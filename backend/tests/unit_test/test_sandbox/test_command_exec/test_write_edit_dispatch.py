@@ -157,6 +157,27 @@ async def test_write_file_rejects_list_path_argument(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("bad_path", [("a", "b"), {"path": "a"}, 123, b"a"])
+async def test_write_file_rejects_non_string_path_argument(
+    tmp_path: Path,
+    bad_path: object,
+) -> None:
+    occ_server._backend_cache_clear()
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    stack = tmp_path / "stack"
+    build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
+    with pytest.raises(ValueError, match="single-path contract"):
+        await write_handler.write_file(
+            {
+                "layer_stack_root": stack.as_posix(),
+                "path": bad_path,
+                "content": "x",
+            }
+        )
+
+
+@pytest.mark.asyncio
 async def test_edit_file_rejects_list_path_argument(tmp_path: Path) -> None:
     occ_server._backend_cache_clear()
     workspace = tmp_path / "ws"

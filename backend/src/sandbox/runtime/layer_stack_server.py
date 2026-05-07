@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import shutil
 import threading
+import time
 from pathlib import Path
 
 from sandbox.layer_stack.stack_manager import (
@@ -21,11 +23,14 @@ from sandbox.layer_stack.workspace import (
 
 _MANAGER_CACHE_LOCK = threading.RLock()
 _MANAGER_CACHE: dict[str, LayerStackManager] = {}
+_DAEMON_STARTED_AT = time.time()
+_FENCED_STAGING_ROOTS: set[str] = set()
 
 
 def get_layer_stack_manager(layer_stack_root: str | Path) -> LayerStackManager:
     key = str(Path(layer_stack_root).resolve(strict=False))
     with _MANAGER_CACHE_LOCK:
+        _fence_stale_staging_once(key)
         manager = _MANAGER_CACHE.get(key)
         if manager is None:
             manager = LayerStackManager(key)
@@ -37,6 +42,56 @@ def _drop_layer_stack_manager(layer_stack_root: str | Path) -> None:
     key = str(Path(layer_stack_root).resolve(strict=False))
     with _MANAGER_CACHE_LOCK:
         _MANAGER_CACHE.pop(key, None)
+
+
+def fence_stale_staging(
+    layer_stack_root: str | Path,
+    *,
+    daemon_started_at: float | None = None,
+) -> dict[str, object]:
+    """Remove staging dirs that predate the current daemon process."""
+    total_start = time.perf_counter()
+    started_at = _DAEMON_STARTED_AT if daemon_started_at is None else daemon_started_at
+    staging_root = Path(layer_stack_root).resolve(strict=False) / "staging"
+    inspected_dirs = 0
+    fenced_paths: list[str] = []
+    if staging_root.is_dir():
+        for child in sorted(staging_root.iterdir(), key=lambda path: path.name):
+            if child.is_symlink() or not child.is_dir():
+                continue
+            inspected_dirs += 1
+            try:
+                mtime = child.stat().st_mtime
+            except OSError:
+                continue
+            if mtime >= started_at:
+                continue
+            shutil.rmtree(child, ignore_errors=True)
+            if not child.exists():
+                fenced_paths.append(child.as_posix())
+    return {
+        "success": True,
+        "staging_root": staging_root.as_posix(),
+        "inspected_dirs": inspected_dirs,
+        "fenced_dirs": len(fenced_paths),
+        "fenced_paths": fenced_paths,
+        "timings": {
+            "layer_stack.fence_stale_staging_s": time.perf_counter() - total_start,
+        },
+    }
+
+
+def _fence_stale_staging_once(layer_stack_root: str) -> None:
+    if layer_stack_root in _FENCED_STAGING_ROOTS:
+        return
+    fence_stale_staging(layer_stack_root)
+    _FENCED_STAGING_ROOTS.add(layer_stack_root)
+
+
+def _clear_layer_stack_server_caches_for_tests() -> None:
+    with _MANAGER_CACHE_LOCK:
+        _MANAGER_CACHE.clear()
+        _FENCED_STAGING_ROOTS.clear()
 
 
 class LayerStackWorkspaceServer:
@@ -121,5 +176,6 @@ class LayerStackWorkspaceServer:
 
 __all__ = [
     "LayerStackWorkspaceServer",
+    "fence_stale_staging",
     "get_layer_stack_manager",
 ]

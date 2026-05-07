@@ -82,6 +82,10 @@ class _RuntimeDispatchError(RuntimeError):
         self.details = details or {}
 
 
+class _RuntimeReadinessError(_RuntimeDispatchError):
+    """Raised when a relaunched runtime daemon does not become ready."""
+
+
 class _RuntimeExec(Protocol):
     async def __call__(
         self,
@@ -155,6 +159,12 @@ async def _exec_daemon_call(
         )
         if getattr(spawn_result, "exit_code", 1) != 0:
             return spawn_result
+        await _check_runtime_readiness_after_spawn(
+            exec_fn=exec_fn,
+            sandbox_id=sandbox_id,
+            original_raw_payload=raw_payload,
+            cwd=cwd,
+        )
         result = await exec_fn(
             sandbox_id,
             _runtime_thin_client_command(raw_payload),
@@ -181,6 +191,116 @@ def _looks_like_socket_missing(result: Any) -> bool:
         "connection refused",
     )
     return any(needle in blob for needle in needles)
+
+
+async def _check_runtime_readiness_after_spawn(
+    *,
+    exec_fn: _RuntimeExec,
+    sandbox_id: str,
+    original_raw_payload: str,
+    cwd: str,
+) -> None:
+    original_op, readiness_payload = _readiness_request_for_original(
+        original_raw_payload
+    )
+    result = await exec_fn(
+        sandbox_id,
+        _runtime_thin_client_command(readiness_payload),
+        cwd=cwd,
+        timeout=30,
+    )
+    if getattr(result, "exit_code", 1) != 0:
+        raise _RuntimeReadinessError(
+            kind="RuntimeReadinessFailed",
+            message=str(getattr(result, "stderr", "") or getattr(result, "stdout", "")),
+            details={"exit_code": getattr(result, "exit_code", 1)},
+        )
+    try:
+        response = _decode_response(getattr(result, "stdout", ""))
+    except _RuntimeDispatchError as exc:
+        raise _RuntimeReadinessError(
+            kind="BadRuntimeReadinessResponse",
+            message=exc.message,
+            details=exc.details,
+        ) from exc
+    if "error" in response:
+        error = response.get("error") or {}
+        raise _RuntimeReadinessError(
+            kind=str(error.get("kind") or "RuntimeReadinessFailed"),
+            message=str(error.get("message") or ""),
+            details=error.get("details") if isinstance(error.get("details"), dict) else {},
+        )
+    if response.get("ready") is not True and not _is_bootstrap_ready_response(
+        original_op,
+        response,
+    ):
+        raise _RuntimeReadinessError(
+            kind="RuntimeNotReady",
+            message="runtime daemon readiness check failed",
+            details={"response": response},
+        )
+
+
+def _readiness_request_for_original(raw_payload: str) -> tuple[str, str]:
+    try:
+        envelope = json.loads(raw_payload)
+    except json.JSONDecodeError as exc:
+        raise _RuntimeReadinessError(
+            kind="BadRuntimeRequest",
+            message="cannot derive readiness request from invalid runtime payload",
+            details={"error": str(exc)},
+        ) from exc
+    op = envelope.get("op") if isinstance(envelope, dict) else None
+    args = envelope.get("args") if isinstance(envelope, dict) else None
+    layer_stack_root = args.get("layer_stack_root") if isinstance(args, dict) else None
+    if not str(layer_stack_root or "").strip():
+        raise _RuntimeReadinessError(
+            kind="MissingLayerStackRoot",
+            message="runtime readiness check requires layer_stack_root",
+            details={"op": op},
+        )
+    return (
+        str(op or ""),
+        json.dumps(
+            {
+                "op": "api.runtime.ready",
+                "args": {"layer_stack_root": str(layer_stack_root)},
+            },
+            separators=(",", ":"),
+        ),
+    )
+
+
+def _is_bootstrap_ready_response(
+    original_op: str,
+    response: dict[str, Any],
+) -> bool:
+    if original_op not in {"api.ensure_workspace_base", "api.build_workspace_base"}:
+        return False
+    probes = response.get("probes")
+    if not isinstance(probes, list):
+        return False
+    by_name = {
+        str(probe.get("name")): probe
+        for probe in probes
+        if isinstance(probe, dict)
+    }
+    control_plane = by_name.get("control_plane")
+    if not isinstance(control_plane, dict):
+        return False
+    details = control_plane.get("details")
+    if not isinstance(details, dict):
+        return False
+    if (
+        control_plane.get("status") != "down"
+        or details.get("error_type") != "WorkspaceBindingError"
+    ):
+        return False
+    return all(
+        isinstance(probe, dict) and probe.get("status") == "ok"
+        for name, probe in by_name.items()
+        if name != "control_plane"
+    )
 
 
 # Env vars forwarded from host into the sandbox runtime process so feature

@@ -1,11 +1,9 @@
-"""Phase 05 — OCC mutation gate structural surface + retry-bound tests.
+"""Phase 05 — OCC mutation gate runtime-boundary + retry-bound tests.
 
 These tests assert the §6 structural invariants:
 
-* occ-server's externally-reachable wire methods are exactly
-  ``{apply_changeset, start, stop, health}``.
-* No ``api.*`` / ``write_*`` / ``edit_*`` / ``read_*`` symbols appear on
-  occ-server.
+* occ-server is not a host-callable runtime dispatch module.
+* Public data operations dispatch through ``runtime.handlers``.
 * In-workspace classifier predicate lives in command-exec only;
   occ-server source contains no ``workspace_root`` classification call
   sites.
@@ -13,129 +11,42 @@ These tests assert the §6 structural invariants:
 
 from __future__ import annotations
 
+import importlib
 from pathlib import Path
 
 import pytest
 
-from sandbox.runtime import occ_handlers, occ_server
+from sandbox.runtime import occ_server
 
 
 # ---------------------------------------------------------------------------
-# Structural surface
+# Runtime boundary
 # ---------------------------------------------------------------------------
 
 
-def test_occ_op_table_surface_is_exactly_four_methods() -> None:
-    """occ-server's wire methods must equal {apply_changeset,start,stop,health}."""
-    assert set(occ_handlers.OCC_OP_TABLE) == {
-        "apply_changeset",
-        "start",
-        "stop",
-        "health",
-    }
+def test_legacy_occ_handlers_module_removed() -> None:
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("sandbox.runtime.occ_handlers")
 
 
-def test_occ_op_table_carries_no_api_prefixed_symbols() -> None:
-    for op in occ_handlers.OCC_OP_TABLE:
-        assert not op.startswith("api.")
-        assert not op.startswith("write_")
-        assert not op.startswith("edit_")
-        assert not op.startswith("read_")
-
-
-def test_occ_handlers_module_does_not_classify_paths() -> None:
+def test_occ_server_module_does_not_classify_paths() -> None:
     """occ-server must not own the in-workspace classifier — single source of
     truth lives on command-exec (handlers/_common.py)."""
-    occ_handlers_source = Path(occ_handlers.__file__).read_text()
     occ_server_source = Path(occ_server.__file__).read_text()
 
-    # No literal ``workspace_root`` classification call sites in occ-server.
-    # (Comments may reference the concept; the assertion is on actual code:
-    # there must be no attribute access or comparison against workspace_root.)
-    for source in (occ_handlers_source, occ_server_source):
-        # Allow workspace_root in docstring/comments only — strip both before checking.
-        # Quick approximation: scan for runtime identifiers like
-        # ``.workspace_root`` or ``workspace_root =``.
-        assert ".workspace_root" not in source
-        assert "workspace_root =" not in source
-        assert "workspace_root==" not in source
+    assert ".workspace_root" not in occ_server_source
+    assert "workspace_root =" not in occ_server_source
+    assert "workspace_root==" not in occ_server_source
 
 
-def test_occ_handlers_does_not_register_api_ops_against_runtime_dispatcher() -> None:
-    """occ_handlers must never put api.write_*/edit_*/read_* into runtime.OP_TABLE."""
+def test_data_api_ops_do_not_dispatch_to_occ_server() -> None:
+    """Data API ops must never route directly to occ-server."""
     from sandbox.runtime import server
 
     server._load_peer_bootstraps()
-    # The host-facing api.* ops must dispatch to runtime.handlers.*,
-    # never to occ_handlers callables.
-    for op in ("api.write_file", "api.edit_file", "api.read_file"):
+    for op in ("api.write_file", "api.edit_file", "api.read_file", "api.shell"):
         handler = server.OP_TABLE[op]
-        assert handler.__module__ != occ_handlers.__name__
-
-
-# ---------------------------------------------------------------------------
-# Lifecycle stubs
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_lifecycle_health_returns_ok() -> None:
-    response = await occ_handlers.health()
-    assert response["status"] == "ok"
-
-
-@pytest.mark.asyncio
-async def test_lifecycle_start_stop_round_trip() -> None:
-    started = await occ_handlers.start()
-    assert started["status"] == "ok" and started["running"] is True
-    stopped = await occ_handlers.stop()
-    assert stopped["status"] == "ok" and stopped["running"] is False
-
-
-# ---------------------------------------------------------------------------
-# Apply forwarding
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_apply_changeset_forwards_to_occ_client() -> None:
-    """apply_changeset is a thin wrapper that delegates to OCCClient."""
-
-    class _StubClient:
-        def __init__(self) -> None:
-            self.called_with: dict | None = None
-
-        async def apply_changeset(
-            self,
-            typed_changes,
-            *,
-            snapshot=None,
-            options=None,
-            workspace_ref=None,
-        ) -> str:
-            self.called_with = {
-                "changes": tuple(typed_changes),
-                "snapshot": snapshot,
-                "options": options,
-                "workspace_ref": workspace_ref,
-            }
-            return "delegated"
-
-    client = _StubClient()
-    result = await occ_handlers.apply_changeset(
-        client,  # type: ignore[arg-type]
-        ["change-A"],
-        snapshot="manifest",
-        options="opts",
-        workspace_ref="ws-ref",
-    )
-    assert result == "delegated"
-    assert client.called_with == {
-        "changes": ("change-A",),
-        "snapshot": "manifest",
-        "options": "opts",
-        "workspace_ref": "ws-ref",
-    }
+        assert handler.__module__.startswith("sandbox.runtime.handlers.")
 
 
 # ---------------------------------------------------------------------------
@@ -304,6 +215,7 @@ def test_single_occ_backend_cache_per_layer_stack_root(
     # The per-verb scaffolding resolves to the cached OccBackend instance.
     via_common = _common._services("/tmp/a")
     assert via_common is backend_a
+    assert occ_server.build_occ_backend("/tmp/a/.") is backend_a
 
     # command_exec_server returns a 4-tuple; the first three fields
     # identity-match the cached OccBackend's fields.

@@ -60,6 +60,7 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/bash.py",
         "sandbox/runtime/async_bridge.py",
         "sandbox/runtime/daemon.py",
+        "sandbox/runtime/health_handlers.py",
         "sandbox/runtime/layer_stack_handlers.py",
         "sandbox/runtime/layer_stack_server.py",
         "sandbox/runtime/server.py",
@@ -71,7 +72,6 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/runtime/handlers/read_handler.py",
         "sandbox/runtime/handlers/shell_handler.py",
         "sandbox/runtime/handlers/write_handler.py",
-        "sandbox/runtime/occ_handlers.py",
         "sandbox/runtime/occ_server.py",
         "sandbox/command_exec/__init__.py",
         "sandbox/command_exec/request.py",
@@ -107,8 +107,10 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
     missing = [p for p in required if not (extract_dir / p).exists()]
     assert missing == [], f"bundle is missing required paths: {missing}"
     assert not (extract_dir / "sandbox/runtime/bundle.py").exists()
+    assert not (extract_dir / "sandbox/runtime/api_handlers.py").exists()
     assert not (extract_dir / "sandbox/runtime/types.py").exists()
     assert not (extract_dir / "sandbox/runtime/wire.py").exists()
+    assert not (extract_dir / "sandbox/runtime/occ_handlers.py").exists()
     assert not (extract_dir / "sandbox/runtime/pipelines.py").exists()
     assert not (extract_dir / "sandbox/runtime/overlay_shell/pipeline.py").exists()
     assert not (extract_dir / "sandbox/runtime/overlay_capture").exists()

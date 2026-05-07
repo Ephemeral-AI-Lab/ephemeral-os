@@ -26,12 +26,9 @@ to `/tmp`, `/home`, or another path outside the bound workspace mutates the host
 sandbox filesystem, not the layer-stack manifest.
 
 `occ-server` owns mutation policy through `OCCClient` / `OccService`, but it is
-not a host-callable API server. Its logical externally reachable surface is
-structurally asserted as:
-
-```text
-{apply_changeset, start, stop, health}
-```
+not a host-callable API server. The old test-only `runtime/occ_handlers.py`
+structural surface and `OCC_OP_TABLE` have been deleted; tests now assert the
+real runtime `OP_TABLE` routing directly.
 
 `layer-stack-server` remains policy-blind storage and lease control.
 
@@ -39,10 +36,9 @@ structurally asserted as:
 
 - `api.write_file`, `api.edit_file`, `api.read_file`, and `api.shell` dispatch
   from `backend/src/sandbox/runtime/handlers/`.
-- `runtime/api_handlers.py` owns `api.layer_metrics` only.
+- `runtime/handlers/metrics_handler.py` owns `api.layer_metrics`.
 - `runtime/occ_server.py` owns the shared `OccBackend` factory/cache.
-- `runtime/occ_handlers.py` owns `OCC_OP_TABLE` only as a structural surface
-  assertion target.
+- `runtime/occ_handlers.py` and `OCC_OP_TABLE` are deleted.
 - `runtime/write_edit_handlers.py` is deleted.
 - Path classification for write/edit/read lives only in
   `runtime/handlers/_common.py`.
@@ -110,11 +106,10 @@ backend/src/sandbox/runtime/
 │   ├── write_handler.py    # api.write_file
 │   ├── edit_handler.py     # api.edit_file
 │   ├── read_handler.py     # api.read_file
-│   └── shell_handler.py    # api.shell entry
+│   ├── shell_handler.py    # api.shell entry
+│   └── metrics_handler.py  # api.layer_metrics
 ├── command_exec_server.py  # shell worker pipeline
-├── api_handlers.py         # api.layer_metrics only
 ├── occ_server.py           # OccBackend factory/cache
-├── occ_handlers.py         # OCC_OP_TABLE structural surface
 ├── layer_stack_handlers.py # workspace base/snapshot control
 └── server.py               # runtime OP_TABLE registration
 
@@ -133,9 +128,12 @@ Deleted legacy surfaces:
 
 ```text
 backend/src/sandbox/runtime/write_edit_handlers.py
+backend/src/sandbox/runtime/api_handlers.py
+backend/src/sandbox/runtime/occ_handlers.py
 api_handlers.write_file / edit_file / read_file
 api_handlers._process_commit_gate / _commit_lock
 api_handlers.drop_services_cache / _services_cache_clear
+OCC_OP_TABLE structural surface
 ```
 
 ## 6. Workflow Demonstration
@@ -199,6 +197,9 @@ api.shell(command)
 runtime.handlers.shell_handler.shell
         │
         ▼
+command_exec_server.execute_shell_api
+        │
+        ▼
 command_exec_server._execute_shell
         │
         ├── prepare workspace snapshot N
@@ -233,10 +234,10 @@ Server topology:
 
 - `api.write_file`, `api.edit_file`, `api.read_file`, and `api.shell` dispatch
   from `runtime.handlers`.
-- `runtime/api_handlers.py` does not export write/edit/read handlers.
-- occ-server's structural surface equals `{apply_changeset, start, stop,
-  health}`.
-- No data API op is registered against `occ_handlers`.
+- `runtime/api_handlers.py` is removed; metrics dispatch lives in
+  `runtime.handlers.metrics_handler`.
+- `runtime/occ_handlers.py` and `OCC_OP_TABLE` are removed.
+- No data API op is registered against `occ_server`.
 - Write/edit/shell submit mutations through `OCCClient.apply_changeset`.
 - Path classification source is `runtime.handlers._common.classify_path`.
 
@@ -278,8 +279,6 @@ Out-of-workspace semantics:
 .venv/bin/mypy --config-file backend/mypy.ini \
   backend/src/sandbox/runtime/handlers \
   backend/src/sandbox/runtime/command_exec_server.py \
-  backend/src/sandbox/runtime/api_handlers.py \
   backend/src/sandbox/runtime/occ_server.py \
-  backend/src/sandbox/runtime/occ_handlers.py \
   backend/src/sandbox/occ/runtime_ops.py
 ```

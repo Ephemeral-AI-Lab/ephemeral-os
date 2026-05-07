@@ -6,7 +6,10 @@ import time
 from collections.abc import Mapping
 
 from sandbox.layer_stack.workspace import require_workspace_binding
-from sandbox.runtime.layer_stack_server import LayerStackWorkspaceServer
+from sandbox.runtime.layer_stack_server import (
+    LayerStackWorkspaceServer,
+    fence_stale_staging as fence_stale_staging_for_root,
+)
 
 
 async def build_workspace_base(args: dict[str, object]) -> dict[str, object]:
@@ -86,6 +89,10 @@ async def release_workspace_snapshot(args: dict[str, object]) -> dict[str, objec
     }
 
 
+async def fence_stale_staging(args: dict[str, object]) -> dict[str, object]:
+    return fence_stale_staging_for_root(_layer_stack_root(args))
+
+
 def _server(args: Mapping[str, object]) -> LayerStackWorkspaceServer:
     return LayerStackWorkspaceServer(_layer_stack_root(args))
 
@@ -122,6 +129,7 @@ def _drop_peer_runtime_caches(layer_stack_root: str) -> None:
 __all__ = [
     "ensure_workspace_base",
     "build_workspace_base",
+    "fence_stale_staging",
     "prepare_workspace_snapshot",
     "release_workspace_snapshot",
     "workspace_binding",

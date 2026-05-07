@@ -24,34 +24,30 @@ _BUNDLE_UPLOAD_JOIN_TIMEOUT_S = 60.0
 
 async def bootstrap_in_sandbox_runtime(
     sandbox_id: str,
-    workspace_root: str,
 ) -> None:
     """Upload the runtime command bundle during sandbox lifecycle events.
 
-    Short-circuits as a no-op only when ``sandbox_id`` or ``workspace_root`` is
-    empty. Raises when the runtime bundle cannot be prepared.
+    Short-circuits as a no-op when ``sandbox_id`` is empty. Raises when the
+    runtime bundle cannot be prepared.
     """
-    if not sandbox_id or not str(workspace_root or "").strip():
+    if not sandbox_id:
         return
 
     from sandbox.control.daemon.bundle import ensure_runtime_uploaded
 
     logger.info(
-        "sandbox-runtime bootstrap starting for sandbox %s at %s",
+        "sandbox-runtime bootstrap starting for sandbox %s",
         sandbox_id,
-        workspace_root,
     )
     await ensure_runtime_uploaded(sandbox_id)
     logger.info(
-        "sandbox-runtime bootstrap completed for sandbox %s at %s",
+        "sandbox-runtime bootstrap completed for sandbox %s",
         sandbox_id,
-        workspace_root,
     )
 
 
 async def bootstrap_upload_runtime_bundle(
     sandbox_id: str,
-    workspace_root: str,
 ) -> None:
     """Upload-only phase of the runtime bootstrap.
 
@@ -61,11 +57,11 @@ async def bootstrap_upload_runtime_bundle(
     :func:`bootstrap_in_sandbox_runtime` afterwards. That call finds the
     bundle already in place via ``.bundle-hash``.
 
-    Same input validation as :func:`bootstrap_in_sandbox_runtime`. Raises on upload
-    failure; callers running this in a background thread are expected to
-    swallow and let the sequential bootstrap retry.
+    Same input validation as :func:`bootstrap_in_sandbox_runtime`. Raises on
+    upload failure; callers running this in a background thread are expected
+    to swallow and let the sequential bootstrap retry.
     """
-    if not sandbox_id or not str(workspace_root or "").strip():
+    if not sandbox_id:
         return
 
     from sandbox.control.daemon.bundle import ensure_runtime_uploaded
@@ -99,7 +95,6 @@ def run_runtime_bootstrap(
     run_sync(
         bootstrap_in_sandbox_runtime(
             sandbox_id=sandbox_id,
-            workspace_root=workspace,
         )
     )
 
@@ -128,6 +123,15 @@ def ensure_workspace_base(
             timeout=180,
         )
     )
+    readiness = run_sync(
+        call_runtime_api(
+            sandbox_id,
+            "api.runtime.ready",
+            {},
+            timeout=60,
+        )
+    )
+    _require_workspace_base_ready(readiness)
 
 
 def start_runtime_bundle_upload(
@@ -155,7 +159,6 @@ def start_runtime_bundle_upload(
         run_sync(
             bootstrap_upload_runtime_bundle(
                 sandbox_id=sandbox_id,
-                workspace_root=workspace,
             )
         )
 
@@ -203,6 +206,32 @@ def finish_runtime_bundle_upload(
             sandbox_id,
             exc_info=True,
         )
+
+
+def _require_workspace_base_ready(readiness: dict[str, object]) -> None:
+    control_plane = _runtime_probe(readiness, "control_plane")
+    details = control_plane.get("details")
+    detail_map = details if isinstance(details, dict) else {}
+    manifest_version = int(detail_map.get("manifest_version") or 0)
+    if (
+        readiness.get("ready") is not True
+        or control_plane.get("status") != "ok"
+        or manifest_version < 1
+    ):
+        raise RuntimeError(f"sandbox runtime not ready after workspace base: {readiness}")
+
+
+def _runtime_probe(
+    readiness: dict[str, object],
+    name: str,
+) -> dict[str, object]:
+    probes = readiness.get("probes")
+    if not isinstance(probes, list):
+        return {}
+    for probe in probes:
+        if isinstance(probe, dict) and probe.get("name") == name:
+            return probe
+    return {}
 
 
 def setup_after_create(sandbox_id: str, workspace_root: str | None) -> None:

@@ -2,7 +2,7 @@
 
 Thin wrapper that delegates to ``command_exec_server`` workers — that
 module owns the mount/capture/OCC-apply pipeline and the shell-specific
-service cache.
+service wiring.
 """
 
 from __future__ import annotations
@@ -13,17 +13,7 @@ async def shell(args: dict[str, object]) -> dict[str, object]:
     # keeping the public handler package cheap to import.
     from sandbox.runtime import command_exec_server
 
-    layer_stack, occ_client, gitignore, storage_root = command_exec_server._services(
-        args
-    )
-    result = await command_exec_server._execute_shell(
-        args,
-        layer_stack=layer_stack,
-        occ_client=occ_client,
-        gitignore=gitignore,
-        storage_root=storage_root,
-    )
-    return command_exec_server._payload_from_result(result)
+    return await command_exec_server.execute_shell_api(args)
 
 
 __all__ = ["shell"]

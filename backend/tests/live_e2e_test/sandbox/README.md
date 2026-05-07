@@ -43,6 +43,15 @@ in the pytest process instead of the sandbox runtime guardrails.
   smoke: `1 passed` in `12.29 s`; 32 public reads over 16 base paths, runtime
   max `0.741 ms`, wall max `526.834 ms`. See
   `phase-01-workspace-base-report.md`.
+- **Phase 05 public file ops:** `layer_stack_overlay_occ/test_phase05_*` proves
+  public `read_file`, `write_file`, `edit_file`, and `shell` over an imported
+  `/testbed` base, including raw workspace mutation isolation, full-filesystem
+  passthrough outside `/testbed`, symlink classification, conflict/fail-closed
+  cases, nonzero shell side-effect policy, and `1/5/10/20` load for read,
+  write, edit, shell, and mixed workloads. Current focused live gate:
+  `7 passed` in `226.96 s` on 2026-05-07 UTC with documented budget overrides.
+  Draft default c20 redlines still miss for write/edit/shell; see
+  `phase-05-public-file-ops-report.md`.
 
 Current overlay syscall run (2026-05-05, full battery, 1000 iter x 8 depths):
 
@@ -111,6 +120,12 @@ The suite is opt-in by directory:
 .venv/bin/pytest backend/tests/live_e2e_test/sandbox/overlay
 .venv/bin/pytest backend/tests/live_e2e_test/sandbox/request_snapshot -q -s
 .venv/bin/pytest backend/tests/live_e2e_test/sandbox/workspace_base -v -rs -s --tb=short
+.venv/bin/pytest \
+  backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase05_public_file_ops_correctness.py \
+  backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase05_full_filesystem_view.py \
+  backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase05_public_file_ops_edge_cases.py \
+  backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase05_public_file_ops_load.py \
+  -v -rs -s --tb=short
 .venv/bin/pytest backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ
 .venv/bin/pytest backend/tests/live_e2e_test -v -rs
 ```

@@ -32,6 +32,19 @@ from sandbox.runtime import occ_server
 from sandbox.runtime.async_bridge import run_sync_in_executor
 
 
+async def execute_shell_api(args: dict[str, object]) -> dict[str, object]:
+    """Public ``api.shell`` execution entrypoint used by the handler layer."""
+    layer_stack, occ_client, gitignore, storage_root = _services(args)
+    result = await _execute_shell(
+        args,
+        layer_stack=layer_stack,
+        occ_client=occ_client,
+        gitignore=gitignore,
+        storage_root=storage_root,
+    )
+    return _payload_from_result(result)
+
+
 async def _execute_shell(
     args: Mapping[str, object],
     *,

@@ -73,7 +73,7 @@ def test_copy_backed_mount_captures_only_workspace_changes(
     assert "command_exec.run_command_s" in timings
 
 
-def test_copy_backed_mount_rejects_absolute_workspace_references(
+def test_copy_backed_mount_rewrites_absolute_workspace_references(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -96,17 +96,26 @@ def test_copy_backed_mount_rejects_absolute_workspace_references(
         request_id="req-1",
         workspace_ref=str(tmp_path / "stack"),
         workspace_root="/testbed",
-        command=("bash", "-lc", "printf bad > /testbed/out.txt"),
+        command=("bash", "-lc", "printf captured > /testbed/out.txt"),
     )
+    timings: dict[str, float] = {}
 
     process = workspace_mount.run_workspace_replaced_command(
         spec=spec,
         request=request,
         run_dir=tmp_path / "run",
-        timings={},
+        timings=timings,
+    )
+    changes = capture_workspace_upperdir(
+        spec=spec,
+        snapshot_manifest=Manifest(version=1, layers=()),
+        mounted_workspace_root=process.mounted_workspace_root,
+        copy_backed=process.mount_mode == "copy_backed",
+        timings=timings,
     )
 
-    assert process.exit_code == 126
-    assert "requires a private mount namespace" in Path(process.stderr_ref).read_text(
-        encoding="utf-8",
-    )
+    assert process.exit_code == 0
+    assert (
+        Path(process.mounted_workspace_root) / "out.txt"
+    ).read_text(encoding="utf-8") == "captured"
+    assert [change.path for change in changes] == ["out.txt"]

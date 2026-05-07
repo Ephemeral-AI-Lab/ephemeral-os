@@ -7,7 +7,7 @@ the registered adapter, never imported by name.
 
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 
 class SandboxContextPreparer(Protocol):
@@ -32,7 +32,7 @@ def context_preparer_for(sandbox_id: str) -> SandboxContextPreparer:
             f"Provider adapter for sandbox {sandbox_id!r} does not expose "
             "context_preparer()."
         )
-    return factory(sandbox_id)
+    return cast(SandboxContextPreparer, factory(sandbox_id))
 
 
 __all__ = [

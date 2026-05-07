@@ -40,17 +40,20 @@ document has the same shape:
 | 04 | `three-server-phase-04-workspace-replaced-shell.md` | Guarded shell enters `command-exec-server`, replaces `/testbed` with a leased snapshot mount, and captures workspace upperdir changes. |
 | 04.5 | `three-server-phase-04-5-remove-materialized-lowerdir-cache.md` | Removes the materialized lowerdir cache and `cache_policy` switch; per-lease transient lowerdirs are the only path. |
 | 05 | `three-server-phase-05-occ-mutation-gate.md` | `write_file`, `edit_file`, and shell capture converge through `OCCClient` and `occ-server`. |
-| 06 | `three-server-phase-06-supervision-transport.md` | Setup supervises `layer-stack.sock`, `occ.sock`, and `command-exec.sock`, and the thin client routes public verbs. |
+| 06 | `three-server-phase-06-supervision-transport.md` | The single resident runtime daemon exposes `api.runtime.ready`, fences stale layer-stack staging after restart, and tests OP_TABLE routing against the handler-per-command layout. |
 | 07 | `three-server-phase-07-raw-exec-blocking-recovery.md` | Raw/setup execution is blocked from mutating `/testbed` after base build, with explicit recovery paths. |
 | 08 | `three-server-phase-08-squash-gc-performance.md` | Squash, GC, cache, and performance gates preserve active leases and bound shell/read costs. |
 
-## Target Dependency Rule
+## Current Dependency Rule
 
 ```text
-runtime/command_exec -> command_exec + occ + layer_stack
-command_exec         -> layer_stack lease client + occ mutation client
-occ                  -> layer_stack narrow commit/read/status protocols
-layer_stack          -> no command_exec, no occ, no git
+runtime.server          -> registers OP_TABLE only
+runtime.handlers        -> one host-facing data handler per public verb
+runtime.handlers._common -> path classifier + OccBackend lookup for read/write/edit
+runtime.command_exec_server -> shell worker pipeline + OccBackend lookup
+runtime.occ_server      -> OccBackend factory/cache; not host-callable
+runtime.layer_stack_*   -> workspace binding, base, snapshot lease, manifest control
+layer_stack             -> no command_exec imports, no occ imports, no git policy
 ```
 
 ## Non-Negotiable Design Rules

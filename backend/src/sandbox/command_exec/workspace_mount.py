@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import lru_cache
 from pathlib import Path
 
@@ -68,17 +69,6 @@ def _run_copy_backed_mount(
     run_dir: Path,
     timings: dict[str, float],
 ) -> ShellProcessResult:
-    if _command_references_declared_workspace(request.command, spec.workspace_root):
-        return _unsupported_namespace_result(
-            spec=spec,
-            request=request,
-            run_dir=run_dir,
-            message=(
-                "workspace replacement mount requires a private mount namespace "
-                f"for commands that reference {spec.workspace_root}"
-            ),
-        )
-
     lowerdir = Path(spec.lowerdir)
     upperdir = Path(spec.upperdir)
     workdir = Path(spec.workdir)
@@ -94,9 +84,17 @@ def _run_copy_backed_mount(
     _copy_tree(lowerdir, merged)
     timings["command_exec.mount_workspace_s"] = time.perf_counter() - mount_start
 
+    run_request = replace(
+        request,
+        command=_rewrite_declared_workspace_refs(
+            request.command,
+            workspace_root=spec.workspace_root,
+            mounted_workspace_root=str(merged),
+        ),
+    )
     run_start = time.perf_counter()
     exit_code = _run_command_to_refs(
-        request=request,
+        request=run_request,
         declared_workspace_root=spec.workspace_root,
         mounted_workspace_root=merged,
         stdout_ref=stdout_ref,
@@ -169,26 +167,6 @@ def _run_private_mount_namespace(
     )
 
 
-def _unsupported_namespace_result(
-    *,
-    spec: WorkspaceReplacementMountSpec,
-    request: CommandExecRequest,
-    run_dir: Path,
-    message: str,
-) -> ShellProcessResult:
-    stdout_ref = run_dir / "stdout.bin"
-    stderr_ref = run_dir / "stderr.bin"
-    stdout_ref.write_bytes(b"")
-    stderr_ref.write_text(message + "\n", encoding="utf-8")
-    return ShellProcessResult(
-        exit_code=126,
-        stdout_ref=str(stdout_ref),
-        stderr_ref=str(stderr_ref),
-        mounted_workspace_root=spec.workspace_root,
-        mount_mode="unsupported_namespace",
-    )
-
-
 def _run_command_to_refs(
     *,
     request: CommandExecRequest,
@@ -232,12 +210,24 @@ def _copy_tree(source: Path, destination: Path) -> None:
             shutil.copy2(entry, target)
 
 
-def _command_references_declared_workspace(
+def _rewrite_declared_workspace_refs(
     command: tuple[str, ...],
     workspace_root: str,
-) -> bool:
+    mounted_workspace_root: str,
+) -> tuple[str, ...]:
+    """Map absolute workspace references to the copy-backed mounted tree.
+
+    The copy-backed fallback cannot replace `/testbed` in the process mount
+    namespace. Rewriting only the declared workspace-root token preserves file
+    operation semantics for commands that use absolute `/testbed/...` paths
+    while keeping `/tmp`, `/root`, and the rest of the sandbox filesystem as
+    provider passthrough.
+    """
     root = str(workspace_root).rstrip("/") or "/"
-    return any(root in part for part in command)
+    if root == "/":
+        return command
+    pattern = re.compile(rf"{re.escape(root)}(?=/|$|[\s'\":;,&|)])")
+    return tuple(pattern.sub(str(mounted_workspace_root), part) for part in command)
 
 
 def _merge_namespace_timings(path: Path, timings: dict[str, float]) -> None:

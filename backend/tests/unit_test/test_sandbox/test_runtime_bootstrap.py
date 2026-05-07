@@ -22,20 +22,18 @@ def test_bootstrap_helper_uploads_by_sandbox_id() -> None:
         asyncio.run(
             bootstrap_in_sandbox_runtime(
                 sandbox_id="sb-1",
-                workspace_root="/ws",
             )
         )
 
     assert calls == ["sb-1"]
 
 
-def test_bootstrap_helper_noop_when_workspace_empty() -> None:
+def test_bootstrap_helper_noop_when_sandbox_id_empty() -> None:
     from sandbox.control.ops.setup import bootstrap_in_sandbox_runtime
 
     asyncio.run(
         bootstrap_in_sandbox_runtime(
-            sandbox_id="sb-1",
-            workspace_root="",
+            sandbox_id="",
         )
     )
 
@@ -53,7 +51,6 @@ def test_bootstrap_helper_raises_on_runtime_upload_failure() -> None:
         asyncio.run(
             bootstrap_in_sandbox_runtime(
                 sandbox_id="sb-1",
-                workspace_root="/ws",
             )
         )
 
@@ -79,11 +76,10 @@ def test_run_runtime_bootstrap_invokes_helper() -> None:
 
     calls: list[dict[str, Any]] = []
 
-    async def fake_helper(sandbox_id: str, workspace_root: str) -> None:
+    async def fake_helper(sandbox_id: str) -> None:
         calls.append(
             {
                 "sandbox_id": sandbox_id,
-                "workspace_root": workspace_root,
             }
         )
 
@@ -93,7 +89,7 @@ def test_run_runtime_bootstrap_invokes_helper() -> None:
     ):
         run_runtime_bootstrap("sb-1", "/ws")
 
-    assert calls == [{"sandbox_id": "sb-1", "workspace_root": "/ws"}]
+    assert calls == [{"sandbox_id": "sb-1"}]
 
 
 def test_run_runtime_bootstrap_propagates_runtime_upload_error() -> None:
@@ -138,6 +134,20 @@ def test_ensure_workspace_base_invokes_runtime_op() -> None:
                 "timeout": timeout,
             }
         )
+        if op == "api.runtime.ready":
+            return {
+                "success": True,
+                "ready": True,
+                "probes": [
+                    {
+                        "name": "control_plane",
+                        "status": "ok",
+                        "details": {
+                            "manifest_version": 1,
+                        },
+                    }
+                ],
+            }
         return {"success": True}
 
     with patch("sandbox.api.tool._runtime.call_runtime_api", new=fake_call_runtime_api):
@@ -149,20 +159,20 @@ def test_ensure_workspace_base_invokes_runtime_op() -> None:
             "op": "api.ensure_workspace_base",
             "args": {"workspace_root": "/testbed"},
             "timeout": 180,
-        }
+        },
+        {
+            "sandbox_id": "sb-1",
+            "op": "api.runtime.ready",
+            "args": {},
+            "timeout": 60,
+        },
     ]
 
 
 def test_upload_helper_noop_on_missing_inputs() -> None:
     from sandbox.control.ops.setup import bootstrap_upload_runtime_bundle
 
-    for missing in ({"sandbox_id": ""}, {"workspace_root": ""}):
-        kwargs: dict[str, Any] = {
-            "sandbox_id": "sb-1",
-            "workspace_root": "/ws",
-        }
-        kwargs.update(missing)
-        asyncio.run(bootstrap_upload_runtime_bundle(**kwargs))
+    asyncio.run(bootstrap_upload_runtime_bundle(sandbox_id=""))
 
 
 def test_upload_helper_uploads_without_running_lifecycle_bootstrap() -> None:
@@ -182,7 +192,6 @@ def test_upload_helper_uploads_without_running_lifecycle_bootstrap() -> None:
         asyncio.run(
             bootstrap_upload_runtime_bundle(
                 sandbox_id="sb-1",
-                workspace_root="/ws",
             )
         )
 
@@ -207,10 +216,9 @@ def test_start_upload_submits_future_and_invokes_helper() -> None:
     helper_done = threading.Event()
     helper_args: dict[str, Any] = {}
 
-    async def fake_helper(sandbox_id: str, workspace_root: str) -> None:
+    async def fake_helper(sandbox_id: str) -> None:
         helper_args.update(
             sandbox_id=sandbox_id,
-            workspace_root=workspace_root,
         )
         helper_done.set()
 
@@ -223,10 +231,7 @@ def test_start_upload_submits_future_and_invokes_helper() -> None:
         finish_runtime_bundle_upload(future, "sb-1")
 
     assert helper_done.is_set()
-    assert helper_args == {
-        "sandbox_id": "sb-1",
-        "workspace_root": "/ws",
-    }
+    assert helper_args == {"sandbox_id": "sb-1"}
 
 
 def test_finish_upload_swallows_helper_failure() -> None:

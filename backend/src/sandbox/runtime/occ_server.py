@@ -1,20 +1,15 @@
 """occ-server logical module — OCC mutation gate composition.
 
 Phase 05 establishes occ-server as the internal mutation gate consumed
-through :class:`OCCClient.apply_changeset`. The host-callable surface is
-defined by :data:`sandbox.runtime.occ_handlers.OCC_OP_TABLE`, which is
-re-exported here for symmetry with the simplified plan's server topology.
-``OCC_OP_TABLE`` is a **structural assertion target**, not a wire dispatch
-table — Phase 05 §6 keeps it in lockstep with the public callable surface
-of :mod:`sandbox.runtime.occ_handlers` so source-level tests can pin the
-externally-reachable surface to ``{apply_changeset, start, stop, health}``.
+through :class:`OCCClient.apply_changeset`. It is not a host-callable runtime
+dispatch surface; public data operations reach it through the handler-owned
+``OCCClient`` instance.
 
 Phase 05.5 adds a single OCC backend factory consumed by every runtime
-peer that needs the ``(LayerStackClient, OCCClient, SnapshotGitignoreOracle,
-LayerStackManager)`` tuple — handlers/_common.py (api.write/edit/read),
-command_exec_server (api.shell), and handlers/metrics_handler.py
-(api.layer_metrics).
-The factory uses ``workspace_ref=layer_stack_root`` only; this module
+peer that needs the layer-stack/OCC/gitignore tuple — handlers/_common.py
+(api.write/edit/read), command_exec_server (api.shell), and
+handlers/metrics_handler.py (api.layer_metrics).
+The factory uses a canonical ``workspace_ref=layer_stack_root`` only; this module
 owns no path classification (single source of truth lives on command-exec
 via :mod:`sandbox.runtime.handlers._common`).
 """
@@ -31,7 +26,6 @@ from sandbox.occ.service import OccService
 from sandbox.runtime.clients.layer_stack import LayerStackClient
 from sandbox.runtime.clients.occ import RuntimeWorkspaceBindingReader
 from sandbox.runtime.layer_stack_server import get_layer_stack_manager
-from sandbox.runtime.occ_handlers import OCC_OP_TABLE
 
 
 @dataclass(frozen=True)
@@ -46,6 +40,7 @@ class OccBackend:
     layer_stack: LayerStackClient
     occ_client: OCCClient
     gitignore: SnapshotGitignoreOracle
+    single_path_gitignore: SnapshotGitignoreOracle
     manager: LayerStackManager
 
 
@@ -54,25 +49,28 @@ _BACKEND_CACHE: dict[str, OccBackend] = {}
 
 def build_occ_backend(layer_stack_root: str) -> OccBackend:
     """Return the cached OCC backend for ``layer_stack_root`` (constructing on miss)."""
-    cached = _BACKEND_CACHE.get(layer_stack_root)
+    cache_key = _backend_cache_key(layer_stack_root)
+    cached = _BACKEND_CACHE.get(cache_key)
     if cached is not None:
         return cached
-    manager = get_layer_stack_manager(layer_stack_root)
+    manager = get_layer_stack_manager(cache_key)
     layer_stack = LayerStackClient(manager)
     gitignore = SnapshotGitignoreOracle(layer_stack)
+    single_path_gitignore = SnapshotGitignoreOracle(layer_stack, backend="pathspec")
     occ_service = OccService(gitignore=gitignore, layer_stack=layer_stack)
     occ_client = OCCClient(
         occ_service,
         binding_reader=RuntimeWorkspaceBindingReader(),
-        workspace_ref=layer_stack_root,
+        workspace_ref=cache_key,
     )
     backend = OccBackend(
         layer_stack=layer_stack,
         occ_client=occ_client,
         gitignore=gitignore,
+        single_path_gitignore=single_path_gitignore,
         manager=manager,
     )
-    _BACKEND_CACHE[layer_stack_root] = backend
+    _BACKEND_CACHE[cache_key] = backend
     return backend
 
 
@@ -90,8 +88,14 @@ def _backend_cache_clear() -> None:
     _BACKEND_CACHE.clear()
 
 
+def _backend_cache_key(layer_stack_root: str | Path) -> str:
+    raw = str(layer_stack_root or "").strip()
+    if not raw:
+        raise ValueError("layer_stack_root is required")
+    return str(Path(raw).resolve(strict=False))
+
+
 __all__ = [
-    "OCC_OP_TABLE",
     "OccBackend",
     "build_occ_backend",
     "drop_backend_cache",

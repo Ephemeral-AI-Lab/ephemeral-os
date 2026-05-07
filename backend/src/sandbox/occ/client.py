@@ -20,6 +20,11 @@ class OCCMutationService(Protocol):
         options: CommitOptions | None = None,
     ) -> ChangesetResult | PreparedChangeset: ...
 
+    async def commit_prepared(
+        self,
+        prepared: PreparedChangeset,
+    ) -> ChangesetResult: ...
+
 
 class OCCClient:
     """Command-exec-facing client for submitting typed mutation changesets."""
@@ -50,6 +55,17 @@ class OCCClient:
             snapshot=snapshot,
             options=options,
         )
+
+    async def commit_prepared_changeset(
+        self,
+        prepared: PreparedChangeset,
+        *,
+        workspace_ref: str | None = None,
+    ) -> ChangesetResult:
+        """Commit a caller-prepared changeset after the standard binding check."""
+        ref = self._workspace_ref if workspace_ref is None else workspace_ref
+        self._binding_reader.require_workspace_binding(ref)
+        return await self._service.commit_prepared(prepared)
 
 
 __all__ = ["OCCClient", "OCCMutationService"]

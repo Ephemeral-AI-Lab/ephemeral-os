@@ -21,7 +21,7 @@ import time
 import traceback
 from collections.abc import Callable, Mapping
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Awaitable
 
 _BOOT_T0 = time.perf_counter()
 
@@ -72,8 +72,8 @@ def dispatch_envelope(envelope: Mapping[str, Any]) -> dict[str, Any]:
     try:
         result = handler(dict(args_raw))
         if inspect.isawaitable(result):
-            result = asyncio.run(result)
-        jsonable = _to_jsonable(result)
+            result = asyncio.run(_await_result(result))
+        jsonable = _to_response_dict(result)
         _attach_runtime_boot_timings(
             jsonable,
             dispatch_entered_at=dispatch_entered_at,
@@ -118,7 +118,7 @@ async def dispatch_envelope_async(
         result = handler(dict(args_raw))
         if inspect.isawaitable(result):
             result = await result
-        jsonable = _to_jsonable(result)
+        jsonable = _to_response_dict(result)
         _attach_runtime_boot_timings(
             jsonable,
             dispatch_entered_at=dispatch_entered_at,
@@ -220,7 +220,19 @@ def _to_jsonable(obj: Any) -> Any:
     return obj
 
 
+async def _await_result(awaitable: Awaitable[Any]) -> Any:
+    return await awaitable
+
+
+def _to_response_dict(result: Any) -> dict[str, Any]:
+    jsonable = _to_jsonable(result)
+    if not isinstance(jsonable, dict):
+        raise TypeError("runtime handler returned a non-object response")
+    return jsonable
+
+
 def _load_peer_bootstraps() -> None:
+    from sandbox.runtime import health_handlers
     from sandbox.runtime import handlers
     from sandbox.runtime import layer_stack_handlers
     from sandbox.overlay.handlers import run as overlay_run
@@ -234,9 +246,13 @@ def _load_peer_bootstraps() -> None:
         "api.release_workspace_snapshot": (
             layer_stack_handlers.release_workspace_snapshot
         ),
+        "api.layer_stack.fence_stale_staging": (
+            layer_stack_handlers.fence_stale_staging
+        ),
         "api.edit_file": handlers.edit_file,
         "api.layer_metrics": handlers.layer_metrics,
         "api.read_file": handlers.read_file,
+        "api.runtime.ready": health_handlers.runtime_ready,
         "api.shell": handlers.shell,
         "api.workspace_binding": layer_stack_handlers.workspace_binding,
         "api.write_file": handlers.write_file,

@@ -109,12 +109,12 @@ def _layer_stack_root(args: Mapping[str, object]) -> str:
 def _required_single_path(args: Mapping[str, object]) -> str:
     """Enforce single-path contract: ``args['path']`` must be one string."""
     raw = args.get("path")
-    if isinstance(raw, list):
+    if not isinstance(raw, str):
         raise ValueError(
             "single-path contract: api.write_file/edit_file/read_file accept "
-            "exactly one path per request"
+            "exactly one string path per request"
         )
-    path = str(raw or "").strip()
+    path = raw.strip()
     if not path:
         raise ValueError("path is required")
     return path

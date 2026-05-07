@@ -8,7 +8,8 @@ from uuid import uuid4
 
 from sandbox.layer_stack.workspace import require_workspace_binding
 from sandbox.occ.changeset.builders import build_api_write_change
-from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
+from sandbox.occ.runtime_ops import content_hash_bytes
+from sandbox.occ.single_path_prepare import prepare_single_path_changeset
 from sandbox.runtime.handlers._common import (
     _layer_stack_root,
     _project_changeset,
@@ -42,8 +43,6 @@ async def write_file(args: dict[str, object]) -> dict[str, object]:
         layer_path=classified.layer_path,
         content=content,
         overwrite=overwrite,
-        actor_id=str(args.get("actor_id") or ""),
-        description=str(args.get("description") or f"write {raw_path}"),
         total_start=total_start,
     )
 
@@ -54,8 +53,6 @@ async def _write_in_workspace(
     layer_path: str,
     content: str,
     overwrite: bool,
-    actor_id: str,
-    description: str,
     total_start: float,
 ) -> dict[str, object]:
     services = _services(layer_stack_root)
@@ -63,15 +60,26 @@ async def _write_in_workspace(
     lease_start = time.perf_counter()
     lease = services.manager.acquire_snapshot_lease(request_id)
     lease_acquired_s = time.perf_counter() - lease_start
+    snapshot_read_s = 0.0
+    known_base_hash: str | None = None
+    known_base_hash_ready = False
     try:
         if not overwrite:
             # create-only: reject if the path already exists in the leased
             # validation snapshot. OCC's gated merge does not enforce
             # WriteChange.create_only on its own — host-side existence check
             # against snapshot N is the §6 source of truth for this rule.
-            _, exists_in_n = services.layer_stack.read_bytes(
+            read_start = time.perf_counter()
+            bytes_, exists_in_n = services.layer_stack.read_bytes(
                 layer_path, lease.manifest
             )
+            snapshot_read_s += time.perf_counter() - read_start
+            known_base_hash = (
+                content_hash_bytes(bytes_)
+                if exists_in_n and bytes_ is not None
+                else None
+            )
+            known_base_hash_ready = True
             if exists_in_n:
                 return {
                     "success": False,
@@ -88,6 +96,7 @@ async def _write_in_workspace(
                     "conflict_reason": "create_only_existing",
                     "timings": {
                         "api.write.lease_acquire_s": lease_acquired_s,
+                        "api.write.snapshot_read_s": snapshot_read_s,
                         "api.write.total_s": time.perf_counter() - total_start,
                     },
                 }
@@ -97,31 +106,43 @@ async def _write_in_workspace(
             final_content=content,
             create_only=not overwrite,
         )
-        apply_start = time.perf_counter()
-        result = await services.occ_client.apply_changeset(
-            [change],
+
+        def read_base_hash(path: str) -> str | None:
+            nonlocal snapshot_read_s
+            if path != layer_path:
+                raise ValueError(f"unexpected single-path base hash read: {path}")
+            if known_base_hash_ready:
+                return known_base_hash
+            read_start = time.perf_counter()
+            bytes_, exists = services.layer_stack.read_bytes(path, lease.manifest)
+            snapshot_read_s += time.perf_counter() - read_start
+            return content_hash_bytes(bytes_) if exists and bytes_ is not None else None
+
+        prepared = prepare_single_path_changeset(
+            change,
             snapshot=lease.manifest,
-            options=CommitOptions(
-                atomic=False,
-                caller_id=actor_id,
-                description=description,
-            ),
+            gitignore=services.single_path_gitignore,
+            base_hash_reader=read_base_hash,
+            atomic=False,
+        )
+        apply_start = time.perf_counter()
+        result = await services.occ_client.commit_prepared_changeset(
+            prepared,
             workspace_ref=layer_stack_root,
         )
         apply_elapsed = time.perf_counter() - apply_start
     finally:
         services.manager.release_lease(lease.lease_id)
 
-    if isinstance(result, PreparedChangeset):
-        raise TypeError("write_file OCC client returned an uncommitted changeset")
     return _project_changeset(
         result,
         fallback_path=layer_path,
         verb="write",
         total_start=total_start,
-        gitignore=services.gitignore,
+        gitignore=services.single_path_gitignore,
         timings_extra={
             "api.write.lease_acquire_s": lease_acquired_s,
+            "api.write.snapshot_read_s": snapshot_read_s,
             "api.write.occ_apply_s": apply_elapsed,
         },
     )
