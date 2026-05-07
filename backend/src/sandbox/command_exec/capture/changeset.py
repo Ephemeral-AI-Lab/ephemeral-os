@@ -18,11 +18,10 @@ def workspace_changes_to_occ_changes(
 ) -> tuple[Change, ...]:
     """Convert policy-blind workspace changes into typed OCC mutations.
 
-    Phase 3 improvement #2: ``write`` kinds now thread ``content_path``
-    and ``final_hash`` (already computed during overlay capture) into
-    the ``WriteChange`` instead of reading the upperdir bytes here.
-    The downstream OCC stager copies the file in-kernel and reuses the
-    precomputed hash — saving one full host-side byte read per file.
+    ``write`` kinds thread ``content_path`` and ``final_hash`` (both
+    already populated during overlay capture) into the ``WriteChange``
+    instead of reading bytes here — the OCC stager copies the file
+    in-kernel and reuses the precomputed hash.
     """
     changes: list[Change] = []
     for path_change in path_changes:

@@ -20,7 +20,7 @@ from sandbox.occ.content.hashing import ContentHasher
 from sandbox.occ.ports import SnapshotReader
 
 StageWrite = Callable[[str, bytes], LayerChange]
-StageWriteFromPath = Callable[[str, str, str], LayerChange]
+StageWriteFromPath = Callable[[str, str, str, bytes | None], LayerChange]
 
 
 class GatedMerge:
@@ -77,11 +77,10 @@ class GatedMerge:
         initial_exists = current_exists
         content = current_content or b""
         exists = current_exists
-        # Phase 3 improvement #2 — track the staging hint for the *final*
-        # WriteChange in the group so the stager can `shutil.copyfile`
-        # the on-disk file instead of re-reading bytes through Python.
-        # Reset on any non-WriteChange (delete, edit, etc.) so a chained
-        # change can't mistakenly stage stale path/hash.
+        # Track the staging hint for the *final* WriteChange in the
+        # group so the stager can copy from disk instead of round-
+        # tripping bytes through Python. Reset on any non-WriteChange
+        # so a chained Edit/Delete can't stage a stale path/hash.
         final_content_path: str | None = None
         final_precomputed_hash: str | None = None
 
@@ -245,9 +244,14 @@ def _delta_for_final_state(
             and content_path is not None
             and precomputed_hash is not None
         ):
+            # `content` was already materialised in the apply loop for
+            # the hash chain — pass it through so the stager's small-
+            # file path doesn't re-read content_path.
             return LayerDelta(
                 changes=(
-                    stage_write_from_path(path, content_path, precomputed_hash),
+                    stage_write_from_path(
+                        path, content_path, precomputed_hash, content
+                    ),
                 )
             )
         return LayerDelta(changes=(stage_write(path, content),))

@@ -57,11 +57,10 @@ def build_overlay_write_change(
 ) -> WriteChange:
     """Build an overlay-captured full-file write without a caller base hash.
 
-    Phase 3 improvement #2: when ``content_path`` and ``precomputed_hash``
-    are supplied (the overlay-capture pipeline already computed them),
-    the bytes stay on disk and are streamed kernel-to-kernel by the OCC
-    stager. ``final_content`` becomes the legacy bytes-based path for
-    callers that haven't migrated.
+    When ``content_path`` and ``precomputed_hash`` are supplied, the
+    bytes stay on disk and the OCC stager streams them kernel-to-kernel.
+    ``final_content`` is the bytes-based fallback for callers that
+    don't have a content path on disk.
     """
     if final_content is None and content_path is None:
         raise ValueError(

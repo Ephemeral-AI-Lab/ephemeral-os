@@ -22,7 +22,7 @@ from sandbox.occ.changeset.types import (
 from sandbox.occ.ports import SnapshotReader
 
 StageWrite = Callable[[str, bytes], LayerChange]
-StageWriteFromPath = Callable[[str, str, str], LayerChange]
+StageWriteFromPath = Callable[[str, str, str, bytes | None], LayerChange]
 _FinalKind = Literal["write", "delete", "symlink", "opaque_dir"]
 
 
@@ -75,9 +75,9 @@ class DirectMerge:
         content = current_content or b""
         final_kind: _FinalKind = "write" if current_exists else "delete"
         symlink_target: str | None = None
-        # Phase 3 improvement #2 — track the final WriteChange's
-        # on-disk content_path so the stager can `shutil.copyfile`
-        # instead of round-tripping the bytes through Python.
+        # Track the final WriteChange's on-disk content_path so the
+        # stager can copy from disk instead of round-tripping bytes
+        # through Python.
         final_content_path: str | None = None
         final_precomputed_hash: str | None = None
 
@@ -175,12 +175,15 @@ class DirectMerge:
                 and final_content_path is not None
                 and final_precomputed_hash is not None
             ):
+                # Pass the already-loaded bytes through; stager's
+                # small-file path skips the second disk read.
                 delta = LayerDelta(
                     changes=(
                         stage_write_from_path(
                             group.path,
                             final_content_path,
                             final_precomputed_hash,
+                            content,
                         ),
                     )
                 )

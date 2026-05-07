@@ -31,6 +31,7 @@ from pathlib import Path
 
 import pytest
 
+from .._harness.phase05_public_file_ops import seed_phase05_imported_base
 from .._harness.sandbox_fixture import SandboxHandle
 
 
@@ -99,6 +100,9 @@ async def test_phase08_dev_shm_stays_bounded(
     workspace_base_sandbox: SandboxHandle,
 ) -> None:
     handle = workspace_base_sandbox
+    # Seed the layer-stack workspace binding so the daemon's first
+    # ``tool.shell`` doesn't fault on a missing workspace.json.
+    await seed_phase05_imported_base(handle)
     artifact = _artifact_path()
     rows: list[dict[str, object]] = []
 

@@ -51,6 +51,11 @@ pytestmark = pytest.mark.asyncio
 
 
 _GATED_ROOT = "tracked/load/phase09"
+# DirectMerge (the only route that handles SymlinkChange + OpaqueDirChange
+# kinds) is selected when the path is gitignored. Use a `dist/` prefix
+# for adversarial cells whose workload writes symlinks; tracked-path
+# symlinks are explicitly rejected by GatedMerge as "unsupported".
+_DIST_ROOT = "dist/phase09"
 
 
 def _run_id() -> str:
@@ -150,7 +155,8 @@ async def _count_files(handle: SandboxHandle, prefix: str) -> int:
 async def _reset_phase09_dirs(handle: SandboxHandle) -> None:
     await _shell_ok(
         handle,
-        f"rm -rf {_GATED_ROOT}; mkdir -p {_GATED_ROOT}",
+        f"rm -rf {_GATED_ROOT} {_DIST_ROOT}; "
+        f"mkdir -p {_GATED_ROOT} {_DIST_ROOT}",
         description="phase09 reset",
     )
 
@@ -501,7 +507,9 @@ async def test_phase09_adversarial(
     )
 
     # ---- 2. Symlink target = absolute path inside workspace ----
-    sym_in_dir = f"{_GATED_ROOT}/adv_sym_in"
+    # Symlinks are routed through DirectMerge — use a gitignored prefix
+    # so GatedMerge doesn't reject the SymlinkChange kind.
+    sym_in_dir = f"{_DIST_ROOT}/adv_sym_in"
     target_inside = "/testbed/keep.txt"
 
     async def _check_sym_in(handle, _result):
@@ -531,7 +539,8 @@ async def test_phase09_adversarial(
     )
 
     # ---- 3. Symlink target = absolute path OUTSIDE workspace ----
-    sym_out_dir = f"{_GATED_ROOT}/adv_sym_out"
+    # Same routing rationale as adv_sym_in.
+    sym_out_dir = f"{_DIST_ROOT}/adv_sym_out"
     target_outside = "/etc/hostname"
 
     async def _check_sym_out(handle, _result):

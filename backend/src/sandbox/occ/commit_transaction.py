@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import time
 from dataclasses import dataclass
@@ -30,6 +31,13 @@ from sandbox.occ.ports import (
     OccLayerStackPorts,
     SnapshotReader,
 )
+
+
+# Below this threshold, a buffered Python read+write is cheaper than
+# shutil.copyfile (which pays open/sendfile/close per call). Above it,
+# the kernel-level copy wins. Crossover measured between 4 KiB (even)
+# and 64 KiB (clear win); 16 KiB is conservative on the win side.
+_SMALL_FILE_BYTES_THRESHOLD = 16 * 1024
 
 
 @dataclass(frozen=True)
@@ -307,15 +315,14 @@ class _LayerChangeStager:
         path: str,
         content_path: str,
         precomputed_hash: str,
+        cached_bytes: bytes | None = None,
     ) -> LayerChange:
-        """Phase 3 improvement #2 — stage from an existing on-disk file.
+        """Stage from an existing on-disk file.
 
-        Skips the host-side ``read_bytes`` and the duplicate SHA-256
-        compute that ``write`` performs. Uses ``shutil.copyfile`` which
-        delegates to ``os.sendfile`` on Linux for kernel-level copy.
-        Caller guarantees the precomputed hash matches the file at
-        ``content_path`` (overlay capture writes the file once and hashes
-        it once during ``capture_workspace_upperdir``).
+        Caller guarantees ``precomputed_hash`` matches the file at
+        ``content_path`` — the stager reuses it instead of recomputing.
+        ``cached_bytes`` short-circuits the small-file disk read when
+        the merge layer already loaded the bytes for the hash chain.
         """
         if self._staging_path is None:
             raise RuntimeError("OCC layer-change stager is not active")
@@ -323,7 +330,24 @@ class _LayerChangeStager:
         try:
             self._counter += 1
             source = self._staging_path / f"{self._counter:06d}.bin"
-            shutil.copyfile(content_path, source)
+            try:
+                file_size = os.path.getsize(content_path)
+            except OSError:
+                file_size = 0
+            if file_size >= _SMALL_FILE_BYTES_THRESHOLD:
+                shutil.copyfile(content_path, source)
+            elif cached_bytes is not None:
+                # Cheap consistency guard against a caller passing
+                # bytes for a different file than content_path.
+                if file_size != len(cached_bytes):
+                    raise RuntimeError(
+                        "stage_write_from_path cached_bytes length "
+                        f"{len(cached_bytes)} disagrees with file size "
+                        f"{file_size} at {content_path!r}"
+                    )
+                source.write_bytes(cached_bytes)
+            else:
+                source.write_bytes(Path(content_path).read_bytes())
             return LayerChange(
                 path=path,
                 kind="write",

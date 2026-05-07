@@ -108,8 +108,6 @@ def overlay_path_changes_to_occ_changes(
                 raise ValueError(
                     f"write overlay path change lacks final_hash: {path_change.path}"
                 )
-            # Phase 3 improvement #2: thread content_path + precomputed
-            # hash through; stager copies in-kernel.
             changes.append(
                 build_overlay_write_change(
                     path=path_change.path,
