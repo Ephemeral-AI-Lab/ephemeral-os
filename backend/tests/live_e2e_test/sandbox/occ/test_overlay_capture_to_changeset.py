@@ -17,7 +17,7 @@ from sandbox.occ.capture.overlay import overlay_path_changes_to_occ_changes
 from sandbox.overlay.capture.changes import OverlayPathChange, content_hash
 from sandbox.overlay.capture.upperdir import capture_changes
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.layer_stack.view.merged import OPAQUE_MARKER, WHITEOUT_PREFIX
+from sandbox.layer_stack.merged_view import OPAQUE_MARKER, WHITEOUT_PREFIX
 
 label = "occ.overlay_capture_to_changeset"
 before = sample_resource()

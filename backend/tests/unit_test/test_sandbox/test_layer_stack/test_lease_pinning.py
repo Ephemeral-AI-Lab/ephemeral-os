@@ -58,7 +58,7 @@ def _publish_layer(
 def evict_log(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     """Capture every `MergedView.evict_layer_index` call site-wide."""
     log: list[str] = []
-    from sandbox.layer_stack.view import merged as merged_view_mod
+    import sandbox.layer_stack.merged_view as merged_view_mod
 
     original = merged_view_mod.MergedView.evict_layer_index
 

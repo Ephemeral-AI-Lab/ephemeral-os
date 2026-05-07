@@ -8,7 +8,7 @@ from typing import ContextManager, Protocol
 
 from sandbox.layer_stack.layer.change import LayerChange
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.layer_stack.commit.staging import CommitStagingArea
+from sandbox.layer_stack.staging import CommitStagingArea
 
 
 @dataclass(frozen=True)
