@@ -22,6 +22,6 @@ def __getattr__(name: str) -> Any:
         module = import_module("engine.background.manager")
         return getattr(module, name)
     if name in {"EphemeralAgent", "spawn_agent"}:
-        module = import_module("engine.runtime.agent")
+        module = import_module("engine.agent.factory")
         return getattr(module, name)
     raise AttributeError(name)

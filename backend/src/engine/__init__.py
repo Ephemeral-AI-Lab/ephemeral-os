@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
-    from engine.runtime.agent import EphemeralAgent, spawn_agent
+    from engine.agent.factory import EphemeralAgent, spawn_agent
     from message.messages import (
         ConversationMessage,
         TextBlock,
@@ -57,8 +57,8 @@ __all__ = [
 ]
 
 _SUBMODULES = {
-    "EphemeralAgent": ("engine.runtime.agent", "EphemeralAgent"),
-    "spawn_agent": ("engine.runtime.agent", "spawn_agent"),
+    "EphemeralAgent": ("engine.agent.factory", "EphemeralAgent"),
+    "spawn_agent": ("engine.agent.factory", "spawn_agent"),
     "BackgroundTaskManager": ("engine.background.manager", "BackgroundTaskManager"),
     "TrackedBackgroundTask": ("engine.background.manager", "TrackedBackgroundTask"),
     "ConversationMessage": ("message.messages", "ConversationMessage"),

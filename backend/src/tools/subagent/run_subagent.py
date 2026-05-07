@@ -179,7 +179,7 @@ async def run_subagent(
     context: ToolExecutionContextService,
 ) -> ToolResult:
     """Spawn a named subagent and rejoin via the background-task lifecycle."""
-    from engine.runtime.lifecycle import run_ephemeral_agent
+    from engine.agent.lifecycle import run_ephemeral_agent
 
     validation = _validate_run_subagent_request(
         agent_name=agent_name,

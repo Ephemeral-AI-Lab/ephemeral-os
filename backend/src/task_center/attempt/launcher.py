@@ -8,7 +8,7 @@ from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING
 
 from agents import get_definition
-from engine.runtime.lifecycle import EphemeralRunResult
+from engine.agent.lifecycle import EphemeralRunResult
 from message.stream_events import StreamEvent
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt.runtime import (
@@ -96,7 +96,7 @@ class EphemeralAttemptAgentLauncher:
         runtime = self._require_runtime()
         runner = self._runner
         if runner is None:
-            from engine.runtime.lifecycle import run_ephemeral_agent
+            from engine.agent.lifecycle import run_ephemeral_agent
 
             runner = run_ephemeral_agent
 

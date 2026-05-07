@@ -94,7 +94,7 @@ async def run_ephemeral_agent(
     callers that need recovery must spawn a fresh agent run with a new prompt.
     """
     from agents import AgentRunTracker
-    from engine.runtime.agent import spawn_agent
+    from engine.agent.factory import spawn_agent
 
     db_available = False
     if persist_agent_run and task_id:

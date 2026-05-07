@@ -349,7 +349,7 @@ class EvalAgent:
         # Resolve the active model so the test uses the same provider +
         # credentials the server would.
         from config.model_config import NoActiveModelError, try_get_active_model_kwargs
-        from engine.runtime.agent import spawn_agent
+        from engine.agent.factory import spawn_agent
         from providers.provider import make_api_client
 
         db_kwargs = try_get_active_model_kwargs() or {}

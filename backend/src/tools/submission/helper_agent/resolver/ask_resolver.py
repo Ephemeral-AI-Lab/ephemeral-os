@@ -49,7 +49,7 @@ async def ask_resolver(
     *,
     context: ToolExecutionContextService,
 ) -> ToolResult:
-    from engine.runtime.lifecycle import run_ephemeral_agent
+    from engine.agent.lifecycle import run_ephemeral_agent
 
     runtime_config = context.runtime_config
     if runtime_config is None:
