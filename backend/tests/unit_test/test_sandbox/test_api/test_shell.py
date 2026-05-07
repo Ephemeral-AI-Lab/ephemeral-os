@@ -9,12 +9,12 @@ from sandbox.api.tool.shell import shell
 
 
 @pytest.mark.asyncio
-async def test_shell_dispatches_to_sandbox_runtime(
+async def test_shell_dispatches_to_sandbox_daemon(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[tuple[str, str, dict[str, object], int]] = []
 
-    async def fake_call_runtime_api(sandbox_id, op, args, *, timeout):
+    async def fake_call_daemon_api(sandbox_id, op, args, *, timeout):
         calls.append((sandbox_id, op, args, timeout))
         return {
             "success": True,
@@ -30,8 +30,8 @@ async def test_shell_dispatches_to_sandbox_runtime(
         }
 
     monkeypatch.setattr(
-        "sandbox.api.tool.shell.call_runtime_api",
-        fake_call_runtime_api,
+        "sandbox.api.tool.shell.call_daemon_api",
+        fake_call_daemon_api,
     )
 
     result = await shell(
@@ -67,15 +67,15 @@ async def test_shell_dispatches_to_sandbox_runtime(
 
 
 @pytest.mark.asyncio
-async def test_shell_rejects_stdin_without_runtime_dispatch(
+async def test_shell_rejects_stdin_without_daemon_dispatch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def fail_call_runtime_api(*_args, **_kwargs):
-        raise AssertionError("runtime dispatch should not be called")
+    async def fail_call_daemon_api(*_args, **_kwargs):
+        raise AssertionError("daemon dispatch should not be called")
 
     monkeypatch.setattr(
-        "sandbox.api.tool.shell.call_runtime_api",
-        fail_call_runtime_api,
+        "sandbox.api.tool.shell.call_daemon_api",
+        fail_call_daemon_api,
     )
 
     result = await shell(

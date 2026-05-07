@@ -33,13 +33,13 @@ Source of truth: `backend/src/sandbox/`.
 │                       ▼                                      │
 │             api/tool/shell.py:shell()                        │
 │                       ▼                                      │
-│             api/tool/_runtime.py:call_runtime_api            │
+│             api/tool/_daemon_client.py:call_daemon_api       │
 │                       ▼                                      │
-│             host/rpc/client._call_runtime_server             │
+│             host/rpc/client._call_daemon                     │
 └───────────────────────┼──────────────────────────────────────┘
                         │  provider.exec (RPC into sandbox)
                         ▼
-┌─────────────────── SANDBOX (runtime daemon) ─────────────────┐
+┌─────────────────── SANDBOX (daemon) ────────────────────────┐
 │  daemon/handlers/shell.shell ─► services/shell_runner        │
 │                                       │                      │
 │         ┌─────────────────────────────┼─────────────────┐    │
@@ -75,9 +75,9 @@ Two views: host→daemon transport, then in-sandbox orchestration.
 **Host → daemon (transport):**
 
 ```
-caller        SandboxAPI.shell        _runtime           daemon
+caller        SandboxAPI.shell        _daemon_client     daemon
   │   shell        │                     │                 │
-  ├───────────────►│ call_runtime_api    │                 │
+  ├───────────────►│ call_daemon_api     │                 │
   │                ├────────────────────►│ provider.exec   │
   │                │                     ├────────────────►│ api.shell(args)
   │                │                     │                 ├─► _execute_shell (below)
@@ -120,13 +120,13 @@ cmd_exec               layer_stack            overlay/mount         occ
 #### Phase 1 — Host marshalling
 
 `api/tool/shell.py:shell` builds the args dict, normalizes absolute `cwd`
-to `"."`, and ships it via `call_runtime_api` (`api/tool/_runtime.py`),
+to `"."`, and ships it via `call_daemon_api` (`api/tool/_daemon_client.py`),
 which adds `layer_stack_root=$BUNDLE_REMOTE_DIR/layer-stack` and forwards
-through the provider adapter into the sandbox's resident runtime daemon.
+through the provider adapter into the sandbox's resident daemon.
 
 #### Phase 2 — Lease a snapshot (layer_stack)
 
-`runtime/command_exec_server._execute_shell` calls
+`daemon/services/shell_runner._execute_shell` calls
 `LayerStackManager.prepare_workspace_snapshot`:
 
 ```
@@ -429,7 +429,7 @@ except through the documented `commit_transaction()` port.
 | Concern | Module |
 |---|---|
 | Host entrypoint | `sandbox/api/tool/shell.py`, `sandbox/api/facade.py` |
-| Host → daemon transport | `sandbox/api/tool/_runtime.py`, `sandbox/host/rpc/client.py` |
+| Host → daemon transport | `sandbox/api/tool/_daemon_client.py`, `sandbox/host/rpc/client.py` |
 | Daemon dispatch | `sandbox/daemon/rpc/dispatcher.py` |
 | Shell orchestrator | `sandbox/daemon/services/shell_runner.py` |
 | Mount + exec | `sandbox/command_exec/workspace_mount.py`, `sandbox/command_exec/namespace_helper.py` |

@@ -150,7 +150,7 @@ def test_bundle_excludes_host_only_raw_exec_modules() -> None:
         "sandbox/api/read.py",
         "sandbox/api/shell.py",
         "sandbox/api/write.py",
-        "sandbox/api/tool/_runtime.py",
+        "sandbox/api/tool/_daemon_client.py",
         "sandbox/api/tool/edit.py",
         "sandbox/api/tool/raw_exec.py",
         "sandbox/api/tool/read.py",
@@ -223,7 +223,7 @@ def test_bundle_includes_peer_setup_scripts(
         assert member.read().decode("utf-8") == "#!/usr/bin/env bash\necho setup\n"
 
 
-def test_bundle_extracted_runtime_modules_import_clean(tmp_path: Path) -> None:
+def test_bundle_extracted_daemon_modules_import_clean(tmp_path: Path) -> None:
     bundle = _runtime_bundle_bytes()
     extract_dir = tmp_path / "extracted"
     _extract_bundle(bundle, extract_dir)
@@ -246,7 +246,7 @@ def test_bundle_extracted_runtime_modules_import_clean(tmp_path: Path) -> None:
         env={"PATH": "/usr/bin:/bin"},
     )
     assert result.returncode == 0, (
-        f"runtime import failed: stdout={result.stdout!r} stderr={result.stderr!r}"
+        f"daemon import failed: stdout={result.stdout!r} stderr={result.stderr!r}"
     )
     assert "ok: True True unknown_op" in result.stdout
 

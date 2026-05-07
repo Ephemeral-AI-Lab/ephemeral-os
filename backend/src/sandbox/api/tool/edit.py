@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from sandbox.api.tool._runtime import (
-    call_runtime_api,
+from sandbox.api.tool._daemon_client import (
+    call_daemon_api,
     conflict_from_payload,
     int_from_payload,
     paths_from_payload,
@@ -14,7 +14,7 @@ from sandbox.api.utils.models import EditFileRequest, EditFileResult
 
 async def edit_file(sandbox_id: str, request: EditFileRequest) -> EditFileResult:
     """Apply search/replace edits through sandbox-local OCC."""
-    raw = await call_runtime_api(
+    raw = await call_daemon_api(
         sandbox_id,
         "api.edit_file",
         {

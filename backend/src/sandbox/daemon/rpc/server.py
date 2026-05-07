@@ -66,7 +66,7 @@ async def _handle_connection(
                 "timings": {},
                 "error": {
                     "kind": "bad_json",
-                    "message": "runtime daemon request must be valid JSON",
+                    "message": "daemon request must be valid JSON",
                     "details": {"message": str(exc)},
                 },
             }
@@ -78,7 +78,7 @@ async def _handle_connection(
                     "timings": {},
                     "error": {
                         "kind": "invalid_envelope",
-                        "message": "runtime envelope must be a JSON object",
+                        "message": "daemon envelope must be a JSON object",
                         "details": {},
                     },
                 }
@@ -98,7 +98,7 @@ async def _handle_connection(
         writer.write(payload)
         await writer.drain()
     except Exception:  # pragma: no cover - logged for diagnostics
-        logger.exception("runtime daemon connection failed")
+        logger.exception("daemon connection failed")
     finally:
         try:
             writer.close()
@@ -136,7 +136,7 @@ async def serve(socket_path: Path, pid_path: Path) -> None:
     except OSError:
         pass
     _write_pid(pid_path)
-    logger.info("runtime daemon listening on %s pid=%s", socket_path, os.getpid())
+    logger.info("daemon listening on %s pid=%s", socket_path, os.getpid())
 
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()

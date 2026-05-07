@@ -5,8 +5,8 @@ from __future__ import annotations
 import time
 from collections.abc import Mapping
 
-from sandbox.api.tool._runtime import (
-    call_runtime_api,
+from sandbox.api.tool._daemon_client import (
+    call_daemon_api,
     conflict_from_payload,
     int_from_payload,
     paths_from_payload,
@@ -25,7 +25,7 @@ async def shell(sandbox_id: str, request: ShellRequest) -> ShellResult:
             timings={"api.shell.total_s": time.perf_counter() - total_start},
         )
 
-    raw = await call_runtime_api(
+    raw = await call_daemon_api(
         sandbox_id,
         "api.shell",
         {

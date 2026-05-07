@@ -1,9 +1,9 @@
-"""Phase 05 — OCC mutation gate runtime-boundary + retry-bound tests.
+"""Phase 05 — OCC mutation gate daemon-boundary + retry-bound tests.
 
 These tests assert the §6 structural invariants:
 
-* occ-server is not a host-callable runtime dispatch module.
-* Public data operations dispatch through ``runtime.handlers``.
+* occ-server is not a host-callable daemon dispatch module.
+* Public data operations dispatch through ``sandbox.daemon.handlers``.
 * In-workspace classifier predicate lives in command-exec only;
   occ-server source contains no ``workspace_root`` classification call
   sites.
@@ -20,7 +20,7 @@ from sandbox.daemon.services import occ_backend
 
 
 # ---------------------------------------------------------------------------
-# Runtime boundary
+# Daemon boundary
 # ---------------------------------------------------------------------------
 
 

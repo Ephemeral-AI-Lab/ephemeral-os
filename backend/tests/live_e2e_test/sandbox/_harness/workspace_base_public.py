@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from pathlib import PurePosixPath
 from typing import Any
 
-from sandbox.api.tool import _runtime as runtime_mod
+from sandbox.api.tool import _daemon_client as daemon_client_mod
 
 from .sandbox_fixture import SandboxHandle, WORKSPACE_ROOT
 
@@ -55,7 +55,7 @@ for rel, content in payload["files"].items():
     )
     assert result.exit_code == 0, result.stderr or result.stdout
 
-    built = await runtime_mod.call_runtime_api(
+    built = await daemon_client_mod.call_daemon_api(
         handle.sandbox_id,
         "api.build_workspace_base",
         {"workspace_root": WORKSPACE_ROOT, "reset": True},

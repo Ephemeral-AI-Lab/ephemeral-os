@@ -143,7 +143,7 @@ are all landed (see commits `42bdfde7`, `ad00c87b`, `083bc336`, `fbae5dc2`).
 This section records the post-implementation measurements taken with
 the same probe (`test_latency_attribution.py`) against the same
 sandbox image (`registry:6000/daytona/sweevo-psf-requests-3738:v1`),
-sweeping c ∈ {1, 4, 8, 16}. The run uses the resident runtime daemon and the
+sweeping c ∈ {1, 4, 8, 16}. The run uses the resident daemon and the
 pathspec gitignore oracle.
 
 ### Wall p99 across phases (c=16, ms)

@@ -1,4 +1,4 @@
-"""Host transport for sandbox-local guarded runtime operations."""
+"""Host transport for sandbox-local guarded daemon operations."""
 
 from __future__ import annotations
 
@@ -7,13 +7,13 @@ from typing import Any
 
 from sandbox.api.utils.models import ConflictInfo
 from sandbox.host.deploy.bundle import BUNDLE_REMOTE_DIR
-from sandbox.host.rpc.client import _call_runtime_server
+from sandbox.host.rpc.client import _call_daemon
 from sandbox.providers.registry import get_adapter
 
 DEFAULT_LAYER_STACK_ROOT = f"{BUNDLE_REMOTE_DIR}/layer-stack"
 
 
-async def call_runtime_api(
+async def call_daemon_api(
     sandbox_id: str,
     op: str,
     args: dict[str, Any],
@@ -21,16 +21,16 @@ async def call_runtime_api(
     timeout: int = 60,
     layer_stack_root: str = DEFAULT_LAYER_STACK_ROOT,
 ) -> dict[str, Any]:
-    """Call one guarded API operation inside the preinstalled runtime bundle."""
-    runtime_args = {
+    """Call one guarded API operation inside the preinstalled daemon bundle."""
+    daemon_args = {
         "layer_stack_root": layer_stack_root,
         **args,
     }
-    return await _call_runtime_server(
+    return await _call_daemon(
         exec_fn=get_adapter(sandbox_id).exec,
         sandbox_id=sandbox_id,
         op=op,
-        args=runtime_args,
+        args=daemon_args,
         timeout=timeout,
     )
 
@@ -71,7 +71,7 @@ def int_from_payload(value: object, *, default: int) -> int:
 
 __all__ = [
     "DEFAULT_LAYER_STACK_ROOT",
-    "call_runtime_api",
+    "call_daemon_api",
     "conflict_from_payload",
     "int_from_payload",
     "paths_from_payload",

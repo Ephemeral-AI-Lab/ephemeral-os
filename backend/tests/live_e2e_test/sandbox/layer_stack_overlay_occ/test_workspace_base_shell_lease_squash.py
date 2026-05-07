@@ -6,7 +6,7 @@ import asyncio
 
 import pytest
 
-from sandbox.api.tool._runtime import DEFAULT_LAYER_STACK_ROOT
+from sandbox.api.tool._daemon_client import DEFAULT_LAYER_STACK_ROOT
 
 from .._harness.concurrency import gather_with_barrier
 from .._harness.integrated_cases import (

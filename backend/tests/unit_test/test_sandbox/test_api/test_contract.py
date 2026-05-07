@@ -31,15 +31,15 @@ _MODEL_ONLY_MODULES = {
     "tool/__init__.py",
 }
 _PUBLIC_VERB_IMPORT_ALLOWLIST = {
-    "tool/read.py": {"sandbox.api.tool._runtime"},
+    "tool/read.py": {"sandbox.api.tool._daemon_client"},
     "tool/write.py": {
-        "sandbox.api.tool._runtime",
+        "sandbox.api.tool._daemon_client",
     },
     "tool/edit.py": {
-        "sandbox.api.tool._runtime",
+        "sandbox.api.tool._daemon_client",
     },
     "tool/shell.py": {
-        "sandbox.api.tool._runtime",
+        "sandbox.api.tool._daemon_client",
     },
     "status/__init__.py": {
         "sandbox.host.ops.recovery",

@@ -74,7 +74,7 @@ def wrap_unshare(source: str, *, prog: str = "python3") -> str:
 
 
 def _python_launcher(source: str) -> str:
-    """Choose the same Python floor as the resident runtime daemon."""
+    """Choose the same Python floor as the resident daemon."""
     version_check = "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)"
     src = shlex.quote(source)
     check = shlex.quote(version_check)

@@ -61,8 +61,20 @@ def _row_for_cell(
     stager_write_count = float(timings.get("occ.commit.stager_write_count", 0.0))
     prepare_groups_s = float(timings.get("occ.prepare.prepare_groups_s", 0.0))
     group_by_route_s = float(timings.get("occ.prepare.group_by_route_s", 0.0))
+    gated_read_s = float(timings.get("occ.commit.gated_read_current_total_s", 0.0))
+    gated_apply_s = float(
+        timings.get("occ.commit.gated_apply_changes_total_s", 0.0)
+    )
+    gated_stage_s = float(timings.get("occ.commit.gated_stage_delta_total_s", 0.0))
+    gated_count = float(timings.get("occ.commit.gated_path_count", 0.0))
+    direct_read_s = float(timings.get("occ.commit.direct_read_current_total_s", 0.0))
+    direct_apply_s = float(
+        timings.get("occ.commit.direct_apply_changes_total_s", 0.0)
+    )
+    direct_stage_s = float(timings.get("occ.commit.direct_stage_delta_total_s", 0.0))
+    direct_count = float(timings.get("occ.commit.direct_path_count", 0.0))
     return {
-        "schema": "phase06.large_capture_scaling.v1",
+        "schema": "phase06.large_capture_scaling.v2",
         "prefix": prefix,
         "k": k,
         "wall_ms": round(wall_ms, 3),
@@ -75,6 +87,14 @@ def _row_for_cell(
         "stager_write_count": stager_write_count,
         "occ_prepare_groups_s": round(prepare_groups_s, 6),
         "occ_group_by_route_s": round(group_by_route_s, 6),
+        "gated_read_current_total_s": round(gated_read_s, 6),
+        "gated_apply_changes_total_s": round(gated_apply_s, 6),
+        "gated_stage_delta_total_s": round(gated_stage_s, 6),
+        "gated_path_count": gated_count,
+        "direct_read_current_total_s": round(direct_read_s, 6),
+        "direct_apply_changes_total_s": round(direct_apply_s, 6),
+        "direct_stage_delta_total_s": round(direct_stage_s, 6),
+        "direct_path_count": direct_count,
         "commit_per_file_us": round(commit_s * 1_000_000.0 / max(k, 1), 3),
         "capture_per_file_us": round(capture_s * 1_000_000.0 / max(k, 1), 3),
         "stager_per_file_us": round(
@@ -83,9 +103,42 @@ def _row_for_cell(
     }
 
 
+async def _run_single_cell(
+    handle: SandboxHandle,
+    *,
+    prefix: str,
+    k: int,
+) -> dict[str, object]:
+    command = build_k_capture_command(prefix=prefix, k=k)
+    label = f"phase06.large_capture.{_slug(prefix)}.k{k}"
+    result, metric = await timed_call(
+        label,
+        handle.tool.shell(
+            command,
+            timeout=300,
+            description=f"k_capture prefix={prefix} k={k}",
+        ),
+    )
+    assert result.success, f"shell failed for {prefix} k={k}: {result}"
+    row = _row_for_cell(
+        prefix=prefix,
+        k=k,
+        timings=metric.timings,
+        wall_ms=metric.elapsed_ms,
+    )
+    emit_metric(label, row)
+    return row
+
+
 async def test_phase06_large_capture_k_scaling(
     workspace_base_sandbox: SandboxHandle,
 ) -> None:
+    """K-scaling matrix at K ∈ {1, 100, 1000} only.
+
+    K=10K cells live in their own test functions so each gets a clean
+    workspace fixture and the cumulative-state ENOSPC failure observed in the
+    baseline run cannot contaminate the breakdown rows.
+    """
     handle = workspace_base_sandbox
     await seed_phase05_imported_base(handle)
 
@@ -94,25 +147,8 @@ async def test_phase06_large_capture_k_scaling(
 
     for prefix in _PREFIXES:
         for k in _K_VALUES:
-            command = build_k_capture_command(prefix=prefix, k=k)
-            label = f"phase06.large_capture.{_slug(prefix)}.k{k}"
-            result, metric = await timed_call(
-                label,
-                handle.tool.shell(
-                    command,
-                    timeout=300,
-                    description=f"k_capture prefix={prefix} k={k}",
-                ),
-            )
-            assert result.success, f"shell failed for {prefix} k={k}: {result}"
-            row = _row_for_cell(
-                prefix=prefix,
-                k=k,
-                timings=metric.timings,
-                wall_ms=metric.elapsed_ms,
-            )
+            row = await _run_single_cell(handle, prefix=prefix, k=k)
             rows.append(row)
-            emit_metric(label, row)
 
     with artifact.open("w", encoding="utf-8") as fh:
         for row in rows:
@@ -125,3 +161,51 @@ async def test_phase06_large_capture_k_scaling(
         {"artifact": str(artifact), "rows": len(rows)},
     )
     assert len(rows) == len(_PREFIXES) * len(_K_VALUES)
+
+
+async def test_phase06_large_capture_tracked_k10000(
+    workspace_base_sandbox: SandboxHandle,
+) -> None:
+    """K=10K tracked-prefix cell on a clean workspace fixture."""
+    handle = workspace_base_sandbox
+    await seed_phase05_imported_base(handle)
+    artifact = _artifact_path().with_name(
+        _artifact_path().name.replace(
+            "phase06-large-capture-scaling-",
+            "phase06-large-capture-tracked-k10000-",
+        )
+    )
+    row = await _run_single_cell(
+        handle,
+        prefix="tracked/load/k_capture",
+        k=10_000,
+    )
+    artifact.write_text(
+        json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+    print(f"\n[phase06:tracked_k10000] artifact={artifact}")
+
+
+async def test_phase06_large_capture_dist_k10000(
+    workspace_base_sandbox: SandboxHandle,
+) -> None:
+    """K=10K gitignored-prefix cell on a clean workspace fixture."""
+    handle = workspace_base_sandbox
+    await seed_phase05_imported_base(handle)
+    artifact = _artifact_path().with_name(
+        _artifact_path().name.replace(
+            "phase06-large-capture-scaling-",
+            "phase06-large-capture-dist-k10000-",
+        )
+    )
+    row = await _run_single_cell(
+        handle,
+        prefix="dist/k_capture",
+        k=10_000,
+    )
+    artifact.write_text(
+        json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+    print(f"\n[phase06:dist_k10000] artifact={artifact}")

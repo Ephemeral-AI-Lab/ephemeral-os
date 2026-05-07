@@ -27,7 +27,7 @@ tables because they are not part of the concurrent profile fan-out.
 
 The public runtime transport now assumes the runtime bundle was installed during
 sandbox setup. Public API calls do not probe the bundle marker and do not upload
-the bundle. If the bundle is missing, the runtime dispatch fails closed.
+the bundle. If the bundle is missing, daemon dispatch fails closed.
 
 Shell fan-out now uses `api.shell_batch`, so the shell side sends one runtime
 envelope for all shell items in a profile. That changes shell transport from

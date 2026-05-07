@@ -81,11 +81,11 @@ def ensure_workspace_base(
         )
         return
 
-    from sandbox.api.tool._runtime import call_runtime_api
+    from sandbox.api.tool._daemon_client import call_daemon_api
     from sandbox.utils.async_bridge import run_sync
 
     run_sync(
-        call_runtime_api(
+        call_daemon_api(
             sandbox_id,
             "api.ensure_workspace_base",
             {"workspace_root": workspace},
@@ -93,7 +93,7 @@ def ensure_workspace_base(
         )
     )
     readiness = run_sync(
-        call_runtime_api(
+        call_daemon_api(
             sandbox_id,
             "api.runtime.ready",
             {},

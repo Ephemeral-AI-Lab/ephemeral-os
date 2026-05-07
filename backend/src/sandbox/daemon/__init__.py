@@ -1,4 +1,4 @@
-"""In-sandbox daemon modules that ship inside the runtime bundle.
+"""In-sandbox daemon modules that ship inside the deployed sandbox bundle.
 
 Strictly the bytes that execute INSIDE a sandbox: ``rpc/`` for the AF_UNIX
 server and dispatcher, ``handlers/`` for OP_TABLE entries, ``services/`` for

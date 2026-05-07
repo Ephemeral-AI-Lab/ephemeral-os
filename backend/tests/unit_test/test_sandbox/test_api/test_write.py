@@ -9,12 +9,12 @@ from sandbox.api.tool.write import write_file
 
 
 @pytest.mark.asyncio
-async def test_write_file_dispatches_to_sandbox_runtime(
+async def test_write_file_dispatches_to_sandbox_daemon(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[tuple[str, str, dict[str, object], int]] = []
 
-    async def fake_call_runtime_api(sandbox_id, op, args, *, timeout):
+    async def fake_call_daemon_api(sandbox_id, op, args, *, timeout):
         calls.append((sandbox_id, op, args, timeout))
         return {
             "success": True,
@@ -26,8 +26,8 @@ async def test_write_file_dispatches_to_sandbox_runtime(
         }
 
     monkeypatch.setattr(
-        "sandbox.api.tool.write.call_runtime_api",
-        fake_call_runtime_api,
+        "sandbox.api.tool.write.call_daemon_api",
+        fake_call_daemon_api,
     )
 
     result = await write_file(
@@ -64,7 +64,7 @@ async def test_write_file_dispatches_to_sandbox_runtime(
 async def test_write_file_guard_failure_maps_conflict_info(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def fake_call_runtime_api(sandbox_id, op, args, *, timeout):
+    async def fake_call_daemon_api(sandbox_id, op, args, *, timeout):
         del sandbox_id, op, args, timeout
         return {
             "success": False,
@@ -80,8 +80,8 @@ async def test_write_file_guard_failure_maps_conflict_info(
         }
 
     monkeypatch.setattr(
-        "sandbox.api.tool.write.call_runtime_api",
-        fake_call_runtime_api,
+        "sandbox.api.tool.write.call_daemon_api",
+        fake_call_daemon_api,
     )
 
     result = await write_file(

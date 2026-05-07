@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from sandbox.api.tool import _runtime as runtime_mod
+from sandbox.api.tool import _daemon_client as daemon_client_mod
 
 from .native_probe import BUNDLE_REMOTE_DIR
 from .sandbox_fixture import SandboxHandle, WORKSPACE_ROOT
@@ -47,7 +47,7 @@ async def runtime_call(
     layer_stack_root: str = LAYER_STACK_ROOT,
     timeout: int = 180,
 ) -> dict[str, Any]:
-    return await runtime_mod.call_runtime_api(
+    return await daemon_client_mod.call_daemon_api(
         handle.sandbox_id,
         op,
         dict(args or {}),

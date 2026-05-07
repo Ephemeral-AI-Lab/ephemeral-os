@@ -1,4 +1,4 @@
-"""Tests for the generic sandbox runtime dispatcher."""
+"""Tests for the generic sandbox daemon dispatcher."""
 
 from __future__ import annotations
 

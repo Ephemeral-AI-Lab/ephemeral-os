@@ -1,4 +1,4 @@
-"""Tests for the resident sandbox runtime daemon (Phase 3)."""
+"""Tests for the resident sandbox daemon."""
 
 from __future__ import annotations
 

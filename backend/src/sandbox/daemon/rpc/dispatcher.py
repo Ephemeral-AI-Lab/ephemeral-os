@@ -1,4 +1,4 @@
-"""Generic in-sandbox runtime dispatcher.
+"""Generic in-sandbox daemon dispatcher.
 
 Host-to-guest contract: callers send a JSON object such as
 ``{"op": "overlay.run", "args": {...}}`` through argv[0] or stdin. Handlers
@@ -31,7 +31,7 @@ OP_TABLE: dict[str, Handler] = {}
 
 
 def register_op(op: str, handler: Handler) -> None:
-    """Register a runtime operation handler.
+    """Register a daemon operation handler.
 
     Peer bootstrap modules call this at import time. Dispatch remains a table
     lookup; peer-specific branching belongs in peer handlers or pipelines.
@@ -50,16 +50,16 @@ def dispatch_json(raw: str) -> dict[str, Any]:
     except json.JSONDecodeError as exc:
         return _error(
             "bad_json",
-            "runtime request must be valid JSON",
+            "daemon request must be valid JSON",
             {"message": str(exc)},
         )
     if not isinstance(envelope, Mapping):
-        return _error("invalid_envelope", "runtime request must be a JSON object")
+        return _error("invalid_envelope", "daemon request must be a JSON object")
     return dispatch_envelope(envelope)
 
 
 def dispatch_envelope(envelope: Mapping[str, Any]) -> dict[str, Any]:
-    """Dispatch an already-decoded runtime envelope."""
+    """Dispatch an already-decoded daemon envelope."""
     dispatch_entered_at = time.perf_counter()
     validation_error, op, args_raw = _validate_envelope(envelope)
     if validation_error is not None:
@@ -141,7 +141,7 @@ def _validate_envelope(
         return (
             _error(
                 "invalid_envelope",
-                "runtime envelope requires a non-empty string op",
+                "daemon envelope requires a non-empty string op",
             ),
             "",
             {},
@@ -153,7 +153,7 @@ def _validate_envelope(
         return (
             _error(
                 "invalid_envelope",
-                "runtime envelope args must be a JSON object",
+                "daemon envelope args must be a JSON object",
                 {"op": op},
             ),
             op,
@@ -182,7 +182,7 @@ def _attach_runtime_boot_timings(
 
 
 def main(argv: list[str] | None = None) -> int:
-    """CLI entrypoint for the deployed runtime script."""
+    """CLI entrypoint for the deployed daemon dispatcher."""
     args = list(sys.argv[1:] if argv is None else argv)
     raw = args[0] if args else sys.stdin.read()
     response = dispatch_json(raw)

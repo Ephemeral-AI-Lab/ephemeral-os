@@ -25,11 +25,11 @@ import pytest_asyncio
 from config import load_settings
 from sandbox.api import status as sb_status
 from sandbox.api.tool import edit as edit_mod
-from sandbox.api.tool import _runtime as runtime_mod
+from sandbox.api.tool import _daemon_client as daemon_client_mod
 from sandbox.api.tool import read as read_mod
 from sandbox.api.tool import shell as shell_mod
 from sandbox.api.tool import write as write_mod
-from sandbox.api.tool._runtime import DEFAULT_LAYER_STACK_ROOT
+from sandbox.api.tool._daemon_client import DEFAULT_LAYER_STACK_ROOT
 from sandbox.api.tool.raw_exec import raw_exec as raw_exec_fn
 from sandbox.api.utils.models import (
     EditFileRequest,
@@ -132,7 +132,7 @@ class ToolBundle:
         )
 
     async def layer_metrics(self) -> dict[str, object]:
-        return await runtime_mod.call_runtime_api(
+        return await daemon_client_mod.call_daemon_api(
             self.sandbox_id,
             "api.layer_metrics",
             {"actor_id": self.caller.agent_id},
@@ -140,7 +140,7 @@ class ToolBundle:
         )
 
     async def workspace_binding(self) -> dict[str, object]:
-        return await runtime_mod.call_runtime_api(
+        return await daemon_client_mod.call_daemon_api(
             self.sandbox_id,
             "api.workspace_binding",
             {"actor_id": self.caller.agent_id},
@@ -264,7 +264,7 @@ async def _reset_runtime_layer_stack(sandbox_id: str) -> None:
 
 async def _build_workspace_base(sandbox_id: str) -> None:
     """Recreate the workspace binding/base after clearing runtime state."""
-    result = await runtime_mod.call_runtime_api(
+    result = await daemon_client_mod.call_daemon_api(
         sandbox_id,
         "api.build_workspace_base",
         {"workspace_root": WORKSPACE_ROOT, "reset": True},

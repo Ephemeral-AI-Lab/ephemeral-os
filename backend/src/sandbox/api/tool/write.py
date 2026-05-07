@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from sandbox.api.tool._runtime import (
-    call_runtime_api,
+from sandbox.api.tool._daemon_client import (
+    call_daemon_api,
     conflict_from_payload,
     paths_from_payload,
     timings_from_payload,
@@ -13,7 +13,7 @@ from sandbox.api.utils.models import WriteFileRequest, WriteFileResult
 
 async def write_file(sandbox_id: str, request: WriteFileRequest) -> WriteFileResult:
     """Write one UTF-8 file through sandbox-local OCC."""
-    raw = await call_runtime_api(
+    raw = await call_daemon_api(
         sandbox_id,
         "api.write_file",
         {

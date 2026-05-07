@@ -108,7 +108,7 @@ def test_run_runtime_bootstrap_propagates_runtime_upload_error() -> None:
 def test_ensure_workspace_base_skips_when_workspace_missing() -> None:
     from sandbox.host.ops.setup import ensure_workspace_base
 
-    with patch("sandbox.api.tool._runtime.call_runtime_api") as call:
+    with patch("sandbox.api.tool._daemon_client.call_daemon_api") as call:
         ensure_workspace_base("sb-1", None)
 
     call.assert_not_called()
@@ -119,7 +119,7 @@ def test_ensure_workspace_base_invokes_runtime_op() -> None:
 
     calls: list[dict[str, Any]] = []
 
-    async def fake_call_runtime_api(
+    async def fake_call_daemon_api(
         sandbox_id: str,
         op: str,
         args: dict[str, Any],
@@ -150,7 +150,7 @@ def test_ensure_workspace_base_invokes_runtime_op() -> None:
             }
         return {"success": True}
 
-    with patch("sandbox.api.tool._runtime.call_runtime_api", new=fake_call_runtime_api):
+    with patch("sandbox.api.tool._daemon_client.call_daemon_api", new=fake_call_daemon_api):
         ensure_workspace_base("sb-1", "/testbed")
 
     assert calls == [

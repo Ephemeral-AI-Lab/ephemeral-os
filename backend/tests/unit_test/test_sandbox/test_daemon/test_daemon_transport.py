@@ -1,4 +1,4 @@
-"""Daemon transport tests for ``_call_runtime_server``."""
+"""Daemon transport tests for ``_call_daemon``."""
 
 from __future__ import annotations
 
@@ -55,7 +55,7 @@ async def test_daemon_uses_daemon_thin_client_by_default() -> None:
         seen.append(command_str)
         return SimpleNamespace(stdout=_ok_response(), stderr="", exit_code=0)
 
-    response = await command._call_runtime_server(
+    response = await command._call_daemon(
         exec_fn=fake_exec,
         sandbox_id="sb-1",
         op="api.read_file",
@@ -73,8 +73,8 @@ def test_daemon_commands_do_not_forward_host_env(
 ) -> None:
     monkeypatch.setenv("UNSUPPORTED_RUNTIME_ENV", "ignored")
 
-    thin_client = command._runtime_thin_client_command("{}")
-    daemon_spawn = command._runtime_daemon_spawn_command()
+    thin_client = command._daemon_thin_client_command("{}")
+    daemon_spawn = command._daemon_spawn_command()
 
     assert thin_client.startswith("sh -c ")
     assert daemon_spawn.startswith("sh -c ")
@@ -99,7 +99,7 @@ async def test_daemon_transport_spawns_on_socket_missing() -> None:
         seen.append(command_str)
         return responses.pop(0)
 
-    response = await command._call_runtime_server(
+    response = await command._call_daemon(
         exec_fn=fake_exec,
         sandbox_id="sb-1",
         op="api.read_file",
@@ -131,7 +131,7 @@ async def test_daemon_transport_allows_unbound_readiness_for_workspace_bootstrap
         seen.append(command_str)
         return responses.pop(0)
 
-    response = await command._call_runtime_server(
+    response = await command._call_daemon(
         exec_fn=fake_exec,
         sandbox_id="sb-1",
         op="api.ensure_workspace_base",
@@ -158,8 +158,8 @@ async def test_daemon_transport_readiness_failure_fails_closed() -> None:
     async def fake_exec(_sandbox_id: str, _command_str: str, **_: Any) -> Any:
         return responses.pop(0)
 
-    with pytest.raises(command._RuntimeReadinessError) as exc:
-        await command._call_runtime_server(
+    with pytest.raises(command._DaemonReadinessError) as exc:
+        await command._call_daemon(
             exec_fn=fake_exec,
             sandbox_id="sb-1",
             op="api.read_file",
@@ -183,8 +183,8 @@ async def test_daemon_transport_bad_readiness_response_uses_readiness_error() ->
     async def fake_exec(_sandbox_id: str, _command_str: str, **_: Any) -> Any:
         return responses.pop(0)
 
-    with pytest.raises(command._RuntimeReadinessError) as exc:
-        await command._call_runtime_server(
+    with pytest.raises(command._DaemonReadinessError) as exc:
+        await command._call_daemon(
             exec_fn=fake_exec,
             sandbox_id="sb-1",
             op="api.read_file",
@@ -204,7 +204,7 @@ async def test_daemon_spawn_failure_fails_closed() -> None:
         ),
         SimpleNamespace(
             stdout="",
-            stderr="sandbox runtime daemon failed to bind socket within 2.5s",
+            stderr="sandbox daemon failed to bind socket within 2.5s",
             exit_code=1,
         ),
     ]
@@ -213,8 +213,8 @@ async def test_daemon_spawn_failure_fails_closed() -> None:
         seen.append(command_str)
         return responses.pop(0)
 
-    with pytest.raises(command._RuntimeDispatchError) as exc:
-        await command._call_runtime_server(
+    with pytest.raises(command._DaemonDispatchError) as exc:
+        await command._call_daemon(
             exec_fn=fake_exec,
             sandbox_id="sb-1",
             op="api.read_file",

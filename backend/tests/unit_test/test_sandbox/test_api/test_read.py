@@ -9,12 +9,12 @@ import sandbox.api.tool.read as read_module
 
 
 @pytest.mark.asyncio
-async def test_read_file_dispatches_to_sandbox_runtime(
+async def test_read_file_dispatches_to_sandbox_daemon(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[tuple[str, str, dict[str, object], int]] = []
 
-    async def fake_call_runtime_api(sandbox_id, op, args, *, timeout):
+    async def fake_call_daemon_api(sandbox_id, op, args, *, timeout):
         calls.append((sandbox_id, op, args, timeout))
         return {
             "success": True,
@@ -24,7 +24,7 @@ async def test_read_file_dispatches_to_sandbox_runtime(
             "timings": {"api.read.total_s": 0.1},
         }
 
-    monkeypatch.setattr(read_module, "call_runtime_api", fake_call_runtime_api)
+    monkeypatch.setattr(read_module, "call_daemon_api", fake_call_daemon_api)
 
     result = await read_module.read_file(
         "sb-1",
@@ -44,7 +44,7 @@ async def test_read_file_dispatches_to_sandbox_runtime(
 async def test_read_file_missing_file_maps_to_exists_false(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def fake_call_runtime_api(sandbox_id, op, args, *, timeout):
+    async def fake_call_daemon_api(sandbox_id, op, args, *, timeout):
         del sandbox_id, op, args, timeout
         return {
             "success": True,
@@ -54,7 +54,7 @@ async def test_read_file_missing_file_maps_to_exists_false(
             "timings": {},
         }
 
-    monkeypatch.setattr(read_module, "call_runtime_api", fake_call_runtime_api)
+    monkeypatch.setattr(read_module, "call_daemon_api", fake_call_daemon_api)
 
     result = await read_module.read_file(
         "sb-1",

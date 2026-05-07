@@ -81,6 +81,14 @@ class OccCommitTransaction:
                 validate_start = time.perf_counter()
                 validations: list[PathValidation] = []
                 occ_gated_failed = False
+                gated_read_total = 0.0
+                gated_apply_total = 0.0
+                gated_stage_total = 0.0
+                direct_read_total = 0.0
+                direct_apply_total = 0.0
+                direct_stage_total = 0.0
+                gated_count = 0
+                direct_count = 0
                 for group in prepared.path_groups:
                     validation = self._validate_group(
                         group,
@@ -93,9 +101,34 @@ class OccCommitTransaction:
                         and validation.result.status is not FileStatus.ACCEPTED
                     ):
                         occ_gated_failed = True
+                    rt = validation.result.timings
+                    if group.route is RouteDecision.OCC_GATED_MERGE:
+                        gated_count += 1
+                        gated_read_total += rt.get("occ.gated.read_current_s", 0.0)
+                        gated_apply_total += rt.get(
+                            "occ.gated.apply_changes_s", 0.0
+                        )
+                        gated_stage_total += rt.get("occ.gated.stage_delta_s", 0.0)
+                    elif group.route is RouteDecision.OCC_SKIPPED_MERGE:
+                        direct_count += 1
+                        direct_read_total += rt.get("occ.direct.read_current_s", 0.0)
+                        direct_apply_total += rt.get(
+                            "occ.direct.apply_changes_s", 0.0
+                        )
+                        direct_stage_total += rt.get("occ.direct.stage_delta_s", 0.0)
                 timings["occ.commit.validate_groups_s"] = (
                     time.perf_counter() - validate_start
                 )
+                timings["occ.commit.gated_read_current_total_s"] = gated_read_total
+                timings["occ.commit.gated_apply_changes_total_s"] = gated_apply_total
+                timings["occ.commit.gated_stage_delta_total_s"] = gated_stage_total
+                timings["occ.commit.gated_path_count"] = float(gated_count)
+                timings["occ.commit.direct_read_current_total_s"] = direct_read_total
+                timings["occ.commit.direct_apply_changes_total_s"] = (
+                    direct_apply_total
+                )
+                timings["occ.commit.direct_stage_delta_total_s"] = direct_stage_total
+                timings["occ.commit.direct_path_count"] = float(direct_count)
 
                 files = tuple(validation.result for validation in validations)
                 if _must_skip_publish(

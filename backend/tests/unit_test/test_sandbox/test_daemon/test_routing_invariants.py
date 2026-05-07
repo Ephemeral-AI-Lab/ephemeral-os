@@ -1,4 +1,4 @@
-"""Runtime OP_TABLE routing invariants."""
+"""Daemon OP_TABLE routing invariants."""
 
 from __future__ import annotations
 
@@ -62,6 +62,6 @@ def test_daemon_op_table_does_not_route_through_occ_server() -> None:
         "sandbox.daemon.api_handlers",
     ],
 )
-def test_legacy_runtime_modules_remain_deleted(module_name: str) -> None:
+def test_legacy_daemon_modules_remain_deleted(module_name: str) -> None:
     with pytest.raises(ModuleNotFoundError):
         importlib.import_module(module_name)
