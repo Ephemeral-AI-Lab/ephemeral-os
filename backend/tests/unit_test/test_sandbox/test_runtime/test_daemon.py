@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.runtime import api_handlers, daemon, server
+from sandbox.runtime import api_handlers, daemon, server, write_edit_handlers
 
 
 def _short_socket_path() -> tuple[Path, Path]:
@@ -172,13 +172,6 @@ async def test_daemon_handles_invalid_json() -> None:
             pass
 
 
-def test_running_in_daemon_reads_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("EPHEMERALOS_RUNTIME_DAEMON", raising=False)
-    assert api_handlers._running_in_daemon() is False
-    monkeypatch.setenv("EPHEMERALOS_RUNTIME_DAEMON", "1")
-    assert api_handlers._running_in_daemon() is True
-
-
 def test_peer_bootstraps_register_snapshot_ops_without_compact() -> None:
     server._load_peer_bootstraps()
 
@@ -187,97 +180,74 @@ def test_peer_bootstraps_register_snapshot_ops_without_compact() -> None:
     assert "api.compact" not in server.OP_TABLE
 
 
-async def test_commit_lock_skipped_in_daemon_mode(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-) -> None:
-    monkeypatch.setenv("EPHEMERALOS_RUNTIME_DAEMON", "1")
-    lock = api_handlers._commit_lock(tmp_path)
-    async with lock:
-        pass
-    assert not (tmp_path / ".commit.lock").exists()
-
-
 def test_services_cached_per_layer_stack_root(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """write_edit_handlers caches the per-root service tuple across calls."""
     api_handlers._services_cache_clear()
 
     class _FakeManager:
         def __init__(self, root: str) -> None:
             self.root = root
 
-    class _FakeOracle:
-        def __init__(self, layer_stack: object) -> None:
-            self.layer_stack = layer_stack
-
-    class _FakeService:
-        def __init__(
-            self,
-            *,
-            gitignore: _FakeOracle,
-            layer_stack: object,
-            workspace_ref: str = "",
-        ) -> None:
-            self.gitignore = gitignore
-            self.layer_stack = layer_stack
-            self.workspace_ref = workspace_ref
-
     monkeypatch.setattr(
-        api_handlers,
+        write_edit_handlers,
         "get_layer_stack_manager",
         lambda root: _FakeManager(str(root)),
     )
-    monkeypatch.setattr(api_handlers, "SnapshotGitignoreOracle", _FakeOracle)
-    monkeypatch.setattr(api_handlers, "OccService", _FakeService)
+    monkeypatch.setattr(
+        write_edit_handlers,
+        "LayerStackClient",
+        lambda manager: ("layer-stack", manager),
+    )
+    monkeypatch.setattr(
+        write_edit_handlers,
+        "SnapshotGitignoreOracle",
+        lambda layer_stack: ("oracle", layer_stack),
+    )
+    monkeypatch.setattr(
+        write_edit_handlers,
+        "OccService",
+        lambda *, gitignore, layer_stack: ("service", gitignore, layer_stack),
+    )
+    monkeypatch.setattr(
+        write_edit_handlers,
+        "OCCClient",
+        lambda service, *, binding_reader, workspace_ref: (
+            "occ-client",
+            service,
+            workspace_ref,
+        ),
+    )
 
-    a1 = api_handlers._services({"layer_stack_root": "/tmp/a"})
-    a2 = api_handlers._services({"layer_stack_root": "/tmp/a"})
-    b1 = api_handlers._services({"layer_stack_root": "/tmp/b"})
+    a1 = write_edit_handlers._services("/tmp/a")
+    a2 = write_edit_handlers._services("/tmp/a")
+    b1 = write_edit_handlers._services("/tmp/b")
 
-    assert a1 is a2  # same root → cached triple
-    assert a1[0] is not b1[0]  # different roots → distinct managers
+    assert a1 is a2  # same root → cached tuple
+    assert a1.manager is not b1.manager  # different roots → distinct managers
 
 
-def test_drop_services_cache_removes_only_requested_layer_stack_root(
+def test_drop_services_cache_cascades_to_all_runtime_modules(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """``api_handlers.drop_services_cache`` must cascade to write_edit + command_exec."""
     api_handlers._services_cache_clear()
-
-    class _FakeManager:
-        def __init__(self, root: str) -> None:
-            self.root = root
-
-    class _FakeOracle:
-        def __init__(self, layer_stack: object) -> None:
-            self.layer_stack = layer_stack
-
-    class _FakeService:
-        def __init__(
-            self,
-            *,
-            gitignore: _FakeOracle,
-            layer_stack: object,
-            workspace_ref: str = "",
-        ) -> None:
-            self.gitignore = gitignore
-            self.layer_stack = layer_stack
-            self.workspace_ref = workspace_ref
+    cleared: list[str] = []
 
     monkeypatch.setattr(
-        api_handlers,
-        "get_layer_stack_manager",
-        lambda root: _FakeManager(str(root)),
+        write_edit_handlers,
+        "drop_services_cache",
+        lambda root: cleared.append(f"write_edit:{root}"),
     )
-    monkeypatch.setattr(api_handlers, "SnapshotGitignoreOracle", _FakeOracle)
-    monkeypatch.setattr(api_handlers, "OccService", _FakeService)
+    from sandbox.runtime import command_exec_server
 
-    first_a = api_handlers._services({"layer_stack_root": "/tmp/a"})
-    first_b = api_handlers._services({"layer_stack_root": "/tmp/b"})
+    monkeypatch.setattr(
+        command_exec_server,
+        "drop_services_cache",
+        lambda root: cleared.append(f"command_exec:{root}"),
+    )
 
     api_handlers.drop_services_cache("/tmp/a")
-
-    second_a = api_handlers._services({"layer_stack_root": "/tmp/a"})
-    second_b = api_handlers._services({"layer_stack_root": "/tmp/b"})
-    assert second_a is not first_a
-    assert second_b is first_b
+    assert "write_edit:/tmp/a" in cleared
+    assert "command_exec:/tmp/a" in cleared

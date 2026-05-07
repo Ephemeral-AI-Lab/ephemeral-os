@@ -9,11 +9,29 @@ import threading
 import time
 from dataclasses import dataclass
 
+from sandbox.layer_stack.manifest import ManifestConflictError
 from sandbox.occ.changeset.prepared import PreparedChangeset
-from sandbox.occ.changeset.types import ChangesetResult
+from sandbox.occ.changeset.types import ChangesetResult, FileResult, FileStatus
 from sandbox.occ.commit_transaction import OccCommitTransaction
 
 _RESULT_READY_AT = "_occ.serial.result_ready_at_s"
+
+
+MAX_OCC_CAS_RETRIES: int = 3
+"""Phase 05 — bounded CAS-mismatch retry budget.
+
+If the layer-stack publisher returns a manifest CAS mismatch
+(:class:`ManifestConflictError`) during ``revalidate_and_publish``, the
+serial merger re-runs validation up to ``MAX_OCC_CAS_RETRIES`` times. On
+exhaustion, the call surfaces a conflict ``ChangesetResult`` (every path
+marked ``ABORTED_VERSION``) instead of looping indefinitely.
+
+In the current single-process architecture the per-root publisher lock
+makes mid-transaction CAS races structurally impossible, so the retry
+loop is a defensive bound — every commit succeeds on the first attempt.
+The constant exists so multi-process Phase 06+ topologies inherit a
+named, testable limit.
+"""
 
 
 @dataclass(frozen=True)
@@ -86,9 +104,18 @@ class OccSerialMerger:
         if not batch:
             return
         commit_start = time.perf_counter()
+        combined = _combine_prepared([item.prepared for item in batch])
+        attempts = 0
         try:
-            combined = _combine_prepared([item.prepared for item in batch])
-            result = self._transaction.revalidate_and_publish(combined)
+            while True:
+                try:
+                    result = self._transaction.revalidate_and_publish(combined)
+                    break
+                except ManifestConflictError as exc:
+                    attempts += 1
+                    if attempts >= MAX_OCC_CAS_RETRIES:
+                        result = _cas_exhaustion_result(combined, exc)
+                        break
             commit_elapsed = time.perf_counter() - commit_start
             ready_at = time.perf_counter()
             for item in batch:
@@ -106,6 +133,7 @@ class OccSerialMerger:
                             - item.enqueued_at,
                             "occ.serial.batch_size": float(len(batch)),
                             "occ.serial.commit_s": commit_elapsed,
+                            "occ.serial.cas_attempts": float(attempts + 1),
                             _RESULT_READY_AT: ready_at,
                         },
                         published_manifest_version=result.published_manifest_version,
@@ -154,4 +182,28 @@ def _path_set(prepared: PreparedChangeset) -> set[str]:
     return {group.path for group in prepared.path_groups}
 
 
-__all__ = ["OccSerialMerger"]
+def _cas_exhaustion_result(
+    prepared: PreparedChangeset,
+    exc: ManifestConflictError,
+) -> ChangesetResult:
+    """Convert a CAS-retry-exhausted failure into a per-path conflict result."""
+    message = (
+        f"CAS mismatch retry budget exhausted after {MAX_OCC_CAS_RETRIES} "
+        f"attempts: {exc}"
+    )
+    files = tuple(
+        FileResult(
+            path=group.path,
+            status=FileStatus.ABORTED_VERSION,
+            message=message,
+        )
+        for group in prepared.path_groups
+    )
+    return ChangesetResult(
+        files=files,
+        timings={"occ.serial.cas_exhausted": 1.0},
+        published_manifest_version=None,
+    )
+
+
+__all__ = ["MAX_OCC_CAS_RETRIES", "OccSerialMerger"]

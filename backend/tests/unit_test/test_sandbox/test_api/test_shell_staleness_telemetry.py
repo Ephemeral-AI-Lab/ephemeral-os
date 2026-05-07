@@ -17,7 +17,7 @@ from sandbox.occ.changeset.builders import build_api_write_change
 from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
 from sandbox.occ.changeset.types import FileStatus
 from sandbox.command_exec.result import ShellProcessResult
-from sandbox.runtime import api_handlers, command_exec_server
+from sandbox.runtime import command_exec_server, write_edit_handlers
 
 
 class _BlockingCommandRunner:
@@ -100,11 +100,11 @@ async def test_shell_accepts_occ_clean_write_after_manifest_advances(
 async def test_runtime_gitignore_uses_layer_stack_snapshot(tmp_path: Path) -> None:
     manager = LayerStackManager(tmp_path / f"stack-{uuid4().hex}")
     _publish(manager, tmp_path, ".gitignore", b"dist/\n")
-    _, occ_service, _ = api_handlers._services(
-        {"layer_stack_root": str(manager.storage_root)}
-    )
+    write_edit_handlers._services_cache_clear()
+    services = write_edit_handlers._services(str(manager.storage_root))
 
-    result = await occ_service.apply_changeset(
+    # Reach through the OCC client to its underlying OccService for the assertion.
+    result = await services.occ_client._service.apply_changeset(
         [build_api_write_change(path="dist/app.js", final_content="first\n")],
         options=CommitOptions(caller_id="test", description="ignored output"),
     )

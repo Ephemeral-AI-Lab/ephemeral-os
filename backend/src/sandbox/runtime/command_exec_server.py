@@ -61,18 +61,6 @@ def drop_services_cache(layer_stack_root: str) -> None:
     _SERVICE_CACHE.pop(str(Path(root).resolve(strict=False)), None)
 
 
-async def shell(args: dict[str, object]) -> dict[str, object]:
-    layer_stack, occ_client, gitignore, storage_root = _services(args)
-    result = await _execute_shell(
-        args,
-        layer_stack=layer_stack,
-        occ_client=occ_client,
-        gitignore=gitignore,
-        storage_root=storage_root,
-    )
-    return _payload_from_result(result)
-
-
 async def _execute_shell(
     args: Mapping[str, object],
     *,
@@ -385,5 +373,4 @@ def _optional_float(value: object) -> float | None:
 
 __all__ = [
     "drop_services_cache",
-    "shell",
 ]

@@ -116,9 +116,11 @@ def _lease_id(args: Mapping[str, object]) -> str:
 def _drop_peer_runtime_caches(layer_stack_root: str) -> None:
     from sandbox.runtime import api_handlers
     from sandbox.runtime import command_exec_server
+    from sandbox.runtime.handlers import _common
 
     api_handlers.drop_services_cache(layer_stack_root)
     command_exec_server.drop_services_cache(layer_stack_root)
+    _common.drop_services_cache(layer_stack_root)
 
 
 __all__ = [

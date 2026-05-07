@@ -14,7 +14,7 @@ from sandbox.layer_stack.workspace import (
     validate_workspace_binding_paths,
     write_workspace_binding_atomic,
 )
-from sandbox.runtime import api_handlers
+from sandbox.runtime import api_handlers, write_edit_handlers
 
 
 def test_binding_rejects_layer_stack_inside_workspace(tmp_path: Path) -> None:
@@ -56,7 +56,7 @@ async def test_read_file_fails_closed_without_workspace_binding(tmp_path: Path) 
     api_handlers._services_cache_clear()
 
     with pytest.raises(WorkspaceBindingError, match="workspace binding is missing"):
-        await api_handlers.read_file(
+        await write_edit_handlers.read_file(
             {
                 "layer_stack_root": str(tmp_path / "stack"),
                 "path": "a.txt",
@@ -77,7 +77,7 @@ async def test_read_file_uses_workspace_base_not_real_workspace(
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
     file_path.write_text("real workspace changed\n", encoding="utf-8")
 
-    result = await api_handlers.read_file(
+    result = await write_edit_handlers.read_file(
         {
             "layer_stack_root": str(stack),
             "path": file_path.as_posix(),
