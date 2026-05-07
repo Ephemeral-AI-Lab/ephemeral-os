@@ -106,7 +106,11 @@ class LayerStackManager:
                 / "lower"
             )
             materialize_start = time.perf_counter()
-            self._view.materialize(lowerdir, manifest)
+            # link_ok=True: the lowerdir feeds an overlay read-only mount
+            # (or is copy-tree'd into a separate merged dir in copy-backed
+            # mode). Sharing inodes with source layers avoids byte copies
+            # under concurrent prepare_workspace_snapshot.
+            self._view.materialize(lowerdir, manifest, link_ok=True)
             materialize_elapsed = time.perf_counter() - materialize_start
             return PrepareWorkspaceSnapshotResult(
                 lease_id=lease.lease_id,

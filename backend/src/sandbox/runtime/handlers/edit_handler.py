@@ -11,6 +11,7 @@ from sandbox.layer_stack.workspace import require_workspace_binding
 from sandbox.occ.changeset.builders import build_api_write_change
 from sandbox.occ.runtime_ops import content_hash_bytes
 from sandbox.occ.single_path_prepare import prepare_single_path_changeset
+from sandbox.runtime.async_bridge import run_sync_in_executor
 from sandbox.runtime.handlers._common import (
     _layer_stack_root,
     _project_changeset,
@@ -65,11 +66,15 @@ async def _edit_in_workspace(
     services = _services(layer_stack_root)
     request_id = uuid4().hex
     lease_start = time.perf_counter()
-    lease = services.manager.acquire_snapshot_lease(request_id)
+    lease = await run_sync_in_executor(
+        services.manager.acquire_snapshot_lease, request_id
+    )
     lease_acquired_s = time.perf_counter() - lease_start
     try:
         read_start = time.perf_counter()
-        bytes_, exists = services.layer_stack.read_bytes(layer_path, lease.manifest)
+        bytes_, exists = await run_sync_in_executor(
+            services.layer_stack.read_bytes, layer_path, lease.manifest
+        )
         read_elapsed = time.perf_counter() - read_start
         if not exists or bytes_ is None:
             raise FileNotFoundError(f"file not found in workspace: {layer_path}")
@@ -90,7 +95,8 @@ async def _edit_in_workspace(
             base_hash=content_hash_bytes(bytes_),
             create_only=False,
         )
-        prepared = prepare_single_path_changeset(
+        prepared = await run_sync_in_executor(
+            prepare_single_path_changeset,
             change,
             snapshot=lease.manifest,
             gitignore=services.gitignore,
@@ -103,7 +109,7 @@ async def _edit_in_workspace(
         )
         apply_elapsed = time.perf_counter() - apply_start
     finally:
-        services.manager.release_lease(lease.lease_id)
+        await run_sync_in_executor(services.manager.release_lease, lease.lease_id)
 
     payload = _project_changeset(
         result,

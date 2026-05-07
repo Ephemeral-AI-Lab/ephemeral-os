@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from tools import ToolExecutionContextService
 
 if TYPE_CHECKING:
-    from engine.query.loop import QueryContext
+    from engine.query.context import QueryContext
 
 
 logger = logging.getLogger(__name__)

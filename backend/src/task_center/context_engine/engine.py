@@ -11,10 +11,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from task_center.context_engine.packet import ContextPacket
-from task_center.context_engine.recipes_registry import (
-    ContextRecipe,
-    RecipeRegistry,
-)
+from task_center.context_engine.recipes_registry import RecipeRegistry
 from task_center.context_engine.scope import ContextScope
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
@@ -47,20 +44,14 @@ class ContextEngine:
     def __init__(
         self,
         deps: ContextEngineDeps,
-        *,
-        registry: type[RecipeRegistry] = RecipeRegistry,
     ) -> None:
         self._deps = deps
-        self._registry = registry
 
     @property
     def deps(self) -> ContextEngineDeps:
         return self._deps
 
     def build(self, recipe_id: str, scope: ContextScope) -> ContextPacket:
-        recipe = self._registry.get(recipe_id)
+        recipe = RecipeRegistry.get(recipe_id)
         scope.assert_fields(recipe.required_scope_fields)
         return recipe.build(scope, self._deps)
-
-    def get_recipe(self, recipe_id: str) -> ContextRecipe:
-        return self._registry.get(recipe_id)

@@ -8,7 +8,7 @@ same code path.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Protocol
 
 from agents import get_definition
@@ -51,11 +51,8 @@ class AgentResolver(Protocol):
     ) -> AgentSelection: ...
 
 
-@dataclass(frozen=True, slots=True)
 class RuleBasedAgentResolver:
     """Variants-driven resolver. Frontmatter is the source of truth."""
-
-    predicate_registry: type[PredicateRegistry] = field(default=PredicateRegistry)
 
     def resolve(
         self,
@@ -74,7 +71,7 @@ class RuleBasedAgentResolver:
 
         ctx = ResolverContext(scope=scope, deps=deps)
         for variant in base.variants:
-            predicate = self.predicate_registry.get(variant.when)
+            predicate = PredicateRegistry.get(variant.when)
             if predicate(ctx):
                 return self._select_variant_target(variant)
 

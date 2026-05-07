@@ -245,7 +245,7 @@ def test_initial_graph_start_can_be_deferred(
         orchestrator_factory=factory,
     )
 
-    attempt = mgr.create_initial_attempt(start=False)
+    attempt = mgr.create_unstarted_initial_attempt()
     assert started == []
 
     mgr.start_attempt(attempt)
@@ -302,7 +302,7 @@ def test_deferred_start_failure_closes_inserted_graph(
         orchestrator_factory=factory,
     )
 
-    attempt = mgr.create_initial_attempt(start=False)
+    attempt = mgr.create_unstarted_initial_attempt()
 
     with pytest.raises(RuntimeError, match="orchestrator start failed"):
         mgr.start_attempt(attempt)

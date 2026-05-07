@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from engine.runtime.lifecycle import run_ephemeral_agent
+from engine.agent.lifecycle import run_ephemeral_agent
 from message.stream_events import StreamEvent, ToolExecutionStarted
 from providers.types import UsageSnapshot
 from tools.core.base import ExecutionMetadata
@@ -41,7 +41,7 @@ async def test_run_ephemeral_agent_stamps_task_id_as_stream_run_id(
     captured: list[StreamEvent] = []
 
     monkeypatch.setattr(
-        "engine.runtime.agent.spawn_agent",
+        "engine.agent.factory.spawn_agent",
         lambda *_args, **_kwargs: fake_agent,
     )
 

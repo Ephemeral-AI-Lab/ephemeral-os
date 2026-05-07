@@ -12,7 +12,8 @@ from engine.query.provider_history import (
     reduce_background_task_history,
     sanitize_tool_sequence,
 )
-from engine.background.manager import BackgroundTaskManager, build_background_reminder
+from engine.background.manager import BackgroundTaskManager
+from engine.background.reminder import build_background_reminder
 from message.messages import (
     BackgroundTaskStateBlock,
     ConversationMessage,

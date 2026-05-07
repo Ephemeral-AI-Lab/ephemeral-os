@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from task_center.exceptions import TaskCenterInvariantViolation
-from task_center.task import EvaluatorSubmission, HarnessTaskRole
+from task_center.api import (
+    EvaluatorSubmission,
+    HarnessTaskRole,
+    TaskCenterInvariantViolation,
+)
 from tools.core.context import ToolExecutionContextService
 from tools.core.decorator import tool
 from tools.core.results import TextToolOutput, ToolResult

@@ -7,8 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from task_center.attempt.runtime import AttemptRuntime
-from task_center.task import HarnessTaskRole
+from task_center.api import AttemptRuntime, HarnessTaskRole
 from tools.core.context import ToolExecutionContextService
 from tools.core.hooks import HookResult
 

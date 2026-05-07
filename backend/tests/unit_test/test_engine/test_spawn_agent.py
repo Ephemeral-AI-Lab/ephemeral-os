@@ -11,7 +11,7 @@ import pytest
 from pydantic import BaseModel
 
 from agents import AgentDefinition
-from engine.runtime.agent import (
+from engine.agent.factory import (
     _build_agent_tool_registry,
     _build_context_preparers,
     finalize_tool_registry_and_prompt,

@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from agents import AgentDefinition
-from engine.query.loop import QueryContext
+from engine.query.context import QueryContext
 from tools.core.tool_execution import execute_tool_call
 from tools.core.runtime import ExecutionMetadata
 

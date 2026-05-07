@@ -159,7 +159,6 @@ class AttemptDispatcher:
             launch = self._build_generator_launch(
                 attempt=attempt,
                 task=task,
-                task_id=task_id,
                 base_agent_name=agent_name,
             )
             if launch.context_packet_id is not None:
@@ -217,15 +216,13 @@ class AttemptDispatcher:
             return
         runtime = self._runtime
         task_id = evaluator_task_id(attempt.id)
-        task_center_run_id = runtime.task_center_run_id_for_attempt(attempt)
         launch = self._build_evaluator_launch(
             attempt=attempt,
             task_id=task_id,
-            task_center_run_id=task_center_run_id,
         )
         runtime.task_store.upsert_task(
             task_id=task_id,
-            task_center_run_id=task_center_run_id,
+            task_center_run_id=launch.task_center_run_id,
             role=HarnessTaskRole.EVALUATOR.value,
             agent_name=launch.agent_name,
             task_input=launch.task_input,
@@ -254,10 +251,10 @@ class AttemptDispatcher:
         *,
         attempt: Attempt,
         task: dict[str, Any],
-        task_id: str,
         base_agent_name: str,
     ) -> AgentLaunch:
         runtime = self._runtime
+        task_id = str(task["id"])
         composer = runtime.require_composer()
         episode = runtime.episode_store.get(attempt.episode_id)
         if episode is None:
@@ -290,7 +287,6 @@ class AttemptDispatcher:
         *,
         attempt: Attempt,
         task_id: str,
-        task_center_run_id: str,
     ) -> AgentLaunch:
         runtime = self._runtime
         composer = runtime.require_composer()
@@ -309,7 +305,7 @@ class AttemptDispatcher:
         )
         return AgentLaunch(
             task_id=task_id,
-            task_center_run_id=task_center_run_id,
+            task_center_run_id=runtime.task_center_run_id_for_attempt(attempt),
             attempt_id=attempt.id,
             role=HarnessTaskRole.EVALUATOR,
             agent_name=bundle.agent_def.name,

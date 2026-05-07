@@ -76,8 +76,14 @@ class EpisodeManager:
 
     # ---- public API -----------------------------------------------------
 
-    def create_initial_attempt(self, *, start: bool = True) -> Attempt:
-        """Create attempt sequence 1 and optionally start its orchestrator."""
+    def create_initial_attempt(self) -> Attempt:
+        """Create attempt sequence 1 and start its orchestrator."""
+        attempt = self.create_unstarted_initial_attempt()
+        self.start_attempt(attempt)
+        return attempt
+
+    def create_unstarted_initial_attempt(self) -> Attempt:
+        """Create attempt sequence 1 without starting its orchestrator."""
         episode = self._current_episode_snapshot()
         assert_episode_open(episode)
         if episode.attempt_ids:
@@ -85,10 +91,7 @@ class EpisodeManager:
                 f"Episode {episode.id!r} already has attempts; use "
                 f"create_next_attempt"
             )
-        attempt = self._insert_attempt(episode, attempt_sequence_no=1)
-        if start:
-            self.start_attempt(attempt)
-        return attempt
+        return self._insert_attempt(episode, attempt_sequence_no=1)
 
     def start_attempt(self, attempt: Attempt) -> None:
         """Start an attempt that belongs to this manager's open episode."""

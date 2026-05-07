@@ -21,7 +21,7 @@ from providers.types import UsageSnapshot
 from tools import execute_tool_call_streaming
 
 if TYPE_CHECKING:
-    from engine.query.loop import QueryContext
+    from engine.query.context import QueryContext
 
 
 logger = logging.getLogger(__name__)

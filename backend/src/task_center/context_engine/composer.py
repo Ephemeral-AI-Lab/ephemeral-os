@@ -51,14 +51,11 @@ class ContextComposer:
     def default(
         cls,
         engine: ContextEngine,
-        *,
-        resolver: AgentResolver | None = None,
-        renderer: PromptRenderer | None = None,
     ) -> "ContextComposer":
         return cls(
-            resolver=resolver or RuleBasedAgentResolver(),
+            resolver=RuleBasedAgentResolver(),
             engine=engine,
-            renderer=renderer or MarkdownPromptRenderer(),
+            renderer=MarkdownPromptRenderer(),
         )
 
     def compose(

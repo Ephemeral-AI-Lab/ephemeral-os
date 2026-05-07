@@ -24,18 +24,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from task_center.mission.starter import (
+from task_center.api import (
+    Attempt,
+    AttemptOrchestrator,
+    AttemptRuntime,
+    EntryTaskController,
+    Episode,
+    GeneratorSubmission,
+    Mission,
     MissionStarter,
     StartedMission,
+    TaskCenterInvariantViolation,
 )
-from task_center.mission.mission import Mission
-from task_center.entry_task_controller import EntryTaskController
-from task_center.exceptions import TaskCenterInvariantViolation
-from task_center.attempt import Attempt
-from task_center.attempt.orchestrator import AttemptOrchestrator
-from task_center.attempt.runtime import AttemptRuntime
-from task_center.episode.episode import Episode
-from task_center.task import GeneratorSubmission
 from tools.core.context import ToolExecutionContextService
 
 
@@ -140,9 +140,7 @@ class ExecutorSubmissionContext:
     ) -> StartedMission:
         coordinator = MissionStarter(runtime=self.runtime)
         return coordinator.start(
-            task_center_run_id=self.task["task_center_run_id"],
             parent_task_id=self.task_center_task_id,
-            parent_attempt_id=self.attempt_id,
             goal=goal,
         )
 

@@ -119,9 +119,7 @@ def test_mission_start_creates_request_segment_graph_and_marks_parent_waiting(
     coordinator = MissionStarter(runtime=runtime)
 
     result: StartedMission = coordinator.start(
-        task_center_run_id=task_center_run_id,
         parent_task_id=parent_task_id,
-        parent_attempt_id=parent_attempt_id,
         goal="solve delegated task",
     )
 
@@ -175,9 +173,7 @@ def test_mission_start_startup_failure_leaves_parent_running(
     try:
         with pytest.raises(RuntimeError):
             coordinator.start(
-                task_center_run_id=task_center_run_id,
                 parent_task_id=parent_task_id,
-                parent_attempt_id=parent_attempt_id,
                 goal="delegated",
             )
     finally:
@@ -229,9 +225,7 @@ def test_mission_start_startup_failure_closes_started_graph_and_deregisters_orch
 
     with pytest.raises(RuntimeError):
         coordinator.start(
-            task_center_run_id=task_center_run_id,
             parent_task_id=parent_task_id,
-            parent_attempt_id=parent_attempt_id,
             goal="delegated",
         )
 
@@ -267,9 +261,7 @@ def test_mission_start_rejects_second_open_child_request_for_same_executor(
     )
     coordinator = MissionStarter(runtime=runtime)
     coordinator.start(
-        task_center_run_id=task_center_run_id,
         parent_task_id=parent_task_id,
-        parent_attempt_id=parent_attempt_id,
         goal="first delegation",
     )
 
@@ -282,9 +274,7 @@ def test_mission_start_rejects_second_open_child_request_for_same_executor(
 
     with pytest.raises(TaskCenterInvariantViolation) as exc:
         coordinator.start(
-            task_center_run_id=task_center_run_id,
             parent_task_id=parent_task_id,
-            parent_attempt_id=parent_attempt_id,
             goal="second delegation",
         )
     assert "open delegated mission" in str(exc.value)
@@ -310,9 +300,7 @@ def test_mission_start_rejects_non_running_parent(
     coordinator = MissionStarter(runtime=runtime)
     with pytest.raises(TaskCenterInvariantViolation) as exc:
         coordinator.start(
-            task_center_run_id=task_center_run_id,
             parent_task_id=parent_task_id,
-            parent_attempt_id=parent_attempt_id,
             goal="delegated",
         )
     assert "not running" in str(exc.value)
@@ -384,9 +372,7 @@ def test_mission_start_accepts_entry_mode_caller_with_no_parent_attempt(
 
     coordinator = MissionStarter(runtime=runtime)
     result: StartedMission = coordinator.start(
-        task_center_run_id=task_center_run_id,
         parent_task_id=entry_task_id,
-        parent_attempt_id=None,
         goal="solve delegated work",
     )
 

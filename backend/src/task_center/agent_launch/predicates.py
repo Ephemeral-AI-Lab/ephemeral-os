@@ -64,10 +64,6 @@ class PredicateRegistry:
         return name in cls._registry
 
     @classmethod
-    def list_names(cls) -> list[str]:
-        return sorted(cls._registry)
-
-    @classmethod
     def clear(cls) -> None:
         cls._registry.clear()
 

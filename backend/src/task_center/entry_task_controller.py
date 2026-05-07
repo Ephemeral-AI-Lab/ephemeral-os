@@ -70,8 +70,7 @@ class EntryTaskController:
             },
         ):
             return
-        self._close_episode_and_request(
-            succeeded=True,
+        self._close_episode_and_request_succeeded(
             task_specification=summary,
             task_summary=summary,
         )
@@ -93,11 +92,7 @@ class EntryTaskController:
             },
         ):
             return
-        self._close_episode_and_request(
-            succeeded=False,
-            task_specification=summary,
-            task_summary=summary,
-        )
+        self._close_episode_and_request_failed()
 
     def apply_run_exhausted(self, *, summary: str) -> None:
         """Launcher detected the entry agent ended without a terminal."""
@@ -109,11 +104,7 @@ class EntryTaskController:
             },
         ):
             return
-        self._close_episode_and_request(
-            succeeded=False,
-            task_specification=summary,
-            task_summary=summary,
-        )
+        self._close_episode_and_request_failed()
 
     # ---- delegated-complex-task resume ------------------------------------
 
@@ -160,11 +151,13 @@ class EntryTaskController:
             ) from exc
         if updated is None:
             return  # CAS miss: already delivered or already terminal.
-        self._close_episode_and_request(
-            succeeded=succeeded,
-            task_specification=text,
-            task_summary=text,
-        )
+        if succeeded:
+            self._close_episode_and_request_succeeded(
+                task_specification=text,
+                task_summary=text,
+            )
+        else:
+            self._close_episode_and_request_failed()
 
     # ---- waiting-on-delegated-mission -------------------------------------
 
@@ -243,39 +236,47 @@ class EntryTaskController:
             ) from exc
         return updated is not None
 
-    def _close_episode_and_request(
+    def _close_episode_and_request_succeeded(
         self,
         *,
-        succeeded: bool,
         task_specification: str,
         task_summary: str,
     ) -> None:
-        """Close the entry episode + entry complex_request.
+        """Close the entry episode + entry mission as succeeded.
 
-        Closing the request triggers ``deliver_close_report`` (wired by the
+        Closing the mission triggers ``deliver_close_report`` (wired by the
         entry coordinator) which finishes the run.
         """
-        self._close_entry_segment(
-            succeeded=succeeded,
+        self._close_entry_segment_succeeded(
             task_specification=task_specification,
             task_summary=task_summary,
         )
         self.manager_registry.deregister(self.episode_id)
         self.mission_handler.close_mission(
             mission_id=self.mission_id,
-            succeeded=succeeded,
+            succeeded=True,
             final_episode_id=self.episode_id,
             final_attempt_id=None,
         )
 
-    def _close_entry_segment(
+    def _close_episode_and_request_failed(self) -> None:
+        """Close the entry episode + entry mission as failed."""
+        self._close_entry_segment_failed()
+        self.manager_registry.deregister(self.episode_id)
+        self.mission_handler.close_mission(
+            mission_id=self.mission_id,
+            succeeded=False,
+            final_episode_id=self.episode_id,
+            final_attempt_id=None,
+        )
+
+    def _close_entry_segment_succeeded(
         self,
         *,
-        succeeded: bool,
         task_specification: str,
         task_summary: str,
     ) -> None:
-        """Atomically close the entry episode.
+        """Atomically close the entry episode as succeeded.
 
         Idempotent: if the episode is already closed, no-op.
         """
@@ -286,17 +287,24 @@ class EntryTaskController:
             )
         if episode.status != EpisodeStatus.OPEN:
             return
-        now = datetime.now(UTC)
-        if succeeded:
-            self.episode_store.close_succeeded(
-                self.episode_id,
-                task_specification=task_specification,
-                task_summary=task_summary,
-                closed_at=now,
+        self.episode_store.close_succeeded(
+            self.episode_id,
+            task_specification=task_specification,
+            task_summary=task_summary,
+            closed_at=datetime.now(UTC),
+        )
+
+    def _close_entry_segment_failed(self) -> None:
+        """Atomically close the entry episode as failed."""
+        episode = self.episode_store.get(self.episode_id)
+        if episode is None:
+            raise TaskCenterInvariantViolation(
+                f"Entry episode {self.episode_id!r} not found"
             )
-        else:
-            self.episode_store.set_status(
-                self.episode_id,
-                status=EpisodeStatus.FAILED,
-                closed_at=now,
-            )
+        if episode.status != EpisodeStatus.OPEN:
+            return
+        self.episode_store.set_status(
+            self.episode_id,
+            status=EpisodeStatus.FAILED,
+            closed_at=datetime.now(UTC),
+        )

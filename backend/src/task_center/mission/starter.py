@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any
 
 from task_center.mission.close_report_delivery import (
     MissionCloseReportRouter,
@@ -52,15 +53,18 @@ class MissionStarter:
     def start(
         self,
         *,
-        task_center_run_id: str,
         parent_task_id: str,
-        parent_attempt_id: str | None,
         goal: str,
     ) -> StartedMission:
-        self._assert_parent_running_and_no_open_child(
+        parent_task = self._assert_parent_running_and_no_open_child(
             parent_task_id=parent_task_id,
-            parent_attempt_id=parent_attempt_id,
         )
+        task_center_run_id = str(parent_task.get("task_center_run_id") or "")
+        if not task_center_run_id or task_center_run_id.isspace():
+            raise TaskCenterInvariantViolation(
+                f"TaskCenter task {parent_task_id!r} has no run id."
+            )
+        parent_attempt_id = _parent_attempt_id(parent_task)
 
         handler = self._build_handler()
         delegated_mission = handler.create_mission(
@@ -77,10 +81,10 @@ class MissionStarter:
 
         initial_attempt = None
         try:
-            initial_attempt = episode_manager.create_initial_attempt(start=False)
+            initial_attempt = episode_manager.create_unstarted_initial_attempt()
             self._mark_parent_waiting(
                 parent_task_id=parent_task_id,
-                parent_attempt_id=parent_attempt_id,
+                parent_task=parent_task,
                 mission=delegated_mission,
                 episode=initial_episode,
                 attempt_id=initial_attempt.id,
@@ -141,8 +145,7 @@ class MissionStarter:
         self,
         *,
         parent_task_id: str,
-        parent_attempt_id: str | None,
-    ) -> None:
+    ) -> dict[str, Any]:
         task = self._runtime.task_store.get_task(parent_task_id)
         if task is None:
             raise TaskCenterInvariantViolation(
@@ -152,16 +155,6 @@ class MissionStarter:
             raise TaskCenterInvariantViolation(
                 f"TaskCenter task {parent_task_id!r} is not running; "
                 "delegated mission start requires a running generator task."
-            )
-        attached_attempt = str(task.get("task_center_attempt_id") or "")
-        # In entry mode the caller has no parent attempt (parent_attempt_id
-        # is None) and the task row's attempt id column is empty/None too. In
-        # attempt mode both must match.
-        expected = parent_attempt_id or ""
-        if attached_attempt != expected:
-            raise TaskCenterInvariantViolation(
-                f"TaskCenter task {parent_task_id!r} is attached to attempt "
-                f"{attached_attempt!r}, not {expected!r}."
             )
         # Entry-mode caveat: the entry task's *own* mission has
         # ``requested_by_task_id == entry_task_id`` because the entry task
@@ -183,12 +176,13 @@ class MissionStarter:
                 f"TaskCenter task {parent_task_id!r} already has an open "
                 f"delegated mission {existing_open[0].id!r}."
             )
+        return task
 
     def _mark_parent_waiting(
         self,
         *,
         parent_task_id: str,
-        parent_attempt_id: str | None,
+        parent_task: dict[str, Any],
         mission: Mission,
         episode: Episode,
         attempt_id: str,
@@ -213,7 +207,7 @@ class MissionStarter:
                 "mission_id": mission.id,
                 "initial_episode_id": episode.id,
                 "initial_attempt_id": attempt_id,
-                "parent_attempt_id": parent_attempt_id,
+                "parent_attempt_id": _parent_attempt_id(parent_task),
                 "goal": goal,
             },
         }
@@ -300,3 +294,8 @@ class MissionStarter:
                 "MissionStarter: failed to close attempt "
                 "after mission-start failure",
             )
+
+
+def _parent_attempt_id(task: dict[str, Any]) -> str | None:
+    raw = str(task.get("task_center_attempt_id") or "")
+    return raw if raw else None

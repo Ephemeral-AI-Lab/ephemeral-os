@@ -247,9 +247,7 @@ def test_delegated_continuation_waits_until_final_segment(
     )
     coordinator = MissionStarter(runtime=runtime)
     mission_start = coordinator.start(
-        task_center_run_id=task_center_run_id,
         parent_task_id=parent_task_id,
-        parent_attempt_id=parent_attempt_id,
         goal="delegated continuation",
     )
 
@@ -320,9 +318,7 @@ def test_continuation_startup_failure_reports_continuation_graph(
     )
     coordinator = MissionStarter(runtime=runtime)
     mission_start = coordinator.start(
-        task_center_run_id=task_center_run_id,
         parent_task_id=parent_task_id,
-        parent_attempt_id=parent_attempt_id,
         goal="delegated continuation",
     )
 
@@ -368,9 +364,7 @@ def test_delegated_retry_waits_until_final_graph(
     )
     coordinator = MissionStarter(runtime=runtime)
     mission_start = coordinator.start(
-        task_center_run_id=task_center_run_id,
         parent_task_id=parent_task_id,
-        parent_attempt_id=parent_attempt_id,
         goal="delegated retry",
     )
 

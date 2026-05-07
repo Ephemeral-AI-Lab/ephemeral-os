@@ -17,7 +17,7 @@ from tools.core.runtime import ExecutionMetadata
 from tools.core.validation import execute_tool_body, parse_tool_input, validate_tool_output
 
 if TYPE_CHECKING:
-    from engine.query.loop import QueryContext
+    from engine.api import QueryContext
 
 
 EmitStreamEvent = Callable[[StreamEvent], Awaitable[None]]

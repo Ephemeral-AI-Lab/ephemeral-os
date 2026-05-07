@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from task_center.exceptions import TaskCenterInvariantViolation
-from task_center.task import HarnessTaskRole
+from task_center.api import HarnessTaskRole, TaskCenterInvariantViolation
 from tools.core.context import ToolExecutionContextService
 from tools.core.decorator import tool
 from tools.core.results import TextToolOutput, ToolResult

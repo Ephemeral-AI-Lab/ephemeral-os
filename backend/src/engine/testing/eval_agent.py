@@ -29,7 +29,7 @@ from typing import Any
 
 from agents import AgentDefinition
 from config.settings import Settings, load_settings
-from engine.query.loop import run_query
+from engine.api import run_query
 from message.messages import ConversationMessage
 from message.event_printer import format_background_start_detail
 from message.stream_events import (
@@ -349,7 +349,7 @@ class EvalAgent:
         # Resolve the active model so the test uses the same provider +
         # credentials the server would.
         from config.model_config import NoActiveModelError, try_get_active_model_kwargs
-        from engine.agent.factory import spawn_agent
+        from engine.api import spawn_agent
         from providers.provider import make_api_client
 
         db_kwargs = try_get_active_model_kwargs() or {}

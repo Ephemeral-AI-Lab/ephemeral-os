@@ -6,7 +6,7 @@ import pytest
 
 from agents import register_definition, unregister_definition
 from agents import AgentDefinition
-from engine.agent.lifecycle import EphemeralRunResult
+from engine.api import EphemeralRunResult
 from task_center.context_engine.packet import (
     ContextBlock,
     ContextPacket,
@@ -192,7 +192,7 @@ async def test_ask_advisor_runs_advisor_with_inherited_parent_context(
             event_count=1,
         )
 
-    monkeypatch.setattr("engine.agent.lifecycle.run_ephemeral_agent", _fake_run)
+    monkeypatch.setattr("engine.api.run_ephemeral_agent", _fake_run)
     try:
         result = await execute_tool_once(
             ask_advisor,
@@ -281,7 +281,7 @@ async def test_ask_resolver_runs_resolver_with_inherited_parent_context(
             event_count=1,
         )
 
-    monkeypatch.setattr("engine.agent.lifecycle.run_ephemeral_agent", _fake_run)
+    monkeypatch.setattr("engine.api.run_ephemeral_agent", _fake_run)
     try:
         result = await execute_tool_once(
             ask_resolver,

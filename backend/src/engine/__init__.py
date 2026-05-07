@@ -26,7 +26,8 @@ if TYPE_CHECKING:  # pragma: no cover
         ToolExecutionProgress,
         ToolExecutionStarted,
     )
-    from engine.query.loop import QueryContext, run_query
+    from engine.query.context import QueryContext
+    from engine.query.loop import run_query
     from engine.tool_call.streaming import StreamingToolExecutor, TrackedTool
     from engine.background.manager import BackgroundTaskManager, TrackedBackgroundTask
 

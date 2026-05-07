@@ -7,9 +7,12 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agents import get_definition
-from task_center.exceptions import TaskCenterInvariantViolation
-from task_center.attempt.generator_dag import ordered_generator_tasks
-from task_center.task import PlannedGeneratorTask, PlannerSubmission
+from task_center.api import (
+    PlannedGeneratorTask,
+    PlannerSubmission,
+    TaskCenterInvariantViolation,
+    ordered_generator_tasks,
+)
 from tools.submission.context import AttemptSubmissionContext
 
 

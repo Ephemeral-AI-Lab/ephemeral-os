@@ -12,7 +12,7 @@ from providers.types import ApiMessageRequest, UsageSnapshot
 from tools import decorate_schemas_for_background
 
 if TYPE_CHECKING:
-    from engine.query.loop import QueryContext
+    from engine.query.context import QueryContext
 
 
 @dataclass(frozen=True)

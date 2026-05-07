@@ -59,7 +59,7 @@ async def ask_advisor(
     *,
     context: ToolExecutionContextService,
 ) -> ToolResult:
-    from engine.agent.lifecycle import run_ephemeral_agent
+    from engine.api import run_ephemeral_agent
 
     runtime_config = context.runtime_config
     if runtime_config is None:

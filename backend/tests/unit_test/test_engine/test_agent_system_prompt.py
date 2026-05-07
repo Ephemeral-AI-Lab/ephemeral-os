@@ -3,7 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from agents import AgentDefinition
-from engine.runtime import agent as runtime_agent
+from engine.agent import factory as runtime_agent
 
 
 def test_agent_system_prompt_includes_runtime_base_and_agent_body_only(monkeypatch):

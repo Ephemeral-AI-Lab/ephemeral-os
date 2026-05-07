@@ -62,16 +62,10 @@ class AttemptOrchestrator:
         self._on_attempt_closed = on_attempt_closed
         self._runtime = runtime
 
-        def _close_attempt_callback(
-            status: AttemptStatus,
-            fail_reason: AttemptFailReason | None,
-        ) -> None:
-            self._close_attempt(status=status, fail_reason=fail_reason)
-
         self._dispatcher = AttemptDispatcher(
             attempt_id=attempt.id,
             runtime=runtime,
-            close_attempt=_close_attempt_callback,
+            close_attempt=self._close_attempt,
         )
 
     @property
@@ -93,15 +87,13 @@ class AttemptOrchestrator:
         task_id = planner_task_id(attempt.id)
         runtime.orchestrator_registry.register(self)
         try:
-            task_center_run_id = runtime.task_center_run_id_for_attempt(attempt)
             launch = self._build_planner_launch(
                 attempt=attempt,
                 task_id=task_id,
-                task_center_run_id=task_center_run_id,
             )
             runtime.task_store.upsert_task(
                 task_id=task_id,
-                task_center_run_id=task_center_run_id,
+                task_center_run_id=launch.task_center_run_id,
                 role=HarnessTaskRole.PLANNER.value,
                 agent_name=launch.agent_name,
                 task_input=launch.task_input,
@@ -124,7 +116,6 @@ class AttemptOrchestrator:
         *,
         attempt,  # type: ignore[no-untyped-def]
         task_id: str,
-        task_center_run_id: str,
     ) -> AgentLaunch:
         """Compose the planner launch via :class:`ContextComposer`."""
         runtime = self._runtime
@@ -144,7 +135,7 @@ class AttemptOrchestrator:
         )
         return AgentLaunch(
             task_id=task_id,
-            task_center_run_id=task_center_run_id,
+            task_center_run_id=runtime.task_center_run_id_for_attempt(attempt),
             attempt_id=attempt.id,
             role=HarnessTaskRole.PLANNER,
             agent_name=bundle.agent_def.name,
@@ -219,8 +210,8 @@ class AttemptOrchestrator:
             },
         )
         self._close_attempt(
-            status=AttemptStatus.FAILED,
-            fail_reason=AttemptFailReason.PLANNER_FAILED,
+            AttemptStatus.FAILED,
+            AttemptFailReason.PLANNER_FAILED,
         )
 
     def apply_generator_submission(
@@ -390,7 +381,6 @@ class AttemptOrchestrator:
 
     def _close_attempt(
         self,
-        *,
         status: AttemptStatus,
         fail_reason: AttemptFailReason | None,
     ) -> None:

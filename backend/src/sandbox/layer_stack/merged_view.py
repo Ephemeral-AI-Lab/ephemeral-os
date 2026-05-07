@@ -94,14 +94,30 @@ class MergedView:
 
         return tuple(sorted(names))
 
-    def materialize(self, destination: str | Path, manifest: Manifest) -> None:
+    def materialize(
+        self,
+        destination: str | Path,
+        manifest: Manifest,
+        *,
+        link_ok: bool = False,
+    ) -> None:
+        """Materialise *manifest* into *destination*.
+
+        ``link_ok=True`` opts the caller into hardlink semantics: regular
+        files are linked from their source layers instead of byte-copied.
+        Only safe when the caller treats *destination* as read-only — e.g.
+        the overlay-mount lowerdir prepared by
+        :meth:`LayerStackManager.prepare_workspace_snapshot`. The public
+        ``manager.materialize()`` keeps the safer byte-copy default so a
+        consumer that writes to the result cannot corrupt source layers.
+        """
         dest = Path(destination)
         if dest.exists():
             shutil.rmtree(dest)
         dest.mkdir(parents=True)
 
         for layer in reversed(manifest.layers):
-            self._apply_layer(self._layer_dir(layer), dest)
+            self._apply_layer(self._layer_dir(layer), dest, link_ok=link_ok)
 
     def _layer_dir(self, layer: LayerRef) -> Path:
         layer_path = Path(layer.path)
@@ -113,7 +129,13 @@ class MergedView:
             )
         return layer_path
 
-    def _apply_layer(self, layer_dir: Path, dest: Path) -> None:
+    def _apply_layer(
+        self,
+        layer_dir: Path,
+        dest: Path,
+        *,
+        link_ok: bool = False,
+    ) -> None:
         entries = tuple(sorted(layer_dir.rglob("*"), key=lambda item: item.as_posix()))
 
         for marker in entries:
@@ -141,7 +163,10 @@ class MergedView:
             elif entry.is_file():
                 target.parent.mkdir(parents=True, exist_ok=True)
                 _remove_path(target)
-                shutil.copy2(entry, target)
+                if link_ok:
+                    _link_or_copy(entry, target)
+                else:
+                    shutil.copy2(entry, target)
 
 
 def _join_rel(root: Path, rel: str) -> Path:
@@ -193,6 +218,23 @@ def _remove_path(path: Path) -> None:
         path.unlink(missing_ok=True)
     elif path.is_dir():
         shutil.rmtree(path)
+
+
+def _link_or_copy(src: Path, dst: Path) -> None:
+    """Hardlink ``src`` into ``dst``; fall back to ``shutil.copy2`` cross-FS.
+
+    Materialised lowerdirs are mounted overlay-readonly (or copied to a
+    separate ``merged`` directory in copy-backed mode) — so sharing inodes
+    with the source layer is safe and avoids byte copies under concurrent
+    materialise. ``EXDEV`` (cross-filesystem) and ``EPERM`` (e.g. some FUSE
+    mounts disallow link creation) fall through to a real copy.
+    """
+    try:
+        os.link(src, dst)
+    except OSError as exc:
+        if exc.errno not in (18, 1):  # EXDEV, EPERM
+            raise
+        shutil.copy2(src, dst)
 
 
 def _replace_symlink(path: Path, target: str) -> None:

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 from message.messages import ToolResultBlock
 
 if TYPE_CHECKING:
-    from engine.query.loop import QueryContext
+    from engine.query.context import QueryContext
 
 
 def reject_tool_batch(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 import shutil
 import time
@@ -32,6 +33,31 @@ from sandbox.runtime import occ_server
 from sandbox.runtime.async_bridge import run_sync_in_executor
 
 
+_PREPARE_SNAPSHOT_PARALLELISM = int(
+    os.environ.get("EPHEMERALOS_SHELL_PREPARE_SEMAPHORE", "4")
+)
+"""Cap on concurrent ``prepare_workspace_snapshot`` calls.
+
+Materialise creates per-call hardlinks (or copies in cross-FS edge cases),
+each one walking and stat'ing every layer entry. With unbounded
+parallelism (e.g. c20 shell load), filesystem metadata bandwidth saturates
+and per-call materialise wall climbs super-linearly. Capping concurrent
+prepares at a small N keeps each materialise close to its isolated cost
+(~40 ms) without re-blocking the asyncio loop on the dispatch.
+"""
+
+_prepare_snapshot_semaphore: asyncio.Semaphore | None = None
+
+
+def _prepare_semaphore() -> asyncio.Semaphore:
+    global _prepare_snapshot_semaphore
+    if _prepare_snapshot_semaphore is None:
+        _prepare_snapshot_semaphore = asyncio.Semaphore(
+            max(1, _PREPARE_SNAPSHOT_PARALLELISM)
+        )
+    return _prepare_snapshot_semaphore
+
+
 async def execute_shell_api(args: dict[str, object]) -> dict[str, object]:
     """Public ``api.shell`` execution entrypoint used by the handler layer."""
     layer_stack, occ_client, gitignore, storage_root = _services(args)
@@ -57,12 +83,17 @@ async def _execute_shell(
     request = _command_request(args)
     run_dir = _run_dir(storage_root, request.request_id)
     timings: dict[str, float] = {}
+    timings["command_exec.handler_sync_prelude_s"] = (
+        time.perf_counter() - total_start
+    )
 
     lease_start = time.perf_counter()
-    lease = layer_stack.prepare_workspace_snapshot(
-        workspace_ref=request.workspace_ref,
-        request_id=request.request_id,
-    )
+    async with _prepare_semaphore():
+        lease = await run_sync_in_executor(
+            layer_stack.prepare_workspace_snapshot,
+            workspace_ref=request.workspace_ref,
+            request_id=request.request_id,
+        )
     timings.update(
         {
             **lease.timings,
@@ -79,9 +110,6 @@ async def _execute_shell(
             workdir=str(run_dir / "work"),
             manifest_version=lease.manifest_version,
             lease_id=lease.lease_id,
-        )
-        timings["command_exec.handler_sync_prelude_s"] = (
-            time.perf_counter() - total_start
         )
         process = await run_sync_in_executor(
             run_workspace_replaced_command,
@@ -114,12 +142,13 @@ async def _execute_shell(
         )
         timings["command_exec.occ_apply_s"] = time.perf_counter() - occ_start
         release_start = time.perf_counter()
-        layer_stack.release_lease(
+        await run_sync_in_executor(
+            layer_stack.release_lease,
             workspace_ref=request.workspace_ref,
             lease_id=lease.lease_id,
         )
         released = True
-        _drop_transient_lowerdir(lease)
+        await run_sync_in_executor(_drop_transient_lowerdir, lease)
         timings["command_exec.release_snapshot_s"] = (
             time.perf_counter() - release_start
         )
@@ -151,11 +180,12 @@ async def _execute_shell(
     finally:
         if not released:
             release_start = time.perf_counter()
-            layer_stack.release_lease(
+            await run_sync_in_executor(
+                layer_stack.release_lease,
                 workspace_ref=request.workspace_ref,
                 lease_id=lease.lease_id,
             )
-            _drop_transient_lowerdir(lease)
+            await run_sync_in_executor(_drop_transient_lowerdir, lease)
             timings["command_exec.release_snapshot_s"] = (
                 time.perf_counter() - release_start
             )

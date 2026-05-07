@@ -9,7 +9,8 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel, RootModel
 
-from engine.query.loop import QueryContext, QueryExitReason, run_query
+from engine.query.context import QueryContext, QueryExitReason
+from engine.query.loop import run_query
 from engine.tool_call.streaming import StreamingToolExecutor
 from engine.background.dispatch import (
     launch_and_collect_bg_events,
