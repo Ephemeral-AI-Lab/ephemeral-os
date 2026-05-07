@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from sandbox.api.tool import _daemon_client as daemon_client_mod
+import sandbox.host.daemon_client as daemon_client_mod
 
 from .native_probe import BUNDLE_REMOTE_DIR
 from .sandbox_fixture import SandboxHandle, WORKSPACE_ROOT

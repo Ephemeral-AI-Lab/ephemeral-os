@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from sandbox.api.tool._daemon_client import call_daemon_api, timings_from_payload
+from sandbox.api.tool._payload import timings_from_payload
 from sandbox.contracts import ReadFileRequest, ReadFileResult
+from sandbox.host.daemon_client import call_daemon_api
 
 
 async def read_file(sandbox_id: str, request: ReadFileRequest) -> ReadFileResult:

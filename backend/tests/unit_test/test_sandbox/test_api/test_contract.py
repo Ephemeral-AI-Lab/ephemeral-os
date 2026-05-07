@@ -30,18 +30,25 @@ _MODEL_ONLY_MODULES = {
     "tool/__init__.py",
 }
 _PUBLIC_VERB_IMPORT_ALLOWLIST = {
-    "tool/read.py": {"sandbox.api.tool._daemon_client", "sandbox.contracts"},
-    "tool/write.py": {
-        "sandbox.api.tool._daemon_client",
+    "tool/read.py": {
+        "sandbox.api.tool._payload",
         "sandbox.contracts",
+        "sandbox.host.daemon_client",
+    },
+    "tool/write.py": {
+        "sandbox.api.tool._payload",
+        "sandbox.contracts",
+        "sandbox.host.daemon_client",
     },
     "tool/edit.py": {
-        "sandbox.api.tool._daemon_client",
+        "sandbox.api.tool._payload",
         "sandbox.contracts",
+        "sandbox.host.daemon_client",
     },
     "tool/shell.py": {
-        "sandbox.api.tool._daemon_client",
+        "sandbox.api.tool._payload",
         "sandbox.contracts",
+        "sandbox.host.daemon_client",
     },
     "status.py": {
         "sandbox.host.recovery",

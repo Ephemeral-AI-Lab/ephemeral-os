@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from sandbox.api.tool._daemon_client import (
-    call_daemon_api,
+from sandbox.api.tool._payload import (
     conflict_from_payload,
     paths_from_payload,
     timings_from_payload,
 )
 from sandbox.contracts import WriteFileRequest, WriteFileResult
+from sandbox.host.daemon_client import call_daemon_api
 
 
 async def write_file(sandbox_id: str, request: WriteFileRequest) -> WriteFileResult:

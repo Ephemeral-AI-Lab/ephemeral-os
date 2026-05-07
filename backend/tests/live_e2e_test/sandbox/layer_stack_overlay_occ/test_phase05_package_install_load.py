@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.api.tool import _daemon_client as daemon_client_mod
+import sandbox.host.daemon_client as daemon_client_mod
 
 from .._harness.concurrency import gather_with_barrier
 from .._harness.integrated_cases import RuntimeCallMetric, percentile, q, timed_call

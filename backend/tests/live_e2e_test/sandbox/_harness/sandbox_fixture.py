@@ -25,11 +25,11 @@ import pytest_asyncio
 from config import load_settings
 from sandbox.api import status as sb_status
 from sandbox.api.tool import edit as edit_mod
-from sandbox.api.tool import _daemon_client as daemon_client_mod
+import sandbox.host.daemon_client as daemon_client_mod
 from sandbox.api.tool import read as read_mod
 from sandbox.api.tool import shell as shell_mod
 from sandbox.api.tool import write as write_mod
-from sandbox.api.tool._daemon_client import DEFAULT_LAYER_STACK_ROOT
+from sandbox.host.daemon_client import DEFAULT_LAYER_STACK_ROOT
 from sandbox.api.tool.raw_exec import raw_exec as raw_exec_fn
 from sandbox.contracts import (
     EditFileRequest,

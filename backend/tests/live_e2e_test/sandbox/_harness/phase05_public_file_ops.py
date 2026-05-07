@@ -10,8 +10,8 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 
-from sandbox.api.tool import _daemon_client as daemon_client_mod
-from sandbox.api.tool._daemon_client import DEFAULT_LAYER_STACK_ROOT
+import sandbox.host.daemon_client as daemon_client_mod
+from sandbox.host.daemon_client import DEFAULT_LAYER_STACK_ROOT
 
 from .integrated_cases import RuntimeCallMetric, percentile, q
 from .sandbox_fixture import SandboxHandle, WORKSPACE_ROOT

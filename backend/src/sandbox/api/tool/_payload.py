@@ -1,11 +1,10 @@
-"""Host transport for sandbox-local guarded daemon operations."""
+"""Payload projection helpers for sandbox-local guarded daemon operations."""
 
 from __future__ import annotations
 
 from collections.abc import Iterable
 
 from sandbox.contracts import ConflictInfo
-from sandbox.host.daemon_client import DEFAULT_LAYER_STACK_ROOT, call_daemon_api
 
 
 def conflict_from_payload(raw: object) -> ConflictInfo | None:
@@ -43,8 +42,6 @@ def int_from_payload(value: object, *, default: int) -> int:
 
 
 __all__ = [
-    "DEFAULT_LAYER_STACK_ROOT",
-    "call_daemon_api",
     "conflict_from_payload",
     "int_from_payload",
     "paths_from_payload",

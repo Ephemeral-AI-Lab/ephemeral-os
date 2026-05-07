@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from pathlib import PurePosixPath
 from typing import Any
 
-from sandbox.api.tool import _daemon_client as daemon_client_mod
+import sandbox.host.daemon_client as daemon_client_mod
 
 from .sandbox_fixture import SandboxHandle, WORKSPACE_ROOT
 

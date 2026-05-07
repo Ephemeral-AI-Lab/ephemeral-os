@@ -5,14 +5,14 @@ from __future__ import annotations
 import time
 from collections.abc import Mapping
 
-from sandbox.api.tool._daemon_client import (
-    call_daemon_api,
+from sandbox.api.tool._payload import (
     conflict_from_payload,
     int_from_payload,
     paths_from_payload,
     timings_from_payload,
 )
 from sandbox.contracts import ConflictInfo, ShellRequest, ShellResult
+from sandbox.host.daemon_client import call_daemon_api
 
 
 async def shell(sandbox_id: str, request: ShellRequest) -> ShellResult:
