@@ -9,12 +9,10 @@ import os
 import time
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from uuid import uuid4
 
 from sandbox.api.tool.result_projection import (
     committed_paths,
     conflict_and_status,
-    published_paths,
 )
 from sandbox.layer_stack import LayerStackManager
 from sandbox.layer_stack.manifest import manifest_path
@@ -26,13 +24,9 @@ from sandbox.layer_stack.workspace import (
 )
 from sandbox.occ.changeset.builders import build_api_edit_change, build_api_write_change
 from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
-from sandbox.occ.changeset.types import Change, ChangesetResult
+from sandbox.occ.changeset.types import Change
 from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
-from sandbox.occ.overlay_capture import overlay_capture_to_occ_changes
 from sandbox.occ.service import OccService
-from sandbox.overlay.capture.types import OverlayCapture, read_output_ref
-from sandbox.overlay.runner.runtime_invoker import RuntimeInvoker
-from sandbox.overlay.runner.snapshot_overlay_runner import OverlayShellRequest
 from sandbox.runtime.clients.layer_stack import LayerStackClient
 from sandbox.runtime.layer_stack_server import get_layer_stack_manager
 
@@ -91,68 +85,6 @@ async def shell(args: dict[str, object]) -> dict[str, object]:
     from sandbox.runtime import command_exec_server
 
     return await command_exec_server.shell(args)
-
-
-async def shell_batch(args: dict[str, object]) -> dict[str, object]:
-    from sandbox.runtime import command_exec_server
-
-    return await command_exec_server.shell_batch(args)
-
-
-async def _shell_with_services(
-    args: Mapping[str, object],
-    *,
-    manager: LayerStackManager,
-    occ_service: OccService,
-    gitignore: "SnapshotGitignoreOracle",
-) -> dict[str, object]:
-    total_start = time.perf_counter()
-    request = _shell_request(args)
-
-    overlay_start = time.perf_counter()
-    capture = await _run_overlay(
-        manager=manager,
-        request=request,
-        barrier=_barrier(args),
-    )
-    overlay_elapsed = time.perf_counter() - overlay_start
-
-    occ_start = time.perf_counter()
-    apply_timings: dict[str, float] = {}
-    changeset = await _apply_overlay_capture(
-        capture,
-        occ_service=occ_service,
-        caller_id=str(args.get("actor_id") or ""),
-        description=str(args.get("description") or "shell"),
-        out_timings=apply_timings,
-    )
-    occ_elapsed = time.perf_counter() - occ_start
-
-    conflict, conflict_status = conflict_and_status(changeset.files)
-    command_failed = capture.exit_code != 0
-    success = not command_failed and changeset.success
-    status = "ok" if success else conflict_status if conflict is not None else "error"
-    timings = {
-        **capture.timings,
-        **changeset.timings,
-        **apply_timings,
-        **_gitignore_timings(gitignore),
-        "api.shell.overlay_s": overlay_elapsed,
-        "api.shell.occ_apply_s": occ_elapsed,
-        "api.shell.total_s": time.perf_counter() - total_start,
-    }
-    return {
-        "success": success,
-        "exit_code": capture.exit_code,
-        "stdout": read_output_ref(capture.stdout_ref),
-        "stderr": read_output_ref(capture.stderr_ref),
-        "changed_paths": list(published_paths(changeset.files)),
-        "status": status,
-        "conflict": _conflict_to_dict(conflict),
-        "conflict_reason": conflict.message if conflict is not None else None,
-        "warnings": [],
-        "timings": timings,
-    }
 
 
 async def write_file(args: dict[str, object]) -> dict[str, object]:
@@ -318,104 +250,6 @@ async def layer_metrics(args: dict[str, object]) -> dict[str, object]:
     }
 
 
-async def _run_overlay(
-    *,
-    manager: LayerStackManager,
-    request: OverlayShellRequest,
-    barrier: tuple[str, int] | None,
-) -> OverlayCapture:
-    total_start = time.perf_counter()
-    lease_start = time.perf_counter()
-    lease = manager.acquire_snapshot_lease(request.request_id)
-    timings = {"overlay.lease_acquire_s": time.perf_counter() - lease_start}
-    invoke_start = time.perf_counter()
-    try:
-        if barrier is not None:
-            barrier_start = time.perf_counter()
-            await _wait_file_barrier(
-                manager.storage_root,
-                barrier_id=barrier[0],
-                parties=barrier[1],
-            )
-            timings["overlay.test_barrier_wait_s"] = time.perf_counter() - barrier_start
-        invoke_start = time.perf_counter()
-        capture = await RuntimeInvoker(storage_root=manager.storage_root).invoke(
-            request=request,
-            manifest=lease.manifest,
-        )
-    finally:
-        timings["overlay.invoke_total_s"] = time.perf_counter() - invoke_start
-        release_start = time.perf_counter()
-        manager.release_lease(lease.lease_id)
-        timings["overlay.lease_release_s"] = time.perf_counter() - release_start
-        timings["overlay.runner_total_s"] = time.perf_counter() - total_start
-    return OverlayCapture.from_dict(
-        {
-            **capture.to_dict(),
-            "timings": {**capture.timings, **timings},
-        }
-    )
-
-
-async def _apply_overlay_capture(
-    capture: OverlayCapture,
-    *,
-    occ_service: OccService,
-    caller_id: str,
-    description: str,
-    out_timings: dict[str, float] | None = None,
-) -> ChangesetResult:
-    convert_start = time.perf_counter()
-    changes: Sequence[Change] = overlay_capture_to_occ_changes(capture)
-    convert_elapsed = time.perf_counter() - convert_start
-    if out_timings is not None:
-        out_timings["api.shell.overlay_capture_to_changes_s"] = convert_elapsed
-    if not changes:
-        return ChangesetResult(
-            files=(),
-            timings=dict(capture.timings),
-            published_manifest_version=None,
-        )
-    if capture.snapshot_manifest is None:
-        raise ValueError("overlay capture is missing its leased manifest")
-    layer_root = occ_service_layer_root(occ_service)
-    prepare_start = time.perf_counter()
-    # Phase 4.x — single-path overlay captures opt out of cross-path
-    # atomicity so ``OccSerialMerger._disjoint_batches`` can coalesce
-    # them with other concurrent disjoint commits. Multi-path captures
-    # (e.g., ``make build`` writing many files in one shell) keep the
-    # default ``atomic=True`` so a single failed validation rejects the
-    # entire capture rather than leaving the layer half-built.
-    distinct_paths = {change.path for change in changes}
-    is_atomic = len(distinct_paths) > 1
-    prepared = await _prepare_changeset(
-        occ_service,
-        changes=changes,
-        snapshot=capture.snapshot_manifest,
-        options=CommitOptions(
-            atomic=is_atomic,
-            caller_id=caller_id,
-            description=description,
-        ),
-    )
-    prepare_elapsed = time.perf_counter() - prepare_start
-    gate_start = time.perf_counter()
-    async with _process_commit_gate(layer_root, _prepared_paths(prepared)):
-        gate_acquired = time.perf_counter()
-        flock_start = time.perf_counter()
-        async with _commit_lock(layer_root):
-            flock_acquired = time.perf_counter()
-            commit_start = time.perf_counter()
-            result = await occ_service.commit_prepared(prepared)
-            commit_elapsed = time.perf_counter() - commit_start
-    if out_timings is not None:
-        out_timings["api.shell.prepare_s"] = prepare_elapsed
-        out_timings["api.shell.commit_s"] = commit_elapsed
-        out_timings["api.shell.process_gate_wait_s"] = gate_acquired - gate_start
-        out_timings["api.shell.flock_wait_s"] = flock_acquired - flock_start
-    return result
-
-
 def _services(args: Mapping[str, object]) -> tuple[
     LayerStackManager,
     OccService,
@@ -479,56 +313,6 @@ def _gitignore_timings(
         "gitignore.materialize_snapshot_s": float(gitignore.last_materialize_s),
         "gitignore.git_init_s": float(gitignore.last_git_init_s),
     }
-
-
-def _shell_request(args: Mapping[str, object]) -> OverlayShellRequest:
-    command = args.get("command")
-    if isinstance(command, str):
-        argv: tuple[str, ...] = ("bash", "-lc", command)
-    elif isinstance(command, list):
-        argv = tuple(str(part) for part in command)
-    else:
-        raise ValueError("command must be a string or argv list")
-    timeout = args.get("timeout_seconds", args.get("timeout"))
-    return OverlayShellRequest(
-        request_id=str(args.get("request_id") or uuid4().hex),
-        command=argv,
-        cwd=str(args.get("cwd") or "."),
-        env={str(k): str(v) for k, v in _mapping(args.get("env")).items()},
-        timeout_seconds=_optional_float(timeout),
-    )
-
-
-def _barrier(args: Mapping[str, object]) -> tuple[str, int] | None:
-    barrier_id = str(args.get("barrier_id") or "").strip()
-    if not barrier_id:
-        return None
-    return barrier_id, max(1, _int(args.get("barrier_parties"), default=1))
-
-
-async def _wait_file_barrier(
-    storage_root: Path,
-    *,
-    barrier_id: str,
-    parties: int,
-) -> None:
-    safe_id = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in barrier_id)
-    barrier_dir = storage_root / "runtime" / "barriers" / safe_id
-    barrier_dir.mkdir(parents=True, exist_ok=True)
-    (barrier_dir / f"{uuid4().hex}.arrived").write_text("", encoding="utf-8")
-    deadline = time.monotonic() + 10
-    while len(list(barrier_dir.glob("*.arrived"))) < parties:
-        if time.monotonic() >= deadline:
-            raise TimeoutError(f"runtime barrier timed out: {barrier_id}")
-        await asyncio.sleep(0.05)
-
-
-def occ_service_layer_root(service: OccService) -> Path:
-    layer_stack = getattr(service, "_layer_stack", None)
-    root = getattr(layer_stack, "storage_root", None)
-    if root is None:
-        raise RuntimeError("OccService is missing a layer stack")
-    return Path(root)
 
 
 def _bucket_locks(storage_root: Path) -> tuple[asyncio.Lock, ...]:
@@ -665,31 +449,11 @@ def _conflict_to_dict(conflict: object | None) -> dict[str, object] | None:
     }
 
 
-def _mapping(value: object) -> Mapping[str, object]:
-    return value if isinstance(value, Mapping) else {}
-
-
-def _optional_float(value: object) -> float | None:
-    if value is None:
-        return None
-    if isinstance(value, (str, int, float)):
-        return float(value)
-    raise TypeError(f"expected numeric value, got {type(value).__name__}")
-
-
-def _int(value: object, *, default: int) -> int:
-    if value is None:
-        return default
-    if isinstance(value, (str, int, float)):
-        return int(value)
-    raise TypeError(f"expected integer value, got {type(value).__name__}")
-
 __all__ = [
     "drop_services_cache",
     "edit_file",
     "layer_metrics",
     "read_file",
     "shell",
-    "shell_batch",
     "write_file",
 ]

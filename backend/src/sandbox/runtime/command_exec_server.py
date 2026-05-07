@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import os
 import shutil
 import time
@@ -74,59 +73,6 @@ async def shell(args: dict[str, object]) -> dict[str, object]:
     return _payload_from_result(result)
 
 
-async def shell_batch(args: dict[str, object]) -> dict[str, object]:
-    total_start = time.perf_counter()
-    items = args.get("items")
-    if not isinstance(items, Sequence) or isinstance(items, (str, bytes)):
-        raise ValueError("items must be a list of shell request objects")
-    max_concurrency = max(1, _int(args.get("max_concurrency"), default=32))
-    layer_stack, occ_client, gitignore, storage_root = _services(args)
-    semaphore = asyncio.Semaphore(max_concurrency)
-
-    async def run_one(index: int, item: object) -> dict[str, object]:
-        if not isinstance(item, Mapping):
-            raise ValueError(f"batch item {index} must be an object")
-        item_args = dict(args)
-        item_args.pop("items", None)
-        item_args.pop("max_concurrency", None)
-        item_args.update(dict(item))
-        wait_start = time.perf_counter()
-        async with semaphore:
-            run_start = time.perf_counter()
-            result = await _execute_shell(
-                item_args,
-                layer_stack=layer_stack,
-                occ_client=occ_client,
-                gitignore=gitignore,
-                storage_root=storage_root,
-            )
-        payload = _payload_from_result(result)
-        timings = payload.get("timings")
-        if not isinstance(timings, dict):
-            timings = {}
-        payload["timings"] = {
-            **timings,
-            "api.shell_batch.item_wait_s": run_start - wait_start,
-            "api.shell_batch.item_total_s": time.perf_counter() - wait_start,
-        }
-        payload["batch_index"] = index
-        return payload
-
-    results = await asyncio.gather(
-        *(run_one(index, item) for index, item in enumerate(items))
-    )
-    return {
-        "success": all(bool(result.get("success", False)) for result in results),
-        "results": results,
-        "warnings": [],
-        "timings": {
-            "api.shell_batch.total_s": time.perf_counter() - total_start,
-            "api.shell_batch.count": float(len(results)),
-            "api.shell_batch.max_concurrency": float(max_concurrency),
-        },
-    }
-
-
 async def _execute_shell(
     args: Mapping[str, object],
     *,
@@ -139,12 +85,6 @@ async def _execute_shell(
     request = _command_request(args)
     run_dir = _run_dir(storage_root, request.request_id)
     timings: dict[str, float] = {}
-
-    if "snapshot_cache_policy" in args:
-        raise ValueError(
-            "snapshot_cache_policy is not supported; the materialized lowerdir "
-            "cache was removed in Phase 04.5"
-        )
 
     lease_start = time.perf_counter()
     lease = layer_stack.prepare_workspace_snapshot(
@@ -160,18 +100,6 @@ async def _execute_shell(
 
     released = False
     try:
-        barrier = _barrier(args)
-        if barrier is not None:
-            barrier_start = time.perf_counter()
-            await _wait_file_barrier(
-                storage_root,
-                barrier_id=barrier[0],
-                parties=barrier[1],
-            )
-            timings["command_exec.test_barrier_wait_s"] = (
-                time.perf_counter() - barrier_start
-            )
-
         spec = WorkspaceReplacementMountSpec(
             workspace_root=request.workspace_root,
             lowerdir=lease.lowerdir,
@@ -272,11 +200,17 @@ async def _apply_workspace_capture(
             timings={},
             published_manifest_version=None,
         )
+    # Single-path captures opt out of cross-path atomicity so
+    # ``OccSerialMerger._disjoint_batches`` can coalesce them with other
+    # concurrent disjoint commits. Multi-path captures keep ``atomic=True``
+    # so a single failed validation rejects the whole capture.
+    distinct_paths = {change.path for change in typed_changes}
+    is_atomic = len(distinct_paths) > 1
     result = await occ_client.apply_changeset(
         typed_changes,
         snapshot=snapshot,
         options=CommitOptions(
-            atomic=True,
+            atomic=is_atomic,
             caller_id=request.actor_id,
             description=request.description,
         ),
@@ -416,30 +350,6 @@ def _drop_transient_lowerdir(lease: object) -> None:
     shutil.rmtree(lowerdir.parent, ignore_errors=True)
 
 
-def _barrier(args: Mapping[str, object]) -> tuple[str, int] | None:
-    barrier_id = str(args.get("barrier_id") or "").strip()
-    if not barrier_id:
-        return None
-    return barrier_id, max(1, _int(args.get("barrier_parties"), default=1))
-
-
-async def _wait_file_barrier(
-    storage_root: Path,
-    *,
-    barrier_id: str,
-    parties: int,
-) -> None:
-    safe_id = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in barrier_id)
-    barrier_dir = storage_root / "runtime" / "barriers" / safe_id
-    barrier_dir.mkdir(parents=True, exist_ok=True)
-    (barrier_dir / f"{uuid4().hex}.arrived").write_text("", encoding="utf-8")
-    deadline = time.monotonic() + 10
-    while len(list(barrier_dir.glob("*.arrived"))) < parties:
-        if time.monotonic() >= deadline:
-            raise TimeoutError(f"runtime barrier timed out: {barrier_id}")
-        await asyncio.sleep(0.05)
-
-
 def _gitignore_timings(
     gitignore: "SnapshotGitignoreOracle",
 ) -> dict[str, float]:
@@ -473,16 +383,7 @@ def _optional_float(value: object) -> float | None:
     raise TypeError(f"expected numeric value, got {type(value).__name__}")
 
 
-def _int(value: object, *, default: int) -> int:
-    if value is None:
-        return default
-    if isinstance(value, (str, int, float)):
-        return int(value)
-    raise TypeError(f"expected integer value, got {type(value).__name__}")
-
-
 __all__ = [
     "drop_services_cache",
     "shell",
-    "shell_batch",
 ]

@@ -219,27 +219,3 @@ async def test_shell_uses_transient_lowerdir_and_removes_it(
     assert result.exit_code == 0
     assert captured_lowerdirs
     assert captured_lowerdirs[0].exists() is False
-
-
-async def test_shell_rejects_legacy_snapshot_cache_policy_arg(
-    tmp_path: Path,
-) -> None:
-    workspace = tmp_path / "workspace"
-    workspace.mkdir()
-    stack = tmp_path / "stack"
-    build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
-    layer_stack = LayerStackClient(stack)
-
-    with pytest.raises(ValueError, match="snapshot_cache_policy"):
-        await command_exec_server._execute_shell(
-            {
-                "layer_stack_root": stack.as_posix(),
-                "command": "true",
-                "cwd": ".",
-                "snapshot_cache_policy": "disabled",
-            },
-            layer_stack=layer_stack,
-            occ_client=_OCCClient(_LayerStackClient(tmp_path / "unused-lower")),
-            gitignore=_Gitignore(),
-            storage_root=stack,
-        )

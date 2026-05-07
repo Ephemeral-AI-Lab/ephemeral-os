@@ -46,9 +46,9 @@ plan §6 (mirrors the existing `stack-overlay-live-*.jsonl` shape).
 Current Phase 4 integrated artifacts use
 `.omc/results/live-e2e-integrated-<profile>-<utc>.jsonl`. Each row includes
 `wall_ms`, `runtime_ms`, `changed_paths`, `conflict_reason`, and the complete
-public-tool timing map. Shell fan-out rows are produced by
-`sandbox.api.tool.shell_batch`; each shell item keeps its normal `shell` op
-label and includes `api.shell_batch.*` timing keys for the shared dispatch.
+public-tool timing map. Shell fan-out rows are produced by independent
+`sandbox.api.tool.shell` calls launched concurrently under
+`gather_with_barrier`; each row carries the normal `api.shell.*` timing keys.
 
 ## Metric terminology
 

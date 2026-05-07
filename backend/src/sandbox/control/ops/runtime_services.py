@@ -7,10 +7,8 @@ live inside the sandbox runtime bundle.
 from __future__ import annotations
 
 import asyncio
-import time
 import uuid
-from collections.abc import Iterable, Iterator, Sequence
-from contextlib import contextmanager
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 
 from sandbox.api import (
@@ -35,22 +33,12 @@ class RemoteRuntimeServiceBinding:
 
     sandbox_id: str
     layer_stack_root: str
-    _barrier: tuple[str, int] | None = None
     _initialized: bool = False
     _init_lock: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
 
     def caller(self, label: str) -> SandboxCaller:
         safe = "".join(ch if ch.isalnum() or ch in "-_." else "-" for ch in label)
         return SandboxCaller(agent_id=f"sandbox-api-{safe or uuid.uuid4().hex}")
-
-    @contextmanager
-    def barrier_overlay(self, *, parties: int) -> Iterator[None]:
-        previous = self._barrier
-        self._barrier = (uuid.uuid4().hex, max(1, int(parties)))
-        try:
-            yield
-        finally:
-            self._barrier = previous
 
     async def shell(
         self,
@@ -70,9 +58,6 @@ class RemoteRuntimeServiceBinding:
             "actor_id": caller.agent_id,
             "description": description,
         }
-        if self._barrier is not None:
-            args["barrier_id"] = self._barrier[0]
-            args["barrier_parties"] = self._barrier[1]
         raw = await _call_runtime_server(
             exec_fn=get_adapter(self.sandbox_id).exec,
             sandbox_id=self.sandbox_id,
@@ -81,56 +66,6 @@ class RemoteRuntimeServiceBinding:
             timeout=(timeout or 60) + 30,
         )
         return _shell_result_from_payload(raw)
-
-    async def shell_batch(
-        self,
-        calls: Sequence[ShellBatchCall],
-        *,
-        max_concurrency: int = 32,
-        timeout: int | None = None,
-    ) -> tuple[ShellResult, ...]:
-        if not calls:
-            return ()
-        init_start = time.perf_counter()
-        await self.ensure_initialized()
-        initialized_at = time.perf_counter()
-        max_call_timeout = max((call.timeout or 60) for call in calls)
-        waves = (len(calls) + max(1, max_concurrency) - 1) // max(1, max_concurrency)
-        raw = await _call_runtime_server(
-            exec_fn=get_adapter(self.sandbox_id).exec,
-            sandbox_id=self.sandbox_id,
-            op="api.shell_batch",
-            args={
-                "layer_stack_root": self.layer_stack_root,
-                "max_concurrency": max_concurrency,
-                "items": [
-                    {
-                        "command": call.command,
-                        "cwd": call.cwd,
-                        "timeout_seconds": call.timeout,
-                        "actor_id": call.caller.agent_id,
-                        "description": call.description,
-                    }
-                    for call in calls
-                ],
-            },
-            timeout=timeout or int(max_call_timeout * waves + 60),
-        )
-        decoded_at = time.perf_counter()
-        batch_timings = _timings(raw.get("timings"))
-        results = tuple(
-            _shell_result_from_payload(item)
-            for item in _payload_items(raw.get("results"))
-        )
-        host_timings = {
-            "host.ensure_initialized_s": initialized_at - init_start,
-            "host.runtime_dispatch_s": decoded_at - initialized_at,
-            "host.total_s": decoded_at - init_start,
-        }
-        for result in results:
-            result.timings.update(batch_timings)
-            result.timings.update(host_timings)
-        return results
 
     async def write_file(
         self,
@@ -262,17 +197,6 @@ class RemoteRuntimeServiceBinding:
         dispose_adapter(self.sandbox_id)
 
 
-@dataclass(frozen=True)
-class ShellBatchCall:
-    """One shell request sent as part of a provider-backed runtime batch."""
-
-    command: str
-    timeout: int | None
-    cwd: str
-    caller: SandboxCaller
-    description: str
-
-
 def create_remote_runtime_services(
     *,
     sandbox_id: str,
@@ -364,12 +288,6 @@ def _timings(raw: object) -> dict[str, float]:
     return {str(key): float(value) for key, value in raw.items()}
 
 
-def _payload_items(raw: object) -> tuple[dict[str, object], ...]:
-    if not isinstance(raw, Iterable) or isinstance(raw, (str, bytes)):
-        return ()
-    return tuple(item for item in raw if isinstance(item, dict))
-
-
 def _int(value: object, *, default: int) -> int:
     if value is None:
         return default
@@ -381,6 +299,5 @@ def _int(value: object, *, default: int) -> int:
 __all__ = [
     "DEFAULT_LAYER_STACK_ROOT",
     "RemoteRuntimeServiceBinding",
-    "ShellBatchCall",
     "create_remote_runtime_services",
 ]

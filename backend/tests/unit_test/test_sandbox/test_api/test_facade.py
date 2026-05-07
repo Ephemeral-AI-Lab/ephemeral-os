@@ -29,12 +29,6 @@ async def test_tool_methods_delegate_to_backing_modules(
 
         return ShellResult(success=True, exit_code=0, stdout="ok")
 
-    async def fake_shell_batch(*args, **kwargs):
-        calls.append(("shell_batch", args, kwargs))
-        from sandbox.api import ShellResult
-
-        return (ShellResult(success=True, exit_code=0, stdout="batch"),)
-
     async def fake_raw_exec(*args, **kwargs):
         calls.append(("raw_exec", args, kwargs))
         return RawExecResult(success=True, exit_code=0, stdout="raw")
@@ -58,7 +52,6 @@ async def test_tool_methods_delegate_to_backing_modules(
         return EditFileResult(success=True, changed_paths=("a.py",), applied_edits=1)
 
     monkeypatch.setattr("sandbox.api.tool.shell.shell", fake_shell)
-    monkeypatch.setattr("sandbox.api.tool.shell.shell_batch", fake_shell_batch)
     monkeypatch.setattr("sandbox.api.tool.raw_exec.raw_exec", fake_raw_exec)
     monkeypatch.setattr("sandbox.api.tool.read.read_file", fake_read_file)
     monkeypatch.setattr("sandbox.api.tool.write.write_file", fake_write_file)
@@ -70,7 +63,6 @@ async def test_tool_methods_delegate_to_backing_modules(
     edit_request = EditFileRequest(path="a.py", edits=(), caller=actor)
 
     assert (await facade.shell("sb-1", shell_request)).stdout == "ok"
-    assert (await facade.shell_batch("sb-1", (shell_request,)))[0].stdout == "batch"
     assert (await facade.raw_exec("sb-1", "pwd", cwd="/ws", timeout=5)).stdout == "raw"
     assert (await facade.read_file("sb-1", read_request)).content == "content"
     assert (await facade.write_file("sb-1", write_request)).changed_paths == ("a.py",)
@@ -78,11 +70,6 @@ async def test_tool_methods_delegate_to_backing_modules(
 
     assert calls == [
         ("shell", ("sb-1", shell_request), {}),
-        (
-            "shell_batch",
-            ("sb-1", (shell_request,)),
-            {"max_concurrency": 32, "timeout": None},
-        ),
         ("raw_exec", ("sb-1", "pwd"), {"cwd": "/ws", "timeout": 5}),
         ("read_file", ("sb-1", read_request), {}),
         ("write_file", ("sb-1", write_request), {}),

@@ -68,10 +68,6 @@ _FIXED_TIMING_KEYS = (
     "api.shell.process_gate_wait_s",
     "api.shell.flock_wait_s",
     "api.shell.overlay_capture_to_changes_s",
-    "api.shell_batch.dispatch_total_s",
-    "api.shell_batch.total_s",
-    "api.shell_batch.item_wait_s",
-    "api.shell_batch.item_total_s",
     "overlay.mount.materialize_lower_s",
     "overlay.mount.copy_lower_to_merged_s",
     "overlay.run_command_s",
@@ -285,29 +281,6 @@ async def timed_call(
     return result, metric
 
 
-async def timed_shell_batch(
-    labels: Sequence[str],
-    awaitable: Awaitable[Sequence[ShellResult]],
-) -> list[tuple[ShellResult, RuntimeCallMetric]]:
-    start = time.perf_counter()
-    results = tuple(await awaitable)
-    elapsed_ms = (time.perf_counter() - start) * 1000.0
-    if len(labels) != len(results):
-        pytest.fail(
-            f"shell batch returned {len(results)} results for {len(labels)} labels"
-        )
-    rows: list[tuple[ShellResult, RuntimeCallMetric]] = []
-    for label, result in zip(labels, results, strict=True):
-        metric = metric_for(
-            label,
-            result,
-            _shell_batch_elapsed_ms(result, default_ms=elapsed_ms),
-        )
-        write_timing_record(metric)
-        rows.append((result, metric))
-    return rows
-
-
 async def timed_raw_exec(
     label: str,
     handle: SandboxHandle,
@@ -386,18 +359,6 @@ def _seconds(value: float | None) -> float | None:
     return round(float(value), 6)
 
 
-def _shell_batch_elapsed_ms(result: ShellResult, *, default_ms: float) -> float:
-    for key in (
-        "api.shell_batch.dispatch_total_s",
-        "host.total_s",
-        "api.shell_batch.item_total_s",
-    ):
-        value = result.timings.get(key)
-        if value is not None:
-            return float(value) * 1000.0
-    return default_ms
-
-
 __all__ = [
     "RuntimeCallMetric",
     "assert_committed",
@@ -411,7 +372,6 @@ __all__ = [
     "remove_tmp",
     "summarize_calls",
     "timed_call",
-    "timed_shell_batch",
     "timed_raw_exec",
     "timing_jsonl_path",
     "tmp_path",

@@ -90,32 +90,27 @@ def _server(args: Mapping[str, object]) -> LayerStackWorkspaceServer:
     return LayerStackWorkspaceServer(_layer_stack_root(args))
 
 
+def _required_str(args: Mapping[str, object], key: str) -> str:
+    value = str(args.get(key) or "").strip()
+    if not value:
+        raise ValueError(f"{key} is required")
+    return value
+
+
 def _layer_stack_root(args: Mapping[str, object]) -> str:
-    layer_stack_root = str(args.get("layer_stack_root") or "").strip()
-    if not layer_stack_root:
-        raise ValueError("layer_stack_root is required")
-    return layer_stack_root
+    return _required_str(args, "layer_stack_root")
 
 
 def _workspace_root(args: Mapping[str, object]) -> str:
-    workspace_root = str(args.get("workspace_root") or "").strip()
-    if not workspace_root:
-        raise ValueError("workspace_root is required")
-    return workspace_root
+    return _required_str(args, "workspace_root")
 
 
 def _owner_request_id(args: Mapping[str, object]) -> str:
-    request_id = str(args.get("request_id") or "").strip()
-    if not request_id:
-        raise ValueError("request_id is required")
-    return request_id
+    return _required_str(args, "request_id")
 
 
 def _lease_id(args: Mapping[str, object]) -> str:
-    lease_id = str(args.get("lease_id") or "").strip()
-    if not lease_id:
-        raise ValueError("lease_id is required")
-    return lease_id
+    return _required_str(args, "lease_id")
 
 
 def _drop_peer_runtime_caches(layer_stack_root: str) -> None:

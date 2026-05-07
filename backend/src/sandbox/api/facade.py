@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import Any
 
 from sandbox.api.utils.models import (
@@ -114,23 +113,6 @@ class SandboxAPI:
         from sandbox.api.tool import shell as shell_module
 
         return await shell_module.shell(sandbox_id, request)
-
-    async def shell_batch(
-        self,
-        sandbox_id: str,
-        requests: Sequence[ShellRequest],
-        *,
-        max_concurrency: int = 32,
-        timeout: int | None = None,
-    ) -> tuple[ShellResult, ...]:
-        from sandbox.api.tool import shell as shell_module
-
-        return await shell_module.shell_batch(
-            sandbox_id,
-            requests,
-            max_concurrency=max_concurrency,
-            timeout=timeout,
-        )
 
     async def raw_exec(
         self,

@@ -1,8 +1,8 @@
-"""Phase 4.x — single-path shell captures opt out of cross-path atomicity.
+"""Single-path shell captures opt out of cross-path atomicity.
 
-When the overlay capture from a shell call yields exactly one distinct
-path, ``CommitOptions.atomic`` is set to ``False`` so that
-``OccSerialMerger._disjoint_batches`` can coalesce concurrent shell
+When the workspace upperdir capture from a guarded shell call yields
+exactly one distinct path, ``CommitOptions.atomic`` is set to ``False``
+so ``OccSerialMerger._disjoint_batches`` can coalesce concurrent shell
 commits into a single revalidate-and-publish round-trip. Multi-path
 captures keep ``atomic=True`` to preserve all-or-nothing semantics for
 real workloads (e.g. ``make build``).
@@ -16,52 +16,34 @@ from typing import Any
 
 import pytest
 
+from sandbox.command_exec.request import CommandExecRequest
 from sandbox.occ.changeset.prepared import CommitOptions
 from sandbox.occ.changeset.types import ChangesetResult, WriteChange
-from sandbox.runtime import api_handlers
+from sandbox.runtime import command_exec_server
 
 
 @dataclass
 class _Manifest:
     version: int = 1
-    layers: tuple[str, ...] = ()
 
 
-class _StubOccService:
-    """Captures the ``CommitOptions`` passed to prepare so the test can
-    inspect the atomic flag."""
+class _StubOccClient:
+    """Captures the ``CommitOptions`` passed to ``apply_changeset``."""
 
     def __init__(self) -> None:
         self.captured_options: list[CommitOptions] = []
-        self._layer_stack = type(
-            "_LS",
-            (),
-            {"storage_root": __import__("pathlib").Path("/tmp/eos-test-shell-atomic")},
-        )()
 
-    async def prepare_changeset(
+    async def apply_changeset(
         self,
-        changes: Any,
+        typed_changes: Any,
         *,
         snapshot: Any = None,
         options: CommitOptions | None = None,
-    ) -> Any:
-        from types import SimpleNamespace
-
-        del snapshot
+        workspace_ref: str | None = None,
+    ) -> ChangesetResult:
+        del typed_changes, snapshot, workspace_ref
         assert options is not None
         self.captured_options.append(options)
-        # Build a minimal stand-in with the only attribute
-        # ``_prepared_paths`` reads.
-        return SimpleNamespace(
-            path_groups=tuple(
-                SimpleNamespace(path=ch.path) for ch in changes
-            ),
-            atomic=options.atomic,
-        )
-
-    async def commit_prepared(self, prepared: Any) -> ChangesetResult:
-        del prepared
         return ChangesetResult(
             files=(),
             timings={},
@@ -69,35 +51,22 @@ class _StubOccService:
         )
 
 
-def _capture(paths: list[str]) -> Any:
-    """Build a minimal stand-in for OverlayCapture.
-
-    ``_apply_overlay_capture`` reads ``capture.snapshot_manifest`` and
-    ``capture.timings``; the actual ``changes`` extraction is mocked
-    via the autouse fixture below so the on-disk content readers in
-    the real ``overlay_capture_to_occ_changes`` are bypassed.
-    """
-    from types import SimpleNamespace
-
-    return SimpleNamespace(
-        paths=tuple(paths),
-        snapshot_manifest=_Manifest(),
-        timings={},
-        exit_code=0,
+def _request() -> CommandExecRequest:
+    return CommandExecRequest(
+        request_id="atomic-by-path-test",
+        workspace_ref="/tmp/eos-test-atomic",
+        workspace_root="/testbed",
+        command=("true",),
+        actor_id="t",
+        description="atomic-by-path",
     )
 
 
 @pytest.fixture(autouse=True)
-def _patch_overlay_to_changes(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Stub out the on-disk content reader so the test stays in-memory.
+def _patch_workspace_to_occ(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Bypass on-disk content readers; emit one ``WriteChange`` per path."""
 
-    The real helper reads each ``OverlayPathChange``'s ``content_path``
-    from the runner's spool directory; here we just emit one
-    ``WriteChange`` per path so ``_apply_overlay_capture`` sees the
-    distinct-path count it cares about.
-    """
-
-    def fake(capture: Any) -> tuple[WriteChange, ...]:
+    def fake(path_changes: Any) -> tuple[WriteChange, ...]:
         return tuple(
             WriteChange(
                 path=path,
@@ -105,53 +74,43 @@ def _patch_overlay_to_changes(monkeypatch: pytest.MonkeyPatch) -> None:
                 source="overlay_capture",
                 create_only=False,
             )
-            for path in capture.paths
+            for path in path_changes
         )
 
-    monkeypatch.setattr(api_handlers, "overlay_capture_to_occ_changes", fake)
+    monkeypatch.setattr(
+        command_exec_server,
+        "workspace_changes_to_occ_changes",
+        fake,
+    )
+
+
+def _apply(client: _StubOccClient, paths: list[str]) -> None:
+    asyncio.run(
+        command_exec_server._apply_workspace_capture(
+            paths,  # type: ignore[arg-type]
+            occ_client=client,  # type: ignore[arg-type]
+            snapshot=_Manifest(),
+            request=_request(),
+        )
+    )
 
 
 def test_single_path_capture_passes_atomic_false() -> None:
-    service = _StubOccService()
-    capture = _capture(["only/file.txt"])
-    asyncio.run(
-        api_handlers._apply_overlay_capture(
-            capture,
-            occ_service=service,  # type: ignore[arg-type]
-            caller_id="t",
-            description="single-path",
-        )
-    )
-    assert len(service.captured_options) == 1
-    assert service.captured_options[0].atomic is False
+    client = _StubOccClient()
+    _apply(client, ["only/file.txt"])
+    assert len(client.captured_options) == 1
+    assert client.captured_options[0].atomic is False
 
 
 def test_multi_path_capture_keeps_atomic_true() -> None:
-    service = _StubOccService()
-    capture = _capture(["build/out.o", "build/out.so"])
-    asyncio.run(
-        api_handlers._apply_overlay_capture(
-            capture,
-            occ_service=service,  # type: ignore[arg-type]
-            caller_id="t",
-            description="multi-path",
-        )
-    )
-    assert len(service.captured_options) == 1
-    assert service.captured_options[0].atomic is True
+    client = _StubOccClient()
+    _apply(client, ["build/out.o", "build/out.so"])
+    assert len(client.captured_options) == 1
+    assert client.captured_options[0].atomic is True
 
 
 def test_repeated_writes_to_one_path_are_single_path() -> None:
-    """Two changes touching the same path → still one distinct path →
-    atomic=False (atomicity is degenerate when there's only one path)."""
-    service = _StubOccService()
-    capture = _capture(["dup/file.txt", "dup/file.txt"])
-    asyncio.run(
-        api_handlers._apply_overlay_capture(
-            capture,
-            occ_service=service,  # type: ignore[arg-type]
-            caller_id="t",
-            description="dup",
-        )
-    )
-    assert service.captured_options[0].atomic is False
+    """Two changes touching the same path → one distinct path → atomic=False."""
+    client = _StubOccClient()
+    _apply(client, ["dup/file.txt", "dup/file.txt"])
+    assert client.captured_options[0].atomic is False

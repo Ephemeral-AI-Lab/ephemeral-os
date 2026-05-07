@@ -9,8 +9,6 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.api import ShellRequest
-
 from .._harness.concurrency import gather_with_barrier
 from .._harness.integrated_cases import (
     RuntimeCallMetric,
@@ -22,7 +20,6 @@ from .._harness.integrated_cases import (
     q,
     summarize_calls,
     timed_call,
-    timed_shell_batch,
 )
 from .._harness.load_profiles import BURST, SMOKE, SOAK, SUSTAINED
 from .._harness.sandbox_fixture import SandboxHandle
@@ -64,8 +61,6 @@ async def _run_profile(handle: SandboxHandle, profile) -> tuple[list[RuntimeCall
     shell_count, edit_count = _PROFILE_CALLS[profile.name]
     await _seed_profile(handle, edit_count=edit_count)
     factories = []
-    shell_labels: list[str] = []
-    shell_requests: list[ShellRequest] = []
     for index in range(shell_count):
         path = f"dist/load/{profile.name}/shell-{index % max(1, shell_count // 2):02d}.txt"
         content = f"{profile.name}:shell:{index:02d}\n"
@@ -79,27 +74,18 @@ async def _run_profile(handle: SandboxHandle, profile) -> tuple[list[RuntimeCall
             f"printf {q(content)} > {q(path)}"
         )
 
-        shell_labels.append(f"load_{profile.name}_shell_{index:02d}")
-        shell_requests.append(
-            ShellRequest(
-                command=command,
-                caller=handle.caller,
-                timeout=45,
-                description=f"phase4 {profile.name} shell {index:02d}",
+        async def run_shell(index: int = index, command: str = command):
+            result, metric = await timed_call(
+                f"load_{profile.name}_shell_{index:02d}",
+                handle.tool.shell(
+                    command,
+                    timeout=45,
+                    description=f"phase4 {profile.name} shell {index:02d}",
+                ),
             )
-        )
+            return [(result, metric)]
 
-    async def run_shell_batch():
-        return await timed_shell_batch(
-            shell_labels,
-            handle.tool.shell_batch(
-                shell_requests,
-                max_concurrency=max(1, shell_count),
-                timeout=45 + 60,
-            ),
-        )
-
-    factories.append(run_shell_batch)
+        factories.append(run_shell)
 
     for index in range(edit_count):
         path = f"tracked/load-edit-{index:02d}.txt"

@@ -63,14 +63,6 @@ class _BaseEntry:
     content_hash: str = ""
 
 
-@dataclass(frozen=True)
-class _BaseInventory:
-    files: int
-    dirs: int
-    symlinks: int
-    bytes: int
-
-
 def build_workspace_base(
     *,
     workspace_root: str | Path,
@@ -103,7 +95,15 @@ def build_workspace_base(
     collect_start = time.perf_counter()
     entries, root_hash = _collect_base_entries(workspace)
     _record(timings, "workspace_base.collect_s", time.perf_counter() - collect_start)
-    _record_inventory(timings, _entries_inventory(entries))
+    if timings is not None:
+        files = sum(1 for e in entries if e.kind == "file")
+        dirs = sum(1 for e in entries if e.kind == "directory")
+        symlinks = sum(1 for e in entries if e.kind == "symlink")
+        bytes_total = sum(e.size for e in entries if e.kind == "file")
+        timings["workspace_base.inventory.files"] = float(files)
+        timings["workspace_base.inventory.dirs"] = float(dirs)
+        timings["workspace_base.inventory.symlinks"] = float(symlinks)
+        timings["workspace_base.inventory.bytes"] = float(bytes_total)
     write_layer_start = time.perf_counter()
     layer_ref = _write_base_layer(stack, entries)
     _record(
@@ -240,15 +240,15 @@ def _collect_base_entries(
                 )
             )
 
-    for entry in sorted(entries, key=lambda item: item.path):
-        _update_root_hash(digest, entry)
-
     if special or unstable:
         raise WorkspaceBaseIncompleteError(
             special_file_rejections=tuple(sorted(special)),
             unstable_paths=tuple(sorted(unstable)),
         )
-    return tuple(sorted(entries, key=lambda item: item.path)), digest.hexdigest()
+    entries.sort(key=lambda item: item.path)
+    for entry in entries:
+        _update_root_hash(digest, entry)
+    return tuple(entries), digest.hexdigest()
 
 
 def _assert_workspace_quiescent(
@@ -258,22 +258,14 @@ def _assert_workspace_quiescent(
     expected_root_hash: str,
 ) -> None:
     latest_entries, latest_root_hash = _collect_base_entries(workspace)
-    if latest_root_hash == expected_root_hash and _entry_signature(
-        latest_entries
-    ) == _entry_signature(expected_entries):
+    if latest_root_hash == expected_root_hash and latest_entries == expected_entries:
         return
     expected_paths = {entry.path for entry in expected_entries}
     latest_paths = {entry.path for entry in latest_entries}
     changed_paths = sorted(expected_paths.symmetric_difference(latest_paths))
-    if not changed_paths:
-        changed_paths = sorted(
-            entry.path
-            for entry, latest in zip(expected_entries, latest_entries, strict=False)
-            if entry != latest
-        )
     raise WorkspaceBaseIncompleteError(
         special_file_rejections=(),
-        unstable_paths=tuple(changed_paths or ("<workspace-root>",)),
+        unstable_paths=tuple(changed_paths) or ("<workspace-root>",),
     )
 
 
@@ -298,8 +290,7 @@ def _write_base_layer(stack: Path, entries: tuple[_BaseEntry, ...]) -> LayerRef:
             target = staging_dir.joinpath(*entry.path.split("/"))
             target.parent.mkdir(parents=True, exist_ok=True)
             if entry.kind == "file":
-                if entry.source_path is None:
-                    raise ValueError(f"missing source path for {entry.path}")
+                assert entry.source_path is not None
                 try:
                     current_hash = _file_hash(entry.source_path)
                 except FileNotFoundError as exc:
@@ -326,28 +317,6 @@ def _write_base_layer(stack: Path, entries: tuple[_BaseEntry, ...]) -> LayerRef:
     return LayerRef(layer_id=layer_id, path=f"{LAYERS_DIR}/{layer_id}")
 
 
-def _entries_inventory(entries: tuple[_BaseEntry, ...]) -> _BaseInventory:
-    return _BaseInventory(
-        files=sum(1 for entry in entries if entry.kind == "file"),
-        dirs=sum(1 for entry in entries if entry.kind == "directory"),
-        symlinks=sum(1 for entry in entries if entry.kind == "symlink"),
-        bytes=sum(entry.size for entry in entries if entry.kind == "file"),
-    )
-
-
-def _entry_signature(entries: tuple[_BaseEntry, ...]) -> tuple[tuple[object, ...], ...]:
-    return tuple(
-        (
-            entry.path,
-            entry.kind,
-            entry.size,
-            entry.content_hash,
-            entry.link_target,
-        )
-        for entry in entries
-    )
-
-
 def _file_hash(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as file:
@@ -356,7 +325,7 @@ def _file_hash(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _update_root_hash(digest: "hashlib._Hash", entry: _BaseEntry) -> None:
+def _update_root_hash(digest: hashlib._Hash, entry: _BaseEntry) -> None:
     digest.update(entry.kind.encode("utf-8"))
     digest.update(b"\0")
     digest.update(entry.path.encode("utf-8"))
@@ -377,18 +346,6 @@ def _relative(workspace: Path, path: Path) -> str:
 def _record(timings: dict[str, float] | None, key: str, value: float) -> None:
     if timings is not None:
         timings[key] = value
-
-
-def _record_inventory(
-    timings: dict[str, float] | None,
-    inventory: _BaseInventory,
-) -> None:
-    if timings is None:
-        return
-    timings["workspace_base.inventory.files"] = float(inventory.files)
-    timings["workspace_base.inventory.dirs"] = float(inventory.dirs)
-    timings["workspace_base.inventory.symlinks"] = float(inventory.symlinks)
-    timings["workspace_base.inventory.bytes"] = float(inventory.bytes)
 
 
 __all__ = [

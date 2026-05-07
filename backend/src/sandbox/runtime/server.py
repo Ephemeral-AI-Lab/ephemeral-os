@@ -239,7 +239,6 @@ def _load_peer_bootstraps() -> None:
         "api.layer_metrics": api_handlers.layer_metrics,
         "api.read_file": api_handlers.read_file,
         "api.shell": command_exec_server.shell,
-        "api.shell_batch": command_exec_server.shell_batch,
         "api.workspace_binding": layer_stack_handlers.workspace_binding,
         "api.write_file": api_handlers.write_file,
         "overlay.run": overlay_run.handle,

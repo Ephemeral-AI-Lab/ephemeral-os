@@ -42,7 +42,7 @@ Phase 3/4 integrated suites:
 backend/tests/live_e2e_test/sandbox/workspace_base/
 |-- __init__.py
 |-- test_base_import_cost.py
-|-- test_base_import_concurrency.py
+|-- test_base_import_concurrency.py        # parametrized: independent-roots, same-root race
 |-- test_base_import_correctness.py
 |-- test_base_import_failure_safety.py
 |-- test_layer_create_speed.py
@@ -58,14 +58,10 @@ backend/tests/live_e2e_test/sandbox/_harness/
 `-- workspace_base_metrics.py     # inventory, timing, and JSONL helpers
 ```
 
-Keep or rewrite this public-read test as a compatibility smoke:
-
-```text
-backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_workspace_base_read_load.py
-```
-
-It should import shared metrics helpers and emit the same base identity fields
-as the new phase-01 suite.
+Once `test_base_import_correctness.py` lands, delete
+`backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_workspace_base_read_load.py` —
+the new suite covers the same `read_file`-after-import path with stronger
+assertions and the new artifact schema.
 
 ## 4. Harness Contract
 
@@ -131,8 +127,7 @@ The first row is always a summary:
     "bytes": 0,
     "sample_hashes": {}
   },
-  "timings_ms": {},
-  "pass_bars": {}
+  "timings_ms": {}
 }
 ```
 
@@ -169,8 +164,10 @@ layer_stack.materialize.total_s
 layer_stack.squash.total_s
 ```
 
-If the current runtime does not expose a timing field, the test plan requires
-adding that timing before claiming phase-01 performance coverage.
+**Prerequisite:** all metrics in this list must be exposed by the runtime
+before any phase-01 performance test is written. Auditing
+`api.layer_metrics`/`api.build_workspace_base` for missing timings and adding
+them is step 1 of §10.
 
 ## 6. Coverage Matrix
 
@@ -222,9 +219,9 @@ File:
 workspace_base/test_base_import_concurrency.py
 ```
 
-Two cases are required because they answer different questions.
+One parametrized test with two scenarios that answer different questions.
 
-Independent roots:
+`scenario="independent_roots"`:
 
 ```text
 for i in 0..19:
@@ -235,7 +232,7 @@ verify all 20 base_root_hash values match
 emit aggregate p50/p99/max and batch wall
 ```
 
-Same root race:
+`scenario="same_root_race"`:
 
 ```text
 layer_stack_root=/tmp/eos-sandbox-runtime/layer-stack-race
@@ -387,12 +384,9 @@ Assertions:
 - unicode paths and long paths round-trip when present
 - no Git or gitignore classification is present in the base importer output
 
-This test should use a bounded sample for content hashes by default, with an
-environment variable for full inventory:
-
-```text
-EPHEMERALOS_PHASE01_FULL_INVENTORY=1
-```
+Content-hash assertions use a bounded random sample (default 64 files). Full
+inventory is not required for sign-off; add a flag only if a future failure
+mode justifies it.
 
 ### G. Base Import Failure Safety
 
@@ -458,15 +452,6 @@ EPHEMERALOS_SANDBOX_DEFAULT_IMAGE=registry:6000/daytona/sweevo-psf-requests-3738
   -v -rs -s --tb=short
 ```
 
-Compatibility smoke:
-
-```bash
-EPHEMERALOS_SANDBOX_DEFAULT_IMAGE=registry:6000/daytona/sweevo-psf-requests-3738:v1 \
-  .venv/bin/pytest \
-  backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_workspace_base_read_load.py \
-  -v -rs -s --tb=short
-```
-
 Fast local collection gate:
 
 ```bash
@@ -495,14 +480,18 @@ Phase 01 live E2E is complete only when:
 
 ## 10. Implementation Order
 
-1. Add workspace-base harness helpers and artifact writer.
-2. Rewrite `test_workspace_base_read_load.py` to use the new artifact schema.
+1. Audit `api.layer_metrics` and `api.build_workspace_base` against §5's
+   metric list; add any missing timings to the runtime. No phase-01 test is
+   written until this is green.
+2. Add workspace-base harness helpers and artifact writer.
 3. Add base import cost and correctness tests.
 4. Add failure-safety tests, including mid-import mutation.
-5. Add independent and same-root concurrent build tests.
+5. Add concurrent build tests (parametrized: independent roots + same-root race).
 6. Add layer creation speed tests over imported base.
 7. Add snapshot assembly speed tests over imported base plus layers.
 8. Add squash with/without lease tests over imported base plus layers.
-9. Remove stale phase-01 README/report references to old empty-stack artifacts.
+9. Delete `layer_stack_overlay_occ/test_workspace_base_read_load.py` (covered
+   by `test_base_import_correctness.py`) and remove stale phase-01
+   README/report references to old empty-stack artifacts.
 10. Run focused live suite and write a phase-01 implementation/performance
     report with the new artifact paths.
