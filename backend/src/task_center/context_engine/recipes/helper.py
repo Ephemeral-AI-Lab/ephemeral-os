@@ -50,6 +50,9 @@ def _build_helper_packet(
     scope: ContextScope,
     deps: ContextEngineDeps,
 ) -> ContextPacket:
+    assert scope.mission_id is not None
+    assert scope.task_id is not None
+    assert scope.parent_packet_id is not None
     if deps.context_packet_store is None:
         raise ContextEngineError(
             "Helper recipes require ContextEngineDeps.context_packet_store; "

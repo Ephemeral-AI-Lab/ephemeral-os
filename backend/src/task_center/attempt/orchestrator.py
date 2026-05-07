@@ -114,7 +114,7 @@ class AttemptOrchestrator:
     def _build_planner_launch(
         self,
         *,
-        attempt,  # type: ignore[no-untyped-def]
+        attempt: Attempt,
         task_id: str,
     ) -> AgentLaunch:
         """Compose the planner launch via :class:`ContextComposer`."""

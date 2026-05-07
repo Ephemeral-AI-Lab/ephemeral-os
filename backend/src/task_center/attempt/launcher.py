@@ -220,6 +220,7 @@ class EphemeralAttemptAgentLauncher:
         *,
         summary: str,
     ) -> None:
+        assert launch.attempt_id is not None
         orchestrator.apply_planner_failure(
             PlannerFailureSubmission(
                 attempt_id=launch.attempt_id,
@@ -236,6 +237,7 @@ class EphemeralAttemptAgentLauncher:
         *,
         summary: str,
     ) -> None:
+        assert launch.attempt_id is not None
         orchestrator.apply_generator_submission(
             GeneratorSubmission(
                 attempt_id=launch.attempt_id,
@@ -253,6 +255,7 @@ class EphemeralAttemptAgentLauncher:
         *,
         summary: str,
     ) -> None:
+        assert launch.attempt_id is not None
         orchestrator.apply_evaluator_submission(
             EvaluatorSubmission(
                 attempt_id=launch.attempt_id,

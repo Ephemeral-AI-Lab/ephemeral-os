@@ -8,7 +8,7 @@ shared :class:`ContextEngineDeps` bundle.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 from task_center.context_engine.packet import ContextPacket
 from task_center.context_engine.recipes_registry import RecipeRegistry
@@ -19,6 +19,12 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only
     from db.stores.attempt_store import AttemptStore
     from db.stores.task_center_store import TaskCenterStore
     from db.stores.episode_store import EpisodeStore
+
+
+class ContextPacketStoreProtocol(Protocol):
+    def insert(self, packet: ContextPacket) -> str: ...
+
+    def get(self, context_packet_id: str) -> ContextPacket | None: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,7 +41,7 @@ class ContextEngineDeps:
     task_store: "TaskCenterStore"
 
     # Optional: when supplied, the composer persists rendered packet inputs.
-    context_packet_store: object | None = None
+    context_packet_store: ContextPacketStoreProtocol | None = None
 
 
 class ContextEngine:

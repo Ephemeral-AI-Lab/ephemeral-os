@@ -7,6 +7,8 @@ generator ends on its concrete obligation.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from task_center.context_engine.engine import ContextEngineDeps
 from task_center.context_engine.errors import ContextEngineError
 from task_center.context_engine.packet import (
@@ -20,6 +22,9 @@ from task_center.context_engine.recipes._summaries import latest_summary_text
 from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
 
+if TYPE_CHECKING:
+    from db.stores.task_center_store import TaskCenterStore
+
 GENERATOR_V1 = "generator_v1"
 _REQUIRED_FIELDS = frozenset({"mission_id", "attempt_id", "task_id"})
 
@@ -27,6 +32,9 @@ _REQUIRED_FIELDS = frozenset({"mission_id", "attempt_id", "task_id"})
 def _generator_v1_build(
     scope: ContextScope, deps: ContextEngineDeps
 ) -> ContextPacket:
+    assert scope.mission_id is not None
+    assert scope.attempt_id is not None
+    assert scope.task_id is not None
     attempt = deps.attempt_store.get(scope.attempt_id)
     if attempt is None:
         raise ContextEngineError(
@@ -52,7 +60,7 @@ def _generator_v1_build(
 
     blocks.extend(
         _dependency_summary_blocks(
-            needs=task.get("needs") or (),
+            needs=tuple(str(dep) for dep in task.get("needs") or ()),
             task_store=deps.task_store,
         )
     )
@@ -82,8 +90,8 @@ def _generator_v1_build(
 
 def _dependency_summary_blocks(
     *,
-    needs,  # type: ignore[no-untyped-def]
-    task_store,  # type: ignore[no-untyped-def]
+    needs: tuple[str, ...],
+    task_store: "TaskCenterStore",
 ) -> list[ContextBlock]:
     out: list[ContextBlock] = []
     for dep_id in needs:

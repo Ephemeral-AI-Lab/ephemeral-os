@@ -38,6 +38,9 @@ _REQUIRED_FIELDS = frozenset(
 def _planner_v1_build(
     scope: ContextScope, deps: ContextEngineDeps
 ) -> ContextPacket:
+    assert scope.mission_id is not None
+    assert scope.episode_id is not None
+    assert scope.attempt_id is not None
     mission = deps.mission_store.get(scope.mission_id)
     if mission is None:
         raise ContextEngineError(

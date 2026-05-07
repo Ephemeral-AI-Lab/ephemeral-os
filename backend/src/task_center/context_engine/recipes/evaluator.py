@@ -30,6 +30,8 @@ _REQUIRED_FIELDS = frozenset({"mission_id", "attempt_id"})
 def _evaluator_v1_build(
     scope: ContextScope, deps: ContextEngineDeps
 ) -> ContextPacket:
+    assert scope.mission_id is not None
+    assert scope.attempt_id is not None
     attempt = deps.attempt_store.get(scope.attempt_id)
     if attempt is None:
         raise ContextEngineError(

@@ -26,6 +26,8 @@ _REQUIRED_FIELDS = frozenset({"mission_id", "task_id"})
 def _entry_executor_v1_build(
     scope: ContextScope, deps: ContextEngineDeps
 ) -> ContextPacket:
+    assert scope.mission_id is not None
+    assert scope.task_id is not None
     task = deps.task_store.get_task(scope.task_id)
     if task is None:
         raise ContextEngineError(
