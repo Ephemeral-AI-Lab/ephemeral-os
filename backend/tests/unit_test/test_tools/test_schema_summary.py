@@ -35,8 +35,8 @@ class _SyntheticTool(BaseTool):
         return ToolResult(output="ok")
 
 
-def test_schema_summary_prints_live_input_and_output_models(tmp_path):
-    tools = collect_schema_tools(cwd=tmp_path, caller_agent="analysis_agent")
+def test_schema_summary_prints_live_input_and_output_models():
+    tools = collect_schema_tools(caller_agent="analysis_agent")
 
     summary = format_tool_schema_summary(tools, include_descriptions=False)
 
@@ -63,8 +63,8 @@ def test_schema_summary_prints_live_input_and_output_models(tmp_path):
     assert "Tool: submit_advisor_feedback" in summary
 
 
-def test_schema_summary_has_input_and_output_section_for_every_tool(tmp_path):
-    tools = collect_schema_tools(cwd=tmp_path)
+def test_schema_summary_has_input_and_output_section_for_every_tool():
+    tools = collect_schema_tools()
     summary = format_tool_schema_summary(tools, include_descriptions=False)
 
     for tool in tools:
@@ -84,8 +84,8 @@ def test_schema_summary_has_input_and_output_section_for_every_tool(tmp_path):
         assert "    output:" in block
 
 
-def test_schema_summary_omits_instruction_blocks(tmp_path):
-    tools = collect_schema_tools(cwd=tmp_path)
+def test_schema_summary_omits_instruction_blocks():
+    tools = collect_schema_tools()
 
     summary = format_tool_schema_summary(tools, include_descriptions=False)
 
@@ -93,8 +93,8 @@ def test_schema_summary_omits_instruction_blocks(tmp_path):
     assert "  instructions:" not in summary
 
 
-def test_sandbox_summary_lists_unprefixed_tools_without_instruction_block(tmp_path):
-    tools = collect_schema_tools(cwd=tmp_path)
+def test_sandbox_summary_lists_unprefixed_tools_without_instruction_block():
+    tools = collect_schema_tools()
 
     summary = format_tool_schema_summary(tools, include_descriptions=True)
 

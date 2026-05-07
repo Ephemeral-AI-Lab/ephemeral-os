@@ -36,7 +36,6 @@ def collect_tool_catalog(
     tool_registry: ToolRegistry | None = None,
     *,
     include_runtime_tools: bool = False,
-    cwd: str | None = None,
 ) -> list[ToolCatalogEntry]:
     """Return deduplicated tool metadata suitable for API responses."""
 

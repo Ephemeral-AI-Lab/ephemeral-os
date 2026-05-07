@@ -11,15 +11,14 @@ from tools.sandbox_toolkit.shell import shell
 from tools.sandbox_toolkit.write_file import write_file
 
 
-def make_sandbox_tools(*, include_shell: bool = True) -> list[BaseTool]:
+def make_sandbox_tools() -> list[BaseTool]:
     """Return sandbox tools."""
     tools: list[BaseTool] = [
         read_file,
         write_file,
         edit_file,
+        shell,
     ]
-    if include_shell:
-        tools.append(shell)
     for tool in tools:
         tool.context_requirements = (SANDBOX_CONTEXT,)
     return tools

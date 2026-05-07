@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from types import UnionType
 from typing import Any, Literal, get_args, get_origin
 from collections.abc import Sequence
@@ -17,7 +16,6 @@ from tools.core.factory import ToolFactoryContext, create_tool, list_available_t
 
 def collect_schema_tools(
     *,
-    cwd: str | Path | None = None,
     sandbox_id: str = "schema-dump",
     caller_agent: str = "",
 ) -> list[BaseTool]:
