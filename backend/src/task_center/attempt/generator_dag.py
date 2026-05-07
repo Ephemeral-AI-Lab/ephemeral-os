@@ -14,29 +14,19 @@ from task_center.task import (
 )
 
 
-def _local_ids(tasks: tuple[PlannedGeneratorTask, ...]) -> set[str]:
-    ids = {task.local_id for task in tasks}
-    if len(ids) != len(tasks):
-        raise TaskCenterInvariantViolation("Generator plan contains duplicate local ids")
-    return ids
-
-
-def assert_generator_deps_exist(
+def ordered_generator_tasks(
     tasks: tuple[PlannedGeneratorTask, ...]
-) -> None:
-    ids = _local_ids(tasks)
+) -> tuple[PlannedGeneratorTask, ...]:
+    local_ids = {task.local_id for task in tasks}
+    if len(local_ids) != len(tasks):
+        raise TaskCenterInvariantViolation("Generator plan contains duplicate local ids")
     for task in tasks:
-        missing = [dep for dep in task.deps if dep not in ids]
+        missing = [dep for dep in task.deps if dep not in local_ids]
         if missing:
             raise TaskCenterInvariantViolation(
                 f"Generator task {task.local_id!r} has unknown deps: {missing!r}"
             )
 
-
-def ordered_generator_tasks(
-    tasks: tuple[PlannedGeneratorTask, ...]
-) -> tuple[PlannedGeneratorTask, ...]:
-    assert_generator_deps_exist(tasks)
     by_id = {task.local_id: task for task in tasks}
     remaining_deps = {task.local_id: set(task.deps) for task in tasks}
     dependents: dict[str, list[str]] = {task.local_id: [] for task in tasks}
