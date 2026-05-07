@@ -1,23 +1,40 @@
 """Helpers for the Phase 06 / 07 large-capture benchmarks.
 
-All builders emit a ``python3 -c`` driver instead of a bash for-loop. The
-bash driver hits per-iteration subshell limits at K=10 000 inside the
-sandbox tmpfs (`for i in $(seq …)` exits 1 mid-run). A single Python
-process with ``os.write`` avoids the fork-per-file cost and the bash
-errno surfaces, so K=10K runs to completion on both gated and gitignored
-prefixes.
+All builders emit a ``python3 -c`` driver. The previous bash for-loop
+(``for i in $(seq 1 10000)``) silently truncates at K=10 000 inside the
+daytona sandbox; a single Python process with ``os.write`` avoids the
+per-iteration subshell fork and runs the workload to completion.
 """
 
 from __future__ import annotations
 
+_MIN_HEAD_BYTES = 32  # safe floor for "head + pad" builders (longest head ≤ 25 B)
+
 
 def _py_driver(body: str) -> str:
-    """Wrap a Python source body inside a ``python3 -c`` shell invocation.
+    """Wrap a Python source body in a ``python3 - <<'PY'`` heredoc.
 
-    The body is passed via stdin to avoid argv quoting issues — the
-    sandbox shell is bash, but we want zero shell parsing of the source.
+    Heredoc avoids argv quoting issues and removes shell parsing of the
+    source.
     """
     return "python3 - <<'PY'\n" + body + "\nPY"
+
+
+def _require_k(k: int) -> None:
+    if k < 1:
+        raise ValueError(f"k must be >= 1, got {k}")
+
+
+def _require_prefix(prefix: str, *, name: str = "prefix") -> None:
+    if not prefix:
+        raise ValueError(f"{name} must be non-empty")
+
+
+def _require_min_size(file_size_bytes: int, *, minimum: int = _MIN_HEAD_BYTES) -> None:
+    if file_size_bytes < minimum:
+        raise ValueError(
+            f"file_size_bytes must be >= {minimum} (header room), got {file_size_bytes}"
+        )
 
 
 def build_k_capture_command(prefix: str, k: int) -> str:
@@ -28,10 +45,8 @@ def build_k_capture_command(prefix: str, k: int) -> str:
     of ``pip install`` / ``npm install`` without depending on network or
     a specific package layout.
     """
-    if k < 1:
-        raise ValueError(f"k must be >= 1, got {k}")
-    if not prefix:
-        raise ValueError("prefix must be non-empty")
+    _require_k(k)
+    _require_prefix(prefix)
     body = (
         "import os\n"
         f"prefix = {prefix!r}\n"
@@ -51,20 +66,13 @@ def build_k_capture_command(prefix: str, k: int) -> str:
 def build_sized_capture(prefix: str, k: int, file_size_bytes: int) -> str:
     """Create K files of exactly ``file_size_bytes`` each under ``prefix``.
 
-    File contents are deterministic (``'x' * size`` with the iteration
-    index encoded in the trailing 16 bytes) so that two runs produce
-    identical byte streams — useful when distinguishing capture/stager
-    cost (which is bytes-per-second) from filesystem cost (which is
-    syscalls-per-file).
+    Each file is ``b'x' * (size-16) + b'i=...\\n'`` (16-byte tail) so two
+    runs produce byte-identical content — useful for separating stager
+    byte-copy cost (bytes/s) from filesystem syscall cost (calls/file).
     """
-    if k < 1:
-        raise ValueError(f"k must be >= 1, got {k}")
-    if file_size_bytes < 16:
-        raise ValueError(
-            f"file_size_bytes must be >= 16 (header room), got {file_size_bytes}"
-        )
-    if not prefix:
-        raise ValueError("prefix must be non-empty")
+    _require_k(k)
+    _require_prefix(prefix)
+    _require_min_size(file_size_bytes, minimum=16)
     body = (
         "import os\n"
         f"prefix = {prefix!r}\n"
@@ -88,18 +96,13 @@ def build_sized_capture(prefix: str, k: int, file_size_bytes: int) -> str:
 def build_seed_capture(prefix: str, k: int, file_size_bytes: int = 64) -> str:
     """Seed K pre-existing files under ``prefix`` with a 'baseline' marker.
 
-    Used as the *untimed* setup step before ``build_modify_capture`` /
-    ``build_delete_capture``. Contents start with ``'baseline '`` so that
+    Untimed setup step before ``build_modify_capture`` /
+    ``build_delete_capture``. Contents start with ``'baseline '`` so the
     modify scenarios can verify the capture replaced the byte stream.
     """
-    if k < 1:
-        raise ValueError(f"k must be >= 1, got {k}")
-    if file_size_bytes < 32:
-        raise ValueError(
-            f"file_size_bytes must be >= 32 (header room), got {file_size_bytes}"
-        )
-    if not prefix:
-        raise ValueError("prefix must be non-empty")
+    _require_k(k)
+    _require_prefix(prefix)
+    _require_min_size(file_size_bytes)
     body = (
         "import os\n"
         f"prefix = {prefix!r}\n"
@@ -124,17 +127,12 @@ def build_modify_capture(prefix: str, k: int, file_size_bytes: int = 64) -> str:
 
     Pair with ``build_seed_capture(prefix, k)`` as the (untimed) setup —
     the OCC commit then sees K *modified* paths instead of K *new* paths,
-    which exercises the gated read-current path against an existing
+    which exercises the read-current validate path against an existing
     layer-stack entry.
     """
-    if k < 1:
-        raise ValueError(f"k must be >= 1, got {k}")
-    if file_size_bytes < 32:
-        raise ValueError(
-            f"file_size_bytes must be >= 32 (header room), got {file_size_bytes}"
-        )
-    if not prefix:
-        raise ValueError("prefix must be non-empty")
+    _require_k(k)
+    _require_prefix(prefix)
+    _require_min_size(file_size_bytes)
     body = (
         "import os\n"
         f"prefix = {prefix!r}\n"
@@ -160,10 +158,8 @@ def build_delete_capture(prefix: str, k: int) -> str:
     the OCC commit then sees K *whiteout* paths, which exercises the
     publish-layer whiteout path independent of stager byte traffic.
     """
-    if k < 1:
-        raise ValueError(f"k must be >= 1, got {k}")
-    if not prefix:
-        raise ValueError("prefix must be non-empty")
+    _require_k(k)
+    _require_prefix(prefix)
     body = (
         "import os\n"
         f"prefix = {prefix!r}\n"
@@ -198,16 +194,12 @@ def build_mixed_kinds_capture(
     and creates ``k_new`` brand-new files at indices starting from
     ``k_modify + k_delete + 1``.
     """
-    if not prefix:
-        raise ValueError("prefix must be non-empty")
+    _require_prefix(prefix)
+    _require_min_size(file_size_bytes)
     if min(k_new, k_modify, k_delete) < 0:
         raise ValueError("k_new/k_modify/k_delete must be >= 0")
     if k_new + k_modify + k_delete < 1:
         raise ValueError("at least one of k_new/k_modify/k_delete must be > 0")
-    if file_size_bytes < 32:
-        raise ValueError(
-            f"file_size_bytes must be >= 32 (header room), got {file_size_bytes}"
-        )
     body = (
         "import os\n"
         f"prefix = {prefix!r}\n"
@@ -259,16 +251,11 @@ def build_mixed_routing_capture(
     and ``direct_path_count`` from a single shell invocation — the
     routing-decision codepath that the K-scaling matrix never exercised.
     """
-    if k_gated < 1 or k_dist < 1:
-        raise ValueError(
-            f"k_gated and k_dist must both be >= 1, got {k_gated}, {k_dist}"
-        )
-    if not gated_prefix or not dist_prefix:
-        raise ValueError("both prefixes must be non-empty")
-    if file_size_bytes < 32:
-        raise ValueError(
-            f"file_size_bytes must be >= 32 (header room), got {file_size_bytes}"
-        )
+    _require_k(k_gated)
+    _require_k(k_dist)
+    _require_prefix(gated_prefix, name="gated_prefix")
+    _require_prefix(dist_prefix, name="dist_prefix")
+    _require_min_size(file_size_bytes)
     body = (
         "import os\n"
         f"gated = {gated_prefix!r}\n"
@@ -301,13 +288,11 @@ def build_mixed_routing_capture(
 
 
 def build_count_files_command(prefix: str) -> str:
-    """Print the number of regular files directly under ``prefix`` (recursive).
+    """Print the number of regular files under ``prefix`` (recursive).
 
-    Used as a correctness probe — count of paths the test expects to be
-    present after a workload runs. Stdout is a single integer line.
+    Correctness probe: stdout is a single integer line.
     """
-    if not prefix:
-        raise ValueError("prefix must be non-empty")
+    _require_prefix(prefix)
     body = (
         "import os, sys\n"
         f"prefix = {prefix!r}\n"
