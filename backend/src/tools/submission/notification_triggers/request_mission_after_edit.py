@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from notification.rules import NotificationRule
+from notification._rule_engine import NotificationRule
 from tools.submission.hooks.request_mission_before_edit_gate import (
     generator_has_edited,
 )

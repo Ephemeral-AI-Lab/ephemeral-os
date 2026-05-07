@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from notification.rules import NotificationRule
+from notification._rule_engine import NotificationRule
 from tools.submission.resolver_history import unresolved_resolver_call_count
 
 

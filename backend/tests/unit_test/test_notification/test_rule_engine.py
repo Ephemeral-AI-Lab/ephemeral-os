@@ -1,4 +1,4 @@
-"""Unit tests for `notification.rules`: NotificationRule + dispatch_rules."""
+"""Unit tests for `notification._rule_engine`: NotificationRule + dispatch_rules."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from notification.rules import NotificationRule, dispatch_rules
+from notification._rule_engine import NotificationRule, dispatch_rules
 from notification._runtime import SystemNotificationService
 
 

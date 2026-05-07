@@ -6,7 +6,7 @@ by `dispatch_rules`; when it returns True, `body` produces the reminder text
 and the result is pushed into the run's notification pool via
 `service.notify_system`.
 
-Rules live in `backend/src/notification/library/` (factories) and are
+Built-in rules live in `backend/src/notification/_rule_catalog.py` and are
 assembled into per-agent lists on `AgentDefinition.notification_rules`.
 """
 

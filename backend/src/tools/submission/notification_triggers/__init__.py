@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from notification.rules import NotificationRule
+from notification._rule_engine import NotificationRule
 from tools.submission.notification_triggers.request_mission_after_edit import (
     make_mission_request_after_edit_reminder,
 )

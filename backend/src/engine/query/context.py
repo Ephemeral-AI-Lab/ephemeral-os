@@ -7,7 +7,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
-from notification.rules import NotificationRule
+from notification._rule_engine import NotificationRule
 from prompt.prompt_report_recorder import PromptReportRecorder
 from providers.types import SupportsStreamingMessages
 from tools import ExecutionMetadata, ToolRegistry, ToolResult
@@ -55,7 +55,7 @@ class QueryContext:
     terminal_result: ToolResult | None = None
     prompt_report_recorder: PromptReportRecorder | None = None
     # Notification rules evaluated at the top of every turn. See
-    # ``notification.rules.dispatch_rules``. Default empty list = disabled.
+    # ``notification._rule_engine.dispatch_rules``. Default empty list = disabled.
     notification_rules: list[NotificationRule] = field(default_factory=list)
     # Run-scoped dedup state managed by ``dispatch_rules``: fire_once rule
     # names that have already fired this run.

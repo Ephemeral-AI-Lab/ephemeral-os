@@ -1,16 +1,13 @@
-"""Budget-warning rule factory.
+"""Built-in notification rule factories.
 
-Replaces the imperative `notify_system` call previously made from
-`tools/core/tool_execution.py`. Fires once per crossed budget threshold;
-the rule's own state in `context.notification_state['budget_warning']`
-enforces "once per threshold" semantics.
+Per-agent definitions assemble these factories into notification rule lists.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from notification.rules import MessageList, NotificationRule
+from notification._rule_engine import MessageList, NotificationRule
 
 if TYPE_CHECKING:
     from engine.api import QueryContext
@@ -18,6 +15,26 @@ if TYPE_CHECKING:
 
 _DEFAULT_THRESHOLDS: tuple[float, ...] = (0.50, 0.75, 0.90)
 _STATE_KEY = "budget_warning"
+
+
+def make_opening_reminder(rules_text: str) -> NotificationRule:
+    """Build a one-shot rule that emits `rules_text` on the first turn."""
+    text = rules_text.strip()
+
+    def _body(messages: MessageList, context: "QueryContext") -> str:
+        del messages, context
+        return text
+
+    def _trigger(messages: MessageList, context: "QueryContext") -> bool:
+        del context
+        return not any(m.role == "assistant" for m in messages)
+
+    return NotificationRule(
+        name="opening_reminder",
+        body=_body,
+        trigger=_trigger,
+        fire_once=True,
+    )
 
 
 def make_budget_warning(

@@ -29,7 +29,7 @@ from message.stream_events import (
     ToolExecutionStarted,
 )
 from notification._runtime import SystemNotification
-from notification.library import make_budget_warning, make_opening_reminder
+from notification._rule_catalog import make_budget_warning, make_opening_reminder
 from providers.types import (
     ApiMessageCompleteEvent,
     ApiToolUseDeltaEvent,
