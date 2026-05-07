@@ -2,8 +2,6 @@
 
 - :mod:`sandbox.control.daemon.bundle` — build the runtime bundle and upload
   it via chunked exec.
-- :mod:`sandbox.control.daemon.install` — register and run bundled peer setup
-  scripts.
 - :mod:`sandbox.control.daemon.command` — client of the bundled runtime
   dispatcher.
 """

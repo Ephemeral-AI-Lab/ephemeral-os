@@ -135,7 +135,7 @@ async def _run_occ_clean_stale_shell(
     )
 
     task = asyncio.create_task(
-        api_handlers.shell(
+        command_exec_server.shell(
             {
                 "layer_stack_root": str(manager.storage_root),
                 "command": (

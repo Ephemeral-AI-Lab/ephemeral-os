@@ -81,12 +81,6 @@ async def _prepare_changeset(
     )
 
 
-async def shell(args: dict[str, object]) -> dict[str, object]:
-    from sandbox.runtime import command_exec_server
-
-    return await command_exec_server.shell(args)
-
-
 async def write_file(args: dict[str, object]) -> dict[str, object]:
     total_start = time.perf_counter()
     _, occ_service, gitignore = _services(args)
@@ -454,6 +448,5 @@ __all__ = [
     "edit_file",
     "layer_metrics",
     "read_file",
-    "shell",
     "write_file",
 ]

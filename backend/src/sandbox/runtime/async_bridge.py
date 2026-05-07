@@ -18,12 +18,8 @@ reusable standalone sandbox I/O loop instead of creating a loop per call.
 Public surface:
 
 * :func:`run_sync` — resolve a sync value or a coroutine synchronously.
-* :func:`use_sandbox_io_loop` — context manager for tool/helper code to
-  register the current event loop around custom worker dispatch.
-* :func:`current_sandbox_io_loop` — accessor (useful in tests).
-* :func:`configure_default_executor` — raise the default
-  ``ThreadPoolExecutor`` size so bulk svc ops aren't capped at ~32
-  workers. Called once at runtime startup.
+* :func:`run_sync_in_executor` — dispatch sync work in a worker thread
+  while seeding the parent loop in :data:`sandbox_io_loop`.
 """
 
 from __future__ import annotations
@@ -31,7 +27,6 @@ from __future__ import annotations
 import asyncio
 import atexit
 import concurrent.futures
-import contextlib
 import contextvars
 import inspect
 import logging
@@ -47,9 +42,9 @@ sandbox_io_loop: contextvars.ContextVar[asyncio.AbstractEventLoop | None] = (
 )
 """Parent loop that owns sandbox I/O (e.g., the agent's event loop).
 
-Set by async tools via :func:`use_sandbox_io_loop` before dispatching to
-worker threads. Read by :func:`run_sync` inside the worker thread so coroutines
-are resubmitted onto the correct loop.
+Seeded by :func:`run_sync_in_executor` inside the worker thread before the
+worker calls :func:`run_sync`, so coroutines are resubmitted onto the
+correct loop.
 """
 
 
@@ -70,48 +65,6 @@ _STANDALONE_THREAD: threading.Thread | None = None
 _STANDALONE_LOOP_READY_TIMEOUT_SECONDS = 5.0
 _SANDBOX_EXECUTOR_LOCK = threading.Lock()
 _SANDBOX_EXECUTOR: concurrent.futures.ThreadPoolExecutor | None = None
-
-
-def use_sandbox_io_loop(
-    loop: asyncio.AbstractEventLoop | None = None,
-) -> contextlib.AbstractContextManager[None]:
-    """Register *loop* as the sandbox I/O loop for the current context.
-
-    Intended usage from async tool code that uses a custom worker dispatcher
-    around a sync function where that sync function internally calls
-    :func:`run_sync` on coroutines returned by an async sandbox SDK::
-
-        with use_sandbox_io_loop():
-            await run_sync_in_executor(svc.write_file, specs, ...)
-
-    Passing ``loop=None`` uses ``asyncio.get_running_loop()`` (the common
-    case). Tests may pass an explicit loop.
-    """
-    effective = loop if loop is not None else asyncio.get_running_loop()
-    return _SandboxIoLoopScope(effective)
-
-
-class _SandboxIoLoopScope:
-    """Context manager that scopes :data:`sandbox_io_loop` to a single run."""
-
-    __slots__ = ("_loop", "_token")
-
-    def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
-        self._loop = loop
-        self._token: contextvars.Token[asyncio.AbstractEventLoop | None] | None = None
-
-    def __enter__(self) -> None:
-        self._token = sandbox_io_loop.set(self._loop)
-
-    def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
-        if self._token is not None:
-            sandbox_io_loop.reset(self._token)
-            self._token = None
-
-
-def current_sandbox_io_loop() -> asyncio.AbstractEventLoop | None:
-    """Return the registered sandbox I/O loop, or ``None`` if unset."""
-    return sandbox_io_loop.get()
 
 
 def run_sync(result: Any, *, timeout: float | None = None) -> Any:
@@ -346,39 +299,10 @@ def _sandbox_executor() -> concurrent.futures.ThreadPoolExecutor:
         return _SANDBOX_EXECUTOR
 
 
-def configure_default_executor(
-    loop: asyncio.AbstractEventLoop | None = None,
-    *,
-    max_workers: int = _DEFAULT_EXECUTOR_WORKERS,
-) -> concurrent.futures.ThreadPoolExecutor:
-    """Raise the event loop's default executor for bulk sandbox I/O.
-
-    Called once at runtime startup. Python's default is
-    ``min(32, (os.cpu_count() or 1) + 4)`` which throttles concurrent
-    ``asyncio.to_thread`` dispatches when many tool calls fan out in
-    parallel. The returned executor is also attached to *loop* (or the
-    running loop when *loop* is ``None``) so subsequent ``to_thread``
-    calls use it directly.
-    """
-    target = loop if loop is not None else asyncio.get_event_loop()
-    pool = concurrent.futures.ThreadPoolExecutor(
-        max_workers=max_workers,
-        thread_name_prefix="sandbox-io",
-    )
-    target.set_default_executor(pool)
-    logger.debug(
-        "async-bridge: default executor raised to %d workers", max_workers,
-    )
-    return pool
-
-
 __all__ = [
     "DEFAULT_RUN_SYNC_TIMEOUT_SECONDS",
-    "configure_default_executor",
-    "current_sandbox_io_loop",
     "register_standalone_loop_cleanup",
     "run_sync",
     "run_sync_in_executor",
     "sandbox_io_loop",
-    "use_sandbox_io_loop",
 ]
