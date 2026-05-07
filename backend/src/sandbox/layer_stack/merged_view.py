@@ -38,6 +38,14 @@ class MergedView:
         index = build_layer_index(self._layer_dir(layer))
         return self._layer_index_cache.setdefault(layer.layer_id, index)
 
+    def evict_layer_index(self, layer_id: str) -> None:
+        """Drop the cached presence index for ``layer_id``.
+
+        Called by ``LayerStackManager`` after a layer dir is removed; without
+        this the cache grows unboundedly on long-running daemons.
+        """
+        self._layer_index_cache.pop(layer_id, None)
+
     def read_bytes(self, path: str, manifest: Manifest) -> tuple[bytes | None, bool]:
         rel = normalize_layer_path(path)
         for layer in manifest.layers:

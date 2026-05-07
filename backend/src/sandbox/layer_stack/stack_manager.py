@@ -262,6 +262,7 @@ class LayerStackManager:
                 continue
             _remove_path(self._layer_path(layer))
             _layer_digest_path(self.storage_root, layer.layer_id).unlink(missing_ok=True)
+            self._view.evict_layer_index(layer.layer_id)
             removed.append(layer.layer_id)
         return tuple(removed)
 
