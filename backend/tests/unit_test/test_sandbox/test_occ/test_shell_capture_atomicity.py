@@ -15,8 +15,8 @@ import pytest
 from sandbox.command_exec.result import ShellProcessResult
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.occ.client import OCCClient
-from sandbox.daemon import command_exec_server, occ_server
-from sandbox.daemon.handlers import shell_handler
+from sandbox.daemon.handlers import shell
+from sandbox.daemon.services import occ_backend, shell_runner
 
 
 @pytest.mark.asyncio
@@ -25,14 +25,14 @@ async def test_shell_uses_occ_client_apply_changeset(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The shell handler must call OCCClient.apply_changeset (not bypass it)."""
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "input.txt").write_text("base\n", encoding="utf-8")
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    services = command_exec_server._services({"layer_stack_root": stack.as_posix()})
+    services = shell_runner._services({"layer_stack_root": stack.as_posix()})
     occ_client = services[1]
     assert isinstance(occ_client, OCCClient), (
         "Shell capture must reach OCC through OCCClient — direct OccService "
@@ -87,10 +87,10 @@ async def test_shell_uses_occ_client_apply_changeset(
         )
 
     monkeypatch.setattr(
-        command_exec_server, "run_workspace_replaced_command", fake_run
+        shell_runner, "run_workspace_replaced_command", fake_run
     )
 
-    result = await shell_handler.shell(
+    result = await shell.shell(
         {
             "layer_stack_root": stack.as_posix(),
             "command": "true",

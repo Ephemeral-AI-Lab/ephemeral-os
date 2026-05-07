@@ -11,8 +11,10 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.daemon import daemon, occ_server, server
 from sandbox.daemon.handlers import _common
+from sandbox.daemon.rpc import dispatcher as server
+from sandbox.daemon.rpc import server as daemon
+from sandbox.daemon.services import occ_backend
 
 
 def _short_socket_path() -> tuple[Path, Path]:
@@ -171,34 +173,34 @@ def test_services_cached_per_layer_stack_root(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """OCC backend factory caches the per-root tuple across calls."""
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
 
     class _FakeManager:
         def __init__(self, root: str) -> None:
             self.root = root
 
     monkeypatch.setattr(
-        occ_server,
+        occ_backend,
         "get_layer_stack_manager",
         lambda root: _FakeManager(str(root)),
     )
     monkeypatch.setattr(
-        occ_server,
+        occ_backend,
         "LayerStackClient",
         lambda manager: ("layer-stack", manager),
     )
     monkeypatch.setattr(
-        occ_server,
+        occ_backend,
         "SnapshotGitignoreOracle",
         lambda layer_stack: ("oracle", layer_stack),
     )
     monkeypatch.setattr(
-        occ_server,
+        occ_backend,
         "OccService",
         lambda *, gitignore, layer_stack: ("service", gitignore, layer_stack),
     )
     monkeypatch.setattr(
-        occ_server,
+        occ_backend,
         "OCCClient",
         lambda service, *, binding_reader, workspace_ref: (
             "occ-client",
@@ -218,35 +220,35 @@ def test_services_cached_per_layer_stack_root(
 def test_drop_backend_cache_removes_only_requested_root(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The shared OCC backend cache is owned directly by ``occ_server``."""
-    occ_server._backend_cache_clear()
+    """The shared OCC backend cache is owned directly by ``occ_backend``."""
+    occ_backend._backend_cache_clear()
 
     monkeypatch.setattr(
-        occ_server,
+        occ_backend,
         "get_layer_stack_manager",
         lambda root: object(),
     )
-    monkeypatch.setattr(occ_server, "LayerStackClient", lambda manager: object())
+    monkeypatch.setattr(occ_backend, "LayerStackClient", lambda manager: object())
     monkeypatch.setattr(
-        occ_server,
+        occ_backend,
         "SnapshotGitignoreOracle",
         lambda layer_stack: object(),
     )
     monkeypatch.setattr(
-        occ_server,
+        occ_backend,
         "OccService",
         lambda *, gitignore, layer_stack: object(),
     )
     monkeypatch.setattr(
-        occ_server,
+        occ_backend,
         "OCCClient",
         lambda service, *, binding_reader, workspace_ref: object(),
     )
 
-    a = occ_server.build_occ_backend("/tmp/a")
-    b = occ_server.build_occ_backend("/tmp/b")
+    a = occ_backend.build_occ_backend("/tmp/a")
+    b = occ_backend.build_occ_backend("/tmp/b")
 
-    occ_server.drop_backend_cache("/tmp/a")
+    occ_backend.drop_backend_cache("/tmp/a")
 
-    assert occ_server.build_occ_backend("/tmp/a") is not a
-    assert occ_server.build_occ_backend("/tmp/b") is b
+    assert occ_backend.build_occ_backend("/tmp/a") is not a
+    assert occ_backend.build_occ_backend("/tmp/b") is b

@@ -11,15 +11,15 @@ from pathlib import Path
 import pytest
 
 from sandbox.layer_stack.workspace_base import build_workspace_base
-from sandbox.daemon import occ_server
-from sandbox.daemon.handlers import edit_handler, read_handler, write_handler
+from sandbox.daemon.services import occ_backend
+from sandbox.daemon.handlers import edit, read, write
 from sandbox.daemon.services.workspace_server import get_layer_stack_manager
 
 
 @pytest.mark.asyncio
 async def test_out_of_workspace_write_lands_on_host_fs(tmp_path: Path) -> None:
     """write_file('/tmp-like/foo') goes straight to host FS, no OCC."""
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
@@ -29,7 +29,7 @@ async def test_out_of_workspace_write_lands_on_host_fs(tmp_path: Path) -> None:
     starting_lease_count = manager.active_lease_count()
 
     target = tmp_path / "outside" / "foo.txt"
-    result = await write_handler.write_file(
+    result = await write.write_file(
         {
             "layer_stack_root": stack.as_posix(),
             "path": target.as_posix(),
@@ -51,7 +51,7 @@ async def test_out_of_workspace_write_lands_on_host_fs(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_out_of_workspace_edit_runs_against_host_bytes(tmp_path: Path) -> None:
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
@@ -63,7 +63,7 @@ async def test_out_of_workspace_edit_runs_against_host_bytes(tmp_path: Path) -> 
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text("key=before\n", encoding="utf-8")
 
-    result = await edit_handler.edit_file(
+    result = await edit.edit_file(
         {
             "layer_stack_root": stack.as_posix(),
             "path": target.as_posix(),
@@ -80,7 +80,7 @@ async def test_out_of_workspace_edit_runs_against_host_bytes(tmp_path: Path) -> 
 
 @pytest.mark.asyncio
 async def test_out_of_workspace_read_returns_host_bytes(tmp_path: Path) -> None:
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
@@ -92,7 +92,7 @@ async def test_out_of_workspace_read_returns_host_bytes(tmp_path: Path) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text("hi\n", encoding="utf-8")
 
-    result = await read_handler.read_file(
+    result = await read.read_file(
         {
             "layer_stack_root": stack.as_posix(),
             "path": target.as_posix(),
@@ -110,14 +110,14 @@ async def test_out_of_workspace_read_returns_host_bytes(tmp_path: Path) -> None:
 async def test_out_of_workspace_read_missing_path_does_not_raise(
     tmp_path: Path,
 ) -> None:
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
     target = tmp_path / "outside" / "missing.txt"
-    result = await read_handler.read_file(
+    result = await read.read_file(
         {
             "layer_stack_root": stack.as_posix(),
             "path": target.as_posix(),
@@ -136,33 +136,33 @@ async def test_shell_namespace_passthrough_consistency(tmp_path: Path) -> None:
     Confirms shell `echo > /tmp/foo` semantics: the same file written from
     write_file is observable via read_file as host-FS bytes.
     """
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
     target = tmp_path / "outside" / "shared.txt"
-    await write_handler.write_file(
+    await write.write_file(
         {
             "layer_stack_root": stack.as_posix(),
             "path": target.as_posix(),
             "content": "first\n",
         }
     )
-    read1 = await read_handler.read_file(
+    read1 = await read.read_file(
         {"layer_stack_root": stack.as_posix(), "path": target.as_posix()}
     )
     assert read1["content"] == "first\n"
 
-    await write_handler.write_file(
+    await write.write_file(
         {
             "layer_stack_root": stack.as_posix(),
             "path": target.as_posix(),
             "content": "second\n",
         }
     )
-    read2 = await read_handler.read_file(
+    read2 = await read.read_file(
         {"layer_stack_root": stack.as_posix(), "path": target.as_posix()}
     )
     assert read2["content"] == "second\n"
@@ -173,7 +173,7 @@ async def test_out_of_workspace_write_create_only_rejects_existing(
     tmp_path: Path,
 ) -> None:
     """create-only host-FS write rejects when the path already exists."""
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
@@ -183,7 +183,7 @@ async def test_out_of_workspace_write_create_only_rejects_existing(
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text("existing\n", encoding="utf-8")
 
-    result = await write_handler.write_file(
+    result = await write.write_file(
         {
             "layer_stack_root": stack.as_posix(),
             "path": target.as_posix(),

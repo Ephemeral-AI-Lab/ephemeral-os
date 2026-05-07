@@ -232,30 +232,28 @@ def _to_response_dict(result: Any) -> dict[str, Any]:
 
 
 def _load_peer_bootstraps() -> None:
-    from sandbox.daemon import health_handlers
-    from sandbox.daemon import handlers
-    from sandbox.daemon import layer_stack_handlers
+    from sandbox.daemon.handlers import edit, health, metrics, read, shell, workspace, write
     from sandbox.overlay.handlers import run as overlay_run
 
     for op, handler in {
-        "api.ensure_workspace_base": layer_stack_handlers.ensure_workspace_base,
-        "api.build_workspace_base": layer_stack_handlers.build_workspace_base,
+        "api.ensure_workspace_base": workspace.ensure_workspace_base,
+        "api.build_workspace_base": workspace.build_workspace_base,
         "api.prepare_workspace_snapshot": (
-            layer_stack_handlers.prepare_workspace_snapshot
+            workspace.prepare_workspace_snapshot
         ),
         "api.release_workspace_snapshot": (
-            layer_stack_handlers.release_workspace_snapshot
+            workspace.release_workspace_snapshot
         ),
         "api.layer_stack.fence_stale_staging": (
-            layer_stack_handlers.fence_stale_staging
+            workspace.fence_stale_staging
         ),
-        "api.edit_file": handlers.edit_file,
-        "api.layer_metrics": handlers.layer_metrics,
-        "api.read_file": handlers.read_file,
-        "api.runtime.ready": health_handlers.runtime_ready,
-        "api.shell": handlers.shell,
-        "api.workspace_binding": layer_stack_handlers.workspace_binding,
-        "api.write_file": handlers.write_file,
+        "api.edit_file": edit.edit_file,
+        "api.layer_metrics": metrics.layer_metrics,
+        "api.read_file": read.read_file,
+        "api.runtime.ready": health.runtime_ready,
+        "api.shell": shell.shell,
+        "api.workspace_binding": workspace.workspace_binding,
+        "api.write_file": write.write_file,
         "overlay.run": overlay_run.handle,
     }.items():
         existing = OP_TABLE.get(op)

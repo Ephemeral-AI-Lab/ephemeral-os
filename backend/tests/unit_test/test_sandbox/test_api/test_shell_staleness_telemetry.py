@@ -17,8 +17,8 @@ from sandbox.occ.changeset.builders import build_api_write_change
 from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
 from sandbox.occ.changeset.types import FileStatus
 from sandbox.command_exec.result import ShellProcessResult
-from sandbox.daemon import command_exec_server, occ_server
-from sandbox.daemon.handlers import shell_handler
+from sandbox.daemon.handlers import shell
+from sandbox.daemon.services import occ_backend, shell_runner
 from sandbox.daemon.handlers._common import _services
 
 
@@ -102,7 +102,7 @@ async def test_shell_accepts_occ_clean_write_after_manifest_advances(
 async def test_daemon_gitignore_uses_layer_stack_snapshot(tmp_path: Path) -> None:
     manager = LayerStackManager(tmp_path / f"stack-{uuid4().hex}")
     _publish(manager, tmp_path, ".gitignore", b"dist/\n")
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
     services = _services(str(manager.storage_root))
 
     # Reach through the OCC client to its underlying OccService for the assertion.
@@ -131,13 +131,13 @@ async def _run_occ_clean_stale_shell(
     manager = LayerStackManager(stack)
     runner = _BlockingCommandRunner()
     monkeypatch.setattr(
-        command_exec_server,
+        shell_runner,
         "run_workspace_replaced_command",
         runner,
     )
 
     task = asyncio.create_task(
-        shell_handler.shell(
+        shell.shell(
             {
                 "layer_stack_root": str(manager.storage_root),
                 "command": (

@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 BUNDLE_REMOTE_DIR = "/tmp/eos-sandbox-runtime"
 """Remote directory the bundle is extracted into."""
 
-_RUNTIME_EXCLUDE_PARTS = {
+_DAEMON_EXCLUDE_PARTS = {
     "backends",
     "testing.py",
 }
@@ -188,12 +188,19 @@ def _runtime_bundle_bytes() -> bytes:
             sandbox_dir=sandbox_dir,
         )
 
-        runtime_dir = sandbox_dir / "runtime"
+        utils_dir = sandbox_dir / "utils"
         _add_python_tree(
             tar,
-            runtime_dir,
+            utils_dir,
             sandbox_dir=sandbox_dir,
-            exclude_parts=_RUNTIME_EXCLUDE_PARTS,
+        )
+
+        daemon_dir = sandbox_dir / "daemon"
+        _add_python_tree(
+            tar,
+            daemon_dir,
+            sandbox_dir=sandbox_dir,
+            exclude_parts=_DAEMON_EXCLUDE_PARTS,
         )
 
         command_exec_dir = sandbox_dir / "command_exec"

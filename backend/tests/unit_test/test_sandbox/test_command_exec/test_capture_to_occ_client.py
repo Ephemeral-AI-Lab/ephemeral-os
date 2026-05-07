@@ -12,7 +12,7 @@ from sandbox.layer_stack.manifest import Manifest
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.layer_stack.workspace import WorkspaceBinding, write_workspace_binding_atomic
 from sandbox.occ.changeset.types import ChangesetResult, FileResult, FileStatus
-from sandbox.daemon import command_exec_server
+from sandbox.daemon.services import shell_runner
 from sandbox.daemon.services.layer_stack_client import LayerStackClient
 
 
@@ -146,12 +146,12 @@ async def test_shell_capture_goes_through_occ_client_before_lease_release(
         )
 
     monkeypatch.setattr(
-        command_exec_server,
+        shell_runner,
         "run_workspace_replaced_command",
         fake_run_workspace_replaced_command,
     )
 
-    result = await command_exec_server._execute_shell(
+    result = await shell_runner._execute_shell(
         {
             "layer_stack_root": stack.as_posix(),
             "command": "true",
@@ -212,12 +212,12 @@ async def test_shell_uses_transient_lowerdir_and_removes_it(
         )
 
     monkeypatch.setattr(
-        command_exec_server,
+        shell_runner,
         "run_workspace_replaced_command",
         fake_run_workspace_replaced_command,
     )
 
-    result = await command_exec_server._execute_shell(
+    result = await shell_runner._execute_shell(
         {
             "layer_stack_root": stack.as_posix(),
             "command": "true",

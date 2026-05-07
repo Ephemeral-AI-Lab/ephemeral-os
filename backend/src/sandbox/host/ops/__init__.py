@@ -5,8 +5,8 @@ These modules are built on raw provider primitives (``provider.exec`` and the
 import from any specific provider package — that's what makes the orchestrator
 provider-agnostic.
 
-Layer rule: ``ops`` may import from :mod:`sandbox.host.daemon`; the reverse
-is forbidden.
+Layer rule: ``ops`` may import from :mod:`sandbox.host.deploy` and
+:mod:`sandbox.host.rpc`; the reverse is forbidden.
 """
 
 from __future__ import annotations

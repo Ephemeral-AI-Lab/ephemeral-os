@@ -134,6 +134,12 @@ class OccCommitTransaction:
                         published_manifest_version=None,
                     )
 
+                timings["occ.commit.stager_write_total_s"] = (
+                    stager.write_total_s
+                )
+                timings["occ.commit.stager_write_count"] = float(
+                    stager.write_count
+                )
                 publish_start = time.perf_counter()
                 published = transaction.publish_layer(changes, timings=timings)
                 timings["occ.commit.publish_layer_s"] = (
@@ -213,6 +219,16 @@ class _LayerChangeStager:
         self._counter = 0
         self._staging_id: str | None = None
         self._staging_path: Path | None = None
+        self._write_total_s = 0.0
+        self._write_count = 0
+
+    @property
+    def write_total_s(self) -> float:
+        return self._write_total_s
+
+    @property
+    def write_count(self) -> int:
+        return self._write_count
 
     def __enter__(self) -> "_LayerChangeStager":
         area = self._staging.allocate_commit_staging(uuid4().hex)
@@ -235,15 +251,20 @@ class _LayerChangeStager:
     def write(self, path: str, content: bytes) -> LayerChange:
         if self._staging_path is None:
             raise RuntimeError("OCC layer-change stager is not active")
-        self._counter += 1
-        source = self._staging_path / f"{self._counter:06d}.bin"
-        source.write_bytes(content)
-        return LayerChange(
-            path=path,
-            kind="write",
-            content_hash=self._hasher.hash_bytes(content),
-            source_path=str(source),
-        )
+        start = time.perf_counter()
+        try:
+            self._counter += 1
+            source = self._staging_path / f"{self._counter:06d}.bin"
+            source.write_bytes(content)
+            return LayerChange(
+                path=path,
+                kind="write",
+                content_hash=self._hasher.hash_bytes(content),
+                source_path=str(source),
+            )
+        finally:
+            self._write_total_s += time.perf_counter() - start
+            self._write_count += 1
 
 
 def _must_skip_publish(

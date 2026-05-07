@@ -1,14 +1,9 @@
-"""occ-server logical module — OCC mutation gate composition.
+"""OCC backend factory for daemon handlers and services.
 
-Phase 05 establishes occ-server as the internal mutation gate consumed
-through :class:`OCCClient.apply_changeset`. It is not a host-callable runtime
-dispatch surface; public data operations reach it through the handler-owned
-``OCCClient`` instance.
-
-Phase 05.5 adds a single OCC backend factory consumed by every runtime
-peer that needs the layer-stack/OCC/gitignore tuple — handlers/_common.py
-(api.write/edit/read), command_exec_server (api.shell), and
-handlers/metrics_handler.py (api.layer_metrics).
+This module owns the single OCC backend tuple consumed by every daemon peer
+that needs layer-stack/OCC/gitignore state: handlers/_common.py
+(api.write/edit/read), services/shell_runner.py (api.shell), and
+handlers/metrics.py (api.layer_metrics).
 The factory uses a canonical ``workspace_ref=layer_stack_root`` only; this module
 owns no path classification (single source of truth lives on command-exec
 via :mod:`sandbox.daemon.handlers._common`).
@@ -33,7 +28,7 @@ class OccBackend:
     """The OCC backend tuple shared by every runtime peer.
 
     Field names are the structural contract: ``handlers._common``,
-    ``command_exec_server``, and ``metrics_handler`` all read these
+    ``services.shell_runner``, and ``handlers.metrics`` all read these
     attributes. A typo here silently breaks every consumer.
     """
 

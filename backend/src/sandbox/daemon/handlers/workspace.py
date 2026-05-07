@@ -121,9 +121,9 @@ def _lease_id(args: Mapping[str, object]) -> str:
 
 
 def _drop_peer_runtime_caches(layer_stack_root: str) -> None:
-    from sandbox.daemon import occ_server
+    from sandbox.daemon.services import occ_backend
 
-    occ_server.drop_backend_cache(layer_stack_root)
+    occ_backend.drop_backend_cache(layer_stack_root)
 
 
 __all__ = [

@@ -1,4 +1,4 @@
-"""Resident in-sandbox runtime daemon.
+"""AF_UNIX server for the resident in-sandbox daemon.
 
 Replaces the per-call ``python -m sandbox.daemon.rpc.dispatcher <json>`` boot path
 with a single long-lived process that listens on AF_UNIX. Each host call
@@ -11,13 +11,13 @@ Wire format (newline-delimited JSON):
   request:  {"op": "...", "args": {...}}\\n
   response: {"success": true, ...}\\n
 
-The daemon imports ``sandbox.daemon.rpc.dispatcher`` so the ``OP_TABLE`` is
+The daemon imports :mod:`sandbox.daemon.rpc.dispatcher` so the ``OP_TABLE`` is
 populated by the standard peer bootstrap, then dispatches via
-:func:`server.dispatch_envelope_async`. State that is expensive to
+:func:`dispatcher.dispatch_envelope_async`. State that is expensive to
 construct — ``LayerStackManager``, ``OccService``,
 ``SnapshotGitignoreOracle`` — is cached across calls by
-``runtime.occ_server`` and thus amortizes naturally because the daemon is
-one Python process.
+``daemon.services.occ_backend`` and thus amortizes naturally because the daemon
+is one Python process.
 
 Lifecycle:
 
@@ -31,19 +31,17 @@ Lifecycle:
 
 from __future__ import annotations
 
-import argparse
 import asyncio
 import json
 import logging
 import os
 import signal
-import sys
 import time
 from pathlib import Path
 
-from sandbox.daemon import server as runtime_server
+from sandbox.daemon.rpc import dispatcher
 
-logger = logging.getLogger("sandbox.daemon.daemon")
+logger = logging.getLogger("sandbox.daemon.rpc.server")
 
 DEFAULT_SOCKET_PATH = "/tmp/eos-sandbox-runtime/runtime.sock"
 DEFAULT_PID_PATH = "/tmp/eos-sandbox-runtime/runtime.pid"
@@ -85,7 +83,7 @@ async def _handle_connection(
                     },
                 }
             else:
-                response = await runtime_server.dispatch_envelope_async(
+                response = await dispatcher.dispatch_envelope_async(
                     envelope, boot_t0=boot_t0
                 )
         if isinstance(response, dict):
@@ -174,26 +172,8 @@ async def serve(socket_path: Path, pid_path: Path) -> None:
             pass
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="sandbox.daemon.daemon")
-    parser.add_argument("--socket", default=DEFAULT_SOCKET_PATH)
-    parser.add_argument("--pid-file", default=DEFAULT_PID_PATH)
-    args = parser.parse_args(argv)
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    try:
-        asyncio.run(serve(Path(args.socket), Path(args.pid_file)))
-    except KeyboardInterrupt:
-        return 0
-    return 0
-
-
-if __name__ == "__main__":  # pragma: no cover - exercised in-sandbox
-    raise SystemExit(main(sys.argv[1:]))
-
-
 __all__ = [
     "DEFAULT_PID_PATH",
     "DEFAULT_SOCKET_PATH",
-    "main",
     "serve",
 ]

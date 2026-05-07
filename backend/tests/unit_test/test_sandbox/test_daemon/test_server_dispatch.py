@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from sandbox.daemon import server
+from sandbox.daemon.rpc import dispatcher as server
 
 
 @pytest.fixture(autouse=True)

@@ -14,22 +14,20 @@ from uuid import uuid4
 import pytest
 
 from sandbox.layer_stack.workspace_base import build_workspace_base
-from sandbox.daemon import (
-    occ_server,
-    server,
-)
 from sandbox.daemon.handlers import (
-    edit_handler,
-    metrics_handler,
-    read_handler,
-    shell_handler,
-    write_handler,
+    edit,
+    metrics,
+    read,
+    shell,
+    write,
 )
 from sandbox.daemon.handlers._common import (
     ClassifiedPath,
     _services,
     classify_path,
 )
+from sandbox.daemon.rpc import dispatcher as server
+from sandbox.daemon.services import occ_backend
 from sandbox.daemon.services.workspace_server import get_layer_stack_manager
 
 
@@ -122,11 +120,11 @@ def test_classify_outside_absolute_path_classifies_out_of_workspace(
 
 def test_op_table_dispatches_data_ops_to_runtime_handlers() -> None:
     server._load_peer_bootstraps()
-    assert server.OP_TABLE["api.write_file"] is write_handler.write_file
-    assert server.OP_TABLE["api.edit_file"] is edit_handler.edit_file
-    assert server.OP_TABLE["api.read_file"] is read_handler.read_file
-    assert server.OP_TABLE["api.shell"] is shell_handler.shell
-    assert server.OP_TABLE["api.layer_metrics"] is metrics_handler.layer_metrics
+    assert server.OP_TABLE["api.write_file"] is write.write_file
+    assert server.OP_TABLE["api.edit_file"] is edit.edit_file
+    assert server.OP_TABLE["api.read_file"] is read.read_file
+    assert server.OP_TABLE["api.shell"] is shell.shell
+    assert server.OP_TABLE["api.layer_metrics"] is metrics.layer_metrics
 
 
 def test_legacy_api_handlers_module_removed() -> None:
@@ -141,13 +139,13 @@ def test_legacy_api_handlers_module_removed() -> None:
 
 @pytest.mark.asyncio
 async def test_write_file_rejects_list_path_argument(tmp_path: Path) -> None:
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
     with pytest.raises(ValueError, match="single-path contract"):
-        await write_handler.write_file(
+        await write.write_file(
             {
                 "layer_stack_root": stack.as_posix(),
                 "path": ["a", "b"],
@@ -162,13 +160,13 @@ async def test_write_file_rejects_non_string_path_argument(
     tmp_path: Path,
     bad_path: object,
 ) -> None:
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
     with pytest.raises(ValueError, match="single-path contract"):
-        await write_handler.write_file(
+        await write.write_file(
             {
                 "layer_stack_root": stack.as_posix(),
                 "path": bad_path,
@@ -179,13 +177,13 @@ async def test_write_file_rejects_non_string_path_argument(
 
 @pytest.mark.asyncio
 async def test_edit_file_rejects_list_path_argument(tmp_path: Path) -> None:
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
     with pytest.raises(ValueError, match="single-path contract"):
-        await edit_handler.edit_file(
+        await edit.edit_file(
             {
                 "layer_stack_root": stack.as_posix(),
                 "path": ["a", "b"],
@@ -205,7 +203,7 @@ async def test_write_edit_read_share_lease_registry_with_shell(
 ) -> None:
     """All four flows acquire leases from the SAME registry instance — layer-stack
     GC sees a unified pin set."""
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "a.txt").write_text("base\n", encoding="utf-8")
@@ -239,7 +237,7 @@ async def test_write_edit_read_share_lease_registry_with_shell(
 @pytest.mark.asyncio
 async def test_in_workspace_write_pins_lease_then_releases(tmp_path: Path) -> None:
     """An in-workspace write_file holds a lease covering prepare → publish."""
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "seed.txt").write_text("seed\n", encoding="utf-8")
@@ -248,7 +246,7 @@ async def test_in_workspace_write_pins_lease_then_releases(tmp_path: Path) -> No
     manager = get_layer_stack_manager(stack.as_posix())
     starting_count = manager.active_lease_count()
 
-    result = await write_handler.write_file(
+    result = await write.write_file(
         {
             "layer_stack_root": stack.as_posix(),
             "path": "new.txt",
@@ -264,14 +262,14 @@ async def test_in_workspace_write_pins_lease_then_releases(tmp_path: Path) -> No
 
 @pytest.mark.asyncio
 async def test_layer_metrics_reports_no_cache_storage_fields(tmp_path: Path) -> None:
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "seed.txt").write_text("seed\n", encoding="utf-8")
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    metrics = await metrics_handler.layer_metrics(
+    payload = await metrics.layer_metrics(
         {"layer_stack_root": stack.as_posix()}
     )
 
@@ -286,7 +284,7 @@ async def test_layer_metrics_reports_no_cache_storage_fields(tmp_path: Path) -> 
         "workspace_bound",
         "workspace_root",
         "base_root_hash",
-    } <= metrics.keys()
+    } <= payload.keys()
     forbidden = {
         "cache_hit",
         "cache_policy",
@@ -295,12 +293,12 @@ async def test_layer_metrics_reports_no_cache_storage_fields(tmp_path: Path) -> 
         "lowerdir_cache_entries",
         "materialized_lowerdirs",
     }
-    assert metrics.keys().isdisjoint(forbidden)
+    assert payload.keys().isdisjoint(forbidden)
 
 
 @pytest.mark.asyncio
 async def test_layer_metrics_reports_active_lease_pins(tmp_path: Path) -> None:
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "seed.txt").write_text("seed\n", encoding="utf-8")
@@ -309,21 +307,21 @@ async def test_layer_metrics_reports_active_lease_pins(tmp_path: Path) -> None:
     manager = get_layer_stack_manager(stack.as_posix())
     lease = manager.acquire_snapshot_lease("metrics-reader")
     try:
-        metrics = await metrics_handler.layer_metrics(
+        payload = await metrics.layer_metrics(
             {"layer_stack_root": stack.as_posix()}
         )
     finally:
         manager.release_lease(lease.lease_id)
 
-    assert metrics["active_leases"] == 1
-    assert metrics["pinned_layers"] == len(set(lease.manifest.layers))
+    assert payload["active_leases"] == 1
+    assert payload["pinned_layers"] == len(set(lease.manifest.layers))
 
 
 @pytest.mark.asyncio
 async def test_write_file_single_path_prepare_reports_gitignore_timing(
     tmp_path: Path,
 ) -> None:
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / ".gitignore").write_text("dist/\n", encoding="utf-8")
@@ -331,7 +329,7 @@ async def test_write_file_single_path_prepare_reports_gitignore_timing(
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    result = await write_handler.write_file(
+    result = await write.write_file(
         {
             "layer_stack_root": stack.as_posix(),
             "path": "a.txt",
@@ -349,7 +347,7 @@ async def test_write_file_single_path_prepare_reports_gitignore_timing(
 async def test_edit_file_single_path_prepare_reuses_target_read_for_base_hash(
     tmp_path: Path,
 ) -> None:
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / ".gitignore").write_text("dist/\n", encoding="utf-8")
@@ -357,7 +355,7 @@ async def test_edit_file_single_path_prepare_reuses_target_read_for_base_hash(
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    result = await edit_handler.edit_file(
+    result = await edit.edit_file(
         {
             "layer_stack_root": stack.as_posix(),
             "path": "a.txt",
@@ -380,7 +378,7 @@ async def test_edit_file_single_path_prepare_reuses_target_read_for_base_hash(
 async def test_read_file_in_workspace_returns_layer_stack_bytes(
     tmp_path: Path,
 ) -> None:
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "a.txt").write_text("base\n", encoding="utf-8")
@@ -389,7 +387,7 @@ async def test_read_file_in_workspace_returns_layer_stack_bytes(
     # Mutate the real workspace file AFTER base build — read_file must NOT see this
     (workspace / "a.txt").write_text("mutated\n", encoding="utf-8")
 
-    result = await read_handler.read_file(
+    result = await read.read_file(
         {
             "layer_stack_root": stack.as_posix(),
             "path": "a.txt",

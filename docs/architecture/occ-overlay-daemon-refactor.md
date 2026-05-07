@@ -3,12 +3,12 @@
 **Status:** Superseded reference draft. The later sandbox API/runtime execution
 plan has been retired from the docs tree. This document is retained for the
 OCC/Overlay responsibility split research and uses the updated naming below:
-`sandbox/runtime/server.py` is the generic in-sandbox
+`sandbox/daemon/rpc/dispatcher.py` is the generic in-sandbox
 guarded service; OCC and Overlay own sandbox-side handlers plus bundled
 `setup.sh`. The refactored domain modules are only `sandbox/occ/` and
-`sandbox/overlay/`; `sandbox/runtime/` is daemon/server support.
+`sandbox/overlay/`; `sandbox/daemon/` is daemon/server support.
 **Author:** session 2026-05-03
-**Scope:** ~7K LoC, ~35 files across `backend/src/sandbox/code_intelligence/`, `backend/src/sandbox/api/`, `backend/src/sandbox/runtime/` (new), and tests under `backend/tests/test_sandbox/`.
+**Scope:** ~7K LoC, ~35 files across `backend/src/sandbox/code_intelligence/`, `backend/src/sandbox/api/`, `backend/src/sandbox/daemon/` (new), and tests under `backend/tests/test_sandbox/`.
 **Companion doc:** `plugins-refactor.md` covers the query-surface replacement (direct LSP plugin tools). Both refactors land together; query-side deletions are listed here for completeness but executed under the plugins plan.
 
 ## 0. Motivation
@@ -61,12 +61,13 @@ These are the trade-offs we are choosing in exchange for OCC surface reduction a
 
 ## 1. End-state architecture
 
-Two independent sandbox-level modules plus the runtime server they share:
+Two independent sandbox-level modules plus the daemon support they share:
 
 ```
 backend/src/
 └── sandbox/
-    ├── runtime/    # generic server, bundle upload, setup orchestration
+    ├── daemon/     # in-sandbox RPC dispatcher, handlers, services
+    ├── host/       # host-side bundle deploy, RPC client, ops
     ├── occ/        # was code_intelligence/mutations + ledger
     └── overlay/    # was code_intelligence/overlay
 ```
@@ -79,21 +80,20 @@ backend/src/
 - The OCC/Overlay split is the contract: edits go through OCC, shell goes
   through Overlay to produce an `OverlayCapture`, then OCC applies that capture.
   No third mutation path.
-- **Two modules, one shared runtime.** Count `sandbox/occ/` and
-  `sandbox/overlay/` as the refactored modules. `sandbox/runtime/` exists
-  because both modules need a deployed server/daemon, setup orchestration, and
-  bundle upload; it is infrastructure, not a peer domain module.
-- **`server.py`, not peer-specific daemon logic.** `sandbox/runtime/server.py`
+- **Two modules, one shared daemon.** Count `sandbox/occ/` and
+  `sandbox/overlay/` as the refactored modules. `sandbox/daemon/` exists
+  because both modules need a deployed in-sandbox dispatcher and shared
+  services; `sandbox/host/` owns bundle upload and host-side RPC.
+- **`dispatcher.py`, not peer-specific daemon logic.** `sandbox/daemon/rpc/dispatcher.py`
   is a generic OP_TABLE dispatcher: decode request, validate, lookup handler,
   run handler, encode result. It does not hardcode one branch for each
   OCC or Overlay request.
-- **No local guardrail clients.** Public tools submit guarded requests to
-  `runtime/server.py` through one provider `adapter.exec` call. OCC and Overlay
+- **No local guardrail clients.** Public tools submit guarded requests through
+  `sandbox/host/rpc/client.py` into `daemon/rpc/dispatcher.py`. OCC and Overlay
   behavior is selected by sandbox-side handlers, not by process-local
   guardrail registries.
-- **`setup.sh` belongs to the peer.** `sandbox/occ/setup.sh` and
-  `sandbox/overlay/setup.sh` are concrete bundled scripts registered by each
-  peer's `bootstrap.py` and submitted by `runtime/setup_orchestrator.py`.
+- **Host deploy owns bundling.** `sandbox/host/deploy/bundle.py` builds the
+  daemon bundle; in-sandbox behavior is registered through daemon handlers.
 
 ### 1.2 OCC chokepoint
 
@@ -112,7 +112,7 @@ Single OCC class is the chokepoint. Internals:
 ```
 sandbox/occ/
 ├── __init__.py
-├── setup.sh                       # OCC setup submitted by runtime/setup_orchestrator.py
+├── setup.sh                       # OCC setup bundled by host/deploy if present
 ├── bootstrap.py                   # registers setup.sh + server handlers
 ├── handlers/                      # thin server op adapters
 │   ├── write.py
@@ -129,7 +129,7 @@ sandbox/occ/
 └── engine.py                      # concrete OCC composition root
 ```
 
-External API: public write/edit verbs route through `runtime/server.py` to
+External API: public write/edit verbs route through `daemon/rpc/dispatcher.py` to
 sandbox-side OCC handlers. Move and delete verbs are removed from the external
 surface (see §0.1) — `mv` / `rm` flow through shell and commit by applying an
 `OverlayCapture` through OCC. Internally, overlay commits can still produce
@@ -142,7 +142,7 @@ Mostly relocation:
 ```
 sandbox/overlay/
 ├── __init__.py
-├── setup.sh                       # overlay setup submitted by runtime/setup_orchestrator.py
+├── setup.sh                       # overlay setup bundled by host/deploy if present
 ├── bootstrap.py                   # registers setup.sh + server handlers
 ├── handlers/
 │   └── run.py                     # in-sandbox overlay implementation
@@ -155,7 +155,7 @@ sandbox/overlay/
 └── engine.py                      # OverlayEngine Protocol
 ```
 
-External API: public shell routes through `runtime/server.py`, receives an
+External API: public shell routes through `daemon/rpc/dispatcher.py`, receives an
 `OverlayCapture` inside the sandbox runtime, and applies that capture through
 `occ.overlay_capture`. Shell no longer has a read-only `raw_exec` bypass and no
 longer falls back to the removed live-root overlay runtime. Overlay never
@@ -166,28 +166,39 @@ policy ownership. The overlay side is capture-only; legacy `gitinclude_*` /
 `gitignore_*` response projection belongs outside `overlay/` during the
 compatibility window and disappears when public `sandbox.api.tool.shell` takes over.
 
-### 2.3 Shared `sandbox/runtime/` Support
+### 2.3 Shared `sandbox/daemon/` Support
 
 The old daemon code moves out from under `code_intelligence/` and becomes the
-sandbox runtime layer. `server.py` is the in-sandbox guarded service. It is
-generic: request decoding, validation, OP_TABLE lookup, result encoding, and
-structured errors. OCC and Overlay behavior is registered by peer bootstraps and
-handler modules, not hardcoded in the server. This package is daemon/server
-support for the two-module refactor, not a third peer module.
+sandbox daemon layer. `rpc/dispatcher.py` is the in-sandbox guarded service. It
+is generic: request decoding, validation, OP_TABLE lookup, result encoding, and
+structured errors. OCC and Overlay behavior is registered by handler modules,
+not hardcoded in the dispatcher. This package is daemon support for the
+two-module refactor, not a third peer module.
 
 ```
-sandbox/runtime/
+sandbox/daemon/
 ├── __init__.py
-├── server.py
+├── __main__.py
+├── rpc/
+│   ├── server.py
+│   └── dispatcher.py
+├── handlers/
+│   ├── edit.py
+│   ├── read.py
+│   ├── shell.py
+│   ├── workspace.py
+│   └── write.py
+├── services/
+│   ├── occ_backend.py
+│   ├── shell_runner.py
+│   └── workspace_server.py
 ├── overlay_shell/
 │   └── cli.py
-├── bundle.py
-└── setup_orchestrator.py
 ```
 
-There is no generic public `runtime/client.py` and no local OCC/Overlay client
+There is no generic public daemon client and no local OCC/Overlay client
 registry. Public agent tools still import only
-`sandbox.api.{shell,read,write,edit}`; those modules call `runtime/server.py`.
+`sandbox.api.{shell,read,write,edit}`; those modules call `daemon/rpc/dispatcher.py`.
 
 DELETED from the old daemon: `index_store.py`, all symbol-query RPC handlers,
 all symbol-related wire types. (See `plugins-refactor.md` for the query-side
@@ -195,7 +206,7 @@ replacement.)
 
 ### 2.4 Shared path utilities
 
-`code_intelligence/core/path_utils.py` and `core/constants.py` → `sandbox/_paths.py` (single util module shared by OCC, Overlay, and runtime code). Anything occ-specific lives in `occ/`; anything overlay-specific lives in `overlay/`.
+`code_intelligence/core/path_utils.py` and `core/constants.py` → `sandbox/_paths.py` (single util module shared by OCC, Overlay, and daemon code). Anything occ-specific lives in `occ/`; anything overlay-specific lives in `overlay/`.
 
 ## 3. Deletions
 
@@ -269,22 +280,22 @@ pass without an intermediate broken state.
    - Path normalizers → sandbox/_paths.py
    - hashing → sandbox/occ/hashing.py
 
-4. Move sandbox/code_intelligence/daemon/ → sandbox/runtime/
-   - Replace command.py's switch with runtime/server.py
+4. Move sandbox/code_intelligence/daemon/ → sandbox/daemon/
+   - Replace command.py's switch with daemon/rpc/dispatcher.py
    - Keep server.py generic: request envelope → OP_TABLE lookup → handler → result envelope
-   - Add runtime/bundle.py and runtime/setup_orchestrator.py
+   - Host bundle deploy lives under sandbox/host/deploy/
    - DELETE: index_store.py, symbol-query handlers, symbol wire types
    - ledger_store.py moves to sandbox/occ/ledger_store.py
 
-5. Add sandbox runtime dispatch and setup scripts
-   - public sandbox API tool modules route guarded requests to runtime/server.py with one adapter.exec
+5. Add sandbox daemon dispatch and setup scripts
+   - public sandbox API tool modules route guarded requests to daemon/rpc/dispatcher.py with one adapter.exec
    - sandbox/occ/setup.sh and sandbox/overlay/setup.sh are registered by peer bootstrap.py files
-   - Do not add local OCC/Overlay client registries or a public runtime/client.py
+   - Do not add local OCC/Overlay client registries or a public daemon client
 
 6. Delete old backends and registries
    - DELETE old code_intelligence/backends/
    - Old code_intelligence/registry.py and service.py DELETED
-   - Public agent tools route through sandbox.api.*; API modules delegate to runtime/server.py
+   - Public agent tools route through sandbox.api.*; API modules delegate to daemon/rpc/dispatcher.py
 
 7. Mass deletions
    - api/code_intelligence_api.py + code_intelligence_impl.py

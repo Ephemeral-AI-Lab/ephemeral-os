@@ -7,38 +7,40 @@ import importlib
 import pytest
 
 from sandbox.overlay.handlers import run as overlay_run
-from sandbox.daemon import health_handlers, layer_stack_handlers, server
 from sandbox.daemon.handlers import (
-    edit_handler,
-    metrics_handler,
-    read_handler,
-    shell_handler,
-    write_handler,
+    edit,
+    health,
+    metrics,
+    read,
+    shell,
+    workspace,
+    write,
 )
+from sandbox.daemon.rpc import dispatcher as server
 
 
 def test_daemon_op_table_routes_to_current_handler_layout() -> None:
     server._load_peer_bootstraps()
 
     expected = {
-        "api.write_file": write_handler.write_file,
-        "api.edit_file": edit_handler.edit_file,
-        "api.read_file": read_handler.read_file,
-        "api.shell": shell_handler.shell,
-        "api.layer_metrics": metrics_handler.layer_metrics,
-        "api.ensure_workspace_base": layer_stack_handlers.ensure_workspace_base,
-        "api.build_workspace_base": layer_stack_handlers.build_workspace_base,
+        "api.write_file": write.write_file,
+        "api.edit_file": edit.edit_file,
+        "api.read_file": read.read_file,
+        "api.shell": shell.shell,
+        "api.layer_metrics": metrics.layer_metrics,
+        "api.ensure_workspace_base": workspace.ensure_workspace_base,
+        "api.build_workspace_base": workspace.build_workspace_base,
         "api.prepare_workspace_snapshot": (
-            layer_stack_handlers.prepare_workspace_snapshot
+            workspace.prepare_workspace_snapshot
         ),
         "api.release_workspace_snapshot": (
-            layer_stack_handlers.release_workspace_snapshot
+            workspace.release_workspace_snapshot
         ),
-        "api.workspace_binding": layer_stack_handlers.workspace_binding,
+        "api.workspace_binding": workspace.workspace_binding,
         "overlay.run": overlay_run.handle,
-        "api.runtime.ready": health_handlers.runtime_ready,
+        "api.runtime.ready": health.runtime_ready,
         "api.layer_stack.fence_stale_staging": (
-            layer_stack_handlers.fence_stale_staging
+            workspace.fence_stale_staging
         ),
     }
     assert server.OP_TABLE == expected

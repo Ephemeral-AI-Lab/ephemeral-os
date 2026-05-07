@@ -19,7 +19,7 @@ import pytest
 from sandbox.command_exec.request import CommandExecRequest
 from sandbox.occ.changeset.prepared import CommitOptions
 from sandbox.occ.changeset.types import ChangesetResult, WriteChange
-from sandbox.daemon import command_exec_server
+from sandbox.daemon.services import shell_runner
 
 
 @dataclass
@@ -78,7 +78,7 @@ def _patch_workspace_to_occ(monkeypatch: pytest.MonkeyPatch) -> None:
         )
 
     monkeypatch.setattr(
-        command_exec_server,
+        shell_runner,
         "workspace_changes_to_occ_changes",
         fake,
     )
@@ -86,7 +86,7 @@ def _patch_workspace_to_occ(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def _apply(client: _StubOccClient, paths: list[str]) -> None:
     asyncio.run(
-        command_exec_server._apply_workspace_capture(
+        shell_runner._apply_workspace_capture(
             paths,  # type: ignore[arg-type]
             occ_client=client,  # type: ignore[arg-type]
             snapshot=_Manifest(),

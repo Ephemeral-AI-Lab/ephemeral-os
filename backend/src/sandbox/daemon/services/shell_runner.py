@@ -28,7 +28,7 @@ from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
 from sandbox.occ.changeset.types import ChangesetResult
 from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
 from sandbox.overlay.capture.types import read_output_ref
-from sandbox.daemon import occ_server
+from sandbox.daemon.services import occ_backend
 from sandbox.utils.async_bridge import run_sync_in_executor
 
 
@@ -233,7 +233,7 @@ def _services(
     "SnapshotGitignoreOracle",
     Path,
 ]:
-    backend = occ_server.build_occ_backend(_layer_stack_root(args))
+    backend = occ_backend.build_occ_backend(_layer_stack_root(args))
     return cast(
         tuple[
             WorkspaceLeaseClient,

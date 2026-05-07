@@ -4,16 +4,16 @@ Owns the single source of truth for:
 
 * the in-workspace classifier predicate (``classify_path``),
 * the host-side single-path / ``layer_stack_root`` validation contract,
-* the result projection helpers used by ``write_handler`` and
-  ``edit_handler`` to turn a :class:`ChangesetResult` into the
+* the result projection helpers used by ``write`` and
+  ``edit`` to turn a :class:`ChangesetResult` into the
   host-visible payload.
 
 The OCC backend tuple ``(LayerStackClient, OCCClient, SnapshotGitignoreOracle,
 LayerStackManager)`` is owned by :mod:`sandbox.daemon.services.occ_backend`. The
 ``_services`` helper is the canonical per-verb access point.
 
-``shell_handler`` does NOT use this module — it routes through
-``command_exec_server`` whose worker scaffolding still owns its own
+``shell`` does NOT use this module — it routes through
+``daemon.services.shell_runner`` whose worker scaffolding still owns its own
 service entrypoint and timing helpers.
 """
 
@@ -30,8 +30,8 @@ from sandbox.api.tool.result_projection import (
 )
 from sandbox.occ.changeset.types import ChangesetResult
 from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
-from sandbox.daemon import occ_server
 from sandbox.daemon.services.occ_backend import OccBackend
+from sandbox.daemon.services import occ_backend
 
 
 # -- classifier predicate ---------------------------------------------------
@@ -120,11 +120,11 @@ def _required_single_path(args: Mapping[str, object]) -> str:
     return path
 
 
-# -- service cache (delegates to occ_server) --------------------------------
+# -- service cache (delegates to occ_backend) -------------------------------
 
 
 def _services(layer_stack_root: str) -> OccBackend:
-    return occ_server.build_occ_backend(layer_stack_root)
+    return occ_backend.build_occ_backend(layer_stack_root)
 
 
 # -- result projection ------------------------------------------------------

@@ -1,13 +1,9 @@
-"""In-sandbox dispatcher modules that ship inside the runtime bundle.
+"""In-sandbox daemon modules that ship inside the runtime bundle.
 
-Strictly the bytes that execute INSIDE a sandbox: ``server.py`` (the JSON
-dispatcher) and ``overlay_shell/`` (overlay shell runtime). Host-side
-plumbing lives under :mod:`sandbox.host.daemon` (bundle build/upload, peer
-install, command client) and :mod:`sandbox.host.ops` (operations against a
-sandbox).
-
-``async_bridge.py`` remains here pending a separate refactor that lifts
-``run_sync`` into a neutral host-side location.
+Strictly the bytes that execute INSIDE a sandbox: ``rpc/`` for the AF_UNIX
+server and dispatcher, ``handlers/`` for OP_TABLE entries, ``services/`` for
+in-process dependencies, and ``overlay_shell/`` for overlay shell runtime.
+Host-side plumbing lives under :mod:`sandbox.host`.
 """
 
 from __future__ import annotations

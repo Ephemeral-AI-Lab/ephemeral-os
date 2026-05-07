@@ -41,7 +41,7 @@ fi
 rm -f "$SOCK"
 for py in python3.13 python3.12 python3.11 python3.10 python3; do
     if command -v "$py" >/dev/null 2>&1 && "$py" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1; then
-        nohup "$py" -m sandbox.daemon.daemon --socket "$SOCK" --pid-file "$PID" </dev/null >"$LOG" 2>&1 &
+        nohup "$py" -m sandbox.daemon --socket "$SOCK" --pid-file "$PID" </dev/null >"$LOG" 2>&1 &
         # Wait briefly for the socket to appear so the next client connect succeeds.
         for _ in $(seq 1 50); do
             [ -S "$SOCK" ] && exit 0

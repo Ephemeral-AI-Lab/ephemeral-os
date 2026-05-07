@@ -35,12 +35,12 @@ Source of truth: `backend/src/sandbox/`.
 │                       ▼                                      │
 │             api/tool/_runtime.py:call_runtime_api            │
 │                       ▼                                      │
-│             control/daemon/command._call_runtime_server      │
+│             host/rpc/client._call_runtime_server             │
 └───────────────────────┼──────────────────────────────────────┘
                         │  provider.exec (RPC into sandbox)
                         ▼
 ┌─────────────────── SANDBOX (runtime daemon) ─────────────────┐
-│  runtime/api_handlers.shell ──► command_exec_server.shell    │
+│  daemon/handlers/shell.shell ─► services/shell_runner        │
 │                                       │                      │
 │         ┌─────────────────────────────┼─────────────────┐    │
 │         ▼                             ▼                 ▼    │
@@ -306,7 +306,7 @@ from storage. It is the union of three narrow protocols:
   `CommitTransaction` (which exposes only `snapshot()` and
   `publish_layer(changes)`)
 
-`LayerStackClient` (`runtime/clients/layer_stack.py`) implements that
+`LayerStackClient` (`daemon/services/layer_stack_client.py`) implements that
 union by forwarding to `LayerStackManager`. OCC never imports
 `LayerStackManager`; it only sees `OccLayerStackPorts`.
 
@@ -344,7 +344,7 @@ into `occ.changeset.types.Change` objects.
 - Overlay knows nothing about OCC routing, gitignore, or transactions.
 - OCC knows nothing about mounts, namespaces, or `unshare`.
 
-The runtime command-exec layer (`runtime/command_exec_server.py`) is
+The runtime command-exec layer (`daemon/services/shell_runner.py`) is
 the only place all three meet. `_execute_shell` is the **sole
 orchestration sink**: it holds `lease_id`, `Manifest(N)`, `lowerdir`,
 and the captured changes only as local variables for one call —
@@ -405,9 +405,9 @@ only; reads, materialize, and command execution overlap.
 ### 3.2 Concurrency surfaces
 
 ```
-ASYNC LOCKS (per layer_stack_root, runtime/api_handlers.py)
-  _process_commit_gate         16 path-bucketed asyncio.Locks
-                               disjoint paths → different buckets
+SERIAL MERGE                   OccSerialMerger.apply
+  (occ/serial_merger.py)       one worker, ~2ms batch window;
+                               coalesces disjoint commits
 
 CROSS-PROCESS                  fcntl flock on <root>/.commit.lock
   _commit_lock                 skipped inside resident daemon
@@ -417,9 +417,6 @@ THREAD/RLock                   LayerStackManager._lock
   (layer_stack/stack_manager)  guards manifest read/swap, lease
                                registry, layer dir delete
 
-SERIAL MERGE                   OccSerialMerger.apply
-  (occ/serial_merger.py)       one worker, ~2ms batch window;
-                               coalesces disjoint commits
 ```
 
 Each subsystem owns one lock concept; they do not nest each other
@@ -432,9 +429,9 @@ except through the documented `commit_transaction()` port.
 | Concern | Module |
 |---|---|
 | Host entrypoint | `sandbox/api/tool/shell.py`, `sandbox/api/facade.py` |
-| Host → daemon transport | `sandbox/api/tool/_runtime.py`, `sandbox/control/daemon/command.py` |
-| Daemon dispatch | `sandbox/runtime/api_handlers.py` |
-| Shell orchestrator | `sandbox/runtime/command_exec_server.py` |
+| Host → daemon transport | `sandbox/api/tool/_runtime.py`, `sandbox/host/rpc/client.py` |
+| Daemon dispatch | `sandbox/daemon/rpc/dispatcher.py` |
+| Shell orchestrator | `sandbox/daemon/services/shell_runner.py` |
 | Mount + exec | `sandbox/command_exec/workspace_mount.py`, `sandbox/command_exec/namespace_helper.py` |
 | Upperdir capture | `sandbox/overlay/capture/upperdir.py`, `sandbox/command_exec/capture/upperdir.py` |
 | Overlay → OCC adapter | `sandbox/command_exec/capture/changeset.py` |
@@ -442,5 +439,5 @@ except through the documented `commit_transaction()` port.
 | OCC commit | `sandbox/occ/commit_transaction.py`, `sandbox/occ/serial_merger.py` |
 | OCC ports | `sandbox/occ/ports.py` |
 | Layer stack | `sandbox/layer_stack/stack_manager.py`, `sandbox/layer_stack/publisher.py`, `sandbox/layer_stack/merged_view.py` |
-| Layer stack client | `sandbox/runtime/clients/layer_stack.py` |
+| Layer stack client | `sandbox/daemon/services/layer_stack_client.py` |
 | Workspace base | `sandbox/layer_stack/workspace_base.py`, `sandbox/layer_stack/workspace.py` |

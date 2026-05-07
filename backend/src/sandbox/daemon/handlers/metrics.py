@@ -6,7 +6,7 @@ from collections.abc import Mapping
 
 from sandbox.layer_stack import LayerStackManager
 from sandbox.layer_stack.workspace import read_workspace_binding
-from sandbox.daemon import occ_server
+from sandbox.daemon.services import occ_backend
 
 
 async def layer_metrics(args: dict[str, object]) -> dict[str, object]:
@@ -39,7 +39,7 @@ def _manager(args: Mapping[str, object]) -> LayerStackManager:
     layer_stack_root = str(args.get("layer_stack_root") or "").strip()
     if not layer_stack_root:
         raise ValueError("layer_stack_root is required")
-    return occ_server.build_occ_backend(layer_stack_root).manager
+    return occ_backend.build_occ_backend(layer_stack_root).manager
 
 
 __all__ = ["layer_metrics"]

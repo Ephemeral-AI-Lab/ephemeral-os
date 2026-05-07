@@ -64,8 +64,8 @@ def test_non_api_production_code_does_not_import_private_api_utils() -> None:
 
 def test_daemon_code_does_not_import_daytona_provider_modules() -> None:
     offenders: list[str] = []
-    runtime_root = SRC_ROOT / "sandbox" / "runtime"
-    for module in _python_files(runtime_root):
+    daemon_root = SRC_ROOT / "sandbox" / "daemon"
+    for module in _python_files(daemon_root):
         for imported in _imports(module):
             if imported == "sandbox.providers.daytona" or imported.startswith(
                 "sandbox.providers.daytona."
@@ -109,10 +109,10 @@ def test_no_daytona_imports_outside_provider_package_or_bootstrap() -> None:
     )
 
 
-def test_host_runtime_api_do_not_import_daytona_sdk() -> None:
-    """control/, runtime/, api/ stay free of any direct daytona_sdk usage."""
+def test_host_daemon_api_do_not_import_daytona_sdk() -> None:
+    """host/, daemon/, api/ stay free of any direct daytona_sdk usage."""
     offenders: list[str] = []
-    for sub in ("control", "runtime", "api"):
+    for sub in ("host", "daemon", "api"):
         root = SRC_ROOT / "sandbox" / sub
         for module in _python_files(root):
             for imported in _imports(module):
@@ -122,18 +122,18 @@ def test_host_runtime_api_do_not_import_daytona_sdk() -> None:
                     )
 
     assert offenders == [], (
-        "control/, runtime/, api/ must not import any daytona SDK module: "
+        "host/, daemon/, api/ must not import any daytona SDK module: "
         f"{offenders}"
     )
 
 
-def test_host_runtime_api_status_do_not_import_daytona_provider() -> None:
-    """The locked seam: control/, runtime/, and api/status are
+def test_host_daemon_api_status_do_not_import_daytona_provider() -> None:
+    """The locked seam: host/, daemon/, and api/status are
     provider-neutral — none of them imports sandbox.providers.daytona.*."""
     offenders: list[str] = []
     for path in (
-        SRC_ROOT / "sandbox" / "control",
-        SRC_ROOT / "sandbox" / "runtime",
+        SRC_ROOT / "sandbox" / "host",
+        SRC_ROOT / "sandbox" / "daemon",
         SRC_ROOT / "sandbox" / "api" / "status",
     ):
         if path.is_file():
@@ -150,7 +150,7 @@ def test_host_runtime_api_status_do_not_import_daytona_provider() -> None:
                     )
 
     assert offenders == [], (
-        "control/, runtime/, and api/status must not import "
+        "host/, daemon/, and api/status must not import "
         f"sandbox.providers.daytona.*: {offenders}"
     )
 

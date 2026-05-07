@@ -14,8 +14,8 @@ from sandbox.layer_stack.workspace import (
     validate_workspace_binding_paths,
     write_workspace_binding_atomic,
 )
-from sandbox.daemon import occ_server
-from sandbox.daemon.handlers import read_handler
+from sandbox.daemon.services import occ_backend
+from sandbox.daemon.handlers import read
 
 
 def test_binding_rejects_layer_stack_inside_workspace(tmp_path: Path) -> None:
@@ -54,10 +54,10 @@ def test_binding_round_trips_and_translates_workspace_paths(tmp_path: Path) -> N
 
 @pytest.mark.asyncio
 async def test_read_file_fails_closed_without_workspace_binding(tmp_path: Path) -> None:
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
 
     with pytest.raises(WorkspaceBindingError, match="workspace binding is missing"):
-        await read_handler.read_file(
+        await read.read_file(
             {
                 "layer_stack_root": str(tmp_path / "stack"),
                 "path": "a.txt",
@@ -69,7 +69,7 @@ async def test_read_file_fails_closed_without_workspace_binding(tmp_path: Path) 
 async def test_read_file_uses_workspace_base_not_real_workspace(
     tmp_path: Path,
 ) -> None:
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     file_path = workspace / "a.txt"
@@ -78,7 +78,7 @@ async def test_read_file_uses_workspace_base_not_real_workspace(
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
     file_path.write_text("real workspace changed\n", encoding="utf-8")
 
-    result = await read_handler.read_file(
+    result = await read.read_file(
         {
             "layer_stack_root": str(stack),
             "path": file_path.as_posix(),
@@ -100,7 +100,7 @@ async def test_read_file_returns_exists_false_for_empty_manifest(
     guard already covers the no-binding case; an empty manifest is a valid
     runtime state — newest-first merged reads return ``("", False)`` for
     every path uniformly."""
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     stack = tmp_path / "stack"
@@ -117,7 +117,7 @@ async def test_read_file_returns_exists_false_for_empty_manifest(
         )
     )
 
-    result = await read_handler.read_file(
+    result = await read.read_file(
         {
             "layer_stack_root": stack.as_posix(),
             "path": "anything.txt",

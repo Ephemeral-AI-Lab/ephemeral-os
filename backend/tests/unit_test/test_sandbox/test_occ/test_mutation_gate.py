@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.daemon import occ_server
+from sandbox.daemon.services import occ_backend
 
 
 # ---------------------------------------------------------------------------
@@ -32,7 +32,7 @@ def test_legacy_occ_handlers_module_removed() -> None:
 def test_occ_server_module_does_not_classify_paths() -> None:
     """occ-server must not own the in-workspace classifier — single source of
     truth lives on command-exec (handlers/_common.py)."""
-    occ_server_source = Path(occ_server.__file__).read_text()
+    occ_server_source = Path(occ_backend.__file__).read_text()
 
     assert ".workspace_root" not in occ_server_source
     assert "workspace_root =" not in occ_server_source
@@ -41,7 +41,7 @@ def test_occ_server_module_does_not_classify_paths() -> None:
 
 def test_data_api_ops_do_not_dispatch_to_occ_server() -> None:
     """Data API ops must never route directly to occ-server."""
-    from sandbox.daemon import server
+    from sandbox.daemon.rpc import dispatcher as server
 
     server._load_peer_bootstraps()
     for op in ("api.write_file", "api.edit_file", "api.read_file", "api.shell"):
@@ -71,17 +71,17 @@ async def test_cas_retry_loop_bounded_under_no_contention(tmp_path: Path) -> Non
     import asyncio
 
     from sandbox.layer_stack.workspace_base import build_workspace_base
-    from sandbox.daemon import occ_server
-    from sandbox.daemon.handlers import write_handler
+    from sandbox.daemon.services import occ_backend
+    from sandbox.daemon.handlers import write
 
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
     result = await asyncio.wait_for(
-        write_handler.write_file(
+        write.write_file(
             {
                 "layer_stack_root": stack.as_posix(),
                 "path": "ok.txt",
@@ -103,11 +103,11 @@ async def test_cas_retry_exhaustion_returns_conflict_result(tmp_path: Path) -> N
     from sandbox.layer_stack.manifest import ManifestConflictError
     from sandbox.layer_stack.workspace_base import build_workspace_base
     from sandbox.occ.serial_merger import MAX_OCC_CAS_RETRIES
-    from sandbox.daemon import occ_server
-    from sandbox.daemon.handlers import write_handler
+    from sandbox.daemon.services import occ_backend
+    from sandbox.daemon.handlers import write
     from sandbox.daemon.handlers._common import _services
 
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
@@ -128,7 +128,7 @@ async def test_cas_retry_exhaustion_returns_conflict_result(tmp_path: Path) -> N
     publisher.publish_layer_locked = always_cas_mismatch  # type: ignore[method-assign]
     try:
         result = await asyncio.wait_for(
-            write_handler.write_file(
+            write.write_file(
                 {
                     "layer_stack_root": stack.as_posix(),
                     "path": "ok.txt",
@@ -159,14 +159,14 @@ def test_single_occ_backend_cache_per_layer_stack_root(
 ) -> None:
     """All runtime peers share one OccBackend per layer_stack_root.
 
-    After Phase 05.5 the OCC backend tuple is owned by ``occ_server``;
+    After Phase 05.5 the OCC backend tuple is owned by ``occ_backend``;
     the per-verb handler scaffolding (write/edit/read/shell) and the
     api-handler manager helper all resolve through the same factory.
     """
-    from sandbox.daemon import command_exec_server, occ_server
+    from sandbox.daemon.services import shell_runner, occ_backend
     from sandbox.daemon.handlers import _common
 
-    occ_server._backend_cache_clear()
+    occ_backend._backend_cache_clear()
 
     class _FakeManager:
         def __init__(self, root: str) -> None:
@@ -185,23 +185,23 @@ def test_single_occ_backend_cache_per_layer_stack_root(
             return self.manager.storage_root
 
     monkeypatch.setattr(
-        occ_server,
+        occ_backend,
         "get_layer_stack_manager",
         lambda root: _FakeManager(str(root)),
     )
-    monkeypatch.setattr(occ_server, "LayerStackClient", _FakeLayerStack)
+    monkeypatch.setattr(occ_backend, "LayerStackClient", _FakeLayerStack)
     monkeypatch.setattr(
-        occ_server,
+        occ_backend,
         "SnapshotGitignoreOracle",
         lambda layer_stack: ("oracle", layer_stack),
     )
     monkeypatch.setattr(
-        occ_server,
+        occ_backend,
         "OccService",
         lambda *, gitignore, layer_stack: ("service", gitignore, layer_stack),
     )
     monkeypatch.setattr(
-        occ_server,
+        occ_backend,
         "OCCClient",
         lambda service, *, binding_reader, workspace_ref: (
             "occ-client",
@@ -210,16 +210,16 @@ def test_single_occ_backend_cache_per_layer_stack_root(
         ),
     )
 
-    backend_a = occ_server.build_occ_backend("/tmp/a")
+    backend_a = occ_backend.build_occ_backend("/tmp/a")
 
     # The per-verb scaffolding resolves to the cached OccBackend instance.
     via_common = _common._services("/tmp/a")
     assert via_common is backend_a
-    assert occ_server.build_occ_backend("/tmp/a/.") is backend_a
+    assert occ_backend.build_occ_backend("/tmp/a/.") is backend_a
 
-    # command_exec_server returns a 4-tuple; the first three fields
+    # shell_runner returns a 4-tuple; the first three fields
     # identity-match the cached OccBackend's fields.
-    via_command_exec_4tuple = command_exec_server._services(
+    via_command_exec_4tuple = shell_runner._services(
         {"layer_stack_root": "/tmp/a"},
     )
     assert via_command_exec_4tuple[0] is backend_a.layer_stack

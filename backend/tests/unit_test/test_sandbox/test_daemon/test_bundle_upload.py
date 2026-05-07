@@ -58,12 +58,18 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/api/utils/__init__.py",
         "sandbox/api/utils/models.py",
         "sandbox/bash.py",
-        "sandbox/daemon/async_bridge.py",
+        "sandbox/utils/__init__.py",
+        "sandbox/utils/async_bridge.py",
         "sandbox/daemon/__main__.py",
+        "sandbox/daemon/rpc/__init__.py",
+        "sandbox/daemon/rpc/server.py",
+        "sandbox/daemon/rpc/dispatcher.py",
+        "sandbox/daemon/services/__init__.py",
+        "sandbox/daemon/services/layer_stack_client.py",
+        "sandbox/daemon/services/workspace_binding.py",
         "sandbox/daemon/handlers/health.py",
         "sandbox/daemon/handlers/workspace.py",
         "sandbox/daemon/services/workspace_server.py",
-        "sandbox/daemon/rpc/dispatcher.py",
         "sandbox/daemon/services/shell_runner.py",
         "sandbox/daemon/handlers/__init__.py",
         "sandbox/daemon/handlers/_common.py",
@@ -155,7 +161,7 @@ def test_bundle_excludes_host_only_raw_exec_modules() -> None:
         "sandbox/overlay/runner/runtime_bundle.py",
         "sandbox/host/deploy/bundle.py",
         "sandbox/host/rpc/client.py",
-        "sandbox/host/daemon/install.py",
+        "sandbox/host/deploy/install.py",
         "sandbox/daemon/overlay_shell/capture_to_changeset.py",
         "sandbox/daemon/overlay_shell/pipeline.py",
         "sandbox/daemon/overlay_shell/result_envelope.py",
@@ -202,7 +208,7 @@ def test_bundle_includes_peer_setup_scripts(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     src_root = tmp_path / "src"
-    setup_script = src_root / "sandbox" / "runtime" / "peer" / "setup.sh"
+    setup_script = src_root / "sandbox" / "daemon" / "peer" / "setup.sh"
     setup_script.parent.mkdir(parents=True)
     setup_script.write_text("#!/usr/bin/env bash\necho setup\n", encoding="utf-8")
 

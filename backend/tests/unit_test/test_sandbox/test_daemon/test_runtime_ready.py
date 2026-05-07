@@ -7,18 +7,19 @@ from pathlib import Path
 import pytest
 
 from sandbox.layer_stack.workspace_base import build_workspace_base
-from sandbox.daemon import health_handlers, layer_stack_server, occ_server
+from sandbox.daemon.handlers import health
+from sandbox.daemon.services import occ_backend, workspace_server
 
 
 @pytest.fixture(autouse=True)
 def _clear_runtime_caches() -> None:
-    occ_server._backend_cache_clear()
-    layer_stack_server._clear_layer_stack_server_caches_for_tests()
+    occ_backend._backend_cache_clear()
+    workspace_server._clear_layer_stack_server_caches_for_tests()
     try:
         yield
     finally:
-        occ_server._backend_cache_clear()
-        layer_stack_server._clear_layer_stack_server_caches_for_tests()
+        occ_backend._backend_cache_clear()
+        workspace_server._clear_layer_stack_server_caches_for_tests()
 
 
 def _probe(response: dict[str, object], name: str) -> dict[str, object]:
@@ -37,7 +38,7 @@ def test_daemon_ready_bound_workspace_returns_ready(tmp_path: Path) -> None:
     stack = tmp_path / "layer-stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    response = health_handlers.runtime_ready({"layer_stack_root": stack.as_posix()})
+    response = health.runtime_ready({"layer_stack_root": stack.as_posix()})
 
     assert response["success"] is True
     assert response["ready"] is True
@@ -55,7 +56,7 @@ def test_daemon_ready_unbound_root_fails_closed(
 ) -> None:
     stack = tmp_path / "layer-stack"
 
-    response = health_handlers.runtime_ready({"layer_stack_root": stack.as_posix()})
+    response = health.runtime_ready({"layer_stack_root": stack.as_posix()})
 
     assert response["success"] is True
     assert response["ready"] is False
@@ -74,9 +75,9 @@ def test_daemon_ready_reports_data_plane_failure(
     def fail_services(_layer_stack_root: str) -> object:
         raise RuntimeError("synthetic data-plane failure")
 
-    monkeypatch.setattr(health_handlers._common, "_services", fail_services)
+    monkeypatch.setattr(health._common, "_services", fail_services)
 
-    response = health_handlers.runtime_ready(
+    response = health.runtime_ready(
         {"layer_stack_root": (tmp_path / "stack").as_posix()}
     )
 
@@ -103,14 +104,14 @@ def test_daemon_ready_reports_incomplete_data_plane_backend(
     def fake_shell_services(_args: dict[str, object]) -> tuple[object, object, object, Path]:
         return object(), object(), object(), tmp_path
 
-    monkeypatch.setattr(health_handlers._common, "_services", incomplete_services)
+    monkeypatch.setattr(health._common, "_services", incomplete_services)
     monkeypatch.setattr(
-        health_handlers.command_exec_server,
+        health.shell_runner,
         "_services",
         fake_shell_services,
     )
 
-    response = health_handlers.runtime_ready(
+    response = health.runtime_ready(
         {"layer_stack_root": (tmp_path / "stack").as_posix()}
     )
 
@@ -143,15 +144,15 @@ def test_daemon_ready_reports_mutation_gate_failure(
     def fail_backend(_layer_stack_root: str) -> object:
         raise RuntimeError("synthetic mutation-gate failure")
 
-    monkeypatch.setattr(health_handlers._common, "_services", fake_services)
+    monkeypatch.setattr(health._common, "_services", fake_services)
     monkeypatch.setattr(
-        health_handlers.command_exec_server,
+        health.shell_runner,
         "_services",
         fake_shell_services,
     )
-    monkeypatch.setattr(health_handlers.occ_server, "build_occ_backend", fail_backend)
+    monkeypatch.setattr(health.occ_backend, "build_occ_backend", fail_backend)
 
-    response = health_handlers.runtime_ready(
+    response = health.runtime_ready(
         {"layer_stack_root": (tmp_path / "stack").as_posix()}
     )
 
@@ -180,19 +181,19 @@ def test_daemon_ready_reports_incomplete_mutation_gate_backend(
     def fake_shell_services(_args: dict[str, object]) -> tuple[object, object, object, Path]:
         return object(), object(), object(), tmp_path
 
-    monkeypatch.setattr(health_handlers._common, "_services", fake_services)
+    monkeypatch.setattr(health._common, "_services", fake_services)
     monkeypatch.setattr(
-        health_handlers.command_exec_server,
+        health.shell_runner,
         "_services",
         fake_shell_services,
     )
     monkeypatch.setattr(
-        health_handlers.occ_server,
+        health.occ_backend,
         "build_occ_backend",
         fake_services,
     )
 
-    response = health_handlers.runtime_ready(
+    response = health.runtime_ready(
         {"layer_stack_root": (tmp_path / "stack").as_posix()}
     )
 
@@ -207,7 +208,7 @@ def test_daemon_ready_reports_incomplete_mutation_gate_backend(
 
 
 def test_daemon_ready_reports_explicit_workspace_mount_mode(tmp_path: Path) -> None:
-    response = health_handlers.runtime_ready(
+    response = health.runtime_ready(
         {"layer_stack_root": (tmp_path / "stack").as_posix()}
     )
 

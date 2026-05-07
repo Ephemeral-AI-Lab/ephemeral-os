@@ -12,8 +12,8 @@ from sandbox.layer_stack.manifest import (
     read_manifest,
 )
 from sandbox.layer_stack.workspace import require_workspace_binding
-from sandbox.daemon import command_exec_server, occ_server
 from sandbox.daemon.handlers import _common
+from sandbox.daemon.services import occ_backend, shell_runner
 from sandbox.daemon.services.workspace_server import get_layer_stack_manager
 
 _STARTED_AT_MONO = time.monotonic()
@@ -75,7 +75,7 @@ def _probe_control_plane(layer_stack_root: str) -> dict[str, object]:
 
 def _probe_data_plane(layer_stack_root: str) -> dict[str, object]:
     handlers_backend = _common._services(layer_stack_root)
-    shell_services = command_exec_server._services(
+    shell_services = shell_runner._services(
         {"layer_stack_root": layer_stack_root}
     )
     expected_fields = (
@@ -108,7 +108,7 @@ def _probe_data_plane(layer_stack_root: str) -> dict[str, object]:
 
 
 def _probe_mutation_gate(layer_stack_root: str) -> dict[str, object]:
-    backend = occ_server.build_occ_backend(layer_stack_root)
+    backend = occ_backend.build_occ_backend(layer_stack_root)
     expected_fields = (
         "layer_stack",
         "occ_client",

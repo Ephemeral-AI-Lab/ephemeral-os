@@ -126,7 +126,7 @@ def test_prepare_workspace_snapshot_returns_distinct_transient_lowerdirs_per_lea
     ) == "print('hi')\n"
 
     # release_lease drops bookkeeping; the transient lowerdir is the caller's
-    # responsibility. Simulate the caller cleanup that command_exec_server does.
+    # responsibility. Simulate the caller cleanup that shell_runner does.
     assert manager.release_lease(first.lease_id) is True
     shutil.rmtree(Path(first.lowerdir).parent, ignore_errors=True)
     assert Path(first.lowerdir).exists() is False
