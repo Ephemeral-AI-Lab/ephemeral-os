@@ -17,21 +17,22 @@ import pytest
 from sandbox.layer_stack import LayerStackManager
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.occ.changeset.types import WriteChange
-from sandbox.runtime import write_edit_handlers
+from sandbox.runtime.handlers import edit_handler, write_handler
+from sandbox.runtime.handlers._common import _services, _services_cache_clear
 
 
 @pytest.mark.asyncio
 async def test_in_workspace_edit_reads_bytes_via_snapshot_reader(
     tmp_path: Path,
 ) -> None:
-    write_edit_handlers._services_cache_clear()
+    _services_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "a.txt").write_text("hello world\n", encoding="utf-8")
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    services = write_edit_handlers._services(stack.as_posix())
+    services = _services(stack.as_posix())
     seen_manifests: list[object] = []
     real_read_bytes = services.layer_stack.read_bytes
 
@@ -44,7 +45,7 @@ async def test_in_workspace_edit_reads_bytes_via_snapshot_reader(
 
     services.layer_stack.read_bytes = tracking_read_bytes  # type: ignore[method-assign]
     try:
-        result = await write_edit_handlers.edit_file(
+        result = await edit_handler.edit_file(
             {
                 "layer_stack_root": stack.as_posix(),
                 "path": "a.txt",
@@ -69,14 +70,14 @@ async def test_in_workspace_edit_submits_write_change_with_derived_bytes(
     tmp_path: Path,
 ) -> None:
     """OCC sees a WriteChange (not EditChange) carrying final derived bytes."""
-    write_edit_handlers._services_cache_clear()
+    _services_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "config.toml").write_text("name = \"old\"\n", encoding="utf-8")
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    services = write_edit_handlers._services(stack.as_posix())
+    services = _services(stack.as_posix())
 
     submitted_changes: list[object] = []
     real_apply = services.occ_client.apply_changeset
@@ -86,7 +87,7 @@ async def test_in_workspace_edit_submits_write_change_with_derived_bytes(
         return await real_apply(typed_changes, **kwargs)
 
     with patch.object(services.occ_client, "apply_changeset", tracking_apply):
-        result = await write_edit_handlers.edit_file(
+        result = await edit_handler.edit_file(
             {
                 "layer_stack_root": stack.as_posix(),
                 "path": "config.toml",
@@ -107,7 +108,7 @@ async def test_in_workspace_edit_submits_write_change_with_derived_bytes(
 @pytest.mark.asyncio
 async def test_in_workspace_edit_anchor_miss_raises(tmp_path: Path) -> None:
     """Anchor validation runs against snapshot N, not a moved manifest."""
-    write_edit_handlers._services_cache_clear()
+    _services_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "a.txt").write_text("foo\n", encoding="utf-8")
@@ -115,7 +116,7 @@ async def test_in_workspace_edit_anchor_miss_raises(tmp_path: Path) -> None:
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
     with pytest.raises(ValueError, match="anchor not found"):
-        await write_edit_handlers.edit_file(
+        await edit_handler.edit_file(
             {
                 "layer_stack_root": stack.as_posix(),
                 "path": "a.txt",
@@ -126,7 +127,7 @@ async def test_in_workspace_edit_anchor_miss_raises(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_in_workspace_edit_rejects_non_utf8(tmp_path: Path) -> None:
-    write_edit_handlers._services_cache_clear()
+    _services_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "blob.bin").write_bytes(b"\xff\xfe\x00\x00bad")
@@ -134,7 +135,7 @@ async def test_in_workspace_edit_rejects_non_utf8(tmp_path: Path) -> None:
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
     with pytest.raises(ValueError, match="not valid UTF-8 text"):
-        await write_edit_handlers.edit_file(
+        await edit_handler.edit_file(
             {
                 "layer_stack_root": stack.as_posix(),
                 "path": "blob.bin",
@@ -157,14 +158,14 @@ async def test_in_workspace_edit_same_path_M_gt_N_surfaces_hard_conflict(
     from sandbox.occ.changeset.types import FileStatus
     from sandbox.occ.content.hashing import ContentHasher
 
-    write_edit_handlers._services_cache_clear()
+    _services_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "shared.txt").write_text("hello world\n", encoding="utf-8")
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    services = write_edit_handlers._services(stack.as_posix())
+    services = _services(stack.as_posix())
     manager: LayerStackManager = services.manager
     occ_service = services.occ_client._service  # type: ignore[attr-defined]
 
@@ -223,14 +224,14 @@ async def test_in_workspace_create_only_rejects_existing_path(
 ) -> None:
     """create-only in-workspace write rejects when the path exists in the
     validation snapshot — base_hash mismatch on existing-path content."""
-    write_edit_handlers._services_cache_clear()
+    _services_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "exists.txt").write_text("base\n", encoding="utf-8")
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    result = await write_edit_handlers.write_file(
+    result = await write_handler.write_file(
         {
             "layer_stack_root": stack.as_posix(),
             "path": "exists.txt",

@@ -16,6 +16,7 @@ from sandbox.command_exec.result import ShellProcessResult
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.occ.client import OCCClient
 from sandbox.runtime import command_exec_server
+from sandbox.runtime.handlers import shell_handler
 
 
 @pytest.mark.asyncio
@@ -89,7 +90,7 @@ async def test_shell_uses_occ_client_apply_changeset(
         command_exec_server, "run_workspace_replaced_command", fake_run
     )
 
-    result = await command_exec_server.shell(
+    result = await shell_handler.shell(
         {
             "layer_stack_root": stack.as_posix(),
             "command": "true",

@@ -4,15 +4,19 @@ Owns the single source of truth for:
 
 * the in-workspace classifier predicate (``classify_path``),
 * the host-side single-path / ``layer_stack_root`` validation contract,
-* the (LayerStackClient, OCCClient, GitignoreOracle, LayerStackManager)
-  service tuple cache,
 * the result projection helpers used by ``write_handler`` and
   ``edit_handler`` to turn a :class:`ChangesetResult` into the
   host-visible payload.
 
+The OCC backend tuple ``(LayerStackClient, OCCClient, GitignoreOracle,
+LayerStackManager)`` is owned by :mod:`sandbox.runtime.occ_server`. The
+``_services`` / ``_services_cache_clear`` / ``drop_services_cache``
+entrypoints here are thin pass-throughs preserved for backward-compat
+with existing test fixtures.
+
 ``shell_handler`` does NOT use this module — it routes through
 ``command_exec_server`` whose worker scaffolding still owns its own
-service cache and timing helpers.
+service entrypoint and timing helpers.
 """
 
 from __future__ import annotations
@@ -20,21 +24,16 @@ from __future__ import annotations
 import os
 import time
 from collections.abc import Mapping
-from pathlib import Path
 from typing import Literal, NamedTuple
 
 from sandbox.api.tool.result_projection import (
     committed_paths,
     conflict_and_status,
 )
-from sandbox.layer_stack.stack_manager import LayerStackManager
 from sandbox.occ.changeset.types import ChangesetResult
-from sandbox.occ.client import OCCClient
 from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
-from sandbox.occ.service import OccService
-from sandbox.runtime.clients.layer_stack import LayerStackClient
-from sandbox.runtime.clients.occ import RuntimeWorkspaceBindingReader
-from sandbox.runtime.layer_stack_server import get_layer_stack_manager
+from sandbox.runtime import occ_server
+from sandbox.runtime.occ_server import OccBackend
 
 
 # -- classifier predicate ---------------------------------------------------
@@ -123,54 +122,21 @@ def _required_single_path(args: Mapping[str, object]) -> str:
     return path
 
 
-# -- service cache ----------------------------------------------------------
+# -- service cache (delegates to occ_server) --------------------------------
 
 
-class _Services(NamedTuple):
-    layer_stack: LayerStackClient
-    occ_client: OCCClient
-    gitignore: SnapshotGitignoreOracle
-    manager: LayerStackManager
-
-
-_SERVICE_CACHE: dict[str, _Services] = {}
+def _services(layer_stack_root: str) -> OccBackend:
+    return occ_server.build_occ_backend(layer_stack_root)
 
 
 def _services_cache_clear() -> None:
     """Drop write/edit/read service cache. Test helper."""
-    _SERVICE_CACHE.clear()
+    occ_server._backend_cache_clear()
 
 
 def drop_services_cache(layer_stack_root: str) -> None:
     """Drop cached services for one layer-stack root."""
-    root = str(layer_stack_root or "").strip()
-    if not root:
-        return
-    _SERVICE_CACHE.pop(root, None)
-    _SERVICE_CACHE.pop(str(Path(root).resolve(strict=False)), None)
-
-
-def _services(layer_stack_root: str) -> _Services:
-    cached = _SERVICE_CACHE.get(layer_stack_root)
-    if cached is not None:
-        return cached
-    manager = get_layer_stack_manager(layer_stack_root)
-    layer_stack = LayerStackClient(manager)
-    gitignore = SnapshotGitignoreOracle(layer_stack)
-    occ_service = OccService(gitignore=gitignore, layer_stack=layer_stack)
-    occ_client = OCCClient(
-        occ_service,
-        binding_reader=RuntimeWorkspaceBindingReader(),
-        workspace_ref=layer_stack_root,
-    )
-    services = _Services(
-        layer_stack=layer_stack,
-        occ_client=occ_client,
-        gitignore=gitignore,
-        manager=manager,
-    )
-    _SERVICE_CACHE[layer_stack_root] = services
-    return services
+    occ_server.drop_backend_cache(layer_stack_root)
 
 
 # -- result projection ------------------------------------------------------
@@ -224,8 +190,6 @@ def _conflict_to_dict(conflict: object | None) -> dict[str, object] | None:
 
 __all__ = [
     "ClassifiedPath",
-    "_Services",
-    "_SERVICE_CACHE",
     "_conflict_to_dict",
     "_gitignore_timings",
     "_layer_stack_root",

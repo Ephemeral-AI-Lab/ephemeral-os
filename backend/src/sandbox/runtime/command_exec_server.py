@@ -27,38 +27,19 @@ from sandbox.layer_stack.workspace import require_workspace_binding
 from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
 from sandbox.occ.changeset.types import ChangesetResult
 from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
-from sandbox.occ.service import OccService
 from sandbox.overlay.capture.types import read_output_ref
+from sandbox.runtime import occ_server
 from sandbox.runtime.async_bridge import run_sync_in_executor
-from sandbox.occ.client import OCCClient
-from sandbox.runtime.clients.layer_stack import LayerStackClient
-from sandbox.runtime.clients.occ import RuntimeWorkspaceBindingReader
-from sandbox.runtime.layer_stack_server import get_layer_stack_manager
-
-
-_SERVICE_CACHE: dict[
-    str,
-    tuple[
-        WorkspaceLeaseClient,
-        OCCMutationClient,
-        "SnapshotGitignoreOracle",
-        Path,
-    ],
-] = {}
 
 
 def _services_cache_clear() -> None:
     """Drop command-exec runtime service cache. Test helper."""
-    _SERVICE_CACHE.clear()
+    occ_server._backend_cache_clear()
 
 
 def drop_services_cache(layer_stack_root: str) -> None:
     """Drop cached command-exec services for one layer-stack root."""
-    root = str(layer_stack_root or "").strip()
-    if not root:
-        return
-    _SERVICE_CACHE.pop(root, None)
-    _SERVICE_CACHE.pop(str(Path(root).resolve(strict=False)), None)
+    occ_server.drop_backend_cache(layer_stack_root)
 
 
 async def _execute_shell(
@@ -246,18 +227,8 @@ def _services(
     "SnapshotGitignoreOracle",
     Path,
 ]:
-    layer_stack_root = _layer_stack_root(args)
-    cached = _SERVICE_CACHE.get(layer_stack_root)
-    if cached is not None:
-        return cached
-    manager = get_layer_stack_manager(layer_stack_root)
-    layer_stack = LayerStackClient(manager)
-    gitignore = SnapshotGitignoreOracle(layer_stack)
-    occ_service = OccService(
-        gitignore=gitignore,
-        layer_stack=layer_stack,
-    )
-    services = cast(
+    backend = occ_server.build_occ_backend(_layer_stack_root(args))
+    return cast(
         tuple[
             WorkspaceLeaseClient,
             OCCMutationClient,
@@ -265,18 +236,12 @@ def _services(
             Path,
         ],
         (
-            layer_stack,
-            OCCClient(
-                occ_service,
-                binding_reader=RuntimeWorkspaceBindingReader(),
-                workspace_ref=layer_stack_root,
-            ),
-            gitignore,
-            layer_stack.storage_root,
+            backend.layer_stack,
+            backend.occ_client,
+            backend.gitignore,
+            backend.layer_stack.storage_root,
         ),
     )
-    _SERVICE_CACHE[layer_stack_root] = services
-    return services
 
 
 def _command_request(args: Mapping[str, object]) -> CommandExecRequest:

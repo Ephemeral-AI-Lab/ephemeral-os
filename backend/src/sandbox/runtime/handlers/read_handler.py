@@ -50,11 +50,6 @@ def _read_in_workspace(
         raise WorkspaceBindingError(
             f"layer-stack root does not exist: {layer_stack_root}"
         )
-    active = services.manager.read_active_manifest()
-    if active.version <= 0:
-        raise WorkspaceBindingError(
-            f"active manifest is empty for workspace binding: {layer_stack_root}"
-        )
     request_id = uuid4().hex
     lease_start = time.perf_counter()
     lease = services.manager.acquire_snapshot_lease(request_id)

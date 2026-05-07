@@ -11,7 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.runtime import api_handlers, daemon, server, write_edit_handlers
+from sandbox.runtime import api_handlers, daemon, server
+from sandbox.runtime.handlers import _common
 
 
 def _short_socket_path() -> tuple[Path, Path]:
@@ -183,7 +184,9 @@ def test_peer_bootstraps_register_snapshot_ops_without_compact() -> None:
 def test_services_cached_per_layer_stack_root(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """write_edit_handlers caches the per-root service tuple across calls."""
+    """OCC backend factory caches the per-root tuple across calls."""
+    from sandbox.runtime import occ_server
+
     api_handlers._services_cache_clear()
 
     class _FakeManager:
@@ -191,27 +194,27 @@ def test_services_cached_per_layer_stack_root(
             self.root = root
 
     monkeypatch.setattr(
-        write_edit_handlers,
+        occ_server,
         "get_layer_stack_manager",
         lambda root: _FakeManager(str(root)),
     )
     monkeypatch.setattr(
-        write_edit_handlers,
+        occ_server,
         "LayerStackClient",
         lambda manager: ("layer-stack", manager),
     )
     monkeypatch.setattr(
-        write_edit_handlers,
+        occ_server,
         "SnapshotGitignoreOracle",
         lambda layer_stack: ("oracle", layer_stack),
     )
     monkeypatch.setattr(
-        write_edit_handlers,
+        occ_server,
         "OccService",
         lambda *, gitignore, layer_stack: ("service", gitignore, layer_stack),
     )
     monkeypatch.setattr(
-        write_edit_handlers,
+        occ_server,
         "OCCClient",
         lambda service, *, binding_reader, workspace_ref: (
             "occ-client",
@@ -220,34 +223,31 @@ def test_services_cached_per_layer_stack_root(
         ),
     )
 
-    a1 = write_edit_handlers._services("/tmp/a")
-    a2 = write_edit_handlers._services("/tmp/a")
-    b1 = write_edit_handlers._services("/tmp/b")
+    a1 = _common._services("/tmp/a")
+    a2 = _common._services("/tmp/a")
+    b1 = _common._services("/tmp/b")
 
     assert a1 is a2  # same root → cached tuple
     assert a1.manager is not b1.manager  # different roots → distinct managers
 
 
-def test_drop_services_cache_cascades_to_all_runtime_modules(
+def test_drop_services_cache_delegates_to_occ_backend_cache(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``api_handlers.drop_services_cache`` must cascade to write_edit + command_exec."""
+    """``api_handlers.drop_services_cache`` must delegate to the shared
+    OCC backend cache owned by :mod:`occ_server`. After Phase 05.5 the
+    write/edit/read and shell paths share one cache, so a single drop
+    invalidates them all."""
+    from sandbox.runtime import occ_server
+
     api_handlers._services_cache_clear()
     cleared: list[str] = []
 
     monkeypatch.setattr(
-        write_edit_handlers,
-        "drop_services_cache",
-        lambda root: cleared.append(f"write_edit:{root}"),
-    )
-    from sandbox.runtime import command_exec_server
-
-    monkeypatch.setattr(
-        command_exec_server,
-        "drop_services_cache",
-        lambda root: cleared.append(f"command_exec:{root}"),
+        occ_server,
+        "drop_backend_cache",
+        lambda root: cleared.append(f"occ_backend:{root}"),
     )
 
     api_handlers.drop_services_cache("/tmp/a")
-    assert "write_edit:/tmp/a" in cleared
-    assert "command_exec:/tmp/a" in cleared
+    assert "occ_backend:/tmp/a" in cleared

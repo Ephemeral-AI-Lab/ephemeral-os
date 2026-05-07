@@ -4,8 +4,10 @@ Phase 05 binds the OCC mutation gate to a single externally-reachable
 surface: ``apply_changeset`` plus ``start`` / ``stop`` / ``health``
 lifecycle. No host-callable ``api.write_*`` / ``api.edit_*`` /
 ``api.read_*`` symbols live here — those dispatch to
-``runtime.handlers`` instead (one module per verb). This module's structural
-``OCC_OP_TABLE`` is the spec for the §6 wire-method assertion.
+``runtime.handlers`` instead (one module per verb). This module's
+``OCC_OP_TABLE`` is a **structural assertion target**, not a wire
+dispatch table; the §6 surface check pins its key set to exactly
+``{apply_changeset, start, stop, health}``.
 
 OCC remains an in-process Python boundary. Callers consume it via
 :class:`sandbox.occ.client.OCCClient`; this module exposes the same

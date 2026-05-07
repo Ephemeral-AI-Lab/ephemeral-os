@@ -45,7 +45,7 @@ def test_occ_op_table_carries_no_api_prefixed_symbols() -> None:
 
 def test_occ_handlers_module_does_not_classify_paths() -> None:
     """occ-server must not own the in-workspace classifier — single source of
-    truth lives on command-exec (write_edit_handlers)."""
+    truth lives on command-exec (handlers/_common.py)."""
     occ_handlers_source = Path(occ_handlers.__file__).read_text()
     occ_server_source = Path(occ_server.__file__).read_text()
 
@@ -66,8 +66,8 @@ def test_occ_handlers_does_not_register_api_ops_against_runtime_dispatcher() -> 
     from sandbox.runtime import server
 
     server._load_peer_bootstraps()
-    # The host-facing api.* ops must dispatch to write_edit_handlers (or
-    # command_exec_server.shell), never to occ_handlers callables.
+    # The host-facing api.* ops must dispatch to runtime.handlers.*,
+    # never to occ_handlers callables.
     for op in ("api.write_file", "api.edit_file", "api.read_file"):
         handler = server.OP_TABLE[op]
         assert handler.__module__ != occ_handlers.__name__
@@ -160,16 +160,17 @@ async def test_cas_retry_loop_bounded_under_no_contention(tmp_path: Path) -> Non
     import asyncio
 
     from sandbox.layer_stack.workspace_base import build_workspace_base
-    from sandbox.runtime import write_edit_handlers
+    from sandbox.runtime.handlers import write_handler
+    from sandbox.runtime.handlers._common import _services_cache_clear
 
-    write_edit_handlers._services_cache_clear()
+    _services_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
     result = await asyncio.wait_for(
-        write_edit_handlers.write_file(
+        write_handler.write_file(
             {
                 "layer_stack_root": stack.as_posix(),
                 "path": "ok.txt",
@@ -191,15 +192,16 @@ async def test_cas_retry_exhaustion_returns_conflict_result(tmp_path: Path) -> N
     from sandbox.layer_stack.manifest import ManifestConflictError
     from sandbox.layer_stack.workspace_base import build_workspace_base
     from sandbox.occ.serial_merger import MAX_OCC_CAS_RETRIES
-    from sandbox.runtime import write_edit_handlers
+    from sandbox.runtime.handlers import write_handler
+    from sandbox.runtime.handlers._common import _services, _services_cache_clear
 
-    write_edit_handlers._services_cache_clear()
+    _services_cache_clear()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    services = write_edit_handlers._services(stack.as_posix())
+    services = _services(stack.as_posix())
     publisher = services.manager._publisher  # type: ignore[attr-defined]
 
     call_counter = {"n": 0}
@@ -214,7 +216,7 @@ async def test_cas_retry_exhaustion_returns_conflict_result(tmp_path: Path) -> N
     publisher.publish_layer_locked = always_cas_mismatch  # type: ignore[method-assign]
     try:
         result = await asyncio.wait_for(
-            write_edit_handlers.write_file(
+            write_handler.write_file(
                 {
                     "layer_stack_root": stack.as_posix(),
                     "path": "ok.txt",
@@ -233,3 +235,80 @@ async def test_cas_retry_exhaustion_returns_conflict_result(tmp_path: Path) -> N
     assert "CAS mismatch retry budget exhausted" in result["conflict"]["message"]
     # Retry budget was respected — exactly MAX retries observed.
     assert call_counter["n"] == MAX_OCC_CAS_RETRIES
+
+
+# ---------------------------------------------------------------------------
+# Phase 05.5 — single OCC backend per layer_stack_root across all peers
+# ---------------------------------------------------------------------------
+
+
+def test_single_occ_backend_cache_per_layer_stack_root(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """All runtime peers share one OccBackend per layer_stack_root.
+
+    After Phase 05.5 the OCC backend tuple is owned by ``occ_server``;
+    the per-verb handler scaffolding (write/edit/read/shell) and the
+    api-handler manager helper all resolve through the same factory.
+    """
+    from sandbox.runtime import command_exec_server, occ_server, write_edit_handlers
+
+    occ_server._backend_cache_clear()
+
+    class _FakeManager:
+        def __init__(self, root: str) -> None:
+            self.root = root
+
+        @property
+        def storage_root(self) -> str:
+            return f"{self.root}/storage"
+
+    class _FakeLayerStack:
+        def __init__(self, manager: _FakeManager) -> None:
+            self.manager = manager
+
+        @property
+        def storage_root(self) -> str:
+            return self.manager.storage_root
+
+    monkeypatch.setattr(
+        occ_server,
+        "get_layer_stack_manager",
+        lambda root: _FakeManager(str(root)),
+    )
+    monkeypatch.setattr(occ_server, "LayerStackClient", _FakeLayerStack)
+    monkeypatch.setattr(
+        occ_server,
+        "SnapshotGitignoreOracle",
+        lambda layer_stack: ("oracle", layer_stack),
+    )
+    monkeypatch.setattr(
+        occ_server,
+        "OccService",
+        lambda *, gitignore, layer_stack: ("service", gitignore, layer_stack),
+    )
+    monkeypatch.setattr(
+        occ_server,
+        "OCCClient",
+        lambda service, *, binding_reader, workspace_ref: (
+            "occ-client",
+            service,
+            workspace_ref,
+        ),
+    )
+
+    backend_a = occ_server.build_occ_backend("/tmp/a")
+
+    # The shim and the per-verb scaffolding both resolve to the same
+    # cached OccBackend instance.
+    via_write_edit = write_edit_handlers._services("/tmp/a")
+    assert via_write_edit is backend_a
+
+    # command_exec_server returns a 4-tuple; the first three fields
+    # identity-match the cached OccBackend's fields.
+    via_command_exec_4tuple = command_exec_server._services(
+        {"layer_stack_root": "/tmp/a"},
+    )
+    assert via_command_exec_4tuple[0] is backend_a.layer_stack
+    assert via_command_exec_4tuple[1] is backend_a.occ_client
+    assert via_command_exec_4tuple[2] is backend_a.gitignore
