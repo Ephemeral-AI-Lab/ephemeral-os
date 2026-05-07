@@ -1,8 +1,8 @@
 """Phase 06 — K-scaling benchmark for shell large captures.
 
-Diagnostic only: emits per-call timings at K ∈ {1, 100, 1000, 10000} for both a
-tracked prefix and a gitignored prefix. Phase 2.2 reads the artifact and selects
-the optimisation lane (Lane A/B/C from the plan §5).
+Emits per-call timings across K ∈ {1, 100, 1000, 10000} on both a tracked
+prefix and a gitignored prefix so that any future K-scaling regression is
+visible in `commit_per_file_us`.
 """
 
 from __future__ import annotations
@@ -133,12 +133,6 @@ async def _run_single_cell(
 async def test_phase06_large_capture_k_scaling(
     workspace_base_sandbox: SandboxHandle,
 ) -> None:
-    """K-scaling matrix at K ∈ {1, 100, 1000} only.
-
-    K=10K cells live in their own test functions so each gets a clean
-    workspace fixture and the cumulative-state ENOSPC failure observed in the
-    baseline run cannot contaminate the breakdown rows.
-    """
     handle = workspace_base_sandbox
     await seed_phase05_imported_base(handle)
 
@@ -163,49 +157,47 @@ async def test_phase06_large_capture_k_scaling(
     assert len(rows) == len(_PREFIXES) * len(_K_VALUES)
 
 
-async def test_phase06_large_capture_tracked_k10000(
-    workspace_base_sandbox: SandboxHandle,
-) -> None:
-    """K=10K tracked-prefix cell on a clean workspace fixture."""
-    handle = workspace_base_sandbox
-    await seed_phase05_imported_base(handle)
-    artifact = _artifact_path().with_name(
-        _artifact_path().name.replace(
+def _isolated_k10000_artifact(label_slug: str) -> Path:
+    base = _artifact_path()
+    return base.with_name(
+        base.name.replace(
             "phase06-large-capture-scaling-",
-            "phase06-large-capture-tracked-k10000-",
+            f"phase06-large-capture-{label_slug}-",
         )
     )
-    row = await _run_single_cell(
-        handle,
-        prefix="tracked/load/k_capture",
-        k=10_000,
-    )
+
+
+async def _isolated_k10000_cell(
+    handle: SandboxHandle,
+    *,
+    prefix: str,
+    label_slug: str,
+) -> None:
+    await seed_phase05_imported_base(handle)
+    artifact = _isolated_k10000_artifact(label_slug)
+    row = await _run_single_cell(handle, prefix=prefix, k=10_000)
     artifact.write_text(
         json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n",
         encoding="utf-8",
     )
-    print(f"\n[phase06:tracked_k10000] artifact={artifact}")
+    print(f"\n[phase06:{label_slug}] artifact={artifact}")
+
+
+async def test_phase06_large_capture_tracked_k10000(
+    workspace_base_sandbox: SandboxHandle,
+) -> None:
+    await _isolated_k10000_cell(
+        workspace_base_sandbox,
+        prefix="tracked/load/k_capture",
+        label_slug="tracked-k10000",
+    )
 
 
 async def test_phase06_large_capture_dist_k10000(
     workspace_base_sandbox: SandboxHandle,
 ) -> None:
-    """K=10K gitignored-prefix cell on a clean workspace fixture."""
-    handle = workspace_base_sandbox
-    await seed_phase05_imported_base(handle)
-    artifact = _artifact_path().with_name(
-        _artifact_path().name.replace(
-            "phase06-large-capture-scaling-",
-            "phase06-large-capture-dist-k10000-",
-        )
-    )
-    row = await _run_single_cell(
-        handle,
+    await _isolated_k10000_cell(
+        workspace_base_sandbox,
         prefix="dist/k_capture",
-        k=10_000,
+        label_slug="dist-k10000",
     )
-    artifact.write_text(
-        json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n",
-        encoding="utf-8",
-    )
-    print(f"\n[phase06:dist_k10000] artifact={artifact}")
