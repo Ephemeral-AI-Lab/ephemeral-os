@@ -159,6 +159,17 @@ def test_host_daemon_api_status_do_not_import_daytona_provider() -> None:
     )
 
 
+def test_provider_package_does_not_import_host_layer() -> None:
+    """Providers own adapters; host orchestration sits above them."""
+    offenders: list[str] = []
+    for module in _python_files(SRC_ROOT / "sandbox" / "provider"):
+        for imported in _imports(module):
+            if imported == "sandbox.host" or imported.startswith("sandbox.host."):
+                offenders.append(f"{module.relative_to(SRC_ROOT)} imports {imported}")
+
+    assert offenders == []
+
+
 def test_occ_policy_modules_depend_on_layer_stack_ports_not_manager() -> None:
     """OCC internals use role protocols instead of the concrete storage facade."""
     offenders: list[str] = []

@@ -14,6 +14,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 def _sandbox_project_root(sandbox: Any) -> str | None:
     project_dir = getattr(sandbox, "project_dir", None)
     if isinstance(project_dir, str) and project_dir.strip():
