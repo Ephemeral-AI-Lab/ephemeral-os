@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from pydantic import BaseModel, Field, field_validator
 
 from task_center.api import (
     HarnessTaskRole,
-    StartedMission,
     TaskCenterInvariantViolation,
 )
 from tools.core.context import ToolExecutionContextService
@@ -21,6 +22,9 @@ from tools.submission.hooks import (
     HarnessRoleGate,
     RequestMissionBeforeEditGate,
 )
+
+if TYPE_CHECKING:
+    from task_center.api import StartedMission
 
 
 class RequestMissionSolutionInput(BaseModel):
