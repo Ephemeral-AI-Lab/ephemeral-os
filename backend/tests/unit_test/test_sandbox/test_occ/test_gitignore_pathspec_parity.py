@@ -1,10 +1,4 @@
-"""Parity matrix: ``PathspecGitignoreOracle`` matches ``git check-ignore``.
-
-Phase 2b of the API latency reduction plan flips ``GitignoreOracle`` over to
-a pure-Python pathspec backend. Before defaulting it on, we lock down the
-parity guarantee by running both backends against the same on-disk workspace
-fixtures and asserting identical verdicts.
-"""
+"""Parity matrix: the pathspec oracle matches ``git check-ignore`` fixtures."""
 
 from __future__ import annotations
 
@@ -15,7 +9,6 @@ from pathlib import Path
 import pytest
 
 from sandbox.occ.content.gitignore_oracle import (
-    GitignoreOracle,
     PathspecGitignoreOracle,
 )
 
@@ -34,6 +27,21 @@ def _init_git(workspace: Path) -> None:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
+
+
+def _git_is_ignored(workspace: Path, path: str) -> bool:
+    completed = subprocess.run(
+        ["git", "-C", str(workspace), "check-ignore", "-q", path],
+        check=False,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    if completed.returncode == 0:
+        return True
+    if completed.returncode == 1:
+        return False
+    stderr = completed.stderr.decode("utf-8", "replace")
+    raise RuntimeError(f"git check-ignore failed: {stderr!r}")
 
 
 def _make_workspace(tmp_path: Path, files: dict[str, str]) -> Path:
@@ -89,7 +97,11 @@ _PARITY_CASES: list[tuple[str, dict[str, str], list[str]]] = [
 ]
 
 
-@pytest.mark.parametrize("label,files,paths", _PARITY_CASES, ids=[c[0] for c in _PARITY_CASES])
+@pytest.mark.parametrize(
+    "label,files,paths",
+    _PARITY_CASES,
+    ids=[c[0] for c in _PARITY_CASES],
+)
 def test_pathspec_matches_git_check_ignore(
     tmp_path: Path,
     label: str,
@@ -97,11 +109,10 @@ def test_pathspec_matches_git_check_ignore(
     paths: list[str],
 ) -> None:
     workspace = _make_workspace(tmp_path, files)
-    git_oracle = GitignoreOracle(str(workspace))
     pathspec_oracle = PathspecGitignoreOracle(str(workspace))
 
     for p in paths:
-        git_verdict = git_oracle.is_ignored(p)
+        git_verdict = _git_is_ignored(workspace, p)
         pathspec_verdict = pathspec_oracle.is_ignored(p)
         assert pathspec_verdict == git_verdict, (
             f"divergence on {p!r} in case {label}: "

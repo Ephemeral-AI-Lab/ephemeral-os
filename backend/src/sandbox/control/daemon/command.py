@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import shlex
 from typing import Any, Protocol
 
@@ -303,34 +302,10 @@ def _is_bootstrap_ready_response(
     )
 
 
-# Env vars forwarded from host into the sandbox runtime process so feature
-# flags (e.g. ``EPHEMERALOS_GITIGNORE_BACKEND``) reach the runtime handlers
-# without having to be threaded through every per-call args dict.
-_FORWARDED_RUNTIME_ENV_VARS: tuple[str, ...] = ("EPHEMERALOS_GITIGNORE_BACKEND",)
-
-
-def _runtime_env_prefix() -> str:
-    parts: list[str] = []
-    for name in _FORWARDED_RUNTIME_ENV_VARS:
-        value = os.environ.get(name)
-        if value is None or value == "":
-            continue
-        parts.append(f"{name}={shlex.quote(value)}")
-    if not parts:
-        return ""
-    return " ".join(parts) + " "
-
-
 def _runtime_thin_client_command(raw_payload: str) -> str:
-    """sh-c launcher that pipes one envelope to the resident daemon.
-
-    Forwarded env vars (``EPHEMERALOS_GITIGNORE_BACKEND``) are still set so a
-    daemon spawn issued from the same call sees them; the resident daemon
-    inherits its env from its first spawn.
-    """
-    env_prefix = _runtime_env_prefix()
+    """sh-c launcher that pipes one envelope to the resident daemon."""
     return (
-        f"{env_prefix}sh -c {shlex.quote(_RUNTIME_THIN_CLIENT_LAUNCHER)} runtime "
+        f"sh -c {shlex.quote(_RUNTIME_THIN_CLIENT_LAUNCHER)} runtime "
         f"{shlex.quote(raw_payload)}"
     )
 
@@ -341,8 +316,7 @@ def _runtime_daemon_spawn_command() -> str:
     Idempotent: returns 0 immediately when an existing daemon's socket is
     bound and its PID is alive.
     """
-    env_prefix = _runtime_env_prefix()
-    return f"{env_prefix}sh -c {shlex.quote(_RUNTIME_DAEMON_LAUNCHER)}"
+    return f"sh -c {shlex.quote(_RUNTIME_DAEMON_LAUNCHER)}"
 
 
 def _without_none(args: dict[str, Any]) -> dict[str, Any]:

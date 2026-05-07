@@ -46,37 +46,6 @@ async def bootstrap_in_sandbox_runtime(
     )
 
 
-async def bootstrap_upload_runtime_bundle(
-    sandbox_id: str,
-) -> None:
-    """Upload-only phase of the runtime bootstrap.
-
-    Performs the chunked bundle upload without spawning the daemon. The
-    create-sandbox path runs this concurrently with ``ensure_git`` (which
-    is the other long pre-bootstrap step), then defers to the regular
-    :func:`bootstrap_in_sandbox_runtime` afterwards. That call finds the
-    bundle already in place via ``.bundle-hash``.
-
-    Same input validation as :func:`bootstrap_in_sandbox_runtime`. Raises on
-    upload failure; callers running this in a background thread are expected
-    to swallow and let the sequential bootstrap retry.
-    """
-    if not sandbox_id:
-        return
-
-    from sandbox.control.daemon.bundle import ensure_runtime_uploaded
-
-    logger.info(
-        "sandbox-runtime bundle upload starting for sandbox %s",
-        sandbox_id,
-    )
-    await ensure_runtime_uploaded(sandbox_id)
-    logger.info(
-        "sandbox-runtime bundle upload completed for sandbox %s",
-        sandbox_id,
-    )
-
-
 def run_runtime_bootstrap(
     sandbox_id: str,
     workspace_root: str | None,
@@ -157,7 +126,7 @@ def start_runtime_bundle_upload(
 
     def _do_upload() -> None:
         run_sync(
-            bootstrap_upload_runtime_bundle(
+            bootstrap_in_sandbox_runtime(
                 sandbox_id=sandbox_id,
             )
         )
@@ -262,7 +231,6 @@ def setup_after_start(sandbox_id: str, workspace_root: str | None) -> None:
 
 __all__ = [
     "bootstrap_in_sandbox_runtime",
-    "bootstrap_upload_runtime_bundle",
     "ensure_workspace_base",
     "finish_runtime_bundle_upload",
     "run_runtime_bootstrap",

@@ -12,14 +12,13 @@ pytestmark = pytest.mark.asyncio
 
 
 _GITIGNORE_BODY = r"""
-from sandbox.occ.content.gitignore_oracle import GitignoreOracle
+from sandbox.occ.content.gitignore_oracle import PathspecGitignoreOracle
 
 label = "occ.content_gitignore_oracle"
 before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label) / "repo"
 root.mkdir(parents=True)
-subprocess.run(["git", "init", "-q", "."], cwd=root, check=True)
 (root / ".gitignore").write_text(
     "build/*\n"
     "!build/keep.txt\n"
@@ -29,7 +28,7 @@ subprocess.run(["git", "init", "-q", "."], cwd=root, check=True)
 (root / "pkg").mkdir()
 (root / "pkg" / ".gitignore").write_text("*.tmp\n!important.tmp\n", encoding="utf-8")
 
-oracle = GitignoreOracle(str(root))
+oracle = PathspecGitignoreOracle(str(root))
 paths = [
     "build/out.o",
     "build/keep.txt",

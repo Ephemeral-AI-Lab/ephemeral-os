@@ -75,8 +75,8 @@ The fence removes stale child directories under:
 <layer_stack_root>/staging
 ```
 
-Only directories with `mtime < daemon_started_at` are removed. Fresh directories
-are retained. The fence is called once per process per resolved
+Only directories older than the daemon process start time are removed. Fresh
+directories are retained. The fence is called once per process per resolved
 `layer_stack_root` before `get_layer_stack_manager(...)` returns either a cached
 or newly constructed manager.
 
@@ -134,7 +134,7 @@ sandbox.runtime.api_handlers remains deleted.
 # 50 passed, 1 warning
 
 .venv/bin/pytest backend/tests/unit_test/test_sandbox/test_command_exec/test_write_edit_dispatch.py -q
-# 19 passed, 1 warning
+# 21 passed, 1 warning
 
 .venv/bin/pytest backend/tests/unit_test/test_sandbox/test_occ/test_mutation_gate.py -q
 # 7 passed, 1 warning

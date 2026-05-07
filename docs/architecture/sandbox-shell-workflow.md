@@ -54,8 +54,7 @@ Source of truth: `backend/src/sandbox/`.
 │      ├─ layers/L00000N-*  (immutable layer dirs)             │
 │      ├─ staging/*         (OCC commit staging)               │
 │      ├─ runtime/                                             │
-│      │   ├─ transient-lowerdirs/<req>/lower/  (per-call)     │
-│      │   └─ gitignore-cache/<ver>/                           │
+│      │   └─ transient-lowerdirs/<req>/lower/  (per-call)     │
 │      └─ workspace.binding (workspace_root ↔ stack)           │
 │                                                              │
 │   /dev/shm/eos-command-exec/<root>/<req>/                    │
@@ -298,10 +297,9 @@ Daemon returns the dict; host `_result_from_payload` rehydrates a
 ### 2.1 Ports
 
 `sandbox.occ.ports.OccLayerStackPorts` is the only contract OCC needs
-from storage. It is the union of four narrow protocols:
+from storage. It is the union of three narrow protocols:
 
 - `SnapshotReader` — `read_active_manifest`, `read_bytes`, `read_text`
-- `SnapshotMaterializer` — `materialize`, `gitignore_cache_root`
 - `CommitStagingStore` — `allocate_commit_staging`,
   `drop_commit_staging`
 - `CommitPublisher` — `commit_transaction()` returning a

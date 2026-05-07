@@ -262,6 +262,60 @@ async def test_in_workspace_write_pins_lease_then_releases(tmp_path: Path) -> No
     assert manager.active_lease_count() == starting_count
 
 
+@pytest.mark.asyncio
+async def test_write_file_single_path_prepare_skips_gitignore_workspace_cache(
+    tmp_path: Path,
+) -> None:
+    occ_server._backend_cache_clear()
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    (workspace / ".gitignore").write_text("dist/\n", encoding="utf-8")
+    (workspace / "a.txt").write_text("base\n", encoding="utf-8")
+    stack = tmp_path / "stack"
+    build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
+
+    result = await write_handler.write_file(
+        {
+            "layer_stack_root": stack.as_posix(),
+            "path": "a.txt",
+            "content": "changed\n",
+        }
+    )
+
+    assert result["success"] is True
+    timings = result["timings"]
+    assert timings["occ.prepare.single_path_fast_s"] >= 0.0
+    assert timings["occ.prepare.single_path_gitignore_s"] >= 0.0
+    _assert_no_gitignore_workspace_cache(stack)
+
+
+@pytest.mark.asyncio
+async def test_edit_file_single_path_prepare_reuses_target_read_for_base_hash(
+    tmp_path: Path,
+) -> None:
+    occ_server._backend_cache_clear()
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    (workspace / ".gitignore").write_text("dist/\n", encoding="utf-8")
+    (workspace / "a.txt").write_text("alpha=old\n", encoding="utf-8")
+    stack = tmp_path / "stack"
+    build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
+
+    result = await edit_handler.edit_file(
+        {
+            "layer_stack_root": stack.as_posix(),
+            "path": "a.txt",
+            "edits": [{"old_text": "alpha=old", "new_text": "alpha=new"}],
+        }
+    )
+
+    assert result["success"] is True
+    timings = result["timings"]
+    assert timings["occ.prepare.single_path_fast_s"] >= 0.0
+    assert timings["occ.prepare.single_path_base_hash_s"] == 0.0
+    _assert_no_gitignore_workspace_cache(stack)
+
+
 # ---------------------------------------------------------------------------
 # Sanity: real read_file in-workspace returns layer-stack bytes (not real FS)
 # ---------------------------------------------------------------------------
@@ -304,3 +358,10 @@ def test_classifier_resolves_workspace_real_path_when_input_uses_literal(
     result = classify_path(f"{link_workspace}/foo", str(link_workspace))
     assert result.classification == "in_workspace"
     assert result.layer_path == "foo"
+
+
+def _assert_no_gitignore_workspace_cache(stack: Path) -> None:
+    cache_root = stack / "runtime" / "gitignore-cache"
+    if not cache_root.is_dir():
+        return
+    assert not any(child.name.startswith("gitignore-") for child in cache_root.iterdir())

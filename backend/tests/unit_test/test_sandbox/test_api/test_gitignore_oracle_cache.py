@@ -1,33 +1,12 @@
-"""Phase 2 of the API latency reduction plan: gitignore oracle cold-start.
-
-Covers two backends of ``SnapshotGitignoreOracle``:
-
-* ``git`` (default) — disk-cached materialized workspace under
-  ``<storage_root>/runtime/gitignore-cache/gitignore-<version>/`` with
-  atomic-rename install and ``.ready`` marker.
-* ``pathspec`` — pure-Python ``GitIgnoreSpec`` evaluator that reads
-  ``.gitignore`` content via ``SnapshotReader.read_text`` (no materialize,
-  no ``git init``, no subprocess).
-"""
+"""Pathspec-only snapshot gitignore oracle tests."""
 
 from __future__ import annotations
 
-import shutil
-import subprocess
 from pathlib import Path
-
-import pytest
 
 from sandbox.layer_stack import LayerChange, LayerStackManager
 from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
 from sandbox.occ.content.hashing import ContentHasher
-
-
-def _have_git() -> bool:
-    return shutil.which("git") is not None
-
-
-pytestmark = pytest.mark.skipif(not _have_git(), reason="git binary not on PATH")
 
 
 def _publish(manager: LayerStackManager, tmp_path: Path, rel: str, content: bytes) -> None:
@@ -51,141 +30,55 @@ def _seed_repo(manager: LayerStackManager, tmp_path: Path) -> None:
     _publish(manager, tmp_path, "pkg/.gitignore", b"*.tmp\n!important.tmp\n")
 
 
-def test_disk_cache_workspace_built_under_storage_root(tmp_path: Path) -> None:
+def test_snapshot_oracle_reads_gitignore_from_layer_stack(tmp_path: Path) -> None:
     manager = LayerStackManager(tmp_path / "stack")
     _seed_repo(manager, tmp_path)
 
-    oracle = SnapshotGitignoreOracle(manager, backend="git")
-    assert oracle.is_ignored("build/out.o") is True
-    # First call paid the build cost — capture before later cache-hits zero it.
-    materialize_s = oracle.last_materialize_s
-    git_init_s = oracle.last_git_init_s
-    assert oracle.is_ignored("build/keep.txt") is False
-    assert oracle.is_ignored("pkg/cache.tmp") is True
-    assert oracle.is_ignored("pkg/important.tmp") is False
+    oracle = SnapshotGitignoreOracle(manager)
 
-    snapshot = manager.read_active_manifest()
-    cached = manager.storage_root / "runtime" / "gitignore-cache" / f"gitignore-{snapshot.version}"
-    assert (cached / ".ready").is_file()
-    assert (cached / ".gitignore").is_file()
-    assert (cached / ".git").is_dir()
-    assert materialize_s > 0.0
-    assert git_init_s > 0.0
-    # Subsequent calls hit the in-memory cache and report no extra work.
-    assert oracle.last_materialize_s == 0.0
-    assert oracle.last_git_init_s == 0.0
-
-
-def test_disk_cache_warm_attach_skips_build_cost(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
-    _seed_repo(manager, tmp_path)
-
-    # First instance builds the cache.
-    SnapshotGitignoreOracle(manager, backend="git").is_ignored(
-        "build/out.o"
-    )
-
-    # A *fresh* oracle instance (simulating a new runtime process) should
-    # attach to the existing on-disk workspace without paying materialize or
-    # git init.
-    fresh = SnapshotGitignoreOracle(manager, backend="git")
-    assert fresh.is_ignored("build/out.o") is True
-    assert fresh.last_materialize_s == 0.0
-    assert fresh.last_git_init_s == 0.0
-
-
-def test_disk_cache_atomic_rename_handles_concurrent_winner(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
-    _seed_repo(manager, tmp_path)
-    snapshot = manager.read_active_manifest()
-
-    # Pre-populate the final cache dir to simulate a concurrent process that
-    # already finished building. The current builder must rename-fail, clean
-    # up its staging, and reuse the existing ready dir.
-    final = manager.storage_root / "runtime" / "gitignore-cache" / f"gitignore-{snapshot.version}"
-    final.mkdir(parents=True)
-    # Construct a real workspace inside it so check-ignore works.
-    (final / ".gitignore").write_text("build/*\n", encoding="utf-8")
-    subprocess.run(
-        ["git", "-C", str(final), "init", "-q"],
-        check=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    (final / ".ready").write_text("", encoding="utf-8")
-
-    oracle = SnapshotGitignoreOracle(manager, backend="git")
-    assert oracle.is_ignored("build/out.o") is True
-    # Cache hit on a ready dir: no build cost.
-    assert oracle.last_materialize_s == 0.0
-    assert oracle.last_git_init_s == 0.0
-
-
-def test_old_cache_versions_evicted_on_build(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
-    _seed_repo(manager, tmp_path)
-
-    # Drop legacy cache dirs for ancient versions.
-    cache = manager.storage_root / "runtime" / "gitignore-cache"
-    cache.mkdir(parents=True, exist_ok=True)
-    stale = cache / "gitignore-0"
-    stale.mkdir()
-    (stale / ".ready").write_text("", encoding="utf-8")
-
-    # Bump the manifest well past the keep-window (default 16) so the
-    # eviction threshold sweeps version 0 cleanly.
-    for i in range(20):
-        _publish(manager, tmp_path, f"src/file_{i:02d}.py", b"x\n")
-
-    SnapshotGitignoreOracle(manager, backend="git").is_ignored(
-        "build/out.o"
-    )
-
-    assert not stale.is_dir(), "old cache dir should have been evicted"
-
-
-def test_pathspec_backend_skips_materialize_and_git_init(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
-    _seed_repo(manager, tmp_path)
-
-    oracle = SnapshotGitignoreOracle(manager, backend="pathspec")
     assert oracle.is_ignored("build/out.o") is True
     assert oracle.is_ignored("build/keep.txt") is False
     assert oracle.is_ignored("pkg/cache.tmp") is True
     assert oracle.is_ignored("pkg/important.tmp") is False
 
-    # No on-disk workspace expected.
+
+def test_snapshot_oracle_reuses_pathspec_reader_per_manifest(tmp_path: Path) -> None:
+    manager = LayerStackManager(tmp_path / "stack")
+    _seed_repo(manager, tmp_path)
+    oracle = SnapshotGitignoreOracle(manager)
+
+    assert oracle.is_ignored("build/out.o") is True
+    assert oracle.cache_misses == 1
+    assert oracle.cache_hits == 0
+
+    assert oracle.is_ignored("pkg/cache.tmp") is True
+    assert oracle.cache_misses == 1
+    assert oracle.cache_hits == 1
+
+
+def test_snapshot_oracle_separates_cache_by_manifest_version(tmp_path: Path) -> None:
+    manager = LayerStackManager(tmp_path / "stack")
+    _publish(manager, tmp_path, ".gitignore", b"*.log\n")
+    oracle = SnapshotGitignoreOracle(manager)
+
+    assert oracle.is_ignored("debug.log") is True
+    assert oracle.cache_misses == 1
+
+    _publish(manager, tmp_path, ".gitignore", b"")
+
+    assert oracle.is_ignored("debug.log") is False
+    assert oracle.cache_misses == 2
+
+
+def test_snapshot_oracle_does_not_materialize_gitignore_workspace(
+    tmp_path: Path,
+) -> None:
+    manager = LayerStackManager(tmp_path / "stack")
+    _seed_repo(manager, tmp_path)
+
+    oracle = SnapshotGitignoreOracle(manager)
+    assert oracle.is_ignored("build/out.o") is True
+
     cache = manager.storage_root / "runtime" / "gitignore-cache"
     if cache.is_dir():
-        for child in cache.iterdir():
-            assert not child.name.startswith("gitignore-"), (
-                "pathspec backend must not materialize a workspace"
-            )
-
-    # Timings reported as zero — no subprocess ran.
-    assert oracle.last_materialize_s == 0.0
-    assert oracle.last_git_init_s == 0.0
-
-
-def test_pathspec_backend_matches_git_backend_on_layer_stack(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
-    _seed_repo(manager, tmp_path)
-
-    git_oracle = SnapshotGitignoreOracle(manager, backend="git")
-    pathspec_oracle = SnapshotGitignoreOracle(
-        manager, backend="pathspec"
-    )
-
-    paths = [
-        "build/out.o",
-        "build/keep.txt",
-        "build/sub/keep.txt",
-        "pkg/cache.tmp",
-        "pkg/important.tmp",
-        "pkg/nested/x.tmp",
-        "src/main.py",
-    ]
-    for p in paths:
-        assert git_oracle.is_ignored(p) == pathspec_oracle.is_ignored(p), p
-
-
+        assert not any(child.name.startswith("gitignore-") for child in cache.iterdir())

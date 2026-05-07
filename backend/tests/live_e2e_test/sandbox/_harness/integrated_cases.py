@@ -78,8 +78,6 @@ _FIXED_TIMING_KEYS = (
     "runtime.dispatch_s",
     "gitignore.cache_hits_total",
     "gitignore.cache_misses_total",
-    "gitignore.materialize_snapshot_s",
-    "gitignore.git_init_s",
 )
 _TIMING_PREFIXES = ("occ.prepare.", "occ.commit.")
 _RUN_ID = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + f"-{os.getpid()}"

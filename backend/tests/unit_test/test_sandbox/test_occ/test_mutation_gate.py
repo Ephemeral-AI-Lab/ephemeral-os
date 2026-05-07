@@ -119,7 +119,7 @@ async def test_cas_retry_exhaustion_returns_conflict_result(tmp_path: Path) -> N
     call_counter = {"n": 0}
     real_publish = publisher.publish_layer_locked
 
-    def always_cas_mismatch(*args, **kwargs):
+    def always_cas_mismatch(*_args, **_kwargs):
         call_counter["n"] += 1
         raise ManifestConflictError(
             "synthetic CAS mismatch for retry-exhaustion test"
@@ -193,7 +193,7 @@ def test_single_occ_backend_cache_per_layer_stack_root(
     monkeypatch.setattr(
         occ_server,
         "SnapshotGitignoreOracle",
-        lambda layer_stack: ("oracle", layer_stack),
+        lambda layer_stack, **kwargs: ("oracle", layer_stack, kwargs),
     )
     monkeypatch.setattr(
         occ_server,

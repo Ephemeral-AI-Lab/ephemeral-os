@@ -141,7 +141,7 @@ breakage. Cutover requires both.
 |---:|---|---|---|
 | 21 | `layer_stack_overlay_occ/test_shell_call_isolation.py` | 3 skip stubs | 100 paired runs, drift = 0 |
 | 22 | `layer_stack_overlay_occ/test_concurrent_agents.py` | 4 skip stubs | sustained mixed shell+edit; replay reconciles; rejected-write absent |
-| 23 | `layer_stack_overlay_occ/test_codegen_race.py` | 3 skip stubs | tracked race rejects; gitignored race LWW via `GitignoreOracle` |
+| 23 | `layer_stack_overlay_occ/test_codegen_race.py` | 3 skip stubs | tracked race rejects; gitignored race LWW via pathspec oracle |
 | 24 | `layer_stack_overlay_occ/test_failure_recovery.py` | 3 skip stubs | kill mid-publish/squash → fsck 0 dangling; killed leases reaped |
 
 ### Verification gate
@@ -252,7 +252,7 @@ For every probe file, the same loop:
 - Building probe scripts that import `sandbox.api.tool` or
   `sandbox.control.*` (host-side packages even when staged).
 - `ignored_paths=[...]` parameters used to fake gitignore — use real
-  `.gitignore` writes inside `/testbed` and let `GitignoreOracle` classify.
+  `.gitignore` writes inside `/testbed` and let the pathspec oracle classify.
 - Adding `*_load.py` files without a `SubsystemLoadProfile` row in §6.3.
 - Touching `DEFAULT_LAYER_STACK_ROOT` (`/tmp/eos-sandbox-runtime/layer-stack`)
   from a probe — use a per-probe path

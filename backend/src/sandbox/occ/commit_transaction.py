@@ -5,9 +5,11 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from types import TracebackType
 from uuid import uuid4
 
 from sandbox.layer_stack.changes import LayerChange, LayerDelta
+from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset.prepared import (
     PreparedChangeset,
     PreparedPathGroup,
@@ -151,7 +153,7 @@ class OccCommitTransaction:
         self,
         group: PreparedPathGroup,
         *,
-        active_manifest,
+        active_manifest: Manifest,
         stager: "_LayerChangeStager",
     ) -> PathValidation:
         if group.route is RouteDecision.DROP:
@@ -218,7 +220,12 @@ class _LayerChangeStager:
         self._staging_path = area.path
         return self
 
-    def __exit__(self, exc_type, exc, traceback) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
         del exc_type, exc, traceback
         if self._staging_id is not None:
             self._staging.drop_commit_staging(self._staging_id)

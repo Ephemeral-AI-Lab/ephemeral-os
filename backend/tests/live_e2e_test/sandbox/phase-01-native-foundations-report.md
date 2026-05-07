@@ -109,7 +109,7 @@ Phase 1 is not the Phase 4 load-profile gate, but it includes correctness under 
 - Added the Phase 1 files under `layer_stack/`, `occ/`, and `overlay/native/` without importing `sandbox.layer_stack`, `sandbox.occ`, or `sandbox.overlay` at host collection time.
 - Added `sandbox.occ.merge` as a narrow facade over existing direct/gated merge implementations because the Phase 1 plan names that import path.
 - Made the OCC changeset runtime importable in the live image's Python 3.9 runtime by replacing `StrEnum`, `kw_only=True`, and runtime `|` type-alias usage in the OCC path.
-- Fixed `GitignoreOracle` handling for verbose negated patterns from `git check-ignore --verbose --non-matching`; negated `!` records now classify as not ignored.
+- Fixed the former git-backed oracle handling for verbose negated patterns from `git check-ignore --verbose --non-matching`; negated `!` records now classify as not ignored.
 - Added digest metadata for published layers so same-digest publishes are idempotent and same-digest race tests converge to one canonical ref.
 
 ## Residual Notes

@@ -178,10 +178,6 @@ class LayerStackManager:
     def commit_transaction(self) -> "LayerStackTransaction":
         return LayerStackTransaction(self)
 
-    @property
-    def gitignore_cache_root(self) -> Path:
-        return self.storage_root / "runtime" / "gitignore-cache"
-
     def allocate_commit_staging(self, request_id: str) -> CommitStagingArea:
         parent = self.storage_root / STAGING_DIR
         parent.mkdir(parents=True, exist_ok=True)

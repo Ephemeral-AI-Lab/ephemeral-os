@@ -22,8 +22,10 @@ def _clear_layer_stack_server_state() -> None:
 
 def test_stale_staging_fence_removes_old_dirs_and_keeps_fresh_dirs(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     started_at = time.time()
+    monkeypatch.setattr(layer_stack_server, "_DAEMON_STARTED_AT", started_at)
     staging = tmp_path / "stack" / "staging"
     old_layer = staging / "L000123-old.staging"
     old_occ = staging / "occ-commit-old"
@@ -35,10 +37,7 @@ def test_stale_staging_fence_removes_old_dirs_and_keeps_fresh_dirs(
     os.utime(old_occ, (started_at - 10, started_at - 10))
     os.utime(fresh, (started_at + 10, started_at + 10))
 
-    result = layer_stack_server.fence_stale_staging(
-        tmp_path / "stack",
-        daemon_started_at=started_at,
-    )
+    result = layer_stack_server.fence_stale_staging(tmp_path / "stack")
 
     assert result["success"] is True
     assert result["inspected_dirs"] == 3
@@ -52,20 +51,18 @@ def test_stale_staging_fence_removes_old_dirs_and_keeps_fresh_dirs(
     ]
 
 
-def test_stale_staging_fence_second_call_is_idempotent(tmp_path: Path) -> None:
+def test_stale_staging_fence_second_call_is_idempotent(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     started_at = time.time()
+    monkeypatch.setattr(layer_stack_server, "_DAEMON_STARTED_AT", started_at)
     old_dir = tmp_path / "stack" / "staging" / "occ-commit-old"
     old_dir.mkdir(parents=True)
     os.utime(old_dir, (started_at - 10, started_at - 10))
 
-    first = layer_stack_server.fence_stale_staging(
-        tmp_path / "stack",
-        daemon_started_at=started_at,
-    )
-    second = layer_stack_server.fence_stale_staging(
-        tmp_path / "stack",
-        daemon_started_at=started_at,
-    )
+    first = layer_stack_server.fence_stale_staging(tmp_path / "stack")
+    second = layer_stack_server.fence_stale_staging(tmp_path / "stack")
 
     assert first["fenced_dirs"] == 1
     assert second["fenced_dirs"] == 0

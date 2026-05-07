@@ -9,7 +9,8 @@ from uuid import uuid4
 
 from sandbox.layer_stack.workspace import require_workspace_binding
 from sandbox.occ.changeset.builders import build_api_write_change
-from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
+from sandbox.occ.runtime_ops import content_hash_bytes
+from sandbox.occ.single_path_prepare import prepare_single_path_changeset
 from sandbox.runtime.handlers._common import (
     _layer_stack_root,
     _project_changeset,
@@ -50,8 +51,6 @@ async def edit_file(args: dict[str, object]) -> dict[str, object]:
         layer_stack_root=layer_stack_root,
         layer_path=classified.layer_path,
         edits=edits,
-        actor_id=str(args.get("actor_id") or ""),
-        description=str(args.get("description") or f"edit {raw_path}"),
         total_start=total_start,
     )
 
@@ -61,8 +60,6 @@ async def _edit_in_workspace(
     layer_stack_root: str,
     layer_path: str,
     edits: Sequence[tuple[str, str, int]],
-    actor_id: str,
-    description: str,
     total_start: float,
 ) -> dict[str, object]:
     services = _services(layer_stack_root)
@@ -90,31 +87,30 @@ async def _edit_in_workspace(
         change = build_api_write_change(
             path=layer_path,
             final_content=final_text.encode("utf-8"),
+            base_hash=content_hash_bytes(bytes_),
             create_only=False,
         )
-        apply_start = time.perf_counter()
-        result = await services.occ_client.apply_changeset(
-            [change],
+        prepared = prepare_single_path_changeset(
+            change,
             snapshot=lease.manifest,
-            options=CommitOptions(
-                atomic=False,
-                caller_id=actor_id,
-                description=description,
-            ),
+            gitignore=services.single_path_gitignore,
+            atomic=False,
+        )
+        apply_start = time.perf_counter()
+        result = await services.occ_client.commit_prepared_changeset(
+            prepared,
             workspace_ref=layer_stack_root,
         )
         apply_elapsed = time.perf_counter() - apply_start
     finally:
         services.manager.release_lease(lease.lease_id)
 
-    if isinstance(result, PreparedChangeset):
-        raise TypeError("edit_file OCC client returned an uncommitted changeset")
     payload = _project_changeset(
         result,
         fallback_path=layer_path,
         verb="edit",
         total_start=total_start,
-        gitignore=services.gitignore,
+        gitignore=services.single_path_gitignore,
         timings_extra={
             "api.edit.lease_acquire_s": lease_acquired_s,
             "api.edit.snapshot_read_s": read_elapsed,

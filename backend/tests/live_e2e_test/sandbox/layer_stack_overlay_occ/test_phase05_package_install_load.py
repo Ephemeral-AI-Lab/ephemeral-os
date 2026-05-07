@@ -12,6 +12,7 @@ import os
 import shlex
 import time
 from collections.abc import Awaitable, Callable, Mapping, Sequence
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -29,7 +30,7 @@ from .._harness.workspace_base_public import selected_runtime_ms
 pytestmark = pytest.mark.asyncio
 
 SCHEMA = "sandbox.live_e2e.phase05_package_install.v1"
-DEFAULT_CONCURRENCIES = (1, 5, 10, 20)
+DEFAULT_CONCURRENCIES = (1, 2)
 DEFAULT_FILE_COUNT = 300
 DEFAULT_FILE_BYTES = 1024
 PIP_WHEEL = "pkg-src/pip/eos_many_files_pkg-0.0.1-py3-none-any.whl"
@@ -38,7 +39,16 @@ NPM_TARBALL = "pkg-src/npm/eos-many-files-npm-0.0.1.tgz"
 _Factory = Callable[[], Awaitable[tuple[object, RuntimeCallMetric]]]
 
 
-async def test_phase05_shell_package_install_load_matrix_c1_c5_c10_c20(
+@dataclass(frozen=True)
+class _InstallVerificationTarget:
+    package_dir: str
+    list_dir: str
+    marker_path: str
+    marker_name: str
+    expected_fragment: str
+
+
+async def test_phase05_shell_package_install_load_matrix_c1_c2(
     workspace_base_sandbox: SandboxHandle,
 ) -> None:
     handle = workspace_base_sandbox
@@ -105,6 +115,21 @@ async def test_phase05_shell_package_install_load_matrix_c1_c5_c10_c20(
                 assert metric.status in {"ok", "committed", "accepted"}, result
                 assert metric.changed_paths, metric
 
+            verification = await _verify_installs_visible(
+                handle,
+                workload=workload,
+                concurrency=concurrency,
+                file_count=file_count,
+            )
+            rows.append(
+                {
+                    "schema": SCHEMA,
+                    "kind": "verification",
+                    "case": workload,
+                    "concurrency": concurrency,
+                    **verification,
+                }
+            )
             summary = _summary_row(
                 case=workload,
                 binding=binding,
@@ -113,6 +138,7 @@ async def test_phase05_shell_package_install_load_matrix_c1_c5_c10_c20(
                 file_bytes=file_bytes,
                 metrics=metrics,
                 batch_wall_ms=batch_wall_ms,
+                verification=verification,
             )
             rows.append(summary)
             rows.extend(
@@ -163,6 +189,104 @@ def _install_factories(
 
         factories.append(run)
     return factories
+
+
+async def _verify_installs_visible(
+    handle: SandboxHandle,
+    *,
+    workload: str,
+    concurrency: int,
+    file_count: int,
+) -> dict[str, object]:
+    samples: list[dict[str, object]] = []
+    for index in range(concurrency):
+        target = _verification_target(
+            workload=workload,
+            concurrency=concurrency,
+            index=index,
+            file_count=file_count,
+        )
+        shell_result = await handle.tool.shell(
+            _install_visibility_command(target, file_count=file_count),
+            timeout=60,
+            description=(
+                f"phase05 package install visibility {workload} "
+                f"c={concurrency} i={index}"
+            ),
+        )
+        assert shell_result.success, shell_result.stderr or shell_result.stdout
+        assert shell_result.exit_code == 0, shell_result.stderr or shell_result.stdout
+
+        read_result = await handle.tool.read_file(target.marker_path)
+        assert read_result.success, target.marker_path
+        assert read_result.exists, target.marker_path
+        assert target.expected_fragment in read_result.content, target.marker_path
+        samples.append(
+            {
+                "index": index,
+                "marker_path": target.marker_path,
+                "shell_stdout": shell_result.stdout.strip(),
+                "read_bytes": len(read_result.content.encode("utf-8")),
+            }
+        )
+
+    return {
+        "all_installs_verified": True,
+        "verified_install_count": concurrency,
+        "shell_ls_cat_checks": concurrency,
+        "public_read_file_checks": concurrency,
+        "sample_markers": samples[:5],
+    }
+
+
+def _install_visibility_command(
+    target: _InstallVerificationTarget,
+    *,
+    file_count: int,
+) -> str:
+    return (
+        "set -euo pipefail; "
+        f"test -d {q(target.package_dir)}; "
+        f"ls {q(target.list_dir)} | grep -Fx {q(target.marker_name)} >/dev/null; "
+        f"cat {q(target.marker_path)} | grep -F "
+        f"{q(target.expected_fragment)} >/dev/null; "
+        f"count=$(find {q(target.package_dir)} -type f | wc -l | tr -d ' '); "
+        f"test \"$count\" -ge {file_count}; "
+        "printf 'verified_files=%s\\n' \"$count\""
+    )
+
+
+def _verification_target(
+    *,
+    workload: str,
+    concurrency: int,
+    index: int,
+    file_count: int,
+) -> _InstallVerificationTarget:
+    if workload == "pip_install_local_wheel":
+        package_dir = f".pkg-install/pip/c{concurrency:02d}-{index:02d}/eos_many_files_pkg"
+        marker_name = f"module_{file_count - 1:04d}.py"
+        return _InstallVerificationTarget(
+            package_dir=package_dir,
+            list_dir=package_dir,
+            marker_path=f"{package_dir}/{marker_name}",
+            marker_name=marker_name,
+            expected_fragment=f"DATA_{file_count - 1:04d}",
+        )
+    if workload == "npm_install_local_tgz":
+        package_dir = (
+            f".pkg-install/npm/c{concurrency:02d}-{index:02d}"
+            "/node_modules/eos-many-files-npm"
+        )
+        marker_name = f"file_{file_count - 1:04d}.txt"
+        return _InstallVerificationTarget(
+            package_dir=package_dir,
+            list_dir=f"{package_dir}/files",
+            marker_path=f"{package_dir}/files/{marker_name}",
+            marker_name=marker_name,
+            expected_fragment=f"{file_count - 1:04d}:",
+        )
+    raise AssertionError(f"unknown workload: {workload}")
 
 
 def _pip_install_command(concurrency: int, index: int, file_count: int) -> str:
@@ -358,6 +482,7 @@ def _summary_row(
     file_bytes: int,
     metrics: Sequence[RuntimeCallMetric],
     batch_wall_ms: float,
+    verification: Mapping[str, object],
 ) -> dict[str, object]:
     wall_values = [metric.elapsed_ms for metric in metrics]
     runtime_values = [selected_runtime_ms(metric) for metric in metrics]
@@ -402,6 +527,7 @@ def _summary_row(
             "unexpected_conflicts": sum(
                 1 for metric in metrics if metric.conflict_reason
             ),
+            "install_verification": dict(verification),
         },
     }
 

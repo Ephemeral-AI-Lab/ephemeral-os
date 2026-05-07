@@ -122,7 +122,7 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
     assert not (extract_dir / "sandbox/code_intelligence").exists()
 
 
-def test_bundle_excludes_pycache_and_compiled(tmp_path: Path) -> None:
+def test_bundle_excludes_pycache_and_compiled() -> None:
     bundle = _runtime_bundle_bytes()
     with tarfile.open(fileobj=io.BytesIO(bundle), mode="r:gz") as tar:
         names = tar.getnames()

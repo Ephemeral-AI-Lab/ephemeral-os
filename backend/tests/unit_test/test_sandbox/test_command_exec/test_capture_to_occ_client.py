@@ -85,8 +85,6 @@ class _OCCClient:
 class _Gitignore:
     cache_hits = 0
     cache_misses = 0
-    last_materialize_s = 0.0
-    last_git_init_s = 0.0
 
 
 async def test_shell_capture_goes_through_occ_client_before_lease_release(

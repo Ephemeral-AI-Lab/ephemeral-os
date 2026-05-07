@@ -78,7 +78,13 @@ def _probe_data_plane(layer_stack_root: str) -> dict[str, object]:
     shell_services = command_exec_server._services(
         {"layer_stack_root": layer_stack_root}
     )
-    expected_fields = ("layer_stack", "occ_client", "gitignore", "manager")
+    expected_fields = (
+        "layer_stack",
+        "occ_client",
+        "gitignore",
+        "single_path_gitignore",
+        "manager",
+    )
     missing_fields = [
         field for field in expected_fields if not hasattr(handlers_backend, field)
     ]
@@ -104,7 +110,13 @@ def _probe_data_plane(layer_stack_root: str) -> dict[str, object]:
 
 def _probe_mutation_gate(layer_stack_root: str) -> dict[str, object]:
     backend = occ_server.build_occ_backend(layer_stack_root)
-    expected_fields = ("layer_stack", "occ_client", "gitignore", "manager")
+    expected_fields = (
+        "layer_stack",
+        "occ_client",
+        "gitignore",
+        "single_path_gitignore",
+        "manager",
+    )
     present_fields = [field for field in expected_fields if hasattr(backend, field)]
     missing_fields = sorted(set(expected_fields) - set(present_fields))
     if missing_fields:

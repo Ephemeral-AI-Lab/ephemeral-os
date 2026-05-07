@@ -3,21 +3,27 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Iterable
 
 from sandbox.layer_stack.changes import LayerChange
 from sandbox.layer_stack.stack_manager import LayerStackManager
 from sandbox.occ.changeset.prepared import RouteDecision
 from sandbox.occ.changeset.types import DeleteChange, EditChange, WriteChange
-from sandbox.occ.content.gitignore_oracle import GitignoreOracle, RunOutcome
+from sandbox.occ.content.gitignore_oracle import GitignoreMatcher
 from sandbox.occ.runtime_ops import content_hash_bytes
 from sandbox.occ.service import OccService
 
 
-def _never_ignored() -> GitignoreOracle:
-    return GitignoreOracle(
-        "/unused",
-        run=lambda _argv, _stdin_bytes: RunOutcome(returncode=1, stdout=b"", stderr=b""),
-    )
+class _NeverIgnored:
+    def is_ignored(self, _path: str) -> bool:
+        return False
+
+    def filter_ignored(self, _paths: Iterable[str]) -> set[str]:
+        return set()
+
+
+def _never_ignored() -> GitignoreMatcher:
+    return _NeverIgnored()
 
 
 def _stack_with_file(tmp_path, rel: str, content: bytes) -> LayerStackManager:

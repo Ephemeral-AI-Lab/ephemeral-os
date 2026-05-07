@@ -345,7 +345,8 @@ runtime_ready(args)
 
   mutation_gate:
     backend = occ_server.build_occ_backend(layer_stack_root)
-    assert backend has layer_stack, occ_client, gitignore, manager
+    assert backend has layer_stack, occ_client, gitignore,
+      single_path_gitignore, manager
     return backend_fields and occ_client_class
 
   ready = all(probe.status == "ok" for probe in probes)
@@ -437,10 +438,10 @@ directories. The fence should remove stale directories under
 Recommended rule:
 
 ```text
-fence_stale_staging(layer_stack_root, daemon_started_at)
+fence_stale_staging(layer_stack_root)
   staging_root = layer_stack_root / "staging"
   for each child directory in staging_root:
-    if child mtime < daemon_started_at:
+    if child mtime < daemon process start time:
        shutil.rmtree(child)
 ```
 
@@ -504,7 +505,7 @@ test_routing_invariants.py
 test_stale_staging_fence.py
   - stale L*.staging dir is removed
   - stale occ-commit-* dir is removed
-  - fresh dir newer than daemon_started_at is retained
+  - fresh dir newer than the daemon process start time is retained
   - second fence call is idempotent
   - get_layer_stack_manager calls the fence once per process per root
 

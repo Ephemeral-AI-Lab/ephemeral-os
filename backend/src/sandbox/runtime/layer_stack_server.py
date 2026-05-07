@@ -44,14 +44,9 @@ def _drop_layer_stack_manager(layer_stack_root: str | Path) -> None:
         _MANAGER_CACHE.pop(key, None)
 
 
-def fence_stale_staging(
-    layer_stack_root: str | Path,
-    *,
-    daemon_started_at: float | None = None,
-) -> dict[str, object]:
+def fence_stale_staging(layer_stack_root: str | Path) -> dict[str, object]:
     """Remove staging dirs that predate the current daemon process."""
     total_start = time.perf_counter()
-    started_at = _DAEMON_STARTED_AT if daemon_started_at is None else daemon_started_at
     staging_root = Path(layer_stack_root).resolve(strict=False) / "staging"
     inspected_dirs = 0
     fenced_paths: list[str] = []
@@ -64,7 +59,7 @@ def fence_stale_staging(
                 mtime = child.stat().st_mtime
             except OSError:
                 continue
-            if mtime >= started_at:
+            if mtime >= _DAEMON_STARTED_AT:
                 continue
             shutil.rmtree(child, ignore_errors=True)
             if not child.exists():

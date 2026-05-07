@@ -5,12 +5,13 @@ from __future__ import annotations
 import time
 from collections.abc import Sequence
 from dataclasses import replace
+from typing import cast
 
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
 from sandbox.occ.changeset.types import Change, ChangesetResult
 from sandbox.occ.commit_transaction import OccCommitTransaction
-from sandbox.occ.content.gitignore_oracle import GitignoreOracle
+from sandbox.occ.content.gitignore_oracle import GitignoreMatcher
 from sandbox.occ.orchestrator import OccOrchestrator
 from sandbox.occ.ports import OccLayerStackPorts
 from sandbox.occ.runtime_ops import infer_manifest_base_hash
@@ -24,7 +25,7 @@ class OccService:
     def __init__(
         self,
         *,
-        gitignore: GitignoreOracle,
+        gitignore: GitignoreMatcher,
         layer_stack: OccLayerStackPorts | None = None,
     ) -> None:
         self._layer_stack = layer_stack
@@ -186,11 +187,14 @@ class OccService:
         options: CommitOptions | None = None,
     ) -> PreparedChangeset:
         """Route changes and infer leased-snapshot base hashes."""
-        return await run_sync_in_executor(
-            self.prepare_changeset_sync,
-            changes,
-            snapshot=snapshot,
-            options=options,
+        return cast(
+            PreparedChangeset,
+            await run_sync_in_executor(
+                self.prepare_changeset_sync,
+                changes,
+                snapshot=snapshot,
+                options=options,
+            ),
         )
 
     def prepare_changeset_sync(

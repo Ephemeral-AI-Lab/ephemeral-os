@@ -80,10 +80,6 @@ def _emit_anatomy(label: str, metrics: list[RuntimeCallMetric]) -> None:
         "overlay.run_command": _stage_p99(metrics, "overlay.run_command_s"),
         "occ.prepare.total": _stage_p99(metrics, "occ.prepare.total_s"),
         "occ.commit.total": _stage_p99(metrics, "occ.commit.total_s"),
-        "gitignore.materialize_snapshot": _stage_p99(
-            metrics, "gitignore.materialize_snapshot_s"
-        ),
-        "gitignore.git_init": _stage_p99(metrics, "gitignore.git_init_s"),
     }
     emit_metric(label, payload)
 

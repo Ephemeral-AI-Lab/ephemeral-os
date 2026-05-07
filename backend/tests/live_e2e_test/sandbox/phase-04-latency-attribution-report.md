@@ -15,7 +15,7 @@ JSONL is at `.omc/results/live-e2e-phase3-per-call-timings-20260505T175743Z-1591
 - `api.shell.flock_wait_s` / `api.edit.flock_wait_s` / `api.write.flock_wait_s` — wait on the cross-process `flock(.commit.lock)`.
 - `api.shell.overlay_capture_to_changes_s` — overlay capture → OCC `Change` conversion.
 - `gitignore.cache_hits` / `gitignore.cache_misses` — per-snapshot oracle cache stats.
-- `gitignore.materialize_snapshot_s` / `gitignore.git_init_s` — cost of building a gitignore oracle for a new manifest version.
+- former materialization / git-init timing — cost of building the old git-backed gitignore oracle for a new manifest version.
 - `api.read.layer_stack_read_s` — layer-stack `read_text` time inside the runtime.
 
 ## Wall p99 by verb × concurrency (ms)
@@ -89,7 +89,7 @@ Read does no commit, so no flock and no OCC. The 423 ms growth (508 → 931 ms)
 comes entirely from transport saturation. Confirms transport is the variable
 cost, not server-side work.
 
-### 7. GitignoreOracle is cold every call
+### 7. The former git-backed oracle was cold every call
 Each new sandbox runtime process starts with an empty `_oracles` cache. Every
 write/edit pays one `materialize_snapshot` + `git_init` (~40–75 ms total).
 This is bundled inside `occ.prepare.total_s` (62–98 ms p99), so OCC prepare
@@ -143,8 +143,8 @@ are all landed (see commits `42bdfde7`, `ad00c87b`, `083bc336`, `fbae5dc2`).
 This section records the post-implementation measurements taken with
 the same probe (`test_latency_attribution.py`) against the same
 sandbox image (`registry:6000/daytona/sweevo-psf-requests-3738:v1`),
-sweeping c ∈ {1, 4, 8, 16}. The run uses the resident runtime daemon and
-`EPHEMERALOS_GITIGNORE_BACKEND=pathspec`.
+sweeping c ∈ {1, 4, 8, 16}. The run uses the resident runtime daemon and the
+pathspec gitignore oracle.
 
 ### Wall p99 across phases (c=16, ms)
 
@@ -164,7 +164,7 @@ sweeping c ∈ {1, 4, 8, 16}. The run uses the resident runtime daemon and
 | `process_gate_wait_s` (path-bucket, Phase 4) | – | 6.7 | 5.8 | 40 |
 | `flock_wait_s` (no-op in daemon) | – | 0.017 | 0.014 | 0.015 |
 | `commit_s` | – | 48 | 12 | **699** |
-| `gitignore.materialize_snapshot_s` / `git_init_s` | 0 | 0 | 0 | 0 |
+| former materialization / git-init timing | 0 | 0 | 0 | 0 |
 | `runtime.dispatch_s` | 3.4 | 92 | 79 | 2663 |
 | `process.exec` transport floor (host↔sandbox, structural) | ≈700 | ≈700 | ≈700 | ≈700 |
 | **wall p99** | **722** | **717** | **755** | **3267** |

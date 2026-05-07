@@ -132,6 +132,7 @@ def test_runtime_ready_reports_mutation_gate_failure(
         layer_stack = object()
         occ_client = object()
         gitignore = object()
+        single_path_gitignore = object()
         manager = object()
 
     def fake_services(_layer_stack_root: str) -> _Backend:

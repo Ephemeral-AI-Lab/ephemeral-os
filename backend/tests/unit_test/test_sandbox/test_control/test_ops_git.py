@@ -54,7 +54,7 @@ def test_ensure_git_installs_when_missing(monkeypatch: pytest.MonkeyPatch) -> No
 def test_ensure_git_no_op_for_empty_sandbox_id(monkeypatch: pytest.MonkeyPatch) -> None:
     called = {"value": False}
 
-    async def fake_raw_exec(*args, **kwargs):
+    async def fake_raw_exec(*_args, **_kwargs):
         called["value"] = True
         return RawExecResult(exit_code=0, stdout="")
 

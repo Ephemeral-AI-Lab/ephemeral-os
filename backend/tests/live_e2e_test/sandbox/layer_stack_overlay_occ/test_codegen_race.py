@@ -1,7 +1,7 @@
 """E13 integrated codegen race coverage.
 
 Tracked generated files are OCC-gated and stale shell captures must reject.
-Gitignored build artifacts are routed through GitignoreOracle and use direct
+Gitignored build artifacts are routed through the pathspec oracle and use direct
 last-writer-wins semantics.
 """
 

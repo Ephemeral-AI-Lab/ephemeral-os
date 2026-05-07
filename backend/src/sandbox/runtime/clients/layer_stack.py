@@ -32,10 +32,6 @@ class LayerStackClient:
     def storage_root(self) -> Path:
         return self.manager.storage_root
 
-    @property
-    def gitignore_cache_root(self) -> Path:
-        return self.manager.gitignore_cache_root
-
     def read_active_manifest(self) -> Manifest:
         return self.manager.read_active_manifest()
 

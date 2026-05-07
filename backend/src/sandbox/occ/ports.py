@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from pathlib import Path
 from typing import ContextManager, Protocol
 
 from sandbox.layer_stack.changes import LayerChange
@@ -35,21 +34,6 @@ class SnapshotReader(Protocol):
         path: str,
         manifest: Manifest | None = None,
     ) -> tuple[str, bool]: ...
-
-
-class SnapshotMaterializer(Protocol):
-    """Materialize a snapshot into a caller-owned directory."""
-
-    def materialize(
-        self,
-        destination: str | Path,
-        manifest: Manifest | None = None,
-    ) -> None: ...
-
-    @property
-    def gitignore_cache_root(self) -> Path:
-        """Working root for the gitignore oracle's per-version git workspaces."""
-        ...
 
 
 class CommitStagingStore(Protocol):
@@ -94,7 +78,6 @@ class WorkspaceBindingReader(Protocol):
 
 class OccLayerStackPorts(
     SnapshotReader,
-    SnapshotMaterializer,
     CommitStagingStore,
     CommitPublisher,
     Protocol,
@@ -108,7 +91,6 @@ __all__ = [
     "CommitStagingStore",
     "CommitTransaction",
     "OccLayerStackPorts",
-    "SnapshotMaterializer",
     "SnapshotReader",
     "WorkspaceBindingReader",
     "WorkspaceBindingSnapshot",

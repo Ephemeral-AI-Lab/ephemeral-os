@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from collections.abc import Callable, Sequence
-from typing import Optional
+from typing import cast
 
 from sandbox.layer_stack.changes import normalize_layer_path
 from sandbox.layer_stack.manifest import Manifest
@@ -19,40 +19,43 @@ from sandbox.occ.changeset.types import (
     DeleteChange,
     WriteChange,
 )
-from sandbox.occ.content.gitignore_oracle import GitignoreOracle
+from sandbox.occ.content.gitignore_oracle import GitignoreMatcher
 from sandbox.runtime.async_bridge import run_sync_in_executor
 
-BaseHashReader = Callable[[str], Optional[str]]
+BaseHashReader = Callable[[str], str | None]
 
 
 class OccOrchestrator:
     """Prepare OCC-skipped and OCC-gated path groups for a typed changeset."""
 
-    def __init__(self, gitignore: GitignoreOracle) -> None:
+    def __init__(self, gitignore: GitignoreMatcher) -> None:
         self._gitignore = gitignore
 
     async def prepare(
         self,
         changes: Sequence[Change],
         *,
-        snapshot,
+        snapshot: Manifest | None,
         options: CommitOptions,
         base_hash_reader: BaseHashReader | None = None,
     ) -> PreparedChangeset:
         """Route changes and infer gated base hashes concurrently by path."""
-        return await run_sync_in_executor(
-            self.prepare_sync,
-            changes,
-            snapshot=snapshot,
-            options=options,
-            base_hash_reader=base_hash_reader,
+        return cast(
+            PreparedChangeset,
+            await run_sync_in_executor(
+                self.prepare_sync,
+                changes,
+                snapshot=snapshot,
+                options=options,
+                base_hash_reader=base_hash_reader,
+            ),
         )
 
     def prepare_sync(
         self,
         changes: Sequence[Change],
         *,
-        snapshot,
+        snapshot: Manifest | None,
         options: CommitOptions,
         base_hash_reader: BaseHashReader | None = None,
     ) -> PreparedChangeset:
@@ -162,7 +165,7 @@ def _attach_base_hash(change: Change, base_hash: str | None) -> Change:
 
 
 def _is_gitignored(
-    oracle: GitignoreOracle,
+    oracle: GitignoreMatcher,
     *,
     path: str,
     snapshot: Manifest | None,

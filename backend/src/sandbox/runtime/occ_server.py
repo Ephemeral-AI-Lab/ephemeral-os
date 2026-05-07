@@ -56,7 +56,6 @@ def build_occ_backend(layer_stack_root: str) -> OccBackend:
     manager = get_layer_stack_manager(cache_key)
     layer_stack = LayerStackClient(manager)
     gitignore = SnapshotGitignoreOracle(layer_stack)
-    single_path_gitignore = SnapshotGitignoreOracle(layer_stack, backend="pathspec")
     occ_service = OccService(gitignore=gitignore, layer_stack=layer_stack)
     occ_client = OCCClient(
         occ_service,
@@ -67,7 +66,7 @@ def build_occ_backend(layer_stack_root: str) -> OccBackend:
         layer_stack=layer_stack,
         occ_client=occ_client,
         gitignore=gitignore,
-        single_path_gitignore=single_path_gitignore,
+        single_path_gitignore=gitignore,
         manager=manager,
     )
     _BACKEND_CACHE[cache_key] = backend

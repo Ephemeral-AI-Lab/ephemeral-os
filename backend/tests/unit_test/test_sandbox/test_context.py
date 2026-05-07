@@ -63,7 +63,7 @@ async def test_get_sandbox_async_caches_per_loop() -> None:
     tk = DaytonaContextPreparer(sandbox_id="sb-xyz")
     fake_sb = MagicMock()
 
-    async def fake_get_async(sandbox_id):
+    async def fake_get_async(_sandbox_id):
         return fake_sb
 
     with patch(
@@ -90,7 +90,7 @@ async def test_get_sandbox_async_invalidates_on_new_loop() -> None:
     tk._sandbox_loop_id = 999999
     new_sb = MagicMock()
 
-    async def fake_get_async(sandbox_id):
+    async def fake_get_async(_sandbox_id):
         return new_sb
 
     mock_module = MagicMock()

@@ -68,17 +68,18 @@ async def test_runtime_uses_daemon_thin_client_by_default() -> None:
     assert "AF_UNIX" in seen[0]
 
 
-def test_runtime_commands_forward_only_supported_runtime_env(
+def test_runtime_commands_do_not_forward_host_env(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("EPHEMERALOS_GITIGNORE_BACKEND", "layer_stack")
+    monkeypatch.setenv("UNSUPPORTED_RUNTIME_ENV", "ignored")
 
-    env_prefix = "EPHEMERALOS_GITIGNORE_BACKEND=layer_stack "
     thin_client = command._runtime_thin_client_command("{}")
     daemon_spawn = command._runtime_daemon_spawn_command()
 
-    assert thin_client.startswith(env_prefix)
-    assert daemon_spawn.startswith(env_prefix)
+    assert thin_client.startswith("sh -c ")
+    assert daemon_spawn.startswith("sh -c ")
+    assert "UNSUPPORTED_RUNTIME_ENV" not in thin_client
+    assert "UNSUPPORTED_RUNTIME_ENV" not in daemon_spawn
 
 
 async def test_daemon_transport_spawns_on_socket_missing() -> None:

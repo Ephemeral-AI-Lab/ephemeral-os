@@ -236,7 +236,7 @@ Covered by Phase 3:
   merged view.
 - Rejected-write invisibility: stale rejected shell changes had no final-view
   trace.
-- Gitignore routing through the sandbox-local `GitignoreOracle`: shell codegen
+- Gitignore routing through the sandbox-local pathspec oracle: shell codegen
   writes under `dist/` are accepted and resolve through LWW in the codegen race
   probe.
 - Gitignored overlap through direct provider execution: 8 raw `process.exec`

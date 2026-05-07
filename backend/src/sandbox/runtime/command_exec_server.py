@@ -312,8 +312,6 @@ def _gitignore_timings(
     return {
         "gitignore.cache_hits_total": float(gitignore.cache_hits),
         "gitignore.cache_misses_total": float(gitignore.cache_misses),
-        "gitignore.materialize_snapshot_s": float(gitignore.last_materialize_s),
-        "gitignore.git_init_s": float(gitignore.last_git_init_s),
     }
 
 

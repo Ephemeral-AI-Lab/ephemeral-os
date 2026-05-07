@@ -169,35 +169,6 @@ def test_ensure_workspace_base_invokes_runtime_op() -> None:
     ]
 
 
-def test_upload_helper_noop_on_missing_inputs() -> None:
-    from sandbox.control.ops.setup import bootstrap_upload_runtime_bundle
-
-    asyncio.run(bootstrap_upload_runtime_bundle(sandbox_id=""))
-
-
-def test_upload_helper_uploads_without_running_lifecycle_bootstrap() -> None:
-    """Background upload runs ensure_runtime_uploaded directly."""
-    from sandbox.control.ops.setup import bootstrap_upload_runtime_bundle
-
-    upload_calls: list[str] = []
-
-    async def fake_upload(sandbox_id: str) -> str:
-        upload_calls.append(sandbox_id)
-        return "deadbeef"
-
-    with patch(
-        "sandbox.control.daemon.bundle.ensure_runtime_uploaded",
-        new=fake_upload,
-    ):
-        asyncio.run(
-            bootstrap_upload_runtime_bundle(
-                sandbox_id="sb-1",
-            )
-        )
-
-    assert upload_calls == ["sb-1"]
-
-
 def test_start_upload_returns_none_when_workspace_missing() -> None:
     from sandbox.control.ops.setup import start_runtime_bundle_upload
 
@@ -223,7 +194,7 @@ def test_start_upload_submits_future_and_invokes_helper() -> None:
         helper_done.set()
 
     with patch(
-        "sandbox.control.ops.setup.bootstrap_upload_runtime_bundle",
+        "sandbox.control.ops.setup.bootstrap_in_sandbox_runtime",
         new=fake_helper,
     ):
         future = start_runtime_bundle_upload("sb-1", "/ws")
@@ -245,7 +216,7 @@ def test_finish_upload_swallows_helper_failure() -> None:
         raise RuntimeError("upload exploded")
 
     with patch(
-        "sandbox.control.ops.setup.bootstrap_upload_runtime_bundle",
+        "sandbox.control.ops.setup.bootstrap_in_sandbox_runtime",
         new=boom,
     ):
         future = start_runtime_bundle_upload("sb-1", "/ws")

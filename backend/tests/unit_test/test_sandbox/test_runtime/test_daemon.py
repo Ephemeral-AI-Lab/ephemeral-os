@@ -190,7 +190,7 @@ def test_services_cached_per_layer_stack_root(
     monkeypatch.setattr(
         occ_server,
         "SnapshotGitignoreOracle",
-        lambda layer_stack: ("oracle", layer_stack),
+        lambda layer_stack, **kwargs: ("oracle", layer_stack, kwargs),
     )
     monkeypatch.setattr(
         occ_server,
@@ -230,7 +230,7 @@ def test_drop_backend_cache_removes_only_requested_root(
     monkeypatch.setattr(
         occ_server,
         "SnapshotGitignoreOracle",
-        lambda layer_stack: object(),
+        lambda layer_stack, **kwargs: object(),
     )
     monkeypatch.setattr(
         occ_server,
