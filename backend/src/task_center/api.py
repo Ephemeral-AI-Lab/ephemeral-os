@@ -85,13 +85,13 @@ from task_center.context_engine.renderer import (
     MarkdownPromptRenderer,
     PromptRenderer,
 )
-from task_center.entry_task_controller import EntryTaskController
+from task_center.entry.controller import EntryTaskController
 from task_center.episode.manager import EpisodeManager, OrchestratorFactory
 from task_center.episode.registry import EpisodeManagerRegistry
 from task_center.mission.close_report_delivery import MissionCloseReportRouter
 from task_center.mission.handler import CloseReportSink, MissionHandler
 from task_center.mission.starter import MissionStarter, StartedMission
-from task_center.sandbox_bridge import (
+from task_center.entry.sandbox_bridge import (
     TaskCenterSandboxBinding,
     TaskCenterSandboxBridge,
 )

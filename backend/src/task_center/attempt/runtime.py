@@ -17,7 +17,7 @@ from task_center.task import HarnessTaskRole
 
 if TYPE_CHECKING:
     from task_center.context_engine.composer import ContextComposer
-    from task_center.entry_task_controller import EntryTaskController
+    from task_center.entry.controller import EntryTaskController
     from task_center.attempt.orchestrator_registry import (
         AttemptOrchestratorRegistry,
     )

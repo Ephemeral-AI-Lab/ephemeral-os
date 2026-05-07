@@ -349,7 +349,7 @@ def test_router_routes_entry_mode_close_report_through_controller(
     from task_center.mission.handler import MissionHandler
     from task_center.mission.mission import MissionStatus
     from task_center.config import HarnessLifecycleConfig
-    from task_center.entry_task_controller import EntryTaskController
+    from task_center.entry.controller import EntryTaskController
     from task_center.episode.episode import EpisodeStatus
     from task_center.task import HarnessTaskRole
 

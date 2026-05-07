@@ -16,7 +16,7 @@ from task_center.mission.mission import (
     MissionStatus,
 )
 from task_center.config import HarnessLifecycleConfig
-from task_center.entry_task_controller import EntryTaskController
+from task_center.entry.controller import EntryTaskController
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.episode.registry import EpisodeManagerRegistry
 from task_center.episode.episode import EpisodeStatus

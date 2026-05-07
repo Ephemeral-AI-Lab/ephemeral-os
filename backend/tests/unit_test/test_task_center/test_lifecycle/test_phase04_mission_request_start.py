@@ -317,7 +317,7 @@ def test_mission_start_accepts_entry_mode_caller_with_no_parent_attempt(
     """
     from task_center.mission.handler import MissionHandler
     from task_center.config import HarnessLifecycleConfig
-    from task_center.entry_task_controller import EntryTaskController
+    from task_center.entry.controller import EntryTaskController
 
     # Seed the entry-mode caller: an entry task with task_center_attempt_id=None.
     entry_task_id = "entry-task-id"

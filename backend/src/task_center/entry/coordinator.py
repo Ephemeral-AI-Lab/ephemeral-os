@@ -32,7 +32,7 @@ from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
 from task_center.agent_launch.predicates import register_builtin_predicates
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.context_engine.scope import ContextScope
-from task_center.entry_task_controller import EntryTaskController
+from task_center.entry.controller import EntryTaskController
 from task_center.attempt.factory import make_attempt_orchestrator_factory
 from task_center.attempt.launcher import (
     AgentStreamEmitter,
@@ -43,7 +43,7 @@ from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
 from task_center.attempt.runtime import AgentLaunch, AttemptRuntime
-from task_center.sandbox_bridge import (
+from task_center.entry.sandbox_bridge import (
     TaskCenterSandboxBinding,
     TaskCenterSandboxBridge,
 )
