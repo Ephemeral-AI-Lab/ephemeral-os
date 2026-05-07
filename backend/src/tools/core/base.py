@@ -1,14 +1,9 @@
-"""Core tool abstraction.
-
-This module remains the compatibility import surface for core tool types. The
-supporting context, registry, result, and validation helpers live in focused
-modules to keep the base abstraction small.
-"""
+"""Core tool abstraction."""
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -16,29 +11,17 @@ from tools.core.context import ToolExecutionContextService
 from tools.core.results import TextToolOutput, ToolResult
 from tools.core.runtime import ExecutionMetadata
 
-if TYPE_CHECKING:
-    from tools.core.registry import ToolRegistry
-
 __all__ = [
     "BackgroundMode",
     "BaseTool",
     "ExecutionMetadata",
     "TextToolOutput",
     "ToolExecutionContextService",
-    "ToolRegistry",
     "ToolResult",
 ]
 
 
 BackgroundMode = Literal["forbidden", "optional", "always"]
-
-
-def __getattr__(name: str) -> Any:
-    if name == "ToolRegistry":
-        from tools.core.registry import ToolRegistry
-
-        return ToolRegistry
-    raise AttributeError(name)
 
 
 class BaseTool(ABC):

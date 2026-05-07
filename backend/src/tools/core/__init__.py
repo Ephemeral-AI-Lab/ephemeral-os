@@ -4,11 +4,11 @@ from tools.core.base import (
     BaseTool,
     TextToolOutput,
     ToolExecutionContextService,
-    ToolRegistry,
     ToolResult,
 )
 from tools.core.decorator import tool
 from tools.core.hooks import HookResult, HookStatus, ToolPostHook, ToolPreHook
+from tools.core.registry import ToolRegistry
 
 __all__ = [
     "BaseTool",

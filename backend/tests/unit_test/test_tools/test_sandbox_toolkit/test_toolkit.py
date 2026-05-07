@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tools.core.base import ToolExecutionContextService, ToolRegistry
+from tools.core.base import ToolExecutionContextService
+from tools.core.registry import ToolRegistry
 from tools.sandbox_toolkit import make_sandbox_tools
 
 

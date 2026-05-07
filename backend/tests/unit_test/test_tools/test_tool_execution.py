@@ -39,11 +39,11 @@ from providers.types import (
 from tools.core.base import (
     BaseTool,
     ToolExecutionContextService,
-    ToolRegistry,
     ToolResult,
 )
 from tools.core.decorator import tool
 from tools.core.hooks import HookResult
+from tools.core.registry import ToolRegistry
 from tools.core.runtime import ExecutionMetadata
 from tools.execution.tool_call import execute_tool_call_streaming, execute_tool_once
 
