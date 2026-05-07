@@ -15,7 +15,7 @@ from message.stream_events import (
     StreamEvent,
     ToolExecutionCompleted,
 )
-from notification._runtime import SystemNotification
+from notification import SystemNotification
 from providers.types import UsageSnapshot
 from tools import BaseTool, ExecutionMetadata, ToolRegistry, ToolResult
 

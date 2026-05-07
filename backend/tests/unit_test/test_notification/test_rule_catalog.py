@@ -1,4 +1,4 @@
-"""Unit tests for the rule factories in `notification._rule_catalog`."""
+"""Unit tests for notification rule factories."""
 
 from __future__ import annotations
 
@@ -7,9 +7,9 @@ from typing import Any
 import pytest
 
 from message.messages import ConversationMessage, TextBlock
-from notification._rule_catalog import make_budget_warning, make_opening_reminder
-from notification._rule_engine import dispatch_rules
-from notification._runtime import SystemNotificationService
+from notification import make_budget_warning, make_opening_reminder
+from notification import dispatch_rules
+from notification import SystemNotificationService
 
 
 class _StubBudget:

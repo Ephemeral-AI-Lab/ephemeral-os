@@ -28,8 +28,8 @@ from message.stream_events import (
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
-from notification._runtime import SystemNotification
-from notification._rule_catalog import make_budget_warning, make_opening_reminder
+from notification import SystemNotification
+from notification import make_budget_warning, make_opening_reminder
 from providers.types import (
     ApiMessageCompleteEvent,
     ApiToolUseDeltaEvent,

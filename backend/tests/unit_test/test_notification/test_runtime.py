@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from notification._runtime import SystemNotificationService
+from notification import SystemNotificationService
 
 
 @pytest.mark.asyncio

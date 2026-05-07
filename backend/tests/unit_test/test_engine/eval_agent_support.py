@@ -43,7 +43,7 @@ from message.stream_events import (
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
-from notification._runtime import SystemNotification
+from notification import SystemNotification
 from providers.types import SupportsStreamingMessages, UsageSnapshot
 
 logger = logging.getLogger(__name__)

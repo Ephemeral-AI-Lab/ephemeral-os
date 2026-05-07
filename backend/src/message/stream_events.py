@@ -5,7 +5,7 @@ from typing import Any
 
 from providers.types import UsageSnapshot
 from message.messages import ConversationMessage
-from notification._runtime import SystemNotification
+from notification import SystemNotification
 
 
 # Identity fields carried by every StreamEvent:

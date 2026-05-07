@@ -7,8 +7,8 @@ from types import SimpleNamespace
 import pytest
 
 from message.messages import ConversationMessage, ToolResultBlock, ToolUseBlock
-from notification._rule_engine import dispatch_rules
-from notification._runtime import SystemNotificationService
+from notification import dispatch_rules
+from notification import SystemNotificationService
 from tools.submission.notification_triggers import (
     make_mission_request_after_edit_reminder,
     make_resolver_limit_reminder,
