@@ -67,14 +67,13 @@ async def workspace(
 
 
 @pytest.fixture
-def audit_dir(tmp_path: Path, request: pytest.FixtureRequest) -> Path:
+def audit_dir(tmp_path: Path) -> Path:
     """Resolve the audit base dir per plan §12.
 
     - ``EOS_SWEEVO_AUDIT_TMP=1`` → use the test's ``tmp_path``.
     - ``EOS_SWEEVO_AUDIT_DIR`` set → use that absolute path.
     - Otherwise → ``<repo>/.sweevo_runs/`` resolved.
     """
-    del request  # only signature for parity with explicit injection
     if os.getenv("EOS_SWEEVO_AUDIT_TMP") == "1":
         return tmp_path / "sweevo_run"
     override = os.getenv("EOS_SWEEVO_AUDIT_DIR")

@@ -275,7 +275,8 @@ async def test_run_scenario_correctness_testing_with_fake_sandbox(
             assert (episode_dir / "episode.jsonl").exists()
             attempt_dirs = list(episode_dir.glob("attempt_*_*"))
             if not attempt_dirs:
-                # Entry-executor episode is attempt-less; skip.
+                # Older run fixtures may include attempt-less entry artifacts.
+                # Delegated missions must still contain normal attempts.
                 continue
             for attempt_dir in attempt_dirs:
                 assert (attempt_dir / "attempt.jsonl").exists()

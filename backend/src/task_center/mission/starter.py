@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 @dataclass(frozen=True, slots=True)
 class StartedMission:
     parent_task_id: str
-    # ``None`` when the caller is the attempt-less entry executor.
+    # ``None`` when the caller is the top-level entry executor.
     parent_attempt_id: str | None
     mission_id: str
     initial_episode_id: str
@@ -156,20 +156,12 @@ class MissionStarter:
                 f"TaskCenter task {parent_task_id!r} is not running; "
                 "delegated mission start requires a running generator task."
             )
-        # Entry-mode caveat: the entry task's *own* mission has
-        # ``requested_by_task_id == entry_task_id`` because the entry task
-        # is the top-level requestor. That self-mission is not a child and
-        # must be excluded from the duplicate-open-child check.
-        controller = self._runtime.entry_task_controller_for(parent_task_id)
-        own_mission_id = (
-            controller.mission_id if controller is not None else None
-        )
         existing_open = [
             r
             for r in self._runtime.mission_store.list_for_executor_task(
                 parent_task_id
             )
-            if r.is_open and r.id != own_mission_id
+            if r.is_open
         ]
         if existing_open:
             raise TaskCenterInvariantViolation(

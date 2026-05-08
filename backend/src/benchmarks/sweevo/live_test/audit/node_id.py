@@ -9,7 +9,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-PrimaryRole = Literal["entry_executor", "planner", "executor", "evaluator"]
+PrimaryRole = Literal[
+    "entry_executor",
+    "planner",
+    "executor",
+    "verifier",
+    "evaluator",
+]
 
 
 @dataclass(frozen=True, slots=True)

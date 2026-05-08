@@ -33,17 +33,55 @@ class MutableMockState:
     response are intentionally stubs in this phase.
     """
 
-    __slots__ = ("seen_events", "flags")
+    __slots__ = ("seen_events", "flags", "_failures", "_next_planner_response")
 
     def __init__(self) -> None:
         self.seen_events: list[EventType] = []
         self.flags: dict[str, Any] = {}
+        self._failures: dict[tuple[str, str, str | None], int] = {}
+        self._next_planner_response: Any = None
 
-    def inject_failure(self, *, role: str, attempt_id: str) -> None:
-        raise NotImplementedError("inject_failure wired in next phase")
+    def inject_failure(
+        self,
+        *,
+        role: str,
+        attempt_id: str,
+        checkpoint: str | None = None,
+    ) -> None:
+        key = (role, attempt_id, checkpoint)
+        self._failures[key] = int(self._failures.get(key, 0)) + 1
 
     def replace_next_planner_response(self, spec: Any) -> None:
-        raise NotImplementedError("replace_next_planner_response wired in next phase")
+        self._next_planner_response = spec
+
+    def consume_failure(
+        self,
+        *,
+        role: str,
+        attempt_id: str,
+        checkpoint: str | None = None,
+    ) -> bool:
+        keys = (
+            (role, attempt_id, checkpoint),
+            (role, attempt_id, None),
+            (role, "*", checkpoint),
+            (role, "*", None),
+        )
+        for key in keys:
+            remaining = self._failures.get(key, 0)
+            if remaining <= 0:
+                continue
+            if remaining == 1:
+                self._failures.pop(key, None)
+            else:
+                self._failures[key] = remaining - 1
+            return True
+        return False
+
+    def consume_next_planner_response(self) -> Any:
+        spec = self._next_planner_response
+        self._next_planner_response = None
+        return spec
 
 
 @dataclass(frozen=True, slots=True)

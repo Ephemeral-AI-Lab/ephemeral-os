@@ -24,6 +24,12 @@ def test_agent_message_recorder_appends_completed_steps(tmp_path) -> None:
         base_event={"benchmark": "sweevo", "instance_id": "demo"},
     )
 
+    recorder.record_initial_messages(
+        system_prompt="system",
+        user_prompt="user",
+        agent_name="executor",
+        run_id="t1",
+    )
     recorder.emit(ThinkingDelta(text="inspect ", agent_name="executor", run_id="t1"))
     recorder.emit(ThinkingDelta(text="repo", agent_name="executor", run_id="t1"))
     recorder.emit(AssistantTextDelta(text="I will run ", agent_name="executor", run_id="t1"))
@@ -58,14 +64,20 @@ def test_agent_message_recorder_appends_completed_steps(tmp_path) -> None:
 
     records = _read_jsonl(path)
     assert [record["step_type"] for record in records] == [
+        "system_message",
+        "user_message",
         "thinking",
         "text",
+        "assistant_message",
         "tool_call",
         "tool_result",
     ]
-    assert records[0]["content"] == [{"type": "thinking", "text": "inspect repo"}]
-    assert records[1]["content"] == [{"type": "text", "text": "I will run tests."}]
-    assert records[2]["content"] == [
+    assert records[0]["role"] == "system"
+    assert records[1]["role"] == "user"
+    assert records[2]["content"] == [{"type": "thinking", "text": "inspect repo"}]
+    assert records[3]["content"] == [{"type": "text", "text": "I will run tests."}]
+    assert records[4]["step_type"] == "assistant_message"
+    assert records[5]["content"] == [
         {
             "type": "tool_use",
             "id": "toolu_1",
@@ -73,7 +85,7 @@ def test_agent_message_recorder_appends_completed_steps(tmp_path) -> None:
             "input": {"cmd": "pytest -q"},
         }
     ]
-    assert records[3]["content"][0]["tool_use_id"] == "toolu_1"
-    assert records[3]["content"][0]["content"] == "ok"
+    assert records[6]["content"][0]["tool_use_id"] == "toolu_1"
+    assert records[6]["content"][0]["content"] == "ok"
     assert all(record["benchmark"] == "sweevo" for record in records)
     assert all(record["agent_name"] == "executor" for record in records)

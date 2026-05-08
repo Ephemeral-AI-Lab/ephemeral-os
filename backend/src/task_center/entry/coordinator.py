@@ -1,13 +1,11 @@
 """TaskCenter entrypoint for top-level user requests.
 
-The entry executor is launched in **attempt-less** mode: it lives in a
-:class:`Episode` with zero ``Attempt`` rows (per phase-06
-*Sources of truth*: an entry episode may have zero ``Attempt`` rows).
-Lifecycle events flow through :class:`EntryTaskController`, which is
-attached to :class:`AttemptRuntime.entry_task_controller` so that the
-launcher exhaustion path, close-report router, and submission tools can
-dispatch into it without knowing whether the spawn was attempt-bound or
-entry-mode.
+The entry executor is not a Mission. It is the top-level user-request agent
+that can either complete directly or call ``request_mission_solution`` to start
+the first delegated Mission. Lifecycle events flow through
+:class:`EntryTaskController`, which is attached to
+:class:`AttemptRuntime.entry_task_controller` so the launcher, close-report
+router, and submission tools can dispatch entry-mode events consistently.
 """
 
 from __future__ import annotations
@@ -24,8 +22,6 @@ from db.stores import (
     EpisodeStore,
 )
 from agents import validate_agent_definitions_resolved
-from task_center.mission.handler import MissionHandler
-from task_center.mission.mission import MissionCloseReport
 from task_center.config import HarnessLifecycleConfig
 from task_center.agent_launch.composer import ContextComposer
 from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
@@ -33,7 +29,6 @@ from task_center.agent_launch.predicates import register_builtin_predicates
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.context_engine.scope import ContextScope
 from task_center.entry.controller import EntryTaskController
-from task_center.attempt.factory import make_attempt_orchestrator_factory
 from task_center.agent_launch.launcher import (
     AgentStreamEmitter,
     EphemeralAttemptAgentLauncher,
@@ -63,8 +58,8 @@ class TaskCenterEntryHandle:
     request_id: str
     task_center_run_id: str
     binding: TaskCenterSandboxBinding
-    mission_id: str
-    episode_id: str
+    mission_id: str | None
+    episode_id: str | None
     entry_task_id: str
     launcher: EphemeralAttemptAgentLauncher
 
@@ -87,7 +82,7 @@ def start_task_center_entry_run(
     context_packet_store: ContextPacketStore | None = None,
     sandbox_bridge: TaskCenterSandboxBridge | None = None,
 ) -> TaskCenterEntryHandle:
-    """Create a attempt-less entry executor task for a user request."""
+    """Create the entry executor task for a user request."""
     return TaskCenterEntryCoordinator(
         config=config,
         prompt=prompt,
@@ -134,46 +129,23 @@ class TaskCenterEntryCoordinator:
         self._sandbox_bridge = sandbox_bridge or TaskCenterSandboxBridge()
 
     def start(self) -> TaskCenterEntryHandle:
-        """Create and launch the entry executor (attempt-less)."""
+        """Create and launch the entry executor."""
         self._assert_stores_ready()
         request_id, run_id, entry_task_id, binding = self._create_top_level_run()
-
         manager_registry = EpisodeManagerRegistry()
-        # The handler created here is reused twice: once to seed the entry
-        # mission + episode, and again — wrapped on the runtime — to drive
-        # delegated mission starts originating from the entry task.
-        handler = self._build_mission_handler(
-            manager_registry=manager_registry,
-            task_center_run_id=run_id,
-        )
-        complex_request = handler.create_mission(
-            task_center_run_id=run_id,
-            requested_by_task_id=entry_task_id,
-            goal=self._prompt,
-        )
-        entry_segment, _episode_manager = (
-            handler.create_initial_episode_with_manager(
-                mission_id=complex_request.id,
-            )
-        )
 
+        self._write_entry_task_row(
+            entry_task_id=entry_task_id,
+            task_center_run_id=run_id,
+        )
         controller = EntryTaskController(
             task_id=entry_task_id,
             task_center_run_id=run_id,
-            mission_id=complex_request.id,
-            episode_id=entry_segment.id,
             task_store=self._task_store,
-            episode_store=self._episode_store,
-            mission_handler=handler,
-            manager_registry=manager_registry,
         )
         runtime, launcher = self._create_runtime(
             manager_registry=manager_registry,
             entry_task_controller=controller,
-        )
-        self._write_entry_task_row(
-            entry_task_id=entry_task_id,
-            task_center_run_id=run_id,
         )
         self._launch_entry_executor(
             runtime=runtime,
@@ -184,8 +156,8 @@ class TaskCenterEntryCoordinator:
             request_id=request_id,
             task_center_run_id=run_id,
             binding=binding,
-            mission_id=complex_request.id,
-            episode_id=entry_segment.id,
+            mission_id=None,
+            episode_id=None,
             entry_task_id=entry_task_id,
             launcher=launcher,
         )
@@ -223,50 +195,6 @@ class TaskCenterEntryCoordinator:
         )
         return request_id, run_id, entry_task_id, binding
 
-    def _build_mission_handler(
-        self,
-        *,
-        manager_registry: EpisodeManagerRegistry,
-        task_center_run_id: str,
-    ) -> MissionHandler:
-        """Build the handler reused for entry-episode + delegated requests.
-
-        ``deliver_close_report`` is the run-finalization callback: when any
-        mission closes (the entry's own, or a delegated child),
-        the handler delivers the close report here, which finishes the run.
-        """
-
-        def _finish_entry_run(report: MissionCloseReport) -> None:
-            del report  # outcome already persisted to the entry task row
-            existing_runs = self._task_store.get_run(task_center_run_id)
-            if existing_runs is None or existing_runs.get("status") in (
-                "done",
-                "failed",
-            ):
-                return
-            entry_task = self._task_store.get_task(
-                f"{task_center_run_id}:entry"
-            )
-            if entry_task is None:
-                return
-            status = (
-                "done"
-                if entry_task.get("status") == HarnessTaskStatus.DONE.value
-                else "failed"
-            )
-            self._task_store.finish_run(task_center_run_id, status=status)
-
-        return MissionHandler(
-            mission_store=self._mission_store,
-            episode_store=self._episode_store,
-            attempt_store=self._attempt_store,
-            manager_registry=manager_registry,
-            config=HarnessLifecycleConfig(),
-            deliver_close_report=_finish_entry_run,
-            orchestrator_factory=None,  # set below once runtime exists
-            task_store=self._task_store,
-        )
-
     def _create_runtime(
         self,
         *,
@@ -295,11 +223,6 @@ class TaskCenterEntryCoordinator:
             entry_task_controller=entry_task_controller,
         )
         runtime_ref = runtime
-        # Late-bind the orchestrator factory on the controller's handler so
-        # delegated missions can spawn real attempts.
-        entry_task_controller.mission_handler.set_orchestrator_factory(
-            make_attempt_orchestrator_factory(runtime=runtime)
-        )
         return runtime, launcher
 
     def _build_composer(self) -> ContextComposer:
@@ -380,7 +303,6 @@ class TaskCenterEntryCoordinator:
         bundle = composer.compose(
             base_agent_name=ENTRY_AGENT_NAME,
             scope=ContextScope(
-                mission_id=controller.mission_id,
                 task_id=controller.task_id,
             ),
         )
@@ -393,7 +315,7 @@ class TaskCenterEntryCoordinator:
             task_input=bundle.task_input,
             needs=(),
             context_packet_id=bundle.context_packet_id,
-            mission_id=controller.mission_id,
+            mission_id=None,
         )
 
     def _compensate_startup_failure(
@@ -403,10 +325,6 @@ class TaskCenterEntryCoordinator:
     ) -> None:
         """Drive the entry stack to FAILED after a launch-time exception."""
         controller.apply_run_exhausted(summary="Entry executor launch failed.")
-        # The controller's close-report delivery normally finishes the run.
-        # Force-finish here as a safety net for the case where the entry
-        # task was already terminal (controller short-circuited) and no
-        # close-report fired.
         run = self._task_store.get_run(controller.task_center_run_id)
         if run is not None and run.get("status") not in ("done", "failed"):
             self._task_store.finish_run(

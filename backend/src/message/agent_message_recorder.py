@@ -37,6 +37,7 @@ class AgentMessageJsonlRecorder:
         self._path = Path(path).expanduser() if path else None
         self._base_event = dict(base_event or {})
         self._seq = 0
+        self._initial_messages_recorded = False
         self._thinking: dict[tuple[str, str], list[str]] = {}
         self._text: dict[tuple[str, str], list[str]] = {}
 
@@ -61,6 +62,16 @@ class AgentMessageJsonlRecorder:
         self._flush_lane(agent_name, run_id)
 
         if isinstance(event, AssistantMessageComplete):
+            self._record(
+                "assistant_message",
+                agent_name=event.agent_name,
+                run_id=event.run_id,
+                role="assistant",
+                content=[
+                    block.model_dump(mode="json")
+                    for block in event.message.content
+                ],
+            )
             for tool_use in getattr(event.message, "tool_uses", []):
                 self._record(
                     "tool_call",
@@ -99,6 +110,39 @@ class AgentMessageJsonlRecorder:
                 is_error=event.is_error,
                 does_terminate=event.does_terminate,
             )
+
+    def record_initial_messages(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        agent_name: str,
+        run_id: str,
+    ) -> None:
+        """Append the system and initial user messages once.
+
+        The live engine sends the system prompt outside the provider
+        ``messages`` array, but the benchmark transcript stores it explicitly
+        so ``message.jsonl`` can be replayed as a full agent conversation.
+        """
+        if self._initial_messages_recorded:
+            return
+        self._initial_messages_recorded = True
+        if system_prompt.strip():
+            self._record(
+                "system_message",
+                agent_name=agent_name,
+                run_id=run_id,
+                role="system",
+                content=[{"type": "text", "text": system_prompt}],
+            )
+        self._record(
+            "user_message",
+            agent_name=agent_name,
+            run_id=run_id,
+            role="user",
+            content=[{"type": "text", "text": user_prompt}],
+        )
 
     def flush(self) -> None:
         """Append any buffered text/thinking still waiting on a boundary."""

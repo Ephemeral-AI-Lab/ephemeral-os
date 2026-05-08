@@ -4,7 +4,8 @@ Wires five SQLAlchemy ``after_insert``/``after_update`` listeners (one per
 ``MissionRecord``/``EpisodeRecord``/``AttemptRecord``/``TaskCenterTaskRecord``
 plus a fifth on ``AgentRunRecord`` for ``agent_run_id`` -> ``task_id``
 mapping). Each row commit appends a single line to a per-row append-only
-``*.jsonl`` under a hierarchical run directory.
+``*.jsonl`` under a hierarchical run directory; sandbox subsystem monitor
+events are mirrored into ``sandbox_events.jsonl``.
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ import json
 import os
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,7 @@ from typing import Any
 from sqlalchemy import event
 
 from benchmarks.sweevo.live_test.audit.bus import AuditEventBus
+from benchmarks.sweevo.live_test.audit.events import Event as AuditEvent
 from benchmarks.sweevo.live_test.audit.metrics import MetricsAggregator
 from db.models.agent_run import AgentRunRecord
 from db.models.attempt import AttemptRecord
@@ -32,14 +34,14 @@ from prompt.message_recorder import append_prompt_report_event
 
 
 PRIMARY_ROLES: frozenset[str] = frozenset(
-    {"entry_executor", "planner", "executor", "evaluator"}
+    {"entry_executor", "planner", "executor", "verifier", "evaluator"}
 )
 
 # Roles which earn an ``NN_<role>_<task_id>`` directory under the parent
 # attempt — superset of the primary message-recorder allowlist (we still
 # want the ``task.jsonl`` snapshot for ``generator`` rows).
 _ATTEMPT_CHILD_ROLES: frozenset[str] = frozenset(
-    {"planner", "executor", "evaluator", "generator"}
+    {"planner", "executor", "verifier", "evaluator", "generator"}
 )
 
 
@@ -183,6 +185,7 @@ class AuditRecorder:
         self._listeners: list[_ListenerHandle] = []
         self._metrics = MetricsAggregator()
         self._metrics_unsub: Callable[[], None] | None = None
+        self._sandbox_events_unsub: Callable[[], None] | None = None
 
         self._started_ts: float | None = None
         self._finished_ts: float | None = None
@@ -278,6 +281,9 @@ class AuditRecorder:
 
         if self._bus is not None:
             self._metrics_unsub = self._bus.subscribe(self._metrics.observe)
+            self._sandbox_events_unsub = self._bus.subscribe(
+                self._record_sandbox_event
+            )
 
         self._write_run_json()
 
@@ -296,6 +302,13 @@ class AuditRecorder:
             except Exception:  # noqa: BLE001
                 pass
             self._metrics_unsub = None
+
+        if self._sandbox_events_unsub is not None:
+            try:
+                self._sandbox_events_unsub()
+            except Exception:  # noqa: BLE001
+                pass
+            self._sandbox_events_unsub = None
 
         for recorder in self._task_recorder.values():
             try:
@@ -374,8 +387,9 @@ class AuditRecorder:
                 return
             self._task_dir[target.id] = task_dir
             task_dir.mkdir(parents=True, exist_ok=True)
+            display_role = self._display_role(target)
             primary = (
-                target.role in self._primary_roles
+                display_role in self._primary_roles
                 or self._is_entry_executor(target)
             )
             if primary:
@@ -392,6 +406,20 @@ class AuditRecorder:
 
     def _handle_agent_run(self, target: AgentRunRecord) -> None:
         self._agent_run_to_task[target.id] = target.task_id
+
+    def _record_sandbox_event(self, audit_event: AuditEvent) -> None:
+        if not audit_event.type.value.startswith("sandbox_"):
+            return
+        append_prompt_report_event(
+            self._run_dir / "sandbox_events.jsonl",
+            {
+                "ts": audit_event.ts.isoformat(),
+                "event_type": audit_event.type.value,
+                "node": asdict(audit_event.node),
+                "payload": audit_event.payload,
+                "correlation_id": audit_event.correlation_id,
+            },
+        )
 
     # ------------------------------------------------------------------
     # Path resolution + numeric prefixes
@@ -437,7 +465,7 @@ class AuditRecorder:
     def _resolve_task_dir(
         self, target: TaskCenterTaskRecord
     ) -> Path | None:
-        role = target.role
+        role = self._display_role(target)
         if self._is_entry_executor(target):
             return self._run_dir / f"entry_executor_{target.id}"
         attempt_id = target.task_center_attempt_id
@@ -451,6 +479,15 @@ class AuditRecorder:
             self._role_seq_counter[attempt_id] = seq
             return attempt_dir / f"{seq:02d}_{role}_{target.id}"
         return None
+
+    @staticmethod
+    def _display_role(target: TaskCenterTaskRecord) -> str:
+        if target.role == "generator" and target.agent_name in {
+            "executor",
+            "verifier",
+        }:
+            return str(target.agent_name)
+        return str(target.role)
 
     @staticmethod
     def _is_entry_executor(target: TaskCenterTaskRecord) -> bool:

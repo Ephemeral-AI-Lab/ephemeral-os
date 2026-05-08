@@ -246,9 +246,8 @@ def test_evaluator_v1_episode2_frame_precedes_attempt_contract(
 
 
 def test_entry_executor_v1_emits_one_required_entry_request_block(
-    deps, mission_store, task_store, task_center_run_id
+    deps, task_store, task_center_run_id
 ):
-    req = _seed_mission(mission_store, task_center_run_id)
     task_store.upsert_task(
         task_id="entry",
         task_center_run_id=task_center_run_id,
@@ -262,9 +261,11 @@ def test_entry_executor_v1_emits_one_required_entry_request_block(
         spawn_reason="entry_executor",
     )
     packet = _entry_executor_v1_build(
-        ContextScope(mission_id=req.id, task_id="entry"),
+        ContextScope(task_id="entry"),
         deps,
     )
+    assert packet.canonical_refs.mission_id is None
+    assert packet.canonical_refs.task_id == "entry"
     assert len(packet.blocks) == 1
     block = packet.blocks[0]
     assert block.kind == "entry_request"

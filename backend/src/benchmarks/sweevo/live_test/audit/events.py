@@ -38,10 +38,15 @@ class EventType(StrEnum):
     EXECUTOR_INVOKED = "executor_invoked"
     EXECUTOR_SUCCESS = "executor_success"
     EXECUTOR_FAILURE = "executor_failure"
+    VERIFIER_INVOKED = "verifier_invoked"
+    VERIFIER_SUCCESS = "verifier_success"
+    VERIFIER_FAILURE = "verifier_failure"
     EVALUATOR_INVOKED = "evaluator_invoked"
     EVALUATOR_SUCCESS = "evaluator_success"
     EVALUATOR_FAILURE = "evaluator_failure"
     ENTRY_EXECUTOR_INVOKED = "entry_executor_invoked"
+    RECURSIVE_MISSION_REQUESTED = "recursive_mission_requested"
+    RECURSIVE_MISSION_COMPLETED = "recursive_mission_completed"
 
     # tools
     TOOL_CALL_STARTED = "tool_call_started"
@@ -54,8 +59,12 @@ class EventType(StrEnum):
     SANDBOX_SHELL_COMMITTED = "sandbox_shell_committed"
     SANDBOX_BATCH_EDIT_APPLIED = "sandbox_batch_edit_applied"
     SANDBOX_CONFLICT_DETECTED = "sandbox_conflict_detected"
-    SANDBOX_LAYER_GROWN = "sandbox_layer_grown"  # producer deferred (see squash_detection.md)
-    SANDBOX_SQUASH_TRIGGERED = "sandbox_squash_triggered"  # producer deferred
+    SANDBOX_LAYER_STACK_LEASE_ACQUIRED = "sandbox_layer_stack_lease_acquired"
+    SANDBOX_LAYER_STACK_LAYER_CREATED = "sandbox_layer_stack_layer_created"
+    SANDBOX_LAYER_STACK_LAYERS_SQUASHED = "sandbox_layer_stack_layers_squashed"
+    SANDBOX_OVERLAY_EXECUTED = "sandbox_overlay_executed"
+    SANDBOX_OCC_CHANGESET_RECEIVED = "sandbox_occ_changeset_received"
+    SANDBOX_OCC_CHANGES_COMMITTED = "sandbox_occ_changes_committed"
 
     # hook synthetic
     HOOK_INJECTED_FAILURE = "hook_injected_failure"

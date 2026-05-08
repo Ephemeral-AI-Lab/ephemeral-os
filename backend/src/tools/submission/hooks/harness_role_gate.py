@@ -43,7 +43,7 @@ class HarnessRoleGate:
                 f"{self.expected_role.value} tasks."
             )
 
-        # Generator-role tasks may be the attempt-less entry executor; the
+        # Generator-role tasks may be the top-level entry executor; the
         # closed-attempt check only applies when there's a attempt.
         attempt_id = str(task.get("task_center_attempt_id") or "")
         if self.expected_role != HarnessTaskRole.GENERATOR and not attempt_id:

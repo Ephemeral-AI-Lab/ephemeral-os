@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import time
 import uuid
+import hashlib
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -23,7 +24,6 @@ from typing import Any
 
 from task_center.api import TaskCenterSandboxBridge, start_task_center_entry_run
 
-from benchmarks.sweevo.dataset import summarize_sweevo_instance
 from benchmarks.sweevo.models import SWEEvoInstance, _REPO_DIR
 from benchmarks.sweevo.prompt import build_sweevo_user_prompt
 from benchmarks.sweevo.live_test.audit.bus import AuditEventBus
@@ -76,6 +76,10 @@ class RunReport:
     sandbox_checks: list[SandboxCheck] = field(default_factory=list)
     metrics: dict[str, Any] = field(default_factory=dict)
     graph_summary: dict[str, Any] = field(default_factory=dict)
+    entry_prompt_sha256: str = ""
+    entry_prompt_length: int = 0
+    requirement_ledger: list[dict[str, Any]] = field(default_factory=list)
+    package_plan: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def passed_prompt_inspections(self) -> bool:
@@ -96,6 +100,7 @@ def _graph_summary(
         for episode in bundle.episode_store.list_for_mission(mission.id):
             attempts: list[dict[str, Any]] = []
             for attempt in bundle.attempt_store.list_for_episode(episode.id):
+                task_rows = bundle.task_store.list_tasks_for_attempt(attempt.id)
                 attempts.append(
                     {
                         "id": attempt.id,
@@ -109,6 +114,7 @@ def _graph_summary(
                         ),
                         "continuation_goal": attempt.continuation_goal,
                         "task_ids": list(attempt.generator_task_ids),
+                        "tasks": task_rows,
                     }
                 )
             episodes.append(
@@ -132,13 +138,6 @@ def _graph_summary(
             }
         )
     return {"missions": missions}
-
-
-def _format_short_run_dir(task_center_run_id: str) -> str:
-    """Return ``<UTC_iso_compact>_<short_hash>`` per plan §7."""
-    timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    short_hash = task_center_run_id.replace("-", "")[:8] or "00000000"
-    return f"{timestamp}_{short_hash}"
 
 
 async def run_scenario(
@@ -185,9 +184,10 @@ async def run_scenario(
     recorder: AuditRecorder | None = None
     handle: Any = None
     recorder_holder: list[AuditRecorder | None] = [None]
-    bridge_cb = stream_bridge(bus, task_center_run_id="placeholder")
+    bridge_run_id = ""
 
     async def _on_agent_event(event: Any) -> None:
+        bridge_cb = stream_bridge(bus, task_center_run_id=bridge_run_id)
         await bridge_cb(event)
         rec_obj = recorder_holder[0]
         if rec_obj is None:
@@ -196,6 +196,8 @@ async def run_scenario(
         if not agent_run_id:
             return
         per_task = rec_obj.message_recorder_for_agent_run(agent_run_id)
+        if per_task is None:
+            per_task = rec_obj.message_recorder_for_task(agent_run_id)
         if per_task is not None:
             per_task.emit(event)
 
@@ -230,6 +232,8 @@ async def run_scenario(
                 bus=bus,
                 task_center_run_id="",
                 scenario=scenario,
+                mutable_state=mutable_state,
+                audit_recorder=recorder,
             )
             handle = start_task_center_entry_run(
                 config=SimpleNamespace(cwd=repo_dir),
@@ -248,6 +252,7 @@ async def run_scenario(
             )
             tcrid = str(handle.task_center_run_id)
             squad._task_center_run_id = tcrid  # noqa: SLF001 — late binding before run
+            bridge_run_id = tcrid
             recorder.bind_task_center_run_id(tcrid)
             bus.publish(
                 Event(
@@ -284,9 +289,13 @@ async def run_scenario(
             sandbox_checks=list(squad.sandbox_checks),
             metrics=recorder.metrics.snapshot() if recorder is not None else {},
             graph_summary=_graph_summary(bundle, tcrid),
+            entry_prompt_sha256=hashlib.sha256(
+                prompt_text.encode("utf-8")
+            ).hexdigest(),
+            entry_prompt_length=len(prompt_text),
+            requirement_ledger=list(getattr(scenario, "requirement_ledger", [])),
+            package_plan=list(getattr(scenario, "package_plan", [])),
         )
-        # Surface the summary keys for legacy parity helpers.
-        report.metrics.setdefault("instance", summarize_sweevo_instance(instance))
         return report
     finally:
         bus_unsub()

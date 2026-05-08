@@ -5,10 +5,9 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from agents import get_definition
-from engine.api import EphemeralRunResult
 from message.stream_events import StreamEvent
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt.runtime import (
@@ -32,7 +31,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 AttemptRuntimeProvider = Callable[[], AttemptRuntime | None]
-AttemptAgentRunner = Callable[..., Awaitable[EphemeralRunResult]]
+AttemptAgentRunner = Callable[..., Awaitable[Any]]
 AgentStreamEmitter = Callable[[StreamEvent], Awaitable[None]]
 
 
@@ -77,7 +76,10 @@ class EphemeralAttemptAgentLauncher:
     async def wait_for_idle(self) -> None:
         """Wait until all currently scheduled and recursively spawned runs finish."""
         while self._pending:
-            await asyncio.gather(*tuple(self._pending))
+            pending = tuple(self._pending)
+            await asyncio.gather(*pending)
+            self._pending.difference_update(task for task in pending if task.done())
+            await asyncio.sleep(0)
 
     @staticmethod
     def _resolve_agent_definition(agent_name: str) -> "AgentDefinition":
@@ -110,7 +112,7 @@ class EphemeralAttemptAgentLauncher:
             attempt_runtime=runtime,
             composer=runtime.composer,
         )
-        result: EphemeralRunResult | None = None
+        result: Any | None = None
         try:
             result = await runner(
                 self._config,

@@ -90,8 +90,6 @@ def _error_result(
 def _overlay_cwd(cwd: str | None) -> str:
     if cwd is None or not str(cwd).strip():
         return "."
-    if str(cwd).startswith("/"):
-        return "."
     return str(cwd)
 
 

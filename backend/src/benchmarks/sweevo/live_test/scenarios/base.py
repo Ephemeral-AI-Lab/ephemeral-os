@@ -34,6 +34,12 @@ class ScenarioContext:
     metadata: Any  # ExecutionMetadata
     audit_recorder: Any  # AuditRecorder | None
     mutable_state: Any  # MutableMockState | None
+    task_id: str | None = None
+    agent_name: str | None = None
+    task_input: str | None = None
+    graph_summary: dict[str, Any] | None = None
+    requirement_ledger: Any = None
+    package_plan: Any = None
 
 
 @runtime_checkable
@@ -47,7 +53,11 @@ class Scenario(Protocol):
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[Any]: ...
 
+    def verifier_response(self, ctx: ScenarioContext) -> ToolCallSpec: ...
+
     def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec: ...
+
+    def recursive_mission_goal(self, ctx: ScenarioContext) -> str | None: ...
 
     def hooks(self) -> Sequence[Hook]: ...
 
@@ -79,8 +89,14 @@ class ScenarioBase:
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[Any]:  # noqa: ARG002
         return ()
 
+    def verifier_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
+        raise NotImplementedError
+
     def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         raise NotImplementedError
+
+    def recursive_mission_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
+        return None
 
     def hooks(self) -> Sequence[Hook]:
         return ()

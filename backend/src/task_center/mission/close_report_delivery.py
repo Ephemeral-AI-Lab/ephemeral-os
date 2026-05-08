@@ -65,7 +65,7 @@ class MissionCloseReportRouter:
             )
 
         if attempt_id is None:
-            # Entry mode: parent is the attempt-less entry executor. Route
+            # Entry mode: parent is the top-level entry executor. Route
             # through the runtime's EntryTaskController instead of the
             # orchestrator registry.
             controller = self._runtime.entry_task_controller_for(
@@ -74,7 +74,7 @@ class MissionCloseReportRouter:
             if controller is None:
                 raise TaskCenterInvariantViolation(
                     f"TaskCenter task {report.requested_by_task_id!r} is "
-                    "attempt-less but no entry controller is bound to it; "
+                    "entry-mode but no entry controller is bound to it; "
                     "close-report delivery cannot proceed."
                 )
             controller.apply_mission_close_report(report)

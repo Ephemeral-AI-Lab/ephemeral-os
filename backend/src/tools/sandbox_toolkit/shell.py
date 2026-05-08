@@ -89,7 +89,15 @@ def _build_tool_output(
     changed_paths: list[str],
     conflict_reason: str | None,
     error: str = "",
+    timings: dict[str, float] | None = None,
 ) -> ToolResult:
+    metadata: dict[str, object] = {
+        "status": status,
+        "changed_paths": changed_paths,
+        "conflict_reason": conflict_reason,
+    }
+    if timings:
+        metadata["timings"] = dict(timings)
     return ToolResult(
         output=json.dumps(
             {
@@ -105,11 +113,7 @@ def _build_tool_output(
             }
         ),
         is_error=status == "error",
-        metadata={
-            "status": status,
-            "changed_paths": changed_paths,
-            "conflict_reason": conflict_reason,
-        },
+        metadata=metadata,
     )
 
 
@@ -221,6 +225,7 @@ async def shell(
         changed_paths=changed_paths,
         conflict_reason=result.conflict_reason,
         error=error_detail,
+        timings=result.timings,
     )
 
 

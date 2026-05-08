@@ -46,12 +46,9 @@ class ContextBlockKind(StrEnum):
 
 
 class ContextRefs(BaseModel):
-    """Canonical row references attached to every packet.
+    """Canonical row references attached to every packet."""
 
-    ``mission_id`` is always present; the rest depend on the recipe scope.
-    """
-
-    mission_id: str
+    mission_id: str | None = None
     episode_id: str | None = None
     attempt_id: str | None = None
     task_id: str | None = None

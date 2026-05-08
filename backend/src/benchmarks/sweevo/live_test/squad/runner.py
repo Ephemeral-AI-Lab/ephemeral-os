@@ -6,12 +6,23 @@ Relocated from ``benchmarks.sweevo.mock_agent_execution`` in S-03.
 from __future__ import annotations
 
 import json
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 import sandbox.api as sandbox_api
 from agents import AgentDefinition
 from engine.api import EphemeralRunResult
+from message.messages import ConversationMessage, ToolUseBlock
+from message.stream_events import (
+    AssistantMessageComplete,
+    AssistantTextDelta,
+    StreamEvent,
+    ToolExecutionCompleted,
+    ToolExecutionStarted,
+)
+from providers.types import UsageSnapshot
 from sandbox.api import (
     EditFileRequest,
     SandboxCaller,
@@ -38,6 +49,10 @@ from tools.submission.main_agent.generator.executor import (
 from tools.submission.main_agent.generator.request_mission_solution import (
     request_mission_solution,
 )
+from tools.submission.main_agent.generator.verifier import (
+    submit_verification_failure,
+    submit_verification_success,
+)
 from tools.submission.main_agent.planner import (
     submit_full_plan,
     submit_partial_plan,
@@ -51,12 +66,21 @@ from benchmarks.sweevo.live_test.scenarios.base import (
     Scenario,
     ScenarioContext,
 )
+from benchmarks.sweevo.live_test.hooks.registry import MutableMockState
 from benchmarks.sweevo.live_test.squad.prompt_inspector import (
     LaunchRecord,
     PromptInspection,
     ToolCallRecord,
 )
 from benchmarks.sweevo.live_test.squad.sandbox_probe import SandboxCheck
+from benchmarks.sweevo.live_test.squad.tool_scripts import (
+    MockToolScriptEngine,
+    execute_package_script,
+    final_reconciliation_script,
+    inspect_user_input_script,
+    recursive_step_script,
+    verifier_checkpoint_script,
+)
 
 _PLANNER_EVENT_BY_TOOL: dict[str, EventType] = {
     submit_full_plan.name: EventType.PLANNER_FULL_PLAN,
@@ -68,9 +92,17 @@ _EVALUATOR_EVENT_BY_TOOL: dict[str, EventType] = {
     submit_evaluation_failure.name: EventType.EVALUATOR_FAILURE,
 }
 
+_VERIFIER_EVENT_BY_TOOL: dict[str, EventType] = {
+    submit_verification_success.name: EventType.VERIFIER_SUCCESS,
+    submit_verification_failure.name: EventType.VERIFIER_FAILURE,
+}
+
 
 async def _noop_emit(_event: Any) -> None:
     return None
+
+
+EmitStreamEvent = Callable[[StreamEvent], Awaitable[None]]
 
 
 class MockSquadRunner:
@@ -84,6 +116,8 @@ class MockSquadRunner:
         bus: AuditEventBus | None = None,
         task_center_run_id: str = "",
         scenario: Scenario | None = None,
+        mutable_state: MutableMockState | None = None,
+        audit_recorder: Any | None = None,
     ) -> None:
         # Late import to avoid circular import (correctness_testing imports
         # ScenarioBase from scenarios.base which is fine, but
@@ -99,10 +133,13 @@ class MockSquadRunner:
         self._bus = bus
         self._task_center_run_id = task_center_run_id
         self._scenario: Scenario = scenario or CorrectnessTesting()
+        self._mutable_state = mutable_state
+        self._audit_recorder = audit_recorder
         self.launches: list[LaunchRecord] = []
         self.tool_calls: list[ToolCallRecord] = []
         self.prompt_inspections: list[PromptInspection] = []
         self.sandbox_checks: list[SandboxCheck] = []
+        self._script_engine = MockToolScriptEngine(self._call_tool)
 
     async def __call__(
         self,
@@ -112,10 +149,15 @@ class MockSquadRunner:
         agent_def: AgentDefinition | None = None,
         sandbox_id: str | None = None,
         extra_tool_metadata: ExecutionMetadata | dict[str, Any] | None = None,
-        **_kwargs: Any,
+        **kwargs: Any,
     ) -> EphemeralRunResult:
         if agent_def is None:
             raise RuntimeError("MockSquadRunner requires agent_def.")
+        on_event = kwargs.get("on_event")
+
+        async def emit(event: StreamEvent) -> None:
+            if callable(on_event):
+                await on_event(event)
 
         metadata = self._metadata_for(
             config=config,
@@ -141,6 +183,11 @@ class MockSquadRunner:
                 metadata=metadata,
             )
         )
+        self._record_initial_messages(
+            agent_def=agent_def,
+            prompt=prompt,
+            metadata=metadata,
+        )
 
         # Publish invocation event.
         if agent_def.name == "entry_executor":
@@ -149,22 +196,32 @@ class MockSquadRunner:
             invocation_type = EventType.PLANNER_INVOKED
         elif agent_def.role == "executor":
             invocation_type = EventType.EXECUTOR_INVOKED
+        elif agent_def.role == "verifier":
+            invocation_type = EventType.VERIFIER_INVOKED
         elif agent_def.role == "evaluator":
             invocation_type = EventType.EVALUATOR_INVOKED
         else:
             invocation_type = None
 
         if invocation_type is not None:
-            self._publish(invocation_type, agent_def=agent_def, metadata=metadata)
+            payload = self._invocation_payload(prompt=prompt, metadata=metadata)
+            self._publish(
+                invocation_type,
+                agent_def=agent_def,
+                metadata=metadata,
+                payload=payload,
+            )
 
         if agent_def.name == "entry_executor":
-            terminal = await self._run_entry_executor(prompt, metadata)
+            terminal = await self._run_entry_executor(prompt, metadata, emit)
         elif agent_def.role == "planner":
-            terminal = await self._run_planner(metadata)
+            terminal = await self._run_planner(metadata, emit)
         elif agent_def.role == "executor":
-            terminal = await self._run_executor(prompt, metadata)
+            terminal = await self._run_executor(prompt, metadata, emit)
+        elif agent_def.role == "verifier":
+            terminal = await self._run_verifier(prompt, metadata, emit)
         elif agent_def.role == "evaluator":
-            terminal = await self._run_evaluator(metadata)
+            terminal = await self._run_evaluator(metadata, emit)
         else:
             raise RuntimeError(f"Unsupported SWE-EVO mock agent role: {agent_def.role!r}")
 
@@ -205,17 +262,29 @@ class MockSquadRunner:
         self,
         prompt: str,
         metadata: ExecutionMetadata,
+        emit: EmitStreamEvent,
     ) -> ToolResult:
+        goal = self._entry_user_prompt(metadata, fallback=prompt)
         return await self._call_tool(
             request_mission_solution,
-            {"goal": prompt},
+            {"goal": goal},
             metadata,
+            emit,
         )
 
-    async def _run_planner(self, metadata: ExecutionMetadata) -> ToolResult:
+    async def _run_planner(
+        self,
+        metadata: ExecutionMetadata,
+        emit: EmitStreamEvent,
+    ) -> ToolResult:
         ctx = self._scenario_context(prompt="", metadata=metadata)
-        spec = self._scenario.planner_response(ctx)
-        result = await self._call_tool(spec.tool, dict(spec.args), metadata)
+        injected = (
+            self._mutable_state.consume_next_planner_response()
+            if self._mutable_state is not None
+            else None
+        )
+        spec = injected or self._scenario.planner_response(ctx)
+        result = await self._call_tool(spec.tool, dict(spec.args), metadata, emit)
         event_type = _PLANNER_EVENT_BY_TOOL.get(spec.tool.name)
         if event_type is not None:
             criteria = list(spec.args.get("evaluation_criteria", ()) or ())
@@ -236,30 +305,87 @@ class MockSquadRunner:
         self,
         prompt: str,
         metadata: ExecutionMetadata,
+        emit: EmitStreamEvent,
     ) -> ToolResult:
         ctx = self._scenario_context(prompt=prompt, metadata=metadata)
         actions = self._scenario.executor_actions(ctx)
         summary = "Workspace preflight completed."
         artifacts: list[str] = []
         for action in actions:
+            if isinstance(action, str) and action.startswith(
+                "request_recursive_mission:"
+            ):
+                package_id = action.split(":", 1)[1]
+                goal = self._scenario.recursive_mission_goal(ctx) or (
+                    f"Resolve recursive package {package_id}."
+                )
+                result = await self._call_tool(
+                    request_mission_solution,
+                    {"goal": goal},
+                    metadata,
+                    emit,
+                )
+                self._publish(
+                    EventType.RECURSIVE_MISSION_REQUESTED,
+                    metadata=metadata,
+                    payload={
+                        "package_id": package_id,
+                        "mission_id": result.metadata.get("mission_id"),
+                    },
+                )
+                return result
             if action == "sandbox_integrity":
-                await self._run_sandbox_integrity_probe(metadata)
+                await self._run_sandbox_integrity_probe(metadata, emit)
                 summary = "Sandbox integrity probe passed."
                 artifacts = [self._probe_path()]
             elif action == "final_probe":
-                await self._run_final_probe(metadata)
+                await self._run_final_probe(metadata, emit)
                 summary = "Continuation final probe passed."
                 artifacts = [self._probe_path()]
             elif action == "preflight":
-                await self._run_preflight_probe(metadata)
+                await self._run_preflight_probe(metadata, emit)
                 summary = "Workspace preflight completed."
                 artifacts = []
+            elif action == "inspect_user_input":
+                script_result = await self._script_engine.run(
+                    inspect_user_input_script(ctx),
+                    metadata=metadata,
+                    emit=emit,
+                )
+                summary = script_result.summary
+                artifacts = [script_result.artifact]
+            elif isinstance(action, str) and action.startswith("execute_package:"):
+                package_id = action.split(":", 1)[1]
+                script_result = await self._script_engine.run(
+                    execute_package_script(ctx, package_id=package_id),
+                    metadata=metadata,
+                    emit=emit,
+                )
+                summary = script_result.summary
+                artifacts = [script_result.artifact]
+            elif action == "final_reconciliation":
+                script_result = await self._script_engine.run(
+                    final_reconciliation_script(ctx),
+                    metadata=metadata,
+                    emit=emit,
+                )
+                summary = script_result.summary
+                artifacts = [script_result.artifact]
+            elif action == "recursive_step":
+                script_result = await self._script_engine.run(
+                    recursive_step_script(ctx),
+                    metadata=metadata,
+                    emit=emit,
+                )
+                summary = script_result.summary
+                artifacts = [script_result.artifact]
             else:
                 raise RuntimeError(f"Unknown executor action: {action!r}")
         result = await self._call_tool(
             submit_execution_success,
             {"summary": summary, "artifacts": artifacts},
             metadata,
+            emit,
         )
         self._publish(
             EventType.EXECUTOR_SUCCESS,
@@ -269,10 +395,46 @@ class MockSquadRunner:
         )
         return result
 
-    async def _run_evaluator(self, metadata: ExecutionMetadata) -> ToolResult:
+    async def _run_verifier(
+        self,
+        prompt: str,
+        metadata: ExecutionMetadata,
+        emit: EmitStreamEvent,
+    ) -> ToolResult:
+        ctx = self._scenario_context(prompt=prompt, metadata=metadata)
+        task_input = ctx.task_input or prompt
+        checkpoint = self._spec_field(task_input, "checkpoint") or "checkpoint"
+        if checkpoint == "recursive_return":
+            self._publish(
+                EventType.RECURSIVE_MISSION_COMPLETED,
+                metadata=metadata,
+                payload=self._recursive_close_payload(metadata),
+            )
+        await self._script_engine.run(
+            verifier_checkpoint_script(ctx),
+            metadata=metadata,
+            emit=emit,
+        )
+        spec = self._scenario.verifier_response(ctx)
+        result = await self._call_tool(spec.tool, dict(spec.args), metadata, emit)
+        event_type = _VERIFIER_EVENT_BY_TOOL.get(spec.tool.name)
+        if event_type is not None:
+            self._publish(
+                event_type,
+                agent_def=None,
+                metadata=metadata,
+                payload=self._verifier_payload(task_input),
+            )
+        return result
+
+    async def _run_evaluator(
+        self,
+        metadata: ExecutionMetadata,
+        emit: EmitStreamEvent,
+    ) -> ToolResult:
         ctx = self._scenario_context(prompt="", metadata=metadata)
         spec = self._scenario.evaluator_response(ctx)
-        result = await self._call_tool(spec.tool, dict(spec.args), metadata)
+        result = await self._call_tool(spec.tool, dict(spec.args), metadata, emit)
         event_type = _EVALUATOR_EVENT_BY_TOOL.get(spec.tool.name)
         if event_type is not None:
             self._publish(event_type, agent_def=None, metadata=metadata)
@@ -285,25 +447,44 @@ class MockSquadRunner:
         metadata: ExecutionMetadata,
     ) -> ScenarioContext:
         attempt, episode = self._current_attempt_and_episode(metadata)
+        runtime = metadata.get("attempt_runtime")
+        mission = runtime.mission_store.get(episode.mission_id)
+        task_id = str(metadata.get("task_center_task_id") or "")
+        task = runtime.task_store.get_task(task_id) if task_id else None
         return ScenarioContext(
             attempt=attempt,
             episode=episode,
-            mission=None,
+            mission=mission,
             prompt=prompt,
             metadata=metadata,
-            audit_recorder=None,
-            mutable_state=None,
+            audit_recorder=self._audit_recorder,
+            mutable_state=self._mutable_state,
+            task_id=task_id or None,
+            agent_name=str(metadata.agent_name or "") or None,
+            task_input=(str(task.get("task_input") or "") if task else None),
+            graph_summary=None,
+            requirement_ledger=getattr(self._scenario, "requirement_ledger", None),
+            package_plan=getattr(self._scenario, "package_plan", None),
         )
 
-    async def _run_preflight_probe(self, metadata: ExecutionMetadata) -> None:
+    async def _run_preflight_probe(
+        self,
+        metadata: ExecutionMetadata,
+        emit: EmitStreamEvent,
+    ) -> None:
         result = await self._call_tool(
             shell_tool,
             {"command": "pwd && git rev-parse --is-inside-work-tree", "timeout": 60},
             metadata,
+            emit,
         )
         self._record_tool_check("tool.shell.preflight", result)
 
-    async def _run_sandbox_integrity_probe(self, metadata: ExecutionMetadata) -> None:
+    async def _run_sandbox_integrity_probe(
+        self,
+        metadata: ExecutionMetadata,
+        emit: EmitStreamEvent,
+    ) -> None:
         probe_dir = ".ephemeralos/sweevo-mock"
         probe_path = self._probe_path()
 
@@ -317,6 +498,7 @@ class MockSquadRunner:
                 "timeout": 60,
             },
             metadata,
+            emit,
         )
         self._record_tool_check("tool.shell.gated_merge", mkdir)
 
@@ -327,6 +509,7 @@ class MockSquadRunner:
                 "content": "alpha\nbeta\n",
             },
             metadata,
+            emit,
         )
         self._record_tool_check("tool.write_file.direct_merge", written)
 
@@ -334,6 +517,7 @@ class MockSquadRunner:
             read_file_tool,
             {"file_path": probe_path, "start_line": 1, "end_line": 20},
             metadata,
+            emit,
         )
         self._assert_read_contains(first_read, "alpha", "tool.read_file.after_write")
 
@@ -346,6 +530,7 @@ class MockSquadRunner:
                 "description": "single edit for mock SWE-EVO probe",
             },
             metadata,
+            emit,
         )
         self._record_tool_check("tool.edit_file.direct_merge", edited)
 
@@ -359,6 +544,7 @@ class MockSquadRunner:
                 "timeout": 60,
             },
             metadata,
+            emit,
         )
         self._record_tool_check("tool.shell.squash_append", squash)
 
@@ -366,6 +552,7 @@ class MockSquadRunner:
             read_file_tool,
             {"file_path": probe_path, "start_line": 1, "end_line": 20},
             metadata,
+            emit,
         )
         self._assert_read_contains(final_read, "squash-check", "tool.read_file.after_squash")
 
@@ -447,11 +634,16 @@ class MockSquadRunner:
         if not passed:
             raise RuntimeError("Expected conflict edit unexpectedly succeeded.")
 
-    async def _run_final_probe(self, metadata: ExecutionMetadata) -> None:
+    async def _run_final_probe(
+        self,
+        metadata: ExecutionMetadata,
+        emit: EmitStreamEvent,
+    ) -> None:
         final_read = await self._call_tool(
             read_file_tool,
             {"file_path": self._probe_path(), "start_line": 1, "end_line": 20},
             metadata,
+            emit,
         )
         self._assert_read_contains(final_read, "squash-check", "tool.read_file.final_probe")
         verify = await self._call_tool(
@@ -461,6 +653,7 @@ class MockSquadRunner:
                 "timeout": 60,
             },
             metadata,
+            emit,
         )
         self._record_tool_check("tool.shell.final_probe", verify)
 
@@ -469,19 +662,65 @@ class MockSquadRunner:
         tool_obj: BaseTool,
         raw_input: dict[str, Any],
         metadata: ExecutionMetadata,
+        emit: EmitStreamEvent,
+        *,
+        allow_error: bool = False,
     ) -> ToolResult:
-        self._publish(
-            EventType.TOOL_CALL_STARTED,
-            metadata=metadata,
-            tool_name=tool_obj.name,
-            payload={"tool_name": tool_obj.name},
+        tool_id = f"toolu_{uuid4().hex}"
+        agent_name = str(metadata.agent_name or "")
+        run_id = self._stream_run_id(metadata)
+        await emit(
+            AssistantTextDelta(
+                text=f"Calling {tool_obj.name}.\n",
+                agent_name=agent_name,
+                run_id=run_id,
+            )
         )
+        await emit(
+            AssistantMessageComplete(
+                message=ConversationMessage(
+                    role="assistant",
+                    content=[
+                        ToolUseBlock(
+                            id=tool_id,
+                            name=tool_obj.name,
+                            input=dict(raw_input),
+                        )
+                    ],
+                ),
+                usage=UsageSnapshot(),
+                agent_name=agent_name,
+                run_id=run_id,
+            )
+        )
+        await emit(
+            ToolExecutionStarted(
+                tool_name=tool_obj.name,
+                tool_input=dict(raw_input),
+                tool_id=tool_id,
+                agent_name=agent_name,
+                run_id=run_id,
+            )
+        )
+        tool_metadata = metadata.with_overrides(tool_id=tool_id)
         result = await execute_tool_once(
             tool_obj,
             raw_input,
-            ToolExecutionContextService(cwd=Path(self._repo_dir), services=metadata),
+            ToolExecutionContextService(cwd=Path(self._repo_dir), services=tool_metadata),
             emit=_noop_emit,
             emit_started=False,
+        )
+        await emit(
+            ToolExecutionCompleted(
+                tool_name=tool_obj.name,
+                output=result.output,
+                is_error=result.is_error,
+                tool_id=tool_id,
+                metadata=dict(result.metadata or {}),
+                does_terminate=result.does_terminate,
+                agent_name=agent_name,
+                run_id=run_id,
+            )
         )
         self.tool_calls.append(
             ToolCallRecord(
@@ -491,20 +730,7 @@ class MockSquadRunner:
                 metadata=dict(result.metadata or {}),
             )
         )
-        completed_type = (
-            EventType.TOOL_CALL_ERROR if result.is_error else EventType.TOOL_CALL_COMPLETED
-        )
-        self._publish(
-            completed_type,
-            metadata=metadata,
-            tool_name=tool_obj.name,
-            payload={
-                "tool_name": tool_obj.name,
-                "is_error": result.is_error,
-                "metadata": dict(result.metadata or {}),
-            },
-        )
-        if result.is_error:
+        if result.is_error and not allow_error:
             raise RuntimeError(f"{tool_obj.name} failed: {result.output}")
         return result
 
@@ -589,6 +815,15 @@ class MockSquadRunner:
                 "Executor context is local to the current planned task with the "
                 "attempt contract as framing."
             )
+        elif role == "verifier":
+            checks = {
+                "attempt_plan": "# Attempt Plan" in prompt,
+                "assigned_task": "# Assigned Task" in prompt,
+            }
+            reason = (
+                "Verifier context is a generator task profile with the assigned "
+                "checkpoint and its dependency evidence."
+            )
         elif role == "evaluator":
             checks = {
                 "attempt_plan": "# Attempt Plan" in prompt,
@@ -609,6 +844,26 @@ class MockSquadRunner:
             role=role,
             checks=checks,
             justification=reason,
+        )
+
+    def _record_initial_messages(
+        self,
+        *,
+        agent_def: AgentDefinition,
+        prompt: str,
+        metadata: ExecutionMetadata,
+    ) -> None:
+        task_id = str(metadata.get("task_center_task_id") or "")
+        if not task_id or self._audit_recorder is None:
+            return
+        recorder = self._audit_recorder.message_recorder_for_task(task_id)
+        if recorder is None:
+            return
+        recorder.record_initial_messages(
+            system_prompt=str(agent_def.system_prompt or ""),
+            user_prompt=prompt,
+            agent_name=agent_def.name,
+            run_id=self._stream_run_id(metadata),
         )
 
     def _current_attempt_and_episode(
@@ -649,6 +904,102 @@ class MockSquadRunner:
             agent_run_id=str(metadata.agent_run_id or ""),
             task_id=str(metadata.get("task_center_task_id") or ""),
         )
+
+    @staticmethod
+    def _stream_run_id(metadata: ExecutionMetadata) -> str:
+        return str(
+            metadata.get("task_center_task_id")
+            or metadata.agent_run_id
+            or metadata.get("run_id")
+            or ""
+        )
+
+    def _entry_user_prompt(
+        self,
+        metadata: ExecutionMetadata,
+        *,
+        fallback: str,
+    ) -> str:
+        runtime = metadata.get("attempt_runtime")
+        task_id = str(metadata.get("task_center_task_id") or "")
+        if runtime is not None and task_id:
+            task = runtime.task_store.get_task(task_id)
+            if task is not None:
+                task_input = str(task.get("task_input") or "")
+                if task_input:
+                    return task_input
+        return fallback
+
+    def _invocation_payload(
+        self,
+        *,
+        prompt: str,
+        metadata: ExecutionMetadata,
+    ) -> dict[str, Any]:
+        task_id = str(metadata.get("task_center_task_id") or "")
+        task_input = ""
+        deps: list[str] = []
+        runtime = metadata.get("attempt_runtime")
+        if runtime is not None and task_id:
+            task = runtime.task_store.get_task(task_id)
+            if task is not None:
+                task_input = str(task.get("task_input") or "")
+                deps = [str(item) for item in task.get("needs", [])]
+        payload = {
+            "task_id": task_id,
+            "prompt_preview": prompt[:500],
+            "dependency_count": len(deps),
+        }
+        payload.update(self._verifier_payload(task_input))
+        return payload
+
+    def _verifier_payload(self, task_input: str) -> dict[str, Any]:
+        checkpoint = self._spec_field(task_input, "checkpoint")
+        wave_id = self._spec_field(task_input, "wave")
+        dependency_count = self._spec_field(task_input, "dependency_count")
+        payload: dict[str, Any] = {}
+        if checkpoint is not None:
+            payload["checkpoint"] = checkpoint
+        if wave_id is not None:
+            payload["wave_id"] = f"wave_{wave_id}" if wave_id.isdigit() else wave_id
+        if dependency_count is not None:
+            payload["dependency_count"] = int(dependency_count)
+        return payload
+
+    def _recursive_close_payload(self, metadata: ExecutionMetadata) -> dict[str, Any]:
+        runtime = metadata.get("attempt_runtime")
+        task_id = str(metadata.get("task_center_task_id") or "")
+        if runtime is None or not task_id:
+            return {}
+        verifier_task = runtime.task_store.get_task(task_id)
+        if verifier_task is None:
+            return {}
+        for dep_id in verifier_task.get("needs", []) or []:
+            dep_task = runtime.task_store.get_task(str(dep_id))
+            if dep_task is None:
+                continue
+            for summary in dep_task.get("summaries", []) or []:
+                payload = summary.get("payload") if isinstance(summary, dict) else None
+                if not isinstance(payload, dict):
+                    continue
+                close_report = payload.get("mission_close_report")
+                if isinstance(close_report, dict):
+                    return {
+                        "mission_id": close_report.get("mission_id"),
+                        "requested_by_task_id": close_report.get(
+                            "requested_by_task_id"
+                        ),
+                        "outcome": close_report.get("outcome"),
+                    }
+        return {}
+
+    @staticmethod
+    def _spec_field(text: str, name: str) -> str | None:
+        prefix = f"{name}="
+        for part in text.split():
+            if part.startswith(prefix):
+                return part[len(prefix) :].strip()
+        return None
 
     def _publish(
         self,

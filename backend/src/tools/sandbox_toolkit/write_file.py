@@ -66,6 +66,7 @@ async def write_file(
                 "file_path": file_path,
                 "bytes_written": len(content.encode("utf-8")),
             },
+            timings=result.timings,
         )
 
     return mutation_tool_result(
@@ -74,6 +75,7 @@ async def write_file(
         paths=paths,
         failure_status=result.status or None,
         conflict_reason=result.conflict_reason,
+        timings=result.timings,
     )
 
 

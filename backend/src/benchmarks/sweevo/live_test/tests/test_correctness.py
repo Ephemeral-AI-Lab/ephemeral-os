@@ -13,6 +13,7 @@ test passes.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -116,7 +117,6 @@ async def test_correctness_testing_scenario_runs_end_to_end(
     mission_dirs = list(run_dir.glob("mission_*_*"))
     assert mission_dirs, f"no mission_NN_<id> dir under {run_dir}"
     found_attempt_with_role_dir = False
-    found_message_jsonl = False
     for mission_dir in mission_dirs:
         assert (mission_dir / "mission.jsonl").exists()
         for episode_dir in mission_dir.glob("episode_*_*"):
@@ -137,19 +137,12 @@ async def test_correctness_testing_scenario_runs_end_to_end(
                         "evaluator",
                         "generator",
                     }, role_segment
-                    msg_path = role_dir / "message.jsonl"
-                    if msg_path.exists():
-                        found_message_jsonl = True
     assert found_attempt_with_role_dir, "no attempt_NN_<id> dir"
 
     entry_dirs = list(run_dir.glob("entry_executor_*"))
     assert entry_dirs, "missing entry_executor sibling dir"
     assert (entry_dirs[0] / "task.jsonl").exists()
-
-    # message.jsonl is the agent stream output. With the mock squad we do
-    # not synthesize stream events for thinking/text, so message.jsonl may
-    # be empty or absent. Only assert presence on real-agent runs.
-    del found_message_jsonl  # placeholder for next-phase real-agent assertion
+    _assert_message_jsonl_contains_sandbox_tools(run_dir)
 
     # --- Helper agents are filtered out -------------------------------
     primary_role_segments = {"planner", "executor", "evaluator", "generator"}
@@ -178,9 +171,25 @@ async def test_correctness_testing_scenario_runs_end_to_end(
     )
 
     # --- run.json carries the bound run id ----------------------------
-    import json
-
     run_payload = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
     assert run_payload["task_center_run_id"] == report.task_center_run_id
     assert run_payload["scenario_name"] == scenario.name
     assert run_payload["status"] in {"running", "finished"}
+
+
+def _assert_message_jsonl_contains_sandbox_tools(run_dir: Path) -> None:
+    steps: list[dict[str, object]] = []
+    message_paths = list(run_dir.rglob("message.jsonl"))
+    assert message_paths, f"no message.jsonl files under {run_dir}"
+    for path in message_paths:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                steps.append(json.loads(line))
+    assert any(step.get("step_type") == "tool_call" for step in steps)
+    assert any(step.get("step_type") == "tool_result" for step in steps)
+    tool_calls = {
+        str(step.get("tool_name") or "")
+        for step in steps
+        if step.get("step_type") == "tool_call"
+    }
+    assert {"write_file", "read_file", "edit_file", "shell"}.issubset(tool_calls)

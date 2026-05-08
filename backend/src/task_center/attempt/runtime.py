@@ -56,9 +56,8 @@ class AttemptRuntime:
     # to obtain a rendered task_input + selected agent definition.
     # Optional so existing tests can continue without composer wiring.
     composer: "ContextComposer | None" = None
-    # Lifecycle controller for the attempt-less entry executor. ``None`` for
-    # delegated-only runtimes (mission starter builds its own runtime
-    # with no controller because delegated requests always have a attempt).
+    # Lifecycle controller for the top-level entry executor. ``None`` for
+    # delegated-only runtimes.
     # The close-report router and launcher use this to dispatch lifecycle
     # events for entry tasks whose ``task_center_attempt_id`` is None.
     entry_task_controller: "EntryTaskController | None" = None

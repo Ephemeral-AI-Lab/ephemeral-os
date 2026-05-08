@@ -7,6 +7,9 @@ from collections.abc import Awaitable, Callable
 from benchmarks.sweevo.live_test.audit.bus import AuditEventBus
 from benchmarks.sweevo.live_test.audit.events import Event, EventType
 from benchmarks.sweevo.live_test.audit.node_id import NodeId
+from benchmarks.sweevo.live_test.audit.sandbox_events import (
+    sandbox_events_from_tool_completion,
+)
 from message.stream_events import ToolExecutionCompleted, ToolExecutionStarted
 
 __all__ = ["stream_bridge"]
@@ -34,6 +37,7 @@ def stream_bridge(
                     payload={
                         "tool_name": stream_event.tool_name,
                         "tool_input": stream_event.tool_input,
+                        "tool_id": stream_event.tool_id,
                     },
                 )
             )
@@ -63,6 +67,11 @@ def stream_bridge(
                     },
                 )
             )
+            for sandbox_event in sandbox_events_from_tool_completion(
+                stream_event,
+                task_center_run_id=task_center_run_id,
+            ):
+                bus.publish(sandbox_event)
         # All other StreamEvent subtypes are silently ignored.
 
     return _on_event

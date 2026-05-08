@@ -128,7 +128,7 @@ def resolve_executor_submission_context(
     controller = runtime.entry_task_controller_for(task_id)
     if controller is None:
         raise AttemptSubmissionContextError(
-            f"TaskCenter task {task_id!r} is attempt-less but no entry "
+            f"TaskCenter task {task_id!r} is entry-mode but no entry "
             "controller is bound to it; the spawn was set up incorrectly."
         )
     return ExecutorSubmissionContext(

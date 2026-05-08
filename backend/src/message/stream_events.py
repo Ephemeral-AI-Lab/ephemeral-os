@@ -53,6 +53,7 @@ class ToolExecutionStarted:
 
     tool_name: str
     tool_input: dict[str, Any]
+    tool_id: str = ""
     agent_name: str = ""
     run_id: str = ""
 

@@ -17,7 +17,7 @@ from task_center.context_engine.errors import RecipeScopeError
 class ContextScope:
     """Identity surface threaded through resolver + engine + recipes."""
 
-    mission_id: str
+    mission_id: str | None = None
 
     # Optional identity fields — recipes declare which of these they need.
     episode_id: str | None = None

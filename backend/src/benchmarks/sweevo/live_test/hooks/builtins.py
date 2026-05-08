@@ -28,6 +28,7 @@ _ROLE_TO_INVOKED: dict[str, EventType] = {
     "entry_executor": EventType.ENTRY_EXECUTOR_INVOKED,
     "planner": EventType.PLANNER_INVOKED,
     "executor": EventType.EXECUTOR_INVOKED,
+    "verifier": EventType.VERIFIER_INVOKED,
     "evaluator": EventType.EVALUATOR_INVOKED,
 }
 
@@ -108,6 +109,100 @@ def fail_evaluator_at(*, attempt_seq: int = 1) -> Hook:
     )
 
 
+def fail_verifier_at(*, checkpoint: str) -> Hook:
+    """Inject a one-shot verifier failure when *checkpoint* is invoked."""
+
+    def _fn(event: Event, state: MutableMockState) -> HookResult:
+        if str(event.payload.get("checkpoint") or "") != checkpoint:
+            return HookResult(
+                name=f"fail_verifier_at:{checkpoint}",
+                asserted=True,
+                extras={"armed": False},
+            )
+        attempt_id = event.node.attempt_id or "*"
+        state.inject_failure(
+            role="verifier",
+            attempt_id=attempt_id,
+            checkpoint=checkpoint,
+        )
+        return HookResult(
+            name=f"fail_verifier_at:{checkpoint}",
+            asserted=True,
+            extras={"armed": True, "attempt_id": attempt_id},
+        )
+
+    return Hook(
+        name=f"fail_verifier_at:{checkpoint}",
+        event=EventType.VERIFIER_INVOKED,
+        when="post",
+        fn=_fn,
+    )
+
+
+def assert_guard_after_wave(*, wave_id: str) -> Hook:
+    """Assert a verifier guard for *wave_id* has executor dependencies."""
+
+    def _fn(event: Event, _state: MutableMockState) -> HookResult:
+        if str(event.payload.get("wave_id") or "") != wave_id:
+            return HookResult(
+                name=f"assert_guard_after_wave:{wave_id}",
+                asserted=True,
+                extras={"matched": False},
+            )
+        dependency_count = int(event.payload.get("dependency_count") or 0)
+        ok = dependency_count > 0
+        return HookResult(
+            name=f"assert_guard_after_wave:{wave_id}",
+            asserted=ok,
+            failed_reason=None if ok else "guard had no dependencies",
+            extras={"dependency_count": dependency_count, "matched": True},
+        )
+
+    return Hook(
+        name=f"assert_guard_after_wave:{wave_id}",
+        event=EventType.VERIFIER_SUCCESS,
+        when="post",
+        fn=_fn,
+    )
+
+
+def assert_recursive_mission_closed_before_parent_guard() -> Hook:
+    """Assert the parent recursive-return guard runs after close-report delivery."""
+
+    def _fn(event: Event, state: MutableMockState) -> HookResult:
+        if str(event.payload.get("checkpoint") or "") != "recursive_return":
+            return HookResult(
+                name="assert_recursive_mission_closed_before_parent_guard",
+                asserted=True,
+                extras={"matched": False},
+            )
+        seen = list(state.seen_events)
+        try:
+            close_idx = seen.index(EventType.RECURSIVE_MISSION_COMPLETED)
+            guard_idx = len(seen) - 1
+        except ValueError:
+            return HookResult(
+                name="assert_recursive_mission_closed_before_parent_guard",
+                asserted=False,
+                failed_reason="recursive completion event was not observed",
+                extras={"seen": [item.value for item in seen]},
+            )
+        ok = close_idx < guard_idx
+        return HookResult(
+            name="assert_recursive_mission_closed_before_parent_guard",
+            asserted=ok,
+            failed_reason=None if ok else "parent guard preceded recursive completion",
+            extras={"matched": True, "close_idx": close_idx, "guard_idx": guard_idx},
+        )
+
+    return Hook(
+        name="assert_recursive_mission_closed_before_parent_guard",
+        event=EventType.VERIFIER_SUCCESS,
+        when="post",
+        fn=_fn,
+    )
+
+
 def assert_squash_after_n_edits(n: int = 16) -> Hook:
     raise NotImplementedError(
         f"assert_squash_after_n_edits(n={n}) deferred to next phase — "
@@ -117,8 +212,11 @@ def assert_squash_after_n_edits(n: int = 16) -> Hook:
 
 __all__ = [
     "assert_event_sequence",
+    "assert_guard_after_wave",
+    "assert_recursive_mission_closed_before_parent_guard",
     "assert_squash_after_n_edits",
     "capture_prompt",
     "count_events",
     "fail_evaluator_at",
+    "fail_verifier_at",
 ]

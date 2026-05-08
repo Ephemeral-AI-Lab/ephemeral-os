@@ -113,6 +113,7 @@ async def edit_file(
                 "file_path": file_path,
                 "applied_edits": result.applied_edits,
             },
+            timings=result.timings,
         )
 
     return mutation_tool_result(
@@ -121,6 +122,7 @@ async def edit_file(
         paths=paths,
         failure_status=result.status or None,
         conflict_reason=result.conflict_reason,
+        timings=result.timings,
     )
 
 

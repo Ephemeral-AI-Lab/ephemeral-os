@@ -346,36 +346,11 @@ def test_router_routes_entry_mode_close_report_through_controller(
     instead of the orchestrator registry, and route the close report into
     the controller's ``apply_mission_close_report``.
     """
-    from task_center.mission.handler import MissionHandler
-    from task_center.mission.mission import MissionStatus
-    from task_center.config import HarnessLifecycleConfig
     from task_center.entry.controller import EntryTaskController
-    from task_center.episode.episode import EpisodeStatus
     from task_center.task import HarnessTaskRole
 
     # Seed entry-mode caller in WAITING_COMPLEX_TASK.
     entry_task_id = "entry-task"
-    finished_runs: list = []
-
-    def _finish(report):
-        finished_runs.append(report)
-
-    handler = MissionHandler(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
-        manager_registry=EpisodeManagerRegistry(),
-        config=HarnessLifecycleConfig(),
-        deliver_close_report=_finish,
-    )
-    entry_request = handler.create_mission(
-        task_center_run_id=task_center_run_id,
-        requested_by_task_id=entry_task_id,
-        goal="entry goal",
-    )
-    entry_segment, _ = handler.create_initial_episode_with_manager(
-        mission_id=entry_request.id
-    )
     task_store.upsert_task(
         task_id=entry_task_id,
         task_center_run_id=task_center_run_id,
@@ -391,12 +366,7 @@ def test_router_routes_entry_mode_close_report_through_controller(
     controller = EntryTaskController(
         task_id=entry_task_id,
         task_center_run_id=task_center_run_id,
-        mission_id=entry_request.id,
-        episode_id=entry_segment.id,
         task_store=task_store,
-        episode_store=episode_store,
-        mission_handler=handler,
-        manager_registry=handler._manager_registry,  # type: ignore[attr-defined]
     )
     runtime = AttemptRuntime(
         mission_store=mission_store,
@@ -405,7 +375,7 @@ def test_router_routes_entry_mode_close_report_through_controller(
         task_store=task_store,
         agent_launcher=_FakeLauncher(),
         orchestrator_registry=AttemptOrchestratorRegistry(),
-        manager_registry=handler._manager_registry,  # type: ignore[attr-defined]
+        manager_registry=EpisodeManagerRegistry(),
         composer=composer,
         entry_task_controller=controller,
     )
@@ -424,14 +394,8 @@ def test_router_routes_entry_mode_close_report_through_controller(
     assert result.status == "delivered"
     assert result.parent_attempt_id is None
     entry_task = task_store.get_task(entry_task_id)
-    fresh_segment = episode_store.get(entry_segment.id)
-    fresh_request = mission_store.get(entry_request.id)
+    run = task_store.get_run(task_center_run_id)
     assert entry_task is not None
     assert entry_task["status"] == HarnessTaskStatus.DONE.value
-    assert fresh_segment is not None
-    assert fresh_segment.status == EpisodeStatus.SUCCEEDED
-    assert fresh_request is not None
-    assert fresh_request.status == MissionStatus.SUCCEEDED
-    # The close-report sink fires once; the run can finalize via that.
-    assert len(finished_runs) == 1
-    assert finished_runs[0].outcome == "success"
+    assert run is not None
+    assert run["status"] == "done"

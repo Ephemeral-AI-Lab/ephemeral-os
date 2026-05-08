@@ -41,9 +41,8 @@ class Mission:
 class MissionCloseReport:
     """Final report attached to ``requested_by_task_id`` when the request closes.
 
-    ``final_attempt_id`` is ``None`` for attempt-less entry episodes — the
-    entry executor lives in a episode with zero ``Attempt`` rows and
-    closes via the entry-task controller rather than a passing attempt.
+    ``final_attempt_id`` is normally the passing or final failed attempt.
+    It remains nullable for defensive compensation paths.
     """
 
     mission_id: str

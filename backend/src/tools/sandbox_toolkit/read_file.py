@@ -60,6 +60,7 @@ async def read_file(
             content=result.content,
             start_line=start_line,
             end_line=end_line,
+            timings=result.timings,
         )
     except Exception as exc:
         return ToolResult(

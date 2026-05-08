@@ -85,12 +85,16 @@ def build_read_file_result(
     content: str,
     start_line: int,
     end_line: int,
+    timings: dict[str, float] | None = None,
 ) -> ToolResult:
     lines = content.splitlines()
     total = len(lines)
     start = max(1, start_line)
     end = min(total, end_line, start + MAX_READ_FILE_LINES - 1)
     selected = [f"{i:4d}: {lines[i - 1]}" for i in range(start, end + 1)]
+    metadata: dict[str, Any] = {}
+    if timings:
+        metadata["timings"] = dict(timings)
     return ToolResult(
         output=json.dumps(
             {
@@ -101,7 +105,8 @@ def build_read_file_result(
                 "end_line": end,
                 "content": "\n".join(selected),
             }
-        )
+        ),
+        metadata=metadata,
     )
 
 

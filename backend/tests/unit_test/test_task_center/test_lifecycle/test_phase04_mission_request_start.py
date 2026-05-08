@@ -315,27 +315,11 @@ def test_mission_start_accepts_entry_mode_caller_with_no_parent_attempt(
     transition through the runtime's :class:`EntryTaskController` so the
     controller stays the single owner of entry-task state transitions.
     """
-    from task_center.mission.handler import MissionHandler
-    from task_center.config import HarnessLifecycleConfig
     from task_center.entry.controller import EntryTaskController
 
     # Seed the entry-mode caller: an entry task with task_center_attempt_id=None.
     entry_task_id = "entry-task-id"
-    entry_request = mission_store.insert(
-        task_center_run_id=task_center_run_id,
-        requested_by_task_id=entry_task_id,
-        goal="entry goal",
-    )
-    handler = MissionHandler(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
-        manager_registry=EpisodeManagerRegistry(),
-        config=HarnessLifecycleConfig(),
-    )
-    entry_segment, _ = handler.create_initial_episode_with_manager(
-        mission_id=entry_request.id
-    )
+    manager_registry = EpisodeManagerRegistry()
     task_store.upsert_task(
         task_id=entry_task_id,
         task_center_run_id=task_center_run_id,
@@ -351,12 +335,7 @@ def test_mission_start_accepts_entry_mode_caller_with_no_parent_attempt(
     controller = EntryTaskController(
         task_id=entry_task_id,
         task_center_run_id=task_center_run_id,
-        mission_id=entry_request.id,
-        episode_id=entry_segment.id,
         task_store=task_store,
-        episode_store=episode_store,
-        mission_handler=handler,
-        manager_registry=handler._manager_registry,  # type: ignore[attr-defined]
     )
     runtime = AttemptRuntime(
         mission_store=mission_store,
@@ -365,7 +344,7 @@ def test_mission_start_accepts_entry_mode_caller_with_no_parent_attempt(
         task_store=task_store,
         agent_launcher=_FakeLauncher(),
         orchestrator_registry=AttemptOrchestratorRegistry(),
-        manager_registry=handler._manager_registry,  # type: ignore[attr-defined]
+        manager_registry=manager_registry,
         composer=composer,
         entry_task_controller=controller,
     )
