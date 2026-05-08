@@ -50,7 +50,7 @@ class OverlayCapture:
         }
 
     @classmethod
-    def from_dict(cls, payload: Mapping[str, Any]) -> "OverlayCapture":
+    def from_dict(cls, payload: Mapping[str, Any]) -> OverlayCapture:
         raw_changes = payload.get("changes") or []
         if not isinstance(raw_changes, list):
             raise ValueError("OverlayCapture.changes must be a list")

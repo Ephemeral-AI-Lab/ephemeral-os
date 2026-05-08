@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from contextlib import AbstractContextManager
 from dataclasses import dataclass
-from typing import ContextManager, Protocol
+from typing import Protocol
 
 from sandbox.layer_stack.layer.change import LayerChange
 from sandbox.layer_stack.manifest import Manifest
@@ -64,7 +65,7 @@ class CommitTransaction(Protocol):
 class CommitPublisher(Protocol):
     """Publish accepted staged changes through the storage CAS primitive."""
 
-    def commit_transaction(self) -> ContextManager[CommitTransaction]: ...
+    def commit_transaction(self) -> AbstractContextManager[CommitTransaction]: ...
 
 
 class WorkspaceBindingReader(Protocol):

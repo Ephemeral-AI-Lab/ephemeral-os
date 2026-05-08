@@ -20,7 +20,6 @@ from sandbox.runtime.daemon.service.layer_stack_client import LayerStackClient
 class _Lease:
     lease_id: str
     manifest_version: int
-    root_hash: str
     manifest: Manifest
     lowerdir: str
     timings: dict[str, float]
@@ -31,7 +30,6 @@ class _LayerStackClient:
         self.lease = _Lease(
             lease_id="lease-1",
             manifest_version=1,
-            root_hash="h",
             manifest=Manifest(version=1, layers=()),
             lowerdir=str(lowerdir),
             timings={

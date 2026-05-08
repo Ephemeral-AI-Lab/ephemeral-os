@@ -110,7 +110,7 @@ cmd_exec               layer_stack            overlay/mount         occ
    │                                                                 │
    │ OCCClient.apply_changeset                                       │
    ├────────────────────────────────────────────────────────────────►│
-   │   prepare (route + base_hash) → serial_merger.apply             │
+   │   prepare (route + base_hash) → OccSerialMerger.apply           │
    │     └─ commit_transaction (RLock): revalidate, stage, publish L(N+1)
    │◄────────────────────── ChangesetResult ─────────────────────────┤
    │                                                                 │
@@ -130,7 +130,7 @@ through the provider adapter into the sandbox's resident daemon.
 
 #### Phase 2 — Lease a snapshot (layer_stack)
 
-`daemon/services/shell_runner._execute_shell` calls
+`runtime/daemon/service/shell_runner._execute_shell` calls
 `LayerStackManager.prepare_workspace_snapshot`:
 
 ```
@@ -157,7 +157,7 @@ lowerdir            = "<root>/runtime/transient-lowerdirs/<req>/lower"
 
 #### Phase 3 — Mount and run (overlay / namespace)
 
-`command_exec/workspace_mount.run_workspace_replaced_command`:
+`command_exec/workspace/mount.run_workspace_replaced_command`:
 
 ```
   workspace_root  = /testbed   (declared, what command literals expect)
@@ -189,13 +189,14 @@ does not see other concurrent shells.
 > `/testbed/foo` resolve naturally. Everything outside the workspace
 > (`/usr`, `/home`, `/etc`) is the host sandbox FS unchanged.
 > In `copy_backed` fallback the same content lands at `run_dir/workspace`
-> instead, so commands referencing `/testbed` literals are rejected.
+> instead, and command argv entries containing `/testbed` literals are
+> rewritten to that mounted workspace path.
 > The mount is per-call and ephemeral; two concurrent shells get two
 > independent overlays over the same lowerdir snapshot version.
 
 #### Phase 4 — Capture changes (overlay)
 
-`command_exec/capture/upperdir.capture_workspace_upperdir` →
+`command_exec/workspace/capture.capture_workspace_upperdir` →
 `overlay/capture/upperdir.capture_changes` walks `upper/`:
 
 ```
@@ -230,7 +231,7 @@ For gated rows, `base_hash = infer_manifest_base_hash(layer_stack, N, path)`
 is captured up front. Output: `PreparedChangeset(path_groups=[…],
 snapshot=Manifest(N), atomic=…)`.
 
-**Stage B — `serial_merger.apply(prepared)` (single worker, under
+**Stage B — `OccSerialMerger.apply(prepared)` (single worker, under
 `commit_transaction` RLock):**
 
 ```
@@ -310,8 +311,8 @@ from storage. It is the union of three narrow protocols:
   `CommitTransaction` (which exposes only `snapshot()` and
   `publish_layer(changes)`)
 
-`LayerStackClient` (`daemon/services/layer_stack_client.py`) implements that
-union by forwarding to `LayerStackManager`. OCC never imports
+`LayerStackClient` (`runtime/daemon/service/layer_stack_client.py`) implements
+that union by forwarding to `LayerStackManager`. OCC never imports
 `LayerStackManager`; it only sees `OccLayerStackPorts`.
 
 Dependency arrow: **OCC → ports ← layer_stack** (layer_stack does not
@@ -348,7 +349,7 @@ into `occ.changeset.types.Change` objects.
 - Overlay knows nothing about OCC routing, gitignore, or transactions.
 - OCC knows nothing about mounts, namespaces, or `unshare`.
 
-The runtime command-exec layer (`daemon/services/shell_runner.py`) is
+The runtime command-exec layer (`runtime/daemon/service/shell_runner.py`) is
 the only place all three meet. `_execute_shell` is the **sole
 orchestration sink**: it holds `lease_id`, `Manifest(N)`, `lowerdir`,
 and the captured changes only as local variables for one call —
@@ -359,10 +360,10 @@ these boundaries:
 - layer_stack ↔ overlay: only via the materialized lowerdir path + the
   leased `Manifest` value.
 - overlay ↔ OCC: only via the `OverlayPathChange → Change` adapter
-  (`command_exec/capture/changeset.py`). The split between
-  `overlay/capture/` and `command_exec/capture/` is deliberate:
+  (`occ/capture/overlay.py`). The split between
+  `overlay/capture/` and `command_exec/workspace/capture.py` is deliberate:
   `overlay/capture/` knows pure overlayfs semantics (whiteouts, opaque
-  dirs); `command_exec/capture/` knows the runtime context
+  dirs); `command_exec/workspace/capture.py` knows the runtime context
   (workspace_root, snapshot manifest) and adapts the result for OCC.
 - OCC ↔ layer_stack: only via `OccLayerStackPorts`.
 
@@ -410,7 +411,7 @@ only; reads, materialize, and command execution overlap.
 
 ```
 SERIAL MERGE                   OccSerialMerger.apply
-  (occ/serial_merger.py)       one worker, ~2ms batch window;
+  (occ/merge/serial.py)        one worker, ~2ms batch window;
                                coalesces disjoint commits
 
 CROSS-PROCESS                  fcntl flock on <root>/.commit.lock
@@ -418,7 +419,7 @@ CROSS-PROCESS                  fcntl flock on <root>/.commit.lock
                                (single process — asyncio gate suffices)
 
 THREAD/RLock                   LayerStackManager._lock
-  (layer_stack/stack_manager)  guards manifest read/swap, lease
+  (layer_stack/manager.py)     guards manifest read/swap, lease
                                registry, layer dir delete
 
 ```
@@ -434,14 +435,14 @@ except through the documented `commit_transaction()` port.
 |---|---|
 | Host entrypoint | `sandbox/api/tool/shell.py`, `sandbox/api/facade.py` |
 | Host → daemon transport | `sandbox/host/daemon_client.py` |
-| Daemon dispatch | `sandbox/daemon/rpc/dispatcher.py` |
-| Shell orchestrator | `sandbox/daemon/services/shell_runner.py` |
-| Mount + exec | `sandbox/command_exec/workspace_mount.py`, `sandbox/command_exec/namespace_helper.py` |
-| Upperdir capture | `sandbox/overlay/capture/upperdir.py`, `sandbox/command_exec/capture/upperdir.py` |
-| Overlay → OCC adapter | `sandbox/command_exec/capture/changeset.py` |
-| OCC service | `sandbox/occ/service.py`, `sandbox/occ/orchestrator.py` |
-| OCC commit | `sandbox/occ/commit_transaction.py`, `sandbox/occ/serial_merger.py` |
+| Daemon dispatch | `sandbox/runtime/daemon/rpc/dispatcher.py` |
+| Shell orchestrator | `sandbox/runtime/daemon/service/shell_runner.py` |
+| Mount + exec | `sandbox/command_exec/workspace/mount.py`, `sandbox/command_exec/workspace/namespace_entrypoint.py` |
+| Upperdir capture | `sandbox/overlay/capture/upperdir.py`, `sandbox/command_exec/workspace/capture.py` |
+| Overlay → OCC adapter | `sandbox/occ/capture/overlay.py` |
+| OCC service | `sandbox/occ/service.py`, `sandbox/occ/routing/orchestrator.py` |
+| OCC commit | `sandbox/occ/commit_transaction.py`, `sandbox/occ/merge/serial.py` |
 | OCC ports | `sandbox/occ/ports.py` |
 | Layer stack | `sandbox/layer_stack/manager.py`, `sandbox/layer_stack/layer/publisher.py`, `sandbox/layer_stack/view/merged.py` |
-| Layer stack client | `sandbox/daemon/services/layer_stack_client.py` |
-| Workspace base | `sandbox/layer_stack/workspace_base.py`, `sandbox/layer_stack/workspace.py` |
+| Layer stack client | `sandbox/runtime/daemon/service/layer_stack_client.py` |
+| Workspace base | `sandbox/layer_stack/workspace/base.py`, `sandbox/layer_stack/workspace/binding.py` |

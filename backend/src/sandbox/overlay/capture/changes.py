@@ -46,7 +46,7 @@ class OverlayPathChange:
         }
 
     @classmethod
-    def from_dict(cls, payload: Mapping[str, Any]) -> "OverlayPathChange":
+    def from_dict(cls, payload: Mapping[str, Any]) -> OverlayPathChange:
         return cls(
             path=str(payload["path"]),
             kind=_parse_kind(payload["kind"]),

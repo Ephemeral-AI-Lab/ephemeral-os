@@ -95,7 +95,7 @@ class WriteChange(Change):
             return Path(self.content_path).read_bytes()
         return b""
 
-    def with_base_hash(self, base_hash: str | None) -> "WriteChange":
+    def with_base_hash(self, base_hash: str | None) -> WriteChange:
         return WriteChange(
             path=self.path,
             source=self.source,
@@ -150,7 +150,7 @@ class DeleteChange(Change):
         Change.__init__(self, path, source=source)
         object.__setattr__(self, "base_hash", base_hash)
 
-    def with_base_hash(self, base_hash: str | None) -> "DeleteChange":
+    def with_base_hash(self, base_hash: str | None) -> DeleteChange:
         return DeleteChange(path=self.path, source=self.source, base_hash=base_hash)
 
 

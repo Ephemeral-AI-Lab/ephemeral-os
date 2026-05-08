@@ -6,7 +6,7 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping
+from collections.abc import Mapping
 
 from sandbox.layer_stack.layer.change import normalize_layer_path
 
@@ -38,7 +38,7 @@ class WorkspaceBinding:
         }
 
     @classmethod
-    def from_dict(cls, payload: Mapping[str, object]) -> "WorkspaceBinding":
+    def from_dict(cls, payload: Mapping[str, object]) -> WorkspaceBinding:
         return cls(
             workspace_root=str(payload["workspace_root"]),
             layer_stack_root=str(payload["layer_stack_root"]),

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from contextlib import AbstractContextManager
 from pathlib import Path
-from typing import ContextManager
 
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.layer_stack.manager import (
@@ -56,7 +56,7 @@ class LayerStackClient:
     ) -> None:
         self.manager.materialize(destination, manifest)
 
-    def commit_transaction(self) -> ContextManager[CommitTransaction]:
+    def commit_transaction(self) -> AbstractContextManager[CommitTransaction]:
         return self.manager.commit_transaction()
 
     def allocate_commit_staging(self, request_id: str) -> CommitStagingArea:

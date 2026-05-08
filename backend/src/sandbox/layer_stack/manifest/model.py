@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from typing import Mapping
+from collections.abc import Mapping
 
 
 class ManifestConflictError(RuntimeError):
@@ -27,7 +27,7 @@ class LayerRef:
         return {"layer_id": self.layer_id, "path": self.path}
 
     @classmethod
-    def from_dict(cls, payload: Mapping[str, object]) -> "LayerRef":
+    def from_dict(cls, payload: Mapping[str, object]) -> LayerRef:
         layer_id = str(payload["layer_id"])
         path = str(payload["path"])
         return cls(layer_id=layer_id, path=path)
@@ -54,7 +54,7 @@ class Manifest:
         }
 
     @classmethod
-    def from_dict(cls, payload: Mapping[str, object]) -> "Manifest":
+    def from_dict(cls, payload: Mapping[str, object]) -> Manifest:
         raw_layers = payload.get("layers", ())
         if not isinstance(raw_layers, list):
             raise ValueError("manifest layers must be a list")

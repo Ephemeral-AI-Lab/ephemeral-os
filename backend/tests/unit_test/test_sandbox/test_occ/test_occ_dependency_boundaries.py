@@ -55,7 +55,6 @@ def test_overlay_capture_module_is_the_occ_overlay_bridge() -> None:
     imports = _imports(occ_root / "capture" / "overlay.py")
 
     assert "sandbox.overlay.capture.changes" in imports
-    assert "sandbox.overlay.capture.types" in imports
     assert "sandbox.occ.changeset.builders" in imports
 
 

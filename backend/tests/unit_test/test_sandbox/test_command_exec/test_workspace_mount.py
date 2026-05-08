@@ -31,8 +31,6 @@ def test_copy_backed_mount_captures_only_workspace_changes(
         lowerdir=str(lower),
         upperdir=str(tmp_path / "upper"),
         workdir=str(tmp_path / "work"),
-        manifest_version=1,
-        lease_id="lease-1",
     )
     request = CommandExecRequest(
         request_id="req-1",
@@ -89,8 +87,6 @@ def test_copy_backed_mount_rewrites_absolute_workspace_references(
         lowerdir=str(lower),
         upperdir=str(tmp_path / "upper"),
         workdir=str(tmp_path / "work"),
-        manifest_version=1,
-        lease_id="lease-1",
     )
     request = CommandExecRequest(
         request_id="req-1",

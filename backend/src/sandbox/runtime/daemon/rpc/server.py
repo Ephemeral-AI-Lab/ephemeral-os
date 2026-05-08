@@ -32,6 +32,7 @@ Lifecycle:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import os
@@ -110,10 +111,8 @@ async def _handle_connection(
 def _prepare_socket_path(socket_path: Path) -> None:
     socket_path.parent.mkdir(parents=True, exist_ok=True)
     if socket_path.exists() or socket_path.is_symlink():
-        try:
+        with contextlib.suppress(FileNotFoundError):
             socket_path.unlink()
-        except FileNotFoundError:
-            pass
 
 
 def _write_pid(pid_path: Path) -> None:
@@ -122,19 +121,15 @@ def _write_pid(pid_path: Path) -> None:
 
 
 def _remove_pid(pid_path: Path) -> None:
-    try:
+    with contextlib.suppress(FileNotFoundError):
         pid_path.unlink()
-    except FileNotFoundError:
-        pass
 
 
 async def serve(socket_path: Path, pid_path: Path) -> None:
     _prepare_socket_path(socket_path)
     server = await asyncio.start_unix_server(_handle_connection, path=str(socket_path))
-    try:
+    with contextlib.suppress(OSError):
         os.chmod(socket_path, 0o600)
-    except OSError:
-        pass
     _write_pid(pid_path)
     logger.info("daemon listening on %s pid=%s", socket_path, os.getpid())
 
@@ -145,10 +140,8 @@ async def serve(socket_path: Path, pid_path: Path) -> None:
         stop.set()
 
     for sig in (signal.SIGTERM, signal.SIGINT):
-        try:
+        with contextlib.suppress(NotImplementedError, RuntimeError):
             loop.add_signal_handler(sig, _signal_stop)
-        except (NotImplementedError, RuntimeError):  # pragma: no cover - non-unix
-            pass
 
     try:
         async with server:
@@ -166,10 +159,8 @@ async def serve(socket_path: Path, pid_path: Path) -> None:
                     raise exc
     finally:
         _remove_pid(pid_path)
-        try:
+        with contextlib.suppress(FileNotFoundError):
             socket_path.unlink()
-        except FileNotFoundError:
-            pass
 
 
 __all__ = [

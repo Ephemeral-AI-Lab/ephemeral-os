@@ -41,16 +41,3 @@ async def test_daytona_provider_adapter_execs_through_daytona_process() -> None:
     assert timeout == 12
     assert "cd /workspace" in wrapped
     assert "echo ok" in wrapped
-
-
-async def test_context_registration_installs_daytona_provider_adapter() -> None:
-    from sandbox.provider.daytona.context import _register_provider_adapter_if_missing
-    from sandbox.provider.registry import dispose_adapter, get_adapter
-
-    sandbox_id = "test-register-provider-adapter"
-    dispose_adapter(sandbox_id)
-
-    _register_provider_adapter_if_missing(sandbox_id)
-
-    assert isinstance(get_adapter(sandbox_id), DaytonaProviderAdapter)
-    dispose_adapter(sandbox_id)

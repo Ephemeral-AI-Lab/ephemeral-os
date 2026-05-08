@@ -1,4 +1,4 @@
-"""Daytona sync client cache + helpers shared with sandbox/lifecycle."""
+"""Daytona sync client cache and helpers."""
 
 from __future__ import annotations
 
@@ -108,29 +108,19 @@ def _normalize_dict(payload: dict[str, str] | None) -> dict[str, str]:
     return {str(k).strip(): str(v).strip() for k, v in payload.items() if str(k).strip()}
 
 
-def _daytona_classes():
-    """Import and return Daytona SDK classes."""
+def _creation_param_classes() -> tuple[Any, Any]:
+    """Import and return Daytona SDK sandbox creation parameter classes."""
     try:
         from daytona_sdk import (
             CreateSandboxFromImageParams,
             CreateSandboxFromSnapshotParams,
-            Daytona,
-            DaytonaConfig,
         )
-    except ImportError:
-        try:
-            from daytona import (
-                CreateSandboxFromImageParams,
-                CreateSandboxFromSnapshotParams,
-                Daytona,
-                DaytonaConfig,
-            )
-        except ImportError as exc:
-            raise DaytonaUnavailableError(
-                "Daytona SDK not installed. Run: pip install daytona-sdk"
-            ) from exc
+    except ImportError as exc:
+        raise DaytonaUnavailableError(
+            "Daytona SDK not installed. Run: pip install daytona-sdk"
+        ) from exc
 
-    return Daytona, DaytonaConfig, CreateSandboxFromSnapshotParams, CreateSandboxFromImageParams
+    return CreateSandboxFromSnapshotParams, CreateSandboxFromImageParams
 
 
 def _paginate_all(list_fn: Any, limit: int) -> list[Any]:

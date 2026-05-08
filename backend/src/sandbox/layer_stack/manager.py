@@ -178,7 +178,7 @@ class LayerStackManager:
     def materialize(self, destination: str | Path, manifest: Manifest | None = None) -> None:
         self._view.materialize(destination, manifest or self.read_active_manifest())
 
-    def commit_transaction(self) -> "LayerStackTransaction":
+    def commit_transaction(self) -> LayerStackTransaction:
         return LayerStackTransaction(self)
 
     def allocate_commit_staging(self, request_id: str) -> CommitStagingArea:
@@ -271,7 +271,7 @@ class LayerStackTransaction:
         self._lock_held_s = 0.0
         self._lock_wait_s = 0.0
 
-    def __enter__(self) -> "LayerStackTransaction":
+    def __enter__(self) -> LayerStackTransaction:
         wait_start = time.perf_counter()
         self._manager._lock.acquire()
         acquired_at = time.perf_counter()

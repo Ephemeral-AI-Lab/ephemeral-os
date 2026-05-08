@@ -67,9 +67,8 @@ def classify_path(raw_path: str, workspace_root: str) -> ClassifiedPath:
     else:
         candidate = raw
         anchored_to_workspace = (
-            raw == workspace_literal
+            raw in (workspace_literal, workspace_real)
             or raw.startswith(workspace_literal + "/")
-            or raw == workspace_real
             or raw.startswith(workspace_real + "/")
         )
 

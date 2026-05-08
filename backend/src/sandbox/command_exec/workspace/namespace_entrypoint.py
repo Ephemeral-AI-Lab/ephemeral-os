@@ -87,7 +87,7 @@ def execute(payload: dict[str, Any]) -> int:
         return exit_code
     except Exception as exc:
         with stderr_ref.open("ab") as stderr_file:
-            stderr_file.write(f"workspace command failed: {exc}\n".encode("utf-8"))
+            stderr_file.write(f"workspace command failed: {exc}\n".encode())
         return 126
     finally:
         _umount(workspace_root)
@@ -105,8 +105,7 @@ def _mount_overlay(
     subprocess.run(
         ["mount", "-t", "overlay", "overlay", "-o", options, str(workspace_root)],
         check=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
     )
 

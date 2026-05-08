@@ -66,10 +66,7 @@ def has_ancestor_in(rel: str, members: frozenset[str]) -> bool:
     if not members:
         return False
     parts = PurePosixPath(rel).parts
-    for index in range(1, len(parts)):
-        if "/".join(parts[:index]) in members:
-            return True
-    return False
+    return any("/".join(parts[:index]) in members for index in range(1, len(parts)))
 
 
 __all__ = [

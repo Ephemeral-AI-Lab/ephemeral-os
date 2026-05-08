@@ -26,13 +26,11 @@ class WorkspaceReplacementMountSpec:
     lowerdir: str
     upperdir: str
     workdir: str
-    manifest_version: int
-    lease_id: str
 
     def __post_init__(self) -> None:
         if not str(self.workspace_root).startswith("/"):
             raise ValueError("workspace_root must be absolute")
-        for field_name in ("lowerdir", "upperdir", "workdir", "lease_id"):
+        for field_name in ("lowerdir", "upperdir", "workdir"):
             if not str(getattr(self, field_name)).strip():
                 raise ValueError(f"{field_name} must not be empty")
 
@@ -155,8 +153,7 @@ def _run_private_mount_namespace(
             "sandbox.command_exec.workspace.namespace_entrypoint",
             str(payload_ref),
         ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         timeout=timeout,
         check=False,
     )

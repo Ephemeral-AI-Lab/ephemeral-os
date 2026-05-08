@@ -103,10 +103,7 @@ def _entries_match(left: Path, right: Path) -> bool:
 
 def _has_payload_ancestor(rel: Path, payload_paths: set[Path]) -> bool:
     parts = rel.parts
-    for index in range(1, len(parts)):
-        if Path(*parts[:index]) in payload_paths:
-            return True
-    return False
+    return any(Path(*parts[:index]) in payload_paths for index in range(1, len(parts)))
 
 
 def _walk_upperdir(upper_root: Path) -> Iterator[OverlayPathChange]:

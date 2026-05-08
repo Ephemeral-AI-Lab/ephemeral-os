@@ -6,7 +6,7 @@ import os
 import time
 from collections.abc import Callable
 
-from sandbox.command_exec.workspace import mount as workspace_mount
+import sandbox.command_exec.workspace.mount as workspace_mount
 from sandbox.layer_stack.manifest import (
     manifest_path,
     read_manifest,

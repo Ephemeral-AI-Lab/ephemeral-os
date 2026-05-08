@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import shutil
 import time
-from dataclasses import dataclass
 from pathlib import Path
 from types import TracebackType
 from uuid import uuid4
@@ -38,12 +37,6 @@ from sandbox.occ.ports import (
 # the kernel-level copy wins. Crossover measured between 4 KiB (even)
 # and 64 KiB (clear win); 16 KiB is conservative on the win side.
 _SMALL_FILE_BYTES_THRESHOLD = 16 * 1024
-
-
-@dataclass(frozen=True)
-class PathValidation:
-    result: FileResult
-    accepted_delta: LayerDelta | None
 
 
 class OccCommitTransaction:
@@ -87,7 +80,7 @@ class OccCommitTransaction:
                 hasher=self._hasher,
             ) as stager:
                 validate_start = time.perf_counter()
-                validations: list[PathValidation] = []
+                validations: list[tuple[FileResult, LayerDelta | None]] = []
                 occ_gated_failed = False
                 gated_read_total = 0.0
                 gated_apply_total = 0.0
@@ -98,18 +91,18 @@ class OccCommitTransaction:
                 gated_count = 0
                 direct_count = 0
                 for group in prepared.path_groups:
-                    validation = self._validate_group(
+                    result, accepted_delta = self._validate_group(
                         group,
                         active_manifest=active_manifest,
                         stager=stager,
                     )
-                    validations.append(validation)
+                    validations.append((result, accepted_delta))
                     if (
                         group.route is RouteDecision.OCC_GATED_MERGE
-                        and validation.result.status is not FileStatus.ACCEPTED
+                        and result.status is not FileStatus.ACCEPTED
                     ):
                         occ_gated_failed = True
-                    rt = validation.result.timings
+                    rt = result.timings
                     if group.route is RouteDecision.OCC_GATED_MERGE:
                         gated_count += 1
                         gated_read_total += rt.get("occ.gated.read_current_s", 0.0)
@@ -138,7 +131,7 @@ class OccCommitTransaction:
                 timings["occ.commit.direct_stage_delta_total_s"] = direct_stage_total
                 timings["occ.commit.direct_path_count"] = float(direct_count)
 
-                files = tuple(validation.result for validation in validations)
+                files = tuple(result for result, _ in validations)
                 if _must_skip_publish(
                     prepared,
                     files,
@@ -157,9 +150,9 @@ class OccCommitTransaction:
                 collect_start = time.perf_counter()
                 changes = tuple(
                     change
-                    for validation in validations
-                    if validation.accepted_delta is not None
-                    for change in validation.accepted_delta.changes
+                    for _, accepted_delta in validations
+                    if accepted_delta is not None
+                    for change in accepted_delta.changes
                 )
                 timings["occ.commit.collect_changes_s"] = (
                     time.perf_counter() - collect_start
@@ -201,49 +194,47 @@ class OccCommitTransaction:
         group: PreparedPathGroup,
         *,
         active_manifest: Manifest,
-        stager: "_LayerChangeStager",
-    ) -> PathValidation:
+        stager: _LayerChangeStager,
+    ) -> tuple[FileResult, LayerDelta | None]:
         if group.route is RouteDecision.DROP:
-            return PathValidation(
-                result=FileResult(
+            return (
+                FileResult(
                     path=group.path,
                     status=FileStatus.DROPPED,
                     message=group.message or "change dropped",
                 ),
-                accepted_delta=None,
+                None,
             )
         if group.route is RouteDecision.REJECT:
-            return PathValidation(
-                result=FileResult(
+            return (
+                FileResult(
                     path=group.path,
                     status=FileStatus.REJECTED,
                     message=group.message or "change rejected",
                 ),
-                accepted_delta=None,
+                None,
             )
         if group.route is RouteDecision.OCC_SKIPPED_MERGE:
-            result, delta = self._direct.stage_group(
+            return self._direct.stage_group(
                 group,
                 active_manifest=active_manifest,
                 stage_write=stager.write,
                 stage_write_from_path=stager.write_from_path,
             )
-            return PathValidation(result=result, accepted_delta=delta)
         if group.route is RouteDecision.OCC_GATED_MERGE:
-            result, delta = self._gated.stage_group(
+            return self._gated.stage_group(
                 group,
                 active_manifest=active_manifest,
                 stage_write=stager.write,
                 stage_write_from_path=stager.write_from_path,
             )
-            return PathValidation(result=result, accepted_delta=delta)
-        return PathValidation(
-            result=FileResult(
+        return (
+            FileResult(
                 path=group.path,
                 status=FileStatus.REJECTED,
                 message=f"unsupported route: {group.route}",
             ),
-            accepted_delta=None,
+            None,
         )
 
 
@@ -270,7 +261,7 @@ class _LayerChangeStager:
     def write_count(self) -> int:
         return self._write_count
 
-    def __enter__(self) -> "_LayerChangeStager":
+    def __enter__(self) -> _LayerChangeStager:
         area = self._staging.allocate_commit_staging(uuid4().hex)
         self._staging_id = area.staging_id
         self._staging_path = area.path

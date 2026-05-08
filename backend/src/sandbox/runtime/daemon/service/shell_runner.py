@@ -7,7 +7,6 @@ import shutil
 import time
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import cast
 from uuid import uuid4
 
 from sandbox.occ.result_projection import (
@@ -52,7 +51,7 @@ async def _execute_shell(
     *,
     layer_stack: WorkspaceLeaseClient,
     occ_client: OCCMutationClient,
-    gitignore: "SnapshotGitignoreOracle",
+    gitignore: SnapshotGitignoreOracle,
     storage_root: Path,
 ) -> CommandExecResult:
     total_start = time.perf_counter()
@@ -82,8 +81,6 @@ async def _execute_shell(
             lowerdir=lease.lowerdir,
             upperdir=str(run_dir / "upper"),
             workdir=str(run_dir / "work"),
-            manifest_version=lease.manifest_version,
-            lease_id=lease.lease_id,
         )
         process = await run_sync_in_executor(
             run_workspace_replaced_command,
@@ -236,23 +233,15 @@ def _services(
 ) -> tuple[
     WorkspaceLeaseClient,
     OCCMutationClient,
-    "SnapshotGitignoreOracle",
+    SnapshotGitignoreOracle,
     Path,
 ]:
     backend = occ_backend.build_occ_backend(_layer_stack_root(args))
-    return cast(
-        tuple[
-            WorkspaceLeaseClient,
-            OCCMutationClient,
-            "SnapshotGitignoreOracle",
-            Path,
-        ],
-        (
-            backend.layer_stack,
-            backend.occ_client,
-            backend.gitignore,
-            backend.layer_stack.storage_root,
-        ),
+    return (
+        backend.layer_stack,
+        backend.occ_client,
+        backend.gitignore,
+        backend.layer_stack.storage_root,
     )
 
 

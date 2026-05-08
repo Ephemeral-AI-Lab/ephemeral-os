@@ -18,7 +18,7 @@ from sandbox.provider.daytona.client.sync_client import (
     _SANDBOX_TIMEOUT_SECONDS,
     _SNAPSHOT_LABEL,
     _SNAPSHOT_PAGE_LIMIT,
-    _daytona_classes,
+    _creation_param_classes,
     _normalize_dict,
     _normalize_optional_text,
     _paginate_all,
@@ -191,7 +191,9 @@ class DaytonaProviderAdapter:
             clean_labels[_IMAGE_LABEL] = normalized_image
 
         client = acquire_client()
-        _, _, CreateSandboxFromSnapshotParams, CreateSandboxFromImageParams = _daytona_classes()
+        CreateSandboxFromSnapshotParams, CreateSandboxFromImageParams = (
+            _creation_param_classes()
+        )
 
         if normalized_image:
             params = CreateSandboxFromImageParams(
@@ -297,8 +299,8 @@ class DaytonaProviderAdapter:
         *,
         cwd: str | None = None,
         timeout: int | None = None,
-    ) -> "RawExecResult":
-        sandbox = await self._resolve(sandbox_id)
+    ) -> RawExecResult:
+        sandbox = await self._resolver(sandbox_id)
         wrapped = wrap_bash_command(command, cwd=cwd)
         kwargs: dict[str, Any] = {}
         if timeout is not None:
@@ -314,9 +316,6 @@ class DaytonaProviderAdapter:
             stdout=stdout,
             stderr=str(getattr(response, "stderr", "") or ""),
         )
-
-    async def _resolve(self, sandbox_id: str) -> Any:
-        return await self._resolver(sandbox_id)
 
     # -- Hook ----------------------------------------------------------------
 

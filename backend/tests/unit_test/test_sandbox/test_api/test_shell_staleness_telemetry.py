@@ -24,10 +24,10 @@ from sandbox.runtime.daemon.handler.request_context import _services
 class _BlockingCommandRunner:
     """Pause after snapshot lease preparation so the test can advance active."""
 
-    def __init__(self) -> None:
+    def __init__(self, snapshot_version: int) -> None:
         self.started = threading.Event()
         self.released = threading.Event()
-        self.snapshot_version: int | None = None
+        self.snapshot_version = snapshot_version
 
     def __call__(
         self,
@@ -38,7 +38,6 @@ class _BlockingCommandRunner:
         timings,
     ) -> ShellProcessResult:
         del request
-        self.snapshot_version = spec.manifest_version
         self.started.set()
         if not self.released.wait(timeout=10):
             raise TimeoutError("blocking command runner timed out")
@@ -128,7 +127,7 @@ async def _run_occ_clean_stale_shell(
     stack = tmp_path / f"stack-{uuid4().hex}"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
     manager = LayerStackManager(stack)
-    runner = _BlockingCommandRunner()
+    runner = _BlockingCommandRunner(manager.read_active_manifest().version)
     monkeypatch.setattr(
         shell_runner,
         "run_workspace_replaced_command",
@@ -155,8 +154,6 @@ async def _run_occ_clean_stale_shell(
         started = await asyncio.to_thread(runner.started.wait, 5)
         if not started:
             raise AssertionError("blocked runner did not start")
-        if runner.snapshot_version is None:
-            raise AssertionError("blocked runner did not record snapshot version")
         for index in range(advance_count):
             _publish(
                 manager,

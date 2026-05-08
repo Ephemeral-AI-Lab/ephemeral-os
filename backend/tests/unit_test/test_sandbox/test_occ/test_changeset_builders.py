@@ -7,7 +7,7 @@ from sandbox.occ.changeset.builders import (
     build_overlay_delete_change,
     build_overlay_write_change,
 )
-from sandbox.occ.changeset.types import DeleteChange, WriteChange
+from sandbox.occ.changeset.types import WriteChange
 
 
 def test_api_write_builder_tags_api_source_and_bytes_payload() -> None:

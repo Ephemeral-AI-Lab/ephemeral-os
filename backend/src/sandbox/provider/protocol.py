@@ -61,7 +61,7 @@ class ProviderAdapter(Protocol):
         *,
         cwd: str | None = None,
         timeout: int | None = None,
-    ) -> "RawExecResult": ...
+    ) -> RawExecResult: ...
 
 
 __all__ = [
