@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-
 from sandbox.occ.changeset.prepared import CommitOptions, RouteDecision
 from sandbox.occ.changeset.types import (
     EditChange,
@@ -26,12 +24,10 @@ class _Gitignore:
 
 def _prepare(changes, *, ignored: set[str] | None = None):
     router = OccOrchestrator(_Gitignore(ignored))
-    return asyncio.run(
-        router.prepare(
-            changes,
-            snapshot=None,
-            options=CommitOptions(),
-        )
+    return router.prepare_sync(
+        changes,
+        snapshot=None,
+        options=CommitOptions(),
     )
 
 
@@ -58,17 +54,15 @@ def test_routes_occ_gated_occ_skipped_drop_and_reject_groups() -> None:
 def test_special_change_kinds_consult_gitignore_before_routing() -> None:
     gitignore = _Gitignore({"cache", "ignored-link"})
     router = OccOrchestrator(gitignore)
-    prepared = asyncio.run(
-        router.prepare(
-            [
-                SymlinkChange(path="bin/data.dat", target="/tmp/data"),
-                SymlinkChange(path="ignored-link", target="/tmp/data"),
-                OpaqueDirChange(path="cache", kept_children=frozenset({"keep"})),
-                OpaqueDirChange(path="pkg", kept_children=frozenset({"keep"})),
-            ],
-            snapshot=None,
-            options=CommitOptions(),
-        )
+    prepared = router.prepare_sync(
+        [
+            SymlinkChange(path="bin/data.dat", target="/tmp/data"),
+            SymlinkChange(path="ignored-link", target="/tmp/data"),
+            OpaqueDirChange(path="cache", kept_children=frozenset({"keep"})),
+            OpaqueDirChange(path="pkg", kept_children=frozenset({"keep"})),
+        ],
+        snapshot=None,
+        options=CommitOptions(),
     )
 
     assert [(group.path, group.route) for group in prepared.path_groups] == [

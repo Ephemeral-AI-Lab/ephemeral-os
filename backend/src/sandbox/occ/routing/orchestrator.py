@@ -5,7 +5,6 @@ from __future__ import annotations
 import time
 from collections import OrderedDict
 from collections.abc import Callable, Sequence
-from typing import cast
 
 from sandbox.layer_stack.layer.change import normalize_layer_path
 from sandbox.layer_stack.manifest import Manifest
@@ -21,7 +20,6 @@ from sandbox.occ.changeset.types import (
     WriteChange,
 )
 from sandbox.occ.content.gitignore_oracle import GitignoreMatcher
-from sandbox.runtime.async_bridge import run_sync_in_executor
 
 BaseHashReader = Callable[[str], str | None]
 
@@ -31,26 +29,6 @@ class OccOrchestrator:
 
     def __init__(self, gitignore: GitignoreMatcher) -> None:
         self._gitignore = gitignore
-
-    async def prepare(
-        self,
-        changes: Sequence[Change],
-        *,
-        snapshot: Manifest | None,
-        options: CommitOptions,
-        base_hash_reader: BaseHashReader | None = None,
-    ) -> PreparedChangeset:
-        """Route changes and infer gated base hashes concurrently by path."""
-        return cast(
-            PreparedChangeset,
-            await run_sync_in_executor(
-                self.prepare_sync,
-                changes,
-                snapshot=snapshot,
-                options=options,
-                base_hash_reader=base_hash_reader,
-            ),
-        )
 
     def prepare_sync(
         self,
@@ -151,7 +129,6 @@ class OccOrchestrator:
             path=path,
             route=route,
             changes=prepared_changes,
-            base_hash=base_hash,
             message=message,
         )
 

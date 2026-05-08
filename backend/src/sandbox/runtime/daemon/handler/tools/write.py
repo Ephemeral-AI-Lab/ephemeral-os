@@ -69,9 +69,8 @@ async def _write_in_workspace(
     try:
         if not overwrite:
             # create-only: reject if the path already exists in the leased
-            # validation snapshot. OCC's gated merge does not enforce
-            # WriteChange.create_only on its own — host-side existence check
-            # against snapshot N is the §6 source of truth for this rule.
+            # validation snapshot. Host-side existence check against snapshot
+            # N is the source of truth for this API rule.
             read_start = time.perf_counter()
             bytes_, exists_in_n = await run_sync_in_executor(
                 services.layer_stack.read_bytes, layer_path, lease.manifest
@@ -107,7 +106,6 @@ async def _write_in_workspace(
         change = build_api_write_change(
             path=layer_path,
             final_content=content,
-            create_only=not overwrite,
         )
 
         def read_base_hash(path: str) -> str | None:

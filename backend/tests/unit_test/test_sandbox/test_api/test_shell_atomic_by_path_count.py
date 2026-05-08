@@ -72,7 +72,6 @@ def _patch_workspace_to_occ(monkeypatch: pytest.MonkeyPatch) -> None:
                 path=path,
                 final_content=b"x",
                 source="overlay_capture",
-                create_only=False,
             )
             for path in path_changes
         )

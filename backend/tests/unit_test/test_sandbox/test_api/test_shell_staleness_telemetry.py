@@ -14,7 +14,7 @@ from sandbox.layer_stack import LayerChange, LayerStackManager
 from sandbox.layer_stack.workspace.base import build_workspace_base
 from sandbox.occ.content.hashing import ContentHasher
 from sandbox.occ.changeset.builders import build_api_write_change
-from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
+from sandbox.occ.changeset.prepared import CommitOptions
 from sandbox.occ.changeset.types import FileStatus
 from sandbox.command_exec.contract.result import ShellProcessResult
 from sandbox.runtime.daemon.service import occ_backend, shell_runner
@@ -106,10 +106,9 @@ async def test_daemon_gitignore_uses_layer_stack_snapshot(tmp_path: Path) -> Non
     # Reach through the OCC client to its underlying OccService for the assertion.
     result = await services.occ_client._service.apply_changeset(
         [build_api_write_change(path="dist/app.js", final_content="first\n")],
-        options=CommitOptions(caller_id="test", description="ignored output"),
+        options=CommitOptions(),
     )
 
-    assert not isinstance(result, PreparedChangeset)
     assert result.files[0].status is FileStatus.ACCEPTED
     assert result.files[0].timings["occ.direct.read_current_s"] >= 0.0
     assert manager.read_text("dist/app.js") == ("first\n", True)

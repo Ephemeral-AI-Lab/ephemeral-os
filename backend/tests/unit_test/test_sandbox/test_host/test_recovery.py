@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from sandbox.contract import RawExecResult
+from sandbox.models import RawExecResult
 
 
 @pytest.fixture(autouse=True)

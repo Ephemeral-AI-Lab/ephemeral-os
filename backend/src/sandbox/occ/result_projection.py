@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from sandbox.contract import ConflictInfo
+from sandbox.models import ConflictInfo
 from sandbox.occ.changeset.types import (
     FileResult,
     is_published_status,

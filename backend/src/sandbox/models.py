@@ -1,6 +1,6 @@
-"""Request/result models and shared data types for the sandbox API.
+"""Shared request/result models for sandbox APIs and provider seams.
 
-This module is the contract surface. It must not import from provider,
+This module is type-only domain structure. It must not import from provider,
 runtime, OCC, or overlay internals.
 """
 
@@ -9,25 +9,15 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 
-# -- Shared identity --------------------------------------------------------
-
 @dataclass(frozen=True, kw_only=True)
 class SandboxCaller:
-    """Caller identity threaded onto every audit-aware request.
-
-    ``agent_id`` is the ledger identity label and is the only required
-    field; the others are populated when the runtime knows them. Keeping
-    the optional fields defaulted lets call sites that have only an agent
-    name still construct a valid caller identity.
-    """
+    """Caller identity threaded onto every audit-aware request."""
 
     agent_id: str
     run_id: str = ""
     agent_run_id: str = ""
     task_id: str = ""
 
-
-# -- Result hierarchy -------------------------------------------------------
 
 @dataclass(frozen=True, kw_only=True)
 class SandboxResultBase:
@@ -64,8 +54,6 @@ class RawExecResult(SandboxResultBase):
     stdout: str
     stderr: str = ""
 
-
-# -- Public file I/O --------------------------------------------------------
 
 @dataclass(frozen=True, kw_only=True)
 class ReadFileRequest:
@@ -114,10 +102,6 @@ class EditFileRequest:
 class EditFileResult(GuardedResultBase):
     applied_edits: int = 0
 
-
-# -- Public search ----------------------------------------------------------
-
-# -- Public shell -----------------------------------------------------------
 
 @dataclass(frozen=True, kw_only=True)
 class ShellRequest:

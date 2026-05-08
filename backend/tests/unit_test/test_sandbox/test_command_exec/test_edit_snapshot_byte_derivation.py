@@ -193,7 +193,7 @@ async def test_in_workspace_edit_same_path_M_gt_N_surfaces_hard_conflict(
                 )
             ],
             snapshot=lease.manifest,
-            options=CommitOptions(caller_id="test", description="edit shared"),
+            options=CommitOptions(),
         )
 
         # Concurrent publish on the SAME path bumps the manifest to M = N+1.

@@ -8,10 +8,17 @@ import shutil
 import time
 import uuid
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 from sandbox.layer_stack.filesystem import join_layer_path, remove_path
-from sandbox.layer_stack.layer.change import LayerChange
+from sandbox.layer_stack.layer.change import (
+    DeleteLayerChange,
+    LayerChange,
+    OpaqueDirLayerChange,
+    SymlinkLayerChange,
+    WriteLayerChange,
+)
 from sandbox.layer_stack.layer.index import OPAQUE_MARKER, WHITEOUT_PREFIX
 from sandbox.layer_stack.manifest import (
     LAYERS_DIR,
@@ -24,6 +31,12 @@ from sandbox.layer_stack.manifest import (
     write_manifest_atomic,
 )
 from sandbox.layer_stack.timing import record_elapsed
+
+
+@dataclass(frozen=True)
+class _PreparedLayerChange:
+    change: LayerChange
+    write_content: bytes | None = None
 
 
 class LayerPublisher:
@@ -60,14 +73,14 @@ class LayerPublisher:
             record_elapsed(timings, "layer_stack.publish.total_s", total_start)
             return active
 
-        digest_start = time.perf_counter()
-        layer_digest = _changes_digest(changes)
+        prepare_start = time.perf_counter()
+        prepared_changes, layer_digest = _prepare_changes(changes)
         if _head_layer_digest(self._storage_root, active) == layer_digest:
-            record_elapsed(timings, "layer_stack.publish.digest_check_s", digest_start)
+            _record_prepare_elapsed(timings, prepare_start)
             record_elapsed(timings, "layer_stack.publish.idempotent_s", total_start)
             record_elapsed(timings, "layer_stack.publish.total_s", total_start)
             return active
-        record_elapsed(timings, "layer_stack.publish.digest_check_s", digest_start)
+        _record_prepare_elapsed(timings, prepare_start)
 
         allocate_start = time.perf_counter()
         layer_id, staging_dir, layer_dir = self._allocate_layer_paths(active.version + 1)
@@ -81,8 +94,8 @@ class LayerPublisher:
         record_elapsed(timings, "layer_stack.publish.create_staging_s", create_staging_start)
         try:
             write_changes_start = time.perf_counter()
-            for change in changes:
-                self._write_change(staging_dir, change)
+            for prepared in prepared_changes:
+                self._write_change(staging_dir, prepared)
             record_elapsed(
                 timings,
                 "layer_stack.publish.write_changes_s",
@@ -142,35 +155,35 @@ class LayerPublisher:
                 return layer_id, staging_dir, layer_dir
         raise RuntimeError("could not allocate a unique layer id")
 
-    def _write_change(self, layer_dir: Path, change: LayerChange) -> None:
-        if change.kind == "write":
-            self._write_file(layer_dir, change)
-        elif change.kind == "delete":
+    def _write_change(self, layer_dir: Path, prepared: _PreparedLayerChange) -> None:
+        change = prepared.change
+        if isinstance(change, WriteLayerChange):
+            self._write_file(layer_dir, change, prepared.write_content)
+        elif isinstance(change, DeleteLayerChange):
             _whiteout_path(layer_dir, change.path).write_text("", encoding="utf-8")
-        elif change.kind == "symlink":
+        elif isinstance(change, SymlinkLayerChange):
             self._write_symlink(layer_dir, change)
-        elif change.kind == "opaque_dir":
+        elif isinstance(change, OpaqueDirLayerChange):
             marker = join_layer_path(layer_dir, change.path) / OPAQUE_MARKER
             marker.parent.mkdir(parents=True, exist_ok=True)
             marker.write_text("", encoding="utf-8")
         else:
             raise ValueError(f"unsupported layer change kind: {change.kind}")
 
-    def _write_file(self, layer_dir: Path, change: LayerChange) -> None:
-        if change.source_path is None:
-            raise ValueError("write changes require source_path")
-        source = Path(change.source_path)
-        content = source.read_bytes()
-        if change.content_hash and hashlib.sha256(content).hexdigest() != change.content_hash:
-            raise ValueError(f"content hash mismatch for {change.path}")
+    def _write_file(
+        self,
+        layer_dir: Path,
+        change: WriteLayerChange,
+        content: bytes | None,
+    ) -> None:
+        if content is None:
+            raise ValueError(f"prepared write content missing for {change.path}")
         target = join_layer_path(layer_dir, change.path)
         target.parent.mkdir(parents=True, exist_ok=True)
         remove_path(target)
         target.write_bytes(content)
 
-    def _write_symlink(self, layer_dir: Path, change: LayerChange) -> None:
-        if change.source_path is None:
-            raise ValueError("symlink changes require source_path target")
+    def _write_symlink(self, layer_dir: Path, change: SymlinkLayerChange) -> None:
         target = join_layer_path(layer_dir, change.path)
         target.parent.mkdir(parents=True, exist_ok=True)
         os.symlink(change.source_path, target)
@@ -180,21 +193,41 @@ def _default_layer_id(next_version: int) -> str:
     return f"L{next_version:06d}-{uuid.uuid4().hex[:8]}"
 
 
-def _changes_digest(changes: Sequence[LayerChange]) -> str:
+def _record_prepare_elapsed(
+    timings: dict[str, float] | None,
+    prepare_start: float,
+) -> None:
+    if timings is None:
+        return
+    elapsed = time.perf_counter() - prepare_start
+    timings["layer_stack.publish.prepare_changes_s"] = elapsed
+    timings["layer_stack.publish.digest_check_s"] = elapsed
+
+
+def _prepare_changes(
+    changes: Sequence[LayerChange],
+) -> tuple[tuple[_PreparedLayerChange, ...], str]:
     digest = hashlib.sha256()
+    prepared: list[_PreparedLayerChange] = []
     for change in changes:
         digest.update(change.kind.encode("utf-8"))
         digest.update(b"\0")
         digest.update(change.path.encode("utf-8"))
         digest.update(b"\0")
-        if change.kind == "write":
-            if change.source_path is None:
-                raise ValueError("write changes require source_path")
-            digest.update(Path(change.source_path).read_bytes())
-        elif change.kind == "symlink":
-            digest.update(str(change.source_path or "").encode("utf-8"))
+        if isinstance(change, WriteLayerChange):
+            content = Path(change.source_path).read_bytes()
+            content_hash = hashlib.sha256(content).hexdigest()
+            if change.content_hash and content_hash != change.content_hash:
+                raise ValueError(f"content hash mismatch for {change.path}")
+            digest.update(content)
+            prepared.append(_PreparedLayerChange(change=change, write_content=content))
+        elif isinstance(change, SymlinkLayerChange):
+            digest.update(change.source_path.encode("utf-8"))
+            prepared.append(_PreparedLayerChange(change=change))
+        else:
+            prepared.append(_PreparedLayerChange(change=change))
         digest.update(b"\0")
-    return digest.hexdigest()
+    return tuple(prepared), digest.hexdigest()
 
 
 def _metadata_dir(storage_root: Path) -> Path:

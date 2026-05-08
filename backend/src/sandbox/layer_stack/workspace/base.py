@@ -8,7 +8,7 @@ import shutil
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, TypeAlias
 
 from sandbox.layer_stack.timing import record_elapsed
 from sandbox.layer_stack.manifest import (
@@ -55,13 +55,28 @@ class WorkspaceBaseIncompleteError(WorkspaceBindingError):
 
 
 @dataclass(frozen=True)
-class _BaseEntry:
+class _DirectoryEntry:
     path: str
-    kind: Literal["directory", "file", "symlink"]
-    source_path: Path | None = None
-    link_target: str | None = None
-    size: int = 0
-    content_hash: str = ""
+    kind: Literal["directory"] = "directory"
+
+
+@dataclass(frozen=True)
+class _FileEntry:
+    path: str
+    source_path: Path
+    size: int
+    content_hash: str
+    kind: Literal["file"] = "file"
+
+
+@dataclass(frozen=True)
+class _SymlinkEntry:
+    path: str
+    link_target: str
+    kind: Literal["symlink"] = "symlink"
+
+
+_BaseEntry: TypeAlias = _DirectoryEntry | _FileEntry | _SymlinkEntry
 
 
 def build_workspace_base(
@@ -97,10 +112,10 @@ def build_workspace_base(
     entries, root_hash = _collect_base_entries(workspace)
     record_elapsed(timings, "workspace_base.collect_s", collect_start)
     if timings is not None:
-        files = sum(1 for e in entries if e.kind == "file")
-        dirs = sum(1 for e in entries if e.kind == "directory")
-        symlinks = sum(1 for e in entries if e.kind == "symlink")
-        bytes_total = sum(e.size for e in entries if e.kind == "file")
+        files = sum(1 for e in entries if isinstance(e, _FileEntry))
+        dirs = sum(1 for e in entries if isinstance(e, _DirectoryEntry))
+        symlinks = sum(1 for e in entries if isinstance(e, _SymlinkEntry))
+        bytes_total = sum(e.size for e in entries if isinstance(e, _FileEntry))
         timings["workspace_base.inventory.files"] = float(files)
         timings["workspace_base.inventory.dirs"] = float(dirs)
         timings["workspace_base.inventory.symlinks"] = float(symlinks)
@@ -200,7 +215,7 @@ def _collect_base_entries(
                 )
                 entries.append(entry)
                 continue
-            entries.append(_BaseEntry(path=rel, kind="directory"))
+            entries.append(_DirectoryEntry(path=rel))
             kept_dirs.append(dirname)
         dirnames[:] = kept_dirs
 
@@ -232,9 +247,8 @@ def _collect_base_entries(
                 special.append(rel)
                 continue
             entries.append(
-                _BaseEntry(
+                _FileEntry(
                     path=rel,
-                    kind="file",
                     source_path=path,
                     size=size,
                     content_hash=content_hash,
@@ -276,7 +290,7 @@ def _symlink_entry(
     rel: str,
 ) -> _BaseEntry:
     target = os.readlink(path)
-    return _BaseEntry(path=rel, kind="symlink", link_target=target)
+    return _SymlinkEntry(path=rel, link_target=target)
 
 
 def _write_base_layer(stack: Path, entries: tuple[_BaseEntry, ...]) -> LayerRef:
@@ -290,8 +304,7 @@ def _write_base_layer(stack: Path, entries: tuple[_BaseEntry, ...]) -> LayerRef:
         for entry in entries:
             target = staging_dir.joinpath(*entry.path.split("/"))
             target.parent.mkdir(parents=True, exist_ok=True)
-            if entry.kind == "file":
-                assert entry.source_path is not None
+            if isinstance(entry, _FileEntry):
                 try:
                     current_hash = _file_hash(entry.source_path)
                 except FileNotFoundError as exc:
@@ -305,9 +318,9 @@ def _write_base_layer(stack: Path, entries: tuple[_BaseEntry, ...]) -> LayerRef:
                         unstable_paths=(entry.path,),
                     )
                 shutil.copy2(entry.source_path, target)
-            elif entry.kind == "symlink":
-                os.symlink(str(entry.link_target or ""), target)
-            elif entry.kind == "directory":
+            elif isinstance(entry, _SymlinkEntry):
+                os.symlink(entry.link_target, target)
+            elif isinstance(entry, _DirectoryEntry):
                 target.mkdir(parents=True, exist_ok=True)
         layer_dir.parent.mkdir(parents=True, exist_ok=True)
         os.replace(staging_dir, layer_dir)
@@ -331,12 +344,12 @@ def _update_root_hash(digest: hashlib._Hash, entry: _BaseEntry) -> None:
     digest.update(b"\0")
     digest.update(entry.path.encode("utf-8"))
     digest.update(b"\0")
-    if entry.kind == "file":
+    if isinstance(entry, _FileEntry):
         digest.update(str(entry.size).encode("ascii"))
         digest.update(b"\0")
         digest.update(entry.content_hash.encode("ascii"))
-    elif entry.kind == "symlink":
-        digest.update(str(entry.link_target or "").encode("utf-8"))
+    elif isinstance(entry, _SymlinkEntry):
+        digest.update(entry.link_target.encode("utf-8"))
     digest.update(b"\0")
 
 

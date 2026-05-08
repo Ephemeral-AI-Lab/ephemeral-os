@@ -239,6 +239,15 @@ def test_removed_lowerdir_cache_modules_stay_absent() -> None:
             raise AssertionError(f"{module} should not be importable")
 
 
+def test_removed_top_level_contract_module_stays_absent() -> None:
+    try:
+        importlib.import_module("sandbox.contract")
+    except ModuleNotFoundError as exc:
+        assert exc.name == "sandbox.contract"
+    else:
+        raise AssertionError("sandbox.contract should not be importable")
+
+
 def test_command_exec_imports_only_client_protocol_boundaries() -> None:
     offenders: list[str] = []
     command_exec_root = SRC_ROOT / "sandbox" / "command_exec"

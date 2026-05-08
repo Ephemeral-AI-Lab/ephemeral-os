@@ -38,21 +38,21 @@ class LayerStackClient:
     def read_bytes(
         self,
         path: str,
-        manifest: Manifest | None = None,
+        manifest: Manifest,
     ) -> tuple[bytes | None, bool]:
         return self.manager.read_bytes(path, manifest)
 
     def read_text(
         self,
         path: str,
-        manifest: Manifest | None = None,
+        manifest: Manifest,
     ) -> tuple[str, bool]:
         return self.manager.read_text(path, manifest)
 
     def materialize(
         self,
         destination: str | Path,
-        manifest: Manifest | None = None,
+        manifest: Manifest,
     ) -> None:
         self.manager.materialize(destination, manifest)
 
@@ -77,6 +77,9 @@ class LayerStackClient:
     def release_lease(self, *, workspace_ref: str = "", lease_id: str) -> bool:
         del workspace_ref
         return self.manager.release_lease(lease_id)
+
+    def squash(self, *, max_depth: int) -> Manifest | None:
+        return self.manager.squash(max_depth=max_depth)
 
 
 __all__ = ["LayerStackClient"]

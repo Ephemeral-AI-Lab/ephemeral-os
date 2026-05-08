@@ -61,7 +61,8 @@ assert routes == [
     (".git/config", RouteDecision.DROP.value),
     ("../escape", RouteDecision.REJECT.value),
 ]
-assert prepared.path_groups[0].base_hash == ContentHasher().hash_bytes(b"base\n")
+[first_change] = prepared.path_groups[0].changes
+assert first_change.base_hash == ContentHasher().hash_bytes(b"base\n")
 
 happy = service.apply_changeset_sync(
     [WriteChange(path="src/app.py", final_content=b"next\n")],

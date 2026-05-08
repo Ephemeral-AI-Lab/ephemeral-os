@@ -25,7 +25,7 @@ from sandbox.command_exec.workspace.mount import (
     run_workspace_replaced_command,
 )
 from sandbox.layer_stack.workspace.binding import require_workspace_binding
-from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
+from sandbox.occ.changeset.prepared import CommitOptions
 from sandbox.occ.changeset.types import ChangesetResult
 from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
 from sandbox.overlay.capture.types import read_output_ref
@@ -187,15 +187,9 @@ async def _apply_workspace_capture(
     result = await occ_client.apply_changeset(
         typed_changes,
         snapshot=snapshot,
-        options=CommitOptions(
-            atomic=is_atomic,
-            caller_id=request.actor_id,
-            description=request.description,
-        ),
+        options=CommitOptions(atomic=is_atomic),
         workspace_ref=request.workspace_ref,
     )
-    if isinstance(result, PreparedChangeset):
-        raise TypeError("command-exec OCC client returned an uncommitted changeset")
     return result
 
 

@@ -54,7 +54,7 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/api/__init__.py",
         "sandbox/api/facade.py",
         "sandbox/api/tool/__init__.py",
-        "sandbox/contract/__init__.py",
+        "sandbox/models.py",
         "sandbox/runtime/__init__.py",
         "sandbox/runtime/async_bridge.py",
         "sandbox/runtime/daemon/__main__.py",
@@ -114,6 +114,7 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
     assert not (extract_dir / "sandbox/api/status.py").exists()
     assert not (extract_dir / "sandbox/api/tool/raw_exec.py").exists()
     assert not (extract_dir / "sandbox/api/tool/_payload.py").exists()
+    assert not (extract_dir / "sandbox/contract").exists()
     assert not (extract_dir / "sandbox/host").exists()
     assert not (extract_dir / "sandbox/provider").exists()
     assert not (extract_dir / "sandbox/testing").exists()

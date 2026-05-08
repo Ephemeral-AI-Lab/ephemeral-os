@@ -27,13 +27,13 @@ class SnapshotReader(Protocol):
     def read_bytes(
         self,
         path: str,
-        manifest: Manifest | None = None,
+        manifest: Manifest,
     ) -> tuple[bytes | None, bool]: ...
 
     def read_text(
         self,
         path: str,
-        manifest: Manifest | None = None,
+        manifest: Manifest,
     ) -> tuple[str, bool]: ...
 
 

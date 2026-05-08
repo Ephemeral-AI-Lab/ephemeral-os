@@ -68,7 +68,7 @@ assert stack.read_text("unicodé/边界.txt") == ("snowman-☃\n", True)
 huge_prepare_start = time.perf_counter()
 huge = service.prepare_changeset_sync(
     [WriteChange(path="huge/%05d.txt" % index, final_content=b"x") for index in range(10000)],
-    options=CommitOptions(description="phase4 huge changeset"),
+    options=CommitOptions(),
 )
 huge_prepare_ms = (time.perf_counter() - huge_prepare_start) * 1000.0
 assert len(huge.path_groups) == 10000

@@ -6,7 +6,7 @@ from collections.abc import Sequence
 
 import pytest
 
-from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
+from sandbox.occ.changeset.prepared import CommitOptions
 from sandbox.occ.changeset.types import Change, ChangesetResult
 from sandbox.occ.client import OCCClient
 
@@ -26,7 +26,7 @@ class _RecordingService:
         *,
         snapshot: object | None = None,
         options: CommitOptions | None = None,
-    ) -> ChangesetResult | PreparedChangeset:
+    ) -> ChangesetResult:
         del changes, snapshot, options
         self.called = True
         raise AssertionError("binding check should run before OCC mutation")

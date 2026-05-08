@@ -31,29 +31,146 @@ def normalize_layer_path(path: str, *, allow_root: bool = False) -> str:
     return "/".join(parts)
 
 
-@dataclass(frozen=True)
 class LayerChange:
+    """Compatibility factory for explicit layer-change variants."""
+
     path: str
     kind: LayerChangeKind
     content_hash: str | None = None
     source_path: str | None = None
 
-    def __post_init__(self) -> None:
-        object.__setattr__(self, "path", normalize_layer_path(self.path))
-        if self.kind == "write":
-            if not self.source_path:
-                raise ValueError("write changes require source_path")
-            return
-        if self.kind == "symlink":
-            if not self.source_path:
-                raise ValueError("symlink changes require source_path")
-            if self.content_hash is not None:
-                raise ValueError("symlink changes must not carry content_hash")
-            return
-        if self.source_path is not None:
-            raise ValueError(f"{self.kind} changes must not carry source_path")
-        if self.content_hash is not None:
-            raise ValueError(f"{self.kind} changes must not carry content_hash")
+    def __new__(
+        cls,
+        path: str,
+        kind: LayerChangeKind | None = None,
+        content_hash: str | None = None,
+        source_path: str | None = None,
+    ) -> LayerChange:
+        if cls is not LayerChange:
+            return super().__new__(cls)
+        if kind is None:
+            raise ValueError("layer change kind is required")
+
+        if kind == "delete":
+            return object.__new__(DeleteLayerChange)
+        if kind == "write":
+            return object.__new__(WriteLayerChange)
+        if kind == "symlink":
+            return object.__new__(SymlinkLayerChange)
+        if kind == "opaque_dir":
+            return object.__new__(OpaqueDirLayerChange)
+        raise ValueError(f"unsupported layer change kind: {kind}")
+
+    def __init__(
+        self,
+        path: str,
+        kind: LayerChangeKind,
+        content_hash: str | None = None,
+        source_path: str | None = None,
+    ) -> None:
+        del path, kind, content_hash, source_path
+
+
+@dataclass(frozen=True, init=False)
+class WriteLayerChange(LayerChange):
+    path: str
+    source_path: str
+    content_hash: str | None = None
+    kind: Literal["write"] = "write"
+
+    def __init__(
+        self,
+        path: str,
+        kind: LayerChangeKind = "write",
+        content_hash: str | None = None,
+        source_path: str | None = None,
+    ) -> None:
+        if kind != "write":
+            raise ValueError(f"unsupported write layer change kind: {kind}")
+        if not source_path:
+            raise ValueError("write changes require source_path")
+        object.__setattr__(self, "path", normalize_layer_path(path))
+        object.__setattr__(self, "source_path", source_path)
+        object.__setattr__(self, "content_hash", content_hash)
+        object.__setattr__(self, "kind", "write")
+
+
+@dataclass(frozen=True, init=False)
+class DeleteLayerChange(LayerChange):
+    path: str
+    kind: Literal["delete"] = "delete"
+    source_path: None = None
+    content_hash: None = None
+
+    def __init__(
+        self,
+        path: str,
+        kind: LayerChangeKind = "delete",
+        content_hash: str | None = None,
+        source_path: str | None = None,
+    ) -> None:
+        if kind != "delete":
+            raise ValueError(f"unsupported delete layer change kind: {kind}")
+        if source_path is not None:
+            raise ValueError("delete changes must not carry source_path")
+        if content_hash is not None:
+            raise ValueError("delete changes must not carry content_hash")
+        object.__setattr__(self, "path", normalize_layer_path(path))
+        object.__setattr__(self, "kind", "delete")
+        object.__setattr__(self, "source_path", None)
+        object.__setattr__(self, "content_hash", None)
+
+
+@dataclass(frozen=True, init=False)
+class SymlinkLayerChange(LayerChange):
+    path: str
+    source_path: str
+    kind: Literal["symlink"] = "symlink"
+    content_hash: None = None
+
+    def __init__(
+        self,
+        path: str,
+        kind: LayerChangeKind = "symlink",
+        content_hash: str | None = None,
+        source_path: str | None = None,
+    ) -> None:
+        if kind != "symlink":
+            raise ValueError(f"unsupported symlink layer change kind: {kind}")
+        if not source_path:
+            raise ValueError("symlink changes require source_path")
+        if content_hash is not None:
+            raise ValueError("symlink changes must not carry content_hash")
+        object.__setattr__(self, "path", normalize_layer_path(path))
+        object.__setattr__(self, "source_path", source_path)
+        object.__setattr__(self, "kind", "symlink")
+        object.__setattr__(self, "content_hash", None)
+
+
+@dataclass(frozen=True, init=False)
+class OpaqueDirLayerChange(LayerChange):
+    path: str
+    kind: Literal["opaque_dir"] = "opaque_dir"
+    source_path: None = None
+    content_hash: None = None
+
+    def __init__(
+        self,
+        path: str,
+        kind: LayerChangeKind = "opaque_dir",
+        content_hash: str | None = None,
+        source_path: str | None = None,
+    ) -> None:
+        if kind != "opaque_dir":
+            raise ValueError(f"unsupported opaque-dir layer change kind: {kind}")
+        if source_path is not None:
+            raise ValueError("opaque_dir changes must not carry source_path")
+        if content_hash is not None:
+            raise ValueError("opaque_dir changes must not carry content_hash")
+        object.__setattr__(self, "path", normalize_layer_path(path))
+        object.__setattr__(self, "kind", "opaque_dir")
+        object.__setattr__(self, "source_path", None)
+        object.__setattr__(self, "content_hash", None)
 
 
 @dataclass(frozen=True)

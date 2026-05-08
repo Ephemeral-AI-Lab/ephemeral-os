@@ -13,7 +13,6 @@ def build_api_write_change(
     path: str,
     final_content: bytes | str,
     base_hash: str | None = None,
-    create_only: bool = False,
 ) -> WriteChange:
     """Build a source-tagged write change from the host write API."""
     return WriteChange(
@@ -21,7 +20,6 @@ def build_api_write_change(
         source="api_write",
         final_content=final_content,
         base_hash=base_hash,
-        create_only=create_only,
     )
 
 

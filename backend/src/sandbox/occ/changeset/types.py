@@ -49,14 +49,12 @@ class WriteChange(Change):
     content_path: str | None
     precomputed_hash: str | None
     base_hash: str | None
-    create_only: bool
 
     def __init__(
         self,
         path: str,
         final_content: bytes | str | None = None,
         base_hash: str | None = None,
-        create_only: bool = False,
         *,
         source: ChangeSource = "api_write",
         content_path: str | None = None,
@@ -78,7 +76,6 @@ class WriteChange(Change):
         object.__setattr__(self, "content_path", content_path)
         object.__setattr__(self, "precomputed_hash", precomputed_hash)
         object.__setattr__(self, "base_hash", base_hash)
-        object.__setattr__(self, "create_only", bool(create_only))
 
     @property
     def final_content(self) -> bytes:
@@ -101,7 +98,6 @@ class WriteChange(Change):
             source=self.source,
             final_content=self._eager_content,
             base_hash=base_hash,
-            create_only=self.create_only,
             content_path=self.content_path,
             precomputed_hash=self.precomputed_hash,
         )

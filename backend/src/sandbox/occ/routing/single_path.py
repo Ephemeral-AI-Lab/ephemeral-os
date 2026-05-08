@@ -80,7 +80,6 @@ def prepare_single_path_changeset(
         path=path,
         route=route,
         changes=(prepared_change,),
-        base_hash=base_hash,
         message=message,
     )
     timings["occ.prepare.route_and_base_hash_s"] = time.perf_counter() - route_start

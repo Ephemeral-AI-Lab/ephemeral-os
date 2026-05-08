@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any, Protocol
 
-from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
+from sandbox.occ.changeset.prepared import CommitOptions
 from sandbox.occ.changeset.types import Change, ChangesetResult
 
 
@@ -40,7 +40,7 @@ class OCCMutationClient(Protocol):
         snapshot: Any = None,
         options: CommitOptions | None = None,
         workspace_ref: str | None = None,
-    ) -> ChangesetResult | PreparedChangeset: ...
+    ) -> ChangesetResult: ...
 
 
 __all__ = [

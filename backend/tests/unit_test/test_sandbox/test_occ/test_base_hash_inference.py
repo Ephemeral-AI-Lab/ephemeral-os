@@ -74,7 +74,6 @@ def test_tracked_write_without_base_hash_uses_leased_snapshot_hash(tmp_path) -> 
     [group] = prepared.path_groups
     [change] = group.changes
     assert group.route is RouteDecision.OCC_GATED_MERGE
-    assert group.base_hash == content_hash_bytes(b"old\n")
     assert isinstance(change, WriteChange)
     assert change.base_hash == content_hash_bytes(b"old\n")
 
@@ -93,7 +92,6 @@ def test_missing_snapshot_path_infers_none_base_hash(tmp_path) -> None:
 
     [group] = prepared.path_groups
     [change] = group.changes
-    assert group.base_hash is None
     assert isinstance(change, WriteChange)
     assert change.base_hash is None
 
@@ -112,7 +110,6 @@ def test_edit_changes_keep_anchor_contract_without_base_hash(tmp_path) -> None:
 
     [group] = prepared.path_groups
     [change] = group.changes
-    assert group.base_hash is None
     assert isinstance(change, EditChange)
     assert change.old_text == "old"
     assert change.new_text == "new"

@@ -93,7 +93,6 @@ async def _edit_in_workspace(
             path=layer_path,
             final_content=final_text.encode("utf-8"),
             base_hash=content_hash_bytes(bytes_),
-            create_only=False,
         )
         prepared = await run_sync_in_executor(
             prepare_single_path_changeset,

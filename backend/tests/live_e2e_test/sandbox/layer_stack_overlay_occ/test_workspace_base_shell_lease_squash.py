@@ -29,6 +29,9 @@ from .._harness.workspace_base_public import seed_imported_base
 
 pytestmark = pytest.mark.asyncio
 
+AUTO_SQUASH_MAX_DEPTH = 32
+AUTO_SQUASH_TRIGGER_WRITES = AUTO_SQUASH_MAX_DEPTH + 4
+
 
 async def test_concurrent_public_shell_leases_survive_mutation_burst(
     workspace_base_sandbox: SandboxHandle,
@@ -336,6 +339,118 @@ async def test_in_flight_public_shell_lease_survives_active_edit(
             **summarize_calls([update_metric, shell_metric]),
             "mid_active_leases": mid_metrics["active_leases"],
             "active_leases_after": after_metrics["active_leases"],
+        },
+    )
+
+
+async def test_public_mutations_naturally_trigger_squash_and_keep_workspace_view(
+    workspace_base_sandbox: SandboxHandle,
+) -> None:
+    handle = workspace_base_sandbox
+    watched_path = "tracked/phase08/auto-squash/watched.txt"
+    edit_path = "tracked/phase08/auto-squash/edit.txt"
+    shell_output = "tracked/phase08/auto-squash/shell-view.txt"
+    await seed_imported_base(
+        handle,
+        {
+            ".gitignore": "dist/\n",
+            watched_path: "base-view\n",
+            edit_path: "alpha=old\n",
+        },
+    )
+
+    before_metrics = await handle.tool.layer_metrics()
+    assert before_metrics["workspace_bound"] is True, before_metrics
+    assert int(before_metrics["manifest_depth"]) == 1, before_metrics
+
+    run = token("phase08-natural-squash")
+    started = tmp_path(f"{run}-started")
+    proceed = tmp_path(f"{run}-go")
+    await remove_tmp(handle, started, proceed)
+    command = (
+        "set -e; "
+        f"first=$(cat {q(watched_path)}); "
+        f"touch {q(started)}; "
+        f"while [ ! -f {q(proceed)} ]; do sleep 0.01; done; "
+        f"second=$(cat {q(watched_path)}); "
+        "mkdir -p tracked/phase08/auto-squash; "
+        f"printf '%s|%s\\n' \"$first\" \"$second\" > {q(shell_output)}"
+    )
+    shell_task = asyncio.create_task(
+        timed_call(
+            "phase08_natural_squash_shell_lease",
+            handle.tool.shell(
+                command,
+                timeout=60,
+                description="phase08 shell lease across natural auto squash",
+            ),
+        )
+    )
+    await wait_for_tmp(handle, started)
+
+    metrics = []
+    for index in range(AUTO_SQUASH_TRIGGER_WRITES):
+        path = f"tracked/phase08/auto-squash/write-{index:02d}.txt"
+        write, metric = await timed_call(
+            f"phase08_natural_squash_write_{index:02d}",
+            handle.tool.write_file(
+                path,
+                f"write-{index:02d}\n",
+                description=f"phase08 natural squash write {index:02d}",
+            ),
+        )
+        metrics.append(metric)
+        assert_committed(write, path=path)
+
+    squashed_metrics = await handle.tool.layer_metrics()
+    assert squashed_metrics["workspace_bound"] is True, squashed_metrics
+    assert int(squashed_metrics["active_leases"]) >= 1, squashed_metrics
+    assert int(squashed_metrics["manifest_depth"]) <= AUTO_SQUASH_MAX_DEPTH, (
+        squashed_metrics
+    )
+    assert int(squashed_metrics["manifest_version"]) > (
+        int(before_metrics["manifest_version"]) + AUTO_SQUASH_TRIGGER_WRITES
+    ), squashed_metrics
+
+    await assert_read(handle, watched_path, "base-view\n")
+    await assert_read(handle, "tracked/phase08/auto-squash/write-00.txt", "write-00\n")
+    await assert_read(
+        handle,
+        f"tracked/phase08/auto-squash/write-{AUTO_SQUASH_TRIGGER_WRITES - 1:02d}.txt",
+        f"write-{AUTO_SQUASH_TRIGGER_WRITES - 1:02d}\n",
+    )
+
+    edit, edit_metric = await timed_call(
+        "phase08_natural_squash_edit_after_trigger",
+        handle.tool.edit_file(
+            edit_path,
+            [("alpha=old", "alpha=new")],
+            description="phase08 edit after natural auto squash",
+        ),
+    )
+    metrics.append(edit_metric)
+    assert_committed(edit, path=edit_path)
+
+    await touch_tmp(handle, proceed)
+    shell, shell_metric = await shell_task
+    metrics.append(shell_metric)
+    assert_committed(shell, path=shell_output)
+    assert shell.exit_code == 0, shell.stderr
+    _assert_no_cache_shell_timings(shell.timings)
+
+    await assert_read(handle, shell_output, "base-view|base-view\n")
+    await assert_read(handle, edit_path, "alpha=new\n")
+    final_metrics = await handle.tool.layer_metrics()
+    assert int(final_metrics["active_leases"]) == 0, final_metrics
+    assert int(final_metrics["manifest_depth"]) <= AUTO_SQUASH_MAX_DEPTH, final_metrics
+    emit_metric(
+        "phase08.natural_auto_squash_workspace_view",
+        {
+            **summarize_calls(metrics),
+            "trigger_writes": AUTO_SQUASH_TRIGGER_WRITES,
+            "manifest_depth_after_trigger": squashed_metrics["manifest_depth"],
+            "manifest_version_after_trigger": squashed_metrics["manifest_version"],
+            "final_manifest_depth": final_metrics["manifest_depth"],
         },
     )
 

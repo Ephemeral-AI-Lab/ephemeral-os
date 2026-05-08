@@ -11,7 +11,7 @@ import asyncio
 
 import pytest
 
-from sandbox.contract import ShellResult
+from sandbox.api import ShellResult
 
 from .._harness.integrated_cases import (
     RuntimeCallMetric,

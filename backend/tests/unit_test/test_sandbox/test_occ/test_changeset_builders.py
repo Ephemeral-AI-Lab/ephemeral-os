@@ -15,14 +15,12 @@ def test_api_write_builder_tags_api_source_and_bytes_payload() -> None:
         path="src/a.py",
         final_content="hello",
         base_hash="abc",
-        create_only=True,
     )
 
     assert isinstance(change, WriteChange)
     assert change.source == "api_write"
     assert change.final_content == b"hello"
     assert change.base_hash == "abc"
-    assert change.create_only is True
 
 
 def test_overlay_builders_defer_base_hash_to_preparation() -> None:

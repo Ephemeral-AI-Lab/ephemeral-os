@@ -18,7 +18,7 @@ class OCCMutationService(Protocol):
         *,
         snapshot: Manifest | None = None,
         options: CommitOptions | None = None,
-    ) -> ChangesetResult | PreparedChangeset: ...
+    ) -> ChangesetResult: ...
 
     async def commit_prepared(
         self,
@@ -47,7 +47,7 @@ class OCCClient:
         snapshot: Manifest | None = None,
         options: CommitOptions | None = None,
         workspace_ref: str | None = None,
-    ) -> ChangesetResult | PreparedChangeset:
+    ) -> ChangesetResult:
         ref = self._workspace_ref if workspace_ref is None else workspace_ref
         self._binding_reader.require_workspace_binding(ref)
         return await self._service.apply_changeset(

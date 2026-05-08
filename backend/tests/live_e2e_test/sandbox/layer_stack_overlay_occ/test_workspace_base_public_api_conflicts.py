@@ -8,7 +8,7 @@ from pathlib import PurePosixPath
 import pytest
 
 import sandbox.host.daemon_client as daemon_client_mod
-from sandbox.contract import GuardedResultBase
+from sandbox.api import GuardedResultBase
 
 from .._harness.concurrency import gather_with_barrier
 from .._harness.integrated_cases import (

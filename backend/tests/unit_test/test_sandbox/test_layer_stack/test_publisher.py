@@ -61,6 +61,37 @@ def test_publish_layer_writes_immutable_layer_and_manifest(tmp_path: Path) -> No
     assert manager.read_bytes("pkg/created.txt") == (b"created", True)
 
 
+def test_publish_reads_write_source_once(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manager = LayerStackManager(tmp_path / "stack")
+    source = _source(tmp_path, "created.txt", b"created")
+    original_read_bytes = Path.read_bytes
+    source_reads = 0
+
+    def count_source_reads(path: Path) -> bytes:
+        nonlocal source_reads
+        if path == source:
+            source_reads += 1
+        return original_read_bytes(path)
+
+    monkeypatch.setattr(Path, "read_bytes", count_source_reads)
+
+    manager.publish_changes(
+        [
+            LayerChange(
+                path="pkg/created.txt",
+                kind="write",
+                content_hash=hashlib.sha256(b"created").hexdigest(),
+                source_path=str(source),
+            )
+        ]
+    )
+
+    assert source_reads == 1
+
+
 def test_same_digest_publish_returns_active_manifest_without_new_layer(
     tmp_path: Path,
 ) -> None:

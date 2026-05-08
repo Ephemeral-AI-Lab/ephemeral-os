@@ -34,10 +34,6 @@ ALLOWED_API_IMPORT_NAMES = {
     "WriteFileRequest",
     "WriteFileResult",
 }
-TYPE_MODULES = {
-    "sandbox.contract",
-}
-
 
 def test_daemon_and_tools_reach_sandbox_through_api_facade() -> None:
     offenders: list[str] = []
@@ -50,7 +46,7 @@ def test_daemon_and_tools_reach_sandbox_through_api_facade() -> None:
                     imported = alias.name
                     if _is_forbidden_import(imported):
                         offenders.append(_format(path, source, node))
-                    elif imported.startswith("sandbox.api.") and imported not in TYPE_MODULES:
+                    elif imported.startswith("sandbox.api."):
                         offenders.append(_format(path, source, node))
             elif isinstance(node, ast.ImportFrom) and node.module:
                 imported = node.module
@@ -64,7 +60,7 @@ def test_daemon_and_tools_reach_sandbox_through_api_facade() -> None:
                     ]
                     if bad_names:
                         offenders.append(_format(path, source, node))
-                elif imported.startswith("sandbox.api.") and imported not in TYPE_MODULES:
+                elif imported.startswith("sandbox.api."):
                     offenders.append(_format(path, source, node))
 
     assert offenders == []

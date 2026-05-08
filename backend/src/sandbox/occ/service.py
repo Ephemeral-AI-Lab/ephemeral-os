@@ -19,6 +19,9 @@ from sandbox.occ.merge.serial import OccSerialMerger
 from sandbox.runtime.async_bridge import run_sync_in_executor
 
 
+AUTO_SQUASH_MAX_DEPTH = 32
+
+
 class OccService:
     """Prepare typed OCC changesets and commit them through the layer stack."""
 
@@ -26,24 +29,16 @@ class OccService:
         self,
         *,
         gitignore: GitignoreMatcher,
-        layer_stack: OccLayerStackPorts | None = None,
+        layer_stack: OccLayerStackPorts,
     ) -> None:
         self._layer_stack = layer_stack
         self._orchestrator = OccOrchestrator(gitignore)
-        self._transaction = (
-            OccCommitTransaction(
-                snapshot_reader=layer_stack,
-                staging=layer_stack,
-                publisher=layer_stack,
-            )
-            if layer_stack is not None
-            else None
+        self._transaction = OccCommitTransaction(
+            snapshot_reader=layer_stack,
+            staging=layer_stack,
+            publisher=layer_stack,
         )
-        self._serial_merger = (
-            OccSerialMerger(self._transaction)
-            if self._transaction is not None
-            else None
-        )
+        self._serial_merger = OccSerialMerger(self._transaction)
 
     async def apply_changeset(
         self,
@@ -51,22 +46,14 @@ class OccService:
         *,
         snapshot: Manifest | None = None,
         options: CommitOptions | None = None,
-    ) -> ChangesetResult | PreparedChangeset:
-        """Prepare a changeset and commit it when a layer stack is configured."""
+    ) -> ChangesetResult:
+        """Prepare a changeset and commit it through the layer stack."""
         total_start = time.perf_counter()
         prepared = await self.prepare_changeset(
             changes,
             snapshot=snapshot,
             options=options,
         )
-        if self._transaction is None:
-            return replace(
-                prepared,
-                timings={
-                    **prepared.timings,
-                    "occ.apply.total_s": time.perf_counter() - total_start,
-                },
-            )
         return await self.commit_prepared(prepared, _total_start=total_start)
 
     async def commit_prepared(
@@ -84,20 +71,21 @@ class OccService:
         longer matches receive a normal OCC rejection. Callers may therefore
         run :meth:`prepare_changeset` lock-free and only serialize this call.
         """
-        if self._transaction is None or self._serial_merger is None:
-            raise RuntimeError(
-                "commit_prepared requires a layer-stack-backed OccService"
-            )
         total_start = _total_start if _total_start is not None else time.perf_counter()
         commit_start = time.perf_counter()
         result = await self._serial_merger.apply(prepared)
         commit_elapsed = time.perf_counter() - commit_start
+        auto_squash_timings = await run_sync_in_executor(
+            self._auto_squash_after_publish_sync,
+            result,
+        )
         return self._wrap_commit_result(
             result,
             prepared=prepared,
             total_start=total_start,
             commit_elapsed=commit_elapsed,
             sync=False,
+            extra_timings=auto_squash_timings,
         )
 
     def apply_changeset_sync(
@@ -106,21 +94,13 @@ class OccService:
         *,
         snapshot: Manifest | None = None,
         options: CommitOptions | None = None,
-    ) -> ChangesetResult | PreparedChangeset:
+    ) -> ChangesetResult:
         total_start = time.perf_counter()
         prepared = self.prepare_changeset_sync(
             changes,
             snapshot=snapshot,
             options=options,
         )
-        if self._transaction is None or self._serial_merger is None:
-            return replace(
-                prepared,
-                timings={
-                    **prepared.timings,
-                    "occ.apply.total_s": time.perf_counter() - total_start,
-                },
-            )
         return self.commit_prepared_sync(prepared, _total_start=total_start)
 
     def commit_prepared_sync(
@@ -130,21 +110,48 @@ class OccService:
         _total_start: float | None = None,
     ) -> ChangesetResult:
         """Synchronous twin of :meth:`commit_prepared`."""
-        if self._transaction is None or self._serial_merger is None:
-            raise RuntimeError(
-                "commit_prepared_sync requires a layer-stack-backed OccService"
-            )
         total_start = _total_start if _total_start is not None else time.perf_counter()
         commit_start = time.perf_counter()
         result = self._serial_merger.apply_sync(prepared)
         commit_elapsed = time.perf_counter() - commit_start
+        auto_squash_timings = self._auto_squash_after_publish_sync(result)
         return self._wrap_commit_result(
             result,
             prepared=prepared,
             total_start=total_start,
             commit_elapsed=commit_elapsed,
             sync=True,
+            extra_timings=auto_squash_timings,
         )
+
+    def _auto_squash_after_publish_sync(
+        self,
+        result: ChangesetResult,
+    ) -> dict[str, float]:
+        if result.published_manifest_version is None:
+            return {}
+        squash = getattr(self._layer_stack, "squash", None)
+        if not callable(squash):
+            return {}
+
+        active = self._layer_stack.read_active_manifest()
+        if active.depth <= AUTO_SQUASH_MAX_DEPTH:
+            return {}
+
+        squash_start = time.perf_counter()
+        squashed = squash(max_depth=AUTO_SQUASH_MAX_DEPTH)
+        elapsed = time.perf_counter() - squash_start
+        timings = {
+            "layer_stack.auto_squash.total_s": elapsed,
+            "layer_stack.auto_squash.max_depth": float(AUTO_SQUASH_MAX_DEPTH),
+            "layer_stack.auto_squash.depth_before": float(active.depth),
+        }
+        if squashed is None:
+            timings["layer_stack.auto_squash.raced"] = 1.0
+            return timings
+        timings["layer_stack.auto_squash.depth_after"] = float(squashed.depth)
+        timings["layer_stack.auto_squash.manifest_version"] = float(squashed.version)
+        return timings
 
     def _wrap_commit_result(
         self,
@@ -154,10 +161,12 @@ class OccService:
         total_start: float,
         commit_elapsed: float,
         sync: bool,
+        extra_timings: dict[str, float] | None = None,
     ) -> ChangesetResult:
         result_timings, resume_wait = _result_timings_with_resume(result)
         timings = {
             **result_timings,
+            **(extra_timings or {}),
             "occ.apply.commit_queue_wait_s": result_timings.get(
                 "occ.serial.queue_wait_s",
                 0.0,
@@ -209,22 +218,21 @@ class OccService:
         timings: dict[str, float] = {}
         commit_options = options or CommitOptions()
         effective_snapshot = snapshot
-        if effective_snapshot is None and self._layer_stack is not None:
+        if effective_snapshot is None:
             snapshot_start = time.perf_counter()
             effective_snapshot = self._layer_stack.read_active_manifest()
             timings["occ.prepare.current_snapshot_s"] = (
                 time.perf_counter() - snapshot_start
             )
-        base_hash_reader = None
-        if effective_snapshot is not None and self._layer_stack is not None:
-            layer_stack = self._layer_stack
+        assert effective_snapshot is not None
+        layer_stack = self._layer_stack
 
-            def base_hash_reader(path: str) -> str | None:
-                return infer_manifest_base_hash(
-                    snapshot_reader=layer_stack,
-                    manifest=effective_snapshot,
-                    path=path,
-                )
+        def base_hash_reader(path: str) -> str | None:
+            return infer_manifest_base_hash(
+                snapshot_reader=layer_stack,
+                manifest=effective_snapshot,
+                path=path,
+            )
 
         prepare_start = time.perf_counter()
         prepared = self._orchestrator.prepare_sync(
@@ -257,4 +265,4 @@ def _result_timings_with_resume(result: ChangesetResult) -> tuple[dict[str, floa
     return timings, max(0.0, time.perf_counter() - ready_at)
 
 
-__all__ = ["OccService"]
+__all__ = ["AUTO_SQUASH_MAX_DEPTH", "OccService"]

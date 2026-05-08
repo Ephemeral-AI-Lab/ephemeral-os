@@ -6,7 +6,7 @@ import asyncio
 
 import pytest
 
-from sandbox.contract import GuardedResultBase
+from sandbox.api import GuardedResultBase
 
 from .._harness.concurrency import gather_with_barrier
 from .._harness.integrated_cases import (

@@ -64,7 +64,6 @@ def test_tracked_write_requires_active_hash_to_match_prepared_base(tmp_path: Pat
                 base_hash=ContentHasher().hash_bytes(b"leased\n"),
             ),
         ),
-        base_hash=ContentHasher().hash_bytes(b"leased\n"),
     )
 
     result, delta = merge.stage_group(

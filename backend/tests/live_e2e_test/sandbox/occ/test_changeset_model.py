@@ -37,7 +37,7 @@ mixed = service.prepare_changeset_sync([
     DeleteChange(path=".git/config"),
     WriteChange(path="../escape", final_content="bad"),
     WriteChange(path="unicodé/文件.txt", final_content="utf8\n"),
-], options=CommitOptions(atomic=True, caller_id="phase4"))
+], options=CommitOptions(atomic=True))
 routes = [(group.path, group.route.value) for group in mixed.path_groups]
 assert routes == [
     ("src/new.txt", RouteDecision.OCC_GATED_MERGE.value),

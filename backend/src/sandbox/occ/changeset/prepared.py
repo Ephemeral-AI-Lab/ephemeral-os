@@ -23,13 +23,12 @@ class PreparedPathGroup:
     path: str
     route: RouteDecision
     changes: tuple[Change, ...]
-    base_hash: str | None = None
     message: str | None = None
 
 
 @dataclass(frozen=True)
 class CommitOptions:
-    """Request-level OCC commit options and metadata.
+    """Request-level OCC commit options.
 
     ``atomic`` defaults to ``True``: a multi-path changeset is published only
     if every path validates. If any path fails (ABORTED_OVERLAP,
@@ -39,8 +38,6 @@ class CommitOptions:
     """
 
     atomic: bool = True
-    caller_id: str = ""
-    description: str = ""
 
 
 @dataclass(frozen=True)

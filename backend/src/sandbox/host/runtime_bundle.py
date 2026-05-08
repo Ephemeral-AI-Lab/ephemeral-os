@@ -18,7 +18,7 @@ import tarfile
 from pathlib import Path
 from typing import Protocol
 
-from sandbox.contract import RawExecResult
+from sandbox.models import RawExecResult
 from sandbox.provider.registry import get_adapter
 
 __all__ = [
@@ -148,10 +148,10 @@ def _runtime_bundle_bytes() -> bytes:
             sandbox_dir / "__init__.py",
             arcname="sandbox/__init__.py",
         )
-        _add_python_tree(
+        _add_if_exists(
             tar,
-            sandbox_dir / "contract",
-            sandbox_dir=sandbox_dir,
+            sandbox_dir / "models.py",
+            arcname="sandbox/models.py",
         )
 
         _add_if_exists(
