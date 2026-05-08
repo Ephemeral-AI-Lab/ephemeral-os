@@ -44,13 +44,32 @@ _TOTAL_CALLS = 200
 _PROBE_EVERY = 50
 
 
+def _resolve_run_id() -> str:
+    """Honor EOS_TIER_RUN_ID so the runner can pin artifact filenames."""
+    env_run_id = os.environ.get("EOS_TIER_RUN_ID")
+    if env_run_id:
+        return env_run_id
+    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + f"-{os.getpid()}"
+
+
 def _artifact_path() -> Path:
-    run_id = (
-        datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + f"-{os.getpid()}"
+    target = (
+        Path.cwd()
+        / ".omc"
+        / "results"
+        / f"phase08-dev-shm-bounded-{_resolve_run_id()}.jsonl"
     )
-    target = Path.cwd() / ".omc" / "results" / f"phase08-dev-shm-bounded-{run_id}.jsonl"
     target.parent.mkdir(parents=True, exist_ok=True)
     return target
+
+
+def _stream_row(artifact: Path, row: dict[str, object]) -> None:
+    """Append one JSONL row, flush, fsync — kill-9 durability."""
+    with artifact.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row, sort_keys=True, separators=(",", ":")))
+        fh.write("\n")
+        fh.flush()
+        os.fsync(fh.fileno())
 
 
 async def _probe_dev_shm(handle: SandboxHandle) -> tuple[int, int, str]:
@@ -104,22 +123,27 @@ async def test_phase08_dev_shm_stays_bounded(
     # ``tool.shell`` doesn't fault on a missing workspace.json.
     await seed_phase05_imported_base(handle)
     artifact = _artifact_path()
+    # Truncate any prior partial artifact so each invocation starts fresh.
+    # Phase08 measures /dev/shm bounds across one continuous loop; resume
+    # is meaningless because the loop's invariant is sequential.
+    if artifact.exists():
+        artifact.unlink()
     rows: list[dict[str, object]] = []
 
     # Pre-flight probe — record the starting state so the assertion has
     # context if it triggers right at probe #1.
     initial_count, initial_bytes, initial_listing = await _probe_dev_shm(handle)
-    rows.append(
-        {
-            "schema": "phase08.dev_shm_bounded.v1",
-            "call_index": 0,
-            "run_dir_count": initial_count,
-            "total_bytes": initial_bytes,
-            "limit_run_dir": _RUN_DIR_LIMIT,
-            "limit_bytes": _TOTAL_BYTES_LIMIT,
-            "listing_excerpt": initial_listing[:1024],
-        }
-    )
+    initial_row: dict[str, object] = {
+        "schema": "phase08.dev_shm_bounded.v1",
+        "call_index": 0,
+        "run_dir_count": initial_count,
+        "total_bytes": initial_bytes,
+        "limit_run_dir": _RUN_DIR_LIMIT,
+        "limit_bytes": _TOTAL_BYTES_LIMIT,
+        "listing_excerpt": initial_listing[:1024],
+    }
+    _stream_row(artifact, initial_row)
+    rows.append(initial_row)
 
     failures: list[str] = []
 
@@ -136,7 +160,7 @@ async def test_phase08_dev_shm_stays_bounded(
             continue
 
         count, total_bytes, listing = await _probe_dev_shm(handle)
-        row = {
+        row: dict[str, object] = {
             "schema": "phase08.dev_shm_bounded.v1",
             "call_index": call_index,
             "run_dir_count": count,
@@ -145,6 +169,7 @@ async def test_phase08_dev_shm_stays_bounded(
             "limit_bytes": _TOTAL_BYTES_LIMIT,
             "listing_excerpt": listing[:1024],
         }
+        _stream_row(artifact, row)
         rows.append(row)
 
         if count > _RUN_DIR_LIMIT:
@@ -156,10 +181,6 @@ async def test_phase08_dev_shm_stays_bounded(
                 f"call={call_index}: total_bytes={total_bytes} > {_TOTAL_BYTES_LIMIT}"
             )
 
-    with artifact.open("w", encoding="utf-8") as fh:
-        for row in rows:
-            fh.write(json.dumps(row, sort_keys=True, separators=(",", ":")))
-            fh.write("\n")
     print(f"\n[phase08:dev_shm] artifact={artifact}")
 
     assert not failures, (

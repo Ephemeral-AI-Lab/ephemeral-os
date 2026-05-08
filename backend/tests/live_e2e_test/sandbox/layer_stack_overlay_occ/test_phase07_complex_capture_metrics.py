@@ -57,13 +57,65 @@ _GATED_ROOT = "tracked/load/phase07"
 _DIST_ROOT = "dist/phase07"
 
 
+def _resolve_run_id() -> str:
+    """Honor EOS_TIER_RUN_ID so the runner can pin artifact filenames."""
+    env_run_id = os.environ.get("EOS_TIER_RUN_ID")
+    if env_run_id:
+        return env_run_id
+    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + f"-{os.getpid()}"
+
+
 def _artifact_path(label: str = "phase07-complex-capture-metrics") -> Path:
-    run_id = (
-        datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + f"-{os.getpid()}"
-    )
-    target = Path.cwd() / ".omc" / "results" / f"{label}-{run_id}.jsonl"
+    target = Path.cwd() / ".omc" / "results" / f"{label}-{_resolve_run_id()}.jsonl"
     target.parent.mkdir(parents=True, exist_ok=True)
     return target
+
+
+def _load_prior_data_rows(artifact: Path) -> list[dict[str, object]]:
+    """Read prior data rows from the artifact, skipping any trailing summary.
+
+    A row whose ``schema`` ends with ``.summary.v1`` is treated as a
+    summary row and discarded — only data rows are returned so a
+    rebuild can recompute the summary cleanly.
+    """
+    if not artifact.exists():
+        return []
+    rows: list[dict[str, object]] = []
+    with artifact.open(encoding="utf-8") as fh:
+        for line in fh:
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            schema = str(row.get("schema", ""))
+            if schema.endswith(".summary.v1"):
+                continue
+            rows.append(row)
+    return rows
+
+
+def _stream_row(artifact: Path, row: dict[str, object]) -> None:
+    """Append one JSONL row, flush, fsync — mid-loop kill-9 durability."""
+    with artifact.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row, sort_keys=True, separators=(",", ":")))
+        fh.write("\n")
+        fh.flush()
+        os.fsync(fh.fileno())
+
+
+def _rewrite_artifact(
+    artifact: Path,
+    rows: list[dict[str, object]],
+    summary_row: dict[str, object] | None,
+) -> None:
+    """Truncate-rewrite the artifact with rows + optional trailing summary."""
+    with artifact.open("w", encoding="utf-8") as fh:
+        for row in rows:
+            fh.write(json.dumps(row, sort_keys=True, separators=(",", ":")))
+            fh.write("\n")
+        if summary_row is not None:
+            fh.write(json.dumps(summary_row, sort_keys=True, separators=(",", ":")))
+            fh.write("\n")
 
 
 def _slug(value: str) -> str:
@@ -278,12 +330,18 @@ async def test_phase07_size_matrix(
     await _reset_workload_dirs(handle)
 
     artifact = _artifact_path("phase07-size-matrix")
-    rows: list[dict[str, object]] = []
+    prior_rows = _load_prior_data_rows(artifact)
+    completed: set[str] = {
+        str(row["cell"]) for row in prior_rows if row.get("cell")
+    }
+    rows: list[dict[str, object]] = list(prior_rows)
 
     for prefix in _SIZE_PREFIXES:
         for size, k_values in _SIZE_BYTES_AND_K:
             for k in k_values:
                 cell_id = f"{prefix}_size{size}_k{k}"
+                if cell_id in completed:
+                    continue
                 cell_dir = f"{_route_root(prefix)}/size_{size}_k{k}"
                 command = build_sized_capture(cell_dir, k, size)
                 row = await _run_and_record(
@@ -319,21 +377,26 @@ async def test_phase07_size_matrix(
                     expected_prefix=b"xxxxxxxxxxxxxxxx",
                 )
                 row["content_prefix_check"] = True
+                _stream_row(artifact, row)
                 rows.append(row)
 
-    with artifact.open("w", encoding="utf-8") as fh:
-        for row in rows:
-            fh.write(json.dumps(row, sort_keys=True, separators=(",", ":")))
-            fh.write("\n")
-
-    print(f"\n[phase07:size_matrix] artifact={artifact}")
-    emit_metric(
-        "phase07.size_matrix.summary",
-        {"artifact": str(artifact), "rows": len(rows)},
-    )
     expected_cells = sum(len(k_values) for _, k_values in _SIZE_BYTES_AND_K) * len(
         _SIZE_PREFIXES
     )
+    summary_row: dict[str, object] = {
+        "schema": "phase07.size_matrix.summary.v1",
+        "matrix": "size_x_k",
+        "artifact": str(artifact),
+        "total_cells": len(rows),
+        "expected_cells": expected_cells,
+        "passed_cells": len(rows),
+        "failed_cells": 0,
+        "run_id": _resolve_run_id(),
+    }
+    _rewrite_artifact(artifact, rows, summary_row)
+
+    print(f"\n[phase07:size_matrix] artifact={artifact}")
+    emit_metric("phase07.size_matrix.summary", summary_row)
     assert len(rows) == expected_cells
 
 
@@ -487,25 +550,38 @@ async def test_phase07_kind_matrix(
     await _reset_workload_dirs(handle)
 
     artifact = _artifact_path("phase07-kind-matrix")
-    rows: list[dict[str, object]] = []
+    prior_rows = _load_prior_data_rows(artifact)
+    completed: set[str] = {
+        str(row["cell"]) for row in prior_rows if row.get("cell")
+    }
+    rows: list[dict[str, object]] = list(prior_rows)
 
     for prefix in _KIND_PREFIXES:
         for kind in _KINDS:
             for k in _KIND_K:
+                cell_id = f"{prefix}_{kind}_k{k}"
+                if cell_id in completed:
+                    continue
                 row = await _run_kind_cell(handle, prefix=prefix, kind=kind, k=k)
+                _stream_row(artifact, row)
                 rows.append(row)
 
-    with artifact.open("w", encoding="utf-8") as fh:
-        for row in rows:
-            fh.write(json.dumps(row, sort_keys=True, separators=(",", ":")))
-            fh.write("\n")
+    expected_cells = len(_KINDS) * len(_KIND_K) * len(_KIND_PREFIXES)
+    summary_row: dict[str, object] = {
+        "schema": "phase07.kind_matrix.summary.v1",
+        "matrix": "kind_x_k",
+        "artifact": str(artifact),
+        "total_cells": len(rows),
+        "expected_cells": expected_cells,
+        "passed_cells": len(rows),
+        "failed_cells": 0,
+        "run_id": _resolve_run_id(),
+    }
+    _rewrite_artifact(artifact, rows, summary_row)
 
     print(f"\n[phase07:kind_matrix] artifact={artifact}")
-    emit_metric(
-        "phase07.kind_matrix.summary",
-        {"artifact": str(artifact), "rows": len(rows)},
-    )
-    assert len(rows) == len(_KINDS) * len(_KIND_K) * len(_KIND_PREFIXES)
+    emit_metric("phase07.kind_matrix.summary", summary_row)
+    assert len(rows) == expected_cells
 
 
 # ---------------------------------------------------------------------------
@@ -527,10 +603,16 @@ async def test_phase07_mixed_routing_matrix(
     await _reset_workload_dirs(handle)
 
     artifact = _artifact_path("phase07-mixed-routing")
-    rows: list[dict[str, object]] = []
+    prior_rows = _load_prior_data_rows(artifact)
+    completed: set[str] = {
+        str(row["cell"]) for row in prior_rows if row.get("cell")
+    }
+    rows: list[dict[str, object]] = list(prior_rows)
 
     for k_gated, k_dist in _ROUTING_SPLITS:
         cell_id = f"gated{k_gated}_dist{k_dist}"
+        if cell_id in completed:
+            continue
         gated_dir = f"{_GATED_ROOT}/routing_g{k_gated}_d{k_dist}"
         dist_dir = f"{_DIST_ROOT}/routing_g{k_gated}_d{k_dist}"
         command = build_mixed_routing_capture(
@@ -597,16 +679,22 @@ async def test_phase07_mixed_routing_matrix(
             expected_prefix=b"dist  i=",
         )
         row["content_prefix_check"] = True
+        _stream_row(artifact, row)
         rows.append(row)
 
-    with artifact.open("w", encoding="utf-8") as fh:
-        for row in rows:
-            fh.write(json.dumps(row, sort_keys=True, separators=(",", ":")))
-            fh.write("\n")
+    expected_cells = len(_ROUTING_SPLITS)
+    summary_row: dict[str, object] = {
+        "schema": "phase07.mixed_routing.summary.v1",
+        "matrix": "mixed_routing",
+        "artifact": str(artifact),
+        "total_cells": len(rows),
+        "expected_cells": expected_cells,
+        "passed_cells": len(rows),
+        "failed_cells": 0,
+        "run_id": _resolve_run_id(),
+    }
+    _rewrite_artifact(artifact, rows, summary_row)
 
     print(f"\n[phase07:mixed_routing] artifact={artifact}")
-    emit_metric(
-        "phase07.mixed_routing.summary",
-        {"artifact": str(artifact), "rows": len(rows)},
-    )
-    assert len(rows) == len(_ROUTING_SPLITS)
+    emit_metric("phase07.mixed_routing.summary", summary_row)
+    assert len(rows) == expected_cells

@@ -40,15 +40,32 @@ _FILE_SIZE = 64
 _CONCURRENCY = (1, 5, 10, 20)
 
 
+def _resolve_run_id() -> str:
+    """Honor EOS_TIER_RUN_ID so the runner can pin artifact filenames."""
+    env_run_id = os.environ.get("EOS_TIER_RUN_ID")
+    if env_run_id:
+        return env_run_id
+    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + f"-{os.getpid()}"
+
+
 def _artifact_path() -> Path:
-    run_id = (
-        datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + f"-{os.getpid()}"
-    )
     target = (
-        Path.cwd() / ".omc" / "results" / f"phase09-k1000-concurrency-{run_id}.jsonl"
+        Path.cwd()
+        / ".omc"
+        / "results"
+        / f"phase09-k1000-concurrency-{_resolve_run_id()}.jsonl"
     )
     target.parent.mkdir(parents=True, exist_ok=True)
     return target
+
+
+def _stream_row(artifact: Path, row: dict[str, object]) -> None:
+    """Append one JSONL row, flush, fsync — mid-batch kill-9 durability."""
+    with artifact.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row, sort_keys=True, separators=(",", ":")))
+        fh.write("\n")
+        fh.flush()
+        os.fsync(fh.fileno())
 
 
 async def test_phase09_k1000_concurrency(
@@ -63,6 +80,10 @@ async def test_phase09_k1000_concurrency(
     )
 
     artifact = _artifact_path()
+    # Each invocation collects fresh data; batch-level concurrency
+    # measurements are not meaningfully resumable mid-batch.
+    if artifact.exists():
+        artifact.unlink()
     rows: list[dict[str, object]] = []
     summaries: list[dict[str, object]] = []
 
@@ -143,21 +164,15 @@ async def test_phase09_k1000_concurrency(
             "calls": c,
             "calls_succeeded": sum(1 for r in per_call if r["success"]),
         }
-        summaries.append(summary)
-        emit_metric(f"phase09.k1000.c{c}.summary", summary)
         for r in per_call:
             row = dict(r)
             row["concurrency"] = c
             row["schema"] = "phase09.k1000_concurrency.call.v1"
+            _stream_row(artifact, row)
             rows.append(row)
-
-    with artifact.open("w", encoding="utf-8") as fh:
-        for row in rows:
-            fh.write(json.dumps(row, sort_keys=True, separators=(",", ":")))
-            fh.write("\n")
-        for s in summaries:
-            fh.write(json.dumps(s, sort_keys=True, separators=(",", ":")))
-            fh.write("\n")
+        summaries.append(summary)
+        _stream_row(artifact, summary)
+        emit_metric(f"phase09.k1000.c{c}.summary", summary)
 
     print(f"\n[phase09:k1000_concurrency] artifact={artifact}")
     print(

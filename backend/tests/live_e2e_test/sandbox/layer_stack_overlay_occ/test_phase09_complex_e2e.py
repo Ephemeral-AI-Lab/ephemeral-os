@@ -59,15 +59,44 @@ _DIST_ROOT = "dist/phase09"
 
 
 def _run_id() -> str:
-    return (
-        datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + f"-{os.getpid()}"
-    )
+    """Honor EOS_TIER_RUN_ID so the runner can pin artifact filenames."""
+    env_run_id = os.environ.get("EOS_TIER_RUN_ID")
+    if env_run_id:
+        return env_run_id
+    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + f"-{os.getpid()}"
 
 
 def _artifact(label: str, run_id: str) -> Path:
     target = Path.cwd() / ".omc" / "results" / f"{label}-{run_id}.jsonl"
     target.parent.mkdir(parents=True, exist_ok=True)
     return target
+
+
+def _load_prior_data_rows(artifact: Path) -> list[dict[str, object]]:
+    """Return data rows from a prior partial run; drop trailing summary."""
+    if not artifact.exists():
+        return []
+    rows: list[dict[str, object]] = []
+    with artifact.open(encoding="utf-8") as fh:
+        for line in fh:
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            schema = str(row.get("schema", ""))
+            if schema.endswith("summary.v1"):
+                continue
+            rows.append(row)
+    return rows
+
+
+def _stream_row(artifact: Path, row: dict[str, object]) -> None:
+    """Append one JSONL row, flush, fsync — mid-loop kill-9 durability."""
+    with artifact.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row, sort_keys=True, separators=(",", ":")))
+        fh.write("\n")
+        fh.flush()
+        os.fsync(fh.fileno())
 
 
 def _row_skeleton(
@@ -162,6 +191,13 @@ async def _reset_phase09_dirs(handle: SandboxHandle) -> None:
 
 
 def _write_artifact(rows: list[dict[str, object]], summary: dict[str, object], path: Path) -> None:
+    """Truncate-rewrite artifact with full data rows + trailing summary.
+
+    Used at end-of-test after the streaming loop has already written
+    each cell's row in append+flush+fsync mode. The rewrite collapses
+    any prior summary row and presents a single canonical artifact;
+    mid-loop kill-9 durability is preserved by the streaming inserts.
+    """
     with path.open("w", encoding="utf-8") as fh:
         for row in rows:
             fh.write(json.dumps(row, sort_keys=True, separators=(",", ":")))
@@ -225,7 +261,13 @@ async def test_phase09_size_x_kind(
 
     run_id = _run_id()
     artifact = _artifact("phase09-size-x-kind", run_id)
-    rows: list[dict[str, object]] = []
+    prior_rows = _load_prior_data_rows(artifact)
+    completed: set[str] = {
+        str(row["cell_id"])
+        for row in prior_rows
+        if row.get("cell_id") and row.get("passed") is True
+    }
+    rows: list[dict[str, object]] = list(prior_rows)
 
     import time as _time
     matrix_start = _time.perf_counter()
@@ -234,6 +276,8 @@ async def test_phase09_size_x_kind(
         k = _SIZE_KIND_K_BY_SIZE[size]
         for kind in _SIZE_KIND_KINDS:
             cell_id = f"size{size}_{kind}_k{k}"
+            if cell_id in completed:
+                continue
             cell_dir = f"{_GATED_ROOT}/{cell_id}"
             label = f"phase09.size_x_kind.{cell_id}"
 
@@ -369,6 +413,7 @@ async def test_phase09_size_x_kind(
                 passed=success,
                 failure_reason=failure_reason,
             )
+            _stream_row(artifact, row)
             rows.append(row)
             emit_metric(label, row)
 
@@ -417,13 +462,26 @@ async def test_phase09_size_x_kind(
 async def _run_adversarial_cell(
     handle: SandboxHandle,
     *,
+    artifact: Path,
+    completed: set[str],
+    rows: list[dict[str, object]],
     cell_id: str,
     command: str,
     setup_command: str | None,
     correctness_check,  # callable returning (passed, failure_reason, correctness)
     run_id: str,
     axis_values: Mapping[str, object],
-) -> dict[str, object]:
+) -> None:
+    """Run one adversarial cell, stream its row, append to rows.
+
+    Skips the cell entirely if ``cell_id`` is in ``completed`` (resume
+    contract from design §5). The row is streamed to ``artifact`` with
+    append+flush+fsync before being added to ``rows`` so a kill-9
+    mid-cell preserves prior cells' rows.
+    """
+    if cell_id in completed:
+        return
+
     if setup_command is not None:
         await _shell_ok(
             handle, setup_command, description=f"adversarial setup {cell_id}"
@@ -456,8 +514,9 @@ async def _run_adversarial_cell(
         passed=passed,
         failure_reason=failure_reason,
     )
+    _stream_row(artifact, row)
+    rows.append(row)
     emit_metric(label, row)
-    return row
 
 
 async def test_phase09_adversarial(
@@ -469,7 +528,13 @@ async def test_phase09_adversarial(
 
     run_id = _run_id()
     artifact = _artifact("phase09-adversarial", run_id)
-    rows: list[dict[str, object]] = []
+    prior_rows = _load_prior_data_rows(artifact)
+    completed: set[str] = {
+        str(row["cell_id"])
+        for row in prior_rows
+        if row.get("cell_id") and row.get("passed") is True
+    }
+    rows: list[dict[str, object]] = list(prior_rows)
 
     import time as _time
     matrix_start = _time.perf_counter()
@@ -494,16 +559,17 @@ async def test_phase09_adversarial(
             )
         return True, None, {"path_length": len(leaf_path)}
 
-    rows.append(
-        await _run_adversarial_cell(
-            handle,
-            cell_id="deeply_nested_d20",
-            command=build_deep_path_workload(deep_dir, depth=20),
-            setup_command=None,
-            correctness_check=_check_deep,
-            run_id=run_id,
-            axis_values={"adversarial_kind": "deeply_nested", "depth": 20},
-        )
+    await _run_adversarial_cell(
+        handle,
+        artifact=artifact,
+        completed=completed,
+        rows=rows,
+        cell_id="deeply_nested_d20",
+        command=build_deep_path_workload(deep_dir, depth=20),
+        setup_command=None,
+        correctness_check=_check_deep,
+        run_id=run_id,
+        axis_values={"adversarial_kind": "deeply_nested", "depth": 20},
     )
 
     # ---- 2. Symlink target = absolute path inside workspace ----
@@ -521,21 +587,22 @@ async def test_phase09_adversarial(
         # behaviour is asserted elsewhere; here we want commit success.
         return True, None, {"link_target": target_inside, "follow_exists": rf.exists}
 
-    rows.append(
-        await _run_adversarial_cell(
-            handle,
-            cell_id="symlink_target_inside_workspace",
-            command=build_symlink_workload(
-                sym_in_dir, link_name="sym_in", target=target_inside
-            ),
-            setup_command=None,
-            correctness_check=_check_sym_in,
-            run_id=run_id,
-            axis_values={
-                "adversarial_kind": "symlink_inside",
-                "target": target_inside,
-            },
-        )
+    await _run_adversarial_cell(
+        handle,
+        artifact=artifact,
+        completed=completed,
+        rows=rows,
+        cell_id="symlink_target_inside_workspace",
+        command=build_symlink_workload(
+            sym_in_dir, link_name="sym_in", target=target_inside
+        ),
+        setup_command=None,
+        correctness_check=_check_sym_in,
+        run_id=run_id,
+        axis_values={
+            "adversarial_kind": "symlink_inside",
+            "target": target_inside,
+        },
     )
 
     # ---- 3. Symlink target = absolute path OUTSIDE workspace ----
@@ -554,21 +621,22 @@ async def test_phase09_adversarial(
         # the filesystem (we already checked result.success).
         return True, None, {"link_target": target_outside}
 
-    rows.append(
-        await _run_adversarial_cell(
-            handle,
-            cell_id="symlink_target_outside_workspace",
-            command=build_symlink_workload(
-                sym_out_dir, link_name="sym_out", target=target_outside
-            ),
-            setup_command=None,
-            correctness_check=_check_sym_out,
-            run_id=run_id,
-            axis_values={
-                "adversarial_kind": "symlink_outside",
-                "target": target_outside,
-            },
-        )
+    await _run_adversarial_cell(
+        handle,
+        artifact=artifact,
+        completed=completed,
+        rows=rows,
+        cell_id="symlink_target_outside_workspace",
+        command=build_symlink_workload(
+            sym_out_dir, link_name="sym_out", target=target_outside
+        ),
+        setup_command=None,
+        correctness_check=_check_sym_out,
+        run_id=run_id,
+        axis_values={
+            "adversarial_kind": "symlink_outside",
+            "target": target_outside,
+        },
     )
 
     # ---- 4. Whiteout collision (delete + create same path in same commit) ----
@@ -588,18 +656,19 @@ async def test_phase09_adversarial(
             )
         return True, None, {}
 
-    rows.append(
-        await _run_adversarial_cell(
-            handle,
-            cell_id="whiteout_collision_same_commit",
-            command=build_whiteout_collision_workload(
-                collision_dir, name="collide.txt"
-            ),
-            setup_command=build_seed_capture(collision_dir, 1, file_size_bytes=64),
-            correctness_check=_check_collision,
-            run_id=run_id,
-            axis_values={"adversarial_kind": "whiteout_collision"},
-        )
+    await _run_adversarial_cell(
+        handle,
+        artifact=artifact,
+        completed=completed,
+        rows=rows,
+        cell_id="whiteout_collision_same_commit",
+        command=build_whiteout_collision_workload(
+            collision_dir, name="collide.txt"
+        ),
+        setup_command=build_seed_capture(collision_dir, 1, file_size_bytes=64),
+        correctness_check=_check_collision,
+        run_id=run_id,
+        axis_values={"adversarial_kind": "whiteout_collision"},
     )
 
     # ---- 5. Special bash chars in filename ----
@@ -621,16 +690,17 @@ async def test_phase09_adversarial(
             )
         return True, None, {}
 
-    rows.append(
-        await _run_adversarial_cell(
-            handle,
-            cell_id="special_bash_chars_filename",
-            command=build_special_chars_workload(special_dir),
-            setup_command=None,
-            correctness_check=_check_special,
-            run_id=run_id,
-            axis_values={"adversarial_kind": "special_chars"},
-        )
+    await _run_adversarial_cell(
+        handle,
+        artifact=artifact,
+        completed=completed,
+        rows=rows,
+        cell_id="special_bash_chars_filename",
+        command=build_special_chars_workload(special_dir),
+        setup_command=None,
+        correctness_check=_check_special,
+        run_id=run_id,
+        axis_values={"adversarial_kind": "special_chars"},
     )
 
     # ---- 6. Long filename (250 chars) ----
@@ -651,16 +721,17 @@ async def test_phase09_adversarial(
             )
         return True, None, {"name_length": 250}
 
-    rows.append(
-        await _run_adversarial_cell(
-            handle,
-            cell_id="long_filename_250",
-            command=build_long_filename_workload(long_dir, name_length=250),
-            setup_command=None,
-            correctness_check=_check_long,
-            run_id=run_id,
-            axis_values={"adversarial_kind": "long_filename", "name_length": 250},
-        )
+    await _run_adversarial_cell(
+        handle,
+        artifact=artifact,
+        completed=completed,
+        rows=rows,
+        cell_id="long_filename_250",
+        command=build_long_filename_workload(long_dir, name_length=250),
+        setup_command=None,
+        correctness_check=_check_long,
+        run_id=run_id,
+        axis_values={"adversarial_kind": "long_filename", "name_length": 250},
     )
 
     # ---- 7. Empty-dir commit (no path changes) ----
@@ -670,16 +741,17 @@ async def test_phase09_adversarial(
         # passes this cell.
         return True, None, {"empty_commit": True}
 
-    rows.append(
-        await _run_adversarial_cell(
-            handle,
-            cell_id="empty_commit_no_changes",
-            command="true",
-            setup_command=None,
-            correctness_check=_check_empty,
-            run_id=run_id,
-            axis_values={"adversarial_kind": "empty_commit"},
-        )
+    await _run_adversarial_cell(
+        handle,
+        artifact=artifact,
+        completed=completed,
+        rows=rows,
+        cell_id="empty_commit_no_changes",
+        command="true",
+        setup_command=None,
+        correctness_check=_check_empty,
+        run_id=run_id,
+        axis_values={"adversarial_kind": "empty_commit"},
     )
 
     elapsed = _time.perf_counter() - matrix_start
