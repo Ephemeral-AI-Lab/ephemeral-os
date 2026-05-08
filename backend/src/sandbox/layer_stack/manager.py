@@ -13,7 +13,7 @@ from types import TracebackType
 from uuid import uuid4
 
 from sandbox.layer_stack.layer.change import LayerChange
-from sandbox.layer_stack.lease_registry import LeaseRegistry, WorkspaceLease
+from sandbox.layer_stack.lease.registry import LeaseRegistry, WorkspaceLease
 from sandbox.layer_stack.manifest import (
     LAYERS_DIR,
     STAGING_DIR,
@@ -25,10 +25,10 @@ from sandbox.layer_stack.manifest import (
     read_manifest,
     write_manifest_atomic,
 )
-from sandbox.layer_stack.merged_view import MergedView
+from sandbox.layer_stack.view.merged import MergedView
 from sandbox.layer_stack.layer.publisher import LayerPublisher
-from sandbox.layer_stack.squash import SquashWorker, manifest_still_ends_with
-from sandbox.layer_stack.staging import CommitStagingArea
+from sandbox.layer_stack.maintenance.squash import SquashWorker, manifest_still_ends_with
+from sandbox.layer_stack.commit.staging import CommitStagingArea
 
 
 _TRANSIENT_LOWERDIR_DIR = "transient-lowerdirs"

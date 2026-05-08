@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from sandbox.layer_stack.manifest import LAYERS_DIR, STAGING_DIR, LayerRef, Manifest
-from sandbox.layer_stack.merged_view import MergedView
+from sandbox.layer_stack.view.merged import MergedView
 
 
 @dataclass(frozen=True)

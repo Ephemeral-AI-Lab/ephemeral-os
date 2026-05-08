@@ -34,7 +34,7 @@ Commands run:
 ```bash
 uv run python -m py_compile \
   backend/src/sandbox/layer_stack/changes.py \
-  backend/src/sandbox/layer_stack/lease_registry.py \
+  backend/src/sandbox/layer_stack/lease/registry.py \
   backend/src/sandbox/layer_stack/stack_manager.py \
   backend/tests/live_e2e_test/sandbox/layer_stack/test_squash.py \
   backend/tests/live_e2e_test/sandbox/layer_stack/test_changes_aggregation.py \

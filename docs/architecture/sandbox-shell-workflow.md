@@ -438,6 +438,6 @@ except through the documented `commit_transaction()` port.
 | OCC service | `sandbox/occ/service.py`, `sandbox/occ/orchestrator.py` |
 | OCC commit | `sandbox/occ/commit_transaction.py`, `sandbox/occ/serial_merger.py` |
 | OCC ports | `sandbox/occ/ports.py` |
-| Layer stack | `sandbox/layer_stack/stack_manager.py`, `sandbox/layer_stack/publisher.py`, `sandbox/layer_stack/merged_view.py` |
+| Layer stack | `sandbox/layer_stack/manager.py`, `sandbox/layer_stack/layer/publisher.py`, `sandbox/layer_stack/view/merged.py` |
 | Layer stack client | `sandbox/daemon/services/layer_stack_client.py` |
 | Workspace base | `sandbox/layer_stack/workspace_base.py`, `sandbox/layer_stack/workspace.py` |

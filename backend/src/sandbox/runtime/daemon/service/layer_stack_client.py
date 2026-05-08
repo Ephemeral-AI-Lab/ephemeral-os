@@ -10,7 +10,7 @@ from sandbox.layer_stack.manager import (
     LayerStackManager,
     PrepareWorkspaceSnapshotResult,
 )
-from sandbox.layer_stack.staging import CommitStagingArea
+from sandbox.layer_stack.commit.staging import CommitStagingArea
 from sandbox.occ.ports import CommitTransaction
 from sandbox.runtime.daemon.service.workspace_server import get_layer_stack_manager
 
