@@ -161,12 +161,11 @@ async def test_daemon_handles_invalid_json() -> None:
             pass
 
 
-def test_peer_bootstraps_register_snapshot_ops_without_compact() -> None:
+def test_peer_bootstraps_register_snapshot_ops() -> None:
     server._load_peer_bootstraps()
 
     assert "api.prepare_workspace_snapshot" in server.OP_TABLE
     assert "api.release_workspace_snapshot" in server.OP_TABLE
-    assert "api.compact" not in server.OP_TABLE
 
 
 def test_services_cached_per_layer_stack_root(

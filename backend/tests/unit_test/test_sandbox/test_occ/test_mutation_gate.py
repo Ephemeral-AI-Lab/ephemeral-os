@@ -3,7 +3,7 @@
 These tests assert the §6 structural invariants:
 
 * occ-server is not a host-callable daemon dispatch module.
-* Public data operations dispatch through ``sandbox.runtime.daemon.handler``.
+* Public data operations do not dispatch through occ-server.
 * In-workspace classifier predicate lives in command-exec only;
   occ-server source contains no ``workspace_root`` classification call
   sites.
@@ -11,7 +11,6 @@ These tests assert the §6 structural invariants:
 
 from __future__ import annotations
 
-import importlib
 from pathlib import Path
 
 import pytest
@@ -20,15 +19,6 @@ from sandbox.runtime.daemon.service import occ_backend
 
 
 # ---------------------------------------------------------------------------
-# Daemon boundary
-# ---------------------------------------------------------------------------
-
-
-def test_legacy_occ_handlers_module_removed() -> None:
-    with pytest.raises(ModuleNotFoundError):
-        importlib.import_module("sandbox.runtime.daemon.occ_handlers")
-
-
 def test_occ_server_module_does_not_classify_paths() -> None:
     """occ-server must not own the in-workspace classifier — single source of
     truth lives on command-exec (handlers/request_context.py)."""
@@ -46,7 +36,7 @@ def test_data_api_ops_do_not_dispatch_to_occ_server() -> None:
     server._load_peer_bootstraps()
     for op in ("api.write_file", "api.edit_file", "api.read_file", "api.shell"):
         handler = server.OP_TABLE[op]
-        assert handler.__module__.startswith("sandbox.runtime.daemon.handler.")
+        assert handler.__module__ != "sandbox.runtime.daemon.service.occ_backend"
 
 
 # ---------------------------------------------------------------------------

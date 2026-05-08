@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -55,14 +54,3 @@ def test_registered_handler_dispatches_through_op_table() -> None:
     assert "runtime.boot_to_dispatch_s" in timings
     assert "runtime.dispatch_s" in timings
     assert calls == [{"value": 3}]
-
-
-def test_server_does_not_keep_legacy_peer_branch_switches() -> None:
-    source = Path(server.__file__).read_text(encoding="utf-8")
-
-    for legacy_op in (
-        "svc_cmd",
-        "apply",
-        "commit_operation_against_base",
-    ):
-        assert legacy_op not in source

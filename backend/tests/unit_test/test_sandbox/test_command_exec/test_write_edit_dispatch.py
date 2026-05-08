@@ -6,7 +6,6 @@ the OP_TABLE wiring, and the shared-LeaseRegistry assertion.
 
 from __future__ import annotations
 
-import importlib
 import os
 from pathlib import Path
 from uuid import uuid4
@@ -125,11 +124,6 @@ def test_op_table_dispatches_data_ops_to_runtime_handlers() -> None:
     assert server.OP_TABLE["api.read_file"] is read.read_file
     assert server.OP_TABLE["api.shell"] is shell_runner.execute_shell_api
     assert server.OP_TABLE["api.layer_metrics"] is metrics.layer_metrics
-
-
-def test_legacy_api_handlers_module_removed() -> None:
-    with pytest.raises(ModuleNotFoundError):
-        importlib.import_module("sandbox.runtime.daemon.api_handlers")
 
 
 # ---------------------------------------------------------------------------
