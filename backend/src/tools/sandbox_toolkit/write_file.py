@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from sandbox.api import WriteFileRequest, api
+import sandbox.api as sandbox_api
+from sandbox.api import WriteFileRequest
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
 from tools.sandbox_toolkit.session import (
@@ -43,7 +44,7 @@ async def write_file(
     if sandbox_id_error is not None:
         return sandbox_id_error
 
-    result = await api.write_file(
+    result = await sandbox_api.write_file(
         sandbox_id,
         WriteFileRequest(
             path=file_path,

@@ -56,7 +56,7 @@ sandbox/
     status.py
     tool/
       __init__.py
-      _daemon_client.py
+      _payload.py
       read.py
       write.py
       edit.py
@@ -426,7 +426,7 @@ Each item should be a separate commit.
 External production callers should import only:
 
 ```python
-from sandbox.api import api
+import sandbox.api as sandbox_api
 from sandbox.api import ReadFileRequest, WriteFileRequest, EditFileRequest, ShellRequest
 ```
 

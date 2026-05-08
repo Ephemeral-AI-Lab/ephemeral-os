@@ -63,6 +63,22 @@ def test_non_api_production_code_does_not_import_removed_api_utils() -> None:
     assert offenders == []
 
 
+def test_non_sandbox_production_code_imports_only_public_api() -> None:
+    offenders: list[str] = []
+    sandbox_root = SRC_ROOT / "sandbox"
+    for module in _python_files(SRC_ROOT):
+        if module.is_relative_to(sandbox_root):
+            continue
+        for imported in _imports(module):
+            if not imported.startswith("sandbox."):
+                continue
+            if imported == "sandbox.api":
+                continue
+            offenders.append(f"{module.relative_to(SRC_ROOT)} imports {imported}")
+
+    assert offenders == []
+
+
 def test_daemon_code_does_not_import_daytona_provider_modules() -> None:
     offenders: list[str] = []
     daemon_root = SRC_ROOT / "sandbox" / "runtime" / "daemon"

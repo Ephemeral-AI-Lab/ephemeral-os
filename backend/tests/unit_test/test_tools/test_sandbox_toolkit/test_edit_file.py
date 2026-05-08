@@ -99,7 +99,7 @@ def test_missing_old_text_is_rejected() -> None:
 def test_single_old_new_text_edit_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
     api = _EditApi(EditFileResult(success=True, changed_paths=("/ws/file.py",), applied_edits=1))
     ctx = _ctx_with_api(api)
-    monkeypatch.setattr(edit_file_module, "api", api)
+    monkeypatch.setattr(edit_file_module, "sandbox_api", api)
 
     result = _run(
         {"file_path": "/ws/file.py", "old_text": "foo", "new_text": "bar"},
@@ -133,7 +133,7 @@ def test_aborted_version_is_surfaced_to_caller(
         )
     )
     ctx = _ctx_with_api(api)
-    monkeypatch.setattr(edit_file_module, "api", api)
+    monkeypatch.setattr(edit_file_module, "sandbox_api", api)
 
     result = _run(
         {"file_path": "/ws/file.py", "old_text": "a", "new_text": "b"},
@@ -161,7 +161,7 @@ def test_patch_failed_in_single_edit_mode_uses_structured_payload(
         )
     )
     ctx = _ctx_with_api(api)
-    monkeypatch.setattr(edit_file_module, "api", api)
+    monkeypatch.setattr(edit_file_module, "sandbox_api", api)
 
     result = _run(
         {"file_path": "/ws/file.py", "old_text": "missing", "new_text": "x"},
@@ -186,7 +186,7 @@ def test_conflict_status_is_preserved_when_reason_is_human_text(
         )
     )
     ctx = _ctx_with_api(api)
-    monkeypatch.setattr(edit_file_module, "api", api)
+    monkeypatch.setattr(edit_file_module, "sandbox_api", api)
 
     result = _run(
         {"file_path": "/ws/file.py", "old_text": "a", "new_text": "b"},
@@ -207,7 +207,7 @@ def test_caller_and_description_flow_through_to_api(
 ) -> None:
     api = _EditApi()
     ctx = _ctx_with_api(api, agent_run_id="run-42")
-    monkeypatch.setattr(edit_file_module, "api", api)
+    monkeypatch.setattr(edit_file_module, "sandbox_api", api)
 
     _run(
         {

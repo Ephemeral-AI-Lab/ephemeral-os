@@ -10,8 +10,7 @@ from collections.abc import Callable
 from typing import Any
 from uuid import uuid4
 
-from sandbox.api import status as sb_status
-from sandbox.api.tool.raw_exec import raw_exec
+import sandbox.api as sandbox_api
 
 from benchmarks.sweevo.dataset import (
     default_sweevo_snapshot_name,
@@ -61,7 +60,7 @@ def _service() -> Any:
     ``DaytonaSandboxLifecycle`` instance — so existing call sites work
     unchanged.
     """
-    return sb_status
+    return sandbox_api
 
 
 def _default_sweevo_sandbox_name(instance: SWEEvoInstance) -> str:
@@ -280,7 +279,7 @@ async def _exec(
 ) -> str:
     """Execute a command in the sandbox via provider raw exec, returning output."""
     try:
-        response = await raw_exec(
+        response = await sandbox_api.raw_exec(
             sandbox_id,
             cmd,
             cwd=cwd or "/",
@@ -441,7 +440,7 @@ async def setup_sweevo_sandbox(
     )
 
     try:
-        sandbox_info = sb_status.get_sandbox(sandbox_id)
+        sandbox_info = sandbox_api.get_sandbox(sandbox_id)
         existing_labels = sandbox_info.get("labels", {})
         merged_labels = (
             {str(k): str(v) for k, v in existing_labels.items()}
@@ -449,7 +448,7 @@ async def setup_sweevo_sandbox(
             else {}
         )
         merged_labels["project_dir"] = repo_dir
-        sb_status.set_sandbox_labels(sandbox_id, merged_labels)
+        sandbox_api.set_sandbox_labels(sandbox_id, merged_labels)
         logger.info("Set project_dir label to %s", repo_dir)
     except Exception as exc:
         logger.warning("Could not set project_dir label: %s", exc)

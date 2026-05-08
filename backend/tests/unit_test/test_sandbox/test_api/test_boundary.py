@@ -25,7 +25,7 @@ ALLOWED_API_IMPORT_NAMES = {
     "RawExecResult",
     "ReadFileRequest",
     "ReadFileResult",
-    "SandboxAPI",
+    "SandboxClient",
     "SandboxCaller",
     "SandboxResultBase",
     "SearchReplaceEdit",
@@ -33,7 +33,6 @@ ALLOWED_API_IMPORT_NAMES = {
     "ShellResult",
     "WriteFileRequest",
     "WriteFileResult",
-    "api",
 }
 TYPE_MODULES = {
     "sandbox.contracts",

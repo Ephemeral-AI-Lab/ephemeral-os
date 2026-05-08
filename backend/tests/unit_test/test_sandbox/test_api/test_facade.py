@@ -1,4 +1,4 @@
-"""Tests for the ``sandbox.api.api`` facade object."""
+"""Tests for the ``sandbox.api`` facade object."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from sandbox.api import (
     EditFileRequest,
     RawExecResult,
     ReadFileRequest,
-    SandboxAPI,
+    SandboxClient,
     SandboxCaller,
     ShellRequest,
     WriteFileRequest,
@@ -19,7 +19,7 @@ from sandbox.api import (
 async def test_tool_methods_delegate_to_backing_modules(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    facade = SandboxAPI()
+    facade = SandboxClient()
     actor = SandboxCaller(agent_id="agent-1")
     calls: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
 
@@ -78,7 +78,7 @@ async def test_tool_methods_delegate_to_backing_modules(
 
 
 def test_status_methods_delegate_to_status_module(monkeypatch: pytest.MonkeyPatch) -> None:
-    facade = SandboxAPI()
+    facade = SandboxClient()
     calls: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
 
     def record(name: str, value):
@@ -139,4 +139,4 @@ def test_context_preparer_delegates_to_control_factory(
         lambda sandbox_id: preparer if sandbox_id == "sb-1" else None,
     )
 
-    assert SandboxAPI().context_preparer_for("sb-1") is preparer
+    assert SandboxClient().context_preparer_for("sb-1") is preparer

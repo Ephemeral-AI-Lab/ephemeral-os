@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from sandbox.api import ReadFileRequest, api
+import sandbox.api as sandbox_api
+from sandbox.api import ReadFileRequest
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
 from tools.sandbox_toolkit.session import (
@@ -45,7 +46,7 @@ async def read_file(
     if sandbox_id_error is not None:
         return sandbox_id_error
     try:
-        result = await api.read_file(
+        result = await sandbox_api.read_file(
             sandbox_id,
             ReadFileRequest(path=file_path, caller=caller_from_context(context)),
         )

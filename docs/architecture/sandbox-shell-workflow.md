@@ -1,6 +1,6 @@
 # Sandbox Shell Workflow
 
-How `SandboxAPI.shell` runs a command end-to-end, what the command sees on
+How `SandboxClient.shell` runs a command end-to-end, what the command sees on
 disk, and how `layer_stack`, `overlay`, and `occ` connect.
 
 Source of truth: `backend/src/sandbox/`.
@@ -22,18 +22,18 @@ Source of truth: `backend/src/sandbox/`.
 
 ---
 
-## 1. Workflow: `SandboxAPI.shell` to result
+## 1. Workflow: `SandboxClient.shell` to result
 
 ### 1.1 Big picture
 
 ```
 ┌──────────────────────── HOST PROCESS ────────────────────────┐
-│  caller ──► SandboxAPI.shell(sandbox_id, request)            │
+│  caller ──► SandboxClient.shell(sandbox_id, request)            │
 │                       │                                      │
 │                       ▼                                      │
 │             api/tool/shell.py:shell()                        │
 │                       ▼                                      │
-│             api/tool/_daemon_client.py:call_daemon_api       │
+│             host/daemon_client.py:call_daemon_api            │
 │                       ▼                                      │
 │             host/rpc/client._call_daemon                     │
 └───────────────────────┼──────────────────────────────────────┘
@@ -75,7 +75,7 @@ Two views: host→daemon transport, then in-sandbox orchestration.
 **Host → daemon (transport):**
 
 ```
-caller        SandboxAPI.shell        _daemon_client     daemon
+caller        SandboxClient.shell        daemon_client      daemon
   │   shell        │                     │                 │
   ├───────────────►│ call_daemon_api     │                 │
   │                ├────────────────────►│ provider.exec   │
@@ -120,7 +120,7 @@ cmd_exec               layer_stack            overlay/mount         occ
 #### Phase 1 — Host marshalling
 
 `api/tool/shell.py:shell` builds the args dict, normalizes absolute `cwd`
-to `"."`, and ships it via `call_daemon_api` (`api/tool/_daemon_client.py`),
+to `"."`, and ships it via `call_daemon_api` (`host/daemon_client.py`),
 which adds `layer_stack_root=$BUNDLE_REMOTE_DIR/layer-stack` and forwards
 through the provider adapter into the sandbox's resident daemon.
 
@@ -429,7 +429,7 @@ except through the documented `commit_transaction()` port.
 | Concern | Module |
 |---|---|
 | Host entrypoint | `sandbox/api/tool/shell.py`, `sandbox/api/facade.py` |
-| Host → daemon transport | `sandbox/api/tool/_daemon_client.py`, `sandbox/host/rpc/client.py` |
+| Host → daemon transport | `sandbox/host/daemon_client.py` |
 | Daemon dispatch | `sandbox/daemon/rpc/dispatcher.py` |
 | Shell orchestrator | `sandbox/daemon/services/shell_runner.py` |
 | Mount + exec | `sandbox/command_exec/workspace_mount.py`, `sandbox/command_exec/namespace_helper.py` |

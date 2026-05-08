@@ -13,6 +13,7 @@ from sandbox.api import (
     EditFileResult,
     RawExecResult,
     ReadFileResult,
+    SandboxClient,
     SandboxCaller,
     ShellResult,
     WriteFileResult,
@@ -84,6 +85,13 @@ def test_api_root_keeps_public_surface_grouped_by_role() -> None:
         for path in _API_ROOT.iterdir()
         if path.name != "__pycache__" and not path.name.startswith(".")
     } == _EXPECTED_API_ROOT_ENTRIES
+
+
+def test_api_package_is_the_facade_without_nested_api_object() -> None:
+    assert isinstance(sandbox_api._client, SandboxClient)
+    assert sandbox_api.create_sandbox == sandbox_api._client.create_sandbox
+    assert sandbox_api.read_file == sandbox_api._client.read_file
+    assert not hasattr(sandbox_api, "api")
 
 
 @pytest.mark.parametrize(

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from sandbox.api import EditFileRequest, SearchReplaceEdit, api
+import sandbox.api as sandbox_api
+from sandbox.api import EditFileRequest, SearchReplaceEdit
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
 from tools.sandbox_toolkit.session import (
@@ -91,7 +92,7 @@ async def edit_file(
     if sandbox_id_error is not None:
         return sandbox_id_error
 
-    result = await api.edit_file(
+    result = await sandbox_api.edit_file(
         sandbox_id,
         EditFileRequest(
             path=file_path,

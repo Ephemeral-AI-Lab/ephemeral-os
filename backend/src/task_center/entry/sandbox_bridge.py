@@ -20,15 +20,15 @@ class TaskCenterSandboxBinding:
 
 
 def _default_create(**kwargs: Any) -> dict[str, Any]:
-    from sandbox.api import api
+    import sandbox.api as sandbox_api
 
-    return api.create_sandbox(**kwargs)
+    return sandbox_api.create_sandbox(**kwargs)
 
 
 def _default_start(sandbox_id: str) -> dict[str, Any]:
-    from sandbox.api import api
+    import sandbox.api as sandbox_api
 
-    return api.start_sandbox(sandbox_id)
+    return sandbox_api.start_sandbox(sandbox_id)
 
 
 class TaskCenterSandboxBridge:

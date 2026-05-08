@@ -1,4 +1,4 @@
-"""Facade object for sandbox API calls from outside ``sandbox/``."""
+"""Sandbox API facade implementation."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from sandbox.contracts import (
 )
 
 
-class SandboxAPI:
+class SandboxClient:
     """Single auditable call surface for sandbox status and tool verbs."""
 
     def create_sandbox(
@@ -159,7 +159,4 @@ class SandboxAPI:
         return await edit_module.edit_file(sandbox_id, request)
 
 
-api = SandboxAPI()
-
-
-__all__ = ["SandboxAPI", "api"]
+__all__ = ["SandboxClient"]

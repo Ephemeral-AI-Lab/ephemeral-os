@@ -6,7 +6,8 @@ import json
 
 from pydantic import BaseModel, Field
 
-from sandbox.api import ShellRequest, api
+import sandbox.api as sandbox_api
+from sandbox.api import ShellRequest
 from tools.core.base import ToolExecutionContextService, ToolResult
 from tools.core.decorator import tool
 from tools.sandbox_toolkit.session import (
@@ -177,7 +178,7 @@ async def shell(
         return sandbox_id_error
 
     try:
-        result = await api.shell(
+        result = await sandbox_api.shell(
             sandbox_id,
             ShellRequest(
                 command=command,
