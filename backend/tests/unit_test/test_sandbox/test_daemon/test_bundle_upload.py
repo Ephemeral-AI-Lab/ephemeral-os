@@ -55,7 +55,6 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/api/facade.py",
         "sandbox/api/tool/__init__.py",
         "sandbox/async_bridge.py",
-        "sandbox/bash.py",
         "sandbox/contracts.py",
         "sandbox/runtime/__init__.py",
         "sandbox/runtime/daemon/__main__.py",
@@ -114,7 +113,7 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
     assert missing == [], f"bundle is missing required paths: {missing}"
     assert not (extract_dir / "sandbox/api/status.py").exists()
     assert not (extract_dir / "sandbox/api/tool/raw_exec.py").exists()
-    assert not (extract_dir / "sandbox/api/tool/_daemon_client.py").exists()
+    assert not (extract_dir / "sandbox/api/tool/_payload.py").exists()
     assert not (extract_dir / "sandbox/host").exists()
     assert not (extract_dir / "sandbox/provider").exists()
     assert not (extract_dir / "sandbox/testing").exists()
@@ -138,7 +137,7 @@ def test_bundle_excludes_host_and_public_transport_modules() -> None:
 
     excluded = {
         "sandbox/api/status.py",
-        "sandbox/api/tool/_daemon_client.py",
+        "sandbox/api/tool/_payload.py",
         "sandbox/api/tool/edit.py",
         "sandbox/api/tool/raw_exec.py",
         "sandbox/api/tool/read.py",
