@@ -32,7 +32,6 @@ from sandbox.layer_stack.staging import CommitStagingArea
 
 
 _TRANSIENT_LOWERDIR_DIR = "transient-lowerdirs"
-_LEGACY_MATERIALIZED_DIR = "materialized"
 
 
 @dataclass(frozen=True)
@@ -63,10 +62,6 @@ class LayerStackManager:
         self.storage_root.mkdir(parents=True, exist_ok=True)
         (self.storage_root / LAYERS_DIR).mkdir(exist_ok=True)
         (self.storage_root / STAGING_DIR).mkdir(exist_ok=True)
-
-        legacy_materialized = self.storage_root / _LEGACY_MATERIALIZED_DIR
-        if legacy_materialized.is_dir():
-            shutil.rmtree(legacy_materialized, ignore_errors=True)
 
         self._manifest_file = manifest_path(self.storage_root)
         if not self._manifest_file.exists():

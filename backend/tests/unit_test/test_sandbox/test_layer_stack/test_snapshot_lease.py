@@ -174,30 +174,3 @@ def test_prepare_workspace_snapshot_failure_releases_lease_and_drops_partial_low
     assert manager.pinned_layers() == ()
     assert partial_lowerdirs
     assert partial_lowerdirs[0].parent.exists() is False
-
-
-def test_layer_stack_manager_purges_legacy_materialized_dir_on_init(
-    tmp_path: Path,
-) -> None:
-    stack = tmp_path / "stack"
-    legacy = stack / "materialized" / "manifest-000001" / "lower"
-    legacy.mkdir(parents=True)
-    (legacy / "marker").write_text("stale\n", encoding="utf-8")
-
-    manager = LayerStackManager(stack)
-    assert (stack / "materialized").exists() is False
-    # Sanity: subsequent prepare/release cycle never recreates ``materialized/``.
-    manifest = manager.publish_changes(
-        [
-            LayerChange(
-                path="a.txt",
-                kind="write",
-                source_path=_source(tmp_path, "a.txt", b"a"),
-            )
-        ]
-    )
-    del manifest
-    result = manager.prepare_workspace_snapshot("request-x")
-    manager.release_lease(result.lease_id)
-    shutil.rmtree(Path(result.lowerdir).parent, ignore_errors=True)
-    assert (stack / "materialized").exists() is False
