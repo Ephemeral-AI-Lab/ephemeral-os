@@ -7,10 +7,7 @@ visible in `commit_per_file_us`.
 
 from __future__ import annotations
 
-import json
-import os
 from collections.abc import Mapping
-from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -19,28 +16,41 @@ from .._harness.integrated_cases import emit_metric, timed_call
 from .._harness.large_capture_workload import build_k_capture_command
 from .._harness.phase05_public_file_ops import seed_phase05_imported_base
 from .._harness.sandbox_fixture import SandboxHandle
+from .._harness.streaming_artifact import (
+    load_prior_data_rows as _load_prior_data_rows,
+    resolve_run_id as _resolve_run_id,
+    rewrite_artifact as _rewrite_artifact,
+    stream_row as _stream_row,
+)
 
 
 pytestmark = pytest.mark.asyncio
 
 _PREFIXES = ("tracked/load/k_capture", "dist/k_capture")
 _K_VALUES = (1, 100, 1000, 10_000)
+_K1000_SPOT_VALUES = (1000,)
 
 
-def _artifact_path() -> Path:
-    run_id = (
-        datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        + f"-{os.getpid()}"
-    )
-    target = Path.cwd() / ".omc" / "results" / (
-        f"phase06-large-capture-scaling-{run_id}.jsonl"
-    )
+def _artifact_path(label: str = "phase06-large-capture-scaling") -> Path:
+    target = Path.cwd() / ".omc" / "results" / f"{label}-{_resolve_run_id()}.jsonl"
     target.parent.mkdir(parents=True, exist_ok=True)
     return target
 
 
 def _slug(prefix: str) -> str:
     return prefix.replace("/", "_").replace(".", "")
+
+
+def _cell_id(prefix: str, k: int) -> str:
+    return f"k_capture:{_slug(prefix)}:k{k}"
+
+
+def _completed_cell_ids(rows: list[dict[str, object]]) -> set[str]:
+    return {
+        str(row["cell_id"])
+        for row in rows
+        if row.get("passed") is True and row.get("cell_id")
+    }
 
 
 def _row_for_cell(
@@ -75,6 +85,8 @@ def _row_for_cell(
     direct_count = float(timings.get("occ.commit.direct_path_count", 0.0))
     return {
         "schema": "phase06.large_capture_scaling.v2",
+        "cell_id": _cell_id(prefix, k),
+        "passed": True,
         "prefix": prefix,
         "k": k,
         "wall_ms": round(wall_ms, 3),
@@ -137,24 +149,64 @@ async def test_phase06_large_capture_k_scaling(
     await seed_phase05_imported_base(handle)
 
     artifact = _artifact_path()
-    rows: list[dict[str, object]] = []
+    rows = _load_prior_data_rows(artifact)
+    completed = _completed_cell_ids(rows)
+    skipped_resume = 0
 
     for prefix in _PREFIXES:
         for k in _K_VALUES:
+            if _cell_id(prefix, k) in completed:
+                skipped_resume += 1
+                continue
             row = await _run_single_cell(handle, prefix=prefix, k=k)
             rows.append(row)
+            _stream_row(artifact, row)
 
-    with artifact.open("w", encoding="utf-8") as fh:
-        for row in rows:
-            fh.write(json.dumps(row, sort_keys=True, separators=(",", ":")))
-            fh.write("\n")
+    summary = {
+        "schema": "phase06.large_capture_scaling.summary.v1",
+        "artifact": str(artifact),
+        "rows": len(rows),
+        "skipped_resume": skipped_resume,
+    }
+    _rewrite_artifact(artifact, rows, summary)
 
     print(f"\n[phase06:large_capture_scaling] artifact={artifact}")
-    emit_metric(
-        "phase06.large_capture_scaling.summary",
-        {"artifact": str(artifact), "rows": len(rows)},
-    )
+    emit_metric("phase06.large_capture_scaling.summary", summary)
     assert len(rows) == len(_PREFIXES) * len(_K_VALUES)
+
+
+async def test_phase06_large_capture_k1000_spot_check(
+    workspace_base_sandbox: SandboxHandle,
+) -> None:
+    """Tier 2 spot check: exactly tracked×K=1000 and dist×K=1000."""
+    handle = workspace_base_sandbox
+    await seed_phase05_imported_base(handle)
+
+    artifact = _artifact_path("phase06-k1000-spot-check")
+    rows = _load_prior_data_rows(artifact)
+    completed = _completed_cell_ids(rows)
+    skipped_resume = 0
+
+    for prefix in _PREFIXES:
+        for k in _K1000_SPOT_VALUES:
+            if _cell_id(prefix, k) in completed:
+                skipped_resume += 1
+                continue
+            row = await _run_single_cell(handle, prefix=prefix, k=k)
+            rows.append(row)
+            _stream_row(artifact, row)
+
+    summary = {
+        "schema": "phase06.k1000_spot_check.summary.v1",
+        "artifact": str(artifact),
+        "rows": len(rows),
+        "skipped_resume": skipped_resume,
+    }
+    _rewrite_artifact(artifact, rows, summary)
+
+    print(f"\n[phase06:k1000_spot_check] artifact={artifact}")
+    emit_metric("phase06.k1000_spot_check.summary", summary)
+    assert len(rows) == len(_PREFIXES) * len(_K1000_SPOT_VALUES)
 
 
 def _isolated_k10000_artifact(label_slug: str) -> Path:
@@ -176,10 +228,7 @@ async def _isolated_k10000_cell(
     await seed_phase05_imported_base(handle)
     artifact = _isolated_k10000_artifact(label_slug)
     row = await _run_single_cell(handle, prefix=prefix, k=10_000)
-    artifact.write_text(
-        json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n",
-        encoding="utf-8",
-    )
+    _stream_row(artifact, row)
     print(f"\n[phase06:{label_slug}] artifact={artifact}")
 
 

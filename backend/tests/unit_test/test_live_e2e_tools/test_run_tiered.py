@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
 import signal
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -198,6 +200,26 @@ def test_run_with_budget_clean_exit_returns_passed():
     assert outcome.elapsed_s == pytest.approx(0.5)
 
 
+def test_run_with_budget_logs_midflight_stdout_tail(tmp_path):
+    messages: list[str] = []
+    outcome = run_tiered.run_with_budget(
+        [
+            sys.executable,
+            "-c",
+            "import time; print('progress-marker', flush=True); time.sleep(0.25)",
+        ],
+        env=os.environ.copy(),
+        wall_budget_s=2.0,
+        cwd=tmp_path,
+        progress_logger=messages.append,
+        progress_interval_s=0.05,
+    )
+    assert outcome.returncode == 0
+    assert outcome.timed_out is False
+    assert any("pytest running" in message for message in messages)
+    assert any("progress-marker" in message for message in messages)
+
+
 def test_run_with_budget_timeout_signals_then_kills(monkeypatch):
     """First communicate() raises TimeoutExpired (wall budget), then SIGINT
     delivered, second communicate() also raises (grace), then SIGKILL."""
@@ -306,7 +328,7 @@ def test_execute_tier_pytest_passed(tmp_path):
 
 def test_execute_tier_pytest_failed_counts_artifact_failures(tmp_path):
     tier = _tier(3, cascade="warn")
-    artifact = tmp_path / "phase07-foo-rid2.jsonl"
+    artifact = tmp_path / "phase07-size-matrix-rid2.jsonl"
     artifact.write_text(
         "\n".join(
             [
@@ -337,6 +359,37 @@ def test_execute_tier_pytest_failed_counts_artifact_failures(tmp_path):
     assert outcome.failed_cells == 2
 
 
+def test_execute_tier_pytest_counts_only_current_tier_artifacts(tmp_path):
+    tier = _tier(6, cascade="none")
+    (tmp_path / "phase09-size-x-concurrency-rid6.jsonl").write_text(
+        json.dumps({"passed": False, "cell_id": "tier4-failure"}) + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "phase09-adversarial-rid6.jsonl").write_text(
+        json.dumps({"passed": True, "cell_id": "tier6-pass"}) + "\n",
+        encoding="utf-8",
+    )
+
+    def _fake_runner(argv, **kw):
+        return SubprocessOutcome(
+            returncode=0,
+            timed_out=False,
+            stdout_tail="",
+            stderr_tail="",
+            elapsed_s=3.0,
+        )
+
+    outcome = execute_tier(
+        tier,
+        run_id="rid6",
+        project_root=tmp_path,
+        results_dir=tmp_path,
+        subprocess_runner=_fake_runner,
+    )
+    assert outcome.status == "passed"
+    assert outcome.failed_cells == 0
+
+
 def test_execute_tier_pytest_aborted_budget(tmp_path):
     tier = _tier(2, cascade="warn")
 
@@ -358,6 +411,49 @@ def test_execute_tier_pytest_aborted_budget(tmp_path):
     )
     assert outcome.status == "aborted_budget"
     assert "wall_budget" in outcome.notes
+
+
+def test_artifact_progress_note_summarizes_latest_row(tmp_path):
+    artifact = tmp_path / "phase06-k1000-spot-check-rid.jsonl"
+    artifact.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "schema": "phase06.large_capture_scaling.v2",
+                        "cell_id": "tracked-k1000",
+                        "passed": True,
+                    }
+                ),
+                json.dumps(
+                    {
+                        "schema": "phase06.k1000_spot_check.summary.v1",
+                        "failed_cells": 0,
+                    }
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    note = run_tiered._artifact_progress_note(tmp_path, "rid")
+    assert "phase06-k1000-spot-check-rid.jsonl:rows=2" in note
+    assert "failed_cells=0" in note
+
+
+def test_artifact_progress_note_filters_to_current_tier(tmp_path):
+    (tmp_path / "phase09-size-x-concurrency-rid.jsonl").write_text(
+        json.dumps({"schema": "phase09.size_x_concurrency.v1", "passed": False})
+        + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "phase09-adversarial-rid.jsonl").write_text(
+        json.dumps({"schema": "phase09.live_e2e.v1", "passed": True}) + "\n",
+        encoding="utf-8",
+    )
+    note = run_tiered._artifact_progress_note(tmp_path, "rid", tier_id=6)
+    assert "phase09-adversarial-rid.jsonl" in note
+    assert "phase09-size-x-concurrency-rid.jsonl" not in note
 
 
 # --------------------------------------------------------------------------

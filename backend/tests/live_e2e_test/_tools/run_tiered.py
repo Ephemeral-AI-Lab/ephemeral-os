@@ -52,6 +52,7 @@ TierKind = Literal["tier0_health", "pytest"]
 TierStatus = Literal[
     "passed", "failed", "aborted_budget", "skipped_cascade", "skipped_unavailable"
 ]
+ProgressLogger = Callable[[str], None]
 
 
 @dataclass(frozen=True)
@@ -85,6 +86,18 @@ class TierOutcome:
 
 _VALID_CASCADE: set[CascadeKind] = {"abort_all", "abort_ge", "abort_eq", "warn", "none"}
 _VALID_KIND: set[TierKind] = {"tier0_health", "pytest"}
+_TIER_ARTIFACT_PREFIXES: dict[int, tuple[str, ...]] = {
+    1: ("phase00-smoke-",),
+    2: ("phase06-k1000-spot-check-", "phase06-large-capture-scaling-"),
+    3: ("phase07-size-matrix-", "phase07-kind-matrix-", "phase07-mixed-routing-"),
+    4: (
+        "phase09-size-x-kind-",
+        "phase09-size-x-concurrency-",
+        "phase09-kind-x-concurrency-",
+    ),
+    5: ("phase08-dev-shm-bounded-",),
+    6: ("phase09-adversarial-",),
+}
 
 
 def load_tier_configs(path: Path) -> list[TierConfig]:
@@ -216,6 +229,8 @@ def run_with_budget(
     grace_s: float = 30.0,
     cwd: str | Path | None = None,
     popen_factory: Callable[..., subprocess.Popen[bytes]] | None = None,
+    progress_logger: ProgressLogger | None = None,
+    progress_interval_s: float = 15.0,
     clock: Callable[[], float] = time.monotonic,
 ) -> SubprocessOutcome:
     """Run ``argv`` under a wall-clock budget with SIGINT-then-SIGKILL.
@@ -236,8 +251,14 @@ def run_with_budget(
     started = clock()
     using_tempfiles = factory is subprocess.Popen
     if using_tempfiles:
-        stdout_f = tempfile.TemporaryFile(mode="w+b")
-        stderr_f = tempfile.TemporaryFile(mode="w+b")
+        stdout_f = tempfile.NamedTemporaryFile(
+            prefix="eos-run-tiered-stdout-", mode="w+b", delete=False
+        )
+        stderr_f = tempfile.NamedTemporaryFile(
+            prefix="eos-run-tiered-stderr-", mode="w+b", delete=False
+        )
+        stdout_path = Path(stdout_f.name)
+        stderr_path = Path(stderr_f.name)
         proc = factory(
             argv,
             env=env,
@@ -252,6 +273,8 @@ def run_with_budget(
         # the fake's communicate() can return canned bytes.
         stdout_f = None
         stderr_f = None
+        stdout_path = None
+        stderr_path = None
         proc = factory(
             argv,
             env=env,
@@ -261,42 +284,119 @@ def run_with_budget(
             start_new_session=True,
         )
 
-    def _read_tails() -> tuple[str, str]:
-        if stdout_f is None or stderr_f is None:
+    def _read_tails(*, close: bool) -> tuple[str, str]:
+        if stdout_path is None or stderr_path is None:
             return "", ""
-        stdout_f.seek(0)
-        stderr_f.seek(0)
-        out = _tail(stdout_f.read())
-        err = _tail(stderr_f.read())
-        stdout_f.close()
-        stderr_f.close()
+        out = _tail(stdout_path.read_bytes()) if stdout_path.exists() else ""
+        err = _tail(stderr_path.read_bytes()) if stderr_path.exists() else ""
+        if close:
+            if stdout_f is not None:
+                stdout_f.close()
+            if stderr_f is not None:
+                stderr_f.close()
+            stdout_path.unlink(missing_ok=True)
+            stderr_path.unlink(missing_ok=True)
         return out, err
+
+    def _emit_progress(phase: str, elapsed_s: float, budget_s: float) -> None:
+        if progress_logger is None:
+            return
+        stdout_tail, stderr_tail = _read_tails(close=False)
+        line = (
+            f"[run_tiered] pytest {phase} elapsed={elapsed_s:.1f}s "
+            f"budget={budget_s:.1f}s"
+        )
+        if stdout_tail:
+            line += f" stdout_tail={stdout_tail[-300:]!r}"
+        if stderr_tail:
+            line += f" stderr_tail={stderr_tail[-300:]!r}"
+        progress_logger(line)
+
+    def _wait_real_process_with_progress(*, budget_s: float, phase: str) -> None:
+        deadline = clock() + budget_s
+        next_progress = clock() + max(progress_interval_s, 0.1)
+        wait_step_s = 1.0
+        if progress_logger is not None and progress_interval_s > 0:
+            wait_step_s = min(max(progress_interval_s, 0.1), 1.0)
+        while True:
+            remaining = deadline - clock()
+            if remaining <= 0:
+                raise subprocess.TimeoutExpired(cmd=argv, timeout=budget_s)
+            try:
+                proc.wait(timeout=min(wait_step_s, remaining))
+                return
+            except subprocess.TimeoutExpired:
+                now = clock()
+                if progress_logger is not None and progress_interval_s > 0:
+                    if now >= next_progress:
+                        _emit_progress(phase, now - started, budget_s)
+                        while next_progress <= now:
+                            next_progress += progress_interval_s
+
+    def _terminate_child_after_parent_interrupt() -> None:
+        if progress_logger is not None:
+            progress_logger(
+                "[run_tiered] parent interrupted; terminating child process group"
+            )
+        _terminate_group(proc.pid, signal.SIGINT)
+        try:
+            if using_tempfiles:
+                proc.wait(timeout=grace_s)
+            else:
+                proc.communicate(timeout=grace_s)
+        except subprocess.TimeoutExpired:
+            _terminate_group(proc.pid, signal.SIGKILL)
+            if using_tempfiles:
+                proc.wait()
+            else:
+                proc.communicate()
 
     timed_out = False
     try:
         if using_tempfiles:
-            proc.wait(timeout=wall_budget_s)
+            _wait_real_process_with_progress(
+                budget_s=wall_budget_s, phase="running"
+            )
             stdout = b""
             stderr = b""
         else:
             stdout, stderr = proc.communicate(timeout=wall_budget_s)
     except subprocess.TimeoutExpired:
         timed_out = True
+        if progress_logger is not None:
+            progress_logger(
+                f"[run_tiered] wall budget exceeded after {wall_budget_s:.1f}s; "
+                "sending SIGINT"
+            )
         _terminate_group(proc.pid, signal.SIGINT)
         try:
             if using_tempfiles:
-                proc.wait(timeout=grace_s)
+                _wait_real_process_with_progress(
+                    budget_s=grace_s, phase="grace"
+                )
             else:
                 stdout, stderr = proc.communicate(timeout=grace_s)
         except subprocess.TimeoutExpired:
+            if progress_logger is not None:
+                progress_logger(
+                    f"[run_tiered] grace budget exceeded after {grace_s:.1f}s; "
+                    "sending SIGKILL"
+                )
             _terminate_group(proc.pid, signal.SIGKILL)
             if using_tempfiles:
                 proc.wait()
             else:
                 stdout, stderr = proc.communicate()
+    except KeyboardInterrupt:
+        try:
+            _terminate_child_after_parent_interrupt()
+        finally:
+            if using_tempfiles:
+                _read_tails(close=True)
+        raise
 
     if using_tempfiles:
-        stdout_tail, stderr_tail = _read_tails()
+        stdout_tail, stderr_tail = _read_tails(close=True)
     else:
         stdout_tail = _tail(stdout)
         stderr_tail = _tail(stderr)
@@ -337,6 +437,8 @@ def execute_tier(
     results_dir: Path,
     tier0_probe: Callable[[str], Tier0Result] | None = None,
     subprocess_runner: Callable[..., SubprocessOutcome] | None = None,
+    progress_logger: ProgressLogger | None = None,
+    progress_interval_s: float = 15.0,
     clock: Callable[[], float] = time.monotonic,
 ) -> TierOutcome:
     """Run one tier and return its outcome.
@@ -365,11 +467,20 @@ def execute_tier(
     env["EOS_TIER_RUN_ID"] = run_id
     env["EOS_TIER_ID"] = str(tier.id)
     pytest_argv = [sys.executable, "-m", "pytest", "-q", *tier.pytest_args]
+
+    def _progress(message: str) -> None:
+        if progress_logger is None:
+            return
+        artifact_note = _artifact_progress_note(results_dir, run_id, tier.id)
+        progress_logger(f"{message} {artifact_note}")
+
     outcome = runner(
         pytest_argv,
         env=env,
         wall_budget_s=tier.wall_budget_s,
         cwd=project_root,
+        progress_logger=_progress,
+        progress_interval_s=progress_interval_s,
         clock=clock,
     )
     if outcome.timed_out:
@@ -405,10 +516,9 @@ def _count_failed_cells(results_dir: Path, tier_id: int, run_id: str) -> int | N
     """
     if not results_dir.exists():
         return None
-    found_any = False
     failed = 0
-    for artifact in sorted(results_dir.glob(f"*-{run_id}.jsonl")):
-        found_any = True
+    artifacts = _tier_artifacts(results_dir, tier_id, run_id)
+    for artifact in artifacts:
         try:
             with artifact.open(encoding="utf-8") as fh:
                 for line in fh:
@@ -420,7 +530,72 @@ def _count_failed_cells(results_dir: Path, tier_id: int, run_id: str) -> int | N
                         failed += 1
         except OSError:
             continue
-    return failed if found_any else None
+    return failed if artifacts else None
+
+
+def _tier_artifacts(results_dir: Path, tier_id: int, run_id: str) -> list[Path]:
+    if not results_dir.exists():
+        return []
+    artifacts = sorted(results_dir.glob(f"*-{run_id}.jsonl"))
+    prefixes = _TIER_ARTIFACT_PREFIXES.get(tier_id)
+    if prefixes is None:
+        return artifacts
+    return [path for path in artifacts if path.name.startswith(prefixes)]
+
+
+def _artifact_progress_note(
+    results_dir: Path, run_id: str, tier_id: int | None = None
+) -> str:
+    """Summarize recently-updated JSONL artifacts for midflight debugging."""
+    if not results_dir.exists():
+        return "artifacts=none"
+    artifacts = (
+        sorted(results_dir.glob(f"*-{run_id}.jsonl"))
+        if tier_id is None
+        else _tier_artifacts(results_dir, tier_id, run_id)
+    )
+    artifacts = sorted(artifacts, key=lambda path: path.stat().st_mtime, reverse=True)
+    if not artifacts:
+        return "artifacts=none"
+    pieces = [_summarize_artifact(path) for path in artifacts[:3]]
+    return "artifacts=[" + "; ".join(pieces) + "]"
+
+
+def _summarize_artifact(path: Path) -> str:
+    rows = 0
+    last: dict[str, object] | None = None
+    try:
+        with path.open(encoding="utf-8") as fh:
+            for line in fh:
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                rows += 1
+                last = row
+    except OSError as exc:
+        return f"{path.name}:error={exc.__class__.__name__}"
+
+    return f"{path.name}:rows={rows},last={_describe_artifact_row(last)}"
+
+
+def _describe_artifact_row(row: dict[str, object] | None) -> str:
+    if row is None:
+        return "none"
+    keys = (
+        "schema",
+        "matrix",
+        "cell_id",
+        "cell",
+        "prefix",
+        "k",
+        "kind",
+        "concurrency",
+        "passed",
+        "failed_cells",
+    )
+    parts = [f"{key}={row[key]!r}" for key in keys if key in row]
+    return "{" + ",".join(parts[:6]) + "}"
 
 
 # --------------------------------------------------------------------------
@@ -471,6 +646,8 @@ def run(
     no_cascade: bool = False,
     tier0_probe: Callable[[str], Tier0Result] | None = None,
     subprocess_runner: Callable[..., SubprocessOutcome] | None = None,
+    progress_logger: ProgressLogger | None = None,
+    progress_interval_s: float = 15.0,
     clock: Callable[[], float] = time.monotonic,
 ) -> RunSummary:
     if run_id is None:
@@ -485,6 +662,10 @@ def run(
     outcomes: list[TierOutcome] = []
     for tier in selected:
         if not no_cascade and cascade.should_skip(tier):
+            if progress_logger is not None:
+                progress_logger(
+                    f"[run_tiered] tier {tier.id} [{tier.name}] skipped_cascade"
+                )
             outcomes.append(
                 TierOutcome(
                     tier_id=tier.id,
@@ -495,6 +676,11 @@ def run(
                 )
             )
             continue
+        if progress_logger is not None:
+            progress_logger(
+                f"[run_tiered] tier {tier.id} [{tier.name}] start "
+                f"budget={tier.wall_budget_s:.1f}s"
+            )
         outcome = execute_tier(
             tier,
             run_id=run_id,
@@ -502,8 +688,16 @@ def run(
             results_dir=results_dir,
             tier0_probe=tier0_probe,
             subprocess_runner=subprocess_runner,
+            progress_logger=progress_logger,
+            progress_interval_s=progress_interval_s,
             clock=clock,
         )
+        if progress_logger is not None:
+            progress_logger(
+                f"[run_tiered] tier {tier.id} [{tier.name}] finish "
+                f"status={outcome.status} elapsed={outcome.elapsed_s:.2f}s "
+                f"failed_cells={outcome.failed_cells}"
+            )
         outcomes.append(outcome)
         cascade.record(tier, outcome.status)
 
@@ -535,6 +729,12 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Path to tiers.toml (default: alongside this script)",
     )
+    parser.add_argument(
+        "--progress-interval-s",
+        type=float,
+        default=15.0,
+        help="Seconds between midflight progress logs for pytest tiers.",
+    )
     args = parser.parse_args(argv)
 
     here = Path(__file__).resolve().parent
@@ -551,6 +751,8 @@ def main(argv: list[str] | None = None) -> int:
         run_id=args.run_id,
         tier_filter=_parse_tier_filter(args.tier),
         no_cascade=args.no_cascade,
+        progress_logger=lambda message: print(message, flush=True),
+        progress_interval_s=args.progress_interval_s,
     )
 
     print(f"\n[run_tiered] summary={summary.summary_path}")

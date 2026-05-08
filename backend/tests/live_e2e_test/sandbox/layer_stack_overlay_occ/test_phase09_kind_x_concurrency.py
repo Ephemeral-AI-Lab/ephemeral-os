@@ -13,10 +13,12 @@ shell then mutates them.
 Per-cell streaming + resume contract identical to
 ``test_phase09_size_x_concurrency.py``.
 
-Strict pass bars per cell:
+Pass bars per cell:
 
 * every concurrent call must succeed
-* per-cell median commit_s ≤ 3 × the c=1 baseline of the same kind
+* per-cell median commit_s ≤ max(3 × the c=1 baseline of the same kind,
+  100 ms). The absolute floor avoids failing on live scheduler jitter when the
+  baseline is only a few milliseconds.
 
 End-of-matrix summary row asserts ``failed_cells == 0``.
 """
@@ -55,6 +57,20 @@ _K = 64
 _FILE_SIZE = 64
 _KINDS = ("new_files", "modify_files", "delete_files")
 _CONCURRENCY = (1, 5, 10)
+_COMMIT_REGRESSION_MULTIPLIER = 3.0
+_COMMIT_REGRESSION_ABSOLUTE_FLOOR_S = 0.1
+
+
+def _tail(value: str, *, limit: int = 400) -> str:
+    if len(value) <= limit:
+        return value
+    return value[-limit:]
+
+
+def _replace_cell_row(rows: list[dict[str, object]], row: dict[str, object]) -> None:
+    cell_id = row.get("cell_id")
+    rows[:] = [existing for existing in rows if existing.get("cell_id") != cell_id]
+    rows.append(row)
 
 
 def _artifact_path() -> Path:
@@ -66,6 +82,13 @@ def _artifact_path() -> Path:
     )
     target.parent.mkdir(parents=True, exist_ok=True)
     return target
+
+
+def _commit_regression_threshold(baseline: float) -> float:
+    return max(
+        _COMMIT_REGRESSION_MULTIPLIER * baseline,
+        _COMMIT_REGRESSION_ABSOLUTE_FLOOR_S,
+    )
 
 
 async def _seed_call_dir(handle: SandboxHandle, *, cell_dir: str) -> None:
@@ -109,6 +132,13 @@ async def _run_one_call(
     return {
         "call_index": call_index,
         "success": bool(result.success),
+        "status": result.status,
+        "exit_code": result.exit_code,
+        "stderr_tail": _tail(result.stderr or ""),
+        "stdout_tail": _tail(result.stdout or ""),
+        "conflict_reason": result.conflict_reason,
+        "changed_path_count": len(result.changed_paths),
+        "changed_path_sample": list(result.changed_paths[:5]),
         "wall_ms": metric.elapsed_ms,
         "commit_s": float(metric.timings.get("occ.commit.total_s", 0.0)),
         "stager_s": float(metric.timings.get("occ.commit.stager_write_total_s", 0.0)),
@@ -196,14 +226,34 @@ async def test_phase09_kind_x_concurrency(
                 failure_reason = {
                     "category": "call_failed",
                     "failed_call_count": len(failed),
+                    "failed_calls": [
+                        {
+                            "call_index": r["call_index"],
+                            "status": r["status"],
+                            "exit_code": r["exit_code"],
+                            "conflict_reason": r["conflict_reason"],
+                            "stderr_tail": r["stderr_tail"],
+                            "stdout_tail": r["stdout_tail"],
+                            "changed_path_count": r["changed_path_count"],
+                            "changed_path_sample": r["changed_path_sample"],
+                        }
+                        for r in failed
+                    ],
                 }
-            elif baseline is not None and baseline > 0 and median_commit > 3 * baseline:
+            elif (
+                baseline is not None
+                and baseline > 0
+                and median_commit > _commit_regression_threshold(baseline)
+            ):
                 passed = False
+                threshold = _commit_regression_threshold(baseline)
                 failure_reason = {
                     "category": "median_commit_regression",
                     "baseline_s": baseline,
                     "observed_s": median_commit,
-                    "threshold_s": 3 * baseline,
+                    "threshold_s": threshold,
+                    "multiplier": _COMMIT_REGRESSION_MULTIPLIER,
+                    "absolute_floor_s": _COMMIT_REGRESSION_ABSOLUTE_FLOOR_S,
                 }
 
             row: dict[str, object] = {
@@ -232,7 +282,7 @@ async def test_phase09_kind_x_concurrency(
                 "run_id": run_id,
             }
             _stream_row(artifact, row)
-            rows.append(row)
+            _replace_cell_row(rows, row)
             emit_metric(label, row)
 
     elapsed = time.perf_counter() - matrix_start

@@ -39,9 +39,7 @@ wall_budget_s = 120
 per_cell_budget_s = 60
 kind = "pytest"
 pytest_args = [
-    "backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase06_large_capture_scaling.py",
-    "-k",
-    "k_capture and 1000",
+    "backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase06_large_capture_scaling.py::test_phase06_large_capture_k1000_spot_check",
 ]
 cascade = "warn"
 
