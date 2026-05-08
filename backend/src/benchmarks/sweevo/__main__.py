@@ -1,19 +1,31 @@
-"""CLI entrypoint for the SWE-EVO TaskCenter runner with mocked agent execution.
+"""SWE-EVO benchmark CLI (slim entrypoint per plan §5).
 
-Example:
-    PYTHONPATH=backend/src uv run python -m benchmarks.sweevo \
-      --instance-id dask__dask_2023.3.2_2023.4.0 -v
+Two flags:
+
+- ``--real-agent`` — placeholder for the real-agent grading loop. Real-agent
+  CLI work is out of scope for the live-e2e framework phase and is deferred to
+  a follow-up; today this prints a deferred-notice and exits non-zero.
+- ``--scenario <name>`` — drives the mock framework via
+  :func:`benchmarks.sweevo.live_test.runner.run_scenario` against a live
+  Daytona sandbox. The scenario must be registered in ``SCENARIO_REGISTRY``.
+
+Pytest is the canonical entry point for the mock framework — see
+``backend/src/benchmarks/sweevo/live_test/tests/`` for the regression tests.
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
-import json
 import logging
+import os
 import sys
+from pathlib import Path
 
-from benchmarks.sweevo.dataset import load_sweevo_dataset, summarize_sweevo_instance
+from benchmarks.sweevo.dataset import (
+    load_sweevo_dataset,
+    summarize_sweevo_instance,
+)
 from benchmarks.sweevo.models import (
     _DEFAULT_DATASET_SOURCE,
     _DEFAULT_TARGET_BULLETS,
@@ -21,12 +33,7 @@ from benchmarks.sweevo.models import (
 )
 
 
-def _configure_benchmark_logging() -> None:
-    """Keep the SWE-EVO CLI stream focused on benchmark progress.
-
-    Suppress lower-severity stdlib logging so SDK/backend logger noise does
-    not interleave with benchmark output.
-    """
+def _configure_logging() -> None:
     logging.basicConfig(
         level=logging.ERROR,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -43,42 +50,36 @@ def _bootstrap_sandbox_provider() -> None:
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m benchmarks.sweevo",
-        description="SWE-EVO TaskCenter runner with mocked agent execution.",
+        description="SWE-EVO benchmark CLI — list / scenario / real-agent.",
     )
     parser.add_argument("--source", default=_DEFAULT_DATASET_SOURCE)
-    parser.add_argument("--instance-id", default=None, help="Exact instance_id to run")
+    parser.add_argument(
+        "--list",
+        action="store_true",
+        help="List available SWE-EVO instances and exit.",
+    )
+    parser.add_argument(
+        "--instance-id",
+        default=None,
+        help="Exact SWE-EVO instance_id to run.",
+    )
     parser.add_argument("--size", default="medium", choices=["small", "medium", "large", "any"])
     parser.add_argument("--target-bullets", type=int, default=_DEFAULT_TARGET_BULLETS)
-    parser.add_argument("--list", action="store_true", help="List available instances and exit")
     parser.add_argument("--repo-dir", default=_REPO_DIR)
-    parser.add_argument("--snapshot-name", default="")
-    parser.add_argument("--sandbox-name", default="")
-    snapshot_group = parser.add_mutually_exclusive_group()
-    snapshot_group.add_argument("--register-snapshot", dest="register_snapshot", action="store_true")
-    snapshot_group.add_argument(
-        "--no-register-snapshot",
-        dest="register_snapshot",
-        action="store_false",
-    )
-    parser.set_defaults(register_snapshot=True)
-    parser.add_argument("--cpu", type=int, default=2)
-    parser.add_argument("--disk", type=int, default=10)
-    parser.add_argument("--no-evaluate", action="store_true", help="Skip F2P/P2P grading")
-    parser.add_argument("--no-stream", action="store_true", help="Print JSON only after completion")
     parser.add_argument(
-        "--message-log",
-        default="message.jsonl",
-        help=(
-            "Append completed agent steps to this JSONL file "
-            "(default: message.jsonl; pass an empty string to disable)"
-        ),
+        "--scenario",
+        default=None,
+        help="Run the named live-test scenario from SCENARIO_REGISTRY.",
     )
-    parser.add_argument("--no-color", action="store_true")
     parser.add_argument(
-        "-v",
-        "--verbose",
+        "--real-agent",
         action="store_true",
-        help="Deprecated no-op; benchmark output is filtered by default.",
+        help="Real-agent grading path — DEFERRED to a follow-up phase.",
+    )
+    parser.add_argument(
+        "--audit-dir",
+        default=None,
+        help="Override audit base dir (defaults to .sweevo_runs/).",
     )
     return parser
 
@@ -97,83 +98,79 @@ def _cmd_list(source: str) -> int:
     return 0
 
 
-async def _cmd_run(args: argparse.Namespace) -> int:
-    from benchmarks.sweevo.task_center_runner import run_sweevo_with_task_center
-    from message.event_printer import MultiAgentEventPrinter
+async def _cmd_scenario(args: argparse.Namespace) -> int:
+    from benchmarks.sweevo.dataset import select_sweevo_instance
+    from benchmarks.sweevo.live_test.runner import run_scenario
+    from benchmarks.sweevo.live_test.scenarios import SCENARIO_REGISTRY
+    from benchmarks.sweevo.sandbox import create_sweevo_test_sandbox
 
-    _bootstrap_sandbox_provider()
-
-    printer = None
-    if not args.no_stream:
-        printer = MultiAgentEventPrinter(color=not args.no_color, timestamps=True)
-        print("=" * 72, flush=True)
+    scenario_cls = SCENARIO_REGISTRY.get(args.scenario)
+    if scenario_cls is None:
         print(
-            f"  SWE-EVO TaskCenter run (mock agent execution)  instance="
-            f"{args.instance_id or f'<auto size={args.size}>'}",
-            flush=True,
+            f"Unknown scenario: {args.scenario!r}. "
+            f"Available: {sorted(SCENARIO_REGISTRY)}",
+            file=sys.stderr,
         )
-        print("=" * 72, flush=True)
-
-    try:
-        result = await run_sweevo_with_task_center(
-            printer=printer,
-            source=args.source,
-            instance_id=args.instance_id,
-            size=args.size,
-            target_bullets=args.target_bullets,
-            snapshot_name=args.snapshot_name,
-            sandbox_name=args.sandbox_name,
-            register_snapshot=args.register_snapshot,
-            cpu=args.cpu,
-            disk=args.disk,
-            repo_dir=args.repo_dir,
-            evaluate=not args.no_evaluate,
-            message_log_path=args.message_log or None,
-        )
-    except RuntimeError as exc:
-        print(str(exc), file=sys.stderr)
         return 2
 
-    if args.no_stream:
-        print(json.dumps(result, indent=2, default=str))
-    else:
-        grading = result.get("grading") or {}
-        print("=" * 72, flush=True)
-        print(
-            f"  status={result.get('task_center_status')}  "
-            f"tasks={result.get('task_count', 0)}  "
-            f"events={result.get('agent_events', 0)}  "
-            f"duration_s={float(result.get('duration_s') or 0):.1f}",
-            flush=True,
-        )
-        if grading:
-            print(
-                f"  grading: resolved={grading.get('resolved')}  "
-                f"f2p={grading.get('fail_to_pass_passed', 0)}/"
-                f"{grading.get('fail_to_pass_total', 0)}  "
-                f"p2p_broken={grading.get('pass_to_pass_broken', 0)}/"
-                f"{grading.get('pass_to_pass_total', 0)}  "
-                f"fix_rate={float(grading.get('fix_rate', 0.0)):.2f}",
-                flush=True,
-            )
-        print("=" * 72, flush=True)
+    _bootstrap_sandbox_provider()
+    instance = select_sweevo_instance(
+        source=args.source,
+        instance_id=args.instance_id,
+        size=args.size,
+        target_bullets=args.target_bullets,
+    )
+    sandbox_result = await create_sweevo_test_sandbox(
+        instance,
+        register_snapshot=True,
+        repo_dir=args.repo_dir,
+    )
+    audit_dir = (
+        Path(args.audit_dir) if args.audit_dir
+        else Path(os.getenv("EOS_SWEEVO_AUDIT_DIR", ".sweevo_runs")).resolve()
+    )
+    report = await run_scenario(
+        scenario_cls(),
+        instance=instance,
+        sandbox_id=str(sandbox_result["sandbox_id"]),
+        audit_dir=audit_dir,
+        repo_dir=args.repo_dir,
+    )
+    print(
+        f"scenario={report.scenario_name} "
+        f"task_center_run_id={report.task_center_run_id} "
+        f"status={report.task_center_status} "
+        f"run_dir={report.run_dir} "
+        f"duration_s={report.duration_s:.1f}"
+    )
+    return 0 if report.task_center_status == "done" else 1
 
-    task_center_ok = result.get("task_center_status") == "done"
-    grading = result.get("grading")
-    grading_ok = grading is None or bool(grading.get("resolved"))
-    return 0 if task_center_ok and grading_ok else 1
+
+def _cmd_real_agent() -> int:
+    print(
+        "--real-agent is deferred to a follow-up phase. "
+        "Use --scenario <name> for the mock framework, "
+        "or run pytest under backend/src/benchmarks/sweevo/live_test/tests/.",
+        file=sys.stderr,
+    )
+    return 2
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
-    _configure_benchmark_logging()
+    _configure_logging()
     if args.list:
         return _cmd_list(args.source)
-    try:
-        return asyncio.run(_cmd_run(args))
-    except KeyboardInterrupt:
-        print("\nInterrupted.", flush=True)
-        return 130
+    if args.real_agent:
+        return _cmd_real_agent()
+    if args.scenario:
+        try:
+            return asyncio.run(_cmd_scenario(args))
+        except KeyboardInterrupt:
+            print("\nInterrupted.", flush=True)
+            return 130
+    print("Specify --list, --scenario <name>, or --real-agent.", file=sys.stderr)
+    return 2
 
 
 if __name__ == "__main__":

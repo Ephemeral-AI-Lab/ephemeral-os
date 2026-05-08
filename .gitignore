@@ -80,3 +80,6 @@ uv.lock
 .agents/
 .omc/
 graphify-out/
+
+# SWE-EVO live e2e test framework audit trees
+.sweevo_runs/

@@ -88,4 +88,17 @@ kind = "pytest"
 pytest_args = [
     "backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase09_complex_e2e.py::test_phase09_adversarial",
 ]
-cascade = "none"
+cascade = "warn"
+
+[[tier]]
+id = 7
+name = "sweevo_mock_framework"
+# ~90s sandbox bring-up + ~30s/test * ~12 tests budget headroom (plan §14).
+wall_budget_s = 600
+per_cell_budget_s = 60
+kind = "pytest"
+pytest_args = [
+    "backend/src/benchmarks/sweevo/live_test/tests/",
+    "-q",
+]
+cascade = "warn"

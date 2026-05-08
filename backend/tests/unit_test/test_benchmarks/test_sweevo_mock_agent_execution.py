@@ -1,15 +1,20 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import pytest
 
 import sandbox.api as sandbox_api
-from benchmarks.sweevo.mock_agent_execution import (
-    run_sweevo_task_center_with_mock_agent_execution,
+from benchmarks.sweevo.live_test.runner import run_scenario
+from benchmarks.sweevo.live_test.scenarios.correctness_testing import (
+    CorrectnessTesting,
+)
+from benchmarks.sweevo.live_test.stores import (
+    create_in_memory_task_center_stores,
 )
 from benchmarks.sweevo.models import SWEEvoInstance
-from benchmarks.sweevo.task_center_runner import build_sweevo_user_prompt
+from benchmarks.sweevo.prompt import build_sweevo_user_prompt
 from sandbox.api import (
     ConflictInfo,
     EditFileRequest,
@@ -170,8 +175,9 @@ def _instance(**overrides: Any) -> SWEEvoInstance:
 
 
 @pytest.mark.asyncio
-async def test_real_task_center_with_mock_agent_execution_context_and_sandbox_tools(
+async def test_run_scenario_correctness_testing_with_fake_sandbox(
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     fake = _FakeSandboxApi()
     monkeypatch.setattr(sandbox_api, "write_file", fake.write_file)
@@ -180,22 +186,30 @@ async def test_real_task_center_with_mock_agent_execution_context_and_sandbox_to
     monkeypatch.setattr(sandbox_api, "shell", fake.shell)
 
     instance = _instance()
-    prompt = build_sweevo_user_prompt(instance, _REPO_DIR)
+    user_prompt = build_sweevo_user_prompt(instance, _REPO_DIR)
 
-    report = await run_sweevo_task_center_with_mock_agent_execution(
-        instance=instance,
-        user_prompt=prompt,
-        sandbox_id="sbx-1",
-        repo_dir=_REPO_DIR,
-    )
+    bundle = create_in_memory_task_center_stores()
+    try:
+        report = await run_scenario(
+            CorrectnessTesting(),
+            instance=instance,
+            sandbox_id="sbx-1",
+            audit_dir=tmp_path,
+            stores=bundle,
+            repo_dir=_REPO_DIR,
+            user_prompt=user_prompt,
+        )
+    finally:
+        bundle.close()
 
-    assert report["task_center_status"] == "done"
-    assert all(item["passed"] for item in report["prompt_inspections"])
-    assert all(item["passed"] for item in report["sandbox_checks"])
+    # --- Existing parity assertions -----------------------------------
+    assert report.task_center_status == "done"
+    assert report.passed_prompt_inspections
+    assert report.passed_sandbox_checks
 
     delegated = [
         mission
-        for mission in report["graph"]["missions"]
+        for mission in report.graph_summary["missions"]
         if len(mission["episodes"]) == 2
     ][0]
     assert delegated["status"] == "succeeded"
@@ -208,14 +222,14 @@ async def test_real_task_center_with_mock_agent_execution_context_and_sandbox_to
     assert delegated["episodes"][1]["creation_reason"] == "partial_continuation"
 
     planner_reviews = [
-        item for item in report["prompt_inspections"] if item["role"] == "planner"
+        item for item in report.prompt_inspections if item.role == "planner"
     ]
-    assert any(item["checks"].get("failed_attempts") for item in planner_reviews)
+    assert any(item.checks.get("failed_attempts") for item in planner_reviews)
     assert any(
-        item["checks"].get("previous_episode_results") for item in planner_reviews
+        item.checks.get("previous_episode_results") for item in planner_reviews
     )
 
-    tool_names = {item["tool_name"] for item in report["tool_calls"]}
+    tool_names = {item.tool_name for item in report.tool_calls}
     assert {
         "request_mission_solution",
         "submit_full_plan",
@@ -229,7 +243,7 @@ async def test_real_task_center_with_mock_agent_execution_context_and_sandbox_to
         "submit_evaluation_success",
     } <= tool_names
 
-    check_names = {item["name"] for item in report["sandbox_checks"]}
+    check_names = {item.name for item in report.sandbox_checks}
     assert {
         "tool.write_file.direct_merge",
         "tool.edit_file.direct_merge",
@@ -239,3 +253,51 @@ async def test_real_task_center_with_mock_agent_execution_context_and_sandbox_to
         "api.edit_file.conflict_detection",
     } <= check_names
     assert fake.files[_PROBE_PATH] == "alpha-batch\nbeta-batch\nsquash-check\n"
+
+    # --- New audit-tree assertions ------------------------------------
+    run_dir = report.run_dir
+    assert run_dir.exists() and run_dir.is_dir()
+    assert (run_dir / "run.json").exists()
+    assert (run_dir / "metrics.json").exists()
+
+    mission_dirs = list(run_dir.glob("mission_*_*"))
+    assert mission_dirs, f"no mission_NN_<id> dir under {run_dir}"
+    delegated_mission_dirs = []
+    for mission_dir in mission_dirs:
+        assert (mission_dir / "mission.jsonl").exists()
+        if list(mission_dir.glob("episode_*_*")):
+            delegated_mission_dirs.append(mission_dir)
+    assert delegated_mission_dirs, "no mission with episodes — delegated path missing"
+    found_attempt_with_role_dir = False
+    for mission_dir in delegated_mission_dirs:
+        episode_dirs = list(mission_dir.glob("episode_*_*"))
+        for episode_dir in episode_dirs:
+            assert (episode_dir / "episode.jsonl").exists()
+            attempt_dirs = list(episode_dir.glob("attempt_*_*"))
+            if not attempt_dirs:
+                # Entry-executor episode is attempt-less; skip.
+                continue
+            for attempt_dir in attempt_dirs:
+                assert (attempt_dir / "attempt.jsonl").exists()
+                role_dirs = list(attempt_dir.glob("[0-9][0-9]_*"))
+                assert role_dirs, (
+                    f"no NN_<role>_<task_id> dir under {attempt_dir}"
+                )
+                found_attempt_with_role_dir = True
+                for role_dir in role_dirs:
+                    assert (role_dir / "task.jsonl").exists()
+                    role_dir_name = role_dir.name
+                    role_segment = role_dir_name.split("_", 2)[1]
+                    # Helper / unknown roles must not earn an attempt-child dir.
+                    assert role_segment in {
+                        "planner",
+                        "executor",
+                        "evaluator",
+                        "generator",
+                    }
+    assert found_attempt_with_role_dir, "no attempt_NN_<id> dir found anywhere"
+
+    # entry_executor sibling directory exists and carries task.jsonl.
+    entry_dirs = list(run_dir.glob("entry_executor_*"))
+    assert entry_dirs, "missing entry_executor sibling dir"
+    assert (entry_dirs[0] / "task.jsonl").exists()

@@ -1,46 +1,22 @@
-"""Mock-agent TaskCenter integration runner for SWE-EVO benchmarks.
+"""MockSquadRunner — deterministic mock agent execution for SWE-EVO benchmarks.
 
-The runner uses real TaskCenter orchestration, real context composition, real
-sandbox tool wrappers, and real terminal submission tools. Only the model loop
-is replaced by deterministic role handlers so benchmark setup can validate the
-runtime and sandbox boundaries without spending model tokens.
+Relocated from ``benchmarks.sweevo.mock_agent_execution`` in S-03.
 """
 
 from __future__ import annotations
 
-import contextlib
 import json
-import time
-from collections.abc import Iterator
-from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
 
 import sandbox.api as sandbox_api
-from agents import (
-    AgentDefinition,
-    list_definitions,
-    register_definition,
-    unregister_definition,
-)
-from db.base import Base
-import db.models  # noqa: F401 - populate SQLAlchemy metadata
-from db.stores.attempt_store import AttemptStore
-from db.stores.context_packet_store import ContextPacketStore
-from db.stores.episode_store import EpisodeStore
-from db.stores.mission_store import MissionStore
-from db.stores.task_center_store import TaskCenterStore
+from agents import AgentDefinition
 from engine.api import EphemeralRunResult
 from sandbox.api import (
     EditFileRequest,
     SandboxCaller,
     SearchReplaceEdit,
 )
-from sqlalchemy import create_engine
-from sqlalchemy.engine import Engine
-from sqlalchemy.orm import sessionmaker
-from task_center.api import TaskCenterSandboxBridge, start_task_center_entry_run
 from task_center.attempt import Attempt
 from task_center.episode.episode import Episode
 from tools.core.base import BaseTool
@@ -67,185 +43,62 @@ from tools.submission.main_agent.planner import (
     submit_partial_plan,
 )
 
-from benchmarks.sweevo.dataset import summarize_sweevo_instance
 from benchmarks.sweevo.models import SWEEvoInstance, _REPO_DIR
+from benchmarks.sweevo.live_test.audit.bus import AuditEventBus
+from benchmarks.sweevo.live_test.audit.events import Event, EventType
+from benchmarks.sweevo.live_test.audit.node_id import NodeId
+from benchmarks.sweevo.live_test.scenarios.base import (
+    Scenario,
+    ScenarioContext,
+)
+from benchmarks.sweevo.live_test.squad.prompt_inspector import (
+    LaunchRecord,
+    PromptInspection,
+    ToolCallRecord,
+)
+from benchmarks.sweevo.live_test.squad.sandbox_probe import SandboxCheck
 
+_PLANNER_EVENT_BY_TOOL: dict[str, EventType] = {
+    submit_full_plan.name: EventType.PLANNER_FULL_PLAN,
+    submit_partial_plan.name: EventType.PLANNER_PARTIAL_PLAN,
+}
 
-@dataclass(frozen=True, slots=True)
-class PromptInspection:
-    task_id: str
-    agent_name: str
-    role: str
-    checks: dict[str, bool]
-    justification: str
-
-    @property
-    def passed(self) -> bool:
-        return all(self.checks.values())
-
-    def as_dict(self) -> dict[str, Any]:
-        payload = asdict(self)
-        payload["passed"] = self.passed
-        return payload
-
-
-@dataclass(frozen=True, slots=True)
-class SandboxCheck:
-    name: str
-    passed: bool
-    detail: str
-    changed_paths: tuple[str, ...] = ()
-
-    def as_dict(self) -> dict[str, Any]:
-        return {
-            "name": self.name,
-            "passed": self.passed,
-            "detail": self.detail,
-            "changed_paths": list(self.changed_paths),
-        }
-
-
-@dataclass(frozen=True, slots=True)
-class LaunchRecord:
-    task_id: str
-    attempt_id: str | None
-    agent_name: str
-    role: str
-    prompt_preview: str
-
-    def as_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
-
-@dataclass(frozen=True, slots=True)
-class ToolCallRecord:
-    task_id: str
-    tool_name: str
-    is_error: bool
-    metadata: dict[str, Any] = field(default_factory=dict)
-
-    def as_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
-
-@dataclass(slots=True)
-class TaskCenterStoreBundle:
-    engine: Engine
-    task_store: TaskCenterStore
-    mission_store: MissionStore
-    episode_store: EpisodeStore
-    attempt_store: AttemptStore
-    context_packet_store: ContextPacketStore
-
-    def close(self) -> None:
-        self.engine.dispose()
-
-
-def create_in_memory_task_center_stores() -> TaskCenterStoreBundle:
-    """Create isolated real TaskCenter stores for a benchmark run."""
-    engine = create_engine("sqlite:///:memory:")
-    Base.metadata.create_all(engine)
-    session_factory = sessionmaker(
-        bind=engine,
-        autoflush=False,
-        expire_on_commit=False,
-    )
-
-    task_store = TaskCenterStore()
-    mission_store = MissionStore()
-    episode_store = EpisodeStore()
-    attempt_store = AttemptStore()
-    context_packet_store = ContextPacketStore()
-    for store in (
-        task_store,
-        mission_store,
-        episode_store,
-        attempt_store,
-        context_packet_store,
-    ):
-        store.initialize(session_factory)
-
-    return TaskCenterStoreBundle(
-        engine=engine,
-        task_store=task_store,
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
-        context_packet_store=context_packet_store,
-    )
-
-
-@contextlib.contextmanager
-def registered_mock_sweevo_agents() -> Iterator[None]:
-    """Temporarily install the minimal TaskCenter squad definitions."""
-    previous = list_definitions()
-    for definition in previous:
-        unregister_definition(definition.name)
-
-    for definition in _mock_agent_definitions():
-        register_definition(definition)
-
-    try:
-        yield
-    finally:
-        for definition in list_definitions():
-            unregister_definition(definition.name)
-        for definition in previous:
-            register_definition(definition)
-
-
-def _mock_agent_definitions() -> tuple[AgentDefinition, ...]:
-    return (
-        AgentDefinition(
-            name="entry_executor",
-            description="SWE-EVO mock entry executor",
-            role="executor",
-            context_recipe="entry_executor_v1",
-            terminals=[
-                "request_mission_solution",
-                "submit_execution_success",
-                "submit_execution_failure",
-            ],
-        ),
-        AgentDefinition(
-            name="planner",
-            description="SWE-EVO mock planner",
-            role="planner",
-            context_recipe="planner_v1",
-            terminals=["submit_full_plan", "submit_partial_plan"],
-        ),
-        AgentDefinition(
-            name="executor",
-            description="SWE-EVO mock executor",
-            role="executor",
-            context_recipe="generator_v1",
-            allowed_tools=["read_file", "write_file", "edit_file", "shell"],
-            terminals=[
-                "request_mission_solution",
-                "submit_execution_success",
-                "submit_execution_failure",
-            ],
-        ),
-        AgentDefinition(
-            name="evaluator",
-            description="SWE-EVO mock evaluator",
-            role="evaluator",
-            context_recipe="evaluator_v1",
-            terminals=["submit_evaluation_success", "submit_evaluation_failure"],
-        ),
-    )
+_EVALUATOR_EVENT_BY_TOOL: dict[str, EventType] = {
+    submit_evaluation_success.name: EventType.EVALUATOR_SUCCESS,
+    submit_evaluation_failure.name: EventType.EVALUATOR_FAILURE,
+}
 
 
 async def _noop_emit(_event: Any) -> None:
     return None
 
 
-class MockSWEvoAgentExecution:
+class MockSquadRunner:
     """Deterministic agent execution handlers that call real tools."""
 
-    def __init__(self, *, instance: SWEEvoInstance, repo_dir: str = _REPO_DIR) -> None:
+    def __init__(
+        self,
+        *,
+        instance: SWEEvoInstance,
+        repo_dir: str = _REPO_DIR,
+        bus: AuditEventBus | None = None,
+        task_center_run_id: str = "",
+        scenario: Scenario | None = None,
+    ) -> None:
+        # Late import to avoid circular import (correctness_testing imports
+        # ScenarioBase from scenarios.base which is fine, but
+        # benchmarks.sweevo.live_test.scenarios re-exports CorrectnessTesting
+        # which lives in the same package — keeping the import local sidesteps
+        # any future package-level loops).
+        from benchmarks.sweevo.live_test.scenarios.correctness_testing import (
+            CorrectnessTesting,
+        )
+
         self._instance = instance
         self._repo_dir = repo_dir
+        self._bus = bus
+        self._task_center_run_id = task_center_run_id
+        self._scenario: Scenario = scenario or CorrectnessTesting()
         self.launches: list[LaunchRecord] = []
         self.tool_calls: list[ToolCallRecord] = []
         self.prompt_inspections: list[PromptInspection] = []
@@ -262,7 +115,7 @@ class MockSWEvoAgentExecution:
         **_kwargs: Any,
     ) -> EphemeralRunResult:
         if agent_def is None:
-            raise RuntimeError("MockSWEvoAgentExecution requires agent_def.")
+            raise RuntimeError("MockSquadRunner requires agent_def.")
 
         metadata = self._metadata_for(
             config=config,
@@ -288,6 +141,21 @@ class MockSWEvoAgentExecution:
                 metadata=metadata,
             )
         )
+
+        # Publish invocation event.
+        if agent_def.name == "entry_executor":
+            invocation_type = EventType.ENTRY_EXECUTOR_INVOKED
+        elif agent_def.role == "planner":
+            invocation_type = EventType.PLANNER_INVOKED
+        elif agent_def.role == "executor":
+            invocation_type = EventType.EXECUTOR_INVOKED
+        elif agent_def.role == "evaluator":
+            invocation_type = EventType.EVALUATOR_INVOKED
+        else:
+            invocation_type = None
+
+        if invocation_type is not None:
+            self._publish(invocation_type, agent_def=agent_def, metadata=metadata)
 
         if agent_def.name == "entry_executor":
             terminal = await self._run_entry_executor(prompt, metadata)
@@ -345,134 +213,86 @@ class MockSWEvoAgentExecution:
         )
 
     async def _run_planner(self, metadata: ExecutionMetadata) -> ToolResult:
-        attempt, episode = self._current_attempt_and_episode(metadata)
-        if episode.sequence_no == 1 and attempt.attempt_sequence_no == 1:
-            return await self._call_tool(
-                submit_full_plan,
-                {
-                    "task_specification": (
-                        "Preflight the SWE-EVO workspace and expose an evaluator "
-                        "retry signal without making benchmark source edits."
-                    ),
-                    "evaluation_criteria": [
-                        "Workspace preflight completed.",
-                        "Retry path was exercised by evaluator feedback.",
-                    ],
-                    "tasks": [{"id": "preflight", "agent_name": "executor", "deps": []}],
-                    "task_specs": {
-                        "preflight": (
-                            "Run a lightweight workspace preflight and report the "
-                            "observed sandbox root."
-                        )
-                    },
+        ctx = self._scenario_context(prompt="", metadata=metadata)
+        spec = self._scenario.planner_response(ctx)
+        result = await self._call_tool(spec.tool, dict(spec.args), metadata)
+        event_type = _PLANNER_EVENT_BY_TOOL.get(spec.tool.name)
+        if event_type is not None:
+            criteria = list(spec.args.get("evaluation_criteria", ()) or ())
+            tasks = list(spec.args.get("tasks", ()) or ())
+            self._publish(
+                event_type,
+                agent_def=None,
+                metadata=metadata,
+                payload={
+                    "task_specification": spec.args.get("task_specification", ""),
+                    "evaluation_criteria": criteria,
+                    "task_count": len(tasks),
                 },
-                metadata,
             )
-
-        if episode.sequence_no == 1:
-            return await self._call_tool(
-                submit_partial_plan,
-                {
-                    "task_specification": (
-                        "Validate sandbox read/write/edit/shell consistency, direct "
-                        "OCC file mutation, gated shell mutation, batch edit handling, "
-                        "and conflict reporting for the SWE-EVO workspace."
-                    ),
-                    "evaluation_criteria": [
-                        "Dedicated sandbox tools can read, write, edit, and run shell.",
-                        "Final file content survives the shell/OCC squash boundary.",
-                        "Batch edit succeeds and a stale edit reports conflict.",
-                    ],
-                    "tasks": [
-                        {
-                            "id": "sandbox_integrity",
-                            "agent_name": "executor",
-                            "deps": [],
-                        }
-                    ],
-                    "task_specs": {
-                        "sandbox_integrity": (
-                            "Exercise the sandbox filesystem with write_file, "
-                            "read_file, edit_file, shell, a batch public edit, and "
-                            "an expected conflict."
-                        )
-                    },
-                    "continuation_goal": (
-                        "Run the final SWE-EVO mock grading episode after sandbox "
-                        "integrity evidence has been persisted."
-                    ),
-                },
-                metadata,
-            )
-
-        return await self._call_tool(
-            submit_full_plan,
-            {
-                "task_specification": (
-                    "Confirm the sandbox integrity artifacts remain readable in the "
-                    "continuation episode and close the benchmark mission."
-                ),
-                "evaluation_criteria": [
-                    "Continuation episode received previous episode context.",
-                    "Persisted sandbox evidence is readable from the workspace.",
-                ],
-                "tasks": [{"id": "final_probe", "agent_name": "executor", "deps": []}],
-                "task_specs": {
-                    "final_probe": (
-                        "Read the sandbox integrity artifact and verify the final "
-                        "squash marker is still present."
-                    )
-                },
-            },
-            metadata,
-        )
+        return result
 
     async def _run_executor(
         self,
         prompt: str,
         metadata: ExecutionMetadata,
     ) -> ToolResult:
-        if "sandbox filesystem" in prompt or "sandbox read/write/edit" in prompt:
-            await self._run_sandbox_integrity_probe(metadata)
-            summary = "Sandbox integrity probe passed."
-            artifacts = [self._probe_path()]
-        elif "squash marker" in prompt:
-            await self._run_final_probe(metadata)
-            summary = "Continuation final probe passed."
-            artifacts = [self._probe_path()]
-        else:
-            await self._run_preflight_probe(metadata)
-            summary = "Workspace preflight completed."
-            artifacts = []
-
-        return await self._call_tool(
+        ctx = self._scenario_context(prompt=prompt, metadata=metadata)
+        actions = self._scenario.executor_actions(ctx)
+        summary = "Workspace preflight completed."
+        artifacts: list[str] = []
+        for action in actions:
+            if action == "sandbox_integrity":
+                await self._run_sandbox_integrity_probe(metadata)
+                summary = "Sandbox integrity probe passed."
+                artifacts = [self._probe_path()]
+            elif action == "final_probe":
+                await self._run_final_probe(metadata)
+                summary = "Continuation final probe passed."
+                artifacts = [self._probe_path()]
+            elif action == "preflight":
+                await self._run_preflight_probe(metadata)
+                summary = "Workspace preflight completed."
+                artifacts = []
+            else:
+                raise RuntimeError(f"Unknown executor action: {action!r}")
+        result = await self._call_tool(
             submit_execution_success,
             {"summary": summary, "artifacts": artifacts},
             metadata,
         )
+        self._publish(
+            EventType.EXECUTOR_SUCCESS,
+            agent_def=None,
+            metadata=metadata,
+            payload={"summary": summary},
+        )
+        return result
 
     async def _run_evaluator(self, metadata: ExecutionMetadata) -> ToolResult:
-        attempt, episode = self._current_attempt_and_episode(metadata)
-        if episode.sequence_no == 1 and attempt.attempt_sequence_no == 1:
-            return await self._call_tool(
-                submit_evaluation_failure,
-                {
-                    "summary": (
-                        "Intentional mock failure to verify episode retry and "
-                        "failed-attempt context."
-                    ),
-                    "failed_criteria": ["Retry path was exercised by evaluator feedback."],
-                },
-                metadata,
-            )
+        ctx = self._scenario_context(prompt="", metadata=metadata)
+        spec = self._scenario.evaluator_response(ctx)
+        result = await self._call_tool(spec.tool, dict(spec.args), metadata)
+        event_type = _EVALUATOR_EVENT_BY_TOOL.get(spec.tool.name)
+        if event_type is not None:
+            self._publish(event_type, agent_def=None, metadata=metadata)
+        return result
 
-        return await self._call_tool(
-            submit_evaluation_success,
-            {
-                "summary": "Mock evaluator accepted the current attempt evidence.",
-                "passed_criteria": list(attempt.evaluation_criteria),
-            },
-            metadata,
+    def _scenario_context(
+        self,
+        *,
+        prompt: str,
+        metadata: ExecutionMetadata,
+    ) -> ScenarioContext:
+        attempt, episode = self._current_attempt_and_episode(metadata)
+        return ScenarioContext(
+            attempt=attempt,
+            episode=episode,
+            mission=None,
+            prompt=prompt,
+            metadata=metadata,
+            audit_recorder=None,
+            mutable_state=None,
         )
 
     async def _run_preflight_probe(self, metadata: ExecutionMetadata) -> None:
@@ -579,6 +399,12 @@ class MockSWEvoAgentExecution:
                 changed_paths=tuple(result.changed_paths),
             )
         )
+        if passed:
+            self._publish(
+                EventType.SANDBOX_BATCH_EDIT_APPLIED,
+                metadata=metadata,
+                payload={"applied_edits": result.applied_edits},
+            )
         if not passed:
             raise RuntimeError("Batch edit did not apply both replacements.")
 
@@ -612,6 +438,12 @@ class MockSWEvoAgentExecution:
                 changed_paths=tuple(result.changed_paths),
             )
         )
+        if passed:
+            self._publish(
+                EventType.SANDBOX_CONFLICT_DETECTED,
+                metadata=metadata,
+                payload={"conflict_reason": detail},
+            )
         if not passed:
             raise RuntimeError("Expected conflict edit unexpectedly succeeded.")
 
@@ -638,6 +470,12 @@ class MockSWEvoAgentExecution:
         raw_input: dict[str, Any],
         metadata: ExecutionMetadata,
     ) -> ToolResult:
+        self._publish(
+            EventType.TOOL_CALL_STARTED,
+            metadata=metadata,
+            tool_name=tool_obj.name,
+            payload={"tool_name": tool_obj.name},
+        )
         result = await execute_tool_once(
             tool_obj,
             raw_input,
@@ -652,6 +490,19 @@ class MockSWEvoAgentExecution:
                 is_error=result.is_error,
                 metadata=dict(result.metadata or {}),
             )
+        )
+        completed_type = (
+            EventType.TOOL_CALL_ERROR if result.is_error else EventType.TOOL_CALL_COMPLETED
+        )
+        self._publish(
+            completed_type,
+            metadata=metadata,
+            tool_name=tool_obj.name,
+            payload={
+                "tool_name": tool_obj.name,
+                "is_error": result.is_error,
+                "metadata": dict(result.metadata or {}),
+            },
         )
         if result.is_error:
             raise RuntimeError(f"{tool_obj.name} failed: {result.output}")
@@ -799,136 +650,38 @@ class MockSWEvoAgentExecution:
             task_id=str(metadata.get("task_center_task_id") or ""),
         )
 
-
-async def run_sweevo_task_center_with_mock_agent_execution(
-    *,
-    instance: SWEEvoInstance,
-    user_prompt: str,
-    sandbox_id: str,
-    repo_dir: str = _REPO_DIR,
-    stores: TaskCenterStoreBundle | None = None,
-) -> dict[str, Any]:
-    """Run one SWE-EVO prompt through real TaskCenter with mocked agent execution."""
-    owns_stores = stores is None
-    bundle = stores or create_in_memory_task_center_stores()
-    squad = MockSWEvoAgentExecution(instance=instance, repo_dir=repo_dir)
-    started = time.perf_counter()
-    try:
-        with registered_mock_sweevo_agents():
-            handle = start_task_center_entry_run(
-                config=SimpleNamespace(cwd=repo_dir),
-                prompt=user_prompt,
-                sandbox_id=sandbox_id,
-                on_agent_event=None,
-                task_store=bundle.task_store,
-                mission_store=bundle.mission_store,
-                episode_store=bundle.episode_store,
-                attempt_store=bundle.attempt_store,
-                runner=squad,
-                context_packet_store=bundle.context_packet_store,
-                sandbox_bridge=TaskCenterSandboxBridge(
-                    start_fn=lambda existing_id: {"id": existing_id}
-                ),
-            )
-            await handle.launcher.wait_for_idle()
-
-        run = bundle.task_store.get_run(handle.task_center_run_id) or {}
-        tasks = bundle.task_store.list_tasks_for_run(handle.task_center_run_id)
-        failed_prompt_reviews = [
-            item.as_dict() for item in squad.prompt_inspections if not item.passed
-        ]
-        failed_sandbox_checks = [
-            item.as_dict() for item in squad.sandbox_checks if not item.passed
-        ]
-        if failed_prompt_reviews:
-            raise RuntimeError(
-                "SWE-EVO prompt context inspection failed: "
-                f"{failed_prompt_reviews}"
-            )
-        if failed_sandbox_checks:
-            raise RuntimeError(
-                "SWE-EVO sandbox integrity checks failed: "
-                f"{failed_sandbox_checks}"
-            )
-
-        return {
-            "instance": summarize_sweevo_instance(instance),
-            "request_id": handle.request_id,
-            "task_center_run_id": handle.task_center_run_id,
-            "task_center_status": run.get("status"),
-            "sandbox_id": handle.sandbox_id,
-            "duration_s": time.perf_counter() - started,
-            "task_count": len(tasks),
-            "tasks_completed": sum(1 for task in tasks if task.get("status") == "done"),
-            "tasks_failed": sum(1 for task in tasks if task.get("status") == "failed"),
-            "agent_events": len(squad.launches) + len(squad.tool_calls),
-            "launches": [item.as_dict() for item in squad.launches],
-            "tool_calls": [item.as_dict() for item in squad.tool_calls],
-            "prompt_inspections": [
-                item.as_dict() for item in squad.prompt_inspections
-            ],
-            "sandbox_checks": [item.as_dict() for item in squad.sandbox_checks],
-            "graph": _graph_summary(bundle, handle.task_center_run_id),
-        }
-    finally:
-        if owns_stores:
-            bundle.close()
-
-
-def _graph_summary(
-    stores: TaskCenterStoreBundle,
-    task_center_run_id: str,
-) -> dict[str, Any]:
-    missions: list[dict[str, Any]] = []
-    for mission in stores.mission_store.list_for_run(task_center_run_id):
-        episodes: list[dict[str, Any]] = []
-        for episode in stores.episode_store.list_for_mission(mission.id):
-            attempts: list[dict[str, Any]] = []
-            for attempt in stores.attempt_store.list_for_episode(episode.id):
-                attempts.append(
-                    {
-                        "id": attempt.id,
-                        "sequence_no": attempt.attempt_sequence_no,
-                        "stage": attempt.stage.value,
-                        "status": attempt.status.value,
-                        "fail_reason": (
-                            attempt.fail_reason.value
-                            if attempt.fail_reason is not None
-                            else None
-                        ),
-                        "continuation_goal": attempt.continuation_goal,
-                        "task_ids": list(attempt.generator_task_ids),
-                    }
-                )
-            episodes.append(
-                {
-                    "id": episode.id,
-                    "sequence_no": episode.sequence_no,
-                    "creation_reason": episode.creation_reason.value,
-                    "status": episode.status.value,
-                    "goal": episode.goal,
-                    "continuation_goal": episode.continuation_goal,
-                    "attempts": attempts,
-                }
-            )
-        missions.append(
-            {
-                "id": mission.id,
-                "status": mission.status.value,
-                "requested_by_task_id": mission.requested_by_task_id,
-                "final_outcome": mission.final_outcome,
-                "episodes": episodes,
-            }
+    def _publish(
+        self,
+        event_type: EventType,
+        *,
+        agent_def: AgentDefinition | None = None,
+        metadata: ExecutionMetadata | None = None,
+        tool_name: str | None = None,
+        payload: dict[str, Any] | None = None,
+    ) -> None:
+        if self._bus is None:
+            return
+        agent_name: str | None = None
+        agent_role: str | None = None
+        agent_run_id: str | None = None
+        attempt_id: str | None = None
+        if agent_def is not None:
+            agent_name = agent_def.name or None
+            agent_role = str(agent_def.role or "") or None
+        if metadata is not None:
+            if agent_name is None:
+                agent_name = str(metadata.agent_name or "") or None
+            agent_run_id = str(metadata.agent_run_id or "") or None
+            attempt_id = str(metadata.get("task_center_attempt_id") or "") or None
+        node = NodeId(
+            task_center_run_id=self._task_center_run_id,
+            agent_name=agent_name,
+            agent_role=agent_role,  # type: ignore[arg-type]
+            agent_run_id=agent_run_id,
+            attempt_id=attempt_id,
+            tool_name=tool_name,
         )
-    return {"missions": missions}
+        self._bus.publish(Event(type=event_type, node=node, payload=payload or {}))
 
 
-__all__ = [
-    "MockSWEvoAgentExecution",
-    "PromptInspection",
-    "SandboxCheck",
-    "TaskCenterStoreBundle",
-    "create_in_memory_task_center_stores",
-    "registered_mock_sweevo_agents",
-    "run_sweevo_task_center_with_mock_agent_execution",
-]
+__all__ = ["MockSquadRunner"]
