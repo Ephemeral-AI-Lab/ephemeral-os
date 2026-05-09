@@ -102,3 +102,18 @@ pytest_args = [
     "-q",
 ]
 cascade = "warn"
+
+[[tier]]
+id = 8
+name = "lsp_live"
+# ~90s sandbox bring-up + ~60s/scenario budget headroom.
+# Pyright install lands on first call; subsequent scenarios reuse the
+# cached session as long as the active manifest hasn't changed.
+wall_budget_s = 900
+per_cell_budget_s = 120
+kind = "pytest"
+pytest_args = [
+    "backend/src/benchmarks/lsp_live_test/tests/test_lsp_scenarios.py",
+    "-q",
+]
+cascade = "warn"

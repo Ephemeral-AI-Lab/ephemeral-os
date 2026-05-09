@@ -1,0 +1,169 @@
+"""In-sandbox handlers for ``api.plugin.ensure`` and ``api.plugin.status``.
+
+``api.plugin.ensure {"plugin": "<name>"}`` imports the plugin's
+``runtime/server.py`` (which decorates handlers with
+:func:`sandbox.plugin.runtime.register_plugin_op`) and flushes the pending
+registrations into the daemon dispatcher under the public op name
+``plugin.<name>.<op>``. Idempotent — re-calling for an already-loaded plugin
+is a no-op.
+
+``api.plugin.status {}`` returns the set of loaded plugins and their op names.
+"""
+
+from __future__ import annotations
+
+import importlib
+import logging
+from typing import Any
+
+from sandbox.models import SandboxCaller
+from sandbox.plugin.projection import WorkspaceProjection
+from sandbox.plugin.runtime.context import PluginOpContext
+from sandbox.plugin.runtime.registry import (
+    flush_plugin_registrations,
+    pending_plugin_registrations,
+)
+
+__all__ = [
+    "PluginEnsureError",
+    "loaded_plugins_snapshot",
+    "plugin_ensure",
+    "plugin_status",
+]
+
+
+logger = logging.getLogger(__name__)
+
+
+class PluginEnsureError(RuntimeError):
+    """Raised when api.plugin.ensure fails to load a plugin runtime."""
+
+
+# Process-local registry of loaded plugins → list of registered op names.
+_LOADED: dict[str, list[str]] = {}
+# Per-layer-stack-root WorkspaceProjection cache so plugin sessions reuse
+# the same projection across calls.
+_PROJECTIONS: dict[str, WorkspaceProjection] = {}
+
+
+async def plugin_ensure(args: dict[str, Any]) -> dict[str, Any]:
+    plugin_name = str(args.get("plugin") or "").strip()
+    if not plugin_name:
+        raise PluginEnsureError("api.plugin.ensure requires plugin name")
+
+    if plugin_name in _LOADED:
+        return {
+            "success": True,
+            "plugin": plugin_name,
+            "registered_ops": list(_LOADED[plugin_name]),
+            "runtime_loaded": True,
+            "already_loaded": True,
+        }
+
+    runtime_module = f"plugins.catalog.{plugin_name}.runtime.server"
+    runtime_loaded = False
+    try:
+        importlib.import_module(runtime_module)
+        runtime_loaded = True
+    except ModuleNotFoundError:
+        # Manifest declared no runtime (or runtime layout is missing). The
+        # registrations dict will be empty for stateless plugins.
+        runtime_loaded = False
+    except Exception as exc:  # pragma: no cover - surface the import error
+        raise PluginEnsureError(
+            f"plugin runtime import failed for {plugin_name!r}: {exc}"
+        ) from exc
+
+    register_op = _import_dispatcher_register_op()
+    registered_ops = flush_plugin_registrations(
+        plugin_name,
+        register_op,
+        context_factory=_plugin_op_context_factory,
+    )
+    _LOADED[plugin_name] = registered_ops
+    if not registered_ops and not runtime_loaded:
+        # Stateless plugin with no runtime — fine, idempotent.
+        logger.debug(
+            "plugin %s: no runtime, no ops registered", plugin_name
+        )
+    return {
+        "success": True,
+        "plugin": plugin_name,
+        "registered_ops": list(registered_ops),
+        "runtime_loaded": runtime_loaded,
+        "already_loaded": False,
+    }
+
+
+async def plugin_status(args: dict[str, Any]) -> dict[str, Any]:
+    del args
+    return {
+        "success": True,
+        "loaded_plugins": [
+            {"name": name, "ops": list(ops)}
+            for name, ops in sorted(_LOADED.items())
+        ],
+        "pending": [
+            {
+                "plugin": entry.plugin_name,
+                "op": entry.op_name,
+            }
+            for entry in pending_plugin_registrations()
+        ],
+    }
+
+
+def loaded_plugins_snapshot() -> dict[str, list[str]]:
+    """Read-only view of the in-process loaded-plugin map (for tests)."""
+    return {name: list(ops) for name, ops in _LOADED.items()}
+
+
+def _import_dispatcher_register_op() -> Any:
+    from sandbox.runtime.daemon.rpc.dispatcher import register_op
+
+    def _idempotent_register_op(op: str, handler: Any) -> None:
+        from sandbox.runtime.daemon.rpc.dispatcher import OP_TABLE
+
+        existing = OP_TABLE.get(op)
+        if existing is handler:
+            return
+        register_op(op, handler)
+
+    return _idempotent_register_op
+
+
+async def _plugin_op_context_factory(
+    args: dict[str, Any], plugin_name: str, op_name: str
+) -> PluginOpContext:
+    """Build a PluginOpContext from the daemon-envelope args.
+
+    Plugin handlers don't see (or need) the layer_stack_root / caller fields
+    directly — they're stripped from the args mapping before reaching the
+    plugin handler (the dispatcher passes the raw envelope, but the wrapper
+    in registry._wrap_with_context forwards the same dict).
+    """
+    layer_stack_root = str(args.get("layer_stack_root", "")).strip()
+    caller_dict = args.get("caller") or {}
+    if isinstance(caller_dict, dict):
+        caller = SandboxCaller(
+            agent_id=str(caller_dict.get("agent_id", "")),
+            run_id=str(caller_dict.get("run_id", "")),
+            agent_run_id=str(caller_dict.get("agent_run_id", "")),
+            task_id=str(caller_dict.get("task_id", "")),
+        )
+    else:
+        caller = SandboxCaller(agent_id="", run_id="", agent_run_id="", task_id="")
+    projection = _PROJECTIONS.get(layer_stack_root)
+    if projection is None:
+        projection = WorkspaceProjection(layer_stack_root)
+        _PROJECTIONS[layer_stack_root] = projection
+    return PluginOpContext(
+        layer_stack_root=layer_stack_root,
+        caller=caller,
+        projection=projection,
+        logger=logging.getLogger(f"plugin.{plugin_name}"),
+        metadata={
+            "op_name": op_name,
+            "workspace_root": str(args.get("workspace_root", "")),
+        },
+    )

@@ -25,7 +25,7 @@
 
 One Command (**oh**) to Launch **EphemeralOS** and Unlock All Agent Harnesses. 
 
-Supports CLI agent integration including OpenClaw, nanobot, Cursor, and more.
+Supports CLI agent integration including nanobot, Cursor, and more.
 
 <p align="center">
   <img src="assets/cli-typing.gif" alt="EphemeralOS Terminal Demo" width="800">
@@ -371,7 +371,6 @@ oh plugin enable <name>
 
 EphemeralOS is useful as a lightweight harness layer around Claude-style tooling conventions:
 
-- **OpenClaw-oriented workflows** can reuse Markdown-first knowledge and command-driven collaboration patterns.
 - **Claude-style plugins** stay portable because EphemeralOS keeps those formats familiar.
 - **Background subagent work** maps onto the built-in subagent and background execution primitives.
 

@@ -1,0 +1,204 @@
+"""Host-side ``call_plugin`` — the only sandbox-plugin entry point a tool author touches.
+
+Implements the 5-step sequence from
+``docs/architecture/plugins-refactor.md`` §5:
+
+  1. Resolve sandbox_id + layer_stack_root + caller from the tool context.
+  2. Ensure the plugin bundle is installed inside the sandbox
+     (:func:`sandbox.plugin.install.ensure_installed`).
+  3. Tell the daemon to load the plugin runtime via ``api.plugin.ensure``.
+  4. Dispatch ``call_daemon_api(sandbox_id, "plugin.<name>.<op>", payload)``.
+  5. Wrap the response in a :class:`ToolResult`.
+
+Errors at any step surface as ``ToolResult(is_error=True, ...)`` with a
+message that names the failing step so callers can disambiguate.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+from collections.abc import Callable, Mapping
+from typing import Any
+
+from plugins.core.discovery import discover_plugins
+from plugins.core.manifest import PluginManifest
+from sandbox.host.daemon_client import (
+    DEFAULT_LAYER_STACK_ROOT,
+    call_daemon_api,
+)
+from sandbox.plugin.install import ensure_installed
+from tools.core.context import ToolExecutionContextService
+from tools.core.results import ToolResult
+from tools.sandbox_toolkit.session import (
+    caller_from_context,
+    sandbox_id_or_error,
+)
+
+__all__ = [
+    "call_plugin",
+    "manifest_for",
+]
+
+
+logger = logging.getLogger(__name__)
+
+_manifest_cache: dict[str, PluginManifest] | None = None
+_runtime_loaded: dict[tuple[str, str], bool] = {}
+_call_locks: dict[tuple[str, str], asyncio.Lock] = {}
+
+
+def manifest_for(plugin_name: str) -> PluginManifest:
+    """Look up a plugin manifest by name from the host catalog."""
+    global _manifest_cache
+    if _manifest_cache is None:
+        _manifest_cache = {m.name: m for m in discover_plugins()}
+    manifest = _manifest_cache.get(plugin_name)
+    if manifest is None:
+        raise KeyError(
+            f"plugin {plugin_name!r} not found in catalog "
+            f"(available: {sorted(_manifest_cache)})"
+        )
+    return manifest
+
+
+async def call_plugin(
+    context: ToolExecutionContextService,
+    *,
+    plugin: str,
+    op: str,
+    payload: Mapping[str, Any],
+    timeout: int = 60,
+    daemon_dispatcher: Callable[..., Any] | None = None,
+    install_runner: Callable[..., Any] | None = None,
+) -> ToolResult:
+    """Call a plugin op end-to-end. See module docstring for the 5-step flow."""
+    sandbox_id, error = sandbox_id_or_error(context)
+    if error is not None:
+        return error
+
+    layer_stack_root = (
+        str(context.get("layer_stack_root") or "").strip()
+        or DEFAULT_LAYER_STACK_ROOT
+    )
+    try:
+        manifest = manifest_for(plugin)
+    except KeyError as exc:
+        return _error_result("manifest", plugin, op, str(exc))
+
+    install_fn = install_runner or ensure_installed
+    dispatch_fn = daemon_dispatcher or call_daemon_api
+    lock = _call_locks.setdefault((sandbox_id, plugin), asyncio.Lock())
+
+    async with lock:
+        try:
+            await install_fn(sandbox_id, manifest)
+        except Exception as exc:
+            logger.warning(
+                "plugin install failed: sandbox=%s plugin=%s op=%s err=%s",
+                sandbox_id,
+                plugin,
+                op,
+                exc,
+            )
+            return _error_result("install", plugin, op, str(exc))
+
+        if not _runtime_loaded.get((sandbox_id, plugin)):
+            try:
+                await dispatch_fn(
+                    sandbox_id,
+                    "api.plugin.ensure",
+                    {"plugin": plugin},
+                    timeout=timeout,
+                    layer_stack_root=layer_stack_root,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "plugin ensure failed: sandbox=%s plugin=%s op=%s err=%s",
+                    sandbox_id,
+                    plugin,
+                    op,
+                    exc,
+                )
+                return _error_result("ensure-runtime", plugin, op, str(exc))
+            _runtime_loaded[(sandbox_id, plugin)] = True
+
+    caller = caller_from_context(context)
+    payload_with_meta = {
+        **dict(payload),
+        "caller": {
+            "agent_id": caller.agent_id,
+            "run_id": caller.run_id,
+            "agent_run_id": caller.agent_run_id,
+            "task_id": caller.task_id,
+        },
+        "workspace_root": str(context.get("repo_root") or "").strip(),
+    }
+    try:
+        response = await dispatch_fn(
+            sandbox_id,
+            f"plugin.{plugin}.{op}",
+            payload_with_meta,
+            timeout=timeout,
+            layer_stack_root=layer_stack_root,
+        )
+    except Exception as exc:
+        logger.warning(
+            "plugin dispatch failed: sandbox=%s plugin=%s op=%s err=%s",
+            sandbox_id,
+            plugin,
+            op,
+            exc,
+        )
+        return _error_result("dispatch", plugin, op, str(exc))
+
+    return _wrap_response(response, plugin=plugin, op=op)
+
+
+def _wrap_response(
+    response: Mapping[str, Any] | Any,
+    *,
+    plugin: str,
+    op: str,
+) -> ToolResult:
+    if not isinstance(response, Mapping):
+        return _error_result(
+            "decode",
+            plugin,
+            op,
+            f"plugin response was not a mapping: {type(response).__name__}",
+        )
+    if response.get("error"):
+        err = response.get("error") or {}
+        message = (
+            err.get("message")
+            if isinstance(err, Mapping)
+            else str(err)
+        )
+        return _error_result("dispatch", plugin, op, str(message))
+    payload_dict = {
+        key: value for key, value in response.items() if key != "timings"
+    }
+    output = json.dumps(payload_dict, sort_keys=True, default=str)
+    metadata: dict[str, Any] = {"plugin": plugin, "op": op}
+    timings = response.get("timings")
+    if isinstance(timings, Mapping):
+        metadata["timings"] = dict(timings)
+    return ToolResult(output=output, is_error=False, metadata=metadata)
+
+
+def _error_result(step: str, plugin: str, op: str, message: str) -> ToolResult:
+    return ToolResult(
+        output=f"plugin {plugin}.{op} {step} failed: {message}",
+        is_error=True,
+        metadata={"plugin": plugin, "op": op, "step": step},
+    )
+
+
+def reset_session_cache() -> None:
+    """Reset module-level caches. Used by tests to isolate state."""
+    global _manifest_cache
+    _manifest_cache = None
+    _runtime_loaded.clear()
+    _call_locks.clear()

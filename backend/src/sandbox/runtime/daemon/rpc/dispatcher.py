@@ -163,7 +163,7 @@ def _to_response_dict(result: Any) -> dict[str, Any]:
 
 
 def _load_peer_bootstraps() -> None:
-    from sandbox.runtime.daemon.handler import health, metrics, workspace
+    from sandbox.runtime.daemon.handler import health, metrics, plugins, workspace
     from sandbox.runtime.daemon.handler import overlay as overlay_run
     from sandbox.runtime.daemon.handler.tools import edit, read, shell, write
 
@@ -181,6 +181,8 @@ def _load_peer_bootstraps() -> None:
         ),
         "api.edit_file": edit.edit_file,
         "api.layer_metrics": metrics.layer_metrics,
+        "api.plugin.ensure": plugins.plugin_ensure,
+        "api.plugin.status": plugins.plugin_status,
         "api.read_file": read.read_file,
         "api.runtime.ready": health.runtime_ready,
         "api.shell": shell.shell,

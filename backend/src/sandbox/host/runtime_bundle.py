@@ -205,6 +205,33 @@ def _runtime_bundle_bytes() -> bytes:
             sandbox_dir=sandbox_dir,
         )
 
+        # Bundle only the in-sandbox parts of sandbox/plugin/ — install.py
+        # and session.py are host-only (they import from sandbox.host and
+        # sandbox.provider). The daemon imports sandbox.plugin.runtime,
+        # sandbox.plugin.handler, and sandbox.plugin.projection.
+        plugin_dir = sandbox_dir / "plugin"
+        _add_if_exists(
+            tar,
+            plugin_dir / "__init__.py",
+            arcname="sandbox/plugin/__init__.py",
+        )
+        _add_if_exists(
+            tar,
+            plugin_dir / "handler.py",
+            arcname="sandbox/plugin/handler.py",
+        )
+        _add_if_exists(
+            tar,
+            plugin_dir / "projection.py",
+            arcname="sandbox/plugin/projection.py",
+        )
+        plugin_runtime_dir = plugin_dir / "runtime"
+        _add_python_tree(
+            tar,
+            plugin_runtime_dir,
+            sandbox_dir=sandbox_dir,
+        )
+
         _add_peer_setup_scripts(tar, sandbox_dir=sandbox_dir)
 
         _vendor_pathspec(tar)

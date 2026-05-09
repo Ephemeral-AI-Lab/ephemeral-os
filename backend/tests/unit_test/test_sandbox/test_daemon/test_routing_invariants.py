@@ -6,6 +6,7 @@ from sandbox.runtime.daemon.handler import overlay as overlay_run
 from sandbox.runtime.daemon.handler import (
     health,
     metrics,
+    plugins,
     workspace,
 )
 from sandbox.runtime.daemon.handler.tools import edit, read, shell, write
@@ -35,8 +36,18 @@ def test_daemon_op_table_routes_to_current_handler_layout() -> None:
         "api.layer_stack.fence_stale_staging": (
             workspace.fence_stale_staging
         ),
+        "api.plugin.ensure": plugins.plugin_ensure,
+        "api.plugin.status": plugins.plugin_status,
     }
-    assert server.OP_TABLE == expected
+    # Plugin-specific ops (plugin.<name>.<op>) appear when api.plugin.ensure
+    # flushes pending registrations; only the static OP_TABLE entries are
+    # asserted here.
+    static_ops = {
+        op: handler
+        for op, handler in server.OP_TABLE.items()
+        if not op.startswith("plugin.")
+    }
+    assert static_ops == expected
 
 
 def test_daemon_op_table_does_not_route_through_occ_server() -> None:
