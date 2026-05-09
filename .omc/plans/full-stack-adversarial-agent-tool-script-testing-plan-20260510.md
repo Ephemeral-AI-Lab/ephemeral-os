@@ -329,7 +329,7 @@ Required cells:
 | `same_file_disjoint_edits` | `edit_file` x2 | Both edits visible after retry if needed |
 | `same_file_overlap_edits` | `edit_file` x2 | One winner, one conflict |
 | `shell_stale_conflict` | `shell`, `write_file`, `read_file` | Public write wins stale shell |
-| `nonzero_shell_no_commit` | `shell`, `read_file` | Failed shell does not commit partial tracked state |
+| `nonzero_shell_commits_side_effect` | `shell`, `read_file` | Failed shell reports an error and publishes tracked side effects |
 | `tracked_and_ignored_mixed` | `shell`, `read_file` | Gated tracked state correct, ignored direct route isolated |
 | `delete_vs_write` | `shell`, `write_file`, `read_file` | Deterministic conflict or final state proof |
 
@@ -362,8 +362,8 @@ Required cells:
 | `deep_paths` | Deep nested paths | No path truncation |
 | `special_chars` | Spaces, brackets, quotes-safe names | Public read works |
 | `long_filename` | Max safe filename length | Commit succeeds or typed path error |
-| `symlink_inside` | Symlink points inside workspace | Direct route behavior explicit |
-| `symlink_escape` | Symlink points outside workspace | Escape is rejected or not committed |
+| `symlink_inside` | Symlink points inside workspace | Gated capture rejection is explicit and recorded |
+| `symlink_escape` | Symlink points outside workspace | Escape is rejected and not committed |
 | `whiteout_collision` | Delete and recreate path family | Merged view deterministic |
 | `outside_workspace_write` | Write outside `/testbed` | Not committed to layer stack |
 | `noop_shell` | No filesystem change | No layer created or no committed changes |
@@ -776,7 +776,7 @@ Classify failures by boundary:
 | No recursive close before parent guard | TaskCenter recursive mission ordering |
 | Verifier failure does not influence retry prompt | Context engine failed-attempt recipe |
 | Expected squash event absent | Layer-stack metrics/monitoring gap or squash threshold not reached |
-| Nonzero shell commits tracked partial writes | Overlay/OCC atomicity regression |
+| Nonzero shell side effects are not reported/readable | Public shell side-effect policy regression |
 
 Do not collapse these into one broad "sandbox failed" result. The point of the
 scenario is to identify the exact boundary that regressed.

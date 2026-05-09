@@ -206,14 +206,26 @@ def test_detect_stuck_rows_parses_psql_output(monkeypatch):
         stdout="abc-1\n\ndef-2\n",
         stderr="",
     )
+    captured: dict[str, object] = {}
+
+    def fake_run(*args, **kwargs):
+        captured["args"] = args
+        captured["kwargs"] = kwargs
+        return fake_completed
+
     monkeypatch.setattr(
-        tier0_health.subprocess, "run", lambda *a, **kw: fake_completed
+        tier0_health.subprocess,
+        "run",
+        fake_run,
     )
 
     available, rows, note = tier0_health._detect_stuck_rows()
     assert available is True
     assert rows == ["abc-1", "def-2"]
     assert note == ""
+    command = captured["args"][0]
+    assert isinstance(command, list)
+    assert "state IN ('starting', 'pending_build')" in " ".join(command)
 
 
 def test_detect_stuck_rows_handles_psql_error(monkeypatch):

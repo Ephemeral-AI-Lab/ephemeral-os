@@ -80,6 +80,7 @@ class RunReport:
     entry_prompt_length: int = 0
     requirement_ledger: list[dict[str, Any]] = field(default_factory=list)
     package_plan: list[dict[str, Any]] = field(default_factory=list)
+    matrix_plan: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def passed_prompt_inspections(self) -> bool:
@@ -295,6 +296,7 @@ async def run_scenario(
             entry_prompt_length=len(prompt_text),
             requirement_ledger=list(getattr(scenario, "requirement_ledger", [])),
             package_plan=list(getattr(scenario, "package_plan", [])),
+            matrix_plan=list(getattr(scenario, "matrix_plan", [])),
         )
         return report
     finally:

@@ -159,7 +159,7 @@ def _prune_auto_sweevo_sandboxes_for_fresh_run(
         if not name.startswith(expected_prefix):
             continue
         state = str(sandbox.get("state") or "")
-        if state not in {"stopped", "build_failed", "error"}:
+        if state not in {"stopped", "pending_build", "build_failed", "error"}:
             continue
         sandbox_id = str(sandbox.get("id") or "")
         if not sandbox_id:
@@ -175,6 +175,42 @@ def _prune_auto_sweevo_sandboxes_for_fresh_run(
                 exc_info=True,
             )
     return deleted
+
+
+def _find_reusable_auto_sweevo_sandbox(
+    service: Any,
+    instance: SWEEvoInstance,
+    *,
+    repo_dir: str,
+) -> dict[str, Any] | None:
+    """Return a healthy auto-created sandbox for the same fixture, if one exists."""
+    expected_prefix = f"sweevo-test-{instance.instance_id}-"
+    candidates: list[dict[str, Any]] = []
+    for sandbox in _safe_list_sandboxes(service):
+        name = str(sandbox.get("name") or "")
+        if not name.startswith(expected_prefix):
+            continue
+        state = str(sandbox.get("state") or "")
+        if state not in {"started", "stopped", ""}:
+            continue
+        labels = sandbox.get("labels")
+        if not isinstance(labels, dict):
+            continue
+        if str(labels.get("purpose") or "") != "sweevo-test":
+            continue
+        if str(labels.get("sweevo_instance") or "") != instance.instance_id:
+            continue
+        labeled_repo = str(labels.get("project_dir") or repo_dir)
+        if labeled_repo != repo_dir:
+            continue
+        candidates.append(sandbox)
+    candidates.sort(
+        key=lambda item: (
+            str(item.get("state") or "") != "started",
+            str(item.get("name") or ""),
+        )
+    )
+    return candidates[0] if candidates else None
 
 
 def _log_sandbox_creation_failure(
@@ -221,7 +257,7 @@ def _cleanup_failed_sandbox(service: Any, sandbox: dict[str, Any] | None) -> Non
     try:
         service.delete_sandbox(str(sandbox["id"]))
     except Exception:
-        logger.debug(
+        logger.warning(
             "Failed to delete unhealthy SWE-EVO sandbox %s",
             sandbox.get("id", ""),
             exc_info=True,
@@ -479,6 +515,11 @@ async def setup_sweevo_sandbox(
         f"{_CONDA_ACTIVATE} && cd {repo_dir} && pip install -e . -q 2>/dev/null || true",
         timeout=_DEFAULT_SANDBOX_SETUP_TIMEOUT,
     )
+    await _rebuild_sweevo_workspace_base(
+        sandbox_id,
+        repo_dir,
+        on_progress=on_progress,
+    )
 
     try:
         sandbox_info = sandbox_api.get_sandbox(sandbox_id)
@@ -506,6 +547,36 @@ async def setup_sweevo_sandbox(
         f"base={instance.base_commit[:12]}",
     )
     return repo_dir
+
+
+async def _rebuild_sweevo_workspace_base(
+    sandbox_id: str,
+    repo_dir: str,
+    *,
+    on_progress: ProgressCallback | None = None,
+) -> None:
+    """Rebind public-tool workspace truth after raw setup commands."""
+    from sandbox.host.daemon_client import call_daemon_api
+
+    _progress(on_progress, "[setup] rebuilding public tool workspace base")
+    await call_daemon_api(
+        sandbox_id,
+        "api.build_workspace_base",
+        {"workspace_root": repo_dir, "reset": True},
+        timeout=240,
+    )
+    readiness = await call_daemon_api(
+        sandbox_id,
+        "api.runtime.ready",
+        {},
+        timeout=60,
+    )
+    if not _runtime_ready(readiness):
+        raise RuntimeError(f"SWE-EVO sandbox runtime is not ready: {readiness!r}")
+
+
+def _runtime_ready(readiness: dict[str, Any]) -> bool:
+    return bool(readiness.get("success") and readiness.get("ready"))
 
 
 async def ensure_sweevo_test_patch(
@@ -570,6 +641,7 @@ async def create_sweevo_test_sandbox(
     snapshot_name: str = "",
     sandbox_name: str = "",
     register_snapshot: bool = True,
+    reuse_existing_auto: bool = False,
     cpu: int = 2,
     disk: int = 10,
     repo_dir: str = _REPO_DIR,
@@ -605,6 +677,7 @@ async def create_sweevo_test_sandbox(
                     resolved_name,
                     state,
                 )
+                _cleanup_failed_sandbox(service, existing)
                 existing = None
         if existing:
             logger.info(
@@ -631,6 +704,54 @@ async def create_sweevo_test_sandbox(
                 "reused_existing": True,
             }
     else:
+        if reuse_existing_auto:
+            existing = _find_reusable_auto_sweevo_sandbox(
+                service,
+                instance,
+                repo_dir=repo_dir,
+            )
+            if existing is not None:
+                logger.info(
+                    "Reusing auto SWE-EVO sandbox %s (%s) for %s",
+                    existing.get("name", ""),
+                    existing.get("id", ""),
+                    instance.instance_id,
+                )
+                _progress(
+                    on_progress,
+                    f"[setup] reusing auto sandbox name={existing.get('name', '')} "
+                    f"sandbox_id={existing.get('id', '')}",
+                )
+                try:
+                    configured = _configure_reusable_sweevo_sandbox(
+                        service,
+                        existing,
+                        instance=instance,
+                        repo_dir=repo_dir,
+                    )
+                    if configured is not None:
+                        existing = configured
+                    await setup_sweevo_sandbox(
+                        instance,
+                        existing["id"],
+                        repo_dir,
+                        on_progress=on_progress,
+                    )
+                    return {
+                        "sandbox_id": existing["id"],
+                        "sandbox": existing,
+                        "snapshot_name": "",
+                        "repo_dir": repo_dir,
+                        "reused_existing": True,
+                        "fallback_reason": "auto_reused_existing",
+                    }
+                except Exception:
+                    logger.warning(
+                        "Failed to reuse auto SWE-EVO sandbox %s (%s); creating a fresh sandbox",
+                        existing.get("name", ""),
+                        existing.get("id", ""),
+                        exc_info=True,
+                    )
         deleted = _prune_auto_sweevo_sandboxes_for_fresh_run(service, instance)
         if deleted:
             logger.info(

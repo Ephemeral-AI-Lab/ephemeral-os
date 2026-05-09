@@ -8,7 +8,8 @@
 #   3. If the runner is wedged by a stale inner containerd PID file,
 #      remove only that stale PID file and restart the runner container.
 #   4. If `docker` is available, look for sandbox rows stuck in
-#      state='starting' for >60s in the daytona-db-1 Postgres container.
+#      state='starting' or state='pending_build' for >60s in the
+#      daytona-db-1 Postgres container.
 #   5. If stuck rows are found, force-flip them to state='destroyed'
 #      via a direct SQL UPDATE that bypasses the broken state-machine
 #      transition the API enforces.
@@ -59,7 +60,7 @@ else
     # `docker exec` returns non-zero if the container is missing; capture
     # stderr so the operator can see *why* recovery isn't running.
     if ! stuck_ids=$(docker exec daytona-db-1 psql -U user -d daytona -t -A \
-        -c "SELECT id FROM sandbox WHERE state='starting' AND \"updatedAt\" < NOW() - INTERVAL '60 seconds'" \
+        -c "SELECT id FROM sandbox WHERE state IN ('starting', 'pending_build') AND \"updatedAt\" < NOW() - INTERVAL '60 seconds'" \
         2>&1); then
         printf 'db_probe_error=true\n'
         printf '%s\n' "${stuck_ids}" | sed 's/^/db_probe_stderr: /'
@@ -175,7 +176,7 @@ fi
 
 printf 'recovery_attempted=true\n'
 if docker exec daytona-db-1 psql -U user -d daytona \
-    -c "UPDATE sandbox SET state='destroyed', \"desiredState\"='destroyed' WHERE state='starting' AND \"updatedAt\" < NOW() - INTERVAL '60 seconds'" \
+    -c "UPDATE sandbox SET state='destroyed', \"desiredState\"='destroyed' WHERE state IN ('starting', 'pending_build') AND \"updatedAt\" < NOW() - INTERVAL '60 seconds'" \
     >/dev/null 2>&1; then
     printf 'recovery_succeeded=true rows=%s\n' "${stuck_count}"
     exit 0

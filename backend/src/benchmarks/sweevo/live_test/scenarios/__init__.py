@@ -9,10 +9,19 @@ from benchmarks.sweevo.live_test.scenarios.correctness_testing import (
 from benchmarks.sweevo.live_test.scenarios.full_case_user_input import (
     FullCaseUserInput,
 )
+from benchmarks.sweevo.live_test.scenarios.full_stack_adversarial import (
+    FullStackAdversarial,
+)
 
 SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     "correctness_testing": CorrectnessTesting,
     "full_case_user_input": FullCaseUserInput,
+    "full_stack_adversarial": FullStackAdversarial,
 }
 
-__all__ = ["SCENARIO_REGISTRY", "CorrectnessTesting", "FullCaseUserInput"]
+__all__ = [
+    "SCENARIO_REGISTRY",
+    "CorrectnessTesting",
+    "FullCaseUserInput",
+    "FullStackAdversarial",
+]

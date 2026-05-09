@@ -40,6 +40,7 @@ class ScenarioContext:
     graph_summary: dict[str, Any] | None = None
     requirement_ledger: Any = None
     package_plan: Any = None
+    matrix_plan: Any = None
 
 
 @runtime_checkable

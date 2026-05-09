@@ -43,7 +43,12 @@ async def sweevo_sandbox(sweevo_instance: SWEEvoInstance) -> dict[str, object]:
     from benchmarks.sweevo.sandbox import create_sweevo_test_sandbox
 
     bootstrap_daytona_provider()
-    return await create_sweevo_test_sandbox(sweevo_instance, register_snapshot=True)
+    reuse_existing_auto = os.getenv("EOS_SWEEVO_FORCE_FRESH_SANDBOX") != "1"
+    return await create_sweevo_test_sandbox(
+        sweevo_instance,
+        register_snapshot=True,
+        reuse_existing_auto=reuse_existing_auto,
+    )
 
 
 @pytest.fixture

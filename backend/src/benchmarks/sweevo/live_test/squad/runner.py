@@ -73,8 +73,18 @@ from benchmarks.sweevo.live_test.squad.prompt_inspector import (
     ToolCallRecord,
 )
 from benchmarks.sweevo.live_test.squad.sandbox_probe import SandboxCheck
+from benchmarks.sweevo.live_test.squad.full_stack_tool_scripts import (
+    final_reconciliation_script as full_stack_final_reconciliation_script,
+    inspect_full_user_input_script,
+    layerstack_squash_lease_script,
+    lsp_refresh_semantics_script,
+    occ_conflict_matrix_script,
+    overlay_edge_matrix_script,
+    recursive_oversized_matrix_script,
+    verifier_checkpoint_script as full_stack_verifier_checkpoint_script,
+)
 from benchmarks.sweevo.live_test.squad.tool_scripts import (
-    MockToolScriptEngine,
+    PreparedToolScriptEngine,
     execute_package_script,
     final_reconciliation_script,
     inspect_user_input_script,
@@ -139,7 +149,7 @@ class MockSquadRunner:
         self.tool_calls: list[ToolCallRecord] = []
         self.prompt_inspections: list[PromptInspection] = []
         self.sandbox_checks: list[SandboxCheck] = []
-        self._script_engine = MockToolScriptEngine(self._call_tool)
+        self._script_engine = PreparedToolScriptEngine(self._call_tool)
 
     async def __call__(
         self,
@@ -334,6 +344,28 @@ class MockSquadRunner:
                     },
                 )
                 return result
+            if isinstance(action, str) and action.startswith(
+                "request_recursive_matrix:"
+            ):
+                package_id = action.split(":", 1)[1]
+                goal = self._scenario.recursive_mission_goal(ctx) or (
+                    f"Resolve recursive matrix package {package_id}."
+                )
+                result = await self._call_tool(
+                    request_mission_solution,
+                    {"goal": goal},
+                    metadata,
+                    emit,
+                )
+                self._publish(
+                    EventType.RECURSIVE_MISSION_REQUESTED,
+                    metadata=metadata,
+                    payload={
+                        "package_id": package_id,
+                        "mission_id": result.metadata.get("mission_id"),
+                    },
+                )
+                return result
             if action == "sandbox_integrity":
                 await self._run_sandbox_integrity_probe(metadata, emit)
                 summary = "Sandbox integrity probe passed."
@@ -371,6 +403,69 @@ class MockSquadRunner:
                 )
                 summary = script_result.summary
                 artifacts = [script_result.artifact]
+            elif action == "inspect_full_user_input":
+                script_result = await self._script_engine.run(
+                    inspect_full_user_input_script(ctx),
+                    metadata=metadata,
+                    emit=emit,
+                )
+                summary = script_result.summary
+                artifacts = [script_result.artifact]
+                self._publish_full_stack_script(script_result.script_name, metadata)
+            elif action == "occ_conflict_matrix":
+                script_result = await self._script_engine.run(
+                    occ_conflict_matrix_script(ctx),
+                    metadata=metadata,
+                    emit=emit,
+                )
+                summary = script_result.summary
+                artifacts = [script_result.artifact]
+                self._publish_full_stack_script(script_result.script_name, metadata)
+            elif action == "overlay_edge_matrix":
+                script_result = await self._script_engine.run(
+                    overlay_edge_matrix_script(ctx),
+                    metadata=metadata,
+                    emit=emit,
+                )
+                summary = script_result.summary
+                artifacts = [script_result.artifact]
+                self._publish_full_stack_script(script_result.script_name, metadata)
+            elif action == "layerstack_squash_lease":
+                script_result = await self._script_engine.run(
+                    layerstack_squash_lease_script(ctx),
+                    metadata=metadata,
+                    emit=emit,
+                )
+                summary = script_result.summary
+                artifacts = [script_result.artifact]
+                self._publish_full_stack_script(script_result.script_name, metadata)
+            elif action == "lsp_refresh_semantics":
+                script_result = await self._script_engine.run(
+                    lsp_refresh_semantics_script(ctx),
+                    metadata=metadata,
+                    emit=emit,
+                )
+                summary = script_result.summary
+                artifacts = [script_result.artifact]
+                self._publish_full_stack_script(script_result.script_name, metadata)
+            elif action == "recursive_oversized_matrix":
+                script_result = await self._script_engine.run(
+                    recursive_oversized_matrix_script(ctx),
+                    metadata=metadata,
+                    emit=emit,
+                )
+                summary = script_result.summary
+                artifacts = [script_result.artifact]
+                self._publish_full_stack_script(script_result.script_name, metadata)
+            elif action == "full_stack_final_reconciliation":
+                script_result = await self._script_engine.run(
+                    full_stack_final_reconciliation_script(ctx),
+                    metadata=metadata,
+                    emit=emit,
+                )
+                summary = script_result.summary
+                artifacts = [script_result.artifact]
+                self._publish_full_stack_script(script_result.script_name, metadata)
             elif action == "recursive_step":
                 script_result = await self._script_engine.run(
                     recursive_step_script(ctx),
@@ -410,8 +505,13 @@ class MockSquadRunner:
                 metadata=metadata,
                 payload=self._recursive_close_payload(metadata),
             )
+        checkpoint_script = (
+            full_stack_verifier_checkpoint_script(ctx)
+            if self._scenario.name == "full_stack_adversarial"
+            else verifier_checkpoint_script(ctx)
+        )
         await self._script_engine.run(
-            verifier_checkpoint_script(ctx),
+            checkpoint_script,
             metadata=metadata,
             emit=emit,
         )
@@ -465,6 +565,7 @@ class MockSquadRunner:
             graph_summary=None,
             requirement_ledger=getattr(self._scenario, "requirement_ledger", None),
             package_plan=getattr(self._scenario, "package_plan", None),
+            matrix_plan=getattr(self._scenario, "matrix_plan", None),
         )
 
     async def _run_preflight_probe(
@@ -992,6 +1093,17 @@ class MockSquadRunner:
                         "outcome": close_report.get("outcome"),
                     }
         return {}
+
+    def _publish_full_stack_script(
+        self,
+        script_name: str,
+        metadata: ExecutionMetadata,
+    ) -> None:
+        self._publish(
+            EventType.FULL_STACK_SCRIPT_COMPLETED,
+            metadata=metadata,
+            payload={"script_name": script_name},
+        )
 
     @staticmethod
     def _spec_field(text: str, name: str) -> str | None:

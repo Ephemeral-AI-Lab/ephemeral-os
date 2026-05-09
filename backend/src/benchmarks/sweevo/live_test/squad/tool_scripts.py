@@ -128,6 +128,9 @@ class MockToolScriptEngine:
         )
 
 
+PreparedToolScriptEngine = MockToolScriptEngine
+
+
 def inspect_user_input_script(ctx: ScenarioContext) -> PreparedToolScript:
     """Persist and verify the requirement ledger parsed from user input."""
     requirements = _dict_list(ctx.requirement_ledger)
@@ -500,6 +503,7 @@ def _json(payload: dict[str, Any]) -> str:
 
 __all__ = [
     "MockToolScriptEngine",
+    "PreparedToolScriptEngine",
     "PreparedToolScript",
     "ToolScriptResult",
     "ToolScriptStep",

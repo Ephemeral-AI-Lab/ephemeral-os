@@ -47,6 +47,7 @@ class EventType(StrEnum):
     ENTRY_EXECUTOR_INVOKED = "entry_executor_invoked"
     RECURSIVE_MISSION_REQUESTED = "recursive_mission_requested"
     RECURSIVE_MISSION_COMPLETED = "recursive_mission_completed"
+    FULL_STACK_SCRIPT_COMPLETED = "full_stack_script_completed"
 
     # tools
     TOOL_CALL_STARTED = "tool_call_started"

@@ -10,7 +10,8 @@ Python entry point. Re-orders the same logic that lives in
 3. If the runner is wedged by a stale Docker-in-Docker ``containerd.pid``,
    surface ``tier0_runner_recovery_required``.
 4. If ``docker`` is on PATH, query the daytona-db-1 Postgres for
-   sandbox rows stuck in ``state='starting'`` for >60s.
+   sandbox rows stuck in ``state='starting'`` or ``state='pending_build'``
+   for >60s.
 5. If stuck rows are found, return ``passed=False`` with notes that
    include ``tier0_manual_recovery_required`` so the runner knows to
    abort everything (per plan §3 cascade rules).
@@ -107,7 +108,7 @@ def _detect_stuck_rows(timeout_s: float = 5.0) -> tuple[bool, list[str], str]:
                 "-t",
                 "-A",
                 "-c",
-                "SELECT id FROM sandbox WHERE state='starting' "
+                "SELECT id FROM sandbox WHERE state IN ('starting', 'pending_build') "
                 "AND \"updatedAt\" < NOW() - INTERVAL '60 seconds'",
             ],
             capture_output=True,
@@ -232,7 +233,7 @@ def _run_recovery(timeout_s: float = 10.0) -> tuple[bool, str]:
                 "daytona",
                 "-c",
                 "UPDATE sandbox SET state='destroyed', \"desiredState\"='destroyed' "
-                "WHERE state='starting' "
+                "WHERE state IN ('starting', 'pending_build') "
                 "AND \"updatedAt\" < NOW() - INTERVAL '60 seconds'",
             ],
             capture_output=True,
