@@ -43,7 +43,8 @@ entry executor task.
 
 | Area | Result |
 |---|---|
-| Agent transcript | `message.jsonl` now records initial `system_message`, `user_message`, full `assistant_message`, tool calls, and tool results. |
+| Agent transcript | `message.jsonl` now records conversational message rows: `role`, `content`, and audit metadata. Tool calls stay inside assistant `tool_use` content blocks, and tool results are user `tool_result` messages. |
+| Lifecycle snapshots | Mission, episode, attempt, and task artifacts are latest-state object snapshots: `mission.json`, `episode.json`, `attempt.json`, and `task.json`. They are no longer append-only JSONL histories. |
 | System prompts | Mock squad definitions include non-empty system prompts for entry executor, planner, executor, verifier, and evaluator. |
 | Prepared tool scripts | Deterministic scripts call real public tools instead of mutating host-local fixtures. |
 | Sandbox tools | Full-case scripts exercise `read_file`, `write_file`, `edit_file`, and `shell`. |
@@ -86,6 +87,13 @@ Event families now recorded:
 
 ## Latest Live Evidence
 
+The live run below verified the full scenario behavior before the
+artifact-contract cleanup that changed lifecycle `*.jsonl` histories to
+latest-state `*.json` snapshots and changed `message.jsonl` rows to
+conversation-message records. The updated artifact format is covered by focused
+unit tests; a fresh live Daytona rerun is still needed if this report needs
+current-format live artifacts.
+
 Latest passing run:
 
 ```text
@@ -104,14 +112,15 @@ Entry transcript:
 /Users/yifanxu/machine_learning/LoVC/EphemeralOS/.sweevo_runs/scenario_logs/full_case_user_input/20260508T174115Z_0533c516aeef/entry_executor_3f2b914f-a121-4d5e-8956-ddda2761fe87:entry/message.jsonl
 ```
 
-The entry transcript starts with:
+For new runs, the entry transcript starts with conversation-message rows shaped
+like:
 
-```text
-system_message system entry_executor
-user_message user entry_executor
-text assistant entry_executor
-assistant_message assistant entry_executor
-tool_call assistant entry_executor request_mission_solution
+```jsonl
+{"role":"system","content":[{"type":"text","text":"..."}],"metadata":{"agent_name":"entry_executor", "...":"..."}}
+{"role":"user","content":[{"type":"text","text":"..."}],"metadata":{"agent_name":"entry_executor", "...":"..."}}
+{"role":"assistant","content":[{"type":"text","text":"..."}],"metadata":{"agent_name":"entry_executor", "...":"..."}}
+{"role":"assistant","content":[{"type":"tool_use","name":"request_mission_solution", "...":"..."}],"metadata":{"agent_name":"entry_executor", "...":"..."}}
+{"role":"user","content":[{"type":"tool_result","tool_use_id":"...", "...":"..."}],"metadata":{"agent_name":"entry_executor", "tool_name":"request_mission_solution", "...":"..."}}
 ```
 
 Mission framing:
@@ -258,6 +267,8 @@ Recommended next implementation slice:
 
 ## Status
 
-Phase 2 is implemented and live verified. The remaining request is a dedicated
+Phase 2 is implemented and live verified for scenario behavior. The artifact
+contract cleanup is unit verified and should be live-rerun before citing new
+format artifacts as Daytona evidence. The remaining request is a dedicated
 `command_exec` auditor, which should be handled as the next narrow change rather
 than hidden inside the generic sandbox monitor.

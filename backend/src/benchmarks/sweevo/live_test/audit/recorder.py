@@ -3,8 +3,9 @@
 Wires five SQLAlchemy ``after_insert``/``after_update`` listeners (one per
 ``MissionRecord``/``EpisodeRecord``/``AttemptRecord``/``TaskCenterTaskRecord``
 plus a fifth on ``AgentRunRecord`` for ``agent_run_id`` -> ``task_id``
-mapping). Each row commit appends a single line to a per-row append-only
-``*.jsonl`` under a hierarchical run directory; sandbox subsystem monitor
+mapping). Task stream events append conversation-message rows to
+``message.jsonl``. Lifecycle rows are mirrored as latest-state ``*.json``
+snapshots under a hierarchical run directory, while sandbox subsystem monitor
 events are mirrored into ``sandbox_events.jsonl``.
 """
 
@@ -39,7 +40,7 @@ PRIMARY_ROLES: frozenset[str] = frozenset(
 
 # Roles which earn an ``NN_<role>_<task_id>`` directory under the parent
 # attempt — superset of the primary message-recorder allowlist (we still
-# want the ``task.jsonl`` snapshot for ``generator`` rows).
+# want the ``task.json`` snapshot for ``generator`` rows).
 _ATTEMPT_CHILD_ROLES: frozenset[str] = frozenset(
     {"planner", "executor", "verifier", "evaluator", "generator"}
 )
@@ -348,9 +349,7 @@ class AuditRecorder:
         ):
             return
         mission_dir = self._ensure_mission_dir(target.id)
-        append_prompt_report_event(
-            mission_dir / "mission.jsonl", {"row": _serialize_mission(target)}
-        )
+        _atomic_write_json(mission_dir / "mission.json", _serialize_mission(target))
 
     def _handle_episode(self, target: EpisodeRecord) -> None:
         mission_dir = self._mission_dir.get(target.mission_id)
@@ -359,9 +358,7 @@ class AuditRecorder:
         episode_dir = self._ensure_episode_dir(
             target.mission_id, target.id, mission_dir
         )
-        append_prompt_report_event(
-            episode_dir / "episode.jsonl", {"row": _serialize_episode(target)}
-        )
+        _atomic_write_json(episode_dir / "episode.json", _serialize_episode(target))
 
     def _handle_attempt(self, target: AttemptRecord) -> None:
         episode_dir = self._episode_dir.get(target.episode_id)
@@ -370,9 +367,7 @@ class AuditRecorder:
         attempt_dir = self._ensure_attempt_dir(
             target.episode_id, target.id, episode_dir
         )
-        append_prompt_report_event(
-            attempt_dir / "attempt.jsonl", {"row": _serialize_attempt(target)}
-        )
+        _atomic_write_json(attempt_dir / "attempt.json", _serialize_attempt(target))
 
     def _handle_task(self, target: TaskCenterTaskRecord) -> None:
         if (
@@ -400,9 +395,7 @@ class AuditRecorder:
                         "task_center_run_id": self._task_center_run_id,
                     },
                 )
-        append_prompt_report_event(
-            task_dir / "task.jsonl", {"row": _serialize_task(target)}
-        )
+        _atomic_write_json(task_dir / "task.json", _serialize_task(target))
 
     def _handle_agent_run(self, target: AgentRunRecord) -> None:
         self._agent_run_to_task[target.id] = target.task_id

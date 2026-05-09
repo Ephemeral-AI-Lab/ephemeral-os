@@ -15,6 +15,9 @@ from typing import Iterator
 
 import pytest
 
+from benchmarks.sweevo.live_test.audit.bus import AuditEventBus
+from benchmarks.sweevo.live_test.audit.events import Event, EventType
+from benchmarks.sweevo.live_test.audit.node_id import NodeId
 from benchmarks.sweevo.live_test.audit.recorder import AuditRecorder
 from benchmarks.sweevo.live_test.stores import (
     TaskCenterStoreBundle,
@@ -83,21 +86,27 @@ def _read_jsonl(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text().splitlines() if line]
 
 
+def _read_json(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def _make_recorder(
     tmp_path: Path,
     *,
     run_id: str = _RUN_ID,
+    bus: AuditEventBus | None = None,
 ) -> AuditRecorder:
     return AuditRecorder(
         run_dir=tmp_path / "run",
         task_center_run_id=run_id,
+        bus=bus,
         scenario_name="correctness_testing",
         instance_id="dask__dask_2023.3.2_2023.4.0",
         sandbox_id="sbx-1",
     )
 
 
-def test_mission_insert_writes_one_line(
+def test_mission_insert_writes_latest_snapshot(
     tmp_path: Path, stores: TaskCenterStoreBundle
 ) -> None:
     _seed_run(stores)
@@ -113,15 +122,15 @@ def test_mission_insert_writes_one_line(
         recorder.dispose()
 
     mission_dir = recorder.run_dir / f"mission_01_{mission.id}"
-    jsonl = mission_dir / "mission.jsonl"
-    assert jsonl.exists()
-    rows = _read_jsonl(jsonl)
-    assert len(rows) == 1
-    assert rows[0]["row"]["id"] == mission.id
-    assert rows[0]["row"]["status"] == "open"
+    snapshot = mission_dir / "mission.json"
+    assert snapshot.exists()
+    row = _read_json(snapshot)
+    assert row["id"] == mission.id
+    assert row["status"] == "open"
+    assert not (mission_dir / "mission.jsonl").exists()
 
 
-def test_mission_update_appends_second_line(
+def test_mission_update_overwrites_latest_snapshot(
     tmp_path: Path, stores: TaskCenterStoreBundle
 ) -> None:
     _seed_run(stores)
@@ -142,11 +151,10 @@ def test_mission_update_appends_second_line(
     finally:
         recorder.dispose()
 
-    jsonl = recorder.run_dir / f"mission_01_{mission.id}" / "mission.jsonl"
-    rows = _read_jsonl(jsonl)
-    assert len(rows) == 2
-    assert rows[0]["row"]["status"] == "open"
-    assert rows[1]["row"]["status"] == "succeeded"
+    snapshot = recorder.run_dir / f"mission_01_{mission.id}" / "mission.json"
+    row = _read_json(snapshot)
+    assert row["status"] == "succeeded"
+    assert row["final_outcome"] == {"ok": True}
 
 
 def test_episode_and_attempt_listeners(
@@ -178,10 +186,10 @@ def test_episode_and_attempt_listeners(
     mission_dir = recorder.run_dir / f"mission_01_{mission.id}"
     episode_dir = mission_dir / f"episode_01_{episode.id}"
     attempt_dir = episode_dir / f"attempt_01_{attempt.id}"
-    assert _read_jsonl(episode_dir / "episode.jsonl"), "episode.jsonl empty"
-    assert _read_jsonl(attempt_dir / "attempt.jsonl"), "attempt.jsonl empty"
-    assert len(_read_jsonl(episode_dir / "episode.jsonl")) == 1
-    assert len(_read_jsonl(attempt_dir / "attempt.jsonl")) == 1
+    assert _read_json(episode_dir / "episode.json")["id"] == episode.id
+    assert _read_json(attempt_dir / "attempt.json")["id"] == attempt.id
+    assert not (episode_dir / "episode.jsonl").exists()
+    assert not (attempt_dir / "attempt.jsonl").exists()
 
 
 def _insert_task(
@@ -264,7 +272,7 @@ def test_task_dir_placement_per_role(
         recorder.dispose()
 
     entry_dir = recorder.run_dir / "entry_executor_entry_task_1"
-    assert (entry_dir / "task.jsonl").exists()
+    assert (entry_dir / "task.json").exists()
 
     attempt_dir = (
         recorder.run_dir
@@ -272,9 +280,9 @@ def test_task_dir_placement_per_role(
         / f"episode_01_{episode.id}"
         / f"attempt_01_{attempt.id}"
     )
-    assert (attempt_dir / "01_planner_task_planner" / "task.jsonl").exists()
-    assert (attempt_dir / "02_executor_task_executor" / "task.jsonl").exists()
-    assert (attempt_dir / "03_evaluator_task_evaluator" / "task.jsonl").exists()
+    assert (attempt_dir / "01_planner_task_planner" / "task.json").exists()
+    assert (attempt_dir / "02_executor_task_executor" / "task.json").exists()
+    assert (attempt_dir / "03_evaluator_task_evaluator" / "task.json").exists()
 
 
 def test_helper_role_filtered(
@@ -290,6 +298,85 @@ def test_helper_role_filtered(
 
     helper_dirs = list(recorder.run_dir.glob("*helper_1*"))
     assert helper_dirs == []
+
+
+def test_generator_verifier_task_uses_verifier_dir_and_message_recorder(
+    tmp_path: Path, stores: TaskCenterStoreBundle
+) -> None:
+    _seed_run(stores)
+    recorder = _make_recorder(tmp_path)
+    recorder.start()
+    try:
+        mission = stores.mission_store.insert(
+            task_center_run_id=_RUN_ID,
+            requested_by_task_id="entry_task_1",
+            goal="goal",
+        )
+        episode = stores.episode_store.insert(
+            mission_id=mission.id,
+            sequence_no=1,
+            creation_reason=EpisodeCreationReason.INITIAL,
+            goal="ep",
+            attempt_budget=3,
+        )
+        attempt = stores.attempt_store.insert(
+            episode_id=episode.id,
+            attempt_sequence_no=1,
+        )
+        _insert_task(
+            stores,
+            task_id="task_verifier",
+            role="generator",
+            agent_name="verifier",
+            task_center_attempt_id=attempt.id,
+        )
+    finally:
+        recorder.dispose()
+
+    verifier_dir = (
+        recorder.run_dir
+        / f"mission_01_{mission.id}"
+        / f"episode_01_{episode.id}"
+        / f"attempt_01_{attempt.id}"
+        / "01_verifier_task_verifier"
+    )
+    assert (verifier_dir / "task.json").exists()
+    assert recorder.message_recorder_for_task("task_verifier") is not None
+
+
+def test_sandbox_events_are_mirrored_to_run_jsonl(tmp_path: Path) -> None:
+    bus = AuditEventBus()
+    recorder = _make_recorder(tmp_path, bus=bus)
+    recorder.start()
+    try:
+        bus.publish(
+            Event(
+                type=EventType.SANDBOX_OCC_CHANGES_COMMITTED,
+                node=NodeId(task_center_run_id=_RUN_ID, tool_name="write_file"),
+                payload={"status": "committed", "changed_paths": ["a.txt"]},
+                correlation_id="corr-1",
+            )
+        )
+        bus.publish(
+            Event(
+                type=EventType.EXECUTOR_SUCCESS,
+                node=NodeId(task_center_run_id=_RUN_ID, agent_name="executor"),
+                payload={"checkpoint": "done"},
+            )
+        )
+    finally:
+        recorder.dispose()
+
+    rows = _read_jsonl(recorder.run_dir / "sandbox_events.jsonl")
+    assert len(rows) == 1
+    assert rows[0]["event_type"] == "sandbox_occ_changes_committed"
+    assert rows[0]["node"]["task_center_run_id"] == _RUN_ID
+    assert rows[0]["node"]["tool_name"] == "write_file"
+    assert rows[0]["payload"] == {
+        "status": "committed",
+        "changed_paths": ["a.txt"],
+    }
+    assert rows[0]["correlation_id"] == "corr-1"
 
 
 def test_dispose_unregisters_listeners(

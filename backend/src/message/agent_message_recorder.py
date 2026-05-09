@@ -1,4 +1,4 @@
-"""Append completed agent stream steps to a JSONL file."""
+"""Append completed agent conversation messages to a JSONL file."""
 
 from __future__ import annotations
 
@@ -7,6 +7,12 @@ from pathlib import Path
 from typing import Any
 from collections.abc import Mapping
 
+from message.messages import (
+    ConversationMessage,
+    TextBlock,
+    ThinkingBlock,
+    ToolResultBlock,
+)
 from message.stream_events import (
     AssistantMessageComplete,
     AssistantTextDelta,
@@ -20,12 +26,12 @@ logger = logging.getLogger(__name__)
 
 
 class AgentMessageJsonlRecorder:
-    """Record completed thinking/text/tool steps as append-only JSONL.
+    """Record completed conversation messages as append-only JSONL.
 
     Text and thinking arrive as deltas, so they are buffered per agent lane and
-    flushed when that lane starts another step or completes an assistant message.
-    Tool calls are read from completed assistant messages; tool results are
-    already complete stream events and are appended immediately.
+    flushed into assistant messages when that lane starts another message or
+    completes an assistant message. Tool calls stay inside assistant message
+    content, and tool results are recorded as user messages.
     """
 
     def __init__(
@@ -46,7 +52,7 @@ class AgentMessageJsonlRecorder:
         return self._path
 
     def emit(self, event: StreamEvent) -> None:
-        """Observe one stream event and append completed message steps."""
+        """Observe one stream event and append completed messages."""
         if isinstance(event, ThinkingDelta):
             self._flush_text(event.agent_name, event.run_id)
             self._thinking_for(event.agent_name, event.run_id).append(event.text)
@@ -63,48 +69,27 @@ class AgentMessageJsonlRecorder:
 
         if isinstance(event, AssistantMessageComplete):
             self._record(
-                "assistant_message",
                 agent_name=event.agent_name,
                 run_id=event.run_id,
-                role="assistant",
-                content=[
-                    block.model_dump(mode="json")
-                    for block in event.message.content
-                ],
+                message=event.message,
             )
-            for tool_use in getattr(event.message, "tool_uses", []):
-                self._record(
-                    "tool_call",
-                    agent_name=event.agent_name,
-                    run_id=event.run_id,
-                    role="assistant",
-                    content=[
-                        {
-                            "type": "tool_use",
-                            "id": tool_use.id,
-                            "name": tool_use.name,
-                            "input": tool_use.input,
-                        }
-                    ],
-                    tool_name=tool_use.name,
-                    tool_id=tool_use.id,
-                )
         elif isinstance(event, ToolExecutionCompleted):
-            self._record(
-                "tool_result",
-                agent_name=event.agent_name,
-                run_id=event.run_id,
+            message = ConversationMessage(
                 role="user",
                 content=[
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": event.tool_id,
-                        "content": event.output,
-                        "is_error": event.is_error,
-                        "metadata": dict(event.metadata or {}),
-                        "does_terminate": event.does_terminate,
-                    }
+                    ToolResultBlock(
+                        tool_use_id=event.tool_id,
+                        content=event.output,
+                        is_error=event.is_error,
+                        metadata=dict(event.metadata or {}),
+                        does_terminate=event.does_terminate,
+                    )
                 ],
+            )
+            self._record(
+                agent_name=event.agent_name,
+                run_id=event.run_id,
+                message=message,
                 tool_name=event.tool_name,
                 tool_id=event.tool_id,
                 is_error=event.is_error,
@@ -129,19 +114,20 @@ class AgentMessageJsonlRecorder:
             return
         self._initial_messages_recorded = True
         if system_prompt.strip():
-            self._record(
-                "system_message",
+            self._record_message(
                 agent_name=agent_name,
                 run_id=run_id,
                 role="system",
                 content=[{"type": "text", "text": system_prompt}],
             )
-        self._record(
-            "user_message",
+        message = ConversationMessage.from_user_text(user_prompt)
+        self._record_message(
             agent_name=agent_name,
             run_id=run_id,
-            role="user",
-            content=[{"type": "text", "text": user_prompt}],
+            role=message.role,
+            content=[
+                block.model_dump(mode="json") for block in message.content
+            ],
         )
 
     def flush(self) -> None:
@@ -168,12 +154,11 @@ class AgentMessageJsonlRecorder:
         if not text:
             return
         self._record(
-            "thinking",
             agent_name=agent_name,
             run_id=run_id,
-            role="assistant",
-            content=[{"type": "thinking", "text": text}],
-            text=text,
+            message=ConversationMessage(
+                role="assistant", content=[ThinkingBlock(text=text)]
+            ),
         )
 
     def _flush_text(self, agent_name: str, run_id: str) -> None:
@@ -183,17 +168,33 @@ class AgentMessageJsonlRecorder:
         if not text:
             return
         self._record(
-            "text",
             agent_name=agent_name,
             run_id=run_id,
-            role="assistant",
-            content=[{"type": "text", "text": text}],
-            text=text,
+            message=ConversationMessage(
+                role="assistant", content=[TextBlock(text=text)]
+            ),
         )
 
     def _record(
         self,
-        step_type: str,
+        *,
+        agent_name: str,
+        run_id: str,
+        message: ConversationMessage,
+        **extra: Any,
+    ) -> None:
+        self._record_message(
+            agent_name=agent_name,
+            run_id=run_id,
+            role=message.role,
+            content=[
+                block.model_dump(mode="json") for block in message.content
+            ],
+            **extra,
+        )
+
+    def _record_message(
+        self,
         *,
         agent_name: str,
         run_id: str,
@@ -204,16 +205,17 @@ class AgentMessageJsonlRecorder:
         if self._path is None:
             return
         self._seq += 1
-        event = {
+        metadata = {
             **self._base_event,
-            "event": "agent_step",
             "seq": self._seq,
-            "step_type": step_type,
             "agent_name": agent_name,
             "run_id": run_id,
+            **extra,
+        }
+        event = {
             "role": role,
             "content": content,
-            **extra,
+            "metadata": metadata,
         }
         try:
             append_prompt_report_event(self._path, event)

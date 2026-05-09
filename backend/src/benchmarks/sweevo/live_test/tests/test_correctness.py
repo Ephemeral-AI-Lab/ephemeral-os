@@ -118,18 +118,18 @@ async def test_correctness_testing_scenario_runs_end_to_end(
     assert mission_dirs, f"no mission_NN_<id> dir under {run_dir}"
     found_attempt_with_role_dir = False
     for mission_dir in mission_dirs:
-        assert (mission_dir / "mission.jsonl").exists()
+        assert (mission_dir / "mission.json").exists()
         for episode_dir in mission_dir.glob("episode_*_*"):
-            assert (episode_dir / "episode.jsonl").exists()
+            assert (episode_dir / "episode.json").exists()
             for attempt_dir in episode_dir.glob("attempt_*_*"):
-                assert (attempt_dir / "attempt.jsonl").exists()
+                assert (attempt_dir / "attempt.json").exists()
                 role_dirs = list(attempt_dir.glob("[0-9][0-9]_*"))
                 assert role_dirs, (
                     f"no NN_<role>_<task_id> dir under {attempt_dir}"
                 )
                 found_attempt_with_role_dir = True
                 for role_dir in role_dirs:
-                    assert (role_dir / "task.jsonl").exists()
+                    assert (role_dir / "task.json").exists()
                     role_segment = role_dir.name.split("_", 2)[1]
                     assert role_segment in {
                         "planner",
@@ -141,7 +141,7 @@ async def test_correctness_testing_scenario_runs_end_to_end(
 
     entry_dirs = list(run_dir.glob("entry_executor_*"))
     assert entry_dirs, "missing entry_executor sibling dir"
-    assert (entry_dirs[0] / "task.jsonl").exists()
+    assert (entry_dirs[0] / "task.json").exists()
     _assert_message_jsonl_contains_sandbox_tools(run_dir)
 
     # --- Helper agents are filtered out -------------------------------
@@ -178,18 +178,25 @@ async def test_correctness_testing_scenario_runs_end_to_end(
 
 
 def _assert_message_jsonl_contains_sandbox_tools(run_dir: Path) -> None:
-    steps: list[dict[str, object]] = []
+    messages: list[dict[str, object]] = []
     message_paths = list(run_dir.rglob("message.jsonl"))
     assert message_paths, f"no message.jsonl files under {run_dir}"
     for path in message_paths:
         for line in path.read_text(encoding="utf-8").splitlines():
             if line.strip():
-                steps.append(json.loads(line))
-    assert any(step.get("step_type") == "tool_call" for step in steps)
-    assert any(step.get("step_type") == "tool_result" for step in steps)
+                messages.append(json.loads(line))
+    assert all("role" in message and "content" in message for message in messages)
+    assert all("step_type" not in message for message in messages)
+    assert any(
+        block.get("type") == "tool_result"
+        for message in messages
+        for block in message.get("content", [])
+        if isinstance(block, dict)
+    )
     tool_calls = {
-        str(step.get("tool_name") or "")
-        for step in steps
-        if step.get("step_type") == "tool_call"
+        str(block.get("name") or "")
+        for message in messages
+        for block in message.get("content", [])
+        if isinstance(block, dict) and block.get("type") == "tool_use"
     }
     assert {"write_file", "read_file", "edit_file", "shell"}.issubset(tool_calls)

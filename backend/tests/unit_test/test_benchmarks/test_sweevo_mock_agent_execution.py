@@ -264,7 +264,7 @@ async def test_run_scenario_correctness_testing_with_fake_sandbox(
     assert mission_dirs, f"no mission_NN_<id> dir under {run_dir}"
     delegated_mission_dirs = []
     for mission_dir in mission_dirs:
-        assert (mission_dir / "mission.jsonl").exists()
+        assert (mission_dir / "mission.json").exists()
         if list(mission_dir.glob("episode_*_*")):
             delegated_mission_dirs.append(mission_dir)
     assert delegated_mission_dirs, "no mission with episodes — delegated path missing"
@@ -272,21 +272,21 @@ async def test_run_scenario_correctness_testing_with_fake_sandbox(
     for mission_dir in delegated_mission_dirs:
         episode_dirs = list(mission_dir.glob("episode_*_*"))
         for episode_dir in episode_dirs:
-            assert (episode_dir / "episode.jsonl").exists()
+            assert (episode_dir / "episode.json").exists()
             attempt_dirs = list(episode_dir.glob("attempt_*_*"))
             if not attempt_dirs:
                 # Older run fixtures may include attempt-less entry artifacts.
                 # Delegated missions must still contain normal attempts.
                 continue
             for attempt_dir in attempt_dirs:
-                assert (attempt_dir / "attempt.jsonl").exists()
+                assert (attempt_dir / "attempt.json").exists()
                 role_dirs = list(attempt_dir.glob("[0-9][0-9]_*"))
                 assert role_dirs, (
                     f"no NN_<role>_<task_id> dir under {attempt_dir}"
                 )
                 found_attempt_with_role_dir = True
                 for role_dir in role_dirs:
-                    assert (role_dir / "task.jsonl").exists()
+                    assert (role_dir / "task.json").exists()
                     role_dir_name = role_dir.name
                     role_segment = role_dir_name.split("_", 2)[1]
                     # Helper / unknown roles must not earn an attempt-child dir.
@@ -298,7 +298,7 @@ async def test_run_scenario_correctness_testing_with_fake_sandbox(
                     }
     assert found_attempt_with_role_dir, "no attempt_NN_<id> dir found anywhere"
 
-    # entry_executor sibling directory exists and carries task.jsonl.
+    # entry_executor sibling directory exists and carries task.json.
     entry_dirs = list(run_dir.glob("entry_executor_*"))
     assert entry_dirs, "missing entry_executor sibling dir"
-    assert (entry_dirs[0] / "task.jsonl").exists()
+    assert (entry_dirs[0] / "task.json").exists()

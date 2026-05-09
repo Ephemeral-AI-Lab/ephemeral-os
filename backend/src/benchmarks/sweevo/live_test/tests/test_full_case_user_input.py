@@ -226,48 +226,62 @@ def _assert_audit_tree_roles(run_dir: Path) -> None:
     role_segments: set[str] = set()
     for role_dir in run_dir.rglob("[0-9][0-9]_*_*"):
         role_segments.add(role_dir.name.split("_", 2)[1])
-        assert (role_dir / "task.jsonl").exists()
+        assert (role_dir / "task.json").exists()
     assert {"executor", "verifier", "evaluator"}.issubset(role_segments)
     mission_dirs = sorted(run_dir.glob("mission_*_*"))
     assert mission_dirs
     assert list(run_dir.glob("mission_*_*/episode_*_*"))
     assert list(run_dir.glob("mission_*_*/episode_*_*/attempt_*_*"))
     first_mission = mission_dirs[0]
-    mission_rows = _jsonl_rows(first_mission / "mission.jsonl")
-    assert mission_rows
-    requested_by = mission_rows[0]["row"]["requested_by_task_id"]
+    mission = _json_file(first_mission / "mission.json")
+    requested_by = mission["requested_by_task_id"]
     assert str(requested_by).endswith(":entry")
-    episode_rows = sorted(first_mission.glob("episode_*_*/episode.jsonl"))
-    assert episode_rows
-    first_episode = _jsonl_rows(episode_rows[0])[-1]["row"]
+    episode_files = sorted(first_mission.glob("episode_*_*/episode.json"))
+    assert episode_files
+    first_episode = _json_file(episode_files[0])
     assert first_episode["attempt_ids"], "first mission must be delegated work"
 
 
 def _assert_message_jsonl_contains_tool_scripts(run_dir: Path) -> None:
-    steps = _message_steps(run_dir)
-    assert steps, f"no message.jsonl agent steps under {run_dir}"
-    agents = {str(step.get("agent_name") or "") for step in steps}
+    messages = _message_steps(run_dir)
+    assert messages, f"no message.jsonl agent messages under {run_dir}"
+    assert all(
+        "role" in message and "content" in message for message in messages
+    )
+    assert all("step_type" not in message for message in messages)
+    agents = {
+        str((message.get("metadata") or {}).get("agent_name") or "")
+        for message in messages
+        if isinstance(message.get("metadata"), dict)
+    }
     assert {"executor", "verifier"}.issubset(agents)
     tool_calls = {
-        str(step.get("tool_name") or "")
-        for step in steps
-        if step.get("step_type") == "tool_call"
+        str(block.get("name") or "")
+        for message in messages
+        for block in message.get("content", [])
+        if isinstance(block, dict) and block.get("type") == "tool_use"
     }
     assert {"write_file", "edit_file", "read_file", "shell"}.issubset(tool_calls)
-    assert "system" in {str(step.get("role") or "") for step in steps}
-    assert "user" in {str(step.get("role") or "") for step in steps}
-    assert any(step.get("step_type") == "assistant_message" for step in steps)
+    assert "system" in {str(message.get("role") or "") for message in messages}
+    assert "user" in {str(message.get("role") or "") for message in messages}
+    assert "assistant" in {
+        str(message.get("role") or "") for message in messages
+    }
     assert any(
-        step.get("step_type") == "tool_result"
-        and step.get("tool_name") == "write_file"
-        and not step.get("is_error")
-        for step in steps
+        block.get("type") == "tool_result"
+        and (message.get("metadata") or {}).get("tool_name") == "write_file"
+        and not (message.get("metadata") or {}).get("is_error")
+        for message in messages
+        for block in message.get("content", [])
+        if isinstance(block, dict) and isinstance(message.get("metadata"), dict)
     )
     assert any(
-        step.get("step_type") == "tool_result"
-        and step.get("tool_name") == "edit_file"
-        and step.get("is_error")
-        for step in steps
+        block.get("type") == "tool_result"
+        and (message.get("metadata") or {}).get("tool_name") == "edit_file"
+        and (message.get("metadata") or {}).get("is_error")
+        for message in messages
+        for block in message.get("content", [])
+        if isinstance(block, dict) and isinstance(message.get("metadata"), dict)
     )
 
 
@@ -371,6 +385,10 @@ def _jsonl_rows(path: Path) -> list[dict[str, Any]]:
         for line in path.read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
+
+
+def _json_file(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _message_steps(run_dir: Path) -> list[dict[str, Any]]:

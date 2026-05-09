@@ -17,7 +17,7 @@ def _read_jsonl(path):
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
 
 
-def test_agent_message_recorder_appends_completed_steps(tmp_path) -> None:
+def test_agent_message_recorder_appends_conversation_messages(tmp_path) -> None:
     path = tmp_path / "message.jsonl"
     recorder = AgentMessageJsonlRecorder(
         path,
@@ -30,10 +30,18 @@ def test_agent_message_recorder_appends_completed_steps(tmp_path) -> None:
         agent_name="executor",
         run_id="t1",
     )
-    recorder.emit(ThinkingDelta(text="inspect ", agent_name="executor", run_id="t1"))
+    recorder.emit(
+        ThinkingDelta(text="inspect ", agent_name="executor", run_id="t1")
+    )
     recorder.emit(ThinkingDelta(text="repo", agent_name="executor", run_id="t1"))
-    recorder.emit(AssistantTextDelta(text="I will run ", agent_name="executor", run_id="t1"))
-    recorder.emit(AssistantTextDelta(text="tests.", agent_name="executor", run_id="t1"))
+    recorder.emit(
+        AssistantTextDelta(
+            text="I will run ", agent_name="executor", run_id="t1"
+        )
+    )
+    recorder.emit(
+        AssistantTextDelta(text="tests.", agent_name="executor", run_id="t1")
+    )
     recorder.emit(
         AssistantMessageComplete(
             message=ConversationMessage(
@@ -63,21 +71,19 @@ def test_agent_message_recorder_appends_completed_steps(tmp_path) -> None:
     recorder.flush()
 
     records = _read_jsonl(path)
-    assert [record["step_type"] for record in records] == [
-        "system_message",
-        "user_message",
-        "thinking",
-        "text",
-        "assistant_message",
-        "tool_call",
-        "tool_result",
+    assert [record["role"] for record in records] == [
+        "system",
+        "user",
+        "assistant",
+        "assistant",
+        "assistant",
+        "user",
     ]
-    assert records[0]["role"] == "system"
-    assert records[1]["role"] == "user"
+    assert all("step_type" not in record for record in records)
+    assert all(record.get("event") != "agent_step" for record in records)
     assert records[2]["content"] == [{"type": "thinking", "text": "inspect repo"}]
     assert records[3]["content"] == [{"type": "text", "text": "I will run tests."}]
-    assert records[4]["step_type"] == "assistant_message"
-    assert records[5]["content"] == [
+    assert records[4]["content"] == [
         {
             "type": "tool_use",
             "id": "toolu_1",
@@ -85,7 +91,11 @@ def test_agent_message_recorder_appends_completed_steps(tmp_path) -> None:
             "input": {"cmd": "pytest -q"},
         }
     ]
-    assert records[6]["content"][0]["tool_use_id"] == "toolu_1"
-    assert records[6]["content"][0]["content"] == "ok"
-    assert all(record["benchmark"] == "sweevo" for record in records)
-    assert all(record["agent_name"] == "executor" for record in records)
+    assert records[5]["content"][0]["tool_use_id"] == "toolu_1"
+    assert records[5]["content"][0]["content"] == "ok"
+    assert all(
+        record["metadata"]["benchmark"] == "sweevo" for record in records
+    )
+    assert all(
+        record["metadata"]["agent_name"] == "executor" for record in records
+    )
