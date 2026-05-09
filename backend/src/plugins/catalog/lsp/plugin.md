@@ -20,9 +20,10 @@ runtime: runtime/server.py
 
 Provides Python language-server tools backed by `pyright-langserver --stdio`.
 The plugin runs inside the sandbox; the host calls into it through
-`call_plugin`. The plugin keeps a long-lived Pyright child keyed by the active
-layer-stack manifest, so edits flush through automatically and the language
-server never sees stale snapshots.
+`call_plugin`. The plugin keeps a long-lived Pyright child per layer-stack
+root, points it at a stable sandbox-local projection root, and retargets that
+root when the active manifest changes. If a refresh cannot be reconciled, the
+session is evicted and restarted rather than reading stale files.
 
 ## Tools
 
@@ -42,5 +43,5 @@ server never sees stale snapshots.
 
 - Read-only in v1. WorkspaceEdit-producing features (rename, code actions
   that modify files) are deferred.
-- Document URIs are mapped onto the layer-stack snapshot lowerdir, so Pyright
-  never sees the mutable provider workspace.
+- Document URIs are mapped onto a stable symlink to the active layer-stack
+  snapshot, so Pyright never sees the mutable provider workspace.

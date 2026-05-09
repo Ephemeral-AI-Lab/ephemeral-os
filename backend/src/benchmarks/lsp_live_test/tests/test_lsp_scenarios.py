@@ -2,8 +2,8 @@
 
 Each scenario in ``LSP_SCENARIOS`` runs as a parametrized test against the
 session-scoped ``lsp_sandbox`` fixture. The first scenario triggers
-Pyright install + spawn; subsequent scenarios reuse the cached
-session as long as the active layer-stack manifest hasn't changed.
+Pyright install + spawn; subsequent manifest changes refresh the stable
+Pyright root without restarting the language server.
 
 Skipped cleanly when Daytona is unavailable so unit-test collections don't
 fail.

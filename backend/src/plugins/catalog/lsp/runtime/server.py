@@ -1,7 +1,7 @@
 """LSP plugin in-sandbox runtime entry point.
 
 Five ``@register_plugin_op('lsp', '<verb>')`` handlers dispatch to a lazy
-Pyright session keyed by the active layer-stack manifest. The session
+Pyright session reconciled to the active layer-stack manifest. The session
 is owned by :mod:`plugins.catalog.lsp.runtime.session_manager`; this module
 is just the dispatcher.
 """

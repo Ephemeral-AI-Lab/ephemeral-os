@@ -134,7 +134,8 @@ async def _maybe_apply_edits(
 
     Uses edit_file when the scenario provides a search/replace pair, otherwise
     write_file as a full overwrite. The layer-stack publishes a new manifest
-    version, which evicts the cached Pyright session.
+    version; the LSP session refreshes its stable projection root before the
+    next tool call.
     """
     for index, edit in scenario.edits:
         if index != before_index:

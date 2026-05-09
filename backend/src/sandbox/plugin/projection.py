@@ -5,7 +5,7 @@ language server at, but the workspace truth is the active layer-stack
 manifest — not the mutable provider workspace directory. This module
 materializes the active manifest into a transient lowerdir and exposes a
 ``manifest_key`` so plugin sessions can detect when the manifest changes and
-evict stale state.
+refresh their state against the new snapshot.
 
 Lives under ``sandbox/plugin/`` rather than the LSP catalog so future stateful
 plugins reuse it. It MUST stay plugin-agnostic — no plugin-name string
@@ -65,9 +65,9 @@ class WorkspaceProjection:
 
     Constructor takes a layer_stack_root (filesystem path); each acquire call
     materializes the active manifest into a transient lowerdir and returns a
-    :class:`ProjectionHandle` keyed by ``manifest_key``. Plugin runtime code
-    keys long-lived sessions on the handle's ``manifest_key`` and evicts when
-    a fresh acquire returns a different key.
+    :class:`ProjectionHandle` keyed by ``manifest_key``. Plugin runtime code can
+    use that key to decide whether a long-lived session is already current or
+    must reconcile itself with the latest projection.
     """
 
     def __init__(self, layer_stack_root: str | Path) -> None:

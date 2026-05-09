@@ -29,7 +29,7 @@ and prepends `/tmp/eos-node22/bin` to `PATH`.
 
 ## Layer-Stack Contract
 
-Pyright is pointed at the active layer-stack projection lowerdir, not the
-mutable provider workspace. Sessions are keyed by active manifest, so a
-manifest change evicts the previous Pyright process and starts a new one against
-the new snapshot.
+Pyright is pointed at a stable sandbox-local symlink, not the mutable provider
+workspace. That symlink targets the active layer-stack projection lowerdir.
+Sessions are cached by layer-stack root and reconciled when the active manifest
+changes; Pyright is restarted only if the refresh cannot be applied safely.

@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import hashlib
 import logging
 import os
 import shutil
+from pathlib import Path
 from typing import Any
 
 from plugins.catalog.lsp.runtime.lsp_jsonrpc import (
@@ -25,6 +28,8 @@ logger = logging.getLogger(__name__)
 _CONDA_HOOK = "/opt/miniconda3/etc/profile.d/conda.sh"
 _DEFAULT_INIT_TIMEOUT_S = 30.0
 _DEFAULT_REQUEST_TIMEOUT_S = 30.0
+_DIAGNOSTICS_WAIT_S = 2.0
+_DIAGNOSTICS_POLL_S = 0.05
 
 
 class PyrightSpawnError(RuntimeError):
@@ -32,7 +37,7 @@ class PyrightSpawnError(RuntimeError):
 
 
 class PyrightSession:
-    """Long-lived Pyright session keyed by ``(layer_stack_root, manifest_key)``."""
+    """Long-lived Pyright session rooted at a stable layer-stack projection."""
 
     def __init__(
         self,
@@ -41,19 +46,67 @@ class PyrightSession:
         lowerdir: str,
         workspace_root: str,
         projection_handle: Any,
+        stable_root: str | None = None,
     ) -> None:
         self.manifest_key = manifest_key
-        self.lowerdir = lowerdir
+        self.lowerdir = stable_root or lowerdir
         self.workspace_root = workspace_root
+        self._stable_root = stable_root
         self._projection_handle = projection_handle
         self._proc: asyncio.subprocess.Process | None = None
         self._client: LspJsonRpcClient | None = None
         self._opened: set[str] = set()
         self._diagnostics: dict[str, list[dict[str, Any]]] = {}
+        self._stale_diagnostics_after_change: dict[str, list[dict[str, Any]]] = {}
         self._lock = asyncio.Lock()
         self._started = False
         self._document_versions: dict[str, int] = {}
-        self._mapper = PathMapper(lowerdir=lowerdir, workspace_root=workspace_root)
+        self._document_hashes: dict[str, str] = {}
+        if stable_root is not None:
+            self._retarget_workspace_root(lowerdir)
+        self._mapper = self._build_mapper()
+
+    async def refresh_manifest(
+        self,
+        *,
+        manifest_key: str,
+        lowerdir: str,
+        projection_handle: Any,
+    ) -> None:
+        """Retarget the stable workspace root to a new projection.
+
+        The Pyright subprocess keeps the same ``rootUri``. We swap the stable
+        root to the latest layer-stack snapshot, then notify Pyright about any
+        already-open documents so semantic queries don't read stale content.
+        If notification fails the caller must evict this session and start a
+        clean one.
+        """
+        if manifest_key == self.manifest_key:
+            projection_handle.release()
+            return
+        if self._stable_root is None:
+            projection_handle.release()
+            raise RuntimeError(
+                "cannot refresh a Pyright session without a stable root"
+            )
+
+        async with self._lock:
+            old_handle = self._projection_handle
+            try:
+                self._retarget_workspace_root(lowerdir)
+            except Exception:
+                projection_handle.release()
+                raise
+
+            self.manifest_key = manifest_key
+            self._projection_handle = projection_handle
+            self._mapper = self._build_mapper()
+            if old_handle is not None:
+                try:
+                    old_handle.release()
+                except Exception:
+                    logger.debug("old projection lease release error", exc_info=True)
+            await self._notify_workspace_refreshed()
 
     async def start(self) -> None:
         if self._started:
@@ -104,14 +157,15 @@ class PyrightSession:
     async def diagnostics(self, args: dict[str, Any]) -> dict[str, Any]:
         await self.start()
         uri = await self._open_document(args["file_path"])
-        # Wait up to ~5s for publishDiagnostics to arrive; Pyright emits
+        # Wait briefly for publishDiagnostics to arrive; Pyright emits
         # it shortly after didOpen / didChange but the first analysis can
         # take longer when the server just loaded a workspace.
-        for _ in range(100):
+        attempts = max(1, int(_DIAGNOSTICS_WAIT_S / _DIAGNOSTICS_POLL_S))
+        for _ in range(attempts):
             entries = self._diagnostics.get(uri)
             if entries is not None:
                 return {"diagnostics": entries}
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(_DIAGNOSTICS_POLL_S)
         return {"diagnostics": self._diagnostics.get(uri, [])}
 
     async def query_symbols(self, args: dict[str, Any]) -> dict[str, Any]:
@@ -160,6 +214,9 @@ class PyrightSession:
             self._projection_handle.release()
         except Exception:
             logger.debug("projection lease release error", exc_info=True)
+        if self._stable_root is not None:
+            with contextlib.suppress(OSError):
+                Path(self._stable_root).unlink()
 
     async def _point_query(
         self, method: str, args: dict[str, Any]
@@ -197,30 +254,13 @@ class PyrightSession:
 
     async def _open_document(self, file_path: str) -> str:
         uri = self._mapper.to_snapshot_uri(file_path)
-        full = self._mapper.to_full_path(file_path)
-        try:
-            with open(full, encoding="utf-8") as fh:
-                text = fh.read()
-        except OSError:
-            text = ""
         notify = self._client
         if notify is None:
             return uri
         if uri in self._opened:
-            # Already open: notify the new content via didChange so the
-            # server picks up edits between calls. version is auto-bumped.
-            self._diagnostics.pop(uri, None)
-            await notify.notify(
-                "textDocument/didChange",
-                {
-                    "textDocument": {
-                        "uri": uri,
-                        "version": self._next_document_version(uri),
-                    },
-                    "contentChanges": [{"text": text}],
-                },
-            )
+            await self._sync_open_document(uri, file_path)
             return uri
+        text = self._read_document_text(file_path)
         await notify.notify(
             "textDocument/didOpen",
             {
@@ -233,7 +273,53 @@ class PyrightSession:
             },
         )
         self._opened.add(uri)
+        self._document_hashes[uri] = _text_hash(text)
         return uri
+
+    async def _notify_workspace_refreshed(self) -> None:
+        client = self._client
+        if client is None or not self._started:
+            return
+        await client.notify(
+            "workspace/didChangeWatchedFiles",
+            {"changes": [{"uri": f"file://{self.lowerdir}", "type": 2}]},
+        )
+        for uri in tuple(self._opened):
+            try:
+                file_path = self._mapper.from_snapshot_uri(uri)
+            except Exception:
+                self._forget_document(uri)
+                continue
+            full_path = self._mapper.to_full_path(file_path)
+            if not os.path.exists(full_path):
+                await client.notify(
+                    "textDocument/didClose",
+                    {"textDocument": {"uri": uri}},
+                )
+                self._forget_document(uri)
+                continue
+            await self._sync_open_document(uri, file_path)
+
+    async def _sync_open_document(self, uri: str, file_path: str) -> None:
+        client = self._client
+        if client is None:
+            return
+        text = self._read_document_text(file_path)
+        text_hash = _text_hash(text)
+        if self._document_hashes.get(uri) == text_hash:
+            return
+        self._invalidate_diagnostics(uri)
+        await client.notify(
+            "textDocument/didChange",
+            {
+                "textDocument": {
+                    "uri": uri,
+                    "version": self._next_document_version(uri),
+                },
+                "contentChanges": [{"text": text}],
+            },
+        )
+        self._document_hashes[uri] = text_hash
 
     async def _send_request(self, method: str, params: dict[str, Any]) -> Any:
         client = self._client
@@ -306,7 +392,10 @@ class PyrightSession:
                         {"uri": f"file://{self.lowerdir}", "name": "layerstack"}
                     ],
                     "capabilities": {
-                        "workspace": {"workspaceFolders": True},
+                        "workspace": {
+                            "workspaceFolders": True,
+                            "didChangeWatchedFiles": {"dynamicRegistration": False},
+                        },
                         "textDocument": {
                             "definition": {"linkSupport": True},
                             "hover": {"contentFormat": ["markdown", "plaintext"]},
@@ -326,7 +415,7 @@ class PyrightSession:
             uri = str(params.get("uri", ""))
             diags = params.get("diagnostics") or []
             if isinstance(diags, list):
-                self._diagnostics[uri] = list(diags)
+                self._accept_diagnostics(uri, list(diags))
 
     def _handle_server_request(self, message: dict[str, Any]) -> Any:
         method = message.get("method")
@@ -342,3 +431,58 @@ class PyrightSession:
         version = self._document_versions.get(uri, 0) + 1
         self._document_versions[uri] = version
         return version
+
+    def _build_mapper(self) -> PathMapper:
+        return PathMapper(
+            lowerdir=self.lowerdir,
+            workspace_root=self.workspace_root,
+        )
+
+    def _read_document_text(self, file_path: str) -> str:
+        try:
+            with open(self._mapper.to_full_path(file_path), encoding="utf-8") as fh:
+                return fh.read()
+        except OSError:
+            return ""
+
+    def _invalidate_diagnostics(self, uri: str) -> None:
+        previous = self._diagnostics.pop(uri, None)
+        if previous is not None:
+            self._stale_diagnostics_after_change[uri] = previous
+
+    def _accept_diagnostics(self, uri: str, entries: list[dict[str, Any]]) -> None:
+        stale = self._stale_diagnostics_after_change.get(uri)
+        if stale is not None and entries == stale:
+            return
+        self._stale_diagnostics_after_change.pop(uri, None)
+        self._diagnostics[uri] = entries
+
+    def _forget_document(self, uri: str) -> None:
+        self._opened.discard(uri)
+        self._diagnostics.pop(uri, None)
+        self._stale_diagnostics_after_change.pop(uri, None)
+        self._document_hashes.pop(uri, None)
+        self._document_versions.pop(uri, None)
+
+    def _retarget_workspace_root(self, lowerdir: str) -> None:
+        if self._stable_root is None:
+            return
+        target = Path(lowerdir)
+        if not target.is_dir():
+            raise RuntimeError(f"projection lowerdir does not exist: {lowerdir}")
+        root = Path(self._stable_root)
+        root.parent.mkdir(parents=True, exist_ok=True)
+        tmp = root.with_name(f".{root.name}.{os.getpid()}.{id(self)}.tmp")
+        with contextlib.suppress(OSError):
+            tmp.unlink()
+        try:
+            os.symlink(target, tmp)
+            os.replace(tmp, root)
+        except Exception:
+            with contextlib.suppress(OSError):
+                tmp.unlink()
+            raise
+
+
+def _text_hash(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()

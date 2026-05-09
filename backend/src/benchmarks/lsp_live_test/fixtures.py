@@ -2,8 +2,8 @@
 
 Reuses the SWE-EVO sandbox provisioning (Daytona-backed conda image with
 Node/Pyright install support). The sandbox is session-scoped — all LSP
-scenarios run against the same sandbox, sharing the Pyright session
-across scenarios where the manifest hasn't changed.
+scenarios run against the same sandbox, sharing one Pyright session that
+refreshes against each active layer-stack manifest.
 """
 
 from __future__ import annotations
@@ -33,8 +33,18 @@ async def lsp_sandbox(
 ) -> Iterator[dict[str, object]]:
     from benchmarks.sweevo.sandbox import create_sweevo_test_sandbox
     from sandbox.provider.daytona.bootstrap import bootstrap_daytona_provider
+    import sandbox.api as sandbox_api
 
     bootstrap_daytona_provider()
+    existing_id = os.getenv("EOS_LSP_SANDBOX_ID", "").strip()
+    if existing_id:
+        yield {
+            "sandbox_id": existing_id,
+            "sandbox": sandbox_api.get_sandbox(existing_id),
+            "repo_dir": _REPO_DIR,
+            "reused_existing": True,
+        }
+        return
     bundle = await create_sweevo_test_sandbox(
         lsp_sweevo_instance, register_snapshot=True
     )

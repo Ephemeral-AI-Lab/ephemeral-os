@@ -1,9 +1,12 @@
-"""Manifest-keyed cache of Pyright sessions per layer-stack root."""
+"""Layer-stack-root keyed cache of stable Pyright sessions."""
 
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
+import tempfile
+from pathlib import Path
 from typing import Any
 
 from plugins.catalog.lsp.runtime.pyright_session import PyrightSession
@@ -19,12 +22,7 @@ _locks: dict[str, asyncio.Lock] = {}
 
 
 async def get_session(ctx: Any) -> PyrightSession:
-    """Return a Pyright session valid for the active manifest.
-
-    On manifest_key change for the same layer_stack_root, evicts the prior
-    session (terminates the subprocess and releases the projection lease)
-    and starts a fresh one bound to the new lowerdir.
-    """
+    """Return a Pyright session reconciled to the active manifest."""
     layer_stack_root = str(ctx.layer_stack_root)
     lock = _locks.setdefault(layer_stack_root, asyncio.Lock())
     async with lock:
@@ -32,17 +30,37 @@ async def get_session(ctx: Any) -> PyrightSession:
         cached = _sessions.get(layer_stack_root)
         if cached is not None and cached.manifest_key == active_key:
             return cached
-        if cached is not None:
-            await cached.evict()
-            _sessions.pop(layer_stack_root, None)
+
         handle = ctx.projection.acquire(_owner_request_id(ctx))
+        if cached is not None:
+            try:
+                await cached.refresh_manifest(
+                    manifest_key=handle.manifest_key,
+                    lowerdir=handle.lowerdir,
+                    projection_handle=handle,
+                )
+                return cached
+            except Exception:
+                logger.warning(
+                    "pyright session refresh failed; restarting",
+                    exc_info=True,
+                )
+                await cached.evict()
+                handle = ctx.projection.acquire(_owner_request_id(ctx))
+            _sessions.pop(layer_stack_root, None)
+
         workspace_root = str(getattr(ctx, "metadata", {}).get("workspace_root", ""))
-        session = PyrightSession(
-            manifest_key=handle.manifest_key,
-            lowerdir=handle.lowerdir,
-            workspace_root=workspace_root,
-            projection_handle=handle,
-        )
+        try:
+            session = PyrightSession(
+                manifest_key=handle.manifest_key,
+                lowerdir=handle.lowerdir,
+                workspace_root=workspace_root,
+                projection_handle=handle,
+                stable_root=_stable_root_for(layer_stack_root),
+            )
+        except Exception:
+            handle.release()
+            raise
         _sessions[layer_stack_root] = session
         return session
 
@@ -68,3 +86,8 @@ def _owner_request_id(ctx: Any) -> str:
         if agent_id:
             return f"lsp:{agent_id}"
     return "lsp"
+
+
+def _stable_root_for(layer_stack_root: str) -> str:
+    digest = hashlib.sha256(layer_stack_root.encode("utf-8")).hexdigest()[:16]
+    return str(Path(tempfile.gettempdir()) / "eos-lsp-workspaces" / digest / "root")
