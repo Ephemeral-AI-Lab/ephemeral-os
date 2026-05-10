@@ -46,6 +46,7 @@ from tools.submission.main_agent.evaluator import (
     submit_evaluation_success,
 )
 from tools.submission.main_agent.generator.executor import (
+    submit_execution_failure,
     submit_execution_success,
 )
 from tools.submission.main_agent.generator.request_mission_solution import (
@@ -319,6 +320,31 @@ class MockSquadRunner:
         summary = "Workspace preflight completed."
         artifacts: list[str] = []
         for action in actions:
+            if isinstance(action, str) and (
+                action == "fail" or action.startswith("fail:")
+            ):
+                reason = (
+                    action.split(":", 1)[1]
+                    if ":" in action
+                    else "Scenario-injected generator failure."
+                )
+                result = await self._call_tool(
+                    submit_execution_failure,
+                    {
+                        "summary": reason,
+                        "reason": reason,
+                        "details": [reason],
+                    },
+                    metadata,
+                    emit,
+                )
+                self._publish(
+                    EventType.EXECUTOR_FAILURE,
+                    agent_def=None,
+                    metadata=metadata,
+                    payload={"summary": reason},
+                )
+                return result
             if isinstance(action, str) and action.startswith(
                 "request_recursive_mission:"
             ):

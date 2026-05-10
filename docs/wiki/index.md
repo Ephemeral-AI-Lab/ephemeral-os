@@ -12,5 +12,6 @@
 
 ## decision
 
+- [Live E2E Scenario Suite — Design](live-e2e-scenario-suite-design.md) — # Live E2E Scenario Suite — Design
 - [Live E2E Scenarios — Full Migration](live-e2e-scenarios-full-migration.md) — # Live E2E Scenarios — Full Migration (delete the live_test shim)
 - [Live E2E Testing Framework — Design](live-e2e-testing-framework-design.md) — # Live E2E Testing Framework — Design
