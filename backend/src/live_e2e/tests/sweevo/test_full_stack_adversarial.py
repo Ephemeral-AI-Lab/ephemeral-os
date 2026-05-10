@@ -70,7 +70,7 @@ def test_full_stack_instance_fixture_default_contract(
 @pytest.mark.asyncio
 async def test_full_stack_adversarial_runs_agent_tool_script_matrix(
     sweevo_instance: SWEEvoInstance,
-    sweevo_sandbox: dict[str, object],
+    workspace: dict[str, object],
     audit_dir: Path,
 ) -> None:
     _require_daytona_healthy()
@@ -81,7 +81,7 @@ async def test_full_stack_adversarial_runs_agent_tool_script_matrix(
         report = await run_sweevo_scenario(
             scenario,
             instance=sweevo_instance,
-            sandbox_id=str(sweevo_sandbox["sandbox_id"]),
+            sandbox_id=str(workspace["sandbox_id"]),
             audit_dir=audit_dir,
             stores=bundle,
             extra_hooks=(

@@ -77,6 +77,8 @@ class _FakeExec:
     ) -> _FakeResult:
         del sandbox_id, cwd, timeout
         self.calls.append(command)
+        if command == "uname -m":
+            return _FakeResult(exit_code=0, stdout="x86_64\n")
         if command.startswith("test -f"):
             return _FakeResult(exit_code=0 if self.marker_present else 1)
         if "setup.sh" in command and "EOS_PLUGIN_DIR" in command:
@@ -212,4 +214,39 @@ def test_install_free_plugin_skips_setup(tmp_path: Path) -> None:
     # No setup invocation in the call log.
     assert not any(
         "setup.sh" in c and "EOS_PLUGIN_DIR" in c for c in fake.calls
+    )
+
+
+def test_lsp_install_uploads_host_node_archive_for_setup(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    plugin_dir = tmp_path / "lsp"
+    plugin_dir.mkdir()
+    (plugin_dir / "plugin.md").write_text(
+        "---\nname: lsp\ndescription: lsp plugin\ntools:\n"
+        "  - name: lsp.hover\n    module: tools/hover.py\n"
+        "setup: setup.sh\nruntime: runtime/server.py\n---\n",
+        encoding="utf-8",
+    )
+    (plugin_dir / "tools").mkdir()
+    (plugin_dir / "tools" / "hover.py").write_text("x = 1\n", encoding="utf-8")
+    (plugin_dir / "runtime").mkdir()
+    (plugin_dir / "runtime" / "server.py").write_text("x = 1\n", encoding="utf-8")
+    (plugin_dir / "setup.sh").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    archive = tmp_path / "node.tar.xz"
+    archive.write_bytes(b"fake node archive")
+    monkeypatch.setenv("EOS_LSP_NODE_ARCHIVE", str(archive))
+    manifest = parse_plugin_manifest(plugin_dir)
+
+    fake = _FakeExec(marker_present=False)
+    asyncio.run(ensure_installed("sb-1", manifest, exec_fn=fake))
+
+    install_dir = plugin_install_dir("lsp")
+    remote_archive = f"{install_dir}/vendor/node/{archive.name}"
+    assert any(command == "uname -m" for command in fake.calls)
+    assert any(remote_archive in command for command in fake.calls)
+    assert any(
+        f"export EOS_NODE_ARCHIVE={shlex.quote(remote_archive)}" in command
+        for command in fake.calls
     )

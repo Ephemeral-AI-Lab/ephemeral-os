@@ -11,7 +11,10 @@ from typing import Any
 import pytest
 
 from plugins.catalog.lsp.runtime import session_manager
-from plugins.catalog.lsp.runtime.pyright_session import PyrightSession
+from plugins.catalog.lsp.runtime.pyright_session import (
+    PyrightSession,
+    PyrightSpawnError,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -253,3 +256,44 @@ async def test_pyright_session_ignores_duplicate_stale_diagnostics_after_change(
     )
 
     assert session._diagnostics[uri] == []
+
+
+@pytest.mark.asyncio
+async def test_pyright_session_uses_python_fallback_when_spawn_fails(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    lower = tmp_path / "lower"
+    (lower / "pkg").mkdir(parents=True)
+    (lower / "pkg" / "model.py").write_text(
+        "class UserProfile:\n"
+        "    pass\n\n"
+        "def display_name(profile: UserProfile) -> str:\n"
+        "    return missing_value\n",
+        encoding="utf-8",
+    )
+    session = PyrightSession(
+        manifest_key="hash-a@1",
+        lowerdir=str(lower),
+        workspace_root="/testbed",
+        projection_handle=_Handle("hash-a@1", str(lower)),
+        stable_root=str(tmp_path / "stable" / "root"),
+    )
+
+    async def _fail_spawn() -> None:
+        raise PyrightSpawnError("missing pyright")
+
+    monkeypatch.setattr(session, "_spawn", _fail_spawn)
+
+    hover = await session.hover(
+        {"file_path": "/testbed/pkg/model.py", "line": 3, "character": 4}
+    )
+    diagnostics = await session.diagnostics({"file_path": "/testbed/pkg/model.py"})
+    symbols = await session.query_symbols(
+        {"file_path": "/testbed/pkg/model.py", "query": "display_name"}
+    )
+
+    assert session._fallback is True
+    assert "display_name" in hover["hover"]["contents"]["value"]
+    assert diagnostics["diagnostics"][0]["message"] == '"missing_value" is not defined'
+    assert [item["name"] for item in symbols["symbols"]] == ["display_name"]

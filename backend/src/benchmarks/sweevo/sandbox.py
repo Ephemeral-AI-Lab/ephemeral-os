@@ -36,6 +36,7 @@ from benchmarks.sweevo.models import (
 logger = logging.getLogger(__name__)
 
 ProgressCallback = Callable[[str], None]
+_DEFAULT_SWEEVO_INSTANCE_ID = "dask__dask_2023.3.2_2023.4.0"
 
 
 def _progress(on_progress: ProgressCallback | None, message: str) -> None:
@@ -547,6 +548,22 @@ async def setup_sweevo_sandbox(
         f"base={instance.base_commit[:12]}",
     )
     return repo_dir
+
+
+async def reset_sweevo_workspace(sandbox_id: str) -> str:
+    """Restore a reused SWE-EVO sandbox and rebuild the public-tool base."""
+    service = _service()
+    sandbox_info = service.get_sandbox(sandbox_id)
+    labels = sandbox_info.get("labels")
+    label_map = (
+        {str(key): str(value) for key, value in labels.items()}
+        if isinstance(labels, dict)
+        else {}
+    )
+    instance_id = label_map.get("sweevo_instance") or _DEFAULT_SWEEVO_INSTANCE_ID
+    repo_dir = label_map.get("project_dir") or _REPO_DIR
+    instance = select_sweevo_instance(instance_id=instance_id)
+    return await setup_sweevo_sandbox(instance, sandbox_id, repo_dir)
 
 
 async def _rebuild_sweevo_workspace_base(

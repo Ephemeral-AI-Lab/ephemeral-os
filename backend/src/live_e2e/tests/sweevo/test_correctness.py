@@ -61,7 +61,7 @@ def _require_daytona_healthy() -> None:
 @pytest.mark.asyncio
 async def test_correctness_testing_scenario_runs_end_to_end(
     sweevo_instance: SWEEvoInstance,
-    sweevo_sandbox: dict[str, object],
+    workspace: dict[str, object],
     audit_dir: Path,
 ) -> None:
     _require_daytona_healthy()
@@ -76,7 +76,7 @@ async def test_correctness_testing_scenario_runs_end_to_end(
         report = await run_sweevo_scenario(
             scenario,
             instance=sweevo_instance,
-            sandbox_id=str(sweevo_sandbox["sandbox_id"]),
+            sandbox_id=str(workspace["sandbox_id"]),
             audit_dir=audit_dir,
             stores=bundle,
             extra_hooks=extra_hooks,

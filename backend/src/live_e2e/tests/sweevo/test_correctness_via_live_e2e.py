@@ -61,7 +61,7 @@ def _require_daytona_healthy() -> None:
 @pytest.mark.asyncio
 async def test_correctness_testing_via_live_e2e(
     sweevo_instance: SWEEvoInstance,
-    sweevo_sandbox: dict[str, object],
+    workspace: dict[str, object],
     audit_dir: Path,
 ) -> None:
     if not os.environ.get("EPHEMERALOS_DATABASE_URL"):
@@ -75,7 +75,7 @@ async def test_correctness_testing_via_live_e2e(
     )
     report = await run_scenario(
         scenario,
-        sandbox_id=str(sweevo_sandbox["sandbox_id"]),
+        sandbox_id=str(workspace["sandbox_id"]),
         audit_dir=audit_dir,
         repo_dir=_REPO_DIR,
         entry_prompt=build_sweevo_user_prompt(sweevo_instance, repo_dir=_REPO_DIR),

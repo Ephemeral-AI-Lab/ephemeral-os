@@ -68,7 +68,7 @@ def test_sweevo_instance_fixture_default_contract(monkeypatch: pytest.MonkeyPatc
 @pytest.mark.asyncio
 async def test_full_case_user_input_runs_dynamic_verifier_dag(
     sweevo_instance: SWEEvoInstance,
-    sweevo_sandbox: dict[str, object],
+    workspace: dict[str, object],
     audit_dir: Path,
 ) -> None:
     _require_daytona_healthy()
@@ -79,7 +79,7 @@ async def test_full_case_user_input_runs_dynamic_verifier_dag(
         report = await run_sweevo_scenario(
             scenario,
             instance=sweevo_instance,
-            sandbox_id=str(sweevo_sandbox["sandbox_id"]),
+            sandbox_id=str(workspace["sandbox_id"]),
             audit_dir=audit_dir,
             stores=bundle,
             extra_hooks=(

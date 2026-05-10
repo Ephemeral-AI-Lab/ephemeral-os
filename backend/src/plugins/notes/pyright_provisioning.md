@@ -5,8 +5,14 @@ The older `pylsp` fallback is intentionally not used.
 
 ## Install Path
 
-`setup.sh` installs Node 22 under `/tmp/eos-node22` from the official Node
-tarball when `node` is not already available. It then runs:
+`sandbox.plugin.install` uploads a Linux Node archive into the LSP plugin
+install directory and passes it to `setup.sh` as `EOS_NODE_ARCHIVE`. That keeps
+Node provisioning on the host-side upload path instead of depending on
+in-sandbox internet. If no uploaded archive is provided, `setup.sh` still has a
+fallback downloader: it tries the official Node tarball first, then the
+npmmirror binary endpoint because some Daytona sandboxes cannot establish TLS
+to `nodejs.org`. The URL list can be overridden with `EOS_NODE_DOWNLOAD_URLS`.
+It then runs:
 
 ```sh
 npm config set prefix /tmp/eos-node22
