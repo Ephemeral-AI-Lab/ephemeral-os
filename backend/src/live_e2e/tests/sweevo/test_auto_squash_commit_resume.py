@@ -1,0 +1,213 @@
+"""Live regression for the ``sandbox.auto_squash_commit_resume`` scenario.
+
+Drives the OCC mutation critical path past ``AUTO_SQUASH_MAX_DEPTH`` via the
+public sandbox toolkit and asserts the contract from
+``.omc/plans/occ-layer-stack-commit-resume-auto-squash-report-20260511.md``:
+
+- ``report.task_center_status == 'done'``.
+- ``SANDBOX_LAYER_STACK_LAYERS_SQUASHED``, ``SANDBOX_OCC_CHANGESET_RECEIVED``,
+  and ``SANDBOX_OCC_CHANGES_COMMITTED`` appear in both in-memory events and
+  ``sandbox_events.jsonl``.
+- At least one tool result includes ``layer_stack.auto_squash.total_s``.
+- At least one tool result includes ``occ.apply.commit_resume_wait_s``.
+- ``layer_stack.auto_squash.depth_before > 32`` appears in timing metadata.
+- Final ``read_file`` and ``shell`` readback agree on committed contents.
+- The intentional missing-anchor edit reports a conflict with non-empty
+  ``conflict_reason``, ``is_error == True``, and the same payload shape as the
+  synchronous baseline.
+- No unexpected tool errors beyond the intentional conflict.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+from collections.abc import Iterable
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+import sandbox.api as sandbox_api
+from benchmarks.sweevo.models import SWEEvoInstance
+from sandbox.api import ReadFileRequest, SandboxCaller, ShellRequest
+
+from live_e2e.audit.events import EventType
+from live_e2e.scenarios import SCENARIO_REGISTRY
+from live_e2e.squad.prompt_inspector import ToolCallRecord
+from live_e2e.stores import TaskCenterStoreBundle
+from live_e2e.sweevo_adapter import run_sweevo_scenario
+
+
+pytestmark = pytest.mark.asyncio
+
+
+_REQUIRED_SANDBOX_EVENTS = (
+    EventType.SANDBOX_LAYER_STACK_LAYERS_SQUASHED,
+    EventType.SANDBOX_OCC_CHANGESET_RECEIVED,
+    EventType.SANDBOX_OCC_CHANGES_COMMITTED,
+)
+
+
+@pytest.mark.skipif(
+    not os.environ.get("EPHEMERALOS_DATABASE_URL"),
+    reason="EPHEMERALOS_DATABASE_URL not set - live_e2e requires PostgreSQL",
+)
+async def test_auto_squash_commit_resume_crosses_depth_threshold(
+    sweevo_instance: SWEEvoInstance,
+    workspace: dict[str, object],
+    audit_dir: Path,
+    stores: TaskCenterStoreBundle,
+) -> None:
+    scenario_cls = SCENARIO_REGISTRY["sandbox.auto_squash_commit_resume"]
+    scenario = scenario_cls()
+    sandbox_id = str(workspace["sandbox_id"])
+    report = await run_sweevo_scenario(
+        scenario,
+        instance=sweevo_instance,
+        sandbox_id=sandbox_id,
+        audit_dir=audit_dir,
+        stores=stores,
+    )
+
+    assert report.task_center_status == "done", report.metrics
+    assert report.passed_prompt_inspections, [
+        item for item in report.prompt_inspections if not item.passed
+    ]
+    assert report.passed_sandbox_checks, [
+        item for item in report.sandbox_checks if not item.passed
+    ]
+
+    seen_events = {event.type for event in report.events}
+    missing_events = sorted(
+        event.value for event in _REQUIRED_SANDBOX_EVENTS if event not in seen_events
+    )
+    assert not missing_events, f"missing in-memory events: {missing_events}"
+
+    sandbox_log = report.run_dir / "sandbox_events.jsonl"
+    assert sandbox_log.exists()
+    logged_events = {
+        EventType(row["event_type"])
+        for row in _jsonl_rows(sandbox_log)
+    }
+    missing_logged = sorted(
+        event.value
+        for event in _REQUIRED_SANDBOX_EVENTS
+        if event not in logged_events
+    )
+    assert not missing_logged, f"missing persisted events: {missing_logged}"
+
+    timings_records = list(_iter_tool_timings(report.tool_calls))
+    assert any(
+        "layer_stack.auto_squash.total_s" in timings
+        for timings in timings_records
+    ), "no tool result reported layer_stack.auto_squash.total_s"
+    assert any(
+        "occ.apply.commit_resume_wait_s" in timings
+        for timings in timings_records
+    ), "no tool result reported occ.apply.commit_resume_wait_s"
+    assert any(
+        float(timings.get("layer_stack.auto_squash.depth_before", 0.0)) > 32.0
+        for timings in timings_records
+    ), "no tool result reported layer_stack.auto_squash.depth_before > 32"
+
+    intentional_conflict = _find_intentional_conflict(report.tool_calls)
+    assert intentional_conflict is not None, "intentional conflict tool call missing"
+    assert intentional_conflict.is_error is True
+    conflict_metadata = intentional_conflict.metadata
+    assert str(conflict_metadata.get("conflict_reason") or ""), (
+        "intentional conflict missing conflict_reason: "
+        f"{conflict_metadata}"
+    )
+    assert isinstance(conflict_metadata.get("changed_paths"), list)
+    assert isinstance(conflict_metadata.get("status"), str)
+
+    expected_error_count = 1  # only the intentional conflict
+    error_calls = [call for call in report.tool_calls if call.is_error]
+    assert len(error_calls) == expected_error_count, [
+        (call.tool_name, call.metadata.get("status")) for call in error_calls
+    ]
+
+    await _assert_final_workspace_state(
+        sandbox_id=sandbox_id,
+        conflict_status=str(conflict_metadata.get("status") or ""),
+        conflict_reason=str(conflict_metadata.get("conflict_reason") or ""),
+    )
+
+
+def _iter_tool_timings(
+    tool_calls: Iterable[ToolCallRecord],
+) -> Iterable[dict[str, Any]]:
+    for call in tool_calls:
+        timings = call.metadata.get("timings")
+        if isinstance(timings, dict):
+            yield timings
+
+
+def _find_intentional_conflict(
+    tool_calls: Iterable[ToolCallRecord],
+) -> ToolCallRecord | None:
+    for call in tool_calls:
+        if call.tool_name != "edit_file":
+            continue
+        if not call.is_error:
+            continue
+        return call
+    return None
+
+
+def _jsonl_rows(path: Path) -> list[dict[str, Any]]:
+    return [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+
+async def _assert_final_workspace_state(
+    *,
+    sandbox_id: str,
+    conflict_status: str,
+    conflict_reason: str,
+) -> None:
+    caller = SandboxCaller(agent_id="sweevo-auto-squash-test")
+    probe_dir = "/testbed/.ephemeralos/sweevo-mock/auto_squash_commit_resume"
+    summary_path = f"{probe_dir}/summary.json"
+    summary_read = await sandbox_api.read_file(
+        sandbox_id,
+        ReadFileRequest(path=summary_path, caller=caller),
+    )
+    assert summary_read.success
+    assert summary_read.exists
+    summary_payload = json.loads(summary_read.content)
+    assert summary_payload["probe"] == "auto_squash_commit_resume"
+    assert summary_payload["write_count"] == 36
+    assert summary_payload["conflict_status"] == conflict_status
+    assert summary_payload["conflict_reason"] == conflict_reason
+    assert summary_payload["conflict_is_error"] is True
+    assert float(summary_payload["max_depth_before"]) > 32.0
+    assert float(summary_payload["max_auto_squash_total_s"]) >= 0.0
+    assert float(summary_payload["max_commit_resume_wait_s"]) >= 0.0
+
+    edit_target = f"{probe_dir}/edit-target.txt"
+    edit_read = await sandbox_api.read_file(
+        sandbox_id,
+        ReadFileRequest(path=edit_target, caller=caller),
+    )
+    assert edit_read.success and edit_read.exists
+    expected_edit_content = "alpha=new\nbeta=new\n"
+    assert edit_read.content == expected_edit_content
+
+    shell_result = await sandbox_api.shell(
+        sandbox_id,
+        ShellRequest(
+            command=f"cat {edit_target}",
+            cwd="/testbed",
+            timeout=60,
+            caller=caller,
+            description="auto-squash commit-resume final shell readback",
+        ),
+    )
+    assert shell_result.success
+    assert shell_result.exit_code == 0
+    assert shell_result.stdout == expected_edit_content

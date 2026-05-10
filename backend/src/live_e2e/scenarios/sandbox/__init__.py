@@ -5,13 +5,17 @@ Drive the sandbox subsystem through tool calls; assert on
 content read back through the sandbox toolkit.
 
 Implemented (reference scenarios):
+- :class:`AutoSquashCommitResume`
 - :class:`OccConcurrentConflicts`
 """
 
 from __future__ import annotations
 
+from live_e2e.scenarios.sandbox.auto_squash_commit_resume import (
+    AutoSquashCommitResume,
+)
 from live_e2e.scenarios.sandbox.occ_concurrent_conflicts import (
     OccConcurrentConflicts,
 )
 
-__all__ = ["OccConcurrentConflicts"]
+__all__ = ["AutoSquashCommitResume", "OccConcurrentConflicts"]

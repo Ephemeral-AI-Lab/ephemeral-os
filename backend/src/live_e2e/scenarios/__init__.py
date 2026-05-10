@@ -21,7 +21,10 @@ from live_e2e.scenarios.pipeline import (
     InitialMission,
 )
 from live_e2e.scenarios.planner_validation import PlannerDuplicateLocalId
-from live_e2e.scenarios.sandbox import OccConcurrentConflicts
+from live_e2e.scenarios.sandbox import (
+    AutoSquashCommitResume,
+    OccConcurrentConflicts,
+)
 
 SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     # Composite end-to-end scenarios.
@@ -37,6 +40,7 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     "pipeline.generator_failure_quiescence": GeneratorFailureQuiescence,
     "pipeline.attempt_budget_exhausted": AttemptBudgetExhausted,
     # Focused sandbox scenarios.
+    "sandbox.auto_squash_commit_resume": AutoSquashCommitResume,
     "sandbox.occ_concurrent_conflicts": OccConcurrentConflicts,
     # Focused planner-validation scenarios.
     "planner_validation.duplicate_local_id": PlannerDuplicateLocalId,
@@ -45,6 +49,7 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
 __all__ = [
     "AttemptBudgetExhausted",
     "AttemptRetryEvaluatorFailure",
+    "AutoSquashCommitResume",
     "CorrectnessTesting",
     "DependencyDagMixed",
     "DependencyDagSerial",

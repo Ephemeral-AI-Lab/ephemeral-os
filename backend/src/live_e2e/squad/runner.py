@@ -497,6 +497,12 @@ class MockSquadRunner:
                 )
                 summary = script_result.summary
                 artifacts = [script_result.artifact]
+            elif action == "auto_squash_commit_resume_probe":
+                summary_path = await self._run_auto_squash_commit_resume_probe(
+                    metadata, emit
+                )
+                summary = "Auto-squash commit-resume probe passed."
+                artifacts = [summary_path]
             else:
                 raise RuntimeError(f"Unknown executor action: {action!r}")
         result = await self._call_tool(
@@ -757,6 +763,182 @@ class MockSquadRunner:
             )
         if not passed:
             raise RuntimeError("Expected conflict edit unexpectedly succeeded.")
+
+    async def _run_auto_squash_commit_resume_probe(
+        self,
+        metadata: ExecutionMetadata,
+        emit: EmitStreamEvent,
+    ) -> str:
+        # Drives the OCC mutation critical path until layer-stack depth
+        # crosses AUTO_SQUASH_MAX_DEPTH (32), then issues edits, reads, a
+        # shell readback, and one intentional missing-anchor edit conflict.
+        # Captures every tool's timing metadata into a sandbox summary
+        # artifact so the paired test can assert on commit_resume_wait_s,
+        # auto_squash.total_s, and depth_before > 32.
+        probe_dir = ".ephemeralos/sweevo-mock/auto_squash_commit_resume"
+        write_count = 36  # AUTO_SQUASH_MAX_DEPTH (32) + 4
+        write_paths: list[str] = []
+        write_metadata: list[dict[str, Any]] = []
+        for index in range(write_count):
+            path = f"{probe_dir}/write-{index:02d}.txt"
+            content = f"write-{index:02d}\n"
+            result = await self._call_tool(
+                write_file_tool,
+                {"file_path": path, "content": content},
+                metadata,
+                emit,
+            )
+            self._record_tool_check(
+                f"tool.write_file.depth_seed_{index:02d}", result
+            )
+            write_paths.append(path)
+            write_metadata.append(dict(result.metadata or {}))
+
+        edit_target = f"{probe_dir}/edit-target.txt"
+        seed = await self._call_tool(
+            write_file_tool,
+            {"file_path": edit_target, "content": "alpha=old\nbeta=old\n"},
+            metadata,
+            emit,
+        )
+        self._record_tool_check("tool.write_file.edit_seed", seed)
+        write_metadata.append(dict(seed.metadata or {}))
+
+        edit_metadata: list[dict[str, Any]] = []
+        for index, (old_text, new_text) in enumerate(
+            (
+                ("alpha=old\n", "alpha=new\n"),
+                ("beta=old\n", "beta=new\n"),
+            )
+        ):
+            edit = await self._call_tool(
+                edit_file_tool,
+                {
+                    "file_path": edit_target,
+                    "old_text": old_text,
+                    "new_text": new_text,
+                    "description": (
+                        f"auto-squash probe edit {index} after depth threshold"
+                    ),
+                },
+                metadata,
+                emit,
+            )
+            self._record_tool_check(
+                f"tool.edit_file.post_threshold_{index}", edit
+            )
+            edit_metadata.append(dict(edit.metadata or {}))
+
+        first_path = write_paths[0]
+        middle_path = write_paths[len(write_paths) // 2]
+        last_path = write_paths[-1]
+        for label, path in (
+            ("first", first_path),
+            ("middle", middle_path),
+            ("last", last_path),
+            ("edited", edit_target),
+        ):
+            read_result = await self._call_tool(
+                read_file_tool,
+                {"file_path": path, "start_line": 1, "end_line": 20},
+                metadata,
+                emit,
+            )
+            check_name = f"tool.read_file.after_squash_{label}"
+            self._record_tool_check(check_name, read_result)
+
+        shell_listing = await self._call_tool(
+            shell_tool,
+            {
+                "command": (
+                    f"ls {probe_dir} | sort | head -n 200 && "
+                    f"cat {edit_target}"
+                ),
+                "timeout": 60,
+            },
+            metadata,
+            emit,
+        )
+        self._record_tool_check("tool.shell.readback", shell_listing)
+
+        conflict_result = await self._call_tool(
+            edit_file_tool,
+            {
+                "file_path": edit_target,
+                "old_text": "missing-anchor-text\n",
+                "new_text": "should-not-apply\n",
+                "description": "intentional missing-anchor conflict for auto-squash probe",
+            },
+            metadata,
+            emit,
+            allow_error=True,
+        )
+        conflict_meta = dict(conflict_result.metadata or {})
+        conflict_status = str(conflict_meta.get("status") or "")
+        conflict_reason = str(conflict_meta.get("conflict_reason") or "")
+        conflict_changed_paths = list(conflict_meta.get("changed_paths") or ())
+        conflict_passed = bool(conflict_result.is_error and conflict_reason)
+        self.sandbox_checks.append(
+            SandboxCheck(
+                name="tool.edit_file.intentional_conflict",
+                passed=conflict_passed,
+                detail=(
+                    f"status={conflict_status} reason={conflict_reason!r} "
+                    f"is_error={conflict_result.is_error}"
+                ),
+                changed_paths=tuple(str(p) for p in conflict_changed_paths),
+            )
+        )
+        if not conflict_passed:
+            raise RuntimeError(
+                "Intentional missing-anchor edit unexpectedly succeeded."
+            )
+        self._publish(
+            EventType.SANDBOX_CONFLICT_DETECTED,
+            metadata=metadata,
+            payload={"conflict_reason": conflict_reason},
+        )
+
+        max_depth_before = 0.0
+        max_resume_wait = 0.0
+        max_squash_total = 0.0
+        for entry in write_metadata + edit_metadata:
+            timings = entry.get("timings") or {}
+            depth_before = float(timings.get("layer_stack.auto_squash.depth_before", 0.0))
+            if depth_before > max_depth_before:
+                max_depth_before = depth_before
+            resume_wait = float(timings.get("occ.apply.commit_resume_wait_s", 0.0))
+            if resume_wait > max_resume_wait:
+                max_resume_wait = resume_wait
+            squash_total = float(timings.get("layer_stack.auto_squash.total_s", 0.0))
+            if squash_total > max_squash_total:
+                max_squash_total = squash_total
+
+        summary_path = f"{probe_dir}/summary.json"
+        summary_payload = {
+            "probe": "auto_squash_commit_resume",
+            "write_count": write_count,
+            "edit_target": edit_target,
+            "edit_paths": write_paths,
+            "conflict_status": conflict_status,
+            "conflict_reason": conflict_reason,
+            "conflict_changed_paths": [str(p) for p in conflict_changed_paths],
+            "conflict_is_error": bool(conflict_result.is_error),
+            "max_depth_before": max_depth_before,
+            "max_commit_resume_wait_s": max_resume_wait,
+            "max_auto_squash_total_s": max_squash_total,
+        }
+        summary_write = await self._call_tool(
+            write_file_tool,
+            {
+                "file_path": summary_path,
+                "content": json.dumps(summary_payload, indent=2) + "\n",
+            },
+            metadata,
+            emit,
+        )
+        self._record_tool_check("tool.write_file.summary", summary_write)
+        return summary_path
 
     async def _run_final_probe(
         self,
