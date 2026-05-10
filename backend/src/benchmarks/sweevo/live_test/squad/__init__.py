@@ -1,5 +1,10 @@
-"""Squad subpackage — mock-agent runner, prompt inspector, sandbox probe."""
+"""Compat shim — re-exports live_e2e.squad."""
 
 from __future__ import annotations
 
-__all__: list[str] = []
+from live_e2e.squad import *  # noqa: F401, F403
+
+try:
+    from live_e2e.squad import __all__  # type: ignore[attr-defined]  # noqa: F401
+except ImportError:
+    pass

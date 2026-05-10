@@ -1,27 +1,10 @@
-"""Scenario protocol + scenario registry."""
+"""Compat shim — re-exports live_e2e.scenarios."""
 
 from __future__ import annotations
 
-from benchmarks.sweevo.live_test.scenarios.base import Scenario
-from benchmarks.sweevo.live_test.scenarios.correctness_testing import (
-    CorrectnessTesting,
-)
-from benchmarks.sweevo.live_test.scenarios.full_case_user_input import (
-    FullCaseUserInput,
-)
-from benchmarks.sweevo.live_test.scenarios.full_stack_adversarial import (
-    FullStackAdversarial,
-)
+from live_e2e.scenarios import *  # noqa: F401, F403
 
-SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
-    "correctness_testing": CorrectnessTesting,
-    "full_case_user_input": FullCaseUserInput,
-    "full_stack_adversarial": FullStackAdversarial,
-}
-
-__all__ = [
-    "SCENARIO_REGISTRY",
-    "CorrectnessTesting",
-    "FullCaseUserInput",
-    "FullStackAdversarial",
-]
+try:
+    from live_e2e.scenarios import __all__  # type: ignore[attr-defined]  # noqa: F401
+except ImportError:
+    pass

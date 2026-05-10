@@ -1,28 +1,10 @@
-"""Sandbox probe primitives + SandboxCheck.
-
-Relocated from ``benchmarks.sweevo.mock_agent_execution`` in S-03.
-"""
+"""Compat shim — re-exports live_e2e.squad.sandbox_probe."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any
+from live_e2e.squad.sandbox_probe import *  # noqa: F401, F403
 
-
-@dataclass(frozen=True, slots=True)
-class SandboxCheck:
-    name: str
-    passed: bool
-    detail: str
-    changed_paths: tuple[str, ...] = ()
-
-    def as_dict(self) -> dict[str, Any]:
-        return {
-            "name": self.name,
-            "passed": self.passed,
-            "detail": self.detail,
-            "changed_paths": list(self.changed_paths),
-        }
-
-
-__all__ = ["SandboxCheck"]
+try:
+    from live_e2e.squad.sandbox_probe import __all__  # type: ignore[attr-defined]  # noqa: F401
+except ImportError:
+    pass

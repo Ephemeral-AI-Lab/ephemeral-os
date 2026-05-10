@@ -1,25 +1,20 @@
-"""Pytest fixtures for the SWE-EVO live e2e framework (plan §12).
+"""SWE-EVO pytest fixtures — wires the SWE-EVO dataset into ``live_e2e``.
 
-The live-Daytona fixtures are intentionally optional — pytest collection
-should not fail if Daytona credentials are absent. Tests that need a real
-sandbox depend on the ``sweevo_sandbox`` fixture which fails fast with a
-clear message when Daytona is unavailable.
+Re-exports ``audit_dir``, ``stores``, and ``db_engine`` from
+:mod:`live_e2e.fixtures` so existing tests find the same fixture names. Adds
+the SWE-EVO-specific fixtures (``sweevo_instance``, ``sweevo_sandbox``,
+``workspace``).
 """
 
 from __future__ import annotations
 
 import os
-from collections.abc import Iterator
-from pathlib import Path
 
 import pytest
 
 from benchmarks.sweevo.dataset import select_sweevo_instance
 from benchmarks.sweevo.models import SWEEvoInstance
-from benchmarks.sweevo.live_test.stores import (
-    TaskCenterStoreBundle,
-    create_in_memory_task_center_stores,
-)
+from live_e2e.fixtures import audit_dir, db_engine, stores  # noqa: F401 — re-exported
 
 _DEFAULT_INSTANCE_ID = "dask__dask_2023.3.2_2023.4.0"
 _WORKSPACE_USED_KEY = "sweevo_sandbox_used"
@@ -56,7 +51,7 @@ async def workspace(
     sweevo_sandbox: dict[str, object],
     request: pytest.FixtureRequest,
 ) -> dict[str, object]:
-    """Per-test workspace reset on subsequent invocations (plan §3 decision 2).
+    """Per-test workspace reset on subsequent invocations.
 
     On the first call after a fresh sandbox provision the reset is skipped.
     Subsequent calls re-import :func:`reset_sweevo_workspace` lazily.
@@ -71,32 +66,9 @@ async def workspace(
     return sweevo_sandbox
 
 
-@pytest.fixture
-def audit_dir(tmp_path: Path) -> Path:
-    """Resolve the audit base dir per plan §12.
-
-    - ``EOS_SWEEVO_AUDIT_TMP=1`` → use the test's ``tmp_path``.
-    - ``EOS_SWEEVO_AUDIT_DIR`` set → use that absolute path.
-    - Otherwise → ``<repo>/.sweevo_runs/`` resolved.
-    """
-    if os.getenv("EOS_SWEEVO_AUDIT_TMP") == "1":
-        return tmp_path / "sweevo_run"
-    override = os.getenv("EOS_SWEEVO_AUDIT_DIR")
-    base = Path(override) if override else Path(".sweevo_runs")
-    return base.resolve()
-
-
-@pytest.fixture
-def stores() -> Iterator[TaskCenterStoreBundle]:
-    bundle = create_in_memory_task_center_stores()
-    try:
-        yield bundle
-    finally:
-        bundle.close()
-
-
 __all__ = [
     "audit_dir",
+    "db_engine",
     "stores",
     "sweevo_instance",
     "sweevo_sandbox",

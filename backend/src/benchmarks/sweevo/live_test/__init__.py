@@ -1,18 +1,11 @@
-"""SWE-EVO live e2e test framework — package root.
+"""SWE-EVO live e2e compat shim.
 
-Subpackages:
+The generic framework lives at :mod:`live_e2e`. This package keeps the legacy
+``benchmarks.sweevo.live_test.*`` import paths green by re-exporting from
+``live_e2e`` and layering SWE-EVO-specific fixtures (``sweevo_instance``,
+``sweevo_sandbox``) and the SWE-EVO entry-prompt builder on top.
 
-- ``audit``  — event bus, lifecycle observer, recorder, metrics
-- ``hooks``  — Hook protocol + registry + built-in hooks
-- ``scenarios`` — Scenario protocol + concrete scenarios + registry
-- ``squad``  — mock-agent squad runner, prompt inspector, sandbox probe
-- ``tests``  — pytest live e2e tests against real Daytona
-
-Top-level modules:
-
-- ``stores``    — :class:`TaskCenterStoreBundle` + ``create_in_memory_task_center_stores``
-- ``runner``    — ``run_scenario`` orchestration entry point
-- ``fixtures``  — pytest fixtures (sweevo_instance, sweevo_sandbox, ...)
+See ``docs/wiki/live-e2e-testing-framework-design.md`` for the migration plan.
 """
 
 from __future__ import annotations
