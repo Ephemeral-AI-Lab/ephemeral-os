@@ -6,6 +6,8 @@ content read back through the sandbox toolkit.
 
 Implemented (reference scenarios):
 - :class:`AutoSquashCommitResume`
+- :class:`ComplexProjectBuild`
+- :class:`ComplexProjectBuildSmoke`
 - :class:`OccConcurrentConflicts`
 """
 
@@ -14,8 +16,17 @@ from __future__ import annotations
 from live_e2e.scenarios.sandbox.auto_squash_commit_resume import (
     AutoSquashCommitResume,
 )
+from live_e2e.scenarios.sandbox.complex_project_build import (
+    ComplexProjectBuild,
+    ComplexProjectBuildSmoke,
+)
 from live_e2e.scenarios.sandbox.occ_concurrent_conflicts import (
     OccConcurrentConflicts,
 )
 
-__all__ = ["AutoSquashCommitResume", "OccConcurrentConflicts"]
+__all__ = [
+    "AutoSquashCommitResume",
+    "ComplexProjectBuild",
+    "ComplexProjectBuildSmoke",
+    "OccConcurrentConflicts",
+]

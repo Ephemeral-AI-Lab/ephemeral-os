@@ -503,6 +503,18 @@ class MockSquadRunner:
                 )
                 summary = "Auto-squash commit-resume probe passed."
                 artifacts = [summary_path]
+            elif action == "complex_project_build":
+                summary_path = await self._run_complex_project_build_probe(
+                    metadata, emit, smoke=False
+                )
+                summary = "Complex project-build probe passed."
+                artifacts = [summary_path]
+            elif action == "complex_project_build_smoke":
+                summary_path = await self._run_complex_project_build_probe(
+                    metadata, emit, smoke=True
+                )
+                summary = "Complex project-build smoke probe passed."
+                artifacts = [summary_path]
             else:
                 raise RuntimeError(f"Unknown executor action: {action!r}")
         result = await self._call_tool(
@@ -939,6 +951,30 @@ class MockSquadRunner:
         )
         self._record_tool_check("tool.write_file.summary", summary_write)
         return summary_path
+
+    async def _run_complex_project_build_probe(
+        self,
+        metadata: ExecutionMetadata,
+        emit: EmitStreamEvent,
+        *,
+        smoke: bool,
+    ) -> str:
+        from live_e2e.squad.complex_project_build_probe import (
+            run_complex_project_build_probe,
+        )
+
+        sandbox_id = self._require_sandbox_id(metadata)
+        return await run_complex_project_build_probe(
+            metadata=metadata,
+            emit=emit,
+            call_tool=self._call_tool,
+            publish=self._publish,
+            record_tool_check=self._record_tool_check,
+            caller=self._caller(metadata),
+            sandbox_id=sandbox_id,
+            sandbox_checks=self.sandbox_checks,
+            smoke=smoke,
+        )
 
     async def _run_final_probe(
         self,

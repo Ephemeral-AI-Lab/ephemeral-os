@@ -6,8 +6,6 @@ import asyncio
 import concurrent.futures
 import threading
 
-import pytest
-
 from sandbox.layer_stack.manifest import LayerRef, Manifest
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.types import ChangesetResult, WriteChange
@@ -24,8 +22,6 @@ def test_occ_publications_auto_squash_without_direct_squash_call(
     tmp_path,
     monkeypatch,
 ) -> None:
-    monkeypatch.delenv("EOS_OCC_SQUASH_MODE", raising=False)
-    monkeypatch.delenv("EOS_OCC_AUTO_SQUASH_MAX_DEPTH", raising=False)
     monkeypatch.setattr(occ_service_module, "AUTO_SQUASH_MAX_DEPTH", 4)
     stack = LayerStackManager(tmp_path / "stack")
     service = OccService(gitignore=_Gitignore(), layer_stack=stack)
@@ -56,8 +52,6 @@ def test_occ_publications_auto_squash_without_direct_squash_call(
 
 
 def test_auto_squash_preserves_active_lease_view(tmp_path, monkeypatch) -> None:
-    monkeypatch.delenv("EOS_OCC_SQUASH_MODE", raising=False)
-    monkeypatch.delenv("EOS_OCC_AUTO_SQUASH_MAX_DEPTH", raising=False)
     monkeypatch.setattr(occ_service_module, "AUTO_SQUASH_MAX_DEPTH", 3)
     stack = LayerStackManager(tmp_path / "stack")
     service = OccService(gitignore=_Gitignore(), layer_stack=stack)
@@ -100,9 +94,8 @@ def test_auto_squash_preserves_active_lease_view(tmp_path, monkeypatch) -> None:
     assert stack.active_lease_count() == 0
 
 
-def test_auto_squash_depth_is_env_configurable(tmp_path, monkeypatch) -> None:
-    monkeypatch.delenv("EOS_OCC_SQUASH_MODE", raising=False)
-    monkeypatch.setenv("EOS_OCC_AUTO_SQUASH_MAX_DEPTH", "6")
+def test_auto_squash_uses_fixed_constant_depth(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(occ_service_module, "AUTO_SQUASH_MAX_DEPTH", 6)
     stack = LayerStackManager(tmp_path / "stack")
     service = OccService(gitignore=_Gitignore(), layer_stack=stack)
     observed_max_depths: list[float] = []
@@ -112,8 +105,8 @@ def test_auto_squash_depth_is_env_configurable(tmp_path, monkeypatch) -> None:
             service.apply_changeset(
                 [
                     WriteChange(
-                        path=f"tracked/env-depth/{index:02d}.txt",
-                        final_content=f"env-depth-{index:02d}\n".encode(),
+                        path=f"tracked/constant-depth/{index:02d}.txt",
+                        final_content=f"constant-depth-{index:02d}\n".encode(),
                     )
                 ],
                 snapshot=stack.read_active_manifest(),
@@ -124,13 +117,11 @@ def test_auto_squash_depth_is_env_configurable(tmp_path, monkeypatch) -> None:
             observed_max_depths.append(max_depth)
 
     assert observed_max_depths
-    assert set(observed_max_depths) == {6.0}
-    assert stack.read_active_manifest().depth <= 6
+    assert set(observed_max_depths) == {occ_service_module.AUTO_SQUASH_MAX_DEPTH}
+    assert stack.read_active_manifest().depth <= occ_service_module.AUTO_SQUASH_MAX_DEPTH
 
 
-def test_coalesced_mode_skips_in_flight_squash_and_rechecks(monkeypatch) -> None:
-    monkeypatch.setenv("EOS_OCC_SQUASH_MODE", "coalesced")
-    monkeypatch.delenv("EOS_OCC_AUTO_SQUASH_MAX_DEPTH", raising=False)
+def test_default_mode_skips_in_flight_squash_and_rechecks(monkeypatch) -> None:
     monkeypatch.setattr(occ_service_module, "AUTO_SQUASH_MAX_DEPTH", 4)
     stack = _AutoSquashOnlyLayerStack(
         depth=7,
@@ -155,60 +146,22 @@ def test_coalesced_mode_skips_in_flight_squash_and_rechecks(monkeypatch) -> None
     assert owner_timings["layer_stack.auto_squash.depth_after"] == 1.0
 
 
-@pytest.mark.asyncio
-async def test_async_mode_drains_pending_auto_squash(tmp_path, monkeypatch) -> None:
+def test_removed_mode_env_is_ignored(monkeypatch) -> None:
     monkeypatch.setenv("EOS_OCC_SQUASH_MODE", "async")
-    monkeypatch.delenv("EOS_OCC_AUTO_SQUASH_MAX_DEPTH", raising=False)
-    monkeypatch.setattr(occ_service_module, "AUTO_SQUASH_MAX_DEPTH", 3)
-    stack = LayerStackManager(tmp_path / "stack")
-    service = OccService(gitignore=_Gitignore(), layer_stack=stack)
-    enqueue_count = 0
-
-    for index in range(8):
-        result = await service.apply_changeset(
-            [
-                WriteChange(
-                    path=f"tracked/async/{index:02d}.txt",
-                    final_content=f"async-{index:02d}\n".encode(),
-                )
-            ],
-            snapshot=stack.read_active_manifest(),
-        )
-        enqueue_count += int(
-            "layer_stack.auto_squash.enqueued" in result.timings
-        )
-
-    status = await service.drain_auto_squash_maintenance(timeout_s=2)
-
-    assert enqueue_count >= 1
-    assert status["drain_timed_out"] is False
-    assert status["queue_depth"] == 0
-    assert status["maintenance_errors"] == 0
-    assert stack.read_active_manifest().depth <= 3
-
-
-@pytest.mark.asyncio
-async def test_async_mode_records_squash_failure_without_leaking(
-    monkeypatch,
-) -> None:
-    monkeypatch.setenv("EOS_OCC_SQUASH_MODE", "async")
-    monkeypatch.delenv("EOS_OCC_AUTO_SQUASH_MAX_DEPTH", raising=False)
-    monkeypatch.setattr(occ_service_module, "AUTO_SQUASH_MAX_DEPTH", 2)
-    stack = _AutoSquashOnlyLayerStack(depth=5, fail=True)
+    monkeypatch.setattr(occ_service_module, "AUTO_SQUASH_MAX_DEPTH", 4)
+    stack = _AutoSquashOnlyLayerStack(
+        depth=7,
+        depth_after_first_squash=1,
+    )
     service = OccService(gitignore=_Gitignore(), layer_stack=stack)
     published = ChangesetResult(files=(), published_manifest_version=1)
 
-    timings = await service._auto_squash_after_publish(published)
-    status = await service.drain_auto_squash_maintenance(timeout_s=2)
+    stack.release_squash.set()
+    timings = service._auto_squash_after_publish_sync(published)
 
-    assert timings["layer_stack.auto_squash.enqueued"] == 1.0
-    assert status["drain_timed_out"] is False
-    assert status["queue_depth"] == 0
-    assert status["maintenance_errors"] == 1
-    last_error = status["last_maintenance_error"]
-    assert isinstance(last_error, dict)
-    assert last_error["error_type"] == "RuntimeError"
-    assert last_error["message"] == "forced squash failure"
+    assert "layer_stack.auto_squash.enqueued" not in timings
+    assert timings["layer_stack.auto_squash.depth_after"] == 1.0
+    assert stack.squash_calls == 1
 
 
 class _AutoSquashOnlyLayerStack:
@@ -218,18 +171,14 @@ class _AutoSquashOnlyLayerStack:
         depth: int,
         depth_after_first_squash: int | None = None,
         depth_after_later_squash: int = 1,
-        fail: bool = False,
     ) -> None:
         self._lock = threading.Lock()
         self._manifest = _manifest(depth)
         self._depth_after_first_squash = depth_after_first_squash
         self._depth_after_later_squash = depth_after_later_squash
-        self._fail = fail
         self.squash_calls = 0
         self.squash_entered = threading.Event()
         self.release_squash = threading.Event()
-        if fail:
-            self.release_squash.set()
 
     def read_active_manifest(self) -> Manifest:
         with self._lock:
@@ -239,8 +188,6 @@ class _AutoSquashOnlyLayerStack:
         del max_depth
         self.squash_entered.set()
         assert self.release_squash.wait(timeout=2)
-        if self._fail:
-            raise RuntimeError("forced squash failure")
         with self._lock:
             self.squash_calls += 1
             if self.squash_calls == 1 and self._depth_after_first_squash is not None:

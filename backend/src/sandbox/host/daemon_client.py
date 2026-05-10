@@ -18,11 +18,9 @@ from sandbox.provider.registry import get_adapter
 _DAEMON_SOCKET = f"{BUNDLE_REMOTE_DIR}/runtime.sock"
 _DAEMON_PID = f"{BUNDLE_REMOTE_DIR}/runtime.pid"
 _DAEMON_LOG = f"{BUNDLE_REMOTE_DIR}/runtime.log"
+_DAEMON_ENV = f"{BUNDLE_REMOTE_DIR}/runtime.env"
 DEFAULT_LAYER_STACK_ROOT = f"{BUNDLE_REMOTE_DIR}/layer-stack"
-_FORWARDED_DAEMON_ENV = (
-    "EOS_OCC_SQUASH_MODE",
-    "EOS_OCC_AUTO_SQUASH_MAX_DEPTH",
-)
+_FORWARDED_DAEMON_ENV: tuple[str, ...] = ()
 
 _DAEMON_THIN_CLIENT_PY = (
     "import socket,sys,os\n"
@@ -323,19 +321,26 @@ def _daemon_spawn_command() -> str:
 
 
 def _daemon_launcher() -> str:
+    env_signature = _daemon_env_signature()
     return f"""\
 set -e
 {_daemon_env_exports()}SOCK={shlex.quote(_DAEMON_SOCKET)}
 PID={shlex.quote(_DAEMON_PID)}
 LOG={shlex.quote(_DAEMON_LOG)}
+ENV_FILE={shlex.quote(_DAEMON_ENV)}
+ENV_SIG={shlex.quote(env_signature)}
 mkdir -p {shlex.quote(BUNDLE_REMOTE_DIR)}
 if [ -S "$SOCK" ] && [ -f "$PID" ] && kill -0 "$(cat "$PID" 2>/dev/null)" 2>/dev/null; then
-    exit 0
+    if [ -f "$ENV_FILE" ] && [ "$(cat "$ENV_FILE")" = "$ENV_SIG" ]; then
+        exit 0
+    fi
+    kill "$(cat "$PID" 2>/dev/null)" 2>/dev/null || true
 fi
 rm -f "$SOCK"
 for py in python3.13 python3.12 python3.11 python3.10 python3; do
     if command -v "$py" >/dev/null 2>&1 && "$py" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1; then
         nohup "$py" -m sandbox.runtime.daemon --socket "$SOCK" --pid-file "$PID" </dev/null >"$LOG" 2>&1 &
+        printf '%s' "$ENV_SIG" > "$ENV_FILE"
         # Wait briefly for the socket to appear so the next client connect succeeds.
         for _ in $(seq 1 50); do
             [ -S "$SOCK" ] && exit 0
@@ -359,6 +364,15 @@ def _daemon_env_exports() -> str:
     if not exports:
         return ""
     return "\n".join(exports) + "\n"
+
+
+def _daemon_env_signature() -> str:
+    parts: list[str] = []
+    for name in _FORWARDED_DAEMON_ENV:
+        value = os.getenv(name)
+        if value is not None:
+            parts.append(f"{name}={value}")
+    return "\n".join(parts)
 
 
 def _without_none(args: dict[str, Any]) -> dict[str, Any]:

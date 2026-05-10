@@ -123,7 +123,6 @@ def _lease_id(args: Mapping[str, object]) -> str:
 async def _drop_peer_runtime_caches(layer_stack_root: str) -> None:
     from sandbox.runtime.daemon.service import occ_backend
 
-    await occ_backend.drain_backend_auto_squash(layer_stack_root)
     occ_backend.drop_backend_cache(layer_stack_root)
 
 

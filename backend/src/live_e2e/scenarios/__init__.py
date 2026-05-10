@@ -23,6 +23,8 @@ from live_e2e.scenarios.pipeline import (
 from live_e2e.scenarios.planner_validation import PlannerDuplicateLocalId
 from live_e2e.scenarios.sandbox import (
     AutoSquashCommitResume,
+    ComplexProjectBuild,
+    ComplexProjectBuildSmoke,
     OccConcurrentConflicts,
 )
 
@@ -41,6 +43,8 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     "pipeline.attempt_budget_exhausted": AttemptBudgetExhausted,
     # Focused sandbox scenarios.
     "sandbox.auto_squash_commit_resume": AutoSquashCommitResume,
+    "sandbox.complex_project_build": ComplexProjectBuild,
+    "sandbox.complex_project_build_smoke": ComplexProjectBuildSmoke,
     "sandbox.occ_concurrent_conflicts": OccConcurrentConflicts,
     # Focused planner-validation scenarios.
     "planner_validation.duplicate_local_id": PlannerDuplicateLocalId,
@@ -50,6 +54,8 @@ __all__ = [
     "AttemptBudgetExhausted",
     "AttemptRetryEvaluatorFailure",
     "AutoSquashCommitResume",
+    "ComplexProjectBuild",
+    "ComplexProjectBuildSmoke",
     "CorrectnessTesting",
     "DependencyDagMixed",
     "DependencyDagSerial",

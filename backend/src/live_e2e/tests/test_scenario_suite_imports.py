@@ -77,7 +77,12 @@ def test_subpackage_imports_are_clean() -> None:
         "GeneratorFailureQuiescence",
         "InitialMission",
     ]
-    assert sandbox.__all__ == ["AutoSquashCommitResume", "OccConcurrentConflicts"]
+    assert sandbox.__all__ == [
+        "AutoSquashCommitResume",
+        "ComplexProjectBuild",
+        "ComplexProjectBuildSmoke",
+        "OccConcurrentConflicts",
+    ]
     assert planner_validation.__all__ == ["PlannerDuplicateLocalId"]
     # tools/ and context/ are scaffold-only in this PR.
     assert tools.__all__ == []
