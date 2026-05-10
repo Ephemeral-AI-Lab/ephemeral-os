@@ -216,3 +216,57 @@ def test_suffix_cas_mismatch_discards_unpublished_checkpoint(
     assert built
     assert _layer_path(manager, built[0]).exists() is False
     assert manager.read_active_manifest().layers == before.layers[:2]
+
+
+def test_squash_pins_planned_suffix_during_checkpoint_build(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manager = LayerStackManager(tmp_path / "stack")
+    for index in range(5):
+        _publish(
+            manager,
+            tmp_path,
+            f"base/{index:02d}.txt",
+            f"base-{index:02d}\n".encode("utf-8"),
+        )
+
+    real_build_checkpoint = manager._squash.build_checkpoint
+    triggered = False
+
+    def build_checkpoint_after_concurrent_squash(plan: SquashPlan) -> LayerRef:
+        nonlocal triggered
+        if not triggered:
+            triggered = True
+            monkeypatch.setattr(
+                manager._squash,
+                "build_checkpoint",
+                real_build_checkpoint,
+            )
+            concurrent = manager.squash(max_depth=2)
+            monkeypatch.setattr(
+                manager._squash,
+                "build_checkpoint",
+                build_checkpoint_after_concurrent_squash,
+            )
+            assert concurrent is not None
+        return real_build_checkpoint(plan)
+
+    monkeypatch.setattr(
+        manager._squash,
+        "build_checkpoint",
+        build_checkpoint_after_concurrent_squash,
+    )
+
+    squashed = manager.squash(max_depth=2)
+
+    assert triggered is True
+    assert squashed is None
+    assert manager.active_lease_count() == 0
+    active = manager.read_active_manifest()
+    assert active.depth == 2
+    for index in range(5):
+        assert manager.read_text(f"base/{index:02d}.txt") == (
+            f"base-{index:02d}\n",
+            True,
+        )

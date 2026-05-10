@@ -202,13 +202,20 @@ class LayerStackManager:
             return transaction.publish_layer(changes)
 
     def squash(self, *, max_depth: int) -> Manifest | None:
-        plan = self._squash.plan(self.read_active_manifest(), max_depth=max_depth)
-        if plan is None:
-            return None
+        with self._lock:
+            active = read_manifest(self._manifest_file)
+            plan = self._squash.plan(active, max_depth=max_depth)
+            if plan is None:
+                return None
+            squash_lease = self._leases.acquire(
+                active,
+                f"squash-{uuid4().hex}",
+            )
 
-        checkpoint = self._squash.build_checkpoint(plan)
+        checkpoint: LayerRef | None = None
         checkpoint_committed = False
         try:
+            checkpoint = self._squash.build_checkpoint(plan)
             with self._lock:
                 current = read_manifest(self._manifest_file)
                 if not manifest_still_ends_with(
@@ -229,14 +236,11 @@ class LayerStackManager:
                 )
                 write_manifest_atomic(self._manifest_file, new_manifest)
                 checkpoint_committed = True
-                self._remove_unreferenced_layers(
-                    plan.suffix_to_checkpoint,
-                    current_manifest=new_manifest,
-                )
             return new_manifest
         finally:
-            if not checkpoint_committed:
+            if checkpoint is not None and not checkpoint_committed:
                 self._squash.discard_checkpoint(checkpoint)
+            self.release_lease(squash_lease.lease_id)
 
     def _layer_path(self, layer: LayerRef) -> Path:
         return resolve_storage_path(self.storage_root, layer.path)
