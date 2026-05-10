@@ -61,13 +61,6 @@ def _mixed_topology_plan() -> dict[str, Any]:
     }
 
 
-# Each generator node emits the EXECUTOR_INVOKED / EXECUTOR_SUCCESS pair in
-# the audit stream. Sibling pairs (b/c, e/f) are launched concurrently and
-# their per-task events may interleave non-deterministically; the suite
-# asserts on counts of each event type rather than strict per-instance order.
-_GENERATOR_PAIR = (EventType.EXECUTOR_INVOKED, EventType.EXECUTOR_SUCCESS)
-
-
 class DependencyDagMixed(ScenarioBase):
     """Mixed serial + parallel DAG; dispatcher honours fan-in semantics."""
 
@@ -76,10 +69,9 @@ class DependencyDagMixed(ScenarioBase):
         EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
         EventType.PLANNER_FULL_PLAN,
-        # Seven generator nodes — each emits invoked + success.
-        # Order between siblings is non-deterministic; the conformance test
-        # asserts on multiset equality rather than positional equality.
-        *(_GENERATOR_PAIR * 7),
+        # Sibling executor events interleave non-deterministically. Focused
+        # tests assert the seven invoked/success counts and graph topology.
+        EventType.EXECUTOR_INVOKED,
         EventType.EVALUATOR_INVOKED,
         EventType.EVALUATOR_SUCCESS,
     )

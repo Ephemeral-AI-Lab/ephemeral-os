@@ -2,17 +2,18 @@
 
 Reference scenario for the planner-validation subpackage. The planner emits a
 full plan whose ``tasks`` list contains two entries sharing ``id="dup"``.
-``ordered_generator_tasks`` (``task_center/attempt/generator_dag.py``) raises
-on duplicate ids; the orchestrator surfaces this as a planner failure and
-closes the attempt with ``fail_reason="planner_failed"``.
+``ordered_generator_tasks`` (``task_center/attempt/generator_dag.py``) rejects
+the duplicate ids inside the planner submission tool; the orchestrator surfaces
+this as a planner failure and closes the attempt with
+``fail_reason="planner_failed"``.
 
 Both attempts in the episode run the same invalid plan, so episode 1 closes
 with ``status=failed`` and the mission closes ``status=failed``. No generator
 or evaluator was launched.
 
 Asserts: ``report.task_center_status == "failed"``; the seen event sequence
-contains exactly two ``PLANNER_FULL_PLAN`` followed by ``ATTEMPT_FAILED`` —
-no ``EXECUTOR_INVOKED`` or ``EVALUATOR_INVOKED`` events.
+contains two planner invocations, no accepted ``PLANNER_FULL_PLAN``, and no
+``EXECUTOR_INVOKED`` or ``EVALUATOR_INVOKED`` events.
 """
 
 from __future__ import annotations
@@ -48,9 +49,7 @@ class PlannerDuplicateLocalId(ScenarioBase):
     expected_event_sequence: tuple[EventType, ...] = (
         EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
-        EventType.PLANNER_FULL_PLAN,
         EventType.PLANNER_INVOKED,
-        EventType.PLANNER_FULL_PLAN,
     )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002

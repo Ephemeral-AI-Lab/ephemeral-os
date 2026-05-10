@@ -23,7 +23,7 @@ from live_e2e.hooks.builtins import count_events
 from live_e2e.scenarios.correctness_testing import (
     CorrectnessTesting,
 )
-from live_e2e.stores import create_per_test_task_center_stores
+from live_e2e.stores import TaskCenterStoreBundle
 from live_e2e.sweevo_adapter import run_sweevo_scenario
 from benchmarks.sweevo.models import SWEEvoInstance
 
@@ -63,6 +63,7 @@ async def test_correctness_testing_scenario_runs_end_to_end(
     sweevo_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
+    stores: TaskCenterStoreBundle,
 ) -> None:
     _require_daytona_healthy()
 
@@ -71,18 +72,14 @@ async def test_correctness_testing_scenario_runs_end_to_end(
         count_events(EventType.PLANNER_INVOKED, name="planner_invocations"),
         count_events(EventType.EVALUATOR_INVOKED, name="evaluator_invocations"),
     )
-    bundle = create_per_test_task_center_stores()
-    try:
-        report = await run_sweevo_scenario(
-            scenario,
-            instance=sweevo_instance,
-            sandbox_id=str(workspace["sandbox_id"]),
-            audit_dir=audit_dir,
-            stores=bundle,
-            extra_hooks=extra_hooks,
-        )
-    finally:
-        bundle.close()
+    report = await run_sweevo_scenario(
+        scenario,
+        instance=sweevo_instance,
+        sandbox_id=str(workspace["sandbox_id"]),
+        audit_dir=audit_dir,
+        stores=stores,
+        extra_hooks=extra_hooks,
+    )
 
     # --- TaskCenter outcome -------------------------------------------
     assert report.task_center_status == "done", (

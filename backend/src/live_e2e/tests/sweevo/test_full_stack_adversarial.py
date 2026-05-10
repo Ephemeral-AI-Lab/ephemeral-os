@@ -20,7 +20,7 @@ from live_e2e.hooks.builtins import (
 from live_e2e.scenarios.full_stack_adversarial import (
     FullStackAdversarial,
 )
-from live_e2e.stores import create_per_test_task_center_stores
+from live_e2e.stores import TaskCenterStoreBundle
 from live_e2e.sweevo_adapter import run_sweevo_scenario
 from benchmarks.sweevo.models import SWEEvoInstance
 
@@ -72,25 +72,22 @@ async def test_full_stack_adversarial_runs_agent_tool_script_matrix(
     sweevo_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
+    stores: TaskCenterStoreBundle,
 ) -> None:
     _require_daytona_healthy()
 
     scenario = FullStackAdversarial()
-    bundle = create_per_test_task_center_stores()
-    try:
-        report = await run_sweevo_scenario(
-            scenario,
-            instance=sweevo_instance,
-            sandbox_id=str(workspace["sandbox_id"]),
-            audit_dir=audit_dir,
-            stores=bundle,
-            extra_hooks=(
-                count_events(EventType.VERIFIER_FAILURE, name="verifier_failures"),
-                assert_recursive_mission_closed_before_parent_guard(),
-            ),
-        )
-    finally:
-        bundle.close()
+    report = await run_sweevo_scenario(
+        scenario,
+        instance=sweevo_instance,
+        sandbox_id=str(workspace["sandbox_id"]),
+        audit_dir=audit_dir,
+        stores=stores,
+        extra_hooks=(
+            count_events(EventType.VERIFIER_FAILURE, name="verifier_failures"),
+            assert_recursive_mission_closed_before_parent_guard(),
+        ),
+    )
 
     assert report.task_center_status == "done", report.metrics
     assert report.instance_id == _DEFAULT_INSTANCE_ID

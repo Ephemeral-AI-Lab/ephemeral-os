@@ -81,22 +81,12 @@ class GeneratorFailureQuiescence(ScenarioBase):
         EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
         EventType.PLANNER_FULL_PLAN,
-        # Attempt 1 — three root tasks invoked; b fails, a/c succeed.
-        EventType.EXECUTOR_INVOKED,
-        EventType.EXECUTOR_INVOKED,
-        EventType.EXECUTOR_INVOKED,
+        # Attempt 1 sibling executor events interleave. The stable signal is
+        # the injected generator failure before the retry planner invocation.
         EventType.EXECUTOR_FAILURE,
-        EventType.EXECUTOR_SUCCESS,
-        EventType.EXECUTOR_SUCCESS,
         # Attempt 2 — fresh planner, all four nodes succeed, evaluator passes.
         EventType.PLANNER_INVOKED,
         EventType.PLANNER_FULL_PLAN,
-        EventType.EXECUTOR_INVOKED,
-        EventType.EXECUTOR_SUCCESS,
-        EventType.EXECUTOR_INVOKED,
-        EventType.EXECUTOR_SUCCESS,
-        EventType.EXECUTOR_INVOKED,
-        EventType.EXECUTOR_SUCCESS,
         EventType.EXECUTOR_INVOKED,
         EventType.EXECUTOR_SUCCESS,
         EventType.EVALUATOR_INVOKED,

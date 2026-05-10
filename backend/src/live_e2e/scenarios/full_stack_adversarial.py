@@ -297,8 +297,15 @@ class FullStackAdversarial(ScenarioBase):
         tasks = [
             {"id": "occ_matrix", "agent_name": "executor", "deps": []},
             {"id": "overlay_matrix", "agent_name": "executor", "deps": []},
-            {"id": "layerstack_matrix", "agent_name": "executor", "deps": []},
             {"id": "lsp_matrix", "agent_name": "executor", "deps": []},
+            # The layer-stack script intentionally drives squash/GC behavior;
+            # run it after the other matrices so it cannot invalidate their
+            # active shell snapshots.
+            {
+                "id": "layerstack_matrix",
+                "agent_name": "executor",
+                "deps": ["occ_matrix", "overlay_matrix", "lsp_matrix"],
+            },
             {
                 "id": "subsystem_wave_guard",
                 "agent_name": "verifier",
