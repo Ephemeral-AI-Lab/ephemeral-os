@@ -385,6 +385,13 @@ def cmd_baseline(args: argparse.Namespace) -> int:
 
 
 def cmd_compare(args: argparse.Namespace) -> int:
+    # TODO(optimization-PR): this currently only enforces the perf gate from
+    # plan §"Performance Acceptance Thresholds". The plan §"Behavior-
+    # Equivalence Assertions" (7 invariants — final-content byte-equality,
+    # conflict surface, event sequence in report.events + sandbox_events.jsonl,
+    # lease invariant, shell multi-path atomicity, fail-closed) MUST be wired
+    # into a behavior gate before any experimental run can claim PASS. The
+    # `behavior_pass` field below is hard-coded True today.
     baseline_root = Path(args.baseline_dir)
     exp_root = Path(args.experimental_dir)
     out_dir = Path(args.out)
