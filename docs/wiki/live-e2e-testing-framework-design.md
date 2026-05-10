@@ -2,7 +2,7 @@
 title: "Live E2E Testing Framework — Design"
 tags: ["live-e2e", "framework-design", "synthesis", "scenario-driven", "migration", "load-bearing"]
 created: 2026-05-10T11:54:10.805Z
-updated: 2026-05-10T20:30:00.000Z
+updated: 2026-05-10T13:37:56.000Z
 sources: []
 links: ["sandbox-subsystem.md", "task-center-pipeline.md", "context-engine-recipes.md", "engine-query-loop-llm-seam.md", "tools-hooks-guardrails-agents-notifications-messages.md"]
 category: decision
@@ -12,7 +12,7 @@ schemaVersion: 1
 
 # Live E2E Testing Framework — Design
 
-_Drafted 2026-05-10. Redrafted 2026-05-10 to reflect the migration mandate: the existing scenario harness under `backend/src/benchmarks/sweevo/live_test/` IS the framework. This document records what to lift out of that sub-tree into a project-wide top-level module, and the conventions (sandbox setup, task-center wiring, agent registration, scenario protocol, audit layout) the lifted module preserves verbatim._
+_Drafted 2026-05-10. Redrafted 2026-05-10 to reflect the migration mandate: the existing scenario harness under `backend/src/benchmarks/sweevo/live_test/` IS the framework. This document records what to lift out of that sub-tree into a project-wide top-level module, and the conventions (sandbox setup, task-center wiring, agent registration, scenario protocol, audit layout) the lifted module preserves verbatim. Follow-up_ `live-e2e-scenarios-full-migration.md` _deleted the transitional shim and moved SWE-EVO-specific tests and prompt wiring to_ `live_e2e/`.
 
 ## TL;DR — central design choice
 
@@ -28,13 +28,13 @@ The user's spec sentence remains the contract: "tool guardrail, hooks, max step,
 
 ## Migration: what moves and where it lands
 
-### Source — current location
+### Source — historical pre-lift location
 
 ```
 backend/src/benchmarks/sweevo/live_test/
   __init__.py
   runner.py                       # run_scenario(...) — orchestration entry point
-  stores.py                       # TaskCenterStoreBundle + create_in_memory_task_center_stores
+  stores.py                       # TaskCenterStoreBundle + create_per_test_task_center_stores
   fixtures.py                     # pytest fixtures: sweevo_sandbox, audit_dir, stores
   audit/
     bus.py                        # AuditEventBus
@@ -77,6 +77,7 @@ backend/src/live_e2e/
   runner.py                       # run_scenario(...) — generalized
   stores.py                       # TaskCenterStoreBundle (unchanged)
   fixtures.py                     # generic_sandbox, audit_dir, stores
+  sweevo_adapter.py               # SWE-EVO prompt, sandbox, and fixture adapter
   audit/                          # copy as-is
   hooks/                          # copy as-is
   squad/
@@ -90,6 +91,7 @@ backend/src/live_e2e/
     [one file per scenario — see "Test scenarios" below]
   tests/
     conftest.py                   # pytest_plugins = ["live_e2e.fixtures"]
+    sweevo/conftest.py            # imports SWE-EVO fixtures from live_e2e.sweevo_adapter
     test_<scenario>.py            # one per scenario
 ```
 
@@ -97,23 +99,24 @@ The SWE-EVO-specific bits (`benchmarks/sweevo/dataset.py`, `models.py`, `prompt.
 
 ### Hand-off API for SWE-EVO consumers
 
-`benchmarks/sweevo/live_test/__init__.py` becomes a thin re-export shim that wires the SWE-EVO dataset into the generic framework:
+The follow-up migration removed the transitional `benchmarks/sweevo/live_test/` shim. SWE-EVO consumers now import the adapter directly from `live_e2e.sweevo_adapter`:
 
 ```python
 from live_e2e import run_scenario as _generic_run_scenario
-from benchmarks.sweevo.sandbox import create_sweevo_test_sandbox
 from benchmarks.sweevo.prompt import build_sweevo_user_prompt
 
-async def run_sweevo_scenario(scenario, *, instance, **kwargs):
+async def run_sweevo_scenario(scenario, *, instance, sandbox_id, audit_dir, **kwargs):
     return await _generic_run_scenario(
         scenario,
-        sandbox_provisioner=lambda: create_sweevo_test_sandbox(instance),
+        sandbox_id=sandbox_id,
+        audit_dir=audit_dir,
+        repo_dir="/testbed",
         entry_prompt=build_sweevo_user_prompt(instance),
         **kwargs,
     )
 ```
 
-Existing `benchmarks/sweevo/live_test/tests/test_*.py` files keep working through the shim; new tests target the generalized `live_e2e/` module.
+SWE-EVO scenario tests live under `backend/src/live_e2e/tests/sweevo/`. The generic fixture plugin loads from `backend/src/live_e2e/tests/conftest.py`; SWE-EVO fixtures are imported by `backend/src/live_e2e/tests/sweevo/conftest.py` so they stay scoped to that subtree.
 
 ## Sandbox setup steps (preserved verbatim from `benchmarks/sweevo/sandbox.py`)
 
@@ -164,7 +167,7 @@ await ensure_test_patch(sandbox_id, repo_dir, test_patch)
 
 Critical constraint: **step 7 is non-optional**. Skipping `api.build_workspace_base` leaves the workspace daemon in an inconsistent state and `read_file`/`edit_file`/`write_file` tools will report `workspace_not_ready` errors.
 
-The `workspace` pytest fixture pattern from `benchmarks/sweevo/live_test/fixtures.py` (cache-keyed first-call skip, subsequent reset via `reset_workspace`) is the pattern to keep.
+The `workspace` pytest fixture pattern in `live_e2e.sweevo_adapter` (cache-keyed first-call skip, subsequent reset via `reset_sweevo_workspace`) is the pattern to keep.
 
 ## Task-center setup (real PostgreSQL via `db.engine.initialize_db`)
 
@@ -494,7 +497,7 @@ sandbox_info = await create_test_sandbox(...)
 sandbox_id = sandbox_info["sandbox_id"]
 
 # 3. Per-test stores (in-memory SQLite, real schema)
-bundle = create_in_memory_task_center_stores()
+bundle = create_per_test_task_center_stores()
 
 # 4. Per-test audit bus + recorder. Recorder is constructed BEFORE start_task_center_entry_run
 #    so initial Mission/Episode/Task commits are captured. task_center_run_id is bound post-fact.

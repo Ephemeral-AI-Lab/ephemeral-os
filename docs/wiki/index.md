@@ -1,6 +1,6 @@
 # Wiki Index
 
-> 6 pages | Last updated: 2026-05-10T11:58:13.441Z
+> 7 pages | Last updated: 2026-05-10T13:37:56.000Z
 
 ## architecture
 
@@ -12,4 +12,5 @@
 
 ## decision
 
+- [Live E2E Scenarios — Full Migration](live-e2e-scenarios-full-migration.md) — # Live E2E Scenarios — Full Migration (delete the live_test shim)
 - [Live E2E Testing Framework — Design](live-e2e-testing-framework-design.md) — # Live E2E Testing Framework — Design

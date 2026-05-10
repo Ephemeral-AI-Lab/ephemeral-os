@@ -1,9 +1,9 @@
 """Pytest fixtures for the live e2e framework — dataset-agnostic.
 
 Dataset-specific fixtures (e.g. ``sweevo_instance``, ``sweevo_sandbox``) live
-in the consumer package (e.g. ``benchmarks.sweevo.live_test.fixtures``). Tests
-that need a real Daytona sandbox depend on the consumer fixture; tests that
-need only PG-backed stores depend on :func:`stores`.
+in consumer adapters such as ``live_e2e.sweevo_adapter``. Tests that need a
+real Daytona sandbox depend on the consumer fixture; tests that need only
+PG-backed stores depend on :func:`stores`.
 
 The audit env vars (``EOS_SWEEVO_AUDIT_DIR`` / ``EOS_SWEEVO_AUDIT_TMP``) are
 preserved verbatim during the migration; see

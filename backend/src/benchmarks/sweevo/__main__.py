@@ -6,11 +6,11 @@ Two flags:
   CLI work is out of scope for the live-e2e framework phase and is deferred to
   a follow-up; today this prints a deferred-notice and exits non-zero.
 - ``--scenario <name>`` — drives the mock framework via
-  :func:`benchmarks.sweevo.live_test.runner.run_scenario` against a live
+  :func:`live_e2e.sweevo_adapter.run_sweevo_scenario` against a live
   Daytona sandbox. The scenario must be registered in ``SCENARIO_REGISTRY``.
 
 Pytest is the canonical entry point for the mock framework — see
-``backend/src/benchmarks/sweevo/live_test/tests/`` for the regression tests.
+``backend/src/live_e2e/tests/sweevo/`` for the regression tests.
 """
 
 from __future__ import annotations
@@ -69,7 +69,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--scenario",
         default=None,
-        help="Run the named live-test scenario from SCENARIO_REGISTRY.",
+        help="Run the named live-e2e scenario from SCENARIO_REGISTRY.",
     )
     parser.add_argument(
         "--real-agent",
@@ -100,9 +100,9 @@ def _cmd_list(source: str) -> int:
 
 async def _cmd_scenario(args: argparse.Namespace) -> int:
     from benchmarks.sweevo.dataset import select_sweevo_instance
-    from benchmarks.sweevo.live_test.runner import run_scenario
-    from benchmarks.sweevo.live_test.scenarios import SCENARIO_REGISTRY
     from benchmarks.sweevo.sandbox import create_sweevo_test_sandbox
+    from live_e2e.scenarios import SCENARIO_REGISTRY
+    from live_e2e.sweevo_adapter import run_sweevo_scenario
 
     scenario_cls = SCENARIO_REGISTRY.get(args.scenario)
     if scenario_cls is None:
@@ -129,7 +129,7 @@ async def _cmd_scenario(args: argparse.Namespace) -> int:
         Path(args.audit_dir) if args.audit_dir
         else Path(os.getenv("EOS_SWEEVO_AUDIT_DIR", ".sweevo_runs")).resolve()
     )
-    report = await run_scenario(
+    report = await run_sweevo_scenario(
         scenario_cls(),
         instance=instance,
         sandbox_id=str(sandbox_result["sandbox_id"]),
@@ -150,7 +150,7 @@ def _cmd_real_agent() -> int:
     print(
         "--real-agent is deferred to a follow-up phase. "
         "Use --scenario <name> for the mock framework, "
-        "or run pytest under backend/src/benchmarks/sweevo/live_test/tests/.",
+        "or run pytest under backend/src/live_e2e/tests/sweevo/.",
         file=sys.stderr,
     )
     return 2

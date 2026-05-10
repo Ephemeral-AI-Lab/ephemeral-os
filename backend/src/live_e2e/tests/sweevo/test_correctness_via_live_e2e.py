@@ -2,9 +2,8 @@
 ``live_e2e.run_scenario`` (with SWE-EVO sandbox + entry prompt).
 
 This complements ``test_correctness.py`` (which goes through the SWE-EVO
-``benchmarks.sweevo.live_test.runner.run_scenario`` shim) by exercising the
-generic entry point directly. Both must produce the same end-to-end behaviour
-post-migration.
+adapter) by exercising the generic entry point directly. Both must produce the
+same end-to-end behaviour post-migration.
 
 Skipped when:
 
@@ -32,7 +31,7 @@ from live_e2e.scenarios.correctness_testing import CorrectnessTesting
 
 def _require_daytona_healthy() -> None:
     """Tier-0 health gate. Skip cleanly if Daytona is unavailable."""
-    repo_root = Path(__file__).resolve().parents[6]
+    repo_root = Path(__file__).resolve().parents[5]
     tier0_path = (
         repo_root
         / "backend"

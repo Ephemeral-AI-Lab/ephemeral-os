@@ -2,7 +2,7 @@
 title: "Live E2E Scenarios — Full Migration (delete the live_test shim)"
 tags: ["live-e2e", "scenarios-migration", "follow-up", "shim-removal"]
 created: 2026-05-10T13:30:00.000Z
-updated: 2026-05-10T13:30:00.000Z
+updated: 2026-05-10T13:37:56.000Z
 sources: ["live-e2e-testing-framework-design.md"]
 links: ["live-e2e-testing-framework-design.md"]
 category: decision
@@ -82,7 +82,7 @@ backend/src/live_e2e/
     test_stores.py                  # PG round-trip tests
     sweevo/                         # NEW — SWE-EVO live tests under live_e2e/
       __init__.py
-      conftest.py                   # pytest_plugins = ["live_e2e.fixtures", "live_e2e.sweevo_adapter"]
+      conftest.py                   # imports SWE-EVO fixtures from live_e2e.sweevo_adapter
       test_correctness.py           # ← moved from benchmarks/sweevo/live_test/tests/
       test_correctness_via_live_e2e.py
       test_full_case_user_input.py
@@ -91,8 +91,8 @@ backend/src/live_e2e/
 
 The `live_e2e/sweevo_adapter.py` module is the new public surface for SWE-EVO consumers — it provides:
 
-- `run_sweevo_scenario(scenario, *, instance, sandbox_id, audit_dir, ...)` — the legacy shim's `run_scenario` reborn, builds the SWE-EVO entry prompt and delegates to `live_e2e.run_scenario`.
-- `sweevo_instance`, `sweevo_sandbox`, `workspace` pytest fixtures (was `benchmarks.sweevo.live_test.fixtures`). Wired via `pytest_plugins` in `live_e2e/tests/sweevo/conftest.py`.
+- `run_sweevo_scenario(scenario, *, instance, sandbox_id, audit_dir, ...)` — builds the SWE-EVO entry prompt and delegates to `live_e2e.run_scenario`.
+- `sweevo_instance`, `sweevo_sandbox`, `workspace` pytest fixtures. `live_e2e/tests/sweevo/conftest.py` imports these fixtures directly from the adapter so they stay scoped to the SWE-EVO tests.
 
 The dataset-specific modules (`dataset.py`, `models.py`, `prompt.py`, `sandbox.py`, `evaluation.py`) **stay** under `benchmarks/sweevo/` per the original spec contract — they are the dataset, not the framework. `live_e2e/sweevo_adapter.py` imports from them.
 
@@ -108,7 +108,7 @@ Six stories, strict serial. Each story has acceptance criteria you can verify wi
   - `async def run_sweevo_scenario(scenario, *, instance, sandbox_id, audit_dir, stores=None, repo_dir=_REPO_DIR, extra_hooks=(), user_prompt=None) -> RunReport` — same body as the current `benchmarks/sweevo/live_test/runner.py` shim (calls `build_sweevo_user_prompt(...)` and delegates to `live_e2e.run_scenario`).
   - Pytest fixtures `sweevo_instance` (session-scoped, reads `EOS_SWEEVO_INSTANCE`), `sweevo_sandbox` (session-scoped, calls `create_sweevo_test_sandbox`), `workspace` (per-test reset via session cache key).
 - New file `backend/src/live_e2e/tests/sweevo/__init__.py` (empty).
-- New file `backend/src/live_e2e/tests/sweevo/conftest.py` containing `pytest_plugins = ["live_e2e.fixtures", "live_e2e.sweevo_adapter"]`.
+- Keep `backend/src/live_e2e/tests/conftest.py` loading only `pytest_plugins = ["live_e2e.fixtures"]`. Add `backend/src/live_e2e/tests/sweevo/conftest.py` that imports `sweevo_instance`, `sweevo_sandbox`, and `workspace` from `live_e2e.sweevo_adapter`; this pytest version rejects nested `pytest_plugins`.
 - Smoke: `.venv/bin/python -c "from live_e2e.sweevo_adapter import run_sweevo_scenario; from live_e2e.sweevo_adapter import sweevo_instance, sweevo_sandbox, workspace"` exits 0.
 - `.venv/bin/ruff check backend/src/live_e2e/sweevo_adapter.py backend/src/live_e2e/tests/sweevo/` exits 0.
 
@@ -122,13 +122,13 @@ Six stories, strict serial. Each story has acceptance criteria you can verify wi
   - `backend/src/benchmarks/sweevo/live_test/tests/test_full_case_user_input.py` → `backend/src/live_e2e/tests/sweevo/test_full_case_user_input.py`
   - `backend/src/benchmarks/sweevo/live_test/tests/test_full_stack_adversarial.py` → `backend/src/live_e2e/tests/sweevo/test_full_stack_adversarial.py`
 - Inside each moved file, rewrite imports:
-  - `from benchmarks.sweevo.live_test.runner import run_scenario` → `from live_e2e.sweevo_adapter import run_sweevo_scenario as run_scenario` (keeps callsites unchanged)
+  - `from benchmarks.sweevo.live_test.runner import run_scenario` → `from live_e2e.sweevo_adapter import run_sweevo_scenario`
   - `from benchmarks.sweevo.live_test.audit.<x> import …` → `from live_e2e.audit.<x> import …`
   - `from benchmarks.sweevo.live_test.hooks.<x> import …` → `from live_e2e.hooks.<x> import …`
   - `from benchmarks.sweevo.live_test.scenarios.<x> import …` → `from live_e2e.scenarios.<x> import …`
-  - `from benchmarks.sweevo.live_test.stores import create_in_memory_task_center_stores` → `from live_e2e.stores import create_per_test_task_center_stores as create_in_memory_task_center_stores` (alias to preserve callsites).
+  - `from benchmarks.sweevo.live_test.stores import create_in_memory_task_center_stores` → `from live_e2e.stores import create_per_test_task_center_stores`.
 - Delete `backend/src/benchmarks/sweevo/live_test/tests/` entirely (including `__init__.py`, `conftest.py`).
-- Pytest collection: `.venv/bin/pytest backend/src/live_e2e/tests --collect-only -q` exits 0 (now collects 11 + 4 = 15 tests).
+- Pytest collection: `.venv/bin/pytest backend/src/live_e2e/tests --collect-only -q` exits 0 (17 tests).
 - Live verification: `.venv/bin/pytest backend/src/live_e2e/tests/sweevo/test_correctness.py -q` PASSES against real Daytona (uses the same warm-sandbox path the existing run uses).
 - `.venv/bin/ruff check backend/src/live_e2e/tests/` exits 0.
 
@@ -138,15 +138,15 @@ Six stories, strict serial. Each story has acceptance criteria you can verify wi
 
 - `backend/tests/unit_test/test_benchmarks/test_sweevo_audit_recorder.py`:
   - Replace `from benchmarks.sweevo.live_test.audit.<x>` → `from live_e2e.audit.<x>` (4 lines).
-  - Replace `from benchmarks.sweevo.live_test.stores import (TaskCenterStoreBundle, create_in_memory_task_center_stores)` → `from live_e2e.stores import TaskCenterStoreBundle, create_per_test_task_center_stores as create_in_memory_task_center_stores`.
+  - Replace `from benchmarks.sweevo.live_test.stores import (TaskCenterStoreBundle, create_in_memory_task_center_stores)` → `from live_e2e.stores import TaskCenterStoreBundle, create_per_test_task_center_stores`.
 - `backend/tests/unit_test/test_benchmarks/test_sweevo_sandbox_event_monitor.py`:
   - Replace `from benchmarks.sweevo.live_test.audit.<x>` → `from live_e2e.audit.<x>` (5 lines).
 - `backend/tests/unit_test/test_benchmarks/test_sweevo_mock_agent_execution.py`:
-  - Replace `from benchmarks.sweevo.live_test.runner import run_scenario` → `from live_e2e.sweevo_adapter import run_sweevo_scenario as run_scenario`.
+  - Replace `from benchmarks.sweevo.live_test.runner import run_scenario` → `from live_e2e.sweevo_adapter import run_sweevo_scenario`.
   - Replace `from benchmarks.sweevo.live_test.scenarios.correctness_testing import ...` → `from live_e2e.scenarios.correctness_testing import ...`.
-  - Replace `from benchmarks.sweevo.live_test.stores import ...` → `from live_e2e.stores import create_per_test_task_center_stores as create_in_memory_task_center_stores`.
+  - Replace `from benchmarks.sweevo.live_test.stores import ...` → `from live_e2e.stores import create_per_test_task_center_stores`.
 - `backend/src/benchmarks/sweevo/__main__.py`:
-  - Replace `from benchmarks.sweevo.live_test.runner import run_scenario` → `from live_e2e.sweevo_adapter import run_sweevo_scenario as run_scenario`.
+  - Replace `from benchmarks.sweevo.live_test.runner import run_scenario` → `from live_e2e.sweevo_adapter import run_sweevo_scenario`.
   - Replace `from benchmarks.sweevo.live_test.scenarios import SCENARIO_REGISTRY` → `from live_e2e.scenarios import SCENARIO_REGISTRY`.
   - Update docstrings + the help-text path reference (`backend/src/benchmarks/sweevo/live_test/tests/` → `backend/src/live_e2e/tests/sweevo/`).
 - Verify: `.venv/bin/pytest backend/tests/unit_test/test_benchmarks -q` exits 0 (27 passed regression floor).

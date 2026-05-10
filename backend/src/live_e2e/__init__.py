@@ -1,9 +1,9 @@
 """Live E2E testing framework — generic scenario harness.
 
-Lifted from ``benchmarks.sweevo.live_test`` per
-``docs/wiki/live-e2e-testing-framework-design.md``. Dataset-agnostic — SWE-EVO
-consumers wire through ``benchmarks.sweevo.live_test`` (a thin shim that
-provides the SWE-EVO sandbox provisioner + entry prompt builder).
+Lifted from the former SWE-EVO live-test harness per
+``docs/wiki/live-e2e-testing-framework-design.md``. Dataset-agnostic; SWE-EVO
+consumers wire through ``live_e2e.sweevo_adapter``, which provides the SWE-EVO
+sandbox provisioner and entry prompt builder.
 
 Subpackages:
 
@@ -18,6 +18,7 @@ Top-level modules:
 - ``stores``    — :class:`TaskCenterStoreBundle` + ``create_per_test_task_center_stores``
 - ``runner``    — ``run_scenario`` orchestration entry point (added in S-3)
 - ``fixtures``  — pytest fixtures (audit_dir, stores) (added in S-3)
+- ``sweevo_adapter`` — SWE-EVO prompt, sandbox, and pytest fixture adapter
 """
 
 from __future__ import annotations

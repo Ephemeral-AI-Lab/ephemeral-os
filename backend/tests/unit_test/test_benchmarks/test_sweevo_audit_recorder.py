@@ -15,13 +15,13 @@ from typing import Iterator
 
 import pytest
 
-from benchmarks.sweevo.live_test.audit.bus import AuditEventBus
-from benchmarks.sweevo.live_test.audit.events import Event, EventType
-from benchmarks.sweevo.live_test.audit.node_id import NodeId
-from benchmarks.sweevo.live_test.audit.recorder import AuditRecorder
-from benchmarks.sweevo.live_test.stores import (
+from live_e2e.audit.bus import AuditEventBus
+from live_e2e.audit.events import Event, EventType
+from live_e2e.audit.node_id import NodeId
+from live_e2e.audit.recorder import AuditRecorder
+from live_e2e.stores import (
     TaskCenterStoreBundle,
-    create_in_memory_task_center_stores,
+    create_per_test_task_center_stores,
 )
 from db.models.agent_run import AgentRunRecord
 from db.models.task_center import (
@@ -42,7 +42,7 @@ _REQUEST_ID = "req-1"
 
 @pytest.fixture
 def stores() -> Iterator[TaskCenterStoreBundle]:
-    bundle = create_in_memory_task_center_stores()
+    bundle = create_per_test_task_center_stores()
     try:
         yield bundle
     finally:

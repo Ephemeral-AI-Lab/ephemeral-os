@@ -4,11 +4,11 @@ import asyncio
 import json
 from pathlib import Path
 
-from benchmarks.sweevo.live_test.audit.bus import AuditEventBus
-from benchmarks.sweevo.live_test.audit.events import Event, EventType
-from benchmarks.sweevo.live_test.audit.node_id import NodeId
-from benchmarks.sweevo.live_test.audit.recorder import AuditRecorder
-from benchmarks.sweevo.live_test.audit.stream_bridge import stream_bridge
+from live_e2e.audit.bus import AuditEventBus
+from live_e2e.audit.events import Event, EventType
+from live_e2e.audit.node_id import NodeId
+from live_e2e.audit.recorder import AuditRecorder
+from live_e2e.audit.stream_bridge import stream_bridge
 from message.stream_events import ToolExecutionCompleted
 
 

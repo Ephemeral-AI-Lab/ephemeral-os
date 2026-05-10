@@ -98,7 +98,7 @@ wall_budget_s = 600
 per_cell_budget_s = 60
 kind = "pytest"
 pytest_args = [
-    "backend/src/benchmarks/sweevo/live_test/tests/",
+    "backend/src/live_e2e/tests/sweevo/",
     "-q",
 ]
 cascade = "warn"

@@ -150,7 +150,7 @@ Child Mission close:
 
 ## Stores
 
-All five are production SQLAlchemy implementations on a shared session factory. **There are no separate "in-memory" class variants** — in-memory setup uses SQLite `sqlite:///:memory:` with the same store classes.
+All five are production SQLAlchemy implementations on a shared session factory. **There are no separate "test-only" class variants**. The live-e2e harness uses PostgreSQL schema isolation with the same store classes as production.
 
 | Store | Import | Purpose |
 |---|---|---|
@@ -160,9 +160,9 @@ All five are production SQLAlchemy implementations on a shared session factory. 
 | `AttemptStore` | `db/stores/attempt_store.py` | Attempt CRUD |
 | `ContextPacketStore` | `db/stores/context_packet_store.py` | Persists rendered ContextPacket per launch |
 
-**In-memory factory:** `create_in_memory_task_center_stores()` (`benchmarks/sweevo/live_test/stores.py:35`) — SQLite `:memory:` engine, `Base.metadata.create_all`, all five stores on shared `sessionmaker`, returns `TaskCenterStoreBundle`. **Same store implementations as production.**
+**Live-e2e factory:** `create_per_test_task_center_stores()` (`live_e2e/stores.py`) — creates a fresh PostgreSQL schema, runs `Base.metadata.create_all`, wires all five stores to a schema-routed shared engine clone, and returns `TaskCenterStoreBundle`.
 
-Pytest fixture: `stores()` in `benchmarks/sweevo/live_test/fixtures.py:90` yields `TaskCenterStoreBundle` and disposes engine on teardown.
+Pytest fixture: `stores()` in `live_e2e/fixtures.py` yields `TaskCenterStoreBundle` and drops the per-test schema on teardown.
 
 ## AttemptAgentLauncher seam
 
@@ -178,7 +178,7 @@ When `runner=None` → falls back to `engine.api.run_ephemeral_agent` (real LLM 
 
 `runner=` plumbed through `start_task_center_entry_run` → `TaskCenterEntryCoordinator.__init__` → `EphemeralAttemptAgentLauncher(runner=runner)` (`coordinator.py:110-115`, `coordinator.py:205`).
 
-**Existing example:** `MockSquadRunner` (`benchmarks/sweevo/live_test/squad/runner.py:1`) is the SWE-EVO benchmark's `AttemptAgentRunner`.
+**Existing example:** `MockSquadRunner` (`live_e2e/squad/runner.py`) is the live-e2e framework's `AttemptAgentRunner`.
 
 **Seam #2 (BELOW seam #1, inside the query loop) — `QueryContext.api_client`:** see "Engine + Query Loop + LLM Seam" wiki page. **The two seams coexist.** Seam #1 = full runner replacement; seam #2 = LLM-only mock with the real query loop running.
 
@@ -193,8 +193,8 @@ After `start_task_center_entry_run` returns: `await handle.launcher.wait_for_idl
 | `start_task_center_entry_run` | `task_center/entry/coordinator.py:71` |
 | `TaskCenterEntryHandle` | `task_center/entry/coordinator.py:57` |
 | `AttemptAgentRunner` | `task_center/agent_launch/launcher.py:34` |
-| `create_in_memory_task_center_stores` | `benchmarks/sweevo/live_test/stores.py:35` |
-| `TaskCenterStoreBundle` | `benchmarks/sweevo/live_test/stores.py:23` |
+| `create_per_test_task_center_stores` | `live_e2e/stores.py` |
+| `TaskCenterStoreBundle` | `live_e2e/stores.py` |
 | `TaskCenterSandboxBridge` | `task_center/entry/sandbox_bridge.py:34` (pass `start_fn=lambda sid: {"id": sid}` to bypass real Daytona) |
 | `EpisodeCreationReason`, `AttemptFailReason`, `AttemptStatus`, `EpisodeClosureReport`, `SuccessContinue`, `TerminalSuccess`, `AttemptPlanFailed` | `task_center/api.py` |
 | `HarnessTaskStatus`, `HarnessTaskRole` | `task_center/task/models.py` |
@@ -204,7 +204,7 @@ After `start_task_center_entry_run` returns: `await handle.launcher.wait_for_idl
 | Component | Status |
 |---|---|
 | `task_center` pipeline (coordinator/orchestrator/dispatcher/episode manager/mission handler/close-report router) | REAL |
-| `TaskCenterStore`, `MissionStore`, `EpisodeStore`, `AttemptStore` | REAL (SQLite `:memory:`) |
+| `TaskCenterStore`, `MissionStore`, `EpisodeStore`, `AttemptStore` | REAL (PostgreSQL per-test schema) |
 | Terminal submission tools | REAL |
 | `ContextComposer` + `ContextEngine` + recipes | REAL |
 | Model API (`stream_message` / `run_ephemeral_agent`) | FAKE — replaced via runner= or api_client= |

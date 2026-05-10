@@ -95,10 +95,11 @@ def test_scenarios_register_hookset_cleanly(scenario_cls: type) -> None:
     assert hasattr(scenario, "expected_event_sequence")
 
 
-def test_hooks_via_legacy_shim_match_live_e2e() -> None:
-    """The benchmarks/sweevo/live_test compat shim returns the same objects."""
-    from benchmarks.sweevo.live_test.scenarios.correctness_testing import (
-        CorrectnessTesting as LegacyCorrectnessTesting,
+def test_sweevo_adapter_keeps_dataset_entrypoint_separate() -> None:
+    """SWE-EVO-specific prompt wiring lives outside the generic runner."""
+    from live_e2e.sweevo_adapter import (
+        run_sweevo_scenario,
     )
 
-    assert LegacyCorrectnessTesting is CorrectnessTesting
+    assert callable(run_sweevo_scenario)
+    assert inspect.signature(run_sweevo_scenario).parameters["instance"]

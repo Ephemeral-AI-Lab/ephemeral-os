@@ -12,16 +12,16 @@ import pytest
 
 from benchmarks.sweevo.dataset import select_sweevo_instance
 from benchmarks.sweevo.prompt import build_sweevo_user_prompt
-from benchmarks.sweevo.live_test.audit.events import Event, EventType
-from benchmarks.sweevo.live_test.hooks.builtins import (
+from live_e2e.audit.events import Event, EventType
+from live_e2e.hooks.builtins import (
     assert_recursive_mission_closed_before_parent_guard,
     count_events,
 )
-from benchmarks.sweevo.live_test.runner import run_scenario
-from benchmarks.sweevo.live_test.scenarios.full_stack_adversarial import (
+from live_e2e.scenarios.full_stack_adversarial import (
     FullStackAdversarial,
 )
-from benchmarks.sweevo.live_test.stores import create_in_memory_task_center_stores
+from live_e2e.stores import create_per_test_task_center_stores
+from live_e2e.sweevo_adapter import run_sweevo_scenario
 from benchmarks.sweevo.models import SWEEvoInstance
 
 
@@ -32,7 +32,7 @@ def _require_daytona_healthy() -> None:
     import importlib.util
     import sys
 
-    repo_root = Path(__file__).resolve().parents[6]
+    repo_root = Path(__file__).resolve().parents[5]
     tier0_path = (
         repo_root
         / "backend"
@@ -76,9 +76,9 @@ async def test_full_stack_adversarial_runs_agent_tool_script_matrix(
     _require_daytona_healthy()
 
     scenario = FullStackAdversarial()
-    bundle = create_in_memory_task_center_stores()
+    bundle = create_per_test_task_center_stores()
     try:
-        report = await run_scenario(
+        report = await run_sweevo_scenario(
             scenario,
             instance=sweevo_instance,
             sandbox_id=str(sweevo_sandbox["sandbox_id"]),

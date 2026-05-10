@@ -206,7 +206,7 @@ def assert_recursive_mission_closed_before_parent_guard() -> Hook:
 def assert_squash_after_n_edits(n: int = 16) -> Hook:
     raise NotImplementedError(
         f"assert_squash_after_n_edits(n={n}) deferred to next phase — "
-        "see live_test/audit/squash_detection.md"
+        "see live_e2e/audit/squash_detection.md"
     )
 
 

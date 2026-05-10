@@ -18,15 +18,13 @@ from pathlib import Path
 
 import pytest
 
-from benchmarks.sweevo.live_test.audit.events import EventType
-from benchmarks.sweevo.live_test.hooks.builtins import count_events
-from benchmarks.sweevo.live_test.runner import run_scenario
-from benchmarks.sweevo.live_test.scenarios.correctness_testing import (
+from live_e2e.audit.events import EventType
+from live_e2e.hooks.builtins import count_events
+from live_e2e.scenarios.correctness_testing import (
     CorrectnessTesting,
 )
-from benchmarks.sweevo.live_test.stores import (
-    create_in_memory_task_center_stores,
-)
+from live_e2e.stores import create_per_test_task_center_stores
+from live_e2e.sweevo_adapter import run_sweevo_scenario
 from benchmarks.sweevo.models import SWEEvoInstance
 
 
@@ -35,7 +33,7 @@ def _require_daytona_healthy() -> None:
     import importlib.util
     import sys
 
-    repo_root = Path(__file__).resolve().parents[6]
+    repo_root = Path(__file__).resolve().parents[5]
     tier0_path = (
         repo_root
         / "backend"
@@ -73,9 +71,9 @@ async def test_correctness_testing_scenario_runs_end_to_end(
         count_events(EventType.PLANNER_INVOKED, name="planner_invocations"),
         count_events(EventType.EVALUATOR_INVOKED, name="evaluator_invocations"),
     )
-    bundle = create_in_memory_task_center_stores()
+    bundle = create_per_test_task_center_stores()
     try:
-        report = await run_scenario(
+        report = await run_sweevo_scenario(
             scenario,
             instance=sweevo_instance,
             sandbox_id=str(sweevo_sandbox["sandbox_id"]),

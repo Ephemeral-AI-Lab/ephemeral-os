@@ -5,16 +5,12 @@ from typing import Any
 
 import pytest
 
-import sandbox.api as sandbox_api
-from benchmarks.sweevo.live_test.runner import run_scenario
-from benchmarks.sweevo.live_test.scenarios.correctness_testing import (
-    CorrectnessTesting,
-)
-from benchmarks.sweevo.live_test.stores import (
-    create_in_memory_task_center_stores,
-)
 from benchmarks.sweevo.models import SWEEvoInstance
 from benchmarks.sweevo.prompt import build_sweevo_user_prompt
+from live_e2e.scenarios.correctness_testing import CorrectnessTesting
+from live_e2e.stores import create_per_test_task_center_stores
+from live_e2e.sweevo_adapter import run_sweevo_scenario
+import sandbox.api as sandbox_api
 from sandbox.api import (
     ConflictInfo,
     EditFileRequest,
@@ -188,9 +184,9 @@ async def test_run_scenario_correctness_testing_with_fake_sandbox(
     instance = _instance()
     user_prompt = build_sweevo_user_prompt(instance, _REPO_DIR)
 
-    bundle = create_in_memory_task_center_stores()
+    bundle = create_per_test_task_center_stores()
     try:
-        report = await run_scenario(
+        report = await run_sweevo_scenario(
             CorrectnessTesting(),
             instance=instance,
             sandbox_id="sbx-1",

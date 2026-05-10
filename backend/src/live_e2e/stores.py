@@ -86,8 +86,7 @@ def create_per_test_task_center_stores(
 
     # The bundle's `engine` is a per-bundle clone of the shared engine with a
     # schema_translate_map option, so any sessionmaker bound to ``bundle.engine``
-    # — including ones built externally by legacy tests — sends DML to the
-    # per-test schema rather than ``public``.
+    # sends DML to the per-test schema rather than ``public``.
     routed_engine = shared_engine.execution_options(
         schema_translate_map={None: schema}
     )
