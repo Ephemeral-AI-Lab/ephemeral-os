@@ -25,12 +25,14 @@ from sandbox.plugin.runtime import registry as registry_mod
 @pytest.fixture(autouse=True)
 def _isolate_plugin_state() -> Iterator[None]:
     handler_mod._LOADED.clear()
+    handler_mod._LOADED_DIGEST.clear()
     registry_mod._PENDING.clear()
     pre_existing = [
         name for name in sys.modules if name.startswith("plugins.catalog.")
     ]
     yield
     handler_mod._LOADED.clear()
+    handler_mod._LOADED_DIGEST.clear()
     registry_mod._PENDING.clear()
     for name in [
         n for n in sys.modules if n.startswith("plugins.catalog.")
@@ -93,10 +95,42 @@ def test_plugin_ensure_loads_runtime_and_registers_ops() -> None:
 
 def test_plugin_ensure_is_idempotent() -> None:
     _inject_runtime("demo2", ["hover"])
-    first = asyncio.run(handler_mod.plugin_ensure({"plugin": "demo2"}))
-    second = asyncio.run(handler_mod.plugin_ensure({"plugin": "demo2"}))
+    first = asyncio.run(
+        handler_mod.plugin_ensure({"plugin": "demo2", "digest": "a"})
+    )
+    second = asyncio.run(
+        handler_mod.plugin_ensure({"plugin": "demo2", "digest": "a"})
+    )
     assert first["registered_ops"] == second["registered_ops"]
     assert second["already_loaded"] is True
+
+
+def test_plugin_ensure_reloads_when_digest_changes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    imports = [["hover"], ["ping"]]
+
+    def import_runtime(module_name: str) -> types.ModuleType:
+        assert module_name == "plugins.catalog.reloadable.runtime.server"
+        return _inject_runtime("reloadable", imports.pop(0))
+
+    monkeypatch.setattr(handler_mod.importlib, "import_module", import_runtime)
+
+    first = asyncio.run(
+        handler_mod.plugin_ensure({"plugin": "reloadable", "digest": "a"})
+    )
+    second = asyncio.run(
+        handler_mod.plugin_ensure({"plugin": "reloadable", "digest": "b"})
+    )
+
+    assert first["registered_ops"] == ["plugin.reloadable.hover"]
+    assert second["already_loaded"] is False
+    assert second["registered_ops"] == ["plugin.reloadable.ping"]
+
+    from sandbox.runtime.daemon.rpc.dispatcher import OP_TABLE
+
+    assert "plugin.reloadable.hover" not in OP_TABLE
+    assert "plugin.reloadable.ping" in OP_TABLE
 
 
 def test_plugin_ensure_when_no_runtime_module() -> None:

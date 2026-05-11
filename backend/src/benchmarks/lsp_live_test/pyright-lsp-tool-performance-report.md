@@ -1,210 +1,310 @@
-# Pyright LSP Tool Performance Report
+# Pyright LSP Performance Report
 
-Date: 2026-05-10
+Date: 2026-05-12
 
-Sandbox: `956b2dea-e3c9-436e-adbc-906485f34564`
+Sandbox: `0a217165-8c80-46e7-98a1-44e1ba62b9e9`
 
-Scope:
+Runtime under test:
 
-- Runtime under test: `pyright-langserver --stdio`
-- Tool path: `lsp.hover`, `lsp.find_definitions`, `lsp.find_references`,
-  `lsp.diagnostics`, `lsp.query_symbols`
-- Mutation path: public `sandbox.api.write_file` and `sandbox.api.edit_file`
-- Filesystem view: stable sandbox-local symlink to the active layer-stack
-  projection lowerdir
+- LSP server: `pyright-langserver --stdio`
+- Diagnostics mode: Pyright `textDocument/diagnostic` pull response only
+- Plugin path: host tool -> `sandbox.plugin.call_plugin` -> sandbox daemon ->
+  in-sandbox LSP plugin runtime -> Pyright process
+- Workspace view: layer-stack manifest projected into a sandbox-local stable
+  root
+
+This report reused an existing Daytona sandbox. "Sandbox setup speed" below
+means the setup phases needed by the LSP test harness inside that sandbox:
+runtime bundle availability, daemon restart/readiness, and layer-stack workspace
+base rebuild. It does not include fresh Daytona sandbox provisioning.
 
 ## Summary
 
-The LSP tool operations are not inherently slow once Pyright is warm. The
-pre-fix slow case was a manifest-changing call path: each setup write or edit
-published a new layer-stack manifest, the LSP session cache evicted the old
-Pyright process, and the next tool call paid for projection acquisition,
-Pyright spawn/init, document open, and initial analysis.
+The current bottleneck is no longer Pyright diagnostics. Warm end-to-end LSP
+tool calls through the full plugin/daemon path are about `0.42-0.90s`, with the
+common no-edit path clustered around `0.42-0.62s`. The larger values are after
+manifest-changing edits where the stable projection is retargeted and open
+documents are synchronized.
 
-The runtime now keeps one Pyright process per layer-stack root, points Pyright
-at a stable sandbox-local projection root, and retargets that root when the
-active manifest changes. If the refresh path cannot reconcile a manifest
-change, it fails closed by evicting and restarting the session.
+Cold plugin setup from a sandbox with `/tmp/eos-node22` removed took `23.70s`.
+After that, plugin marker-hit setup was `0.004s`. Raw Pyright protocol calls
+inside one already-initialized process are much faster: definition, references,
+symbols, and pull diagnostics were all below `0.03s` in the direct probe. Hover
+was the expensive raw method in that probe at `0.83s`.
 
-In the measured pre-fix complex scenario, calls that reused the same active
-Pyright session were sub-second for definition, references, and symbols. Calls
-that followed a manifest change were around `3-4s` because they included cold
-session startup.
+## Setup Metrics
 
-## Evidence
+Sandbox setup phases on the reused sandbox:
 
-Final live run of all plugin-tool scenarios:
-
-| Scenario | Tool calls | Result |
-| --- | ---: | --- |
-| `hover_returns_signature` | 1 | passed |
-| `find_definitions_resolves_local_def` | 1 | passed |
-| `find_references_returns_call_sites` | 1 | passed |
-| `diagnostics_flags_undefined_name` | 1 | passed |
-| `query_symbols_lists_module_symbols` | 1 | passed |
-| `hover_reflects_edit` | 2 | passed |
-| `complex_all_tools_layerstack_write_edit_cycle` | 9 | passed |
-
-Single-tool scenario timings after Pyright was already installed:
-
-| Scenario | Tool | Tool time |
-| --- | --- | ---: |
-| `hover_returns_signature` | `lsp.hover` | `7.96s` |
-| `find_definitions_resolves_local_def` | `lsp.find_definitions` | `3.09s` |
-| `find_references_returns_call_sites` | `lsp.find_references` | `3.31s` |
-| `diagnostics_flags_undefined_name` | `lsp.diagnostics` | `3.32s` |
-| `query_symbols_lists_module_symbols` | `lsp.query_symbols` | `2.92s` |
-
-Complex all-tools scenario timings:
-
-| Step | Tool | Tool time | Notes |
-| --- | --- | ---: | --- |
-| 1 | `lsp.hover` | `3.59s` | First call after setup writes/new manifest |
-| 2 | `lsp.find_definitions` | `0.69s` | Same Pyright session |
-| 3 | `lsp.find_references` | `0.61s` | Same Pyright session |
-| 4 | `lsp.query_symbols` | `0.53s` | Same Pyright session |
-| 5 | `lsp.diagnostics` | `1.08s` | Same Pyright session |
-| 6 | `lsp.diagnostics` | `3.22s` | After edit/new manifest |
-| 7 | `lsp.hover` | `3.68s` | After edit/new manifest |
-| 8 | `lsp.find_definitions` | `0.57s` | Same Pyright session as step 7 |
-| 9 | `lsp.diagnostics` | `1.01s` | Same Pyright session as step 7 |
-
-Post-cleanup live pytest rerun against the same Daytona sandbox with
-`EOS_LSP_SANDBOX_ID=956b2dea-e3c9-436e-adbc-906485f34564`, after restarting
-the in-sandbox daemon so the patched plugin bundle was loaded. The first hover
-below includes the one intentional cold Pyright spawn after daemon restart:
-
-| Scenario | Tool | Pre-fix tool time | Post-fix tool time | Change |
-| --- | --- | ---: | ---: | ---: |
-| `hover_returns_signature` | `lsp.hover` | `7.96s` | `7.35s` | `-8%` |
-| `find_definitions_resolves_local_def` | `lsp.find_definitions` | `3.09s` | `0.59s` | `-81%` |
-| `find_references_returns_call_sites` | `lsp.find_references` | `3.31s` | `0.79s` | `-76%` |
-| `diagnostics_flags_undefined_name` | `lsp.diagnostics` | `3.32s` | `0.67s` | `-80%` |
-| `query_symbols_lists_module_symbols` | `lsp.query_symbols` | `2.92s` | `0.69s` | `-76%` |
-
-Post-cleanup complex scenario timings:
-
-| Step | Tool | Pre-fix tool time | Post-fix tool time | Notes |
-| --- | --- | ---: | ---: | --- |
-| 1 | `lsp.hover` | `3.59s` | `0.79s` | First call after setup writes; no Pyright restart |
-| 2 | `lsp.find_definitions` | `0.69s` | `1.04s` | Same Pyright session |
-| 3 | `lsp.find_references` | `0.61s` | `0.63s` | Same Pyright session |
-| 4 | `lsp.query_symbols` | `0.53s` | `0.59s` | Same Pyright session |
-| 5 | `lsp.diagnostics` | `1.08s` | `0.68s` | Same Pyright session |
-| 6 | `lsp.diagnostics` | `3.22s` | `0.93s` | After edit/new manifest; session refreshed |
-| 7 | `lsp.hover` | `3.68s` | `0.86s` | After edit/new manifest; session refreshed |
-| 8 | `lsp.find_definitions` | `0.57s` | `0.62s` | Same Pyright session as step 7 |
-| 9 | `lsp.diagnostics` | `1.01s` | `2.72s` | No diagnostics response arrived; bounded wait returned empty |
-
-The live pytest run passed all seven scenarios in `38.85s`. The meaningful
-manifest-change calls dropped from `3-4s` to roughly `0.6-1.0s`. The remaining
-tail is no-diagnostics polling, not process restart.
-
-Direct Pyright/layer-stack benchmark evidence:
-
-| Component | Observed cost |
+| Phase | Wall time |
 | --- | ---: |
-| Layer-stack snapshot materialization | about `27-32ms` per checkpoint |
-| Public write/edit internal API time | mostly about `0.16-0.19s` in a deep stack |
-| Auto-squash contribution during deep-stack writes | about `0.13-0.15s` |
-| Pyright initialize | about `0.46-0.55s` |
-| Hover after init/open | about `0.90-1.00s` |
-| Definition after warm session | about `4-38ms` in direct probe, `0.57-0.69s` through plugin tool path |
-| Fixed diagnostics wait in direct probe | `3.0s` |
+| Runtime bundle upload, warm marker path | `1.012s` |
+| Daemon restart to `api.runtime.ready` | `2.343s` |
+| Workspace base rebuild, host-observed | `1.350s` |
+| Workspace base rebuild, daemon internal | `0.935s` |
 
-## Why Single-Tool Scenarios Look Slow
+Workspace base rebuild input size:
 
-The measured single-tool scenarios were not measuring a warm LSP operation.
-Each scenario first wrote setup files into `/testbed`. That write published a
-new layer-stack manifest. Before this implementation, the session manager keyed
-Pyright sessions by active manifest, so the next tool call had to:
+| Metric | Value |
+| --- | ---: |
+| Inventory bytes | `135,088,891` |
+| Inventory files | `520` |
+| Inventory dirs | `55` |
+| Inventory symlinks | `0` |
+| Collect | `0.268s` |
+| Rescan | `0.264s` |
+| Write layer | `0.318s` |
 
-1. Acquire a projection for the new manifest.
-2. Start `pyright-langserver --stdio`.
-3. Send `initialize` and `initialized`.
-4. Open the requested document.
-5. Wait for Pyright to parse/analyze enough state.
-6. Execute the requested LSP operation.
+Plugin setup phases:
 
-That startup path explains the `~3s` calls after setup. The tool operation
-itself is much faster once the Pyright process is already running. The current
-implementation removes that startup from ordinary manifest changes by
-refreshing Pyright's stable root and notifying opened documents.
+| Phase | Wall time |
+| --- | ---: |
+| Cold `lsp` plugin install with `/tmp/eos-node22` removed | `23.701s` |
+| `api.plugin.ensure` runtime import/register | `0.430s` |
+| Marker-hit `ensure_installed` | `0.004s` |
 
-## Layer-Stack Attribution
+Cold plugin setup includes bundle upload/extract, `setup.sh`, Node 22 install,
+and npm Pyright install. The measured plugin digest was
+`1a670d29284714e3b511879798096cfe22cf69052facb6822032ebd8d4606a92`.
 
-The layer stack is not the main source of the LSP tool latency in this run.
-Projection materialization was tens of milliseconds in the direct benchmark.
-The measurable write/edit internal cost rose when auto-squash triggered in a
-deep stack, but that was still roughly `0.13-0.15s`, not the `3s` LSP tool
-latency.
+## Raw Pyright LSP Speed
 
-The dominant pre-fix LSP latency source was lifecycle churn: every
-manifest-changing operation forced a new Pyright process and fresh analysis.
-The implementation replaces that with stable-root retargeting plus explicit
-session eviction only when refresh fails.
+Direct in-sandbox Pyright protocol probe, one Pyright process, root
+`/testbed/eos_lsp_perf_direct`:
 
-## Current Runtime Behavior
+| Operation | Time |
+| --- | ---: |
+| `initialize` | `0.941s` |
+| `didOpen` for 3 files | `0.000s` |
+| `textDocument/hover` | `0.830s` |
+| `textDocument/definition` | `0.025s` |
+| `textDocument/references` | `0.006s` |
+| `textDocument/documentSymbol` | `0.006s` |
+| `workspace/symbol` | `0.006s` |
+| `textDocument/diagnostic` | `0.006s` |
+| `shutdown` | `0.007s` |
 
-The LSP plugin uses `pyright-langserver --stdio`.
+Correctness signals from the same probe:
 
-Relevant implementation points:
+| Result | Count |
+| --- | ---: |
+| References | `4` |
+| Document symbols | `5` |
+| Workspace symbols | `1` |
+| Diagnostics | `1` |
 
-- `backend/src/plugins/catalog/lsp/runtime/pyright_session.py` owns the Pyright
-  subprocess, stable projection root, manifest refresh notification, and
-  fail-closed eviction behavior.
-- `backend/src/plugins/catalog/lsp/runtime/session_manager.py` keys sessions by
-  layer-stack root and refreshes the existing session when the active manifest
-  changes.
-- `backend/src/plugins/catalog/lsp/runtime/paths.py` maps returned locations
-  through the stable projection root and back to repo paths.
-- `backend/src/plugins/catalog/lsp/setup.sh` installs Node 22 and npm Pyright.
-- `backend/src/benchmarks/lsp_live_test/scenarios.py` includes the complex
-  all-tools scenario.
+The diagnostic was `"missing_value" is not defined` with code
+`reportUndefinedVariable`.
 
-Pyright-specific protocol fixes were required:
+## End-to-End LSP Tool Speed
 
-- The client must advertise `workspace.workspaceFolders` when sending
-  `workspaceFolders`; otherwise Pyright can hang during initialize.
-- The JSON-RPC client must answer server-to-client requests such as
-  `workspace/configuration`.
-- LSP framing must be byte-based because diagnostics can contain non-ASCII
-  text.
+Verification command:
 
-## Recommendation
+```sh
+EOS_LSP_SANDBOX_ID=0a217165-8c80-46e7-98a1-44e1ba62b9e9 \
+  uv run pytest backend/src/benchmarks/lsp_live_test/tests/test_lsp_scenarios.py -q -s
+```
 
-The main optimization target was to stop restarting Pyright on every manifest
-change.
+Result: `7 passed, 1 warning in 31.78s`.
 
-Implemented architecture:
+Per-scenario timings from that pytest run:
 
-1. Keep a sandbox-local Pyright sidecar alive for the workspace.
-2. Retarget a stable workspace symlink to the latest layer-stack projection
-   after public write/edit operations.
-3. Apply file updates via `textDocument/didChange` or close/reopen documents
-   after manifest refresh.
-4. Use layer-stack manifests for correctness and recovery, but avoid tying every
-   semantic query to a brand-new Pyright process.
-5. Keep fail-closed behavior: if the sidecar cannot reconcile a change, evict
-   and restart explicitly rather than silently reading stale files.
+| Scenario | Warmup | Tool calls |
+| --- | ---: | --- |
+| `hover_returns_signature` | `2.38s` | `lsp.hover=0.624s` |
+| `find_definitions_resolves_local_def` | `0.99s` | `lsp.find_definitions=0.610s` |
+| `find_references_returns_call_sites` | `0.91s` | `lsp.find_references=0.519s` |
+| `diagnostics_flags_undefined_name` | `0.92s` | `lsp.diagnostics=0.543s` |
+| `query_symbols_lists_module_symbols` | `0.98s` | `lsp.query_symbols=0.568s` |
+| `hover_reflects_edit` | `0.94s` | `lsp.hover=0.580s`, `lsp.hover=1.076s` |
+| `complex_all_tools_layerstack_write_edit_cycle` | `0.62s` | see below |
 
-Expected impact:
+Complex all-tools scenario:
 
-- Definition/references/symbol calls should stay in the sub-second range for
-  repeated operations.
-- Hover should avoid repeated `3-4s` cold-start cost after edits.
-- Diagnostics latency should be bounded by Pyright analysis, not process
-  startup plus projection setup.
+| Step | Tool | Time |
+| ---: | --- | ---: |
+| 1 | `lsp.hover` | `0.598s` |
+| 2 | `lsp.find_definitions` | `0.492s` |
+| 3 | `lsp.find_references` | `0.449s` |
+| 4 | `lsp.query_symbols` | `0.430s` |
+| 5 | `lsp.diagnostics` | `0.429s` |
+| 6 | `lsp.diagnostics` after edit | `0.805s` |
+| 7 | `lsp.hover` after edit | `0.898s` |
+| 8 | `lsp.find_definitions` after edit | `0.430s` |
+| 9 | `lsp.diagnostics` final clean file | `0.423s` |
+
+Tool summary from the same pytest run:
+
+| Tool | Count | Min | Median | Mean | Max |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `lsp.hover` | 5 | `0.580s` | `0.624s` | `0.755s` | `1.076s` |
+| `lsp.find_definitions` | 3 | `0.430s` | `0.492s` | `0.510s` | `0.610s` |
+| `lsp.find_references` | 2 | `0.449s` | `0.484s` | `0.484s` | `0.519s` |
+| `lsp.diagnostics` | 4 | `0.423s` | `0.486s` | `0.550s` | `0.805s` |
+| `lsp.query_symbols` | 2 | `0.430s` | `0.499s` | `0.499s` | `0.568s` |
+
+## Live E2E Scenario Verification
+
+Exact scenario file:
+`backend/src/live_e2e/scenarios/sandbox/complex_project_build_shell_edit_lsp.py`.
+
+Verification command:
+
+```sh
+EPHEMERALOS_RUN_HEAVY_LIVE_E2E=1 \
+  uv run pytest backend/src/live_e2e/tests/sweevo/test_complex_project_build_shell_edit_lsp.py::test_complex_project_build_shell_edit_lsp_full -q -s
+```
+
+Result: `1 passed, 4 warnings in 1482.44s (0:24:42)`.
+
+Run artifact:
+`.sweevo_runs/scenario_logs/sandbox.complex_project_build_shell_edit_lsp/20260511T183612Z_cd4b04785a01`.
+
+Run metadata:
+
+| Metric | Value |
+| --- | ---: |
+| Sandbox id | `c8cb8aa4-b5fb-4ea4-a81c-291d52734079` |
+| TaskCenter run id | `352b545a-7a5a-40eb-9cd0-ecc6f14ce9f0` |
+| `run.json` duration | `1450.46s` |
+| In-sandbox probe duration | `1448.66s` |
+| Pytest wall time | `1482.44s` |
+
+In-sandbox `summary.json` correctness:
+
+| Metric | Value |
+| --- | ---: |
+| Logical edits | `653` |
+| `edit_file` routed edits | `435` |
+| Shell routed edits | `218` |
+| Shell edit ratio | `0.3338` |
+| Shell edit errors | `0` |
+| LSP semantic correctness checks | `336` |
+| LSP failed checks | `0` |
+| Diagnostic probe checks | `10` |
+| Diagnostic error detected and repaired | `true` |
+| In-sandbox pytest | `115 passed, 2 warnings in 0.17s` |
+
+Semantic LSP correctness by tool:
+
+| Tool | Passed checks |
+| --- | ---: |
+| `lsp.diagnostics` | `77` |
+| `lsp.find_definitions` | `64` |
+| `lsp.find_references` | `67` |
+| `lsp.hover` | `64` |
+| `lsp.query_symbols` | `64` |
+
+Host-observed tool-call timing from `.sweevo_runs`:
+
+| Tool | Count | Errors | P50 | P95 |
+| --- | ---: | ---: | ---: | ---: |
+| `lsp.diagnostics` | `85` | `0` | `0.430s` | `1.047s` |
+| `lsp.find_definitions` | `64` | `0` | `0.427s` | `0.445s` |
+| `lsp.find_references` | `67` | `0` | `0.451s` | `0.564s` |
+| `lsp.hover` | `64` | `0` | `1.133s` | `1.214s` |
+| `lsp.query_symbols` | `64` | `0` | `0.469s` | `0.504s` |
+| `edit_file` | `436` | `1` | `0.436s` | `0.458s` |
+| `read_file` | `83` | `0` | `0.427s` | `0.438s` |
+| `write_file` | `43` | `0` | `0.433s` | `0.448s` |
+| `shell` | `256` | `2` | `1.063s` | `1.103s` |
+
+The recorded `edit_file` and shell errors are expected scenario probes, not
+unhandled failures: the scenario intentionally exercises overlap/conflict and
+diagnostic repair paths, and the test asserts `failed_checks == 0`,
+`shell_edit.errors == 0`, and no unexpected conflicts.
+
+In-sandbox performance attribution from `perf.json`:
+
+| Layer | Metric | Value |
+| --- | --- | ---: |
+| Layer stack | materialize count | `254` |
+| Layer stack | materialize p95 | `0.0062s` |
+| Layer stack | squash p95 | `0.0042s` |
+| Overlay | capture p95 | `0.00048s` |
+| OCC | commit p95 | `0.00143s` |
+| OCC | total commit time | `0.831s` |
+| Shell edit | p50 | `1.067s` |
+| Shell edit | p95 | `1.107s` |
+
+## Direct Layer-Stack Probe
+
+Verification command:
+
+```sh
+EOS_LSP_SANDBOX_ID=0a217165-8c80-46e7-98a1-44e1ba62b9e9 \
+  uv run pytest backend/src/benchmarks/lsp_live_test/tests/test_pyright_layerstack.py -q -s
+```
+
+Result: `1 passed, 1 warning in 22.75s`.
+
+Top-level metrics:
+
+| Metric | Value |
+| --- | ---: |
+| Scenario wall time | `21.41s` |
+| Warm `ensure_node_pyright` | `2.00s` |
+| Public write/edit host wall | `0.427-0.484s` |
+| Public write/edit daemon internal | `0.005-0.008s` |
+| Snapshot materialization | `0.022-0.025s` |
+| Direct Pyright LSP probe per stage | `1.72-1.85s` |
+
+The host-observed public write/edit time is dominated by the provider exec
+round trip. The daemon-side mutation work itself is single-digit milliseconds
+for these small files.
+
+## Interpretation
+
+Current speed split:
+
+| Layer | Current behavior |
+| --- | --- |
+| Sandbox setup | `1-2s` for reused-sandbox runtime/base phases, excluding fresh Daytona provisioning |
+| Cold plugin setup | `23.70s` when Node/Pyright are absent |
+| Warm plugin setup | `0.004s` marker-hit path |
+| Raw Pyright diagnostics | `0.006s` in direct pull probe |
+| End-to-end `lsp.diagnostics` | `0.423-0.805s` through tool/plugin/daemon/projection path |
+| End-to-end all LSP tools | Mostly `0.42-0.62s`, edit-refresh tail up to `1.08s` |
+
+The main remaining cost in ordinary tool calls is the host-to-sandbox
+provider/daemon/plugin envelope and projection/document synchronization. Raw
+Pyright pull diagnostics are not the bottleneck.
 
 ## Verification Commands
 
 ```sh
-uv run ruff check backend/src/plugins/catalog/lsp backend/src/benchmarks/lsp_live_test backend/tests/unit_test/test_plugins/test_lsp_catalog.py
-uv run python -m py_compile backend/src/plugins/catalog/lsp/runtime/pyright_session.py backend/src/plugins/catalog/lsp/runtime/session_manager.py backend/src/plugins/catalog/lsp/runtime/lsp_jsonrpc.py backend/src/benchmarks/lsp_live_test/runner.py backend/src/benchmarks/lsp_live_test/scenarios.py backend/src/benchmarks/lsp_live_test/tests/test_lsp_scenarios.py
-uv run pytest -q backend/tests/unit_test/test_plugins/test_lsp_catalog.py backend/tests/unit_test/test_plugins/test_lsp_runtime_paths.py backend/tests/unit_test/test_plugins/test_lsp_session_refresh.py
-uv run pytest --collect-only -q backend/src/benchmarks/lsp_live_test/tests/test_lsp_scenarios.py backend/src/benchmarks/lsp_live_test/tests/test_pyright_layerstack.py
-```
+uv run ruff check \
+  backend/src/benchmarks/lsp_live_test/pyright_layerstack.py \
+  backend/src/benchmarks/lsp_live_test/runner.py \
+  backend/src/benchmarks/lsp_live_test/tests/test_lsp_scenarios.py \
+  backend/src/plugins/catalog/lsp/runtime/pyright_session.py \
+  backend/src/sandbox/plugin/handler.py \
+  backend/src/sandbox/plugin/install.py \
+  backend/src/sandbox/plugin/runtime/registry.py \
+  backend/src/sandbox/plugin/session.py \
+  backend/tests/unit_test/test_plugins/test_lsp_catalog.py \
+  backend/tests/unit_test/test_plugins/test_lsp_session_refresh.py \
+  backend/tests/unit_test/test_sandbox/test_plugin_handler.py \
+  backend/tests/unit_test/test_sandbox/test_plugin_install.py \
+  backend/tests/unit_test/test_sandbox/test_plugin_session.py \
+  backend/tests/unit_test/test_benchmarks/test_lsp_runner_workspace_base.py
 
-Live verification used a direct runner invocation against the existing Daytona
-sandbox `956b2dea-e3c9-436e-adbc-906485f34564` to avoid measuring fresh sandbox
-provisioning time as LSP latency.
+bash -n backend/src/plugins/catalog/lsp/setup.sh
+
+uv run pytest \
+  backend/tests/unit_test/test_plugins/test_lsp_catalog.py \
+  backend/tests/unit_test/test_plugins/test_lsp_session_refresh.py \
+  backend/tests/unit_test/test_sandbox/test_plugin_install.py \
+  backend/tests/unit_test/test_sandbox/test_plugin_handler.py \
+  backend/tests/unit_test/test_sandbox/test_plugin_session.py \
+  backend/tests/unit_test/test_benchmarks/test_lsp_runner_workspace_base.py -q
+
+EOS_LSP_SANDBOX_ID=0a217165-8c80-46e7-98a1-44e1ba62b9e9 \
+  uv run pytest backend/src/benchmarks/lsp_live_test/tests/test_lsp_scenarios.py -q -s
+
+EOS_LSP_SANDBOX_ID=0a217165-8c80-46e7-98a1-44e1ba62b9e9 \
+  uv run pytest backend/src/benchmarks/lsp_live_test/tests/test_pyright_layerstack.py -q -s
+
+EPHEMERALOS_RUN_HEAVY_LIVE_E2E=1 \
+  uv run pytest backend/src/live_e2e/tests/sweevo/test_complex_project_build_shell_edit_lsp.py::test_complex_project_build_shell_edit_lsp_full -q -s
+```

@@ -85,6 +85,7 @@ def test_call_plugin_happy_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
     assert install_calls == ["sb-1"]
     op_names = [op for _sb, op, _args in dispatch_calls]
     assert op_names == ["api.plugin.ensure", "plugin.demo.run"]
+    assert dispatch_calls[0][2] == {"plugin": "demo", "digest": "abc123"}
 
 
 def test_call_plugin_install_failure_surfaces_error(
@@ -152,6 +153,48 @@ def test_call_plugin_dispatch_error_surfaces(
     assert result.is_error
     assert "boom in plugin op" in result.output
     assert result.metadata["step"] == "dispatch"
+
+
+def test_call_plugin_reensures_runtime_when_digest_changes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manifest = _seed_demo_manifest(tmp_path)
+    monkeypatch.setattr(
+        session_mod, "_manifest_cache", {"demo": manifest}, raising=False
+    )
+    digests = iter(["digest-a", "digest-b"])
+    ensure_payloads: list[dict[str, Any]] = []
+
+    async def changing_install(sandbox_id: str, m: PluginManifest) -> str:
+        del sandbox_id, m
+        return next(digests)
+
+    async def fake_dispatch(
+        sandbox_id: str, op: str, args: dict[str, Any], **kwargs: Any
+    ) -> dict[str, Any]:
+        del sandbox_id, kwargs
+        if op == "api.plugin.ensure":
+            ensure_payloads.append(dict(args))
+        return {"success": True}
+
+    for _ in range(2):
+        result = asyncio.run(
+            call_plugin(
+                _make_context(),
+                plugin="demo",
+                op="run",
+                payload={},
+                install_runner=changing_install,
+                daemon_dispatcher=fake_dispatch,
+            )
+        )
+        assert not result.is_error
+
+    assert ensure_payloads == [
+        {"plugin": "demo", "digest": "digest-a"},
+        {"plugin": "demo", "digest": "digest-b"},
+    ]
 
 
 def test_call_plugin_missing_sandbox_id_returns_error() -> None:

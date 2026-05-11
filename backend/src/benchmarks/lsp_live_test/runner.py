@@ -19,6 +19,7 @@ from sandbox.api import (
     SearchReplaceEdit,
     WriteFileRequest,
 )
+from sandbox.host.daemon_client import DEFAULT_LAYER_STACK_ROOT, call_daemon_api
 from tools.core.context import ToolExecutionContextService
 from tools.core.results import ToolResult
 from tools.factory import ToolFactoryContext, create_tool
@@ -38,6 +39,7 @@ class LspScenarioReport:
     name: str
     passed: bool
     duration_s: float
+    warmup_duration_s: float = 0.0
     tool_durations_s: list[tuple[str, float]] = field(default_factory=list)
     failure: str | None = None
 
@@ -70,8 +72,11 @@ async def run_lsp_scenario(
         task_id="lsp-live-test",
     )
     tool_durations: list[tuple[str, float]] = []
+    warmup_duration_s = 0.0
     try:
+        await _ensure_workspace_base(sandbox_id, repo_root)
         await _seed_files(scenario, sandbox_id, repo_root, caller)
+        warmup_duration_s = await _prewarm_lsp_session(scenario, ctx)
         for index, call in enumerate(scenario.tool_calls):
             await _maybe_apply_edits(
                 scenario, before_index=index, sandbox_id=sandbox_id,
@@ -87,6 +92,7 @@ async def run_lsp_scenario(
             name=scenario.name,
             passed=False,
             duration_s=time.monotonic() - start,
+            warmup_duration_s=warmup_duration_s,
             tool_durations_s=tool_durations,
             failure=str(exc),
         )
@@ -95,6 +101,7 @@ async def run_lsp_scenario(
             name=scenario.name,
             passed=False,
             duration_s=time.monotonic() - start,
+            warmup_duration_s=warmup_duration_s,
             tool_durations_s=tool_durations,
             failure=f"unexpected error: {type(exc).__name__}: {exc}",
         )
@@ -102,8 +109,60 @@ async def run_lsp_scenario(
         name=scenario.name,
         passed=True,
         duration_s=time.monotonic() - start,
+        warmup_duration_s=warmup_duration_s,
         tool_durations_s=tool_durations,
     )
+
+
+async def _ensure_workspace_base(sandbox_id: str, repo_root: str) -> None:
+    try:
+        response = await call_daemon_api(
+            sandbox_id,
+            "api.ensure_workspace_base",
+            {"workspace_root": repo_root},
+            timeout=120,
+            layer_stack_root=DEFAULT_LAYER_STACK_ROOT,
+        )
+    except Exception as exc:
+        if not _requires_workspace_rebuild(exc):
+            raise
+        response = await _rebuild_workspace_base(sandbox_id, repo_root)
+
+    binding = response.get("binding")
+    if isinstance(binding, dict) and binding.get("workspace_root") == repo_root:
+        return
+
+    response = await _rebuild_workspace_base(sandbox_id, repo_root)
+    binding = response.get("binding")
+    if not isinstance(binding, dict) or binding.get("workspace_root") != repo_root:
+        raise ScenarioFailure(f"workspace base not bound to {repo_root}: {response}")
+
+
+async def _rebuild_workspace_base(sandbox_id: str, repo_root: str) -> dict[str, object]:
+    return await call_daemon_api(
+        sandbox_id,
+        "api.build_workspace_base",
+        {"workspace_root": repo_root, "reset": True},
+        timeout=240,
+        layer_stack_root=DEFAULT_LAYER_STACK_ROOT,
+    )
+
+
+def _requires_workspace_rebuild(exc: Exception) -> bool:
+    kind = str(getattr(exc, "kind", "") or type(exc).__name__)
+    message = str(exc)
+    rebuildable = any(
+        fragment in message
+        for fragment in (
+            "workspace binding is missing",
+            "active manifest is missing",
+            "active manifest is empty",
+            "workspace binding points at a different workspace",
+        )
+    )
+    if rebuildable:
+        return True
+    return "WorkspaceBindingError" in kind or "WorkspaceBindingError" in message
 
 
 async def _seed_files(
@@ -120,6 +179,33 @@ async def _seed_files(
         )
         if not result.success:
             raise ScenarioFailure(f"setup write failed for {relative_path}: {result}")
+
+
+async def _prewarm_lsp_session(
+    scenario: LspScenario,
+    ctx: ToolExecutionContextService,
+) -> float:
+    warmup_file = _warmup_file_for(scenario)
+    if warmup_file is None:
+        return 0.0
+    started = time.monotonic()
+    result = await _execute_tool_call(
+        LspToolCall(
+            tool_name="lsp.diagnostics",
+            args={"file_path": warmup_file},
+        ),
+        ctx,
+    )
+    if result.is_error:
+        raise ScenarioFailure(f"lsp warmup failed: {result.output}")
+    return time.monotonic() - started
+
+
+def _warmup_file_for(scenario: LspScenario) -> str | None:
+    for relative_path in scenario.setup_files:
+        if relative_path.endswith(".py"):
+            return relative_path
+    return None
 
 
 async def _maybe_apply_edits(

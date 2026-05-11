@@ -770,6 +770,14 @@ def _record_notification(message):
     diagnostics[_rel_from_uri(uri)] = params.get("diagnostics") or []
 
 
+def _diagnostic_items(response):
+    result = response.get("result") if isinstance(response, dict) else None
+    if not isinstance(result, dict):
+        return []
+    items = result.get("items")
+    return items if isinstance(items, list) else []
+
+
 def _server_request_result(message):
     method = message.get("method")
     params = message.get("params") or {}
@@ -846,6 +854,10 @@ init = _request(
         "capabilities": {
             "workspace": {"workspaceFolders": True},
             "textDocument": {
+                "diagnostic": {
+                    "dynamicRegistration": False,
+                    "relatedDocumentSupport": True,
+                },
                 "definition": {"linkSupport": True},
                 "hover": {"contentFormat": ["markdown", "plaintext"]},
             }
@@ -892,14 +904,16 @@ for query in queries:
     )
 
 diagnostics_started = time.time()
-deadline = time.time() + 3.0
-while time.time() < deadline:
-    try:
-        message = _read_msg(max(0.1, deadline - time.time()))
-    except TimeoutError:
-        break
-    _handle_non_target_message(message)
-phase_timings["diagnostics_wait.s"] = time.time() - diagnostics_started
+for rel_path in open_files:
+    full_path = Path(root) / rel_path
+    diagnostics[rel_path] = _diagnostic_items(
+        _request(
+            "textDocument/diagnostic",
+            {"textDocument": {"uri": "file://" + quote(str(full_path))}},
+            timeout=60.0,
+        )
+    )
+phase_timings["diagnostics_pull.s"] = time.time() - diagnostics_started
 
 shutdown = {"error": None}
 try:

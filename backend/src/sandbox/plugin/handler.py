@@ -13,7 +13,9 @@ is a no-op.
 from __future__ import annotations
 
 import importlib
+import inspect
 import logging
+import sys
 from typing import Any
 
 from sandbox.models import SandboxCaller
@@ -22,6 +24,7 @@ from sandbox.plugin.runtime.context import PluginOpContext
 from sandbox.plugin.runtime.registry import (
     flush_plugin_registrations,
     pending_plugin_registrations,
+    clear_plugin_registrations,
 )
 
 __all__ = [
@@ -41,6 +44,7 @@ class PluginEnsureError(RuntimeError):
 
 # Process-local registry of loaded plugins → list of registered op names.
 _LOADED: dict[str, list[str]] = {}
+_LOADED_DIGEST: dict[str, str] = {}
 # Per-layer-stack-root WorkspaceProjection cache so plugin sessions reuse
 # the same projection across calls.
 _PROJECTIONS: dict[str, WorkspaceProjection] = {}
@@ -50,15 +54,22 @@ async def plugin_ensure(args: dict[str, Any]) -> dict[str, Any]:
     plugin_name = str(args.get("plugin") or "").strip()
     if not plugin_name:
         raise PluginEnsureError("api.plugin.ensure requires plugin name")
+    digest = str(args.get("digest") or "").strip()
 
-    if plugin_name in _LOADED:
+    if (
+        plugin_name in _LOADED
+        and (not digest or _LOADED_DIGEST.get(plugin_name) == digest)
+    ):
         return {
             "success": True,
             "plugin": plugin_name,
+            "digest": _LOADED_DIGEST.get(plugin_name, ""),
             "registered_ops": list(_LOADED[plugin_name]),
             "runtime_loaded": True,
             "already_loaded": True,
         }
+    if plugin_name in _LOADED:
+        await _unload_plugin_runtime(plugin_name)
 
     runtime_module = f"plugins.catalog.{plugin_name}.runtime.server"
     runtime_loaded = False
@@ -81,6 +92,7 @@ async def plugin_ensure(args: dict[str, Any]) -> dict[str, Any]:
         context_factory=_plugin_op_context_factory,
     )
     _LOADED[plugin_name] = registered_ops
+    _LOADED_DIGEST[plugin_name] = digest
     if not registered_ops and not runtime_loaded:
         # Stateless plugin with no runtime — fine, idempotent.
         logger.debug(
@@ -89,6 +101,7 @@ async def plugin_ensure(args: dict[str, Any]) -> dict[str, Any]:
     return {
         "success": True,
         "plugin": plugin_name,
+        "digest": digest,
         "registered_ops": list(registered_ops),
         "runtime_loaded": runtime_loaded,
         "already_loaded": False,
@@ -116,6 +129,36 @@ async def plugin_status(args: dict[str, Any]) -> dict[str, Any]:
 def loaded_plugins_snapshot() -> dict[str, list[str]]:
     """Read-only view of the in-process loaded-plugin map (for tests)."""
     return {name: list(ops) for name, ops in _LOADED.items()}
+
+
+async def _unload_plugin_runtime(plugin_name: str) -> None:
+    await _evict_plugin_sessions(plugin_name)
+    from sandbox.runtime.daemon.rpc.dispatcher import OP_TABLE
+
+    for op in _LOADED.pop(plugin_name, []):
+        OP_TABLE.pop(op, None)
+    _LOADED_DIGEST.pop(plugin_name, None)
+    clear_plugin_registrations(plugin_name)
+    prefix = f"plugins.catalog.{plugin_name}"
+    for module_name in [
+        name
+        for name in sys.modules
+        if name == prefix or name.startswith(f"{prefix}.")
+    ]:
+        sys.modules.pop(module_name, None)
+    importlib.invalidate_caches()
+
+
+async def _evict_plugin_sessions(plugin_name: str) -> None:
+    module = sys.modules.get(
+        f"plugins.catalog.{plugin_name}.runtime.session_manager"
+    )
+    evict_all = getattr(module, "evict_all", None)
+    if not callable(evict_all):
+        return
+    result = evict_all()
+    if inspect.isawaitable(result):
+        await result
 
 
 def _import_dispatcher_register_op() -> Any:

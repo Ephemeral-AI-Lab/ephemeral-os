@@ -70,6 +70,7 @@ async def test_lsp_scenario_runs_end_to_end(
     print(
         f"\n[{scenario.name}] passed={report.passed} "
         f"duration={report.duration_s:.2f}s "
+        f"warmup={report.warmup_duration_s:.2f}s "
         f"tool_durations={report.tool_durations_s}"
     )
     assert report.passed, f"scenario {scenario.name} failed: {report.failure}"

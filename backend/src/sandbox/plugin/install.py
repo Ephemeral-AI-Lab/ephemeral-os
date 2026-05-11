@@ -19,9 +19,7 @@ import gzip
 import hashlib
 import io
 import logging
-import os
 import shlex
-import subprocess
 import tarfile
 from pathlib import Path
 from typing import Any, Protocol
@@ -50,16 +48,10 @@ logger = logging.getLogger(__name__)
 PLUGIN_BUNDLE_REMOTE_ROOT = f"{BUNDLE_REMOTE_DIR}/plugins/catalog"
 
 _CHUNK_SIZE = 32 * 1024
-# Binary chunks are base64-encoded one at a time. Keep encoded commands below
-# common argv limits while avoiding thousands of provider exec calls for large
-# LSP runtime archives.
-_BINARY_UPLOAD_CHUNK_SIZE = 48 * 1024
-# 600s headroom for plugin setup scripts that pip-install Python deps over
-# the network. Pure-Python servers like pylsp install in ~30-60s; this
-# leaves slack for slow networks but stays within Daytona's exec timeout.
+# 600s headroom for plugin setup scripts that download runtime binaries or
+# install small dependencies over the network while staying inside Daytona's
+# exec timeout.
 _DEFAULT_SETUP_TIMEOUT = 600
-_LSP_NODE_VERSION = "22.13.1"
-_LSP_PYRIGHT_VERSION = "1.1.409"
 
 
 class PluginInstallError(RuntimeError):
@@ -248,19 +240,8 @@ async def _upload_and_run_setup(
     _check(extract, "plugin install: bundle extract failed")
 
     if manifest.setup is not None:
-        setup_env = await _upload_setup_assets(
-            exec_fn,
-            sandbox_id=sandbox_id,
-            manifest=manifest,
-            install_dir=install_dir,
-        )
-        setup_exports = " ".join(
-            f"export {name}={shlex.quote(value)} &&"
-            for name, value in setup_env.items()
-        )
         setup_cmd = (
             f"export EOS_PLUGIN_DIR={shlex.quote(install_dir)} && "
-            f"{setup_exports} "
             f"chmod +x {shlex.quote(install_dir)}/setup.sh && "
             f"{shlex.quote(install_dir)}/setup.sh"
         )
@@ -288,278 +269,6 @@ async def _upload_and_run_setup(
         digest[:8],
         sandbox_id,
     )
-
-
-async def _upload_setup_assets(
-    exec_fn: _RawExecCallable,
-    *,
-    sandbox_id: str,
-    manifest: PluginManifest,
-    install_dir: str,
-) -> dict[str, str]:
-    if manifest.name != "lsp":
-        return {}
-    env: dict[str, str] = {}
-    if os.getenv("EOS_LSP_SKIP_HOST_NODE_UPLOAD") == "1":
-        env.update(_lsp_sandbox_download_env())
-    else:
-        try:
-            remote_archive = await _upload_lsp_node_archive(
-                exec_fn,
-                sandbox_id=sandbox_id,
-                install_dir=install_dir,
-            )
-        except PluginInstallError as exc:
-            logger.warning(
-                "plugin install: lsp node archive unavailable; "
-                "setup will download Node in sandbox: %s",
-                exc,
-            )
-            env.update(_lsp_sandbox_download_env())
-        else:
-            env["EOS_NODE_ARCHIVE"] = remote_archive
-
-    try:
-        remote_package = await _upload_lsp_pyright_package(
-            exec_fn,
-            sandbox_id=sandbox_id,
-            install_dir=install_dir,
-        )
-    except PluginInstallError as exc:
-        logger.warning(
-            "plugin install: pyright package unavailable; "
-            "setup will download Pyright in sandbox: %s",
-            exc,
-        )
-        env["EOS_LSP_ALLOW_DOWNLOAD"] = "1"
-    else:
-        env["EOS_PYRIGHT_PACKAGE"] = remote_package
-    return env
-
-
-def _lsp_sandbox_download_env() -> dict[str, str]:
-    env = {"EOS_LSP_ALLOW_DOWNLOAD": "1"}
-    download_urls = os.getenv("EOS_NODE_DOWNLOAD_URLS")
-    if download_urls:
-        env["EOS_NODE_DOWNLOAD_URLS"] = download_urls
-    return env
-
-
-async def _upload_lsp_node_archive(
-    exec_fn: _RawExecCallable,
-    *,
-    sandbox_id: str,
-    install_dir: str,
-) -> str:
-    arch = await _sandbox_node_arch(exec_fn, sandbox_id)
-    archive = _ensure_lsp_node_archive(arch)
-    remote_dir = f"{install_dir}/vendor/node"
-    remote_archive = f"{remote_dir}/{archive.name}"
-    await _upload_file(
-        exec_fn,
-        sandbox_id=sandbox_id,
-        local_path=archive,
-        remote_path=remote_archive,
-        timeout=60,
-    )
-    return remote_archive
-
-
-async def _upload_lsp_pyright_package(
-    exec_fn: _RawExecCallable,
-    *,
-    sandbox_id: str,
-    install_dir: str,
-) -> str:
-    package = _ensure_lsp_pyright_package()
-    remote_dir = f"{install_dir}/vendor/pyright"
-    remote_package = f"{remote_dir}/{package.name}"
-    await _upload_file(
-        exec_fn,
-        sandbox_id=sandbox_id,
-        local_path=package,
-        remote_path=remote_package,
-        timeout=60,
-    )
-    return remote_package
-
-
-async def _sandbox_node_arch(
-    exec_fn: _RawExecCallable,
-    sandbox_id: str,
-) -> str:
-    result = await exec_fn(sandbox_id, "uname -m", timeout=10)
-    if getattr(result, "exit_code", 1) != 0:
-        raise PluginInstallError(
-            "plugin lsp install: failed to detect sandbox architecture: "
-            f"{getattr(result, 'stderr', '') or getattr(result, 'stdout', '')}"
-        )
-    machine = (getattr(result, "stdout", "") or "").strip()
-    if machine == "x86_64":
-        return "x64"
-    if machine in {"aarch64", "arm64"}:
-        return "arm64"
-    raise PluginInstallError(
-        f"plugin lsp install: unsupported sandbox architecture {machine!r}"
-    )
-
-
-def _ensure_lsp_node_archive(node_arch: str) -> Path:
-    override = os.getenv("EOS_LSP_NODE_ARCHIVE")
-    if override:
-        archive = Path(override).expanduser().resolve()
-        if not archive.is_file():
-            raise PluginInstallError(
-                f"EOS_LSP_NODE_ARCHIVE does not exist: {archive}"
-            )
-        return archive
-
-    version = os.getenv("EOS_NODE_VERSION", _LSP_NODE_VERSION)
-    archive_name = f"node-v{version}-linux-{node_arch}.tar.xz"
-    cache_root = Path(
-        os.getenv(
-            "EOS_LSP_NODE_CACHE_DIR",
-            str(Path.home() / ".cache" / "ephemeralos" / "lsp-node"),
-        )
-    ).expanduser()
-    archive = cache_root / archive_name
-    if archive.is_file() and archive.stat().st_size > 0:
-        return archive
-
-    download_urls = os.getenv("EOS_LSP_NODE_DOWNLOAD_URLS")
-    if download_urls:
-        urls = download_urls.split()
-    else:
-        urls = [
-            f"https://nodejs.org/dist/v{version}/{archive_name}",
-            f"https://registry.npmmirror.com/-/binary/node/v{version}/{archive_name}",
-        ]
-    _download_lsp_node_archive(urls, archive)
-    return archive
-
-
-def _ensure_lsp_pyright_package() -> Path:
-    override = os.getenv("EOS_LSP_PYRIGHT_PACKAGE")
-    if override:
-        package = Path(override).expanduser().resolve()
-        if not package.is_file():
-            raise PluginInstallError(
-                f"EOS_LSP_PYRIGHT_PACKAGE does not exist: {package}"
-            )
-        return package
-
-    version = os.getenv("EOS_PYRIGHT_VERSION", _LSP_PYRIGHT_VERSION)
-    package_name = f"pyright-{version}.tgz"
-    cache_root = Path(
-        os.getenv(
-            "EOS_LSP_PYRIGHT_CACHE_DIR",
-            str(Path.home() / ".cache" / "ephemeralos" / "lsp-pyright"),
-        )
-    ).expanduser()
-    package = cache_root / package_name
-    if package.is_file() and package.stat().st_size > 0:
-        return package
-
-    _pack_lsp_pyright_package(version, cache_root, package_name)
-    return package
-
-
-def _pack_lsp_pyright_package(
-    version: str,
-    cache_root: Path,
-    package_name: str,
-) -> None:
-    cache_root.mkdir(parents=True, exist_ok=True)
-    completed = subprocess.run(
-        [
-            "npm",
-            "pack",
-            f"pyright@{version}",
-            "--silent",
-            "--pack-destination",
-            str(cache_root),
-        ],
-        text=True,
-        capture_output=True,
-        check=False,
-        timeout=600,
-    )
-    package = cache_root / package_name
-    if completed.returncode == 0 and package.is_file() and package.stat().st_size > 0:
-        return
-    detail = completed.stderr.strip() or completed.stdout.strip()
-    raise PluginInstallError(
-        f"failed to pack Pyright npm package {version}: {detail or 'empty package'}"
-    )
-
-
-def _download_lsp_node_archive(urls: list[str], archive: Path) -> None:
-    archive.parent.mkdir(parents=True, exist_ok=True)
-    tmp_path = archive.with_suffix(archive.suffix + ".tmp")
-    errors: list[str] = []
-    for url in urls:
-        completed = subprocess.run(
-            [
-                "curl",
-                "-fL",
-                "--retry",
-                "3",
-                "--connect-timeout",
-                "20",
-                "--max-time",
-                "600",
-                url,
-                "-o",
-                str(tmp_path),
-            ],
-            text=True,
-            capture_output=True,
-            check=False,
-        )
-        if completed.returncode == 0 and tmp_path.is_file() and tmp_path.stat().st_size > 0:
-            tmp_path.replace(archive)
-            return
-        error = completed.stderr.strip() or completed.stdout.strip()
-        errors.append(f"{url}: {error or 'empty download'}")
-        if tmp_path.exists():
-            tmp_path.unlink(missing_ok=True)
-    detail = "; ".join(errors) if errors else "no URLs configured"
-    raise PluginInstallError(f"failed to download LSP Node archive: {detail}")
-
-
-async def _upload_file(
-    exec_fn: _RawExecCallable,
-    *,
-    sandbox_id: str,
-    local_path: Path,
-    remote_path: str,
-    timeout: int,
-) -> None:
-    remote_dir = str(Path(remote_path).parent)
-    prepare = await exec_fn(
-        sandbox_id,
-        f"mkdir -p {shlex.quote(remote_dir)} && : > {shlex.quote(remote_path)}",
-        timeout=timeout,
-    )
-    _check(prepare, f"plugin install: failed to prepare {remote_path}")
-
-    offset = 0
-    with local_path.open("rb") as src:
-        while True:
-            chunk = src.read(_BINARY_UPLOAD_CHUNK_SIZE)
-            if not chunk:
-                break
-            encoded = base64.b64encode(chunk).decode("ascii")
-            write = await exec_fn(
-                sandbox_id,
-                (
-                    f"printf %s {shlex.quote(encoded)} | base64 -d "
-                    f">> {shlex.quote(remote_path)}"
-                ),
-                timeout=timeout,
-            )
-            _check(write, f"plugin install: asset write failed at offset {offset}")
-            offset += len(chunk)
 
 
 def _check(result: Any, message: str) -> None:

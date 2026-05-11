@@ -207,7 +207,6 @@ async def test_pyright_session_retarget_keeps_unchanged_open_doc_cached(
     session._client = client  # type: ignore[assignment]
     session._started = True
     uri = await session._open_document("pkg/mod.py")
-    session._diagnostics[uri] = [{"message": "cached"}]
     client.notifications.clear()
 
     await session.refresh_manifest(
@@ -216,16 +215,17 @@ async def test_pyright_session_retarget_keeps_unchanged_open_doc_cached(
         projection_handle=handle_b,
     )
 
-    assert session._diagnostics[uri] == [{"message": "cached"}]
     assert [
         method
         for method, _params in client.notifications
     ] == ["workspace/didChangeWatchedFiles"]
+    assert uri in session._opened
 
 
 @pytest.mark.asyncio
-async def test_pyright_session_ignores_duplicate_stale_diagnostics_after_change(
+async def test_pyright_session_diagnostics_returns_pull_response_only(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     lower = tmp_path / "lower"
     lower.mkdir()
@@ -237,25 +237,67 @@ async def test_pyright_session_ignores_duplicate_stale_diagnostics_after_change(
         stable_root=str(tmp_path / "stable" / "root"),
     )
     uri = session._mapper.to_snapshot_uri("pkg/mod.py")
-    stale = [{"message": '"missing_value" is not defined'}]
-    fresh: list[dict[str, Any]] = []
-    session._diagnostics[uri] = stale
 
-    session._invalidate_diagnostics(uri)
-    await session._on_notification(
-        {
-            "method": "textDocument/publishDiagnostics",
-            "params": {"uri": uri, "diagnostics": stale},
-        }
-    )
-    await session._on_notification(
-        {
-            "method": "textDocument/publishDiagnostics",
-            "params": {"uri": uri, "diagnostics": fresh},
-        }
-    )
+    async def fake_request(method: str, params: dict[str, Any]) -> dict[str, Any]:
+        assert method == "textDocument/diagnostic"
+        assert params == {"textDocument": {"uri": uri}}
+        return {"kind": "full", "items": []}
 
-    assert session._diagnostics[uri] == []
+    monkeypatch.setattr(session, "_send_request", fake_request)
+
+    assert await session._pull_diagnostics(uri) == {
+        "diagnostics": [],
+        "kind": "full",
+    }
+
+
+@pytest.mark.asyncio
+async def test_pyright_session_diagnostics_pulls_current_report(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    lower = tmp_path / "lower"
+    (lower / "pkg").mkdir(parents=True)
+    (lower / "pkg" / "mod.py").write_text(
+        "def f(x: int) -> int:\n"
+        "    return x + 'bad'\n",
+        encoding="utf-8",
+    )
+    session = PyrightSession(
+        manifest_key="hash-a@1",
+        lowerdir=str(lower),
+        workspace_root="/testbed",
+        projection_handle=_Handle("hash-a@1", str(lower)),
+        stable_root=str(tmp_path / "stable" / "root"),
+    )
+    client = _Client()
+    session._client = client  # type: ignore[assignment]
+    session._started = True
+    pulled = [
+        {
+            "message": "Operator '+' not supported",
+            "range": {"start": {"line": 1, "character": 11}},
+        }
+    ]
+
+    async def _send_request(
+        method: str,
+        params: dict[str, Any],
+    ) -> dict[str, Any]:
+        assert method == "textDocument/diagnostic"
+        assert params["textDocument"]["uri"].endswith("/pkg/mod.py")
+        return {"items": pulled, "kind": "full", "resultId": "1"}
+
+    monkeypatch.setattr(session, "_send_request", _send_request)
+
+    result = await session.diagnostics({"file_path": "/testbed/pkg/mod.py"})
+
+    assert result == {
+        "diagnostics": pulled,
+        "kind": "full",
+        "result_id": "1",
+    }
+    assert session._mapper.to_snapshot_uri("pkg/mod.py") in session._opened
 
 
 @pytest.mark.asyncio

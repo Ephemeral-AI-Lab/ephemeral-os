@@ -36,11 +36,10 @@ session is evicted and restarted rather than reading stale files.
 
 ## Setup
 
-The host-side plugin installer uploads a Linux Node archive for this plugin
-before setup. `setup.sh` installs that archive into `/tmp/eos-node22` when
-needed, then installs `pyright` with npm and writes a marker so re-runs are
-cheap. If no archive is provided, setup falls back to downloading Node from the
-official tarball URL and then a mirror URL.
+`setup.sh` installs Node into `/tmp/eos-node22` only when needed, installs the
+pinned Pyright package with npm, and writes a marker so re-runs are cheap. The
+host-side plugin installer uploads only the plugin bundle; it does not upload
+Node archives or npm packages.
 
 ## Constraints
 

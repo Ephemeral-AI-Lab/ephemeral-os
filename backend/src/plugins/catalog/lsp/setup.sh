@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 # Idempotent Node 22 + Pyright install for the LSP plugin.
-#
-# Installs Node from the official tarball instead of conda/nodeenv. This has
-# been reliable on Daytona sandboxes and works with Node 22+.
 
 set -eu
 
@@ -27,14 +24,9 @@ download_node() {
     esac
 
     archive="node-v${NODE_VERSION}-linux-${node_arch}.tar.xz"
-    urls="${EOS_NODE_DOWNLOAD_URLS:-https://nodejs.org/dist/v${NODE_VERSION}/${archive} https://registry.npmmirror.com/-/binary/node/v${NODE_VERSION}/${archive}}"
+    urls="${EOS_NODE_DOWNLOAD_URLS:-https://registry.npmmirror.com/-/binary/node/v${NODE_VERSION}/${archive} https://nodejs.org/dist/v${NODE_VERSION}/${archive}}"
     mkdir -p "$NODE_HOME"
     cd "$NODE_HOME"
-    if [ -n "${EOS_NODE_ARCHIVE:-}" ]; then
-        cp "$EOS_NODE_ARCHIVE" node.tar.xz
-        tar -xJf node.tar.xz --strip-components=1
-        return 0
-    fi
     for url in $urls; do
         rm -f node.tar.xz
         if curl -fL --retry 2 --connect-timeout 10 --max-time 240 "$url" -o node.tar.xz; then
@@ -50,24 +42,14 @@ download_node() {
 }
 
 if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
-    if [ -z "${EOS_NODE_ARCHIVE:-}" ] && [ "${EOS_LSP_ALLOW_DOWNLOAD:-0}" != "1" ]; then
-        echo "node archive missing and sandbox download disabled" >&2
-        exit 35
-    fi
     download_node
 fi
 
 export PATH="$NODE_HOME/bin:$PATH"
 npm config set prefix "$NODE_HOME"
 if ! command -v pyright-langserver >/dev/null 2>&1; then
-    if [ -n "${EOS_PYRIGHT_PACKAGE:-}" ]; then
-        npm install -g --omit=optional "$EOS_PYRIGHT_PACKAGE"
-    elif [ "${EOS_LSP_ALLOW_DOWNLOAD:-0}" = "1" ]; then
-        npm install -g --omit=optional "pyright@${PYRIGHT_VERSION}" || npm --registry=https://registry.npmmirror.com install -g --omit=optional "pyright@${PYRIGHT_VERSION}"
-    else
-        echo "pyright package missing and sandbox download disabled" >&2
-        exit 36
-    fi
+    npm install -g --omit=optional "pyright@${PYRIGHT_VERSION}" || \
+        npm --registry=https://registry.npmmirror.com install -g --omit=optional "pyright@${PYRIGHT_VERSION}"
 fi
 
 node -v

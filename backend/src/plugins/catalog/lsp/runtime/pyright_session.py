@@ -56,8 +56,6 @@ class PyrightSession:
         self._proc: asyncio.subprocess.Process | None = None
         self._client: LspJsonRpcClient | None = None
         self._opened: set[str] = set()
-        self._diagnostics: dict[str, list[dict[str, Any]]] = {}
-        self._stale_diagnostics_after_change: dict[str, list[dict[str, Any]]] = {}
         self._lock = asyncio.Lock()
         self._started = False
         self._document_versions: dict[str, int] = {}
@@ -163,19 +161,17 @@ class PyrightSession:
         await self.start()
         uri = await self._open_document(args["file_path"])
         wait_for_diagnostics = bool(args.get("wait_for_diagnostics"))
-        # Wait briefly for publishDiagnostics to arrive; Pyright emits
-        # it shortly after didOpen / didChange but the first analysis can
-        # take longer when the server just loaded a workspace.
-        attempts = max(1, int(_DIAGNOSTICS_WAIT_S / _DIAGNOSTICS_POLL_S))
-        for _ in range(attempts):
-            entries = self._diagnostics.get(uri)
-            if entries is not None:
-                if wait_for_diagnostics and not entries:
-                    await asyncio.sleep(_DIAGNOSTICS_POLL_S)
-                    continue
-                return {"diagnostics": entries}
+        if not wait_for_diagnostics:
+            return await self._pull_diagnostics(uri)
+
+        deadline = asyncio.get_running_loop().time() + _DIAGNOSTICS_WAIT_S
+        while True:
+            result = await self._pull_diagnostics(uri)
+            if result.get("diagnostics") or result.get("error"):
+                return result
+            if asyncio.get_running_loop().time() >= deadline:
+                return result
             await asyncio.sleep(_DIAGNOSTICS_POLL_S)
-        return {"diagnostics": self._diagnostics.get(uri, [])}
 
     async def query_symbols(self, args: dict[str, Any]) -> dict[str, Any]:
         await self.start()
@@ -326,7 +322,6 @@ class PyrightSession:
         text_hash = _text_hash(text)
         if self._document_hashes.get(uri) == text_hash:
             return
-        self._invalidate_diagnostics(uri)
         await client.notify(
             "textDocument/didChange",
             {
@@ -347,6 +342,48 @@ class PyrightSession:
             return await client.request(method, params)
         except JsonRpcError as exc:
             return {"error": {"code": exc.code, "message": exc.message}}
+
+    async def _pull_diagnostics(self, uri: str) -> dict[str, Any]:
+        raw = await self._send_request(
+            "textDocument/diagnostic",
+            {"textDocument": {"uri": uri}},
+        )
+        if isinstance(raw, dict) and "error" in raw:
+            return {"diagnostics": [], "error": raw["error"]}
+        if not isinstance(raw, dict):
+            return {
+                "diagnostics": [],
+                "error": {
+                    "message": (
+                        "unexpected Pyright diagnostic response type: "
+                        f"{type(raw).__name__}"
+                    )
+                },
+            }
+
+        items = raw.get("items")
+        if not isinstance(items, list):
+            return {
+                "diagnostics": [],
+                "error": {
+                    "message": "unexpected Pyright diagnostic response: missing items"
+                },
+            }
+
+        diagnostics = list(items)
+        return self._diagnostic_result(diagnostics, raw)
+
+    def _diagnostic_result(
+        self,
+        diagnostics: list[dict[str, Any]],
+        raw: dict[str, Any],
+    ) -> dict[str, Any]:
+        result: dict[str, Any] = {"diagnostics": diagnostics}
+        if "kind" in raw:
+            result["kind"] = raw["kind"]
+        if "resultId" in raw:
+            result["result_id"] = raw["resultId"]
+        return result
 
     async def _spawn(self) -> None:
         argv = self._build_argv()
@@ -415,6 +452,10 @@ class PyrightSession:
                             "didChangeWatchedFiles": {"dynamicRegistration": False},
                         },
                         "textDocument": {
+                            "diagnostic": {
+                                "dynamicRegistration": False,
+                                "relatedDocumentSupport": True,
+                            },
                             "definition": {"linkSupport": True},
                             "hover": {"contentFormat": ["markdown", "plaintext"]},
                         },
@@ -427,13 +468,7 @@ class PyrightSession:
         await client.notify("initialized", {})
 
     async def _on_notification(self, message: dict[str, Any]) -> None:
-        method = message.get("method")
-        if method == "textDocument/publishDiagnostics":
-            params = message.get("params") or {}
-            uri = str(params.get("uri", ""))
-            diags = params.get("diagnostics") or []
-            if isinstance(diags, list):
-                self._accept_diagnostics(uri, list(diags))
+        del message
 
     def _handle_server_request(self, message: dict[str, Any]) -> Any:
         method = message.get("method")
@@ -463,22 +498,8 @@ class PyrightSession:
         except OSError:
             return ""
 
-    def _invalidate_diagnostics(self, uri: str) -> None:
-        previous = self._diagnostics.pop(uri, None)
-        if previous is not None:
-            self._stale_diagnostics_after_change[uri] = previous
-
-    def _accept_diagnostics(self, uri: str, entries: list[dict[str, Any]]) -> None:
-        stale = self._stale_diagnostics_after_change.get(uri)
-        if stale is not None and entries == stale:
-            return
-        self._stale_diagnostics_after_change.pop(uri, None)
-        self._diagnostics[uri] = entries
-
     def _forget_document(self, uri: str) -> None:
         self._opened.discard(uri)
-        self._diagnostics.pop(uri, None)
-        self._stale_diagnostics_after_change.pop(uri, None)
         self._document_hashes.pop(uri, None)
         self._document_versions.pop(uri, None)
 

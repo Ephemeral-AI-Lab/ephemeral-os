@@ -27,6 +27,7 @@ __all__ = [
     "PluginOpConflictError",
     "PluginOpHandler",
     "PluginOpRegistrationError",
+    "clear_plugin_registrations",
     "flush_plugin_registrations",
     "pending_plugin_registrations",
     "register_plugin_op",
@@ -113,6 +114,16 @@ def pending_plugin_registrations(
         for entry in _PENDING.values()
         if entry.plugin_name == plugin_name
     )
+
+
+def clear_plugin_registrations(plugin_name: str) -> None:
+    """Drop pending registrations for one plugin before a runtime reload."""
+    plugin_name = (plugin_name or "").strip()
+    for key in [
+        key for key, entry in _PENDING.items()
+        if entry.plugin_name == plugin_name
+    ]:
+        _PENDING.pop(key, None)
 
 
 def flush_plugin_registrations(

@@ -45,7 +45,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 _manifest_cache: dict[str, PluginManifest] | None = None
-_runtime_loaded: dict[tuple[str, str], bool] = {}
+_runtime_loaded: dict[tuple[str, str], str] = {}
 _call_locks: dict[tuple[str, str], asyncio.Lock] = {}
 
 
@@ -93,7 +93,7 @@ async def call_plugin(
 
     async with lock:
         try:
-            await install_fn(sandbox_id, manifest)
+            digest = await install_fn(sandbox_id, manifest)
         except Exception as exc:
             logger.warning(
                 "plugin install failed: sandbox=%s plugin=%s op=%s err=%s",
@@ -104,12 +104,12 @@ async def call_plugin(
             )
             return _error_result("install", plugin, op, str(exc))
 
-        if not _runtime_loaded.get((sandbox_id, plugin)):
+        if _runtime_loaded.get((sandbox_id, plugin)) != digest:
             try:
                 await dispatch_fn(
                     sandbox_id,
                     "api.plugin.ensure",
-                    {"plugin": plugin},
+                    {"plugin": plugin, "digest": digest},
                     timeout=timeout,
                     layer_stack_root=layer_stack_root,
                 )
@@ -122,7 +122,7 @@ async def call_plugin(
                     exc,
                 )
                 return _error_result("ensure-runtime", plugin, op, str(exc))
-            _runtime_loaded[(sandbox_id, plugin)] = True
+            _runtime_loaded[(sandbox_id, plugin)] = digest
 
     caller = caller_from_context(context)
     payload_with_meta = {
