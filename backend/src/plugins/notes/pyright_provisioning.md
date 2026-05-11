@@ -5,18 +5,27 @@ The older `pylsp` fallback is intentionally not used.
 
 ## Install Path
 
-`sandbox.plugin.install` uploads a Linux Node archive into the LSP plugin
-install directory and passes it to `setup.sh` as `EOS_NODE_ARCHIVE`. That keeps
-Node provisioning on the host-side upload path instead of depending on
-in-sandbox internet. If no uploaded archive is provided, `setup.sh` still has a
-fallback downloader: it tries the official Node tarball first, then the
-npmmirror binary endpoint because some Daytona sandboxes cannot establish TLS
-to `nodejs.org`. The URL list can be overridden with `EOS_NODE_DOWNLOAD_URLS`.
+`sandbox.plugin.install` resolves a Linux Node archive on the host, uploads it
+into the LSP plugin install directory, and passes it to `setup.sh` as
+`EOS_NODE_ARCHIVE`. That keeps Node provisioning on the host-side upload path
+instead of depending on in-sandbox internet. If no uploaded archive is provided,
+`setup.sh` may download Node in the sandbox only when the installer explicitly
+sets `EOS_LSP_ALLOW_DOWNLOAD=1`; it tries the official Node tarball first, then
+the npmmirror binary endpoint because some Daytona sandboxes cannot establish
+TLS to `nodejs.org`. The URL list can be overridden with
+`EOS_NODE_DOWNLOAD_URLS`.
+
+The installer also resolves a local `pyright-<version>.tgz` package with
+`npm pack pyright@<version>` and uploads it as `EOS_PYRIGHT_PACKAGE`. That keeps
+the Pyright install on the same host-side upload path. If the local package is
+unavailable, `setup.sh` may download the pinned Pyright package only when
+`EOS_LSP_ALLOW_DOWNLOAD=1`.
+
 It then runs:
 
 ```sh
 npm config set prefix /tmp/eos-node22
-npm install -g pyright
+npm install -g --omit=optional "$EOS_PYRIGHT_PACKAGE"
 ```
 
 The marker is `.pyright_installed`, but setup also verifies

@@ -129,6 +129,8 @@ def test_lsp_setup_script_self_locates_and_installs_pyright(
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
     fake_node_home = tmp_path / "node"
+    fake_pyright_package = tmp_path / "pyright-1.1.409.tgz"
+    fake_pyright_package.write_bytes(b"fake pyright package")
     log_path = tmp_path / "npm.log"
     (fake_bin / "node").write_text(
         """#!/usr/bin/env bash
@@ -166,6 +168,7 @@ exit 99
     env = {
         "PATH": f"{fake_bin}:/usr/bin:/bin",
         "EOS_NODE_HOME": str(fake_node_home),
+        "EOS_PYRIGHT_PACKAGE": str(fake_pyright_package),
         "PYRIGHT_SETUP_LOG": str(log_path),
     }
     completed = subprocess.run(
@@ -182,7 +185,7 @@ exit 99
     assert (plugin_dir / ".pyright_installed").is_file()
     npm_calls = log_path.read_text(encoding="utf-8").splitlines()
     assert "config set prefix " + str(fake_node_home) in npm_calls
-    assert "install -g pyright" in npm_calls
+    assert f"install -g --omit=optional {fake_pyright_package}" in npm_calls
 
 
 def test_lsp_setup_script_falls_back_to_second_node_download_url(

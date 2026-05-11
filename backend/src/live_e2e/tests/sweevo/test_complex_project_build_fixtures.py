@@ -17,8 +17,17 @@ from __future__ import annotations
 import ast
 
 from live_e2e.scenarios.sandbox._fixtures.refactor_passes import REFACTOR_PASSES
+from live_e2e.scenarios.sandbox._fixtures.lsp_expectations import LSP_EXPECTATIONS
 from live_e2e.scenarios.sandbox._fixtures.scheduler_demo_data import (
     SCHEDULER_DEMO_FILES,
+    SMOKE_FILE_PATHS,
+)
+from live_e2e.squad.complex_project_build_probe import (
+    _compute_amp_pairs,
+    _importable_dotted_names,
+)
+from live_e2e.squad.complex_project_build_shell_edit_lsp_probe import (
+    _compute_mixed_amp_pairs,
 )
 
 
@@ -107,6 +116,111 @@ def test_refactor_lsp_target_anchors_exist() -> None:
                     (refactor.name, spec.relative_path, spec.line_index_anchor)
                 )
     assert missing == [], f"missing LSP anchors: {missing}"
+
+
+def test_shell_edit_lsp_expectation_anchors_exist() -> None:
+    by_path = {fixture.relative_path: fixture for fixture in SCHEDULER_DEMO_FILES}
+    missing: list[tuple[str, str, str]] = []
+    for expectation in LSP_EXPECTATIONS:
+        source = by_path.get(expectation.source_path)
+        definition = by_path.get(expectation.definition_path)
+        if source is None:
+            missing.append((expectation.symbol, expectation.source_path, "source file"))
+            continue
+        if definition is None:
+            missing.append(
+                (expectation.symbol, expectation.definition_path, "definition file")
+            )
+            continue
+        if expectation.source_anchor not in source.final:
+            missing.append(
+                (expectation.symbol, expectation.source_path, expectation.source_anchor)
+            )
+        if expectation.definition_anchor not in definition.final:
+            missing.append(
+                (
+                    expectation.symbol,
+                    expectation.definition_path,
+                    expectation.definition_anchor,
+                )
+            )
+    assert missing == [], f"missing shell-edit LSP expectation anchors: {missing}"
+
+
+def test_shell_edit_lsp_expectations_cover_minimum_symbol_set() -> None:
+    symbols = {expectation.symbol for expectation in LSP_EXPECTATIONS}
+    required = {
+        "Task",
+        "TaskState",
+        "Schedule",
+        "Priority",
+        "Scheduler",
+        "MemoryStore",
+        "JsonSerializer",
+        "RetryPolicy",
+    }
+    assert required <= symbols
+
+
+def test_compute_mixed_amp_pairs_meets_logical_edit_floors() -> None:
+    smoke = tuple(f for f in SCHEDULER_DEMO_FILES if f.relative_path in SMOKE_FILE_PATHS)
+    full = SCHEDULER_DEMO_FILES
+    for selected, smoke_flag, floor in (
+        (smoke, True, 90),
+        (full, False, 600),
+    ):
+        pairs = _compute_mixed_amp_pairs(
+            selected,
+            REFACTOR_PASSES[:1] if smoke_flag else REFACTOR_PASSES,
+            smoke=smoke_flag,
+        )
+        selected_paths = {fixture.relative_path for fixture in selected}
+        patch_count = sum(len(fixture.patches) for fixture in selected)
+        refactor_count = 2 * sum(
+            1
+            for refactor in (REFACTOR_PASSES[:1] if smoke_flag else REFACTOR_PASSES)
+            for edit in refactor.edits
+            if edit.relative_path in selected_paths
+        )
+        py_anchor_count = sum(
+            1
+            for fixture in selected
+            if fixture.relative_path.endswith(".py")
+            and "from __future__ import annotations" in fixture.final
+        )
+        logical_edits = patch_count + refactor_count + (2 * py_anchor_count * pairs)
+        assert logical_edits >= floor, (
+            f"smoke={smoke_flag} pairs={pairs} logical_edits={logical_edits}"
+        )
+
+
+def test_compute_amp_pairs_meets_phase1_floor() -> None:
+    """Phase 2 N2: helper must auto-size such that smoke ≥6 and full ≥30
+    against the current fixture set (matches Phase 1 amp_pairs constants
+    with headroom for future fixture additions)."""
+    smoke = tuple(f for f in SCHEDULER_DEMO_FILES if f.relative_path in SMOKE_FILE_PATHS)
+    full = SCHEDULER_DEMO_FILES
+    smoke_pairs = _compute_amp_pairs(smoke, smoke=True)
+    full_pairs = _compute_amp_pairs(full, smoke=False)
+    assert smoke_pairs >= 6, f"smoke amp_pairs={smoke_pairs}, want ≥6"
+    assert full_pairs >= 30, f"full amp_pairs={full_pairs}, want ≥30"
+
+
+def test_importable_dotted_names_covers_source_modules() -> None:
+    """Phase 2 N1: per-module import smoke loop must visit every source
+    module (no __init__, conftest, or tests/*) so plan §7.7 is asserted
+    independently of pytest collection."""
+    smoke = tuple(f for f in SCHEDULER_DEMO_FILES if f.relative_path in SMOKE_FILE_PATHS)
+    full = SCHEDULER_DEMO_FILES
+    smoke_names = _importable_dotted_names(smoke)
+    full_names = _importable_dotted_names(full)
+    assert len(smoke_names) >= 1, f"smoke importable names={smoke_names}"
+    assert len(full_names) >= 10, f"full importable names={full_names}"
+    forbidden = {"__init__", "conftest"}
+    for name in smoke_names + full_names:
+        last = name.rsplit(".", 1)[-1]
+        assert last not in forbidden, f"unexpected dotted name leaked: {name}"
+        assert not name.startswith("tests."), f"tests/* leaked: {name}"
 
 
 def test_total_patches_meet_edit_floor() -> None:

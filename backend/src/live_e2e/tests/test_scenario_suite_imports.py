@@ -80,6 +80,8 @@ def test_subpackage_imports_are_clean() -> None:
     assert sandbox.__all__ == [
         "AutoSquashCommitResume",
         "ComplexProjectBuild",
+        "ComplexProjectBuildShellEditLsp",
+        "ComplexProjectBuildShellEditLspSmoke",
         "ComplexProjectBuildSmoke",
         "OccConcurrentConflicts",
     ]

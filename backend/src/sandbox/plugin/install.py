@@ -50,14 +50,16 @@ logger = logging.getLogger(__name__)
 PLUGIN_BUNDLE_REMOTE_ROOT = f"{BUNDLE_REMOTE_DIR}/plugins/catalog"
 
 _CHUNK_SIZE = 32 * 1024
-# Binary chunks are base64-encoded one at a time; keep the encoded argv under
-# the same conservative provider limit used for plugin/runtime bundles.
-_BINARY_UPLOAD_CHUNK_SIZE = 24 * 1024
+# Binary chunks are base64-encoded one at a time. Keep encoded commands below
+# common argv limits while avoiding thousands of provider exec calls for large
+# LSP runtime archives.
+_BINARY_UPLOAD_CHUNK_SIZE = 48 * 1024
 # 600s headroom for plugin setup scripts that pip-install Python deps over
 # the network. Pure-Python servers like pylsp install in ~30-60s; this
 # leaves slack for slow networks but stays within Daytona's exec timeout.
 _DEFAULT_SETUP_TIMEOUT = 600
 _LSP_NODE_VERSION = "22.13.1"
+_LSP_PYRIGHT_VERSION = "1.1.409"
 
 
 class PluginInstallError(RuntimeError):
@@ -297,21 +299,49 @@ async def _upload_setup_assets(
 ) -> dict[str, str]:
     if manifest.name != "lsp":
         return {}
-    env = {"EOS_LSP_ALLOW_PYTHON_FALLBACK": "1"}
+    env: dict[str, str] = {}
+    if os.getenv("EOS_LSP_SKIP_HOST_NODE_UPLOAD") == "1":
+        env.update(_lsp_sandbox_download_env())
+    else:
+        try:
+            remote_archive = await _upload_lsp_node_archive(
+                exec_fn,
+                sandbox_id=sandbox_id,
+                install_dir=install_dir,
+            )
+        except PluginInstallError as exc:
+            logger.warning(
+                "plugin install: lsp node archive unavailable; "
+                "setup will download Node in sandbox: %s",
+                exc,
+            )
+            env.update(_lsp_sandbox_download_env())
+        else:
+            env["EOS_NODE_ARCHIVE"] = remote_archive
+
     try:
-        remote_archive = await _upload_lsp_node_archive(
+        remote_package = await _upload_lsp_pyright_package(
             exec_fn,
             sandbox_id=sandbox_id,
             install_dir=install_dir,
         )
     except PluginInstallError as exc:
         logger.warning(
-            "plugin install: lsp node archive unavailable; "
-            "setup may use Python fallback: %s",
+            "plugin install: pyright package unavailable; "
+            "setup will download Pyright in sandbox: %s",
             exc,
         )
-        return env
-    env["EOS_NODE_ARCHIVE"] = remote_archive
+        env["EOS_LSP_ALLOW_DOWNLOAD"] = "1"
+    else:
+        env["EOS_PYRIGHT_PACKAGE"] = remote_package
+    return env
+
+
+def _lsp_sandbox_download_env() -> dict[str, str]:
+    env = {"EOS_LSP_ALLOW_DOWNLOAD": "1"}
+    download_urls = os.getenv("EOS_NODE_DOWNLOAD_URLS")
+    if download_urls:
+        env["EOS_NODE_DOWNLOAD_URLS"] = download_urls
     return env
 
 
@@ -333,6 +363,25 @@ async def _upload_lsp_node_archive(
         timeout=60,
     )
     return remote_archive
+
+
+async def _upload_lsp_pyright_package(
+    exec_fn: _RawExecCallable,
+    *,
+    sandbox_id: str,
+    install_dir: str,
+) -> str:
+    package = _ensure_lsp_pyright_package()
+    remote_dir = f"{install_dir}/vendor/pyright"
+    remote_package = f"{remote_dir}/{package.name}"
+    await _upload_file(
+        exec_fn,
+        sandbox_id=sandbox_id,
+        local_path=package,
+        remote_path=remote_package,
+        timeout=60,
+    )
+    return remote_package
 
 
 async def _sandbox_node_arch(
@@ -378,14 +427,70 @@ def _ensure_lsp_node_archive(node_arch: str) -> Path:
         return archive
 
     download_urls = os.getenv("EOS_LSP_NODE_DOWNLOAD_URLS")
-    if not download_urls:
-        raise PluginInstallError(
-            "no cached LSP Node archive found; set EOS_LSP_NODE_ARCHIVE "
-            "or EOS_LSP_NODE_DOWNLOAD_URLS to enable host-side Node upload"
-        )
-    urls = download_urls.split()
+    if download_urls:
+        urls = download_urls.split()
+    else:
+        urls = [
+            f"https://nodejs.org/dist/v{version}/{archive_name}",
+            f"https://registry.npmmirror.com/-/binary/node/v{version}/{archive_name}",
+        ]
     _download_lsp_node_archive(urls, archive)
     return archive
+
+
+def _ensure_lsp_pyright_package() -> Path:
+    override = os.getenv("EOS_LSP_PYRIGHT_PACKAGE")
+    if override:
+        package = Path(override).expanduser().resolve()
+        if not package.is_file():
+            raise PluginInstallError(
+                f"EOS_LSP_PYRIGHT_PACKAGE does not exist: {package}"
+            )
+        return package
+
+    version = os.getenv("EOS_PYRIGHT_VERSION", _LSP_PYRIGHT_VERSION)
+    package_name = f"pyright-{version}.tgz"
+    cache_root = Path(
+        os.getenv(
+            "EOS_LSP_PYRIGHT_CACHE_DIR",
+            str(Path.home() / ".cache" / "ephemeralos" / "lsp-pyright"),
+        )
+    ).expanduser()
+    package = cache_root / package_name
+    if package.is_file() and package.stat().st_size > 0:
+        return package
+
+    _pack_lsp_pyright_package(version, cache_root, package_name)
+    return package
+
+
+def _pack_lsp_pyright_package(
+    version: str,
+    cache_root: Path,
+    package_name: str,
+) -> None:
+    cache_root.mkdir(parents=True, exist_ok=True)
+    completed = subprocess.run(
+        [
+            "npm",
+            "pack",
+            f"pyright@{version}",
+            "--silent",
+            "--pack-destination",
+            str(cache_root),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=600,
+    )
+    package = cache_root / package_name
+    if completed.returncode == 0 and package.is_file() and package.stat().st_size > 0:
+        return
+    detail = completed.stderr.strip() or completed.stdout.strip()
+    raise PluginInstallError(
+        f"failed to pack Pyright npm package {version}: {detail or 'empty package'}"
+    )
 
 
 def _download_lsp_node_archive(urls: list[str], archive: Path) -> None:

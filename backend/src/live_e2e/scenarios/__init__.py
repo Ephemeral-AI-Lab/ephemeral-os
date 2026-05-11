@@ -24,6 +24,8 @@ from live_e2e.scenarios.planner_validation import PlannerDuplicateLocalId
 from live_e2e.scenarios.sandbox import (
     AutoSquashCommitResume,
     ComplexProjectBuild,
+    ComplexProjectBuildShellEditLsp,
+    ComplexProjectBuildShellEditLspSmoke,
     ComplexProjectBuildSmoke,
     OccConcurrentConflicts,
 )
@@ -44,6 +46,10 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     # Focused sandbox scenarios.
     "sandbox.auto_squash_commit_resume": AutoSquashCommitResume,
     "sandbox.complex_project_build": ComplexProjectBuild,
+    "sandbox.complex_project_build_shell_edit_lsp": ComplexProjectBuildShellEditLsp,
+    "sandbox.complex_project_build_shell_edit_lsp_smoke": (
+        ComplexProjectBuildShellEditLspSmoke
+    ),
     "sandbox.complex_project_build_smoke": ComplexProjectBuildSmoke,
     "sandbox.occ_concurrent_conflicts": OccConcurrentConflicts,
     # Focused planner-validation scenarios.
@@ -55,6 +61,8 @@ __all__ = [
     "AttemptRetryEvaluatorFailure",
     "AutoSquashCommitResume",
     "ComplexProjectBuild",
+    "ComplexProjectBuildShellEditLsp",
+    "ComplexProjectBuildShellEditLspSmoke",
     "ComplexProjectBuildSmoke",
     "CorrectnessTesting",
     "DependencyDagMixed",

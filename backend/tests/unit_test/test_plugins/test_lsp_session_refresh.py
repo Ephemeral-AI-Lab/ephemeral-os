@@ -259,7 +259,7 @@ async def test_pyright_session_ignores_duplicate_stale_diagnostics_after_change(
 
 
 @pytest.mark.asyncio
-async def test_pyright_session_uses_python_fallback_when_spawn_fails(
+async def test_pyright_session_fails_closed_when_spawn_fails(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -285,15 +285,8 @@ async def test_pyright_session_uses_python_fallback_when_spawn_fails(
 
     monkeypatch.setattr(session, "_spawn", _fail_spawn)
 
-    hover = await session.hover(
-        {"file_path": "/testbed/pkg/model.py", "line": 3, "character": 4}
-    )
-    diagnostics = await session.diagnostics({"file_path": "/testbed/pkg/model.py"})
-    symbols = await session.query_symbols(
-        {"file_path": "/testbed/pkg/model.py", "query": "display_name"}
-    )
-
-    assert session._fallback is True
-    assert "display_name" in hover["hover"]["contents"]["value"]
-    assert diagnostics["diagnostics"][0]["message"] == '"missing_value" is not defined'
-    assert [item["name"] for item in symbols["symbols"]] == ["display_name"]
+    with pytest.raises(PyrightSpawnError, match="missing pyright"):
+        await session.hover(
+            {"file_path": "/testbed/pkg/model.py", "line": 3, "character": 4}
+        )
+    assert session._started is False

@@ -400,7 +400,7 @@ A small post-run analyzer in `_metrics.py` ingests the JSON and prints a one-scr
 
 ## 10. Runtime / cost / CI placement
 
-- **Expected wall time (full):** 12–25 minutes per run; smoke variant 1–2 minutes.
+- **Expected wall time (full):** 12–25 minutes per run (Phase 1 observed: 18:33); smoke variant <5 minutes (Phase 1 observed: 3:27 — initial 1–2 min target was pre-Phase-1 estimate before transitive-import realities expanded the smoke fixture set; <5 min is the live budget).
 - **Gate:** double opt-in via env vars
   - `EPHEMERALOS_DATABASE_URL` (matches existing live_e2e gate)
   - `EPHEMERALOS_RUN_HEAVY_LIVE_E2E=1` (heavy-test gate, also gates other future >5min scenarios)
@@ -419,7 +419,7 @@ A small post-run analyzer in `_metrics.py` ingests the JSON and prints a one-scr
 - Edit:write ratio still ≥4×.
 - Tool-call floor: ≥250.
 - Same projection-consistency gate (§7.6, §7.8) and same metrics artifact (§9, possibly with smaller numbers).
-- Runs in <2 min, no `EPHEMERALOS_RUN_HEAVY_LIVE_E2E` required, only `EPHEMERALOS_DATABASE_URL`.
+- Runs in <5 min (Phase 1 observed: 3:27), no `EPHEMERALOS_RUN_HEAVY_LIVE_E2E` required, only `EPHEMERALOS_DATABASE_URL`.
 
 ## 12. Risks and mitigations
 

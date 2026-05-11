@@ -9,6 +9,7 @@ set -eu
 PLUGIN_DIR="${EOS_PLUGIN_DIR:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)}"
 NODE_HOME="${EOS_NODE_HOME:-/tmp/eos-node22}"
 NODE_VERSION="${EOS_NODE_VERSION:-22.13.1}"
+PYRIGHT_VERSION="${EOS_PYRIGHT_VERSION:-1.1.409}"
 MARKER="$PLUGIN_DIR/.pyright_installed"
 
 export PATH="$NODE_HOME/bin:$PATH"
@@ -16,16 +17,6 @@ export PATH="$NODE_HOME/bin:$PATH"
 if [ -f "$MARKER" ] && command -v pyright-langserver >/dev/null 2>&1; then
     exit 0
 fi
-
-use_python_fallback() {
-    if [ "${EOS_LSP_ALLOW_PYTHON_FALLBACK:-0}" != "1" ]; then
-        return 1
-    fi
-    echo "pyright-langserver unavailable; using Python LSP fallback" >&2
-    mkdir -p "$PLUGIN_DIR"
-    : > "$PLUGIN_DIR/.python_lsp_fallback"
-    exit 0
-}
 
 download_node() {
     arch="$(uname -m)"
@@ -60,15 +51,23 @@ download_node() {
 
 if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
     if [ -z "${EOS_NODE_ARCHIVE:-}" ] && [ "${EOS_LSP_ALLOW_DOWNLOAD:-0}" != "1" ]; then
-        use_python_fallback || exit 35
+        echo "node archive missing and sandbox download disabled" >&2
+        exit 35
     fi
-    download_node || use_python_fallback || exit $?
+    download_node
 fi
 
 export PATH="$NODE_HOME/bin:$PATH"
 npm config set prefix "$NODE_HOME"
 if ! command -v pyright-langserver >/dev/null 2>&1; then
-    npm install -g pyright || npm --registry=https://registry.npmmirror.com install -g pyright || use_python_fallback || exit $?
+    if [ -n "${EOS_PYRIGHT_PACKAGE:-}" ]; then
+        npm install -g --omit=optional "$EOS_PYRIGHT_PACKAGE"
+    elif [ "${EOS_LSP_ALLOW_DOWNLOAD:-0}" = "1" ]; then
+        npm install -g --omit=optional "pyright@${PYRIGHT_VERSION}" || npm --registry=https://registry.npmmirror.com install -g --omit=optional "pyright@${PYRIGHT_VERSION}"
+    else
+        echo "pyright package missing and sandbox download disabled" >&2
+        exit 36
+    fi
 fi
 
 node -v

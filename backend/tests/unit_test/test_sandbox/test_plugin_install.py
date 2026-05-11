@@ -236,7 +236,10 @@ def test_lsp_install_uploads_host_node_archive_for_setup(
     (plugin_dir / "setup.sh").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     archive = tmp_path / "node.tar.xz"
     archive.write_bytes(b"fake node archive")
+    package = tmp_path / "pyright.tgz"
+    package.write_bytes(b"fake pyright package")
     monkeypatch.setenv("EOS_LSP_NODE_ARCHIVE", str(archive))
+    monkeypatch.setenv("EOS_LSP_PYRIGHT_PACKAGE", str(package))
     manifest = parse_plugin_manifest(plugin_dir)
 
     fake = _FakeExec(marker_present=False)
@@ -244,9 +247,15 @@ def test_lsp_install_uploads_host_node_archive_for_setup(
 
     install_dir = plugin_install_dir("lsp")
     remote_archive = f"{install_dir}/vendor/node/{archive.name}"
+    remote_package = f"{install_dir}/vendor/pyright/{package.name}"
     assert any(command == "uname -m" for command in fake.calls)
     assert any(remote_archive in command for command in fake.calls)
+    assert any(remote_package in command for command in fake.calls)
     assert any(
         f"export EOS_NODE_ARCHIVE={shlex.quote(remote_archive)}" in command
+        for command in fake.calls
+    )
+    assert any(
+        f"export EOS_PYRIGHT_PACKAGE={shlex.quote(remote_package)}" in command
         for command in fake.calls
     )

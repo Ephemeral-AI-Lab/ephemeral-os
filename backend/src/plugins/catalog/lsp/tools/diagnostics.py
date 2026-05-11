@@ -13,6 +13,13 @@ from tools.sandbox_toolkit.session import resolve_sandbox_path
 
 class DiagnosticsInput(BaseModel):
     file_path: str = Field(..., description="Repo-relative or absolute file path.")
+    wait_for_diagnostics: bool = Field(
+        False,
+        description=(
+            "When true, wait for at least one Pyright diagnostic before returning, "
+            "up to the session diagnostic timeout."
+        ),
+    )
 
 
 @tool(
@@ -24,6 +31,7 @@ class DiagnosticsInput(BaseModel):
 )
 async def diagnostics(
     file_path: str,
+    wait_for_diagnostics: bool = False,
     *,
     context: ToolExecutionContextService,
 ) -> ToolResult:
@@ -31,5 +39,8 @@ async def diagnostics(
         context,
         plugin="lsp",
         op="diagnostics",
-        payload={"file_path": resolve_sandbox_path(file_path, context)},
+        payload={
+            "file_path": resolve_sandbox_path(file_path, context),
+            "wait_for_diagnostics": wait_for_diagnostics,
+        },
     )

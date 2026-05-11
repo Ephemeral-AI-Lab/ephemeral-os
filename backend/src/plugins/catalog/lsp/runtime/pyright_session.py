@@ -7,7 +7,6 @@ import contextlib
 import hashlib
 import logging
 import os
-import re
 import shutil
 from pathlib import Path
 from typing import Any
@@ -29,13 +28,8 @@ logger = logging.getLogger(__name__)
 _CONDA_HOOK = "/opt/miniconda3/etc/profile.d/conda.sh"
 _DEFAULT_INIT_TIMEOUT_S = 30.0
 _DEFAULT_REQUEST_TIMEOUT_S = 30.0
-_DIAGNOSTICS_WAIT_S = 2.0
+_DIAGNOSTICS_WAIT_S = 5.0
 _DIAGNOSTICS_POLL_S = 0.05
-_WORD_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
-_SYMBOL_DEF_RE = re.compile(
-    r"^\s*(?:(?P<kind>def|class)\s+)?"
-    r"(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*(?:\(|:|=)"
-)
 
 
 class PyrightSpawnError(RuntimeError):
@@ -66,7 +60,6 @@ class PyrightSession:
         self._stale_diagnostics_after_change: dict[str, list[dict[str, Any]]] = {}
         self._lock = asyncio.Lock()
         self._started = False
-        self._fallback = False
         self._document_versions: dict[str, int] = {}
         self._document_hashes: dict[str, str] = {}
         if stable_root is not None:
@@ -125,20 +118,12 @@ class PyrightSession:
                 await self._spawn()
                 await self._initialize()
             except Exception:
-                if os.getenv("EOS_LSP_DISABLE_PYTHON_FALLBACK") == "1":
-                    raise
                 await self._cleanup_failed_start()
-                self._fallback = True
-                logger.warning(
-                    "pyright-langserver unavailable; using Python LSP fallback",
-                    exc_info=True,
-                )
+                raise
             self._started = True
 
     async def hover(self, args: dict[str, Any]) -> dict[str, Any]:
         await self.start()
-        if self._fallback:
-            return self._fallback_hover(args)
         uri = await self._open_document(args["file_path"])
         params = {
             "textDocument": {"uri": uri},
@@ -152,8 +137,6 @@ class PyrightSession:
 
     async def find_definitions(self, args: dict[str, Any]) -> dict[str, Any]:
         await self.start()
-        if self._fallback:
-            return {"definitions": self._fallback_locations(args)}
         return {
             "definitions": await self._point_query(
                 "textDocument/definition", args
@@ -162,8 +145,6 @@ class PyrightSession:
 
     async def find_references(self, args: dict[str, Any]) -> dict[str, Any]:
         await self.start()
-        if self._fallback:
-            return {"references": self._fallback_locations(args)}
         uri = await self._open_document(args["file_path"])
         params = {
             "textDocument": {"uri": uri},
@@ -180,9 +161,8 @@ class PyrightSession:
 
     async def diagnostics(self, args: dict[str, Any]) -> dict[str, Any]:
         await self.start()
-        if self._fallback:
-            return {"diagnostics": self._fallback_diagnostics(args)}
         uri = await self._open_document(args["file_path"])
+        wait_for_diagnostics = bool(args.get("wait_for_diagnostics"))
         # Wait briefly for publishDiagnostics to arrive; Pyright emits
         # it shortly after didOpen / didChange but the first analysis can
         # take longer when the server just loaded a workspace.
@@ -190,14 +170,15 @@ class PyrightSession:
         for _ in range(attempts):
             entries = self._diagnostics.get(uri)
             if entries is not None:
+                if wait_for_diagnostics and not entries:
+                    await asyncio.sleep(_DIAGNOSTICS_POLL_S)
+                    continue
                 return {"diagnostics": entries}
             await asyncio.sleep(_DIAGNOSTICS_POLL_S)
         return {"diagnostics": self._diagnostics.get(uri, [])}
 
     async def query_symbols(self, args: dict[str, Any]) -> dict[str, Any]:
         await self.start()
-        if self._fallback:
-            return {"symbols": self._fallback_symbols(args)}
         query = str(args.get("query", "")).strip()
         if "file_path" in args and args["file_path"]:
             uri = await self._open_document(str(args["file_path"]))
@@ -254,121 +235,6 @@ class PyrightSession:
             with contextlib.suppress(Exception):
                 proc.terminate()
                 await asyncio.wait_for(proc.wait(), timeout=5.0)
-
-    def _fallback_hover(self, args: dict[str, Any]) -> dict[str, Any]:
-        text = self._read_document_text(str(args["file_path"]))
-        line_no = int(args.get("line") or 0)
-        char = int(args.get("character") or 0)
-        symbol = _symbol_at(text, line_no, char)
-        contents = (
-            f"Python fallback symbol `{symbol}`"
-            if symbol
-            else "Python fallback hover"
-        )
-        return {"hover": {"contents": {"kind": "markdown", "value": contents}}}
-
-    def _fallback_locations(self, args: dict[str, Any]) -> list[dict[str, Any]]:
-        text = self._read_document_text(str(args["file_path"]))
-        line_no = int(args.get("line") or 0)
-        char = int(args.get("character") or 0)
-        symbol = _symbol_at(text, line_no, char)
-        if not symbol:
-            return []
-        return [
-            {
-                "file_path": file_path,
-                "range": _range(line_index, column),
-            }
-            for file_path, line_index, column in self._find_symbol_defs(symbol, args)
-        ]
-
-    def _fallback_diagnostics(self, args: dict[str, Any]) -> list[dict[str, Any]]:
-        file_path = str(args["file_path"])
-        text = self._read_document_text(file_path)
-        diagnostics: list[dict[str, Any]] = []
-        for index, line in enumerate(text.splitlines()):
-            column = line.find("missing_value")
-            if column >= 0:
-                diagnostics.append(
-                    {
-                        "range": _range(index, column, len("missing_value")),
-                        "severity": 1,
-                        "source": "python-fallback-lsp",
-                        "message": '"missing_value" is not defined',
-                    }
-                )
-        return diagnostics
-
-    def _fallback_symbols(self, args: dict[str, Any]) -> list[dict[str, Any]]:
-        query = str(args.get("query", "")).strip().lower()
-        files = (
-            self._fallback_files(str(args["file_path"]))
-            if args.get("file_path")
-            else self._all_python_files()
-        )
-        symbols: list[dict[str, Any]] = []
-        for file_path, full_path in files:
-            try:
-                text = full_path.read_text(encoding="utf-8")
-            except OSError:
-                continue
-            for line_index, line in enumerate(text.splitlines()):
-                match = _SYMBOL_DEF_RE.match(line)
-                if match is None:
-                    continue
-                name = match.group("name")
-                if query and query not in name.lower():
-                    continue
-                symbols.append(
-                    {
-                        "name": name,
-                        "kind": _symbol_kind(match.group("kind")),
-                        "location": {
-                            "uri": self._mapper.to_snapshot_uri(file_path),
-                            "range": _range(line_index, line.find(name)),
-                        },
-                    }
-                )
-        return symbols
-
-    def _find_symbol_defs(
-        self, symbol: str, args: dict[str, Any]
-    ) -> list[tuple[str, int, int]]:
-        candidates = self._all_python_files()
-        if args.get("file_path"):
-            local = self._fallback_files(str(args["file_path"]))
-            candidates = local + [item for item in candidates if item not in local]
-        matches: list[tuple[str, int, int]] = []
-        pattern = re.compile(
-            rf"^\s*(?:def|class)\s+{re.escape(symbol)}\b"
-            rf"|^\s*{re.escape(symbol)}\s*="
-        )
-        for file_path, full_path in candidates:
-            try:
-                lines = full_path.read_text(encoding="utf-8").splitlines()
-            except OSError:
-                continue
-            for line_index, line in enumerate(lines):
-                found = pattern.search(line)
-                if found is not None:
-                    matches.append((file_path, line_index, line.find(symbol)))
-        return matches
-
-    def _fallback_files(self, file_path: str) -> list[tuple[str, Path]]:
-        return [(file_path, Path(self._mapper.to_full_path(file_path)))]
-
-    def _all_python_files(self) -> list[tuple[str, Path]]:
-        root = Path(self.lowerdir)
-        out: list[tuple[str, Path]] = []
-        if not root.exists():
-            return out
-        for path in root.rglob("*.py"):
-            try:
-                rel = path.relative_to(root).as_posix()
-            except ValueError:
-                continue
-            out.append((rel, path))
-        return out
 
     async def _point_query(
         self, method: str, args: dict[str, Any]
@@ -638,31 +504,3 @@ class PyrightSession:
 
 def _text_hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-
-def _symbol_at(text: str, line_no: int, character: int) -> str:
-    lines = text.splitlines()
-    if line_no < 0 or line_no >= len(lines):
-        return ""
-    line = lines[line_no]
-    for match in _WORD_RE.finditer(line):
-        if match.start() <= character <= match.end():
-            return match.group(0)
-    return ""
-
-
-def _range(line: int, column: int, width: int = 0) -> dict[str, Any]:
-    start = max(column, 0)
-    end = start + max(width, 0)
-    return {
-        "start": {"line": line, "character": start},
-        "end": {"line": line, "character": end},
-    }
-
-
-def _symbol_kind(kind: str | None) -> int:
-    if kind == "class":
-        return 5
-    if kind == "def":
-        return 12
-    return 13

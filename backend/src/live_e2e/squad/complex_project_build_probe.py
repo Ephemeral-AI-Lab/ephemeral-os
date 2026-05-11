@@ -171,8 +171,9 @@ async def run_complex_project_build_probe(
     )
     selected_paths = frozenset(f.relative_path for f in selected_files)
     await _phase_d_refactor(ctx, stats, refactor_passes, selected_paths)
-    await _phase_d_edit_amplification(ctx, stats, selected_files)
+    amp_pairs = await _phase_d_edit_amplification(ctx, stats, selected_files)
     pytest_exit_code, pytest_stdout = await _phase_f_pytest(ctx, stats)
+    await _phase_f_per_module_imports(ctx, stats, selected_files)
     await _phase_f_lsp_saturation(ctx, stats, selected_files)
     await _phase_f_tri_source_consistency(ctx, stats, selected_files)
     await _phase_f_intentional_conflicts(ctx, stats, selected_files)
@@ -186,6 +187,7 @@ async def run_complex_project_build_probe(
         refactor_passes=refactor_passes,
         pytest_exit_code=pytest_exit_code,
         pytest_stdout=pytest_stdout,
+        amp_pairs=amp_pairs,
     )
 
     return summary_path
@@ -237,8 +239,8 @@ async def _phase0_bootstrap(ctx: ProbeContext, stats: ProbeStats) -> None:
                 description=f"bootstrap api.shell mkdir cwd={candidate_cwd}",
             ),
         )
-        stats.api_shell_count += 1
         if candidate_result.success and candidate_result.exit_code == 0:
+            stats.api_shell_count += 1
             mkdir_result = candidate_result
             break
         last_err = (
@@ -351,21 +353,48 @@ async def _phase0_bootstrap(ctx: ProbeContext, stats: ProbeStats) -> None:
     api_shell = await sandbox_api.shell(
         ctx.sandbox_id,
         ShellRequest(
-            command="git rev-parse --git-dir 2>&1 || echo MISSING_GIT",
+            command="test -d . && printf 'workspace-exists\\n'",
             cwd=WORKSPACE_ROOT,
             timeout=60,
             caller=ctx.caller,
-            description="bootstrap api.shell git rev-parse",
+            description="bootstrap api.shell workspace exists",
         ),
     )
-    stats.api_shell_count += 1
+    if api_shell.success and api_shell.exit_code == 0:
+        stats.api_shell_count += 1
     ctx.sandbox_checks.append(
         SandboxCheck(
-            name="api.shell.bootstrap.git_status",
-            passed=bool(api_shell.success),
+            name="api.shell.bootstrap.workspace_exists",
+            passed=bool(api_shell.success and api_shell.exit_code == 0),
             detail=(
                 f"exit_code={api_shell.exit_code} "
                 f"stdout={api_shell.stdout!r} stderr={api_shell.stderr!r}"
+            ),
+        )
+    )
+
+    api_shell_status = await sandbox_api.shell(
+        ctx.sandbox_id,
+        ShellRequest(
+            command="pwd",
+            cwd=WORKSPACE_ROOT,
+            timeout=60,
+            caller=ctx.caller,
+            description="bootstrap api.shell workspace cwd",
+        ),
+    )
+    if api_shell_status.success and api_shell_status.exit_code == 0:
+        stats.api_shell_count += 1
+    ctx.sandbox_checks.append(
+        SandboxCheck(
+            name="api.shell.bootstrap.workspace_cwd",
+            passed=bool(
+                api_shell_status.success and api_shell_status.exit_code == 0
+            ),
+            detail=(
+                f"exit_code={api_shell_status.exit_code} "
+                f"stdout={api_shell_status.stdout!r} "
+                f"stderr={api_shell_status.stderr!r}"
             ),
         )
     )
@@ -705,22 +734,68 @@ async def _phase_d_refactor(
     )
 
 
+def _compute_amp_pairs(
+    selected_files: Sequence[FixtureFile],
+    *,
+    smoke: bool,
+    edit_write_ratio_floor: float = 4.0,
+    headroom: float = 1.25,
+    phase1_full_floor: int = 30,
+    phase1_smoke_floor: int = 6,
+) -> int:
+    """Size the Phase D' amplification so §13.6 (edit:write ≥4×) + §7.2
+    (≥2000 toolkit calls for full) both hold without a magic constant.
+
+    Returns the per-anchor ``pairs`` value (each pair = 2 ``edit_file`` calls
+    — forward + revert) computed from the §13.6 ratio target plus a §7.2
+    tool-call floor pad.
+
+    ``phase1_full_floor`` / ``phase1_smoke_floor`` are regression anchors,
+    not principled floors: they keep this from returning a *smaller* value
+    than the Phase 1 magic constants (30 / 6) if the formula auto-scales
+    down as the fixture set grows. ``floor_pairs`` from §7.2 already
+    provides the principled lower bound; these anchors only kick in if the
+    formula would otherwise regress call volume below Phase 1's known-good
+    behaviour.
+    """
+    py_anchor_count = sum(
+        1 for f in selected_files
+        if f.relative_path.endswith(".py")
+        and "from __future__ import annotations" in f.final
+    )
+    if py_anchor_count == 0:
+        return 0
+    write_count_est = len(selected_files) + 5
+    existing_edits_est = sum(len(f.patches) for f in selected_files)
+    target_edits = int(edit_write_ratio_floor * headroom * write_count_est)
+    deficit = max(0, target_edits - existing_edits_est)
+    pairs_from_ratio = (deficit + 2 * py_anchor_count - 1) // (2 * py_anchor_count)
+    if not smoke:
+        # baseline = observed non-amp toolkit call count from Phase 1 full
+        # run (bootstrap + patches + refactor + F-phases ≈600); §7.2 floor 2000.
+        baseline = 600
+        floor_pairs = (2000 - baseline + 2 * py_anchor_count - 1) // (2 * py_anchor_count)
+        return max(pairs_from_ratio, floor_pairs, phase1_full_floor)
+    return max(pairs_from_ratio, phase1_smoke_floor)
+
+
 async def _phase_d_edit_amplification(
     ctx: ProbeContext,
     stats: ProbeStats,
     selected: Sequence[FixtureFile],
-) -> None:
+) -> int:
     """Drive the edit:write ratio above the §13.6 ≥4× floor.
 
     Walks every fixture with at least one patch and applies ``pairs`` sentinel
-    insert+revert pairs against ``from __future__ import annotations`` (or the
-    fixture content itself for files without that anchor). Each pair is two
-    edit_file calls — one forward (insert ``# amp_N``), one revert (remove it)
-    — so the file ends up byte-identical to its post-Phase-B form. The count
-    is tuned so smoke (13 files × 4 pairs = 104 edits) and full (38 × 6 = 456
-    edits) both clear the ratio target with margin.
+    insert+revert pairs against ``from __future__ import annotations``. Each
+    pair is two edit_file calls — one forward (insert ``# amp_N``), one
+    revert (remove it) — so the file ends up byte-identical to its
+    post-Phase-B form.
+
+    Returns the computed ``pairs`` value so the caller can record it in the
+    probe summary for visibility.
     """
-    pairs = 6 if ctx.smoke else 30
+    pairs = _compute_amp_pairs(selected, smoke=ctx.smoke)
     phase_started = time.monotonic()
 
     targets = [
@@ -728,7 +803,7 @@ async def _phase_d_edit_amplification(
         if f.relative_path.endswith(".py") and "from __future__ import annotations" in f.final
     ]
     if not targets:
-        return
+        return pairs
 
     for fixture in targets:
         path = f"{WORKSPACE_ROOT}/{fixture.relative_path}"
@@ -760,6 +835,7 @@ async def _phase_d_edit_amplification(
             "tool_calls_at_end": _total_calls(stats),
         }
     )
+    return pairs
 
 
 async def _resolve_anchor_position(
@@ -829,6 +905,69 @@ async def _phase_f_pytest(
         }
     )
     return exit_code, stdout
+
+
+def _importable_dotted_names(selected: Sequence[FixtureFile]) -> list[str]:
+    """Return the dotted module names from ``selected`` that should be
+    importable via ``python3 -c 'import <name>'``.
+
+    Excludes package ``__init__`` files (importing them re-exercises the
+    package init but doesn't add unique coverage), ``conftest.py``, anything
+    under ``tests/`` (those are pytest-collected, not import-as-module), and
+    project-root non-Python files like ``.gitignore`` / ``pyproject.toml``.
+    """
+    names: list[str] = []
+    for fixture in selected:
+        path = fixture.relative_path
+        if not path.endswith(".py"):
+            continue
+        if path.endswith("/__init__.py") or path == "__init__.py":
+            continue
+        if path == "conftest.py" or path.startswith("tests/"):
+            continue
+        dotted = path[:-3].replace("/", ".")
+        names.append(dotted)
+    return names
+
+
+async def _phase_f_per_module_imports(
+    ctx: ProbeContext,
+    stats: ProbeStats,
+    selected: Sequence[FixtureFile],
+) -> None:
+    """Plan §7.7 — every source module must be importable on its own.
+
+    pytest collection in :func:`_phase_f_pytest` covers this transitively,
+    but the §7.7 contract is stated as an independent per-module probe so
+    we run it explicitly. Each module produces a ``module.import.<dotted>``
+    SandboxCheck which rolls up via ``passed_sandbox_checks``.
+    """
+    dotted_names = _importable_dotted_names(selected)
+    if not dotted_names:
+        return
+    phase_started = time.monotonic()
+    for dotted in dotted_names:
+        result = await _shell(
+            ctx,
+            stats,
+            command=f"cd {WORKSPACE_ROOT} && python3 -c 'import {dotted}'",
+            timeout=30,
+        )
+        exit_code = _shell_exit_code(result)
+        ctx.sandbox_checks.append(
+            SandboxCheck(
+                name=f"module.import.{dotted}",
+                passed=exit_code == 0,
+                detail=f"exit_code={exit_code}",
+            )
+        )
+    stats.phases.append(
+        {
+            "name": "F_per_module_imports",
+            "duration_s": time.monotonic() - phase_started,
+            "tool_calls_at_end": _total_calls(stats),
+        }
+    )
 
 
 async def _phase_f_lsp_saturation(
@@ -983,6 +1122,7 @@ async def _phase_f_emit_metrics(
     refactor_passes: Sequence[RefactorPass],
     pytest_exit_code: int,
     pytest_stdout: str,
+    amp_pairs: int,
 ) -> str:
     perf_payload = aggregate_perf_metrics(
         run_id=str(ctx.metadata.get("task_center_task_id") or ""),
@@ -1018,6 +1158,7 @@ async def _phase_f_emit_metrics(
         "wall_seconds_total": wall_seconds,
         "selected_file_count": len(selected_files),
         "refactor_pass_count": len(refactor_passes),
+        "amp_pairs": amp_pairs,
         "pytest_exit_code": pytest_exit_code,
         "pytest_stdout_tail": pytest_stdout[-2048:],
         "metrics_path": METRICS_PATH,

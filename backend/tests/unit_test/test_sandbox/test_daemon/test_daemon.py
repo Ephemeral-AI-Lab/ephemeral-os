@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 from sandbox.runtime.daemon.handler import request_context
+from sandbox.runtime.daemon.handler import workspace as workspace_handler
 from sandbox.runtime.daemon.rpc import dispatcher as server
 from sandbox.runtime.daemon.rpc import server as daemon
 from sandbox.runtime.daemon.service import occ_backend
@@ -251,3 +252,56 @@ def test_drop_backend_cache_removes_only_requested_root(
 
     assert occ_backend.build_occ_backend("/tmp/a") is not a
     assert occ_backend.build_occ_backend("/tmp/b") is b
+
+
+async def test_build_workspace_base_reset_drops_cache_without_drain(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, str]] = []
+
+    class _FakeBinding:
+        def to_dict(self) -> dict[str, object]:
+            return {"workspace_root": "/ephemeral-os"}
+
+    class _FakeServer:
+        def __init__(self, layer_stack_root: str) -> None:
+            calls.append(("server", layer_stack_root))
+
+        def build_workspace_base(
+            self,
+            *,
+            workspace_root: str,
+            reset: bool,
+            timings: dict[str, float],
+        ) -> _FakeBinding:
+            calls.append(("build", f"{workspace_root}|reset={reset}"))
+            timings["server.build_workspace_base_s"] = 0.01
+            return _FakeBinding()
+
+    monkeypatch.setattr(workspace_handler, "LayerStackWorkspaceServer", _FakeServer)
+    monkeypatch.setattr(
+        occ_backend,
+        "drop_backend_cache",
+        lambda layer_stack_root: calls.append(("drop", layer_stack_root)),
+    )
+    monkeypatch.setattr(
+        occ_backend,
+        "drain_backend_auto_squash",
+        lambda layer_stack_root: calls.append(("drain", layer_stack_root)),
+        raising=False,
+    )
+
+    result = await workspace_handler.build_workspace_base(
+        {
+            "layer_stack_root": "/tmp/stack",
+            "workspace_root": "/ephemeral-os",
+            "reset": True,
+        }
+    )
+
+    assert result["success"] is True
+    assert result["created"] is True
+    assert result["binding"] == {"workspace_root": "/ephemeral-os"}
+    assert ("drop", "/tmp/stack") in calls
+    assert ("drain", "/tmp/stack") not in calls
+    assert ("build", "/ephemeral-os|reset=True") in calls

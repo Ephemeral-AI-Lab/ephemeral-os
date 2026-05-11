@@ -899,6 +899,39 @@ def round_trip(tasks: list[Task]) -> list[Task]:
 )
 
 
+# --- scheduler_demo/storage/json_serializer.py ------------------------------
+
+_JSON_SERIALIZER_SKELETON = '''\
+"""Object-oriented JSON serializer facade."""
+from __future__ import annotations
+
+from scheduler_demo.domain.task import Task
+from scheduler_demo.storage.serializer import dump, load
+
+
+# ---- json serializer ----
+'''
+
+_JSON_SERIALIZER_BLOCKS: tuple[tuple[str, str], ...] = (
+    (
+        "# ---- json serializer ----\n",
+        '''
+
+class JsonSerializer:
+    """Small facade over the module-level JSON serializer helpers."""
+
+    media_type = "application/json"
+
+    def dumps(self, tasks: list[Task]) -> str:
+        return dump(tasks)
+
+    def loads(self, payload: str) -> list[Task]:
+        return load(payload)
+''',
+    ),
+)
+
+
 # --- scheduler_demo/api/__init__.py -----------------------------------------
 
 _API_INIT_FINAL = '''\
@@ -2375,6 +2408,11 @@ SCHEDULER_DEMO_FILES: tuple[FixtureFile, ...] = (
         relative_path="scheduler_demo/storage/serializer.py",
         skeleton=_SERIALIZER_SKELETON,
         blocks=_SERIALIZER_BLOCKS,
+    ),
+    _build(
+        relative_path="scheduler_demo/storage/json_serializer.py",
+        skeleton=_JSON_SERIALIZER_SKELETON,
+        blocks=_JSON_SERIALIZER_BLOCKS,
     ),
     # api/
     _init("scheduler_demo/api/__init__.py", _API_INIT_FINAL),

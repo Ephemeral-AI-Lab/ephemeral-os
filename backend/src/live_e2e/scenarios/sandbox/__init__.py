@@ -7,6 +7,8 @@ content read back through the sandbox toolkit.
 Implemented (reference scenarios):
 - :class:`AutoSquashCommitResume`
 - :class:`ComplexProjectBuild`
+- :class:`ComplexProjectBuildShellEditLsp`
+- :class:`ComplexProjectBuildShellEditLspSmoke`
 - :class:`ComplexProjectBuildSmoke`
 - :class:`OccConcurrentConflicts`
 """
@@ -20,6 +22,10 @@ from live_e2e.scenarios.sandbox.complex_project_build import (
     ComplexProjectBuild,
     ComplexProjectBuildSmoke,
 )
+from live_e2e.scenarios.sandbox.complex_project_build_shell_edit_lsp import (
+    ComplexProjectBuildShellEditLsp,
+    ComplexProjectBuildShellEditLspSmoke,
+)
 from live_e2e.scenarios.sandbox.occ_concurrent_conflicts import (
     OccConcurrentConflicts,
 )
@@ -27,6 +33,8 @@ from live_e2e.scenarios.sandbox.occ_concurrent_conflicts import (
 __all__ = [
     "AutoSquashCommitResume",
     "ComplexProjectBuild",
+    "ComplexProjectBuildShellEditLsp",
+    "ComplexProjectBuildShellEditLspSmoke",
     "ComplexProjectBuildSmoke",
     "OccConcurrentConflicts",
 ]
