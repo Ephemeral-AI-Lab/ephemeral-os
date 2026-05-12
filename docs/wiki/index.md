@@ -1,6 +1,6 @@
 # Wiki Index
 
-> 7 pages | Last updated: 2026-05-10T13:37:56.000Z
+> 13 pages | Last updated: 2026-05-12T00:00:00.000Z
 
 ## architecture
 
@@ -12,6 +12,10 @@
 
 ## decision
 
+- [Live E2E Capacity Suite - Harness And Action Plan](live-e2e-capacity-suite-harness-actions.md) — # Live E2E Capacity Suite - Harness And Action Plan
+- [Live E2E Capacity Suite - Scenario Packs](live-e2e-capacity-suite-scenario-packs.md) — # Live E2E Capacity Suite - Scenario Packs
+- [Live E2E Capacity Suite - Scenario-Based Testing Plan](live-e2e-capacity-suite-plan.md) — # Live E2E Capacity Suite - Scenario-Based Testing Plan
+- [Live E2E Capacity Suite - Verification Plan](live-e2e-capacity-suite-verification.md) — # Live E2E Capacity Suite - Verification Plan
 - [Live E2E Scenario Suite — Design](live-e2e-scenario-suite-design.md) — # Live E2E Scenario Suite — Design
 - [Live E2E Scenarios — Full Migration](live-e2e-scenarios-full-migration.md) — # Live E2E Scenarios — Full Migration (delete the live_test shim)
 - [Live E2E Testing Framework — Design](live-e2e-testing-framework-design.md) — # Live E2E Testing Framework — Design

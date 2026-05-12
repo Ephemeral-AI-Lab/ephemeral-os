@@ -10,6 +10,7 @@ conventions, and per-subpackage coverage matrix.
 - `_utils/` — shared helpers (plan factories, mission/recursive predicates, task_input parsers).
 - `pipeline/` — task_center state-machine scenarios (mission/episode/attempt control flow).
 - `sandbox/` — sandbox subsystem scenarios (OCC, overlay, layerstack, LSP, daemon).
+- `capacity/` — composite scenarios that intentionally span multiple subsystem owners.
 - `tools/` — tool execution, gate hooks, notifications, max-step.
 - `context/` — context engine recipe rendering.
 - `planner_validation/` — invalid plan rejection.

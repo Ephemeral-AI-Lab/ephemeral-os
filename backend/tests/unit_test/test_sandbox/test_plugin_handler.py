@@ -14,6 +14,7 @@ import sys
 import textwrap
 import types
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 
@@ -26,6 +27,7 @@ from sandbox.plugin.runtime import registry as registry_mod
 def _isolate_plugin_state() -> Iterator[None]:
     handler_mod._LOADED.clear()
     handler_mod._LOADED_DIGEST.clear()
+    handler_mod._PROJECTIONS.clear()
     registry_mod._PENDING.clear()
     pre_existing = [
         name for name in sys.modules if name.startswith("plugins.catalog.")
@@ -33,6 +35,7 @@ def _isolate_plugin_state() -> Iterator[None]:
     yield
     handler_mod._LOADED.clear()
     handler_mod._LOADED_DIGEST.clear()
+    handler_mod._PROJECTIONS.clear()
     registry_mod._PENDING.clear()
     for name in [
         n for n in sys.modules if n.startswith("plugins.catalog.")
@@ -41,7 +44,12 @@ def _isolate_plugin_state() -> Iterator[None]:
             sys.modules.pop(name, None)
 
 
-def _inject_runtime(plugin: str, ops: list[str]) -> types.ModuleType:
+def _inject_runtime(
+    plugin: str,
+    ops: list[str],
+    *,
+    warm_hook: bool = False,
+) -> types.ModuleType:
     """Build a synthetic plugins.catalog.<plugin>.runtime.server module.
 
     Uses exec() with __name__ set to the plugin runtime path so the
@@ -64,6 +72,14 @@ def _inject_runtime(plugin: str, ops: list[str]) -> types.ModuleType:
         ).strip()
         for op in ops
     )
+    if warm_hook:
+        body = (
+            "WARM_CALLS = []\n"
+            f"{body}\n"
+            "async def warm_plugin_runtime(args, ctx):\n"
+            "    WARM_CALLS.append((args.get('plugin'), ctx.layer_stack_root))\n"
+            "    return {'manifest_key': 'hot@1'}\n"
+        )
     exec(body, namespace)
 
     mod = types.ModuleType(module_name)
@@ -91,6 +107,42 @@ def test_plugin_ensure_loads_runtime_and_registers_ops() -> None:
 
     assert "plugin.demo.hover" in OP_TABLE
     assert "plugin.demo.ping" in OP_TABLE
+
+
+def test_plugin_ensure_runs_optional_runtime_warm_hook(tmp_path: Path) -> None:
+    runtime = _inject_runtime("hot_demo", ["hover"], warm_hook=True)
+    layer_stack_root = str(tmp_path / "layer-stack")
+
+    response = asyncio.run(
+        handler_mod.plugin_ensure(
+            {
+                "plugin": "hot_demo",
+                "digest": "a",
+                "layer_stack_root": layer_stack_root,
+            }
+        )
+    )
+
+    assert response["runtime_warmed"] is True
+    assert response["warm_result"] == {"manifest_key": "hot@1"}
+    assert runtime.WARM_CALLS == [("hot_demo", layer_stack_root)]
+
+    second = asyncio.run(
+        handler_mod.plugin_ensure(
+            {
+                "plugin": "hot_demo",
+                "digest": "a",
+                "layer_stack_root": layer_stack_root,
+            }
+        )
+    )
+
+    assert second["already_loaded"] is True
+    assert second["runtime_warmed"] is True
+    assert runtime.WARM_CALLS == [
+        ("hot_demo", layer_stack_root),
+        ("hot_demo", layer_stack_root),
+    ]
 
 
 def test_plugin_ensure_is_idempotent() -> None:

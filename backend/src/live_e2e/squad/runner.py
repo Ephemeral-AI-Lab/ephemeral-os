@@ -85,6 +85,9 @@ from live_e2e.squad.full_stack_tool_scripts import (
     recursive_oversized_matrix_script,
     verifier_checkpoint_script as full_stack_verifier_checkpoint_script,
 )
+from live_e2e.squad.capacity_actions import (
+    full_system_capacity_metrics_script,
+)
 from live_e2e.squad.tool_scripts import (
     PreparedToolScriptEngine,
     execute_package_script,
@@ -489,6 +492,14 @@ class MockSquadRunner:
                 summary = script_result.summary
                 artifacts = [script_result.artifact]
                 self._publish_full_stack_script(script_result.script_name, metadata)
+            elif action == "capacity_metrics_full_system":
+                script_result = await self._script_engine.run(
+                    full_system_capacity_metrics_script(ctx),
+                    metadata=metadata,
+                    emit=emit,
+                )
+                summary = script_result.summary
+                artifacts = [script_result.artifact]
             elif action == "recursive_step":
                 script_result = await self._script_engine.run(
                     recursive_step_script(ctx),
@@ -560,7 +571,8 @@ class MockSquadRunner:
             )
         checkpoint_script = (
             full_stack_verifier_checkpoint_script(ctx)
-            if self._scenario.name == "full_stack_adversarial"
+            if self._scenario.name
+            in {"full_stack_adversarial", "capacity.full_system_capacity_matrix"}
             else verifier_checkpoint_script(ctx)
         )
         await self._script_engine.run(

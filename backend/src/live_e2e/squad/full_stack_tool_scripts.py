@@ -598,6 +598,11 @@ def lsp_refresh_semantics_script(ctx: ScenarioContext) -> PreparedToolScript:
             {"file_path": consumer_path, "content": _LSP_CONSUMER_BAD},
         ),
         ToolScriptStep(
+            "lsp-hot-server-warmup",
+            lsp_diagnostics_tool,
+            {"file_path": model_path, "wait_for_diagnostics": False},
+        ),
+        ToolScriptStep(
             "lsp-hover-initial",
             lsp_hover_tool,
             {"file_path": model_path, "line": 3, "character": 4},

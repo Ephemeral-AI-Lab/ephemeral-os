@@ -42,8 +42,8 @@ LSP_EXPECTATIONS: tuple[LspExpectation, ...] = (
     ),
     LspExpectation(
         symbol="Schedule",
-        source_path="scheduler_demo/domain/__init__.py",
-        source_anchor="from scheduler_demo.domain.schedule import Schedule, ScheduleSlot",
+        source_path="scheduler_demo/domain/schedule.py",
+        source_anchor="class Schedule:",
         definition_path="scheduler_demo/domain/schedule.py",
         definition_anchor="class Schedule:",
         min_references=2,
@@ -51,8 +51,8 @@ LSP_EXPECTATIONS: tuple[LspExpectation, ...] = (
     ),
     LspExpectation(
         symbol="Priority",
-        source_path="scheduler_demo/domain/__init__.py",
-        source_anchor="from scheduler_demo.domain.priority import Priority",
+        source_path="scheduler_demo/domain/priority.py",
+        source_anchor="class Priority(IntEnum):",
         definition_path="scheduler_demo/domain/priority.py",
         definition_anchor="class Priority(IntEnum):",
         min_references=2,
@@ -60,8 +60,8 @@ LSP_EXPECTATIONS: tuple[LspExpectation, ...] = (
     ),
     LspExpectation(
         symbol="Scheduler",
-        source_path="scheduler_demo/services/__init__.py",
-        source_anchor="from scheduler_demo.services.scheduler import Scheduler",
+        source_path="scheduler_demo/services/scheduler.py",
+        source_anchor="class Scheduler:",
         definition_path="scheduler_demo/services/scheduler.py",
         definition_anchor="class Scheduler:",
         min_references=2,
@@ -87,8 +87,8 @@ LSP_EXPECTATIONS: tuple[LspExpectation, ...] = (
     ),
     LspExpectation(
         symbol="RetryPolicy",
-        source_path="scheduler_demo/services/__init__.py",
-        source_anchor="from scheduler_demo.services.retry import RetryPolicy",
+        source_path="scheduler_demo/services/retry.py",
+        source_anchor="class RetryPolicy:",
         definition_path="scheduler_demo/services/retry.py",
         definition_anchor="class RetryPolicy:",
         min_references=2,

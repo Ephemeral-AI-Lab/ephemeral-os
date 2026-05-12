@@ -15,6 +15,17 @@ from sandbox.plugin.runtime import register_plugin_op
 from plugins.catalog.lsp.runtime.session_manager import get_session
 
 
+async def warm_plugin_runtime(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
+    """Start the Pyright sidecar during plugin ensure so first tool calls are warm."""
+    del args
+    session = await get_session(ctx)
+    await session.start()
+    return {
+        "success": True,
+        "manifest_key": session.manifest_key,
+    }
+
+
 @register_plugin_op("lsp", "hover")
 async def hover(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     session = await get_session(ctx)

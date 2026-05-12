@@ -23,7 +23,7 @@ from live_e2e.scenarios.base import Scenario
 from live_e2e.stores import TaskCenterStoreBundle
 
 _DEFAULT_INSTANCE_ID = "dask__dask_2023.3.2_2023.4.0"
-_WORKSPACE_USED_KEY = "sweevo_sandbox_used"
+_SESSION_WORKSPACE_USED_ATTR = "_ephemeralos_sweevo_workspace_used_sandboxes"
 
 
 async def run_sweevo_scenario(
@@ -69,11 +69,10 @@ async def sweevo_sandbox(sweevo_instance: SWEEvoInstance) -> dict[str, object]:
     from benchmarks.sweevo.sandbox import create_sweevo_test_sandbox
 
     bootstrap_daytona_provider()
-    reuse_existing_auto = os.getenv("EOS_SWEEVO_FORCE_FRESH_SANDBOX") != "1"
     return await create_sweevo_test_sandbox(
         sweevo_instance,
         register_snapshot=True,
-        reuse_existing_auto=reuse_existing_auto,
+        reuse_existing_auto=_reuse_existing_auto_enabled(),
     )
 
 
@@ -82,15 +81,34 @@ async def workspace(
     sweevo_sandbox: dict[str, object],
     request: pytest.FixtureRequest,
 ) -> dict[str, object]:
-    """Per-test workspace reset on subsequent invocations."""
-    cache = request.session.config.cache
-    if cache is not None and cache.get(_WORKSPACE_USED_KEY, False):
+    """Return a SWE-EVO workspace with per-test reset isolation."""
+    sandbox_id = str(sweevo_sandbox["sandbox_id"])
+    used_sandboxes = _session_workspace_used_sandboxes(request.session)
+    first_use = sandbox_id not in used_sandboxes
+    should_reset = (not first_use) or bool(sweevo_sandbox.get("reused_existing"))
+    if should_reset:
         from benchmarks.sweevo.sandbox import reset_sweevo_workspace
 
-        await reset_sweevo_workspace(str(sweevo_sandbox["sandbox_id"]))
-    elif cache is not None:
-        cache.set(_WORKSPACE_USED_KEY, True)
+        await reset_sweevo_workspace(sandbox_id)
+    used_sandboxes.add(sandbox_id)
     return sweevo_sandbox
+
+
+def _reuse_existing_auto_enabled() -> bool:
+    """Return whether SWE-EVO tests may attach to an existing auto sandbox."""
+    if os.getenv("EOS_SWEEVO_FORCE_FRESH_SANDBOX") == "1":
+        return False
+    return os.getenv("EOS_SWEEVO_REUSE_SANDBOX") == "1"
+
+
+def _session_workspace_used_sandboxes(session: object) -> set[str]:
+    """Track workspace use in the current pytest process only."""
+    current = getattr(session, _SESSION_WORKSPACE_USED_ATTR, None)
+    if isinstance(current, set):
+        return current
+    used: set[str] = set()
+    setattr(session, _SESSION_WORKSPACE_USED_ATTR, used)
+    return used
 
 
 __all__ = [

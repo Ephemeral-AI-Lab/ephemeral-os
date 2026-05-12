@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 
 from plugins.catalog.lsp.runtime import session_manager
+from plugins.catalog.lsp.runtime import server as lsp_server
 from plugins.catalog.lsp.runtime.pyright_session import (
     PyrightSession,
     PyrightSpawnError,
@@ -98,6 +99,29 @@ class _FakeSession:
         self.evict_count += 1
 
 
+class _StartableFakeSession(_FakeSession):
+    def __init__(
+        self,
+        *,
+        manifest_key: str,
+        lowerdir: str,
+        workspace_root: str,
+        projection_handle: _Handle,
+        stable_root: str,
+    ) -> None:
+        super().__init__(
+            manifest_key=manifest_key,
+            lowerdir=lowerdir,
+            workspace_root=workspace_root,
+            projection_handle=projection_handle,
+            stable_root=stable_root,
+        )
+        self.start_count = 0
+
+    async def start(self) -> None:
+        self.start_count += 1
+
+
 @pytest.mark.asyncio
 async def test_session_manager_refreshes_on_manifest_change(
     monkeypatch: pytest.MonkeyPatch,
@@ -125,6 +149,28 @@ async def test_session_manager_refreshes_on_manifest_change(
     assert refreshed.refresh_count == 1
     assert refreshed.evict_count == 0
     assert projection.acquire_count == 2
+
+
+@pytest.mark.asyncio
+async def test_lsp_runtime_warm_hook_starts_cached_session(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(session_manager, "PyrightSession", _StartableFakeSession)
+
+    handle = _Handle("hash-a@1", str(tmp_path / "lower-a"))
+    ctx = _Ctx(
+        layer_stack_root=str(tmp_path / "layer-stack"),
+        projection=_Projection(handle),
+        metadata={"workspace_root": "/testbed"},
+    )
+
+    result = await lsp_server.warm_plugin_runtime({}, ctx)
+    session = await session_manager.get_session(ctx)
+
+    assert result == {"success": True, "manifest_key": "hash-a@1"}
+    assert isinstance(session, _StartableFakeSession)
+    assert session.start_count == 1
 
 
 class _Client:

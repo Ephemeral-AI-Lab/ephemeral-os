@@ -60,6 +60,7 @@ async def plugin_ensure(args: dict[str, Any]) -> dict[str, Any]:
         plugin_name in _LOADED
         and (not digest or _LOADED_DIGEST.get(plugin_name) == digest)
     ):
+        warm_result = await _warm_plugin_runtime(plugin_name, args)
         return {
             "success": True,
             "plugin": plugin_name,
@@ -67,6 +68,7 @@ async def plugin_ensure(args: dict[str, Any]) -> dict[str, Any]:
             "registered_ops": list(_LOADED[plugin_name]),
             "runtime_loaded": True,
             "already_loaded": True,
+            **warm_result,
         }
     if plugin_name in _LOADED:
         await _unload_plugin_runtime(plugin_name)
@@ -93,6 +95,11 @@ async def plugin_ensure(args: dict[str, Any]) -> dict[str, Any]:
     )
     _LOADED[plugin_name] = registered_ops
     _LOADED_DIGEST[plugin_name] = digest
+    warm_result = (
+        await _warm_plugin_runtime(plugin_name, args)
+        if runtime_loaded
+        else {"runtime_warmed": False}
+    )
     if not registered_ops and not runtime_loaded:
         # Stateless plugin with no runtime — fine, idempotent.
         logger.debug(
@@ -105,6 +112,7 @@ async def plugin_ensure(args: dict[str, Any]) -> dict[str, Any]:
         "registered_ops": list(registered_ops),
         "runtime_loaded": runtime_loaded,
         "already_loaded": False,
+        **warm_result,
     }
 
 
@@ -129,6 +137,33 @@ async def plugin_status(args: dict[str, Any]) -> dict[str, Any]:
 def loaded_plugins_snapshot() -> dict[str, list[str]]:
     """Read-only view of the in-process loaded-plugin map (for tests)."""
     return {name: list(ops) for name, ops in _LOADED.items()}
+
+
+async def _warm_plugin_runtime(
+    plugin_name: str,
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    """Run an optional plugin warm hook after runtime registration."""
+    module = sys.modules.get(f"plugins.catalog.{plugin_name}.runtime.server")
+    warm = getattr(module, "warm_plugin_runtime", None)
+    if not callable(warm):
+        return {"runtime_warmed": False}
+
+    ctx = await _plugin_op_context_factory(args, plugin_name, "__warm__")
+    try:
+        result = warm(args, ctx)
+        if inspect.isawaitable(result):
+            result = await result
+    except Exception as exc:  # pragma: no cover - surfaced through daemon
+        raise PluginEnsureError(
+            f"plugin runtime warm failed for {plugin_name!r}: {exc}"
+        ) from exc
+
+    warm_payload = result if isinstance(result, dict) else {}
+    return {
+        "runtime_warmed": True,
+        "warm_result": warm_payload,
+    }
 
 
 async def _unload_plugin_runtime(plugin_name: str) -> None:

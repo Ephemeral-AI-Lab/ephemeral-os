@@ -63,6 +63,27 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
         attempt_count=2,
     ),
     FocusedScenarioCase(
+        "pipeline.attempt_retry_planner_failure",
+        min_event_counts={
+            EventType.PLANNER_INVOKED: 2,
+            EventType.PLANNER_FULL_PLAN: 1,
+            EventType.TOOL_CALL_ERROR: 1,
+            EventType.EXECUTOR_SUCCESS: 1,
+            EventType.EVALUATOR_SUCCESS: 1,
+        },
+        attempt_count=2,
+    ),
+    FocusedScenarioCase(
+        "pipeline.attempt_retry_generator_failure",
+        min_event_counts={
+            EventType.PLANNER_FULL_PLAN: 2,
+            EventType.EXECUTOR_FAILURE: 1,
+            EventType.EXECUTOR_SUCCESS: 1,
+            EventType.EVALUATOR_SUCCESS: 1,
+        },
+        attempt_count=2,
+    ),
+    FocusedScenarioCase(
         "pipeline.dependency_dag_serial",
         min_event_counts={
             EventType.EXECUTOR_INVOKED: 3,
@@ -79,6 +100,22 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
         attempt_count=1,
     ),
     FocusedScenarioCase(
+        "pipeline.dependency_dag_parallel",
+        min_event_counts={
+            EventType.EXECUTOR_INVOKED: 4,
+            EventType.EXECUTOR_SUCCESS: 4,
+        },
+        attempt_count=1,
+    ),
+    FocusedScenarioCase(
+        "pipeline.dependency_dag_diamond",
+        min_event_counts={
+            EventType.EXECUTOR_INVOKED: 4,
+            EventType.EXECUTOR_SUCCESS: 4,
+        },
+        attempt_count=1,
+    ),
+    FocusedScenarioCase(
         "pipeline.generator_failure_quiescence",
         min_event_counts={
             EventType.PLANNER_FULL_PLAN: 2,
@@ -87,6 +124,18 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EXECUTOR_FAILURE: 1,
             EventType.EVALUATOR_SUCCESS: 1,
         },
+        attempt_count=2,
+    ),
+    FocusedScenarioCase(
+        "pipeline.dependency_blocked_descendants",
+        expected_status="failed",
+        min_event_counts={
+            EventType.PLANNER_FULL_PLAN: 2,
+            EventType.EXECUTOR_INVOKED: 2,
+            EventType.EXECUTOR_FAILURE: 2,
+        },
+        absent_events=(EventType.EVALUATOR_INVOKED,),
+        mission_status="failed",
         attempt_count=2,
     ),
     FocusedScenarioCase(
@@ -111,6 +160,82 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
     ),
     FocusedScenarioCase(
         "planner_validation.duplicate_local_id",
+        expected_status="failed",
+        min_event_counts={
+            EventType.PLANNER_INVOKED: 2,
+            EventType.TOOL_CALL_ERROR: 2,
+        },
+        absent_events=(
+            EventType.PLANNER_FULL_PLAN,
+            EventType.EXECUTOR_INVOKED,
+            EventType.EVALUATOR_INVOKED,
+        ),
+        mission_status="failed",
+        attempt_count=2,
+    ),
+    FocusedScenarioCase(
+        "planner_validation.unknown_dep",
+        expected_status="failed",
+        min_event_counts={
+            EventType.PLANNER_INVOKED: 2,
+            EventType.TOOL_CALL_ERROR: 2,
+        },
+        absent_events=(
+            EventType.PLANNER_FULL_PLAN,
+            EventType.EXECUTOR_INVOKED,
+            EventType.EVALUATOR_INVOKED,
+        ),
+        mission_status="failed",
+        attempt_count=2,
+    ),
+    FocusedScenarioCase(
+        "planner_validation.cycle_in_deps",
+        expected_status="failed",
+        min_event_counts={
+            EventType.PLANNER_INVOKED: 2,
+            EventType.TOOL_CALL_ERROR: 2,
+        },
+        absent_events=(
+            EventType.PLANNER_FULL_PLAN,
+            EventType.EXECUTOR_INVOKED,
+            EventType.EVALUATOR_INVOKED,
+        ),
+        mission_status="failed",
+        attempt_count=2,
+    ),
+    FocusedScenarioCase(
+        "planner_validation.partial_without_continuation_goal",
+        expected_status="failed",
+        min_event_counts={
+            EventType.PLANNER_INVOKED: 2,
+            EventType.TOOL_CALL_ERROR: 2,
+        },
+        absent_events=(
+            EventType.PLANNER_FULL_PLAN,
+            EventType.PLANNER_PARTIAL_PLAN,
+            EventType.EXECUTOR_INVOKED,
+            EventType.EVALUATOR_INVOKED,
+        ),
+        mission_status="failed",
+        attempt_count=2,
+    ),
+    FocusedScenarioCase(
+        "planner_validation.unknown_agent_name",
+        expected_status="failed",
+        min_event_counts={
+            EventType.PLANNER_INVOKED: 2,
+            EventType.TOOL_CALL_ERROR: 2,
+        },
+        absent_events=(
+            EventType.PLANNER_FULL_PLAN,
+            EventType.EXECUTOR_INVOKED,
+            EventType.EVALUATOR_INVOKED,
+        ),
+        mission_status="failed",
+        attempt_count=2,
+    ),
+    FocusedScenarioCase(
+        "planner_validation.empty_tasks",
         expected_status="failed",
         min_event_counts={
             EventType.PLANNER_INVOKED: 2,
