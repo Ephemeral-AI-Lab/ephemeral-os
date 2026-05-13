@@ -59,6 +59,12 @@ async def test_shell_dispatches_to_sandbox_daemon(
                 "cwd": ".",
                 "timeout_seconds": 12,
                 "actor_id": "agent-1",
+                "caller": {
+                    "agent_id": "agent-1",
+                    "run_id": "",
+                    "agent_run_id": "",
+                    "task_id": "",
+                },
                 "description": "shell test",
             },
             42,

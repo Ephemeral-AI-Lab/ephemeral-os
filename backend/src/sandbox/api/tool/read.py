@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sandbox.api.tool._payload import timings_from_payload
+from sandbox.api.tool._payload import caller_envelope, timings_from_payload
 from sandbox.models import ReadFileRequest, ReadFileResult
 from sandbox.host.daemon_client import call_daemon_api
 
@@ -12,7 +12,10 @@ async def read_file(sandbox_id: str, request: ReadFileRequest) -> ReadFileResult
     raw = await call_daemon_api(
         sandbox_id,
         "api.read_file",
-        {"path": request.path},
+        {
+            "path": request.path,
+            "caller": caller_envelope(request.caller),
+        },
         timeout=60,
     )
     return ReadFileResult(

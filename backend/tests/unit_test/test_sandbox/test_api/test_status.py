@@ -412,7 +412,13 @@ def test_configured_default_snapshot_takes_precedence_over_default_image(
         provider.create.call_args.kwargs["snapshot"]
         == "sweevo-psf-requests-3738"
     )
-    assert provider.create.call_args.kwargs["image"] is None
+    # WR-06: when both snapshot and image are configured, return both —
+    # the caller decides precedence. Pre-fix dropped image whenever
+    # snapshot was set, surprising get_health's fallback logic.
+    assert (
+        provider.create.call_args.kwargs["image"]
+        == "ghcr.io/example/default:latest"
+    )
 
 
 def test_health_reports_configured_default_image(

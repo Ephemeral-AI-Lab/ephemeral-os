@@ -128,8 +128,10 @@ def _configured_sandbox_defaults() -> tuple[str | None, str | None]:
     sandbox = load_settings().sandbox
     snapshot = sandbox.default_snapshot.strip()
     image = sandbox.default_image.strip()
-    if snapshot:
-        return snapshot, None
+    # Return both fields when configured. The caller picks precedence
+    # (snapshot is preferred for warm starts, image is the cold-start
+    # fallback). Pre-fix dropped image whenever snapshot was set, which
+    # surprised get_health's fallback logic.
     return snapshot or None, image or None
 
 

@@ -52,6 +52,12 @@ async def test_edit_file_dispatches_to_sandbox_daemon(
                 "path": "a.py",
                 "edits": [{"old_text": "old", "new_text": "new"}],
                 "actor_id": "agent-1",
+                "caller": {
+                    "agent_id": "agent-1",
+                    "run_id": "",
+                    "agent_run_id": "",
+                    "task_id": "",
+                },
                 "description": "edit a",
             },
             60,

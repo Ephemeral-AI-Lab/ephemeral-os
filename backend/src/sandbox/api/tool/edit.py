@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from sandbox.api.tool._payload import (
+    caller_envelope,
     conflict_from_payload,
     int_from_payload,
     paths_from_payload,
@@ -24,6 +25,7 @@ async def edit_file(sandbox_id: str, request: EditFileRequest) -> EditFileResult
                 for edit in request.edits
             ],
             "actor_id": request.caller.agent_id,
+            "caller": caller_envelope(request.caller),
             "description": request.description or f"edit {request.path}",
         },
         timeout=60,

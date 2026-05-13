@@ -36,7 +36,20 @@ async def test_read_file_dispatches_to_sandbox_daemon(
     assert result.content == "hello"
     assert not hasattr(result, "conflict")
     assert calls == [
-        ("sb-1", "api.read_file", {"path": "/workspace/a.txt"}, 60),
+        (
+            "sb-1",
+            "api.read_file",
+            {
+                "path": "/workspace/a.txt",
+                "caller": {
+                    "agent_id": "a",
+                    "run_id": "",
+                    "agent_run_id": "",
+                    "task_id": "",
+                },
+            },
+            60,
+        ),
     ]
 
 

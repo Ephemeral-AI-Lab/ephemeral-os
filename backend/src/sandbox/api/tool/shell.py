@@ -6,6 +6,7 @@ import time
 from collections.abc import Mapping
 
 from sandbox.api.tool._payload import (
+    caller_envelope,
     conflict_from_payload,
     int_from_payload,
     paths_from_payload,
@@ -33,6 +34,7 @@ async def shell(sandbox_id: str, request: ShellRequest) -> ShellResult:
             "cwd": _overlay_cwd(request.cwd),
             "timeout_seconds": request.timeout,
             "actor_id": request.caller.agent_id,
+            "caller": caller_envelope(request.caller),
             "description": request.description or "shell",
         },
         timeout=(request.timeout or 60) + 30,

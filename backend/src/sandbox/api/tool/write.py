@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from sandbox.api.tool._payload import (
+    caller_envelope,
     conflict_from_payload,
     paths_from_payload,
     timings_from_payload,
@@ -20,6 +21,7 @@ async def write_file(sandbox_id: str, request: WriteFileRequest) -> WriteFileRes
             "path": request.path,
             "content": request.content,
             "actor_id": request.caller.agent_id,
+            "caller": caller_envelope(request.caller),
             "description": request.description or f"write {request.path}",
             "overwrite": request.overwrite,
         },
