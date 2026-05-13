@@ -9,19 +9,6 @@ from db.models.agent_run import AgentRunRecord
 from db.stores.base import SyncStoreMixin
 
 
-def _serialize_run_summary(r: AgentRunRecord) -> dict[str, Any]:
-    """Small JSON view of an AgentRunRecord for list endpoints."""
-    return {
-        "id": r.id,
-        "task_id": r.task_id,
-        "agent_name": r.agent_name,
-        "token_count": r.token_count,
-        "error": r.error,
-        "created_at": r.created_at.isoformat() if r.created_at else None,
-        "finished_at": r.finished_at.isoformat() if r.finished_at else None,
-    }
-
-
 class AgentRunStore(SyncStoreMixin):
     """CRUD operations for agent run records."""
 
@@ -72,14 +59,3 @@ class AgentRunStore(SyncStoreMixin):
     def get_run(self, agent_run_id: str) -> AgentRunRecord | None:
         with self._sf() as db:
             return db.get(AgentRunRecord, agent_run_id)
-
-    def list_runs_for_tasks(self, task_ids: list[str]) -> list[dict[str, Any]]:
-        if not task_ids:
-            return []
-        with self._sf() as db:
-            q = (
-                db.query(AgentRunRecord)
-                .filter(AgentRunRecord.task_id.in_(task_ids))
-                .order_by(AgentRunRecord.created_at.asc())
-            )
-            return [_serialize_run_summary(r) for r in q.all()]

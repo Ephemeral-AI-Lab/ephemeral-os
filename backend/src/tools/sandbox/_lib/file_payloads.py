@@ -86,6 +86,7 @@ def build_read_file_result(
     start_line: int,
     end_line: int,
     timings: dict[str, float] | None = None,
+    metadata_extra: dict[str, Any] | None = None,
 ) -> ToolResult:
     lines = content.splitlines()
     total = len(lines)
@@ -95,6 +96,7 @@ def build_read_file_result(
     metadata: dict[str, Any] = {}
     if timings:
         metadata["timings"] = dict(timings)
+    metadata.update(metadata_extra or {})
     return ToolResult(
         output=json.dumps(
             {

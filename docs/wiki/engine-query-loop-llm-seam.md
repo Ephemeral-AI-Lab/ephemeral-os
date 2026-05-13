@@ -2,7 +2,7 @@
 title: "Engine + Query Loop + LLM Seam"
 tags: ["engine", "query-loop", "llm-seam", "supports-streaming-messages", "api-client", "run-ephemeral-agent", "live-e2e", "load-bearing", "see-also"]
 created: 2026-05-10T11:31:40.882Z
-updated: 2026-05-10T11:58:12.532Z
+updated: 2026-05-13T00:00:00.000Z
 sources: []
 links: ["live-e2e-testing-framework-design.md", "tools-hooks-guardrails-agents-notifications-messages.md", "task-center-pipeline.md"]
 category: architecture
@@ -16,15 +16,14 @@ _Source: explore agent draft, 2026-05-10. See `.omc/wiki-draft/engine-query.md`.
 
 ## The LLM API seam (the central fact)
 
-- **Protocol**: `providers.types.SupportsStreamingMessages` at `backend/src/providers/types.py:112`
-- **Single method**: `async def stream_message(self, request: ApiMessageRequest) -> AsyncIterator[ApiStreamEvent]` (`providers/types.py:115`)
-- **ApiStreamEvent union** — 5 cases, all at `providers/types.py`:
-  - `ApiThinkingDeltaEvent` (line 51) — incremental thinking/reasoning chunk
-  - `ApiTextDeltaEvent` (line 57) — incremental assistant text chunk
-  - `ApiToolUseDeltaEvent` (line 73) — one tool_use block mid-stream with id/name/input
-  - `ApiCancelEvent` (line 86) — LLM-issued abort signal targeting a running tool
-  - `ApiMessageCompleteEvent` (line 64) — terminal event with full assistant ConversationMessage and UsageSnapshot
-- **Where it is consumed**: `engine/query/loop.py:_consume_provider_stream` (line 171) — the single `async for event in context.api_client.stream_message(run_request.request):` at line 178
+- **Protocol**: `providers.types.SupportsStreamingMessages` at `backend/src/providers/types.py`
+- **Single method**: `async def stream_message(self, request: ApiMessageRequest) -> AsyncIterator[ApiStreamEvent]`
+- **ApiStreamEvent union** — 4 cases, all at `providers/types.py`:
+  - `ApiThinkingDeltaEvent` — incremental thinking/reasoning chunk
+  - `ApiTextDeltaEvent` — incremental assistant text chunk
+  - `ApiToolUseDeltaEvent` — one tool_use block mid-stream with id/name/input
+  - `ApiMessageCompleteEvent` — terminal event with full assistant ConversationMessage and UsageSnapshot
+- **Where it is consumed**: `engine/query/loop.py:_consume_provider_stream` — the single `async for event in context.api_client.stream_message(run_request.request):`
 - **Where it is set**: `QueryContext.api_client` field (`engine/query/context.py:40`). Constructed by `make_api_client` (`providers/provider.py:57`), which returns `external` as-is if supplied; otherwise builds `AnthropicClient`.
 - **This is the seam. Mocking only this Protocol keeps the entire query loop real.**
 
@@ -41,7 +40,7 @@ Key fields: `api_client` (line 40, **the seam**), `tool_registry`, `cwd`, `model
 
 ## ApiMessageRequest
 
-`providers/types.py:37` — `model`, `messages`, `system_prompt`, `max_tokens`, `tools`, `tool_choice`, `raw_messages`.
+`providers/types.py` — `model`, `messages`, `system_prompt`, `max_tokens`, `tools`, `tool_choice`.
 
 Built per turn by `build_query_run_request` (`engine/query/request.py:44`):
 - `prepare_provider_messages(messages)` (`engine/query/provider_history.py:30`) — sanitized provider-safe view
@@ -63,9 +62,8 @@ Built per turn by `build_query_run_request` (`engine/query/request.py:44`):
    - **`build_query_run_request`** (line 329) — records `llm_request`
    - **`_consume_provider_stream`** (line 171) — the seam consumption:
      - `ApiThinkingDeltaEvent` → yield `ThinkingDelta`
-    - `ApiTextDeltaEvent` → yield `AssistantTextDelta`
+     - `ApiTextDeltaEvent` → yield `AssistantTextDelta`
      - `ApiToolUseDeltaEvent` → `_consume_tool_budget_or_reject(...)` (`tools/execution/tool_call.py:59`); rejected → `ToolResultBlock` rejection appended, yield `ToolExecutionCompleted(is_error=True)`; otherwise → `executor.add_tool(event)`, drain progress/events
-     - `ApiCancelEvent` → `executor.cancel(event.tool_id, event.reason)`
      - `ApiMessageCompleteEvent` → set `state.final_message` + `state.usage`
      - Stream ending without `final_message` raises RuntimeError (line 224-228)
    - **`_drain_executor_after_stream`** (line 231) — drain final executor progress/events
@@ -163,8 +161,8 @@ Note: subagent agents (`agent_type="subagent"`) trigger `needs_fresh_client=True
 - `run_ephemeral_agent` (`engine/agent/lifecycle.py:73`)
 - `EphemeralRunResult` (`lifecycle.py:38`)
 - `QueryContext` (`engine/query/context.py:39`)
-- `SupportsStreamingMessages` (`providers/types.py:112`)
-- `ApiStreamEvent` union (`providers/types.py:98-104`)
+- `SupportsStreamingMessages` (`providers/types.py`)
+- `ApiStreamEvent` union (`providers/types.py`)
 
 ### What tests can assert
 - **Tool guardrail / terminal-exclusivity**: script terminal + sibling tools → assert rejection by `_validate_tool_batch` (`tool_call/dispatch.py`)

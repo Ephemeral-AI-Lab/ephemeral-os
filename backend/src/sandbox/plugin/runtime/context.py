@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -49,5 +48,4 @@ class PluginOpContext:
     layer_stack_root: str
     caller: SandboxCaller
     projection: WorkspaceProjectionLike
-    logger: logging.Logger
     metadata: dict[str, Any] = field(default_factory=dict)

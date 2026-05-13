@@ -21,9 +21,6 @@ from message.stream_events import BackgroundTaskStarted
 
 logger = logging.getLogger(__name__)
 
-# Async callback that physically kills the sandbox process.
-KillCallback = Callable[[], Coroutine[Any, Any, None]]
-
 
 class TaskStatus(StrEnum):
     """Lifecycle states for a tracked background task.
@@ -76,7 +73,6 @@ class TrackedBackgroundTask:
     result: ToolResult | None = None
     started_at: float = field(default_factory=time.monotonic)
     progress_lines: list[str] = field(default_factory=list)
-    kill_callback: KillCallback | None = None  # physically kills the sandbox process
     # Optional pull-callback that returns a fresh progress snapshot on demand.
     # Used by tools (e.g. run_subagent) that have structured progress state
     # which is more meaningful than a flat line buffer.
@@ -109,7 +105,6 @@ class BackgroundTaskManager:
         tool_name: str,
         tool_input: dict[str, Any],
         coro: Coroutine[Any, Any, ToolResult],
-        kill_callback: KillCallback | None = None,
         task_type: str = DEFAULT_BACKGROUND_TASK_TYPE,
         agent_run_id: str | None = None,
     ) -> BackgroundTaskStarted:
@@ -122,7 +117,6 @@ class BackgroundTaskManager:
             asyncio_task=asyncio_task,
             task_type=task_type,
             agent_run_id=agent_run_id,
-            kill_callback=kill_callback,
         )
         start_line = f"[started: {tool_name}]"
         tracked.progress_lines.append(start_line)
@@ -238,13 +232,9 @@ class BackgroundTaskManager:
     async def cancel(self, task_id: str, reason: str = "") -> bool:
         """Cancel a task by id. Returns True if found and cancelled.
 
-        Marks the task as cancelled first, then attempts to physically
-        kill the sandbox process via the kill_callback (if provided).
-        We do NOT call asyncio.Task.cancel() for sandbox-backed work:
-        sending CancelledError through an in-flight provider exec can corrupt
-        the shared sandbox connection. Instead the kill_callback sends a kill
-        signal to the sandbox process, letting the provider call return
-        naturally.
+        Subagents receive a cooperative early-stop cancellation so they can
+        salvage a partial result. Ordinary background tools are pure-Python
+        jobs and are cancelled through their asyncio task.
         """
         tracked = self._tasks.get(task_id)
         if tracked is None:
@@ -258,15 +248,7 @@ class BackgroundTaskManager:
         msg = f"Cancelled: {reason}" if reason else "Cancelled"
         tracked.result = ToolResult(output=msg, is_error=True)
         tracked.progress_lines = [msg]
-        if tracked.kill_callback is not None:
-            try:
-                await tracked.kill_callback()
-            except Exception as exc:
-                logger.debug("Kill callback failed for task %s: %s", task_id, exc)
-        elif should_cancel_asyncio_task(tracked):
-            # Pure-Python tools with no external runtime can be cancelled
-            # cooperatively without risking the shared sandbox connection.
-            tracked.asyncio_task.cancel()
+        tracked.asyncio_task.cancel()
         return True
 
     def get_task(self, task_id: str) -> TrackedBackgroundTask | None:
@@ -282,20 +264,7 @@ class BackgroundTaskManager:
                 tracked.status = TaskStatus.CANCELLED
                 tracked.result = ToolResult(output="Cancelled", is_error=True)
                 tracked.progress_lines = ["Cancelled"]
-                if tracked.kill_callback is not None:
-                    try:
-                        await tracked.kill_callback()
-                    except Exception:
-                        # On query-loop shutdown this is the only hook that
-                        # physically kills the sandbox process; a silently
-                        # failed kill leaks a sandbox process and only
-                        # surfaces hours later as "sandbox quota exhausted".
-                        logger.warning(
-                            "Kill callback failed for task %s",
-                            tracked.task_id,
-                            exc_info=True,
-                        )
-                elif should_cancel_asyncio_task(tracked):
+                if should_cancel_asyncio_task(tracked):
                     tracked.asyncio_task.cancel()
                     cancelled_tasks.append(tracked.asyncio_task)
         if cancelled_tasks:

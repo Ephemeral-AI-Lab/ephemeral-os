@@ -11,8 +11,11 @@ from sandbox.api import ShellRequest
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
 from tools.sandbox._lib.session import (
+    audit_kwargs_from_context,
     caller_from_context,
     get_repo_root,
+    merge_tool_metadata,
+    sandbox_audit_metadata,
     sandbox_id_or_error,
 )
 from tools.sandbox._lib.shell_policy import (
@@ -98,6 +101,7 @@ def _build_tool_output(
     }
     if timings:
         metadata["timings"] = dict(timings)
+    metadata = merge_tool_metadata(metadata, sandbox_audit_metadata(context))
     return ToolResult(
         output=json.dumps(
             {
@@ -190,6 +194,7 @@ async def shell(
                 caller=caller_from_context(context),
                 description="shell",
             ),
+            **audit_kwargs_from_context(context),
         )
     except Exception as exc:
         return ToolResult(

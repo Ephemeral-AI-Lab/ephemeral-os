@@ -247,7 +247,7 @@ class TestCheckBackgroundTaskResultExecute:
         await asyncio.sleep(0.01)
 
         # Register a peek provider so the failed branch has something to show.
-        mgr.set_progress_provider("bg_1", lambda n: "peek-snapshot")
+        mgr.set_progress_provider("bg_1", lambda _last_n: "peek-snapshot")
 
         result = await tool.execute(
             CheckBackgroundTaskResultInput(task_id="bg_1"), _ctx(mgr)

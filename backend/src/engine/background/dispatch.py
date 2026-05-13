@@ -73,11 +73,6 @@ def launch_background_tool(
             ToolExecutionCompleted(tool_name=tool_use.name, output=msg, is_error=True),
         )
 
-    # TODO(engine/CR-01): kill_callback is intentionally None because the
-    # sandbox package does not yet expose a per-process kill primitive.
-    # Only pure-Python background tools should use this generic path until
-    # sandbox.api exposes one.
-    kill_callback = None
     validation_result = validate_background_input(
         tool_def=tool_def,
         clean_input=clean_input,
@@ -124,7 +119,6 @@ def launch_background_tool(
         tool_use.name,
         clean_input,
         _bg_wrapper(),
-        kill_callback=kill_callback,
         task_type=getattr(tool_def, "task_type", "agent"),
     )
     record_tool_trace(tool_metadata, tool_use.name, clean_input)

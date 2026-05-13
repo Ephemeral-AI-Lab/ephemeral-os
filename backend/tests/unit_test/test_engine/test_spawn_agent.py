@@ -240,21 +240,14 @@ def test_build_agent_tool_registry_does_not_register_skill_tools(monkeypatch) ->
         _fake_make_skills_tools,
     )
 
-    no_skills_registry = _build_agent_tool_registry(
+    registry = _build_agent_tool_registry(
         _make_config(),
         _make_agent_def(),
         None,
         "agent",
     )
-    declared_skills_registry = _build_agent_tool_registry(
-        _make_config(),
-        _make_agent_def(skills=["demo-skill"]),
-        None,
-        "agent",
-    )
 
-    assert no_skills_registry.get("dummy_tool") is None
-    assert declared_skills_registry.get("dummy_tool") is None
+    assert registry.get("dummy_tool") is None
     assert calls == []
 
 

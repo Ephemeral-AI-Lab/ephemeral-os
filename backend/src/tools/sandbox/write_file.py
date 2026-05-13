@@ -7,9 +7,11 @@ from sandbox.api import WriteFileRequest
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
 from tools.sandbox._lib.session import (
+    audit_kwargs_from_context,
     caller_from_context,
     get_repo_root,
     resolve_sandbox_path,
+    sandbox_audit_metadata,
     sandbox_id_or_error,
 )
 from tools.sandbox._lib.file_payloads import (
@@ -53,6 +55,7 @@ async def write_file(
             description=f"write {file_path}",
             overwrite=True,
         ),
+        **audit_kwargs_from_context(context),
     )
 
     paths = list(result.changed_paths or (file_path,))
@@ -67,6 +70,7 @@ async def write_file(
                 "bytes_written": len(content.encode("utf-8")),
             },
             timings=result.timings,
+            metadata_extra=sandbox_audit_metadata(context),
         )
 
     return mutation_tool_result(
@@ -76,6 +80,7 @@ async def write_file(
         failure_status=result.status or None,
         conflict_reason=result.conflict_reason,
         timings=result.timings,
+        metadata_extra=sandbox_audit_metadata(context),
     )
 
 

@@ -36,21 +36,16 @@ def _launch(
     tool_input: dict[str, Any] | None = None,
     delay: float = 0.0,
     output: str = "ok",
-    exit_code: int = 0,
-    kill_callback=None,
     task_type: str = "tool",
 ):
     """Thin wrapper: creates the coro and calls mgr.launch with sensible defaults."""
-    kwargs: dict[str, Any] = dict(
+    return mgr.launch(
         task_id=task_id,
         tool_name=tool_name,
         tool_input=tool_input if tool_input is not None else {},
         coro=_make_tool_coro(output=output, delay=delay),
         task_type=task_type,
     )
-    if kill_callback is not None:
-        kwargs["kill_callback"] = kill_callback
-    return mgr.launch(**kwargs)
 
 
 def _launch_subagent(
@@ -310,62 +305,7 @@ async def test_multiple_concurrent_tasks() -> None:
     assert {t.task_id for t in completed} == {"fast", "medium", "slow"}
 
 
-# ---------------------------------------------------------------------------
-# 18. cancel invokes kill_callback
-# ---------------------------------------------------------------------------
-
-
-async def test_cancel_invokes_kill_callback() -> None:
-    """cancel() should call the kill_callback to physically stop the process."""
-    killed: list[str] = []
-
-    async def _fake_kill() -> None:
-        killed.append("killed")
-
-    mgr = BackgroundTaskManager()
-    _launch(mgr, tool_name="slow", delay=10, kill_callback=_fake_kill)
-
-    ok = await mgr.cancel("t1", "test kill")
-    assert ok is True
-    assert killed == ["killed"], "kill_callback was not invoked"
-
-    tracked = mgr._tasks["t1"]
-    assert tracked.status == "cancelled"
-    assert tracked.result is not None
-    assert "test kill" in tracked.result.output
-
-
-# ---------------------------------------------------------------------------
-# 19. cancel_all invokes kill_callbacks
-# ---------------------------------------------------------------------------
-
-
-async def test_cancel_all_invokes_kill_callbacks() -> None:
-    """cancel_all() should call kill_callback for every running task."""
-    killed: list[str] = []
-
-    async def _fake_kill_1() -> None:
-        killed.append("t1")
-
-    async def _fake_kill_2() -> None:
-        killed.append("t2")
-
-    mgr = BackgroundTaskManager()
-    _launch(mgr, task_id="t1", tool_name="tool1", delay=10, kill_callback=_fake_kill_1)
-    _launch(mgr, task_id="t2", tool_name="tool2", delay=10, kill_callback=_fake_kill_2)
-
-    await mgr.cancel_all()
-    assert set(killed) == {"t1", "t2"}, f"Expected both callbacks invoked, got {killed}"
-    assert mgr.has_pending() is False
-
-
-# ---------------------------------------------------------------------------
-# 20. cancel without kill_callback still works (logical cancel)
-# ---------------------------------------------------------------------------
-
-
-async def test_cancel_without_kill_callback() -> None:
-    """cancel() with no kill_callback should still mark as cancelled."""
+async def test_cancel_marks_task_cancelled() -> None:
     mgr = BackgroundTaskManager()
     _launch(mgr, tool_name="slow", delay=10)
 
@@ -374,63 +314,7 @@ async def test_cancel_without_kill_callback() -> None:
     assert mgr._tasks["t1"].status == "cancelled"
 
 
-# ---------------------------------------------------------------------------
-# 21. kill_callback exception does not prevent cancel
-# ---------------------------------------------------------------------------
-
-
-async def test_kill_callback_exception_does_not_prevent_cancel() -> None:
-    """If kill_callback raises, the task should still be marked cancelled."""
-
-    async def _bad_kill() -> None:
-        raise RuntimeError("sandbox connection lost")
-
-    mgr = BackgroundTaskManager()
-    _launch(mgr, tool_name="slow", delay=10, kill_callback=_bad_kill)
-
-    ok = await mgr.cancel("t1", "kill failed but cancel ok")
-    assert ok is True
-    assert mgr._tasks["t1"].status == "cancelled"
-    assert "kill failed but cancel ok" in mgr._tasks["t1"].result.output
-
-
-# ---------------------------------------------------------------------------
-# 26. cancel_all does NOT call asyncio.cancel when kill_callback present
-# ---------------------------------------------------------------------------
-
-
-async def test_cancel_all_skips_asyncio_cancel_when_kill_callback_present() -> None:
-    """If kill_callback is provided, cancel_all must NOT call asyncio.Task.cancel().
-
-    Calling .cancel() through Daytona SDK process.exec corrupts the shared
-    sandbox connection — the kill_callback is the safe path.
-    """
-    kill_called: list[str] = []
-
-    async def _kill() -> None:
-        kill_called.append("yes")
-
-    mgr = BackgroundTaskManager()
-    _launch(mgr, tool_name="slow", delay=10, kill_callback=_kill)
-    task = mgr._tasks["t1"].asyncio_task
-
-    await mgr.cancel_all()
-
-    assert kill_called == ["yes"]
-    assert not task.cancelled(), (
-        "cancel_all must not invoke asyncio.Task.cancel() when a "
-        "kill_callback is provided"
-    )
-
-    # Clean up so the test doesn't leak the still-running asyncio task.
-    task.cancel()
-    try:
-        await task
-    except BaseException:
-        pass
-
-
-async def test_cancel_all_falls_back_to_asyncio_cancel_without_kill_callback() -> None:
+async def test_cancel_all_cancels_python_task() -> None:
     mgr = BackgroundTaskManager()
     _launch(mgr, tool_name="slow", delay=10)
     task = mgr._tasks["t1"].asyncio_task

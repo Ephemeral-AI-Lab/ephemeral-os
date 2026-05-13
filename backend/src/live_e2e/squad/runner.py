@@ -1098,7 +1098,10 @@ class MockSquadRunner:
                 run_id=run_id,
             )
         )
-        tool_metadata = metadata.with_overrides(tool_id=tool_id)
+        tool_metadata = metadata.with_overrides(
+            tool_id=tool_id,
+            sandbox_audit_sink=self._sandbox_audit_sink,
+        )
         result = await execute_tool_once(
             tool_obj,
             raw_input,

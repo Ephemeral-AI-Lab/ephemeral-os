@@ -7,9 +7,11 @@ from sandbox.api import ReadFileRequest
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
 from tools.sandbox._lib.session import (
+    audit_kwargs_from_context,
     caller_from_context,
     path_error,
     resolve_sandbox_path,
+    sandbox_audit_metadata,
     sandbox_id_or_error,
 )
 from tools.sandbox._lib.file_payloads import (
@@ -49,6 +51,7 @@ async def read_file(
         result = await sandbox_api.read_file(
             sandbox_id,
             ReadFileRequest(path=file_path, caller=caller_from_context(context)),
+            **audit_kwargs_from_context(context),
         )
         if not result.success:
             raise RuntimeError(f"Failed to read file: {file_path}")
@@ -61,6 +64,7 @@ async def read_file(
             start_line=start_line,
             end_line=end_line,
             timings=result.timings,
+            metadata_extra=sandbox_audit_metadata(context),
         )
     except Exception as exc:
         return ToolResult(

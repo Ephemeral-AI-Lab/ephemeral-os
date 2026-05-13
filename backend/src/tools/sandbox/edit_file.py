@@ -9,9 +9,11 @@ from sandbox.api import EditFileRequest, SearchReplaceEdit
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
 from tools.sandbox._lib.session import (
+    audit_kwargs_from_context,
     caller_from_context,
     get_repo_root,
     resolve_sandbox_path,
+    sandbox_audit_metadata,
     sandbox_id_or_error,
 )
 from tools.sandbox._lib.mutation_result import mutation_tool_result
@@ -100,6 +102,7 @@ async def edit_file(
             caller=caller_from_context(context),
             description=description or f"edit {file_path}",
         ),
+        **audit_kwargs_from_context(context),
     )
 
     paths = list(result.changed_paths or (file_path,))
@@ -114,6 +117,7 @@ async def edit_file(
                 "applied_edits": result.applied_edits,
             },
             timings=result.timings,
+            metadata_extra=sandbox_audit_metadata(context),
         )
 
     return mutation_tool_result(
@@ -123,6 +127,7 @@ async def edit_file(
         failure_status=result.status or None,
         conflict_reason=result.conflict_reason,
         timings=result.timings,
+        metadata_extra=sandbox_audit_metadata(context),
     )
 
 

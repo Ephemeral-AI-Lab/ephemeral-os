@@ -22,8 +22,14 @@ class _ShellApi:
         self.result = result
         self.calls: list[tuple[str, Any]] = []
 
-    async def shell(self, sandbox_id: str, request: Any) -> ShellResult:
+    async def shell(
+        self,
+        sandbox_id: str,
+        request: Any,
+        **kwargs: Any,
+    ) -> ShellResult:
         self.calls.append((sandbox_id, request))
+        self.kwargs = kwargs
         return self.result
 
 
@@ -103,3 +109,28 @@ def test_shell_conflict_returns_conflict_reason_without_legacy_fields(
         "stderr": "",
         "error": "sandbox commit aborted: overlay upperdir is full",
     }
+
+
+def test_shell_uses_publishable_audit_sink(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Sink:
+        def publish(self, _event: object) -> None:
+            return None
+
+    api = _ShellApi(ShellResult(exit_code=0, stdout="ok\n", success=True))
+    sink = Sink()
+    ctx = ToolExecutionContextService(
+        cwd=Path("/tmp"),
+        services={
+            "sandbox_id": "sb-1",
+            "repo_root": "/ws",
+            "sandbox_audit_sink": sink,
+        },
+    )
+    monkeypatch.setattr(shell_module, "sandbox_api", api)
+
+    result = _run({"command": "pytest -q"}, ctx)
+
+    assert api.kwargs == {"audit_sink": sink}
+    assert result.metadata["sandbox_audit_emitted"] is True

@@ -275,7 +275,6 @@ async def _plugin_op_context_factory(
         layer_stack_root=layer_stack_root,
         caller=caller,
         projection=projection,
-        logger=logging.getLogger(f"plugin.{plugin_name}"),
         metadata={
             "op_name": op_name,
             "workspace_root": str(args.get("workspace_root", "")),

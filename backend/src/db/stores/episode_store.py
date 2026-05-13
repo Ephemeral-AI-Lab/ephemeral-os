@@ -108,27 +108,6 @@ class EpisodeStore(SyncStoreMixin):
             )
             return [self._to_dto(r) for r in q.all()]
 
-    def list_for_missions(
-        self, mission_ids: list[str]
-    ) -> list[Episode]:
-        """Ordered by mission id, then sequence_no ascending."""
-        if not mission_ids:
-            return []
-        with self._sf() as db:
-            q = (
-                db.query(EpisodeRecord)
-                .filter(
-                    EpisodeRecord.mission_id.in_(
-                        mission_ids
-                    )
-                )
-                .order_by(
-                    EpisodeRecord.mission_id.asc(),
-                    EpisodeRecord.sequence_no.asc(),
-                )
-            )
-            return [self._to_dto(r) for r in q.all()]
-
     def cancel_for_compensation(
         self, episode_id: str, *, closed_at: datetime | None = None
     ) -> Episode:

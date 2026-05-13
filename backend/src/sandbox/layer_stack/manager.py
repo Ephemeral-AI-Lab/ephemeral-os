@@ -6,9 +6,6 @@ import logging
 import tempfile
 import threading
 import time
-
-
-logger = logging.getLogger(__name__)
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -35,6 +32,8 @@ from sandbox.layer_stack.layer.publisher import LayerPublisher
 from sandbox.layer_stack.maintenance.squash import SquashWorker, manifest_still_ends_with
 from sandbox.layer_stack.commit.staging import CommitStagingArea
 
+
+logger = logging.getLogger(__name__)
 
 _TRANSIENT_LOWERDIR_DIR = "transient-lowerdirs"
 

@@ -72,13 +72,8 @@ def timings_from_payload(raw: object) -> dict[str, float]:
 def int_from_payload(value: object, *, default: int) -> int:
     if value is None:
         return default
-    # IN-02: bool is an int subclass; isinstance(True, int) is True. A
-    # bug-source daemon sending exit_code=True would otherwise yield 1
-    # silently. Reject bool with the same TypeError as other non-numerics.
     if isinstance(value, bool):
-        raise TypeError(
-            f"expected integer value, got bool ({value!r})"
-        )
+        raise TypeError(f"expected integer value, got bool ({value!r})")
     if isinstance(value, (str, int, float)):
         try:
             return int(value)

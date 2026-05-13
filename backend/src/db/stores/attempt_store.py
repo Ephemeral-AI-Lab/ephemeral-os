@@ -146,23 +146,6 @@ class AttemptStore(SyncStoreMixin):
             )
             return [self._to_dto(r) for r in q.all()]
 
-    def list_for_episodes(
-        self, episode_ids: list[str]
-    ) -> list[Attempt]:
-        """Ordered by episode id, then attempt_sequence_no ascending."""
-        if not episode_ids:
-            return []
-        with self._sf() as db:
-            q = (
-                db.query(AttemptRecord)
-                .filter(AttemptRecord.episode_id.in_(episode_ids))
-                .order_by(
-                    AttemptRecord.episode_id.asc(),
-                    AttemptRecord.attempt_sequence_no.asc(),
-                )
-            )
-            return [self._to_dto(r) for r in q.all()]
-
     def get_by_sequence(
         self, *, episode_id: str, attempt_sequence_no: int
     ) -> Attempt | None:

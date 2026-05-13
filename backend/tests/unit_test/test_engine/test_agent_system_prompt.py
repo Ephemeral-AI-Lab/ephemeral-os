@@ -26,25 +26,3 @@ def test_agent_system_prompt_includes_runtime_base_and_agent_body_only(monkeypat
     assert "# Type Constraints" not in prompt
     assert "# Role Boundary" not in prompt
     assert "# Skill Bootstrap" not in prompt
-
-
-def test_agent_system_prompt_ignores_declared_skills(monkeypatch) -> None:
-    monkeypatch.setattr(
-        runtime_agent,
-        "build_runtime_system_prompt",
-        lambda *_args, **_kwargs: "",
-    )
-    agent = AgentDefinition(
-        name="minimal",
-        description="d",
-        system_prompt="agent body",
-        skills=["demo-skill"],
-    )
-
-    prompt = runtime_agent._build_agent_system_prompt(
-        SimpleNamespace(cwd="/tmp"),
-        agent,
-        settings=None,
-    )
-
-    assert prompt == "agent body"

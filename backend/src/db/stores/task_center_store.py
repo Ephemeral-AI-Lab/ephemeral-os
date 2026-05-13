@@ -224,26 +224,6 @@ class TaskCenterStore(SyncStoreMixin):
             )
             return [_serialize_task(record) for record in q.all()]
 
-    def list_tasks_for_attempts(
-        self, attempt_ids: list[str]
-    ) -> list[SerializedRow]:
-        if not attempt_ids:
-            return []
-        with self._sf() as db:
-            q = (
-                db.query(TaskCenterTaskRecord)
-                .filter(
-                    TaskCenterTaskRecord.task_center_attempt_id.in_(
-                        attempt_ids
-                    )
-                )
-                .order_by(
-                    TaskCenterTaskRecord.task_center_attempt_id.asc(),
-                    TaskCenterTaskRecord.created_at.asc(),
-                )
-            )
-            return [_serialize_task(record) for record in q.all()]
-
     def list_generator_tasks_for_attempt(
         self, attempt_id: str
     ) -> list[SerializedRow]:

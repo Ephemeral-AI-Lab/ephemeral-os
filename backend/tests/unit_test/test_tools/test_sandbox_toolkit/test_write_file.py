@@ -22,8 +22,14 @@ class _WriteApi:
         self.result = result
         self.calls: list[tuple[str, Any]] = []
 
-    async def write_file(self, sandbox_id: str, request: Any) -> WriteFileResult:
+    async def write_file(
+        self,
+        sandbox_id: str,
+        request: Any,
+        **kwargs: Any,
+    ) -> WriteFileResult:
         self.calls.append((sandbox_id, request))
+        self.kwargs = kwargs
         return self.result
 
 
@@ -88,3 +94,50 @@ def test_write_file_failure_preserves_conflict_status(
         "changed_paths": ["/ws/new.py"],
         "conflict_reason": "concurrent edit overlaps the operation window",
     }
+
+
+def test_write_file_ignores_non_publishable_audit_sink(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    api = _WriteApi(WriteFileResult(success=True, changed_paths=("/ws/new.py",)))
+    sink = object()
+    ctx = ToolExecutionContextService(
+        cwd=Path("/tmp"),
+        services={
+            "sandbox_id": "sb-1",
+            "repo_root": "/ws",
+            "sandbox_audit_sink": sink,
+        },
+    )
+    monkeypatch.setattr(write_file_module, "sandbox_api", api)
+
+    result = _run({"file_path": "/ws/new.py", "content": "x"}, ctx)
+
+    assert not result.is_error
+    assert api.kwargs == {}
+    assert "sandbox_audit_emitted" not in result.metadata
+
+
+def test_write_file_uses_publishable_audit_sink(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Sink:
+        def publish(self, _event: object) -> None:
+            return None
+
+    api = _WriteApi(WriteFileResult(success=True, changed_paths=("/ws/new.py",)))
+    sink = Sink()
+    ctx = ToolExecutionContextService(
+        cwd=Path("/tmp"),
+        services={
+            "sandbox_id": "sb-1",
+            "repo_root": "/ws",
+            "sandbox_audit_sink": sink,
+        },
+    )
+    monkeypatch.setattr(write_file_module, "sandbox_api", api)
+
+    result = _run({"file_path": "/ws/new.py", "content": "x"}, ctx)
+
+    assert api.kwargs == {"audit_sink": sink}
+    assert result.metadata["sandbox_audit_emitted"] is True

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from typing import Any
+
 from sandbox.api import SandboxCaller
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.results import ToolResult
@@ -25,6 +28,35 @@ def caller_from_context(
         task_center_request_id=str(context.get("task_center_request_id") or ""),
         tool_id=str(context.get("tool_id") or ""),
     )
+
+
+def audit_kwargs_from_context(
+    context: ToolExecutionContextService,
+) -> dict[str, Any]:
+    """Return sandbox API audit kwargs when an audit sink is available."""
+    audit_sink = context.get("sandbox_audit_sink")
+    if audit_sink is None:
+        return {}
+    publish = getattr(audit_sink, "publish", None)
+    if not callable(publish):
+        return {}
+    return {"audit_sink": audit_sink}
+
+
+def sandbox_audit_metadata(
+    context: ToolExecutionContextService,
+) -> dict[str, bool]:
+    """Mark tool metadata when sandbox audit events were emitted directly."""
+    return {"sandbox_audit_emitted": True} if audit_kwargs_from_context(context) else {}
+
+
+def merge_tool_metadata(
+    base: Mapping[str, Any] | None,
+    extra: Mapping[str, Any],
+) -> dict[str, Any]:
+    merged = dict(base or {})
+    merged.update(extra)
+    return merged
 
 
 def get_repo_root(context: ToolExecutionContextService) -> str:
@@ -73,9 +105,12 @@ def sandbox_id_or_error(context: ToolExecutionContextService) -> tuple[str, Tool
 
 __all__ = [
     "caller_from_context",
+    "audit_kwargs_from_context",
     "get_repo_root",
+    "merge_tool_metadata",
     "normalized_path",
     "path_error",
     "resolve_sandbox_path",
+    "sandbox_audit_metadata",
     "sandbox_id_or_error",
 ]
