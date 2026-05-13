@@ -142,7 +142,7 @@ def _clear_definitions() -> None:
 
 
 @pytest.fixture
-def register_test_agents(isolated_agent_registries):
+def register_test_agents(request):
     """Register the bare-minimum agents needed by lifecycle tests.
 
     Provides ``planner``, ``executor``, ``generator``, ``evaluator`` definitions
@@ -150,6 +150,7 @@ def register_test_agents(isolated_agent_registries):
     different shape can register their own definitions on top — agent names
     are unique per test thanks to ``isolated_agent_registries`` cleanup.
     """
+    request.getfixturevalue("isolated_agent_registries")
     register_definition(
         AgentDefinition(
             name="planner",
@@ -209,9 +210,10 @@ def composer(
     attempt_store,
     task_store,
     context_packet_store,
-    register_test_agents,
+    request,
 ) -> ContextComposer:
     """Real ContextComposer wired against the in-memory stores."""
+    request.getfixturevalue("register_test_agents")
     deps = ContextEngineDeps(
         mission_store=mission_store,
         episode_store=episode_store,

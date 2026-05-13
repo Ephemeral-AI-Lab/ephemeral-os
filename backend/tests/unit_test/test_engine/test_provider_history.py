@@ -4,11 +4,8 @@ from __future__ import annotations
 
 import copy
 
-from engine.query.provider_history import (
-    prepare_provider_messages,
-    reduce_background_task_history,
-    sanitize_tool_sequence,
-)
+from engine.background.history import reduce_background_task_history
+from engine.query.provider_history import prepare_provider_messages, sanitize_tool_sequence
 from message.messages import (
     ConversationMessage,
     SystemNotificationBlock,

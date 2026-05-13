@@ -88,13 +88,25 @@ class OccSerialMerger:
         while True:
             first = self._queue.get()
             items = [first]
-            if self._batch_window_s > 0:
-                time.sleep(self._batch_window_s)
+            # WR-04: drain the queue non-blockingly first. Only pay the
+            # batch-window latency when the drain emptied the queue AND
+            # we still have headroom; otherwise the sleep is dead
+            # wall-clock on the single-commit hot path.
             while len(items) < self._max_batch_size:
                 try:
                     items.append(self._queue.get_nowait())
                 except queue.Empty:
                     break
+            if (
+                self._batch_window_s > 0
+                and len(items) < self._max_batch_size
+            ):
+                time.sleep(self._batch_window_s)
+                while len(items) < self._max_batch_size:
+                    try:
+                        items.append(self._queue.get_nowait())
+                    except queue.Empty:
+                        break
 
             pending = [item for item in items if not item.future.cancelled()]
             for batch in _disjoint_batches(pending):

@@ -73,8 +73,7 @@ class TrackedBackgroundTask:
     kill_callback: KillCallback | None = None  # physically kills the sandbox process
     # Optional pull-callback that returns a fresh progress snapshot on demand.
     # Used by tools (e.g. run_subagent) that have structured progress state
-    # which is more meaningful than a flat line buffer. When set, get_status
-    # calls this instead of joining progress_lines for running tasks.
+    # which is more meaningful than a flat line buffer.
     progress_provider: Callable[[int], str] | None = None
 
 
@@ -196,59 +195,6 @@ class BackgroundTaskManager:
         """Return True if any task is still running."""
         return any(t.status == TaskStatus.RUNNING for t in self._tasks.values())
 
-    async def wait_for(self, task_id: str, timeout: float) -> TrackedBackgroundTask | None:
-        """Wait for a *specific* task to complete or *timeout* expires.
-
-        Unlike :meth:`wait_any`, this does NOT call :meth:`collect_completed`,
-        so completion events for *other* tasks are preserved for the engine's
-        normal delivery path.
-        """
-        tracked = self._tasks.get(task_id)
-        if tracked is None:
-            return None
-        if tracked.status != TaskStatus.RUNNING:
-            return tracked
-        try:
-            await asyncio.wait(
-                {tracked.asyncio_task},
-                timeout=timeout,
-                return_when=asyncio.FIRST_COMPLETED,
-            )
-        except Exception:
-            return None
-        return tracked if tracked.status != TaskStatus.RUNNING else None
-
-    async def wait_any(self, timeout: float = 300) -> TrackedBackgroundTask | None:
-        """Wait until any running task completes or *timeout* expires.
-
-        Returns the first completed task, or ``None`` on timeout.
-        Cost: zero tokens -- pure asyncio wait.
-        """
-        running = list(self.iter_running())
-        if not running:
-            return None
-
-        # Check if any are already done (callback fired between our check
-        # and now).
-        for tracked in running:
-            if tracked.asyncio_task.done():
-                # The done callback already ran; collect it.
-                completed = self.collect_completed()
-                return completed[0] if completed else None
-
-        aws = [t.asyncio_task for t in running]
-        try:
-            done, _ = await asyncio.wait(aws, timeout=timeout, return_when=asyncio.FIRST_COMPLETED)
-        except Exception:
-            return None
-
-        if not done:
-            return None
-
-        # The done callback has already fired for tasks in *done*.
-        completed = self.collect_completed()
-        return completed[0] if completed else None
-
     def append_progress(self, task_id: str, line: str) -> None:
         """Append a live progress line for *task_id*.
 
@@ -267,11 +213,9 @@ class BackgroundTaskManager:
     def set_progress_provider(self, task_id: str, provider: Callable[[int], str]) -> None:
         """Register a pull-callback for live progress on *task_id*.
 
-        The provider is invoked synchronously by ``get_status`` while the task
-        is still running. It should return a compact text snapshot of the
-        task's current state. Errors raised by the provider are caught and
-        surfaced as ``[progress provider error: ...]`` so a buggy provider
-        can never crash the bg manager.
+        The provider is invoked synchronously by background result tools while
+        the task is still running. It should return a compact text snapshot of
+        the task's current state.
         """
         tracked = self._tasks.get(task_id)
         if tracked is not None:
@@ -285,61 +229,6 @@ class BackgroundTaskManager:
         knowing about the manager.
         """
         return lambda line: self.append_progress(task_id, line)
-
-    def get_status(self, task_id: str | None = None, last_n: int = 20) -> list[dict[str, Any]]:
-        """Return JSON-serializable status for tasks.
-
-        If *task_id* is given, only that task is returned. Otherwise all
-        tasks are included.
-        """
-        now = time.monotonic()
-        result: list[dict[str, Any]] = []
-        if task_id is not None:
-            if task_id not in self._tasks:
-                return []
-            tasks: Any = [self._tasks[task_id]]
-        else:
-            tasks = self._tasks.values()
-        for tracked in tasks:
-            entry: dict[str, Any] = {
-                "task_id": tracked.task_id,
-                "tool_name": tracked.tool_name,
-                "task_type": tracked.task_type,
-                "agent_run_id": tracked.agent_run_id,
-                "status": tracked.status,
-                "elapsed_seconds": round(now - tracked.started_at, 1),
-            }
-            if tracked.cancel_reason:
-                entry["cancel_reason"] = tracked.cancel_reason
-            if tracked.stop_mode:
-                entry["stop_mode"] = tracked.stop_mode
-            if tracked.completion_mode:
-                entry["completion_mode"] = tracked.completion_mode
-            if tracked.result is not None:
-                # Char-cap is applied by the tool layer (apply_last_n_lines)
-                # AFTER line-tail trimming, so a long-tail run still yields
-                # the requested number of trailing lines.
-                entry["output"] = tracked.result.output
-            elif tracked.status == TaskStatus.RUNNING:
-                # Prefer the structured progress provider (e.g. run_subagent
-                # returns a formatted view of its inner agent's last N
-                # messages). Fall back to the line buffer for tools that
-                # stream output via append_progress / on_progress_line.
-                prefix = ""
-                if tracked.stop_mode == "early_stop":
-                    reason = f" ({tracked.cancel_reason})" if tracked.cancel_reason else ""
-                    prefix = f"[early stop requested{reason}]\n"
-                if tracked.progress_provider is not None:
-                    try:
-                        entry["output"] = prefix + tracked.progress_provider(last_n)
-                    except Exception as exc:
-                        entry["output"] = f"[progress provider error: {exc}]"
-                elif tracked.progress_lines:
-                    entry["output"] = prefix + "\n".join(tracked.progress_lines)
-                else:
-                    entry["output"] = prefix + "[no output captured yet]"
-            result.append(entry)
-        return result
 
     async def cancel(self, task_id: str, reason: str = "") -> bool:
         """Cancel a task by id. Returns True if found and cancelled.

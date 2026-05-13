@@ -103,7 +103,6 @@ async def test_ephemeral_agent_run_preserves_initial_messages() -> None:
     agent = EphemeralAgent(
         agent_name="executor",
         query_context=context,
-        settings=SimpleNamespace(),
         model="test",
         _messages=[ConversationMessage.from_user_text("prior context")],
     )

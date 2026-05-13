@@ -101,7 +101,7 @@ def _ok_recipe(recipe_id: str):
 
 def _stub_deps(packet_store) -> ContextEngineDeps:
     class _S:
-        def get(self, *a, **k):
+        def get(self, *_args, **_kwargs):
             return None
 
     return ContextEngineDeps(
@@ -194,7 +194,7 @@ def test_compose_persists_packet_only_with_store():
     register_definition(base)
 
     class _S:
-        def get(self, *a, **k):
+        def get(self, *_args, **_kwargs):
             return None
 
     deps = ContextEngineDeps(

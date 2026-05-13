@@ -150,7 +150,7 @@ async def execute_tool_call_streaming(
         emit_started=emit_started,
     )
     if not result.is_error:
-        from engine.tool_call.trace import record_tool_trace
+        from tools._framework.execution.trace import record_tool_trace
 
         record_tool_trace(
             context.tool_metadata,

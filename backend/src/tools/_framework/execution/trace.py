@@ -1,8 +1,8 @@
-"""Per-response tool trace bookkeeping used by the query loop."""
+"""Per-response tool trace bookkeeping."""
 
 from __future__ import annotations
 
-from tools import ExecutionMetadata
+from tools._framework.core.runtime import ExecutionMetadata
 
 _TOOL_TRACE_LIMIT = 64
 
@@ -72,5 +72,3 @@ def record_tool_trace(
             "_read_paths_this_response",
             _normalize_trace_paths(tool_input.get("file_path")),
         )
-        return
-    return

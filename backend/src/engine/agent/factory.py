@@ -53,7 +53,6 @@ class EphemeralAgent:
 
     agent_name: str
     query_context: QueryContext
-    settings: Settings
     model: str
     _messages: list[ConversationMessage]
     total_usage: UsageSnapshot | None = None
@@ -370,7 +369,6 @@ def spawn_agent(
     return EphemeralAgent(
         agent_name=agent_name,
         query_context=query_context,
-        settings=settings,
         model=resolved_model,
         _messages=messages if messages else [],
     )

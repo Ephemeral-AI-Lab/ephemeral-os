@@ -29,10 +29,6 @@ from engine.query.notifications import (
 )
 from engine.tool_call.streaming import StreamingToolExecutor, defer_background_dispatch
 from engine.tool_call.dispatch import dispatch_assistant_tools
-from engine.tool_call.result import (
-    any_terminal_result,
-    terminal_result_from_tool_results,
-)
 from engine.query.request import (
     QueryRunRequest,
     build_query_run_request,
@@ -259,8 +255,8 @@ async def _handle_tool_dispatch_branch(
     for event in flush_system_notifications(notification_service):
         yield event
 
-    if any_terminal_result(tool_results):
-        context.terminal_result = terminal_result_from_tool_results(tool_results)
+    if dispatch.terminal_result is not None:
+        context.terminal_result = dispatch.terminal_result
         context.exit_reason = QueryExitReason.TOOL_STOP
         return
 

@@ -67,19 +67,18 @@ class CancelBackgroundTaskTool(BaseTool):
         # Schema makes task_id required so we should never see empty
         # strings here, but we handle them defensively the same way.
         if task_id == "auto" or not task_id:
-            snapshot = manager.get_status()
-            running = [s for s in snapshot if s.get("status") == "running"]
+            running = list(manager.iter_running())
             if len(running) == 0:
                 return ToolResult(
                     output="No background tasks are running — nothing to cancel.",
                     is_error=False,
                 )
             if len(running) == 1:
-                task_id = running[0]["task_id"]
+                task_id = running[0].task_id
             else:
                 listing = "\n".join(
-                    f"  - task_id=\"{s['task_id']}\"  ({s.get('tool_name')})"
-                    for s in running
+                    f"  - task_id=\"{task.task_id}\"  ({task.tool_name})"
+                    for task in running
                 )
                 return ToolResult(
                     output=(

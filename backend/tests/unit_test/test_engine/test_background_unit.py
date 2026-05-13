@@ -344,43 +344,6 @@ class TestBackgroundTaskManagerExtras:
         ids = [mgr.next_alias() for _ in range(3)]
         assert ids == ["bg_1", "bg_2", "bg_3"]
 
-    async def test_get_status_unknown_id_returns_empty(self) -> None:
-        mgr = BackgroundTaskManager()
-        assert mgr.get_status("nope") == []
-
-    async def test_wait_for_unknown_id_returns_none(self) -> None:
-        mgr = BackgroundTaskManager()
-        assert await mgr.wait_for("nope", timeout=0.1) is None
-
-    async def test_wait_for_already_completed_returns_immediately(self) -> None:
-        mgr = BackgroundTaskManager()
-
-        async def quick() -> ToolResult:
-            return ToolResult(output="hi")
-
-        alias = mgr.next_alias()
-        mgr.launch(alias, "noop", {}, quick())
-        await asyncio.sleep(0)
-        await asyncio.sleep(0)
-        tracked = await mgr.wait_for(alias, timeout=1)
-        assert tracked is not None
-        assert tracked.status in ("completed", "delivered")
-
-    async def test_wait_for_running_then_timeout_returns_none(self) -> None:
-        mgr = BackgroundTaskManager()
-
-        async def slow() -> ToolResult:
-            await asyncio.sleep(5)
-            return ToolResult(output="done")
-
-        alias = mgr.next_alias()
-        mgr.launch(alias, "noop", {}, slow())
-        try:
-            result = await mgr.wait_for(alias, timeout=0.05)
-            assert result is None  # still running
-        finally:
-            await mgr.cancel(alias, "")
-
     async def test_has_pending_reflects_running_state(self) -> None:
         mgr = BackgroundTaskManager()
 
@@ -395,23 +358,8 @@ class TestBackgroundTaskManagerExtras:
         await mgr.cancel(alias, "")
         assert not mgr.has_pending()
 
-    async def test_get_status_returns_full_output_no_truncation(self) -> None:
-        """get_status returns output verbatim."""
-        mgr = BackgroundTaskManager()
-
-        async def big() -> ToolResult:
-            return ToolResult(output="x" * 5000)
-
-        alias = mgr.next_alias()
-        mgr.launch(alias, "noop", {}, big())
-        await asyncio.sleep(0)
-        await asyncio.sleep(0)
-        snap = mgr.get_status(alias)
-        assert snap and len(snap[0]["output"]) == 5000
-
-
 # ---------------------------------------------------------------------------
-# Live progress tail — append_progress / make_progress_callback / get_status
+# Live progress tail — append_progress / make_progress_callback / result tool
 # ---------------------------------------------------------------------------
 
 
@@ -468,7 +416,8 @@ class TestLiveProgressTail:
         finally:
             await mgr.cancel(alias, "")
 
-    async def test_get_status_surfaces_live_tail_for_running(self) -> None:
+    async def test_check_result_surfaces_live_tail_for_running(self) -> None:
+        tool = CheckBackgroundTaskResultTool()
         mgr = BackgroundTaskManager()
 
         async def slow() -> ToolResult:
@@ -480,13 +429,15 @@ class TestLiveProgressTail:
         try:
             mgr.append_progress(alias, "live-1")
             mgr.append_progress(alias, "live-2")
-            snap = mgr.get_status(alias)
-            assert snap and snap[0]["status"] == "running"
-            assert snap[0]["output"].endswith("live-1\nlive-2")
+            result = await tool.execute(CheckBackgroundTaskResultInput(task_id=alias), _ctx(mgr))
+            payload = json.loads(result.output)
+            assert payload["status"] == "running"
+            assert payload["result"].endswith("live-1\nlive-2")
         finally:
             await mgr.cancel(alias, "")
 
-    async def test_get_status_running_task_carries_start_stamp(self) -> None:
+    async def test_check_result_running_task_carries_start_stamp(self) -> None:
+        tool = CheckBackgroundTaskResultTool()
         mgr = BackgroundTaskManager()
 
         async def slow() -> ToolResult:
@@ -496,9 +447,9 @@ class TestLiveProgressTail:
         alias = mgr.next_alias()
         mgr.launch(alias, "noop", {}, slow())
         try:
-            snap = mgr.get_status(alias)
-            assert snap and snap[0]["status"] == "running"
-            assert "output" in snap[0]
-            assert snap[0]["output"].startswith("[started:")
+            result = await tool.execute(CheckBackgroundTaskResultInput(task_id=alias), _ctx(mgr))
+            payload = json.loads(result.output)
+            assert payload["status"] == "running"
+            assert payload["result"].startswith("[started:")
         finally:
             await mgr.cancel(alias, "")

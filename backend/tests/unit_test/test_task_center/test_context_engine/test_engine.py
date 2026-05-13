@@ -36,7 +36,7 @@ def _isolate_registry():
 def deps() -> ContextEngineDeps:
     # Recipes in these tests do not call any store, so simple stubs suffice.
     class _Stub:
-        def get(self, *args, **kwargs):
+        def get(self, *_args, **_kwargs):
             return None
 
     return ContextEngineDeps(

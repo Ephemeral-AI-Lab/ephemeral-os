@@ -67,7 +67,7 @@ def compose_helper_bundle(
             "context_packet_id; helper inheritance unavailable."
         )
 
-    mission_id = context.task_center_request_id
+    mission_id = context.task_center_mission_id or context.task_center_request_id
     if not mission_id:
         parent_packet = deps.context_packet_store.get(parent_packet_id)
         if parent_packet is None:

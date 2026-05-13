@@ -50,7 +50,7 @@ def _clear_definitions() -> None:
 @pytest.fixture
 def deps() -> ContextEngineDeps:
     class _S:
-        def get(self, *a, **k):
+        def get(self, *_args, **_kwargs):
             return None
 
     return ContextEngineDeps(
@@ -110,7 +110,8 @@ def test_empty_variants_returns_base_fast_path(deps):
     assert sel.required_context_blocks == ()
 
 
-def test_variant_predicate_match_picks_target(deps, planner_with_variant):
+@pytest.mark.usefixtures("planner_with_variant")
+def test_variant_predicate_match_picks_target(deps):
     PredicateRegistry.register("needs_full_only", lambda ctx: True)
     sel = RuleBasedAgentResolver().resolve(
         base_agent_name="planner",
@@ -124,7 +125,8 @@ def test_variant_predicate_match_picks_target(deps, planner_with_variant):
     assert sel.reason == "ancestry has partial-plan caller"
 
 
-def test_predicate_no_match_falls_back_to_base(deps, planner_with_variant):
+@pytest.mark.usefixtures("planner_with_variant")
+def test_predicate_no_match_falls_back_to_base(deps):
     PredicateRegistry.register("needs_full_only", lambda ctx: False)
     sel = RuleBasedAgentResolver().resolve(
         base_agent_name="planner",
@@ -184,7 +186,8 @@ def test_nested_variant_target_rejected(deps):
         )
 
 
-def test_predicate_exception_propagates_no_fail_open(deps, planner_with_variant):
+@pytest.mark.usefixtures("planner_with_variant")
+def test_predicate_exception_propagates_no_fail_open(deps):
     def _boom(ctx: ResolverContext) -> bool:
         raise RuntimeError("predicate exploded")
 

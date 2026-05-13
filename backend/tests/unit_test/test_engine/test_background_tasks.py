@@ -4,10 +4,8 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import suppress
-import time
 from typing import Any
 
-from engine.tool_call.trace import record_tool_trace as _record_tool_trace
 from engine.background.manager import BackgroundTaskManager
 from message.stream_events import BackgroundTaskStarted
 from tools.background.cancel_background_task import (
@@ -15,7 +13,6 @@ from tools.background.cancel_background_task import (
     CancelBackgroundTaskTool,
 )
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
-from tools._framework.core.runtime import ExecutionMetadata
 
 
 # ---------------------------------------------------------------------------
@@ -152,84 +149,6 @@ async def test_has_pending() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 5. wait_any returns on completion
-# ---------------------------------------------------------------------------
-
-
-async def test_wait_any_returns_on_completion() -> None:
-    mgr = BackgroundTaskManager()
-    _launch(mgr, output="waited", delay=0.1)
-
-    start = time.monotonic()
-    result = await mgr.wait_any(timeout=5)
-    elapsed = time.monotonic() - start
-
-    assert result is not None
-    assert result.task_id == "t1"
-    assert result.result is not None
-    assert result.result.output == "waited"
-    # Should complete in roughly 0.1s, not 5s.
-    assert elapsed < 1.0
-
-
-def test_record_tool_trace_ignores_subagent_launches() -> None:
-    meta = ExecutionMetadata()
-
-    _record_tool_trace(
-        meta,
-        "run_subagent",
-        {"agent_name": "test_subagent", "prompt": "explore pkg/core.py"},
-    )
-    _record_tool_trace(
-        meta,
-        "run_subagent",
-        {"agent_name": "test_subagent", "prompt": "explore pkg/core.py"},
-    )
-
-    assert meta.extras == {}
-
-
-def test_record_tool_trace_counts_note_and_sandbox_reads() -> None:
-    meta = ExecutionMetadata()
-
-    _record_tool_trace(meta, "read_file_note", {"file_paths": ["pkg/core.py"]})
-    _record_tool_trace(meta, "shell", {"code": "shell('pytest -q')"})
-    _record_tool_trace(meta, "read_file", {"file_path": "pkg/core.py"})
-
-    assert meta["_read_file_note_calls"] == 1
-    assert meta["_note_read_paths_this_response"] == ["pkg/core.py"]
-    assert meta["_shell_calls"] == 1
-    assert meta["_read_file_calls"] == 1
-    assert meta["_read_paths_this_response"] == ["pkg/core.py"]
-
-
-# ---------------------------------------------------------------------------
-# 6. wait_any timeout
-# ---------------------------------------------------------------------------
-
-
-async def test_wait_any_timeout() -> None:
-    mgr = BackgroundTaskManager()
-    _launch(mgr, delay=10)
-
-    result = await mgr.wait_any(timeout=0.1)
-    assert result is None
-
-    await mgr.cancel_all()
-
-
-# ---------------------------------------------------------------------------
-# 7. wait_any no pending
-# ---------------------------------------------------------------------------
-
-
-async def test_wait_any_no_pending() -> None:
-    mgr = BackgroundTaskManager()
-    result = await mgr.wait_any()
-    assert result is None
-
-
-# ---------------------------------------------------------------------------
 # 8. cancel running task
 # ---------------------------------------------------------------------------
 
@@ -362,64 +281,6 @@ async def test_task_that_raises_exception() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 12. get_status all
-# ---------------------------------------------------------------------------
-
-
-async def test_get_status_all() -> None:
-    mgr = BackgroundTaskManager()
-    _launch(mgr, task_id="t1", tool_name="tool_a", delay=10)
-    _launch(mgr, task_id="t2", tool_name="tool_b", delay=10)
-
-    statuses = mgr.get_status()
-    assert len(statuses) == 2
-
-    ids = {s["task_id"] for s in statuses}
-    assert ids == {"t1", "t2"}
-
-    for s in statuses:
-        assert "tool_name" in s
-        assert "status" in s
-        assert "elapsed_seconds" in s
-
-    await mgr.cancel_all()
-
-
-# ---------------------------------------------------------------------------
-# 13. get_status by id
-# ---------------------------------------------------------------------------
-
-
-async def test_get_status_by_id() -> None:
-    mgr = BackgroundTaskManager()
-    _launch(mgr, task_id="t1", tool_name="tool_a", delay=10)
-    _launch(mgr, task_id="t2", tool_name="tool_b", delay=10)
-
-    statuses = mgr.get_status(task_id="t1")
-    assert len(statuses) == 1
-    assert statuses[0]["task_id"] == "t1"
-
-    await mgr.cancel_all()
-
-
-# ---------------------------------------------------------------------------
-# 15. get_status returns full output
-# ---------------------------------------------------------------------------
-
-
-async def test_get_status_returns_full_output_for_tool_layer_to_trim() -> None:
-    """Manager returns the raw output verbatim."""
-    mgr = BackgroundTaskManager()
-    long_output = "x" * 5000
-    _launch(mgr, output=long_output)
-    await asyncio.sleep(0.01)
-
-    statuses = mgr.get_status()
-    assert len(statuses) == 1
-    assert statuses[0]["output"] == long_output
-
-
-# ---------------------------------------------------------------------------
 # 16. progress_lines populated
 # ---------------------------------------------------------------------------
 
@@ -444,17 +305,9 @@ async def test_multiple_concurrent_tasks() -> None:
     _launch(mgr, task_id="medium", tool_name="medium", output="medium_done", delay=0.05)
     _launch(mgr, task_id="slow", tool_name="slow", output="slow_done", delay=0.1)
 
-    # wait_any should return the fastest first.
-    first = await mgr.wait_any(timeout=5)
-    assert first is not None
-    assert first.task_id == "fast"
-
-    # Wait for the rest.
     await asyncio.sleep(0.15)
-    remaining = mgr.collect_completed()
-    remaining_ids = {t.task_id for t in remaining}
-    assert "medium" in remaining_ids
-    assert "slow" in remaining_ids
+    completed = mgr.collect_completed()
+    assert {t.task_id for t in completed} == {"fast", "medium", "slow"}
 
 
 # ---------------------------------------------------------------------------
@@ -539,81 +392,6 @@ async def test_kill_callback_exception_does_not_prevent_cancel() -> None:
     assert ok is True
     assert mgr._tasks["t1"].status == "cancelled"
     assert "kill failed but cancel ok" in mgr._tasks["t1"].result.output
-
-
-# ---------------------------------------------------------------------------
-# 22. wait_for: targets specific task and preserves other completions
-# ---------------------------------------------------------------------------
-
-
-async def test_wait_for_does_not_consume_other_task_completions() -> None:
-    """wait_for(target) must NOT swallow completion events for other tasks.
-
-    Guards the bug where the previous implementation routed specific-task
-    waits through wait_any(), which calls collect_completed as a side
-    effect and silently consumed completions for unrelated background
-    tasks before the engine could deliver them.
-    """
-    mgr = BackgroundTaskManager()
-    _launch(mgr, task_id="fast", tool_name="fast", output="fast-done", delay=0.01)
-    _launch(mgr, task_id="slow", tool_name="slow", output="slow-done", delay=0.30)
-
-    result = await mgr.wait_for("slow", timeout=0.05)
-    assert result is None
-    assert mgr._tasks["slow"].status == "running"
-
-    completed = mgr.collect_completed()
-    assert "fast" in [t.task_id for t in completed], (
-        "wait_for() must not swallow other tasks' completions"
-    )
-
-    # Cleanup the still-running slow task.
-    await mgr.cancel("slow")
-
-
-# ---------------------------------------------------------------------------
-# 23. wait_for: returns immediately for already-finished task
-# ---------------------------------------------------------------------------
-
-
-async def test_wait_for_returns_immediately_for_finished_task() -> None:
-    mgr = BackgroundTaskManager()
-    _launch(mgr)
-    await asyncio.sleep(0.01)
-
-    start = time.monotonic()
-    result = await mgr.wait_for("t1", timeout=10.0)
-    elapsed = time.monotonic() - start
-
-    assert result is not None
-    assert result.task_id == "t1"
-    assert elapsed < 0.1, "should return immediately, not wait"
-
-
-# ---------------------------------------------------------------------------
-# 24. wait_for: unknown id returns None without raising
-# ---------------------------------------------------------------------------
-
-
-async def test_wait_for_unknown_id_returns_none() -> None:
-    mgr = BackgroundTaskManager()
-    result = await mgr.wait_for("nonexistent", timeout=1.0)
-    assert result is None
-
-
-# ---------------------------------------------------------------------------
-# 25. get_status unknown id returns empty list (not all tasks)
-# ---------------------------------------------------------------------------
-
-
-async def test_get_status_unknown_id_returns_empty() -> None:
-    """Unknown task_id must return [] — never silently fall through to 'all'."""
-    mgr = BackgroundTaskManager()
-    _launch(mgr, task_id="real", tool_name="t")
-
-    assert mgr.get_status("ghost") == []
-    assert len(mgr.get_status("real")) == 1
-    assert len(mgr.get_status()) == 1
 
 
 # ---------------------------------------------------------------------------

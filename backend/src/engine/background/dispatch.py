@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any
 from pydantic import ValidationError
 
 from engine.background.manager import BackgroundTaskManager
-from engine.tool_call.trace import record_tool_trace
 from message.messages import ConversationMessage, ToolResultBlock, ToolUseBlock
 from message.stream_events import (
     BackgroundTaskStarted,
@@ -18,6 +17,7 @@ from message.stream_events import (
 from notification import SystemNotification
 from providers.types import UsageSnapshot
 from tools import BaseTool, ExecutionMetadata, ToolRegistry, ToolResult
+from tools._framework.execution.trace import record_tool_trace
 
 if TYPE_CHECKING:
     from engine.query.context import QueryContext

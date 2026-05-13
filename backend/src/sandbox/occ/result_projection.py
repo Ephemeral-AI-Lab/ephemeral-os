@@ -68,9 +68,16 @@ def conflict_to_dict(conflict: object | None) -> dict[str, object] | None:
 
 def gitignore_cache_timings(gitignore: object) -> dict[str, float]:
     """Expose gitignore-oracle cache counters as result timing metrics."""
+    # WR-01: default the counters; only SnapshotGitignoreOracle exposes
+    # them. A test mock or alternative oracle satisfying the protocol
+    # without these counters used to crash here at result-shape time.
     return {
-        "gitignore.cache_hits_total": float(getattr(gitignore, "cache_hits")),
-        "gitignore.cache_misses_total": float(getattr(gitignore, "cache_misses")),
+        "gitignore.cache_hits_total": float(
+            getattr(gitignore, "cache_hits", 0)
+        ),
+        "gitignore.cache_misses_total": float(
+            getattr(gitignore, "cache_misses", 0)
+        ),
     }
 
 

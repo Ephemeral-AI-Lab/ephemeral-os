@@ -18,7 +18,7 @@ from message.stream_events import (
     ToolExecutionCompleted,
 )
 from providers.types import UsageSnapshot
-from tools import execute_tool_call_streaming
+from tools import ToolResult, execute_tool_call_streaming
 
 if TYPE_CHECKING:
     from engine.query.context import QueryContext
@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 @dataclass(frozen=True)
 class ToolDispatchResult:
     tool_results: list[ToolResultBlock]
+    terminal_result: ToolResult | None = None
     events: list[tuple[StreamEvent, UsageSnapshot | None]] = field(default_factory=list)
 
 
@@ -49,6 +50,21 @@ def _result_from_cancelled(completed: ToolExecutionCancelled) -> ToolResultBlock
         content=f"[CANCELLED] {completed.reason}",
         is_error=True,
     )
+
+
+def _terminal_result_from_tool_results(
+    tool_results: list[ToolResultBlock],
+) -> ToolResult | None:
+    for result in tool_results:
+        if not result.does_terminate:
+            continue
+        return ToolResult(
+            output=str(result.content),
+            is_error=result.is_error,
+            metadata=dict(result.metadata or {}),
+            does_terminate=True,
+        )
+    return None
 
 
 def _assign_missing_tool_result_ids(
@@ -104,7 +120,11 @@ async def dispatch_assistant_tools(
                 )
             )
         _assign_missing_tool_result_ids(tool_results, final_message.tool_uses)
-        return ToolDispatchResult(tool_results=tool_results, events=events)
+        return ToolDispatchResult(
+            tool_results=tool_results,
+            terminal_result=_terminal_result_from_tool_results(tool_results),
+            events=events,
+        )
 
     resolved_ids = {result.tool_use_id for result in tool_results if result.tool_use_id}
     pending_calls = [tc for tc in final_message.tool_uses if tc.id not in resolved_ids]
@@ -121,7 +141,11 @@ async def dispatch_assistant_tools(
         )
 
     _assign_missing_tool_result_ids(tool_results, final_message.tool_uses)
-    return ToolDispatchResult(tool_results=tool_results, events=events)
+    return ToolDispatchResult(
+        tool_results=tool_results,
+        terminal_result=_terminal_result_from_tool_results(tool_results),
+        events=events,
+    )
 
 
 async def _dispatch_deferred_tool_calls(
