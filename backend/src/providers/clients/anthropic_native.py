@@ -75,19 +75,25 @@ class AnthropicClient:
     # ------------------------------------------------------------------
 
     async def stream_message(self, request: ApiMessageRequest) -> AsyncIterator[ApiStreamEvent]:
-        """Yield streamed events for *request* with retry logic."""
-        last_error: Exception | None = None
+        """Yield streamed events for *request* with retry logic.
 
+        Retries are gated on ``emitted_any`` so we never re-yield events the
+        caller has already observed. Once a single stream event has been
+        forwarded, any failure on the active attempt fails fast — re-running
+        the request would duplicate text deltas and double-dispatch tool_use
+        ids on the engine side.
+        """
         for attempt in range(MAX_RETRIES + 1):
+            emitted_any = False
             try:
                 async for event in self._stream_once(request):
+                    emitted_any = True
                     yield event
                 return
             except EphemeralOSApiError:
                 raise
             except Exception as exc:
-                last_error = exc
-                if attempt >= MAX_RETRIES or not self._is_retryable(exc):
+                if emitted_any or attempt >= MAX_RETRIES or not self._is_retryable(exc):
                     raise self._translate_error(exc) from exc
 
                 delay = min(BASE_DELAY * (2**attempt), MAX_DELAY)
@@ -99,9 +105,6 @@ class AnthropicClient:
                     exc,
                 )
                 await asyncio.sleep(delay)
-
-        if last_error is not None:
-            raise self._translate_error(last_error) from last_error
 
     # ------------------------------------------------------------------
     # Internal helpers

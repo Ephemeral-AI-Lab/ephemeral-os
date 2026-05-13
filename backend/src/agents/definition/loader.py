@@ -20,17 +20,20 @@ def _load_agent_files(paths: Iterable[Path]) -> list[AgentDefinition]:
     for path in sorted(paths):
         try:
             fm, body = parse_markdown_frontmatter(path.read_text(encoding="utf-8"))
-            data = dict(fm)
-            data.setdefault("name", path.stem)
-            description = str(data.get("description") or f"Agent: {data['name']}")
-            data["description"] = description.replace("\\n", "\n")
-            if body:
-                data["system_prompt"] = body
+        except OSError:
+            logger.error("Could not read agent definition %s", path, exc_info=True)
+            raise
+        data = dict(fm)
+        if not data.get("name"):
+            data["name"] = path.stem
+        data["description"] = str(data.get("description") or f"Agent: {data['name']}")
+        if body:
+            data["system_prompt"] = body
+        try:
             agents.append(AgentDefinition.model_validate(data))
         except ValidationError:
-            logger.debug("Invalid agent definition in %s", path, exc_info=True)
-        except Exception:
-            logger.debug("Failed to load agent from %s", path, exc_info=True)
+            logger.error("Invalid agent definition in %s", path, exc_info=True)
+            raise
     return agents
 
 
