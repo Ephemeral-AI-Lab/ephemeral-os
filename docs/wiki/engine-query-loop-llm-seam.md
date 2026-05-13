@@ -180,6 +180,6 @@ Note: subagent agents (`agent_type="subagent"`) trigger `needs_fresh_client=True
 
 ## See also
 
-- [[live-e2e-testing-framework-design]] — the framework that consumes this seam
+- [[role-planner]], [[role-generator]], [[role-evaluator]] — the roles whose agent runs execute inside this query loop
 - [[tools-hooks-guardrails-agents-notifications-messages]] — what runs inside the loop
 - [[task-center-pipeline]] — the runner-level seam (above the query loop)

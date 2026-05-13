@@ -97,12 +97,7 @@ Pre-hooks run sequentially before execution; `fail` short-circuits and returns h
 
 | Hook | File:line | Purpose |
 |---|---|---|
-| `HarnessRoleGate` | `tools/submission/hooks/harness_role_gate.py:16` | Verifies task row has expected `HarnessTaskRole` and attempt is not closed |
-| `HarnessAgentProfileGate` | `harness_agent_profile_gate.py:15` | Confirms running agent's `role` matches `expected_profile_role` |
-| `HelperRequestGate` | `helper_request_gate.py:15` | Allows `ask_advisor`/`ask_resolver` only from roles in `allowed_caller_roles` |
-| `ResolverSuccessLimitGate` | `resolver_success_limit_gate.py:15` | Blocks success terminals when `unresolved_resolver_call_count(messages) >= limit` |
-| `HelperRoleGate` | `helper_role_gate.py:15` | Validates `role` and optionally `agent_type` for helper terminals |
-| `RequestMissionBeforeEditGate` | `request_mission_before_edit_gate.py:35` | Blocks `request_mission_solution` if any `write_file/edit_file/shell` already in history |
+| `RequestMissionBeforeEditGate` | `tools/submission/hooks/request_mission_before_edit_gate.py:35` | Blocks `request_mission_solution` if any `write_file/edit_file/shell` already in history |
 
 ## Notification triggers
 
@@ -266,6 +261,6 @@ The replay harness reads `"assistant"` events (keyed by `seq`) and replays them 
 
 ## See also
 
-- [[live-e2e-testing-framework-design]] — how the framework asserts on hooks/notifications
+- [[role-planner]], [[role-generator]], [[role-evaluator]] — hook usage per role (RequestMissionBeforeEditGate)
 - [[engine-query-loop-llm-seam]] — where these run
 - [[task-center-pipeline]] — what terminal tools drive

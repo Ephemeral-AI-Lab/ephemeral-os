@@ -182,6 +182,6 @@ Wrap or subclass `ContextComposer.compose`, capture, assert, forward to launcher
 
 ## See also
 
-- [[live-e2e-testing-framework-design]] — how the framework asserts on rendered prompts
+- [[role-planner]], [[role-generator]], [[role-evaluator]] — per-role deep dives on what each recipe's blocks mean to its consumer
 - [[task-center-pipeline]] — the data the recipes read from
 - [[engine-query-loop-llm-seam]] — what consumes the rendered prompt

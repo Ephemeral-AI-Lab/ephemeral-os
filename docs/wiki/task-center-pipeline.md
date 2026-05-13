@@ -226,7 +226,7 @@ After `start_task_center_entry_run` returns: `await handle.launcher.wait_for_idl
 
 ## See also
 
-- [[live-e2e-testing-framework-design]] — how the framework drives the pipeline
+- [[role-planner]], [[role-generator]], [[role-evaluator]] — per-role responsibilities, context recipes, and design insights
 - [[engine-query-loop-llm-seam]] — what runs inside each agent task
 - [[context-engine-recipes]] — how prompts are built per role
 - [[sandbox-subsystem]] — what tool calls hit

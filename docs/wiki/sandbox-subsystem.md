@@ -144,6 +144,6 @@ Sync → `api/status.py` → `ProviderAdapter`. Tool verbs lazy-import `api/tool
 
 ## See also
 
-- [[live-e2e-testing-framework-design]] — how the framework drives this subsystem
+- [[role-generator]] — executor-profile generators are the only role that mutates sandbox state
 - [[engine-query-loop-llm-seam]] — the LLM API seam
 - [[task-center-pipeline]] — what consumes the sandbox
