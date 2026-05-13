@@ -363,7 +363,7 @@ class EvalAgent:
             logger.info("[EvalAgent] Using DB model: model=%s", db_kwargs.get("model", "?"))
 
         # Build the same runtime config shape the server uses.
-        from server.app_factory import RuntimeConfig
+        from runtime.app_factory import RuntimeConfig
 
         runtime_config = RuntimeConfig(cwd=".")
 
@@ -418,7 +418,7 @@ class EvalAgent:
         simply skips persistence.
         """
         try:
-            from server.app_factory import agent_run_store, model_store, task_center_store
+            from runtime.app_factory import agent_run_store, model_store, task_center_store
 
             needs_init = (
                 any(not store.is_ready for store in (agent_run_store, task_center_store))

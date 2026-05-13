@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 from collections.abc import AsyncIterator
 
 if TYPE_CHECKING:
-    from server.app_factory import RuntimeConfig
+    from runtime.app_factory import RuntimeConfig
     from engine.query.context import QueryContext
     from tools import ToolRegistry
 

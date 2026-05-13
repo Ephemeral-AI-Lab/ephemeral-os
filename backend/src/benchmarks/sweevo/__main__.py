@@ -2,9 +2,11 @@
 
 Two flags:
 
-- ``--real-agent`` — placeholder for the real-agent grading loop. Real-agent
-  CLI work is out of scope for the live-e2e framework phase and is deferred to
-  a follow-up; today this prints a deferred-notice and exits non-zero.
+- ``--real-agent --instance-id=<id>`` — drive a real LLM run of one SWE-EVO
+  instance through :func:`task_center.api.start_task_center_entry_run`
+  (``runner=None``) via :func:`live_e2e.real_agent_run.run_sweevo_real_agent`.
+  Writes the canonical live-e2e audit tree plus a ``sweevo_result.json``
+  carrying the F2P/P2P verdict.
 - ``--scenario <name>`` — drives the mock framework via
   :func:`live_e2e.sweevo_adapter.run_sweevo_scenario` against a live
   Daytona sandbox. The scenario must be registered in ``SCENARIO_REGISTRY``.
@@ -74,7 +76,13 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--real-agent",
         action="store_true",
-        help="Real-agent grading path — DEFERRED to a follow-up phase.",
+        help="Run a real-LLM SWE-EVO instance through the task_center pipeline.",
+    )
+    parser.add_argument(
+        "--max-duration-s",
+        type=float,
+        default=1800.0,
+        help="Wall-clock cap for the real-agent task_center run (default 30min).",
     )
     parser.add_argument(
         "--audit-dir",
@@ -146,14 +154,44 @@ async def _cmd_scenario(args: argparse.Namespace) -> int:
     return 0 if report.task_center_status == "done" else 1
 
 
-def _cmd_real_agent() -> int:
-    print(
-        "--real-agent is deferred to a follow-up phase. "
-        "Use --scenario <name> for the mock framework, "
-        "or run pytest under backend/src/live_e2e/tests/sweevo/.",
-        file=sys.stderr,
+async def _cmd_real_agent(args: argparse.Namespace) -> int:
+    if not args.instance_id:
+        print("--real-agent requires --instance-id=<id>", file=sys.stderr)
+        return 2
+
+    from benchmarks.sweevo.dataset import select_sweevo_instance
+    from benchmarks.sweevo.sandbox import create_sweevo_test_sandbox
+    from live_e2e.real_agent_run import run_sweevo_real_agent
+
+    _bootstrap_sandbox_provider()
+    instance = select_sweevo_instance(source=args.source, instance_id=args.instance_id)
+    sandbox = await create_sweevo_test_sandbox(
+        instance, register_snapshot=True, repo_dir=args.repo_dir
     )
-    return 2
+    audit_dir = (
+        Path(args.audit_dir) if args.audit_dir
+        else Path(os.getenv("EOS_SWEEVO_AUDIT_DIR", ".sweevo_runs")).resolve()
+    )
+    report = await run_sweevo_real_agent(
+        instance=instance,
+        sandbox_id=str(sandbox["sandbox_id"]),
+        audit_dir=audit_dir,
+        repo_dir=args.repo_dir,
+        max_duration_s=args.max_duration_s,
+    )
+    r = report.sweevo_result
+    print(
+        f"real_agent instance_id={instance.instance_id} "
+        f"task_center_run_id={report.task_center_run_id} "
+        f"status={report.task_center_status} "
+        f"resolved={r.resolved} fix_rate={r.fix_rate:.2f} "
+        f"f2p={r.fail_to_pass_passed}/{r.fail_to_pass_total} "
+        f"p2p_broken={r.pass_to_pass_broken}/{r.pass_to_pass_total} "
+        f"duration_s={r.duration_s:.1f} "
+        f"aborted_by_timeout={report.aborted_by_timeout} "
+        f"run_dir={report.run_dir}"
+    )
+    return 0 if r.resolved else 1
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -162,7 +200,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.list:
         return _cmd_list(args.source)
     if args.real_agent:
-        return _cmd_real_agent()
+        try:
+            return asyncio.run(_cmd_real_agent(args))
+        except KeyboardInterrupt:
+            print("\nInterrupted.", flush=True)
+            return 130
     if args.scenario:
         try:
             return asyncio.run(_cmd_scenario(args))

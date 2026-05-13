@@ -25,7 +25,7 @@ from message.stream_events import StreamEvent, ToolExecutionCompleted
 from tools import ExecutionMetadata, ToolResult
 
 if TYPE_CHECKING:
-    from server.app_factory import RuntimeConfig
+    from runtime.app_factory import RuntimeConfig
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +99,7 @@ async def run_ephemeral_agent(
     db_available = False
     if persist_agent_run and task_id:
         try:
-            from server.app_factory import agent_run_store as _ars
+            from runtime.app_factory import agent_run_store as _ars
             db_available = _ars.is_ready
         except Exception:
             db_available = False

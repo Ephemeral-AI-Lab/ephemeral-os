@@ -28,7 +28,7 @@ def detect_provider() -> ProviderInfo:
     """Return provider metadata derived from the active model registration's class_path."""
     from config.model_config import try_get_active_model_kwargs  # noqa: F401
 
-    from server.app_factory import model_store
+    from runtime.app_factory import model_store
 
     name = "anthropic"
     try:

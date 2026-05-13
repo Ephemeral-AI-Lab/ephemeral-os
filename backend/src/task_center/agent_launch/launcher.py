@@ -25,7 +25,7 @@ from tools import ExecutionMetadata
 
 if TYPE_CHECKING:
     from agents import AgentDefinition
-    from server.app_factory import RuntimeConfig
+    from runtime.app_factory import RuntimeConfig
     from task_center.attempt.orchestrator import AttemptOrchestrator
 
 logger = logging.getLogger(__name__)

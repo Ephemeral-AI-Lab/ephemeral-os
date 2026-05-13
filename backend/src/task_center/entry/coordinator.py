@@ -46,7 +46,7 @@ from task_center.episode.registry import EpisodeManagerRegistry
 from task_center.task import HarnessTaskRole, HarnessTaskStatus
 
 if TYPE_CHECKING:
-    from server.app_factory import RuntimeConfig
+    from runtime.app_factory import RuntimeConfig
 
 
 ENTRY_AGENT_NAME = "entry_executor"

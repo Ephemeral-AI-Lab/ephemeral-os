@@ -38,7 +38,7 @@ _AUTO_RUN_ID_HEX_LEN = 16
 def _get_agent_run_store() -> Any | None:
     """Return the live agent_run_store if it is importable and ready."""
     try:
-        from server.app_factory import agent_run_store
+        from runtime.app_factory import agent_run_store
     except Exception as exc:
         logger.debug("agent_run_store import failed: %s", exc)
         return None

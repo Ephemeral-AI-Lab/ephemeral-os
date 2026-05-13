@@ -13,7 +13,7 @@ class NoActiveModelError(RuntimeError):
 
 
 def _resolve_store() -> Any:
-    from server.app_factory import ensure_runtime_stores_ready, model_store
+    from runtime.app_factory import ensure_runtime_stores_ready, model_store
 
     if store_unavailable := (model_store is None or not getattr(model_store, "is_available", False)):
         try:
