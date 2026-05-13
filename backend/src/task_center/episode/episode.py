@@ -39,8 +39,6 @@ class Episode:
     # null while open and on failed close.
     task_specification: str | None = None
     task_summary: str | None = None
-    context: str | None = None
-    summary: str | None = None
 
     @property
     def is_open(self) -> bool:

@@ -229,16 +229,20 @@ async def _phase0_bootstrap(ctx: ProbeContext, stats: ProbeStats) -> None:
     mkdir_result = None
     last_err = ""
     for candidate_cwd in ("/testbed", WORKSPACE_ROOT):
-        candidate_result = await sandbox_api.shell(
-            ctx.sandbox_id,
-            ShellRequest(
-                command=f"mkdir -p {WORKSPACE_ROOT}",
-                cwd=candidate_cwd,
-                timeout=60,
-                caller=ctx.caller,
-                description=f"bootstrap api.shell mkdir cwd={candidate_cwd}",
-            ),
-        )
+        try:
+            candidate_result = await sandbox_api.shell(
+                ctx.sandbox_id,
+                ShellRequest(
+                    command=f"mkdir -p {WORKSPACE_ROOT}",
+                    cwd=candidate_cwd,
+                    timeout=60,
+                    caller=ctx.caller,
+                    description=f"bootstrap api.shell mkdir cwd={candidate_cwd}",
+                ),
+            )
+        except Exception as exc:
+            last_err = f"cwd={candidate_cwd} error={type(exc).__name__}: {exc}"
+            continue
         if candidate_result.success and candidate_result.exit_code == 0:
             stats.api_shell_count += 1
             mkdir_result = candidate_result
@@ -1065,7 +1069,13 @@ async def _phase_f_intentional_conflicts(
     )
     tool_meta = dict(tool_conflict.metadata or {})
     tool_reason = str(tool_meta.get("conflict_reason") or "")
-    tool_passed = bool(tool_conflict.is_error and tool_reason)
+    if not tool_reason:
+        tool_reason = str(tool_conflict.output or "")
+    tool_passed = bool(
+        tool_conflict.is_error
+        and tool_reason
+        and "anchor not found" in tool_reason
+    )
     ctx.sandbox_checks.append(
         SandboxCheck(
             name="tool.edit_file.intentional_conflict",
@@ -1081,34 +1091,40 @@ async def _phase_f_intentional_conflicts(
         )
         stats.intentional_conflicts += 1
 
-    api_conflict = await sandbox_api.edit_file(
-        ctx.sandbox_id,
-        EditFileRequest(
-            path=path,
-            edits=(
-                SearchReplaceEdit(
-                    old_text="missing-anchor-text-XYZ\n",
-                    new_text="should-not-apply\n",
-                ),
-            ),
-            caller=ctx.caller,
-            description="intentional missing-anchor conflict (api)",
-        ),
-    )
     stats.api_edit_count += 1
-    api_passed = (not api_conflict.success) and bool(api_conflict.conflict_reason)
+    api_conflict_reason = ""
+    try:
+        api_conflict = await sandbox_api.edit_file(
+            ctx.sandbox_id,
+            EditFileRequest(
+                path=path,
+                edits=(
+                    SearchReplaceEdit(
+                        old_text="missing-anchor-text-XYZ\n",
+                        new_text="should-not-apply\n",
+                    ),
+                ),
+                caller=ctx.caller,
+                description="intentional missing-anchor conflict (api)",
+            ),
+        )
+        api_passed = (not api_conflict.success) and bool(api_conflict.conflict_reason)
+        api_conflict_reason = api_conflict.conflict_reason or ""
+    except Exception as exc:
+        api_conflict_reason = str(exc)
+        api_passed = "anchor not found" in api_conflict_reason
     ctx.sandbox_checks.append(
         SandboxCheck(
             name="api.edit_file.intentional_conflict",
             passed=api_passed,
-            detail=f"reason={api_conflict.conflict_reason!r}",
+            detail=f"reason={api_conflict_reason!r}",
         )
     )
     if api_passed:
         ctx.publish(
             EventType.SANDBOX_CONFLICT_DETECTED,
             metadata=ctx.metadata,
-            payload={"conflict_reason": api_conflict.conflict_reason or "api conflict"},
+            payload={"conflict_reason": api_conflict_reason or "api conflict"},
         )
         stats.intentional_conflicts += 1
 

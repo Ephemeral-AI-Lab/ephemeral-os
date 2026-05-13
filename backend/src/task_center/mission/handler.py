@@ -39,6 +39,7 @@ from task_center.episode.registry import EpisodeManagerRegistry
 from task_center.episode.episode import (
     Episode,
     EpisodeCreationReason,
+    EpisodeStatus,
 )
 
 
@@ -234,8 +235,10 @@ class MissionHandler:
             failed_attempt_id = self._latest_attempt_id_for_episode(
                 next_episode.id
             ) or previous_report.final_attempt_id
-            self._episode_store.cancel_for_compensation(
-                next_episode.id, closed_at=datetime.now(UTC)
+            self._episode_store.set_status(
+                next_episode.id,
+                status=EpisodeStatus.CANCELLED,
+                closed_at=datetime.now(UTC),
             )
             self._manager_registry.deregister(next_episode.id)
             self.close_mission(

@@ -107,6 +107,8 @@ def _configure_reusable_sweevo_sandbox(
         _sweevo_sandbox_labels(instance, repo_dir),
     )
     service.set_sandbox_labels(sandbox_id, labels)
+    if str(existing.get("state") or "") == "started":
+        return service.get_sandbox(sandbox_id)
     return service.start_sandbox(sandbox_id)
 
 
@@ -573,9 +575,12 @@ async def _rebuild_sweevo_workspace_base(
     on_progress: ProgressCallback | None = None,
 ) -> None:
     """Rebind public-tool workspace truth after raw setup commands."""
-    from sandbox.host.daemon_client import call_daemon_api
+    from sandbox.host.daemon_client import call_daemon_api, ensure_daemon_current
+    from sandbox.host.runtime_bundle import ensure_runtime_uploaded
 
     _progress(on_progress, "[setup] rebuilding public tool workspace base")
+    await ensure_runtime_uploaded(sandbox_id)
+    await ensure_daemon_current(sandbox_id)
     await call_daemon_api(
         sandbox_id,
         "api.build_workspace_base",

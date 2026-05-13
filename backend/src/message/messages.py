@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Annotated, Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 
 class TextBlock(BaseModel):
@@ -188,6 +191,11 @@ def assistant_message_from_api(raw_message: Any) -> ConversationMessage:
                     name=getattr(raw_block, "name", ""),
                     input=dict(getattr(raw_block, "input", {}) or {}),
                 )
+            )
+        else:
+            logger.debug(
+                "assistant_message_from_api: dropping unrecognized block type %r",
+                block_type,
             )
 
     return ConversationMessage(role="assistant", content=content)

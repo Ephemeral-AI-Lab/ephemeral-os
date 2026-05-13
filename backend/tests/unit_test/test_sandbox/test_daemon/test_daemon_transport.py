@@ -86,12 +86,34 @@ def test_daemon_commands_do_not_forward_host_env(
     assert "EOS_OCC_AUTO_SQUASH_MAX_DEPTH" not in daemon_spawn
 
 
-def test_daemon_spawn_tracks_empty_runtime_env_signature() -> None:
+def test_daemon_spawn_tracks_runtime_bundle_signature(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(command, "bundle_hash", lambda: "sha-current")
+
     daemon_spawn = command._daemon_spawn_command()
 
     assert "runtime.env" in daemon_spawn
-    assert "ENV_SIG=" in daemon_spawn
+    assert "runtime_bundle_sha=sha-current" in daemon_spawn
     assert "kill" in daemon_spawn
+
+
+async def test_ensure_daemon_current_runs_spawn_command(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: list[str] = []
+
+    class Adapter:
+        async def exec(self, _sandbox_id: str, command_str: str, **_: Any) -> Any:
+            seen.append(command_str)
+            return SimpleNamespace(stdout="", stderr="", exit_code=0)
+
+    monkeypatch.setattr(command, "get_adapter", lambda _sandbox_id: Adapter())
+
+    await command.ensure_daemon_current("sb-1")
+
+    assert len(seen) == 1
+    assert "sandbox.runtime.daemon" in seen[0]
 
 
 async def test_daemon_transport_spawns_on_socket_missing() -> None:

@@ -12,6 +12,7 @@ import os
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Engine, create_engine, inspect, text
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session, sessionmaker
 
 from db.base import Base
@@ -57,10 +58,24 @@ _DROPPED_COLUMNS: dict[str, set[str]] = {
         "run_id",
         "spec",
         "summary",
+        "system_prompt",
         "title",
+        "user_prompt",
     },
     "task_center_runs": {
         "root_task_id",
+    },
+    "missions": {
+        "context",
+        "summary",
+    },
+    "episodes": {
+        "context",
+        "summary",
+    },
+    "attempts": {
+        "context",
+        "summary",
     },
 }
 
@@ -256,13 +271,15 @@ def initialize_db(
     echo = db_settings.echo if db_settings else False
 
     logger.info("Connecting to database …")
-    _engine = create_engine(
-        url,
-        pool_pre_ping=pool_pre_ping,
-        pool_size=pool_size,
-        max_overflow=max_overflow,
-        echo=echo,
-    )
+    engine_kwargs: dict[str, Any] = {"echo": echo}
+    is_sqlite = make_url(url).drivername.startswith("sqlite")
+    if not is_sqlite:
+        engine_kwargs.update(
+            pool_pre_ping=pool_pre_ping,
+            pool_size=pool_size,
+            max_overflow=max_overflow,
+        )
+    _engine = create_engine(url, **engine_kwargs)
 
     # Import models so Base.metadata knows about all tables
     import db.models  # noqa: F401

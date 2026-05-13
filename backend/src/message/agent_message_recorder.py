@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 from collections.abc import Mapping
 
+from audit.jsonl import append_jsonl_event
 from message.messages import (
     ConversationMessage,
     TextBlock,
@@ -20,7 +21,6 @@ from message.stream_events import (
     ThinkingDelta,
     ToolExecutionCompleted,
 )
-from prompt.message_recorder import append_prompt_report_event
 
 logger = logging.getLogger(__name__)
 
@@ -218,7 +218,7 @@ class AgentMessageJsonlRecorder:
             "metadata": metadata,
         }
         try:
-            append_prompt_report_event(self._path, event)
+            append_jsonl_event(self._path, event)
         except Exception:
             logger.debug("agent message append failed", exc_info=True)
 

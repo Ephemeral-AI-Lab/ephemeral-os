@@ -1,3 +1,4 @@
+import message.event_printer as event_printer
 from message.event_printer import MultiAgentEventPrinter
 from message.stream_events import (
     AssistantMessageComplete,
@@ -27,6 +28,28 @@ def test_printer_includes_run_id_in_prefix() -> None:
     assert lines == [
         "[developer     ] [1234567890abcdef1234] -> tool_start: pytest({'k': 'value'})"
     ]
+
+
+def test_printer_timestamps_use_module_time(monkeypatch) -> None:
+    calls = iter([10.0, 12.5])
+    monkeypatch.setattr(event_printer.time, "monotonic", lambda: next(calls))
+    lines: list[str] = []
+    printer = MultiAgentEventPrinter(
+        color=False,
+        sink=lines.append,
+        timestamps=True,
+    )
+
+    printer.emit(
+        ToolExecutionStarted(
+            tool_name="pytest",
+            tool_input={},
+            agent_name="developer",
+            run_id="run-1",
+        )
+    )
+
+    assert lines == ["[    2.5s] [developer     ] [run-1] -> tool_start: pytest({})"]
 
 
 def test_printer_keeps_run_id_for_flushed_thinking() -> None:

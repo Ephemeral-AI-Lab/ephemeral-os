@@ -107,6 +107,13 @@ async def test_setup_sweevo_sandbox_rebuilds_workspace_base_after_raw_setup(
             return {"success": True, "ready": True}
         return {"success": True}
 
+    async def fake_ensure_runtime_uploaded(_sandbox_id: str) -> str:
+        daemon_calls.append(("runtime_uploaded", {}))
+        return "sha"
+
+    async def fake_ensure_daemon_current(_sandbox_id: str) -> None:
+        daemon_calls.append(("daemon_current", {}))
+
     monkeypatch.setattr(sweevo_sandbox, "_wait_for_sandbox_exec_ready", fake_wait)
     monkeypatch.setattr(sweevo_sandbox, "_exec", fake_exec)
     monkeypatch.setattr(
@@ -123,11 +130,21 @@ async def test_setup_sweevo_sandbox_rebuilds_workspace_base_after_raw_setup(
         "sandbox.host.daemon_client.call_daemon_api",
         fake_call_daemon_api,
     )
+    monkeypatch.setattr(
+        "sandbox.host.daemon_client.ensure_daemon_current",
+        fake_ensure_daemon_current,
+    )
+    monkeypatch.setattr(
+        "sandbox.host.runtime_bundle.ensure_runtime_uploaded",
+        fake_ensure_runtime_uploaded,
+    )
 
     await sweevo_sandbox.setup_sweevo_sandbox(_instance(), "sbx-1")
 
     assert any("git checkout -B sweevo-work" in command for command in commands)
     assert daemon_calls == [
+        ("runtime_uploaded", {}),
+        ("daemon_current", {}),
         ("api.build_workspace_base", {"workspace_root": "/testbed", "reset": True}),
         ("api.runtime.ready", {}),
     ]
@@ -143,8 +160,8 @@ async def test_named_sweevo_sandbox_is_configured_before_reuse(
         captured["labels"] = labels
         return {"id": "sbx-existing", "labels": labels}
 
-    def fake_start_sandbox(sandbox_id: str) -> dict[str, object]:
-        captured["started"] = sandbox_id
+    def fake_get_sandbox(sandbox_id: str) -> dict[str, object]:
+        captured["loaded"] = sandbox_id
         return {
             "id": sandbox_id,
             "name": "sweevo-existing",
@@ -163,7 +180,8 @@ async def test_named_sweevo_sandbox_is_configured_before_reuse(
             }
         ],
         set_sandbox_labels=fake_set_labels,
-        start_sandbox=fake_start_sandbox,
+        get_sandbox=fake_get_sandbox,
+        start_sandbox=lambda _sandbox_id: pytest.fail("started sandbox should not be restarted"),
         create_sandbox=lambda **_: pytest.fail("existing sandbox should be reused"),
     )
     monkeypatch.setattr(sweevo_sandbox, "_service", lambda: service)
@@ -177,7 +195,7 @@ async def test_named_sweevo_sandbox_is_configured_before_reuse(
 
     assert result["sandbox_id"] == "sbx-existing"
     assert result["reused_existing"] is True
-    assert captured["started"] == "sbx-existing"
+    assert captured["loaded"] == "sbx-existing"
     labels = captured["labels"]
     assert isinstance(labels, dict)
     assert labels["managed_by"] == "ephemeralos"
@@ -194,8 +212,8 @@ async def test_auto_sweevo_sandbox_reuses_started_matching_fixture(
         captured["labels"] = labels
         return {"id": "sbx-started", "labels": labels}
 
-    def fake_start_sandbox(sandbox_id: str) -> dict[str, object]:
-        captured["started"] = sandbox_id
+    def fake_get_sandbox(sandbox_id: str) -> dict[str, object]:
+        captured["loaded"] = sandbox_id
         return {
             "id": sandbox_id,
             "name": "sweevo-test-dask__dask_2023.3.2_2023.4.0-started",
@@ -224,7 +242,8 @@ async def test_auto_sweevo_sandbox_reuses_started_matching_fixture(
             },
         ],
         set_sandbox_labels=fake_set_labels,
-        start_sandbox=fake_start_sandbox,
+        get_sandbox=fake_get_sandbox,
+        start_sandbox=lambda _sandbox_id: pytest.fail("started sandbox should not be restarted"),
         create_sandbox=lambda **_: pytest.fail("healthy auto sandbox should be reused"),
     )
     monkeypatch.setattr(sweevo_sandbox, "_service", lambda: service)
@@ -239,7 +258,7 @@ async def test_auto_sweevo_sandbox_reuses_started_matching_fixture(
     assert result["sandbox_id"] == "sbx-started"
     assert result["reused_existing"] is True
     assert result["fallback_reason"] == "auto_reused_existing"
-    assert captured["started"] == "sbx-started"
+    assert captured["loaded"] == "sbx-started"
 
 
 @pytest.mark.asyncio

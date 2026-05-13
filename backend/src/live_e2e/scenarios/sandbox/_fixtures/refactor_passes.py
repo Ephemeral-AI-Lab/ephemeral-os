@@ -29,9 +29,9 @@ class RefactorEdit:
 class LSPRefSpec:
     relative_path: str
     line_index_anchor: str
+    symbol: str | None = None
     """A stable substring on the target line; the probe converts this to a
-    1-based line number after reading the file. The probe issues the LSP
-    request at that line, character 0."""
+    cursor position for the configured symbol."""
 
 
 @dataclass(frozen=True)
@@ -75,8 +75,9 @@ REFACTOR_PASSES: tuple[RefactorPass, ...] = (
         ),
         lsp_targets=(
             LSPRefSpec(
-                relative_path="scheduler_demo/domain/task.py",
-                line_index_anchor="state: TaskState = TaskState.PENDING",
+                relative_path="tests/test_task.py",
+                line_index_anchor="assert TaskState.DONE.is_terminal()",
+                symbol="TaskState",
             ),
         ),
     ),
@@ -108,8 +109,8 @@ REFACTOR_PASSES: tuple[RefactorPass, ...] = (
         ),
         lsp_targets=(
             LSPRefSpec(
-                relative_path="scheduler_demo/storage/memory_store.py",
-                line_index_anchor="def fetch(self, task_id: str) -> Task:",
+                relative_path="tests/test_memory_store.py",
+                line_index_anchor='assert store.fetch("t").task_id == "t"',
             ),
         ),
     ),
@@ -146,8 +147,9 @@ REFACTOR_PASSES: tuple[RefactorPass, ...] = (
         ),
         lsp_targets=(
             LSPRefSpec(
-                relative_path="scheduler_demo/domain/task.py",
-                line_index_anchor="priority: int = 0",
+                relative_path="tests/test_task.py",
+                line_index_anchor='task = Task(task_id="t", payload={"x": 1}, priority=5)',
+                symbol="Task",
             ),
         ),
     ),

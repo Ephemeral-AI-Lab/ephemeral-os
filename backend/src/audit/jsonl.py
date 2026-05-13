@@ -1,13 +1,13 @@
-"""Append-only prompt/message report helpers for live benchmark runs."""
+"""Append-only JSONL helpers shared by audit and transcript recorders."""
 
 from __future__ import annotations
 
 import json
 import os
 import time
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
-from collections.abc import Mapping
 
 
 def _json_default(value: Any) -> Any:
@@ -22,11 +22,11 @@ def _json_default(value: Any) -> Any:
     return str(value)
 
 
-def append_prompt_report_event(
+def append_jsonl_event(
     path: str | Path | None,
     event: Mapping[str, Any],
 ) -> None:
-    """Append one untruncated JSON event to a prompt report JSONL file."""
+    """Append one untruncated JSON event to a JSONL file."""
     if not path:
         return
     output_path = Path(path)
@@ -38,3 +38,6 @@ def append_prompt_report_event(
         os.write(fd, data.encode("utf-8"))
     finally:
         os.close(fd)
+
+
+__all__ = ["append_jsonl_event"]

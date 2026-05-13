@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import logging
 
+import pytest
 
 from message import (
     ConversationMessage,
@@ -258,6 +260,25 @@ class TestAssistantMessageFromApiThinking:
         msg = assistant_message_from_api(raw)
         assert len(msg.content) == 1
         assert isinstance(msg.content[0], TextBlock)
+
+    def test_unknown_block_type_is_logged_and_dropped(
+        self,
+        caplog: pytest.LogCaptureFixture,
+    ):
+        raw = _FakeMessage(
+            content=[
+                _FakeBlock(type="server_tool_use", id="srv_1"),
+                _FakeBlock(type="text", text="visible"),
+            ]
+        )
+
+        with caplog.at_level(logging.DEBUG, logger="message.messages"):
+            msg = assistant_message_from_api(raw)
+
+        assert len(msg.content) == 1
+        assert isinstance(msg.content[0], TextBlock)
+        assert msg.content[0].text == "visible"
+        assert "dropping unrecognized block type 'server_tool_use'" in caplog.text
 
 
 # ---------------------------------------------------------------------------

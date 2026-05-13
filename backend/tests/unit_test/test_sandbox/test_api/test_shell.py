@@ -73,6 +73,41 @@ async def test_shell_dispatches_to_sandbox_daemon(
 
 
 @pytest.mark.asyncio
+async def test_shell_overlay_policy_error_maps_to_rejected_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_call_daemon_api(*_args, **_kwargs):
+        raise RuntimeError(
+            "internal_error: overlay capture refuses escaping symlink target: "
+            ".ephemeralos/sweevo-mock/full_stack/overlay/symlink_escape"
+        )
+
+    monkeypatch.setattr(
+        "sandbox.api.tool.shell.call_daemon_api",
+        fake_call_daemon_api,
+    )
+
+    result = await shell(
+        "sb-shell",
+        ShellRequest(
+            command="ln -s /tmp/outside link",
+            cwd=".",
+            timeout=12,
+            caller=SandboxCaller(agent_id="agent-1"),
+            description="shell test",
+        ),
+    )
+
+    assert result.success is False
+    assert result.status == "rejected"
+    assert result.conflict is not None
+    assert result.conflict.reason == "rejected"
+    assert result.conflict_reason is not None
+    assert "internal_error" not in result.conflict_reason
+    assert "overlay capture refuses escaping symlink target" in result.conflict_reason
+
+
+@pytest.mark.asyncio
 async def test_shell_rejects_stdin_without_daemon_dispatch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

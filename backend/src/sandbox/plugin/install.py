@@ -236,17 +236,79 @@ async def _upload_and_run_setup(
     try:
         if await _marker_present(exec_fn, sandbox_id, manifest.name, digest):
             return
-        await _upload_setup_finalize_and_mark(
-            exec_fn,
-            sandbox_id=sandbox_id,
-            manifest=manifest,
-            digest=digest,
-            setup_timeout=setup_timeout,
-            install_dir=install_dir,
-            staging_dir=staging_dir,
-            tar_path=tar_path,
-            marker=marker,
-            encoded=encoded,
+        setup_dir = await exec_fn(
+            sandbox_id,
+            (
+                f"rm -rf {shlex.quote(staging_dir)} && "
+                f"mkdir -p {shlex.quote(staging_dir)} && "
+                f": > {shlex.quote(tar_path)}"
+            ),
+            timeout=30,
+        )
+        _check(setup_dir, f"plugin install: failed to prepare {staging_dir}")
+
+        for offset in range(0, len(encoded), _CHUNK_SIZE):
+            chunk = encoded[offset : offset + _CHUNK_SIZE]
+            write = await exec_fn(
+                sandbox_id,
+                (
+                    f"printf %s {shlex.quote(chunk)} | base64 -d "
+                    f">> {shlex.quote(tar_path)}"
+                ),
+                timeout=60,
+            )
+            _check(write, f"plugin install: chunk write failed at offset {offset}")
+
+        extract = await exec_fn(
+            sandbox_id,
+            (
+                f"cd {shlex.quote(staging_dir)} && "
+                f"tar -xzf {shlex.quote(tar_path)} && "
+                f"rm -f {shlex.quote(tar_path)}"
+            ),
+            timeout=60,
+        )
+        _check(extract, "plugin install: bundle extract failed")
+
+        finalize = await exec_fn(
+            sandbox_id,
+            (
+                f"rm -rf {shlex.quote(install_dir)} && "
+                f"mv {shlex.quote(staging_dir)} {shlex.quote(install_dir)}"
+            ),
+            timeout=30,
+        )
+        _check(finalize, f"plugin install: failed to publish {install_dir}")
+
+        if manifest.setup is not None:
+            setup_cmd = (
+                f"export EOS_PLUGIN_DIR={shlex.quote(install_dir)} && "
+                f"chmod +x {shlex.quote(install_dir)}/setup.sh && "
+                f"{shlex.quote(install_dir)}/setup.sh"
+            )
+            setup_run = await exec_fn(
+                sandbox_id,
+                setup_cmd,
+                timeout=setup_timeout,
+            )
+            if getattr(setup_run, "exit_code", 1) != 0:
+                raise PluginInstallError(
+                    f"plugin {manifest.name!r} setup.sh failed "
+                    f"(exit_code={getattr(setup_run, 'exit_code', 1)}): "
+                    f"{getattr(setup_run, 'stderr', '') or getattr(setup_run, 'stdout', '')}"
+                )
+
+        write_marker = await exec_fn(
+            sandbox_id,
+            f"printf %s {shlex.quote(digest)} > {shlex.quote(marker)}",
+            timeout=10,
+        )
+        _check(write_marker, f"plugin install: marker write failed for {marker}")
+        logger.info(
+            "plugin install: %s sha=%s on %s",
+            manifest.name,
+            digest[:8],
+            sandbox_id,
         )
     finally:
         cleanup = await exec_fn(
@@ -264,95 +326,6 @@ async def _upload_and_run_setup(
                 sandbox_id,
                 getattr(cleanup, "stderr", "") or getattr(cleanup, "stdout", ""),
             )
-
-
-async def _upload_setup_finalize_and_mark(
-    exec_fn: _RawExecCallable,
-    *,
-    sandbox_id: str,
-    manifest: PluginManifest,
-    digest: str,
-    setup_timeout: int,
-    install_dir: str,
-    staging_dir: str,
-    tar_path: str,
-    marker: str,
-    encoded: str,
-) -> None:
-    setup_dir = await exec_fn(
-        sandbox_id,
-        (
-            f"rm -rf {shlex.quote(staging_dir)} && "
-            f"mkdir -p {shlex.quote(staging_dir)} && "
-            f": > {shlex.quote(tar_path)}"
-        ),
-        timeout=30,
-    )
-    _check(setup_dir, f"plugin install: failed to prepare {staging_dir}")
-
-    for offset in range(0, len(encoded), _CHUNK_SIZE):
-        chunk = encoded[offset : offset + _CHUNK_SIZE]
-        write = await exec_fn(
-            sandbox_id,
-            (
-                f"printf %s {shlex.quote(chunk)} | base64 -d "
-                f">> {shlex.quote(tar_path)}"
-            ),
-            timeout=60,
-        )
-        _check(write, f"plugin install: chunk write failed at offset {offset}")
-
-    extract = await exec_fn(
-        sandbox_id,
-        (
-            f"cd {shlex.quote(staging_dir)} && "
-            f"tar -xzf {shlex.quote(tar_path)} && "
-            f"rm -f {shlex.quote(tar_path)}"
-        ),
-        timeout=60,
-    )
-    _check(extract, "plugin install: bundle extract failed")
-
-    finalize = await exec_fn(
-        sandbox_id,
-        (
-            f"rm -rf {shlex.quote(install_dir)} && "
-            f"mv {shlex.quote(staging_dir)} {shlex.quote(install_dir)}"
-        ),
-        timeout=30,
-    )
-    _check(finalize, f"plugin install: failed to publish {install_dir}")
-
-    if manifest.setup is not None:
-        setup_cmd = (
-            f"export EOS_PLUGIN_DIR={shlex.quote(install_dir)} && "
-            f"chmod +x {shlex.quote(install_dir)}/setup.sh && "
-            f"{shlex.quote(install_dir)}/setup.sh"
-        )
-        setup_run = await exec_fn(
-            sandbox_id,
-            setup_cmd,
-            timeout=setup_timeout,
-        )
-        if getattr(setup_run, "exit_code", 1) != 0:
-            raise PluginInstallError(
-                f"plugin {manifest.name!r} setup.sh failed "
-                f"(exit_code={getattr(setup_run, 'exit_code', 1)}): "
-                f"{getattr(setup_run, 'stderr', '') or getattr(setup_run, 'stdout', '')}"
-            )
-
-    write_marker = await exec_fn(
-        sandbox_id,
-        f"printf %s {shlex.quote(digest)} > {shlex.quote(marker)}",
-        timeout=10,
-    )
-    _check(write_marker, f"plugin install: marker write failed for {marker}")
-    logger.info(
-        "plugin install: %s sha=%s on %s",
-        manifest.name,
-        digest[:8],
-        sandbox_id,
-    )
 
 
 def _check(result: Any, message: str) -> None:

@@ -19,12 +19,13 @@ from task_center.mission.handler import MissionHandler
 from task_center.mission.mission import (
     MissionCloseReport,
     Mission,
+    MissionStatus,
 )
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.state import AttemptFailReason, AttemptStatus
 from task_center.attempt.runtime import AttemptRuntime
-from task_center.episode.episode import Episode
+from task_center.episode.episode import Episode, EpisodeStatus
 from task_center.task.models import HarnessTaskStatus
 
 logger = logging.getLogger(__name__)
@@ -228,16 +229,21 @@ class MissionStarter:
         now = datetime.now(UTC)
         self._close_unstarted_attempt_after_failed_start(initial_attempt_id, now=now)
         try:
-            self._runtime.episode_store.cancel_for_compensation(
-                episode.id, closed_at=now
+            self._runtime.episode_store.set_status(
+                episode.id,
+                status=EpisodeStatus.CANCELLED,
+                closed_at=now,
             )
         except Exception:
             logger.exception(
                 "MissionStarter: cancel episode failed",
             )
         try:
-            self._runtime.mission_store.cancel_for_compensation(
-                mission.id, closed_at=now
+            self._runtime.mission_store.set_status(
+                mission.id,
+                status=MissionStatus.CANCELLED,
+                final_outcome=None,
+                closed_at=now,
             )
         except Exception:
             logger.exception(

@@ -12,6 +12,7 @@ from sandbox.occ.changeset.types import (
     EditChange,
     FileResult,
     FileStatus,
+    OpaqueDirChange,
     WriteChange,
 )
 from sandbox.occ.content.hashing import ContentHasher
@@ -82,10 +83,22 @@ class GatedMerge:
         # so a chained Edit/Delete can't stage a stale path/hash.
         final_content_path: str | None = None
         final_precomputed_hash: str | None = None
+        final_special_change: LayerChange | None = None
 
         apply_start = monotonic_now()
         for change in group.changes:
             current_hash = self._hasher.hash_current(content, exists=exists)
+            if isinstance(change, OpaqueDirChange):
+                content = b""
+                exists = True
+                final_content_path = None
+                final_precomputed_hash = None
+                final_special_change = LayerChange(
+                    path=group.path,
+                    kind="opaque_dir",
+                )
+                continue
+
             if isinstance(change, WriteChange):
                 expected_hash = _base_hash(change.base_hash)
                 if current_hash != expected_hash:
@@ -108,6 +121,7 @@ class GatedMerge:
                 exists = True
                 final_content_path = change.content_path
                 final_precomputed_hash = change.precomputed_hash
+                final_special_change = None
                 continue
 
             if isinstance(change, DeleteChange):
@@ -129,6 +143,7 @@ class GatedMerge:
                 exists = False
                 final_content_path = None
                 final_precomputed_hash = None
+                final_special_change = None
                 continue
 
             if isinstance(change, EditChange):
@@ -149,6 +164,7 @@ class GatedMerge:
                 # longer represents the final content.
                 final_content_path = None
                 final_precomputed_hash = None
+                final_special_change = None
                 continue
 
             timings["occ.gated.apply_changes_s"] = monotonic_now() - apply_start
@@ -164,15 +180,19 @@ class GatedMerge:
 
         timings["occ.gated.apply_changes_s"] = monotonic_now() - apply_start
         stage_start = monotonic_now()
-        delta = _delta_for_final_state(
-            path=group.path,
-            content=content,
-            exists=exists,
-            initial_exists=initial_exists,
-            stage_write=stage_write,
-            stage_write_from_path=stage_write_from_path,
-            content_path=final_content_path,
-            precomputed_hash=final_precomputed_hash,
+        delta = (
+            LayerDelta(changes=(final_special_change,))
+            if final_special_change is not None
+            else _delta_for_final_state(
+                path=group.path,
+                content=content,
+                exists=exists,
+                initial_exists=initial_exists,
+                stage_write=stage_write,
+                stage_write_from_path=stage_write_from_path,
+                content_path=final_content_path,
+                precomputed_hash=final_precomputed_hash,
+            )
         )
         timings["occ.gated.stage_delta_s"] = monotonic_now() - stage_start
         return (

@@ -33,7 +33,8 @@ class ContextPacketStore(SyncStoreMixin):
             )
             db.add(record)
             db.commit()
-        return packet.id
+            db.refresh(record)
+            return record.id
 
     def get(self, context_packet_id: str) -> ContextPacket | None:
         with self._sf() as db:

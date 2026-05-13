@@ -92,6 +92,40 @@ def test_stream_bridge_skips_metadata_derivation_when_sandbox_audit_emitted() ->
     assert [event.type for event in events] == [EventType.TOOL_CALL_COMPLETED]
 
 
+def test_stream_bridge_keeps_lease_event_when_sandbox_audit_emitted() -> None:
+    bus = AuditEventBus()
+    events: list[Event] = []
+    bus.subscribe(events.append)
+    bridge = stream_bridge(bus, task_center_run_id="run-1")
+
+    asyncio.run(
+        bridge(
+            ToolExecutionCompleted(
+                tool_name="edit_file",
+                output="{}",
+                is_error=False,
+                tool_id="toolu_1",
+                agent_name="executor",
+                run_id="task-1",
+                metadata={
+                    "sandbox_audit_emitted": True,
+                    "status": "ok",
+                    "changed_paths": ["a.txt"],
+                    "timings": {
+                        "api.edit.lease_acquire_s": 0.01,
+                        "occ.apply.total_s": 0.06,
+                    },
+                },
+            )
+        )
+    )
+
+    assert [event.type for event in events] == [
+        EventType.TOOL_CALL_COMPLETED,
+        EventType.SANDBOX_LAYER_STACK_LEASE_ACQUIRED,
+    ]
+
+
 def test_stream_bridge_derives_sandbox_conflict_event() -> None:
     bus = AuditEventBus()
     events: list[Event] = []

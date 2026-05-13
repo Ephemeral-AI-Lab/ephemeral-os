@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from collections.abc import Mapping
 
-from prompt.message_recorder import append_prompt_report_event
+from audit.jsonl import append_jsonl_event
 
 if TYPE_CHECKING:
     from engine.query.context import QueryContext
@@ -38,7 +38,7 @@ class PromptReportRecorder:
         if not self._path:
             return
         try:
-            append_prompt_report_event(
+            append_jsonl_event(
                 self._path,
                 {
                     **self._base_event,

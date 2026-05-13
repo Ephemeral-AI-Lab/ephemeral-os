@@ -7,7 +7,13 @@ from pathlib import Path
 from sandbox.layer_stack.layer.change import LayerChange
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.prepared import PreparedPathGroup, RouteDecision
-from sandbox.occ.changeset.types import EditChange, FileStatus, WriteChange
+from sandbox.occ.changeset.types import (
+    EditChange,
+    FileStatus,
+    OpaqueDirChange,
+    SymlinkChange,
+    WriteChange,
+)
 from sandbox.occ.content.hashing import ContentHasher
 from sandbox.occ.merge.gated import GatedMerge
 
@@ -115,4 +121,48 @@ def test_tracked_edit_aborts_when_anchor_is_ambiguous(tmp_path: Path) -> None:
     )
 
     assert result.status is FileStatus.ABORTED_OVERLAP
+    assert delta is None
+
+
+def test_tracked_opaque_dir_overlay_change_stages_storage_change(
+    tmp_path: Path,
+) -> None:
+    stack = LayerStackManager(tmp_path / "stack")
+    merge = GatedMerge(stack)
+    opaque_group = PreparedPathGroup(
+        path=".omc/results",
+        route=RouteDecision.OCC_GATED_MERGE,
+        changes=(
+            OpaqueDirChange(path=".omc/results", kept_children=frozenset()),
+        ),
+    )
+
+    opaque_result, opaque_delta = merge.stage_group(
+        opaque_group,
+        active_manifest=stack.read_active_manifest(),
+        stage_write=_stage_write(tmp_path),
+    )
+
+    assert opaque_result.status is FileStatus.ACCEPTED
+    assert opaque_delta is not None
+    assert opaque_delta.changes[0].kind == "opaque_dir"
+
+
+def test_tracked_symlink_overlay_change_is_rejected(tmp_path: Path) -> None:
+    stack = LayerStackManager(tmp_path / "stack")
+    merge = GatedMerge(stack)
+    group = PreparedPathGroup(
+        path="link",
+        route=RouteDecision.OCC_GATED_MERGE,
+        changes=(SymlinkChange(path="link", target="../target"),),
+    )
+
+    result, delta = merge.stage_group(
+        group,
+        active_manifest=stack.read_active_manifest(),
+        stage_write=_stage_write(tmp_path),
+    )
+
+    assert result.status is FileStatus.REJECTED
+    assert result.message == "unsupported tracked change kind: SymlinkChange"
     assert delta is None

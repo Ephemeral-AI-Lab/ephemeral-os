@@ -16,10 +16,11 @@ This report defines the next phase for tightening the role-context e-commerce
 example and the matching context-engine behavior. The review found that the
 example already gives agents a useful picture of planner, generator, evaluator,
 retry, and continuation context, but it needs a clearer split between hard
-runtime gates and context-shaping prompt policy. It also needs a more explicit
-summary provenance model. The review exposed one remaining scale issue:
-evaluator context still receives every current-attempt generator summary without
-a role-level bounding policy.
+runtime gates and context-shaping prompt behavior. It also needs a more explicit
+summary provenance model. The review exposed one scale choice to document:
+evaluator context intentionally receives every current-attempt generator summary,
+and this phase should preserve that high-recall behavior instead of adding
+summary caps.
 
 ## Phase Goal
 
@@ -29,27 +30,28 @@ properties clearly:
 1. Agents know what to do because each role receives the right contract for its
    authority level.
 2. Drift is limited by hard harness gates where the runtime can enforce them,
-   and reduced by explicit context-shaping policy where the runtime only shapes
+   and reduced by explicit context-shaping behavior where the runtime only shapes
    what an agent sees.
-3. Context growth is bounded where previous attempt history is projected, and
-   evaluator-scale behavior is either bounded or intentionally documented as
-   unbounded.
+3. Context growth is explicit where previous attempt history is projected, and
+   evaluator-scale behavior is intentionally documented as all-summary rather
+   than capped.
 
 The phase is complete when a reader can inspect the e-commerce example and tell
 which facts are submitted by agents, which facts are derived by the context
 engine, which boundaries are hard runtime gates, which boundaries are prompt
-composition policy, and which large-context cases remain intentionally accepted.
+composition behavior, and which large-context cases remain intentionally
+accepted.
 
 ## Findings To Close
 
 | Finding | Current state | Next-phase action |
 |---|---|---|
-| Evaluator context can grow without a cap | `evaluator_v1` renders every id in `attempt.generator_task_ids` as `completed_task_summary`. | Implement bounded evaluator projection: keep small DAG behavior unchanged, but use verifier-first full summaries, boundary executor summaries, and an all-task manifest for large DAGs. |
-| Verifier selection seam is implicit | Bounded evaluator projection needs to know which generator tasks were verifier-profile tasks, but context recipes currently receive stores, not agent registry objects. | Add a narrow agent-role lookup seam to `ContextEngineDeps` or persist resolved agent role on task rows before implementing verifier-first selection. Do not import global agent registries inside recipe code. |
+| Evaluator context must stay uncapped | `evaluator_v1` renders every id in `attempt.generator_task_ids` as `completed_task_summary`. | Preserve this all-summary behavior. Do not add verifier-prioritized selection, boundary-summary selection, hidden-omission markers, or an all-task manifest. |
+| Verifier selection seam is unnecessary | Summary-count restriction would require knowing verifier-profile tasks, but the desired behavior renders all summaries. | Do not add an agent-role lookup seam to `ContextEngineDeps` and do not persist resolved agent role only for evaluator selection. |
 | Hard gates and prompt policy are blurred | The e-commerce example shows rendered context but does not distinguish schema/lifecycle invariants from recipe ordering and omission policy. | Add a "Runtime Gates And Context Policies Represented By This Example" section to the example, with separate tables for enforceable gates and prompt-shaping policy. |
 | Summary provenance is implicit | Example summaries are realistic, but the doc does not state where each summary comes from. | Add a summary provenance table that traces planner contract, generator summaries, dependency summaries, evaluator results, failed-attempt summaries, and continuation summaries. |
-| A retry-planner lesson row is stale | The dependency lessons say the retry planner sees failed plan, criteria, and fail reason, but it now also sees `plan_kind`, `continuation_goal`, and capped generator summaries. | Update that row to match the current failed-attempt landscape. |
-| Adjacent docs still describe missing deps as silently skipped | Current `generator_v1` raises context assembly failure when a dependency task row is missing, but older prose in `role-generator.md` and `context-engine-recipes.md` still says missing dependency rows are skipped. | Include those stale-doc fixes in the same documentation pass so the report does not create a new contradiction. |
+| A retry-planner lesson row is stale | The dependency lessons say the retry planner sees failed plan, criteria, and fail reason, but it now also sees `plan_kind`, `continuation_goal`, and generator summaries. | Update that row to match the current failed-attempt landscape. |
+| Adjacent docs need the missing-dependency invariant | Current `generator_v1` raises context assembly failure when a dependency task row is missing, so `role-generator.md` and `context-engine-recipes.md` must not describe missing dependency rows as skipped. | Include those stale-doc fixes in the same documentation pass so the report does not create a new contradiction. |
 
 ## Target Agent Picture
 
@@ -60,7 +62,7 @@ The next version should preserve the current role split:
 | Planner, first attempt | Mission or current episode goal, prior successful episode summaries if any, and failed-attempt landscape only on retry. | Raw generator logs, live filesystem state, or evaluator internals. |
 | Generator | Attempt-level task specification, summaries for direct dependencies, and its own assigned task spec. | Failed-attempt history, sibling task specs, full criteria, continuation goal, or unrelated dependency logs. |
 | Evaluator | Mission/episode frame, current attempt plan, partial boundary if present, current attempt dependency results, and criteria last. | Failed-attempt landscape or future continuation work. |
-| Retry planner | Current episode goal plus failed-attempt projection: plan kind, continuation goal, task specification, criteria, capped generator summaries, and fail reason. | Full historical work logs or all artifact payloads. |
+| Retry planner | Current episode goal plus failed-attempt projection: plan kind, continuation goal, task specification, criteria, generator summaries, and fail reason. | Full historical work logs or all artifact payloads. |
 | Continuation planner | New episode goal plus prior accepted episode plan and evaluator pass summary. | All prior episode generator summaries. |
 
 This division is the main anti-drift shape. The planner owns scope and criteria,
@@ -275,20 +277,19 @@ Final block sequence (planner_v1, packet order):
 
 ### Scenario 5: Large Evaluator Context
 
-The current implementation renders every current-attempt generator summary. If
-the next phase implements bounded evaluator projection, the packet should still
-make every task visible through a manifest while limiting full prose blocks.
+The current and target implementation renders every current-attempt generator
+summary. Large attempts can therefore produce large evaluator packets. That is
+intentional: the evaluator is the role responsible for judging the complete
+current attempt, so the context engine should not silently omit summaries or
+replace them with a manifest.
 
 ```mermaid
 flowchart TD
-    allTasks["All current-attempt generator task ids"] --> selector{"Over evaluator summary cap?"}
-    selector -- "No" --> current["All completed_task_summary blocks"]
-    selector -- "Yes" --> bounded["Bounded full summaries + all-task manifest"]
-    current --> criteria["evaluation_criteria last"]
-    bounded --> criteria
+    allTasks["All current-attempt generator task ids"] --> summaries["All completed_task_summary blocks"]
+    summaries --> criteria["evaluation_criteria last"]
 ```
 
-Current evaluator packet:
+Evaluator packet:
 
 ```text
 Final block sequence (evaluator_v1, packet order):
@@ -299,18 +300,6 @@ Final block sequence (evaluator_v1, packet order):
   [...]
   [N-1] completed_task_summary (gen-N)               HIGH      group=# Dependency Results
   [N] evaluation_criteria                            REQUIRED  heading=# Evaluation Criteria
-```
-
-Proposed bounded evaluator packet:
-
-```text
-Final block sequence (evaluator_v1 bounded, packet order):
-  [0] episode_goal (mission/current episode)         REQUIRED  heading=# Mission / Current Episode
-  [1] task_specification                             REQUIRED  heading=# Attempt Plan
-  [2] completed_task_summary   (selected verifier)   HIGH      group=# Dependency Results
-  [3] completed_task_summary   (boundary executor)   HIGH      group=# Dependency Results
-  [4] completed_task_manifest  (all generator ids)   HIGH      group=# Dependency Results
-  [5] evaluation_criteria                            REQUIRED  heading=# Evaluation Criteria
 ```
 
 ## Runtime Gates And Context Policies To Document
@@ -336,7 +325,7 @@ runtime rejects or blocks the invalid state.
 | Generator context recipe | Emits attempt spec, direct dependency summaries, and the assigned task spec only. | A generator is not invited to reason about sibling work unless the planner encoded it into its local task or dependency summaries. |
 | Evaluator partial boundary | Emits `plan_kind: partial` and `continuation_goal` for partial attempts. | The evaluator is told not to fail intentionally deferred continuation work, but the judgment remains an agent decision. |
 | Evaluator criteria last | Places criteria after dependency results. | The final prompt section anchors the evaluator on the planner's accepted rubric. |
-| Failed-attempt projection | Retry planner receives failed-attempt fields and capped generator summaries. | The repair plan can be narrow without replaying every prior work log. |
+| Failed-attempt projection | Retry planner receives failed-attempt fields and generator summaries. | The repair plan can be narrow without replaying raw work logs. |
 | Continuation summary boundary | Next episode sees prior accepted plan and evaluator pass summary. | Cross-episode reuse depends on deliberate close summaries, not context sprawl. |
 
 ## Summary Provenance
@@ -352,62 +341,34 @@ supporting section.
 | Generator task summary | Generator terminal success/failure submission. | Task row `summaries[]`, appended as `{outcome, summary, payload}`. | Dependency summaries, evaluator dependency results, failed-attempt generator summaries. | Latest summary entry only; `summary` is preferred over `outcome`. |
 | Generator dependency summary | Context-engine projection from direct `needs`. | Not separately stored. | Generator recipe. | One latest summary per direct dependency. |
 | Evaluator pass/fail summary | Evaluator terminal success/failure submission. | Evaluator task row `summaries[]`, appended as `{outcome, summary, payload}`. | Episode close summary, retry failure reason surface. | Latest evaluator summary for the attempt. |
-| Failed-attempt generator summaries | Context-engine projection from a failed attempt's generator task ids. | Not separately stored. | Planner recipe through failed-attempt landscape. | Capped first/last task ids, each summary truncated. |
+| Failed-attempt generator summaries | Context-engine projection from a failed attempt's generator task ids. | Not separately stored. | Planner recipe through failed-attempt landscape. | One latest summary per generator task id in every failed attempt; no failed-attempt count cap, summary-count cap, or summary-length cap. |
 | Continuation episode summary | Episode close path. | Episode row `task_summary`, derived from evaluator pass summary. | Planner recipe for later episodes. | Does not include every prior generator summary. |
 
 The important distinction is that summaries are agent-authored terminal outputs,
 but dependency, evaluator, retry, and continuation surfaces are context-engine
 projections of those stored summaries.
 
-## Evaluator Context Bound Decision
+## Evaluator Summary Count Decision
 
 The current evaluator behavior is simple and high-recall: render every current
 attempt generator summary. That is acceptable for small DAGs like the
 e-commerce example, but it is the only remaining role surface in this flow that
 can grow linearly with the full attempt graph.
 
-Next-phase decision: implement bounded evaluator projection in `evaluator_v1`.
-Docs-only clarification is not enough because the current recipe can still
-overrun prompt budget on wide attempts and the renderer cannot drop REQUIRED or
-HIGH evaluator blocks.
+Next-phase decision: keep `evaluator_v1` all-summary. Do not add
+`MAX_EVALUATOR_*` constants, verifier-prioritized selection, executor boundary
+selection, all-task manifests, or hidden-omission markers. The renderer should not
+silently choose which HIGH judgment evidence the evaluator sees.
 
-Proposed policy:
+If a wide attempt overruns the prompt budget, treat that as an explicit
+planner/attempt-size problem rather than a context-engine omission policy. The
+planner can split work into smaller episodes or attempts, and the evaluator keeps
+a complete view of the current attempt it is asked to judge.
 
-1. Always render the mission/episode frame, attempt plan, partial boundary, and
-   evaluation criteria.
-2. If the attempt has at most `MAX_EVALUATOR_FULL_SUMMARIES` generator tasks,
-   render every generator summary as today.
-3. If the attempt exceeds that limit, render:
-   - up to `MAX_EVALUATOR_VERIFIER_FULL_SUMMARIES` verifier task summaries by
-     planned order, prioritizing final aggregate verifier nodes when present;
-   - first and last executor summaries by planned order, each capped by
-     `MAX_EVALUATOR_EXECUTOR_BOUNDARY_SUMMARIES`;
-   - a compact manifest line for every omitted generator task with task id,
-     agent name, local status, and a short summary excerpt;
-   - explicit omitted-count markers for verifier and executor prose.
-4. Keep criteria last.
-
-This avoids blind truncation. The evaluator still sees every task id and a
-short signal for every omitted task, while full prose is reserved for a bounded
-set of verifier summaries and boundary summaries most likely to contain
-aggregate evidence.
-
-Verifier detection must be explicit. The structural task role is `generator` for
-both executors and verifiers, and task rows currently store `agent_name`, not the
-resolved profile role. The implementation should choose one narrow seam before
-adding summary selection:
-
-1. Preferred low-schema-change path: add an optional agent-role lookup protocol
-   to `ContextEngineDeps`, for example a `role_for_agent(agent_name)` method
-   returning `str | None`, wired by the launch/composer layer from registered
-   `AgentDefinition` objects and stubbed directly in recipe tests.
-2. Acceptable persistence path: persist the resolved `AgentDefinition.role` on
-   each generator task row when planner submissions are accepted.
-
-Do not let `recipes/evaluator.py` import the global agent registry directly.
-Terminal payloads such as `payload.generator_role` can remain fallback evidence,
-but they should not drive selection because they are submitted after the task
-runs.
+Because all summaries are rendered, there is no need for evaluator-specific
+verifier detection. Do not add an agent-role lookup protocol to
+`ContextEngineDeps`, do not import agent registries inside recipe code, and do
+not persist resolved agent roles only to support evaluator summary selection.
 
 ## Implementation Plan
 
@@ -423,30 +384,24 @@ runs.
    - Add "How Each Summary Is Obtained" near the evaluator or dependency lesson
      section.
    - Fix the retry-planner lesson row to include `plan_kind`,
-     `continuation_goal`, and capped generator summaries.
+     `continuation_goal`, and generator summaries.
    - Fix the missing-dependency prose in `role-generator.md` and
      `context-engine-recipes.md` so both say current `generator_v1` raises a
-     context assembly error instead of silently skipping missing dependency
-     rows.
+     context assembly error instead of skipping missing dependency rows without
+     an error.
 
-2. Implement evaluator context bounding.
-   - Add the verifier-role seam first: either a narrow `ContextEngineDeps`
-     protocol for `agent_name` -> role lookup, or a persisted resolved agent role
-     on generator task rows.
-   - Add evaluator summary selection helpers and constants:
-     `MAX_EVALUATOR_FULL_SUMMARIES`,
-     `MAX_EVALUATOR_VERIFIER_FULL_SUMMARIES`,
-     `MAX_EVALUATOR_EXECUTOR_BOUNDARY_SUMMARIES`, and
-     `MAX_EVALUATOR_MANIFEST_EXCERPT_CHARS`.
-   - Preserve current behavior when the generator-task count is less than or
-     equal to `MAX_EVALUATOR_FULL_SUMMARIES`.
-   - For large attempts, render selected full `completed_task_summary` blocks,
-     a compact `completed_task_manifest` block covering every generator task, and
-     explicit omitted-count markers.
+2. Preserve all-summary context projections.
+   - Keep `evaluator_v1` rendering every task id in
+     `attempt.generator_task_ids` as `completed_task_summary`.
+   - Remove failed-attempt count caps, generator-summary count caps, and
+     generator-summary text-length caps so retry planners see every failed
+     attempt and one full latest generator summary for every task id.
+   - Do not add evaluator summary selection helpers, `MAX_EVALUATOR_*`
+     constants, manifests, hidden-omission markers, or verifier role lookup seams.
    - Keep `evaluation_criteria` last and keep `partial_plan_boundary` before
      dependency results.
-   - Add direct tests for small, large, verifier-heavy, executor-heavy,
-     all-executor, partial-plan, and missing-task-row attempts.
+   - Add direct tests proving all generator summaries render and missing task
+     rows still surface explicitly.
 
 3. Keep generator boundaries unchanged.
    - Do not add partial-plan boundary, continuation goal, failed-attempt
@@ -455,13 +410,13 @@ runs.
      artifact payloads or raw logs.
 
 4. Update role docs after code policy lands.
-   - `role-evaluator.md`: bounded current-attempt summary policy, manifest
-     semantics, and partial boundary.
+   - `role-evaluator.md`: all-summary current-attempt behavior and partial
+     boundary.
    - `role-planner.md`: failed-attempt planner receives summary projection, not
      full work logs.
    - `role-generator.md`: dependency summaries are latest prose summaries only.
-   - `context-engine-recipes.md`: block kinds, role-lookup seam, manifest, and
-     caps.
+   - `context-engine-recipes.md`: block kinds and all-summary retry/evaluator
+     projection.
 
 5. Verify.
    - Run focused context-engine tests.
@@ -477,28 +432,27 @@ runs.
 - The example contains a summary provenance table that answers how every shown
   summary was produced, stored, selected, and rendered.
 - Retry planner documentation matches the current failed-attempt landscape:
-  `plan_kind`, `continuation_goal`, task specification, criteria, capped
-  generator summaries, and failure reason.
+  `plan_kind`, `continuation_goal`, task specification, criteria, generator
+  summaries, and failure reason.
 - Generator context remains narrow and does not receive the partial-plan
   boundary.
 - `role-generator.md` and `context-engine-recipes.md` no longer say missing
-  dependency task rows are silently skipped.
-- Evaluator context scale behavior is code-backed and tested: small DAGs keep
-  current all-summary behavior; large DAGs use bounded full summaries plus an
-  all-task manifest.
-- Verifier-first evaluator selection is based on a documented role seam
-  (`agent_name` -> resolved agent role or persisted resolved role), not global
-  registry access from recipe code or post-run terminal payloads.
-- Focused tests cover small, large, verifier-heavy, executor-heavy, all-executor,
-  partial-plan, missing dependency, and missing generator-task rows.
+  dependency task rows are skipped without an error.
+- Evaluator context scale behavior is code-backed and tested: every
+  `attempt.generator_task_ids` entry renders as a `completed_task_summary`; no
+  manifest or selection layer is introduced.
+- Retry-planner failed-attempt projection renders one latest generator summary
+  for every task id in every failed attempt.
+- Focused tests cover all-summary retry projection, partial-plan evaluator
+  ordering, missing dependency rows, and missing generator-task rows.
 
 ## Risks
 
 | Risk | Mitigation |
 |---|---|
-| Evaluator cap hides a critical failed fact. | Use an all-task manifest and bounded verifier-first full prose before omitting executor prose. |
-| Verifier detection couples recipes to agent globals. | Add a narrow role lookup protocol to `ContextEngineDeps` or persist resolved role on task rows; keep registry access outside recipe code. |
+| Wide attempts produce large evaluator prompts. | Treat that as a planner/attempt-size concern. Do not silently omit HIGH judgment evidence in the context engine. |
+| Future verifier detection couples recipes to agent globals. | Avoid verifier-specific evaluator selection in this phase, so recipes do not need registry access or a new role lookup seam. |
 | Docs imply stronger gates than runtime has. | Separate hard runtime gates from context-shaping policy and link every hard gate claim to schema, lifecycle, or store behavior. |
 | Summary provenance becomes another stale explanation. | Keep the table field-oriented and aligned to terminal submissions plus context-engine projections. |
-| Retry planner receives too much history. | Keep failed-attempt generator summaries capped and make the omission explicit. |
+| Retry planner receives many summaries on a wide failed attempt. | Keep the projection explicit and one-summary-per-task; rely on planner graph sizing rather than hidden omission. |
 | Continuation planner misses reusable contracts. | Require evaluator pass summaries to preserve route names, ids, env vars, formulas, and accepted exclusions. |

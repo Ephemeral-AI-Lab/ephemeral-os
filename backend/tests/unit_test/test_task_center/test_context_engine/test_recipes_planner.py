@@ -11,9 +11,6 @@ from task_center.context_engine.errors import ContextEngineError
 from task_center.context_engine.packet import (
     ContextPriority,
 )
-from task_center.context_engine.recipes.attempt_landscape import (
-    MAX_FAILED_ATTEMPTS_RENDERED,
-)
 from task_center.context_engine.recipes.planner import (
     _planner_v1_build,
 )
@@ -340,7 +337,7 @@ def test_failed_attempt_landscape_includes_plan_kind_and_generator_summaries(
     assert "  - gen-b:\n    B failed after creating fixture" in text
 
 
-def test_more_than_cap_failed_attempts_truncates_with_medium_summary(
+def test_all_failed_attempts_render_as_high_priority_blocks(
     deps_with_stores, mission_store, episode_store, attempt_store,
     task_center_run_id,
 ):
@@ -348,7 +345,7 @@ def test_more_than_cap_failed_attempts_truncates_with_medium_summary(
     episode = _seed_episode(
         episode_store, mission_id=request.id, sequence_no=1, goal="g"
     )
-    total = MAX_FAILED_ATTEMPTS_RENDERED + 2
+    total = 8
     for n in range(1, total + 1):
         _seed_failed_attempt(attempt_store, episode.id, sequence_no=n)
     current_attempt = _seed_running_attempt(
@@ -366,7 +363,9 @@ def test_more_than_cap_failed_attempts_truncates_with_medium_summary(
     failed_blocks = [
         b for b in packet.blocks if b.kind == "failed_attempt_landscape"
     ]
-    assert len(failed_blocks) == MAX_FAILED_ATTEMPTS_RENDERED + 1
-    truncation_block = failed_blocks[-1]
-    assert truncation_block.priority == ContextPriority.MEDIUM
-    assert truncation_block.metadata["truncated_count"] == "2"
+    assert len(failed_blocks) == total
+    assert [b.metadata["attempt_sequence_no"] for b in failed_blocks] == [
+        str(n) for n in range(1, total + 1)
+    ]
+    assert all(block.priority == ContextPriority.HIGH for block in failed_blocks)
+    assert all("truncated_count" not in block.metadata for block in failed_blocks)

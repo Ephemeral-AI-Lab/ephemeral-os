@@ -81,6 +81,266 @@ latest prose summary from dependency tasks. If `gen-payment-adapter` forgets to
 name `STRIPE_TEST_SECRET_KEY` in its summary, `gen-checkout-api` may not know
 the env contract even though the task's artifacts list contains it.
 
+## Context Shapes By Scenario
+
+The context engine builds role-specific packets, not one shared context blob.
+For episode 1, the internal block kind is `episode_goal`, but the rendered
+heading is `# Mission / Current Episode`. Planners and evaluators are not
+missing mission context in episode 1; it is collapsed into that single block.
+Generators intentionally omit mission and episode framing.
+
+### Scenario 1: First Attempt In The First Episode
+
+The first planner receives only the mission/current-episode goal. After the
+planner submits a plan, generator and evaluator contexts are projections of the
+accepted contract, not the planner's private reasoning.
+
+```mermaid
+flowchart TD
+    user["User request"] --> planner["Planner context"]
+    planner --> plan["Accepted plan contract"]
+    plan --> rootGen["Root generator context"]
+    rootGen --> rootSummary["Root terminal summary"]
+    plan --> depGen["Dependent generator context"]
+    rootSummary --> depGen
+    plan --> evaluator["Evaluator context"]
+    rootSummary --> evaluator
+    depGen --> evaluator
+```
+
+Planner packet:
+
+```text
+Final block sequence (planner_v1, packet order):
+  [0] episode_goal (mission/current episode)         REQUIRED  heading=# Mission / Current Episode
+```
+
+Root generator packet:
+
+```text
+Final block sequence (generator_v1, packet order):
+  [0] task_specification                             HIGH      heading=# Attempt Plan
+  [1] planned_task_spec        (gen-db-contracts)    REQUIRED  heading=# Assigned Task
+```
+
+Dependent generator packet:
+
+```text
+Final block sequence (generator_v1, packet order):
+  [0] task_specification                             HIGH      heading=# Attempt Plan
+  [1] dependency_summary       (gen-db-contracts)    MEDIUM    group=# Dependency Results
+  [2] planned_task_spec        (gen-product-api)     REQUIRED  heading=# Assigned Task
+```
+
+Evaluator packet:
+
+```text
+Final block sequence (evaluator_v1, packet order):
+  [0] episode_goal (mission/current episode)         REQUIRED  heading=# Mission / Current Episode
+  [1] task_specification                             REQUIRED  heading=# Attempt Plan
+  [2] completed_task_summary   (gen-db-contracts)    HIGH      group=# Dependency Results
+  [3] completed_task_summary   (gen-product-api)     HIGH      group=# Dependency Results
+  [...]
+  [N] evaluation_criteria                            REQUIRED  heading=# Evaluation Criteria
+```
+
+### Scenario 2: Partial Attempt
+
+A partial plan changes evaluator context and later continuation-planner context.
+It does not change generator context: generators still see the attempt plan,
+direct dependency summaries, and their assigned task.
+
+```mermaid
+flowchart TD
+    partialPlan["Accepted partial plan"] --> generator["Generator context"]
+    partialPlan --> evaluator["Evaluator context with partial boundary"]
+    evaluator --> pass["Evaluator PASS"]
+    pass --> nextEpisode["Continuation episode"]
+    nextEpisode --> nextPlanner["Continuation planner context"]
+```
+
+Generator packet:
+
+```text
+Final block sequence (generator_v1, packet order):
+  [0] task_specification                             HIGH      heading=# Attempt Plan
+  [1] dependency_summary       (direct dependency)   MEDIUM    group=# Dependency Results
+  [2] planned_task_spec        (assigned task)       REQUIRED  heading=# Assigned Task
+```
+
+Evaluator packet:
+
+```text
+Final block sequence (evaluator_v1, packet order):
+  [0] episode_goal (mission/current episode)         REQUIRED  heading=# Mission / Current Episode
+  [1] task_specification                             REQUIRED  heading=# Attempt Plan
+  [2] partial_plan_boundary                          REQUIRED  heading=# Partial Plan Boundary
+  [3] completed_task_summary   (gen-*)               HIGH      group=# Dependency Results
+  [...]
+  [N] evaluation_criteria                            REQUIRED  heading=# Evaluation Criteria
+```
+
+Continuation planner packet:
+
+```text
+Final block sequence (planner_v1, packet order):
+  [0] mission_goal                                   REQUIRED  heading=# Mission
+  [1] prior_episode_specification (Ep#1)             HIGH      group=# Previous Episode Results
+  [2] prior_episode_summary       (Ep#1)             HIGH      group=# Previous Episode Results
+  [3] episode_goal                (Ep#2, current)    REQUIRED  heading=# Current Episode
+```
+
+### Scenario 3: Retry After A Failed Attempt
+
+Failed-attempt history belongs to the retry planner. The next generators and
+evaluator only see the new attempt contract unless the retry planner copies
+relevant facts into the new plan or task specs.
+
+```mermaid
+flowchart TD
+    failedAttempt["Failed attempt projection"] --> retryPlanner["Retry planner context"]
+    retryPlanner --> newPlan["New accepted repair plan"]
+    newPlan --> newGenerator["Retry generator context"]
+    newPlan --> newEvaluator["Retry evaluator context"]
+    failedAttempt -. "not shown directly" .-> newGenerator
+    failedAttempt -. "not shown directly" .-> newEvaluator
+```
+
+Retry planner packet:
+
+```text
+Final block sequence (planner_v1, packet order):
+  [0] episode_goal (mission/current retry scope)     REQUIRED  heading=# Mission / Current Episode
+  [1] failed_attempt_landscape (Attempt#1 in Ep#1)   HIGH      group=# Failed Attempts
+  [2] failed_attempt_landscape (Attempt#2 in Ep#1)   HIGH      group=# Failed Attempts
+```
+
+Retry generator packet:
+
+```text
+Final block sequence (generator_v1, packet order):
+  [0] task_specification          (retry attempt)    HIGH      heading=# Attempt Plan
+  [1] dependency_summary          (new dependency)   MEDIUM    group=# Dependency Results
+  [2] planned_task_spec           (new task)         REQUIRED  heading=# Assigned Task
+```
+
+Retry evaluator packet:
+
+```text
+Final block sequence (evaluator_v1, packet order):
+  [0] episode_goal (mission/current episode)         REQUIRED  heading=# Mission / Current Episode
+  [1] task_specification          (retry attempt)    REQUIRED  heading=# Attempt Plan
+  [2] completed_task_summary      (retry gen-*)      HIGH      group=# Dependency Results
+  [...]
+  [N] evaluation_criteria         (retry criteria)   REQUIRED  heading=# Evaluation Criteria
+```
+
+### Scenario 4: Continuation Episode
+
+Continuation carries forward episode-level closure, not every task-level
+detail. The next planner sees the prior accepted plan and evaluator pass
+summary, then plans against the new current episode goal.
+
+```mermaid
+flowchart TD
+    mission["Mission goal"] --> planner2["Episode 2 planner context"]
+    ep1["Episode 1 accepted plan + evaluator summary"] --> planner2
+    continuation["Continuation goal"] --> planner2
+    planner2 --> ep2Plan["Episode 2 accepted plan"]
+    ep1 -. "generator summaries are not replayed" .-> ep2Plan
+```
+
+Continuation planner packet:
+
+```text
+Final block sequence (planner_v1, packet order):
+  [0] mission_goal                                   REQUIRED  heading=# Mission
+  [1] prior_episode_specification (Ep#1)             HIGH      group=# Previous Episode Results
+  [2] prior_episode_summary       (Ep#1)             HIGH      group=# Previous Episode Results
+  [3] episode_goal                (Ep#2, current)    REQUIRED  heading=# Current Episode
+```
+
+If episode 2 retries, failed attempts from episode 2 append after the current
+episode goal:
+
+```text
+Final block sequence (planner_v1, packet order):
+  [0] mission_goal                                   REQUIRED  heading=# Mission
+  [1] prior_episode_specification (Ep#1)             HIGH      group=# Previous Episode Results
+  [2] prior_episode_summary       (Ep#1)             HIGH      group=# Previous Episode Results
+  [3] episode_goal (Ep#2 current retry scope)        REQUIRED  heading=# Current Episode
+  [4] failed_attempt_landscape (Attempt#1 in Ep#2)   HIGH      group=# Failed Attempts
+```
+
+### Scenario 5: Large Evaluator Context
+
+The evaluator receives every current-attempt generator summary. This is
+intentional: the evaluator judges the complete current attempt, so the context
+engine should not silently omit high-priority judgment evidence or replace it
+with a manifest.
+
+```mermaid
+flowchart TD
+    allTasks["All current-attempt generator task ids"] --> summaries["All completed_task_summary blocks"]
+    summaries --> criteria["evaluation_criteria last"]
+```
+
+Evaluator packet:
+
+```text
+Final block sequence (evaluator_v1, packet order):
+  [0] episode_goal (mission/current episode)         REQUIRED  heading=# Mission / Current Episode
+  [1] task_specification                             REQUIRED  heading=# Attempt Plan
+  [2] completed_task_summary   (gen-1)               HIGH      group=# Dependency Results
+  [3] completed_task_summary   (gen-2)               HIGH      group=# Dependency Results
+  [...]
+  [N-1] completed_task_summary (gen-N)               HIGH      group=# Dependency Results
+  [N] evaluation_criteria                            REQUIRED  heading=# Evaluation Criteria
+```
+
+## Runtime Gates And Context Policies Represented By This Example
+
+Visible context shape is not always enforcement. Hard gates are runtime
+validation or lifecycle rules that reject or block invalid states. Context
+policies shape what the agent sees, but they do not force an agent's final
+judgment unless the runtime separately validates the state.
+
+### Hard runtime gates
+
+| Gate | Runtime effect | Why it prevents drift |
+|---|---|---|
+| Planner terminal schema | Requires nonblank `task_specification`, nonblank `evaluation_criteria`, nonempty `tasks`, and matching `task_specs`. | The planner cannot submit vague work or orphan task specs. |
+| Planner DAG validation | Rejects duplicate ids, unknown generator agents, unknown deps, and dependency cycles. | The execution graph is dispatchable before generators launch. |
+| Missing dependency invariant | A missing dependency task row raises context assembly failure. | The harness does not silently launch a generator with truncated dependency context. |
+| Attempt retry lifecycle | Failed generator or evaluator outcomes close the current attempt and start a new planner when budget remains. | Repair scope is re-authored by a planner instead of improvised by a worker or evaluator. |
+
+### Context-shaping policies
+
+| Policy | Rendered effect | Why it reduces drift |
+|---|---|---|
+| Generator context recipe | Emits attempt spec, direct dependency summaries, and the assigned task spec only. | A generator is not invited to reason about sibling work unless the planner encoded it into local task or dependency summaries. |
+| Evaluator partial boundary | Emits `plan_kind: partial` and `continuation_goal` for partial attempts. | The evaluator is told not to fail intentionally deferred continuation work, but the judgment remains an agent decision. |
+| Evaluator criteria last | Places criteria after dependency results. | The final prompt section anchors the evaluator on the planner's accepted rubric. |
+| Failed-attempt projection | Retry planner receives failed-attempt fields and generator summaries. | The repair plan can be narrow without replaying raw work logs. |
+| Continuation summary boundary | Next episode sees prior accepted plan and evaluator pass summary. | Cross-episode reuse depends on deliberate close summaries, not context sprawl. |
+
+## How Each Summary Is Obtained
+
+Summaries are agent-authored terminal outputs. Dependency, evaluator, retry,
+and continuation surfaces are context-engine projections of those stored
+summaries.
+
+| Surface | Producer | Stored as | Rendered by | Selection rule |
+|---|---|---|---|---|
+| Planner `task_specification` | Planner terminal call, `submit_full_plan` or `submit_partial_plan`. | Attempt plan contract. | Planner output becomes generator/evaluator framing. | Frozen for the attempt once accepted. |
+| Planner `evaluation_criteria` | Planner terminal call. | Attempt plan contract. | Evaluator criteria block. | Rendered last for evaluator. |
+| Planner `continuation_goal` | Planner terminal call when using partial plan. | Attempt plan contract and later episode continuation goal. | Evaluator partial boundary, retry planner failed-attempt landscape, next episode goal after pass. | Present only for partial attempts. |
+| Generator task summary | Generator terminal success/failure submission. | Task row `summaries[]`, appended as `{outcome, summary, payload}`. | Dependency summaries, evaluator dependency results, failed-attempt generator summaries. | Latest summary entry only; `summary` is preferred over `outcome`. |
+| Generator dependency summary | Context-engine projection from direct `needs`. | Not separately stored. | Generator recipe. | One latest summary per direct dependency. |
+| Evaluator pass/fail summary | Evaluator terminal success/failure submission. | Evaluator task row `summaries[]`, appended as `{outcome, summary, payload}`. | Episode close summary, retry failure reason surface. | Latest evaluator summary for the attempt. |
+| Failed-attempt generator summaries | Context-engine projection from a failed attempt's generator task ids. | Not separately stored. | Planner recipe through failed-attempt landscape. | One latest summary per generator task id in every failed attempt; no failed-attempt count cap, summary-count cap, or summary-length cap. |
+| Continuation episode summary | Episode close path. | Episode row `task_summary`, derived from evaluator pass summary. | Planner recipe for later episodes. | Does not include every prior generator summary. |
+
 ## Stage 1: Planner Context, First Attempt
 
 For a first attempt in the first episode, `planner_v1` renders only the episode
@@ -1102,8 +1362,7 @@ order response, and confirmation page agree for the e2e fixture.
 The episode has retry budget, so attempt #2 starts with a new planner. The
 planner sees the same current episode goal plus failed-attempt landscape. It
 sees whether the failed attempt was partial or full, the continuation goal, the
-failed attempt's plan, criteria, capped latest generator summaries, and fail
-reason.
+failed attempt's plan, criteria, latest generator summaries, and fail reason.
 
 Attempt #2 id: `attempt-commerce-001-a2`
 
@@ -1309,7 +1568,7 @@ cart id persistence, Stripe env vars, and total calculation.
 | Generator context is intentionally narrow | UI tasks do not see mission goal, retry history, sibling specs, or criteria |
 | Verifiers are still generator nodes | `gen-fullstack-verifier` receives dependency summaries and an assigned verification task, but uses a verifier profile |
 | Evaluator sees the whole current attempt | It receives all generator summaries, the attempt plan, and criteria, but no failed-attempt landscape |
-| Retry planner sees failure projection, not all work logs | Attempt #2 planner gets the failed plan, criteria, and fail reason, then narrows the repair DAG |
+| Retry planner sees failure projection, not all work logs | Attempt #2 planner gets `plan_kind`, `continuation_goal`, the failed plan, criteria, generator summaries, and fail reason, then narrows the repair DAG |
 | Continuation planner sees episode summaries | Episode #2 gets prior accepted plan and summary, so episode #1 summary must preserve reusable contracts |
 | Bad summaries create downstream blindness | If a backend task omits endpoint names or total formula, frontend/evaluator tasks must rediscover them with tools or may fail |
 

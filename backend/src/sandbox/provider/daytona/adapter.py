@@ -22,6 +22,7 @@ from sandbox.provider.daytona.client.sync_client import (
     _creation_param_classes,
     _normalize_dict,
     _normalize_optional_text,
+    _call_with_optional_timeout,
     _paginate_all,
     acquire_client,
     fetch_sandbox,
@@ -124,7 +125,11 @@ class DaytonaProviderAdapter:
             }
         try:
             client = acquire_client()
-            client.list(limit=1, timeout=_HEALTH_TIMEOUT_SECONDS)
+            _call_with_optional_timeout(
+                client.list,
+                limit=1,
+                timeout=_HEALTH_TIMEOUT_SECONDS,
+            )
             return {
                 "configured": True,
                 "available": True,

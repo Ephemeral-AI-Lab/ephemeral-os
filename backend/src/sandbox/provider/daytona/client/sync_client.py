@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import threading
+from inspect import Parameter, signature
 from typing import Any
 
 from sandbox.provider.daytona.client.credentials import load_credentials
@@ -100,7 +101,11 @@ def acquire_client() -> Any:
 def fetch_sandbox(sandbox_id: str) -> Any:
     """Fetch a pre-created sandbox by ID."""
     client = acquire_client()
-    sandbox = client.get(sandbox_id, timeout=_SANDBOX_TIMEOUT_SECONDS)
+    sandbox = _call_with_optional_timeout(
+        client.get,
+        sandbox_id,
+        timeout=_SANDBOX_TIMEOUT_SECONDS,
+    )
     if sandbox is None:
         raise ValueError(f"Sandbox '{sandbox_id}' not found")
     return sandbox
@@ -144,7 +149,11 @@ _MAX_PAGINATION_PAGES = 1000  # WR-06: defense-in-depth cap
 
 def _paginate_all(list_fn: Any, limit: int) -> list[Any]:
     """Exhaust a paginated Daytona SDK list method and return all items."""
-    first_page = list_fn(limit=limit, timeout=_SANDBOX_TIMEOUT_SECONDS)
+    first_page = _call_with_optional_timeout(
+        list_fn,
+        limit=limit,
+        timeout=_SANDBOX_TIMEOUT_SECONDS,
+    )
     items = list(getattr(first_page, "items", []) or [])
     current_page = int(getattr(first_page, "page", 1) or 1)
     total_pages = int(getattr(first_page, "total_pages", 1) or 1)
@@ -158,14 +167,50 @@ def _paginate_all(list_fn: Any, limit: int) -> list[Any]:
             total_pages,
         )
     for page in range(current_page + 1, capped_total + 1):
-        response = list_fn(page=page, limit=limit, timeout=_SANDBOX_TIMEOUT_SECONDS)
+        response = _call_with_optional_timeout(
+            list_fn,
+            page=page,
+            limit=limit,
+            timeout=_SANDBOX_TIMEOUT_SECONDS,
+        )
         items.extend(list(getattr(response, "items", []) or []))
     return items
+
+
+def _call_with_optional_timeout(
+    fn: Any,
+    *args: Any,
+    timeout: float,
+    **kwargs: Any,
+) -> Any:
+    """Call a Daytona SDK method, passing timeout only when supported.
+
+    Daytona SDK versions differ here: create/start/stop/delete accept timeout,
+    while current get/list methods do not. Keep the timeout on methods that
+    expose it without breaking newer get/list signatures.
+    """
+    if _accepts_timeout(fn):
+        kwargs["timeout"] = timeout
+    return fn(*args, **kwargs)
+
+
+def _accepts_timeout(fn: Any) -> bool:
+    try:
+        params = signature(fn).parameters.values()
+    except (TypeError, ValueError):
+        return True
+    for param in params:
+        if param.kind is Parameter.VAR_KEYWORD:
+            return True
+        if param.name == "timeout":
+            return True
+    return False
 
 
 __all__ = [
     "acquire_client",
     "fetch_sandbox",
+    "_call_with_optional_timeout",
     "_HEALTH_TIMEOUT_SECONDS",
     "_SANDBOX_TIMEOUT_SECONDS",
 ]

@@ -108,21 +108,6 @@ class EpisodeStore(SyncStoreMixin):
             )
             return [self._to_dto(r) for r in q.all()]
 
-    def cancel_for_compensation(
-        self, episode_id: str, *, closed_at: datetime | None = None
-    ) -> Episode:
-        """Mark an episode CANCELLED. Reserved for startup compensation paths."""
-        with self._sf() as db:
-            record = db.get(EpisodeRecord, episode_id)
-            if record is None:
-                raise LookupError(f"Episode {episode_id!r} not found")
-            record.status = EpisodeStatus.CANCELLED.value
-            if closed_at is not None:
-                record.closed_at = closed_at
-            db.commit()
-            db.refresh(record)
-            return self._to_dto(record)
-
     def get_by_sequence(
         self, *, mission_id: str, sequence_no: int
     ) -> Episode | None:

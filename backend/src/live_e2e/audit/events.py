@@ -1,7 +1,7 @@
 """EventType enum + Event dataclass for the in-memory audit bus.
 
-Per plan §8. Events live in-memory only — they drive the LifecycleObserver,
-HookSet, and metrics aggregator. There is no persisted ``events.jsonl``.
+Events live in-memory only — they drive hook dispatch and metrics aggregation.
+There is no persisted ``events.jsonl``.
 """
 
 from __future__ import annotations

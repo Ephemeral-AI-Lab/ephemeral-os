@@ -69,15 +69,21 @@ def failed_event(
     caller: SandboxCaller | None,
     error: BaseException,
 ) -> AuditEvent:
+    conflict_reason = _conflict_reason_from_error(error)
+    status = "conflict" if conflict_reason is not None else "error"
     return AuditEvent(
         source="sandbox",
-        type=events.OPERATION_FAILED,
+        type=(
+            events.OPERATION_CONFLICTED
+            if conflict_reason is not None
+            else events.OPERATION_FAILED
+        ),
         node=node_from_caller(sandbox_id=sandbox_id, operation=operation, caller=caller),
         payload={
             "operation": operation,
-            "status": "error",
+            "status": status,
             "changed_paths": [],
-            "conflict_reason": None,
+            "conflict_reason": conflict_reason,
             "warnings": [],
             "timings": {},
             "error_kind": type(error).__name__,
@@ -185,6 +191,26 @@ def _none_if_empty(value: str | None) -> str | None:
         return None
     stripped = value.strip()
     return stripped or None
+
+
+_CONFLICT_ERROR_MARKERS = (
+    "anchor not found",
+    "anchor occurrence count mismatch",
+    "aborted_overlap",
+    "aborted_version",
+    "content changed",
+    "old_text_not_found",
+    "overlay capture refuses escaping symlink target",
+    "unsupported tracked change kind: symlinkchange",
+)
+
+
+def _conflict_reason_from_error(error: BaseException) -> str | None:
+    message = str(getattr(error, "message", "") or error)
+    lowered = message.lower()
+    if any(marker in lowered for marker in _CONFLICT_ERROR_MARKERS):
+        return message
+    return None
 
 
 _EVENT_BY_SIGNAL = {

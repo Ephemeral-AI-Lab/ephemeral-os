@@ -17,6 +17,7 @@ Key ideas:
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -175,13 +176,11 @@ class MultiAgentEventPrinter:
         sink: "Any" = None,
         timestamps: bool = False,
     ) -> None:
-        import time as _time
-
         self._color = color
         self._tag_width = tag_width
         self._sink = sink  # callable taking a line; default = print
         self._timestamps = timestamps
-        self._start = _time.monotonic()
+        self._start = time.monotonic()
         self._agent_totals: dict[str, _AgentTotals] = {}
         self._lanes: dict[tuple[str, str], _LaneState] = {}
         self._palette_idx = 0
@@ -304,15 +303,13 @@ class MultiAgentEventPrinter:
                 self._flush_lane(lane_agent, lane_run_id)
 
     def _line(self, agent: str, run_id: str, body: str) -> None:
-        import time as _time
-
         tag = self._agent_tag(agent, run_id)
         lines = body.splitlines() or [""]
         continuation = self._c("dim", "│ ") if self._color else "│ "
         for idx, segment in enumerate(lines):
             prefix = continuation if idx else ""
             if self._timestamps:
-                elapsed = _time.monotonic() - self._start
+                elapsed = time.monotonic() - self._start
                 stamp = f"{_DIM}[{elapsed:7.1f}s]{_RESET}" if self._color else f"[{elapsed:7.1f}s]"
                 line = f"{stamp} {tag} {prefix}{segment}"
             else:

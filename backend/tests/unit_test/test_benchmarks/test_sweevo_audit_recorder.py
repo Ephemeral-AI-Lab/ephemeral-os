@@ -9,27 +9,31 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import UTC, datetime
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Iterator
 
 import pytest
+from sqlalchemy import Engine, create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
-from live_e2e.audit.bus import AuditEventBus
-from live_e2e.audit.events import Event, EventType
-from live_e2e.audit.node_id import NodeId
-from live_e2e.audit.recorder import AuditRecorder
-from live_e2e.stores import (
-    TaskCenterStoreBundle,
-    create_per_test_task_center_stores,
-)
+import db.models  # noqa: F401 - populate Base.metadata
+from db.base import Base
 from db.models.agent_run import AgentRunRecord
 from db.models.task_center import (
     TaskCenterRequestRecord,
     TaskCenterRunRecord,
     TaskCenterTaskRecord,
 )
-from sqlalchemy.orm import sessionmaker
+from db.stores.attempt_store import AttemptStore
+from db.stores.episode_store import EpisodeStore
+from db.stores.mission_store import MissionStore
+from db.stores.task_center_store import TaskCenterStore
+from live_e2e.audit.bus import AuditEventBus
+from live_e2e.audit.events import Event, EventType
+from live_e2e.audit.node_id import NodeId
+from live_e2e.audit.recorder import AuditRecorder
 from task_center.domain import (
     EpisodeCreationReason,
     MissionStatus,
@@ -40,25 +44,51 @@ _RUN_ID = "run-abc"
 _REQUEST_ID = "req-1"
 
 
+@dataclass(slots=True)
+class _TestStoreBundle:
+    engine: Engine
+    session_factory: sessionmaker[Session]
+    task_store: TaskCenterStore
+    mission_store: MissionStore
+    episode_store: EpisodeStore
+    attempt_store: AttemptStore
+
+    def close(self) -> None:
+        self.engine.dispose()
+
+
 @pytest.fixture
-def stores() -> Iterator[TaskCenterStoreBundle]:
-    bundle = create_per_test_task_center_stores()
+def stores() -> Iterator[_TestStoreBundle]:
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    session_factory = sessionmaker(
+        bind=engine,
+        autoflush=False,
+        expire_on_commit=False,
+    )
+    bundle = _TestStoreBundle(
+        engine=engine,
+        session_factory=session_factory,
+        task_store=TaskCenterStore(),
+        mission_store=MissionStore(),
+        episode_store=EpisodeStore(),
+        attempt_store=AttemptStore(),
+    )
+    for store in (
+        bundle.task_store,
+        bundle.mission_store,
+        bundle.episode_store,
+        bundle.attempt_store,
+    ):
+        store.initialize(session_factory)
     try:
         yield bundle
     finally:
         bundle.close()
 
 
-def _session_factory(bundle: TaskCenterStoreBundle) -> sessionmaker:
-    return sessionmaker(
-        bind=bundle.engine,
-        autoflush=False,
-        expire_on_commit=False,
-    )
-
-
-def _seed_run(bundle: TaskCenterStoreBundle, run_id: str = _RUN_ID) -> None:
-    sf = _session_factory(bundle)
+def _seed_run(bundle: _TestStoreBundle, run_id: str = _RUN_ID) -> None:
+    sf = bundle.session_factory
     with sf() as db:
         now = datetime.now(UTC)
         db.add(
@@ -107,7 +137,7 @@ def _make_recorder(
 
 
 def test_mission_insert_writes_latest_snapshot(
-    tmp_path: Path, stores: TaskCenterStoreBundle
+    tmp_path: Path, stores: _TestStoreBundle
 ) -> None:
     _seed_run(stores)
     recorder = _make_recorder(tmp_path)
@@ -127,11 +157,13 @@ def test_mission_insert_writes_latest_snapshot(
     row = _read_json(snapshot)
     assert row["id"] == mission.id
     assert row["status"] == "open"
+    assert "context" not in row
+    assert "summary" not in row
     assert not (mission_dir / "mission.jsonl").exists()
 
 
 def test_mission_update_overwrites_latest_snapshot(
-    tmp_path: Path, stores: TaskCenterStoreBundle
+    tmp_path: Path, stores: _TestStoreBundle
 ) -> None:
     _seed_run(stores)
     recorder = _make_recorder(tmp_path)
@@ -158,7 +190,7 @@ def test_mission_update_overwrites_latest_snapshot(
 
 
 def test_episode_and_attempt_listeners(
-    tmp_path: Path, stores: TaskCenterStoreBundle
+    tmp_path: Path, stores: _TestStoreBundle
 ) -> None:
     _seed_run(stores)
     recorder = _make_recorder(tmp_path)
@@ -186,14 +218,20 @@ def test_episode_and_attempt_listeners(
     mission_dir = recorder.run_dir / f"mission_01_{mission.id}"
     episode_dir = mission_dir / f"episode_01_{episode.id}"
     attempt_dir = episode_dir / f"attempt_01_{attempt.id}"
-    assert _read_json(episode_dir / "episode.json")["id"] == episode.id
-    assert _read_json(attempt_dir / "attempt.json")["id"] == attempt.id
+    episode_row = _read_json(episode_dir / "episode.json")
+    attempt_row = _read_json(attempt_dir / "attempt.json")
+    assert episode_row["id"] == episode.id
+    assert "context" not in episode_row
+    assert "summary" not in episode_row
+    assert attempt_row["id"] == attempt.id
+    assert "context" not in attempt_row
+    assert "summary" not in attempt_row
     assert not (episode_dir / "episode.jsonl").exists()
     assert not (attempt_dir / "attempt.jsonl").exists()
 
 
 def _insert_task(
-    bundle: TaskCenterStoreBundle,
+    bundle: _TestStoreBundle,
     *,
     task_id: str,
     role: str,
@@ -201,7 +239,7 @@ def _insert_task(
     task_center_attempt_id: str | None = None,
     agent_name: str | None = None,
 ) -> None:
-    sf = _session_factory(bundle)
+    sf = bundle.session_factory
     with sf() as db:
         now = datetime.now(UTC)
         db.add(
@@ -216,8 +254,6 @@ def _insert_task(
                 needs=[],
                 task_center_attempt_id=task_center_attempt_id,
                 context_packet_id=None,
-                system_prompt=None,
-                user_prompt=None,
                 created_at=now,
                 updated_at=now,
             )
@@ -226,7 +262,7 @@ def _insert_task(
 
 
 def test_task_dir_placement_per_role(
-    tmp_path: Path, stores: TaskCenterStoreBundle
+    tmp_path: Path, stores: _TestStoreBundle
 ) -> None:
     _seed_run(stores)
     recorder = _make_recorder(tmp_path)
@@ -272,7 +308,9 @@ def test_task_dir_placement_per_role(
         recorder.dispose()
 
     entry_dir = recorder.run_dir / "entry_executor_entry_task_1"
-    assert (entry_dir / "task.json").exists()
+    entry_task = _read_json(entry_dir / "task.json")
+    assert "system_prompt" not in entry_task
+    assert "user_prompt" not in entry_task
 
     attempt_dir = (
         recorder.run_dir
@@ -286,7 +324,7 @@ def test_task_dir_placement_per_role(
 
 
 def test_helper_role_filtered(
-    tmp_path: Path, stores: TaskCenterStoreBundle
+    tmp_path: Path, stores: _TestStoreBundle
 ) -> None:
     _seed_run(stores)
     recorder = _make_recorder(tmp_path)
@@ -301,7 +339,7 @@ def test_helper_role_filtered(
 
 
 def test_generator_verifier_task_uses_verifier_dir_and_message_recorder(
-    tmp_path: Path, stores: TaskCenterStoreBundle
+    tmp_path: Path, stores: _TestStoreBundle
 ) -> None:
     _seed_run(stores)
     recorder = _make_recorder(tmp_path)
@@ -380,7 +418,7 @@ def test_sandbox_events_are_mirrored_to_run_jsonl(tmp_path: Path) -> None:
 
 
 def test_dispose_unregisters_listeners(
-    tmp_path: Path, stores: TaskCenterStoreBundle
+    tmp_path: Path, stores: _TestStoreBundle
 ) -> None:
     _seed_run(stores)
     recorder = _make_recorder(tmp_path)
@@ -405,7 +443,7 @@ def test_dispose_unregisters_listeners(
 
 
 def test_run_json_and_metrics_json_written(
-    tmp_path: Path, stores: TaskCenterStoreBundle
+    tmp_path: Path, stores: _TestStoreBundle
 ) -> None:
     _seed_run(stores)
     recorder = _make_recorder(tmp_path)
@@ -427,8 +465,128 @@ def test_run_json_and_metrics_json_written(
     assert "per_tool" in payload
 
 
+def test_dispose_writes_detailed_performance_report(tmp_path: Path) -> None:
+    bus = AuditEventBus()
+    recorder = _make_recorder(tmp_path, bus=bus)
+    started = datetime.now(UTC)
+    recorder.start()
+    try:
+        node = NodeId(
+            task_center_run_id=_RUN_ID,
+            agent_name="executor",
+            agent_run_id="agent-run-1",
+            tool_name="write_file",
+        )
+        bus.publish(
+            Event(
+                type=EventType.TOOL_CALL_STARTED,
+                node=node,
+                payload={
+                    "tool_name": "write_file",
+                    "tool_id": "toolu_1",
+                    "tool_input": {"file_path": "a.py", "content": "print(1)"},
+                },
+                ts=started,
+            )
+        )
+        bus.publish(
+            Event(
+                type=EventType.TOOL_CALL_COMPLETED,
+                node=node,
+                payload={
+                    "tool_name": "write_file",
+                    "tool_id": "toolu_1",
+                    "output": '{"ok": true}',
+                    "is_error": False,
+                    "metadata": {
+                        "status": "ok",
+                        "changed_paths": ["a.py"],
+                        "timings": {
+                            "api.write.occ_apply_s": 0.04,
+                            "occ.commit.publish_layer_s": 0.01,
+                        },
+                    },
+                },
+                ts=started + timedelta(milliseconds=125),
+            )
+        )
+        bus.publish(
+            Event(
+                type=EventType.SANDBOX_OCC_CHANGES_COMMITTED,
+                node=node,
+                payload={
+                    "tool_name": "write_file",
+                    "tool_id": "toolu_1",
+                    "status": "ok",
+                    "changed_paths": ["a.py"],
+                    "timings": {
+                        "api.write.occ_apply_s": 0.04,
+                        "occ.commit.publish_layer_s": 0.01,
+                    },
+                },
+            )
+        )
+        bus.publish(
+            Event(
+                type=EventType.SANDBOX_OVERLAY_EXECUTED,
+                node=node,
+                payload={
+                    "tool_name": "shell",
+                    "tool_id": "toolu_2",
+                    "status": "ok",
+                    "changed_paths": ["b.py"],
+                    "timings": {"api.shell.overlay_s": 0.12},
+                },
+            )
+        )
+        bus.publish(
+            Event(
+                type=EventType.SANDBOX_LAYER_STACK_LAYERS_SQUASHED,
+                node=node,
+                payload={
+                    "tool_name": "write_file",
+                    "tool_id": "toolu_3",
+                    "status": "ok",
+                    "changed_paths": [],
+                    "timings": {
+                        "layer_stack.auto_squash.total_s": 0.5,
+                        "layer_stack.auto_squash.depth_before": 40,
+                    },
+                },
+            )
+        )
+    finally:
+        recorder.dispose()
+
+    metrics_payload = _read_json(recorder.run_dir / "metrics.json")
+    assert "samples" not in metrics_payload["per_tool"]["write_file"]
+
+    report = _read_json(recorder.run_dir / "performance_report.json")
+    assert report["schema"] == "live_e2e.performance_report.v1"
+    assert report["totals"]["tool_calls_total"] == 1
+    assert report["tools"]["per_tool"]["write_file"]["p95_ms"] == 125.0
+    assert report["tools"]["per_tool"]["write_file"]["samples"][0][
+        "changed_paths"
+    ] == ["a.py"]
+    assert report["sandbox"]["families"]["occ"]["event_count"] == 1
+    assert report["sandbox"]["families"]["overlay"]["event_count"] == 1
+    assert report["sandbox"]["families"]["layer_stack"]["event_count"] == 1
+    assert report["sandbox"]["timing_keys"]["api.shell.overlay_s"]["total"] == 0.12
+    assert report["sandbox"]["non_duration_observations"][
+        "layer_stack.auto_squash.depth_before"
+    ]["max"] == 40.0
+    assert report["hotspots"]["slowest_tool_calls"][0]["tool_id"] == "toolu_1"
+
+    markdown = (recorder.run_dir / "performance_report.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Tool Latency By Total Time" in markdown
+    assert "Sandbox Subsystems" in markdown
+    assert "write_file" in markdown
+
+
 def test_agent_run_id_to_task_id_mapping(
-    tmp_path: Path, stores: TaskCenterStoreBundle
+    tmp_path: Path, stores: _TestStoreBundle
 ) -> None:
     """The 5th listener populates agent_run_id -> task_id."""
     _seed_run(stores)
@@ -442,7 +600,7 @@ def test_agent_run_id_to_task_id_mapping(
             agent_name="entry_executor_v1",
         )
         agent_run_id = str(uuid.uuid4())
-        sf = _session_factory(stores)
+        sf = stores.session_factory
         with sf() as db:
             db.add(
                 AgentRunRecord(

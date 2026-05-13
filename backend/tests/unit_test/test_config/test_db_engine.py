@@ -9,7 +9,9 @@ import pytest
 from sqlalchemy import create_engine, inspect, text
 
 import db.engine as engine_mod
+import db.models  # noqa: F401 - populate Base.metadata
 from config.settings import DatabaseSettings
+from db.base import Base
 from db.stores.agent_run_store import AgentRunStore
 from db.stores.task_center_store import TaskCenterStore
 
@@ -281,3 +283,32 @@ def test_initialize_db_migrates_legacy_agent_runs_schema(
     assert tasks[0]["task_center_run_id"] == "run"
     assert "run_id" not in tasks[0]
     assert agent_run_store.get_run("agent1") is not None
+
+
+def test_initialize_db_drops_dead_task_center_lifecycle_columns(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "dead-columns.db"
+    legacy_engine = create_engine(f"sqlite:///{db_path}")
+    Base.metadata.create_all(legacy_engine)
+    with legacy_engine.begin() as conn:
+        for table_name in ("missions", "episodes", "attempts"):
+            conn.execute(text(f'ALTER TABLE "{table_name}" ADD COLUMN "context" TEXT'))
+            conn.execute(text(f'ALTER TABLE "{table_name}" ADD COLUMN "summary" TEXT'))
+        conn.execute(text('ALTER TABLE "task_center_tasks" ADD COLUMN "system_prompt" TEXT'))
+        conn.execute(text('ALTER TABLE "task_center_tasks" ADD COLUMN "user_prompt" TEXT'))
+    legacy_engine.dispose()
+
+    sf = engine_mod.initialize_db(DatabaseSettings(url=f"sqlite:///{db_path}"))
+    assert sf is not None
+
+    engine = engine_mod.get_engine()
+    assert engine is not None
+    insp = inspect(engine)
+    for table_name in ("missions", "episodes", "attempts"):
+        columns = {col["name"] for col in insp.get_columns(table_name)}
+        assert "context" not in columns
+        assert "summary" not in columns
+    task_columns = {col["name"] for col in insp.get_columns("task_center_tasks")}
+    assert "system_prompt" not in task_columns
+    assert "user_prompt" not in task_columns

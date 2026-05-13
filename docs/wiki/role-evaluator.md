@@ -141,7 +141,7 @@ The evaluator's verdict is the only point in the pipeline where a Mission can su
 |---|---|---|
 | `resolve_attempt_submission_context` | both terminals | Caller is the attempt's evaluator task; attempt not closed. Raises `AttemptSubmissionContextError` (not a pre-hook). |
 
-The asymmetry is intentional: the failure path is always reachable, but success requires the resolver loop to have closed cleanly.
+There is no runtime pre-hook that checks resolver-loop closure before success. Success and failure share the same structural gate; the resolver-limit signal is prompt policy and reviewer discipline, not an enforced submission predicate.
 
 ## Key insights
 

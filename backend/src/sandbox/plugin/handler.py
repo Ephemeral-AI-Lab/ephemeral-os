@@ -30,7 +30,10 @@ from sandbox.plugin.runtime.registry import (
     pending_plugin_registrations,
     clear_plugin_registrations,
 )
-from sandbox.layer_stack.workspace.binding import read_workspace_binding
+from sandbox.layer_stack.workspace.binding import (
+    WorkspaceBindingError,
+    require_workspace_binding,
+)
 
 __all__ = [
     "PluginEnsureError",
@@ -214,18 +217,6 @@ async def _unload_plugin_runtime(plugin_name: str) -> None:
     importlib.invalidate_caches()
 
 
-def _test_force_reload_plugin(plugin_name: str) -> None:
-    """Force a clean plugin import for tests that exercise reload behavior.
-
-    Production plugin code is trusted once installed in the sandbox runtime;
-    this helper exists only for tests that need to clear Python import caches
-    in addition to the dispatcher/pending-registration maps.
-    """
-    clear_plugin_registrations(plugin_name)
-    _evict_plugin_runtime_modules(plugin_name)
-    importlib.invalidate_caches()
-
-
 def _evict_plugin_runtime_modules(plugin_name: str) -> None:
     prefix = f"plugins.catalog.{plugin_name}"
     for module_name in [
@@ -319,10 +310,11 @@ def _validate_projection_root(layer_stack_root: str) -> str:
     if not layer_stack_root:
         raise PluginEnsureError("plugin op context requires layer_stack_root")
     root = Path(layer_stack_root).resolve(strict=False)
-    binding = read_workspace_binding(root)
-    if binding is not None and Path(binding.layer_stack_root).resolve(
-        strict=False
-    ) != root:
+    try:
+        binding = require_workspace_binding(root)
+    except WorkspaceBindingError as exc:
+        raise PluginEnsureError(str(exc)) from exc
+    if Path(binding.layer_stack_root).resolve(strict=False) != root:
         raise PluginEnsureError(
             "workspace binding layer_stack_root mismatch: "
             f"{binding.layer_stack_root} != {root}"

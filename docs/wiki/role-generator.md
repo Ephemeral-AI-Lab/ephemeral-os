@@ -255,7 +255,7 @@ The dimensions are dependency count and attempt-plan presence:
 | **A — root leaf, normal attempt** | `[]` | non-empty | spec + (no deps) + planned_task_spec | `task_specification`, `planned_task_spec` |
 | **B — mid-DAG, normal attempt** | `[d1, d2]` | non-empty | spec + 2 dep summaries + planned_task_spec | `task_specification`, `dependency_summary`×2, `planned_task_spec` |
 | **C — degenerate: empty plan** | any | empty | spec block elided; deps + planned_task_spec only | `dependency_summary`×N, `planned_task_spec` |
-| **D — orphan dep id** | `[d1, d_missing]` | non-empty | `d_missing` silently skipped (`generator.py:99`) | as B with the missing dep omitted |
+| **D — orphan dep id** | `[d1, d_missing]` | non-empty | `ContextEngineError`; accepted DAG edges must resolve to task rows | no packet emitted |
 
 ### Walk-through: Case A — a root leaf
 
@@ -383,18 +383,18 @@ Critically: `gen-process` does **not** see `gen-fetch`'s `task_input`, agent rol
 
 ### Walk-through: Case D — orphaned dependency
 
-If a dep id in `needs` does not resolve in `task_store` (e.g., a transient store inconsistency or a deleted row), the recipe silently skips that block:
+If a dep id in `needs` does not resolve in `task_store` (e.g., a transient store inconsistency or a deleted row), the recipe raises `ContextEngineError` and no packet is emitted:
 
 ```
 task.needs = ["gen-fetch", "gen-validate"]
 loop:
   task_store.get_task("gen-fetch")     → {...}              → emit block
-  task_store.get_task("gen-validate")  → None               → continue (skip)
+  task_store.get_task("gen-validate")  → None               → raise ContextEngineError
 
-Final blocks: just the gen-fetch summary; gen-validate is invisible.
+Final blocks: none; the generator is not launched with a truncated dependency frame.
 ```
 
-This is a **silent degradation** by design (`generator.py:99-100`). The dispatcher's invariants (`generator_dag.py`) guarantee `needs` references are valid at DAG-construction time; a runtime miss is treated as recoverable rather than as a hard error. The trade-off: a generator may proceed under-informed if upstream state corrupts. The downstream verifier or evaluator is expected to catch the resulting defect.
+The dispatcher's invariants (`generator_dag.py`) guarantee `needs` references are valid at DAG-construction time, so a runtime miss is treated as a harness invariant violation. The context engine surfaces that violation instead of asking a generator to proceed under-informed.
 
 ### Where each piece of information comes from
 
@@ -411,8 +411,8 @@ attempt_store ──────────►─────────┤
 task_store    ──────────►─────────┤
                                   │   for dep_id in task["needs"]:
                                   │     dep = task_store.get_task(dep_id)
-                                  │     if dep is not None:
-                                  │       latest_summary_text(dep["summaries"])
+                                  │     if dep is None: raise ContextEngineError
+                                  │     latest_summary_text(dep["summaries"])
                                   │                                  ► dependency_summary block
                                   │                                    (MEDIUM, group="# Dependency Results")
 
@@ -483,7 +483,7 @@ This ordering is not what `_compress` operates on — priority drives only compr
 | `ContextEngine.build` | scope missing `mission_id`/`attempt_id`/`task_id` | `AssertionError` from `scope.assert_fields` → launcher exception → task fails with `fail_reason="agent_launch_failed"`; cascade to descendants. |
 | `attempt_store.get` returns None | attempt row deleted/missing | `ContextEngineError("Attempt ... not found")` — same effect as above. |
 | `task_store.get_task` returns None for the scope task | task row deleted/missing | `ContextEngineError("TaskCenterTask ... not found")`. |
-| `task_store.get_task` returns None for a dep id | upstream task row gone | **silently skipped** — dependent proceeds without that dep's summary. |
+| `task_store.get_task` returns None for a dep id | upstream task row gone | `ContextEngineError`; the dependent does not launch with a truncated dependency frame. |
 | `task["task_input"]` falsy | planner submitted empty `task_specs[id]` | `planned_task_spec` block emitted with `text=""`. Pydantic's `_non_blank_required_text` validator on `ContextBlock` (`packet.py:73`) **raises ValidationError** because the priority is REQUIRED. The planner schema rejects blank task_specs upstream, so this should be unreachable in practice. |
 
 ## Failure modes

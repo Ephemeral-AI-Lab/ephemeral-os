@@ -6,7 +6,6 @@ from pathlib import Path
 
 from config.paths import get_project_issue_file, get_project_pr_comments_file
 from config.settings import Settings
-from prompt.system_prompt import build_system_prompt
 
 __all__ = [
     "build_runtime_context_message",
@@ -22,7 +21,7 @@ def build_runtime_system_prompt(
 ) -> str:
     """Build the runtime instruction prompt for an agent run."""
     sections = [
-        build_system_prompt(agent_system_prompt=settings.system_prompt),
+        (settings.system_prompt or "").strip(),
     ]
     if settings.fast_mode:
         sections.append(

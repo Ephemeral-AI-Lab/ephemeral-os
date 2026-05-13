@@ -324,7 +324,12 @@ async def _run_query_loop(
                 message=final_message,
                 usage=state.usage,
             )
-            yield AssistantMessageComplete(message=final_message, usage=state.usage), state.usage
+            yield AssistantMessageComplete(
+                message=final_message,
+                usage=state.usage,
+                agent_name=context.agent_name,
+                run_id=context.run_id,
+            ), state.usage
 
             if not final_message.tool_uses:
                 for event in flush_system_notification_events(notification_service):

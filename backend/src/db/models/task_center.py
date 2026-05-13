@@ -9,8 +9,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy import JSON, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db.base import Base
@@ -90,8 +89,6 @@ class TaskCenterTaskRecord(Base):
         String(96), nullable=True
     )
     context_packet_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
-    system_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
-    user_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Stage 6: fix-executor recovery wiring (round-tripped to/from
     # ``Task.fix_target_id`` / ``Task.spawn_reason``).
     fix_target_id: Mapped[str | None] = mapped_column(String(96), nullable=True)

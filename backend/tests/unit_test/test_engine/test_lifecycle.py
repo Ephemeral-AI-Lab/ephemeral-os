@@ -10,7 +10,11 @@ from engine.agent.factory import EphemeralAgent
 from engine.agent.lifecycle import run_ephemeral_agent
 from engine.query.context import QueryContext, QueryExitReason
 from message.messages import ConversationMessage, TextBlock
-from message.stream_events import StreamEvent, ToolExecutionStarted
+from message.stream_events import (
+    AssistantMessageComplete,
+    StreamEvent,
+    ToolExecutionStarted,
+)
 from providers.types import ApiMessageCompleteEvent
 from providers.types import UsageSnapshot
 from tools._framework.core.base import ExecutionMetadata
@@ -99,6 +103,8 @@ async def test_ephemeral_agent_run_preserves_initial_messages() -> None:
         model="test",
         system_prompt="",
         max_tokens=100,
+        agent_name="executor",
+        run_id="run-1:t1",
     )
     agent = EphemeralAgent(
         agent_name="executor",
@@ -107,12 +113,17 @@ async def test_ephemeral_agent_run_preserves_initial_messages() -> None:
         _messages=[ConversationMessage.from_user_text("prior context")],
     )
 
-    async for _event in agent.run("new prompt"):
-        pass
+    completed: list[AssistantMessageComplete] = []
+    async for event in agent.run("new prompt"):
+        if isinstance(event, AssistantMessageComplete):
+            completed.append(event)
 
     assert context.exit_reason is QueryExitReason.TEXT_RESPONSE
     assert [message.text for message in agent.messages] == [
         "prior context",
         "new prompt",
         "done",
+    ]
+    assert [(event.agent_name, event.run_id) for event in completed] == [
+        ("executor", "run-1:t1")
     ]

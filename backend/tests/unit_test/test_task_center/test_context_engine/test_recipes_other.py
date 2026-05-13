@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 import pytest
 
 from task_center.context_engine.engine import ContextEngineDeps
+from task_center.context_engine.errors import ContextEngineError
 from task_center.context_engine.packet import ContextPriority
 from task_center.context_engine.recipes.entry_executor import (
     _entry_executor_v1_build,
@@ -189,6 +190,36 @@ def test_generator_v1_dependency_summary_blocks(
     assert packet.blocks[-1].kind == "planned_task_spec"
 
 
+def test_generator_v1_missing_dependency_task_raises_context_error(
+    deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
+):
+    req = _seed_mission(mission_store, task_center_run_id)
+    episode = _seed_episode(episode_store, mission_id=req.id)
+    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    task_store.upsert_task(
+        task_id="t-down",
+        task_center_run_id=task_center_run_id,
+        role="generator",
+        agent_name="executor",
+        task_input="downstream",
+        status="pending",
+        summaries=[],
+        needs=["t-missing"],
+        task_center_attempt_id=attempt.id,
+        spawn_reason="attempt_generator",
+    )
+
+    with pytest.raises(ContextEngineError, match="Dependency task 't-missing'"):
+        _generator_v1_build(
+            ContextScope(
+                mission_id=req.id,
+                attempt_id=attempt.id,
+                task_id="t-down",
+            ),
+            deps,
+        )
+
+
 # ---------------------------------------------------------------------------
 # evaluator_v1
 # ---------------------------------------------------------------------------
@@ -238,6 +269,83 @@ def test_evaluator_v1_emits_required_spec_and_criteria(
     )
     assert packet.blocks[0].metadata["heading"] == "# Mission / Current Episode"
     assert packet.blocks[2].metadata["group_heading"] == "# Dependency Results"
+
+
+def test_evaluator_v1_renders_every_generator_summary_in_attempt_order(
+    deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
+):
+    req = _seed_mission(mission_store, task_center_run_id)
+    episode = _seed_episode(episode_store, mission_id=req.id)
+    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    attempt_store.set_plan_contract(
+        attempt.id,
+        task_specification="evaluator spec",
+        evaluation_criteria=["all work passes"],
+        continuation_goal=None,
+    )
+    task_ids = [f"t-{i}" for i in range(14)]
+    attempt_store.set_generator_task_ids(attempt.id, task_ids)
+    for task_id in task_ids:
+        task_store.upsert_task(
+            task_id=task_id,
+            task_center_run_id=task_center_run_id,
+            role="generator",
+            agent_name="executor",
+            task_input=f"work for {task_id}",
+            status="done",
+            summaries=[{"summary": f"summary for {task_id}"}],
+            needs=[],
+            task_center_attempt_id=attempt.id,
+            spawn_reason="attempt_generator",
+        )
+
+    packet = _evaluator_v1_build(
+        ContextScope(
+            mission_id=req.id,
+            episode_id=episode.id,
+            attempt_id=attempt.id,
+        ),
+        deps,
+    )
+
+    summary_blocks = [
+        b for b in packet.blocks if b.kind == "completed_task_summary"
+    ]
+    assert [b.source_id for b in summary_blocks] == task_ids
+    assert [b.text for b in summary_blocks] == [
+        f"summary for {task_id}" for task_id in task_ids
+    ]
+    assert all(block.priority == ContextPriority.HIGH for block in summary_blocks)
+    assert all(
+        block.metadata["group_heading"] == "# Dependency Results"
+        for block in summary_blocks
+    )
+    assert packet.blocks[-1].kind == "evaluation_criteria"
+
+
+def test_evaluator_v1_missing_generator_task_raises_context_error(
+    deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
+):
+    req = _seed_mission(mission_store, task_center_run_id)
+    episode = _seed_episode(episode_store, mission_id=req.id)
+    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    attempt_store.set_plan_contract(
+        attempt.id,
+        task_specification="evaluator spec",
+        evaluation_criteria=["all work passes"],
+        continuation_goal=None,
+    )
+    attempt_store.set_generator_task_ids(attempt.id, ["t-missing"])
+
+    with pytest.raises(ContextEngineError, match="Generator task 't-missing'"):
+        _evaluator_v1_build(
+            ContextScope(
+                mission_id=req.id,
+                episode_id=episode.id,
+                attempt_id=attempt.id,
+            ),
+            deps,
+        )
 
 
 def test_evaluator_v1_emits_partial_plan_boundary_before_summaries(

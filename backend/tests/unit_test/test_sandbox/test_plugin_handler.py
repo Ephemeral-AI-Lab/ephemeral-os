@@ -18,6 +18,10 @@ from pathlib import Path
 
 import pytest
 
+from sandbox.layer_stack.workspace.binding import (
+    WorkspaceBinding,
+    write_workspace_binding_atomic,
+)
 from sandbox.plugin import handler as handler_mod
 from sandbox.plugin.runtime import register_plugin_op
 from sandbox.plugin.runtime import registry as registry_mod
@@ -89,6 +93,19 @@ def _inject_runtime(
     return mod
 
 
+def _write_binding(layer_stack_root: Path) -> None:
+    write_workspace_binding_atomic(
+        WorkspaceBinding(
+            workspace_root="/testbed",
+            layer_stack_root=str(layer_stack_root),
+            active_manifest_version=1,
+            active_root_hash="active",
+            base_manifest_version=1,
+            base_root_hash="base",
+        )
+    )
+
+
 def test_plugin_ensure_loads_runtime_and_registers_ops() -> None:
     _inject_runtime("demo", ["hover", "ping"])
 
@@ -111,28 +128,29 @@ def test_plugin_ensure_loads_runtime_and_registers_ops() -> None:
 
 def test_plugin_ensure_runs_optional_runtime_warm_hook(tmp_path: Path) -> None:
     runtime = _inject_runtime("hot_demo", ["hover"], warm_hook=True)
-    layer_stack_root = str(tmp_path / "layer-stack")
+    layer_stack_root = tmp_path / "layer-stack"
+    _write_binding(layer_stack_root)
 
     response = asyncio.run(
         handler_mod.plugin_ensure(
             {
                 "plugin": "hot_demo",
                 "digest": "a",
-                "layer_stack_root": layer_stack_root,
+                "layer_stack_root": str(layer_stack_root),
             }
         )
     )
 
     assert response["runtime_warmed"] is True
     assert response["warm_result"] == {"manifest_key": "hot@1"}
-    assert runtime.WARM_CALLS == [("hot_demo", layer_stack_root)]
+    assert runtime.WARM_CALLS == [("hot_demo", str(layer_stack_root))]
 
     second = asyncio.run(
         handler_mod.plugin_ensure(
             {
                 "plugin": "hot_demo",
                 "digest": "a",
-                "layer_stack_root": layer_stack_root,
+                "layer_stack_root": str(layer_stack_root),
             }
         )
     )
@@ -140,9 +158,24 @@ def test_plugin_ensure_runs_optional_runtime_warm_hook(tmp_path: Path) -> None:
     assert second["already_loaded"] is True
     assert second["runtime_warmed"] is True
     assert runtime.WARM_CALLS == [
-        ("hot_demo", layer_stack_root),
-        ("hot_demo", layer_stack_root),
+        ("hot_demo", str(layer_stack_root)),
+        ("hot_demo", str(layer_stack_root)),
     ]
+
+
+def test_plugin_warm_requires_workspace_binding(tmp_path: Path) -> None:
+    _inject_runtime("missing_binding", ["hover"], warm_hook=True)
+
+    with pytest.raises(handler_mod.PluginEnsureError, match="workspace binding"):
+        asyncio.run(
+            handler_mod.plugin_ensure(
+                {
+                    "plugin": "missing_binding",
+                    "digest": "a",
+                    "layer_stack_root": str(tmp_path / "missing-stack"),
+                }
+            )
+        )
 
 
 def test_plugin_ensure_is_idempotent() -> None:

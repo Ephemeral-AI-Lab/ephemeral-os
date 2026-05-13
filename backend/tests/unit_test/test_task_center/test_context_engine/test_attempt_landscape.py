@@ -6,9 +6,6 @@ from datetime import UTC, datetime
 
 from task_center.context_engine.packet import ContextPriority
 from task_center.context_engine.recipes.attempt_landscape import (
-    MAX_FAILED_ATTEMPTS_RENDERED,
-    MAX_GENERATOR_SUMMARIES_PER_FAILED_ATTEMPT,
-    MAX_GENERATOR_SUMMARY_CHARS,
     failed_attempt_landscape_blocks,
 )
 from task_center.attempt import (
@@ -27,6 +24,7 @@ def _attempt(
     task_specification: str | None = None,
     evaluation_criteria: tuple[str, ...] = (),
     generator_task_ids: tuple[str, ...] = (),
+    evaluator_task_id: str | None = None,
     continuation_goal: str | None = None,
     fail_reason: AttemptFailReason | None = None,
 ) -> Attempt:
@@ -41,7 +39,7 @@ def _attempt(
         task_specification=task_specification,
         evaluation_criteria=evaluation_criteria,
         generator_task_ids=generator_task_ids,
-        evaluator_task_id=None,
+        evaluator_task_id=evaluator_task_id,
         continuation_goal=continuation_goal,
         fail_reason=fail_reason,
         created_at=now,
@@ -149,15 +147,48 @@ def test_renders_full_plan_kind_for_submitted_nonpartial_attempt():
     assert "plan_kind: full" in blocks[0].text
 
 
-def test_generator_summaries_are_capped_per_failed_attempt():
+def test_evaluator_failure_summary_extends_retry_fail_reason():
+    class TaskStore:
+        def get_task(self, task_id: str):
+            return {
+                "eval-1": {
+                    "summaries": [
+                        {"summary": "older evaluator note"},
+                        {
+                            "summary": (
+                                "checkout review displayed 3197 before submit "
+                                "\nwhile confirmation displayed 3411"
+                            )
+                        },
+                    ]
+                }
+            }.get(task_id)
+
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=None,
+        attempts=[
+            _attempt(
+                1,
+                task_specification="submitted spec",
+                evaluator_task_id="eval-1",
+                fail_reason=AttemptFailReason.EVALUATOR_FAILED,
+            )
+        ],
+        task_store=TaskStore(),
+    )
+
+    assert (
+        "fail_reason: evaluator_failed: checkout review displayed 3197 before "
+        "submit while confirmation displayed 3411"
+    ) in blocks[0].text
+
+
+def test_generator_summaries_include_every_task_in_failed_attempt():
     class TaskStore:
         def get_task(self, task_id: str):
             return {"summaries": [{"summary": f"summary for {task_id}"}]}
 
-    task_ids = tuple(
-        f"t-{i}"
-        for i in range(MAX_GENERATOR_SUMMARIES_PER_FAILED_ATTEMPT + 2)
-    )
+    task_ids = tuple(f"t-{i}" for i in range(14))
 
     blocks = failed_attempt_landscape_blocks(
         current_attempt_id=None,
@@ -172,21 +203,15 @@ def test_generator_summaries_are_capped_per_failed_attempt():
         task_store=TaskStore(),
     )
 
-    head_count = MAX_GENERATOR_SUMMARIES_PER_FAILED_ATTEMPT // 2
-    assert f"  - t-{head_count - 1}:" in blocks[0].text
-    assert f"  - t-{head_count}:" not in blocks[0].text
-    assert f"  - t-{len(task_ids) - 1}:" in blocks[0].text
-    assert "2 middle generator summaries omitted" in blocks[0].text
+    for task_id in task_ids:
+        assert f"  - {task_id}:" in blocks[0].text
+    assert "generator summaries omitted" not in blocks[0].text
 
 
-def test_generator_summary_text_is_truncated():
+def test_generator_summary_text_is_not_truncated():
     class TaskStore:
         def get_task(self, task_id: str):
-            return {
-                "summaries": [
-                    {"summary": "x" * (MAX_GENERATOR_SUMMARY_CHARS + 50)}
-                ]
-            }
+            return {"summaries": [{"summary": "x" * 850}]}
 
     blocks = failed_attempt_landscape_blocks(
         current_attempt_id=None,
@@ -201,10 +226,11 @@ def test_generator_summary_text_is_truncated():
         task_store=TaskStore(),
     )
 
-    assert f"truncated to {MAX_GENERATOR_SUMMARY_CHARS} chars" in blocks[0].text
+    assert "x" * 850 in blocks[0].text
+    assert "truncated" not in blocks[0].text
 
 
-def test_truncation_keeps_most_recent_failed_attempts_and_reports_omitted_range():
+def test_all_failed_attempts_render_in_sequence_order():
     blocks = failed_attempt_landscape_blocks(
         current_attempt_id=None,
         attempts=[
@@ -214,20 +240,13 @@ def test_truncation_keeps_most_recent_failed_attempts_and_reports_omitted_range(
                 evaluation_criteria=(f"crit-{sequence_no}",),
                 fail_reason=AttemptFailReason.GENERATOR_FAILED,
             )
-            for sequence_no in range(MAX_FAILED_ATTEMPTS_RENDERED + 2, 0, -1)
+            for sequence_no in range(8, 0, -1)
         ],
     )
 
-    rendered = blocks[:-1]
-    truncation = blocks[-1]
-
-    assert [block.metadata["attempt_sequence_no"] for block in rendered] == [
-        str(sequence_no)
-        for sequence_no in range(
-            3, MAX_FAILED_ATTEMPTS_RENDERED + 3
-        )
+    assert [block.metadata["attempt_sequence_no"] for block in blocks] == [
+        str(sequence_no) for sequence_no in range(1, 9)
     ]
-    assert all(block.priority == ContextPriority.HIGH for block in rendered)
-    assert truncation.priority == ContextPriority.MEDIUM
-    assert truncation.metadata["truncated_count"] == "2"
-    assert "attempt_sequence_no 1-2" in truncation.text
+    assert all(block.priority == ContextPriority.HIGH for block in blocks)
+    assert all("truncated_count" not in block.metadata for block in blocks)
+    assert all("omitted" not in block.text for block in blocks)

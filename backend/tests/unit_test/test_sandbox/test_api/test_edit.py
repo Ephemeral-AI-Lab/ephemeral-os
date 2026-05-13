@@ -106,3 +106,38 @@ async def test_edit_file_guard_failure_maps_conflict_info(
     assert result.conflict.reason == "aborted_overlap"
     assert result.conflict.message == "patch_failed"
     assert result.conflict_reason == "patch_failed"
+
+
+@pytest.mark.asyncio
+async def test_edit_file_anchor_error_maps_to_conflict_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_call_daemon_api(sandbox_id, op, args, *, timeout):
+        del sandbox_id, op, args, timeout
+        raise RuntimeError(
+            "internal_error: anchor not found in a.py: expected 1 occurrences"
+        )
+
+    monkeypatch.setattr(
+        "sandbox.api.tool.edit.call_daemon_api",
+        fake_call_daemon_api,
+    )
+
+    result = await edit_file(
+        "sb-edit-conflict",
+        EditFileRequest(
+            path="a.py",
+            edits=(SearchReplaceEdit(old_text="missing", new_text="new"),),
+            caller=SandboxCaller(agent_id="agent-1"),
+        ),
+    )
+
+    assert result.success is False
+    assert result.applied_edits == 0
+    assert result.status == "aborted_overlap"
+    assert result.conflict is not None
+    assert result.conflict.reason == "aborted_overlap"
+    assert result.conflict.conflict_file == "a.py"
+    assert result.conflict_reason == (
+        "anchor not found in a.py: expected 1 occurrences"
+    )

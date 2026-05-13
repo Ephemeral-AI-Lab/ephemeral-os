@@ -71,6 +71,19 @@ async def shell(
         timings["api.shell.dispatch_total_s"] = monotonic_now() - total_start
         result = _result_from_payload(raw, timings=timings)
     except Exception as exc:
+        conflict_result = _conflict_result_from_error(
+            exc,
+            timings={"api.shell.dispatch_total_s": monotonic_now() - total_start},
+        )
+        if conflict_result is not None:
+            publish_operation_result(
+                audit_sink,
+                sandbox_id=sandbox_id,
+                operation="shell",
+                caller=request.caller,
+                result=conflict_result,
+            )
+            return conflict_result
         publish_operation_failed(
             audit_sink,
             sandbox_id=sandbox_id,
@@ -110,6 +123,46 @@ def _result_from_payload(
         ),
         warnings=paths_from_payload(raw.get("warnings")),
         timings=timings,
+    )
+
+
+def _conflict_result_from_error(
+    error: BaseException,
+    *,
+    timings: dict[str, float],
+) -> ShellResult | None:
+    message = _error_message(error)
+    if not _is_shell_conflict(message):
+        return None
+    return ShellResult(
+        success=False,
+        exit_code=1,
+        stdout="",
+        stderr="",
+        changed_paths=(),
+        status="rejected",
+        conflict=ConflictInfo(
+            reason="rejected",
+            message=message,
+        ),
+        conflict_reason=message,
+        warnings=(),
+        timings=timings,
+    )
+
+
+def _error_message(error: BaseException) -> str:
+    message = str(getattr(error, "message", "") or error)
+    if message.startswith("internal_error: "):
+        return message.removeprefix("internal_error: ")
+    return message
+
+
+def _is_shell_conflict(message: str) -> bool:
+    lowered = message.lower()
+    return (
+        "overlay capture refuses escaping symlink target" in lowered
+        or "unsupported tracked change kind: symlinkchange" in lowered
     )
 
 

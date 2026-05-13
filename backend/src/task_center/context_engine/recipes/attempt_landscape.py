@@ -10,14 +10,10 @@ from task_center.context_engine.packet import (
     ContextPriority,
 )
 from task_center.context_engine.recipes._summaries import latest_summary_text
-from task_center.attempt.state import Attempt, AttemptStatus
+from task_center.attempt.state import Attempt, AttemptFailReason, AttemptStatus
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
     from db.stores.task_center_store import TaskCenterStore
-
-MAX_FAILED_ATTEMPTS_RENDERED = 6
-MAX_GENERATOR_SUMMARIES_PER_FAILED_ATTEMPT = 12
-MAX_GENERATOR_SUMMARY_CHARS = 800
 
 
 def failed_attempt_landscape_blocks(
@@ -38,14 +34,7 @@ def failed_attempt_landscape_blocks(
     if not failed:
         return []
 
-    if len(failed) <= MAX_FAILED_ATTEMPTS_RENDERED:
-        rendered = failed
-        truncated: list[Attempt] = []
-    else:
-        rendered = failed[-MAX_FAILED_ATTEMPTS_RENDERED:]
-        truncated = failed[:-MAX_FAILED_ATTEMPTS_RENDERED]
-
-    blocks: list[ContextBlock] = [
+    return [
         ContextBlock(
             kind=ContextBlockKind.FAILED_ATTEMPT_LANDSCAPE,
             priority=ContextPriority.HIGH,
@@ -58,32 +47,8 @@ def failed_attempt_landscape_blocks(
                 "subheading": f"Attempt {g.attempt_sequence_no}",
             },
         )
-        for g in rendered
+        for g in failed
     ]
-
-    if truncated:
-        blocks.append(
-            ContextBlock(
-                kind=ContextBlockKind.FAILED_ATTEMPT_LANDSCAPE,
-                priority=ContextPriority.MEDIUM,
-                text=(
-                    f"{len(truncated)} earlier failed attempts omitted "
-                    f"(attempt_sequence_no "
-                    f"{truncated[0].attempt_sequence_no}-"
-                    f"{truncated[-1].attempt_sequence_no}). "
-                    f"Most recent {MAX_FAILED_ATTEMPTS_RENDERED} attempts "
-                    f"shown above."
-                ),
-                source_id=None,
-                source_kind=None,
-                metadata={
-                    "truncated_count": str(len(truncated)),
-                    "group_heading": "# Failed Attempts",
-                    "subheading": "Earlier attempts omitted",
-                },
-            )
-        )
-    return blocks
 
 
 def _render_failed_attempt(
@@ -99,7 +64,7 @@ def _render_failed_attempt(
         f"evaluation_criteria:\n{criteria_block}\n"
         "generator_summaries:\n"
         f"{_render_generator_summaries(attempt, task_store=task_store)}\n"
-        f"fail_reason: {attempt.fail_reason.value if attempt.fail_reason else 'unknown'}"
+        f"fail_reason: {_render_fail_reason(attempt, task_store=task_store)}"
     )
 
 
@@ -110,23 +75,41 @@ def _render_generator_summaries(
         return "  (none)"
 
     rendered: list[str] = []
-    task_ids, omitted = _selected_generator_task_ids(attempt)
-    for task_id in task_ids:
-        if task_id is None:
-            rendered.append(
-                f"  - ({omitted} middle generator summaries omitted)"
-            )
-            continue
+    for task_id in attempt.generator_task_ids:
         task = task_store.get_task(task_id)
         if task is None:
             rendered.append(f"  - {task_id}: (missing task row)")
             continue
-        summary = _truncate_summary(
-            latest_summary_text(task.get("summaries")).strip()
-        )
+        summary = latest_summary_text(task.get("summaries")).strip()
         indented = "\n".join(f"    {line}" for line in summary.splitlines())
         rendered.append(f"  - {task_id}:\n{indented}")
     return "\n".join(rendered)
+
+
+def _render_fail_reason(
+    attempt: Attempt, *, task_store: TaskCenterStore | None
+) -> str:
+    reason = attempt.fail_reason.value if attempt.fail_reason else "unknown"
+    if (
+        task_store is None
+        or attempt.fail_reason != AttemptFailReason.EVALUATOR_FAILED
+        or not attempt.evaluator_task_id
+    ):
+        return reason
+
+    task = task_store.get_task(attempt.evaluator_task_id)
+    summaries = task.get("summaries") if task is not None else None
+    if not summaries:
+        return reason
+
+    summary = " ".join(
+        line.strip()
+        for line in latest_summary_text(summaries).splitlines()
+        if line.strip()
+    )
+    if not summary:
+        return reason
+    return f"{reason}: {summary}"
 
 
 def _plan_kind(attempt: Attempt) -> str:
@@ -139,30 +122,3 @@ def _plan_kind(attempt: Attempt) -> str:
     ):
         return "full"
     return "unsubmitted"
-
-
-def _truncate_summary(summary: str) -> str:
-    if len(summary) <= MAX_GENERATOR_SUMMARY_CHARS:
-        return summary
-    return (
-        f"{summary[:MAX_GENERATOR_SUMMARY_CHARS].rstrip()} "
-        f"... (truncated to {MAX_GENERATOR_SUMMARY_CHARS} chars)"
-    )
-
-
-def _selected_generator_task_ids(
-    attempt: Attempt,
-) -> tuple[tuple[str | None, ...], int]:
-    task_ids = attempt.generator_task_ids
-    if len(task_ids) <= MAX_GENERATOR_SUMMARIES_PER_FAILED_ATTEMPT:
-        return task_ids, 0
-
-    head_count = MAX_GENERATOR_SUMMARIES_PER_FAILED_ATTEMPT // 2
-    tail_count = MAX_GENERATOR_SUMMARIES_PER_FAILED_ATTEMPT - head_count
-    omitted = len(task_ids) - head_count - tail_count
-    selected: tuple[str | None, ...] = (
-        *task_ids[:head_count],
-        None,
-        *task_ids[-tail_count:],
-    )
-    return selected, omitted

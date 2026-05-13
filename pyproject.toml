@@ -14,17 +14,8 @@ authors = [
 
 dependencies = [
     "anthropic>=0.39.0",
-    "rich>=13.0.0",
     "pydantic>=2.0.0",
-    "httpx>=0.27.0",
-    "websockets>=12.0",
-    "fastapi>=0.115.0",
-    "uvicorn[standard]>=0.30.0",
-    "mcp>=1.0.0",
-    "pyperclip>=1.9.0",
     "pyyaml>=6.0",
-    "watchfiles>=0.20.0",
-    "croniter>=2.0.0",
     "python-dotenv>=1.0.0",
     "sqlalchemy>=2.0.43",
     "greenlet>=3.0.0",
@@ -42,6 +33,7 @@ daytona = [
     "daytona-sdk>=0.149.0",
 ]
 dev = [
+    "mcp>=1.0.0",
     "pexpect>=4.9.0",
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",

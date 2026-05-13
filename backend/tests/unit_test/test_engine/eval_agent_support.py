@@ -413,7 +413,7 @@ class EvalAgent:
 
             needs_init = (
                 any(not store.is_ready for store in (agent_run_store, task_center_store))
-                or not model_store.is_available
+                or not model_store.is_ready
             )
 
             if needs_init and settings.database.url:
@@ -421,7 +421,7 @@ class EvalAgent:
 
                 sf = initialize_db(settings.database)
                 if sf is not None:
-                    if not model_store.is_available:
+                    if not model_store.is_ready:
                         model_store.initialize(sf)
                     if not agent_run_store.is_ready:
                         agent_run_store.initialize(sf)

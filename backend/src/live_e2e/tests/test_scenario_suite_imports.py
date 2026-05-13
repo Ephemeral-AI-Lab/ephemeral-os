@@ -76,15 +76,7 @@ def test_capacity_pack_catalog_has_coverage_anchor() -> None:
 
 def test_capacity_action_contract_and_modules_import() -> None:
     from live_e2e.squad import capacity_actions  # noqa: PLC0415
-    from live_e2e.squad.capacity_actions import (  # noqa: PLC0415
-        audit,
-        context,
-        graph,
-        guardrails,
-        lsp,
-        metrics,
-        workspace,
-    )
+    from live_e2e.squad.capacity_actions import metrics  # noqa: PLC0415
 
     result = capacity_actions.CapacityActionResult(
         name="smoke",
@@ -95,12 +87,6 @@ def test_capacity_action_contract_and_modules_import() -> None:
     )
     assert result.counters["total"] == 0
     assert metrics.full_system_capacity_metrics_script
-    assert graph.__all__ == []
-    assert workspace.__all__ == []
-    assert lsp.__all__ == []
-    assert guardrails.__all__ == []
-    assert context.__all__ == []
-    assert audit.__all__ == []
 
 
 def test_subpackage_imports_are_clean() -> None:

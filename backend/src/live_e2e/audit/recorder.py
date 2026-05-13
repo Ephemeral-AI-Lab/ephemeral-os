@@ -22,16 +22,17 @@ from typing import Any
 
 from sqlalchemy import event
 
+from audit.jsonl import append_jsonl_event
 from live_e2e.audit.bus import AuditEventBus
 from live_e2e.audit.events import Event as AuditEvent
 from live_e2e.audit.metrics import MetricsAggregator
+from live_e2e.audit.performance_report import write_performance_reports
 from db.models.agent_run import AgentRunRecord
 from db.models.attempt import AttemptRecord
 from db.models.episode import EpisodeRecord
 from db.models.mission import MissionRecord
 from db.models.task_center import TaskCenterTaskRecord
 from message.agent_message_recorder import AgentMessageJsonlRecorder
-from prompt.message_recorder import append_prompt_report_event
 
 
 PRIMARY_ROLES: frozenset[str] = frozenset(
@@ -62,8 +63,6 @@ def _serialize_mission(record: MissionRecord) -> dict[str, Any]:
         "created_at": _isoformat(record.created_at),
         "updated_at": _isoformat(record.updated_at),
         "closed_at": _isoformat(record.closed_at),
-        "context": record.context,
-        "summary": record.summary,
     }
 
 
@@ -80,8 +79,6 @@ def _serialize_episode(record: EpisodeRecord) -> dict[str, Any]:
         "continuation_goal": record.continuation_goal,
         "task_specification": record.task_specification,
         "task_summary": record.task_summary,
-        "context": record.context,
-        "summary": record.summary,
         "created_at": _isoformat(record.created_at),
         "updated_at": _isoformat(record.updated_at),
         "closed_at": _isoformat(record.closed_at),
@@ -105,8 +102,6 @@ def _serialize_attempt(record: AttemptRecord) -> dict[str, Any]:
         "created_at": _isoformat(record.created_at),
         "updated_at": _isoformat(record.updated_at),
         "closed_at": _isoformat(record.closed_at),
-        "context": record.context,
-        "summary": record.summary,
     }
 
 
@@ -122,8 +117,6 @@ def _serialize_task(record: TaskCenterTaskRecord) -> dict[str, Any]:
         "needs": list(record.needs or []),
         "task_center_attempt_id": record.task_center_attempt_id,
         "context_packet_id": record.context_packet_id,
-        "system_prompt": record.system_prompt,
-        "user_prompt": record.user_prompt,
         "fix_target_id": record.fix_target_id,
         "spawn_reason": record.spawn_reason,
         "created_at": _isoformat(record.created_at),
@@ -321,8 +314,10 @@ class AuditRecorder:
         if self._status == "running":
             self._status = "finished"
         self._write_run_json()
-        _atomic_write_json(
-            self._run_dir / "metrics.json", self._metrics.snapshot()
+        _atomic_write_json(self._run_dir / "metrics.json", self._metrics.snapshot())
+        write_performance_reports(
+            self._run_dir,
+            self._metrics.performance_snapshot(),
         )
 
     # ------------------------------------------------------------------
@@ -403,7 +398,7 @@ class AuditRecorder:
     def _record_sandbox_event(self, audit_event: AuditEvent) -> None:
         if not audit_event.type.value.startswith("sandbox_"):
             return
-        append_prompt_report_event(
+        append_jsonl_event(
             self._run_dir / "sandbox_events.jsonl",
             {
                 "ts": audit_event.ts.isoformat(),

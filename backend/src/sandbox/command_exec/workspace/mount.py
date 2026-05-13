@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from functools import lru_cache
 from pathlib import Path
@@ -37,7 +38,7 @@ class WorkspaceReplacementMountSpec:
             if not str(getattr(self, field_name)).strip():
                 raise ValueError(f"{field_name} must not be empty")
             path = Path(str(getattr(self, field_name))).resolve(strict=False)
-            if not _is_relative_to(path, scratch_root):
+            if not path.is_relative_to(scratch_root):
                 raise ValueError(
                     f"{field_name} must be under scratch_root: {path}"
                 )
@@ -54,12 +55,15 @@ def run_workspace_replaced_command(
     run_root = Path(run_dir)
     run_root.mkdir(parents=True, exist_ok=True)
     if _private_mount_namespace_available():
-        return _run_private_mount_namespace(
+        process = _run_private_mount_namespace(
             spec=spec,
             request=request,
             run_dir=run_root,
             timings=timings,
         )
+        if not _is_namespace_mount_failure(process):
+            return process
+        timings["command_exec.private_mount_fallback"] = 1.0
     return _run_copy_backed_mount(
         spec=spec,
         request=request,
@@ -175,7 +179,6 @@ def _run_private_mount_namespace(
             timeout=timeout,
             check=False,
         )
-    _ensure_refs(stdout_ref, stderr_ref, completed)
     _merge_namespace_timings(timings_ref, timings)
     return ShellProcessResult(
         exit_code=int(completed.returncode),
@@ -194,15 +197,15 @@ def _rewrite_declared_workspace_refs(
     """Map path-like workspace references to the copy-backed mounted tree.
 
     The copy-backed fallback cannot replace `/testbed` in the process mount
-    namespace. Path argv tokens can be rewritten directly; shell command
-    strings are scanned so quoted literals such as ``'/testbed docs'`` remain
-    user data rather than leaking the mounted host path into program logs.
+    namespace, so absolute workspace paths must point at the temporary merged
+    tree. Shell users commonly quote those paths, so quotes are treated as
+    path boundaries instead of as "do not rewrite" regions.
     """
     root = str(workspace_root).rstrip("/") or "/"
     if root == "/":
         return command
     return tuple(
-        _rewrite_unquoted_workspace_paths(
+        _rewrite_workspace_paths(
             part,
             workspace_root=root,
             mounted_workspace_root=str(mounted_workspace_root),
@@ -215,17 +218,15 @@ _WORKSPACE_ENV_KEYS = frozenset({"WORKSPACE_DIR", "PWD", "OLDPWD"})
 
 
 def _rewrite_declared_workspace_env(
-    env: object,
+    env: Mapping[str, str],
     *,
     workspace_root: str,
     mounted_workspace_root: str,
 ) -> dict[str, str]:
     """Rewrite env values that explicitly name the assigned workspace."""
-    if not isinstance(env, dict):
-        env = dict(env)  # type: ignore[arg-type]
     root = str(workspace_root).rstrip("/") or "/"
     rewritten: dict[str, str] = {}
-    for key, value in env.items():  # type: ignore[union-attr]
+    for key, value in env.items():
         env_key = str(key)
         env_value = str(value)
         if env_key in _WORKSPACE_ENV_KEYS:
@@ -238,7 +239,7 @@ def _rewrite_declared_workspace_env(
     return rewritten
 
 
-def _rewrite_unquoted_workspace_paths(
+def _rewrite_workspace_paths(
     value: str,
     *,
     workspace_root: str,
@@ -246,22 +247,12 @@ def _rewrite_unquoted_workspace_paths(
 ) -> str:
     result: list[str] = []
     index = 0
-    quote: str | None = None
     while index < len(value):
-        char = value[index]
-        if char in {"'", '"'}:
-            if quote is None:
-                quote = char
-            elif quote == char:
-                quote = None
-            result.append(char)
-            index += 1
-            continue
-        if quote is None and _path_starts_at(value, index, workspace_root):
+        if _path_starts_at(value, index, workspace_root):
             result.append(mounted_workspace_root)
             index += len(workspace_root)
             continue
-        result.append(char)
+        result.append(value[index])
         index += 1
     return "".join(result)
 
@@ -285,9 +276,9 @@ def _path_starts_at(value: str, index: int, workspace_root: str) -> bool:
     before = value[index - 1] if index > 0 else ""
     after_index = index + len(workspace_root)
     after = value[after_index] if after_index < len(value) else ""
-    if before and before not in " \t\n\r=:;,&|>(":
+    if before and before not in " \t\n\r=:;,&|>(\"'":
         return False
-    return not after or after in "/ \t\n\r:;,&|)<"
+    return not after or after in "/ \t\n\r:;,&|)<\"'"
 
 
 def _merge_namespace_timings(path: Path, timings: dict[str, float]) -> None:
@@ -302,17 +293,21 @@ def _merge_namespace_timings(path: Path, timings: dict[str, float]) -> None:
             timings[str(key)] = float(value)
 
 
-def _ensure_refs(
-    stdout_ref: Path,
-    stderr_ref: Path,
-    completed: subprocess.CompletedProcess[bytes],
-) -> None:
-    if not stdout_ref.exists():
-        stdout_ref.parent.mkdir(parents=True, exist_ok=True)
-        stdout_ref.write_bytes(completed.stdout or b"")
-    if not stderr_ref.exists():
-        stderr_ref.parent.mkdir(parents=True, exist_ok=True)
-        stderr_ref.write_bytes(completed.stderr or b"")
+def _is_namespace_mount_failure(process: ShellProcessResult) -> bool:
+    if process.mount_mode != "private_namespace" or process.exit_code != 126:
+        return False
+    try:
+        lines = Path(process.stderr_ref).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return False
+    for line in lines:
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict) and payload.get("error_kind") == "mount_failed":
+            return True
+    return False
 
 
 @lru_cache(maxsize=1)
@@ -341,16 +336,8 @@ def _unshare_path() -> str:
 def _assert_under_scratch_root(path: Path, spec: WorkspaceReplacementMountSpec) -> None:
     scratch_root = Path(spec.scratch_root).resolve(strict=False)
     resolved = path.resolve(strict=False)
-    if not _is_relative_to(resolved, scratch_root):
+    if not resolved.is_relative_to(scratch_root):
         raise RuntimeError(f"path escapes scratch root: {resolved}")
-
-
-def _is_relative_to(path: Path, root: Path) -> bool:
-    try:
-        path.relative_to(root)
-        return True
-    except ValueError:
-        return False
 
 
 __all__ = [

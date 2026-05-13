@@ -7,7 +7,7 @@ import os
 import shlex
 from typing import Any, Protocol
 
-from sandbox.host.runtime_bundle import BUNDLE_REMOTE_DIR
+from sandbox.host.runtime_bundle import BUNDLE_REMOTE_DIR, bundle_hash
 from sandbox.provider.registry import get_adapter
 
 # Daemon launcher: ensures the resident daemon is running, then invokes a
@@ -155,6 +155,22 @@ async def call_daemon_api(
         args=daemon_args,
         timeout=timeout,
     )
+
+
+async def ensure_daemon_current(
+    sandbox_id: str,
+    *,
+    timeout: int = 10,
+) -> None:
+    """Ensure the resident daemon is running for the current runtime bundle."""
+    result = await get_adapter(sandbox_id).exec(
+        sandbox_id,
+        _daemon_spawn_command(),
+        cwd=BUNDLE_REMOTE_DIR,
+        timeout=timeout,
+    )
+    if _exit_code(result) != 0:
+        _raise_exec_failed(result)
 
 
 async def _exec_daemon_call(
@@ -383,7 +399,7 @@ def _daemon_env_exports() -> str:
 
 
 def _daemon_env_signature() -> str:
-    parts: list[str] = []
+    parts: list[str] = [f"runtime_bundle_sha={bundle_hash()}"]
     for name in _FORWARDED_DAEMON_ENV:
         value = os.getenv(name)
         if value is not None:

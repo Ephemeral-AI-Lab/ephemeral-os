@@ -108,21 +108,6 @@ class MissionStore(SyncStoreMixin):
             )
             return [self._to_dto(r) for r in q.all()]
 
-    def cancel_for_compensation(
-        self, mission_id: str, *, closed_at: datetime | None = None
-    ) -> Mission:
-        """Mark a mission CANCELLED. Reserved for startup compensation paths."""
-        with self._sf() as db:
-            record = db.get(MissionRecord, mission_id)
-            if record is None:
-                raise LookupError(f"Mission {mission_id!r} not found")
-            record.status = MissionStatus.CANCELLED.value
-            if closed_at is not None:
-                record.closed_at = closed_at
-            db.commit()
-            db.refresh(record)
-            return self._to_dto(record)
-
     def _to_dto(self, record: MissionRecord) -> Mission:
         return Mission(
             id=record.id,

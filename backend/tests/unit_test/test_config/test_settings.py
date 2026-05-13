@@ -38,16 +38,21 @@ class TestSettings:
             "spec",
             "title",
             "summary",
+            "system_prompt",
             "parent_id",
             "closes_for",
             "children",
             "evaluator_id",
             "acceptance_criteria",
             "handoff_note",
+            "user_prompt",
         }
         assert _DROPPED_COLUMNS["task_center_runs"] >= {
             "root_task_id",
         }
+        assert _DROPPED_COLUMNS["missions"] >= {"context", "summary"}
+        assert _DROPPED_COLUMNS["episodes"] >= {"context", "summary"}
+        assert _DROPPED_COLUMNS["attempts"] >= {"context", "summary"}
 
 
 class TestLoadSaveSettings:

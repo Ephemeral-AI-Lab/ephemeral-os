@@ -329,7 +329,9 @@ def _drop_transient_lowerdir(lease: object, *, storage_root: Path) -> None:
     if (
         lowerdir.name != "lower"
         or scratch_dir.parent.name != _TRANSIENT_LOWERDIR_DIR
-        or not _is_relative_to(scratch_dir.resolve(strict=False), transient_root.resolve(strict=False))
+        or not scratch_dir.resolve(strict=False).is_relative_to(
+            transient_root.resolve(strict=False)
+        )
     ):
         logger.warning(
             "refusing to drop unexpected transient lowerdir path: %s",
@@ -344,14 +346,6 @@ def _drop_transient_lowerdir(lease: object, *, storage_root: Path) -> None:
             scratch_dir,
             exc_info=True,
         )
-
-
-def _is_relative_to(path: Path, root: Path) -> bool:
-    try:
-        path.relative_to(root)
-        return True
-    except ValueError:
-        return False
 
 
 def _mapping(value: object) -> Mapping[str, object]:

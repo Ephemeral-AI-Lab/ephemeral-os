@@ -98,7 +98,7 @@ def ensure_runtime_stores_ready(settings: "Settings | None" = None):
         task_center_store.initialize(sf)
     if not agent_run_store.is_ready:
         agent_run_store.initialize(sf)
-    if not model_store.is_available:
+    if not model_store.is_ready:
         model_store.initialize(sf)
 
     registry_path = _model_registry_path()

@@ -68,10 +68,13 @@ def stream_bridge(
                     },
                 )
             )
-            if not metadata.get("sandbox_audit_emitted"):
-                for sandbox_event in sandbox_events_from_tool_completion(
-                    stream_event,
-                    task_center_run_id=task_center_run_id,
+            for sandbox_event in sandbox_events_from_tool_completion(
+                stream_event,
+                task_center_run_id=task_center_run_id,
+            ):
+                if (
+                    not metadata.get("sandbox_audit_emitted")
+                    or sandbox_event.type is EventType.SANDBOX_LAYER_STACK_LEASE_ACQUIRED
                 ):
                     bus.publish(sandbox_event)
         # All other StreamEvent subtypes are silently ignored.

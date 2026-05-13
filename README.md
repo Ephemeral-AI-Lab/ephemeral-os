@@ -268,24 +268,22 @@ with `EPHEMERALOS_SANDBOX_DEFAULT_SNAPSHOT` and
 
 ## 🏗️ Harness Architecture
 
-EphemeralOS implements the core Agent Harness pattern across the live backend and frontend runtime surfaces:
+EphemeralOS implements the core Agent Harness pattern across the Python backend runtime:
 
 ```
 backend/src/
   engine/          # 🧠 Agent loop, streaming executor, background task lifecycle
-  tools/           # 🔧 Built-in tools: sandbox, CI, context, memory, subagent
-  skills/          # 📚 Skill registry internals and read-only API
-  agents/          # 🤖 Agent definition loading, builder, registry, CRUD API
-  server/          # 🌐 FastAPI app, SSE protocol, state snapshots
+  tools/           # 🔧 Built-in tools: sandbox, skills, subagent, submissions
+  skills/          # 📚 File-backed skill discovery and registry internals
+  agents/          # 🤖 Agent definition loading and profile assets
+  runtime/         # ⚙️ Runtime config and store bootstrap
   sandbox/         # 🧪 Sandbox lifecycle, workspace discovery, credentials
-  prompts/         # 📝 Runtime/system prompt assembly and capability awareness
+  prompt/          # 📝 Runtime prompt assembly and environment context
+  live_e2e/        # 🧪 Scenario harnesses and SWE-EVO adapters
   config/          # ⚙️ Settings, model resolution, paths
 backend/config/
   agents/          # 🤖 Optional local agent definitions (empty by default)
-  skills/          # 📚 Skill API and registry internals
-frontend/
-  web/             # 🖥️ React dashboard (agents, tools, sessions, sandboxes)
-  terminal/        # 💬 Terminal UI components and backend session controls
+  skills/          # 📚 Bundled skill definitions
 ```
 
 ### The Agent Loop

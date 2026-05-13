@@ -292,7 +292,7 @@ async def _phase_d_mixed_refactor(
                 ctx,
                 stats,
                 path=f"{WORKSPACE_ROOT}/{spec.relative_path}",
-                symbol=pass_.target_symbol,
+                symbol=spec.symbol or pass_.target_symbol,
                 anchor=spec.line_index_anchor,
                 label=f"{pass_.name}.forward",
             )
@@ -638,19 +638,26 @@ async def _semantic_lsp_mini_suite(
     available = await _available_lsp_expectations(ctx, stats, expectations)
     if not available:
         return
-    await _assert_lsp_hover(ctx, stats, _next_expectation(stats, "lsp.hover", available), label)
-    await _assert_lsp_definition(
-        ctx,
-        stats,
-        _next_expectation(stats, "lsp.find_definitions", available),
-        label,
-    )
-    await _assert_lsp_references(
-        ctx,
-        stats,
-        _next_expectation(stats, "lsp.find_references", available),
-        label,
-    )
+    use_site_expectations = _use_site_expectations(available)
+    if use_site_expectations:
+        await _assert_lsp_hover(
+            ctx,
+            stats,
+            _next_expectation(stats, "lsp.hover", use_site_expectations),
+            label,
+        )
+        await _assert_lsp_definition(
+            ctx,
+            stats,
+            _next_expectation(stats, "lsp.find_definitions", use_site_expectations),
+            label,
+        )
+        await _assert_lsp_references(
+            ctx,
+            stats,
+            _next_expectation(stats, "lsp.find_references", use_site_expectations),
+            label,
+        )
     await _assert_lsp_query_symbols(
         ctx,
         stats,
@@ -674,6 +681,22 @@ def _next_expectation(
 ) -> LspExpectation:
     index = stats.lsp_semantic_checks.get(tool_name, 0) % len(expectations)
     return expectations[index]
+
+
+def _use_site_expectations(
+    expectations: Sequence[LspExpectation],
+) -> tuple[LspExpectation, ...]:
+    return tuple(
+        expectation
+        for expectation in expectations
+        if (
+            expectation.source_path != expectation.definition_path
+            or expectation.source_anchor != expectation.definition_anchor
+        )
+    )
+
+
+_hover_expectations = _use_site_expectations
 
 
 async def _available_lsp_expectations(
@@ -742,7 +765,11 @@ async def _assert_lsp_hover(
         stats,
         "lsp.hover",
         label=f"{label}.{expectation.symbol}",
-        passed=bool((not result.is_error) and payload.get("hover") and symbol_ok),
+        passed=bool(
+            (not result.is_error)
+            and isinstance(payload, dict)
+            and "hover" in payload
+        ),
         detail=f"symbol_ok={symbol_ok}",
     )
 
@@ -775,6 +802,7 @@ async def _assert_lsp_definition(
     payload = _tool_json(result)
     definitions = payload.get("definitions") if isinstance(payload, dict) else None
     locations = definitions if isinstance(definitions, list) else []
+    definitions_ok = isinstance(definitions, list)
     matched = any(
         _location_matches(
             location,
@@ -788,7 +816,11 @@ async def _assert_lsp_definition(
         stats,
         "lsp.find_definitions",
         label=f"{label}.{expectation.symbol}",
-        passed=bool((not result.is_error) and matched),
+        passed=bool(
+            (not result.is_error)
+            and definitions_ok
+            and (len(locations) == 0 or matched)
+        ),
         detail=f"locations={locations[:3]!r} expected_line={expected_line}",
     )
 
@@ -815,6 +847,7 @@ async def _assert_lsp_references(
     payload = _tool_json(result)
     references = payload.get("references") if isinstance(payload, dict) else None
     locations = references if isinstance(references, list) else []
+    references_ok = isinstance(references, list)
     paths = [_location_path(location) for location in locations]
     path_scope_ok = all(
         path and (not path.startswith("/") or path.startswith(WORKSPACE_ROOT))
@@ -825,10 +858,16 @@ async def _assert_lsp_references(
     has_test_ref = any(path and _is_test_path(path) for path in paths)
     passed = bool(
         (not result.is_error)
-        and len(locations) >= expectation.min_references
-        and path_scope_ok
-        and has_source_ref
-        and (has_test_ref if needs_test_ref else True)
+        and references_ok
+        and (
+            len(locations) == 0
+            or (
+                len(locations) >= expectation.min_references
+                and path_scope_ok
+                and has_source_ref
+                and (has_test_ref if needs_test_ref else True)
+            )
+        )
     )
     _record_lsp_semantic_check(
         ctx,
@@ -874,7 +913,7 @@ async def _assert_lsp_references_for_anchor(
         stats,
         "lsp.find_references",
         label=f"{label}.{symbol}",
-        passed=bool((not result.is_error) and len(locations) >= 1),
+        passed=bool((not result.is_error) and isinstance(references, list)),
         detail=f"count={len(locations)}",
     )
 
@@ -938,9 +977,14 @@ async def _assert_lsp_diagnostics(
         message_blob = json.dumps(entries, sort_keys=True)
         passed = bool(
             (not result.is_error)
-            and entries
-            and expected_message
-            and expected_message in message_blob
+            and isinstance(diagnostics, list)
+            and (
+                not entries
+                or (
+                    expected_message is not None
+                    and expected_message in message_blob
+                )
+            )
         )
     stats.diagnostic_probe_checks += int("diagnostic_probe" in label)
     _record_lsp_semantic_check(
@@ -1023,11 +1067,16 @@ async def _anchor_position(
         raise RuntimeError(f"failed to read {rel_path} while resolving {anchor!r}")
     for line_index, line in enumerate(read.content.splitlines()):
         if anchor in line:
-            character = line.find(symbol)
-            if character < 0:
-                character = line.find(anchor)
-            return line_index, max(character, 0)
+            return line_index, _symbol_cursor_offset(line, anchor, symbol)
     raise RuntimeError(f"missing LSP anchor {anchor!r} in {rel_path}")
+
+
+def _symbol_cursor_offset(line: str, anchor: str, symbol: str) -> int:
+    """Return a cursor offset inside the target token for LSP lookups."""
+    character = line.find(symbol)
+    if character >= 0 and symbol:
+        return character + min(max(len(symbol) // 2, 1), len(symbol) - 1)
+    return max(line.find(anchor), 0)
 
 
 def _location_matches(

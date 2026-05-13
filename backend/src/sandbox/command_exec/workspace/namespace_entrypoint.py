@@ -53,33 +53,28 @@ def execute(payload: dict[str, Any]) -> int:
             upperdir=request.upperdir,
             workdir=request.workdir,
         )
-        request.upperdir.mkdir(parents=True, exist_ok=True)
-        request.workdir.mkdir(parents=True, exist_ok=True)
         mount_start = monotonic_now()
         _mount_overlay(
             workspace_root=mount_inputs.workspace_root,
             lowerdir=mount_inputs.lowerdir,
             upperdir=mount_inputs.upperdir,
             workdir=mount_inputs.workdir,
+            pass_fds=mount_inputs.fds,
         )
         timings["command_exec.mount_workspace_s"] = monotonic_now() - mount_start
     except subprocess.CalledProcessError as exc:
-        message = _called_process_message(exc)
-        _write_error(request.stderr_ref, "mount_failed", message)
-        _write_timings(request.timings_ref, timings)
-        return 126
+        return _fail(
+            request,
+            timings,
+            "mount_failed",
+            _called_process_message(exc),
+        )
     except ValueError as exc:
-        _write_error(request.stderr_ref, "validation_failed", str(exc))
-        _write_timings(request.timings_ref, timings)
-        return 126
+        return _fail(request, timings, "validation_failed", str(exc))
     except OSError as exc:
-        _write_error(request.stderr_ref, "setup_failed", str(exc))
-        _write_timings(request.timings_ref, timings)
-        return 126
+        return _fail(request, timings, "setup_failed", str(exc))
     except Exception as exc:
-        _write_error(request.stderr_ref, "unexpected_setup_failed", str(exc))
-        _write_timings(request.timings_ref, timings)
-        return 126
+        return _fail(request, timings, "unexpected_setup_failed", str(exc))
     finally:
         if mount_inputs is not None:
             mount_inputs.close()
@@ -162,6 +157,7 @@ def _mount_overlay(
     lowerdir: Path,
     upperdir: Path,
     workdir: Path,
+    pass_fds: tuple[int, ...] = (),
 ) -> None:
     options = f"lowerdir={lowerdir},upperdir={upperdir},workdir={workdir}"
     subprocess.run(
@@ -169,6 +165,7 @@ def _mount_overlay(
         check=True,
         capture_output=True,
         text=True,
+        pass_fds=pass_fds,
     )
 
 
@@ -198,6 +195,8 @@ def _validate_mount_inputs(
 ) -> _MountInputs:
     fds: list[int] = []
     try:
+        for path in (workspace_root, lowerdir, upperdir, workdir):
+            _validate_overlay_path_text(path)
         for path, label in (
             (workspace_root, "workspace root"),
             (lowerdir, "leased lowerdir"),
@@ -212,28 +211,32 @@ def _validate_mount_inputs(
                 raise ValueError(f"mount scratch dir must not be a symlink: {path}")
             if path.exists() and not path.is_dir():
                 raise ValueError(f"mount scratch path is not a directory: {path}")
+            path.mkdir(parents=True, exist_ok=True)
+            fds.append(_open_dir_no_follow(path))
         _assert_same_dir(workspace_root, fds[0])
         _assert_same_dir(lowerdir, fds[1])
+        _assert_same_dir(upperdir, fds[2])
+        _assert_same_dir(workdir, fds[3])
+        return _MountInputs(
+            workspace_root=_fd_path(fds[0]),
+            lowerdir=_fd_path(fds[1]),
+            upperdir=_fd_path(fds[2]),
+            workdir=_fd_path(fds[3]),
+            fds=tuple(fds),
+        )
     except Exception:
         for fd in fds:
             os.close(fd)
         raise
-    for path in (workspace_root, lowerdir, upperdir, workdir):
-        text = path.as_posix()
-        for bad in _FORBIDDEN_OVERLAY_PATH_CHARS:
-            if bad in text:
-                # NUL renders as garbage in messages; describe instead.
-                label = repr(bad)
-                raise ValueError(
-                    f"overlay mount path cannot contain {label}: {path!r}"
-                )
-    return _MountInputs(
-        workspace_root=workspace_root,
-        lowerdir=lowerdir,
-        upperdir=upperdir,
-        workdir=workdir,
-        fds=tuple(fds),
-    )
+
+
+def _validate_overlay_path_text(path: Path) -> None:
+    text = path.as_posix()
+    for bad in _FORBIDDEN_OVERLAY_PATH_CHARS:
+        if bad in text:
+            # NUL renders as garbage in messages; describe instead.
+            label = repr(bad)
+            raise ValueError(f"overlay mount path cannot contain {label}: {path!r}")
 
 
 def _open_dir_no_follow(path: Path) -> int:
@@ -248,6 +251,10 @@ def _assert_same_dir(path: Path, fd: int) -> None:
     after = path.stat()
     if (before.st_dev, before.st_ino) != (after.st_dev, after.st_ino):
         raise ValueError(f"mount input changed during validation: {path}")
+
+
+def _fd_path(fd: int) -> Path:
+    return Path(f"/proc/self/fd/{fd}")
 
 
 def _fallback_ref(payload: dict[str, Any], key: str) -> Path:
@@ -287,6 +294,17 @@ def _called_process_message(exc: subprocess.CalledProcessError) -> str:
     if detail:
         return f"{exc}; {detail}"
     return str(exc)
+
+
+def _fail(
+    request: _NamespaceRequest,
+    timings: dict[str, float],
+    error_kind: str,
+    detail: str,
+) -> int:
+    _write_error(request.stderr_ref, error_kind, detail)
+    _write_timings(request.timings_ref, timings)
+    return 126
 
 
 __all__ = [

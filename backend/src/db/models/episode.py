@@ -8,8 +8,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
-from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from db.base import Base
@@ -52,9 +51,6 @@ class EpisodeRecord(Base):
         Text, nullable=True
     )
     task_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
-    context: Mapped[str | None] = mapped_column(Text, nullable=True)
-    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
-
     __table_args__ = (
         UniqueConstraint(
             "mission_id",
