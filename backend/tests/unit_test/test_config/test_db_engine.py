@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import importlib.util
-from importlib.machinery import ModuleSpec
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -30,48 +28,11 @@ def _reset_db_engine_state() -> None:
         engine_mod._engine.dispose()
     engine_mod._engine = None
     engine_mod._session_factory = None
-    engine_mod._async_engine = None
-    engine_mod._async_session_factory = None
-
-
-def _hide_aiosqlite(monkeypatch: pytest.MonkeyPatch) -> None:
-    real_find_spec = importlib.util.find_spec
-
-    def fake_find_spec(name: str, package: str | None = None) -> ModuleSpec | None:
-        if name == "aiosqlite":
-            return None
-        return real_find_spec(name, package)
-
-    monkeypatch.setattr(importlib.util, "find_spec", fake_find_spec)
-
-
-def test_initialize_db_skips_missing_sqlite_async_driver(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    _hide_aiosqlite(monkeypatch)
-
-    import sqlalchemy.ext.asyncio as sa_async
-
-    def fail_create_async_engine(*args: object, **kwargs: object) -> object:
-        del args, kwargs
-        raise AssertionError("async engine should be skipped without aiosqlite")
-
-    monkeypatch.setattr(sa_async, "create_async_engine", fail_create_async_engine)
-
-    db_path = tmp_path / "runtime.db"
-    sf = engine_mod.initialize_db(DatabaseSettings(url=f"sqlite:///{db_path}"))
-
-    assert sf is not None
-    assert engine_mod.get_async_session_factory() is None
-    engine = engine_mod.get_engine()
-    assert engine is not None
-    assert inspect(engine).has_table("task_center_tasks")
 
 
 def test_initialize_db_renames_task_center_child_run_id_columns(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _hide_aiosqlite(monkeypatch)
     db_path = tmp_path / "legacy-task-center.db"
     legacy_engine = create_engine(f"sqlite:///{db_path}")
     with legacy_engine.begin() as conn:
@@ -233,7 +194,6 @@ def test_initialize_db_renames_task_center_child_run_id_columns(
 def test_initialize_db_migrates_legacy_agent_runs_schema(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _hide_aiosqlite(monkeypatch)
     db_path = tmp_path / "legacy.db"
     legacy_engine = create_engine(f"sqlite:///{db_path}")
     with legacy_engine.begin() as conn:

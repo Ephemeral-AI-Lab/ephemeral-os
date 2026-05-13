@@ -31,8 +31,6 @@ def test_initialize_db_drops_legacy_attempt_table(tmp_path, monkeypatch):
     # Reset module-level engine state so initialize_db rebuilds cleanly.
     monkeypatch.setattr(engine_mod, "_engine", None)
     monkeypatch.setattr(engine_mod, "_session_factory", None)
-    monkeypatch.setattr(engine_mod, "_async_engine", None)
-    monkeypatch.setattr(engine_mod, "_async_session_factory", None)
 
     sf = engine_mod.initialize_db(DatabaseSettings(url=f"sqlite:///{db_path}"))
     assert sf is not None
