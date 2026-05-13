@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -113,6 +113,11 @@ def _initialize_loop_state(
     if context.tool_metadata is None:
         context.tool_metadata = ExecutionMetadata()
     elif not isinstance(context.tool_metadata, ExecutionMetadata):
+        if not isinstance(context.tool_metadata, Mapping):
+            raise TypeError(
+                "tool_metadata must be ExecutionMetadata or Mapping, "
+                f"got {type(context.tool_metadata).__name__}"
+            )
         coerced = ExecutionMetadata()
         coerced.update(context.tool_metadata)
         context.tool_metadata = coerced
