@@ -299,5 +299,5 @@ async def _dispatch_many_foreground_tools(
             )
         else:
             events.append((item, None))
-    await asyncio.gather(*tasks)
+    await asyncio.gather(*tasks, return_exceptions=True)
     return events
