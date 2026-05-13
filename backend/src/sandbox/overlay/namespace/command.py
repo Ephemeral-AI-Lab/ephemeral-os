@@ -55,17 +55,25 @@ def run_user_command(
     child_env = {**base_env, **env, "GIT_OPTIONAL_LOCKS": "0"}
 
     with stdout_path.open("wb") as stdout_file, stderr_path.open("wb") as stderr_file:
-        completed = subprocess.run(
-            list(command),
-            cwd=resolved_cwd,
-            env=child_env,
-            stdout=stdout_file,
-            stderr=stderr_file,
-            timeout=timeout_seconds,
-            check=False,
-        )
+        try:
+            completed = subprocess.run(
+                list(command),
+                cwd=resolved_cwd,
+                env=child_env,
+                stdout=stdout_file,
+                stderr=stderr_file,
+                timeout=timeout_seconds,
+                check=False,
+            )
+            exit_code = int(completed.returncode)
+        except subprocess.TimeoutExpired:
+            # WR-04: a user command exceeding its timeout must surface as a
+            # structured ``timeout`` result, not an uncaught exception.
+            # 124 follows the GNU `timeout(1)` convention so callers can
+            # distinguish "timed out" from infrastructure failures.
+            exit_code = 124
     return CommandResult(
-        exit_code=int(completed.returncode),
+        exit_code=exit_code,
         stdout_ref=str(stdout_path),
         stderr_ref=str(stderr_path),
     )

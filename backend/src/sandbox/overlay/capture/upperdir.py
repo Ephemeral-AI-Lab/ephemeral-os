@@ -173,7 +173,15 @@ def _remove_path(path: Path) -> None:
 
 
 def _is_whiteout_marker(entry: Path) -> bool:
-    return entry.name.startswith(WHITEOUT_PREFIX) and entry.name != OPAQUE_MARKER
+    # WR-02: an entry named literally ``.wh.`` (prefix only, empty target)
+    # would satisfy ``startswith(WHITEOUT_PREFIX) and != OPAQUE_MARKER`` and
+    # then crash ``normalize_layer_path`` later with "path must not be
+    # empty", aborting the capture mid-walk. Require a non-empty suffix.
+    return (
+        entry.name.startswith(WHITEOUT_PREFIX)
+        and entry.name != OPAQUE_MARKER
+        and len(entry.name) > len(WHITEOUT_PREFIX)
+    )
 
 
 def _whiteout_target(rel: Path) -> Path:
@@ -185,7 +193,11 @@ def _is_overlay_whiteout(entry: Path) -> bool:
         st = entry.lstat()
     except FileNotFoundError:
         return False
-    if stat.S_ISCHR(st.st_mode) and getattr(st, "st_rdev", None) in (0, None):
+    # WR-03: the overlayfs whiteout convention is ``S_ISCHR(mode) && rdev ==
+    # makedev(0, 0)``. The pre-fix ``in (0, None)`` matched whenever
+    # st_rdev was missing (mocked stat results, hypothetical platforms),
+    # which could mis-flag arbitrary char-special files as whiteouts.
+    if stat.S_ISCHR(st.st_mode) and getattr(st, "st_rdev", None) == 0:
         return True
     return entry.is_file() and entry.stat().st_size == 0 and _has_xattr(
         entry,
