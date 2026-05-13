@@ -74,6 +74,14 @@ def launch_background_tool(
             ToolExecutionCompleted(tool_name=tool_use.name, output=msg, is_error=True),
         )
 
+    # TODO(engine/CR-01): kill_callback is intentionally None because the
+    # sandbox package does not yet expose a per-process kill primitive.
+    # BackgroundTaskManager.cancel/cancel_all therefore fall through to
+    # asyncio.Task.cancel() for non-subagent tools, which (per
+    # manager.cancel's docstring) can corrupt the shared sandbox connection
+    # when the task is in flight inside a sandbox exec. Pure-Python tools
+    # are safe; sandbox-backed tools (e.g. shell with background="optional")
+    # are not. Wire a real kill_callback once sandbox.api exposes one.
     kill_callback = None
     validation_result = validate_background_input(
         tool_def=tool_def,
