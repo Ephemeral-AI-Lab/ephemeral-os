@@ -14,9 +14,8 @@ from tools.background.check_background_task_result import (
 from tools.background.wait_background_tasks import WaitBackgroundTasksTool
 
 
-def make_background_tools(bg_tool_names: list[str]) -> list[BaseTool]:
+def make_background_tools() -> list[BaseTool]:
     """Create background task management tools."""
-    del bg_tool_names
     return [
         CancelBackgroundTaskTool(),
         CheckBackgroundTaskResultTool(),

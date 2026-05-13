@@ -17,7 +17,7 @@ from notification import (
 from notification import SystemNotificationService
 from tools._framework.core.base import BaseTool
 from tools._framework.core.context import ToolExecutionContextService
-from tools._framework.core.hooks import HookResult, hook_name, validate_hook_targets
+from tools._framework.core.hooks import HookResult, hook_name
 from tools._framework.core.results import ToolResult
 from tools._framework.core.validation import validate_tool_output
 
@@ -35,11 +35,10 @@ class ToolHookExecutionHelper:
         context: ToolExecutionContextService,
         emit: EmitStreamEvent,
     ) -> None:
-        validate_hook_targets(
-            tool_name=tool.name,
-            pre_hooks=tuple(getattr(tool, "pre_hooks", ()) or ()),
-            post_hooks=tuple(getattr(tool, "post_hooks", ()) or ()),
-        )
+        # Hook-target validation is the @tool decorator's responsibility
+        # (see tools._framework.core.decorator); it runs once at tool
+        # construction time. Re-checking on every tool call would be pure
+        # overhead because hook lists are immutable on BaseTool instances.
         self._tool = tool
         self._context = context
         self._system_notification_service = self._ensure_notification_service(
@@ -158,18 +157,24 @@ class ToolHookExecutionHelper:
                     metadata=outcome.metadata,
                     effective_input=parsed_input,
                 )
-            validation_error = self._validate_hook_output(next_value)
+            validation_error, validation_metadata = self._validate_hook_output(next_value)
             if validation_error is not None:
                 reason = (
                     f"{hook_name(hook)} returned output inconsistent with "
                     f"{self._tool.output_model.__name__}: {validation_error}"
                 )
+                # Merge structured validator metadata into the hook's own
+                # metadata so the failure trace retains the raw pydantic /
+                # JSON error, not just the prose rendering.
+                merged_metadata: dict[str, object] = dict(outcome.metadata or {})
+                if validation_metadata:
+                    merged_metadata.update(validation_metadata)
                 return self._build_hook_failure_result(
                     phase="post",
                     hook=hook,
                     reason=reason,
                     message=outcome.message,
-                    metadata=outcome.metadata,
+                    metadata=merged_metadata,
                     effective_input=parsed_input,
                 )
             current = next_value
@@ -326,10 +331,20 @@ class ToolHookExecutionHelper:
         raw = value.model_dump(mode="json") if isinstance(value, BaseModel) else value
         return self._tool.input_model.model_validate(raw)
 
-    def _validate_hook_output(self, result: ToolResult) -> str | None:
+    def _validate_hook_output(
+        self, result: ToolResult
+    ) -> tuple[str | None, dict[str, object]]:
+        """Validate a hook's replacement ``ToolResult``.
+
+        Returns ``(prose_error, structured_metadata)``. ``prose_error`` is
+        ``None`` on success. ``structured_metadata`` carries the
+        ``output_validation_error`` field (and any other validator-stamped
+        keys) lifted from the failed ToolResult so callers can preserve
+        them in the hook-failure trace rather than dropping them.
+        """
         if result.is_error:
-            return None
+            return None, {}
         validated = validate_tool_output(self._tool, result)
         if validated.is_error:
-            return validated.output
-        return None
+            return validated.output, dict(validated.metadata or {})
+        return None, {}

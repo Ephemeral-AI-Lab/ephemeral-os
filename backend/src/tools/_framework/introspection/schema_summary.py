@@ -29,15 +29,11 @@ def collect_schema_tools(
     tools = [create_tool(name, ctx) for name in sorted(list_available_tools())]
 
     from tools.background import make_background_tools
-    background_tool_names = sorted(
-        {
-            tool.name
-            for tool in tools
-            if getattr(tool, "background", "forbidden") != "forbidden"
-        }
+    has_background = any(
+        getattr(tool, "background", "forbidden") != "forbidden" for tool in tools
     )
-    if background_tool_names:
-        tools.extend(make_background_tools(background_tool_names))
+    if has_background:
+        tools.extend(make_background_tools())
 
     return _dedupe_tools(tools)
 

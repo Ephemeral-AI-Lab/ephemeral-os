@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
@@ -10,13 +11,22 @@ from pydantic import BaseModel, RootModel, ValidationError
 
 from tools._framework.core.results import ToolInputParseResult, ToolResult
 
+logger = logging.getLogger(__name__)
+
 if TYPE_CHECKING:
     from tools._framework.core.base import BaseTool
     from tools._framework.core.context import ToolExecutionContextService
     from tools._framework.core.registry import ToolRegistry
 
 
-_RUNTIME_CONTROL_FIELDS = frozenset({"background"})
+# Engine-level schema decorations that may be injected into a tool's
+# input_schema by `decorate_schemas_for_background` (and any future
+# runtime-control decorator). Keep this set in sync with the property
+# names that `decorate_schemas_for_background` writes into the schema —
+# anything added there MUST also be added here, or pydantic
+# `extra="forbid"` models will reject the inflated input at validation
+# time.
+_RUNTIME_CONTROL_FIELDS: frozenset[str] = frozenset({"background"})
 
 
 def parse_tool_input(
@@ -39,9 +49,17 @@ def parse_tool_input(
             )
         )
     except Exception as exc:
+        # Not a pydantic ValidationError: either `clean_input` is not a
+        # mapping, or a custom validator raised something exotic. This is
+        # an internal error path, not an "invalid arguments" path — do not
+        # tell the agent to retry; surface the type so triage can find it.
+        logger.exception("Internal validation error for tool %s", tool.name)
         return ToolInputParseResult.failure(
             ToolResult(
-                output=f"Invalid input for {tool.name}: {exc}",
+                output=(
+                    f"Internal validation error for {tool.name}: "
+                    f"{type(exc).__name__}: {exc}"
+                ),
                 is_error=True,
             )
         )
@@ -57,8 +75,13 @@ async def execute_tool_body(
     try:
         return await tool.execute(parsed_input, context)
     except Exception as exc:
+        # Render the exception type alongside its message so production
+        # triage can tell `ValueError` from `KeyError` without parsing
+        # prose. The full traceback is logged (not surfaced to the LLM) to
+        # keep tool output bounded.
+        logger.exception("Tool execution failed: %s", tool.name)
         return ToolResult(
-            output=f"Tool execution failed: {exc}",
+            output=f"Tool execution failed: {type(exc).__name__}: {exc}",
             is_error=True,
         )
 
@@ -130,6 +153,10 @@ def decorate_schemas_for_background(
             and tool is not None
             and getattr(tool, "background", "forbidden") == "optional"
         ):
+            # Keep in sync with `_RUNTIME_CONTROL_FIELDS` above. Any new
+            # property key written into `props` here must also appear in
+            # that set so `_strip_runtime_control_fields` removes it
+            # before per-tool pydantic validation.
             props["background"] = {
                 "type": "boolean",
                 "description": (

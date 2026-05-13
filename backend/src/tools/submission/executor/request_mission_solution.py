@@ -51,24 +51,24 @@ async def request_mission_solution(
         return ToolResult(output=str(exc), is_error=True)
 
     try:
-        started_request: StartedMission = (
-            submission_context.start_mission_request(goal=goal)
+        started_mission: StartedMission = (
+            submission_context.start_delegated_mission(goal=goal)
         )
     except TaskCenterInvariantViolation as exc:
         return ToolResult(output=str(exc), is_error=True)
 
     return ToolResult(
         output=(
-            "Started delegated mission request "
-            f"{started_request.mission_id} "
+            "Started delegated mission "
+            f"{started_mission.mission_id} "
             "for this generator task."
         ),
         metadata={
             "submission_kind": "mission_start",
-            "task_center_task_id": started_request.parent_task_id,
-            "attempt_id": started_request.parent_attempt_id,
-            "mission_id": started_request.mission_id,
-            "initial_episode_id": started_request.initial_episode_id,
-            "initial_attempt_id": started_request.initial_attempt_id,
+            "task_center_task_id": started_mission.parent_task_id,
+            "attempt_id": started_mission.parent_attempt_id,
+            "mission_id": started_mission.mission_id,
+            "initial_episode_id": started_mission.initial_episode_id,
+            "initial_attempt_id": started_mission.initial_attempt_id,
         },
     )

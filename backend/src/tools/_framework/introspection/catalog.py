@@ -56,9 +56,8 @@ def collect_tool_catalog(
     if include_runtime_tools:
         from tools.background import make_background_tools
 
-        background_tool_names = _background_tool_names()
-        if background_tool_names:
-            for tool in make_background_tools(background_tool_names):
+        if _background_tool_names():
+            for tool in make_background_tools():
                 _merge_tool(tool)
 
     return sorted(by_name.values(), key=lambda entry: entry.name)

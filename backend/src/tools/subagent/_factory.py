@@ -8,6 +8,7 @@ from pydantic import Field, field_validator
 
 from agents import list_dispatchable_subagent_names
 from tools._framework.core.base import BaseTool, ToolExecutionContextService, ToolResult
+from tools._framework.core.hooks import validate_hook_targets
 from tools.subagent.run_subagent import run_subagent
 
 
@@ -56,13 +57,31 @@ class RestrictedRunSubagentTool(BaseTool):
 
     def __init__(self, *, allowed_agent_names: tuple[str, ...]) -> None:
         self._delegate = run_subagent
-        self.name = run_subagent.name
-        self.description = run_subagent.description
-        self.short_description = run_subagent.short_description
+        # Copy every BaseTool contract attribute the framework reads so that
+        # future hooks/context_requirements/is_terminal_tool changes to
+        # `run_subagent` are not silently dropped on the restricted shim.
+        for attr in (
+            "name",
+            "description",
+            "short_description",
+            "output_model",
+            "background",
+            "task_type",
+            "is_terminal_tool",
+            "pre_hooks",
+            "post_hooks",
+            "context_requirements",
+        ):
+            setattr(self, attr, getattr(run_subagent, attr))
         self.input_model = _build_restricted_input_model(allowed_agent_names)
-        self.output_model = run_subagent.output_model
-        self.background = run_subagent.background
-        self.task_type = run_subagent.task_type
+        # Re-validate hook targets since the wrapping tool's name must match
+        # the hook target_tool. (No-op today because run_subagent has no
+        # hooks, but keeps the invariant explicit.)
+        validate_hook_targets(
+            tool_name=self.name,
+            pre_hooks=tuple(self.pre_hooks or ()),
+            post_hooks=tuple(self.post_hooks or ()),
+        )
 
     async def execute(self, arguments, context: ToolExecutionContextService) -> ToolResult:  # type: ignore[override]
         return await self._delegate.execute(arguments, context)

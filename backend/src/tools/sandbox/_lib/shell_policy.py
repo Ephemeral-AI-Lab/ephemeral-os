@@ -39,28 +39,38 @@ _GIT_FLAG_OPTIONS = {
 _BLOCKED_GIT_SUBCOMMANDS = {
     "add",
     "am",
+    "branch",
     "checkout",
     "checkout-index",
     "cherry-pick",
     "commit",
     "merge",
     "mv",
+    "notes",
+    "prune",
     "read-tree",
     "rebase",
+    "replace",
     "reset",
     "restore",
     "revert",
     "rm",
     "stash",
+    "submodule",
     "switch",
+    "tag",
     "update-index",
+    "update-ref",
+    "worktree",
 }
 _DESTRUCTIVE_GIT_MESSAGE = (
     "BLOCKED: shell is for runtime commands, tests, and inspection. "
-    "destructive git commands and other git mutation commands are forbidden. "
-    "Detected filesystem mutation command or git metadata mutation. They mutate "
-    "repository metadata or working-tree files outside the OCC/write-scope audit "
-    "path. Use edit_file or write_file instead."
+    "Destructive git mutation commands are forbidden here. "
+    "They mutate repository metadata or working-tree files outside the "
+    "OCC/write-scope audit path. Use edit_file or write_file instead. "
+    "(Note: shell-substitution forms such as $(...), backticks, bash -c, "
+    "or eval can bypass this prehook; the sandbox commit/write audit "
+    "remains the authoritative isolation boundary.)"
 )
 _DESTRUCTIVE_SHELL_PATTERN = re.compile(
     r"(?:^|[;&|]\s*)(?:"
@@ -88,6 +98,13 @@ def _shell_command(args: BaseModel) -> str | None:
     return command
 
 
+# git clean short flags that may legitimately appear in a combined bundle
+# alongside -n. Any short flag containing a character outside this set is
+# treated as ambiguous and NOT a dry-run (fail closed). `-e` is excluded
+# because it takes an argument and cannot be combined.
+_GIT_CLEAN_SHORT_FLAGS: frozenset[str] = frozenset("ndfxXqi")
+
+
 def _clean_args_are_dry_run(args: list[str]) -> bool:
     for arg in args:
         if arg == "--":
@@ -96,8 +113,15 @@ def _clean_args_are_dry_run(args: list[str]) -> bool:
             return True
         if arg.startswith("--"):
             continue
-        if arg.startswith("-") and "n" in arg[1:]:
-            return True
+        if arg.startswith("-") and len(arg) > 1:
+            # Combined short flags: each char is its own flag. Treat as a
+            # dry-run only if `-n` is present AND every char in the bundle
+            # is a known git clean short flag. Anything else (e.g. `-nx`
+            # where `x` is fine, `-ny` where `y` is unknown, `-an` where
+            # `a` is unknown) is rejected — fail closed.
+            chars = set(arg[1:])
+            if "n" in chars and chars <= _GIT_CLEAN_SHORT_FLAGS:
+                return True
     return False
 
 

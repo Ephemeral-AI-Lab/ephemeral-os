@@ -20,6 +20,7 @@ from engine.background.manager import BackgroundTaskManager
 from message.messages import (
     ConversationMessage,
     SystemNotificationBlock,
+    TextBlock,
     ToolResultBlock,
     ToolUseBlock,
 )
@@ -991,6 +992,89 @@ async def test_query_loop_captures_terminal_result_without_tool_result_prompt() 
     assert context.terminal_result is not None
     assert context.terminal_result.output == "done"
     assert [message.role for message in messages] == ["assistant"]
+
+
+async def test_query_loop_rejects_streamed_terminal_tool_batched_with_sibling() -> None:
+    echo = _EchoTool()
+    terminal = _TerminalEchoTool()
+
+    class _MixedTerminalBatchClient(SupportsStreamingMessages):
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def stream_message(self, request):
+            del request
+            self.calls += 1
+            if self.calls == 1:
+                yield ApiToolUseDeltaEvent(
+                    id="toolu_echo",
+                    name="echo_tool",
+                    input={"value": "should-not-run"},
+                )
+                yield ApiToolUseDeltaEvent(
+                    id="toolu_terminal",
+                    name="terminal_echo",
+                    input={"value": "done"},
+                )
+                yield ApiMessageCompleteEvent(
+                    message=ConversationMessage(
+                        role="assistant",
+                        content=[
+                            ToolUseBlock(
+                                id="toolu_echo",
+                                name="echo_tool",
+                                input={"value": "should-not-run"},
+                            ),
+                            ToolUseBlock(
+                                id="toolu_terminal",
+                                name="terminal_echo",
+                                input={"value": "done"},
+                            ),
+                        ],
+                    ),
+                    usage=UsageSnapshot(),
+                )
+                return
+            yield ApiMessageCompleteEvent(
+                message=ConversationMessage(
+                    role="assistant",
+                    content=[TextBlock(text="retry acknowledged")],
+                ),
+                usage=UsageSnapshot(),
+            )
+
+    registry = ToolRegistry()
+    registry.register(echo)
+    registry.register(terminal)
+    context = QueryContext(
+        api_client=_MixedTerminalBatchClient(),
+        tool_registry=registry,
+        cwd=Path("/tmp"),
+        model="test",
+        system_prompt="",
+        max_tokens=100,
+    )
+
+    messages, stream = await run_query(context, [])
+    async for _event, _usage in stream:
+        pass
+
+    assert echo.seen == []
+    assert context.terminal_result is None
+    assert context.exit_reason is QueryExitReason.TEXT_RESPONSE
+    rejection_message = messages[1]
+    assert rejection_message.role == "user"
+    assert [
+        block.tool_use_id
+        for block in rejection_message.content
+        if isinstance(block, ToolResultBlock)
+    ] == ["toolu_echo", "toolu_terminal"]
+    assert all(
+        isinstance(block, ToolResultBlock)
+        and block.is_error
+        and "Terminal tool" in block.content
+        for block in rejection_message.content
+    )
 
 
 async def test_streaming_executor_propagates_terminal_completion_marker() -> None:

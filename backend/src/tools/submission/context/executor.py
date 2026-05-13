@@ -22,7 +22,7 @@ class ExecutorSubmissionContext:
     """Unified context for executor-shaped terminal submissions.
 
     Tools call :meth:`submit_executor_success`,
-    :meth:`submit_executor_failure`, or :meth:`start_mission_request`
+    :meth:`submit_executor_failure`, or :meth:`start_delegated_mission`
     without knowing whether the task is attempt-bound or entry-mode. The
     context dispatches to the right backend (orchestrator vs entry
     controller) internally.
@@ -89,7 +89,7 @@ class ExecutorSubmissionContext:
             summary=summary, reason=reason, details=details
         )
 
-    def start_mission_request(
+    def start_delegated_mission(
         self, *, goal: str
     ) -> StartedMission:
         from task_center.api import MissionStarter

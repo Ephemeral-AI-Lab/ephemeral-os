@@ -206,9 +206,14 @@ async def run_subagent(
         # (and after, if the terminal tool was never called).
         if bg_manager is None or not isinstance(bg_task_id, str):
             return
+        # Snapshot `agent.messages` at progress-provider invocation time so
+        # the iteration inside `format_last_n_messages` cannot observe a
+        # partially constructed tail if the subagent appends concurrently.
+        # asyncio cooperative scheduling makes this safe today, but the
+        # copy makes the contract explicit and robust to future preemption.
         bg_manager.set_progress_provider(
             bg_task_id,
-            lambda last_n: format_last_n_messages(agent.messages, last_n),
+            lambda last_n: format_last_n_messages(list(agent.messages), last_n),
         )
 
     result = await run_ephemeral_agent(

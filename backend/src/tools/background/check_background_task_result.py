@@ -48,9 +48,15 @@ def _build_subagent_result(tracked, raw_status: str) -> tuple[str, str]:
     if raw_status in ("completed", "delivered") and _subagent_terminal_called(tracked):
         return "finished", tracked.result.output if tracked.result else ""
 
-    # Either crashed/cancelled, or completed without calling the terminal
-    # tool — surface as failed and include the last 5 messages so the parent
-    # can see what the subagent was doing.
+    # Caller-initiated cancellation: surface separately so the parent does
+    # not blame the subagent for what was its own action. Prefix the peek
+    # so it is clear in any log surface as well.
+    if raw_status == "cancelled":
+        return "cancelled", f"[cancelled] {_peek_messages(tracked, 5)}"
+
+    # Either crashed, or completed without calling the terminal tool —
+    # surface as failed and include the last 5 messages so the parent can
+    # see what the subagent was doing.
     return "failed", _peek_messages(tracked, 5)
 
 
@@ -78,10 +84,11 @@ class CheckBackgroundTaskResultTool(BaseTool):
     name: str = "check_background_task_result"
     description: str = (
         "Fetches the result of a background task by id. Returns "
-        "{id, status (running|finished|failed), tool_command, result}. "
-        "For run_subagent: result is the terminal-tool output if finished, "
-        "or the last 5 messages otherwise. For other tools (e.g. shell): "
-        "result is the full output."
+        "{id, status (running|finished|failed|cancelled), tool_command, "
+        "result}. For run_subagent: result is the terminal-tool output if "
+        "finished, or the last 5 messages otherwise (prefixed with "
+        "[cancelled] when the caller cancelled the task). For other tools "
+        "(e.g. shell): result is the full output."
     )
     short_description: str = "Check a background task's result."
     input_model: type[BaseModel] = CheckBackgroundTaskResultInput

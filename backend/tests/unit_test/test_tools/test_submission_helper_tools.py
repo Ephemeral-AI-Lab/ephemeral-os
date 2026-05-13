@@ -85,7 +85,8 @@ def _helper_context(
         composer=composer,
         task_center_task_id=PARENT_TASK_ID,
         task_center_run_id=PARENT_RUN_ID,
-        task_center_request_id=mission_id,
+        task_center_mission_id=mission_id,
+        task_center_request_id="legacy-request-id",
     )
     metadata["role"] = role
     metadata["agent_type"] = "agent"

@@ -28,6 +28,9 @@ def get_repo_root(context: ToolExecutionContextService) -> str:
 
 def resolve_sandbox_path(path: str, context: ToolExecutionContextService) -> str:
     """Resolve a repo-relative path against the sandbox repository root."""
+    # Trust boundary: absolute paths are passed through verbatim. The
+    # sandbox provider (isolated rootfs) is the authoritative layer that
+    # refuses or sandboxes host paths; this helper does not gate on them.
     if path.startswith("/"):
         return path
     repo_root = get_repo_root(context)

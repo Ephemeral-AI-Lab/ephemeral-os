@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -22,22 +23,35 @@ class ToolFactoryContext:
 ToolFactory = Callable[[ToolFactoryContext], BaseTool]
 
 _factories: dict[str, ToolFactory] = {}
+_builtins_registered: bool = False
 
 
-def register_tool_factory(name: str, factory: ToolFactory) -> None:
-    """Register a factory for a named tool."""
+def register_tool_factory(
+    name: str, factory: ToolFactory, *, override: bool = False
+) -> None:
+    """Register a factory for a named tool.
+
+    Raises ``ValueError`` if *name* is already registered unless
+    ``override=True`` is passed. This prevents plugins from silently
+    shadowing builtin tools (or each other).
+    """
+    if name in _factories and not override:
+        raise ValueError(
+            f"Tool factory {name!r} already registered; "
+            f"pass override=True to replace."
+        )
     _factories[name] = factory
     logger.debug("Registered tool factory: %s", name)
 
 
-def register_tool_instance(tool: BaseTool) -> None:
+def register_tool_instance(tool: BaseTool, *, override: bool = False) -> None:
     """Register a reusable stateless tool instance."""
 
     def factory(ctx: ToolFactoryContext) -> BaseTool:
         del ctx
         return tool
 
-    register_tool_factory(tool.name, factory)
+    register_tool_factory(tool.name, factory, override=override)
 
 
 def create_tool(name: str, ctx: ToolFactoryContext) -> BaseTool:
@@ -83,8 +97,19 @@ def _register_many(tools: list[BaseTool]) -> None:
 
 
 def _register_builtins() -> None:
-    """Register built-in tool factories."""
-    from plugins.core.loader import register_plugin_tools
+    """Register built-in tool factories.
+
+    Note: ``make_skills_tools`` is intentionally NOT registered here. Skill
+    tools require a ``SkillRegistry`` instance that cannot be resolved at
+    static registration time; they are constructed per-agent at agent build
+    time. As a consequence, ``collect_tool_catalog`` and
+    ``collect_schema_tools`` will not enumerate skill tools — that is
+    expected; skill tools are agent-scoped, not part of the global catalog.
+
+    Set ``EOS_SKIP_PLUGIN_IMPORTS_FOR_TESTS=1`` to skip plugin discovery —
+    useful for unit tests that want to exercise the framework in
+    isolation without triggering transitive plugin imports.
+    """
     from tools.ask_helper import make_ask_helper_tools
     from tools.sandbox import make_sandbox_tools
     from tools.submission import make_submission_tools
@@ -94,10 +119,18 @@ def _register_builtins() -> None:
     _register_many(make_submission_tools())
     _register_many(make_ask_helper_tools())
     register_tool_factory("run_subagent", make_subagent_tool_from_context)
-    _register_many(register_plugin_tools())
+    if not os.environ.get("EOS_SKIP_PLUGIN_IMPORTS_FOR_TESTS"):
+        from plugins.core.loader import register_plugin_tools
+
+        _register_many(register_plugin_tools())
 
 
 def _ensure_builtins_registered() -> None:
-    if "run_subagent" in _factories and "read_file" in _factories:
+    global _builtins_registered
+    # If `_factories` was externally cleared (e.g. by a test fixture), the
+    # flag is stale — fall through and re-register. This keeps the
+    # idempotency guard from breaking test isolation.
+    if _builtins_registered and _factories:
         return
     _register_builtins()
+    _builtins_registered = True
