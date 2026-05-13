@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from engine.query.context import QueryContext
 
 
-def reject_tool_batch(
+def _reject_tool_batch(
     tool_calls: list[Any],
     message: str,
 ) -> list[ToolResultBlock]:
@@ -44,4 +44,4 @@ def validate_tool_batch(
         f"No tool in this batch executed. "
         f"Resubmit with only the exclusive tool in its own final batch."
     )
-    return reject_tool_batch(tool_calls, message=message)
+    return _reject_tool_batch(tool_calls, message=message)

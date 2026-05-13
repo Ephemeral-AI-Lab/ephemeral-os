@@ -22,7 +22,7 @@ class QueryRunRequest:
     prompt_report_seq: int
 
 
-def prompt_report_recorder(context: QueryContext) -> PromptReportRecorder:
+def _prompt_report_recorder(context: QueryContext) -> PromptReportRecorder:
     if context.prompt_report_recorder is not None:
         return context.prompt_report_recorder
     metadata = context.tool_metadata
@@ -46,7 +46,7 @@ def build_query_run_request(
     messages: list[ConversationMessage],
 ) -> QueryRunRequest:
     provider_messages = prepare_provider_messages(messages)
-    prompt_report = prompt_report_recorder(context)
+    prompt_report = _prompt_report_recorder(context)
     prompt_report_seq = prompt_report.next_seq()
     tool_schemas = context.tool_registry.to_api_schema()
     if context.enable_background_tasks:
