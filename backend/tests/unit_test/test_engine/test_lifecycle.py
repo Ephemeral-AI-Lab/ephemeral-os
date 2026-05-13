@@ -2,13 +2,19 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 from typing import Any
+from pathlib import Path
 
 import pytest
 
+from engine.agent.factory import EphemeralAgent
 from engine.agent.lifecycle import run_ephemeral_agent
+from engine.query.context import QueryContext, QueryExitReason
+from message.messages import ConversationMessage, TextBlock
 from message.stream_events import StreamEvent, ToolExecutionStarted
+from providers.types import ApiMessageCompleteEvent
 from providers.types import UsageSnapshot
 from tools._framework.core.base import ExecutionMetadata
+from tools._framework.core.registry import ToolRegistry
 
 
 class _FakeAgent:
@@ -23,6 +29,10 @@ class _FakeAgent:
             run_id="",
             terminal_result=None,
         )
+
+    @property
+    def messages(self) -> list[Any]:
+        return self._messages
 
     async def run(self, _prompt: str):
         yield ToolExecutionStarted(
@@ -63,4 +73,47 @@ async def test_run_ephemeral_agent_stamps_task_id_as_stream_run_id(
             agent_name="executor",
             run_id="run-1:t2",
         )
+    ]
+
+
+@pytest.mark.asyncio
+async def test_ephemeral_agent_run_preserves_initial_messages() -> None:
+    class _TextClient:
+        async def stream_message(self, request):
+            assert [message.text for message in request.messages] == [
+                "prior context",
+                "new prompt",
+            ]
+            yield ApiMessageCompleteEvent(
+                message=ConversationMessage(
+                    role="assistant",
+                    content=[TextBlock(text="done")],
+                ),
+                usage=UsageSnapshot(),
+            )
+
+    context = QueryContext(
+        api_client=_TextClient(),
+        tool_registry=ToolRegistry(),
+        cwd=Path("/tmp"),
+        model="test",
+        system_prompt="",
+        max_tokens=100,
+    )
+    agent = EphemeralAgent(
+        agent_name="executor",
+        query_context=context,
+        settings=SimpleNamespace(),
+        model="test",
+        _messages=[ConversationMessage.from_user_text("prior context")],
+    )
+
+    async for _event in agent.run("new prompt"):
+        pass
+
+    assert context.exit_reason is QueryExitReason.TEXT_RESPONSE
+    assert [message.text for message in agent.messages] == [
+        "prior context",
+        "new prompt",
+        "done",
     ]
