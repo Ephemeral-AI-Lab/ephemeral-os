@@ -306,10 +306,11 @@ async def _assert_complex_build_contract(
     )
     assert junit_read.success and junit_read.exists, "pytest.xml missing"
     junit_root = ElementTree.fromstring(junit_read.content)
-    junit_suite = (
-        junit_root if junit_root.tag == "testsuite"
-        else (junit_root.find("testsuite") or junit_root)
-    )
+    junit_suite = junit_root
+    if junit_root.tag != "testsuite":
+        junit_suite = junit_root.find("testsuite")
+        if junit_suite is None:
+            junit_suite = junit_root
     failures = int(junit_suite.get("failures", "0"))
     errors = int(junit_suite.get("errors", "0"))
     tests = int(junit_suite.get("tests", "0"))

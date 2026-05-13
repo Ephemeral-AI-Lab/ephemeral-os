@@ -52,7 +52,7 @@ testpaths = ["backend/tests"]
 # live_e2e_test/ requires a real Daytona sandbox; it is opt-in by directory.
 # Default `pytest backend/tests` skips it; opt in with
 # `pytest backend/tests/live_e2e_test`.
-norecursedirs = ["live_e2e_test"]
+norecursedirs = ["live_e2e_test", ".hypothesis"]
 asyncio_mode = "auto"
 markers = [
     "live: tests that require live external services such as Daytona",

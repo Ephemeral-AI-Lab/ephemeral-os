@@ -179,11 +179,11 @@ async def _assert_shell_edit_lsp_contract(
         caller,
     )
     junit_root = ElementTree.fromstring(junit)
-    junit_suite = (
-        junit_root
-        if junit_root.tag == "testsuite"
-        else (junit_root.find("testsuite") or junit_root)
-    )
+    junit_suite = junit_root
+    if junit_root.tag != "testsuite":
+        junit_suite = junit_root.find("testsuite")
+        if junit_suite is None:
+            junit_suite = junit_root
     assert int(junit_suite.get("failures", "0")) == 0
     assert int(junit_suite.get("errors", "0")) == 0
 

@@ -8,8 +8,12 @@ the dataset glue remains under ``benchmarks.sweevo``.
 from __future__ import annotations
 
 import os
+import re
+from collections.abc import AsyncIterator
 from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
+from typing import IO
 
 import pytest
 
@@ -24,6 +28,14 @@ from live_e2e.stores import TaskCenterStoreBundle
 
 _DEFAULT_INSTANCE_ID = "dask__dask_2023.3.2_2023.4.0"
 _SESSION_WORKSPACE_USED_ATTR = "_ephemeralos_sweevo_workspace_used_sandboxes"
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_LOCK_DIR = _REPO_ROOT / ".sweevo_runs" / "locks"
+_HELD_SWEEVO_LOCKS: dict[Path, tuple[IO[str], int]] = {}
+
+
+@dataclass(frozen=True, slots=True)
+class _SweevoSessionLock:
+    path: Path
 
 
 async def run_sweevo_scenario(
@@ -62,18 +74,24 @@ def sweevo_instance() -> SWEEvoInstance:
 
 
 @pytest.fixture(scope="session")
-async def sweevo_sandbox(sweevo_instance: SWEEvoInstance) -> dict[str, object]:
+async def sweevo_sandbox(
+    sweevo_instance: SWEEvoInstance,
+) -> AsyncIterator[dict[str, object]]:
     """Provision a real Daytona sandbox for the configured SWE-EVO instance."""
     from sandbox.provider.daytona.bootstrap import bootstrap_daytona_provider
 
     from benchmarks.sweevo.sandbox import create_sweevo_test_sandbox
 
-    bootstrap_daytona_provider()
-    return await create_sweevo_test_sandbox(
-        sweevo_instance,
-        register_snapshot=True,
-        reuse_existing_auto=_reuse_existing_auto_enabled(),
-    )
+    lock = _acquire_sweevo_session_lock(sweevo_instance.instance_id)
+    try:
+        bootstrap_daytona_provider()
+        yield await create_sweevo_test_sandbox(
+            sweevo_instance,
+            register_snapshot=True,
+            reuse_existing_auto=_reuse_existing_auto_enabled(),
+        )
+    finally:
+        _release_sweevo_session_lock(lock)
 
 
 @pytest.fixture
@@ -99,6 +117,57 @@ def _reuse_existing_auto_enabled() -> bool:
     if os.getenv("EOS_SWEEVO_FORCE_FRESH_SANDBOX") == "1":
         return False
     return os.getenv("EOS_SWEEVO_REUSE_SANDBOX") == "1"
+
+
+def _acquire_sweevo_session_lock(instance_id: str) -> _SweevoSessionLock:
+    """Serialize live SWE-EVO runs that may reuse the same Daytona sandbox.
+
+    Several scenarios intentionally rebind the public-tool workspace root
+    during execution. Running two live pytest sessions for the same SWE-EVO
+    instance against a reusable sandbox can make one session observe the
+    other's binding. A host-side flock keeps setup and the test session
+    isolated without adding a dependency.
+    """
+    import fcntl
+
+    _LOCK_DIR.mkdir(parents=True, exist_ok=True)
+    lock_path = _LOCK_DIR / f"sweevo-{_lock_slug(instance_id)}.lock"
+    held = _HELD_SWEEVO_LOCKS.get(lock_path)
+    if held is not None:
+        handle, count = held
+        _HELD_SWEEVO_LOCKS[lock_path] = (handle, count + 1)
+        return _SweevoSessionLock(lock_path)
+
+    handle = lock_path.open("a+", encoding="utf-8")
+    fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+    handle.seek(0)
+    handle.truncate()
+    handle.write(f"pid={os.getpid()}\ninstance={instance_id}\n")
+    handle.flush()
+    _HELD_SWEEVO_LOCKS[lock_path] = (handle, 1)
+    return _SweevoSessionLock(lock_path)
+
+
+def _release_sweevo_session_lock(lock: _SweevoSessionLock) -> None:
+    import fcntl
+
+    held = _HELD_SWEEVO_LOCKS.get(lock.path)
+    if held is None:
+        return
+    handle, count = held
+    if count > 1:
+        _HELD_SWEEVO_LOCKS[lock.path] = (handle, count - 1)
+        return
+    try:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+    finally:
+        _HELD_SWEEVO_LOCKS.pop(lock.path, None)
+        handle.close()
+
+
+def _lock_slug(value: str) -> str:
+    slug = re.sub(r"[^A-Za-z0-9_.-]+", "-", value.strip()).strip("-")
+    return slug or "default"
 
 
 def _session_workspace_used_sandboxes(session: object) -> set[str]:
