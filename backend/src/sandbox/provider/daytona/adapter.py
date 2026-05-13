@@ -134,12 +134,19 @@ class DaytonaProviderAdapter:
                 "default_image": None,
             }
         except Exception as exc:
+            # IN-02: log the full SDK error server-side, return a generic
+            # "provider unavailable" detail. SDK exceptions can include URL
+            # fragments, request IDs, and partial response bodies — none of
+            # that belongs on a public health endpoint.
+            logger.warning(
+                "Daytona health probe failed: %s", exc, exc_info=True
+            )
             return {
                 "configured": True,
                 "available": False,
                 "api_url": api_url,
                 "target": target or None,
-                "detail": str(exc),
+                "detail": "provider unavailable",
                 "default_image": None,
             }
 

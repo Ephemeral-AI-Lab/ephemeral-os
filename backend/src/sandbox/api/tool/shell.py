@@ -64,7 +64,9 @@ async def shell(
                 "caller": caller_envelope(request.caller),
                 "description": request.description or "shell",
             },
-            timeout=(request.timeout or 60) + 30,
+            # IN-01: explicit None-check so a caller-supplied timeout=0
+            # is not silently coerced to 60 by ``or``.
+            timeout=(60 if request.timeout is None else request.timeout) + 30,
         )
         timings = timings_from_payload(raw.get("timings"))
         timings["api.shell.dispatch_total_s"] = time.perf_counter() - total_start
