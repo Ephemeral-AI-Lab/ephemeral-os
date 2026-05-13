@@ -181,25 +181,11 @@ CAPACITY_PACK_SPECS: tuple[CapacityPackSpec, ...] = (
         registry_name="sandbox.complex_project_build_shell_edit_lsp_smoke",
     ),
     CapacityPackSpec(
-        "tools.request_mission_before_edit_gate",
-        "D",
-        "tools",
-        "T0",
-        test_path="backend/tests/unit_test/test_tools/test_submission_tool_gates.py",
-    ),
-    CapacityPackSpec(
         "tools.terminal_tool_exclusivity",
         "D",
         "tools",
         "T0",
         test_path="backend/tests/unit_test/test_tools/test_tool_execution.py",
-    ),
-    CapacityPackSpec(
-        "tools.resolver_success_limit_gate",
-        "D",
-        "tools",
-        "T0",
-        test_path="backend/tests/unit_test/test_tools/test_submission_tool_gates.py",
     ),
     CapacityPackSpec(
         "tools.notification_budget_warning",

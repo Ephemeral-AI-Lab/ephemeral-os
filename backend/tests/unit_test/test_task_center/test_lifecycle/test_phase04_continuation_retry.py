@@ -263,7 +263,7 @@ def test_delegated_continuation_waits_until_final_segment(
     assert parent_after_segment1 is not None
     assert (
         parent_after_segment1["status"]
-        == HarnessTaskStatus.WAITING_COMPLEX_TASK.value
+        == HarnessTaskStatus.WAITING_MISSION.value
     )
     delegated_request_after_segment1 = mission_store.get(
         mission_start.mission_id
@@ -377,7 +377,7 @@ def test_delegated_retry_waits_until_final_graph(
     assert len(segment1.attempt_ids) == 2
     parent_mid = task_store.get_task(parent_task_id)
     assert parent_mid is not None
-    assert parent_mid["status"] == HarnessTaskStatus.WAITING_COMPLEX_TASK.value
+    assert parent_mid["status"] == HarnessTaskStatus.WAITING_MISSION.value
     delegated_mid = mission_store.get(mission_start.mission_id)
     assert delegated_mid is not None
     assert delegated_mid.status == MissionStatus.OPEN

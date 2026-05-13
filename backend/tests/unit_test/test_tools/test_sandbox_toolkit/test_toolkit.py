@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tools.core.base import ToolExecutionContextService
-from tools.core.registry import ToolRegistry
-from tools.sandbox_toolkit import make_sandbox_tools
+from tools._framework.core.base import ToolExecutionContextService
+from tools._framework.core.registry import ToolRegistry
+from tools.sandbox import make_sandbox_tools
 
 
 # pytest-asyncio runs in auto mode (configured in pyproject.toml) — async

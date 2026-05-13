@@ -17,25 +17,25 @@ import pytest
 from pathlib import Path
 from pydantic import ValidationError
 
-from tools.builtins.background._common import (
+from tools.background._lib._common import (
     build_background_snapshot_metadata,
     normalize_status,
     render_background_snapshot,
     render_tool_command,
 )
-from tools.builtins.background.wait_background_tasks import (
+from tools.background.wait_background_tasks import (
     WaitBackgroundTasksInput,
     WaitBackgroundTasksTool,
 )
-from tools.builtins.background.check_background_task_result import (
+from tools.background.check_background_task_result import (
     CheckBackgroundTaskResultInput,
     CheckBackgroundTaskResultTool,
 )
-from tools.builtins.background.cancel_background_task import (
+from tools.background.cancel_background_task import (
     CancelBackgroundTaskInput,
     CancelBackgroundTaskTool,
 )
-from tools.core.base import ToolExecutionContextService, ToolResult
+from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from engine.background.manager import BackgroundTaskManager
 
 

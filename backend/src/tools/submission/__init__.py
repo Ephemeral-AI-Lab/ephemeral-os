@@ -7,7 +7,7 @@ from typing import Any
 
 def __getattr__(name: str) -> Any:
     if name == "make_submission_tools":
-        from tools.submission.factory import make_submission_tools
+        from tools.submission._factory import make_submission_tools
 
         return make_submission_tools
     raise AttributeError(name)

@@ -10,12 +10,12 @@ from typing import Any
 from engine.tool_call.trace import record_tool_trace as _record_tool_trace
 from engine.background.manager import BackgroundTaskManager
 from message.stream_events import BackgroundTaskStarted
-from tools.builtins.background.cancel_background_task import (
+from tools.background.cancel_background_task import (
     CancelBackgroundTaskInput,
     CancelBackgroundTaskTool,
 )
-from tools.core.base import ToolExecutionContextService, ToolResult
-from tools.core.runtime import ExecutionMetadata
+from tools._framework.core.base import ToolExecutionContextService, ToolResult
+from tools._framework.core.runtime import ExecutionMetadata
 
 
 # ---------------------------------------------------------------------------

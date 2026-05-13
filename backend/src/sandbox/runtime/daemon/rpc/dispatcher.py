@@ -10,11 +10,14 @@ from __future__ import annotations
 
 import dataclasses
 import inspect
+import logging
 import time
-import traceback
 from collections.abc import Callable, Mapping
 from types import SimpleNamespace
 from typing import Any
+from uuid import uuid4
+
+logger = logging.getLogger("sandbox.runtime.daemon.rpc.dispatcher")
 
 _BOOT_T0 = time.perf_counter()
 
@@ -71,10 +74,15 @@ async def dispatch_envelope_async(
         )
         return jsonable
     except Exception as exc:
+        error_id = uuid4().hex
+        logger.exception(
+            "daemon op failed",
+            extra={"op": op, "error_id": error_id},
+        )
         return _error(
             "internal_error",
             str(exc),
-            {"op": op, "traceback": traceback.format_exc()},
+            {"op": op, "error_id": error_id},
         )
 
 

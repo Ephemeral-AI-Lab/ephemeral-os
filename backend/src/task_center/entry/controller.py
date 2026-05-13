@@ -92,7 +92,7 @@ class EntryTaskController:
         try:
             updated = self.task_store.set_task_status_if_current(
                 self.task_id,
-                expected_status=HarnessTaskStatus.WAITING_COMPLEX_TASK.value,
+                expected_status=HarnessTaskStatus.WAITING_MISSION.value,
                 status=status.value,
                 summary={
                     "outcome": report.outcome,
@@ -121,7 +121,7 @@ class EntryTaskController:
         delegated_attempt_id: str,
         goal: str,
     ) -> None:
-        """Park the entry task in ``WAITING_COMPLEX_TASK``."""
+        """Park the entry task in ``WAITING_MISSION``."""
         summary = {
             "outcome": "mission_start",
             "summary": "Waiting on delegated mission solution.",
@@ -136,7 +136,7 @@ class EntryTaskController:
         updated = self.task_store.set_task_status_if_current(
             self.task_id,
             expected_status=HarnessTaskStatus.RUNNING.value,
-            status=HarnessTaskStatus.WAITING_COMPLEX_TASK.value,
+            status=HarnessTaskStatus.WAITING_MISSION.value,
             summary=summary,
         )
         if updated is None:
@@ -149,7 +149,7 @@ class EntryTaskController:
         """Roll the entry task back to RUNNING after a failed mission start."""
         self.task_store.set_task_status_if_current(
             self.task_id,
-            expected_status=HarnessTaskStatus.WAITING_COMPLEX_TASK.value,
+            expected_status=HarnessTaskStatus.WAITING_MISSION.value,
             status=HarnessTaskStatus.RUNNING.value,
         )
 

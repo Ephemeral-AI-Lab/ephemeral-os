@@ -1,4 +1,4 @@
-"""Tests for tools.sandbox_toolkit.edit_file."""
+"""Tests for tools.sandbox.edit_file."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from typing import Any
 import pytest
 
 from sandbox.api import EditFileResult
-from tools.core.base import ToolExecutionContextService
-import tools.sandbox_toolkit.edit_file as edit_file_module
-from tools.sandbox_toolkit.edit_file import edit_file
+from tools._framework.core.base import ToolExecutionContextService
+import tools.sandbox.edit_file as edit_file_module
+from tools.sandbox.edit_file import edit_file
 
 from ._helpers import run_tool_safely
 

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from agents import get_definition
-from agents import AgentDefinition, AgentSelectionBlock
+from agents import AgentDefinition, AgentSelectionBlock, AgentVariant
 from task_center.context_engine.engine import ContextEngineDeps
 from task_center.context_engine.errors import (
     AgentDefinitionValidationError,
@@ -91,7 +91,7 @@ class RuleBasedAgentResolver:
             )
         return definition
 
-    def _select_variant_target(self, variant) -> AgentSelection:  # type: ignore[no-untyped-def]
+    def _select_variant_target(self, variant: AgentVariant) -> AgentSelection:
         target = self._load_definition(variant.use)
         if target.variants:
             raise AgentDefinitionValidationError(

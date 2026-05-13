@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from tools.core import (
+from tools._framework.core import (
     BaseTool,
     HookResult,
     HookStatus,
@@ -20,38 +20,39 @@ from tools.core import (
     ToolResult,
     tool,
 )
-from tools.core.runtime import ExecutionMetadata
+from tools._framework.core.runtime import ExecutionMetadata
 
 _LAZY_EXPORTS = {
-    "CancelBackgroundTaskTool": "tools.builtins.background",
-    "CheckBackgroundTaskResultTool": "tools.builtins.background",
-    "ToolCatalogEntry": "tools.introspection.catalog",
-    "ToolFactoryContext": "tools.factory",
-    "WaitBackgroundTasksTool": "tools.builtins.background",
-    "_consume_tool_budget_or_reject": "tools.execution.tool_call",
-    "build_background_snapshot_metadata": "tools.builtins.background._common",
-    "collect_schema_tools": "tools.introspection.schema_summary",
-    "collect_tool_catalog": "tools.introspection.catalog",
-    "create_tool": "tools.factory",
-    "create_tools": "tools.factory",
-    "decorate_schemas_for_background": "tools.core.validation",
-    "execute_tool_call": "tools.execution.tool_call",
-    "execute_tool_call_streaming": "tools.execution.tool_call",
-    "execute_tool_once": "tools.execution.tool_call",
-    "format_tool_schema_summary": "tools.introspection.schema_summary",
-    "has_tool": "tools.factory",
-    "list_available_tools": "tools.factory",
-    "make_background_tools": "tools.builtins.background",
-    "make_sandbox_tools": "tools.sandbox_toolkit",
-    "make_skills_tools": "tools.builtins.skills",
+    "CancelBackgroundTaskTool": "tools.background",
+    "CheckBackgroundTaskResultTool": "tools.background",
+    "ToolCatalogEntry": "tools._framework.introspection.catalog",
+    "ToolFactoryContext": "tools._framework.factory",
+    "WaitBackgroundTasksTool": "tools.background",
+    "_consume_tool_budget_or_reject": "tools._framework.execution.tool_call",
+    "build_background_snapshot_metadata": "tools.background._lib._common",
+    "collect_schema_tools": "tools._framework.introspection.schema_summary",
+    "collect_tool_catalog": "tools._framework.introspection.catalog",
+    "create_tool": "tools._framework.factory",
+    "create_tools": "tools._framework.factory",
+    "decorate_schemas_for_background": "tools._framework.core.validation",
+    "execute_tool_call": "tools._framework.execution.tool_call",
+    "execute_tool_call_streaming": "tools._framework.execution.tool_call",
+    "execute_tool_once": "tools._framework.execution.tool_call",
+    "format_tool_schema_summary": "tools._framework.introspection.schema_summary",
+    "has_tool": "tools._framework.factory",
+    "list_available_tools": "tools._framework.factory",
+    "make_ask_helper_tools": "tools.ask_helper",
+    "make_background_tools": "tools.background",
+    "make_sandbox_tools": "tools.sandbox",
+    "make_skills_tools": "tools.skills",
     "make_subagent_tool_from_context": "tools.subagent",
     "make_subagent_tools": "tools.subagent",
     "make_submission_tools": "tools.submission",
-    "register_tool_factory": "tools.factory",
-    "register_tool_instance": "tools.factory",
-    "render_background_snapshot": "tools.builtins.background._common",
+    "register_tool_factory": "tools._framework.factory",
+    "register_tool_instance": "tools._framework.factory",
+    "render_background_snapshot": "tools.background._lib._common",
     "resolve_harness_notification_triggers": "tools.submission.notification_triggers",
-    "SANDBOX_CONTEXT": "tools.sandbox_toolkit.context",
+    "SANDBOX_CONTEXT": "tools.sandbox._lib.context",
 }
 
 
@@ -102,6 +103,7 @@ __all__ = [
     "format_tool_schema_summary",
     "has_tool",
     "list_available_tools",
+    "make_ask_helper_tools",
     "make_background_tools",
     "make_sandbox_tools",
     "make_skills_tools",

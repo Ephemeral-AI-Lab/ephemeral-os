@@ -30,6 +30,19 @@ def resolve_workspace_cwd(
         resolved = mounted_root / rel
     else:
         resolved = mounted_root / candidate
+
+    # Belt-and-suspenders containment check: the request boundary already
+    # rejects `..` in relative cwd, but verify the resolved path still falls
+    # inside the mounted workspace root before any side effect (mkdir).
+    mounted_root_resolved = mounted_root.resolve(strict=False)
+    resolved_check = resolved.resolve(strict=False)
+    try:
+        resolved_check.relative_to(mounted_root_resolved)
+    except ValueError as exc:
+        raise ValueError(
+            f"cwd escapes workspace replacement root: {raw}"
+        ) from exc
+
     resolved.mkdir(parents=True, exist_ok=True)
     return resolved
 

@@ -37,9 +37,18 @@ _REQUIRED_FIELDS = frozenset(
 def _planner_v1_build(
     scope: ContextScope, deps: ContextEngineDeps
 ) -> ContextPacket:
-    assert scope.mission_id is not None
-    assert scope.episode_id is not None
-    assert scope.attempt_id is not None
+    # Engine pre-validates required scope fields via ``assert_fields``; this
+    # explicit guard makes the recipe self-defending under ``python -O`` where
+    # ``assert`` would be stripped.
+    if (
+        scope.mission_id is None
+        or scope.episode_id is None
+        or scope.attempt_id is None
+    ):
+        raise ContextEngineError(
+            "planner_v1 requires mission_id, episode_id, and attempt_id; "
+            f"got {scope!r}"
+        )
     mission = deps.mission_store.get(scope.mission_id)
     if mission is None:
         raise ContextEngineError(

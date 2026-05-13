@@ -100,7 +100,7 @@ def _build_runtime_with_open_graph(
 def _set_parent_waiting(task_store, parent_task_id: str) -> None:
     task_store.set_task_status(
         parent_task_id,
-        status=HarnessTaskStatus.WAITING_COMPLEX_TASK.value,
+        status=HarnessTaskStatus.WAITING_MISSION.value,
     )
 
 
@@ -242,7 +242,7 @@ def test_router_treats_done_parent_as_already_delivered(
 def test_router_raises_when_parent_orchestrator_missing(
     mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
-    """No-restart invariant: while a parent task is in WAITING_COMPLEX_TASK
+    """No-restart invariant: while a parent task is in WAITING_MISSION
     its orchestrator must remain registered. A missing orchestrator at
     delivery time is a hard ``TaskCenterInvariantViolation``."""
     runtime, parent_attempt_id, parent_task_id = _build_runtime_with_open_graph(
@@ -270,7 +270,7 @@ def test_router_raises_when_parent_orchestrator_missing(
 
     parent_task = task_store.get_task(parent_task_id)
     assert parent_task is not None
-    assert parent_task["status"] == HarnessTaskStatus.WAITING_COMPLEX_TASK.value
+    assert parent_task["status"] == HarnessTaskStatus.WAITING_MISSION.value
 
 
 def test_router_rejects_running_parent(
@@ -349,7 +349,7 @@ def test_router_routes_entry_mode_close_report_through_controller(
     from task_center.entry.controller import EntryTaskController
     from task_center.task import HarnessTaskRole
 
-    # Seed entry-mode caller in WAITING_COMPLEX_TASK.
+    # Seed entry-mode caller in WAITING_MISSION.
     entry_task_id = "entry-task"
     task_store.upsert_task(
         task_id=entry_task_id,
@@ -357,7 +357,7 @@ def test_router_routes_entry_mode_close_report_through_controller(
         role=HarnessTaskRole.GENERATOR.value,
         agent_name="entry_executor",
         task_input="entry goal",
-        status=HarnessTaskStatus.WAITING_COMPLEX_TASK.value,
+        status=HarnessTaskStatus.WAITING_MISSION.value,
         summaries=[],
         needs=[],
         task_center_attempt_id=None,

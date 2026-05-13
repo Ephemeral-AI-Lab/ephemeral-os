@@ -96,6 +96,8 @@ class LayerPublisher:
             write_changes_start = time.perf_counter()
             for prepared in prepared_changes:
                 self._write_change(staging_dir, prepared)
+            _fsync_tree_files(staging_dir)
+            _fsync_dir(staging_dir)
             record_elapsed(
                 timings,
                 "layer_stack.publish.write_changes_s",
@@ -104,6 +106,7 @@ class LayerPublisher:
             replace_start = time.perf_counter()
             layer_dir.parent.mkdir(parents=True, exist_ok=True)
             os.replace(staging_dir, layer_dir)
+            _fsync_dir(layer_dir.parent)
             _write_layer_digest(self._storage_root, layer_id, layer_digest)
             record_elapsed(
                 timings,
@@ -241,7 +244,38 @@ def _digest_path(storage_root: Path, layer_id: str) -> Path:
 def _write_layer_digest(storage_root: Path, layer_id: str, digest: str) -> None:
     metadata = _metadata_dir(storage_root)
     metadata.mkdir(parents=True, exist_ok=True)
-    _digest_path(storage_root, layer_id).write_text(digest, encoding="utf-8")
+    target = _digest_path(storage_root, layer_id)
+    data = digest.encode("utf-8")
+    fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
+    try:
+        os.write(fd, data)
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    _fsync_dir(metadata)
+
+
+def _fsync_dir(path: Path) -> None:
+    fd = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def _fsync_tree_files(root: Path) -> None:
+    """fsync every regular file under *root* (skip symlinks)."""
+    for current_root, _dirnames, filenames in os.walk(root, followlinks=False):
+        current = Path(current_root)
+        for filename in filenames:
+            file_path = current / filename
+            if file_path.is_symlink():
+                continue
+            fd = os.open(file_path, os.O_RDONLY)
+            try:
+                os.fsync(fd)
+            finally:
+                os.close(fd)
 
 
 def _head_layer_digest(storage_root: Path, active: Manifest) -> str | None:

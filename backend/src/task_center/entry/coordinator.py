@@ -228,12 +228,16 @@ class TaskCenterEntryCoordinator:
     def _build_composer(self) -> ContextComposer:
         """Construct the composer + register built-in predicates / recipes.
 
-        Predicate and recipe registration are idempotent — safe to call once
-        per entry-coordinator startup. After registration we cross-validate
-        every loaded :class:`AgentDefinition` so a typo in a frontmatter
-        ``variants:`` block, a dangling target, a chained variant, or an
-        unknown ``context_recipe`` fails the spawn here rather than during
-        the first model turn.
+        Predicate and recipe registration are idempotent — re-registration is
+        the intended steady-state behaviour: each entry-coordinator startup
+        re-asserts the builtin set and cross-validates every loaded
+        :class:`AgentDefinition` so a typo in a frontmatter ``variants:``
+        block, a dangling target, a chained variant, or an unknown
+        ``context_recipe`` fails the spawn here rather than during the first
+        model turn. Tests that intentionally mutate the process-global
+        :class:`PredicateRegistry` or :class:`RecipeRegistry` between
+        coordinator builds should reset them to a known state in their own
+        teardown — this method is not a sandbox.
         """
         register_builtin_predicates()
         register_builtin_recipes()

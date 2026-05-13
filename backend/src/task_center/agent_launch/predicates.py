@@ -58,8 +58,14 @@ class PredicateRegistry:
 
 def _partial_plan_caller_ancestor(ctx: ResolverContext) -> bool:
     """Delegate to the canonical ancestry predicate."""
+    mission_id = ctx.scope.mission_id
+    if mission_id is None:
+        # No mission scope => no caller-attempt ancestry to walk. Scopes
+        # without a mission (e.g. the top-level entry executor) cannot have
+        # a partial-plan caller by construction.
+        return False
     return has_partial_planned_caller_ancestor(
-        mission_id=ctx.scope.mission_id,
+        mission_id=mission_id,
         mission_store=ctx.deps.mission_store,
         episode_store=ctx.deps.episode_store,
         attempt_store=ctx.deps.attempt_store,

@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from sandbox.provider.daytona.context import DaytonaContextPreparer
-from tools.core.base import ToolExecutionContextService
+from tools._framework.core.base import ToolExecutionContextService
 
 
 def _ctx(services=None) -> ToolExecutionContextService:

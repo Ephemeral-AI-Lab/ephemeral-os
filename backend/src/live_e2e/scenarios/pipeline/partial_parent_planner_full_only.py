@@ -13,11 +13,11 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.main_agent.evaluator import submit_evaluation_success
-from tools.submission.main_agent.generator.verifier import (
+from tools.submission.evaluator import submit_evaluation_success
+from tools.submission.verifier import (
     submit_verification_success,
 )
-from tools.submission.main_agent.planner import (
+from tools.submission.planner import (
     submit_full_plan,
     submit_partial_plan,
 )

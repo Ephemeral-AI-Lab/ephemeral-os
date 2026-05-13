@@ -1,0 +1,65 @@
+# SWE-EVO Real-Agent Live E2E — Ralph Progress
+
+## Plan
+.omc/plans/sweevo-real-agent-live-e2e-plan-20260512.md
+
+## Session: 2026-05-12
+
+### Pre-implementation findings
+- The plan is unusually detailed: verbatim code snippets, exact line numbers, file inventory.
+- Existing `.omc/prd.json` was stale (from completed Complex build phase 2). Overwritten.
+- `backend/src/server/` already absent; `runtime/` package does not yet exist.
+- 9 stale `from server.app_factory import …` import sites verified via grep (8 production files + 1 test).
+- `system_prompt_override` empirically dead: grep returns only `test_settings.py:25` which uses
+  `merge_cli_overrides(verbose=True, system_prompt=None)` — that tests the generic merger, not the
+  field. Safe to drop the field; keep `merge_cli_overrides` as-is.
+- `factory.py` `config.*` access points (lines 174, 197, 284, 311, 323, 359) confirm all three
+  fields {cwd, external_api_client, _initial_messages} + `resolve_settings()` are load-bearing.
+- `agents/profile/main/` ships planner.md, evaluator.md, entry_executor.md,
+  generator_executor.md (name=executor), generator_verifier.md (name=verifier), planner_full_only.md.
+- `models/registry.json` exists at repo root.
+- `launcher._pending: set[asyncio.Task[None]]` exists at agent_launch/launcher.py:61.
+
+### Constraints flagged for architect review
+1. **Locally unverifiable ACs.** Verification gates §13-16 require real LLM creds + Daytona +
+   `EOS_SWEEVO_REAL_AGENT_TESTS=1`. We verify wiring (imports + signatures + code paths) but
+   cannot execute the end-to-end runs. Architect needs to assess code-correctness; runtime
+   verification is deferred to the human gate.
+2. **EPHEMERALOS_DATABASE_URL absent at dev time** — `ensure_runtime_stores_ready` can be
+   imported but the store-readiness assertions in plan §0.5 step 3 require a real DSN. We
+   verify import + dataclass shape; full DB roundtrip is deferred.
+3. **PR-split preference.** Plan says Phase 0 ships first, Phase 1 second. User invoked /ralph
+   on the whole plan — we bundle into this session and note the split preference for hand-off.
+
+### Codebase landmarks (for future iterations)
+- Scenario seam pattern: backend/src/live_e2e/runner.py:`run_scenario` — mirror minus mock-runner.
+- AuditRecorder: backend/src/live_e2e/audit/recorder.py — `bind_task_center_run_id` lazy-binds tcrid.
+- TaskCenterStoreBundle: backend/src/live_e2e/stores.py — `create_per_test_task_center_stores()`.
+- SWE-EVO prompt builder: backend/src/benchmarks/sweevo/prompt.py:`build_sweevo_user_prompt`.
+- SWE-EVO eval: backend/src/benchmarks/sweevo/evaluation.py:`evaluate_sweevo_result`.
+- Workspace fixture (function-scoped reset): backend/src/live_e2e/sweevo_adapter.py:`workspace`.
+
+### Implementation summary (2026-05-12)
+- **Phase 0**: created backend/src/runtime/{__init__,app_factory}.py with 3-field RuntimeConfig
+  (cwd / external_api_client / _initial_messages — no system_prompt_override) and 3 store singletons
+  (task_center_store, agent_run_store, model_store). ensure_runtime_stores_ready does is_ready/
+  is_available-guarded init and fail-fast asserts the model registry JSON before seeding. 9 stale
+  `from server.app_factory import …` lazy/TYPE_CHECKING imports rewritten to `runtime.app_factory`.
+- **Phase 1**: created backend/src/live_e2e/real_agent_bootstrap.py (idempotent _BOOTSTRAPPED sentinel;
+  loads agent profile tree from parents[1]/agents/profile and asserts the 5 required names) and
+  backend/src/live_e2e/real_agent_run.py (mirrors live_e2e/runner.py minus mock plumbing; wraps
+  wait_for_idle in asyncio.wait_for with explicit per-task cancel of handle.launcher._pending on
+  timeout; F2P/P2P gate triggers evaluate_sweevo_result ONLY when task_center_status == 'done' AND
+  NOT aborted_by_timeout; writes sweevo_result.json in every branch). Replaced the deferred
+  _cmd_real_agent stub in benchmarks/sweevo/__main__.py with an async implementation and added
+  --max-duration-s. Added a gated test_real_agent.py (skipif EOS_SWEEVO_REAL_AGENT_TESTS != '1')
+  that depends on the function-scoped `workspace` fixture (per-test reset), not session-scoped
+  `sweevo_sandbox`. Added a "Real-agent path" section to docs/wiki/live-e2e-testing-framework-design.md.
+- **Architect review**: APPROVED-WITH-NITS (3 LOW, all baseline-parity or stylistic).
+- **Deslop**: applied one targeted simplification (trimmed rotting line numbers from the RuntimeConfig
+  docstring). All other architect nits intentionally deferred to keep scope bounded — they touch
+  files outside the Ralph diff (runner.py for _on_agent_event factoring).
+- **Out-of-scope discovery**: `backend/src/__main__.py:6` references `server.entrypoint`, which is
+  broken in HEAD because backend/src/server/ was deleted. This pre-dates the Ralph session — the
+  plan explicitly scoped only `server.app_factory` (HTTP routers and server.entrypoint were not
+  part of the recovery). Worth a follow-up issue.

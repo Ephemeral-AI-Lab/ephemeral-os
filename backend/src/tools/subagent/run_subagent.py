@@ -31,8 +31,8 @@ from message.messages import (
     ToolResultBlock,
     ToolUseBlock,
 )
-from tools.core.base import ExecutionMetadata, TextToolOutput, ToolExecutionContextService, ToolResult
-from tools.core.decorator import tool
+from tools._framework.core.base import ExecutionMetadata, TextToolOutput, ToolExecutionContextService, ToolResult
+from tools._framework.core.decorator import tool
 
 logger = logging.getLogger(__name__)
 

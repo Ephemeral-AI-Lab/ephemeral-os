@@ -1,6 +1,6 @@
 """Subagent tools."""
 
-from tools.subagent.factory import (
+from tools.subagent._factory import (
     RestrictedRunSubagentTool,
     make_subagent_tool_from_context,
     make_subagent_tools,

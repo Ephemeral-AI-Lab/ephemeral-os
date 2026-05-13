@@ -64,7 +64,7 @@ What an executor MUST do:
 1. **Read the assigned task** — `planned_task_spec` block (REQUIRED, last position). This is the contract.
 2. **Use the attempt plan** (`task_specification` block, HIGH) only as framing. Don't re-implement other tasks; sibling DAG nodes are someone else's job.
 3. **Use dependency summaries** for inputs. The DAG's edges encode information flow.
-4. **Decide scope fit before editing.** If the task is too broad, call `request_mission_solution` _before_ any `write_file`/`edit_file`/`shell` use. Once edits begin, recursive delegation is closed (`RequestMissionBeforeEditGate`).
+4. **Decide scope fit before editing.** If the task is too broad, call `request_mission_solution` _before_ any `write_file`/`edit_file`/`shell` use. Once edits begin, the `request_mission_after_edit` notification reminder fires to steer the agent toward finishing through its own success/failure terminal instead.
 5. **Write a self-contained summary on submission.** It is the only durable record of this task — siblings, the evaluator, and a future retry planner will read it without the conversation history.
 6. **Exit via exactly one terminal.**
 
@@ -122,11 +122,7 @@ Same flow with `outcome="failure"`. The `reason` field is a short cause-of-failu
 
 `tools/submission/main_agent/generator/request_mission_solution.py:41`. Spawns a child Mission. Gates:
 
-| Gate | Source | Enforces |
-|---|---|---|
-| `RequestMissionBeforeEditGate()` | `request_mission_before_edit_gate.py:35` | No `write_file`/`edit_file`/`shell` tool call has occurred in this turn. Once edits begin, recursive delegation is closed. |
-
-Verifier-vs-executor restriction is enforced by the profile's `terminals` whitelist (only the executor profile lists `request_mission_solution`), not at the hook layer. Structural role checks (caller is a live generator in an open attempt) happen inside `resolve_attempt_submission_context`, which raises `AttemptSubmissionContextError` rather than running a pre-hook.
+`request_mission_solution` has no pre-hook. Verifier-vs-executor restriction is enforced by the profile's `terminals` whitelist (only the executor profile lists `request_mission_solution`). Structural role checks (caller is a live generator in an open attempt) happen inside `resolve_attempt_submission_context`, which raises `AttemptSubmissionContextError`. After the first edit, the `request_mission_after_edit` notification reminder nudges the agent toward its own success/failure terminal — the call itself is not blocked.
 
 After acceptance, the parent task parks in `WAITING_COMPLEX_TASK` (`MissionStarter.start`, `mission/starter.py:53`); the agent run terminates. When the child Mission closes, `MissionCloseReportRouter.deliver` routes the close report back into the parent attempt's orchestrator, which transitions the parked task to `DONE` (mission succeeded) or `FAILED` (mission failed), and `dispatch_ready_work()` re-evaluates the DAG.
 
@@ -142,11 +138,7 @@ Same routing with `outcome="failure"`. Failure cascades the same way as executor
 
 ## Constraints in summary
 
-| Gate | Applied to | Effect |
-|---|---|---|
-| `RequestMissionBeforeEditGate` | `request_mission_solution` | No edit-capable tool used in the current run yet. |
-
-Profile-vs-terminal separation (executor cannot call verifier terminals, and vice versa) is enforced by each profile's `AgentDefinition.terminals` whitelist. Structural role and attempt-open checks are enforced by `resolve_attempt_submission_context`, which fails the tool with `AttemptSubmissionContextError` rather than running a pre-hook.
+Submission terminals have no pre-hooks. Structural role and attempt-open checks are enforced by `resolve_attempt_submission_context`, which fails the tool with `AttemptSubmissionContextError`. Profile-vs-terminal separation (executor cannot call verifier terminals, and vice versa) is enforced by each profile's `AgentDefinition.terminals` whitelist. After-edit and resolver-loop pressure are delivered as notification reminders (`request_mission_after_edit`, `resolver_limit`), not blocking gates.
 
 ## DAG behavior
 
@@ -498,7 +490,7 @@ This ordering is not what `_compress` operates on — priority drives only compr
 | Mode | Cause | Effect |
 |---|---|---|
 | Profile mismatch | Verifier agent calling executor terminal (or vice versa) | Each profile's `terminals` whitelist excludes the other side's terminals, so the call is never dispatched. |
-| Edit-then-delegate | Edit tool used before `request_mission_solution` | `RequestMissionBeforeEditGate` rejects. Generator must finish through success/failure. |
+| Edit-then-delegate | Edit tool used before `request_mission_solution` | `request_mission_after_edit` notification reminder fires; the generator is expected to finish through success/failure. The call is not hard-blocked. |
 | Resolver saturation | ≥4 unresolved resolver calls before verifier success | `resolver_limit` notification reminder fires; verifier is expected to submit failure with remaining issues. |
 | Submission failure | Agent submits explicit failure | Cascade BLOCKED descendants; close attempt `FAILED/generator_failed`. |
 | Launcher exception | Agent crash, sandbox error | `_launch_ready_generator` exception path marks task `FAILED` with `fail_reason="agent_launch_failed"`; cascade. |

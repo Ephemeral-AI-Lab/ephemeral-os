@@ -30,8 +30,14 @@ _REQUIRED_FIELDS = frozenset({"mission_id", "attempt_id"})
 def _evaluator_v1_build(
     scope: ContextScope, deps: ContextEngineDeps
 ) -> ContextPacket:
-    assert scope.mission_id is not None
-    assert scope.attempt_id is not None
+    # Engine pre-validates required scope fields via ``assert_fields``; this
+    # explicit guard makes the recipe self-defending under ``python -O`` where
+    # ``assert`` would be stripped.
+    if scope.mission_id is None or scope.attempt_id is None:
+        raise ContextEngineError(
+            "evaluator_v1 requires mission_id and attempt_id; "
+            f"got {scope!r}"
+        )
     attempt = deps.attempt_store.get(scope.attempt_id)
     if attempt is None:
         raise ContextEngineError(
@@ -66,7 +72,14 @@ def _evaluator_v1_build(
     for task_id in attempt.generator_task_ids:
         task = deps.task_store.get_task(task_id)
         if task is None:
-            continue
+            # ``generator_task_ids`` are the planner-submitted DAG nodes
+            # persisted on the attempt; a missing row at evaluator-launch time
+            # is a harness invariant violation. Surface it instead of letting
+            # the evaluator reason over a partial frame.
+            raise ContextEngineError(
+                f"Generator task {task_id!r} referenced by attempt is missing; "
+                "evaluator context cannot be assembled without dependency results."
+            )
         blocks.append(
             ContextBlock(
                 kind=ContextBlockKind.COMPLETED_TASK_SUMMARY,

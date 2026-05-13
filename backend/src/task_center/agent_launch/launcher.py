@@ -112,9 +112,8 @@ class EphemeralAttemptAgentLauncher:
             attempt_runtime=runtime,
             composer=runtime.composer,
         )
-        result: Any | None = None
         try:
-            result = await runner(
+            result: Any = await runner(
                 self._config,
                 launch.task_input,
                 agent_def=agent_def,
@@ -139,8 +138,22 @@ class EphemeralAttemptAgentLauncher:
             )
             return
 
-        if result.status == "failed":
-            summary = f"Agent run failed: {result.error or 'unknown error'}"
+        # Guard the public-seam contract: ``AttemptAgentRunner`` is typed
+        # ``Callable[..., Awaitable[Any]]`` so any value (including ``None``
+        # or an object missing ``.status``) is permitted. Treat those as the
+        # same exhaustion case so ``wait_for_idle`` does not propagate
+        # ``AttributeError`` out of the asyncio task.
+        if result is None:
+            await self._report_unfinished_running_task(
+                launch,
+                summary="Agent runner returned None.",
+            )
+            return
+
+        status = getattr(result, "status", None)
+        if status == "failed":
+            error = getattr(result, "error", None) or "unknown error"
+            summary = f"Agent run failed: {error}"
         else:
             summary = "Agent run ended without a terminal submission."
         await self._report_unfinished_running_task(launch, summary=summary)
@@ -162,7 +175,7 @@ class EphemeralAttemptAgentLauncher:
             return
         task = runtime.task_store.get_task(launch.task_id)
         if task is None or task.get("status") != HarnessTaskStatus.RUNNING.value:
-            # Entry-mode tasks may already be in WAITING_COMPLEX_TASK after a
+            # Entry-mode tasks may already be in WAITING_MISSION after a
             # delegated mission start; or DONE/FAILED via a terminal. Either way,
             # the controller has already moved the task off RUNNING and
             # there's nothing to do.
@@ -222,7 +235,10 @@ class EphemeralAttemptAgentLauncher:
         *,
         summary: str,
     ) -> None:
-        assert launch.attempt_id is not None
+        if launch.attempt_id is None:
+            raise TaskCenterInvariantViolation(
+                "Planner exhaustion report requires launch.attempt_id."
+            )
         orchestrator.apply_planner_failure(
             PlannerFailureSubmission(
                 attempt_id=launch.attempt_id,
@@ -239,7 +255,10 @@ class EphemeralAttemptAgentLauncher:
         *,
         summary: str,
     ) -> None:
-        assert launch.attempt_id is not None
+        if launch.attempt_id is None:
+            raise TaskCenterInvariantViolation(
+                "Generator exhaustion report requires launch.attempt_id."
+            )
         orchestrator.apply_generator_submission(
             GeneratorSubmission(
                 attempt_id=launch.attempt_id,
@@ -257,7 +276,10 @@ class EphemeralAttemptAgentLauncher:
         *,
         summary: str,
     ) -> None:
-        assert launch.attempt_id is not None
+        if launch.attempt_id is None:
+            raise TaskCenterInvariantViolation(
+                "Evaluator exhaustion report requires launch.attempt_id."
+            )
         orchestrator.apply_evaluator_submission(
             EvaluatorSubmission(
                 attempt_id=launch.attempt_id,

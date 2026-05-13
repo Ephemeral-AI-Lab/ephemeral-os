@@ -26,9 +26,9 @@ from plugins.catalog.lsp.tools.query_symbols import (
     query_symbols as lsp_query_symbols_tool,
 )
 from sandbox.api import ReadFileRequest
-from tools.core.base import BaseTool
-from tools.core.results import ToolResult
-from tools.core.runtime import ExecutionMetadata
+from tools._framework.core.base import BaseTool
+from tools._framework.core.results import ToolResult
+from tools._framework.core.runtime import ExecutionMetadata
 
 import sandbox.api as sandbox_api
 

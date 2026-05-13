@@ -8,8 +8,8 @@ from typing import Any
 
 from live_e2e.scenarios.base import ScenarioContext
 from live_e2e.squad.tool_scripts import PreparedToolScript, ToolScriptStep
-from tools.sandbox_toolkit.read_file import read_file as read_file_tool
-from tools.sandbox_toolkit.write_file import write_file as write_file_tool
+from tools.sandbox.read_file import read_file as read_file_tool
+from tools.sandbox.write_file import write_file as write_file_tool
 
 _CAPACITY_ROOT = ".ephemeralos/sweevo-mock/capacity"
 _SUMMARY_PATH = f"{_CAPACITY_ROOT}/full-system-capacity-summary.json"

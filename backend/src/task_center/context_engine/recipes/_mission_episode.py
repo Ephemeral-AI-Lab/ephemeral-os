@@ -98,7 +98,6 @@ def _previous_episode_result_blocks(
                 source_kind="episode",
                 metadata={
                     **base_meta,
-                    "episode_sequence_no": str(prior.sequence_no),
                     "subheading": f"Episode {prior.sequence_no} accepted plan",
                 },
             )
@@ -112,7 +111,6 @@ def _previous_episode_result_blocks(
                 source_kind="episode",
                 metadata={
                     **base_meta,
-                    "episode_sequence_no": str(prior.sequence_no),
                     "subheading": f"Episode {prior.sequence_no} summary",
                 },
             )

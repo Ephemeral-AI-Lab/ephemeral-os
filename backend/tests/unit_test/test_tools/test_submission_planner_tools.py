@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 
 from task_center.attempt import AttemptStage
-from tools.execution.tool_call import execute_tool_once
-from tools.submission.main_agent.planner import submit_full_plan, submit_partial_plan
+from tools._framework.execution.tool_call import execute_tool_once
+from tools.submission.planner import submit_full_plan, submit_partial_plan
 
 from .submission_test_utils import (
     build_harness_fixture,

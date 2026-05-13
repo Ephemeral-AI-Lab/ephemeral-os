@@ -68,7 +68,7 @@ Terminal-tool family driving task_center lifecycle. All `is_terminal_tool=True`;
 - `submit_partial_plan` (`submit_partial_plan.py:34`)
 
 **main_agent/generator**
-- `request_mission_solution` (`request_mission_solution.py:42`) — generator pre-edit terminal; blocked after first edit by `RequestMissionBeforeEditGate`
+- `request_mission_solution` (`request_mission_solution.py:42`) — generator pre-edit terminal; the `request_mission_after_edit` notification reminder nudges the generator to finish through its own success/failure once edits have begun
 - `submit_execution_success` / `submit_execution_failure` (`generator/executor/`)
 - `submit_verification_success` / `submit_verification_failure` (`generator/verifier/`)
 
@@ -95,16 +95,14 @@ Pre-hooks run sequentially before execution; `fail` short-circuits and returns h
 
 ### Submission gate hooks
 
-| Hook | File:line | Purpose |
-|---|---|---|
-| `RequestMissionBeforeEditGate` | `tools/submission/hooks/request_mission_before_edit_gate.py:35` | Blocks `request_mission_solution` if any `write_file/edit_file/shell` already in history |
+None. Submission tools no longer wire any pre-hooks. Caller-role, attempt-open, and profile-vs-terminal checks live elsewhere: structural role / open-attempt checks fail inside `resolve_attempt_submission_context` as `AttemptSubmissionContextError`; profile-vs-terminal separation is enforced by each `AgentDefinition.terminals` whitelist. Behavioral nudges (resolver-loop saturation, mission-after-edit) are delivered via notification triggers instead, so the agent retains the choice.
 
 ## Notification triggers
 
 `NotificationRule` factories fired from inside tool execution (triggers run at top of each model turn via `dispatch_rules`).
 
 - **`make_resolver_limit_reminder`** (`resolver_limit.py:11`) — fires when `unresolved_resolver_call_count(messages) >= 4`; rule name `"resolver_limit"`, `fire_once=True`
-- **`make_mission_request_after_edit_reminder`** (`request_mission_after_edit.py:13`) — fires when `generator_has_edited(messages)` is True; rule name `"request_mission_after_edit"`, `fire_once=True`
+- **`make_mission_request_after_edit_reminder`** (`request_mission_after_edit.py`) — fires when the generator's transcript already contains a `write_file`/`edit_file`/`shell` tool use; rule name `"request_mission_after_edit"`, `fire_once=True`
 
 Both assembled into `AgentDefinition.notification_rules` at agent launch time.
 
@@ -239,7 +237,7 @@ Three event types per turn (in `engine/query/request.py`):
 ### What to test
 | Concern | Where it lives |
 |---|---|
-| Tool guardrails (gate hooks) | `tools/submission/hooks/` — each `HookResult.fail` path |
+| Submission guardrails | `tools/submission/context.py` (`resolve_attempt_submission_context` → `AttemptSubmissionContextError`); each `AgentDefinition.terminals` whitelist; notification triggers under `tools/submission/notification_triggers/` |
 | Pre/post hook lifecycle | `tools/execution/hook_runner.py:ToolHookExecutionHelper` |
 | Max-step enforcement | `engine/query/loop.py:280` + `tool_call.py:59` |
 | Terminal tool submission (`does_terminate`) | `tool_call.py:211`, loop `TOOL_STOP` at `loop.py:276` |
@@ -261,6 +259,6 @@ The replay harness reads `"assistant"` events (keyed by `seq`) and replays them 
 
 ## See also
 
-- [[role-planner]], [[role-generator]], [[role-evaluator]] — hook usage per role (RequestMissionBeforeEditGate)
+- [[role-planner]], [[role-generator]], [[role-evaluator]] — submission contracts per role
 - [[engine-query-loop-llm-seam]] — where these run
 - [[task-center-pipeline]] — what terminal tools drive

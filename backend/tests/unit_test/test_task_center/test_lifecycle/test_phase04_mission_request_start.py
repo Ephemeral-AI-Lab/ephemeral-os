@@ -137,7 +137,7 @@ def test_mission_start_creates_request_segment_graph_and_marks_parent_waiting(
     assert initial_graph is not None
     assert initial_graph.episode_id == initial_episode.id
     assert parent_task is not None
-    assert parent_task["status"] == HarnessTaskStatus.WAITING_COMPLEX_TASK.value
+    assert parent_task["status"] == HarnessTaskStatus.WAITING_MISSION.value
     # Delegated orchestrator was started.
     assert runtime.orchestrator_registry.get(initial_graph.id) is not None
 
@@ -355,10 +355,10 @@ def test_mission_start_accepts_entry_mode_caller_with_no_parent_attempt(
         goal="solve delegated work",
     )
 
-    # Entry task is now WAITING_COMPLEX_TASK via the controller.
+    # Entry task is now WAITING_MISSION via the controller.
     entry_task = task_store.get_task(entry_task_id)
     assert entry_task is not None
-    assert entry_task["status"] == HarnessTaskStatus.WAITING_COMPLEX_TASK.value
+    assert entry_task["status"] == HarnessTaskStatus.WAITING_MISSION.value
     # Result carries None for parent_attempt_id (entry mode).
     assert result.parent_attempt_id is None
     # Delegated request + episode + attempt were all created and started.

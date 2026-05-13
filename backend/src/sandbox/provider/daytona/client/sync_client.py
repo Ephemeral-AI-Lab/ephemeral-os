@@ -38,6 +38,9 @@ def _timeout_seconds_from_env() -> float:
 
 
 _SANDBOX_TIMEOUT_SECONDS = _timeout_seconds_from_env()
+# Health probes and unauthenticated lookups should not pay the cold-start budget;
+# scheduler-degraded states must surface within seconds, not minutes.
+_HEALTH_TIMEOUT_SECONDS = 30.0
 
 
 # ---------------------------------------------------------------------------
@@ -60,6 +63,7 @@ def acquire_client() -> Any:
         )
     current_key = (api_key, api_url, target)
 
+    stale_client: Any = None
     with _client_lock:
         if _cached_client is not None and _cached_client_key == current_key:
             return _cached_client
@@ -71,20 +75,32 @@ def acquire_client() -> Any:
                 "Daytona SDK not installed. Run: pip install daytona-sdk"
             ) from exc
 
+        if _cached_client is not None:
+            stale_client = _cached_client
+
         cfg_kwargs: dict[str, str] = {"api_key": api_key, "api_url": api_url}
         if target:
             cfg_kwargs["target"] = target
         cfg = DaytonaConfig(**cfg_kwargs)
         _cached_client = Daytona(cfg)
         _cached_client_key = current_key
+        new_client = _cached_client
         logger.info("Daytona client created (api_url=%s)", api_url)
-        return _cached_client
+
+    if stale_client is not None:
+        try:
+            close_fn = getattr(stale_client, "close", None)
+            if callable(close_fn):
+                close_fn()
+        except Exception:
+            logger.debug("Failed to close superseded Daytona client", exc_info=True)
+    return new_client
 
 
 def fetch_sandbox(sandbox_id: str) -> Any:
     """Fetch a pre-created sandbox by ID."""
     client = acquire_client()
-    sandbox = client.get(sandbox_id)
+    sandbox = client.get(sandbox_id, timeout=_SANDBOX_TIMEOUT_SECONDS)
     if sandbox is None:
         raise ValueError(f"Sandbox '{sandbox_id}' not found")
     return sandbox
@@ -125,12 +141,12 @@ def _creation_param_classes() -> tuple[Any, Any]:
 
 def _paginate_all(list_fn: Any, limit: int) -> list[Any]:
     """Exhaust a paginated Daytona SDK list method and return all items."""
-    first_page = list_fn(limit=limit)
+    first_page = list_fn(limit=limit, timeout=_SANDBOX_TIMEOUT_SECONDS)
     items = list(getattr(first_page, "items", []) or [])
     current_page = int(getattr(first_page, "page", 1) or 1)
     total_pages = int(getattr(first_page, "total_pages", 1) or 1)
     for page in range(current_page + 1, total_pages + 1):
-        response = list_fn(page=page, limit=limit)
+        response = list_fn(page=page, limit=limit, timeout=_SANDBOX_TIMEOUT_SECONDS)
         items.extend(list(getattr(response, "items", []) or []))
     return items
 
@@ -138,4 +154,6 @@ def _paginate_all(list_fn: Any, limit: int) -> list[Any]:
 __all__ = [
     "acquire_client",
     "fetch_sandbox",
+    "_HEALTH_TIMEOUT_SECONDS",
+    "_SANDBOX_TIMEOUT_SECONDS",
 ]

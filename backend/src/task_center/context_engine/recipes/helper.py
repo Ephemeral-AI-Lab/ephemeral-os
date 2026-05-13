@@ -50,9 +50,18 @@ def _build_helper_packet(
     scope: ContextScope,
     deps: ContextEngineDeps,
 ) -> ContextPacket:
-    assert scope.mission_id is not None
-    assert scope.task_id is not None
-    assert scope.parent_packet_id is not None
+    # Engine pre-validates required scope fields via ``assert_fields``; this
+    # explicit guard makes the recipe self-defending under ``python -O`` where
+    # ``assert`` would be stripped.
+    if (
+        scope.mission_id is None
+        or scope.task_id is None
+        or scope.parent_packet_id is None
+    ):
+        raise ContextEngineError(
+            "Helper recipes require mission_id, task_id, and parent_packet_id; "
+            f"got {scope!r}"
+        )
     if deps.context_packet_store is None:
         raise ContextEngineError(
             "Helper recipes require ContextEngineDeps.context_packet_store; "

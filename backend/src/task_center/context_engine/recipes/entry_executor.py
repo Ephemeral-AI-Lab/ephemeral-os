@@ -26,7 +26,13 @@ _REQUIRED_FIELDS = frozenset({"task_id"})
 def _entry_executor_v1_build(
     scope: ContextScope, deps: ContextEngineDeps
 ) -> ContextPacket:
-    assert scope.task_id is not None
+    # Engine pre-validates required scope fields via ``assert_fields``; this
+    # explicit guard makes the recipe self-defending under ``python -O`` where
+    # ``assert`` would be stripped.
+    if scope.task_id is None:
+        raise ContextEngineError(
+            "entry_executor_v1 requires scope.task_id."
+        )
     task = deps.task_store.get_task(scope.task_id)
     if task is None:
         raise ContextEngineError(

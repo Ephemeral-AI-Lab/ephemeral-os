@@ -15,13 +15,13 @@ from typing import Any, Protocol
 
 from live_e2e.scenarios.base import ScenarioContext
 from message.stream_events import AssistantTextDelta, StreamEvent
-from tools.core.base import BaseTool
-from tools.core.results import ToolResult
-from tools.core.runtime import ExecutionMetadata
-from tools.sandbox_toolkit.edit_file import edit_file as edit_file_tool
-from tools.sandbox_toolkit.read_file import read_file as read_file_tool
-from tools.sandbox_toolkit.shell import shell as shell_tool
-from tools.sandbox_toolkit.write_file import write_file as write_file_tool
+from tools._framework.core.base import BaseTool
+from tools._framework.core.results import ToolResult
+from tools._framework.core.runtime import ExecutionMetadata
+from tools.sandbox.edit_file import edit_file as edit_file_tool
+from tools.sandbox.read_file import read_file as read_file_tool
+from tools.sandbox.shell import shell as shell_tool
+from tools.sandbox.write_file import write_file as write_file_tool
 
 
 EmitStreamEvent = Callable[[StreamEvent], Awaitable[None]]

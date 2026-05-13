@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from tools.core.context import ToolExecutionContextService
+from tools._framework.core.context import ToolExecutionContextService
 from tools.submission.context.attempt import (
     AttemptSubmissionContext,
     AttemptSubmissionContextError,

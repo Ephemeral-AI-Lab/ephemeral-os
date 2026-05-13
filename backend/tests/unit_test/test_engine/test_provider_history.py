@@ -22,11 +22,11 @@ from message.messages import (
     ToolResultBlock,
     ToolUseBlock,
 )
-from tools.builtins.background._common import (
+from tools.background._lib._common import (
     build_background_snapshot_metadata,
     render_background_snapshot,
 )
-from tools.core.base import ToolResult
+from tools._framework.core.base import ToolResult
 
 
 def _user(text: str) -> ConversationMessage:

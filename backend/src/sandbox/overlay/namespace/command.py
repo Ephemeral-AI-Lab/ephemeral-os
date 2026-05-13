@@ -8,6 +8,21 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+# Host env vars that the user command needs to function (PATH for argv0
+# resolution, HOME/TERM for shells, locale vars for tooling that branches
+# on encoding). Host secrets (AWS_*, ANTHROPIC_API_KEY, SSH_AUTH_SOCK, etc.)
+# are NOT in this list and therefore never reach the user command.
+_HOST_ENV_ALLOWLIST: tuple[str, ...] = (
+    "PATH",
+    "HOME",
+    "USER",
+    "LANG",
+    "LC_ALL",
+    "TERM",
+    "TZ",
+)
+
+
 @dataclass(frozen=True)
 class CommandResult:
     exit_code: int
@@ -32,11 +47,18 @@ def run_user_command(
     stdout_path.parent.mkdir(parents=True, exist_ok=True)
     stderr_path.parent.mkdir(parents=True, exist_ok=True)
 
+    base_env = {
+        key: os.environ[key]
+        for key in _HOST_ENV_ALLOWLIST
+        if key in os.environ
+    }
+    child_env = {**base_env, **env, "GIT_OPTIONAL_LOCKS": "0"}
+
     with stdout_path.open("wb") as stdout_file, stderr_path.open("wb") as stderr_file:
         completed = subprocess.run(
             list(command),
             cwd=resolved_cwd,
-            env={**os.environ, **env, "GIT_OPTIONAL_LOCKS": "0"},
+            env=child_env,
             stdout=stdout_file,
             stderr=stderr_file,
             timeout=timeout_seconds,

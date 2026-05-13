@@ -6,6 +6,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 from collections.abc import Mapping
+from pathlib import PurePosixPath
 
 
 class ManifestConflictError(RuntimeError):
@@ -22,6 +23,13 @@ class LayerRef:
             raise ValueError("layer_id must not be empty")
         if not self.path:
             raise ValueError("layer path must not be empty")
+        if "\0" in self.path:
+            raise ValueError(f"layer path must not contain NUL bytes: {self.path!r}")
+        posix = PurePosixPath(self.path)
+        if posix.is_absolute():
+            raise ValueError(f"layer path must be relative: {self.path}")
+        if any(part == ".." for part in posix.parts):
+            raise ValueError(f"layer path must not contain '..': {self.path}")
 
     def to_dict(self) -> dict[str, str]:
         return {"layer_id": self.layer_id, "path": self.path}

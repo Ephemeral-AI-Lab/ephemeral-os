@@ -6,7 +6,7 @@ import asyncio
 
 from engine.background.manager import BackgroundTaskManager
 from engine.background.reminder import append_background_reminder
-from tools.core.base import ToolResult
+from tools._framework.core.base import ToolResult
 
 
 async def _slow_tool() -> ToolResult:

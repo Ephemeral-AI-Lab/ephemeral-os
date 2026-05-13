@@ -11,9 +11,9 @@ from prompt.runtime_prompt import (
     build_runtime_system_prompt,
     build_termination_condition_prompt,
 )
-from tools.builtins.background import make_background_tools
-from tools.core.base import BaseTool, ToolExecutionContextService, ToolResult
-from tools.core.registry import ToolRegistry
+from tools.background import make_background_tools
+from tools._framework.core.base import BaseTool, ToolExecutionContextService, ToolResult
+from tools._framework.core.registry import ToolRegistry
 from tools.subagent import make_subagent_tools
 
 

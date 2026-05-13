@@ -13,7 +13,7 @@ from task_center.api import (
     Mission,
     TaskCenterInvariantViolation,
 )
-from tools.core.context import ToolExecutionContextService
+from tools._framework.core.context import ToolExecutionContextService
 
 
 class AttemptSubmissionContextError(RuntimeError):

@@ -20,10 +20,10 @@ from plugins.catalog.lsp.tools.find_references import (
 )
 from plugins.catalog.lsp.tools.hover import hover as lsp_hover_tool
 from plugins.catalog.lsp.tools.query_symbols import query_symbols as lsp_query_symbols_tool
-from tools.sandbox_toolkit.edit_file import edit_file as edit_file_tool
-from tools.sandbox_toolkit.read_file import read_file as read_file_tool
-from tools.sandbox_toolkit.shell import shell as shell_tool
-from tools.sandbox_toolkit.write_file import write_file as write_file_tool
+from tools.sandbox.edit_file import edit_file as edit_file_tool
+from tools.sandbox.read_file import read_file as read_file_tool
+from tools.sandbox.shell import shell as shell_tool
+from tools.sandbox.write_file import write_file as write_file_tool
 
 
 _ROOT = ".ephemeralos/sweevo-mock/full_stack"

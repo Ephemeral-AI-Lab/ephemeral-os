@@ -13,7 +13,7 @@ import pytest
 from plugins.core.manifest import PluginManifest, parse_plugin_manifest
 from sandbox.plugin import session as session_mod
 from sandbox.plugin.session import call_plugin
-from tools.core.context import ToolExecutionContextService
+from tools._framework.core.context import ToolExecutionContextService
 
 
 def _make_context(sandbox_id: str = "sb-1") -> ToolExecutionContextService:

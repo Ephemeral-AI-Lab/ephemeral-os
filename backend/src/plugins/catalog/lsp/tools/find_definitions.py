@@ -5,10 +5,10 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from sandbox.plugin import call_plugin
-from tools.core.base import ToolExecutionContextService, ToolResult
-from tools.core.decorator import tool
-from tools.core.results import TextToolOutput
-from tools.sandbox_toolkit.session import resolve_sandbox_path
+from tools._framework.core.base import ToolExecutionContextService, ToolResult
+from tools._framework.core.decorator import tool
+from tools._framework.core.results import TextToolOutput
+from tools.sandbox._lib.session import resolve_sandbox_path
 
 
 class FindDefinitionsInput(BaseModel):

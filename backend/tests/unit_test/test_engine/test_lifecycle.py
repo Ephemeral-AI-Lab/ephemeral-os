@@ -8,7 +8,7 @@ import pytest
 from engine.agent.lifecycle import run_ephemeral_agent
 from message.stream_events import StreamEvent, ToolExecutionStarted
 from providers.types import UsageSnapshot
-from tools.core.base import ExecutionMetadata
+from tools._framework.core.base import ExecutionMetadata
 
 
 class _FakeAgent:

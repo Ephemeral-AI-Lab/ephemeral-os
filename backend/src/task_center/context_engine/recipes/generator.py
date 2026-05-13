@@ -32,9 +32,18 @@ _REQUIRED_FIELDS = frozenset({"mission_id", "attempt_id", "task_id"})
 def _generator_v1_build(
     scope: ContextScope, deps: ContextEngineDeps
 ) -> ContextPacket:
-    assert scope.mission_id is not None
-    assert scope.attempt_id is not None
-    assert scope.task_id is not None
+    # Engine pre-validates required scope fields via ``assert_fields``; this
+    # explicit guard makes the recipe self-defending under ``python -O`` where
+    # ``assert`` would be stripped.
+    if (
+        scope.mission_id is None
+        or scope.attempt_id is None
+        or scope.task_id is None
+    ):
+        raise ContextEngineError(
+            "generator_v1 requires mission_id, attempt_id, and task_id; "
+            f"got {scope!r}"
+        )
     attempt = deps.attempt_store.get(scope.attempt_id)
     if attempt is None:
         raise ContextEngineError(
@@ -97,7 +106,14 @@ def _dependency_summary_blocks(
     for dep_id in needs:
         dep = task_store.get_task(dep_id)
         if dep is None:
-            continue
+            # ``needs`` are persisted DAG edges validated at planner-submission
+            # acceptance; a missing row here is a harness invariant violation,
+            # not a tolerable absence. Surface it so the LLM never reasons
+            # over a silently-truncated dependency frame.
+            raise ContextEngineError(
+                f"Dependency task {dep_id!r} referenced by needs is missing; "
+                "generator context cannot be assembled without dependency results."
+            )
         out.append(
             ContextBlock(
                 kind=ContextBlockKind.DEPENDENCY_SUMMARY,

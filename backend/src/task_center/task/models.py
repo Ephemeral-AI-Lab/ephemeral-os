@@ -16,7 +16,7 @@ class HarnessTaskRole(StrEnum):
 class HarnessTaskStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
-    WAITING_COMPLEX_TASK = "waiting_mission"
+    WAITING_MISSION = "waiting_mission"
     DONE = "done"
     FAILED = "failed"
     BLOCKED = "blocked"

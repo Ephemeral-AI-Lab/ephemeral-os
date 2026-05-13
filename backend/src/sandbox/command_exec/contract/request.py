@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
@@ -37,11 +38,18 @@ class CommandExecRequest:
         if timeout is not None and timeout <= 0:
             raise ValueError("timeout_seconds must be positive when provided")
 
+        cwd_raw = str(self.cwd).strip() or "."
+        cwd_normalized = os.path.normpath(cwd_raw)
+        if cwd_normalized == ".." or cwd_normalized.startswith("../"):
+            raise ValueError(f"cwd must not escape workspace root: {cwd_raw!r}")
+        if not cwd_normalized.startswith("/") and ".." in cwd_normalized.split("/"):
+            raise ValueError(f"cwd must not contain '..' segments: {cwd_raw!r}")
+
         object.__setattr__(self, "request_id", request_id)
         object.__setattr__(self, "workspace_ref", workspace_ref)
         object.__setattr__(self, "workspace_root", workspace_root.rstrip("/") or "/")
         object.__setattr__(self, "command", command)
-        object.__setattr__(self, "cwd", str(self.cwd).strip() or ".")
+        object.__setattr__(self, "cwd", cwd_raw)
         object.__setattr__(
             self,
             "env",

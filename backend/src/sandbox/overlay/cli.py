@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -15,6 +16,16 @@ from sandbox.overlay.capture.types import OverlayCapture, write_overlay_capture
 from sandbox.overlay.namespace.command import run_user_command
 from sandbox.overlay.namespace.mounts import lowerdir_for, mount_snapshot
 from sandbox.overlay.runner.snapshot_overlay_runner import overlay_shell_request_from_dict
+
+
+# Intermediate trees inside run_dir that are NOT load-bearing after
+# ``capture_changes`` returns. Removing them bounds disk growth without
+# breaking consumers that follow ``OverlayCapture`` paths:
+#   - ``upper/`` carries ``content_path`` refs (kept)
+#   - ``stdout.bin`` / ``stderr.bin`` are the ``stdout_ref`` / ``stderr_ref``
+#     targets (kept)
+#   - ``result.json`` is the serialized capture for debugging (kept)
+_INTERMEDIATE_RUN_DIRS: tuple[str, ...] = ("lower", "merged", "work")
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -35,50 +46,60 @@ def execute_request(
 ) -> OverlayCapture:
     total_start = time.perf_counter()
     timings: dict[str, float] = {}
-    request = overlay_shell_request_from_dict(request_payload)
-    manifest = Manifest.from_dict(manifest_payload)
-    mount_start = time.perf_counter()
-    mounted = mount_snapshot(
-        manifest=manifest,
-        storage_root=storage_root,
-        run_dir=run_dir,
-        timings=timings,
-    )
-    timings["overlay.mount_snapshot_s"] = time.perf_counter() - mount_start
-    stdout_ref = Path(run_dir) / "stdout.bin"
-    stderr_ref = Path(run_dir) / "stderr.bin"
-    command_start = time.perf_counter()
-    command = run_user_command(
-        command=request.command,
-        workspace_root=mounted.workspace_root,
-        cwd=request.cwd,
-        env=dict(request.env),
-        timeout_seconds=request.timeout_seconds,
-        stdout_ref=stdout_ref,
-        stderr_ref=stderr_ref,
-    )
-    timings["overlay.run_command_s"] = time.perf_counter() - command_start
-    capture_start = time.perf_counter()
-    changes = capture_changes(
-        mounted.upperdir,
-        snapshot_manifest=mounted.manifest,
-        lowerdir=lowerdir_for(mounted),
-        workspace_root=mounted.workspace_root,
-        timings=timings,
-    )
-    timings["overlay.capture_changes_s"] = time.perf_counter() - capture_start
-    timings["overlay.total_s"] = time.perf_counter() - total_start
-    capture = OverlayCapture(
-        exit_code=command.exit_code,
-        stdout_ref=command.stdout_ref,
-        stderr_ref=command.stderr_ref,
-        snapshot_version=manifest.version,
-        changes=changes,
-        snapshot_manifest=manifest,
-        timings=timings,
-    )
-    write_overlay_capture(run_dir, capture)
-    return capture
+    run_dir_path = Path(run_dir)
+    try:
+        request = overlay_shell_request_from_dict(request_payload)
+        manifest = Manifest.from_dict(manifest_payload)
+        mount_start = time.perf_counter()
+        mounted = mount_snapshot(
+            manifest=manifest,
+            storage_root=storage_root,
+            run_dir=run_dir,
+            timings=timings,
+        )
+        timings["overlay.mount_snapshot_s"] = time.perf_counter() - mount_start
+        stdout_ref = run_dir_path / "stdout.bin"
+        stderr_ref = run_dir_path / "stderr.bin"
+        command_start = time.perf_counter()
+        command = run_user_command(
+            command=request.command,
+            workspace_root=mounted.workspace_root,
+            cwd=request.cwd,
+            env=dict(request.env),
+            timeout_seconds=request.timeout_seconds,
+            stdout_ref=stdout_ref,
+            stderr_ref=stderr_ref,
+        )
+        timings["overlay.run_command_s"] = time.perf_counter() - command_start
+        capture_start = time.perf_counter()
+        changes = capture_changes(
+            mounted.upperdir,
+            snapshot_manifest=mounted.manifest,
+            lowerdir=lowerdir_for(mounted),
+            workspace_root=mounted.workspace_root,
+            timings=timings,
+        )
+        timings["overlay.capture_changes_s"] = time.perf_counter() - capture_start
+        timings["overlay.total_s"] = time.perf_counter() - total_start
+        capture = OverlayCapture(
+            exit_code=command.exit_code,
+            stdout_ref=command.stdout_ref,
+            stderr_ref=command.stderr_ref,
+            snapshot_version=manifest.version,
+            changes=changes,
+            snapshot_manifest=manifest,
+            timings=timings,
+        )
+        write_overlay_capture(run_dir, capture)
+        return capture
+    finally:
+        # Reap the bulk-growth intermediates regardless of success/failure.
+        # ``upper/`` (content_path refs), ``stdout.bin``, ``stderr.bin``,
+        # and ``result.json`` remain because callers read them after
+        # ``execute_request`` returns. Full run_dir TTL/sweep is left to a
+        # higher layer (see CR-02 scope adjustment).
+        for name in _INTERMEDIATE_RUN_DIRS:
+            shutil.rmtree(run_dir_path / name, ignore_errors=True)
 
 
 def main(argv: list[str] | None = None) -> int:

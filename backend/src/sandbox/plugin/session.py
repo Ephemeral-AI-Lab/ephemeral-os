@@ -29,9 +29,9 @@ from sandbox.host.daemon_client import (
     call_daemon_api,
 )
 from sandbox.plugin.install import ensure_installed
-from tools.core.context import ToolExecutionContextService
-from tools.core.results import ToolResult
-from tools.sandbox_toolkit.session import (
+from tools._framework.core.context import ToolExecutionContextService
+from tools._framework.core.results import ToolResult
+from tools.sandbox._lib.session import (
     caller_from_context,
     sandbox_id_or_error,
 )

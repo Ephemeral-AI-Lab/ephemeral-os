@@ -7,8 +7,8 @@ from pydantic import ValidationError
 
 from agents import AgentDefinition
 from agents import AgentDefinitionValidator
-from tools.factory import ToolFactoryContext, create_tool, has_tool
-from tools.submission.main_agent.planner import PlanTaskInput
+from tools._framework.factory import ToolFactoryContext, create_tool, has_tool
+from tools.submission.planner import PlanTaskInput
 
 
 PHASE03_TOOLS = (

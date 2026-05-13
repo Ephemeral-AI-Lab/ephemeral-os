@@ -1,25 +1,37 @@
-"""Soft reminder for disabled generator mission starts after edit."""
+"""Soft reminder nudging delegation to happen before the first edit."""
 
 from __future__ import annotations
 
 from typing import Any
 
+from message.messages import ConversationMessage, ToolUseBlock
 from notification import NotificationRule
-from tools.submission.hooks.request_mission_before_edit_gate import (
-    generator_has_edited,
-)
+
+
+_EDIT_TOOL_NAMES = frozenset({"write_file", "edit_file", "shell"})
+
+
+def _generator_has_edited(messages: list[Any]) -> bool:
+    for message in messages:
+        if not isinstance(message, ConversationMessage):
+            continue
+        for block in message.content:
+            if isinstance(block, ToolUseBlock) and block.name in _EDIT_TOOL_NAMES:
+                return True
+    return False
 
 
 def make_mission_request_after_edit_reminder() -> NotificationRule:
     def _trigger(messages: list[Any], context: Any) -> bool:
         del context
-        return generator_has_edited(messages)
+        return _generator_has_edited(messages)
 
     def _body(messages: list[Any], context: Any) -> str:
         del messages, context
         return (
-            "request_mission_solution is disabled after the first edit. "
-            "Finish through this generator agent's success or failure terminal."
+            "request_mission_solution is meant for delegating before edits begin. "
+            "Once this generator has edited, prefer finishing through its own "
+            "success or failure terminal."
         )
 
     return NotificationRule(

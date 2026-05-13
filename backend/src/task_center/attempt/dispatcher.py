@@ -100,13 +100,11 @@ class AttemptDispatcher:
         if ready_ids:
             launch_failed = False
             for task_id in ready_ids:
-                launch_failed = (
-                    not self._launch_ready_generator(
-                        attempt=attempt,
-                        task_id=task_id,
-                    )
-                    or launch_failed
-                )
+                if not self._launch_ready_generator(
+                    attempt=attempt,
+                    task_id=task_id,
+                ):
+                    launch_failed = True
             if launch_failed:
                 self.dispatch_ready_work()
             return

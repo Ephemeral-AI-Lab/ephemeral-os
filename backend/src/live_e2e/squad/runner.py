@@ -32,31 +32,31 @@ from sandbox.api import (
 )
 from task_center.attempt import Attempt
 from task_center.episode.episode import Episode
-from tools.core.base import BaseTool
-from tools.core.context import ToolExecutionContextService
-from tools.core.results import ToolResult
-from tools.core.runtime import ExecutionMetadata
-from tools.execution.tool_call import execute_tool_once
-from tools.sandbox_toolkit.edit_file import edit_file as edit_file_tool
-from tools.sandbox_toolkit.read_file import read_file as read_file_tool
-from tools.sandbox_toolkit.shell import shell as shell_tool
-from tools.sandbox_toolkit.write_file import write_file as write_file_tool
-from tools.submission.main_agent.evaluator import (
+from tools._framework.core.base import BaseTool
+from tools._framework.core.context import ToolExecutionContextService
+from tools._framework.core.results import ToolResult
+from tools._framework.core.runtime import ExecutionMetadata
+from tools._framework.execution.tool_call import execute_tool_once
+from tools.sandbox.edit_file import edit_file as edit_file_tool
+from tools.sandbox.read_file import read_file as read_file_tool
+from tools.sandbox.shell import shell as shell_tool
+from tools.sandbox.write_file import write_file as write_file_tool
+from tools.submission.evaluator import (
     submit_evaluation_failure,
     submit_evaluation_success,
 )
-from tools.submission.main_agent.generator.executor import (
+from tools.submission.executor import (
     submit_execution_failure,
     submit_execution_success,
 )
-from tools.submission.main_agent.generator.request_mission_solution import (
+from tools.submission.executor.request_mission_solution import (
     request_mission_solution,
 )
-from tools.submission.main_agent.generator.verifier import (
+from tools.submission.verifier import (
     submit_verification_failure,
     submit_verification_success,
 )
-from tools.submission.main_agent.planner import (
+from tools.submission.planner import (
     submit_full_plan,
     submit_partial_plan,
 )

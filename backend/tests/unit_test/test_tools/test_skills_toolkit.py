@@ -6,8 +6,8 @@ import pytest
 
 from skills.core.registry import SkillRegistry
 from skills.core.types import SkillDefinition
-from tools.builtins.skills.factory import make_skills_tools
-from tools.core.base import ToolExecutionContextService
+from tools.skills._factory import make_skills_tools
+from tools._framework.core.base import ToolExecutionContextService
 
 
 @pytest.mark.asyncio

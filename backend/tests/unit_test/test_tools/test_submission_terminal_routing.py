@@ -16,17 +16,17 @@ from task_center.task import (
     generator_task_id,
     planner_task_id,
 )
-from tools.execution.tool_call import execute_tool_once
-from tools.submission.main_agent.evaluator import (
+from tools._framework.execution.tool_call import execute_tool_once
+from tools.submission.evaluator import (
     submit_evaluation_failure,
     submit_evaluation_success,
 )
-from tools.submission.main_agent.generator import request_mission_solution
-from tools.submission.main_agent.generator.executor import (
+from tools.submission.executor import request_mission_solution
+from tools.submission.executor import (
     submit_execution_failure,
     submit_execution_success,
 )
-from tools.submission.main_agent.generator.verifier import (
+from tools.submission.verifier import (
     submit_verification_success,
 )
 
@@ -199,7 +199,7 @@ async def test_request_mission_solution_starts_delegated_request(
     assert not result.is_error
     assert result.does_terminate
     assert task is not None
-    assert task["status"] == HarnessTaskStatus.WAITING_COMPLEX_TASK.value
+    assert task["status"] == HarnessTaskStatus.WAITING_MISSION.value
     assert delegated_request is not None
     assert delegated_request.status == MissionStatus.OPEN
     assert delegated_request.requested_by_task_id == generator_id
@@ -253,7 +253,7 @@ async def test_request_mission_solution_accepts_any_generator_agent_profile(
     assert not result.is_error
     assert result.does_terminate
     assert task is not None
-    assert task["status"] == HarnessTaskStatus.WAITING_COMPLEX_TASK.value
+    assert task["status"] == HarnessTaskStatus.WAITING_MISSION.value
 
 
 async def test_request_mission_solution_return_updates_outer_generator(

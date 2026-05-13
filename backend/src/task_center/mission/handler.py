@@ -137,8 +137,14 @@ class MissionHandler:
         assert_continuation_episode_predecessor(previous_episode)
         new_sequence_no = previous_episode.sequence_no + 1
         assert_episode_sequence_contiguous(mission, new_sequence_no=new_sequence_no)
-        # Narrowed by the invariant above.
-        assert previous_episode.continuation_goal is not None
+        # Narrowed by ``assert_continuation_episode_predecessor`` above; the
+        # explicit check makes the invariant self-defending under ``python -O``
+        # where ``assert`` would be stripped.
+        if previous_episode.continuation_goal is None:
+            raise TaskCenterInvariantViolation(
+                f"Previous episode {previous_episode.id!r} has no "
+                "continuation_goal despite passing the predecessor invariant."
+            )
         episode = self._episode_store.insert(
             mission_id=mission.id,
             sequence_no=new_sequence_no,

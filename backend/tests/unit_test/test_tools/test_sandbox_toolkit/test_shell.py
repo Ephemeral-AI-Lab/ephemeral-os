@@ -1,4 +1,4 @@
-"""Tests for tools.sandbox_toolkit.shell."""
+"""Tests for tools.sandbox.shell."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from typing import Any
 import pytest
 
 from sandbox.api import ShellResult
-from tools.core.base import ToolExecutionContextService
-import tools.sandbox_toolkit.shell as shell_module
-from tools.sandbox_toolkit.shell import shell
+from tools._framework.core.base import ToolExecutionContextService
+import tools.sandbox.shell as shell_module
+from tools.sandbox.shell import shell
 
 from ._helpers import run_tool_safely
 

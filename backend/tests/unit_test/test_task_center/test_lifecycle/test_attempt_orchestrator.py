@@ -402,7 +402,7 @@ def test_waiting_mission_prevents_generator_quiescence(
     )
     task_store.set_task_status(
         generator_task_id(attempt.id, "a"),
-        status=HarnessTaskStatus.WAITING_COMPLEX_TASK.value,
+        status=HarnessTaskStatus.WAITING_MISSION.value,
     )
 
     orchestrator.apply_generator_submission(_generator_success(attempt.id, "b"))
@@ -429,7 +429,7 @@ def test_mission_close_report_success_resumes_waiting_generator(
     task_id = generator_task_id(attempt.id, "a")
     task_store.set_task_status(
         task_id,
-        status=HarnessTaskStatus.WAITING_COMPLEX_TASK.value,
+        status=HarnessTaskStatus.WAITING_MISSION.value,
     )
 
     orchestrator.apply_mission_close_report(
@@ -473,7 +473,7 @@ def test_mission_close_report_failure_blocks_dependents_and_closes_graph(
     dependent_id = generator_task_id(attempt.id, "b")
     task_store.set_task_status(
         task_id,
-        status=HarnessTaskStatus.WAITING_COMPLEX_TASK.value,
+        status=HarnessTaskStatus.WAITING_MISSION.value,
     )
 
     orchestrator.apply_mission_close_report(

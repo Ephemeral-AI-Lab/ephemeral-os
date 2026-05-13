@@ -105,7 +105,7 @@ def test_mark_waiting_then_close_report_success(
     )
     task = task_store.get_task(controller.task_id)
     assert task is not None
-    assert task["status"] == HarnessTaskStatus.WAITING_COMPLEX_TASK.value
+    assert task["status"] == HarnessTaskStatus.WAITING_MISSION.value
 
     controller.apply_mission_close_report(
         MissionCloseReport(

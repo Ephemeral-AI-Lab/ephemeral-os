@@ -20,8 +20,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from tools.submission.main_agent.evaluator import submit_evaluation_success
-from tools.submission.main_agent.planner import submit_full_plan
+from tools.submission.evaluator import submit_evaluation_success
+from tools.submission.planner import submit_full_plan
 
 from live_e2e.audit.events import EventType
 from live_e2e.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec

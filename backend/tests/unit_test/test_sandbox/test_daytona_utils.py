@@ -8,19 +8,19 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from tools.core.base import ToolExecutionContextService
-from tools.sandbox_toolkit.session import (
+from tools._framework.core.base import ToolExecutionContextService
+from tools.sandbox._lib.session import (
     get_repo_root,
     normalized_path,
     path_error,
     resolve_sandbox_path,
 )
-from tools.sandbox_toolkit.file_payloads import (
+from tools.sandbox._lib.file_payloads import (
     MAX_READ_FILE_LINES,
     ReadFileInput,
     build_read_file_result,
 )
-from tools.sandbox_toolkit.shell import _build_tool_output
+from tools.sandbox.shell import _build_tool_output
 
 
 def _ctx(services=None) -> ToolExecutionContextService:

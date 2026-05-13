@@ -13,6 +13,7 @@ from sandbox.provider.daytona.client.credentials import load_credentials
 from sandbox.provider.daytona.client.sync_client import (
     _APP_CREATED_VIA,
     _APP_MANAGED_BY,
+    _HEALTH_TIMEOUT_SECONDS,
     _IMAGE_LABEL,
     _LIST_PAGE_LIMIT,
     _SANDBOX_TIMEOUT_SECONDS,
@@ -123,7 +124,7 @@ class DaytonaProviderAdapter:
             }
         try:
             client = acquire_client()
-            client.list(limit=1)
+            client.list(limit=1, timeout=_HEALTH_TIMEOUT_SECONDS)
             return {
                 "configured": True,
                 "available": True,

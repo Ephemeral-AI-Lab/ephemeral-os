@@ -21,8 +21,8 @@ from task_center.task import (
     generator_task_id,
     planner_task_id,
 )
-from tools.core.context import ToolExecutionContextService
-from tools.core.runtime import ExecutionMetadata
+from tools._framework.core.context import ToolExecutionContextService
+from tools._framework.core.runtime import ExecutionMetadata
 
 
 @dataclass

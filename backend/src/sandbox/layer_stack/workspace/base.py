@@ -121,7 +121,7 @@ def build_workspace_base(
         timings["workspace_base.inventory.symlinks"] = float(symlinks)
         timings["workspace_base.inventory.bytes"] = float(bytes_total)
     write_layer_start = time.perf_counter()
-    layer_ref = _write_base_layer(stack, entries)
+    layer_ref = _write_base_layer(stack, entries, root_hash=root_hash)
     record_elapsed(
         timings,
         "workspace_base.write_layer_s",

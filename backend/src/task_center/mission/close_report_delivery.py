@@ -4,7 +4,7 @@ Owns the single delivery path from ``MissionHandler.close_mission``
 to the parent ``AttemptOrchestrator.apply_mission_close_report``.
 
 The runtime assumes no process restart: while a parent generator task is in
-``WAITING_COMPLEX_TASK`` its attempt cannot reach quiescence and its
+``WAITING_MISSION`` its attempt cannot reach quiescence and its
 orchestrator stays registered. Therefore close-report delivery is always
 synchronous against an active parent orchestrator; a missing orchestrator at
 delivery time is a hard ``TaskCenterInvariantViolation``.
@@ -58,7 +58,7 @@ class MissionCloseReportRouter:
                 requested_by_task_id=report.requested_by_task_id,
                 parent_attempt_id=attempt_id,
             )
-        if status != HarnessTaskStatus.WAITING_COMPLEX_TASK.value:
+        if status != HarnessTaskStatus.WAITING_MISSION.value:
             raise TaskCenterInvariantViolation(
                 f"TaskCenter task {report.requested_by_task_id!r} is not waiting "
                 "on a mission."

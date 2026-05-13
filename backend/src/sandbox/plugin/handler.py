@@ -93,13 +93,24 @@ async def plugin_ensure(args: dict[str, Any]) -> dict[str, Any]:
         register_op,
         context_factory=_plugin_op_context_factory,
     )
+    # Warm BEFORE writing _LOADED/_LOADED_DIGEST so a failed warm doesn't
+    # wedge the registry (BL-01). On warm failure roll back the dispatcher
+    # entries we just registered so the next call retries cleanly.
+    try:
+        warm_result = (
+            await _warm_plugin_runtime(plugin_name, args)
+            if runtime_loaded
+            else {"runtime_warmed": False}
+        )
+    except Exception:
+        from sandbox.runtime.daemon.rpc.dispatcher import OP_TABLE
+
+        for op in registered_ops:
+            OP_TABLE.pop(op, None)
+        clear_plugin_registrations(plugin_name)
+        raise
     _LOADED[plugin_name] = registered_ops
     _LOADED_DIGEST[plugin_name] = digest
-    warm_result = (
-        await _warm_plugin_runtime(plugin_name, args)
-        if runtime_loaded
-        else {"runtime_warmed": False}
-    )
     if not registered_ops and not runtime_loaded:
         # Stateless plugin with no runtime — fine, idempotent.
         logger.debug(

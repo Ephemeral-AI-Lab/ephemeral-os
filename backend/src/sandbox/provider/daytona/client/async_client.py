@@ -13,6 +13,7 @@ import weakref
 from typing import Any
 
 from sandbox.provider.daytona.client.credentials import load_credentials
+from sandbox.provider.daytona.client.sync_client import _SANDBOX_TIMEOUT_SECONDS
 from sandbox.provider.daytona.errors import AsyncDaytonaUnavailableError
 from sandbox.runtime.async_bridge import (
     register_standalone_loop_cleanup,
@@ -96,7 +97,7 @@ def get_async_daytona_client() -> Any:
 async def get_async_sandbox(sandbox_id: str) -> Any:
     """Fetch and start a pre-created sandbox by ID using async client."""
     client = get_async_daytona_client()
-    sandbox = await client.get(sandbox_id)
+    sandbox = await client.get(sandbox_id, timeout=_SANDBOX_TIMEOUT_SECONDS)
     if sandbox is None:
         raise ValueError(f"Sandbox '{sandbox_id}' not found")
     return sandbox

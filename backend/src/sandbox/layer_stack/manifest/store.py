@@ -32,11 +32,19 @@ def write_manifest_atomic(path: str | Path, manifest: Manifest) -> None:
     manifest_file = Path(path)
     manifest_file.parent.mkdir(parents=True, exist_ok=True)
     tmp = manifest_file.with_name(f".{manifest_file.name}.tmp")
-    tmp.write_text(
-        json.dumps(manifest.to_dict(), indent=2, sort_keys=True),
-        encoding="utf-8",
-    )
+    data = json.dumps(manifest.to_dict(), indent=2, sort_keys=True).encode("utf-8")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
+    try:
+        os.write(fd, data)
+        os.fsync(fd)
+    finally:
+        os.close(fd)
     os.replace(tmp, manifest_file)
+    dir_fd = os.open(manifest_file.parent, os.O_RDONLY)
+    try:
+        os.fsync(dir_fd)
+    finally:
+        os.close(dir_fd)
 
 
 __all__ = [

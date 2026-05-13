@@ -14,8 +14,8 @@ import pytest
 
 from agents import AgentDefinition
 from engine.query.context import QueryContext
-from tools.execution.tool_call import execute_tool_call
-from tools.core.runtime import ExecutionMetadata
+from tools._framework.execution.tool_call import execute_tool_call
+from tools._framework.core.runtime import ExecutionMetadata
 
 
 def _ctx(

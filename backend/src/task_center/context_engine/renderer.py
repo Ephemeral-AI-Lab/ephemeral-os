@@ -204,6 +204,13 @@ class MarkdownPromptRenderer:
         *,
         budget: int | None,
     ) -> list[ContextBlock]:
+        """Apply the token-budget compression policy and return a fresh list.
+
+        The input ``blocks`` list is never mutated: this method returns a
+        shallow copy with truncated entries replaced via ``ContextBlock.model_copy``
+        (which itself returns a new Pydantic model). Callers can safely pass
+        ``packet.blocks`` and rely on the packet being unchanged afterwards.
+        """
         if budget is None:
             return list(blocks)
 

@@ -60,7 +60,7 @@ class MissionStarter:
             parent_task_id=parent_task_id,
         )
         task_center_run_id = str(parent_task.get("task_center_run_id") or "")
-        if not task_center_run_id or task_center_run_id.isspace():
+        if not task_center_run_id.strip():
             raise TaskCenterInvariantViolation(
                 f"TaskCenter task {parent_task_id!r} has no run id."
             )
@@ -102,7 +102,13 @@ class MissionStarter:
             )
             raise
 
-        assert initial_attempt is not None
+        # Narrowed by the ``try`` block above: the only path to here assigns
+        # ``initial_attempt`` before ``start_attempt`` runs. The explicit
+        # check makes the invariant self-defending under ``python -O``.
+        if initial_attempt is None:
+            raise TaskCenterInvariantViolation(
+                "MissionStarter.start completed without assigning initial_attempt."
+            )
         return StartedMission(
             parent_task_id=parent_task_id,
             parent_attempt_id=parent_attempt_id,
@@ -127,6 +133,12 @@ class MissionStarter:
         def _deliver(report: MissionCloseReport) -> None:
             router.deliver(report)
 
+        # Closure capture of ``self._runtime`` is only safe because
+        # ``AttemptRuntime`` is ``@dataclass(frozen=True, slots=True)``: its
+        # fields cannot be reassigned after construction, so the orchestrator
+        # factory built here keeps pointing at the same runtime instance for
+        # the lifetime of this starter. If ``AttemptRuntime`` ever becomes
+        # mutable, this lazy-build pattern needs to be revisited.
         orchestrator_factory = make_attempt_orchestrator_factory(
             runtime=self._runtime,
         )
@@ -206,7 +218,7 @@ class MissionStarter:
         updated = self._runtime.task_store.set_task_status_if_current(
             parent_task_id,
             expected_status=HarnessTaskStatus.RUNNING.value,
-            status=HarnessTaskStatus.WAITING_COMPLEX_TASK.value,
+            status=HarnessTaskStatus.WAITING_MISSION.value,
             summary=summary,
         )
         if updated is None:
@@ -251,20 +263,63 @@ class MissionStarter:
             else:
                 self._runtime.task_store.set_task_status_if_current(
                     parent_task_id,
-                    expected_status=HarnessTaskStatus.WAITING_COMPLEX_TASK.value,
+                    expected_status=HarnessTaskStatus.WAITING_MISSION.value,
                     status=HarnessTaskStatus.RUNNING.value,
                 )
         except Exception:
             logger.critical(
                 "MissionStarter: parent status rollback failed; "
-                "task %r will remain in WAITING_COMPLEX_TASK and requires "
-                "manual recovery",
+                "task %r remains in WAITING_MISSION — attempting "
+                "synthetic close-report recovery",
                 parent_task_id,
                 exc_info=True,
+            )
+            self._deliver_synthetic_failure_close_report(
+                mission=mission,
+                episode=episode,
+                initial_attempt_id=initial_attempt_id,
+                parent_task_id=parent_task_id,
             )
         manager_registry = self._runtime.manager_registry
         if manager_registry is not None:
             manager_registry.deregister(episode.id)
+
+    def _deliver_synthetic_failure_close_report(
+        self,
+        *,
+        mission: Mission,
+        episode: Episode,
+        initial_attempt_id: str | None,
+        parent_task_id: str,
+    ) -> None:
+        """Last-resort recovery when direct rollback to RUNNING fails.
+
+        Without this, a parent task can be orphaned in
+        ``WAITING_MISSION`` with no automated driver to reset it.
+        Routing a synthetic ``MissionCloseReport(outcome="failed")`` re-uses
+        the close-report router so the controller / orchestrator unsticks the
+        parent the same way it would for a normal failed-mission close. The
+        router no-ops cleanly when the task already reached a terminal state.
+        """
+        try:
+            router = MissionCloseReportRouter(runtime=self._runtime)
+            router.deliver(
+                MissionCloseReport(
+                    mission_id=mission.id,
+                    requested_by_task_id=parent_task_id,
+                    outcome="failed",
+                    final_episode_id=episode.id,
+                    final_attempt_id=initial_attempt_id,
+                )
+            )
+        except Exception:
+            logger.critical(
+                "MissionStarter: synthetic close-report delivery also failed; "
+                "task %r remains in WAITING_MISSION and requires manual "
+                "recovery",
+                parent_task_id,
+                exc_info=True,
+            )
 
     def _close_unstarted_attempt_after_failed_start(
         self, attempt_id: str | None, *, now: datetime

@@ -47,6 +47,31 @@ logger = logging.getLogger("sandbox.runtime.daemon.rpc.server")
 DEFAULT_SOCKET_PATH = "/tmp/eos-sandbox-runtime/runtime.sock"
 DEFAULT_PID_PATH = "/tmp/eos-sandbox-runtime/runtime.pid"
 
+# Cap a single request envelope to bound the daemon's per-connection memory and
+# convert oversize payloads into a structured ``request_too_large`` error rather
+# than a silent connection drop. ``api.write_file`` is the largest legitimate
+# producer; 16 MiB leaves comfortable headroom over realistic source files.
+MAX_REQUEST_BYTES = 16 * 1024 * 1024
+# Bound the time a single ``readline`` may pin a connection task. Long enough
+# for slow but legitimate clients; short enough to defang slowloris-style
+# half-open peers from a buggy host.
+REQUEST_READ_TIMEOUT_S = 30.0
+
+
+def _request_too_large_envelope() -> dict[str, object]:
+    return {
+        "success": False,
+        "warnings": [],
+        "timings": {},
+        "error": {
+            "kind": "request_too_large",
+            "message": (
+                f"daemon request exceeds {MAX_REQUEST_BYTES} byte limit"
+            ),
+            "details": {"limit": MAX_REQUEST_BYTES},
+        },
+    }
+
 
 async def _handle_connection(
     reader: asyncio.StreamReader,
@@ -54,7 +79,22 @@ async def _handle_connection(
 ) -> None:
     boot_t0 = time.perf_counter()
     try:
-        raw = await reader.readline()
+        try:
+            raw = await asyncio.wait_for(
+                reader.readline(), timeout=REQUEST_READ_TIMEOUT_S
+            )
+        except asyncio.LimitOverrunError:
+            payload = json.dumps(
+                _request_too_large_envelope(), separators=(",", ":")
+            ).encode("utf-8") + b"\n"
+            writer.write(payload)
+            with contextlib.suppress(Exception):
+                await writer.drain()
+            return
+        except asyncio.TimeoutError:
+            # Peer is stalled; do not write a response and let ``finally``
+            # close the connection.
+            return
         read_completed_at = time.perf_counter()
         if not raw:
             return
@@ -110,6 +150,10 @@ async def _handle_connection(
 
 def _prepare_socket_path(socket_path: Path) -> None:
     socket_path.parent.mkdir(parents=True, exist_ok=True)
+    # Lock the parent directory to the daemon's UID before any other process
+    # can race the socket bind. ``OSError`` propagates: failing to constrain
+    # the parent is a deployment-fatal condition, not something to suppress.
+    os.chmod(socket_path.parent, 0o700)
     if socket_path.exists() or socket_path.is_symlink():
         with contextlib.suppress(FileNotFoundError):
             socket_path.unlink()
@@ -127,9 +171,21 @@ def _remove_pid(pid_path: Path) -> None:
 
 async def serve(socket_path: Path, pid_path: Path) -> None:
     _prepare_socket_path(socket_path)
-    server = await asyncio.start_unix_server(_handle_connection, path=str(socket_path))
-    with contextlib.suppress(OSError):
-        os.chmod(socket_path, 0o600)
+    # Force the initial socket inode permissions to ``0o700`` via umask so the
+    # window between bind() (inside ``start_unix_server``) and the explicit
+    # ``os.chmod`` below is not world-accessible. The chmod that follows is
+    # not allowed to fail silently: a permission-locking failure on the trust
+    # boundary must surface to the daemon's exit path.
+    old_umask = os.umask(0o077)
+    try:
+        server = await asyncio.start_unix_server(
+            _handle_connection,
+            path=str(socket_path),
+            limit=MAX_REQUEST_BYTES,
+        )
+    finally:
+        os.umask(old_umask)
+    os.chmod(socket_path, 0o600)
     _write_pid(pid_path)
     logger.info("daemon listening on %s pid=%s", socket_path, os.getpid())
 

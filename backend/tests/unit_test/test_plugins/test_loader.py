@@ -41,7 +41,7 @@ def _valid_tool_body(name: str) -> str:
     return textwrap.dedent(
         f"""
         from pydantic import BaseModel
-        from tools.core.base import BaseTool, ToolResult
+        from tools._framework.core.base import BaseTool, ToolResult
 
 
         class _Input(BaseModel):
@@ -134,7 +134,7 @@ def test_module_with_two_base_tools_raises(tmp_path: Path) -> None:
     body = textwrap.dedent(
         """
         from pydantic import BaseModel
-        from tools.core.base import BaseTool, ToolResult
+        from tools._framework.core.base import BaseTool, ToolResult
 
 
         class _Input(BaseModel):
@@ -176,7 +176,7 @@ def test_factory_integration_via_create_tool(tmp_path: Path) -> None:
     catalog.mkdir()
     _seed_plugin(catalog, "demo", tool_module_body=_valid_tool_body("demo.run"))
 
-    from tools.factory import (
+    from tools._framework.factory import (
         ToolFactoryContext,
         _register_many,
         create_tool,

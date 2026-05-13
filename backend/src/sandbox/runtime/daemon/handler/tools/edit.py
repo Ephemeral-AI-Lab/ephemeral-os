@@ -38,7 +38,10 @@ async def edit_file(args: dict[str, object]) -> dict[str, object]:
             raise ValueError("each edit must be an object")
         old_text = str(edit.get("old_text") or "")
         new_text = str(edit.get("new_text") or "")
-        expected = int(edit.get("expected_occurrences") or 1)
+        raw_expected = edit.get("expected_occurrences")
+        expected = 1 if raw_expected is None else int(raw_expected)
+        if expected < 0:
+            raise ValueError("expected_occurrences must be >= 0")
         edits.append((old_text, new_text, expected))
 
     if classified.classification == "out_of_workspace":

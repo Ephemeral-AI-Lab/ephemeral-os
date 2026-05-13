@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 
-from tools.core.base import ToolExecutionContextService
+from tools._framework.core.base import ToolExecutionContextService
 
 
 class TestDiscoverWorkspace:

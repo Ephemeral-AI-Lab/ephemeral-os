@@ -36,16 +36,16 @@ from providers.types import (
     SupportsStreamingMessages,
     UsageSnapshot,
 )
-from tools.core.base import (
+from tools._framework.core.base import (
     BaseTool,
     ToolExecutionContextService,
     ToolResult,
 )
-from tools.core.decorator import tool
-from tools.core.hooks import HookResult
-from tools.core.registry import ToolRegistry
-from tools.core.runtime import ExecutionMetadata
-from tools.execution.tool_call import execute_tool_call_streaming, execute_tool_once
+from tools._framework.core.decorator import tool
+from tools._framework.core.hooks import HookResult
+from tools._framework.core.registry import ToolRegistry
+from tools._framework.core.runtime import ExecutionMetadata
+from tools._framework.execution.tool_call import execute_tool_call_streaming, execute_tool_once
 
 pytestmark = pytest.mark.asyncio
 

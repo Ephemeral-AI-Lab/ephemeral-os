@@ -77,9 +77,9 @@ def test_register_plugin_tools_yields_five_lsp_tools() -> None:
 
 
 def test_each_lsp_tool_creatable_via_factory() -> None:
-    """Round-trip: register_plugin_tools → tools.factory → create_tool."""
+    """Round-trip: register_plugin_tools → tools._framework.factory → create_tool."""
     catalog_dir = _LSP_DIR.parent
-    from tools.factory import (
+    from tools._framework.factory import (
         ToolFactoryContext,
         _register_many,
         create_tool,

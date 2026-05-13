@@ -243,7 +243,7 @@ class AttemptOrchestrator:
             raise TaskCenterInvariantViolation(
                 f"Generator task {report.requested_by_task_id!r} not found"
             )
-        if task.get("status") != HarnessTaskStatus.WAITING_COMPLEX_TASK.value:
+        if task.get("status") != HarnessTaskStatus.WAITING_MISSION.value:
             # Already delivered; no further action.
             return
 
@@ -263,7 +263,7 @@ class AttemptOrchestrator:
 
         updated = runtime.task_store.set_task_status_if_current(
             report.requested_by_task_id,
-            expected_status=HarnessTaskStatus.WAITING_COMPLEX_TASK.value,
+            expected_status=HarnessTaskStatus.WAITING_MISSION.value,
             status=status.value,
             summary={
                 "outcome": report.outcome,

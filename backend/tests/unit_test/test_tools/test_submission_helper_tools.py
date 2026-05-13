@@ -13,19 +13,14 @@ from task_center.context_engine.packet import (
     ContextPriority,
     ContextRefs,
 )
-from tools.core.context import ToolExecutionContextService
-from tools.core.results import ToolResult
-from tools.core.runtime import ExecutionMetadata
-from tools.execution.tool_call import execute_tool_once
-from tools.submission.helper_agent.advisor import (
-    ask_advisor,
-    submit_advisor_feedback,
-)
-from tools.submission.helper_agent.resolver import (
-    ask_resolver,
-    submit_resolver_result,
-)
-from tools.submission.subagent.explorer import submit_exploration_result
+from tools._framework.core.context import ToolExecutionContextService
+from tools._framework.core.results import ToolResult
+from tools._framework.core.runtime import ExecutionMetadata
+from tools._framework.execution.tool_call import execute_tool_once
+from tools.ask_helper import ask_advisor, ask_resolver
+from tools.submission.advisor import submit_advisor_feedback
+from tools.submission.resolver import submit_resolver_result
+from tools.submission.explorer.submit_exploration_result import submit_exploration_result
 
 pytestmark = pytest.mark.asyncio
 
@@ -143,23 +138,6 @@ async def test_submit_exploration_result_returns_subagent_findings() -> None:
     assert not result.is_error
     assert result.metadata["subagent_role"] == "explorer"
     assert result.metadata["findings"] == ["finding"]
-
-
-async def test_helper_role_gate_blocks_wrong_helper_terminal_role() -> None:
-    result = await execute_tool_once(
-        submit_resolver_result,
-        {
-            "resolved": True,
-            "summary": "done",
-            "changed_files": [],
-            "remaining_issues": [],
-        },
-        _context(role="advisor"),
-        emit=_noop_emit,
-    )
-
-    assert result.is_error
-    assert "resolver runs" in result.output
 
 
 async def test_ask_advisor_runs_advisor_with_inherited_parent_context(

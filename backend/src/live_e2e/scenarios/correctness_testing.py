@@ -10,11 +10,11 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from tools.submission.main_agent.evaluator import (
+from tools.submission.evaluator import (
     submit_evaluation_failure,
     submit_evaluation_success,
 )
-from tools.submission.main_agent.planner import (
+from tools.submission.planner import (
     submit_full_plan,
     submit_partial_plan,
 )

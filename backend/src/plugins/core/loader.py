@@ -1,6 +1,6 @@
 """Import plugin tool modules and return their ``BaseTool`` instances.
 
-The loader is invoked from :mod:`tools.factory` during builtin registration.
+The loader is invoked from :mod:`tools._framework.factory` during builtin registration.
 It walks the discovered catalog, imports each tool module with a stable
 synthetic module name (``plugins.catalog.<plugin>.tools.<stem>``), and
 extracts the single ``BaseTool`` instance the module is required to expose.
@@ -20,7 +20,7 @@ from typing import Any
 
 from plugins.core.discovery import default_catalog_dir, discover_plugins
 from plugins.core.manifest import PluginManifest, ToolEntry
-from tools.core.base import BaseTool
+from tools._framework.core.base import BaseTool
 
 __all__ = [
     "PluginLoaderError",

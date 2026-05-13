@@ -100,11 +100,19 @@ def write_workspace_binding_atomic(binding: WorkspaceBinding) -> None:
     path = workspace_binding_path(binding.layer_stack_root)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.tmp")
-    tmp.write_text(
-        json.dumps(binding.to_dict(), indent=2, sort_keys=True),
-        encoding="utf-8",
-    )
+    data = json.dumps(binding.to_dict(), indent=2, sort_keys=True).encode("utf-8")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
+    try:
+        os.write(fd, data)
+        os.fsync(fd)
+    finally:
+        os.close(fd)
     os.replace(tmp, path)
+    dir_fd = os.open(path.parent, os.O_RDONLY)
+    try:
+        os.fsync(dir_fd)
+    finally:
+        os.close(dir_fd)
 
 
 def validate_workspace_binding_paths(

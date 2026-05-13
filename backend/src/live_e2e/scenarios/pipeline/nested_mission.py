@@ -5,14 +5,14 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tools.submission.main_agent.evaluator import (
+from tools.submission.evaluator import (
     submit_evaluation_failure,
     submit_evaluation_success,
 )
-from tools.submission.main_agent.generator.verifier import (
+from tools.submission.verifier import (
     submit_verification_success,
 )
-from tools.submission.main_agent.planner import submit_full_plan
+from tools.submission.planner import submit_full_plan
 
 from live_e2e.audit.events import EventType
 from live_e2e.scenarios._utils import is_recursive_mission
