@@ -10,7 +10,7 @@ from task_center.context_engine.packet import (
     ContextPriority,
 )
 from task_center.context_engine.recipes._summaries import latest_summary_text
-from task_center.attempt import Attempt, AttemptStatus
+from task_center.attempt.state import Attempt, AttemptStatus
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
     from db.stores.task_center_store import TaskCenterStore

@@ -15,7 +15,7 @@ from db.stores.attempt_store import AttemptStore
 from db.stores.task_center_store import TaskCenterStore
 from db.stores.episode_store import EpisodeStore
 from task_center.exceptions import TaskCenterInvariantViolation
-from task_center.attempt import (
+from task_center.attempt.state import (
     Attempt,
     AttemptFailReason,
     AttemptStatus,

@@ -139,13 +139,25 @@ def _creation_param_classes() -> tuple[Any, Any]:
     return CreateSandboxFromSnapshotParams, CreateSandboxFromImageParams
 
 
+_MAX_PAGINATION_PAGES = 1000  # WR-06: defense-in-depth cap
+
+
 def _paginate_all(list_fn: Any, limit: int) -> list[Any]:
     """Exhaust a paginated Daytona SDK list method and return all items."""
     first_page = list_fn(limit=limit, timeout=_SANDBOX_TIMEOUT_SECONDS)
     items = list(getattr(first_page, "items", []) or [])
     current_page = int(getattr(first_page, "page", 1) or 1)
     total_pages = int(getattr(first_page, "total_pages", 1) or 1)
-    for page in range(current_page + 1, total_pages + 1):
+    # WR-06: cap iteration so a corrupt SDK response (very large
+    # total_pages) cannot loop until OOM or rate-limit.
+    capped_total = min(total_pages, _MAX_PAGINATION_PAGES)
+    if total_pages > _MAX_PAGINATION_PAGES:
+        logger.warning(
+            "Truncating Daytona pagination at %d pages (SDK reported %d)",
+            _MAX_PAGINATION_PAGES,
+            total_pages,
+        )
+    for page in range(current_page + 1, capped_total + 1):
         response = list_fn(page=page, limit=limit, timeout=_SANDBOX_TIMEOUT_SECONDS)
         items.extend(list(getattr(response, "items", []) or []))
     return items

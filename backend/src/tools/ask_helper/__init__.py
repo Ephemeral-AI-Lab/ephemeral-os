@@ -8,8 +8,8 @@ themselves still use submission tools (``submit_advisor_feedback`` /
 
 from __future__ import annotations
 
-from tools.ask_helper.ask_advisor import AskAdvisorInput, ask_advisor
-from tools.ask_helper.ask_resolver import AskResolverInput, ask_resolver
+from tools.ask_helper.ask_advisor import ask_advisor
+from tools.ask_helper.ask_resolver import ask_resolver
 from tools._framework.core.base import BaseTool
 
 
@@ -19,8 +19,6 @@ def make_ask_helper_tools() -> list[BaseTool]:
 
 
 __all__ = [
-    "AskAdvisorInput",
-    "AskResolverInput",
     "ask_advisor",
     "ask_resolver",
     "make_ask_helper_tools",

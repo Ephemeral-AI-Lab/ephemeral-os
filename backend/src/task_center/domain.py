@@ -1,6 +1,6 @@
 """Read-only TaskCenter domain DTO facade for persistence and audit callers."""
 
-from task_center.attempt import (
+from task_center.attempt.state import (
     Attempt,
     AttemptFailReason,
     AttemptStage,

@@ -11,12 +11,12 @@ from typing import TYPE_CHECKING, Any
 from agents import get_definition
 from message.stream_events import StreamEvent
 from task_center.exceptions import TaskCenterInvariantViolation
-from task_center.attempt import AttemptFailReason, AttemptStatus
+from task_center.attempt.state import AttemptFailReason, AttemptStatus
 from task_center.attempt.runtime import (
     AgentLaunch,
     AttemptRuntime,
 )
-from task_center.task import (
+from task_center.task.models import (
     EvaluatorSubmission,
     GeneratorSubmission,
     HarnessTaskRole,

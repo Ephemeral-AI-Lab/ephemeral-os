@@ -21,7 +21,8 @@ from task_center.attempt.runtime import (
     AgentLaunch,
     AttemptRuntime,
 )
-from task_center.task import (
+from task_center.task.ids import generator_task_id, planner_task_id
+from task_center.task.models import (
     EvaluatorSubmission,
     GeneratorSubmission,
     HarnessTaskRole,
@@ -29,8 +30,6 @@ from task_center.task import (
     PlannedGeneratorTask,
     PlannerFailureSubmission,
     PlannerSubmission,
-    generator_task_id,
-    planner_task_id,
 )
 from task_center.attempt.generator_dag import (
     dependency_task_ids,

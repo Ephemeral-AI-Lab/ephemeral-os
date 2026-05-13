@@ -12,7 +12,7 @@ from task_center.attempt.state import (
     AttemptStatus,
 )
 from task_center.episode.episode import Episode
-from task_center.task import HarnessTaskRole
+from task_center.task.models import HarnessTaskRole
 
 
 def assert_attempt_sequence_contiguous(

@@ -1,13 +1,6 @@
-"""Tool execution orchestration."""
+"""Tool execution orchestration.
 
-from tools._framework.execution.tool_call import (
-    execute_tool_call,
-    execute_tool_call_streaming,
-    execute_tool_once,
-)
-
-__all__ = [
-    "execute_tool_call",
-    "execute_tool_call_streaming",
-    "execute_tool_once",
-]
+External callers import directly from ``tools._framework.execution.tool_call``
+or via the top-level ``tools`` lazy facade; this package marker intentionally
+does not re-export.
+"""

@@ -1,11 +1,10 @@
 """Skill loading tool factory.
 
 Instead of injecting full skill content into the system prompt (which
-can consume 10-50K+ tokens), these tools let the
-agent load skill content on demand.  The system prompt only contains
-skill name + one-line description (~20 tokens each).
+can consume 10-50K+ tokens), these tools let the agent load skill
+content on demand. The system prompt only contains skill name + one-line
+description (~20 tokens each):
 
-Follows Agno's progressive discovery pattern:
 1. Agent sees skill summaries in system prompt
 2. Agent calls ``load_skill`` to get full instructions when needed
 3. Agent calls ``load_skill_reference`` for supplementary docs

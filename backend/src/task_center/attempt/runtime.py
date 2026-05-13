@@ -13,7 +13,7 @@ from task_center.config import HarnessLifecycleConfig
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt.state import Attempt
 from task_center.episode.registry import EpisodeManagerRegistry
-from task_center.task import HarnessTaskRole
+from task_center.task.models import HarnessTaskRole
 
 if TYPE_CHECKING:
     from task_center.agent_launch.composer import ContextComposer

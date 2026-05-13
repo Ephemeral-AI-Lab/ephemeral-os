@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from task_center.attempt import AttemptFailReason
+from task_center.attempt.state import AttemptFailReason
 
 
 @dataclass(frozen=True, slots=True)

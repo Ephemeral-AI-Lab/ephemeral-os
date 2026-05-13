@@ -12,7 +12,6 @@ from tools._framework.core.results import TextToolOutput, ToolResult
 from tools._framework.core.runtime import ExecutionMetadata
 
 __all__ = [
-    "BackgroundMode",
     "BaseTool",
     "ExecutionMetadata",
     "TextToolOutput",

@@ -22,10 +22,10 @@ from task_center.mission.mission import (
 )
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt.orchestrator import AttemptOrchestrator
-from task_center.attempt import AttemptFailReason, AttemptStatus
+from task_center.attempt.state import AttemptFailReason, AttemptStatus
 from task_center.attempt.runtime import AttemptRuntime
 from task_center.episode.episode import Episode
-from task_center.task import HarnessTaskStatus
+from task_center.task.models import HarnessTaskStatus
 
 logger = logging.getLogger(__name__)
 

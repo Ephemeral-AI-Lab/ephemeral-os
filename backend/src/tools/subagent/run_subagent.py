@@ -24,6 +24,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from engine.background.subagent_policy import SUBAGENT_TASK_TYPE
 from message.messages import (
     ConversationMessage,
     TextBlock,
@@ -170,7 +171,7 @@ def _validate_run_subagent_request(
     input_model=RunSubagentInput,
     output_model=TextToolOutput,
     background="always",
-    task_type="subagent",
+    task_type=SUBAGENT_TASK_TYPE,
 )
 async def run_subagent(
     agent_name: str,

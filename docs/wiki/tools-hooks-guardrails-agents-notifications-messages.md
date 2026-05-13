@@ -39,7 +39,7 @@ _Source: explore agent draft, 2026-05-10. See `.omc/wiki-draft/tools-and-agents.
 
 REAL operations inside the live sandbox. All `@tool`-decorated.
 
-- `shell` (`shell.py:121`) — runs shell commands; `background="optional"`.
+- `shell` (`shell.py:121`) — runs shell commands in the foreground only.
 - `read_file` (`read_file.py:24`)
 - `write_file` (`write_file.py:23`)
 - `edit_file` (`edit_file.py:62`) — structured patch edits (search/replace blocks).

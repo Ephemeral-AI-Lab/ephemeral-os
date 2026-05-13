@@ -19,7 +19,7 @@ from task_center.episode.episode import Episode
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.mission.mission import Mission
 from task_center.mission.starter import MissionStarter, StartedMission
-from task_center.task import (
+from task_center.task.models import (
     EvaluatorSubmission,
     GeneratorSubmission,
     PlannedGeneratorTask,
@@ -27,16 +27,13 @@ from task_center.task import (
 )
 
 if TYPE_CHECKING:
-    from task_center.entry import start_task_center_entry_run
-
-_ENTRY_EXPORTS = {"start_task_center_entry_run"}
-
+    from task_center.entry.coordinator import start_task_center_entry_run
 
 def __getattr__(name: str) -> object:
-    if name in _ENTRY_EXPORTS:
-        from task_center import entry
+    if name == "start_task_center_entry_run":
+        from task_center.entry.coordinator import start_task_center_entry_run
 
-        value = getattr(entry, name)
+        value = start_task_center_entry_run
         globals()[name] = value
         return value
     raise AttributeError(name)

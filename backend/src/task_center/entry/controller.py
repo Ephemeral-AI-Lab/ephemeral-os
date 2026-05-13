@@ -13,7 +13,7 @@ from typing import Any
 from db.stores.task_center_store import TaskCenterStore
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.mission.mission import MissionCloseReport
-from task_center.task import HarnessTaskStatus
+from task_center.task.models import HarnessTaskStatus
 
 
 @dataclass(frozen=True, slots=True)

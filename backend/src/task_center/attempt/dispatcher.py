@@ -31,10 +31,10 @@ from task_center.attempt.generator_dag import (
     blocked_descendant_ids,
     ready_pending_generator_ids,
 )
-from task_center.task import (
+from task_center.task.ids import evaluator_task_id
+from task_center.task.models import (
     HarnessTaskRole,
     HarnessTaskStatus,
-    evaluator_task_id,
 )
 
 logger = logging.getLogger(__name__)

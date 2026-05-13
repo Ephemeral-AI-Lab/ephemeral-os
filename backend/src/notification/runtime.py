@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from message.messages import SystemNotificationBlock
@@ -80,4 +80,24 @@ class SystemNotificationService:
         self._notifications.clear()
         if not self._registered_agent_run:
             self._events.clear()
+
+
+def ensure_system_notification_service(metadata: Any | None) -> SystemNotificationService:
+    service = (
+        getattr(metadata, "system_notification_service", None)
+        if metadata is not None
+        else None
+    )
+    if not isinstance(service, SystemNotificationService):
+        service = SystemNotificationService()
+        if metadata is not None:
+            metadata.system_notification_service = service
+    service.register_agent_run()
+    return service
+
+
+def flush_system_notification_events(
+    service: SystemNotificationService,
+) -> list[SystemNotification]:
+    return service.flush_events()
         return notifications

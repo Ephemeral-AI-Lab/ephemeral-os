@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from task_center.exceptions import TaskCenterInvariantViolation
-from task_center.attempt import Attempt
+from task_center.attempt.state import Attempt
 from task_center.episode.episode import Episode
 
 

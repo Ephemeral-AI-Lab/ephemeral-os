@@ -164,7 +164,6 @@ def _build_tool_output(
     short_description="Run a shell command from the repo root.",
     input_model=ShellInput,
     output_model=ShellOutput,
-    background="optional",
     pre_hooks=(DestructiveGitShellPreHook(), DestructiveShellPreHook()),
 )
 async def shell(

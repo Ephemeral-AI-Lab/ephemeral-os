@@ -15,7 +15,6 @@ from message.stream_events import (
     ToolExecutionCompleted,
 )
 from notification import SystemNotification
-from providers.types import UsageSnapshot
 from tools import BaseTool, ExecutionMetadata, ToolRegistry, ToolResult
 from tools._framework.execution.trace import record_tool_trace
 
@@ -76,12 +75,8 @@ def launch_background_tool(
 
     # TODO(engine/CR-01): kill_callback is intentionally None because the
     # sandbox package does not yet expose a per-process kill primitive.
-    # BackgroundTaskManager.cancel/cancel_all therefore fall through to
-    # asyncio.Task.cancel() for non-subagent tools, which (per
-    # manager.cancel's docstring) can corrupt the shared sandbox connection
-    # when the task is in flight inside a sandbox exec. Pure-Python tools
-    # are safe; sandbox-backed tools (e.g. shell with background="optional")
-    # are not. Wire a real kill_callback once sandbox.api exposes one.
+    # Only pure-Python background tools should use this generic path until
+    # sandbox.api exposes one.
     kill_callback = None
     validation_result = validate_background_input(
         tool_def=tool_def,
@@ -155,7 +150,7 @@ def launch_and_collect_bg_events(
     background_manager: BackgroundTaskManager,
     tc: ToolUseBlock,
     tool_results: list[ToolResultBlock],
-) -> list[tuple[StreamEvent, UsageSnapshot | None]]:
+) -> list[StreamEvent]:
     async def _execute_in_context(
         tool_name: str,
         tool_use_id: str,
@@ -194,9 +189,9 @@ def launch_and_collect_bg_events(
         execute_tool_call=_execute_in_context,
     )
     tool_results.append(tool_result)
-    events: list[tuple[StreamEvent, UsageSnapshot | None]] = []
+    events: list[StreamEvent] = []
     if bg_event is not None:
-        events.append((bg_event, None))
+        events.append(bg_event)
     if reject_event is not None:
-        events.append((reject_event, None))
+        events.append(reject_event)
     return events

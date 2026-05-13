@@ -246,7 +246,11 @@ class DaytonaProviderAdapter:
 
     def stop(self, sandbox_id: str) -> dict[str, Any]:
         raw = fetch_sandbox(sandbox_id)
-        raw.stop(timeout=60)
+        # WR-03: use the module-wide timeout (configurable via
+        # EPHEMERALOS_SANDBOX_TIMEOUT_SECONDS) so a degraded scheduler
+        # does not fail stop alone at the magic-literal 60s while
+        # start/delete tolerate the longer budget.
+        raw.stop(timeout=_SANDBOX_TIMEOUT_SECONDS)
         _refresh(raw)
         return _serialize_raw(raw)
 

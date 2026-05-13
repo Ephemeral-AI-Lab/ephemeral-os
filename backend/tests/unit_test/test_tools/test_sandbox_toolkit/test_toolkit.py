@@ -84,6 +84,16 @@ def test_shell_schema_describes_command():
     assert tool.short_description == "Run a shell command from the repo root."
 
 
+def test_shell_does_not_expose_background_execution():
+    tools = {tool.name: tool for tool in make_sandbox_tools()}
+    tool = tools.get("shell")
+    assert tool is not None
+
+    schema = tool.to_api_schema()["input_schema"]
+    assert tool.background == "forbidden"
+    assert "background" not in schema["properties"]
+
+
 def test_missing_sandbox_tool_absent():
     tools = {tool.name: tool for tool in make_sandbox_tools()}
     assert tools.get("nonexistent_tool") is None

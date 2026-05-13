@@ -43,7 +43,7 @@ from task_center.entry.sandbox_bridge import (
     TaskCenterSandboxBridge,
 )
 from task_center.episode.registry import EpisodeManagerRegistry
-from task_center.task import HarnessTaskRole, HarnessTaskStatus
+from task_center.task.models import HarnessTaskRole, HarnessTaskStatus
 
 if TYPE_CHECKING:
     from runtime.app_factory import RuntimeConfig

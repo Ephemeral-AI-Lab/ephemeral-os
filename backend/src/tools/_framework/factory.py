@@ -66,19 +66,6 @@ def create_tool(name: str, ctx: ToolFactoryContext) -> BaseTool:
     return tool
 
 
-def create_tools(names: list[str], ctx: ToolFactoryContext) -> list[BaseTool]:
-    """Create tool instances, deduplicating by tool name while preserving order."""
-    tools: list[BaseTool] = []
-    seen: set[str] = set()
-    for name in names:
-        clean_name = str(name).strip()
-        if not clean_name or clean_name in seen:
-            continue
-        tools.append(create_tool(clean_name, ctx))
-        seen.add(clean_name)
-    return tools
-
-
 def has_tool(name: str) -> bool:
     """Return True if a tool factory is registered for *name*."""
     _ensure_builtins_registered()

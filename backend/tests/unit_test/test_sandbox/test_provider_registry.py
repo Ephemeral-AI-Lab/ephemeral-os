@@ -56,7 +56,10 @@ def test_default_and_id_keyed_registries_are_independent() -> None:
     assert get_adapter("sb-1") is per_id
 
 
-def test_get_adapter_falls_back_to_default_provider_for_unknown_id() -> None:
+def test_get_adapter_falls_back_to_default_provider_without_caching() -> None:
+    """WR-01: fallback to default must NOT cache the binding. has_registered_adapter
+    must stay False for ids that only ever resolved via fallback, so callers
+    can distinguish "explicit register" from "fallback cached"."""
     from sandbox.provider.registry import (
         get_adapter,
         has_registered_adapter,
@@ -68,8 +71,12 @@ def test_get_adapter_falls_back_to_default_provider_for_unknown_id() -> None:
 
     assert has_registered_adapter("sb-existing") is False
     assert get_adapter("sb-existing") is default
-    assert has_registered_adapter("sb-existing") is True
+    # WR-01: fallback does NOT flip has_registered_adapter — the id was
+    # never explicitly registered.
+    assert has_registered_adapter("sb-existing") is False
+    # Repeat lookup still resolves to default (no cache pollution).
     assert get_adapter("sb-existing") is default
+    assert has_registered_adapter("sb-existing") is False
 
 
 # ---------------------------------------------------------------------------

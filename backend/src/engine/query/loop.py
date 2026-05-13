@@ -23,23 +23,21 @@ from message.stream_events import (
     ThinkingDelta,
     ToolExecutionCompleted,
 )
-from engine.query.notifications import (
-    ensure_system_notification_service,
-    flush_system_notifications,
-)
 from engine.tool_call.streaming import StreamingToolExecutor, defer_background_dispatch
 from engine.tool_call.dispatch import dispatch_assistant_tools
 from engine.query.request import (
     QueryRunRequest,
     build_query_run_request,
-    record_assistant_message,
-    record_tool_results,
 )
 from engine.query.context import QueryContext, QueryExitReason
 from engine.background.manager import BackgroundTaskManager
 from engine.tool_call.context import prepare_tool_execution_context
-from notification import dispatch_rules
-from notification import SystemNotificationService
+from notification import (
+    SystemNotificationService,
+    dispatch_rules,
+    ensure_system_notification_service,
+    flush_system_notification_events,
+)
 from tools import (
     BaseTool,
     ExecutionMetadata,
@@ -247,13 +245,16 @@ async def _handle_tool_dispatch_branch(
         streamed_tool_use_ids=state.streamed_tool_use_ids,
         background_manager=background_manager,
     )
-    for event, event_usage in dispatch.events:
-        yield event, event_usage
+    for event in dispatch.events:
+        yield event, None
 
     tool_results = dispatch.tool_results
-    record_tool_results(run_request, tool_results)
-    for event in flush_system_notifications(notification_service):
-        yield event
+    run_request.prompt_report.record_tool_results(
+        seq=run_request.prompt_report_seq,
+        tool_results=tool_results,
+    )
+    for event in flush_system_notification_events(notification_service):
+        yield event, None
 
     if dispatch.terminal_result is not None:
         context.terminal_result = dispatch.terminal_result
@@ -275,8 +276,8 @@ async def _handle_tool_dispatch_branch(
             ),
                 None,
             )
-        for event in flush_system_notifications(notification_service):
-            yield event
+        for event in flush_system_notification_events(notification_service):
+            yield event, None
         return
 
     if tool_results:
@@ -323,12 +324,16 @@ async def _run_query_loop(
             final_message = state.final_message
             assert final_message is not None  # narrowed by _consume_provider_stream
             messages.append(final_message)
-            record_assistant_message(run_request, final_message, state.usage)
+            run_request.prompt_report.record_assistant(
+                seq=run_request.prompt_report_seq,
+                message=final_message,
+                usage=state.usage,
+            )
             yield AssistantMessageComplete(message=final_message, usage=state.usage), state.usage
 
             if not final_message.tool_uses:
-                for event, event_usage in flush_system_notifications(notification_service):
-                    yield event, event_usage
+                for event in flush_system_notification_events(notification_service):
+                    yield event, None
                 context.exit_reason = QueryExitReason.TEXT_RESPONSE
                 break
 

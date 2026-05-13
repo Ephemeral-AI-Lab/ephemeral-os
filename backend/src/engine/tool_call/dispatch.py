@@ -8,7 +8,6 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from engine.tool_call.streaming import StreamingToolExecutor
-from engine.tool_call.batch import validate_tool_batch
 from engine.background.dispatch import launch_and_collect_bg_events
 from engine.background.manager import BackgroundTaskManager
 from message.messages import ConversationMessage, ToolResultBlock, ToolUseBlock
@@ -17,7 +16,6 @@ from message.stream_events import (
     ToolExecutionCancelled,
     ToolExecutionCompleted,
 )
-from providers.types import UsageSnapshot
 from tools import ToolResult, execute_tool_call_streaming
 
 if TYPE_CHECKING:
@@ -31,7 +29,7 @@ logger = logging.getLogger(__name__)
 class ToolDispatchResult:
     tool_results: list[ToolResultBlock]
     terminal_result: ToolResult | None = None
-    events: list[tuple[StreamEvent, UsageSnapshot | None]] = field(default_factory=list)
+    events: list[StreamEvent] = field(default_factory=list)
 
 
 def _result_from_completed(completed: ToolExecutionCompleted) -> ToolResultBlock:
@@ -78,6 +76,40 @@ def _assign_missing_tool_result_ids(
             result.tool_use_id = unassigned_ids.pop(0)
 
 
+def _reject_tool_batch(
+    tool_calls: list[ToolUseBlock],
+    message: str,
+) -> list[ToolResultBlock]:
+    return [
+        ToolResultBlock(tool_use_id=str(tc.id), content=message, is_error=True)
+        for tc in tool_calls
+    ]
+
+
+def _validate_tool_batch(
+    context: QueryContext,
+    tool_calls: list[ToolUseBlock],
+) -> list[ToolResultBlock] | None:
+    if not tool_calls or len(tool_calls) <= 1:
+        return None
+
+    terminal_in_batch = [
+        tc for tc in tool_calls if tc.name in context.terminal_tools
+    ]
+    if not terminal_in_batch:
+        return None
+
+    flagged_names = ", ".join(sorted({f"`{tc.name}`" for tc in terminal_in_batch}))
+    called_names = ", ".join(f"`{tc.name}`" for tc in tool_calls)
+    message = (
+        f"Terminal tool {flagged_names} must be called alone. "
+        f"This response batched it with other tools: {called_names}. "
+        f"No tool in this batch executed. "
+        f"Resubmit with only the exclusive tool in its own final batch."
+    )
+    return _reject_tool_batch(tool_calls, message=message)
+
+
 async def dispatch_assistant_tools(
     context: QueryContext,
     messages: list[ConversationMessage],
@@ -88,35 +120,32 @@ async def dispatch_assistant_tools(
     streamed_tool_use_ids: set[str],
     background_manager: BackgroundTaskManager | None,
 ) -> ToolDispatchResult:
-    events: list[tuple[StreamEvent, UsageSnapshot | None]] = []
+    events: list[StreamEvent] = []
     tool_results: list[ToolResultBlock] = list(streamed_rejections)
 
     remaining_events = await executor.get_remaining()
-    events.extend((emitted, None) for emitted in executor.get_events())
+    events.extend(executor.get_events())
     for completed in remaining_events:
         if isinstance(completed, ToolExecutionCompleted):
             tool_results.append(_result_from_completed(completed))
-            events.append((completed, None))
+            events.append(completed)
         elif isinstance(completed, ToolExecutionCancelled):
             tool_results.append(_result_from_cancelled(completed))
-            events.append((completed, None))
+            events.append(completed)
 
-    batch_rejection = validate_tool_batch(context, final_message.tool_uses)
+    batch_rejection = _validate_tool_batch(context, final_message.tool_uses)
     if batch_rejection is not None:
         executor.cancel_all()
         tool_results.extend(batch_rejection)
         for tc, result in zip(final_message.tool_uses, batch_rejection, strict=True):
             events.append(
-                (
-                    ToolExecutionCompleted(
-                        tool_name=tc.name,
-                        output=result.content,
-                        is_error=result.is_error,
-                        tool_id=tc.id,
-                        metadata=dict(result.metadata or {}),
-                        does_terminate=result.does_terminate,
-                    ),
-                    None,
+                ToolExecutionCompleted(
+                    tool_name=tc.name,
+                    output=result.content,
+                    is_error=result.is_error,
+                    tool_id=tc.id,
+                    metadata=dict(result.metadata or {}),
+                    does_terminate=result.does_terminate,
                 )
             )
         _assign_missing_tool_result_ids(tool_results, final_message.tool_uses)
@@ -156,23 +185,20 @@ async def _dispatch_deferred_tool_calls(
     streamed_tool_use_ids: set[str],
     background_manager: BackgroundTaskManager | None,
     tool_results: list[ToolResultBlock],
-) -> list[tuple[StreamEvent, UsageSnapshot | None]]:
-    events: list[tuple[StreamEvent, UsageSnapshot | None]] = []
-    batch_rejection = validate_tool_batch(context, tool_calls)
+) -> list[StreamEvent]:
+    events: list[StreamEvent] = []
+    batch_rejection = _validate_tool_batch(context, tool_calls)
     if batch_rejection is not None:
         tool_results.extend(batch_rejection)
         for tc, result in zip(tool_calls, batch_rejection, strict=True):
             events.append(
-                (
-                    ToolExecutionCompleted(
-                        tool_name=tc.name,
-                        output=result.content,
-                        is_error=result.is_error,
-                        tool_id=tc.id,
-                        metadata=dict(result.metadata or {}),
-                        does_terminate=result.does_terminate,
-                    ),
-                    None,
+                ToolExecutionCompleted(
+                    tool_name=tc.name,
+                    output=result.content,
+                    is_error=result.is_error,
+                    tool_id=tc.id,
+                    metadata=dict(result.metadata or {}),
+                    does_terminate=result.does_terminate,
                 )
             )
         return events
@@ -231,7 +257,7 @@ async def _dispatch_single_foreground_tool(
     *,
     streamed_tool_use_ids: set[str],
     tool_results: list[ToolResultBlock],
-) -> list[tuple[StreamEvent, UsageSnapshot | None]]:
+) -> list[StreamEvent]:
     emitted_events: list[StreamEvent] = []
 
     async def emit(event: StreamEvent) -> None:
@@ -247,20 +273,15 @@ async def _dispatch_single_foreground_tool(
         consume_budget=tc.id not in streamed_tool_use_ids,
     )
     tool_results.append(result)
-    events: list[tuple[StreamEvent, UsageSnapshot | None]] = [
-        (emitted, None) for emitted in emitted_events
-    ]
+    events: list[StreamEvent] = list(emitted_events)
     events.append(
-        (
-            ToolExecutionCompleted(
-                tool_name=tc.name,
-                output=result.content,
-                is_error=result.is_error,
-                tool_id=tc.id,
-                metadata=dict(result.metadata or {}),
-                does_terminate=result.does_terminate,
-            ),
-            None,
+        ToolExecutionCompleted(
+            tool_name=tc.name,
+            output=result.content,
+            is_error=result.is_error,
+            tool_id=tc.id,
+            metadata=dict(result.metadata or {}),
+            does_terminate=result.does_terminate,
         )
     )
     return events
@@ -273,9 +294,9 @@ async def _dispatch_many_foreground_tools(
     *,
     streamed_tool_use_ids: set[str],
     tool_results: list[ToolResultBlock],
-) -> list[tuple[StreamEvent, UsageSnapshot | None]]:
+) -> list[StreamEvent]:
     queue: asyncio.Queue[StreamEvent | tuple[ToolUseBlock, ToolResultBlock]] = asyncio.Queue()
-    events: list[tuple[StreamEvent, UsageSnapshot | None]] = []
+    events: list[StreamEvent] = []
 
     async def run_foreground(tc: ToolUseBlock) -> None:
         async def emit(event: StreamEvent) -> None:
@@ -313,19 +334,16 @@ async def _dispatch_many_foreground_tools(
             tool_results.append(result)
             remaining -= 1
             events.append(
-                (
-                    ToolExecutionCompleted(
-                        tool_name=tc.name,
-                        output=result.content,
-                        is_error=result.is_error,
-                        tool_id=tc.id,
-                        metadata=dict(result.metadata or {}),
-                        does_terminate=result.does_terminate,
-                    ),
-                    None,
+                ToolExecutionCompleted(
+                    tool_name=tc.name,
+                    output=result.content,
+                    is_error=result.is_error,
+                    tool_id=tc.id,
+                    metadata=dict(result.metadata or {}),
+                    does_terminate=result.does_terminate,
                 )
             )
         else:
-            events.append((item, None))
+            events.append(item)
     await asyncio.gather(*tasks, return_exceptions=True)
     return events

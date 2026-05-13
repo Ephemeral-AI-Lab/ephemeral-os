@@ -10,6 +10,12 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
+from engine.background.subagent_policy import (
+    DEFAULT_BACKGROUND_TASK_TYPE,
+    mark_completion_mode_if_stopped,
+    request_subagent_early_stop,
+    should_cancel_asyncio_task,
+)
 from tools import ToolResult
 from message.stream_events import BackgroundTaskStarted
 
@@ -53,7 +59,7 @@ class TrackedBackgroundTask:
     asyncio_task: asyncio.Task[ToolResult]
     # Discriminator so monitoring/UI/audit can branch without sniffing tool_name.
     # "agent" for ordinary background tools, "subagent" for run_subagent.
-    task_type: str = "agent"
+    task_type: str = DEFAULT_BACKGROUND_TASK_TYPE
     # Optional back-reference to a persisted AgentRunRecord (set by run_subagent
     # so the audit row and the in-memory bg task can be cross-resolved).
     agent_run_id: str | None = None
@@ -104,7 +110,7 @@ class BackgroundTaskManager:
         tool_input: dict[str, Any],
         coro: Coroutine[Any, Any, ToolResult],
         kill_callback: KillCallback | None = None,
-        task_type: str = "agent",
+        task_type: str = DEFAULT_BACKGROUND_TASK_TYPE,
         agent_run_id: str | None = None,
     ) -> BackgroundTaskStarted:
         """Launch *coro* as a background task and return a started event."""
@@ -149,8 +155,7 @@ class BackgroundTaskManager:
                     tracked.result = ToolResult(output=str(exc), is_error=True)
                 else:
                     tracked.status = TaskStatus.COMPLETED
-                    if tracked.stop_mode == "early_stop":
-                        tracked.completion_mode = "early_stopped"
+                    mark_completion_mode_if_stopped(tracked)
                     tracked.result = task.result()
             except Exception as exc:
                 logger.debug("done_callback failed for %s: %s", tracked.task_id, exc)
@@ -245,17 +250,8 @@ class BackgroundTaskManager:
         if tracked is None:
             return False
         tracked.cancel_reason = reason or None
-        if tracked.task_type == "subagent":
-            tracked.stop_mode = "early_stop"
-            tracked.progress_lines = [f"Early stop requested{': ' + reason if reason else ''}"]
-            # Give a freshly launched subagent one event-loop cycle to reach its
-            # first cooperative await so cancellation can be salvaged into a
-            # partial result instead of short-circuiting before user code runs.
-            await asyncio.sleep(0)
-            tracked.asyncio_task.cancel()
-            # Let trivial cancellation handlers and the task done-callback run
-            # before we return status to the caller.
-            await asyncio.sleep(0)
+        if not should_cancel_asyncio_task(tracked):
+            await request_subagent_early_stop(tracked, reason=reason)
             return True
         tracked.stop_mode = "cancel"
         tracked.status = TaskStatus.CANCELLED
@@ -267,8 +263,7 @@ class BackgroundTaskManager:
                 await tracked.kill_callback()
             except Exception as exc:
                 logger.debug("Kill callback failed for task %s: %s", task_id, exc)
-        # Subagents may be inside async provider calls; logical cancel is enough.
-        elif tracked.task_type != "subagent":
+        elif should_cancel_asyncio_task(tracked):
             # Pure-Python tools with no external runtime can be cancelled
             # cooperatively without risking the shared sandbox connection.
             tracked.asyncio_task.cancel()
@@ -300,8 +295,7 @@ class BackgroundTaskManager:
                             tracked.task_id,
                             exc_info=True,
                         )
-                # Subagents may be inside async provider calls; logical cancel is enough.
-                elif tracked.task_type != "subagent":
+                elif should_cancel_asyncio_task(tracked):
                     tracked.asyncio_task.cancel()
                     cancelled_tasks.append(tracked.asyncio_task)
         if cancelled_tasks:

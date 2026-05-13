@@ -18,7 +18,7 @@ from typing import Literal
 from task_center.mission.mission import MissionCloseReport
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt.runtime import AttemptRuntime
-from task_center.task import HarnessTaskStatus
+from task_center.task.models import HarnessTaskStatus
 
 CloseReportDeliveryStatus = Literal[
     "delivered",

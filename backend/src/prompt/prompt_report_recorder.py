@@ -4,10 +4,15 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from collections.abc import Mapping
 
 from prompt.message_recorder import append_prompt_report_event
+
+if TYPE_CHECKING:
+    from engine.query.context import QueryContext
+    from message.messages import ConversationMessage, ToolResultBlock
+    from providers.types import UsageSnapshot
 
 logger = logging.getLogger(__name__)
 
@@ -43,5 +48,74 @@ class PromptReportRecorder:
         except Exception:
             logger.debug("prompt report append failed", exc_info=True)
 
+    def record_llm_request(
+        self,
+        *,
+        seq: int,
+        system_prompt: str,
+        messages: list[Any],
+        tools: list[dict[str, Any]],
+    ) -> None:
+        self.record(
+            {
+                "event": "llm_request",
+                "seq": seq,
+                "system_prompt": system_prompt,
+                "messages": [m.model_dump(mode="json") for m in messages],
+                "tools": tools,
+            }
+        )
 
-__all__ = ["PromptReportRecorder"]
+    def record_assistant(
+        self,
+        *,
+        seq: int,
+        message: "ConversationMessage",
+        usage: "UsageSnapshot",
+    ) -> None:
+        self.record(
+            {
+                "event": "assistant",
+                "seq": seq,
+                "message": message.model_dump(mode="json"),
+                "usage": usage.model_dump(mode="json"),
+            }
+        )
+
+    def record_tool_results(
+        self,
+        *,
+        seq: int,
+        tool_results: list["ToolResultBlock"],
+    ) -> None:
+        self.record(
+            {
+                "event": "tool_results",
+                "seq": seq,
+                "tool_results": [
+                    result.model_dump(mode="json") for result in tool_results
+                ],
+            }
+        )
+
+
+def recorder_for_context(context: "QueryContext") -> PromptReportRecorder:
+    if context.prompt_report_recorder is not None:
+        return context.prompt_report_recorder
+
+    metadata = context.tool_metadata
+    context.prompt_report_recorder = PromptReportRecorder(
+        metadata.get("prompt_report_messages_path") if metadata is not None else None,
+        base_event=(
+            {
+                "agent_run_id": metadata.get("agent_run_id"),
+                "agent": context.agent_name or metadata.get("agent_name"),
+                "model": context.model,
+            }
+            if metadata is not None
+            else {"agent": context.agent_name, "model": context.model}
+        ),
+    )
+    return context.prompt_report_recorder
+
+__all__ = ["PromptReportRecorder", "recorder_for_context"]
