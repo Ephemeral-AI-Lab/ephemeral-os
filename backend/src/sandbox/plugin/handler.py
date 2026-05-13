@@ -12,6 +12,7 @@ is a no-op.
 
 from __future__ import annotations
 
+import asyncio
 import importlib
 import inspect
 import logging
@@ -48,6 +49,11 @@ _LOADED_DIGEST: dict[str, str] = {}
 # Per-layer-stack-root WorkspaceProjection cache so plugin sessions reuse
 # the same projection across calls.
 _PROJECTIONS: dict[str, WorkspaceProjection] = {}
+# WR-01: per-plugin async lock so two concurrent ensure calls with
+# different digests cannot interleave at await boundaries. Without this
+# the digest-A → digest-B race tore the dispatcher (T2's unload popped
+# entries T1 just registered).
+_PLUGIN_LOCKS: dict[str, asyncio.Lock] = {}
 
 
 async def plugin_ensure(args: dict[str, Any]) -> dict[str, Any]:
@@ -55,7 +61,16 @@ async def plugin_ensure(args: dict[str, Any]) -> dict[str, Any]:
     if not plugin_name:
         raise PluginEnsureError("api.plugin.ensure requires plugin name")
     digest = str(args.get("digest") or "").strip()
+    lock = _PLUGIN_LOCKS.setdefault(plugin_name, asyncio.Lock())
+    async with lock:
+        return await _plugin_ensure_locked(plugin_name, digest, args)
 
+
+async def _plugin_ensure_locked(
+    plugin_name: str,
+    digest: str,
+    args: dict[str, Any],
+) -> dict[str, Any]:
     if (
         plugin_name in _LOADED
         and (not digest or _LOADED_DIGEST.get(plugin_name) == digest)
@@ -242,6 +257,13 @@ async def _plugin_op_context_factory(
             run_id=str(caller_dict.get("run_id", "")),
             agent_run_id=str(caller_dict.get("agent_run_id", "")),
             task_id=str(caller_dict.get("task_id", "")),
+            task_center_run_id=str(caller_dict.get("task_center_run_id", "")),
+            task_center_task_id=str(caller_dict.get("task_center_task_id", "")),
+            task_center_attempt_id=str(caller_dict.get("task_center_attempt_id", "")),
+            task_center_mission_id=str(caller_dict.get("task_center_mission_id", "")),
+            task_center_request_id=str(caller_dict.get("task_center_request_id", "")),
+            tool_name=str(caller_dict.get("tool_name", "")),
+            tool_id=str(caller_dict.get("tool_id", "")),
         )
     else:
         caller = SandboxCaller(agent_id="", run_id="", agent_run_id="", task_id="")
