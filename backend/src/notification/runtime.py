@@ -71,7 +71,7 @@ class SystemNotificationService:
 
         In agent runs (registered via ``register_agent_run``) leaves
         ``_events`` untouched so the stream-side flush
-        (``flush_events`` / ``flush_system_notifications``) still emits
+        (``flush_events`` / ``flush_system_notification_events``) still emits
         these events to the user UI. In standalone tool execution where
         nothing else drains ``_events``, clears them too to keep memory
         bounded.
@@ -80,6 +80,7 @@ class SystemNotificationService:
         self._notifications.clear()
         if not self._registered_agent_run:
             self._events.clear()
+        return notifications
 
 
 def ensure_system_notification_service(metadata: Any | None) -> SystemNotificationService:
@@ -100,4 +101,3 @@ def flush_system_notification_events(
     service: SystemNotificationService,
 ) -> list[SystemNotification]:
     return service.flush_events()
-        return notifications

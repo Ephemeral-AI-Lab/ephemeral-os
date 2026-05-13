@@ -239,6 +239,13 @@ def _services(
     )
 
 
+# WR-08: conservative argv-size cap below typical Linux ARG_MAX (~128 KiB).
+# A caller pushing a large blob into a single argv element used to trip
+# the kernel's E2BIG at exec time with an opaque OSError; this surfaces a
+# structured ValueError before the syscall.
+_MAX_ARGV_BYTES = 128 * 1024
+
+
 def _command_request(args: Mapping[str, object]) -> CommandExecRequest:
     command = args.get("command")
     if isinstance(command, str):
@@ -247,20 +254,45 @@ def _command_request(args: Mapping[str, object]) -> CommandExecRequest:
         argv = tuple(str(part) for part in command)
     else:
         raise ValueError("command must be a string or argv list")
+    argv_bytes = sum(len(part.encode("utf-8")) for part in argv) + len(argv)
+    if argv_bytes > _MAX_ARGV_BYTES:
+        raise ValueError(
+            f"argv exceeds {_MAX_ARGV_BYTES} bytes ({argv_bytes}); "
+            "stream large blobs via stdin instead"
+        )
     timeout = args.get("timeout_seconds", args.get("timeout"))
     workspace_ref = _layer_stack_root(args)
     binding = require_workspace_binding(workspace_ref)
+    env = _safe_env(_mapping(args.get("env")))
     return CommandExecRequest(
         request_id=str(args.get("request_id") or uuid4().hex),
         workspace_ref=workspace_ref,
         workspace_root=binding.workspace_root,
         command=argv,
         cwd=str(args.get("cwd") or "."),
-        env={str(k): str(v) for k, v in _mapping(args.get("env")).items()},
+        env=env,
         timeout_seconds=_optional_float(timeout),
         actor_id=str(args.get("actor_id") or ""),
         description=str(args.get("description") or "shell"),
     )
+
+
+def _safe_env(raw: Mapping[object, object]) -> dict[str, str]:
+    """Validate caller env mapping; reject NUL / ``=`` / empty keys (WR-04)."""
+    result: dict[str, str] = {}
+    for k, v in raw.items():
+        key = str(k)
+        value = str(v)
+        if not key:
+            raise ValueError("env entry has empty key")
+        if "\0" in key or "\0" in value:
+            raise ValueError(f"env entry contains NUL byte: {key!r}")
+        if "=" in key:
+            # execvpe constructs `NAME=VALUE`; a `=` in NAME silently
+            # corrupts the child env.
+            raise ValueError(f"env key cannot contain '=': {key!r}")
+        result[key] = value
+    return result
 
 
 def _layer_stack_root(args: Mapping[str, object]) -> str:

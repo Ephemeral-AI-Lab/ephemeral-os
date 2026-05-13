@@ -12,6 +12,7 @@ import logging
 from collections.abc import Callable
 from typing import Any
 
+from task_center.audit.emitter import TaskCenterAuditEmitter
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt.state import (
     Attempt,
@@ -150,9 +151,18 @@ class AttemptDispatcher:
         if current is None:
             raise TaskCenterInvariantViolation(f"Generator task {task_id!r} not found")
         agent_name = self._task_agent_name(current)
+        audit = TaskCenterAuditEmitter(runtime.audit_sink)
+        audit.task_ready(
+            current,
+            attempt_id=attempt.id,
+            satisfied_dependency_ids=tuple(
+                str(dep) for dep in current.get("needs", ()) or ()
+            ),
+        )
         task = runtime.task_store.set_task_status(
             task_id, status=HarnessTaskStatus.RUNNING.value
         )
+        audit.task_launched(task, attempt_id=attempt.id)
         try:
             launch = self._build_generator_launch(
                 attempt=attempt,
@@ -179,12 +189,20 @@ class AttemptDispatcher:
                     "summary": "Generator agent launch failed.",
                 },
             )
+            failed_task = runtime.task_store.get_task(task_id) or task
+            audit.task_failed(
+                failed_task,
+                attempt_id=attempt.id,
+                fail_reason="agent_launch_failed",
+                summary="Generator agent launch failed.",
+            )
             self.block_failed_descendants(task_id)
             return False
         return True
 
     def _launch_evaluator(self, launch: AgentLaunch) -> None:
         runtime = self._runtime
+        audit = TaskCenterAuditEmitter(runtime.audit_sink)
         try:
             runtime.agent_launcher.launch(launch)
         except Exception:
@@ -204,6 +222,14 @@ class AttemptDispatcher:
                     "summary": "Evaluator agent launch failed.",
                 },
             )
+            failed_task = runtime.task_store.get_task(launch.task_id)
+            if failed_task is not None:
+                audit.task_failed(
+                    failed_task,
+                    attempt_id=launch.attempt_id,
+                    fail_reason="agent_launch_failed",
+                    summary="Evaluator agent launch failed.",
+                )
             self._close_attempt(
                 AttemptStatus.FAILED,
                 AttemptFailReason.EVALUATOR_FAILED,
@@ -219,6 +245,22 @@ class AttemptDispatcher:
                 attempt=attempt,
                 task_id=task_id,
             )
+            audit = TaskCenterAuditEmitter(runtime.audit_sink)
+            ready_task = {
+                "id": task_id,
+                "task_center_run_id": launch.task_center_run_id,
+                "role": HarnessTaskRole.EVALUATOR.value,
+                "agent_name": launch.agent_name,
+                "status": HarnessTaskStatus.PENDING.value,
+                "needs": list(attempt.generator_task_ids),
+                "task_center_attempt_id": attempt.id,
+                "context_packet_id": launch.context_packet_id,
+            }
+            audit.task_ready(
+                ready_task,
+                attempt_id=attempt.id,
+                satisfied_dependency_ids=tuple(attempt.generator_task_ids),
+            )
             runtime.task_store.upsert_task(
                 task_id=task_id,
                 task_center_run_id=launch.task_center_run_id,
@@ -232,6 +274,9 @@ class AttemptDispatcher:
                 context_packet_id=launch.context_packet_id,
                 spawn_reason="attempt_evaluator",
             )
+            task = runtime.task_store.get_task(task_id)
+            if task is not None:
+                audit.task_launched(task, attempt_id=attempt.id)
             runtime.attempt_store.set_evaluator_task_id(attempt.id, task_id)
             runtime.attempt_store.set_stage(attempt.id, AttemptStage.EVALUATING)
             self._launch_evaluator(launch)

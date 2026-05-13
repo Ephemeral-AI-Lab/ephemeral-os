@@ -114,7 +114,7 @@ Both assembled into `AgentDefinition.notification_rules` at agent launch time.
 
 **Call sites** (`engine/query/loop.py`):
 - Line 316: `await dispatch_rules(rules, messages, context, service)` — top of every turn
-- Lines 271, 294, 345: `flush_system_notifications(notification_service)` — turn boundaries
+- Lines 271, 294, 345: `flush_system_notification_events(notification_service)` — turn boundaries
 
 **Built-in rule factories** (`notification/rules/factories.py`):
 - `make_opening_reminder(rules_text)` — first turn only; `fire_once=True`
@@ -193,12 +193,12 @@ Emitted OUT by run loop and tool executor — distinct from provider's `ApiStrea
 
 ## PromptReportRecorder
 
-**`PromptReportRecorder`** (`prompt/prompt_report_recorder.py:15`) — appends JSONL events with monotonic `seq` via `append_prompt_report_event`. Constructed lazily in `engine/query/request.py:25` from `metadata["prompt_report_messages_path"]`.
+**`PromptReportRecorder`** (`prompt/prompt_report_recorder.py:15`) — appends JSONL events with monotonic `seq` via `append_prompt_report_event`. Constructed lazily by `prompt.prompt_report_recorder.recorder_for_context` from `metadata["prompt_report_messages_path"]`.
 
-Three event types per turn (in `engine/query/request.py`):
-1. `"llm_request"` (line 59) — `{event, seq, system_prompt, messages, tools}`
-2. `"assistant"` (line 87) — `{event, seq, message, usage}`
-3. `"tool_results"` (line 101) — `{event, seq, tool_results}`
+Three event types per turn:
+1. `"llm_request"` — `{event, seq, system_prompt, messages, tools}`
+2. `"assistant"` — `{event, seq, message, usage}`
+3. `"tool_results"` — `{event, seq, tool_results}`
 
 **This is the canonical capture mechanism for replay**: the `{llm_request, assistant, tool_results}` triple per turn gives everything needed to replay with a stubbed `stream_message` — feed the captured `assistant` message back instead of calling the API.
 
@@ -225,7 +225,7 @@ Three event types per turn (in `engine/query/request.py`):
 | `ConversationMessage`, `ToolUseBlock`, `ToolResultBlock` | `message/messages.py` |
 | `dispatch_rules` | `notification/rules/dispatch.py` |
 | `SystemNotificationService` | `notification/runtime.py` |
-| `flush_system_notifications` | `engine/query/notifications.py` |
+| `flush_system_notification_events` | `notification/runtime.py` |
 | `PromptReportRecorder` | `prompt/prompt_report_recorder.py` |
 
 ### Real vs fake

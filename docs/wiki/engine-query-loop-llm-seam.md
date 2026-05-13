@@ -69,9 +69,9 @@ Built per turn by `build_query_run_request` (`engine/query/request.py:44`):
      - `ApiMessageCompleteEvent` → set `state.final_message` + `state.usage`
      - Stream ending without `final_message` raises RuntimeError (line 224-228)
    - **`_drain_executor_after_stream`** (line 231) — drain final executor progress/events
-   - **`record_assistant_message` + `AssistantMessageComplete`** (lines 341-342)
+   - **`PromptReportRecorder.record_assistant` + `AssistantMessageComplete`** (lines 341-342)
    - **Text-only exit** (lines 344-348) — `final_message.tool_uses` empty → flush, `TEXT_RESPONSE`, break
-   - **`_handle_tool_dispatch_branch`** (line 244) — `dispatch_assistant_tools`, `record_tool_results`, `flush_system_notifications`, terminal-result check, `tool_call_limit` check, append tool results as user message
+   - **`_handle_tool_dispatch_branch`** (line 244) — `dispatch_assistant_tools`, `PromptReportRecorder.record_tool_results`, `flush_system_notification_events`, terminal-result check, `tool_call_limit` check, append tool results as user message
    - Break on `TOOL_STOP` / `RESOURCE_LIMIT` (lines 361-365)
 
 3. **Post-loop** (lines 367-368) — `await background_manager.cancel_all()` if pending.
@@ -80,9 +80,9 @@ Built per turn by `build_query_run_request` (`engine/query/request.py:44`):
 
 - `StreamingToolExecutor` (`engine/tool_call/streaming.py:66`)
 - `defer_background_dispatch` (`streaming.py:47`) — defers `background="always"` or `background="optional"+background=true` tools
-- `_make_stream_dispatch_deferrer` (`engine/query/loop.py:61`) — once a terminal tool seen, defers all subsequent so `validate_tool_batch` (`engine/tool_call/batch.py:23`) enforces terminal-exclusivity on the full tool_uses list after stream completes
+- `_make_stream_dispatch_deferrer` (`engine/query/loop.py:61`) — once a terminal tool seen, defers all subsequent so `_validate_tool_batch` (`engine/tool_call/dispatch.py`) enforces terminal-exclusivity on the full tool_uses list after stream completes
 
-**During replay**: the fake api_client emits `ApiToolUseDeltaEvent` for tools to execute. The deferrer correctly batches them. Terminal tools deferred mid-stream are dispatched via `_dispatch_deferred_tool_calls` → `validate_tool_batch` enforces alone-ness.
+**During replay**: the fake api_client emits `ApiToolUseDeltaEvent` for tools to execute. The deferrer correctly batches them. Terminal tools deferred mid-stream are dispatched via `_dispatch_deferred_tool_calls` → `_validate_tool_batch` enforces alone-ness.
 
 ## Tool budget rejection mid-stream
 
@@ -91,7 +91,7 @@ Built per turn by `build_query_run_request` (`engine/query/request.py:44`):
 ## Notification rules dispatch within loop
 
 - `notification.dispatch_rules` (`notification/rules/dispatch.py`) invoked **per loop iteration** at `loop.py:316-321`, before `build_query_run_request`
-- `flush_system_notifications` called in three places per turn:
+- `flush_system_notification_events` called in three places per turn:
   1. After `dispatch_assistant_tools` (line 271)
   2. When `tool_call_limit` exceeded (line 294)
   3. On text-only exit (line 345)
@@ -153,9 +153,9 @@ Note: subagent agents (`agent_type="subagent"`) trigger `needs_fresh_client=True
 | `StreamingToolExecutor` | YES |
 | `BackgroundTaskManager` | YES |
 | `dispatch_assistant_tools` | YES |
-| `validate_tool_batch` | YES — terminal-exclusivity enforcement |
+| `_validate_tool_batch` | YES — terminal-exclusivity enforcement |
 | `_consume_tool_budget_or_reject` | YES — budget enforced |
-| `flush_system_notifications` | YES |
+| `flush_system_notification_events` | YES |
 | `PromptReportRecorder` | YES — canonical capture |
 | `api_client.stream_message` | FAKE — only this method |
 
@@ -167,7 +167,7 @@ Note: subagent agents (`agent_type="subagent"`) trigger `needs_fresh_client=True
 - `ApiStreamEvent` union (`providers/types.py:98-104`)
 
 ### What tests can assert
-- **Tool guardrail / terminal-exclusivity**: script terminal + sibling tools → assert rejection by `validate_tool_batch` (`tool_call/batch.py:23`)
+- **Tool guardrail / terminal-exclusivity**: script terminal + sibling tools → assert rejection by `_validate_tool_batch` (`tool_call/dispatch.py`)
 - **Max-step / budget**: script enough tool turns → loop exits `RESOURCE_LIMIT`
 - **Terminal tool submission**: script terminal alone → `exit_reason=TOOL_STOP`, `terminal_result` populated
 - **System notification trigger**: script multi-turn sequence → assert notifications appear in messages at right turn

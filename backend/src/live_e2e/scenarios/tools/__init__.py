@@ -2,7 +2,7 @@
 
 Verify that submission gate hooks reject the wrong calls, pre/post hook
 pipelines compose correctly, ``tool_call_limit`` triggers ``RESOURCE_LIMIT``,
-``validate_tool_batch`` enforces terminal-tool exclusivity, and notification
+dispatch validation enforces terminal-tool exclusivity, and notification
 rules fire at the expected turn.
 
 Reference scenarios for this subpackage will land alongside the executor

@@ -89,6 +89,19 @@ def _read_out_of_workspace(
                 "api.read.total_s": time.perf_counter() - total_start,
             },
         }
+    # WR-01: cap out-of-workspace reads. Reading /var/log/syslog or
+    # /proc/kcore unbounded OOMs the daemon and blows up the response
+    # body. 16 MiB is comfortably larger than any legitimate source
+    # file and small enough to never starve the daemon.
+    _MAX_OUT_OF_WORKSPACE_READ_BYTES = 16 * 1024 * 1024
+    try:
+        size = target.stat().st_size
+    except OSError:
+        size = -1
+    if size > _MAX_OUT_OF_WORKSPACE_READ_BYTES:
+        raise ValueError(
+            f"file too large: {size} > {_MAX_OUT_OF_WORKSPACE_READ_BYTES} bytes"
+        )
     read_start = time.perf_counter()
     content = target.read_text(encoding="utf-8")
     read_elapsed = time.perf_counter() - read_start

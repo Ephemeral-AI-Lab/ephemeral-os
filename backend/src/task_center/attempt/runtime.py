@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Protocol
 
+from audit.base import AuditSink, NoopAuditSink
 from db.stores.mission_store import MissionStore
 from db.stores.attempt_store import AttemptStore
 from db.stores.task_center_store import TaskCenterStore
@@ -61,6 +62,7 @@ class AttemptRuntime:
     # The close-report router and launcher use this to dispatch lifecycle
     # events for entry tasks whose ``task_center_attempt_id`` is None.
     entry_task_controller: EntryTaskController | None = None
+    audit_sink: AuditSink = field(default_factory=NoopAuditSink)
 
     def task_center_run_id_for_attempt(self, attempt: Attempt) -> str:
         episode = self.episode_store.get(attempt.episode_id)
