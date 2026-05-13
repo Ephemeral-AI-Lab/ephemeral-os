@@ -192,7 +192,7 @@ CAPACITY_PACK_SPECS: tuple[CapacityPackSpec, ...] = (
         "D",
         "tools",
         "T0",
-        test_path="backend/tests/unit_test/test_notification/test_rule_catalog.py",
+        test_path="backend/tests/unit_test/test_notification/test_rules_factories.py",
     ),
     CapacityPackSpec(
         "tools.pre_post_hook_lifecycle",

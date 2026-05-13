@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from notification._rule_engine import MessageList, NotificationRule
+from notification.rules.model import MessageList, NotificationRule
 
 if TYPE_CHECKING:
     from engine.api import QueryContext

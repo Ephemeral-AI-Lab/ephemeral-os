@@ -158,8 +158,7 @@ async def test_budget_warning_jumps_past_threshold() -> None:
     service = SystemNotificationService()
     ctx = _StubContext(used=0, limit=10)
 
-    # Jump straight to 80% — fires the 75% threshold (highest crossed by
-    # this trigger evaluation; the 50% threshold is skipped by design).
+    # Jump straight to 80% — still walks the crossed thresholds in order.
     ctx.set_used(8)
     await dispatch_rules([rule], [], ctx, service)
     blocks = service.pop_pending_notifications()

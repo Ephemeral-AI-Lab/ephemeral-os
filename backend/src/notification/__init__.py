@@ -1,13 +1,12 @@
 """Public notification API."""
 
-from notification._metadata import (
+from notification.runtime import SystemNotification, SystemNotificationService
+from notification.metadata import (
     SYSTEM_NOTIFICATIONS_METADATA_KEY,
     serialize_system_notifications,
 )
-from notification._rule_catalog import make_budget_warning, make_opening_reminder
-from notification._rule_engine import NotificationRule, dispatch_rules
-from notification._runtime import SystemNotification
-from notification._runtime import SystemNotificationService
+from notification.rules import NotificationRule, dispatch_rules
+from notification.rules import make_budget_warning, make_opening_reminder
 
 __all__ = [
     "NotificationRule",
