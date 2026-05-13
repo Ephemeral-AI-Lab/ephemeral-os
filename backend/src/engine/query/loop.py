@@ -316,66 +316,67 @@ async def _run_query_loop(
 ) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
     background_manager, notification_service = _initialize_loop_state(context)
 
-    while True:
-        executor = await _build_stream_executor(context, background_manager, messages)
+    try:
+        while True:
+            executor = await _build_stream_executor(context, background_manager, messages)
 
-        # Evaluate notification rules and drain any reminders into the
-        # transcript before building the next provider request, so newly-
-        # fired reminders reach the model on this turn.
-        if context.notification_rules:
-            await dispatch_rules(
-                context.notification_rules,
-                messages,
-                context,
-                notification_service,
-            )
-            pending = notification_service.pop_pending_notifications()
-            if pending:
-                messages.append(
-                    ConversationMessage(role="user", content=list(pending))
+            # Evaluate notification rules and drain any reminders into the
+            # transcript before building the next provider request, so newly-
+            # fired reminders reach the model on this turn.
+            if context.notification_rules:
+                await dispatch_rules(
+                    context.notification_rules,
+                    messages,
+                    context,
+                    notification_service,
                 )
+                pending = notification_service.pop_pending_notifications()
+                if pending:
+                    messages.append(
+                        ConversationMessage(role="user", content=list(pending))
+                    )
 
-        state = _StreamRunState()
-        run_request = build_query_run_request(context, messages)
-        async for event, event_usage in _consume_provider_stream(
-            context, executor, run_request, state
-        ):
-            yield event, event_usage
-
-        async for event, event_usage in _drain_executor_after_stream(executor, state):
-            yield event, event_usage
-
-        final_message = state.final_message
-        assert final_message is not None  # narrowed by _consume_provider_stream
-        messages.append(final_message)
-        record_assistant_message(run_request, final_message, state.usage)
-        yield AssistantMessageComplete(message=final_message, usage=state.usage), state.usage
-
-        if not final_message.tool_uses:
-            for event, event_usage in flush_system_notifications(notification_service):
+            state = _StreamRunState()
+            run_request = build_query_run_request(context, messages)
+            async for event, event_usage in _consume_provider_stream(
+                context, executor, run_request, state
+            ):
                 yield event, event_usage
-            context.exit_reason = QueryExitReason.TEXT_RESPONSE
-            break
 
-        async for event, event_usage in _handle_tool_dispatch_branch(
-            context,
-            messages,
-            executor,
-            run_request,
-            state,
-            background_manager,
-            notification_service,
-        ):
-            yield event, event_usage
+            async for event, event_usage in _drain_executor_after_stream(executor, state):
+                yield event, event_usage
 
-        if context.exit_reason in {
-            QueryExitReason.TOOL_STOP,
-            QueryExitReason.RESOURCE_LIMIT,
-        }:
-            break
+            final_message = state.final_message
+            assert final_message is not None  # narrowed by _consume_provider_stream
+            messages.append(final_message)
+            record_assistant_message(run_request, final_message, state.usage)
+            yield AssistantMessageComplete(message=final_message, usage=state.usage), state.usage
 
-    if background_manager is not None and background_manager.has_pending():
-        await background_manager.cancel_all()
+            if not final_message.tool_uses:
+                for event, event_usage in flush_system_notifications(notification_service):
+                    yield event, event_usage
+                context.exit_reason = QueryExitReason.TEXT_RESPONSE
+                break
+
+            async for event, event_usage in _handle_tool_dispatch_branch(
+                context,
+                messages,
+                executor,
+                run_request,
+                state,
+                background_manager,
+                notification_service,
+            ):
+                yield event, event_usage
+
+            if context.exit_reason in {
+                QueryExitReason.TOOL_STOP,
+                QueryExitReason.RESOURCE_LIMIT,
+            }:
+                break
+    finally:
+        if background_manager is not None and background_manager.has_pending():
+            await background_manager.cancel_all()
 
 
 async def run_query(

@@ -146,51 +146,52 @@ async def run_ephemeral_agent(
     terminal_result: ToolResult | None = None
 
     try:
-        async for event in agent.run(prompt):
-            event_count += 1
-            if (
-                isinstance(event, ToolExecutionCompleted)
-                and event.does_terminate
-                and not event.is_error
-            ):
-                terminal_result = ToolResult(
-                    output=event.output,
-                    is_error=event.is_error,
-                    metadata=dict(event.metadata or {}),
-                    does_terminate=True,
-                )
-            if on_event is not None:
-                await on_event(event)
-    except Exception as exc:
-        run_error = str(exc)
-        logger.exception("run_ephemeral_agent: agent run crashed")
-
-    if not run_error and terminal_result is None:
-        terminal_result = agent.query_context.terminal_result or _last_terminal_tool_result(
-            agent._messages
+        try:
+            async for event in agent.run(prompt):
+                event_count += 1
+                if (
+                    isinstance(event, ToolExecutionCompleted)
+                    and event.does_terminate
+                    and not event.is_error
+                ):
+                    terminal_result = ToolResult(
+                        output=event.output,
+                        is_error=event.is_error,
+                        metadata=dict(event.metadata or {}),
+                        does_terminate=True,
+                    )
+                if on_event is not None:
+                    await on_event(event)
+        except Exception as exc:
+            run_error = str(exc)
+            logger.exception("run_ephemeral_agent: agent run crashed")
+    finally:
+        if not run_error and terminal_result is None:
+            terminal_result = agent.query_context.terminal_result or _last_terminal_tool_result(
+                agent.messages
+            )
+        if run_error:
+            terminal_result = None
+        terminal_payload = (
+            {
+                "output": terminal_result.output,
+                "is_error": terminal_result.is_error,
+                "metadata": terminal_result.metadata,
+                "does_terminate": terminal_result.does_terminate,
+            }
+            if terminal_result is not None
+            else None
         )
-    if run_error:
-        terminal_result = None
-    terminal_payload = (
-        {
-            "output": terminal_result.output,
-            "is_error": terminal_result.is_error,
-            "metadata": terminal_result.metadata,
-            "does_terminate": terminal_result.does_terminate,
-        }
-        if terminal_result is not None
-        else None
-    )
-    token_count = 0
-    if agent.total_usage is not None:
-        token_count = agent.total_usage.input_tokens + agent.total_usage.output_tokens
+        token_count = 0
+        if agent.total_usage is not None:
+            token_count = agent.total_usage.input_tokens + agent.total_usage.output_tokens
 
-    tracker.finish(
-        messages=list(agent._messages),
-        terminal_tool_result=terminal_payload,
-        token_count=token_count,
-        error=run_error,
-    )
+        tracker.finish(
+            messages=list(agent.messages),
+            terminal_tool_result=terminal_payload,
+            token_count=token_count,
+            error=run_error,
+        )
 
     return EphemeralRunResult(
         status="failed" if run_error else "completed",
