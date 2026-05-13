@@ -175,57 +175,62 @@ async def _consume_provider_stream(
     state: _StreamRunState,
 ) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
     """Consume the provider stream, populating ``state`` along the way."""
-    async for event in context.api_client.stream_message(run_request.request):
-        if isinstance(event, ApiThinkingDeltaEvent):
-            yield ThinkingDelta(text=event.text), None
-            continue
-
-        if isinstance(event, ApiTextDeltaEvent):
-            if match := CANCEL_PATTERN.search(event.text):
-                tool_id, reason = match.groups()
-                state.pending_cancel[tool_id] = reason or "Cancelled by LLM"
-            yield AssistantTextDelta(text=event.text), None
-            continue
-
-        if isinstance(event, ApiToolUseDeltaEvent):
-            state.streamed_tool_use_ids.add(event.id)
-            budget_rejection = await _consume_tool_budget_or_reject(
-                context,
-                event.name,
-                event.id,
-            )
-            if budget_rejection is not None:
-                state.streamed_rejections.append(budget_rejection)
-                yield (
-                    ToolExecutionCompleted(
-                        tool_name=event.name,
-                        output=budget_rejection.content,
-                        is_error=True,
-                        tool_id=event.id,
-                    ),
-                    None,
-                )
+    try:
+        async for event in context.api_client.stream_message(run_request.request):
+            if isinstance(event, ApiThinkingDeltaEvent):
+                yield ThinkingDelta(text=event.text), None
                 continue
-            executor.add_tool(event)
-            for emitted in executor.get_events():
-                yield emitted, None
-            for progress in executor.get_progress():
-                yield progress, None
-            continue
 
-        if isinstance(event, ApiCancelEvent):
-            executor.cancel(event.tool_id, event.reason)
-            continue
+            if isinstance(event, ApiTextDeltaEvent):
+                if match := CANCEL_PATTERN.search(event.text):
+                    tool_id, reason = match.groups()
+                    state.pending_cancel[tool_id] = reason or "Cancelled by LLM"
+                yield AssistantTextDelta(text=event.text), None
+                continue
 
-        if isinstance(event, ApiMessageCompleteEvent):
-            state.final_message = event.message
-            state.usage = event.usage
+            if isinstance(event, ApiToolUseDeltaEvent):
+                state.streamed_tool_use_ids.add(event.id)
+                budget_rejection = await _consume_tool_budget_or_reject(
+                    context,
+                    event.name,
+                    event.id,
+                )
+                if budget_rejection is not None:
+                    state.streamed_rejections.append(budget_rejection)
+                    yield (
+                        ToolExecutionCompleted(
+                            tool_name=event.name,
+                            output=budget_rejection.content,
+                            is_error=True,
+                            tool_id=event.id,
+                        ),
+                        None,
+                    )
+                    continue
+                executor.add_tool(event)
+                for emitted in executor.get_events():
+                    yield emitted, None
+                for progress in executor.get_progress():
+                    yield progress, None
+                continue
 
-    if state.final_message is None:
-        raise RuntimeError(
-            f"Model stream finished without a final message for model {context.model}. "
-            "Check that the API endpoint, authentication, and model name are correct."
-        )
+            if isinstance(event, ApiCancelEvent):
+                executor.cancel(event.tool_id, event.reason)
+                continue
+
+            if isinstance(event, ApiMessageCompleteEvent):
+                state.final_message = event.message
+                state.usage = event.usage
+
+        if state.final_message is None:
+            raise RuntimeError(
+                f"Model stream finished without a final message for model {context.model}. "
+                "This may indicate a provider error, content-filter cutoff, or "
+                "misconfigured API endpoint / authentication / model name."
+            )
+    except BaseException:
+        executor.cancel_all()
+        raise
 
 
 async def _drain_executor_after_stream(
