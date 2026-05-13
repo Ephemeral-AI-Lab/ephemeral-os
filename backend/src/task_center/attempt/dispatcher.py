@@ -214,26 +214,52 @@ class AttemptDispatcher:
             return
         runtime = self._runtime
         task_id = evaluator_task_id(attempt.id)
-        launch = self._build_evaluator_launch(
-            attempt=attempt,
-            task_id=task_id,
+        try:
+            launch = self._build_evaluator_launch(
+                attempt=attempt,
+                task_id=task_id,
+            )
+            runtime.task_store.upsert_task(
+                task_id=task_id,
+                task_center_run_id=launch.task_center_run_id,
+                role=HarnessTaskRole.EVALUATOR.value,
+                agent_name=launch.agent_name,
+                task_input=launch.task_input,
+                status=HarnessTaskStatus.RUNNING.value,
+                summaries=[],
+                needs=list(attempt.generator_task_ids),
+                task_center_attempt_id=attempt.id,
+                context_packet_id=launch.context_packet_id,
+                spawn_reason="attempt_evaluator",
+            )
+            runtime.attempt_store.set_evaluator_task_id(attempt.id, task_id)
+            runtime.attempt_store.set_stage(attempt.id, AttemptStage.EVALUATING)
+            self._launch_evaluator(launch)
+        except Exception:
+            logger.exception(
+                "AttemptDispatcher: evaluator spawn failed",
+                extra={"task_id": task_id, "attempt_id": attempt.id},
+            )
+            self._fail_evaluator_spawn(task_id)
+            raise
+
+    def _fail_evaluator_spawn(self, task_id: str) -> None:
+        try:
+            self._runtime.task_store.set_task_status_if_current(
+                task_id,
+                expected_status=HarnessTaskStatus.RUNNING.value,
+                status=HarnessTaskStatus.FAILED.value,
+                summary={
+                    "fail_reason": "agent_launch_failed",
+                    "summary": "Evaluator agent startup failed.",
+                },
+            )
+        except LookupError:
+            pass
+        self._close_attempt(
+            AttemptStatus.FAILED,
+            AttemptFailReason.EVALUATOR_FAILED,
         )
-        runtime.task_store.upsert_task(
-            task_id=task_id,
-            task_center_run_id=launch.task_center_run_id,
-            role=HarnessTaskRole.EVALUATOR.value,
-            agent_name=launch.agent_name,
-            task_input=launch.task_input,
-            status=HarnessTaskStatus.RUNNING.value,
-            summaries=[],
-            needs=list(attempt.generator_task_ids),
-            task_center_attempt_id=attempt.id,
-            context_packet_id=launch.context_packet_id,
-            spawn_reason="attempt_evaluator",
-        )
-        runtime.attempt_store.set_evaluator_task_id(attempt.id, task_id)
-        runtime.attempt_store.set_stage(attempt.id, AttemptStage.EVALUATING)
-        self._launch_evaluator(launch)
 
     @staticmethod
     def _task_agent_name(task: dict[str, Any]) -> str:

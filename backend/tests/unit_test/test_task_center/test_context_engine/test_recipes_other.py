@@ -102,6 +102,47 @@ def test_generator_v1_emits_planned_task_spec_required_block(
     assert "task_specification" in kinds
 
 
+def test_generator_v1_does_not_emit_partial_plan_boundary(
+    deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
+):
+    req = _seed_mission(mission_store, task_center_run_id)
+    episode = _seed_episode(episode_store, mission_id=req.id)
+    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    attempt_store.set_plan_contract(
+        attempt.id,
+        task_specification="attempt spec framing",
+        evaluation_criteria=["c1"],
+        continuation_goal="future episode work",
+    )
+    task_store.upsert_task(
+        task_id="t-1",
+        task_center_run_id=task_center_run_id,
+        role="generator",
+        agent_name="executor",
+        task_input="do thing X",
+        status="pending",
+        summaries=[],
+        needs=[],
+        task_center_attempt_id=attempt.id,
+        spawn_reason="attempt_generator",
+    )
+
+    packet = _generator_v1_build(
+        ContextScope(
+            mission_id=req.id,
+            attempt_id=attempt.id,
+            task_id="t-1",
+        ),
+        deps,
+    )
+
+    assert [b.kind for b in packet.blocks] == [
+        "task_specification",
+        "planned_task_spec",
+    ]
+    assert "future episode work" not in "\n".join(b.text for b in packet.blocks)
+
+
 def test_generator_v1_dependency_summary_blocks(
     deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
@@ -197,6 +238,54 @@ def test_evaluator_v1_emits_required_spec_and_criteria(
     )
     assert packet.blocks[0].metadata["heading"] == "# Mission / Current Episode"
     assert packet.blocks[2].metadata["group_heading"] == "# Dependency Results"
+
+
+def test_evaluator_v1_emits_partial_plan_boundary_before_summaries(
+    deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
+):
+    req = _seed_mission(mission_store, task_center_run_id)
+    episode = _seed_episode(episode_store, mission_id=req.id)
+    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    attempt_store.set_plan_contract(
+        attempt.id,
+        task_specification="partial attempt spec",
+        evaluation_criteria=["current slice passes"],
+        continuation_goal="build admin tools next",
+    )
+    attempt_store.set_generator_task_ids(attempt.id, ["t-a"])
+    task_store.upsert_task(
+        task_id="t-a",
+        task_center_run_id=task_center_run_id,
+        role="generator",
+        agent_name="executor",
+        task_input="x",
+        status="done",
+        summaries=[{"summary": "completed current slice"}],
+        needs=[],
+        task_center_attempt_id=attempt.id,
+        spawn_reason="attempt_generator",
+    )
+
+    packet = _evaluator_v1_build(
+        ContextScope(
+            mission_id=req.id, episode_id=episode.id, attempt_id=attempt.id
+        ),
+        deps,
+    )
+
+    assert [b.kind for b in packet.blocks] == [
+        "episode_goal",
+        "task_specification",
+        "partial_plan_boundary",
+        "completed_task_summary",
+        "evaluation_criteria",
+    ]
+    boundary = packet.blocks[2]
+    assert boundary.priority == ContextPriority.REQUIRED
+    assert "plan_kind: partial" in boundary.text
+    assert "continuation_goal: build admin tools next" in boundary.text
+    assert "Do not treat continuation work as missing" in boundary.text
+    assert packet.blocks[-1].kind == "evaluation_criteria"
 
 
 def test_evaluator_v1_episode2_frame_precedes_attempt_contract(

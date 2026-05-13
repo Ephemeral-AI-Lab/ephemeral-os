@@ -94,7 +94,7 @@ def test_smoke_terminal_success(
         requested_by_task_id="exec-1",
         goal="solve X",
     )
-    seg = handler.create_initial_episode(mission_id=req.id)
+    seg, _ = handler.create_initial_episode_with_manager(mission_id=req.id)
     _drive_segment(
         handler=handler,
         episode_id=seg.id,
@@ -117,7 +117,7 @@ def test_smoke_attempt_plan_failed(
         requested_by_task_id="exec-1",
         goal="solve X",
     )
-    seg = handler.create_initial_episode(mission_id=req.id)
+    seg, _ = handler.create_initial_episode_with_manager(mission_id=req.id)
     # First attempt: fail with a generator error.
     registry = handler._manager_registry  # type: ignore[attr-defined]
     mgr = registry.get(seg.id)
@@ -161,7 +161,7 @@ def test_smoke_success_continue_then_terminal(
         requested_by_task_id="exec-1",
         goal="initial-goal",
     )
-    seg1 = handler.create_initial_episode(mission_id=req.id)
+    seg1, _ = handler.create_initial_episode_with_manager(mission_id=req.id)
     _drive_segment(
         handler=handler,
         episode_id=seg1.id,

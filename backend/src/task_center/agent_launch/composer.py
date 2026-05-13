@@ -51,7 +51,7 @@ class ContextComposer:
     def default(
         cls,
         engine: ContextEngine,
-    ) -> "ContextComposer":
+    ) -> ContextComposer:
         return cls(
             resolver=RuleBasedAgentResolver(),
             engine=engine,

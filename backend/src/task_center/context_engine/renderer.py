@@ -84,6 +84,7 @@ def default_heading_template() -> HeadingTemplate:
             "failed_attempt_landscape": (
                 "# Failed Attempts"
             ),
+            "partial_plan_boundary": "# Partial Plan Boundary",
             "planned_task_spec": "# Assigned Task",
             "task_specification": "# Attempt Plan",
             "evaluation_criteria": "# Evaluation Criteria",

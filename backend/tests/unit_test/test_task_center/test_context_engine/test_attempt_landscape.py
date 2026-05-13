@@ -7,6 +7,8 @@ from datetime import UTC, datetime
 from task_center.context_engine.packet import ContextPriority
 from task_center.context_engine.recipes.attempt_landscape import (
     MAX_FAILED_ATTEMPTS_RENDERED,
+    MAX_GENERATOR_SUMMARIES_PER_FAILED_ATTEMPT,
+    MAX_GENERATOR_SUMMARY_CHARS,
     failed_attempt_landscape_blocks,
 )
 from task_center.attempt import (
@@ -24,6 +26,8 @@ def _attempt(
     status: AttemptStatus = AttemptStatus.FAILED,
     task_specification: str | None = None,
     evaluation_criteria: tuple[str, ...] = (),
+    generator_task_ids: tuple[str, ...] = (),
+    continuation_goal: str | None = None,
     fail_reason: AttemptFailReason | None = None,
 ) -> Attempt:
     now = datetime.now(UTC)
@@ -36,9 +40,9 @@ def _attempt(
         planner_task_id=None,
         task_specification=task_specification,
         evaluation_criteria=evaluation_criteria,
-        generator_task_ids=(),
+        generator_task_ids=generator_task_ids,
         evaluator_task_id=None,
-        continuation_goal=None,
+        continuation_goal=continuation_goal,
         fail_reason=fail_reason,
         created_at=now,
         updated_at=now,
@@ -85,9 +89,119 @@ def test_renders_missing_spec_empty_criteria_and_unknown_reason():
     )
 
     assert len(blocks) == 1
+    assert "plan_kind: unsubmitted" in blocks[0].text
+    assert "continuation_goal: (none)" in blocks[0].text
     assert "task_specification: (missing)" in blocks[0].text
     assert "evaluation_criteria:\n  (none)" in blocks[0].text
+    assert "generator_summaries:\n  (none)" in blocks[0].text
     assert "fail_reason: unknown" in blocks[0].text
+
+
+def test_renders_plan_kind_continuation_goal_and_generator_summaries():
+    class TaskStore:
+        def get_task(self, task_id: str):
+            return {
+                "t-a": {
+                    "summaries": [
+                        {"summary": "first summary"},
+                        {"summary": "built catalog slice"},
+                    ]
+                },
+                "t-b": {"summaries": [{"outcome": "verified checkout"}]},
+            }.get(task_id)
+
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=None,
+        attempts=[
+            _attempt(
+                1,
+                task_specification="partial spec",
+                evaluation_criteria=("criterion",),
+                generator_task_ids=("t-a", "t-b", "t-missing"),
+                continuation_goal="continue with admin tools",
+                fail_reason=AttemptFailReason.EVALUATOR_FAILED,
+            )
+        ],
+        task_store=TaskStore(),
+    )
+
+    assert len(blocks) == 1
+    assert "plan_kind: partial" in blocks[0].text
+    assert "continuation_goal: continue with admin tools" in blocks[0].text
+    assert "  - t-a:\n    built catalog slice" in blocks[0].text
+    assert "  - t-b:\n    verified checkout" in blocks[0].text
+    assert "  - t-missing: (missing task row)" in blocks[0].text
+
+
+def test_renders_full_plan_kind_for_submitted_nonpartial_attempt():
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=None,
+        attempts=[
+            _attempt(
+                1,
+                task_specification="submitted spec",
+                evaluation_criteria=("criterion",),
+                fail_reason=AttemptFailReason.EVALUATOR_FAILED,
+            )
+        ],
+    )
+
+    assert "plan_kind: full" in blocks[0].text
+
+
+def test_generator_summaries_are_capped_per_failed_attempt():
+    class TaskStore:
+        def get_task(self, task_id: str):
+            return {"summaries": [{"summary": f"summary for {task_id}"}]}
+
+    task_ids = tuple(
+        f"t-{i}"
+        for i in range(MAX_GENERATOR_SUMMARIES_PER_FAILED_ATTEMPT + 2)
+    )
+
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=None,
+        attempts=[
+            _attempt(
+                1,
+                task_specification="spec",
+                generator_task_ids=task_ids,
+                fail_reason=AttemptFailReason.GENERATOR_FAILED,
+            )
+        ],
+        task_store=TaskStore(),
+    )
+
+    head_count = MAX_GENERATOR_SUMMARIES_PER_FAILED_ATTEMPT // 2
+    assert f"  - t-{head_count - 1}:" in blocks[0].text
+    assert f"  - t-{head_count}:" not in blocks[0].text
+    assert f"  - t-{len(task_ids) - 1}:" in blocks[0].text
+    assert "2 middle generator summaries omitted" in blocks[0].text
+
+
+def test_generator_summary_text_is_truncated():
+    class TaskStore:
+        def get_task(self, task_id: str):
+            return {
+                "summaries": [
+                    {"summary": "x" * (MAX_GENERATOR_SUMMARY_CHARS + 50)}
+                ]
+            }
+
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=None,
+        attempts=[
+            _attempt(
+                1,
+                task_specification="spec",
+                generator_task_ids=("t-a",),
+                fail_reason=AttemptFailReason.GENERATOR_FAILED,
+            )
+        ],
+        task_store=TaskStore(),
+    )
+
+    assert f"truncated to {MAX_GENERATOR_SUMMARY_CHARS} chars" in blocks[0].text
 
 
 def test_truncation_keeps_most_recent_failed_attempts_and_reports_omitted_range():

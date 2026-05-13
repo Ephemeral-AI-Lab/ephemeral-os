@@ -5,11 +5,13 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from agents import get_definition
 from message.stream_events import StreamEvent
 from task_center.exceptions import TaskCenterInvariantViolation
+from task_center.attempt import AttemptFailReason, AttemptStatus
 from task_center.attempt.runtime import (
     AgentLaunch,
     AttemptRuntime,
@@ -47,7 +49,7 @@ class EphemeralAttemptAgentLauncher:
     def __init__(
         self,
         *,
-        config: "RuntimeConfig",
+        config: RuntimeConfig,
         runtime: AttemptRuntimeProvider,
         sandbox_id: str | None = None,
         on_event: AgentStreamEmitter | None = None,
@@ -82,7 +84,7 @@ class EphemeralAttemptAgentLauncher:
             await asyncio.sleep(0)
 
     @staticmethod
-    def _resolve_agent_definition(agent_name: str) -> "AgentDefinition":
+    def _resolve_agent_definition(agent_name: str) -> AgentDefinition:
         agent_def = get_definition(agent_name)
         if agent_def is None:
             raise TaskCenterInvariantViolation(
@@ -93,7 +95,7 @@ class EphemeralAttemptAgentLauncher:
     async def _run_launch(
         self,
         launch: AgentLaunch,
-        agent_def: "AgentDefinition",
+        agent_def: AgentDefinition,
     ) -> None:
         runtime = self._require_runtime()
         runner = self._runner
@@ -108,6 +110,7 @@ class EphemeralAttemptAgentLauncher:
             task_center_run_id=launch.task_center_run_id,
             task_center_task_id=launch.task_id,
             task_center_attempt_id=launch.attempt_id,
+            task_center_mission_id=launch.mission_id,
             task_center_request_id=launch.mission_id,
             attempt_runtime=runtime,
             composer=runtime.composer,
@@ -196,7 +199,7 @@ class EphemeralAttemptAgentLauncher:
 
         orchestrator = runtime.orchestrator_registry.get(launch.attempt_id)
         if orchestrator is None:
-            self._mark_unowned_task_exhausted(runtime, launch, summary=summary)
+            self._fail_unowned_attempt(runtime, launch, summary=summary)
             return
 
         if launch.role == HarnessTaskRole.PLANNER:
@@ -228,9 +231,37 @@ class EphemeralAttemptAgentLauncher:
             summary={"fail_reason": "run_exhausted", "summary": summary},
         )
 
+    @classmethod
+    def _fail_unowned_attempt(
+        cls,
+        runtime: AttemptRuntime,
+        launch: AgentLaunch,
+        *,
+        summary: str,
+    ) -> None:
+        cls._mark_unowned_task_exhausted(runtime, launch, summary=summary)
+        if launch.attempt_id is None:
+            return
+        attempt = runtime.attempt_store.get(launch.attempt_id)
+        if attempt is None or attempt.is_closed:
+            return
+        fail_reason = _fail_reason_for_role(launch.role)
+        runtime.attempt_store.close(
+            attempt.id,
+            status=AttemptStatus.FAILED,
+            fail_reason=fail_reason,
+            closed_at=datetime.now(UTC),
+        )
+        manager_registry = runtime.manager_registry
+        if manager_registry is None:
+            return
+        manager = manager_registry.get(attempt.episode_id)
+        if manager is not None:
+            manager.handle_attempt_closed(attempt.id)
+
     @staticmethod
     def _report_planner_exhaustion(
-        orchestrator: "AttemptOrchestrator",
+        orchestrator: AttemptOrchestrator,
         launch: AgentLaunch,
         *,
         summary: str,
@@ -250,7 +281,7 @@ class EphemeralAttemptAgentLauncher:
 
     @staticmethod
     def _report_generator_exhaustion(
-        orchestrator: "AttemptOrchestrator",
+        orchestrator: AttemptOrchestrator,
         launch: AgentLaunch,
         *,
         summary: str,
@@ -271,7 +302,7 @@ class EphemeralAttemptAgentLauncher:
 
     @staticmethod
     def _report_evaluator_exhaustion(
-        orchestrator: "AttemptOrchestrator",
+        orchestrator: AttemptOrchestrator,
         launch: AgentLaunch,
         *,
         summary: str,
@@ -289,3 +320,13 @@ class EphemeralAttemptAgentLauncher:
                 payload={"fail_reason": "run_exhausted"},
             )
         )
+
+
+def _fail_reason_for_role(role: HarnessTaskRole) -> AttemptFailReason:
+    if role == HarnessTaskRole.PLANNER:
+        return AttemptFailReason.PLANNER_FAILED
+    if role == HarnessTaskRole.GENERATOR:
+        return AttemptFailReason.GENERATOR_FAILED
+    if role == HarnessTaskRole.EVALUATOR:
+        return AttemptFailReason.EVALUATOR_FAILED
+    raise TaskCenterInvariantViolation(f"Unknown harness role: {role!r}")

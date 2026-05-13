@@ -100,7 +100,7 @@ def _generator_v1_build(
 def _dependency_summary_blocks(
     *,
     needs: tuple[str, ...],
-    task_store: "TaskCenterStore",
+    task_store: TaskCenterStore,
 ) -> list[ContextBlock]:
     out: list[ContextBlock] = []
     for dep_id in needs:

@@ -1,6 +1,6 @@
-"""MissionStarter — use-case boundary for delegated request start.
+"""MissionStarter — use-case boundary for delegated mission start.
 
-Composes the existing request, episode, manager, and parent-task owners into
+Composes the mission, episode, manager, and parent-task owners into
 the single safe mission-start path used by ``request_mission_solution``. Owns
 parent-task CAS, deferred orchestrator startup, and compensation on failure.
 """
@@ -21,9 +21,7 @@ from task_center.mission.mission import (
     Mission,
 )
 from task_center.exceptions import TaskCenterInvariantViolation
-from task_center.attempt.factory import (
-    make_attempt_orchestrator_factory,
-)
+from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt import AttemptFailReason, AttemptStatus
 from task_center.attempt.runtime import AttemptRuntime
 from task_center.episode.episode import Episode
@@ -48,7 +46,6 @@ class MissionStarter:
 
     def __init__(self, *, runtime: AttemptRuntime) -> None:
         self._runtime = runtime
-        self._handler: MissionHandler | None = None
 
     def start(
         self,
@@ -121,8 +118,6 @@ class MissionStarter:
     # ---- internal -------------------------------------------------------
 
     def _build_handler(self) -> MissionHandler:
-        if self._handler is not None:
-            return self._handler
         manager_registry = self._runtime.manager_registry
         if manager_registry is None:
             raise TaskCenterInvariantViolation(
@@ -133,25 +128,19 @@ class MissionStarter:
         def _deliver(report: MissionCloseReport) -> None:
             router.deliver(report)
 
-        # Closure capture of ``self._runtime`` is only safe because
-        # ``AttemptRuntime`` is ``@dataclass(frozen=True, slots=True)``: its
-        # fields cannot be reassigned after construction, so the orchestrator
-        # factory built here keeps pointing at the same runtime instance for
-        # the lifetime of this starter. If ``AttemptRuntime`` ever becomes
-        # mutable, this lazy-build pattern needs to be revisited.
-        orchestrator_factory = make_attempt_orchestrator_factory(
-            runtime=self._runtime,
-        )
-        self._handler = MissionHandler(
+        return MissionHandler(
             mission_store=self._runtime.mission_store,
             episode_store=self._runtime.episode_store,
             attempt_store=self._runtime.attempt_store,
             manager_registry=manager_registry,
             config=self._runtime.lifecycle_config,
             deliver_close_report=_deliver,
-            orchestrator_factory=orchestrator_factory,
+            orchestrator_factory=lambda attempt, on_attempt_closed: AttemptOrchestrator(
+                attempt=attempt,
+                on_attempt_closed=on_attempt_closed,
+                runtime=self._runtime,
+            ),
         )
-        return self._handler
 
     def _assert_parent_running_and_no_open_child(
         self,

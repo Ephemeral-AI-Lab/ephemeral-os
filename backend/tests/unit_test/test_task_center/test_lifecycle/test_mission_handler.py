@@ -59,7 +59,7 @@ def test_request_records_segments_in_episode_ids(
         requested_by_task_id="t1",
         goal="g",
     )
-    seg = handler.create_initial_episode(mission_id=req.id)
+    seg, _ = handler.create_initial_episode_with_manager(mission_id=req.id)
     refreshed = mission_store.get(req.id)
     assert refreshed is not None
     assert refreshed.episode_ids == (seg.id,)
@@ -71,7 +71,7 @@ def test_initial_episode_has_sequence_one_and_initial_reason(handler, task_cente
         requested_by_task_id="t1",
         goal="g",
     )
-    seg = handler.create_initial_episode(mission_id=req.id)
+    seg, _ = handler.create_initial_episode_with_manager(mission_id=req.id)
     assert seg.sequence_no == 1
     assert seg.creation_reason == EpisodeCreationReason.INITIAL
     assert seg.goal == "g"
@@ -88,14 +88,16 @@ def test_continuation_segment_inherits_continuation_goal(
         requested_by_task_id="t1",
         goal="initial-goal",
     )
-    seg1 = handler.create_initial_episode(mission_id=req.id)
+    seg1, _ = handler.create_initial_episode_with_manager(mission_id=req.id)
     # Mark predecessor SUCCEEDED with a continuation_goal so the invariant passes.
     episode_store.set_continuation_goal(seg1.id, "next-goal")
     episode_store.set_status(seg1.id, status=EpisodeStatus.SUCCEEDED)
     seg1_succeeded = episode_store.get(seg1.id)
     assert seg1_succeeded is not None
 
-    seg2 = handler.create_continuation_episode(previous_episode=seg1_succeeded)
+    seg2, _ = handler.create_continuation_episode_with_manager(
+        previous_episode=seg1_succeeded
+    )
     assert seg2.sequence_no == 2
     assert seg2.creation_reason == EpisodeCreationReason.PARTIAL_CONTINUATION
     assert seg2.goal == "next-goal"
@@ -110,12 +112,14 @@ def test_episode_ids_holds_multiple_segments(
         requested_by_task_id="t1",
         goal="g1",
     )
-    seg1 = handler.create_initial_episode(mission_id=req.id)
+    seg1, _ = handler.create_initial_episode_with_manager(mission_id=req.id)
     episode_store.set_continuation_goal(seg1.id, "g2")
     episode_store.set_status(seg1.id, status=EpisodeStatus.SUCCEEDED)
     seg1_succeeded = episode_store.get(seg1.id)
     assert seg1_succeeded is not None
-    seg2 = handler.create_continuation_episode(previous_episode=seg1_succeeded)
+    seg2, _ = handler.create_continuation_episode_with_manager(
+        previous_episode=seg1_succeeded
+    )
     refreshed = mission_store.get(req.id)
     assert refreshed is not None
     assert refreshed.episode_ids == (seg1.id, seg2.id)
@@ -129,7 +133,7 @@ def test_handle_episode_closed_terminal_success_closes_request_succeeded(
         requested_by_task_id="t1",
         goal="g",
     )
-    seg = handler.create_initial_episode(mission_id=req.id)
+    seg, _ = handler.create_initial_episode_with_manager(mission_id=req.id)
     handler.handle_episode_closed(
         EpisodeClosureReport(
             episode_id=seg.id,
@@ -155,7 +159,7 @@ def test_handle_episode_closed_attempt_plan_failed_closes_request_failed(
         requested_by_task_id="t1",
         goal="g",
     )
-    seg = handler.create_initial_episode(mission_id=req.id)
+    seg, _ = handler.create_initial_episode_with_manager(mission_id=req.id)
     handler.handle_episode_closed(
         EpisodeClosureReport(
             episode_id=seg.id,
@@ -178,7 +182,7 @@ def test_handle_episode_closed_success_continue_creates_continuation(
         requested_by_task_id="t1",
         goal="g",
     )
-    seg1 = handler.create_initial_episode(mission_id=req.id)
+    seg1, _ = handler.create_initial_episode_with_manager(mission_id=req.id)
     episode_store.set_continuation_goal(seg1.id, "next-goal")
     episode_store.set_status(seg1.id, status=EpisodeStatus.SUCCEEDED)
     handler.handle_episode_closed(
@@ -206,7 +210,7 @@ def test_handle_episode_closed_deregisters_manager(
         requested_by_task_id="t1",
         goal="g",
     )
-    seg = handler.create_initial_episode(mission_id=req.id)
+    seg, _ = handler.create_initial_episode_with_manager(mission_id=req.id)
     # Access the registry through the handler's private attr for verification.
     reg = handler._manager_registry  # type: ignore[attr-defined]
     assert reg.get(seg.id) is not None
@@ -228,18 +232,18 @@ def test_continuation_segment_only_from_succeeded_predecessor_with_goal(
         requested_by_task_id="t1",
         goal="g",
     )
-    seg1 = handler.create_initial_episode(mission_id=req.id)
+    seg1, _ = handler.create_initial_episode_with_manager(mission_id=req.id)
 
     # Predecessor still OPEN -> invariant violation.
     with pytest.raises(TaskCenterInvariantViolation):
-        handler.create_continuation_episode(previous_episode=seg1)
+        handler.create_continuation_episode_with_manager(previous_episode=seg1)
 
     # Predecessor SUCCEEDED but no continuation_goal -> invariant violation.
     episode_store.set_status(seg1.id, status=EpisodeStatus.SUCCEEDED)
     seg1_no_goal = episode_store.get(seg1.id)
     assert seg1_no_goal is not None
     with pytest.raises(TaskCenterInvariantViolation):
-        handler.create_continuation_episode(previous_episode=seg1_no_goal)
+        handler.create_continuation_episode_with_manager(previous_episode=seg1_no_goal)
 
 
 def test_episode_manager_registry_enforces_unique_per_segment(
@@ -251,11 +255,11 @@ def test_episode_manager_registry_enforces_unique_per_segment(
         requested_by_task_id="t1",
         goal="g",
     )
-    handler.create_initial_episode(mission_id=req.id)
+    handler.create_initial_episode_with_manager(mission_id=req.id)
     # Calling create_initial_episode again should fail because the request now
     # has episode 1 — sequence_no 1 is no longer the contiguous next.
     with pytest.raises(TaskCenterInvariantViolation):
-        handler.create_initial_episode(mission_id=req.id)
+        handler.create_initial_episode_with_manager(mission_id=req.id)
 
 
 def test_close_mission_delivers_close_report_when_callback_set(
@@ -279,7 +283,7 @@ def test_close_mission_delivers_close_report_when_callback_set(
         requested_by_task_id="executor-1",
         goal="g",
     )
-    handler.create_initial_episode(mission_id=req.id)
+    handler.create_initial_episode_with_manager(mission_id=req.id)
     handler.close_mission(
         mission_id=req.id,
         succeeded=True,
@@ -321,7 +325,7 @@ def test_handler_passes_orchestrator_factory_to_spawned_manager(
         requested_by_task_id="executor-1",
         goal="g",
     )
-    episode = handler.create_initial_episode(mission_id=req.id)
+    episode, _ = handler.create_initial_episode_with_manager(mission_id=req.id)
     manager = registry.get(episode.id)
     assert manager is not None
 
@@ -339,7 +343,7 @@ def test_no_root_creation_reason_in_lifecycle(handler, task_center_run_id):
         requested_by_task_id="t1",
         goal="g",
     )
-    seg = handler.create_initial_episode(mission_id=req.id)
+    seg, _ = handler.create_initial_episode_with_manager(mission_id=req.id)
     assert seg.creation_reason in (
         EpisodeCreationReason.INITIAL,
         EpisodeCreationReason.PARTIAL_CONTINUATION,

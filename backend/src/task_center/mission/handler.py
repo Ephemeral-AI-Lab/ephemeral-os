@@ -71,18 +71,6 @@ class MissionHandler:
 
     # ---- public API -----------------------------------------------------
 
-    def set_orchestrator_factory(
-        self, factory: OrchestratorFactory
-    ) -> None:
-        """Inject the orchestrator factory after construction.
-
-        The entry coordinator builds the handler before the runtime exists
-        (the handler is a dependency of the entry-task controller, which is
-        in turn a dependency of the runtime). The factory closes over the
-        runtime, so it must be installed once construction completes.
-        """
-        self._orchestrator_factory = factory
-
     def create_mission(
         self,
         *,
@@ -95,14 +83,6 @@ class MissionHandler:
             requested_by_task_id=requested_by_task_id,
             goal=goal,
         )
-
-    def create_initial_episode(
-        self, *, mission_id: str
-    ) -> Episode:
-        episode, _ = self.create_initial_episode_with_manager(
-            mission_id=mission_id
-        )
-        return episode
 
     def create_initial_episode_with_manager(
         self, *, mission_id: str
@@ -120,14 +100,6 @@ class MissionHandler:
         self._append_episode_to_mission(mission, episode)
         manager = self._spawn_episode_manager(episode)
         return episode, manager
-
-    def create_continuation_episode(
-        self, *, previous_episode: Episode
-    ) -> Episode:
-        episode, _ = self.create_continuation_episode_with_manager(
-            previous_episode=previous_episode
-        )
-        return episode
 
     def create_continuation_episode_with_manager(
         self, *, previous_episode: Episode

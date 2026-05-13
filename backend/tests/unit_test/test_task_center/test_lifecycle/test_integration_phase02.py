@@ -5,10 +5,8 @@ from __future__ import annotations
 from task_center.config import HarnessLifecycleConfig
 from task_center.mission.handler import MissionHandler
 from task_center.mission.mission import MissionStatus
-from task_center.attempt.factory import (
-    make_attempt_orchestrator_factory,
-)
 from task_center.attempt import AttemptStatus
+from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
@@ -64,7 +62,9 @@ def _build_handler(
         attempt_store=attempt_store,
         manager_registry=manager_registry,
         config=HarnessLifecycleConfig(default_attempt_budget=2),
-        orchestrator_factory=make_attempt_orchestrator_factory(
+        orchestrator_factory=lambda attempt, on_attempt_closed: AttemptOrchestrator(
+            attempt=attempt,
+            on_attempt_closed=on_attempt_closed,
             runtime=runtime,
         ),
     )
@@ -130,7 +130,7 @@ def test_full_plan_execution_success_closes_request_success(
         requested_by_task_id="executor-1",
         goal="g",
     )
-    episode = handler.create_initial_episode(mission_id=request.id)
+    episode, _ = handler.create_initial_episode_with_manager(mission_id=request.id)
     manager = manager_registry.get(episode.id)
     assert manager is not None
     attempt = manager.create_initial_attempt()
@@ -167,7 +167,7 @@ def test_generator_failure_retry_then_evaluator_success(
         requested_by_task_id="executor-1",
         goal="g",
     )
-    episode = handler.create_initial_episode(mission_id=request.id)
+    episode, _ = handler.create_initial_episode_with_manager(mission_id=request.id)
     manager = manager_registry.get(episode.id)
     assert manager is not None
     graph1 = manager.create_initial_attempt()

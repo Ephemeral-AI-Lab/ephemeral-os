@@ -49,18 +49,18 @@ class AttemptRuntime:
     attempt_store: AttemptStore
     task_store: TaskCenterStore
     agent_launcher: AttemptAgentLauncher
-    orchestrator_registry: "AttemptOrchestratorRegistry"
+    orchestrator_registry: AttemptOrchestratorRegistry
     manager_registry: EpisodeManagerRegistry | None = None
     lifecycle_config: HarnessLifecycleConfig = field(default_factory=HarnessLifecycleConfig)
     # When set, orchestrator + dispatcher route launches through the composer
     # to obtain a rendered task_input + selected agent definition.
     # Optional so existing tests can continue without composer wiring.
-    composer: "ContextComposer | None" = None
+    composer: ContextComposer | None = None
     # Lifecycle controller for the top-level entry executor. ``None`` for
     # delegated-only runtimes.
     # The close-report router and launcher use this to dispatch lifecycle
     # events for entry tasks whose ``task_center_attempt_id`` is None.
-    entry_task_controller: "EntryTaskController | None" = None
+    entry_task_controller: EntryTaskController | None = None
 
     def task_center_run_id_for_attempt(self, attempt: Attempt) -> str:
         episode = self.episode_store.get(attempt.episode_id)
@@ -69,15 +69,15 @@ class AttemptRuntime:
                 f"Episode {attempt.episode_id!r} not found for "
                 f"Attempt {attempt.id!r}"
             )
-        request = self.mission_store.get(episode.mission_id)
-        if request is None:
+        mission = self.mission_store.get(episode.mission_id)
+        if mission is None:
             raise TaskCenterInvariantViolation(
                 f"Mission {episode.mission_id!r} not "
                 f"found for Episode {episode.id!r}"
             )
-        return request.task_center_run_id
+        return mission.task_center_run_id
 
-    def require_composer(self) -> "ContextComposer":
+    def require_composer(self) -> ContextComposer:
         if self.composer is None:
             raise TaskCenterInvariantViolation(
                 "AttemptRuntime requires a ContextComposer for harness "
@@ -87,7 +87,7 @@ class AttemptRuntime:
 
     def entry_task_controller_for(
         self, task_id: str
-    ) -> "EntryTaskController | None":
+    ) -> EntryTaskController | None:
         """Return the entry controller iff it's bound to *task_id*.
 
         Used at the four entry-mode dispatch sites (mission starter

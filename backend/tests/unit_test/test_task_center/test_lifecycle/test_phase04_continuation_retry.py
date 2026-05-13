@@ -3,7 +3,7 @@
 Drives the full coordinator → handler → manager → orchestrator pipeline so
 that retry, continuation, and final close-report routing are exercised
 together. The parent task must remain in ``waiting_mission`` until the
-delegated request closes terminally.
+delegated mission closes terminally.
 """
 
 from __future__ import annotations

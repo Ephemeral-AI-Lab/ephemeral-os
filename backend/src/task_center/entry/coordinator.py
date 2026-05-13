@@ -58,8 +58,6 @@ class TaskCenterEntryHandle:
     request_id: str
     task_center_run_id: str
     binding: TaskCenterSandboxBinding
-    mission_id: str | None
-    episode_id: str | None
     entry_task_id: str
     launcher: EphemeralAttemptAgentLauncher
 
@@ -70,7 +68,7 @@ class TaskCenterEntryHandle:
 
 def start_task_center_entry_run(
     *,
-    config: "RuntimeConfig",
+    config: RuntimeConfig,
     prompt: str,
     sandbox_id: str | None,
     on_agent_event: AgentStreamEmitter | None,
@@ -104,7 +102,7 @@ class TaskCenterEntryCoordinator:
     def __init__(
         self,
         *,
-        config: "RuntimeConfig",
+        config: RuntimeConfig,
         prompt: str,
         sandbox_id: str | None,
         on_agent_event: AgentStreamEmitter | None,
@@ -156,8 +154,6 @@ class TaskCenterEntryCoordinator:
             request_id=request_id,
             task_center_run_id=run_id,
             binding=binding,
-            mission_id=None,
-            episode_id=None,
             entry_task_id=entry_task_id,
             launcher=launcher,
         )

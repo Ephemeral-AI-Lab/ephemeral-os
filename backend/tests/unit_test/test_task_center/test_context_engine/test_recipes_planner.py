@@ -272,6 +272,74 @@ def test_three_failed_attempts_emit_three_high_priority_blocks(
     ]
 
 
+def test_failed_attempt_landscape_includes_plan_kind_and_generator_summaries(
+    deps_with_stores, mission_store, episode_store, attempt_store, task_store,
+    task_center_run_id,
+):
+    request = _seed_mission(mission_store, task_center_run_id)
+    episode = _seed_episode(
+        episode_store, mission_id=request.id, sequence_no=1, goal="g"
+    )
+    failed = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    attempt_store.set_plan_contract(
+        failed.id,
+        task_specification="partial failed spec",
+        evaluation_criteria=["criterion"],
+        continuation_goal="continue with later slice",
+    )
+    attempt_store.set_generator_task_ids(failed.id, ["gen-a", "gen-b"])
+    task_store.upsert_task(
+        task_id="gen-a",
+        task_center_run_id=task_center_run_id,
+        role="generator",
+        agent_name="executor",
+        task_input="a",
+        status="done",
+        summaries=[{"summary": "implemented A"}],
+        needs=[],
+        task_center_attempt_id=failed.id,
+        spawn_reason="attempt_generator",
+    )
+    task_store.upsert_task(
+        task_id="gen-b",
+        task_center_run_id=task_center_run_id,
+        role="generator",
+        agent_name="executor",
+        task_input="b",
+        status="failed",
+        summaries=[{"summary": "B failed after creating fixture"}],
+        needs=[],
+        task_center_attempt_id=failed.id,
+        spawn_reason="attempt_generator",
+    )
+    attempt_store.close(
+        failed.id,
+        status=AttemptStatus.FAILED,
+        fail_reason=AttemptFailReason.EVALUATOR_FAILED,
+        closed_at=datetime.now(UTC),
+    )
+    current_attempt = _seed_running_attempt(attempt_store, episode.id, sequence_no=2)
+
+    packet = _planner_v1_build(
+        ContextScope(
+            mission_id=request.id,
+            episode_id=episode.id,
+            attempt_id=current_attempt.id,
+        ),
+        deps_with_stores,
+    )
+
+    failed_blocks = [
+        b for b in packet.blocks if b.kind == "failed_attempt_landscape"
+    ]
+    assert len(failed_blocks) == 1
+    text = failed_blocks[0].text
+    assert "plan_kind: partial" in text
+    assert "continuation_goal: continue with later slice" in text
+    assert "  - gen-a:\n    implemented A" in text
+    assert "  - gen-b:\n    B failed after creating fixture" in text
+
+
 def test_more_than_cap_failed_attempts_truncates_with_medium_summary(
     deps_with_stores, mission_store, episode_store, attempt_store,
     task_center_run_id,

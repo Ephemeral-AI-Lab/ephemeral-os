@@ -14,9 +14,9 @@ class AttemptOrchestratorRegistry:
     """In-memory lookup by Attempt id."""
 
     def __init__(self) -> None:
-        self._by_attempt_id: dict[str, "AttemptOrchestrator"] = {}
+        self._by_attempt_id: dict[str, AttemptOrchestrator] = {}
 
-    def register(self, orchestrator: "AttemptOrchestrator") -> None:
+    def register(self, orchestrator: AttemptOrchestrator) -> None:
         attempt_id = orchestrator.attempt_id
         current = self._by_attempt_id.get(attempt_id)
         if current is not None and current is not orchestrator:
@@ -26,10 +26,10 @@ class AttemptOrchestratorRegistry:
             )
         self._by_attempt_id[attempt_id] = orchestrator
 
-    def get(self, attempt_id: str) -> "AttemptOrchestrator | None":
+    def get(self, attempt_id: str) -> AttemptOrchestrator | None:
         return self._by_attempt_id.get(attempt_id)
 
-    def get_or_raise(self, attempt_id: str) -> "AttemptOrchestrator":
+    def get_or_raise(self, attempt_id: str) -> AttemptOrchestrator:
         orchestrator = self.get(attempt_id)
         if orchestrator is None:
             raise TaskCenterInvariantViolation(

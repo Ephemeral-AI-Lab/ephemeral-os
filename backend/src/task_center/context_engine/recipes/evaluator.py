@@ -68,6 +68,25 @@ def _evaluator_v1_build(
                 source_kind="attempt",
             )
         )
+    if attempt.continuation_goal:
+        blocks.append(
+            ContextBlock(
+                kind=ContextBlockKind.PARTIAL_PLAN_BOUNDARY,
+                priority=ContextPriority.REQUIRED,
+                text=(
+                    "plan_kind: partial\n"
+                    f"continuation_goal: {attempt.continuation_goal}\n\n"
+                    "This attempt is intentionally partial. If it passes, "
+                    "the continuation_goal becomes the next episode. Do not "
+                    "treat continuation work as missing from the current "
+                    "attempt; judge this attempt against the Attempt Plan "
+                    "and Evaluation Criteria."
+                ),
+                source_id=attempt.id,
+                source_kind="attempt",
+                metadata={"plan_kind": "partial"},
+            )
+        )
 
     for task_id in attempt.generator_task_ids:
         task = deps.task_store.get_task(task_id)

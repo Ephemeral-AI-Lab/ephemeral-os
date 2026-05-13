@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import ClassVar
 
 from task_center.context_engine.engine import ContextEngineDeps
 from task_center.context_engine.scope import ContextScope
@@ -31,7 +32,7 @@ PredicateFn = Callable[[ResolverContext], bool]
 class PredicateRegistry:
     """Process-global registry. Tests use ``clear`` to start fresh."""
 
-    _registry: dict[str, PredicateFn] = {}
+    _registry: ClassVar[dict[str, PredicateFn]] = {}
 
     @classmethod
     def register(cls, name: str, fn: PredicateFn) -> None:

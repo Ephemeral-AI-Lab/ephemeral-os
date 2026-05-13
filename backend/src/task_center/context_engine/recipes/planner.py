@@ -70,6 +70,7 @@ def _planner_v1_build(
         failed_attempt_landscape_blocks(
             current_attempt_id=scope.attempt_id,
             attempts=deps.attempt_store.list_for_episode(episode.id),
+            task_store=deps.task_store,
         )
     )
 

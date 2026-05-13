@@ -53,6 +53,17 @@ class _FailingRoleLauncher(_FakeLauncher):
         super().launch(launch)
 
 
+class _FailingEvaluatorComposer:
+    def __init__(self, inner) -> None:
+        self._inner = inner
+        self.engine = inner.engine
+
+    def compose(self, *, base_agent_name: str, scope):
+        if base_agent_name == "evaluator":
+            raise RuntimeError("evaluator compose failed")
+        return self._inner.compose(base_agent_name=base_agent_name, scope=scope)
+
+
 def _seed_graph(mission_store, episode_store, attempt_store, task_center_run_id):
     request = mission_store.insert(
         task_center_run_id=task_center_run_id,
@@ -377,6 +388,38 @@ def test_evaluator_launch_failure_marks_task_failed_and_closes_graph(
     assert task is not None
     assert task["status"] == HarnessTaskStatus.FAILED.value
     assert task["summaries"][-1]["fail_reason"] == "agent_launch_failed"
+    assert refreshed is not None
+    assert refreshed.status == AttemptStatus.FAILED
+    assert refreshed.fail_reason == AttemptFailReason.EVALUATOR_FAILED
+    assert closed == [attempt.id]
+    assert registry.get(attempt.id) is None
+
+
+def test_evaluator_compose_failure_closes_graph(
+    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+):
+    orchestrator, attempt, _, registry, closed = _build_orchestrator(
+        mission_store,
+        episode_store,
+        attempt_store,
+        task_store,
+        task_center_run_id,
+        composer=_FailingEvaluatorComposer(composer),
+    )
+    orchestrator.start()
+    orchestrator.apply_plan_submission(
+        _plan(
+            attempt.id,
+            tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
+        )
+    )
+
+    with pytest.raises(RuntimeError, match="evaluator compose failed"):
+        orchestrator.apply_generator_submission(_generator_success(attempt.id, "a"))
+
+    task = task_store.get_task(evaluator_task_id(attempt.id))
+    refreshed = attempt_store.get(attempt.id)
+    assert task is None
     assert refreshed is not None
     assert refreshed.status == AttemptStatus.FAILED
     assert refreshed.fail_reason == AttemptFailReason.EVALUATOR_FAILED

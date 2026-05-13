@@ -35,10 +35,10 @@ class ContextEngineDeps:
     runtime objects, so swapping a store in tests is one keyword argument.
     """
 
-    mission_store: "MissionStore"
-    episode_store: "EpisodeStore"
-    attempt_store: "AttemptStore"
-    task_store: "TaskCenterStore"
+    mission_store: MissionStore
+    episode_store: EpisodeStore
+    attempt_store: AttemptStore
+    task_store: TaskCenterStore
 
     # Optional: when supplied, the composer persists rendered packet inputs.
     context_packet_store: ContextPacketStoreProtocol | None = None

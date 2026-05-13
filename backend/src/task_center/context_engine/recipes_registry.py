@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from task_center.context_engine.errors import ContextEngineError
 from task_center.context_engine.packet import ContextPacket
@@ -37,7 +37,7 @@ class ContextRecipe:
 class RecipeRegistry:
     """Process-global recipe registry."""
 
-    _registry: dict[str, ContextRecipe] = {}
+    _registry: ClassVar[dict[str, ContextRecipe]] = {}
 
     @classmethod
     def register(cls, recipe: ContextRecipe) -> None:

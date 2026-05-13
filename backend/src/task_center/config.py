@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class HarnessLifecycleConfig:
-    """Configurable knobs for the request/episode/attempt lifecycle.
+    """Configurable knobs for the mission/episode/attempt lifecycle.
 
     ``default_attempt_budget`` is applied to every Episode created by
     ``MissionHandler`` unless overridden per-call.

@@ -36,6 +36,7 @@ class ContextBlockKind(StrEnum):
     PRIOR_EPISODE_SPECIFICATION = "prior_episode_specification"
     PRIOR_EPISODE_SUMMARY = "prior_episode_summary"
     FAILED_ATTEMPT_LANDSCAPE = "failed_attempt_landscape"
+    PARTIAL_PLAN_BOUNDARY = "partial_plan_boundary"
     PLANNED_TASK_SPEC = "planned_task_spec"
     TASK_SPECIFICATION = "task_specification"
     EVALUATION_CRITERIA = "evaluation_criteria"
