@@ -63,7 +63,20 @@ class Manifest:
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, object]) -> Manifest:
-        raw_layers = payload.get("layers", ())
+        # WR-04 + WR-08: require both top-level keys explicitly. The
+        # pre-fix `.get("layers", ())` would silently promote a torn write
+        # (manifest.json that lost the `layers` key) into an "empty stack,
+        # version N" Manifest, which downstream paths interpret as
+        # legitimately-empty rather than as corruption.
+        if "version" not in payload:
+            raise ManifestConflictError(
+                "manifest payload missing required field: version"
+            )
+        if "layers" not in payload:
+            raise ManifestConflictError(
+                "manifest payload missing required field: layers"
+            )
+        raw_layers = payload["layers"]
         if not isinstance(raw_layers, list):
             raise ValueError("manifest layers must be a list")
         layers: list[LayerRef] = []

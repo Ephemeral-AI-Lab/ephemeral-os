@@ -90,13 +90,7 @@ class StreamingToolExecutor:
         self._should_defer = should_defer
         self._tools: dict[str, TrackedTool] = {}
         self._aborted: set[str] = set()
-        self._deferred: set[str] = set()
         self._events: list[StreamEvent] = []
-
-    @property
-    def deferred_dispatch_ids(self) -> set[str]:
-        """IDs of tool_uses the caller asked us to defer (not execute)."""
-        return self._deferred
 
     @property
     def context(self) -> ToolExecutionContextService:
@@ -111,10 +105,11 @@ class StreamingToolExecutor:
         """
         tool_def = self._tool_registry.get(event.name)
 
-        # Deferred tools are tracked by id but never executed here —
-        # the query loop dispatches them through its background path.
+        # Deferred tools are skipped here — the query loop dispatches them
+        # through its background path. The executor doesn't need to track
+        # which ids were deferred; dispatch_assistant_tools recovers that by
+        # diffing tool_results against the assistant message's tool_uses.
         if self._should_defer is not None and self._should_defer(tool_def, event.input):
-            self._deferred.add(event.id)
             logger.info(
                 "STREAM: Deferring tool dispatch: tool_id=%s tool_name=%s",
                 event.id,

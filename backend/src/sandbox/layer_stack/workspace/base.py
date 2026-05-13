@@ -291,7 +291,36 @@ def _symlink_entry(
     rel: str,
 ) -> _BaseEntry:
     target = os.readlink(path)
+    # WR-05: trusted-workspace assumption is preserved (the workspace is
+    # populated by the host before base-build runs), but reject obviously
+    # unsafe targets so a clone of an untrusted third-party repo carrying
+    # a malicious symlink does NOT end up in the published base layer.
+    # Absolute targets (escape into host fs) and relative targets that
+    # walk out of the workspace are rejected as "incomplete" so the
+    # caller can decide what to do.
+    if target.startswith("/") or _relative_target_escapes(target):
+        raise WorkspaceBaseIncompleteError(
+            special_file_rejections=(rel,),
+            unstable_paths=(),
+        )
     return _SymlinkEntry(path=rel, link_target=target)
+
+
+def _relative_target_escapes(target: str) -> bool:
+    """Return True if a relative symlink target walks out of its directory."""
+    parts: list[str] = []
+    for raw in target.split("/"):
+        if raw in ("", "."):
+            continue
+        if raw == "..":
+            if not parts:
+                return True
+            parts.pop()
+            continue
+        parts.append(raw)
+    # If the path is exhausted without underflow, the relative target stays
+    # inside its origin directory tree.
+    return False
 
 
 def _write_base_layer(

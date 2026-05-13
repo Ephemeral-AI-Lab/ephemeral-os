@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 import tempfile
 import threading
 import time
+
+
+logger = logging.getLogger(__name__)
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -124,7 +128,13 @@ class LayerStackManager:
             )
         except Exception:
             if lowerdir is not None:
-                shutil.rmtree(lowerdir.parent, ignore_errors=True)
+                # WR-01: log cleanup errors instead of swallowing them with
+                # ignore_errors=True. A leaked transient lowerdir on every
+                # failed snapshot is a slow disk-fill bug; logging surfaces
+                # the leak in operator dashboards.
+                shutil.rmtree(
+                    lowerdir.parent, onerror=_log_rmtree_failure
+                )
             with self._lock:
                 self._leases.release(lease.lease_id)
             raise
@@ -340,3 +350,13 @@ def _layer_digest_path(storage_root: Path, layer_id: str) -> Path:
 def _safe_request_part(value: str) -> str:
     safe = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in value)
     return safe[:48] or "request"
+
+
+def _log_rmtree_failure(func: object, path: object, exc_info: object) -> None:
+    """``shutil.rmtree`` onerror callback: surface cleanup leaks via logs."""
+    logger.warning(
+        "transient lowerdir cleanup failed: %s(%r) -> %r",
+        getattr(func, "__name__", repr(func)),
+        path,
+        exc_info,
+    )
