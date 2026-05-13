@@ -44,7 +44,6 @@ class ApiMessageRequest:
     max_tokens: int = 4096
     tools: list[dict[str, Any]] = field(default_factory=list)
     tool_choice: dict[str, Any] | None = None
-    raw_messages: list[dict[str, Any]] | None = None
 
 
 @dataclass(frozen=True)
@@ -83,24 +82,11 @@ class ApiToolUseDeltaEvent:
     input: dict[str, Any]
 
 
-@dataclass(frozen=True)
-class ApiCancelEvent:
-    """LLM cancel signal for a running tool.
-
-    Emitted when the LLM decides to abort a long-running tool.
-    The loop intercepts this and calls executor.cancel().
-    """
-
-    tool_id: str
-    reason: str
-
-
 ApiStreamEvent = (
     ApiThinkingDeltaEvent
     | ApiTextDeltaEvent
     | ApiMessageCompleteEvent
     | ApiToolUseDeltaEvent
-    | ApiCancelEvent
 )
 
 

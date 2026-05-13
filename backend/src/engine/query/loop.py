@@ -8,7 +8,6 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from providers.types import (
-    ApiCancelEvent,
     ApiMessageCompleteEvent,
     ApiTextDeltaEvent,
     ApiThinkingDeltaEvent,
@@ -192,10 +191,6 @@ async def _consume_provider_stream(
                     yield emitted, None
                 for progress in executor.get_progress():
                     yield progress, None
-                continue
-
-            if isinstance(event, ApiCancelEvent):
-                executor.cancel(event.tool_id, event.reason)
                 continue
 
             if isinstance(event, ApiMessageCompleteEvent):

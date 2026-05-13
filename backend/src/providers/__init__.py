@@ -1,9 +1,8 @@
-"""Provider exports with lazy optional-dependency imports."""
+"""Provider exports."""
 
 from __future__ import annotations
 
 from providers.types import (
-    ApiCancelEvent,
     ApiMessageCompleteEvent,
     ApiMessageRequest,
     ApiStreamEvent,
@@ -19,16 +18,10 @@ from providers.errors import (
     RateLimitFailure,
     RequestFailure,
 )
-from providers.provider import (
-    ProviderInfo,
-    auth_status,
-    detect_provider,
-    make_api_client,
-)
+from providers.provider import make_api_client
 
 __all__ = [
     # Types & protocol
-    "ApiCancelEvent",
     "ApiMessageRequest",
     "ApiTextDeltaEvent",
     "ApiThinkingDeltaEvent",
@@ -42,25 +35,6 @@ __all__ = [
     "AuthenticationFailure",
     "RateLimitFailure",
     "RequestFailure",
-    # Provider
-    "ProviderInfo",
-    "detect_provider",
-    "auth_status",
+    # Provider factory
     "make_api_client",
-    # Clients
-    "AnthropicClient",
-    # API
-    "create_models_router",
 ]
-
-
-def __getattr__(name: str):
-    if name == "AnthropicClient":
-        from providers.clients import AnthropicClient
-
-        return AnthropicClient
-    if name == "create_models_router":
-        from providers.api import create_models_router
-
-        return create_models_router
-    raise AttributeError(name)
