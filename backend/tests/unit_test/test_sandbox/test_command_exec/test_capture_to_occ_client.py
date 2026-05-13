@@ -115,10 +115,9 @@ async def test_shell_capture_goes_through_occ_client_before_lease_release(
             base_root_hash="a" * 64,
         )
     )
-    lower_parent = tmp_path / "transient"
-    lower_parent.mkdir()
+    lower_parent = stack / "runtime" / "transient-lowerdirs" / "req-1"
     lower = lower_parent / "lower"
-    lower.mkdir()
+    lower.mkdir(parents=True)
     layer_stack = _LayerStackClient(lower)
     occ = _OCCClient(layer_stack)
 
@@ -230,6 +229,28 @@ async def test_shell_uses_transient_lowerdir_and_removes_it(
     assert result.exit_code == 0
     assert captured_lowerdirs
     assert captured_lowerdirs[0].exists() is False
+
+
+def test_drop_transient_lowerdir_refuses_matching_path_outside_storage_root(
+    tmp_path: Path,
+) -> None:
+    storage_root = tmp_path / "stack"
+    outside_root = tmp_path / "outside"
+    lower = outside_root / "runtime" / "transient-lowerdirs" / "req-1" / "lower"
+    lower.mkdir(parents=True)
+
+    shell_runner._drop_transient_lowerdir(
+        _Lease(
+            lease_id="lease-1",
+            manifest_version=1,
+            manifest=Manifest(version=1, layers=()),
+            lowerdir=lower.as_posix(),
+            timings={},
+        ),
+        storage_root=storage_root,
+    )
+
+    assert lower.exists()
 
 
 def _assert_phase08_shell_timings(timings: dict[str, float]) -> None:

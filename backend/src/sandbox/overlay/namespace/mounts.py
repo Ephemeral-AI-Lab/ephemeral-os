@@ -3,18 +3,22 @@
 from __future__ import annotations
 
 import shutil
-import time
 from dataclasses import dataclass
 from pathlib import Path
 
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.layer_stack.view.merged import MergedView
+from sandbox.timing import monotonic_now
 
+# This module builds a copy-backed merged view for portable overlay-shell
+# execution. The privileged kernel mount path is separate:
+# sandbox.command_exec.workspace.namespace_entrypoint.
 
 @dataclass(frozen=True)
 class MountedSnapshot:
     manifest: Manifest
     workspace_root: str
+    lowerdir: str
     upperdir: str
     workdir: str
 
@@ -39,37 +43,34 @@ def mount_snapshot(
     workdir = run_root / "work"
     merged = run_root / "merged"
 
-    prepare_start = time.perf_counter()
+    prepare_start = monotonic_now()
     for directory in (upperdir, workdir, merged):
         if directory.exists():
             shutil.rmtree(directory)
         directory.mkdir(parents=True)
     if timings is not None:
-        timings["overlay.mount.prepare_dirs_s"] = time.perf_counter() - prepare_start
+        timings["overlay.mount.prepare_dirs_s"] = monotonic_now() - prepare_start
 
-    materialize_start = time.perf_counter()
+    materialize_start = monotonic_now()
     MergedView(storage_root).materialize(lowerdir, manifest)
     if timings is not None:
         timings["overlay.mount.materialize_lower_s"] = (
-            time.perf_counter() - materialize_start
+            monotonic_now() - materialize_start
         )
 
-    copy_start = time.perf_counter()
+    copy_start = monotonic_now()
     _copy_tree(lowerdir, merged)
     if timings is not None:
         timings["overlay.mount.copy_lower_to_merged_s"] = (
-            time.perf_counter() - copy_start
+            monotonic_now() - copy_start
         )
     return MountedSnapshot(
         manifest=manifest,
         workspace_root=str(merged),
+        lowerdir=str(lowerdir),
         upperdir=str(upperdir),
         workdir=str(workdir),
     )
-
-
-def lowerdir_for(mounted: MountedSnapshot) -> str:
-    return str(Path(mounted.workdir).parent / "lower")
 
 
 def _copy_tree(source: Path, destination: Path) -> None:
@@ -87,6 +88,5 @@ def _copy_tree(source: Path, destination: Path) -> None:
 
 __all__ = [
     "MountedSnapshot",
-    "lowerdir_for",
     "mount_snapshot",
 ]

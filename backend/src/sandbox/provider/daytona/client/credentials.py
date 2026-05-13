@@ -7,7 +7,15 @@ from pathlib import Path
 
 from dotenv import dotenv_values
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[6]
+
+def _find_project_root(start: Path) -> Path:
+    for candidate in (start.parent, *start.parents):
+        if (candidate / "pyproject.toml").is_file() or (candidate / ".git").exists():
+            return candidate
+    return start.parents[6]
+
+
+_PROJECT_ROOT = _find_project_root(Path(__file__).resolve())
 _DOTENV_PATH = _PROJECT_ROOT / ".env"
 
 

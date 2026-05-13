@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import time
 from collections import OrderedDict
 from collections.abc import Callable, Sequence
 
@@ -20,6 +19,8 @@ from sandbox.occ.changeset.types import (
     WriteChange,
 )
 from sandbox.occ.content.gitignore_oracle import GitignoreMatcher
+from sandbox.occ.content.hashing import ContentHasher
+from sandbox.timing import monotonic_now
 
 BaseHashReader = Callable[[str], str | None]
 
@@ -39,9 +40,9 @@ class OccOrchestrator:
         base_hash_reader: BaseHashReader | None = None,
     ) -> PreparedChangeset:
         """Route changes and infer gated base hashes synchronously by path."""
-        group_start = time.perf_counter()
+        group_start = monotonic_now()
         grouped = self._group_by_route(changes, snapshot=snapshot)
-        groups_end = time.perf_counter()
+        groups_end = monotonic_now()
         prepared = tuple(
             self._prepare_group(
                 path,
@@ -52,7 +53,7 @@ class OccOrchestrator:
             )
             for path, route, path_changes, message in grouped
         )
-        prepare_end = time.perf_counter()
+        prepare_end = monotonic_now()
         return PreparedChangeset(
             snapshot=snapshot,
             path_groups=prepared,
@@ -117,13 +118,10 @@ class OccOrchestrator:
                 message=message,
             )
 
-        needs_base_hash = any(requires_base_hash(change) for change in changes)
-        base_hash = base_hash_reader(path) if needs_base_hash else None
-        prepared_changes = tuple(
-            attach_base_hash(change, base_hash)
-            if requires_base_hash(change)
-            else change
-            for change in changes
+        prepared_changes = _attach_chained_base_hashes(
+            path,
+            changes,
+            base_hash_reader,
         )
         return PreparedPathGroup(
             path=path,
@@ -147,6 +145,31 @@ def attach_base_hash(change: Change, base_hash: str | None) -> Change:
     if isinstance(change, DeleteChange):
         return change.with_base_hash(base_hash)
     return change
+
+
+def _attach_chained_base_hashes(
+    path: str,
+    changes: tuple[Change, ...],
+    base_hash_reader: BaseHashReader,
+) -> tuple[Change, ...]:
+    needs_base_hash = any(requires_base_hash(change) for change in changes)
+    running_hash = base_hash_reader(path) if needs_base_hash else None
+    hasher = ContentHasher()
+    prepared: list[Change] = []
+    for change in changes:
+        next_change = (
+            attach_base_hash(change, running_hash)
+            if requires_base_hash(change)
+            else change
+        )
+        prepared.append(next_change)
+        if isinstance(change, WriteChange):
+            running_hash = change.precomputed_hash or hasher.hash_bytes(
+                change.final_content
+            )
+        elif isinstance(change, DeleteChange):
+            running_hash = None
+    return tuple(prepared)
 
 
 def _is_gitignored(

@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 from sandbox.models import ConflictInfo, SandboxCaller
+from sandbox.timing import normalize_timing_map
 
 
 def caller_envelope(caller: SandboxCaller) -> dict[str, str]:
@@ -66,7 +67,7 @@ def paths_from_payload(raw: object) -> tuple[str, ...]:
 def timings_from_payload(raw: object) -> dict[str, float]:
     if not isinstance(raw, dict):
         return {}
-    return {str(key): float(value) for key, value in raw.items()}
+    return normalize_timing_map(raw)
 
 
 def int_from_payload(value: object, *, default: int) -> int:

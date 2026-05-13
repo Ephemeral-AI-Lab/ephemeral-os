@@ -85,6 +85,31 @@ def test_overlay_path_changes_to_occ_changes_converts_all_supported_kinds(
     assert changes[3].kept_children == frozenset({"keep.py", "nested"})
 
 
+def test_opaque_dir_kept_children_normalizes_paths(tmp_path: Path) -> None:
+    write_path = tmp_path / "keep.py"
+    write_path.write_bytes(b"keep")
+    opaque = object.__new__(OverlayPathChange)
+    object.__setattr__(opaque, "path", "dir/")
+    object.__setattr__(opaque, "kind", "opaque_dir")
+    object.__setattr__(opaque, "content_path", None)
+    object.__setattr__(opaque, "final_hash", None)
+
+    changes = overlay_path_changes_to_occ_changes(
+        [
+            opaque,
+            OverlayPathChange(
+                path="dir/keep.py",
+                kind="write",
+                content_path=str(write_path),
+                final_hash=content_hash(write_path),
+            ),
+        ]
+    )
+
+    assert isinstance(changes[0], OpaqueDirChange)
+    assert changes[0].kept_children == frozenset({"keep.py"})
+
+
 def test_overlay_path_changes_to_occ_changes_rejects_missing_content_path() -> None:
     invalid_change = object.__new__(OverlayPathChange)
     object.__setattr__(invalid_change, "path", "src/new.txt")

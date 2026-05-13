@@ -10,9 +10,10 @@ import time
 from dataclasses import dataclass
 
 from sandbox.layer_stack.manifest import ManifestConflictError
-from sandbox.occ.changeset.prepared import PreparedChangeset
+from sandbox.occ.changeset.prepared import PreparedChangeset, RouteDecision
 from sandbox.occ.changeset.types import ChangesetResult, FileResult, FileStatus
 from sandbox.occ.commit_transaction import OccCommitTransaction
+from sandbox.timing import monotonic_now
 
 _RESULT_READY_AT = "_occ.serial.result_ready_at_s"
 
@@ -73,7 +74,7 @@ class OccSerialMerger:
             _WorkItem(
                 prepared=prepared,
                 future=future,
-                enqueued_at=time.perf_counter(),
+                enqueued_at=monotonic_now(),
             )
         )
         return future
@@ -115,7 +116,7 @@ class OccSerialMerger:
     def _commit_batch(self, batch: list[_WorkItem]) -> None:
         if not batch:
             return
-        commit_start = time.perf_counter()
+        commit_start = monotonic_now()
         combined = _combine_prepared([item.prepared for item in batch])
         attempts = 0
         try:
@@ -128,8 +129,8 @@ class OccSerialMerger:
                     if attempts >= MAX_OCC_CAS_RETRIES:
                         result = _cas_exhaustion_result(combined, exc)
                         break
-            commit_elapsed = time.perf_counter() - commit_start
-            ready_at = time.perf_counter()
+            commit_elapsed = monotonic_now() - commit_start
+            ready_at = monotonic_now()
             for item in batch:
                 if item.future.cancelled():
                     continue
@@ -181,12 +182,15 @@ def _disjoint_batches(items: list[_WorkItem]) -> list[list[_WorkItem]]:
 
 def _combine_prepared(items: list[PreparedChangeset]) -> PreparedChangeset:
     first = items[0]
+    if len(items) > 1 and any(prepared.atomic for prepared in items):
+        raise AssertionError("atomic prepared changesets must not be batched")
     return PreparedChangeset(
         snapshot=first.snapshot,
         path_groups=tuple(
             group for prepared in items for group in prepared.path_groups
         ),
-        atomic=any(prepared.atomic for prepared in items),
+        atomic=first.atomic,
+        timings=_merge_timings(items),
     )
 
 
@@ -203,19 +207,46 @@ def _cas_exhaustion_result(
         f"CAS mismatch retry budget exhausted after {MAX_OCC_CAS_RETRIES} "
         f"attempts: {exc}"
     )
-    files = tuple(
-        FileResult(
-            path=group.path,
-            status=FileStatus.ABORTED_VERSION,
-            message=message,
+    files: list[FileResult] = []
+    for group in prepared.path_groups:
+        if group.route is RouteDecision.DROP:
+            files.append(
+                FileResult(
+                    path=group.path,
+                    status=FileStatus.DROPPED,
+                    message=group.message or "change dropped",
+                )
+            )
+            continue
+        if group.route is RouteDecision.REJECT:
+            files.append(
+                FileResult(
+                    path=group.path,
+                    status=FileStatus.REJECTED,
+                    message=group.message or "change rejected",
+                )
+            )
+            continue
+        files.append(
+            FileResult(
+                path=group.path,
+                status=FileStatus.ABORTED_VERSION,
+                message=message,
+            )
         )
-        for group in prepared.path_groups
-    )
     return ChangesetResult(
-        files=files,
+        files=tuple(files),
         timings={"occ.serial.cas_exhausted": 1.0},
         published_manifest_version=None,
     )
+
+
+def _merge_timings(items: list[PreparedChangeset]) -> dict[str, float]:
+    timings: dict[str, float] = {}
+    for prepared in items:
+        for key, value in prepared.timings.items():
+            timings[key] = timings.get(key, 0.0) + float(value)
+    return timings
 
 
 __all__ = ["MAX_OCC_CAS_RETRIES", "OccSerialMerger"]

@@ -18,17 +18,16 @@ def capture_workspace_upperdir(
     timings: dict[str, float],
 ) -> Sequence[OverlayPathChange]:
     """Return only assigned-workspace changes for one command."""
+    del snapshot_manifest
     if copy_backed:
         return capture_changes(
             spec.upperdir,
-            snapshot_manifest=snapshot_manifest,  # type: ignore[arg-type]
             lowerdir=spec.lowerdir,
             workspace_root=mounted_workspace_root,
             timings=timings,
         )
     return capture_changes(
         spec.upperdir,
-        snapshot_manifest=snapshot_manifest,  # type: ignore[arg-type]
         timings=timings,
     )
 

@@ -74,7 +74,7 @@ async def test_dispatch_envelope_async_unknown_op_returns_structured_error() -> 
 async def test_dispatch_envelope_async_honors_boot_t0_override() -> None:
     """``boot_t0`` overrides module-level ``_BOOT_T0`` so daemon-mode dispatch
     measures per-call boot, not daemon uptime."""
-    import time
+    from sandbox.timing import monotonic_now
 
     def handler(_: dict[str, object]) -> dict[str, object]:
         return {"success": True}
@@ -86,7 +86,7 @@ async def test_dispatch_envelope_async_honors_boot_t0_override() -> None:
     # boot_to_dispatch.
     response = await server.dispatch_envelope_async(
         {"op": "test.boot", "args": {}},
-        boot_t0=time.perf_counter(),
+        boot_t0=monotonic_now(),
     )
     assert response["success"] is True
     assert response["timings"]["runtime.boot_to_dispatch_s"] < 0.05

@@ -144,7 +144,6 @@ def _ensure_standalone_loop() -> asyncio.AbstractEventLoop:
 
         ready = threading.Event()
         loop_holder: dict[str, asyncio.AbstractEventLoop] = {}
-        error_holder: dict[str, BaseException] = {}
 
         def _run_loop() -> None:
             loop = asyncio.new_event_loop()
@@ -153,9 +152,6 @@ def _ensure_standalone_loop() -> asyncio.AbstractEventLoop:
             ready.set()
             try:
                 loop.run_forever()
-            except BaseException as exc:  # pragma: no cover - catastrophic
-                error_holder["error"] = exc
-                raise
             finally:
                 pending = asyncio.all_tasks(loop)
                 for task in pending:
@@ -176,10 +172,6 @@ def _ensure_standalone_loop() -> asyncio.AbstractEventLoop:
         thread.start()
         if not ready.wait(_STANDALONE_LOOP_READY_TIMEOUT_SECONDS):
             raise RuntimeError("standalone sandbox I/O loop did not start")
-        if error_holder:
-            raise RuntimeError("standalone sandbox I/O loop failed") from error_holder[
-                "error"
-            ]
         loop = loop_holder.get("loop")
         if loop is None:
             raise RuntimeError("standalone sandbox I/O loop did not publish loop")

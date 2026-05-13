@@ -31,6 +31,7 @@ def test_copy_backed_mount_captures_only_workspace_changes(
         lowerdir=str(lower),
         upperdir=str(tmp_path / "upper"),
         workdir=str(tmp_path / "work"),
+        scratch_root=str(tmp_path),
     )
     request = CommandExecRequest(
         request_id="req-1",
@@ -87,6 +88,7 @@ def test_copy_backed_mount_rewrites_absolute_workspace_references(
         lowerdir=str(lower),
         upperdir=str(tmp_path / "upper"),
         workdir=str(tmp_path / "work"),
+        scratch_root=str(tmp_path),
     )
     request = CommandExecRequest(
         request_id="req-1",
@@ -115,3 +117,65 @@ def test_copy_backed_mount_rewrites_absolute_workspace_references(
         Path(process.mounted_workspace_root) / "out.txt"
     ).read_text(encoding="utf-8") == "captured"
     assert [change.path for change in changes] == ["out.txt"]
+
+
+def test_copy_backed_mount_rewrites_workspace_env_values(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        workspace_mount,
+        "_private_mount_namespace_available",
+        lambda: False,
+    )
+    lower = tmp_path / "lower"
+    lower.mkdir()
+    spec = WorkspaceReplacementMountSpec(
+        workspace_root="/testbed",
+        lowerdir=str(lower),
+        upperdir=str(tmp_path / "upper"),
+        workdir=str(tmp_path / "work"),
+        scratch_root=str(tmp_path),
+    )
+    request = CommandExecRequest(
+        request_id="req-1",
+        workspace_ref=str(tmp_path / "stack"),
+        workspace_root="/testbed",
+        command=("bash", "-lc", "printf env > \"$WORKSPACE_DIR/env.txt\""),
+        env={"WORKSPACE_DIR": "/testbed"},
+    )
+
+    process = workspace_mount.run_workspace_replaced_command(
+        spec=spec,
+        request=request,
+        run_dir=tmp_path / "run",
+        timings={},
+    )
+
+    assert process.exit_code == 0
+    assert (
+        Path(process.mounted_workspace_root) / "env.txt"
+    ).read_text(encoding="utf-8") == "env"
+
+
+def test_workspace_rewrite_preserves_quoted_literals() -> None:
+    rewritten = workspace_mount._rewrite_declared_workspace_refs(
+        ("bash", "-lc", "printf '%s' '/testbed docs'; cat /testbed/file.txt"),
+        workspace_root="/testbed",
+        mounted_workspace_root="/tmp/run/workspace",
+    )
+
+    assert rewritten[-1] == (
+        "printf '%s' '/testbed docs'; cat /tmp/run/workspace/file.txt"
+    )
+
+
+def test_mount_spec_rejects_paths_outside_scratch_root(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="upperdir must be under scratch_root"):
+        WorkspaceReplacementMountSpec(
+            workspace_root="/testbed",
+            lowerdir=str(tmp_path / "lower"),
+            upperdir="/tmp/not-owned",
+            workdir=str(tmp_path / "work"),
+            scratch_root=str(tmp_path),
+        )

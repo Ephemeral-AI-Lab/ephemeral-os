@@ -16,7 +16,10 @@ import asyncio
 import importlib
 import inspect
 import logging
+import re
 import sys
+from collections import OrderedDict
+from pathlib import Path
 from typing import Any
 
 from sandbox.models import SandboxCaller
@@ -27,6 +30,7 @@ from sandbox.plugin.runtime.registry import (
     pending_plugin_registrations,
     clear_plugin_registrations,
 )
+from sandbox.layer_stack.workspace.binding import read_workspace_binding
 
 __all__ = [
     "PluginEnsureError",
@@ -48,7 +52,10 @@ _LOADED: dict[str, list[str]] = {}
 _LOADED_DIGEST: dict[str, str] = {}
 # Per-layer-stack-root WorkspaceProjection cache so plugin sessions reuse
 # the same projection across calls.
-_PROJECTIONS: dict[str, WorkspaceProjection] = {}
+_MAX_PROJECTIONS = 256
+_MAX_AUDIT_FIELD_CHARS = 256
+_PLUGIN_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_PROJECTIONS: OrderedDict[str, WorkspaceProjection] = OrderedDict()
 # WR-01: per-plugin async lock so two concurrent ensure calls with
 # different digests cannot interleave at await boundaries. Without this
 # the digest-A → digest-B race tore the dispatcher (T2's unload popped
@@ -60,6 +67,7 @@ async def plugin_ensure(args: dict[str, Any]) -> dict[str, Any]:
     plugin_name = str(args.get("plugin") or "").strip()
     if not plugin_name:
         raise PluginEnsureError("api.plugin.ensure requires plugin name")
+    _validate_plugin_name(plugin_name)
     digest = str(args.get("digest") or "").strip()
     lock = _PLUGIN_LOCKS.setdefault(plugin_name, asyncio.Lock())
     async with lock:
@@ -107,6 +115,7 @@ async def _plugin_ensure_locked(
         plugin_name,
         register_op,
         context_factory=_plugin_op_context_factory,
+        trusted_caller=True,
     )
     # Warm BEFORE writing _LOADED/_LOADED_DIGEST so a failed warm doesn't
     # wedge the registry (BL-01). On warm failure roll back the dispatcher
@@ -122,10 +131,8 @@ async def _plugin_ensure_locked(
 
         for op in registered_ops:
             OP_TABLE.pop(op, None)
-        # Leave _PENDING populated so the next ensure call's flush
-        # re-registers without needing to re-import the runtime module
-        # (decorators only fire at import time; sys.modules caches the
-        # module so import_module would no-op on retry).
+        _evict_plugin_runtime_modules(plugin_name)
+        importlib.invalidate_caches()
         raise
     _LOADED[plugin_name] = registered_ops
     _LOADED_DIGEST[plugin_name] = digest
@@ -203,6 +210,23 @@ async def _unload_plugin_runtime(plugin_name: str) -> None:
         OP_TABLE.pop(op, None)
     _LOADED_DIGEST.pop(plugin_name, None)
     clear_plugin_registrations(plugin_name)
+    _evict_plugin_runtime_modules(plugin_name)
+    importlib.invalidate_caches()
+
+
+def _test_force_reload_plugin(plugin_name: str) -> None:
+    """Force a clean plugin import for tests that exercise reload behavior.
+
+    Production plugin code is trusted once installed in the sandbox runtime;
+    this helper exists only for tests that need to clear Python import caches
+    in addition to the dispatcher/pending-registration maps.
+    """
+    clear_plugin_registrations(plugin_name)
+    _evict_plugin_runtime_modules(plugin_name)
+    importlib.invalidate_caches()
+
+
+def _evict_plugin_runtime_modules(plugin_name: str) -> None:
     prefix = f"plugins.catalog.{plugin_name}"
     for module_name in [
         name
@@ -210,7 +234,6 @@ async def _unload_plugin_runtime(plugin_name: str) -> None:
         if name == prefix or name.startswith(f"{prefix}.")
     ]:
         sys.modules.pop(module_name, None)
-    importlib.invalidate_caches()
 
 
 async def _evict_plugin_sessions(plugin_name: str) -> None:
@@ -253,24 +276,21 @@ async def _plugin_op_context_factory(
     caller_dict = args.get("caller") or {}
     if isinstance(caller_dict, dict):
         caller = SandboxCaller(
-            agent_id=str(caller_dict.get("agent_id", "")),
-            run_id=str(caller_dict.get("run_id", "")),
-            agent_run_id=str(caller_dict.get("agent_run_id", "")),
-            task_id=str(caller_dict.get("task_id", "")),
-            task_center_run_id=str(caller_dict.get("task_center_run_id", "")),
-            task_center_task_id=str(caller_dict.get("task_center_task_id", "")),
-            task_center_attempt_id=str(caller_dict.get("task_center_attempt_id", "")),
-            task_center_mission_id=str(caller_dict.get("task_center_mission_id", "")),
-            task_center_request_id=str(caller_dict.get("task_center_request_id", "")),
-            tool_name=str(caller_dict.get("tool_name", "")),
-            tool_id=str(caller_dict.get("tool_id", "")),
+            agent_id=_audit_field(caller_dict, "agent_id"),
+            run_id=_audit_field(caller_dict, "run_id"),
+            agent_run_id=_audit_field(caller_dict, "agent_run_id"),
+            task_id=_audit_field(caller_dict, "task_id"),
+            task_center_run_id=_audit_field(caller_dict, "task_center_run_id"),
+            task_center_task_id=_audit_field(caller_dict, "task_center_task_id"),
+            task_center_attempt_id=_audit_field(caller_dict, "task_center_attempt_id"),
+            task_center_mission_id=_audit_field(caller_dict, "task_center_mission_id"),
+            task_center_request_id=_audit_field(caller_dict, "task_center_request_id"),
+            tool_name=_audit_field(caller_dict, "tool_name"),
+            tool_id=_audit_field(caller_dict, "tool_id"),
         )
     else:
         caller = SandboxCaller(agent_id="", run_id="", agent_run_id="", task_id="")
-    projection = _PROJECTIONS.get(layer_stack_root)
-    if projection is None:
-        projection = WorkspaceProjection(layer_stack_root)
-        _PROJECTIONS[layer_stack_root] = projection
+    projection = _projection_for_root(layer_stack_root)
     return PluginOpContext(
         layer_stack_root=layer_stack_root,
         caller=caller,
@@ -280,3 +300,47 @@ async def _plugin_op_context_factory(
             "workspace_root": str(args.get("workspace_root", "")),
         },
     )
+
+
+def _projection_for_root(layer_stack_root: str) -> WorkspaceProjection:
+    key = _validate_projection_root(layer_stack_root)
+    projection = _PROJECTIONS.get(key)
+    if projection is None:
+        projection = WorkspaceProjection(key)
+        _PROJECTIONS[key] = projection
+        if len(_PROJECTIONS) > _MAX_PROJECTIONS:
+            _PROJECTIONS.popitem(last=False)
+    else:
+        _PROJECTIONS.move_to_end(key)
+    return projection
+
+
+def _validate_projection_root(layer_stack_root: str) -> str:
+    if not layer_stack_root:
+        raise PluginEnsureError("plugin op context requires layer_stack_root")
+    root = Path(layer_stack_root).resolve(strict=False)
+    binding = read_workspace_binding(root)
+    if binding is not None and Path(binding.layer_stack_root).resolve(
+        strict=False
+    ) != root:
+        raise PluginEnsureError(
+            "workspace binding layer_stack_root mismatch: "
+            f"{binding.layer_stack_root} != {root}"
+        )
+    return root.as_posix()
+
+
+def _validate_plugin_name(plugin_name: str) -> None:
+    if _PLUGIN_NAME_RE.fullmatch(plugin_name) is None:
+        raise PluginEnsureError(f"invalid plugin name: {plugin_name!r}")
+
+
+def _audit_field(caller_dict: dict[str, Any], key: str) -> str:
+    value = str(caller_dict.get(key, ""))
+    if "\x00" in value:
+        raise PluginEnsureError(f"caller field {key} contains NUL byte")
+    if len(value) > _MAX_AUDIT_FIELD_CHARS:
+        raise PluginEnsureError(
+            f"caller field {key} exceeds {_MAX_AUDIT_FIELD_CHARS} characters"
+        )
+    return value

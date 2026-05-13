@@ -20,6 +20,7 @@ import pytest
 
 from sandbox.host.runtime_bundle import (
     BUNDLE_REMOTE_DIR,
+    _BUNDLE_REMOTE_TARBALL,
     _ensure_runtime_uploaded_with_exec,
     _runtime_bundle_bytes,
     bundle_hash,
@@ -55,6 +56,7 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/api/facade.py",
         "sandbox/api/tool/__init__.py",
         "sandbox/models.py",
+        "sandbox/timing.py",
         "sandbox/runtime/__init__.py",
         "sandbox/runtime/async_bridge.py",
         "sandbox/runtime/daemon/__main__.py",
@@ -267,6 +269,9 @@ async def test_ensure_runtime_uploaded_uploads_when_marker_missing() -> None:
     finalize_cmd = transport.exec.await_args_list[-1].args[1]
     assert BUNDLE_REMOTE_DIR in finalize_cmd
     assert "tar -xzf" in finalize_cmd
+    assert "mv -f" not in finalize_cmd
+    assert f"tar -xzf {_BUNDLE_REMOTE_TARBALL} " not in finalize_cmd
+    assert ".staging" in finalize_cmd
     assert ".bundle-hash" in finalize_cmd
 
     # Chunk writes pipe ``printf`` through ``base64 -d`` straight into the

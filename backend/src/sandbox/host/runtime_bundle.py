@@ -15,6 +15,7 @@ import io
 import logging
 import shlex
 import tarfile
+import uuid
 from pathlib import Path
 from typing import Protocol
 
@@ -153,6 +154,11 @@ def _runtime_bundle_bytes() -> bytes:
             sandbox_dir / "models.py",
             arcname="sandbox/models.py",
         )
+        _add_if_exists(
+            tar,
+            sandbox_dir / "timing.py",
+            arcname="sandbox/timing.py",
+        )
 
         _add_if_exists(
             tar,
@@ -277,7 +283,7 @@ async def _ensure_runtime_uploaded_with_exec(
         f"test -f {shlex.quote(_BUNDLE_HASH_MARKER)} && cat {shlex.quote(_BUNDLE_HASH_MARKER)}",
     )
     existing = (getattr(marker_check, "stdout", "") or "").strip()
-    if getattr(marker_check, "exit_code", 1) == 0 and existing == digest:
+    if _exit_code(marker_check) == 0 and existing == digest:
         logger.debug(
             "sandbox runtime bundle already uploaded (%s) on %s", digest[:8], sandbox_id
         )
@@ -285,16 +291,17 @@ async def _ensure_runtime_uploaded_with_exec(
 
     bundle = _runtime_bundle_bytes()
     encoded = base64.b64encode(bundle).decode("ascii")
+    staging_tarball = f"{_BUNDLE_REMOTE_TARBALL}.{uuid.uuid4().hex}.staging"
 
     setup = await exec_fn(
         sandbox_id,
         (
             f"mkdir -p {shlex.quote(BUNDLE_REMOTE_DIR)} && "
-            f": > {shlex.quote(_BUNDLE_REMOTE_TARBALL)}"
+            f": > {shlex.quote(staging_tarball)}"
         ),
         timeout=30,
     )
-    if getattr(setup, "exit_code", 1) != 0:
+    if _exit_code(setup) != 0:
         raise RuntimeError(
             f"runtime bundle staging mkdir failed (sandbox={sandbox_id!r}): "
             f"{getattr(setup, 'stdout', '')}"
@@ -304,10 +311,10 @@ async def _ensure_runtime_uploaded_with_exec(
         chunk = encoded[i : i + _CHUNK_SIZE]
         write_cmd = (
             f"printf %s {shlex.quote(chunk)} | base64 -d "
-            f">> {shlex.quote(_BUNDLE_REMOTE_TARBALL)}"
+            f">> {shlex.quote(staging_tarball)}"
         )
         result = await exec_fn(sandbox_id, write_cmd, timeout=60)
-        if getattr(result, "exit_code", 1) != 0:
+        if _exit_code(result) != 0:
             raise RuntimeError(
                 f"runtime bundle chunk write failed at offset {i} "
                 f"(sandbox={sandbox_id!r}): {getattr(result, 'stdout', '')}"
@@ -315,12 +322,12 @@ async def _ensure_runtime_uploaded_with_exec(
 
     finalize_cmd = (
         f"cd {shlex.quote(BUNDLE_REMOTE_DIR)} && "
-        f"tar -xzf {shlex.quote(_BUNDLE_REMOTE_TARBALL)} && "
-        f"rm -f {shlex.quote(_BUNDLE_REMOTE_TARBALL)} && "
+        f"tar -xzf {shlex.quote(staging_tarball)} && "
+        f"rm -f {shlex.quote(staging_tarball)} && "
         f"printf %s {shlex.quote(digest)} > {shlex.quote(_BUNDLE_HASH_MARKER)}"
     )
     result = await exec_fn(sandbox_id, finalize_cmd, timeout=60)
-    if getattr(result, "exit_code", 1) != 0:
+    if _exit_code(result) != 0:
         raise RuntimeError(
             f"runtime bundle upload failed (sandbox={sandbox_id!r}): "
             f"{getattr(result, 'stdout', '')}"
@@ -333,3 +340,17 @@ async def _ensure_runtime_uploaded_with_exec(
         sandbox_id,
     )
     return digest
+
+
+def _exit_code(result: object) -> int:
+    raw = getattr(result, "exit_code", None)
+    if raw is None:
+        raise RuntimeError(
+            f"runtime bundle exec result is missing exit_code: {type(result).__name__}"
+        )
+    try:
+        return int(raw)
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError(
+            f"runtime bundle exec result has invalid exit_code: {raw!r}"
+        ) from exc

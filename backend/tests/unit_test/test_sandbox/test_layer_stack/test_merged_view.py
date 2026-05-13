@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
+import pytest
+
 from sandbox.layer_stack import LayerChange, LayerStackManager
+from sandbox.layer_stack.view.merged import LayerStackStorageError
 
 
 def _source(tmp_path: Path, name: str, content: bytes) -> str:
@@ -39,6 +43,27 @@ def test_read_uses_leased_manifest_not_advanced_active_manifest(tmp_path: Path) 
 
     assert manager.read_text("pkg/value.txt") == ("new", True)
     assert manager.read_text("pkg/value.txt", manifest=lease.manifest) == ("base", True)
+
+
+def test_stale_layer_read_raises_typed_storage_error(tmp_path: Path) -> None:
+    manager = LayerStackManager(tmp_path / "stack")
+    manifest = manager.publish_changes(
+        [
+            LayerChange(
+                path="pkg/value.txt",
+                kind="write",
+                source_path=_source(tmp_path, "value.txt", b"value"),
+            )
+        ]
+    )
+    assert manager.read_bytes("pkg/value.txt", manifest=manifest) == (b"value", True)
+
+    shutil.rmtree(manager.storage_root / manifest.layers[0].path)
+
+    with pytest.raises(LayerStackStorageError) as exc_info:
+        manager.read_bytes("pkg/value.txt", manifest=manifest)
+
+    assert exc_info.value.layer_id == manifest.layers[0].layer_id
 
 
 def test_whiteout_hides_older_file(tmp_path: Path) -> None:

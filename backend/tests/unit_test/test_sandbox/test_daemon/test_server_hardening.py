@@ -29,6 +29,7 @@ import pytest
 
 from sandbox.runtime.daemon.rpc import dispatcher
 from sandbox.runtime.daemon.rpc import server as server_module
+from sandbox.runtime.daemon import __main__ as daemon_main
 
 
 @pytest.fixture(autouse=True)
@@ -164,6 +165,16 @@ async def test_socket_and_parent_dir_locked_down(short_tmp_path: Path) -> None:
 
     assert parent_mode == 0o700
     assert sock_mode == 0o600
+
+
+def test_daemon_pid_lock_rejects_second_owner(short_tmp_path: Path) -> None:
+    pid_path = short_tmp_path / "runtime.pid"
+    fd = daemon_main._acquire_pid_lock(pid_path)
+    try:
+        with pytest.raises(RuntimeError, match="already running"):
+            daemon_main._acquire_pid_lock(pid_path)
+    finally:
+        os.close(fd)
 
 
 async def test_dispatch_internal_error_envelope_strips_traceback(

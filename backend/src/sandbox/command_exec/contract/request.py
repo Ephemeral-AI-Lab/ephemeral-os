@@ -49,7 +49,7 @@ class CommandExecRequest:
         object.__setattr__(self, "workspace_ref", workspace_ref)
         object.__setattr__(self, "workspace_root", workspace_root.rstrip("/") or "/")
         object.__setattr__(self, "command", command)
-        object.__setattr__(self, "cwd", cwd_raw)
+        object.__setattr__(self, "cwd", cwd_normalized)
         object.__setattr__(
             self,
             "env",

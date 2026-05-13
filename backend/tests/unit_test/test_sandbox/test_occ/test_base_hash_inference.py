@@ -78,6 +78,29 @@ def test_tracked_write_without_base_hash_uses_leased_snapshot_hash(tmp_path) -> 
     assert change.base_hash == content_hash_bytes(b"old\n")
 
 
+def test_chained_writes_use_running_base_hash(tmp_path) -> None:
+    stack = _stack_with_file(tmp_path, "src/app.py", b"old\n")
+    snapshot = stack.read_active_manifest()
+    service = OccService(gitignore=_never_ignored(), layer_stack=stack)
+
+    prepared = asyncio.run(
+        service.prepare_changeset(
+            [
+                WriteChange(path="src/app.py", final_content=b"first\n"),
+                WriteChange(path="src/app.py", final_content=b"second\n"),
+            ],
+            snapshot=snapshot,
+        )
+    )
+
+    [group] = prepared.path_groups
+    first, second = group.changes
+    assert isinstance(first, WriteChange)
+    assert isinstance(second, WriteChange)
+    assert first.base_hash == content_hash_bytes(b"old\n")
+    assert second.base_hash == content_hash_bytes(b"first\n")
+
+
 def test_missing_snapshot_path_infers_none_base_hash(tmp_path) -> None:
     stack = LayerStackManager(tmp_path / "layers")
     snapshot = stack.read_active_manifest()

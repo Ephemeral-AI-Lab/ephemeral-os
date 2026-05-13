@@ -38,6 +38,7 @@ from tools.sandbox._lib.session import (
 
 __all__ = [
     "call_plugin",
+    "forget",
     "manifest_for",
 ]
 
@@ -47,6 +48,7 @@ logger = logging.getLogger(__name__)
 _manifest_cache: dict[str, PluginManifest] | None = None
 _runtime_loaded: dict[tuple[str, str], str] = {}
 _call_locks: dict[tuple[str, str], asyncio.Lock] = {}
+_MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 
 
 def manifest_for(plugin_name: str) -> PluginManifest:
@@ -180,7 +182,17 @@ def _wrap_response(
     payload_dict = {
         key: value for key, value in response.items() if key != "timings"
     }
-    output = json.dumps(payload_dict, sort_keys=True, default=str)
+    try:
+        output = json.dumps(payload_dict, sort_keys=True)
+    except TypeError as exc:
+        return _error_result("decode", plugin, op, str(exc))
+    if len(output.encode("utf-8")) > _MAX_RESPONSE_BYTES:
+        return _error_result(
+            "decode",
+            plugin,
+            op,
+            f"plugin response exceeds {_MAX_RESPONSE_BYTES} byte limit",
+        )
     metadata: dict[str, Any] = {"plugin": plugin, "op": op}
     timings = response.get("timings")
     if isinstance(timings, Mapping):
@@ -202,3 +214,12 @@ def reset_session_cache() -> None:
     _manifest_cache = None
     _runtime_loaded.clear()
     _call_locks.clear()
+
+
+def forget(sandbox_id: str) -> None:
+    """Drop host-side plugin session state for one sandbox id."""
+    sandbox_id = str(sandbox_id or "").strip()
+    for key in [key for key in _runtime_loaded if key[0] == sandbox_id]:
+        _runtime_loaded.pop(key, None)
+    for key in [key for key in _call_locks if key[0] == sandbox_id]:
+        _call_locks.pop(key, None)

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import shutil
-import time
 from pathlib import Path
 from types import TracebackType
 from uuid import uuid4
@@ -21,8 +20,8 @@ from sandbox.occ.changeset.types import (
     FileResult,
     FileStatus,
 )
-from sandbox.occ.merge.direct import DirectMerge
 from sandbox.occ.content.hashing import ContentHasher
+from sandbox.occ.merge.direct import DirectMerge
 from sandbox.occ.merge.gated import GatedMerge
 from sandbox.occ.ports import (
     CommitPublisher,
@@ -30,7 +29,7 @@ from sandbox.occ.ports import (
     OccLayerStackPorts,
     SnapshotReader,
 )
-
+from sandbox.timing import monotonic_now
 
 # Below this threshold, a buffered Python read+write is cheaper than
 # shutil.copyfile (which pays open/sendfile/close per call). Above it,
@@ -68,18 +67,18 @@ class OccCommitTransaction:
 
     def revalidate_and_publish(self, prepared: PreparedChangeset) -> ChangesetResult:
         """Validate against the current active manifest and publish accepted deltas."""
-        total_start = time.perf_counter()
+        total_start = monotonic_now()
         timings: dict[str, float] = {}
         with self._publisher.commit_transaction() as transaction:
             timings["layer_stack.transaction.lock_wait_s"] = transaction.lock_wait_s
-            snapshot_start = time.perf_counter()
+            snapshot_start = monotonic_now()
             active_manifest = transaction.snapshot()
-            timings["occ.commit.snapshot_s"] = time.perf_counter() - snapshot_start
+            timings["occ.commit.snapshot_s"] = monotonic_now() - snapshot_start
             with _LayerChangeStager(
                 self._staging,
                 hasher=self._hasher,
             ) as stager:
-                validate_start = time.perf_counter()
+                validate_start = monotonic_now()
                 validations: list[tuple[FileResult, LayerDelta | None]] = []
                 occ_gated_failed = False
                 gated_read_total = 0.0
@@ -118,7 +117,7 @@ class OccCommitTransaction:
                         )
                         direct_stage_total += rt.get("occ.direct.stage_delta_s", 0.0)
                 timings["occ.commit.validate_groups_s"] = (
-                    time.perf_counter() - validate_start
+                    monotonic_now() - validate_start
                 )
                 timings["occ.commit.gated_read_current_total_s"] = gated_read_total
                 timings["occ.commit.gated_apply_changes_total_s"] = gated_apply_total
@@ -147,7 +146,7 @@ class OccCommitTransaction:
                         published_manifest_version=None,
                     )
 
-                collect_start = time.perf_counter()
+                collect_start = monotonic_now()
                 changes = tuple(
                     change
                     for _, accepted_delta in validations
@@ -155,7 +154,7 @@ class OccCommitTransaction:
                     for change in accepted_delta.changes
                 )
                 timings["occ.commit.collect_changes_s"] = (
-                    time.perf_counter() - collect_start
+                    monotonic_now() - collect_start
                 )
                 if not changes:
                     return ChangesetResult(
@@ -174,10 +173,14 @@ class OccCommitTransaction:
                 timings["occ.commit.stager_write_count"] = float(
                     stager.write_count
                 )
-                publish_start = time.perf_counter()
-                published = transaction.publish_layer(changes, timings=timings)
+                publish_start = monotonic_now()
+                published = transaction.publish_layer(
+                    changes,
+                    source_root=stager.staging_path,
+                    timings=timings,
+                )
                 timings["occ.commit.publish_layer_s"] = (
-                    time.perf_counter() - publish_start
+                    monotonic_now() - publish_start
                 )
                 return ChangesetResult(
                     files=files,
@@ -261,6 +264,10 @@ class _LayerChangeStager:
     def write_count(self) -> int:
         return self._write_count
 
+    @property
+    def staging_path(self) -> Path | None:
+        return self._staging_path
+
     def __enter__(self) -> _LayerChangeStager:
         area = self._staging.allocate_commit_staging(uuid4().hex)
         self._staging_id = area.staging_id
@@ -282,7 +289,7 @@ class _LayerChangeStager:
     def write(self, path: str, content: bytes) -> LayerChange:
         if self._staging_path is None:
             raise RuntimeError("OCC layer-change stager is not active")
-        start = time.perf_counter()
+        start = monotonic_now()
         try:
             self._counter += 1
             source = self._staging_path / f"{self._counter:06d}.bin"
@@ -294,7 +301,7 @@ class _LayerChangeStager:
                 source_path=str(source),
             )
         finally:
-            self._write_total_s += time.perf_counter() - start
+            self._write_total_s += monotonic_now() - start
             self._write_count += 1
 
     def write_from_path(
@@ -313,7 +320,7 @@ class _LayerChangeStager:
         """
         if self._staging_path is None:
             raise RuntimeError("OCC layer-change stager is not active")
-        start = time.perf_counter()
+        start = monotonic_now()
         try:
             self._counter += 1
             source = self._staging_path / f"{self._counter:06d}.bin"
@@ -342,7 +349,7 @@ class _LayerChangeStager:
                 source_path=str(source),
             )
         finally:
-            self._write_total_s += time.perf_counter() - start
+            self._write_total_s += monotonic_now() - start
             self._write_count += 1
 
 
@@ -407,7 +414,7 @@ def _finish_timings(
 ) -> dict[str, float]:
     result = {
         **timings,
-        "occ.commit.total_s": time.perf_counter() - total_start,
+        "occ.commit.total_s": monotonic_now() - total_start,
     }
     if transaction is not None:
         lock_held_s = getattr(transaction, "lock_held_s", None)

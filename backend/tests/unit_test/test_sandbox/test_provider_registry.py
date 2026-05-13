@@ -206,6 +206,25 @@ def test_adapter_set_labels_calls_raw_set_labels_and_serializes() -> None:
     assert info["id"] == "sb-abc"
 
 
+def test_adapter_build_logs_url_uses_daytona_private_api() -> None:
+    from sandbox.provider.daytona.adapter import DaytonaProviderAdapter
+
+    raw = MagicMock()
+    raw._sandbox_api.get_build_logs_url.return_value = MagicMock(
+        url="https://logs.example/build"
+    )
+
+    with patch(
+        "sandbox.provider.daytona.adapter.fetch_sandbox",
+        return_value=raw,
+    ):
+        adapter = DaytonaProviderAdapter()
+        url = adapter.get_build_logs_url("sb-abc")
+
+    assert url == "https://logs.example/build"
+    raw._sandbox_api.get_build_logs_url.assert_called_once_with("sb-abc")
+
+
 def test_bootstrap_registers_daytona_as_default() -> None:
     from sandbox.provider.daytona.adapter import DaytonaProviderAdapter
     from sandbox.provider.daytona.bootstrap import bootstrap_daytona_provider

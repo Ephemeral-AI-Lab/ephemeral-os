@@ -99,6 +99,44 @@ def test_release_lease_keeps_active_layer_storage(tmp_path: Path) -> None:
     assert manager.pinned_layers() == ()
 
 
+def test_release_lease_removes_unreferenced_layers_outside_manager_lock(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manager = LayerStackManager(tmp_path / "stack")
+    manager.publish_changes(
+        [
+            LayerChange(
+                path="old.txt",
+                kind="write",
+                source_path=_source(tmp_path, "old.txt", b"old\n"),
+            )
+        ]
+    )
+    lease = manager.acquire_snapshot_lease("old")
+    manager.publish_changes(
+        [
+            LayerChange(
+                path="new.txt",
+                kind="write",
+                source_path=_source(tmp_path, "new.txt", b"new\n"),
+            )
+        ]
+    )
+    observed_unlocked = False
+    original_remove_layers = manager._remove_layers
+
+    def assert_unlocked(layers):
+        nonlocal observed_unlocked
+        observed_unlocked = not manager._lock._is_owned()
+        return original_remove_layers(layers)
+
+    monkeypatch.setattr(manager, "_remove_layers", assert_unlocked)
+
+    assert manager.release_lease(lease.lease_id) is True
+    assert observed_unlocked is True
+
+
 def test_prepare_workspace_snapshot_returns_distinct_transient_lowerdirs_per_lease(
     tmp_path: Path,
 ) -> None:

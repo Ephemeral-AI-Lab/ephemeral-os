@@ -27,7 +27,7 @@ def committed_paths(
     )
     if aborted is not None:
         return (aborted.path,)
-    return (fallback_path,) if not files else ()
+    return (fallback_path,)
 
 
 def published_paths(files: Sequence[FileResult]) -> tuple[str, ...]:

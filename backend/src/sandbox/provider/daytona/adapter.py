@@ -289,7 +289,9 @@ class DaytonaProviderAdapter:
 
     def get_build_logs_url(self, sandbox_id: str) -> str | None:
         raw = fetch_sandbox(sandbox_id)
-        daytona_api = getattr(raw, "_sandbox" + "_api", None)
+        # Daytona SDK 0.23.x does not expose build-log URLs publicly; keep the
+        # private access grep-visible so SDK upgrades fail loudly in review.
+        daytona_api = getattr(raw, "_sandbox_api", None)  # noqa: SLF001
         if daytona_api is None or not hasattr(daytona_api, "get_build_logs_url"):
             return None
         try:

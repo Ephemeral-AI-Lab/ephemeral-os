@@ -20,6 +20,10 @@ logger = logging.getLogger(__name__)
 
 _BUNDLE_UPLOAD_THREAD_PREFIX = "eos-runtime-upload"
 _BUNDLE_UPLOAD_JOIN_TIMEOUT_S = 60.0
+_BUNDLE_UPLOAD_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+    max_workers=4,
+    thread_name_prefix=_BUNDLE_UPLOAD_THREAD_PREFIX,
+)
 
 
 async def bootstrap_in_sandbox_runtime(
@@ -131,13 +135,8 @@ def start_runtime_bundle_upload(
             )
         )
 
-    pool = concurrent.futures.ThreadPoolExecutor(
-        max_workers=1, thread_name_prefix=_BUNDLE_UPLOAD_THREAD_PREFIX,
-    )
-    try:
-        future = pool.submit(_do_upload)
-    finally:
-        pool.shutdown(wait=False)
+    future = _BUNDLE_UPLOAD_EXECUTOR.submit(_do_upload)
+    future.add_done_callback(_log_background_upload_exception)
     return future
 
 
@@ -174,6 +173,28 @@ def finish_runtime_bundle_upload(
             "sequential bootstrap will retry",
             sandbox_id,
             exc_info=True,
+        )
+
+
+def _log_background_upload_exception(
+    future: concurrent.futures.Future[None],
+) -> None:
+    if future.cancelled():
+        return
+    try:
+        exc = future.exception()
+    except concurrent.futures.CancelledError:
+        return
+    except Exception:
+        logger.warning(
+            "sandbox-runtime background upload future failed before join",
+            exc_info=True,
+        )
+        return
+    if exc is not None:
+        logger.debug(
+            "sandbox-runtime background upload future completed with error",
+            exc_info=(type(exc), exc, exc.__traceback__),
         )
 
 

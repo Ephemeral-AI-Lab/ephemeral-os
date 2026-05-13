@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import time
 from collections.abc import Callable
 from typing import Literal
 
@@ -19,6 +18,7 @@ from sandbox.occ.changeset.types import (
     WriteChange,
 )
 from sandbox.occ.ports import SnapshotReader
+from sandbox.timing import monotonic_now
 
 StageWrite = Callable[[str, bytes], LayerChange]
 StageWriteFromPath = Callable[[str, str, str, bytes | None], LayerChange]
@@ -64,12 +64,12 @@ class DirectMerge:
         stage_write_from_path: StageWriteFromPath | None,
     ) -> tuple[FileResult, LayerDelta | None]:
         timings: dict[str, float] = {}
-        read_start = time.perf_counter()
+        read_start = monotonic_now()
         current_content, current_exists = self._snapshot_reader.read_bytes(
             group.path,
             active_manifest,
         )
-        timings["occ.direct.read_current_s"] = time.perf_counter() - read_start
+        timings["occ.direct.read_current_s"] = monotonic_now() - read_start
         initial_exists = current_exists
         content = current_content or b""
         final_kind: _FinalKind = "write" if current_exists else "delete"
@@ -80,7 +80,7 @@ class DirectMerge:
         final_content_path: str | None = None
         final_precomputed_hash: str | None = None
 
-        apply_start = time.perf_counter()
+        apply_start = monotonic_now()
         for change in group.changes:
             if isinstance(change, OpaqueDirChange):
                 content = b""
@@ -119,7 +119,7 @@ class DirectMerge:
                 # tracked paths got rejected.
                 if final_kind != "write":
                     timings["occ.direct.apply_changes_s"] = (
-                        time.perf_counter() - apply_start
+                        monotonic_now() - apply_start
                     )
                     return (
                         FileResult(
@@ -134,7 +134,7 @@ class DirectMerge:
                     text = content.decode("utf-8")
                 except UnicodeDecodeError:
                     timings["occ.direct.apply_changes_s"] = (
-                        time.perf_counter() - apply_start
+                        monotonic_now() - apply_start
                     )
                     return (
                         FileResult(
@@ -148,7 +148,7 @@ class DirectMerge:
                 count = text.count(change.old_text)
                 if count == 0:
                     timings["occ.direct.apply_changes_s"] = (
-                        time.perf_counter() - apply_start
+                        monotonic_now() - apply_start
                     )
                     return (
                         FileResult(
@@ -161,7 +161,7 @@ class DirectMerge:
                     )
                 if count != change.expected_occurrences:
                     timings["occ.direct.apply_changes_s"] = (
-                        time.perf_counter() - apply_start
+                        monotonic_now() - apply_start
                     )
                     return (
                         FileResult(
@@ -182,7 +182,7 @@ class DirectMerge:
                 final_precomputed_hash = None
                 continue
 
-            timings["occ.direct.apply_changes_s"] = time.perf_counter() - apply_start
+            timings["occ.direct.apply_changes_s"] = monotonic_now() - apply_start
             return (
                 FileResult(
                     path=group.path,
@@ -193,10 +193,10 @@ class DirectMerge:
                 None,
             )
 
-        timings["occ.direct.apply_changes_s"] = time.perf_counter() - apply_start
-        stage_start = time.perf_counter()
+        timings["occ.direct.apply_changes_s"] = monotonic_now() - apply_start
+        stage_start = monotonic_now()
         if final_kind == "opaque_dir":
-            timings["occ.direct.stage_delta_s"] = time.perf_counter() - stage_start
+            timings["occ.direct.stage_delta_s"] = monotonic_now() - stage_start
             return (
                 FileResult(
                     path=group.path,
@@ -215,7 +215,7 @@ class DirectMerge:
                     ),
                 )
             )
-            timings["occ.direct.stage_delta_s"] = time.perf_counter() - stage_start
+            timings["occ.direct.stage_delta_s"] = monotonic_now() - stage_start
             return (
                 FileResult(
                     path=group.path,
@@ -244,7 +244,7 @@ class DirectMerge:
                 )
             else:
                 delta = LayerDelta(changes=(stage_write(group.path, content),))
-            timings["occ.direct.stage_delta_s"] = time.perf_counter() - stage_start
+            timings["occ.direct.stage_delta_s"] = monotonic_now() - stage_start
             return (
                 FileResult(
                     path=group.path,
@@ -254,7 +254,7 @@ class DirectMerge:
                 delta,
             )
         if final_kind == "delete" and initial_exists:
-            timings["occ.direct.stage_delta_s"] = time.perf_counter() - stage_start
+            timings["occ.direct.stage_delta_s"] = monotonic_now() - stage_start
             return (
                 FileResult(
                     path=group.path,
@@ -263,7 +263,7 @@ class DirectMerge:
                 ),
                 LayerDelta(changes=(LayerChange(path=group.path, kind="delete"),)),
             )
-        timings["occ.direct.stage_delta_s"] = time.perf_counter() - stage_start
+        timings["occ.direct.stage_delta_s"] = monotonic_now() - stage_start
         return (
             FileResult(
                 path=group.path,

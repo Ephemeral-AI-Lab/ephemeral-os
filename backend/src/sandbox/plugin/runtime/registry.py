@@ -8,13 +8,15 @@ hands them off to the daemon dispatcher under the public op name
 The decorator enforces the namespace rule from
 ``docs/architecture/plugins-refactor.md`` §2: a module that calls
 ``register_plugin_op('lsp', 'hover')`` MUST be importable as
-``plugins.catalog.lsp.runtime.<something>``. The check uses ``inspect.stack``
-to read the caller frame's ``__name__``.
+``plugins.catalog.lsp.runtime.<something>``. The check walks live frames
+directly so wrapper functions cannot hide a caller outside the plugin
+namespace.
 """
 
 from __future__ import annotations
 
 import inspect
+import re
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
 from typing import Any
@@ -58,6 +60,8 @@ class _PendingRegistration:
 
 
 _PENDING: dict[tuple[str, str], _PendingRegistration] = {}
+_MAX_CALLER_FRAMES = 16
+_PLUGIN_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 def register_plugin_op(
@@ -70,18 +74,11 @@ def register_plugin_op(
     """
     plugin_name = (plugin_name or "").strip()
     op_name = (op_name or "").strip()
-    if not plugin_name or not op_name:
+    if _PLUGIN_NAME_RE.fullmatch(plugin_name) is None or not op_name:
         raise PluginOpRegistrationError(
-            "register_plugin_op requires non-empty plugin_name and op_name"
+            "register_plugin_op requires a valid plugin_name and non-empty op_name"
         )
-    expected_module_prefix = f"plugins.catalog.{plugin_name}."
-    caller_module = _caller_module_name()
-    if not caller_module.startswith(expected_module_prefix):
-        raise PluginOpRegistrationError(
-            f"register_plugin_op({plugin_name!r}, {op_name!r}) called from "
-            f"{caller_module!r}; only modules under "
-            f"{expected_module_prefix}* may register ops for this plugin"
-        )
+    _validate_plugin_caller(plugin_name, "register_plugin_op")
 
     def decorator(handler: PluginOpHandler) -> PluginOpHandler:
         key = (plugin_name, op_name)
@@ -131,6 +128,7 @@ def flush_plugin_registrations(
     dispatcher_register_op: Callable[[str, DispatcherHandler], None],
     *,
     context_factory: ContextFactory | None = None,
+    trusted_caller: bool = False,
 ) -> list[str]:
     """Flush pending registrations for *plugin_name* into the dispatcher.
 
@@ -145,6 +143,12 @@ def flush_plugin_registrations(
         raise PluginOpRegistrationError(
             "flush_plugin_registrations requires a non-empty plugin_name"
         )
+    if _PLUGIN_NAME_RE.fullmatch(plugin_name) is None:
+        raise PluginOpRegistrationError(
+            "flush_plugin_registrations requires a valid plugin_name"
+        )
+    if not trusted_caller:
+        _validate_plugin_caller(plugin_name, "flush_plugin_registrations")
     registered: list[str] = []
     for entry in _filter_pending(plugin_name):
         public_op = f"plugin.{entry.plugin_name}.{entry.op_name}"
@@ -159,6 +163,7 @@ def flush_plugin_registrations(
             )
         dispatcher_register_op(public_op, handler)
         registered.append(public_op)
+        _PENDING.pop((entry.plugin_name, entry.op_name), None)
     return registered
 
 
@@ -184,25 +189,38 @@ def _filter_pending(plugin_name: str) -> Iterable[_PendingRegistration]:
     ]
 
 
-def _caller_module_name() -> str:
-    """Return the ``__name__`` of the module that called register_plugin_op.
-
-    Skips the registry module itself; returns ``''`` when no caller frame is
-    available (mostly a defensive guard for synthetic frames).
-    """
+def _validate_plugin_caller(plugin_name: str, operation: str) -> None:
+    expected_module_prefix = f"plugins.catalog.{plugin_name}."
     here = __name__
     frame = inspect.currentframe()
     try:
-        # Walk up: we are in _caller_module_name → register_plugin_op → caller.
         if frame is None:
-            return ""
-        for _ in range(8):
+            caller_module = ""
+            raise _registration_error(operation, plugin_name, caller_module)
+        for _ in range(_MAX_CALLER_FRAMES):
             frame = frame.f_back
             if frame is None:
-                return ""
+                break
             mod_name = frame.f_globals.get("__name__", "")
-            if mod_name and mod_name != here:
-                return str(mod_name)
-        return ""
+            if not mod_name or mod_name == here:
+                continue
+            caller_module = str(mod_name)
+            if caller_module.startswith(expected_module_prefix):
+                return
+            raise _registration_error(operation, plugin_name, caller_module)
+        raise _registration_error(operation, plugin_name, "")
     finally:
         del frame
+
+
+def _registration_error(
+    operation: str,
+    plugin_name: str,
+    caller_module: str,
+) -> PluginOpRegistrationError:
+    expected_module_prefix = f"plugins.catalog.{plugin_name}."
+    return PluginOpRegistrationError(
+        f"{operation}({plugin_name!r}) called from {caller_module!r}; "
+        f"only modules under {expected_module_prefix}* may register or flush "
+        "ops for this plugin"
+    )

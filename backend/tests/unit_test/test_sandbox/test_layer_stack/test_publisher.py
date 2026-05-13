@@ -134,6 +134,30 @@ def test_content_hash_mismatch_preserves_manifest_and_removes_staging(
     assert list((tmp_path / "stack" / "staging").iterdir()) == []
 
 
+def test_transaction_publish_layer_rejects_source_outside_source_root(
+    tmp_path: Path,
+) -> None:
+    manager = LayerStackManager(tmp_path / "stack")
+    trusted_root = tmp_path / "staging"
+    trusted_root.mkdir()
+    source = _source(tmp_path, "outside.txt", b"outside")
+
+    with manager.commit_transaction() as transaction:
+        with pytest.raises(ValueError, match="outside trusted source root"):
+            transaction.publish_layer(
+                [
+                    LayerChange(
+                        path="outside.txt",
+                        kind="write",
+                        source_path=str(source),
+                    )
+                ],
+                source_root=trusted_root,
+            )
+
+    assert manager.read_active_manifest() == Manifest(version=0, layers=())
+
+
 def test_late_manifest_conflict_removes_unreferenced_layer(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

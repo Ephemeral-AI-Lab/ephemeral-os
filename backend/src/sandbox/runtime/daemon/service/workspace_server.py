@@ -16,10 +16,10 @@ from sandbox.layer_stack.workspace.base import build_workspace_base
 from sandbox.layer_stack.workspace.binding import (
     WorkspaceBinding,
     WorkspaceBindingError,
-    require_workspace_binding,
     read_workspace_binding,
+    require_workspace_binding,
 )
-
+from sandbox.timing import monotonic_now
 
 _MANAGER_CACHE_LOCK = threading.RLock()
 _MANAGER_CACHE: dict[str, LayerStackManager] = {}
@@ -46,7 +46,7 @@ def _drop_layer_stack_manager(layer_stack_root: str | Path) -> None:
 
 def fence_stale_staging(layer_stack_root: str | Path) -> dict[str, object]:
     """Remove staging dirs that predate the current daemon process."""
-    total_start = time.perf_counter()
+    total_start = monotonic_now()
     staging_root = Path(layer_stack_root).resolve(strict=False) / "staging"
     inspected_dirs = 0
     fenced_paths: list[str] = []
@@ -71,7 +71,7 @@ def fence_stale_staging(layer_stack_root: str | Path) -> dict[str, object]:
         "fenced_dirs": len(fenced_paths),
         "fenced_paths": fenced_paths,
         "timings": {
-            "layer_stack.fence_stale_staging_s": time.perf_counter() - total_start,
+            "layer_stack.fence_stale_staging_s": monotonic_now() - total_start,
         },
     }
 
@@ -121,16 +121,7 @@ class LayerStackWorkspaceServer:
     ) -> tuple[WorkspaceBinding, bool]:
         binding = read_workspace_binding(self.layer_stack_root)
         if binding is not None:
-            manifest_file = manifest_path(self.layer_stack_root)
-            if not manifest_file.exists():
-                raise WorkspaceBindingError(
-                    f"active manifest is missing for workspace binding: {manifest_file}"
-                )
-            active = read_manifest(manifest_file)
-            if active.version <= 0:
-                raise WorkspaceBindingError(
-                    f"active manifest is empty for workspace binding: {manifest_file}"
-                )
+            _validate_manifest_for_root(self.layer_stack_root)
             if Path(binding.workspace_root) != Path(workspace_root):
                 raise WorkspaceBindingError(
                     "workspace binding points at a different workspace: "
@@ -156,17 +147,21 @@ class LayerStackWorkspaceServer:
 
     def _require_bound_active_workspace(self) -> WorkspaceBinding:
         binding = require_workspace_binding(self.layer_stack_root)
-        manifest_file = manifest_path(self.layer_stack_root)
-        if not manifest_file.exists():
-            raise WorkspaceBindingError(
-                f"active manifest is missing for workspace binding: {manifest_file}"
-            )
-        active = read_manifest(manifest_file)
-        if active.version <= 0:
-            raise WorkspaceBindingError(
-                f"active manifest is empty for workspace binding: {manifest_file}"
-            )
+        _validate_manifest_for_root(self.layer_stack_root)
         return binding
+
+
+def _validate_manifest_for_root(layer_stack_root: Path) -> None:
+    manifest_file = manifest_path(layer_stack_root)
+    if not manifest_file.exists():
+        raise WorkspaceBindingError(
+            f"active manifest is missing for workspace binding: {manifest_file}"
+        )
+    active = read_manifest(manifest_file)
+    if active.version <= 0:
+        raise WorkspaceBindingError(
+            f"active manifest is empty for workspace binding: {manifest_file}"
+        )
 
 
 __all__ = [

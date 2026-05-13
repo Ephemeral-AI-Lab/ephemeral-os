@@ -60,9 +60,14 @@ decorated = register_plugin_op("demo", "hover")(hover_handler)
     def fake_dispatcher(op: str, handler: object) -> None:
         registered[op] = handler
 
-    keys = flush_plugin_registrations("demo", fake_dispatcher)
+    keys = flush_plugin_registrations(
+        "demo",
+        fake_dispatcher,
+        trusted_caller=True,
+    )
     assert keys == ["plugin.demo.hover"]
     assert registered == {"plugin.demo.hover": namespace["hover_handler"]}
+    assert pending_plugin_registrations("demo") == ()
 
 
 def test_namespace_mismatch_rejected_loudly() -> None:
@@ -126,7 +131,11 @@ register_plugin_op("beta", "ping")(beta_handler)
     )
 
     seen: list[str] = []
-    flush_plugin_registrations("alpha", lambda op, _h: seen.append(op))
+    flush_plugin_registrations(
+        "alpha",
+        lambda op, _h: seen.append(op),
+        trusted_caller=True,
+    )
     assert seen == ["plugin.alpha.ping"]
     # beta still pending
     assert any(
@@ -140,3 +149,18 @@ def test_register_requires_non_empty_names() -> None:
         register_plugin_op("", "hover")
     with pytest.raises(PluginOpRegistrationError, match="non-empty"):
         register_plugin_op("demo", "")
+
+
+def test_untrusted_flush_requires_plugin_namespace() -> None:
+    _exec_in_plugin_namespace(
+        "demo",
+        """
+async def handler(args):
+    return {}
+
+register_plugin_op("demo", "hover")(handler)
+        """.strip(),
+    )
+
+    with pytest.raises(PluginOpRegistrationError, match="only modules under"):
+        flush_plugin_registrations("demo", lambda _op, _h: None)

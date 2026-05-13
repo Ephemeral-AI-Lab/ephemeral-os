@@ -2,18 +2,20 @@
 
 from __future__ import annotations
 
-import time
 from collections.abc import Mapping
 
 from sandbox.layer_stack.workspace.binding import require_workspace_binding
 from sandbox.runtime.daemon.service.workspace_server import (
     LayerStackWorkspaceServer,
+)
+from sandbox.runtime.daemon.service.workspace_server import (
     fence_stale_staging as fence_stale_staging_for_root,
 )
+from sandbox.timing import monotonic_now
 
 
 async def build_workspace_base(args: dict[str, object]) -> dict[str, object]:
-    total_start = time.perf_counter()
+    total_start = monotonic_now()
     layer_stack_root = _layer_stack_root(args)
     reset = bool(args.get("reset", False))
     if reset:
@@ -31,13 +33,13 @@ async def build_workspace_base(args: dict[str, object]) -> dict[str, object]:
         "binding": binding.to_dict(),
         "timings": {
             **timings,
-            "api.workspace_base.total_s": time.perf_counter() - total_start,
+            "api.workspace_base.total_s": monotonic_now() - total_start,
         },
     }
 
 
 async def ensure_workspace_base(args: dict[str, object]) -> dict[str, object]:
-    total_start = time.perf_counter()
+    total_start = monotonic_now()
     server = _server(args)
     binding, created = server.ensure_workspace_base(
         workspace_root=_workspace_root(args),
@@ -47,7 +49,7 @@ async def ensure_workspace_base(args: dict[str, object]) -> dict[str, object]:
         "created": created,
         "binding": binding.to_dict(),
         "timings": {
-            "api.workspace_base.total_s": time.perf_counter() - total_start,
+            "api.workspace_base.total_s": monotonic_now() - total_start,
         },
     }
 
@@ -61,7 +63,7 @@ async def workspace_binding(args: dict[str, object]) -> dict[str, object]:
 
 
 async def prepare_workspace_snapshot(args: dict[str, object]) -> dict[str, object]:
-    total_start = time.perf_counter()
+    total_start = monotonic_now()
     server = _server(args)
     result = server.prepare_workspace_snapshot(
         owner_request_id=_owner_request_id(args),
@@ -72,7 +74,7 @@ async def prepare_workspace_snapshot(args: dict[str, object]) -> dict[str, objec
         timings = {}
     payload["timings"] = {
         **timings,
-        "api.prepare_workspace_snapshot.total_s": time.perf_counter() - total_start,
+        "api.prepare_workspace_snapshot.total_s": monotonic_now() - total_start,
     }
     return {
         "success": True,

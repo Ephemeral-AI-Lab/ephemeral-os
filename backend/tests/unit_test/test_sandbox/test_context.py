@@ -43,14 +43,24 @@ def test_get_sandbox_caches_instance() -> None:
         assert result is fake_sb
 
 
-def test_get_sandbox_uses_cached() -> None:
+def test_get_sandbox_refetches_sync_sandbox(monkeypatch: pytest.MonkeyPatch) -> None:
     tk = DaytonaContextPreparer(sandbox_id="sb-abc")
-    fake_sb = MagicMock()
-    tk._sandbox = fake_sb
+    first = MagicMock()
+    second = MagicMock()
+    calls: list[str] = []
 
-    result = tk._get_sandbox()
+    def fetch_sandbox(sandbox_id: str):
+        calls.append(sandbox_id)
+        return first if len(calls) == 1 else second
 
-    assert result is fake_sb
+    monkeypatch.setattr(
+        "sandbox.provider.daytona.client.sync_client.fetch_sandbox",
+        fetch_sandbox,
+    )
+
+    assert tk._get_sandbox() is first
+    assert tk._get_sandbox() is second
+    assert calls == ["sb-abc", "sb-abc"]
 
 
 async def test_get_sandbox_async_no_id_raises() -> None:

@@ -37,10 +37,10 @@ import json
 import logging
 import os
 import signal
-import time
 from pathlib import Path
 
 from sandbox.runtime.daemon.rpc import dispatcher
+from sandbox.timing import monotonic_now
 
 logger = logging.getLogger("sandbox.runtime.daemon.rpc.server")
 
@@ -77,7 +77,7 @@ async def _handle_connection(
     reader: asyncio.StreamReader,
     writer: asyncio.StreamWriter,
 ) -> None:
-    boot_t0 = time.perf_counter()
+    boot_t0 = monotonic_now()
     try:
         try:
             raw = await asyncio.wait_for(
@@ -100,7 +100,7 @@ async def _handle_connection(
             # Peer is stalled; do not write a response and let ``finally``
             # close the connection.
             return
-        read_completed_at = time.perf_counter()
+        read_completed_at = monotonic_now()
         if not raw:
             return
         try:

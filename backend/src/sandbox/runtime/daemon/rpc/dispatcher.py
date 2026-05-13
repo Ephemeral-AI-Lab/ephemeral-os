@@ -11,15 +11,16 @@ from __future__ import annotations
 import dataclasses
 import inspect
 import logging
-import time
 from collections.abc import Callable, Mapping
 from types import SimpleNamespace
 from typing import Any
 from uuid import uuid4
 
+from sandbox.timing import monotonic_now
+
 logger = logging.getLogger("sandbox.runtime.daemon.rpc.dispatcher")
 
-_BOOT_T0 = time.perf_counter()
+_BOOT_T0 = monotonic_now()
 
 Handler = Callable[[dict[str, Any]], Any]
 
@@ -53,7 +54,7 @@ async def dispatch_envelope_async(
     uptime — which would otherwise grow monotonically and break the
     Phase 3 pass bar (``runtime.boot_to_dispatch_s ≤ 2 ms``).
     """
-    dispatch_entered_at = time.perf_counter()
+    dispatch_entered_at = monotonic_now()
     validation_error, op, args_raw = _validate_envelope(envelope)
     if validation_error is not None:
         return validation_error
@@ -130,7 +131,7 @@ def _attach_runtime_boot_timings(
     origin = boot_t0 if boot_t0 is not None else _BOOT_T0
     timings["runtime.boot_to_dispatch_s"] = max(0.0, dispatch_entered_at - origin)
     timings["runtime.dispatch_s"] = max(
-        0.0, time.perf_counter() - dispatch_entered_at
+        0.0, monotonic_now() - dispatch_entered_at
     )
 
 

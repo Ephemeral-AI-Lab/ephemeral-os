@@ -15,13 +15,14 @@ from sandbox.layer_stack.workspace.binding import require_workspace_binding
 from sandbox.runtime.daemon.handler import request_context
 from sandbox.runtime.daemon.service import occ_backend, shell_runner
 from sandbox.runtime.daemon.service.workspace_server import get_layer_stack_manager
+from sandbox.timing import monotonic_now
 
 _STARTED_AT_MONO = time.monotonic()
 
 
 def runtime_ready(args: dict[str, object]) -> dict[str, object]:
     """Return binary daemon readiness plus per-plane probe details."""
-    total_start = time.perf_counter()
+    total_start = monotonic_now()
     layer_stack_root = _layer_stack_root(args)
     timings: dict[str, float] = {}
     probes = [
@@ -49,7 +50,7 @@ def runtime_ready(args: dict[str, object]) -> dict[str, object]:
         "uptime_s": max(0.0, time.monotonic() - _STARTED_AT_MONO),
         "timings": {
             **timings,
-            "runtime.ready.total_s": time.perf_counter() - total_start,
+            "runtime.ready.total_s": monotonic_now() - total_start,
         },
     }
 
@@ -132,7 +133,7 @@ def _run_probe(
     *,
     timings: dict[str, float],
 ) -> dict[str, object]:
-    start = time.perf_counter()
+    start = monotonic_now()
     try:
         details = probe()
         status = "ok"
@@ -142,7 +143,7 @@ def _run_probe(
             "error_type": type(exc).__name__,
             "error": str(exc),
         }
-    timings[f"runtime.ready.{name}_s"] = time.perf_counter() - start
+    timings[f"runtime.ready.{name}_s"] = monotonic_now() - start
     return {
         "name": name,
         "status": status,

@@ -2,35 +2,38 @@
 
 from __future__ import annotations
 
-import os
+import logging
 import shutil
-import time
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from uuid import uuid4
 
+from sandbox.command_exec.contract.ports import OCCMutationClient, WorkspaceLeaseClient
+from sandbox.command_exec.contract.request import CommandExecRequest
+from sandbox.command_exec.contract.result import CommandExecResult, WorkspaceCapture
+from sandbox.command_exec.workspace.capture import capture_workspace_upperdir
+from sandbox.command_exec.workspace.mount import (
+    WorkspaceReplacementMountSpec,
+    run_workspace_replaced_command,
+)
+from sandbox.layer_stack.workspace.binding import require_workspace_binding
+from sandbox.occ.capture.overlay import overlay_path_changes_to_occ_changes
+from sandbox.occ.changeset.prepared import CommitOptions
+from sandbox.occ.changeset.types import ChangesetResult
+from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
 from sandbox.occ.result_projection import (
     conflict_and_status,
     conflict_to_dict,
     gitignore_cache_timings,
     published_paths,
 )
-from sandbox.occ.capture.overlay import overlay_path_changes_to_occ_changes
-from sandbox.command_exec.workspace.capture import capture_workspace_upperdir
-from sandbox.command_exec.contract.ports import OCCMutationClient, WorkspaceLeaseClient
-from sandbox.command_exec.contract.request import CommandExecRequest
-from sandbox.command_exec.contract.result import CommandExecResult, WorkspaceCapture
-from sandbox.command_exec.workspace.mount import (
-    WorkspaceReplacementMountSpec,
-    run_workspace_replaced_command,
-)
-from sandbox.layer_stack.workspace.binding import require_workspace_binding
-from sandbox.occ.changeset.prepared import CommitOptions
-from sandbox.occ.changeset.types import ChangesetResult
-from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
 from sandbox.overlay.capture.types import read_output_ref
-from sandbox.runtime.daemon.service import occ_backend
 from sandbox.runtime.async_bridge import run_sync_in_executor
+from sandbox.runtime.daemon.service import occ_backend
+from sandbox.timing import monotonic_now
+
+logger = logging.getLogger(__name__)
+_TRANSIENT_LOWERDIR_DIR = "transient-lowerdirs"
 
 
 async def execute_shell_api(args: dict[str, object]) -> dict[str, object]:
@@ -54,15 +57,15 @@ async def _execute_shell(
     gitignore: SnapshotGitignoreOracle,
     storage_root: Path,
 ) -> CommandExecResult:
-    total_start = time.perf_counter()
+    total_start = monotonic_now()
     request = _command_request(args)
     run_dir = _run_dir(storage_root, request.request_id)
     timings: dict[str, float] = {}
     timings["command_exec.handler_sync_prelude_s"] = (
-        time.perf_counter() - total_start
+        monotonic_now() - total_start
     )
 
-    lease_start = time.perf_counter()
+    lease_start = monotonic_now()
     lease = layer_stack.prepare_workspace_snapshot(
         workspace_ref=request.workspace_ref,
         request_id=request.request_id,
@@ -70,7 +73,7 @@ async def _execute_shell(
     timings.update(
         {
             **lease.timings,
-            "command_exec.prepare_snapshot_s": time.perf_counter() - lease_start,
+            "command_exec.prepare_snapshot_s": monotonic_now() - lease_start,
         }
     )
 
@@ -81,6 +84,7 @@ async def _execute_shell(
             lowerdir=lease.lowerdir,
             upperdir=str(run_dir / "upper"),
             workdir=str(run_dir / "work"),
+            scratch_root=str(storage_root),
         )
         process = await run_sync_in_executor(
             run_workspace_replaced_command,
@@ -90,7 +94,7 @@ async def _execute_shell(
             timings=timings,
         )
 
-        capture_start = time.perf_counter()
+        capture_start = monotonic_now()
         path_changes = tuple(
             capture_workspace_upperdir(
                 spec=spec,
@@ -101,26 +105,26 @@ async def _execute_shell(
             )
         )
         timings["command_exec.capture_upperdir_s"] = (
-            time.perf_counter() - capture_start
+            monotonic_now() - capture_start
         )
 
-        occ_start = time.perf_counter()
+        occ_start = monotonic_now()
         changeset = await _apply_workspace_capture(
             path_changes,
             occ_client=occ_client,
             snapshot=lease.manifest,
             request=request,
         )
-        timings["command_exec.occ_apply_s"] = time.perf_counter() - occ_start
-        release_start = time.perf_counter()
+        timings["command_exec.occ_apply_s"] = monotonic_now() - occ_start
+        release_start = monotonic_now()
         layer_stack.release_lease(
             workspace_ref=request.workspace_ref,
             lease_id=lease.lease_id,
         )
         released = True
-        _drop_transient_lowerdir(lease)
+        _drop_transient_lowerdir(lease, storage_root=storage_root)
         timings["command_exec.release_snapshot_s"] = (
-            time.perf_counter() - release_start
+            monotonic_now() - release_start
         )
         timings = {
             **timings,
@@ -133,7 +137,7 @@ async def _execute_shell(
             + timings.get("command_exec.capture_upperdir_s", 0.0)
         )
         timings["api.shell.occ_apply_s"] = timings["command_exec.occ_apply_s"]
-        timings["command_exec.total_s"] = time.perf_counter() - total_start
+        timings["command_exec.total_s"] = monotonic_now() - total_start
         timings["api.shell.total_s"] = timings["command_exec.total_s"]
         return CommandExecResult(
             exit_code=process.exit_code,
@@ -149,14 +153,14 @@ async def _execute_shell(
         )
     finally:
         if not released:
-            release_start = time.perf_counter()
+            release_start = monotonic_now()
             layer_stack.release_lease(
                 workspace_ref=request.workspace_ref,
                 lease_id=lease.lease_id,
             )
-            _drop_transient_lowerdir(lease)
+            _drop_transient_lowerdir(lease, storage_root=storage_root)
             timings["command_exec.release_snapshot_s"] = (
-                time.perf_counter() - release_start
+                monotonic_now() - release_start
             )
         # Capture and OCC commit are done by the time we get here; the
         # run_dir tree is no longer load-bearing. ignore_errors keeps
@@ -312,22 +316,42 @@ def _run_dir(storage_root: Path, request_id: str) -> Path:
 
 
 def _command_exec_runtime_root(storage_root: Path) -> Path:
-    shm = Path("/dev/shm")
-    if shm.is_dir() and os.access(shm, os.W_OK):
-        root_key = "".join(
-            ch if ch.isalnum() else "-"
-            for ch in str(storage_root.resolve(strict=False))
-        ).strip("-")
-        return shm / "eos-command-exec" / (root_key[-48:] or "layer-stack")
     return storage_root / "runtime" / "command_exec"
 
 
-def _drop_transient_lowerdir(lease: object) -> None:
+def _drop_transient_lowerdir(lease: object, *, storage_root: Path) -> None:
     raw = str(getattr(lease, "lowerdir", "")).strip()
     if not raw:
         return
     lowerdir = Path(raw)
-    shutil.rmtree(lowerdir.parent, ignore_errors=True)
+    scratch_dir = lowerdir.parent
+    transient_root = storage_root / "runtime" / _TRANSIENT_LOWERDIR_DIR
+    if (
+        lowerdir.name != "lower"
+        or scratch_dir.parent.name != _TRANSIENT_LOWERDIR_DIR
+        or not _is_relative_to(scratch_dir.resolve(strict=False), transient_root.resolve(strict=False))
+    ):
+        logger.warning(
+            "refusing to drop unexpected transient lowerdir path: %s",
+            lowerdir,
+        )
+        return
+    try:
+        shutil.rmtree(scratch_dir)
+    except OSError:
+        logger.warning(
+            "failed to drop transient lowerdir scratch dir: %s",
+            scratch_dir,
+            exc_info=True,
+        )
+
+
+def _is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
 
 
 def _mapping(value: object) -> Mapping[str, object]:

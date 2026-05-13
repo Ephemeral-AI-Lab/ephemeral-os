@@ -44,6 +44,15 @@ def test_committed_paths_uses_fallback_when_no_files() -> None:
     assert committed_paths((), fallback_path="/ws/x.py") == ("/ws/x.py",)
 
 
+def test_committed_paths_uses_fallback_when_all_file_paths_are_empty() -> None:
+    files = (
+        FileResult(path="", status=FileStatus.ACCEPTED),
+        FileResult(path="", status=FileStatus.ABORTED_VERSION),
+    )
+
+    assert committed_paths(files, fallback_path="/ws/x.py") == ("/ws/x.py",)
+
+
 def test_conflict_and_status_returns_committed_when_no_failures() -> None:
     conflict, status = conflict_and_status(
         (FileResult(path="/ws/a.py", status=FileStatus.COMMITTED),)

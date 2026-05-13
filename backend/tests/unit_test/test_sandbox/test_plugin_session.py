@@ -155,6 +155,28 @@ def test_call_plugin_dispatch_error_surfaces(
     assert result.metadata["step"] == "dispatch"
 
 
+def test_wrap_response_rejects_non_json_payload() -> None:
+    result = session_mod._wrap_response(
+        {"success": True, "value": object()},
+        plugin="demo",
+        op="run",
+    )
+
+    assert result.is_error
+    assert result.metadata["step"] == "decode"
+
+
+def test_wrap_response_rejects_oversize_payload() -> None:
+    result = session_mod._wrap_response(
+        {"success": True, "value": "x" * session_mod._MAX_RESPONSE_BYTES},
+        plugin="demo",
+        op="run",
+    )
+
+    assert result.is_error
+    assert "byte limit" in result.output
+
+
 def test_call_plugin_reensures_runtime_when_digest_changes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

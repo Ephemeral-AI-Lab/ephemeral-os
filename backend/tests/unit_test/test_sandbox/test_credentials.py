@@ -72,3 +72,13 @@ class TestLoadCredentials:
         assert key == ""
         assert url == ""
         assert target == ""
+
+    def test_project_root_lookup_uses_marker_file(self, tmp_path):
+        from sandbox.provider.daytona.client.credentials import _find_project_root
+
+        root = tmp_path / "repo"
+        nested = root / "backend" / "src" / "sandbox"
+        nested.mkdir(parents=True)
+        (root / "pyproject.toml").write_text("[project]\n", encoding="utf-8")
+
+        assert _find_project_root(nested / "credentials.py") == root

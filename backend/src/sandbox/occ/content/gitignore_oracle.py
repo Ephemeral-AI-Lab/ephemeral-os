@@ -100,18 +100,19 @@ class PathspecGitignoreOracle:
     def _is_dir_excluded(self, dir_rel: str) -> bool:
         if dir_rel in self._dir_cache:
             return self._dir_cache[dir_rel]
-        # A nested ancestor can be excluded even if the parent dir is not,
-        # but if any ancestor is excluded, propagate up.
-        parts = dir_rel.split("/")
+        parts = [part for part in dir_rel.split("/") if part]
         accum = ""
-        for depth in range(len(parts) - 1):
-            accum = f"{accum}/{parts[depth]}" if accum else parts[depth]
-            if self._is_dir_excluded(accum):
-                self._dir_cache[dir_rel] = True
-                return True
-        excluded = self._match_with_inheritance(dir_rel, as_directory=True)
-        self._dir_cache[dir_rel] = excluded
-        return excluded
+        excluded = False
+        for part in parts:
+            accum = f"{accum}/{part}" if accum else part
+            cached = self._dir_cache.get(accum)
+            if cached is not None:
+                excluded = cached
+                continue
+            if not excluded:
+                excluded = self._match_with_inheritance(accum, as_directory=True)
+            self._dir_cache[accum] = excluded
+        return self._dir_cache.get(dir_rel, excluded)
 
     def _match_with_inheritance(self, path: str, *, as_directory: bool) -> bool:
         """Last-match-wins evaluation across every ``.gitignore`` above *path*.

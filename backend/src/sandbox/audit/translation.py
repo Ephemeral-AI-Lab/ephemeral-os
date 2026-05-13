@@ -6,8 +6,10 @@ from collections.abc import Mapping
 from typing import Any, Literal
 
 from audit.base import AuditEvent, AuditNode, JsonValue
+
 from sandbox.audit import events
 from sandbox.models import GuardedResultBase, SandboxCaller, SandboxResultBase
+from sandbox.timing import normalize_timing_map, timing_audit_signals
 
 SandboxOperation = Literal[
     "read_file",
@@ -120,7 +122,7 @@ def operation_payload(
         "changed_paths": list(getattr(result, "changed_paths", ()) or ()),
         "conflict_reason": getattr(result, "conflict_reason", None),
         "warnings": list(getattr(result, "warnings", ()) or ()),
-        "timings": dict(result.timings),
+        "timings": normalize_timing_map(result.timings),
     }
 
 
@@ -155,32 +157,14 @@ def _subsystem_events(
     if not isinstance(timings, dict) or not timings:
         return []
 
-    status = payload.get("status")
-    emitted: list[AuditEvent] = []
-    if _has_timing(timings, "occ.prepare."):
-        emitted.append(_subsystem_event(events.OCC_PREPARED, node, payload))
-    if _has_timing(timings, "occ.") and status == "conflict":
-        emitted.append(_subsystem_event(events.OCC_CONFLICTED, node, payload))
-    elif _has_any_timing(timings, ("occ.commit.", "occ.apply.")) and status == "ok":
-        emitted.append(_subsystem_event(events.OCC_COMMITTED, node, payload))
-
-    if _has_any_timing(timings, ("overlay.", "command_exec.")):
-        emitted.append(_subsystem_event(events.OVERLAY_EXECUTED, node, payload))
-
-    if _has_any_timing(
-        timings,
-        (
-            "layer_stack.lease_",
-            "layer_stack.transaction_lock_wait",
-            "layer_stack.transaction_lock_held",
-        ),
-    ):
-        emitted.append(_subsystem_event(events.LAYER_STACK_LEASE_ACQUIRED, node, payload))
-    if _has_any_timing(timings, ("layer_stack.publish", "layer_stack.layer_")):
-        emitted.append(_subsystem_event(events.LAYER_STACK_LAYER_PUBLISHED, node, payload))
-    if _has_auto_squash_fact(timings, payload):
-        emitted.append(_subsystem_event(events.LAYER_STACK_AUTO_SQUASHED, node, payload))
-    return emitted
+    return [
+        _subsystem_event(_EVENT_BY_SIGNAL[signal], node, payload)
+        for signal in timing_audit_signals(
+            timings,
+            status=payload.get("status"),
+            payload=payload,
+        )
+    ]
 
 
 def _subsystem_event(
@@ -196,28 +180,22 @@ def _subsystem_event(
     )
 
 
-def _has_timing(timings: Mapping[object, object], prefix: str) -> bool:
-    return any(str(key).startswith(prefix) for key in timings)
-
-
-def _has_any_timing(timings: Mapping[object, object], prefixes: tuple[str, ...]) -> bool:
-    return any(_has_timing(timings, prefix) for prefix in prefixes)
-
-
-def _has_auto_squash_fact(
-    timings: Mapping[object, object],
-    payload: Mapping[str, Any],
-) -> bool:
-    if any("auto_squash" in str(key) for key in timings):
-        return True
-    return any("auto_squash" in str(key) for key in payload)
-
-
 def _none_if_empty(value: str | None) -> str | None:
     if value is None:
         return None
     stripped = value.strip()
     return stripped or None
+
+
+_EVENT_BY_SIGNAL = {
+    "occ_prepared": events.OCC_PREPARED,
+    "occ_committed": events.OCC_COMMITTED,
+    "occ_conflicted": events.OCC_CONFLICTED,
+    "overlay_executed": events.OVERLAY_EXECUTED,
+    "layer_stack_lease_acquired": events.LAYER_STACK_LEASE_ACQUIRED,
+    "layer_stack_layer_published": events.LAYER_STACK_LAYER_PUBLISHED,
+    "layer_stack_auto_squashed": events.LAYER_STACK_AUTO_SQUASHED,
+}
 
 
 __all__ = [

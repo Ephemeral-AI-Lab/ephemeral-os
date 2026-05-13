@@ -39,7 +39,9 @@ def close_client(client: Any) -> None:
 
     closer = threading.Thread(target=_run_close, name="daytona-async-client-close", daemon=True)
     closer.start()
-    closer.join(timeout=1.0)
+    closer.join(timeout=5.0)
+    if closer.is_alive():
+        logger.warning("Timed out waiting for AsyncDaytona client close")
 
 
 async def async_close_client(client: Any) -> None:

@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
 
 from sandbox.layer_stack.layer.change import LayerChange
@@ -58,6 +59,7 @@ class CommitTransaction(Protocol):
         self,
         changes: Sequence[LayerChange],
         *,
+        source_root: str | Path | None = None,
         timings: dict[str, float] | None = None,
     ) -> Manifest: ...
 

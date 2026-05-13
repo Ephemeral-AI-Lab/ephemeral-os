@@ -19,22 +19,23 @@ entrypoint and timing helpers.
 
 from __future__ import annotations
 
+import errno
 import os
-import time
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Literal, NamedTuple
 
+from sandbox.occ.changeset.types import ChangesetResult
+from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
 from sandbox.occ.result_projection import (
     committed_paths,
     conflict_and_status,
     conflict_to_dict,
     gitignore_cache_timings,
 )
-from sandbox.occ.changeset.types import ChangesetResult
-from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
-from sandbox.runtime.daemon.service.occ_backend import OccBackend
 from sandbox.runtime.daemon.service import occ_backend
-
+from sandbox.runtime.daemon.service.occ_backend import OccBackend
+from sandbox.timing import monotonic_now
 
 # -- classifier predicate ---------------------------------------------------
 
@@ -128,6 +129,64 @@ def _services(layer_stack_root: str) -> OccBackend:
     return occ_backend.build_occ_backend(layer_stack_root)
 
 
+# -- no-follow host filesystem helpers --------------------------------------
+
+
+def read_bytes_no_follow(abs_path: str) -> bytes:
+    fd = _open_no_follow(abs_path, os.O_RDONLY)
+    with os.fdopen(fd, "rb") as file:
+        return file.read()
+
+
+def write_text_no_follow(
+    abs_path: str,
+    content: str,
+    *,
+    create_only: bool = False,
+) -> None:
+    target = Path(abs_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    flags = os.O_WRONLY | os.O_CREAT | _o_no_follow()
+    flags |= os.O_EXCL if create_only else os.O_TRUNC
+    fd = _open_no_follow(abs_path, flags, mode=0o666)
+    with os.fdopen(fd, "wb") as file:
+        file.write(content.encode("utf-8"))
+
+
+def _open_no_follow(abs_path: str, flags: int, mode: int = 0o666) -> int:
+    path = Path(abs_path)
+    if not path.is_absolute():
+        raise ValueError(f"path must be absolute: {abs_path!r}")
+    parts = path.parts
+    if len(parts) < 2:
+        raise ValueError(f"path must name a file: {abs_path!r}")
+
+    dir_fd = os.open(parts[0], os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        for part in parts[1:-1]:
+            next_fd = os.open(
+                part,
+                os.O_RDONLY | os.O_DIRECTORY | _o_no_follow(),
+                dir_fd=dir_fd,
+            )
+            os.close(dir_fd)
+            dir_fd = next_fd
+        return os.open(parts[-1], flags | _o_no_follow(), mode, dir_fd=dir_fd)
+    except OSError as exc:
+        if exc.errno == errno.ELOOP:
+            raise ValueError(f"refusing to follow symlink: {abs_path}") from exc
+        raise
+    finally:
+        os.close(dir_fd)
+
+
+def _o_no_follow() -> int:
+    value = getattr(os, "O_NOFOLLOW", None)
+    if value is None:
+        raise RuntimeError("O_NOFOLLOW is unavailable on this platform")
+    return int(value)
+
+
 # -- result projection ------------------------------------------------------
 
 
@@ -151,7 +210,7 @@ def _project_changeset(
             **result.timings,
             **gitignore_cache_timings(gitignore),
             **timings_extra,
-            f"api.{verb}.total_s": time.perf_counter() - total_start,
+            f"api.{verb}.total_s": monotonic_now() - total_start,
         },
     }
 
@@ -163,4 +222,6 @@ __all__ = [
     "_required_single_path",
     "_services",
     "classify_path",
+    "read_bytes_no_follow",
+    "write_text_no_follow",
 ]

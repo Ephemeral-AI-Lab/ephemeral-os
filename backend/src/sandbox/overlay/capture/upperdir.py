@@ -5,19 +5,19 @@ from __future__ import annotations
 import os
 import shutil
 import stat
-import time
 from collections.abc import Iterator
+from contextlib import suppress
 from pathlib import Path
 
-from sandbox.layer_stack.manifest import Manifest
 from sandbox.layer_stack.view.merged import OPAQUE_MARKER, WHITEOUT_PREFIX
+from sandbox.layer_stack.workspace.base import _relative_target_escapes
 from sandbox.overlay.capture.changes import OverlayPathChange, content_hash
+from sandbox.timing import monotonic_now
 
 
 def capture_changes(
     upperdir: str | Path,
     *,
-    snapshot_manifest: Manifest,
     lowerdir: str | Path | None = None,
     workspace_root: str | Path | None = None,
     timings: dict[str, float] | None = None,
@@ -28,11 +28,10 @@ def capture_changes(
     runtimes can pass ``lowerdir`` and ``workspace_root`` to populate that
     upperdir from a copy-backed merged view before capture.
     """
-    del snapshot_manifest
     upper_root = Path(upperdir)
     upper_root.mkdir(parents=True, exist_ok=True)
     if lowerdir is not None and workspace_root is not None:
-        populate_start = time.perf_counter()
+        populate_start = monotonic_now()
         _populate_upperdir_from_diff(
             lowerdir=Path(lowerdir),
             workspace_root=Path(workspace_root),
@@ -40,12 +39,12 @@ def capture_changes(
         )
         if timings is not None:
             timings["overlay.capture.populate_upperdir_s"] = (
-                time.perf_counter() - populate_start
+                monotonic_now() - populate_start
             )
-    walk_start = time.perf_counter()
+    walk_start = monotonic_now()
     changes = tuple(_walk_upperdir(upper_root))
     if timings is not None:
-        timings["overlay.capture.walk_upperdir_s"] = time.perf_counter() - walk_start
+        timings["overlay.capture.walk_upperdir_s"] = monotonic_now() - walk_start
     return changes
 
 
@@ -63,7 +62,11 @@ def _populate_upperdir_from_diff(
     merged_paths = _payload_paths(workspace_root)
 
     for rel in sorted(lower_paths - merged_paths):
-        if _has_payload_ancestor(rel, merged_paths):
+        if _has_nondirectory_payload_ancestor(
+            rel,
+            merged_paths,
+            root=workspace_root,
+        ):
             continue
         _write_whiteout(upperdir, rel)
 
@@ -76,7 +79,19 @@ def _populate_upperdir_from_diff(
         target.parent.mkdir(parents=True, exist_ok=True)
         _remove_path(target)
         if merged_entry.is_symlink():
-            os.symlink(os.readlink(merged_entry), target)
+            link_target = os.readlink(merged_entry)
+            if link_target.startswith("/") or _relative_target_escapes(link_target):
+                raise ValueError(
+                    "overlay capture refuses escaping symlink target: "
+                    f"{rel.as_posix()}"
+                )
+            os.symlink(link_target, target)
+        elif merged_entry.is_dir():
+            target.mkdir(parents=True, exist_ok=True)
+            with suppress(OSError):
+                shutil.copystat(merged_entry, target, follow_symlinks=False)
+            if not _has_payload_descendant(rel, merged_paths):
+                (target / OPAQUE_MARKER).write_text("", encoding="utf-8")
         elif merged_entry.is_file():
             shutil.copy2(merged_entry, target)
 
@@ -88,7 +103,7 @@ def _payload_paths(root: Path) -> set[Path]:
     for entry in root.rglob("*"):
         if entry.name == OPAQUE_MARKER or entry.name.startswith(WHITEOUT_PREFIX):
             continue
-        if entry.is_symlink() or entry.is_file():
+        if entry.is_symlink() or entry.is_file() or entry.is_dir():
             paths.add(entry.relative_to(root))
     return paths
 
@@ -96,26 +111,56 @@ def _payload_paths(root: Path) -> set[Path]:
 def _entries_match(left: Path, right: Path) -> bool:
     if left.is_symlink() or right.is_symlink():
         return left.is_symlink() and right.is_symlink() and os.readlink(left) == os.readlink(right)
+    if left.is_dir() and right.is_dir():
+        return _mode_bits(left) == _mode_bits(right)
     if left.is_file() and right.is_file():
-        return left.read_bytes() == right.read_bytes()
+        return left.read_bytes() == right.read_bytes() and _mode_bits(left) == _mode_bits(right)
     return False
 
 
-def _has_payload_ancestor(rel: Path, payload_paths: set[Path]) -> bool:
+def _has_nondirectory_payload_ancestor(
+    rel: Path,
+    payload_paths: set[Path],
+    *,
+    root: Path,
+) -> bool:
     parts = rel.parts
-    return any(Path(*parts[:index]) in payload_paths for index in range(1, len(parts)))
+    for index in range(1, len(parts)):
+        ancestor = Path(*parts[:index])
+        if ancestor not in payload_paths:
+            continue
+        entry = root / ancestor
+        if entry.is_symlink() or entry.is_file():
+            return True
+    return False
+
+
+def _has_payload_descendant(rel: Path, payload_paths: set[Path]) -> bool:
+    prefix = rel.parts
+    return any(
+        len(path.parts) > len(prefix) and path.parts[: len(prefix)] == prefix
+        for path in payload_paths
+    )
+
+
+def _mode_bits(path: Path) -> int:
+    return stat.S_IMODE(path.lstat().st_mode)
 
 
 def _walk_upperdir(upper_root: Path) -> Iterator[OverlayPathChange]:
+    emitted_opaque_dirs: set[str] = set()
     for entry in sorted(upper_root.rglob("*"), key=lambda item: item.as_posix()):
         rel = entry.relative_to(upper_root)
         if entry.name == OPAQUE_MARKER:
-            yield OverlayPathChange(
-                path=rel.parent.as_posix() if rel.parent.as_posix() != "." else "",
-                kind="opaque_dir",
-                content_path=None,
-                final_hash=None,
-            )
+            opaque_path = rel.parent.as_posix() if rel.parent.as_posix() != "." else ""
+            if opaque_path not in emitted_opaque_dirs:
+                emitted_opaque_dirs.add(opaque_path)
+                yield OverlayPathChange(
+                    path=opaque_path,
+                    kind="opaque_dir",
+                    content_path=None,
+                    final_hash=None,
+                )
             continue
         if _is_whiteout_marker(entry):
             yield OverlayPathChange(
@@ -127,12 +172,15 @@ def _walk_upperdir(upper_root: Path) -> Iterator[OverlayPathChange]:
             continue
         if entry.is_dir():
             if _has_overlay_opaque_xattr(entry):
-                yield OverlayPathChange(
-                    path=rel.as_posix(),
-                    kind="opaque_dir",
-                    content_path=None,
-                    final_hash=None,
-                )
+                opaque_path = rel.as_posix()
+                if opaque_path not in emitted_opaque_dirs:
+                    emitted_opaque_dirs.add(opaque_path)
+                    yield OverlayPathChange(
+                        path=opaque_path,
+                        kind="opaque_dir",
+                        content_path=None,
+                        final_hash=None,
+                    )
             continue
         if _is_overlay_whiteout(entry):
             yield OverlayPathChange(

@@ -23,10 +23,8 @@ from sandbox.plugin.install import (
 @pytest.fixture(autouse=True)
 def _clear_install_caches() -> Iterator[None]:
     install_mod._locks.clear()
-    install_mod._installed_marker_cache.clear()
     yield
     install_mod._locks.clear()
-    install_mod._installed_marker_cache.clear()
 
 
 def _seed_demo_plugin(tmp_path: Path, *, with_runtime: bool = True) -> Path:
@@ -144,6 +142,23 @@ def test_marker_miss_uploads_and_runs_setup(tmp_path: Path) -> None:
     )
     # At least one base64 chunk write happened.
     assert any("base64 -d" in c for c in fake.calls)
+    assert any(".staging-" in c for c in fake.calls)
+
+
+def test_install_does_not_use_sticky_marker_cache(tmp_path: Path) -> None:
+    plugin_dir = _seed_demo_plugin(tmp_path)
+    manifest = parse_plugin_manifest(plugin_dir)
+    fake = _FakeExec(marker_present=False)
+
+    asyncio.run(ensure_installed("sb-1", manifest, exec_fn=fake))
+    asyncio.run(ensure_installed("sb-1", manifest, exec_fn=fake))
+
+    setup_runs = [
+        command
+        for command in fake.calls
+        if "setup.sh" in command and "EOS_PLUGIN_DIR" in command
+    ]
+    assert len(setup_runs) == 2
 
 
 def test_setup_failure_surfaces_clear_error(tmp_path: Path) -> None:

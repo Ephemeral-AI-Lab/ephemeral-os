@@ -20,27 +20,47 @@ _DAEMON_PID = f"{BUNDLE_REMOTE_DIR}/runtime.pid"
 _DAEMON_LOG = f"{BUNDLE_REMOTE_DIR}/runtime.log"
 _DAEMON_ENV = f"{BUNDLE_REMOTE_DIR}/runtime.env"
 DEFAULT_LAYER_STACK_ROOT = f"{BUNDLE_REMOTE_DIR}/layer-stack"
+# Explicit extension point for daemon-scoped feature flags. Keep empty unless
+# a runtime setting must restart the daemon when the host value changes.
 _FORWARDED_DAEMON_ENV: tuple[str, ...] = ()
+_THIN_CLIENT_CONNECT_FAILED = 97
+_THIN_CLIENT_IO_FAILED = 98
 
 _DAEMON_THIN_CLIENT_PY = (
     "import socket,sys,os\n"
-    f"s=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM);s.settimeout(float(os.environ.get('EPHEMERALOS_RUNTIME_CLIENT_TIMEOUT','600')));s.connect({_DAEMON_SOCKET!r});"
-    "s.sendall(sys.argv[1].encode('utf-8')+b'\\n');s.shutdown(socket.SHUT_WR);"
+    f"CONNECT_FAILED={_THIN_CLIENT_CONNECT_FAILED};IO_FAILED={_THIN_CLIENT_IO_FAILED}\n"
+    "timeout=float(os.environ.get('EPHEMERALOS_RUNTIME_CLIENT_TIMEOUT','600'))\n"
+    "s=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM);s.settimeout(timeout)\n"
+    "try:\n"
+    f" s.connect({_DAEMON_SOCKET!r})\n"
+    "except (ConnectionRefusedError,FileNotFoundError) as e:\n"
+    " sys.stderr.write('EOS_DAEMON_CONNECT_FAILED:'+e.__class__.__name__+'\\n');sys.exit(CONNECT_FAILED)\n"
+    "except OSError as e:\n"
+    " sys.stderr.write('EOS_DAEMON_CONNECT_FAILED:'+e.__class__.__name__+'\\n');sys.exit(CONNECT_FAILED)\n"
+    "try:\n"
+    " s.sendall(sys.argv[1].encode('utf-8')+b'\\n');s.shutdown(socket.SHUT_WR)\n"
+    "except OSError as e:\n"
+    " sys.stderr.write('EOS_DAEMON_IO_FAILED:'+e.__class__.__name__+'\\n');sys.exit(IO_FAILED)\n"
     "buf=b''\n"
-    "while True:\n"
-    " chunk=s.recv(65536)\n"
-    " if not chunk: break\n"
-    " buf+=chunk\n"
+    "try:\n"
+    " while True:\n"
+    "  chunk=s.recv(65536)\n"
+    "  if not chunk: break\n"
+    "  buf+=chunk\n"
+    "except socket.timeout:\n"
+    " sys.stderr.write('EOS_DAEMON_IO_FAILED:socket.timeout\\n');sys.exit(IO_FAILED)\n"
+    "except OSError as e:\n"
+    " sys.stderr.write('EOS_DAEMON_IO_FAILED:'+e.__class__.__name__+'\\n');sys.exit(IO_FAILED)\n"
     "sys.stdout.buffer.write(buf)\n"
 )
 
 _DAEMON_THIN_CLIENT_LAUNCHER = f"""\
 for py in python3.13 python3.12 python3.11 python3.10 python3; do
-    if command -v "$py" >/dev/null 2>&1; then
+    if command -v "$py" >/dev/null 2>&1 && "$py" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1; then
         exec "$py" -c {shlex.quote(_DAEMON_THIN_CLIENT_PY)} "$1"
     fi
 done
-echo 'sandbox daemon requires python3' >&2
+echo 'sandbox daemon requires Python >= 3.10' >&2
 exit 127
 """
 
@@ -92,6 +112,7 @@ async def _call_daemon(
     result = await _exec_daemon_call(
         exec_fn=exec_fn,
         sandbox_id=sandbox_id,
+        op=op,
         raw_payload=raw_payload,
         cwd=cwd,
         timeout=timeout,
@@ -99,7 +120,7 @@ async def _call_daemon(
     try:
         response = _decode_response(getattr(result, "stdout", ""))
     except _DaemonDispatchError:
-        if getattr(result, "exit_code", 1) != 0:
+        if _exit_code(result) != 0:
             _raise_exec_failed(result)
         raise
     if "error" in response:
@@ -109,7 +130,7 @@ async def _call_daemon(
             message=str(error.get("message") or ""),
             details=error.get("details") if isinstance(error.get("details"), dict) else {},
         )
-    if getattr(result, "exit_code", 1) != 0:
+    if _exit_code(result) != 0:
         _raise_exec_failed(result)
     return response
 
@@ -140,6 +161,7 @@ async def _exec_daemon_call(
     *,
     exec_fn: _DaemonExec,
     sandbox_id: str,
+    op: str,
     raw_payload: str,
     cwd: str,
     timeout: int | None,
@@ -150,14 +172,14 @@ async def _exec_daemon_call(
         cwd=cwd,
         timeout=timeout,
     )
-    if _looks_like_socket_missing(result):
+    if _should_retry_after_connect_failure(result, op):
         spawn_result = await exec_fn(
             sandbox_id,
             _daemon_spawn_command(),
             cwd=cwd,
             timeout=10,
         )
-        if getattr(spawn_result, "exit_code", 1) != 0:
+        if _exit_code(spawn_result) != 0:
             return spawn_result
         await _check_daemon_readiness_after_spawn(
             exec_fn=exec_fn,
@@ -174,23 +196,10 @@ async def _exec_daemon_call(
     return result
 
 
-def _looks_like_socket_missing(result: Any) -> bool:
-    """Detect a thin-client failure caused by a missing daemon socket.
-
-    The thin client raises ``ConnectionRefusedError`` / ``FileNotFoundError``
-    when the daemon hasn't bound the socket yet. Both surface as a non-zero
-    exit code with the exception text on stderr.
-    """
-    if getattr(result, "exit_code", 0) == 0:
-        return False
-    blob = (getattr(result, "stderr", "") or getattr(result, "stdout", "") or "").lower()
-    needles = (
-        "connectionrefusederror",
-        "filenotfounderror",
-        "no such file or directory",
-        "connection refused",
-    )
-    return any(needle in blob for needle in needles)
+def _should_retry_after_connect_failure(result: Any, op: str) -> bool:
+    """Retry only when the thin client failed before sending the envelope."""
+    del op
+    return _exit_code(result) == _THIN_CLIENT_CONNECT_FAILED
 
 
 async def _check_daemon_readiness_after_spawn(
@@ -209,11 +218,11 @@ async def _check_daemon_readiness_after_spawn(
         cwd=cwd,
         timeout=30,
     )
-    if getattr(result, "exit_code", 1) != 0:
+    if _exit_code(result) != 0:
         raise _DaemonReadinessError(
             kind="RuntimeReadinessFailed",
             message=str(getattr(result, "stderr", "") or getattr(result, "stdout", "")),
-            details={"exit_code": getattr(result, "exit_code", 1)},
+            details={"exit_code": _exit_code(result), "original_op": original_op},
         )
     try:
         response = _decode_response(getattr(result, "stdout", ""))
@@ -221,14 +230,21 @@ async def _check_daemon_readiness_after_spawn(
         raise _DaemonReadinessError(
             kind="BadRuntimeReadinessResponse",
             message=exc.message,
-            details=exc.details,
+            details={**exc.details, "original_op": original_op},
         ) from exc
     if "error" in response:
         error = response.get("error") or {}
         raise _DaemonReadinessError(
             kind=str(error.get("kind") or "RuntimeReadinessFailed"),
             message=str(error.get("message") or ""),
-            details=error.get("details") if isinstance(error.get("details"), dict) else {},
+            details={
+                **(
+                    error.get("details")
+                    if isinstance(error.get("details"), dict)
+                    else {}
+                ),
+                "original_op": original_op,
+            },
         )
     if response.get("ready") is not True and not _is_bootstrap_ready_response(
         original_op,
@@ -237,7 +253,7 @@ async def _check_daemon_readiness_after_spawn(
         raise _DaemonReadinessError(
             kind="RuntimeNotReady",
             message="daemon readiness check failed",
-            details={"response": response},
+            details={"response": response, "original_op": original_op},
         )
 
 
@@ -398,12 +414,30 @@ def _decode_response(stdout: str) -> dict[str, Any]:
 
 
 def _raise_exec_failed(result: Any) -> None:
-    exit_code = getattr(result, "exit_code", 1)
+    exit_code = _exit_code(result)
     raise _DaemonDispatchError(
         kind="RuntimeExecFailed",
         message=str(getattr(result, "stderr", "") or getattr(result, "stdout", "")),
         details={"exit_code": exit_code},
     )
+
+
+def _exit_code(result: Any) -> int:
+    raw = getattr(result, "exit_code", None)
+    if raw is None:
+        raise _DaemonDispatchError(
+            kind="BadExecResult",
+            message="provider exec result is missing exit_code",
+            details={"result_type": type(result).__name__},
+        )
+    try:
+        return int(raw)
+    except (TypeError, ValueError) as exc:
+        raise _DaemonDispatchError(
+            kind="BadExecResult",
+            message=f"provider exec result has invalid exit_code: {raw!r}",
+            details={"result_type": type(result).__name__},
+        ) from exc
 
 
 __all__: list[str] = []

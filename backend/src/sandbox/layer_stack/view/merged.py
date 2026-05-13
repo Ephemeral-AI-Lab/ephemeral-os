@@ -25,6 +25,10 @@ __all__ = ["LayerStackStorageError", "MergedView", "OPAQUE_MARKER", "WHITEOUT_PR
 class LayerStackStorageError(RuntimeError):
     """Raised when a manifest references missing or invalid layer storage."""
 
+    def __init__(self, message: str, *, layer_id: str | None = None) -> None:
+        super().__init__(message)
+        self.layer_id = layer_id
+
 
 class MergedView:
     """Reads paths through a frozen manifest without mutating layer state."""
@@ -57,10 +61,14 @@ class MergedView:
             if rel in index.files:
                 layer_dir = self._layer_dir(layer)
                 candidate = join_layer_path(layer_dir, rel)
-                if candidate.is_symlink():
-                    return os.readlink(candidate).encode("utf-8"), True
-                if candidate.is_file():
-                    return candidate.read_bytes(), True
+                try:
+                    if candidate.is_symlink():
+                        return os.readlink(candidate).encode("utf-8"), True
+                    if candidate.is_file():
+                        return candidate.read_bytes(), True
+                except OSError as exc:
+                    raise _stale_layer_error(layer, rel) from exc
+                raise _stale_layer_error(layer, rel)
             if has_ancestor_in(rel, index.files):
                 return None, False
             if has_ancestor_in(rel, index.opaque_dirs):
@@ -84,12 +92,17 @@ class MergedView:
             if rel in index.files:
                 layer_dir = self._layer_dir(layer)
                 candidate = join_layer_path(layer_dir, rel)
-                if candidate.is_symlink():
-                    return os.readlink(candidate), True
-                # rel resolves to a regular file (not a symlink) in this
-                # layer — same answer as the old `candidate.exists()`
-                # branch: the path exists but is not a symlink.
-                return "", False
+                try:
+                    if candidate.is_symlink():
+                        return os.readlink(candidate), True
+                    if candidate.exists():
+                        # rel resolves to a regular file (not a symlink) in
+                        # this layer — same answer as the old
+                        # `candidate.exists()` branch.
+                        return "", False
+                except OSError as exc:
+                    raise _stale_layer_error(layer, rel) from exc
+                raise _stale_layer_error(layer, rel)
             if has_ancestor_in(rel, index.files):
                 return "", False
             if has_ancestor_in(rel, index.opaque_dirs):
@@ -194,7 +207,8 @@ class MergedView:
             layer_path = self._storage_root / layer_path
         if not layer_path.is_dir():
             raise LayerStackStorageError(
-                f"manifest references missing layer {layer.layer_id}: {layer.path}"
+                f"manifest references missing layer {layer.layer_id}: {layer.path}",
+                layer_id=layer.layer_id,
             )
         return layer_path
 
@@ -261,6 +275,13 @@ def _direct_child_segment(name: str, prefix: str) -> str | None:
 
 def _is_whiteout(name: str) -> bool:
     return name.startswith(WHITEOUT_PREFIX) and name != OPAQUE_MARKER
+
+
+def _stale_layer_error(layer: LayerRef, rel: str) -> LayerStackStorageError:
+    return LayerStackStorageError(
+        f"layer no longer present while reading {rel}: {layer.layer_id}",
+        layer_id=layer.layer_id,
+    )
 
 
 def _clear_directory(path: Path) -> None:

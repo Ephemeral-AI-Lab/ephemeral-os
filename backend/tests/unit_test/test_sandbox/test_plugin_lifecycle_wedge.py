@@ -100,6 +100,9 @@ def test_plugin_ensure_recovers_from_transient_warm_failure(
         "BL-01: _LOADED was written before warm completed; registry is wedged"
     )
     assert "wedge_demo" not in handler_mod._LOADED_DIGEST
+    assert "plugins.catalog.wedge_demo.runtime.server" not in sys.modules
+
+    _inject_runtime("wedge_demo", "hover")
 
     # Second call must take the full ensure path (not "already loaded") and
     # succeed because warm now returns normally.

@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-import time
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
-from typing import Any
-from typing import Protocol
+from typing import Any, Protocol
 
-from sandbox.layer_stack.manifest import Manifest
 from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.manifest import Manifest
 from sandbox.overlay.capture.types import OverlayCapture
+from sandbox.timing import monotonic_now
 
 
 @dataclass(frozen=True)
@@ -105,24 +104,24 @@ class SnapshotOverlayRunner:
         self._invoker = invoker
 
     async def shell(self, request: OverlayShellRequest) -> OverlayCapture:
-        total_start = time.perf_counter()
-        lease_start = time.perf_counter()
+        total_start = monotonic_now()
+        lease_start = monotonic_now()
         lease = self._layer_stack.acquire_snapshot_lease(request.request_id)
         timings = {
-            "overlay.lease_acquire_s": time.perf_counter() - lease_start,
+            "overlay.lease_acquire_s": monotonic_now() - lease_start,
         }
+        invoke_start = monotonic_now()
         try:
-            invoke_start = time.perf_counter()
             capture = await self._invoker.invoke(
                 request=request,
                 manifest=lease.manifest,
             )
         finally:
-            timings["overlay.invoke_total_s"] = time.perf_counter() - invoke_start
-            release_start = time.perf_counter()
+            timings["overlay.invoke_total_s"] = monotonic_now() - invoke_start
+            release_start = monotonic_now()
             self._layer_stack.release_lease(lease.lease_id)
-            timings["overlay.lease_release_s"] = time.perf_counter() - release_start
-            timings["overlay.runner_total_s"] = time.perf_counter() - total_start
+            timings["overlay.lease_release_s"] = monotonic_now() - release_start
+            timings["overlay.runner_total_s"] = monotonic_now() - total_start
         return replace(capture, timings={**capture.timings, **timings})
 
     @property
@@ -134,21 +133,21 @@ class SnapshotOverlayRunner:
         if not callable(invoke_sync):
             raise RuntimeError("overlay runner invoker does not support sync shell")
 
-        total_start = time.perf_counter()
-        lease_start = time.perf_counter()
+        total_start = monotonic_now()
+        lease_start = monotonic_now()
         lease = self._layer_stack.acquire_snapshot_lease(request.request_id)
         timings = {
-            "overlay.lease_acquire_s": time.perf_counter() - lease_start,
+            "overlay.lease_acquire_s": monotonic_now() - lease_start,
         }
+        invoke_start = monotonic_now()
         try:
-            invoke_start = time.perf_counter()
             capture = invoke_sync(request=request, manifest=lease.manifest)
         finally:
-            timings["overlay.invoke_total_s"] = time.perf_counter() - invoke_start
-            release_start = time.perf_counter()
+            timings["overlay.invoke_total_s"] = monotonic_now() - invoke_start
+            release_start = monotonic_now()
             self._layer_stack.release_lease(lease.lease_id)
-            timings["overlay.lease_release_s"] = time.perf_counter() - release_start
-            timings["overlay.runner_total_s"] = time.perf_counter() - total_start
+            timings["overlay.lease_release_s"] = monotonic_now() - release_start
+            timings["overlay.runner_total_s"] = monotonic_now() - total_start
         return replace(capture, timings={**capture.timings, **timings})
 
 

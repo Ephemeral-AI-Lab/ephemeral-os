@@ -25,16 +25,16 @@ class DaytonaContextPreparer:
         self._sandbox_loop_id: int | None = None
 
     def _get_sandbox(self) -> Any:
-        """Fetch the sync sandbox once and cache it."""
-        if self._sandbox is not None:
-            return self._sandbox
+        """Fetch the sync sandbox for the current preparation call."""
         if not self.sandbox_id:
             raise RuntimeError("No sandbox_id configured for tool context.")
         from sandbox.provider.daytona.client.sync_client import fetch_sandbox as get_sandbox
 
-        self._sandbox = get_sandbox(self.sandbox_id)
+        sandbox = get_sandbox(self.sandbox_id)
+        self._sandbox = sandbox
+        self._sandbox_loop_id = None
         logger.debug("Sandbox fetched: %s", self.sandbox_id)
-        return self._sandbox
+        return sandbox
 
     async def _get_sandbox_async(self) -> Any:
         """Fetch the async sandbox once per event loop."""

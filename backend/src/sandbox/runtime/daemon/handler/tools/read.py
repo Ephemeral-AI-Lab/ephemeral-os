@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import time
 from pathlib import Path
 from uuid import uuid4
 
@@ -16,11 +15,12 @@ from sandbox.runtime.daemon.handler.request_context import (
     _services,
     classify_path,
 )
+from sandbox.timing import monotonic_now
 
 
 async def read_file(args: dict[str, object]) -> dict[str, object]:
     """Single-path read_file dispatch with in/out-of-workspace classification."""
-    total_start = time.perf_counter()
+    total_start = monotonic_now()
     layer_stack_root = _layer_stack_root(args)
     binding = require_workspace_binding(layer_stack_root)
     raw_path = _required_single_path(args)
@@ -51,13 +51,13 @@ def _read_in_workspace(
             f"layer-stack root does not exist: {layer_stack_root}"
         )
     request_id = uuid4().hex
-    lease_start = time.perf_counter()
+    lease_start = monotonic_now()
     lease = services.manager.acquire_snapshot_lease(request_id)
-    lease_acquired_s = time.perf_counter() - lease_start
+    lease_acquired_s = monotonic_now() - lease_start
     try:
-        read_start = time.perf_counter()
+        read_start = monotonic_now()
         content, exists = services.layer_stack.read_text(layer_path, lease.manifest)
-        read_elapsed = time.perf_counter() - read_start
+        read_elapsed = monotonic_now() - read_start
     finally:
         services.manager.release_lease(lease.lease_id)
     return {
@@ -68,7 +68,7 @@ def _read_in_workspace(
         "timings": {
             "api.read.lease_acquire_s": lease_acquired_s,
             "api.read.layer_stack_read_s": read_elapsed,
-            "api.read.total_s": time.perf_counter() - total_start,
+            "api.read.total_s": monotonic_now() - total_start,
         },
     }
 
@@ -86,7 +86,7 @@ def _read_out_of_workspace(
             "content": "",
             "encoding": "utf-8",
             "timings": {
-                "api.read.total_s": time.perf_counter() - total_start,
+                "api.read.total_s": monotonic_now() - total_start,
             },
         }
     # WR-01: cap out-of-workspace reads. Reading /var/log/syslog or
@@ -102,9 +102,9 @@ def _read_out_of_workspace(
         raise ValueError(
             f"file too large: {size} > {_MAX_OUT_OF_WORKSPACE_READ_BYTES} bytes"
         )
-    read_start = time.perf_counter()
+    read_start = monotonic_now()
     content = target.read_text(encoding="utf-8")
-    read_elapsed = time.perf_counter() - read_start
+    read_elapsed = monotonic_now() - read_start
     return {
         "success": True,
         "exists": True,
@@ -112,7 +112,7 @@ def _read_out_of_workspace(
         "encoding": "utf-8",
         "timings": {
             "api.read.host_fs_read_s": read_elapsed,
-            "api.read.total_s": time.perf_counter() - total_start,
+            "api.read.total_s": monotonic_now() - total_start,
         },
     }
 

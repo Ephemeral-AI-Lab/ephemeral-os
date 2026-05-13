@@ -2,15 +2,10 @@
 
 from __future__ import annotations
 
-import time
 from collections.abc import Mapping
 
 from audit.base import AuditSink
-from sandbox.audit.operation import (
-    publish_operation_failed,
-    publish_operation_result,
-    publish_operation_started,
-)
+
 from sandbox.api.tool._payload import (
     caller_envelope,
     conflict_from_payload,
@@ -18,8 +13,14 @@ from sandbox.api.tool._payload import (
     paths_from_payload,
     timings_from_payload,
 )
-from sandbox.models import ConflictInfo, ShellRequest, ShellResult
+from sandbox.audit.operation import (
+    publish_operation_failed,
+    publish_operation_result,
+    publish_operation_started,
+)
 from sandbox.host.daemon_client import call_daemon_api
+from sandbox.models import ConflictInfo, ShellRequest, ShellResult
+from sandbox.timing import monotonic_now
 
 
 async def shell(
@@ -29,7 +30,7 @@ async def shell(
     audit_sink: AuditSink | None = None,
 ) -> ShellResult:
     """Run a shell command through sandbox-local overlay and OCC."""
-    total_start = time.perf_counter()
+    total_start = monotonic_now()
     publish_operation_started(
         audit_sink,
         sandbox_id=sandbox_id,
@@ -41,7 +42,7 @@ async def shell(
         result = _error_result(
             reason="stdin_not_supported",
             message="snapshot overlay shell does not accept stdin",
-            timings={"api.shell.total_s": time.perf_counter() - total_start},
+            timings={"api.shell.total_s": monotonic_now() - total_start},
         )
         publish_operation_result(
             audit_sink,
@@ -67,7 +68,7 @@ async def shell(
             timeout=(60 if request.timeout is None else request.timeout) + 30,
         )
         timings = timings_from_payload(raw.get("timings"))
-        timings["api.shell.dispatch_total_s"] = time.perf_counter() - total_start
+        timings["api.shell.dispatch_total_s"] = monotonic_now() - total_start
         result = _result_from_payload(raw, timings=timings)
     except Exception as exc:
         publish_operation_failed(
@@ -134,9 +135,9 @@ def _error_result(
 
 
 def _overlay_cwd(cwd: str | None) -> str:
-    if cwd is None or not str(cwd).strip():
+    if cwd is None or not cwd.strip():
         return "."
-    return str(cwd)
+    return cwd
 
 
 __all__ = ["shell"]

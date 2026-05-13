@@ -5,12 +5,10 @@ from __future__ import annotations
 import hashlib
 import os
 import shutil
-import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, TypeAlias
 
-from sandbox.layer_stack.timing import record_elapsed
 from sandbox.layer_stack.manifest import (
     LAYERS_DIR,
     STAGING_DIR,
@@ -27,7 +25,8 @@ from sandbox.layer_stack.workspace.binding import (
     validate_workspace_binding_paths,
     write_workspace_binding_atomic,
 )
-
+from sandbox.timing import monotonic_now
+from sandbox.timing import record_elapsed
 
 WORKSPACE_BASE_LAYER_ID = "L000001-base"
 
@@ -103,12 +102,12 @@ def build_workspace_base(
 
     if reset:
         shutil.rmtree(stack, ignore_errors=True)
-    prepare_start = time.perf_counter()
+    prepare_start = monotonic_now()
     _prepare_empty_stack(stack)
     _reject_existing_base_state(stack)
     record_elapsed(timings, "workspace_base.prepare_stack_s", prepare_start)
 
-    collect_start = time.perf_counter()
+    collect_start = monotonic_now()
     entries, root_hash = _collect_base_entries(workspace)
     record_elapsed(timings, "workspace_base.collect_s", collect_start)
     if timings is not None:
@@ -120,7 +119,7 @@ def build_workspace_base(
         timings["workspace_base.inventory.dirs"] = float(dirs)
         timings["workspace_base.inventory.symlinks"] = float(symlinks)
         timings["workspace_base.inventory.bytes"] = float(bytes_total)
-    write_layer_start = time.perf_counter()
+    write_layer_start = monotonic_now()
     layer_ref = _write_base_layer(stack, entries, root_hash=root_hash)
     _write_base_digest_sidecar(stack, layer_ref.layer_id, root_hash)
     record_elapsed(
@@ -128,7 +127,7 @@ def build_workspace_base(
         "workspace_base.write_layer_s",
         write_layer_start,
     )
-    rescan_start = time.perf_counter()
+    rescan_start = monotonic_now()
     try:
         _assert_workspace_quiescent(
             workspace=workspace,
@@ -140,7 +139,7 @@ def build_workspace_base(
         raise
     record_elapsed(timings, "workspace_base.rescan_s", rescan_start)
     manifest = Manifest(version=1, layers=(layer_ref,))
-    write_manifest_start = time.perf_counter()
+    write_manifest_start = monotonic_now()
     write_manifest_atomic(manifest_path(stack), manifest)
     record_elapsed(
         timings,
@@ -155,7 +154,7 @@ def build_workspace_base(
         base_manifest_version=manifest.version,
         base_root_hash=root_hash,
     )
-    write_binding_start = time.perf_counter()
+    write_binding_start = monotonic_now()
     write_workspace_binding_atomic(binding)
     record_elapsed(
         timings,

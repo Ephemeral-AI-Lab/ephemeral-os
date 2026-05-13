@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import threading
-import time
 from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 from typing import cast
@@ -13,12 +12,12 @@ from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
 from sandbox.occ.changeset.types import Change, ChangesetResult
 from sandbox.occ.commit_transaction import OccCommitTransaction
 from sandbox.occ.content.gitignore_oracle import GitignoreMatcher
-from sandbox.occ.routing.orchestrator import OccOrchestrator
-from sandbox.occ.ports import OccLayerStackPorts
-from sandbox.occ.routing.runtime_ops import infer_manifest_base_hash
 from sandbox.occ.merge.serial import OccSerialMerger
+from sandbox.occ.ports import OccLayerStackPorts
+from sandbox.occ.routing.orchestrator import OccOrchestrator
+from sandbox.occ.routing.runtime_ops import infer_manifest_base_hash
 from sandbox.runtime.async_bridge import run_sync_in_executor
-
+from sandbox.timing import monotonic_now
 
 AUTO_SQUASH_MAX_DEPTH = 32
 
@@ -58,7 +57,7 @@ class OccService:
         options: CommitOptions | None = None,
     ) -> ChangesetResult:
         """Prepare a changeset and commit it through the layer stack."""
-        total_start = time.perf_counter()
+        total_start = monotonic_now()
         prepared = await self.prepare_changeset(
             changes,
             snapshot=snapshot,
@@ -81,10 +80,10 @@ class OccService:
         longer matches receive a normal OCC rejection. Callers may therefore
         run :meth:`prepare_changeset` lock-free and only serialize this call.
         """
-        total_start = _total_start if _total_start is not None else time.perf_counter()
-        commit_start = time.perf_counter()
+        total_start = _total_start if _total_start is not None else monotonic_now()
+        commit_start = monotonic_now()
         result = await self._serial_merger.apply(prepared)
-        commit_elapsed = time.perf_counter() - commit_start
+        commit_elapsed = monotonic_now() - commit_start
         auto_squash_timings = await self._auto_squash_after_publish(result)
         return self._wrap_commit_result(
             result,
@@ -102,7 +101,7 @@ class OccService:
         snapshot: Manifest | None = None,
         options: CommitOptions | None = None,
     ) -> ChangesetResult:
-        total_start = time.perf_counter()
+        total_start = monotonic_now()
         prepared = self.prepare_changeset_sync(
             changes,
             snapshot=snapshot,
@@ -117,10 +116,10 @@ class OccService:
         _total_start: float | None = None,
     ) -> ChangesetResult:
         """Synchronous twin of :meth:`commit_prepared`."""
-        total_start = _total_start if _total_start is not None else time.perf_counter()
-        commit_start = time.perf_counter()
+        total_start = _total_start if _total_start is not None else monotonic_now()
+        commit_start = monotonic_now()
         result = self._serial_merger.apply_sync(prepared)
-        commit_elapsed = time.perf_counter() - commit_start
+        commit_elapsed = monotonic_now() - commit_start
         auto_squash_timings = self._auto_squash_after_publish_sync(result)
         return self._wrap_commit_result(
             result,
@@ -164,34 +163,13 @@ class OccService:
         if not state.lock.acquire(blocking=False):
             with state.state_lock:
                 state.pending_recheck = True
-            timings = {
+            return {
                 "layer_stack.auto_squash.skipped_in_flight": 1.0,
                 "layer_stack.auto_squash.max_depth": float(
                     self._auto_squash_max_depth
                 ),
                 "layer_stack.auto_squash.depth_before": float(active.depth),
             }
-            if active.depth <= self._auto_squash_max_depth * 2:
-                return timings
-
-            wait_start = time.perf_counter()
-            state.lock.acquire()
-            timings["layer_stack.auto_squash.backpressure_wait_s"] = (
-                time.perf_counter() - wait_start
-            )
-            try:
-                context = self._auto_squash_context_sync(result)
-                if context is None:
-                    return timings
-                squash, active = context
-                if active.depth <= self._auto_squash_max_depth:
-                    return timings
-                return _merge_auto_squash_timings(
-                    timings,
-                    self._run_squash_for_active_sync(squash, active),
-                )
-            finally:
-                state.lock.release()
 
         try:
             timings = self._run_squash_for_active_sync(squash, active)
@@ -229,9 +207,9 @@ class OccService:
         squash,
         active: Manifest,
     ) -> dict[str, float]:
-        squash_start = time.perf_counter()
+        squash_start = monotonic_now()
         squashed = squash(max_depth=self._auto_squash_max_depth)
-        elapsed = time.perf_counter() - squash_start
+        elapsed = monotonic_now() - squash_start
         timings = {
             "layer_stack.auto_squash.total_s": elapsed,
             "layer_stack.auto_squash.max_depth": float(
@@ -270,7 +248,7 @@ class OccService:
             ),
             "occ.apply.commit_resume_wait_s": 0.0 if sync_call else resume_wait,
             "occ.apply.commit_s": commit_elapsed,
-            "occ.apply.total_s": time.perf_counter() - total_start,
+            "occ.apply.total_s": monotonic_now() - total_start,
         }
         manifest_lag = _manifest_lag(prepared.snapshot, result.published_manifest_version)
         if manifest_lag is not None:
@@ -307,15 +285,15 @@ class OccService:
         options: CommitOptions | None = None,
     ) -> PreparedChangeset:
         """Route changes and infer leased-snapshot base hashes synchronously."""
-        total_start = time.perf_counter()
+        total_start = monotonic_now()
         timings: dict[str, float] = {}
         commit_options = options or CommitOptions()
         effective_snapshot = snapshot
         if effective_snapshot is None:
-            snapshot_start = time.perf_counter()
+            snapshot_start = monotonic_now()
             effective_snapshot = self._layer_stack.read_active_manifest()
             timings["occ.prepare.current_snapshot_s"] = (
-                time.perf_counter() - snapshot_start
+                monotonic_now() - snapshot_start
             )
         assert effective_snapshot is not None
         layer_stack = self._layer_stack
@@ -327,7 +305,7 @@ class OccService:
                 path=path,
             )
 
-        prepare_start = time.perf_counter()
+        prepare_start = monotonic_now()
         prepared = self._orchestrator.prepare_sync(
             changes,
             snapshot=effective_snapshot,
@@ -335,9 +313,9 @@ class OccService:
             base_hash_reader=base_hash_reader,
         )
         timings["occ.prepare.route_and_base_hash_s"] = (
-            time.perf_counter() - prepare_start
+            monotonic_now() - prepare_start
         )
-        timings["occ.prepare.total_s"] = time.perf_counter() - total_start
+        timings["occ.prepare.total_s"] = monotonic_now() - total_start
         return replace(prepared, timings={**prepared.timings, **timings})
 
 
@@ -355,7 +333,7 @@ def _result_timings_with_resume(result: ChangesetResult) -> tuple[dict[str, floa
     ready_at = timings.pop("_occ.serial.result_ready_at_s", None)
     if ready_at is None:
         return timings, 0.0
-    return timings, max(0.0, time.perf_counter() - ready_at)
+    return timings, max(0.0, monotonic_now() - ready_at)
 
 
 def _merge_auto_squash_timings(

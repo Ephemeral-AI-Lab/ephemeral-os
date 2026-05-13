@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import time
 from collections.abc import Callable
 
 from sandbox.layer_stack.layer.change import LayerChange, LayerDelta
@@ -17,6 +16,7 @@ from sandbox.occ.changeset.types import (
 )
 from sandbox.occ.content.hashing import ContentHasher
 from sandbox.occ.ports import SnapshotReader
+from sandbox.timing import monotonic_now
 
 StageWrite = Callable[[str, bytes], LayerChange]
 StageWriteFromPath = Callable[[str, str, str, bytes | None], LayerChange]
@@ -67,12 +67,12 @@ class GatedMerge:
         stage_write_from_path: StageWriteFromPath | None,
     ) -> tuple[FileResult, LayerDelta | None]:
         timings: dict[str, float] = {}
-        read_start = time.perf_counter()
+        read_start = monotonic_now()
         current_content, current_exists = self._snapshot_reader.read_bytes(
             group.path,
             active_manifest,
         )
-        timings["occ.gated.read_current_s"] = time.perf_counter() - read_start
+        timings["occ.gated.read_current_s"] = monotonic_now() - read_start
         initial_exists = current_exists
         content = current_content or b""
         exists = current_exists
@@ -83,14 +83,14 @@ class GatedMerge:
         final_content_path: str | None = None
         final_precomputed_hash: str | None = None
 
-        apply_start = time.perf_counter()
+        apply_start = monotonic_now()
         for change in group.changes:
             current_hash = self._hasher.hash_current(content, exists=exists)
             if isinstance(change, WriteChange):
                 expected_hash = _base_hash(change.base_hash)
                 if current_hash != expected_hash:
                     timings["occ.gated.apply_changes_s"] = (
-                        time.perf_counter() - apply_start
+                        monotonic_now() - apply_start
                     )
                     return (
                         FileResult(
@@ -114,7 +114,7 @@ class GatedMerge:
                 expected_hash = _base_hash(change.base_hash)
                 if current_hash != expected_hash:
                     timings["occ.gated.apply_changes_s"] = (
-                        time.perf_counter() - apply_start
+                        monotonic_now() - apply_start
                     )
                     return (
                         FileResult(
@@ -140,7 +140,7 @@ class GatedMerge:
                 )
                 if isinstance(edit_result, FileResult):
                     timings["occ.gated.apply_changes_s"] = (
-                        time.perf_counter() - apply_start
+                        monotonic_now() - apply_start
                     )
                     return _with_timings(edit_result, timings), None
                 content = edit_result
@@ -151,7 +151,7 @@ class GatedMerge:
                 final_precomputed_hash = None
                 continue
 
-            timings["occ.gated.apply_changes_s"] = time.perf_counter() - apply_start
+            timings["occ.gated.apply_changes_s"] = monotonic_now() - apply_start
             return (
                 FileResult(
                     path=group.path,
@@ -162,8 +162,8 @@ class GatedMerge:
                 None,
             )
 
-        timings["occ.gated.apply_changes_s"] = time.perf_counter() - apply_start
-        stage_start = time.perf_counter()
+        timings["occ.gated.apply_changes_s"] = monotonic_now() - apply_start
+        stage_start = monotonic_now()
         delta = _delta_for_final_state(
             path=group.path,
             content=content,
@@ -174,7 +174,7 @@ class GatedMerge:
             content_path=final_content_path,
             precomputed_hash=final_precomputed_hash,
         )
-        timings["occ.gated.stage_delta_s"] = time.perf_counter() - stage_start
+        timings["occ.gated.stage_delta_s"] = monotonic_now() - stage_start
         return (
             FileResult(
                 path=group.path,

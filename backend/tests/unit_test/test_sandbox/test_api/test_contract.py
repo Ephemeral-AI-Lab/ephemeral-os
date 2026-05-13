@@ -57,11 +57,13 @@ _PUBLIC_VERB_IMPORT_ALLOWLIST = {
         "sandbox.audit.operation",
         "sandbox.api.tool._payload",
         "sandbox.models",
+        "sandbox.timing",
         "sandbox.host.daemon_client",
     },
     "status.py": {
         "sandbox.host.recovery",
         "sandbox.host.setup",
+        "sandbox.plugin",
         "sandbox.provider.registry",
     },
 }

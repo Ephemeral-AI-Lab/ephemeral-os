@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import time
 from collections.abc import Mapping, Sequence
-from pathlib import Path
 from uuid import uuid4
 
 from sandbox.layer_stack.workspace.binding import require_workspace_binding
@@ -18,12 +16,15 @@ from sandbox.runtime.daemon.handler.request_context import (
     _required_single_path,
     _services,
     classify_path,
+    read_bytes_no_follow,
+    write_text_no_follow,
 )
+from sandbox.timing import monotonic_now
 
 
 async def edit_file(args: dict[str, object]) -> dict[str, object]:
     """Single-path edit_file dispatch with in/out-of-workspace classification."""
-    total_start = time.perf_counter()
+    total_start = monotonic_now()
     # Validate edits payload before binding/classification so structural
     # errors (negative expected_occurrences, malformed entries) surface as
     # the most-specific error rather than being masked by the
@@ -72,17 +73,17 @@ async def _edit_in_workspace(
 ) -> dict[str, object]:
     services = _services(layer_stack_root)
     request_id = uuid4().hex
-    lease_start = time.perf_counter()
+    lease_start = monotonic_now()
     lease = await run_sync_in_executor(
         services.manager.acquire_snapshot_lease, request_id
     )
-    lease_acquired_s = time.perf_counter() - lease_start
+    lease_acquired_s = monotonic_now() - lease_start
     try:
-        read_start = time.perf_counter()
+        read_start = monotonic_now()
         bytes_, exists = await run_sync_in_executor(
             services.layer_stack.read_bytes, layer_path, lease.manifest
         )
-        read_elapsed = time.perf_counter() - read_start
+        read_elapsed = monotonic_now() - read_start
         if not exists or bytes_ is None:
             raise FileNotFoundError(f"file not found in workspace: {layer_path}")
         try:
@@ -92,13 +93,13 @@ async def _edit_in_workspace(
                 f"file is not valid UTF-8 text: {layer_path}"
             ) from exc
 
-        derive_start = time.perf_counter()
+        derive_start = monotonic_now()
         # Anchor-miss / count-mismatch / non-utf8 must surface as a hard
         # ValueError rather than a silent "conflict" payload — silent
         # acceptance was the BL-01 contract violation in DirectMerge and the
         # runtime handler must not undo that loudness at the API boundary.
         final_text = _apply_edits(text, edits, path=layer_path)
-        derive_elapsed = time.perf_counter() - derive_start
+        derive_elapsed = monotonic_now() - derive_start
 
         change = build_api_write_change(
             path=layer_path,
@@ -112,12 +113,12 @@ async def _edit_in_workspace(
             gitignore=services.gitignore,
             atomic=False,
         )
-        apply_start = time.perf_counter()
+        apply_start = monotonic_now()
         result = await services.occ_client.commit_prepared_changeset(
             prepared,
             workspace_ref=layer_stack_root,
         )
-        apply_elapsed = time.perf_counter() - apply_start
+        apply_elapsed = monotonic_now() - apply_start
     finally:
         await run_sync_in_executor(services.manager.release_lease, lease.lease_id)
 
@@ -144,24 +145,21 @@ def _edit_out_of_workspace(
     edits: Sequence[tuple[str, str, int]],
     total_start: float,
 ) -> dict[str, object]:
-    target = Path(abs_path)
-    if not target.exists():
-        raise FileNotFoundError(f"file not found: {abs_path}")
-    read_start = time.perf_counter()
-    raw = target.read_bytes()
-    read_elapsed = time.perf_counter() - read_start
+    read_start = monotonic_now()
+    raw = read_bytes_no_follow(abs_path)
+    read_elapsed = monotonic_now() - read_start
     try:
         text = raw.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise ValueError(f"file is not valid UTF-8 text: {abs_path}") from exc
-    derive_start = time.perf_counter()
+    derive_start = monotonic_now()
     # Out-of-workspace edits return a structured conflict payload on
     # anchor-miss (preserves existing API contract). The in-workspace path
     # raises loud per the Theme 4 OCC realignment.
     try:
         final_text = _apply_edits(text, edits, path=abs_path)
     except ValueError as exc:
-        derive_elapsed = time.perf_counter() - derive_start
+        derive_elapsed = monotonic_now() - derive_start
         return _edit_conflict_payload(
             path=abs_path,
             message=str(exc),
@@ -171,10 +169,10 @@ def _edit_out_of_workspace(
                 "api.edit.derive_bytes_s": derive_elapsed,
             },
         )
-    derive_elapsed = time.perf_counter() - derive_start
-    write_start = time.perf_counter()
-    target.write_text(final_text, encoding="utf-8")
-    write_elapsed = time.perf_counter() - write_start
+    derive_elapsed = monotonic_now() - derive_start
+    write_start = monotonic_now()
+    write_text_no_follow(abs_path, final_text)
+    write_elapsed = monotonic_now() - write_start
     return {
         "success": True,
         "changed_paths": [abs_path],
@@ -186,7 +184,7 @@ def _edit_out_of_workspace(
             "api.edit.host_fs_read_s": read_elapsed,
             "api.edit.derive_bytes_s": derive_elapsed,
             "api.edit.host_fs_write_s": write_elapsed,
-            "api.edit.total_s": time.perf_counter() - total_start,
+            "api.edit.total_s": monotonic_now() - total_start,
         },
     }
 
@@ -211,7 +209,7 @@ def _edit_conflict_payload(
         "conflict_reason": message,
         "timings": {
             **timings_extra,
-            "api.edit.total_s": time.perf_counter() - total_start,
+            "api.edit.total_s": monotonic_now() - total_start,
         },
     }
 

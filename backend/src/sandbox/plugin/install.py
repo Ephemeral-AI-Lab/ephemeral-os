@@ -19,8 +19,10 @@ import gzip
 import hashlib
 import io
 import logging
+import re
 import shlex
 import tarfile
+import uuid
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -33,6 +35,7 @@ __all__ = [
     "PLUGIN_BUNDLE_REMOTE_ROOT",
     "PluginInstallError",
     "ensure_installed",
+    "forget",
     "plugin_install_dir",
     "plugin_marker_path",
 ]
@@ -48,6 +51,7 @@ logger = logging.getLogger(__name__)
 PLUGIN_BUNDLE_REMOTE_ROOT = f"{BUNDLE_REMOTE_DIR}/plugins/catalog"
 
 _CHUNK_SIZE = 32 * 1024
+_PLUGIN_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 # 600s headroom for plugin setup scripts that download runtime binaries or
 # install small dependencies over the network while staying inside Daytona's
 # exec timeout.
@@ -70,15 +74,20 @@ class _RawExecCallable(Protocol):
 
 
 _locks: dict[tuple[str, str], asyncio.Lock] = {}
-_installed_marker_cache: dict[tuple[str, str], str] = {}
 
 
 def plugin_install_dir(plugin_name: str) -> str:
+    _validate_plugin_name(plugin_name)
     return f"{PLUGIN_BUNDLE_REMOTE_ROOT}/{plugin_name}"
 
 
 def plugin_marker_path(plugin_name: str, digest: str) -> str:
     return f"{plugin_install_dir(plugin_name)}/.installed-{digest}"
+
+
+def _validate_plugin_name(plugin_name: str) -> None:
+    if _PLUGIN_NAME_RE.fullmatch(plugin_name) is None:
+        raise PluginInstallError(f"invalid plugin name: {plugin_name!r}")
 
 
 async def ensure_installed(
@@ -94,10 +103,7 @@ async def ensure_installed(
     async with lock:
         executor = exec_fn or get_adapter(sandbox_id).exec
         digest = _bundle_hash(manifest)
-        if _installed_marker_cache.get(key) == digest:
-            return digest
         if await _marker_present(executor, sandbox_id, manifest.name, digest):
-            _installed_marker_cache[key] = digest
             return digest
         await _upload_and_run_setup(
             executor,
@@ -106,8 +112,14 @@ async def ensure_installed(
             digest=digest,
             setup_timeout=setup_timeout,
         )
-        _installed_marker_cache[key] = digest
         return digest
+
+
+def forget(sandbox_id: str) -> None:
+    """Drop process-local install locks for one sandbox id."""
+    sandbox_id = str(sandbox_id or "").strip()
+    for key in [key for key in _locks if key[0] == sandbox_id]:
+        _locks.pop(key, None)
 
 
 def _bundle_hash(manifest: PluginManifest) -> str:
@@ -200,21 +212,83 @@ async def _upload_and_run_setup(
 ) -> None:
     install_dir = plugin_install_dir(manifest.name)
     marker = plugin_marker_path(manifest.name, digest)
-    tar_path = f"{install_dir}/.bundle.tar.gz"
+    lock_dir = f"{install_dir}.lock"
+    staging_dir = f"{install_dir}.staging-{digest[:12]}-{uuid.uuid4().hex[:8]}"
+    tar_path = f"{staging_dir}/.bundle.tar.gz"
 
     bundle = _build_tar(manifest)
     encoded = base64.b64encode(bundle).decode("ascii")
 
+    acquire_lock = await exec_fn(
+        sandbox_id,
+        (
+            f"mkdir -p {shlex.quote(PLUGIN_BUNDLE_REMOTE_ROOT)} && "
+            "i=0; "
+            f"while ! mkdir {shlex.quote(lock_dir)} 2>/dev/null; do "
+            "i=$((i+1)); "
+            "if [ \"$i\" -ge 600 ]; then exit 75; fi; "
+            "sleep 1; "
+            "done"
+        ),
+        timeout=660,
+    )
+    _check(acquire_lock, f"plugin install: failed to acquire lock {lock_dir}")
+    try:
+        if await _marker_present(exec_fn, sandbox_id, manifest.name, digest):
+            return
+        await _upload_setup_finalize_and_mark(
+            exec_fn,
+            sandbox_id=sandbox_id,
+            manifest=manifest,
+            digest=digest,
+            setup_timeout=setup_timeout,
+            install_dir=install_dir,
+            staging_dir=staging_dir,
+            tar_path=tar_path,
+            marker=marker,
+            encoded=encoded,
+        )
+    finally:
+        cleanup = await exec_fn(
+            sandbox_id,
+            (
+                f"rm -rf {shlex.quote(lock_dir)} "
+                f"{shlex.quote(staging_dir)}"
+            ),
+            timeout=30,
+        )
+        if getattr(cleanup, "exit_code", 1) != 0:
+            logger.warning(
+                "plugin install: cleanup failed for %s on %s: %s",
+                manifest.name,
+                sandbox_id,
+                getattr(cleanup, "stderr", "") or getattr(cleanup, "stdout", ""),
+            )
+
+
+async def _upload_setup_finalize_and_mark(
+    exec_fn: _RawExecCallable,
+    *,
+    sandbox_id: str,
+    manifest: PluginManifest,
+    digest: str,
+    setup_timeout: int,
+    install_dir: str,
+    staging_dir: str,
+    tar_path: str,
+    marker: str,
+    encoded: str,
+) -> None:
     setup_dir = await exec_fn(
         sandbox_id,
         (
-            f"rm -rf {shlex.quote(install_dir)} && "
-            f"mkdir -p {shlex.quote(install_dir)} && "
+            f"rm -rf {shlex.quote(staging_dir)} && "
+            f"mkdir -p {shlex.quote(staging_dir)} && "
             f": > {shlex.quote(tar_path)}"
         ),
         timeout=30,
     )
-    _check(setup_dir, f"plugin install: failed to prepare {install_dir}")
+    _check(setup_dir, f"plugin install: failed to prepare {staging_dir}")
 
     for offset in range(0, len(encoded), _CHUNK_SIZE):
         chunk = encoded[offset : offset + _CHUNK_SIZE]
@@ -231,13 +305,23 @@ async def _upload_and_run_setup(
     extract = await exec_fn(
         sandbox_id,
         (
-            f"cd {shlex.quote(install_dir)} && "
+            f"cd {shlex.quote(staging_dir)} && "
             f"tar -xzf {shlex.quote(tar_path)} && "
             f"rm -f {shlex.quote(tar_path)}"
         ),
         timeout=60,
     )
     _check(extract, "plugin install: bundle extract failed")
+
+    finalize = await exec_fn(
+        sandbox_id,
+        (
+            f"rm -rf {shlex.quote(install_dir)} && "
+            f"mv {shlex.quote(staging_dir)} {shlex.quote(install_dir)}"
+        ),
+        timeout=30,
+    )
+    _check(finalize, f"plugin install: failed to publish {install_dir}")
 
     if manifest.setup is not None:
         setup_cmd = (

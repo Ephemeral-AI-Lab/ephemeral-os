@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import time
 from typing import Protocol
 
 from sandbox.layer_stack.layer.change import normalize_layer_path
@@ -18,6 +17,7 @@ from sandbox.occ.routing.orchestrator import (
     attach_base_hash,
     requires_base_hash,
 )
+from sandbox.timing import monotonic_now
 
 
 class SnapshotIgnoreOracle(Protocol):
@@ -33,9 +33,9 @@ def prepare_single_path_changeset(
     atomic: bool = False,
 ) -> PreparedChangeset:
     """Prepare one path without materializing a full gitignore workspace."""
-    total_start = time.perf_counter()
+    total_start = monotonic_now()
     timings: dict[str, float] = {}
-    route_start = time.perf_counter()
+    route_start = monotonic_now()
 
     try:
         path = normalize_layer_path(change.path)
@@ -46,11 +46,11 @@ def prepare_single_path_changeset(
             changes=(change,),
             message=str(exc),
         )
-        timings["occ.prepare.route_and_base_hash_s"] = time.perf_counter() - route_start
+        timings["occ.prepare.route_and_base_hash_s"] = monotonic_now() - route_start
         timings["occ.prepare.single_path_fast_s"] = timings[
             "occ.prepare.route_and_base_hash_s"
         ]
-        timings["occ.prepare.total_s"] = time.perf_counter() - total_start
+        timings["occ.prepare.total_s"] = monotonic_now() - total_start
         return PreparedChangeset(
             snapshot=snapshot,
             path_groups=(group,),
@@ -67,10 +67,10 @@ def prepare_single_path_changeset(
     prepared_change = change
     base_hash = None
     if route is RouteDecision.OCC_GATED_MERGE and requires_base_hash(change):
-        base_hash_start = time.perf_counter()
+        base_hash_start = monotonic_now()
         base_hash = base_hash_reader(path) if base_hash_reader is not None else None
         timings["occ.prepare.single_path_base_hash_s"] = (
-            time.perf_counter() - base_hash_start
+            monotonic_now() - base_hash_start
         )
         prepared_change = attach_base_hash(change, base_hash)
     else:
@@ -82,11 +82,11 @@ def prepare_single_path_changeset(
         changes=(prepared_change,),
         message=message,
     )
-    timings["occ.prepare.route_and_base_hash_s"] = time.perf_counter() - route_start
+    timings["occ.prepare.route_and_base_hash_s"] = monotonic_now() - route_start
     timings["occ.prepare.single_path_fast_s"] = timings[
         "occ.prepare.route_and_base_hash_s"
     ]
-    timings["occ.prepare.total_s"] = time.perf_counter() - total_start
+    timings["occ.prepare.total_s"] = monotonic_now() - total_start
     return PreparedChangeset(
         snapshot=snapshot,
         path_groups=(group,),
@@ -106,9 +106,9 @@ def _route_single_path(
         timings["occ.prepare.gitignore_s"] = 0.0
         return RouteDecision.DROP, ".git paths are not mutable through OCC"
 
-    gitignore_start = time.perf_counter()
+    gitignore_start = monotonic_now()
     ignored = gitignore.is_ignored_in_snapshot(path, snapshot)
-    timings["occ.prepare.gitignore_s"] = time.perf_counter() - gitignore_start
+    timings["occ.prepare.gitignore_s"] = monotonic_now() - gitignore_start
     if ignored:
         return RouteDecision.OCC_SKIPPED_MERGE, None
     return RouteDecision.OCC_GATED_MERGE, None

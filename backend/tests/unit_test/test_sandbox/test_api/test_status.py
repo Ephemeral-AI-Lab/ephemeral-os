@@ -96,16 +96,30 @@ def test_start_runs_setup_after_start(monkeypatch: pytest.MonkeyPatch) -> None:
     assert setup_calls == [("sb-1", "/workspace/demo")]
 
 
-def test_delete_disposes_adapter() -> None:
+def test_delete_disposes_adapter_and_plugin_host_caches(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from sandbox.api import status as sb_status
     from sandbox.provider.registry import get_adapter, register_adapter
 
     provider = _stub_provider()
     register_adapter("sb-1", provider)
+    forgotten: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        sb_status.plugin_session,
+        "forget",
+        lambda sandbox_id: forgotten.append(("session", sandbox_id)),
+    )
+    monkeypatch.setattr(
+        sb_status.plugin_install,
+        "forget",
+        lambda sandbox_id: forgotten.append(("install", sandbox_id)),
+    )
 
     sb_status.delete_sandbox("sb-1")
 
     provider.delete.assert_called_once_with("sb-1")
+    assert forgotten == [("session", "sb-1"), ("install", "sb-1")]
     with pytest.raises(KeyError):
         get_adapter("sb-1")
 

@@ -12,20 +12,18 @@ handlers, the runtime agent) should dispatch them through
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from sandbox.host.recovery import ensure_running as _ensure_running
 from sandbox.host.setup import setup_after_create, setup_after_start
+from sandbox.plugin import install as plugin_install
+from sandbox.plugin import session as plugin_session
 from sandbox.provider.registry import (
     dispose_adapter,
     get_adapter,
     get_default_provider,
     register_adapter,
 )
-
-logger = logging.getLogger(__name__)
-
 
 # -- Health / discovery --------------------------------------------------------
 
@@ -110,6 +108,8 @@ def stop_sandbox(sandbox_id: str) -> dict[str, Any]:
 
 def delete_sandbox(sandbox_id: str) -> None:
     get_adapter(sandbox_id).delete(sandbox_id)
+    plugin_session.forget(sandbox_id)
+    plugin_install.forget(sandbox_id)
     dispose_adapter(sandbox_id)
 
 

@@ -6,7 +6,9 @@ import hashlib
 import os
 from pathlib import Path
 
-from sandbox.layer_stack.manifest import Manifest
+import pytest
+
+import sandbox.overlay.capture.upperdir as upperdir_mod
 from sandbox.layer_stack.view.merged import OPAQUE_MARKER, WHITEOUT_PREFIX
 from sandbox.overlay.capture.upperdir import capture_changes
 
@@ -22,7 +24,6 @@ def test_upperdir_capture_emits_raw_runtime_changes(tmp_path: Path) -> None:
 
     changes = capture_changes(
         upper,
-        snapshot_manifest=Manifest(version=3, layers=()),
     )
 
     by_path = {change.path: change for change in changes}
@@ -49,7 +50,6 @@ def test_copy_backed_capture_detects_writes_and_deletes(tmp_path: Path) -> None:
 
     changes = capture_changes(
         upper,
-        snapshot_manifest=Manifest(version=1, layers=()),
         lowerdir=lower,
         workspace_root=merged,
     )
@@ -58,3 +58,67 @@ def test_copy_backed_capture_detects_writes_and_deletes(tmp_path: Path) -> None:
     assert by_path["pkg/value.txt"].kind == "write"
     assert Path(str(by_path["pkg/value.txt"].content_path)).read_text() == "new\n"
     assert by_path["pkg/gone.txt"].kind == "delete"
+
+
+def test_opaque_dir_marker_and_xattr_emit_once(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    upper = tmp_path / "upper"
+    (upper / "pkg").mkdir(parents=True)
+    (upper / "pkg" / OPAQUE_MARKER).write_text("", encoding="utf-8")
+    monkeypatch.setattr(
+        upperdir_mod,
+        "_has_overlay_opaque_xattr",
+        lambda entry: entry.name == "pkg",
+    )
+
+    changes = capture_changes(upper)
+
+    assert [(change.path, change.kind) for change in changes] == [
+        ("pkg", "opaque_dir")
+    ]
+
+
+def test_copy_backed_capture_preserves_new_empty_dir(tmp_path: Path) -> None:
+    lower = tmp_path / "lower"
+    merged = tmp_path / "merged"
+    upper = tmp_path / "upper"
+    lower.mkdir()
+    (merged / "empty").mkdir(parents=True)
+
+    changes = capture_changes(upper, lowerdir=lower, workspace_root=merged)
+
+    assert [(change.path, change.kind) for change in changes] == [
+        ("empty", "opaque_dir")
+    ]
+
+
+def test_copy_backed_capture_detects_file_mode_changes(tmp_path: Path) -> None:
+    lower = tmp_path / "lower"
+    merged = tmp_path / "merged"
+    upper = tmp_path / "upper"
+    lower.mkdir()
+    merged.mkdir()
+    (lower / "script.sh").write_text("echo hi\n", encoding="utf-8")
+    (merged / "script.sh").write_text("echo hi\n", encoding="utf-8")
+    (lower / "script.sh").chmod(0o644)
+    (merged / "script.sh").chmod(0o755)
+
+    changes = capture_changes(upper, lowerdir=lower, workspace_root=merged)
+
+    assert [(change.path, change.kind) for change in changes] == [
+        ("script.sh", "write")
+    ]
+
+
+def test_copy_backed_capture_rejects_escaping_symlink(tmp_path: Path) -> None:
+    lower = tmp_path / "lower"
+    merged = tmp_path / "merged"
+    upper = tmp_path / "upper"
+    lower.mkdir()
+    merged.mkdir()
+    os.symlink("../escape", merged / "link")
+
+    with pytest.raises(ValueError, match="escaping symlink"):
+        capture_changes(upper, lowerdir=lower, workspace_root=merged)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import time
+import os
 
 import pytest
 
@@ -8,6 +8,7 @@ from sandbox.runtime.daemon.handler.tools.edit import (
     _edit_out_of_workspace,
     edit_file,
 )
+from sandbox.timing import monotonic_now
 
 
 def test_edit_out_of_workspace_anchor_miss_returns_conflict(tmp_path) -> None:
@@ -17,7 +18,7 @@ def test_edit_out_of_workspace_anchor_miss_returns_conflict(tmp_path) -> None:
     result = _edit_out_of_workspace(
         abs_path=str(target),
         edits=(("missing\n", "replacement\n", 1),),
-        total_start=time.perf_counter(),
+        total_start=monotonic_now(),
     )
 
     assert result["success"] is False
@@ -44,7 +45,7 @@ def test_edit_out_of_workspace_expected_zero_with_absent_anchor_succeeds(
     result = _edit_out_of_workspace(
         abs_path=str(target),
         edits=(("missing\n", "replacement\n", 0),),
-        total_start=time.perf_counter(),
+        total_start=monotonic_now(),
     )
 
     assert result["success"] is True
@@ -65,13 +66,29 @@ def test_edit_out_of_workspace_expected_zero_with_present_anchor_rejects(
     result = _edit_out_of_workspace(
         abs_path=str(target),
         edits=(("alpha\n", "beta\n", 0),),
-        total_start=time.perf_counter(),
+        total_start=monotonic_now(),
     )
 
     assert result["success"] is False
     assert result["status"] == "aborted_overlap"
     assert result["conflict_reason"]
     # File unchanged on conflict.
+    assert target.read_text(encoding="utf-8") == "alpha\n"
+
+
+def test_edit_out_of_workspace_refuses_terminal_symlink(tmp_path) -> None:
+    target = tmp_path / "target.txt"
+    target.write_text("alpha\n", encoding="utf-8")
+    link = tmp_path / "link.txt"
+    os.symlink(target, link)
+
+    with pytest.raises(ValueError, match="refusing to follow symlink"):
+        _edit_out_of_workspace(
+            abs_path=str(link),
+            edits=(("alpha", "beta", 1),),
+            total_start=monotonic_now(),
+        )
+
     assert target.read_text(encoding="utf-8") == "alpha\n"
 
 

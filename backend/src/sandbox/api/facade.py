@@ -22,7 +22,11 @@ if TYPE_CHECKING:
 
 
 class SandboxClient:
-    """Single auditable call surface for sandbox status and tool verbs."""
+    """Single auditable call surface for sandbox status and tool verbs.
+
+    Instances are stateless apart from the optional audit sink, so the package
+    module can safely expose one process-global singleton.
+    """
 
     def __init__(self, *, audit_sink: AuditSink | None = None) -> None:
         self._audit_sink = audit_sink

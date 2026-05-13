@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import os
 import shutil
-import time
 import uuid
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -30,7 +29,8 @@ from sandbox.layer_stack.manifest import (
     read_manifest,
     write_manifest_atomic,
 )
-from sandbox.layer_stack.timing import record_elapsed
+from sandbox.timing import monotonic_now
+from sandbox.timing import record_elapsed
 
 
 @dataclass(frozen=True)
@@ -57,10 +57,11 @@ class LayerPublisher:
         changes: Sequence[LayerChange],
         *,
         expected_manifest: Manifest,
+        source_root: str | Path | None = None,
         timings: dict[str, float] | None = None,
     ) -> Manifest:
-        total_start = time.perf_counter()
-        read_active_start = time.perf_counter()
+        total_start = monotonic_now()
+        read_active_start = monotonic_now()
         active = read_manifest(self._manifest_file)
         record_elapsed(timings, "layer_stack.publish.read_active_manifest_s", read_active_start)
         if active != expected_manifest:
@@ -73,8 +74,11 @@ class LayerPublisher:
             record_elapsed(timings, "layer_stack.publish.total_s", total_start)
             return active
 
-        prepare_start = time.perf_counter()
-        prepared_changes, layer_digest = _prepare_changes(changes)
+        prepare_start = monotonic_now()
+        prepared_changes, layer_digest = _prepare_changes(
+            changes,
+            source_root=source_root,
+        )
         if _head_layer_digest(self._storage_root, active) == layer_digest:
             _record_prepare_elapsed(timings, prepare_start)
             record_elapsed(timings, "layer_stack.publish.idempotent_s", total_start)
@@ -82,18 +86,18 @@ class LayerPublisher:
             return active
         _record_prepare_elapsed(timings, prepare_start)
 
-        allocate_start = time.perf_counter()
+        allocate_start = monotonic_now()
         layer_id, staging_dir, layer_dir = self._allocate_layer_paths(active.version + 1)
         record_elapsed(
             timings,
             "layer_stack.publish.allocate_layer_paths_s",
             allocate_start,
         )
-        create_staging_start = time.perf_counter()
+        create_staging_start = monotonic_now()
         staging_dir.mkdir(parents=True)
         record_elapsed(timings, "layer_stack.publish.create_staging_s", create_staging_start)
         try:
-            write_changes_start = time.perf_counter()
+            write_changes_start = monotonic_now()
             # Dedupe prepared changes by path, last-write-wins. OCC's
             # flattening across multiple LayerDeltas can present the same
             # path more than once, and _write_symlink / opaque-dir marker
@@ -113,7 +117,7 @@ class LayerPublisher:
                 "layer_stack.publish.write_changes_s",
                 write_changes_start,
             )
-            replace_start = time.perf_counter()
+            replace_start = monotonic_now()
             layer_dir.parent.mkdir(parents=True, exist_ok=True)
             os.replace(staging_dir, layer_dir)
             _fsync_dir(layer_dir.parent)
@@ -134,7 +138,7 @@ class LayerPublisher:
                 *active.layers,
             ),
         )
-        read_latest_start = time.perf_counter()
+        read_latest_start = monotonic_now()
         latest = read_manifest(self._manifest_file)
         record_elapsed(
             timings,
@@ -148,7 +152,7 @@ class LayerPublisher:
                 "active manifest changed during layer publish: "
                 f"expected version {active.version}, found version {latest.version}"
             )
-        write_manifest_start = time.perf_counter()
+        write_manifest_start = monotonic_now()
         try:
             write_manifest_atomic(self._manifest_file, new_manifest)
         except Exception:
@@ -217,15 +221,20 @@ def _record_prepare_elapsed(
 ) -> None:
     if timings is None:
         return
-    elapsed = time.perf_counter() - prepare_start
+    elapsed = monotonic_now() - prepare_start
     timings["layer_stack.publish.prepare_changes_s"] = elapsed
     timings["layer_stack.publish.digest_check_s"] = elapsed
 
 
 def _prepare_changes(
     changes: Sequence[LayerChange],
+    *,
+    source_root: str | Path | None = None,
 ) -> tuple[tuple[_PreparedLayerChange, ...], str]:
     digest = hashlib.sha256()
+    resolved_source_root = (
+        Path(source_root).resolve(strict=True) if source_root is not None else None
+    )
     prepared: list[_PreparedLayerChange] = []
     for change in changes:
         digest.update(change.kind.encode("utf-8"))
@@ -233,7 +242,16 @@ def _prepare_changes(
         digest.update(change.path.encode("utf-8"))
         digest.update(b"\0")
         if isinstance(change, WriteLayerChange):
-            content = Path(change.source_path).read_bytes()
+            source_path = Path(change.source_path)
+            if resolved_source_root is not None:
+                resolved_source = source_path.resolve(strict=True)
+                if not resolved_source.is_relative_to(resolved_source_root):
+                    raise ValueError(
+                        "write source path is outside trusted source root: "
+                        f"{change.path}"
+                    )
+                source_path = resolved_source
+            content = source_path.read_bytes()
             content_hash = hashlib.sha256(content).hexdigest()
             if change.content_hash and content_hash != change.content_hash:
                 raise ValueError(f"content hash mismatch for {change.path}")
