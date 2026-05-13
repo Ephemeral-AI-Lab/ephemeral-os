@@ -435,6 +435,7 @@ class BackgroundTaskManager:
 
     async def cancel_all(self) -> None:
         """Cancel all running tasks. Called on query loop exit."""
+        cancelled_tasks: list[asyncio.Task[ToolResult]] = []
         for tracked in self._tasks.values():
             if tracked.status == TaskStatus.RUNNING:
                 tracked.stop_mode = "cancel"
@@ -444,8 +445,19 @@ class BackgroundTaskManager:
                 if tracked.kill_callback is not None:
                     try:
                         await tracked.kill_callback()
-                    except Exception as exc:
-                        logger.debug("Kill callback failed for task %s: %s", tracked.task_id, exc)
+                    except Exception:
+                        # On query-loop shutdown this is the only hook that
+                        # physically kills the sandbox process; a silently
+                        # failed kill leaks a sandbox process and only
+                        # surfaces hours later as "sandbox quota exhausted".
+                        logger.warning(
+                            "Kill callback failed for task %s",
+                            tracked.task_id,
+                            exc_info=True,
+                        )
                 # Subagents may be inside async provider calls; logical cancel is enough.
                 elif tracked.task_type != "subagent":
                     tracked.asyncio_task.cancel()
+                    cancelled_tasks.append(tracked.asyncio_task)
+        if cancelled_tasks:
+            await asyncio.gather(*cancelled_tasks, return_exceptions=True)
