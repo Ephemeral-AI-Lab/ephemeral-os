@@ -83,7 +83,12 @@ async def _handle_connection(
             raw = await asyncio.wait_for(
                 reader.readline(), timeout=REQUEST_READ_TIMEOUT_S
             )
-        except asyncio.LimitOverrunError:
+        except (asyncio.LimitOverrunError, ValueError):
+            # asyncio raises ``LimitOverrunError`` when no separator is found
+            # within the buffer limit and plain ``ValueError`` when a
+            # separator IS found but the line itself exceeds the limit. Both
+            # mean "client exceeded MAX_REQUEST_BYTES" and must surface the
+            # structured envelope rather than dropping the connection.
             payload = json.dumps(
                 _request_too_large_envelope(), separators=(",", ":")
             ).encode("utf-8") + b"\n"

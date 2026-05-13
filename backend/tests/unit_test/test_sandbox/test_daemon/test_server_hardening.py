@@ -15,9 +15,13 @@ Covers BL-01..BL-04 from the runtime code review:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import os
+import shutil
 import stat
+import tempfile
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +39,17 @@ def _restore_op_table() -> None:
     finally:
         dispatcher.OP_TABLE.clear()
         dispatcher.OP_TABLE.update(saved)
+
+
+@pytest.fixture
+def short_tmp_path() -> Iterator[Path]:
+    """A short tmp path under /tmp. pytest's tmp_path can exceed the macOS
+    AF_UNIX 104-char sun_path limit."""
+    path = Path(tempfile.mkdtemp(prefix="eos-", dir="/tmp"))
+    try:
+        yield path
+    finally:
+        shutil.rmtree(path, ignore_errors=True)
 
 
 async def _wait_for_socket(path: Path, *, timeout: float = 2.0) -> None:
@@ -74,14 +89,14 @@ async def _read_envelope(reader: asyncio.StreamReader) -> dict[str, Any]:
 
 
 async def test_oversize_request_returns_request_too_large_envelope(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    short_tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """BL-01: requests larger than ``MAX_REQUEST_BYTES`` get a structured
     error rather than a silently-closed connection."""
 
     monkeypatch.setattr(server_module, "MAX_REQUEST_BYTES", 1024)
-    socket_path = tmp_path / "runtime.sock"
-    pid_path = tmp_path / "runtime.pid"
+    socket_path = short_tmp_path / "runtime.sock"
+    pid_path = short_tmp_path / "runtime.pid"
 
     task = await _spawn_server(socket_path, pid_path)
     try:
@@ -94,7 +109,7 @@ async def test_oversize_request_returns_request_too_large_envelope(
             response = await _read_envelope(reader)
         finally:
             writer.close()
-            with pytest.raises(BaseException):  # pragma: no cover
+            with contextlib.suppress(BaseException):
                 await writer.wait_closed()
     finally:
         await _stop_server(task)
@@ -105,14 +120,14 @@ async def test_oversize_request_returns_request_too_large_envelope(
 
 
 async def test_idle_connection_times_out_without_envelope(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    short_tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """BL-02: a peer that opens but never sends ``\\n`` is closed silently
     by the read timeout rather than pinning a connection task forever."""
 
     monkeypatch.setattr(server_module, "REQUEST_READ_TIMEOUT_S", 0.05)
-    socket_path = tmp_path / "runtime.sock"
-    pid_path = tmp_path / "runtime.pid"
+    socket_path = short_tmp_path / "runtime.sock"
+    pid_path = short_tmp_path / "runtime.pid"
 
     task = await _spawn_server(socket_path, pid_path)
     try:
@@ -123,7 +138,7 @@ async def test_idle_connection_times_out_without_envelope(
             raw = await asyncio.wait_for(reader.read(), timeout=1.0)
         finally:
             writer.close()
-            with pytest.raises(BaseException):  # pragma: no cover
+            with contextlib.suppress(BaseException):
                 await writer.wait_closed()
     finally:
         await _stop_server(task)
@@ -132,11 +147,11 @@ async def test_idle_connection_times_out_without_envelope(
     assert raw == b""
 
 
-async def test_socket_and_parent_dir_locked_down(tmp_path: Path) -> None:
+async def test_socket_and_parent_dir_locked_down(short_tmp_path: Path) -> None:
     """BL-03: socket inode and parent dir are restricted before any peer can
     connect; the explicit chmod is not allowed to fail silently."""
 
-    sock_dir = tmp_path / "runtime"
+    sock_dir = short_tmp_path / "runtime"
     socket_path = sock_dir / "runtime.sock"
     pid_path = sock_dir / "runtime.pid"
 

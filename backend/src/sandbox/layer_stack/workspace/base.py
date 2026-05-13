@@ -122,6 +122,7 @@ def build_workspace_base(
         timings["workspace_base.inventory.bytes"] = float(bytes_total)
     write_layer_start = time.perf_counter()
     layer_ref = _write_base_layer(stack, entries, root_hash=root_hash)
+    _write_base_digest_sidecar(stack, layer_ref.layer_id, root_hash)
     record_elapsed(
         timings,
         "workspace_base.write_layer_s",
@@ -293,7 +294,13 @@ def _symlink_entry(
     return _SymlinkEntry(path=rel, link_target=target)
 
 
-def _write_base_layer(stack: Path, entries: tuple[_BaseEntry, ...]) -> LayerRef:
+def _write_base_layer(
+    stack: Path,
+    entries: tuple[_BaseEntry, ...],
+    *,
+    root_hash: str,
+) -> LayerRef:
+    del root_hash  # written separately via _write_base_digest_sidecar
     layer_id = WORKSPACE_BASE_LAYER_ID
     layer_dir = stack / LAYERS_DIR / layer_id
     staging_dir = stack / STAGING_DIR / f"{layer_id}.staging"
@@ -318,17 +325,56 @@ def _write_base_layer(stack: Path, entries: tuple[_BaseEntry, ...]) -> LayerRef:
                         unstable_paths=(entry.path,),
                     )
                 shutil.copy2(entry.source_path, target)
+                _fsync_file(target)
             elif isinstance(entry, _SymlinkEntry):
                 os.symlink(entry.link_target, target)
             elif isinstance(entry, _DirectoryEntry):
                 target.mkdir(parents=True, exist_ok=True)
+        _fsync_dir(staging_dir)
         layer_dir.parent.mkdir(parents=True, exist_ok=True)
         os.replace(staging_dir, layer_dir)
+        _fsync_dir(layer_dir.parent)
     except Exception:
         shutil.rmtree(staging_dir, ignore_errors=True)
         shutil.rmtree(layer_dir, ignore_errors=True)
         raise
     return LayerRef(layer_id=layer_id, path=f"{LAYERS_DIR}/{layer_id}")
+
+
+_BASE_METADATA_DIR = ".layer-metadata"
+
+
+def _write_base_digest_sidecar(stack: Path, layer_id: str, root_hash: str) -> None:
+    metadata_dir = stack / _BASE_METADATA_DIR
+    metadata_dir.mkdir(parents=True, exist_ok=True)
+    digest_path = metadata_dir / f"{layer_id}.digest"
+    fd = os.open(
+        str(digest_path),
+        os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
+        0o644,
+    )
+    try:
+        os.write(fd, root_hash.encode("ascii") + b"\n")
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    _fsync_dir(metadata_dir)
+
+
+def _fsync_file(path: Path) -> None:
+    fd = os.open(str(path), os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def _fsync_dir(path: Path) -> None:
+    fd = os.open(str(path), os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
 
 
 def _file_hash(path: Path) -> str:

@@ -24,11 +24,10 @@ from sandbox.runtime.daemon.handler.request_context import (
 async def edit_file(args: dict[str, object]) -> dict[str, object]:
     """Single-path edit_file dispatch with in/out-of-workspace classification."""
     total_start = time.perf_counter()
-    layer_stack_root = _layer_stack_root(args)
-    binding = require_workspace_binding(layer_stack_root)
-    raw_path = _required_single_path(args)
-    classified = classify_path(raw_path, binding.workspace_root)
-
+    # Validate edits payload before binding/classification so structural
+    # errors (negative expected_occurrences, malformed entries) surface as
+    # the most-specific error rather than being masked by the
+    # layer_stack_root requirement check.
     edits_raw = args.get("edits")
     if not isinstance(edits_raw, Sequence) or isinstance(edits_raw, (str, bytes)):
         raise ValueError("edits must be a list of search/replace objects")
@@ -43,6 +42,11 @@ async def edit_file(args: dict[str, object]) -> dict[str, object]:
         if expected < 0:
             raise ValueError("expected_occurrences must be >= 0")
         edits.append((old_text, new_text, expected))
+
+    layer_stack_root = _layer_stack_root(args)
+    binding = require_workspace_binding(layer_stack_root)
+    raw_path = _required_single_path(args)
+    classified = classify_path(raw_path, binding.workspace_root)
 
     if classified.classification == "out_of_workspace":
         return _edit_out_of_workspace(
@@ -89,20 +93,11 @@ async def _edit_in_workspace(
             ) from exc
 
         derive_start = time.perf_counter()
-        try:
-            final_text = _apply_edits(text, edits, path=layer_path)
-        except ValueError as exc:
-            derive_elapsed = time.perf_counter() - derive_start
-            return _edit_conflict_payload(
-                path=layer_path,
-                message=str(exc),
-                total_start=total_start,
-                timings_extra={
-                    "api.edit.lease_acquire_s": lease_acquired_s,
-                    "api.edit.snapshot_read_s": read_elapsed,
-                    "api.edit.derive_bytes_s": derive_elapsed,
-                },
-            )
+        # Anchor-miss / count-mismatch / non-utf8 must surface as a hard
+        # ValueError rather than a silent "conflict" payload — silent
+        # acceptance was the BL-01 contract violation in DirectMerge and the
+        # runtime handler must not undo that loudness at the API boundary.
+        final_text = _apply_edits(text, edits, path=layer_path)
         derive_elapsed = time.perf_counter() - derive_start
 
         change = build_api_write_change(
@@ -160,6 +155,9 @@ def _edit_out_of_workspace(
     except UnicodeDecodeError as exc:
         raise ValueError(f"file is not valid UTF-8 text: {abs_path}") from exc
     derive_start = time.perf_counter()
+    # Out-of-workspace edits return a structured conflict payload on
+    # anchor-miss (preserves existing API contract). The in-workspace path
+    # raises loud per the Theme 4 OCC realignment.
     try:
         final_text = _apply_edits(text, edits, path=abs_path)
     except ValueError as exc:

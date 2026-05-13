@@ -107,7 +107,10 @@ async def plugin_ensure(args: dict[str, Any]) -> dict[str, Any]:
 
         for op in registered_ops:
             OP_TABLE.pop(op, None)
-        clear_plugin_registrations(plugin_name)
+        # Leave _PENDING populated so the next ensure call's flush
+        # re-registers without needing to re-import the runtime module
+        # (decorators only fire at import time; sys.modules caches the
+        # module so import_module would no-op on retry).
         raise
     _LOADED[plugin_name] = registered_ops
     _LOADED_DIGEST[plugin_name] = digest

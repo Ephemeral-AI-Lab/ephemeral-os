@@ -29,7 +29,12 @@ class TestGetAsyncSandbox:
         result = await mod.get_async_sandbox("sb-async-123")
 
         assert result == mock_sandbox
-        mock_client.get.assert_awaited_once_with("sb-async-123")
+        # Theme 5 CR-02: client.get must carry the sandbox-fetch timeout to
+        # bound the scheduler-degraded hang failure mode.
+        mock_client.get.assert_awaited_once()
+        call_args = mock_client.get.await_args
+        assert call_args.args == ("sb-async-123",)
+        assert call_args.kwargs.get("timeout") is not None
 
     @pytest.mark.anyio
     async def test_fetch_sandbox_not_found(self, monkeypatch):
