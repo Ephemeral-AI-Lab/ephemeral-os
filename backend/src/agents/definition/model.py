@@ -15,6 +15,14 @@ from pydantic import (
 AgentType = Literal["agent", "subagent"]
 
 
+# Pydantic can't accept ``notification.NotificationRule`` directly here because
+# the rule type is defined cross-package and using it would re-introduce a
+# forward-reference cycle (see ``notification/rules/model.py:18-22``). This
+# structural Protocol is the supported workaround; do not replace it with a
+# concrete import. The @runtime_checkable decorator is load-bearing — Pydantic
+# uses ``isinstance(rule, AgentNotificationRule)`` to validate the
+# ``notification_rules: list[AgentNotificationRule]`` field at construction
+# time and Protocol isinstance checks require the decorator.
 @runtime_checkable
 class AgentNotificationRule(Protocol):
     """Runtime notification rule shape consumed by agent definitions."""
@@ -79,18 +87,9 @@ class AgentDefinition(BaseModel):
     # caller's counter is untouched.
     tool_call_limit: int | None = None
 
-    # --- skills ---
-    skills: list[str] = Field(default_factory=list)
-
-    # --- lifecycle ---
-    background: bool = False
-
     # --- role metadata ---
     # Optional freeform label for UI display and tool-factory context.
     role: str | None = None
-
-    # --- Python-specific ---
-    permissions: list[str] = Field(default_factory=list)
 
     # --- agent type: regular agent or subagent (worker) ---
     agent_type: AgentType = "agent"
@@ -128,17 +127,6 @@ class AgentDefinition(BaseModel):
         extra="forbid",
     )
 
-    @field_validator(
-        "skills",
-        "permissions",
-        mode="before",
-    )
-    @classmethod
-    def _split_csv(cls, v: Any) -> Any:
-        if isinstance(v, str):
-            return [s.strip() for s in v.split(",") if s.strip()]
-        return v
-
     @field_validator("tool_call_limit", mode="before")
     @classmethod
     def _coerce_positive_int(cls, v: Any) -> Any:
@@ -149,13 +137,6 @@ class AgentDefinition(BaseModel):
             return n if n > 0 else None
         except (TypeError, ValueError):
             return None
-
-    @field_validator("background", mode="before")
-    @classmethod
-    def _coerce_bool(cls, v: Any) -> Any:
-        if isinstance(v, str):
-            return v.lower() == "true"
-        return bool(v) if v is not None else False
 
     @field_validator("terminals")
     @classmethod
