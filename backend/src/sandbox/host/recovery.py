@@ -38,15 +38,17 @@ def ensure_running(sandbox_id: str) -> dict[str, Any]:
         )
 
     try:
-        info = adapter.start(sandbox_id)
+        adapter.start(sandbox_id)
     except Exception:
         logger.debug(
             "Sandbox %s start during recovery raised; refreshing handle",
             sandbox_id,
             exc_info=True,
         )
-        info = adapter.get(sandbox_id)
 
+    # WR-02: unconditionally refresh; previous code had a dead-write
+    # pair that ran adapter.get up to three times before this line
+    # silently shadowed all of them.
     info = adapter.get(sandbox_id)
 
     workspace_root = info.get("project_dir") or ""

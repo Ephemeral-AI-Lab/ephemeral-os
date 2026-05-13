@@ -78,8 +78,24 @@ def ensure_git(sandbox_id: str) -> None:
                 or "git install failed"
             )
         logger.info("ensure_git(%s): install completed", sandbox_id)
-    except Exception as exc:
-        logger.warning("Git bootstrap failed for sandbox %s: %s", sandbox_id, exc)
+    except RuntimeError as exc:
+        # Expected "best-effort" failure: git is unavailable and no
+        # package manager can install it. Most code paths cope without
+        # git; we keep going. Log loudly enough for diagnostics.
+        logger.warning(
+            "Git bootstrap failed for sandbox %s: %s", sandbox_id, exc
+        )
+    except Exception:
+        # WR-04: anything else (adapter unreachable, import failure,
+        # provider config issue) is NOT a "git is best-effort missing"
+        # condition — it indicates the sandbox itself is broken and
+        # downstream setup will fail confusingly. Surface the original
+        # error to the caller rather than silently swallowing.
+        logger.exception(
+            "Git bootstrap unexpectedly failed for sandbox %s; "
+            "propagating to caller", sandbox_id,
+        )
+        raise
 
 
 __all__ = ["ensure_git"]
