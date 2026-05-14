@@ -183,12 +183,7 @@ class EphemeralAttemptAgentLauncher:
             # the lifecycle owner has already moved the task off RUNNING.
             return
 
-        report = _ROLE_EXHAUSTION_REPORTERS.get(launch.role)
-        if report is None:
-            raise TaskCenterInvariantViolation(
-                f"No exhaustion reporter for role {launch.role!r}"
-            )
-        report(self, runtime, launch, summary=summary)
+        _report_exhaustion(self, runtime, launch, summary=summary)
 
     @staticmethod
     def _mark_unowned_task_exhausted(
@@ -257,100 +252,66 @@ def _require_attempt_orchestrator(
     return orchestrator
 
 
-def _report_entry_exhaustion(
+def _report_exhaustion(
     launcher: EphemeralAttemptAgentLauncher,
     runtime: AttemptDeps,
     launch: AgentLaunch,
     *,
     summary: str,
 ) -> None:
-    controller = runtime.entry_task_controller
-    if controller is None:
-        launcher._mark_unowned_task_exhausted(runtime, launch, summary=summary)
+    """Single role-parameterized exhaustion reporter (lever #6 consolidation).
+
+    Adding a new role means adding one ``elif`` branch here — no dispatch
+    table to keep in sync.
+    """
+    if launch.role == TaskCenterTaskRole.ENTRY_EXECUTOR:
+        controller = runtime.entry_task_controller
+        if controller is None:
+            launcher._mark_unowned_task_exhausted(runtime, launch, summary=summary)
+            return
+        controller.apply_run_exhausted(summary=summary)
         return
-    controller.apply_run_exhausted(summary=summary)
 
-
-def _report_planner_exhaustion(
-    launcher: EphemeralAttemptAgentLauncher,
-    runtime: AttemptDeps,
-    launch: AgentLaunch,
-    *,
-    summary: str,
-) -> None:
     orchestrator = _require_attempt_orchestrator(
         launcher, runtime, launch, summary=summary
     )
     if orchestrator is None:
         return
-    orchestrator.apply_planner_failure(
-        PlannerFailureSubmission(
-            attempt_id=launch.attempt_id or "",
-            planner_task_id=launch.task_id,
-            fail_reason="run_exhausted",
-            summary=summary,
+
+    attempt_id = launch.attempt_id or ""
+    if launch.role == TaskCenterTaskRole.PLANNER:
+        orchestrator.apply_planner_failure(
+            PlannerFailureSubmission(
+                attempt_id=attempt_id,
+                planner_task_id=launch.task_id,
+                fail_reason="run_exhausted",
+                summary=summary,
+            )
         )
-    )
-
-
-def _report_generator_exhaustion(
-    launcher: EphemeralAttemptAgentLauncher,
-    runtime: AttemptDeps,
-    launch: AgentLaunch,
-    *,
-    summary: str,
-) -> None:
-    orchestrator = _require_attempt_orchestrator(
-        launcher, runtime, launch, summary=summary
-    )
-    if orchestrator is None:
-        return
-    orchestrator.apply_generator_submission(
-        GeneratorSubmission(
-            attempt_id=launch.attempt_id or "",
-            task_id=launch.task_id,
-            outcome="failure",
-            summary=summary,
-            payload={"fail_reason": "run_exhausted"},
+    elif launch.role == TaskCenterTaskRole.GENERATOR:
+        orchestrator.apply_generator_submission(
+            GeneratorSubmission(
+                attempt_id=attempt_id,
+                task_id=launch.task_id,
+                outcome="failure",
+                summary=summary,
+                payload={"fail_reason": "run_exhausted"},
+            )
         )
-    )
-
-
-def _report_evaluator_exhaustion(
-    launcher: EphemeralAttemptAgentLauncher,
-    runtime: AttemptDeps,
-    launch: AgentLaunch,
-    *,
-    summary: str,
-) -> None:
-    orchestrator = _require_attempt_orchestrator(
-        launcher, runtime, launch, summary=summary
-    )
-    if orchestrator is None:
-        return
-    orchestrator.apply_evaluator_submission(
-        EvaluatorSubmission(
-            attempt_id=launch.attempt_id or "",
-            task_id=launch.task_id,
-            outcome="failure",
-            summary=summary,
-            payload={"fail_reason": "run_exhausted"},
+    elif launch.role == TaskCenterTaskRole.EVALUATOR:
+        orchestrator.apply_evaluator_submission(
+            EvaluatorSubmission(
+                attempt_id=attempt_id,
+                task_id=launch.task_id,
+                outcome="failure",
+                summary=summary,
+                payload={"fail_reason": "run_exhausted"},
+            )
         )
-    )
-
-
-# Polymorphic role dispatch. Adding a new role means: add the enum value,
-# add a reporter here, add a (role, fail_reason) entry below. No
-# ``pragma: no cover`` switch to silence.
-_ROLE_EXHAUSTION_REPORTERS: dict[
-    TaskCenterTaskRole,
-    "Callable[[EphemeralAttemptAgentLauncher, AttemptDeps, AgentLaunch, ...], None]",
-] = {
-    TaskCenterTaskRole.ENTRY_EXECUTOR: _report_entry_exhaustion,
-    TaskCenterTaskRole.PLANNER: _report_planner_exhaustion,
-    TaskCenterTaskRole.GENERATOR: _report_generator_exhaustion,
-    TaskCenterTaskRole.EVALUATOR: _report_evaluator_exhaustion,
-}
+    else:
+        raise TaskCenterInvariantViolation(
+            f"No exhaustion reporter for role {launch.role!r}"
+        )
 
 
 _ROLE_FAIL_REASONS: dict[TaskCenterTaskRole, AttemptFailReason] = {
