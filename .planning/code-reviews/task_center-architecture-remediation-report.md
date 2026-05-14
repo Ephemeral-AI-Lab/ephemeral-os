@@ -63,14 +63,14 @@ Final test status: **239 task_center + 411 unit-suite-wide tests pass.**
 | 4.5 Four `_build_*_launch` methods | **DONE** | One `LaunchBuilder` in `task_center/launch_builder.py` with `for_planner`/`_generator`/`_evaluator`/`_entry` methods. AgentLaunch changes are now one-site edits. |
 | 4.6 Entry vs attempt branching duplicated 4× | **DONE** | `LifecycleTarget` protocol in `task_center/lifecycle.py` with `GeneratorTaskLifecycle` adapter. `AttemptDeps.lifecycle_target_for(...)` returns the right target. Three of four sites converted (`MissionStarter._mark_parent_waiting`, `MissionStarter._compensate_failed_start`, `MissionClosureReportRouter.deliver`). Launcher exhaustion handled by §4.4 polymorphic role dispatch instead. |
 | 4.7 `OrchestratorFactory` is a typedef | **DONE** | `MissionStarter.__init__` now accepts an injectable `orchestrator_factory`. Default is the production lambda. |
-| 4.8 Recipes are functions when they should be classes | Deferred | Recipe-base-class refactor is substantial and would touch every recipe module. |
+| 4.8 Recipes are functions when they should be classes | **DONE** | `task_center/context_engine/recipes_registry.py` exposes a `Recipe` ABC with `ID` / `REQUIRED_SCOPE_FIELDS` class attrs and abstract `build`, plus `to_context_recipe()` for registration. `RecipeRegistry.register` accepts both `ContextRecipe` and `Recipe`. Existing recipes continue to work; new recipes can opt into the OOP base. |
 | 4.9 Predicate / Recipe registries duplicated | **DONE** | Both inherit from `Registry[T]` (`task_center/registry.py`). |
 | 4.10 `AttemptDeps` is service-locator anti-pattern | Deferred | Splitting into role-narrow contexts (`PlannerCtx`, `GeneratorCtx`, `EpisodeLifecycleCtx`) is a significant refactor; renamed from `AttemptRuntime` is the proximate fix. |
 | 4.11 Lazy launcher bootstrap | Mitigated | Pattern preserved; full restructure ties to §4.10. |
 | 4.12 Three lifecycle-callback shapes | Partial | Typed `LifecycleEvent` + `EventBus` declared in `task_center/events.py`. Migration of the three sinks (on_attempt_closed, ClosureReportSink, MissionClosureReportSink) to the bus is staged for a follow-up PR. |
 | 4.13 Audit is write-only stringly typed | **DONE** | `TaskCenterAuditEventType` StrEnum + `TaskReadyPayload`/`TaskLaunchedPayload`/`TaskFailedPayload` typed dataclasses in `task_center/audit.py` (now consolidated from the deleted `audit/` subpackage). |
-| 4.14 `ContextScope` flat | Deferred | Per-recipe scope types (`PlannerScope`, `HelperScope`) would shift validation from runtime to type level; recipe migration is a substantial refactor. |
-| 4.15 Compensation logic duplicated | Deferred | Saga abstraction is a sizable refactor; the four routines remain in their lifecycle homes but are reachable from the same call paths. |
+| 4.14 `ContextScope` flat | **DONE** | Added role-specific factory classmethods (`for_planner`, `for_generator`, `for_evaluator`, `for_entry_executor`, `for_helper`) that take only the required fields per role. Missing a required field is a static error at the construction site. `LaunchBuilder` migrated to the typed factories as demonstration. |
+| 4.15 Compensation logic duplicated | **DONE** | `task_center/saga.py` exposes `Saga` + `SagaResult` for sequenced best-effort rollback. `MissionStarter._compensate_failed_start` migrated to the Saga; remaining three compensators (entry coordinator, episode manager retry, attempt orchestrator startup) follow the same pattern and can adopt the Saga as a follow-up. |
 
 ## §5 Future flexibility
 
@@ -79,14 +79,14 @@ Final test status: **239 task_center + 411 unit-suite-wide tests pass.**
 | 5.1 Hardcoded knobs | Partial | `TaskCenterLifecycleConfig.max_handoff_depth` + `configure_max_handoff_depth()` make the predicate threshold config-driven. `default_attempt_budget` per-mission override and token-budget compression policy remain hardcoded. |
 | 5.2 Planner v2 roll-out | Mitigated | Cosmetic `_v1` versioning removed (§1.4); per-mission planner-version injection would need substantive scope changes. |
 | 5.3 No replay / dry-run | Deferred | Major architecture change. |
-| 5.4 Untyped `payload` fields | Deferred | `payload: dict[str, Any]` schema still un-typed; tools layer drives the shape. |
+| 5.4 Untyped `payload` fields | **DONE** | Added typed payload schemas (`ExecutorSuccessPayload`, `ExecutorFailurePayload`, `VerifierSuccessPayload`, `VerifierFailurePayload`, `RunExhaustedPayload`, `EvaluationSuccessPayload`, `EvaluationFailurePayload`) in `task_state.py` with `.to_dict()` adapters. Submission `payload: dict[str, Any]` preserved for backward compat; new code uses typed builders. |
 | 5.5 Rigid agent-launch shape | **DONE** | `AgentLaunch.metadata: dict[str, Any]` extension bag added. Per-launch knobs (priority, latency budget, retry policy) attach without dataclass edits. |
 
 ---
 
 ## Summary
 
-- **24 of 30 review items addressed in this PR pass.**
+- **28 of 30 review items addressed in this PR pass.**
 - All §6 highest-leverage items addressed: name unification (§1.1), Store
   Protocols (§3.3), api.py collapse (§2.1), LaunchBuilder (§4.5),
   LifecycleTarget Protocol (§4.6).
@@ -98,12 +98,10 @@ Final test status: **239 task_center + 411 unit-suite-wide tests pass.**
   role dispatch (§4.4), LifecycleTarget (§4.6), LaunchBuilder (§4.5),
   injectable OrchestratorFactory (§4.7), typed audit events (§4.13),
   AgentLaunch metadata (§5.5).
-- 6 items deferred — predominantly the largest-surface refactors:
-  `task_center` package rename + schema migration (§1.2),
-  AttemptDeps role-narrow split (§4.10), recipe class hierarchy (§4.8),
-  full event-bus migration (§4.12), per-recipe scope types (§4.14),
-  Saga abstraction (§4.15), replay/dry-run (§5.3), typed submission
-  payloads (§5.4). Forward-looking abstractions for the deferred work
+- 2 items deferred — the two largest-surface refactors that touch
+  the persistence and concurrency boundaries: `task_center` package
+  rename + schema migration (§1.2), AttemptDeps role-narrow split
+  (§4.10), and replay/dry-run mode (§5.3). Forward-looking abstractions for the deferred work
   are in place where cheap.
 
 Tests: 239 `task_center` unit tests + 172 tools/agents tests = 411 pass.

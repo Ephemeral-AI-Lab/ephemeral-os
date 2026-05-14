@@ -24,6 +24,7 @@ from task_center.mission.state import (
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.episode.manager import OrchestratorFactory
+from task_center.saga import Saga
 from task_center.attempt.state import AttemptFailReason, AttemptStatus
 from task_center.attempt.runtime import AttemptDeps
 from task_center.episode.state import Episode, EpisodeStatus
@@ -229,53 +230,50 @@ class MissionStarter:
         initial_attempt_id: str | None,
         parent_task_id: str,
     ) -> None:
-        """Best-effort rollback. Order: attempt → episode → mission → parent."""
+        """Best-effort rollback. Order: attempt → episode → mission → parent.
+
+        Each step runs inside a shared :class:`Saga` so a failure in one
+        step is logged but does not block the remaining cleanup. The
+        parent-restore step is special-cased: on failure we escalate to
+        synthetic close-report delivery so the parent task does not
+        remain orphaned in ``WAITING_MISSION``.
+        """
         now = datetime.now(UTC)
-        self._close_unstarted_attempt_after_failed_start(initial_attempt_id, now=now)
-        try:
-            self._runtime.episode_store.set_status(
+        saga = Saga(name="mission_start_compensation")
+        saga.step(
+            "close_unstarted_attempt",
+            lambda: self._close_unstarted_attempt_after_failed_start(
+                initial_attempt_id, now=now
+            ),
+        )
+        saga.step(
+            "cancel_episode",
+            lambda: self._runtime.episode_store.set_status(
                 episode.id,
                 status=EpisodeStatus.CANCELLED,
                 closed_at=now,
-            )
-        except Exception:
-            logger.exception(
-                "MissionStarter: cancel episode failed",
-            )
-        try:
-            self._runtime.mission_store.set_status(
+            ),
+        )
+        saga.step(
+            "cancel_mission",
+            lambda: self._runtime.mission_store.set_status(
                 mission.id,
                 status=MissionStatus.CANCELLED,
                 final_outcome=None,
                 closed_at=now,
-            )
-        except Exception:
-            logger.exception(
-                "MissionStarter: cancel mission failed",
-            )
-        try:
-            parent_task = self._runtime.task_store.get_task(parent_task_id)
-            attempt_id = (
-                _parent_attempt_id(parent_task) if parent_task else None
-            )
-            target = self._runtime.lifecycle_target_for(
-                task_id=parent_task_id, attempt_id=attempt_id
-            )
-            if target is not None:
-                target.restore_running_after_failed_mission_start()
-            else:
-                self._runtime.task_store.set_task_status_if_current(
-                    parent_task_id,
-                    expected_status=TaskCenterTaskStatus.WAITING_MISSION.value,
-                    status=TaskCenterTaskStatus.RUNNING.value,
-                )
-        except Exception:
+            ),
+        )
+        saga.step(
+            "restore_parent",
+            lambda: self._restore_parent(parent_task_id=parent_task_id),
+        )
+        result = saga.run()
+        if any(name == "restore_parent" for name, _ in result.failures):
             logger.critical(
                 "MissionStarter: parent status rollback failed; "
                 "task %r remains in WAITING_MISSION — attempting "
                 "synthetic close-report recovery",
                 parent_task_id,
-                exc_info=True,
             )
             self._deliver_synthetic_failure_closure_report(
                 mission=mission,
@@ -286,6 +284,24 @@ class MissionStarter:
         manager_registry = self._runtime.manager_registry
         if manager_registry is not None:
             manager_registry.deregister(episode.id)
+
+    def _restore_parent(self, *, parent_task_id: str) -> None:
+        """Single-step parent restore — extracted for saga clarity."""
+        parent_task = self._runtime.task_store.get_task(parent_task_id)
+        attempt_id = (
+            _parent_attempt_id(parent_task) if parent_task else None
+        )
+        target = self._runtime.lifecycle_target_for(
+            task_id=parent_task_id, attempt_id=attempt_id
+        )
+        if target is not None:
+            target.restore_running_after_failed_mission_start()
+            return
+        self._runtime.task_store.set_task_status_if_current(
+            parent_task_id,
+            expected_status=TaskCenterTaskStatus.WAITING_MISSION.value,
+            status=TaskCenterTaskStatus.RUNNING.value,
+        )
 
     def _deliver_synthetic_failure_closure_report(
         self,

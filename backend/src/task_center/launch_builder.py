@@ -41,7 +41,7 @@ class LaunchBuilder:
         episode = self._require_episode(attempt)
         bundle = self.runtime.require_composer().compose(
             base_agent_name=PLANNER_AGENT_NAME,
-            scope=ContextScope(
+            scope=ContextScope.for_planner(
                 mission_id=episode.mission_id,
                 episode_id=episode.id,
                 attempt_id=attempt.id,
@@ -70,7 +70,7 @@ class LaunchBuilder:
         task_id = str(task["id"])
         bundle = self.runtime.require_composer().compose(
             base_agent_name=base_agent_name,
-            scope=ContextScope(
+            scope=ContextScope.for_generator(
                 mission_id=episode.mission_id,
                 episode_id=episode.id,
                 attempt_id=attempt.id,
@@ -95,7 +95,7 @@ class LaunchBuilder:
         episode = self._require_episode(attempt)
         bundle = self.runtime.require_composer().compose(
             base_agent_name=EVALUATOR_AGENT_NAME,
-            scope=ContextScope(
+            scope=ContextScope.for_evaluator(
                 mission_id=episode.mission_id,
                 episode_id=episode.id,
                 attempt_id=attempt.id,
@@ -122,7 +122,7 @@ class LaunchBuilder:
     ) -> AgentLaunch:
         bundle = self.runtime.require_composer().compose(
             base_agent_name=base_agent_name,
-            scope=ContextScope(task_id=task_id),
+            scope=ContextScope.for_entry_executor(task_id=task_id),
         )
         return AgentLaunch(
             task_id=task_id,
