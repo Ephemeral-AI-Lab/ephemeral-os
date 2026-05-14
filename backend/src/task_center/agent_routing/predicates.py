@@ -17,7 +17,7 @@ from typing import ClassVar
 
 from task_center.context_engine.engine import ContextEngineDeps
 from task_center.context_engine.scope import ContextScope
-from task_center.mission.ancestry import nested_mission_depth
+from task_center.mission.handler import nested_mission_depth
 
 
 # Maximum nested-mission depth at which an executor profile still offers a

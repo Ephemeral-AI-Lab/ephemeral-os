@@ -1,9 +1,14 @@
-"""Mission boundary — handler facade + episode factory + closure router."""
+"""Mission boundary — handler + factory + closure router + repository + ancestry.
+
+Phase 7c absorbs ``mission/repository.py`` and ``mission/ancestry.py`` into
+this single module.
+"""
 
 from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import UTC, datetime
+from typing import Literal
 
 from task_center.config import TaskCenterLifecycleConfig
 from task_center.episode.closure_report import (
@@ -22,11 +27,11 @@ from task_center.episode.state import (
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.invariants import (
     assert_continuation_episode_predecessor,
+    assert_episode_id_unique_in_mission,
     assert_episode_sequence_contiguous,
     assert_mission_open,
 )
-from task_center.mission.repository import MissionRepository
-from task_center.mission.state import Mission, MissionClosureReport
+from task_center.mission.state import Mission, MissionClosureReport, MissionStatus
 from task_center.persistence import (
     AttemptStoreProtocol,
     EpisodeStoreProtocol,
@@ -35,6 +40,118 @@ from task_center.persistence import (
 )
 
 MissionClosureReportSink = Callable[[MissionClosureReport], None]
+
+
+# ---- Mission CRUD ----------------------------------------------------------
+
+
+class MissionRepository:
+    """CRUD + closure helpers for :class:`Mission` records."""
+
+    def __init__(self, mission_store: MissionStoreProtocol) -> None:
+        self._mission_store = mission_store
+
+    def create(
+        self,
+        *,
+        task_center_run_id: str,
+        requested_by_task_id: str,
+        goal: str,
+    ) -> Mission:
+        return self._mission_store.insert(
+            task_center_run_id=task_center_run_id,
+            requested_by_task_id=requested_by_task_id,
+            goal=goal,
+        )
+
+    def get(self, mission_id: str) -> Mission | None:
+        return self._mission_store.get(mission_id)
+
+    def require(self, mission_id: str) -> Mission:
+        mission = self.get(mission_id)
+        if mission is None:
+            raise TaskCenterInvariantViolation(f"Mission {mission_id!r} not found")
+        return mission
+
+    def append_episode_id(self, mission: Mission, episode_id: str) -> Mission:
+        assert_episode_id_unique_in_mission(mission, episode_id)
+        return self._mission_store.append_episode_id(mission.id, episode_id)
+
+    def close(
+        self,
+        *,
+        mission_id: str,
+        succeeded: bool,
+        final_episode_id: str,
+        final_attempt_id: str | None,
+    ) -> tuple[Mission, MissionClosureReport]:
+        """Close the mission and synthesise its :class:`MissionClosureReport`."""
+        mission = self.require(mission_id)
+        assert_mission_open(mission)
+        outcome_label: Literal["success", "failed"] = (
+            "success" if succeeded else "failed"
+        )
+        report = MissionClosureReport(
+            mission_id=mission_id,
+            requested_by_task_id=mission.requested_by_task_id,
+            outcome=outcome_label,
+            final_episode_id=final_episode_id,
+            final_attempt_id=final_attempt_id,
+        )
+        status = MissionStatus.SUCCEEDED if succeeded else MissionStatus.FAILED
+        updated = self._mission_store.set_status(
+            mission_id,
+            status=status,
+            final_outcome=report.to_final_outcome(),
+            closed_at=datetime.now(UTC),
+        )
+        return updated, report
+
+
+# ---- Ancestry --------------------------------------------------------------
+
+
+def nested_mission_depth(
+    *,
+    mission_id: str,
+    mission_store: MissionStoreProtocol,
+    episode_store: EpisodeStoreProtocol,
+    attempt_store: AttemptStoreProtocol,
+    task_store: TaskStoreProtocol,
+) -> int:
+    """Number of mission ancestors on the chain INCLUDING ``mission_id``."""
+    depth = 0
+    seen_mission_ids: set[str] = set()
+    current_mission_id = mission_id
+    while True:
+        if current_mission_id in seen_mission_ids:
+            raise TaskCenterInvariantViolation(
+                "Cycle detected while resolving mission ancestry."
+            )
+        seen_mission_ids.add(current_mission_id)
+        depth += 1
+        current_mission = mission_store.get(current_mission_id)
+        if current_mission is None:
+            raise TaskCenterInvariantViolation(
+                f"Mission {current_mission_id!r} was not found."
+            )
+        parent_task = task_store.get_task(current_mission.requested_by_task_id)
+        if parent_task is None:
+            return depth
+        parent_attempt_id = str(parent_task.get("task_center_attempt_id") or "")
+        if not parent_attempt_id:
+            return depth
+        parent_attempt = attempt_store.get(parent_attempt_id)
+        if parent_attempt is None:
+            raise TaskCenterInvariantViolation(
+                f"Parent Attempt {parent_attempt_id!r} was not found."
+            )
+        parent_episode = episode_store.get(parent_attempt.episode_id)
+        if parent_episode is None:
+            raise TaskCenterInvariantViolation(
+                f"Parent Episode {parent_attempt.episode_id!r} was not found."
+            )
+        current_mission_id = parent_episode.mission_id
 
 
 class EpisodeFactory:
@@ -293,4 +410,11 @@ class MissionHandler:
         return updated
 
 
-__all__ = ["EpisodeClosureRouter", "EpisodeFactory", "MissionClosureReportSink", "MissionHandler"]
+__all__ = [
+    "EpisodeClosureRouter",
+    "EpisodeFactory",
+    "MissionClosureReportSink",
+    "MissionHandler",
+    "MissionRepository",
+    "nested_mission_depth",
+]

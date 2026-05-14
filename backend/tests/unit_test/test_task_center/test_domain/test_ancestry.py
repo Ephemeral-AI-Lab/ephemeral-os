@@ -15,7 +15,7 @@ from task_center.context_engine.engine import ContextEngineDeps
 from task_center.context_engine.scope import ContextScope
 from task_center.episode.state import EpisodeCreationReason
 from task_center.exceptions import TaskCenterInvariantViolation
-from task_center.mission.ancestry import nested_mission_depth
+from task_center.mission.handler import nested_mission_depth
 
 
 def _stores(mission_store, episode_store, attempt_store, task_store):
