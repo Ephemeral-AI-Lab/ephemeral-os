@@ -13,7 +13,7 @@ from sandbox.layer_stack.manifest import Manifest
 from sandbox.execution.overlay_change import OverlayPathChange
 
 
-@dataclass(frozen=True)
+@dataclass
 class OverlayCapture:
     """Policy-blind shell execution result captured from a snapshot overlay."""
 
@@ -26,15 +26,11 @@ class OverlayCapture:
     timings: Mapping[str, float] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "exit_code", int(self.exit_code))
-        object.__setattr__(self, "snapshot_version", int(self.snapshot_version))
-        object.__setattr__(self, "changes", tuple(self.changes))
-        object.__setattr__(
-            self,
-            "timings",
-            MappingProxyType(
-                {str(key): float(value) for key, value in self.timings.items()}
-            ),
+        self.exit_code = int(self.exit_code)
+        self.snapshot_version = int(self.snapshot_version)
+        self.changes = tuple(self.changes)
+        self.timings = MappingProxyType(
+            {str(key): float(value) for key, value in self.timings.items()}
         )
 
     def to_dict(self) -> dict[str, Any]:

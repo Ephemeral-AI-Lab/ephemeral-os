@@ -1,8 +1,4 @@
-"""Public command-exec contract values: request, result, ports, spec.
-
-Collapsed from execution/contract/{request,result,ports,spec}.py per the
-sandbox-reframe RFC §4 Wave 5c. Behavior is preserved verbatim.
-"""
+"""Public command-exec contract values: request, result, ports, spec."""
 
 from __future__ import annotations
 
@@ -21,7 +17,7 @@ if TYPE_CHECKING:
 # ---- request ---------------------------------------------------------------
 
 
-@dataclass(frozen=True)
+@dataclass
 class CommandExecRequest:
     """One shell command against a workspace replacement mount."""
 
@@ -48,8 +44,7 @@ class CommandExecRequest:
         command = tuple(str(part) for part in self.command)
         if not command or any(part == "" for part in command):
             raise ValueError("command must contain non-empty argv parts")
-        timeout = self.timeout_seconds
-        if timeout is not None and timeout <= 0:
+        if self.timeout_seconds is not None and self.timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be positive when provided")
 
         cwd_raw = str(self.cwd).strip() or "."
@@ -59,18 +54,14 @@ class CommandExecRequest:
         if not cwd_normalized.startswith("/") and ".." in cwd_normalized.split("/"):
             raise ValueError(f"cwd must not contain '..' segments: {cwd_raw!r}")
 
-        object.__setattr__(self, "request_id", request_id)
-        object.__setattr__(self, "workspace_ref", workspace_ref)
-        object.__setattr__(self, "workspace_root", workspace_root.rstrip("/") or "/")
-        object.__setattr__(self, "command", command)
-        object.__setattr__(self, "cwd", cwd_normalized)
-        object.__setattr__(
-            self,
-            "env",
-            {str(key): str(value) for key, value in self.env.items()},
-        )
-        object.__setattr__(self, "actor_id", str(self.actor_id))
-        object.__setattr__(self, "description", str(self.description or "shell"))
+        self.request_id = request_id
+        self.workspace_ref = workspace_ref
+        self.workspace_root = workspace_root.rstrip("/") or "/"
+        self.command = command
+        self.cwd = cwd_normalized
+        self.env = {str(key): str(value) for key, value in self.env.items()}
+        self.actor_id = str(self.actor_id)
+        self.description = str(self.description or "shell")
 
 
 # ---- result ----------------------------------------------------------------
@@ -83,7 +74,7 @@ class MountMode(str, Enum):
     PRIVATE_NAMESPACE = "private_namespace"
 
 
-@dataclass(frozen=True)
+@dataclass
 class WorkspaceCapture:
     """Workspace-relative changes captured from one command upperdir."""
 
@@ -92,10 +83,10 @@ class WorkspaceCapture:
     mount_mode: MountMode
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "mount_mode", MountMode(self.mount_mode))
+        self.mount_mode = MountMode(self.mount_mode)
 
 
-@dataclass(frozen=True)
+@dataclass
 class CommandExecResult:
     """Final command-exec response before public API projection."""
 
@@ -107,7 +98,7 @@ class CommandExecResult:
     timings: dict[str, float] = field(default_factory=dict)
 
 
-@dataclass(frozen=True)
+@dataclass
 class ShellProcessResult:
     """Raw process result and capture locations."""
 
@@ -118,7 +109,7 @@ class ShellProcessResult:
     mount_mode: MountMode
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "mount_mode", MountMode(self.mount_mode))
+        self.mount_mode = MountMode(self.mount_mode)
 
 
 # ---- ports -----------------------------------------------------------------
@@ -174,7 +165,7 @@ class CommandExecutor(Protocol):
 # ---- spec ------------------------------------------------------------------
 
 
-@dataclass(frozen=True)
+@dataclass
 class WorkspaceReplacementMountSpec:
     """Filesystem inputs for replacing the assigned workspace root."""
 

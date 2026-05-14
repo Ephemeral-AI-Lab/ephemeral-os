@@ -35,7 +35,7 @@ _HOST_ENV_ALLOWLIST: tuple[str, ...] = (
 )
 
 
-@dataclass(frozen=True)
+@dataclass
 class OverlayCommandResult:
     exit_code: int
     stdout_ref: str

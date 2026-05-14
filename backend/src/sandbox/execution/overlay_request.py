@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 
-@dataclass(frozen=True)
+@dataclass
 class OverlayShellRequest:
     """One per-call shell request against a leased layer-stack snapshot."""
 
@@ -24,17 +24,12 @@ class OverlayShellRequest:
         command = tuple(str(part) for part in self.command)
         if not command or any(part == "" for part in command):
             raise ValueError("command must contain non-empty argv parts")
-        timeout = self.timeout_seconds
-        if timeout is not None and timeout <= 0:
+        if self.timeout_seconds is not None and self.timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be positive when provided")
-        object.__setattr__(self, "request_id", request_id)
-        object.__setattr__(self, "command", command)
-        object.__setattr__(self, "cwd", str(self.cwd).strip() or ".")
-        object.__setattr__(
-            self,
-            "env",
-            {str(key): str(value) for key, value in self.env.items()},
-        )
+        self.request_id = request_id
+        self.command = command
+        self.cwd = str(self.cwd).strip() or "."
+        self.env = {str(key): str(value) for key, value in self.env.items()}
 
     def to_dict(self) -> dict[str, Any]:
         return {

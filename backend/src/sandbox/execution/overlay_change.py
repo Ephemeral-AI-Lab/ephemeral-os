@@ -13,7 +13,7 @@ from sandbox.layer_stack.layer_change import normalize_layer_path
 OverlayPathChangeKind = Literal["write", "delete", "symlink", "opaque_dir"]
 
 
-@dataclass(frozen=True)
+@dataclass
 class OverlayPathChange:
     path: str
     kind: OverlayPathChangeKind
@@ -21,10 +21,8 @@ class OverlayPathChange:
     final_hash: str | None
 
     def __post_init__(self) -> None:
-        object.__setattr__(
-            self,
-            "path",
-            normalize_layer_path(self.path, allow_root=self.kind == "opaque_dir"),
+        self.path = normalize_layer_path(
+            self.path, allow_root=self.kind == "opaque_dir"
         )
         if self.kind in ("write", "symlink"):
             if not self.content_path:
