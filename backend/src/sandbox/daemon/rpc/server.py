@@ -43,7 +43,7 @@ from sandbox.daemon_paths import DAEMON_PID_PATH, DAEMON_SOCKET_PATH
 from sandbox.daemon.rpc import dispatcher
 from sandbox.timing import monotonic_now
 
-logger = logging.getLogger("sandbox.runtime.daemon.rpc.server")
+logger = logging.getLogger("sandbox.daemon.rpc.server")
 
 DEFAULT_SOCKET_PATH = DAEMON_SOCKET_PATH
 DEFAULT_PID_PATH = DAEMON_PID_PATH
