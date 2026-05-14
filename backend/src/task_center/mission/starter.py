@@ -127,13 +127,6 @@ class MissionStarter:
             )
             raise
 
-        # Narrowed by the ``try`` block above: the only path to here assigns
-        # ``initial_attempt`` before ``start_attempt`` runs. The explicit
-        # check makes the invariant self-defending under ``python -O``.
-        if initial_attempt is None:
-            raise TaskCenterInvariantViolation(
-                "MissionStarter.start completed without assigning initial_attempt."
-            )
         return StartedMission(
             parent_task_id=parent_task_id,
             parent_attempt_id=parent_attempt_id,
