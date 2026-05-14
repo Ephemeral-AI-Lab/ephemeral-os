@@ -37,17 +37,6 @@ named, testable limit.
 
 
 @dataclass(frozen=True)
-class RetryPolicy:
-    """Bounded CAS retry policy for serial OCC commits."""
-
-    max_cas_retries: int = MAX_OCC_CAS_RETRIES
-
-    def __post_init__(self) -> None:
-        if self.max_cas_retries < 1:
-            raise ValueError("max_cas_retries must be >= 1")
-
-
-@dataclass(frozen=True)
 class _WorkItem:
     prepared: PreparedChangeset
     future: concurrent.futures.Future[ChangesetResult]
@@ -72,12 +61,14 @@ class CommitQueue:
         *,
         max_batch_size: int = 64,
         batch_window_s: float = 0.002,
-        retry_policy: RetryPolicy = RetryPolicy(),
+        max_cas_retries: int = MAX_OCC_CAS_RETRIES,
     ) -> None:
+        if max_cas_retries < 1:
+            raise ValueError("max_cas_retries must be >= 1")
         self._transaction = transaction
         self._max_batch_size = max(1, int(max_batch_size))
         self._batch_window_s = max(0.0, float(batch_window_s))
-        self._retry_policy = retry_policy
+        self._max_cas_retries = int(max_cas_retries)
         self._queue: queue.Queue[_QueueItem] = queue.Queue()
         self._thread: threading.Thread | None = None
         self._closed = False
@@ -178,11 +169,11 @@ class CommitQueue:
                     break
                 except ManifestConflictError as exc:
                     attempts += 1
-                    if attempts >= self._retry_policy.max_cas_retries:
+                    if attempts >= self._max_cas_retries:
                         result = _cas_exhaustion_result(
                             combined,
                             exc,
-                            retry_policy=self._retry_policy,
+                            max_cas_retries=self._max_cas_retries,
                         )
                         break
             commit_elapsed = monotonic_now() - commit_start
@@ -257,12 +248,10 @@ def _cas_exhaustion_result(
     prepared: PreparedChangeset,
     exc: ManifestConflictError,
     *,
-    retry_policy: RetryPolicy,
+    max_cas_retries: int,
 ) -> ChangesetResult:
     """Convert a CAS-retry-exhausted failure into a per-path conflict result."""
-    message = (
-        f"CAS mismatch retry budget exhausted after {retry_policy.max_cas_retries} attempts: {exc}"
-    )
+    message = f"CAS mismatch retry budget exhausted after {max_cas_retries} attempts: {exc}"
     files: list[FileResult] = []
     for group in prepared.path_groups:
         if group.route is RouteDecision.DROP:
@@ -305,4 +294,4 @@ def _merge_timings(items: list[PreparedChangeset]) -> dict[str, float]:
     return timings
 
 
-__all__ = ["MAX_OCC_CAS_RETRIES", "CommitQueue", "RetryPolicy"]
+__all__ = ["MAX_OCC_CAS_RETRIES", "CommitQueue"]
