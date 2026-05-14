@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from sandbox.daemon.handler.tools.write import _write_out_of_workspace
+from sandbox.daemon.handler.write import _write_out_of_workspace
 from sandbox.timing import monotonic_now
 
 

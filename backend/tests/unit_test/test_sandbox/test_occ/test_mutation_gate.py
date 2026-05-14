@@ -62,7 +62,7 @@ async def test_cas_retry_loop_bounded_under_no_contention(tmp_path: Path) -> Non
 
     from sandbox.layer_stack.workspace_base import build_workspace_base
     from sandbox.daemon.service import occ_backend
-    from sandbox.daemon.handler.tools import write
+    from sandbox.daemon.handler import write
 
     occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
@@ -94,7 +94,7 @@ async def test_cas_retry_exhaustion_returns_conflict_result(tmp_path: Path) -> N
     from sandbox.layer_stack.workspace_base import build_workspace_base
     from sandbox.occ.commit_queue import MAX_OCC_CAS_RETRIES
     from sandbox.daemon.service import occ_backend
-    from sandbox.daemon.handler.tools import write
+    from sandbox.daemon.handler import write
     from sandbox.daemon.handler.request_context import services as request_services
 
     occ_backend.clear_backend_cache()
