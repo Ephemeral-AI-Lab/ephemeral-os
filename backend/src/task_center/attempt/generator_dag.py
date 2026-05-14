@@ -20,7 +20,11 @@ def ordered_generator_tasks(
 ) -> tuple[PlannedGeneratorTask, ...]:
     local_ids = {task.local_id for task in tasks}
     if len(local_ids) != len(tasks):
-        raise TaskCenterInvariantViolation("Generator plan contains duplicate local ids")
+        seen: set[str] = set()
+        dups = tuple(t.local_id for t in tasks if t.local_id in seen or seen.add(t.local_id))
+        raise TaskCenterInvariantViolation(
+            f"Generator plan contains duplicate local ids: {dups!r}"
+        )
     for task in tasks:
         missing = [dep for dep in task.deps if dep not in local_ids]
         if missing:
@@ -46,7 +50,11 @@ def ordered_generator_tasks(
                 ready.append(dependent_id)
 
     if len(ordered) != len(tasks):
-        raise TaskCenterInvariantViolation("Generator plan contains a dependency cycle")
+        seen_ids = {o.local_id for o in ordered}
+        cycle = tuple(t.local_id for t in tasks if t.local_id not in seen_ids)
+        raise TaskCenterInvariantViolation(
+            f"Generator plan contains a dependency cycle among: {cycle!r}"
+        )
     return tuple(ordered)
 
 

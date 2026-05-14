@@ -33,8 +33,8 @@ class MissionClosureReportRouter:
             raise TaskCenterInvariantViolation(
                 f"TaskCenter task {report.requested_by_task_id!r} was not found."
             )
-        attempt_id = str(task.get("task_center_attempt_id") or "") or None
-        status = str(task.get("status") or "")
+        attempt_id = task.get("task_center_attempt_id") or None
+        status = task.get("status") or ""
         if status in (
             TaskCenterTaskStatus.DONE.value,
             TaskCenterTaskStatus.FAILED.value,
