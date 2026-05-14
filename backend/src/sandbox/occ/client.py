@@ -11,7 +11,7 @@ from sandbox.occ.changeset.types import Change, ChangesetResult
 from sandbox.occ.ports import WorkspaceBindingReader
 
 
-class MutationService(Protocol):
+class OccMutationService(Protocol):
     async def apply_changeset(
         self,
         changes: Sequence[Change],
@@ -26,12 +26,12 @@ class MutationService(Protocol):
     ) -> ChangesetResult: ...
 
 
-class Client:
+class OccClient:
     """Command-exec-facing client for submitting typed mutation changesets."""
 
     def __init__(
         self,
-        service: MutationService,
+        service: OccMutationService,
         *,
         binding_reader: WorkspaceBindingReader,
         workspace_ref: str = "",
@@ -70,4 +70,4 @@ class Client:
         return await self._service.commit_prepared(prepared)
 
 
-__all__ = ["MutationService", "Client"]
+__all__ = ["OccMutationService", "OccClient"]

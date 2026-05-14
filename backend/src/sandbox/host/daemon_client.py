@@ -156,7 +156,7 @@ async def _exec_daemon_call(
         cwd=cwd,
         timeout=timeout,
     )
-    if _should_retry_after_connect_failure(result, op):
+    if _should_retry_after_connect_failure(result):
         spawn_result = await exec_fn(
             sandbox_id,
             _daemon_spawn_command(),
@@ -180,9 +180,8 @@ async def _exec_daemon_call(
     return result
 
 
-def _should_retry_after_connect_failure(result: Any, op: str) -> bool:
+def _should_retry_after_connect_failure(result: Any) -> bool:
     """Retry only when the thin client failed before sending the envelope."""
-    del op
     return _exit_code(result) == _THIN_CLIENT_CONNECT_FAILED
 
 

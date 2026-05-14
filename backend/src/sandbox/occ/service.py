@@ -14,7 +14,7 @@ from sandbox.occ.content.gitignore_oracle import GitignoreMatcher
 from sandbox.occ.content.hashing import infer_manifest_base_hash
 from sandbox.occ.maintenance import MaintenancePolicy, NoopMaintenancePolicy
 from sandbox.occ.commit_queue import CommitQueue
-from sandbox.occ.ports import CommitPublisher, CommitStagingStore, SnapshotReader
+from sandbox.occ.ports import OccLayerStackPort
 from sandbox.occ.router import Router
 from sandbox.occ.timing_keys import TimingKey
 from sandbox.runtime.async_bridge import run_sync_in_executor
@@ -23,27 +23,25 @@ from sandbox.timing import monotonic_now
 AUTO_SQUASH_MAX_DEPTH = 32
 
 
-class Service:
+class OccService:
     """Prepare typed OCC changesets and commit them through the layer stack."""
 
     def __init__(
         self,
         *,
         gitignore: GitignoreMatcher,
-        snapshot_reader: SnapshotReader,
-        staging: CommitStagingStore,
-        publisher: CommitPublisher,
+        layer_stack: OccLayerStackPort,
         orchestrator: Router | None = None,
         transaction: CommitTransaction | None = None,
         commit_queue: CommitQueue | None = None,
         maintenance: MaintenancePolicy | None = None,
     ) -> None:
-        self._snapshot_reader = snapshot_reader
+        self._snapshot_reader = layer_stack
         self._orchestrator = orchestrator or Router(gitignore)
         self._transaction = transaction or CommitTransaction(
-            snapshot_reader=snapshot_reader,
-            staging=staging,
-            publisher=publisher,
+            snapshot_reader=layer_stack,
+            staging=layer_stack,
+            publisher=layer_stack,
         )
         self._owns_commit_queue = commit_queue is None
         self._commit_queue = commit_queue or CommitQueue(self._transaction)
@@ -260,5 +258,5 @@ def _result_timings_with_resume(result: ChangesetResult) -> tuple[dict[str, floa
 
 __all__ = [
     "AUTO_SQUASH_MAX_DEPTH",
-    "Service",
+    "OccService",
 ]

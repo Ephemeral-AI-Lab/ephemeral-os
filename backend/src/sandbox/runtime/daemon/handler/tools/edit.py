@@ -76,9 +76,7 @@ async def _edit_in_workspace(
     services = backend_services(layer_stack_root)
     request_id = uuid4().hex
     lease_start = monotonic_now()
-    lease = await run_sync_in_executor(
-        services.manager.acquire_snapshot_lease, request_id
-    )
+    lease = await run_sync_in_executor(services.manager.acquire_snapshot_lease, request_id)
     lease_acquired_s = monotonic_now() - lease_start
     try:
         read_start = monotonic_now()
@@ -91,9 +89,7 @@ async def _edit_in_workspace(
         try:
             text = bytes_.decode("utf-8")
         except UnicodeDecodeError as exc:
-            raise ValueError(
-                f"file is not valid UTF-8 text: {layer_path}"
-            ) from exc
+            raise ValueError(f"file is not valid UTF-8 text: {layer_path}") from exc
 
         derive_start = monotonic_now()
         # Anchor-miss / count-mismatch / non-utf8 must surface as a hard

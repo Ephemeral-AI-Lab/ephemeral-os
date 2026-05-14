@@ -43,7 +43,6 @@ from sandbox.api.default import (
     stop_sandbox,
     write_file,
 )
-from sandbox.api.facade import SandboxClient
 
 __all__ = [
     "ConflictInfo",
@@ -57,7 +56,6 @@ __all__ = [
     "SandboxRequestBase",
     "SandboxResultBase",
     "SearchReplaceEdit",
-    "SandboxClient",
     "ShellRequest",
     "ShellResult",
     "WriteFileRequest",

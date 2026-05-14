@@ -4,8 +4,17 @@ from __future__ import annotations
 
 from sandbox.occ.changeset.types import (
     DeleteChange,
+    DiskWritePayload,
+    EagerWritePayload,
     WriteChange,
+    WritePayload,
 )
+
+
+def _eager_payload(content: bytes | str) -> EagerWritePayload:
+    if isinstance(content, bytes):
+        return EagerWritePayload(content=content)
+    return EagerWritePayload(content=content.encode("utf-8"))
 
 
 def build_api_write_change(
@@ -18,7 +27,7 @@ def build_api_write_change(
     return WriteChange(
         path=path,
         source="api_write",
-        final_content=final_content,
+        payload=_eager_payload(final_content),
         base_hash=base_hash,
     )
 
@@ -39,13 +48,21 @@ def build_overlay_write_change(
     """
     if final_content is None and content_path is None:
         raise ValueError("build_overlay_write_change needs final_content or content_path")
+    payload: WritePayload
+    if content_path is not None and final_content is None:
+        payload = DiskWritePayload(
+            path=str(content_path),
+            content_hash=precomputed_hash,
+        )
+    else:
+        if final_content is None:
+            raise ValueError("build_overlay_write_change needs final_content or content_path")
+        payload = _eager_payload(final_content)
     return WriteChange(
         path=path,
         source="overlay_capture",
-        final_content=final_content,
+        payload=payload,
         base_hash=None,
-        content_path=content_path,
-        precomputed_hash=precomputed_hash,
     )
 
 

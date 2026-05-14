@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+from tests.occ_change_helpers import write_change
+
 import asyncio
 from pathlib import Path
 
 from sandbox.layer_stack.layer.change import WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
-from sandbox.occ.changeset.types import FileStatus, WriteChange
+from sandbox.occ.changeset.types import FileStatus
 from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.service import Service
+from sandbox.occ.service import OccService
 
 
 class _Gitignore:
@@ -45,17 +47,17 @@ def test_shell_occ_gated_conflict_holds_occ_skipped_outputs(tmp_path: Path) -> N
     _publish(stack, tmp_path, "src/app.py", b"leased\n")
     snapshot = stack.read_active_manifest()
     _publish(stack, tmp_path, "src/app.py", b"active\n")
-    service = Service(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
+    service = OccService(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
 
     result = asyncio.run(
         service.apply_changeset(
             [
-                WriteChange(
+                write_change(
                     path="src/app.py",
                     source="overlay_capture",
                     final_content=b"tracked shell\n",
                 ),
-                WriteChange(
+                write_change(
                     path="dist/out.txt",
                     source="overlay_capture",
                     final_content=b"occ skipped shell\n",

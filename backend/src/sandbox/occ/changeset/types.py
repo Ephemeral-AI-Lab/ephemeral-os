@@ -75,47 +75,30 @@ class DiskWritePayload:
 WritePayload = EagerWritePayload | DiskWritePayload
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class WriteChange(Change):
     """Whole-file write intent.
 
-    ``payload`` keeps transport details out of the mutation intent. The
-    generated dataclass constructor still accepts the historical
-    ``final_content`` / ``content_path`` inputs so callers do not need an API
-    churn pass.
+    ``payload`` keeps transport details out of the mutation intent. Source
+    adapters are responsible for translating host/API inputs into eager or
+    disk-backed payloads before constructing this value object.
     """
 
     source: ChangeSource = "api_write"
     base_hash: str | None = None
-    payload: WritePayload = field(init=False)
+    payload: WritePayload
 
-    def __init__(  # type: ignore[no-untyped-def]
+    def __init__(
         self,
-        path: str,
-        final_content: bytes | str | None = None,
-        base_hash: str | None = None,
         *,
+        path: str,
+        payload: WritePayload,
         source: ChangeSource = "api_write",
-        content_path: str | None = None,
-        precomputed_hash: str | None = None,
+        base_hash: str | None = None,
     ) -> None:
         object.__setattr__(self, "path", str(path))
         object.__setattr__(self, "source", source)
         object.__setattr__(self, "base_hash", base_hash)
-        if final_content is None and content_path is None:
-            raise ValueError("WriteChange requires final_content or content_path")
-        if content_path is not None and final_content is None:
-            payload: WritePayload = DiskWritePayload(
-                path=str(content_path),
-                content_hash=precomputed_hash,
-            )
-        else:
-            content = (
-                final_content
-                if isinstance(final_content, bytes)
-                else str(final_content).encode("utf-8")
-            )
-            payload = EagerWritePayload(content=content)
         object.__setattr__(self, "payload", payload)
 
     @property
@@ -137,18 +120,10 @@ class WriteChange(Change):
         return self.payload.precomputed_hash
 
     def with_base_hash(self, base_hash: str | None) -> WriteChange:
-        if isinstance(self.payload, DiskWritePayload):
-            return WriteChange(
-                path=self.path,
-                source=self.source,
-                base_hash=base_hash,
-                content_path=self.payload.path,
-                precomputed_hash=self.payload.content_hash,
-            )
         return WriteChange(
             path=self.path,
             source=self.source,
-            final_content=self.payload.content,
+            payload=self.payload,
             base_hash=base_hash,
         )
 

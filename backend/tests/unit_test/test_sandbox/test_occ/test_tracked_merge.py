@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from tests.occ_change_helpers import write_change
+
 from pathlib import Path
 
 from sandbox.layer_stack.layer.change import LayerChange, WriteLayerChange
@@ -12,7 +14,6 @@ from sandbox.occ.changeset.types import (
     FileStatus,
     OpaqueDirChange,
     SymlinkChange,
-    WriteChange,
 )
 from sandbox.occ.content.hashing import ContentHasher
 from sandbox.occ.stage.gated import GatedStager
@@ -62,7 +63,7 @@ def test_tracked_write_requires_active_hash_to_match_prepared_base(tmp_path: Pat
         path="src/app.py",
         route=RouteDecision.GATED,
         changes=(
-            WriteChange(
+            write_change(
                 path="src/app.py",
                 final_content=b"new\n",
                 base_hash=ContentHasher().hash_bytes(b"leased\n"),

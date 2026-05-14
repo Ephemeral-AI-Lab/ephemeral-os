@@ -8,6 +8,8 @@ authority consumed by commit.
 
 from __future__ import annotations
 
+from tests.occ_change_helpers import write_change
+
 from pathlib import Path
 
 from sandbox.layer_stack.layer.change import WriteLayerChange
@@ -18,11 +20,10 @@ from sandbox.occ.changeset.types import (
     Change,
     DeleteChange,
     FileStatus,
-    WriteChange,
 )
 from sandbox.occ.stage.transaction import CommitTransaction
 from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.service import Service
+from sandbox.occ.service import OccService
 
 
 class _MutableGitignore:
@@ -60,14 +61,14 @@ def _service(
     stack: LayerStackManager,
     *,
     ignored: set[str] | None = None,
-) -> Service:
-    return Service(
+) -> OccService:
+    return OccService(
         gitignore=_MutableGitignore(ignored), snapshot_reader=stack, staging=stack, publisher=stack
     )
 
 
 def _apply(
-    service: Service,
+    service: OccService,
     changes: list[Change],
     *,
     snapshot,
@@ -91,7 +92,7 @@ def test_gitignored_same_path_writes_are_occ_skipped_last_writer_wins(
     first = _apply(
         service,
         [
-            WriteChange(
+            write_change(
                 path="dist/out.js",
                 source="overlay_capture",
                 final_content=b"first\n",
@@ -102,7 +103,7 @@ def test_gitignored_same_path_writes_are_occ_skipped_last_writer_wins(
     second = _apply(
         service,
         [
-            WriteChange(
+            write_change(
                 path="dist/out.js",
                 source="overlay_capture",
                 final_content=b"second\n",
@@ -147,7 +148,7 @@ def test_tracked_same_path_stale_shell_write_aborts_with_aborted_version(
     result = _apply(
         service,
         [
-            WriteChange(
+            write_change(
                 path="src/app.py",
                 source="overlay_capture",
                 final_content=b"stale shell\n",
@@ -173,12 +174,12 @@ def test_current_mixed_shell_tracked_conflict_drops_gitignored_occ_skipped_outpu
     result = _apply(
         service,
         [
-            WriteChange(
+            write_change(
                 path="src/app.py",
                 source="overlay_capture",
                 final_content=b"tracked shell\n",
             ),
-            WriteChange(
+            write_change(
                 path="dist/out.js",
                 source="overlay_capture",
                 final_content=b"occ skipped shell\n",
@@ -198,11 +199,11 @@ def test_gitignore_occ_skipped_route_is_fixed_after_prepare_even_if_oracle_chang
 ) -> None:
     stack = LayerStackManager(tmp_path / "stack")
     gitignore = _MutableGitignore({"dist/out.js"})
-    service = Service(gitignore=gitignore, snapshot_reader=stack, staging=stack, publisher=stack)
+    service = OccService(gitignore=gitignore, snapshot_reader=stack, staging=stack, publisher=stack)
 
     prepared = service.prepare_changeset_sync(
         [
-            WriteChange(
+            write_change(
                 path="dist/out.js",
                 source="overlay_capture",
                 final_content=b"occ skipped\n",
@@ -232,11 +233,11 @@ def test_tracked_route_is_fixed_after_prepare_even_if_path_becomes_ignored(
     stale_snapshot = stack.read_active_manifest()
     _publish(stack, tmp_path, "dist/out.js", b"active\n")
     gitignore = _MutableGitignore()
-    service = Service(gitignore=gitignore, snapshot_reader=stack, staging=stack, publisher=stack)
+    service = OccService(gitignore=gitignore, snapshot_reader=stack, staging=stack, publisher=stack)
 
     prepared = service.prepare_changeset_sync(
         [
-            WriteChange(
+            write_change(
                 path="dist/out.js",
                 source="overlay_capture",
                 final_content=b"stale shell\n",

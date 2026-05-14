@@ -8,10 +8,10 @@ from sandbox.occ.changeset import (
     CommitOptions,
     PreparedChangeset,
 )
-from sandbox.occ.client import Client
+from sandbox.occ.client import OccClient
 from sandbox.occ.commit_queue import CommitQueue
 from sandbox.occ.router import Router
-from sandbox.occ.service import Service
+from sandbox.occ.service import OccService
 from sandbox.occ.stage import CommitTransaction, DirectStager, GatedStager
 
 __all__ = [
@@ -22,8 +22,8 @@ __all__ = [
     "CommitTransaction",
     "DirectStager",
     "GatedStager",
-    "Client",
-    "Service",
+    "OccClient",
+    "OccService",
     "PreparedChangeset",
     "Router",
 ]

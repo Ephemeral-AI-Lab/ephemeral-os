@@ -53,7 +53,7 @@ def test_overlay_capture_module_is_the_occ_overlay_bridge() -> None:
     occ_root = Path(sandbox.occ.__file__).resolve().parent
     imports = _imports(occ_root / "overlay.py")
 
-    assert "sandbox.overlay" in imports
+    assert "sandbox.overlay.change" in imports
     assert "sandbox.occ.changeset.builders" in imports
 
 

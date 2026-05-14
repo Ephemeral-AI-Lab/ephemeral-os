@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+from tests.occ_change_helpers import write_change
+
 import asyncio
 import concurrent.futures
 import threading
 
 from sandbox.layer_stack.manifest import LayerRef, Manifest
 from sandbox.layer_stack.manager import LayerStackManager
-from sandbox.occ.changeset.types import ChangesetResult, WriteChange
+from sandbox.occ.changeset.types import ChangesetResult
 from sandbox.occ.maintenance import AutoSquashMaintenancePolicy
-from sandbox.occ.service import Service
+from sandbox.occ.service import OccService
 from sandbox.occ.timing_keys import TimingKey
 
 
@@ -26,8 +28,8 @@ def _auto_squash_service(
     stack: LayerStackManager,
     *,
     max_depth: int,
-) -> Service:
-    return Service(
+) -> OccService:
+    return OccService(
         gitignore=_Gitignore(),
         snapshot_reader=stack,
         staging=stack,
@@ -51,7 +53,7 @@ def test_occ_publications_auto_squash_without_direct_squash_call(
         result = asyncio.run(
             service.apply_changeset(
                 [
-                    WriteChange(
+                    write_change(
                         path=f"tracked/auto/{index:02d}.txt",
                         final_content=f"auto-{index:02d}\n".encode(),
                     )
@@ -79,7 +81,7 @@ def test_auto_squash_preserves_active_lease_view(tmp_path) -> None:
 
     seed = asyncio.run(
         service.apply_changeset(
-            [WriteChange(path="tracked/value.txt", final_content=b"base\n")],
+            [write_change(path="tracked/value.txt", final_content=b"base\n")],
             snapshot=stack.read_active_manifest(),
         )
     )
@@ -92,7 +94,7 @@ def test_auto_squash_preserves_active_lease_view(tmp_path) -> None:
             result = asyncio.run(
                 service.apply_changeset(
                     [
-                        WriteChange(
+                        write_change(
                             path=f"tracked/burst/{index:02d}.txt",
                             final_content=f"burst-{index:02d}\n".encode(),
                         )
@@ -125,7 +127,7 @@ def test_auto_squash_uses_fixed_constant_depth(tmp_path) -> None:
         result = asyncio.run(
             service.apply_changeset(
                 [
-                    WriteChange(
+                    write_change(
                         path=f"tracked/constant-depth/{index:02d}.txt",
                         final_content=f"constant-depth-{index:02d}\n".encode(),
                     )

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sandbox.layer_stack import LayerChange, WriteLayerChange
+from sandbox.layer_stack import WriteLayerChange
 from sandbox.plugin.projection import (
     WorkspaceProjection,
     build_manifest_key,

@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+from tests.occ_change_helpers import write_change
+
 import asyncio
 from pathlib import Path
 
 from sandbox.layer_stack.layer.change import WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.prepared import CommitOptions
-from sandbox.occ.changeset.types import ChangesetResult, FileStatus, WriteChange
+from sandbox.occ.changeset.types import ChangesetResult, FileStatus
 from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.service import Service
+from sandbox.occ.service import OccService
 
 
 class _Gitignore:
@@ -48,8 +50,8 @@ def _service(
     stack: LayerStackManager,
     *,
     ignored: set[str] | None = None,
-) -> Service:
-    return Service(
+) -> OccService:
+    return OccService(
         gitignore=_Gitignore(ignored), snapshot_reader=stack, staging=stack, publisher=stack
     )
 
@@ -61,7 +63,7 @@ def test_apply_changeset_publishes_accepted_tracked_layer(tmp_path: Path) -> Non
 
     result = asyncio.run(
         _service(stack).apply_changeset(
-            [WriteChange(path="src/app.py", final_content=b"new\n")],
+            [write_change(path="src/app.py", final_content=b"new\n")],
             snapshot=snapshot,
         )
     )
@@ -80,7 +82,7 @@ def test_stale_tracked_base_hash_aborts_without_publishing(tmp_path: Path) -> No
 
     result = asyncio.run(
         _service(stack).apply_changeset(
-            [WriteChange(path="src/app.py", final_content=b"new\n")],
+            [write_change(path="src/app.py", final_content=b"new\n")],
             snapshot=snapshot,
         )
     )
@@ -98,8 +100,8 @@ def test_drop_and_reject_return_file_results_without_publishing(tmp_path: Path) 
     result = asyncio.run(
         _service(stack).apply_changeset(
             [
-                WriteChange(path=".git/config", final_content=b"x"),
-                WriteChange(path="../escape", final_content=b"x"),
+                write_change(path=".git/config", final_content=b"x"),
+                write_change(path="../escape", final_content=b"x"),
             ],
             snapshot=stack.read_active_manifest(),
         )
@@ -122,8 +124,8 @@ def test_atomic_option_suppresses_otherwise_accepted_paths_on_failure(
     result = asyncio.run(
         _service(stack).apply_changeset(
             [
-                WriteChange(path="src/app.py", final_content=b"x"),
-                WriteChange(path="../escape", final_content=b"x"),
+                write_change(path="src/app.py", final_content=b"x"),
+                write_change(path="../escape", final_content=b"x"),
             ],
             snapshot=stack.read_active_manifest(),
             options=CommitOptions(atomic=True),

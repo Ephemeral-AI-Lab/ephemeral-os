@@ -16,7 +16,21 @@ from sandbox.layer_stack.layer.change import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.prepared import CommitOptions
 from sandbox.occ.changeset.types import FileStatus, WriteChange
-from sandbox.occ.service import Service
+from sandbox.occ.changeset.builders import build_api_write_change, build_overlay_write_change
+
+def write_change(*, path, final_content, source="api_write", base_hash=None):
+    if source == "overlay_capture":
+        return build_overlay_write_change(
+            path=path,
+            final_content=final_content,
+        ).with_base_hash(base_hash)
+    return build_api_write_change(
+        path=path,
+        final_content=final_content,
+        base_hash=base_hash,
+    )
+
+from sandbox.occ.service import OccService
 
 class _Gitignore:
     def is_ignored(self, path):
@@ -30,7 +44,7 @@ stack = LayerStackManager(root / "stack")
 stack.publish_changes([
     WriteLayerChange(path="tracked/shared.txt", source_path=str(_source(root, "shared", b"base\n"))),
 ])
-service = Service(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
+service = OccService(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
 
 snapshot = stack.read_active_manifest()
 n = 6
@@ -39,7 +53,7 @@ barrier = threading.Barrier(n)
 def commit_shared(index):
     barrier.wait(timeout=10)
     result = service.apply_changeset_sync([
-        WriteChange(
+        write_change(
             path="tracked/shared.txt",
             source="overlay_capture",
             final_content=("writer-%02d\n" % index).encode("utf-8"),
@@ -53,21 +67,21 @@ assert conflict_statuses.count("accepted") == 1, conflict_statuses
 assert conflict_statuses.count("aborted_version") == n - 1, conflict_statuses
 
 partial = service.apply_changeset_sync([
-    WriteChange(path="tracked/shared.txt", source="overlay_capture", final_content=b"stale\n"),
-    WriteChange(path="dist/partial.txt", source="overlay_capture", final_content=b"direct\n"),
+    write_change(path="tracked/shared.txt", source="overlay_capture", final_content=b"stale\n"),
+    write_change(path="dist/partial.txt", source="overlay_capture", final_content=b"direct\n"),
 ], snapshot=snapshot)
 assert [_status(item.status) for item in partial.files] == ["aborted_version", "dropped"]
 assert stack.read_text("dist/partial.txt") == ("", False)
 
 utf8 = service.apply_changeset_sync([
-    WriteChange(path="unicodé/边界.txt", final_content="snowman-☃\n"),
+    write_change(path="unicodé/边界.txt", final_content="snowman-☃\n"),
 ])
 assert utf8.files[0].status is FileStatus.ACCEPTED
 assert stack.read_text("unicodé/边界.txt") == ("snowman-☃\n", True)
 
 huge_prepare_start = time.perf_counter()
 huge = service.prepare_changeset_sync(
-    [WriteChange(path="huge/%05d.txt" % index, final_content=b"x") for index in range(10000)],
+    [write_change(path="huge/%05d.txt" % index, final_content=b"x") for index in range(10000)],
     options=CommitOptions(),
 )
 huge_prepare_ms = (time.perf_counter() - huge_prepare_start) * 1000.0

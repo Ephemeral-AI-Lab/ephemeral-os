@@ -70,6 +70,10 @@ class CommitPublisher(Protocol):
     def commit_transaction(self) -> AbstractContextManager[CommitTransactionPort]: ...
 
 
+class OccLayerStackPort(SnapshotReader, CommitStagingStore, CommitPublisher, Protocol):
+    """Combined layer-stack role required by the OCC service."""
+
+
 class WorkspaceBindingReader(Protocol):
     """Fail-closed binding lookup used by OCC-facing clients."""
 
@@ -84,6 +88,7 @@ __all__ = [
     "CommitStagingArea",
     "CommitStagingStore",
     "CommitTransactionPort",
+    "OccLayerStackPort",
     "SnapshotReader",
     "WorkspaceBindingReader",
     "WorkspaceBindingSnapshot",

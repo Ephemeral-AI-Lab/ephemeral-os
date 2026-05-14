@@ -16,8 +16,22 @@ from sandbox.layer_stack.layer.change import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.prepared import CommitOptions, RouteDecision
 from sandbox.occ.changeset.types import FileStatus, WriteChange
+from sandbox.occ.changeset.builders import build_api_write_change, build_overlay_write_change
+
+def write_change(*, path, final_content, source="api_write", base_hash=None):
+    if source == "overlay_capture":
+        return build_overlay_write_change(
+            path=path,
+            final_content=final_content,
+        ).with_base_hash(base_hash)
+    return build_api_write_change(
+        path=path,
+        final_content=final_content,
+        base_hash=base_hash,
+    )
+
 from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.service import Service
+from sandbox.occ.service import OccService
 
 class _Gitignore:
     def __init__(self, ignored=()):
@@ -39,16 +53,16 @@ before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
 stack = LayerStackManager(root / "stack")
-service = Service(gitignore=_Gitignore({"dist/app.js"}), snapshot_reader=stack, staging=stack, publisher=stack)
+service = OccService(gitignore=_Gitignore({"dist/app.js"}), snapshot_reader=stack, staging=stack, publisher=stack)
 _publish(stack, "src/app.py", b"base\n")
 snapshot = stack.read_active_manifest()
 
 prepared = service.prepare_changeset_sync(
     [
-        WriteChange(path="src/app.py", final_content=b"next\n"),
-        WriteChange(path="dist/app.js", final_content=b"built\n"),
-        WriteChange(path=".git/config", final_content=b"bad"),
-        WriteChange(path="../escape", final_content=b"bad"),
+        write_change(path="src/app.py", final_content=b"next\n"),
+        write_change(path="dist/app.js", final_content=b"built\n"),
+        write_change(path=".git/config", final_content=b"bad"),
+        write_change(path="../escape", final_content=b"bad"),
     ],
     snapshot=snapshot,
     options=CommitOptions(),
@@ -64,21 +78,21 @@ assert routes == [
 assert first_change.base_hash == ContentHasher().hash_bytes(b"base\n")
 
 happy = service.apply_changeset_sync(
-    [WriteChange(path="src/app.py", final_content=b"next\n")],
+    [write_change(path="src/app.py", final_content=b"next\n")],
     snapshot=snapshot,
 )
 assert happy.files[0].status is FileStatus.ACCEPTED
 
 conflict = service.apply_changeset_sync(
-    [WriteChange(path="src/app.py", final_content=b"conflict\n")],
+    [write_change(path="src/app.py", final_content=b"conflict\n")],
     snapshot=snapshot,
 )
 assert conflict.files[0].status is FileStatus.ABORTED_VERSION
 
 restarted_stack = LayerStackManager(root / "stack")
-restarted_service = Service(gitignore=_Gitignore(), snapshot_reader=restarted_stack, staging=restarted_stack, publisher=restarted_stack)
+restarted_service = OccService(gitignore=_Gitignore(), snapshot_reader=restarted_stack, staging=restarted_stack, publisher=restarted_stack)
 after_restart = restarted_service.apply_changeset_sync(
-    [WriteChange(path="src/restart.py", final_content=b"ok\n")],
+    [write_change(path="src/restart.py", final_content=b"ok\n")],
     snapshot=restarted_stack.read_active_manifest(),
 )
 assert after_restart.files[0].status is FileStatus.ACCEPTED
@@ -98,8 +112,22 @@ _RACE_BODY = r"""
 from sandbox.layer_stack.layer.change import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.types import WriteChange
+from sandbox.occ.changeset.builders import build_api_write_change, build_overlay_write_change
+
+def write_change(*, path, final_content, source="api_write", base_hash=None):
+    if source == "overlay_capture":
+        return build_overlay_write_change(
+            path=path,
+            final_content=final_content,
+        ).with_base_hash(base_hash)
+    return build_api_write_change(
+        path=path,
+        final_content=final_content,
+        base_hash=base_hash,
+    )
+
 from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.service import Service
+from sandbox.occ.service import OccService
 
 class _Gitignore:
     def is_ignored(self, path):
@@ -119,7 +147,7 @@ before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
 stack = LayerStackManager(root / "stack")
-service = Service(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
+service = OccService(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
 _publish(stack, "src/app.py", b"base\n")
 snapshot = stack.read_active_manifest()
 n = 4
@@ -128,7 +156,7 @@ barrier = threading.Barrier(n)
 def run_one(index):
     prepared = service.prepare_changeset_sync(
         [
-            WriteChange(
+            write_change(
                 path="src/app.py",
                 source="overlay_capture",
                 final_content=("agent-%d\n" % index).encode("utf-8"),

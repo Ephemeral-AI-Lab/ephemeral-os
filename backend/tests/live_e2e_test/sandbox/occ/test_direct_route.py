@@ -14,7 +14,21 @@ pytestmark = pytest.mark.asyncio
 _DIRECT_BODY = r"""
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.types import ChangesetResult, FileStatus, WriteChange
-from sandbox.occ.service import Service
+from sandbox.occ.changeset.builders import build_api_write_change, build_overlay_write_change
+
+def write_change(*, path, final_content, source="api_write", base_hash=None):
+    if source == "overlay_capture":
+        return build_overlay_write_change(
+            path=path,
+            final_content=final_content,
+        ).with_base_hash(base_hash)
+    return build_api_write_change(
+        path=path,
+        final_content=final_content,
+        base_hash=base_hash,
+    )
+
+from sandbox.occ.service import OccService
 
 class _Gitignore:
     def is_ignored(self, path):
@@ -25,7 +39,7 @@ before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
 stack = LayerStackManager(root / "stack")
-service = Service(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
+service = OccService(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
 
 empty = service.apply_changeset_sync([], snapshot=stack.read_active_manifest())
 assert isinstance(empty, ChangesetResult)
@@ -35,7 +49,7 @@ assert empty.published_manifest_version is None
 n = 10000
 t0 = time.perf_counter()
 large = service.apply_changeset_sync(
-    [WriteChange(path="dist/%05d.txt" % index, final_content=b"x") for index in range(n)],
+    [write_change(path="dist/%05d.txt" % index, final_content=b"x") for index in range(n)],
     snapshot=stack.read_active_manifest(),
 )
 large_ms = (time.perf_counter() - t0) * 1000.0
@@ -57,7 +71,21 @@ _emit(label, started, before, {
 _RACE_BODY = r"""
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.types import WriteChange
-from sandbox.occ.service import Service
+from sandbox.occ.changeset.builders import build_api_write_change, build_overlay_write_change
+
+def write_change(*, path, final_content, source="api_write", base_hash=None):
+    if source == "overlay_capture":
+        return build_overlay_write_change(
+            path=path,
+            final_content=final_content,
+        ).with_base_hash(base_hash)
+    return build_api_write_change(
+        path=path,
+        final_content=final_content,
+        base_hash=base_hash,
+    )
+
+from sandbox.occ.service import OccService
 
 class _Gitignore:
     def is_ignored(self, path):
@@ -68,7 +96,7 @@ before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
 stack = LayerStackManager(root / "stack")
-service = Service(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
+service = OccService(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
 n = 8
 barrier = threading.Barrier(n)
 
@@ -76,7 +104,7 @@ def direct_commit(index):
     barrier.wait(timeout=5)
     t0 = time.perf_counter()
     result = service.apply_changeset_sync(
-        [WriteChange(path="dist/race-%02d.txt" % index, final_content=("value-%02d" % index).encode("utf-8"))],
+        [write_change(path="dist/race-%02d.txt" % index, final_content=("value-%02d" % index).encode("utf-8"))],
         snapshot=stack.read_active_manifest(),
     )
     return {

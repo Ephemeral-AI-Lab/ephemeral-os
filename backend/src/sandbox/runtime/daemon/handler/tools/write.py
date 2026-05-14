@@ -61,9 +61,7 @@ async def _write_in_workspace(
     services = backend_services(layer_stack_root)
     request_id = uuid4().hex
     lease_start = monotonic_now()
-    lease = await run_sync_in_executor(
-        services.manager.acquire_snapshot_lease, request_id
-    )
+    lease = await run_sync_in_executor(services.manager.acquire_snapshot_lease, request_id)
     lease_acquired_s = monotonic_now() - lease_start
     snapshot_read_s = 0.0
     known_base_hash: str | None = None
@@ -79,9 +77,7 @@ async def _write_in_workspace(
             )
             snapshot_read_s += monotonic_now() - read_start
             known_base_hash = (
-                _CONTENT_HASHER.hash_bytes(bytes_)
-                if exists_in_n and bytes_ is not None
-                else None
+                _CONTENT_HASHER.hash_bytes(bytes_) if exists_in_n and bytes_ is not None else None
             )
             known_base_hash_ready = True
             if exists_in_n:
@@ -171,10 +167,7 @@ def _write_out_of_workspace(
                 "conflict": {
                     "reason": "create_only_existing",
                     "conflict_file": abs_path,
-                    "message": (
-                        "create-only write rejected: path exists at "
-                        f"{abs_path}"
-                    ),
+                    "message": (f"create-only write rejected: path exists at {abs_path}"),
                 },
                 "conflict_reason": "create_only_existing",
                 "timings": {

@@ -120,7 +120,7 @@ def build_workspace_base(
         timings["workspace_base.inventory.symlinks"] = float(symlinks)
         timings["workspace_base.inventory.bytes"] = float(bytes_total)
     write_layer_start = monotonic_now()
-    layer_ref = _write_base_layer(stack, entries, root_hash=root_hash)
+    layer_ref = _write_base_layer(stack, entries)
     _write_base_digest_sidecar(stack, layer_ref.layer_id, root_hash)
     record_elapsed(
         timings,
@@ -325,10 +325,7 @@ def _relative_target_escapes(target: str) -> bool:
 def _write_base_layer(
     stack: Path,
     entries: tuple[_BaseEntry, ...],
-    *,
-    root_hash: str,
 ) -> LayerRef:
-    del root_hash  # written separately via _write_base_digest_sidecar
     layer_id = WORKSPACE_BASE_LAYER_ID
     layer_dir = stack / LAYERS_DIR / layer_id
     staging_dir = stack / STAGING_DIR / f"{layer_id}.staging"

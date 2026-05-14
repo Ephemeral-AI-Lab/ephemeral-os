@@ -23,6 +23,7 @@ from task_center.mission.state import (
 )
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt.orchestrator import AttemptOrchestrator
+from task_center.episode.manager import OrchestratorFactory
 from task_center.attempt.state import AttemptFailReason, AttemptStatus
 from task_center.attempt.runtime import AttemptDeps
 from task_center.episode.state import Episode, EpisodeStatus
@@ -43,10 +44,36 @@ class StartedMission:
 
 
 class MissionStarter:
-    """Single orchestration entry point for executor → delegated mission start."""
+    """Single orchestration entry point for executor → delegated mission start.
 
-    def __init__(self, *, runtime: AttemptDeps) -> None:
+    ``orchestrator_factory`` lets callers (tests, variant rollouts) inject a
+    different :class:`AttemptOrchestrator` builder. The default builder uses
+    the production :class:`AttemptOrchestrator`. Pass a custom factory to
+    swap in an instrumented or shadow orchestrator without rewriting the
+    starter.
+    """
+
+    def __init__(
+        self,
+        *,
+        runtime: AttemptDeps,
+        orchestrator_factory: OrchestratorFactory | None = None,
+    ) -> None:
         self._runtime = runtime
+        self._orchestrator_factory = (
+            orchestrator_factory or self._default_orchestrator_factory
+        )
+
+    def _default_orchestrator_factory(
+        self,
+        attempt: Any,
+        on_attempt_closed: Any,
+    ) -> AttemptOrchestrator:
+        return AttemptOrchestrator(
+            attempt=attempt,
+            on_attempt_closed=on_attempt_closed,
+            runtime=self._runtime,
+        )
 
     def start(
         self,
@@ -136,11 +163,7 @@ class MissionStarter:
             manager_registry=manager_registry,
             config=self._runtime.lifecycle_config,
             deliver_closure_report=_deliver,
-            orchestrator_factory=lambda attempt, on_attempt_closed: AttemptOrchestrator(
-                attempt=attempt,
-                on_attempt_closed=on_attempt_closed,
-                runtime=self._runtime,
-            ),
+            orchestrator_factory=self._orchestrator_factory,
         )
 
     def _assert_parent_running_and_no_open_child(

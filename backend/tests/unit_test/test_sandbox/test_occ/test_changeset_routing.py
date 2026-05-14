@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from tests.occ_change_helpers import write_change
+
 from sandbox.occ.changeset.prepared import CommitOptions, RouteDecision
 from sandbox.occ.changeset.types import (
     EditChange,
     OpaqueDirChange,
     SymlinkChange,
-    WriteChange,
 )
 from sandbox.occ.router import Router
 
@@ -34,10 +35,10 @@ def _prepare(changes, *, ignored: set[str] | None = None):
 def test_routes_occ_gated_occ_skipped_drop_and_reject_groups() -> None:
     prepared = _prepare(
         [
-            WriteChange(path="src/app.py", source="api_write", final_content=b"x"),
-            WriteChange(path="dist/app.js", source="api_write", final_content=b"x"),
-            WriteChange(path=".git/config", source="api_write", final_content=b"x"),
-            WriteChange(path="../escape", source="api_write", final_content=b"x"),
+            write_change(path="src/app.py", source="api_write", final_content=b"x"),
+            write_change(path="dist/app.js", source="api_write", final_content=b"x"),
+            write_change(path=".git/config", source="api_write", final_content=b"x"),
+            write_change(path="../escape", source="api_write", final_content=b"x"),
         ],
         ignored={"dist/app.js"},
     )

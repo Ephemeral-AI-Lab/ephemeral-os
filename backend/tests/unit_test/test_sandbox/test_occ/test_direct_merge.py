@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from tests.occ_change_helpers import write_change
+
 from pathlib import Path
 
 from sandbox.layer_stack.layer.change import LayerChange, WriteLayerChange
@@ -12,7 +14,6 @@ from sandbox.occ.changeset.types import (
     FileStatus,
     OpaqueDirChange,
     SymlinkChange,
-    WriteChange,
 )
 from sandbox.occ.stage.direct import DirectStager
 from sandbox.occ.content.hashing import ContentHasher
@@ -61,8 +62,8 @@ def test_direct_write_stages_last_writer_wins_content(tmp_path: Path) -> None:
         path="dist/app.js",
         route=RouteDecision.DIRECT,
         changes=(
-            WriteChange(path="dist/app.js", final_content=b"first"),
-            WriteChange(path="dist/app.js", final_content=b"second"),
+            write_change(path="dist/app.js", final_content=b"first"),
+            write_change(path="dist/app.js", final_content=b"second"),
         ),
     )
 
@@ -147,7 +148,7 @@ def test_direct_same_path_opaque_dir_respects_later_write(
         route=RouteDecision.DIRECT,
         changes=(
             OpaqueDirChange(path="cache", kept_children=frozenset()),
-            WriteChange(path="cache", final_content=b"file wins"),
+            write_change(path="cache", final_content=b"file wins"),
         ),
     )
 

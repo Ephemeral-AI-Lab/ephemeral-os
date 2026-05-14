@@ -15,7 +15,7 @@ _BODY = r"""
 from sandbox.layer_stack.layer.change import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.types import EditChange, FileStatus
-from sandbox.occ.service import Service
+from sandbox.occ.service import OccService
 
 class _Gitignore:
     def is_ignored(self, path):
@@ -31,7 +31,7 @@ stack.publish_changes([
     WriteLayerChange(path="src/no_newline.py", source_path=str(_source(root, "nonewline", b"tail"))),
     WriteLayerChange(path="src/spaces.py", source_path=str(_source(root, "spaces", b"value = 1\n"))),
 ])
-service = Service(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
+service = OccService(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
 
 success = service.apply_changeset_sync([
     EditChange(path="src/app.py", old_text="beta\n", new_text="gamma\n"),

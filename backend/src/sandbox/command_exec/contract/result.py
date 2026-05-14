@@ -8,8 +8,8 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from sandbox.occ import ChangesetResult
-    from sandbox.overlay import OverlayPathChange
+    from sandbox.occ.changeset import ChangesetResult
+    from sandbox.overlay.change import OverlayPathChange
 
 
 class MountMode(str, Enum):

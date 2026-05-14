@@ -14,7 +14,21 @@ pytestmark = pytest.mark.asyncio
 _BODY = r"""
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.types import WriteChange
-from sandbox.occ.service import Service
+from sandbox.occ.changeset.builders import build_api_write_change, build_overlay_write_change
+
+def write_change(*, path, final_content, source="api_write", base_hash=None):
+    if source == "overlay_capture":
+        return build_overlay_write_change(
+            path=path,
+            final_content=final_content,
+        ).with_base_hash(base_hash)
+    return build_api_write_change(
+        path=path,
+        final_content=final_content,
+        base_hash=base_hash,
+    )
+
+from sandbox.occ.service import OccService
 
 class _Gitignore:
     def is_ignored(self, path):
@@ -25,16 +39,16 @@ before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
 stack = LayerStackManager(root / "stack")
-service = Service(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
+service = OccService(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
 latencies = []
 timing_rows = []
 for batch in range(12):
     changes = [
-        WriteChange(path="tracked/%02d-%02d.txt" % (batch, index), final_content="tracked\n")
+        write_change(path="tracked/%02d-%02d.txt" % (batch, index), final_content="tracked\n")
         for index in range(3)
     ]
     changes.extend(
-        WriteChange(path="dist/%02d-%02d.txt" % (batch, index), final_content="ignored\n")
+        write_change(path="dist/%02d-%02d.txt" % (batch, index), final_content="ignored\n")
         for index in range(2)
     )
     t0 = time.perf_counter()

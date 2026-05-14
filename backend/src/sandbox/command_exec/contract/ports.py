@@ -9,7 +9,7 @@ from sandbox.command_exec.contract.request import CommandExecRequest
 from sandbox.command_exec.contract.result import CommandExecResult
 
 if TYPE_CHECKING:
-    from sandbox.occ import Change, ChangesetResult, CommitOptions
+    from sandbox.occ.changeset import Change, ChangesetResult, CommitOptions
 
 
 class SnapshotManifest(Protocol):

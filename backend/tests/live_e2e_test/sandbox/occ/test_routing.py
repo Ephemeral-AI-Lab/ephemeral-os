@@ -14,6 +14,20 @@ pytestmark = pytest.mark.asyncio
 _ROUTING_BODY = r"""
 from sandbox.occ.changeset.prepared import CommitOptions, RouteDecision
 from sandbox.occ.changeset.types import OpaqueDirChange, SymlinkChange, WriteChange
+from sandbox.occ.changeset.builders import build_api_write_change, build_overlay_write_change
+
+def write_change(*, path, final_content, source="api_write", base_hash=None):
+    if source == "overlay_capture":
+        return build_overlay_write_change(
+            path=path,
+            final_content=final_content,
+        ).with_base_hash(base_hash)
+    return build_api_write_change(
+        path=path,
+        final_content=final_content,
+        base_hash=base_hash,
+    )
+
 from sandbox.occ.router import Router
 
 class _Gitignore:
@@ -31,10 +45,10 @@ gitignore = _Gitignore()
 router = Router(gitignore)
 prepared = router.prepare_sync(
     [
-        WriteChange(path="src/app.py", final_content=b"x"),
-        WriteChange(path="dist/app.js", final_content=b"x"),
-        WriteChange(path=".git/config", final_content=b"x"),
-        WriteChange(path="../escape", final_content=b"x"),
+        write_change(path="src/app.py", final_content=b"x"),
+        write_change(path="dist/app.js", final_content=b"x"),
+        write_change(path=".git/config", final_content=b"x"),
+        write_change(path="../escape", final_content=b"x"),
         SymlinkChange(path="ignored-link", target="/tmp/data"),
         OpaqueDirChange(path="cache", kept_children=frozenset({"keep"})),
     ],

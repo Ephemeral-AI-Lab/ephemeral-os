@@ -15,7 +15,21 @@ _BODY = r"""
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.prepared import CommitOptions, RouteDecision
 from sandbox.occ.changeset.types import DeleteChange, EditChange, FileStatus, WriteChange
-from sandbox.occ.service import Service
+from sandbox.occ.changeset.builders import build_api_write_change, build_overlay_write_change
+
+def write_change(*, path, final_content, source="api_write", base_hash=None):
+    if source == "overlay_capture":
+        return build_overlay_write_change(
+            path=path,
+            final_content=final_content,
+        ).with_base_hash(base_hash)
+    return build_api_write_change(
+        path=path,
+        final_content=final_content,
+        base_hash=base_hash,
+    )
+
+from sandbox.occ.service import OccService
 
 class _Gitignore:
     def is_ignored(self, path):
@@ -26,17 +40,17 @@ before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
 stack = LayerStackManager(root / "stack")
-service = Service(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
+service = OccService(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
 
 empty = service.apply_changeset_sync([])
 assert empty.files == ()
 
 mixed = service.prepare_changeset_sync([
-    WriteChange(path="src/new.txt", final_content="new\n"),
-    WriteChange(path="dist/cache.txt", final_content="cache\n"),
+    write_change(path="src/new.txt", final_content="new\n"),
+    write_change(path="dist/cache.txt", final_content="cache\n"),
     DeleteChange(path=".git/config"),
-    WriteChange(path="../escape", final_content="bad"),
-    WriteChange(path="unicodé/文件.txt", final_content="utf8\n"),
+    write_change(path="../escape", final_content="bad"),
+    write_change(path="unicodé/文件.txt", final_content="utf8\n"),
 ], options=CommitOptions(atomic=True))
 routes = [(group.path, group.route.value) for group in mixed.path_groups]
 assert routes == [
@@ -47,13 +61,13 @@ assert routes == [
     ("unicodé/文件.txt", RouteDecision.GATED.value),
 ]
 
-max_changes = [WriteChange(path="bulk/%05d.txt" % index, final_content="x") for index in range(2000)]
+max_changes = [write_change(path="bulk/%05d.txt" % index, final_content="x") for index in range(2000)]
 prepared = service.prepare_changeset_sync(max_changes)
 assert len(prepared.path_groups) == 2000
 
 applied = service.apply_changeset_sync([
-    WriteChange(path="src/new.txt", final_content="new\n"),
-    WriteChange(path="dist/cache.txt", final_content="cache\n"),
+    write_change(path="src/new.txt", final_content="new\n"),
+    write_change(path="dist/cache.txt", final_content="cache\n"),
 ])
 assert [item.status for item in applied.files] == [FileStatus.ACCEPTED, FileStatus.ACCEPTED]
 

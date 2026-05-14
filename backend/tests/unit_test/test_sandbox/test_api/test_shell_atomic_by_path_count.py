@@ -10,6 +10,8 @@ real workloads (e.g. ``make build``).
 
 from __future__ import annotations
 
+from tests.occ_change_helpers import write_change
+
 import asyncio
 from dataclasses import dataclass
 from typing import Any
@@ -68,7 +70,7 @@ def _patch_workspace_to_occ(monkeypatch: pytest.MonkeyPatch) -> None:
 
     def fake(path_changes: Any) -> tuple[WriteChange, ...]:
         return tuple(
-            WriteChange(
+            write_change(
                 path=path,
                 final_content=b"x",
                 source="overlay_capture",

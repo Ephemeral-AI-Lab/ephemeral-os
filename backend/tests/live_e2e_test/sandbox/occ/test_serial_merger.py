@@ -15,6 +15,20 @@ _SERIAL_MERGER_BODY = r"""
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset.prepared import PreparedChangeset, PreparedPathGroup, RouteDecision
 from sandbox.occ.changeset.types import ChangesetResult, FileResult, FileStatus, WriteChange
+from sandbox.occ.changeset.builders import build_api_write_change, build_overlay_write_change
+
+def write_change(*, path, final_content, source="api_write", base_hash=None):
+    if source == "overlay_capture":
+        return build_overlay_write_change(
+            path=path,
+            final_content=final_content,
+        ).with_base_hash(base_hash)
+    return build_api_write_change(
+        path=path,
+        final_content=final_content,
+        base_hash=base_hash,
+    )
+
 from sandbox.occ.commit_queue import CommitQueue
 
 class _RecordingTransaction:
@@ -37,7 +51,7 @@ def _prepared(path, *, atomic=True):
         path_groups=(PreparedPathGroup(
             path=path,
             route=RouteDecision.DIRECT,
-            changes=(WriteChange(path=path, final_content=b"x"),),
+            changes=(write_change(path=path, final_content=b"x"),),
         ),),
         atomic=atomic,
     )
@@ -70,6 +84,20 @@ _RACE_BODY = r"""
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset.prepared import PreparedChangeset, PreparedPathGroup, RouteDecision
 from sandbox.occ.changeset.types import ChangesetResult, FileResult, FileStatus, WriteChange
+from sandbox.occ.changeset.builders import build_api_write_change, build_overlay_write_change
+
+def write_change(*, path, final_content, source="api_write", base_hash=None):
+    if source == "overlay_capture":
+        return build_overlay_write_change(
+            path=path,
+            final_content=final_content,
+        ).with_base_hash(base_hash)
+    return build_api_write_change(
+        path=path,
+        final_content=final_content,
+        base_hash=base_hash,
+    )
+
 from sandbox.occ.commit_queue import CommitQueue
 
 class _RecordingTransaction:
@@ -92,7 +120,7 @@ def _prepared(path):
         path_groups=(PreparedPathGroup(
             path=path,
             route=RouteDecision.DIRECT,
-            changes=(WriteChange(path=path, final_content=b"x"),),
+            changes=(write_change(path=path, final_content=b"x"),),
         ),),
         atomic=True,
     )

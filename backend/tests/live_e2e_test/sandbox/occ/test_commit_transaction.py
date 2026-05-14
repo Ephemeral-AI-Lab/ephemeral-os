@@ -16,8 +16,22 @@ from sandbox.layer_stack.layer.change import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.prepared import CommitOptions
 from sandbox.occ.changeset.types import ChangesetResult, FileStatus, WriteChange
+from sandbox.occ.changeset.builders import build_api_write_change, build_overlay_write_change
+
+def write_change(*, path, final_content, source="api_write", base_hash=None):
+    if source == "overlay_capture":
+        return build_overlay_write_change(
+            path=path,
+            final_content=final_content,
+        ).with_base_hash(base_hash)
+    return build_api_write_change(
+        path=path,
+        final_content=final_content,
+        base_hash=base_hash,
+    )
+
 from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.service import Service
+from sandbox.occ.service import OccService
 
 class _Gitignore:
     def is_ignored(self, path):
@@ -37,12 +51,12 @@ before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
 stack = LayerStackManager(root / "stack")
-service = Service(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
+service = OccService(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
 _publish(stack, "src/app.py", b"old\n")
 snapshot = stack.read_active_manifest()
 
 result = service.apply_changeset_sync(
-    [WriteChange(path="src/app.py", final_content=b"new\n")],
+    [write_change(path="src/app.py", final_content=b"new\n")],
     snapshot=snapshot,
 )
 assert isinstance(result, ChangesetResult)
@@ -51,7 +65,7 @@ assert result.published_manifest_version == 2
 assert stack.read_bytes("src/app.py") == (b"new\n", True)
 
 stale = service.apply_changeset_sync(
-    [WriteChange(path="src/app.py", final_content=b"stale\n")],
+    [write_change(path="src/app.py", final_content=b"stale\n")],
     snapshot=snapshot,
 )
 assert isinstance(stale, ChangesetResult)
@@ -61,8 +75,8 @@ assert stack.read_bytes("src/app.py") == (b"new\n", True)
 
 atomic = service.apply_changeset_sync(
     [
-        WriteChange(path="src/ok.py", final_content=b"ok"),
-        WriteChange(path="../escape", final_content=b"bad"),
+        write_change(path="src/ok.py", final_content=b"ok"),
+        write_change(path="../escape", final_content=b"bad"),
     ],
     snapshot=stack.read_active_manifest(),
     options=CommitOptions(atomic=True),
@@ -86,8 +100,22 @@ _RACE_BODY = r"""
 from sandbox.layer_stack.layer.change import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.types import FileStatus, WriteChange
+from sandbox.occ.changeset.builders import build_api_write_change, build_overlay_write_change
+
+def write_change(*, path, final_content, source="api_write", base_hash=None):
+    if source == "overlay_capture":
+        return build_overlay_write_change(
+            path=path,
+            final_content=final_content,
+        ).with_base_hash(base_hash)
+    return build_api_write_change(
+        path=path,
+        final_content=final_content,
+        base_hash=base_hash,
+    )
+
 from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.service import Service
+from sandbox.occ.service import OccService
 
 class _Gitignore:
     def is_ignored(self, path):
@@ -107,7 +135,7 @@ before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
 stack = LayerStackManager(root / "stack")
-service = Service(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
+service = OccService(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
 _publish(stack, "src/app.py", b"base\n")
 snapshot = stack.read_active_manifest()
 n = 4
@@ -118,7 +146,7 @@ def commit_one(index):
     t0 = time.perf_counter()
     result = service.apply_changeset_sync(
         [
-            WriteChange(
+            write_change(
                 path="src/app.py",
                 source="overlay_capture",
                 final_content=("agent-%d\n" % index).encode("utf-8"),

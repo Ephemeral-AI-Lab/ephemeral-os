@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from sandbox.command_exec.contract.spec import WorkspaceReplacementMountSpec
-from sandbox.overlay import OverlayPathChange
-from sandbox.overlay import capture_changes
+from sandbox.overlay.capture import capture_changes
+from sandbox.overlay.change import OverlayPathChange
 
 
 def capture_workspace_upperdir(

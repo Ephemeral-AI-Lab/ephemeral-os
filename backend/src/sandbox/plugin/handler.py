@@ -254,7 +254,7 @@ def _import_dispatcher_register_op() -> Any:
 
 
 async def _plugin_op_context_factory(
-    args: dict[str, Any], plugin_name: str, op_name: str
+    args: dict[str, Any], _plugin_name: str, op_name: str
 ) -> PluginOpContext:
     """Build a PluginOpContext from the daemon-envelope args.
 

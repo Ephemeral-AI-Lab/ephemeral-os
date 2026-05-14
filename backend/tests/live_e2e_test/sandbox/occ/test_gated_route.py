@@ -15,8 +15,22 @@ _GATED_BODY = r"""
 from sandbox.layer_stack.layer.change import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.types import FileStatus, WriteChange
+from sandbox.occ.changeset.builders import build_api_write_change, build_overlay_write_change
+
+def write_change(*, path, final_content, source="api_write", base_hash=None):
+    if source == "overlay_capture":
+        return build_overlay_write_change(
+            path=path,
+            final_content=final_content,
+        ).with_base_hash(base_hash)
+    return build_api_write_change(
+        path=path,
+        final_content=final_content,
+        base_hash=base_hash,
+    )
+
 from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.service import Service
+from sandbox.occ.service import OccService
 
 class _Gitignore:
     def is_ignored(self, path):
@@ -36,7 +50,7 @@ before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
 stack = LayerStackManager(root / "stack")
-service = Service(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
+service = OccService(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
 _publish(stack, "src/race.py", b"base\n")
 snapshot = stack.read_active_manifest()
 
@@ -45,7 +59,7 @@ def race_write(index):
     barrier.wait(timeout=5)
     result = service.apply_changeset_sync(
         [
-            WriteChange(
+            write_change(
                 path="src/race.py",
                 source="overlay_capture",
                 final_content=("winner-%d\n" % index).encode("utf-8"),
@@ -63,11 +77,11 @@ assert first_commit_wins.count("aborted_version") == 1
 stale_snapshot = snapshot
 both_reject = [
     service.apply_changeset_sync(
-        [WriteChange(path="src/race.py", source="overlay_capture", final_content=b"stale-a\n")],
+        [write_change(path="src/race.py", source="overlay_capture", final_content=b"stale-a\n")],
         snapshot=stale_snapshot,
     ).files[0].status,
     service.apply_changeset_sync(
-        [WriteChange(path="src/race.py", source="overlay_capture", final_content=b"stale-b\n")],
+        [write_change(path="src/race.py", source="overlay_capture", final_content=b"stale-b\n")],
         snapshot=stale_snapshot,
     ).files[0].status,
 ]
@@ -77,8 +91,8 @@ fresh = stack.read_active_manifest()
 _publish(stack, "src/other.py", b"changed\n")
 partial = service.apply_changeset_sync(
     [
-        WriteChange(path="src/other.py", source="overlay_capture", final_content=b"partial-a\n"),
-        WriteChange(path="src/new.py", source="overlay_capture", final_content=b"partial-b\n"),
+        write_change(path="src/other.py", source="overlay_capture", final_content=b"partial-a\n"),
+        write_change(path="src/new.py", source="overlay_capture", final_content=b"partial-b\n"),
     ],
     snapshot=fresh,
 )

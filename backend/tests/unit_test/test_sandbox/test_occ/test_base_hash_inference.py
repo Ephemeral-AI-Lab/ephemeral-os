@@ -12,7 +12,7 @@ from sandbox.occ.changeset.prepared import RouteDecision
 from sandbox.occ.changeset.types import DeleteChange, EditChange, WriteChange
 from sandbox.occ.content.gitignore_oracle import GitignoreMatcher
 from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.service import Service
+from sandbox.occ.service import OccService
 
 _HASHER = ContentHasher()
 
@@ -61,7 +61,7 @@ def test_tracked_write_without_base_hash_uses_leased_snapshot_hash(tmp_path) -> 
         ]
     )
 
-    service = Service(
+    service = OccService(
         gitignore=_never_ignored(), snapshot_reader=stack, staging=stack, publisher=stack
     )
     prepared = asyncio.run(
@@ -88,7 +88,7 @@ def test_tracked_write_without_base_hash_uses_leased_snapshot_hash(tmp_path) -> 
 def test_chained_writes_use_running_base_hash(tmp_path) -> None:
     stack = _stack_with_file(tmp_path, "src/app.py", b"old\n")
     snapshot = stack.read_active_manifest()
-    service = Service(
+    service = OccService(
         gitignore=_never_ignored(), snapshot_reader=stack, staging=stack, publisher=stack
     )
 
@@ -113,7 +113,7 @@ def test_chained_writes_use_running_base_hash(tmp_path) -> None:
 def test_missing_snapshot_path_infers_none_base_hash(tmp_path) -> None:
     stack = LayerStackManager(tmp_path / "layers")
     snapshot = stack.read_active_manifest()
-    service = Service(
+    service = OccService(
         gitignore=_never_ignored(), snapshot_reader=stack, staging=stack, publisher=stack
     )
 
@@ -133,7 +133,7 @@ def test_missing_snapshot_path_infers_none_base_hash(tmp_path) -> None:
 def test_edit_changes_keep_anchor_contract_without_base_hash(tmp_path) -> None:
     stack = _stack_with_file(tmp_path, "src/app.py", b"old\n")
     snapshot = stack.read_active_manifest()
-    service = Service(
+    service = OccService(
         gitignore=_never_ignored(), snapshot_reader=stack, staging=stack, publisher=stack
     )
 
@@ -154,7 +154,7 @@ def test_edit_changes_keep_anchor_contract_without_base_hash(tmp_path) -> None:
 def test_shell_delete_can_infer_base_hash_from_snapshot(tmp_path) -> None:
     stack = _stack_with_file(tmp_path, "src/gone.py", b"delete me")
     snapshot = stack.read_active_manifest()
-    service = Service(
+    service = OccService(
         gitignore=_never_ignored(), snapshot_reader=stack, staging=stack, publisher=stack
     )
 

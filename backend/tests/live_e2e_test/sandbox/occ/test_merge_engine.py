@@ -17,6 +17,20 @@ from sandbox.layer_stack.layer.change import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.prepared import PreparedPathGroup, RouteDecision
 from sandbox.occ.changeset.types import EditChange, FileStatus, WriteChange
+from sandbox.occ.changeset.builders import build_api_write_change, build_overlay_write_change
+
+def write_change(*, path, final_content, source="api_write", base_hash=None):
+    if source == "overlay_capture":
+        return build_overlay_write_change(
+            path=path,
+            final_content=final_content,
+        ).with_base_hash(base_hash)
+    return build_api_write_change(
+        path=path,
+        final_content=final_content,
+        base_hash=base_hash,
+    )
+
 from sandbox.occ.content.hashing import ContentHasher
 
 def _publish(stack, rel, content):
@@ -103,7 +117,7 @@ assert Path(crlf_delta.changes[0].source_path).read_bytes() == b"a\r\nB\r\n"
 direct_group = PreparedPathGroup(
     path="dist/app.js",
     route=RouteDecision.DIRECT,
-    changes=(WriteChange(path="dist/app.js", final_content=b"direct"),),
+    changes=(write_change(path="dist/app.js", final_content=b"direct"),),
 )
 direct_result, direct_delta = direct.stage_group(
     direct_group,

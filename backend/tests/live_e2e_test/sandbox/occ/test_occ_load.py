@@ -16,7 +16,21 @@ _BODY = r"""
 from sandbox.layer_stack.layer.change import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.types import FileStatus, WriteChange
-from sandbox.occ.service import Service
+from sandbox.occ.changeset.builders import build_api_write_change, build_overlay_write_change
+
+def write_change(*, path, final_content, source="api_write", base_hash=None):
+    if source == "overlay_capture":
+        return build_overlay_write_change(
+            path=path,
+            final_content=final_content,
+        ).with_base_hash(base_hash)
+    return build_api_write_change(
+        path=path,
+        final_content=final_content,
+        base_hash=base_hash,
+    )
+
+from sandbox.occ.service import OccService
 
 class _Gitignore:
     def is_ignored(self, path):
@@ -35,7 +49,7 @@ for index in range(5):
             source_path=str(_source(root, "shared-%02d" % index, b"base\n")),
         )
     ])
-service = Service(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
+service = OccService(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
 operation_count = int(cfg["operation_count"])
 concurrency = int(cfg["concurrency"])
 barrier = threading.Barrier(concurrency)
@@ -51,7 +65,7 @@ def commit_one(index):
             path = "dist/load-%02d-%02d.txt" % (index, slot)
             source = "overlay_capture"
         changes.append(
-            WriteChange(
+            write_change(
                 path=path,
                 source=source,
                 final_content=("writer-%03d-%02d\n" % (index, slot)).encode("utf-8"),
