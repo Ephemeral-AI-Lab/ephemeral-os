@@ -36,7 +36,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only
     from task_center.config import TaskCenterLifecycleConfig
     from task_center.context_engine.composer import ContextComposer
     from task_center.episode.registry import EpisodeManagerRegistry
-    from task_center.lifecycle import LifecycleTarget
+    from task_center.attempt.runtime import LifecycleTarget
 
 
 @dataclass(frozen=True, slots=True)

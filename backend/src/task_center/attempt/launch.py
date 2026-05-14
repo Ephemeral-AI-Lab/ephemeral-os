@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from runtime.app_factory import RuntimeConfig
     from task_center.attempt.orchestrator import AttemptOrchestrator
     from task_center.attempt.state import Attempt
-    from task_center.contexts import LaunchCtx
+    from task_center.attempt.contexts import LaunchCtx
 
 logger = logging.getLogger(__name__)
 

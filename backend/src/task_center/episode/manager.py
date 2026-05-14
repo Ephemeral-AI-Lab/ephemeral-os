@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 from task_center.persistence import AttemptStoreProtocol
 from task_center.persistence import TaskStoreProtocol
 from task_center.persistence import EpisodeStoreProtocol
-from task_center.protocols import RegisteredAttemptOrchestrator
+from task_center._core.types import RegisteredAttemptOrchestrator
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt.state import (
     Attempt,

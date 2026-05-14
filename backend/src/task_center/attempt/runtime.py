@@ -24,7 +24,7 @@ from task_center.persistence import (
     MissionStoreProtocol,
     TaskStoreProtocol,
 )
-from task_center.protocols import RegisteredAttemptOrchestrator
+from task_center._core.types import RegisteredAttemptOrchestrator
 from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 
 if TYPE_CHECKING:
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
         AttemptOrchestratorRegistry,
     )
     from task_center.context_engine.composer import ContextComposer
-    from task_center.contexts import TaskCenterStores
+    from task_center.attempt.contexts import TaskCenterStores
     from task_center.entry.controller import EntryTaskController
     from task_center.mission.state import MissionClosureReport
 
@@ -90,7 +90,7 @@ class AttemptDeps:
         # Local import keeps the runtime module free of an eager
         # contexts dependency; the protocols reference back to AttemptDeps
         # only for documentation.
-        from task_center.contexts import TaskCenterStores
+        from task_center.attempt.contexts import TaskCenterStores
 
         return TaskCenterStores(
             mission_store=self.mission_store,

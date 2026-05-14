@@ -25,7 +25,7 @@ from task_center.attempt.runtime import (
     AgentLaunch,
     AttemptDeps,
 )
-from task_center.launch_builder import LaunchBuilder
+from task_center.attempt.launch import LaunchBuilder
 from task_center.attempt.generator_dag import (
     all_generators_done,
     all_generators_quiescent,

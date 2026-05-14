@@ -32,10 +32,10 @@ from task_center.agent_routing.predicates import (
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.context_engine.scope import ContextScope
 from task_center.entry.controller import EntryTaskController
-from task_center.launcher import (
+from task_center.attempt.launch import (
     AgentStreamEmitter,
-    EphemeralAttemptAgentLauncher,
     AttemptAgentRunner,
+    EphemeralAttemptAgentLauncher,
 )
 from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
@@ -308,7 +308,7 @@ class TaskCenterEntryCoordinator:
         controller: EntryTaskController,
         task_center_run_id: str,
     ) -> AgentLaunch:
-        from task_center.launch_builder import LaunchBuilder
+        from task_center.attempt.launch import LaunchBuilder
 
         return LaunchBuilder(runtime=runtime).for_entry(
             task_id=controller.task_id,
