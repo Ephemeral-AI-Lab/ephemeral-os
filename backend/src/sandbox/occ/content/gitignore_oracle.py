@@ -8,28 +8,14 @@ does not shell out to ``git check-ignore``.
 
 from __future__ import annotations
 
-import importlib
 from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
+
+import pathspec
 
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.ports import SnapshotReader
-
-if TYPE_CHECKING:  # pragma: no cover - import only for type-checkers
-    import pathspec  # noqa: F401
-
-
-_pathspec_module: Any | None = None
-
-
-def _load_pathspec() -> Any:
-    """Lazy-import ``pathspec`` so importing the runtime module stays cheap."""
-    global _pathspec_module
-    if _pathspec_module is None:
-        _pathspec_module = importlib.import_module("pathspec")
-    return _pathspec_module
-
 
 ReadGitignoreFn = Callable[[str], str | None]
 
@@ -84,7 +70,6 @@ class PathspecGitignoreOracle:
         self._path_cache: dict[str, bool] = {}
         self._dir_cache: dict[str, bool] = {}
         self._spec_cache: dict[str, Any | None] = {}
-        self._pathspec = _load_pathspec()
 
     def is_ignored(self, path: str) -> bool:
         if path in self._path_cache:
@@ -159,7 +144,7 @@ class PathspecGitignoreOracle:
         content = self._read(dir_rel)
         spec: Any | None = None
         if content:
-            spec = self._pathspec.GitIgnoreSpec.from_lines(content.splitlines())
+            spec = pathspec.GitIgnoreSpec.from_lines(content.splitlines())
         self._spec_cache[dir_rel] = spec
         return spec
 
