@@ -79,17 +79,13 @@ def _probe_control_plane(layer_stack_root: str) -> dict[str, object]:
 
 def _probe_data_plane(layer_stack_root: str) -> dict[str, object]:
     handlers_backend = request_context.services(layer_stack_root)
-    shell_services = shell_runner.services(
-        {"layer_stack_root": layer_stack_root}
-    )
+    # Build shell data-plane services for the side effect: a crash here
+    # surfaces a broken OCC backend before any request hits api.shell.
+    shell_runner.services({"layer_stack_root": layer_stack_root})
     if not isinstance(handlers_backend, OccBackend):
         raise RuntimeError(
             "handler services returned "
             f"{type(handlers_backend).__name__}; expected OccBackend"
-        )
-    if len(shell_services) != 4:
-        raise RuntimeError(
-            f"shell services returned {len(shell_services)} entries; expected 4"
         )
     mount_mode = (
         "private_namespace"

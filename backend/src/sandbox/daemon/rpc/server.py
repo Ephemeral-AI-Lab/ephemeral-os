@@ -151,7 +151,7 @@ async def _handle_connection(
             writer.close()
             await writer.wait_closed()
         except Exception:  # pragma: no cover
-            pass
+            logger.debug("daemon writer.close failed", exc_info=True)
 
 
 def _prepare_socket_path(socket_path: Path) -> None:

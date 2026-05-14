@@ -15,6 +15,12 @@ from sandbox.timing import monotonic_now
 
 
 async def build_workspace_base(args: dict[str, object]) -> dict[str, object]:
+    """Build (or rebuild on ``reset``) the layer-stack workspace base.
+
+    ``reset=True`` drops peer runtime caches before rebuilding so the new
+    base is rebound cleanly; that side effect is part of the public
+    contract, not an internal optimization.
+    """
     total_start = monotonic_now()
     layer_stack_root = require_layer_stack_root(args)
     reset = bool(args.get("reset", False))
