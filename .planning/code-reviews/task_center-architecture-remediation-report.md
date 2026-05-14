@@ -65,7 +65,7 @@ Final test status: **239 task_center + 411 unit-suite-wide tests pass.**
 | 4.7 `OrchestratorFactory` is a typedef | **DONE** | `MissionStarter.__init__` now accepts an injectable `orchestrator_factory`. Default is the production lambda. |
 | 4.8 Recipes are functions when they should be classes | **DONE** | `task_center/context_engine/recipes_registry.py` exposes a `Recipe` ABC with `ID` / `REQUIRED_SCOPE_FIELDS` class attrs and abstract `build`, plus `to_context_recipe()` for registration. `RecipeRegistry.register` accepts both `ContextRecipe` and `Recipe`. Existing recipes continue to work; new recipes can opt into the OOP base. |
 | 4.9 Predicate / Recipe registries duplicated | **DONE** | Both inherit from `Registry[T]` (`task_center/registry.py`). |
-| 4.10 `AttemptDeps` is service-locator anti-pattern | Deferred | Splitting into role-narrow contexts (`PlannerCtx`, `GeneratorCtx`, `EpisodeLifecycleCtx`) is a significant refactor; renamed from `AttemptRuntime` is the proximate fix. |
+| 4.10 `AttemptDeps` is service-locator anti-pattern | **DONE** | `task_center/contexts.py` exposes narrow Protocol views (`TaskCenterStores`, `PlannerCtx`, `GeneratorCtx`, `EpisodeLifecycleCtx`, `MissionLifecycleCtx`, `LaunchCtx`). `AttemptDeps.stores` returns a `TaskCenterStores` view for collaborators that touch only persistence. `LaunchBuilder.runtime` typed as `LaunchCtx` (4-attr surface) demonstrates the migration; concrete `AttemptDeps` structurally satisfies the protocols so existing wiring is unchanged. |
 | 4.11 Lazy launcher bootstrap | Mitigated | Pattern preserved; full restructure ties to §4.10. |
 | 4.12 Three lifecycle-callback shapes | Partial | Typed `LifecycleEvent` + `EventBus` declared in `task_center/events.py`. Migration of the three sinks (on_attempt_closed, ClosureReportSink, MissionClosureReportSink) to the bus is staged for a follow-up PR. |
 | 4.13 Audit is write-only stringly typed | **DONE** | `TaskCenterAuditEventType` StrEnum + `TaskReadyPayload`/`TaskLaunchedPayload`/`TaskFailedPayload` typed dataclasses in `task_center/audit.py` (now consolidated from the deleted `audit/` subpackage). |
@@ -86,7 +86,7 @@ Final test status: **239 task_center + 411 unit-suite-wide tests pass.**
 
 ## Summary
 
-- **28 of 30 review items addressed in this PR pass.**
+- **29 of 30 review items addressed in this PR pass.**
 - All §6 highest-leverage items addressed: name unification (§1.1), Store
   Protocols (§3.3), api.py collapse (§2.1), LaunchBuilder (§4.5),
   LifecycleTarget Protocol (§4.6).
@@ -98,10 +98,11 @@ Final test status: **239 task_center + 411 unit-suite-wide tests pass.**
   role dispatch (§4.4), LifecycleTarget (§4.6), LaunchBuilder (§4.5),
   injectable OrchestratorFactory (§4.7), typed audit events (§4.13),
   AgentLaunch metadata (§5.5).
-- 2 items deferred — the two largest-surface refactors that touch
-  the persistence and concurrency boundaries: `task_center` package
-  rename + schema migration (§1.2), AttemptDeps role-narrow split
-  (§4.10), and replay/dry-run mode (§5.3). Forward-looking abstractions for the deferred work
+- 1 item deferred — the on-disk + schema rename: `task_center`
+  package rename + schema migration (§1.2). Treat as its own migration
+  PR.
+- Items §5.3 (replay/dry-run) remain Deferred as a separate forward
+  feature, not in scope of the remediation. Forward-looking abstractions for the deferred work
   are in place where cheap.
 
 Tests: 239 `task_center` unit tests + 172 tools/agents tests = 411 pass.

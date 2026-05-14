@@ -18,6 +18,7 @@ from task_center.task_state import TaskCenterTaskRole
 
 if TYPE_CHECKING:
     from task_center.context_engine.composer import ContextComposer
+    from task_center.contexts import TaskCenterStores
     from task_center.entry.controller import EntryTaskController
     from task_center.attempt.orchestrator_registry import (
         AttemptOrchestratorRegistry,
@@ -69,6 +70,28 @@ class AttemptDeps:
     # events for entry tasks whose ``task_center_attempt_id`` is None.
     entry_task_controller: EntryTaskController | None = None
     audit_sink: AuditSink = field(default_factory=NoopAuditSink)
+
+    @property
+    def stores(self) -> TaskCenterStores:
+        """Narrow view of the store quintet for collaborators that touch
+        only persistence.
+
+        See :mod:`task_center.contexts` for the broader role-narrow
+        Protocol palette (:class:`PlannerCtx`, :class:`GeneratorCtx`,
+        :class:`EpisodeLifecycleCtx`, :class:`MissionLifecycleCtx`,
+        :class:`LaunchCtx`).
+        """
+        # Local import keeps the runtime module free of an eager
+        # contexts dependency; the protocols reference back to AttemptDeps
+        # only for documentation.
+        from task_center.contexts import TaskCenterStores
+
+        return TaskCenterStores(
+            mission_store=self.mission_store,
+            episode_store=self.episode_store,
+            attempt_store=self.attempt_store,
+            task_store=self.task_store,
+        )
 
     def run_id_for_attempt(self, attempt: Attempt) -> str:
         episode = self.episode_store.get(attempt.episode_id)

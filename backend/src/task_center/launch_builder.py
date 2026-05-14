@@ -23,6 +23,7 @@ from task_center.task_state import TaskCenterTaskRole
 
 if TYPE_CHECKING:
     from task_center.attempt.state import Attempt
+    from task_center.contexts import LaunchCtx
 
 
 PLANNER_AGENT_NAME = "planner"
@@ -31,9 +32,17 @@ EVALUATOR_AGENT_NAME = "evaluator"
 
 @dataclass(frozen=True, slots=True)
 class LaunchBuilder:
-    """Build :class:`AgentLaunch` records for each harness role."""
+    """Build :class:`AgentLaunch` records for each harness role.
 
-    runtime: AttemptDeps
+    Typed against :class:`LaunchCtx` (a narrow Protocol view) rather than
+    the full :class:`AttemptDeps`, so the dependency surface visible at
+    construction is just ``episode_store`` + ``mission_store`` +
+    ``run_id_for_attempt`` + ``require_composer``. The concrete
+    :class:`AttemptDeps` structurally satisfies the protocol, so existing
+    call sites pass it unchanged.
+    """
+
+    runtime: LaunchCtx
 
     def for_planner(
         self, *, attempt: Attempt, task_id: str
