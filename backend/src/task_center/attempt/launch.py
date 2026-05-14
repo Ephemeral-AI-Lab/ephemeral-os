@@ -69,7 +69,11 @@ class EphemeralAttemptAgentLauncher:
         self._pending: set[asyncio.Task[None]] = set()
 
     def launch(self, launch: AgentLaunch) -> None:
-        agent_def = self._resolve_agent_definition(launch.agent_name)
+        agent_def = get_definition(launch.agent_name)
+        if agent_def is None:
+            raise TaskCenterInvariantViolation(
+                f"TaskCenter agent definition {launch.agent_name!r} is not registered."
+            )
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError as exc:
@@ -89,21 +93,14 @@ class EphemeralAttemptAgentLauncher:
             self._pending.difference_update(task for task in pending if task.done())
             await asyncio.sleep(0)
 
-    @staticmethod
-    def _resolve_agent_definition(agent_name: str) -> AgentDefinition:
-        agent_def = get_definition(agent_name)
-        if agent_def is None:
-            raise TaskCenterInvariantViolation(
-                f"TaskCenter agent definition {agent_name!r} is not registered."
-            )
-        return agent_def
-
     async def _run_launch(
         self,
         launch: AgentLaunch,
         agent_def: AgentDefinition,
     ) -> None:
-        runtime = self._require_runtime()
+        runtime = self._runtime()
+        if runtime is None:
+            raise TaskCenterInvariantViolation("TaskCenter attempt runtime is not initialized.")
         runner = self._runner
         if runner is None:
             from engine.api import run_ephemeral_agent
@@ -167,12 +164,6 @@ class EphemeralAttemptAgentLauncher:
             summary = "Agent run ended without a terminal submission."
         await self._report_unfinished_running_task(launch, summary=summary)
 
-    def _require_runtime(self) -> AttemptDeps:
-        runtime = self._runtime()
-        if runtime is None:
-            raise TaskCenterInvariantViolation("TaskCenter attempt runtime is not initialized.")
-        return runtime
-
     async def _report_unfinished_running_task(
         self,
         launch: AgentLaunch,
@@ -191,53 +182,48 @@ class EphemeralAttemptAgentLauncher:
 
         _report_exhaustion(self, runtime, launch, summary=summary)
 
-    @staticmethod
-    def _mark_unowned_task_exhausted(
-        runtime: AttemptDeps,
-        launch: AgentLaunch,
-        *,
-        summary: str,
-    ) -> None:
-        logger.error(
-            "EphemeralAttemptAgentLauncher: missing orchestrator for unfinished task",
-            extra={
-                "task_id": launch.task_id,
-                "attempt_id": launch.attempt_id,
-            },
-        )
-        runtime.task_store.set_task_status(
-            launch.task_id,
-            status=TaskCenterTaskStatus.FAILED.value,
-            summary={"fail_reason": "run_exhausted", "summary": summary},
-        )
 
-    @classmethod
-    def _fail_unowned_attempt(
-        cls,
-        runtime: AttemptDeps,
-        launch: AgentLaunch,
-        *,
-        summary: str,
-    ) -> None:
-        cls._mark_unowned_task_exhausted(runtime, launch, summary=summary)
-        if launch.attempt_id is None:
-            return
-        attempt = runtime.attempt_store.get(launch.attempt_id)
-        if attempt is None or attempt.is_closed:
-            return
-        fail_reason = _fail_reason_for_role(launch.role)
-        runtime.attempt_store.close(
-            attempt.id,
-            status=AttemptStatus.FAILED,
-            fail_reason=fail_reason,
-            closed_at=datetime.now(UTC),
-        )
-        manager_registry = runtime.manager_registry
-        if manager_registry is None:
-            return
-        manager = manager_registry.get(attempt.episode_id)
-        if manager is not None:
-            manager.handle_attempt_closed(attempt.id)
+_ROLE_FAIL_REASONS: dict[TaskCenterTaskRole, AttemptFailReason] = {
+    TaskCenterTaskRole.PLANNER: AttemptFailReason.PLANNER_FAILED,
+    TaskCenterTaskRole.GENERATOR: AttemptFailReason.GENERATOR_FAILED,
+    TaskCenterTaskRole.EVALUATOR: AttemptFailReason.EVALUATOR_FAILED,
+}
+
+
+def _fail_unowned_attempt(
+    runtime: AttemptDeps,
+    launch: AgentLaunch,
+    *,
+    summary: str,
+) -> None:
+    """Close task + attempt directly when the orchestrator is missing."""
+    logger.error(
+        "EphemeralAttemptAgentLauncher: missing orchestrator for unfinished task",
+        extra={"task_id": launch.task_id, "attempt_id": launch.attempt_id},
+    )
+    runtime.task_store.set_task_status(
+        launch.task_id,
+        status=TaskCenterTaskStatus.FAILED.value,
+        summary={"fail_reason": "run_exhausted", "summary": summary},
+    )
+    if launch.attempt_id is None:
+        return
+    attempt = runtime.attempt_store.get(launch.attempt_id)
+    if attempt is None or attempt.is_closed:
+        return
+    runtime.attempt_store.close(
+        attempt.id,
+        status=AttemptStatus.FAILED,
+        fail_reason=_ROLE_FAIL_REASONS[launch.role],
+        closed_at=datetime.now(UTC),
+    )
+    manager_registry = runtime.manager_registry
+    if manager_registry is None:
+        return
+    manager = manager_registry.get(attempt.episode_id)
+    if manager is not None:
+        manager.handle_attempt_closed(attempt.id)
+
 
 def _require_attempt_orchestrator(
     launcher: EphemeralAttemptAgentLauncher,
@@ -248,12 +234,11 @@ def _require_attempt_orchestrator(
 ) -> AttemptOrchestrator | None:
     if launch.attempt_id is None:
         raise TaskCenterInvariantViolation(
-            f"Role {launch.role!r} exhaustion report requires "
-            "launch.attempt_id."
+            f"Role {launch.role!r} exhaustion report requires launch.attempt_id."
         )
     orchestrator = runtime.orchestrator_registry.get(launch.attempt_id)
     if orchestrator is None:
-        launcher._fail_unowned_attempt(runtime, launch, summary=summary)
+        _fail_unowned_attempt(runtime, launch, summary=summary)
         return None
     return orchestrator
 
@@ -265,22 +250,16 @@ def _report_exhaustion(
     *,
     summary: str,
 ) -> None:
-    """Single role-parameterized exhaustion reporter (lever #6 consolidation).
-
-    Adding a new role means adding one ``elif`` branch here — no dispatch
-    table to keep in sync.
-    """
+    """Single role-parameterized exhaustion reporter."""
     if launch.role == TaskCenterTaskRole.ENTRY_EXECUTOR:
         controller = runtime.entry_task_controller
         if controller is None:
-            launcher._mark_unowned_task_exhausted(runtime, launch, summary=summary)
+            _fail_unowned_attempt(runtime, launch, summary=summary)
             return
         controller.apply_run_exhausted(summary=summary)
         return
 
-    orchestrator = _require_attempt_orchestrator(
-        launcher, runtime, launch, summary=summary
-    )
+    orchestrator = _require_attempt_orchestrator(launcher, runtime, launch, summary=summary)
     if orchestrator is None:
         return
 
@@ -318,28 +297,6 @@ def _report_exhaustion(
         raise TaskCenterInvariantViolation(
             f"No exhaustion reporter for role {launch.role!r}"
         )
-
-
-_ROLE_FAIL_REASONS: dict[TaskCenterTaskRole, AttemptFailReason] = {
-    TaskCenterTaskRole.PLANNER: AttemptFailReason.PLANNER_FAILED,
-    TaskCenterTaskRole.GENERATOR: AttemptFailReason.GENERATOR_FAILED,
-    TaskCenterTaskRole.EVALUATOR: AttemptFailReason.EVALUATOR_FAILED,
-}
-
-
-def _fail_reason_for_role(role: TaskCenterTaskRole) -> AttemptFailReason:
-    """Map an attempt-scoped role to its :class:`AttemptFailReason`.
-
-    ``ENTRY_EXECUTOR`` is intentionally absent: entry tasks have no parent
-    attempt, so callers (``_fail_unowned_attempt``) short-circuit before
-    they need a fail reason.
-    """
-    try:
-        return _ROLE_FAIL_REASONS[role]
-    except KeyError as exc:
-        raise TaskCenterInvariantViolation(
-            f"Role {role!r} has no AttemptFailReason mapping"
-        ) from exc
 
 
 # ---- LaunchBuilder (role-parametrized AgentLaunch factory) -----------------
