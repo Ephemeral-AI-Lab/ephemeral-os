@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.entry.sandbox_bridge import TaskCenterSandboxBridge
+from task_center.entry import TaskCenterSandboxBridge
 
 
 def test_prepares_explicit_sandbox_id_without_create() -> None:

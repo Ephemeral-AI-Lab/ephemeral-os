@@ -44,9 +44,9 @@ if TYPE_CHECKING:
     from task_center.context_engine.packet import ContextPacket
     from task_center.context_engine.recipes_registry import RecipeRegistry
     from task_center.context_engine.scope import ContextScope
-    from task_center.entry.controller import EntryTaskController
+    from task_center.entry import EntryTaskController
     from task_center.entry.coordinator import start_task_center_entry_run
-    from task_center.entry.sandbox_bridge import TaskCenterSandboxBridge
+    from task_center.entry import TaskCenterSandboxBridge
     from task_center.episode.state import (
         Episode,
         EpisodeCreationReason,
@@ -82,7 +82,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "ContextPacket": ("task_center.context_engine.packet", "ContextPacket"),
     "ContextScope": ("task_center.context_engine.scope", "ContextScope"),
     "EntryTaskController": (
-        "task_center.entry.controller",
+        "task_center.entry",
         "EntryTaskController",
     ),
     "Episode": ("task_center.episode.state", "Episode"),
@@ -113,7 +113,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "TaskCenterInvariantViolation",
     ),
     "TaskCenterSandboxBridge": (
-        "task_center.entry.sandbox_bridge",
+        "task_center.entry",
         "TaskCenterSandboxBridge",
     ),
     "ordered_generator_tasks": (

@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     )
     from task_center.context_engine.core import ContextComposer
     from task_center.attempt.contexts import TaskCenterStores
-    from task_center.entry.controller import EntryTaskController
+    from task_center.entry import EntryTaskController
     from task_center.mission.state import MissionClosureReport
 
 

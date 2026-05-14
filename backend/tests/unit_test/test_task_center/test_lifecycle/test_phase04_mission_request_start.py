@@ -316,7 +316,7 @@ def test_mission_start_accepts_entry_mode_caller_with_no_parent_attempt(
     transition through the runtime's :class:`EntryTaskController` so the
     controller stays the single owner of entry-task state transitions.
     """
-    from task_center.entry.controller import EntryTaskController
+    from task_center.entry import EntryTaskController
 
     # Seed the entry-mode caller: an entry task with task_center_attempt_id=None.
     entry_task_id = "entry-task-id"

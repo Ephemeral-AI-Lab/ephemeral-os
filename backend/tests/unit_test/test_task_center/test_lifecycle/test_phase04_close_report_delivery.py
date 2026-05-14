@@ -342,7 +342,7 @@ def test_router_routes_entry_mode_closure_report_through_controller(
     instead of the orchestrator registry, and route the close report into
     the controller's ``apply_mission_closure_report``.
     """
-    from task_center.entry.controller import EntryTaskController
+    from task_center.entry import EntryTaskController
     from task_center.task_state import TaskCenterTaskRole
 
     # Seed entry-mode caller in WAITING_MISSION.

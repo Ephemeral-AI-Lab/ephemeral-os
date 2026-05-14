@@ -34,7 +34,7 @@ from task_center.agent_routing import (
 )
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.context_engine.scope import ContextScope
-from task_center.entry.controller import EntryTaskController
+from task_center.entry import EntryTaskController, TaskCenterSandboxBinding, TaskCenterSandboxBridge
 from task_center.attempt.launch import (
     AgentStreamEmitter,
     AttemptAgentRunner,
@@ -44,10 +44,6 @@ from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
 from task_center.attempt.runtime import AgentLaunch, AttemptDeps
-from task_center.entry.sandbox_bridge import (
-    TaskCenterSandboxBinding,
-    TaskCenterSandboxBridge,
-)
 from task_center.episode import EpisodeManagerRegistry
 from task_center.task_state import (
     SpawnReason,
