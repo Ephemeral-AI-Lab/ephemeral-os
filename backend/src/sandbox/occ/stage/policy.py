@@ -26,3 +26,12 @@ class MergePolicy(Protocol):
         stage_write: StageWrite,
         stage_write_from_path: StageWriteFromPath | None = None,
     ) -> tuple[FileResult, LayerDelta | None]: ...
+
+
+def with_timings(result: FileResult, timings: dict[str, float]) -> FileResult:
+    return FileResult(
+        path=result.path,
+        status=result.status,
+        message=result.message,
+        timings={**result.timings, **timings},
+    )

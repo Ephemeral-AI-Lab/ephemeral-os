@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.config import TaskCenterLifecycleConfig
+from task_center._core.types import TaskCenterLifecycleConfig
 from task_center.mission.handler import MissionHandler
 from task_center.episode.registry import EpisodeManagerRegistry
 from task_center.mission.state import MissionStatus

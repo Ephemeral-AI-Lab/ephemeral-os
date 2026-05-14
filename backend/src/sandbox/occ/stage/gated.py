@@ -24,7 +24,8 @@ from sandbox.occ.changeset.types import (
     WriteChange,
 )
 from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.stage.policy import StageWrite, StageWriteFromPath
+from sandbox.occ.stage._edit import apply_edit_content
+from sandbox.occ.stage.policy import StageWrite, StageWriteFromPath, with_timings
 from sandbox.occ.ports import SnapshotReader
 from sandbox.occ.timing_keys import TimingKey
 from sandbox.timing import monotonic_now
@@ -161,7 +162,7 @@ class GatedStager:
             )
             if result is not None:
                 timings[TimingKey.GATED_APPLY_CHANGES] = monotonic_now() - apply_start
-                return _with_timings(result, timings), None
+                return with_timings(result, timings), None
 
         timings[TimingKey.GATED_APPLY_CHANGES] = monotonic_now() - apply_start
         stage_start = monotonic_now()
@@ -266,7 +267,7 @@ class GatedStager:
     ) -> FileResult | None:
         del current_hash
         edit = cast(EditChange, change)
-        edit_result = _apply_edit_content(
+        edit_result = apply_edit_content(
             path,
             state.content,
             state.exists,

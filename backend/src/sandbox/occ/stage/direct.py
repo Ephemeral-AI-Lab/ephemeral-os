@@ -24,7 +24,8 @@ from sandbox.occ.changeset.types import (
     SymlinkChange,
     WriteChange,
 )
-from sandbox.occ.stage.policy import FinalKind, StageWrite, StageWriteFromPath
+from sandbox.occ.stage._edit import apply_edit_content
+from sandbox.occ.stage.policy import FinalKind, StageWrite, StageWriteFromPath, with_timings
 from sandbox.occ.ports import SnapshotReader
 from sandbox.occ.timing_keys import TimingKey
 from sandbox.timing import monotonic_now
@@ -140,7 +141,7 @@ class DirectStager:
             result = self._apply_change(change, state, path=group.path)
             if result is not None:
                 timings[TimingKey.DIRECT_APPLY_CHANGES] = monotonic_now() - apply_start
-                return _with_timings(result, timings), None
+                return with_timings(result, timings), None
 
         timings[TimingKey.DIRECT_APPLY_CHANGES] = monotonic_now() - apply_start
         stage_start = monotonic_now()
@@ -283,49 +284,20 @@ class DirectStager:
         state: _DirectStageState,
     ) -> FileResult | None:
         edit = cast(EditChange, change)
-        if state.final_kind != "write":
-            return FileResult(
-                path=edit.path,
-                status=FileStatus.ABORTED_OVERLAP,
-                message="file does not exist",
-            )
-        try:
-            text = state.content.decode("utf-8")
-        except UnicodeDecodeError:
-            return FileResult(
-                path=edit.path,
-                status=FileStatus.ABORTED_OVERLAP,
-                message="file is not utf-8 text",
-            )
-        count = text.count(edit.old_text)
-        if count == 0:
-            return FileResult(
-                path=edit.path,
-                status=FileStatus.ABORTED_OVERLAP,
-                message="anchor not found",
-            )
-        if count != edit.expected_occurrences:
-            return FileResult(
-                path=edit.path,
-                status=FileStatus.ABORTED_OVERLAP,
-                message="anchor occurrence count mismatch",
-            )
-        text = text.replace(edit.old_text, edit.new_text, edit.expected_occurrences)
+        edit_result = apply_edit_content(
+            edit.path,
+            state.content,
+            state.final_kind == "write",
+            edit,
+        )
+        if isinstance(edit_result, FileResult):
+            return edit_result
         state.set_write(
-            text.encode("utf-8"),
+            edit_result,
             content_path=None,
             precomputed_hash=None,
         )
         return None
-
-
-def _with_timings(result: FileResult, timings: dict[str, float]) -> FileResult:
-    return FileResult(
-        path=result.path,
-        status=result.status,
-        message=result.message,
-        timings={**result.timings, **timings},
-    )
 
 
 __all__ = ["DirectStager"]

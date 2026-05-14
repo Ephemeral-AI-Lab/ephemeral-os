@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from task_center.config import TaskCenterLifecycleConfig
+from task_center._core.types import TaskCenterLifecycleConfig
 from task_center.mission.handler import MissionHandler
 from task_center.mission.state import MissionStatus
 from task_center.attempt import AttemptStatus
@@ -15,7 +15,7 @@ from task_center.attempt.runtime import (
     AttemptDeps,
 )
 from task_center.task_state import EvaluatorSubmission, GeneratorSubmission, PlannedGeneratorTask, PlannerSubmission
-from task_center.task_ids import evaluator_task_id, generator_task_id, planner_task_id
+from task_center._core.types import evaluator_task_id, generator_task_id, planner_task_id
 from task_center.episode.registry import EpisodeManagerRegistry
 from task_center.episode.state import EpisodeStatus
 

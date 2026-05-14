@@ -33,7 +33,7 @@ from task_center.attempt.generator_dag import (
     blocked_descendant_ids,
     ready_pending_generator_ids,
 )
-from task_center.task_ids import evaluator_task_id
+from task_center._core.types import evaluator_task_id
 from task_center.task_state import (
     SpawnReason,
     TaskCenterTaskRole,

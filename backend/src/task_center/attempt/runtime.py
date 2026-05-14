@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 from audit.base import AuditSink, NoopAuditSink
 
 from task_center.attempt.state import Attempt
-from task_center.config import TaskCenterLifecycleConfig
+from task_center._core.types import TaskCenterLifecycleConfig
 from task_center.episode.registry import EpisodeManagerRegistry
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.persistence import (
