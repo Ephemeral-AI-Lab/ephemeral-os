@@ -12,7 +12,7 @@ from sandbox.occ.changeset.types import Change, ChangesetResult
 from sandbox.occ.stage.transaction import CommitTransaction
 from sandbox.occ.content.gitignore_oracle import GitignoreMatcher
 from sandbox.occ.content.hashing import infer_manifest_base_hash
-from sandbox.occ.maintenance import MaintenancePolicy, NoopMaintenancePolicy
+from sandbox.occ.maintenance import MaintenancePolicy
 from sandbox.occ.commit_queue import CommitQueue
 from sandbox.occ.ports import OccLayerStackPort
 from sandbox.occ.router import Router
@@ -47,7 +47,7 @@ class OccService:
         self._commit_queue = commit_queue or CommitQueue(self._transaction)
         if self._owns_commit_queue:
             self._commit_queue.start()
-        self._maintenance = maintenance or NoopMaintenancePolicy()
+        self._maintenance: MaintenancePolicy | None = maintenance
 
     async def apply_changeset(
         self,
@@ -134,6 +134,8 @@ class OccService:
         self,
         result: ChangesetResult,
     ) -> dict[str, float]:
+        if self._maintenance is None:
+            return {}
         return await run_sync_in_executor(
             self._maintenance.after_publish_sync,
             result,
@@ -143,6 +145,8 @@ class OccService:
         self,
         result: ChangesetResult,
     ) -> dict[str, float]:
+        if self._maintenance is None:
+            return {}
         return self._maintenance.after_publish_sync(result)
 
     def _wrap_commit_result(

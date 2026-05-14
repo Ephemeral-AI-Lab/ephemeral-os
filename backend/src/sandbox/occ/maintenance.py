@@ -33,15 +33,6 @@ class _CoalescedSquashState:
     pending_recheck: bool = False
 
 
-@dataclass(frozen=True)
-class NoopMaintenancePolicy:
-    """Maintenance policy for callers that do not want post-publish work."""
-
-    def after_publish_sync(self, result: ChangesetResult) -> dict[str, float]:
-        del result
-        return {}
-
-
 class AutoSquashMaintenancePolicy:
     """Coalesced synchronous layer-stack squash after successful publishes."""
 
@@ -132,6 +123,5 @@ def _merge_auto_squash_timings(
 __all__ = [
     "AutoSquashMaintenancePolicy",
     "MaintenancePolicy",
-    "NoopMaintenancePolicy",
     "SquashPort",
 ]
