@@ -166,6 +166,7 @@ def register_test_agents(request):
             name="executor",
             description="test executor",
             agent_kind=AgentKind.EXECUTOR,
+            dispatchable_by_planner=True,
             context_recipe="generator_v1",
             terminals=[
                 "submit_execution_handoff",
@@ -197,6 +198,7 @@ def register_test_agents(request):
             name="verifier",
             description="test verifier",
             agent_kind=AgentKind.EXECUTOR,
+            dispatchable_by_planner=True,
             context_recipe="generator_v1",
             terminals=["submit_execution_success", "submit_execution_failure"],
         )

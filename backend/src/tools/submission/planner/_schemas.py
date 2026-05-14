@@ -77,10 +77,18 @@ def validate_nonblank(value: str, field_name: str) -> str:
 
 
 def _is_generator_capable_agent(agent_name: str) -> bool:
-    if agent_name in {"executor", "verifier"}:
-        return True
+    """Gate for ``agent_name`` values a planner may submit as a generator task.
+
+    Defense-in-depth: requires BOTH a positive ``dispatchable_by_planner`` flag
+    on the registered definition AND an executor / verifier ``agent_kind``.
+    The literal-name fast-path was deleted in Stage 6 of the agent-kind plan;
+    the prior shortcut masked entry_executor's structurally-executor agent_kind
+    and allowed planners to submit it.
+    """
     definition = get_definition(agent_name)
-    return definition is not None and definition.agent_kind in {
+    if definition is None:
+        return False
+    return definition.dispatchable_by_planner and definition.agent_kind in {
         AgentKind.EXECUTOR,
         AgentKind.VERIFIER,
     }

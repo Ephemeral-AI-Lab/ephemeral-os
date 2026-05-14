@@ -6,12 +6,19 @@ from .registry import get_definition, list_definitions
 from .model import AgentDefinition
 
 
+# Predicate id reserved for the total-coverage tail of a variants list. Lint
+# rules below require this name to appear as the FINAL ``when`` entry in any
+# variants-having profile that risks silent no-match — see plan AC9.
+_TAIL_PREDICATE = "always"
+
+
 def validate_agent_definitions_resolved() -> None:
     """Cross-check every registered :class:`AgentDefinition`.
 
     Raises :class:`AgentDefinitionValidationError` if any agent references an
-    unregistered predicate / recipe / variant target, or declares a variant
-    target that itself has variants (chaining is forbidden).
+    unregistered predicate / recipe / variant target, declares a variant
+    target that itself has variants (chaining is forbidden), or violates the
+    total-coverage tail rule on its variants list.
 
     Called once at app startup after ``load_agents_tree`` so wiring mistakes
     surface before the first request.
@@ -53,4 +60,25 @@ def _validate_definition(definition: AgentDefinition) -> None:
             raise AgentDefinitionValidationError(
                 f"Variant target {target.name!r} declares context_recipe="
                 f"{target.context_recipe!r}, which is not registered."
+            )
+
+    # AC9 — variant-list total-coverage tail rules. The FINAL element matters
+    # because the resolver is first-match-wins; an ``always``-predicate
+    # anywhere but the tail position would shadow subsequent entries instead
+    # of closing the partition.
+    if definition.variants:
+        final_when = definition.variants[-1].when
+        if len(definition.variants) > 1 and final_when != _TAIL_PREDICATE:
+            raise AgentDefinitionValidationError(
+                f"Agent {definition.name!r} declares "
+                f"{len(definition.variants)} variants but the final entry's "
+                f"predicate is {final_when!r}; multi-variant lists must end "
+                f"with ``when: {_TAIL_PREDICATE}`` to close the partition."
+            )
+        if not definition.terminals and final_when != _TAIL_PREDICATE:
+            raise AgentDefinitionValidationError(
+                f"Agent {definition.name!r} has no terminals of its own and "
+                f"the final variant's predicate is {final_when!r}; a thin "
+                f"variants-only profile must end with ``when: "
+                f"{_TAIL_PREDICATE}`` so every depth resolves to a target."
             )

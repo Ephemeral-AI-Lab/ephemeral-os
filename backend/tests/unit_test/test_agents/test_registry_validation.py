@@ -136,6 +136,7 @@ def test_clean_setup_passes_validation():
         name="planner",
         description="planner",
         context_recipe="planner_v1",
+        terminals=["submit_full_plan", "submit_partial_plan"],
         variants=[
             AgentVariant(
                 when="nested_mission_depth_gt_1", use="planner_full_only"
@@ -146,11 +147,13 @@ def test_clean_setup_passes_validation():
         name="planner_full_only",
         description="planner",
         context_recipe="planner_v1",
+        terminals=["submit_full_plan"],
     )
     generator = AgentDefinition(
         name="generator",
         description="generator",
         context_recipe="generator_v1",
+        terminals=["submit_execution_success", "submit_execution_failure"],
     )
     for d in (base, full_only, generator):
         register_definition(d)
