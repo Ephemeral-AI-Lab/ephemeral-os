@@ -68,14 +68,11 @@ class LayerStackClient:
     def prepare_workspace_snapshot(
         self,
         *,
-        workspace_ref: str = "",
         request_id: str,
     ) -> PrepareWorkspaceSnapshotResult:
-        del workspace_ref
         return self.manager.prepare_workspace_snapshot(request_id)
 
-    def release_lease(self, *, workspace_ref: str = "", lease_id: str) -> bool:
-        del workspace_ref
+    def release_lease(self, *, lease_id: str) -> bool:
         return self.manager.release_lease(lease_id)
 
     def squash(self, *, max_depth: int) -> Manifest | None:

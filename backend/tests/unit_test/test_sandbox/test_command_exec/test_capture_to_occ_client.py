@@ -43,14 +43,12 @@ class _LayerStackClient:
     def prepare_workspace_snapshot(
         self,
         *,
-        workspace_ref: str,
         request_id: str,
     ) -> _Lease:
-        del workspace_ref, request_id
+        del request_id
         return self.lease
 
-    def release_lease(self, *, workspace_ref: str, lease_id: str) -> bool:
-        del workspace_ref
+    def release_lease(self, *, lease_id: str) -> bool:
         self.released.append(lease_id)
         return True
 

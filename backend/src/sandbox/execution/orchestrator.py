@@ -57,7 +57,6 @@ async def execute_command(
 
     lease_start = monotonic_now()
     lease = layer_stack.prepare_workspace_snapshot(
-        workspace_ref=request.workspace_ref,
         request_id=request.request_id,
     )
     timings.update(
@@ -107,7 +106,6 @@ async def execute_command(
         timings["command_exec.occ_apply_s"] = monotonic_now() - occ_start
         release_start = monotonic_now()
         layer_stack.release_lease(
-            workspace_ref=request.workspace_ref,
             lease_id=lease.lease_id,
         )
         released = True
@@ -144,7 +142,6 @@ async def execute_command(
         if not released:
             release_start = monotonic_now()
             layer_stack.release_lease(
-                workspace_ref=request.workspace_ref,
                 lease_id=lease.lease_id,
             )
             _drop_transient_lowerdir(lease, storage_root=storage_root)

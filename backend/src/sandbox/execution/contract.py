@@ -136,11 +136,10 @@ class WorkspaceLeaseClient(Protocol):
     def prepare_workspace_snapshot(
         self,
         *,
-        workspace_ref: str,
         request_id: str,
     ) -> WorkspaceSnapshotLease: ...
 
-    def release_lease(self, *, workspace_ref: str, lease_id: str) -> bool: ...
+    def release_lease(self, *, lease_id: str) -> bool: ...
 
 
 class OCCMutationClient(Protocol):
