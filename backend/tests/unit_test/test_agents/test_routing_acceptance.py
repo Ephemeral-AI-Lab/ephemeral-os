@@ -198,25 +198,25 @@ def test_ac8_always_predicate_is_registered_and_unconditional() -> None:
 
 
 def test_ac9_multi_variant_without_always_tail_rejected() -> None:
-    _stub_recipe("generator_v1")
+    _stub_recipe("generator")
     PredicateRegistry.register("p_a", lambda ctx: False)
     PredicateRegistry.register("p_b", lambda ctx: False)
     leaf = AgentDefinition(
         name="leaf_a",
         description="leaf",
-        context_recipe="generator_v1",
+        context_recipe="generator",
         terminals=["submit_execution_success"],
     )
     leaf_b = AgentDefinition(
         name="leaf_b",
         description="leaf",
-        context_recipe="generator_v1",
+        context_recipe="generator",
         terminals=["submit_execution_success"],
     )
     base = AgentDefinition(
         name="thin_base",
         description="base",
-        context_recipe="generator_v1",
+        context_recipe="generator",
         terminals=["submit_execution_success"],
         variants=[
             AgentVariant(when="p_a", use="leaf_a"),
@@ -231,18 +231,18 @@ def test_ac9_multi_variant_without_always_tail_rejected() -> None:
 
 
 def test_ac9_thin_variants_only_without_always_tail_rejected() -> None:
-    _stub_recipe("generator_v1")
+    _stub_recipe("generator")
     PredicateRegistry.register("p_a", lambda ctx: False)
     leaf = AgentDefinition(
         name="leaf_a",
         description="leaf",
-        context_recipe="generator_v1",
+        context_recipe="generator",
         terminals=["submit_execution_success"],
     )
     base = AgentDefinition(
         name="thin_base",
         description="base",
-        context_recipe="generator_v1",
+        context_recipe="generator",
         # No terminals — relies on variants to cover every input.
         variants=[AgentVariant(when="p_a", use="leaf_a")],
     )
@@ -254,25 +254,25 @@ def test_ac9_thin_variants_only_without_always_tail_rejected() -> None:
 
 
 def test_ac9_always_predicate_must_be_in_tail_position_for_multi_variant() -> None:
-    _stub_recipe("generator_v1")
+    _stub_recipe("generator")
     PredicateRegistry.register("always", lambda ctx: True)
     PredicateRegistry.register("p_b", lambda ctx: False)
     leaf_a = AgentDefinition(
         name="leaf_a",
         description="leaf",
-        context_recipe="generator_v1",
+        context_recipe="generator",
         terminals=["submit_execution_success"],
     )
     leaf_b = AgentDefinition(
         name="leaf_b",
         description="leaf",
-        context_recipe="generator_v1",
+        context_recipe="generator",
         terminals=["submit_execution_success"],
     )
     base = AgentDefinition(
         name="thin_base",
         description="base",
-        context_recipe="generator_v1",
+        context_recipe="generator",
         terminals=["submit_execution_success"],
         # "always" shadows the later variant — final element matters.
         variants=[
@@ -287,25 +287,25 @@ def test_ac9_always_predicate_must_be_in_tail_position_for_multi_variant() -> No
 
 
 def test_ac9_thin_variants_only_with_non_always_final_rejected() -> None:
-    _stub_recipe("generator_v1")
+    _stub_recipe("generator")
     PredicateRegistry.register("always", lambda ctx: True)
     PredicateRegistry.register("p_b", lambda ctx: False)
     leaf_a = AgentDefinition(
         name="leaf_a",
         description="leaf",
-        context_recipe="generator_v1",
+        context_recipe="generator",
         terminals=["submit_execution_success"],
     )
     leaf_b = AgentDefinition(
         name="leaf_b",
         description="leaf",
-        context_recipe="generator_v1",
+        context_recipe="generator",
         terminals=["submit_execution_success"],
     )
     base = AgentDefinition(
         name="thin_base",
         description="base",
-        context_recipe="generator_v1",
+        context_recipe="generator",
         # Empty terminals + variants not ending with always — the
         # tail-position rule catches the silent no-match risk.
         variants=[
@@ -323,18 +323,18 @@ def test_ac9_planner_md_shape_passes_validation() -> None:
     """The planner.md shape — single variant + non-empty terminals — is the
     paradigmatic passing case: terminals cover the no-match branch, no
     ``always`` tail required."""
-    _stub_recipe("planner_v1")
+    _stub_recipe("planner")
     PredicateRegistry.register("nested_mission_depth_gt_1", lambda ctx: False)
     full_only = AgentDefinition(
         name="planner_full_only",
         description="planner",
-        context_recipe="planner_v1",
+        context_recipe="planner",
         terminals=["submit_full_plan"],
     )
     planner = AgentDefinition(
         name="planner",
         description="planner",
-        context_recipe="planner_v1",
+        context_recipe="planner",
         terminals=["submit_full_plan", "submit_partial_plan"],
         variants=[
             AgentVariant(

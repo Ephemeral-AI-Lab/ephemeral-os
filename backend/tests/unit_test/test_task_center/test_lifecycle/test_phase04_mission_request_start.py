@@ -11,7 +11,7 @@ from task_center.mission.starter import (
     MissionStarter,
     StartedMission,
 )
-from task_center.mission.mission import MissionStatus
+from task_center.mission.state import MissionStatus
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
@@ -22,7 +22,7 @@ from task_center.attempt import (
     AttemptStatus,
 )
 from task_center.episode.registry import EpisodeManagerRegistry
-from task_center.episode.episode import (
+from task_center.episode.state import (
     EpisodeCreationReason,
     EpisodeStatus,
     )

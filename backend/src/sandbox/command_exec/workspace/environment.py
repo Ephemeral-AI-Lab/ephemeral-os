@@ -7,6 +7,11 @@ import subprocess
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
+from sandbox.command_exec.policy import (
+    DEFAULT_COMMAND_EXEC_POLICY,
+    CommandExecPolicy,
+)
+
 
 def resolve_workspace_cwd(
     *,
@@ -57,6 +62,7 @@ def run_command_to_refs(
     timeout_seconds: float | None,
     stdout_ref: str | Path,
     stderr_ref: str | Path,
+    policy: CommandExecPolicy = DEFAULT_COMMAND_EXEC_POLICY,
 ) -> int:
     """Run a guarded command and write stdout/stderr to reference files."""
     stdout_path = Path(stdout_ref)
@@ -72,7 +78,7 @@ def run_command_to_refs(
         completed = subprocess.run(
             list(command),
             cwd=resolved_cwd,
-            env=_command_environment(env),
+            env=_command_environment(env, policy=policy),
             stdout=stdout_file,
             stderr=stderr_file,
             timeout=timeout_seconds,
@@ -92,31 +98,12 @@ def _relative_to_declared_workspace(candidate: Path, declared_root: Path) -> Pat
         raise ValueError(f"cwd escapes workspace replacement root: {candidate}") from exc
 
 
-# Env-var names a caller is NEVER allowed to override. These either alter
-# the loader/interpreter trust boundary (LD_PRELOAD, BASH_ENV) or steer
-# lookups for binaries the workspace-replacement layer assumes are sourced
-# from the host (PATH, PYTHONPATH). Caller-supplied values are silently
-# dropped — the host's value (if any) wins.
-_RESTRICTED_ENV_KEYS = frozenset(
-    {
-        "LD_PRELOAD",
-        "LD_LIBRARY_PATH",
-        "LD_AUDIT",
-        "DYLD_INSERT_LIBRARIES",
-        "DYLD_LIBRARY_PATH",
-        "PATH",
-        "PYTHONPATH",
-        "BASH_ENV",
-        "ENV",
-    }
-)
-
-
-def _command_environment(extra: Mapping[str, str]) -> dict[str, str]:
-    safe_extra = {
-        k: v for k, v in extra.items() if k not in _RESTRICTED_ENV_KEYS
-    }
-    return {**os.environ, **safe_extra, "GIT_OPTIONAL_LOCKS": "0"}
+def _command_environment(
+    extra: Mapping[str, str],
+    *,
+    policy: CommandExecPolicy = DEFAULT_COMMAND_EXEC_POLICY,
+) -> dict[str, str]:
+    return policy.command_environment(extra)
 
 
 __all__ = [

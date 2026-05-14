@@ -20,7 +20,7 @@ from sandbox.occ.changeset.types import (
     FileStatus,
     WriteChange,
 )
-from sandbox.occ.commit_transaction import OccCommitTransaction
+from sandbox.occ.stage.transaction import CommitTransaction
 from sandbox.occ.content.hashing import ContentHasher
 from sandbox.occ.service import OccService
 
@@ -212,7 +212,11 @@ def test_gitignore_occ_skipped_route_is_fixed_after_prepare_even_if_oracle_chang
     assert group.route is RouteDecision.DIRECT
 
     gitignore.ignored.clear()
-    result = OccCommitTransaction(stack).revalidate_and_publish(prepared)
+    result = CommitTransaction(
+        snapshot_reader=stack,
+        staging=stack,
+        publisher=stack,
+    ).revalidate_and_publish(prepared)
 
     assert _statuses(result) == [FileStatus.ACCEPTED]
     assert stack.read_bytes("dist/out.js") == (b"occ skipped\n", True)
@@ -242,7 +246,11 @@ def test_tracked_route_is_fixed_after_prepare_even_if_path_becomes_ignored(
     assert group.route is RouteDecision.GATED
 
     gitignore.ignored.add("dist/out.js")
-    result = OccCommitTransaction(stack).revalidate_and_publish(prepared)
+    result = CommitTransaction(
+        snapshot_reader=stack,
+        staging=stack,
+        publisher=stack,
+    ).revalidate_and_publish(prepared)
 
     assert _statuses(result) == [FileStatus.ABORTED_VERSION]
     assert result.published_manifest_version is None

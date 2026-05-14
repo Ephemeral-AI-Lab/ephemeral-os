@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 
 from db.models.mission import MissionRecord
 from db.stores.base import SyncStoreMixin
-from task_center.domain import (
+from task_center.mission.state import (
     Mission,
     MissionStatus,
 )

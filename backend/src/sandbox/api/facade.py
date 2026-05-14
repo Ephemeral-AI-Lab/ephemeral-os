@@ -2,9 +2,19 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
+import sandbox.api.status as status_module
+from sandbox.api._impl import edit as edit_module
+from sandbox.api._impl import raw_exec as raw_exec_module
+from sandbox.api._impl import read as read_module
+from sandbox.api._impl import shell as shell_module
+from sandbox.api._impl import write as write_module
+from sandbox.api.transport import DaemonSandboxTransport
+from sandbox.host.context_preparer import (
+    context_preparer_for as default_context_preparer_for,
+)
 from sandbox.models import (
     EditFileRequest,
     EditFileResult,
@@ -19,17 +29,24 @@ from sandbox.models import (
 
 if TYPE_CHECKING:
     from audit.base import AuditSink
+    from sandbox.api.protocol import SandboxLifecycleAPI, SandboxTransport
 
 
 class SandboxClient:
-    """Single auditable call surface for sandbox status and tool verbs.
+    """Injectable public call surface for sandbox lifecycle and tool verbs."""
 
-    Instances are stateless apart from the optional audit sink, so the package
-    module can safely expose one process-global singleton.
-    """
-
-    def __init__(self, *, audit_sink: AuditSink | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        audit_sink: AuditSink | None = None,
+        transport: SandboxTransport | None = None,
+        lifecycle: SandboxLifecycleAPI | None = None,
+        context_preparer: Callable[[str], Any] = default_context_preparer_for,
+    ) -> None:
         self._audit_sink = audit_sink
+        self._transport = transport or DaemonSandboxTransport()
+        self._lifecycle = lifecycle or status_module
+        self._context_preparer = context_preparer
 
     def create_sandbox(
         self,
@@ -41,9 +58,7 @@ class SandboxClient:
         env_vars: dict[str, str] | None = None,
         labels: dict[str, str] | None = None,
     ) -> dict[str, Any]:
-        from sandbox.api import status
-
-        return status.create_sandbox(
+        return self._lifecycle.create_sandbox(
             name=name,
             snapshot=snapshot,
             image=image,
@@ -53,72 +68,48 @@ class SandboxClient:
         )
 
     def start_sandbox(self, sandbox_id: str) -> dict[str, Any]:
-        from sandbox.api import status
-
-        return status.start_sandbox(sandbox_id)
+        return self._lifecycle.start_sandbox(sandbox_id)
 
     def stop_sandbox(self, sandbox_id: str) -> dict[str, Any]:
-        from sandbox.api import status
-
-        return status.stop_sandbox(sandbox_id)
+        return self._lifecycle.stop_sandbox(sandbox_id)
 
     def delete_sandbox(self, sandbox_id: str) -> None:
-        from sandbox.api import status
-
-        status.delete_sandbox(sandbox_id)
+        self._lifecycle.delete_sandbox(sandbox_id)
 
     def ensure_sandbox_running(self, sandbox_id: str) -> dict[str, Any]:
-        from sandbox.api import status
-
-        return status.ensure_sandbox_running(sandbox_id)
+        return self._lifecycle.ensure_sandbox_running(sandbox_id)
 
     def set_sandbox_labels(
         self,
         sandbox_id: str,
         labels: dict[str, str],
     ) -> dict[str, Any]:
-        from sandbox.api import status
-
-        return status.set_sandbox_labels(sandbox_id, labels)
+        return self._lifecycle.set_sandbox_labels(sandbox_id, labels)
 
     def get_sandbox(self, sandbox_id: str) -> dict[str, Any]:
-        from sandbox.api import status
-
-        return status.get_sandbox(sandbox_id)
+        return self._lifecycle.get_sandbox(sandbox_id)
 
     def list_sandboxes(self) -> list[dict[str, Any]]:
-        from sandbox.api import status
-
-        return status.list_sandboxes()
+        return self._lifecycle.list_sandboxes()
 
     def list_snapshots(self) -> list[dict[str, Any]]:
-        from sandbox.api import status
-
-        return status.list_snapshots()
+        return self._lifecycle.list_snapshots()
 
     def get_health(self) -> dict[str, Any]:
-        from sandbox.api import status
-
-        return status.get_health()
+        return self._lifecycle.get_health()
 
     def get_signed_preview_url(
         self,
         sandbox_id: str,
         port: int,
     ) -> dict[str, Any]:
-        from sandbox.api import status
-
-        return status.get_signed_preview_url(sandbox_id, port)
+        return self._lifecycle.get_signed_preview_url(sandbox_id, port)
 
     def get_build_logs_url(self, sandbox_id: str) -> str | None:
-        from sandbox.api import status
-
-        return status.get_build_logs_url(sandbox_id)
+        return self._lifecycle.get_build_logs_url(sandbox_id)
 
     def context_preparer_for(self, sandbox_id: str) -> Any:
-        from sandbox.host.context_preparer import context_preparer_for
-
-        return context_preparer_for(sandbox_id)
+        return self._context_preparer(sandbox_id)
 
     async def shell(
         self,
@@ -127,11 +118,12 @@ class SandboxClient:
         *,
         audit_sink: AuditSink | None = None,
     ) -> ShellResult:
-        from sandbox.api.tool import shell as shell_module
-
-        sink = self._audit_sink if audit_sink is None else audit_sink
-        kwargs = {"audit_sink": sink} if sink is not None else {}
-        return await shell_module.shell(sandbox_id, request, **kwargs)
+        return await shell_module.shell(
+            sandbox_id,
+            request,
+            audit_sink=self._select_audit_sink(audit_sink),
+            transport=self._transport,
+        )
 
     async def raw_exec(
         self,
@@ -142,16 +134,12 @@ class SandboxClient:
         timeout: int | None = None,
         audit_sink: AuditSink | None = None,
     ) -> RawExecResult:
-        from sandbox.api.tool import raw_exec as raw_exec_module
-
-        sink = self._audit_sink if audit_sink is None else audit_sink
-        kwargs = {"audit_sink": sink} if sink is not None else {}
         return await raw_exec_module.raw_exec(
             sandbox_id,
             command,
             cwd=cwd,
             timeout=timeout,
-            **kwargs,
+            audit_sink=self._select_audit_sink(audit_sink),
         )
 
     async def read_file(
@@ -161,11 +149,12 @@ class SandboxClient:
         *,
         audit_sink: AuditSink | None = None,
     ) -> ReadFileResult:
-        from sandbox.api.tool import read as read_module
-
-        sink = self._audit_sink if audit_sink is None else audit_sink
-        kwargs = {"audit_sink": sink} if sink is not None else {}
-        return await read_module.read_file(sandbox_id, request, **kwargs)
+        return await read_module.read_file(
+            sandbox_id,
+            request,
+            audit_sink=self._select_audit_sink(audit_sink),
+            transport=self._transport,
+        )
 
     async def write_file(
         self,
@@ -174,11 +163,12 @@ class SandboxClient:
         *,
         audit_sink: AuditSink | None = None,
     ) -> WriteFileResult:
-        from sandbox.api.tool import write as write_module
-
-        sink = self._audit_sink if audit_sink is None else audit_sink
-        kwargs = {"audit_sink": sink} if sink is not None else {}
-        return await write_module.write_file(sandbox_id, request, **kwargs)
+        return await write_module.write_file(
+            sandbox_id,
+            request,
+            audit_sink=self._select_audit_sink(audit_sink),
+            transport=self._transport,
+        )
 
     async def edit_file(
         self,
@@ -187,11 +177,18 @@ class SandboxClient:
         *,
         audit_sink: AuditSink | None = None,
     ) -> EditFileResult:
-        from sandbox.api.tool import edit as edit_module
+        return await edit_module.edit_file(
+            sandbox_id,
+            request,
+            audit_sink=self._select_audit_sink(audit_sink),
+            transport=self._transport,
+        )
 
-        sink = self._audit_sink if audit_sink is None else audit_sink
-        kwargs = {"audit_sink": sink} if sink is not None else {}
-        return await edit_module.edit_file(sandbox_id, request, **kwargs)
+    def _select_audit_sink(
+        self,
+        audit_sink: AuditSink | None,
+    ) -> AuditSink | None:
+        return self._audit_sink if audit_sink is None else audit_sink
 
 
 __all__ = ["SandboxClient"]

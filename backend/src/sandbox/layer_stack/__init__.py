@@ -10,9 +10,9 @@ from sandbox.layer_stack.layer.change import (
     SymlinkLayerChange,
     WriteLayerChange,
     aggregate_layer_changes,
-    make_layer_change,
     normalize_layer_path,
 )
+from sandbox.layer_stack.commit import CommitStagingArea
 from sandbox.layer_stack.errors import LayerStackStorageError
 from sandbox.layer_stack.manifest import (
     LayerRef,
@@ -23,6 +23,13 @@ from sandbox.layer_stack.manifest import (
 from sandbox.layer_stack.manager import (
     LayerStackManager,
     PrepareWorkspaceSnapshotResult,
+)
+from sandbox.layer_stack.transaction import LayerStackTransaction
+from sandbox.layer_stack.workspace import (
+    WorkspaceBinding,
+    WorkspaceBindingError,
+    read_workspace_binding,
+    require_workspace_binding,
 )
 
 __all__ = [
@@ -35,11 +42,16 @@ __all__ = [
     "Manifest",
     "ManifestConflictError",
     "DeleteLayerChange",
+    "CommitStagingArea",
     "OpaqueDirLayerChange",
     "PrepareWorkspaceSnapshotResult",
     "SymlinkLayerChange",
+    "LayerStackTransaction",
+    "WorkspaceBinding",
+    "WorkspaceBindingError",
     "WriteLayerChange",
     "aggregate_layer_changes",
-    "make_layer_change",
     "normalize_layer_path",
+    "read_workspace_binding",
+    "require_workspace_binding",
 ]

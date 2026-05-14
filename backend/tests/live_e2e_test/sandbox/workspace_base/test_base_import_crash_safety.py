@@ -48,7 +48,7 @@ marker.parent.mkdir(parents=True, exist_ok=True)
 
 if mode == "during_layer_write":
     def stuck_write(stack_root, entries):
-        staging = Path(stack_root) / "staging" / "L000001-base.staging"
+        staging = Path(stack_root) / "staging" / "B000001-base.staging"
         staging.mkdir(parents=True, exist_ok=True)
         (staging / "partial.txt").write_text("partial\n", encoding="utf-8")
         marker.write_text("ready\n", encoding="utf-8")

@@ -14,7 +14,7 @@ from task_center.config import TaskCenterLifecycleConfig
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt.state import Attempt
 from task_center.episode.registry import EpisodeManagerRegistry
-from task_center.task.models import TaskCenterTaskRole
+from task_center.task.state import TaskCenterTaskRole
 
 if TYPE_CHECKING:
     from task_center.agent_launch.composer import ContextComposer
@@ -64,7 +64,7 @@ class AttemptDeps:
     entry_task_controller: EntryTaskController | None = None
     audit_sink: AuditSink = field(default_factory=NoopAuditSink)
 
-    def task_center_run_id_for_attempt(self, attempt: Attempt) -> str:
+    def run_id_for_attempt(self, attempt: Attempt) -> str:
         episode = self.episode_store.get(attempt.episode_id)
         if episode is None:
             raise TaskCenterInvariantViolation(

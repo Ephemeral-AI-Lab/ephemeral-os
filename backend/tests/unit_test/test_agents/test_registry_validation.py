@@ -56,17 +56,17 @@ def _stub_recipe(recipe_id: str) -> None:
 
 
 def test_unknown_predicate_id_rejected():
-    _stub_recipe("planner_v1")
+    _stub_recipe("planner")
     base = AgentDefinition(
         name="planner",
         description="planner",
-        context_recipe="planner_v1",
+        context_recipe="planner",
         variants=[AgentVariant(when="missing_predicate", use="planner_full_only")],
     )
     full_only = AgentDefinition(
         name="planner_full_only",
         description="planner",
-        context_recipe="planner_v1",
+        context_recipe="planner",
     )
     register_definition(base)
     register_definition(full_only)
@@ -76,12 +76,12 @@ def test_unknown_predicate_id_rejected():
 
 
 def test_dangling_variant_target_rejected():
-    _stub_recipe("planner_v1")
+    _stub_recipe("planner")
     PredicateRegistry.register("p", lambda ctx: False)
     base = AgentDefinition(
         name="planner",
         description="planner",
-        context_recipe="planner_v1",
+        context_recipe="planner",
         variants=[AgentVariant(when="p", use="missing_target")],
     )
     register_definition(base)
@@ -91,22 +91,22 @@ def test_dangling_variant_target_rejected():
 
 
 def test_nested_variant_target_rejected():
-    _stub_recipe("planner_v1")
+    _stub_recipe("planner")
     PredicateRegistry.register("p", lambda ctx: False)
     base = AgentDefinition(
         name="base",
         description="base",
-        context_recipe="planner_v1",
+        context_recipe="planner",
         variants=[AgentVariant(when="p", use="middle")],
     )
     middle = AgentDefinition(
         name="middle",
         description="middle",
-        context_recipe="planner_v1",
+        context_recipe="planner",
         variants=[AgentVariant(when="p", use="leaf")],
     )
     leaf = AgentDefinition(
-        name="leaf", description="leaf", context_recipe="planner_v1"
+        name="leaf", description="leaf", context_recipe="planner"
     )
     for d in (base, middle, leaf):
         register_definition(d)
@@ -129,13 +129,13 @@ def test_unknown_context_recipe_rejected():
 
 
 def test_clean_setup_passes_validation():
-    _stub_recipe("planner_v1")
-    _stub_recipe("generator_v1")
+    _stub_recipe("planner")
+    _stub_recipe("generator")
     PredicateRegistry.register("nested_mission_depth_gt_1", lambda ctx: False)
     base = AgentDefinition(
         name="planner",
         description="planner",
-        context_recipe="planner_v1",
+        context_recipe="planner",
         terminals=["submit_full_plan", "submit_partial_plan"],
         variants=[
             AgentVariant(
@@ -146,13 +146,13 @@ def test_clean_setup_passes_validation():
     full_only = AgentDefinition(
         name="planner_full_only",
         description="planner",
-        context_recipe="planner_v1",
+        context_recipe="planner",
         terminals=["submit_full_plan"],
     )
     generator = AgentDefinition(
         name="generator",
         description="generator",
-        context_recipe="generator_v1",
+        context_recipe="generator",
         terminals=["submit_execution_success", "submit_execution_failure"],
     )
     for d in (base, full_only, generator):

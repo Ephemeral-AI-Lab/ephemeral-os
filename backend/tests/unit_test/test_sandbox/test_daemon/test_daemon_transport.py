@@ -65,7 +65,7 @@ async def test_daemon_uses_daemon_thin_client_by_default() -> None:
     assert response == {"success": True, "timings": {}}
     assert len(seen) == 1
     assert "runtime.sock" in seen[0]
-    assert "AF_UNIX" in seen[0]
+    assert "thin_client.py" in seen[0]
 
 
 def test_daemon_commands_do_not_forward_host_env(
@@ -79,7 +79,7 @@ def test_daemon_commands_do_not_forward_host_env(
     daemon_spawn = command._daemon_spawn_command()
 
     assert thin_client.startswith("sh -c ")
-    assert daemon_spawn.startswith("sh -c ")
+    assert daemon_spawn.startswith("sh ")
     assert "UNSUPPORTED_RUNTIME_ENV" not in thin_client
     assert "UNSUPPORTED_RUNTIME_ENV" not in daemon_spawn
     assert "EOS_OCC_SQUASH_MODE" not in daemon_spawn
@@ -95,7 +95,7 @@ def test_daemon_spawn_tracks_runtime_bundle_signature(
 
     assert "runtime.env" in daemon_spawn
     assert "runtime_bundle_sha=sha-current" in daemon_spawn
-    assert "kill" in daemon_spawn
+    assert "launch_daemon.sh" in daemon_spawn
 
 
 async def test_ensure_daemon_current_runs_spawn_command(
@@ -142,10 +142,10 @@ async def test_daemon_transport_spawns_on_socket_missing() -> None:
 
     assert response == {"success": True, "timings": {}}
     assert len(seen) == 4
-    assert "AF_UNIX" in seen[0]
+    assert "thin_client.py" in seen[0]
     assert "sandbox.runtime.daemon" in seen[1]
     assert "api.runtime.ready" in seen[2]
-    assert "AF_UNIX" in seen[3]
+    assert "thin_client.py" in seen[3]
 
 
 async def test_daemon_transport_allows_unbound_readiness_for_workspace_bootstrap() -> None:
@@ -259,7 +259,7 @@ async def test_daemon_spawn_failure_fails_closed() -> None:
 
     assert exc.value.kind == "RuntimeExecFailed"
     assert len(seen) == 2
-    assert "AF_UNIX" in seen[0]
+    assert "thin_client.py" in seen[0]
     assert "sandbox.runtime.daemon" in seen[1]
 
 

@@ -8,30 +8,30 @@ startup. The engine itself owns no recipe knowledge.
 from __future__ import annotations
 
 from task_center.context_engine.recipes.entry_executor import (
-    ENTRY_EXECUTOR_V1_RECIPE,
+    ENTRY_EXECUTOR_RECIPE,
 )
 from task_center.context_engine.recipes.evaluator import (
-    EVALUATOR_V1_RECIPE,
+    EVALUATOR_RECIPE,
 )
 from task_center.context_engine.recipes.generator import (
-    GENERATOR_V1_RECIPE,
+    GENERATOR_RECIPE,
 )
 from task_center.context_engine.recipes.helper import (
-    ADVISOR_V1_RECIPE,
-    RESOLVER_V1_RECIPE,
+    ADVISOR_RECIPE,
+    RESOLVER_RECIPE,
 )
 from task_center.context_engine.recipes.planner import (
-    PLANNER_V1_RECIPE,
+    PLANNER_RECIPE,
 )
 from task_center.context_engine.recipes_registry import RecipeRegistry
 
 _BUILTIN_RECIPES = (
-    PLANNER_V1_RECIPE,
-    GENERATOR_V1_RECIPE,
-    EVALUATOR_V1_RECIPE,
-    ENTRY_EXECUTOR_V1_RECIPE,
-    ADVISOR_V1_RECIPE,
-    RESOLVER_V1_RECIPE,
+    PLANNER_RECIPE,
+    GENERATOR_RECIPE,
+    EVALUATOR_RECIPE,
+    ENTRY_EXECUTOR_RECIPE,
+    ADVISOR_RECIPE,
+    RESOLVER_RECIPE,
 )
 
 

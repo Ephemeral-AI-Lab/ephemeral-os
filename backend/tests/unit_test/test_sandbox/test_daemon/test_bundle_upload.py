@@ -18,12 +18,13 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from sandbox.daemon_paths import BUNDLE_REMOTE_DIR, BUNDLE_REMOTE_TARBALL
 from sandbox.host.runtime_bundle import (
-    BUNDLE_REMOTE_DIR,
-    _BUNDLE_REMOTE_TARBALL,
     _ensure_runtime_uploaded_with_exec,
     _runtime_bundle_bytes,
     bundle_hash,
+    clear_bundle_caches,
+    compute_bundle_hash,
 )
 
 
@@ -52,12 +53,10 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
 
     required = [
         "sandbox/__init__.py",
-        "sandbox/api/__init__.py",
-        "sandbox/api/facade.py",
-        "sandbox/api/tool/__init__.py",
+        "sandbox/async_bridge.py",
+        "sandbox/daemon_paths.py",
         "sandbox/models.py",
         "sandbox/timing.py",
-        "sandbox/async_bridge.py",
         "sandbox/runtime/__init__.py",
         "sandbox/runtime/daemon/__main__.py",
         "sandbox/runtime/daemon/rpc/__init__.py",
@@ -65,6 +64,7 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/runtime/daemon/rpc/dispatcher.py",
         "sandbox/runtime/daemon/service/__init__.py",
         "sandbox/runtime/daemon/service/layer_stack_client.py",
+        "sandbox/runtime/daemon/service/result_projection.py",
         "sandbox/runtime/daemon/service/workspace_binding.py",
         "sandbox/runtime/daemon/handler/health.py",
         "sandbox/runtime/daemon/handler/workspace.py",
@@ -77,15 +77,29 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/runtime/daemon/handler/tools/__init__.py",
         "sandbox/runtime/daemon/handler/tools/edit.py",
         "sandbox/runtime/daemon/handler/tools/read.py",
-        "sandbox/runtime/daemon/handler/tools/shell.py",
         "sandbox/runtime/daemon/handler/tools/write.py",
         "sandbox/runtime/daemon/service/occ_backend.py",
+        "sandbox/runtime/scripts/__init__.py",
+        "sandbox/runtime/scripts/install_git.sh",
+        "sandbox/runtime/scripts/launch_daemon.sh",
+        "sandbox/runtime/scripts/thin_client.py",
         "sandbox/command_exec/__init__.py",
+        "sandbox/command_exec/executor.py",
+        "sandbox/command_exec/policy.py",
+        "sandbox/command_exec/entrypoints/__init__.py",
+        "sandbox/command_exec/entrypoints/namespace_helper.py",
         "sandbox/command_exec/contract/request.py",
         "sandbox/command_exec/contract/result.py",
         "sandbox/command_exec/contract/ports.py",
+        "sandbox/command_exec/contract/spec.py",
+        "sandbox/command_exec/strategies/__init__.py",
+        "sandbox/command_exec/strategies/base.py",
+        "sandbox/command_exec/strategies/copy_backed.py",
+        "sandbox/command_exec/strategies/private_namespace.py",
+        "sandbox/command_exec/strategies/registry.py",
         "sandbox/command_exec/workspace/mount.py",
         "sandbox/command_exec/workspace/capture.py",
+        "sandbox/command_exec/workspace/path_rewrite.py",
         "sandbox/layer_stack/workspace/base.py",
         "sandbox/overlay/cli.py",
         "sandbox/overlay/worker.py",
@@ -98,21 +112,24 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/overlay/invoker.py",
         "sandbox/overlay/factory.py",
         "sandbox/overlay/runner.py",
-        "sandbox/layer_stack/manifest/model.py",
+        "sandbox/layer_stack/manifest/_model.py",
         "sandbox/layer_stack/manifest/store.py",
         "sandbox/layer_stack/manager.py",
         "sandbox/layer_stack/workspace/binding.py",
-        "sandbox/occ/capture/overlay.py",
-        "sandbox/occ/result_projection.py",
+        "sandbox/occ/overlay.py",
         "sandbox/occ/changeset/builders.py",
         "sandbox/occ/changeset/prepared.py",
         "sandbox/occ/changeset/types.py",
-        "sandbox/occ/commit_transaction.py",
-        "sandbox/occ/routing/orchestrator.py",
+        "sandbox/occ/commit_queue.py",
+        "sandbox/occ/router.py",
+        "sandbox/occ/timing_keys.py",
         "sandbox/occ/content/gitignore_oracle.py",
         "sandbox/occ/content/hashing.py",
-        "sandbox/occ/merge/direct.py",
-        "sandbox/occ/merge/gated.py",
+        "sandbox/occ/stage/__init__.py",
+        "sandbox/occ/stage/direct.py",
+        "sandbox/occ/stage/gated.py",
+        "sandbox/occ/stage/policy.py",
+        "sandbox/occ/stage/transaction.py",
     ]
     missing = [p for p in required if not (extract_dir / p).exists()]
     assert missing == [], f"bundle is missing required paths: {missing}"
@@ -210,14 +227,16 @@ def test_bundle_includes_peer_setup_scripts(
     setup_script.write_text("#!/usr/bin/env bash\necho setup\n", encoding="utf-8")
 
     monkeypatch.setattr("sandbox.host.runtime_bundle._src_root", lambda: src_root)
-    monkeypatch.setattr("sandbox.host.runtime_bundle._BUNDLE_CACHE", None)
-    monkeypatch.setattr("sandbox.host.runtime_bundle._BUNDLE_HASH_CACHE", None)
+    clear_bundle_caches()
 
-    bundle = _runtime_bundle_bytes()
-    with tarfile.open(fileobj=io.BytesIO(bundle), mode="r:gz") as tar:
-        member = tar.extractfile("sandbox/runtime/daemon/peer/setup.sh")
-        assert member is not None
-        assert member.read().decode("utf-8") == "#!/usr/bin/env bash\necho setup\n"
+    try:
+        bundle = _runtime_bundle_bytes()
+        with tarfile.open(fileobj=io.BytesIO(bundle), mode="r:gz") as tar:
+            member = tar.extractfile("sandbox/runtime/daemon/peer/setup.sh")
+            assert member is not None
+            assert member.read().decode("utf-8") == "#!/usr/bin/env bash\necho setup\n"
+    finally:
+        clear_bundle_caches()
 
 
 def test_bundle_extracted_daemon_modules_import_clean(tmp_path: Path) -> None:
@@ -254,6 +273,7 @@ def test_bundle_hash_is_deterministic() -> None:
     b = bundle_hash()
     assert a == b
     assert len(a) == 64
+    assert compute_bundle_hash(b"abc") != compute_bundle_hash(b"abcd")
 
 
 @pytest.mark.asyncio
@@ -284,7 +304,7 @@ async def test_ensure_runtime_uploaded_uploads_when_marker_missing() -> None:
     assert BUNDLE_REMOTE_DIR in finalize_cmd
     assert "tar -xzf" in finalize_cmd
     assert "mv -f" not in finalize_cmd
-    assert f"tar -xzf {_BUNDLE_REMOTE_TARBALL} " not in finalize_cmd
+    assert f"tar -xzf {BUNDLE_REMOTE_TARBALL} " not in finalize_cmd
     assert ".staging" in finalize_cmd
     assert ".bundle-hash" in finalize_cmd
 

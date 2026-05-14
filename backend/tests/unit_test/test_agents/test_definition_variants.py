@@ -15,7 +15,7 @@ def test_variant_round_trips_through_pydantic():
     defn = AgentDefinition(
         name="planner",
         description="planner",
-        context_recipe="planner_v1",
+        context_recipe="planner",
         variants=[
             AgentVariant(
                 when="nested_mission_depth_gt_1",
@@ -33,7 +33,7 @@ def test_variant_round_trips_through_pydantic():
     )
     payload = defn.model_dump()
     restored = AgentDefinition.model_validate(payload)
-    assert restored.context_recipe == "planner_v1"
+    assert restored.context_recipe == "planner"
     assert restored.variants[0].use == "planner_full_only"
     assert restored.variants[0].required_context_blocks[0].kind == "launch_notice"
 

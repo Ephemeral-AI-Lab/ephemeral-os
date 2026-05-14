@@ -7,8 +7,8 @@ from datetime import UTC, datetime
 
 import pytest
 
-from task_center.mission.mission import (
-    MissionCloseReport,
+from task_center.mission.state import (
+    MissionClosureReport,
     Mission,
     MissionStatus,
 )
@@ -44,8 +44,8 @@ def test_request_dto_is_frozen():
         req.status = MissionStatus.SUCCEEDED  # type: ignore[misc]
 
 
-def test_close_report_constructs():
-    rep = MissionCloseReport(
+def test_closure_report_constructs():
+    rep = MissionClosureReport(
         mission_id="r1",
         requested_by_task_id="t1",
         outcome="success",

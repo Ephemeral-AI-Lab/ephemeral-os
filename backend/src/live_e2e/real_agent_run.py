@@ -18,7 +18,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from task_center.api import TaskCenterSandboxBridge, start_task_center_entry_run
+from task_center import TaskCenterSandboxBridge, start_task_center_entry_run
 
 from benchmarks.sweevo.evaluation import evaluate_sweevo_result
 from benchmarks.sweevo.models import SWEEvoInstance, SWEEvoResult, _REPO_DIR

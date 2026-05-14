@@ -9,7 +9,7 @@ from typing import cast
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
 from sandbox.occ.changeset.types import Change, ChangesetResult
-from sandbox.occ.commit_transaction import OccCommitTransaction
+from sandbox.occ.stage.transaction import CommitTransaction
 from sandbox.occ.content.gitignore_oracle import GitignoreMatcher
 from sandbox.occ.content.hashing import infer_manifest_base_hash
 from sandbox.occ.maintenance import (
@@ -18,9 +18,10 @@ from sandbox.occ.maintenance import (
     NoopMaintenancePolicy,
     SquashPort,
 )
-from sandbox.occ.merge.serial import OccSerialMerger
+from sandbox.occ.commit_queue import CommitQueue
 from sandbox.occ.ports import CommitPublisher, CommitStagingStore, SnapshotReader
-from sandbox.occ.routing.orchestrator import OccOrchestrator
+from sandbox.occ.router import Router
+from sandbox.occ.timing_keys import TimingKey
 from sandbox.async_bridge import run_sync_in_executor
 from sandbox.timing import monotonic_now
 
@@ -38,11 +39,11 @@ class OccService:
         staging: CommitStagingStore | None = None,
         publisher: CommitPublisher | None = None,
         layer_stack: object | None = None,
-        orchestrator: OccOrchestrator | None = None,
-        transaction: OccCommitTransaction | None = None,
-        serial_merger: OccSerialMerger | None = None,
+        orchestrator: Router | None = None,
+        transaction: CommitTransaction | None = None,
+        commit_queue: CommitQueue | None = None,
         maintenance: MaintenancePolicy | None = None,
-        auto_squash_max_depth: int = AUTO_SQUASH_MAX_DEPTH,
+        auto_squash_max_depth: int | None = None,
     ) -> None:
         if layer_stack is not None:
             snapshot_reader = snapshot_reader or cast(SnapshotReader, layer_stack)
@@ -53,19 +54,23 @@ class OccService:
                 "OccService requires snapshot_reader, staging, and publisher ports"
             )
         self._snapshot_reader = snapshot_reader
-        self._orchestrator = orchestrator or OccOrchestrator(gitignore)
-        self._transaction = transaction or OccCommitTransaction(
+        self._orchestrator = orchestrator or Router(gitignore)
+        self._transaction = transaction or CommitTransaction(
             snapshot_reader=snapshot_reader,
             staging=staging,
             publisher=publisher,
         )
-        self._serial_merger = serial_merger or OccSerialMerger(self._transaction)
-        if serial_merger is None:
-            self._serial_merger.start()
+        self._commit_queue = commit_queue or CommitQueue(self._transaction)
+        if commit_queue is None:
+            self._commit_queue.start()
         self._maintenance = maintenance or _default_maintenance(
             layer_stack=layer_stack,
             snapshot_reader=snapshot_reader,
-            max_depth=auto_squash_max_depth,
+            max_depth=(
+                AUTO_SQUASH_MAX_DEPTH
+                if auto_squash_max_depth is None
+                else auto_squash_max_depth
+            ),
         )
 
     async def apply_changeset(
@@ -101,7 +106,7 @@ class OccService:
         """
         total_start = _total_start if _total_start is not None else monotonic_now()
         commit_start = monotonic_now()
-        result = await self._serial_merger.apply(prepared)
+        result = await self._commit_queue.apply(prepared)
         commit_elapsed = monotonic_now() - commit_start
         auto_squash_timings = await self._auto_squash_after_publish(result)
         return self._wrap_commit_result(
@@ -137,7 +142,7 @@ class OccService:
         """Synchronous twin of :meth:`commit_prepared`."""
         total_start = _total_start if _total_start is not None else monotonic_now()
         commit_start = monotonic_now()
-        result = self._serial_merger.apply_sync(prepared)
+        result = self._commit_queue.apply_sync(prepared)
         commit_elapsed = monotonic_now() - commit_start
         auto_squash_timings = self._auto_squash_after_publish_sync(result)
         return self._wrap_commit_result(
@@ -181,21 +186,21 @@ class OccService:
         timings = {
             **result_timings,
             **(extra_timings or {}),
-            "occ.apply.commit_queue_wait_s": result_timings.get(
-                "occ.serial.queue_wait_s",
+            TimingKey.APPLY_COMMIT_QUEUE_WAIT: result_timings.get(
+                TimingKey.SERIAL_QUEUE_WAIT,
                 0.0,
             ),
-            "occ.apply.commit_worker_s": result_timings.get(
-                "occ.commit.total_s",
+            TimingKey.APPLY_COMMIT_WORKER: result_timings.get(
+                TimingKey.COMMIT_TOTAL,
                 0.0,
             ),
-            "occ.apply.commit_resume_wait_s": 0.0 if sync_call else resume_wait,
-            "occ.apply.commit_s": commit_elapsed,
-            "occ.apply.total_s": monotonic_now() - total_start,
+            TimingKey.APPLY_COMMIT_RESUME_WAIT: 0.0 if sync_call else resume_wait,
+            TimingKey.APPLY_COMMIT: commit_elapsed,
+            TimingKey.APPLY_TOTAL: monotonic_now() - total_start,
         }
         manifest_lag = _manifest_lag(prepared.snapshot, result.published_manifest_version)
         if manifest_lag is not None:
-            timings["occ.apply.manifest_lag"] = manifest_lag
+            timings[TimingKey.APPLY_MANIFEST_LAG] = manifest_lag
         return ChangesetResult(
             files=result.files,
             timings=timings,
@@ -235,7 +240,7 @@ class OccService:
         if effective_snapshot is None:
             snapshot_start = monotonic_now()
             effective_snapshot = self._snapshot_reader.read_active_manifest()
-            timings["occ.prepare.current_snapshot_s"] = (
+            timings[TimingKey.PREPARE_CURRENT_SNAPSHOT] = (
                 monotonic_now() - snapshot_start
             )
         assert effective_snapshot is not None
@@ -255,15 +260,15 @@ class OccService:
             options=commit_options,
             base_hash_reader=base_hash_reader,
         )
-        timings["occ.prepare.route_and_base_hash_s"] = (
+        timings[TimingKey.PREPARE_ROUTE_AND_BASE_HASH] = (
             monotonic_now() - prepare_start
         )
-        timings["occ.prepare.total_s"] = monotonic_now() - total_start
+        timings[TimingKey.PREPARE_TOTAL] = monotonic_now() - total_start
         return replace(prepared, timings={**prepared.timings, **timings})
 
     def close(self) -> None:
         """Stop owned background resources."""
-        self._serial_merger.close()
+        self._commit_queue.close()
 
 
 def _default_maintenance(
@@ -292,49 +297,10 @@ def _manifest_lag(
 
 def _result_timings_with_resume(result: ChangesetResult) -> tuple[dict[str, float], float]:
     timings = dict(result.timings)
-    ready_at = timings.pop("_occ.serial.result_ready_at_s", None)
+    ready_at = timings.pop(TimingKey.SERIAL_RESULT_READY_AT, None)
     if ready_at is None:
         return timings, 0.0
     return timings, max(0.0, monotonic_now() - ready_at)
-
-
-def _default_maintenance(
-    *,
-    layer_stack: object | None,
-    snapshot_reader: SnapshotReader,
-    max_depth: int,
-) -> MaintenancePolicy:
-    if isinstance(layer_stack, SquashPort):
-        return AutoSquashMaintenancePolicy(
-            snapshot_reader=snapshot_reader,
-            squasher=layer_stack,
-            max_depth=max_depth,
-        )
-    return NoopMaintenancePolicy()
-
-
-def _merge_auto_squash_timings(
-    first: dict[str, float],
-    second: dict[str, float],
-) -> dict[str, float]:
-    if not first:
-        return dict(second)
-    if not second:
-        return dict(first)
-    merged = {**first, **second}
-    if (
-        "layer_stack.auto_squash.total_s" in first
-        or "layer_stack.auto_squash.total_s" in second
-    ):
-        merged["layer_stack.auto_squash.total_s"] = first.get(
-            "layer_stack.auto_squash.total_s",
-            0.0,
-        ) + second.get("layer_stack.auto_squash.total_s", 0.0)
-    if "layer_stack.auto_squash.depth_before" in first:
-        merged["layer_stack.auto_squash.depth_before"] = first[
-            "layer_stack.auto_squash.depth_before"
-        ]
-    return merged
 
 
 __all__ = [

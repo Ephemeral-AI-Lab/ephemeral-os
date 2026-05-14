@@ -34,7 +34,7 @@ from live_e2e.audit.bus import AuditEventBus
 from live_e2e.audit.events import Event, EventType
 from live_e2e.audit.node_id import NodeId
 from live_e2e.audit.recorder import AuditRecorder
-from task_center.domain import (
+from task_center import (
     EpisodeCreationReason,
     MissionStatus,
 )
@@ -597,7 +597,7 @@ def test_agent_run_id_to_task_id_mapping(
             stores,
             task_id="entry_task_1",
             role="entry_executor",
-            agent_name="entry_executor_v1",
+            agent_name="entry_executor",
         )
         agent_run_id = str(uuid.uuid4())
         sf = stores.session_factory
@@ -606,7 +606,7 @@ def test_agent_run_id_to_task_id_mapping(
                 AgentRunRecord(
                     id=agent_run_id,
                     task_id="entry_task_1",
-                    agent_name="entry_executor_v1",
+                    agent_name="entry_executor",
                     message_history=None,
                     terminal_tool_result=None,
                     token_count=0,

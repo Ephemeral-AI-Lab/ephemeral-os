@@ -13,11 +13,11 @@ from sandbox.runtime.daemon.service import workspace_server
 
 @pytest.fixture(autouse=True)
 def _clear_layer_stack_server_state() -> None:
-    workspace_server._clear_layer_stack_server_caches_for_tests()
+    workspace_server.clear_layer_stack_server_caches_for_tests()
     try:
         yield
     finally:
-        workspace_server._clear_layer_stack_server_caches_for_tests()
+        workspace_server.clear_layer_stack_server_caches_for_tests()
 
 
 def test_stale_staging_fence_removes_old_dirs_and_keeps_fresh_dirs(

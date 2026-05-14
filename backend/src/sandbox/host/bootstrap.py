@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import logging
+from pathlib import Path
 from typing import Any, Literal
 
 from sandbox.async_bridge import run_sync
@@ -25,37 +26,9 @@ _BUNDLE_UPLOAD_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
     thread_name_prefix=_BUNDLE_UPLOAD_THREAD_PREFIX,
 )
 LifecyclePhase = Literal["create", "start"]
-
-_GIT_BOOTSTRAP = r"""
-set -e
-if command -v git >/dev/null 2>&1; then exit 0; fi
-echo "[sandbox] Installing git..."
-as_root() {
-    if [ "$(id -u)" = "0" ]; then
-        "$@"
-    elif command -v sudo >/dev/null 2>&1; then
-        sudo -n "$@"
-    else
-        return 1
-    fi
-}
-if command -v apt-get >/dev/null 2>&1; then
-    as_root mkdir -p /var/lib/apt/lists/partial
-    as_root apt-get update -qq && as_root apt-get install -y -qq git
-elif command -v apk >/dev/null 2>&1; then
-    as_root apk add --no-cache git
-elif command -v microdnf >/dev/null 2>&1; then
-    as_root microdnf install -y git
-elif command -v dnf >/dev/null 2>&1; then
-    as_root dnf install -y git
-elif command -v yum >/dev/null 2>&1; then
-    as_root yum install -y git
-else
-    echo "[sandbox] No package manager found; git not installed" >&2
-    exit 1
-fi
-echo "[sandbox] git installed"
-"""
+_INSTALL_GIT_SCRIPT = (
+    Path(__file__).resolve().parent.parent / "runtime" / "scripts" / "install_git.sh"
+)
 
 
 async def bootstrap_in_sandbox_runtime(
@@ -270,7 +243,9 @@ def ensure_git(sandbox_id: str) -> None:
             logger.info("ensure_git(%s): git already available", sandbox_id)
             return
         logger.info("ensure_git(%s): installing git", sandbox_id)
-        install = run_sync(adapter.exec(sandbox_id, _GIT_BOOTSTRAP, timeout=120))
+        install = run_sync(
+            adapter.exec(sandbox_id, _install_git_script(), timeout=120)
+        )
         if getattr(install, "exit_code", 1) not in (0, None):
             raise RuntimeError(
                 getattr(install, "stderr", "")
@@ -317,6 +292,10 @@ def ensure_running(sandbox_id: str) -> dict[str, Any]:
     workspace_root = info.get("project_dir") or ""
     setup_after_start(sandbox_id, workspace_root)
     return info
+
+
+def _install_git_script() -> str:
+    return _INSTALL_GIT_SCRIPT.read_text(encoding="utf-8")
 
 
 def setup_post_lifecycle(

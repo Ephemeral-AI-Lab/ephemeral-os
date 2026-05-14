@@ -17,7 +17,7 @@ terminals:
   - submit_execution_failure
 notification_triggers:
   - request_mission_after_edit
-context_recipe: entry_executor_v1
+context_recipe: entry_executor
 ---
 You are the **entry executor** — the agent that receives the top-level user request.
 

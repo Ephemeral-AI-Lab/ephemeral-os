@@ -153,7 +153,7 @@ async def test_ask_advisor_runs_advisor_with_inherited_parent_context(
             description="advisor",
             agent_kind=AgentKind.ADVISOR,
             terminals=["submit_advisor_feedback"],
-            context_recipe="advisor_v1",
+            context_recipe="advisor",
         )
     )
     seen: dict[str, object] = {}
@@ -208,7 +208,7 @@ async def test_ask_advisor_errors_when_composer_missing() -> None:
             description="advisor",
             agent_kind=AgentKind.ADVISOR,
             terminals=["submit_advisor_feedback"],
-            context_recipe="advisor_v1",
+            context_recipe="advisor",
         )
     )
     try:
@@ -240,7 +240,7 @@ async def test_ask_resolver_runs_resolver_with_inherited_parent_context(
             description="resolver",
             agent_kind=AgentKind.RESOLVER,
             terminals=["submit_resolver_result"],
-            context_recipe="resolver_v1",
+            context_recipe="resolver",
         )
     )
     seen: dict[str, object] = {}

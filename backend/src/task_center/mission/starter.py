@@ -13,11 +13,11 @@ from datetime import UTC, datetime
 from typing import Any
 
 from task_center.mission.close_report_delivery import (
-    MissionCloseReportRouter,
+    MissionClosureReportRouter,
 )
 from task_center.mission.handler import MissionHandler
-from task_center.mission.mission import (
-    MissionCloseReport,
+from task_center.mission.state import (
+    MissionClosureReport,
     Mission,
     MissionStatus,
 )
@@ -25,8 +25,8 @@ from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.state import AttemptFailReason, AttemptStatus
 from task_center.attempt.runtime import AttemptDeps
-from task_center.episode.episode import Episode, EpisodeStatus
-from task_center.task.models import TaskCenterTaskStatus
+from task_center.episode.state import Episode, EpisodeStatus
+from task_center.task.state import TaskCenterTaskStatus
 
 logger = logging.getLogger(__name__)
 
@@ -124,9 +124,9 @@ class MissionStarter:
             raise TaskCenterInvariantViolation(
                 "MissionStarter requires an episode manager registry."
             )
-        router = MissionCloseReportRouter(runtime=self._runtime)
+        router = MissionClosureReportRouter(runtime=self._runtime)
 
-        def _deliver(report: MissionCloseReport) -> None:
+        def _deliver(report: MissionClosureReport) -> None:
             router.deliver(report)
 
         return MissionHandler(
@@ -135,7 +135,7 @@ class MissionStarter:
             attempt_store=self._runtime.attempt_store,
             manager_registry=manager_registry,
             config=self._runtime.lifecycle_config,
-            deliver_close_report=_deliver,
+            deliver_closure_report=_deliver,
             orchestrator_factory=lambda attempt, on_attempt_closed: AttemptOrchestrator(
                 attempt=attempt,
                 on_attempt_closed=on_attempt_closed,
@@ -269,7 +269,7 @@ class MissionStarter:
                 parent_task_id,
                 exc_info=True,
             )
-            self._deliver_synthetic_failure_close_report(
+            self._deliver_synthetic_failure_closure_report(
                 mission=mission,
                 episode=episode,
                 initial_attempt_id=initial_attempt_id,
@@ -279,7 +279,7 @@ class MissionStarter:
         if manager_registry is not None:
             manager_registry.deregister(episode.id)
 
-    def _deliver_synthetic_failure_close_report(
+    def _deliver_synthetic_failure_closure_report(
         self,
         *,
         mission: Mission,
@@ -291,15 +291,15 @@ class MissionStarter:
 
         Without this, a parent task can be orphaned in
         ``WAITING_MISSION`` with no automated driver to reset it.
-        Routing a synthetic ``MissionCloseReport(outcome="failed")`` re-uses
+        Routing a synthetic ``MissionClosureReport(outcome="failed")`` re-uses
         the close-report router so the controller / orchestrator unsticks the
         parent the same way it would for a normal failed-mission close. The
         router no-ops cleanly when the task already reached a terminal state.
         """
         try:
-            router = MissionCloseReportRouter(runtime=self._runtime)
+            router = MissionClosureReportRouter(runtime=self._runtime)
             router.deliver(
-                MissionCloseReport(
+                MissionClosureReport(
                     mission_id=mission.id,
                     requested_by_task_id=parent_task_id,
                     outcome="failed",

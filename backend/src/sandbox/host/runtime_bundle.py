@@ -19,24 +19,24 @@ import uuid
 from pathlib import Path
 from typing import Protocol
 
+from sandbox.daemon_paths import (
+    BUNDLE_HASH_MARKER as _BUNDLE_HASH_MARKER,
+    BUNDLE_REMOTE_DIR as _BUNDLE_REMOTE_DIR,
+    BUNDLE_REMOTE_TARBALL as _BUNDLE_REMOTE_TARBALL,
+)
 from sandbox.models import RawExecResult
 from sandbox.provider.registry import get_adapter
 
 __all__ = [
-    "BUNDLE_REMOTE_DIR",
     "bundle_hash",
+    "clear_bundle_caches",
+    "compute_bundle_hash",
     "ensure_runtime_uploaded",
     "_ensure_runtime_uploaded_with_exec",
     "_runtime_bundle_bytes",
 ]
 
 logger = logging.getLogger(__name__)
-
-BUNDLE_REMOTE_DIR = "/tmp/eos-sandbox-runtime"
-"""Remote directory the bundle is extracted into."""
-
-_BUNDLE_HASH_MARKER = f"{BUNDLE_REMOTE_DIR}/.bundle-hash"
-_BUNDLE_REMOTE_TARBALL = f"{BUNDLE_REMOTE_DIR}/bundle.tar.gz"
 
 # Keep chunks below observed provider argv limits while preserving base64
 # alignment so each chunk decodes independently.
@@ -109,6 +109,20 @@ def _add_peer_setup_scripts(tar: tarfile.TarFile, *, sandbox_dir: Path) -> None:
         )
 
 
+def _add_runtime_scripts(tar: tarfile.TarFile, *, sandbox_dir: Path) -> None:
+    scripts_dir = sandbox_dir / "runtime" / "scripts"
+    if not scripts_dir.exists():
+        return
+    for path in sorted(scripts_dir.iterdir()):
+        if path.is_dir() or "__pycache__" in path.parts:
+            continue
+        tar.add(
+            path,
+            arcname=f"sandbox/{path.relative_to(sandbox_dir).as_posix()}",
+            filter=_normalize_tarinfo,
+        )
+
+
 def _vendor_pathspec(tar: tarfile.TarFile) -> None:
     """Add the host's installed ``pathspec`` package to the bundle.
 
@@ -164,21 +178,10 @@ def _runtime_bundle_bytes() -> bytes:
             sandbox_dir / "async_bridge.py",
             arcname="sandbox/async_bridge.py",
         )
-
         _add_if_exists(
             tar,
-            sandbox_dir / "api" / "__init__.py",
-            arcname="sandbox/api/__init__.py",
-        )
-        _add_if_exists(
-            tar,
-            sandbox_dir / "api" / "facade.py",
-            arcname="sandbox/api/facade.py",
-        )
-        _add_if_exists(
-            tar,
-            sandbox_dir / "api" / "tool" / "__init__.py",
-            arcname="sandbox/api/tool/__init__.py",
+            sandbox_dir / "daemon_paths.py",
+            arcname="sandbox/daemon_paths.py",
         )
 
         daemon_dir = sandbox_dir / "runtime"
@@ -244,6 +247,7 @@ def _runtime_bundle_bytes() -> bytes:
         )
 
         _add_peer_setup_scripts(tar, sandbox_dir=sandbox_dir)
+        _add_runtime_scripts(tar, sandbox_dir=sandbox_dir)
 
         _vendor_pathspec(tar)
 
@@ -257,16 +261,25 @@ def _runtime_bundle_bytes() -> bytes:
 _BUNDLE_HASH_CACHE: str | None = None
 
 
-def bundle_hash(bundle: bytes | None = None) -> str:
-    """Stable hex digest of the runtime bundle."""
-    global _BUNDLE_HASH_CACHE
-    if bundle is None:
-        if _BUNDLE_HASH_CACHE is not None:
-            return _BUNDLE_HASH_CACHE
-        bundle = _runtime_bundle_bytes()
-        _BUNDLE_HASH_CACHE = hashlib.sha256(bundle).hexdigest()
-        return _BUNDLE_HASH_CACHE
+def compute_bundle_hash(bundle: bytes) -> str:
+    """Pure stable hex digest helper for a concrete runtime bundle."""
     return hashlib.sha256(bundle).hexdigest()
+
+
+def bundle_hash() -> str:
+    """Cached stable hex digest of the default runtime bundle."""
+    global _BUNDLE_HASH_CACHE
+    if _BUNDLE_HASH_CACHE is not None:
+        return _BUNDLE_HASH_CACHE
+    _BUNDLE_HASH_CACHE = compute_bundle_hash(_runtime_bundle_bytes())
+    return _BUNDLE_HASH_CACHE
+
+
+def clear_bundle_caches() -> None:
+    """Clear process-local runtime bundle caches. Test seam."""
+    global _BUNDLE_CACHE, _BUNDLE_HASH_CACHE
+    _BUNDLE_CACHE = None
+    _BUNDLE_HASH_CACHE = None
 
 
 async def ensure_runtime_uploaded(sandbox_id: str) -> str:
@@ -301,7 +314,7 @@ async def _ensure_runtime_uploaded_with_exec(
     setup = await exec_fn(
         sandbox_id,
         (
-            f"mkdir -p {shlex.quote(BUNDLE_REMOTE_DIR)} && "
+            f"mkdir -p {shlex.quote(_BUNDLE_REMOTE_DIR)} && "
             f": > {shlex.quote(staging_tarball)}"
         ),
         timeout=30,
@@ -326,10 +339,10 @@ async def _ensure_runtime_uploaded_with_exec(
             )
 
     finalize_cmd = (
-        f"cd {shlex.quote(BUNDLE_REMOTE_DIR)} && "
+        f"cd {shlex.quote(_BUNDLE_REMOTE_DIR)} && "
         f"tar -xzf {shlex.quote(staging_tarball)} && "
         f"rm -f {shlex.quote(staging_tarball)} && "
-        f"printf %s {shlex.quote(digest)} > {shlex.quote(_BUNDLE_HASH_MARKER)}"
+            f"printf %s {shlex.quote(digest)} > {shlex.quote(_BUNDLE_HASH_MARKER)}"
     )
     result = await exec_fn(sandbox_id, finalize_cmd, timeout=60)
     if _exit_code(result) != 0:

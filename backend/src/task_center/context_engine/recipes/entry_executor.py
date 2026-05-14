@@ -1,4 +1,4 @@
-"""``entry_executor_v1`` recipe — context for the top-level entry executor.
+"""``entry_executor`` recipe — context for the top-level entry executor.
 
 Emits one ``entry_request`` block (priority=required) sourced from the
 entry task row's ``rendered_prompt``. The entry executor is not a Mission, so this
@@ -19,11 +19,11 @@ from task_center.context_engine.packet import (
 from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
 
-ENTRY_EXECUTOR_V1 = "entry_executor_v1"
+ENTRY_EXECUTOR_ID = "entry_executor"
 _REQUIRED_FIELDS = frozenset({"task_id"})
 
 
-def _entry_executor_v1_build(
+def _entry_executor_build(
     scope: ContextScope, deps: ContextEngineDeps
 ) -> ContextPacket:
     # Engine pre-validates required scope fields via ``assert_fields``; this
@@ -31,7 +31,7 @@ def _entry_executor_v1_build(
     # ``assert`` would be stripped.
     if scope.task_id is None:
         raise ContextEngineError(
-            "entry_executor_v1 requires scope.task_id."
+            "entry_executor requires scope.task_id."
         )
     task = deps.task_store.get_task(scope.task_id)
     if task is None:
@@ -57,8 +57,8 @@ def _entry_executor_v1_build(
     )
 
 
-ENTRY_EXECUTOR_V1_RECIPE = ContextRecipe(
-    id=ENTRY_EXECUTOR_V1,
+ENTRY_EXECUTOR_RECIPE = ContextRecipe(
+    id=ENTRY_EXECUTOR_ID,
     required_scope_fields=_REQUIRED_FIELDS,
-    build=_entry_executor_v1_build,
+    build=_entry_executor_build,
 )

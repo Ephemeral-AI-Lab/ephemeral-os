@@ -243,45 +243,6 @@ def aggregate_layer_changes(changes: Iterable[LayerChange]) -> LayerDelta:
     return LayerDelta(changes=tuple(final_by_path[path] for path in sorted(final_by_path)))
 
 
-def make_layer_change(
-    *,
-    path: str,
-    kind: LayerChangeKind,
-    content_hash: str | None = None,
-    source_path: str | None = None,
-) -> LayerChange:
-    """Compatibility factory for callers that still parse kind strings."""
-    if kind == "write":
-        if source_path is None:
-            raise ValueError("write changes require source_path")
-        return WriteLayerChange(
-            path=path,
-            source_path=source_path,
-            content_hash=content_hash,
-        )
-    if kind == "delete":
-        return DeleteLayerChange(
-            path=path,
-            content_hash=content_hash,
-            source_path=source_path,
-        )
-    if kind == "symlink":
-        if source_path is None:
-            raise ValueError("symlink changes require source_path")
-        return SymlinkLayerChange(
-            path=path,
-            source_path=source_path,
-            content_hash=content_hash,
-        )
-    if kind == "opaque_dir":
-        return OpaqueDirLayerChange(
-            path=path,
-            content_hash=content_hash,
-            source_path=source_path,
-        )
-    raise ValueError(f"unsupported layer change kind: {kind}")
-
-
 def _sha256_hex(content: bytes) -> str:
     import hashlib
 

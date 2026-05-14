@@ -7,6 +7,7 @@ import shutil
 from collections.abc import Mapping
 from pathlib import Path
 from types import TracebackType
+from typing import Protocol
 from uuid import uuid4
 
 from sandbox.layer_stack.layer.change import LayerChange, LayerDelta, WriteLayerChange
@@ -22,14 +23,16 @@ from sandbox.occ.changeset.types import (
     FileStatus,
 )
 from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.merge.direct import DirectMerge
-from sandbox.occ.merge.gated import GatedMerge
-from sandbox.occ.merge.policy import MergePolicy
+from sandbox.occ.stage.direct import DirectStager
+from sandbox.occ.stage.gated import GatedStager
+from sandbox.occ.stage.policy import MergePolicy
 from sandbox.occ.ports import (
     CommitPublisher,
+    CommitTransactionPort,
     CommitStagingStore,
     SnapshotReader,
 )
+from sandbox.occ.timing_keys import TimingKey
 from sandbox.timing import monotonic_now
 
 # Below this threshold, a buffered Python read+write is cheaper than
@@ -39,7 +42,7 @@ from sandbox.timing import monotonic_now
 _SMALL_FILE_BYTES_THRESHOLD = 16 * 1024
 
 
-class OccCommitTransaction:
+class CommitTransaction:
     """Revalidate prepared OCC path groups and publish one immutable layer."""
 
     def __init__(
@@ -53,8 +56,8 @@ class OccCommitTransaction:
         self._staging = staging
         self._publisher = publisher
         self._hasher = ContentHasher()
-        self._gated = GatedMerge(snapshot_reader, hasher=self._hasher)
-        self._direct = DirectMerge(snapshot_reader)
+        self._gated = GatedStager(snapshot_reader, hasher=self._hasher)
+        self._direct = DirectStager(snapshot_reader)
         self._policies: Mapping[RouteDecision, MergePolicy] = {
             RouteDecision.DIRECT: self._direct,
             RouteDecision.GATED: self._gated,
@@ -65,11 +68,11 @@ class OccCommitTransaction:
         total_start = monotonic_now()
         timings: dict[str, float] = {}
         with self._publisher.commit_transaction() as transaction:
-            timings["layer_stack.transaction.lock_wait_s"] = transaction.lock_wait_s
+            timings[TimingKey.LAYER_TRANSACTION_LOCK_WAIT] = transaction.lock_wait_s
             snapshot_start = monotonic_now()
             active_manifest = transaction.snapshot()
-            timings["occ.commit.snapshot_s"] = monotonic_now() - snapshot_start
-            with _LayerChangeStager(
+            timings[TimingKey.COMMIT_SNAPSHOT] = monotonic_now() - snapshot_start
+            with _FileSystemLayerChangeStager(
                 self._staging,
                 hasher=self._hasher,
             ) as stager:
@@ -99,31 +102,31 @@ class OccCommitTransaction:
                     rt = result.timings
                     if group.route is RouteDecision.GATED:
                         gated_count += 1
-                        gated_read_total += rt.get("occ.gated.read_current_s", 0.0)
+                        gated_read_total += rt.get(TimingKey.GATED_READ_CURRENT, 0.0)
                         gated_apply_total += rt.get(
-                            "occ.gated.apply_changes_s", 0.0
+                            TimingKey.GATED_APPLY_CHANGES, 0.0
                         )
-                        gated_stage_total += rt.get("occ.gated.stage_delta_s", 0.0)
+                        gated_stage_total += rt.get(TimingKey.GATED_STAGE_DELTA, 0.0)
                     elif group.route is RouteDecision.DIRECT:
                         direct_count += 1
-                        direct_read_total += rt.get("occ.direct.read_current_s", 0.0)
+                        direct_read_total += rt.get(TimingKey.DIRECT_READ_CURRENT, 0.0)
                         direct_apply_total += rt.get(
-                            "occ.direct.apply_changes_s", 0.0
+                            TimingKey.DIRECT_APPLY_CHANGES, 0.0
                         )
-                        direct_stage_total += rt.get("occ.direct.stage_delta_s", 0.0)
-                timings["occ.commit.validate_groups_s"] = (
+                        direct_stage_total += rt.get(TimingKey.DIRECT_STAGE_DELTA, 0.0)
+                timings[TimingKey.COMMIT_VALIDATE_GROUPS] = (
                     monotonic_now() - validate_start
                 )
-                timings["occ.commit.gated_read_current_total_s"] = gated_read_total
-                timings["occ.commit.gated_apply_changes_total_s"] = gated_apply_total
-                timings["occ.commit.gated_stage_delta_total_s"] = gated_stage_total
-                timings["occ.commit.gated_path_count"] = float(gated_count)
-                timings["occ.commit.direct_read_current_total_s"] = direct_read_total
-                timings["occ.commit.direct_apply_changes_total_s"] = (
+                timings[TimingKey.COMMIT_GATED_READ_TOTAL] = gated_read_total
+                timings[TimingKey.COMMIT_GATED_APPLY_TOTAL] = gated_apply_total
+                timings[TimingKey.COMMIT_GATED_STAGE_TOTAL] = gated_stage_total
+                timings[TimingKey.COMMIT_GATED_PATH_COUNT] = float(gated_count)
+                timings[TimingKey.COMMIT_DIRECT_READ_TOTAL] = direct_read_total
+                timings[TimingKey.COMMIT_DIRECT_APPLY_TOTAL] = (
                     direct_apply_total
                 )
-                timings["occ.commit.direct_stage_delta_total_s"] = direct_stage_total
-                timings["occ.commit.direct_path_count"] = float(direct_count)
+                timings[TimingKey.COMMIT_DIRECT_STAGE_TOTAL] = direct_stage_total
+                timings[TimingKey.COMMIT_DIRECT_PATH_COUNT] = float(direct_count)
 
                 files = tuple(result for result, _ in validations)
                 if _must_skip_publish(
@@ -148,7 +151,7 @@ class OccCommitTransaction:
                     if accepted_delta is not None
                     for change in accepted_delta.changes
                 )
-                timings["occ.commit.collect_changes_s"] = (
+                timings[TimingKey.COMMIT_COLLECT_CHANGES] = (
                     monotonic_now() - collect_start
                 )
                 if not changes:
@@ -162,10 +165,10 @@ class OccCommitTransaction:
                         published_manifest_version=None,
                     )
 
-                timings["occ.commit.stager_write_total_s"] = (
+                timings[TimingKey.COMMIT_STAGER_WRITE_TOTAL] = (
                     stager.write_total_s
                 )
-                timings["occ.commit.stager_write_count"] = float(
+                timings[TimingKey.COMMIT_STAGER_WRITE_COUNT] = float(
                     stager.write_count
                 )
                 publish_start = monotonic_now()
@@ -174,7 +177,7 @@ class OccCommitTransaction:
                     source_root=stager.staging_path,
                     timings=timings,
                 )
-                timings["occ.commit.publish_layer_s"] = (
+                timings[TimingKey.COMMIT_PUBLISH_LAYER] = (
                     monotonic_now() - publish_start
                 )
                 return ChangesetResult(
@@ -230,7 +233,30 @@ class OccCommitTransaction:
         )
 
 
-class _LayerChangeStager:
+class _LayerChangeStager(Protocol):
+    """Stage file payloads for layer publish implementations."""
+
+    @property
+    def write_total_s(self) -> float: ...
+
+    @property
+    def write_count(self) -> int: ...
+
+    @property
+    def staging_path(self) -> Path | None: ...
+
+    def write(self, path: str, content: bytes) -> LayerChange: ...
+
+    def write_from_path(
+        self,
+        path: str,
+        content_path: str,
+        precomputed_hash: str,
+        cached_bytes: bytes | None = None,
+    ) -> LayerChange: ...
+
+
+class _FileSystemLayerChangeStager:
     def __init__(
         self,
         staging: CommitStagingStore,
@@ -257,7 +283,7 @@ class _LayerChangeStager:
     def staging_path(self) -> Path | None:
         return self._staging_path
 
-    def __enter__(self) -> _LayerChangeStager:
+    def __enter__(self) -> _FileSystemLayerChangeStager:
         area = self._staging.allocate_commit_staging(uuid4().hex)
         self._staging_id = area.staging_id
         self._staging_path = area.path
@@ -397,17 +423,19 @@ def _finish_timings(
     timings: dict[str, float],
     total_start: float,
     *,
-    transaction: object | None = None,
+    transaction: CommitTransactionPort | None = None,
 ) -> dict[str, float]:
     result = {
         **timings,
-        "occ.commit.total_s": monotonic_now() - total_start,
+        TimingKey.COMMIT_TOTAL: monotonic_now() - total_start,
     }
     if transaction is not None:
-        lock_held_s = getattr(transaction, "lock_held_s", None)
-        if lock_held_s is not None:
-            result["layer_stack.transaction.lock_held_s"] = float(lock_held_s)
+        result[TimingKey.LAYER_TRANSACTION_LOCK_HELD] = float(
+            transaction.lock_held_s
+        )
     return result
 
 
-__all__ = ["OccCommitTransaction"]
+__all__ = [
+    "CommitTransaction",
+]

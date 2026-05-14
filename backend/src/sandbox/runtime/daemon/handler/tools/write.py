@@ -7,14 +7,14 @@ from uuid import uuid4
 from sandbox.layer_stack.workspace.binding import require_workspace_binding
 from sandbox.occ.changeset.builders import build_api_write_change
 from sandbox.occ.content.hashing import content_hash_bytes
-from sandbox.occ.routing.single_path import prepare_single_path_changeset
+from sandbox.occ.router import prepare_single_path_changeset
 from sandbox.async_bridge import run_sync_in_executor
 from sandbox.runtime.daemon.handler.request_context import (
-    _layer_stack_root,
-    _project_changeset,
-    _required_single_path,
-    _services,
     classify_path,
+    layer_stack_root as require_layer_stack_root,
+    project_changeset,
+    required_single_path,
+    services as backend_services,
     write_text_no_follow,
 )
 from sandbox.timing import monotonic_now
@@ -23,9 +23,9 @@ from sandbox.timing import monotonic_now
 async def write_file(args: dict[str, object]) -> dict[str, object]:
     """Single-path write_file dispatch with in/out-of-workspace classification."""
     total_start = monotonic_now()
-    layer_stack_root = _layer_stack_root(args)
+    layer_stack_root = require_layer_stack_root(args)
     binding = require_workspace_binding(layer_stack_root)
-    raw_path = _required_single_path(args)
+    raw_path = required_single_path(args)
     classified = classify_path(raw_path, binding.workspace_root)
 
     content = str(args.get("content") or "")
@@ -56,7 +56,7 @@ async def _write_in_workspace(
     overwrite: bool,
     total_start: float,
 ) -> dict[str, object]:
-    services = _services(layer_stack_root)
+    services = backend_services(layer_stack_root)
     request_id = uuid4().hex
     lease_start = monotonic_now()
     lease = await run_sync_in_executor(
@@ -128,7 +128,7 @@ async def _write_in_workspace(
             atomic=False,
         )
         apply_start = monotonic_now()
-        result = await services.occ_client.commit_prepared_changeset(
+        result = await services.occ_client.commit_prepared(
             prepared,
             workspace_ref=layer_stack_root,
         )
@@ -136,7 +136,7 @@ async def _write_in_workspace(
     finally:
         await run_sync_in_executor(services.manager.release_lease, lease.lease_id)
 
-    return _project_changeset(
+    return project_changeset(
         result,
         fallback_path=layer_path,
         verb="write",

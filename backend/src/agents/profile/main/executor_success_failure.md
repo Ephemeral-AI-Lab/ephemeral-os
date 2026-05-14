@@ -14,7 +14,7 @@ allowed_tools:
 terminals:
   - submit_execution_success
   - submit_execution_failure
-context_recipe: generator_v1
+context_recipe: generator
 ---
 You are the main-agent generator executor at a leaf depth — no further
 delegation is allowed.

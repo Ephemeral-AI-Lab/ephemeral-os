@@ -11,11 +11,10 @@ from sandbox.api.tool.shell import shell
 @pytest.mark.asyncio
 async def test_shell_dispatches_to_sandbox_daemon(
     monkeypatch: pytest.MonkeyPatch,
+    recording_transport_factory,
 ) -> None:
-    calls: list[tuple[str, str, dict[str, object], int]] = []
-
-    async def fake_call_daemon_api(sandbox_id, op, args, *, timeout):
-        calls.append((sandbox_id, op, args, timeout))
+    async def fake_call_daemon_api(sandbox_id, op, args, timeout):
+        del sandbox_id, op, args, timeout
         return {
             "success": True,
             "exit_code": 0,
@@ -29,10 +28,8 @@ async def test_shell_dispatches_to_sandbox_daemon(
             "timings": {"api.shell.total_s": 0.2},
         }
 
-    monkeypatch.setattr(
-        "sandbox.api.tool.shell.call_daemon_api",
-        fake_call_daemon_api,
-    )
+    del monkeypatch
+    transport = recording_transport_factory(fake_call_daemon_api)
 
     result = await shell(
         "sb-shell",
@@ -43,6 +40,7 @@ async def test_shell_dispatches_to_sandbox_daemon(
             caller=SandboxCaller(agent_id="agent-1"),
             description="shell test",
         ),
+        transport=transport,
     )
 
     assert result.success is True
@@ -50,7 +48,7 @@ async def test_shell_dispatches_to_sandbox_daemon(
     assert result.exit_code == 0
     assert result.stdout == "new\n"
     assert result.changed_paths == ("pkg/value.txt",)
-    assert calls == [
+    assert transport.calls == [
         (
             "sb-shell",
             "api.shell",
@@ -75,17 +73,16 @@ async def test_shell_dispatches_to_sandbox_daemon(
 @pytest.mark.asyncio
 async def test_shell_overlay_policy_error_maps_to_rejected_result(
     monkeypatch: pytest.MonkeyPatch,
+    recording_transport_factory,
 ) -> None:
-    async def fake_call_daemon_api(*_args, **_kwargs):
+    async def fake_call_daemon_api(_sandbox_id, _op, _args, _timeout):
         raise RuntimeError(
             "internal_error: overlay capture refuses escaping symlink target: "
             ".ephemeralos/sweevo-mock/full_stack/overlay/symlink_escape"
         )
 
-    monkeypatch.setattr(
-        "sandbox.api.tool.shell.call_daemon_api",
-        fake_call_daemon_api,
-    )
+    del monkeypatch
+    transport = recording_transport_factory(fake_call_daemon_api)
 
     result = await shell(
         "sb-shell",
@@ -96,6 +93,7 @@ async def test_shell_overlay_policy_error_maps_to_rejected_result(
             caller=SandboxCaller(agent_id="agent-1"),
             description="shell test",
         ),
+        transport=transport,
     )
 
     assert result.success is False
@@ -110,14 +108,13 @@ async def test_shell_overlay_policy_error_maps_to_rejected_result(
 @pytest.mark.asyncio
 async def test_shell_rejects_stdin_without_daemon_dispatch(
     monkeypatch: pytest.MonkeyPatch,
+    recording_transport_factory,
 ) -> None:
-    async def fail_call_daemon_api(*_args, **_kwargs):
+    async def fail_call_daemon_api(_sandbox_id, _op, _args, _timeout):
         raise AssertionError("daemon dispatch should not be called")
 
-    monkeypatch.setattr(
-        "sandbox.api.tool.shell.call_daemon_api",
-        fail_call_daemon_api,
-    )
+    del monkeypatch
+    transport = recording_transport_factory(fail_call_daemon_api)
 
     result = await shell(
         "sb-shell",
@@ -126,9 +123,11 @@ async def test_shell_rejects_stdin_without_daemon_dispatch(
             stdin="input",
             caller=SandboxCaller(agent_id="agent-1"),
         ),
+        transport=transport,
     )
 
     assert result.success is False
     assert result.status == "error"
     assert result.conflict is not None
     assert result.conflict.reason == "stdin_not_supported"
+    assert transport.calls == []

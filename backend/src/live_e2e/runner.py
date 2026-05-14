@@ -18,7 +18,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from task_center.api import TaskCenterSandboxBridge, start_task_center_entry_run
+from task_center import TaskCenterSandboxBridge, start_task_center_entry_run
 
 from live_e2e.audit.bus import AuditEventBus
 from live_e2e.audit.events import Event, EventType
@@ -147,7 +147,7 @@ async def run_scenario(
     """Run *scenario* end-to-end against ``sandbox_id``.
 
     Bus, recorder, scenario hooks, and the squad runner are wired here. The
-    real :func:`task_center.api.start_task_center_entry_run` is invoked with
+    real :func:`task_center.start_task_center_entry_run` is invoked with
     the per-test PG stores so every ORM commit fires the recorder's listeners.
     """
     owns_stores = stores is None

@@ -1,4 +1,4 @@
-"""``planner_v1`` recipe — context for one attempt planner spawn.
+"""``planner`` recipe — context for one attempt planner spawn.
 
 See plan §3.3.6 for the full block taxonomy. The recipe reads:
 
@@ -19,7 +19,7 @@ from task_center.context_engine.packet import (
     ContextPacket,
     ContextRefs,
 )
-from task_center.context_engine.recipes._mission_episode import (
+from task_center.context_engine.recipes.mission_episode import (
     mission_episode_blocks,
 )
 from task_center.context_engine.recipes_registry import ContextRecipe
@@ -28,13 +28,13 @@ from task_center.context_engine.recipes.attempt_landscape import (
 )
 from task_center.context_engine.scope import ContextScope
 
-PLANNER_V1 = "planner_v1"
+PLANNER_ID = "planner"
 _REQUIRED_FIELDS = frozenset(
     {"mission_id", "episode_id", "attempt_id"}
 )
 
 
-def _planner_v1_build(
+def _planner_build(
     scope: ContextScope, deps: ContextEngineDeps
 ) -> ContextPacket:
     # Engine pre-validates required scope fields via ``assert_fields``; this
@@ -46,7 +46,7 @@ def _planner_v1_build(
         or scope.attempt_id is None
     ):
         raise ContextEngineError(
-            "planner_v1 requires mission_id, episode_id, and attempt_id; "
+            "planner requires mission_id, episode_id, and attempt_id; "
             f"got {scope!r}"
         )
     mission = deps.mission_store.get(scope.mission_id)
@@ -87,8 +87,8 @@ def _planner_v1_build(
     )
 
 
-PLANNER_V1_RECIPE = ContextRecipe(
-    id=PLANNER_V1,
+PLANNER_RECIPE = ContextRecipe(
+    id=PLANNER_ID,
     required_scope_fields=_REQUIRED_FIELDS,
-    build=_planner_v1_build,
+    build=_planner_build,
 )

@@ -13,7 +13,7 @@ terminals:
   - submit_evaluation_failure
 notification_triggers:
   - resolver_limit
-context_recipe: evaluator_v1
+context_recipe: evaluator
 ---
 You are the main-agent evaluator.
 

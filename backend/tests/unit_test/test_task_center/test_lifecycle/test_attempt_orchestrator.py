@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.mission.mission import MissionCloseReport
+from task_center.mission.state import MissionClosureReport
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt import (
     AttemptFailReason,
@@ -31,7 +31,7 @@ from task_center.task import (
     generator_task_id,
     planner_task_id,
 )
-from task_center.episode.episode import EpisodeCreationReason
+from task_center.episode.state import EpisodeCreationReason
 
 
 class _FakeLauncher:
@@ -456,7 +456,7 @@ def test_waiting_mission_prevents_generator_quiescence(
     assert closed == []
 
 
-def test_mission_close_report_success_resumes_waiting_generator(
+def test_mission_closure_report_success_resumes_waiting_generator(
     mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, _, _, _ = _build_orchestrator(
@@ -475,8 +475,8 @@ def test_mission_close_report_success_resumes_waiting_generator(
         status=TaskCenterTaskStatus.WAITING_MISSION.value,
     )
 
-    orchestrator.apply_mission_close_report(
-        MissionCloseReport(
+    orchestrator.apply_mission_closure_report(
+        MissionClosureReport(
             mission_id="delegated-1",
             requested_by_task_id=task_id,
             outcome="success",
@@ -489,14 +489,14 @@ def test_mission_close_report_success_resumes_waiting_generator(
     refreshed = attempt_store.get(attempt.id)
     assert task is not None
     assert task["status"] == TaskCenterTaskStatus.DONE.value
-    assert task["summaries"][-1]["payload"]["mission_close_report"][
+    assert task["summaries"][-1]["payload"]["mission_closure_report"][
         "mission_id"
     ] == "delegated-1"
     assert refreshed is not None
     assert refreshed.stage == AttemptStage.EVALUATE
 
 
-def test_mission_close_report_failure_blocks_dependents_and_closes_graph(
+def test_mission_closure_report_failure_blocks_dependents_and_closes_graph(
     mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, _, _, closed = _build_orchestrator(
@@ -519,8 +519,8 @@ def test_mission_close_report_failure_blocks_dependents_and_closes_graph(
         status=TaskCenterTaskStatus.WAITING_MISSION.value,
     )
 
-    orchestrator.apply_mission_close_report(
-        MissionCloseReport(
+    orchestrator.apply_mission_closure_report(
+        MissionClosureReport(
             mission_id="delegated-1",
             requested_by_task_id=task_id,
             outcome="failed",

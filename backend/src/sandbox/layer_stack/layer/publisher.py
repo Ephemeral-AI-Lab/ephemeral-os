@@ -163,9 +163,7 @@ def _record_prepare_elapsed(
 ) -> None:
     if timings is None:
         return
-    elapsed = monotonic_now() - prepare_start
-    timings["layer_stack.publish.prepare_changes_s"] = elapsed
-    timings["layer_stack.publish.digest_check_s"] = elapsed
+    timings["layer_stack.publish.prepare_changes_s"] = monotonic_now() - prepare_start
 
 
 def _prepare_changes(

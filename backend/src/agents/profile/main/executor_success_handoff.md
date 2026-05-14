@@ -16,7 +16,7 @@ terminals:
   - submit_execution_success
 notification_triggers:
   - request_mission_after_edit
-context_recipe: generator_v1
+context_recipe: generator
 ---
 You are the main-agent generator executor at a depth where handoff is still
 available.

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from task_center.mission.mission import (
+from task_center.mission.state import (
     Mission,
     MissionStatus,
 )

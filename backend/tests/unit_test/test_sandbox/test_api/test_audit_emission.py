@@ -23,12 +23,13 @@ import sandbox.api.tool.write as write_module
 @pytest.mark.asyncio
 async def test_read_file_publishes_started_and_completed(
     monkeypatch: pytest.MonkeyPatch,
+    recording_transport_factory,
 ) -> None:
     bus = AuditEventBus()
     published = []
     bus.subscribe(published.append)
 
-    async def fake_call_daemon_api(sandbox_id, op, args, *, timeout):
+    async def fake_call_daemon_api(sandbox_id, op, args, timeout):
         del sandbox_id, op, args, timeout
         return {
             "success": True,
@@ -38,7 +39,8 @@ async def test_read_file_publishes_started_and_completed(
             "timings": {"api.read.total_s": 0.1},
         }
 
-    monkeypatch.setattr(read_module, "call_daemon_api", fake_call_daemon_api)
+    del monkeypatch
+    transport = recording_transport_factory(fake_call_daemon_api)
 
     result = await read_module.read_file(
         "sb-1",
@@ -52,6 +54,7 @@ async def test_read_file_publishes_started_and_completed(
             ),
         ),
         audit_sink=bus,
+        transport=transport,
     )
 
     assert result.content == "hello"
@@ -70,12 +73,13 @@ async def test_read_file_publishes_started_and_completed(
 @pytest.mark.asyncio
 async def test_write_conflict_publishes_one_operation_conflict(
     monkeypatch: pytest.MonkeyPatch,
+    recording_transport_factory,
 ) -> None:
     bus = AuditEventBus()
     published = []
     bus.subscribe(published.append)
 
-    async def fake_call_daemon_api(sandbox_id, op, args, *, timeout):
+    async def fake_call_daemon_api(sandbox_id, op, args, timeout):
         del sandbox_id, op, args, timeout
         return {
             "success": False,
@@ -90,7 +94,8 @@ async def test_write_conflict_publishes_one_operation_conflict(
             "timings": {"occ.prepare.total_s": 0.01, "occ.apply.total_s": 0.02},
         }
 
-    monkeypatch.setattr(write_module, "call_daemon_api", fake_call_daemon_api)
+    del monkeypatch
+    transport = recording_transport_factory(fake_call_daemon_api)
 
     result = await write_module.write_file(
         "sb-1",
@@ -100,6 +105,7 @@ async def test_write_conflict_publishes_one_operation_conflict(
             caller=SandboxCaller(agent_id="agent-1"),
         ),
         audit_sink=bus,
+        transport=transport,
     )
 
     assert result.success is False
@@ -123,16 +129,26 @@ async def test_write_conflict_publishes_one_operation_conflict(
 @pytest.mark.asyncio
 async def test_edit_anchor_error_publishes_operation_conflict(
     monkeypatch: pytest.MonkeyPatch,
+    recording_transport_factory,
 ) -> None:
     bus = AuditEventBus()
     published = []
     bus.subscribe(published.append)
 
-    async def fake_call_daemon_api(sandbox_id, op, args, *, timeout):
-        del sandbox_id, op, args, timeout
+    async def fake_call_daemon_api(sandbox_id, op, args, timeout):
+        del sandbox_id, args, timeout
+        if op == "api.read_file":
+            return {
+                "success": True,
+                "exists": True,
+                "content": "missing",
+                "encoding": "utf-8",
+                "timings": {},
+            }
         raise RuntimeError("anchor not found in a.py: expected 1 occurrences")
 
-    monkeypatch.setattr(edit_module, "call_daemon_api", fake_call_daemon_api)
+    del monkeypatch
+    transport = recording_transport_factory(fake_call_daemon_api)
 
     result = await edit_module.edit_file(
         "sb-1",
@@ -142,6 +158,7 @@ async def test_edit_anchor_error_publishes_operation_conflict(
             caller=SandboxCaller(agent_id="agent-1"),
         ),
         audit_sink=bus,
+        transport=transport,
     )
 
     assert result.success is False
@@ -159,15 +176,17 @@ async def test_edit_anchor_error_publishes_operation_conflict(
 @pytest.mark.asyncio
 async def test_shell_validation_error_publishes_failed_operation_without_daemon(
     monkeypatch: pytest.MonkeyPatch,
+    recording_transport_factory,
 ) -> None:
     bus = AuditEventBus()
     published = []
     bus.subscribe(published.append)
 
-    async def fail_call_daemon_api(*_args, **_kwargs):
+    async def fail_call_daemon_api(_sandbox_id, _op, _args, _timeout):
         raise AssertionError("daemon dispatch should not be called")
 
-    monkeypatch.setattr(shell_module, "call_daemon_api", fail_call_daemon_api)
+    del monkeypatch
+    transport = recording_transport_factory(fail_call_daemon_api)
 
     result = await shell_module.shell(
         "sb-shell",
@@ -177,6 +196,7 @@ async def test_shell_validation_error_publishes_failed_operation_without_daemon(
             caller=SandboxCaller(agent_id="agent-1"),
         ),
         audit_sink=bus,
+        transport=transport,
     )
 
     assert result.success is False
@@ -193,18 +213,20 @@ async def test_shell_validation_error_publishes_failed_operation_without_daemon(
 @pytest.mark.asyncio
 async def test_shell_overlay_policy_error_publishes_operation_conflict(
     monkeypatch: pytest.MonkeyPatch,
+    recording_transport_factory,
 ) -> None:
     bus = AuditEventBus()
     published = []
     bus.subscribe(published.append)
 
-    async def fake_call_daemon_api(*_args, **_kwargs):
+    async def fake_call_daemon_api(_sandbox_id, _op, _args, _timeout):
         raise RuntimeError(
             "internal_error: overlay capture refuses escaping symlink target: "
             ".ephemeralos/sweevo-mock/full_stack/overlay/symlink_escape"
         )
 
-    monkeypatch.setattr(shell_module, "call_daemon_api", fake_call_daemon_api)
+    del monkeypatch
+    transport = recording_transport_factory(fake_call_daemon_api)
 
     result = await shell_module.shell(
         "sb-shell",
@@ -213,6 +235,7 @@ async def test_shell_overlay_policy_error_publishes_operation_conflict(
             caller=SandboxCaller(agent_id="agent-1"),
         ),
         audit_sink=bus,
+        transport=transport,
     )
 
     assert result.success is False

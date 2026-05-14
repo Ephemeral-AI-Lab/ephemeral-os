@@ -33,7 +33,7 @@ from task_center.attempt.generator_dag import (
     ready_pending_generator_ids,
 )
 from task_center.task.ids import evaluator_task_id
-from task_center.task.models import (
+from task_center.task.state import (
     SpawnReason,
     TaskCenterTaskRole,
     TaskCenterTaskStatus,
@@ -373,7 +373,7 @@ class AttemptDispatcher:
         )
         return AgentLaunch(
             task_id=task_id,
-            task_center_run_id=runtime.task_center_run_id_for_attempt(attempt),
+            task_center_run_id=runtime.run_id_for_attempt(attempt),
             attempt_id=attempt.id,
             role=TaskCenterTaskRole.EVALUATOR,
             agent_name=bundle.agent_def.name,

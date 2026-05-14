@@ -59,7 +59,7 @@ deep_empty.mkdir(parents=True, exist_ok=True)
 workspace_inv = _inventory(WORKSPACE_ROOT)
 stack_root = _phase01_root(label)
 binding, timings = _build_base(stack_root)
-base_layer = stack_root / "layers" / "L000001-base"
+base_layer = stack_root / "layers" / "B000001-base"
 base_inv = _inventory(base_layer)
 
 assert workspace_inv["files"] == base_inv["files"], (workspace_inv, base_inv)

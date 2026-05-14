@@ -7,7 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agents import AgentKind, get_definition
-from task_center.api import (
+from task_center import (
     PlannedGeneratorTask,
     PlannerSubmission,
     TaskCenterInvariantViolation,

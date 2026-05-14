@@ -43,7 +43,7 @@ from task_center.entry.sandbox_bridge import (
     TaskCenterSandboxBridge,
 )
 from task_center.episode.registry import EpisodeManagerRegistry
-from task_center.task.models import (
+from task_center.task.state import (
     SpawnReason,
     TaskCenterTaskRole,
     TaskCenterTaskStatus,

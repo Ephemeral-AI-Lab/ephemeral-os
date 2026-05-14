@@ -23,22 +23,22 @@ def test_phase03_occ_preparation_modules_do_not_import_overlay_or_legacy_apply()
     occ_root = Path(sandbox.occ.__file__).resolve().parent
     phase03_files = [
         occ_root / "service.py",
-        occ_root / "routing" / "single_path.py",
+        occ_root / "router.py",
         occ_root / "changeset" / "builders.py",
         occ_root / "changeset" / "prepared.py",
         occ_root / "changeset" / "types.py",
-        occ_root / "routing" / "orchestrator.py",
         occ_root / "content" / "gitignore_oracle.py",
         occ_root / "content" / "hashing.py",
-        occ_root / "merge" / "direct.py",
-        occ_root / "merge" / "gated.py",
-        occ_root / "commit_transaction.py",
+        occ_root / "stage" / "direct.py",
+        occ_root / "stage" / "gated.py",
+        occ_root / "stage" / "transaction.py",
+        occ_root / "commit_queue.py",
     ]
 
     forbidden = {
         "sandbox.overlay",
-        "sandbox.occ.merge.direct.direct_merge_coordinator",
-        "sandbox.occ.merge.gated.gated_coordinator",
+        "sandbox.occ.stage.direct.direct_merge_coordinator",
+        "sandbox.occ.stage.gated.gated_coordinator",
     }
     hits: list[tuple[str, str]] = []
     for path in phase03_files:
@@ -51,7 +51,7 @@ def test_phase03_occ_preparation_modules_do_not_import_overlay_or_legacy_apply()
 
 def test_overlay_capture_module_is_the_occ_overlay_bridge() -> None:
     occ_root = Path(sandbox.occ.__file__).resolve().parent
-    imports = _imports(occ_root / "capture" / "overlay.py")
+    imports = _imports(occ_root / "overlay.py")
 
     assert "sandbox.overlay" in imports
     assert "sandbox.occ.changeset.builders" in imports
@@ -59,7 +59,7 @@ def test_overlay_capture_module_is_the_occ_overlay_bridge() -> None:
 
 def test_overlay_capture_conversion_does_not_import_occ_service() -> None:
     occ_root = Path(sandbox.occ.__file__).resolve().parent
-    imports = _imports(occ_root / "capture" / "overlay.py")
+    imports = _imports(occ_root / "overlay.py")
 
     assert "sandbox.occ.service" not in imports
     assert not (occ_root / "overlay_capture.py").exists()

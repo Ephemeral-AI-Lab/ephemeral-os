@@ -16,7 +16,7 @@ from task_center.attempt.runtime import (
     AgentLaunch,
     AttemptDeps,
 )
-from task_center.task.models import (
+from task_center.task.state import (
     EvaluatorSubmission,
     GeneratorSubmission,
     TaskCenterTaskRole,

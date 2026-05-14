@@ -46,15 +46,18 @@ def test_binding_round_trips_and_translates_workspace_paths(tmp_path: Path) -> N
 
     loaded = require_workspace_binding(stack)
     assert loaded == binding
-    assert loaded.relative_layer_path("pkg/a.py") == "pkg/a.py"
-    assert loaded.relative_layer_path((workspace / "pkg" / "a.py").as_posix()) == "pkg/a.py"
+    assert loaded.layer_path_from_relative("pkg/a.py") == "pkg/a.py"
+    assert (
+        loaded.layer_path_from_absolute((workspace / "pkg" / "a.py").as_posix())
+        == "pkg/a.py"
+    )
     with pytest.raises(WorkspaceBindingError, match="outside bound workspace"):
-        loaded.relative_layer_path("/other/pkg/a.py")
+        loaded.layer_path_from_absolute("/other/pkg/a.py")
 
 
 @pytest.mark.asyncio
 async def test_read_file_fails_closed_without_workspace_binding(tmp_path: Path) -> None:
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
 
     with pytest.raises(WorkspaceBindingError, match="workspace binding is missing"):
         await read.read_file(
@@ -69,7 +72,7 @@ async def test_read_file_fails_closed_without_workspace_binding(tmp_path: Path) 
 async def test_read_file_uses_workspace_base_not_real_workspace(
     tmp_path: Path,
 ) -> None:
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     file_path = workspace / "a.txt"
@@ -100,7 +103,7 @@ async def test_read_file_returns_exists_false_for_empty_manifest(
     guard already covers the no-binding case; an empty manifest is a valid
     runtime state — newest-first merged reads return ``("", False)`` for
     every path uniformly."""
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     stack = tmp_path / "stack"

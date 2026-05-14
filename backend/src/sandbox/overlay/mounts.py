@@ -2,7 +2,7 @@
 
 This module intentionally does not enter a Linux mount namespace. The
 privileged kernel-overlay entrypoint is
-``sandbox.command_exec.workspace.namespace_entrypoint``; this portable path
+``sandbox.command_exec.entrypoints.namespace_helper``; this portable path
 materializes the leased snapshot into a normal directory tree and captures the
 diff afterward.
 """

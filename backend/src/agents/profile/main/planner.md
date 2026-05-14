@@ -12,7 +12,7 @@ terminals:
   - submit_full_plan
   - submit_partial_plan
 notification_triggers: []
-context_recipe: planner_v1
+context_recipe: planner
 variants:
   - when: nested_mission_depth_gt_1
     use: planner_full_only

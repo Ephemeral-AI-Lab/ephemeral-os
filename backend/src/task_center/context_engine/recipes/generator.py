@@ -1,4 +1,4 @@
-"""``generator_v1`` recipe — context for one generator task spawn.
+"""``generator`` recipe — context for one generator task spawn.
 
 Emits the current attempt plan, dependency results, and the assigned local task
 in presentation order. The assigned task is required but remains last so the
@@ -18,18 +18,18 @@ from task_center.context_engine.packet import (
     ContextPriority,
     ContextRefs,
 )
-from task_center.context_engine.recipes._summaries import latest_summary_text
+from task_center.context_engine.recipes.summaries import latest_summary_text
 from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
 
 if TYPE_CHECKING:
     from db.stores.task_center_store import TaskCenterStore
 
-GENERATOR_V1 = "generator_v1"
+GENERATOR_ID = "generator"
 _REQUIRED_FIELDS = frozenset({"mission_id", "attempt_id", "task_id"})
 
 
-def _generator_v1_build(
+def _generator_build(
     scope: ContextScope, deps: ContextEngineDeps
 ) -> ContextPacket:
     # Engine pre-validates required scope fields via ``assert_fields``; this
@@ -41,7 +41,7 @@ def _generator_v1_build(
         or scope.task_id is None
     ):
         raise ContextEngineError(
-            "generator_v1 requires mission_id, attempt_id, and task_id; "
+            "generator requires mission_id, attempt_id, and task_id; "
             f"got {scope!r}"
         )
     attempt = deps.attempt_store.get(scope.attempt_id)
@@ -131,8 +131,8 @@ def _dependency_summary_blocks(
     return out
 
 
-GENERATOR_V1_RECIPE = ContextRecipe(
-    id=GENERATOR_V1,
+GENERATOR_RECIPE = ContextRecipe(
+    id=GENERATOR_ID,
     required_scope_fields=_REQUIRED_FIELDS,
-    build=_generator_v1_build,
+    build=_generator_build,
 )

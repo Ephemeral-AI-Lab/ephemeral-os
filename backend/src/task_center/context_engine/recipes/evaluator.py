@@ -1,4 +1,4 @@
-"""``evaluator_v1`` recipe — context for one evaluator spawn.
+"""``evaluator`` recipe — context for one evaluator spawn.
 
 Emits mission/episode framing, the current attempt plan, dependency results,
 and the evaluation criteria in presentation order. The criteria block remains
@@ -16,18 +16,18 @@ from task_center.context_engine.packet import (
     ContextPriority,
     ContextRefs,
 )
-from task_center.context_engine.recipes._summaries import latest_summary_text
-from task_center.context_engine.recipes._mission_episode import (
+from task_center.context_engine.recipes.summaries import latest_summary_text
+from task_center.context_engine.recipes.mission_episode import (
     mission_episode_blocks,
 )
 from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
 
-EVALUATOR_V1 = "evaluator_v1"
+EVALUATOR_ID = "evaluator"
 _REQUIRED_FIELDS = frozenset({"mission_id", "attempt_id"})
 
 
-def _evaluator_v1_build(
+def _evaluator_build(
     scope: ContextScope, deps: ContextEngineDeps
 ) -> ContextPacket:
     # Engine pre-validates required scope fields via ``assert_fields``; this
@@ -35,7 +35,7 @@ def _evaluator_v1_build(
     # ``assert`` would be stripped.
     if scope.mission_id is None or scope.attempt_id is None:
         raise ContextEngineError(
-            "evaluator_v1 requires mission_id and attempt_id; "
+            "evaluator requires mission_id and attempt_id; "
             f"got {scope!r}"
         )
     attempt = deps.attempt_store.get(scope.attempt_id)
@@ -138,8 +138,8 @@ def _evaluator_v1_build(
     )
 
 
-EVALUATOR_V1_RECIPE = ContextRecipe(
-    id=EVALUATOR_V1,
+EVALUATOR_RECIPE = ContextRecipe(
+    id=EVALUATOR_ID,
     required_scope_fields=_REQUIRED_FIELDS,
-    build=_evaluator_v1_build,
+    build=_evaluator_build,
 )

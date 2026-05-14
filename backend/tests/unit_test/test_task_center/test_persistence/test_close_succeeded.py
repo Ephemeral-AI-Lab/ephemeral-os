@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from task_center.episode.episode import (
+from task_center.episode.state import (
     EpisodeCreationReason,
     EpisodeStatus,
 )

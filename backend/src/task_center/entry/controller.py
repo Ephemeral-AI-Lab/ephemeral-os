@@ -12,8 +12,8 @@ from typing import Any
 
 from db.stores.task_center_store import TaskCenterStore
 from task_center.exceptions import TaskCenterInvariantViolation
-from task_center.mission.mission import MissionCloseReport
-from task_center.task.models import TaskCenterTaskStatus
+from task_center.mission.state import MissionClosureReport
+from task_center.task.state import TaskCenterTaskStatus
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,8 +77,8 @@ class EntryTaskController:
 
     # ---- delegated-mission resume -----------------------------------------
 
-    def apply_mission_close_report(
-        self, report: MissionCloseReport
+    def apply_mission_closure_report(
+        self, report: MissionClosureReport
     ) -> None:
         """Resume the entry task waiting on a delegated mission."""
         succeeded = report.outcome == "success"
@@ -98,8 +98,8 @@ class EntryTaskController:
                     "outcome": report.outcome,
                     "summary": text,
                     "payload": {
-                        "mission_close_report": asdict(report),
-                        "submission_kind": "mission_close_report",
+                        "mission_closure_report": asdict(report),
+                        "submission_kind": "mission_closure_report",
                     },
                 },
             )

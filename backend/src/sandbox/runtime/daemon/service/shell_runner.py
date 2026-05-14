@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
+from uuid import uuid4
 
 from sandbox.command_exec import (
+    CommandExecRequest,
     CommandExecResult,
     OCCMutationClient,
     WorkspaceLeaseClient,
@@ -13,13 +15,14 @@ from sandbox.command_exec import (
     run_workspace_replaced_command,
 )
 from sandbox.command_exec.executor import (
-    _drop_transient_lowerdir,
-    layer_stack_root,
+    _drop_transient_lowerdir as _drop_transient_lowerdir,
 )
+from sandbox.layer_stack.workspace.binding import require_workspace_binding
 from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
-from sandbox.occ.result_projection import (
+from sandbox.runtime.daemon.service.result_projection import (
     conflict_and_status,
     conflict_to_dict,
+    gitignore_cache_timings,
     published_paths,
 )
 from sandbox.runtime.daemon.service import occ_backend
@@ -27,7 +30,7 @@ from sandbox.runtime.daemon.service import occ_backend
 
 async def execute_shell_api(args: dict[str, object]) -> dict[str, object]:
     """Public ``api.shell`` execution entrypoint used by the handler layer."""
-    layer_stack, occ_client, gitignore, storage_root = _services(args)
+    layer_stack, occ_client, gitignore, storage_root = services(args)
     result = await _execute_shell(
         args,
         layer_stack=layer_stack,
@@ -46,12 +49,13 @@ async def _execute_shell(
     gitignore: SnapshotGitignoreOracle,
     storage_root: Path,
 ) -> CommandExecResult:
+    request = _command_request(args)
     return await execute_command(
-        args,
+        request,
         layer_stack=layer_stack,
         occ_client=occ_client,
-        gitignore=gitignore,
         storage_root=storage_root,
+        timing_provider=lambda: gitignore_cache_timings(gitignore),
         command_runner=run_workspace_replaced_command,
     )
 
@@ -85,7 +89,7 @@ def _payload_from_result(result: CommandExecResult) -> dict[str, object]:
     }
 
 
-def _services(
+def services(
     args: Mapping[str, object],
 ) -> tuple[
     WorkspaceLeaseClient,
@@ -100,3 +104,78 @@ def _services(
         backend.gitignore,
         backend.layer_stack.storage_root,
     )
+
+
+# WR-08: conservative argv-size cap below typical Linux ARG_MAX (~128 KiB).
+# A caller pushing a large blob into a single argv element used to trip
+# the kernel's E2BIG at exec time with an opaque OSError; this surfaces a
+# structured ValueError before the syscall.
+_MAX_ARGV_BYTES = 128 * 1024
+
+
+def _command_request(args: Mapping[str, object]) -> CommandExecRequest:
+    command = args.get("command")
+    if isinstance(command, str):
+        argv: tuple[str, ...] = ("bash", "-lc", command)
+    elif isinstance(command, list):
+        argv = tuple(str(part) for part in command)
+    else:
+        raise ValueError("command must be a string or argv list")
+    argv_bytes = sum(len(part.encode("utf-8")) for part in argv) + len(argv)
+    if argv_bytes > _MAX_ARGV_BYTES:
+        raise ValueError(
+            f"argv exceeds {_MAX_ARGV_BYTES} bytes ({argv_bytes}); "
+            "stream large blobs via stdin instead"
+        )
+    timeout = args.get("timeout_seconds", args.get("timeout"))
+    workspace_ref = layer_stack_root(args)
+    binding = require_workspace_binding(workspace_ref)
+    env = _safe_env(_mapping(args.get("env")))
+    return CommandExecRequest(
+        request_id=str(args.get("request_id") or uuid4().hex),
+        workspace_ref=workspace_ref,
+        workspace_root=binding.workspace_root,
+        command=argv,
+        cwd=str(args.get("cwd") or "."),
+        env=env,
+        timeout_seconds=_optional_float(timeout),
+        actor_id=str(args.get("actor_id") or ""),
+        description=str(args.get("description") or "shell"),
+    )
+
+
+def _safe_env(raw: Mapping[object, object]) -> dict[str, str]:
+    """Validate caller env mapping; reject NUL / ``=`` / empty keys (WR-04)."""
+    result: dict[str, str] = {}
+    for k, v in raw.items():
+        key = str(k)
+        value = str(v)
+        if not key:
+            raise ValueError("env entry has empty key")
+        if "\0" in key or "\0" in value:
+            raise ValueError(f"env entry contains NUL byte: {key!r}")
+        if "=" in key:
+            # execvpe constructs `NAME=VALUE`; a `=` in NAME silently
+            # corrupts the child env.
+            raise ValueError(f"env key cannot contain '=': {key!r}")
+        result[key] = value
+    return result
+
+
+def layer_stack_root(args: Mapping[str, object]) -> str:
+    layer_stack_root = str(args.get("layer_stack_root") or "").strip()
+    if not layer_stack_root:
+        raise ValueError("layer_stack_root is required")
+    return layer_stack_root
+
+
+def _mapping(value: object) -> Mapping[str, object]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def _optional_float(value: object) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, (str, int, float)):
+        return float(value)
+    raise TypeError(f"expected numeric value, got {type(value).__name__}")

@@ -14,7 +14,7 @@ from sandbox.occ.changeset.types import (
     SymlinkChange,
     WriteChange,
 )
-from sandbox.occ.merge.direct import DirectMerge
+from sandbox.occ.stage.direct import DirectStager
 from sandbox.occ.content.hashing import ContentHasher
 
 
@@ -56,7 +56,7 @@ def _stage_write(tmp_path: Path):
 
 def test_direct_write_stages_last_writer_wins_content(tmp_path: Path) -> None:
     stack = LayerStackManager(tmp_path / "stack")
-    merge = DirectMerge(stack)
+    merge = DirectStager(stack)
     group = PreparedPathGroup(
         path="dist/app.js",
         route=RouteDecision.DIRECT,
@@ -79,13 +79,13 @@ def test_direct_write_stages_last_writer_wins_content(tmp_path: Path) -> None:
 
 
 def test_direct_edit_rejects_missing_anchor(tmp_path: Path) -> None:
-    """occ BL-01: DirectMerge.EditChange must REJECT on anchor miss, matching
-    GatedMerge. The pre-fix `continue` silently accepted bogus edits on
+    """occ BL-01: DirectStager.EditChange must REJECT on anchor miss, matching
+    GatedStager. The pre-fix `continue` silently accepted bogus edits on
     gitignored paths while tracked paths got rejected — a contract violation.
     """
     stack = LayerStackManager(tmp_path / "stack")
     _publish(stack, tmp_path, "dist/app.js", b"alpha\n")
-    merge = DirectMerge(stack)
+    merge = DirectStager(stack)
     group = PreparedPathGroup(
         path="dist/app.js",
         route=RouteDecision.DIRECT,
@@ -105,7 +105,7 @@ def test_direct_edit_rejects_missing_anchor(tmp_path: Path) -> None:
 
 def test_direct_symlink_and_opaque_dir_stage_storage_changes(tmp_path: Path) -> None:
     stack = LayerStackManager(tmp_path / "stack")
-    merge = DirectMerge(stack)
+    merge = DirectStager(stack)
     symlink_group = PreparedPathGroup(
         path="link",
         route=RouteDecision.DIRECT,
@@ -141,7 +141,7 @@ def test_direct_same_path_opaque_dir_respects_later_write(
     tmp_path: Path,
 ) -> None:
     stack = LayerStackManager(tmp_path / "stack")
-    merge = DirectMerge(stack)
+    merge = DirectStager(stack)
     group = PreparedPathGroup(
         path="cache",
         route=RouteDecision.DIRECT,

@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import time
 from collections.abc import Callable
+from dataclasses import fields
 
 import sandbox.command_exec.workspace.mount as workspace_mount
 from sandbox.layer_stack.manifest import (
@@ -14,6 +15,7 @@ from sandbox.layer_stack.manifest import (
 from sandbox.layer_stack.workspace.binding import require_workspace_binding
 from sandbox.runtime.daemon.handler import request_context
 from sandbox.runtime.daemon.service import occ_backend, shell_runner
+from sandbox.runtime.daemon.service.occ_backend import OccBackend
 from sandbox.runtime.daemon.service.workspace_server import get_layer_stack_manager
 from sandbox.timing import monotonic_now
 
@@ -23,22 +25,22 @@ _STARTED_AT_MONO = time.monotonic()
 def runtime_ready(args: dict[str, object]) -> dict[str, object]:
     """Return binary daemon readiness plus per-plane probe details."""
     total_start = monotonic_now()
-    layer_stack_root = _layer_stack_root(args)
+    root = layer_stack_root(args)
     timings: dict[str, float] = {}
     probes = [
         _run_probe(
             "control_plane",
-            lambda: _probe_control_plane(layer_stack_root),
+            lambda: _probe_control_plane(root),
             timings=timings,
         ),
         _run_probe(
             "data_plane",
-            lambda: _probe_data_plane(layer_stack_root),
+            lambda: _probe_data_plane(root),
             timings=timings,
         ),
         _run_probe(
             "mutation_gate",
-            lambda: _probe_mutation_gate(layer_stack_root),
+            lambda: _probe_mutation_gate(root),
             timings=timings,
         ),
     ]
@@ -75,22 +77,14 @@ def _probe_control_plane(layer_stack_root: str) -> dict[str, object]:
 
 
 def _probe_data_plane(layer_stack_root: str) -> dict[str, object]:
-    handlers_backend = request_context._services(layer_stack_root)
-    shell_services = shell_runner._services(
+    handlers_backend = request_context.services(layer_stack_root)
+    shell_services = shell_runner.services(
         {"layer_stack_root": layer_stack_root}
     )
-    expected_fields = (
-        "layer_stack",
-        "occ_client",
-        "gitignore",
-        "manager",
-    )
-    missing_fields = [
-        field for field in expected_fields if not hasattr(handlers_backend, field)
-    ]
-    if missing_fields:
+    if not isinstance(handlers_backend, OccBackend):
         raise RuntimeError(
-            "handler services missing fields: " + ", ".join(missing_fields)
+            "handler services returned "
+            f"{type(handlers_backend).__name__}; expected OccBackend"
         )
     if len(shell_services) != 4:
         raise RuntimeError(
@@ -110,16 +104,11 @@ def _probe_data_plane(layer_stack_root: str) -> dict[str, object]:
 
 def _probe_mutation_gate(layer_stack_root: str) -> dict[str, object]:
     backend = occ_backend.build_occ_backend(layer_stack_root)
-    expected_fields = (
-        "layer_stack",
-        "occ_client",
-        "gitignore",
-        "manager",
-    )
-    present_fields = [field for field in expected_fields if hasattr(backend, field)]
-    missing_fields = sorted(set(expected_fields) - set(present_fields))
-    if missing_fields:
-        raise RuntimeError("OCC backend missing fields: " + ", ".join(missing_fields))
+    if not isinstance(backend, OccBackend):
+        raise RuntimeError(
+            f"OCC backend type mismatch: {type(backend).__name__}"
+        )
+    present_fields = [field.name for field in fields(OccBackend)]
     return {
         "backend_ready": True,
         "backend_fields": present_fields,
@@ -151,7 +140,7 @@ def _run_probe(
     }
 
 
-def _layer_stack_root(args: dict[str, object]) -> str:
+def layer_stack_root(args: dict[str, object]) -> str:
     layer_stack_root = str(args.get("layer_stack_root") or "").strip()
     if not layer_stack_root:
         raise ValueError("layer_stack_root is required")

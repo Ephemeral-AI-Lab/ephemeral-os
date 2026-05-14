@@ -2,21 +2,27 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Protocol
 
 from sandbox.command_exec.contract.request import CommandExecRequest
 from sandbox.command_exec.contract.result import CommandExecResult
-from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ import Change, ChangesetResult, CommitOptions
+
+
+class SnapshotManifest(Protocol):
+    """Snapshot manifest shape needed by command execution."""
+
+    version: int
+    layers: tuple[object, ...]
 
 
 class WorkspaceSnapshotLease(Protocol):
     lease_id: str
     manifest_version: int
-    manifest: Manifest
+    manifest: SnapshotManifest
     lowerdir: str
-    timings: dict[str, float]
+    timings: Mapping[str, float]
 
 
 class WorkspaceLeaseClient(Protocol):
@@ -39,7 +45,7 @@ class OCCMutationClient(Protocol):
         self,
         typed_changes: Sequence[Change],
         *,
-        snapshot: Manifest | None = None,
+        snapshot: SnapshotManifest | None = None,
         options: CommitOptions | None = None,
         workspace_ref: str | None = None,
     ) -> ChangesetResult: ...
@@ -54,6 +60,7 @@ class CommandExecutor(Protocol):
 __all__ = [
     "CommandExecutor",
     "OCCMutationClient",
+    "SnapshotManifest",
     "WorkspaceLeaseClient",
     "WorkspaceSnapshotLease",
 ]

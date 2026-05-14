@@ -22,7 +22,7 @@ def _isolate_registry(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_recovery_probe_success_skips_restart_setup(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from sandbox.host import recovery
+    from sandbox.host import bootstrap
     from sandbox.provider.registry import register_adapter
 
     adapter = MagicMock()
@@ -35,12 +35,12 @@ def test_recovery_probe_success_skips_restart_setup(
     setup_calls: list[tuple[str, str | None]] = []
     adapter.exec = probe_ok
     monkeypatch.setattr(
-        recovery,
+        bootstrap,
         "setup_after_start",
         lambda sid, ws: setup_calls.append((sid, ws)),
     )
 
-    assert recovery.ensure_running("sb-1") == {"id": "sb-1", "project_dir": "/testbed"}
+    assert bootstrap.ensure_running("sb-1") == {"id": "sb-1", "project_dir": "/testbed"}
     adapter.start.assert_not_called()
     assert setup_calls == []
 
@@ -48,7 +48,7 @@ def test_recovery_probe_success_skips_restart_setup(
 def test_recovery_restart_uses_canonical_setup_hook(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from sandbox.host import recovery
+    from sandbox.host import bootstrap
     from sandbox.provider.registry import register_adapter
 
     adapter = MagicMock()
@@ -62,11 +62,11 @@ def test_recovery_restart_uses_canonical_setup_hook(
     setup_calls: list[tuple[str, str | None]] = []
     adapter.exec = probe_failed
     monkeypatch.setattr(
-        recovery,
+        bootstrap,
         "setup_after_start",
         lambda sid, ws: setup_calls.append((sid, ws)),
     )
 
-    assert recovery.ensure_running("sb-1") == {"id": "sb-1", "project_dir": "/testbed"}
+    assert bootstrap.ensure_running("sb-1") == {"id": "sb-1", "project_dir": "/testbed"}
     adapter.start.assert_called_once_with("sb-1")
     assert setup_calls == [("sb-1", "/testbed")]

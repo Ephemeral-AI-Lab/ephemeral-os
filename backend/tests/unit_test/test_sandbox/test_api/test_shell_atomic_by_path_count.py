@@ -2,7 +2,7 @@
 
 When the workspace upperdir capture from a guarded shell call yields
 exactly one distinct path, ``CommitOptions.atomic`` is set to ``False``
-so ``OccSerialMerger._disjoint_batches`` can coalesce concurrent shell
+so ``CommitQueue._disjoint_batches`` can coalesce concurrent shell
 commits into a single revalidate-and-publish round-trip. Multi-path
 captures keep ``atomic=True`` to preserve all-or-nothing semantics for
 real workloads (e.g. ``make build``).
@@ -17,9 +17,9 @@ from typing import Any
 import pytest
 
 from sandbox.command_exec.contract.request import CommandExecRequest
+from sandbox.command_exec import executor as command_executor
 from sandbox.occ.changeset.prepared import CommitOptions
 from sandbox.occ.changeset.types import ChangesetResult, WriteChange
-from sandbox.runtime.daemon.service import shell_runner
 
 
 @dataclass
@@ -77,7 +77,7 @@ def _patch_workspace_to_occ(monkeypatch: pytest.MonkeyPatch) -> None:
         )
 
     monkeypatch.setattr(
-        shell_runner,
+        command_executor,
         "overlay_path_changes_to_occ_changes",
         fake,
     )
@@ -85,7 +85,7 @@ def _patch_workspace_to_occ(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def _apply(client: _StubOccClient, paths: list[str]) -> None:
     asyncio.run(
-        shell_runner._apply_workspace_capture(
+        command_executor._apply_workspace_capture(
             paths,  # type: ignore[arg-type]
             occ_client=client,  # type: ignore[arg-type]
             snapshot=_Manifest(),

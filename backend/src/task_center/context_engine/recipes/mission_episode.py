@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from task_center.mission.mission import Mission
+from task_center.mission.state import Mission
 from task_center.context_engine.errors import ContextEngineError
 from task_center.context_engine.packet import (
     ContextBlock,
     ContextBlockKind,
     ContextPriority,
 )
-from task_center.episode.episode import Episode
+from task_center.episode.state import Episode
 
 MISSION_EPISODE_HEADING = "# Mission / Current Episode"
 MISSION_HEADING = "# Mission"

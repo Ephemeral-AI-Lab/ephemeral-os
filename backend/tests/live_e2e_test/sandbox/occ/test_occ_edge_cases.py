@@ -16,7 +16,7 @@ from sandbox.layer_stack.layer.change import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.prepared import CommitOptions
 from sandbox.occ.changeset.types import FileStatus, WriteChange
-from sandbox.occ.service import OccService
+from sandbox.occ.service import Service
 
 class _Gitignore:
     def is_ignored(self, path):
@@ -30,7 +30,7 @@ stack = LayerStackManager(root / "stack")
 stack.publish_changes([
     WriteLayerChange(path="tracked/shared.txt", source_path=str(_source(root, "shared", b"base\n"))),
 ])
-service = OccService(gitignore=_Gitignore(), layer_stack=stack)
+service = Service(gitignore=_Gitignore(), layer_stack=stack)
 
 snapshot = stack.read_active_manifest()
 n = 6

@@ -9,6 +9,7 @@ from typing import Protocol, runtime_checkable
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset.types import ChangesetResult
 from sandbox.occ.ports import SnapshotReader
+from sandbox.occ.timing_keys import TimingKey
 from sandbox.timing import monotonic_now
 
 
@@ -68,9 +69,9 @@ class AutoSquashMaintenancePolicy:
             with state.state_lock:
                 state.pending_recheck = True
             return {
-                "layer_stack.auto_squash.skipped_in_flight": 1.0,
-                "layer_stack.auto_squash.max_depth": float(self._max_depth),
-                "layer_stack.auto_squash.depth_before": float(active.depth),
+                TimingKey.LAYER_AUTO_SQUASH_SKIPPED_IN_FLIGHT: 1.0,
+                TimingKey.LAYER_AUTO_SQUASH_MAX_DEPTH: float(self._max_depth),
+                TimingKey.LAYER_AUTO_SQUASH_DEPTH_BEFORE: float(active.depth),
             }
 
         try:
@@ -85,7 +86,7 @@ class AutoSquashMaintenancePolicy:
             if active.depth <= self._max_depth:
                 return timings
             recheck_timings = self._run_squash_for_active(active)
-            recheck_timings["layer_stack.auto_squash.recheck_triggered"] = 1.0
+            recheck_timings[TimingKey.LAYER_AUTO_SQUASH_RECHECK_TRIGGERED] = 1.0
             return _merge_auto_squash_timings(timings, recheck_timings)
         finally:
             state.lock.release()
@@ -95,15 +96,15 @@ class AutoSquashMaintenancePolicy:
         squashed = self._squasher.squash(max_depth=self._max_depth)
         elapsed = monotonic_now() - squash_start
         timings = {
-            "layer_stack.auto_squash.total_s": elapsed,
-            "layer_stack.auto_squash.max_depth": float(self._max_depth),
-            "layer_stack.auto_squash.depth_before": float(active.depth),
+            TimingKey.LAYER_AUTO_SQUASH_TOTAL: elapsed,
+            TimingKey.LAYER_AUTO_SQUASH_MAX_DEPTH: float(self._max_depth),
+            TimingKey.LAYER_AUTO_SQUASH_DEPTH_BEFORE: float(active.depth),
         }
         if squashed is None:
-            timings["layer_stack.auto_squash.raced"] = 1.0
+            timings[TimingKey.LAYER_AUTO_SQUASH_RACED] = 1.0
             return timings
-        timings["layer_stack.auto_squash.depth_after"] = float(squashed.depth)
-        timings["layer_stack.auto_squash.manifest_version"] = float(squashed.version)
+        timings[TimingKey.LAYER_AUTO_SQUASH_DEPTH_AFTER] = float(squashed.depth)
+        timings[TimingKey.LAYER_AUTO_SQUASH_MANIFEST_VERSION] = float(squashed.version)
         return timings
 
 
@@ -117,16 +118,16 @@ def _merge_auto_squash_timings(
         return dict(first)
     merged = {**first, **second}
     if (
-        "layer_stack.auto_squash.total_s" in first
-        or "layer_stack.auto_squash.total_s" in second
+        TimingKey.LAYER_AUTO_SQUASH_TOTAL in first
+        or TimingKey.LAYER_AUTO_SQUASH_TOTAL in second
     ):
-        merged["layer_stack.auto_squash.total_s"] = first.get(
-            "layer_stack.auto_squash.total_s",
+        merged[TimingKey.LAYER_AUTO_SQUASH_TOTAL] = first.get(
+            TimingKey.LAYER_AUTO_SQUASH_TOTAL,
             0.0,
-        ) + second.get("layer_stack.auto_squash.total_s", 0.0)
-    if "layer_stack.auto_squash.depth_before" in first:
-        merged["layer_stack.auto_squash.depth_before"] = first[
-            "layer_stack.auto_squash.depth_before"
+        ) + second.get(TimingKey.LAYER_AUTO_SQUASH_TOTAL, 0.0)
+    if TimingKey.LAYER_AUTO_SQUASH_DEPTH_BEFORE in first:
+        merged[TimingKey.LAYER_AUTO_SQUASH_DEPTH_BEFORE] = first[
+            TimingKey.LAYER_AUTO_SQUASH_DEPTH_BEFORE
         ]
     return merged
 

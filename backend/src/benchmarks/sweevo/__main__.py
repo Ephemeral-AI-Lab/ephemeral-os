@@ -3,7 +3,7 @@
 Two flags:
 
 - ``--real-agent --instance-id=<id>`` — drive a real LLM run of one SWE-EVO
-  instance through :func:`task_center.api.start_task_center_entry_run`
+  instance through :func:`task_center.start_task_center_entry_run`
   (``runner=None``) via :func:`live_e2e.real_agent_run.run_sweevo_real_agent`.
   Writes the canonical live-e2e audit tree plus a ``sweevo_result.json``
   carrying the F2P/P2P verdict.

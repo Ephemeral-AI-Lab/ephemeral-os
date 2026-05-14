@@ -48,14 +48,22 @@ class WorkspaceBinding:
             base_root_hash=str(payload["base_root_hash"]),
         )
 
-    def relative_layer_path(self, path: str) -> str:
-        """Translate a repo-relative or workspace-absolute path to a layer path."""
+    def layer_path_from_relative(self, path: str) -> str:
+        """Translate a repo-relative path to a layer path."""
+        raw = str(path or "").strip()
+        if not raw:
+            raise WorkspaceBindingError("path is required")
+        if raw.startswith("/"):
+            raise WorkspaceBindingError(f"path must be relative: {raw}")
+        return normalize_layer_path(raw)
+
+    def layer_path_from_absolute(self, path: str) -> str:
+        """Translate a workspace-absolute path to a layer path."""
         raw = str(path or "").strip()
         if not raw:
             raise WorkspaceBindingError("path is required")
         if not raw.startswith("/"):
-            return normalize_layer_path(raw)
-
+            raise WorkspaceBindingError(f"path must be absolute: {raw}")
         workspace = Path(self.workspace_root)
         candidate = Path(raw)
         try:
@@ -65,7 +73,6 @@ class WorkspaceBinding:
                 f"path is outside bound workspace {self.workspace_root}: {raw}"
             ) from exc
         return normalize_layer_path(relative.as_posix())
-
 
 def workspace_binding_path(layer_stack_root: str | Path) -> Path:
     return Path(layer_stack_root) / WORKSPACE_BINDING_FILE

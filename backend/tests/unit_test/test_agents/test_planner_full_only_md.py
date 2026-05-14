@@ -43,10 +43,10 @@ def test_full_only_has_no_variants():
     assert full_only.variants == []
 
 
-def test_both_planners_share_planner_v1_recipe():
+def test_both_planners_share_planner_recipe():
     planner, full_only = _load_planner_pair()
-    assert planner.context_recipe == "planner_v1"
-    assert full_only.context_recipe == "planner_v1"
+    assert planner.context_recipe == "planner"
+    assert full_only.context_recipe == "planner"
 
 
 def test_planner_variants_declare_full_only_target():

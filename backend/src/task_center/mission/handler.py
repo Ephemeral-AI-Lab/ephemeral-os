@@ -21,8 +21,8 @@ from task_center.mission.validation import (
     assert_episode_id_unique_in_mission,
     assert_episode_sequence_contiguous,
 )
-from task_center.mission.mission import (
-    MissionCloseReport,
+from task_center.mission.state import (
+    MissionClosureReport,
     Mission,
     MissionStatus,
 )
@@ -36,14 +36,14 @@ from task_center.episode.closure_report import (
 )
 from task_center.episode.manager import OrchestratorFactory, EpisodeManager
 from task_center.episode.registry import EpisodeManagerRegistry
-from task_center.episode.episode import (
+from task_center.episode.state import (
     Episode,
     EpisodeCreationReason,
     EpisodeStatus,
 )
 
 
-CloseReportSink = Callable[[MissionCloseReport], None]
+MissionClosureReportSink = Callable[[MissionClosureReport], None]
 
 
 class MissionHandler:
@@ -57,7 +57,7 @@ class MissionHandler:
         attempt_store: AttemptStore,
         manager_registry: EpisodeManagerRegistry,
         config: TaskCenterLifecycleConfig,
-        deliver_close_report: CloseReportSink | None = None,
+        deliver_closure_report: MissionClosureReportSink | None = None,
         orchestrator_factory: OrchestratorFactory | None = None,
         task_store: TaskCenterStore | None = None,
     ) -> None:
@@ -66,7 +66,7 @@ class MissionHandler:
         self._attempt_store = attempt_store
         self._manager_registry = manager_registry
         self._config = config
-        self._deliver_close_report = deliver_close_report
+        self._deliver_closure_report = deliver_closure_report
         self._orchestrator_factory = orchestrator_factory
         self._task_store = task_store
 
@@ -185,7 +185,7 @@ class MissionHandler:
         outcome_label: Literal["success", "failed"] = (
             "success" if succeeded else "failed"
         )
-        close_report = MissionCloseReport(
+        close_report = MissionClosureReport(
             mission_id=mission_id,
             requested_by_task_id=mission.requested_by_task_id,
             outcome=outcome_label,
@@ -203,8 +203,8 @@ class MissionHandler:
             final_outcome=close_report.to_final_outcome(),
             closed_at=datetime.now(UTC),
         )
-        if self._deliver_close_report is not None:
-            self._deliver_close_report(close_report)
+        if self._deliver_closure_report is not None:
+            self._deliver_closure_report(close_report)
         return updated
 
     # ---- internal -------------------------------------------------------

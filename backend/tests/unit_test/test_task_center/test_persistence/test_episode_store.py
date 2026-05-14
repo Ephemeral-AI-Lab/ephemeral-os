@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from task_center.episode.episode import (
+from task_center.episode.state import (
     Episode,
     EpisodeCreationReason,
     EpisodeStatus,

@@ -19,7 +19,7 @@ from sandbox.runtime.daemon.service.workspace_server import get_layer_stack_mana
 @pytest.mark.asyncio
 async def test_out_of_workspace_write_lands_on_host_fs(tmp_path: Path) -> None:
     """write_file('/tmp-like/foo') goes straight to host FS, no OCC."""
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
@@ -51,7 +51,7 @@ async def test_out_of_workspace_write_lands_on_host_fs(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_out_of_workspace_edit_runs_against_host_bytes(tmp_path: Path) -> None:
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
@@ -80,7 +80,7 @@ async def test_out_of_workspace_edit_runs_against_host_bytes(tmp_path: Path) -> 
 
 @pytest.mark.asyncio
 async def test_out_of_workspace_read_returns_host_bytes(tmp_path: Path) -> None:
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
@@ -110,7 +110,7 @@ async def test_out_of_workspace_read_returns_host_bytes(tmp_path: Path) -> None:
 async def test_out_of_workspace_read_missing_path_does_not_raise(
     tmp_path: Path,
 ) -> None:
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
@@ -136,7 +136,7 @@ async def test_shell_namespace_passthrough_consistency(tmp_path: Path) -> None:
     Confirms shell `echo > /tmp/foo` semantics: the same file written from
     write_file is observable via read_file as host-FS bytes.
     """
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
@@ -173,7 +173,7 @@ async def test_out_of_workspace_write_create_only_rejects_existing(
     tmp_path: Path,
 ) -> None:
     """create-only host-FS write rejects when the path already exists."""
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"

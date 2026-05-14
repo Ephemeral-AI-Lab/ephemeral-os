@@ -36,7 +36,7 @@ class Mission:
 
 
 @dataclass(frozen=True, slots=True)
-class MissionCloseReport:
+class MissionClosureReport:
     """Final report attached to ``requested_by_task_id`` when the mission closes.
 
     ``final_attempt_id`` is normally the passing or final failed attempt.

@@ -8,7 +8,6 @@ from typing import cast
 
 from sandbox.layer_stack.layer.change import (
     DeleteLayerChange,
-    LayerChange,
     LayerDelta,
     OpaqueDirLayerChange,
     SymlinkLayerChange,
@@ -25,8 +24,9 @@ from sandbox.occ.changeset.types import (
     SymlinkChange,
     WriteChange,
 )
-from sandbox.occ.merge.policy import FinalKind, StageWrite, StageWriteFromPath
+from sandbox.occ.stage.policy import FinalKind, StageWrite, StageWriteFromPath
 from sandbox.occ.ports import SnapshotReader
+from sandbox.occ.timing_keys import TimingKey
 from sandbox.timing import monotonic_now
 
 _DirectChangeHandler = Callable[[Change, "_DirectStageState"], FileResult | None]
@@ -78,7 +78,7 @@ class _DirectStageState:
         self.set_special("delete")
 
 
-class DirectMerge:
+class DirectStager:
     """Stage direct changes with last-writer-wins semantics."""
 
     def __init__(self, snapshot_reader: SnapshotReader) -> None:
@@ -129,7 +129,7 @@ class DirectMerge:
             group.path,
             active_manifest,
         )
-        timings["occ.direct.read_current_s"] = monotonic_now() - read_start
+        timings[TimingKey.DIRECT_READ_CURRENT] = monotonic_now() - read_start
         state = _DirectStageState.from_snapshot(
             current_content,
             current_exists=current_exists,
@@ -139,15 +139,15 @@ class DirectMerge:
         for change in group.changes:
             result = self._apply_change(change, state, path=group.path)
             if result is not None:
-                timings["occ.direct.apply_changes_s"] = (
+                timings[TimingKey.DIRECT_APPLY_CHANGES] = (
                     monotonic_now() - apply_start
                 )
                 return _with_timings(result, timings), None
 
-        timings["occ.direct.apply_changes_s"] = monotonic_now() - apply_start
+        timings[TimingKey.DIRECT_APPLY_CHANGES] = monotonic_now() - apply_start
         stage_start = monotonic_now()
         if state.final_kind == "opaque_dir":
-            timings["occ.direct.stage_delta_s"] = monotonic_now() - stage_start
+            timings[TimingKey.DIRECT_STAGE_DELTA] = monotonic_now() - stage_start
             return (
                 FileResult(
                     path=group.path,
@@ -165,7 +165,7 @@ class DirectMerge:
                     ),
                 )
             )
-            timings["occ.direct.stage_delta_s"] = monotonic_now() - stage_start
+            timings[TimingKey.DIRECT_STAGE_DELTA] = monotonic_now() - stage_start
             return (
                 FileResult(
                     path=group.path,
@@ -196,7 +196,7 @@ class DirectMerge:
                 delta = LayerDelta(
                     changes=(stage_write(group.path, state.content),)
                 )
-            timings["occ.direct.stage_delta_s"] = monotonic_now() - stage_start
+            timings[TimingKey.DIRECT_STAGE_DELTA] = monotonic_now() - stage_start
             return (
                 FileResult(
                     path=group.path,
@@ -206,7 +206,7 @@ class DirectMerge:
                 delta,
             )
         if state.final_kind == "delete" and state.initial_exists:
-            timings["occ.direct.stage_delta_s"] = monotonic_now() - stage_start
+            timings[TimingKey.DIRECT_STAGE_DELTA] = monotonic_now() - stage_start
             return (
                 FileResult(
                     path=group.path,
@@ -215,7 +215,7 @@ class DirectMerge:
                 ),
                 LayerDelta(changes=(DeleteLayerChange(path=group.path),)),
             )
-        timings["occ.direct.stage_delta_s"] = monotonic_now() - stage_start
+        timings[TimingKey.DIRECT_STAGE_DELTA] = monotonic_now() - stage_start
         return (
             FileResult(
                 path=group.path,
@@ -332,4 +332,4 @@ def _with_timings(result: FileResult, timings: dict[str, float]) -> FileResult:
     )
 
 
-__all__ = ["DirectMerge"]
+__all__ = ["DirectStager"]

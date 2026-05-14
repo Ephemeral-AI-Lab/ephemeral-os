@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from task_center.api import (
+from task_center import (
     GeneratorSubmission,
     TaskCenterInvariantViolation,
 )

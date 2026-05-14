@@ -8,7 +8,7 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
-from sandbox.layer_stack._paths import resolve_storage_path
+from sandbox.layer_stack._paths import allocate_unique_layer_paths, resolve_storage_path
 from sandbox.layer_stack.manifest import LAYERS_DIR, STAGING_DIR, LayerRef, Manifest
 from sandbox.layer_stack.view.merged import MergedView
 
@@ -28,7 +28,7 @@ class SquashPlan:
             raise ValueError("suffix_to_checkpoint must not be empty")
 
 
-class SquashWorker:
+class SquashService:
     """Plans suffix squash and materializes checkpoint layers."""
 
     def __init__(
@@ -85,13 +85,13 @@ class SquashWorker:
         shutil.rmtree(layer_path, ignore_errors=True)
 
     def _allocate_checkpoint_paths(self, next_version: int) -> tuple[str, Path, Path]:
-        for _ in range(100):
-            layer_id = _default_checkpoint_id(next_version)
-            layer_dir = self._storage_root / LAYERS_DIR / layer_id
-            staging_dir = self._storage_root / STAGING_DIR / f"{layer_id}.staging"
-            if not layer_dir.exists() and not staging_dir.exists():
-                return layer_id, staging_dir, layer_dir
-        raise RuntimeError("could not allocate a unique checkpoint layer id")
+        return allocate_unique_layer_paths(
+            storage_root=self._storage_root,
+            layers_dir=LAYERS_DIR,
+            staging_dir=STAGING_DIR,
+            next_version=next_version,
+            id_factory=_default_checkpoint_id,
+        )
 
 
 def manifest_still_ends_with(
@@ -105,3 +105,10 @@ def manifest_still_ends_with(
 
 def _default_checkpoint_id(next_version: int) -> str:
     return f"B{next_version:06d}-{uuid.uuid4().hex[:8]}"
+
+
+__all__ = [
+    "SquashPlan",
+    "SquashService",
+    "manifest_still_ends_with",
+]

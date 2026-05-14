@@ -11,11 +11,10 @@ from sandbox.api.tool.write import write_file
 @pytest.mark.asyncio
 async def test_write_file_dispatches_to_sandbox_daemon(
     monkeypatch: pytest.MonkeyPatch,
+    recording_transport_factory,
 ) -> None:
-    calls: list[tuple[str, str, dict[str, object], int]] = []
-
-    async def fake_call_daemon_api(sandbox_id, op, args, *, timeout):
-        calls.append((sandbox_id, op, args, timeout))
+    async def fake_call_daemon_api(sandbox_id, op, args, timeout):
+        del sandbox_id, op, args, timeout
         return {
             "success": True,
             "changed_paths": ["a.py"],
@@ -25,10 +24,8 @@ async def test_write_file_dispatches_to_sandbox_daemon(
             "timings": {"api.write.total_s": 0.1},
         }
 
-    monkeypatch.setattr(
-        "sandbox.api.tool.write.call_daemon_api",
-        fake_call_daemon_api,
-    )
+    del monkeypatch
+    transport = recording_transport_factory(fake_call_daemon_api)
 
     result = await write_file(
         "sb-write",
@@ -39,12 +36,13 @@ async def test_write_file_dispatches_to_sandbox_daemon(
             description="write a",
             overwrite=False,
         ),
+        transport=transport,
     )
 
     assert result.success is True
     assert result.changed_paths == ("a.py",)
     assert result.timings["api.write.total_s"] == 0.1
-    assert calls == [
+    assert transport.calls == [
         (
             "sb-write",
             "api.write_file",
@@ -69,8 +67,9 @@ async def test_write_file_dispatches_to_sandbox_daemon(
 @pytest.mark.asyncio
 async def test_write_file_guard_failure_maps_conflict_info(
     monkeypatch: pytest.MonkeyPatch,
+    recording_transport_factory,
 ) -> None:
-    async def fake_call_daemon_api(sandbox_id, op, args, *, timeout):
+    async def fake_call_daemon_api(sandbox_id, op, args, timeout):
         del sandbox_id, op, args, timeout
         return {
             "success": False,
@@ -85,10 +84,8 @@ async def test_write_file_guard_failure_maps_conflict_info(
             "timings": {},
         }
 
-    monkeypatch.setattr(
-        "sandbox.api.tool.write.call_daemon_api",
-        fake_call_daemon_api,
-    )
+    del monkeypatch
+    transport = recording_transport_factory(fake_call_daemon_api)
 
     result = await write_file(
         "sb-write-conflict",
@@ -97,6 +94,7 @@ async def test_write_file_guard_failure_maps_conflict_info(
             content="x",
             caller=SandboxCaller(agent_id="agent-1"),
         ),
+        transport=transport,
     )
 
     assert result.success is False

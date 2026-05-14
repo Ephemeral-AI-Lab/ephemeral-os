@@ -7,7 +7,7 @@ from collections.abc import Callable
 from dataclasses import asdict
 from datetime import UTC, datetime
 
-from task_center.mission.mission import MissionCloseReport
+from task_center.mission.state import MissionClosureReport
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt.dispatcher import AttemptDispatcher
 from task_center.attempt.state import (
@@ -22,7 +22,7 @@ from task_center.attempt.runtime import (
     AttemptDeps,
 )
 from task_center.task.ids import generator_task_id, planner_task_id
-from task_center.task.models import (
+from task_center.task.state import (
     SpawnReason,
     EvaluatorSubmission,
     GeneratorSubmission,
@@ -135,7 +135,7 @@ class AttemptOrchestrator:
         )
         return AgentLaunch(
             task_id=task_id,
-            task_center_run_id=runtime.task_center_run_id_for_attempt(attempt),
+            task_center_run_id=runtime.run_id_for_attempt(attempt),
             attempt_id=attempt.id,
             role=TaskCenterTaskRole.PLANNER,
             agent_name=bundle.agent_def.name,
@@ -230,7 +230,7 @@ class AttemptOrchestrator:
         self._mark_evaluator(submission)
         self._dispatcher.dispatch_ready_work()
 
-    def apply_mission_close_report(self, report: MissionCloseReport) -> None:
+    def apply_mission_closure_report(self, report: MissionClosureReport) -> None:
         """Resume a generator task waiting on a delegated mission.
 
         Idempotent: if the parent has already been resumed (status moved off
@@ -269,8 +269,8 @@ class AttemptOrchestrator:
                 "outcome": report.outcome,
                 "summary": summary,
                 "payload": {
-                    "mission_close_report": asdict(report),
-                    "submission_kind": "mission_close_report",
+                    "mission_closure_report": asdict(report),
+                    "submission_kind": "mission_closure_report",
                 },
             },
         )
@@ -295,7 +295,7 @@ class AttemptOrchestrator:
         runtime = self._runtime
         attempt = self._fresh_attempt()
         ordered = ordered_generator_tasks(tasks)
-        task_center_run_id = runtime.task_center_run_id_for_attempt(attempt)
+        task_center_run_id = runtime.run_id_for_attempt(attempt)
         task_ids: list[str] = []
         for task in ordered:
             task_id = generator_task_id(attempt.id, task.local_id)

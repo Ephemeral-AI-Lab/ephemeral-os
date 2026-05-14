@@ -265,18 +265,18 @@ class FullStackAdversarial(ScenarioBase):
                 ],
                 "tasks": [
                     {
-                        "id": "recursive_close_report",
+                        "id": "recursive_closure_report",
                         "agent_name": "executor",
                         "deps": [],
                     },
                     {
                         "id": "recursive_close_guard",
                         "agent_name": "verifier",
-                        "deps": ["recursive_close_report"],
+                        "deps": ["recursive_closure_report"],
                     },
                 ],
                 "task_specs": {
-                    "recursive_close_report": (
+                    "recursive_closure_report": (
                         "ACTION recursive_oversized_matrix slice=close close=true"
                     ),
                     "recursive_close_guard": (

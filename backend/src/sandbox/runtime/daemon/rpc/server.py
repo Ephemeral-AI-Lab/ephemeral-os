@@ -39,13 +39,14 @@ import os
 import signal
 from pathlib import Path
 
+from sandbox.daemon_paths import DAEMON_PID_PATH, DAEMON_SOCKET_PATH
 from sandbox.runtime.daemon.rpc import dispatcher
 from sandbox.timing import monotonic_now
 
 logger = logging.getLogger("sandbox.runtime.daemon.rpc.server")
 
-DEFAULT_SOCKET_PATH = "/tmp/eos-sandbox-runtime/runtime.sock"
-DEFAULT_PID_PATH = "/tmp/eos-sandbox-runtime/runtime.pid"
+DEFAULT_SOCKET_PATH = DAEMON_SOCKET_PATH
+DEFAULT_PID_PATH = DAEMON_PID_PATH
 
 # Cap a single request envelope to bound the daemon's per-connection memory and
 # convert oversize payloads into a structured ``request_too_large`` error rather

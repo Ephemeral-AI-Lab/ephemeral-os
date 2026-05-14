@@ -38,7 +38,7 @@ def get_layer_stack_manager(layer_stack_root: str | Path) -> LayerStackManager:
         return manager
 
 
-def _drop_layer_stack_manager(layer_stack_root: str | Path) -> None:
+def drop_layer_stack_manager(layer_stack_root: str | Path) -> None:
     key = str(Path(layer_stack_root).resolve(strict=False))
     with _MANAGER_CACHE_LOCK:
         _MANAGER_CACHE.pop(key, None)
@@ -83,7 +83,7 @@ def _fence_stale_staging_once(layer_stack_root: str) -> None:
     _FENCED_STAGING_ROOTS.add(layer_stack_root)
 
 
-def _clear_layer_stack_server_caches_for_tests() -> None:
+def clear_layer_stack_server_caches_for_tests() -> None:
     with _MANAGER_CACHE_LOCK:
         _MANAGER_CACHE.clear()
         _FENCED_STAGING_ROOTS.clear()
@@ -104,7 +104,7 @@ class LayerStackWorkspaceServer:
         timings: dict[str, float] | None = None,
     ) -> WorkspaceBinding:
         if reset:
-            _drop_layer_stack_manager(self.layer_stack_root)
+            drop_layer_stack_manager(self.layer_stack_root)
         binding = build_workspace_base(
             workspace_root=workspace_root,
             layer_stack_root=self.layer_stack_root,
@@ -166,6 +166,8 @@ def _validate_manifest_for_root(layer_stack_root: Path) -> None:
 
 __all__ = [
     "LayerStackWorkspaceServer",
+    "clear_layer_stack_server_caches_for_tests",
+    "drop_layer_stack_manager",
     "fence_stale_staging",
     "get_layer_stack_manager",
 ]

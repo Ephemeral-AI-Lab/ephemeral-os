@@ -114,11 +114,11 @@ def _stub_deps(packet_store) -> ContextEngineDeps:
 
 
 def test_compose_threads_calls_in_order(packet_store):
-    RecipeRegistry.register(_ok_recipe("planner_v1"))
+    RecipeRegistry.register(_ok_recipe("planner"))
     base = AgentDefinition(
         name="planner",
         description="planner",
-        context_recipe="planner_v1",
+        context_recipe="planner",
         system_prompt="SYSTEM PROMPT",
     )
     register_definition(base)
@@ -141,11 +141,11 @@ def test_compose_threads_calls_in_order(packet_store):
 
 def test_required_context_blocks_appended_before_render(packet_store):
     PredicateRegistry.register("always", lambda ctx: True)
-    RecipeRegistry.register(_ok_recipe("planner_v1"))
+    RecipeRegistry.register(_ok_recipe("planner"))
     base = AgentDefinition(
         name="planner",
         description="planner",
-        context_recipe="planner_v1",
+        context_recipe="planner",
         variants=[
             AgentVariant(
                 when="always",
@@ -163,7 +163,7 @@ def test_required_context_blocks_appended_before_render(packet_store):
     full_only = AgentDefinition(
         name="planner_full_only",
         description="planner",
-        context_recipe="planner_v1",
+        context_recipe="planner",
         system_prompt="FULL ONLY",
     )
     register_definition(base)
@@ -185,11 +185,11 @@ def test_required_context_blocks_appended_before_render(packet_store):
 
 def test_compose_persists_packet_only_with_store():
     """When deps.context_packet_store is None, composer skips persistence."""
-    RecipeRegistry.register(_ok_recipe("planner_v1"))
+    RecipeRegistry.register(_ok_recipe("planner"))
     base = AgentDefinition(
         name="planner",
         description="planner",
-        context_recipe="planner_v1",
+        context_recipe="planner",
     )
     register_definition(base)
 
@@ -216,11 +216,11 @@ def test_compose_persists_packet_only_with_store():
 
 def test_resolver_engine_renderer_called_with_correct_args(packet_store):
     """Mock resolver/engine/renderer and assert the wiring contract."""
-    RecipeRegistry.register(_ok_recipe("planner_v1"))
+    RecipeRegistry.register(_ok_recipe("planner"))
     base = AgentDefinition(
         name="planner",
         description="planner",
-        context_recipe="planner_v1",
+        context_recipe="planner",
         system_prompt="P",
     )
     register_definition(base)

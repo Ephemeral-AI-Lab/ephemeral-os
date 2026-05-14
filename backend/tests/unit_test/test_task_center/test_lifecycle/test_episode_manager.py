@@ -15,7 +15,7 @@ from task_center.episode.closure_report import (
     EpisodeClosureReport,
     TerminalSuccess,
 )
-from task_center.episode.episode import (
+from task_center.episode.state import (
     EpisodeCreationReason,
     EpisodeStatus,
 )

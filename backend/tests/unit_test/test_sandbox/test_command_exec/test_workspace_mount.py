@@ -13,6 +13,12 @@ from sandbox.command_exec.contract.result import ShellProcessResult
 from sandbox.command_exec.workspace.capture import capture_workspace_upperdir
 from sandbox.command_exec.contract.request import CommandExecRequest
 from sandbox.command_exec.contract.result import MountMode
+from sandbox.command_exec.strategies.copy_backed import CopyBackedStrategy
+from sandbox.command_exec.strategies.private_namespace import (
+    NAMESPACE_CONTROL_REF,
+    NAMESPACE_FALLBACK_STRATEGY,
+    NAMESPACE_INFRA_EXIT_CODE,
+)
 from sandbox.command_exec.workspace.mount import WorkspaceReplacementMountSpec
 
 
@@ -161,7 +167,6 @@ def test_copy_backed_mount_rewrites_workspace_env_values(
 
 def test_namespace_mount_failure_falls_back_to_copy_backed(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     lower = tmp_path / "lower"
     lower.mkdir()
@@ -181,30 +186,47 @@ def test_namespace_mount_failure_falls_back_to_copy_backed(
         command=("bash", "-lc", "printf ok > /testbed/out.txt"),
     )
 
-    def fake_private_namespace(**_: object) -> ShellProcessResult:
-        stderr_ref.parent.mkdir(parents=True, exist_ok=True)
-        stderr_ref.write_text(
-            '{"detail":"overlay rejected mount","error_kind":"mount_failed"}\n',
-            encoding="utf-8",
-        )
-        return ShellProcessResult(
-            exit_code=126,
-            stdout_ref=str(tmp_path / "run" / "stdout.bin"),
-            stderr_ref=str(stderr_ref),
-            mounted_workspace_root="/testbed",
-            mount_mode=MountMode.PRIVATE_NAMESPACE,
-        )
+    class FakePrivateNamespaceStrategy:
+        name = "private_namespace"
 
-    monkeypatch.setattr(
-        workspace_mount,
-        "_private_mount_namespace_available",
-        lambda: True,
-    )
-    monkeypatch.setattr(
-        workspace_mount,
-        "_run_private_mount_namespace",
-        fake_private_namespace,
-    )
+        def is_available(self) -> bool:
+            return True
+
+        def run(self, **_: object) -> ShellProcessResult:
+            run_dir = tmp_path / "run"
+            stderr_ref.parent.mkdir(parents=True, exist_ok=True)
+            stderr_ref.write_text(
+                '{"detail":"overlay rejected mount","error_kind":"mount_failed"}\n',
+                encoding="utf-8",
+            )
+            (run_dir / NAMESPACE_CONTROL_REF).write_text(
+                (
+                    '{"detail":"overlay rejected mount",'
+                    '"error_kind":"mount_failed",'
+                    f'"fallback":"{NAMESPACE_FALLBACK_STRATEGY}"'
+                    "}\n"
+                ),
+                encoding="utf-8",
+            )
+            return ShellProcessResult(
+                exit_code=NAMESPACE_INFRA_EXIT_CODE,
+                stdout_ref=str(run_dir / "stdout.bin"),
+                stderr_ref=str(stderr_ref),
+                mounted_workspace_root="/testbed",
+                mount_mode=MountMode.PRIVATE_NAMESPACE,
+            )
+
+        def is_recoverable_failure(
+            self,
+            result: ShellProcessResult,
+            *,
+            run_dir: Path,
+        ) -> bool:
+            return workspace_mount._is_namespace_mount_failure(
+                result,
+                run_dir=run_dir,
+            )
+
     timings: dict[str, float] = {}
 
     process = workspace_mount.run_workspace_replaced_command(
@@ -212,6 +234,7 @@ def test_namespace_mount_failure_falls_back_to_copy_backed(
         request=request,
         run_dir=tmp_path / "run",
         timings=timings,
+        strategies=(FakePrivateNamespaceStrategy(), CopyBackedStrategy()),
     )
 
     assert process.exit_code == 0
@@ -220,6 +243,27 @@ def test_namespace_mount_failure_falls_back_to_copy_backed(
         encoding="utf-8"
     ) == "ok"
     assert timings["command_exec.private_mount_fallback"] == 1.0
+
+
+def test_namespace_mount_failure_requires_control_sidecar(tmp_path: Path) -> None:
+    stderr_ref = tmp_path / "run" / "stderr.bin"
+    stderr_ref.parent.mkdir(parents=True)
+    stderr_ref.write_text(
+        '{"detail":"user output","error_kind":"mount_failed"}\n',
+        encoding="utf-8",
+    )
+    process = ShellProcessResult(
+        exit_code=NAMESPACE_INFRA_EXIT_CODE,
+        stdout_ref=str(tmp_path / "run" / "stdout.bin"),
+        stderr_ref=str(stderr_ref),
+        mounted_workspace_root="/testbed",
+        mount_mode=MountMode.PRIVATE_NAMESPACE,
+    )
+
+    assert workspace_mount._is_namespace_mount_failure(
+        process,
+        run_dir=tmp_path / "run",
+    ) is False
 
 
 def test_workspace_rewrite_rewrites_quoted_shell_paths() -> None:

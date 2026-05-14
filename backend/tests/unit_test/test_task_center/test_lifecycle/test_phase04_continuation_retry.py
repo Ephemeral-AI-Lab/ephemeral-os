@@ -9,7 +9,7 @@ delegated mission closes terminally.
 from __future__ import annotations
 
 from task_center.mission.starter import MissionStarter
-from task_center.mission.mission import MissionStatus
+from task_center.mission.state import MissionStatus
 from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
@@ -20,7 +20,7 @@ from task_center.attempt import (
 )
 from task_center.attempt.runtime import AgentLaunch, AttemptDeps
 from task_center.episode.registry import EpisodeManagerRegistry
-from task_center.episode.episode import (
+from task_center.episode.state import (
     EpisodeCreationReason,
     EpisodeStatus,
 )

@@ -31,7 +31,7 @@ from sandbox.api import (
     SearchReplaceEdit,
 )
 from task_center.attempt import Attempt
-from task_center.episode.episode import Episode
+from task_center.episode.state import Episode
 from tools._framework.core.base import BaseTool
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.results import ToolResult
@@ -1387,7 +1387,7 @@ class MockSquadRunner:
                 payload = summary.get("payload") if isinstance(summary, dict) else None
                 if not isinstance(payload, dict):
                     continue
-                close_report = payload.get("mission_close_report")
+                close_report = payload.get("mission_closure_report")
                 if isinstance(close_report, dict):
                     return {
                         "mission_id": close_report.get("mission_id"),

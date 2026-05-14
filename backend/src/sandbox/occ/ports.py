@@ -10,7 +10,7 @@ from typing import Protocol
 
 from sandbox.layer_stack.layer.change import LayerChange
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.layer_stack.commit.staging import CommitStagingArea
+from sandbox.layer_stack.commit.commit_staging_area import CommitStagingArea
 
 
 @dataclass(frozen=True)
@@ -79,14 +79,10 @@ class WorkspaceBindingReader(Protocol):
     ) -> WorkspaceBindingSnapshot: ...
 
 
-CommitTransaction = CommitTransactionPort
-
-
 __all__ = [
     "CommitPublisher",
     "CommitStagingArea",
     "CommitStagingStore",
-    "CommitTransaction",
     "CommitTransactionPort",
     "SnapshotReader",
     "WorkspaceBindingReader",

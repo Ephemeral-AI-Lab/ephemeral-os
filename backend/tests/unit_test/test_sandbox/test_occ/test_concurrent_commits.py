@@ -5,11 +5,11 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
-from sandbox.layer_stack.layer.change import LayerChange, WriteLayerChange
+from sandbox.layer_stack.layer.change import WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.types import FileStatus, WriteChange
 from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.commit_transaction import OccCommitTransaction
+from sandbox.occ.stage.transaction import CommitTransaction
 from sandbox.occ.service import OccService
 
 
@@ -17,6 +17,9 @@ class _Gitignore:
     def is_ignored(self, path: str) -> bool:
         del path
         return False
+
+    def is_ignored_in_snapshot(self, path: str, _snapshot: object) -> bool:
+        return self.is_ignored(path)
 
 
 def _source(tmp_path: Path, name: str, content: bytes) -> Path:
@@ -58,7 +61,11 @@ def test_concurrent_prepared_commits_revalidate_latest_manifest(
             ],
             snapshot=snapshot,
         )
-        transaction = OccCommitTransaction(stack)
+        transaction = CommitTransaction(
+            snapshot_reader=stack,
+            staging=stack,
+            publisher=stack,
+        )
         return await asyncio.to_thread(transaction.revalidate_and_publish, prepared)
 
     async def run_all():

@@ -1,4 +1,4 @@
-"""US-010: planner_v1 block taxonomy and conditional logic."""
+"""US-010: planner block taxonomy and conditional logic."""
 
 from __future__ import annotations
 
@@ -12,14 +12,14 @@ from task_center.context_engine.packet import (
     ContextPriority,
 )
 from task_center.context_engine.recipes.planner import (
-    _planner_v1_build,
+    _planner_build,
 )
 from task_center.context_engine.scope import ContextScope
 from task_center.attempt import (
     AttemptFailReason,
     AttemptStatus,
 )
-from task_center.episode.episode import (
+from task_center.episode.state import (
     EpisodeCreationReason,
     EpisodeStatus,
 )
@@ -111,7 +111,7 @@ def test_episode1_emits_one_merged_mission_episode_block(
     )
     g = _seed_running_attempt(attempt_store, episode.id, sequence_no=1)
 
-    packet = _planner_v1_build(
+    packet = _planner_build(
         ContextScope(
             mission_id=request.id, episode_id=episode.id, attempt_id=g.id
         ),
@@ -145,7 +145,7 @@ def test_episode2_emits_mission_prior_results_and_current_episode(
     )
     g = _seed_running_attempt(attempt_store, episode2.id, sequence_no=1)
 
-    packet = _planner_v1_build(
+    packet = _planner_build(
         ContextScope(
             mission_id=request.id, episode_id=episode2.id, attempt_id=g.id
         ),
@@ -186,7 +186,7 @@ def test_episode3_emits_two_pairs_with_priority_split(
     )
     g = _seed_running_attempt(attempt_store, episode3.id, sequence_no=1)
 
-    packet = _planner_v1_build(
+    packet = _planner_build(
         ContextScope(
             mission_id=request.id, episode_id=episode3.id, attempt_id=g.id
         ),
@@ -223,7 +223,7 @@ def test_missing_prior_spec_raises_context_engine_error(
     g = _seed_running_attempt(attempt_store, episode2.id, sequence_no=1)
 
     with pytest.raises(ContextEngineError):
-        _planner_v1_build(
+        _planner_build(
             ContextScope(
                 mission_id=request.id, episode_id=episode2.id, attempt_id=g.id
             ),
@@ -248,7 +248,7 @@ def test_three_failed_attempts_emit_three_high_priority_blocks(
         _seed_failed_attempt(attempt_store, episode.id, sequence_no=n)
     current_attempt = _seed_running_attempt(attempt_store, episode.id, sequence_no=4)
 
-    packet = _planner_v1_build(
+    packet = _planner_build(
         ContextScope(
             mission_id=request.id,
             episode_id=episode.id,
@@ -317,7 +317,7 @@ def test_failed_attempt_landscape_includes_plan_type_statuses_and_summaries(
     )
     current_attempt = _seed_running_attempt(attempt_store, episode.id, sequence_no=2)
 
-    packet = _planner_v1_build(
+    packet = _planner_build(
         ContextScope(
             mission_id=request.id,
             episode_id=episode.id,
@@ -355,7 +355,7 @@ def test_all_failed_attempts_render_as_high_priority_blocks(
         attempt_store, episode.id, sequence_no=total + 1
     )
 
-    packet = _planner_v1_build(
+    packet = _planner_build(
         ContextScope(
             mission_id=request.id,
             episode_id=episode.id,

@@ -9,7 +9,6 @@ import threading
 from sandbox.layer_stack.manifest import LayerRef, Manifest
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.types import ChangesetResult, WriteChange
-import sandbox.occ.service as occ_service_module
 from sandbox.occ.service import OccService
 
 
@@ -17,14 +16,20 @@ class _Gitignore:
     def is_ignored(self, _path: str) -> bool:
         return False
 
+    def is_ignored_in_snapshot(self, path: str, _snapshot: object) -> bool:
+        return self.is_ignored(path)
+
 
 def test_occ_publications_auto_squash_without_direct_squash_call(
     tmp_path,
-    monkeypatch,
 ) -> None:
-    monkeypatch.setattr(occ_service_module, "AUTO_SQUASH_MAX_DEPTH", 4)
+    max_depth = 4
     stack = LayerStackManager(tmp_path / "stack")
-    service = OccService(gitignore=_Gitignore(), layer_stack=stack)
+    service = OccService(
+        gitignore=_Gitignore(),
+        layer_stack=stack,
+        auto_squash_max_depth=max_depth,
+    )
 
     for index in range(8):
         result = asyncio.run(
@@ -48,13 +53,17 @@ def test_occ_publications_auto_squash_without_direct_squash_call(
         assert stack.read_text(f"tracked/auto/{index:02d}.txt") == (
             f"auto-{index:02d}\n",
             True,
-        )
+    )
 
 
-def test_auto_squash_preserves_active_lease_view(tmp_path, monkeypatch) -> None:
-    monkeypatch.setattr(occ_service_module, "AUTO_SQUASH_MAX_DEPTH", 3)
+def test_auto_squash_preserves_active_lease_view(tmp_path) -> None:
+    max_depth = 3
     stack = LayerStackManager(tmp_path / "stack")
-    service = OccService(gitignore=_Gitignore(), layer_stack=stack)
+    service = OccService(
+        gitignore=_Gitignore(),
+        layer_stack=stack,
+        auto_squash_max_depth=max_depth,
+    )
 
     seed = asyncio.run(
         service.apply_changeset(
@@ -94,10 +103,14 @@ def test_auto_squash_preserves_active_lease_view(tmp_path, monkeypatch) -> None:
     assert stack.active_lease_count() == 0
 
 
-def test_auto_squash_uses_fixed_constant_depth(tmp_path, monkeypatch) -> None:
-    monkeypatch.setattr(occ_service_module, "AUTO_SQUASH_MAX_DEPTH", 6)
+def test_auto_squash_uses_fixed_constant_depth(tmp_path) -> None:
+    max_depth = 6
     stack = LayerStackManager(tmp_path / "stack")
-    service = OccService(gitignore=_Gitignore(), layer_stack=stack)
+    service = OccService(
+        gitignore=_Gitignore(),
+        layer_stack=stack,
+        auto_squash_max_depth=max_depth,
+    )
     observed_max_depths: list[float] = []
 
     for index in range(10):
@@ -117,18 +130,22 @@ def test_auto_squash_uses_fixed_constant_depth(tmp_path, monkeypatch) -> None:
             observed_max_depths.append(max_depth)
 
     assert observed_max_depths
-    assert set(observed_max_depths) == {occ_service_module.AUTO_SQUASH_MAX_DEPTH}
-    assert stack.read_active_manifest().depth <= occ_service_module.AUTO_SQUASH_MAX_DEPTH
+    assert set(observed_max_depths) == {max_depth}
+    assert stack.read_active_manifest().depth <= max_depth
 
 
-def test_default_mode_skips_in_flight_squash_and_rechecks(monkeypatch) -> None:
-    monkeypatch.setattr(occ_service_module, "AUTO_SQUASH_MAX_DEPTH", 4)
+def test_default_mode_skips_in_flight_squash_and_rechecks() -> None:
+    max_depth = 4
     stack = _AutoSquashOnlyLayerStack(
         depth=7,
         depth_after_first_squash=6,
         depth_after_later_squash=1,
     )
-    service = OccService(gitignore=_Gitignore(), layer_stack=stack)
+    service = OccService(
+        gitignore=_Gitignore(),
+        layer_stack=stack,
+        auto_squash_max_depth=max_depth,
+    )
     published = ChangesetResult(files=(), published_manifest_version=1)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
@@ -148,12 +165,16 @@ def test_default_mode_skips_in_flight_squash_and_rechecks(monkeypatch) -> None:
 
 def test_removed_mode_env_is_ignored(monkeypatch) -> None:
     monkeypatch.setenv("EOS_OCC_SQUASH_MODE", "async")
-    monkeypatch.setattr(occ_service_module, "AUTO_SQUASH_MAX_DEPTH", 4)
+    max_depth = 4
     stack = _AutoSquashOnlyLayerStack(
         depth=7,
         depth_after_first_squash=1,
     )
-    service = OccService(gitignore=_Gitignore(), layer_stack=stack)
+    service = OccService(
+        gitignore=_Gitignore(),
+        layer_stack=stack,
+        auto_squash_max_depth=max_depth,
+    )
     published = ChangesetResult(files=(), published_manifest_version=1)
 
     stack.release_squash.set()

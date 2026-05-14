@@ -12,10 +12,11 @@ from dataclasses import dataclass
 from sandbox.layer_stack.manifest import ManifestConflictError
 from sandbox.occ.changeset.prepared import PreparedChangeset, RouteDecision
 from sandbox.occ.changeset.types import ChangesetResult, FileResult, FileStatus
-from sandbox.occ.commit_transaction import OccCommitTransaction
+from sandbox.occ.stage.transaction import CommitTransaction
+from sandbox.occ.timing_keys import TimingKey
 from sandbox.timing import monotonic_now
 
-_RESULT_READY_AT = "_occ.serial.result_ready_at_s"
+_RESULT_READY_AT = TimingKey.SERIAL_RESULT_READY_AT
 
 
 MAX_OCC_CAS_RETRIES: int = 3
@@ -62,12 +63,12 @@ _STOP = _StopItem()
 _QueueItem = _WorkItem | _StopItem
 
 
-class OccSerialMerger:
+class CommitQueue:
     """Serialize OCC publish while batching disjoint prepared changesets."""
 
     def __init__(
         self,
-        transaction: OccCommitTransaction,
+        transaction: CommitTransaction,
         *,
         max_batch_size: int = 64,
         batch_window_s: float = 0.002,
@@ -202,11 +203,11 @@ class OccSerialMerger:
                         timings={
                             **item.prepared.timings,
                             **result.timings,
-                            "occ.serial.queue_wait_s": commit_start
+                            TimingKey.SERIAL_QUEUE_WAIT: commit_start
                             - item.enqueued_at,
-                            "occ.serial.batch_size": float(len(batch)),
-                            "occ.serial.commit_s": commit_elapsed,
-                            "occ.serial.cas_attempts": float(attempts + 1),
+                            TimingKey.SERIAL_BATCH_SIZE: float(len(batch)),
+                            TimingKey.SERIAL_COMMIT: commit_elapsed,
+                            TimingKey.SERIAL_CAS_ATTEMPTS: float(attempts + 1),
                             _RESULT_READY_AT: ready_at,
                         },
                         published_manifest_version=result.published_manifest_version,
@@ -298,7 +299,7 @@ def _cas_exhaustion_result(
         )
     return ChangesetResult(
         files=tuple(files),
-        timings={"occ.serial.cas_exhausted": 1.0},
+        timings={TimingKey.SERIAL_CAS_EXHAUSTED: 1.0},
         published_manifest_version=None,
     )
 
@@ -311,4 +312,4 @@ def _merge_timings(items: list[PreparedChangeset]) -> dict[str, float]:
     return timings
 
 
-__all__ = ["MAX_OCC_CAS_RETRIES", "OccSerialMerger", "RetryPolicy"]
+__all__ = ["MAX_OCC_CAS_RETRIES", "CommitQueue", "RetryPolicy"]

@@ -15,7 +15,7 @@ _SERIAL_MERGER_BODY = r"""
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset.prepared import PreparedChangeset, PreparedPathGroup, RouteDecision
 from sandbox.occ.changeset.types import ChangesetResult, FileResult, FileStatus, WriteChange
-from sandbox.occ.merge.serial import OccSerialMerger
+from sandbox.occ.commit_queue import CommitQueue
 
 class _RecordingTransaction:
     def __init__(self):
@@ -46,7 +46,8 @@ label = "occ.serial_merger"
 before = sample_resource()
 started = time.perf_counter()
 txn = _RecordingTransaction()
-merger = OccSerialMerger(txn, max_batch_size=1, batch_window_s=0.0)
+merger = CommitQueue(txn, max_batch_size=1, batch_window_s=0.0)
+merger.start()
 
 futures = [merger.submit(_prepared("fifo/%02d.txt" % index)) for index in range(4)]
 cancelled = merger.submit(_prepared("fifo/cancelled.txt"))
@@ -55,6 +56,7 @@ results = [future.result(timeout=5) for future in futures]
 assert cancelled.cancelled() is True
 assert txn.order == ["fifo/%02d.txt" % index for index in range(4)], txn.order
 assert all(result.files[0].status is FileStatus.ACCEPTED for result in results)
+merger.close()
 
 _emit(label, started, before, {
     "processed_order": txn.order,
@@ -68,7 +70,7 @@ _RACE_BODY = r"""
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset.prepared import PreparedChangeset, PreparedPathGroup, RouteDecision
 from sandbox.occ.changeset.types import ChangesetResult, FileResult, FileStatus, WriteChange
-from sandbox.occ.merge.serial import OccSerialMerger
+from sandbox.occ.commit_queue import CommitQueue
 
 class _RecordingTransaction:
     def __init__(self):
@@ -99,7 +101,8 @@ label = "occ.serial_merger_under_race"
 before = sample_resource()
 started = time.perf_counter()
 txn = _RecordingTransaction()
-merger = OccSerialMerger(txn, max_batch_size=1, batch_window_s=0.0)
+merger = CommitQueue(txn, max_batch_size=1, batch_window_s=0.0)
+merger.start()
 n = 16
 paths = ["wait/%02d.txt" % index for index in range(n)]
 futures = [merger.submit(_prepared(path)) for path in paths]
@@ -120,6 +123,7 @@ waits = [row["wait_ms"] for row in rows]
 assert txn.order == paths, txn.order
 assert all(row["status"] == "accepted" for row in rows), rows
 assert max(waits) < 30000.0, waits
+merger.close()
 
 _emit(label, started, before, {
     "waiters": n,

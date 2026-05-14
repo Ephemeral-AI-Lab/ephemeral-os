@@ -131,7 +131,7 @@ def register_test_agents(isolated_agent_registries):
             name="planner",
             description="test planner",
             agent_kind=AgentKind.PLANNER,
-            context_recipe="planner_v1",
+            context_recipe="planner",
             terminals=["submit_full_plan", "submit_partial_plan"],
         )
     )
@@ -141,7 +141,7 @@ def register_test_agents(isolated_agent_registries):
             description="test executor",
             agent_kind=AgentKind.EXECUTOR,
             dispatchable_by_planner=True,
-            context_recipe="generator_v1",
+            context_recipe="generator",
             terminals=[
                 "submit_execution_handoff",
                 "submit_execution_success",
@@ -154,7 +154,7 @@ def register_test_agents(isolated_agent_registries):
             name="generator",
             description="test generator",
             agent_kind=AgentKind.EXECUTOR,
-            context_recipe="generator_v1",
+            context_recipe="generator",
             terminals=["submit_execution_success", "submit_execution_failure"],
         )
     )
@@ -164,7 +164,7 @@ def register_test_agents(isolated_agent_registries):
             description="test verifier",
             agent_kind=AgentKind.EXECUTOR,
             dispatchable_by_planner=True,
-            context_recipe="generator_v1",
+            context_recipe="generator",
             terminals=["submit_verification_success", "submit_verification_failure"],
         )
     )
@@ -173,7 +173,7 @@ def register_test_agents(isolated_agent_registries):
             name="evaluator",
             description="test evaluator",
             agent_kind=AgentKind.EVALUATOR,
-            context_recipe="evaluator_v1",
+            context_recipe="evaluator",
             terminals=["submit_evaluation"],
         )
     )

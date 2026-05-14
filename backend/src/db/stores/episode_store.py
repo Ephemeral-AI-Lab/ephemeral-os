@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 
 from db.models.episode import EpisodeRecord
 from db.stores.base import SyncStoreMixin
-from task_center.domain import (
+from task_center.episode.state import (
     Episode,
     EpisodeCreationReason,
     EpisodeStatus,

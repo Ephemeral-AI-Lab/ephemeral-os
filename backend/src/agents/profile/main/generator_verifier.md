@@ -14,7 +14,7 @@ terminals:
   - submit_verification_failure
 notification_triggers:
   - resolver_limit
-context_recipe: generator_v1
+context_recipe: generator
 ---
 You are the main-agent generator verifier.
 

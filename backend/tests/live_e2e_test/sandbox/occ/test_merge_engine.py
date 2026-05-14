@@ -12,7 +12,7 @@ pytestmark = pytest.mark.asyncio
 
 
 _MERGE_BODY = r"""
-import sandbox.occ.merge as merge_facade
+import sandbox.occ.stage as merge_facade
 from sandbox.layer_stack.layer.change import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.prepared import PreparedPathGroup, RouteDecision
@@ -44,8 +44,8 @@ _publish(stack, "src/app.py", b"alpha\nbeta\n")
 _publish(stack, "src/crlf.txt", b"a\r\nb\r\n")
 _publish(stack, "src/bin.dat", b"\x00\x01\x02")
 
-gated = merge_facade.GatedMerge(stack)
-direct = merge_facade.DirectMerge(stack)
+gated = merge_facade.GatedStager(stack)
+direct = merge_facade.DirectStager(stack)
 
 ok_group = PreparedPathGroup(
     path="src/app.py",

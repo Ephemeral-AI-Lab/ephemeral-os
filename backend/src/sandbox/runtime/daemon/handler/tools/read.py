@@ -10,10 +10,10 @@ from sandbox.layer_stack.workspace.binding import (
     require_workspace_binding,
 )
 from sandbox.runtime.daemon.handler.request_context import (
-    _layer_stack_root,
-    _required_single_path,
-    _services,
     classify_path,
+    layer_stack_root as require_layer_stack_root,
+    required_single_path,
+    services as backend_services,
 )
 from sandbox.timing import monotonic_now
 
@@ -21,9 +21,9 @@ from sandbox.timing import monotonic_now
 async def read_file(args: dict[str, object]) -> dict[str, object]:
     """Single-path read_file dispatch with in/out-of-workspace classification."""
     total_start = monotonic_now()
-    layer_stack_root = _layer_stack_root(args)
+    layer_stack_root = require_layer_stack_root(args)
     binding = require_workspace_binding(layer_stack_root)
-    raw_path = _required_single_path(args)
+    raw_path = required_single_path(args)
     classified = classify_path(raw_path, binding.workspace_root)
 
     if classified.classification == "out_of_workspace":
@@ -45,7 +45,7 @@ def _read_in_workspace(
     layer_path: str,
     total_start: float,
 ) -> dict[str, object]:
-    services = _services(layer_stack_root)
+    services = backend_services(layer_stack_root)
     if not Path(layer_stack_root).exists():
         raise WorkspaceBindingError(
             f"layer-stack root does not exist: {layer_stack_root}"

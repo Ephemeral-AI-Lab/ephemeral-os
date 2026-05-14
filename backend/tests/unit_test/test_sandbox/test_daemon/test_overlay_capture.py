@@ -11,7 +11,7 @@ from sandbox.occ.changeset.types import (
     WriteChange,
 )
 from sandbox.overlay import OverlayPathChange, content_hash
-from sandbox.occ.capture.overlay import overlay_path_changes_to_occ_changes
+from sandbox.occ.overlay import overlay_path_changes_to_occ_changes
 
 
 def test_overlay_path_changes_to_occ_changes_converts_changes(tmp_path) -> None:

@@ -1,4 +1,4 @@
-"""US-011: advisor_v1 / resolver_v1 parent inheritance with priority demotion."""
+"""US-011: advisor / resolver parent inheritance with priority demotion."""
 
 from __future__ import annotations
 
@@ -21,9 +21,9 @@ from task_center.context_engine.packet import (
     ContextRefs,
 )
 from task_center.context_engine.recipes.helper import (
-    _advisor_v1_build,
+    _advisor_build,
     demote_priority,
-    _resolver_v1_build,
+    _resolver_build,
 )
 from task_center.context_engine.scope import ContextScope
 
@@ -106,7 +106,7 @@ def test_demotion_table_covers_all_priorities():
     assert demote_priority(ContextPriority.LOW) == ContextPriority.LOW
 
 
-def test_advisor_v1_emits_only_demoted_inherited_parent_context(
+def test_advisor_emits_only_demoted_inherited_parent_context(
     deps_with_packet_store, packet_store, task_store, task_center_run_id
 ):
     parent_packet = _seed_parent_packet(packet_store)
@@ -122,7 +122,7 @@ def test_advisor_v1_emits_only_demoted_inherited_parent_context(
         parent_packet_id=parent_packet.id,
         parent_task_id="t-parent",
     )
-    packet = _advisor_v1_build(scope, deps_with_packet_store)
+    packet = _advisor_build(scope, deps_with_packet_store)
 
     assert packet.target_role == "advisor"
 
@@ -139,7 +139,7 @@ def test_advisor_v1_emits_only_demoted_inherited_parent_context(
         assert block.metadata["inherited_from_parent"] == "true"
 
 
-def test_resolver_v1_same_shape_target_role_resolver(
+def test_resolver_same_shape_target_role_resolver(
     deps_with_packet_store, packet_store, task_store, task_center_run_id
 ):
     parent_packet = _seed_parent_packet(packet_store)
@@ -155,7 +155,7 @@ def test_resolver_v1_same_shape_target_role_resolver(
         parent_packet_id=parent_packet.id,
         parent_task_id="t-parent",
     )
-    packet = _resolver_v1_build(scope, deps_with_packet_store)
+    packet = _resolver_build(scope, deps_with_packet_store)
     assert packet.target_role == "resolver"
     assert packet.blocks[0].kind == "episode_goal"
 
@@ -176,7 +176,7 @@ def test_missing_parent_packet_raises_context_engine_error(
         parent_task_id="t-parent",
     )
     with pytest.raises(ContextEngineError):
-        _advisor_v1_build(scope, deps_with_packet_store)
+        _advisor_build(scope, deps_with_packet_store)
 
 
 def test_missing_packet_store_raises_context_engine_error(
@@ -202,16 +202,16 @@ def test_missing_packet_store_raises_context_engine_error(
         parent_task_id="t-parent",
     )
     with pytest.raises(ContextEngineError):
-        _advisor_v1_build(scope, deps)
+        _advisor_build(scope, deps)
 
 
 def test_helper_required_scope_fields_enforced():
     """Recipe registry's scope assertion fires before recipe build."""
     from task_center.context_engine.recipes.helper import (
-        ADVISOR_V1_RECIPE,
-        RESOLVER_V1_RECIPE,
+        ADVISOR_RECIPE,
+        RESOLVER_RECIPE,
     )
-    for recipe in (ADVISOR_V1_RECIPE, RESOLVER_V1_RECIPE):
+    for recipe in (ADVISOR_RECIPE, RESOLVER_RECIPE):
         scope = ContextScope(mission_id="r")
         with pytest.raises(RecipeScopeError):
             scope.assert_fields(recipe.required_scope_fields)

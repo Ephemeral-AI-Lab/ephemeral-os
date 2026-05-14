@@ -1,4 +1,8 @@
-"""Public sandbox API package and request/result models."""
+"""Public sandbox API package and compatibility request/result exports.
+
+Request and result dataclasses are owned by :mod:`sandbox.models`; they are
+re-exported here to preserve the existing public import path.
+"""
 
 from __future__ import annotations
 
@@ -18,29 +22,30 @@ from sandbox.models import (
     WriteFileRequest,
     WriteFileResult,
 )
+from sandbox.api.default import (
+    configure_default_client,
+    context_preparer_for,
+    create_sandbox,
+    default_client,
+    delete_sandbox,
+    edit_file,
+    ensure_sandbox_running,
+    get_build_logs_url,
+    get_health,
+    get_sandbox,
+    get_signed_preview_url,
+    list_sandboxes,
+    list_snapshots,
+    raw_exec,
+    read_file,
+    set_default_client,
+    set_sandbox_labels,
+    shell,
+    start_sandbox,
+    stop_sandbox,
+    write_file,
+)
 from sandbox.api.facade import SandboxClient
-
-_client = SandboxClient()
-
-create_sandbox = _client.create_sandbox
-start_sandbox = _client.start_sandbox
-stop_sandbox = _client.stop_sandbox
-delete_sandbox = _client.delete_sandbox
-ensure_sandbox_running = _client.ensure_sandbox_running
-set_sandbox_labels = _client.set_sandbox_labels
-get_sandbox = _client.get_sandbox
-list_sandboxes = _client.list_sandboxes
-list_snapshots = _client.list_snapshots
-get_health = _client.get_health
-get_signed_preview_url = _client.get_signed_preview_url
-get_build_logs_url = _client.get_build_logs_url
-context_preparer_for = _client.context_preparer_for
-shell = _client.shell
-raw_exec = _client.raw_exec
-read_file = _client.read_file
-write_file = _client.write_file
-edit_file = _client.edit_file
-
 
 __all__ = [
     "ConflictInfo",
@@ -58,8 +63,10 @@ __all__ = [
     "ShellResult",
     "WriteFileRequest",
     "WriteFileResult",
+    "configure_default_client",
     "context_preparer_for",
     "create_sandbox",
+    "default_client",
     "delete_sandbox",
     "edit_file",
     "ensure_sandbox_running",
@@ -71,6 +78,7 @@ __all__ = [
     "list_snapshots",
     "raw_exec",
     "read_file",
+    "set_default_client",
     "set_sandbox_labels",
     "shell",
     "start_sandbox",

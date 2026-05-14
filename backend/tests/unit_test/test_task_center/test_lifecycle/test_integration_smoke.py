@@ -9,13 +9,13 @@ from task_center.config import TaskCenterLifecycleConfig
 from task_center.mission.handler import MissionHandler
 from task_center.episode.manager import EpisodeManager
 from task_center.episode.registry import EpisodeManagerRegistry
-from task_center.mission.mission import MissionStatus
+from task_center.mission.state import MissionStatus
 from task_center.attempt import (
     Attempt,
     AttemptFailReason,
     AttemptStatus,
 )
-from task_center.episode.episode import EpisodeStatus
+from task_center.episode.state import EpisodeStatus
 
 
 class _StubOrchestrator:

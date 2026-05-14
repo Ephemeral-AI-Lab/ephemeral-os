@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
-from sandbox.layer_stack.layer.change import LayerChange, WriteLayerChange
+from sandbox.layer_stack.layer.change import WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.types import FileStatus, WriteChange
 from sandbox.occ.content.hashing import ContentHasher
@@ -15,6 +15,9 @@ from sandbox.occ.service import OccService
 class _Gitignore:
     def is_ignored(self, path: str) -> bool:
         return path == "dist/out.txt"
+
+    def is_ignored_in_snapshot(self, path: str, _snapshot: object) -> bool:
+        return self.is_ignored(path)
 
 
 def _source(tmp_path: Path, name: str, content: bytes) -> Path:

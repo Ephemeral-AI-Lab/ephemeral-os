@@ -192,7 +192,7 @@ def test_create_sandbox_invokes_ensure_git_via_setup_hook(
     running ``git ...`` on a minimal-image sandbox).
     """
     from sandbox.api import status as sb_status
-    from sandbox.host import setup as setup_mod
+    from sandbox.host import bootstrap as bootstrap_mod
     from sandbox.provider.registry import set_default_provider
 
     provider = _stub_provider()
@@ -200,23 +200,23 @@ def test_create_sandbox_invokes_ensure_git_via_setup_hook(
 
     calls: list[str] = []
     monkeypatch.setattr(
-        setup_mod, "start_runtime_bundle_upload",
+        bootstrap_mod, "start_runtime_bundle_upload",
         lambda sid, ws: calls.append(f"start_upload({sid},{ws})") or None,
     )
     monkeypatch.setattr(
-        setup_mod, "ensure_git",
+        bootstrap_mod, "ensure_git",
         lambda sid: calls.append(f"ensure_git({sid})"),
     )
     monkeypatch.setattr(
-        setup_mod, "finish_runtime_bundle_upload",
+        bootstrap_mod, "finish_runtime_bundle_upload",
         lambda fut, sid: calls.append(f"finish_upload({sid})"),
     )
     monkeypatch.setattr(
-        setup_mod, "run_runtime_bootstrap",
+        bootstrap_mod, "run_runtime_bootstrap",
         lambda sid, ws: calls.append(f"run_bootstrap({sid},{ws})"),
     )
     monkeypatch.setattr(
-        setup_mod,
+        bootstrap_mod,
         "ensure_workspace_base",
         lambda sid, ws: calls.append(f"ensure_workspace({sid},{ws})"),
     )
@@ -237,7 +237,7 @@ def test_start_sandbox_invokes_ensure_git_via_setup_hook(
 ) -> None:
     """Same regression guard for the start path."""
     from sandbox.api import status as sb_status
-    from sandbox.host import setup as setup_mod
+    from sandbox.host import bootstrap as bootstrap_mod
     from sandbox.provider.registry import register_adapter
 
     provider = _stub_provider()
@@ -245,23 +245,23 @@ def test_start_sandbox_invokes_ensure_git_via_setup_hook(
 
     calls: list[str] = []
     monkeypatch.setattr(
-        setup_mod, "start_runtime_bundle_upload",
+        bootstrap_mod, "start_runtime_bundle_upload",
         lambda sid, ws: calls.append(f"start_upload({sid},{ws})") or None,
     )
     monkeypatch.setattr(
-        setup_mod, "ensure_git",
+        bootstrap_mod, "ensure_git",
         lambda sid: calls.append(f"ensure_git({sid})"),
     )
     monkeypatch.setattr(
-        setup_mod, "finish_runtime_bundle_upload",
+        bootstrap_mod, "finish_runtime_bundle_upload",
         lambda fut, sid: calls.append(f"finish_upload({sid})"),
     )
     monkeypatch.setattr(
-        setup_mod, "run_runtime_bootstrap",
+        bootstrap_mod, "run_runtime_bootstrap",
         lambda sid, ws: calls.append(f"run_bootstrap({sid},{ws})"),
     )
     monkeypatch.setattr(
-        setup_mod,
+        bootstrap_mod,
         "ensure_workspace_base",
         lambda sid, ws: calls.append(f"ensure_workspace({sid},{ws})"),
     )

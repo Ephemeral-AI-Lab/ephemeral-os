@@ -165,7 +165,7 @@ async def test_shell_capture_goes_through_occ_client_before_lease_release(
     assert occ.paths == ["generated/output.txt"]
     assert occ.snapshot is layer_stack.lease.manifest
     # Phase 04.5 follow-up: single-path captures opt out of cross-path
-    # atomicity so OccSerialMerger._disjoint_batches can coalesce them.
+    # atomicity so CommitQueue._disjoint_batches can coalesce them.
     assert occ.atomic is False
     assert layer_stack.released == ["lease-1"]
     assert result.stdout == "done\n"

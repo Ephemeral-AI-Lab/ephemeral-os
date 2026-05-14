@@ -18,44 +18,62 @@ from sandbox.api import (
 @pytest.mark.asyncio
 async def test_tool_methods_delegate_to_backing_modules(
     monkeypatch: pytest.MonkeyPatch,
+    recording_transport_factory,
 ) -> None:
-    facade = SandboxClient()
     actor = SandboxCaller(agent_id="agent-1")
-    calls: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
-
-    async def fake_shell(*args, **kwargs):
-        calls.append(("shell", args, kwargs))
-        from sandbox.api import ShellResult
-
-        return ShellResult(success=True, exit_code=0, stdout="ok")
+    raw_calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
 
     async def fake_raw_exec(*args, **kwargs):
-        calls.append(("raw_exec", args, kwargs))
+        raw_calls.append((args, kwargs))
         return RawExecResult(success=True, exit_code=0, stdout="raw")
 
-    async def fake_read_file(*args, **kwargs):
-        calls.append(("read_file", args, kwargs))
-        from sandbox.api import ReadFileResult
+    async def fake_transport_call(sandbox_id, op, args, timeout):
+        del sandbox_id, args, timeout
+        if op == "api.shell":
+            return {
+                "success": True,
+                "exit_code": 0,
+                "stdout": "ok",
+                "stderr": "",
+                "changed_paths": [],
+                "status": "ok",
+                "conflict": None,
+                "conflict_reason": None,
+                "warnings": [],
+                "timings": {},
+            }
+        if op == "api.read_file":
+            return {
+                "success": True,
+                "exists": True,
+                "content": "content",
+                "encoding": "utf-8",
+                "timings": {},
+            }
+        if op == "api.write_file":
+            return {
+                "success": True,
+                "changed_paths": ["a.py"],
+                "status": "ok",
+                "conflict": None,
+                "conflict_reason": None,
+                "timings": {},
+            }
+        if op == "api.edit_file":
+            return {
+                "success": True,
+                "changed_paths": ["a.py"],
+                "applied_edits": 1,
+                "status": "ok",
+                "conflict": None,
+                "conflict_reason": None,
+                "timings": {},
+            }
+        raise AssertionError(op)
 
-        return ReadFileResult(success=True, exists=True, content="content")
-
-    async def fake_write_file(*args, **kwargs):
-        calls.append(("write_file", args, kwargs))
-        from sandbox.api import WriteFileResult
-
-        return WriteFileResult(success=True, changed_paths=("a.py",))
-
-    async def fake_edit_file(*args, **kwargs):
-        calls.append(("edit_file", args, kwargs))
-        from sandbox.api import EditFileResult
-
-        return EditFileResult(success=True, changed_paths=("a.py",), applied_edits=1)
-
-    monkeypatch.setattr("sandbox.api.tool.shell.shell", fake_shell)
-    monkeypatch.setattr("sandbox.api.tool.raw_exec.raw_exec", fake_raw_exec)
-    monkeypatch.setattr("sandbox.api.tool.read.read_file", fake_read_file)
-    monkeypatch.setattr("sandbox.api.tool.write.write_file", fake_write_file)
-    monkeypatch.setattr("sandbox.api.tool.edit.edit_file", fake_edit_file)
+    monkeypatch.setattr("sandbox.api._impl.raw_exec.raw_exec", fake_raw_exec)
+    transport = recording_transport_factory(fake_transport_call)
+    facade = SandboxClient(transport=transport)
 
     shell_request = ShellRequest(command="pwd", caller=actor)
     read_request = ReadFileRequest(path="a.py", caller=actor)
@@ -68,12 +86,14 @@ async def test_tool_methods_delegate_to_backing_modules(
     assert (await facade.write_file("sb-1", write_request)).changed_paths == ("a.py",)
     assert (await facade.edit_file("sb-1", edit_request)).applied_edits == 1
 
-    assert calls == [
-        ("shell", ("sb-1", shell_request), {}),
-        ("raw_exec", ("sb-1", "pwd"), {"cwd": "/ws", "timeout": 5}),
-        ("read_file", ("sb-1", read_request), {}),
-        ("write_file", ("sb-1", write_request), {}),
-        ("edit_file", ("sb-1", edit_request), {}),
+    assert raw_calls == [
+        (("sb-1", "pwd"), {"cwd": "/ws", "timeout": 5, "audit_sink": None}),
+    ]
+    assert [call[1] for call in transport.calls] == [
+        "api.shell",
+        "api.read_file",
+        "api.write_file",
+        "api.edit_file",
     ]
 
 
@@ -131,12 +151,10 @@ def test_status_methods_delegate_to_status_module(monkeypatch: pytest.MonkeyPatc
 
 
 def test_context_preparer_delegates_to_control_factory(
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     preparer = object()
-    monkeypatch.setattr(
-        "sandbox.host.context_preparer.context_preparer_for",
-        lambda sandbox_id: preparer if sandbox_id == "sb-1" else None,
+    client = SandboxClient(
+        context_preparer=lambda sandbox_id: preparer if sandbox_id == "sb-1" else None,
     )
 
-    assert SandboxClient().context_preparer_for("sb-1") is preparer
+    assert client.context_preparer_for("sb-1") is preparer

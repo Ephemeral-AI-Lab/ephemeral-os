@@ -14,7 +14,7 @@ from tools.submission.context.attempt import (
 )
 
 if TYPE_CHECKING:
-    from task_center.api import AttemptDeps, EntryTaskController, StartedMission
+    from task_center import AttemptDeps, EntryTaskController, StartedMission
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,7 +44,7 @@ class ExecutorSubmissionContext:
         self, *, summary: str, artifacts: list[str]
     ) -> None:
         if self.attempt_ctx is not None:
-            from task_center.api import GeneratorSubmission
+            from task_center import GeneratorSubmission
 
             self.attempt_ctx.orchestrator.apply_generator_submission(
                 GeneratorSubmission(
@@ -68,7 +68,7 @@ class ExecutorSubmissionContext:
         self, *, summary: str, reason: str, details: list[str]
     ) -> None:
         if self.attempt_ctx is not None:
-            from task_center.api import GeneratorSubmission
+            from task_center import GeneratorSubmission
 
             self.attempt_ctx.orchestrator.apply_generator_submission(
                 GeneratorSubmission(
@@ -92,7 +92,7 @@ class ExecutorSubmissionContext:
     def start_delegated_mission(
         self, *, goal: str
     ) -> StartedMission:
-        from task_center.api import MissionStarter
+        from task_center import MissionStarter
 
         coordinator = MissionStarter(runtime=self.runtime)
         return coordinator.start(

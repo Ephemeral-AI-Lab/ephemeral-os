@@ -15,7 +15,7 @@ _BODY = r"""
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.prepared import CommitOptions, RouteDecision
 from sandbox.occ.changeset.types import DeleteChange, EditChange, FileStatus, WriteChange
-from sandbox.occ.service import OccService
+from sandbox.occ.service import Service
 
 class _Gitignore:
     def is_ignored(self, path):
@@ -26,7 +26,7 @@ before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
 stack = LayerStackManager(root / "stack")
-service = OccService(gitignore=_Gitignore(), layer_stack=stack)
+service = Service(gitignore=_Gitignore(), layer_stack=stack)
 
 empty = service.apply_changeset_sync([])
 assert empty.files == ()

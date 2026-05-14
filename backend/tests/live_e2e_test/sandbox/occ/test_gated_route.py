@@ -16,7 +16,7 @@ from sandbox.layer_stack.layer.change import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.types import FileStatus, WriteChange
 from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.service import OccService
+from sandbox.occ.service import Service
 
 class _Gitignore:
     def is_ignored(self, path):
@@ -36,7 +36,7 @@ before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
 stack = LayerStackManager(root / "stack")
-service = OccService(gitignore=_Gitignore(), layer_stack=stack)
+service = Service(gitignore=_Gitignore(), layer_stack=stack)
 _publish(stack, "src/race.py", b"base\n")
 snapshot = stack.read_active_manifest()
 

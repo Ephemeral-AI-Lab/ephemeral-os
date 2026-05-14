@@ -10,6 +10,7 @@ from sandbox.occ.changeset.types import (
     is_published_status,
     is_success_status,
 )
+from sandbox.occ.timing_keys import TimingKey
 
 
 def committed_paths(
@@ -72,10 +73,10 @@ def gitignore_cache_timings(gitignore: object) -> dict[str, float]:
     # them. A test mock or alternative oracle satisfying the protocol
     # without these counters used to crash here at result-shape time.
     return {
-        "gitignore.cache_hits_total": float(
+        TimingKey.GITIGNORE_CACHE_HITS_TOTAL: float(
             getattr(gitignore, "cache_hits", 0)
         ),
-        "gitignore.cache_misses_total": float(
+        TimingKey.GITIGNORE_CACHE_MISSES_TOTAL: float(
             getattr(gitignore, "cache_misses", 0)
         ),
     }

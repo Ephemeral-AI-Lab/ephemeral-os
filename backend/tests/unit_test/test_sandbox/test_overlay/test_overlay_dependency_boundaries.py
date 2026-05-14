@@ -63,7 +63,7 @@ def test_phase02_runtime_bundle_contains_snapshot_runtime_without_ndjson() -> No
     assert "sandbox/overlay/mounts.py" in names
     assert "sandbox/overlay/runner.py" in names
     assert "sandbox/overlay/invoker.py" in names
-    assert "sandbox/layer_stack/manifest/model.py" in names
+    assert "sandbox/layer_stack/manifest/_model.py" in names
     assert "sandbox/overlay/capture/ndjson.py" not in names
     assert "sandbox/overlay/capture/upperdir.py" not in names
     assert "sandbox/overlay/namespace/mounts.py" not in names

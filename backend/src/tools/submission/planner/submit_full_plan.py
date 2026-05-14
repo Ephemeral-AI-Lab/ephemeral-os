@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from task_center.api import TaskCenterInvariantViolation
+from task_center import TaskCenterInvariantViolation
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput, ToolResult

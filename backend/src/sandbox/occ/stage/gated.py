@@ -24,8 +24,9 @@ from sandbox.occ.changeset.types import (
     WriteChange,
 )
 from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.merge.policy import StageWrite, StageWriteFromPath
+from sandbox.occ.stage.policy import StageWrite, StageWriteFromPath
 from sandbox.occ.ports import SnapshotReader
+from sandbox.occ.timing_keys import TimingKey
 from sandbox.timing import monotonic_now
 
 _GatedChangeHandler = Callable[
@@ -84,7 +85,7 @@ class _GatedStageState:
         self.final_special_change = None
 
 
-class GatedMerge:
+class GatedStager:
     """Validate gated changes against the active manifest and stage a delta."""
 
     def __init__(
@@ -140,7 +141,7 @@ class GatedMerge:
             group.path,
             active_manifest,
         )
-        timings["occ.gated.read_current_s"] = monotonic_now() - read_start
+        timings[TimingKey.GATED_READ_CURRENT] = monotonic_now() - read_start
         state = _GatedStageState.from_snapshot(
             current_content,
             current_exists=current_exists,
@@ -159,12 +160,12 @@ class GatedMerge:
                 path=group.path,
             )
             if result is not None:
-                timings["occ.gated.apply_changes_s"] = (
+                timings[TimingKey.GATED_APPLY_CHANGES] = (
                     monotonic_now() - apply_start
                 )
                 return _with_timings(result, timings), None
 
-        timings["occ.gated.apply_changes_s"] = monotonic_now() - apply_start
+        timings[TimingKey.GATED_APPLY_CHANGES] = monotonic_now() - apply_start
         stage_start = monotonic_now()
         delta = (
             LayerDelta(changes=(state.final_special_change,))
@@ -180,7 +181,7 @@ class GatedMerge:
                 precomputed_hash=state.final_precomputed_hash,
             )
         )
-        timings["occ.gated.stage_delta_s"] = monotonic_now() - stage_start
+        timings[TimingKey.GATED_STAGE_DELTA] = monotonic_now() - stage_start
         return (
             FileResult(
                 path=group.path,
@@ -366,4 +367,4 @@ def _with_timings(result: FileResult, timings: dict[str, float]) -> FileResult:
     )
 
 
-__all__ = ["GatedMerge"]
+__all__ = ["GatedStager"]

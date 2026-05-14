@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sandbox.layer_stack.manifest.model import (
+from sandbox.layer_stack.manifest._model import (
     LayerRef,
     MANIFEST_SCHEMA_VERSION,
     Manifest,

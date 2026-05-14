@@ -1,6 +1,7 @@
-"""Internal implementation modules for public sandbox tool verbs.
+"""Compatibility package for legacy direct sandbox tool imports.
 
-External callers should import from :mod:`sandbox.api`.
+New code should import from :mod:`sandbox.api`. The implementations live under
+:mod:`sandbox.api._impl`.
 """
 
 from __future__ import annotations

@@ -6,6 +6,10 @@ from pathlib import Path
 
 import pytest
 
+from sandbox.command_exec.policy import (
+    DEFAULT_COMMAND_EXEC_POLICY,
+    CommandExecPolicy,
+)
 from sandbox.command_exec.workspace.environment import resolve_workspace_cwd
 
 
@@ -42,3 +46,30 @@ def test_absolute_cwd_outside_workspace_is_rejected(tmp_path: Path) -> None:
             mounted_workspace_root=tmp_path / "mounted",
             cwd="/tmp",
         )
+
+
+def test_default_policy_filters_loader_env() -> None:
+    env = DEFAULT_COMMAND_EXEC_POLICY.command_environment(
+        {"PATH": "/tmp/unsafe", "SAFE_FLAG": "1"}
+    )
+
+    assert env["SAFE_FLAG"] == "1"
+    assert env["PATH"] != "/tmp/unsafe"
+    assert env["GIT_OPTIONAL_LOCKS"] == "0"
+
+
+def test_command_exec_policy_can_be_tightened_for_tests() -> None:
+    policy = CommandExecPolicy(
+        restricted_env_keys=frozenset({"SECRET"}),
+        workspace_env_keys=frozenset({"WORKSPACE_DIR"}),
+        forbidden_overlay_path_chars=("@",),
+        command_env_defaults={"LOCKS": "off"},
+    )
+
+    env = policy.command_environment({"SECRET": "drop", "VISIBLE": "keep"})
+
+    assert "SECRET" not in env
+    assert env["VISIBLE"] == "keep"
+    assert env["LOCKS"] == "off"
+    with pytest.raises(ValueError, match="overlay mount path cannot contain"):
+        policy.validate_overlay_path_text("/tmp/bad@path")

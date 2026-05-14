@@ -22,7 +22,7 @@ from task_center.episode.validation import (
     assert_episode_open,
 )
 from task_center.episode.registry import EpisodeManagerRegistry
-from task_center.mission.mission import (
+from task_center.mission.state import (
     Mission,
     MissionStatus,
 )
@@ -32,7 +32,7 @@ from task_center.attempt import (
     AttemptStage,
     AttemptStatus,
 )
-from task_center.episode.episode import (
+from task_center.episode.state import (
     Episode,
     EpisodeCreationReason,
     EpisodeStatus,

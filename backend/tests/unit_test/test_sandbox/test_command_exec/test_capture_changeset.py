@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.occ.capture.overlay import overlay_path_changes_to_occ_changes
+from sandbox.occ.overlay import overlay_path_changes_to_occ_changes
 from sandbox.occ.changeset.types import (
     DeleteChange,
     OpaqueDirChange,

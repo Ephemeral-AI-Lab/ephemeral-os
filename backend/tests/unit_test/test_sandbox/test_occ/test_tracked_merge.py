@@ -15,7 +15,7 @@ from sandbox.occ.changeset.types import (
     WriteChange,
 )
 from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.merge.gated import GatedMerge
+from sandbox.occ.stage.gated import GatedStager
 
 
 def _source(tmp_path: Path, name: str, content: bytes) -> Path:
@@ -57,7 +57,7 @@ def _stage_write(tmp_path: Path):
 def test_tracked_write_requires_active_hash_to_match_prepared_base(tmp_path: Path) -> None:
     stack = LayerStackManager(tmp_path / "stack")
     _publish(stack, tmp_path, "src/app.py", b"active\n")
-    merge = GatedMerge(stack)
+    merge = GatedStager(stack)
     group = PreparedPathGroup(
         path="src/app.py",
         route=RouteDecision.GATED,
@@ -83,7 +83,7 @@ def test_tracked_write_requires_active_hash_to_match_prepared_base(tmp_path: Pat
 def test_tracked_edit_applies_unique_anchor_to_active_content(tmp_path: Path) -> None:
     stack = LayerStackManager(tmp_path / "stack")
     _publish(stack, tmp_path, "src/app.py", b"alpha\nbeta\n")
-    merge = GatedMerge(stack)
+    merge = GatedStager(stack)
     group = PreparedPathGroup(
         path="src/app.py",
         route=RouteDecision.GATED,
@@ -105,7 +105,7 @@ def test_tracked_edit_applies_unique_anchor_to_active_content(tmp_path: Path) ->
 def test_tracked_edit_aborts_when_anchor_is_ambiguous(tmp_path: Path) -> None:
     stack = LayerStackManager(tmp_path / "stack")
     _publish(stack, tmp_path, "src/app.py", b"x\nx\n")
-    merge = GatedMerge(stack)
+    merge = GatedStager(stack)
     group = PreparedPathGroup(
         path="src/app.py",
         route=RouteDecision.GATED,
@@ -126,7 +126,7 @@ def test_tracked_opaque_dir_overlay_change_stages_storage_change(
     tmp_path: Path,
 ) -> None:
     stack = LayerStackManager(tmp_path / "stack")
-    merge = GatedMerge(stack)
+    merge = GatedStager(stack)
     opaque_group = PreparedPathGroup(
         path=".omc/results",
         route=RouteDecision.GATED,
@@ -148,7 +148,7 @@ def test_tracked_opaque_dir_overlay_change_stages_storage_change(
 
 def test_tracked_symlink_overlay_change_is_rejected(tmp_path: Path) -> None:
     stack = LayerStackManager(tmp_path / "stack")
-    merge = GatedMerge(stack)
+    merge = GatedStager(stack)
     group = PreparedPathGroup(
         path="link",
         route=RouteDecision.GATED,

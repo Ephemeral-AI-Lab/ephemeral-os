@@ -46,7 +46,7 @@ def test_data_api_ops_do_not_dispatch_to_occ_server() -> None:
 
 def test_max_occ_cas_retries_is_named_constant_with_positive_default() -> None:
     """MAX_OCC_CAS_RETRIES is the public, testable retry budget."""
-    from sandbox.occ.merge.serial import MAX_OCC_CAS_RETRIES
+    from sandbox.occ.commit_queue import MAX_OCC_CAS_RETRIES
 
     assert isinstance(MAX_OCC_CAS_RETRIES, int)
     assert MAX_OCC_CAS_RETRIES >= 1
@@ -64,7 +64,7 @@ async def test_cas_retry_loop_bounded_under_no_contention(tmp_path: Path) -> Non
     from sandbox.runtime.daemon.service import occ_backend
     from sandbox.runtime.daemon.handler.tools import write
 
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
@@ -92,18 +92,18 @@ async def test_cas_retry_exhaustion_returns_conflict_result(tmp_path: Path) -> N
 
     from sandbox.layer_stack.manifest import ManifestConflictError
     from sandbox.layer_stack.workspace.base import build_workspace_base
-    from sandbox.occ.merge.serial import MAX_OCC_CAS_RETRIES
+    from sandbox.occ.commit_queue import MAX_OCC_CAS_RETRIES
     from sandbox.runtime.daemon.service import occ_backend
     from sandbox.runtime.daemon.handler.tools import write
-    from sandbox.runtime.daemon.handler.request_context import _services
+    from sandbox.runtime.daemon.handler.request_context import services as request_services
 
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    services = _services(stack.as_posix())
+    services = request_services(stack.as_posix())
     publisher = services.manager._publisher  # type: ignore[attr-defined]
 
     call_counter = {"n": 0}
@@ -156,7 +156,7 @@ def test_single_occ_backend_cache_per_layer_stack_root(
     from sandbox.runtime.daemon.service import shell_runner, occ_backend
     from sandbox.runtime.daemon.handler import request_context
 
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
 
     class _FakeManager:
         def __init__(self, root: str) -> None:
@@ -203,13 +203,13 @@ def test_single_occ_backend_cache_per_layer_stack_root(
     backend_a = occ_backend.build_occ_backend("/tmp/a")
 
     # The per-verb scaffolding resolves to the cached OccBackend instance.
-    via_common = request_context._services("/tmp/a")
+    via_common = request_context.services("/tmp/a")
     assert via_common is backend_a
     assert occ_backend.build_occ_backend("/tmp/a/.") is backend_a
 
     # shell_runner returns a 4-tuple; the first three fields
     # identity-match the cached OccBackend's fields.
-    via_command_exec_4tuple = shell_runner._services(
+    via_command_exec_4tuple = shell_runner.services(
         {"layer_stack_root": "/tmp/a"},
     )
     assert via_command_exec_4tuple[0] is backend_a.layer_stack

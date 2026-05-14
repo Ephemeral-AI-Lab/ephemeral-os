@@ -254,11 +254,11 @@ def test_command_exec_imports_only_client_protocol_boundaries() -> None:
     forbidden = (
         "sandbox.layer_stack",
         "sandbox.occ.service",
-        "sandbox.occ.commit_transaction",
+        "sandbox.occ.stage.transaction",
         "sandbox.occ.content.gitignore_oracle",
-        "sandbox.occ.merge.direct",
-        "sandbox.occ.merge.gated",
-        "sandbox.occ.routing.orchestrator",
+        "sandbox.occ.stage.direct",
+        "sandbox.occ.stage.gated",
+        "sandbox.occ.router",
         "sandbox.occ.content.hashing",
         "sandbox.runtime.daemon.service.workspace_server",
     )

@@ -1,7 +1,7 @@
-"""MissionCloseReport delivery router.
+"""MissionClosureReport delivery router.
 
 Owns the single delivery path from ``MissionHandler.close_mission``
-to the parent ``AttemptOrchestrator.apply_mission_close_report``.
+to the parent ``AttemptOrchestrator.apply_mission_closure_report``.
 
 The runtime assumes no process restart: while a parent generator task is in
 ``WAITING_MISSION`` its attempt cannot reach quiescence and its
@@ -15,10 +15,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from task_center.mission.mission import MissionCloseReport
+from task_center.mission.state import MissionClosureReport
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt.runtime import AttemptDeps
-from task_center.task.models import TaskCenterTaskStatus
+from task_center.task.state import TaskCenterTaskStatus
 
 CloseReportDeliveryStatus = Literal[
     "delivered",
@@ -33,14 +33,14 @@ class CloseReportDeliveryResult:
     parent_attempt_id: str | None
 
 
-class MissionCloseReportRouter:
-    """Single delivery path for final ``MissionCloseReport``s."""
+class MissionClosureReportRouter:
+    """Single delivery path for final ``MissionClosureReport``s."""
 
     def __init__(self, *, runtime: AttemptDeps) -> None:
         self._runtime = runtime
 
     def deliver(
-        self, report: MissionCloseReport
+        self, report: MissionClosureReport
     ) -> CloseReportDeliveryResult:
         task = self._runtime.task_store.get_task(report.requested_by_task_id)
         if task is None:
@@ -77,7 +77,7 @@ class MissionCloseReportRouter:
                     "entry-mode but no entry controller is bound to it; "
                     "close-report delivery cannot proceed."
                 )
-            controller.apply_mission_close_report(report)
+            controller.apply_mission_closure_report(report)
             return CloseReportDeliveryResult(
                 status="delivered",
                 requested_by_task_id=report.requested_by_task_id,
@@ -91,7 +91,7 @@ class MissionCloseReportRouter:
                 "not registered; close-report delivery requires an active "
                 "parent orchestrator."
             )
-        orchestrator.apply_mission_close_report(report)
+        orchestrator.apply_mission_closure_report(report)
         return CloseReportDeliveryResult(
             status="delivered",
             requested_by_task_id=report.requested_by_task_id,

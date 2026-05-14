@@ -173,7 +173,7 @@ def test_services_cached_per_layer_stack_root(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """OCC backend factory caches the per-root tuple across calls."""
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
 
     class _FakeManager:
         def __init__(self, root: str) -> None:
@@ -209,9 +209,9 @@ def test_services_cached_per_layer_stack_root(
         ),
     )
 
-    a1 = request_context._services("/tmp/a")
-    a2 = request_context._services("/tmp/a")
-    b1 = request_context._services("/tmp/b")
+    a1 = request_context.services("/tmp/a")
+    a2 = request_context.services("/tmp/a")
+    b1 = request_context.services("/tmp/b")
 
     assert a1 is a2  # same root → cached tuple
     assert a1.manager is not b1.manager  # different roots → distinct managers
@@ -221,7 +221,7 @@ def test_drop_backend_cache_removes_only_requested_root(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The shared OCC backend cache is owned directly by ``occ_backend``."""
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
 
     monkeypatch.setattr(
         occ_backend,

@@ -1,4 +1,4 @@
-"""US-010: generator_v1, evaluator_v1, entry_executor_v1 happy-path."""
+"""US-010: generator, evaluator, entry_executor happy-path."""
 
 from __future__ import annotations
 
@@ -10,12 +10,12 @@ from task_center.context_engine.engine import ContextEngineDeps
 from task_center.context_engine.errors import ContextEngineError
 from task_center.context_engine.packet import ContextPriority
 from task_center.context_engine.recipes.entry_executor import (
-    _entry_executor_v1_build,
+    _entry_executor_build,
 )
-from task_center.context_engine.recipes.evaluator import _evaluator_v1_build
-from task_center.context_engine.recipes.generator import _generator_v1_build
+from task_center.context_engine.recipes.evaluator import _evaluator_build
+from task_center.context_engine.recipes.generator import _generator_build
 from task_center.context_engine.scope import ContextScope
-from task_center.episode.episode import EpisodeCreationReason
+from task_center.episode.state import EpisodeCreationReason
 
 
 @pytest.fixture
@@ -59,11 +59,11 @@ def _seed_continuation_episode(episode_store, *, mission_id):
 
 
 # ---------------------------------------------------------------------------
-# generator_v1
+# generator
 # ---------------------------------------------------------------------------
 
 
-def test_generator_v1_emits_planned_task_spec_required_block(
+def test_generator_emits_planned_task_spec_required_block(
     deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
     req = _seed_mission(mission_store, task_center_run_id)
@@ -88,7 +88,7 @@ def test_generator_v1_emits_planned_task_spec_required_block(
         task_center_attempt_id=attempt.id,
         spawn_reason="attempt_generator",
     )
-    packet = _generator_v1_build(
+    packet = _generator_build(
         ContextScope(
             mission_id=req.id,
             attempt_id=attempt.id,
@@ -103,7 +103,7 @@ def test_generator_v1_emits_planned_task_spec_required_block(
     assert "task_specification" in kinds
 
 
-def test_generator_v1_does_not_emit_partial_plan_boundary(
+def test_generator_does_not_emit_partial_plan_boundary(
     deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
     req = _seed_mission(mission_store, task_center_run_id)
@@ -128,7 +128,7 @@ def test_generator_v1_does_not_emit_partial_plan_boundary(
         spawn_reason="attempt_generator",
     )
 
-    packet = _generator_v1_build(
+    packet = _generator_build(
         ContextScope(
             mission_id=req.id,
             attempt_id=attempt.id,
@@ -144,7 +144,7 @@ def test_generator_v1_does_not_emit_partial_plan_boundary(
     assert "future episode work" not in "\n".join(b.text for b in packet.blocks)
 
 
-def test_generator_v1_dependency_summary_blocks(
+def test_generator_dependency_summary_blocks(
     deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
     req = _seed_mission(mission_store, task_center_run_id)
@@ -176,7 +176,7 @@ def test_generator_v1_dependency_summary_blocks(
         spawn_reason="attempt_generator",
     )
 
-    packet = _generator_v1_build(
+    packet = _generator_build(
         ContextScope(
             mission_id=req.id, attempt_id=attempt.id, task_id="t-down"
         ),
@@ -190,7 +190,7 @@ def test_generator_v1_dependency_summary_blocks(
     assert packet.blocks[-1].kind == "planned_task_spec"
 
 
-def test_generator_v1_missing_dependency_task_raises_context_error(
+def test_generator_missing_dependency_task_raises_context_error(
     deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
     req = _seed_mission(mission_store, task_center_run_id)
@@ -210,7 +210,7 @@ def test_generator_v1_missing_dependency_task_raises_context_error(
     )
 
     with pytest.raises(ContextEngineError, match="Dependency task 't-missing'"):
-        _generator_v1_build(
+        _generator_build(
             ContextScope(
                 mission_id=req.id,
                 attempt_id=attempt.id,
@@ -221,11 +221,11 @@ def test_generator_v1_missing_dependency_task_raises_context_error(
 
 
 # ---------------------------------------------------------------------------
-# evaluator_v1
+# evaluator
 # ---------------------------------------------------------------------------
 
 
-def test_evaluator_v1_emits_required_spec_and_criteria(
+def test_evaluator_emits_required_spec_and_criteria(
     deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
     req = _seed_mission(mission_store, task_center_run_id)
@@ -250,7 +250,7 @@ def test_evaluator_v1_emits_required_spec_and_criteria(
         task_center_attempt_id=attempt.id,
         spawn_reason="attempt_generator",
     )
-    packet = _evaluator_v1_build(
+    packet = _evaluator_build(
         ContextScope(
             mission_id=req.id, episode_id=episode.id, attempt_id=attempt.id
         ),
@@ -271,7 +271,7 @@ def test_evaluator_v1_emits_required_spec_and_criteria(
     assert packet.blocks[2].metadata["group_heading"] == "# Dependency Results"
 
 
-def test_evaluator_v1_renders_every_generator_summary_in_attempt_order(
+def test_evaluator_renders_every_generator_summary_in_attempt_order(
     deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
     req = _seed_mission(mission_store, task_center_run_id)
@@ -299,7 +299,7 @@ def test_evaluator_v1_renders_every_generator_summary_in_attempt_order(
             spawn_reason="attempt_generator",
         )
 
-    packet = _evaluator_v1_build(
+    packet = _evaluator_build(
         ContextScope(
             mission_id=req.id,
             episode_id=episode.id,
@@ -323,7 +323,7 @@ def test_evaluator_v1_renders_every_generator_summary_in_attempt_order(
     assert packet.blocks[-1].kind == "evaluation_criteria"
 
 
-def test_evaluator_v1_missing_generator_task_raises_context_error(
+def test_evaluator_missing_generator_task_raises_context_error(
     deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
     req = _seed_mission(mission_store, task_center_run_id)
@@ -338,7 +338,7 @@ def test_evaluator_v1_missing_generator_task_raises_context_error(
     attempt_store.set_generator_task_ids(attempt.id, ["t-missing"])
 
     with pytest.raises(ContextEngineError, match="Generator task 't-missing'"):
-        _evaluator_v1_build(
+        _evaluator_build(
             ContextScope(
                 mission_id=req.id,
                 episode_id=episode.id,
@@ -348,7 +348,7 @@ def test_evaluator_v1_missing_generator_task_raises_context_error(
         )
 
 
-def test_evaluator_v1_emits_partial_plan_boundary_before_summaries(
+def test_evaluator_emits_partial_plan_boundary_before_summaries(
     deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
     req = _seed_mission(mission_store, task_center_run_id)
@@ -374,7 +374,7 @@ def test_evaluator_v1_emits_partial_plan_boundary_before_summaries(
         spawn_reason="attempt_generator",
     )
 
-    packet = _evaluator_v1_build(
+    packet = _evaluator_build(
         ContextScope(
             mission_id=req.id, episode_id=episode.id, attempt_id=attempt.id
         ),
@@ -396,7 +396,7 @@ def test_evaluator_v1_emits_partial_plan_boundary_before_summaries(
     assert packet.blocks[-1].kind == "evaluation_criteria"
 
 
-def test_evaluator_v1_episode2_frame_precedes_attempt_contract(
+def test_evaluator_episode2_frame_precedes_attempt_contract(
     deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
     req = _seed_mission(mission_store, task_center_run_id)
@@ -416,7 +416,7 @@ def test_evaluator_v1_episode2_frame_precedes_attempt_contract(
         continuation_goal=None,
     )
 
-    packet = _evaluator_v1_build(
+    packet = _evaluator_build(
         ContextScope(
             mission_id=req.id, episode_id=episode2.id, attempt_id=attempt.id
         ),
@@ -438,11 +438,11 @@ def test_evaluator_v1_episode2_frame_precedes_attempt_contract(
 
 
 # ---------------------------------------------------------------------------
-# entry_executor_v1
+# entry_executor
 # ---------------------------------------------------------------------------
 
 
-def test_entry_executor_v1_emits_one_required_entry_request_block(
+def test_entry_executor_emits_one_required_entry_request_block(
     deps, task_store, task_center_run_id
 ):
     task_store.upsert_task(
@@ -457,7 +457,7 @@ def test_entry_executor_v1_emits_one_required_entry_request_block(
         task_center_attempt_id=None,
         spawn_reason="entry_executor",
     )
-    packet = _entry_executor_v1_build(
+    packet = _entry_executor_build(
         ContextScope(task_id="entry"),
         deps,
     )
@@ -490,10 +490,10 @@ def test_register_builtin_recipes_is_idempotent():
         second = set(RecipeRegistry.list_ids())
         assert first == second
         assert {
-            "planner_v1",
-            "generator_v1",
-            "evaluator_v1",
-            "entry_executor_v1",
+            "planner",
+            "generator",
+            "evaluator",
+            "entry_executor",
         }.issubset(first)
     finally:
         RecipeRegistry.clear()

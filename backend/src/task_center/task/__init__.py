@@ -5,7 +5,7 @@ from task_center.task.ids import (
     generator_task_id,
     planner_task_id,
 )
-from task_center.task.models import (
+from task_center.task.state import (
     TERMINAL_GENERATOR_STATUSES,
     EvaluatorSubmission,
     GeneratorSubmission,

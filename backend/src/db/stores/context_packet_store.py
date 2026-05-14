@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from db.models.context_packet import ContextPacketRecord
 from db.stores.base import SyncStoreMixin
-from task_center.domain import ContextPacket
+from task_center.context_engine.packet import ContextPacket
 
 
 class ContextPacketStore(SyncStoreMixin):

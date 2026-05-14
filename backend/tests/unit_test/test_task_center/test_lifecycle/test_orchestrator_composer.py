@@ -35,7 +35,7 @@ from task_center.attempt.runtime import (
     AgentLaunch,
     AttemptDeps,
 )
-from task_center.episode.episode import EpisodeCreationReason
+from task_center.episode.state import EpisodeCreationReason
 
 
 class _RecordingLauncher:
@@ -103,7 +103,7 @@ def _register_planner_agents() -> None:
     base = AgentDefinition(
         name="planner",
         description="planner",
-        context_recipe="planner_v1",
+        context_recipe="planner",
         terminals=["submit_full_plan", "submit_partial_plan"],
         variants=[
             AgentVariant(
@@ -116,7 +116,7 @@ def _register_planner_agents() -> None:
     full_only = AgentDefinition(
         name="planner_full_only",
         description="planner",
-        context_recipe="planner_v1",
+        context_recipe="planner",
         terminals=["submit_full_plan"],
         system_prompt="PLANNER FULL ONLY",
     )

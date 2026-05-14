@@ -46,7 +46,7 @@ class EpisodeRecord(Base):
 
     # Denormalized projections from this segment's *passing* harness graph at
     # close time. Both null while open and on failed close. Used by the
-    # context engine's ``planner_v1`` recipe for prior-segment context.
+    # context engine's ``planner`` recipe for prior-segment context.
     task_specification: Mapped[str | None] = mapped_column(
         Text, nullable=True
     )

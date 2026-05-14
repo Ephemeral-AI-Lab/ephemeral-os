@@ -18,7 +18,7 @@ from sandbox.layer_stack import LayerStackManager
 from sandbox.layer_stack.workspace.base import build_workspace_base
 from sandbox.occ.changeset.types import WriteChange
 from sandbox.runtime.daemon.service import occ_backend
-from sandbox.runtime.daemon.handler.request_context import _services
+from sandbox.runtime.daemon.handler.request_context import services as request_services
 from sandbox.runtime.daemon.handler.tools import edit, write
 
 
@@ -26,14 +26,14 @@ from sandbox.runtime.daemon.handler.tools import edit, write
 async def test_in_workspace_edit_reads_bytes_via_snapshot_reader(
     tmp_path: Path,
 ) -> None:
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "a.txt").write_text("hello world\n", encoding="utf-8")
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    services = _services(stack.as_posix())
+    services = request_services(stack.as_posix())
     seen_manifests: list[object] = []
     real_read_bytes = services.layer_stack.read_bytes
 
@@ -71,17 +71,17 @@ async def test_in_workspace_edit_submits_write_change_with_derived_bytes(
     tmp_path: Path,
 ) -> None:
     """OCC sees a WriteChange (not EditChange) carrying final derived bytes."""
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "config.toml").write_text("name = \"old\"\n", encoding="utf-8")
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    services = _services(stack.as_posix())
+    services = request_services(stack.as_posix())
 
     submitted_changes: list[object] = []
-    real_commit = services.occ_client.commit_prepared_changeset
+    real_commit = services.occ_client.commit_prepared
 
     async def tracking_commit(prepared, **kwargs):
         for group in prepared.path_groups:
@@ -90,7 +90,7 @@ async def test_in_workspace_edit_submits_write_change_with_derived_bytes(
 
     with patch.object(
         services.occ_client,
-        "commit_prepared_changeset",
+        "commit_prepared",
         tracking_commit,
     ):
         result = await edit.edit_file(
@@ -114,7 +114,7 @@ async def test_in_workspace_edit_submits_write_change_with_derived_bytes(
 @pytest.mark.asyncio
 async def test_in_workspace_edit_anchor_miss_raises(tmp_path: Path) -> None:
     """Anchor validation runs against snapshot N, not a moved manifest."""
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "a.txt").write_text("foo\n", encoding="utf-8")
@@ -133,7 +133,7 @@ async def test_in_workspace_edit_anchor_miss_raises(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_in_workspace_edit_rejects_non_utf8(tmp_path: Path) -> None:
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "blob.bin").write_bytes(b"\xff\xfe\x00\x00bad")
@@ -164,14 +164,14 @@ async def test_in_workspace_edit_same_path_M_gt_N_surfaces_hard_conflict(
     from sandbox.occ.changeset.types import FileStatus
     from sandbox.occ.content.hashing import ContentHasher
 
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "shared.txt").write_text("hello world\n", encoding="utf-8")
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    services = _services(stack.as_posix())
+    services = request_services(stack.as_posix())
     manager: LayerStackManager = services.manager
     occ_service = services.occ_client._service  # type: ignore[attr-defined]
 
@@ -229,7 +229,7 @@ async def test_in_workspace_create_only_rejects_existing_path(
 ) -> None:
     """create-only in-workspace write rejects when the path exists in the
     validation snapshot — base_hash mismatch on existing-path content."""
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "exists.txt").write_text("base\n", encoding="utf-8")

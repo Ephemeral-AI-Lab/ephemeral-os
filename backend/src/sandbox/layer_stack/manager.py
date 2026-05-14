@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
 
-from sandbox.layer_stack.commit.staging import CommitStagingArea
+from sandbox.layer_stack.commit.commit_staging_area import CommitStagingArea
 from sandbox.layer_stack._paths import (
     log_rmtree_failure,
     remove_path,
@@ -22,7 +22,7 @@ from sandbox.layer_stack._paths import (
 from sandbox.layer_stack.layer.change import LayerChange
 from sandbox.layer_stack.layer.publisher import LayerPublisher
 from sandbox.layer_stack.lease.registry import LeaseRegistry, WorkspaceLease
-from sandbox.layer_stack.maintenance.squash import SquashWorker, manifest_still_ends_with
+from sandbox.layer_stack.maintenance.squash import SquashService, manifest_still_ends_with
 from sandbox.layer_stack.manifest import (
     FileManifestStore,
     LAYERS_DIR,
@@ -99,6 +99,11 @@ class PrepareWorkspaceSnapshotResult:
     lowerdir: str
     timings: dict[str, float]
 
+    @property
+    def snapshot_dir(self) -> str:
+        """Backend-neutral name for the materialized snapshot directory."""
+        return self.lowerdir
+
     def to_dict(self) -> dict[str, object]:
         return {
             "lease_id": self.lease_id,
@@ -106,6 +111,7 @@ class PrepareWorkspaceSnapshotResult:
             "root_hash": self.root_hash,
             "manifest": self.manifest.to_dict(),
             "lowerdir": self.lowerdir,
+            "snapshot_dir": self.snapshot_dir,
             "timings": dict(self.timings),
         }
 
@@ -121,7 +127,7 @@ class LayerStackManager:
         leases: LeaseStore | None = None,
         view: SnapshotMaterializer | None = None,
         publisher: ChangePublisher | None = None,
-        squash: SquashWorker | None = None,
+        squash: SquashService | None = None,
     ) -> None:
         self.storage_root = Path(storage_root)
         self.storage_root.mkdir(parents=True, exist_ok=True)
@@ -138,7 +144,7 @@ class LayerStackManager:
         self._leases = leases or LeaseRegistry()
         self._view = view or MergedView(self.storage_root)
         self._publisher = publisher or LayerPublisher(self.storage_root)
-        self._squash = squash or SquashWorker(self.storage_root)
+        self._squash = squash or SquashService(self.storage_root)
         self._transaction_handle = LayerStackTransactionHandle(
             lock=self._lock,
             manifest_store=self._manifest_store,

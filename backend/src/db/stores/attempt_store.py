@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 
 from db.models.attempt import AttemptRecord
 from db.stores.base import SyncStoreMixin
-from task_center.domain import (
+from task_center.attempt.state import (
     Attempt,
     AttemptFailReason,
     AttemptStage,

@@ -48,7 +48,7 @@ Review issues addressed:
 Implementation notes:
 
 - Production OCC code now constructs `WriteLayerChange`, `DeleteLayerChange`, `SymlinkLayerChange`, or `OpaqueDirLayerChange` directly.
-- `make_layer_change(...)` remains as an explicit factory for code that genuinely has a parsed kind string.
+- The temporary `make_layer_change(...)` compatibility factory was removed after the cleanup pass found no in-repo callers.
 
 Verification:
 
@@ -74,3 +74,59 @@ Implementation notes:
 Verification:
 
 - `uv run pytest backend/tests/unit_test/test_sandbox/test_layer_stack backend/tests/unit_test/test_sandbox/test_overlay/test_upperdir_capture.py -q` -> `75 passed`.
+
+### Phase 3: Manager, transaction, and storage seams
+
+Status: complete.
+
+Review issues addressed:
+
+- C-2/H-2: `LayerStackTransaction` moved out of `manager.py` into `transaction.py` with an explicit `LayerStackTransactionHandle`.
+- C-3: added `ManifestStore`, `SnapshotMaterializer`, `ChangePublisher`, `LeaseStore`, and `CommitStagingStore` protocols; `LayerStackManager` accepts injected collaborators.
+- H-3/M-4: filesystem helpers moved to private `_paths.py`, with request-safe naming and cleanup logging outside `manager.py`.
+- M-3: publisher method renamed from `publish_layer_locked` to `publish_layer`; the lock contract is now held at the transaction boundary.
+- M-7: materialization keyword renamed from `link_ok` to `share_inodes`.
+- L-3: unreferenced-layer cleanup now preserves candidate order while deduplicating instead of sorting by `layer_id`.
+- L-4: publisher layer-ID allocation now uses the shared path allocator.
+- L-7: storage writer locks now use refcounted leases with `close()`/`__del__` cleanup instead of an immortal fd cache.
+
+Implementation notes:
+
+- `FileManifestStore` keeps the existing on-disk manifest behavior behind the new manifest-store protocol.
+- A current OCC checkout mismatch also blocked this phase: `_default_maintenance` had been removed while `OccService` still called it. The helper was restored as a thin selector between `AutoSquashMaintenancePolicy` and `NoopMaintenancePolicy`.
+
+Verification:
+
+- `uv run pytest backend/tests/unit_test/test_sandbox/test_layer_stack backend/tests/unit_test/test_sandbox/test_occ/test_mutation_gate.py -q` -> `75 passed`.
+
+### Phase 4: Naming, layout, and compatibility cleanup
+
+Status: complete.
+
+Review issues addressed:
+
+- C-5: snapshot results now expose `snapshot_dir` as the backend-neutral alias while preserving `lowerdir` for existing runtime callers.
+- C-6: workspace-base layers moved out of the runtime `L...` namespace; the base sentinel is now `B000001-base`.
+- H-1/L-1: package `__init__.py` files now act as deliberate facades for layer, commit, lease, maintenance, view, and workspace APIs.
+- M-1: the squash collaborator is now `SquashService`; the old `SquashWorker` compatibility alias was removed.
+- M-2: vague `commit/staging.py` was renamed to `commit/commit_staging_area.py`.
+- M-5: duplicate publish timing was removed; publish preparation now reports one timing key.
+- M-6: the public `opaque_dir` discriminator remains for overlay/runtime compatibility; the explicit `OpaqueDirLayerChange` variant now isolates the odd name behind a typed constructor instead of the old string factory.
+- M-8: manifest internals now use private `_model.py`; the `manifest` package facade is the canonical public import path.
+- M-11: common layer-stack symbols are exported through root/package facades, and the current sandbox boundary/bundle tests cover the intended public surface.
+- L-2: `WorkspaceBaseIncompleteError` no longer inherits from workspace-binding errors.
+- L-4: the shared unique-layer allocator is used by both layer publish and squash.
+- L-6: workspace binding now has explicit `layer_path_from_relative(...)` and `layer_path_from_absolute(...)` methods; the old wrapper remains for compatibility.
+- L-8: the manager now has protocol-backed collaborator seams. A complete memory-only backend was not added because the production contract remains filesystem-backed, but the test seam no longer requires reaching through concrete storage classes.
+
+Implementation notes:
+
+- The physical package layout was not flattened further because existing import paths are part of the runtime/test surface. The facades now provide the intended shallow imports without breaking deeper compatibility paths.
+- Final verification exposed unrelated concurrent sandbox/OCC rename drift in the current checkout. Compatibility aliases and bundle/dependency expectations were aligned with the current `occ.router`, `occ.stage`, and runtime-bundle layout so the sandbox slices import and execute.
+
+Verification:
+
+- `uv run pytest backend/tests/unit_test/test_sandbox/test_layer_stack backend/tests/unit_test/test_sandbox/test_occ/test_mutation_gate.py backend/tests/unit_test/test_sandbox/test_overlay/test_upperdir_capture.py -q` -> `81 passed`.
+- `uv run pytest backend/tests/unit_test/test_sandbox/test_occ/test_auto_squash.py -q` -> `5 passed`.
+- `uv run pytest backend/tests/unit_test/test_sandbox/test_daemon/test_runtime_ready.py -q` -> `7 passed`.
+- `uv run pytest backend/tests/unit_test/test_sandbox/test_layer_stack backend/tests/unit_test/test_sandbox/test_occ backend/tests/unit_test/test_sandbox/test_command_exec backend/tests/unit_test/test_sandbox/test_overlay/test_upperdir_capture.py backend/tests/unit_test/test_sandbox/test_overlay/test_overlay_dependency_boundaries.py backend/tests/unit_test/test_sandbox/test_daemon/test_runtime_ready.py backend/tests/unit_test/test_sandbox/test_daemon/test_bundle_upload.py backend/tests/unit_test/test_sandbox/test_import_fence.py -q` -> `231 passed`.

@@ -36,7 +36,7 @@ from task_center.episode.validation import (
     assert_episode_has_budget,
     assert_episode_open,
 )
-from task_center.episode.episode import Episode, EpisodeStatus
+from task_center.episode.state import Episode, EpisodeStatus
 
 if TYPE_CHECKING:
     from task_center.attempt.orchestrator import AttemptOrchestrator
@@ -71,7 +71,7 @@ class EpisodeManager:
         self._orchestrator_factory = orchestrator_factory
         # Optional — when present, the manager denormalizes the evaluator's
         # pass-summary text onto the episode row at successful close so the
-        # context engine's planner_v1 recipe can read it on retry / chain.
+        # context engine's planner recipe can read it on retry / chain.
         self._task_store = task_store
 
     # ---- public API -----------------------------------------------------

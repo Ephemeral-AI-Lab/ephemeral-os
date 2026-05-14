@@ -11,11 +11,18 @@ from sandbox.api.tool.edit import edit_file
 @pytest.mark.asyncio
 async def test_edit_file_dispatches_to_sandbox_daemon(
     monkeypatch: pytest.MonkeyPatch,
+    recording_transport_factory,
 ) -> None:
-    calls: list[tuple[str, str, dict[str, object], int]] = []
-
-    async def fake_call_daemon_api(sandbox_id, op, args, *, timeout):
-        calls.append((sandbox_id, op, args, timeout))
+    async def fake_call_daemon_api(sandbox_id, op, args, timeout):
+        del sandbox_id, args, timeout
+        if op == "api.read_file":
+            return {
+                "success": True,
+                "exists": True,
+                "content": "old",
+                "encoding": "utf-8",
+                "timings": {},
+            }
         return {
             "success": True,
             "changed_paths": ["a.py"],
@@ -26,10 +33,8 @@ async def test_edit_file_dispatches_to_sandbox_daemon(
             "timings": {},
         }
 
-    monkeypatch.setattr(
-        "sandbox.api.tool.edit.call_daemon_api",
-        fake_call_daemon_api,
-    )
+    del monkeypatch
+    transport = recording_transport_factory(fake_call_daemon_api)
 
     result = await edit_file(
         "sb-edit",
@@ -39,12 +44,27 @@ async def test_edit_file_dispatches_to_sandbox_daemon(
             caller=SandboxCaller(agent_id="agent-1"),
             description="edit a",
         ),
+        transport=transport,
     )
 
     assert result.success is True
     assert result.changed_paths == ("a.py",)
     assert result.applied_edits == 1
-    assert calls == [
+    assert transport.calls == [
+        (
+            "sb-edit",
+            "api.read_file",
+            {
+                "path": "a.py",
+                "caller": {
+                    "agent_id": "agent-1",
+                    "run_id": "",
+                    "agent_run_id": "",
+                    "task_id": "",
+                },
+            },
+            20,
+        ),
         (
             "sb-edit",
             "api.edit_file",
@@ -68,14 +88,23 @@ async def test_edit_file_dispatches_to_sandbox_daemon(
 @pytest.mark.asyncio
 async def test_edit_file_recovers_when_transient_exec_already_applied_edit(
     monkeypatch: pytest.MonkeyPatch,
+    recording_transport_factory,
 ) -> None:
     calls: list[tuple[str, int]] = []
     old_text = "# marker\n"
     new_text = "# marker\nclass RetryPolicy:\n    pass\n"
 
-    async def fake_call_daemon_api(sandbox_id, op, args, *, timeout):
+    async def fake_call_daemon_api(sandbox_id, op, args, timeout):
         del sandbox_id, args
         calls.append((op, timeout))
+        if calls == [("api.read_file", 20)]:
+            return {
+                "success": True,
+                "exists": True,
+                "content": old_text,
+                "encoding": "utf-8",
+                "timings": {},
+            }
         if op == "api.edit_file":
             raise RuntimeError("DaytonaError: Failed to execute command: ")
         if op == "api.read_file":
@@ -88,10 +117,8 @@ async def test_edit_file_recovers_when_transient_exec_already_applied_edit(
             }
         raise AssertionError(op)
 
-    monkeypatch.setattr(
-        "sandbox.api.tool.edit.call_daemon_api",
-        fake_call_daemon_api,
-    )
+    del monkeypatch
+    transport = recording_transport_factory(fake_call_daemon_api)
 
     result = await edit_file(
         "sb-edit-transient",
@@ -100,6 +127,7 @@ async def test_edit_file_recovers_when_transient_exec_already_applied_edit(
             edits=(SearchReplaceEdit(old_text=old_text, new_text=new_text),),
             caller=SandboxCaller(agent_id="agent-1"),
         ),
+        transport=transport,
     )
 
     assert result.success is True
@@ -107,19 +135,32 @@ async def test_edit_file_recovers_when_transient_exec_already_applied_edit(
     assert result.applied_edits == 1
     assert result.status == "edited"
     assert result.timings["api.edit.recovered_after_transient"] == 1.0
-    assert calls == [("api.edit_file", 20), ("api.read_file", 20)]
+    assert calls == [
+        ("api.read_file", 20),
+        ("api.edit_file", 20),
+        ("api.read_file", 20),
+    ]
 
 
 @pytest.mark.asyncio
 async def test_edit_file_retries_transient_exec_when_edit_not_visible(
     monkeypatch: pytest.MonkeyPatch,
+    recording_transport_factory,
 ) -> None:
     calls: list[tuple[str, int]] = []
 
-    async def fake_call_daemon_api(sandbox_id, op, args, *, timeout):
+    async def fake_call_daemon_api(sandbox_id, op, args, timeout):
         del sandbox_id, args
         calls.append((op, timeout))
-        if calls == [("api.edit_file", 20)]:
+        if calls == [("api.read_file", 20)]:
+            return {
+                "success": True,
+                "exists": True,
+                "content": "old",
+                "encoding": "utf-8",
+                "timings": {},
+            }
+        if calls == [("api.read_file", 20), ("api.edit_file", 20)]:
             raise RuntimeError("DaytonaError: Failed to execute command: ")
         if op == "api.read_file":
             return {
@@ -141,10 +182,8 @@ async def test_edit_file_retries_transient_exec_when_edit_not_visible(
             }
         raise AssertionError(op)
 
-    monkeypatch.setattr(
-        "sandbox.api.tool.edit.call_daemon_api",
-        fake_call_daemon_api,
-    )
+    del monkeypatch
+    transport = recording_transport_factory(fake_call_daemon_api)
 
     result = await edit_file(
         "sb-edit-transient",
@@ -153,11 +192,13 @@ async def test_edit_file_retries_transient_exec_when_edit_not_visible(
             edits=(SearchReplaceEdit(old_text="old", new_text="new"),),
             caller=SandboxCaller(agent_id="agent-1"),
         ),
+        transport=transport,
     )
 
     assert result.success is True
     assert result.changed_paths == ("a.py",)
     assert calls == [
+        ("api.read_file", 20),
         ("api.edit_file", 20),
         ("api.read_file", 20),
         ("api.edit_file", 20),
@@ -167,9 +208,18 @@ async def test_edit_file_retries_transient_exec_when_edit_not_visible(
 @pytest.mark.asyncio
 async def test_edit_file_guard_failure_maps_conflict_info(
     monkeypatch: pytest.MonkeyPatch,
+    recording_transport_factory,
 ) -> None:
-    async def fake_call_daemon_api(sandbox_id, op, args, *, timeout):
-        del sandbox_id, op, args, timeout
+    async def fake_call_daemon_api(sandbox_id, op, args, timeout):
+        del sandbox_id, args, timeout
+        if op == "api.read_file":
+            return {
+                "success": True,
+                "exists": True,
+                "content": "old",
+                "encoding": "utf-8",
+                "timings": {},
+            }
         return {
             "success": False,
             "changed_paths": [],
@@ -184,10 +234,8 @@ async def test_edit_file_guard_failure_maps_conflict_info(
             "timings": {},
         }
 
-    monkeypatch.setattr(
-        "sandbox.api.tool.edit.call_daemon_api",
-        fake_call_daemon_api,
-    )
+    del monkeypatch
+    transport = recording_transport_factory(fake_call_daemon_api)
 
     result = await edit_file(
         "sb-edit-conflict",
@@ -196,6 +244,7 @@ async def test_edit_file_guard_failure_maps_conflict_info(
             edits=(SearchReplaceEdit(old_text="old", new_text="new"),),
             caller=SandboxCaller(agent_id="agent-1"),
         ),
+        transport=transport,
     )
 
     assert result.success is False
@@ -210,17 +259,24 @@ async def test_edit_file_guard_failure_maps_conflict_info(
 @pytest.mark.asyncio
 async def test_edit_file_anchor_error_maps_to_conflict_result(
     monkeypatch: pytest.MonkeyPatch,
+    recording_transport_factory,
 ) -> None:
-    async def fake_call_daemon_api(sandbox_id, op, args, *, timeout):
-        del sandbox_id, op, args, timeout
+    async def fake_call_daemon_api(sandbox_id, op, args, timeout):
+        del sandbox_id, args, timeout
+        if op == "api.read_file":
+            return {
+                "success": True,
+                "exists": True,
+                "content": "missing",
+                "encoding": "utf-8",
+                "timings": {},
+            }
         raise RuntimeError(
             "internal_error: anchor not found in a.py: expected 1 occurrences"
         )
 
-    monkeypatch.setattr(
-        "sandbox.api.tool.edit.call_daemon_api",
-        fake_call_daemon_api,
-    )
+    del monkeypatch
+    transport = recording_transport_factory(fake_call_daemon_api)
 
     result = await edit_file(
         "sb-edit-conflict",
@@ -229,6 +285,7 @@ async def test_edit_file_anchor_error_maps_to_conflict_result(
             edits=(SearchReplaceEdit(old_text="missing", new_text="new"),),
             caller=SandboxCaller(agent_id="agent-1"),
         ),
+        transport=transport,
     )
 
     assert result.success is False

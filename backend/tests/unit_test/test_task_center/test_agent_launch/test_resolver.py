@@ -64,7 +64,7 @@ def planner_with_variant():
     base = AgentDefinition(
         name="planner",
         description="planner",
-        context_recipe="planner_v1",
+        context_recipe="planner",
         terminals=["submit_full_plan", "submit_partial_plan"],
         variants=[
             AgentVariant(
@@ -84,7 +84,7 @@ def planner_with_variant():
     full_only = AgentDefinition(
         name="planner_full_only",
         description="planner",
-        context_recipe="planner_v1",
+        context_recipe="planner",
         terminals=["submit_full_plan"],
     )
     register_definition(base)
@@ -96,7 +96,7 @@ def test_empty_variants_returns_base_fast_path(deps):
     base = AgentDefinition(
         name="generator",
         description="g",
-        context_recipe="generator_v1",
+        context_recipe="generator",
     )
     register_definition(base)
     sel = RuleBasedAgentResolver().resolve(
@@ -106,7 +106,7 @@ def test_empty_variants_returns_base_fast_path(deps):
     )
     assert isinstance(sel, AgentSelection)
     assert sel.agent_def.name == "generator"
-    assert sel.context_recipe == "generator_v1"
+    assert sel.context_recipe == "generator"
     assert sel.required_context_blocks == ()
 
 

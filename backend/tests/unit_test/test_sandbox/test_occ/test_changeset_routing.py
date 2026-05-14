@@ -9,7 +9,7 @@ from sandbox.occ.changeset.types import (
     SymlinkChange,
     WriteChange,
 )
-from sandbox.occ.routing.orchestrator import OccOrchestrator
+from sandbox.occ.router import Router
 
 
 class _Gitignore:
@@ -23,7 +23,7 @@ class _Gitignore:
 
 
 def _prepare(changes, *, ignored: set[str] | None = None):
-    router = OccOrchestrator(_Gitignore(ignored))
+    router = Router(_Gitignore(ignored))
     return router.prepare_sync(
         changes,
         snapshot=None,
@@ -53,7 +53,7 @@ def test_routes_occ_gated_occ_skipped_drop_and_reject_groups() -> None:
 
 def test_special_change_kinds_consult_gitignore_before_routing() -> None:
     gitignore = _Gitignore({"cache", "ignored-link"})
-    router = OccOrchestrator(gitignore)
+    router = Router(gitignore)
     prepared = router.prepare_sync(
         [
             SymlinkChange(path="bin/data.dat", target="/tmp/data"),

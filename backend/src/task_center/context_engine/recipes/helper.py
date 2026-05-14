@@ -1,4 +1,4 @@
-"""Helper recipes — ``advisor_v1`` and ``resolver_v1``.
+"""Helper recipes — ``advisor`` and ``resolver``.
 
 Helper agents (advisor, resolver) are spawned by parent agents via tools
 (``ask_advisor`` / ``run_subagent``). They inherit the parent's full
@@ -25,8 +25,8 @@ from task_center.context_engine.packet import (
 from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
 
-ADVISOR_V1 = "advisor_v1"
-RESOLVER_V1 = "resolver_v1"
+ADVISOR_ID = "advisor"
+RESOLVER_ID = "resolver"
 
 _HELPER_REQUIRED_FIELDS = frozenset(
     {"mission_id", "task_id", "parent_packet_id"}
@@ -102,7 +102,7 @@ def _build_helper_packet(
     )
 
 
-def _advisor_v1_build(
+def _advisor_build(
     scope: ContextScope, deps: ContextEngineDeps
 ) -> ContextPacket:
     return _build_helper_packet(
@@ -110,7 +110,7 @@ def _advisor_v1_build(
     )
 
 
-def _resolver_v1_build(
+def _resolver_build(
     scope: ContextScope, deps: ContextEngineDeps
 ) -> ContextPacket:
     return _build_helper_packet(
@@ -118,14 +118,14 @@ def _resolver_v1_build(
     )
 
 
-ADVISOR_V1_RECIPE = ContextRecipe(
-    id=ADVISOR_V1,
+ADVISOR_RECIPE = ContextRecipe(
+    id=ADVISOR_ID,
     required_scope_fields=_HELPER_REQUIRED_FIELDS,
-    build=_advisor_v1_build,
+    build=_advisor_build,
 )
 
-RESOLVER_V1_RECIPE = ContextRecipe(
-    id=RESOLVER_V1,
+RESOLVER_RECIPE = ContextRecipe(
+    id=RESOLVER_ID,
     required_scope_fields=_HELPER_REQUIRED_FIELDS,
-    build=_resolver_v1_build,
+    build=_resolver_build,
 )

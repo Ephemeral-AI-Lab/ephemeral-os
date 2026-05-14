@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from task_center.api import (
+from task_center import (
     Attempt,
     AttemptOrchestrator,
     AttemptDeps,

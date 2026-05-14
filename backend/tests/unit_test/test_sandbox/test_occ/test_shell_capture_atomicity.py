@@ -24,14 +24,14 @@ async def test_shell_uses_occ_client_apply_changeset(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The shell handler must call OCCClient.apply_changeset (not bypass it)."""
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "input.txt").write_text("base\n", encoding="utf-8")
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    services = shell_runner._services({"layer_stack_root": stack.as_posix()})
+    services = shell_runner.services({"layer_stack_root": stack.as_posix()})
     occ_client = services[1]
     assert isinstance(occ_client, OCCClient), (
         "Shell capture must reach OCC through OCCClient — direct OccService "

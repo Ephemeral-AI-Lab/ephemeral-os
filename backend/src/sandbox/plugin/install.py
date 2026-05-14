@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from plugins.core.manifest import PluginManifest
-from sandbox.host.runtime_bundle import BUNDLE_REMOTE_DIR
+from sandbox.daemon_paths import BUNDLE_REMOTE_DIR
 from sandbox.models import RawExecResult
 from sandbox.provider.registry import get_adapter
 

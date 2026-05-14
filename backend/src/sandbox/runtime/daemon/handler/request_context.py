@@ -9,10 +9,10 @@ Owns the single source of truth for:
   host-visible payload.
 
 The OCC backend tuple ``(LayerStackClient, OCCClient, SnapshotGitignoreOracle,
-LayerStackManager)`` is owned by :mod:`sandbox.runtime.daemon.service.occ_backend`. The
-``_services`` helper is the canonical per-verb access point.
+LayerStackManager)`` is owned by :mod:`sandbox.runtime.daemon.service.occ_backend`.
+The ``services`` helper is the canonical per-verb access point.
 
-``shell`` does NOT use this module — ``handler.tools.shell`` delegates to
+``shell`` does NOT use this module — the dispatcher routes it directly to
 ``service.shell_runner``, whose worker scaffolding still owns its own service
 entrypoint and timing helpers.
 """
@@ -27,7 +27,7 @@ from typing import Literal, NamedTuple
 
 from sandbox.occ.changeset.types import ChangesetResult
 from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
-from sandbox.occ.result_projection import (
+from sandbox.runtime.daemon.service.result_projection import (
     committed_paths,
     conflict_and_status,
     conflict_to_dict,
@@ -101,14 +101,14 @@ def classify_path(raw_path: str, workspace_root: str) -> ClassifiedPath:
 # -- argument validation ----------------------------------------------------
 
 
-def _layer_stack_root(args: Mapping[str, object]) -> str:
+def layer_stack_root(args: Mapping[str, object]) -> str:
     layer_stack_root = str(args.get("layer_stack_root") or "").strip()
     if not layer_stack_root:
         raise ValueError("layer_stack_root is required")
     return layer_stack_root
 
 
-def _required_single_path(args: Mapping[str, object]) -> str:
+def required_single_path(args: Mapping[str, object]) -> str:
     """Enforce single-path contract: ``args['path']`` must be one string."""
     raw = args.get("path")
     if not isinstance(raw, str):
@@ -125,7 +125,7 @@ def _required_single_path(args: Mapping[str, object]) -> str:
 # -- service cache (delegates to occ_backend) -------------------------------
 
 
-def _services(layer_stack_root: str) -> OccBackend:
+def services(layer_stack_root: str) -> OccBackend:
     return occ_backend.build_occ_backend(layer_stack_root)
 
 
@@ -190,7 +190,7 @@ def _o_no_follow() -> int:
 # -- result projection ------------------------------------------------------
 
 
-def _project_changeset(
+def project_changeset(
     result: ChangesetResult,
     *,
     fallback_path: str,
@@ -217,11 +217,11 @@ def _project_changeset(
 
 __all__ = [
     "ClassifiedPath",
-    "_layer_stack_root",
-    "_project_changeset",
-    "_required_single_path",
-    "_services",
     "classify_path",
+    "layer_stack_root",
+    "project_changeset",
     "read_bytes_no_follow",
+    "required_single_path",
+    "services",
     "write_text_no_follow",
 ]

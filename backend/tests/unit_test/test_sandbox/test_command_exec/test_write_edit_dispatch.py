@@ -16,12 +16,13 @@ from sandbox.layer_stack.workspace.base import build_workspace_base
 from sandbox.runtime.daemon.handler import metrics
 from sandbox.runtime.daemon.handler.request_context import (
     ClassifiedPath,
-    _services,
     classify_path,
+    services as request_services,
 )
-from sandbox.runtime.daemon.handler.tools import edit, read, shell, write
+from sandbox.runtime.daemon.handler.tools import edit, read, write
 from sandbox.runtime.daemon.rpc import dispatcher as server
 from sandbox.runtime.daemon.service import occ_backend
+from sandbox.runtime.daemon.service import shell_runner
 from sandbox.runtime.daemon.service.workspace_server import get_layer_stack_manager
 
 
@@ -117,7 +118,7 @@ def test_op_table_dispatches_data_ops_to_runtime_handlers() -> None:
     assert server.OP_TABLE["api.write_file"] is write.write_file
     assert server.OP_TABLE["api.edit_file"] is edit.edit_file
     assert server.OP_TABLE["api.read_file"] is read.read_file
-    assert server.OP_TABLE["api.shell"] is shell.shell
+    assert server.OP_TABLE["api.shell"] is shell_runner.execute_shell_api
     assert server.OP_TABLE["api.layer_metrics"] is metrics.layer_metrics
 
 
@@ -128,7 +129,7 @@ def test_op_table_dispatches_data_ops_to_runtime_handlers() -> None:
 
 @pytest.mark.asyncio
 async def test_write_file_rejects_list_path_argument(tmp_path: Path) -> None:
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
@@ -149,7 +150,7 @@ async def test_write_file_rejects_non_string_path_argument(
     tmp_path: Path,
     bad_path: object,
 ) -> None:
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
@@ -166,7 +167,7 @@ async def test_write_file_rejects_non_string_path_argument(
 
 @pytest.mark.asyncio
 async def test_edit_file_rejects_list_path_argument(tmp_path: Path) -> None:
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
@@ -192,14 +193,14 @@ async def test_write_edit_read_share_lease_registry_with_shell(
 ) -> None:
     """All four flows acquire leases from the SAME registry instance — layer-stack
     GC sees a unified pin set."""
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "a.txt").write_text("base\n", encoding="utf-8")
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    write_services = _services(stack.as_posix())
+    write_services = request_services(stack.as_posix())
     manager_via_singleton = get_layer_stack_manager(stack.as_posix())
 
     # The write/edit/read services point at the same LayerStackManager singleton
@@ -226,7 +227,7 @@ async def test_write_edit_read_share_lease_registry_with_shell(
 @pytest.mark.asyncio
 async def test_in_workspace_write_pins_lease_then_releases(tmp_path: Path) -> None:
     """An in-workspace write_file holds a lease covering prepare → publish."""
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "seed.txt").write_text("seed\n", encoding="utf-8")
@@ -251,7 +252,7 @@ async def test_in_workspace_write_pins_lease_then_releases(tmp_path: Path) -> No
 
 @pytest.mark.asyncio
 async def test_layer_metrics_reports_no_cache_storage_fields(tmp_path: Path) -> None:
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "seed.txt").write_text("seed\n", encoding="utf-8")
@@ -287,7 +288,7 @@ async def test_layer_metrics_reports_no_cache_storage_fields(tmp_path: Path) -> 
 
 @pytest.mark.asyncio
 async def test_layer_metrics_reports_active_lease_pins(tmp_path: Path) -> None:
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "seed.txt").write_text("seed\n", encoding="utf-8")
@@ -310,7 +311,7 @@ async def test_layer_metrics_reports_active_lease_pins(tmp_path: Path) -> None:
 async def test_write_file_single_path_prepare_reports_gitignore_timing(
     tmp_path: Path,
 ) -> None:
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / ".gitignore").write_text("dist/\n", encoding="utf-8")
@@ -336,7 +337,7 @@ async def test_write_file_single_path_prepare_reports_gitignore_timing(
 async def test_edit_file_single_path_prepare_reuses_target_read_for_base_hash(
     tmp_path: Path,
 ) -> None:
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / ".gitignore").write_text("dist/\n", encoding="utf-8")
@@ -367,7 +368,7 @@ async def test_edit_file_single_path_prepare_reuses_target_read_for_base_hash(
 async def test_read_file_in_workspace_returns_layer_stack_bytes(
     tmp_path: Path,
 ) -> None:
-    occ_backend._backend_cache_clear()
+    occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     (workspace / "a.txt").write_text("base\n", encoding="utf-8")

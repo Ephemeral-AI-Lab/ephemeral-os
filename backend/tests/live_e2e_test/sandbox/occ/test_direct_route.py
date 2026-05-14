@@ -14,7 +14,7 @@ pytestmark = pytest.mark.asyncio
 _DIRECT_BODY = r"""
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.types import ChangesetResult, FileStatus, WriteChange
-from sandbox.occ.service import OccService
+from sandbox.occ.service import Service
 
 class _Gitignore:
     def is_ignored(self, path):
@@ -25,7 +25,7 @@ before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
 stack = LayerStackManager(root / "stack")
-service = OccService(gitignore=_Gitignore(), layer_stack=stack)
+service = Service(gitignore=_Gitignore(), layer_stack=stack)
 
 empty = service.apply_changeset_sync([], snapshot=stack.read_active_manifest())
 assert isinstance(empty, ChangesetResult)
@@ -57,7 +57,7 @@ _emit(label, started, before, {
 _RACE_BODY = r"""
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.types import WriteChange
-from sandbox.occ.service import OccService
+from sandbox.occ.service import Service
 
 class _Gitignore:
     def is_ignored(self, path):
@@ -68,7 +68,7 @@ before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
 stack = LayerStackManager(root / "stack")
-service = OccService(gitignore=_Gitignore(), layer_stack=stack)
+service = Service(gitignore=_Gitignore(), layer_stack=stack)
 n = 8
 barrier = threading.Barrier(n)
 

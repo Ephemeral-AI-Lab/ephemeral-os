@@ -28,14 +28,14 @@ from sandbox.layer_stack.workspace.binding import (
 from sandbox.timing import monotonic_now
 from sandbox.timing import record_elapsed
 
-WORKSPACE_BASE_LAYER_ID = "L000001-base"
+WORKSPACE_BASE_LAYER_ID = "B000001-base"
 
 
 class WorkspaceBaseAlreadyExistsError(RuntimeError):
     """Raised when a workspace base is requested for non-empty stack state."""
 
 
-class WorkspaceBaseIncompleteError(WorkspaceBindingError):
+class WorkspaceBaseIncompleteError(RuntimeError):
     """Raised when a full workspace base cannot represent every workspace path."""
 
     def __init__(

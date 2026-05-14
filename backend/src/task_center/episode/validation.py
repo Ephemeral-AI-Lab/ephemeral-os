@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt.state import Attempt
-from task_center.episode.episode import Episode
+from task_center.episode.state import Episode
 
 
 def assert_episode_open(episode: Episode) -> None:

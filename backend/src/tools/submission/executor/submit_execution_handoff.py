@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field, field_validator
 
-from task_center.api import TaskCenterInvariantViolation
+from task_center import TaskCenterInvariantViolation
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput, ToolResult
@@ -16,7 +16,7 @@ from tools.submission.context import (
 )
 
 if TYPE_CHECKING:
-    from task_center.api import StartedMission
+    from task_center import StartedMission
 
 
 class RequestMissionSolutionInput(BaseModel):

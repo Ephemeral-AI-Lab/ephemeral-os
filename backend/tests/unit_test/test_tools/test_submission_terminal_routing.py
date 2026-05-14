@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.mission.mission import MissionStatus
+from task_center.mission.state import MissionStatus
 from task_center.attempt import AttemptStage, AttemptStatus
 from task_center.task import (
     EvaluatorSubmission,
@@ -222,7 +222,7 @@ async def test_submit_execution_handoff_accepts_any_generator_agent_profile(
             description="custom generator for this test",
             agent_kind=AgentKind.EXECUTOR,
             dispatchable_by_planner=True,
-            context_recipe="generator_v1",
+            context_recipe="generator",
             terminals=[
                 "submit_execution_handoff",
                 "submit_execution_success",
@@ -327,7 +327,7 @@ async def test_submit_execution_handoff_return_updates_outer_generator(
 
     assert outer_task is not None
     assert outer_task["status"] == TaskCenterTaskStatus.DONE.value
-    assert outer_task["summaries"][-1]["payload"]["mission_close_report"][
+    assert outer_task["summaries"][-1]["payload"]["mission_closure_report"][
         "final_attempt_id"
     ] == delegated_attempt_id
     assert outer_attempt is not None

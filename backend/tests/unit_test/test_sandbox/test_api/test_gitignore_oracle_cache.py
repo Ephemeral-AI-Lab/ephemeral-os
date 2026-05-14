@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sandbox.layer_stack import LayerChange, WriteLayerChange, LayerStackManager
+from sandbox.layer_stack import WriteLayerChange, LayerStackManager
 from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
 from sandbox.occ.content.hashing import ContentHasher
 

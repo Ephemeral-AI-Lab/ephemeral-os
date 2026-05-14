@@ -66,3 +66,37 @@ Result:
 - `runtime_ops.py` is removed.
 - Routing no longer probes `is_ignored_in_snapshot` with `getattr`; snapshot
   routing requires the explicit snapshot-aware protocol.
+
+## Phase 3 — Service, Ports, Maintenance, And Queue Lifecycle
+
+Status: complete
+
+Changes:
+
+- Removed the welded `OccLayerStackPorts` protocol from the port surface.
+- Renamed the storage transaction protocol to `CommitTransactionPort`, keeping a
+  temporary compatibility alias for older imports.
+- Changed `OccCommitTransaction` to require explicit snapshot/staging/publisher
+  ports.
+- Promoted the staging seam to `LayerChangeStager` with
+  `FileSystemLayerChangeStager` as the concrete implementation.
+- Extracted auto-squash into `AutoSquashMaintenancePolicy` /
+  `NoopMaintenancePolicy`.
+- Added `RetryPolicy` for serial CAS retry limits.
+- Changed `OccSerialMerger` so the worker thread starts through `start()` and
+  stops through `close()`.
+- Added `TimingKey` as the stable registry for OCC timing metric names and
+  moved OCC timing emissions to enum keys.
+
+Verification:
+
+- `uv run pytest backend/tests/unit_test/test_sandbox/test_occ/test_changeset_builders.py backend/tests/unit_test/test_sandbox/test_occ/test_direct_merge.py backend/tests/unit_test/test_sandbox/test_occ/test_tracked_merge.py backend/tests/unit_test/test_sandbox/test_occ/test_base_hash_inference.py backend/tests/unit_test/test_sandbox/test_occ/test_commit_transaction.py backend/tests/unit_test/test_sandbox/test_occ/test_concurrent_commits.py backend/tests/unit_test/test_sandbox/test_occ/test_gitignore_policy_edge_cases.py backend/tests/unit_test/test_sandbox/test_occ/test_auto_squash.py -q`
+- `python3 -m compileall -q backend/src/sandbox/occ`
+- `rg -no '"(occ|layer_stack|gitignore)\\.[^"]+"|"_occ\\.[^"]+"' backend/src/sandbox/occ`
+
+Result:
+
+- 32 tests passed.
+- OCC package compiled.
+- The only remaining raw OCC timing strings are the enum values in
+  `timing_keys.py`.

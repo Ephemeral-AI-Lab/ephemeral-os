@@ -17,7 +17,7 @@ from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.prepared import CommitOptions, RouteDecision
 from sandbox.occ.changeset.types import FileStatus, WriteChange
 from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.service import OccService
+from sandbox.occ.service import Service
 
 class _Gitignore:
     def __init__(self, ignored=()):
@@ -39,7 +39,7 @@ before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
 stack = LayerStackManager(root / "stack")
-service = OccService(gitignore=_Gitignore({"dist/app.js"}), layer_stack=stack)
+service = Service(gitignore=_Gitignore({"dist/app.js"}), layer_stack=stack)
 _publish(stack, "src/app.py", b"base\n")
 snapshot = stack.read_active_manifest()
 
@@ -76,7 +76,7 @@ conflict = service.apply_changeset_sync(
 assert conflict.files[0].status is FileStatus.ABORTED_VERSION
 
 restarted_stack = LayerStackManager(root / "stack")
-restarted_service = OccService(gitignore=_Gitignore(), layer_stack=restarted_stack)
+restarted_service = Service(gitignore=_Gitignore(), layer_stack=restarted_stack)
 after_restart = restarted_service.apply_changeset_sync(
     [WriteChange(path="src/restart.py", final_content=b"ok\n")],
     snapshot=restarted_stack.read_active_manifest(),
@@ -99,7 +99,7 @@ from sandbox.layer_stack.layer.change import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.types import WriteChange
 from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.service import OccService
+from sandbox.occ.service import Service
 
 class _Gitignore:
     def is_ignored(self, path):
@@ -119,7 +119,7 @@ before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
 stack = LayerStackManager(root / "stack")
-service = OccService(gitignore=_Gitignore(), layer_stack=stack)
+service = Service(gitignore=_Gitignore(), layer_stack=stack)
 _publish(stack, "src/app.py", b"base\n")
 snapshot = stack.read_active_manifest()
 n = 4

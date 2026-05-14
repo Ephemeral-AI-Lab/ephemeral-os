@@ -13,13 +13,13 @@ from sandbox.runtime.daemon.service import occ_backend, workspace_server
 
 @pytest.fixture(autouse=True)
 def _clear_runtime_caches() -> None:
-    occ_backend._backend_cache_clear()
-    workspace_server._clear_layer_stack_server_caches_for_tests()
+    occ_backend.clear_backend_cache()
+    workspace_server.clear_layer_stack_server_caches_for_tests()
     try:
         yield
     finally:
-        occ_backend._backend_cache_clear()
-        workspace_server._clear_layer_stack_server_caches_for_tests()
+        occ_backend.clear_backend_cache()
+        workspace_server.clear_layer_stack_server_caches_for_tests()
 
 
 def _probe(response: dict[str, object], name: str) -> dict[str, object]:
@@ -75,7 +75,7 @@ def test_daemon_ready_reports_data_plane_failure(
     def fail_services(_layer_stack_root: str) -> object:
         raise RuntimeError("synthetic data-plane failure")
 
-    monkeypatch.setattr(health.request_context, "_services", fail_services)
+    monkeypatch.setattr(health.request_context, "services", fail_services)
 
     response = health.runtime_ready(
         {"layer_stack_root": (tmp_path / "stack").as_posix()}
@@ -104,10 +104,10 @@ def test_daemon_ready_reports_incomplete_data_plane_backend(
     def fake_shell_services(_args: dict[str, object]) -> tuple[object, object, object, Path]:
         return object(), object(), object(), tmp_path
 
-    monkeypatch.setattr(health.request_context, "_services", incomplete_services)
+    monkeypatch.setattr(health.request_context, "services", incomplete_services)
     monkeypatch.setattr(
         health.shell_runner,
-        "_services",
+        "services",
         fake_shell_services,
     )
 
@@ -122,7 +122,7 @@ def test_daemon_ready_reports_incomplete_data_plane_backend(
     details = data_plane["details"]
     assert isinstance(details, dict)
     assert details["error_type"] == "RuntimeError"
-    assert "handler services missing fields" in str(details["error"])
+    assert "handler services returned" in str(details["error"])
 
 
 def test_daemon_ready_reports_mutation_gate_failure(
@@ -144,10 +144,10 @@ def test_daemon_ready_reports_mutation_gate_failure(
     def fail_backend(_layer_stack_root: str) -> object:
         raise RuntimeError("synthetic mutation-gate failure")
 
-    monkeypatch.setattr(health.request_context, "_services", fake_services)
+    monkeypatch.setattr(health.request_context, "services", fake_services)
     monkeypatch.setattr(
         health.shell_runner,
-        "_services",
+        "services",
         fake_shell_services,
     )
     monkeypatch.setattr(health.occ_backend, "build_occ_backend", fail_backend)
@@ -181,10 +181,10 @@ def test_daemon_ready_reports_incomplete_mutation_gate_backend(
     def fake_shell_services(_args: dict[str, object]) -> tuple[object, object, object, Path]:
         return object(), object(), object(), tmp_path
 
-    monkeypatch.setattr(health.request_context, "_services", fake_services)
+    monkeypatch.setattr(health.request_context, "services", fake_services)
     monkeypatch.setattr(
         health.shell_runner,
-        "_services",
+        "services",
         fake_shell_services,
     )
     monkeypatch.setattr(
@@ -204,7 +204,7 @@ def test_daemon_ready_reports_incomplete_mutation_gate_backend(
     details = mutation_gate["details"]
     assert isinstance(details, dict)
     assert details["error_type"] == "RuntimeError"
-    assert "OCC backend missing fields" in str(details["error"])
+    assert "OCC backend type mismatch" in str(details["error"])
 
 
 def test_daemon_ready_reports_explicit_workspace_mount_mode(tmp_path: Path) -> None:

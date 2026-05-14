@@ -7,7 +7,7 @@ from typing import Any
 
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.task.ids import generator_task_id
-from task_center.task.models import (
+from task_center.task.state import (
     TaskCenterTaskStatus,
     PlannedGeneratorTask,
     TERMINAL_GENERATOR_STATUSES,

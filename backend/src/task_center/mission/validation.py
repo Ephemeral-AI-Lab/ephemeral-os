@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from task_center.mission.mission import Mission
+from task_center.mission.state import Mission
 from task_center.exceptions import TaskCenterInvariantViolation
-from task_center.episode.episode import Episode, EpisodeStatus
+from task_center.episode.state import Episode, EpisodeStatus
 
 
 def assert_mission_open(mission: Mission) -> None:

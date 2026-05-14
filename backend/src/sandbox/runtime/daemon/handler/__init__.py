@@ -6,6 +6,4 @@ because they are daemon/runtime control operations rather than agent-facing
 tool verbs.
 """
 
-from . import health, metrics, overlay, tools, workspace
-
 __all__ = ["health", "metrics", "overlay", "tools", "workspace"]

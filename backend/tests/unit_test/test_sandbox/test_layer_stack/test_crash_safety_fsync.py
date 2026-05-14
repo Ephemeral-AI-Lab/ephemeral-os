@@ -156,7 +156,7 @@ def test_workspace_base_writes_digest_sidecar(tmp_path: Path) -> None:
 
     binding = build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    digest_path = stack / ".layer-metadata" / "L000001-base.digest"
+    digest_path = stack / ".layer-metadata" / "B000001-base.digest"
     assert digest_path.exists(), (
         f"_write_base_layer must persist a digest sidecar at {digest_path}"
     )

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from task_center.config import TaskCenterLifecycleConfig
 from task_center.mission.handler import MissionHandler
-from task_center.mission.mission import MissionStatus
+from task_center.mission.state import MissionStatus
 from task_center.attempt import AttemptStatus
 from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
@@ -24,7 +24,7 @@ from task_center.task import (
     planner_task_id,
 )
 from task_center.episode.registry import EpisodeManagerRegistry
-from task_center.episode.episode import EpisodeStatus
+from task_center.episode.state import EpisodeStatus
 
 
 class _FakeLauncher:

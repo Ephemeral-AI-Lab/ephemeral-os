@@ -5,9 +5,9 @@ from __future__ import annotations
 import pytest
 
 from task_center.mission.close_report_delivery import (
-    MissionCloseReportRouter,
+    MissionClosureReportRouter,
 )
-from task_center.mission.mission import MissionCloseReport
+from task_center.mission.state import MissionClosureReport
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
@@ -15,7 +15,7 @@ from task_center.attempt.orchestrator_registry import (
 )
 from task_center.attempt.runtime import AgentLaunch, AttemptDeps
 from task_center.episode.registry import EpisodeManagerRegistry
-from task_center.episode.episode import EpisodeCreationReason
+from task_center.episode.state import EpisodeCreationReason
 from task_center.task import (
     TaskCenterTaskStatus,
     PlannedGeneratorTask,
@@ -116,10 +116,10 @@ def test_router_delivers_success_to_waiting_parent(
         composer=composer,
     )
     _set_parent_waiting(task_store, parent_task_id)
-    router = MissionCloseReportRouter(runtime=runtime)
+    router = MissionClosureReportRouter(runtime=runtime)
 
     result = router.deliver(
-        MissionCloseReport(
+        MissionClosureReport(
             mission_id="delegated-1",
             requested_by_task_id=parent_task_id,
             outcome="success",
@@ -189,10 +189,10 @@ def test_router_delivers_failure_marks_parent_failed_and_blocks_dependents(
     parent_task_id = generator_task_id(attempt.id, "a")
     dependent_id = generator_task_id(attempt.id, "b")
     _set_parent_waiting(task_store, parent_task_id)
-    router = MissionCloseReportRouter(runtime=runtime)
+    router = MissionClosureReportRouter(runtime=runtime)
 
     result = router.deliver(
-        MissionCloseReport(
+        MissionClosureReport(
             mission_id="delegated-1",
             requested_by_task_id=parent_task_id,
             outcome="failed",
@@ -224,10 +224,10 @@ def test_router_treats_done_parent_as_already_delivered(
     task_store.set_task_status(
         parent_task_id, status=TaskCenterTaskStatus.DONE.value
     )
-    router = MissionCloseReportRouter(runtime=runtime)
+    router = MissionClosureReportRouter(runtime=runtime)
 
     result = router.deliver(
-        MissionCloseReport(
+        MissionClosureReport(
             mission_id="delegated-1",
             requested_by_task_id=parent_task_id,
             outcome="success",
@@ -255,11 +255,11 @@ def test_router_raises_when_parent_orchestrator_missing(
     )
     _set_parent_waiting(task_store, parent_task_id)
     runtime.orchestrator_registry.deregister(parent_attempt_id)
-    router = MissionCloseReportRouter(runtime=runtime)
+    router = MissionClosureReportRouter(runtime=runtime)
 
     with pytest.raises(TaskCenterInvariantViolation):
         router.deliver(
-            MissionCloseReport(
+            MissionClosureReport(
                 mission_id="delegated-1",
                 requested_by_task_id=parent_task_id,
                 outcome="success",
@@ -285,11 +285,11 @@ def test_router_rejects_running_parent(
         composer=composer,
     )
     # Parent is RUNNING (not waiting) — illegal report state.
-    router = MissionCloseReportRouter(runtime=runtime)
+    router = MissionClosureReportRouter(runtime=runtime)
 
     with pytest.raises(TaskCenterInvariantViolation):
         router.deliver(
-            MissionCloseReport(
+            MissionClosureReport(
                 mission_id="delegated-1",
                 requested_by_task_id=parent_task_id,
                 outcome="success",
@@ -299,7 +299,7 @@ def test_router_rejects_running_parent(
         )
 
 
-def test_apply_close_report_is_idempotent_on_second_delivery(
+def test_apply_closure_report_is_idempotent_on_second_delivery(
     mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime, _, parent_task_id = _build_runtime_with_open_graph(
@@ -315,7 +315,7 @@ def test_apply_close_report_is_idempotent_on_second_delivery(
     assert parent_task_before is not None
     summary_count_before = len(parent_task_before["summaries"])
 
-    report = MissionCloseReport(
+    report = MissionClosureReport(
         mission_id="delegated-1",
         requested_by_task_id=parent_task_id,
         outcome="success",
@@ -326,8 +326,8 @@ def test_apply_close_report_is_idempotent_on_second_delivery(
     # must be silently idempotent (CAS miss).
     parent_attempt_id = parent_task_before["task_center_attempt_id"]
     orchestrator = runtime.orchestrator_registry.get_or_raise(parent_attempt_id)
-    orchestrator.apply_mission_close_report(report)
-    orchestrator.apply_mission_close_report(report)
+    orchestrator.apply_mission_closure_report(report)
+    orchestrator.apply_mission_closure_report(report)
 
     parent_task = task_store.get_task(parent_task_id)
     assert parent_task is not None
@@ -336,7 +336,7 @@ def test_apply_close_report_is_idempotent_on_second_delivery(
     assert len(parent_task["summaries"]) == summary_count_before + 1
 
 
-def test_router_routes_entry_mode_close_report_through_controller(
+def test_router_routes_entry_mode_closure_report_through_controller(
     mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     """Entry-mode close-report dispatch.
@@ -344,7 +344,7 @@ def test_router_routes_entry_mode_close_report_through_controller(
     When the parent task has ``task_center_attempt_id=None``, the
     router must look up :attr:`AttemptDeps.entry_task_controller`
     instead of the orchestrator registry, and route the close report into
-    the controller's ``apply_mission_close_report``.
+    the controller's ``apply_mission_closure_report``.
     """
     from task_center.entry.controller import EntryTaskController
     from task_center.task import TaskCenterTaskRole
@@ -380,9 +380,9 @@ def test_router_routes_entry_mode_close_report_through_controller(
         entry_task_controller=controller,
     )
 
-    router = MissionCloseReportRouter(runtime=runtime)
+    router = MissionClosureReportRouter(runtime=runtime)
     result = router.deliver(
-        MissionCloseReport(
+        MissionClosureReport(
             mission_id="delegated-x",
             requested_by_task_id=entry_task_id,
             outcome="success",

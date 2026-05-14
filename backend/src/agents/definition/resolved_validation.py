@@ -28,7 +28,7 @@ def validate_agent_definitions_resolved() -> None:
 
 
 def _validate_definition(definition: AgentDefinition) -> None:
-    from task_center.api import (
+    from task_center import (
         AgentDefinitionValidationError,
         PredicateRegistry,
         RecipeRegistry,

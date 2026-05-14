@@ -11,8 +11,8 @@ from task_center.attempt.state import (
     AttemptStage,
     AttemptStatus,
 )
-from task_center.episode.episode import Episode
-from task_center.task.models import TaskCenterTaskRole
+from task_center.episode.state import Episode
+from task_center.task.state import TaskCenterTaskRole
 
 
 def assert_attempt_sequence_contiguous(

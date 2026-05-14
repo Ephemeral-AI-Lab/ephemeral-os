@@ -6,7 +6,7 @@ import pytest
 
 from task_center.entry.controller import EntryTaskController
 from task_center.exceptions import TaskCenterInvariantViolation
-from task_center.mission.mission import MissionCloseReport
+from task_center.mission.state import MissionClosureReport
 from task_center.task import TaskCenterTaskRole, TaskCenterTaskStatus
 
 
@@ -93,7 +93,7 @@ def test_apply_run_exhausted_marks_failed(
     assert run["status"] == "failed"
 
 
-def test_mark_waiting_then_close_report_success(
+def test_mark_waiting_then_closure_report_success(
     entry_setup, task_store, task_center_run_id
 ):
     controller = entry_setup
@@ -107,8 +107,8 @@ def test_mark_waiting_then_close_report_success(
     assert task is not None
     assert task["status"] == TaskCenterTaskStatus.WAITING_MISSION.value
 
-    controller.apply_mission_close_report(
-        MissionCloseReport(
+    controller.apply_mission_closure_report(
+        MissionClosureReport(
             mission_id="delegated-1",
             requested_by_task_id=controller.task_id,
             outcome="success",
@@ -125,7 +125,7 @@ def test_mark_waiting_then_close_report_success(
     assert run["status"] == "done"
 
 
-def test_close_report_failure_marks_failed(
+def test_closure_report_failure_marks_failed(
     entry_setup, task_store, task_center_run_id
 ):
     controller = entry_setup
@@ -136,8 +136,8 @@ def test_close_report_failure_marks_failed(
         goal="solve x",
     )
 
-    controller.apply_mission_close_report(
-        MissionCloseReport(
+    controller.apply_mission_closure_report(
+        MissionClosureReport(
             mission_id="delegated-1",
             requested_by_task_id=controller.task_id,
             outcome="failed",
@@ -154,14 +154,14 @@ def test_close_report_failure_marks_failed(
     assert run["status"] == "failed"
 
 
-def test_close_report_idempotent_when_task_already_terminal(
+def test_closure_report_idempotent_when_task_already_terminal(
     entry_setup, task_store, task_center_run_id
 ):
     controller = entry_setup
     controller.apply_executor_success(summary="done", artifacts=[])
 
-    controller.apply_mission_close_report(
-        MissionCloseReport(
+    controller.apply_mission_closure_report(
+        MissionClosureReport(
             mission_id="delegated-1",
             requested_by_task_id=controller.task_id,
             outcome="failed",

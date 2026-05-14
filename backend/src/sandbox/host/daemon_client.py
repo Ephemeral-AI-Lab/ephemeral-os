@@ -3,11 +3,20 @@
 from __future__ import annotations
 
 import json
-import os
 import shlex
 from typing import Any, Protocol
 
-from sandbox.host.runtime_bundle import BUNDLE_REMOTE_DIR, bundle_hash
+from sandbox.daemon_paths import (
+    BUNDLE_REMOTE_DIR,
+    DAEMON_ENV_SIGNATURE_PATH,
+    DAEMON_LAUNCH_SCRIPT_PATH,
+    DAEMON_LOG_PATH,
+    DAEMON_PID_PATH,
+    DAEMON_SOCKET_PATH,
+    DAEMON_THIN_CLIENT_PATH,
+    DEFAULT_LAYER_STACK_ROOT,
+)
+from sandbox.host.runtime_bundle import bundle_hash
 from sandbox.provider.registry import get_adapter
 
 # Daemon launcher: ensures the resident daemon is running, then invokes a
@@ -15,54 +24,13 @@ from sandbox.provider.registry import get_adapter
 # daemon is spawned via ``nohup`` once per sandbox; subsequent calls hit the
 # already-warm process. Both the spawn and the per-call thin client are emitted
 # through ``provider.exec``; Daytona stays inside the adapter.
-_DAEMON_SOCKET = f"{BUNDLE_REMOTE_DIR}/runtime.sock"
-_DAEMON_PID = f"{BUNDLE_REMOTE_DIR}/runtime.pid"
-_DAEMON_LOG = f"{BUNDLE_REMOTE_DIR}/runtime.log"
-_DAEMON_ENV = f"{BUNDLE_REMOTE_DIR}/runtime.env"
-DEFAULT_LAYER_STACK_ROOT = f"{BUNDLE_REMOTE_DIR}/layer-stack"
-# Explicit extension point for daemon-scoped feature flags. Keep empty unless
-# a runtime setting must restart the daemon when the host value changes.
-_FORWARDED_DAEMON_ENV: tuple[str, ...] = ()
+_DAEMON_SOCKET = DAEMON_SOCKET_PATH
+_DAEMON_PID = DAEMON_PID_PATH
+_DAEMON_LOG = DAEMON_LOG_PATH
+_DAEMON_ENV = DAEMON_ENV_SIGNATURE_PATH
+_PYTHON_CANDIDATES = ("python3.13", "python3.12", "python3.11", "python3.10", "python3")
 _THIN_CLIENT_CONNECT_FAILED = 97
 _THIN_CLIENT_IO_FAILED = 98
-
-_DAEMON_THIN_CLIENT_PY = (
-    "import socket,sys,os\n"
-    f"CONNECT_FAILED={_THIN_CLIENT_CONNECT_FAILED};IO_FAILED={_THIN_CLIENT_IO_FAILED}\n"
-    "timeout=float(os.environ.get('EPHEMERALOS_RUNTIME_CLIENT_TIMEOUT','600'))\n"
-    "s=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM);s.settimeout(timeout)\n"
-    "try:\n"
-    f" s.connect({_DAEMON_SOCKET!r})\n"
-    "except (ConnectionRefusedError,FileNotFoundError) as e:\n"
-    " sys.stderr.write('EOS_DAEMON_CONNECT_FAILED:'+e.__class__.__name__+'\\n');sys.exit(CONNECT_FAILED)\n"
-    "except OSError as e:\n"
-    " sys.stderr.write('EOS_DAEMON_CONNECT_FAILED:'+e.__class__.__name__+'\\n');sys.exit(CONNECT_FAILED)\n"
-    "try:\n"
-    " s.sendall(sys.argv[1].encode('utf-8')+b'\\n');s.shutdown(socket.SHUT_WR)\n"
-    "except OSError as e:\n"
-    " sys.stderr.write('EOS_DAEMON_IO_FAILED:'+e.__class__.__name__+'\\n');sys.exit(IO_FAILED)\n"
-    "buf=b''\n"
-    "try:\n"
-    " while True:\n"
-    "  chunk=s.recv(65536)\n"
-    "  if not chunk: break\n"
-    "  buf+=chunk\n"
-    "except socket.timeout:\n"
-    " sys.stderr.write('EOS_DAEMON_IO_FAILED:socket.timeout\\n');sys.exit(IO_FAILED)\n"
-    "except OSError as e:\n"
-    " sys.stderr.write('EOS_DAEMON_IO_FAILED:'+e.__class__.__name__+'\\n');sys.exit(IO_FAILED)\n"
-    "sys.stdout.buffer.write(buf)\n"
-)
-
-_DAEMON_THIN_CLIENT_LAUNCHER = f"""\
-for py in python3.13 python3.12 python3.11 python3.10 python3; do
-    if command -v "$py" >/dev/null 2>&1 && "$py" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1; then
-        exec "$py" -c {shlex.quote(_DAEMON_THIN_CLIENT_PY)} "$1"
-    fi
-done
-echo 'sandbox daemon requires Python >= 3.10' >&2
-exit 127
-"""
 
 
 class _DaemonDispatchError(RuntimeError):
@@ -336,50 +304,47 @@ def _is_bootstrap_ready_response(
 
 
 def _daemon_thin_client_command(raw_payload: str) -> str:
-    """sh-c launcher that pipes one envelope to the resident daemon."""
+    """Launch the bundled thin client with one daemon envelope."""
     return (
-        f"sh -c {shlex.quote(_DAEMON_THIN_CLIENT_LAUNCHER)} daemon "
+        f"sh -c {shlex.quote(_thin_client_python_launcher())} daemon "
+        f"{shlex.quote(_python_candidates_arg())} "
+        f"{shlex.quote(DAEMON_THIN_CLIENT_PATH)} "
+        f"{shlex.quote(_DAEMON_SOCKET)} "
         f"{shlex.quote(raw_payload)}"
     )
 
 
 def _daemon_spawn_command() -> str:
-    """sh-c launcher that ensures the resident daemon is running.
+    """Launch the bundled daemon supervisor script.
 
     Idempotent: returns 0 immediately when an existing daemon's socket is
     bound and its PID is alive.
     """
-    return f"sh -c {shlex.quote(_daemon_launcher())}"
+    return " ".join(
+        shlex.quote(part)
+        for part in (
+            "sh",
+            DAEMON_LAUNCH_SCRIPT_PATH,
+            _python_candidates_arg(),
+            _DAEMON_SOCKET,
+            _DAEMON_PID,
+            _DAEMON_LOG,
+            _DAEMON_ENV,
+            _daemon_env_signature(),
+            "sandbox.runtime.daemon",
+        )
+    )
 
 
-def _daemon_launcher() -> str:
-    env_signature = _daemon_env_signature()
-    return f"""\
-set -e
-{_daemon_env_exports()}SOCK={shlex.quote(_DAEMON_SOCKET)}
-PID={shlex.quote(_DAEMON_PID)}
-LOG={shlex.quote(_DAEMON_LOG)}
-ENV_FILE={shlex.quote(_DAEMON_ENV)}
-ENV_SIG={shlex.quote(env_signature)}
-mkdir -p {shlex.quote(BUNDLE_REMOTE_DIR)}
-if [ -S "$SOCK" ] && [ -f "$PID" ] && kill -0 "$(cat "$PID" 2>/dev/null)" 2>/dev/null; then
-    if [ -f "$ENV_FILE" ] && [ "$(cat "$ENV_FILE")" = "$ENV_SIG" ]; then
-        exit 0
-    fi
-    kill "$(cat "$PID" 2>/dev/null)" 2>/dev/null || true
-fi
-rm -f "$SOCK"
-for py in python3.13 python3.12 python3.11 python3.10 python3; do
+def _thin_client_python_launcher() -> str:
+    return """\
+candidates=$1
+script=$2
+socket_path=$3
+payload=$4
+for py in $candidates; do
     if command -v "$py" >/dev/null 2>&1 && "$py" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1; then
-        nohup "$py" -m sandbox.runtime.daemon --socket "$SOCK" --pid-file "$PID" </dev/null >"$LOG" 2>&1 &
-        printf '%s' "$ENV_SIG" > "$ENV_FILE"
-        # Wait briefly for the socket to appear so the next client connect succeeds.
-        for _ in $(seq 1 50); do
-            [ -S "$SOCK" ] && exit 0
-            sleep 0.05
-        done
-        echo 'sandbox daemon failed to bind socket within 2.5s' >&2
-        exit 1
+        exec "$py" "$script" "$socket_path" "$payload"
     fi
 done
 echo 'sandbox daemon requires Python >= 3.10' >&2
@@ -387,24 +352,12 @@ exit 127
 """
 
 
-def _daemon_env_exports() -> str:
-    exports: list[str] = []
-    for name in _FORWARDED_DAEMON_ENV:
-        value = os.getenv(name)
-        if value is not None:
-            exports.append(f"export {name}={shlex.quote(value)}")
-    if not exports:
-        return ""
-    return "\n".join(exports) + "\n"
-
-
 def _daemon_env_signature() -> str:
-    parts: list[str] = [f"runtime_bundle_sha={bundle_hash()}"]
-    for name in _FORWARDED_DAEMON_ENV:
-        value = os.getenv(name)
-        if value is not None:
-            parts.append(f"{name}={value}")
-    return "\n".join(parts)
+    return f"runtime_bundle_sha={bundle_hash()}"
+
+
+def _python_candidates_arg() -> str:
+    return " ".join(_PYTHON_CANDIDATES)
 
 
 def _without_none(args: dict[str, Any]) -> dict[str, Any]:

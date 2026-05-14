@@ -8,7 +8,7 @@ from task_center.attempt import (
     AttemptStage,
     AttemptStatus,
 )
-from task_center.episode.episode import EpisodeCreationReason
+from task_center.episode.state import EpisodeCreationReason
 
 
 def _seed_segment(

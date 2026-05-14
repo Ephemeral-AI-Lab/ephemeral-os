@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 
-from task_center.api import ContextComposer, ContextScope, LaunchBundle
+from task_center import ContextComposer, ContextScope, LaunchBundle
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.results import ToolResult
 

@@ -16,7 +16,7 @@ _BODY = r"""
 from sandbox.layer_stack.layer.change import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.types import FileStatus, WriteChange
-from sandbox.occ.service import OccService
+from sandbox.occ.service import Service
 
 class _Gitignore:
     def is_ignored(self, path):
@@ -35,7 +35,7 @@ for index in range(5):
             source_path=str(_source(root, "shared-%02d" % index, b"base\n")),
         )
     ])
-service = OccService(gitignore=_Gitignore(), layer_stack=stack)
+service = Service(gitignore=_Gitignore(), layer_stack=stack)
 operation_count = int(cfg["operation_count"])
 concurrency = int(cfg["concurrency"])
 barrier = threading.Barrier(concurrency)

@@ -5,6 +5,7 @@ from __future__ import annotations
 from sandbox.command_exec.contract.ports import (
     CommandExecutor,
     OCCMutationClient,
+    SnapshotManifest,
     WorkspaceLeaseClient,
     WorkspaceSnapshotLease,
 )
@@ -23,6 +24,7 @@ __all__ = [
     "CommandExecutor",
     "MountMode",
     "OCCMutationClient",
+    "SnapshotManifest",
     "ShellProcessResult",
     "WorkspaceCapture",
     "WorkspaceLeaseClient",

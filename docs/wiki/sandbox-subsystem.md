@@ -29,7 +29,7 @@ Sync → `api/status.py` → `ProviderAdapter`. Tool verbs lazy-import `api/tool
 - `occ/service.py:25` `OccService.apply_changeset` — prepare + commit through layer stack.
 - `occ/client.py:29` `OCCClient` — validates workspace binding, forwards to `OccService`.
 - `occ/ports.py:80` `OccLayerStackPorts` — `SnapshotReader + CommitStagingStore + CommitPublisher`; implemented by `LayerStackManager`.
-- `occ/commit_transaction.py:42` `OccCommitTransaction` — holds commit lock, calls `publish_layer`.
+- `occ/stage/transaction.py` `CommitTransaction` — holds commit lock, calls `publish_layer`.
 
 **overlay** — Runs commands in a prepared snapshot workspace, captures diffs.
 - `overlay/worker.py` `execute_request` — prepare workspace -> exec -> `capture_changes` -> `OverlayCapture` JSON.
@@ -43,7 +43,7 @@ Sync → `api/status.py` → `ProviderAdapter`. Tool verbs lazy-import `api/tool
 - `layer_stack/layer/publisher.py:42` `LayerPublisher` — writes delta as tar layer, updates manifest atomically.
 - `layer_stack/lease/registry.py:23` `LeaseRegistry` — snapshot leases during in-flight commits.
 - `layer_stack/workspace/base.py:82` `build_workspace_base` — content-addressed base layer from host workspace.
-- `layer_stack/maintenance/squash.py` `SquashWorker` — collapses layers when depth > 32.
+- `layer_stack/maintenance/squash.py` `SquashService` — collapses layers when depth > 32.
 
 **command_exec** — Namespace stub; logic in `occ/routing/orchestrator.py`.
 
@@ -131,10 +131,10 @@ Sync → `api/status.py` → `ProviderAdapter`. Tool verbs lazy-import `api/tool
 
 - **setup**: `host/bootstrap.py` bootstrap, bundle upload, `ensure_workspace_base`.
 - **daemon**: AF_UNIX lifecycle, `call_daemon_api` round-trip, `OP_TABLE` dispatch.
-- **occ**: `OccService.apply_changeset`, conflict detection, `OccSerialMerger`.
+- **occ**: `OccService.apply_changeset`, conflict detection, `CommitQueue`.
 - **overlay**: `overlay/worker.py` workspace preparation + capture via `shell` tool calls.
-- **layerstack**: `LayerStackManager` manifest read/write, `LayerPublisher`, `SquashWorker`.
-- **command_exec**: guarded exec via `occ/routing/orchestrator.py`.
+- **layerstack**: `LayerStackManager` manifest read/write, `LayerPublisher`, `SquashService`.
+- **command_exec**: guarded exec via `occ/router.py`.
 - **lsp plugin server**: `call_plugin` 5-step, `ensure_installed`, `plugin_ensure`.
 - **tool call impact**: assert `ShellResult.changed_paths`, `EditFileResult.applied_edits`; verify via `read_file`/`raw_exec`.
 
