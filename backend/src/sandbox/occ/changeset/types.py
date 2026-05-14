@@ -25,90 +25,40 @@ class Change:
 
 
 @dataclass(frozen=True)
-class EagerWritePayload:
-    """In-memory write payload."""
+class WritePayload:
+    """Write payload: eager bytes, an on-disk path, or both.
 
-    content: bytes
+    At least one of ``content``/``content_path`` must be set; ``read_bytes``
+    prefers the in-memory bytes and falls back to a disk read. Callers that
+    need to avoid re-reads should cache the bytes themselves.
+    """
 
-    def read_bytes(self) -> bytes:
-        return self.content
-
-    @property
-    def content_path(self) -> str | None:
-        return None
-
-    @property
-    def precomputed_hash(self) -> str | None:
-        return None
-
-
-@dataclass(frozen=True)
-class DiskWritePayload:
-    """On-disk write payload with optional cached bytes."""
-
-    path: str
-    content_hash: str | None
-    _cached_content: bytes | None = field(
-        default=None,
-        init=False,
-        compare=False,
-        repr=False,
-    )
+    content: bytes | None = None
+    content_path: str | None = None
+    precomputed_hash: str | None = None
 
     def read_bytes(self) -> bytes:
-        cached = self._cached_content
-        if cached is not None:
-            return cached
-        content = Path(self.path).read_bytes()
-        object.__setattr__(self, "_cached_content", content)
-        return content
-
-    @property
-    def content_path(self) -> str | None:
-        return self.path
-
-    @property
-    def precomputed_hash(self) -> str | None:
-        return self.content_hash
+        if self.content is not None:
+            return self.content
+        if self.content_path is None:
+            raise ValueError("WritePayload requires content or content_path")
+        return Path(self.content_path).read_bytes()
 
 
-WritePayload = EagerWritePayload | DiskWritePayload
-
-
-@dataclass(frozen=True, init=False)
+@dataclass(frozen=True, kw_only=True)
 class WriteChange(Change):
     """Whole-file write intent.
 
     ``payload`` keeps transport details out of the mutation intent. Source
-    adapters are responsible for translating host/API inputs into eager or
-    disk-backed payloads before constructing this value object.
+    adapters translate host/API inputs into in-memory or disk-backed payloads
+    before constructing this value object.
     """
 
-    source: ChangeSource = "api_write"
-    base_hash: str | None = None
     payload: WritePayload
-
-    def __init__(
-        self,
-        *,
-        path: str,
-        payload: WritePayload,
-        source: ChangeSource = "api_write",
-        base_hash: str | None = None,
-    ) -> None:
-        object.__setattr__(self, "path", str(path))
-        object.__setattr__(self, "source", source)
-        object.__setattr__(self, "base_hash", base_hash)
-        object.__setattr__(self, "payload", payload)
+    base_hash: str | None = None
 
     @property
     def final_content(self) -> bytes:
-        """Return the write payload as bytes, materialising lazily.
-
-        Eager (api_write / api_edit) instances return their stored bytes
-        immediately. Lazy (overlay_capture) instances cache the first
-        ``content_path`` read so chained hash/stage consumers share it.
-        """
         return self.payload.read_bytes()
 
     @property
@@ -120,12 +70,7 @@ class WriteChange(Change):
         return self.payload.precomputed_hash
 
     def with_base_hash(self, base_hash: str | None) -> WriteChange:
-        return WriteChange(
-            path=self.path,
-            source=self.source,
-            payload=self.payload,
-            base_hash=base_hash,
-        )
+        return replace(self, base_hash=base_hash)
 
 
 @dataclass(frozen=True)
@@ -145,11 +90,7 @@ class EditChange(Change):
             raise ValueError("EditChange requires new_text")
         object.__setattr__(self, "old_text", str(self.old_text))
         object.__setattr__(self, "new_text", str(self.new_text))
-        object.__setattr__(
-            self,
-            "expected_occurrences",
-            int(self.expected_occurrences),
-        )
+        object.__setattr__(self, "expected_occurrences", int(self.expected_occurrences))
 
 
 @dataclass(frozen=True)
@@ -183,21 +124,13 @@ class OpaqueDirChange(Change):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        object.__setattr__(
-            self,
-            "kept_children",
-            _normalize_kept_children(self.kept_children),
-        )
-
-
-def _normalize_kept_children(values: frozenset[str]) -> frozenset[str]:
-    normalized: set[str] = set()
-    for value in values:
-        child = str(value).strip("/")
-        if not child or "/" in child or child in {".", ".."}:
-            raise ValueError(f"opaque dir kept child must be direct: {value!r}")
-        normalized.add(child)
-    return frozenset(normalized)
+        normalized: set[str] = set()
+        for value in self.kept_children:
+            child = str(value).strip("/")
+            if not child or "/" in child or child in {".", ".."}:
+                raise ValueError(f"opaque dir kept child must be direct: {value!r}")
+            normalized.add(child)
+        object.__setattr__(self, "kept_children", frozenset(normalized))
 
 
 class FileStatus(str, Enum):
@@ -241,13 +174,13 @@ class ChangesetResult:
         return all(is_success_status(f.status) for f in self.files)
 
 
-# ---- builders (folded in from former changeset/builders.py per W5c) ------
+# ---- builders ------
 
 
-def _eager_payload(content: bytes | str) -> EagerWritePayload:
+def _eager_payload(content: bytes | str) -> WritePayload:
     if isinstance(content, bytes):
-        return EagerWritePayload(content=content)
-    return EagerWritePayload(content=content.encode("utf-8"))
+        return WritePayload(content=content)
+    return WritePayload(content=content.encode("utf-8"))
 
 
 def build_api_write_change(
@@ -274,23 +207,20 @@ def build_overlay_write_change(
 ) -> WriteChange:
     """Build an overlay-captured full-file write without a caller base hash.
 
-    When ``content_path`` and ``precomputed_hash`` are supplied, the
+    When ``content_path`` is provided and ``final_content`` is None, the
     bytes stay on disk and the OCC stager streams them kernel-to-kernel.
-    ``final_content`` is the bytes-based fallback for callers that
-    don't have a content path on disk.
+    ``final_content`` is the bytes-based fallback for callers that don't
+    have a content path on disk.
     """
-    if final_content is None and content_path is None:
-        raise ValueError("build_overlay_write_change needs final_content or content_path")
-    payload: WritePayload
     if content_path is not None and final_content is None:
-        payload = DiskWritePayload(
-            path=str(content_path),
-            content_hash=precomputed_hash,
+        payload = WritePayload(
+            content_path=str(content_path),
+            precomputed_hash=precomputed_hash,
         )
-    else:
-        if final_content is None:
-            raise ValueError("build_overlay_write_change needs final_content or content_path")
+    elif final_content is not None:
         payload = _eager_payload(final_content)
+    else:
+        raise ValueError("build_overlay_write_change needs final_content or content_path")
     return WriteChange(
         path=path,
         source="overlay_capture",
@@ -313,9 +243,7 @@ __all__ = [
     "ChangeSource",
     "ChangesetResult",
     "DeleteChange",
-    "DiskWritePayload",
     "EditChange",
-    "EagerWritePayload",
     "FileResult",
     "FileStatus",
     "OpaqueDirChange",
