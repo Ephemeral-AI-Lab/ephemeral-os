@@ -19,7 +19,7 @@ from agents import AgentDefinition
 from task_center.context_engine.engine import ContextEngine
 from task_center.context_engine.packet import ContextPacket
 from task_center.context_engine.renderer import MarkdownPromptRenderer
-from task_center.agent_routing.resolver import RuleBasedAgentResolver
+from task_center.agent_routing import RuleBasedAgentResolver
 from task_center.context_engine.scope import ContextScope
 
 

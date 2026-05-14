@@ -28,12 +28,11 @@ from task_center.context_engine.packet import (
     ContextPriority,
     ContextRefs,
 )
-from task_center.agent_routing.predicates import PredicateRegistry
+from task_center.agent_routing import PredicateRegistry, RuleBasedAgentResolver
 from task_center.context_engine.recipes_registry import (
     ContextRecipe,
     RecipeRegistry,
 )
-from task_center.agent_routing.resolver import RuleBasedAgentResolver
 from task_center.context_engine.scope import ContextScope
 
 

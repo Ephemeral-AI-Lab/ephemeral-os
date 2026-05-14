@@ -15,7 +15,7 @@ from agents import (
 from task_center.context_engine.errors import (
     AgentDefinitionValidationError,
 )
-from task_center.agent_routing.predicates import PredicateRegistry
+from task_center.agent_routing import PredicateRegistry
 from task_center.context_engine.recipes_registry import (
     ContextRecipe,
     RecipeRegistry,

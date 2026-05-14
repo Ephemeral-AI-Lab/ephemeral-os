@@ -9,7 +9,7 @@ import pytest
 from task_center.context_engine.engine import ContextEngineDeps
 from task_center.context_engine.errors import ContextEngineError
 from task_center.context_engine.packet import ContextPriority
-from task_center.context_engine.recipes.entry_executor import (
+from task_center.context_engine.recipes import (
     _entry_executor_build,
 )
 from task_center.context_engine.recipes.evaluator import _evaluator_build

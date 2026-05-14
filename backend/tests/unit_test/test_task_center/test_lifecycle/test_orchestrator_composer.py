@@ -21,7 +21,7 @@ from agents import (
 from task_center._core.types import TaskCenterLifecycleConfig
 from task_center.context_engine.composer import ContextComposer
 from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
-from task_center.agent_routing.predicates import (
+from task_center.agent_routing import (
     PredicateRegistry,
     register_builtin_predicates,
 )

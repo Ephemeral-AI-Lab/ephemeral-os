@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from task_center.context_engine.composer import ContextComposer, LaunchBundle
-    from task_center.agent_routing.predicates import PredicateRegistry
+    from task_center.agent_routing import PredicateRegistry
     from task_center.attempt.generator_dag import ordered_generator_tasks
     from task_center.attempt.orchestrator import AttemptOrchestrator
     from task_center.attempt.runtime import AttemptDeps
