@@ -358,14 +358,6 @@ class MissionHandler:
             close_mission=self.close_mission,
         )
 
-    @property
-    def _orchestrator_factory(self) -> OrchestratorFactory | None:
-        return self._factory._orchestrator_factory
-
-    @_orchestrator_factory.setter
-    def _orchestrator_factory(self, value: OrchestratorFactory | None) -> None:
-        self._factory._orchestrator_factory = value
-
     def create_mission(
         self,
         *,

@@ -167,7 +167,7 @@ def test_mission_start_startup_failure_leaves_parent_running(
 
     def _patched_build_handler(self):
         handler = original(self)
-        handler._orchestrator_factory = _failing_factory  # type: ignore[attr-defined]
+        handler._factory._orchestrator_factory = _failing_factory  # type: ignore[attr-defined]
         return handler
 
     MissionStarter._build_handler = _patched_build_handler  # type: ignore[assignment]
