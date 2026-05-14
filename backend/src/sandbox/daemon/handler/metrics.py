@@ -2,19 +2,17 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-
-from sandbox.layer_stack import LayerStackManager
 from sandbox.layer_stack.workspace_binding import read_workspace_binding
+from sandbox.daemon.handler.request_context import layer_stack_root as require_layer_stack_root
 from sandbox.daemon.service import occ_backend
 
 
 async def layer_metrics(args: dict[str, object]) -> dict[str, object]:
     """Summarize layer-stack storage and lease state for one runtime root."""
-    layer_stack_root = str(args.get("layer_stack_root") or "")
-    manager = _manager(args)
+    root = require_layer_stack_root(args)
+    manager = occ_backend.build_occ_backend(root).manager
     manifest = manager.read_active_manifest()
-    binding = read_workspace_binding(layer_stack_root)
+    binding = read_workspace_binding(root)
     layer_dirs = tuple((manager.storage_root / "layers").iterdir())
     staging_dirs = tuple((manager.storage_root / "staging").iterdir())
     total_bytes = 0
@@ -34,13 +32,6 @@ async def layer_metrics(args: dict[str, object]) -> dict[str, object]:
         "workspace_root": binding.workspace_root if binding is not None else "",
         "base_root_hash": binding.base_root_hash if binding is not None else "",
     }
-
-
-def _manager(args: Mapping[str, object]) -> LayerStackManager:
-    layer_stack_root = str(args.get("layer_stack_root") or "").strip()
-    if not layer_stack_root:
-        raise ValueError("layer_stack_root is required")
-    return occ_backend.build_occ_backend(layer_stack_root).manager
 
 
 __all__ = ["layer_metrics"]

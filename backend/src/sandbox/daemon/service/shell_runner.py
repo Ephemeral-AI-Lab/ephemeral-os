@@ -16,6 +16,7 @@ from sandbox.execution import (
 )
 from sandbox.layer_stack.workspace_binding import require_workspace_binding
 from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
+from sandbox.daemon.handler.request_context import layer_stack_root
 from sandbox.daemon.service.result_projection import (
     conflict_and_status,
     conflict_to_dict,
@@ -157,13 +158,6 @@ def _safe_env(raw: Mapping[object, object]) -> dict[str, str]:
             raise ValueError(f"env key cannot contain '=': {key!r}")
         result[key] = value
     return result
-
-
-def layer_stack_root(args: Mapping[str, object]) -> str:
-    layer_stack_root = str(args.get("layer_stack_root") or "").strip()
-    if not layer_stack_root:
-        raise ValueError("layer_stack_root is required")
-    return layer_stack_root
 
 
 def _mapping(value: object) -> Mapping[str, object]:

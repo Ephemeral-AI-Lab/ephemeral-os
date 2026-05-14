@@ -101,11 +101,16 @@ def classify_path(raw_path: str, workspace_root: str) -> ClassifiedPath:
 # -- argument validation ----------------------------------------------------
 
 
+def require_arg(args: Mapping[str, object], key: str) -> str:
+    """Return a stripped non-empty string ``args[key]`` or raise."""
+    value = str(args.get(key) or "").strip()
+    if not value:
+        raise ValueError(f"{key} is required")
+    return value
+
+
 def layer_stack_root(args: Mapping[str, object]) -> str:
-    layer_stack_root = str(args.get("layer_stack_root") or "").strip()
-    if not layer_stack_root:
-        raise ValueError("layer_stack_root is required")
-    return layer_stack_root
+    return require_arg(args, "layer_stack_root")
 
 
 def required_single_path(args: Mapping[str, object]) -> str:

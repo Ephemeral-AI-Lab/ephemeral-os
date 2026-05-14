@@ -14,6 +14,7 @@ from sandbox.layer_stack.manifest import (
 )
 from sandbox.layer_stack.workspace_binding import require_workspace_binding
 from sandbox.daemon.handler import request_context
+from sandbox.daemon.handler.request_context import layer_stack_root as require_layer_stack_root
 from sandbox.daemon.service import occ_backend, shell_runner
 from sandbox.daemon.service.occ_backend import OccBackend
 from sandbox.daemon.service.workspace_server import get_layer_stack_manager
@@ -25,7 +26,7 @@ _STARTED_AT_MONO = time.monotonic()
 def runtime_ready(args: dict[str, object]) -> dict[str, object]:
     """Return binary daemon readiness plus per-plane probe details."""
     total_start = monotonic_now()
-    root = layer_stack_root(args)
+    root = require_layer_stack_root(args)
     timings: dict[str, float] = {}
     probes = [
         _run_probe(
@@ -138,13 +139,6 @@ def _run_probe(
         "status": status,
         "details": details,
     }
-
-
-def layer_stack_root(args: dict[str, object]) -> str:
-    layer_stack_root = str(args.get("layer_stack_root") or "").strip()
-    if not layer_stack_root:
-        raise ValueError("layer_stack_root is required")
-    return layer_stack_root
 
 
 __all__ = ["runtime_ready"]
