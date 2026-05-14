@@ -1,10 +1,8 @@
 """Recipe registry + the ``ContextRecipe`` value type.
 
-The registry is a *process-global* singleton. Tests should call
-:meth:`RecipeRegistry.clear` in their teardown when registering ad-hoc
-recipes; production startup calls
-:func:`task_center.context_engine.recipes.register_builtin_recipes` exactly
-once.
+Process-global singleton. Tests call :meth:`RecipeRegistry.clear` in teardown
+when registering ad-hoc recipes; production startup calls
+:func:`task_center.context_engine.recipes.register_builtin_recipes` exactly once.
 """
 
 from __future__ import annotations
@@ -13,15 +11,13 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
-from task_center.context_engine.core import ContextEngineError
+from task_center.context_engine.exceptions import ContextEngineError
 from task_center.context_engine.packet import ContextPacket
 from task_center.context_engine.scope import ContextScope
 
-if TYPE_CHECKING:  # pragma: no cover - typing-only; engine imports this module
+if TYPE_CHECKING:  # pragma: no cover - typing-only
     from task_center.context_engine.core import ContextEngineDeps
 
-# The engine imports this module at runtime to wire ``ContextRecipe``; the
-# deps type is imported only for typing so the cycle stays static.
 RecipeBuild = Callable[[ContextScope, "ContextEngineDeps"], ContextPacket]
 
 

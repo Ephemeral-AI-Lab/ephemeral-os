@@ -17,7 +17,8 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only
     from task_center._core.persistence import TaskStoreProtocol
 
 
-_PREMATURE_STATUSES = frozenset({"failed", "blocked", "missing task row"})
+_MISSING_TASK_ROW_STATUS = "missing task row"
+_PREMATURE_STATUSES = frozenset({"failed", "blocked", _MISSING_TASK_ROW_STATUS})
 _EMPTY_SUMMARY_PLACEHOLDERS = frozenset({"(empty)", "(no summary recorded)"})
 
 
@@ -137,7 +138,7 @@ def _generator_outcomes(
             outcomes.append(
                 _GeneratorOutcome(
                     task_id=task_id,
-                    status="missing task row",
+                    status=_MISSING_TASK_ROW_STATUS,
                     blocked_by=None,
                     summary=None,
                 )

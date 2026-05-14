@@ -24,12 +24,11 @@ class ContextPriority(StrEnum):
     LOW = "low"
 
 
-# A growing taxonomy of block kinds — kept open via plain str fields rather
-# than a closed enum so new recipes can introduce kinds without touching this
-# module. The constants below are convenience handles for callers that want
-# to avoid stringly-typed code.
+# ``ContextBlock.kind`` is typed as ``str`` (not this enum) so new recipes can
+# introduce kinds without touching this module. The enum below is a namespaced
+# set of constants for callers that want to avoid stringly-typed code.
 class ContextBlockKind(StrEnum):
-    """Convenience handles for known kinds. Recipes may use any string."""
+    """Convenience constants for known kinds. ``ContextBlock.kind`` accepts any string."""
 
     MISSION_GOAL = "mission_goal"
     EPISODE_GOAL = "episode_goal"
