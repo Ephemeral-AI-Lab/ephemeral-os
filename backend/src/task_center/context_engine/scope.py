@@ -106,20 +106,3 @@ class ContextScope:
     def for_entry_executor(cls, *, task_id: str) -> ContextScope:
         """Scope shape required by the entry-executor recipe."""
         return cls(task_id=task_id)
-
-    @classmethod
-    def for_helper(
-        cls,
-        *,
-        mission_id: str,
-        task_id: str,
-        parent_packet_id: str,
-        parent_task_id: str | None = None,
-    ) -> ContextScope:
-        """Scope shape required by helper recipes (advisor / resolver)."""
-        return cls(
-            mission_id=mission_id,
-            task_id=task_id,
-            parent_packet_id=parent_packet_id,
-            parent_task_id=parent_task_id,
-        )
