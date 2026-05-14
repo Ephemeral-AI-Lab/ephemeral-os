@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from audit.base import AuditEvent
-from task_center import audit as events
-from task_center.audit import TaskCenterAuditEmitter
+from task_center._core import infra as events
+from task_center._core.infra import TaskCenterAuditEmitter
 
 
 class CollectingSink:

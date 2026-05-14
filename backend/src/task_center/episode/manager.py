@@ -20,11 +20,11 @@ from task_center.attempt.state import (
     AttemptFailReason,
     AttemptStatus,
 )
-from task_center.invariants import (
+from task_center._core.infra import (
     assert_fail_reason_present_on_failure,
     assert_attempt_sequence_contiguous,
 )
-from task_center.invariants import (
+from task_center._core.infra import (
     assert_attempt_belongs_to_episode,
     assert_episode_has_budget,
     assert_episode_open,

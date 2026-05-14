@@ -37,7 +37,7 @@ from task_center.attempt.generator_dag import (
     dependency_task_ids,
     ordered_generator_tasks,
 )
-from task_center.invariants import (
+from task_center._core.infra import (
     assert_evaluator_task_for_submission,
     assert_generator_task_for_submission,
     assert_attempt_not_closed,

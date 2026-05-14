@@ -23,7 +23,7 @@ from task_center.episode.state import (
     TerminalSuccess,
 )
 from task_center.exceptions import TaskCenterInvariantViolation
-from task_center.invariants import (
+from task_center._core.infra import (
     assert_continuation_episode_predecessor,
     assert_episode_id_unique_in_mission,
     assert_episode_sequence_contiguous,

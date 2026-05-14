@@ -6,17 +6,17 @@ from datetime import UTC, datetime
 
 import pytest
 
-from task_center.invariants import (
+from task_center._core.infra import (
     assert_continuation_episode_predecessor,
     assert_mission_open,
     assert_episode_id_unique_in_mission,
     assert_episode_sequence_contiguous,
 )
-from task_center.invariants import (
+from task_center._core.infra import (
     assert_fail_reason_present_on_failure,
     assert_attempt_sequence_contiguous,
 )
-from task_center.invariants import (
+from task_center._core.infra import (
     assert_attempt_belongs_to_episode,
     assert_episode_has_budget,
     assert_episode_open,
