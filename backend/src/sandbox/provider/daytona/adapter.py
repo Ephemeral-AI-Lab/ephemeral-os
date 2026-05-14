@@ -139,10 +139,8 @@ class DaytonaProviderAdapter:
                 "default_image": None,
             }
         except Exception as exc:
-            # IN-02: log the full SDK error server-side, return a generic
-            # "provider unavailable" detail. SDK exceptions can include URL
-            # fragments, request IDs, and partial response bodies — none of
-            # that belongs on a public health endpoint.
+            # IN-02: log full SDK error server-side; return generic detail
+            # (SDK exceptions can leak URLs/request IDs/response bodies).
             logger.warning(
                 "Daytona health probe failed: %s", exc, exc_info=True
             )
@@ -258,10 +256,8 @@ class DaytonaProviderAdapter:
 
     def stop(self, sandbox_id: str) -> dict[str, Any]:
         raw = fetch_sandbox(sandbox_id)
-        # WR-03: use the module-wide timeout (configurable via
-        # EPHEMERALOS_SANDBOX_TIMEOUT_SECONDS) so a degraded scheduler
-        # does not fail stop alone at the magic-literal 60s while
-        # start/delete tolerate the longer budget.
+        # WR-03: module-wide timeout (configurable via EPHEMERALOS_SANDBOX_TIMEOUT_SECONDS)
+        # so degraded-scheduler stops don't fail at 60s while start/delete tolerate longer.
         raw.stop(timeout=_SANDBOX_TIMEOUT_SECONDS)
         _refresh(raw)
         return _serialize_raw(raw)

@@ -19,11 +19,8 @@ from sandbox.daemon_paths import (
 from sandbox.host.runtime_bundle import bundle_hash
 from sandbox.provider.registry import get_adapter
 
-# Daemon launcher: ensures the resident daemon is running, then invokes a
-# tiny AF_UNIX client that pipes one envelope and prints the response. The
-# daemon is spawned via ``nohup`` once per sandbox; subsequent calls hit the
-# already-warm process. Both the spawn and the per-call thin client are emitted
-# through ``provider.exec``; Daytona stays inside the adapter.
+# Daemon spawned once per sandbox via provider.exec; subsequent calls hit the
+# warm process via an AF_UNIX thin client (one envelope per call).
 _DAEMON_SOCKET = DAEMON_SOCKET_PATH
 _DAEMON_PID = DAEMON_PID_PATH
 _DAEMON_LOG = DAEMON_LOG_PATH
@@ -312,11 +309,8 @@ def _daemon_thin_client_command(raw_payload: str) -> str:
 
 
 def _daemon_spawn_command() -> str:
-    """Launch the bundled daemon supervisor script.
-
-    Idempotent: returns 0 immediately when an existing daemon's socket is
-    bound and its PID is alive.
-    """
+    """Launch the bundled daemon supervisor. Idempotent: returns 0 when
+    an existing daemon's socket is bound and its PID is alive."""
     return " ".join(
         shlex.quote(part)
         for part in (

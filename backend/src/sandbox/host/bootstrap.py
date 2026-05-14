@@ -1,9 +1,4 @@
-"""Provider-neutral sandbox lifecycle bootstrap and recovery.
-
-The runtime-bundle upload runs concurrently with whatever else the create flow
-does (today: ``ensure_git``). Both depend only on the sandbox existing;
-sequencing them serially leaves wall-clock time on the table.
-"""
+"""Provider-neutral sandbox lifecycle bootstrap and recovery."""
 
 from __future__ import annotations
 
@@ -34,11 +29,7 @@ _INSTALL_GIT_SCRIPT = (
 async def bootstrap_in_sandbox_runtime(
     sandbox_id: str,
 ) -> None:
-    """Upload the runtime command bundle during sandbox lifecycle events.
-
-    Short-circuits as a no-op when ``sandbox_id`` is empty. Raises when the
-    runtime bundle cannot be prepared.
-    """
+    """Upload the runtime command bundle. No-op when sandbox_id is empty."""
     if not sandbox_id:
         return
 
@@ -109,16 +100,10 @@ def start_runtime_bundle_upload(
     sandbox_id: str,
     workspace_root: str | None,
 ) -> concurrent.futures.Future[None] | None:
-    """Kick off the runtime-bundle upload in a background thread.
+    """Start the bundle upload in a background thread to overlap with ensure_git.
 
-    Designed to overlap with the ~7 s ``ensure_git`` step in the create
-    pipeline. Returns a future the caller MUST drain via
-    :func:`finish_runtime_bundle_upload` before invoking
-    :func:`run_runtime_bootstrap`. Returns ``None`` when there is no
-    sandbox id or project_dir.
-
-    Best-effort by design: the matching join helper swallows errors and
-    timeouts so the sequential bootstrap can retry from scratch.
+    Best-effort: the matching join helper swallows errors so the sequential
+    bootstrap can retry. Caller MUST drain via finish_runtime_bundle_upload.
     """
     workspace = (workspace_root or "").strip()
     if not workspace or not sandbox_id:
@@ -140,13 +125,8 @@ def finish_runtime_bundle_upload(
     future: concurrent.futures.Future[None] | None,
     sandbox_id: str,
 ) -> None:
-    """Join the background bundle-upload future. Errors do not propagate.
-
-    A failed background upload is recoverable: the subsequent sequential
-    :func:`run_runtime_bootstrap` call will re-run
-    ``ensure_runtime_uploaded`` and either find the bundle in place or
-    retry the upload. Surfacing background failures here would mask that
-    retry path.
+    """Join the background bundle-upload future. Errors swallowed by design:
+    run_runtime_bootstrap will retry; surfacing errors here would mask that.
     """
     if future is None:
         return
@@ -221,12 +201,8 @@ def _runtime_probe(
 
 
 def ensure_git(sandbox_id: str) -> None:
-    """Install git in the sandbox if missing.
-
-    Best-effort: expected "git is unavailable and cannot be installed" failures
-    are logged but not raised. Adapter/config failures still propagate because
-    they indicate the sandbox itself is broken.
-    """
+    """Install git if missing. Best-effort: install failures are logged,
+    adapter/config failures propagate (sandbox is broken)."""
     if not sandbox_id:
         return
     try:
@@ -314,15 +290,7 @@ def setup_post_lifecycle(
 
 
 def setup_after_create(sandbox_id: str, workspace_root: str | None) -> None:
-    """Post-create hook: ensure_git, runtime bootstrap, and workspace base.
-
-    1. Start the bundle upload in the background (overlaps with ensure_git).
-    2. Run ensure_git synchronously — installs git in minimal images that
-       don't have it.
-    3. Join the upload future (errors swallowed; sequential bootstrap retries).
-    4. Run the sequential runtime bootstrap.
-    5. Bind the assigned workspace and build its layer-stack base.
-    """
+    """Post-create hook."""
     setup_post_lifecycle(sandbox_id, workspace_root, phase="create")
 
 
