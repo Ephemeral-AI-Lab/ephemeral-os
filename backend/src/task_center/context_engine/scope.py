@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from task_center.context_engine.errors import RecipeScopeError
+from task_center.context_engine.core import RecipeScopeError
 
 
 @dataclass(frozen=True, slots=True)

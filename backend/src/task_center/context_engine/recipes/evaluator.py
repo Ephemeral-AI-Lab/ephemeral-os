@@ -7,8 +7,7 @@ last so pass/fail authority is anchored to the current attempt contract.
 
 from __future__ import annotations
 
-from task_center.context_engine.engine import ContextEngineDeps
-from task_center.context_engine.errors import ContextEngineError
+from task_center.context_engine.core import ContextEngineDeps, ContextEngineError
 from task_center.context_engine.packet import (
     ContextBlock,
     ContextBlockKind,

@@ -13,9 +13,9 @@ from typing import ClassVar
 
 from agents import get_definition
 from agents import AgentDefinition, AgentSelectionBlock, AgentVariant
-from task_center.context_engine.engine import ContextEngineDeps
-from task_center.context_engine.errors import (
+from task_center.context_engine.core import (
     AgentDefinitionValidationError,
+    ContextEngineDeps,
     MissingContextRecipeError,
 )
 from task_center.context_engine.packet import (

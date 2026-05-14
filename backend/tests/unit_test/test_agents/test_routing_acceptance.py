@@ -24,8 +24,7 @@ from task_center.agent_routing import (
     ResolverContext,
     register_builtin_predicates,
 )
-from task_center.context_engine.engine import ContextEngineDeps
-from task_center.context_engine.errors import AgentDefinitionValidationError
+from task_center.context_engine.core import ContextEngineDeps, AgentDefinitionValidationError
 from task_center.context_engine.recipes_registry import (
     ContextRecipe,
     RecipeRegistry,

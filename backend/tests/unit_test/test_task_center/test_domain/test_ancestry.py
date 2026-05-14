@@ -11,7 +11,7 @@ from task_center.agent_routing import (
     register_builtin_predicates,
 )
 from task_center.attempt import AttemptStage
-from task_center.context_engine.engine import ContextEngineDeps
+from task_center.context_engine.core import ContextEngineDeps
 from task_center.context_engine.scope import ContextScope
 from task_center.episode.state import EpisodeCreationReason
 from task_center._core.types import TaskCenterInvariantViolation

@@ -13,8 +13,7 @@ import importlib
 import pkgutil
 from typing import Any
 
-from task_center.context_engine.engine import ContextEngineDeps
-from task_center.context_engine.errors import ContextEngineError
+from task_center.context_engine.core import ContextEngineDeps, ContextEngineError
 from task_center.context_engine.packet import (
     ContextBlock,
     ContextBlockKind,

@@ -12,8 +12,8 @@ from agents import (
     register_definition,
     unregister_definition,
 )
-from task_center.context_engine.engine import ContextEngineDeps
-from task_center.context_engine.errors import (
+from task_center.context_engine.core import (
+    ContextEngineDeps,
     AgentDefinitionValidationError,
     MissingContextRecipeError,
 )

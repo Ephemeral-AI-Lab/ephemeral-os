@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
-from task_center.context_engine.errors import (
+from task_center.context_engine.core import (
+    ContextEngine,
+    ContextEngineDeps,
     ContextEngineError,
     RecipeScopeError,
 )

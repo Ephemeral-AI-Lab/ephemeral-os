@@ -25,12 +25,12 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
-from task_center.context_engine.errors import ContextEngineError
+from task_center.context_engine.core import ContextEngineError
 from task_center.context_engine.packet import ContextPacket
 from task_center.context_engine.scope import ContextScope
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only; engine imports this module
-    from task_center.context_engine.engine import ContextEngineDeps
+    from task_center.context_engine.core import ContextEngineDeps
 
 # The engine imports this module at runtime to wire ``ContextRecipe``; the
 # deps type is imported only for typing so the cycle stays static.

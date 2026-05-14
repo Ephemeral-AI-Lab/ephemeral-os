@@ -6,8 +6,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from task_center.context_engine.engine import ContextEngineDeps
-from task_center.context_engine.errors import ContextEngineError
+from task_center.context_engine.core import ContextEngineDeps, ContextEngineError
 from task_center.context_engine.packet import ContextPriority
 from task_center.context_engine.recipes import (
     _entry_executor_build,

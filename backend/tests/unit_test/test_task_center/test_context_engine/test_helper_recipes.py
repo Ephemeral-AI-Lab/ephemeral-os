@@ -9,8 +9,8 @@ from sqlalchemy.orm import sessionmaker
 import db.models  # noqa: F401 — populate Base.metadata
 from db.base import Base
 from db.stores.context_packet_store import ContextPacketStore
-from task_center.context_engine.engine import ContextEngineDeps
-from task_center.context_engine.errors import (
+from task_center.context_engine.core import (
+    ContextEngineDeps,
     ContextEngineError,
     RecipeScopeError,
 )

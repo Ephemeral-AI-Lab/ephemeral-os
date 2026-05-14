@@ -12,8 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from task_center.context_engine.engine import ContextEngineDeps
-from task_center.context_engine.errors import ContextEngineError
+from task_center.context_engine.core import ContextEngineDeps, ContextEngineError
 from task_center.context_engine.packet import (
     ContextBlock,
     ContextBlockKind,

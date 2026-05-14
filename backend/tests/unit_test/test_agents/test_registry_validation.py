@@ -12,7 +12,7 @@ from agents import (
     unregister_definition,
     validate_agent_definitions_resolved,
 )
-from task_center.context_engine.errors import (
+from task_center.context_engine.core import (
     AgentDefinitionValidationError,
 )
 from task_center.agent_routing import PredicateRegistry

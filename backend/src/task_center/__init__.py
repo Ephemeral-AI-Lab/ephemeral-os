@@ -27,7 +27,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from task_center.context_engine.composer import ContextComposer, LaunchBundle
+    from task_center.context_engine.core import ContextComposer, LaunchBundle
     from task_center.agent_routing import PredicateRegistry
     from task_center.attempt.generator_dag import ordered_generator_tasks
     from task_center.attempt.orchestrator import AttemptOrchestrator
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
         AttemptStage,
         AttemptStatus,
     )
-    from task_center.context_engine.errors import (
+    from task_center.context_engine.core import (
         AgentDefinitionValidationError,
     )
     from task_center.context_engine.packet import ContextPacket
@@ -66,7 +66,7 @@ if TYPE_CHECKING:
 # Map: public name → (submodule, name_in_submodule)
 _EXPORTS: dict[str, tuple[str, str]] = {
     "AgentDefinitionValidationError": (
-        "task_center.context_engine.errors",
+        "task_center.context_engine.core",
         "AgentDefinitionValidationError",
     ),
     "Attempt": ("task_center.attempt.state", "Attempt"),
@@ -78,7 +78,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     ),
     "AttemptStage": ("task_center.attempt.state", "AttemptStage"),
     "AttemptStatus": ("task_center.attempt.state", "AttemptStatus"),
-    "ContextComposer": ("task_center.context_engine.composer", "ContextComposer"),
+    "ContextComposer": ("task_center.context_engine.core", "ContextComposer"),
     "ContextPacket": ("task_center.context_engine.packet", "ContextPacket"),
     "ContextScope": ("task_center.context_engine.scope", "ContextScope"),
     "EntryTaskController": (
@@ -93,7 +93,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "EpisodeStatus": ("task_center.episode.state", "EpisodeStatus"),
     "EvaluatorSubmission": ("task_center.task_state", "EvaluatorSubmission"),
     "GeneratorSubmission": ("task_center.task_state", "GeneratorSubmission"),
-    "LaunchBundle": ("task_center.context_engine.composer", "LaunchBundle"),
+    "LaunchBundle": ("task_center.context_engine.core", "LaunchBundle"),
     "Mission": ("task_center.mission.state", "Mission"),
     "MissionStarter": ("task_center.mission.starter", "MissionStarter"),
     "MissionStatus": ("task_center.mission.state", "MissionStatus"),

@@ -45,7 +45,7 @@ def test_registry_get_raises_typed_error() -> None:
     else:
         raise AssertionError("expected KeyError")
 
-    from task_center.context_engine.errors import ContextEngineError
+    from task_center.context_engine.core import ContextEngineError
 
     RecipeRegistry.clear()
     try:
