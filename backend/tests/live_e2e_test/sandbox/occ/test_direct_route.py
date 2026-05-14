@@ -39,7 +39,7 @@ before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
 stack = LayerStackManager(root / "stack")
-service = OccService(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
+service = OccService(gitignore=_Gitignore(), layer_stack=stack)
 
 empty = service.apply_changeset_sync([], snapshot=stack.read_active_manifest())
 assert isinstance(empty, ChangesetResult)
@@ -96,7 +96,7 @@ before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
 stack = LayerStackManager(root / "stack")
-service = OccService(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
+service = OccService(gitignore=_Gitignore(), layer_stack=stack)
 n = 8
 barrier = threading.Barrier(n)
 

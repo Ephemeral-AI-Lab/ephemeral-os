@@ -47,7 +47,7 @@ def test_shell_occ_gated_conflict_holds_occ_skipped_outputs(tmp_path: Path) -> N
     _publish(stack, tmp_path, "src/app.py", b"leased\n")
     snapshot = stack.read_active_manifest()
     _publish(stack, tmp_path, "src/app.py", b"active\n")
-    service = OccService(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
+    service = OccService(gitignore=_Gitignore(), layer_stack=stack)
 
     result = asyncio.run(
         service.apply_changeset(

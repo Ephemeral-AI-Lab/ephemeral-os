@@ -16,19 +16,22 @@ _Source: explore agent draft, 2026-05-10. See `.omc/wiki-draft/sandbox.md`._
 
 ## Top-level surface
 
-`sandbox/api/__init__.py` re-exports singleton `SandboxOCCClient` (`api/facade.py:20`).
+`sandbox/api/__init__.py` re-exports module-level lifecycle and tool verbs from
+`sandbox/api/default.py`; there is no `SandboxClient` facade layer.
 
 - Sync lifecycle: `create_sandbox`, `start_sandbox`, `stop_sandbox`, `delete_sandbox`, `ensure_sandbox_running`, `get_sandbox`, `list_sandboxes`, `get_health`
 - Async tool verbs: `shell`, `raw_exec`, `read_file`, `write_file`, `edit_file`
 
-Sync → `api/status.py` → `ProviderAdapter`. Tool verbs lazy-import `api/tool/{shell,raw_exec,read,write,edit}.py`.
+Sync lifecycle/discovery calls route through `api/lifecycle.py`,
+`api/discovery.py`, and `api/preview_urls.py`. Tool verbs route through
+`api/_impl/{shell,raw_exec,read,write,edit}.py`.
 
 ## Subsystem map
 
 **occ** — Optimistic concurrency control.
-- `occ/service.py` `Service.apply_changeset` — prepare + commit through layer stack.
-- `occ/client.py` `Client` — validates workspace binding, forwards to `Service`.
-- `occ/ports.py` — `SnapshotReader + CommitStagingStore + CommitPublisher`; implemented by `LayerStackManager`.
+- `occ/service.py` `OccService.apply_changeset` — prepare + commit through layer stack.
+- `occ/client.py` `OccClient` — validates workspace binding, forwards to `OccService`.
+- `occ/ports.py` — `OccLayerStackPort`; implemented by `LayerStackManager`.
 - `occ/stage/transaction.py` `CommitTransaction` — holds commit lock, calls `publish_layer`.
 
 **overlay** — Runs commands in a prepared snapshot workspace, captures diffs.
@@ -37,7 +40,7 @@ Sync → `api/status.py` → `ProviderAdapter`. Tool verbs lazy-import `api/tool
 - `overlay/capture.py` `capture_changes` — diffs upperdir or copy-backed workspace changes against the snapshot.
 
 **layer_stack** — Content-addressed layered FS inside sandbox.
-- `layer_stack/manager.py:58` `LayerStackManager` — manifest I/O, leases, reads, publishes; implements `OccLayerStackPorts`.
+- `layer_stack/manager.py:58` `LayerStackManager` — manifest I/O, leases, reads, publishes; implements `OccLayerStackPort`.
 - `layer_stack/manifest/model.py:37` `Manifest` — ordered `LayerRef` list + version + root_hash.
 - `layer_stack/layer/change.py:34` `LayerChange` ADT — Write/Delete/Symlink/OpaqueDir → `LayerDelta`.
 - `layer_stack/layer/publisher.py:42` `LayerPublisher` — writes delta as tar layer, updates manifest atomically.
@@ -89,7 +92,7 @@ Sync → `api/status.py` → `ProviderAdapter`. Tool verbs lazy-import `api/tool
 2. **Create** — `api/status.py:70` → `provider.create` → `register_adapter` → `setup_after_create`.
 3. **Post-create** — concurrent `ensure_git` + bundle upload → `call_daemon_api("api.ensure_workspace_base")`.
 4. **Daemon** — `_daemon_spawn_command` via `provider.exec` → AF_UNIX socket open, `OP_TABLE` populated.
-5. **Tool call** — `SandboxOCCClient.edit_file` → `call_daemon_api("command_exec.edit_file")` → `Service.apply_changeset` → `LayerPublisher` writes layer.
+5. **Tool call** — `edit_file` → `call_daemon_api("api.v1.edit_file")` → `OccService.apply_changeset` → `LayerPublisher` writes layer.
 6. **Shell** — `shell` -> `call_daemon_api("overlay.run")` -> `overlay/worker.py` -> prepared workspace + exec + capture -> OCC commits delta.
 7. **Plugin** — `call_plugin` → `ensure_installed` → `api.plugin.ensure` → `call_daemon_api("plugin.<n>.<op>")`.
 8. **Recovery** — `ensure_sandbox_running` → probe → restart + `setup_after_start`.
@@ -131,7 +134,7 @@ Sync → `api/status.py` → `ProviderAdapter`. Tool verbs lazy-import `api/tool
 
 - **setup**: `host/bootstrap.py` bootstrap, bundle upload, `ensure_workspace_base`.
 - **daemon**: AF_UNIX lifecycle, `call_daemon_api` round-trip, `OP_TABLE` dispatch.
-- **occ**: `Service.apply_changeset`, conflict detection, `CommitQueue`.
+- **occ**: `OccService.apply_changeset`, conflict detection, `CommitQueue`.
 - **overlay**: `overlay/worker.py` workspace preparation + capture via `shell` tool calls.
 - **layerstack**: `LayerStackManager` manifest read/write, `LayerPublisher`, `SquashService`.
 - **command_exec**: guarded exec via `occ/router.py`.

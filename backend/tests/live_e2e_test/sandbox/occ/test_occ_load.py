@@ -49,7 +49,7 @@ for index in range(5):
             source_path=str(_source(root, "shared-%02d" % index, b"base\n")),
         )
     ])
-service = OccService(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
+service = OccService(gitignore=_Gitignore(), layer_stack=stack)
 operation_count = int(cfg["operation_count"])
 concurrency = int(cfg["concurrency"])
 barrier = threading.Barrier(concurrency)

@@ -1,6 +1,7 @@
 # layer_stack Remediation Implementation Report
 
-Source review: `backend/src/sandbox/layer_stack/REVIEW.md`
+Source review: historical layer-stack architecture review, removed after
+remediation to avoid preserving stale cleanup instructions.
 
 ## Remediation Plan
 
@@ -138,14 +139,16 @@ Status: complete.
 
 Review issues addressed:
 
-- Removed the remaining prefixed OCC service/client symbols from the runtime surface.
-- Standardized in-repo callers on package-local `Service` and `Client`.
-- Kept explicit `snapshot_reader`/`staging`/`publisher` construction for
-  `Service`; runtime backend wiring now owns auto-squash maintenance injection.
+- Removed the remaining ambiguous unqualified OCC service/client symbols from
+  the runtime surface.
+- Standardized in-repo callers on explicit `OccService` and `OccClient`.
+- Collapsed explicit `snapshot_reader`/`staging`/`publisher` construction into
+  the combined `OccLayerStackPort`; runtime backend wiring now owns auto-squash
+  maintenance injection.
 
 Implementation notes:
 
-- `Service` now delegates post-publish maintenance through the injected
+- `OccService` now delegates post-publish maintenance through the injected
   maintenance policy instead of embedding auto-squash logic.
 - Runtime backend construction, OCC unit tests, live OCC probes, and architecture notes were aligned to the canonical names.
 
@@ -154,3 +157,37 @@ Verification:
 - `python3 -m py_compile backend/src/sandbox/occ/service.py backend/src/sandbox/occ/client.py backend/src/sandbox/runtime/daemon/service/occ_backend.py` -> passed.
 - `uv run ruff check backend/src/sandbox/occ backend/src/sandbox/runtime/daemon/service/occ_backend.py backend/tests/unit_test/test_sandbox/test_occ backend/tests/unit_test/test_sandbox/test_daemon/test_daemon.py backend/tests/live_e2e_test/sandbox/occ --select F401,F811,F821,F841,UP035 -q` -> passed.
 - `uv run pytest backend/tests/unit_test/test_sandbox/test_occ backend/tests/unit_test/test_sandbox/test_daemon/test_daemon.py -q` -> `67 passed`.
+
+### Phase 6: Second-round dead-code and long-code cleanup
+
+Status: complete.
+
+Review issues addressed:
+
+- Removed the stale historical review file after its actionable items had been
+  moved into this implementation report.
+- Removed dead or unused arguments: workspace-base layer writing no longer
+  accepts an immediately discarded `root_hash`, daemon retry handling no longer
+  carries an unused `op`, and plugin context construction marks the protocol
+  placeholder as intentionally unused.
+- Removed the unused `LayerChange` import from plugin projection tests.
+- Simplified OCC base-hash chaining by replacing the two-entry behavior table
+  with direct `WriteChange`/`DeleteChange` helpers.
+- Moved the process-wide layer-stack storage-writer fd/refcount lifecycle out
+  of `LayerStackManager` into `_storage_lock.py`.
+
+Implementation notes:
+
+- `LayerStackManager` now imports `acquire_storage_writer_lock(...)`; the manager
+  file no longer owns `fcntl`, fd close, or refcount bookkeeping.
+- The router still preserves the same chained base-hash semantics: writes
+  advance the running hash, deletes clear it, and other changes leave it
+  unchanged.
+
+Verification:
+
+- `python3 -m py_compile backend/src/sandbox/layer_stack/_storage_lock.py backend/src/sandbox/layer_stack/manager.py backend/src/sandbox/layer_stack/workspace/base.py backend/src/sandbox/occ/client.py backend/src/sandbox/occ/service.py backend/src/sandbox/occ/ports.py backend/src/sandbox/occ/router.py backend/src/sandbox/runtime/daemon/service/occ_backend.py` -> passed.
+- `uv run ruff check backend/src/sandbox/layer_stack/manager.py backend/src/sandbox/layer_stack/_storage_lock.py backend/src/sandbox/layer_stack/workspace/base.py backend/src/sandbox/occ/client.py backend/src/sandbox/occ/service.py backend/src/sandbox/occ/ports.py backend/src/sandbox/occ/router.py backend/src/sandbox/runtime/daemon/service/occ_backend.py backend/src/sandbox/plugin/handler.py backend/src/sandbox/host/daemon_client.py backend/tests/unit_test/test_sandbox/test_plugin_projection.py backend/tests/unit_test/test_sandbox/test_occ backend/tests/unit_test/test_sandbox/test_daemon/test_daemon.py backend/tests/live_e2e_test/sandbox/occ --select F401,F811,F821,F841,ARG,UP035 -q` -> passed.
+- `uv run pytest backend/tests/unit_test/test_sandbox/test_layer_stack backend/tests/unit_test/test_sandbox/test_occ backend/tests/unit_test/test_sandbox/test_daemon/test_daemon.py backend/tests/unit_test/test_sandbox/test_plugin_projection.py -q` -> `140 passed`.
+- `uv run pytest backend/tests/unit_test/test_sandbox/test_import_fence.py backend/tests/unit_test/test_sandbox/test_daemon/test_bundle_upload.py -q` -> `27 passed`.
+- `uv run pytest backend/tests/unit_test/test_sandbox/test_api/test_shell_staleness_telemetry.py -q` -> `8 passed`.

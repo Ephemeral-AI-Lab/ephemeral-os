@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import logging
-import os
 import shutil
 import tempfile
 import threading
@@ -19,6 +17,7 @@ from sandbox.layer_stack._paths import (
     resolve_storage_path,
     safe_request_part,
 )
+from sandbox.layer_stack._storage_lock import acquire_storage_writer_lock
 from sandbox.layer_stack.layer.change import LayerChange
 from sandbox.layer_stack.layer.publisher import LayerPublisher
 from sandbox.layer_stack.lease.registry import LeaseRegistry, WorkspaceLease
@@ -45,49 +44,7 @@ from sandbox.layer_stack.transaction import (
 from sandbox.layer_stack.view.merged import MergedView
 from sandbox.timing import monotonic_now
 
-logger = logging.getLogger(__name__)
-
 _TRANSIENT_LOWERDIR_DIR = "transient-lowerdirs"
-_STORAGE_WRITER_LOCK_FILE = ".storage-writer.lock"
-_STORAGE_WRITER_LOCKS: dict[str, _StorageWriterLock] = {}
-_STORAGE_WRITER_LOCKS_LOCK = threading.Lock()
-
-try:
-    import fcntl
-except ImportError:  # pragma: no cover - Windows-only fallback.
-    fcntl = None  # type: ignore[assignment]
-
-
-@dataclass
-class _StorageWriterLock:
-    fd: int
-    refcount: int
-
-
-class _StorageWriterLockLease:
-    def __init__(self, key: str, fd: int) -> None:
-        self._key = key
-        self.fd = fd
-        self._closed = False
-
-    def close(self) -> None:
-        if self._closed:
-            return
-        self._closed = True
-        with _STORAGE_WRITER_LOCKS_LOCK:
-            record = _STORAGE_WRITER_LOCKS.get(self._key)
-            if record is None:
-                return
-            record.refcount -= 1
-            if record.refcount > 0:
-                return
-            _STORAGE_WRITER_LOCKS.pop(self._key, None)
-            if fcntl is not None:
-                fcntl.flock(record.fd, fcntl.LOCK_UN)
-            os.close(record.fd)
-
-    def __del__(self) -> None:
-        self.close()
 
 
 @dataclass(frozen=True)
@@ -125,7 +82,7 @@ class LayerStackManager:
     ) -> None:
         self.storage_root = Path(storage_root)
         self.storage_root.mkdir(parents=True, exist_ok=True)
-        self._storage_writer_lock = _acquire_storage_writer_lock(self.storage_root)
+        self._storage_writer_lock = acquire_storage_writer_lock(self.storage_root)
         (self.storage_root / LAYERS_DIR).mkdir(exist_ok=True)
         (self.storage_root / STAGING_DIR).mkdir(exist_ok=True)
 
@@ -369,31 +326,3 @@ class LayerStackManager:
 
 def _layer_digest_path(storage_root: Path, layer_id: str) -> Path:
     return storage_root / ".layer-metadata" / f"{layer_id}.digest"
-
-
-def _acquire_storage_writer_lock(storage_root: Path) -> _StorageWriterLockLease | None:
-    """Hold a process-wide advisory writer lock for this storage root."""
-    if fcntl is None:
-        logger.warning(
-            "layer-stack storage writer lock unavailable; fcntl is missing",
-        )
-        return None
-    key = str(storage_root.resolve())
-    with _STORAGE_WRITER_LOCKS_LOCK:
-        record = _STORAGE_WRITER_LOCKS.get(key)
-        if record is not None:
-            record.refcount += 1
-            return _StorageWriterLockLease(key, record.fd)
-
-        lock_path = storage_root / _STORAGE_WRITER_LOCK_FILE
-        fd = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o644)
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError as exc:
-            os.close(fd)
-            raise RuntimeError(
-                "layer-stack storage root is already owned by another process: "
-                f"{storage_root}"
-            ) from exc
-        _STORAGE_WRITER_LOCKS[key] = _StorageWriterLock(fd=fd, refcount=1)
-        return _StorageWriterLockLease(key, fd)

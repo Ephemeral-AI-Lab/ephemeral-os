@@ -192,12 +192,17 @@ def test_services_cached_per_layer_stack_root(
     )
     monkeypatch.setattr(
         occ_backend,
-        "Service",
-        lambda *, gitignore, layer_stack: ("service", gitignore, layer_stack),
+        "OccService",
+        lambda *, gitignore, layer_stack, maintenance=None: (
+            "service",
+            gitignore,
+            layer_stack,
+            maintenance,
+        ),
     )
     monkeypatch.setattr(
         occ_backend,
-        "Client",
+        "OccClient",
         lambda service, *, binding_reader, workspace_ref: (
             "occ-client",
             service,
@@ -222,22 +227,22 @@ def test_drop_backend_cache_removes_only_requested_root(
     monkeypatch.setattr(
         occ_backend,
         "get_layer_stack_manager",
-        lambda root: object(),
+        lambda _root: object(),
     )
-    monkeypatch.setattr(occ_backend, "LayerStackClient", lambda manager: object())
+    monkeypatch.setattr(occ_backend, "LayerStackClient", lambda _manager: object())
     monkeypatch.setattr(
         occ_backend,
         "SnapshotGitignoreOracle",
-        lambda layer_stack: object(),
+        lambda _layer_stack: object(),
     )
     monkeypatch.setattr(
         occ_backend,
-        "Service",
-        lambda *, gitignore, layer_stack: object(),
+        "OccService",
+        lambda *, gitignore, layer_stack, maintenance=None: object(),
     )
     monkeypatch.setattr(
         occ_backend,
-        "Client",
+        "OccClient",
         lambda service, *, binding_reader, workspace_ref: object(),
     )
 

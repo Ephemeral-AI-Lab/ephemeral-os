@@ -10,10 +10,10 @@ Source review: `.planning/code-reviews/sandbox-api-REVIEW.md`
 | --- | --- | --- |
 | 1. API contracts and shared helpers | Done | `uv run pytest backend/tests/unit_test/test_sandbox/test_api/test_payload_helpers.py backend/tests/unit_test/test_sandbox/test_api/test_transport_protocol.py -q` -> 7 passed |
 | 2. Tool verb refactor | Done | `uv run pytest backend/tests/unit_test/test_sandbox/test_api/test_raw_exec.py backend/tests/unit_test/test_sandbox/test_api/test_read.py backend/tests/unit_test/test_sandbox/test_api/test_write.py backend/tests/unit_test/test_sandbox/test_api/test_shell.py backend/tests/unit_test/test_sandbox/test_api/test_edit.py backend/tests/unit_test/test_sandbox/test_api/test_audit_emission.py -q` -> 19 passed |
-| 3. Facade and default client | Done | `uv run pytest backend/tests/unit_test/test_sandbox/test_api/test_facade.py backend/tests/unit_test/test_sandbox/test_api/test_contract.py -q` -> 32 passed |
+| 3. Facade/default wrapper simplification | Done | Initial facade tests passed during the first pass; the second cleanup removed `SandboxClient`/`facade.py` and locked that removal with contract/import-fence tests |
 | 4. Lifecycle/discovery split | Done | `uv run pytest backend/tests/unit_test/test_sandbox/test_api/test_status.py backend/tests/unit_test/test_sandbox/test_api/test_contract.py backend/tests/unit_test/test_sandbox/test_import_fence.py -q` -> 64 passed |
-| 5. Daemon version and error taxonomy | Done | `uv run pytest backend/tests/unit_test/test_sandbox/test_api/test_payload_helpers.py backend/tests/unit_test/test_sandbox/test_api/test_transport_protocol.py backend/tests/unit_test/test_sandbox/test_api/test_read.py backend/tests/unit_test/test_sandbox/test_api/test_write.py backend/tests/unit_test/test_sandbox/test_api/test_shell.py backend/tests/unit_test/test_sandbox/test_api/test_edit.py backend/tests/unit_test/test_sandbox/test_api/test_facade.py backend/tests/unit_test/test_sandbox/test_command_exec/test_write_edit_dispatch.py backend/tests/unit_test/test_sandbox/test_daemon/test_routing_invariants.py -q` -> 48 passed |
-| 6. Hygiene and closeout | Done | `.DS_Store` is ignored/untracked; sandbox API/import-fence slice -> 94 passed; full sandbox API directory -> 106 passed |
+| 5. Daemon version and error taxonomy | Done | Versioned daemon operation and verb tests passed in the first pass; latest second-review verification covers the direct verb dispatch slice |
+| 6. Hygiene and closeout | Done | `.DS_Store` is ignored/untracked; latest second-review verification passes the focused API/import-fence slice; the wider API folder is currently blocked by unrelated OCC/client worktree drift |
 
 ## Notes
 
@@ -25,8 +25,9 @@ Source review: `.planning/code-reviews/sandbox-api-REVIEW.md`
 
 ## Phase 1 Details
 
-- Added `sandbox.api.protocol` with explicit `SandboxTransport`,
-  `SandboxToolAPI`, `SandboxLifecycleAPI`, and combined `SandboxAPI` contracts.
+- Added `sandbox.api.protocol` with the explicit `SandboxTransport` seam. The
+  broader lifecycle/tool/combined protocol experiments were removed in the
+  second cleanup pass because no production caller used them.
 - Added `sandbox.api.transport` with the default daemon transport and an
   explicit daemon protocol version marker.
 - Added `sandbox.api.timeouts` so verb timeout policy has a single owner.
@@ -44,25 +45,20 @@ Source review: `.planning/code-reviews/sandbox-api-REVIEW.md`
 - Routed read/write/edit/shell through the injected `SandboxTransport` seam.
 - Centralized guarded-result construction over `GuardedResultBase`.
 - Added typed-code-first conflict classifiers with legacy message fallback.
-- Tightened edit transient recovery by precomputing an expected post-image and
-  only recovering when the daemon-visible file exactly matches that post-image.
 - Added `SandboxRequestBase` for shared caller/description plumbing and
   `ConflictInfo` factories for common guarded conflict shapes.
-- Moved write/edit transient handling through a shared recovery helper; write
-  recovery only succeeds when a pre-read proves the post-failure content changed
-  to the requested content.
+- Removed write/edit transient recovery in the second cleanup pass. Mutation
+  verbs now dispatch directly to the daemon instead of paying a speculative
+  pre-read on the happy path.
 - Updated API verb tests to use fake transports instead of monkey-patching
   `call_daemon_api`.
 
 ## Phase 3 Details
 
-- Rebuilt `SandboxClient` around injected `transport`, `lifecycle`, and
-  `audit_sink` dependencies.
-- Removed all method-local imports from the facade.
 - Moved package-level default wrappers into `sandbox.api.default`.
-- Removed the private package `_client`; package-level functions now call an
-  internal default client at invocation time rather than binding singleton
-  methods during import.
+- Removed `SandboxClient` and `sandbox.api.facade` in the second cleanup pass;
+  package-level functions now call the owning lifecycle/discovery/preview/verb
+  modules directly.
 - Removed public default-client mutation helpers that had no repo callers.
 - Updated contract tests to lock the `_impl` implementation package and removed
   compatibility modules.
@@ -92,12 +88,9 @@ Source review: `.planning/code-reviews/sandbox-api-REVIEW.md`
 
 - Verified the review's `.DS_Store` concern: the file is present locally but is
   ignored and not tracked by git, so no repo content change is needed.
-- Ran the safe sandbox API/import-fence slice:
-  `uv run pytest backend/tests/unit_test/test_sandbox/test_api/test_audit_emission.py backend/tests/unit_test/test_sandbox/test_api/test_boundary.py backend/tests/unit_test/test_sandbox/test_api/test_contract.py backend/tests/unit_test/test_sandbox/test_api/test_daemon_client.py backend/tests/unit_test/test_sandbox/test_api/test_edit.py backend/tests/unit_test/test_sandbox/test_api/test_facade.py backend/tests/unit_test/test_sandbox/test_api/test_payload_helpers.py backend/tests/unit_test/test_sandbox/test_api/test_raw_exec.py backend/tests/unit_test/test_sandbox/test_api/test_read.py backend/tests/unit_test/test_sandbox/test_api/test_shell.py backend/tests/unit_test/test_sandbox/test_api/test_status.py backend/tests/unit_test/test_sandbox/test_api/test_transport_protocol.py backend/tests/unit_test/test_sandbox/test_api/test_write.py backend/tests/unit_test/test_sandbox/test_import_fence.py -q`
-  -> 94 passed.
-- Ran the full sandbox API directory:
-  `uv run pytest backend/tests/unit_test/test_sandbox/test_api -q`
-  -> 106 passed.
+- Earlier first-pass verification recorded the sandbox API/import-fence slice
+  and full sandbox API directory as passing. The current post-cleanup
+  verification is recorded in the second-review section below.
 
 ## Cleanup Pass - 2026-05-14
 
@@ -112,8 +105,8 @@ Changes:
   `default_client`, `set_default_client`, and `configure_default_client`.
 - Removed the legacy `caller_audit_fields` helper; callers now use
   `SandboxCaller.audit_fields()` directly.
-- Removed the stale `TRANSIENT_EDIT_ATTEMPTS` alias in favor of
-  `TRANSIENT_MUTATION_ATTEMPTS`.
+- Removed mutation retry/recovery timeout aliases after deleting the speculative
+  recovery path.
 - Updated current docs/reports to use `sandbox.api` or the owning
   lifecycle/discovery modules instead of removed compatibility paths.
 - Updated the public API contract test for the explicit `default.py` default
@@ -124,7 +117,36 @@ Changes:
 
 Verification:
 
-- `uv run pytest backend/tests/unit_test/test_sandbox/test_api/test_payload_helpers.py backend/tests/unit_test/test_sandbox/test_api/test_contract.py backend/tests/unit_test/test_sandbox/test_api/test_write.py backend/tests/unit_test/test_sandbox/test_api/test_edit.py backend/tests/unit_test/test_sandbox/test_api/test_shell.py -q` -> 54 passed.
-- `uv run pytest backend/tests/unit_test/test_sandbox/test_api/test_audit_emission.py backend/tests/unit_test/test_sandbox/test_api/test_boundary.py backend/tests/unit_test/test_sandbox/test_api/test_contract.py backend/tests/unit_test/test_sandbox/test_api/test_daemon_client.py backend/tests/unit_test/test_sandbox/test_api/test_edit.py backend/tests/unit_test/test_sandbox/test_api/test_facade.py backend/tests/unit_test/test_sandbox/test_api/test_payload_helpers.py backend/tests/unit_test/test_sandbox/test_api/test_raw_exec.py backend/tests/unit_test/test_sandbox/test_api/test_read.py backend/tests/unit_test/test_sandbox/test_api/test_shell.py backend/tests/unit_test/test_sandbox/test_api/test_status.py backend/tests/unit_test/test_sandbox/test_api/test_transport_protocol.py backend/tests/unit_test/test_sandbox/test_api/test_write.py backend/tests/unit_test/test_sandbox/test_import_fence.py -q` -> 94 passed.
-- `uv run pytest backend/tests/unit_test/test_sandbox/test_api -q` -> 106 passed.
-- `uv run ruff check backend/src/sandbox/models.py backend/src/sandbox/api backend/src/sandbox/host/lifecycle.py backend/tests/unit_test/test_sandbox/test_api backend/tests/unit_test/test_sandbox/test_import_fence.py backend/tests/unit_test/test_engine/eval_agent_support.py` -> all checks passed.
+- The cleanup pass originally passed the targeted API slice, the full sandbox
+  API directory, and scoped ruff. The exact command list was superseded by the
+  second-review deletion of `test_facade.py`; the current command list and
+  results are recorded below.
+
+## Second Review Cleanup Pass - 2026-05-14
+
+Findings addressed:
+
+- Locked the final public surface as module-level `sandbox.api` functions plus
+  request/result model re-exports. `SandboxClient` is no longer an allowed
+  public import, and `sandbox.api.facade` is now covered by the removed-module
+  import fence.
+- Confirmed `sandbox.api.protocol` only exposes the transport seam needed by
+  the verb implementations; the unused lifecycle/tool/combined protocol stack
+  is absent.
+- Confirmed `write_file` and `edit_file` dispatch directly to the daemon
+  transport without speculative pre-read recovery. The old recovery helper and
+  recovery timeout constants are absent.
+- Updated the public API contract tests so `facade.py` is not part of the
+  expected package root and `SandboxClient` cannot quietly return through
+  `sandbox.api`.
+
+Verification:
+
+- `uv run pytest backend/tests/unit_test/test_sandbox/test_api/test_write.py backend/tests/unit_test/test_sandbox/test_api/test_edit.py backend/tests/unit_test/test_sandbox/test_api/test_read.py backend/tests/unit_test/test_sandbox/test_api/test_shell.py backend/tests/unit_test/test_sandbox/test_api/test_raw_exec.py backend/tests/unit_test/test_sandbox/test_api/test_contract.py backend/tests/unit_test/test_sandbox/test_api/test_boundary.py backend/tests/unit_test/test_sandbox/test_import_fence.py -q`
+  -> 54 passed.
+- `uv run ruff check backend/src/sandbox/api backend/tests/unit_test/test_sandbox/test_api/test_boundary.py backend/tests/unit_test/test_sandbox/test_api/test_contract.py backend/tests/unit_test/test_sandbox/test_import_fence.py`
+  -> all checks passed.
+- `uv run pytest backend/tests/unit_test/test_sandbox/test_api -q` is currently
+  blocked during collection by unrelated OCC/client worktree drift:
+  `OccLayerStackPort` is missing from `sandbox.occ.ports`, and `Client` is
+  missing from `sandbox.occ.client`.

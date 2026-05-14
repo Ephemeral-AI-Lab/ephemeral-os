@@ -185,17 +185,16 @@ def test_single_occ_backend_cache_per_layer_stack_root(
     )
     monkeypatch.setattr(
         occ_backend,
-        "Service",
+        "OccService",
         lambda *, gitignore, **kwargs: ("service", gitignore, kwargs),
     )
     monkeypatch.setattr(
         occ_backend,
-        "Client",
+        "OccClient",
         lambda service, *, binding_reader, workspace_ref: (
-            "occ-client",
-            service,
-            workspace_ref,
-        ),
+            binding_reader,
+            ("occ-client", service, workspace_ref),
+        )[1],
     )
 
     backend_a = occ_backend.build_occ_backend("/tmp/a")

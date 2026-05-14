@@ -31,9 +31,7 @@ def _auto_squash_service(
 ) -> OccService:
     return OccService(
         gitignore=_Gitignore(),
-        snapshot_reader=stack,
-        staging=stack,
-        publisher=stack,
+        layer_stack=stack,
         maintenance=AutoSquashMaintenancePolicy(
             snapshot_reader=stack,
             squasher=stack,

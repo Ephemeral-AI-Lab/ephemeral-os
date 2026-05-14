@@ -44,7 +44,7 @@ stack = LayerStackManager(root / "stack")
 stack.publish_changes([
     WriteLayerChange(path="tracked/shared.txt", source_path=str(_source(root, "shared", b"base\n"))),
 ])
-service = OccService(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
+service = OccService(gitignore=_Gitignore(), layer_stack=stack)
 
 snapshot = stack.read_active_manifest()
 n = 6

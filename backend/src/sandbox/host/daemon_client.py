@@ -80,7 +80,6 @@ async def _call_daemon(
     result = await _exec_daemon_call(
         exec_fn=exec_fn,
         sandbox_id=sandbox_id,
-        op=op,
         raw_payload=raw_payload,
         cwd=cwd,
         timeout=timeout,
@@ -145,7 +144,6 @@ async def _exec_daemon_call(
     *,
     exec_fn: _DaemonExec,
     sandbox_id: str,
-    op: str,
     raw_payload: str,
     cwd: str,
     timeout: int | None,

@@ -63,7 +63,7 @@ def _service(
     ignored: set[str] | None = None,
 ) -> OccService:
     return OccService(
-        gitignore=_MutableGitignore(ignored), snapshot_reader=stack, staging=stack, publisher=stack
+        gitignore=_MutableGitignore(ignored), layer_stack=stack
     )
 
 
@@ -199,7 +199,7 @@ def test_gitignore_occ_skipped_route_is_fixed_after_prepare_even_if_oracle_chang
 ) -> None:
     stack = LayerStackManager(tmp_path / "stack")
     gitignore = _MutableGitignore({"dist/out.js"})
-    service = OccService(gitignore=gitignore, snapshot_reader=stack, staging=stack, publisher=stack)
+    service = OccService(gitignore=gitignore, layer_stack=stack)
 
     prepared = service.prepare_changeset_sync(
         [
@@ -233,7 +233,7 @@ def test_tracked_route_is_fixed_after_prepare_even_if_path_becomes_ignored(
     stale_snapshot = stack.read_active_manifest()
     _publish(stack, tmp_path, "dist/out.js", b"active\n")
     gitignore = _MutableGitignore()
-    service = OccService(gitignore=gitignore, snapshot_reader=stack, staging=stack, publisher=stack)
+    service = OccService(gitignore=gitignore, layer_stack=stack)
 
     prepared = service.prepare_changeset_sync(
         [

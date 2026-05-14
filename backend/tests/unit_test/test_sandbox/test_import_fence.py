@@ -172,6 +172,7 @@ def test_host_daemon_api_do_not_import_daytona_provider() -> None:
 
 def test_removed_api_compatibility_modules_stay_absent() -> None:
     for module in (
+        "sandbox.api.facade",
         "sandbox.api.status",
         "sandbox.api.tool.read",
         "sandbox.api.tool.write",

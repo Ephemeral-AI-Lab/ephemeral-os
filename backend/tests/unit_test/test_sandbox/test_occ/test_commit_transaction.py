@@ -52,7 +52,7 @@ def _service(
     ignored: set[str] | None = None,
 ) -> OccService:
     return OccService(
-        gitignore=_Gitignore(ignored), snapshot_reader=stack, staging=stack, publisher=stack
+        gitignore=_Gitignore(ignored), layer_stack=stack
     )
 
 

@@ -25,7 +25,6 @@ ALLOWED_API_IMPORT_NAMES = {
     "RawExecResult",
     "ReadFileRequest",
     "ReadFileResult",
-    "SandboxClient",
     "SandboxCaller",
     "SandboxResultBase",
     "SearchReplaceEdit",

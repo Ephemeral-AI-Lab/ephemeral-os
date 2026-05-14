@@ -50,7 +50,7 @@ def test_concurrent_prepared_commits_revalidate_latest_manifest(
     stack = LayerStackManager(tmp_path / "stack")
     _publish(stack, tmp_path, "src/app.py", b"base\n")
     snapshot = stack.read_active_manifest()
-    service = OccService(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
+    service = OccService(gitignore=_Gitignore(), layer_stack=stack)
 
     async def run_commit(index: int):
         prepared = await service.prepare_changeset(

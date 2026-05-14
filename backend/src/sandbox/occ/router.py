@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
-from typing import cast
 
 from sandbox.layer_stack.layer.change import normalize_layer_path
 from sandbox.layer_stack.manifest import Manifest
@@ -29,13 +27,6 @@ from sandbox.occ.timing_keys import TimingKey
 from sandbox.timing import monotonic_now
 
 BaseHashReader = Callable[[str], str | None]
-
-
-@dataclass(frozen=True)
-class _BaseHashBehavior:
-    requires: Callable[[Change], bool]
-    attach: Callable[[Change, str | None], Change]
-    next_hash: Callable[[Change, str | None, ContentHasher], str | None]
 
 
 class Router:
@@ -209,13 +200,19 @@ class Router:
 
 
 def _requires_base_hash(change: Change) -> bool:
-    behavior = _BASE_HASH_BEHAVIORS.get(type(change))
-    return behavior.requires(change) if behavior is not None else False
+    return (
+        isinstance(change, (WriteChange, DeleteChange))
+        and change.base_hash is None
+        and change.source in ("api_write", "overlay_capture")
+    )
 
 
 def _attach_base_hash(change: Change, base_hash: str | None) -> Change:
-    behavior = _BASE_HASH_BEHAVIORS.get(type(change))
-    return behavior.attach(change, base_hash) if behavior is not None else change
+    if isinstance(change, WriteChange):
+        return change.with_base_hash(base_hash)
+    if isinstance(change, DeleteChange):
+        return change.with_base_hash(base_hash)
+    return change
 
 
 def _attach_chained_base_hashes(
@@ -232,56 +229,20 @@ def _attach_chained_base_hashes(
             _attach_base_hash(change, running_hash) if _requires_base_hash(change) else change
         )
         prepared.append(next_change)
-        behavior = _BASE_HASH_BEHAVIORS.get(type(change))
-        if behavior is not None:
-            running_hash = behavior.next_hash(change, running_hash, hasher)
+        running_hash = _next_base_hash(change, running_hash, hasher)
     return tuple(prepared)
 
 
-def _change_requires_base_hash(change: Change) -> bool:
-    return getattr(change, "base_hash", None) is None and change.source in (
-        "api_write",
-        "overlay_capture",
-    )
-
-
-def _attach_write_base_hash(change: Change, base_hash: str | None) -> Change:
-    return cast(WriteChange, change).with_base_hash(base_hash)
-
-
-def _attach_delete_base_hash(change: Change, base_hash: str | None) -> Change:
-    return cast(DeleteChange, change).with_base_hash(base_hash)
-
-
-def _next_write_base_hash(
+def _next_base_hash(
     change: Change,
-    _running_hash: str | None,
+    running_hash: str | None,
     hasher: ContentHasher,
 ) -> str | None:
-    write = cast(WriteChange, change)
-    return write.precomputed_hash or hasher.hash_bytes(write.final_content)
-
-
-def _next_delete_base_hash(
-    _change: Change,
-    _running_hash: str | None,
-    _hasher: ContentHasher,
-) -> str | None:
-    return None
-
-
-_BASE_HASH_BEHAVIORS: dict[type[Change], _BaseHashBehavior] = {
-    WriteChange: _BaseHashBehavior(
-        requires=_change_requires_base_hash,
-        attach=_attach_write_base_hash,
-        next_hash=_next_write_base_hash,
-    ),
-    DeleteChange: _BaseHashBehavior(
-        requires=_change_requires_base_hash,
-        attach=_attach_delete_base_hash,
-        next_hash=_next_delete_base_hash,
-    ),
-}
+    if isinstance(change, WriteChange):
+        return change.precomputed_hash or hasher.hash_bytes(change.final_content)
+    if isinstance(change, DeleteChange):
+        return None
+    return running_hash
 
 
 def _is_gitignored(

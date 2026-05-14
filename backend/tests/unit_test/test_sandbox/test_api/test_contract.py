@@ -28,7 +28,6 @@ _EXPECTED_API_ROOT_ENTRIES = {
     "default.py",
     "defaults.py",
     "discovery.py",
-    "facade.py",
     "lifecycle.py",
     "preview_urls.py",
     "protocol.py",
@@ -96,9 +95,10 @@ def test_api_root_keeps_public_surface_grouped_by_role() -> None:
     } == _EXPECTED_API_ROOT_ENTRIES
 
 
-def test_api_package_uses_thin_default_client_wrappers() -> None:
+def test_api_package_uses_module_level_default_wrappers() -> None:
     assert callable(sandbox_api.read_file)
     assert not hasattr(sandbox_api, "_client")
+    assert not hasattr(sandbox_api, "SandboxClient")
     assert not hasattr(sandbox_api, "default_client")
     assert not hasattr(sandbox_api, "set_default_client")
     assert not hasattr(sandbox_api, "configure_default_client")

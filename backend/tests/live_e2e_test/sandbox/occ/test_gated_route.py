@@ -50,7 +50,7 @@ before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
 stack = LayerStackManager(root / "stack")
-service = OccService(gitignore=_Gitignore(), snapshot_reader=stack, staging=stack, publisher=stack)
+service = OccService(gitignore=_Gitignore(), layer_stack=stack)
 _publish(stack, "src/race.py", b"base\n")
 snapshot = stack.read_active_manifest()
 
