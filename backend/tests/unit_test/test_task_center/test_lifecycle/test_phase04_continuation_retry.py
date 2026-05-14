@@ -24,16 +24,8 @@ from task_center.episode.state import (
     EpisodeCreationReason,
     EpisodeStatus,
 )
-from task_center.task import (
-    EvaluatorSubmission,
-    GeneratorSubmission,
-    TaskCenterTaskStatus,
-    PlannedGeneratorTask,
-    PlannerSubmission,
-    evaluator_task_id,
-    generator_task_id,
-    planner_task_id,
-)
+from task_center.task_state import EvaluatorSubmission, GeneratorSubmission, TaskCenterTaskStatus, PlannedGeneratorTask, PlannerSubmission
+from task_center.task_ids import evaluator_task_id, generator_task_id, planner_task_id
 
 
 class _FakeLauncher:

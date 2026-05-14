@@ -18,7 +18,7 @@ from agents import (
     unregister_definition,
     validate_agent_definitions_resolved,
 )
-from task_center.agent_launch.predicates import (
+from task_center.agent_routing.predicates import (
     MAX_HANDOFF_DEPTH,
     PredicateRegistry,
     ResolverContext,
@@ -135,7 +135,7 @@ def test_ac7_executor_variant_disjunction_total_across_depths(monkeypatch) -> No
         return fake_depth["value"]
 
     monkeypatch.setattr(
-        "task_center.agent_launch.predicates.nested_mission_depth",
+        "task_center.agent_routing.predicates.nested_mission_depth",
         _fake_nested_mission_depth,
     )
 

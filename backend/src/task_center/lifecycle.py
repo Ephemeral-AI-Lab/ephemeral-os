@@ -22,11 +22,11 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 from task_center.exceptions import TaskCenterInvariantViolation
-from task_center.task.state import TaskCenterTaskStatus
+from task_center.protocols import RegisteredAttemptOrchestrator
+from task_center.task_state import TaskCenterTaskStatus
 
 if TYPE_CHECKING:
     from task_center.persistence import TaskStoreProtocol
-    from task_center.attempt.orchestrator import AttemptOrchestrator
     from task_center.mission.state import MissionClosureReport
 
 
@@ -79,7 +79,9 @@ class GeneratorTaskLifecycle:
     task_id: str
     attempt_id: str
     task_store: TaskStoreProtocol
-    orchestrator_lookup: Callable[[str], AttemptOrchestrator | None]
+    orchestrator_lookup: Callable[
+        [str], RegisteredAttemptOrchestrator | None
+    ]
 
     def apply_mission_closure_report(
         self, report: MissionClosureReport

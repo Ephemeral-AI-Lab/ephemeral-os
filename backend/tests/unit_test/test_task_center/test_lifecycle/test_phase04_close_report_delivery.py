@@ -16,12 +16,8 @@ from task_center.attempt.orchestrator_registry import (
 from task_center.attempt.runtime import AgentLaunch, AttemptDeps
 from task_center.episode.registry import EpisodeManagerRegistry
 from task_center.episode.state import EpisodeCreationReason
-from task_center.task import (
-    TaskCenterTaskStatus,
-    PlannedGeneratorTask,
-    PlannerSubmission,
-    generator_task_id,
-)
+from task_center.task_state import TaskCenterTaskStatus, PlannedGeneratorTask, PlannerSubmission
+from task_center.task_ids import generator_task_id
 
 
 class _FakeLauncher:
@@ -347,7 +343,7 @@ def test_router_routes_entry_mode_closure_report_through_controller(
     the controller's ``apply_mission_closure_report``.
     """
     from task_center.entry.controller import EntryTaskController
-    from task_center.task import TaskCenterTaskRole
+    from task_center.task_state import TaskCenterTaskRole
 
     # Seed entry-mode caller in WAITING_MISSION.
     entry_task_id = "entry-task"

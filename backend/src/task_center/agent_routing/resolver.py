@@ -22,7 +22,7 @@ from task_center.context_engine.packet import (
     ContextBlock,
     ContextPriority,
 )
-from task_center.agent_launch.predicates import (
+from task_center.agent_routing.predicates import (
     PredicateRegistry,
     ResolverContext,
 )

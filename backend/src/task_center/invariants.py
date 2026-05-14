@@ -31,7 +31,7 @@ from task_center.attempt.state import (
 from task_center.episode.state import Episode, EpisodeStatus
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.mission.state import Mission
-from task_center.task.state import TaskCenterTaskRole
+from task_center.task_state import TaskCenterTaskRole
 
 
 # ---- Mission invariants ----------------------------------------------------

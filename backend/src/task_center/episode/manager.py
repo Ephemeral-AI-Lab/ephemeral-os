@@ -9,11 +9,11 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
 
 from task_center.persistence import AttemptStoreProtocol
 from task_center.persistence import TaskStoreProtocol
 from task_center.persistence import EpisodeStoreProtocol
+from task_center.protocols import RegisteredAttemptOrchestrator
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt.state import (
     Attempt,
@@ -38,16 +38,13 @@ from task_center.invariants import (
 )
 from task_center.episode.state import Episode, EpisodeStatus
 
-if TYPE_CHECKING:
-    from task_center.attempt.orchestrator import AttemptOrchestrator
-
 logger = logging.getLogger(__name__)
 
 
 ClosureReportSink = Callable[[EpisodeClosureReport], None]
 AttemptClosedCallback = Callable[[str], None]
 OrchestratorFactory = Callable[
-    [Attempt, AttemptClosedCallback], "AttemptOrchestrator"
+    [Attempt, AttemptClosedCallback], RegisteredAttemptOrchestrator
 ]
 
 

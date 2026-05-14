@@ -23,16 +23,16 @@ from db.stores import (
 )
 from agents import validate_agent_definitions_resolved
 from task_center.config import TaskCenterLifecycleConfig
-from task_center.agent_launch.composer import ContextComposer
+from task_center.context_engine.composer import ContextComposer
 from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
-from task_center.agent_launch.predicates import (
+from task_center.agent_routing.predicates import (
     configure_max_handoff_depth,
     register_builtin_predicates,
 )
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.context_engine.scope import ContextScope
 from task_center.entry.controller import EntryTaskController
-from task_center.agent_launch.launcher import (
+from task_center.launcher import (
     AgentStreamEmitter,
     EphemeralAttemptAgentLauncher,
     AttemptAgentRunner,
@@ -46,7 +46,7 @@ from task_center.entry.sandbox_bridge import (
     TaskCenterSandboxBridge,
 )
 from task_center.episode.registry import EpisodeManagerRegistry
-from task_center.task.state import (
+from task_center.task_state import (
     SpawnReason,
     TaskCenterTaskRole,
     TaskCenterTaskStatus,

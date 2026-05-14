@@ -22,8 +22,8 @@ from task_center.attempt.runtime import (
     AttemptDeps,
 )
 from task_center.launch_builder import LaunchBuilder
-from task_center.task.ids import generator_task_id, planner_task_id
-from task_center.task.state import (
+from task_center.task_ids import generator_task_id, planner_task_id
+from task_center.task_state import (
     SpawnReason,
     EvaluatorSubmission,
     GeneratorSubmission,

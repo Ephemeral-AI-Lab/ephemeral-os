@@ -1,45 +1,34 @@
-"""MissionHandler — mission boundary lifecycle service.
+"""MissionHandler — mission boundary facade.
 
-Only creator of ``Mission`` and ``Episode`` records, and the
-spawner of ``EpisodeManager`` instances. Routes ``EpisodeClosureReport``
-into either continuation episode creation or mission closure.
+Composes the four mission-boundary verbs into a single class for callers
+that want one wiring point. Internally delegates to:
+
+- :class:`MissionRepository` — mission CRUD + closure write.
+- :class:`EpisodeFactory` — initial + continuation episode creation.
+- :class:`EpisodeClosureRouter` — :class:`EpisodeClosureReport` routing.
+
+The constructor signature is preserved for backward compatibility with
+existing call sites (``MissionStarter._build_handler``) and tests.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import UTC, datetime
-from typing import Literal
 
-from task_center.persistence import MissionStoreProtocol
-from task_center.persistence import AttemptStoreProtocol
-from task_center.persistence import TaskStoreProtocol
-from task_center.persistence import EpisodeStoreProtocol
-from task_center.invariants import (
-    assert_continuation_episode_predecessor,
-    assert_mission_open,
-    assert_episode_id_unique_in_mission,
-    assert_episode_sequence_contiguous,
-)
-from task_center.mission.state import (
-    MissionClosureReport,
-    Mission,
-    MissionStatus,
-)
 from task_center.config import TaskCenterLifecycleConfig
-from task_center.exceptions import TaskCenterInvariantViolation
-from task_center.episode.closure_report import (
-    AttemptPlanFailed,
-    SuccessContinue,
-    EpisodeClosureReport,
-    TerminalSuccess,
-)
-from task_center.episode.manager import OrchestratorFactory, EpisodeManager
+from task_center.episode.closure_report import EpisodeClosureReport
+from task_center.episode.manager import EpisodeManager, OrchestratorFactory
 from task_center.episode.registry import EpisodeManagerRegistry
-from task_center.episode.state import (
-    Episode,
-    EpisodeCreationReason,
-    EpisodeStatus,
+from task_center.episode.state import Episode
+from task_center.mission.episode_closure_router import EpisodeClosureRouter
+from task_center.mission.episode_factory import EpisodeFactory
+from task_center.mission.repository import MissionRepository
+from task_center.mission.state import Mission, MissionClosureReport
+from task_center.persistence import (
+    AttemptStoreProtocol,
+    EpisodeStoreProtocol,
+    MissionStoreProtocol,
+    TaskStoreProtocol,
 )
 
 
@@ -47,7 +36,9 @@ MissionClosureReportSink = Callable[[MissionClosureReport], None]
 
 
 class MissionHandler:
-    """Owns the mission boundary: mission + episode creation, mission closure."""
+    """Facade composing :class:`MissionRepository`, :class:`EpisodeFactory`,
+    and :class:`EpisodeClosureRouter`. Owns the mission boundary's wiring.
+    """
 
     def __init__(
         self,
@@ -61,16 +52,45 @@ class MissionHandler:
         orchestrator_factory: OrchestratorFactory | None = None,
         task_store: TaskStoreProtocol | None = None,
     ) -> None:
-        self._mission_store = mission_store
-        self._episode_store = episode_store
-        self._attempt_store = attempt_store
-        self._manager_registry = manager_registry
-        self._config = config
         self._deliver_closure_report = deliver_closure_report
-        self._orchestrator_factory = orchestrator_factory
-        self._task_store = task_store
+        # Retained as an attribute for tests that introspect the handler's
+        # wiring. The factory below owns the live orchestrator factory; the
+        # ``_orchestrator_factory`` property proxies reads/writes through it.
+        self._manager_registry = manager_registry
+        self._repository = MissionRepository(mission_store)
+        self._factory = EpisodeFactory(
+            mission_repository=self._repository,
+            episode_store=episode_store,
+            attempt_store=attempt_store,
+            manager_registry=manager_registry,
+            config=config,
+            on_episode_closed=self.handle_episode_closed,
+            orchestrator_factory=orchestrator_factory,
+            task_store=task_store,
+        )
+        self._router = EpisodeClosureRouter(
+            factory=self._factory,
+            episode_store=episode_store,
+            manager_registry=manager_registry,
+            close_mission=self.close_mission,
+        )
 
-    # ---- public API -----------------------------------------------------
+    # ---- backward-compat introspection ----------------------------------
+
+    @property
+    def _orchestrator_factory(self) -> OrchestratorFactory | None:
+        return self._factory._orchestrator_factory
+
+    @_orchestrator_factory.setter
+    def _orchestrator_factory(
+        self, value: OrchestratorFactory | None
+    ) -> None:
+        # Tests inject failing factories after construction; route the
+        # mutation into the factory so its has_orchestrator_factory + spawn
+        # path see the override.
+        self._factory._orchestrator_factory = value
+
+    # ---- public API (preserved signatures) ------------------------------
 
     def create_mission(
         self,
@@ -79,7 +99,7 @@ class MissionHandler:
         requested_by_task_id: str,
         goal: str,
     ) -> Mission:
-        return self._mission_store.insert(
+        return self._repository.create(
             task_center_run_id=task_center_run_id,
             requested_by_task_id=requested_by_task_id,
             goal=goal,
@@ -88,89 +108,19 @@ class MissionHandler:
     def create_initial_episode_with_manager(
         self, *, mission_id: str
     ) -> tuple[Episode, EpisodeManager]:
-        mission = self._require_mission(mission_id)
-        assert_mission_open(mission)
-        assert_episode_sequence_contiguous(mission, new_sequence_no=1)
-        episode = self._episode_store.insert(
-            mission_id=mission_id,
-            sequence_no=1,
-            creation_reason=EpisodeCreationReason.INITIAL,
-            goal=mission.goal,
-            attempt_budget=self._config.default_attempt_budget,
-        )
-        self._append_episode_to_mission(mission, episode)
-        manager = self._spawn_episode_manager(episode)
-        return episode, manager
+        return self._factory.create_initial(mission_id=mission_id)
 
     def create_continuation_episode_with_manager(
         self, *, previous_episode: Episode
     ) -> tuple[Episode, EpisodeManager]:
-        mission = self._require_mission(previous_episode.mission_id)
-        assert_mission_open(mission)
-        assert_continuation_episode_predecessor(previous_episode)
-        new_sequence_no = previous_episode.sequence_no + 1
-        assert_episode_sequence_contiguous(mission, new_sequence_no=new_sequence_no)
-        # Narrowed by ``assert_continuation_episode_predecessor`` above; the
-        # explicit check makes the invariant self-defending under ``python -O``
-        # where ``assert`` would be stripped.
-        if previous_episode.continuation_goal is None:
-            raise TaskCenterInvariantViolation(
-                f"Previous episode {previous_episode.id!r} has no "
-                "continuation_goal despite passing the predecessor invariant."
-            )
-        episode = self._episode_store.insert(
-            mission_id=mission.id,
-            sequence_no=new_sequence_no,
-            creation_reason=EpisodeCreationReason.PARTIAL_CONTINUATION,
-            goal=previous_episode.continuation_goal,
-            attempt_budget=self._config.default_attempt_budget,
+        return self._factory.create_continuation(
+            previous_episode=previous_episode
         )
-        self._append_episode_to_mission(mission, episode)
-        manager = self._spawn_episode_manager(episode)
-        return episode, manager
 
     def handle_episode_closed(
         self, report: EpisodeClosureReport
     ) -> None:
-        episode = self._episode_store.get(report.episode_id)
-        if episode is None:
-            raise TaskCenterInvariantViolation(
-                f"Episode {report.episode_id!r} not found"
-            )
-        try:
-            outcome = report.outcome
-            if isinstance(outcome, SuccessContinue):
-                (
-                    next_episode,
-                    next_manager,
-                ) = self.create_continuation_episode_with_manager(
-                    previous_episode=episode,
-                )
-                self._start_continuation_episode(
-                    next_episode=next_episode,
-                    next_manager=next_manager,
-                    previous_report=report,
-                )
-            elif isinstance(outcome, TerminalSuccess):
-                self.close_mission(
-                    mission_id=episode.mission_id,
-                    succeeded=True,
-                    final_episode_id=episode.id,
-                    final_attempt_id=report.final_attempt_id,
-                )
-            elif isinstance(outcome, AttemptPlanFailed):
-                self.close_mission(
-                    mission_id=episode.mission_id,
-                    succeeded=False,
-                    final_episode_id=episode.id,
-                    final_attempt_id=report.final_attempt_id,
-                )
-            else:  # pragma: no cover - exhaustive over discriminated union
-                raise TaskCenterInvariantViolation(
-                    f"Unknown ClosureOutcome: {outcome!r}"
-                )
-        finally:
-            self._manager_registry.deregister(episode.id)
+        self._router.route(report)
 
     def close_mission(
         self,
@@ -180,102 +130,15 @@ class MissionHandler:
         final_episode_id: str,
         final_attempt_id: str | None,
     ) -> Mission:
-        mission = self._require_mission(mission_id)
-        assert_mission_open(mission)
-        outcome_label: Literal["success", "failed"] = (
-            "success" if succeeded else "failed"
-        )
-        close_report = MissionClosureReport(
+        updated, report = self._repository.close(
             mission_id=mission_id,
-            requested_by_task_id=mission.requested_by_task_id,
-            outcome=outcome_label,
+            succeeded=succeeded,
             final_episode_id=final_episode_id,
             final_attempt_id=final_attempt_id,
         )
-        status = (
-            MissionStatus.SUCCEEDED
-            if succeeded
-            else MissionStatus.FAILED
-        )
-        updated = self._mission_store.set_status(
-            mission_id,
-            status=status,
-            final_outcome=close_report.to_final_outcome(),
-            closed_at=datetime.now(UTC),
-        )
         if self._deliver_closure_report is not None:
-            self._deliver_closure_report(close_report)
+            self._deliver_closure_report(report)
         return updated
 
-    # ---- internal -------------------------------------------------------
 
-    def _start_continuation_episode(
-        self,
-        *,
-        next_episode: Episode,
-        next_manager: EpisodeManager,
-        previous_report: EpisodeClosureReport,
-    ) -> None:
-        """Create and start the continuation episode's initial attempt.
-
-        Skipped when no ``orchestrator_factory`` is configured: in that case
-        the test or harness driver is responsible for creating and stopping the
-        attempt manually. Production paths always attach a factory through the
-        mission starter, so continuation startup runs end-to-end.
-
-        On startup failure the continuation episode is cancelled and the
-        mission is closed as failed. If attempt insertion already happened, the
-        close report points at that failed continuation attempt.
-        """
-        if self._orchestrator_factory is None:
-            return
-        try:
-            next_manager.create_initial_attempt()
-        except Exception:
-            failed_attempt_id = self._latest_attempt_id_for_episode(
-                next_episode.id
-            ) or previous_report.final_attempt_id
-            self._episode_store.set_status(
-                next_episode.id,
-                status=EpisodeStatus.CANCELLED,
-                closed_at=datetime.now(UTC),
-            )
-            self._manager_registry.deregister(next_episode.id)
-            self.close_mission(
-                mission_id=next_episode.mission_id,
-                succeeded=False,
-                final_episode_id=next_episode.id,
-                final_attempt_id=failed_attempt_id,
-            )
-
-    def _require_mission(self, mission_id: str) -> Mission:
-        mission = self._mission_store.get(mission_id)
-        if mission is None:
-            raise TaskCenterInvariantViolation(
-                f"Mission {mission_id!r} not found"
-            )
-        return mission
-
-    def _append_episode_to_mission(
-        self, mission: Mission, episode: Episode
-    ) -> None:
-        assert_episode_id_unique_in_mission(mission, episode.id)
-        self._mission_store.append_episode_id(mission.id, episode.id)
-
-    def _latest_attempt_id_for_episode(self, episode_id: str) -> str | None:
-        episode = self._episode_store.get(episode_id)
-        if episode is None:
-            return None
-        return episode.latest_attempt_id
-
-    def _spawn_episode_manager(self, episode: Episode) -> EpisodeManager:
-        manager = EpisodeManager(
-            episode_id=episode.id,
-            episode_store=self._episode_store,
-            attempt_store=self._attempt_store,
-            on_episode_closed=self.handle_episode_closed,
-            orchestrator_factory=self._orchestrator_factory,
-            task_store=self._task_store,
-        )
-        self._manager_registry.register(manager)
-        return manager
+__all__ = ["MissionHandler", "MissionClosureReportSink"]

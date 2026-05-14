@@ -6,8 +6,8 @@ from collections import deque
 from typing import Any
 
 from task_center.exceptions import TaskCenterInvariantViolation
-from task_center.task.ids import generator_task_id
-from task_center.task.state import (
+from task_center.task_ids import generator_task_id
+from task_center.task_state import (
     TaskCenterTaskStatus,
     PlannedGeneratorTask,
     TERMINAL_GENERATOR_STATUSES,

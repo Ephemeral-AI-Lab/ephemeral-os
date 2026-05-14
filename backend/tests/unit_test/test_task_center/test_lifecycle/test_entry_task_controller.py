@@ -7,7 +7,7 @@ import pytest
 from task_center.entry.controller import EntryTaskController
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.mission.state import MissionClosureReport
-from task_center.task import TaskCenterTaskRole, TaskCenterTaskStatus
+from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 
 
 def _seed_entry_task(*, task_store, task_center_run_id: str) -> str:

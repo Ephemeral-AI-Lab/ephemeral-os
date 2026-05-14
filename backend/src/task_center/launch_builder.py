@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any
 from task_center.attempt.runtime import AgentLaunch, AttemptDeps
 from task_center.context_engine.scope import ContextScope
 from task_center.exceptions import TaskCenterInvariantViolation
-from task_center.task.state import TaskCenterTaskRole
+from task_center.task_state import TaskCenterTaskRole
 
 if TYPE_CHECKING:
     from task_center.attempt.state import Attempt

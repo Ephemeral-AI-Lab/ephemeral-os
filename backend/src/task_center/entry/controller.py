@@ -13,7 +13,7 @@ from typing import Any
 from task_center.persistence import TaskStoreProtocol
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.mission.state import MissionClosureReport
-from task_center.task.state import TaskCenterTaskStatus
+from task_center.task_state import TaskCenterTaskStatus
 
 
 @dataclass(frozen=True, slots=True)

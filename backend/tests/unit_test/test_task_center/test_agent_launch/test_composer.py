@@ -19,7 +19,7 @@ from agents import (
 )
 from db.base import Base
 from db.stores.context_packet_store import ContextPacketStore
-from task_center.agent_launch.composer import ContextComposer, LaunchBundle
+from task_center.context_engine.composer import ContextComposer, LaunchBundle
 from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
 from task_center.context_engine.errors import MissingContextRecipeError
 from task_center.context_engine.packet import (
@@ -28,12 +28,12 @@ from task_center.context_engine.packet import (
     ContextPriority,
     ContextRefs,
 )
-from task_center.agent_launch.predicates import PredicateRegistry
+from task_center.agent_routing.predicates import PredicateRegistry
 from task_center.context_engine.recipes_registry import (
     ContextRecipe,
     RecipeRegistry,
 )
-from task_center.agent_launch.resolver import RuleBasedAgentResolver
+from task_center.agent_routing.resolver import RuleBasedAgentResolver
 from task_center.context_engine.scope import ContextScope
 
 

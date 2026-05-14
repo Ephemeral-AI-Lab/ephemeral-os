@@ -27,7 +27,7 @@ from task_center.episode.manager import OrchestratorFactory
 from task_center.attempt.state import AttemptFailReason, AttemptStatus
 from task_center.attempt.runtime import AttemptDeps
 from task_center.episode.state import Episode, EpisodeStatus
-from task_center.task.state import TaskCenterTaskStatus
+from task_center.task_state import TaskCenterTaskStatus
 
 logger = logging.getLogger(__name__)
 

@@ -6,16 +6,8 @@ import pytest
 
 from task_center.mission.state import MissionStatus
 from task_center.attempt import AttemptStage, AttemptStatus
-from task_center.task import (
-    EvaluatorSubmission,
-    GeneratorSubmission,
-    TaskCenterTaskStatus,
-    PlannedGeneratorTask,
-    PlannerSubmission,
-    evaluator_task_id,
-    generator_task_id,
-    planner_task_id,
-)
+from task_center.task_state import EvaluatorSubmission, GeneratorSubmission, TaskCenterTaskStatus, PlannedGeneratorTask, PlannerSubmission
+from task_center.task_ids import evaluator_task_id, generator_task_id, planner_task_id
 from tools._framework.execution.tool_call import execute_tool_once
 from tools.submission.evaluator import (
     submit_evaluation_failure,

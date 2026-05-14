@@ -12,7 +12,7 @@ from task_center.attempt.generator_dag import (
     ordered_generator_tasks,
     ready_pending_generator_ids,
 )
-from task_center.task import PlannedGeneratorTask
+from task_center.task_state import PlannedGeneratorTask
 
 
 def _task(task_id: str, status: str, needs: tuple[str, ...] = ()) -> dict:

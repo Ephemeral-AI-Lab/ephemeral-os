@@ -5,7 +5,7 @@ Resurrects the runtime surface from the pre-deletion ``server.app_factory``
 restored — only the symbols that production code still imports lazily:
 
 * :class:`RuntimeConfig` — durable runtime config consumed by
-  ``engine.agent.factory`` and ``task_center.agent_launch.launcher``.
+  ``engine.agent.factory`` and ``task_center.launcher``.
 * Module-level store singletons (``task_center_store``, ``agent_run_store``,
   ``model_store``).
 * :func:`ensure_runtime_stores_ready` — idempotent bootstrap that initialises
@@ -42,7 +42,7 @@ class RuntimeConfig:
     """Durable runtime configuration shared by request-scoped agents.
 
     Read by ``engine.agent.factory`` (cwd, external_api_client, resolve_settings)
-    and ``task_center.agent_launch.launcher``. ``_initial_messages`` is part of
+    and ``task_center.launcher``. ``_initial_messages`` is part of
     the resurrected public shape; ``system_prompt_override`` is intentionally
     absent — see module docstring.
     """

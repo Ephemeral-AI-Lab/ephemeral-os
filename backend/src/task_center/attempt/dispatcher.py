@@ -12,8 +12,9 @@ import logging
 from collections.abc import Callable
 from typing import Any
 
-from task_center.audit.emitter import TaskCenterAuditEmitter
+from task_center.audit import TaskCenterAuditEmitter
 from task_center.exceptions import TaskCenterInvariantViolation
+from task_center.attempt.stage_strategy import STAGE_STRATEGIES
 from task_center.attempt.state import (
     Attempt,
     AttemptFailReason,
@@ -33,8 +34,8 @@ from task_center.attempt.generator_dag import (
     blocked_descendant_ids,
     ready_pending_generator_ids,
 )
-from task_center.task.ids import evaluator_task_id
-from task_center.task.state import (
+from task_center.task_ids import evaluator_task_id
+from task_center.task_state import (
     SpawnReason,
     TaskCenterTaskRole,
     TaskCenterTaskStatus,
@@ -69,13 +70,7 @@ class AttemptDispatcher:
         attempt = self._fresh_attempt()
         if attempt.is_closed:
             return
-        if attempt.stage == AttemptStage.PLAN:
-            return
-        if attempt.stage == AttemptStage.GENERATE:
-            self._dispatch_generating(attempt)
-            return
-        if attempt.stage == AttemptStage.EVALUATE:
-            self._dispatch_evaluating(attempt)
+        STAGE_STRATEGIES[attempt.stage].dispatch(self, attempt)
 
     def block_failed_descendants(self, failed_task_id: str) -> None:
         runtime = self._runtime

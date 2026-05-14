@@ -27,8 +27,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from task_center.agent_launch.composer import ContextComposer, LaunchBundle
-    from task_center.agent_launch.predicates import PredicateRegistry
+    from task_center.context_engine.composer import ContextComposer, LaunchBundle
+    from task_center.agent_routing.predicates import PredicateRegistry
     from task_center.attempt.generator_dag import ordered_generator_tasks
     from task_center.attempt.orchestrator import AttemptOrchestrator
     from task_center.attempt.runtime import AttemptDeps
@@ -55,7 +55,7 @@ if TYPE_CHECKING:
     from task_center.exceptions import TaskCenterInvariantViolation
     from task_center.mission.starter import MissionStarter, StartedMission
     from task_center.mission.state import Mission, MissionStatus
-    from task_center.task.state import (
+    from task_center.task_state import (
         EvaluatorSubmission,
         GeneratorSubmission,
         PlannedGeneratorTask,
@@ -78,7 +78,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     ),
     "AttemptStage": ("task_center.attempt.state", "AttemptStage"),
     "AttemptStatus": ("task_center.attempt.state", "AttemptStatus"),
-    "ContextComposer": ("task_center.agent_launch.composer", "ContextComposer"),
+    "ContextComposer": ("task_center.context_engine.composer", "ContextComposer"),
     "ContextPacket": ("task_center.context_engine.packet", "ContextPacket"),
     "ContextScope": ("task_center.context_engine.scope", "ContextScope"),
     "EntryTaskController": (
@@ -91,16 +91,16 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "EpisodeCreationReason",
     ),
     "EpisodeStatus": ("task_center.episode.state", "EpisodeStatus"),
-    "EvaluatorSubmission": ("task_center.task.state", "EvaluatorSubmission"),
-    "GeneratorSubmission": ("task_center.task.state", "GeneratorSubmission"),
-    "LaunchBundle": ("task_center.agent_launch.composer", "LaunchBundle"),
+    "EvaluatorSubmission": ("task_center.task_state", "EvaluatorSubmission"),
+    "GeneratorSubmission": ("task_center.task_state", "GeneratorSubmission"),
+    "LaunchBundle": ("task_center.context_engine.composer", "LaunchBundle"),
     "Mission": ("task_center.mission.state", "Mission"),
     "MissionStarter": ("task_center.mission.starter", "MissionStarter"),
     "MissionStatus": ("task_center.mission.state", "MissionStatus"),
-    "PlannedGeneratorTask": ("task_center.task.state", "PlannedGeneratorTask"),
-    "PlannerSubmission": ("task_center.task.state", "PlannerSubmission"),
+    "PlannedGeneratorTask": ("task_center.task_state", "PlannedGeneratorTask"),
+    "PlannerSubmission": ("task_center.task_state", "PlannerSubmission"),
     "PredicateRegistry": (
-        "task_center.agent_launch.predicates",
+        "task_center.agent_routing.predicates",
         "PredicateRegistry",
     ),
     "RecipeRegistry": (
