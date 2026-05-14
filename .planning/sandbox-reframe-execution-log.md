@@ -88,3 +88,31 @@ This commits **only** changes to the listed paths from the working tree, bypassi
 - `backend/scripts/vulture_whitelist.py` — anchors for W4a.
 
 **Bundle hash invalidation alert (W3).** Logger channel renamed `sandbox.runtime.daemon.*` → `sandbox.daemon.*`. Tar bundle now ships `sandbox/daemon/*` instead of `sandbox/runtime/daemon/*`. Running sandboxes will re-upload the daemon bundle exactly once on first contact post-deploy. Ops must update any log filters that matched `sandbox.runtime.daemon`.
+
+## Session 1 — Addendum (post-handoff continued execution)
+
+After the initial handoff commit (`3ddac58a`), the loop directive resumed and 3 more waves landed:
+
+| SHA | Wave | Description |
+|---|---|---|
+| `c7e2c4c1` | W8b | StrategyRegistry inlined as a tuple in `execution/workspace/mount.py`; `execution/strategies/registry.py` deleted (~55 LOC). |
+| `77b7b9d1` | W5c (partial) | `execution/contract/{__init__,request,result,ports,spec}.py` (5 files, 274 LOC) collapsed into a single `execution/contract.py` (~210 LOC). Codemod rewrote 7 submodule-form imports. The occ/changeset half of W5c is still deferred. |
+
+**Updated final metrics (post-W5c-partial):**
+- Files: 145 (was 160 baseline) — RFC §7 AC #6 target ≤152 beaten by 7.
+- LOC: 17,310 (was 17,492 baseline). -182 LOC net. RFC §13 AC #9 floor 1,222 LOC still NOT MET; the remaining LOC-yielders are W5b/W6/W7/W8a/W9.
+- Top-level subdirs: 9 (unchanged from earlier handoff).
+- Tests: 544 passed, 1 skipped, 0 failed.
+- Ruff: clean.
+
+**Updated next-session pickup order** (W5c partial state acknowledged):
+1. W7b (small) — DEFERRED here because the RFC's `_with_snapshot_lease` and `_classify_and_dispatch` helpers don't exist yet; needs design work first.
+2. W6 (Protocol thinning) — still pending; ~150 LOC.
+3. W5c-occ — the remaining occ/changeset 3→2 collapse, ~40 LOC.
+4. W5a — 25+ test-caller churn; still pending.
+5. PREP-5b → W5b — pre-flight + daemon/service inlines.
+6. W8a — api/* inlines.
+7. W9 — occ/stage dedup.
+8. W7a — api/_impl consolidation (Scenario E mock-seam risk).
+9. W7c — Daytona dedup (T3 + manual e2e deferred to user).
+10. W4b — narration cleanup (cosmetic, lowest priority).
