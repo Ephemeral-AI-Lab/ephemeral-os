@@ -7,21 +7,21 @@ from pathlib import Path
 
 import pytest
 
-import sandbox.command_exec.workspace.mount as workspace_mount
-from sandbox.command_exec.contract.request import CommandExecRequest
-from sandbox.command_exec.contract.result import MountMode
-from sandbox.command_exec.contract.result import ShellProcessResult
-from sandbox.command_exec.workspace.capture import capture_workspace_upperdir
-from sandbox.command_exec.contract.spec import WorkspaceReplacementMountSpec
-from sandbox.command_exec.entrypoints import namespace_helper
-from sandbox.command_exec.strategies.copy_backed import CopyBackedStrategy
-from sandbox.command_exec.strategies.private_namespace import (
+import sandbox.execution.workspace.mount as workspace_mount
+from sandbox.execution.contract.request import CommandExecRequest
+from sandbox.execution.contract.result import MountMode
+from sandbox.execution.contract.result import ShellProcessResult
+from sandbox.execution.workspace.capture import capture_workspace_upperdir
+from sandbox.execution.contract.spec import WorkspaceReplacementMountSpec
+from sandbox.execution import entrypoints as namespace_helper
+from sandbox.execution.strategies.copy_backed import CopyBackedStrategy
+from sandbox.execution.strategies.private_namespace import (
     NAMESPACE_CONTROL_REF,
     NAMESPACE_FALLBACK_STRATEGY,
     NAMESPACE_INFRA_EXIT_CODE,
     PrivateNamespaceStrategy,
 )
-from sandbox.command_exec.workspace.path_rewrite import rewrite_declared_workspace_refs
+from sandbox.execution.workspace.path_rewrite import rewrite_declared_workspace_refs
 
 
 def test_copy_backed_mount_captures_only_workspace_changes(

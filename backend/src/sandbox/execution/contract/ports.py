@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Protocol
 
-from sandbox.command_exec.contract.request import CommandExecRequest
-from sandbox.command_exec.contract.result import CommandExecResult
+from sandbox.execution.contract.request import CommandExecRequest
+from sandbox.execution.contract.result import CommandExecResult
 
 if TYPE_CHECKING:
     from sandbox.occ.changeset import Change, ChangesetResult, CommitOptions

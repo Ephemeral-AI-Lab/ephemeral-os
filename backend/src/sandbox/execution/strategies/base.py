@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Protocol
 
-from sandbox.command_exec.contract import (
+from sandbox.execution.contract import (
     CommandExecRequest,
     ShellProcessResult,
     WorkspaceReplacementMountSpec,

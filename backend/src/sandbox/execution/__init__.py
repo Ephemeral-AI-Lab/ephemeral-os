@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sandbox.command_exec.contract import (
+from sandbox.execution.contract import (
     CommandExecutor,
     CommandExecRequest,
     CommandExecResult,
@@ -15,19 +15,19 @@ from sandbox.command_exec.contract import (
     WorkspaceReplacementMountSpec,
     WorkspaceSnapshotLease,
 )
-from sandbox.command_exec.policy import (
+from sandbox.execution.policy import (
     DEFAULT_COMMAND_EXEC_POLICY,
     CommandExecPolicy,
 )
 
 _LAZY_EXPORTS = {
     "capture_workspace_upperdir": (
-        "sandbox.command_exec.workspace.capture",
+        "sandbox.execution.workspace.capture",
         "capture_workspace_upperdir",
     ),
-    "execute_command": ("sandbox.command_exec.executor", "execute_command"),
+    "execute_command": ("sandbox.execution.orchestrator", "execute_command"),
     "run_workspace_replaced_command": (
-        "sandbox.command_exec.workspace.mount",
+        "sandbox.execution.workspace.mount",
         "run_workspace_replaced_command",
     ),
 }

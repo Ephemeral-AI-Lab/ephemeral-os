@@ -2,21 +2,21 @@
 
 from __future__ import annotations
 
-from sandbox.command_exec.contract.ports import (
+from sandbox.execution.contract.ports import (
     CommandExecutor,
     OCCMutationClient,
     SnapshotManifest,
     WorkspaceLeaseClient,
     WorkspaceSnapshotLease,
 )
-from sandbox.command_exec.contract.request import CommandExecRequest
-from sandbox.command_exec.contract.result import (
+from sandbox.execution.contract.request import CommandExecRequest
+from sandbox.execution.contract.result import (
     CommandExecResult,
     MountMode,
     ShellProcessResult,
     WorkspaceCapture,
 )
-from sandbox.command_exec.contract.spec import WorkspaceReplacementMountSpec
+from sandbox.execution.contract.spec import WorkspaceReplacementMountSpec
 
 __all__ = [
     "CommandExecRequest",

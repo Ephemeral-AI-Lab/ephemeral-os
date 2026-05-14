@@ -6,19 +6,19 @@ import shutil
 from dataclasses import replace
 from pathlib import Path
 
-from sandbox.command_exec.contract import (
+from sandbox.execution.contract import (
     CommandExecRequest,
     MountMode,
     ShellProcessResult,
     WorkspaceReplacementMountSpec,
 )
-from sandbox.command_exec.policy import (
+from sandbox.execution.policy import (
     DEFAULT_COMMAND_EXEC_POLICY,
     CommandExecPolicy,
 )
-from sandbox.command_exec.strategies.base import ExecutionStrategy
-from sandbox.command_exec.workspace.environment import run_command_to_refs
-from sandbox.command_exec.workspace.path_rewrite import (
+from sandbox.execution.strategies.base import ExecutionStrategy
+from sandbox.execution.workspace.environment import run_command_to_refs
+from sandbox.execution.workspace.path_rewrite import (
     rewrite_declared_workspace_env,
     rewrite_declared_workspace_refs,
 )

@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from uuid import uuid4
 
-from sandbox.command_exec import (
+from sandbox.execution import (
     CommandExecRequest,
     CommandExecResult,
     OCCMutationClient,
@@ -14,7 +14,7 @@ from sandbox.command_exec import (
     execute_command,
     run_workspace_replaced_command,
 )
-from sandbox.command_exec.executor import (
+from sandbox.execution.orchestrator import (
     _drop_transient_lowerdir as _drop_transient_lowerdir,
 )
 from sandbox.layer_stack.workspace.binding import require_workspace_binding

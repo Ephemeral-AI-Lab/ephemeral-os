@@ -5,17 +5,17 @@ from __future__ import annotations
 from collections.abc import Sequence
 from pathlib import Path
 
-from sandbox.command_exec.contract import (
+from sandbox.execution.contract import (
     CommandExecRequest,
     MountMode,
     ShellProcessResult,
     WorkspaceReplacementMountSpec,
 )
-from sandbox.command_exec.policy import (
+from sandbox.execution.policy import (
     DEFAULT_COMMAND_EXEC_POLICY,
     CommandExecPolicy,
 )
-from sandbox.command_exec.strategies import (
+from sandbox.execution.strategies import (
     ExecutionStrategy,
     StrategyRegistry,
     detect_private_mount_namespace,

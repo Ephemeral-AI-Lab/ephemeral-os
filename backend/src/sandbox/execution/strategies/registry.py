@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from sandbox.command_exec.contract import MountMode
-from sandbox.command_exec.policy import (
+from sandbox.execution.contract import MountMode
+from sandbox.execution.policy import (
     DEFAULT_COMMAND_EXEC_POLICY,
     CommandExecPolicy,
 )
-from sandbox.command_exec.strategies.base import ExecutionStrategy
-from sandbox.command_exec.strategies.copy_backed import CopyBackedStrategy
-from sandbox.command_exec.strategies.private_namespace import (
+from sandbox.execution.strategies.base import ExecutionStrategy
+from sandbox.execution.strategies.copy_backed import CopyBackedStrategy
+from sandbox.execution.strategies.private_namespace import (
     PrivateNamespaceStrategy,
     detect_private_mount_namespace,
 )

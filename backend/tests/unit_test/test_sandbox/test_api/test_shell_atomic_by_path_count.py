@@ -18,8 +18,8 @@ from typing import Any
 
 import pytest
 
-from sandbox.command_exec.contract.request import CommandExecRequest
-from sandbox.command_exec import executor as command_executor
+from sandbox.execution.contract.request import CommandExecRequest
+from sandbox.execution import orchestrator as command_executor
 from sandbox.occ.changeset.prepared import CommitOptions
 from sandbox.occ.changeset.types import ChangesetResult, WriteChange
 

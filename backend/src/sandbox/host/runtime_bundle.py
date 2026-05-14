@@ -186,10 +186,10 @@ def _runtime_bundle_bytes() -> bytes:
             sandbox_dir=sandbox_dir,
         )
 
-        command_exec_dir = sandbox_dir / "command_exec"
+        execution_dir = sandbox_dir / "execution"
         _add_python_tree(
             tar,
-            command_exec_dir,
+            execution_dir,
             sandbox_dir=sandbox_dir,
         )
 

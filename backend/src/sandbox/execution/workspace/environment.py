@@ -7,7 +7,7 @@ import subprocess
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
-from sandbox.command_exec.policy import (
+from sandbox.execution.policy import (
     DEFAULT_COMMAND_EXEC_POLICY,
     CommandExecPolicy,
 )

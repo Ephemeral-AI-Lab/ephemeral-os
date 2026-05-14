@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from sandbox.command_exec.contract.spec import WorkspaceReplacementMountSpec
+from sandbox.execution.contract.spec import WorkspaceReplacementMountSpec
 from sandbox.overlay.capture import capture_changes
 from sandbox.overlay.change import OverlayPathChange
 

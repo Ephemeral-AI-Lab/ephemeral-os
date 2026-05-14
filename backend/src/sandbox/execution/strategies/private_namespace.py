@@ -9,17 +9,17 @@ import subprocess
 import sys
 from pathlib import Path
 
-from sandbox.command_exec.contract import (
+from sandbox.execution.contract import (
     CommandExecRequest,
     MountMode,
     ShellProcessResult,
     WorkspaceReplacementMountSpec,
 )
-from sandbox.command_exec.policy import (
+from sandbox.execution.policy import (
     DEFAULT_COMMAND_EXEC_POLICY,
     CommandExecPolicy,
 )
-from sandbox.command_exec.strategies.base import ExecutionStrategy
+from sandbox.execution.strategies.base import ExecutionStrategy
 
 NAMESPACE_INFRA_EXIT_CODE = 125
 NAMESPACE_CONTROL_REF = "namespace-control.json"
@@ -90,7 +90,7 @@ class PrivateNamespaceStrategy(ExecutionStrategy):
                     "-Urm",
                     sys.executable,
                     "-m",
-                    "sandbox.command_exec.entrypoints.namespace_helper",
+                    "sandbox.execution.entrypoints",
                     str(payload_ref),
                 ],
                 stdout=stdout_file,

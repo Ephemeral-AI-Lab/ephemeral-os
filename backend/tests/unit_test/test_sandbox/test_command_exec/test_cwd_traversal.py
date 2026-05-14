@@ -12,8 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.command_exec.contract.request import CommandExecRequest
-from sandbox.command_exec.workspace.environment import resolve_workspace_cwd
+from sandbox.execution.contract.request import CommandExecRequest
+from sandbox.execution.workspace.environment import resolve_workspace_cwd
 
 
 def test_relative_cwd_with_parent_escape_is_rejected(tmp_path: Path) -> None:

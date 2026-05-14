@@ -6,11 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.command_exec.policy import (
+from sandbox.execution.policy import (
     DEFAULT_COMMAND_EXEC_POLICY,
     CommandExecPolicy,
 )
-from sandbox.command_exec.workspace.environment import resolve_workspace_cwd
+from sandbox.execution.workspace.environment import resolve_workspace_cwd
 
 
 def test_relative_cwd_resolves_inside_mounted_workspace(tmp_path: Path) -> None:
