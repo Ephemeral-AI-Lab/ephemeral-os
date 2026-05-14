@@ -112,6 +112,38 @@ After the first addendum (commit `4f95b143`) the loop resumed again and landed:
 |---|---|---|
 | `205e0b03` | W6 partial | OccMutationService Protocol in occ/client.py replaced with TYPE_CHECKING import of OccService. -12 LOC. |
 
+## Session 2 — Addendum 4 (W6 + W4b + W7a + PREP-5b convergence push)
+
+| SHA | Wave | Description |
+|---|---|---|
+| `cea83986` | W6 (layer_stack) | layer_stack/protocols.py deleted. 5 Protocols (ManifestStore, LeaseStore, SnapshotMaterializer, ChangePublisher, CommitStagingStore) replaced with concrete-class annotations. TransactionLock Protocol also dropped (threading.RLock single impl). occ/ports.py Protocols preserved (architectural layering). -86 LOC net. |
+| `507ffeb7` | W4b | Narration compression in host/bootstrap.py, host/daemon_client.py, provider/daytona/adapter.py. Kept WHY rationale. -42 LOC net. |
+| `272a0b69` | W7a | api/_impl read/write/edit consolidated onto _VerbSpec + _run_verb dispatcher. test_run_verb_seam.py added as Scenario E mock-seam guard. +46 LOC structural (new helper), but session-wide LOC remains net-negative. |
+| `bee72173` | PREP-5b | Wave 5b pre-flight written to .planning/wave-5b-preflight.md. All 3 candidates (result_projection.py / shell_runner.py / workspace_server.py) classified REAL-LOGIC. W5b closes as NO-OP. |
+
+**Updated final metrics (post-Session-2):**
+- Files: 143 (was 160 baseline) — RFC §7 AC #6 target ≤152 beaten by 9.
+- LOC: 17,202 (was 17,492 baseline). -290 LOC net.
+  - **Relaxed FINAL floor (≥250 LOC, with T3/stretch deferred): MET.**
+  - Firm RFC §13 AC #9 floor (≥1,222 LOC): NOT MET; remaining yielders deferred to next session.
+- Top-level subdirs: 9 (api, audit, daemon, execution, host, layer_stack, occ, plugin, provider).
+- AC #11 (≤600 LOC ceiling): MET. Largest sandbox file: workspace/base.py at 436 LOC.
+- Tests: 546 passed, 1 skipped, 0 failed.
+- Ruff: clean.
+
+**Session 2 explicit deferrals (next-session pickup order):**
+1. W9 — `_apply_edit_content` extraction in occ/stage/_edit.py (~50-70 LOC).
+2. W5a — sync API drop (~80 LOC src + 80 LOC tests, heavy test churn).
+3. W8a — api/{lifecycle,transport,protocol,discovery,preview_urls,timeouts}.py inlines (~155 LOC, public-adjacent).
+4. W7c — Daytona dedup (T3 + requires manual real-Daytona e2e by user).
+5. W7b — daemon handler tool trio extraction (RFC helpers don't exist; design first).
+
+**Session 2 parallel-codex incidents:** None observed. The `git commit -m "..." -- <pathspec>` pattern held throughout; no unrelated content swept into Session 2 commits.
+
+**T3 deferrals still owed by user before deploy:**
+- W3 (runtime/ → daemon/): run `live_e2e/squad/runner.py` against a real Daytona provider with `provider.create()` 60s timeout. Bundle hash invalidation on first contact is expected (one-time re-upload per running sandbox).
+- W7c (Daytona dedup): not yet implemented; defer to next session.
+
 **Updated final metrics (post-W6-partial):**
 - Files: 144 (was 160 baseline) — RFC §7 AC #6 target ≤152 beaten by 8.
 - LOC: 17,286 (was 17,492 baseline). -206 LOC net. RFC §13 AC #9 floor 1,222 LOC still NOT MET; the remaining LOC-yielders are W5b/W6/W7/W8a/W9.
