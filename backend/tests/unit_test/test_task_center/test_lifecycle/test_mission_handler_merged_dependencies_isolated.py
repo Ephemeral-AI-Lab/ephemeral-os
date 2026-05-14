@@ -57,7 +57,6 @@ def test_episode_factory_and_router_public_surface_preserved() -> None:
     factory_methods = {
         "create_initial",
         "create_continuation",
-        "has_orchestrator_factory",
     }
     factory_actual = {
         name for name in vars(EpisodeFactory) if not name.startswith("_")

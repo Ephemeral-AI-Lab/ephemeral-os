@@ -104,10 +104,6 @@ class EpisodeFactory:
         manager = self._spawn_manager(episode)
         return episode, manager
 
-    @property
-    def has_orchestrator_factory(self) -> bool:
-        return self._orchestrator_factory is not None
-
     def _spawn_manager(self, episode: Episode) -> EpisodeManager:
         manager = EpisodeManager(
             episode_id=episode.id,
@@ -180,7 +176,7 @@ class EpisodeClosureRouter:
         next_manager,
         previous_report: EpisodeClosureReport,
     ) -> None:
-        if not self._factory.has_orchestrator_factory:
+        if self._factory._orchestrator_factory is None:
             return
         try:
             next_manager.create_initial_attempt()
