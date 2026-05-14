@@ -9,7 +9,9 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
-from sandbox.layer_stack.errors import ManifestConflictError
+
+class ManifestConflictError(RuntimeError):
+    """Raised when an active-manifest compare-and-swap check fails."""
 
 
 MANIFEST_SCHEMA_VERSION = 1

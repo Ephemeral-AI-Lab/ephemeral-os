@@ -9,7 +9,6 @@ from typing import cast
 from sandbox.layer_stack.layer_change import (
     DeleteLayerChange,
     LayerChange,
-    LayerDelta,
     OpaqueDirLayerChange,
 )
 from sandbox.layer_stack.manifest import Manifest
@@ -25,7 +24,7 @@ from sandbox.occ.changeset.types import (
 )
 from sandbox.occ.content.hashing import ContentHasher
 from sandbox.occ.stage._edit import apply_edit_content
-from sandbox.occ.stage.policy import StageWrite, StageWriteFromPath, with_timings
+from sandbox.occ.stage.policy import StagedChanges, StageWrite, StageWriteFromPath, with_timings
 from sandbox.occ.ports import SnapshotReader
 from sandbox.occ.timing_keys import TimingKey
 from sandbox.timing import monotonic_now
@@ -111,7 +110,7 @@ class GatedStager:
         active_manifest: Manifest,
         stage_write: StageWrite,
         stage_write_from_path: StageWriteFromPath | None = None,
-    ) -> tuple[FileResult, LayerDelta | None]:
+    ) -> tuple[FileResult, StagedChanges | None]:
         try:
             return self._stage_group(
                 group,
@@ -135,7 +134,7 @@ class GatedStager:
         active_manifest: Manifest,
         stage_write: StageWrite,
         stage_write_from_path: StageWriteFromPath | None,
-    ) -> tuple[FileResult, LayerDelta | None]:
+    ) -> tuple[FileResult, StagedChanges | None]:
         timings: dict[str, float] = {}
         read_start = monotonic_now()
         current_content, current_exists = self._snapshot_reader.read_bytes(
@@ -167,7 +166,7 @@ class GatedStager:
         timings[TimingKey.GATED_APPLY_CHANGES] = monotonic_now() - apply_start
         stage_start = monotonic_now()
         delta = (
-            LayerDelta(changes=(state.final_special_change,))
+            (state.final_special_change,)
             if state.final_special_change is not None
             else _delta_for_final_state(
                 path=group.path,
@@ -298,7 +297,7 @@ def _delta_for_final_state(
     stage_write_from_path: StageWriteFromPath | None = None,
     content_path: str | None = None,
     precomputed_hash: str | None = None,
-) -> LayerDelta | None:
+) -> StagedChanges | None:
     if exists:
         if (
             stage_write_from_path is not None
@@ -308,12 +307,10 @@ def _delta_for_final_state(
             # `content` was already materialised in the apply loop for
             # the hash chain — pass it through so the stager's small-
             # file path doesn't re-read content_path.
-            return LayerDelta(
-                changes=(stage_write_from_path(path, content_path, precomputed_hash, content),)
-            )
-        return LayerDelta(changes=(stage_write(path, content),))
+            return (stage_write_from_path(path, content_path, precomputed_hash, content),)
+        return (stage_write(path, content),)
     if initial_exists:
-        return LayerDelta(changes=(DeleteLayerChange(path=path),))
+        return (DeleteLayerChange(path=path),)
     return None
 
 

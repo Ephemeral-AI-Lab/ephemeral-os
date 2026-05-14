@@ -7,7 +7,6 @@ from sandbox.layer_stack.errors import LayerStackStorageError
 from sandbox.layer_stack.layer_change import (
     DeleteLayerChange,
     LayerChange,
-    LayerDelta,
     OpaqueDirLayerChange,
     SymlinkLayerChange,
     WriteLayerChange,
@@ -36,7 +35,6 @@ __all__ = [
     "CommitStagingArea",
     "DeleteLayerChange",
     "LayerChange",
-    "LayerDelta",
     "LayerRef",
     "LayerStackManager",
     "LayerStackStorageError",

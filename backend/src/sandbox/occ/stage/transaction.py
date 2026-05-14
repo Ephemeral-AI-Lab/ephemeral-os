@@ -10,7 +10,7 @@ from types import TracebackType
 from typing import Protocol
 from uuid import uuid4
 
-from sandbox.layer_stack.layer_change import LayerChange, LayerDelta, WriteLayerChange
+from sandbox.layer_stack.layer_change import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset.prepared import (
     PreparedChangeset,
@@ -25,7 +25,7 @@ from sandbox.occ.changeset.types import (
 from sandbox.occ.content.hashing import ContentHasher
 from sandbox.occ.stage.direct import DirectStager
 from sandbox.occ.stage.gated import GatedStager
-from sandbox.occ.stage.policy import MergePolicy
+from sandbox.occ.stage.policy import MergePolicy, StagedChanges
 from sandbox.occ.ports import (
     CommitPublisher,
     CommitTransactionPort,
@@ -141,7 +141,7 @@ class CommitTransaction:
                     change
                     for _, accepted_delta in validations
                     if accepted_delta is not None
-                    for change in accepted_delta.changes
+                    for change in accepted_delta
                 )
                 timings[TimingKey.COMMIT_COLLECT_CHANGES] = monotonic_now() - collect_start
                 if not changes:

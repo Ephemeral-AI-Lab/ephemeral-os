@@ -58,10 +58,7 @@ class LeaseRegistry:
             lease = self._leases.pop(lease_id, None)
             if lease is None:
                 return None
-            for layer in lease.manifest.layers:
-                self._refcounts[layer] -= 1
-                if self._refcounts[layer] <= 0:
-                    del self._refcounts[layer]
+            self._refcounts -= Counter(lease.manifest.layers)
             return lease
 
     def pinned_layers(self) -> tuple[LayerRef, ...]:

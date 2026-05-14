@@ -19,11 +19,6 @@ class SquashPlan:
     suffix_to_checkpoint: tuple[LayerRef, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(
-            self,
-            "suffix_to_checkpoint",
-            tuple(self.suffix_to_checkpoint),
-        )
         if not self.suffix_to_checkpoint:
             raise ValueError("suffix_to_checkpoint must not be empty")
 

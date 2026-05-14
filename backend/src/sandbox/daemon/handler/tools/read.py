@@ -5,10 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import uuid4
 
-from sandbox.layer_stack.workspace_binding import (
-    WorkspaceBindingError,
-    require_workspace_binding,
-)
+from sandbox.layer_stack.workspace_binding import require_workspace_binding
 from sandbox.daemon.handler.request_context import (
     classify_path,
     layer_stack_root as require_layer_stack_root,
@@ -16,6 +13,11 @@ from sandbox.daemon.handler.request_context import (
     services as backend_services,
 )
 from sandbox.timing import monotonic_now
+
+# WR-01: cap out-of-workspace reads. Reading /var/log/syslog or /proc/kcore
+# unbounded OOMs the daemon and blows up the response body. 16 MiB is
+# comfortably larger than any legitimate source file.
+_MAX_OUT_OF_WORKSPACE_READ_BYTES = 16 * 1024 * 1024
 
 
 async def read_file(args: dict[str, object]) -> dict[str, object]:
@@ -46,10 +48,6 @@ def _read_in_workspace(
     total_start: float,
 ) -> dict[str, object]:
     services = backend_services(layer_stack_root)
-    if not Path(layer_stack_root).exists():
-        raise WorkspaceBindingError(
-            f"layer-stack root does not exist: {layer_stack_root}"
-        )
     request_id = uuid4().hex
     lease_start = monotonic_now()
     lease = services.manager.acquire_snapshot_lease(request_id)
@@ -89,11 +87,6 @@ def _read_out_of_workspace(
                 "api.read.total_s": monotonic_now() - total_start,
             },
         }
-    # WR-01: cap out-of-workspace reads. Reading /var/log/syslog or
-    # /proc/kcore unbounded OOMs the daemon and blows up the response
-    # body. 16 MiB is comfortably larger than any legitimate source
-    # file and small enough to never starve the daemon.
-    _MAX_OUT_OF_WORKSPACE_READ_BYTES = 16 * 1024 * 1024
     try:
         size = target.stat().st_size
     except OSError:

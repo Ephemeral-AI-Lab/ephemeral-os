@@ -285,3 +285,44 @@ Applied R2, R3, R4, R5, R6, R7, R9, R10. Skipped:
 | Round 2 | 940 | -60 (-6%) | -185 (-16.4%) |
 
 `pipeline.py` alone: 286 → 80 (**-72%**). The Wave-2 consolidation grew it; the two-round refactor shrank it back to a single-concept module.
+
+---
+
+## Round 3 (2026-05-15)
+
+Targeted: one performance bug (P1), one correctness-adjacent cleanup (S-rd-2), one symmetry polish (S-rd-1). Skipped P2/P3/Q1–Q4 as bikeshedding.
+
+### Landed
+
+- **P1** — `_populate_upperdir_from_diff` was doing an O(N) `_has_payload_descendant` scan inside an O(N) loop = **O(N²)**. Built a `dirs_with_descendants: set[Path]` prefix index once (O(N)), changed the per-iteration check to `rel not in dirs_with_descendants` (O(1)). Deleted `_has_payload_descendant`. For a 10k-path workspace: ~10⁷ comparisons → ~10⁴ set lookups.
+- **S-rd-2** — `execute_request` now takes typed `request: OverlayShellRequest` and `manifest: Manifest` directly instead of dict payloads. `pipeline.invoke_sync` no longer round-trips via `request.to_dict()` / `manifest.to_dict()`. Validation now happens once at the daemon-handler boundary instead of twice.
+- **S-rd-1** — Added `_content(kind, path, entry, *, symlink=False)` helper mirroring `_marker`. Symlink/file yields in `_walk_upperdir` dropped from 12 lines to 2.
+
+### Result
+
+| File | R2 → R3 | Δ |
+|---|:---:|---:|
+| `capture.py` | 278 → 277 | -1 |
+| `worker.py` | 160 → 156 | -4 |
+| Other | unchanged | 0 |
+| **Total** | **940 → 935** | **-5** |
+
+LoC delta is small because P1's prefix-set build (3 new lines + comment) nets against the deleted helper. The real wins are algorithmic, not visual.
+
+### Verification
+- `tests/unit_test/test_sandbox/test_overlay/`: **19/19 pass**
+- `ruff check`: clean
+- No external call-site updates needed (only `pipeline.invoke_sync` calls `execute_request`)
+
+---
+
+## Cumulative trajectory (final)
+
+| Stage | LoC | Δ from prior | Δ from baseline |
+|---|---:|---:|---:|
+| Baseline | 1125 | — | — |
+| Round 1 | 1000 | -125 (-11%) | -125 (-11%) |
+| Round 2 | 940 | -60 (-6%) | -185 (-16.4%) |
+| Round 3 | 935 | -5 (-0.5%) | -190 (-16.9%) |
+
+After three rounds: pipeline↔worker cycle eliminated, public `OverlayInvoker` test seam preserved, no private cross-package imports, O(N²) bug fixed, redundant serialization removed, 16 public exports intact. Diminishing returns from here.

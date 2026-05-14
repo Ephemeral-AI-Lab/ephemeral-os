@@ -68,6 +68,12 @@ def _populate_upperdir_from_diff(
 
     lower_paths = _payload_paths(lowerdir)
     merged_paths = _payload_paths(workspace_root)
+    # Prefix index: every dir that has at least one descendant in merged_paths.
+    # O(N) to build, O(1) per lookup — replaces the O(N²) inner scan that
+    # `_has_payload_descendant` used to do.
+    dirs_with_descendants: set[Path] = {
+        parent for path in merged_paths for parent in path.parents if parent != Path(".")
+    }
 
     for rel in sorted(lower_paths - merged_paths):
         if _has_nondirectory_payload_ancestor(
@@ -98,7 +104,7 @@ def _populate_upperdir_from_diff(
             target.mkdir(parents=True, exist_ok=True)
             with suppress(OSError):
                 shutil.copystat(merged_entry, target, follow_symlinks=False)
-            if not _has_payload_descendant(rel, merged_paths):
+            if rel not in dirs_with_descendants:
                 (target / OPAQUE_MARKER).write_text("", encoding="utf-8")
         elif merged_entry.is_file():
             shutil.copy2(merged_entry, target)
@@ -150,14 +156,6 @@ def _has_nondirectory_payload_ancestor(
     return False
 
 
-def _has_payload_descendant(rel: Path, payload_paths: set[Path]) -> bool:
-    prefix = rel.parts
-    return any(
-        len(path.parts) > len(prefix) and path.parts[: len(prefix)] == prefix
-        for path in payload_paths
-    )
-
-
 def _mode_bits(path: Path) -> int:
     return stat.S_IMODE(path.lstat().st_mode)
 
@@ -167,6 +165,17 @@ def _mode_bits(path: Path) -> int:
 
 def _marker(kind: OverlayPathChangeKind, path: str) -> OverlayPathChange:
     return OverlayPathChange(path=path, kind=kind, content_path=None, final_hash=None)
+
+
+def _content(
+    kind: OverlayPathChangeKind, path: str, entry: Path, *, symlink: bool = False
+) -> OverlayPathChange:
+    return OverlayPathChange(
+        path=path,
+        kind=kind,
+        content_path=str(entry),
+        final_hash=content_hash(entry, symlink=symlink),
+    )
 
 
 def _walk_upperdir(upper_root: Path) -> Iterator[OverlayPathChange]:
@@ -193,20 +202,10 @@ def _walk_upperdir(upper_root: Path) -> Iterator[OverlayPathChange]:
             yield _marker("delete", rel.as_posix())
             continue
         if entry.is_symlink():
-            yield OverlayPathChange(
-                path=rel.as_posix(),
-                kind="symlink",
-                content_path=str(entry),
-                final_hash=content_hash(entry, symlink=True),
-            )
+            yield _content("symlink", rel.as_posix(), entry, symlink=True)
             continue
         if entry.is_file():
-            yield OverlayPathChange(
-                path=rel.as_posix(),
-                kind="write",
-                content_path=str(entry),
-                final_hash=content_hash(entry),
-            )
+            yield _content("write", rel.as_posix(), entry)
 
 
 def _write_whiteout(upperdir: Path, rel: Path) -> None:

@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Literal
 
 from sandbox.layer_stack._paths import join_layer_path, remove_path
-from sandbox.layer_stack.errors import LayerStackStorageError
 from sandbox.layer_stack.layer_change import normalize_layer_path
 from sandbox.layer_stack.layer_index import (
     OPAQUE_MARKER as _OPAQUE_MARKER,
@@ -23,7 +22,16 @@ from sandbox.layer_stack.manifest import LayerRef, Manifest
 
 SymlinkLookup = Literal["symlink", "file", "absent"]
 
-__all__ = ["MergedView", "SymlinkLookup"]
+
+class LayerStackStorageError(RuntimeError):
+    """Raised when a manifest references missing or invalid layer storage."""
+
+    def __init__(self, message: str, *, layer_id: str | None = None) -> None:
+        super().__init__(message)
+        self.layer_id = layer_id
+
+
+__all__ = ["LayerStackStorageError", "MergedView", "SymlinkLookup"]
 
 
 class MergedView:
@@ -75,8 +83,7 @@ class MergedView:
         content, exists = self.read_bytes(path, manifest)
         if not exists:
             return "", False
-        if content is None:
-            return "", True
+        assert content is not None
         return content.decode("utf-8"), True
 
     def read_symlink(self, path: str, manifest: Manifest) -> tuple[str, SymlinkLookup]:
@@ -143,28 +150,11 @@ class MergedView:
                 if child is not None and child not in hidden:
                     names.add(child)
 
-            # rel itself is whited out in this layer. If this same layer
-            # has no children of rel, the directory is gone — stop.
-            # If it does have children, the layer effectively re-creates
-            # rel as a directory; keep iterating older layers BUT they
-            # cannot show through (case D below catches the opaque-on-rel
-            # path; otherwise the whiteout-only re-creation never happens
-            # in practice — overlayfs writes `.wh.<rel>` only when rel
-            # is being deleted).
-            if rel and rel in index.whiteouts:
-                has_children_here = (
-                    any(name.startswith(prefix) for name in index.files)
-                    or any(name.startswith(prefix) for name in index.whiteouts)
-                    or any(
-                        opaque == rel or opaque.startswith(prefix)
-                        for opaque in index.opaque_dirs
-                    )
-                )
-                if not has_children_here:
-                    return tuple(sorted(names))
-
             # rel itself is opaque in this layer → stop after collecting
-            # this layer's children; older layers can't contribute.
+            # this layer's children; older layers can't contribute. A
+            # plain whiteout on rel (without an opaque marker) cannot
+            # appear with same-layer children produced by this module's
+            # publisher; the case isn't represented here.
             if rel in index.opaque_dirs:
                 return tuple(sorted(names))
 
@@ -214,26 +204,26 @@ class MergedView:
         *,
         share_inodes: bool = False,
     ) -> None:
-        entries = tuple(sorted(layer_dir.rglob("*"), key=lambda item: item.as_posix()))
+        opaques: list[Path] = []
+        whiteouts: list[Path] = []
+        regulars: list[Path] = []
+        for entry in sorted(layer_dir.rglob("*"), key=lambda item: item.as_posix()):
+            if entry.name == _OPAQUE_MARKER:
+                opaques.append(entry)
+            elif _is_whiteout(entry.name):
+                whiteouts.append(entry)
+            else:
+                regulars.append(entry)
 
-        for marker in entries:
-            if marker.name != _OPAQUE_MARKER:
-                continue
-            target = dest / marker.parent.relative_to(layer_dir)
-            _clear_directory(target)
+        for marker in opaques:
+            _clear_directory(dest / marker.parent.relative_to(layer_dir))
 
-        for whiteout in entries:
-            if not _is_whiteout(whiteout.name):
-                continue
+        for whiteout in whiteouts:
             rel = whiteout.relative_to(layer_dir)
-            target = dest / rel.parent / whiteout.name[len(_WHITEOUT_PREFIX) :]
-            remove_path(target)
+            remove_path(dest / rel.parent / whiteout.name[len(_WHITEOUT_PREFIX) :])
 
-        for entry in entries:
-            if entry.name == _OPAQUE_MARKER or _is_whiteout(entry.name):
-                continue
-            rel = entry.relative_to(layer_dir)
-            target = dest / rel
+        for entry in regulars:
+            target = dest / entry.relative_to(layer_dir)
             if entry.is_symlink():
                 _replace_symlink(target, os.readlink(entry))
             elif entry.is_dir():

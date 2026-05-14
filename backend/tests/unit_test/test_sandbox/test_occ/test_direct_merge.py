@@ -75,7 +75,7 @@ def test_direct_write_stages_last_writer_wins_content(tmp_path: Path) -> None:
 
     assert result.status is FileStatus.ACCEPTED
     assert delta is not None
-    [change] = delta.changes
+    [change] = delta
     assert Path(change.source_path or "").read_bytes() == b"second"
 
 
@@ -131,11 +131,11 @@ def test_direct_symlink_and_opaque_dir_stage_storage_changes(tmp_path: Path) -> 
 
     assert symlink_result.status is FileStatus.ACCEPTED
     assert symlink_delta is not None
-    assert symlink_delta.changes[0].kind == "symlink"
-    assert symlink_delta.changes[0].source_path == "../target"
+    assert symlink_delta[0].kind == "symlink"
+    assert symlink_delta[0].source_path == "../target"
     assert opaque_result.status is FileStatus.ACCEPTED
     assert opaque_delta is not None
-    assert opaque_delta.changes[0].kind == "opaque_dir"
+    assert opaque_delta[0].kind == "opaque_dir"
 
 
 def test_direct_same_path_opaque_dir_respects_later_write(
@@ -160,6 +160,6 @@ def test_direct_same_path_opaque_dir_respects_later_write(
 
     assert result.status is FileStatus.ACCEPTED
     assert delta is not None
-    [change] = delta.changes
+    [change] = delta
     assert change.kind == "write"
     assert Path(change.source_path or "").read_bytes() == b"file wins"

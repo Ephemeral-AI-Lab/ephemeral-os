@@ -10,10 +10,8 @@ from __future__ import annotations
 
 import os
 import subprocess
-from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.execution.overlay.capture import capture_changes
@@ -99,8 +97,8 @@ def run_user_command(
 
 def execute_request(
     *,
-    request_payload: Mapping[str, Any],
-    manifest_payload: Mapping[str, Any],
+    request: OverlayShellRequest,
+    manifest: Manifest,
     storage_root: str | Path,
     run_dir: str | Path,
 ) -> OverlayCapture:
@@ -108,8 +106,6 @@ def execute_request(
     timings: dict[str, float] = {}
     run_dir_path = Path(run_dir)
     try:
-        request = OverlayShellRequest.from_dict(request_payload)
-        manifest = Manifest.from_dict(manifest_payload)
         mount_start = monotonic_now()
         mounted = mount_snapshot(
             manifest=manifest,

@@ -8,7 +8,6 @@ from typing import cast
 
 from sandbox.layer_stack.layer_change import (
     DeleteLayerChange,
-    LayerDelta,
     OpaqueDirLayerChange,
     SymlinkLayerChange,
 )
@@ -25,7 +24,13 @@ from sandbox.occ.changeset.types import (
     WriteChange,
 )
 from sandbox.occ.stage._edit import apply_edit_content
-from sandbox.occ.stage.policy import FinalKind, StageWrite, StageWriteFromPath, with_timings
+from sandbox.occ.stage.policy import (
+    FinalKind,
+    StageWrite,
+    StageWriteFromPath,
+    StagedChanges,
+    with_timings,
+)
 from sandbox.occ.ports import SnapshotReader
 from sandbox.occ.timing_keys import TimingKey
 from sandbox.timing import monotonic_now
@@ -99,7 +104,7 @@ class DirectStager:
         active_manifest: Manifest,
         stage_write: StageWrite,
         stage_write_from_path: StageWriteFromPath | None = None,
-    ) -> tuple[FileResult, LayerDelta | None]:
+    ) -> tuple[FileResult, StagedChanges | None]:
         try:
             return self._stage_group(
                 group,
@@ -123,7 +128,7 @@ class DirectStager:
         active_manifest: Manifest,
         stage_write: StageWrite,
         stage_write_from_path: StageWriteFromPath | None,
-    ) -> tuple[FileResult, LayerDelta | None]:
+    ) -> tuple[FileResult, StagedChanges | None]:
         timings: dict[str, float] = {}
         read_start = monotonic_now()
         current_content, current_exists = self._snapshot_reader.read_bytes(
@@ -153,16 +158,14 @@ class DirectStager:
                     status=FileStatus.ACCEPTED,
                     timings=timings,
                 ),
-                LayerDelta(changes=(OpaqueDirLayerChange(path=group.path),)),
+                (OpaqueDirLayerChange(path=group.path),),
             )
         if state.final_kind == "symlink" and state.symlink_target is not None:
-            delta = LayerDelta(
-                changes=(
-                    SymlinkLayerChange(
-                        path=group.path,
-                        source_path=state.symlink_target,
-                    ),
-                )
+            delta = (
+                SymlinkLayerChange(
+                    path=group.path,
+                    source_path=state.symlink_target,
+                ),
             )
             timings[TimingKey.DIRECT_STAGE_DELTA] = monotonic_now() - stage_start
             return (
@@ -181,18 +184,16 @@ class DirectStager:
             ):
                 # Pass the already-loaded bytes through; stager's
                 # small-file path skips the second disk read.
-                delta = LayerDelta(
-                    changes=(
-                        stage_write_from_path(
-                            group.path,
-                            state.final_content_path,
-                            state.final_precomputed_hash,
-                            state.content,
-                        ),
-                    )
+                delta = (
+                    stage_write_from_path(
+                        group.path,
+                        state.final_content_path,
+                        state.final_precomputed_hash,
+                        state.content,
+                    ),
                 )
             else:
-                delta = LayerDelta(changes=(stage_write(group.path, state.content),))
+                delta = (stage_write(group.path, state.content),)
             timings[TimingKey.DIRECT_STAGE_DELTA] = monotonic_now() - stage_start
             return (
                 FileResult(
@@ -210,7 +211,7 @@ class DirectStager:
                     status=FileStatus.ACCEPTED,
                     timings=timings,
                 ),
-                LayerDelta(changes=(DeleteLayerChange(path=group.path),)),
+                (DeleteLayerChange(path=group.path),),
             )
         timings[TimingKey.DIRECT_STAGE_DELTA] = monotonic_now() - stage_start
         return (

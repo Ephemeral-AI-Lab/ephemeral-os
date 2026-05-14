@@ -178,22 +178,12 @@ def update_digest(digest: DigestSink, prepared: PreparedLayerChange) -> None:
     digest.update(b"\0")
 
 
-@dataclass(frozen=True)
-class LayerDelta:
-    changes: tuple[LayerChange, ...]
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, "changes", tuple(self.changes))
-
-
-def aggregate_layer_changes(changes: Iterable[LayerChange]) -> LayerDelta:
+def aggregate_layer_changes(changes: Iterable[LayerChange]) -> tuple[LayerChange, ...]:
     """Collapse accepted same-path changes into a deterministic layer delta."""
     final_by_path: dict[str, LayerChange] = {}
     for change in changes:
         final_by_path[change.path] = change
-    return LayerDelta(
-        changes=tuple(final_by_path[path] for path in sorted(final_by_path))
-    )
+    return tuple(final_by_path[path] for path in sorted(final_by_path))
 
 
 def _whiteout_path(layer_dir: Path, rel: str) -> Path:
@@ -209,7 +199,6 @@ __all__ = [
     "DigestSink",
     "LayerChange",
     "LayerChangeKind",
-    "LayerDelta",
     "OpaqueDirLayerChange",
     "PreparedLayerChange",
     "SymlinkLayerChange",

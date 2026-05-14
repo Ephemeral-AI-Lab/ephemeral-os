@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Literal, Protocol
 
-from sandbox.layer_stack.layer_change import LayerChange, LayerDelta
+from sandbox.layer_stack.layer_change import LayerChange
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset.prepared import PreparedPathGroup
 from sandbox.occ.changeset.types import FileResult
@@ -13,6 +13,7 @@ from sandbox.occ.changeset.types import FileResult
 StageWrite = Callable[[str, bytes], LayerChange]
 StageWriteFromPath = Callable[[str, str, str, bytes | None], LayerChange]
 FinalKind = Literal["write", "delete", "symlink", "opaque_dir"]
+StagedChanges = tuple[LayerChange, ...]
 
 
 class MergePolicy(Protocol):
@@ -25,7 +26,7 @@ class MergePolicy(Protocol):
         active_manifest: Manifest,
         stage_write: StageWrite,
         stage_write_from_path: StageWriteFromPath | None = None,
-    ) -> tuple[FileResult, LayerDelta | None]: ...
+    ) -> tuple[FileResult, StagedChanges | None]: ...
 
 
 def with_timings(result: FileResult, timings: dict[str, float]) -> FileResult:

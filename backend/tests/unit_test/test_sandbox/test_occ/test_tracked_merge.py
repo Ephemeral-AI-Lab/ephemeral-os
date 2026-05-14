@@ -99,7 +99,7 @@ def test_tracked_edit_applies_unique_anchor_to_active_content(tmp_path: Path) ->
 
     assert result.status is FileStatus.ACCEPTED
     assert delta is not None
-    [change] = delta.changes
+    [change] = delta
     assert Path(change.source_path or "").read_bytes() == b"alpha\nBETA\n"
 
 
@@ -142,7 +142,7 @@ def test_tracked_opaque_dir_overlay_change_stages_storage_change(
 
     assert opaque_result.status is FileStatus.ACCEPTED
     assert opaque_delta is not None
-    assert opaque_delta.changes[0].kind == "opaque_dir"
+    assert opaque_delta[0].kind == "opaque_dir"
 
 
 def test_tracked_symlink_overlay_change_is_rejected(tmp_path: Path) -> None:

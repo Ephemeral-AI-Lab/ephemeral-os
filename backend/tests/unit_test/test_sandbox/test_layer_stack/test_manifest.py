@@ -108,5 +108,5 @@ def test_layer_change_aggregation_keeps_final_change_per_path(tmp_path: Path) ->
         )
     )
 
-    assert [change.path for change in delta.changes] == ["a.txt", "b.txt"]
-    assert delta.changes[1].source_path == str(second)
+    assert [change.path for change in delta] == ["a.txt", "b.txt"]
+    assert delta[1].source_path == str(second)

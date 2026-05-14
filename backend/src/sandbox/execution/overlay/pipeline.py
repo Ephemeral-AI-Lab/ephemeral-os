@@ -60,8 +60,8 @@ class OverlayRuntimeInvoker:
         self, *, request: OverlayShellRequest, manifest: Manifest
     ) -> OverlayCapture:
         return execute_request(
-            request_payload=request.to_dict(),
-            manifest_payload=manifest.to_dict(),
+            request=request,
+            manifest=manifest,
             storage_root=self.storage_root,
             run_dir=self._run_dir(request),
         )

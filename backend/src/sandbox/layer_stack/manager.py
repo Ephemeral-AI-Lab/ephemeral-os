@@ -98,8 +98,7 @@ class LayerStackManager:
         )
 
     def read_active_manifest(self) -> Manifest:
-        with self._lock:
-            return self._manifest_store.read()
+        return self._manifest_store.read()
 
     def acquire_snapshot_lease(self, owner_request_id: str) -> WorkspaceLease:
         with self._lock:
@@ -288,18 +287,8 @@ class LayerStackManager:
         *,
         current_manifest: Manifest,
     ) -> tuple[LayerRef, ...]:
-        active_layers = set(current_manifest.layers)
-        pinned_layers = set(self._leases.pinned_layers())
-        removable: list[LayerRef] = []
-        seen: set[LayerRef] = set()
-        for layer in candidates:
-            if layer in seen:
-                continue
-            seen.add(layer)
-            if layer in active_layers or layer in pinned_layers:
-                continue
-            removable.append(layer)
-        return tuple(removable)
+        skip = set(current_manifest.layers) | set(self._leases.pinned_layers())
+        return tuple(layer for layer in candidates if layer not in skip)
 
     def _remove_layers(self, layers: Sequence[LayerRef]) -> tuple[str, ...]:
         removed: list[str] = []

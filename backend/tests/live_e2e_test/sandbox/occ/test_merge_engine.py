@@ -73,7 +73,7 @@ ok_result, ok_delta = gated.stage_group(
 )
 assert ok_result.status is FileStatus.ACCEPTED
 assert ok_delta is not None
-assert Path(ok_delta.changes[0].source_path).read_bytes() == b"alpha\nBETA\n"
+assert Path(ok_delta[0].source_path).read_bytes() == b"alpha\nBETA\n"
 
 conflict_group = PreparedPathGroup(
     path="src/app.py",
@@ -112,7 +112,7 @@ crlf_result, crlf_delta = gated.stage_group(
     stage_write=_stage_write,
 )
 assert crlf_result.status is FileStatus.ACCEPTED
-assert Path(crlf_delta.changes[0].source_path).read_bytes() == b"a\r\nB\r\n"
+assert Path(crlf_delta[0].source_path).read_bytes() == b"a\r\nB\r\n"
 
 direct_group = PreparedPathGroup(
     path="dist/app.js",
@@ -125,7 +125,7 @@ direct_result, direct_delta = direct.stage_group(
     stage_write=_stage_write,
 )
 assert direct_result.status is FileStatus.ACCEPTED
-assert Path(direct_delta.changes[0].source_path).read_bytes() == b"direct"
+assert Path(direct_delta[0].source_path).read_bytes() == b"direct"
 
 _emit(label, started, before, {
     "non_conflict": _status(ok_result.status),

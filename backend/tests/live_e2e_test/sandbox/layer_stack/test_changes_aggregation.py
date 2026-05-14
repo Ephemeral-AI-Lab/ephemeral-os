@@ -38,9 +38,9 @@ changes = [
     WriteLayerChange(path="z/out.txt", source_path=str(_source(root, "z-out-v2", b"z2\n"))),
 ]
 delta = aggregate_layer_changes(changes)
-paths = [change.path for change in delta.changes]
+paths = [change.path for change in delta]
 assert paths == sorted(set(change.path for change in changes)), paths
-manager.publish_changes(delta.changes)
+manager.publish_changes(delta)
 
 assert manager.read_text("a/out.txt") == ("a2\n", True)
 assert manager.read_text("z/out.txt") == ("z2\n", True)
@@ -49,8 +49,8 @@ assert manager.read_text("new/name.txt") == ("renamed\n", True)
 
 _emit(label, started, before, {
     "input_changes": len(changes),
-    "aggregated_changes": len(delta.changes),
-    "deduped_paths": len(changes) - len(delta.changes),
+    "aggregated_changes": len(delta),
+    "deduped_paths": len(changes) - len(delta),
     "ordered_paths": paths,
     "rename_pair_preserved": manager.read_text("new/name.txt") == ("renamed\n", True),
     "old_name_deleted": manager.read_bytes("old/name.txt") == (None, False),
@@ -87,9 +87,9 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=n) as pool:
     rows = list(pool.map(produce, range(n)))
 changes = [change for row in rows for change in row]
 delta = aggregate_layer_changes(changes)
-manager.publish_changes(delta.changes)
+manager.publish_changes(delta)
 
-paths = [change.path for change in delta.changes]
+paths = [change.path for change in delta]
 assert paths == ["race/%02d.txt" % index for index in range(n)], paths
 for index in range(n):
     assert manager.read_text("race/%02d.txt" % index) == ("final-%02d\n" % index, True)
@@ -97,8 +97,8 @@ for index in range(n):
 _emit(label, started, before, {
     "producers": n,
     "input_changes": len(changes),
-    "aggregated_changes": len(delta.changes),
-    "dedup_invariant": len(delta.changes) == n,
+    "aggregated_changes": len(delta),
+    "dedup_invariant": len(delta) == n,
     "ordered_paths": paths,
 })
 """

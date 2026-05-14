@@ -162,7 +162,7 @@ def _prepare_changes(
         Path(source_root).resolve(strict=True) if source_root is not None else None
     )
     prepared: list[PreparedLayerChange] = []
-    for change in aggregate_layer_changes(changes).changes:
+    for change in aggregate_layer_changes(changes):
         prepared_change = prepare_layer_change(change, source_root=resolved_source_root)
         update_digest(digest, prepared_change)
         prepared.append(prepared_change)

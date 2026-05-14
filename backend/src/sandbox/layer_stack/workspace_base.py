@@ -117,20 +117,11 @@ def build_workspace_base(
         timings["workspace_base.inventory.symlinks"] = float(symlinks)
         timings["workspace_base.inventory.bytes"] = float(bytes_total)
     write_layer_start = monotonic_now()
+    # _write_base_layer's per-file content_hash recheck already catches
+    # mid-flight file edits at write time; no second full-tree rescan.
     layer_ref = _write_base_layer(stack, entries)
     _write_base_digest_sidecar(stack, layer_ref.layer_id, root_hash)
     record_elapsed(timings, "workspace_base.write_layer_s", write_layer_start)
-    rescan_start = monotonic_now()
-    try:
-        _assert_workspace_quiescent(
-            workspace=workspace,
-            expected_entries=entries,
-            expected_root_hash=root_hash,
-        )
-    except Exception:
-        shutil.rmtree(stack / LAYERS_DIR / layer_ref.layer_id, ignore_errors=True)
-        raise
-    record_elapsed(timings, "workspace_base.rescan_s", rescan_start)
     manifest = Manifest(version=1, layers=(layer_ref,))
     write_manifest_start = monotonic_now()
     write_manifest_atomic(manifest_path(stack), manifest)
@@ -230,24 +221,6 @@ def _collect_base_entries(workspace: Path) -> tuple[tuple[_BaseEntry, ...], str]
     for entry in entries:
         _update_root_hash(digest, entry)
     return tuple(entries), digest.hexdigest()
-
-
-def _assert_workspace_quiescent(
-    *,
-    workspace: Path,
-    expected_entries: tuple[_BaseEntry, ...],
-    expected_root_hash: str,
-) -> None:
-    latest_entries, latest_root_hash = _collect_base_entries(workspace)
-    if latest_root_hash == expected_root_hash and latest_entries == expected_entries:
-        return
-    expected_paths = {entry.path for entry in expected_entries}
-    latest_paths = {entry.path for entry in latest_entries}
-    changed_paths = sorted(expected_paths.symmetric_difference(latest_paths))
-    raise WorkspaceBaseIncompleteError(
-        special_file_rejections=(),
-        unstable_paths=tuple(changed_paths) or ("<workspace-root>",),
-    )
 
 
 def _symlink_entry(*, path: Path, rel: str) -> _BaseEntry:
