@@ -1,3 +1,6 @@
-"""Phase 3 shim — canonical home is :mod:`task_center.attempt.lifecycle`."""
+"""Phase 7e shim — canonical home is :mod:`task_center.attempt.runtime`."""
 
-from task_center.attempt.lifecycle import *  # noqa: F401, F403
+from task_center.attempt.runtime import (  # noqa: F401
+    GeneratorTaskLifecycle,
+    LifecycleTarget,
+)
