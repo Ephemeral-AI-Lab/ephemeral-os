@@ -3,27 +3,15 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Protocol
+from typing import TYPE_CHECKING
 
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
 from sandbox.occ.changeset.types import Change, ChangesetResult
 from sandbox.occ.ports import WorkspaceBindingReader
 
-
-class OccMutationService(Protocol):
-    async def apply_changeset(
-        self,
-        changes: Sequence[Change],
-        *,
-        snapshot: Manifest | None = None,
-        options: CommitOptions | None = None,
-    ) -> ChangesetResult: ...
-
-    async def commit_prepared(
-        self,
-        prepared: PreparedChangeset,
-    ) -> ChangesetResult: ...
+if TYPE_CHECKING:
+    from sandbox.occ.service import OccService
 
 
 class OccClient:
@@ -31,7 +19,7 @@ class OccClient:
 
     def __init__(
         self,
-        service: OccMutationService,
+        service: OccService,
         *,
         binding_reader: WorkspaceBindingReader,
         workspace_ref: str = "",
@@ -70,4 +58,4 @@ class OccClient:
         return await self._service.commit_prepared(prepared)
 
 
-__all__ = ["OccMutationService", "OccClient"]
+__all__ = ["OccClient"]
