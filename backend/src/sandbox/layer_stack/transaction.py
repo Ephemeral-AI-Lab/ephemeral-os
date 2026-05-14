@@ -2,29 +2,27 @@
 
 from __future__ import annotations
 
+import threading
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from types import TracebackType
-from typing import Protocol
+from typing import TYPE_CHECKING
 
 from sandbox.layer_stack.layer.change import LayerChange
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.layer_stack.protocols import ChangePublisher, ManifestStore
 from sandbox.timing import monotonic_now
 
-
-class TransactionLock(Protocol):
-    def acquire(self) -> bool: ...
-
-    def release(self) -> None: ...
+if TYPE_CHECKING:
+    from sandbox.layer_stack.layer.publisher import LayerPublisher
+    from sandbox.layer_stack.manifest import FileManifestStore
 
 
 @dataclass(frozen=True)
 class LayerStackTransactionHandle:
-    lock: TransactionLock
-    manifest_store: ManifestStore
-    publisher: ChangePublisher
+    lock: threading.RLock
+    manifest_store: FileManifestStore
+    publisher: LayerPublisher
 
 
 class LayerStackTransaction:
@@ -101,5 +99,4 @@ class LayerStackTransaction:
 __all__ = [
     "LayerStackTransaction",
     "LayerStackTransactionHandle",
-    "TransactionLock",
 ]

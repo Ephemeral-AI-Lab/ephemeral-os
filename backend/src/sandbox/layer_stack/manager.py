@@ -31,12 +31,6 @@ from sandbox.layer_stack.manifest import (
     empty_manifest,
     manifest_root_hash,
 )
-from sandbox.layer_stack.protocols import (
-    ChangePublisher,
-    LeaseStore,
-    ManifestStore,
-    SnapshotMaterializer,
-)
 from sandbox.layer_stack.transaction import (
     LayerStackTransaction,
     LayerStackTransactionHandle,
@@ -74,10 +68,10 @@ class LayerStackManager:
         self,
         storage_root: str | Path,
         *,
-        manifest_store: ManifestStore | None = None,
-        leases: LeaseStore | None = None,
-        view: SnapshotMaterializer | None = None,
-        publisher: ChangePublisher | None = None,
+        manifest_store: FileManifestStore | None = None,
+        leases: LeaseRegistry | None = None,
+        view: MergedView | None = None,
+        publisher: LayerPublisher | None = None,
         squash: SquashService | None = None,
     ) -> None:
         self.storage_root = Path(storage_root)
