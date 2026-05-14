@@ -1,4 +1,4 @@
-"""Entrypoint for ``python -m sandbox.runtime.daemon`` inside the sandbox."""
+"""Entrypoint for ``python -m sandbox.daemon`` inside the sandbox."""
 
 from __future__ import annotations
 
@@ -11,11 +11,11 @@ import os
 import sys
 from pathlib import Path
 
-from sandbox.runtime.daemon.rpc.server import DEFAULT_PID_PATH, DEFAULT_SOCKET_PATH, serve
+from sandbox.daemon.rpc.server import DEFAULT_PID_PATH, DEFAULT_SOCKET_PATH, serve
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="sandbox.runtime.daemon")
+    parser = argparse.ArgumentParser(prog="sandbox.daemon")
     parser.add_argument("--socket", default=DEFAULT_SOCKET_PATH)
     parser.add_argument("--pid-file", default=DEFAULT_PID_PATH)
     args = parser.parse_args(argv)

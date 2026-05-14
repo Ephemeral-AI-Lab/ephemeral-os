@@ -13,17 +13,17 @@ from uuid import uuid4
 import pytest
 
 from sandbox.layer_stack.workspace.base import build_workspace_base
-from sandbox.runtime.daemon.handler import metrics
-from sandbox.runtime.daemon.handler.request_context import (
+from sandbox.daemon.handler import metrics
+from sandbox.daemon.handler.request_context import (
     ClassifiedPath,
     classify_path,
     services as request_services,
 )
-from sandbox.runtime.daemon.handler.tools import edit, read, write
-from sandbox.runtime.daemon.rpc import dispatcher as server
-from sandbox.runtime.daemon.service import occ_backend
-from sandbox.runtime.daemon.service import shell_runner
-from sandbox.runtime.daemon.service.workspace_server import get_layer_stack_manager
+from sandbox.daemon.handler.tools import edit, read, write
+from sandbox.daemon.rpc import dispatcher as server
+from sandbox.daemon.service import occ_backend
+from sandbox.daemon.service import shell_runner
+from sandbox.daemon.service.workspace_server import get_layer_stack_manager
 
 
 # ---------------------------------------------------------------------------

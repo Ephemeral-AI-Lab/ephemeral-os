@@ -20,9 +20,9 @@ from sandbox.occ.client import OccClient
 from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
 from sandbox.occ.maintenance import AutoSquashMaintenancePolicy
 from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH, OccService
-from sandbox.runtime.daemon.service.layer_stack_client import LayerStackClient
-from sandbox.runtime.daemon.service.workspace_binding import RuntimeWorkspaceBindingReader
-from sandbox.runtime.daemon.service.workspace_server import get_layer_stack_manager
+from sandbox.daemon.service.layer_stack_client import LayerStackClient
+from sandbox.daemon.service.workspace_binding import RuntimeWorkspaceBindingReader
+from sandbox.daemon.service.workspace_server import get_layer_stack_manager
 
 
 @dataclass(frozen=True)

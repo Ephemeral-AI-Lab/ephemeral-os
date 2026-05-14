@@ -110,7 +110,7 @@ def _add_peer_setup_scripts(tar: tarfile.TarFile, *, sandbox_dir: Path) -> None:
 
 
 def _add_runtime_scripts(tar: tarfile.TarFile, *, sandbox_dir: Path) -> None:
-    scripts_dir = sandbox_dir / "runtime" / "scripts"
+    scripts_dir = sandbox_dir / "daemon" / "scripts"
     if not scripts_dir.exists():
         return
     for path in sorted(scripts_dir.iterdir()):
@@ -179,7 +179,7 @@ def _runtime_bundle_bytes() -> bytes:
             arcname="sandbox/daemon_paths.py",
         )
 
-        daemon_dir = sandbox_dir / "runtime"
+        daemon_dir = sandbox_dir / "daemon"
         _add_python_tree(
             tar,
             daemon_dir,

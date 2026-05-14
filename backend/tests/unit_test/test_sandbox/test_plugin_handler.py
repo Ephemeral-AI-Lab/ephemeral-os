@@ -120,7 +120,7 @@ def test_plugin_ensure_loads_runtime_and_registers_ops() -> None:
     assert response["runtime_loaded"] is True
     assert response["already_loaded"] is False
 
-    from sandbox.runtime.daemon.rpc.dispatcher import OP_TABLE
+    from sandbox.daemon.rpc.dispatcher import OP_TABLE
 
     assert "plugin.demo.hover" in OP_TABLE
     assert "plugin.demo.ping" in OP_TABLE
@@ -212,7 +212,7 @@ def test_plugin_ensure_reloads_when_digest_changes(
     assert second["already_loaded"] is False
     assert second["registered_ops"] == ["plugin.reloadable.ping"]
 
-    from sandbox.runtime.daemon.rpc.dispatcher import OP_TABLE
+    from sandbox.daemon.rpc.dispatcher import OP_TABLE
 
     assert "plugin.reloadable.hover" not in OP_TABLE
     assert "plugin.reloadable.ping" in OP_TABLE

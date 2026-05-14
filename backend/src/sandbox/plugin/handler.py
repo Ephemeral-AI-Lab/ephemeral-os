@@ -130,7 +130,7 @@ async def _plugin_ensure_locked(
             else {"runtime_warmed": False}
         )
     except Exception:
-        from sandbox.runtime.daemon.rpc.dispatcher import OP_TABLE
+        from sandbox.daemon.rpc.dispatcher import OP_TABLE
 
         for op in registered_ops:
             OP_TABLE.pop(op, None)
@@ -207,7 +207,7 @@ async def _warm_plugin_runtime(
 
 async def _unload_plugin_runtime(plugin_name: str) -> None:
     await _evict_plugin_sessions(plugin_name)
-    from sandbox.runtime.daemon.rpc.dispatcher import OP_TABLE
+    from sandbox.daemon.rpc.dispatcher import OP_TABLE
 
     for op in _LOADED.pop(plugin_name, []):
         OP_TABLE.pop(op, None)
@@ -240,10 +240,10 @@ async def _evict_plugin_sessions(plugin_name: str) -> None:
 
 
 def _import_dispatcher_register_op() -> Any:
-    from sandbox.runtime.daemon.rpc.dispatcher import register_op
+    from sandbox.daemon.rpc.dispatcher import register_op
 
     def _idempotent_register_op(op: str, handler: Any) -> None:
-        from sandbox.runtime.daemon.rpc.dispatcher import OP_TABLE
+        from sandbox.daemon.rpc.dispatcher import OP_TABLE
 
         existing = OP_TABLE.get(op)
         if existing is handler:

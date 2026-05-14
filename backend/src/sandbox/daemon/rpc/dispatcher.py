@@ -173,10 +173,10 @@ def _to_response_dict(result: Any) -> dict[str, Any]:
 
 def _load_peer_bootstraps() -> None:
     from sandbox.plugin import handler as plugin_handler
-    from sandbox.runtime.daemon.handler import health, metrics, workspace
-    from sandbox.runtime.daemon.handler import overlay as overlay_run
-    from sandbox.runtime.daemon.handler.tools import edit, read, write
-    from sandbox.runtime.daemon.service import shell_runner
+    from sandbox.daemon.handler import health, metrics, workspace
+    from sandbox.daemon.handler import overlay as overlay_run
+    from sandbox.daemon.handler.tools import edit, read, write
+    from sandbox.daemon.service import shell_runner
 
     for op, handler in {
         "api.ensure_workspace_base": workspace.ensure_workspace_base,

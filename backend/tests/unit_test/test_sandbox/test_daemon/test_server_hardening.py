@@ -1,4 +1,4 @@
-"""Hardening tests for ``sandbox.runtime.daemon.rpc.server``.
+"""Hardening tests for ``sandbox.daemon.rpc.server``.
 
 Covers BL-01..BL-04 from the runtime code review:
 
@@ -27,9 +27,9 @@ from typing import Any
 
 import pytest
 
-from sandbox.runtime.daemon.rpc import dispatcher
-from sandbox.runtime.daemon.rpc import server as server_module
-from sandbox.runtime.daemon import __main__ as daemon_main
+from sandbox.daemon.rpc import dispatcher
+from sandbox.daemon.rpc import server as server_module
+from sandbox.daemon import __main__ as daemon_main
 
 
 @pytest.fixture(autouse=True)

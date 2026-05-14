@@ -9,7 +9,7 @@ import pytest
 
 from sandbox.layer_stack import WriteLayerChange, LayerStackManager
 from sandbox.execution.overlay import OverlayCapture, OverlayShellRequest, OverlaySnapshotRunner
-from sandbox.runtime.daemon.rpc.dispatcher import dispatch_envelope_async
+from sandbox.daemon.rpc.dispatcher import dispatch_envelope_async
 
 
 def _source(tmp_path: Path, name: str, content: bytes) -> str:

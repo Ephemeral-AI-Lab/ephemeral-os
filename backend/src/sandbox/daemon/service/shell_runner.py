@@ -19,13 +19,13 @@ from sandbox.execution.orchestrator import (
 )
 from sandbox.layer_stack.workspace.binding import require_workspace_binding
 from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
-from sandbox.runtime.daemon.service.result_projection import (
+from sandbox.daemon.service.result_projection import (
     conflict_and_status,
     conflict_to_dict,
     gitignore_cache_timings,
     published_paths,
 )
-from sandbox.runtime.daemon.service import occ_backend
+from sandbox.daemon.service import occ_backend
 
 
 async def execute_shell_api(args: dict[str, object]) -> dict[str, object]:

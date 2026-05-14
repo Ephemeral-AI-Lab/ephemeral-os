@@ -27,14 +27,14 @@ from typing import Literal, NamedTuple
 
 from sandbox.occ.changeset.types import ChangesetResult
 from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
-from sandbox.runtime.daemon.service.result_projection import (
+from sandbox.daemon.service.result_projection import (
     committed_paths,
     conflict_and_status,
     conflict_to_dict,
     gitignore_cache_timings,
 )
-from sandbox.runtime.daemon.service import occ_backend
-from sandbox.runtime.daemon.service.occ_backend import OccBackend
+from sandbox.daemon.service import occ_backend
+from sandbox.daemon.service.occ_backend import OccBackend
 from sandbox.timing import monotonic_now
 
 # -- classifier predicate ---------------------------------------------------

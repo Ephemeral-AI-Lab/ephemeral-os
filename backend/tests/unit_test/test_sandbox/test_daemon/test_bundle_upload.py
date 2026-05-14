@@ -53,36 +53,36 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
 
     required = [
         "sandbox/__init__.py",
-        "sandbox/runtime/async_bridge.py",
+        "sandbox/daemon/async_bridge.py",
         "sandbox/daemon_paths.py",
         "sandbox/models.py",
         "sandbox/timing.py",
-        "sandbox/runtime/__init__.py",
-        "sandbox/runtime/daemon/__main__.py",
-        "sandbox/runtime/daemon/rpc/__init__.py",
-        "sandbox/runtime/daemon/rpc/server.py",
-        "sandbox/runtime/daemon/rpc/dispatcher.py",
-        "sandbox/runtime/daemon/service/__init__.py",
-        "sandbox/runtime/daemon/service/layer_stack_client.py",
-        "sandbox/runtime/daemon/service/result_projection.py",
-        "sandbox/runtime/daemon/service/workspace_binding.py",
-        "sandbox/runtime/daemon/handler/health.py",
-        "sandbox/runtime/daemon/handler/workspace.py",
-        "sandbox/runtime/daemon/service/workspace_server.py",
-        "sandbox/runtime/daemon/service/shell_runner.py",
-        "sandbox/runtime/daemon/handler/__init__.py",
-        "sandbox/runtime/daemon/handler/request_context.py",
-        "sandbox/runtime/daemon/handler/metrics.py",
-        "sandbox/runtime/daemon/handler/overlay.py",
-        "sandbox/runtime/daemon/handler/tools/__init__.py",
-        "sandbox/runtime/daemon/handler/tools/edit.py",
-        "sandbox/runtime/daemon/handler/tools/read.py",
-        "sandbox/runtime/daemon/handler/tools/write.py",
-        "sandbox/runtime/daemon/service/occ_backend.py",
-        "sandbox/runtime/scripts/__init__.py",
-        "sandbox/runtime/scripts/install_git.sh",
-        "sandbox/runtime/scripts/launch_daemon.sh",
-        "sandbox/runtime/scripts/thin_client.py",
+        "sandbox/daemon/__init__.py",
+        "sandbox/daemon/__main__.py",
+        "sandbox/daemon/rpc/__init__.py",
+        "sandbox/daemon/rpc/server.py",
+        "sandbox/daemon/rpc/dispatcher.py",
+        "sandbox/daemon/service/__init__.py",
+        "sandbox/daemon/service/layer_stack_client.py",
+        "sandbox/daemon/service/result_projection.py",
+        "sandbox/daemon/service/workspace_binding.py",
+        "sandbox/daemon/handler/health.py",
+        "sandbox/daemon/handler/workspace.py",
+        "sandbox/daemon/service/workspace_server.py",
+        "sandbox/daemon/service/shell_runner.py",
+        "sandbox/daemon/handler/__init__.py",
+        "sandbox/daemon/handler/request_context.py",
+        "sandbox/daemon/handler/metrics.py",
+        "sandbox/daemon/handler/overlay.py",
+        "sandbox/daemon/handler/tools/__init__.py",
+        "sandbox/daemon/handler/tools/edit.py",
+        "sandbox/daemon/handler/tools/read.py",
+        "sandbox/daemon/handler/tools/write.py",
+        "sandbox/daemon/service/occ_backend.py",
+        "sandbox/daemon/scripts/__init__.py",
+        "sandbox/daemon/scripts/install_git.sh",
+        "sandbox/daemon/scripts/launch_daemon.sh",
+        "sandbox/daemon/scripts/thin_client.py",
         "sandbox/execution/__init__.py",
         "sandbox/execution/orchestrator.py",
         "sandbox/execution/policy.py",
@@ -217,7 +217,7 @@ def test_bundle_includes_peer_setup_scripts(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     src_root = tmp_path / "src"
-    setup_script = src_root / "sandbox" / "runtime" / "daemon" / "peer" / "setup.sh"
+    setup_script = src_root / "sandbox" / "daemon" / "peer" / "setup.sh"
     setup_script.parent.mkdir(parents=True)
     setup_script.write_text("#!/usr/bin/env bash\necho setup\n", encoding="utf-8")
 
@@ -227,7 +227,7 @@ def test_bundle_includes_peer_setup_scripts(
     try:
         bundle = _runtime_bundle_bytes()
         with tarfile.open(fileobj=io.BytesIO(bundle), mode="r:gz") as tar:
-            member = tar.extractfile("sandbox/runtime/daemon/peer/setup.sh")
+            member = tar.extractfile("sandbox/daemon/peer/setup.sh")
             assert member is not None
             assert member.read().decode("utf-8") == "#!/usr/bin/env bash\necho setup\n"
     finally:
@@ -245,7 +245,7 @@ def test_bundle_extracted_daemon_modules_import_clean(tmp_path: Path) -> None:
         (
             f"import sys; sys.path.insert(0, {str(extract_dir)!r}); "
             "import asyncio; "
-            "from sandbox.runtime.daemon.rpc.dispatcher import OP_TABLE, dispatch_envelope_async; "
+            "from sandbox.daemon.rpc.dispatcher import OP_TABLE, dispatch_envelope_async; "
             "response = asyncio.run(dispatch_envelope_async({'op':'missing'})); "
             "print('ok:', isinstance(OP_TABLE, dict), response['error']['kind'])"
         ),

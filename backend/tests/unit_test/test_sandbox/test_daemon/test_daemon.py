@@ -11,11 +11,11 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.runtime.daemon.handler import request_context
-from sandbox.runtime.daemon.handler import workspace as workspace_handler
-from sandbox.runtime.daemon.rpc import dispatcher as server
-from sandbox.runtime.daemon.rpc import server as daemon
-from sandbox.runtime.daemon.service import occ_backend
+from sandbox.daemon.handler import request_context
+from sandbox.daemon.handler import workspace as workspace_handler
+from sandbox.daemon.rpc import dispatcher as server
+from sandbox.daemon.rpc import server as daemon
+from sandbox.daemon.service import occ_backend
 
 
 def _short_socket_path() -> tuple[Path, Path]:

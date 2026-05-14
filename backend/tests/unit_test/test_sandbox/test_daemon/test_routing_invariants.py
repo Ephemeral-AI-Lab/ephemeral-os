@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from sandbox.runtime.daemon.handler import overlay as overlay_run
-from sandbox.runtime.daemon.handler import (
+from sandbox.daemon.handler import overlay as overlay_run
+from sandbox.daemon.handler import (
     health,
     metrics,
     workspace,
 )
 from sandbox.plugin import handler as plugin_handler
-from sandbox.runtime.daemon.handler.tools import edit, read, write
-from sandbox.runtime.daemon.rpc import dispatcher as server
-from sandbox.runtime.daemon.service import shell_runner
+from sandbox.daemon.handler.tools import edit, read, write
+from sandbox.daemon.rpc import dispatcher as server
+from sandbox.daemon.service import shell_runner
 
 
 def test_daemon_op_table_routes_to_current_handler_layout() -> None:
@@ -59,4 +59,4 @@ def test_daemon_op_table_does_not_route_through_occ_server() -> None:
     server._load_peer_bootstraps()
 
     for handler in server.OP_TABLE.values():
-        assert handler.__module__ != "sandbox.runtime.daemon.service.occ_backend"
+        assert handler.__module__ != "sandbox.daemon.service.occ_backend"

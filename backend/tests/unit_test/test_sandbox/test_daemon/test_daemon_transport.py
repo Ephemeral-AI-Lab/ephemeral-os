@@ -113,7 +113,7 @@ async def test_ensure_daemon_current_runs_spawn_command(
     await command.ensure_daemon_current("sb-1")
 
     assert len(seen) == 1
-    assert "sandbox.runtime.daemon" in seen[0]
+    assert "sandbox.daemon" in seen[0]
 
 
 async def test_daemon_transport_spawns_on_socket_missing() -> None:
@@ -143,7 +143,7 @@ async def test_daemon_transport_spawns_on_socket_missing() -> None:
     assert response == {"success": True, "timings": {}}
     assert len(seen) == 4
     assert "thin_client.py" in seen[0]
-    assert "sandbox.runtime.daemon" in seen[1]
+    assert "sandbox.daemon" in seen[1]
     assert "api.runtime.ready" in seen[2]
     assert "thin_client.py" in seen[3]
 
@@ -260,7 +260,7 @@ async def test_daemon_spawn_failure_fails_closed() -> None:
     assert exc.value.kind == "RuntimeExecFailed"
     assert len(seen) == 2
     assert "thin_client.py" in seen[0]
-    assert "sandbox.runtime.daemon" in seen[1]
+    assert "sandbox.daemon" in seen[1]
 
 
 async def test_daemon_transport_does_not_retry_after_io_failure() -> None:

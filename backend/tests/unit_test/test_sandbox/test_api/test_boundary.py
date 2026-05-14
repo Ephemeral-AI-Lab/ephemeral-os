@@ -15,7 +15,7 @@ FORBIDDEN_PREFIXES = (
     "sandbox.host",
     "sandbox.lifecycle",
     "sandbox.provider",
-    "sandbox.runtime.daemon",
+    "sandbox.daemon",
 )
 ALLOWED_API_IMPORT_NAMES = {
     "ConflictInfo",

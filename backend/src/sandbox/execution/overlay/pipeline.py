@@ -31,7 +31,7 @@ from sandbox.execution.overlay.request import OverlayShellRequest
 from sandbox.execution.overlay.result import OverlayCapture
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.runtime.async_bridge import run_sync_in_executor
+from sandbox.daemon.async_bridge import run_sync_in_executor
 from sandbox.timing import monotonic_now
 
 # Deferred import to break the

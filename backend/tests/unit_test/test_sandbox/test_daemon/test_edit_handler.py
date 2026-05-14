@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from sandbox.runtime.daemon.handler.tools.edit import (
+from sandbox.daemon.handler.tools.edit import (
     _edit_out_of_workspace,
     edit_file,
 )

@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.runtime.daemon.service import occ_backend
+from sandbox.daemon.service import occ_backend
 
 
 # ---------------------------------------------------------------------------
@@ -31,12 +31,12 @@ def test_occ_server_module_does_not_classify_paths() -> None:
 
 def test_data_api_ops_do_not_dispatch_to_occ_server() -> None:
     """Data API ops must never route directly to occ-server."""
-    from sandbox.runtime.daemon.rpc import dispatcher as server
+    from sandbox.daemon.rpc import dispatcher as server
 
     server._load_peer_bootstraps()
     for op in ("api.write_file", "api.edit_file", "api.read_file", "api.shell"):
         handler = server.OP_TABLE[op]
-        assert handler.__module__ != "sandbox.runtime.daemon.service.occ_backend"
+        assert handler.__module__ != "sandbox.daemon.service.occ_backend"
 
 
 # ---------------------------------------------------------------------------
@@ -61,8 +61,8 @@ async def test_cas_retry_loop_bounded_under_no_contention(tmp_path: Path) -> Non
     import asyncio
 
     from sandbox.layer_stack.workspace.base import build_workspace_base
-    from sandbox.runtime.daemon.service import occ_backend
-    from sandbox.runtime.daemon.handler.tools import write
+    from sandbox.daemon.service import occ_backend
+    from sandbox.daemon.handler.tools import write
 
     occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
@@ -93,9 +93,9 @@ async def test_cas_retry_exhaustion_returns_conflict_result(tmp_path: Path) -> N
     from sandbox.layer_stack.manifest import ManifestConflictError
     from sandbox.layer_stack.workspace.base import build_workspace_base
     from sandbox.occ.commit_queue import MAX_OCC_CAS_RETRIES
-    from sandbox.runtime.daemon.service import occ_backend
-    from sandbox.runtime.daemon.handler.tools import write
-    from sandbox.runtime.daemon.handler.request_context import services as request_services
+    from sandbox.daemon.service import occ_backend
+    from sandbox.daemon.handler.tools import write
+    from sandbox.daemon.handler.request_context import services as request_services
 
     occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
@@ -151,8 +151,8 @@ def test_single_occ_backend_cache_per_layer_stack_root(
     the per-verb handler scaffolding (write/edit/read/shell) and the
     api-handler manager helper all resolve through the same factory.
     """
-    from sandbox.runtime.daemon.service import shell_runner, occ_backend
-    from sandbox.runtime.daemon.handler import request_context
+    from sandbox.daemon.service import shell_runner, occ_backend
+    from sandbox.daemon.handler import request_context
 
     occ_backend.clear_backend_cache()
 

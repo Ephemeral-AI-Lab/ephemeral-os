@@ -5,10 +5,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from sandbox.layer_stack.workspace.binding import require_workspace_binding
-from sandbox.runtime.daemon.service.workspace_server import (
+from sandbox.daemon.service.workspace_server import (
     LayerStackWorkspaceServer,
 )
-from sandbox.runtime.daemon.service.workspace_server import (
+from sandbox.daemon.service.workspace_server import (
     fence_stale_staging as fence_stale_staging_for_root,
 )
 from sandbox.timing import monotonic_now
@@ -123,7 +123,7 @@ def _lease_id(args: Mapping[str, object]) -> str:
 
 
 async def _drop_peer_runtime_caches(layer_stack_root: str) -> None:
-    from sandbox.runtime.daemon.service import occ_backend
+    from sandbox.daemon.service import occ_backend
 
     occ_backend.drop_backend_cache(layer_stack_root)
 

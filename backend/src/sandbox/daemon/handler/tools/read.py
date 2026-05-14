@@ -9,7 +9,7 @@ from sandbox.layer_stack.workspace.binding import (
     WorkspaceBindingError,
     require_workspace_binding,
 )
-from sandbox.runtime.daemon.handler.request_context import (
+from sandbox.daemon.handler.request_context import (
     classify_path,
     layer_stack_root as require_layer_stack_root,
     required_single_path,

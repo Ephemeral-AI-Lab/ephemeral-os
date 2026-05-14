@@ -328,7 +328,7 @@ def _daemon_spawn_command() -> str:
             _DAEMON_LOG,
             _DAEMON_ENV,
             _daemon_env_signature(),
-            "sandbox.runtime.daemon",
+            "sandbox.daemon",
         )
     )
 

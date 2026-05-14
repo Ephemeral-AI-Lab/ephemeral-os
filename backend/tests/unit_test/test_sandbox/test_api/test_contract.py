@@ -65,7 +65,7 @@ _PUBLIC_VERB_IMPORT_ALLOWLIST = {
 _FORBIDDEN_FOR_MODELS = (
     "sandbox.provider",
     "sandbox.daytona",
-    "sandbox.runtime.daemon",
+    "sandbox.daemon",
     "sandbox.occ",
     "sandbox.overlay",
     "tools.",

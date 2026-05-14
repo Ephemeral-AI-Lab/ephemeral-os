@@ -58,7 +58,7 @@ def test_phase02_runtime_bundle_contains_snapshot_runtime_without_ndjson() -> No
     assert "sandbox/execution/overlay/capture.py" in names
     assert "sandbox/execution/overlay/change.py" in names
     assert "sandbox/execution/overlay/result.py" in names
-    assert "sandbox/runtime/daemon/handler/overlay.py" in names
+    assert "sandbox/daemon/handler/overlay.py" in names
     assert "sandbox/execution/overlay/mounts.py" in names
     assert "sandbox/execution/overlay/runner.py" in names
     assert "sandbox/execution/overlay/pipeline.py" in names

@@ -16,7 +16,7 @@ _TOOL_FORBIDDEN_PREFIXES = (
     "sandbox.provider",
     "sandbox.occ",
     "sandbox.overlay",
-    "sandbox.runtime.daemon",
+    "sandbox.daemon",
     "sandbox.daytona",
     "sandbox.code_intelligence",
 )
@@ -215,7 +215,7 @@ def test_occ_policy_modules_depend_on_layer_stack_ports_not_manager() -> None:
         "sandbox.layer_stack.view",
         "sandbox.layer_stack.layer.publisher",
         "sandbox.layer_stack.lease",
-        "sandbox.runtime.daemon.service.workspace_server",
+        "sandbox.daemon.service.workspace_server",
     )
     for module in _python_files(occ_root):
         if module in allowed:
@@ -234,7 +234,7 @@ def test_layer_stack_package_has_no_occ_command_exec_or_git_policy_imports() -> 
     forbidden = (
         "sandbox.occ",
         "sandbox.command_exec",
-        "sandbox.runtime.daemon.service.workspace_binding",
+        "sandbox.daemon.service.workspace_binding",
         "pathspec",
     )
     for module in _python_files(SRC_ROOT / "sandbox" / "layer_stack"):
@@ -281,7 +281,7 @@ def test_command_exec_imports_only_client_protocol_boundaries() -> None:
         "sandbox.occ.stage.gated",
         "sandbox.occ.router",
         "sandbox.occ.content.hashing",
-        "sandbox.runtime.daemon.service.workspace_server",
+        "sandbox.daemon.service.workspace_server",
     )
     for module in _python_files(command_exec_root):
         for imported in _imports(module):

@@ -6,7 +6,7 @@ from collections.abc import Mapping
 
 from sandbox.layer_stack import LayerStackManager
 from sandbox.layer_stack.workspace.binding import read_workspace_binding
-from sandbox.runtime.daemon.service import occ_backend
+from sandbox.daemon.service import occ_backend
 
 
 async def layer_metrics(args: dict[str, object]) -> dict[str, object]:

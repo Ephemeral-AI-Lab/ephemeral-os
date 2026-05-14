@@ -12,7 +12,7 @@ import logging
 from pathlib import Path
 from typing import Any, Literal
 
-from sandbox.runtime.async_bridge import run_sync
+from sandbox.daemon.async_bridge import run_sync
 from sandbox.host.daemon_client import call_daemon_api
 from sandbox.host.runtime_bundle import ensure_runtime_uploaded
 from sandbox.provider.registry import get_adapter
@@ -27,7 +27,7 @@ _BUNDLE_UPLOAD_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
 )
 LifecyclePhase = Literal["create", "start"]
 _INSTALL_GIT_SCRIPT = (
-    Path(__file__).resolve().parent.parent / "runtime" / "scripts" / "install_git.sh"
+    Path(__file__).resolve().parent.parent / "daemon" / "scripts" / "install_git.sh"
 )
 
 
