@@ -6,16 +6,24 @@ this single module.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from datetime import UTC, datetime
-from typing import Literal
 
-from task_center._core.types import TaskCenterLifecycleConfig
-from task_center.episode import (
-    EpisodeManager,
-    EpisodeManagerRegistry,
-    OrchestratorFactory,
+from task_center._core.infra import (
+    assert_continuation_episode_predecessor,
+    assert_episode_id_unique_in_mission,
+    assert_episode_sequence_contiguous,
+    assert_mission_open,
 )
+from task_center._core.persistence import (
+    AttemptStoreProtocol,
+    EpisodeStoreProtocol,
+    MissionStoreProtocol,
+    TaskStoreProtocol,
+)
+from task_center._core.types import TaskCenterInvariantViolation, TaskCenterLifecycleConfig
+from task_center.episode import EpisodeManager, EpisodeManagerRegistry, OrchestratorFactory
 from task_center.episode.state import (
     AttemptPlanFailed,
     Episode,
@@ -25,20 +33,9 @@ from task_center.episode.state import (
     SuccessContinue,
     TerminalSuccess,
 )
-from task_center._core.types import TaskCenterInvariantViolation
-from task_center._core.infra import (
-    assert_continuation_episode_predecessor,
-    assert_episode_id_unique_in_mission,
-    assert_episode_sequence_contiguous,
-    assert_mission_open,
-)
 from task_center.mission.state import Mission, MissionClosureReport, MissionStatus
-from task_center._core.persistence import (
-    AttemptStoreProtocol,
-    EpisodeStoreProtocol,
-    MissionStoreProtocol,
-    TaskStoreProtocol,
-)
+
+logger = logging.getLogger(__name__)
 
 MissionClosureReportSink = Callable[[MissionClosureReport], None]
 
@@ -53,11 +50,7 @@ class MissionRepository:
         self._mission_store = mission_store
 
     def create(
-        self,
-        *,
-        task_center_run_id: str,
-        requested_by_task_id: str,
-        goal: str,
+        self, *, task_center_run_id: str, requested_by_task_id: str, goal: str,
     ) -> Mission:
         return self._mission_store.insert(
             task_center_run_id=task_center_run_id,
@@ -65,11 +58,8 @@ class MissionRepository:
             goal=goal,
         )
 
-    def get(self, mission_id: str) -> Mission | None:
-        return self._mission_store.get(mission_id)
-
     def require(self, mission_id: str) -> Mission:
-        mission = self.get(mission_id)
+        mission = self._mission_store.get(mission_id)
         if mission is None:
             raise TaskCenterInvariantViolation(f"Mission {mission_id!r} not found")
         return mission
@@ -89,20 +79,16 @@ class MissionRepository:
         """Close the mission and synthesise its :class:`MissionClosureReport`."""
         mission = self.require(mission_id)
         assert_mission_open(mission)
-        outcome_label: Literal["success", "failed"] = (
-            "success" if succeeded else "failed"
-        )
         report = MissionClosureReport(
             mission_id=mission_id,
             requested_by_task_id=mission.requested_by_task_id,
-            outcome=outcome_label,
+            outcome="success" if succeeded else "failed",
             final_episode_id=final_episode_id,
             final_attempt_id=final_attempt_id,
         )
-        status = MissionStatus.SUCCEEDED if succeeded else MissionStatus.FAILED
         updated = self._mission_store.set_status(
             mission_id,
-            status=status,
+            status=MissionStatus.SUCCEEDED if succeeded else MissionStatus.FAILED,
             final_outcome=report.to_final_outcome(),
             closed_at=datetime.now(UTC),
         )
@@ -179,50 +165,49 @@ class EpisodeFactory:
         self._orchestrator_factory = orchestrator_factory
         self._task_store = task_store
 
-    def create_initial(
-        self, *, mission_id: str
-    ) -> tuple[Episode, EpisodeManager]:
+    def create_initial(self, *, mission_id: str) -> tuple[Episode, EpisodeManager]:
         mission = self._mission_repository.require(mission_id)
         assert_mission_open(mission)
         assert_episode_sequence_contiguous(mission, new_sequence_no=1)
-        episode = self._episode_store.insert(
-            mission_id=mission_id,
+        return self._insert_and_spawn(
+            mission=mission,
             sequence_no=1,
             creation_reason=EpisodeCreationReason.INITIAL,
             goal=mission.goal,
-            attempt_budget=self._config.default_attempt_budget,
         )
-        self._mission_repository.append_episode_id(mission, episode.id)
-        manager = self._spawn_manager(episode)
-        return episode, manager
 
     def create_continuation(
-        self, *, previous_episode: Episode
+        self, *, previous_episode: Episode,
     ) -> tuple[Episode, EpisodeManager]:
         mission = self._mission_repository.require(previous_episode.mission_id)
         assert_mission_open(mission)
         assert_continuation_episode_predecessor(previous_episode)
         new_sequence_no = previous_episode.sequence_no + 1
-        assert_episode_sequence_contiguous(
-            mission, new_sequence_no=new_sequence_no
-        )
-        if previous_episode.continuation_goal is None:
-            raise TaskCenterInvariantViolation(
-                f"Previous episode {previous_episode.id!r} has no "
-                "continuation_goal despite passing the predecessor invariant."
-            )
-        episode = self._episode_store.insert(
-            mission_id=mission.id,
+        assert_episode_sequence_contiguous(mission, new_sequence_no=new_sequence_no)
+        # predecessor invariant guarantees continuation_goal is not None.
+        return self._insert_and_spawn(
+            mission=mission,
             sequence_no=new_sequence_no,
             creation_reason=EpisodeCreationReason.PARTIAL_CONTINUATION,
-            goal=previous_episode.continuation_goal,
+            goal=previous_episode.continuation_goal,  # type: ignore[arg-type]
+        )
+
+    def _insert_and_spawn(
+        self,
+        *,
+        mission: Mission,
+        sequence_no: int,
+        creation_reason: EpisodeCreationReason,
+        goal: str,
+    ) -> tuple[Episode, EpisodeManager]:
+        episode = self._episode_store.insert(
+            mission_id=mission.id,
+            sequence_no=sequence_no,
+            creation_reason=creation_reason,
+            goal=goal,
             attempt_budget=self._config.default_attempt_budget,
         )
         self._mission_repository.append_episode_id(mission, episode.id)
-        manager = self._spawn_manager(episode)
-        return episode, manager
-
-    def _spawn_manager(self, episode: Episode) -> EpisodeManager:
         manager = EpisodeManager(
             episode_id=episode.id,
             episode_store=self._episode_store,
@@ -232,7 +217,7 @@ class EpisodeFactory:
             task_store=self._task_store,
         )
         self._manager_registry.register(manager)
-        return manager
+        return episode, manager
 
 
 class EpisodeClosureRouter:
@@ -268,17 +253,10 @@ class EpisodeClosureRouter:
                     next_manager=next_manager,
                     previous_report=report,
                 )
-            elif isinstance(outcome, TerminalSuccess):
+            elif isinstance(outcome, (TerminalSuccess, AttemptPlanFailed)):
                 self._close_mission(
                     mission_id=episode.mission_id,
-                    succeeded=True,
-                    final_episode_id=episode.id,
-                    final_attempt_id=report.final_attempt_id,
-                )
-            elif isinstance(outcome, AttemptPlanFailed):
-                self._close_mission(
-                    mission_id=episode.mission_id,
-                    succeeded=False,
+                    succeeded=isinstance(outcome, TerminalSuccess),
                     final_episode_id=episode.id,
                     final_attempt_id=report.final_attempt_id,
                 )
@@ -299,8 +277,13 @@ class EpisodeClosureRouter:
         try:
             next_manager.create_initial_attempt()
         except Exception:
+            logger.exception(
+                "EpisodeClosureRouter: continuation attempt creation failed",
+                extra={"episode_id": next_episode.id},
+            )
+            latest_episode = self._episode_store.get(next_episode.id)
             failed_attempt_id = (
-                self._latest_attempt_id_for_episode(next_episode.id)
+                (latest_episode.latest_attempt_id if latest_episode else None)
                 or previous_report.final_attempt_id
             )
             self._episode_store.set_status(
@@ -315,12 +298,6 @@ class EpisodeClosureRouter:
                 final_episode_id=next_episode.id,
                 final_attempt_id=failed_attempt_id,
             )
-
-    def _latest_attempt_id_for_episode(self, episode_id: str) -> str | None:
-        episode = self._episode_store.get(episode_id)
-        if episode is None:
-            return None
-        return episode.latest_attempt_id
 
 
 class MissionHandler:
@@ -359,11 +336,7 @@ class MissionHandler:
         )
 
     def create_mission(
-        self,
-        *,
-        task_center_run_id: str,
-        requested_by_task_id: str,
-        goal: str,
+        self, *, task_center_run_id: str, requested_by_task_id: str, goal: str,
     ) -> Mission:
         return self._repository.create(
             task_center_run_id=task_center_run_id,
@@ -372,12 +345,12 @@ class MissionHandler:
         )
 
     def create_initial_episode_with_manager(
-        self, *, mission_id: str
+        self, *, mission_id: str,
     ) -> tuple[Episode, EpisodeManager]:
         return self._factory.create_initial(mission_id=mission_id)
 
     def create_continuation_episode_with_manager(
-        self, *, previous_episode: Episode
+        self, *, previous_episode: Episode,
     ) -> tuple[Episode, EpisodeManager]:
         return self._factory.create_continuation(previous_episode=previous_episode)
 
