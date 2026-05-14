@@ -6,7 +6,7 @@ import os
 from collections.abc import Sequence
 
 from sandbox.layer_stack.layer.change import normalize_layer_path
-from sandbox.occ.changeset.builders import (
+from sandbox.occ.changeset.types import (
     build_overlay_delete_change,
     build_overlay_write_change,
 )

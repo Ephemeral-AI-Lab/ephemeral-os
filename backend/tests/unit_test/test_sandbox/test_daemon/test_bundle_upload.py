@@ -109,7 +109,6 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/layer_stack/manager.py",
         "sandbox/layer_stack/workspace/binding.py",
         "sandbox/occ/overlay.py",
-        "sandbox/occ/changeset/builders.py",
         "sandbox/occ/changeset/prepared.py",
         "sandbox/occ/changeset/types.py",
         "sandbox/occ/commit_queue.py",

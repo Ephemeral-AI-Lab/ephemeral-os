@@ -159,7 +159,7 @@ async def test_in_workspace_edit_same_path_M_gt_N_surfaces_hard_conflict(
     — OCC must NOT silently re-derive bytes against M.
     """
     from sandbox.layer_stack import WriteLayerChange
-    from sandbox.occ.changeset.builders import build_api_write_change
+    from sandbox.occ.changeset.types import build_api_write_change
     from sandbox.occ.changeset.prepared import CommitOptions
     from sandbox.occ.changeset.types import FileStatus
     from sandbox.occ.content.hashing import ContentHasher

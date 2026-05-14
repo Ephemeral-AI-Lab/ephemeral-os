@@ -24,7 +24,6 @@ def test_phase03_occ_preparation_modules_do_not_import_overlay_or_legacy_apply()
     phase03_files = [
         occ_root / "service.py",
         occ_root / "router.py",
-        occ_root / "changeset" / "builders.py",
         occ_root / "changeset" / "prepared.py",
         occ_root / "changeset" / "types.py",
         occ_root / "content" / "gitignore_oracle.py",
@@ -54,7 +53,7 @@ def test_overlay_capture_module_is_the_occ_overlay_bridge() -> None:
     imports = _imports(occ_root / "overlay.py")
 
     assert "sandbox.execution.overlay.change" in imports
-    assert "sandbox.occ.changeset.builders" in imports
+    assert "sandbox.occ.changeset.types" in imports
 
 
 def test_overlay_capture_conversion_does_not_import_occ_service() -> None:
