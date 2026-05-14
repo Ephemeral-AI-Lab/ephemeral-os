@@ -33,7 +33,6 @@ if TYPE_CHECKING:
         AttemptOrchestratorRegistry,
     )
     from task_center.context_engine.core import ContextComposer
-    from task_center.attempt.contexts import TaskCenterStores
     from task_center.entry import EntryTaskController
     from task_center.mission.state import MissionClosureReport
 
@@ -72,28 +71,6 @@ class AttemptDeps:
     entry_task_controller: EntryTaskController | None = None
     audit_sink: AuditSink = field(default_factory=NoopAuditSink)
 
-    @property
-    def stores(self) -> TaskCenterStores:
-        """Narrow view of the store quintet for collaborators that touch
-        only persistence.
-
-        See :mod:`task_center.contexts` for the broader role-narrow
-        Protocol palette (:class:`AttemptStageCtx`,
-        :class:`EpisodeLifecycleCtx`, :class:`MissionLifecycleCtx`,
-        :class:`LaunchCtx`).
-        """
-        # Local import keeps the runtime module free of an eager
-        # contexts dependency; the protocols reference back to AttemptDeps
-        # only for documentation.
-        from task_center.attempt.contexts import TaskCenterStores
-
-        return TaskCenterStores(
-            mission_store=self.mission_store,
-            episode_store=self.episode_store,
-            attempt_store=self.attempt_store,
-            task_store=self.task_store,
-        )
-
     def run_id_for_attempt(self, attempt: Attempt) -> str:
         episode = self.episode_store.get(attempt.episode_id)
         if episode is None:
@@ -117,23 +94,6 @@ class AttemptDeps:
             )
         return self.composer
 
-    def entry_task_controller_for(
-        self, task_id: str
-    ) -> EntryTaskController | None:
-        """Return the entry controller iff it's bound to *task_id*.
-
-        Used at the four entry-mode dispatch sites (mission starter
-        parent-waiting + compensation + duplicate-child check, close-report
-        router, submission resolver) so each site collapses to one call
-        instead of duplicating the ``is not None and task_id == X`` guard.
-        Returns ``None`` for attempt-mode tasks or when no controller is
-        wired.
-        """
-        controller = self.entry_task_controller
-        if controller is None or controller.task_id != task_id:
-            return None
-        return controller
-
     def lifecycle_target_for(
         self, *, task_id: str, attempt_id: str | None
     ) -> LifecycleTarget | None:
@@ -146,7 +106,10 @@ class AttemptDeps:
         registered — callers decide whether that's a hard error.
         """
         if attempt_id is None:
-            return self.entry_task_controller_for(task_id)
+            controller = self.entry_task_controller
+            if controller is None or controller.task_id != task_id:
+                return None
+            return controller
         return GeneratorTaskLifecycle(
             task_id=task_id,
             attempt_id=attempt_id,
