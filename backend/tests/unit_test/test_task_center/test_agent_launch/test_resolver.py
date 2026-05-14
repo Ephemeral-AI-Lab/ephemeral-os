@@ -17,7 +17,7 @@ from task_center.context_engine.core import (
     AgentDefinitionValidationError,
     MissingContextRecipeError,
 )
-from task_center.agent_routing import (
+from task_center._core.agent_routing import (
     AgentSelection,
     PredicateRegistry,
     ResolverContext,

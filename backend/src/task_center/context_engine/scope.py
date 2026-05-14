@@ -5,16 +5,12 @@ helper parent references. It does **not** carry store handles; those live
 on :class:`ContextEngineDeps` so recipes can be swapped without touching
 call sites.
 
-The flat dataclass shape is preserved for runtime/engine compatibility,
-but the role-specific factory classmethods (:meth:`for_planner`,
-:meth:`for_generator`, etc.) document the *required* fields per recipe
-at the type level. Call sites that use the factories get a checked
-construction — missing a required field for the role is a static error
-instead of a runtime ``RecipeScopeError``.
-
-Engine + recipe code still validates via :meth:`assert_fields` for
-defensive coverage; the factories are an opt-in shortcut, not a
-replacement.
+The role-specific factory classmethods (:meth:`for_planner`,
+:meth:`for_generator`, etc.) document the required fields per role at the
+call site: omitting one raises ``TypeError`` at call time, and strict
+mypy will narrow the kwargs to their declared ``str`` types. The engine
+still validates via :meth:`assert_fields` so direct ``ContextScope(...)``
+construction is also covered at runtime.
 """
 
 from __future__ import annotations

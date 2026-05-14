@@ -15,8 +15,8 @@ from task_center.context_engine.packet import (
     ContextPriority,
     ContextRefs,
 )
-from task_center.context_engine.recipes import latest_summary_text
-from task_center.context_engine.recipes.generator import (
+from task_center.context_engine.recipes._shared import (
+    latest_summary_text,
     mission_episode_blocks,
 )
 from task_center.context_engine.recipes_registry import ContextRecipe
@@ -29,24 +29,12 @@ _REQUIRED_FIELDS = frozenset({"mission_id", "attempt_id"})
 def _evaluator_build(
     scope: ContextScope, deps: ContextEngineDeps
 ) -> ContextPacket:
-    # Engine pre-validates required scope fields via ``assert_fields``; this
-    # explicit guard makes the recipe self-defending under ``python -O`` where
-    # ``assert`` would be stripped.
-    if scope.mission_id is None or scope.attempt_id is None:
-        raise ContextEngineError(
-            "evaluator requires mission_id and attempt_id; "
-            f"got {scope!r}"
-        )
     attempt = deps.attempt_store.get(scope.attempt_id)
     if attempt is None:
-        raise ContextEngineError(
-            f"Attempt {scope.attempt_id!r} not found"
-        )
+        raise ContextEngineError(f"Attempt {scope.attempt_id!r} not found")
     mission = deps.mission_store.get(scope.mission_id)
     if mission is None:
-        raise ContextEngineError(
-            f"Mission {scope.mission_id!r} not found"
-        )
+        raise ContextEngineError(f"Mission {scope.mission_id!r} not found")
     episode_id = scope.episode_id or attempt.episode_id
     episode = deps.episode_store.get(episode_id)
     if episode is None:
@@ -90,10 +78,9 @@ def _evaluator_build(
     for task_id in attempt.generator_task_ids:
         task = deps.task_store.get_task(task_id)
         if task is None:
-            # ``generator_task_ids`` are the planner-submitted DAG nodes
-            # persisted on the attempt; a missing row at evaluator-launch time
-            # is a harness invariant violation. Surface it instead of letting
-            # the evaluator reason over a partial frame.
+            # ``generator_task_ids`` are planner-submitted DAG nodes persisted
+            # on the attempt; a missing row here is a harness invariant
+            # violation, not a tolerable absence.
             raise ContextEngineError(
                 f"Generator task {task_id!r} referenced by attempt is missing; "
                 "evaluator context cannot be assembled without dependency results."

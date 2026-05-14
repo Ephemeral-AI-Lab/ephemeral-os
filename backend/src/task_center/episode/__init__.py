@@ -219,28 +219,33 @@ class EpisodeManager:
         return self._task_store.get_evaluator_pass_summary(attempt.id)
 
     def _retry_or_close_failed(self, attempt: Attempt) -> None:
-        episode = self._current_episode_snapshot()
-        if not episode.has_budget_remaining:
-            self._close_episode_failed(attempt)
-            return
-        try:
-            self.create_next_attempt(previous_attempt_id=attempt.id)
-        except Exception:
-            # Retry start failed; the new attempt was inserted and closed
-            # STARTUP_FAILED before the exception propagated. Re-enter the
-            # retry decision on the new closed attempt instead of leaving the
-            # episode open.
-            retry_attempt = self._latest_failed_attempt_for(previous_id=attempt.id)
-            if retry_attempt is None:
-                raise
-            logger.warning(
-                "EpisodeManager: retry start failure for episode %r; "
-                "treating new attempt %r as a failed attempt",
-                self.episode_id,
-                retry_attempt.id,
-                exc_info=True,
-            )
-            self._retry_or_close_failed(retry_attempt)
+        while True:
+            episode = self._current_episode_snapshot()
+            if not episode.has_budget_remaining:
+                self._close_episode_failed(attempt)
+                return
+            try:
+                self.create_next_attempt(previous_attempt_id=attempt.id)
+                return
+            except Exception:
+                # Retry start failed; the new attempt was inserted and closed
+                # STARTUP_FAILED before the exception propagated. Re-enter the
+                # retry decision on the new closed attempt instead of leaving
+                # the episode open.
+                retry_attempt = self._latest_failed_attempt_for(
+                    previous_id=attempt.id
+                )
+                if retry_attempt is None:
+                    raise
+                logger.warning(
+                    "EpisodeManager: retry start failure for episode %r; "
+                    "treating new attempt %r as a failed attempt",
+                    self.episode_id,
+                    retry_attempt.id,
+                    exc_info=True,
+                )
+                attempt = retry_attempt
+                continue
 
     def _close_episode_failed(self, attempt: Attempt) -> None:
         self._episode_store.set_status(

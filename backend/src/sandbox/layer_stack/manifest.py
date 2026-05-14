@@ -9,6 +9,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
+from sandbox.layer_stack._paths import fsync_path
+
 
 class ManifestConflictError(RuntimeError):
     """Raised when an active-manifest compare-and-swap check fails."""
@@ -141,11 +143,7 @@ def write_manifest_atomic(path: str | Path, manifest: Manifest) -> None:
     finally:
         os.close(fd)
     os.replace(tmp, manifest_file)
-    dir_fd = os.open(manifest_file.parent, os.O_RDONLY)
-    try:
-        os.fsync(dir_fd)
-    finally:
-        os.close(dir_fd)
+    fsync_path(manifest_file.parent)
 
 
 class FileManifestStore:

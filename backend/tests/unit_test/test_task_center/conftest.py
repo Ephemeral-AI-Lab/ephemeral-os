@@ -24,7 +24,7 @@ from db.stores.attempt_store import AttemptStore
 from db.stores.task_center_store import TaskCenterStore
 from db.stores.episode_store import EpisodeStore
 from task_center.context_engine.core import ContextComposer, ContextEngine, ContextEngineDeps
-from task_center.agent_routing import (
+from task_center._core.agent_routing import (
     PredicateRegistry,
     register_builtin_predicates,
 )

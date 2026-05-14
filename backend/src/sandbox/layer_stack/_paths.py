@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import logging
+import os
 import shutil
 from collections.abc import Callable
 from pathlib import Path, PurePosixPath
-
-logger = logging.getLogger(__name__)
 
 
 def join_layer_path(root: Path, rel: str) -> Path:
@@ -41,19 +39,13 @@ def resolve_storage_path(storage_root: Path, path: str) -> Path:
     return joined
 
 
-def safe_request_part(value: str) -> str:
-    safe = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in value)
-    return safe[:48] or "request"
-
-
-def log_rmtree_failure(func: object, path: object, exc_info: object) -> None:
-    """``shutil.rmtree`` onerror callback: surface cleanup leaks via logs."""
-    logger.warning(
-        "layer-stack cleanup failed: %s(%r) -> %r",
-        getattr(func, "__name__", repr(func)),
-        path,
-        exc_info,
-    )
+def fsync_path(path: Path) -> None:
+    """fsync a regular file or directory by path."""
+    fd = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
 
 
 def relative_symlink_target_escapes(target: str) -> bool:
@@ -91,10 +83,9 @@ def allocate_unique_layer_paths(
 
 __all__ = [
     "allocate_unique_layer_paths",
+    "fsync_path",
     "join_layer_path",
-    "log_rmtree_failure",
     "relative_symlink_target_escapes",
     "remove_path",
     "resolve_storage_path",
-    "safe_request_part",
 ]

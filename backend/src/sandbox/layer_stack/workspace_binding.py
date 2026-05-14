@@ -8,6 +8,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from sandbox.layer_stack._paths import fsync_path
 from sandbox.layer_stack.layer_change import normalize_layer_path
 
 
@@ -114,11 +115,7 @@ def write_workspace_binding_atomic(binding: WorkspaceBinding) -> None:
     finally:
         os.close(fd)
     os.replace(tmp, path)
-    dir_fd = os.open(path.parent, os.O_RDONLY)
-    try:
-        os.fsync(dir_fd)
-    finally:
-        os.close(dir_fd)
+    fsync_path(path.parent)
 
 
 def validate_workspace_binding_paths(

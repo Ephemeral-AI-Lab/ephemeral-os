@@ -3,18 +3,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from task_center.context_engine.packet import (
     ContextBlock,
     ContextBlockKind,
     ContextPriority,
 )
-from task_center.context_engine.recipes import latest_summary_text
+from task_center.context_engine.recipes._shared import latest_summary_text
 from task_center.attempt.state import Attempt, AttemptStatus
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
     from task_center._core.persistence import TaskStoreProtocol
+
+
+_PREMATURE_STATUSES = frozenset({"failed", "blocked", "missing task row"})
+_EMPTY_SUMMARY_PLACEHOLDERS = frozenset({"(empty)", "(no summary recorded)"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,30 +37,26 @@ def failed_attempt_landscape_blocks(
 ) -> list[ContextBlock]:
     failed = sorted(
         (
-            g
-            for g in attempts
-            if g.status == AttemptStatus.FAILED
-            and g.id != current_attempt_id
+            a
+            for a in attempts
+            if a.status == AttemptStatus.FAILED and a.id != current_attempt_id
         ),
-        key=lambda g: g.attempt_sequence_no,
+        key=lambda a: a.attempt_sequence_no,
     )
-    if not failed:
-        return []
-
     return [
         ContextBlock(
             kind=ContextBlockKind.FAILED_ATTEMPT_LANDSCAPE,
             priority=ContextPriority.HIGH,
-            text=_render_failed_attempt(g, task_store=task_store),
-            source_id=g.id,
+            text=_render_failed_attempt(a, task_store=task_store),
+            source_id=a.id,
             source_kind="attempt",
             metadata={
-                "attempt_sequence_no": str(g.attempt_sequence_no),
+                "attempt_sequence_no": str(a.attempt_sequence_no),
                 "group_heading": "# Prior Failed Attempts",
-                "subheading": f"Attempt {g.attempt_sequence_no}",
+                "subheading": f"Attempt {a.attempt_sequence_no}",
             },
         )
-        for g in failed
+        for a in failed
     ]
 
 
@@ -64,103 +64,64 @@ def _render_failed_attempt(
     attempt: Attempt, *, task_store: TaskStoreProtocol | None
 ) -> str:
     outcomes = _generator_outcomes(attempt, task_store=task_store)
+
+    if attempt.continuation_goal:
+        plan_kind = "partial"
+    elif (
+        attempt.task_specification
+        or attempt.evaluation_criteria
+        or attempt.generator_task_ids
+    ):
+        plan_kind = "full"
+    else:
+        plan_kind = "unsubmitted"
+
     sections = [
-        _render_accepted_plan(attempt),
+        "### Accepted Plan\n\n"
+        f"Plan type: {plan_kind}\n\n"
+        f"Specification:\n{attempt.task_specification or '(not submitted)'}",
         _render_generator_outcomes(outcomes),
     ]
-    evaluator = _render_evaluator_judgment(
-        attempt, outcomes=outcomes, task_store=task_store
-    )
-    if evaluator:
-        sections.append(evaluator)
+
+    has_premature = any(o.status in _PREMATURE_STATUSES for o in outcomes)
+    if not has_premature and task_store and attempt.evaluator_task_id is not None:
+        evaluator_task = task_store.get_task(attempt.evaluator_task_id)
+        evaluator_summary = (
+            "(missing evaluator task row)"
+            if evaluator_task is None
+            else latest_summary_text(evaluator_task.get("summaries"))
+        )
+        criteria_block = (
+            "\n".join(f"  - {c}" for c in attempt.evaluation_criteria) or "  (none)"
+        )
+        sections.append(
+            "### Evaluator Judgment\n\n"
+            f"Evaluation criteria:\n{criteria_block}\n\n"
+            f"Evaluator summary:\n{evaluator_summary}"
+        )
     return "\n\n".join(sections)
 
 
-def _render_accepted_plan(attempt: Attempt) -> str:
-    specification = attempt.task_specification or "(not submitted)"
-    return (
-        "### Accepted Plan\n\n"
-        f"Plan type: {_plan_kind(attempt)}\n\n"
-        f"Specification:\n{specification}"
-    )
-
-
 def _render_generator_outcomes(outcomes: list[_GeneratorOutcome]) -> str:
-    status_lines = _status_summary_lines(outcomes)
-    detail_sections = [
-        _render_generator_detail(outcome)
-        for outcome in outcomes
-        if _should_render_generator_detail(outcome)
-    ]
-    body = "### Generator Outcomes\n\nStatus summary:\n" + "\n".join(
-        status_lines
-    )
-    if detail_sections:
-        body += "\n\n" + "\n\n".join(detail_sections)
-    return body
-
-
-def _status_summary_lines(outcomes: list[_GeneratorOutcome]) -> list[str]:
     if not outcomes:
-        return ["- (no generator tasks recorded)"]
-    lines: list[str] = []
-    for outcome in outcomes:
-        if outcome.blocked_by:
-            lines.append(
-                f"- {outcome.task_id}: {outcome.status} by {outcome.blocked_by}"
-            )
-        else:
-            lines.append(f"- {outcome.task_id}: {outcome.status}")
-    return lines
-
-
-def _render_generator_detail(outcome: _GeneratorOutcome) -> str:
-    return f"#### {outcome.task_id}\n\n{outcome.summary}"
-
-
-def _should_render_generator_detail(outcome: _GeneratorOutcome) -> bool:
-    if outcome.summary is None:
-        return False
-    if outcome.summary in {
-        "(empty)",
-        "(no summary recorded)",
-    }:
-        return False
-    return True
-
-
-def _render_evaluator_judgment(
-    attempt: Attempt,
-    *,
-    outcomes: list[_GeneratorOutcome],
-    task_store: TaskStoreProtocol | None,
-) -> str:
-    if _has_premature_generator_failure(outcomes):
-        return ""
-    if task_store is None or attempt.evaluator_task_id is None:
-        return ""
-
-    task = task_store.get_task(attempt.evaluator_task_id)
-    if task is None:
-        evaluator_summary = "(missing evaluator task row)"
+        status_lines = ["- (no generator tasks recorded)"]
     else:
-        evaluator_summary = latest_summary_text(task.get("summaries"))
+        status_lines = [
+            f"- {o.task_id}: {o.status} by {o.blocked_by}"
+            if o.blocked_by
+            else f"- {o.task_id}: {o.status}"
+            for o in outcomes
+        ]
+    body = "### Generator Outcomes\n\nStatus summary:\n" + "\n".join(status_lines)
 
-    criteria_block = (
-        "\n".join(f"  - {c}" for c in attempt.evaluation_criteria) or "  (none)"
-    )
-    return (
-        "### Evaluator Judgment\n\n"
-        f"Evaluation criteria:\n{criteria_block}\n\n"
-        f"Evaluator summary:\n{evaluator_summary}"
-    )
-
-
-def _has_premature_generator_failure(outcomes: list[_GeneratorOutcome]) -> bool:
-    return any(
-        outcome.status in {"failed", "blocked", "missing task row"}
-        for outcome in outcomes
-    )
+    details = [
+        f"#### {o.task_id}\n\n{o.summary}"
+        for o in outcomes
+        if o.summary and o.summary not in _EMPTY_SUMMARY_PLACEHOLDERS
+    ]
+    if details:
+        body += "\n\n" + "\n\n".join(details)
+    return body
 
 
 def _generator_outcomes(
@@ -183,34 +144,18 @@ def _generator_outcomes(
             )
             continue
         summaries = task.get("summaries")
+        latest = summaries[-1] if summaries else None
+        blocked_by = (
+            str(latest["blocked_by"])
+            if isinstance(latest, dict) and latest.get("blocked_by")
+            else None
+        )
         outcomes.append(
             _GeneratorOutcome(
                 task_id=task_id,
                 status=str(task.get("status") or "unknown"),
-                blocked_by=_blocked_by(summaries),
+                blocked_by=blocked_by,
                 summary=latest_summary_text(summaries).strip(),
             )
         )
     return outcomes
-
-
-def _blocked_by(summaries: list[Any] | None) -> str | None:
-    if not summaries:
-        return None
-    latest = summaries[-1]
-    if not isinstance(latest, dict):
-        return None
-    blocked_by = latest.get("blocked_by")
-    return str(blocked_by) if blocked_by else None
-
-
-def _plan_kind(attempt: Attempt) -> str:
-    if attempt.continuation_goal:
-        return "partial"
-    if (
-        attempt.task_specification
-        or attempt.evaluation_criteria
-        or attempt.generator_task_ids
-    ):
-        return "full"
-    return "unsubmitted"

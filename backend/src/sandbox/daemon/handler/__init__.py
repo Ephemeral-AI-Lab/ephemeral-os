@@ -1,9 +1,3 @@
-"""Handler modules for daemon ``api.*`` ops.
+"""Handler modules for daemon ``api.*`` ops."""
 
-Public tool verbs live under :mod:`sandbox.daemon.handler.tools`.
-Workspace, health, metrics, and overlay handlers stay at this package root
-because they are daemon/runtime control operations rather than agent-facing
-tool verbs.
-"""
-
-__all__ = ["health", "metrics", "overlay", "tools", "workspace"]
+__all__ = ["edit", "health", "metrics", "overlay", "read", "workspace", "write"]

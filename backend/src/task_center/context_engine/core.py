@@ -70,7 +70,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only
     from task_center._core.persistence import AttemptStoreProtocol
     from task_center._core.persistence import TaskStoreProtocol
     from task_center._core.persistence import EpisodeStoreProtocol
-    from task_center.agent_routing import RuleBasedAgentResolver
+    from task_center._core.agent_routing import RuleBasedAgentResolver
 
 
 # ---- Engine -------------------------------------------------------------
@@ -150,7 +150,7 @@ class ContextComposer:
         cls,
         engine: ContextEngine,
     ) -> ContextComposer:
-        from task_center.agent_routing import RuleBasedAgentResolver
+        from task_center._core.agent_routing import RuleBasedAgentResolver
 
         return cls(
             resolver=RuleBasedAgentResolver(),

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.agent_routing import (
+from task_center._core.agent_routing import (
     MAX_HANDOFF_DEPTH,
     PredicateRegistry,
     ResolverContext,

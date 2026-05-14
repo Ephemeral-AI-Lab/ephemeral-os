@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import shutil
 import tempfile
 import threading
@@ -11,12 +12,7 @@ from pathlib import Path
 from typing import Literal
 from uuid import uuid4
 
-from sandbox.layer_stack._paths import (
-    log_rmtree_failure,
-    remove_path,
-    resolve_storage_path,
-    safe_request_part,
-)
+from sandbox.layer_stack._paths import remove_path, resolve_storage_path
 from sandbox.layer_stack._storage_lock import acquire_storage_writer_lock
 from sandbox.layer_stack.layer_change import LayerChange
 from sandbox.layer_stack.layer_publisher import LayerPublisher
@@ -38,7 +34,24 @@ from sandbox.layer_stack.transaction import (
 from sandbox.layer_stack.view import MergedView
 from sandbox.timing import monotonic_now
 
+logger = logging.getLogger(__name__)
+
 _TRANSIENT_LOWERDIR_DIR = "transient-lowerdirs"
+
+
+def _safe_request_part(value: str) -> str:
+    safe = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in value)
+    return safe[:48] or "request"
+
+
+def _log_rmtree_failure(func: object, path: object, exc_info: object) -> None:
+    """``shutil.rmtree`` onerror callback: surface cleanup leaks via logs."""
+    logger.warning(
+        "layer-stack cleanup failed: %s(%r) -> %r",
+        getattr(func, "__name__", repr(func)),
+        path,
+        exc_info,
+    )
 
 
 @dataclass(frozen=True)
@@ -126,7 +139,7 @@ class LayerStackManager:
                 self.storage_root
                 / "runtime"
                 / _TRANSIENT_LOWERDIR_DIR
-                / f"{safe_request_part(owner_request_id)}-{uuid4().hex[:8]}"
+                / f"{_safe_request_part(owner_request_id)}-{uuid4().hex[:8]}"
                 / "lower"
             )
             materialize_start = monotonic_now()
@@ -156,7 +169,7 @@ class LayerStackManager:
                 # failed snapshot is a slow disk-fill bug; logging surfaces
                 # the leak in operator dashboards.
                 shutil.rmtree(
-                    lowerdir.parent, onerror=log_rmtree_failure
+                    lowerdir.parent, onerror=_log_rmtree_failure
                 )
             with self._lock:
                 self._leases.release(lease.lease_id)
@@ -220,7 +233,7 @@ class LayerStackManager:
         parent.mkdir(parents=True, exist_ok=True)
         path = Path(
             tempfile.mkdtemp(
-                prefix=f"occ-commit-{safe_request_part(request_id)}-",
+                prefix=f"occ-commit-{_safe_request_part(request_id)}-",
                 dir=str(parent),
             )
         )

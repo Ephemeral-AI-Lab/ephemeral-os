@@ -173,9 +173,8 @@ def _to_response_dict(result: Any) -> dict[str, Any]:
 
 def _load_peer_bootstraps() -> None:
     from sandbox.plugin import handler as plugin_handler
-    from sandbox.daemon.handler import health, metrics, workspace
+    from sandbox.daemon.handler import edit, health, metrics, read, workspace, write
     from sandbox.daemon.handler import overlay as overlay_run
-    from sandbox.daemon.handler.tools import edit, read, write
     from sandbox.daemon.service import shell_runner
 
     OP_TABLE.update({

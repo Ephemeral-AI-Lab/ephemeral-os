@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from sandbox.execution.contract import ShellProcessResult
+from sandbox.execution.orchestrator import _drop_transient_lowerdir
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.layer_stack.workspace_binding import WorkspaceBinding, write_workspace_binding_atomic
@@ -237,7 +238,7 @@ def test_drop_transient_lowerdir_refuses_matching_path_outside_storage_root(
     lower = outside_root / "runtime" / "transient-lowerdirs" / "req-1" / "lower"
     lower.mkdir(parents=True)
 
-    shell_runner._drop_transient_lowerdir(
+    _drop_transient_lowerdir(
         _Lease(
             lease_id="lease-1",
             manifest_version=1,

@@ -9,7 +9,7 @@ import uuid
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
-from sandbox.layer_stack._paths import allocate_unique_layer_paths, remove_path
+from sandbox.layer_stack._paths import allocate_unique_layer_paths, fsync_path, remove_path
 from sandbox.layer_stack.layer_change import (
     LayerChange,
     PreparedLayerChange,
@@ -89,12 +89,12 @@ class LayerPublisher:
             for prepared in prepared_changes:
                 write_layer_change(prepared, staging_dir)
             _fsync_tree_files(staging_dir)
-            _fsync_dir(staging_dir)
+            fsync_path(staging_dir)
             record_elapsed(timings, "layer_stack.publish.write_changes_s", write_changes_start)
             replace_start = monotonic_now()
             layer_dir.parent.mkdir(parents=True, exist_ok=True)
             os.replace(staging_dir, layer_dir)
-            _fsync_dir(layer_dir.parent)
+            fsync_path(layer_dir.parent)
             _write_layer_digest(self._storage_root, layer_id, layer_digest)
             record_elapsed(timings, "layer_stack.publish.replace_staging_s", replace_start)
         except Exception:
@@ -188,15 +188,7 @@ def _write_layer_digest(storage_root: Path, layer_id: str, digest: str) -> None:
         os.fsync(fd)
     finally:
         os.close(fd)
-    _fsync_dir(metadata)
-
-
-def _fsync_dir(path: Path) -> None:
-    fd = os.open(path, os.O_RDONLY)
-    try:
-        os.fsync(fd)
-    finally:
-        os.close(fd)
+    fsync_path(metadata)
 
 
 def _fsync_tree_files(root: Path) -> None:
@@ -205,13 +197,8 @@ def _fsync_tree_files(root: Path) -> None:
         current = Path(current_root)
         for filename in filenames:
             file_path = current / filename
-            if file_path.is_symlink():
-                continue
-            fd = os.open(file_path, os.O_RDONLY)
-            try:
-                os.fsync(fd)
-            finally:
-                os.close(fd)
+            if not file_path.is_symlink():
+                fsync_path(file_path)
 
 
 def _head_layer_digest(storage_root: Path, active: Manifest) -> str | None:

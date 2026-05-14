@@ -28,7 +28,7 @@ from task_center.context_engine.core import (
     ContextEngine,
     ContextEngineDeps,
 )
-from task_center.agent_routing import (
+from task_center._core.agent_routing import (
     configure_max_handoff_depth,
     register_builtin_predicates,
 )

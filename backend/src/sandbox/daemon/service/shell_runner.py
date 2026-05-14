@@ -14,9 +14,6 @@ from sandbox.execution import (
     execute_command,
     run_workspace_replaced_command,
 )
-from sandbox.execution.orchestrator import (
-    _drop_transient_lowerdir as _drop_transient_lowerdir,
-)
 from sandbox.layer_stack.workspace_binding import require_workspace_binding
 from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
 from sandbox.daemon.service.result_projection import (

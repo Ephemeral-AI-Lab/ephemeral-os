@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from audit.base import AuditSink, NoopAuditSink
 
@@ -49,11 +49,6 @@ class AgentLaunch:
     needs: tuple[str, ...]
     context_packet_id: str | None = None
     mission_id: str | None = None
-    # Per-launch extension bag. Use for knobs the launcher or runtime can
-    # opt into (priority, latency budget, retry policy) without forcing a
-    # new field + four call-site edits per knob. Keys are caller-defined;
-    # consumers should ``metadata.get(...)`` defensively.
-    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)

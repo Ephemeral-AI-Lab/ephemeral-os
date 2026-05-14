@@ -20,7 +20,7 @@ from task_center.context_engine.packet import (
     ContextPriority,
     ContextRefs,
 )
-from task_center.context_engine.recipes.planner import (
+from task_center.context_engine.recipes.helper import (
     _advisor_build,
     demote_priority,
     _resolver_build,
@@ -207,7 +207,7 @@ def test_missing_packet_store_raises_context_engine_error(
 
 def test_helper_required_scope_fields_enforced():
     """Recipe registry's scope assertion fires before recipe build."""
-    from task_center.context_engine.recipes.planner import (
+    from task_center.context_engine.recipes.helper import (
         ADVISOR_RECIPE,
         RESOLVER_RECIPE,
     )

@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, TypeAlias
 
-from sandbox.layer_stack._paths import relative_symlink_target_escapes
+from sandbox.layer_stack._paths import fsync_path, relative_symlink_target_escapes
 from sandbox.layer_stack.manifest import (
     LAYERS_DIR,
     STAGING_DIR,
@@ -262,15 +262,15 @@ def _write_base_layer(stack: Path, entries: tuple[_BaseEntry, ...]) -> LayerRef:
                         unstable_paths=(entry.path,),
                     )
                 shutil.copy2(entry.source_path, target)
-                _fsync_file(target)
+                fsync_path(target)
             elif isinstance(entry, _SymlinkEntry):
                 os.symlink(entry.link_target, target)
             elif isinstance(entry, _DirectoryEntry):
                 target.mkdir(parents=True, exist_ok=True)
-        _fsync_dir(staging_dir)
+        fsync_path(staging_dir)
         layer_dir.parent.mkdir(parents=True, exist_ok=True)
         os.replace(staging_dir, layer_dir)
-        _fsync_dir(layer_dir.parent)
+        fsync_path(layer_dir.parent)
     except Exception:
         shutil.rmtree(staging_dir, ignore_errors=True)
         shutil.rmtree(layer_dir, ignore_errors=True)
@@ -291,23 +291,7 @@ def _write_base_digest_sidecar(stack: Path, layer_id: str, root_hash: str) -> No
         os.fsync(fd)
     finally:
         os.close(fd)
-    _fsync_dir(metadata_dir)
-
-
-def _fsync_file(path: Path) -> None:
-    fd = os.open(str(path), os.O_RDONLY)
-    try:
-        os.fsync(fd)
-    finally:
-        os.close(fd)
-
-
-def _fsync_dir(path: Path) -> None:
-    fd = os.open(str(path), os.O_RDONLY)
-    try:
-        os.fsync(fd)
-    finally:
-        os.close(fd)
+    fsync_path(metadata_dir)
 
 
 def _file_hash(path: Path) -> str:

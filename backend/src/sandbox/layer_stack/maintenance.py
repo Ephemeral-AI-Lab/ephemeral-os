@@ -8,7 +8,11 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
-from sandbox.layer_stack._paths import allocate_unique_layer_paths, resolve_storage_path
+from sandbox.layer_stack._paths import (
+    allocate_unique_layer_paths,
+    fsync_path,
+    resolve_storage_path,
+)
 from sandbox.layer_stack.manifest import LAYERS_DIR, STAGING_DIR, LayerRef, Manifest
 from sandbox.layer_stack.view import MergedView
 
@@ -73,11 +77,7 @@ class SquashService:
             manifest_version
         )
         os.replace(current_path, layer_dir)
-        fd = os.open(layer_dir.parent, os.O_RDONLY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+        fsync_path(layer_dir.parent)
         return LayerRef(layer_id=layer_id, path=f"{LAYERS_DIR}/{layer_id}")
 
     def discard_checkpoint(self, checkpoint: LayerRef) -> None:
