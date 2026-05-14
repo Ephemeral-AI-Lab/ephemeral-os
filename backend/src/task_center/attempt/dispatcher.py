@@ -14,7 +14,6 @@ from typing import Any
 
 from task_center.audit import TaskCenterAuditEmitter
 from task_center.exceptions import TaskCenterInvariantViolation
-from task_center.attempt.stage_strategy import STAGE_STRATEGIES
 from task_center.attempt.state import (
     Attempt,
     AttemptFailReason,
@@ -49,6 +48,13 @@ CloseGraphCallback = Callable[
 ]
 
 
+# Stage → dispatch-method name. PLAN and CLOSED stages are no-ops.
+_STAGE_DISPATCH: dict[AttemptStage, str] = {
+    AttemptStage.GENERATE: "_dispatch_generating",
+    AttemptStage.EVALUATE: "_dispatch_evaluating",
+}
+
+
 class AttemptDispatcher:
     """Drives the generator-DAG and evaluator launch/quiescence machine."""
 
@@ -70,7 +76,9 @@ class AttemptDispatcher:
         attempt = self._fresh_attempt()
         if attempt.is_closed:
             return
-        STAGE_STRATEGIES[attempt.stage].dispatch(self, attempt)
+        method = _STAGE_DISPATCH.get(attempt.stage)
+        if method is not None:
+            getattr(self, method)(attempt)
 
     def block_failed_descendants(self, failed_task_id: str) -> None:
         runtime = self._runtime
