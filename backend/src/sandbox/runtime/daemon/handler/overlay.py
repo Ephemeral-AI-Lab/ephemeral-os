@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from sandbox.layer_stack.manager import LayerStackManager
-from sandbox.overlay import (
+from sandbox.execution.overlay import (
     OverlayCapture,
     OverlayShellRequest,
     OverlaySnapshotRunner,

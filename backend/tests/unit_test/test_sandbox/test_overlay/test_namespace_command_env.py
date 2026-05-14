@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.overlay import run_user_command
+from sandbox.execution.overlay import run_user_command
 
 
 def _run(

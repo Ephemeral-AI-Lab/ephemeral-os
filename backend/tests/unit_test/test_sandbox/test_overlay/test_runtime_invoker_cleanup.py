@@ -13,7 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from sandbox.layer_stack import WriteLayerChange, LayerStackManager
-from sandbox.overlay import OverlayRuntimeInvoker, OverlayShellRequest
+from sandbox.execution.overlay import OverlayRuntimeInvoker, OverlayShellRequest
 
 
 def _source(tmp_path: Path, name: str, content: bytes) -> str:

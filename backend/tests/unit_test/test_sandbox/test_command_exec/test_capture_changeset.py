@@ -14,7 +14,7 @@ from sandbox.occ.changeset.types import (
     SymlinkChange,
     WriteChange,
 )
-from sandbox.overlay import OverlayPathChange, content_hash
+from sandbox.execution.overlay import OverlayPathChange, content_hash
 
 
 def test_overlay_path_changes_to_occ_changes_converts_all_supported_kinds(

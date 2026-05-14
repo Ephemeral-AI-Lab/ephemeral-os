@@ -23,8 +23,8 @@ from sandbox.execution.workspace.capture import capture_workspace_upperdir
 from sandbox.execution.workspace.mount import run_workspace_replaced_command
 from sandbox.occ.changeset import ChangesetResult, CommitOptions
 from sandbox.occ.overlay import overlay_path_changes_to_occ_changes
-from sandbox.overlay.change import OverlayPathChange
-from sandbox.overlay.result import read_output_ref
+from sandbox.execution.overlay.change import OverlayPathChange
+from sandbox.execution.overlay.result import read_output_ref
 from sandbox.runtime.async_bridge import run_sync_in_executor
 from sandbox.timing import monotonic_now
 
