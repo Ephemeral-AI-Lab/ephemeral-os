@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.execution.contract.request import CommandExecRequest
+from sandbox.execution.contract import CommandExecRequest
 from sandbox.execution.workspace.environment import resolve_workspace_cwd
 
 

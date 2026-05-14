@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.execution.contract.result import ShellProcessResult
+from sandbox.execution.contract import ShellProcessResult
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.layer_stack.workspace.base import build_workspace_base
 from sandbox.layer_stack.workspace.binding import WorkspaceBinding, write_workspace_binding_atomic

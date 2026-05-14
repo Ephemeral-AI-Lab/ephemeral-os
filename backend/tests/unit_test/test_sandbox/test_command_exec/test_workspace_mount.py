@@ -8,11 +8,11 @@ from pathlib import Path
 import pytest
 
 import sandbox.execution.workspace.mount as workspace_mount
-from sandbox.execution.contract.request import CommandExecRequest
-from sandbox.execution.contract.result import MountMode
-from sandbox.execution.contract.result import ShellProcessResult
+from sandbox.execution.contract import CommandExecRequest
+from sandbox.execution.contract import MountMode
+from sandbox.execution.contract import ShellProcessResult
 from sandbox.execution.workspace.capture import capture_workspace_upperdir
-from sandbox.execution.contract.spec import WorkspaceReplacementMountSpec
+from sandbox.execution.contract import WorkspaceReplacementMountSpec
 from sandbox.execution import entrypoints as namespace_helper
 from sandbox.execution.strategies.copy_backed import CopyBackedStrategy
 from sandbox.execution.strategies.private_namespace import (
