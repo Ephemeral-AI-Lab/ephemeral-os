@@ -220,13 +220,56 @@ def project_changeset(
     }
 
 
+def project_conflict(
+    *,
+    verb: str,
+    status: str,
+    reason: str,
+    path: str,
+    message: str,
+    total_start: float,
+    timings_extra: dict[str, float] | None = None,
+    changed_paths: list[str] | None = None,
+    conflict_reason: str | None = None,
+    **extras: object,
+) -> dict[str, object]:
+    """Project a single-path conflict into the guarded-result shape.
+
+    ``status`` is the outer wire status (e.g. ``rejected``); ``reason`` is
+    the inner ``conflict.reason`` (e.g. ``create_only_existing``). They
+    coincide for the edit anchor-miss case. ``conflict_reason`` defaults
+    to ``reason`` but the in-workspace edit path passes the raw exception
+    text instead. ``extras`` carries verb-specific fields like
+    ``applied_edits``.
+    """
+    payload: dict[str, object] = {
+        "success": False,
+        "changed_paths": list(changed_paths or []),
+        "status": status,
+        "conflict": {
+            "reason": reason,
+            "conflict_file": path,
+            "message": message,
+        },
+        "conflict_reason": conflict_reason if conflict_reason is not None else reason,
+        "timings": {
+            **(timings_extra or {}),
+            f"api.{verb}.total_s": monotonic_now() - total_start,
+        },
+    }
+    payload.update(extras)
+    return payload
+
+
 __all__ = [
     "ClassifiedPath",
     "classify_path",
     "layer_stack_root",
     "project_changeset",
+    "project_conflict",
     "read_bytes_no_follow",
     "required_single_path",
+    "require_arg",
     "services",
     "write_text_no_follow",
 ]

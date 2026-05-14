@@ -13,6 +13,7 @@ from sandbox.daemon.handler.request_context import (
     classify_path,
     layer_stack_root as require_layer_stack_root,
     project_changeset,
+    project_conflict,
     required_single_path,
     services as backend_services,
     write_text_no_follow,
@@ -81,25 +82,21 @@ async def _write_in_workspace(
             )
             known_base_hash_ready = True
             if exists_in_n:
-                return {
-                    "success": False,
-                    "changed_paths": [],
-                    "status": "rejected",
-                    "conflict": {
-                        "reason": "create_only_existing",
-                        "conflict_file": layer_path,
-                        "message": (
-                            "create-only write rejected: path exists in "
-                            f"validation snapshot at {layer_path}"
-                        ),
-                    },
-                    "conflict_reason": "create_only_existing",
-                    "timings": {
+                return project_conflict(
+                    verb="write",
+                    status="rejected",
+                    reason="create_only_existing",
+                    path=layer_path,
+                    message=(
+                        "create-only write rejected: path exists in "
+                        f"validation snapshot at {layer_path}"
+                    ),
+                    total_start=total_start,
+                    timings_extra={
                         "api.write.lease_acquire_s": lease_acquired_s,
                         "api.write.snapshot_read_s": snapshot_read_s,
-                        "api.write.total_s": monotonic_now() - total_start,
                     },
-                }
+                )
 
         change = build_api_write_change(
             path=layer_path,
@@ -160,20 +157,14 @@ def _write_out_of_workspace(
             write_start = monotonic_now()
             write_text_no_follow(abs_path, content, create_only=True)
         except FileExistsError:
-            return {
-                "success": False,
-                "changed_paths": [],
-                "status": "rejected",
-                "conflict": {
-                    "reason": "create_only_existing",
-                    "conflict_file": abs_path,
-                    "message": (f"create-only write rejected: path exists at {abs_path}"),
-                },
-                "conflict_reason": "create_only_existing",
-                "timings": {
-                    "api.write.total_s": monotonic_now() - total_start,
-                },
-            }
+            return project_conflict(
+                verb="write",
+                status="rejected",
+                reason="create_only_existing",
+                path=abs_path,
+                message=f"create-only write rejected: path exists at {abs_path}",
+                total_start=total_start,
+            )
         write_elapsed = monotonic_now() - write_start
         return {
             "success": True,

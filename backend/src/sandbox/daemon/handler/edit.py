@@ -14,6 +14,7 @@ from sandbox.daemon.handler.request_context import (
     classify_path,
     layer_stack_root as require_layer_stack_root,
     project_changeset,
+    project_conflict,
     read_bytes_no_follow,
     required_single_path,
     services as backend_services,
@@ -158,14 +159,20 @@ def _edit_out_of_workspace(
         final_text = _apply_edits(text, edits, path=abs_path)
     except ValueError as exc:
         derive_elapsed = monotonic_now() - derive_start
-        return _edit_conflict_payload(
+        return project_conflict(
+            verb="edit",
+            status="aborted_overlap",
+            reason="aborted_overlap",
             path=abs_path,
             message=str(exc),
+            conflict_reason=str(exc),
             total_start=total_start,
             timings_extra={
                 "api.edit.host_fs_read_s": read_elapsed,
                 "api.edit.derive_bytes_s": derive_elapsed,
             },
+            changed_paths=[abs_path],
+            applied_edits=0,
         )
     derive_elapsed = monotonic_now() - derive_start
     write_start = monotonic_now()
@@ -182,31 +189,6 @@ def _edit_out_of_workspace(
             "api.edit.host_fs_read_s": read_elapsed,
             "api.edit.derive_bytes_s": derive_elapsed,
             "api.edit.host_fs_write_s": write_elapsed,
-            "api.edit.total_s": monotonic_now() - total_start,
-        },
-    }
-
-
-def _edit_conflict_payload(
-    *,
-    path: str,
-    message: str,
-    total_start: float,
-    timings_extra: dict[str, float],
-) -> dict[str, object]:
-    return {
-        "success": False,
-        "changed_paths": [path],
-        "applied_edits": 0,
-        "status": "aborted_overlap",
-        "conflict": {
-            "reason": "aborted_overlap",
-            "conflict_file": path,
-            "message": message,
-        },
-        "conflict_reason": message,
-        "timings": {
-            **timings_extra,
             "api.edit.total_s": monotonic_now() - total_start,
         },
     }
