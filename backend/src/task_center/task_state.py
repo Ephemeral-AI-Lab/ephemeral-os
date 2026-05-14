@@ -77,14 +77,7 @@ class PlannerFailureSubmission:
 
 @dataclass(frozen=True, slots=True)
 class GeneratorSubmission:
-    """Validated terminal outcome for one generator task.
-
-    ``payload`` retains ``dict[str, Any]`` shape for backward compatibility
-    with persisted task-summary rows and the submission-tool surface.
-    Callers building payloads from typed sources should use one of the
-    :class:`GeneratorPayload` schemas below and call ``.to_dict()`` so the
-    expected keys and field types are visible at the type level.
-    """
+    """Validated terminal outcome for one generator task."""
 
     attempt_id: str
     task_id: str
@@ -95,130 +88,10 @@ class GeneratorSubmission:
 
 @dataclass(frozen=True, slots=True)
 class EvaluatorSubmission:
-    """Validated terminal outcome for one evaluator task.
-
-    See :class:`GeneratorSubmission` regarding ``payload`` typing. Build
-    typed payloads via :class:`EvaluatorPayload` schemas below.
-    """
+    """Validated terminal outcome for one evaluator task."""
 
     attempt_id: str
     task_id: str
     outcome: Literal["success", "failure"]
     summary: str
     payload: dict[str, Any]
-
-
-# ---- Typed submission payload schemas --------------------------------------
-#
-# These dataclasses document the expected ``payload`` shape for each
-# submission outcome. Tools and consumers can opt into typed construction
-# and serialization via ``.to_dict()`` while the persistence and tool-call
-# protocols continue to accept ``dict[str, Any]``. Adding a new payload
-# shape is a new class here plus a new ``to_dict`` mapping — no scattered
-# string-key additions.
-
-
-@dataclass(frozen=True, slots=True)
-class ExecutorSuccessPayload:
-    """Payload for a generator task completed via ``submit_execution_success``."""
-
-    artifacts: tuple[str, ...] = ()
-    generator_role: Literal["executor"] = "executor"
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "generator_role": self.generator_role,
-            "artifacts": list(self.artifacts),
-        }
-
-
-@dataclass(frozen=True, slots=True)
-class ExecutorFailurePayload:
-    """Payload for ``submit_execution_failure``."""
-
-    reason: str
-    details: tuple[str, ...] = ()
-    generator_role: Literal["executor"] = "executor"
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "generator_role": self.generator_role,
-            "reason": self.reason,
-            "details": list(self.details),
-        }
-
-
-@dataclass(frozen=True, slots=True)
-class VerifierSuccessPayload:
-    """Payload for ``submit_verification_success``."""
-
-    checks: tuple[str, ...] = ()
-    generator_role: Literal["verifier"] = "verifier"
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "generator_role": self.generator_role,
-            "checks": list(self.checks),
-        }
-
-
-@dataclass(frozen=True, slots=True)
-class VerifierFailurePayload:
-    """Payload for ``submit_verification_failure``."""
-
-    reason: str
-    details: tuple[str, ...] = ()
-    generator_role: Literal["verifier"] = "verifier"
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "generator_role": self.generator_role,
-            "reason": self.reason,
-            "details": list(self.details),
-        }
-
-
-@dataclass(frozen=True, slots=True)
-class RunExhaustedPayload:
-    """Payload synthesized by the launcher when an agent run ends without
-    a terminal submission."""
-
-    fail_reason: Literal["run_exhausted"] = "run_exhausted"
-
-    def to_dict(self) -> dict[str, Any]:
-        return {"fail_reason": self.fail_reason}
-
-
-@dataclass(frozen=True, slots=True)
-class EvaluationSuccessPayload:
-    """Payload for ``submit_evaluation_success``."""
-
-    passed_criteria: tuple[str, ...] = ()
-
-    def to_dict(self) -> dict[str, Any]:
-        return {"passed_criteria": list(self.passed_criteria)}
-
-
-@dataclass(frozen=True, slots=True)
-class EvaluationFailurePayload:
-    """Payload for ``submit_evaluation_failure``."""
-
-    failed_criteria: tuple[str, ...] = ()
-
-    def to_dict(self) -> dict[str, Any]:
-        return {"failed_criteria": list(self.failed_criteria)}
-
-
-# Discriminated unions for callers that want type-level dispatch.
-GeneratorPayload = (
-    ExecutorSuccessPayload
-    | ExecutorFailurePayload
-    | VerifierSuccessPayload
-    | VerifierFailurePayload
-    | RunExhaustedPayload
-)
-EvaluatorPayload = (
-    EvaluationSuccessPayload
-    | EvaluationFailurePayload
-    | RunExhaustedPayload
-)
