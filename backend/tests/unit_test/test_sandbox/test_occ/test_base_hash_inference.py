@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from tests.occ_change_helpers import write_change
+
 import asyncio
 
 from sandbox.layer_stack.layer.change import WriteLayerChange
@@ -9,8 +11,10 @@ from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset.prepared import RouteDecision
 from sandbox.occ.changeset.types import DeleteChange, EditChange, WriteChange
 from sandbox.occ.content.gitignore_oracle import GitignoreMatcher
-from sandbox.occ.content.hashing import content_hash_bytes
+from sandbox.occ.content.hashing import ContentHasher
 from sandbox.occ.service import Service
+
+_HASHER = ContentHasher()
 
 
 class _NeverIgnored:
@@ -33,7 +37,7 @@ def _stack_with_file(tmp_path, rel: str, content: bytes) -> LayerStackManager:
         [
             WriteLayerChange(
                 path=rel,
-                content_hash=content_hash_bytes(content),
+                content_hash=_HASHER.hash_bytes(content),
                 source_path=str(source),
             )
         ]
@@ -51,7 +55,7 @@ def test_tracked_write_without_base_hash_uses_leased_snapshot_hash(tmp_path) -> 
         [
             WriteLayerChange(
                 path="src/app.py",
-                content_hash=content_hash_bytes(b"active\n"),
+                content_hash=_HASHER.hash_bytes(b"active\n"),
                 source_path=str(source),
             )
         ]
@@ -63,7 +67,7 @@ def test_tracked_write_without_base_hash_uses_leased_snapshot_hash(tmp_path) -> 
     prepared = asyncio.run(
         service.prepare_changeset(
             [
-                WriteChange(
+                write_change(
                     path="src/app.py",
                     source="overlay_capture",
                     final_content=b"next\n",
@@ -78,7 +82,7 @@ def test_tracked_write_without_base_hash_uses_leased_snapshot_hash(tmp_path) -> 
     [change] = group.changes
     assert group.route is RouteDecision.GATED
     assert isinstance(change, WriteChange)
-    assert change.base_hash == content_hash_bytes(b"old\n")
+    assert change.base_hash == _HASHER.hash_bytes(b"old\n")
 
 
 def test_chained_writes_use_running_base_hash(tmp_path) -> None:
@@ -91,8 +95,8 @@ def test_chained_writes_use_running_base_hash(tmp_path) -> None:
     prepared = asyncio.run(
         service.prepare_changeset(
             [
-                WriteChange(path="src/app.py", final_content=b"first\n"),
-                WriteChange(path="src/app.py", final_content=b"second\n"),
+                write_change(path="src/app.py", final_content=b"first\n"),
+                write_change(path="src/app.py", final_content=b"second\n"),
             ],
             snapshot=snapshot,
         )
@@ -102,8 +106,8 @@ def test_chained_writes_use_running_base_hash(tmp_path) -> None:
     first, second = group.changes
     assert isinstance(first, WriteChange)
     assert isinstance(second, WriteChange)
-    assert first.base_hash == content_hash_bytes(b"old\n")
-    assert second.base_hash == content_hash_bytes(b"first\n")
+    assert first.base_hash == _HASHER.hash_bytes(b"old\n")
+    assert second.base_hash == _HASHER.hash_bytes(b"first\n")
 
 
 def test_missing_snapshot_path_infers_none_base_hash(tmp_path) -> None:
@@ -115,7 +119,7 @@ def test_missing_snapshot_path_infers_none_base_hash(tmp_path) -> None:
 
     prepared = asyncio.run(
         service.prepare_changeset(
-            [WriteChange(path="new.py", source="api_write", final_content=b"x")],
+            [write_change(path="new.py", source="api_write", final_content=b"x")],
             snapshot=snapshot,
         )
     )
@@ -164,4 +168,4 @@ def test_shell_delete_can_infer_base_hash_from_snapshot(tmp_path) -> None:
     [group] = prepared.path_groups
     [change] = group.changes
     assert isinstance(change, DeleteChange)
-    assert change.base_hash == content_hash_bytes(b"delete me")
+    assert change.base_hash == _HASHER.hash_bytes(b"delete me")

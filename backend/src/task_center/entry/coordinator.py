@@ -25,7 +25,10 @@ from agents import validate_agent_definitions_resolved
 from task_center.config import TaskCenterLifecycleConfig
 from task_center.agent_launch.composer import ContextComposer
 from task_center.context_engine.engine import ContextEngine, ContextEngineDeps
-from task_center.agent_launch.predicates import register_builtin_predicates
+from task_center.agent_launch.predicates import (
+    configure_max_handoff_depth,
+    register_builtin_predicates,
+)
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.context_engine.scope import ContextScope
 from task_center.entry.controller import EntryTaskController
@@ -239,6 +242,9 @@ class TaskCenterEntryCoordinator:
         teardown — this method is not a sandbox.
         """
         register_builtin_predicates()
+        configure_max_handoff_depth(
+            TaskCenterLifecycleConfig().max_handoff_depth
+        )
         register_builtin_recipes()
         validate_agent_definitions_resolved()
         deps = ContextEngineDeps(

@@ -13,7 +13,7 @@ Source review: `.planning/code-reviews/sandbox-api-REVIEW.md`
 | 3. Facade and default client | Done | `uv run pytest backend/tests/unit_test/test_sandbox/test_api/test_facade.py backend/tests/unit_test/test_sandbox/test_api/test_contract.py -q` -> 32 passed |
 | 4. Lifecycle/discovery split | Done | `uv run pytest backend/tests/unit_test/test_sandbox/test_api/test_status.py backend/tests/unit_test/test_sandbox/test_api/test_contract.py backend/tests/unit_test/test_sandbox/test_import_fence.py -q` -> 64 passed |
 | 5. Daemon version and error taxonomy | Done | `uv run pytest backend/tests/unit_test/test_sandbox/test_api/test_payload_helpers.py backend/tests/unit_test/test_sandbox/test_api/test_transport_protocol.py backend/tests/unit_test/test_sandbox/test_api/test_read.py backend/tests/unit_test/test_sandbox/test_api/test_write.py backend/tests/unit_test/test_sandbox/test_api/test_shell.py backend/tests/unit_test/test_sandbox/test_api/test_edit.py backend/tests/unit_test/test_sandbox/test_api/test_facade.py backend/tests/unit_test/test_sandbox/test_command_exec/test_write_edit_dispatch.py backend/tests/unit_test/test_sandbox/test_daemon/test_routing_invariants.py -q` -> 48 passed |
-| 6. Hygiene and closeout | Done | `.DS_Store` is ignored/untracked; sandbox API/OCC slice -> 163 passed; broader sandbox boundary slice -> 190 passed, 1 skipped |
+| 6. Hygiene and closeout | Done | `.DS_Store` is ignored/untracked; sandbox API/import-fence slice -> 94 passed; full sandbox API directory -> 106 passed |
 
 ## Notes
 
@@ -94,10 +94,10 @@ Source review: `.planning/code-reviews/sandbox-api-REVIEW.md`
   ignored and not tracked by git, so no repo content change is needed.
 - Ran the safe sandbox API/import-fence slice:
   `uv run pytest backend/tests/unit_test/test_sandbox/test_api/test_audit_emission.py backend/tests/unit_test/test_sandbox/test_api/test_boundary.py backend/tests/unit_test/test_sandbox/test_api/test_contract.py backend/tests/unit_test/test_sandbox/test_api/test_daemon_client.py backend/tests/unit_test/test_sandbox/test_api/test_edit.py backend/tests/unit_test/test_sandbox/test_api/test_facade.py backend/tests/unit_test/test_sandbox/test_api/test_payload_helpers.py backend/tests/unit_test/test_sandbox/test_api/test_raw_exec.py backend/tests/unit_test/test_sandbox/test_api/test_read.py backend/tests/unit_test/test_sandbox/test_api/test_shell.py backend/tests/unit_test/test_sandbox/test_api/test_status.py backend/tests/unit_test/test_sandbox/test_api/test_transport_protocol.py backend/tests/unit_test/test_sandbox/test_api/test_write.py backend/tests/unit_test/test_sandbox/test_import_fence.py -q`
-  -> 102 passed.
-- Ran the sandbox API + OCC slice against the current dirty worktree:
-  `uv run pytest backend/tests/unit_test/test_sandbox/test_api backend/tests/unit_test/test_sandbox/test_occ -q`
-  -> 163 passed.
+  -> 94 passed.
+- Ran the full sandbox API directory:
+  `uv run pytest backend/tests/unit_test/test_sandbox/test_api -q`
+  -> 106 passed.
 
 ## Cleanup Pass - 2026-05-14
 
@@ -108,6 +108,14 @@ Changes:
   compatibility facade.
 - Kept `sandbox.api._impl` as the real implementation owner for direct internal
   tests.
+- Removed public default-client mutation helpers with no repo callers:
+  `default_client`, `set_default_client`, and `configure_default_client`.
+- Removed the legacy `caller_audit_fields` helper; callers now use
+  `SandboxCaller.audit_fields()` directly.
+- Removed the stale `TRANSIENT_EDIT_ATTEMPTS` alias in favor of
+  `TRANSIENT_MUTATION_ATTEMPTS`.
+- Updated current docs/reports to use `sandbox.api` or the owning
+  lifecycle/discovery modules instead of removed compatibility paths.
 - Updated the public API contract test for the explicit `default.py` default
   client module and the `_impl` implementation package.
 - Removed stale `LayerChange` imports in sandbox API/OCC tests.
@@ -117,7 +125,6 @@ Changes:
 Verification:
 
 - `uv run pytest backend/tests/unit_test/test_sandbox/test_api/test_payload_helpers.py backend/tests/unit_test/test_sandbox/test_api/test_contract.py backend/tests/unit_test/test_sandbox/test_api/test_write.py backend/tests/unit_test/test_sandbox/test_api/test_edit.py backend/tests/unit_test/test_sandbox/test_api/test_shell.py -q` -> 54 passed.
-- `uv run pytest backend/tests/unit_test/test_sandbox/test_api/test_audit_emission.py backend/tests/unit_test/test_sandbox/test_api/test_boundary.py backend/tests/unit_test/test_sandbox/test_api/test_contract.py backend/tests/unit_test/test_sandbox/test_api/test_daemon_client.py backend/tests/unit_test/test_sandbox/test_api/test_edit.py backend/tests/unit_test/test_sandbox/test_api/test_facade.py backend/tests/unit_test/test_sandbox/test_api/test_payload_helpers.py backend/tests/unit_test/test_sandbox/test_api/test_raw_exec.py backend/tests/unit_test/test_sandbox/test_api/test_read.py backend/tests/unit_test/test_sandbox/test_api/test_shell.py backend/tests/unit_test/test_sandbox/test_api/test_status.py backend/tests/unit_test/test_sandbox/test_api/test_transport_protocol.py backend/tests/unit_test/test_sandbox/test_api/test_write.py backend/tests/unit_test/test_sandbox/test_import_fence.py -q` -> 102 passed.
-- `uv run pytest backend/tests/unit_test/test_sandbox/test_api backend/tests/unit_test/test_sandbox/test_occ -q` -> 163 passed.
-- `uv run pytest backend/tests/unit_test/test_sandbox/test_api backend/tests/unit_test/test_sandbox/test_host backend/tests/unit_test/test_sandbox/test_runtime_bootstrap.py backend/tests/unit_test/test_sandbox/test_live_setup_api.py backend/tests/unit_test/test_sandbox/test_occ backend/tests/unit_test/test_sandbox/test_command_exec/test_edit_snapshot_byte_derivation.py backend/tests/unit_test/test_sandbox/test_command_exec/test_capture_to_occ_client.py -q` -> 190 passed, 1 skipped.
-- `uv run ruff check backend/src/sandbox/models.py backend/src/sandbox/api backend/src/sandbox/occ backend/src/sandbox/runtime/daemon/service/occ_backend.py backend/src/sandbox/runtime/daemon/handler/tools/edit.py backend/src/sandbox/runtime/daemon/handler/tools/write.py backend/tests/unit_test/test_sandbox/test_api backend/tests/unit_test/test_sandbox/test_occ backend/tests/unit_test/test_sandbox/test_command_exec/test_edit_snapshot_byte_derivation.py` -> all checks passed.
+- `uv run pytest backend/tests/unit_test/test_sandbox/test_api/test_audit_emission.py backend/tests/unit_test/test_sandbox/test_api/test_boundary.py backend/tests/unit_test/test_sandbox/test_api/test_contract.py backend/tests/unit_test/test_sandbox/test_api/test_daemon_client.py backend/tests/unit_test/test_sandbox/test_api/test_edit.py backend/tests/unit_test/test_sandbox/test_api/test_facade.py backend/tests/unit_test/test_sandbox/test_api/test_payload_helpers.py backend/tests/unit_test/test_sandbox/test_api/test_raw_exec.py backend/tests/unit_test/test_sandbox/test_api/test_read.py backend/tests/unit_test/test_sandbox/test_api/test_shell.py backend/tests/unit_test/test_sandbox/test_api/test_status.py backend/tests/unit_test/test_sandbox/test_api/test_transport_protocol.py backend/tests/unit_test/test_sandbox/test_api/test_write.py backend/tests/unit_test/test_sandbox/test_import_fence.py -q` -> 94 passed.
+- `uv run pytest backend/tests/unit_test/test_sandbox/test_api -q` -> 106 passed.
+- `uv run ruff check backend/src/sandbox/models.py backend/src/sandbox/api backend/src/sandbox/host/lifecycle.py backend/tests/unit_test/test_sandbox/test_api backend/tests/unit_test/test_sandbox/test_import_fence.py backend/tests/unit_test/test_engine/eval_agent_support.py` -> all checks passed.

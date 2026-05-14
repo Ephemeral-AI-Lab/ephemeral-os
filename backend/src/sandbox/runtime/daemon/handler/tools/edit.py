@@ -7,9 +7,9 @@ from uuid import uuid4
 
 from sandbox.layer_stack.workspace.binding import require_workspace_binding
 from sandbox.occ.changeset.builders import build_api_write_change
-from sandbox.occ.content.hashing import content_hash_bytes
+from sandbox.occ.content.hashing import ContentHasher
 from sandbox.occ.router import prepare_single_path_changeset
-from sandbox.async_bridge import run_sync_in_executor
+from sandbox.runtime.async_bridge import run_sync_in_executor
 from sandbox.runtime.daemon.handler.request_context import (
     classify_path,
     layer_stack_root as require_layer_stack_root,
@@ -20,6 +20,8 @@ from sandbox.runtime.daemon.handler.request_context import (
     write_text_no_follow,
 )
 from sandbox.timing import monotonic_now
+
+_CONTENT_HASHER = ContentHasher()
 
 
 async def edit_file(args: dict[str, object]) -> dict[str, object]:
@@ -104,7 +106,7 @@ async def _edit_in_workspace(
         change = build_api_write_change(
             path=layer_path,
             final_content=final_text.encode("utf-8"),
-            base_hash=content_hash_bytes(bytes_),
+            base_hash=_CONTENT_HASHER.hash_bytes(bytes_),
         )
         prepared = await run_sync_in_executor(
             prepare_single_path_changeset,

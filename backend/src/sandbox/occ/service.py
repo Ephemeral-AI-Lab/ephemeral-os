@@ -17,7 +17,7 @@ from sandbox.occ.commit_queue import CommitQueue
 from sandbox.occ.ports import CommitPublisher, CommitStagingStore, SnapshotReader
 from sandbox.occ.router import Router
 from sandbox.occ.timing_keys import TimingKey
-from sandbox.async_bridge import run_sync_in_executor
+from sandbox.runtime.async_bridge import run_sync_in_executor
 from sandbox.timing import monotonic_now
 
 AUTO_SQUASH_MAX_DEPTH = 32

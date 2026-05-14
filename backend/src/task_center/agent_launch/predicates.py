@@ -25,7 +25,26 @@ from task_center.registry import Registry
 # handoff terminal. Above this, the leaf executor profile is selected (success
 # + failure terminals only). Range-named predicates encode the threshold so
 # renaming this constant does not require touching any frontmatter.
-MAX_HANDOFF_DEPTH = 2
+#
+# Mutable so :class:`task_center.config.TaskCenterLifecycleConfig` can override
+# it at startup via :func:`configure_max_handoff_depth`. Predicates read the
+# current value at each invocation.
+MAX_HANDOFF_DEPTH: int = 2
+
+
+def configure_max_handoff_depth(value: int) -> None:
+    """Set the runtime handoff-depth threshold (called by app startup).
+
+    Calling this before ``register_builtin_predicates`` is fine — the
+    predicates capture the module-level name at call time, not at
+    registration.
+    """
+    global MAX_HANDOFF_DEPTH
+    if value < 0:
+        raise ValueError(
+            f"max_handoff_depth must be >= 0, got {value!r}"
+        )
+    MAX_HANDOFF_DEPTH = value
 
 
 @dataclass(frozen=True, slots=True)

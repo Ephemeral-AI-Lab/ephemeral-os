@@ -12,7 +12,7 @@ from sandbox.layer_stack.manifest import Manifest
 from sandbox.overlay.request import OverlayShellRequest
 from sandbox.overlay.result import OverlayCapture
 from sandbox.overlay.worker import execute_request
-from sandbox.async_bridge import run_sync_in_executor
+from sandbox.runtime.async_bridge import run_sync_in_executor
 from sandbox.timing import monotonic_now
 
 

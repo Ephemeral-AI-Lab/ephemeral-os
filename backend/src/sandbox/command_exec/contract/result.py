@@ -5,9 +5,11 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import TYPE_CHECKING
 
-from sandbox.occ import ChangesetResult
-from sandbox.overlay import OverlayPathChange
+if TYPE_CHECKING:
+    from sandbox.occ import ChangesetResult
+    from sandbox.overlay import OverlayPathChange
 
 
 class MountMode(str, Enum):

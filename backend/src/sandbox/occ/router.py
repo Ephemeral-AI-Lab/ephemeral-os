@@ -94,11 +94,11 @@ class Router:
         )
         prepared_change = change
         timings: dict[str, float] = {TimingKey.PREPARE_GITIGNORE: gitignore_s}
-        if route is RouteDecision.GATED and requires_base_hash(change):
+        if route is RouteDecision.GATED and _requires_base_hash(change):
             base_hash_start = monotonic_now()
             base_hash = base_hash_reader(path) if base_hash_reader is not None else None
             timings[TimingKey.PREPARE_SINGLE_PATH_BASE_HASH] = monotonic_now() - base_hash_start
-            prepared_change = attach_base_hash(change, base_hash)
+            prepared_change = _attach_base_hash(change, base_hash)
         else:
             timings[TimingKey.PREPARE_SINGLE_PATH_BASE_HASH] = 0.0
 
@@ -208,12 +208,12 @@ class Router:
         )
 
 
-def requires_base_hash(change: Change) -> bool:
+def _requires_base_hash(change: Change) -> bool:
     behavior = _BASE_HASH_BEHAVIORS.get(type(change))
     return behavior.requires(change) if behavior is not None else False
 
 
-def attach_base_hash(change: Change, base_hash: str | None) -> Change:
+def _attach_base_hash(change: Change, base_hash: str | None) -> Change:
     behavior = _BASE_HASH_BEHAVIORS.get(type(change))
     return behavior.attach(change, base_hash) if behavior is not None else change
 
@@ -223,13 +223,13 @@ def _attach_chained_base_hashes(
     changes: tuple[Change, ...],
     base_hash_reader: BaseHashReader,
 ) -> tuple[Change, ...]:
-    needs_base_hash = any(requires_base_hash(change) for change in changes)
+    needs_base_hash = any(_requires_base_hash(change) for change in changes)
     running_hash = base_hash_reader(path) if needs_base_hash else None
     hasher = ContentHasher()
     prepared: list[Change] = []
     for change in changes:
         next_change = (
-            attach_base_hash(change, running_hash) if requires_base_hash(change) else change
+            _attach_base_hash(change, running_hash) if _requires_base_hash(change) else change
         )
         prepared.append(next_change)
         behavior = _BASE_HASH_BEHAVIORS.get(type(change))
@@ -320,7 +320,5 @@ def prepare_single_path_changeset(
 __all__ = [
     "BaseHashReader",
     "Router",
-    "attach_base_hash",
     "prepare_single_path_changeset",
-    "requires_base_hash",
 ]

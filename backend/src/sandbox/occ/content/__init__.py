@@ -9,7 +9,6 @@ from sandbox.occ.content.gitignore_oracle import (
 )
 from sandbox.occ.content.hashing import (
     ContentHasher,
-    content_hash_bytes,
     infer_manifest_base_hash,
 )
 
@@ -20,6 +19,5 @@ __all__ = [
     "PathspecGitignoreOracle",
     "SnapshotGitignoreMatcher",
     "SnapshotGitignoreOracle",
-    "content_hash_bytes",
     "infer_manifest_base_hash",
 ]

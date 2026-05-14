@@ -67,7 +67,7 @@ Sync → `api/status.py` → `ProviderAdapter`. Tool verbs lazy-import `api/tool
 - `host/bootstrap.py` `setup_after_create/start` — concurrent `ensure_git` + bundle upload → `call_daemon_api("api.ensure_workspace_base")`.
 - `host/runtime_bundle.py:261` `ensure_runtime_uploaded` — tars `sandbox/runtime/`, uploads via `provider.exec`.
 - `host/bootstrap.py` `ensure_running` — probe → restart + `setup_after_start` on failure.
-- `async_bridge.py` `run_sync` / `run_sync_in_executor` — loop-aware sync-from-async bridge.
+- `runtime/async_bridge.py` `run_sync` / `run_sync_in_executor` — loop-aware sync-from-async bridge.
 
 ## Key data structures
 

@@ -20,11 +20,6 @@ class ContentHasher:
         return self.hash_bytes(content)
 
 
-def content_hash_bytes(content: bytes) -> str:
-    """Return the layer-stack OCC hash for file bytes."""
-    return ContentHasher().hash_bytes(content)
-
-
 def infer_manifest_base_hash(
     *,
     snapshot_reader: SnapshotReader,
@@ -35,11 +30,10 @@ def infer_manifest_base_hash(
     content, exists = snapshot_reader.read_bytes(path, manifest)
     if not exists or content is None:
         return None
-    return content_hash_bytes(content)
+    return ContentHasher().hash_bytes(content)
 
 
 __all__ = [
     "ContentHasher",
-    "content_hash_bytes",
     "infer_manifest_base_hash",
 ]

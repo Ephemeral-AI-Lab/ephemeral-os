@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from sandbox.command_exec.contract.request import CommandExecRequest
 from sandbox.command_exec.contract.result import CommandExecResult
-from sandbox.occ import Change, ChangesetResult, CommitOptions
+
+if TYPE_CHECKING:
+    from sandbox.occ import Change, ChangesetResult, CommitOptions
 
 
 class SnapshotManifest(Protocol):

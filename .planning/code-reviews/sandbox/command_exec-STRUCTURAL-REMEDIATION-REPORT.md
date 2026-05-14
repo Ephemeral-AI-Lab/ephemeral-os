@@ -32,7 +32,7 @@ Issues addressed: 2, 3, 7, 10, 14, 19.
 
 - Add an `ExecutionStrategy` protocol and concrete strategy modules.
 - Split copy-backed path rewriting into its own module with explicit tests.
-- Move the namespace helper to `entrypoints/` while keeping a compatibility import for existing callers.
+- Move the namespace helper to `entrypoints/` and delete the old workspace-level compatibility import.
 - Replace stderr JSON fallback sniffing with a sidecar control file and reserved infrastructure-failure exit code.
 - Replace the forever-cached private probe with an explicit strategy registry object.
 
@@ -90,9 +90,9 @@ Status: complete.
 Changes:
 
 - Added `command_exec/strategies/` with `ExecutionStrategy`, `CopyBackedStrategy`, `PrivateNamespaceStrategy`, and `StrategyRegistry`.
-- Reduced `workspace/mount.py` to ordered strategy dispatch plus compatibility helpers.
+- Reduced `workspace/mount.py` to ordered strategy dispatch only.
 - Split copy-backed workspace path rewriting into `workspace/path_rewrite.py`.
-- Moved the private namespace subprocess module to `entrypoints/namespace_helper.py`; kept `workspace/namespace_entrypoint.py` as a compatibility import module.
+- Moved the private namespace subprocess module to `entrypoints/namespace_helper.py` and removed the old `workspace/namespace_entrypoint.py` compatibility module.
 - Replaced stderr JSON fallback detection with `namespace-control.json` and reserved exit code `125` for recoverable namespace infrastructure failures.
 - Removed the forever `lru_cache` namespace capability probe; strategy availability is now bootstrapped explicitly per registry construction.
 - Updated runtime bundle required-path coverage for the new command-exec structure.
@@ -152,3 +152,29 @@ Verification:
 
 - `uv run pytest backend/tests/unit_test/test_sandbox/test_api backend/tests/unit_test/test_sandbox/test_host backend/tests/unit_test/test_sandbox/test_runtime_bootstrap.py backend/tests/unit_test/test_sandbox/test_live_setup_api.py backend/tests/unit_test/test_sandbox/test_occ backend/tests/unit_test/test_sandbox/test_command_exec/test_edit_snapshot_byte_derivation.py backend/tests/unit_test/test_sandbox/test_command_exec/test_capture_to_occ_client.py -q` -> 190 passed, 1 skipped.
 - `uv run ruff check backend/src/sandbox/api backend/src/sandbox/occ backend/src/sandbox/runtime/daemon/service/occ_backend.py backend/src/sandbox/runtime/daemon/handler/tools/edit.py backend/src/sandbox/runtime/daemon/handler/tools/write.py backend/tests/unit_test/test_sandbox/test_api backend/tests/unit_test/test_sandbox/test_occ backend/tests/unit_test/test_sandbox/test_command_exec/test_edit_snapshot_byte_derivation.py` -> all checks passed.
+
+### Cleanup Follow-up - Compatibility Removal
+
+Status: complete.
+
+Changes:
+
+- Deleted `command_exec/workspace/namespace_entrypoint.py`; tests now target `command_exec.entrypoints.namespace_helper` directly.
+- Removed the test-only compatibility wrappers from `workspace/mount.py`: `_run_copy_backed_mount`, `_run_private_mount_namespace`, `_is_namespace_mount_failure`, and the path-rewrite proxy functions.
+- Updated command-exec tests to inject `CopyBackedStrategy` directly instead of monkey-patching namespace availability.
+- Updated namespace fallback tests to assert through `PrivateNamespaceStrategy.is_recoverable_failure`.
+- Updated runtime readiness to call `detect_private_mount_namespace()` directly instead of a private helper in `workspace.mount`.
+- Made the command-exec package facade lazy for heavy exports so strategy/readiness imports no longer eagerly load executor/OCC modules.
+- Moved OCC and overlay result imports under `TYPE_CHECKING` in command-exec contract modules.
+- Removed the remaining eager `execute_command` facade import and routed stale `sandbox.async_bridge` imports to `sandbox.runtime.async_bridge`.
+- Switched command-exec overlay imports from package-facade imports to owning submodules to avoid pulling unrelated overlay runtime wiring during command-exec import.
+
+Verification:
+
+- `uv run pytest backend/tests/unit_test/test_sandbox/test_command_exec/test_workspace_mount.py backend/tests/unit_test/test_sandbox/test_command_exec/test_env_policy.py backend/tests/unit_test/test_sandbox/test_import_fence.py::test_command_exec_imports_only_client_protocol_boundaries backend/tests/unit_test/test_sandbox/test_import_fence.py::test_internal_sandbox_layers_do_not_import_public_api backend/tests/unit_test/test_sandbox/test_daemon/test_runtime_ready.py::test_daemon_ready_reports_explicit_workspace_mount_mode -q` -> 19 passed.
+- `uv run ruff check backend/src/sandbox/command_exec backend/src/sandbox/runtime/daemon/handler/health.py backend/tests/unit_test/test_sandbox/test_command_exec/test_workspace_mount.py backend/tests/unit_test/test_sandbox/test_command_exec/test_env_policy.py` -> all checks passed.
+- Command-exec runtime bundle membership probe -> required command-exec files present and removed `workspace/namespace_entrypoint.py` absent.
+- Import smoke: `from sandbox.command_exec.strategies import detect_private_mount_namespace` and lazy `from sandbox.command_exec import execute_command` both work.
+- `import sandbox.command_exec` smoke -> facade imports without loading `sandbox.command_exec.executor`, `sandbox.command_exec.workspace.mount`, `sandbox.command_exec.strategies.copy_backed`, `sandbox.occ`, or `sandbox.overlay`.
+- `uv run pytest backend/tests/unit_test/test_sandbox/test_command_exec/test_workspace_mount.py backend/tests/unit_test/test_sandbox/test_command_exec/test_env_policy.py backend/tests/unit_test/test_sandbox/test_import_fence.py::test_command_exec_imports_only_client_protocol_boundaries backend/tests/unit_test/test_sandbox/test_import_fence.py::test_internal_sandbox_layers_do_not_import_public_api backend/tests/unit_test/test_sandbox/test_daemon/test_runtime_ready.py::test_daemon_ready_reports_explicit_workspace_mount_mode backend/tests/unit_test/test_sandbox/test_async/test_bridge.py -q` -> 24 passed.
+- `uv run ruff check backend/src/sandbox/command_exec backend/src/sandbox/runtime/daemon/handler/health.py backend/src/sandbox/runtime/async_bridge.py backend/src/sandbox/occ/service.py backend/src/sandbox/overlay/invoker.py backend/src/sandbox/host/bootstrap.py backend/src/sandbox/provider/daytona/client/async_client.py backend/src/sandbox/runtime/daemon/handler/tools/edit.py backend/src/sandbox/runtime/daemon/handler/tools/write.py backend/tests/unit_test/test_sandbox/test_command_exec/test_workspace_mount.py backend/tests/unit_test/test_sandbox/test_command_exec/test_env_policy.py backend/tests/unit_test/test_sandbox/test_async/test_bridge.py` -> all checks passed.

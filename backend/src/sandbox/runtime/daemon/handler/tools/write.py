@@ -6,9 +6,9 @@ from uuid import uuid4
 
 from sandbox.layer_stack.workspace.binding import require_workspace_binding
 from sandbox.occ.changeset.builders import build_api_write_change
-from sandbox.occ.content.hashing import content_hash_bytes
+from sandbox.occ.content.hashing import ContentHasher
 from sandbox.occ.router import prepare_single_path_changeset
-from sandbox.async_bridge import run_sync_in_executor
+from sandbox.runtime.async_bridge import run_sync_in_executor
 from sandbox.runtime.daemon.handler.request_context import (
     classify_path,
     layer_stack_root as require_layer_stack_root,
@@ -18,6 +18,8 @@ from sandbox.runtime.daemon.handler.request_context import (
     write_text_no_follow,
 )
 from sandbox.timing import monotonic_now
+
+_CONTENT_HASHER = ContentHasher()
 
 
 async def write_file(args: dict[str, object]) -> dict[str, object]:
@@ -77,7 +79,7 @@ async def _write_in_workspace(
             )
             snapshot_read_s += monotonic_now() - read_start
             known_base_hash = (
-                content_hash_bytes(bytes_)
+                _CONTENT_HASHER.hash_bytes(bytes_)
                 if exists_in_n and bytes_ is not None
                 else None
             )
@@ -117,7 +119,7 @@ async def _write_in_workspace(
             read_start = monotonic_now()
             bytes_, exists = services.layer_stack.read_bytes(path, lease.manifest)
             snapshot_read_s += monotonic_now() - read_start
-            return content_hash_bytes(bytes_) if exists and bytes_ is not None else None
+            return _CONTENT_HASHER.hash_bytes(bytes_) if exists and bytes_ is not None else None
 
         prepared = await run_sync_in_executor(
             prepare_single_path_changeset,
