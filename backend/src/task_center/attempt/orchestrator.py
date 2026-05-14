@@ -16,10 +16,7 @@ from task_center.attempt.state import (
     AttemptStage,
     AttemptStatus,
 )
-from task_center.attempt.runtime import (
-    AgentLaunch,
-    AttemptDeps,
-)
+from task_center.attempt.runtime import AttemptDeps
 from task_center.attempt.launch import LaunchBuilder
 from task_center._core.types import generator_task_id, planner_task_id
 from task_center.task_state import (
@@ -112,36 +109,17 @@ class AttemptOrchestrator:
 
     def apply_plan_submission(self, submission: PlannerSubmission) -> None:
         self._assert_submission_attempt(submission.attempt_id)
-        attempt = self._assert_stage(AttemptStage.PLAN)
-        if attempt.planner_task_id != submission.planner_task_id:
-            raise TaskCenterInvariantViolation(
-                f"Planner submission task {submission.planner_task_id!r} does "
-                f"not match attempt planner {attempt.planner_task_id!r}"
-            )
         if submission.kind == "full" and submission.continuation_goal is not None:
             raise TaskCenterInvariantViolation("Full plans cannot set continuation_goal")
         if submission.kind == "partial" and submission.continuation_goal is None:
             raise TaskCenterInvariantViolation("Partial plans require continuation_goal")
 
+        attempt = self._validate_planner_submission(submission.planner_task_id)
         runtime = self._runtime
-        planner_task = runtime.task_store.get_task(submission.planner_task_id)
-        if planner_task is None:
-            raise TaskCenterInvariantViolation(
-                f"Planner task {submission.planner_task_id!r} not found"
-            )
-        assert_task_belongs_to_attempt(planner_task, attempt)
-        if planner_task["role"] != TaskCenterTaskRole.PLANNER.value:
-            raise TaskCenterInvariantViolation(
-                f"Task {submission.planner_task_id!r} is not a planner task"
-            )
-
         runtime.task_store.set_task_status(
             submission.planner_task_id,
             status=TaskCenterTaskStatus.DONE.value,
-            summary={
-                "kind": submission.kind,
-                "summary": submission.summary,
-            },
+            summary={"kind": submission.kind, "summary": submission.summary},
         )
         self._persist_plan_contract(submission)
         generator_ids = self._persist_generator_tasks(submission.tasks)
@@ -153,20 +131,8 @@ class AttemptOrchestrator:
         self, submission: PlannerFailureSubmission
     ) -> None:
         self._assert_submission_attempt(submission.attempt_id)
-        attempt = self._assert_stage(AttemptStage.PLAN)
-        if attempt.planner_task_id != submission.planner_task_id:
-            raise TaskCenterInvariantViolation(
-                f"Planner failure task {submission.planner_task_id!r} does not "
-                f"match attempt planner {attempt.planner_task_id!r}"
-            )
-        runtime = self._runtime
-        planner_task = runtime.task_store.get_task(submission.planner_task_id)
-        if planner_task is None:
-            raise TaskCenterInvariantViolation(
-                f"Planner task {submission.planner_task_id!r} not found"
-            )
-        assert_task_belongs_to_attempt(planner_task, attempt)
-        runtime.task_store.set_task_status(
+        self._validate_planner_submission(submission.planner_task_id)
+        self._runtime.task_store.set_task_status(
             submission.planner_task_id,
             status=TaskCenterTaskStatus.FAILED.value,
             summary={
@@ -174,10 +140,7 @@ class AttemptOrchestrator:
                 "summary": submission.summary,
             },
         )
-        self._close_attempt(
-            AttemptStatus.FAILED,
-            AttemptFailReason.PLANNER_FAILED,
-        )
+        self._close_attempt(AttemptStatus.FAILED, AttemptFailReason.PLANNER_FAILED)
 
     def apply_generator_submission(
         self, submission: GeneratorSubmission
@@ -246,6 +209,25 @@ class AttemptOrchestrator:
             self._dispatcher.block_failed_descendants(report.requested_by_task_id)
         self._dispatcher.dispatch_ready_work()
 
+    def _validate_planner_submission(self, planner_task_id: str) -> Attempt:
+        attempt = self._assert_stage(AttemptStage.PLAN)
+        if attempt.planner_task_id != planner_task_id:
+            raise TaskCenterInvariantViolation(
+                f"Planner submission task {planner_task_id!r} does not "
+                f"match attempt planner {attempt.planner_task_id!r}"
+            )
+        planner_task = self._runtime.task_store.get_task(planner_task_id)
+        if planner_task is None:
+            raise TaskCenterInvariantViolation(
+                f"Planner task {planner_task_id!r} not found"
+            )
+        assert_task_belongs_to_attempt(planner_task, attempt)
+        if planner_task["role"] != TaskCenterTaskRole.PLANNER.value:
+            raise TaskCenterInvariantViolation(
+                f"Task {planner_task_id!r} is not a planner task"
+            )
+        return attempt
+
     def _persist_plan_contract(self, submission: PlannerSubmission) -> None:
         self._runtime.attempt_store.set_plan_contract(
             submission.attempt_id,
@@ -284,64 +266,55 @@ class AttemptOrchestrator:
         return tuple(task_ids)
 
     def _mark_generator(self, submission: GeneratorSubmission) -> None:
-        runtime = self._runtime
         attempt = self._assert_stage(AttemptStage.GENERATE)
-        task = runtime.task_store.get_task(submission.task_id)
+        task = self._runtime.task_store.get_task(submission.task_id)
         if task is None:
             raise TaskCenterInvariantViolation(
                 f"Generator task {submission.task_id!r} not found"
             )
         assert_generator_task_for_submission(task, attempt)
-        if task["status"] != TaskCenterTaskStatus.RUNNING.value:
-            raise TaskCenterInvariantViolation(
-                f"Generator task {submission.task_id!r} is not running"
-            )
-        status = (
-            TaskCenterTaskStatus.DONE
-            if submission.outcome == "success"
-            else TaskCenterTaskStatus.FAILED
-        )
-        runtime.task_store.set_task_status(
-            submission.task_id,
-            status=status.value,
-            summary={
-                "outcome": submission.outcome,
-                "summary": submission.summary,
-                "payload": submission.payload,
-            },
+        self._write_submission_status(
+            task=task, task_id=submission.task_id, role="Generator",
+            outcome=submission.outcome, summary=submission.summary,
+            payload=submission.payload,
         )
 
     def _mark_evaluator(self, submission: EvaluatorSubmission) -> None:
-        runtime = self._runtime
         attempt = self._assert_stage(AttemptStage.EVALUATE)
         if attempt.evaluator_task_id != submission.task_id:
             raise TaskCenterInvariantViolation(
                 f"Evaluator submission task {submission.task_id!r} does not "
                 f"match attempt evaluator {attempt.evaluator_task_id!r}"
             )
-        task = runtime.task_store.get_task(submission.task_id)
+        task = self._runtime.task_store.get_task(submission.task_id)
         if task is None:
             raise TaskCenterInvariantViolation(
                 f"Evaluator task {submission.task_id!r} not found"
             )
         assert_evaluator_task_for_submission(task, attempt)
+        self._write_submission_status(
+            task=task, task_id=submission.task_id, role="Evaluator",
+            outcome=submission.outcome, summary=submission.summary,
+            payload=submission.payload,
+        )
+
+    def _write_submission_status(
+        self, *, task: dict, task_id: str, role: str,
+        outcome: str, summary: str, payload: object,
+    ) -> None:
         if task["status"] != TaskCenterTaskStatus.RUNNING.value:
             raise TaskCenterInvariantViolation(
-                f"Evaluator task {submission.task_id!r} is not running"
+                f"{role} task {task_id!r} is not running"
             )
         status = (
             TaskCenterTaskStatus.DONE
-            if submission.outcome == "success"
+            if outcome == "success"
             else TaskCenterTaskStatus.FAILED
         )
-        runtime.task_store.set_task_status(
-            submission.task_id,
+        self._runtime.task_store.set_task_status(
+            task_id,
             status=status.value,
-            summary={
-                "outcome": submission.outcome,
-                "summary": submission.summary,
-                "payload": submission.payload,
-            },
+            summary={"outcome": outcome, "summary": summary, "payload": payload},
         )
 
     def _close_attempt(
