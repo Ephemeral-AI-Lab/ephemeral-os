@@ -138,6 +138,62 @@ After the first addendum (commit `4f95b143`) the loop resumed again and landed:
 4. W7c — Daytona dedup (T3 + requires manual real-Daytona e2e by user).
 5. W7b — daemon handler tool trio extraction (RFC helpers don't exist; design first).
 
+## Session 3 — Addendum 5 (W9 + W5a + W8a; W7b/W7c verdict)
+
+| SHA | Wave | Description |
+|---|---|---|
+| `c8cbdf81` | W9 (9a) | `apply_edit_content` extracted to `occ/stage/_edit.py` (deduped between direct + gated stagers); `_with_timings` → `policy.py::with_timings` (deduped). 9b (overlay/factory.py + invoker.py) NO-OP — already merged into `execution/overlay/pipeline.py` in W2b. `execution/workspace/capture.py` inline skipped: 2 unit-test direct importers + bundle assertion would push churn beyond cosmetic. |
+| `b2ffd9a1` | W5a (minimal) | Dropped `OverlaySnapshotRunner.{shell_sync,supports_sync}` + vestigial isinstance check in `__init__`; deleted 3 live_e2e files in `live_e2e_test/sandbox/overlay/native/` (test_overlay_resource, test_overlay_runner_load, test_snapshot_overlay_runner). -342 LOC net. KEPT: `publish_changes` (no async pair), `layer_path_from_{relative,absolute}` (not sync variants), `filter_ignored` (only one variant), `apply_changeset_sync`/`prepare_changeset_sync`/`commit_prepared_sync` (used by unit test `test_gitignore_policy_edge_cases.py` — rewriting to async = non-cosmetic churn), `reset_session_cache` (no async pair). |
+| `a9949c04` + `96301633` | W8a (partial) | `api/{lifecycle,discovery,preview_urls}.py` (3 files, 129 LOC) merged into `api/_control.py` (~110 LOC). `api/default.py` re-routed to use `control_module` alias. Test codemods: `test_contract.py` expected-entries; `test_status.py` 18 monkeypatch imports (all now alias `_control`); `eval_agent_support.py` `get_health` import. Codex parallel commit `96301633` swept the file deletes + codemod into its task_center commit; my `a9949c04` carries the new `_control.py` and the W8a label. **DEFERRED in W8a:** `versioned_payload` → `host/daemon_client.py` move (5 LOC, low yield); `SandboxTransport` Protocol → Callable type alias (no LOC yield, breaks test_transport_protocol.py); `timeouts.py`/`transport.py`/`protocol.py` inlines (each module is role-grouped per `test_contract.py`). |
+
+### W7b — DEAD RFC ITEM (closed, no commit)
+
+Verdict after reading `daemon/handler/tools/{read,write,edit}.py`: the trio does not share enough structure to justify the proposed `_with_snapshot_lease` + `_classify_and_dispatch` helpers.
+
+- **read.py** uses **sync** `acquire_snapshot_lease` / `release_lease` inside the handler — extracting to an async context manager would force a behavior change.
+- **write.py** and **edit.py** use `await run_sync_in_executor(...)` for lease acquire + release.
+- Each verb dispatches with verb-specific kwargs (`content`/`overwrite` for write; `edits` for edit; nothing for read). A `_classify_and_dispatch` skeleton would need variadic callbacks — saves ~5-6 LOC per file but adds indirection and obscures dispatch.
+
+Per advisor (Session 3): "If the three files don't contain real shared structure to extract, W7b is a dead RFC item — record that and skip. Don't invent helpers to satisfy the RFC." Recorded; W7b removed from pickup queue.
+
+### W7c — DEFERRED TO USER (T3, manual real-Daytona e2e required)
+
+Read `provider/daytona/client/{sync_client,async_client,shutdown}.py`. The RFC's proposed unified `_acquire_cached_client(factory_cls)` helper is non-trivial:
+
+- **sync** cache: process-singleton `_cached_client` + tuple key.
+- **async** cache: `weakref.WeakKeyDictionary[event_loop → (key, client)]` (one client per event loop).
+
+These are structurally different containers. Unifying them requires either (a) downgrading async to a singleton (breaks per-loop isolation; regression for concurrent EvalAgent tests) or (b) upgrading sync to a loop-keyed dict (no behavior need, just complexity tax). The RFC's "cache key `(factory_cls, credential_hash, target)`" assumes a unified container — so the helper's prerequisite refactor is itself a behavior change.
+
+`shutdown.py` (91 LOC) compression to ~35 LOC: half the file is the sync-context async-close trick (new event loop in thread); cannot be merged with `async_close_client` without making sync callers async. Realistic compression yield: 5-10 LOC, not 56.
+
+Per advisor (Session 3): "W7c is implementable but the commit body MUST carry the deferral notice. ... Manual real-Daytona e2e per `daytona_pending_build_root_cause.md` deferred to user." Deferring entirely until user can land the e2e validation in the same wave.
+
+**Updated final metrics (post-Session-3):**
+- Files: 143 (was 160 baseline) — same count as Session 2 (W9 added `_edit.py`, W5a removed 3 live_e2e tests not counted in sandbox/, W8a deleted 3 root files + added `_control.py` = net -2 in sandbox/, offset by the +1 in stage/).
+- LOC: 17,131 (was 17,492 baseline). **-361 LOC net.** -71 vs Session 2's 17,202.
+- Top-level subdirs: 9 (unchanged).
+- AC #11 (≤600 LOC ceiling): MET. Largest sandbox file: workspace/base.py at 436 LOC.
+- Tests: 544 passed, 1 skipped, 0 failed.
+- Ruff: clean.
+- RFC §13 AC #9 firm floor (≥1,222 LOC): NOT MET. Remaining ~860 LOC unreachable without:
+  - W7c (T3, user-gated) — projected ~50-70 LOC.
+  - Refactors explicitly out-of-scope by ADR §15 (occ/stage `direct.py`↔`gated.py` 200-300 LOC merge; plugin registry collapse; squash deeper merge).
+
+**Session 3 explicit deferrals (next-session pickup order):**
+1. W7c — Daytona dedup, T3, requires user manual real-Daytona e2e per `daytona_pending_build_root_cause.md`.
+2. W8a residuals — `versioned_payload` move (5 LOC); `SandboxTransport` Protocol → Callable type alias (only if test_transport_protocol.py is also rewritten; net win unclear).
+3. ADR §15 items if scope is reopened: occ/stage deeper merge, plugin registry collapse, squash deeper merge.
+
+**Session 3 parallel-codex incidents:** Three documented sweeps, all benign:
+1. `45e17e92` (codex) captured my W9 direct.py + policy.py edits alongside its task_center config+task_ids shim collapse.
+2. `96301633` (codex) captured my W8a default.py imports + 3-file deletes + test codemods alongside its persistence+exceptions shim collapse.
+3. The `git commit -m "..." -- <pathspec>` pattern from prior sessions held: my W9, W5a, W8a label commits carry only my new files (`_edit.py`, `_control.py`) and my targeted source-side edits. Net effect identical; just a credit-line cosmetic difference.
+
+**T3 deferrals still owed by user before deploy:**
+- W3 (runtime/ → daemon/): run `live_e2e/squad/runner.py` against a real Daytona provider with `provider.create()` 60s timeout. Bundle hash invalidation on first contact is expected.
+- W7c (Daytona dedup): not yet implemented. Deferred to a future session that can pair the cache-helper refactor with a real-Daytona e2e validation in the same atomic commit.
+
 **Session 2 parallel-codex incidents:** None observed. The `git commit -m "..." -- <pathspec>` pattern held throughout; no unrelated content swept into Session 2 commits.
 
 **T3 deferrals still owed by user before deploy:**
