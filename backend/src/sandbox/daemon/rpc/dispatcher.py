@@ -178,7 +178,7 @@ def _load_peer_bootstraps() -> None:
     from sandbox.daemon.handler.tools import edit, read, write
     from sandbox.daemon.service import shell_runner
 
-    for op, handler in {
+    OP_TABLE.update({
         "api.ensure_workspace_base": workspace.ensure_workspace_base,
         "api.build_workspace_base": workspace.build_workspace_base,
         "api.prepare_workspace_snapshot": workspace.prepare_workspace_snapshot,
@@ -198,8 +198,7 @@ def _load_peer_bootstraps() -> None:
         "api.write_file": write.write_file,
         "api.v1.write_file": write.write_file,
         "overlay.run": overlay_run.handle,
-    }.items():
-        register_op(op, handler)
+    })
 
 
 _load_peer_bootstraps()
