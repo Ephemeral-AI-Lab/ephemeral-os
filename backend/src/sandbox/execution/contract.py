@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
-    from sandbox.execution.overlay.change import OverlayPathChange
+    from sandbox.execution.overlay_change import OverlayPathChange
     from sandbox.occ.changeset import Change, ChangesetResult, CommitOptions
 
 

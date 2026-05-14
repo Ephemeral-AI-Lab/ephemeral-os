@@ -8,7 +8,9 @@ from pathlib import Path
 import pytest
 
 from sandbox.layer_stack import WriteLayerChange, LayerStackManager
-from sandbox.execution.overlay import OverlayCapture, OverlayShellRequest, OverlaySnapshotRunner
+from sandbox.execution.overlay_request import OverlayShellRequest
+from sandbox.execution.overlay_result import OverlayCapture
+from sandbox.execution.overlay_runner import OverlaySnapshotRunner
 from sandbox.daemon.rpc.dispatcher import dispatch_envelope_async
 
 

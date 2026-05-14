@@ -16,9 +16,9 @@ from typing import Protocol, runtime_checkable
 from uuid import uuid4
 
 from sandbox.daemon.async_bridge import run_sync_in_executor
-from sandbox.execution.overlay.request import OverlayShellRequest
-from sandbox.execution.overlay.result import OverlayCapture
-from sandbox.execution.overlay.worker import execute_request
+from sandbox.execution.overlay_request import OverlayShellRequest
+from sandbox.execution.overlay_result import OverlayCapture
+from sandbox.execution.overlay_worker import execute_request
 from sandbox.layer_stack.manifest import Manifest
 
 

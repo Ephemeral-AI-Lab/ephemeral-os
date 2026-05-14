@@ -6,11 +6,9 @@ from collections.abc import Mapping
 from typing import Any
 
 from sandbox.layer_stack.manager import LayerStackManager
-from sandbox.execution.overlay import (
-    OverlayCapture,
-    OverlayShellRequest,
-    OverlaySnapshotRunner,
-)
+from sandbox.execution.overlay_request import OverlayShellRequest
+from sandbox.execution.overlay_result import OverlayCapture
+from sandbox.execution.overlay_runner import OverlaySnapshotRunner
 
 
 async def handle(args: dict[str, Any]) -> dict[str, Any]:

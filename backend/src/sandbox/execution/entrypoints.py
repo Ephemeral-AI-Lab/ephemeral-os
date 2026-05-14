@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from sandbox.execution.strategies.private_namespace import (
+from sandbox.execution.strategy_private_namespace import (
     NAMESPACE_FALLBACK_STRATEGY,
     NAMESPACE_INFRA_EXIT_CODE,
 )
@@ -23,7 +23,7 @@ from sandbox.execution.policy import (
     DEFAULT_COMMAND_EXEC_POLICY,
     CommandExecPolicy,
 )
-from sandbox.execution.workspace.environment import run_command_to_refs
+from sandbox.execution.workspace_environment import run_command_to_refs
 from sandbox.timing import monotonic_now
 
 

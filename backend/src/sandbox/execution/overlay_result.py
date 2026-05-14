@@ -10,7 +10,7 @@ from types import MappingProxyType
 from typing import Any
 
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.execution.overlay.change import OverlayPathChange
+from sandbox.execution.overlay_change import OverlayPathChange
 
 
 @dataclass(frozen=True)

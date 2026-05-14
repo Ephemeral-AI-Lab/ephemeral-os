@@ -22,12 +22,12 @@ from sandbox.execution.policy import (
 
 _LAZY_EXPORTS = {
     "capture_workspace_upperdir": (
-        "sandbox.execution.workspace.capture",
+        "sandbox.execution.workspace_capture",
         "capture_workspace_upperdir",
     ),
     "execute_command": ("sandbox.execution.orchestrator", "execute_command"),
     "run_workspace_replaced_command": (
-        "sandbox.execution.workspace.mount",
+        "sandbox.execution.workspace_mount",
         "run_workspace_replaced_command",
     ),
 }

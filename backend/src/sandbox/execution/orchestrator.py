@@ -19,12 +19,12 @@ from sandbox.execution.contract import (
     WorkspaceLeaseClient,
     WorkspaceReplacementMountSpec,
 )
-from sandbox.execution.workspace.capture import capture_workspace_upperdir
-from sandbox.execution.workspace.mount import run_workspace_replaced_command
+from sandbox.execution.workspace_capture import capture_workspace_upperdir
+from sandbox.execution.workspace_mount import run_workspace_replaced_command
 from sandbox.occ.changeset import ChangesetResult, CommitOptions
 from sandbox.occ.overlay import overlay_path_changes_to_occ_changes
-from sandbox.execution.overlay.change import OverlayPathChange
-from sandbox.execution.overlay.result import read_output_ref
+from sandbox.execution.overlay_change import OverlayPathChange
+from sandbox.execution.overlay_result import read_output_ref
 from sandbox.daemon.async_bridge import run_sync_in_executor
 from sandbox.timing import monotonic_now
 

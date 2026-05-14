@@ -7,7 +7,7 @@ import time
 from collections.abc import Callable
 from dataclasses import fields
 
-from sandbox.execution.strategies import detect_private_mount_namespace
+from sandbox.execution.strategy_private_namespace import detect_private_mount_namespace
 from sandbox.layer_stack.manifest import (
     manifest_path,
     read_manifest,

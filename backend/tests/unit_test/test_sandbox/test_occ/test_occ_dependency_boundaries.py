@@ -34,15 +34,20 @@ def test_phase03_occ_preparation_modules_do_not_import_overlay_or_legacy_apply()
         occ_root / "commit_queue.py",
     ]
 
-    forbidden = {
-        "sandbox.execution.overlay",
+    forbidden_exact = {
         "sandbox.occ.stage.direct.direct_merge_coordinator",
         "sandbox.occ.stage.gated.gated_coordinator",
     }
+    forbidden_prefix = ("sandbox.execution.overlay_",)
     hits: list[tuple[str, str]] = []
     for path in phase03_files:
         for name in _imports(path):
-            if name in forbidden or any(name.startswith(f"{item}.") for item in forbidden):
+            if name in forbidden_exact or any(
+                name.startswith(prefix) for prefix in forbidden_prefix
+            ):
+                if name == "sandbox.execution.overlay_change":
+                    # The overlay→OCC bridge is the only allowed overlay import for OCC.
+                    continue
                 hits.append((path.name, name))
 
     assert hits == []
@@ -52,7 +57,7 @@ def test_overlay_capture_module_is_the_occ_overlay_bridge() -> None:
     occ_root = Path(sandbox.occ.__file__).resolve().parent
     imports = _imports(occ_root / "overlay.py")
 
-    assert "sandbox.execution.overlay.change" in imports
+    assert "sandbox.execution.overlay_change" in imports
     assert "sandbox.occ.changeset.types" in imports
 
 

@@ -16,9 +16,9 @@ from sandbox.execution.policy import (
     DEFAULT_COMMAND_EXEC_POLICY,
     CommandExecPolicy,
 )
-from sandbox.execution.strategies.base import ExecutionStrategy
-from sandbox.execution.workspace.environment import run_command_to_refs
-from sandbox.execution.workspace.path_rewrite import (
+from sandbox.execution.strategy_base import ExecutionStrategy
+from sandbox.execution.workspace_environment import run_command_to_refs
+from sandbox.execution.workspace_path_rewrite import (
     rewrite_declared_workspace_env,
     rewrite_declared_workspace_refs,
 )

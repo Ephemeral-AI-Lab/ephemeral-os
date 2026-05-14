@@ -14,10 +14,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.execution.overlay.capture import capture_changes
-from sandbox.execution.overlay.mounts import cleanup_runtime_run_dir, mount_snapshot
-from sandbox.execution.overlay.request import OverlayShellRequest
-from sandbox.execution.overlay.result import OverlayCapture, write_overlay_capture
+from sandbox.execution.overlay_capture import capture_changes
+from sandbox.execution.overlay_mounts import cleanup_runtime_run_dir, mount_snapshot
+from sandbox.execution.overlay_request import OverlayShellRequest
+from sandbox.execution.overlay_result import OverlayCapture, write_overlay_capture
 from sandbox.timing import monotonic_now
 
 

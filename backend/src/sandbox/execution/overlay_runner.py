@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from sandbox.execution.overlay.pipeline import OverlayInvoker, OverlayRuntimeInvoker
-from sandbox.execution.overlay.request import OverlayShellRequest
-from sandbox.execution.overlay.result import OverlayCapture
+from sandbox.execution.overlay_pipeline import OverlayInvoker, OverlayRuntimeInvoker
+from sandbox.execution.overlay_request import OverlayShellRequest
+from sandbox.execution.overlay_result import OverlayCapture
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.timing import monotonic_now
 

@@ -8,9 +8,9 @@ from pathlib import Path
 
 import pytest
 
-import sandbox.execution.overlay.capture as upperdir_mod
+import sandbox.execution.overlay_capture as upperdir_mod
 from sandbox.layer_stack.layer_index import OPAQUE_MARKER, WHITEOUT_PREFIX
-from sandbox.execution.overlay import capture_changes
+from sandbox.execution.overlay_capture import capture_changes
 
 
 def test_upperdir_capture_emits_raw_runtime_changes(tmp_path: Path) -> None:
