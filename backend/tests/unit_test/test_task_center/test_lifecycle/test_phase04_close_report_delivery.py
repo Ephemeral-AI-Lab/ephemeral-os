@@ -14,7 +14,7 @@ from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
 from task_center.attempt.runtime import AgentLaunch, AttemptDeps
-from task_center.episode.registry import EpisodeManagerRegistry
+from task_center.episode import EpisodeManagerRegistry
 from task_center.episode.state import EpisodeCreationReason
 from task_center.task_state import TaskCenterTaskStatus, PlannedGeneratorTask, PlannerSubmission
 from task_center._core.types import generator_task_id

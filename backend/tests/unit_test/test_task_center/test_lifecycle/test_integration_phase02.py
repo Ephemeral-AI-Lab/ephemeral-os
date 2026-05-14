@@ -16,7 +16,7 @@ from task_center.attempt.runtime import (
 )
 from task_center.task_state import EvaluatorSubmission, GeneratorSubmission, PlannedGeneratorTask, PlannerSubmission
 from task_center._core.types import evaluator_task_id, generator_task_id, planner_task_id
-from task_center.episode.registry import EpisodeManagerRegistry
+from task_center.episode import EpisodeManagerRegistry
 from task_center.episode.state import EpisodeStatus
 
 

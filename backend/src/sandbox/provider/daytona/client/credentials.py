@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
+from hashlib import sha256
+from typing import Any, Literal, TypeAlias
 
 from dotenv import dotenv_values
+
+DaytonaFactoryName = Literal["Daytona", "AsyncDaytona"]
+DaytonaClientCacheKey: TypeAlias = tuple[DaytonaFactoryName, str, str]
 
 
 def _find_project_root(start: Path) -> Path:
@@ -42,8 +46,25 @@ def load_required_credentials(
     return api_key, api_url, target
 
 
+def client_cache_key(
+    factory_name: DaytonaFactoryName,
+    *,
+    api_key: str,
+    api_url: str,
+    target: str,
+) -> DaytonaClientCacheKey:
+    """Return the cache key for one Daytona SDK factory.
+
+    The key includes factory identity so sync and async clients cannot collide,
+    and hashes credential material so the cache does not retain the API key.
+    """
+    assert factory_name in ("Daytona", "AsyncDaytona")
+    credential_hash = sha256(f"{api_key}\0{api_url}".encode()).hexdigest()
+    return factory_name, credential_hash, target
+
+
 def build_sdk_client(
-    factory_name: str,
+    factory_name: DaytonaFactoryName,
     *,
     api_key: str,
     api_url: str,
@@ -53,10 +74,10 @@ def build_sdk_client(
 ) -> Any:
     """Import the Daytona SDK factory and build a configured client.
 
-    ``factory_name`` must be ``"Daytona"`` or ``"AsyncDaytona"``. Cache
-    storage is owned by the caller — this helper only builds a fresh
+    Cache storage is owned by the caller; this helper only builds a fresh
     instance.
     """
+    assert factory_name in ("Daytona", "AsyncDaytona")
     try:
         import daytona_sdk
     except ImportError as exc:
@@ -87,4 +108,10 @@ def _load_dotenv_values() -> dict[str, str]:
     }
 
 
-__all__ = ["build_sdk_client", "load_credentials", "load_required_credentials"]
+__all__ = [
+    "DaytonaClientCacheKey",
+    "build_sdk_client",
+    "client_cache_key",
+    "load_credentials",
+    "load_required_credentials",
+]

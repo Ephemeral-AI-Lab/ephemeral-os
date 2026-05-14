@@ -9,7 +9,9 @@ from inspect import Parameter, signature
 from typing import Any
 
 from sandbox.provider.daytona.client.credentials import (
+    DaytonaClientCacheKey,
     build_sdk_client,
+    client_cache_key,
     load_required_credentials,
 )
 from sandbox.provider.daytona.errors import DaytonaUnavailableError
@@ -53,7 +55,7 @@ _HEALTH_TIMEOUT_SECONDS = 30.0
 
 _client_lock = threading.Lock()
 _cached_client: Any | None = None
-_cached_client_key: tuple[str, str, str] | None = None
+_cached_client_key: DaytonaClientCacheKey | None = None
 
 
 def acquire_client() -> Any:
@@ -66,7 +68,12 @@ def acquire_client() -> Any:
             "Daytona is not configured. Set DAYTONA_API_KEY and DAYTONA_API_URL."
         ),
     )
-    current_key = (api_key, api_url, target)
+    current_key = client_cache_key(
+        "Daytona",
+        api_key=api_key,
+        api_url=api_url,
+        target=target,
+    )
 
     stale_client: Any = None
     with _client_lock:

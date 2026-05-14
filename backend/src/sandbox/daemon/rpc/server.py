@@ -1,6 +1,6 @@
 """AF_UNIX server for the resident in-sandbox daemon.
 
-Replaces the per-call ``python -m sandbox.runtime.daemon.rpc.dispatcher <json>`` boot path
+Replaces the per-call ``python -m sandbox.daemon.rpc.dispatcher <json>`` boot path
 with a single long-lived process that listens on AF_UNIX. Each host call
 still goes through ``provider.exec(...)`` (Daytona constraint), but the
 per-call command is now a thin client that connects to the socket, sends
@@ -11,7 +11,7 @@ Wire format (newline-delimited JSON):
   request:  {"op": "...", "args": {...}}\\n
   response: {"success": true, ...}\\n
 
-The daemon imports :mod:`sandbox.runtime.daemon.rpc.dispatcher` so the ``OP_TABLE`` is
+The daemon imports :mod:`sandbox.daemon.rpc.dispatcher` so the ``OP_TABLE`` is
 populated by the standard peer bootstrap, then dispatches via
 :func:`dispatcher.dispatch_envelope_async`. State that is expensive to
 construct — ``LayerStackManager``, ``Service``,

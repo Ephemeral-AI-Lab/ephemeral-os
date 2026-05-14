@@ -1,21 +1,104 @@
-"""Worker entrypoint for one command against a leased snapshot overlay."""
+"""Worker entrypoint for one command against a leased snapshot overlay.
+
+Also hosts the in-worker subprocess wrapper (`run_user_command`,
+`OverlayCommandResult`) because it has exactly one consumer
+(`execute_request` below). Keeping it here avoids the pipeline→worker
+import cycle that an earlier consolidation introduced.
+"""
 
 from __future__ import annotations
 
-import argparse
-import json
-import sys
+import os
+import subprocess
 from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.execution.overlay.capture import capture_changes
-from sandbox.execution.overlay.pipeline import run_user_command
 from sandbox.execution.overlay.mounts import cleanup_runtime_run_dir, mount_snapshot
 from sandbox.execution.overlay.request import OverlayShellRequest
 from sandbox.execution.overlay.result import OverlayCapture, write_overlay_capture
 from sandbox.timing import monotonic_now
+
+
+# Host env vars that the user command needs to function (PATH for argv0
+# resolution, HOME/TERM for shells, locale vars for tooling that branches on
+# encoding). Host secrets are intentionally absent from this allow-list.
+_HOST_ENV_ALLOWLIST: tuple[str, ...] = (
+    "PATH",
+    "HOME",
+    "USER",
+    "LANG",
+    "LC_ALL",
+    "TERM",
+    "TZ",
+)
+
+
+@dataclass(frozen=True)
+class OverlayCommandResult:
+    exit_code: int
+    stdout_ref: str
+    stderr_ref: str
+
+
+def run_user_command(
+    *,
+    command: tuple[str, ...],
+    workspace_root: str | Path,
+    cwd: str,
+    env: dict[str, str],
+    timeout_seconds: float | None,
+    stdout_ref: str | Path,
+    stderr_ref: str | Path,
+) -> OverlayCommandResult:
+    resolved_cwd = _validate_cwd(Path(workspace_root), cwd)
+    resolved_cwd.mkdir(parents=True, exist_ok=True)
+    stdout_path = Path(stdout_ref)
+    stderr_path = Path(stderr_ref)
+    stdout_path.parent.mkdir(parents=True, exist_ok=True)
+    stderr_path.parent.mkdir(parents=True, exist_ok=True)
+
+    child_env = {
+        **{k: os.environ[k] for k in _HOST_ENV_ALLOWLIST if k in os.environ},
+        **env,
+        "GIT_OPTIONAL_LOCKS": "0",
+    }
+
+    with stdout_path.open("wb") as stdout_file, stderr_path.open("wb") as stderr_file:
+        try:
+            completed = subprocess.run(
+                list(command),
+                cwd=resolved_cwd,
+                env=child_env,
+                stdout=stdout_file,
+                stderr=stderr_file,
+                timeout=timeout_seconds,
+                check=False,
+            )
+            exit_code = int(completed.returncode)
+        except subprocess.TimeoutExpired:
+            # 124 follows the GNU `timeout(1)` convention so callers can
+            # distinguish a user-command timeout from infrastructure failure.
+            exit_code = 124
+    return OverlayCommandResult(
+        exit_code=exit_code,
+        stdout_ref=str(stdout_path),
+        stderr_ref=str(stderr_path),
+    )
+
+
+def _validate_cwd(workspace_root: Path, cwd: str) -> Path:
+    root = workspace_root.resolve()
+    candidate = Path(cwd)
+    if not candidate.is_absolute():
+        candidate = root / candidate
+    resolved = candidate.resolve()
+    if not resolved.is_relative_to(root):
+        raise ValueError(f"cwd escapes mounted workspace: {cwd!r}")
+    return resolved
 
 
 def execute_request(
@@ -39,8 +122,6 @@ def execute_request(
             timings=timings,
         )
         timings["overlay.mount_snapshot_s"] = monotonic_now() - mount_start
-        stdout_ref = run_dir_path / "stdout.bin"
-        stderr_ref = run_dir_path / "stderr.bin"
         command_start = monotonic_now()
         command = run_user_command(
             command=request.command,
@@ -48,8 +129,8 @@ def execute_request(
             cwd=request.cwd,
             env=dict(request.env),
             timeout_seconds=request.timeout_seconds,
-            stdout_ref=stdout_ref,
-            stderr_ref=stderr_ref,
+            stdout_ref=run_dir_path / "stdout.bin",
+            stderr_ref=run_dir_path / "stderr.bin",
         )
         timings["overlay.run_command_s"] = monotonic_now() - command_start
         capture_start = monotonic_now()
@@ -76,33 +157,8 @@ def execute_request(
         cleanup_runtime_run_dir(run_dir_path)
 
 
-def _parse_args(argv: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--request-json", required=True)
-    parser.add_argument("--manifest-json", required=True)
-    parser.add_argument("--storage-root", required=True)
-    parser.add_argument("--run-dir", required=True)
-    return parser.parse_args(argv)
-
-
-def main(argv: list[str] | None = None) -> int:
-    args = _parse_args(argv if argv is not None else sys.argv[1:])
-    capture = execute_request(
-        request_payload=json.loads(args.request_json),
-        manifest_payload=json.loads(args.manifest_json),
-        storage_root=args.storage_root,
-        run_dir=args.run_dir,
-    )
-    sys.stdout.write(json.dumps(capture.to_dict(), separators=(",", ":")))
-    sys.stdout.write("\n")
-    return 0 if capture.exit_code == 0 else capture.exit_code
-
-
 __all__ = [
+    "OverlayCommandResult",
     "execute_request",
-    "main",
+    "run_user_command",
 ]
-
-
-if __name__ == "__main__":  # pragma: no cover
-    raise SystemExit(main())

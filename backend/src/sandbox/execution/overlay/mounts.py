@@ -42,28 +42,23 @@ def mount_snapshot(
     upperdir = run_root / "upper"
     workdir = run_root / "work"
     merged = run_root / "merged"
+    if timings is None:
+        timings = {}
 
     prepare_start = monotonic_now()
     for directory in (upperdir, workdir, merged):
         if directory.exists():
             shutil.rmtree(directory)
         directory.mkdir(parents=True)
-    if timings is not None:
-        timings["overlay.mount.prepare_dirs_s"] = monotonic_now() - prepare_start
+    timings["overlay.mount.prepare_dirs_s"] = monotonic_now() - prepare_start
 
     materialize_start = monotonic_now()
     MergedView(storage_root).materialize(lowerdir, manifest)
-    if timings is not None:
-        timings["overlay.mount.materialize_lower_s"] = (
-            monotonic_now() - materialize_start
-        )
+    timings["overlay.mount.materialize_lower_s"] = monotonic_now() - materialize_start
 
     copy_start = monotonic_now()
     _copy_tree(lowerdir, merged)
-    if timings is not None:
-        timings["overlay.mount.copy_lower_to_merged_s"] = (
-            monotonic_now() - copy_start
-        )
+    timings["overlay.mount.copy_lower_to_merged_s"] = monotonic_now() - copy_start
     return OverlayMountedSnapshot(
         manifest=manifest,
         workspace_root=str(merged),

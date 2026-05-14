@@ -1,4 +1,4 @@
-"""Tests for sandbox API transport/version contracts."""
+"""Tests for sandbox API transport contracts."""
 
 from __future__ import annotations
 
@@ -8,9 +8,6 @@ from sandbox.api.transport import (
     DAEMON_OP_READ_FILE,
     DAEMON_OP_SHELL,
     DAEMON_OP_WRITE_FILE,
-    DAEMON_PROTOCOL_FIELD,
-    DAEMON_PROTOCOL_VERSION,
-    versioned_payload,
 )
 
 
@@ -32,14 +29,7 @@ def test_recording_transport_matches_protocol_shape() -> None:
     assert transport is not None
 
 
-def test_versioned_payload_attaches_daemon_protocol_version() -> None:
-    assert versioned_payload({"path": "a.py"}) == {
-        DAEMON_PROTOCOL_FIELD: DAEMON_PROTOCOL_VERSION,
-        "path": "a.py",
-    }
-
-
-def test_public_daemon_ops_are_versioned() -> None:
+def test_public_daemon_ops_use_api_v1_names() -> None:
     assert DAEMON_OP_READ_FILE == "api.v1.read_file"
     assert DAEMON_OP_WRITE_FILE == "api.v1.write_file"
     assert DAEMON_OP_EDIT_FILE == "api.v1.edit_file"

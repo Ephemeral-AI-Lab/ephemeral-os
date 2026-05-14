@@ -6,7 +6,7 @@ that needs layer-stack/OCC/gitignore state: handlers/request_context.py
 handler/tools/shell.py), and handlers/metrics.py (api.layer_metrics).
 The factory uses a canonical ``workspace_ref=layer_stack_root`` only; this module
 owns no path classification (single source of truth lives on command-exec
-via :mod:`sandbox.runtime.daemon.handler.request_context`).
+via :mod:`sandbox.daemon.handler.request_context`).
 """
 
 from __future__ import annotations

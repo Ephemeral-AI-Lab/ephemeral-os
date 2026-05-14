@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import MagicMock
 
+from sandbox.provider.daytona.client.credentials import client_cache_key
+
 
 class TestCloseClient:
     def test_does_nothing_when_client_is_none(self):
@@ -65,7 +67,15 @@ class TestShutdownCachedClient:
         mock_client = MagicMock()
         mock_client.close = MagicMock(return_value=fake_close())
         loop = asyncio.new_event_loop()
-        async_client_mod._cached_clients[loop] = (("key", "url", "target"), mock_client)
+        async_client_mod._cached_clients[loop] = (
+            client_cache_key(
+                "AsyncDaytona",
+                api_key="key",
+                api_url="url",
+                target="target",
+            ),
+            mock_client,
+        )
 
         try:
             asyncio.run(mod.shutdown_cached_client_async())
@@ -89,7 +99,15 @@ class TestShutdownCachedClient:
             loop = asyncio.get_running_loop()
             with async_client_mod._client_lock:
                 async_client_mod._cached_clients.clear()
-                async_client_mod._cached_clients[loop] = (("key", "url", "target"), Client())
+                async_client_mod._cached_clients[loop] = (
+                    client_cache_key(
+                        "AsyncDaytona",
+                        api_key="key",
+                        api_url="url",
+                        target="target",
+                    ),
+                    Client(),
+                )
             await mod.shutdown_cached_client_async()
 
         asyncio.run(run())

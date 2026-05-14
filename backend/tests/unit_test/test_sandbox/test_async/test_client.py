@@ -7,6 +7,8 @@ import asyncio
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
+from sandbox.provider.daytona.client.credentials import client_cache_key
+
 
 class TestGetAsyncSandbox:
     @pytest.mark.anyio
@@ -24,7 +26,15 @@ class TestGetAsyncSandbox:
         monkeypatch.setattr(mod, "_load_credentials", lambda: ("async-key", "https://async-url", ""))
         with mod._client_lock:
             mod._cached_clients.clear()
-            mod._cached_clients[loop] = (("async-key", "https://async-url", ""), mock_client)
+            mod._cached_clients[loop] = (
+                client_cache_key(
+                    "AsyncDaytona",
+                    api_key="async-key",
+                    api_url="https://async-url",
+                    target="",
+                ),
+                mock_client,
+            )
 
         result = await mod.get_async_sandbox("sb-async-123")
 
@@ -50,7 +60,15 @@ class TestGetAsyncSandbox:
         monkeypatch.setattr(mod, "_load_credentials", lambda: ("async-key", "https://async-url", ""))
         with mod._client_lock:
             mod._cached_clients.clear()
-            mod._cached_clients[loop] = (("async-key", "https://async-url", ""), mock_client)
+            mod._cached_clients[loop] = (
+                client_cache_key(
+                    "AsyncDaytona",
+                    api_key="async-key",
+                    api_url="https://async-url",
+                    target="",
+                ),
+                mock_client,
+            )
 
         with pytest.raises(ValueError, match="not found"):
             await mod.get_async_sandbox("sb-nonexistent")

@@ -19,7 +19,7 @@ from task_center.attempt import (
     AttemptStatus,
 )
 from task_center.attempt.runtime import AgentLaunch, AttemptDeps
-from task_center.episode.registry import EpisodeManagerRegistry
+from task_center.episode import EpisodeManagerRegistry
 from task_center.episode.state import (
     EpisodeCreationReason,
     EpisodeStatus,

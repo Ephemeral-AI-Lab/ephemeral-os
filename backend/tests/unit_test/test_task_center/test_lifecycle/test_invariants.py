@@ -21,7 +21,7 @@ from task_center._core.infra import (
     assert_episode_has_budget,
     assert_episode_open,
 )
-from task_center.episode.registry import EpisodeManagerRegistry
+from task_center.episode import EpisodeManagerRegistry
 from task_center.mission.state import (
     Mission,
     MissionStatus,

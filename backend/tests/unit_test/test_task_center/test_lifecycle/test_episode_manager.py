@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.episode.manager import EpisodeManager
+from task_center.episode import EpisodeManager
 from task_center.attempt import (
     AttemptFailReason,
     AttemptStatus,

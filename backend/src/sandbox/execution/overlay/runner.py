@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from sandbox.layer_stack.manager import LayerStackManager
-from sandbox.execution.overlay.pipeline import create_overlay_invoker
-from sandbox.execution.overlay.pipeline import OverlayInvoker
+from sandbox.execution.overlay.pipeline import OverlayInvoker, OverlayRuntimeInvoker
 from sandbox.execution.overlay.request import OverlayShellRequest
 from sandbox.execution.overlay.result import OverlayCapture
+from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.timing import monotonic_now
 
 
@@ -22,22 +21,19 @@ class OverlaySnapshotRunner:
         invoker: OverlayInvoker | None = None,
     ) -> None:
         self._layer_stack = layer_stack
-        if invoker is None:
-            invoker = create_overlay_invoker(layer_stack)
-        self._invoker = invoker
+        self._invoker = invoker or OverlayRuntimeInvoker(
+            storage_root=layer_stack.storage_root
+        )
 
     async def shell(self, request: OverlayShellRequest) -> OverlayCapture:
         total_start = monotonic_now()
         lease_start = monotonic_now()
         lease = self._layer_stack.acquire_snapshot_lease(request.request_id)
-        timings = {
-            "overlay.lease_acquire_s": monotonic_now() - lease_start,
-        }
+        timings = {"overlay.lease_acquire_s": monotonic_now() - lease_start}
         invoke_start = monotonic_now()
         try:
             capture = await self._invoker.invoke(
-                request=request,
-                manifest=lease.manifest,
+                request=request, manifest=lease.manifest
             )
         finally:
             timings["overlay.invoke_total_s"] = monotonic_now() - invoke_start

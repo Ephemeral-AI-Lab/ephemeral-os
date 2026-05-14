@@ -30,6 +30,8 @@ def capture_changes(
     """
     upper_root = Path(upperdir)
     upper_root.mkdir(parents=True, exist_ok=True)
+    if timings is None:
+        timings = {}
     if lowerdir is not None and workspace_root is not None:
         populate_start = monotonic_now()
         _populate_upperdir_from_diff(
@@ -37,14 +39,12 @@ def capture_changes(
             workspace_root=Path(workspace_root),
             upperdir=upper_root,
         )
-        if timings is not None:
-            timings["overlay.capture.populate_upperdir_s"] = (
-                monotonic_now() - populate_start
-            )
+        timings["overlay.capture.populate_upperdir_s"] = (
+            monotonic_now() - populate_start
+        )
     walk_start = monotonic_now()
     changes = tuple(_walk_upperdir(upper_root))
-    if timings is not None:
-        timings["overlay.capture.walk_upperdir_s"] = monotonic_now() - walk_start
+    timings["overlay.capture.walk_upperdir_s"] = monotonic_now() - walk_start
     return changes
 
 
@@ -57,8 +57,9 @@ def _populate_upperdir_from_diff(
     workspace_root: Path,
     upperdir: Path,
 ) -> None:
-    if upperdir.exists():
-        shutil.rmtree(upperdir)
+    # Caller (`capture_changes`) has already mkdir'd `upperdir` exist_ok; we
+    # reset to a clean slate before materializing the diff.
+    shutil.rmtree(upperdir, ignore_errors=True)
     upperdir.mkdir(parents=True)
 
     lower_paths = _payload_paths(lowerdir)

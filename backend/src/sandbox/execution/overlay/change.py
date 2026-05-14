@@ -47,9 +47,12 @@ class OverlayPathChange:
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, Any]) -> OverlayPathChange:
+        kind = payload["kind"]
+        if kind not in ("write", "delete", "symlink", "opaque_dir"):
+            raise ValueError(f"unsupported upper change kind: {kind!r}")
         return cls(
             path=str(payload["path"]),
-            kind=_parse_kind(payload["kind"]),
+            kind=kind,
             content_path=(
                 str(payload["content_path"])
                 if payload.get("content_path") is not None
@@ -70,12 +73,6 @@ def content_hash(path: str | Path, *, symlink: bool = False) -> str:
         else Path(path).read_bytes()
     )
     return hashlib.sha256(data).hexdigest()
-
-
-def _parse_kind(value: object) -> OverlayPathChangeKind:
-    if value in ("write", "delete", "symlink", "opaque_dir"):
-        return value
-    raise ValueError(f"unsupported upper change kind: {value!r}")
 
 
 __all__ = [

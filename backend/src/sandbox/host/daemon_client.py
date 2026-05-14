@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import shlex
+from collections.abc import Mapping
 from typing import Any, Protocol
 
 from sandbox.daemon_paths import (
@@ -28,6 +29,8 @@ _DAEMON_ENV = DAEMON_ENV_SIGNATURE_PATH
 _PYTHON_CANDIDATES = ("python3.13", "python3.12", "python3.11", "python3.10", "python3")
 _THIN_CLIENT_CONNECT_FAILED = 97
 _THIN_CLIENT_IO_FAILED = 98
+DAEMON_PROTOCOL_VERSION = 1
+DAEMON_PROTOCOL_FIELD = "_eos_daemon_protocol_version"
 
 
 class _DaemonDispatchError(RuntimeError):
@@ -119,6 +122,14 @@ async def call_daemon_api(
         args=daemon_args,
         timeout=timeout,
     )
+
+
+def versioned_payload(payload: Mapping[str, object]) -> dict[str, object]:
+    """Attach the daemon protocol version while preserving caller payloads."""
+    return {
+        DAEMON_PROTOCOL_FIELD: DAEMON_PROTOCOL_VERSION,
+        **dict(payload),
+    }
 
 
 async def ensure_daemon_current(

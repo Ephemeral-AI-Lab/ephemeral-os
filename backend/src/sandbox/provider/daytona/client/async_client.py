@@ -13,7 +13,9 @@ import weakref
 from typing import Any
 
 from sandbox.provider.daytona.client.credentials import (
+    DaytonaClientCacheKey,
     build_sdk_client,
+    client_cache_key,
     load_required_credentials,
 )
 from sandbox.provider.daytona.client.sync_client import (
@@ -37,7 +39,7 @@ except Exception:
 _client_lock = threading.Lock()
 _cached_clients: weakref.WeakKeyDictionary[
     asyncio.AbstractEventLoop,
-    tuple[tuple[str, str, str], Any],
+    tuple[DaytonaClientCacheKey, Any],
 ] = weakref.WeakKeyDictionary()
 
 
@@ -59,7 +61,12 @@ def get_async_daytona_client() -> Any:
     """
     loop = asyncio.get_running_loop()
     api_key, api_url, target = _load_credentials()
-    current_key = (api_key, api_url, target)
+    current_key = client_cache_key(
+        "AsyncDaytona",
+        api_key=api_key,
+        api_url=api_url,
+        target=target,
+    )
     stale_clients: list[Any] = []
 
     with _client_lock:

@@ -9,7 +9,7 @@ Owns the single source of truth for:
   host-visible payload.
 
 The OCC backend tuple ``(LayerStackClient, OccClient, SnapshotGitignoreOracle,
-LayerStackManager)`` is owned by :mod:`sandbox.runtime.daemon.service.occ_backend`.
+LayerStackManager)`` is owned by :mod:`sandbox.daemon.service.occ_backend`.
 The ``services`` helper is the canonical per-verb access point.
 
 ``shell`` does NOT use this module — the dispatcher routes it directly to

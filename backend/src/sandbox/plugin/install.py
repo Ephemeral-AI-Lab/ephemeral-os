@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 
 # All plugins land under /tmp/eos-sandbox-runtime/plugins/catalog/<name>/.
 # /tmp/eos-sandbox-runtime/ is already on the daemon's sys.path (that's how
-# sandbox.runtime.daemon imports the runtime bundle). plugins/ and
+# the in-sandbox daemon imports the runtime bundle). plugins/ and
 # plugins/catalog/ are implicit namespace packages — no __init__.py is uploaded
 # — so ``import plugins.catalog.<name>.runtime.server`` resolves naturally.
 PLUGIN_BUNDLE_REMOTE_ROOT = f"{BUNDLE_REMOTE_DIR}/plugins/catalog"

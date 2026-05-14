@@ -23,7 +23,7 @@ from task_center.mission.state import (
 )
 from task_center._core.types import TaskCenterInvariantViolation
 from task_center.attempt.orchestrator import AttemptOrchestrator
-from task_center.episode.manager import OrchestratorFactory
+from task_center.episode import OrchestratorFactory
 from task_center.attempt.state import AttemptFailReason, AttemptStatus
 from task_center.attempt.runtime import AttemptDeps
 from task_center.episode.state import Episode, EpisodeStatus
