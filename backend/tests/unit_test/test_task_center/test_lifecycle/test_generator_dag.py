@@ -6,11 +6,10 @@ import pytest
 
 from task_center._core.types import TaskCenterInvariantViolation
 from task_center.attempt.generator_dag import (
-    all_generators_done,
-    all_generators_quiescent,
     blocked_descendant_ids,
     ordered_generator_tasks,
     ready_pending_generator_ids,
+    summarize_generator_dag,
 )
 from task_center.task_state import PlannedGeneratorTask
 
@@ -82,5 +81,6 @@ def test_running_dependent_of_failed_task_is_invariant_violation():
 def test_waiting_mission_is_not_quiescent_or_done():
     records = [_task("a", "waiting_mission")]
 
-    assert not all_generators_quiescent(records)
-    assert not all_generators_done(records)
+    state = summarize_generator_dag(records)
+    assert not state.all_quiescent
+    assert not state.all_done

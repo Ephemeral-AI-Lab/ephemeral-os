@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import deque
+from dataclasses import dataclass
 from typing import Any
 
 from task_center._core.types import TaskCenterInvariantViolation
@@ -132,19 +133,21 @@ def blocked_descendant_ids(
     return tuple(blocked)
 
 
-def all_generators_quiescent(task_records: list[TaskRecord]) -> bool:
+@dataclass(frozen=True, slots=True)
+class GeneratorDagState:
+    all_quiescent: bool
+    all_done: bool
+    any_failed_or_blocked: bool
+
+
+_FAILED_OR_BLOCKED = (TaskCenterTaskStatus.FAILED, TaskCenterTaskStatus.BLOCKED)
+
+
+def summarize_generator_dag(task_records: list[TaskRecord]) -> GeneratorDagState:
+    """Single-pass summary of generator statuses for DAG dispatch."""
     statuses = generator_status_map(task_records).values()
-    return all(status in TERMINAL_GENERATOR_STATUSES for status in statuses)
-
-
-def all_generators_done(task_records: list[TaskRecord]) -> bool:
-    statuses = generator_status_map(task_records).values()
-    return all(status == TaskCenterTaskStatus.DONE for status in statuses)
-
-
-def any_generator_failed_or_blocked(task_records: list[TaskRecord]) -> bool:
-    statuses = generator_status_map(task_records).values()
-    return any(
-        status in (TaskCenterTaskStatus.FAILED, TaskCenterTaskStatus.BLOCKED)
-        for status in statuses
+    return GeneratorDagState(
+        all_quiescent=all(s in TERMINAL_GENERATOR_STATUSES for s in statuses),
+        all_done=all(s == TaskCenterTaskStatus.DONE for s in statuses),
+        any_failed_or_blocked=any(s in _FAILED_OR_BLOCKED for s in statuses),
     )
