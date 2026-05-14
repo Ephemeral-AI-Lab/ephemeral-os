@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from sandbox.execution.overlay_pipeline import OverlayInvoker, OverlayRuntimeInvoker
+from sandbox.daemon.async_bridge import run_sync_in_executor
+from sandbox.execution.overlay_pipeline import OverlayRuntimeInvoker
 from sandbox.execution.overlay_request import OverlayShellRequest
 from sandbox.execution.overlay_result import OverlayCapture
 from sandbox.layer_stack.manager import LayerStackManager
@@ -18,7 +19,7 @@ class OverlaySnapshotRunner:
         self,
         layer_stack: LayerStackManager,
         *,
-        invoker: OverlayInvoker | None = None,
+        invoker: OverlayRuntimeInvoker | None = None,
     ) -> None:
         self._layer_stack = layer_stack
         self._invoker = (
@@ -34,8 +35,10 @@ class OverlaySnapshotRunner:
         timings = {"overlay.lease_acquire_s": monotonic_now() - lease_start}
         invoke_start = monotonic_now()
         try:
-            capture = await self._invoker.invoke(
-                request=request, manifest=lease.manifest
+            capture = await run_sync_in_executor(
+                self._invoker.invoke_sync,
+                request=request,
+                manifest=lease.manifest,
             )
         finally:
             timings["overlay.invoke_total_s"] = monotonic_now() - invoke_start

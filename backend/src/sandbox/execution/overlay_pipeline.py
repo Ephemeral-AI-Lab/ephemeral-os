@@ -1,36 +1,18 @@
 """Overlay-shell invoker: drives one worker run per leased snapshot.
 
-`OverlayRuntimeInvoker` runs `execute_request` (the worker) and stamps
-invoker-side timings on the returned capture. `OverlayInvoker` is the
-duck-typed seam tests substitute against.
-
-The user-command stage (`run_user_command`, `OverlayCommandResult`) lives
-in `.worker` so the worker module is self-contained and there is no
-pipeline↔worker import cycle.
+`OverlayRuntimeInvoker.invoke_sync` is the production seam; the snapshot
+runner drives it via the async executor.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Protocol, runtime_checkable
 from uuid import uuid4
 
-from sandbox.daemon.async_bridge import run_sync_in_executor
 from sandbox.execution.overlay_request import OverlayShellRequest
 from sandbox.execution.overlay_result import OverlayCapture
 from sandbox.execution.overlay_worker import execute_request
 from sandbox.layer_stack.manifest import Manifest
-
-
-@runtime_checkable
-class OverlayInvoker(Protocol):
-    async def invoke(
-        self, *, request: OverlayShellRequest, manifest: Manifest
-    ) -> OverlayCapture: ...
-
-    def invoke_sync(
-        self, *, request: OverlayShellRequest, manifest: Manifest
-    ) -> OverlayCapture: ...
 
 
 class OverlayRuntimeInvoker:
@@ -47,13 +29,6 @@ class OverlayRuntimeInvoker:
             Path(runtime_root)
             if runtime_root is not None
             else self.storage_root / "runtime" / "overlay_shell"
-        )
-
-    async def invoke(
-        self, *, request: OverlayShellRequest, manifest: Manifest
-    ) -> OverlayCapture:
-        return await run_sync_in_executor(
-            self.invoke_sync, request=request, manifest=manifest
         )
 
     def invoke_sync(
@@ -74,7 +49,4 @@ class OverlayRuntimeInvoker:
         return self.runtime_root / f"{safe_id or 'request'}-{uuid4().hex[:8]}"
 
 
-__all__ = [
-    "OverlayInvoker",
-    "OverlayRuntimeInvoker",
-]
+__all__ = ["OverlayRuntimeInvoker"]
