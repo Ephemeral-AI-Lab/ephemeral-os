@@ -107,7 +107,7 @@ def _register_planner_agents() -> None:
         terminals=["submit_full_plan", "submit_partial_plan"],
         variants=[
             AgentVariant(
-                when="partial_plan_caller_ancestor",
+                when="nested_mission_depth_gt_1",
                 use="planner_full_only",
             )
         ],

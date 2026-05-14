@@ -53,7 +53,7 @@ def test_planner_variants_declare_full_only_target():
     planner, _ = _load_planner_pair()
     assert len(planner.variants) == 1
     variant = planner.variants[0]
-    assert variant.when == "partial_plan_caller_ancestor"
+    assert variant.when == "nested_mission_depth_gt_1"
     assert variant.use == "planner_full_only"
     assert variant.required_context_blocks == []
 

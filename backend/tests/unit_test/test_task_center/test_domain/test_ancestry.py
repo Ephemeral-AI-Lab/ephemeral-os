@@ -1,22 +1,21 @@
-"""Unit tests for the canonical ancestry walker.
-
-Pins walker behavior across no/full/partial caller chains and verifies the
-registered resolver predicate returns the same result.
-"""
+"""Unit tests for nested mission ancestry depth and predicate routing."""
 
 from __future__ import annotations
 
 import pytest
 
 from task_center.agent_launch.predicates import (
+    MAX_HANDOFF_DEPTH,
     PredicateRegistry,
+    ResolverContext,
     register_builtin_predicates,
 )
-from task_center.mission.ancestry import (
-    has_partial_planned_caller_ancestor,
-)
 from task_center.attempt import AttemptStage
+from task_center.context_engine.engine import ContextEngineDeps
+from task_center.context_engine.scope import ContextScope
 from task_center.episode.episode import EpisodeCreationReason
+from task_center.exceptions import TaskCenterInvariantViolation
+from task_center.mission.ancestry import nested_mission_depth
 
 
 def _stores(mission_store, episode_store, attempt_store, task_store):
@@ -57,7 +56,6 @@ def _seed_attempt(
     *,
     episode_id: str,
     sequence_no: int = 1,
-    continuation_goal: str | None = None,
 ):
     attempt = attempt_store.insert(
         episode_id=episode_id, attempt_sequence_no=sequence_no
@@ -66,7 +64,7 @@ def _seed_attempt(
         attempt.id,
         task_specification="spec",
         evaluation_criteria=["c1"],
-        continuation_goal=continuation_goal,
+        continuation_goal=None,
     )
     attempt_store.set_stage(attempt.id, AttemptStage.GENERATING)
     return attempt
@@ -94,31 +92,59 @@ def _seed_task(
     )
 
 
-# ---------------------------------------------------------------------------
-# Walker behavior
-# ---------------------------------------------------------------------------
+def _seed_nested_mission_chain(
+    mission_store,
+    episode_store,
+    attempt_store,
+    task_store,
+    *,
+    task_center_run_id: str,
+    depth: int,
+) -> list[str]:
+    assert depth >= 1
+    mission_ids: list[str] = []
+    requested_by_task_id = "t-entry"
+    for idx in range(depth):
+        mission = _seed_mission(
+            mission_store,
+            task_center_run_id=task_center_run_id,
+            requested_by_task_id=requested_by_task_id,
+        )
+        mission_ids.append(mission.id)
+        if idx == depth - 1:
+            break
+        episode = _seed_episode(episode_store, mission_id=mission.id)
+        attempt = _seed_attempt(attempt_store, episode_id=episode.id)
+        task_id = f"t-{idx}"
+        _seed_task(
+            task_store,
+            task_id=task_id,
+            task_center_run_id=task_center_run_id,
+            attempt_id=attempt.id,
+        )
+        requested_by_task_id = task_id
+    return mission_ids
 
 
-def test_no_parent_task_returns_false(
+def test_no_parent_task_returns_depth_1(
     mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
-    request = _seed_mission(
+    mission = _seed_mission(
         mission_store, task_center_run_id=task_center_run_id
     )
-    # No parent task seeded → walk terminates returning False.
     assert (
-        has_partial_planned_caller_ancestor(
-            mission_id=request.id,
+        nested_mission_depth(
+            mission_id=mission.id,
             **_stores(mission_store, episode_store, attempt_store, task_store),
         )
-        is False
+        == 1
     )
 
 
-def test_parent_task_with_no_attempt_returns_false(
+def test_parent_task_with_no_attempt_returns_depth_1(
     mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
-    request = _seed_mission(
+    mission = _seed_mission(
         mission_store,
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t-entry",
@@ -130,196 +156,148 @@ def test_parent_task_with_no_attempt_returns_false(
         attempt_id=None,
     )
     assert (
-        has_partial_planned_caller_ancestor(
-            mission_id=request.id,
+        nested_mission_depth(
+            mission_id=mission.id,
             **_stores(mission_store, episode_store, attempt_store, task_store),
         )
-        is False
+        == 1
     )
 
 
-def test_full_plan_caller_chain_returns_false(
+def test_child_mission_returns_depth_2(
     mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
-    # Top-level request → episode → caller_attempt (full plan: continuation_goal=None)
-    parent_mission = _seed_mission(
-        mission_store, task_center_run_id=task_center_run_id
-    )
-    parent_episode = _seed_episode(episode_store, mission_id=parent_mission.id)
-    caller_attempt = _seed_attempt(
-        attempt_store, episode_id=parent_episode.id, continuation_goal=None
-    )
-    _seed_task(
-        task_store,
-        task_id="t-caller",
-        task_center_run_id=task_center_run_id,
-        attempt_id=caller_attempt.id,
-    )
-    child_mission = _seed_mission(
+    root_id, child_id = _seed_nested_mission_chain(
         mission_store,
-        task_center_run_id=task_center_run_id,
-        requested_by_task_id="t-caller",
-    )
-    assert (
-        has_partial_planned_caller_ancestor(
-            mission_id=child_mission.id,
-            **_stores(mission_store, episode_store, attempt_store, task_store),
-        )
-        is False
-    )
-
-
-def test_partial_plan_caller_returns_true(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id
-):
-    parent_mission = _seed_mission(
-        mission_store, task_center_run_id=task_center_run_id
-    )
-    parent_episode = _seed_episode(episode_store, mission_id=parent_mission.id)
-    caller_attempt = _seed_attempt(
+        episode_store,
         attempt_store,
-        episode_id=parent_episode.id,
-        continuation_goal="continue here",
-    )
-    _seed_task(
         task_store,
-        task_id="t-caller",
         task_center_run_id=task_center_run_id,
-        attempt_id=caller_attempt.id,
-    )
-    child_mission = _seed_mission(
-        mission_store,
-        task_center_run_id=task_center_run_id,
-        requested_by_task_id="t-caller",
+        depth=2,
     )
     assert (
-        has_partial_planned_caller_ancestor(
-            mission_id=child_mission.id,
+        nested_mission_depth(
+            mission_id=root_id,
             **_stores(mission_store, episode_store, attempt_store, task_store),
         )
-        is True
+        == 1
+    )
+    assert (
+        nested_mission_depth(
+            mission_id=child_id,
+            **_stores(mission_store, episode_store, attempt_store, task_store),
+        )
+        == 2
     )
 
 
-def test_deep_mixed_chain_with_partial_root_returns_true(
+def test_grandchild_mission_returns_depth_3(
     mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
-    # Three-deep: root submits partial → child full → grandchild request.
-    root_mission = _seed_mission(
-        mission_store, task_center_run_id=task_center_run_id
-    )
-    root_episode = _seed_episode(episode_store, mission_id=root_mission.id)
-    root_attempt = _seed_attempt(
+    mission_ids = _seed_nested_mission_chain(
+        mission_store,
+        episode_store,
         attempt_store,
-        episode_id=root_episode.id,
-        continuation_goal="rotate next",
-    )
-    _seed_task(
         task_store,
-        task_id="t-root",
         task_center_run_id=task_center_run_id,
-        attempt_id=root_attempt.id,
+        depth=MAX_HANDOFF_DEPTH + 1,
     )
-    mid_mission = _seed_mission(
-        mission_store,
-        task_center_run_id=task_center_run_id,
-        requested_by_task_id="t-root",
-    )
-    mid_episode = _seed_episode(episode_store, mission_id=mid_mission.id)
-    mid_attempt = _seed_attempt(
-        attempt_store, episode_id=mid_episode.id, continuation_goal=None
-    )
-    _seed_task(
-        task_store,
-        task_id="t-mid",
-        task_center_run_id=task_center_run_id,
-        attempt_id=mid_attempt.id,
-    )
-    leaf_mission = _seed_mission(
-        mission_store,
-        task_center_run_id=task_center_run_id,
-        requested_by_task_id="t-mid",
-    )
-
     assert (
-        has_partial_planned_caller_ancestor(
-            mission_id=leaf_mission.id,
+        nested_mission_depth(
+            mission_id=mission_ids[-1],
             **_stores(mission_store, episode_store, attempt_store, task_store),
         )
-        is True
+        == MAX_HANDOFF_DEPTH + 1
     )
 
 
 def test_unknown_mission_id_raises(
     mission_store, episode_store, attempt_store, task_store
 ):
-    from task_center.exceptions import TaskCenterInvariantViolation
-
     with pytest.raises(TaskCenterInvariantViolation):
-        has_partial_planned_caller_ancestor(
+        nested_mission_depth(
             mission_id="nonexistent",
             **_stores(mission_store, episode_store, attempt_store, task_store),
         )
 
 
-# ---------------------------------------------------------------------------
-# Resolver predicate behavior
-# ---------------------------------------------------------------------------
-
-
-def test_resolver_predicate_dispatches_to_canonical(
+def test_registered_predicates_cover_top_level_and_depth_thresholds(
     mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
-    """The registered resolver predicate must call the canonical ancestry
-    function — confirmed by checking the result matches the canonical's."""
     saved = dict(PredicateRegistry._registry)
     PredicateRegistry.clear()
     register_builtin_predicates()
     try:
-        from task_center.context_engine.engine import ContextEngineDeps
-        from task_center.agent_launch.predicates import ResolverContext
-        from task_center.context_engine.scope import ContextScope
-
-        # Seed a partial-plan caller chain.
-        parent_mission = _seed_mission(
-            mission_store, task_center_run_id=task_center_run_id
-        )
-        parent_episode = _seed_episode(episode_store, mission_id=parent_mission.id)
-        caller_attempt = _seed_attempt(
-            attempt_store,
-            episode_id=parent_episode.id,
-            continuation_goal="next",
-        )
-        _seed_task(
-            task_store,
-            task_id="t-caller",
-            task_center_run_id=task_center_run_id,
-            attempt_id=caller_attempt.id,
-        )
-        child_mission = _seed_mission(
-            mission_store,
-            task_center_run_id=task_center_run_id,
-            requested_by_task_id="t-caller",
-        )
         deps = ContextEngineDeps(
             mission_store=mission_store,
             episode_store=episode_store,
             attempt_store=attempt_store,
             task_store=task_store,
         )
-        ctx = ResolverContext(
-            scope=ContextScope(mission_id=child_mission.id), deps=deps
+
+        top_level_ctx = ResolverContext(scope=ContextScope(), deps=deps)
+        assert (
+            PredicateRegistry.get("nested_mission_depth_within_handoff_range")(
+                top_level_ctx
+            )
+            is True
         )
-        predicate = PredicateRegistry.get("partial_plan_caller_ancestor")
-        canonical_result = has_partial_planned_caller_ancestor(
-            mission_id=child_mission.id,
-            **_stores(mission_store, episode_store, attempt_store, task_store),
+        assert (
+            PredicateRegistry.get("nested_mission_depth_above_handoff_range")(
+                top_level_ctx
+            )
+            is False
         )
-        assert predicate(ctx) is True
-        assert predicate(ctx) is canonical_result, (
-            "resolver predicate must yield the same answer as the canonical"
+        assert (
+            PredicateRegistry.get("nested_mission_depth_gt_1")(top_level_ctx)
+            is False
+        )
+        assert PredicateRegistry.get("always")(top_level_ctx) is True
+
+        mission_ids = _seed_nested_mission_chain(
+            mission_store,
+            episode_store,
+            attempt_store,
+            task_store,
+            task_center_run_id=task_center_run_id,
+            depth=MAX_HANDOFF_DEPTH + 1,
+        )
+        within_ctx = ResolverContext(
+            scope=ContextScope(mission_id=mission_ids[MAX_HANDOFF_DEPTH - 1]),
+            deps=deps,
+        )
+        above_ctx = ResolverContext(
+            scope=ContextScope(mission_id=mission_ids[-1]),
+            deps=deps,
         )
 
+        assert (
+            PredicateRegistry.get("nested_mission_depth_within_handoff_range")(
+                within_ctx
+            )
+            is True
+        )
+        assert (
+            PredicateRegistry.get("nested_mission_depth_above_handoff_range")(
+                within_ctx
+            )
+            is False
+        )
+        assert PredicateRegistry.get("nested_mission_depth_gt_1")(within_ctx) is True
+
+        assert (
+            PredicateRegistry.get("nested_mission_depth_within_handoff_range")(
+                above_ctx
+            )
+            is False
+        )
+        assert (
+            PredicateRegistry.get("nested_mission_depth_above_handoff_range")(
+                above_ctx
+            )
+            is True
+        )
+        assert PredicateRegistry.get("nested_mission_depth_gt_1")(above_ctx) is True
     finally:
         PredicateRegistry.clear()
         PredicateRegistry._registry.update(saved)

@@ -18,9 +18,9 @@ def test_variant_round_trips_through_pydantic():
         context_recipe="planner_v1",
         variants=[
             AgentVariant(
-                when="partial_plan_caller_ancestor",
+                when="nested_mission_depth_gt_1",
                 use="planner_full_only",
-                note="ancestry contains a partial-planned caller attempt",
+                note="depth >1 — nested planner inside another mission's attempt",
                 required_context_blocks=[
                     AgentSelectionBlock(
                         kind="launch_notice",

@@ -131,14 +131,14 @@ def test_unknown_context_recipe_rejected():
 def test_clean_setup_passes_validation():
     _stub_recipe("planner_v1")
     _stub_recipe("generator_v1")
-    PredicateRegistry.register("partial_plan_caller_ancestor", lambda ctx: False)
+    PredicateRegistry.register("nested_mission_depth_gt_1", lambda ctx: False)
     base = AgentDefinition(
         name="planner",
         description="planner",
         context_recipe="planner_v1",
         variants=[
             AgentVariant(
-                when="partial_plan_caller_ancestor", use="planner_full_only"
+                when="nested_mission_depth_gt_1", use="planner_full_only"
             )
         ],
     )

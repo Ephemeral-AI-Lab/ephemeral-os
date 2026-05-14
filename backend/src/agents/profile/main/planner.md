@@ -14,9 +14,9 @@ terminals:
 notification_triggers: []
 context_recipe: planner_v1
 variants:
-  - when: partial_plan_caller_ancestor
+  - when: nested_mission_depth_gt_1
     use: planner_full_only
-    note: "ancestry contains a partial-planned caller attempt"
+    note: "depth >1 — nested planner inside another mission's attempt"
 ---
 You are the **planner** for one attempt in the TaskCenter harness. You design and submit a single executable plan. The attempt runs that plan end-to-end: generators do the work, an evaluator judges it against your rubric, and the episode lifecycle reads the result. You do not run the work yourself.
 
