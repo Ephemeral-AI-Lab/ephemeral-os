@@ -95,7 +95,6 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/execution/strategies/base.py",
         "sandbox/execution/strategies/copy_backed.py",
         "sandbox/execution/strategies/private_namespace.py",
-        "sandbox/execution/strategies/registry.py",
         "sandbox/execution/workspace/mount.py",
         "sandbox/execution/workspace/capture.py",
         "sandbox/execution/workspace/path_rewrite.py",

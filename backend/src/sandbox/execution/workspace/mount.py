@@ -16,8 +16,9 @@ from sandbox.execution.policy import (
     CommandExecPolicy,
 )
 from sandbox.execution.strategies import (
+    CopyBackedStrategy,
     ExecutionStrategy,
-    StrategyRegistry,
+    PrivateNamespaceStrategy,
     detect_private_mount_namespace,
 )
 
@@ -34,15 +35,18 @@ def run_workspace_replaced_command(
     """Run a command with the assigned workspace replaced by the leased view."""
     run_root = Path(run_dir)
     run_root.mkdir(parents=True, exist_ok=True)
-    registry = (
-        StrategyRegistry(tuple(strategies))
+    strategy_list: tuple[ExecutionStrategy, ...] = (
+        tuple(strategies)
         if strategies is not None
-        else StrategyRegistry.bootstrap(
-            private_namespace_available=detect_private_mount_namespace(),
-            policy=policy,
+        else (
+            PrivateNamespaceStrategy(
+                available=detect_private_mount_namespace(),
+                policy=policy,
+            ),
+            CopyBackedStrategy(policy=policy),
         )
     )
-    for strategy in registry.strategies:
+    for strategy in strategy_list:
         if not strategy.is_available():
             continue
         process = strategy.run(
