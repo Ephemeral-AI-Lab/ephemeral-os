@@ -42,6 +42,7 @@ def drop_layer_stack_manager(layer_stack_root: str | Path) -> None:
     key = str(Path(layer_stack_root).resolve(strict=False))
     with _MANAGER_CACHE_LOCK:
         _MANAGER_CACHE.pop(key, None)
+        _FENCED_STAGING_ROOTS.discard(key)
 
 
 def fence_stale_staging(layer_stack_root: str | Path) -> dict[str, object]:
