@@ -45,18 +45,6 @@ class RegisteredAttemptOrchestrator(Protocol):
     ) -> None: ...
 
 
-class RegisteredEpisodeManager(Protocol):
-    """The slice of :class:`EpisodeManager` observed by the registry.
-
-    The registry indexes managers by ``episode_id`` and otherwise stores
-    them opaquely. Lifecycle behaviour is invoked through the concrete
-    class only; the registry's contract is read-only.
-    """
-
-    episode_id: str
-
-
 __all__ = [
     "RegisteredAttemptOrchestrator",
-    "RegisteredEpisodeManager",
 ]
