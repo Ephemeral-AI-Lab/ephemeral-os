@@ -18,6 +18,10 @@ from sandbox.api.tool._payload import (
 from sandbox.models import ConflictInfo, EditFileRequest, EditFileResult
 from sandbox.host.daemon_client import call_daemon_api
 
+_EDIT_DAEMON_TIMEOUT_S = 20
+_RECOVERY_READ_TIMEOUT_S = 20
+_TRANSIENT_EDIT_ATTEMPTS = 2
+
 
 async def edit_file(
     sandbox_id: str,
@@ -34,21 +38,7 @@ async def edit_file(
         payload={"path": request.path},
     )
     try:
-        raw = await call_daemon_api(
-            sandbox_id,
-            "api.edit_file",
-            {
-                "path": request.path,
-                "edits": [
-                    {"old_text": edit.old_text, "new_text": edit.new_text}
-                    for edit in request.edits
-                ],
-                "actor_id": request.caller.agent_id,
-                "caller": caller_envelope(request.caller),
-                "description": request.description or f"edit {request.path}",
-            },
-            timeout=60,
-        )
+        raw = await _call_edit_with_recovery(sandbox_id, request)
         result = _result_from_payload(raw)
     except Exception as exc:
         conflict_result = _conflict_result_from_error(request.path, exc)
@@ -79,6 +69,89 @@ async def edit_file(
     return result
 
 
+async def _call_edit_with_recovery(
+    sandbox_id: str,
+    request: EditFileRequest,
+) -> dict[str, object]:
+    payload = _edit_payload(request)
+    last_exc: Exception | None = None
+    for attempt_no in range(1, _TRANSIENT_EDIT_ATTEMPTS + 1):
+        try:
+            return await call_daemon_api(
+                sandbox_id,
+                "api.edit_file",
+                payload,
+                timeout=_EDIT_DAEMON_TIMEOUT_S,
+            )
+        except Exception as exc:
+            if not _is_transient_transport_error(exc):
+                raise
+            recovered = await _recover_if_edit_already_applied(
+                sandbox_id,
+                request,
+                attempt_no=attempt_no,
+            )
+            if recovered is not None:
+                return recovered
+            last_exc = exc
+    assert last_exc is not None
+    raise last_exc
+
+
+def _edit_payload(request: EditFileRequest) -> dict[str, object]:
+    return {
+        "path": request.path,
+        "edits": [
+            {"old_text": edit.old_text, "new_text": edit.new_text}
+            for edit in request.edits
+        ],
+        "actor_id": request.caller.agent_id,
+        "caller": caller_envelope(request.caller),
+        "description": request.description or f"edit {request.path}",
+    }
+
+
+async def _recover_if_edit_already_applied(
+    sandbox_id: str,
+    request: EditFileRequest,
+    *,
+    attempt_no: int,
+) -> dict[str, object] | None:
+    try:
+        raw = await call_daemon_api(
+            sandbox_id,
+            "api.read_file",
+            {
+                "path": request.path,
+                "caller": caller_envelope(request.caller),
+            },
+            timeout=_RECOVERY_READ_TIMEOUT_S,
+        )
+    except Exception:
+        return None
+    if not raw.get("success") or not raw.get("exists"):
+        return None
+    content = str(raw.get("content", ""))
+    if not _edits_are_visible(content, request):
+        return None
+    return {
+        "success": True,
+        "changed_paths": [request.path],
+        "applied_edits": len(request.edits),
+        "status": "edited",
+        "conflict": None,
+        "conflict_reason": None,
+        "timings": {
+            "api.edit.recovered_after_transient": 1.0,
+            "api.edit.recovery_attempt": float(attempt_no),
+        },
+    }
+
+
+def _edits_are_visible(content: str, request: EditFileRequest) -> bool:
+    return bool(request.edits) and all(edit.new_text in content for edit in request.edits)
+
+
 def _result_from_payload(raw: dict[str, object]) -> EditFileResult:
     conflict = conflict_from_payload(raw.get("conflict"))
     return EditFileResult(
@@ -93,6 +166,23 @@ def _result_from_payload(raw: dict[str, object]) -> EditFileResult:
             else None
         ),
         timings=timings_from_payload(raw.get("timings")),
+    )
+
+
+def _is_transient_transport_error(error: BaseException) -> bool:
+    message = _error_message(error).lower()
+    return any(
+        marker in message
+        for marker in (
+            "daytonaerror",
+            "failed to execute command",
+            "connection reset",
+            "connection refused",
+            "server disconnected",
+            "temporarily unavailable",
+            "runtimeexecfailed",
+            "eos_daemon_io_failed",
+        )
     )
 
 

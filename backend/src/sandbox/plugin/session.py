@@ -111,7 +111,11 @@ async def call_plugin(
                 await dispatch_fn(
                     sandbox_id,
                     "api.plugin.ensure",
-                    {"plugin": plugin, "digest": digest},
+                    {
+                        "plugin": plugin,
+                        "digest": digest,
+                        "workspace_root": str(context.get("repo_root") or "").strip(),
+                    },
                     timeout=timeout,
                     layer_stack_root=layer_stack_root,
                 )

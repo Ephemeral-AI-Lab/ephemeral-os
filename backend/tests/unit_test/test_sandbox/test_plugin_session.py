@@ -85,7 +85,11 @@ def test_call_plugin_happy_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
     assert install_calls == ["sb-1"]
     op_names = [op for _sb, op, _args in dispatch_calls]
     assert op_names == ["api.plugin.ensure", "plugin.demo.run"]
-    assert dispatch_calls[0][2] == {"plugin": "demo", "digest": "abc123"}
+    assert dispatch_calls[0][2] == {
+        "plugin": "demo",
+        "digest": "abc123",
+        "workspace_root": "/testbed",
+    }
 
 
 def test_call_plugin_install_failure_surfaces_error(
@@ -214,8 +218,8 @@ def test_call_plugin_reensures_runtime_when_digest_changes(
         assert not result.is_error
 
     assert ensure_payloads == [
-        {"plugin": "demo", "digest": "digest-a"},
-        {"plugin": "demo", "digest": "digest-b"},
+        {"plugin": "demo", "digest": "digest-a", "workspace_root": "/testbed"},
+        {"plugin": "demo", "digest": "digest-b", "workspace_root": "/testbed"},
     ]
 
 

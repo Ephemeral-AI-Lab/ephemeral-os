@@ -60,8 +60,107 @@ async def test_edit_file_dispatches_to_sandbox_daemon(
                 },
                 "description": "edit a",
             },
-            60,
+            20,
         )
+    ]
+
+
+@pytest.mark.asyncio
+async def test_edit_file_recovers_when_transient_exec_already_applied_edit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, int]] = []
+    old_text = "# marker\n"
+    new_text = "# marker\nclass RetryPolicy:\n    pass\n"
+
+    async def fake_call_daemon_api(sandbox_id, op, args, *, timeout):
+        del sandbox_id, args
+        calls.append((op, timeout))
+        if op == "api.edit_file":
+            raise RuntimeError("DaytonaError: Failed to execute command: ")
+        if op == "api.read_file":
+            return {
+                "success": True,
+                "exists": True,
+                "content": new_text,
+                "encoding": "utf-8",
+                "timings": {},
+            }
+        raise AssertionError(op)
+
+    monkeypatch.setattr(
+        "sandbox.api.tool.edit.call_daemon_api",
+        fake_call_daemon_api,
+    )
+
+    result = await edit_file(
+        "sb-edit-transient",
+        EditFileRequest(
+            path="retry.py",
+            edits=(SearchReplaceEdit(old_text=old_text, new_text=new_text),),
+            caller=SandboxCaller(agent_id="agent-1"),
+        ),
+    )
+
+    assert result.success is True
+    assert result.changed_paths == ("retry.py",)
+    assert result.applied_edits == 1
+    assert result.status == "edited"
+    assert result.timings["api.edit.recovered_after_transient"] == 1.0
+    assert calls == [("api.edit_file", 20), ("api.read_file", 20)]
+
+
+@pytest.mark.asyncio
+async def test_edit_file_retries_transient_exec_when_edit_not_visible(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, int]] = []
+
+    async def fake_call_daemon_api(sandbox_id, op, args, *, timeout):
+        del sandbox_id, args
+        calls.append((op, timeout))
+        if calls == [("api.edit_file", 20)]:
+            raise RuntimeError("DaytonaError: Failed to execute command: ")
+        if op == "api.read_file":
+            return {
+                "success": True,
+                "exists": True,
+                "content": "old",
+                "encoding": "utf-8",
+                "timings": {},
+            }
+        if op == "api.edit_file":
+            return {
+                "success": True,
+                "changed_paths": ["a.py"],
+                "applied_edits": 1,
+                "status": "ok",
+                "conflict": None,
+                "conflict_reason": None,
+                "timings": {},
+            }
+        raise AssertionError(op)
+
+    monkeypatch.setattr(
+        "sandbox.api.tool.edit.call_daemon_api",
+        fake_call_daemon_api,
+    )
+
+    result = await edit_file(
+        "sb-edit-transient",
+        EditFileRequest(
+            path="a.py",
+            edits=(SearchReplaceEdit(old_text="old", new_text="new"),),
+            caller=SandboxCaller(agent_id="agent-1"),
+        ),
+    )
+
+    assert result.success is True
+    assert result.changed_paths == ("a.py",)
+    assert calls == [
+        ("api.edit_file", 20),
+        ("api.read_file", 20),
+        ("api.edit_file", 20),
     ]
 
 

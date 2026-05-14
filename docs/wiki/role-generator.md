@@ -1,14 +1,15 @@
----
+***
+
 title: "Role: Generator (Executor + Verifier)"
-tags: ["task-center", "generator", "executor", "verifier", "role", "context-recipe", "dag", "submission", "see-also"]
+tags: \["task-center", "generator", "executor", "verifier", "role", "context-recipe", "dag", "submission", "see-also"]
 created: 2026-05-13T00:00:00.000Z
 updated: 2026-05-13T00:00:00.000Z
-sources: []
-links: ["task-center-pipeline.md", "context-engine-recipes.md", "role-planner.md", "role-evaluator.md", "sandbox-subsystem.md"]
+sources: \[]
+links: \["task-center-pipeline.md", "context-engine-recipes.md", "role-planner.md", "role-evaluator.md", "sandbox-subsystem.md"]
 category: architecture
 confidence: high
 schemaVersion: 1
----
+----------------
 
 # Role: Generator (Executor + Verifier)
 
@@ -33,14 +34,14 @@ The entry executor (the top-level agent that owns the user request) is _also_ a 
 
 ## Two profiles, one recipe
 
-| | Executor (`agents/profile/main/generator_executor.md`) | Verifier (`agents/profile/main/generator_verifier.md`) |
-|---|---|---|
-| `role` (in profile frontmatter) | `executor` | `verifier` |
-| `allowed_tools` | `read_file, write_file, edit_file, shell, run_subagent, ask_advisor` | `read_file, shell, ask_resolver` |
-| Terminals | `submit_execution_success`, `submit_execution_failure`, `request_mission_solution` | `submit_verification_success`, `submit_verification_failure` |
-| `context_recipe` | `generator_v1` | `generator_v1` (same recipe) |
-| Notification triggers | `request_mission_after_edit` | `resolver_limit` |
-| Editorial stance | Build the artifact | Inspect; if broken, delegate the fix via `ask_resolver`; re-check |
+| <br />                          | Executor (`agents/profile/main/generator_executor.md`)                             | Verifier (`agents/profile/main/generator_verifier.md`)            |
+| ------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `role` (in profile frontmatter) | `executor`                                                                         | `verifier`                                                        |
+| `allowed_tools`                 | `read_file, write_file, edit_file, shell, run_subagent, ask_advisor`               | `read_file, shell, ask_resolver`                                  |
+| Terminals                       | `submit_execution_success`, `submit_execution_failure`, `request_mission_solution` | `submit_verification_success`, `submit_verification_failure`      |
+| `context_recipe`                | `generator_v1`                                                                     | `generator_v1` (same recipe)                                      |
+| Notification triggers           | `request_mission_after_edit`                                                       | `resolver_limit`                                                  |
+| Editorial stance                | Build the artifact                                                                 | Inspect; if broken, delegate the fix via `ask_resolver`; re-check |
 
 Profile-level separation is enforced by each `AgentDefinition.terminals` whitelist — the executor profile lists only executor terminals, the verifier profile lists only verifier terminals — so a verifier-launched task cannot reach an executor terminal at all. There is no runtime role gate; the structural role on the task row is set by the dispatcher and consumed by `resolve_attempt_submission_context`.
 
@@ -48,14 +49,14 @@ The recipe is identical because the _information_ each profile needs is identica
 
 ## Lifecycle
 
-| Event | Effect |
-|---|---|
-| Planner submission | Dispatcher creates generator task rows `PENDING`. |
-| Dependencies all `DONE` | `_dispatch_generating` flips row to `RUNNING`, composes `generator_v1`, launches agent (`dispatcher.py:147`). |
-| Agent calls `submit_execution_success` / `submit_verification_success` | `apply_generator_submission(outcome="success")` → task `DONE`; dispatcher checks quiescence and either launches more ready siblings or spawns the evaluator. |
+| Event                                                                  | Effect                                                                                                                                                        |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Planner submission                                                     | Dispatcher creates generator task rows `PENDING`.                                                                                                             |
+| Dependencies all `DONE`                                                | `_dispatch_generating` flips row to `RUNNING`, composes `generator_v1`, launches agent (`dispatcher.py:147`).                                                 |
+| Agent calls `submit_execution_success` / `submit_verification_success` | `apply_generator_submission(outcome="success")` → task `DONE`; dispatcher checks quiescence and either launches more ready siblings or spawns the evaluator.  |
 | Agent calls `submit_execution_failure` / `submit_verification_failure` | Task `FAILED`; `block_failed_descendants` walks the DAG and marks every transitive PENDING descendant as `BLOCKED`. Attempt closes `FAILED/generator_failed`. |
-| Agent calls `request_mission_solution` | Task parks in `WAITING_COMPLEX_TASK`; child Mission starts. Calling agent run ends here. Child Mission close-report drives task to `DONE`/`FAILED`. |
-| Agent run ends without terminal | Launcher synthesises `apply_generator_submission(outcome="failure")` with `fail_reason="generator_failed"`. |
+| Agent calls `request_mission_solution`                                 | Task parks in `WAITING_COMPLEX_TASK`; child Mission starts. Calling agent run ends here. Child Mission close-report drives task to `DONE`/`FAILED`.           |
+| Agent run ends without terminal                                        | Launcher synthesises `apply_generator_submission(outcome="failure")` with `fail_reason="generator_failed"`.                                                   |
 
 ## Responsibilities
 
@@ -87,18 +88,18 @@ Source: `task_center/context_engine/recipes/generator.py:32-89`. Required scope:
 
 **Block order (rendered top-to-bottom):**
 
-| Position | Block kind | Priority | When present |
-|---|---|---|---|
-| 1 | `task_specification` | HIGH | `attempt.task_specification` non-empty (always, post-planning) |
-| 2..N | `dependency_summary` (under `# Dependency Results`) | MEDIUM | One per resolved `task.needs[]` entry; rendered via `latest_summary_text` |
-| last | `planned_task_spec` | **REQUIRED** | Always (the task's own `task_input`, derived from the planner's `task_specs[local_id]`) |
+| Position | Block kind                                          | Priority     | When present                                                                            |
+| -------- | --------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------- |
+| 1        | `task_specification`                                | HIGH         | `attempt.task_specification` non-empty (always, post-planning)                          |
+| 2..N     | `dependency_summary` (under `# Dependency Results`) | MEDIUM       | One per resolved `task.needs[]` entry; rendered via `latest_summary_text`               |
+| last     | `planned_task_spec`                                 | **REQUIRED** | Always (the task's own `task_input`, derived from the planner's `task_specs[local_id]`) |
 
 **Why this order:** The local task spec is the concrete obligation. Placing it last anchors the agent's reading on what it must do, not on what the broader attempt is about.
 
 **What is deliberately absent from the generator's view:**
 
 - **No mission goal, no episode goal, no prior episode results.** The generator never sees the broader contract. This is information minimization: re-exposing the wider goal invites scope creep (a generator that knows the mission goal might "improve" beyond their task and break invariants the planner relied on).
-- **No `partial_plan_boundary` or `continuation_goal`.** Partial-plan boundaries are evaluator and retry-planner context. A generator should not reason about future episode scope while executing its node.
+- **No** **`partial_plan_boundary`** **or** **`continuation_goal`.** Partial-plan boundaries are evaluator and retry-planner context. A generator should not reason about future episode scope while executing its node.
 - **No evaluation criteria.** The criteria are the evaluator's business. A generator that sees them risks teaching to the test in the wrong direction.
 - **No failed-attempt landscape.** Retry history is the planner's responsibility, not the worker's.
 - **No sibling task specs.** Each generator sees only its own `planned_task_spec`. Siblings communicate only via summaries on completed dependency edges.
@@ -167,7 +168,7 @@ Submission terminals have no pre-hooks. Structural role and attempt-open checks 
 
 None of these readers see the conversation, the diffs, the tool calls, or the artifacts directly. The summary _is_ the truth.
 
-**4. `request_mission_solution` is gated before edits.** A generator that has begun editing has committed to direct execution — the sandbox is already modified. Allowing recursive delegation after that point would create a state-management problem: the child Mission's "fresh" precondition is no longer true. The gate enforces an early-or-not-at-all decision.
+**4.** **`request_mission_solution`** **is gated before edits.** A generator that has begun editing has committed to direct execution — the sandbox is already modified. Allowing recursive delegation after that point would create a state-management problem: the child Mission's "fresh" precondition is no longer true. The gate enforces an early-or-not-at-all decision.
 
 **5. Verifier ↔ resolver is read-modify-verify across agents.** The verifier owns inspection but not edits. When verification finds an issue, `ask_resolver` dispatches a helper agent (a `subagent` profile) to make the fix; the verifier then re-runs its checks. The `resolver_limit` notification reminder nudges the verifier toward `submit_verification_failure` once the loop has run several times without resolution — but the decision is the verifier's, not a hook's.
 
@@ -250,12 +251,12 @@ The recipe is **scope-narrowest** of the three role recipes. The generator's sco
 
 The dimensions are dependency count and attempt-plan presence:
 
-| Case | task.needs | attempt.task_specification | Builders invoked | Block kinds |
-|---|---|---|---|---|
-| **A — root leaf, normal attempt** | `[]` | non-empty | spec + (no deps) + planned_task_spec | `task_specification`, `planned_task_spec` |
-| **B — mid-DAG, normal attempt** | `[d1, d2]` | non-empty | spec + 2 dep summaries + planned_task_spec | `task_specification`, `dependency_summary`×2, `planned_task_spec` |
-| **C — degenerate: empty plan** | any | empty | spec block elided; deps + planned_task_spec only | `dependency_summary`×N, `planned_task_spec` |
-| **D — orphan dep id** | `[d1, d_missing]` | non-empty | `ContextEngineError`; accepted DAG edges must resolve to task rows | no packet emitted |
+| Case                              | task.needs        | attempt.task\_specification | Builders invoked                                                   | Block kinds                                                       |
+| --------------------------------- | ----------------- | --------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| **A — root leaf, normal attempt** | `[]`              | non-empty                   | spec + (no deps) + planned\_task\_spec                             | `task_specification`, `planned_task_spec`                         |
+| **B — mid-DAG, normal attempt**   | `[d1, d2]`        | non-empty                   | spec + 2 dep summaries + planned\_task\_spec                       | `task_specification`, `dependency_summary`×2, `planned_task_spec` |
+| **C — degenerate: empty plan**    | any               | empty                       | spec block elided; deps + planned\_task\_spec only                 | `dependency_summary`×N, `planned_task_spec`                       |
+| **D — orphan dep id**             | `[d1, d_missing]` | non-empty                   | `ContextEngineError`; accepted DAG edges must resolve to task rows | no packet emitted                                                 |
 
 ### Walk-through: Case A — a root leaf
 
@@ -423,8 +424,8 @@ episode_store  ──── (not read by generator_v1) ────
 Compared to the planner and evaluator provenance maps, the generator's surface is dramatically narrower:
 
 - **No mission or episode store reads.** The generator's contract is its task, full stop.
-- **No `evaluation_criteria` exposure.** Even though `attempt.evaluation_criteria` is in the attempt row the recipe already loaded, the recipe does not surface it. This is deliberate scope minimization.
-- **No `generator_task_ids` walk.** The generator sees only its own `needs[]` — a subset of the DAG. Siblings are invisible.
+- **No** **`evaluation_criteria`** **exposure.** Even though `attempt.evaluation_criteria` is in the attempt row the recipe already loaded, the recipe does not surface it. This is deliberate scope minimization.
+- **No** **`generator_task_ids`** **walk.** The generator sees only its own `needs[]` — a subset of the DAG. Siblings are invisible.
 
 ### The dependency summary contract
 
@@ -441,7 +442,7 @@ latest_summary_text([
 Implications:
 
 - **Only the last summary is exposed.** If a generator wrote intermediate progress summaries before its terminal one, those are unread. Write your terminal summary as if it is the only one.
-- **Latest wins; field priority is `summary > outcome > "(empty)"`.** Executors emit `"summary"`; some fallback paths emit `"outcome"`.
+- **Latest wins; field priority is** **`summary > outcome > "(empty)"`.** Executors emit `"summary"`; some fallback paths emit `"outcome"`.
 - **No artifacts list, no tool-call trace, no diff.** Even if the executor returned `artifacts=["routes/import.py"]`, that list is persisted on the task row but **not surfaced** to dependents. The generator that needs to consume an artifact must learn its path from the dependency's prose summary.
 
 ### Where this recipe differs from the others — at a glance
@@ -468,40 +469,40 @@ Reading down each column tells you exactly what that role can know without going
 
 Each recipe places its highest-priority _operational_ block last so the agent's reading ends on what to do:
 
-| Recipe | Closes on |
-|---|---|
-| `planner_v1` | `failed_attempt_landscape` (HIGH) — the retry evidence |
-| `evaluator_v1` | `evaluation_criteria` (REQUIRED) — the verdict basis |
+| Recipe         | Closes on                                                |
+| -------------- | -------------------------------------------------------- |
+| `planner_v1`   | `failed_attempt_landscape` (HIGH) — the retry evidence   |
+| `evaluator_v1` | `evaluation_criteria` (REQUIRED) — the verdict basis     |
 | `generator_v1` | `planned_task_spec` (REQUIRED) — the concrete obligation |
 
 This ordering is not what `_compress` operates on — priority drives only compression, not order (`renderer.py` docstring: _"Priority is a compression policy only; it is not a presentation-order policy."_). The order is fixed by the recipe builder's `blocks.append(...)` sequence.
 
 ### Failure shapes inside the recipe
 
-| Where it fails | Trigger | Effect |
-|---|---|---|
-| `ContextEngine.build` | scope missing `mission_id`/`attempt_id`/`task_id` | `AssertionError` from `scope.assert_fields` → launcher exception → task fails with `fail_reason="agent_launch_failed"`; cascade to descendants. |
-| `attempt_store.get` returns None | attempt row deleted/missing | `ContextEngineError("Attempt ... not found")` — same effect as above. |
-| `task_store.get_task` returns None for the scope task | task row deleted/missing | `ContextEngineError("TaskCenterTask ... not found")`. |
-| `task_store.get_task` returns None for a dep id | upstream task row gone | `ContextEngineError`; the dependent does not launch with a truncated dependency frame. |
-| `task["task_input"]` falsy | planner submitted empty `task_specs[id]` | `planned_task_spec` block emitted with `text=""`. Pydantic's `_non_blank_required_text` validator on `ContextBlock` (`packet.py:73`) **raises ValidationError** because the priority is REQUIRED. The planner schema rejects blank task_specs upstream, so this should be unreachable in practice. |
+| Where it fails                                        | Trigger                                           | Effect                                                                                                                                                                                                                                                                                              |
+| ----------------------------------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ContextEngine.build`                                 | scope missing `mission_id`/`attempt_id`/`task_id` | `AssertionError` from `scope.assert_fields` → launcher exception → task fails with `fail_reason="agent_launch_failed"`; cascade to descendants.                                                                                                                                                     |
+| `attempt_store.get` returns None                      | attempt row deleted/missing                       | `ContextEngineError("Attempt ... not found")` — same effect as above.                                                                                                                                                                                                                               |
+| `task_store.get_task` returns None for the scope task | task row deleted/missing                          | `ContextEngineError("TaskCenterTask ... not found")`.                                                                                                                                                                                                                                               |
+| `task_store.get_task` returns None for a dep id       | upstream task row gone                            | `ContextEngineError`; the dependent does not launch with a truncated dependency frame.                                                                                                                                                                                                              |
+| `task["task_input"]` falsy                            | planner submitted empty `task_specs[id]`          | `planned_task_spec` block emitted with `text=""`. Pydantic's `_non_blank_required_text` validator on `ContextBlock` (`packet.py:73`) **raises ValidationError** because the priority is REQUIRED. The planner schema rejects blank task\_specs upstream, so this should be unreachable in practice. |
 
 ## Failure modes
 
-| Mode | Cause | Effect |
-|---|---|---|
-| Profile mismatch | Verifier agent calling executor terminal (or vice versa) | Each profile's `terminals` whitelist excludes the other side's terminals, so the call is never dispatched. |
-| Edit-then-delegate | Edit tool used before `request_mission_solution` | `request_mission_after_edit` notification reminder fires; the generator is expected to finish through success/failure. The call is not hard-blocked. |
-| Resolver saturation | ≥4 unresolved resolver calls before verifier success | `resolver_limit` notification reminder fires; verifier is expected to submit failure with remaining issues. |
-| Submission failure | Agent submits explicit failure | Cascade BLOCKED descendants; close attempt `FAILED/generator_failed`. |
-| Launcher exception | Agent crash, sandbox error | `_launch_ready_generator` exception path marks task `FAILED` with `fail_reason="agent_launch_failed"`; cascade. |
-| Unfinished agent run | Run ends with no terminal | Launcher synthesises `apply_generator_submission(outcome="failure")`. |
-| Submission to closed attempt | Race between submission and attempt close | `resolve_attempt_submission_context` raises `AttemptSubmissionContextError` once the attempt is closed. |
+| Mode                         | Cause                                                    | Effect                                                                                                                                               |
+| ---------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Profile mismatch             | Verifier agent calling executor terminal (or vice versa) | Each profile's `terminals` whitelist excludes the other side's terminals, so the call is never dispatched.                                           |
+| Edit-then-delegate           | Edit tool used before `request_mission_solution`         | `request_mission_after_edit` notification reminder fires; the generator is expected to finish through success/failure. The call is not hard-blocked. |
+| Resolver saturation          | ≥4 unresolved resolver calls before verifier success     | `resolver_limit` notification reminder fires; verifier is expected to submit failure with remaining issues.                                          |
+| Submission failure           | Agent submits explicit failure                           | Cascade BLOCKED descendants; close attempt `FAILED/generator_failed`.                                                                                |
+| Launcher exception           | Agent crash, sandbox error                               | `_launch_ready_generator` exception path marks task `FAILED` with `fail_reason="agent_launch_failed"`; cascade.                                      |
+| Unfinished agent run         | Run ends with no terminal                                | Launcher synthesises `apply_generator_submission(outcome="failure")`.                                                                                |
+| Submission to closed attempt | Race between submission and attempt close                | `resolve_attempt_submission_context` raises `AttemptSubmissionContextError` once the attempt is closed.                                              |
 
 ## See also
 
-- [[role-planner]] — produces the `task_specs[id]` each generator consumes.
-- [[role-evaluator]] — reads the summaries each generator writes.
-- [[task-center-pipeline]] — the dispatcher and DAG state machine.
-- [[context-engine-recipes]] — `generator_v1` block builders and renderer.
-- [[sandbox-subsystem]] — where executor edits actually land.
+- \[\[role-planner]] — produces the `task_specs[id]` each generator consumes.
+- \[\[role-evaluator]] — reads the summaries each generator writes.
+- \[\[task-center-pipeline]] — the dispatcher and DAG state machine.
+- \[\[context-engine-recipes]] — `generator_v1` block builders and renderer.
+- \[\[sandbox-subsystem]] — where executor edits actually land.

@@ -24,10 +24,26 @@ _locks: dict[str, asyncio.Lock] = {}
 async def get_session(ctx: Any) -> PyrightSession:
     """Return a Pyright session reconciled to the active manifest."""
     layer_stack_root = str(ctx.layer_stack_root)
+    workspace_root = str(getattr(ctx, "metadata", {}).get("workspace_root", ""))
     lock = _locks.setdefault(layer_stack_root, asyncio.Lock())
     async with lock:
         active_key = ctx.projection.active_manifest_key()
         cached = _sessions.get(layer_stack_root)
+        if (
+            cached is not None
+            and workspace_root
+            and cached.workspace_root != workspace_root
+        ):
+            logger.info(
+                "pyright session workspace root changed; restarting",
+                extra={
+                    "old_workspace_root": cached.workspace_root,
+                    "new_workspace_root": workspace_root,
+                },
+            )
+            await cached.evict()
+            _sessions.pop(layer_stack_root, None)
+            cached = None
         if cached is not None and cached.manifest_key == active_key:
             return cached
 
@@ -49,7 +65,6 @@ async def get_session(ctx: Any) -> PyrightSession:
                 handle = ctx.projection.acquire(_owner_request_id(ctx))
             _sessions.pop(layer_stack_root, None)
 
-        workspace_root = str(getattr(ctx, "metadata", {}).get("workspace_root", ""))
         try:
             session = PyrightSession(
                 manifest_key=handle.manifest_key,

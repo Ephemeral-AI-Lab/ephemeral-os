@@ -76,9 +76,10 @@ class _FakeSession:
         projection_handle: _Handle,
         stable_root: str,
     ) -> None:
-        del workspace_root, stable_root
+        del stable_root
         self.manifest_key = manifest_key
         self.lowerdir = lowerdir
+        self.workspace_root = workspace_root
         self.projection_handle = projection_handle
         self.refresh_count = 0
         self.evict_count = 0
@@ -148,6 +149,37 @@ async def test_session_manager_refreshes_on_manifest_change(
     assert refreshed.lowerdir == str(tmp_path / "lower-b")
     assert refreshed.refresh_count == 1
     assert refreshed.evict_count == 0
+    assert projection.acquire_count == 2
+
+
+@pytest.mark.asyncio
+async def test_session_manager_restarts_when_workspace_root_changes(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(session_manager, "PyrightSession", _FakeSession)
+
+    handle = _Handle("hash-a@1", str(tmp_path / "lower-a"))
+    projection = _Projection(handle)
+    ctx = _Ctx(
+        layer_stack_root=str(tmp_path / "layer-stack"),
+        projection=projection,
+        metadata={"workspace_root": ""},
+    )
+
+    first = await session_manager.get_session(ctx)
+    second = await session_manager.get_session(
+        _Ctx(
+            layer_stack_root=ctx.layer_stack_root,
+            projection=projection,
+            metadata={"workspace_root": "/ephemeral-os"},
+        )
+    )
+
+    assert second is not first
+    assert first.evict_count == 1
+    assert second.workspace_root == "/ephemeral-os"
+    assert second.manifest_key == "hash-a@1"
     assert projection.acquire_count == 2
 
 

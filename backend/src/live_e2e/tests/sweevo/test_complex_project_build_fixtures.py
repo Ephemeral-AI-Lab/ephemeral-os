@@ -15,7 +15,12 @@ satisfy:
 from __future__ import annotations
 
 import ast
+import json
+from types import SimpleNamespace
 
+import pytest
+
+from tools._framework.core.results import ToolResult
 from live_e2e.scenarios.sandbox._fixtures.refactor_passes import REFACTOR_PASSES
 from live_e2e.scenarios.sandbox._fixtures.lsp_expectations import LSP_EXPECTATIONS
 from live_e2e.scenarios.sandbox._fixtures.scheduler_demo_data import (
@@ -27,7 +32,10 @@ from live_e2e.squad.complex_project_build_probe import (
     _importable_dotted_names,
 )
 from live_e2e.squad.complex_project_build_shell_edit_lsp_probe import (
+    ShellEditLspStats,
+    _assert_lsp_diagnostics,
     _compute_mixed_amp_pairs,
+    _diagnostic_probe_sources,
 )
 
 
@@ -160,6 +168,77 @@ def test_shell_edit_lsp_expectations_cover_minimum_symbol_set() -> None:
         "RetryPolicy",
     }
     assert required <= symbols
+
+
+def test_diagnostic_probe_uses_syntax_error_payload() -> None:
+    clean, broken = _diagnostic_probe_sources()
+    assert "    return 1\n" in clean
+    assert "    return (\n" in broken
+    assert "missing_value" not in broken
+
+
+@pytest.mark.asyncio
+async def test_broken_lsp_diagnostic_requires_at_least_one_diagnostic(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_lsp_semantic_call(*args, **kwargs):  # noqa: ANN002, ANN003
+        return ToolResult(output=json.dumps({"diagnostics": []}))
+
+    monkeypatch.setattr(
+        "live_e2e.squad.complex_project_build_shell_edit_lsp_probe."
+        "_lsp_semantic_call",
+        fake_lsp_semantic_call,
+    )
+
+    with pytest.raises(RuntimeError, match="semantic lsp.diagnostics check failed"):
+        await _assert_lsp_diagnostics(
+            SimpleNamespace(sandbox_checks=[]),
+            ShellEditLspStats(),
+            rel_path="scheduler_demo/_lsp_error_probe.py",
+            expect_clean=False,
+            label="diagnostic_probe.broken",
+        )
+
+
+@pytest.mark.asyncio
+async def test_broken_lsp_diagnostic_can_skip_wait_after_first_probe(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[dict[str, object]] = []
+
+    async def fake_lsp_semantic_call(*args, **kwargs):  # noqa: ANN002, ANN003
+        calls.append(kwargs["args"])
+        return ToolResult(
+            output=json.dumps(
+                {
+                    "diagnostics": [
+                        {"message": "Expected expression", "severity": 1}
+                    ]
+                }
+            )
+        )
+
+    monkeypatch.setattr(
+        "live_e2e.squad.complex_project_build_shell_edit_lsp_probe."
+        "_lsp_semantic_call",
+        fake_lsp_semantic_call,
+    )
+
+    await _assert_lsp_diagnostics(
+        SimpleNamespace(sandbox_checks=[]),
+        ShellEditLspStats(),
+        rel_path="scheduler_demo/_lsp_error_probe.py",
+        expect_clean=False,
+        wait_for_diagnostics=False,
+        label="diagnostic_probe.broken.fast_followup",
+    )
+
+    assert calls == [
+        {
+            "file_path": "/ephemeral-os/scheduler_demo/_lsp_error_probe.py",
+            "wait_for_diagnostics": False,
+        }
+    ]
 
 
 def test_compute_mixed_amp_pairs_meets_logical_edit_floors() -> None:

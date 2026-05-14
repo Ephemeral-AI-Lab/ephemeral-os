@@ -390,21 +390,15 @@ async def _phase_e_diagnostic_probe(
     expectations: Sequence[LspExpectation],
 ) -> None:
     phase_started = time.monotonic()
-    clean = (
-        '"""Temporary LSP diagnostic probe."""\n'
-        "from __future__ import annotations\n\n"
-        "def probe_value() -> int:\n"
-        "    return 1\n"
-    )
-    broken = clean.replace("    return 1\n", "    return missing_value\n")
+    clean, broken = _diagnostic_probe_sources()
     await _write_file(ctx, stats, path=_DIAGNOSTIC_PROBE_PATH, content=clean)
     await _apply_logical_edit(
         ctx,
         stats,
         path=_DIAGNOSTIC_PROBE_PATH,
         old_text="    return 1\n",
-        new_text="    return missing_value\n",
-        description="diagnostic probe inject missing_value",
+        new_text="    return (\n",
+        description="diagnostic probe inject syntax error",
         expectations=expectations,
         forced_route="shell",
     )
@@ -415,7 +409,7 @@ async def _phase_e_diagnostic_probe(
             stats,
             rel_path="scheduler_demo/_lsp_error_probe.py",
             expect_clean=False,
-            expected_message="missing_value",
+            wait_for_diagnostics=index == 0,
             label=f"diagnostic_probe.broken.{index}",
         )
     stats.diagnostic_error_detected = True
@@ -426,7 +420,7 @@ async def _phase_e_diagnostic_probe(
         path=_DIAGNOSTIC_PROBE_PATH,
         old_text=broken,
         new_text=clean,
-        description="diagnostic probe repair missing_value",
+        description="diagnostic probe repair syntax error",
         expectations=expectations,
         forced_route="edit_file",
     )
@@ -463,6 +457,17 @@ async def _phase_e_diagnostic_probe(
             "tool_calls_at_end": _total_calls(stats),
         }
     )
+
+
+def _diagnostic_probe_sources() -> tuple[str, str]:
+    clean = (
+        '"""Temporary LSP diagnostic probe."""\n'
+        "from __future__ import annotations\n\n"
+        "def probe_value() -> int:\n"
+        "    return 1\n"
+    )
+    broken = clean.replace("    return 1\n", "    return (\n")
+    return clean, broken
 
 
 async def _apply_logical_edit(
@@ -957,7 +962,9 @@ async def _assert_lsp_diagnostics(
     expect_clean: bool,
     label: str,
     expected_message: str | None = None,
+    wait_for_diagnostics: bool | None = None,
 ) -> None:
+    should_wait = (not expect_clean) if wait_for_diagnostics is None else wait_for_diagnostics
     result = await _lsp_semantic_call(
         ctx,
         stats,
@@ -965,7 +972,7 @@ async def _assert_lsp_diagnostics(
         tool_name="lsp.diagnostics",
         args={
             "file_path": f"{WORKSPACE_ROOT}/{rel_path}",
-            "wait_for_diagnostics": not expect_clean,
+            "wait_for_diagnostics": should_wait,
         },
     )
     payload = _tool_json(result)
@@ -978,12 +985,10 @@ async def _assert_lsp_diagnostics(
         passed = bool(
             (not result.is_error)
             and isinstance(diagnostics, list)
+            and entries
             and (
-                not entries
-                or (
-                    expected_message is not None
-                    and expected_message in message_blob
-                )
+                expected_message is None
+                or expected_message in message_blob
             )
         )
     stats.diagnostic_probe_checks += int("diagnostic_probe" in label)
