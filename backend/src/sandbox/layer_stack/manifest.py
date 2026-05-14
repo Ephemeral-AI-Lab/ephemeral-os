@@ -76,9 +76,9 @@ class Manifest:
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, object]) -> Manifest:
-        # WR-04 + WR-08: require both top-level keys explicitly so a torn
-        # write that lost the `layers` key is treated as corruption, not as
-        # a legitimately-empty manifest.
+        # Require both top-level keys explicitly so a torn write that lost
+        # the `layers` key is treated as corruption, not as a legitimately-
+        # empty manifest.
         if "version" not in payload:
             raise ManifestConflictError("manifest payload missing required field: version")
         if "layers" not in payload:

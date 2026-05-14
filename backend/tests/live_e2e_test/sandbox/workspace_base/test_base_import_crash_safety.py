@@ -56,10 +56,10 @@ if mode == "during_layer_write":
     wb._write_base_layer = stuck_write
 
 elif mode == "after_base_layer_rename_before_manifest":
-    def stuck_quiescent(*, workspace, expected_entries, expected_root_hash):
+    def stuck_manifest_write(path, manifest):
         marker.write_text("ready\n", encoding="utf-8")
         time.sleep(3600)
-    wb._assert_workspace_quiescent = stuck_quiescent
+    wb.write_manifest_atomic = stuck_manifest_write
 
 elif mode == "after_manifest_before_workspace_json":
     def stuck_binding(binding):

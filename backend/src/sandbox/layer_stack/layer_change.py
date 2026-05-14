@@ -85,37 +85,16 @@ def WriteLayerChange(
     )
 
 
-def DeleteLayerChange(
-    *,
-    path: str,
-    source_path: str | None = None,
-    content_hash: str | None = None,
-) -> LayerChange:
-    return LayerChange(
-        kind="delete", path=path, source_path=source_path, content_hash=content_hash
-    )
+def DeleteLayerChange(*, path: str) -> LayerChange:
+    return LayerChange(kind="delete", path=path)
 
 
-def SymlinkLayerChange(
-    *,
-    path: str,
-    source_path: str | None = None,
-    content_hash: str | None = None,
-) -> LayerChange:
-    return LayerChange(
-        kind="symlink", path=path, source_path=source_path, content_hash=content_hash
-    )
+def SymlinkLayerChange(*, path: str, source_path: str) -> LayerChange:
+    return LayerChange(kind="symlink", path=path, source_path=source_path)
 
 
-def OpaqueDirLayerChange(
-    *,
-    path: str,
-    source_path: str | None = None,
-    content_hash: str | None = None,
-) -> LayerChange:
-    return LayerChange(
-        kind="opaque_dir", path=path, source_path=source_path, content_hash=content_hash
-    )
+def OpaqueDirLayerChange(*, path: str) -> LayerChange:
+    return LayerChange(kind="opaque_dir", path=path)
 
 
 def prepare_layer_change(
@@ -196,9 +175,7 @@ def _whiteout_path(layer_dir: Path, rel: str) -> Path:
 
 __all__ = [
     "DeleteLayerChange",
-    "DigestSink",
     "LayerChange",
-    "LayerChangeKind",
     "OpaqueDirLayerChange",
     "PreparedLayerChange",
     "SymlinkLayerChange",

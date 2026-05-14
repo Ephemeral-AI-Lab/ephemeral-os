@@ -8,6 +8,7 @@ import pytest
 
 from sandbox.layer_stack.layer_change import (
     DeleteLayerChange,
+    LayerChange,
     SymlinkLayerChange,
     WriteLayerChange,
     aggregate_layer_changes,
@@ -82,10 +83,11 @@ def test_layer_change_validates_storage_level_payload_shape(tmp_path: Path) -> N
         WriteLayerChange(path="missing.py")
 
     with pytest.raises(ValueError, match="delete changes must not carry source_path"):
-        DeleteLayerChange(path="old.py", source_path=str(source))
+        LayerChange(kind="delete", path="old.py", source_path=str(source))
 
     with pytest.raises(ValueError, match="symlink changes must not carry content_hash"):
-        SymlinkLayerChange(
+        LayerChange(
+            kind="symlink",
             path="link.py",
             source_path="target.py",
             content_hash="x",

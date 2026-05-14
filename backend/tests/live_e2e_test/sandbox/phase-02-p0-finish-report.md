@@ -15,7 +15,7 @@ New live native probe files:
 
 Runtime helpers added to support the Phase 2 contract:
 
-- `sandbox.layer_stack.layer.change.aggregate_layer_changes`
+- `sandbox.layer_stack.layer_change.aggregate_layer_changes`
 - `LeaseRegistry.expire_older_than`
 - `LeaseRegistry.sweep_dead_owners`
 - `LayerStackManager.expire_leases_older_than`

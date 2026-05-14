@@ -9,7 +9,6 @@ import threading
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
 from uuid import uuid4
 
 from sandbox.layer_stack._paths import remove_path, resolve_storage_path
@@ -31,7 +30,7 @@ from sandbox.layer_stack.transaction import (
     LayerStackTransaction,
     LayerStackTransactionHandle,
 )
-from sandbox.layer_stack.view import MergedView
+from sandbox.layer_stack.view import MergedView, SymlinkLookup
 from sandbox.timing import monotonic_now
 
 logger = logging.getLogger(__name__)
@@ -164,7 +163,7 @@ class LayerStackManager:
             )
         except Exception:
             if lowerdir is not None:
-                # WR-01: log cleanup errors instead of swallowing them with
+                # Log cleanup errors instead of swallowing them with
                 # ignore_errors=True. A leaked transient lowerdir on every
                 # failed snapshot is a slow disk-fill bug; logging surfaces
                 # the leak in operator dashboards.
@@ -212,7 +211,7 @@ class LayerStackManager:
         self,
         path: str,
         manifest: Manifest | None = None,
-    ) -> tuple[str, Literal["symlink", "file", "absent"]]:
+    ) -> tuple[str, SymlinkLookup]:
         return self._view.read_symlink(path, manifest or self.read_active_manifest())
 
     def list_dir(

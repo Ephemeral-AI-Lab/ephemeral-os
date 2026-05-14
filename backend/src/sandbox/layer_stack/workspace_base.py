@@ -225,10 +225,10 @@ def _collect_base_entries(workspace: Path) -> tuple[tuple[_BaseEntry, ...], str]
 
 def _symlink_entry(*, path: Path, rel: str) -> _BaseEntry:
     target = os.readlink(path)
-    # WR-05: reject obviously unsafe symlink targets so a clone of an
-    # untrusted third-party repo carrying a malicious symlink does NOT
-    # end up in the published base layer. Absolute targets and relative
-    # targets that walk out of the workspace are rejected as "incomplete".
+    # Reject obviously unsafe symlink targets so a clone of an untrusted
+    # third-party repo carrying a malicious symlink does NOT end up in the
+    # published base layer. Absolute targets and relative targets that walk
+    # out of the workspace are rejected as "incomplete".
     if target.startswith("/") or relative_symlink_target_escapes(target):
         raise WorkspaceBaseIncompleteError(
             special_file_rejections=(rel,),
