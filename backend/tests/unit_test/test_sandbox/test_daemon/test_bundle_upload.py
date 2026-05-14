@@ -92,7 +92,6 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/execution/strategy_private_namespace.py",
         "sandbox/execution/workspace_mount.py",
         "sandbox/execution/workspace_capture.py",
-        "sandbox/execution/workspace_path_rewrite.py",
         "sandbox/layer_stack/workspace_base.py",
         "sandbox/execution/overlay_worker.py",
         "sandbox/execution/overlay_change.py",

@@ -14,14 +14,16 @@ from sandbox.execution.contract import ShellProcessResult
 from sandbox.execution.workspace_capture import capture_workspace_upperdir
 from sandbox.execution.contract import WorkspaceReplacementMountSpec
 from sandbox.execution import entrypoints as namespace_helper
-from sandbox.execution.strategy_copy_backed import CopyBackedStrategy
+from sandbox.execution.strategy_copy_backed import (
+    CopyBackedStrategy,
+    rewrite_declared_workspace_refs,
+)
 from sandbox.execution.strategy_private_namespace import (
     NAMESPACE_CONTROL_REF,
     NAMESPACE_FALLBACK_STRATEGY,
     NAMESPACE_INFRA_EXIT_CODE,
     PrivateNamespaceStrategy,
 )
-from sandbox.execution.workspace_path_rewrite import rewrite_declared_workspace_refs
 
 
 def test_copy_backed_mount_captures_only_workspace_changes(
