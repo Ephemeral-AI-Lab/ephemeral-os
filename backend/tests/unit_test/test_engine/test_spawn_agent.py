@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 from pydantic import BaseModel
 
-from agents import AgentDefinition
+from agents import AgentDefinition, AgentKind
 from engine.agent.factory import (
     _build_agent_tool_registry,
     _build_context_preparers,
@@ -129,7 +129,7 @@ def test_tool_factory_context_carries_agent_metadata() -> None:
     register_tool_factory("capturing_tool", factory)
     agent_def = _make_agent_def(
         name="my-agent",
-        role="developer",
+        agent_kind=AgentKind.EXECUTOR,
         allowed_tools=["capturing_tool"],
     )
 
@@ -143,7 +143,7 @@ def test_tool_factory_context_carries_agent_metadata() -> None:
     assert len(_CapturingTool.captured_contexts) == 1
     captured = _CapturingTool.captured_contexts[0]
     assert captured.metadata["agent_name"] == "my-agent"
-    assert captured.metadata["role"] == "developer"
+    assert captured.metadata["role"] == "executor"
     assert captured.metadata["cwd"] == "/repo"
     assert captured.metadata["sandbox_id"] == "sb-123"
 
