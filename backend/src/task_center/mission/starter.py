@@ -1,8 +1,7 @@
-"""MissionStarter — use-case boundary for delegated mission start.
+"""MissionStarter — single safe path for executor → delegated mission start.
 
-Composes the mission, episode, manager, and parent-task owners into
-the single safe mission-start path used by ``submit_execution_handoff``. Owns
-parent-task CAS, deferred orchestrator startup, and compensation on failure.
+Owns parent-task CAS, deferred orchestrator startup, and compensation on
+failure for ``submit_execution_handoff``.
 """
 
 from __future__ import annotations
@@ -35,8 +34,7 @@ logger = logging.getLogger(__name__)
 @dataclass(frozen=True, slots=True)
 class StartedMission:
     parent_task_id: str
-    # ``None`` when the caller is the top-level entry executor.
-    parent_attempt_id: str | None
+    parent_attempt_id: str | None  # None when caller is the top-level executor
     mission_id: str
     initial_episode_id: str
     initial_attempt_id: str
@@ -44,14 +42,7 @@ class StartedMission:
 
 
 class MissionStarter:
-    """Single orchestration entry point for executor → delegated mission start.
-
-    ``orchestrator_factory`` lets callers (tests, variant rollouts) inject a
-    different :class:`AttemptOrchestrator` builder. The default builder uses
-    the production :class:`AttemptOrchestrator`. Pass a custom factory to
-    swap in an instrumented or shadow orchestrator without rewriting the
-    starter.
-    """
+    """Single orchestration entry point for executor → delegated mission start."""
 
     def __init__(
         self,
@@ -60,30 +51,16 @@ class MissionStarter:
         orchestrator_factory: OrchestratorFactory | None = None,
     ) -> None:
         self._runtime = runtime
-        self._orchestrator_factory = (
-            orchestrator_factory or self._default_orchestrator_factory
+        self._orchestrator_factory = orchestrator_factory or (
+            lambda attempt, on_attempt_closed: AttemptOrchestrator(
+                attempt=attempt,
+                on_attempt_closed=on_attempt_closed,
+                runtime=self._runtime,
+            )
         )
 
-    def _default_orchestrator_factory(
-        self,
-        attempt: Any,
-        on_attempt_closed: Any,
-    ) -> AttemptOrchestrator:
-        return AttemptOrchestrator(
-            attempt=attempt,
-            on_attempt_closed=on_attempt_closed,
-            runtime=self._runtime,
-        )
-
-    def start(
-        self,
-        *,
-        parent_task_id: str,
-        goal: str,
-    ) -> StartedMission:
-        parent_task = self._assert_parent_running_and_no_open_child(
-            parent_task_id=parent_task_id,
-        )
+    def start(self, *, parent_task_id: str, goal: str) -> StartedMission:
+        parent_task = self._assert_parent_running_and_no_open_child(parent_task_id)
         task_center_run_id = str(parent_task.get("task_center_run_id") or "")
         if not task_center_run_id.strip():
             raise TaskCenterInvariantViolation(
@@ -92,16 +69,13 @@ class MissionStarter:
         parent_attempt_id = _parent_attempt_id(parent_task)
 
         handler = self._build_handler()
-        delegated_mission = handler.create_mission(
+        mission = handler.create_mission(
             task_center_run_id=task_center_run_id,
             requested_by_task_id=parent_task_id,
             goal=goal,
         )
-        (
-            initial_episode,
-            episode_manager,
-        ) = handler.create_initial_episode_with_manager(
-            mission_id=delegated_mission.id,
+        episode, episode_manager = handler.create_initial_episode_with_manager(
+            mission_id=mission.id,
         )
 
         initial_attempt = None
@@ -109,20 +83,18 @@ class MissionStarter:
             initial_attempt = episode_manager.create_unstarted_initial_attempt()
             self._mark_parent_waiting(
                 parent_task_id=parent_task_id,
-                parent_task=parent_task,
-                mission=delegated_mission,
-                episode=initial_episode,
+                parent_attempt_id=parent_attempt_id,
+                mission=mission,
+                episode=episode,
                 attempt_id=initial_attempt.id,
                 goal=goal,
             )
             episode_manager.start_attempt(initial_attempt)
         except Exception:
             self._compensate_failed_start(
-                mission=delegated_mission,
-                episode=initial_episode,
-                initial_attempt_id=(
-                    initial_attempt.id if initial_attempt is not None else None
-                ),
+                mission=mission,
+                episode=episode,
+                initial_attempt_id=initial_attempt.id if initial_attempt else None,
                 parent_task_id=parent_task_id,
             )
             raise
@@ -130,13 +102,11 @@ class MissionStarter:
         return StartedMission(
             parent_task_id=parent_task_id,
             parent_attempt_id=parent_attempt_id,
-            mission_id=delegated_mission.id,
-            initial_episode_id=initial_episode.id,
+            mission_id=mission.id,
+            initial_episode_id=episode.id,
             initial_attempt_id=initial_attempt.id,
             goal=goal,
         )
-
-    # ---- internal -------------------------------------------------------
 
     def _build_handler(self) -> MissionHandler:
         manager_registry = self._runtime.manager_registry
@@ -145,24 +115,18 @@ class MissionStarter:
                 "MissionStarter requires an episode manager registry."
             )
         router = MissionClosureReportRouter(runtime=self._runtime)
-
-        def _deliver(report: MissionClosureReport) -> None:
-            router.deliver(report)
-
         return MissionHandler(
             mission_store=self._runtime.mission_store,
             episode_store=self._runtime.episode_store,
             attempt_store=self._runtime.attempt_store,
             manager_registry=manager_registry,
             config=self._runtime.lifecycle_config,
-            deliver_closure_report=_deliver,
+            deliver_closure_report=router.deliver,
             orchestrator_factory=self._orchestrator_factory,
         )
 
     def _assert_parent_running_and_no_open_child(
-        self,
-        *,
-        parent_task_id: str,
+        self, parent_task_id: str
     ) -> dict[str, Any]:
         task = self._runtime.task_store.get_task(parent_task_id)
         if task is None:
@@ -174,17 +138,15 @@ class MissionStarter:
                 f"TaskCenter task {parent_task_id!r} is not running; "
                 "delegated mission start requires a running generator task."
             )
-        existing_open = [
+        open_missions = [
             r
-            for r in self._runtime.mission_store.list_for_executor_task(
-                parent_task_id
-            )
+            for r in self._runtime.mission_store.list_for_executor_task(parent_task_id)
             if r.is_open
         ]
-        if existing_open:
+        if open_missions:
             raise TaskCenterInvariantViolation(
                 f"TaskCenter task {parent_task_id!r} already has an open "
-                f"delegated mission {existing_open[0].id!r}."
+                f"delegated mission {open_missions[0].id!r}."
             )
         return task
 
@@ -192,15 +154,14 @@ class MissionStarter:
         self,
         *,
         parent_task_id: str,
-        parent_task: dict[str, Any],
+        parent_attempt_id: str | None,
         mission: Mission,
         episode: Episode,
         attempt_id: str,
         goal: str,
     ) -> None:
         target = self._runtime.lifecycle_target_for(
-            task_id=parent_task_id,
-            attempt_id=_parent_attempt_id(parent_task),
+            task_id=parent_task_id, attempt_id=parent_attempt_id
         )
         if target is None:
             raise TaskCenterInvariantViolation(
@@ -222,14 +183,15 @@ class MissionStarter:
         initial_attempt_id: str | None,
         parent_task_id: str,
     ) -> None:
-        """Best-effort rollback. Order: attempt → episode → mission → parent.
+        """Best-effort rollback: attempt -> episode -> mission -> parent.
 
-        Each step's failure is logged but does not block subsequent
-        steps. The parent-restore step is special-cased: on failure we
-        escalate to synthetic close-report delivery so the parent task
-        does not remain orphaned in ``WAITING_MISSION``.
+        Each step is independent; failures are logged via ``logger.exception``
+        but never block subsequent steps. If parent restore fails we route a
+        synthetic failed close-report so the parent does not stay orphaned in
+        ``WAITING_MISSION``.
         """
         now = datetime.now(UTC)
+        runtime = self._runtime
 
         def _do(step_name, action) -> bool:
             try:
@@ -241,54 +203,32 @@ class MissionStarter:
                 )
                 return False
 
-        _do(
-            "close_unstarted_attempt",
-            lambda: self._close_unstarted_attempt_after_failed_start(
-                initial_attempt_id, now=now
-            ),
-        )
-        _do(
-            "cancel_episode",
-            lambda: self._runtime.episode_store.set_status(
-                episode.id, status=EpisodeStatus.CANCELLED, closed_at=now
-            ),
-        )
-        _do(
-            "cancel_mission",
-            lambda: self._runtime.mission_store.set_status(
-                mission.id,
-                status=MissionStatus.CANCELLED,
-                final_outcome=None,
-                closed_at=now,
-            ),
-        )
-        restore_ok = _do(
-            "restore_parent",
-            lambda: self._restore_parent(parent_task_id=parent_task_id),
-        )
-        if not restore_ok:
-            logger.critical(
-                "MissionStarter: parent status rollback failed; "
-                "task %r remains in WAITING_MISSION — attempting "
-                "synthetic close-report recovery",
-                parent_task_id,
-            )
-            self._deliver_synthetic_failure_closure_report(
-                mission=mission,
-                episode=episode,
-                initial_attempt_id=initial_attempt_id,
-                parent_task_id=parent_task_id,
-            )
-        manager_registry = self._runtime.manager_registry
-        if manager_registry is not None:
-            manager_registry.deregister(episode.id)
+        _do("close_unstarted_attempt", lambda: self._close_unstarted_attempt(
+            initial_attempt_id, now=now
+        ))
+        _do("cancel_episode", lambda: runtime.episode_store.set_status(
+            episode.id, status=EpisodeStatus.CANCELLED, closed_at=now
+        ))
+        _do("cancel_mission", lambda: runtime.mission_store.set_status(
+            mission.id, status=MissionStatus.CANCELLED,
+            final_outcome=None, closed_at=now,
+        ))
+        if not _do("restore_parent", lambda: self._restore_parent(parent_task_id)):
+            _do("synthetic_close_report", lambda: MissionClosureReportRouter(
+                runtime=runtime
+            ).deliver(MissionClosureReport(
+                mission_id=mission.id,
+                requested_by_task_id=parent_task_id,
+                outcome="failed",
+                final_episode_id=episode.id,
+                final_attempt_id=initial_attempt_id,
+            )))
+        if runtime.manager_registry is not None:
+            runtime.manager_registry.deregister(episode.id)
 
-    def _restore_parent(self, *, parent_task_id: str) -> None:
-        """Single-step parent restore — extracted for saga clarity."""
+    def _restore_parent(self, parent_task_id: str) -> None:
         parent_task = self._runtime.task_store.get_task(parent_task_id)
-        attempt_id = (
-            _parent_attempt_id(parent_task) if parent_task else None
-        )
+        attempt_id = _parent_attempt_id(parent_task) if parent_task else None
         target = self._runtime.lifecycle_target_for(
             task_id=parent_task_id, attempt_id=attempt_id
         )
@@ -301,63 +241,20 @@ class MissionStarter:
             status=TaskCenterTaskStatus.RUNNING.value,
         )
 
-    def _deliver_synthetic_failure_closure_report(
-        self,
-        *,
-        mission: Mission,
-        episode: Episode,
-        initial_attempt_id: str | None,
-        parent_task_id: str,
-    ) -> None:
-        """Last-resort recovery when direct rollback to RUNNING fails.
-
-        Without this, a parent task can be orphaned in
-        ``WAITING_MISSION`` with no automated driver to reset it.
-        Routing a synthetic ``MissionClosureReport(outcome="failed")`` re-uses
-        the close-report router so the controller / orchestrator unsticks the
-        parent the same way it would for a normal failed-mission close. The
-        router no-ops cleanly when the task already reached a terminal state.
-        """
-        try:
-            router = MissionClosureReportRouter(runtime=self._runtime)
-            router.deliver(
-                MissionClosureReport(
-                    mission_id=mission.id,
-                    requested_by_task_id=parent_task_id,
-                    outcome="failed",
-                    final_episode_id=episode.id,
-                    final_attempt_id=initial_attempt_id,
-                )
-            )
-        except Exception:
-            logger.critical(
-                "MissionStarter: synthetic close-report delivery also failed; "
-                "task %r remains in WAITING_MISSION and requires manual "
-                "recovery",
-                parent_task_id,
-                exc_info=True,
-            )
-
-    def _close_unstarted_attempt_after_failed_start(
+    def _close_unstarted_attempt(
         self, attempt_id: str | None, *, now: datetime
     ) -> None:
         if attempt_id is None:
             return
-        try:
-            attempt = self._runtime.attempt_store.get(attempt_id)
-            if attempt is None or attempt.is_closed:
-                return
-            self._runtime.attempt_store.close(
-                attempt_id,
-                status=AttemptStatus.FAILED,
-                fail_reason=AttemptFailReason.STARTUP_FAILED,
-                closed_at=now,
-            )
-        except Exception:
-            logger.exception(
-                "MissionStarter: failed to close attempt "
-                "after mission-start failure",
-            )
+        attempt = self._runtime.attempt_store.get(attempt_id)
+        if attempt is None or attempt.is_closed:
+            return
+        self._runtime.attempt_store.close(
+            attempt_id,
+            status=AttemptStatus.FAILED,
+            fail_reason=AttemptFailReason.STARTUP_FAILED,
+            closed_at=now,
+        )
 
 
 def _parent_attempt_id(task: dict[str, Any]) -> str | None:
