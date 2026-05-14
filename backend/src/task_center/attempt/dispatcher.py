@@ -20,7 +20,6 @@ from task_center.attempt.state import (
     AttemptStage,
     AttemptStatus,
 )
-from task_center.context_engine.scope import ContextScope
 from task_center.attempt.runtime import (
     AgentLaunch,
     AttemptDeps,
