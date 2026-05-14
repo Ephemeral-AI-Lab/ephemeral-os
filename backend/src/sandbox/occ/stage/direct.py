@@ -284,12 +284,13 @@ class DirectStager:
         state: _DirectStageState,
     ) -> FileResult | None:
         edit = cast(EditChange, change)
-        edit_result = apply_edit_content(
-            edit.path,
-            state.content,
-            state.final_kind == "write",
-            edit,
-        )
+        if state.final_kind != "write":
+            return FileResult(
+                path=edit.path,
+                status=FileStatus.REJECTED,
+                message="file does not exist",
+            )
+        edit_result = apply_edit_content(edit.path, state.content, edit)
         if isinstance(edit_result, FileResult):
             return edit_result
         state.set_write(

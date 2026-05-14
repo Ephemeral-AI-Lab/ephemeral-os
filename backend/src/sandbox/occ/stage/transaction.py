@@ -322,22 +322,10 @@ class _FileSystemLayerChangeStager:
         try:
             self._counter += 1
             source = self._staging_path / f"{self._counter:06d}.bin"
-            try:
-                file_size = os.path.getsize(content_path)
-            except OSError:
-                file_size = 0
-            if file_size >= _SMALL_FILE_BYTES_THRESHOLD:
-                shutil.copyfile(content_path, source)
-            elif cached_bytes is not None:
-                # Cheap consistency guard against a caller passing
-                # bytes for a different file than content_path.
-                if file_size != len(cached_bytes):
-                    raise RuntimeError(
-                        "stage_write_from_path cached_bytes length "
-                        f"{len(cached_bytes)} disagrees with file size "
-                        f"{file_size} at {content_path!r}"
-                    )
+            if cached_bytes is not None:
                 source.write_bytes(cached_bytes)
+            elif os.path.getsize(content_path) >= _SMALL_FILE_BYTES_THRESHOLD:
+                shutil.copyfile(content_path, source)
             else:
                 source.write_bytes(Path(content_path).read_bytes())
             return WriteLayerChange(

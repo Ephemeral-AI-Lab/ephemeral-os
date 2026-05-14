@@ -8,15 +8,8 @@ from sandbox.occ.changeset.types import EditChange, FileResult, FileStatus
 def apply_edit_content(
     path: str,
     content: bytes,
-    exists: bool,
     change: EditChange,
 ) -> bytes | FileResult:
-    if not exists:
-        return FileResult(
-            path=path,
-            status=FileStatus.ABORTED_OVERLAP,
-            message="file does not exist",
-        )
     try:
         text = content.decode("utf-8")
     except UnicodeDecodeError:

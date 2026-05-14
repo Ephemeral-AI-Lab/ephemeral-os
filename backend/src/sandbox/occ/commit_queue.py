@@ -211,6 +211,8 @@ class CommitQueue:
             for item in batch:
                 if not item.future.cancelled():
                     item.future.set_exception(exc)
+            if not isinstance(exc, Exception):
+                raise
 
 
 def _disjoint_batches(items: list[_WorkItem]) -> list[list[_WorkItem]]:

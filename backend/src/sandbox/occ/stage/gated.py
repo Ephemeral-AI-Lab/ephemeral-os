@@ -267,12 +267,13 @@ class GatedStager:
     ) -> FileResult | None:
         del current_hash
         edit = cast(EditChange, change)
-        edit_result = apply_edit_content(
-            path,
-            state.content,
-            state.exists,
-            edit,
-        )
+        if not state.exists:
+            return FileResult(
+                path=path,
+                status=FileStatus.ABORTED_VERSION,
+                message="file does not exist",
+            )
+        edit_result = apply_edit_content(path, state.content, edit)
         if isinstance(edit_result, FileResult):
             return edit_result
         state.set_write(
