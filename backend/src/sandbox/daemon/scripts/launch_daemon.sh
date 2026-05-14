@@ -29,11 +29,11 @@ for py in $PYTHON_CANDIDATES; do
     if command -v "$py" >/dev/null 2>&1 && "$py" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1; then
         nohup "$py" -m "$MODULE" --socket "$SOCK" --pid-file "$PID" </dev/null >"$LOG" 2>&1 &
         printf '%s' "$ENV_SIG" > "$ENV_FILE"
-        for _ in $(seq 1 50); do
+        for _ in $(seq 1 200); do
             [ -S "$SOCK" ] && exit 0
             sleep 0.05
         done
-        echo 'sandbox daemon failed to bind socket within 2.5s' >&2
+        echo 'sandbox daemon failed to bind socket within 10s' >&2
         exit 1
     fi
 done

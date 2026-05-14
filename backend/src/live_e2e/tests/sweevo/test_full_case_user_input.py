@@ -103,8 +103,8 @@ async def test_full_case_user_input_runs_dynamic_verifier_dag(
     assert run_payload["instance_id"] == _DEFAULT_INSTANCE_ID
 
     assert len(report.requirement_ledger) > 100
-    executor_count = sum(1 for launch in report.launches if launch.agent_name == "executor")
-    verifier_count = sum(1 for launch in report.launches if launch.agent_name == "verifier")
+    executor_count = sum(1 for launch in report.launches if launch.role == "executor")
+    verifier_count = sum(1 for launch in report.launches if launch.role == "verifier")
     assert executor_count >= 12
     assert verifier_count >= 4
     assert verifier_count < executor_count
@@ -251,7 +251,8 @@ def _assert_message_jsonl_contains_tool_scripts(run_dir: Path) -> None:
         for message in messages
         if isinstance(message.get("metadata"), dict)
     }
-    assert {"executor", "verifier"}.issubset(agents)
+    assert any(_is_executor_agent_name(agent) for agent in agents)
+    assert "verifier" in agents
     tool_calls = {
         str(block.get("name") or "")
         for message in messages
@@ -397,3 +398,7 @@ def _message_steps(run_dir: Path) -> list[dict[str, Any]]:
             if line.strip():
                 steps.append(json.loads(line))
     return steps
+
+
+def _is_executor_agent_name(agent_name: str) -> bool:
+    return agent_name == "executor" or agent_name.startswith("executor_")

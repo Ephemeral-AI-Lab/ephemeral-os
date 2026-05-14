@@ -9,8 +9,11 @@ ScenarioContext — all without invoking Daytona or Postgres.
 from __future__ import annotations
 
 import inspect
+from types import SimpleNamespace
+
 import pytest
 
+from agents import AgentDefinition, AgentKind
 from agents import list_definitions
 from live_e2e import RunReport, run_scenario
 from live_e2e.audit.bus import AuditEventBus
@@ -23,6 +26,7 @@ from live_e2e.squad.definitions import (
     registered_mock_agents,
 )
 from live_e2e.squad.runner import MockSquadRunner
+from tools._framework.core.runtime import ExecutionMetadata
 
 
 def test_runner_top_level_exports_are_callable() -> None:
@@ -56,6 +60,45 @@ def test_squad_runner_constructs_without_instance() -> None:
     assert runner._probe_path() == ".ephemeralos/sweevo-mock/probe.txt"  # noqa: SLF001
 
 
+def test_prompt_inspector_accepts_current_failed_attempt_heading(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runner = MockSquadRunner(
+        repo_dir="/tmp/live_e2e_test_repo",
+        bus=AuditEventBus(),
+        scenario=CorrectnessTesting(),
+        mutable_state=MutableMockState(),
+    )
+    monkeypatch.setattr(
+        runner,
+        "_current_attempt_and_episode",
+        lambda _metadata: (
+            SimpleNamespace(attempt_sequence_no=2),
+            SimpleNamespace(sequence_no=1),
+        ),
+    )
+
+    inspection = runner._inspect_prompt(  # noqa: SLF001
+        prompt="\n".join(
+            [
+                "# Mission / Current Episode",
+                "Do the retry work.",
+                "# Prior Failed Attempts",
+                "Attempt 1 failed.",
+            ]
+        ),
+        agent_def=AgentDefinition(
+            name="planner",
+            description="test planner",
+            agent_kind=AgentKind.PLANNER,
+        ),
+        metadata=ExecutionMetadata(task_center_task_id="attempt-2:planner"),
+    )
+
+    assert inspection.checks["failed_attempts"]
+    assert inspection.passed
+
+
 def test_registered_mock_agents_install_and_restore() -> None:
     initial = {d.name for d in list_definitions()}
     with registered_mock_agents():
@@ -65,6 +108,8 @@ def test_registered_mock_agents_install_and_restore() -> None:
             "planner",
             "planner_full_only",
             "executor",
+            "executor_success_failure",
+            "executor_success_handoff",
             "verifier",
             "evaluator",
         }

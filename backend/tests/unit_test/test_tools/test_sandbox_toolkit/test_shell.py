@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 
 from sandbox.api import ShellResult
+from sandbox.occ.timing_keys import TimingKey
 from tools._framework.core.base import ToolExecutionContextService
 import tools.sandbox.shell as shell_module
 from tools.sandbox.shell import shell
@@ -76,6 +77,28 @@ def test_shell_success_returns_single_command_output_shape(
         "stdout": "ok\n",
         "stderr": "",
         "error": "",
+    }
+
+
+def test_shell_metadata_normalizes_timing_key_enum_names(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    api = _ShellApi(
+        ShellResult(
+            exit_code=0,
+            stdout="ok\n",
+            success=True,
+            timings={TimingKey.PREPARE_TOTAL: 0.1, TimingKey.APPLY_TOTAL: 0.2},
+        )
+    )
+    ctx = _ctx_with_api(api)
+    monkeypatch.setattr(shell_module, "sandbox_api", api)
+
+    result = _run({"command": "pytest -q"}, ctx)
+
+    assert result.metadata["timings"] == {
+        "occ.prepare.total_s": 0.1,
+        "occ.apply.total_s": 0.2,
     }
 
 

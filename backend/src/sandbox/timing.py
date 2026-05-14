@@ -10,7 +10,10 @@ from __future__ import annotations
 
 import time
 from collections.abc import Mapping, MutableMapping
+from enum import Enum
 from typing import Literal
+
+from sandbox.timing_keys import TimingKey
 
 TimingAuditSignal = Literal[
     "occ_prepared",
@@ -44,7 +47,7 @@ def normalize_timing_map(raw: Mapping[object, object] | None) -> dict[str, float
     """Project arbitrary timing payloads into ``dict[str, float]``."""
     if not raw:
         return {}
-    return {str(key): float(value) for key, value in raw.items()}
+    return {_timing_key_text(key): float(value) for key, value in raw.items()}
 
 
 def timing_audit_signals(
@@ -85,7 +88,7 @@ def timing_audit_signals(
 
 
 def _has_timing(timings: Mapping[object, object], prefix: str) -> bool:
-    return any(str(key).startswith(prefix) for key in timings)
+    return any(_matches_timing_prefix(key, prefix) for key in timings)
 
 
 def _has_any_timing(timings: Mapping[object, object], prefixes: tuple[str, ...]) -> bool:
@@ -96,9 +99,46 @@ def _has_auto_squash_fact(
     timings: Mapping[object, object],
     payload: Mapping[str, object],
 ) -> bool:
-    if any("auto_squash" in str(key) for key in timings):
+    if any("auto_squash" in _timing_key_text(key).lower() for key in timings):
         return True
-    return any("auto_squash" in str(key) for key in payload)
+    return any("auto_squash" in str(key).lower() for key in payload)
+
+
+def _timing_key_text(key: object) -> str:
+    if isinstance(key, Enum):
+        return str(key.value)
+    text = str(key)
+    if text.startswith("TimingKey."):
+        return _TIMING_KEY_NAME_TO_VALUE.get(text.removeprefix("TimingKey."), text)
+    return text
+
+
+def _matches_timing_prefix(key: object, prefix: str) -> bool:
+    text = _timing_key_text(key)
+    if text.startswith(prefix):
+        return True
+    if not text.startswith("TimingKey."):
+        return False
+    name = text.removeprefix("TimingKey.").lower()
+    return _STRINGIFIED_TIMING_KEY_PREFIXES.get(prefix, ()) and name.startswith(
+        _STRINGIFIED_TIMING_KEY_PREFIXES[prefix]
+    )
+
+
+_STRINGIFIED_TIMING_KEY_PREFIXES = {
+    "occ.prepare.": ("prepare_",),
+    "occ.commit.": ("commit_",),
+    "occ.apply.": ("apply_",),
+    "occ.direct.": ("direct_",),
+    "occ.gated.": ("gated_",),
+    "occ.serial.": ("serial_",),
+    "layer_stack.lease_": ("layer_transaction_lock_",),
+    "layer_stack.transaction_lock_wait": ("layer_transaction_lock_wait",),
+    "layer_stack.transaction_lock_held": ("layer_transaction_lock_held",),
+    "layer_stack.publish": ("commit_publish_layer",),
+}
+
+_TIMING_KEY_NAME_TO_VALUE = {key.name: str(key.value) for key in TimingKey}
 
 
 __all__ = [

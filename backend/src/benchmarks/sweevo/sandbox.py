@@ -497,10 +497,11 @@ async def setup_sweevo_sandbox(
     repo_dir: str = _REPO_DIR,
     *,
     on_progress: ProgressCallback | None = None,
+    exec_ready_attempts: int = 6,
 ) -> str:
     """Prepare the sandbox by checking out the repo at the base commit."""
     _progress(on_progress, f"[setup] waiting for sandbox exec readiness sandbox_id={sandbox_id}")
-    await _wait_for_sandbox_exec_ready(sandbox_id)
+    await _wait_for_sandbox_exec_ready(sandbox_id, attempts=exec_ready_attempts)
     _progress(on_progress, f"[setup] checking repository at {repo_dir}")
     await _exec(sandbox_id, f"test -d {repo_dir} && test -d {repo_dir}/.git")
     await _exec(sandbox_id, f"{_CONDA_ACTIVATE} && python --version")
@@ -675,9 +676,9 @@ async def create_sweevo_test_sandbox(
     resolved_name = _truncate_dns_label(sandbox_name) if sandbox_name else _default_sweevo_sandbox_name(instance)
     if sandbox_name:
         existing = _find_existing_sandbox_by_name(service, resolved_name)
+        existing_state = str(existing.get("state") or "") if existing else ""
         if existing:
-            state = str(existing.get("state") or "")
-            if state in {"started", "stopped", ""}:
+            if existing_state in {"started", "stopped", ""}:
                 try:
                     existing = _configure_reusable_sweevo_sandbox(
                         service,
@@ -697,7 +698,7 @@ async def create_sweevo_test_sandbox(
                 logger.warning(
                     "Ignoring named SWE-EVO sandbox %s in non-reusable state %s",
                     resolved_name,
-                    state,
+                    existing_state,
                 )
                 _cleanup_failed_sandbox(service, existing)
                 existing = None
@@ -717,6 +718,7 @@ async def create_sweevo_test_sandbox(
                 existing["id"],
                 repo_dir,
                 on_progress=on_progress,
+                exec_ready_attempts=1 if existing_state == "started" else 6,
             )
             return {
                 "sandbox_id": existing["id"],
@@ -733,6 +735,7 @@ async def create_sweevo_test_sandbox(
                 repo_dir=repo_dir,
             )
             if existing is not None:
+                existing_state = str(existing.get("state") or "")
                 logger.info(
                     "Reusing auto SWE-EVO sandbox %s (%s) for %s",
                     existing.get("name", ""),
@@ -758,6 +761,9 @@ async def create_sweevo_test_sandbox(
                         existing["id"],
                         repo_dir,
                         on_progress=on_progress,
+                        exec_ready_attempts=1
+                        if existing_state == "started"
+                        else 6,
                     )
                     return {
                         "sandbox_id": existing["id"],

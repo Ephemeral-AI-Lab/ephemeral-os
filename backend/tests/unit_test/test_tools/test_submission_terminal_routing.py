@@ -6,7 +6,15 @@ import pytest
 
 from task_center.mission.state import MissionStatus
 from task_center.attempt import AttemptStage, AttemptStatus
-from task_center.task_state import EvaluatorSubmission, GeneratorSubmission, TaskCenterTaskStatus, PlannedGeneratorTask, PlannerSubmission
+from task_center.task_state import (
+    EvaluatorSubmission,
+    GeneratorSubmission,
+    PlannedGeneratorTask,
+    PlannerSubmission,
+    SpawnReason,
+    TaskCenterTaskRole,
+    TaskCenterTaskStatus,
+)
 from task_center._core.types import evaluator_task_id, generator_task_id, planner_task_id
 from tools._framework.execution.tool_call import execute_tool_once
 from tools.submission.evaluator import (
@@ -201,6 +209,80 @@ async def test_submit_execution_handoff_starts_delegated_request(
     assert created_attempt is not None
     assert created_attempt.episode_id == initial_episode.id
     assert created_attempt.stage == AttemptStage.PLAN
+
+
+async def test_submit_execution_handoff_entry_mode_uses_bound_controller(
+    mission_store, episode_store, attempt_store, task_store, composer
+) -> None:
+    from pathlib import Path
+
+    from task_center.attempt.orchestrator_registry import (
+        AttemptOrchestratorRegistry,
+    )
+    from task_center.attempt.runtime import AttemptDeps
+    from task_center.entry import EntryTaskController
+    from task_center.episode import EpisodeManagerRegistry
+    from tools._framework.core.context import ToolExecutionContextService
+    from tools._framework.core.runtime import ExecutionMetadata
+
+    from .submission_test_utils import FakeLauncher
+
+    entry_task_id = "run1:entry"
+    task_store.upsert_task(
+        task_id=entry_task_id,
+        task_center_run_id="run1",
+        role=TaskCenterTaskRole.ENTRY_EXECUTOR.value,
+        agent_name="entry_executor",
+        rendered_prompt="top-level goal",
+        status=TaskCenterTaskStatus.RUNNING.value,
+        summaries=[],
+        needs=[],
+        task_center_attempt_id=None,
+        spawn_reason=SpawnReason.ENTRY_EXECUTOR.value,
+    )
+    controller = EntryTaskController(
+        task_id=entry_task_id,
+        task_center_run_id="run1",
+        task_store=task_store,
+    )
+    runtime = AttemptDeps(
+        mission_store=mission_store,
+        episode_store=episode_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+        agent_launcher=FakeLauncher(),
+        orchestrator_registry=AttemptOrchestratorRegistry(),
+        manager_registry=EpisodeManagerRegistry(),
+        composer=composer,
+        entry_task_controller=controller,
+    )
+    context = ToolExecutionContextService(
+        cwd=Path("/tmp"),
+        services=ExecutionMetadata(
+            task_center_task_id=entry_task_id,
+            task_center_attempt_id=None,
+            attempt_runtime=runtime,
+            conversation_messages=[],
+        ),
+    )
+
+    result = await execute_tool_once(
+        submit_execution_handoff,
+        {"goal": "solve first delegated mission"},
+        context,
+        emit=_noop_emit,
+    )
+
+    entry_task = task_store.get_task(entry_task_id)
+    delegated_mission = mission_store.get(result.metadata["mission_id"])
+
+    assert not result.is_error
+    assert result.does_terminate
+    assert result.metadata["attempt_id"] is None
+    assert entry_task is not None
+    assert entry_task["status"] == TaskCenterTaskStatus.WAITING_MISSION.value
+    assert delegated_mission is not None
+    assert delegated_mission.requested_by_task_id == entry_task_id
 
 
 async def test_submit_execution_handoff_accepts_any_generator_agent_profile(

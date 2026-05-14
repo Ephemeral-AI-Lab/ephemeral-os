@@ -259,6 +259,13 @@ async def test_auto_sweevo_sandbox_reuses_started_matching_fixture(
     assert result["reused_existing"] is True
     assert result["fallback_reason"] == "auto_reused_existing"
     assert captured["loaded"] == "sbx-started"
+    sweevo_sandbox.setup_sweevo_sandbox.assert_awaited_once_with(
+        _instance(),
+        "sbx-started",
+        "/testbed",
+        on_progress=None,
+        exec_ready_attempts=1,
+    )
 
 
 @pytest.mark.asyncio

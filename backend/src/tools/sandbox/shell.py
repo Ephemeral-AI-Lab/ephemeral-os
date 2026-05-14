@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 import sandbox.api as sandbox_api
 from sandbox.api import ShellRequest
+from sandbox.timing import normalize_timing_map
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
 from tools.sandbox._lib.session import (
@@ -100,7 +101,7 @@ def _build_tool_output(
         "conflict_reason": conflict_reason,
     }
     if timings:
-        metadata["timings"] = dict(timings)
+        metadata["timings"] = normalize_timing_map(timings)
     metadata = merge_tool_metadata(metadata, sandbox_audit_metadata(context))
     return ToolResult(
         output=json.dumps(

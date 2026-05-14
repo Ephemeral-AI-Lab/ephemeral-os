@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from sandbox.occ.timing_keys import TimingKey
 from sandbox.timing import (
     normalize_timing_map,
     record_elapsed,
@@ -14,6 +15,18 @@ def test_normalize_timing_map_projects_string_float_dict() -> None:
     assert normalize_timing_map({"a": "0.25", 10: 2}) == {
         "a": 0.25,
         "10": 2.0,
+    }
+
+
+def test_normalize_timing_map_projects_timing_key_enum_values() -> None:
+    assert normalize_timing_map({TimingKey.PREPARE_TOTAL: "0.25"}) == {
+        "occ.prepare.total_s": 0.25,
+    }
+
+
+def test_normalize_timing_map_projects_stringified_timing_key_names() -> None:
+    assert normalize_timing_map({"TimingKey.LAYER_AUTO_SQUASH_TOTAL": "0.25"}) == {
+        "layer_stack.auto_squash.total_s": 0.25,
     }
 
 
@@ -60,3 +73,20 @@ def test_timing_audit_signals_classify_occ_conflict_without_commit() -> None:
     )
 
     assert signals == ("occ_prepared", "occ_conflicted")
+
+
+def test_timing_audit_signals_accept_stringified_timing_key_names() -> None:
+    signals = timing_audit_signals(
+        {
+            "TimingKey.PREPARE_TOTAL": 0.01,
+            "TimingKey.APPLY_TOTAL": 0.02,
+            "TimingKey.LAYER_AUTO_SQUASH_TOTAL": 0.03,
+        },
+        status="ok",
+    )
+
+    assert signals == (
+        "occ_prepared",
+        "occ_committed",
+        "layer_stack_auto_squashed",
+    )

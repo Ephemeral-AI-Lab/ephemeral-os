@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from sandbox.timing import normalize_timing_map
 from tools._framework.core.results import ToolResult
 
 
@@ -31,7 +32,7 @@ def mutation_tool_result(
         "conflict_reason": conflict_reason,
     }
     if timings:
-        metadata["timings"] = dict(timings)
+        metadata["timings"] = normalize_timing_map(timings)
     metadata.update(metadata_extra or {})
 
     if success:

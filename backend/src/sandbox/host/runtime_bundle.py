@@ -175,6 +175,11 @@ def _runtime_bundle_bytes() -> bytes:
         )
         _add_if_exists(
             tar,
+            sandbox_dir / "timing_keys.py",
+            arcname="sandbox/timing_keys.py",
+        )
+        _add_if_exists(
+            tar,
             sandbox_dir / "daemon_paths.py",
             arcname="sandbox/daemon_paths.py",
         )

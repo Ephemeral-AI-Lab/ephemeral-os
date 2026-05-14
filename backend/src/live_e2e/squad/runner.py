@@ -1197,7 +1197,10 @@ class MockSquadRunner:
                 ),
             }
             if attempt.attempt_sequence_no > 1:
-                checks["failed_attempts"] = "# Failed Attempts" in prompt
+                checks["failed_attempts"] = (
+                    "# Prior Failed Attempts" in prompt
+                    or "# Failed Attempts" in prompt
+                )
             if episode.sequence_no > 1:
                 checks["previous_episode_results"] = "# Previous Episode Results" in prompt
             reason = (

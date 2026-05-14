@@ -29,6 +29,7 @@ _DAEMON_ENV = DAEMON_ENV_SIGNATURE_PATH
 _PYTHON_CANDIDATES = ("python3.13", "python3.12", "python3.11", "python3.10", "python3")
 _THIN_CLIENT_CONNECT_FAILED = 97
 _THIN_CLIENT_IO_FAILED = 98
+_DAEMON_SPAWN_TIMEOUT = 20
 DAEMON_PROTOCOL_VERSION = 1
 DAEMON_PROTOCOL_FIELD = "_eos_daemon_protocol_version"
 
@@ -135,7 +136,7 @@ def versioned_payload(payload: Mapping[str, object]) -> dict[str, object]:
 async def ensure_daemon_current(
     sandbox_id: str,
     *,
-    timeout: int = 10,
+    timeout: int = _DAEMON_SPAWN_TIMEOUT,
 ) -> None:
     """Ensure the resident daemon is running for the current runtime bundle."""
     result = await get_adapter(sandbox_id).exec(
@@ -167,7 +168,7 @@ async def _exec_daemon_call(
             sandbox_id,
             _daemon_spawn_command(),
             cwd=cwd,
-            timeout=10,
+            timeout=_DAEMON_SPAWN_TIMEOUT,
         )
         if _exit_code(spawn_result) != 0:
             return spawn_result

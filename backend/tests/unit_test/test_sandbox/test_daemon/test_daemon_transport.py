@@ -102,10 +102,12 @@ async def test_ensure_daemon_current_runs_spawn_command(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     seen: list[str] = []
+    timeouts: list[int | None] = []
 
     class Adapter:
-        async def exec(self, _sandbox_id: str, command_str: str, **_: Any) -> Any:
+        async def exec(self, _sandbox_id: str, command_str: str, **kwargs: Any) -> Any:
             seen.append(command_str)
+            timeouts.append(kwargs.get("timeout"))
             return SimpleNamespace(stdout="", stderr="", exit_code=0)
 
     monkeypatch.setattr(command, "get_adapter", lambda _sandbox_id: Adapter())
@@ -114,10 +116,12 @@ async def test_ensure_daemon_current_runs_spawn_command(
 
     assert len(seen) == 1
     assert "sandbox.daemon" in seen[0]
+    assert timeouts == [command._DAEMON_SPAWN_TIMEOUT]
 
 
 async def test_daemon_transport_spawns_on_socket_missing() -> None:
     seen: list[str] = []
+    timeouts: list[int | None] = []
     responses: list[Any] = [
         SimpleNamespace(
             stdout="",
@@ -129,8 +133,9 @@ async def test_daemon_transport_spawns_on_socket_missing() -> None:
         SimpleNamespace(stdout=_ok_response(), stderr="", exit_code=0),
     ]
 
-    async def fake_exec(_sandbox_id: str, command_str: str, **_: Any) -> Any:
+    async def fake_exec(_sandbox_id: str, command_str: str, **kwargs: Any) -> Any:
         seen.append(command_str)
+        timeouts.append(kwargs.get("timeout"))
         return responses.pop(0)
 
     response = await command._call_daemon(
@@ -146,6 +151,7 @@ async def test_daemon_transport_spawns_on_socket_missing() -> None:
     assert "sandbox.daemon" in seen[1]
     assert "api.runtime.ready" in seen[2]
     assert "thin_client.py" in seen[3]
+    assert timeouts[1] == command._DAEMON_SPAWN_TIMEOUT
 
 
 async def test_daemon_transport_allows_unbound_readiness_for_workspace_bootstrap() -> None:

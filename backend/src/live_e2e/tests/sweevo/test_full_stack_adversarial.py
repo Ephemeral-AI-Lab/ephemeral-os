@@ -165,7 +165,8 @@ def _assert_message_logs(run_dir: Path) -> None:
         for message in messages
         if isinstance(message.get("metadata"), dict)
     }
-    assert {"entry_executor", "planner", "executor", "verifier", "evaluator"} <= agents
+    assert {"entry_executor", "planner", "verifier", "evaluator"} <= agents
+    assert any(_is_executor_agent_name(agent) for agent in agents)
     tool_uses = {
         str(block.get("name") or "")
         for message in messages
@@ -329,6 +330,10 @@ def _message_rows(run_dir: Path) -> list[dict[str, Any]]:
             if line.strip():
                 rows.append(json.loads(line))
     return rows
+
+
+def _is_executor_agent_name(agent_name: str) -> bool:
+    return agent_name == "executor" or agent_name.startswith("executor_")
 
 
 def _jsonl_rows(path: Path) -> list[dict[str, Any]]:
