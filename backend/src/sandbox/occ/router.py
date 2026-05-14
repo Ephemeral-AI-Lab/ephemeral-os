@@ -119,7 +119,7 @@ class Router:
             OrderedDict()
         )
         for change in changes:
-            route, path, message = self._route_change(change, snapshot=snapshot)
+            route, path, message, _ = self._route_change_timed(change, snapshot=snapshot)
             key = (route, path)
             if key not in grouped:
                 grouped[key] = ([], message)
@@ -128,18 +128,6 @@ class Router:
             (path, route, path_changes, message)
             for (route, path), (path_changes, message) in grouped.items()
         ]
-
-    def _route_change(
-        self,
-        change: Change,
-        *,
-        snapshot: Manifest | None,
-    ) -> tuple[RouteDecision, str, str | None]:
-        route, path, message, _gitignore_s = self._route_change_timed(
-            change,
-            snapshot=snapshot,
-        )
-        return route, path, message
 
     def _route_change_timed(
         self,
@@ -178,25 +166,26 @@ class Router:
         message: str | None,
         base_hash_reader: BaseHashReader | None,
     ) -> PreparedPathGroup:
-        if route is not RouteDecision.GATED or base_hash_reader is None:
-            return PreparedPathGroup(
-                path=path,
-                route=route,
-                changes=changes,
-                message=message,
-            )
+        if (
+            route is not RouteDecision.GATED
+            or base_hash_reader is None
+            or not any(_requires_base_hash(change) for change in changes)
+        ):
+            return PreparedPathGroup(path=path, route=route, changes=changes, message=message)
 
-        prepared_changes = _attach_chained_base_hashes(
-            path,
-            changes,
-            base_hash_reader,
-        )
-        return PreparedPathGroup(
-            path=path,
-            route=route,
-            changes=prepared_changes,
-            message=message,
-        )
+        running_hash = base_hash_reader(path)
+        hasher = ContentHasher()
+        prepared: list[Change] = []
+        for change in changes:
+            if _requires_base_hash(change):
+                prepared.append(_attach_base_hash(change, running_hash))
+            else:
+                prepared.append(change)
+            if isinstance(change, WriteChange):
+                running_hash = change.precomputed_hash or hasher.hash_bytes(change.final_content)
+            elif isinstance(change, DeleteChange):
+                running_hash = None
+        return PreparedPathGroup(path=path, route=route, changes=tuple(prepared), message=message)
 
 
 def _requires_base_hash(change: Change) -> bool:
@@ -213,36 +202,6 @@ def _attach_base_hash(change: Change, base_hash: str | None) -> Change:
     if isinstance(change, DeleteChange):
         return change.with_base_hash(base_hash)
     return change
-
-
-def _attach_chained_base_hashes(
-    path: str,
-    changes: tuple[Change, ...],
-    base_hash_reader: BaseHashReader,
-) -> tuple[Change, ...]:
-    needs_base_hash = any(_requires_base_hash(change) for change in changes)
-    running_hash = base_hash_reader(path) if needs_base_hash else None
-    hasher = ContentHasher()
-    prepared: list[Change] = []
-    for change in changes:
-        next_change = (
-            _attach_base_hash(change, running_hash) if _requires_base_hash(change) else change
-        )
-        prepared.append(next_change)
-        running_hash = _next_base_hash(change, running_hash, hasher)
-    return tuple(prepared)
-
-
-def _next_base_hash(
-    change: Change,
-    running_hash: str | None,
-    hasher: ContentHasher,
-) -> str | None:
-    if isinstance(change, WriteChange):
-        return change.precomputed_hash or hasher.hash_bytes(change.final_content)
-    if isinstance(change, DeleteChange):
-        return None
-    return running_hash
 
 
 def _is_gitignored(

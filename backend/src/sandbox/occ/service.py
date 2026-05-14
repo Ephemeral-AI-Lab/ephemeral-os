@@ -162,7 +162,9 @@ class OccService:
         sync_call: bool,
         extra_timings: dict[str, float] | None = None,
     ) -> ChangesetResult:
-        result_timings, resume_wait = _result_timings_with_resume(result)
+        result_timings = dict(result.timings)
+        ready_at = result_timings.pop(TimingKey.SERIAL_RESULT_READY_AT, None)
+        resume_wait = 0.0 if ready_at is None else max(0.0, monotonic_now() - ready_at)
         timings = {
             **result_timings,
             **(extra_timings or {}),
@@ -178,13 +180,14 @@ class OccService:
             TimingKey.APPLY_COMMIT: commit_elapsed,
             TimingKey.APPLY_TOTAL: monotonic_now() - total_start,
         }
-        manifest_lag = _manifest_lag(prepared.snapshot, result.published_manifest_version)
-        if manifest_lag is not None:
-            timings[TimingKey.APPLY_MANIFEST_LAG] = manifest_lag
+        published = result.published_manifest_version
+        snapshot = prepared.snapshot
+        if snapshot is not None and published is not None:
+            timings[TimingKey.APPLY_MANIFEST_LAG] = max(0, published - snapshot.version - 1)
         return ChangesetResult(
             files=result.files,
             timings=timings,
-            published_manifest_version=result.published_manifest_version,
+            published_manifest_version=published,
         )
 
     async def prepare_changeset(
@@ -246,21 +249,6 @@ class OccService:
         """Stop owned background resources."""
         if self._owns_commit_queue:
             self._commit_queue.close()
-
-
-def _manifest_lag(snapshot: Manifest | None, published_version: int | None) -> int | None:
-    if snapshot is None or published_version is None:
-        return None
-    delta = published_version - snapshot.version - 1
-    return max(0, delta)
-
-
-def _result_timings_with_resume(result: ChangesetResult) -> tuple[dict[str, float], float]:
-    timings = dict(result.timings)
-    ready_at = timings.pop(TimingKey.SERIAL_RESULT_READY_AT, None)
-    if ready_at is None:
-        return timings, 0.0
-    return timings, max(0.0, monotonic_now() - ready_at)
 
 
 __all__ = [

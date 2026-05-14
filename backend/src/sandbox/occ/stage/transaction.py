@@ -7,7 +7,6 @@ import shutil
 from collections.abc import Mapping
 from pathlib import Path
 from types import TracebackType
-from typing import Protocol
 from uuid import uuid4
 
 from sandbox.layer_stack.layer_change import LayerChange, WriteLayerChange
@@ -77,7 +76,7 @@ class CommitTransaction:
                 hasher=self._hasher,
             ) as stager:
                 validate_start = monotonic_now()
-                validations: list[tuple[FileResult, LayerDelta | None]] = []
+                validations: list[tuple[FileResult, StagedChanges | None]] = []
                 occ_gated_failed = False
                 gated_read_total = 0.0
                 gated_apply_total = 0.0
@@ -121,18 +120,33 @@ class CommitTransaction:
                 timings[TimingKey.COMMIT_DIRECT_PATH_COUNT] = float(direct_count)
 
                 files = tuple(result for result, _ in validations)
-                if _must_skip_publish(
-                    prepared,
-                    files,
-                    occ_gated_failed=occ_gated_failed,
-                ):
+                atomic_failed = prepared.atomic and any(
+                    result.status in _FAILURE_STATUSES for result in files
+                )
+                overlay_failed = occ_gated_failed and any(
+                    change.source == "overlay_capture"
+                    for group in prepared.path_groups
+                    for change in group.changes
+                )
+                if atomic_failed or overlay_failed:
+                    message = (
+                        "not published because atomic changeset validation failed"
+                        if prepared.atomic
+                        else "not published because overlay capture OCC-gated validation failed"
+                    )
                     return ChangesetResult(
-                        files=tuple(_mark_unpublished(files, prepared)),
-                        timings=_finish_timings(
-                            timings,
-                            total_start,
-                            transaction=transaction,
+                        files=tuple(
+                            FileResult(
+                                path=result.path,
+                                status=FileStatus.DROPPED,
+                                message=message,
+                                timings=result.timings,
+                            )
+                            if result.status is FileStatus.ACCEPTED
+                            else result
+                            for result in files
                         ),
+                        timings=_finish_timings(timings, total_start, transaction),
                         published_manifest_version=None,
                     )
 
@@ -147,11 +161,7 @@ class CommitTransaction:
                 if not changes:
                     return ChangesetResult(
                         files=files,
-                        timings=_finish_timings(
-                            timings,
-                            total_start,
-                            transaction=transaction,
-                        ),
+                        timings=_finish_timings(timings, total_start, transaction),
                         published_manifest_version=None,
                     )
 
@@ -166,11 +176,7 @@ class CommitTransaction:
                 timings[TimingKey.COMMIT_PUBLISH_LAYER] = monotonic_now() - publish_start
                 return ChangesetResult(
                     files=files,
-                    timings=_finish_timings(
-                        timings,
-                        total_start,
-                        transaction=transaction,
-                    ),
+                    timings=_finish_timings(timings, total_start, transaction),
                     published_manifest_version=published.version,
                 )
 
@@ -179,8 +185,8 @@ class CommitTransaction:
         group: PreparedPathGroup,
         *,
         active_manifest: Manifest,
-        stager: _LayerChangeStager,
-    ) -> tuple[FileResult, LayerDelta | None]:
+        stager: _FileSystemLayerChangeStager,
+    ) -> tuple[FileResult, StagedChanges | None]:
         if group.route is RouteDecision.DROP:
             return (
                 FileResult(
@@ -215,29 +221,6 @@ class CommitTransaction:
             ),
             None,
         )
-
-
-class _LayerChangeStager(Protocol):
-    """Stage file payloads for layer publish implementations."""
-
-    @property
-    def write_total_s(self) -> float: ...
-
-    @property
-    def write_count(self) -> int: ...
-
-    @property
-    def staging_path(self) -> Path | None: ...
-
-    def write(self, path: str, content: bytes) -> LayerChange: ...
-
-    def write_from_path(
-        self,
-        path: str,
-        content_path: str,
-        precomputed_hash: str,
-        cached_bytes: bytes | None = None,
-    ) -> LayerChange: ...
 
 
 class _FileSystemLayerChangeStager:
@@ -338,72 +321,26 @@ class _FileSystemLayerChangeStager:
             self._write_count += 1
 
 
-def _must_skip_publish(
-    prepared: PreparedChangeset,
-    files: tuple[FileResult, ...],
-    *,
-    occ_gated_failed: bool,
-) -> bool:
-    if prepared.atomic and any(_is_failure(result) for result in files):
-        return True
-    return _is_overlay_capture_changeset(prepared) and occ_gated_failed
-
-
-def _is_overlay_capture_changeset(prepared: PreparedChangeset) -> bool:
-    return any(
-        change.source == "overlay_capture"
-        for group in prepared.path_groups
-        for change in group.changes
-    )
-
-
-def _is_failure(result: FileResult) -> bool:
-    return result.status in {
+_FAILURE_STATUSES = frozenset(
+    {
         FileStatus.ABORTED_OVERLAP,
         FileStatus.ABORTED_VERSION,
         FileStatus.FAILED,
         FileStatus.REJECTED,
     }
-
-
-def _mark_unpublished(
-    files: tuple[FileResult, ...],
-    prepared: PreparedChangeset,
-) -> tuple[FileResult, ...]:
-    if prepared.atomic:
-        message = "not published because atomic changeset validation failed"
-    else:
-        message = "not published because overlay capture OCC-gated validation failed"
-
-    marked: list[FileResult] = []
-    for result in files:
-        if result.status is FileStatus.ACCEPTED:
-            marked.append(
-                FileResult(
-                    path=result.path,
-                    status=FileStatus.DROPPED,
-                    message=message,
-                    timings=result.timings,
-                )
-            )
-        else:
-            marked.append(result)
-    return tuple(marked)
+)
 
 
 def _finish_timings(
     timings: dict[str, float],
     total_start: float,
-    *,
-    transaction: CommitTransactionPort | None = None,
+    transaction: CommitTransactionPort,
 ) -> dict[str, float]:
-    result = {
+    return {
         **timings,
         TimingKey.COMMIT_TOTAL: monotonic_now() - total_start,
+        TimingKey.LAYER_TRANSACTION_LOCK_HELD: float(transaction.lock_held_s),
     }
-    if transaction is not None:
-        result[TimingKey.LAYER_TRANSACTION_LOCK_HELD] = float(transaction.lock_held_s)
-    return result
 
 
 __all__ = [

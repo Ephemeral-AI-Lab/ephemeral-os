@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import contextlib
 import fcntl
 import logging
 import os
@@ -28,8 +27,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     finally:
         if pid_lock_fd is not None:
-            with contextlib.suppress(OSError):
-                os.close(pid_lock_fd)
+            os.close(pid_lock_fd)
     return 0
 
 

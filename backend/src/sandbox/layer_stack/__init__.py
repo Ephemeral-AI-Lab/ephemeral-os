@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from sandbox.layer_stack.commit import CommitStagingArea
-from sandbox.layer_stack.errors import LayerStackStorageError
 from sandbox.layer_stack.layer_change import (
     DeleteLayerChange,
     LayerChange,
@@ -14,6 +12,7 @@ from sandbox.layer_stack.layer_change import (
     normalize_layer_path,
 )
 from sandbox.layer_stack.manager import (
+    CommitStagingArea,
     LayerStackManager,
     PrepareWorkspaceSnapshotResult,
 )
@@ -24,6 +23,7 @@ from sandbox.layer_stack.manifest import (
     ManifestConflictError,
 )
 from sandbox.layer_stack.transaction import LayerStackTransaction
+from sandbox.layer_stack.view import LayerStackStorageError
 from sandbox.layer_stack.workspace_binding import (
     WorkspaceBinding,
     WorkspaceBindingError,

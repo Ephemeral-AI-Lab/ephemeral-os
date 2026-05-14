@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Literal
 from uuid import uuid4
 
-from sandbox.layer_stack.commit import CommitStagingArea
 from sandbox.layer_stack._paths import (
     log_rmtree_failure,
     remove_path,
@@ -40,6 +39,12 @@ from sandbox.layer_stack.view import MergedView
 from sandbox.timing import monotonic_now
 
 _TRANSIENT_LOWERDIR_DIR = "transient-lowerdirs"
+
+
+@dataclass(frozen=True)
+class CommitStagingArea:
+    staging_id: str
+    path: Path
 
 
 @dataclass(frozen=True)

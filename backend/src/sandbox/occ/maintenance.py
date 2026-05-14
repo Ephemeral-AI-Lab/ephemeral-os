@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import threading
-from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 
 from sandbox.layer_stack.manifest import Manifest
@@ -26,13 +25,6 @@ class SquashPort(Protocol):
     def squash(self, *, max_depth: int) -> Manifest | None: ...
 
 
-@dataclass
-class _CoalescedSquashState:
-    lock: threading.Lock = field(default_factory=threading.Lock)
-    state_lock: threading.Lock = field(default_factory=threading.Lock)
-    pending_recheck: bool = False
-
-
 class AutoSquashMaintenancePolicy:
     """Coalesced synchronous layer-stack squash after successful publishes."""
 
@@ -46,7 +38,9 @@ class AutoSquashMaintenancePolicy:
         self._snapshot_reader = snapshot_reader
         self._squasher = squasher
         self._max_depth = int(max_depth)
-        self._state = _CoalescedSquashState()
+        self._lock = threading.Lock()
+        self._state_lock = threading.Lock()
+        self._pending_recheck = False
 
     def after_publish_sync(self, result: ChangesetResult) -> dict[str, float]:
         if result.published_manifest_version is None:
@@ -55,10 +49,9 @@ class AutoSquashMaintenancePolicy:
         if active.depth <= self._max_depth:
             return {}
 
-        state = self._state
-        if not state.lock.acquire(blocking=False):
-            with state.state_lock:
-                state.pending_recheck = True
+        if not self._lock.acquire(blocking=False):
+            with self._state_lock:
+                self._pending_recheck = True
             return {
                 TimingKey.LAYER_AUTO_SQUASH_SKIPPED_IN_FLIGHT: 1.0,
                 TimingKey.LAYER_AUTO_SQUASH_MAX_DEPTH: float(self._max_depth),
@@ -67,9 +60,9 @@ class AutoSquashMaintenancePolicy:
 
         try:
             timings = self._run_squash_for_active(active)
-            with state.state_lock:
-                pending_recheck = state.pending_recheck
-                state.pending_recheck = False
+            with self._state_lock:
+                pending_recheck = self._pending_recheck
+                self._pending_recheck = False
             if not pending_recheck:
                 return timings
 
@@ -78,9 +71,16 @@ class AutoSquashMaintenancePolicy:
                 return timings
             recheck_timings = self._run_squash_for_active(active)
             recheck_timings[TimingKey.LAYER_AUTO_SQUASH_RECHECK_TRIGGERED] = 1.0
-            return _merge_auto_squash_timings(timings, recheck_timings)
+            merged = {**timings, **recheck_timings}
+            merged[TimingKey.LAYER_AUTO_SQUASH_TOTAL] = timings.get(
+                TimingKey.LAYER_AUTO_SQUASH_TOTAL, 0.0
+            ) + recheck_timings.get(TimingKey.LAYER_AUTO_SQUASH_TOTAL, 0.0)
+            merged[TimingKey.LAYER_AUTO_SQUASH_DEPTH_BEFORE] = timings[
+                TimingKey.LAYER_AUTO_SQUASH_DEPTH_BEFORE
+            ]
+            return merged
         finally:
-            state.lock.release()
+            self._lock.release()
 
     def _run_squash_for_active(self, active: Manifest) -> dict[str, float]:
         squash_start = monotonic_now()
@@ -97,27 +97,6 @@ class AutoSquashMaintenancePolicy:
         timings[TimingKey.LAYER_AUTO_SQUASH_DEPTH_AFTER] = float(squashed.depth)
         timings[TimingKey.LAYER_AUTO_SQUASH_MANIFEST_VERSION] = float(squashed.version)
         return timings
-
-
-def _merge_auto_squash_timings(
-    first: dict[str, float],
-    second: dict[str, float],
-) -> dict[str, float]:
-    if not first:
-        return dict(second)
-    if not second:
-        return dict(first)
-    merged = {**first, **second}
-    if TimingKey.LAYER_AUTO_SQUASH_TOTAL in first or TimingKey.LAYER_AUTO_SQUASH_TOTAL in second:
-        merged[TimingKey.LAYER_AUTO_SQUASH_TOTAL] = first.get(
-            TimingKey.LAYER_AUTO_SQUASH_TOTAL,
-            0.0,
-        ) + second.get(TimingKey.LAYER_AUTO_SQUASH_TOTAL, 0.0)
-    if TimingKey.LAYER_AUTO_SQUASH_DEPTH_BEFORE in first:
-        merged[TimingKey.LAYER_AUTO_SQUASH_DEPTH_BEFORE] = first[
-            TimingKey.LAYER_AUTO_SQUASH_DEPTH_BEFORE
-        ]
-    return merged
 
 
 __all__ = [
