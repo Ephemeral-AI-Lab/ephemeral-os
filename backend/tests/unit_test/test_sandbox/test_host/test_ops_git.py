@@ -1,4 +1,4 @@
-"""Unit tests for sandbox.host.git.ensure_git.
+"""Unit tests for sandbox.host.bootstrap.ensure_git.
 
 Body lifted from the deleted SandboxProxy.ensure_git, with provider exec
 replacing the SDK process.exec. These tests cover the same probe + install
@@ -12,7 +12,7 @@ from types import SimpleNamespace
 import pytest
 
 from sandbox.models import RawExecResult
-from sandbox.host.git import ensure_git
+from sandbox.host.bootstrap import ensure_git
 
 
 def test_ensure_git_skips_when_git_present(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -24,7 +24,7 @@ def test_ensure_git_skips_when_git_present(monkeypatch: pytest.MonkeyPatch) -> N
         return RawExecResult(exit_code=0, stdout="ok")
 
     monkeypatch.setattr(
-        "sandbox.provider.registry.get_adapter",
+        "sandbox.host.bootstrap.get_adapter",
         lambda _sandbox_id: SimpleNamespace(exec=fake_raw_exec),
     )
     ensure_git("sb-123")
@@ -49,7 +49,7 @@ def test_ensure_git_installs_when_missing(monkeypatch: pytest.MonkeyPatch) -> No
         return RawExecResult(exit_code=0, stdout="installed")
 
     monkeypatch.setattr(
-        "sandbox.provider.registry.get_adapter",
+        "sandbox.host.bootstrap.get_adapter",
         lambda _sandbox_id: SimpleNamespace(exec=fake_raw_exec),
     )
     ensure_git("sb-123")
@@ -67,7 +67,7 @@ def test_ensure_git_no_op_for_empty_sandbox_id(monkeypatch: pytest.MonkeyPatch) 
         return RawExecResult(exit_code=0, stdout="")
 
     monkeypatch.setattr(
-        "sandbox.provider.registry.get_adapter",
+        "sandbox.host.bootstrap.get_adapter",
         lambda _sandbox_id: SimpleNamespace(exec=fake_raw_exec),
     )
     ensure_git("")
@@ -85,7 +85,7 @@ def test_ensure_git_swallows_install_failure(monkeypatch: pytest.MonkeyPatch) ->
         return RawExecResult(exit_code=1, stdout="", stderr="apt failed")
 
     monkeypatch.setattr(
-        "sandbox.provider.registry.get_adapter",
+        "sandbox.host.bootstrap.get_adapter",
         lambda _sandbox_id: SimpleNamespace(exec=fake_raw_exec),
     )
     ensure_git("sb-123")  # Must not raise.

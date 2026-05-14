@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from sandbox.command_exec.contract.ports import (
+    CommandExecutor,
     OCCMutationClient,
     WorkspaceLeaseClient,
     WorkspaceSnapshotLease,
@@ -19,6 +20,7 @@ from sandbox.command_exec.contract.spec import WorkspaceReplacementMountSpec
 __all__ = [
     "CommandExecRequest",
     "CommandExecResult",
+    "CommandExecutor",
     "MountMode",
     "OCCMutationClient",
     "ShellProcessResult",

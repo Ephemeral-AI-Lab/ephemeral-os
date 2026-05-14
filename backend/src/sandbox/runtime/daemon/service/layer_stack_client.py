@@ -11,7 +11,7 @@ from sandbox.layer_stack.manager import (
     PrepareWorkspaceSnapshotResult,
 )
 from sandbox.layer_stack.commit.staging import CommitStagingArea
-from sandbox.occ.ports import CommitTransaction
+from sandbox.occ.ports import CommitTransactionPort
 from sandbox.runtime.daemon.service.workspace_server import get_layer_stack_manager
 
 
@@ -56,7 +56,7 @@ class LayerStackClient:
     ) -> None:
         self.manager.materialize(destination, manifest)
 
-    def commit_transaction(self) -> AbstractContextManager[CommitTransaction]:
+    def commit_transaction(self) -> AbstractContextManager[CommitTransactionPort]:
         return self.manager.commit_transaction()
 
     def allocate_commit_staging(self, request_id: str) -> CommitStagingArea:

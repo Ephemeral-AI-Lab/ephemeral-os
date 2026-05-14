@@ -6,10 +6,13 @@ from collections.abc import Mapping
 
 from audit.base import AuditSink
 
+from sandbox.api.timeouts import shell_dispatch_timeout
 from sandbox.api.tool._payload import (
-    caller_envelope,
+    caller_audit_fields,
     conflict_from_payload,
+    error_message,
     int_from_payload,
+    normalize_overlay_cwd,
     paths_from_payload,
     timings_from_payload,
 )
@@ -36,7 +39,7 @@ async def shell(
         sandbox_id=sandbox_id,
         operation="shell",
         caller=request.caller,
-        payload={"cwd": _overlay_cwd(request.cwd)},
+        payload={"cwd": normalize_overlay_cwd(request.cwd)},
     )
     if request.stdin is not None:
         result = _error_result(
@@ -59,13 +62,13 @@ async def shell(
             "api.shell",
             {
                 "command": request.command,
-                "cwd": _overlay_cwd(request.cwd),
+                "cwd": normalize_overlay_cwd(request.cwd),
                 "timeout_seconds": request.timeout,
                 "actor_id": request.caller.agent_id,
-                "caller": caller_envelope(request.caller),
+                "caller": caller_audit_fields(request.caller),
                 "description": request.description or "shell",
             },
-            timeout=(60 if request.timeout is None else request.timeout) + 30,
+            timeout=shell_dispatch_timeout(request.timeout),
         )
         timings = timings_from_payload(raw.get("timings"))
         timings["api.shell.dispatch_total_s"] = monotonic_now() - total_start
@@ -131,7 +134,7 @@ def _conflict_result_from_error(
     *,
     timings: dict[str, float],
 ) -> ShellResult | None:
-    message = _error_message(error)
+    message = error_message(error)
     if not _is_shell_conflict(message):
         return None
     return ShellResult(
@@ -149,13 +152,6 @@ def _conflict_result_from_error(
         warnings=(),
         timings=timings,
     )
-
-
-def _error_message(error: BaseException) -> str:
-    message = str(getattr(error, "message", "") or error)
-    if message.startswith("internal_error: "):
-        return message.removeprefix("internal_error: ")
-    return message
 
 
 def _is_shell_conflict(message: str) -> bool:
@@ -185,12 +181,6 @@ def _error_result(
         warnings=(),
         timings=timings or {},
     )
-
-
-def _overlay_cwd(cwd: str | None) -> str:
-    if cwd is None or not cwd.strip():
-        return "."
-    return cwd
 
 
 __all__ = ["shell"]

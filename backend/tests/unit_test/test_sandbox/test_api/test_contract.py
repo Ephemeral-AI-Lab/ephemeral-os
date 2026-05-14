@@ -61,8 +61,7 @@ _PUBLIC_VERB_IMPORT_ALLOWLIST = {
         "sandbox.host.daemon_client",
     },
     "status.py": {
-        "sandbox.host.recovery",
-        "sandbox.host.setup",
+        "sandbox.host.bootstrap",
         "sandbox.plugin",
         "sandbox.provider.registry",
     },

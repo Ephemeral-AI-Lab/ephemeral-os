@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import threading
 from collections.abc import Sequence
-from dataclasses import dataclass, field, replace
+from dataclasses import replace
 from typing import cast
 
 from sandbox.layer_stack.manifest import Manifest
@@ -13,20 +12,19 @@ from sandbox.occ.changeset.types import Change, ChangesetResult
 from sandbox.occ.commit_transaction import OccCommitTransaction
 from sandbox.occ.content.gitignore_oracle import GitignoreMatcher
 from sandbox.occ.content.hashing import infer_manifest_base_hash
+from sandbox.occ.maintenance import (
+    AutoSquashMaintenancePolicy,
+    MaintenancePolicy,
+    NoopMaintenancePolicy,
+    SquashPort,
+)
 from sandbox.occ.merge.serial import OccSerialMerger
-from sandbox.occ.ports import OccLayerStackPorts
+from sandbox.occ.ports import CommitPublisher, CommitStagingStore, SnapshotReader
 from sandbox.occ.routing.orchestrator import OccOrchestrator
 from sandbox.async_bridge import run_sync_in_executor
 from sandbox.timing import monotonic_now
 
 AUTO_SQUASH_MAX_DEPTH = 32
-
-
-@dataclass
-class _CoalescedSquashState:
-    lock: threading.Lock = field(default_factory=threading.Lock)
-    state_lock: threading.Lock = field(default_factory=threading.Lock)
-    pending_recheck: bool = False
 
 
 class OccService:
@@ -36,18 +34,39 @@ class OccService:
         self,
         *,
         gitignore: GitignoreMatcher,
-        layer_stack: OccLayerStackPorts,
+        snapshot_reader: SnapshotReader | None = None,
+        staging: CommitStagingStore | None = None,
+        publisher: CommitPublisher | None = None,
+        layer_stack: object | None = None,
+        orchestrator: OccOrchestrator | None = None,
+        transaction: OccCommitTransaction | None = None,
+        serial_merger: OccSerialMerger | None = None,
+        maintenance: MaintenancePolicy | None = None,
+        auto_squash_max_depth: int = AUTO_SQUASH_MAX_DEPTH,
     ) -> None:
-        self._layer_stack = layer_stack
-        self._orchestrator = OccOrchestrator(gitignore)
-        self._transaction = OccCommitTransaction(
-            snapshot_reader=layer_stack,
-            staging=layer_stack,
-            publisher=layer_stack,
+        if layer_stack is not None:
+            snapshot_reader = snapshot_reader or cast(SnapshotReader, layer_stack)
+            staging = staging or cast(CommitStagingStore, layer_stack)
+            publisher = publisher or cast(CommitPublisher, layer_stack)
+        if snapshot_reader is None or staging is None or publisher is None:
+            raise TypeError(
+                "OccService requires snapshot_reader, staging, and publisher ports"
+            )
+        self._snapshot_reader = snapshot_reader
+        self._orchestrator = orchestrator or OccOrchestrator(gitignore)
+        self._transaction = transaction or OccCommitTransaction(
+            snapshot_reader=snapshot_reader,
+            staging=staging,
+            publisher=publisher,
         )
-        self._serial_merger = OccSerialMerger(self._transaction)
-        self._auto_squash_max_depth = int(AUTO_SQUASH_MAX_DEPTH)
-        self._coalesced_squash = _CoalescedSquashState()
+        self._serial_merger = serial_merger or OccSerialMerger(self._transaction)
+        if serial_merger is None:
+            self._serial_merger.start()
+        self._maintenance = maintenance or _default_maintenance(
+            layer_stack=layer_stack,
+            snapshot_reader=snapshot_reader,
+            max_depth=auto_squash_max_depth,
+        )
 
     async def apply_changeset(
         self,
@@ -137,7 +156,7 @@ class OccService:
         return cast(
             dict[str, float],
             await run_sync_in_executor(
-                self._auto_squash_after_publish_sync,
+                self._maintenance.after_publish_sync,
                 result,
             ),
         )
@@ -146,83 +165,7 @@ class OccService:
         self,
         result: ChangesetResult,
     ) -> dict[str, float]:
-        return self._auto_squash_after_publish_coalesced_sync(result)
-
-    def _auto_squash_after_publish_coalesced_sync(
-        self,
-        result: ChangesetResult,
-    ) -> dict[str, float]:
-        context = self._auto_squash_context_sync(result)
-        if context is None:
-            return {}
-        squash, active = context
-        if active.depth <= self._auto_squash_max_depth:
-            return {}
-
-        state = self._coalesced_squash
-        if not state.lock.acquire(blocking=False):
-            with state.state_lock:
-                state.pending_recheck = True
-            return {
-                "layer_stack.auto_squash.skipped_in_flight": 1.0,
-                "layer_stack.auto_squash.max_depth": float(
-                    self._auto_squash_max_depth
-                ),
-                "layer_stack.auto_squash.depth_before": float(active.depth),
-            }
-
-        try:
-            timings = self._run_squash_for_active_sync(squash, active)
-            with state.state_lock:
-                pending_recheck = state.pending_recheck
-                state.pending_recheck = False
-            if not pending_recheck:
-                return timings
-
-            context = self._auto_squash_context_sync(result)
-            if context is None:
-                return timings
-            squash, active = context
-            if active.depth <= self._auto_squash_max_depth:
-                return timings
-            recheck_timings = self._run_squash_for_active_sync(squash, active)
-            recheck_timings["layer_stack.auto_squash.recheck_triggered"] = 1.0
-            return _merge_auto_squash_timings(timings, recheck_timings)
-        finally:
-            state.lock.release()
-
-    def _auto_squash_context_sync(
-        self,
-        result: ChangesetResult | None,
-    ):
-        if result is not None and result.published_manifest_version is None:
-            return None
-        squash = getattr(self._layer_stack, "squash", None)
-        if not callable(squash):
-            return None
-        return squash, self._layer_stack.read_active_manifest()
-
-    def _run_squash_for_active_sync(
-        self,
-        squash,
-        active: Manifest,
-    ) -> dict[str, float]:
-        squash_start = monotonic_now()
-        squashed = squash(max_depth=self._auto_squash_max_depth)
-        elapsed = monotonic_now() - squash_start
-        timings = {
-            "layer_stack.auto_squash.total_s": elapsed,
-            "layer_stack.auto_squash.max_depth": float(
-                self._auto_squash_max_depth
-            ),
-            "layer_stack.auto_squash.depth_before": float(active.depth),
-        }
-        if squashed is None:
-            timings["layer_stack.auto_squash.raced"] = 1.0
-            return timings
-        timings["layer_stack.auto_squash.depth_after"] = float(squashed.depth)
-        timings["layer_stack.auto_squash.manifest_version"] = float(squashed.version)
-        return timings
+        return self._maintenance.after_publish_sync(result)
 
     def _wrap_commit_result(
         self,
@@ -291,16 +234,16 @@ class OccService:
         effective_snapshot = snapshot
         if effective_snapshot is None:
             snapshot_start = monotonic_now()
-            effective_snapshot = self._layer_stack.read_active_manifest()
+            effective_snapshot = self._snapshot_reader.read_active_manifest()
             timings["occ.prepare.current_snapshot_s"] = (
                 monotonic_now() - snapshot_start
             )
         assert effective_snapshot is not None
-        layer_stack = self._layer_stack
+        snapshot_reader = self._snapshot_reader
 
         def base_hash_reader(path: str) -> str | None:
             return infer_manifest_base_hash(
-                snapshot_reader=layer_stack,
+                snapshot_reader=snapshot_reader,
                 manifest=effective_snapshot,
                 path=path,
             )
@@ -318,6 +261,25 @@ class OccService:
         timings["occ.prepare.total_s"] = monotonic_now() - total_start
         return replace(prepared, timings={**prepared.timings, **timings})
 
+    def close(self) -> None:
+        """Stop owned background resources."""
+        self._serial_merger.close()
+
+
+def _default_maintenance(
+    *,
+    layer_stack: object | None,
+    snapshot_reader: SnapshotReader,
+    max_depth: int,
+) -> MaintenancePolicy:
+    if isinstance(layer_stack, SquashPort):
+        return AutoSquashMaintenancePolicy(
+            snapshot_reader=snapshot_reader,
+            squasher=layer_stack,
+            max_depth=max_depth,
+        )
+    return NoopMaintenancePolicy()
+
 
 def _manifest_lag(
     snapshot: Manifest | None, published_version: int | None
@@ -334,6 +296,21 @@ def _result_timings_with_resume(result: ChangesetResult) -> tuple[dict[str, floa
     if ready_at is None:
         return timings, 0.0
     return timings, max(0.0, monotonic_now() - ready_at)
+
+
+def _default_maintenance(
+    *,
+    layer_stack: object | None,
+    snapshot_reader: SnapshotReader,
+    max_depth: int,
+) -> MaintenancePolicy:
+    if isinstance(layer_stack, SquashPort):
+        return AutoSquashMaintenancePolicy(
+            snapshot_reader=snapshot_reader,
+            squasher=layer_stack,
+            max_depth=max_depth,
+        )
+    return NoopMaintenancePolicy()
 
 
 def _merge_auto_squash_timings(

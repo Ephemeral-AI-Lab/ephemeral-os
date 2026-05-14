@@ -116,7 +116,7 @@ class SandboxClient:
         return status.get_build_logs_url(sandbox_id)
 
     def context_preparer_for(self, sandbox_id: str) -> Any:
-        from sandbox.host.context import context_preparer_for
+        from sandbox.host.context_preparer import context_preparer_for
 
         return context_preparer_for(sandbox_id)
 

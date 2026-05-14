@@ -3,35 +3,61 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import fields
+import re
 
 from sandbox.models import ConflictInfo, SandboxCaller
 from sandbox.timing import normalize_timing_map
 
+_CALLER_REQUIRED_FIELDS = frozenset({"agent_id", "run_id", "agent_run_id", "task_id"})
+_INTERNAL_ERROR_PREFIX = "internal_error: "
+_TRANSIENT_ERROR_PATTERNS = tuple(
+    re.compile(pattern, re.IGNORECASE)
+    for pattern in (
+        r"\bdaytonaerror\b",
+        r"\bfailed to execute command\b",
+        r"\bconnection reset\b",
+        r"\bconnection refused\b",
+        r"\bserver disconnected\b",
+        r"\btemporarily unavailable\b",
+        r"\bruntimeexecfailed\b",
+        r"\beos_daemon_io_failed\b",
+    )
+)
 
-def caller_envelope(caller: SandboxCaller) -> dict[str, str]:
-    """Project a SandboxCaller into the daemon-envelope ``caller`` dict.
 
-    Forwards every audit-relevant field so the daemon can stitch runs by
-    ``run_id`` / ``agent_run_id`` / ``task_id`` instead of only ``agent_id``.
+def caller_audit_fields(caller: SandboxCaller) -> dict[str, str]:
+    """Project a SandboxCaller into daemon audit fields.
+
+    Required daemon keys stay present even when empty. New dataclass fields are
+    forwarded automatically when populated, so audit attribution can evolve
+    without updating a hand-maintained allowlist.
     """
-    envelope = {
-        "agent_id": caller.agent_id,
-        "run_id": caller.run_id,
-        "agent_run_id": caller.agent_run_id,
-        "task_id": caller.task_id,
-    }
-    for key, value in (
-        ("task_center_run_id", caller.task_center_run_id),
-        ("task_center_task_id", caller.task_center_task_id),
-        ("task_center_attempt_id", caller.task_center_attempt_id),
-        ("task_center_mission_id", caller.task_center_mission_id),
-        ("task_center_request_id", caller.task_center_request_id),
-        ("tool_name", caller.tool_name),
-        ("tool_id", caller.tool_id),
-    ):
-        if value:
-            envelope[key] = value
+    envelope: dict[str, str] = {}
+    for field in fields(caller):
+        key = field.name
+        value = getattr(caller, key)
+        if key in _CALLER_REQUIRED_FIELDS or value:
+            envelope[key] = str(value)
     return envelope
+
+
+def normalize_overlay_cwd(cwd: str | None) -> str:
+    """Normalize public shell cwd values for overlay execution."""
+    normalized = (cwd or "").strip()
+    return normalized or "."
+
+
+def error_message(error: BaseException) -> str:
+    message = str(getattr(error, "message", "") or error)
+    if message.startswith(_INTERNAL_ERROR_PREFIX):
+        return message.removeprefix(_INTERNAL_ERROR_PREFIX)
+    return message
+
+
+def is_transient_transport_error(error: BaseException) -> bool:
+    message = error_message(error)
+    return any(pattern.search(message) for pattern in _TRANSIENT_ERROR_PATTERNS)
 
 
 def conflict_from_payload(raw: object) -> ConflictInfo | None:
@@ -75,23 +101,18 @@ def int_from_payload(value: object, *, default: int) -> int:
         return default
     if isinstance(value, bool):
         raise TypeError(f"expected integer value, got bool ({value!r})")
-    if isinstance(value, (str, int, float)):
-        try:
-            return int(value)
-        except ValueError as exc:
-            # The docstring promises TypeError for unparseable values; the
-            # bare ``int("abc")`` would surface ValueError and the caller's
-            # ``except TypeError`` would not catch it.
-            raise TypeError(
-                f"expected integer-coercible value, got {value!r}"
-            ) from exc
+    if isinstance(value, int):
+        return value
     raise TypeError(f"expected integer value, got {type(value).__name__}")
 
 
 __all__ = [
-    "caller_envelope",
+    "caller_audit_fields",
     "conflict_from_payload",
+    "error_message",
     "int_from_payload",
+    "is_transient_transport_error",
+    "normalize_overlay_cwd",
     "paths_from_payload",
     "timings_from_payload",
 ]

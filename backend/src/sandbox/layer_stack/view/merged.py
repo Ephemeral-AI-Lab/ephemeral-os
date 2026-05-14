@@ -177,11 +177,11 @@ class MergedView:
         destination: str | Path,
         manifest: Manifest,
         *,
-        link_ok: bool = False,
+        share_inodes: bool = False,
     ) -> None:
         """Materialise *manifest* into *destination*.
 
-        ``link_ok=True`` hardlinks regular files from source layers. Only safe
+        ``share_inodes=True`` hardlinks regular files from source layers. Only safe
         when the caller treats *destination* as read-only (e.g. the overlay
         lowerdir from :meth:`LayerStackManager.prepare_workspace_snapshot`);
         a writer would corrupt the source layer through the shared inode.
@@ -192,7 +192,11 @@ class MergedView:
         dest.mkdir(parents=True)
 
         for layer in reversed(manifest.layers):
-            self._apply_layer(self._layer_dir(layer), dest, link_ok=link_ok)
+            self._apply_layer(
+                self._layer_dir(layer),
+                dest,
+                share_inodes=share_inodes,
+            )
 
     def _layer_dir(self, layer: LayerRef) -> Path:
         layer_path = Path(layer.path)
@@ -210,7 +214,7 @@ class MergedView:
         layer_dir: Path,
         dest: Path,
         *,
-        link_ok: bool = False,
+        share_inodes: bool = False,
     ) -> None:
         entries = tuple(sorted(layer_dir.rglob("*"), key=lambda item: item.as_posix()))
 
@@ -239,7 +243,7 @@ class MergedView:
             elif entry.is_file():
                 target.parent.mkdir(parents=True, exist_ok=True)
                 remove_path(target)
-                if link_ok:
+                if share_inodes:
                     _link_or_copy(entry, target)
                 else:
                     shutil.copy2(entry, target)

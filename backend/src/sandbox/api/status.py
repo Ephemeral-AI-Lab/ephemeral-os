@@ -14,8 +14,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from sandbox.host.recovery import ensure_running as _ensure_running
-from sandbox.host.setup import setup_after_create, setup_after_start
+from sandbox.host.bootstrap import ensure_running as _ensure_running
+from sandbox.host.bootstrap import setup_after_create, setup_after_start
 from sandbox.plugin import install as plugin_install
 from sandbox.plugin import session as plugin_session
 from sandbox.provider.registry import (

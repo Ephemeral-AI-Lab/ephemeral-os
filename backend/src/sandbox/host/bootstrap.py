@@ -1,20 +1,20 @@
-"""Provider-neutral post-create / post-start setup orchestration.
+"""Provider-neutral sandbox lifecycle bootstrap and recovery.
 
 The runtime-bundle upload runs concurrently with whatever else the create flow
-does (today: ``ensure_git`` from :mod:`sandbox.host.git`). Both depend
-only on the sandbox existing; sequencing them serially leaves wall-clock time
-on the table.
-
-Bodies lifted from the deleted lifecycle helpers and rewritten against the
-provider-neutral sandbox API.
+does (today: ``ensure_git``). Both depend only on the sandbox existing;
+sequencing them serially leaves wall-clock time on the table.
 """
 
 from __future__ import annotations
 
 import concurrent.futures
 import logging
+from typing import Any, Literal
 
-from sandbox.host.git import ensure_git
+from sandbox.async_bridge import run_sync
+from sandbox.host.daemon_client import call_daemon_api
+from sandbox.host.runtime_bundle import ensure_runtime_uploaded
+from sandbox.provider.registry import get_adapter
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,38 @@ _BUNDLE_UPLOAD_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
     max_workers=4,
     thread_name_prefix=_BUNDLE_UPLOAD_THREAD_PREFIX,
 )
+LifecyclePhase = Literal["create", "start"]
+
+_GIT_BOOTSTRAP = r"""
+set -e
+if command -v git >/dev/null 2>&1; then exit 0; fi
+echo "[sandbox] Installing git..."
+as_root() {
+    if [ "$(id -u)" = "0" ]; then
+        "$@"
+    elif command -v sudo >/dev/null 2>&1; then
+        sudo -n "$@"
+    else
+        return 1
+    fi
+}
+if command -v apt-get >/dev/null 2>&1; then
+    as_root mkdir -p /var/lib/apt/lists/partial
+    as_root apt-get update -qq && as_root apt-get install -y -qq git
+elif command -v apk >/dev/null 2>&1; then
+    as_root apk add --no-cache git
+elif command -v microdnf >/dev/null 2>&1; then
+    as_root microdnf install -y git
+elif command -v dnf >/dev/null 2>&1; then
+    as_root dnf install -y git
+elif command -v yum >/dev/null 2>&1; then
+    as_root yum install -y git
+else
+    echo "[sandbox] No package manager found; git not installed" >&2
+    exit 1
+fi
+echo "[sandbox] git installed"
+"""
 
 
 async def bootstrap_in_sandbox_runtime(
@@ -36,8 +68,6 @@ async def bootstrap_in_sandbox_runtime(
     """
     if not sandbox_id:
         return
-
-    from sandbox.host.runtime_bundle import ensure_runtime_uploaded
 
     logger.info(
         "sandbox-runtime bootstrap starting for sandbox %s",
@@ -63,8 +93,6 @@ def run_runtime_bootstrap(
         )
         return
 
-    from sandbox.async_bridge import run_sync
-
     run_sync(
         bootstrap_in_sandbox_runtime(
             sandbox_id=sandbox_id,
@@ -84,9 +112,6 @@ def ensure_workspace_base(
             sandbox_id,
         )
         return
-
-    from sandbox.async_bridge import run_sync
-    from sandbox.host.daemon_client import call_daemon_api
 
     run_sync(
         call_daemon_api(
@@ -125,8 +150,6 @@ def start_runtime_bundle_upload(
     workspace = (workspace_root or "").strip()
     if not workspace or not sandbox_id:
         return None
-
-    from sandbox.async_bridge import run_sync
 
     def _do_upload() -> None:
         run_sync(
@@ -224,6 +247,93 @@ def _runtime_probe(
     return {}
 
 
+def ensure_git(sandbox_id: str) -> None:
+    """Install git in the sandbox if missing.
+
+    Best-effort: expected "git is unavailable and cannot be installed" failures
+    are logged but not raised. Adapter/config failures still propagate because
+    they indicate the sandbox itself is broken.
+    """
+    if not sandbox_id:
+        return
+    try:
+        adapter = get_adapter(sandbox_id)
+        logger.info("ensure_git(%s): probe starting", sandbox_id)
+        resp = run_sync(
+            adapter.exec(
+                sandbox_id,
+                "command -v git >/dev/null 2>&1 && echo ok || echo missing",
+                timeout=10,
+            )
+        )
+        if "ok" in (resp.stdout or ""):
+            logger.info("ensure_git(%s): git already available", sandbox_id)
+            return
+        logger.info("ensure_git(%s): installing git", sandbox_id)
+        install = run_sync(adapter.exec(sandbox_id, _GIT_BOOTSTRAP, timeout=120))
+        if getattr(install, "exit_code", 1) not in (0, None):
+            raise RuntimeError(
+                getattr(install, "stderr", "")
+                or getattr(install, "stdout", "")
+                or "git install failed"
+            )
+        logger.info("ensure_git(%s): install completed", sandbox_id)
+    except RuntimeError as exc:
+        logger.warning("Git bootstrap failed for sandbox %s: %s", sandbox_id, exc)
+    except Exception:
+        logger.exception(
+            "Git bootstrap unexpectedly failed for sandbox %s; propagating to caller",
+            sandbox_id,
+        )
+        raise
+
+
+def ensure_running(sandbox_id: str) -> dict[str, Any]:
+    """Best-effort recovery: probe, restart on failure, re-run start bootstrap."""
+    adapter = get_adapter(sandbox_id)
+    info = adapter.get(sandbox_id)
+    try:
+        resp = run_sync(adapter.exec(sandbox_id, "pwd", timeout=10))
+        exit_code = getattr(resp, "exit_code", 0)
+        if exit_code in (None, 0):
+            return info
+    except Exception:
+        logger.warning(
+            "Sandbox %s probe failed; attempting restart recovery",
+            sandbox_id,
+            exc_info=True,
+        )
+
+    try:
+        adapter.start(sandbox_id)
+    except Exception:
+        logger.debug(
+            "Sandbox %s start during recovery raised; refreshing handle",
+            sandbox_id,
+            exc_info=True,
+        )
+
+    info = adapter.get(sandbox_id)
+    workspace_root = info.get("project_dir") or ""
+    setup_after_start(sandbox_id, workspace_root)
+    return info
+
+
+def setup_post_lifecycle(
+    sandbox_id: str,
+    workspace_root: str | None,
+    *,
+    phase: LifecyclePhase,
+) -> None:
+    """Run the shared post-create/post-start bootstrap sequence."""
+    logger.debug("running sandbox post-%s bootstrap for %s", phase, sandbox_id)
+    upload_future = start_runtime_bundle_upload(sandbox_id, workspace_root)
+    ensure_git(sandbox_id)
+    finish_runtime_bundle_upload(upload_future, sandbox_id)
+    run_runtime_bootstrap(sandbox_id, workspace_root)
+    ensure_workspace_base(sandbox_id, workspace_root)
+
+
 def setup_after_create(sandbox_id: str, workspace_root: str | None) -> None:
     """Post-create hook: ensure_git, runtime bootstrap, and workspace base.
 
@@ -234,27 +344,22 @@ def setup_after_create(sandbox_id: str, workspace_root: str | None) -> None:
     4. Run the sequential runtime bootstrap.
     5. Bind the assigned workspace and build its layer-stack base.
     """
-    upload_future = start_runtime_bundle_upload(sandbox_id, workspace_root)
-    ensure_git(sandbox_id)
-    finish_runtime_bundle_upload(upload_future, sandbox_id)
-    run_runtime_bootstrap(sandbox_id, workspace_root)
-    ensure_workspace_base(sandbox_id, workspace_root)
+    setup_post_lifecycle(sandbox_id, workspace_root, phase="create")
 
 
 def setup_after_start(sandbox_id: str, workspace_root: str | None) -> None:
     """Post-start hook: same setup sequence as create."""
-    upload_future = start_runtime_bundle_upload(sandbox_id, workspace_root)
-    ensure_git(sandbox_id)
-    finish_runtime_bundle_upload(upload_future, sandbox_id)
-    run_runtime_bootstrap(sandbox_id, workspace_root)
-    ensure_workspace_base(sandbox_id, workspace_root)
+    setup_post_lifecycle(sandbox_id, workspace_root, phase="start")
 
 
 __all__ = [
     "bootstrap_in_sandbox_runtime",
+    "ensure_git",
+    "ensure_running",
     "ensure_workspace_base",
     "finish_runtime_bundle_upload",
     "run_runtime_bootstrap",
+    "setup_post_lifecycle",
     "setup_after_create",
     "setup_after_start",
     "start_runtime_bundle_upload",

@@ -8,8 +8,9 @@ from sandbox.audit.operation import (
     publish_operation_result,
     publish_operation_started,
 )
+from sandbox.api.timeouts import WRITE_FILE_TIMEOUT_S
 from sandbox.api.tool._payload import (
-    caller_envelope,
+    caller_audit_fields,
     conflict_from_payload,
     paths_from_payload,
     timings_from_payload,
@@ -40,11 +41,11 @@ async def write_file(
                 "path": request.path,
                 "content": request.content,
                 "actor_id": request.caller.agent_id,
-                "caller": caller_envelope(request.caller),
+                "caller": caller_audit_fields(request.caller),
                 "description": request.description or f"write {request.path}",
                 "overwrite": request.overwrite,
             },
-            timeout=60,
+            timeout=WRITE_FILE_TIMEOUT_S,
         )
         conflict = conflict_from_payload(raw.get("conflict"))
         result = WriteFileResult(

@@ -6,6 +6,9 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 
+from sandbox.occ import ChangesetResult
+from sandbox.overlay import OverlayPathChange
+
 
 class MountMode(str, Enum):
     """Workspace replacement mode used for one command."""
@@ -18,9 +21,12 @@ class MountMode(str, Enum):
 class WorkspaceCapture:
     """Workspace-relative changes captured from one command upperdir."""
 
-    changes: Sequence[object]
+    changes: Sequence[OverlayPathChange]
     snapshot_version: int
     mount_mode: MountMode
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "mount_mode", MountMode(self.mount_mode))
 
 
 @dataclass(frozen=True)
@@ -31,7 +37,7 @@ class CommandExecResult:
     stdout: str
     stderr: str
     workspace_capture: WorkspaceCapture
-    occ_result: object
+    occ_result: ChangesetResult
     timings: dict[str, float] = field(default_factory=dict)
 
 
@@ -44,6 +50,9 @@ class ShellProcessResult:
     stderr_ref: str
     mounted_workspace_root: str
     mount_mode: MountMode
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "mount_mode", MountMode(self.mount_mode))
 
 
 __all__ = [

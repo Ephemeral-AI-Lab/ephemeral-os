@@ -39,7 +39,7 @@ from sandbox.api import (
     WriteFileRequest,
     WriteFileResult,
 )
-from sandbox.host.setup import setup_after_create
+from sandbox.host.bootstrap import setup_after_create
 from sandbox.provider.daytona.bootstrap import bootstrap_daytona_provider
 from sandbox.provider.registry import get_default_provider, register_adapter
 

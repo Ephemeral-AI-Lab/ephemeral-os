@@ -64,10 +64,10 @@ Sync → `api/status.py` → `ProviderAdapter`. Tool verbs lazy-import `api/tool
 - `provider/registry.py` — `set_default_provider`, `register_adapter`, `get_adapter`, `dispose_adapter`.
 
 **host** — Local-side orchestration.
-- `host/setup.py:206/223` `setup_after_create/start` — concurrent `ensure_git` + bundle upload → `call_daemon_api("api.ensure_workspace_base")`.
+- `host/bootstrap.py` `setup_after_create/start` — concurrent `ensure_git` + bundle upload → `call_daemon_api("api.ensure_workspace_base")`.
 - `host/runtime_bundle.py:261` `ensure_runtime_uploaded` — tars `sandbox/runtime/`, uploads via `provider.exec`.
-- `host/recovery.py:24` `ensure_running` — probe → restart + `setup_after_start` on failure.
-- `runtime/async_bridge.py` `run_sync` / `run_sync_in_executor` — loop-aware sync-from-async bridge.
+- `host/bootstrap.py` `ensure_running` — probe → restart + `setup_after_start` on failure.
+- `async_bridge.py` `run_sync` / `run_sync_in_executor` — loop-aware sync-from-async bridge.
 
 ## Key data structures
 
@@ -120,7 +120,7 @@ Sync → `api/status.py` → `ProviderAdapter`. Tool verbs lazy-import `api/tool
 | Component | Real / Mock |
 |---|---|
 | `DaytonaProviderAdapter` | **REAL** — must hit actual Daytona |
-| `host/setup.py` bootstrap | **REAL** — daemon needs bundle + workspace base |
+| `host/bootstrap.py` bootstrap | **REAL** — daemon needs bundle + workspace base |
 | `runtime/daemon` in-sandbox | **REAL** — all tool calls traverse it |
 | `occ` + `layer_stack` | **REAL** — correctness under test |
 | `overlay/worker.py` execution | **REAL** — shell path needs the snapshot workspace and capture pipeline |
@@ -129,7 +129,7 @@ Sync → `api/status.py` → `ProviderAdapter`. Tool verbs lazy-import `api/tool
 
 ### Coverage per "What to Test" bullet
 
-- **setup**: `host/setup.py` bootstrap, bundle upload, `ensure_workspace_base`.
+- **setup**: `host/bootstrap.py` bootstrap, bundle upload, `ensure_workspace_base`.
 - **daemon**: AF_UNIX lifecycle, `call_daemon_api` round-trip, `OP_TABLE` dispatch.
 - **occ**: `OccService.apply_changeset`, conflict detection, `OccSerialMerger`.
 - **overlay**: `overlay/worker.py` workspace preparation + capture via `shell` tool calls.

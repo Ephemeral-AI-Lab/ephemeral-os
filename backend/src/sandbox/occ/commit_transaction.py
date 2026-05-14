@@ -28,7 +28,6 @@ from sandbox.occ.merge.policy import MergePolicy
 from sandbox.occ.ports import (
     CommitPublisher,
     CommitStagingStore,
-    OccLayerStackPorts,
     SnapshotReader,
 )
 from sandbox.timing import monotonic_now
@@ -45,21 +44,11 @@ class OccCommitTransaction:
 
     def __init__(
         self,
-        layer_stack: OccLayerStackPorts | None = None,
         *,
-        snapshot_reader: SnapshotReader | None = None,
-        staging: CommitStagingStore | None = None,
-        publisher: CommitPublisher | None = None,
+        snapshot_reader: SnapshotReader,
+        staging: CommitStagingStore,
+        publisher: CommitPublisher,
     ) -> None:
-        if layer_stack is not None:
-            snapshot_reader = snapshot_reader or layer_stack
-            staging = staging or layer_stack
-            publisher = publisher or layer_stack
-        if snapshot_reader is None or staging is None or publisher is None:
-            raise TypeError(
-                "OccCommitTransaction requires snapshot_reader, staging, "
-                "and publisher ports"
-            )
         self._snapshot_reader = snapshot_reader
         self._staging = staging
         self._publisher = publisher

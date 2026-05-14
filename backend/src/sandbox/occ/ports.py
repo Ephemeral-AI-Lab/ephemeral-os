@@ -46,7 +46,7 @@ class CommitStagingStore(Protocol):
     def drop_commit_staging(self, staging_id: str) -> None: ...
 
 
-class CommitTransaction(Protocol):
+class CommitTransactionPort(Protocol):
     @property
     def lock_wait_s(self) -> float: ...
 
@@ -67,7 +67,7 @@ class CommitTransaction(Protocol):
 class CommitPublisher(Protocol):
     """Publish accepted staged changes through the storage CAS primitive."""
 
-    def commit_transaction(self) -> AbstractContextManager[CommitTransaction]: ...
+    def commit_transaction(self) -> AbstractContextManager[CommitTransactionPort]: ...
 
 
 class WorkspaceBindingReader(Protocol):
@@ -79,13 +79,7 @@ class WorkspaceBindingReader(Protocol):
     ) -> WorkspaceBindingSnapshot: ...
 
 
-class OccLayerStackPorts(
-    SnapshotReader,
-    CommitStagingStore,
-    CommitPublisher,
-    Protocol,
-):
-    """Combined in-process migration shape for the current OCC service."""
+CommitTransaction = CommitTransactionPort
 
 
 __all__ = [
@@ -93,7 +87,7 @@ __all__ = [
     "CommitStagingArea",
     "CommitStagingStore",
     "CommitTransaction",
-    "OccLayerStackPorts",
+    "CommitTransactionPort",
     "SnapshotReader",
     "WorkspaceBindingReader",
     "WorkspaceBindingSnapshot",

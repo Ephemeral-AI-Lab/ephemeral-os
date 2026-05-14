@@ -9,18 +9,21 @@ from sandbox.audit.operation import (
     publish_operation_started,
 )
 from sandbox.api.tool._payload import (
-    caller_envelope,
+    caller_audit_fields,
     conflict_from_payload,
+    error_message,
     int_from_payload,
+    is_transient_transport_error,
     paths_from_payload,
     timings_from_payload,
 )
+from sandbox.api.timeouts import (
+    EDIT_FILE_TIMEOUT_S,
+    RECOVERY_READ_TIMEOUT_S,
+    TRANSIENT_EDIT_ATTEMPTS,
+)
 from sandbox.models import ConflictInfo, EditFileRequest, EditFileResult
 from sandbox.host.daemon_client import call_daemon_api
-
-_EDIT_DAEMON_TIMEOUT_S = 20
-_RECOVERY_READ_TIMEOUT_S = 20
-_TRANSIENT_EDIT_ATTEMPTS = 2
 
 
 async def edit_file(
@@ -75,16 +78,16 @@ async def _call_edit_with_recovery(
 ) -> dict[str, object]:
     payload = _edit_payload(request)
     last_exc: Exception | None = None
-    for attempt_no in range(1, _TRANSIENT_EDIT_ATTEMPTS + 1):
+    for attempt_no in range(1, TRANSIENT_EDIT_ATTEMPTS + 1):
         try:
             return await call_daemon_api(
                 sandbox_id,
                 "api.edit_file",
                 payload,
-                timeout=_EDIT_DAEMON_TIMEOUT_S,
+                timeout=EDIT_FILE_TIMEOUT_S,
             )
         except Exception as exc:
-            if not _is_transient_transport_error(exc):
+            if not is_transient_transport_error(exc):
                 raise
             recovered = await _recover_if_edit_already_applied(
                 sandbox_id,
@@ -106,7 +109,7 @@ def _edit_payload(request: EditFileRequest) -> dict[str, object]:
             for edit in request.edits
         ],
         "actor_id": request.caller.agent_id,
-        "caller": caller_envelope(request.caller),
+        "caller": caller_audit_fields(request.caller),
         "description": request.description or f"edit {request.path}",
     }
 
@@ -123,9 +126,9 @@ async def _recover_if_edit_already_applied(
             "api.read_file",
             {
                 "path": request.path,
-                "caller": caller_envelope(request.caller),
+                "caller": caller_audit_fields(request.caller),
             },
-            timeout=_RECOVERY_READ_TIMEOUT_S,
+            timeout=RECOVERY_READ_TIMEOUT_S,
         )
     except Exception:
         return None
@@ -169,25 +172,8 @@ def _result_from_payload(raw: dict[str, object]) -> EditFileResult:
     )
 
 
-def _is_transient_transport_error(error: BaseException) -> bool:
-    message = _error_message(error).lower()
-    return any(
-        marker in message
-        for marker in (
-            "daytonaerror",
-            "failed to execute command",
-            "connection reset",
-            "connection refused",
-            "server disconnected",
-            "temporarily unavailable",
-            "runtimeexecfailed",
-            "eos_daemon_io_failed",
-        )
-    )
-
-
 def _conflict_result_from_error(path: str, error: BaseException) -> EditFileResult | None:
-    message = _error_message(error)
+    message = error_message(error)
     if not _is_edit_conflict(message):
         return None
     return EditFileResult(
@@ -203,13 +189,6 @@ def _conflict_result_from_error(path: str, error: BaseException) -> EditFileResu
         conflict_reason=message,
         timings={},
     )
-
-
-def _error_message(error: BaseException) -> str:
-    message = str(getattr(error, "message", "") or error)
-    if message.startswith("internal_error: "):
-        return message.removeprefix("internal_error: ")
-    return message
 
 
 def _is_edit_conflict(message: str) -> bool:

@@ -8,7 +8,8 @@ from sandbox.audit.operation import (
     publish_operation_result,
     publish_operation_started,
 )
-from sandbox.api.tool._payload import caller_envelope, timings_from_payload
+from sandbox.api.timeouts import READ_FILE_TIMEOUT_S
+from sandbox.api.tool._payload import caller_audit_fields, timings_from_payload
 from sandbox.models import ReadFileRequest, ReadFileResult
 from sandbox.host.daemon_client import call_daemon_api
 
@@ -33,9 +34,9 @@ async def read_file(
             "api.read_file",
             {
                 "path": request.path,
-                "caller": caller_envelope(request.caller),
+                "caller": caller_audit_fields(request.caller),
             },
-            timeout=60,
+            timeout=READ_FILE_TIMEOUT_S,
         )
         result = ReadFileResult(
             success=bool(raw.get("success", False)),

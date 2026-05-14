@@ -49,13 +49,45 @@ logger = logging.getLogger(__name__)
 
 _TRANSIENT_LOWERDIR_DIR = "transient-lowerdirs"
 _STORAGE_WRITER_LOCK_FILE = ".storage-writer.lock"
-_STORAGE_WRITER_LOCKS: dict[str, int] = {}
+_STORAGE_WRITER_LOCKS: dict[str, _StorageWriterLock] = {}
 _STORAGE_WRITER_LOCKS_LOCK = threading.Lock()
 
 try:
     import fcntl
 except ImportError:  # pragma: no cover - Windows-only fallback.
     fcntl = None  # type: ignore[assignment]
+
+
+@dataclass
+class _StorageWriterLock:
+    fd: int
+    refcount: int
+
+
+class _StorageWriterLockLease:
+    def __init__(self, key: str, fd: int) -> None:
+        self._key = key
+        self.fd = fd
+        self._closed = False
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        with _STORAGE_WRITER_LOCKS_LOCK:
+            record = _STORAGE_WRITER_LOCKS.get(self._key)
+            if record is None:
+                return
+            record.refcount -= 1
+            if record.refcount > 0:
+                return
+            _STORAGE_WRITER_LOCKS.pop(self._key, None)
+            if fcntl is not None:
+                fcntl.flock(record.fd, fcntl.LOCK_UN)
+            os.close(record.fd)
+
+    def __del__(self) -> None:
+        self.close()
 
 
 @dataclass(frozen=True)
@@ -81,26 +113,41 @@ class PrepareWorkspaceSnapshotResult:
 class LayerStackManager:
     """Coordinates active manifests, snapshot leases, reads, and publishes."""
 
-    def __init__(self, storage_root: str | Path) -> None:
+    def __init__(
+        self,
+        storage_root: str | Path,
+        *,
+        manifest_store: ManifestStore | None = None,
+        leases: LeaseStore | None = None,
+        view: SnapshotMaterializer | None = None,
+        publisher: ChangePublisher | None = None,
+        squash: SquashWorker | None = None,
+    ) -> None:
         self.storage_root = Path(storage_root)
         self.storage_root.mkdir(parents=True, exist_ok=True)
-        self._storage_writer_lock_fd = _acquire_storage_writer_lock(self.storage_root)
+        self._storage_writer_lock = _acquire_storage_writer_lock(self.storage_root)
         (self.storage_root / LAYERS_DIR).mkdir(exist_ok=True)
         (self.storage_root / STAGING_DIR).mkdir(exist_ok=True)
 
-        self._manifest_file = manifest_path(self.storage_root)
+        self._manifest_store = manifest_store or FileManifestStore(self.storage_root)
+        self._manifest_file = self._manifest_store.path
         if not self._manifest_file.exists():
-            write_manifest_atomic(self._manifest_file, empty_manifest())
+            self._manifest_store.write(empty_manifest())
 
         self._lock = threading.RLock()
-        self._leases = LeaseRegistry()
-        self._view = MergedView(self.storage_root)
-        self._publisher = LayerPublisher(self.storage_root)
-        self._squash = SquashWorker(self.storage_root)
+        self._leases = leases or LeaseRegistry()
+        self._view = view or MergedView(self.storage_root)
+        self._publisher = publisher or LayerPublisher(self.storage_root)
+        self._squash = squash or SquashWorker(self.storage_root)
+        self._transaction_handle = LayerStackTransactionHandle(
+            lock=self._lock,
+            manifest_store=self._manifest_store,
+            publisher=self._publisher,
+        )
 
     def read_active_manifest(self) -> Manifest:
         with self._lock:
-            return read_manifest(self._manifest_file)
+            return self._manifest_store.read()
 
     def acquire_snapshot_lease(self, owner_request_id: str) -> WorkspaceLease:
         with self._lock:
@@ -115,7 +162,7 @@ class LayerStackManager:
     ) -> PrepareWorkspaceSnapshotResult:
         total_start = monotonic_now()
         with self._lock:
-            manifest = read_manifest(self._manifest_file)
+            manifest = self._manifest_store.read()
             lease = self._leases.acquire(manifest, owner_request_id)
         lowerdir: Path | None = None
         try:
@@ -123,15 +170,15 @@ class LayerStackManager:
                 self.storage_root
                 / "runtime"
                 / _TRANSIENT_LOWERDIR_DIR
-                / f"{_safe_request_part(owner_request_id)}-{uuid4().hex[:8]}"
+                / f"{safe_request_part(owner_request_id)}-{uuid4().hex[:8]}"
                 / "lower"
             )
             materialize_start = monotonic_now()
-            # link_ok=True: the lowerdir feeds an overlay read-only mount
+            # share_inodes=True: the lowerdir feeds an overlay read-only mount
             # (or is copy-tree'd into a separate merged dir in copy-backed
             # mode). Sharing inodes with source layers avoids byte copies
             # under concurrent prepare_workspace_snapshot.
-            self._view.materialize(lowerdir, manifest, link_ok=True)
+            self._view.materialize(lowerdir, manifest, share_inodes=True)
             materialize_elapsed = monotonic_now() - materialize_start
             return PrepareWorkspaceSnapshotResult(
                 lease_id=lease.lease_id,
@@ -153,7 +200,7 @@ class LayerStackManager:
                 # failed snapshot is a slow disk-fill bug; logging surfaces
                 # the leak in operator dashboards.
                 shutil.rmtree(
-                    lowerdir.parent, onerror=_log_rmtree_failure
+                    lowerdir.parent, onerror=log_rmtree_failure
                 )
             with self._lock:
                 self._leases.release(lease.lease_id)
@@ -164,7 +211,7 @@ class LayerStackManager:
             lease = self._leases.release(lease_id)
             if lease is None:
                 return False
-            active_manifest = read_manifest(self._manifest_file)
+            active_manifest = self._manifest_store.read()
             removable = self._unreferenced_layers(
                 lease.manifest.layers,
                 current_manifest=active_manifest,
@@ -210,14 +257,14 @@ class LayerStackManager:
         self._view.materialize(destination, manifest or self.read_active_manifest())
 
     def commit_transaction(self) -> LayerStackTransaction:
-        return LayerStackTransaction(self)
+        return LayerStackTransaction(self._transaction_handle)
 
     def allocate_commit_staging(self, request_id: str) -> CommitStagingArea:
         parent = self.storage_root / STAGING_DIR
         parent.mkdir(parents=True, exist_ok=True)
         path = Path(
             tempfile.mkdtemp(
-                prefix=f"occ-commit-{_safe_request_part(request_id)}-",
+                prefix=f"occ-commit-{safe_request_part(request_id)}-",
                 dir=str(parent),
             )
         )
@@ -241,7 +288,7 @@ class LayerStackManager:
 
     def squash(self, *, max_depth: int) -> Manifest | None:
         with self._lock:
-            active = read_manifest(self._manifest_file)
+            active = self._manifest_store.read()
             plan = self._squash.plan(active, max_depth=max_depth)
             if plan is None:
                 return None
@@ -255,7 +302,7 @@ class LayerStackManager:
         try:
             checkpoint = self._squash.build_checkpoint(plan)
             with self._lock:
-                current = read_manifest(self._manifest_file)
+                current = self._manifest_store.read()
                 if not manifest_still_ends_with(
                     current,
                     plan.suffix_to_checkpoint,
@@ -272,7 +319,7 @@ class LayerStackManager:
                     version=next_version,
                     layers=(*live_prefix, checkpoint),
                 )
-                write_manifest_atomic(self._manifest_file, new_manifest)
+                self._manifest_store.write(new_manifest)
                 checkpoint_committed = True
             return new_manifest
         finally:
@@ -292,7 +339,11 @@ class LayerStackManager:
         active_layers = set(current_manifest.layers)
         pinned_layers = set(self._leases.pinned_layers())
         removable: list[LayerRef] = []
-        for layer in sorted(set(candidates), key=lambda item: item.layer_id):
+        seen: set[LayerRef] = set()
+        for layer in candidates:
+            if layer in seen:
+                continue
+            seen.add(layer)
             if layer in active_layers or layer in pinned_layers:
                 continue
             removable.append(layer)
@@ -307,83 +358,20 @@ class LayerStackManager:
             removed.append(layer.layer_id)
         return tuple(removed)
 
+    def close(self) -> None:
+        if self._storage_writer_lock is not None:
+            self._storage_writer_lock.close()
+            self._storage_writer_lock = None
 
-class LayerStackTransaction:
-    """Process-local active-manifest transaction shell."""
-
-    def __init__(self, manager: LayerStackManager) -> None:
-        self._manager = manager
-        self._manifest: Manifest | None = None
-        self._entered = False
-        self._lock_acquired_at: float | None = None
-        self._lock_held_s = 0.0
-        self._lock_wait_s = 0.0
-
-    def __enter__(self) -> LayerStackTransaction:
-        wait_start = monotonic_now()
-        self._manager._lock.acquire()
-        acquired_at = monotonic_now()
-        self._lock_wait_s = acquired_at - wait_start
-        self._lock_acquired_at = acquired_at
-        self._entered = True
-        self._manifest = read_manifest(self._manager._manifest_file)
-        return self
-
-    def __exit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        del exc_type, exc, traceback
-        self._entered = False
-        self._manifest = None
-        if self._lock_acquired_at is not None:
-            self._lock_held_s = monotonic_now() - self._lock_acquired_at
-            self._lock_acquired_at = None
-        self._manager._lock.release()
-
-    def snapshot(self) -> Manifest:
-        return self._require_manifest()
-
-    def publish_layer(
-        self,
-        changes: Sequence[LayerChange],
-        *,
-        source_root: str | Path | None = None,
-        timings: dict[str, float] | None = None,
-    ) -> Manifest:
-        current = self._require_manifest()
-        new_manifest = self._manager._publisher.publish_layer(
-            tuple(changes),
-            expected_manifest=current,
-            source_root=source_root,
-            timings=timings,
-        )
-        self._manifest = new_manifest
-        return new_manifest
-
-    @property
-    def lock_wait_s(self) -> float:
-        return self._lock_wait_s
-
-    @property
-    def lock_held_s(self) -> float:
-        if self._lock_acquired_at is not None:
-            return monotonic_now() - self._lock_acquired_at
-        return self._lock_held_s
-
-    def _require_manifest(self) -> Manifest:
-        if not self._entered or self._manifest is None:
-            raise RuntimeError("layer-stack transaction is not active")
-        return self._manifest
+    def __del__(self) -> None:
+        self.close()
 
 
 def _layer_digest_path(storage_root: Path, layer_id: str) -> Path:
     return storage_root / ".layer-metadata" / f"{layer_id}.digest"
 
 
-def _acquire_storage_writer_lock(storage_root: Path) -> int | None:
+def _acquire_storage_writer_lock(storage_root: Path) -> _StorageWriterLockLease | None:
     """Hold a process-wide advisory writer lock for this storage root."""
     if fcntl is None:
         logger.warning(
@@ -392,9 +380,10 @@ def _acquire_storage_writer_lock(storage_root: Path) -> int | None:
         return None
     key = str(storage_root.resolve())
     with _STORAGE_WRITER_LOCKS_LOCK:
-        fd = _STORAGE_WRITER_LOCKS.get(key)
-        if fd is not None:
-            return fd
+        record = _STORAGE_WRITER_LOCKS.get(key)
+        if record is not None:
+            record.refcount += 1
+            return _StorageWriterLockLease(key, record.fd)
 
         lock_path = storage_root / _STORAGE_WRITER_LOCK_FILE
         fd = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o644)
@@ -406,20 +395,5 @@ def _acquire_storage_writer_lock(storage_root: Path) -> int | None:
                 "layer-stack storage root is already owned by another process: "
                 f"{storage_root}"
             ) from exc
-        _STORAGE_WRITER_LOCKS[key] = fd
-        return fd
-
-
-def _safe_request_part(value: str) -> str:
-    safe = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in value)
-    return safe[:48] or "request"
-
-
-def _log_rmtree_failure(func: object, path: object, exc_info: object) -> None:
-    """``shutil.rmtree`` onerror callback: surface cleanup leaks via logs."""
-    logger.warning(
-        "transient lowerdir cleanup failed: %s(%r) -> %r",
-        getattr(func, "__name__", repr(func)),
-        path,
-        exc_info,
-    )
+        _STORAGE_WRITER_LOCKS[key] = _StorageWriterLock(fd=fd, refcount=1)
+        return _StorageWriterLockLease(key, fd)

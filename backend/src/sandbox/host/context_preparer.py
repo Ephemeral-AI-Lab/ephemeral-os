@@ -7,14 +7,23 @@ the registered adapter, never imported by name.
 
 from __future__ import annotations
 
-from typing import Any, Protocol, cast
+from typing import Protocol, cast
+
+from sandbox.provider.registry import get_adapter
+
+
+class SandboxRuntimeContext(Protocol):
+    """Mapping-shaped runtime context consumed by sandbox context preparers."""
+
+    def get(self, key: str, default: object = None) -> object: ...
+    def __setitem__(self, key: str, value: object) -> None: ...
 
 
 class SandboxContextPreparer(Protocol):
     """Provider-owned context hook used by agent runtime setup."""
 
-    def prepare_context(self, context: Any) -> None: ...
-    async def prepare_context_async(self, context: Any) -> None: ...
+    def prepare_context(self, context: SandboxRuntimeContext) -> None: ...
+    async def prepare_context_async(self, context: SandboxRuntimeContext) -> None: ...
 
 
 def context_preparer_for(sandbox_id: str) -> SandboxContextPreparer:
@@ -23,8 +32,6 @@ def context_preparer_for(sandbox_id: str) -> SandboxContextPreparer:
     The provider adapter exposes ``context_preparer(sandbox_id) ->
     SandboxContextPreparer`` so this factory is provider-agnostic.
     """
-    from sandbox.provider.registry import get_adapter
-
     adapter = get_adapter(sandbox_id)
     factory = getattr(adapter, "context_preparer", None)
     if not callable(factory):
@@ -37,5 +44,6 @@ def context_preparer_for(sandbox_id: str) -> SandboxContextPreparer:
 
 __all__ = [
     "SandboxContextPreparer",
+    "SandboxRuntimeContext",
     "context_preparer_for",
 ]

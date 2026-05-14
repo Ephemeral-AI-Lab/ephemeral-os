@@ -186,9 +186,9 @@ def test_prepare_workspace_snapshot_failure_releases_lease_and_drops_partial_low
         destination: str | Path,
         manifest: object,
         *,
-        link_ok: bool = False,
+        share_inodes: bool = False,
     ) -> None:
-        del manifest, link_ok
+        del manifest, share_inodes
         lowerdir = Path(destination)
         lowerdir.mkdir(parents=True)
         (lowerdir / "partial.txt").write_text("partial\n", encoding="utf-8")

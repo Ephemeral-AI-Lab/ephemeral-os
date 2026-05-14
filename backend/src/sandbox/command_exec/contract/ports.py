@@ -3,16 +3,18 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, Protocol
+from typing import Protocol
 
-from sandbox.occ.changeset.prepared import CommitOptions
-from sandbox.occ.changeset.types import Change, ChangesetResult
+from sandbox.command_exec.contract.request import CommandExecRequest
+from sandbox.command_exec.contract.result import CommandExecResult
+from sandbox.layer_stack.manifest import Manifest
+from sandbox.occ import Change, ChangesetResult, CommitOptions
 
 
 class WorkspaceSnapshotLease(Protocol):
     lease_id: str
     manifest_version: int
-    manifest: object
+    manifest: Manifest
     lowerdir: str
     timings: dict[str, float]
 
@@ -37,13 +39,20 @@ class OCCMutationClient(Protocol):
         self,
         typed_changes: Sequence[Change],
         *,
-        snapshot: Any = None,
+        snapshot: Manifest | None = None,
         options: CommitOptions | None = None,
         workspace_ref: str | None = None,
     ) -> ChangesetResult: ...
 
 
+class CommandExecutor(Protocol):
+    """Runnable command-exec boundary exposed to daemon/API adapters."""
+
+    async def run(self, request: CommandExecRequest) -> CommandExecResult: ...
+
+
 __all__ = [
+    "CommandExecutor",
     "OCCMutationClient",
     "WorkspaceLeaseClient",
     "WorkspaceSnapshotLease",

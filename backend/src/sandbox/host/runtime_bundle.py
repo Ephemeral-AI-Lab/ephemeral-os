@@ -159,6 +159,11 @@ def _runtime_bundle_bytes() -> bytes:
             sandbox_dir / "timing.py",
             arcname="sandbox/timing.py",
         )
+        _add_if_exists(
+            tar,
+            sandbox_dir / "async_bridge.py",
+            arcname="sandbox/async_bridge.py",
+        )
 
         _add_if_exists(
             tar,

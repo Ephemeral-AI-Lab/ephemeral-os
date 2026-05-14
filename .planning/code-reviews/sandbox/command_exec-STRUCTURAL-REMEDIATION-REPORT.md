@@ -64,3 +64,21 @@ Verification:
 
 - `uv run pytest backend/tests/unit_test/test_sandbox/test_command_exec/test_workspace_mount.py -q` -> 10 passed.
 - `uv run pytest backend/tests/unit_test/test_sandbox/test_command_exec -q` -> 54 passed, 6 unrelated OCC write/edit tests failed because the OCC serial merger was not started in this local run.
+
+### Phase 2 - Executor Boundary And Typed Dependencies
+
+Status: complete.
+
+Changes:
+
+- Added `command_exec/executor.py` as the owner of the snapshot lease, command run, capture, OCC apply, lease release, and transient lowerdir cleanup pipeline.
+- Reduced `runtime/daemon/service/shell_runner.py` to service lookup plus API payload projection, with a thin internal delegate for existing callers.
+- Added `CommandExecutor` to the command-exec contract and exported `execute_command` from the package facade.
+- Routed command-exec OCC type imports through the `sandbox.occ` facade.
+- Typed `WorkspaceCapture.changes` as `OverlayPathChange` values and `CommandExecResult.occ_result` as `ChangesetResult`.
+- Added mount-mode coercion in result dataclasses so older tests/fakes passing string values normalize to `MountMode`.
+
+Verification:
+
+- `uv run pytest backend/tests/unit_test/test_sandbox/test_command_exec/test_workspace_mount.py backend/tests/unit_test/test_sandbox/test_command_exec/test_capture_to_occ_client.py::test_shell_capture_goes_through_occ_client_before_lease_release -q` -> 11 passed.
+- Facade import smoke: `CommandExecRequest`, `execute_command`, `WorkspaceReplacementMountSpec`, and `shell_runner.execute_shell_api` import successfully.

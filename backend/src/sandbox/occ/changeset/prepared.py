@@ -15,12 +15,6 @@ class RouteDecision(str, Enum):
     DROP = "drop"
     REJECT = "reject"
 
-    # Backward-compatible aliases for older callers. New code should use
-    # DIRECT/GATED so route names describe what will happen, not what is
-    # being skipped.
-    OCC_GATED_MERGE = "gated"
-    OCC_SKIPPED_MERGE = "direct"
-
 
 @dataclass(frozen=True)
 class PreparedPathGroup:
