@@ -98,7 +98,19 @@ After the initial handoff commit (`3ddac58a`), the loop directive resumed and 3 
 | `c7e2c4c1` | W8b | StrategyRegistry inlined as a tuple in `execution/workspace/mount.py`; `execution/strategies/registry.py` deleted (~55 LOC). |
 | `77b7b9d1` | W5c (partial) | `execution/contract/{__init__,request,result,ports,spec}.py` (5 files, 274 LOC) collapsed into a single `execution/contract.py` (~210 LOC). Codemod rewrote 7 submodule-form imports. The occ/changeset half of W5c is still deferred. |
 
-**Updated final metrics (post-W5c-partial):**
+## Session 1 — Addendum 2 (post-W5c-occ)
+
+After the first addendum (commit `4f95b143`) the loop resumed again and landed:
+
+| SHA | Wave | Description |
+|---|---|---|
+| `234e50b9` | W5c-occ | `occ/changeset/builders.py` (82 LOC) folded into `occ/changeset/types.py`; codemod 7 sites; -14 LOC net. |
+
+**Updated final metrics (post-W5c-occ):**
+- Files: 144 (was 160 baseline) — RFC §7 AC #6 target ≤152 beaten by 8.
+- LOC: 17,298 (was 17,492 baseline). -194 LOC net. RFC §13 AC #9 floor 1,222 LOC still NOT MET; the remaining LOC-yielders are W5b/W6/W7/W8a/W9.
+
+**Updated previous addendum metrics (now stale):**
 - Files: 145 (was 160 baseline) — RFC §7 AC #6 target ≤152 beaten by 7.
 - LOC: 17,310 (was 17,492 baseline). -182 LOC net. RFC §13 AC #9 floor 1,222 LOC still NOT MET; the remaining LOC-yielders are W5b/W6/W7/W8a/W9.
 - Top-level subdirs: 9 (unchanged from earlier handoff).
