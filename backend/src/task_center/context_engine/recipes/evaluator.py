@@ -16,8 +16,8 @@ from task_center.context_engine.packet import (
     ContextPriority,
     ContextRefs,
 )
-from task_center.context_engine.recipes.summaries import latest_summary_text
-from task_center.context_engine.recipes.mission_episode import (
+from task_center.context_engine.recipes import latest_summary_text
+from task_center.context_engine.recipes.generator import (
     mission_episode_blocks,
 )
 from task_center.context_engine.recipes_registry import ContextRecipe
