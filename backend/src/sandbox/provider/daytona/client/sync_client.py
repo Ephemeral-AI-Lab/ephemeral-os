@@ -8,7 +8,10 @@ import threading
 from inspect import Parameter, signature
 from typing import Any
 
-from sandbox.provider.daytona.client.credentials import load_credentials
+from sandbox.provider.daytona.client.credentials import (
+    build_sdk_client,
+    load_required_credentials,
+)
 from sandbox.provider.daytona.errors import DaytonaUnavailableError
 
 logger = logging.getLogger(__name__)
@@ -57,11 +60,12 @@ def acquire_client() -> Any:
     """Return a cached Daytona client, creating one if config changed."""
     global _cached_client, _cached_client_key
 
-    api_key, api_url, target = load_credentials()
-    if not api_key or not api_url:
-        raise DaytonaUnavailableError(
+    api_key, api_url, target = load_required_credentials(
+        unavailable_cls=DaytonaUnavailableError,
+        not_configured_message=(
             "Daytona is not configured. Set DAYTONA_API_KEY and DAYTONA_API_URL."
-        )
+        ),
+    )
     current_key = (api_key, api_url, target)
 
     stale_client: Any = None
@@ -69,21 +73,17 @@ def acquire_client() -> Any:
         if _cached_client is not None and _cached_client_key == current_key:
             return _cached_client
 
-        try:
-            from daytona_sdk import Daytona, DaytonaConfig
-        except ImportError as exc:
-            raise DaytonaUnavailableError(
-                "Daytona SDK not installed. Run: pip install daytona-sdk"
-            ) from exc
-
         if _cached_client is not None:
             stale_client = _cached_client
 
-        cfg_kwargs: dict[str, str] = {"api_key": api_key, "api_url": api_url}
-        if target:
-            cfg_kwargs["target"] = target
-        cfg = DaytonaConfig(**cfg_kwargs)
-        _cached_client = Daytona(cfg)
+        _cached_client = build_sdk_client(
+            "Daytona",
+            api_key=api_key,
+            api_url=api_url,
+            target=target,
+            unavailable_cls=DaytonaUnavailableError,
+            not_installed_message="Daytona SDK not installed. Run: pip install daytona-sdk",
+        )
         _cached_client_key = current_key
         new_client = _cached_client
         logger.info("Daytona client created (api_url=%s)", api_url)

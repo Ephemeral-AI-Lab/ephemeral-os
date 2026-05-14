@@ -12,7 +12,10 @@ import threading
 import weakref
 from typing import Any
 
-from sandbox.provider.daytona.client.credentials import load_credentials
+from sandbox.provider.daytona.client.credentials import (
+    build_sdk_client,
+    load_required_credentials,
+)
 from sandbox.provider.daytona.client.sync_client import (
     _SANDBOX_TIMEOUT_SECONDS,
     _call_with_optional_timeout,
@@ -39,12 +42,12 @@ _cached_clients: weakref.WeakKeyDictionary[
 
 
 def _load_credentials() -> tuple[str, str, str]:
-    api_key, api_url, target = load_credentials()
-    if not api_key or not api_url:
-        raise AsyncDaytonaUnavailableError(
+    return load_required_credentials(
+        unavailable_cls=AsyncDaytonaUnavailableError,
+        not_configured_message=(
             "Async Daytona is not configured. Set DAYTONA_API_KEY and DAYTONA_API_URL."
-        )
-    return api_key, api_url, target
+        ),
+    )
 
 
 def get_async_daytona_client() -> Any:
@@ -73,18 +76,16 @@ def get_async_daytona_client() -> Any:
             stale_clients.append(cached_client)
             del _cached_clients[loop]
 
-        try:
-            from daytona_sdk import AsyncDaytona, DaytonaConfig
-        except ImportError as exc:
-            raise AsyncDaytonaUnavailableError(
+        client = build_sdk_client(
+            "AsyncDaytona",
+            api_key=api_key,
+            api_url=api_url,
+            target=target,
+            unavailable_cls=AsyncDaytonaUnavailableError,
+            not_installed_message=(
                 "Async Daytona SDK is not available. Run: pip install daytona-sdk"
-            ) from exc
-
-        cfg_kwargs: dict[str, str] = {"api_key": api_key, "api_url": api_url}
-        if target:
-            cfg_kwargs["target"] = target
-        cfg = DaytonaConfig(**cfg_kwargs)
-        client = AsyncDaytona(cfg)
+            ),
+        )
         _cached_clients[loop] = (current_key, client)
 
     if stale_clients:
