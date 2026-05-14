@@ -178,18 +178,12 @@ def _load_peer_bootstraps() -> None:
     from sandbox.daemon.handler.tools import edit, read, write
     from sandbox.daemon.service import shell_runner
 
-    for op, handler in {
+    OP_TABLE.update({
         "api.ensure_workspace_base": workspace.ensure_workspace_base,
         "api.build_workspace_base": workspace.build_workspace_base,
-        "api.prepare_workspace_snapshot": (
-            workspace.prepare_workspace_snapshot
-        ),
-        "api.release_workspace_snapshot": (
-            workspace.release_workspace_snapshot
-        ),
-        "api.layer_stack.fence_stale_staging": (
-            workspace.fence_stale_staging
-        ),
+        "api.prepare_workspace_snapshot": workspace.prepare_workspace_snapshot,
+        "api.release_workspace_snapshot": workspace.release_workspace_snapshot,
+        "api.layer_stack.fence_stale_staging": workspace.fence_stale_staging,
         "api.edit_file": edit.edit_file,
         "api.v1.edit_file": edit.edit_file,
         "api.layer_metrics": metrics.layer_metrics,
@@ -204,13 +198,7 @@ def _load_peer_bootstraps() -> None:
         "api.write_file": write.write_file,
         "api.v1.write_file": write.write_file,
         "overlay.run": overlay_run.handle,
-    }.items():
-        existing = OP_TABLE.get(op)
-        if existing is handler:
-            continue
-        if existing is not None:
-            raise ValueError(f"runtime op already registered: {op}")
-        register_op(op, handler)
+    })
 
 
 _load_peer_bootstraps()
