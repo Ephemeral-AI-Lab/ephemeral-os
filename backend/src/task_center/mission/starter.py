@@ -24,7 +24,6 @@ from task_center.mission.state import (
 from task_center.exceptions import TaskCenterInvariantViolation
 from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.episode.manager import OrchestratorFactory
-from task_center.saga import Saga
 from task_center.attempt.state import AttemptFailReason, AttemptStatus
 from task_center.attempt.runtime import AttemptDeps
 from task_center.episode.state import Episode, EpisodeStatus
@@ -232,29 +231,36 @@ class MissionStarter:
     ) -> None:
         """Best-effort rollback. Order: attempt → episode → mission → parent.
 
-        Each step runs inside a shared :class:`Saga` so a failure in one
-        step is logged but does not block the remaining cleanup. The
-        parent-restore step is special-cased: on failure we escalate to
-        synthetic close-report delivery so the parent task does not
-        remain orphaned in ``WAITING_MISSION``.
+        Each step's failure is logged but does not block subsequent
+        steps. The parent-restore step is special-cased: on failure we
+        escalate to synthetic close-report delivery so the parent task
+        does not remain orphaned in ``WAITING_MISSION``.
         """
         now = datetime.now(UTC)
-        saga = Saga(name="mission_start_compensation")
-        saga.step(
+
+        def _do(step_name, action) -> bool:
+            try:
+                action()
+                return True
+            except Exception:
+                logger.exception(
+                    "MissionStart compensation step %r failed", step_name
+                )
+                return False
+
+        _do(
             "close_unstarted_attempt",
             lambda: self._close_unstarted_attempt_after_failed_start(
                 initial_attempt_id, now=now
             ),
         )
-        saga.step(
+        _do(
             "cancel_episode",
             lambda: self._runtime.episode_store.set_status(
-                episode.id,
-                status=EpisodeStatus.CANCELLED,
-                closed_at=now,
+                episode.id, status=EpisodeStatus.CANCELLED, closed_at=now
             ),
         )
-        saga.step(
+        _do(
             "cancel_mission",
             lambda: self._runtime.mission_store.set_status(
                 mission.id,
@@ -263,12 +269,11 @@ class MissionStarter:
                 closed_at=now,
             ),
         )
-        saga.step(
+        restore_ok = _do(
             "restore_parent",
             lambda: self._restore_parent(parent_task_id=parent_task_id),
         )
-        result = saga.run()
-        if any(name == "restore_parent" for name, _ in result.failures):
+        if not restore_ok:
             logger.critical(
                 "MissionStarter: parent status rollback failed; "
                 "task %r remains in WAITING_MISSION — attempting "
