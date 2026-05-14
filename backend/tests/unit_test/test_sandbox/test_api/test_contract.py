@@ -13,7 +13,6 @@ from sandbox.api import (
     EditFileResult,
     RawExecResult,
     ReadFileResult,
-    SandboxClient,
     SandboxCaller,
     SandboxRequestBase,
     ShellResult,
@@ -33,15 +32,12 @@ _EXPECTED_API_ROOT_ENTRIES = {
     "lifecycle.py",
     "preview_urls.py",
     "protocol.py",
-    "status.py",
     "timeouts.py",
-    "tool",
     "transport.py",
 }
 _MODEL_ONLY_MODULES = {
     "__init__.py",
     "_impl/__init__.py",
-    "tool/__init__.py",
 }
 _PUBLIC_VERB_IMPORT_ALLOWLIST = {
     "_impl/read.py": {
@@ -65,11 +61,6 @@ _PUBLIC_VERB_IMPORT_ALLOWLIST = {
     "_impl/raw_exec.py": {
         "audit.base",
         "sandbox.models",
-        "sandbox.provider.registry",
-    },
-    "status.py": {
-        "sandbox.host.bootstrap",
-        "sandbox.plugin",
         "sandbox.provider.registry",
     },
 }
@@ -99,14 +90,18 @@ def test_api_root_keeps_public_surface_grouped_by_role() -> None:
     assert {
         path.name
         for path in _API_ROOT.iterdir()
-        if path.name != "__pycache__" and not path.name.startswith(".")
+        if path.name != "__pycache__"
+        and not path.name.startswith(".")
+        and (path.is_file() or any(path.glob("*.py")))
     } == _EXPECTED_API_ROOT_ENTRIES
 
 
-def test_api_package_uses_replaceable_default_client_wrappers() -> None:
-    assert isinstance(sandbox_api.default_client(), SandboxClient)
-    assert sandbox_api.read_file != sandbox_api.default_client().read_file
+def test_api_package_uses_thin_default_client_wrappers() -> None:
+    assert callable(sandbox_api.read_file)
     assert not hasattr(sandbox_api, "_client")
+    assert not hasattr(sandbox_api, "default_client")
+    assert not hasattr(sandbox_api, "set_default_client")
+    assert not hasattr(sandbox_api, "configure_default_client")
     assert not hasattr(sandbox_api, "api")
 
 
@@ -116,7 +111,6 @@ def test_api_package_uses_replaceable_default_client_wrappers() -> None:
             [
                 *_API_ROOT.glob("*.py"),
                 *(_API_ROOT / "_impl").glob("*.py"),
-                *(_API_ROOT / "tool").glob("*.py"),
             ]
         ),
     )

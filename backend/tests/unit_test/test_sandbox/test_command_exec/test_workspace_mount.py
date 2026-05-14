@@ -7,30 +7,26 @@ from pathlib import Path
 
 import pytest
 
-import sandbox.command_exec.workspace.namespace_entrypoint as namespace_entrypoint
 import sandbox.command_exec.workspace.mount as workspace_mount
-from sandbox.command_exec.contract.result import ShellProcessResult
-from sandbox.command_exec.workspace.capture import capture_workspace_upperdir
 from sandbox.command_exec.contract.request import CommandExecRequest
 from sandbox.command_exec.contract.result import MountMode
+from sandbox.command_exec.contract.result import ShellProcessResult
+from sandbox.command_exec.workspace.capture import capture_workspace_upperdir
+from sandbox.command_exec.contract.spec import WorkspaceReplacementMountSpec
+from sandbox.command_exec.entrypoints import namespace_helper
 from sandbox.command_exec.strategies.copy_backed import CopyBackedStrategy
 from sandbox.command_exec.strategies.private_namespace import (
     NAMESPACE_CONTROL_REF,
     NAMESPACE_FALLBACK_STRATEGY,
     NAMESPACE_INFRA_EXIT_CODE,
+    PrivateNamespaceStrategy,
 )
-from sandbox.command_exec.workspace.mount import WorkspaceReplacementMountSpec
+from sandbox.command_exec.workspace.path_rewrite import rewrite_declared_workspace_refs
 
 
 def test_copy_backed_mount_captures_only_workspace_changes(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(
-        workspace_mount,
-        "_private_mount_namespace_available",
-        lambda: False,
-    )
     lower = tmp_path / "lower"
     lower.mkdir()
     (lower / "input.txt").write_text("base\n", encoding="utf-8")
@@ -64,6 +60,7 @@ def test_copy_backed_mount_captures_only_workspace_changes(
         request=request,
         run_dir=tmp_path / "run",
         timings=timings,
+        strategies=(CopyBackedStrategy(),),
     )
     changes = capture_workspace_upperdir(
         spec=spec,
@@ -82,13 +79,7 @@ def test_copy_backed_mount_captures_only_workspace_changes(
 
 def test_copy_backed_mount_rewrites_absolute_workspace_references(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(
-        workspace_mount,
-        "_private_mount_namespace_available",
-        lambda: False,
-    )
     lower = tmp_path / "lower"
     lower.mkdir()
     spec = WorkspaceReplacementMountSpec(
@@ -111,6 +102,7 @@ def test_copy_backed_mount_rewrites_absolute_workspace_references(
         request=request,
         run_dir=tmp_path / "run",
         timings=timings,
+        strategies=(CopyBackedStrategy(),),
     )
     changes = capture_workspace_upperdir(
         spec=spec,
@@ -128,13 +120,7 @@ def test_copy_backed_mount_rewrites_absolute_workspace_references(
 
 def test_copy_backed_mount_rewrites_workspace_env_values(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(
-        workspace_mount,
-        "_private_mount_namespace_available",
-        lambda: False,
-    )
     lower = tmp_path / "lower"
     lower.mkdir()
     spec = WorkspaceReplacementMountSpec(
@@ -157,6 +143,7 @@ def test_copy_backed_mount_rewrites_workspace_env_values(
         request=request,
         run_dir=tmp_path / "run",
         timings={},
+        strategies=(CopyBackedStrategy(),),
     )
 
     assert process.exit_code == 0
@@ -222,7 +209,7 @@ def test_namespace_mount_failure_falls_back_to_copy_backed(
             *,
             run_dir: Path,
         ) -> bool:
-            return workspace_mount._is_namespace_mount_failure(
+            return PrivateNamespaceStrategy(available=True).is_recoverable_failure(
                 result,
                 run_dir=run_dir,
             )
@@ -260,14 +247,14 @@ def test_namespace_mount_failure_requires_control_sidecar(tmp_path: Path) -> Non
         mount_mode=MountMode.PRIVATE_NAMESPACE,
     )
 
-    assert workspace_mount._is_namespace_mount_failure(
+    assert PrivateNamespaceStrategy(available=True).is_recoverable_failure(
         process,
         run_dir=tmp_path / "run",
     ) is False
 
 
 def test_workspace_rewrite_rewrites_quoted_shell_paths() -> None:
-    rewritten = workspace_mount._rewrite_declared_workspace_refs(
+    rewritten = rewrite_declared_workspace_refs(
         ("bash", "-lc", 'cat "/testbed/file.txt"; cat /testbed/other.txt'),
         workspace_root="/testbed",
         mounted_workspace_root="/tmp/run/workspace",
@@ -326,7 +313,7 @@ def test_namespace_mount_validation_returns_fd_backed_paths(tmp_path: Path) -> N
     workspace_root.mkdir()
     lowerdir.mkdir()
 
-    inputs = namespace_entrypoint._validate_mount_inputs(
+    inputs = namespace_helper._validate_mount_inputs(
         workspace_root=workspace_root,
         lowerdir=lowerdir,
         upperdir=upperdir,
@@ -351,7 +338,7 @@ def test_namespace_mount_passes_fd_paths_to_mount_subprocess(
     workdir = tmp_path / "work"
     workspace_root.mkdir()
     lowerdir.mkdir()
-    inputs = namespace_entrypoint._validate_mount_inputs(
+    inputs = namespace_helper._validate_mount_inputs(
         workspace_root=workspace_root,
         lowerdir=lowerdir,
         upperdir=upperdir,
@@ -363,9 +350,9 @@ def test_namespace_mount_passes_fd_paths_to_mount_subprocess(
         calls.append({"args": args, "kwargs": kwargs})
         return subprocess.CompletedProcess(args=args, returncode=0)
 
-    monkeypatch.setattr(namespace_entrypoint.subprocess, "run", fake_run)
+    monkeypatch.setattr(namespace_helper.subprocess, "run", fake_run)
     try:
-        namespace_entrypoint._mount_overlay(
+        namespace_helper._mount_overlay(
             workspace_root=inputs.workspace_root,
             lowerdir=inputs.lowerdir,
             upperdir=inputs.upperdir,

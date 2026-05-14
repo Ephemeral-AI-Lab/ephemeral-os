@@ -1,11 +1,11 @@
-"""Tests for ``sandbox.api.tool.shell``."""
+"""Tests for ``sandbox.api._impl.shell``."""
 
 from __future__ import annotations
 
 import pytest
 
 from sandbox.api import SandboxCaller, ShellRequest
-from sandbox.api.tool.shell import shell
+from sandbox.api._impl.shell import shell
 
 
 @pytest.mark.asyncio

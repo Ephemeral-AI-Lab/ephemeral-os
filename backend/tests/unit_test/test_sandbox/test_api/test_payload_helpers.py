@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from sandbox.api.tool._payload import (
-    caller_audit_fields,
+from sandbox.api._impl._payload import (
     error_message,
     int_from_payload,
     is_transient_transport_error,
@@ -15,14 +14,14 @@ from sandbox.api._impl._classifiers import is_edit_conflict, is_shell_conflict
 from sandbox.models import SandboxCaller
 
 
-def test_caller_audit_fields_keeps_required_daemon_keys_and_non_empty_fields() -> None:
+def test_sandbox_caller_audit_fields_keeps_required_keys_and_non_empty_fields() -> None:
     caller = SandboxCaller(
         agent_id="agent-1",
         task_center_run_id="tc-run",
         tool_id="tool-1",
     )
 
-    assert caller_audit_fields(caller) == {
+    assert caller.audit_fields() == {
         "agent_id": "agent-1",
         "run_id": "",
         "agent_run_id": "",
@@ -30,7 +29,6 @@ def test_caller_audit_fields_keeps_required_daemon_keys_and_non_empty_fields() -
         "task_center_run_id": "tc-run",
         "tool_id": "tool-1",
     }
-    assert caller.audit_fields() == caller_audit_fields(caller)
 
 
 def test_normalize_overlay_cwd_strips_non_empty_paths() -> None:

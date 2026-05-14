@@ -6,7 +6,6 @@ from audit.base import AuditSink
 from sandbox.api._impl._audit import audited_operation
 from sandbox.api._impl._classifiers import is_shell_conflict
 from sandbox.api._impl._payload import (
-    caller_audit_fields,
     error_message,
     normalize_overlay_cwd,
     timings_from_payload,
@@ -67,7 +66,7 @@ async def shell(
                 "cwd": cwd,
                 "timeout_seconds": request.timeout,
                 "actor_id": request.caller.agent_id,
-                "caller": caller_audit_fields(request.caller),
+                "caller": request.caller.audit_fields(),
                 "description": request.default_description("shell"),
             },
             timeout=shell_dispatch_timeout(request.timeout),

@@ -15,7 +15,7 @@ from task_center.persistence import MissionStoreProtocol
 from task_center.persistence import AttemptStoreProtocol
 from task_center.persistence import TaskStoreProtocol
 from task_center.persistence import EpisodeStoreProtocol
-from task_center.mission.validation import (
+from task_center.invariants import (
     assert_continuation_episode_predecessor,
     assert_mission_open,
     assert_episode_id_unique_in_mission,

@@ -180,36 +180,15 @@ class EphemeralAttemptAgentLauncher:
         if task is None or task.get("status") != TaskCenterTaskStatus.RUNNING.value:
             # Entry-mode tasks may already be in WAITING_MISSION after a
             # delegated mission start; or DONE/FAILED via a terminal. Either way,
-            # the controller has already moved the task off RUNNING and
-            # there's nothing to do.
+            # the lifecycle owner has already moved the task off RUNNING.
             return
 
-        if launch.attempt_id is None:
-            # Entry mode — dispatch through the controller instead of the
-            # orchestrator registry. Missing controller is a hard error: the
-            # entry task is RUNNING and the run cannot finalize without it.
-            controller = runtime.entry_task_controller
-            if controller is None:
-                self._mark_unowned_task_exhausted(
-                    runtime, launch, summary=summary
-                )
-                return
-            controller.apply_run_exhausted(summary=summary)
-            return
-
-        orchestrator = runtime.orchestrator_registry.get(launch.attempt_id)
-        if orchestrator is None:
-            self._fail_unowned_attempt(runtime, launch, summary=summary)
-            return
-
-        if launch.role == TaskCenterTaskRole.PLANNER:
-            self._report_planner_exhaustion(orchestrator, launch, summary=summary)
-        elif launch.role == TaskCenterTaskRole.GENERATOR:
-            self._report_generator_exhaustion(orchestrator, launch, summary=summary)
-        elif launch.role == TaskCenterTaskRole.EVALUATOR:
-            self._report_evaluator_exhaustion(orchestrator, launch, summary=summary)
-        else:  # pragma: no cover - exhaustive over TaskCenterTaskRole
-            raise TaskCenterInvariantViolation(f"Unknown harness role: {launch.role!r}")
+        report = _ROLE_EXHAUSTION_REPORTERS.get(launch.role)
+        if report is None:
+            raise TaskCenterInvariantViolation(
+                f"No exhaustion reporter for role {launch.role!r}"
+            )
+        report(self, runtime, launch, summary=summary)
 
     @staticmethod
     def _mark_unowned_task_exhausted(
@@ -259,74 +238,138 @@ class EphemeralAttemptAgentLauncher:
         if manager is not None:
             manager.handle_attempt_closed(attempt.id)
 
-    @staticmethod
-    def _report_planner_exhaustion(
-        orchestrator: AttemptOrchestrator,
-        launch: AgentLaunch,
-        *,
-        summary: str,
-    ) -> None:
-        if launch.attempt_id is None:
-            raise TaskCenterInvariantViolation(
-                "Planner exhaustion report requires launch.attempt_id."
-            )
-        orchestrator.apply_planner_failure(
-            PlannerFailureSubmission(
-                attempt_id=launch.attempt_id,
-                planner_task_id=launch.task_id,
-                fail_reason="run_exhausted",
-                summary=summary,
-            )
+def _require_attempt_orchestrator(
+    launcher: EphemeralAttemptAgentLauncher,
+    runtime: AttemptDeps,
+    launch: AgentLaunch,
+    *,
+    summary: str,
+) -> AttemptOrchestrator | None:
+    if launch.attempt_id is None:
+        raise TaskCenterInvariantViolation(
+            f"Role {launch.role!r} exhaustion report requires "
+            "launch.attempt_id."
         )
+    orchestrator = runtime.orchestrator_registry.get(launch.attempt_id)
+    if orchestrator is None:
+        launcher._fail_unowned_attempt(runtime, launch, summary=summary)
+        return None
+    return orchestrator
 
-    @staticmethod
-    def _report_generator_exhaustion(
-        orchestrator: AttemptOrchestrator,
-        launch: AgentLaunch,
-        *,
-        summary: str,
-    ) -> None:
-        if launch.attempt_id is None:
-            raise TaskCenterInvariantViolation(
-                "Generator exhaustion report requires launch.attempt_id."
-            )
-        orchestrator.apply_generator_submission(
-            GeneratorSubmission(
-                attempt_id=launch.attempt_id,
-                task_id=launch.task_id,
-                outcome="failure",
-                summary=summary,
-                payload={"fail_reason": "run_exhausted"},
-            )
-        )
 
-    @staticmethod
-    def _report_evaluator_exhaustion(
-        orchestrator: AttemptOrchestrator,
-        launch: AgentLaunch,
-        *,
-        summary: str,
-    ) -> None:
-        if launch.attempt_id is None:
-            raise TaskCenterInvariantViolation(
-                "Evaluator exhaustion report requires launch.attempt_id."
-            )
-        orchestrator.apply_evaluator_submission(
-            EvaluatorSubmission(
-                attempt_id=launch.attempt_id,
-                task_id=launch.task_id,
-                outcome="failure",
-                summary=summary,
-                payload={"fail_reason": "run_exhausted"},
-            )
+def _report_entry_exhaustion(
+    launcher: EphemeralAttemptAgentLauncher,
+    runtime: AttemptDeps,
+    launch: AgentLaunch,
+    *,
+    summary: str,
+) -> None:
+    controller = runtime.entry_task_controller
+    if controller is None:
+        launcher._mark_unowned_task_exhausted(runtime, launch, summary=summary)
+        return
+    controller.apply_run_exhausted(summary=summary)
+
+
+def _report_planner_exhaustion(
+    launcher: EphemeralAttemptAgentLauncher,
+    runtime: AttemptDeps,
+    launch: AgentLaunch,
+    *,
+    summary: str,
+) -> None:
+    orchestrator = _require_attempt_orchestrator(
+        launcher, runtime, launch, summary=summary
+    )
+    if orchestrator is None:
+        return
+    orchestrator.apply_planner_failure(
+        PlannerFailureSubmission(
+            attempt_id=launch.attempt_id or "",
+            planner_task_id=launch.task_id,
+            fail_reason="run_exhausted",
+            summary=summary,
         )
+    )
+
+
+def _report_generator_exhaustion(
+    launcher: EphemeralAttemptAgentLauncher,
+    runtime: AttemptDeps,
+    launch: AgentLaunch,
+    *,
+    summary: str,
+) -> None:
+    orchestrator = _require_attempt_orchestrator(
+        launcher, runtime, launch, summary=summary
+    )
+    if orchestrator is None:
+        return
+    orchestrator.apply_generator_submission(
+        GeneratorSubmission(
+            attempt_id=launch.attempt_id or "",
+            task_id=launch.task_id,
+            outcome="failure",
+            summary=summary,
+            payload={"fail_reason": "run_exhausted"},
+        )
+    )
+
+
+def _report_evaluator_exhaustion(
+    launcher: EphemeralAttemptAgentLauncher,
+    runtime: AttemptDeps,
+    launch: AgentLaunch,
+    *,
+    summary: str,
+) -> None:
+    orchestrator = _require_attempt_orchestrator(
+        launcher, runtime, launch, summary=summary
+    )
+    if orchestrator is None:
+        return
+    orchestrator.apply_evaluator_submission(
+        EvaluatorSubmission(
+            attempt_id=launch.attempt_id or "",
+            task_id=launch.task_id,
+            outcome="failure",
+            summary=summary,
+            payload={"fail_reason": "run_exhausted"},
+        )
+    )
+
+
+# Polymorphic role dispatch. Adding a new role means: add the enum value,
+# add a reporter here, add a (role, fail_reason) entry below. No
+# ``pragma: no cover`` switch to silence.
+_ROLE_EXHAUSTION_REPORTERS: dict[
+    TaskCenterTaskRole,
+    "Callable[[EphemeralAttemptAgentLauncher, AttemptDeps, AgentLaunch, ...], None]",
+] = {
+    TaskCenterTaskRole.ENTRY_EXECUTOR: _report_entry_exhaustion,
+    TaskCenterTaskRole.PLANNER: _report_planner_exhaustion,
+    TaskCenterTaskRole.GENERATOR: _report_generator_exhaustion,
+    TaskCenterTaskRole.EVALUATOR: _report_evaluator_exhaustion,
+}
+
+
+_ROLE_FAIL_REASONS: dict[TaskCenterTaskRole, AttemptFailReason] = {
+    TaskCenterTaskRole.PLANNER: AttemptFailReason.PLANNER_FAILED,
+    TaskCenterTaskRole.GENERATOR: AttemptFailReason.GENERATOR_FAILED,
+    TaskCenterTaskRole.EVALUATOR: AttemptFailReason.EVALUATOR_FAILED,
+}
 
 
 def _fail_reason_for_role(role: TaskCenterTaskRole) -> AttemptFailReason:
-    if role == TaskCenterTaskRole.PLANNER:
-        return AttemptFailReason.PLANNER_FAILED
-    if role == TaskCenterTaskRole.GENERATOR:
-        return AttemptFailReason.GENERATOR_FAILED
-    if role == TaskCenterTaskRole.EVALUATOR:
-        return AttemptFailReason.EVALUATOR_FAILED
-    raise TaskCenterInvariantViolation(f"Unknown harness role: {role!r}")
+    """Map an attempt-scoped role to its :class:`AttemptFailReason`.
+
+    ``ENTRY_EXECUTOR`` is intentionally absent: entry tasks have no parent
+    attempt, so callers (``_fail_unowned_attempt``) short-circuit before
+    they need a fail reason.
+    """
+    try:
+        return _ROLE_FAIL_REASONS[role]
+    except KeyError as exc:
+        raise TaskCenterInvariantViolation(
+            f"Role {role!r} has no AttemptFailReason mapping"
+        ) from exc

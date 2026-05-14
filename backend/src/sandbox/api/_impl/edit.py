@@ -5,10 +5,7 @@ from __future__ import annotations
 from audit.base import AuditSink
 from sandbox.api._impl._audit import audited_operation
 from sandbox.api._impl._classifiers import is_edit_conflict
-from sandbox.api._impl._payload import (
-    caller_audit_fields,
-    error_message,
-)
+from sandbox.api._impl._payload import error_message
 from sandbox.api._impl._recovery import call_with_transient_recovery
 from sandbox.api._impl._results import edit_conflict_result, edit_result_from_payload
 from sandbox.api.protocol import SandboxTransport
@@ -99,7 +96,7 @@ def _edit_payload(request: EditFileRequest) -> dict[str, object]:
             for edit in request.edits
         ],
         "actor_id": request.caller.agent_id,
-        "caller": caller_audit_fields(request.caller),
+        "caller": request.caller.audit_fields(),
         "description": request.default_description(f"edit {request.path}"),
     }
 
@@ -118,7 +115,7 @@ async def _expected_content_after_edit(
             DAEMON_OP_READ_FILE,
             {
                 "path": request.path,
-                "caller": caller_audit_fields(request.caller),
+                "caller": request.caller.audit_fields(),
             },
             timeout=RECOVERY_READ_TIMEOUT_S,
         )
@@ -150,7 +147,7 @@ async def _recover_if_edit_already_applied(
             DAEMON_OP_READ_FILE,
             {
                 "path": request.path,
-                "caller": caller_audit_fields(request.caller),
+                "caller": request.caller.audit_fields(),
             },
             timeout=RECOVERY_READ_TIMEOUT_S,
         )

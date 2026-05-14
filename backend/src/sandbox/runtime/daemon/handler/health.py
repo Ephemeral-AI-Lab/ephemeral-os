@@ -7,7 +7,7 @@ import time
 from collections.abc import Callable
 from dataclasses import fields
 
-import sandbox.command_exec.workspace.mount as workspace_mount
+from sandbox.command_exec.strategies import detect_private_mount_namespace
 from sandbox.layer_stack.manifest import (
     manifest_path,
     read_manifest,
@@ -92,7 +92,7 @@ def _probe_data_plane(layer_stack_root: str) -> dict[str, object]:
         )
     mount_mode = (
         "private_namespace"
-        if workspace_mount._private_mount_namespace_available()
+        if detect_private_mount_namespace()
         else "copy_backed"
     )
     return {

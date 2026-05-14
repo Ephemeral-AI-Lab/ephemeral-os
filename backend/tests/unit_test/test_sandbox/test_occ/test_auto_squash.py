@@ -29,9 +29,13 @@ def _auto_squash_service(
 ) -> Service:
     return Service(
         gitignore=_Gitignore(),
-        layer_stack=stack,
+        snapshot_reader=stack,
+        staging=stack,
+        publisher=stack,
         maintenance=AutoSquashMaintenancePolicy(
-            snapshot_reader=stack, squasher=stack, max_depth=max_depth
+            snapshot_reader=stack,
+            squasher=stack,
+            max_depth=max_depth,
         ),
     )
 

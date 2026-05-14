@@ -20,7 +20,7 @@ from task_center.attempt.state import (
     AttemptFailReason,
     AttemptStatus,
 )
-from task_center.attempt.validation import (
+from task_center.invariants import (
     assert_fail_reason_present_on_failure,
     assert_attempt_sequence_contiguous,
 )
@@ -31,7 +31,7 @@ from task_center.episode.closure_report import (
     EpisodeClosureReport,
     TerminalSuccess,
 )
-from task_center.episode.validation import (
+from task_center.invariants import (
     assert_attempt_belongs_to_episode,
     assert_episode_has_budget,
     assert_episode_open,

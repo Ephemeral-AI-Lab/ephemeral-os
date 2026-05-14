@@ -15,7 +15,7 @@ This phase ships only `correctness_testing` per plan §15 step 7.
   `status`, `conflict`, `conflict_reason`, `timings`.
 - `WriteFileResult` exposes: `success`, `changed_paths`, `status`,
   `conflict`, `conflict_reason`, `timings`.
-- `sandbox.api.status` has `get_health` / `get_sandbox` / `list_sandboxes`
+- `sandbox.api.discovery` has `get_health` / `get_sandbox` / `list_sandboxes`
   but no `get_workspace_status` returning a layer count.
 
 There is **no `layer_count` field and no `squash_triggered` flag** on the public

@@ -8,10 +8,10 @@ This run implements
 `.omc/plans/per-call-snapshot-layer-stack-migration/three-server-phase-05-live-e2e-public-file-ops.md`
 against a real Daytona sandbox. The public surface under test is:
 
-- `sandbox.api.tool.read_file`
-- `sandbox.api.tool.write_file`
-- `sandbox.api.tool.edit_file`
-- `sandbox.api.tool.shell`
+- `sandbox.api.read_file`
+- `sandbox.api.write_file`
+- `sandbox.api.edit_file`
+- `sandbox.api.shell`
 
 The imported workspace root is `/testbed`; the runtime layer-stack root is
 `/tmp/eos-sandbox-runtime/layer-stack`.

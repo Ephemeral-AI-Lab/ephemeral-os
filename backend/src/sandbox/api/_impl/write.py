@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from audit.base import AuditSink
 from sandbox.api._impl._audit import audited_operation
-from sandbox.api._impl._payload import caller_audit_fields
 from sandbox.api._impl._recovery import call_with_transient_recovery
 from sandbox.api._impl._results import write_result_from_payload
 from sandbox.api.protocol import SandboxTransport
@@ -54,7 +53,7 @@ def _write_payload(request: WriteFileRequest) -> dict[str, object]:
         "path": request.path,
         "content": request.content,
         "actor_id": request.caller.agent_id,
-        "caller": caller_audit_fields(request.caller),
+        "caller": request.caller.audit_fields(),
         "description": request.default_description(f"write {request.path}"),
         "overwrite": request.overwrite,
     }
@@ -109,7 +108,7 @@ async def _write_recovery_can_be_proven(
             DAEMON_OP_READ_FILE,
             {
                 "path": request.path,
-                "caller": caller_audit_fields(request.caller),
+                "caller": request.caller.audit_fields(),
             },
             timeout=RECOVERY_READ_TIMEOUT_S,
         )
@@ -138,7 +137,7 @@ async def _recover_if_write_already_applied(
             DAEMON_OP_READ_FILE,
             {
                 "path": request.path,
-                "caller": caller_audit_fields(request.caller),
+                "caller": request.caller.audit_fields(),
             },
             timeout=RECOVERY_READ_TIMEOUT_S,
         )

@@ -143,14 +143,13 @@ def test_host_daemon_api_do_not_import_daytona_sdk() -> None:
     )
 
 
-def test_host_daemon_api_status_do_not_import_daytona_provider() -> None:
-    """The locked seam: host/, runtime/daemon/, and api/status are
-    provider-neutral — none of them imports sandbox.provider.daytona.*."""
+def test_host_daemon_api_do_not_import_daytona_provider() -> None:
+    """The locked seam: host/, runtime/daemon/, and api/ are provider-neutral."""
     offenders: list[str] = []
     for path in (
         SRC_ROOT / "sandbox" / "host",
         SRC_ROOT / "sandbox" / "runtime" / "daemon",
-        SRC_ROOT / "sandbox" / "api" / "status.py",
+        SRC_ROOT / "sandbox" / "api",
     ):
         if path.is_file():
             modules = [path]
@@ -166,9 +165,26 @@ def test_host_daemon_api_status_do_not_import_daytona_provider() -> None:
                     )
 
     assert offenders == [], (
-        "host/, runtime/daemon/, and api/status must not import "
+        "host/, runtime/daemon/, and api/ must not import "
         f"sandbox.provider.daytona.*: {offenders}"
     )
+
+
+def test_removed_api_compatibility_modules_stay_absent() -> None:
+    for module in (
+        "sandbox.api.status",
+        "sandbox.api.tool.read",
+        "sandbox.api.tool.write",
+        "sandbox.api.tool.edit",
+        "sandbox.api.tool.shell",
+        "sandbox.api.tool.raw_exec",
+    ):
+        try:
+            importlib.import_module(module)
+        except ModuleNotFoundError as exc:
+            assert exc.name == module
+        else:
+            raise AssertionError(f"{module} should not be importable")
 
 
 def test_provider_package_does_not_import_host_layer() -> None:

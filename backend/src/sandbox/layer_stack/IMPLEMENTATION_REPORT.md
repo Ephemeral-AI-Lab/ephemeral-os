@@ -93,7 +93,8 @@ Review issues addressed:
 Implementation notes:
 
 - `FileManifestStore` keeps the existing on-disk manifest behavior behind the new manifest-store protocol.
-- A current OCC checkout mismatch also blocked this phase: `_default_maintenance` had been removed while `OccService` still called it. The helper was restored as a thin selector between `AutoSquashMaintenancePolicy` and `NoopMaintenancePolicy`.
+- A current OCC checkout mismatch also blocked this phase: stale maintenance
+  wiring was aligned with the extracted `AutoSquashMaintenancePolicy`.
 
 Verification:
 
@@ -137,13 +138,15 @@ Status: complete.
 
 Review issues addressed:
 
-- Removed the legacy generic OCC service/client symbols from the runtime surface.
-- Standardized in-repo callers on `OccService(gitignore=..., layer_stack=...)` and `OCCClient`.
-- Removed the old explicit `snapshot_reader`/`staging`/`publisher` constructor path from `OccService`; the layer stack is the canonical combined OCC port.
+- Removed the remaining prefixed OCC service/client symbols from the runtime surface.
+- Standardized in-repo callers on package-local `Service` and `Client`.
+- Kept explicit `snapshot_reader`/`staging`/`publisher` construction for
+  `Service`; runtime backend wiring now owns auto-squash maintenance injection.
 
 Implementation notes:
 
-- `OccService` now owns the default auto-squash maintenance policy selection directly from the layer-stack capability.
+- `Service` now delegates post-publish maintenance through the injected
+  maintenance policy instead of embedding auto-squash logic.
 - Runtime backend construction, OCC unit tests, live OCC probes, and architecture notes were aligned to the canonical names.
 
 Verification:

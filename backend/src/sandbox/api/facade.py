@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from types import SimpleNamespace
+from typing import TYPE_CHECKING, Any, cast
 
-import sandbox.api.status as status_module
+from sandbox.api import discovery as discovery_module
+from sandbox.api import lifecycle as lifecycle_module
+from sandbox.api import preview_urls as preview_urls_module
 from sandbox.api._impl import edit as edit_module
 from sandbox.api._impl import raw_exec as raw_exec_module
 from sandbox.api._impl import read as read_module
 from sandbox.api._impl import shell as shell_module
 from sandbox.api._impl import write as write_module
+from sandbox.api.protocol import SandboxLifecycleAPI, SandboxTransport
 from sandbox.api.transport import DaemonSandboxTransport
 from sandbox.host.context_preparer import (
     context_preparer_for as default_context_preparer_for,
@@ -29,7 +33,21 @@ from sandbox.models import (
 
 if TYPE_CHECKING:
     from audit.base import AuditSink
-    from sandbox.api.protocol import SandboxLifecycleAPI, SandboxTransport
+
+_DEFAULT_LIFECYCLE = SimpleNamespace(
+    create_sandbox=lifecycle_module.create_sandbox,
+    start_sandbox=lifecycle_module.start_sandbox,
+    stop_sandbox=lifecycle_module.stop_sandbox,
+    delete_sandbox=lifecycle_module.delete_sandbox,
+    ensure_sandbox_running=lifecycle_module.ensure_sandbox_running,
+    set_sandbox_labels=lifecycle_module.set_sandbox_labels,
+    get_sandbox=discovery_module.get_sandbox,
+    list_sandboxes=discovery_module.list_sandboxes,
+    list_snapshots=discovery_module.list_snapshots,
+    get_health=discovery_module.get_health,
+    get_signed_preview_url=preview_urls_module.get_signed_preview_url,
+    get_build_logs_url=preview_urls_module.get_build_logs_url,
+)
 
 
 class SandboxClient:
@@ -45,7 +63,7 @@ class SandboxClient:
     ) -> None:
         self._audit_sink = audit_sink
         self._transport = transport or DaemonSandboxTransport()
-        self._lifecycle = lifecycle or status_module
+        self._lifecycle = lifecycle or cast(SandboxLifecycleAPI, _DEFAULT_LIFECYCLE)
         self._context_preparer = context_preparer
 
     def create_sandbox(

@@ -54,7 +54,7 @@ class _LayerStackClient:
         return True
 
 
-class _OCCClient:
+class _Client:
     def __init__(self, layer_stack: _LayerStackClient) -> None:
         self.layer_stack = layer_stack
         self.paths: list[str] = []
@@ -117,7 +117,7 @@ async def test_shell_capture_goes_through_occ_client_before_lease_release(
     lower = lower_parent / "lower"
     lower.mkdir(parents=True)
     layer_stack = _LayerStackClient(lower)
-    occ = _OCCClient(layer_stack)
+    occ = _Client(layer_stack)
 
     def fake_run_workspace_replaced_command(*, spec, request, run_dir, timings):
         del request
@@ -219,7 +219,7 @@ async def test_shell_uses_transient_lowerdir_and_removes_it(
             "cwd": ".",
         },
         layer_stack=layer_stack,
-        occ_client=_OCCClient(_LayerStackClient(tmp_path / "unused-lower")),
+        occ_client=_Client(_LayerStackClient(tmp_path / "unused-lower")),
         gitignore=_Gitignore(),
         storage_root=stack,
     )

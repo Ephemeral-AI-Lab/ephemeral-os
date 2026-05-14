@@ -10,10 +10,10 @@ Implemented Phase 3 of
 The integrated `layer_stack_overlay_occ/` skip stubs now exercise the public
 sandbox tool path end-to-end:
 
-- `sandbox.api.tool.write_file`
-- `sandbox.api.tool.edit_file`
-- `sandbox.api.tool.read_file`
-- `sandbox.api.tool.shell`
+- `sandbox.api.write_file`
+- `sandbox.api.edit_file`
+- `sandbox.api.read_file`
+- `sandbox.api.shell`
 
 Raw exec is used only for test harness duties outside the captured workspace:
 resetting/polling `/tmp` side-channel files and injecting one stale staging
@@ -268,7 +268,7 @@ Artifact:
 .omc/results/live-e2e-phase3-concurrency-scaling-20260505T161437Z.jsonl
 ```
 
-Rows: 36 shell calls. Each row is a public `sandbox.api.tool.shell` call that
+Rows: 36 shell calls. Each row is a public `sandbox.api.shell` call that
 writes one unique gitignored `dist/scaling/...` path. The test verifies every
 accepted path is present in `changed_paths` and visible through
 `read_file(...)` after the batch.

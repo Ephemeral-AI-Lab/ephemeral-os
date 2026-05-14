@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 import re
 
-from sandbox.models import ConflictInfo, SandboxCaller
+from sandbox.models import ConflictInfo
 from sandbox.timing import normalize_timing_map
 
 _INTERNAL_ERROR_PREFIX = "internal_error: "
@@ -22,11 +22,6 @@ _TRANSIENT_ERROR_PATTERNS = tuple(
         r"\beos_daemon_io_failed\b",
     )
 )
-
-
-def caller_audit_fields(caller: SandboxCaller) -> dict[str, str]:
-    """Project a SandboxCaller into daemon audit fields."""
-    return caller.audit_fields()
 
 
 def normalize_overlay_cwd(cwd: str | None) -> str:
@@ -85,7 +80,6 @@ def int_from_payload(value: object, *, default: int) -> int:
 
 
 __all__ = [
-    "caller_audit_fields",
     "conflict_from_payload",
     "error_message",
     "int_from_payload",

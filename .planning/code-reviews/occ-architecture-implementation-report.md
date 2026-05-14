@@ -8,7 +8,7 @@ Status: complete
 
 Changes:
 
-- Added `sandbox.occ.merge.policy.MergePolicy` plus shared staging callable
+- Added `sandbox.occ.stage.policy.MergePolicy` plus shared staging callable
   aliases.
 - Reworked `WriteChange` around eager and disk-backed payload objects while
   preserving existing constructor call sites.
@@ -16,7 +16,7 @@ Changes:
 - Normalized `OpaqueDirChange.kept_children` so only direct child names are
   accepted.
 - Replaced direct/gated `isinstance(change, ...)` cascades with handler tables.
-- Wired `OccCommitTransaction` through a `RouteDecision -> MergePolicy` map.
+- Wired `CommitTransaction` through a `RouteDecision -> MergePolicy` map.
 
 Verification:
 
@@ -39,10 +39,9 @@ Changes:
 
 - Added canonical route names: `RouteDecision.GATED` and
   `RouteDecision.DIRECT`.
-- Reworked `OccOrchestrator` into a canonical `Router` implementation while
-  keeping the old name as a compatibility alias.
-- Folded single-path preparation into `Router.prepare_single_path_sync`; the
-  `routing/single_path.py` module is now a thin compatibility wrapper.
+- Reworked the old orchestrator into a canonical `Router` implementation.
+- Folded single-path preparation into `Router.prepare_single_path_sync` and
+  removed the duplicate `routing/single_path.py` module.
 - Deleted `routing/runtime_ops.py` and moved hash helpers into
   `sandbox.occ.content.hashing`.
 - Added explicit `SnapshotGitignoreMatcher` and `GitignoreCacheStats`
@@ -76,14 +75,14 @@ Changes:
 - Removed the welded `OccLayerStackPorts` protocol from the port surface.
 - Renamed the storage transaction protocol to `CommitTransactionPort`, keeping a
   temporary compatibility alias for older imports.
-- Changed `OccCommitTransaction` to require explicit snapshot/staging/publisher
+- Changed `CommitTransaction` to require explicit snapshot/staging/publisher
   ports.
 - Promoted the staging seam to `LayerChangeStager` with
   `FileSystemLayerChangeStager` as the concrete implementation.
 - Extracted auto-squash into `AutoSquashMaintenancePolicy` /
   `NoopMaintenancePolicy`.
 - Added `RetryPolicy` for serial CAS retry limits.
-- Changed `OccSerialMerger` so the worker thread starts through `start()` and
+- Changed `CommitQueue` so the worker thread starts through `start()` and
   stops through `close()`.
 - Added `TimingKey` as the stable registry for OCC timing metric names and
   moved OCC timing emissions to enum keys.
@@ -101,26 +100,49 @@ Result:
 - The only remaining raw OCC timing strings are the enum values in
   `timing_keys.py`.
 
-## Cleanup Pass — Legacy Alias Removal
+## Phase 4 — Naming, Structure, And Consumer Ownership
 
 Status: complete
 
 Changes:
 
-- Removed compatibility aliases for renamed OCC components:
-  `OccSerialMerger`, `OccCommitTransaction`, `DirectMerge`, `GatedMerge`,
-  `OccOrchestrator`, `SnapshotIgnoreOracle`, `OCCMutationService`, and the
-  service/client `Service`/`Client` aliases.
-- Updated production imports and tests to use `CommitQueue`,
-  `CommitTransaction`, `DirectStager`, `GatedStager`, `Router`, `OccService`,
-  and `OCCClient`.
-- Removed the unused `CommitTransaction` port alias and kept the explicit
-  `CommitTransactionPort` protocol.
-- Kept `_LayerChangeStager` and `_FileSystemLayerChangeStager` private to the
-  transaction module.
+- Removed the remaining prefixed service/client/class names from Python code:
+  production and tests now use `Service`, `Client`, `CommitQueue`,
+  `CommitTransaction`, `DirectStager`, `GatedStager`, and `Router`.
+- Removed legacy module paths from Python code: staging lives under
+  `sandbox.occ.stage`, routing in `sandbox.occ.router`, overlay capture in
+  `sandbox.occ.overlay`, and result projection in
+  `sandbox.runtime.daemon.service.result_projection`.
+- Made `Service` require explicit `snapshot_reader`, `staging`, and `publisher`
+  ports at construction. Runtime backend wiring passes auto-squash as an
+  explicit `AutoSquashMaintenancePolicy`.
+- Replaced the router base-hash `isinstance(change, ...)` chain with a
+  change-behavior dispatch table.
+- Updated daemon bundle/import-fence tests and OCC unit/live test imports for
+  the canonical structure.
 
 Verification:
 
-- `uv run pytest backend/tests/unit_test/test_sandbox/test_api backend/tests/unit_test/test_sandbox/test_occ -q` -> 151 passed.
-- `uv run pytest backend/tests/unit_test/test_sandbox/test_api backend/tests/unit_test/test_sandbox/test_host backend/tests/unit_test/test_sandbox/test_runtime_bootstrap.py backend/tests/unit_test/test_sandbox/test_live_setup_api.py backend/tests/unit_test/test_sandbox/test_occ backend/tests/unit_test/test_sandbox/test_command_exec/test_edit_snapshot_byte_derivation.py backend/tests/unit_test/test_sandbox/test_command_exec/test_capture_to_occ_client.py -q` -> 178 passed, 1 skipped.
-- `uv run ruff check backend/src/sandbox/api backend/src/sandbox/occ backend/src/sandbox/runtime/daemon/service/occ_backend.py backend/src/sandbox/runtime/daemon/handler/tools/edit.py backend/src/sandbox/runtime/daemon/handler/tools/write.py backend/tests/unit_test/test_sandbox/test_api backend/tests/unit_test/test_sandbox/test_occ backend/tests/unit_test/test_sandbox/test_command_exec/test_edit_snapshot_byte_derivation.py` -> all checks passed.
+- `python3 -m compileall -q backend/src/sandbox/occ backend/src/sandbox/runtime/daemon/service backend/src/sandbox/runtime/daemon/handler`
+- `uv run pytest backend/tests/unit_test/test_sandbox/test_occ -q`
+- `uv run pytest backend/tests/unit_test/test_sandbox/test_daemon/test_bundle_upload.py backend/tests/unit_test/test_sandbox/test_api/test_guarded_result_status.py backend/tests/unit_test/test_sandbox/test_command_exec/test_capture_to_occ_client.py backend/tests/unit_test/test_sandbox/test_occ/test_shell_capture_atomicity.py -q`
+- `uv run pytest backend/tests/unit_test/test_sandbox/test_daemon/test_bundle_upload.py backend/tests/unit_test/test_sandbox/test_import_fence.py backend/tests/unit_test/test_sandbox/test_api/test_guarded_result_status.py backend/tests/unit_test/test_sandbox/test_command_exec/test_capture_to_occ_client.py backend/tests/unit_test/test_sandbox/test_occ/test_shell_capture_atomicity.py -q`
+- `uv run ruff check backend/src/sandbox/occ backend/src/sandbox/runtime/daemon/service/occ_backend.py backend/src/sandbox/runtime/daemon/service/result_projection.py backend/tests/unit_test/test_sandbox/test_occ backend/tests/live_e2e_test/sandbox/occ backend/tests/unit_test/test_sandbox/test_daemon/test_daemon.py backend/tests/unit_test/test_sandbox/test_daemon/test_bundle_upload.py backend/tests/unit_test/test_sandbox/test_command_exec/test_capture_to_occ_client.py`
+- `rg -n "Service\\([^\\n]*layer_stack=|auto_squash_max_depth|\\bOccService\\b|\\bOCCClient\\b|\\bOccOrchestrator\\b|\\bOccSerialMerger\\b|\\bOccCommitTransaction\\b|\\bDirectMerge\\b|\\bGatedMerge\\b|sandbox\\.occ\\.(merge|commit_transaction|routing|capture|result_projection)|RouteDecision\\.(OCC_SKIPPED_MERGE|OCC_GATED_MERGE)|OCC_SKIPPED_MERGE|OCC_GATED_MERGE" backend/src backend/tests --glob "*.py" --glob "!**/__pycache__/**"`
+- `uv run pytest backend/tests/unit_test/test_sandbox/test_api backend/tests/unit_test/test_sandbox/test_occ -q` -> 163 passed.
+- `uv run pytest backend/tests/unit_test/test_sandbox/test_api backend/tests/unit_test/test_sandbox/test_host backend/tests/unit_test/test_sandbox/test_runtime_bootstrap.py backend/tests/unit_test/test_sandbox/test_live_setup_api.py backend/tests/unit_test/test_sandbox/test_occ backend/tests/unit_test/test_sandbox/test_command_exec/test_edit_snapshot_byte_derivation.py backend/tests/unit_test/test_sandbox/test_command_exec/test_capture_to_occ_client.py -q` -> 190 passed, 1 skipped.
+- `rg -n "isinstance\\(change," backend/src/sandbox/occ`
+
+Result:
+
+- 57 OCC unit tests passed.
+- 28 daemon/bundle/client-boundary tests passed.
+- The broader import-fence rerun is blocked by the current dirty sandbox API
+  worktree: `test_removed_api_compatibility_modules_stay_absent` fails because
+  `sandbox.api.status` is importable. The failure is outside the OCC package
+  and does not involve the moved OCC module paths.
+- Touched OCC/runtime/test files pass Ruff.
+- OCC/runtime daemon modules compile.
+- No remaining Python references to the old prefixed OCC names, old OCC module
+  paths, double-negative route names, `Service(..., layer_stack=...)`, or
+  router/stager `isinstance(change, ...)` dispatch.

@@ -19,33 +19,12 @@ from sandbox.models import (
 
 if TYPE_CHECKING:
     from audit.base import AuditSink
-    from sandbox.api.protocol import SandboxLifecycleAPI, SandboxTransport
 
 _default_client = SandboxClient()
 
 
-def default_client() -> SandboxClient:
+def _client() -> SandboxClient:
     return _default_client
-
-
-def set_default_client(client: SandboxClient) -> None:
-    global _default_client
-    _default_client = client
-
-
-def configure_default_client(
-    *,
-    audit_sink: AuditSink | None = None,
-    transport: SandboxTransport | None = None,
-    lifecycle: SandboxLifecycleAPI | None = None,
-) -> SandboxClient:
-    client = SandboxClient(
-        audit_sink=audit_sink,
-        transport=transport,
-        lifecycle=lifecycle,
-    )
-    set_default_client(client)
-    return client
 
 
 def create_sandbox(
@@ -57,7 +36,7 @@ def create_sandbox(
     env_vars: dict[str, str] | None = None,
     labels: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    return default_client().create_sandbox(
+    return _client().create_sandbox(
         name=name,
         snapshot=snapshot,
         image=image,
@@ -68,51 +47,51 @@ def create_sandbox(
 
 
 def start_sandbox(sandbox_id: str) -> dict[str, Any]:
-    return default_client().start_sandbox(sandbox_id)
+    return _client().start_sandbox(sandbox_id)
 
 
 def stop_sandbox(sandbox_id: str) -> dict[str, Any]:
-    return default_client().stop_sandbox(sandbox_id)
+    return _client().stop_sandbox(sandbox_id)
 
 
 def delete_sandbox(sandbox_id: str) -> None:
-    default_client().delete_sandbox(sandbox_id)
+    _client().delete_sandbox(sandbox_id)
 
 
 def ensure_sandbox_running(sandbox_id: str) -> dict[str, Any]:
-    return default_client().ensure_sandbox_running(sandbox_id)
+    return _client().ensure_sandbox_running(sandbox_id)
 
 
 def set_sandbox_labels(sandbox_id: str, labels: dict[str, str]) -> dict[str, Any]:
-    return default_client().set_sandbox_labels(sandbox_id, labels)
+    return _client().set_sandbox_labels(sandbox_id, labels)
 
 
 def get_sandbox(sandbox_id: str) -> dict[str, Any]:
-    return default_client().get_sandbox(sandbox_id)
+    return _client().get_sandbox(sandbox_id)
 
 
 def list_sandboxes() -> list[dict[str, Any]]:
-    return default_client().list_sandboxes()
+    return _client().list_sandboxes()
 
 
 def list_snapshots() -> list[dict[str, Any]]:
-    return default_client().list_snapshots()
+    return _client().list_snapshots()
 
 
 def get_health() -> dict[str, Any]:
-    return default_client().get_health()
+    return _client().get_health()
 
 
 def get_signed_preview_url(sandbox_id: str, port: int) -> dict[str, Any]:
-    return default_client().get_signed_preview_url(sandbox_id, port)
+    return _client().get_signed_preview_url(sandbox_id, port)
 
 
 def get_build_logs_url(sandbox_id: str) -> str | None:
-    return default_client().get_build_logs_url(sandbox_id)
+    return _client().get_build_logs_url(sandbox_id)
 
 
 def context_preparer_for(sandbox_id: str) -> Any:
-    return default_client().context_preparer_for(sandbox_id)
+    return _client().context_preparer_for(sandbox_id)
 
 
 async def shell(
@@ -121,7 +100,7 @@ async def shell(
     *,
     audit_sink: AuditSink | None = None,
 ) -> ShellResult:
-    return await default_client().shell(sandbox_id, request, audit_sink=audit_sink)
+    return await _client().shell(sandbox_id, request, audit_sink=audit_sink)
 
 
 async def raw_exec(
@@ -132,7 +111,7 @@ async def raw_exec(
     timeout: int | None = None,
     audit_sink: AuditSink | None = None,
 ) -> RawExecResult:
-    return await default_client().raw_exec(
+    return await _client().raw_exec(
         sandbox_id,
         command,
         cwd=cwd,
@@ -147,7 +126,7 @@ async def read_file(
     *,
     audit_sink: AuditSink | None = None,
 ) -> ReadFileResult:
-    return await default_client().read_file(sandbox_id, request, audit_sink=audit_sink)
+    return await _client().read_file(sandbox_id, request, audit_sink=audit_sink)
 
 
 async def write_file(
@@ -156,7 +135,7 @@ async def write_file(
     *,
     audit_sink: AuditSink | None = None,
 ) -> WriteFileResult:
-    return await default_client().write_file(sandbox_id, request, audit_sink=audit_sink)
+    return await _client().write_file(sandbox_id, request, audit_sink=audit_sink)
 
 
 async def edit_file(
@@ -165,14 +144,12 @@ async def edit_file(
     *,
     audit_sink: AuditSink | None = None,
 ) -> EditFileResult:
-    return await default_client().edit_file(sandbox_id, request, audit_sink=audit_sink)
+    return await _client().edit_file(sandbox_id, request, audit_sink=audit_sink)
 
 
 __all__ = [
-    "configure_default_client",
     "context_preparer_for",
     "create_sandbox",
-    "default_client",
     "delete_sandbox",
     "edit_file",
     "ensure_sandbox_running",
@@ -184,7 +161,6 @@ __all__ = [
     "list_snapshots",
     "raw_exec",
     "read_file",
-    "set_default_client",
     "set_sandbox_labels",
     "shell",
     "start_sandbox",

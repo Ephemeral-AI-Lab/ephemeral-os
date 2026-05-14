@@ -1,41 +1,39 @@
 """Built-in context recipes.
 
-Adding a new recipe is two steps: write the builder in its own module under
-this package, then call :func:`register_builtin_recipes` (idempotent) at
-startup. The engine itself owns no recipe knowledge.
+Adding a new recipe is a single step: write a new builder module under this
+package that exposes a module-level ``<NAME>_RECIPE`` attribute referencing
+a :class:`ContextRecipe`. :func:`register_builtin_recipes` walks every
+submodule once at startup and registers every ``*_RECIPE`` it finds — no
+edit to this file required.
 """
 
 from __future__ import annotations
 
-from task_center.context_engine.recipes.entry_executor import (
-    ENTRY_EXECUTOR_RECIPE,
-)
-from task_center.context_engine.recipes.evaluator import (
-    EVALUATOR_RECIPE,
-)
-from task_center.context_engine.recipes.generator import (
-    GENERATOR_RECIPE,
-)
-from task_center.context_engine.recipes.helper import (
-    ADVISOR_RECIPE,
-    RESOLVER_RECIPE,
-)
-from task_center.context_engine.recipes.planner import (
-    PLANNER_RECIPE,
-)
-from task_center.context_engine.recipes_registry import RecipeRegistry
+import importlib
+import pkgutil
 
-_BUILTIN_RECIPES = (
-    PLANNER_RECIPE,
-    GENERATOR_RECIPE,
-    EVALUATOR_RECIPE,
-    ENTRY_EXECUTOR_RECIPE,
-    ADVISOR_RECIPE,
-    RESOLVER_RECIPE,
+from task_center.context_engine.recipes_registry import (
+    ContextRecipe,
+    RecipeRegistry,
 )
 
 
 def register_builtin_recipes() -> None:
-    """Register every built-in recipe. Idempotent — safe to call repeatedly."""
-    for recipe in _BUILTIN_RECIPES:
-        RecipeRegistry.register(recipe)
+    """Discover and register every built-in recipe. Idempotent.
+
+    Walks every submodule of :mod:`task_center.context_engine.recipes` and
+    registers any module attribute matching ``*_RECIPE`` that is a
+    :class:`ContextRecipe` instance. Helper submodules without a recipe
+    attribute (e.g. ``summaries``, ``mission_episode``) are imported but
+    contribute nothing to the registry.
+    """
+    for module_info in pkgutil.iter_modules(
+        __path__, prefix=f"{__name__}."
+    ):
+        module = importlib.import_module(module_info.name)
+        for attr_name in dir(module):
+            if not attr_name.endswith("_RECIPE"):
+                continue
+            value = getattr(module, attr_name)
+            if isinstance(value, ContextRecipe):
+                RecipeRegistry.register(value)

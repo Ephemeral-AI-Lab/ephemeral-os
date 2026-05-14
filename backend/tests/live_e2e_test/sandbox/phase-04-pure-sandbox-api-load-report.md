@@ -10,14 +10,14 @@ excludes native in-sandbox probes, direct `raw_exec`, and subsystem-only
 
 Timed load calls use:
 
-- `sandbox.api.tool.shell_batch` for shell fan-out
-- `sandbox.api.tool.edit_file` for edit fan-out
+- `sandbox.api.shell fan-out` for shell fan-out
+- `sandbox.api.edit_file` for edit fan-out
 
 Setup and validation use:
 
-- `sandbox.api.tool.write_file` to seed `.gitignore`, shared tracked files, and
+- `sandbox.api.write_file` to seed `.gitignore`, shared tracked files, and
   edit targets
-- `sandbox.api.tool.read_file` to verify every accepted path is visible after
+- `sandbox.api.read_file` to verify every accepted path is visible after
   the load batch
 
 The setup and validation calls are intentionally excluded from load latency
@@ -114,7 +114,7 @@ Interpretation: runtime p99 passed all budgets before and still passes. Host
 wall p99 improved materially. The burst host wall p99 is now close to the
 2500 ms diagnostic budget, but this run missed it by 52.919 ms.
 
-## `sandbox.api.tool.shell_batch`
+## `sandbox.api.shell fan-out`
 
 | Profile | Shell items | Batch dispatch p99 | Runtime p99 | Overlay p99 | Shell OCC apply p99 | Runtime batch p99 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -134,7 +134,7 @@ Shell conclusion: batching removed most provider round-trip amplification. The
 remaining burst shell cost is inside the runtime batch: overlay command/capture
 plus outer shell OCC apply. The inner OCC commit remains below 6 ms p99.
 
-## `sandbox.api.tool.edit_file`
+## `sandbox.api.edit_file`
 
 | Profile | Calls | Wall p50 | Wall p99 | Runtime p50 | Runtime p99 | Runtime max |
 |---|---:|---:|---:|---:|---:|---:|
@@ -154,7 +154,7 @@ Edit conclusion: `edit_file` remains cheaper than shell. Burst edit wall p99
 is now 2.32 s and runtime p99 is 1.11 s. Commit remains a small slice; prepare
 and apply dominate under mixed shell/edit contention.
 
-## `sandbox.api.tool.write_file`
+## `sandbox.api.write_file`
 
 `write_file` is covered in this profile as setup, not as load. It seeds:
 
@@ -166,7 +166,7 @@ Each seed write is asserted committed before the timed batch starts. The report
 does not claim write-load p99 because no `write_file` calls are currently in
 the concurrent load fan-out.
 
-## `sandbox.api.tool.read_file`
+## `sandbox.api.read_file`
 
 `read_file` is covered as final validation, not as load. It verifies:
 
@@ -183,7 +183,7 @@ All three pure API profiles had:
 
 - all timed public API calls succeed
 - no conflicts
-- every accepted path visible via `sandbox.api.tool.read_file`
+- every accepted path visible via `sandbox.api.read_file`
 - all expected tracked edit contents present
 - drift `0`
 - JSONL artifacts emitted for every timed call

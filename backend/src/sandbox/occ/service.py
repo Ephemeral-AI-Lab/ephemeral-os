@@ -250,20 +250,6 @@ def _manifest_lag(snapshot: Manifest | None, published_version: int | None) -> i
     return max(0, delta)
 
 
-def _default_maintenance(
-    layer_stack: _LayerStackOccPort | None,
-    *,
-    max_depth: int,
-) -> MaintenancePolicy:
-    if layer_stack is None or max_depth < 1 or not isinstance(layer_stack, SquashPort):
-        return NoopMaintenancePolicy()
-    return AutoSquashMaintenancePolicy(
-        snapshot_reader=layer_stack,
-        squasher=layer_stack,
-        max_depth=max_depth,
-    )
-
-
 def _result_timings_with_resume(result: ChangesetResult) -> tuple[dict[str, float], float]:
     timings = dict(result.timings)
     ready_at = timings.pop(TimingKey.SERIAL_RESULT_READY_AT, None)

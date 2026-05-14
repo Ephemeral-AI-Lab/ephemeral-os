@@ -58,7 +58,8 @@ Issues addressed:
 Implementation shape:
 
 - Move verb implementations to `sandbox.api._impl`.
-- Keep `sandbox.api.tool` as a compatibility shim for old imports.
+- Delete the old `sandbox.api.tool` compatibility package once call sites are
+  on `sandbox.api` or `_impl` tests.
 - Introduce a shared audited execution helper used by read/write/edit/shell/raw.
 - Route daemon verbs through `SandboxTransport`.
 - Introduce named conflict classifiers and a stricter edit recovery check.
@@ -68,7 +69,7 @@ Implementation shape:
 Verification:
 
 - Update direct verb tests to use injected transports.
-- Keep shim tests for `sandbox.api.tool`.
+- Add negative import-fence coverage for removed compatibility modules.
 
 ## Phase 3: Facade And Default Client
 
@@ -84,8 +85,8 @@ Implementation shape:
 - Make `SandboxClient` eagerly import dependency modules and own injected
   `transport`, `lifecycle`, and `audit_sink` fields.
 - Move package-level default callables into `sandbox.api.default`.
-- Keep `sandbox.api.read_file(...)` and peers as compatibility wrappers backed
-  by `default_client()` rather than import-time bound methods.
+- Keep `sandbox.api.read_file(...)` and peers as the public module-level API;
+  avoid exposing default-client mutation helpers unless a caller needs them.
 - Keep model re-exports for public compatibility but document `sandbox.models`
   as the canonical model owner in package docstrings.
 
@@ -107,11 +108,12 @@ Implementation shape:
 - Split `status.py` into `lifecycle.py`, `discovery.py`, and `preview_urls.py`.
 - Move create/start/delete orchestration into host lifecycle helpers where
   feasible.
-- Keep `sandbox.api.status` as a compatibility re-export module.
+- Delete `sandbox.api.status` after tests and docs use the owning modules.
 
 Verification:
 
-- Update status tests to cover the new owner modules and compatibility import.
+- Update status tests to cover the new owner modules and removed compatibility
+  import.
 - Update import-boundary tests for the new split.
 
 ## Phase 5: Daemon Version And Error Taxonomy

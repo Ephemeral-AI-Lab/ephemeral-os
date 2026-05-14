@@ -1,9 +1,4 @@
-"""Unit tests for the public facade :mod:`sandbox.api.status`.
-
-The facade is dormant in S4 — no callers have migrated yet — but its routing
-through the registry's default + per-id slots is exercised here so the seam
-is locked before S5 flips the call sites.
-"""
+"""Unit tests for public sandbox lifecycle, discovery, and URL modules."""
 
 from __future__ import annotations
 
@@ -183,14 +178,6 @@ def test_set_sandbox_labels_routes_through_provider() -> None:
     provider.set_labels.assert_called_once_with("sb-1", {"project_dir": "/testbed"})
 
 
-def test_facade_module_accessible_via_package_import() -> None:
-    """`from sandbox.api import status as sb_status` resolves."""
-    from sandbox.api import status as sb_status
-
-    assert callable(sb_status.create_sandbox)
-    assert callable(sb_status.ensure_sandbox_running)
-
-
 def test_create_sandbox_invokes_ensure_git_via_setup_hook(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -201,7 +188,7 @@ def test_create_sandbox_invokes_ensure_git_via_setup_hook(
     downstream code that assumes git is installed (sweevo, any consumer
     running ``git ...`` on a minimal-image sandbox).
     """
-    from sandbox.api import status as sb_status
+    from sandbox.api import lifecycle as sb_lifecycle
     from sandbox.host import bootstrap as bootstrap_mod
     from sandbox.provider.registry import set_default_provider
 
@@ -231,7 +218,7 @@ def test_create_sandbox_invokes_ensure_git_via_setup_hook(
         lambda sid, ws: calls.append(f"ensure_workspace({sid},{ws})"),
     )
 
-    sb_status.create_sandbox(name="demo")
+    sb_lifecycle.create_sandbox(name="demo")
 
     assert calls == [
         "start_upload(sb-1,/workspace/demo)",
@@ -246,7 +233,7 @@ def test_start_sandbox_invokes_ensure_git_via_setup_hook(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Same regression guard for the start path."""
-    from sandbox.api import status as sb_status
+    from sandbox.api import lifecycle as sb_lifecycle
     from sandbox.host import bootstrap as bootstrap_mod
     from sandbox.provider.registry import register_adapter
 
@@ -276,7 +263,7 @@ def test_start_sandbox_invokes_ensure_git_via_setup_hook(
         lambda sid, ws: calls.append(f"ensure_workspace({sid},{ws})"),
     )
 
-    sb_status.start_sandbox("sb-1")
+    sb_lifecycle.start_sandbox("sb-1")
 
     assert calls == [
         "start_upload(sb-1,/workspace/demo)",

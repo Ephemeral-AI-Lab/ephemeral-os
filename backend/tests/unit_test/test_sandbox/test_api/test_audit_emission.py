@@ -14,10 +14,10 @@ from sandbox.api import (
     WriteFileRequest,
 )
 from sandbox.audit import events
-import sandbox.api.tool.edit as edit_module
-import sandbox.api.tool.read as read_module
-import sandbox.api.tool.shell as shell_module
-import sandbox.api.tool.write as write_module
+import sandbox.api._impl.edit as edit_module
+import sandbox.api._impl.read as read_module
+import sandbox.api._impl.shell as shell_module
+import sandbox.api._impl.write as write_module
 
 
 @pytest.mark.asyncio

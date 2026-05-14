@@ -1,11 +1,11 @@
-"""Tests for ``sandbox.api.tool.write``."""
+"""Tests for ``sandbox.api._impl.write``."""
 
 from __future__ import annotations
 
 import pytest
 
 from sandbox.api import SandboxCaller, WriteFileRequest
-from sandbox.api.tool.write import write_file
+from sandbox.api._impl.write import write_file
 
 
 @pytest.mark.asyncio

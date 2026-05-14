@@ -98,8 +98,7 @@ async def test_tool_methods_delegate_to_backing_modules(
     ]
 
 
-def test_status_methods_delegate_to_status_module(monkeypatch: pytest.MonkeyPatch) -> None:
-    facade = SandboxClient()
+def test_status_methods_delegate_to_injected_lifecycle() -> None:
     calls: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
 
     def record(name: str, value):
@@ -109,18 +108,21 @@ def test_status_methods_delegate_to_status_module(monkeypatch: pytest.MonkeyPatc
 
         return _inner
 
-    monkeypatch.setattr("sandbox.api.status.create_sandbox", record("create", {"id": "sb"}))
-    monkeypatch.setattr("sandbox.api.status.start_sandbox", record("start", {"state": "started"}))
-    monkeypatch.setattr("sandbox.api.status.stop_sandbox", record("stop", {"state": "stopped"}))
-    monkeypatch.setattr("sandbox.api.status.delete_sandbox", record("delete", None))
-    monkeypatch.setattr("sandbox.api.status.ensure_sandbox_running", record("ensure", {"state": "started"}))
-    monkeypatch.setattr("sandbox.api.status.set_sandbox_labels", record("labels", {"id": "sb"}))
-    monkeypatch.setattr("sandbox.api.status.get_sandbox", record("get", {"id": "sb"}))
-    monkeypatch.setattr("sandbox.api.status.list_sandboxes", record("list", [{"id": "sb"}]))
-    monkeypatch.setattr("sandbox.api.status.list_snapshots", record("snapshots", [{"name": "snap"}]))
-    monkeypatch.setattr("sandbox.api.status.get_health", record("health", {"available": True}))
-    monkeypatch.setattr("sandbox.api.status.get_signed_preview_url", record("preview", {"url": "u"}))
-    monkeypatch.setattr("sandbox.api.status.get_build_logs_url", record("logs", "log-url"))
+    class Lifecycle:
+        create_sandbox = staticmethod(record("create", {"id": "sb"}))
+        start_sandbox = staticmethod(record("start", {"state": "started"}))
+        stop_sandbox = staticmethod(record("stop", {"state": "stopped"}))
+        delete_sandbox = staticmethod(record("delete", None))
+        ensure_sandbox_running = staticmethod(record("ensure", {"state": "started"}))
+        set_sandbox_labels = staticmethod(record("labels", {"id": "sb"}))
+        get_sandbox = staticmethod(record("get", {"id": "sb"}))
+        list_sandboxes = staticmethod(record("list", [{"id": "sb"}]))
+        list_snapshots = staticmethod(record("snapshots", [{"name": "snap"}]))
+        get_health = staticmethod(record("health", {"available": True}))
+        get_signed_preview_url = staticmethod(record("preview", {"url": "u"}))
+        get_build_logs_url = staticmethod(record("logs", "log-url"))
+
+    facade = SandboxClient(lifecycle=Lifecycle())
 
     assert facade.create_sandbox(name="n", labels={"k": "v"}) == {"id": "sb"}
     assert facade.start_sandbox("sb") == {"state": "started"}
