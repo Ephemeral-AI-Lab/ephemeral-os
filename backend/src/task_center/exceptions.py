@@ -1,11 +1,3 @@
-"""Exceptions raised by the TaskCenter harness lifecycle."""
+"""Phase 2 shim — canonical home is :mod:`task_center._core.exceptions`."""
 
-from __future__ import annotations
-
-
-class TaskCenterInvariantViolation(Exception):
-    """Raised when a harness lifecycle invariant is violated.
-
-    Hard, non-tolerable harness state breach. Matches the existing
-    ``TaskCenterInvariantViolation`` convention used elsewhere in the codebase.
-    """
+from task_center._core.exceptions import *  # noqa: F401, F403

@@ -1,15 +1,3 @@
-"""Stable task ids for harness attempt planner, generator, and evaluator rows."""
+"""Phase 2 shim — canonical home is :mod:`task_center._core.ids`."""
 
-from __future__ import annotations
-
-
-def planner_task_id(attempt_id: str) -> str:
-    return f"{attempt_id}:planner"
-
-
-def generator_task_id(attempt_id: str, local_task_id: str) -> str:
-    return f"{attempt_id}:gen:{local_task_id}"
-
-
-def evaluator_task_id(attempt_id: str) -> str:
-    return f"{attempt_id}:evaluator"
+from task_center._core.ids import *  # noqa: F401, F403
