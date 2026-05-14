@@ -34,6 +34,9 @@ class Router:
 
     def __init__(self, gitignore: GitignoreMatcher) -> None:
         self._gitignore = gitignore
+        self._snapshot_gitignore: SnapshotGitignoreMatcher | None = (
+            gitignore if isinstance(gitignore, SnapshotGitignoreMatcher) else None
+        )
 
     def prepare_sync(
         self,
@@ -149,7 +152,7 @@ class Router:
             )
 
         gitignore_start = monotonic_now()
-        if _is_gitignored(self._gitignore, path=path, snapshot=snapshot):
+        if self._is_gitignored(path, snapshot):
             return (
                 RouteDecision.DIRECT,
                 path,
@@ -157,6 +160,17 @@ class Router:
                 monotonic_now() - gitignore_start,
             )
         return RouteDecision.GATED, path, None, monotonic_now() - gitignore_start
+
+    def _is_gitignored(self, path: str, snapshot: Manifest | None) -> bool:
+        if snapshot is None:
+            return self._gitignore.is_ignored(path)
+        matcher = self._snapshot_gitignore
+        if matcher is None:
+            raise TypeError(
+                "snapshot-aware OCC routing requires "
+                "SnapshotGitignoreMatcher.is_ignored_in_snapshot"
+            )
+        return matcher.is_ignored_in_snapshot(path, snapshot)
 
     def _prepare_group(
         self,
@@ -202,22 +216,6 @@ def _attach_base_hash(change: Change, base_hash: str | None) -> Change:
     if isinstance(change, DeleteChange):
         return change.with_base_hash(base_hash)
     return change
-
-
-def _is_gitignored(
-    oracle: GitignoreMatcher,
-    *,
-    path: str,
-    snapshot: Manifest | None,
-) -> bool:
-    if snapshot is not None:
-        if not isinstance(oracle, SnapshotGitignoreMatcher):
-            raise TypeError(
-                "snapshot-aware OCC routing requires "
-                "SnapshotGitignoreMatcher.is_ignored_in_snapshot"
-            )
-        return oracle.is_ignored_in_snapshot(path, snapshot)
-    return oracle.is_ignored(path)
 
 
 def prepare_single_path_changeset(

@@ -95,7 +95,7 @@ class CommitTransaction:
                     validations.append((result, accepted_delta))
                     if (
                         group.route is RouteDecision.GATED
-                        and result.status is not FileStatus.ACCEPTED
+                        and result.status in _FAILURE_STATUSES
                     ):
                         occ_gated_failed = True
                     rt = result.timings
@@ -131,7 +131,7 @@ class CommitTransaction:
                 if atomic_failed or overlay_failed:
                     message = (
                         "not published because atomic changeset validation failed"
-                        if prepared.atomic
+                        if atomic_failed
                         else "not published because overlay capture OCC-gated validation failed"
                     )
                     return ChangesetResult(
