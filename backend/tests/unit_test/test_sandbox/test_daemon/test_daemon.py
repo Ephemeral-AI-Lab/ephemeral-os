@@ -15,7 +15,7 @@ from sandbox.daemon.handler import request_context
 from sandbox.daemon.handler import workspace as workspace_handler
 from sandbox.daemon.rpc import dispatcher as server
 from sandbox.daemon.rpc import server as daemon
-from sandbox.daemon.service import occ_backend
+from sandbox.daemon.service import occ_backend, workspace_server
 
 
 def _short_socket_path() -> tuple[Path, Path]:
@@ -264,22 +264,19 @@ async def test_build_workspace_base_reset_drops_cache_without_drain(
         def to_dict(self) -> dict[str, object]:
             return {"workspace_root": "/ephemeral-os"}
 
-    class _FakeServer:
-        def __init__(self, layer_stack_root: str) -> None:
-            calls.append(("server", layer_stack_root))
+    def _fake_build_workspace_base(
+        layer_stack_root: str,
+        *,
+        workspace_root: str,
+        reset: bool,
+        timings: dict[str, float],
+    ) -> _FakeBinding:
+        calls.append(("server", layer_stack_root))
+        calls.append(("build", f"{workspace_root}|reset={reset}"))
+        timings["server.build_workspace_base_s"] = 0.01
+        return _FakeBinding()
 
-        def build_workspace_base(
-            self,
-            *,
-            workspace_root: str,
-            reset: bool,
-            timings: dict[str, float],
-        ) -> _FakeBinding:
-            calls.append(("build", f"{workspace_root}|reset={reset}"))
-            timings["server.build_workspace_base_s"] = 0.01
-            return _FakeBinding()
-
-    monkeypatch.setattr(workspace_handler, "LayerStackWorkspaceServer", _FakeServer)
+    monkeypatch.setattr(workspace_server, "build_workspace_base", _fake_build_workspace_base)
     monkeypatch.setattr(
         occ_backend,
         "drop_backend_cache",

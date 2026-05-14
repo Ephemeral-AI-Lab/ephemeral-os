@@ -12,7 +12,9 @@ from sandbox.layer_stack.manager import (
     PrepareWorkspaceSnapshotResult,
 )
 from sandbox.layer_stack.manifest import manifest_path, read_manifest
-from sandbox.layer_stack.workspace_base import build_workspace_base
+from sandbox.layer_stack.workspace_base import (
+    build_workspace_base as _build_layer_stack_workspace_base,
+)
 from sandbox.layer_stack.workspace_binding import (
     WorkspaceBinding,
     WorkspaceBindingError,
@@ -90,66 +92,62 @@ def clear_layer_stack_server_caches_for_tests() -> None:
         _FENCED_STAGING_ROOTS.clear()
 
 
-class LayerStackWorkspaceServer:
-    """Owns binding and first base build for one layer-stack root."""
+def build_workspace_base(
+    layer_stack_root: str | Path,
+    *,
+    workspace_root: str | Path,
+    reset: bool = False,
+    timings: dict[str, float] | None = None,
+) -> WorkspaceBinding:
+    """Build (or rebuild on ``reset``) the workspace base for one root."""
+    if reset:
+        drop_layer_stack_manager(layer_stack_root)
+    return _build_layer_stack_workspace_base(
+        workspace_root=workspace_root,
+        layer_stack_root=layer_stack_root,
+        reset=reset,
+        timings=timings,
+    )
 
-    def __init__(self, layer_stack_root: str | Path) -> None:
-        self.layer_stack_root = Path(layer_stack_root)
-        self._manager = get_layer_stack_manager(self.layer_stack_root)
 
-    def build_workspace_base(
-        self,
-        *,
-        workspace_root: str | Path,
-        reset: bool = False,
-        timings: dict[str, float] | None = None,
-    ) -> WorkspaceBinding:
-        if reset:
-            drop_layer_stack_manager(self.layer_stack_root)
-        binding = build_workspace_base(
-            workspace_root=workspace_root,
-            layer_stack_root=self.layer_stack_root,
-            reset=reset,
-            timings=timings,
-        )
-        self._manager = get_layer_stack_manager(self.layer_stack_root)
-        return binding
+def ensure_workspace_base(
+    layer_stack_root: str | Path,
+    *,
+    workspace_root: str | Path,
+) -> tuple[WorkspaceBinding, bool]:
+    """Return the existing binding for ``layer_stack_root`` or build a new base."""
+    binding = read_workspace_binding(layer_stack_root)
+    if binding is not None:
+        _validate_manifest_for_root(Path(layer_stack_root))
+        if Path(binding.workspace_root) != Path(workspace_root):
+            raise WorkspaceBindingError(
+                "workspace binding points at a different workspace: "
+                f"{binding.workspace_root} != {workspace_root}"
+            )
+        return binding, False
+    return build_workspace_base(layer_stack_root, workspace_root=workspace_root), True
 
-    def ensure_workspace_base(
-        self,
-        *,
-        workspace_root: str | Path,
-    ) -> tuple[WorkspaceBinding, bool]:
-        binding = read_workspace_binding(self.layer_stack_root)
-        if binding is not None:
-            _validate_manifest_for_root(self.layer_stack_root)
-            if Path(binding.workspace_root) != Path(workspace_root):
-                raise WorkspaceBindingError(
-                    "workspace binding points at a different workspace: "
-                    f"{binding.workspace_root} != {workspace_root}"
-                )
-            return binding, False
-        return self.build_workspace_base(
-            workspace_root=workspace_root,
-        ), True
 
-    def prepare_workspace_snapshot(
-        self,
-        *,
-        owner_request_id: str,
-    ) -> PrepareWorkspaceSnapshotResult:
-        self._require_bound_active_workspace()
-        return self._manager.prepare_workspace_snapshot(
-            owner_request_id,
-        )
+def prepare_workspace_snapshot(
+    layer_stack_root: str | Path,
+    *,
+    owner_request_id: str,
+) -> PrepareWorkspaceSnapshotResult:
+    """Prepare a workspace snapshot lease for a bound, manifest-valid root."""
+    require_workspace_binding(layer_stack_root)
+    _validate_manifest_for_root(Path(layer_stack_root))
+    return get_layer_stack_manager(layer_stack_root).prepare_workspace_snapshot(
+        owner_request_id,
+    )
 
-    def release_workspace_snapshot(self, *, lease_id: str) -> bool:
-        return self._manager.release_lease(lease_id)
 
-    def _require_bound_active_workspace(self) -> WorkspaceBinding:
-        binding = require_workspace_binding(self.layer_stack_root)
-        _validate_manifest_for_root(self.layer_stack_root)
-        return binding
+def release_workspace_snapshot(
+    layer_stack_root: str | Path,
+    *,
+    lease_id: str,
+) -> bool:
+    """Release a previously-prepared workspace snapshot lease."""
+    return get_layer_stack_manager(layer_stack_root).release_lease(lease_id)
 
 
 def _validate_manifest_for_root(layer_stack_root: Path) -> None:
@@ -166,9 +164,12 @@ def _validate_manifest_for_root(layer_stack_root: Path) -> None:
 
 
 __all__ = [
-    "LayerStackWorkspaceServer",
+    "build_workspace_base",
     "clear_layer_stack_server_caches_for_tests",
     "drop_layer_stack_manager",
+    "ensure_workspace_base",
     "fence_stale_staging",
     "get_layer_stack_manager",
+    "prepare_workspace_snapshot",
+    "release_workspace_snapshot",
 ]

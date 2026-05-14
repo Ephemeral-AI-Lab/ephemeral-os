@@ -7,10 +7,7 @@ from sandbox.daemon.handler.request_context import (
     layer_stack_root as require_layer_stack_root,
     require_arg,
 )
-from sandbox.daemon.service.workspace_server import (
-    LayerStackWorkspaceServer,
-    fence_stale_staging as fence_stale_staging_for_root,
-)
+from sandbox.daemon.service import workspace_server
 from sandbox.timing import monotonic_now
 
 
@@ -26,9 +23,9 @@ async def build_workspace_base(args: dict[str, object]) -> dict[str, object]:
     reset = bool(args.get("reset", False))
     if reset:
         await _drop_peer_runtime_caches(layer_stack_root)
-    server = LayerStackWorkspaceServer(layer_stack_root)
     timings: dict[str, float] = {}
-    binding = server.build_workspace_base(
+    binding = workspace_server.build_workspace_base(
+        layer_stack_root,
         workspace_root=require_arg(args, "workspace_root"),
         reset=reset,
         timings=timings,
@@ -46,8 +43,8 @@ async def build_workspace_base(args: dict[str, object]) -> dict[str, object]:
 
 async def ensure_workspace_base(args: dict[str, object]) -> dict[str, object]:
     total_start = monotonic_now()
-    server = LayerStackWorkspaceServer(require_layer_stack_root(args))
-    binding, created = server.ensure_workspace_base(
+    binding, created = workspace_server.ensure_workspace_base(
+        require_layer_stack_root(args),
         workspace_root=require_arg(args, "workspace_root"),
     )
     return {
@@ -70,8 +67,8 @@ async def workspace_binding(args: dict[str, object]) -> dict[str, object]:
 
 async def prepare_workspace_snapshot(args: dict[str, object]) -> dict[str, object]:
     total_start = monotonic_now()
-    server = LayerStackWorkspaceServer(require_layer_stack_root(args))
-    result = server.prepare_workspace_snapshot(
+    result = workspace_server.prepare_workspace_snapshot(
+        require_layer_stack_root(args),
         owner_request_id=require_arg(args, "request_id"),
     )
     payload = result.to_dict()
@@ -89,8 +86,10 @@ async def prepare_workspace_snapshot(args: dict[str, object]) -> dict[str, objec
 
 
 async def release_workspace_snapshot(args: dict[str, object]) -> dict[str, object]:
-    server = LayerStackWorkspaceServer(require_layer_stack_root(args))
-    released = server.release_workspace_snapshot(lease_id=require_arg(args, "lease_id"))
+    released = workspace_server.release_workspace_snapshot(
+        require_layer_stack_root(args),
+        lease_id=require_arg(args, "lease_id"),
+    )
     return {
         "success": True,
         "released": released,
@@ -98,7 +97,7 @@ async def release_workspace_snapshot(args: dict[str, object]) -> dict[str, objec
 
 
 async def fence_stale_staging(args: dict[str, object]) -> dict[str, object]:
-    return fence_stale_staging_for_root(require_layer_stack_root(args))
+    return workspace_server.fence_stale_staging(require_layer_stack_root(args))
 
 
 async def _drop_peer_runtime_caches(layer_stack_root: str) -> None:

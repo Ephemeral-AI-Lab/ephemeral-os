@@ -15,7 +15,7 @@ pytestmark = pytest.mark.asyncio
 _CRASH_SAFETY_BODY = r"""
 import signal
 import sys
-from sandbox.daemon.service.workspace_server import LayerStackWorkspaceServer
+from sandbox.daemon.service.workspace_server import ensure_workspace_base
 
 label = "workspace_base.import_crash_safety"
 case = "base_import_crash_safety"
@@ -100,7 +100,7 @@ def _publish_state(stack_root):
 
 def _restart_ensure_outcome(stack_root):
     try:
-        binding, created = LayerStackWorkspaceServer(stack_root).ensure_workspace_base(
+        binding, created = ensure_workspace_base(stack_root, 
             workspace_root=WORKSPACE_ROOT,
         )
         return {
@@ -169,13 +169,13 @@ for mode in (
 
 clean_stack = _phase01_root(label, "restart-clean")
 clean_t0 = time.perf_counter()
-clean_binding, created = LayerStackWorkspaceServer(clean_stack).ensure_workspace_base(
+clean_binding, created = ensure_workspace_base(clean_stack, 
     workspace_root=WORKSPACE_ROOT,
 )
 clean_state = _publish_state(clean_stack)
 assert created is True
 assert clean_state["consistent"] is True, clean_state
-again_binding, again_created = LayerStackWorkspaceServer(clean_stack).ensure_workspace_base(
+again_binding, again_created = ensure_workspace_base(clean_stack, 
     workspace_root=WORKSPACE_ROOT,
 )
 assert again_created is False
