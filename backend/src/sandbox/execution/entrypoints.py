@@ -11,6 +11,7 @@ import json
 import os
 import subprocess
 import sys
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -73,13 +74,11 @@ def execute(payload: dict[str, Any]) -> int:
         )
         timings["command_exec.mount_workspace_s"] = monotonic_now() - mount_start
     except subprocess.CalledProcessError as exc:
-        return _fail(
-            request,
-            timings,
-            "mount_failed",
-            _called_process_message(exc),
-            recoverable=True,
-        )
+        stderr = str(exc.stderr or "").strip()
+        stdout = str(exc.stdout or "").strip()
+        detail = stderr or stdout
+        message = f"{exc}; {detail}" if detail else str(exc)
+        return _fail(request, timings, "mount_failed", message, recoverable=True)
     except ValueError as exc:
         return _fail(request, timings, "validation_failed", str(exc))
     except OSError as exc:
@@ -147,10 +146,8 @@ class _MountInputs:
 
     def close(self) -> None:
         for fd in self.fds:
-            try:
+            with suppress(OSError):
                 os.close(fd)
-            except OSError:
-                pass
 
 
 def _payload_request(payload: dict[str, Any]) -> _NamespaceRequest:
@@ -211,7 +208,7 @@ def _validate_mount_inputs(
     fds: list[int] = []
     try:
         for path in (workspace_root, lowerdir, upperdir, workdir):
-            _validate_overlay_path_text(path, policy=policy)
+            policy.validate_overlay_path_text(path.as_posix())
         for path, label in (
             (workspace_root, "workspace root"),
             (lowerdir, "leased lowerdir"),
@@ -233,24 +230,17 @@ def _validate_mount_inputs(
         _assert_same_dir(upperdir, fds[2])
         _assert_same_dir(workdir, fds[3])
         return _MountInputs(
-            workspace_root=_fd_path(fds[0]),
-            lowerdir=_fd_path(fds[1]),
-            upperdir=_fd_path(fds[2]),
-            workdir=_fd_path(fds[3]),
+            workspace_root=Path(f"/proc/self/fd/{fds[0]}"),
+            lowerdir=Path(f"/proc/self/fd/{fds[1]}"),
+            upperdir=Path(f"/proc/self/fd/{fds[2]}"),
+            workdir=Path(f"/proc/self/fd/{fds[3]}"),
             fds=tuple(fds),
         )
     except Exception:
         for fd in fds:
-            os.close(fd)
+            with suppress(OSError):
+                os.close(fd)
         raise
-
-
-def _validate_overlay_path_text(
-    path: Path,
-    *,
-    policy: CommandExecPolicy = DEFAULT_COMMAND_EXEC_POLICY,
-) -> None:
-    policy.validate_overlay_path_text(path.as_posix())
 
 
 def _open_dir_no_follow(path: Path) -> int:
@@ -267,39 +257,9 @@ def _assert_same_dir(path: Path, fd: int) -> None:
         raise ValueError(f"mount input changed during validation: {path}")
 
 
-def _fd_path(fd: int) -> Path:
-    return Path(f"/proc/self/fd/{fd}")
-
-
-def _fallback_ref(payload: dict[str, Any], key: str) -> Path:
-    raw = payload.get(key)
-    if not raw:
-        raise ValueError(f"payload is missing {key}; no fallback ref available")
-    path = Path(str(raw))
-    path.parent.mkdir(parents=True, exist_ok=True)
-    return path
-
-
 def _write_error(path: Path, error_kind: str, detail: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(_json_error_line(error_kind, detail), encoding="utf-8")
-
-
-def _write_control(path: Path, error_kind: str, detail: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(
-            {
-                "detail": detail,
-                "error_kind": error_kind,
-                "fallback": NAMESPACE_FALLBACK_STRATEGY,
-            },
-            separators=(",", ":"),
-            sort_keys=True,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
 
 
 def _json_error_line(error_kind: str, detail: str) -> str:
@@ -323,8 +283,8 @@ def _fail_bad_payload(
     detail: str,
 ) -> int:
     try:
-        stderr_ref = _fallback_ref(payload, "stderr_ref")
-        timings_ref = _fallback_ref(payload, "timings_ref")
+        stderr_ref = _resolve_fallback_ref(payload, "stderr_ref")
+        timings_ref = _resolve_fallback_ref(payload, "timings_ref")
     except ValueError as exc:
         sys.stderr.write(f"bad namespace helper payload: {detail}; {exc}\n")
         return 2
@@ -333,13 +293,13 @@ def _fail_bad_payload(
     return 126
 
 
-def _called_process_message(exc: subprocess.CalledProcessError) -> str:
-    stderr = str(exc.stderr or "").strip()
-    stdout = str(exc.stdout or "").strip()
-    detail = stderr or stdout
-    if detail:
-        return f"{exc}; {detail}"
-    return str(exc)
+def _resolve_fallback_ref(payload: dict[str, Any], key: str) -> Path:
+    raw = payload.get(key)
+    if not raw:
+        raise ValueError(f"payload is missing {key}; no fallback ref available")
+    path = Path(str(raw))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
 
 
 def _fail(
@@ -352,7 +312,20 @@ def _fail(
 ) -> int:
     _write_error(request.stderr_ref, error_kind, detail)
     if recoverable and request.control_ref is not None:
-        _write_control(request.control_ref, error_kind, detail)
+        request.control_ref.parent.mkdir(parents=True, exist_ok=True)
+        request.control_ref.write_text(
+            json.dumps(
+                {
+                    "detail": detail,
+                    "error_kind": error_kind,
+                    "fallback": NAMESPACE_FALLBACK_STRATEGY,
+                },
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
     _write_timings(request.timings_ref, timings)
     return NAMESPACE_INFRA_EXIT_CODE if recoverable else 126
 
