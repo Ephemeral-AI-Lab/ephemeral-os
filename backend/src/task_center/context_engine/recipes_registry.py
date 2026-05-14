@@ -28,7 +28,6 @@ from typing import TYPE_CHECKING, ClassVar
 from task_center.context_engine.errors import ContextEngineError
 from task_center.context_engine.packet import ContextPacket
 from task_center.context_engine.scope import ContextScope
-from task_center.registry import Registry
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only; engine imports this module
     from task_center.context_engine.engine import ContextEngineDeps
@@ -78,7 +77,7 @@ class Recipe(ABC):
         )
 
 
-class RecipeRegistry(Registry[ContextRecipe]):
+class RecipeRegistry:
     """Process-global recipe registry indexed by ``recipe.id``.
 
     Accepts both :class:`ContextRecipe` instances and :class:`Recipe`
@@ -88,10 +87,31 @@ class RecipeRegistry(Registry[ContextRecipe]):
     """
 
     _registry: ClassVar[dict[str, ContextRecipe]] = {}
-    _missing_exc: ClassVar[type[Exception]] = ContextEngineError
 
     @classmethod
     def register(cls, recipe: ContextRecipe | Recipe) -> None:
         if isinstance(recipe, Recipe):
             recipe = recipe.to_context_recipe()
-        cls._put(recipe.id, recipe)
+        cls._registry[recipe.id] = recipe
+
+    @classmethod
+    def get(cls, key: str) -> ContextRecipe:
+        try:
+            return cls._registry[key]
+        except KeyError as exc:
+            raise ContextEngineError(
+                f"RecipeRegistry: {key!r} is not registered. "
+                f"Known: {sorted(cls._registry)!r}"
+            ) from exc
+
+    @classmethod
+    def has(cls, key: str) -> bool:
+        return key in cls._registry
+
+    @classmethod
+    def list_ids(cls) -> list[str]:
+        return sorted(cls._registry)
+
+    @classmethod
+    def clear(cls) -> None:
+        cls._registry.clear()

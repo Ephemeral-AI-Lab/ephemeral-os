@@ -18,7 +18,6 @@ from typing import ClassVar
 from task_center.context_engine.engine import ContextEngineDeps
 from task_center.context_engine.scope import ContextScope
 from task_center.mission.ancestry import nested_mission_depth
-from task_center.registry import Registry
 
 
 # Maximum nested-mission depth at which an executor profile still offers a
@@ -58,14 +57,36 @@ class ResolverContext:
 PredicateFn = Callable[[ResolverContext], bool]
 
 
-class PredicateRegistry(Registry[PredicateFn]):
+class PredicateRegistry:
     """Process-global predicate registry. Tests use ``clear`` to start fresh."""
 
     _registry: ClassVar[dict[str, PredicateFn]] = {}
 
     @classmethod
     def register(cls, name: str, fn: PredicateFn) -> None:
-        cls._put(name, fn)
+        cls._registry[name] = fn
+
+    @classmethod
+    def get(cls, key: str) -> PredicateFn:
+        try:
+            return cls._registry[key]
+        except KeyError as exc:
+            raise KeyError(
+                f"PredicateRegistry: {key!r} is not registered. "
+                f"Known: {sorted(cls._registry)!r}"
+            ) from exc
+
+    @classmethod
+    def has(cls, key: str) -> bool:
+        return key in cls._registry
+
+    @classmethod
+    def list_ids(cls) -> list[str]:
+        return sorted(cls._registry)
+
+    @classmethod
+    def clear(cls) -> None:
+        cls._registry.clear()
 
 
 def _depth(ctx: ResolverContext) -> int:
