@@ -167,13 +167,13 @@ def test_index_driven_list_dir_handles_files_whiteouts_and_opaque_marker(
     # read_bytes on the whited-out path returns (None, False).
     assert manager.read_bytes("mix/gone.txt") == (None, False)
     # read_symlink follows the index path to a symlink target.
-    assert manager.read_symlink("mix/link") == ("keep.txt", True)
-    # read_symlink on a regular file path returns ("", False) (path
-    # exists but is not a symlink).
-    assert manager.read_symlink("mix/keep.txt") == ("", False)
+    assert manager.read_symlink("mix/link") == ("keep.txt", "symlink")
+    # read_symlink distinguishes a regular file at this path from an
+    # absent path: kind="file" vs kind="absent".
+    assert manager.read_symlink("mix/keep.txt") == ("", "file")
     # read_symlink on a path under an opaque-dir ancestor short-circuits
-    # to ("", False) without touching the filesystem.
-    assert manager.read_symlink("mix/nested/x.txt") == ("", False)
+    # to absent without touching the filesystem.
+    assert manager.read_symlink("mix/nested/x.txt") == ("", "absent")
 
 
 def test_materialize_matches_point_reads_and_preserves_symlinks(tmp_path: Path) -> None:
@@ -194,4 +194,4 @@ def test_materialize_matches_point_reads_and_preserves_symlinks(tmp_path: Path) 
     assert (destination / "target.txt").read_text(encoding="utf-8") == "target"
     assert (destination / "links" / "current").is_symlink()
     assert (destination / "links" / "current").readlink().as_posix() == "../target.txt"
-    assert manager.read_symlink("links/current") == ("../target.txt", True)
+    assert manager.read_symlink("links/current") == ("../target.txt", "symlink")

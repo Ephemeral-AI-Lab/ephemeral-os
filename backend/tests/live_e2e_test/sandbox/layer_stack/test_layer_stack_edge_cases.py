@@ -50,7 +50,7 @@ assert manager.read_text(unicode_path) == ("hello unicode", True)
 loop_manifest = manager.publish_changes([
     SymlinkLayerChange(path="links/self", source_path="../links/self"),
 ])
-assert manager.read_symlink("links/self", manifest=loop_manifest) == ("../links/self", True)
+assert manager.read_symlink("links/self", manifest=loop_manifest) == ("../links/self", "symlink")
 
 sparse_layer = manager.storage_root / "layers" / "manual-sparse"
 sparse_file = sparse_layer / "huge.bin"

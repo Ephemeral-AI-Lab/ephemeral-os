@@ -95,7 +95,7 @@ def _verify(workload, manager, materialized, depth):
         assert (WORKSPACE_ROOT / rel).exists()
     if workload == "symlink" and depth > 0:
         rel = "phase01-snapshot/symlinks/link-%03d" % (depth - 1)
-        assert manager.read_symlink(rel) == ("target-%03d.txt" % (depth - 1), True)
+        assert manager.read_symlink(rel) == ("target-%03d.txt" % (depth - 1), "symlink")
         assert os.readlink(materialized / rel) == "target-%03d.txt" % (depth - 1)
     if workload == "opaque" and depth > 0:
         assert manager.list_dir("phase01-snapshot/opaque") == ("%03d.txt" % (depth - 1),)

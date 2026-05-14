@@ -193,7 +193,7 @@ _publish_workload(
 
 assert manager.read_text("phase01-layer-create-fixtures/overwrites/000.txt") == ("mixed-overwrite\n", True)
 assert manager.read_bytes("phase01-layer-create-fixtures/deletes/050.txt") == (None, False)
-assert manager.read_symlink("phase01-layer-create/mixed/link.txt") == ("new.txt", True)
+assert manager.read_symlink("phase01-layer-create/mixed/link.txt") == ("new.txt", "symlink")
 assert manager.list_dir("phase01-layer-create-fixtures/opaque") == ("new.txt",)
 assert (WORKSPACE_ROOT / "phase01-layer-create-fixtures/overwrites/000.txt").read_text(encoding="utf-8") == "overwrite-base-000\n"
 assert (WORKSPACE_ROOT / "phase01-layer-create-fixtures/deletes/050.txt").exists()

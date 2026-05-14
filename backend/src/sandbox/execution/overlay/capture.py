@@ -9,8 +9,8 @@ from collections.abc import Iterator
 from contextlib import suppress
 from pathlib import Path
 
+from sandbox.layer_stack._paths import relative_symlink_target_escapes
 from sandbox.layer_stack.layer.index import OPAQUE_MARKER, WHITEOUT_PREFIX
-from sandbox.layer_stack.workspace.base import _relative_target_escapes
 from sandbox.execution.overlay.change import OverlayPathChange, content_hash
 from sandbox.timing import monotonic_now
 
@@ -84,7 +84,7 @@ def _populate_upperdir_from_diff(
         _remove_path(target)
         if merged_entry.is_symlink():
             link_target = os.readlink(merged_entry)
-            if link_target.startswith("/") or _relative_target_escapes(link_target):
+            if link_target.startswith("/") or relative_symlink_target_escapes(link_target):
                 raise ValueError(
                     "overlay capture refuses escaping symlink target: "
                     f"{rel.as_posix()}"

@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, TypeAlias
 
+from sandbox.layer_stack._paths import relative_symlink_target_escapes
 from sandbox.layer_stack.manifest import (
     LAYERS_DIR,
     STAGING_DIR,
@@ -297,29 +298,12 @@ def _symlink_entry(
     # Absolute targets (escape into host fs) and relative targets that
     # walk out of the workspace are rejected as "incomplete" so the
     # caller can decide what to do.
-    if target.startswith("/") or _relative_target_escapes(target):
+    if target.startswith("/") or relative_symlink_target_escapes(target):
         raise WorkspaceBaseIncompleteError(
             special_file_rejections=(rel,),
             unstable_paths=(),
         )
     return _SymlinkEntry(path=rel, link_target=target)
-
-
-def _relative_target_escapes(target: str) -> bool:
-    """Return True if a relative symlink target walks out of its directory."""
-    parts: list[str] = []
-    for raw in target.split("/"):
-        if raw in ("", "."):
-            continue
-        if raw == "..":
-            if not parts:
-                return True
-            parts.pop()
-            continue
-        parts.append(raw)
-    # If the path is exhausted without underflow, the relative target stays
-    # inside its origin directory tree.
-    return False
 
 
 def _write_base_layer(

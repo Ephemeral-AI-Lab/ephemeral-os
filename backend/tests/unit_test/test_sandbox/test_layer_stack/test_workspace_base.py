@@ -46,8 +46,8 @@ def test_workspace_base_writes_full_manifest_binding(tmp_path: Path) -> None:
     content, exists = manager.read_text("README.md")
     assert exists is True
     assert content == "# demo\n"
-    target, symlink_exists = manager.read_symlink("link.py")
-    assert symlink_exists is True
+    target, symlink_kind = manager.read_symlink("link.py")
+    assert symlink_kind == "symlink"
     assert target == "src/a.py"
 
     loaded = read_workspace_binding(stack)

@@ -50,7 +50,7 @@ assert (base_layer / "phase01-correctness-fixtures/empty-dir").is_dir()
 assert (base_layer / "phase01-correctness-fixtures/unicode-path-π.txt").read_text(encoding="utf-8") == "unicode\n"
 assert (base_layer / "phase01-correctness-fixtures" / long_dir.name / "leaf.txt").read_text(encoding="utf-8") == "long\n"
 assert manager.read_bytes("phase01-correctness-fixtures/binary.bin")[1] is True
-assert manager.read_symlink("phase01-correctness-fixtures/symlink-link.txt") == ("symlink-target.txt", True)
+assert manager.read_symlink("phase01-correctness-fixtures/symlink-link.txt") == ("symlink-target.txt", "symlink")
 assert manager.list_dir("phase01-correctness-fixtures/empty-dir") == ()
 assert "gitignore" not in json.dumps(binding).lower()
 assert "classification" not in json.dumps(binding).lower()

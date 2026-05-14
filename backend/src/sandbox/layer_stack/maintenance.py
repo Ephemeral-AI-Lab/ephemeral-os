@@ -78,6 +78,11 @@ class SquashService:
             manifest_version
         )
         os.replace(current_path, layer_dir)
+        fd = os.open(layer_dir.parent, os.O_RDONLY)
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
         return LayerRef(layer_id=layer_id, path=f"{LAYERS_DIR}/{layer_id}")
 
     def discard_checkpoint(self, checkpoint: LayerRef) -> None:

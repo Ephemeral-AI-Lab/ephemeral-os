@@ -56,6 +56,21 @@ def log_rmtree_failure(func: object, path: object, exc_info: object) -> None:
     )
 
 
+def relative_symlink_target_escapes(target: str) -> bool:
+    """Return True if a relative symlink target walks out of its directory."""
+    depth = 0
+    for part in target.split("/"):
+        if part in ("", "."):
+            continue
+        if part == "..":
+            if depth == 0:
+                return True
+            depth -= 1
+        else:
+            depth += 1
+    return False
+
+
 def allocate_unique_layer_paths(
     *,
     storage_root: Path,
@@ -78,6 +93,7 @@ __all__ = [
     "allocate_unique_layer_paths",
     "join_layer_path",
     "log_rmtree_failure",
+    "relative_symlink_target_escapes",
     "remove_path",
     "resolve_storage_path",
     "safe_request_part",

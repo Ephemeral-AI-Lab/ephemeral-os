@@ -8,6 +8,7 @@ import threading
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 from uuid import uuid4
 
 from sandbox.layer_stack.commit import CommitStagingArea
@@ -194,7 +195,7 @@ class LayerStackManager:
         self,
         path: str,
         manifest: Manifest | None = None,
-    ) -> tuple[str, bool]:
+    ) -> tuple[str, Literal["symlink", "file", "absent"]]:
         return self._view.read_symlink(path, manifest or self.read_active_manifest())
 
     def list_dir(
@@ -313,9 +314,6 @@ class LayerStackManager:
         if self._storage_writer_lock is not None:
             self._storage_writer_lock.close()
             self._storage_writer_lock = None
-
-    def __del__(self) -> None:
-        self.close()
 
 
 def _layer_digest_path(storage_root: Path, layer_id: str) -> Path:

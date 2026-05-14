@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import threading
+import weakref
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -28,28 +29,28 @@ class _StorageWriterLock:
 
 class StorageWriterLockLease:
     def __init__(self, key: str, fd: int) -> None:
-        self._key = key
         self.fd = fd
-        self._closed = False
+        # weakref.finalize avoids the __del__ trap of running during
+        # interpreter teardown after module globals (the dict and its
+        # lock) have been cleared.
+        self._finalizer = weakref.finalize(self, _release_storage_lock, key)
 
     def close(self) -> None:
-        if self._closed:
-            return
-        self._closed = True
-        with _STORAGE_WRITER_LOCKS_LOCK:
-            record = _STORAGE_WRITER_LOCKS.get(self._key)
-            if record is None:
-                return
-            record.refcount -= 1
-            if record.refcount > 0:
-                return
-            _STORAGE_WRITER_LOCKS.pop(self._key, None)
-            if fcntl is not None:
-                fcntl.flock(record.fd, fcntl.LOCK_UN)
-            os.close(record.fd)
+        self._finalizer()
 
-    def __del__(self) -> None:
-        self.close()
+
+def _release_storage_lock(key: str) -> None:
+    with _STORAGE_WRITER_LOCKS_LOCK:
+        record = _STORAGE_WRITER_LOCKS.get(key)
+        if record is None:
+            return
+        record.refcount -= 1
+        if record.refcount > 0:
+            return
+        _STORAGE_WRITER_LOCKS.pop(key, None)
+        if fcntl is not None:
+            fcntl.flock(record.fd, fcntl.LOCK_UN)
+        os.close(record.fd)
 
 
 def acquire_storage_writer_lock(storage_root: Path) -> StorageWriterLockLease | None:

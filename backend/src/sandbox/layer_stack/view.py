@@ -6,6 +6,7 @@ import errno
 import os
 import shutil
 from pathlib import Path
+from typing import Literal
 
 from sandbox.layer_stack.errors import LayerStackStorageError
 from sandbox.layer_stack._paths import join_layer_path, remove_path
@@ -20,7 +21,9 @@ from sandbox.layer_stack.layer.index import (
 from sandbox.layer_stack.manifest import LayerRef, Manifest
 
 
-__all__ = ["MergedView"]
+SymlinkLookup = Literal["symlink", "file", "absent"]
+
+__all__ = ["MergedView", "SymlinkLookup"]
 
 
 class MergedView:
@@ -76,31 +79,26 @@ class MergedView:
             return "", True
         return content.decode("utf-8"), True
 
-    def read_symlink(self, path: str, manifest: Manifest) -> tuple[str, bool]:
+    def read_symlink(self, path: str, manifest: Manifest) -> tuple[str, SymlinkLookup]:
         rel = normalize_layer_path(path)
         for layer in manifest.layers:
             index = self._layer_index(layer)
             if rel in index.whiteouts:
-                return "", False
+                return "", "absent"
             if rel in index.files:
                 layer_dir = self._layer_dir(layer)
                 candidate = join_layer_path(layer_dir, rel)
                 try:
                     if candidate.is_symlink():
-                        return os.readlink(candidate), True
+                        return os.readlink(candidate), "symlink"
                     if candidate.exists():
-                        # rel resolves to a regular file (not a symlink) in
-                        # this layer — same answer as the old
-                        # `candidate.exists()` branch.
-                        return "", False
+                        return "", "file"
                 except OSError as exc:
                     raise _stale_layer_error(layer, rel) from exc
                 raise _stale_layer_error(layer, rel)
-            if has_ancestor_in(rel, index.files):
-                return "", False
-            if has_ancestor_in(rel, index.opaque_dirs):
-                return "", False
-        return "", False
+            if has_ancestor_in(rel, index.files) or has_ancestor_in(rel, index.opaque_dirs):
+                return "", "absent"
+        return "", "absent"
 
     def list_dir(self, path: str, manifest: Manifest) -> tuple[str, ...]:
         rel = normalize_layer_path(path, allow_root=True)
