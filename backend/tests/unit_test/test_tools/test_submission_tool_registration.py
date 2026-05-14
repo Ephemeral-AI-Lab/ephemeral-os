@@ -14,7 +14,7 @@ from tools.submission.planner import PlanTaskInput
 PHASE03_TOOLS = (
     "submit_full_plan",
     "submit_partial_plan",
-    "request_mission_solution",
+    "submit_execution_handoff",
     "submit_execution_success",
     "submit_execution_failure",
     "submit_verification_success",
@@ -47,9 +47,9 @@ def test_custom_generator_agent_can_declare_mission_solution_terminal() -> None:
         name="custom_generator",
         description="Custom generator agent.",
         agent_kind=AgentKind.EXECUTOR,
-        terminals=["request_mission_solution"],
+        terminals=["submit_execution_handoff"],
     )
-    assert has_tool("request_mission_solution")
+    assert has_tool("submit_execution_handoff")
 
 
 def test_plan_task_input_rejects_extra_keys() -> None:

@@ -12,7 +12,7 @@ allowed_tools:
   - run_subagent
   - ask_advisor
 terminals:
-  - request_mission_solution
+  - submit_execution_handoff
   - submit_execution_success
 notification_triggers:
   - request_mission_after_edit
@@ -23,7 +23,7 @@ available.
 
 Complete the `Assigned Task` section. Use `Attempt Plan` only as framing and
 `Dependency Results` as inputs from prerequisite tasks. If the task is too
-broad or needs a delegated complex-task plan, call `request_mission_solution`
+broad or needs a delegated complex-task plan, call `submit_execution_handoff`
 before making edits. After editing begins, finish through execution success.
 
 This profile intentionally does not expose `submit_execution_failure`. The

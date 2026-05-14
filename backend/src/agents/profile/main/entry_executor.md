@@ -12,7 +12,7 @@ allowed_tools:
   - run_subagent
   - ask_advisor
 terminals:
-  - request_mission_solution
+  - submit_execution_handoff
   - submit_execution_success
   - submit_execution_failure
 notification_triggers:
@@ -23,7 +23,7 @@ You are the **entry executor** — the agent that receives the top-level user re
 
 Decide whether to act directly or delegate the work as a mission. Small,
 self-contained requests can be handled here with the editor and shell tools.
-Larger requests should be planned via `request_mission_solution`, which
+Larger requests should be planned via `submit_execution_handoff`, which
 spawns a complex-task request that goes through the full planner / generator /
 evaluator harness.
 

@@ -35,7 +35,7 @@ def handler(mission_store, episode_store, attempt_store):
 def test_create_mission_links_executor(
     handler, mission_store, task_center_run_id
 ):
-    """Phase 01 exit: request_mission_solution -> request linked to requested_by_task_id."""
+    """Phase 01 exit: submit_execution_handoff -> request linked to requested_by_task_id."""
     req = handler.create_mission(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="executor-1",

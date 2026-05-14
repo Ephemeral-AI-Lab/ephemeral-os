@@ -68,7 +68,7 @@ Terminal-tool family driving task_center lifecycle. All `is_terminal_tool=True`;
 - `submit_partial_plan` (`submit_partial_plan.py:34`)
 
 **main_agent/generator**
-- `request_mission_solution` (`request_mission_solution.py:42`) — generator pre-edit terminal; the `request_mission_after_edit` notification reminder nudges the generator to finish through its own success/failure once edits have begun
+- `submit_execution_handoff` (`submit_execution_handoff.py:42`) — generator pre-edit terminal; the `request_mission_after_edit` notification reminder nudges the generator to finish through its own success/failure once edits have begun
 - `submit_execution_success` / `submit_execution_failure` (`generator/executor/`)
 - `submit_verification_success` / `submit_verification_failure` (`generator/verifier/`)
 

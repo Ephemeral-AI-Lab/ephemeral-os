@@ -1,4 +1,4 @@
-"""request_mission_solution delegated request tool."""
+"""submit_execution_handoff delegated request tool."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ class RequestMissionSolutionInput(BaseModel):
 
 
 @tool(
-    name="request_mission_solution",
+    name="submit_execution_handoff",
     description=(
         "Request a delegated complex-task solution for the current generator task. "
         "This must be called before making edits."
@@ -40,7 +40,7 @@ class RequestMissionSolutionInput(BaseModel):
     output_model=TextToolOutput,
     is_terminal_tool=True,
 )
-async def request_mission_solution(
+async def submit_execution_handoff(
     goal: str,
     *,
     context: ToolExecutionContextService,

@@ -1,7 +1,7 @@
 """Mission persistence model — origin axis of harness work.
 
 A Mission is created when a generator task calls
-``request_mission_solution(goal)``. It owns an ordered list of
+``submit_execution_handoff(goal)``. It owns an ordered list of
 ``Episode`` ids representing the vertical (continuation) progression of
 work toward the request's goal.
 """

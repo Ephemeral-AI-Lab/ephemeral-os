@@ -142,7 +142,7 @@ def register_test_agents(isolated_agent_registries):
             agent_kind=AgentKind.EXECUTOR,
             context_recipe="generator_v1",
             terminals=[
-                "request_mission_solution",
+                "submit_execution_handoff",
                 "submit_execution_success",
                 "submit_execution_failure",
             ],

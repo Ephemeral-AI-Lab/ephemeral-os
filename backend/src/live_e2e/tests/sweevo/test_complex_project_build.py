@@ -210,12 +210,12 @@ async def _assert_complex_build_contract(
 
     # §7.20: tool_use.total_calls matches len(report.tool_calls) — minus the
     # framework's own submission calls (entry-executor's
-    # request_mission_solution, planner's submit_full_plan, executor's
+    # submit_execution_handoff, planner's submit_full_plan, executor's
     # submit_execution_success, evaluator's submit_evaluation_success) which
     # the probe does not track. Use the actual toolkit-call count from the
     # report (excluding submission tool names) as ground truth.
     submission_tool_names = {
-        "request_mission_solution",
+        "submit_execution_handoff",
         "submit_full_plan",
         "submit_partial_plan",
         "submit_execution_success",

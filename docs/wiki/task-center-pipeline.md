@@ -18,7 +18,7 @@ _Source: explore agent draft, 2026-05-10. See `.omc/wiki-draft/task-center.md`._
 
 The pipeline is a four-level tree: Mission → Episode → Attempt → Tasks.
 
-- **Mission** (`task_center/mission/mission.py:19`) — a delegated goal. Holds an ordered Episode id list, `task_center_run_id`, and `requested_by_task_id` (the generator task that called `request_mission_solution`, or the entry task). Statuses: `open`, `succeeded`, `failed`, `cancelled`.
+- **Mission** (`task_center/mission/mission.py:19`) — a delegated goal. Holds an ordered Episode id list, `task_center_run_id`, and `requested_by_task_id` (the generator task that called `submit_execution_handoff`, or the entry task). Statuses: `open`, `succeeded`, `failed`, `cancelled`.
 - **Episode** (`task_center/episode/episode.py:22`) — one planning attempt window inside a Mission. Has `attempt_budget` (default `2` from `HarnessLifecycleConfig`, `task_center/config.py:9`), ordered Attempt id list, `creation_reason` (`initial` | `partial_continuation`), and `continuation_goal` (non-null when the passing attempt submitted a partial plan).
 - **Attempt** (`task_center/attempt/state.py:30`) — one planner→generator-DAG→evaluator execution. Tracks `stage` (`planning` → `generating` → `evaluating` → `closed`), `status` (`running` | `passed` | `failed`), `fail_reason`, `continuation_goal`.
 - **Tasks** — per-role harness rows in `TaskCenterStore`. Roles: `planner`, `generator`, `evaluator` (`task_center/task/models.py:10`). Task ids deterministic: `{attempt_id}:planner`, `{attempt_id}:gen:{local_id}`, `{attempt_id}:evaluator` (`task_center/task/ids.py`).
@@ -60,9 +60,9 @@ def start_task_center_entry_run(
 
 | Role | Agent name | What it does | Terminal submission tool |
 |---|---|---|---|
-| `entry_executor` | `entry_executor` | Top-level user-request agent; either completes directly or delegates via `request_mission_solution`. Not a Mission. | `submit_execution_success` / `submit_execution_failure` |
+| `entry_executor` | `entry_executor` | Top-level user-request agent; either completes directly or delegates via `submit_execution_handoff`. Not a Mission. | `submit_execution_success` / `submit_execution_failure` |
 | `planner` | `planner` | Plans one Attempt: emits `PlannerSubmission` encoding generator DAG, `task_specification`, `evaluation_criteria`, optional `continuation_goal`. | `submit_full_plan` / `submit_partial_plan` |
-| `generator` (executor) | agent-specific | Executes one DAG leaf task. Optionally calls `request_mission_solution` to delegate to a child Mission. | `submit_execution_success` / `submit_execution_failure` / `request_mission_solution` |
+| `generator` (executor) | agent-specific | Executes one DAG leaf task. Optionally calls `submit_execution_handoff` to delegate to a child Mission. | `submit_execution_success` / `submit_execution_failure` / `submit_execution_handoff` |
 | `generator` (verifier) | agent-specific | Verifies work produced by an executor. | `submit_verification_success` / `submit_verification_failure` |
 | `evaluator` | `evaluator` | Evaluates the full DAG outcome; pass closes the Attempt. | `submit_evaluation_success` / `submit_evaluation_failure` |
 
@@ -79,7 +79,7 @@ Each tool calls into `AttemptOrchestrator` (or `EntryTaskController` for entry-m
 | `submit_verification_*` | Same `apply_generator_submission` path | As executor success/failure |
 | `submit_evaluation_success` | `apply_evaluator_submission(outcome="success")` | Eval→DONE; attempt closes PASSED; `EpisodeManager.handle_attempt_closed` emits `TerminalSuccess` or `SuccessContinue` |
 | `submit_evaluation_failure` | `apply_evaluator_submission(outcome="failure")` | Eval→FAILED; attempt closes FAILED/`evaluator_failed` |
-| `request_mission_solution` | `MissionStarter.start(goal=…)` | Creates child Mission+Episode+Attempt; parks parent gen task in `WAITING_COMPLEX_TASK`; terminal so parent agent run ends |
+| `submit_execution_handoff` | `MissionStarter.start(goal=…)` | Creates child Mission+Episode+Attempt; parks parent gen task in `WAITING_COMPLEX_TASK`; terminal so parent agent run ends |
 
 The dispatcher (`task_center/attempt/dispatcher.py:64`) is called after every submission via `AttemptOrchestrator.dispatch_ready_work()`:
 - `generating`: launches PENDING tasks whose `needs[]` are all DONE.
@@ -119,7 +119,7 @@ Invariant: `assert_continuation_episode_predecessor` (`mission/validation.py:38`
 
 ## Recursive (nested) missions
 
-Generator (executor-profile) calls `request_mission_solution(goal=…)` (`tools/submission/main_agent/generator/request_mission_solution.py:59`).
+Generator (executor-profile) calls `submit_execution_handoff(goal=…)` (`tools/submission/main_agent/generator/submit_execution_handoff.py:59`).
 
 `ExecutorSubmissionContext.start_mission_request` (`submission/context/executor.py:93`) → `MissionStarter.start(parent_task_id, goal)` (`mission/starter.py:53`):
 1. Asserts parent task is RUNNING and has no open child Mission.
@@ -216,7 +216,7 @@ After `start_task_center_entry_run` returns: `await handle.launcher.wait_for_idl
 - **Attempt retry on failure** — supply runner that submits failure or returns without terminal; assert `attempt_sequence_no=2` after retry.
 - **Episodic continuation** — runner calls `submit_partial_plan(continuation_goal=…)`; assert second Episode with `creation_reason=PARTIAL_CONTINUATION`.
 - **Initial mission** — first Episode `creation_reason=INITIAL`, `sequence_no=1`, Mission `status=succeeded`.
-- **Nested mission** — runner calls `request_mission_solution`; assert child Mission with `requested_by_task_id=<gen_task_id>` and close report routed back.
+- **Nested mission** — runner calls `submit_execution_handoff`; assert child Mission with `requested_by_task_id=<gen_task_id>` and close report routed back.
 - **Dependency context** — multi-task plan with `deps`; assert PENDING tasks not launched until `needs[]` are DONE; assert blocked descendants on failure.
 - **Planner validation** — invalid plan (duplicate local_id, unknown dep, partial without `continuation_goal`); assert orchestrator raises `TaskCenterInvariantViolation` and attempt closes `fail_reason=planner_failed`.
 

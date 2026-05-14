@@ -6,7 +6,7 @@ dispatch validation enforces terminal-tool exclusivity, and notification
 rules fire at the expected turn.
 
 Reference scenarios for this subpackage will land alongside the executor
-actions they require (e.g. ``request_mission_solution`` after edit). See
+actions they require (e.g. ``submit_execution_handoff`` after edit). See
 ``docs/wiki/live-e2e-scenario-suite-design.md``.
 """
 

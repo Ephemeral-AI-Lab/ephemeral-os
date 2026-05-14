@@ -9,7 +9,7 @@ from tools.submission.evaluator import (
     submit_evaluation_failure,
     submit_evaluation_success,
 )
-from tools.submission.executor import request_mission_solution
+from tools.submission.executor import submit_execution_handoff
 from tools.submission.executor import (
     submit_execution_failure,
     submit_execution_success,
@@ -29,7 +29,7 @@ def make_submission_tools() -> list[BaseTool]:
     return [
         submit_full_plan,
         submit_partial_plan,
-        request_mission_solution,
+        submit_execution_handoff,
         submit_execution_success,
         submit_execution_failure,
         submit_verification_success,

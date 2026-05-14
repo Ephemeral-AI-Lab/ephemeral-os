@@ -29,7 +29,7 @@ def make_mission_request_after_edit_reminder() -> NotificationRule:
     def _body(messages: list[Any], context: Any) -> str:
         del messages, context
         return (
-            "request_mission_solution is meant for delegating before edits begin. "
+            "submit_execution_handoff is meant for delegating before edits begin. "
             "Once this generator has edited, prefer finishing through its own "
             "success or failure terminal."
         )

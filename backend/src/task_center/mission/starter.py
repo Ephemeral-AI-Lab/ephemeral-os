@@ -1,7 +1,7 @@
 """MissionStarter — use-case boundary for delegated mission start.
 
 Composes the mission, episode, manager, and parent-task owners into
-the single safe mission-start path used by ``request_mission_solution``. Owns
+the single safe mission-start path used by ``submit_execution_handoff``. Owns
 parent-task CAS, deferred orchestrator startup, and compensation on failure.
 """
 

@@ -49,8 +49,8 @@ from tools.submission.executor import (
     submit_execution_failure,
     submit_execution_success,
 )
-from tools.submission.executor.request_mission_solution import (
-    request_mission_solution,
+from tools.submission.executor.submit_execution_handoff import (
+    submit_execution_handoff,
 )
 from tools.submission.verifier import (
     submit_verification_failure,
@@ -281,7 +281,7 @@ class MockSquadRunner:
     ) -> ToolResult:
         goal = self._entry_user_prompt(metadata, fallback=prompt)
         return await self._call_tool(
-            request_mission_solution,
+            submit_execution_handoff,
             {"goal": goal},
             metadata,
             emit,
@@ -360,7 +360,7 @@ class MockSquadRunner:
                     f"Resolve recursive package {package_id}."
                 )
                 result = await self._call_tool(
-                    request_mission_solution,
+                    submit_execution_handoff,
                     {"goal": goal},
                     metadata,
                     emit,
@@ -382,7 +382,7 @@ class MockSquadRunner:
                     f"Resolve recursive matrix package {package_id}."
                 )
                 result = await self._call_tool(
-                    request_mission_solution,
+                    submit_execution_handoff,
                     {"goal": goal},
                     metadata,
                     emit,

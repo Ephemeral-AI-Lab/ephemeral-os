@@ -69,7 +69,7 @@ async def test_after_edit_reminder_fires_once() -> None:
     )
 
     assert len(notifications) == 1
-    assert "request_mission_solution is meant for delegating before edits begin" in notifications[0].text
+    assert "submit_execution_handoff is meant for delegating before edits begin" in notifications[0].text
 
 
 async def test_resolver_limit_reminder_fires_at_four() -> None:

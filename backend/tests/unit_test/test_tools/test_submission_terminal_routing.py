@@ -21,7 +21,7 @@ from tools.submission.evaluator import (
     submit_evaluation_failure,
     submit_evaluation_success,
 )
-from tools.submission.executor import request_mission_solution
+from tools.submission.executor import submit_execution_handoff
 from tools.submission.executor import (
     submit_execution_failure,
     submit_execution_success,
@@ -172,7 +172,7 @@ async def test_submit_evaluation_failure_calls_apply_evaluator_submission(
     assert attempt.status == AttemptStatus.FAILED
 
 
-async def test_request_mission_solution_starts_delegated_request(
+async def test_submit_execution_handoff_starts_delegated_request(
     mission_store, episode_store, attempt_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
@@ -185,7 +185,7 @@ async def test_request_mission_solution_starts_delegated_request(
     generator_id = apply_single_generator_plan(fixture)
 
     result = await execute_tool_once(
-        request_mission_solution,
+        submit_execution_handoff,
         {"goal": "solve delegated task"},
         make_tool_context(fixture, generator_id),
         emit=_noop_emit,
@@ -211,7 +211,7 @@ async def test_request_mission_solution_starts_delegated_request(
     assert created_attempt.stage == AttemptStage.PLANNING
 
 
-async def test_request_mission_solution_accepts_any_generator_agent_profile(
+async def test_submit_execution_handoff_accepts_any_generator_agent_profile(
     mission_store, episode_store, attempt_store, task_store, composer
 ) -> None:
     from agents import AgentDefinition, AgentKind, register_definition
@@ -223,7 +223,7 @@ async def test_request_mission_solution_accepts_any_generator_agent_profile(
             agent_kind=AgentKind.EXECUTOR,
             context_recipe="generator_v1",
             terminals=[
-                "request_mission_solution",
+                "submit_execution_handoff",
                 "submit_execution_success",
                 "submit_execution_failure",
             ],
@@ -243,7 +243,7 @@ async def test_request_mission_solution_accepts_any_generator_agent_profile(
     )
 
     result = await execute_tool_once(
-        request_mission_solution,
+        submit_execution_handoff,
         {"goal": "delegate broad custom generator work"},
         make_tool_context(fixture, generator_id),
         emit=_noop_emit,
@@ -256,7 +256,7 @@ async def test_request_mission_solution_accepts_any_generator_agent_profile(
     assert task["status"] == HarnessTaskStatus.WAITING_MISSION.value
 
 
-async def test_request_mission_solution_return_updates_outer_generator(
+async def test_submit_execution_handoff_return_updates_outer_generator(
     mission_store, episode_store, attempt_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
@@ -269,7 +269,7 @@ async def test_request_mission_solution_return_updates_outer_generator(
     outer_generator_id = apply_single_generator_plan(fixture)
 
     result = await execute_tool_once(
-        request_mission_solution,
+        submit_execution_handoff,
         {"goal": "solve delegated task"},
         make_tool_context(fixture, outer_generator_id),
         emit=_noop_emit,

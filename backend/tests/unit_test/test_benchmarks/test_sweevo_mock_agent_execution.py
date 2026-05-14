@@ -227,7 +227,7 @@ async def test_run_scenario_correctness_testing_with_fake_sandbox(
 
     tool_names = {item.tool_name for item in report.tool_calls}
     assert {
-        "request_mission_solution",
+        "submit_execution_handoff",
         "submit_full_plan",
         "submit_partial_plan",
         "write_file",

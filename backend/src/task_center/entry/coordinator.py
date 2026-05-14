@@ -1,7 +1,7 @@
 """TaskCenter entrypoint for top-level user requests.
 
 The entry executor is not a Mission. It is the top-level user-request agent
-that can either complete directly or call ``request_mission_solution`` to start
+that can either complete directly or call ``submit_execution_handoff`` to start
 the first delegated Mission. Lifecycle events flow through
 :class:`EntryTaskController`, which is attached to
 :class:`AttemptRuntime.entry_task_controller` so the launcher, close-report

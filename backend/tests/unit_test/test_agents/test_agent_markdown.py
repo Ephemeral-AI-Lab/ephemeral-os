@@ -57,11 +57,11 @@ def test_recursive_agent_loader_finds_harness_profiles() -> None:
     # The depth-shallow target keeps the handoff terminal; the leaf target
     # exposes only success + failure.
     assert (
-        "request_mission_solution"
+        "submit_execution_handoff"
         in by_name["executor_success_handoff"].terminals
     )
     assert (
-        "request_mission_solution"
+        "submit_execution_handoff"
         not in by_name["executor_success_failure"].terminals
     )
 
@@ -69,5 +69,5 @@ def test_recursive_agent_loader_finds_harness_profiles() -> None:
 def test_executor_handoff_profile_uses_mission_solution_terminal() -> None:
     handoff = _load_named(MAIN_PROFILE_DIR, "executor_success_handoff")
 
-    assert "request_mission_solution" in handoff.terminals
+    assert "submit_execution_handoff" in handoff.terminals
     assert "ask_resolver" not in handoff.allowed_tools

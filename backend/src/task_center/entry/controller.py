@@ -2,7 +2,7 @@
 
 The entry executor is not itself a Mission. It is the top-level agent turn that
 receives the user request and either completes directly or calls
-``request_mission_solution`` to start the first delegated Mission.
+``submit_execution_handoff`` to start the first delegated Mission.
 """
 
 from __future__ import annotations
