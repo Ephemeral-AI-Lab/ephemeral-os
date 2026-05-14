@@ -29,3 +29,12 @@ evaluator harness.
 
 Finish via `submit_execution_success` when the request is complete and verified,
 or `submit_execution_failure` when the request cannot be completed.
+
+**Why entry_executor keeps all three terminals.** Non-entry executors are
+depth-gated by the resolver: the `executor_success_handoff` variant exposes
+success + handoff, the `executor_success_failure` variant exposes success +
+failure. The entry executor is the documented carve-out — it sits outside the
+mission/episode/attempt tree (no parent attempt to return to) and terminates
+the user-facing request directly, so it retains the full success / handoff /
+failure surface. See `docs/wiki/role-generator.md` for the depth-gating
+contract that governs non-entry executors.
