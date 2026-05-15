@@ -42,7 +42,7 @@ _MIRRORED_SUBMODULES = (
     "scenarios",
     "scenarios._utils",
     "scenarios._utils.inspectors",
-    "scenarios._utils.mission_helpers",
+    "scenarios._utils.goal_helpers",
     "scenarios._utils.plans",
     "scenarios.base",
     "scenarios.capacity",

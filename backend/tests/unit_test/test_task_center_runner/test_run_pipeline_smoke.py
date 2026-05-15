@@ -66,6 +66,9 @@ class _StubStores:
         self.mission_store = self
         self.episode_store = self
         self.attempt_store = self
+        self.goal_store = self
+        self.iteration_store = self
+        self.trial_store = self
         self.context_packet_store = self
 
     def get_run(self, *_args: Any, **_kwargs: Any) -> dict:

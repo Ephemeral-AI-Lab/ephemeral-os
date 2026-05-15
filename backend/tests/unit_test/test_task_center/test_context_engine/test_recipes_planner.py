@@ -13,6 +13,7 @@ from task_center.context_engine.packet import (
 from task_center.context_engine.recipes.planner import (
     _planner_build,
 )
+from task_center.context_engine.renderer import MarkdownPromptRenderer
 from task_center.context_engine.scope import ContextScope
 from task_center.trial import (
     TrialFailReason,
@@ -371,3 +372,81 @@ def test_all_failed_attempts_render_as_high_priority_blocks(
     ]
     assert all(block.priority == ContextPriority.HIGH for block in failed_blocks)
     assert all("truncated_count" not in block.metadata for block in failed_blocks)
+
+
+# ---------------------------------------------------------------------------
+# Reading-A structural acceptance test (iteration 2+)
+# ---------------------------------------------------------------------------
+
+
+def test_iteration_2_plus_reading_a_structure(
+    deps_with_stores, mission_store, episode_store, attempt_store,
+    task_center_run_id,
+):
+    """Structural lock for the planner Reading-A reframing (§4, Principle 4).
+
+    Asserts block-kind order and rendered heading structure for a scenario with
+    2 prior closed iterations and a current iteration (sequence_no=3).  Uses
+    structural assertions (not full-text snapshots) so the test survives a
+    future Reading-B rewrite.
+    """
+    request = _seed_mission(mission_store, task_center_run_id, goal="overall goal")
+    episode1 = _seed_episode(
+        episode_store, goal_id=request.id, sequence_no=1, goal="iteration 1 goal"
+    )
+    _close_episode_succeeded(
+        episode_store, episode1.id, spec="iter1 spec", summary="iter1 summary"
+    )
+    episode2 = _seed_episode(
+        episode_store, goal_id=request.id, sequence_no=2, goal="iteration 2 goal"
+    )
+    _close_episode_succeeded(
+        episode_store, episode2.id, spec="iter2 spec", summary="iter2 summary"
+    )
+    episode3 = _seed_episode(
+        episode_store, goal_id=request.id, sequence_no=3, goal="iteration 3 goal"
+    )
+    current_attempt = _seed_running_attempt(attempt_store, episode3.id, sequence_no=1)
+
+    packet = _planner_build(
+        ContextScope(
+            goal_id=request.id,
+            iteration_id=episode3.id,
+            trial_id=current_attempt.id,
+        ),
+        deps_with_stores,
+    )
+
+    # 1. Block-kind order (structural lock; survives Reading B):
+    tier_kinds = {
+        "goal_statement",
+        "prior_iteration_specification",
+        "prior_iteration_summary",
+        "iteration_statement",
+    }
+    assert [b.kind for b in packet.blocks if b.kind in tier_kinds] == [
+        "goal_statement",
+        "prior_iteration_specification",
+        "prior_iteration_summary",
+        "prior_iteration_specification",
+        "prior_iteration_summary",
+        "iteration_statement",
+    ]
+
+    # 2. Renderer output structure (heading-line presence, not full body text):
+    renderer = MarkdownPromptRenderer()
+    rendered = renderer.render(packet)
+    # H1 "# Goal" is the very first line; check presence + no extra H1 Goals.
+    assert rendered.startswith("# Goal\n")
+    assert rendered.count("\n# Goal\n") == 0  # only one # Goal H1, at top
+    assert "\n# Current Iteration\n" in rendered
+    assert "## Iteration 1 accepted plan" in rendered
+    assert "## Iteration 1 summary" in rendered
+    assert "## Iteration 2 accepted plan" in rendered
+    assert "## Iteration 2 summary" in rendered
+
+    # 3. group_heading metadata contract (§2.7 invariant):
+    goal_group = [
+        b for b in packet.blocks if b.metadata.get("group_heading") == "# Goal"
+    ]
+    assert len(goal_group) == 5  # 1 goal_statement + 2 × (spec + summary)

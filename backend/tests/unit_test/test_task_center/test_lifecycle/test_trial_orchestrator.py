@@ -479,8 +479,8 @@ def test_mission_closure_report_success_resumes_waiting_generator(
     refreshed = attempt_store.get(attempt.id)
     assert task is not None
     assert task["status"] == TaskCenterTaskStatus.DONE.value
-    assert task["summaries"][-1]["payload"]["mission_closure_report"][
-        "mission_id"
+    assert task["summaries"][-1]["payload"]["goal_closure_report"][
+        "goal_id"
     ] == "delegated-1"
     assert refreshed is not None
     assert refreshed.stage == TrialStage.EVALUATE

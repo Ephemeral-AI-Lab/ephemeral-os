@@ -7,7 +7,7 @@ def _upsert(
     task_store,
     *,
     task_id: str,
-    attempt_id: str | None,
+    trial_id: str | None,
     role: str = "generator",
     status: str = "pending",
     needs: list[str] | None = None,
@@ -22,7 +22,7 @@ def _upsert(
         status=status,
         summaries=[],
         needs=needs or [],
-        task_center_attempt_id=attempt_id,
+        task_center_attempt_id=trial_id,
         context_packet_id=context_packet_id,
     )
 
@@ -52,11 +52,11 @@ def test_request_and_run_helpers_return_serialized_rows(task_store):
     assert run["status"] == "running"
 
 
-def test_list_tasks_for_attempt_filters_by_attempt_id(task_store):
+def test_list_tasks_for_trial_filters_by_attempt_id(task_store):
     _upsert(task_store, task_id="g1:planner", trial_id="g1", role="planner")
     _upsert(task_store, task_id="g2:planner", trial_id="g2", role="planner")
 
-    tasks = task_store.list_tasks_for_attempt("g1")
+    tasks = task_store.list_tasks_for_trial("g1")
 
     assert [task["id"] for task in tasks] == ["g1:planner"]
 
@@ -95,6 +95,6 @@ def test_list_generator_tasks_excludes_planner_and_evaluator(task_store):
     _upsert(task_store, task_id="g1:gen:a", trial_id="g1", role="generator")
     _upsert(task_store, task_id="g1:evaluator", trial_id="g1", role="evaluator")
 
-    tasks = task_store.list_generator_tasks_for_attempt("g1")
+    tasks = task_store.list_generator_tasks_for_trial("g1")
 
     assert [task["id"] for task in tasks] == ["g1:gen:a"]

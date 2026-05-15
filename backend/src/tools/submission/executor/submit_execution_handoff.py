@@ -16,7 +16,7 @@ from tools.submission.context import (
 )
 
 if TYPE_CHECKING:
-    from task_center import StartedMission
+    from task_center import StartedGoal
 
 
 class RequestMissionSolutionInput(BaseModel):
@@ -51,24 +51,24 @@ async def submit_execution_handoff(
         return ToolResult(output=str(exc), is_error=True)
 
     try:
-        started_mission: StartedMission = (
-            submission_context.start_delegated_mission(goal=goal)
+        started_goal: StartedGoal = (
+            submission_context.start_delegated_goal(goal=goal)
         )
     except TaskCenterInvariantViolation as exc:
         return ToolResult(output=str(exc), is_error=True)
 
     return ToolResult(
         output=(
-            "Started delegated mission "
-            f"{started_mission.mission_id} "
+            "Started delegated goal "
+            f"{started_goal.goal_id} "
             "for this generator task."
         ),
         metadata={
-            "submission_kind": "mission_start",
-            "task_center_task_id": started_mission.parent_task_id,
-            "attempt_id": started_mission.parent_attempt_id,
-            "goal_id": started_mission.mission_id,
-            "initial_episode_id": started_mission.initial_episode_id,
-            "initial_attempt_id": started_mission.initial_attempt_id,
+            "submission_kind": "goal_start",
+            "task_center_task_id": started_goal.parent_task_id,
+            "attempt_id": started_goal.parent_attempt_id,
+            "goal_id": started_goal.goal_id,
+            "initial_iteration_id": started_goal.initial_iteration_id,
+            "initial_trial_id": started_goal.initial_trial_id,
         },
     )

@@ -192,9 +192,9 @@ async def test_submit_execution_handoff_starts_delegated_request(
     )
 
     task = task_store.get_task(generator_id)
-    delegated_request = mission_store.get(result.metadata["mission_id"])
-    initial_episode = episode_store.get(result.metadata["initial_episode_id"])
-    created_attempt = attempt_store.get(result.metadata["initial_attempt_id"])
+    delegated_request = mission_store.get(result.metadata["goal_id"])
+    initial_episode = episode_store.get(result.metadata["initial_iteration_id"])
+    created_attempt = attempt_store.get(result.metadata["initial_trial_id"])
 
     assert not result.is_error
     assert result.does_terminate
@@ -274,7 +274,7 @@ async def test_submit_execution_handoff_entry_mode_uses_bound_controller(
     )
 
     entry_task = task_store.get_task(entry_task_id)
-    delegated_mission = mission_store.get(result.metadata["mission_id"])
+    delegated_mission = mission_store.get(result.metadata["goal_id"])
 
     assert not result.is_error
     assert result.does_terminate
@@ -349,7 +349,7 @@ async def test_submit_execution_handoff_return_updates_outer_generator(
         make_tool_context(fixture, outer_generator_id),
         emit=_noop_emit,
     )
-    delegated_attempt_id = result.metadata["initial_attempt_id"]
+    delegated_attempt_id = result.metadata["initial_trial_id"]
     delegated_orchestrator = fixture.runtime.orchestrator_registry.get_or_raise(
         delegated_attempt_id
     )
@@ -359,7 +359,7 @@ async def test_submit_execution_handoff_return_updates_outer_generator(
 
     delegated_orchestrator.apply_plan_submission(
         PlannerSubmission(
-            trial_id=delegated_attempt_id,
+            attempt_id=delegated_attempt_id,
             planner_task_id=delegated_planner_id,
             kind="full",
             task_specification="Solve delegated task.",
@@ -378,7 +378,7 @@ async def test_submit_execution_handoff_return_updates_outer_generator(
     )
     delegated_orchestrator.apply_generator_submission(
         GeneratorSubmission(
-            trial_id=delegated_attempt_id,
+            attempt_id=delegated_attempt_id,
             task_id=delegated_generator_id,
             outcome="success",
             summary="Delegated work done.",
@@ -387,7 +387,7 @@ async def test_submit_execution_handoff_return_updates_outer_generator(
     )
     delegated_orchestrator.apply_evaluator_submission(
         EvaluatorSubmission(
-            trial_id=delegated_attempt_id,
+            attempt_id=delegated_attempt_id,
             task_id=delegated_evaluator_id,
             outcome="success",
             summary="Delegated task passed.",
@@ -397,12 +397,12 @@ async def test_submit_execution_handoff_return_updates_outer_generator(
 
     outer_task = task_store.get_task(outer_generator_id)
     outer_attempt = attempt_store.get(fixture.trial_id)
-    delegated_request = mission_store.get(result.metadata["mission_id"])
+    delegated_request = mission_store.get(result.metadata["goal_id"])
 
     assert outer_task is not None
     assert outer_task["status"] == TaskCenterTaskStatus.DONE.value
-    assert outer_task["summaries"][-1]["payload"]["mission_closure_report"][
-        "final_attempt_id"
+    assert outer_task["summaries"][-1]["payload"]["goal_closure_report"][
+        "final_trial_id"
     ] == delegated_attempt_id
     assert outer_attempt is not None
     assert outer_attempt.stage == TrialStage.EVALUATE

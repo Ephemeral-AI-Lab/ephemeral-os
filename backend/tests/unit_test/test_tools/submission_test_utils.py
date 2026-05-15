@@ -23,9 +23,9 @@ from tools._framework.core.runtime import ExecutionMetadata
 class TaskCenterFixture:
     runtime: TrialDeps
     orchestrator: TrialOrchestrator
-    attempt_id: str
+    trial_id: str
     request_id: str
-    episode_id: str
+    iteration_id: str
 
 
 class FakeLauncher:
@@ -38,34 +38,34 @@ class FakeLauncher:
 
 def build_harness_fixture(
     *,
-    mission_store: Any,
-    episode_store: Any,
-    attempt_store: Any,
+    goal_store: Any,
+    iteration_store: Any,
+    trial_store: Any,
     task_store: Any,
     composer: Any,
 ) -> TaskCenterFixture:
-    request = mission_store.insert(
+    request = goal_store.insert(
         task_center_run_id="run1",
         requested_by_task_id="outer-task",
         goal="solve the task",
     )
-    iteration = episode_store.insert(
+    iteration = iteration_store.insert(
         goal_id=request.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="solve the task",
         trial_budget=2,
     )
-    mission_store.append_iteration_id(request.id, iteration.id)
-    attempt = attempt_store.insert(iteration_id=iteration.id, trial_sequence_no=1)
-    episode_store.append_trial_id(iteration.id, attempt.id)
+    goal_store.append_iteration_id(request.id, iteration.id)
+    attempt = trial_store.insert(iteration_id=iteration.id, trial_sequence_no=1)
+    iteration_store.append_trial_id(iteration.id, attempt.id)
 
     launcher = FakeLauncher()
     registry = TrialOrchestratorRegistry()
     runtime = TrialDeps(
-        goal_store=mission_store,
-        iteration_store=episode_store,
-        trial_store=attempt_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        trial_store=trial_store,
         task_store=task_store,
         agent_launcher=launcher,
         orchestrator_registry=registry,
@@ -117,7 +117,7 @@ def apply_single_generator_plan(fixture: TaskCenterFixture, *, agent_name: str =
     planner_id = start_planner(fixture)
     fixture.orchestrator.apply_plan_submission(
         PlannerSubmission(
-            trial_id=fixture.trial_id,
+            attempt_id=fixture.trial_id,
             planner_task_id=planner_id,
             kind="full",
             task_specification="spec",
@@ -141,7 +141,7 @@ def spawn_evaluator(fixture: TaskCenterFixture) -> str:
     generator_id = apply_single_generator_plan(fixture)
     fixture.orchestrator.apply_generator_submission(
         GeneratorSubmission(
-            trial_id=fixture.trial_id,
+            attempt_id=fixture.trial_id,
             task_id=generator_id,
             outcome="success",
             summary="done",
