@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import atexit
 import concurrent.futures
 import logging
 from pathlib import Path
@@ -20,6 +21,7 @@ _BUNDLE_UPLOAD_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
     max_workers=4,
     thread_name_prefix=_BUNDLE_UPLOAD_THREAD_PREFIX,
 )
+atexit.register(_BUNDLE_UPLOAD_EXECUTOR.shutdown, wait=False, cancel_futures=True)
 LifecyclePhase = Literal["create", "start"]
 _INSTALL_GIT_SCRIPT = (
     Path(__file__).resolve().parent.parent / "daemon" / "scripts" / "install_git.sh"
@@ -143,8 +145,8 @@ def finish_runtime_bundle_upload(
             _BUNDLE_UPLOAD_JOIN_TIMEOUT_S,
             sandbox_id,
         )
-    except Exception:
-        logger.warning(
+    except RuntimeError:
+        logger.error(
             "sandbox-runtime bundle upload failed for sandbox %s; "
             "sequential bootstrap will retry",
             sandbox_id,
