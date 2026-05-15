@@ -19,7 +19,7 @@ import json
 from dataclasses import fields
 from pathlib import Path
 
-from task_center_runner.runner import RunReport
+from task_center_runner.core.runner import RunReport
 
 
 _GOLDEN_PATH = (

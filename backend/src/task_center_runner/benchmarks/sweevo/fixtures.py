@@ -21,8 +21,8 @@ from benchmarks.sweevo.dataset import select_sweevo_instance
 from benchmarks.sweevo.models import SWEEvoInstance, _REPO_DIR
 from benchmarks.sweevo.prompt import build_sweevo_user_prompt
 from task_center_runner.hooks.registry import Hook
-from task_center_runner.runner import RunReport
-from task_center_runner.runner import run_scenario as _generic_run_scenario
+from task_center_runner.core.runner import RunReport
+from task_center_runner.core.runner import run_scenario as _generic_run_scenario
 from task_center_runner.scenarios.base import Scenario
 from task_center_runner.core.stores import TaskCenterStoreBundle
 

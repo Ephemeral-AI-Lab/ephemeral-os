@@ -31,7 +31,7 @@ from tools._framework.core.runtime import ExecutionMetadata
 
 def test_runner_top_level_exports_are_callable() -> None:
     assert callable(run_scenario)
-    assert RunReport.__module__ == "task_center_runner.runner"
+    assert RunReport.__module__ == "task_center_runner.core.runner"
     sig = inspect.signature(run_scenario)
     # de-sweevo-fied signature: no ``instance``, ``repo_dir`` is required, and
     # ``entry_prompt`` is required.

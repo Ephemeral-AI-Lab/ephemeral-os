@@ -112,6 +112,8 @@ _PREFIX_REMAPS = (
     ("real_agent_bootstrap", "core.bootstrap"),
     ("sweevo_adapter", "benchmarks.sweevo.fixtures"),
     ("fixtures", "core.fixtures"),
+    ("runner", "core.runner"),
+    ("real_agent_run", "core.real_agent_run"),
 )
 
 

@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 from benchmarks.sweevo.models import SWEEvoInstance
-from task_center_runner.real_agent_run import run_sweevo_real_agent
+from task_center_runner.core.real_agent_run import run_sweevo_real_agent
 from task_center_runner.core.stores import TaskCenterStoreBundle
 
 pytestmark = pytest.mark.skipif(

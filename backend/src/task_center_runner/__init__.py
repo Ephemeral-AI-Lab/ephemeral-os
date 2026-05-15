@@ -23,7 +23,7 @@ Top-level modules:
 
 from __future__ import annotations
 
-from task_center_runner.runner import RunReport, run_scenario
+from task_center_runner.core.runner import RunReport, run_scenario
 from task_center_runner.core.stores import (
     TaskCenterStoreBundle,
     create_per_test_task_center_stores,
