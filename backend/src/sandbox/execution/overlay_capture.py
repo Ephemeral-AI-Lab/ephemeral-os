@@ -179,33 +179,49 @@ def _content(
 
 
 def _walk_upperdir(upper_root: Path) -> Iterator[OverlayPathChange]:
+    # Stream via os.walk with per-level sort instead of sorted(rglob("*")),
+    # which materializes every path in memory before iterating — OOM-prone
+    # on runaway commands that write many files. Emission order changes from
+    # full-tree lex to per-level lex; consumers depend on the
+    # "opaque_dir before children" invariant which topdown=True preserves.
     emitted_opaque_dirs: set[str] = set()
-    for entry in sorted(upper_root.rglob("*"), key=lambda item: item.as_posix()):
-        rel = entry.relative_to(upper_root)
-        if entry.name == OPAQUE_MARKER:
-            opaque_path = rel.parent.as_posix() if rel.parent.as_posix() != "." else ""
-            if opaque_path not in emitted_opaque_dirs:
-                emitted_opaque_dirs.add(opaque_path)
-                yield _marker("opaque_dir", opaque_path)
-            continue
-        if _is_whiteout_marker(entry):
-            yield _marker("delete", _whiteout_target(rel).as_posix())
-            continue
-        if entry.is_dir():
-            if _has_overlay_opaque_xattr(entry):
-                opaque_path = rel.as_posix()
+    for dirpath, dirnames, filenames in os.walk(
+        upper_root, topdown=True, followlinks=False
+    ):
+        dirnames.sort()
+        filenames.sort()
+        dir_path = Path(dirpath)
+        for name in filenames:
+            entry = dir_path / name
+            rel = entry.relative_to(upper_root)
+            if name == OPAQUE_MARKER:
+                opaque_path = (
+                    rel.parent.as_posix() if rel.parent.as_posix() != "." else ""
+                )
                 if opaque_path not in emitted_opaque_dirs:
                     emitted_opaque_dirs.add(opaque_path)
                     yield _marker("opaque_dir", opaque_path)
-            continue
-        if _is_overlay_whiteout(entry):
-            yield _marker("delete", rel.as_posix())
-            continue
-        if entry.is_symlink():
-            yield _content("symlink", rel.as_posix(), entry, symlink=True)
-            continue
-        if entry.is_file():
-            yield _content("write", rel.as_posix(), entry)
+                continue
+            if _is_whiteout_marker(entry):
+                yield _marker("delete", _whiteout_target(rel).as_posix())
+                continue
+            if _is_overlay_whiteout(entry):
+                yield _marker("delete", rel.as_posix())
+                continue
+            if entry.is_symlink():
+                yield _content("symlink", rel.as_posix(), entry, symlink=True)
+                continue
+            if entry.is_file():
+                yield _content("write", rel.as_posix(), entry)
+        for name in dirnames:
+            entry = dir_path / name
+            if not _has_overlay_opaque_xattr(entry):
+                continue
+            rel = entry.relative_to(upper_root)
+            opaque_path = rel.as_posix()
+            if opaque_path not in emitted_opaque_dirs:
+                emitted_opaque_dirs.add(opaque_path)
+                yield _marker("opaque_dir", opaque_path)
 
 
 def _write_whiteout(upperdir: Path, rel: Path) -> None:
