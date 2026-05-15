@@ -78,6 +78,7 @@ def build_scenario_config(
         audit_dir=audit_dir,
         run_label=f"scenario_logs/{scenario.name}",
         instance_id=instance_id,
+        extras={"scenario_name": scenario.name},
     )
     return config, mutable_state, lifecycle
 

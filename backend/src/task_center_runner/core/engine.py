@@ -111,11 +111,15 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
     run_dir_factory = config.run_dir_factory or _default_run_dir
     run_dir = run_dir_factory(config.audit_dir, ctx)
 
+    scenario_name = config.extras.get("scenario_name")
+    if not isinstance(scenario_name, str) or not scenario_name:
+        scenario_name = config.run_label
+
     recorder = AuditRecorder(
         run_dir,
         task_center_run_id="",
         bus=bus,
-        scenario_name=config.run_label,
+        scenario_name=scenario_name,
         instance_id=config.instance_id,
         sandbox_id=lease.sandbox_id,
     )
