@@ -32,7 +32,7 @@ from sandbox.execution.strategy_private_namespace import (
 )
 from sandbox.occ.changeset import ChangesetResult, CommitOptions
 from sandbox.occ.overlay import overlay_path_changes_to_occ_changes
-from sandbox.execution.overlay_change import OverlayPathChange
+from sandbox.execution.path_change import OverlayPathChange
 from sandbox.daemon.async_bridge import run_sync_in_executor
 from sandbox.timing import monotonic_now
 

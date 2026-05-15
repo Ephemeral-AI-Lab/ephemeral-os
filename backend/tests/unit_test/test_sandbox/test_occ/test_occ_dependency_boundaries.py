@@ -43,7 +43,7 @@ def test_phase03_occ_preparation_modules_do_not_import_overlay_or_legacy_apply()
             if name in forbidden_exact or any(
                 name.startswith(prefix) for prefix in forbidden_prefix
             ):
-                if name == "sandbox.execution.overlay_change":
+                if name == "sandbox.execution.path_change":
                     # The overlay→OCC bridge is the only allowed overlay import for OCC.
                     continue
                 hits.append((path.name, name))
@@ -55,7 +55,7 @@ def test_overlay_capture_module_is_the_occ_overlay_bridge() -> None:
     occ_root = Path(sandbox.occ.__file__).resolve().parent
     imports = _imports(occ_root / "overlay.py")
 
-    assert "sandbox.execution.overlay_change" in imports
+    assert "sandbox.execution.path_change" in imports
     assert "sandbox.occ.changeset" in imports
 
 

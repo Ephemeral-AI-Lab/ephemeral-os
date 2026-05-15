@@ -11,7 +11,7 @@ from sandbox.occ.changeset import (
     build_overlay_write_change,
 )
 from sandbox.occ.changeset import Change, OpaqueDirChange, SymlinkChange
-from sandbox.execution.overlay_change import OverlayPathChange
+from sandbox.execution.path_change import OverlayPathChange
 
 
 def overlay_path_changes_to_occ_changes(

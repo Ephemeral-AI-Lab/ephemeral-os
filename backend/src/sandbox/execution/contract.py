@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
     from sandbox.layer_stack.manifest import Manifest
-    from sandbox.execution.overlay_change import OverlayPathChange
+    from sandbox.execution.path_change import OverlayPathChange
     from sandbox.occ.changeset import Change, ChangesetResult, CommitOptions
 
 

@@ -50,7 +50,7 @@ def test_runtime_bundle_contains_unified_snapshot_runtime_without_ndjson() -> No
         names = set(tar.getnames())
 
     assert "sandbox/execution/overlay_capture.py" in names
-    assert "sandbox/execution/overlay_change.py" in names
+    assert "sandbox/execution/path_change.py" in names
     assert "sandbox/execution/contract.py" in names
     assert "sandbox/execution/orchestrator.py" in names
     assert "sandbox/daemon/handler/overlay.py" in names
