@@ -138,3 +138,32 @@ The full REVIEW.md §5 rename map includes additional renames that this pass lef
 ---
 
 **Status:** Phase 8 sandbox-internal naming pass complete. 547 sandbox tests green at HEAD `f1e908f6`. No `task_center/` files touched. No compatibility shims introduced beyond the pre-existing `sandbox.plugin.runtime` deprecation re-export from Phase 5.
+
+---
+
+## 7. Phase 8b — Top-level file moves (`bd5d5d29..ef0c3aa9` range, 5 commits)
+
+Follow-up cleanup: the user asked for zero top-level files in `sandbox/` (other than `__init__.py`). 5 top-level files moved.
+
+| File | New location | Notes |
+|---|---|---|
+| `models.py` | `_shared/models.py` | New `_shared/` subpackage for cross-subsystem infra (sandbox-package-private). Bundle now wholesale-scans `_shared/`. Contract allowlist updated. |
+| `timing.py` | split: `_shared/clock.py` + `audit/timing.py` | Clock primitives (monotonic_now, record_elapsed, normalize_timing_map) are bundled and sandbox-wide → `_shared/clock.py`. Audit-signal derivation (timing_audit_signals, TimingAuditSignal) is host-only → `audit/timing.py`. |
+| `timing_keys.py` | `_shared/timing_keys.py` | TimingKey enum used by daemon/_wire + occ/* (in-bundle). |
+| `daemon_paths.py` | `daemon/paths.py` | Already named for daemon scope. |
+| `_conflict_markers.py` | `audit/conflict_markers.py` | Dropped leading underscore — module was imported across packages, so the `_` lied. |
+
+### Bundle changes
+
+`runtime_bundle.py` lost the top-level inclusion tuple (had `models.py, timing.py, timing_keys.py, daemon_paths.py`) and gained a wholesale `_shared/` tree scan. `daemon_paths.py` is now picked up automatically by the daemon-tree scan. `_conflict_markers.py` is host-only and unbundled. `audit/timing.py` is host-only and unbundled.
+
+### Final result
+
+```
+$ ls backend/src/sandbox/*.py
+backend/src/sandbox/__init__.py
+```
+
+Only `__init__.py` remains at the top level. 547 sandbox tests still green. The 2 pre-existing F401 ruff warnings in `test_manifest.py` are unchanged.
+
+5 commits: see `git log --oneline bd5d5d29~5..bd5d5d29`.
