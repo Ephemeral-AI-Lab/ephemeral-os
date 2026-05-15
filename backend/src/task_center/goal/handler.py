@@ -98,18 +98,18 @@ class GoalRepository:
 # ---- Ancestry --------------------------------------------------------------
 
 
-def nested_mission_depth(
+def nested_goal_depth(
     *,
-    mission_id: str,
+    goal_id: str,
     mission_store: GoalStoreProtocol,
     episode_store: IterationStoreProtocol,
     attempt_store: TrialStoreProtocol,
     task_store: TaskStoreProtocol,
 ) -> int:
-    """Number of goal ancestors on the chain INCLUDING ``mission_id``."""
+    """Number of goal ancestors on the chain INCLUDING ``goal_id``."""
     depth = 0
     seen_goal_ids: set[str] = set()
-    current_goal_id = mission_id
+    current_goal_id = goal_id
     while True:
         if current_goal_id in seen_goal_ids:
             raise TaskCenterInvariantViolation(
@@ -382,5 +382,5 @@ __all__ = [
     "GoalClosureReportSink",
     "GoalHandler",
     "GoalRepository",
-    "nested_mission_depth",
+    "nested_goal_depth",
 ]

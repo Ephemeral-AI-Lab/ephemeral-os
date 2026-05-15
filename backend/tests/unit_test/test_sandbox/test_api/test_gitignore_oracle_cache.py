@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from sandbox.layer_stack import WriteLayerChange, LayerStackManager
-from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
-from sandbox.occ.content.hashing import ContentHasher
+from sandbox.occ.gitignore import SnapshotGitignoreOracle
+from sandbox.occ.hashing import ContentHasher
 
 
 def _publish(manager: LayerStackManager, tmp_path: Path, rel: str, content: bytes) -> None:

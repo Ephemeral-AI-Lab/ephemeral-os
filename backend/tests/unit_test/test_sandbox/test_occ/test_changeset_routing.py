@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from tests.occ_change_helpers import write_change
 
-from sandbox.occ.changeset.prepared import CommitOptions, RouteDecision
-from sandbox.occ.changeset.types import (
+from sandbox.occ.changeset import CommitOptions, RouteDecision
+from sandbox.occ.changeset import (
     EditChange,
     OpaqueDirChange,
     SymlinkChange,

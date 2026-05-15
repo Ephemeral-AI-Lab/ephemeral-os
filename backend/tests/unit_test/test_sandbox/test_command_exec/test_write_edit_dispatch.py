@@ -14,16 +14,16 @@ import pytest
 
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.daemon.handler import metrics
-from sandbox.daemon.handler.request_context import (
+from sandbox.daemon._toolbox import (
     ClassifiedPath,
     classify_path,
     services as request_services,
 )
 from sandbox.daemon.handler import edit, read, write
 from sandbox.daemon.rpc import dispatcher as server
-from sandbox.daemon.service import occ_backend
+from sandbox.daemon import occ_backend
 from sandbox.daemon.service import shell_runner
-from sandbox.daemon.service.workspace_server import get_layer_stack_manager
+from sandbox.daemon.workspace_server import get_layer_stack_manager
 
 
 # ---------------------------------------------------------------------------

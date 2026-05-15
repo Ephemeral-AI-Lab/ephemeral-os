@@ -10,10 +10,10 @@ import threading
 
 from sandbox.layer_stack.manifest import LayerRef, Manifest
 from sandbox.layer_stack.manager import LayerStackManager
-from sandbox.occ.changeset.types import ChangesetResult
+from sandbox.occ.changeset import ChangesetResult
 from sandbox.occ.maintenance import AutoSquashMaintenancePolicy
 from sandbox.occ.service import OccService
-from sandbox.occ.timing_keys import TimingKey
+from sandbox.timing_keys import TimingKey
 
 
 class _Gitignore:

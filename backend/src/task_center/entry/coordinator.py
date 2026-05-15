@@ -1,8 +1,8 @@
 """TaskCenter entrypoint for top-level user requests.
 
-The entry executor is not a Mission. It is the top-level user-request agent
+The entry executor is not a Goal. It is the top-level user-request agent
 that can either complete directly or call ``submit_execution_handoff`` to start
-the first delegated Mission. Lifecycle events flow through
+the first delegated Goal. Lifecycle events flow through
 :class:`EntryTaskController`, which is attached to
 :class:`AttemptDeps.entry_task_controller` so the launcher, close-report
 router, and submission tools can dispatch entry-mode events consistently.
@@ -15,11 +15,11 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from db.stores import (
-    MissionStore,
+    GoalStore,
     ContextPacketStore,
-    AttemptStore,
+    TrialStore,
     TaskCenterStore,
-    EpisodeStore,
+    IterationStore,
 )
 from agents import validate_agent_definitions_resolved
 from task_center._core.types import TaskCenterLifecycleConfig
@@ -35,16 +35,16 @@ from task_center._core.agent_routing import (
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.context_engine.scope import ContextScope
 from task_center.entry import EntryTaskController, TaskCenterSandboxBinding, TaskCenterSandboxBridge
-from task_center.attempt.launch import (
+from task_center.trial.launch import (
     AgentStreamEmitter,
     AttemptAgentRunner,
     EphemeralAttemptAgentLauncher,
 )
-from task_center.attempt.orchestrator_registry import (
-    AttemptOrchestratorRegistry,
+from task_center.trial.orchestrator_registry import (
+    TrialOrchestratorRegistry,
 )
-from task_center.attempt.runtime import AgentLaunch, AttemptDeps
-from task_center.episode import EpisodeManagerRegistry
+from task_center.trial.runtime import AgentLaunch, AttemptDeps
+from task_center.iteration import IterationManagerRegistry
 from task_center.task_state import (
     SpawnReason,
     TaskCenterTaskRole,
@@ -78,9 +78,9 @@ def start_task_center_entry_run(
     sandbox_id: str | None,
     on_agent_event: AgentStreamEmitter | None,
     task_store: TaskCenterStore,
-    mission_store: MissionStore,
-    episode_store: EpisodeStore,
-    attempt_store: AttemptStore,
+    mission_store: GoalStore,
+    episode_store: IterationStore,
+    attempt_store: TrialStore,
     runner: AttemptAgentRunner | None = None,
     context_packet_store: ContextPacketStore | None = None,
     sandbox_bridge: TaskCenterSandboxBridge | None = None,
@@ -112,9 +112,9 @@ class TaskCenterEntryCoordinator:
         sandbox_id: str | None,
         on_agent_event: AgentStreamEmitter | None,
         task_store: TaskCenterStore,
-        mission_store: MissionStore,
-        episode_store: EpisodeStore,
-        attempt_store: AttemptStore,
+        mission_store: GoalStore,
+        episode_store: IterationStore,
+        attempt_store: TrialStore,
         runner: AttemptAgentRunner | None = None,
         context_packet_store: ContextPacketStore | None = None,
         sandbox_bridge: TaskCenterSandboxBridge | None = None,
@@ -135,7 +135,7 @@ class TaskCenterEntryCoordinator:
         """Create and launch the entry executor."""
         self._assert_stores_ready()
         request_id, run_id, entry_task_id, binding = self._create_top_level_run()
-        manager_registry = EpisodeManagerRegistry()
+        manager_registry = IterationManagerRegistry()
 
         self._write_entry_task_row(
             entry_task_id=entry_task_id,
@@ -199,7 +199,7 @@ class TaskCenterEntryCoordinator:
     def _create_runtime(
         self,
         *,
-        manager_registry: EpisodeManagerRegistry,
+        manager_registry: IterationManagerRegistry,
         entry_task_controller: EntryTaskController,
     ) -> tuple[AttemptDeps, EphemeralAttemptAgentLauncher]:
         runtime_ref: AttemptDeps | None = None
@@ -217,7 +217,7 @@ class TaskCenterEntryCoordinator:
             attempt_store=self._attempt_store,
             task_store=self._task_store,
             agent_launcher=launcher,
-            orchestrator_registry=AttemptOrchestratorRegistry(),
+            orchestrator_registry=TrialOrchestratorRegistry(),
             manager_registry=manager_registry,
             lifecycle_config=TaskCenterLifecycleConfig(),
             composer=composer,
@@ -307,7 +307,7 @@ class TaskCenterEntryCoordinator:
         controller: EntryTaskController,
         task_center_run_id: str,
     ) -> AgentLaunch:
-        from task_center.attempt.launch import LaunchBuilder
+        from task_center.trial.launch import LaunchBuilder
 
         return LaunchBuilder(runtime=runtime).for_entry(
             task_id=controller.task_id,
@@ -332,9 +332,9 @@ class TaskCenterEntryCoordinator:
 def _assert_stores_ready(
     *,
     task_store: TaskCenterStore,
-    mission_store: MissionStore,
-    episode_store: EpisodeStore,
-    attempt_store: AttemptStore,
+    mission_store: GoalStore,
+    episode_store: IterationStore,
+    attempt_store: TrialStore,
 ) -> None:
     if not (
         task_store.is_ready

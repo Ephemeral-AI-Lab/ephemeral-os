@@ -9,7 +9,7 @@ Owns the single source of truth for:
   host-visible payload.
 
 The OCC backend tuple ``(LayerStackClient, OccClient, SnapshotGitignoreOracle,
-LayerStackManager)`` is owned by :mod:`sandbox.daemon.service.occ_backend`.
+LayerStackManager)`` is owned by :mod:`sandbox.daemon.occ_backend`.
 The ``services`` helper is the canonical per-verb access point.
 
 ``shell`` does NOT use this module — the dispatcher routes it directly to
@@ -25,16 +25,16 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Literal, NamedTuple
 
-from sandbox.occ.changeset.types import ChangesetResult
-from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
-from sandbox.daemon.service.result_projection import (
+from sandbox.occ.changeset import ChangesetResult
+from sandbox.occ.gitignore import SnapshotGitignoreOracle
+from sandbox.daemon._wire import (
     committed_paths,
     conflict_and_status,
     conflict_to_dict,
     gitignore_cache_timings,
 )
-from sandbox.daemon.service import occ_backend
-from sandbox.daemon.service.occ_backend import OccBackend
+from sandbox.daemon import occ_backend
+from sandbox.daemon.occ_backend import OccBackend
 from sandbox.timing import monotonic_now
 
 # -- classifier predicate ---------------------------------------------------

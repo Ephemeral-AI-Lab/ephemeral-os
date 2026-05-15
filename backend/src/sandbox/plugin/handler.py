@@ -22,19 +22,19 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
-from sandbox.daemon.service.workspace_server import get_layer_stack_manager
-from sandbox.models import SandboxCaller
-from sandbox.plugin.projection import WorkspaceProjection
-from sandbox.plugin.runtime.context import PluginOpContext
-from sandbox.plugin.runtime.registry import (
-    flush_plugin_registrations,
-    pending_plugin_registrations,
-    clear_plugin_registrations,
-)
+from sandbox.daemon.workspace_server import get_layer_stack_manager
 from sandbox.layer_stack.workspace_binding import (
     WorkspaceBindingError,
     require_workspace_binding,
 )
+from sandbox.models import SandboxCaller
+from sandbox.plugin.op_context import PluginOpContext
+from sandbox.plugin.op_registry import (
+    clear_plugin_registrations,
+    flush_plugin_registrations,
+    pending_plugin_registrations,
+)
+from sandbox.plugin.projection import WorkspaceProjection
 
 __all__ = [
     "PluginEnsureError",

@@ -81,9 +81,11 @@ async def _call_daemon(
         {"op": op, "args": _without_none(args)},
         separators=(",", ":"),
     )
-    result = await _exec_daemon_call(
+    result = await _dispatch_once_with_retry(
         exec_fn=exec_fn,
         sandbox_id=sandbox_id,
+        op=op,
+        args=_without_none(args),
         raw_payload=raw_payload,
         cwd=cwd,
         timeout=timeout,
@@ -152,10 +154,12 @@ async def ensure_daemon_current(
         _raise_exec_failed(result)
 
 
-async def _exec_daemon_call(
+async def _dispatch_once_with_retry(
     *,
     exec_fn: _DaemonExec,
     sandbox_id: str,
+    op: str,
+    args: dict[str, Any],
     raw_payload: str,
     cwd: str,
     timeout: int | None,
@@ -166,64 +170,55 @@ async def _exec_daemon_call(
         cwd=cwd,
         timeout=timeout,
     )
-    if _should_retry_after_connect_failure(result):
-        spawn_result = await exec_fn(
-            sandbox_id,
-            _daemon_spawn_command(),
-            cwd=cwd,
-            timeout=_DAEMON_SPAWN_TIMEOUT,
-        )
-        if _exit_code(spawn_result) != 0:
-            return spawn_result
-        await _check_daemon_readiness_after_spawn(
-            exec_fn=exec_fn,
-            sandbox_id=sandbox_id,
-            original_raw_payload=raw_payload,
-            cwd=cwd,
-        )
-        result = await exec_fn(
-            sandbox_id,
-            _daemon_thin_client_command(raw_payload),
-            cwd=cwd,
-            timeout=timeout,
-        )
-    return result
+    if _exit_code(result) != _THIN_CLIENT_CONNECT_FAILED:
+        return result
 
-
-def _should_retry_after_connect_failure(result: Any) -> bool:
-    """Retry only when the thin client failed before sending the envelope."""
-    return _exit_code(result) == _THIN_CLIENT_CONNECT_FAILED
-
-
-async def _check_daemon_readiness_after_spawn(
-    *,
-    exec_fn: _DaemonExec,
-    sandbox_id: str,
-    original_raw_payload: str,
-    cwd: str,
-) -> None:
-    original_op, readiness_payload = _readiness_request_for_original(
-        original_raw_payload
+    spawn_result = await exec_fn(
+        sandbox_id,
+        _daemon_spawn_command(),
+        cwd=cwd,
+        timeout=_DAEMON_SPAWN_TIMEOUT,
     )
-    result = await exec_fn(
+    if _exit_code(spawn_result) != 0:
+        return spawn_result
+
+    layer_stack_root = args.get("layer_stack_root")
+    if not str(layer_stack_root or "").strip():
+        raise _DaemonReadinessError(
+            kind="MissingLayerStackRoot",
+            message="daemon readiness check requires layer_stack_root",
+            details={"op": op},
+        )
+
+    readiness_payload = json.dumps(
+        {
+            "op": "api.runtime.ready",
+            "args": {"layer_stack_root": str(layer_stack_root)},
+        },
+        separators=(",", ":"),
+    )
+    readiness_result = await exec_fn(
         sandbox_id,
         _daemon_thin_client_command(readiness_payload),
         cwd=cwd,
         timeout=30,
     )
-    if _exit_code(result) != 0:
+    if _exit_code(readiness_result) != 0:
         raise _DaemonReadinessError(
             kind="RuntimeReadinessFailed",
-            message=str(getattr(result, "stderr", "") or getattr(result, "stdout", "")),
-            details={"exit_code": _exit_code(result), "original_op": original_op},
+            message=str(
+                getattr(readiness_result, "stderr", "")
+                or getattr(readiness_result, "stdout", "")
+            ),
+            details={"exit_code": _exit_code(readiness_result), "original_op": op},
         )
     try:
-        response = _decode_response(getattr(result, "stdout", ""))
+        response = _decode_response(getattr(readiness_result, "stdout", ""))
     except _DaemonDispatchError as exc:
         raise _DaemonReadinessError(
             kind="BadRuntimeReadinessResponse",
             message=exc.message,
-            details={**exc.details, "original_op": original_op},
+            details={**exc.details, "original_op": op},
         ) from exc
     if "error" in response:
         error = response.get("error") or {}
@@ -236,53 +231,30 @@ async def _check_daemon_readiness_after_spawn(
                     if isinstance(error.get("details"), dict)
                     else {}
                 ),
-                "original_op": original_op,
+                "original_op": op,
             },
         )
     if response.get("ready") is not True:
-        if _is_bootstrap_ready_response(original_op, response):
+        if _is_bootstrap_ready_response(op, response):
             logger.warning(
                 "daemon-readiness: declaring %s ready despite control_plane "
                 "WorkspaceBindingError; original op will retry against an "
                 "unbound workspace and its own error path will surface the "
                 "binding failure if it persists",
-                original_op,
+                op,
             )
         else:
             raise _DaemonReadinessError(
                 kind="RuntimeNotReady",
                 message="daemon readiness check failed",
-                details={"response": response, "original_op": original_op},
+                details={"response": response, "original_op": op},
             )
 
-
-def _readiness_request_for_original(raw_payload: str) -> tuple[str, str]:
-    try:
-        envelope = json.loads(raw_payload)
-    except json.JSONDecodeError as exc:
-        raise _DaemonReadinessError(
-            kind="BadRuntimeRequest",
-            message="cannot derive readiness request from invalid daemon payload",
-            details={"error": str(exc)},
-        ) from exc
-    op = envelope.get("op") if isinstance(envelope, dict) else None
-    args = envelope.get("args") if isinstance(envelope, dict) else None
-    layer_stack_root = args.get("layer_stack_root") if isinstance(args, dict) else None
-    if not str(layer_stack_root or "").strip():
-        raise _DaemonReadinessError(
-            kind="MissingLayerStackRoot",
-            message="daemon readiness check requires layer_stack_root",
-            details={"op": op},
-        )
-    return (
-        str(op or ""),
-        json.dumps(
-            {
-                "op": "api.runtime.ready",
-                "args": {"layer_stack_root": str(layer_stack_root)},
-            },
-            separators=(",", ":"),
-        ),
+    return await exec_fn(
+        sandbox_id,
+        _daemon_thin_client_command(raw_payload),
+        cwd=cwd,
+        timeout=timeout,
     )
 
 

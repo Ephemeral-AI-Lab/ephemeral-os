@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.attempt import AttemptStatus
-from task_center.attempt.orchestrator import AttemptOrchestrator
-from task_center.attempt.orchestrator_registry import (
-    AttemptOrchestratorRegistry,
+from task_center.trial import TrialStatus
+from task_center.trial.orchestrator import TrialOrchestrator
+from task_center.trial.orchestrator_registry import (
+    TrialOrchestratorRegistry,
 )
-from task_center.attempt.runtime import AgentLaunch, AttemptDeps
-from task_center.episode import EpisodeManagerRegistry
-from task_center.episode.state import EpisodeCreationReason
+from task_center.trial.runtime import AgentLaunch, AttemptDeps
+from task_center.iteration import IterationManagerRegistry
+from task_center.iteration.state import IterationCreationReason
 from task_center._core.types import evaluator_task_id, generator_task_id, planner_task_id
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.runtime import ExecutionMetadata
@@ -58,17 +58,17 @@ def _build_runtime(mission_store, episode_store, attempt_store, task_store, *, c
         goal="solve task",
     )
     episode = episode_store.insert(
-        mission_id=request.id,
+        goal_id=request.id,
         sequence_no=1,
-        creation_reason=EpisodeCreationReason.INITIAL,
+        creation_reason=IterationCreationReason.INITIAL,
         goal="solve task",
-        attempt_budget=2,
+        trial_budget=2,
     )
     mission_store.append_episode_id(request.id, episode.id)
-    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    attempt = attempt_store.insert(iteration_id=episode.id, trial_sequence_no=1)
     episode_store.append_attempt_id(episode.id, attempt.id)
     launcher = _FakeLauncher()
-    registry = AttemptOrchestratorRegistry()
+    registry = TrialOrchestratorRegistry()
     runtime = AttemptDeps(
         mission_store=mission_store,
         episode_store=episode_store,
@@ -76,10 +76,10 @@ def _build_runtime(mission_store, episode_store, attempt_store, task_store, *, c
         task_store=task_store,
         agent_launcher=launcher,
         orchestrator_registry=registry,
-        manager_registry=EpisodeManagerRegistry(),
+        manager_registry=IterationManagerRegistry(),
         composer=composer,
     )
-    orchestrator = AttemptOrchestrator(
+    orchestrator = TrialOrchestrator(
         attempt=attempt,
         on_attempt_closed=lambda attempt_id: None,
         runtime=runtime,
@@ -129,4 +129,4 @@ async def test_phase03_full_plan_through_evaluator_success(
     assert not generator_result.is_error
     assert not evaluator_result.is_error
     assert attempt is not None
-    assert attempt.status == AttemptStatus.PASSED
+    assert attempt.status == TrialStatus.PASSED

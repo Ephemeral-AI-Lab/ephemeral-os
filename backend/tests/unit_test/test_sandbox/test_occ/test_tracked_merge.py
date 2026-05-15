@@ -8,15 +8,15 @@ from pathlib import Path
 
 from sandbox.layer_stack.layer_change import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
-from sandbox.occ.changeset.prepared import PreparedPathGroup, RouteDecision
-from sandbox.occ.changeset.types import (
+from sandbox.occ.changeset import PreparedPathGroup, RouteDecision
+from sandbox.occ.changeset import (
     EditChange,
     FileStatus,
     OpaqueDirChange,
     SymlinkChange,
 )
-from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.stage.gated import GatedStager
+from sandbox.occ.hashing import ContentHasher
+from sandbox.occ.stage import GatedStager
 
 
 def _source(tmp_path: Path, name: str, content: bytes) -> Path:

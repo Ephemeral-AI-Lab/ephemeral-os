@@ -1,6 +1,6 @@
 """Phase 5j regression test - Saga inlining (lever #4).
 
-After inlining task_center.saga.Saga directly into MissionStarter's
+After inlining task_center.saga.Saga directly into GoalStarter's
 _compensate_failed_start method, this test pins:
 
 1. The Saga module and its shim are gone.
@@ -18,7 +18,7 @@ import inspect
 
 import pytest
 
-from task_center.mission.starter import MissionStarter
+from task_center.goal.starter import GoalStarter
 
 
 def test_saga_module_is_gone() -> None:
@@ -28,7 +28,7 @@ def test_saga_module_is_gone() -> None:
 
 
 def test_compensate_failed_start_signature_preserved() -> None:
-    sig = inspect.signature(MissionStarter._compensate_failed_start)
+    sig = inspect.signature(GoalStarter._compensate_failed_start)
     expected = {
         "self",
         "mission",
@@ -41,7 +41,7 @@ def test_compensate_failed_start_signature_preserved() -> None:
 
 def test_inline_helper_uses_logger_not_saga() -> None:
     # Sanity: the method body must no longer reference Saga symbols.
-    src = inspect.getsource(MissionStarter._compensate_failed_start)
+    src = inspect.getsource(GoalStarter._compensate_failed_start)
     assert "Saga" not in src
     assert "SagaResult" not in src
     # Best-effort logging still emits per failed step.

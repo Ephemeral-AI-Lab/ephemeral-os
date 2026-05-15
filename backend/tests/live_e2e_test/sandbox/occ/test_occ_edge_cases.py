@@ -14,9 +14,9 @@ pytestmark = pytest.mark.asyncio
 _BODY = r"""
 from sandbox.layer_stack.layer_change import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
-from sandbox.occ.changeset.prepared import CommitOptions
-from sandbox.occ.changeset.types import FileStatus, WriteChange
-from sandbox.occ.changeset.builders import build_api_write_change, build_overlay_write_change
+from sandbox.occ.changeset import CommitOptions
+from sandbox.occ.changeset import FileStatus, WriteChange
+from sandbox.occ.changeset import build_api_write_change, build_overlay_write_change
 
 def write_change(*, path, final_content, source="api_write", base_hash=None):
     if source == "overlay_capture":

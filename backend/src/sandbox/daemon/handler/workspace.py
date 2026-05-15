@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from sandbox.layer_stack.workspace_binding import require_workspace_binding
-from sandbox.daemon.handler.request_context import (
+from sandbox.daemon._toolbox import (
     layer_stack_root as require_layer_stack_root,
     require_arg,
 )
-from sandbox.daemon.service import workspace_server
+from sandbox.daemon import workspace_server
 from sandbox.timing import monotonic_now
 
 
@@ -101,7 +101,7 @@ async def fence_stale_staging(args: dict[str, object]) -> dict[str, object]:
 
 
 async def _drop_peer_runtime_caches(layer_stack_root: str) -> None:
-    from sandbox.daemon.service import occ_backend
+    from sandbox.daemon import occ_backend
 
     occ_backend.drop_backend_cache(layer_stack_root)
 

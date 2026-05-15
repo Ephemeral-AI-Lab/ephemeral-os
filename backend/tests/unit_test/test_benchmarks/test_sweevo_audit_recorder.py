@@ -1,6 +1,6 @@
 """Unit tests for the SWE-EVO live e2e AuditRecorder.
 
-Exercises the 4 ORM commit listeners (Mission/Episode/Attempt/Task) plus the
+Exercises the 4 ORM commit listeners (Goal/Iteration/Trial/Task) plus the
 agent_run_id -> task_id mapping listener, the per-Task message recorder
 gating by primary role, and the run.json/metrics.json writers.
 """
@@ -26,17 +26,17 @@ from db.models.task_center import (
     TaskCenterRunRecord,
     TaskCenterTaskRecord,
 )
-from db.stores.attempt_store import AttemptStore
-from db.stores.episode_store import EpisodeStore
-from db.stores.mission_store import MissionStore
+from db.stores.trial_store import TrialStore
+from db.stores.iteration_store import IterationStore
+from db.stores.goal_store import GoalStore
 from db.stores.task_center_store import TaskCenterStore
 from live_e2e.audit.bus import AuditEventBus
 from live_e2e.audit.events import Event, EventType
 from live_e2e.audit.node_id import NodeId
 from live_e2e.audit.recorder import AuditRecorder
 from task_center import (
-    EpisodeCreationReason,
-    MissionStatus,
+    IterationCreationReason,
+    GoalStatus,
 )
 
 
@@ -49,9 +49,9 @@ class _TestStoreBundle:
     engine: Engine
     session_factory: sessionmaker[Session]
     task_store: TaskCenterStore
-    mission_store: MissionStore
-    episode_store: EpisodeStore
-    attempt_store: AttemptStore
+    mission_store: GoalStore
+    episode_store: IterationStore
+    attempt_store: TrialStore
 
     def close(self) -> None:
         self.engine.dispose()
@@ -70,9 +70,9 @@ def stores() -> Iterator[_TestStoreBundle]:
         engine=engine,
         session_factory=session_factory,
         task_store=TaskCenterStore(),
-        mission_store=MissionStore(),
-        episode_store=EpisodeStore(),
-        attempt_store=AttemptStore(),
+        mission_store=GoalStore(),
+        episode_store=IterationStore(),
+        attempt_store=TrialStore(),
     )
     for store in (
         bundle.task_store,
@@ -176,7 +176,7 @@ def test_mission_update_overwrites_latest_snapshot(
         )
         stores.mission_store.set_status(
             mission.id,
-            status=MissionStatus.SUCCEEDED,
+            status=GoalStatus.SUCCEEDED,
             final_outcome={"ok": True},
             closed_at=datetime.now(UTC),
         )
@@ -202,15 +202,15 @@ def test_episode_and_attempt_listeners(
             goal="solve the problem",
         )
         episode = stores.episode_store.insert(
-            mission_id=mission.id,
+            goal_id=mission.id,
             sequence_no=1,
-            creation_reason=EpisodeCreationReason.INITIAL,
+            creation_reason=IterationCreationReason.INITIAL,
             goal="ep goal",
-            attempt_budget=3,
+            trial_budget=3,
         )
         attempt = stores.attempt_store.insert(
-            episode_id=episode.id,
-            attempt_sequence_no=1,
+            iteration_id=episode.id,
+            trial_sequence_no=1,
         )
     finally:
         recorder.dispose()
@@ -274,15 +274,15 @@ def test_task_dir_placement_per_role(
             goal="goal",
         )
         episode = stores.episode_store.insert(
-            mission_id=mission.id,
+            goal_id=mission.id,
             sequence_no=1,
-            creation_reason=EpisodeCreationReason.INITIAL,
+            creation_reason=IterationCreationReason.INITIAL,
             goal="ep",
-            attempt_budget=3,
+            trial_budget=3,
         )
         attempt = stores.attempt_store.insert(
-            episode_id=episode.id,
-            attempt_sequence_no=1,
+            iteration_id=episode.id,
+            trial_sequence_no=1,
         )
 
         _insert_task(stores, task_id="entry_task_1", role="entry_executor")
@@ -351,15 +351,15 @@ def test_generator_verifier_task_uses_verifier_dir_and_message_recorder(
             goal="goal",
         )
         episode = stores.episode_store.insert(
-            mission_id=mission.id,
+            goal_id=mission.id,
             sequence_no=1,
-            creation_reason=EpisodeCreationReason.INITIAL,
+            creation_reason=IterationCreationReason.INITIAL,
             goal="ep",
-            attempt_budget=3,
+            trial_budget=3,
         )
         attempt = stores.attempt_store.insert(
-            episode_id=episode.id,
-            attempt_sequence_no=1,
+            iteration_id=episode.id,
+            trial_sequence_no=1,
         )
         _insert_task(
             stores,

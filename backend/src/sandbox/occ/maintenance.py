@@ -6,9 +6,9 @@ import threading
 from typing import Protocol, runtime_checkable
 
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.occ.changeset.types import ChangesetResult
+from sandbox.occ.changeset import ChangesetResult
 from sandbox.occ.ports import SnapshotReader
-from sandbox.occ.timing_keys import TimingKey
+from sandbox.timing_keys import TimingKey
 from sandbox.timing import monotonic_now
 
 

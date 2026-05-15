@@ -4,21 +4,21 @@ External callers import lifecycle types, orchestrators, submissions, and
 sandbox helpers from this package root::
 
     from task_center import (
-        AttemptOrchestrator,
+        TrialOrchestrator,
         ContextScope,
         start_task_center_entry_run,
     )
 
 Internal modules import from the canonical submodule path (e.g.
-``task_center.mission.state`` for ``Mission``). The submodule paths are
+``task_center.goal.state`` for ``Goal``). The submodule paths are
 stable; this package root is the convenience facade for outside-the-package
 callers.
 
 Public names are exposed via ``__getattr__`` so that importing a submodule
-(``from task_center.mission.state import Mission``) does NOT trigger the
+(``from task_center.goal.state import Goal``) does NOT trigger the
 heavy agent-launch / context-engine load chain. The cycle would otherwise
 be: db.stores → task_center root → agent_launch.composer → predicates →
-mission.ancestry → db.stores. Lazy loading keeps the DTO submodules
+goal.ancestry → db.stores. Lazy loading keeps the DTO submodules
 import-cycle-safe.
 """
 
@@ -29,14 +29,14 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from task_center.context_engine.core import ContextComposer, LaunchBundle
     from task_center._core.agent_routing import PredicateRegistry
-    from task_center.attempt.generator_dag import ordered_generator_tasks
-    from task_center.attempt.orchestrator import AttemptOrchestrator
-    from task_center.attempt.runtime import AttemptDeps
-    from task_center.attempt.state import (
-        Attempt,
-        AttemptFailReason,
-        AttemptStage,
-        AttemptStatus,
+    from task_center.trial.generator_dag import ordered_generator_tasks
+    from task_center.trial.orchestrator import TrialOrchestrator
+    from task_center.trial.runtime import AttemptDeps
+    from task_center.trial.state import (
+        Trial,
+        TrialFailReason,
+        TrialStage,
+        TrialStatus,
     )
     from task_center.context_engine.core import (
         AgentDefinitionValidationError,
@@ -47,14 +47,14 @@ if TYPE_CHECKING:
     from task_center.entry import EntryTaskController
     from task_center.entry.coordinator import start_task_center_entry_run
     from task_center.entry import TaskCenterSandboxBridge
-    from task_center.episode.state import (
-        Episode,
-        EpisodeCreationReason,
-        EpisodeStatus,
+    from task_center.iteration.state import (
+        Iteration,
+        IterationCreationReason,
+        IterationStatus,
     )
     from task_center._core.types import TaskCenterInvariantViolation
-    from task_center.mission.starter import MissionStarter, StartedMission
-    from task_center.mission.state import Mission, MissionStatus
+    from task_center.goal.starter import GoalStarter, StartedGoal
+    from task_center.goal.state import Goal, GoalStatus
     from task_center.task_state import (
         EvaluatorSubmission,
         GeneratorSubmission,
@@ -69,15 +69,15 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "task_center.context_engine.core",
         "AgentDefinitionValidationError",
     ),
-    "Attempt": ("task_center.attempt.state", "Attempt"),
-    "AttemptDeps": ("task_center.attempt.runtime", "AttemptDeps"),
-    "AttemptFailReason": ("task_center.attempt.state", "AttemptFailReason"),
-    "AttemptOrchestrator": (
-        "task_center.attempt.orchestrator",
-        "AttemptOrchestrator",
+    "Trial": ("task_center.trial.state", "Trial"),
+    "AttemptDeps": ("task_center.trial.runtime", "AttemptDeps"),
+    "TrialFailReason": ("task_center.trial.state", "TrialFailReason"),
+    "TrialOrchestrator": (
+        "task_center.trial.orchestrator",
+        "TrialOrchestrator",
     ),
-    "AttemptStage": ("task_center.attempt.state", "AttemptStage"),
-    "AttemptStatus": ("task_center.attempt.state", "AttemptStatus"),
+    "TrialStage": ("task_center.trial.state", "TrialStage"),
+    "TrialStatus": ("task_center.trial.state", "TrialStatus"),
     "ContextComposer": ("task_center.context_engine.core", "ContextComposer"),
     "ContextPacket": ("task_center.context_engine.packet", "ContextPacket"),
     "ContextScope": ("task_center.context_engine.scope", "ContextScope"),
@@ -85,18 +85,18 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "task_center.entry",
         "EntryTaskController",
     ),
-    "Episode": ("task_center.episode.state", "Episode"),
-    "EpisodeCreationReason": (
-        "task_center.episode.state",
-        "EpisodeCreationReason",
+    "Iteration": ("task_center.iteration.state", "Iteration"),
+    "IterationCreationReason": (
+        "task_center.iteration.state",
+        "IterationCreationReason",
     ),
-    "EpisodeStatus": ("task_center.episode.state", "EpisodeStatus"),
+    "IterationStatus": ("task_center.iteration.state", "IterationStatus"),
     "EvaluatorSubmission": ("task_center.task_state", "EvaluatorSubmission"),
     "GeneratorSubmission": ("task_center.task_state", "GeneratorSubmission"),
     "LaunchBundle": ("task_center.context_engine.core", "LaunchBundle"),
-    "Mission": ("task_center.mission.state", "Mission"),
-    "MissionStarter": ("task_center.mission.starter", "MissionStarter"),
-    "MissionStatus": ("task_center.mission.state", "MissionStatus"),
+    "Goal": ("task_center.goal.state", "Goal"),
+    "GoalStarter": ("task_center.goal.starter", "GoalStarter"),
+    "GoalStatus": ("task_center.goal.state", "GoalStatus"),
     "PlannedGeneratorTask": ("task_center.task_state", "PlannedGeneratorTask"),
     "PlannerSubmission": ("task_center.task_state", "PlannerSubmission"),
     "PredicateRegistry": (
@@ -107,7 +107,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "task_center.context_engine.recipes_registry",
         "RecipeRegistry",
     ),
-    "StartedMission": ("task_center.mission.starter", "StartedMission"),
+    "StartedGoal": ("task_center.goal.starter", "StartedGoal"),
     "TaskCenterInvariantViolation": (
         "task_center._core.types",
         "TaskCenterInvariantViolation",
@@ -117,7 +117,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "TaskCenterSandboxBridge",
     ),
     "ordered_generator_tasks": (
-        "task_center.attempt.generator_dag",
+        "task_center.trial.generator_dag",
         "ordered_generator_tasks",
     ),
     "start_task_center_entry_run": (

@@ -11,9 +11,9 @@ from pathlib import Path
 import pytest
 
 from sandbox.layer_stack.workspace_base import build_workspace_base
-from sandbox.daemon.service import occ_backend
+from sandbox.daemon import occ_backend
 from sandbox.daemon.handler import edit, read, write
-from sandbox.daemon.service.workspace_server import get_layer_stack_manager
+from sandbox.daemon.workspace_server import get_layer_stack_manager
 
 
 @pytest.mark.asyncio

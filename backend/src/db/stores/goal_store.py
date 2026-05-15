@@ -7,14 +7,14 @@ from datetime import UTC, datetime
 
 from db.models.goal import GoalRecord
 from db.stores.base import SyncStoreMixin
-from task_center.mission.state import (
-    Mission,
-    MissionStatus,
+from task_center.goal.state import (
+    Goal,
+    GoalStatus,
 )
 
 
 class GoalStore(SyncStoreMixin):
-    """CRUD for Goal. Returns frozen Mission DTOs."""
+    """CRUD for Goal. Returns frozen Goal DTOs."""
 
     def insert(
         self,
@@ -22,7 +22,7 @@ class GoalStore(SyncStoreMixin):
         task_center_run_id: str,
         requested_by_task_id: str,
         goal: str,
-    ) -> Mission:
+    ) -> Goal:
         with self._sf() as db:
             now = datetime.now(UTC)
             record = GoalRecord(
@@ -30,7 +30,7 @@ class GoalStore(SyncStoreMixin):
                 task_center_run_id=task_center_run_id,
                 requested_by_task_id=requested_by_task_id,
                 goal=goal,
-                status=MissionStatus.OPEN.value,
+                status=GoalStatus.OPEN.value,
                 iteration_ids=[],
                 final_outcome=None,
                 created_at=now,
@@ -41,14 +41,14 @@ class GoalStore(SyncStoreMixin):
             db.refresh(record)
             return self._to_dto(record)
 
-    def get(self, goal_id: str) -> Mission | None:
+    def get(self, goal_id: str) -> Goal | None:
         with self._sf() as db:
             record = db.get(GoalRecord, goal_id)
             return self._to_dto(record) if record is not None else None
 
     def append_iteration_id(
         self, goal_id: str, iteration_id: str
-    ) -> Mission:
+    ) -> Goal:
         with self._sf() as db:
             record = db.get(GoalRecord, goal_id)
             if record is None:
@@ -64,10 +64,10 @@ class GoalStore(SyncStoreMixin):
         self,
         goal_id: str,
         *,
-        status: MissionStatus,
+        status: GoalStatus,
         final_outcome: dict | None,
         closed_at: datetime | None = None,
-    ) -> Mission:
+    ) -> Goal:
         with self._sf() as db:
             record = db.get(GoalRecord, goal_id)
             if record is None:
@@ -82,7 +82,7 @@ class GoalStore(SyncStoreMixin):
 
     def list_for_executor_task(
         self, requested_by_task_id: str
-    ) -> list[Mission]:
+    ) -> list[Goal]:
         with self._sf() as db:
             q = (
                 db.query(GoalRecord)
@@ -96,7 +96,7 @@ class GoalStore(SyncStoreMixin):
 
     def list_for_run(
         self, task_center_run_id: str
-    ) -> list[Mission]:
+    ) -> list[Goal]:
         with self._sf() as db:
             q = (
                 db.query(GoalRecord)
@@ -108,14 +108,14 @@ class GoalStore(SyncStoreMixin):
             )
             return [self._to_dto(r) for r in q.all()]
 
-    def _to_dto(self, record: GoalRecord) -> Mission:
-        return Mission(
+    def _to_dto(self, record: GoalRecord) -> Goal:
+        return Goal(
             id=record.id,
             task_center_run_id=record.task_center_run_id,
             requested_by_task_id=record.requested_by_task_id,
             goal=record.goal,
-            status=MissionStatus(record.status),
-            episode_ids=tuple(record.iteration_ids or ()),
+            status=GoalStatus(record.status),
+            iteration_ids=tuple(record.iteration_ids or ()),
             final_outcome=record.final_outcome,
             created_at=record.created_at,
             updated_at=record.updated_at,

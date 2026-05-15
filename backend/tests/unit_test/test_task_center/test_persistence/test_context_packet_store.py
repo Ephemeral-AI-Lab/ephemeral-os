@@ -68,7 +68,7 @@ def test_round_trip_preserves_blocks_and_metadata(packet_store):
     loaded = packet_store.get(stored_id)
     assert loaded is not None
     assert loaded.target_role == "planner"
-    assert loaded.canonical_refs.mission_id == "req-A"
+    assert loaded.canonical_refsgoal_id == "req-A"
     assert len(loaded.blocks) == 2
     prior = loaded.blocks[1]
     assert prior.metadata["episode_sequence_no"] == "1"

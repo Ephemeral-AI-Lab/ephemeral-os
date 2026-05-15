@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from sandbox.occ.changeset.types import (
+from sandbox.occ.changeset import (
     build_api_write_change,
     build_overlay_write_change,
 )
-from sandbox.occ.changeset.types import ChangeSource, WriteChange
+from sandbox.occ.changeset import ChangeSource, WriteChange
 
 
 def write_change(

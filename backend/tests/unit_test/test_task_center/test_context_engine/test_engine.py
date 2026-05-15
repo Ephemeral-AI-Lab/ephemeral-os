@@ -54,8 +54,8 @@ def _ok_recipe(recipe_id: str, *, required: frozenset[str]) -> ContextRecipe:
             target_role="planner",
             target_id=scope.attempt_id,
             canonical_refs=ContextRefs(
-                mission_id=scope.mission_id,
-                episode_id=scope.episode_id,
+                mission_id=scopegoal_id,
+                episode_id=scopeiteration_id,
                 attempt_id=scope.attempt_id,
             ),
             blocks=[
@@ -96,7 +96,7 @@ def test_engine_dispatches_to_registered_recipe(deps):
         ContextScope(mission_id="r", episode_id="s", attempt_id="g"),
     )
     assert packet.target_id == "g"
-    assert packet.canonical_refs.mission_id == "r"
+    assert packet.canonical_refsgoal_id == "r"
 
 
 def test_recipe_registry_list_ids_returns_sorted():

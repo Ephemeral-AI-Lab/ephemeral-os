@@ -1,24 +1,24 @@
-"""Domain DTO tests for Attempt."""
+"""Domain DTO tests for Trial."""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from task_center.attempt import (
-    Attempt,
-    AttemptFailReason,
-    AttemptStage,
-    AttemptStatus,
+from task_center.trial import (
+    Trial,
+    TrialFailReason,
+    TrialStage,
+    TrialStatus,
 )
 
 
-def _graph(**overrides) -> Attempt:
+def _graph(**overrides) -> Trial:
     base = dict(
         id="g1",
         episode_id="s1",
-        attempt_sequence_no=1,
-        stage=AttemptStage.PLAN,
-        status=AttemptStatus.RUNNING,
+        trial_sequence_no=1,
+        stage=TrialStage.PLAN,
+        status=TrialStatus.RUNNING,
         planner_task_id=None,
         task_specification=None,
         evaluation_criteria=(),
@@ -31,7 +31,7 @@ def _graph(**overrides) -> Attempt:
         closed_at=None,
     )
     base.update(overrides)
-    return Attempt(**base)
+    return Trial(**base)
 
 
 def test_has_partial_continuation_matches_continuation_goal():
@@ -40,17 +40,17 @@ def test_has_partial_continuation_matches_continuation_goal():
 
 
 def test_is_closed_matches_stage():
-    assert _graph(stage=AttemptStage.PLAN).is_closed is False
-    assert _graph(stage=AttemptStage.GENERATE).is_closed is False
-    assert _graph(stage=AttemptStage.EVALUATE).is_closed is False
-    assert _graph(stage=AttemptStage.CLOSED).is_closed is True
+    assert _graph(stage=TrialStage.PLAN).is_closed is False
+    assert _graph(stage=TrialStage.GENERATE).is_closed is False
+    assert _graph(stage=TrialStage.EVALUATE).is_closed is False
+    assert _graph(stage=TrialStage.CLOSED).is_closed is True
 
 
 def test_fail_reason_enum_values():
     assert (
-        AttemptFailReason.PLANNER_FAILED.value
+        TrialFailReason.PLANNER_FAILED.value
         == "planner_failed"
     )
-    assert AttemptFailReason.GENERATOR_FAILED.value == "generator_failed"
-    assert AttemptFailReason.EVALUATOR_FAILED.value == "evaluator_failed"
-    assert AttemptFailReason.STARTUP_FAILED.value == "startup_failed"
+    assert TrialFailReason.GENERATOR_FAILED.value == "generator_failed"
+    assert TrialFailReason.EVALUATOR_FAILED.value == "evaluator_failed"
+    assert TrialFailReason.STARTUP_FAILED.value == "startup_failed"

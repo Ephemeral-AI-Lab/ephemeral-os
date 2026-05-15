@@ -10,12 +10,12 @@ from task_center._core.agent_routing import (
     ResolverContext,
     register_builtin_predicates,
 )
-from task_center.attempt import AttemptStage
+from task_center.trial import TrialStage
 from task_center.context_engine.core import ContextEngineDeps
 from task_center.context_engine.scope import ContextScope
-from task_center.episode.state import EpisodeCreationReason
+from task_center.iteration.state import IterationCreationReason
 from task_center._core.types import TaskCenterInvariantViolation
-from task_center.mission.handler import nested_mission_depth
+from task_center.goal.handler import nested_goal_depth
 
 
 def _stores(mission_store, episode_store, attempt_store, task_store):
@@ -45,9 +45,9 @@ def _seed_episode(episode_store, *, mission_id: str, sequence_no: int = 1):
     return episode_store.insert(
         mission_id=mission_id,
         sequence_no=sequence_no,
-        creation_reason=EpisodeCreationReason.INITIAL,
+        creation_reason=IterationCreationReason.INITIAL,
         goal="g",
-        attempt_budget=2,
+        trial_budget=2,
     )
 
 
@@ -58,7 +58,7 @@ def _seed_attempt(
     sequence_no: int = 1,
 ):
     attempt = attempt_store.insert(
-        episode_id=episode_id, attempt_sequence_no=sequence_no
+        episode_id=episode_id, trial_sequence_no=sequence_no
     )
     attempt_store.set_plan_contract(
         attempt.id,
@@ -66,7 +66,7 @@ def _seed_attempt(
         evaluation_criteria=["c1"],
         continuation_goal=None,
     )
-    attempt_store.set_stage(attempt.id, AttemptStage.GENERATE)
+    attempt_store.set_stage(attempt.id, TrialStage.GENERATE)
     return attempt
 
 
@@ -113,8 +113,8 @@ def _seed_nested_mission_chain(
         mission_ids.append(mission.id)
         if idx == depth - 1:
             break
-        episode = _seed_episode(episode_store, mission_id=mission.id)
-        attempt = _seed_attempt(attempt_store, episode_id=episode.id)
+        episode = _seed_episode(episode_store, goal_id=mission.id)
+        attempt = _seed_attempt(attempt_store, iteration_id=episode.id)
         task_id = f"t-{idx}"
         _seed_task(
             task_store,
@@ -133,8 +133,8 @@ def test_no_parent_task_returns_depth_1(
         mission_store, task_center_run_id=task_center_run_id
     )
     assert (
-        nested_mission_depth(
-            mission_id=mission.id,
+        nested_goal_depth(
+            goal_id=mission.id,
             **_stores(mission_store, episode_store, attempt_store, task_store),
         )
         == 1
@@ -156,8 +156,8 @@ def test_parent_task_with_no_attempt_returns_depth_1(
         attempt_id=None,
     )
     assert (
-        nested_mission_depth(
-            mission_id=mission.id,
+        nested_goal_depth(
+            goal_id=mission.id,
             **_stores(mission_store, episode_store, attempt_store, task_store),
         )
         == 1
@@ -176,14 +176,14 @@ def test_child_mission_returns_depth_2(
         depth=2,
     )
     assert (
-        nested_mission_depth(
+        nested_goal_depth(
             mission_id=root_id,
             **_stores(mission_store, episode_store, attempt_store, task_store),
         )
         == 1
     )
     assert (
-        nested_mission_depth(
+        nested_goal_depth(
             mission_id=child_id,
             **_stores(mission_store, episode_store, attempt_store, task_store),
         )
@@ -203,7 +203,7 @@ def test_grandchild_mission_returns_depth_3(
         depth=MAX_HANDOFF_DEPTH + 1,
     )
     assert (
-        nested_mission_depth(
+        nested_goal_depth(
             mission_id=mission_ids[-1],
             **_stores(mission_store, episode_store, attempt_store, task_store),
         )
@@ -215,7 +215,7 @@ def test_unknown_mission_id_raises(
     mission_store, episode_store, attempt_store, task_store
 ):
     with pytest.raises(TaskCenterInvariantViolation):
-        nested_mission_depth(
+        nested_goal_depth(
             mission_id="nonexistent",
             **_stores(mission_store, episode_store, attempt_store, task_store),
         )

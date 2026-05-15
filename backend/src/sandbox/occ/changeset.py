@@ -10,6 +10,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Literal
 
+from sandbox.layer_stack.manifest import Manifest
+
 ChangeSource = Literal["api_write", "api_edit", "overlay_capture"]
 
 
@@ -174,6 +176,50 @@ class ChangesetResult:
         return all(is_success_status(f.status) for f in self.files)
 
 
+# ---- prepared changesets ---------------------------------------------------
+
+
+class RouteDecision(str, Enum):
+    GATED = "gated"
+    DIRECT = "direct"
+    DROP = "drop"
+    REJECT = "reject"
+
+
+@dataclass(frozen=True)
+class PreparedPathGroup:
+    """Ordered changes for one normalized path and route decision."""
+
+    path: str
+    route: RouteDecision
+    changes: tuple[Change, ...]
+    message: str | None = None
+
+
+@dataclass(frozen=True)
+class CommitOptions:
+    """Request-level OCC commit options.
+
+    ``atomic`` defaults to ``True``: a multi-path changeset is published only
+    if every path validates. If any path fails (ABORTED_OVERLAP,
+    ABORTED_VERSION, FAILED, or REJECTED), no path lands. Callers that want
+    best-effort partial publish must opt out explicitly with
+    ``atomic=False``.
+    """
+
+    atomic: bool = True
+
+
+@dataclass(frozen=True)
+class PreparedChangeset:
+    """Routed changeset consumed by the commit transaction."""
+
+    snapshot: Manifest | None
+    path_groups: tuple[PreparedPathGroup, ...]
+    atomic: bool
+    timings: dict[str, float] = field(default_factory=dict)
+
+
 # ---- builders ------
 
 
@@ -242,11 +288,15 @@ __all__ = [
     "Change",
     "ChangeSource",
     "ChangesetResult",
+    "CommitOptions",
     "DeleteChange",
     "EditChange",
     "FileResult",
     "FileStatus",
     "OpaqueDirChange",
+    "PreparedChangeset",
+    "PreparedPathGroup",
+    "RouteDecision",
     "SymlinkChange",
     "WriteChange",
     "WritePayload",

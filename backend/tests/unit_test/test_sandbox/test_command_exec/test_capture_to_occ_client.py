@@ -12,7 +12,7 @@ from sandbox.execution.orchestrator import _drop_transient_lowerdir
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.layer_stack.workspace_binding import WorkspaceBinding, write_workspace_binding_atomic
-from sandbox.occ.changeset.types import ChangesetResult, FileResult, FileStatus
+from sandbox.occ.changeset import ChangesetResult, FileResult, FileStatus
 from sandbox.daemon.service import shell_runner
 from sandbox.daemon.service.layer_stack_client import LayerStackClient
 

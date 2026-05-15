@@ -31,8 +31,8 @@ from sandbox.api import (
     SandboxCaller,
     SearchReplaceEdit,
 )
-from task_center.attempt import Attempt
-from task_center.episode.state import Episode
+from task_center.trial.state import Trial as Attempt
+from task_center.iteration.state import Iteration as Episode
 from tools._framework.core.base import BaseTool
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.results import ToolResult

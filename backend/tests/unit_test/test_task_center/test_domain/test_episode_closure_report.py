@@ -1,13 +1,13 @@
-"""Tests for EpisodeClosureReport variants and history shape."""
+"""Tests for IterationClosureReport variants and history shape."""
 
 from __future__ import annotations
 
-from task_center.attempt import AttemptFailReason
-from task_center.episode.state import (
-    AttemptedPlanEntry,
-    AttemptPlanFailed,
+from task_center.trial import TrialFailReason
+from task_center.iteration.state import (
+    PriorTrialEntry,
+    TrialPlanFailed,
     SuccessContinue,
-    EpisodeClosureReport,
+    IterationClosureReport,
     TerminalSuccess,
 )
 
@@ -24,48 +24,48 @@ def test_success_continue_carries_goal():
 
 
 def test_attempt_plan_failed_carries_history():
-    e1 = AttemptedPlanEntry(
+    e1 = PriorTrialEntry(
         attempt_id="g1",
-        attempt_sequence_no=1,
+        trial_sequence_no=1,
         task_specification=None,
         evaluation_criteria=(),
-        fail_reason=AttemptFailReason.GENERATOR_FAILED,
+        fail_reason=TrialFailReason.GENERATOR_FAILED,
         attempt_summary_id=None,
         failure_landscape=None,
     )
-    o = AttemptPlanFailed(failure_summary="bad", attempted_plan_history=(e1,))
+    o = TrialPlanFailed(failure_summary="bad", attempted_plan_history=(e1,))
     assert o.kind == "attempt_plan_failed"
     assert o.attempted_plan_history == (e1,)
 
 
 def test_attempted_plan_history_orders_by_sequence_no():
-    e1 = AttemptedPlanEntry(
+    e1 = PriorTrialEntry(
         attempt_id="g1",
-        attempt_sequence_no=1,
+        trial_sequence_no=1,
         task_specification=None,
         evaluation_criteria=(),
         fail_reason=None,
         attempt_summary_id=None,
         failure_landscape=None,
     )
-    e2 = AttemptedPlanEntry(
+    e2 = PriorTrialEntry(
         attempt_id="g2",
-        attempt_sequence_no=2,
+        trial_sequence_no=2,
         task_specification=None,
         evaluation_criteria=(),
         fail_reason=None,
         attempt_summary_id=None,
         failure_landscape=None,
     )
-    seqs = [e.attempt_sequence_no for e in (e1, e2)]
+    seqs = [etrial_sequence_no for e in (e1, e2)]
     assert seqs == sorted(seqs)
 
 
 def test_phase06_summary_fields_default_to_none():
     """Phase 06 fills these. Phase 01 must surface them as ``None``, not absent."""
-    e = AttemptedPlanEntry(
+    e = PriorTrialEntry(
         attempt_id="g1",
-        attempt_sequence_no=1,
+        trial_sequence_no=1,
         task_specification=None,
         evaluation_criteria=(),
         fail_reason=None,
@@ -77,7 +77,7 @@ def test_phase06_summary_fields_default_to_none():
 
 
 def test_closure_report_carries_outcome():
-    rep = EpisodeClosureReport(
+    rep = IterationClosureReport(
         episode_id="s1",
         final_attempt_id="g1",
         outcome=TerminalSuccess(),

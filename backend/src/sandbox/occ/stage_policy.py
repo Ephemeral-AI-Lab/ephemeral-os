@@ -7,8 +7,7 @@ from typing import Literal, Protocol
 
 from sandbox.layer_stack.layer_change import LayerChange
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.occ.changeset.prepared import PreparedPathGroup
-from sandbox.occ.changeset.types import FileResult
+from sandbox.occ.changeset import FileResult, PreparedPathGroup
 
 StageWrite = Callable[[str, bytes], LayerChange]
 StageWriteFromPath = Callable[[str, str, str, bytes | None], LayerChange]

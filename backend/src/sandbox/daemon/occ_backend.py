@@ -6,7 +6,7 @@ that needs layer-stack/OCC/gitignore state: handlers/request_context.py
 handlers/metrics.py (api.layer_metrics).
 The factory uses a canonical ``workspace_ref=layer_stack_root`` only; this module
 owns no path classification (single source of truth lives on command-exec
-via :mod:`sandbox.daemon.handler.request_context`).
+via :mod:`sandbox.daemon._toolbox`).
 """
 
 from __future__ import annotations
@@ -18,12 +18,12 @@ from pathlib import Path
 
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.client import OccClient
-from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
+from sandbox.occ.gitignore import SnapshotGitignoreOracle
 from sandbox.occ.maintenance import AutoSquashMaintenancePolicy
 from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH, OccService
 from sandbox.daemon.service.layer_stack_client import LayerStackClient
 from sandbox.daemon.service.workspace_binding import RuntimeWorkspaceBindingReader
-from sandbox.daemon.service.workspace_server import get_layer_stack_manager
+from sandbox.daemon.workspace_server import get_layer_stack_manager
 
 
 @dataclass(frozen=True)

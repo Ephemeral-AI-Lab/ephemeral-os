@@ -18,11 +18,11 @@ from agents import (
 from db.base import Base
 import db.models  # noqa: F401  - populates Base.metadata
 from db.models.task_center import TaskCenterRequestRecord, TaskCenterRunRecord
-from db.stores.mission_store import MissionStore
+from db.stores.goal_store import GoalStore
 from db.stores.context_packet_store import ContextPacketStore
-from db.stores.attempt_store import AttemptStore
+from db.stores.trial_store import TrialStore
 from db.stores.task_center_store import TaskCenterStore
-from db.stores.episode_store import EpisodeStore
+from db.stores.iteration_store import IterationStore
 from task_center.context_engine.core import ContextComposer, ContextEngine, ContextEngineDeps
 from task_center._core.agent_routing import (
     PredicateRegistry,
@@ -63,22 +63,22 @@ def session_factory():
 
 
 @pytest.fixture
-def mission_store(session_factory) -> MissionStore:
-    store = MissionStore()
+def mission_store(session_factory) -> GoalStore:
+    store = GoalStore()
     store.initialize(session_factory)
     return store
 
 
 @pytest.fixture
-def episode_store(session_factory) -> EpisodeStore:
-    store = EpisodeStore()
+def episode_store(session_factory) -> IterationStore:
+    store = IterationStore()
     store.initialize(session_factory)
     return store
 
 
 @pytest.fixture
-def attempt_store(session_factory) -> AttemptStore:
-    store = AttemptStore()
+def attempt_store(session_factory) -> TrialStore:
+    store = TrialStore()
     store.initialize(session_factory)
     return store
 

@@ -12,9 +12,9 @@ pytestmark = pytest.mark.asyncio
 
 
 _ROUTING_BODY = r"""
-from sandbox.occ.changeset.prepared import CommitOptions, RouteDecision
-from sandbox.occ.changeset.types import OpaqueDirChange, SymlinkChange, WriteChange
-from sandbox.occ.changeset.builders import build_api_write_change, build_overlay_write_change
+from sandbox.occ.changeset import CommitOptions, RouteDecision
+from sandbox.occ.changeset import OpaqueDirChange, SymlinkChange, WriteChange
+from sandbox.occ.changeset import build_api_write_change, build_overlay_write_change
 
 def write_change(*, path, final_content, source="api_write", base_hash=None):
     if source == "overlay_capture":

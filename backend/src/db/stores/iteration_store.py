@@ -7,25 +7,25 @@ from datetime import UTC, datetime
 
 from db.models.iteration import IterationRecord
 from db.stores.base import SyncStoreMixin
-from task_center.episode.state import (
-    Episode,
-    EpisodeCreationReason,
-    EpisodeStatus,
+from task_center.iteration.state import (
+    Iteration,
+    IterationCreationReason,
+    IterationStatus,
 )
 
 
 class IterationStore(SyncStoreMixin):
-    """CRUD for Iteration. Returns frozen Episode DTOs."""
+    """CRUD for Iteration. Returns frozen Iteration DTOs."""
 
     def insert(
         self,
         *,
         goal_id: str,
         sequence_no: int,
-        creation_reason: EpisodeCreationReason,
+        creation_reason: IterationCreationReason,
         goal: str,
         trial_budget: int,
-    ) -> Episode:
+    ) -> Iteration:
         with self._sf() as db:
             now = datetime.now(UTC)
             record = IterationRecord(
@@ -35,7 +35,7 @@ class IterationStore(SyncStoreMixin):
                 creation_reason=creation_reason.value,
                 goal=goal,
                 trial_budget=trial_budget,
-                status=EpisodeStatus.OPEN.value,
+                status=IterationStatus.OPEN.value,
                 trial_ids=[],
                 continuation_goal=None,
                 created_at=now,
@@ -46,12 +46,12 @@ class IterationStore(SyncStoreMixin):
             db.refresh(record)
             return self._to_dto(record)
 
-    def get(self, iteration_id: str) -> Episode | None:
+    def get(self, iteration_id: str) -> Iteration | None:
         with self._sf() as db:
             record = db.get(IterationRecord, iteration_id)
             return self._to_dto(record) if record is not None else None
 
-    def append_trial_id(self, iteration_id: str, trial_id: str) -> Episode:
+    def append_trial_id(self, iteration_id: str, trial_id: str) -> Iteration:
         with self._sf() as db:
             record = db.get(IterationRecord, iteration_id)
             if record is None:
@@ -65,7 +65,7 @@ class IterationStore(SyncStoreMixin):
 
     def set_continuation_goal(
         self, iteration_id: str, continuation_goal: str | None
-    ) -> Episode:
+    ) -> Iteration:
         with self._sf() as db:
             record = db.get(IterationRecord, iteration_id)
             if record is None:
@@ -79,9 +79,9 @@ class IterationStore(SyncStoreMixin):
         self,
         iteration_id: str,
         *,
-        status: EpisodeStatus,
+        status: IterationStatus,
         closed_at: datetime | None = None,
-    ) -> Episode:
+    ) -> Iteration:
         with self._sf() as db:
             record = db.get(IterationRecord, iteration_id)
             if record is None:
@@ -95,7 +95,7 @@ class IterationStore(SyncStoreMixin):
 
     def list_for_goal(
         self, goal_id: str
-    ) -> list[Episode]:
+    ) -> list[Iteration]:
         """Ordered by sequence_no ascending."""
         with self._sf() as db:
             q = (
@@ -110,7 +110,7 @@ class IterationStore(SyncStoreMixin):
 
     def get_by_sequence(
         self, *, goal_id: str, sequence_no: int
-    ) -> Episode | None:
+    ) -> Iteration | None:
         with self._sf() as db:
             record = (
                 db.query(IterationRecord)
@@ -130,7 +130,7 @@ class IterationStore(SyncStoreMixin):
         task_specification: str,
         task_summary: str,
         closed_at: datetime | None = None,
-    ) -> Episode:
+    ) -> Iteration:
         """Atomically transition to SUCCEEDED + write denormalized fields.
 
         All three writes (status, task_specification, task_summary) happen
@@ -142,7 +142,7 @@ class IterationStore(SyncStoreMixin):
             record = db.get(IterationRecord, iteration_id)
             if record is None:
                 raise LookupError(f"Iteration {iteration_id!r} not found")
-            record.status = EpisodeStatus.SUCCEEDED.value
+            record.status = IterationStatus.SUCCEEDED.value
             record.task_specification = task_specification
             record.task_summary = task_summary
             if closed_at is not None:
@@ -151,16 +151,16 @@ class IterationStore(SyncStoreMixin):
             db.refresh(record)
             return self._to_dto(record)
 
-    def _to_dto(self, record: IterationRecord) -> Episode:
-        return Episode(
+    def _to_dto(self, record: IterationRecord) -> Iteration:
+        return Iteration(
             id=record.id,
-            mission_id=record.goal_id,
+            goal_id=record.goal_id,
             sequence_no=record.sequence_no,
-            creation_reason=EpisodeCreationReason(record.creation_reason),
+            creation_reason=IterationCreationReason(record.creation_reason),
             goal=record.goal,
-            attempt_budget=record.trial_budget,
-            status=EpisodeStatus(record.status),
-            attempt_ids=tuple(record.trial_ids or ()),
+            trial_budget=record.trial_budget,
+            status=IterationStatus(record.status),
+            trial_ids=tuple(record.trial_ids or ()),
             continuation_goal=record.continuation_goal,
             created_at=record.created_at,
             updated_at=record.updated_at,

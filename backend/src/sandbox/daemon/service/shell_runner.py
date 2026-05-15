@@ -15,15 +15,15 @@ from sandbox.execution import (
     run_workspace_replaced_command,
 )
 from sandbox.layer_stack.workspace_binding import require_workspace_binding
-from sandbox.occ.content.gitignore_oracle import SnapshotGitignoreOracle
-from sandbox.daemon.handler.request_context import layer_stack_root
-from sandbox.daemon.service.result_projection import (
+from sandbox.occ.gitignore import SnapshotGitignoreOracle
+from sandbox.daemon._toolbox import layer_stack_root
+from sandbox.daemon._wire import (
     conflict_and_status,
     conflict_to_dict,
     gitignore_cache_timings,
     published_paths,
 )
-from sandbox.daemon.service import occ_backend
+from sandbox.daemon import occ_backend
 
 
 async def execute_shell_api(args: dict[str, object]) -> dict[str, object]:

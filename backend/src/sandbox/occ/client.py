@@ -6,8 +6,8 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
-from sandbox.occ.changeset.types import Change, ChangesetResult
+from sandbox.occ.changeset import CommitOptions, PreparedChangeset
+from sandbox.occ.changeset import Change, ChangesetResult
 from sandbox.occ.ports import WorkspaceBindingReader
 
 if TYPE_CHECKING:

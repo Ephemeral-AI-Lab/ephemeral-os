@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 
-from sandbox.occ.changeset.types import (
+from sandbox.occ.changeset import (
     DeleteChange,
     OpaqueDirChange,
     SymlinkChange,

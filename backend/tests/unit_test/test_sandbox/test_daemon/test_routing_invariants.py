@@ -59,4 +59,4 @@ def test_daemon_op_table_does_not_route_through_occ_server() -> None:
     server._load_peer_bootstraps()
 
     for handler in server.OP_TABLE.values():
-        assert handler.__module__ != "sandbox.daemon.service.occ_backend"
+        assert handler.__module__ != "sandbox.daemon.occ_backend"

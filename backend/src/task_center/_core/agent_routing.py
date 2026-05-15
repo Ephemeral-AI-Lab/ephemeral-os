@@ -23,7 +23,7 @@ from task_center.context_engine.packet import (
     ContextPriority,
 )
 from task_center.context_engine.scope import ContextScope
-from task_center.goal.handler import nested_mission_depth
+from task_center.goal.handler import nested_goal_depth
 
 
 # ---------------------------------------------------------------------------
@@ -108,8 +108,8 @@ def _depth(ctx: ResolverContext) -> int:
     goal_id = ctx.scope.mission_id
     if goal_id is None:
         return 0
-    return nested_mission_depth(
-        mission_id=goal_id,
+    return nested_goal_depth(
+        goal_id=goal_id,
         mission_store=ctx.deps.mission_store,
         episode_store=ctx.deps.episode_store,
         attempt_store=ctx.deps.attempt_store,
@@ -140,7 +140,7 @@ def _always(ctx: ResolverContext) -> bool:
 def register_builtin_predicates() -> None:
     """Idempotent — safe to call from app startup."""
     PredicateRegistry.register(
-        "nested_mission_depth_within_handoff_range",
+        "nested_goal_depth_within_handoff_range",
         _nested_goal_depth_within_handoff_range,
     )
     PredicateRegistry.register(

@@ -7,11 +7,11 @@ from dataclasses import replace
 from typing import cast
 
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.occ.changeset.prepared import CommitOptions, PreparedChangeset
-from sandbox.occ.changeset.types import Change, ChangesetResult
-from sandbox.occ.stage.transaction import CommitTransaction
-from sandbox.occ.content.gitignore_oracle import GitignoreMatcher
-from sandbox.occ.content.hashing import infer_manifest_base_hash
+from sandbox.occ.changeset import CommitOptions, PreparedChangeset
+from sandbox.occ.changeset import Change, ChangesetResult
+from sandbox.occ.commit_transaction import CommitTransaction
+from sandbox.occ.gitignore import GitignoreMatcher
+from sandbox.occ.hashing import infer_manifest_base_hash
 from sandbox.occ.maintenance import MaintenancePolicy
 from sandbox.occ.commit_queue import CommitQueue
 from typing import TYPE_CHECKING
@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.router import Router
-from sandbox.occ.timing_keys import TimingKey
+from sandbox.timing_keys import TimingKey
 from sandbox.daemon.async_bridge import run_sync_in_executor
 from sandbox.timing import monotonic_now
 

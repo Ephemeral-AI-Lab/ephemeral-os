@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from sandbox.occ.timing_keys import TimingKey
+from sandbox.timing_keys import TimingKey
 from sandbox.timing import (
     normalize_timing_map,
     record_elapsed,

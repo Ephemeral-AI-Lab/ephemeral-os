@@ -14,9 +14,9 @@ pytestmark = pytest.mark.asyncio
 _ORCHESTRATOR_BODY = r"""
 from sandbox.layer_stack.layer_change import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
-from sandbox.occ.changeset.prepared import CommitOptions, RouteDecision
-from sandbox.occ.changeset.types import FileStatus, WriteChange
-from sandbox.occ.changeset.builders import build_api_write_change, build_overlay_write_change
+from sandbox.occ.changeset import CommitOptions, RouteDecision
+from sandbox.occ.changeset import FileStatus, WriteChange
+from sandbox.occ.changeset import build_api_write_change, build_overlay_write_change
 
 def write_change(*, path, final_content, source="api_write", base_hash=None):
     if source == "overlay_capture":
@@ -30,7 +30,7 @@ def write_change(*, path, final_content, source="api_write", base_hash=None):
         base_hash=base_hash,
     )
 
-from sandbox.occ.content.hashing import ContentHasher
+from sandbox.occ.hashing import ContentHasher
 from sandbox.occ.service import OccService
 
 class _Gitignore:
@@ -111,8 +111,8 @@ _emit(label, started, before, {
 _RACE_BODY = r"""
 from sandbox.layer_stack.layer_change import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
-from sandbox.occ.changeset.types import WriteChange
-from sandbox.occ.changeset.builders import build_api_write_change, build_overlay_write_change
+from sandbox.occ.changeset import WriteChange
+from sandbox.occ.changeset import build_api_write_change, build_overlay_write_change
 
 def write_change(*, path, final_content, source="api_write", base_hash=None):
     if source == "overlay_capture":
@@ -126,7 +126,7 @@ def write_change(*, path, final_content, source="api_write", base_hash=None):
         base_hash=base_hash,
     )
 
-from sandbox.occ.content.hashing import ContentHasher
+from sandbox.occ.hashing import ContentHasher
 from sandbox.occ.service import OccService
 
 class _Gitignore:

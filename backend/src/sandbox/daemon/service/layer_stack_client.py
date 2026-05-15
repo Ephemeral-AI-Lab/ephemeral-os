@@ -12,7 +12,7 @@ from sandbox.layer_stack.manager import (
 )
 from sandbox.layer_stack.manager import CommitStagingArea
 from sandbox.occ.ports import CommitTransactionPort
-from sandbox.daemon.service.workspace_server import get_layer_stack_manager
+from sandbox.daemon.workspace_server import get_layer_stack_manager
 
 
 class LayerStackClient:

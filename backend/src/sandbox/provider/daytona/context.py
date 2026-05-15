@@ -28,7 +28,7 @@ class DaytonaContextPreparer:
         """Fetch the sync sandbox for the current preparation call."""
         if not self.sandbox_id:
             raise RuntimeError("No sandbox_id configured for tool context.")
-        from sandbox.provider.daytona.client.sync_client import fetch_sandbox as get_sandbox
+        from sandbox.provider.daytona.client import fetch_sandbox as get_sandbox
 
         sandbox = get_sandbox(self.sandbox_id)
         self._sandbox = sandbox
@@ -47,7 +47,7 @@ class DaytonaContextPreparer:
         self._sandbox_loop_id = None
         if not self.sandbox_id:
             raise RuntimeError("No sandbox_id configured for tool context.")
-        from sandbox.provider.daytona.client.async_client import get_async_sandbox
+        from sandbox.provider.daytona.client import get_async_sandbox
 
         self._sandbox = await get_async_sandbox(self.sandbox_id)
         self._sandbox_loop_id = loop_id

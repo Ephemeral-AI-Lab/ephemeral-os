@@ -1,27 +1,27 @@
-"""AttemptOrchestrator lifecycle tests."""
+"""TrialOrchestrator lifecycle tests."""
 
 from __future__ import annotations
 
 import pytest
 
-from task_center.mission.state import MissionClosureReport
+from task_center.goal.state import GoalClosureReport
 from task_center._core.types import TaskCenterInvariantViolation
-from task_center.attempt import (
-    AttemptFailReason,
-    AttemptStage,
-    AttemptStatus,
+from task_center.trial import (
+    TrialFailReason,
+    TrialStage,
+    TrialStatus,
 )
-from task_center.attempt.orchestrator import AttemptOrchestrator
-from task_center.attempt.orchestrator_registry import (
-    AttemptOrchestratorRegistry,
+from task_center.trial.orchestrator import TrialOrchestrator
+from task_center.trial.orchestrator_registry import (
+    TrialOrchestratorRegistry,
 )
-from task_center.attempt.runtime import (
+from task_center.trial.runtime import (
     AgentLaunch,
     AttemptDeps,
 )
 from task_center.task_state import EvaluatorSubmission, GeneratorSubmission, TaskCenterTaskRole, TaskCenterTaskStatus, PlannedGeneratorTask, PlannerFailureSubmission, PlannerSubmission
 from task_center._core.types import evaluator_task_id, generator_task_id, planner_task_id
-from task_center.episode.state import EpisodeCreationReason
+from task_center.iteration.state import IterationCreationReason
 
 
 class _FakeLauncher:
@@ -61,13 +61,13 @@ def _seed_graph(mission_store, episode_store, attempt_store, task_center_run_id)
         goal="solve the task",
     )
     episode = episode_store.insert(
-        mission_id=request.id,
+        goal_id=request.id,
         sequence_no=1,
-        creation_reason=EpisodeCreationReason.INITIAL,
+        creation_reason=IterationCreationReason.INITIAL,
         goal="solve the task",
-        attempt_budget=2,
+        trial_budget=2,
     )
-    return attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    return attempt_store.insert(iteration_id=episode.id, trial_sequence_no=1)
 
 
 def _build_orchestrator(
@@ -84,7 +84,7 @@ def _build_orchestrator(
         mission_store, episode_store, attempt_store, task_center_run_id
     )
     launcher = launcher or _FakeLauncher()
-    registry = AttemptOrchestratorRegistry()
+    registry = TrialOrchestratorRegistry()
     runtime = AttemptDeps(
         mission_store=mission_store,
         episode_store=episode_store,
@@ -95,7 +95,7 @@ def _build_orchestrator(
         composer=composer,
     )
     closed: list[str] = []
-    orchestrator = AttemptOrchestrator(
+    orchestrator = TrialOrchestrator(
         attempt=attempt,
         on_attempt_closed=closed.append,
         runtime=runtime,
@@ -187,7 +187,7 @@ def test_apply_plan_submission_persists_contract_and_generator_ids(
 
     refreshed = attempt_store.get(attempt.id)
     assert refreshed is not None
-    assert refreshed.stage == AttemptStage.GENERATE
+    assert refreshed.stage == TrialStage.GENERATE
     assert refreshed.task_specification == "spec"
     assert refreshed.generator_task_ids == (
         generator_task_id(attempt.id, "a"),
@@ -241,8 +241,8 @@ def test_apply_planner_failure_marks_task_and_closes_graph(
     refreshed = attempt_store.get(attempt.id)
     task = task_store.get_task(planner_task_id(attempt.id))
     assert refreshed is not None
-    assert refreshed.status == AttemptStatus.FAILED
-    assert refreshed.fail_reason == AttemptFailReason.PLANNER_FAILED
+    assert refreshed.status == TrialStatus.FAILED
+    assert refreshed.fail_reason == TrialFailReason.PLANNER_FAILED
     assert task is not None and task["status"] == TaskCenterTaskStatus.FAILED.value
     assert closed == [attempt.id]
     assert registry.get(attempt.id) is None
@@ -344,8 +344,8 @@ def test_generator_launch_failure_marks_task_failed_and_closes_graph(
     assert task["status"] == TaskCenterTaskStatus.FAILED.value
     assert task["summaries"][-1]["fail_reason"] == "agent_launch_failed"
     assert refreshed is not None
-    assert refreshed.status == AttemptStatus.FAILED
-    assert refreshed.fail_reason == AttemptFailReason.GENERATOR_FAILED
+    assert refreshed.status == TrialStatus.FAILED
+    assert refreshed.fail_reason == TrialFailReason.GENERATOR_FAILED
     assert closed == [attempt.id]
     assert registry.get(attempt.id) is None
 
@@ -379,8 +379,8 @@ def test_evaluator_launch_failure_marks_task_failed_and_closes_graph(
     assert task["status"] == TaskCenterTaskStatus.FAILED.value
     assert task["summaries"][-1]["fail_reason"] == "agent_launch_failed"
     assert refreshed is not None
-    assert refreshed.status == AttemptStatus.FAILED
-    assert refreshed.fail_reason == AttemptFailReason.EVALUATOR_FAILED
+    assert refreshed.status == TrialStatus.FAILED
+    assert refreshed.fail_reason == TrialFailReason.EVALUATOR_FAILED
     assert closed == [attempt.id]
     assert registry.get(attempt.id) is None
 
@@ -411,8 +411,8 @@ def test_evaluator_compose_failure_closes_graph(
     refreshed = attempt_store.get(attempt.id)
     assert task is None
     assert refreshed is not None
-    assert refreshed.status == AttemptStatus.FAILED
-    assert refreshed.fail_reason == AttemptFailReason.EVALUATOR_FAILED
+    assert refreshed.status == TrialStatus.FAILED
+    assert refreshed.fail_reason == TrialFailReason.EVALUATOR_FAILED
     assert closed == [attempt.id]
     assert registry.get(attempt.id) is None
 
@@ -442,7 +442,7 @@ def test_waiting_mission_prevents_generator_quiescence(
 
     refreshed = attempt_store.get(attempt.id)
     assert refreshed is not None
-    assert refreshed.stage == AttemptStage.GENERATE
+    assert refreshed.stage == TrialStage.GENERATE
     assert closed == []
 
 
@@ -466,7 +466,7 @@ def test_mission_closure_report_success_resumes_waiting_generator(
     )
 
     orchestrator.apply_mission_closure_report(
-        MissionClosureReport(
+        GoalClosureReport(
             mission_id="delegated-1",
             requested_by_task_id=task_id,
             outcome="success",
@@ -483,7 +483,7 @@ def test_mission_closure_report_success_resumes_waiting_generator(
         "mission_id"
     ] == "delegated-1"
     assert refreshed is not None
-    assert refreshed.stage == AttemptStage.EVALUATE
+    assert refreshed.stage == TrialStage.EVALUATE
 
 
 def test_mission_closure_report_failure_blocks_dependents_and_closes_graph(
@@ -510,7 +510,7 @@ def test_mission_closure_report_failure_blocks_dependents_and_closes_graph(
     )
 
     orchestrator.apply_mission_closure_report(
-        MissionClosureReport(
+        GoalClosureReport(
             mission_id="delegated-1",
             requested_by_task_id=task_id,
             outcome="failed",
@@ -527,7 +527,7 @@ def test_mission_closure_report_failure_blocks_dependents_and_closes_graph(
     assert dependent is not None
     assert dependent["status"] == TaskCenterTaskStatus.BLOCKED.value
     assert refreshed is not None
-    assert refreshed.status == AttemptStatus.FAILED
+    assert refreshed.status == TrialStatus.FAILED
     assert closed == [attempt.id]
 
 
@@ -584,8 +584,8 @@ def test_generator_failure_waits_then_closes_after_quiescence(
 
     refreshed = attempt_store.get(attempt.id)
     assert refreshed is not None
-    assert refreshed.status == AttemptStatus.FAILED
-    assert refreshed.fail_reason == AttemptFailReason.GENERATOR_FAILED
+    assert refreshed.status == TrialStatus.FAILED
+    assert refreshed.fail_reason == TrialFailReason.GENERATOR_FAILED
     assert closed == [attempt.id]
 
 
@@ -607,7 +607,7 @@ def test_all_generators_done_spawns_evaluator(
 
     refreshed = attempt_store.get(attempt.id)
     assert refreshed is not None
-    assert refreshed.stage == AttemptStage.EVALUATE
+    assert refreshed.stage == TrialStage.EVALUATE
     assert launcher.launches[-1].task_id == evaluator_task_id(attempt.id)
 
 
@@ -632,7 +632,7 @@ def test_apply_evaluator_success_closes_graph_passed(
 
     refreshed = attempt_store.get(attempt.id)
     assert refreshed is not None
-    assert refreshed.status == AttemptStatus.PASSED
+    assert refreshed.status == TrialStatus.PASSED
     assert refreshed.fail_reason is None
     assert closed == [attempt.id]
 
@@ -658,8 +658,8 @@ def test_apply_evaluator_failure_closes_graph_failed(
 
     refreshed = attempt_store.get(attempt.id)
     assert refreshed is not None
-    assert refreshed.status == AttemptStatus.FAILED
-    assert refreshed.fail_reason == AttemptFailReason.EVALUATOR_FAILED
+    assert refreshed.status == TrialStatus.FAILED
+    assert refreshed.fail_reason == TrialFailReason.EVALUATOR_FAILED
     assert closed == [attempt.id]
 
 
@@ -678,4 +678,4 @@ def test_orchestrator_never_creates_retry_attempt(
     )
     orchestrator.apply_generator_submission(_generator_failure(attempt.id, "a"))
 
-    assert len(attempt_store.list_for_episode(attempt.episode_id)) == 1
+    assert len(attempt_store.list_for_episode(attemptiteration_id)) == 1

@@ -6,7 +6,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from sandbox.layer_stack.workspace_binding import require_workspace_binding
-from sandbox.daemon.handler.request_context import (
+from sandbox.daemon._toolbox import (
     classify_path,
     layer_stack_root as require_layer_stack_root,
     required_single_path,

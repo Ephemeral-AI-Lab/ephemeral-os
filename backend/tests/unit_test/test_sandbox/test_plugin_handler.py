@@ -23,8 +23,8 @@ from sandbox.layer_stack.workspace_binding import (
     write_workspace_binding_atomic,
 )
 from sandbox.plugin import handler as handler_mod
+from sandbox.plugin import op_registry as registry_mod
 from sandbox.plugin.runtime import register_plugin_op
-from sandbox.plugin.runtime import registry as registry_mod
 
 
 @pytest.fixture(autouse=True)

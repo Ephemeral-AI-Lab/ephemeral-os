@@ -8,7 +8,7 @@ import pytest
 
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.daemon.handler import health
-from sandbox.daemon.service import occ_backend, workspace_server
+from sandbox.daemon import occ_backend, workspace_server
 
 
 @pytest.fixture(autouse=True)

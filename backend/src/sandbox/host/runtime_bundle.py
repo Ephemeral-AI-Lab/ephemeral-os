@@ -158,31 +158,14 @@ def _runtime_bundle_bytes() -> bytes:
     sandbox_dir = src / "sandbox"
     raw = io.BytesIO()
     with tarfile.open(fileobj=raw, mode="w") as tar:
-        _add_if_exists(
-            tar,
-            sandbox_dir / "__init__.py",
-            arcname="sandbox/__init__.py",
-        )
-        _add_if_exists(
-            tar,
-            sandbox_dir / "models.py",
-            arcname="sandbox/models.py",
-        )
-        _add_if_exists(
-            tar,
-            sandbox_dir / "timing.py",
-            arcname="sandbox/timing.py",
-        )
-        _add_if_exists(
-            tar,
-            sandbox_dir / "timing_keys.py",
-            arcname="sandbox/timing_keys.py",
-        )
-        _add_if_exists(
-            tar,
-            sandbox_dir / "daemon_paths.py",
-            arcname="sandbox/daemon_paths.py",
-        )
+        for name in (
+            "__init__.py",
+            "models.py",
+            "timing.py",
+            "timing_keys.py",
+            "daemon_paths.py",
+        ):
+            _add_if_exists(tar, sandbox_dir / name, arcname=f"sandbox/{name}")
 
         daemon_dir = sandbox_dir / "daemon"
         _add_python_tree(
@@ -217,21 +200,18 @@ def _runtime_bundle_bytes() -> bytes:
         # sandbox.provider). The daemon imports sandbox.plugin.runtime,
         # sandbox.plugin.handler, and sandbox.plugin.projection.
         plugin_dir = sandbox_dir / "plugin"
-        _add_if_exists(
-            tar,
-            plugin_dir / "__init__.py",
-            arcname="sandbox/plugin/__init__.py",
-        )
-        _add_if_exists(
-            tar,
-            plugin_dir / "handler.py",
-            arcname="sandbox/plugin/handler.py",
-        )
-        _add_if_exists(
-            tar,
-            plugin_dir / "projection.py",
-            arcname="sandbox/plugin/projection.py",
-        )
+        for name in (
+            "__init__.py",
+            "handler.py",
+            "op_context.py",
+            "op_registry.py",
+            "projection.py",
+        ):
+            _add_if_exists(
+                tar,
+                plugin_dir / name,
+                arcname=f"sandbox/plugin/{name}",
+            )
         plugin_runtime_dir = plugin_dir / "runtime"
         _add_python_tree(
             tar,

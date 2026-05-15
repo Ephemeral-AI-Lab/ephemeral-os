@@ -13,11 +13,12 @@ from sandbox.layer_stack.manifest import (
     read_manifest,
 )
 from sandbox.layer_stack.workspace_binding import require_workspace_binding
-from sandbox.daemon.handler import request_context
-from sandbox.daemon.handler.request_context import layer_stack_root as require_layer_stack_root
-from sandbox.daemon.service import occ_backend, shell_runner
-from sandbox.daemon.service.occ_backend import OccBackend
-from sandbox.daemon.service.workspace_server import get_layer_stack_manager
+from sandbox.daemon import _toolbox as request_context
+from sandbox.daemon._toolbox import layer_stack_root as require_layer_stack_root
+from sandbox.daemon import occ_backend
+from sandbox.daemon.service import shell_runner
+from sandbox.daemon.occ_backend import OccBackend
+from sandbox.daemon.workspace_server import get_layer_stack_manager
 from sandbox.timing import monotonic_now
 
 _STARTED_AT_MONO = time.monotonic()

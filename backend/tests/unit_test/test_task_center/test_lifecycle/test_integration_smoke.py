@@ -4,21 +4,21 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from db.stores.attempt_store import AttemptStore
+from db.stores.trial_store import TrialStore
 from task_center._core.types import TaskCenterLifecycleConfig
-from task_center.mission.handler import MissionHandler
-from task_center.episode import EpisodeManager, EpisodeManagerRegistry
-from task_center.mission.state import MissionStatus
-from task_center.attempt import (
-    Attempt,
-    AttemptFailReason,
-    AttemptStatus,
+from task_center.goal.handler import GoalHandler
+from task_center.iteration import IterationManager, IterationManagerRegistry
+from task_center.goal.state import GoalStatus
+from task_center.trial import (
+    Trial,
+    TrialFailReason,
+    TrialStatus,
 )
-from task_center.episode.state import EpisodeStatus
+from task_center.iteration.state import IterationStatus
 
 
 class _StubOrchestrator:
-    """Synchronous stand-in for AttemptOrchestrator.
+    """Synchronous stand-in for TrialOrchestrator.
 
     Closes the attempt immediately on ``start`` with a caller-supplied verdict.
     """
@@ -26,11 +26,11 @@ class _StubOrchestrator:
     def __init__(
         self,
         *,
-        attempt: Attempt,
-        attempt_store: AttemptStore,
+        attempt: Trial,
+        attempt_store: TrialStore,
         on_attempt_closed: Callable[[str], None],
         verdict: tuple[
-            AttemptStatus, AttemptFailReason | None, str | None
+            TrialStatus, TrialFailReason | None, str | None
         ],
     ) -> None:
         self._g = attempt
@@ -52,12 +52,12 @@ class _StubOrchestrator:
 
 
 def _build_handler(mission_store, episode_store, attempt_store):
-    return MissionHandler(
+    return GoalHandler(
         mission_store=mission_store,
         episode_store=episode_store,
         attempt_store=attempt_store,
-        manager_registry=EpisodeManagerRegistry(),
-        config=TaskCenterLifecycleConfig(default_attempt_budget=2),
+        manager_registry=IterationManagerRegistry(),
+        config=TaskCenterLifecycleConfig(default_trial_budget=2),
     )
 
 
@@ -65,14 +65,14 @@ def _drive_segment(
     *,
     handler,
     episode_id: str,
-    attempt_store: AttemptStore,
+    attempt_store: TrialStore,
     verdict: tuple[
-        AttemptStatus, AttemptFailReason | None, str | None
+        TrialStatus, TrialFailReason | None, str | None
     ],
 ) -> None:
     """Run a stub orchestrator against the manager-owned episode."""
     registry = handler._manager_registry  # type: ignore[attr-defined]
-    mgr: EpisodeManager | None = registry.get(episode_id)
+    mgr: IterationManager | None = registry.get(episode_id)
     assert mgr is not None
     g = mgr.create_initial_attempt()
     stub = _StubOrchestrator(
@@ -93,18 +93,18 @@ def test_smoke_terminal_success(
         requested_by_task_id="exec-1",
         goal="solve X",
     )
-    seg, _ = handler.create_initial_episode_with_manager(mission_id=req.id)
+    seg, _ = handler.create_initial_episode_with_manager(goal_id=req.id)
     _drive_segment(
         handler=handler,
-        episode_id=seg.id,
+        iteration_id=seg.id,
         attempt_store=attempt_store,
-        verdict=(AttemptStatus.PASSED, None, None),
+        verdict=(TrialStatus.PASSED, None, None),
     )
     final_request = mission_store.get(req.id)
     final_segment = episode_store.get(seg.id)
     assert final_request is not None and final_segment is not None
-    assert final_request.status == MissionStatus.SUCCEEDED
-    assert final_segment.status == EpisodeStatus.SUCCEEDED
+    assert final_request.status == GoalStatus.SUCCEEDED
+    assert final_segment.status == IterationStatus.SUCCEEDED
 
 
 def test_smoke_attempt_plan_failed(
@@ -116,7 +116,7 @@ def test_smoke_attempt_plan_failed(
         requested_by_task_id="exec-1",
         goal="solve X",
     )
-    seg, _ = handler.create_initial_episode_with_manager(mission_id=req.id)
+    seg, _ = handler.create_initial_episode_with_manager(goal_id=req.id)
     # First attempt: fail with a generator error.
     registry = handler._manager_registry  # type: ignore[attr-defined]
     mgr = registry.get(seg.id)
@@ -126,27 +126,27 @@ def test_smoke_attempt_plan_failed(
         g1.id, task_specification="spec1", evaluation_criteria=["a"], continuation_goal=None
     )
     attempt_store.close(
-        g1.id, status=AttemptStatus.FAILED,
-        fail_reason=AttemptFailReason.GENERATOR_FAILED,
+        g1.id, status=TrialStatus.FAILED,
+        fail_reason=TrialFailReason.GENERATOR_FAILED,
     )
     mgr.handle_attempt_closed(g1.id)
     # Second (and budget-final) attempt: also fail.
     seg_after = episode_store.get(seg.id)
     assert seg_after is not None
-    g2_id = seg_after.attempt_ids[-1]
+    g2_id = seg_aftertrial_ids[-1]
     attempt_store.set_plan_contract(
         g2_id, task_specification="spec2", evaluation_criteria=["b"], continuation_goal=None
     )
     attempt_store.close(
-        g2_id, status=AttemptStatus.FAILED,
-        fail_reason=AttemptFailReason.EVALUATOR_FAILED,
+        g2_id, status=TrialStatus.FAILED,
+        fail_reason=TrialFailReason.EVALUATOR_FAILED,
     )
     mgr.handle_attempt_closed(g2_id)
     final_request = mission_store.get(req.id)
     final_segment = episode_store.get(seg.id)
     assert final_request is not None and final_segment is not None
-    assert final_request.status == MissionStatus.FAILED
-    assert final_segment.status == EpisodeStatus.FAILED
+    assert final_request.status == GoalStatus.FAILED
+    assert final_segment.status == IterationStatus.FAILED
     assert final_request.final_outcome is not None
     assert final_request.final_outcome["outcome"] == "failed"
 
@@ -160,18 +160,18 @@ def test_smoke_success_continue_then_terminal(
         requested_by_task_id="exec-1",
         goal="initial-goal",
     )
-    seg1, _ = handler.create_initial_episode_with_manager(mission_id=req.id)
+    seg1, _ = handler.create_initial_episode_with_manager(goal_id=req.id)
     _drive_segment(
         handler=handler,
-        episode_id=seg1.id,
+        iteration_id=seg1.id,
         attempt_store=attempt_store,
-        verdict=(AttemptStatus.PASSED, None, "next-goal"),
+        verdict=(TrialStatus.PASSED, None, "next-goal"),
     )
     refreshed = mission_store.get(req.id)
     assert refreshed is not None
-    assert len(refreshed.episode_ids) == 2
+    assert len(refreshediteration_ids) == 2
     assert refreshed.is_open
-    seg2_id = refreshed.episode_ids[1]
+    seg2_id = refreshediteration_ids[1]
     seg2 = episode_store.get(seg2_id)
     assert seg2 is not None
     assert seg2.goal == "next-goal"
@@ -180,8 +180,8 @@ def test_smoke_success_continue_then_terminal(
         handler=handler,
         episode_id=seg2_id,
         attempt_store=attempt_store,
-        verdict=(AttemptStatus.PASSED, None, None),
+        verdict=(TrialStatus.PASSED, None, None),
     )
     final_request = mission_store.get(req.id)
     assert final_request is not None
-    assert final_request.status == MissionStatus.SUCCEEDED
+    assert final_request.status == GoalStatus.SUCCEEDED

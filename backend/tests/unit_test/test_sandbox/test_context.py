@@ -21,6 +21,36 @@ def test_sandbox_exports_context_preparer() -> None:
     assert DCP is DaytonaContextPreparer
 
 
+def test_sandbox_api_context_preparer_uses_registered_adapter(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import sandbox.api as sandbox_api
+    from sandbox.api import _control
+
+    sentinel = object()
+
+    class Adapter:
+        def context_preparer(self, sandbox_id: str) -> object:
+            assert sandbox_id == "sb-test123"
+            return sentinel
+
+    monkeypatch.setattr(_control, "get_adapter", lambda _sandbox_id: Adapter())
+
+    assert sandbox_api.context_preparer_for("sb-test123") is sentinel
+
+
+def test_sandbox_api_context_preparer_requires_provider_hook(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import sandbox.api as sandbox_api
+    from sandbox.api import _control
+
+    monkeypatch.setattr(_control, "get_adapter", lambda _sandbox_id: object())
+
+    with pytest.raises(RuntimeError, match="does not expose context_preparer"):
+        sandbox_api.context_preparer_for("sb-test123")
+
+
 def test_context_preparer_instantiation() -> None:
     preparer = DaytonaContextPreparer(sandbox_id="sb-test123")
     assert preparer.sandbox_id == "sb-test123"
@@ -54,7 +84,7 @@ def test_get_sandbox_refetches_sync_sandbox(monkeypatch: pytest.MonkeyPatch) -> 
         return first if len(calls) == 1 else second
 
     monkeypatch.setattr(
-        "sandbox.provider.daytona.client.sync_client.fetch_sandbox",
+        "sandbox.provider.daytona.client.fetch_sandbox",
         fetch_sandbox,
     )
 
@@ -77,20 +107,14 @@ async def test_get_sandbox_async_caches_per_loop() -> None:
         return fake_sb
 
     with patch(
-        "sandbox.provider.daytona.client.async_client.get_async_sandbox",
+        "sandbox.provider.daytona.client.get_async_sandbox",
         new=fake_get_async,
         create=True,
     ):
-        mock_module = MagicMock()
-        mock_module.get_async_sandbox = fake_get_async
-        with patch.dict(
-            "sys.modules",
-            {"sandbox.provider.daytona.client.async_client": mock_module},
-        ):
-            result = await tk._get_sandbox_async()
-            assert result is fake_sb
-            result2 = await tk._get_sandbox_async()
-            assert result2 is fake_sb
+        result = await tk._get_sandbox_async()
+        assert result is fake_sb
+        result2 = await tk._get_sandbox_async()
+        assert result2 is fake_sb
 
 
 async def test_get_sandbox_async_invalidates_on_new_loop() -> None:
@@ -103,11 +127,10 @@ async def test_get_sandbox_async_invalidates_on_new_loop() -> None:
     async def fake_get_async(_sandbox_id):
         return new_sb
 
-    mock_module = MagicMock()
-    mock_module.get_async_sandbox = fake_get_async
-    with patch.dict(
-        "sys.modules",
-        {"sandbox.provider.daytona.client.async_client": mock_module},
+    with patch(
+        "sandbox.provider.daytona.client.get_async_sandbox",
+        new=fake_get_async,
+        create=True,
     ):
         result = await tk._get_sandbox_async()
         assert result is new_sb

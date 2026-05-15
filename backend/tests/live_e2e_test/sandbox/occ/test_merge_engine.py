@@ -15,9 +15,9 @@ _MERGE_BODY = r"""
 import sandbox.occ.stage as merge_facade
 from sandbox.layer_stack.layer_change import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
-from sandbox.occ.changeset.prepared import PreparedPathGroup, RouteDecision
-from sandbox.occ.changeset.types import EditChange, FileStatus, WriteChange
-from sandbox.occ.changeset.builders import build_api_write_change, build_overlay_write_change
+from sandbox.occ.changeset import PreparedPathGroup, RouteDecision
+from sandbox.occ.changeset import EditChange, FileStatus, WriteChange
+from sandbox.occ.changeset import build_api_write_change, build_overlay_write_change
 
 def write_change(*, path, final_content, source="api_write", base_hash=None):
     if source == "overlay_capture":
@@ -31,7 +31,7 @@ def write_change(*, path, final_content, source="api_write", base_hash=None):
         base_hash=base_hash,
     )
 
-from sandbox.occ.content.hashing import ContentHasher
+from sandbox.occ.hashing import ContentHasher
 
 def _publish(stack, rel, content):
     stack.publish_changes([

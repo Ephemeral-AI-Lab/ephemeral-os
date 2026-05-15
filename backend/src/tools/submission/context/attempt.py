@@ -6,11 +6,11 @@ from dataclasses import dataclass
 from typing import Any
 
 from task_center import (
-    Attempt,
-    AttemptOrchestrator,
+    Trial as Attempt,
+    TrialOrchestrator as AttemptOrchestrator,
     AttemptDeps,
-    Episode,
-    Mission,
+    Iteration as Episode,
+    Goal as Mission,
     TaskCenterInvariantViolation,
 )
 from tools._framework.core.context import ToolExecutionContextService
@@ -113,16 +113,16 @@ def _resolve_attempt_context(
             f"Attempt {attempt_id!r} was not found."
         )
 
-    episode = runtime.episode_store.get(attempt.episode_id)
+    episode = runtime.episode_store.get(attempt.iteration_id)
     if episode is None:
         raise AttemptSubmissionContextError(
-            f"Episode {attempt.episode_id!r} was not found."
+            f"Episode {attempt.iteration_id!r} was not found."
         )
 
-    mission = runtime.mission_store.get(episode.mission_id)
+    mission = runtime.mission_store.get(episode.goal_id)
     if mission is None:
         raise AttemptSubmissionContextError(
-            f"Mission {episode.mission_id!r} was not found."
+            f"Mission {episode.goal_id!r} was not found."
         )
 
     try:

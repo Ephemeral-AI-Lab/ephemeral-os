@@ -12,7 +12,7 @@ pytestmark = pytest.mark.asyncio
 
 
 _GITIGNORE_BODY = r"""
-from sandbox.occ.content.gitignore_oracle import PathspecGitignoreOracle
+from sandbox.occ.gitignore import PathspecGitignoreOracle
 
 label = "occ.content_gitignore_oracle"
 before = sample_resource()

@@ -24,10 +24,10 @@ def test_persistence_can_import_episode_state_before_manager_facade() -> None:
             "\n".join(
                 [
                     "from task_center._core.persistence import AttemptStoreProtocol",
-                    "from task_center.episode import Episode, EpisodeManagerRegistry",
+                    "from task_center.iteration import Iteration, IterationManagerRegistry",
                     "assert AttemptStoreProtocol",
-                    "assert Episode",
-                    "assert EpisodeManagerRegistry",
+                    "assert Iteration",
+                    "assert IterationManagerRegistry",
                 ]
             ),
         ],

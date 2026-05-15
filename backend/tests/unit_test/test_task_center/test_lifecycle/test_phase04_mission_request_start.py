@@ -7,24 +7,24 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.mission.starter import (
-    MissionStarter,
-    StartedMission,
+from task_center.goal.starter import (
+    GoalStarter,
+    StartedGoal,
 )
-from task_center.mission.state import MissionStatus
+from task_center.goal.state import GoalStatus
 from task_center._core.types import TaskCenterInvariantViolation
-from task_center.attempt.orchestrator_registry import (
-    AttemptOrchestratorRegistry,
+from task_center.trial.orchestrator_registry import (
+    TrialOrchestratorRegistry,
 )
-from task_center.attempt.runtime import AgentLaunch, AttemptDeps
-from task_center.attempt import (
-    AttemptFailReason,
-    AttemptStatus,
+from task_center.trial.runtime import AgentLaunch, AttemptDeps
+from task_center.trial import (
+    TrialFailReason,
+    TrialStatus,
 )
-from task_center.episode import EpisodeManagerRegistry
-from task_center.episode.state import (
-    EpisodeCreationReason,
-    EpisodeStatus,
+from task_center.iteration import IterationManagerRegistry
+from task_center.iteration.state import (
+    IterationCreationReason,
+    IterationStatus,
     )
 from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 from task_center._core.types import planner_task_id
@@ -48,7 +48,7 @@ def _build_runtime(
     mission_store, episode_store, attempt_store, task_store, *, composer, launcher=None
 ) -> AttemptDeps:
     launcher = launcher or _FakeLauncher()
-    registry = AttemptOrchestratorRegistry()
+    registry = TrialOrchestratorRegistry()
     return AttemptDeps(
         mission_store=mission_store,
         episode_store=episode_store,
@@ -56,7 +56,7 @@ def _build_runtime(
         task_store=task_store,
         agent_launcher=launcher,
         orchestrator_registry=registry,
-        manager_registry=EpisodeManagerRegistry(),
+        manager_registry=IterationManagerRegistry(),
         composer=composer,
     )
 
@@ -76,15 +76,15 @@ def _seed_outer_generator_task(
         goal="outer goal",
     )
     outer_segment = episode_store.insert(
-        mission_id=outer_request.id,
+        goal_id=outer_request.id,
         sequence_no=1,
-        creation_reason=EpisodeCreationReason.INITIAL,
+        creation_reason=IterationCreationReason.INITIAL,
         goal="outer goal",
-        attempt_budget=2,
+        trial_budget=2,
     )
     mission_store.append_episode_id(outer_request.id, outer_segment.id)
     outer_attempt = attempt_store.insert(
-        episode_id=outer_segment.id, attempt_sequence_no=1
+        iteration_id=outer_segment.id, trial_sequence_no=1
     )
     episode_store.append_attempt_id(outer_segment.id, outer_attempt.id)
 
@@ -117,26 +117,26 @@ def test_mission_start_creates_request_segment_graph_and_marks_parent_waiting(
         attempt_store=attempt_store,
         task_center_run_id=task_center_run_id,
     )
-    coordinator = MissionStarter(runtime=runtime)
+    coordinator = GoalStarter(runtime=runtime)
 
-    result: StartedMission = coordinator.start(
+    result: StartedGoal = coordinator.start(
         parent_task_id=parent_task_id,
         goal="solve delegated task",
     )
 
-    delegated_request = mission_store.get(result.mission_id)
+    delegated_request = mission_store.get(resultgoal_id)
     initial_episode = episode_store.get(result.initial_episode_id)
     initial_graph = attempt_store.get(result.initial_attempt_id)
     parent_task = task_store.get_task(parent_task_id)
 
     assert delegated_request is not None
-    assert delegated_request.status == MissionStatus.OPEN
+    assert delegated_request.status == GoalStatus.OPEN
     assert delegated_request.requested_by_task_id == parent_task_id
     assert delegated_request.goal == "solve delegated task"
     assert initial_episode is not None
-    assert initial_episode.mission_id == delegated_request.id
+    assert initial_episodegoal_id == delegated_request.id
     assert initial_graph is not None
-    assert initial_graph.episode_id == initial_episode.id
+    assert initial_graphiteration_id == initial_episode.id
     assert parent_task is not None
     assert parent_task["status"] == TaskCenterTaskStatus.WAITING_MISSION.value
     # Delegated orchestrator was started.
@@ -161,16 +161,16 @@ def test_mission_start_startup_failure_leaves_parent_running(
         del attempt, on_attempt_closed
         raise RuntimeError("delegated startup boom")
 
-    coordinator = MissionStarter(runtime=runtime)
+    coordinator = GoalStarter(runtime=runtime)
     # Patch the factory used by the coordinator's handler builder.
-    original = MissionStarter._build_handler
+    original = GoalStarter._build_handler
 
     def _patched_build_handler(self):
         handler = original(self)
         handler._factory._orchestrator_factory = _failing_factory  # type: ignore[attr-defined]
         return handler
 
-    MissionStarter._build_handler = _patched_build_handler  # type: ignore[assignment]
+    GoalStarter._build_handler = _patched_build_handler  # type: ignore[assignment]
     try:
         with pytest.raises(RuntimeError):
             coordinator.start(
@@ -178,7 +178,7 @@ def test_mission_start_startup_failure_leaves_parent_running(
                 goal="delegated",
             )
     finally:
-        MissionStarter._build_handler = original  # type: ignore[assignment]
+        GoalStarter._build_handler = original  # type: ignore[assignment]
 
     parent_task = task_store.get_task(parent_task_id)
     assert parent_task is not None
@@ -193,13 +193,13 @@ def test_mission_start_startup_failure_leaves_parent_running(
     cancelled = [
         r
         for r in mission_store.list_for_executor_task(parent_task_id)
-        if r.status == MissionStatus.CANCELLED
+        if r.status == GoalStatus.CANCELLED
     ]
     assert len(cancelled) == 1
     assert cancelled[0].requested_by_task_id == parent_task_id
     cancelled_segment = episode_store.list_for_mission(cancelled[0].id)
     assert len(cancelled_segment) == 1
-    assert cancelled_segment[0].status == EpisodeStatus.CANCELLED
+    assert cancelled_segment[0].status == IterationStatus.CANCELLED
     assert runtime.manager_registry is not None
     assert runtime.manager_registry.get(cancelled_segment[0].id) is None
 
@@ -222,7 +222,7 @@ def test_mission_start_startup_failure_closes_started_graph_and_deregisters_orch
         attempt_store=attempt_store,
         task_center_run_id=task_center_run_id,
     )
-    coordinator = MissionStarter(runtime=runtime)
+    coordinator = GoalStarter(runtime=runtime)
 
     with pytest.raises(RuntimeError):
         coordinator.start(
@@ -233,12 +233,12 @@ def test_mission_start_startup_failure_closes_started_graph_and_deregisters_orch
     [cancelled_request] = [
         r
         for r in mission_store.list_for_executor_task(parent_task_id)
-        if r.status == MissionStatus.CANCELLED
+        if r.status == GoalStatus.CANCELLED
     ]
     [cancelled_segment] = episode_store.list_for_mission(cancelled_request.id)
     [failed_attempt] = attempt_store.list_for_episode(cancelled_segment.id)
-    assert failed_attempt.status == AttemptStatus.FAILED
-    assert failed_attempt.fail_reason == AttemptFailReason.STARTUP_FAILED
+    assert failed_attempt.status == TrialStatus.FAILED
+    assert failed_attempt.fail_reason == TrialFailReason.STARTUP_FAILED
     assert runtime.orchestrator_registry.get(failed_attempt.id) is None
     assert runtime.manager_registry is not None
     assert runtime.manager_registry.get(cancelled_segment.id) is None
@@ -260,7 +260,7 @@ def test_mission_start_rejects_second_open_child_request_for_same_executor(
         attempt_store=attempt_store,
         task_center_run_id=task_center_run_id,
     )
-    coordinator = MissionStarter(runtime=runtime)
+    coordinator = GoalStarter(runtime=runtime)
     coordinator.start(
         parent_task_id=parent_task_id,
         goal="first delegation",
@@ -298,7 +298,7 @@ def test_mission_start_rejects_non_running_parent(
         parent_task_id, status=TaskCenterTaskStatus.DONE.value
     )
 
-    coordinator = MissionStarter(runtime=runtime)
+    coordinator = GoalStarter(runtime=runtime)
     with pytest.raises(TaskCenterInvariantViolation) as exc:
         coordinator.start(
             parent_task_id=parent_task_id,
@@ -320,7 +320,7 @@ def test_mission_start_accepts_entry_mode_caller_with_no_parent_attempt(
 
     # Seed the entry-mode caller: an entry task with task_center_attempt_id=None.
     entry_task_id = "entry-task-id"
-    manager_registry = EpisodeManagerRegistry()
+    manager_registry = IterationManagerRegistry()
     task_store.upsert_task(
         task_id=entry_task_id,
         task_center_run_id=task_center_run_id,
@@ -344,14 +344,14 @@ def test_mission_start_accepts_entry_mode_caller_with_no_parent_attempt(
         attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=_FakeLauncher(),
-        orchestrator_registry=AttemptOrchestratorRegistry(),
+        orchestrator_registry=TrialOrchestratorRegistry(),
         manager_registry=manager_registry,
         composer=composer,
         entry_task_controller=controller,
     )
 
-    coordinator = MissionStarter(runtime=runtime)
-    result: StartedMission = coordinator.start(
+    coordinator = GoalStarter(runtime=runtime)
+    result: StartedGoal = coordinator.start(
         parent_task_id=entry_task_id,
         goal="solve delegated work",
     )
@@ -363,11 +363,11 @@ def test_mission_start_accepts_entry_mode_caller_with_no_parent_attempt(
     # Result carries None for parent_attempt_id (entry mode).
     assert result.parent_attempt_id is None
     # Delegated request + episode + attempt were all created and started.
-    delegated_request = mission_store.get(result.mission_id)
+    delegated_request = mission_store.get(resultgoal_id)
     delegated_segment = episode_store.get(result.initial_episode_id)
     delegated_attempt = attempt_store.get(result.initial_attempt_id)
     assert delegated_request is not None
-    assert delegated_request.status == MissionStatus.OPEN
+    assert delegated_request.status == GoalStatus.OPEN
     assert delegated_segment is not None
     assert delegated_attempt is not None
     assert runtime.orchestrator_registry.get(delegated_attempt.id) is not None

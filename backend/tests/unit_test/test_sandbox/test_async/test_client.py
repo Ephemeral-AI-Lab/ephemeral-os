@@ -7,7 +7,7 @@ import asyncio
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from sandbox.provider.daytona.client.credentials import client_cache_key
+from sandbox.provider.daytona.client import client_cache_key
 
 
 class TestGetAsyncSandbox:
@@ -20,11 +20,11 @@ class TestGetAsyncSandbox:
         mock_sandbox = MagicMock()
         mock_client.get = AsyncMock(return_value=mock_sandbox)
 
-        import sandbox.provider.daytona.client.async_client as mod
+        import sandbox.provider.daytona.client as mod
 
         loop = asyncio.get_running_loop()
         monkeypatch.setattr(mod, "_load_credentials", lambda: ("async-key", "https://async-url", ""))
-        with mod._client_lock:
+        with mod._async_client_lock:
             mod._cached_clients.clear()
             mod._cached_clients[loop] = (
                 client_cache_key(
@@ -54,11 +54,11 @@ class TestGetAsyncSandbox:
         mock_client = MagicMock()
         mock_client.get = AsyncMock(return_value=None)
 
-        import sandbox.provider.daytona.client.async_client as mod
+        import sandbox.provider.daytona.client as mod
 
         loop = asyncio.get_running_loop()
         monkeypatch.setattr(mod, "_load_credentials", lambda: ("async-key", "https://async-url", ""))
-        with mod._client_lock:
+        with mod._async_client_lock:
             mod._cached_clients.clear()
             mod._cached_clients[loop] = (
                 client_cache_key(

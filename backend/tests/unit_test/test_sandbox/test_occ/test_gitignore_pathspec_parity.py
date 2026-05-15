@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.occ.content.gitignore_oracle import (
+from sandbox.occ.gitignore import (
     PathspecGitignoreOracle,
 )
 

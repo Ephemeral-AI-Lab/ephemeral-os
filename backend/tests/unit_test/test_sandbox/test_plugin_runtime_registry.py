@@ -1,4 +1,4 @@
-"""Unit tests for sandbox.plugin.runtime.registry."""
+"""Unit tests for sandbox.plugin.op_registry."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ from collections.abc import Iterator
 
 import pytest
 
-from sandbox.plugin.runtime import registry as registry_mod
-from sandbox.plugin.runtime.registry import (
+from sandbox.plugin import op_registry as registry_mod
+from sandbox.plugin.op_registry import (
     PluginOpConflictError,
     PluginOpRegistrationError,
     flush_plugin_registrations,

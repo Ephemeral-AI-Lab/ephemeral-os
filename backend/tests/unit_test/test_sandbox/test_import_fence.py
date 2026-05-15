@@ -215,7 +215,7 @@ def test_occ_policy_modules_depend_on_layer_stack_ports_not_manager() -> None:
         "sandbox.layer_stack.view",
         "sandbox.layer_stack.layer_publisher",
         "sandbox.layer_stack.lease",
-        "sandbox.daemon.service.workspace_server",
+        "sandbox.daemon.workspace_server",
     )
     for module in _python_files(occ_root):
         if module in allowed:
@@ -275,13 +275,13 @@ def test_command_exec_imports_only_client_protocol_boundaries() -> None:
     forbidden = (
         "sandbox.layer_stack",
         "sandbox.occ.service",
-        "sandbox.occ.stage.transaction",
-        "sandbox.occ.content.gitignore_oracle",
-        "sandbox.occ.stage.direct",
-        "sandbox.occ.stage.gated",
+        "sandbox.occ.commit_transaction",
+        "sandbox.occ.gitignore",
+        "sandbox.occ.stage",
+        "sandbox.occ.stage",
         "sandbox.occ.router",
-        "sandbox.occ.content.hashing",
-        "sandbox.daemon.service.workspace_server",
+        "sandbox.occ.hashing",
+        "sandbox.daemon.workspace_server",
     )
     for module in _python_files(command_exec_root):
         for imported in _imports(module):

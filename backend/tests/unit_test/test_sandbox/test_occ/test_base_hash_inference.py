@@ -8,10 +8,10 @@ import asyncio
 
 from sandbox.layer_stack.layer_change import WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
-from sandbox.occ.changeset.prepared import RouteDecision
-from sandbox.occ.changeset.types import DeleteChange, EditChange, WriteChange
-from sandbox.occ.content.gitignore_oracle import GitignoreMatcher
-from sandbox.occ.content.hashing import ContentHasher
+from sandbox.occ.changeset import RouteDecision
+from sandbox.occ.changeset import DeleteChange, EditChange, WriteChange
+from sandbox.occ.gitignore import GitignoreMatcher
+from sandbox.occ.hashing import ContentHasher
 from sandbox.occ.service import OccService
 
 _HASHER = ContentHasher()

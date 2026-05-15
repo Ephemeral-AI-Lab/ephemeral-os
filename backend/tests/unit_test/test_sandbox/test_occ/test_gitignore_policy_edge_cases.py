@@ -14,15 +14,15 @@ from pathlib import Path
 
 from sandbox.layer_stack.layer_change import WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
-from sandbox.occ.changeset.prepared import RouteDecision
-from sandbox.occ.changeset.types import (
+from sandbox.occ.changeset import RouteDecision
+from sandbox.occ.changeset import (
     ChangesetResult,
     Change,
     DeleteChange,
     FileStatus,
 )
-from sandbox.occ.stage.transaction import CommitTransaction
-from sandbox.occ.content.hashing import ContentHasher
+from sandbox.occ.commit_transaction import CommitTransaction
+from sandbox.occ.hashing import ContentHasher
 from sandbox.occ.service import OccService
 
 

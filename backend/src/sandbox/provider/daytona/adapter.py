@@ -8,24 +8,24 @@ from typing import Any, ClassVar
 
 from sandbox.models import RawExecResult
 from sandbox.provider.daytona.bash import extract_exit_code, wrap_bash_command
-from sandbox.provider.daytona.client.async_client import get_async_sandbox
-from sandbox.provider.daytona.client.credentials import load_credentials
-from sandbox.provider.daytona.client.sync_client import (
-    _APP_CREATED_VIA,
-    _APP_MANAGED_BY,
-    _HEALTH_TIMEOUT_SECONDS,
-    _IMAGE_LABEL,
-    _LIST_PAGE_LIMIT,
-    _SANDBOX_TIMEOUT_SECONDS,
-    _SNAPSHOT_LABEL,
-    _SNAPSHOT_PAGE_LIMIT,
-    _creation_param_classes,
-    _normalize_dict,
-    _normalize_optional_text,
-    _call_with_optional_timeout,
-    _paginate_all,
+from sandbox.provider.daytona.client import (
+    APP_CREATED_VIA,
+    APP_MANAGED_BY,
+    HEALTH_TIMEOUT_SECONDS,
+    IMAGE_LABEL,
+    LIST_PAGE_LIMIT,
+    SANDBOX_TIMEOUT_SECONDS,
+    SNAPSHOT_LABEL,
+    SNAPSHOT_PAGE_LIMIT,
     acquire_client,
+    call_with_optional_timeout,
+    creation_param_classes,
     fetch_sandbox,
+    get_async_sandbox,
+    load_credentials,
+    normalize_dict,
+    normalize_optional_text,
+    paginate_all,
 )
 
 logger = logging.getLogger(__name__)
@@ -55,13 +55,13 @@ def _serialize_raw(raw: Any, *, assigned_agents: list[str] | None = None) -> dic
             state = s.lower()
 
     image: str | None = None
-    for key in (_SNAPSHOT_LABEL, _IMAGE_LABEL):
+    for key in (SNAPSHOT_LABEL, IMAGE_LABEL):
         if labels.get(key):
             image = labels[key]
             break
     if image is None:
         for attr in ("image", "image_name", "snapshot"):
-            val = _normalize_optional_text(getattr(raw, attr, None))
+            val = normalize_optional_text(getattr(raw, attr, None))
             if val:
                 image = val
                 break
@@ -75,7 +75,7 @@ def _serialize_raw(raw: Any, *, assigned_agents: list[str] | None = None) -> dic
         "image": image,
         "labels": labels,
         "created_at": created_at,
-        "managed_by_app": labels.get("managed_by") == _APP_MANAGED_BY,
+        "managed_by_app": labels.get("managed_by") == APP_MANAGED_BY,
         "project_dir": project_dir,
         "assigned_agents": list(assigned_agents or []),
     }
@@ -125,10 +125,10 @@ class DaytonaProviderAdapter:
             }
         try:
             client = acquire_client()
-            _call_with_optional_timeout(
+            call_with_optional_timeout(
                 client.list,
                 limit=1,
-                timeout=_HEALTH_TIMEOUT_SECONDS,
+                timeout=HEALTH_TIMEOUT_SECONDS,
             )
             return {
                 "configured": True,
@@ -157,9 +157,9 @@ class DaytonaProviderAdapter:
         client = acquire_client()
         snapshot_api = getattr(client, "snapshot", None)
         if snapshot_api and hasattr(snapshot_api, "list"):
-            items = _paginate_all(snapshot_api.list, _SNAPSHOT_PAGE_LIMIT)
+            items = paginate_all(snapshot_api.list, SNAPSHOT_PAGE_LIMIT)
         elif hasattr(client, "list_snapshots"):
-            items = _paginate_all(client.list_snapshots, _SNAPSHOT_PAGE_LIMIT)
+            items = paginate_all(client.list_snapshots, SNAPSHOT_PAGE_LIMIT)
         else:
             logger.warning("Daytona client has no snapshot listing API")
             return []
@@ -184,26 +184,26 @@ class DaytonaProviderAdapter:
         env_vars: dict[str, str] | None = None,
         labels: dict[str, str] | None = None,
     ) -> dict[str, Any]:
-        normalized_name = _normalize_optional_text(name)
-        normalized_snapshot = _normalize_optional_text(snapshot)
-        normalized_image = _normalize_optional_text(image)
+        normalized_name = normalize_optional_text(name)
+        normalized_snapshot = normalize_optional_text(snapshot)
+        normalized_image = normalize_optional_text(image)
         if not normalized_name:
             raise ValueError("Sandbox name is required")
         if normalized_snapshot and normalized_image:
             raise ValueError("Pass either snapshot or image, not both.")
 
-        clean_env = _normalize_dict(env_vars)
-        clean_labels = _normalize_dict(labels)
-        clean_labels["managed_by"] = _APP_MANAGED_BY
-        clean_labels["created_via"] = _APP_CREATED_VIA
+        clean_env = normalize_dict(env_vars)
+        clean_labels = normalize_dict(labels)
+        clean_labels["managed_by"] = APP_MANAGED_BY
+        clean_labels["created_via"] = APP_CREATED_VIA
         if normalized_snapshot:
-            clean_labels[_SNAPSHOT_LABEL] = normalized_snapshot
+            clean_labels[SNAPSHOT_LABEL] = normalized_snapshot
         if normalized_image:
-            clean_labels[_IMAGE_LABEL] = normalized_image
+            clean_labels[IMAGE_LABEL] = normalized_image
 
         client = acquire_client()
         CreateSandboxFromSnapshotParams, CreateSandboxFromImageParams = (
-            _creation_param_classes()
+            creation_param_classes()
         )
 
         if normalized_image:
@@ -228,7 +228,7 @@ class DaytonaProviderAdapter:
             )
 
         logger.info("create_sandbox(%s): Daytona create starting", normalized_name)
-        raw = client.create(params, timeout=_SANDBOX_TIMEOUT_SECONDS)
+        raw = client.create(params, timeout=SANDBOX_TIMEOUT_SECONDS)
         logger.info("create_sandbox(%s): Daytona create returned", normalized_name)
         _refresh(raw)
         return _serialize_raw(raw, assigned_agents=[])
@@ -238,7 +238,7 @@ class DaytonaProviderAdapter:
 
     def list(self) -> list[dict[str, Any]]:
         client = acquire_client()
-        items = _paginate_all(client.list, _LIST_PAGE_LIMIT)
+        items = paginate_all(client.list, LIST_PAGE_LIMIT)
         sandboxes = [_serialize_raw(sb) for sb in items]
         sandboxes.sort(key=lambda item: item.get("created_at") or "", reverse=True)
         return sandboxes
@@ -250,7 +250,7 @@ class DaytonaProviderAdapter:
             str(getattr(state_attr, "value", state_attr) or "unknown").lower()
         )
         if not state.startswith("started"):
-            raw.start(timeout=_SANDBOX_TIMEOUT_SECONDS)
+            raw.start(timeout=SANDBOX_TIMEOUT_SECONDS)
             _refresh(raw)
         return _serialize_raw(raw)
 
@@ -258,18 +258,18 @@ class DaytonaProviderAdapter:
         raw = fetch_sandbox(sandbox_id)
         # WR-03: module-wide timeout (configurable via EPHEMERALOS_SANDBOX_TIMEOUT_SECONDS)
         # so degraded-scheduler stops don't fail at 60s while start/delete tolerate longer.
-        raw.stop(timeout=_SANDBOX_TIMEOUT_SECONDS)
+        raw.stop(timeout=SANDBOX_TIMEOUT_SECONDS)
         _refresh(raw)
         return _serialize_raw(raw)
 
     def delete(self, sandbox_id: str) -> None:
         raw = fetch_sandbox(sandbox_id)
-        raw.delete(timeout=_SANDBOX_TIMEOUT_SECONDS)
+        raw.delete(timeout=SANDBOX_TIMEOUT_SECONDS)
         logger.info("Sandbox deleted: %s", sandbox_id)
 
     def set_labels(self, sandbox_id: str, labels: dict[str, str]) -> dict[str, Any]:
         raw = fetch_sandbox(sandbox_id)
-        raw.set_labels(_normalize_dict(labels))
+        raw.set_labels(normalize_dict(labels))
         _refresh(raw)
         return _serialize_raw(raw)
 

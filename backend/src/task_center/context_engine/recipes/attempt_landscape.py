@@ -11,7 +11,7 @@ from task_center.context_engine.packet import (
     ContextPriority,
 )
 from task_center.context_engine.recipes._shared import latest_summary_text
-from task_center.attempt.state import Attempt, AttemptStatus
+from task_center.trial.state import Trial as Attempt, TrialStatus as AttemptStatus
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
     from task_center._core.persistence import TaskStoreProtocol

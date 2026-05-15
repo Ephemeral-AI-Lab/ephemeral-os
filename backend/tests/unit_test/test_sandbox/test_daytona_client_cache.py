@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from sandbox.provider.daytona.client.credentials import client_cache_key
+from sandbox.provider.daytona.client import client_cache_key
 
 
 class _DaytonaConfig:
@@ -40,30 +40,29 @@ async def test_sync_and_async_clients_use_factory_isolated_cache_keys(
     monkeypatch.setenv("DAYTONA_API_URL", "https://daytona.example")
     monkeypatch.setenv("DAYTONA_TARGET", "target-a")
     monkeypatch.setattr(
-        "sandbox.provider.daytona.client.credentials._load_dotenv_values",
+        "sandbox.provider.daytona.client._load_dotenv_values",
         lambda: {},
     )
 
-    import sandbox.provider.daytona.client.async_client as async_mod
-    import sandbox.provider.daytona.client.sync_client as sync_mod
+    import sandbox.provider.daytona.client as client_mod
 
     loop = asyncio.get_running_loop()
-    with sync_mod._client_lock:
-        sync_mod._cached_client = None
-        sync_mod._cached_client_key = None
-    with async_mod._client_lock:
-        async_mod._cached_clients.clear()
+    with client_mod._sync_client_lock:
+        client_mod._cached_client = None
+        client_mod._cached_client_key = None
+    with client_mod._async_client_lock:
+        client_mod._cached_clients.clear()
 
     try:
-        sync_client = sync_mod.acquire_client()
-        async_client = async_mod.get_async_daytona_client()
+        sync_client = client_mod.acquire_client()
+        async_client = client_mod.get_async_daytona_client()
 
         assert isinstance(sync_client, _SyncDaytona)
         assert isinstance(async_client, _AsyncDaytona)
         assert sync_client is not async_client
 
-        sync_key = sync_mod._cached_client_key
-        async_key, cached_async_client = async_mod._cached_clients[loop]
+        sync_key = client_mod._cached_client_key
+        async_key, cached_async_client = client_mod._cached_clients[loop]
         assert cached_async_client is async_client
         assert sync_key == client_cache_key(
             "Daytona",
@@ -83,8 +82,8 @@ async def test_sync_and_async_clients_use_factory_isolated_cache_keys(
         assert "secret-key" not in sync_key
         assert "secret-key" not in async_key
     finally:
-        with sync_mod._client_lock:
-            sync_mod._cached_client = None
-            sync_mod._cached_client_key = None
-        with async_mod._client_lock:
-            async_mod._cached_clients.clear()
+        with client_mod._sync_client_lock:
+            client_mod._cached_client = None
+            client_mod._cached_client_key = None
+        with client_mod._async_client_lock:
+            client_mod._cached_clients.clear()

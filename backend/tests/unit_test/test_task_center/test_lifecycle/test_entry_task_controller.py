@@ -6,7 +6,7 @@ import pytest
 
 from task_center.entry import EntryTaskController
 from task_center._core.types import TaskCenterInvariantViolation
-from task_center.mission.state import MissionClosureReport
+from task_center.goal.state import GoalClosureReport
 from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 
 
@@ -108,7 +108,7 @@ def test_mark_waiting_then_closure_report_success(
     assert task["status"] == TaskCenterTaskStatus.WAITING_MISSION.value
 
     controller.apply_mission_closure_report(
-        MissionClosureReport(
+        GoalClosureReport(
             mission_id="delegated-1",
             requested_by_task_id=controller.task_id,
             outcome="success",
@@ -137,7 +137,7 @@ def test_closure_report_failure_marks_failed(
     )
 
     controller.apply_mission_closure_report(
-        MissionClosureReport(
+        GoalClosureReport(
             mission_id="delegated-1",
             requested_by_task_id=controller.task_id,
             outcome="failed",
@@ -161,7 +161,7 @@ def test_closure_report_idempotent_when_task_already_terminal(
     controller.apply_executor_success(summary="done", artifacts=[])
 
     controller.apply_mission_closure_report(
-        MissionClosureReport(
+        GoalClosureReport(
             mission_id="delegated-1",
             requested_by_task_id=controller.task_id,
             outcome="failed",

@@ -1,12 +1,12 @@
-"""AttemptOrchestratorRegistry tests."""
+"""TrialOrchestratorRegistry tests."""
 
 from __future__ import annotations
 
 import pytest
 
 from task_center._core.types import TaskCenterInvariantViolation
-from task_center.attempt.orchestrator_registry import (
-    AttemptOrchestratorRegistry,
+from task_center.trial.orchestrator_registry import (
+    TrialOrchestratorRegistry,
 )
 
 
@@ -16,7 +16,7 @@ class _FakeOrchestrator:
 
 
 def test_registry_enforces_one_orchestrator_per_graph():
-    registry = AttemptOrchestratorRegistry()
+    registry = TrialOrchestratorRegistry()
     registry.register(_FakeOrchestrator("g1"))  # type: ignore[arg-type]
 
     with pytest.raises(TaskCenterInvariantViolation):
@@ -24,7 +24,7 @@ def test_registry_enforces_one_orchestrator_per_graph():
 
 
 def test_registry_deregister_allows_replacement():
-    registry = AttemptOrchestratorRegistry()
+    registry = TrialOrchestratorRegistry()
     first = _FakeOrchestrator("g1")
     second = _FakeOrchestrator("g1")
 

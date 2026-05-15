@@ -21,7 +21,7 @@ from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
 from typing import Any
 
-from sandbox.plugin.runtime.context import PluginOpContext
+from sandbox.plugin.op_context import PluginOpContext
 
 __all__ = [
     "ContextFactory",

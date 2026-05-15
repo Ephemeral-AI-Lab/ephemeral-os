@@ -21,6 +21,9 @@ def test_bundle_contains_sandbox_plugin_runtime() -> None:
         name.startswith("sandbox/plugin/") and name.endswith(".py")
         for name in names
     ), f"runtime bundle missing sandbox/plugin/*: {sorted(names)[:20]}"
-    assert "sandbox/plugin/runtime/registry.py" in names
+    assert "sandbox/plugin/op_context.py" in names
+    assert "sandbox/plugin/op_registry.py" in names
     assert "sandbox/plugin/runtime/__init__.py" in names
+    assert "sandbox/plugin/runtime/registry.py" not in names
+    assert "sandbox/plugin/runtime/context.py" not in names
     assert "sandbox/plugin/handler.py" in names

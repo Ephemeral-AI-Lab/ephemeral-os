@@ -7,45 +7,45 @@ from datetime import UTC, datetime
 import pytest
 
 from task_center._core.infra import (
-    assert_continuation_episode_predecessor,
-    assert_mission_open,
-    assert_episode_id_unique_in_mission,
-    assert_episode_sequence_contiguous,
+    assert_continuation_iteration_predecessor,
+    assert_goal_open,
+    assert_iteration_id_unique_in_goal,
+    assert_iteration_sequence_contiguous,
 )
 from task_center._core.infra import (
     assert_fail_reason_present_on_failure,
-    assert_attempt_sequence_contiguous,
+    assert_trial_sequence_contiguous,
 )
 from task_center._core.infra import (
-    assert_attempt_belongs_to_episode,
-    assert_episode_has_budget,
-    assert_episode_open,
+    assert_trial_belongs_to_iteration,
+    assert_iteration_has_budget,
+    assert_iteration_open,
 )
-from task_center.episode import EpisodeManagerRegistry
-from task_center.mission.state import (
-    Mission,
-    MissionStatus,
+from task_center.iteration import IterationManagerRegistry
+from task_center.goal.state import (
+    Goal,
+    GoalStatus,
 )
-from task_center.attempt import (
-    Attempt,
-    AttemptFailReason,
-    AttemptStage,
-    AttemptStatus,
+from task_center.trial import (
+    Trial,
+    TrialFailReason,
+    TrialStage,
+    TrialStatus,
 )
-from task_center.episode.state import (
-    Episode,
-    EpisodeCreationReason,
-    EpisodeStatus,
+from task_center.iteration.state import (
+    Iteration,
+    IterationCreationReason,
+    IterationStatus,
 )
 from task_center._core.types import TaskCenterInvariantViolation
 
 
 def _request(
-    status: MissionStatus = MissionStatus.OPEN,
+    status: GoalStatus = GoalStatus.OPEN,
     episode_ids: tuple[str, ...] = (),
-) -> Mission:
+) -> Goal:
     now = datetime.now(UTC)
-    return Mission(
+    return Goal(
         id="r1",
         task_center_run_id="run1",
         requested_by_task_id="t1",
@@ -61,22 +61,22 @@ def _request(
 
 def _segment(
     *,
-    status: EpisodeStatus = EpisodeStatus.OPEN,
+    status: IterationStatus = IterationStatus.OPEN,
     attempt_ids: tuple[str, ...] = (),
     continuation_goal: str | None = None,
     attempt_budget: int = 2,
     sid: str = "s1",
-) -> Episode:
+) -> Iteration:
     now = datetime.now(UTC)
-    return Episode(
+    return Iteration(
         id=sid,
         mission_id="r1",
         sequence_no=1,
-        creation_reason=EpisodeCreationReason.INITIAL,
+        creation_reason=IterationCreationReason.INITIAL,
         goal="g",
-        attempt_budget=attempt_budget,
+        trial_budget=attempt_budget,
         status=status,
-        attempt_ids=attempt_ids,
+        trial_ids=attempt_ids,
         continuation_goal=continuation_goal,
         created_at=now,
         updated_at=now,
@@ -86,17 +86,17 @@ def _segment(
 
 def _graph(
     *,
-    status: AttemptStatus = AttemptStatus.RUNNING,
-    fail_reason: AttemptFailReason | None = None,
+    status: TrialStatus = TrialStatus.RUNNING,
+    fail_reason: TrialFailReason | None = None,
     episode_id: str = "s1",
     gid: str = "g1",
-) -> Attempt:
+) -> Trial:
     now = datetime.now(UTC)
-    return Attempt(
+    return Trial(
         id=gid,
         episode_id=episode_id,
-        attempt_sequence_no=1,
-        stage=AttemptStage.PLAN,
+        trial_sequence_no=1,
+        stage=TrialStage.PLAN,
         status=status,
         planner_task_id=None,
         task_specification=None,
@@ -115,51 +115,51 @@ def _graph(
 
 
 def test_assert_mission_open_passes_for_open():
-    assert_mission_open(_request(status=MissionStatus.OPEN))
+    assert_goal_open(_request(status=GoalStatus.OPEN))
 
 
 def test_assert_mission_open_fails_for_closed():
     for status in (
-        MissionStatus.SUCCEEDED,
-        MissionStatus.FAILED,
-        MissionStatus.CANCELLED,
+        GoalStatus.SUCCEEDED,
+        GoalStatus.FAILED,
+        GoalStatus.CANCELLED,
     ):
         with pytest.raises(TaskCenterInvariantViolation):
-            assert_mission_open(_request(status=status))
+            assert_goal_open(_request(status=status))
 
 
 def test_assert_episode_id_unique_in_mission():
-    assert_episode_id_unique_in_mission(
+    assert_iteration_id_unique_in_goal(
         _request(episode_ids=("s1", "s2")), "s3"
     )
     with pytest.raises(TaskCenterInvariantViolation):
-        assert_episode_id_unique_in_mission(
+        assert_iteration_id_unique_in_goal(
             _request(episode_ids=("s1",)), "s1"
         )
 
 
 def test_assert_episode_sequence_contiguous():
-    assert_episode_sequence_contiguous(_request(episode_ids=()), 1)
-    assert_episode_sequence_contiguous(_request(episode_ids=("s1",)), 2)
+    assert_iteration_sequence_contiguous(_request(episode_ids=()), 1)
+    assert_iteration_sequence_contiguous(_request(episode_ids=("s1",)), 2)
     with pytest.raises(TaskCenterInvariantViolation):
-        assert_episode_sequence_contiguous(_request(episode_ids=("s1",)), 1)
+        assert_iteration_sequence_contiguous(_request(episode_ids=("s1",)), 1)
     with pytest.raises(TaskCenterInvariantViolation):
-        assert_episode_sequence_contiguous(_request(episode_ids=("s1",)), 3)
+        assert_iteration_sequence_contiguous(_request(episode_ids=("s1",)), 3)
 
 
 def test_assert_continuation_episode_predecessor_requires_succeeded_with_goal():
     succeeded_with_goal = _segment(
-        status=EpisodeStatus.SUCCEEDED, continuation_goal="next"
+        status=IterationStatus.SUCCEEDED, continuation_goal="next"
     )
-    assert_continuation_episode_predecessor(succeeded_with_goal)
+    assert_continuation_iteration_predecessor(succeeded_with_goal)
 
     with pytest.raises(TaskCenterInvariantViolation):
-        assert_continuation_episode_predecessor(
-            _segment(status=EpisodeStatus.OPEN, continuation_goal="next")
+        assert_continuation_iteration_predecessor(
+            _segment(status=IterationStatus.OPEN, continuation_goal="next")
         )
     with pytest.raises(TaskCenterInvariantViolation):
-        assert_continuation_episode_predecessor(
-            _segment(status=EpisodeStatus.SUCCEEDED, continuation_goal=None)
+        assert_continuation_iteration_predecessor(
+            _segment(status=IterationStatus.SUCCEEDED, continuation_goal=None)
         )
 
 
@@ -167,28 +167,28 @@ def test_assert_continuation_episode_predecessor_requires_succeeded_with_goal():
 
 
 def test_assert_episode_open():
-    assert_episode_open(_segment(status=EpisodeStatus.OPEN))
+    assert_iteration_open(_segment(status=IterationStatus.OPEN))
     with pytest.raises(TaskCenterInvariantViolation):
-        assert_episode_open(_segment(status=EpisodeStatus.SUCCEEDED))
+        assert_iteration_open(_segment(status=IterationStatus.SUCCEEDED))
 
 
 def test_assert_episode_has_budget():
-    assert_episode_has_budget(_segment(attempt_budget=2, attempt_ids=()))
-    assert_episode_has_budget(
-        _segment(attempt_budget=2, attempt_ids=("g1",))
+    assert_iteration_has_budget(_segment(trial_budget=2, attempt_ids=()))
+    assert_iteration_has_budget(
+        _segment(trial_budget=2, attempt_ids=("g1",))
     )
     with pytest.raises(TaskCenterInvariantViolation):
-        assert_episode_has_budget(
-            _segment(attempt_budget=2, attempt_ids=("g1", "g2"))
+        assert_iteration_has_budget(
+            _segment(trial_budget=2, attempt_ids=("g1", "g2"))
         )
 
 
 def test_assert_attempt_belongs_to_episode():
-    assert_attempt_belongs_to_episode(
+    assert_trial_belongs_to_iteration(
         _graph(episode_id="s1"), _segment(sid="s1")
     )
     with pytest.raises(TaskCenterInvariantViolation):
-        assert_attempt_belongs_to_episode(
+        assert_trial_belongs_to_iteration(
             _graph(episode_id="s1"), _segment(sid="s2")
         )
 
@@ -197,25 +197,25 @@ def test_assert_attempt_belongs_to_episode():
 
 
 def test_assert_attempt_sequence_contiguous():
-    assert_attempt_sequence_contiguous(_segment(attempt_ids=()), 1)
-    assert_attempt_sequence_contiguous(_segment(attempt_ids=("g1",)), 2)
+    assert_trial_sequence_contiguous(_segment(attempt_ids=()), 1)
+    assert_trial_sequence_contiguous(_segment(attempt_ids=("g1",)), 2)
     with pytest.raises(TaskCenterInvariantViolation):
-        assert_attempt_sequence_contiguous(_segment(attempt_ids=("g1",)), 1)
+        assert_trial_sequence_contiguous(_segment(attempt_ids=("g1",)), 1)
 
 
 def test_assert_fail_reason_present_on_failure():
     assert_fail_reason_present_on_failure(
-        _graph(status=AttemptStatus.PASSED)
+        _graph(status=TrialStatus.PASSED)
     )
     assert_fail_reason_present_on_failure(
         _graph(
-            status=AttemptStatus.FAILED,
-            fail_reason=AttemptFailReason.GENERATOR_FAILED,
+            status=TrialStatus.FAILED,
+            fail_reason=TrialFailReason.GENERATOR_FAILED,
         )
     )
     with pytest.raises(TaskCenterInvariantViolation):
         assert_fail_reason_present_on_failure(
-            _graph(status=AttemptStatus.FAILED, fail_reason=None)
+            _graph(status=TrialStatus.FAILED, fail_reason=None)
         )
 
 
@@ -223,7 +223,7 @@ def test_assert_fail_reason_present_on_failure():
 
 
 def test_episode_manager_registry_enforces_uniqueness():
-    reg = EpisodeManagerRegistry()
+    reg = IterationManagerRegistry()
 
     class _Fake:
         episode_id = "s1"

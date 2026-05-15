@@ -19,10 +19,10 @@ from sqlalchemy.orm import Session, sessionmaker
 from db.base import Base
 import db.models  # noqa: F401 — populate SQLAlchemy metadata
 from db.engine import get_engine, initialize_db
-from db.stores.attempt_store import AttemptStore
+from db.stores.trial_store import TrialStore
 from db.stores.context_packet_store import ContextPacketStore
-from db.stores.episode_store import EpisodeStore
-from db.stores.mission_store import MissionStore
+from db.stores.iteration_store import IterationStore
+from db.stores.goal_store import GoalStore
 from db.stores.task_center_store import TaskCenterStore
 
 
@@ -34,9 +34,9 @@ class TaskCenterStoreBundle:
     schema: str
     session_factory: sessionmaker[Session]
     task_store: TaskCenterStore
-    mission_store: MissionStore
-    episode_store: EpisodeStore
-    attempt_store: AttemptStore
+    goal_store: GoalStore
+    iteration_store: IterationStore
+    trial_store: TrialStore
     context_packet_store: ContextPacketStore
 
     def close(self) -> None:
@@ -99,16 +99,16 @@ def create_per_test_task_center_stores(
         schema=schema,
         session_factory=session_factory,
         task_store=TaskCenterStore(),
-        mission_store=MissionStore(),
-        episode_store=EpisodeStore(),
-        attempt_store=AttemptStore(),
+        goal_store=GoalStore(),
+        iteration_store=IterationStore(),
+        trial_store=TrialStore(),
         context_packet_store=ContextPacketStore(),
     )
     for store in (
         bundle.task_store,
-        bundle.mission_store,
-        bundle.episode_store,
-        bundle.attempt_store,
+        bundle.goal_store,
+        bundle.iteration_store,
+        bundle.trial_store,
         bundle.context_packet_store,
     ):
         store.initialize(session_factory)

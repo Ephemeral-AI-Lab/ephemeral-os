@@ -13,7 +13,7 @@ import uuid
 
 from task_center._core.persistence import TaskStoreProtocol
 from task_center._core.types import TaskCenterInvariantViolation
-from task_center.mission.state import MissionClosureReport
+from task_center.goal.state import GoalClosureReport
 from task_center.task_state import TaskCenterTaskStatus
 
 
@@ -78,17 +78,17 @@ class EntryTaskController:
 
     # ---- delegated-mission resume -----------------------------------------
 
-    def apply_mission_closure_report(
-        self, report: MissionClosureReport
+    def apply_goal_closure_report(
+        self, report: GoalClosureReport
     ) -> None:
-        """Resume the entry task waiting on a delegated mission."""
+        """Resume the entry task waiting on a delegated goal."""
         succeeded = report.outcome == "success"
         if succeeded:
             status = TaskCenterTaskStatus.DONE
-            text = f"Delegated mission {report.mission_id} succeeded."
+            text = f"Delegated goal {report.goal_id} succeeded."
         else:
             status = TaskCenterTaskStatus.FAILED
-            text = f"Delegated mission {report.mission_id} failed."
+            text = f"Delegated goal {report.goal_id} failed."
 
         try:
             updated = self.task_store.set_task_status_if_current(
@@ -99,8 +99,8 @@ class EntryTaskController:
                     "outcome": report.outcome,
                     "summary": text,
                     "payload": {
-                        "mission_closure_report": asdict(report),
-                        "submission_kind": "mission_closure_report",
+                        "goal_closure_report": asdict(report),
+                        "submission_kind": "goal_closure_report",
                     },
                 },
             )

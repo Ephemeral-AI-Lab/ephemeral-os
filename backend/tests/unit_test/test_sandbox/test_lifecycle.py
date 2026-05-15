@@ -5,17 +5,17 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import MagicMock
 
-from sandbox.provider.daytona.client.credentials import client_cache_key
+from sandbox.provider.daytona.client import client_cache_key
 
 
 class TestCloseClient:
     def test_does_nothing_when_client_is_none(self):
-        from sandbox.provider.daytona.client.shutdown import close_client
+        from sandbox.provider.daytona.client import close_client
 
         close_client(None)
 
     def test_calls_close_method(self):
-        from sandbox.provider.daytona.client.shutdown import close_client
+        from sandbox.provider.daytona.client import close_client
 
         async def fake_close():
             pass
@@ -28,7 +28,7 @@ class TestCloseClient:
         close_mock.close.assert_called_once()
 
     def test_handles_missing_close_method(self):
-        from sandbox.provider.daytona.client.shutdown import close_client
+        from sandbox.provider.daytona.client import close_client
 
         client = MagicMock(spec=[])
         close_client(client)
@@ -36,7 +36,7 @@ class TestCloseClient:
 
 class TestAsyncCloseClient:
     def test_awaits_close_method(self):
-        from sandbox.provider.daytona.client.shutdown import async_close_client
+        from sandbox.provider.daytona.client import async_close_client
 
         closed = False
 
@@ -50,7 +50,7 @@ class TestAsyncCloseClient:
         assert closed is True
 
     def test_handles_missing_close_method(self):
-        from sandbox.provider.daytona.client.shutdown import async_close_client
+        from sandbox.provider.daytona.client import async_close_client
 
         client = MagicMock(spec=[])
         asyncio.run(async_close_client(client))
@@ -58,8 +58,7 @@ class TestAsyncCloseClient:
 
 class TestShutdownCachedClient:
     def test_async_shutdown_closes_fallback_loop_clients(self):
-        import sandbox.provider.daytona.client.async_client as async_client_mod
-        import sandbox.provider.daytona.client.shutdown as mod
+        import sandbox.provider.daytona.client as mod
 
         async def fake_close():
             pass
@@ -67,7 +66,7 @@ class TestShutdownCachedClient:
         mock_client = MagicMock()
         mock_client.close = MagicMock(return_value=fake_close())
         loop = asyncio.new_event_loop()
-        async_client_mod._cached_clients[loop] = (
+        mod._cached_clients[loop] = (
             client_cache_key(
                 "AsyncDaytona",
                 api_key="key",
@@ -82,11 +81,10 @@ class TestShutdownCachedClient:
         finally:
             loop.close()
 
-        assert len(async_client_mod._cached_clients) == 0
+        assert len(mod._cached_clients) == 0
 
     def test_async_shutdown_closes_active_loop_client(self):
-        import sandbox.provider.daytona.client.async_client as async_client_mod
-        import sandbox.provider.daytona.client.shutdown as mod
+        import sandbox.provider.daytona.client as mod
 
         closed = False
 
@@ -97,9 +95,9 @@ class TestShutdownCachedClient:
 
         async def run() -> None:
             loop = asyncio.get_running_loop()
-            with async_client_mod._client_lock:
-                async_client_mod._cached_clients.clear()
-                async_client_mod._cached_clients[loop] = (
+            with mod._async_client_lock:
+                mod._cached_clients.clear()
+                mod._cached_clients[loop] = (
                     client_cache_key(
                         "AsyncDaytona",
                         api_key="key",
@@ -113,4 +111,4 @@ class TestShutdownCachedClient:
         asyncio.run(run())
 
         assert closed is True
-        assert len(async_client_mod._cached_clients) == 0
+        assert len(mod._cached_clients) == 0

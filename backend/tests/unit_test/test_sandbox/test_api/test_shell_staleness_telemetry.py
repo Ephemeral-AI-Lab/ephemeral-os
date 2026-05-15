@@ -12,13 +12,14 @@ import pytest
 
 from sandbox.layer_stack import WriteLayerChange, LayerStackManager
 from sandbox.layer_stack.workspace_base import build_workspace_base
-from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.changeset.types import build_api_write_change
-from sandbox.occ.changeset.prepared import CommitOptions
-from sandbox.occ.changeset.types import FileStatus
+from sandbox.occ.hashing import ContentHasher
+from sandbox.occ.changeset import build_api_write_change
+from sandbox.occ.changeset import CommitOptions
+from sandbox.occ.changeset import FileStatus
 from sandbox.execution.contract import ShellProcessResult
-from sandbox.daemon.service import occ_backend, shell_runner
-from sandbox.daemon.handler.request_context import services as request_services
+from sandbox.daemon import occ_backend
+from sandbox.daemon.service import shell_runner
+from sandbox.daemon._toolbox import services as request_services
 
 
 class _BlockingCommandRunner:

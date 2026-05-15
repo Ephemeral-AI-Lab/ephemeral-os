@@ -6,8 +6,8 @@ from collections.abc import Sequence
 
 import pytest
 
-from sandbox.occ.changeset.prepared import CommitOptions
-from sandbox.occ.changeset.types import Change, ChangesetResult
+from sandbox.occ.changeset import CommitOptions
+from sandbox.occ.changeset import Change, ChangesetResult
 from sandbox.occ.client import OccClient
 
 

@@ -26,9 +26,9 @@ from task_center_runner.audit.events import Event as AuditEvent
 from task_center_runner.audit.io import atomic_write_json
 from task_center_runner.audit.metrics import MetricsAggregator
 from db.models.agent_run import AgentRunRecord
-from db.models.attempt import AttemptRecord
-from db.models.episode import EpisodeRecord
-from db.models.mission import MissionRecord
+from db.models.trial import TrialRecord as AttemptRecord
+from db.models.iteration import IterationRecord as EpisodeRecord
+from db.models.goal import GoalRecord as MissionRecord
 from db.models.task_center import TaskCenterTaskRecord
 from message.agent_message_recorder import AgentMessageJsonlRecorder
 

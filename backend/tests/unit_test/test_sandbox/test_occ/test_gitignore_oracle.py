@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sandbox.occ.content.gitignore_oracle import PathspecGitignoreOracle
+from sandbox.occ.gitignore import PathspecGitignoreOracle
 
 
 def _make_workspace(tmp_path: Path, files: dict[str, str]) -> Path:

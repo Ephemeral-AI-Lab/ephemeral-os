@@ -31,6 +31,7 @@ from sandbox.models import (
 )
 from sandbox.api._control import (  # isort: skip -- models must precede control
     configured_sandbox_defaults,
+    context_preparer_for,
     create_sandbox,
     delete_sandbox,
     ensure_sandbox_running,
@@ -49,7 +50,6 @@ from sandbox.api._impl.raw_exec import raw_exec
 from sandbox.api._impl.read import read_file
 from sandbox.api._impl.shell import shell
 from sandbox.api._impl.write import write_file
-from sandbox.host.context_preparer import context_preparer_for
 
 __all__ = [
     "ConflictInfo",

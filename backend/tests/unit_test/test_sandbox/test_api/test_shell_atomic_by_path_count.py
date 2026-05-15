@@ -20,8 +20,8 @@ import pytest
 
 from sandbox.execution.contract import CommandExecRequest
 from sandbox.execution import orchestrator as command_executor
-from sandbox.occ.changeset.prepared import CommitOptions
-from sandbox.occ.changeset.types import ChangesetResult, WriteChange
+from sandbox.occ.changeset import CommitOptions
+from sandbox.occ.changeset import ChangesetResult, WriteChange
 
 
 @dataclass

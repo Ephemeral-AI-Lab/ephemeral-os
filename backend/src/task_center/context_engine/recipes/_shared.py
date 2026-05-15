@@ -14,8 +14,8 @@ from task_center.context_engine.packet import (
     ContextBlockKind,
     ContextPriority,
 )
-from task_center.episode.state import Episode
-from task_center.mission.state import Mission
+from task_center.iteration.state import Iteration as Episode
+from task_center.goal.state import Goal as Mission
 
 MISSION_EPISODE_HEADING = "# Mission / Current Episode"
 MISSION_HEADING = "# Mission"

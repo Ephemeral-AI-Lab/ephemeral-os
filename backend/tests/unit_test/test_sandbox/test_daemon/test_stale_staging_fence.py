@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.daemon.service import workspace_server
+from sandbox.daemon import workspace_server
 
 
 @pytest.fixture(autouse=True)

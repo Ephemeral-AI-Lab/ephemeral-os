@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.mission.state import MissionStatus
-from task_center.attempt import AttemptStage, AttemptStatus
+from task_center.goal.state import GoalStatus
+from task_center.trial import TrialStage, TrialStatus
 from task_center.task_state import (
     EvaluatorSubmission,
     GeneratorSubmission,
@@ -144,7 +144,7 @@ async def test_submit_evaluation_success_calls_apply_evaluator_submission(
     attempt = attempt_store.get(fixture.attempt_id)
     assert not result.is_error
     assert attempt is not None
-    assert attempt.status == AttemptStatus.PASSED
+    assert attempt.status == TrialStatus.PASSED
 
 
 async def test_submit_evaluation_failure_calls_apply_evaluator_submission(
@@ -169,7 +169,7 @@ async def test_submit_evaluation_failure_calls_apply_evaluator_submission(
     attempt = attempt_store.get(fixture.attempt_id)
     assert not result.is_error
     assert attempt is not None
-    assert attempt.status == AttemptStatus.FAILED
+    assert attempt.status == TrialStatus.FAILED
 
 
 async def test_submit_execution_handoff_starts_delegated_request(
@@ -201,14 +201,14 @@ async def test_submit_execution_handoff_starts_delegated_request(
     assert task is not None
     assert task["status"] == TaskCenterTaskStatus.WAITING_MISSION.value
     assert delegated_request is not None
-    assert delegated_request.status == MissionStatus.OPEN
+    assert delegated_request.status == GoalStatus.OPEN
     assert delegated_request.requested_by_task_id == generator_id
     assert delegated_request.goal == "solve delegated task"
     assert initial_episode is not None
-    assert initial_episode.mission_id == delegated_request.id
+    assert initial_episodegoal_id == delegated_request.id
     assert created_attempt is not None
-    assert created_attempt.episode_id == initial_episode.id
-    assert created_attempt.stage == AttemptStage.PLAN
+    assert created_attemptiteration_id == initial_episode.id
+    assert created_attempt.stage == TrialStage.PLAN
 
 
 async def test_submit_execution_handoff_entry_mode_uses_bound_controller(
@@ -216,12 +216,12 @@ async def test_submit_execution_handoff_entry_mode_uses_bound_controller(
 ) -> None:
     from pathlib import Path
 
-    from task_center.attempt.orchestrator_registry import (
-        AttemptOrchestratorRegistry,
+    from task_center.trial.orchestrator_registry import (
+        TrialOrchestratorRegistry,
     )
-    from task_center.attempt.runtime import AttemptDeps
+    from task_center.trial.runtime import AttemptDeps
     from task_center.entry import EntryTaskController
-    from task_center.episode import EpisodeManagerRegistry
+    from task_center.iteration import IterationManagerRegistry
     from tools._framework.core.context import ToolExecutionContextService
     from tools._framework.core.runtime import ExecutionMetadata
 
@@ -251,8 +251,8 @@ async def test_submit_execution_handoff_entry_mode_uses_bound_controller(
         attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=FakeLauncher(),
-        orchestrator_registry=AttemptOrchestratorRegistry(),
-        manager_registry=EpisodeManagerRegistry(),
+        orchestrator_registry=TrialOrchestratorRegistry(),
+        manager_registry=IterationManagerRegistry(),
         composer=composer,
         entry_task_controller=controller,
     )
@@ -405,6 +405,6 @@ async def test_submit_execution_handoff_return_updates_outer_generator(
         "final_attempt_id"
     ] == delegated_attempt_id
     assert outer_attempt is not None
-    assert outer_attempt.stage == AttemptStage.EVALUATE
+    assert outer_attempt.stage == TrialStage.EVALUATE
     assert delegated_request is not None
-    assert delegated_request.status == MissionStatus.SUCCEEDED
+    assert delegated_request.status == GoalStatus.SUCCEEDED

@@ -9,9 +9,9 @@ from pathlib import Path
 
 from sandbox.layer_stack.layer_change import WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
-from sandbox.occ.changeset.prepared import CommitOptions
-from sandbox.occ.changeset.types import ChangesetResult, FileStatus
-from sandbox.occ.content.hashing import ContentHasher
+from sandbox.occ.changeset import CommitOptions
+from sandbox.occ.changeset import ChangesetResult, FileStatus
+from sandbox.occ.hashing import ContentHasher
 from sandbox.occ.service import OccService
 
 

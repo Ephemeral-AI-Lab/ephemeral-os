@@ -4,18 +4,18 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.mission.close_report_router import (
-    MissionClosureReportRouter,
+from task_center.goal.close_report_router import (
+    GoalClosureReportRouter,
 )
-from task_center.mission.state import MissionClosureReport
+from task_center.goal.state import GoalClosureReport
 from task_center._core.types import TaskCenterInvariantViolation
-from task_center.attempt.orchestrator import AttemptOrchestrator
-from task_center.attempt.orchestrator_registry import (
-    AttemptOrchestratorRegistry,
+from task_center.trial.orchestrator import TrialOrchestrator
+from task_center.trial.orchestrator_registry import (
+    TrialOrchestratorRegistry,
 )
-from task_center.attempt.runtime import AgentLaunch, AttemptDeps
-from task_center.episode import EpisodeManagerRegistry
-from task_center.episode.state import EpisodeCreationReason
+from task_center.trial.runtime import AgentLaunch, AttemptDeps
+from task_center.iteration import IterationManagerRegistry
+from task_center.iteration.state import IterationCreationReason
 from task_center.task_state import TaskCenterTaskStatus, PlannedGeneratorTask, PlannerSubmission
 from task_center._core.types import generator_task_id
 
@@ -43,16 +43,16 @@ def _build_runtime_with_open_graph(
         goal="outer",
     )
     episode = episode_store.insert(
-        mission_id=request.id,
+        goal_id=request.id,
         sequence_no=1,
-        creation_reason=EpisodeCreationReason.INITIAL,
+        creation_reason=IterationCreationReason.INITIAL,
         goal="outer",
-        attempt_budget=2,
+        trial_budget=2,
     )
     mission_store.append_episode_id(request.id, episode.id)
-    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    attempt = attempt_store.insert(iteration_id=episode.id, trial_sequence_no=1)
     episode_store.append_attempt_id(episode.id, attempt.id)
-    registry = AttemptOrchestratorRegistry()
+    registry = TrialOrchestratorRegistry()
     runtime = AttemptDeps(
         mission_store=mission_store,
         episode_store=episode_store,
@@ -60,10 +60,10 @@ def _build_runtime_with_open_graph(
         task_store=task_store,
         agent_launcher=_FakeLauncher(),
         orchestrator_registry=registry,
-        manager_registry=EpisodeManagerRegistry(),
+        manager_registry=IterationManagerRegistry(),
         composer=composer,
     )
-    orchestrator = AttemptOrchestrator(
+    orchestrator = TrialOrchestrator(
         attempt=attempt,
         on_attempt_closed=lambda attempt_id: None,
         runtime=runtime,
@@ -112,10 +112,10 @@ def test_router_delivers_success_to_waiting_parent(
         composer=composer,
     )
     _set_parent_waiting(task_store, parent_task_id)
-    router = MissionClosureReportRouter(runtime=runtime)
+    router = GoalClosureReportRouter(runtime=runtime)
 
     result = router.deliver(
-        MissionClosureReport(
+        GoalClosureReport(
             mission_id="delegated-1",
             requested_by_task_id=parent_task_id,
             outcome="success",
@@ -140,16 +140,16 @@ def test_router_delivers_failure_marks_parent_failed_and_blocks_dependents(
         goal="outer",
     )
     episode = episode_store.insert(
-        mission_id=request.id,
+        goal_id=request.id,
         sequence_no=1,
-        creation_reason=EpisodeCreationReason.INITIAL,
+        creation_reason=IterationCreationReason.INITIAL,
         goal="outer",
-        attempt_budget=2,
+        trial_budget=2,
     )
     mission_store.append_episode_id(request.id, episode.id)
-    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    attempt = attempt_store.insert(iteration_id=episode.id, trial_sequence_no=1)
     episode_store.append_attempt_id(episode.id, attempt.id)
-    registry = AttemptOrchestratorRegistry()
+    registry = TrialOrchestratorRegistry()
     runtime = AttemptDeps(
         mission_store=mission_store,
         episode_store=episode_store,
@@ -157,10 +157,10 @@ def test_router_delivers_failure_marks_parent_failed_and_blocks_dependents(
         task_store=task_store,
         agent_launcher=_FakeLauncher(),
         orchestrator_registry=registry,
-        manager_registry=EpisodeManagerRegistry(),
+        manager_registry=IterationManagerRegistry(),
         composer=composer,
     )
-    orchestrator = AttemptOrchestrator(
+    orchestrator = TrialOrchestrator(
         attempt=attempt,
         on_attempt_closed=lambda attempt_id: None,
         runtime=runtime,
@@ -185,10 +185,10 @@ def test_router_delivers_failure_marks_parent_failed_and_blocks_dependents(
     parent_task_id = generator_task_id(attempt.id, "a")
     dependent_id = generator_task_id(attempt.id, "b")
     _set_parent_waiting(task_store, parent_task_id)
-    router = MissionClosureReportRouter(runtime=runtime)
+    router = GoalClosureReportRouter(runtime=runtime)
 
     result = router.deliver(
-        MissionClosureReport(
+        GoalClosureReport(
             mission_id="delegated-1",
             requested_by_task_id=parent_task_id,
             outcome="failed",
@@ -220,10 +220,10 @@ def test_router_treats_done_parent_as_already_delivered(
     task_store.set_task_status(
         parent_task_id, status=TaskCenterTaskStatus.DONE.value
     )
-    router = MissionClosureReportRouter(runtime=runtime)
+    router = GoalClosureReportRouter(runtime=runtime)
 
     result = router.deliver(
-        MissionClosureReport(
+        GoalClosureReport(
             mission_id="delegated-1",
             requested_by_task_id=parent_task_id,
             outcome="success",
@@ -251,11 +251,11 @@ def test_router_raises_when_parent_orchestrator_missing(
     )
     _set_parent_waiting(task_store, parent_task_id)
     runtime.orchestrator_registry.deregister(parent_attempt_id)
-    router = MissionClosureReportRouter(runtime=runtime)
+    router = GoalClosureReportRouter(runtime=runtime)
 
     with pytest.raises(TaskCenterInvariantViolation):
         router.deliver(
-            MissionClosureReport(
+            GoalClosureReport(
                 mission_id="delegated-1",
                 requested_by_task_id=parent_task_id,
                 outcome="success",
@@ -281,11 +281,11 @@ def test_router_rejects_running_parent(
         composer=composer,
     )
     # Parent is RUNNING (not waiting) — illegal report state.
-    router = MissionClosureReportRouter(runtime=runtime)
+    router = GoalClosureReportRouter(runtime=runtime)
 
     with pytest.raises(TaskCenterInvariantViolation):
         router.deliver(
-            MissionClosureReport(
+            GoalClosureReport(
                 mission_id="delegated-1",
                 requested_by_task_id=parent_task_id,
                 outcome="success",
@@ -311,7 +311,7 @@ def test_apply_closure_report_is_idempotent_on_second_delivery(
     assert parent_task_before is not None
     summary_count_before = len(parent_task_before["summaries"])
 
-    report = MissionClosureReport(
+    report = GoalClosureReport(
         mission_id="delegated-1",
         requested_by_task_id=parent_task_id,
         outcome="success",
@@ -370,15 +370,15 @@ def test_router_routes_entry_mode_closure_report_through_controller(
         attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=_FakeLauncher(),
-        orchestrator_registry=AttemptOrchestratorRegistry(),
-        manager_registry=EpisodeManagerRegistry(),
+        orchestrator_registry=TrialOrchestratorRegistry(),
+        manager_registry=IterationManagerRegistry(),
         composer=composer,
         entry_task_controller=controller,
     )
 
-    router = MissionClosureReportRouter(runtime=runtime)
+    router = GoalClosureReportRouter(runtime=runtime)
     result = router.deliver(
-        MissionClosureReport(
+        GoalClosureReport(
             mission_id="delegated-x",
             requested_by_task_id=entry_task_id,
             outcome="success",

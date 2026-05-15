@@ -11,7 +11,7 @@ Three structural problems stand out:
 
 1. **Boilerplate duplication.** Four copies of the same `layer_stack_root(args)` validator (`request_context.py`, `health.py`, `shell_runner.py`, `metrics.py`). Per-verb in/out-of-workspace payload shapes in `write.py`/`edit.py` repeat 5 nearly-identical timing dicts. `handler/workspace.py` repeats the same `_required_str` wrap six times.
 2. **Vestigial indirection.** `LayerStackClient.release_lease`/`prepare_workspace_snapshot` take a `workspace_ref` kwarg solely to `del` it. `LayerStackWorkspaceServer` is a thin class over module-level functions that already exist. `_drop_transient_lowerdir as _drop_transient_lowerdir` is re-exported through `shell_runner.py` for one unit test. `drop_backend_cache` pops a raw key that `build_occ_backend` never inserts.
-3. **Long import chains.** `sandbox.daemon.handler.tools.edit/read/write` are 5 segments deep — over the user's 3-hop cap. The `tools/` subpackage holds three files and adds nothing the dispatcher can't address directly. `sandbox.occ.changeset.types`, `sandbox.occ.content.{hashing,gitignore_oracle}`, `sandbox.layer_stack.workspace_binding` are all 4-segment hops imported by the daemon.
+3. **Long import chains.** `sandbox.daemon.handler.tools.edit/read/write` are 5 segments deep — over the user's 3-hop cap. The `tools/` subpackage holds three files and adds nothing the dispatcher can't address directly. `sandbox.occ.changeset`, `sandbox.occ.content.{hashing,gitignore_oracle}`, `sandbox.layer_stack.workspace_binding` are all 4-segment hops imported by the daemon.
 
 - **Total LOC:** 2735 → estimated achievable ~2150 (≈21% reduction) without functional loss.
 - Findings: **CRITICAL 0** / **HIGH 0** / **MEDIUM 14** / **LOW 5**
@@ -101,15 +101,15 @@ The daemon's deepest module chains:
 | Module | Segments |
 | --- | --- |
 | `sandbox.daemon.handler.tools.edit` / `.read` / `.write` | 5 |
-| `sandbox.daemon.handler.request_context` | 4 |
-| `sandbox.daemon.service.workspace_server` | 4 |
+| `sandbox.daemon._toolbox` | 4 |
+| `sandbox.daemon.workspace_server` | 4 |
 | `sandbox.daemon.service.layer_stack_client` | 4 |
-| `sandbox.daemon.service.result_projection` | 4 |
+| `sandbox.daemon._wire` | 4 |
 | `sandbox.daemon.service.workspace_binding` | 4 |
-| `sandbox.daemon.service.occ_backend` | 4 |
-| `sandbox.occ.changeset.types` | 4 |
-| `sandbox.occ.content.gitignore_oracle` | 4 |
-| `sandbox.occ.content.hashing` | 4 |
+| `sandbox.daemon.occ_backend` | 4 |
+| `sandbox.occ.changeset` | 4 |
+| `sandbox.occ.gitignore` | 4 |
+| `sandbox.occ.hashing` | 4 |
 | `sandbox.layer_stack.workspace_binding` | 3 (boundary case) |
 
 The `handler/tools/` subpackage is the highest-leverage target. It contains exactly three files (`edit.py`, `read.py`, `write.py`); flattening into `handler/` brings every public verb to ≤4 hops and matches the existing one-file-per-verb pattern for `health`/`metrics`/`overlay`/`workspace`. `dispatcher.py:178` already imports them as a group — the rename is a one-line change there plus `git mv`.
@@ -161,9 +161,9 @@ finally:
 | Import | Segments | Suggested target |
 | --- | --- | --- |
 | `sandbox.daemon.handler.tools.edit` (and `.read`, `.write`) | 5 | Flatten `handler/tools/` → `handler/` (only 3 files). All four other handlers are already direct children of `handler/`. |
-| `sandbox.daemon.handler.request_context` | 4 | Acceptable boundary case; collapsing into `handler/__init__` would hurt cohesion. Leave. |
-| `sandbox.occ.changeset.types` (external) | 4 | Re-export `ChangesetResult`, `FileResult`, `build_api_write_change` from `sandbox.occ` so the daemon imports `from sandbox.occ import ChangesetResult`. |
-| `sandbox.occ.content.gitignore_oracle`, `.hashing` (external) | 4 | Same: re-export `SnapshotGitignoreOracle`, `ContentHasher` from `sandbox.occ`. |
+| `sandbox.daemon._toolbox` | 4 | Acceptable boundary case; collapsing into `handler/__init__` would hurt cohesion. Leave. |
+| `sandbox.occ.changeset` (external) | 4 | Re-export `ChangesetResult`, `FileResult`, `build_api_write_change` from `sandbox.occ` so the daemon imports `from sandbox.occ import ChangesetResult`. |
+| `sandbox.occ.gitignore`, `.hashing` (external) | 4 | Same: re-export `SnapshotGitignoreOracle`, `ContentHasher` from `sandbox.occ`. |
 | `sandbox.layer_stack.workspace_binding` (external) | 3 | OK at the boundary. |
 
 The internal flattening (M-13) is the only one the daemon module owns; the `occ.*` and `layer_stack.*` flattenings require changes outside scope but are noted because they appear in nearly every daemon file.

@@ -16,8 +16,7 @@ from sandbox.layer_stack.layer_change import (
     SymlinkLayerChange,
 )
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.occ.changeset.prepared import PreparedPathGroup, RouteDecision
-from sandbox.occ.changeset.types import (
+from sandbox.occ.changeset import (
     Change,
     DeleteChange,
     EditChange,
@@ -26,19 +25,49 @@ from sandbox.occ.changeset.types import (
     OpaqueDirChange,
     SymlinkChange,
     WriteChange,
+    PreparedPathGroup,
 )
-from sandbox.occ.content.hashing import ContentHasher
+from sandbox.occ.hashing import ContentHasher
 from sandbox.occ.ports import SnapshotReader
-from sandbox.occ.stage._edit import apply_edit_content
-from sandbox.occ.stage.policy import (
+from sandbox.occ.stage_policy import (
     FinalKind,
     StageWrite,
     StageWriteFromPath,
     StagedChanges,
     with_timings,
 )
-from sandbox.occ.timing_keys import TimingKey
+from sandbox.timing_keys import TimingKey
 from sandbox.timing import monotonic_now
+
+
+def apply_edit_content(
+    path: str,
+    content: bytes,
+    change: EditChange,
+) -> bytes | FileResult:
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError:
+        return FileResult(
+            path=path,
+            status=FileStatus.ABORTED_OVERLAP,
+            message="file is not utf-8 text",
+        )
+    count = text.count(change.old_text)
+    if count == 0:
+        return FileResult(
+            path=path,
+            status=FileStatus.ABORTED_OVERLAP,
+            message="anchor not found",
+        )
+    if count != change.expected_occurrences:
+        return FileResult(
+            path=path,
+            status=FileStatus.ABORTED_OVERLAP,
+            message="anchor occurrence count mismatch",
+        )
+    text = text.replace(change.old_text, change.new_text, change.expected_occurrences)
+    return text.encode("utf-8")
 
 
 @dataclass(frozen=True)

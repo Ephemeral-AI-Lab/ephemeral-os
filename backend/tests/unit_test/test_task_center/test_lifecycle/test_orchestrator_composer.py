@@ -26,15 +26,15 @@ from task_center._core.agent_routing import (
 )
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.context_engine.recipes_registry import RecipeRegistry
-from task_center.attempt.orchestrator import AttemptOrchestrator
-from task_center.attempt.orchestrator_registry import (
-    AttemptOrchestratorRegistry,
+from task_center.trial.orchestrator import TrialOrchestrator
+from task_center.trial.orchestrator_registry import (
+    TrialOrchestratorRegistry,
 )
-from task_center.attempt.runtime import (
+from task_center.trial.runtime import (
     AgentLaunch,
     AttemptDeps,
 )
-from task_center.episode.state import EpisodeCreationReason
+from task_center.iteration.state import IterationCreationReason
 
 
 class _RecordingLauncher:
@@ -90,7 +90,7 @@ def composer_runtime(
         attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher,
-        orchestrator_registry=AttemptOrchestratorRegistry(),
+        orchestrator_registry=TrialOrchestratorRegistry(),
         manager_registry=None,
         lifecycle_config=TaskCenterLifecycleConfig(),
         composer=composer,
@@ -132,14 +132,14 @@ def _seed_request_segment_graph(
         goal="overall",
     )
     episode = episode_store.insert(
-        mission_id=request.id,
+        goal_id=request.id,
         sequence_no=1,
-        creation_reason=EpisodeCreationReason.INITIAL,
+        creation_reason=IterationCreationReason.INITIAL,
         goal="seg goal",
-        attempt_budget=2,
+        trial_budget=2,
     )
     attempt = attempt_store.insert(
-        episode_id=episode.id, attempt_sequence_no=1
+        iteration_id=episode.id, trial_sequence_no=1
     )
     return request, episode, attempt
 
@@ -158,14 +158,14 @@ def _setup_partial_plan_ancestor(
         goal="parent",
     )
     parent_seg = episode_store.insert(
-        mission_id=parent_req.id,
+        goal_id=parent_req.id,
         sequence_no=1,
-        creation_reason=EpisodeCreationReason.INITIAL,
+        creation_reason=IterationCreationReason.INITIAL,
         goal="parent seg",
-        attempt_budget=2,
+        trial_budget=2,
     )
     caller_attempt = attempt_store.insert(
-        episode_id=parent_seg.id, attempt_sequence_no=1
+        iteration_id=parent_seg.id, trial_sequence_no=1
     )
     attempt_store.set_plan_contract(
         caller_attempt.id,
@@ -201,7 +201,7 @@ def test_planner_launched_via_composer_uses_base_when_no_ancestor(
     request, episode, attempt = _seed_request_segment_graph(
         mission_store, episode_store, attempt_store, task_center_run_id
     )
-    orchestrator = AttemptOrchestrator(
+    orchestrator = TrialOrchestrator(
         attempt=attempt, on_attempt_closed=lambda _id: None, runtime=runtime
     )
     orchestrator.start()
@@ -212,7 +212,7 @@ def test_planner_launched_via_composer_uses_base_when_no_ancestor(
     assert selected is not None
     assert selected.system_prompt == "PLANNER"
     assert launched.context_packet_id is None  # no packet store wired
-    assert "Mission / Current Episode" in launched.rendered_prompt
+    assert "Goal / Current Iteration" in launched.rendered_prompt
 
 
 def test_planner_forked_to_full_only_when_partial_plan_caller_present(
@@ -239,16 +239,16 @@ def test_planner_forked_to_full_only_when_partial_plan_caller_present(
         goal="child",
     )
     child_seg = episode_store.insert(
-        mission_id=child_req.id,
+        goal_id=child_req.id,
         sequence_no=1,
-        creation_reason=EpisodeCreationReason.INITIAL,
+        creation_reason=IterationCreationReason.INITIAL,
         goal="child seg",
-        attempt_budget=2,
+        trial_budget=2,
     )
     child_graph = attempt_store.insert(
-        episode_id=child_seg.id, attempt_sequence_no=1
+        iteration_id=child_seg.id, trial_sequence_no=1
     )
-    orchestrator = AttemptOrchestrator(
+    orchestrator = TrialOrchestrator(
         attempt=child_graph,
         on_attempt_closed=lambda _id: None,
         runtime=runtime,

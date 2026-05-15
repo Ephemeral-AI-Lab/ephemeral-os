@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.attempt import launch as launcher_module
+from task_center.trial import launch as launcher_module
 from task_center._core.types import TaskCenterInvariantViolation
 
 

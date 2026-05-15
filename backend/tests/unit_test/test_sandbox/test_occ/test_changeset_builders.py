@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from sandbox.occ.changeset.types import (
+from sandbox.occ.changeset import (
     build_api_write_change,
     build_overlay_delete_change,
     build_overlay_write_change,
 )
-from sandbox.occ.changeset.types import WriteChange
+from sandbox.occ.changeset import WriteChange
 
 
 def test_api_write_builder_tags_api_source_and_bytes_payload() -> None:

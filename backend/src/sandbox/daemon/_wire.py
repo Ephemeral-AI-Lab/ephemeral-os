@@ -5,12 +5,12 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from sandbox.models import ConflictInfo
-from sandbox.occ.changeset.types import (
+from sandbox.occ.changeset import (
     FileResult,
     is_published_status,
     is_success_status,
 )
-from sandbox.occ.timing_keys import TimingKey
+from sandbox.timing_keys import TimingKey
 
 
 def committed_paths(

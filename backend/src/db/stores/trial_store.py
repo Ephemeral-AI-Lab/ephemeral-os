@@ -7,28 +7,28 @@ from datetime import UTC, datetime
 
 from db.models.trial import TrialRecord
 from db.stores.base import SyncStoreMixin
-from task_center.attempt.state import (
-    Attempt,
-    AttemptFailReason,
-    AttemptStage,
-    AttemptStatus,
+from task_center.trial.state import (
+    Trial,
+    TrialFailReason,
+    TrialStage,
+    TrialStatus,
 )
 
 
 class TrialStore(SyncStoreMixin):
-    """CRUD for Trial. Returns frozen Attempt DTOs."""
+    """CRUD for Trial. Returns frozen Trial DTOs."""
 
     def insert(
         self, *, iteration_id: str, trial_sequence_no: int
-    ) -> Attempt:
+    ) -> Trial:
         with self._sf() as db:
             now = datetime.now(UTC)
             record = TrialRecord(
                 id=str(uuid.uuid4()),
                 iteration_id=iteration_id,
                 trial_sequence_no=trial_sequence_no,
-                stage=AttemptStage.PLAN.value,
-                status=AttemptStatus.RUNNING.value,
+                stage=TrialStage.PLAN.value,
+                status=TrialStatus.RUNNING.value,
                 planner_task_id=None,
                 task_specification=None,
                 evaluation_criteria=[],
@@ -44,14 +44,14 @@ class TrialStore(SyncStoreMixin):
             db.refresh(record)
             return self._to_dto(record)
 
-    def get(self, trial_id: str) -> Attempt | None:
+    def get(self, trial_id: str) -> Trial | None:
         with self._sf() as db:
             record = db.get(TrialRecord, trial_id)
             return self._to_dto(record) if record is not None else None
 
     def set_planner_task_id(
         self, trial_id: str, planner_task_id: str
-    ) -> Attempt:
+    ) -> Trial:
         with self._sf() as db:
             record = db.get(TrialRecord, trial_id)
             if record is None:
@@ -68,7 +68,7 @@ class TrialStore(SyncStoreMixin):
         task_specification: str,
         evaluation_criteria: list[str],
         continuation_goal: str | None,
-    ) -> Attempt:
+    ) -> Trial:
         with self._sf() as db:
             record = db.get(TrialRecord, trial_id)
             if record is None:
@@ -82,7 +82,7 @@ class TrialStore(SyncStoreMixin):
 
     def set_generator_task_ids(
         self, trial_id: str, task_ids: list[str]
-    ) -> Attempt:
+    ) -> Trial:
         with self._sf() as db:
             record = db.get(TrialRecord, trial_id)
             if record is None:
@@ -94,7 +94,7 @@ class TrialStore(SyncStoreMixin):
 
     def set_evaluator_task_id(
         self, trial_id: str, evaluator_task_id: str
-    ) -> Attempt:
+    ) -> Trial:
         with self._sf() as db:
             record = db.get(TrialRecord, trial_id)
             if record is None:
@@ -105,8 +105,8 @@ class TrialStore(SyncStoreMixin):
             return self._to_dto(record)
 
     def set_stage(
-        self, trial_id: str, stage: AttemptStage
-    ) -> Attempt:
+        self, trial_id: str, stage: TrialStage
+    ) -> Trial:
         with self._sf() as db:
             record = db.get(TrialRecord, trial_id)
             if record is None:
@@ -120,15 +120,15 @@ class TrialStore(SyncStoreMixin):
         self,
         trial_id: str,
         *,
-        status: AttemptStatus,
-        fail_reason: AttemptFailReason | None,
+        status: TrialStatus,
+        fail_reason: TrialFailReason | None,
         closed_at: datetime | None = None,
-    ) -> Attempt:
+    ) -> Trial:
         with self._sf() as db:
             record = db.get(TrialRecord, trial_id)
             if record is None:
                 raise LookupError(f"Trial {trial_id!r} not found")
-            record.stage = AttemptStage.CLOSED.value
+            record.stage = TrialStage.CLOSED.value
             record.status = status.value
             record.fail_reason = fail_reason.value if fail_reason is not None else None
             record.closed_at = closed_at if closed_at is not None else datetime.now(UTC)
@@ -136,7 +136,7 @@ class TrialStore(SyncStoreMixin):
             db.refresh(record)
             return self._to_dto(record)
 
-    def list_for_iteration(self, iteration_id: str) -> list[Attempt]:
+    def list_for_iteration(self, iteration_id: str) -> list[Trial]:
         """Ordered by trial_sequence_no ascending."""
         with self._sf() as db:
             q = (
@@ -148,7 +148,7 @@ class TrialStore(SyncStoreMixin):
 
     def get_by_sequence(
         self, *, iteration_id: str, trial_sequence_no: int
-    ) -> Attempt | None:
+    ) -> Trial | None:
         with self._sf() as db:
             record = (
                 db.query(TrialRecord)
@@ -160,13 +160,13 @@ class TrialStore(SyncStoreMixin):
             )
             return self._to_dto(record) if record is not None else None
 
-    def _to_dto(self, record: TrialRecord) -> Attempt:
-        return Attempt(
+    def _to_dto(self, record: TrialRecord) -> Trial:
+        return Trial(
             id=record.id,
-            episode_id=record.iteration_id,
-            attempt_sequence_no=record.trial_sequence_no,
-            stage=AttemptStage(record.stage),
-            status=AttemptStatus(record.status),
+            iteration_id=record.iteration_id,
+            trial_sequence_no=record.trial_sequence_no,
+            stage=TrialStage(record.stage),
+            status=TrialStatus(record.status),
             planner_task_id=record.planner_task_id,
             task_specification=record.task_specification,
             evaluation_criteria=tuple(record.evaluation_criteria or ()),
@@ -174,7 +174,7 @@ class TrialStore(SyncStoreMixin):
             evaluator_task_id=record.evaluator_task_id,
             continuation_goal=record.continuation_goal,
             fail_reason=(
-                AttemptFailReason(record.fail_reason)
+                TrialFailReason(record.fail_reason)
                 if record.fail_reason is not None
                 else None
             ),

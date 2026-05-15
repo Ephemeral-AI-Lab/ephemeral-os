@@ -6,11 +6,11 @@ import os
 from collections.abc import Sequence
 
 from sandbox.layer_stack.layer_change import normalize_layer_path
-from sandbox.occ.changeset.types import (
+from sandbox.occ.changeset import (
     build_overlay_delete_change,
     build_overlay_write_change,
 )
-from sandbox.occ.changeset.types import Change, OpaqueDirChange, SymlinkChange
+from sandbox.occ.changeset import Change, OpaqueDirChange, SymlinkChange
 from sandbox.execution.overlay_change import OverlayPathChange
 
 

@@ -134,7 +134,7 @@ def test_ac7_executor_variant_disjunction_total_across_depths(monkeypatch) -> No
         return fake_depth["value"]
 
     monkeypatch.setattr(
-        "task_center._core.agent_routing.nested_mission_depth",
+        "task_center._core.agent_routing.nested_goal_depth",
         _fake_nested_mission_depth,
     )
 

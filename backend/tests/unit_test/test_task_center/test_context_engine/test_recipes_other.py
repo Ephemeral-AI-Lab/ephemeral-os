@@ -12,7 +12,7 @@ from task_center.context_engine.recipes.entry_executor import _entry_executor_bu
 from task_center.context_engine.recipes.evaluator import _evaluator_build
 from task_center.context_engine.recipes.generator import _generator_build
 from task_center.context_engine.scope import ContextScope
-from task_center.episode.state import EpisodeCreationReason
+from task_center.iteration.state import IterationCreationReason
 
 
 @pytest.fixture
@@ -39,9 +39,9 @@ def _seed_episode(episode_store, *, mission_id):
     return episode_store.insert(
         mission_id=mission_id,
         sequence_no=1,
-        creation_reason=EpisodeCreationReason.INITIAL,
+        creation_reason=IterationCreationReason.INITIAL,
         goal="g",
-        attempt_budget=2,
+        trial_budget=2,
     )
 
 
@@ -49,9 +49,9 @@ def _seed_continuation_episode(episode_store, *, mission_id):
     return episode_store.insert(
         mission_id=mission_id,
         sequence_no=2,
-        creation_reason=EpisodeCreationReason.PARTIAL_CONTINUATION,
+        creation_reason=IterationCreationReason.PARTIAL_CONTINUATION,
         goal="g2",
-        attempt_budget=2,
+        trial_budget=2,
     )
 
 
@@ -64,8 +64,8 @@ def test_generator_emits_planned_task_spec_required_block(
     deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
     req = _seed_mission(mission_store, task_center_run_id)
-    episode = _seed_episode(episode_store, mission_id=req.id)
-    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    episode = _seed_episode(episode_store, goal_id=req.id)
+    attempt = attempt_store.insert(iteration_id=episode.id, trial_sequence_no=1)
     attempt_store.set_plan_contract(
         attempt.id,
         task_specification="attempt spec framing",
@@ -87,7 +87,7 @@ def test_generator_emits_planned_task_spec_required_block(
     )
     packet = _generator_build(
         ContextScope(
-            mission_id=req.id,
+            goal_id=req.id,
             attempt_id=attempt.id,
             task_id=task_id,
         ),
@@ -104,8 +104,8 @@ def test_generator_does_not_emit_partial_plan_boundary(
     deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
     req = _seed_mission(mission_store, task_center_run_id)
-    episode = _seed_episode(episode_store, mission_id=req.id)
-    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    episode = _seed_episode(episode_store, goal_id=req.id)
+    attempt = attempt_store.insert(iteration_id=episode.id, trial_sequence_no=1)
     attempt_store.set_plan_contract(
         attempt.id,
         task_specification="attempt spec framing",
@@ -127,7 +127,7 @@ def test_generator_does_not_emit_partial_plan_boundary(
 
     packet = _generator_build(
         ContextScope(
-            mission_id=req.id,
+            goal_id=req.id,
             attempt_id=attempt.id,
             task_id="t-1",
         ),
@@ -145,8 +145,8 @@ def test_generator_dependency_summary_blocks(
     deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
     req = _seed_mission(mission_store, task_center_run_id)
-    episode = _seed_episode(episode_store, mission_id=req.id)
-    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    episode = _seed_episode(episode_store, goal_id=req.id)
+    attempt = attempt_store.insert(iteration_id=episode.id, trial_sequence_no=1)
     # Upstream task with a recorded summary.
     task_store.upsert_task(
         task_id="t-up",
@@ -175,7 +175,7 @@ def test_generator_dependency_summary_blocks(
 
     packet = _generator_build(
         ContextScope(
-            mission_id=req.id, attempt_id=attempt.id, task_id="t-down"
+            goal_id=req.id, attempt_id=attempt.id, task_id="t-down"
         ),
         deps,
     )
@@ -191,8 +191,8 @@ def test_generator_missing_dependency_task_raises_context_error(
     deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
     req = _seed_mission(mission_store, task_center_run_id)
-    episode = _seed_episode(episode_store, mission_id=req.id)
-    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    episode = _seed_episode(episode_store, goal_id=req.id)
+    attempt = attempt_store.insert(iteration_id=episode.id, trial_sequence_no=1)
     task_store.upsert_task(
         task_id="t-down",
         task_center_run_id=task_center_run_id,
@@ -209,7 +209,7 @@ def test_generator_missing_dependency_task_raises_context_error(
     with pytest.raises(ContextEngineError, match="Dependency task 't-missing'"):
         _generator_build(
             ContextScope(
-                mission_id=req.id,
+                goal_id=req.id,
                 attempt_id=attempt.id,
                 task_id="t-down",
             ),
@@ -226,8 +226,8 @@ def test_evaluator_emits_required_spec_and_criteria(
     deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
     req = _seed_mission(mission_store, task_center_run_id)
-    episode = _seed_episode(episode_store, mission_id=req.id)
-    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    episode = _seed_episode(episode_store, goal_id=req.id)
+    attempt = attempt_store.insert(iteration_id=episode.id, trial_sequence_no=1)
     attempt_store.set_plan_contract(
         attempt.id,
         task_specification="evaluator spec",
@@ -249,7 +249,7 @@ def test_evaluator_emits_required_spec_and_criteria(
     )
     packet = _evaluator_build(
         ContextScope(
-            mission_id=req.id, episode_id=episode.id, attempt_id=attempt.id
+            goal_id=req.id, iteration_id=episode.id, attempt_id=attempt.id
         ),
         deps,
     )
@@ -264,7 +264,7 @@ def test_evaluator_emits_required_spec_and_criteria(
         b.priority == ContextPriority.REQUIRED
         for b in [packet.blocks[1], packet.blocks[-1]]
     )
-    assert packet.blocks[0].metadata["heading"] == "# Mission / Current Episode"
+    assert packet.blocks[0].metadata["heading"] == "# Goal / Current Iteration"
     assert packet.blocks[2].metadata["group_heading"] == "# Dependency Results"
 
 
@@ -272,8 +272,8 @@ def test_evaluator_renders_every_generator_summary_in_attempt_order(
     deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
     req = _seed_mission(mission_store, task_center_run_id)
-    episode = _seed_episode(episode_store, mission_id=req.id)
-    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    episode = _seed_episode(episode_store, goal_id=req.id)
+    attempt = attempt_store.insert(iteration_id=episode.id, trial_sequence_no=1)
     attempt_store.set_plan_contract(
         attempt.id,
         task_specification="evaluator spec",
@@ -298,8 +298,8 @@ def test_evaluator_renders_every_generator_summary_in_attempt_order(
 
     packet = _evaluator_build(
         ContextScope(
-            mission_id=req.id,
-            episode_id=episode.id,
+            goal_id=req.id,
+            iteration_id=episode.id,
             attempt_id=attempt.id,
         ),
         deps,
@@ -324,8 +324,8 @@ def test_evaluator_missing_generator_task_raises_context_error(
     deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
     req = _seed_mission(mission_store, task_center_run_id)
-    episode = _seed_episode(episode_store, mission_id=req.id)
-    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    episode = _seed_episode(episode_store, goal_id=req.id)
+    attempt = attempt_store.insert(iteration_id=episode.id, trial_sequence_no=1)
     attempt_store.set_plan_contract(
         attempt.id,
         task_specification="evaluator spec",
@@ -337,8 +337,8 @@ def test_evaluator_missing_generator_task_raises_context_error(
     with pytest.raises(ContextEngineError, match="Generator task 't-missing'"):
         _evaluator_build(
             ContextScope(
-                mission_id=req.id,
-                episode_id=episode.id,
+                goal_id=req.id,
+                iteration_id=episode.id,
                 attempt_id=attempt.id,
             ),
             deps,
@@ -349,8 +349,8 @@ def test_evaluator_emits_partial_plan_boundary_before_summaries(
     deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
     req = _seed_mission(mission_store, task_center_run_id)
-    episode = _seed_episode(episode_store, mission_id=req.id)
-    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    episode = _seed_episode(episode_store, goal_id=req.id)
+    attempt = attempt_store.insert(iteration_id=episode.id, trial_sequence_no=1)
     attempt_store.set_plan_contract(
         attempt.id,
         task_specification="partial attempt spec",
@@ -373,7 +373,7 @@ def test_evaluator_emits_partial_plan_boundary_before_summaries(
 
     packet = _evaluator_build(
         ContextScope(
-            mission_id=req.id, episode_id=episode.id, attempt_id=attempt.id
+            goal_id=req.id, iteration_id=episode.id, attempt_id=attempt.id
         ),
         deps,
     )
@@ -397,15 +397,15 @@ def test_evaluator_episode2_frame_precedes_attempt_contract(
     deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
     req = _seed_mission(mission_store, task_center_run_id)
-    episode1 = _seed_episode(episode_store, mission_id=req.id)
+    episode1 = _seed_episode(episode_store, goal_id=req.id)
     episode_store.close_succeeded(
         episode1.id,
         task_specification="accepted plan",
         task_summary="accepted summary",
         closed_at=datetime.now(UTC),
     )
-    episode2 = _seed_continuation_episode(episode_store, mission_id=req.id)
-    attempt = attempt_store.insert(episode_id=episode2.id, attempt_sequence_no=1)
+    episode2 = _seed_continuation_episode(episode_store, goal_id=req.id)
+    attempt = attempt_store.insert(iteration_id=episode2.id, trial_sequence_no=1)
     attempt_store.set_plan_contract(
         attempt.id,
         task_specification="attempt plan",
@@ -415,7 +415,7 @@ def test_evaluator_episode2_frame_precedes_attempt_contract(
 
     packet = _evaluator_build(
         ContextScope(
-            mission_id=req.id, episode_id=episode2.id, attempt_id=attempt.id
+            goal_id=req.id, iteration_id=episode2.id, attempt_id=attempt.id
         ),
         deps,
     )
@@ -428,9 +428,9 @@ def test_evaluator_episode2_frame_precedes_attempt_contract(
         "task_specification",
         "evaluation_criteria",
     ]
-    assert packet.blocks[0].metadata["heading"] == "# Mission"
-    assert packet.blocks[1].metadata["group_heading"] == "# Previous Episode Results"
-    assert packet.blocks[3].metadata["heading"] == "# Current Episode"
+    assert packet.blocks[0].metadata["heading"] == "# Goal"
+    assert packet.blocks[1].metadata["group_heading"] == "# Previous Iteration Results"
+    assert packet.blocks[3].metadata["heading"] == "# Current Iteration"
     assert packet.blocks[-1].kind == "evaluation_criteria"
 
 
@@ -458,7 +458,7 @@ def test_entry_executor_emits_one_required_entry_request_block(
         ContextScope(task_id="entry"),
         deps,
     )
-    assert packet.canonical_refs.mission_id is None
+    assert packet.canonical_refsgoal_id is None
     assert packet.canonical_refs.task_id == "entry"
     assert len(packet.blocks) == 1
     block = packet.blocks[0]

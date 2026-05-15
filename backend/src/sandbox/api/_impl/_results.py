@@ -17,7 +17,6 @@ from sandbox.models import (
     GuardedResultBase,
     ReadFileResult,
     ShellResult,
-    WriteFileResult,
 )
 
 TGuarded = TypeVar("TGuarded", bound=GuardedResultBase)

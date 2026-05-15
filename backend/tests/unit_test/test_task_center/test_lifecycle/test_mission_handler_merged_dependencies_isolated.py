@@ -1,7 +1,7 @@
-"""Phase 4a regression test — Mission handler family merger.
+"""Phase 4a regression test — Goal handler family merger.
 
-Pins the three merged classes (EpisodeFactory, EpisodeClosureRouter,
-MissionHandler) to the single `mission/handler.py` module post-merger and
+Pins the three merged classes (IterationFactory, IterationClosureRouter,
+GoalHandler) to the single `mission/handler.py` module post-merger and
 enforces the iter4 file-size ceiling (Phase 4a: ≤300 LoC; relaxed to
 ≤480 LoC at Phase 7c after repository+ancestry absorb).
 
@@ -13,12 +13,12 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from task_center.mission import handler as merged
-from task_center.mission.handler import (
-    EpisodeClosureRouter,
-    EpisodeFactory,
-    MissionClosureReportSink,
-    MissionHandler,
+from task_center.goal import handler as merged
+from task_center.goal.handler import (
+    IterationClosureRouter,
+    IterationFactory,
+    GoalClosureReportSink,
+    GoalHandler,
 )
 
 
@@ -26,8 +26,8 @@ MISSION_HANDLER_PATH = Path(merged.__file__)
 
 
 def test_three_merged_classes_live_in_single_module() -> None:
-    for cls in (EpisodeFactory, EpisodeClosureRouter, MissionHandler):
-        assert cls.__module__ == "task_center.mission.handler"
+    for cls in (IterationFactory, IterationClosureRouter, GoalHandler):
+        assert cls.__module__ == "task_center.goal.handler"
 
 
 def test_mission_handler_public_signature_preserved() -> None:
@@ -40,12 +40,12 @@ def test_mission_handler_public_signature_preserved() -> None:
         "close_mission",
     }
     actual = {
-        name for name in vars(MissionHandler) if not name.startswith("_")
+        name for name in vars(GoalHandler) if not name.startswith("_")
     } | {"__init__"}
     missing = expected_methods - actual
-    assert not missing, f"MissionHandler missing public methods: {missing}"
+    assert not missing, f"GoalHandler missing public methods: {missing}"
 
-    init_params = list(inspect.signature(MissionHandler).parameters)
+    init_params = list(inspect.signature(GoalHandler).parameters)
     assert "mission_store" in init_params
     assert "episode_store" in init_params
     assert "attempt_store" in init_params
@@ -59,20 +59,20 @@ def test_episode_factory_and_router_public_surface_preserved() -> None:
         "create_continuation",
     }
     factory_actual = {
-        name for name in vars(EpisodeFactory) if not name.startswith("_")
+        name for name in vars(IterationFactory) if not name.startswith("_")
     }
     assert factory_methods <= factory_actual
 
     router_methods = {"route"}
     router_actual = {
-        name for name in vars(EpisodeClosureRouter) if not name.startswith("_")
+        name for name in vars(IterationClosureRouter) if not name.startswith("_")
     }
     assert router_methods <= router_actual
 
 
 def test_mission_closure_report_sink_alias_exists() -> None:
     # The Callable type alias is preserved as the public-callback hook.
-    assert MissionClosureReportSink is not None
+    assert GoalClosureReportSink is not None
 
 
 def test_old_carved_out_modules_are_gone() -> None:

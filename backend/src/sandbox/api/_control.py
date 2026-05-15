@@ -89,8 +89,21 @@ def get_build_logs_url(sandbox_id: str) -> str | None:
     return get_adapter(sandbox_id).get_build_logs_url(sandbox_id)
 
 
+def context_preparer_for(sandbox_id: str) -> Any:
+    """Return the provider-owned context preparer for *sandbox_id*."""
+    adapter = get_adapter(sandbox_id)
+    factory = getattr(adapter, "context_preparer", None)
+    if not callable(factory):
+        raise RuntimeError(
+            f"Provider adapter for sandbox {sandbox_id!r} does not expose "
+            "context_preparer()."
+        )
+    return factory(sandbox_id)
+
+
 __all__ = [
     "configured_sandbox_defaults",
+    "context_preparer_for",
     "create_sandbox",
     "delete_sandbox",
     "ensure_sandbox_running",

@@ -13,9 +13,9 @@ pytestmark = pytest.mark.asyncio
 
 _SERIAL_MERGER_BODY = r"""
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.occ.changeset.prepared import PreparedChangeset, PreparedPathGroup, RouteDecision
-from sandbox.occ.changeset.types import ChangesetResult, FileResult, FileStatus, WriteChange
-from sandbox.occ.changeset.builders import build_api_write_change, build_overlay_write_change
+from sandbox.occ.changeset import PreparedChangeset, PreparedPathGroup, RouteDecision
+from sandbox.occ.changeset import ChangesetResult, FileResult, FileStatus, WriteChange
+from sandbox.occ.changeset import build_api_write_change, build_overlay_write_change
 
 def write_change(*, path, final_content, source="api_write", base_hash=None):
     if source == "overlay_capture":
@@ -82,9 +82,9 @@ _emit(label, started, before, {
 
 _RACE_BODY = r"""
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.occ.changeset.prepared import PreparedChangeset, PreparedPathGroup, RouteDecision
-from sandbox.occ.changeset.types import ChangesetResult, FileResult, FileStatus, WriteChange
-from sandbox.occ.changeset.builders import build_api_write_change, build_overlay_write_change
+from sandbox.occ.changeset import PreparedChangeset, PreparedPathGroup, RouteDecision
+from sandbox.occ.changeset import ChangesetResult, FileResult, FileStatus, WriteChange
+from sandbox.occ.changeset import build_api_write_change, build_overlay_write_change
 
 def write_change(*, path, final_content, source="api_write", base_hash=None):
     if source == "overlay_capture":

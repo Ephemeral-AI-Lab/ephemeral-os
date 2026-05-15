@@ -7,11 +7,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from task_center.attempt.launch import EphemeralAttemptAgentLauncher
-from task_center.attempt import AttemptFailReason, AttemptStatus
-from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
-from task_center.attempt.runtime import AgentLaunch, AttemptDeps
-from task_center.episode.state import EpisodeCreationReason
+from task_center.trial.launch import EphemeralAttemptAgentLauncher
+from task_center.trial import TrialFailReason, TrialStatus
+from task_center.trial.orchestrator_registry import TrialOrchestratorRegistry
+from task_center.trial.runtime import AgentLaunch, AttemptDeps
+from task_center.iteration.state import IterationCreationReason
 from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 from task_center._core.types import planner_task_id
 
@@ -46,14 +46,14 @@ async def test_missing_orchestrator_exhaustion_closes_attempt(
         goal="solve",
     )
     episode = episode_store.insert(
-        mission_id=mission.id,
+        goal_id=mission.id,
         sequence_no=1,
-        creation_reason=EpisodeCreationReason.INITIAL,
+        creation_reason=IterationCreationReason.INITIAL,
         goal="solve",
-        attempt_budget=1,
+        trial_budget=1,
     )
     mission_store.append_episode_id(mission.id, episode.id)
-    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    attempt = attempt_store.insert(iteration_id=episode.id, trial_sequence_no=1)
     episode_store.append_attempt_id(episode.id, attempt.id)
     task_id = planner_task_id(attempt.id)
     task_store.upsert_task(
@@ -74,7 +74,7 @@ async def test_missing_orchestrator_exhaustion_closes_attempt(
         attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=_NoopLauncher(),
-        orchestrator_registry=AttemptOrchestratorRegistry(),
+        orchestrator_registry=TrialOrchestratorRegistry(),
     )
     launcher = EphemeralAttemptAgentLauncher(
         config=SimpleNamespace(),
@@ -90,7 +90,7 @@ async def test_missing_orchestrator_exhaustion_closes_attempt(
             agent_name="planner",
             rendered_prompt="plan",
             needs=(),
-            mission_id=mission.id,
+            goal_id=mission.id,
         ),
         summary="Agent run ended without a terminal submission.",
     )
@@ -100,5 +100,5 @@ async def test_missing_orchestrator_exhaustion_closes_attempt(
     assert task is not None
     assert task["status"] == TaskCenterTaskStatus.FAILED.value
     assert refreshed is not None
-    assert refreshed.status == AttemptStatus.FAILED
-    assert refreshed.fail_reason == AttemptFailReason.PLANNER_FAILED
+    assert refreshed.status == TrialStatus.FAILED
+    assert refreshed.fail_reason == TrialFailReason.PLANNER_FAILED

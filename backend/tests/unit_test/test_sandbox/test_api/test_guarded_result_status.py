@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from sandbox.daemon.service.result_projection import (
+from sandbox.daemon._wire import (
     committed_paths,
     conflict_and_status,
     conflict_to_dict,
     gitignore_cache_timings,
 )
-from sandbox.occ.changeset.types import FileResult, FileStatus
+from sandbox.occ.changeset import FileResult, FileStatus
 
 
 def test_committed_paths_returns_committed_when_present() -> None:

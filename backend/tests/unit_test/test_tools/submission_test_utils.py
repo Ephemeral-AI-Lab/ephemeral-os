@@ -6,13 +6,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from task_center.attempt.orchestrator import AttemptOrchestrator
-from task_center.attempt.orchestrator_registry import (
-    AttemptOrchestratorRegistry,
+from task_center.trial.orchestrator import TrialOrchestrator
+from task_center.trial.orchestrator_registry import (
+    TrialOrchestratorRegistry,
 )
-from task_center.attempt.runtime import AgentLaunch, AttemptDeps
-from task_center.episode import EpisodeManagerRegistry
-from task_center.episode.state import EpisodeCreationReason
+from task_center.trial.runtime import AgentLaunch, AttemptDeps
+from task_center.iteration import IterationManagerRegistry
+from task_center.iteration.state import IterationCreationReason
 from task_center.task_state import GeneratorSubmission, PlannedGeneratorTask, PlannerSubmission
 from task_center._core.types import evaluator_task_id, generator_task_id, planner_task_id
 from tools._framework.core.context import ToolExecutionContextService
@@ -22,7 +22,7 @@ from tools._framework.core.runtime import ExecutionMetadata
 @dataclass
 class TaskCenterFixture:
     runtime: AttemptDeps
-    orchestrator: AttemptOrchestrator
+    orchestrator: TrialOrchestrator
     attempt_id: str
     request_id: str
     episode_id: str
@@ -50,18 +50,18 @@ def build_harness_fixture(
         goal="solve the task",
     )
     episode = episode_store.insert(
-        mission_id=request.id,
+        goal_id=request.id,
         sequence_no=1,
-        creation_reason=EpisodeCreationReason.INITIAL,
+        creation_reason=IterationCreationReason.INITIAL,
         goal="solve the task",
-        attempt_budget=2,
+        trial_budget=2,
     )
     mission_store.append_episode_id(request.id, episode.id)
-    attempt = attempt_store.insert(episode_id=episode.id, attempt_sequence_no=1)
+    attempt = attempt_store.insert(iteration_id=episode.id, trial_sequence_no=1)
     episode_store.append_attempt_id(episode.id, attempt.id)
 
     launcher = FakeLauncher()
-    registry = AttemptOrchestratorRegistry()
+    registry = TrialOrchestratorRegistry()
     runtime = AttemptDeps(
         mission_store=mission_store,
         episode_store=episode_store,
@@ -69,10 +69,10 @@ def build_harness_fixture(
         task_store=task_store,
         agent_launcher=launcher,
         orchestrator_registry=registry,
-        manager_registry=EpisodeManagerRegistry(),
+        manager_registry=IterationManagerRegistry(),
         composer=composer,
     )
-    orchestrator = AttemptOrchestrator(
+    orchestrator = TrialOrchestrator(
         attempt=attempt,
         on_attempt_closed=lambda attempt_id: None,
         runtime=runtime,
@@ -83,7 +83,7 @@ def build_harness_fixture(
         orchestrator=orchestrator,
         attempt_id=attempt.id,
         request_id=request.id,
-        episode_id=episode.id,
+        iteration_id=episode.id,
     )
 
 

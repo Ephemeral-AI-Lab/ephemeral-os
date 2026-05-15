@@ -11,27 +11,24 @@ from uuid import uuid4
 
 from sandbox.layer_stack.layer_change import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.occ.changeset.prepared import (
+from sandbox.occ.changeset import (
+    ChangesetResult,
+    FileResult,
+    FileStatus,
     PreparedChangeset,
     PreparedPathGroup,
     RouteDecision,
 )
-from sandbox.occ.changeset.types import (
-    ChangesetResult,
-    FileResult,
-    FileStatus,
-)
-from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.stage.direct import DirectStager
-from sandbox.occ.stage.gated import GatedStager
-from sandbox.occ.stage.policy import MergePolicy, StagedChanges
+from sandbox.occ.hashing import ContentHasher
 from sandbox.occ.ports import (
     CommitPublisher,
     CommitTransactionPort,
     CommitStagingStore,
     SnapshotReader,
 )
-from sandbox.occ.timing_keys import TimingKey
+from sandbox.occ.stage import DirectStager, GatedStager
+from sandbox.occ.stage_policy import MergePolicy, StagedChanges
+from sandbox.timing_keys import TimingKey
 from sandbox.timing import monotonic_now
 
 # Below this threshold, a buffered Python read+write is cheaper than
@@ -76,70 +73,30 @@ class CommitTransaction:
                 hasher=self._hasher,
             ) as stager:
                 validate_start = monotonic_now()
-                validations: list[tuple[FileResult, StagedChanges | None]] = []
-                occ_gated_failed = False
-                gated_read_total = 0.0
-                gated_apply_total = 0.0
-                gated_stage_total = 0.0
-                direct_read_total = 0.0
-                direct_apply_total = 0.0
-                direct_stage_total = 0.0
-                gated_count = 0
-                direct_count = 0
+                validations: list[_Validation] = []
                 for group in prepared.path_groups:
                     result, accepted_delta = self._validate_group(
                         group,
                         active_manifest=active_manifest,
                         stager=stager,
                     )
-                    validations.append((result, accepted_delta))
-                    if (
-                        group.route is RouteDecision.GATED
-                        and result.status in _FAILURE_STATUSES
-                    ):
-                        occ_gated_failed = True
-                    rt = result.timings
-                    if group.route is RouteDecision.GATED:
-                        gated_count += 1
-                        gated_read_total += rt.get(TimingKey.GATED_READ_CURRENT, 0.0)
-                        gated_apply_total += rt.get(TimingKey.GATED_APPLY_CHANGES, 0.0)
-                        gated_stage_total += rt.get(TimingKey.GATED_STAGE_DELTA, 0.0)
-                    elif group.route is RouteDecision.DIRECT:
-                        direct_count += 1
-                        direct_read_total += rt.get(TimingKey.DIRECT_READ_CURRENT, 0.0)
-                        direct_apply_total += rt.get(TimingKey.DIRECT_APPLY_CHANGES, 0.0)
-                        direct_stage_total += rt.get(TimingKey.DIRECT_STAGE_DELTA, 0.0)
+                    validations.append((group, result, accepted_delta))
                 timings[TimingKey.COMMIT_VALIDATE_GROUPS] = monotonic_now() - validate_start
-                timings[TimingKey.COMMIT_GATED_READ_TOTAL] = gated_read_total
-                timings[TimingKey.COMMIT_GATED_APPLY_TOTAL] = gated_apply_total
-                timings[TimingKey.COMMIT_GATED_STAGE_TOTAL] = gated_stage_total
-                timings[TimingKey.COMMIT_GATED_PATH_COUNT] = float(gated_count)
-                timings[TimingKey.COMMIT_DIRECT_READ_TOTAL] = direct_read_total
-                timings[TimingKey.COMMIT_DIRECT_APPLY_TOTAL] = direct_apply_total
-                timings[TimingKey.COMMIT_DIRECT_STAGE_TOTAL] = direct_stage_total
-                timings[TimingKey.COMMIT_DIRECT_PATH_COUNT] = float(direct_count)
+                occ_gated_failed = _accumulate_route_timings(timings, validations)
 
-                files = tuple(result for result, _ in validations)
-                atomic_failed = prepared.atomic and any(
-                    result.status in _FAILURE_STATUSES for result in files
+                files = tuple(result for _, result, _ in validations)
+                drop_message = _atomic_or_overlay_dropped(
+                    prepared=prepared,
+                    files=files,
+                    occ_gated_failed=occ_gated_failed,
                 )
-                overlay_failed = occ_gated_failed and any(
-                    change.source == "overlay_capture"
-                    for group in prepared.path_groups
-                    for change in group.changes
-                )
-                if atomic_failed or overlay_failed:
-                    message = (
-                        "not published because atomic changeset validation failed"
-                        if atomic_failed
-                        else "not published because overlay capture OCC-gated validation failed"
-                    )
+                if drop_message is not None:
                     return ChangesetResult(
                         files=tuple(
                             FileResult(
                                 path=result.path,
                                 status=FileStatus.DROPPED,
-                                message=message,
+                                message=drop_message,
                                 timings=result.timings,
                             )
                             if result.status is FileStatus.ACCEPTED
@@ -153,7 +110,7 @@ class CommitTransaction:
                 collect_start = monotonic_now()
                 changes = tuple(
                     change
-                    for _, accepted_delta in validations
+                    for _, _, accepted_delta in validations
                     if accepted_delta is not None
                     for change in accepted_delta
                 )
@@ -329,6 +286,65 @@ _FAILURE_STATUSES = frozenset(
         FileStatus.REJECTED,
     }
 )
+
+_Validation = tuple[PreparedPathGroup, FileResult, StagedChanges | None]
+
+
+def _accumulate_route_timings(
+    timings: dict[str, float],
+    validations: list[_Validation],
+) -> bool:
+    occ_gated_failed = False
+    gated_read_total = 0.0
+    gated_apply_total = 0.0
+    gated_stage_total = 0.0
+    direct_read_total = 0.0
+    direct_apply_total = 0.0
+    direct_stage_total = 0.0
+    gated_count = 0
+    direct_count = 0
+    for group, result, _ in validations:
+        if group.route is RouteDecision.GATED:
+            gated_count += 1
+            if result.status in _FAILURE_STATUSES:
+                occ_gated_failed = True
+            route_timings = result.timings
+            gated_read_total += route_timings.get(TimingKey.GATED_READ_CURRENT, 0.0)
+            gated_apply_total += route_timings.get(TimingKey.GATED_APPLY_CHANGES, 0.0)
+            gated_stage_total += route_timings.get(TimingKey.GATED_STAGE_DELTA, 0.0)
+        elif group.route is RouteDecision.DIRECT:
+            direct_count += 1
+            route_timings = result.timings
+            direct_read_total += route_timings.get(TimingKey.DIRECT_READ_CURRENT, 0.0)
+            direct_apply_total += route_timings.get(TimingKey.DIRECT_APPLY_CHANGES, 0.0)
+            direct_stage_total += route_timings.get(TimingKey.DIRECT_STAGE_DELTA, 0.0)
+
+    timings[TimingKey.COMMIT_GATED_READ_TOTAL] = gated_read_total
+    timings[TimingKey.COMMIT_GATED_APPLY_TOTAL] = gated_apply_total
+    timings[TimingKey.COMMIT_GATED_STAGE_TOTAL] = gated_stage_total
+    timings[TimingKey.COMMIT_GATED_PATH_COUNT] = float(gated_count)
+    timings[TimingKey.COMMIT_DIRECT_READ_TOTAL] = direct_read_total
+    timings[TimingKey.COMMIT_DIRECT_APPLY_TOTAL] = direct_apply_total
+    timings[TimingKey.COMMIT_DIRECT_STAGE_TOTAL] = direct_stage_total
+    timings[TimingKey.COMMIT_DIRECT_PATH_COUNT] = float(direct_count)
+    return occ_gated_failed
+
+
+def _atomic_or_overlay_dropped(
+    *,
+    prepared: PreparedChangeset,
+    files: tuple[FileResult, ...],
+    occ_gated_failed: bool,
+) -> str | None:
+    if prepared.atomic and any(result.status in _FAILURE_STATUSES for result in files):
+        return "not published because atomic changeset validation failed"
+    if occ_gated_failed and any(
+        change.source == "overlay_capture"
+        for group in prepared.path_groups
+        for change in group.changes
+    ):
+        return "not published because overlay capture OCC-gated validation failed"
+    return None
 
 
 def _finish_timings(

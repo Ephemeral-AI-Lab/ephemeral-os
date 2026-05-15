@@ -1,4 +1,4 @@
-"""US-009: EpisodeStore.close_succeeded atomicity + denormalization."""
+"""US-009: IterationStore.close_succeeded atomicity + denormalization."""
 
 from __future__ import annotations
 
@@ -6,9 +6,9 @@ from datetime import UTC, datetime
 
 import pytest
 
-from task_center.episode.state import (
-    EpisodeCreationReason,
-    EpisodeStatus,
+from task_center.iteration.state import (
+    IterationCreationReason,
+    IterationStatus,
 )
 
 
@@ -19,11 +19,11 @@ def _seed_segment(mission_store, episode_store, task_center_run_id):
         goal="g",
     )
     return episode_store.insert(
-        mission_id=req.id,
+        goal_id=req.id,
         sequence_no=1,
-        creation_reason=EpisodeCreationReason.INITIAL,
+        creation_reason=IterationCreationReason.INITIAL,
         goal="g",
-        attempt_budget=2,
+        trial_budget=2,
     )
 
 
@@ -37,7 +37,7 @@ def test_close_succeeded_writes_status_spec_summary_atomically(
         task_summary="evaluator pass summary",
         closed_at=datetime.now(UTC),
     )
-    assert closed.status == EpisodeStatus.SUCCEEDED
+    assert closed.status == IterationStatus.SUCCEEDED
     assert closed.task_specification == "resulting spec"
     assert closed.task_summary == "evaluator pass summary"
     assert closed.closed_at is not None
@@ -64,10 +64,10 @@ def test_failed_close_leaves_denormalized_fields_null(
     seg = _seed_segment(mission_store, episode_store, task_center_run_id)
     failed = episode_store.set_status(
         seg.id,
-        status=EpisodeStatus.FAILED,
+        status=IterationStatus.FAILED,
         closed_at=datetime.now(UTC),
     )
-    assert failed.status == EpisodeStatus.FAILED
+    assert failed.status == IterationStatus.FAILED
     assert failed.task_specification is None
     assert failed.task_summary is None
 

@@ -8,11 +8,11 @@ from task_center.context_engine.packet import ContextPriority
 from task_center.context_engine.recipes.attempt_landscape import (
     failed_attempt_landscape_blocks,
 )
-from task_center.attempt import (
-    Attempt,
-    AttemptFailReason,
-    AttemptStage,
-    AttemptStatus,
+from task_center.trial import (
+    Trial,
+    TrialFailReason,
+    TrialStage,
+    TrialStatus,
 )
 
 
@@ -20,20 +20,20 @@ def _attempt(
     sequence_no: int,
     *,
     attempt_id: str | None = None,
-    status: AttemptStatus = AttemptStatus.FAILED,
+    status: TrialStatus = TrialStatus.FAILED,
     task_specification: str | None = None,
     evaluation_criteria: tuple[str, ...] = (),
     generator_task_ids: tuple[str, ...] = (),
     evaluator_task_id: str | None = None,
     continuation_goal: str | None = None,
-    fail_reason: AttemptFailReason | None = None,
-) -> Attempt:
+    fail_reason: TrialFailReason | None = None,
+) -> Trial:
     now = datetime.now(UTC)
-    return Attempt(
+    return Trial(
         id=attempt_id or f"attempt-{sequence_no}",
         episode_id="seg-1",
-        attempt_sequence_no=sequence_no,
-        stage=AttemptStage.CLOSED,
+        trial_sequence_no=sequence_no,
+        stage=TrialStage.CLOSED,
         status=status,
         planner_task_id=None,
         task_specification=task_specification,
@@ -54,7 +54,7 @@ def test_excludes_current_attempt_even_if_current_is_failed():
         attempt_id="current",
         task_specification="current spec",
         evaluation_criteria=("current crit",),
-        fail_reason=AttemptFailReason.PLANNER_FAILED,
+        fail_reason=TrialFailReason.PLANNER_FAILED,
     )
     blocks = failed_attempt_landscape_blocks(
         current_attempt_id=current.id,
@@ -64,14 +64,14 @@ def test_excludes_current_attempt_even_if_current_is_failed():
                 2,
                 task_specification="older spec",
                 evaluation_criteria=("older crit",),
-                fail_reason=AttemptFailReason.GENERATOR_FAILED,
+                fail_reason=TrialFailReason.GENERATOR_FAILED,
             ),
-            _attempt(4, status=AttemptStatus.RUNNING),
+            _attempt(4, status=TrialStatus.RUNNING),
             _attempt(
                 1,
                 task_specification="oldest spec",
                 evaluation_criteria=("oldest crit",),
-                fail_reason=AttemptFailReason.EVALUATOR_FAILED,
+                fail_reason=TrialFailReason.EVALUATOR_FAILED,
             ),
         ],
     )
@@ -122,7 +122,7 @@ def test_renders_plan_kind_statuses_and_generator_summaries():
                 evaluation_criteria=("criterion",),
                 generator_task_ids=("t-a", "t-b", "t-missing"),
                 continuation_goal="continue with admin tools",
-                fail_reason=AttemptFailReason.EVALUATOR_FAILED,
+                fail_reason=TrialFailReason.EVALUATOR_FAILED,
             )
         ],
         task_store=TaskStore(),
@@ -146,7 +146,7 @@ def test_renders_full_plan_kind_for_submitted_nonpartial_attempt():
                 1,
                 task_specification="submitted spec",
                 evaluation_criteria=("criterion",),
-                fail_reason=AttemptFailReason.EVALUATOR_FAILED,
+                fail_reason=TrialFailReason.EVALUATOR_FAILED,
             )
         ],
     )
@@ -184,7 +184,7 @@ def test_evaluator_failure_renders_evaluator_judgment():
                 evaluation_criteria=("total criterion",),
                 generator_task_ids=("t-a",),
                 evaluator_task_id="eval-1",
-                fail_reason=AttemptFailReason.EVALUATOR_FAILED,
+                fail_reason=TrialFailReason.EVALUATOR_FAILED,
             )
         ],
         task_store=TaskStore(),
@@ -229,7 +229,7 @@ def test_generator_failure_hides_evaluator_and_keeps_blocked_task_in_status_only
                 evaluation_criteria=("criterion",),
                 generator_task_ids=("t-a", "t-b", "t-c"),
                 evaluator_task_id="eval-1",
-                fail_reason=AttemptFailReason.GENERATOR_FAILED,
+                fail_reason=TrialFailReason.GENERATOR_FAILED,
             )
         ],
         task_store=TaskStore(),
@@ -263,7 +263,7 @@ def test_generator_summaries_include_every_task_in_failed_attempt():
                 1,
                 task_specification="spec",
                 generator_task_ids=task_ids,
-                fail_reason=AttemptFailReason.GENERATOR_FAILED,
+                fail_reason=TrialFailReason.GENERATOR_FAILED,
             )
         ],
         task_store=TaskStore(),
@@ -287,7 +287,7 @@ def test_generator_summary_text_is_not_truncated():
                 1,
                 task_specification="spec",
                 generator_task_ids=("t-a",),
-                fail_reason=AttemptFailReason.GENERATOR_FAILED,
+                fail_reason=TrialFailReason.GENERATOR_FAILED,
             )
         ],
         task_store=TaskStore(),
@@ -305,7 +305,7 @@ def test_all_failed_attempts_render_in_sequence_order():
                 sequence_no,
                 task_specification=f"spec-{sequence_no}",
                 evaluation_criteria=(f"crit-{sequence_no}",),
-                fail_reason=AttemptFailReason.GENERATOR_FAILED,
+                fail_reason=TrialFailReason.GENERATOR_FAILED,
             )
             for sequence_no in range(8, 0, -1)
         ],

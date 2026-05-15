@@ -7,23 +7,23 @@ from collections.abc import Callable, Sequence
 
 from sandbox.layer_stack.layer_change import normalize_layer_path
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.occ.changeset.prepared import (
+from sandbox.occ.changeset import (
     CommitOptions,
     PreparedChangeset,
     PreparedPathGroup,
     RouteDecision,
 )
-from sandbox.occ.changeset.types import (
+from sandbox.occ.changeset import (
     Change,
     DeleteChange,
     WriteChange,
 )
-from sandbox.occ.content.gitignore_oracle import (
+from sandbox.occ.gitignore import (
     GitignoreMatcher,
     SnapshotGitignoreMatcher,
 )
-from sandbox.occ.content.hashing import ContentHasher
-from sandbox.occ.timing_keys import TimingKey
+from sandbox.occ.hashing import ContentHasher
+from sandbox.timing_keys import TimingKey
 from sandbox.timing import monotonic_now
 
 BaseHashReader = Callable[[str], str | None]

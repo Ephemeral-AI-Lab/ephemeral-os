@@ -16,9 +16,9 @@ import pytest
 
 from sandbox.layer_stack import LayerStackManager
 from sandbox.layer_stack.workspace_base import build_workspace_base
-from sandbox.occ.changeset.types import WriteChange
-from sandbox.daemon.service import occ_backend
-from sandbox.daemon.handler.request_context import services as request_services
+from sandbox.occ.changeset import WriteChange
+from sandbox.daemon import occ_backend
+from sandbox.daemon._toolbox import services as request_services
 from sandbox.daemon.handler import edit, write
 
 
@@ -159,10 +159,10 @@ async def test_in_workspace_edit_same_path_M_gt_N_surfaces_hard_conflict(
     — OCC must NOT silently re-derive bytes against M.
     """
     from sandbox.layer_stack import WriteLayerChange
-    from sandbox.occ.changeset.types import build_api_write_change
-    from sandbox.occ.changeset.prepared import CommitOptions
-    from sandbox.occ.changeset.types import FileStatus
-    from sandbox.occ.content.hashing import ContentHasher
+    from sandbox.occ.changeset import build_api_write_change
+    from sandbox.occ.changeset import CommitOptions
+    from sandbox.occ.changeset import FileStatus
+    from sandbox.occ.hashing import ContentHasher
 
     occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"

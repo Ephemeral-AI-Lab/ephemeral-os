@@ -32,15 +32,15 @@ from task_center._core.agent_routing import (
 )
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.context_engine.recipes_registry import RecipeRegistry
-from task_center.attempt.orchestrator import AttemptOrchestrator
-from task_center.attempt.orchestrator_registry import (
-    AttemptOrchestratorRegistry,
+from task_center.trial.orchestrator import TrialOrchestrator
+from task_center.trial.orchestrator_registry import (
+    TrialOrchestratorRegistry,
 )
-from task_center.attempt.runtime import (
+from task_center.trial.runtime import (
     AgentLaunch,
     AttemptDeps,
 )
-from task_center.episode.state import EpisodeCreationReason
+from task_center.iteration.state import IterationCreationReason
 
 
 REPO_ROOT = next(
@@ -104,7 +104,7 @@ def _runtime_with_composer(
         attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher,
-        orchestrator_registry=AttemptOrchestratorRegistry(),
+        orchestrator_registry=TrialOrchestratorRegistry(),
         manager_registry=None,
         lifecycle_config=TaskCenterLifecycleConfig(),
         composer=composer,
@@ -125,14 +125,14 @@ def _seed_partial_plan_caller(
         goal="parent",
     )
     parent_seg = episode_store.insert(
-        mission_id=parent_req.id,
+        goal_id=parent_req.id,
         sequence_no=1,
-        creation_reason=EpisodeCreationReason.INITIAL,
+        creation_reason=IterationCreationReason.INITIAL,
         goal="parent seg",
-        attempt_budget=2,
+        trial_budget=2,
     )
     caller_attempt = attempt_store.insert(
-        episode_id=parent_seg.id, attempt_sequence_no=1
+        iteration_id=parent_seg.id, trial_sequence_no=1
     )
     attempt_store.set_plan_contract(
         caller_attempt.id,
@@ -172,16 +172,16 @@ def test_partial_plan_caller_forks_child_planner_to_full_only(
         goal="child",
     )
     child_seg = episode_store.insert(
-        mission_id=child_req.id,
+        goal_id=child_req.id,
         sequence_no=1,
-        creation_reason=EpisodeCreationReason.INITIAL,
+        creation_reason=IterationCreationReason.INITIAL,
         goal="child seg",
-        attempt_budget=2,
+        trial_budget=2,
     )
     child_graph = attempt_store.insert(
-        episode_id=child_seg.id, attempt_sequence_no=1
+        iteration_id=child_seg.id, trial_sequence_no=1
     )
-    orchestrator = AttemptOrchestrator(
+    orchestrator = TrialOrchestrator(
         attempt=child_graph,
         on_attempt_closed=lambda _id: None,
         runtime=runtime,
