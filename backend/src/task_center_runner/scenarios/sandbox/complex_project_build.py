@@ -16,7 +16,7 @@ Two scenario classes are exported:
   calls per LSP tool).
 
 Both run the same probe machinery in
-``task_center_runner.squad.complex_project_build_probe`` and emit a versioned perf
+``task_center_runner.agent.mock.complex_project_build_probe`` and emit a versioned perf
 artifact at ``/ephemeral-os/.metrics/perf.json``.
 """
 

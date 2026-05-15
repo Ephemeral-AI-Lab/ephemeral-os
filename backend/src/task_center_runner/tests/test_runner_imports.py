@@ -21,11 +21,11 @@ from task_center_runner.hooks.registry import HookSet, MutableMockState
 from task_center_runner.scenarios.correctness_testing import CorrectnessTesting
 from task_center_runner.scenarios.full_case_user_input import FullCaseUserInput
 from task_center_runner.scenarios.full_stack_adversarial import FullStackAdversarial
-from task_center_runner.squad.definitions import (
+from task_center_runner.agent.mock.definitions import (
     mock_agent_definitions,
     registered_mock_agents,
 )
-from task_center_runner.squad.runner import MockSquadRunner
+from task_center_runner.agent.mock.runner import MockSquadRunner
 from tools._framework.core.runtime import ExecutionMetadata
 
 

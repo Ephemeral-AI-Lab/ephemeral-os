@@ -34,7 +34,7 @@ from sandbox.api import ReadFileRequest, SandboxCaller, ShellRequest
 
 from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios import SCENARIO_REGISTRY
-from task_center_runner.squad.prompt_inspector import ToolCallRecord
+from task_center_runner.agent.mock.prompt_inspector import ToolCallRecord
 from task_center_runner.stores import TaskCenterStoreBundle
 from task_center_runner.sweevo_adapter import run_sweevo_scenario
 

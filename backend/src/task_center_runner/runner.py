@@ -41,13 +41,13 @@ from task_center_runner.hooks.registry import (
 )
 from task_center_runner.scenarios.base import Scenario
 from task_center_runner.scenarios.builder import build_scenario_config
-from task_center_runner.squad.definitions import registered_mock_agents  # noqa: F401 — re-export
-from task_center_runner.squad.prompt_inspector import (
+from task_center_runner.agent.mock.definitions import registered_mock_agents  # noqa: F401 — re-export
+from task_center_runner.agent.mock.prompt_inspector import (
     LaunchRecord,
     PromptInspection,
     ToolCallRecord,
 )
-from task_center_runner.squad.sandbox_probe import SandboxCheck
+from task_center_runner.agent.mock.sandbox_probe import SandboxCheck
 from task_center_runner.stores import (
     TaskCenterStoreBundle,
     create_per_test_task_center_stores,

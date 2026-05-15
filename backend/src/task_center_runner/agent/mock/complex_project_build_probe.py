@@ -71,7 +71,7 @@ from task_center_runner.scenarios.sandbox._fixtures.scheduler_demo_data import (
 from task_center_runner.scenarios.sandbox._metrics import (
     aggregate_perf_metrics,
 )
-from task_center_runner.squad.sandbox_probe import SandboxCheck
+from task_center_runner.agent.mock.sandbox_probe import SandboxCheck
 
 
 EmitStreamEvent = Callable[[StreamEvent], Awaitable[None]]

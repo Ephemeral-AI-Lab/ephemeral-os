@@ -4,7 +4,7 @@ Ensures the Daytona provider, the production runtime store singletons, and
 the markdown-defined agent registry are all populated before
 ``start_task_center_entry_run`` runs with ``runner=None`` (real LLM). The
 scenario / mock path never invokes this — mocks register their own agents
-via ``task_center_runner.squad.definitions.registered_mock_agents``.
+via ``task_center_runner.agent.mock.definitions.registered_mock_agents``.
 
 Idempotent. Safe to call from CLI startup and pytest fixtures alike.
 """

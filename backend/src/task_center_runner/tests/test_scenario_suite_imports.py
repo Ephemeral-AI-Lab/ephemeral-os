@@ -75,8 +75,8 @@ def test_capacity_pack_catalog_has_coverage_anchor() -> None:
 
 
 def test_capacity_action_contract_and_modules_import() -> None:
-    from task_center_runner.squad import capacity_actions  # noqa: PLC0415
-    from task_center_runner.squad.capacity_actions import metrics  # noqa: PLC0415
+    from task_center_runner.agent.mock import capacity_actions  # noqa: PLC0415
+    from task_center_runner.agent.mock.capacity_actions import metrics  # noqa: PLC0415
 
     result = capacity_actions.CapacityActionResult(
         name="smoke",

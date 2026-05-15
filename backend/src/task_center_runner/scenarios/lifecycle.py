@@ -21,12 +21,12 @@ from typing import TYPE_CHECKING
 from task_center_runner.audit.events import EventType
 from task_center_runner.hooks.registry import HookResult, HookSet, MutableMockState
 from task_center_runner.scenarios.base import Scenario
-from task_center_runner.squad.prompt_inspector import (
+from task_center_runner.agent.mock.prompt_inspector import (
     LaunchRecord,
     PromptInspection,
     ToolCallRecord,
 )
-from task_center_runner.squad.sandbox_probe import SandboxCheck
+from task_center_runner.agent.mock.sandbox_probe import SandboxCheck
 
 if TYPE_CHECKING:
     from task_center_runner.audit.events import Event

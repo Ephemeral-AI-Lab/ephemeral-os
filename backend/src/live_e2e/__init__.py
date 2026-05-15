@@ -102,9 +102,27 @@ _MIRRORED_SUBMODULES = (
     "sweevo_adapter",
 )
 
+# Phase 5 of the restructure renamed ``squad/`` → ``agent/mock/`` inside
+# ``task_center_runner``. The external API stays ``live_e2e.squad.*`` for
+# one release; this prefix remap lets the shim's mirror list keep using the
+# old paths.
+_PREFIX_REMAPS = (
+    ("squad", "agent.mock"),
+)
+
+
+def _remap(subname: str) -> str:
+    for src, tgt in _PREFIX_REMAPS:
+        if subname == src:
+            return tgt
+        if subname.startswith(src + "."):
+            return tgt + subname[len(src) :]
+    return subname
+
+
 for _subname in _MIRRORED_SUBMODULES:
     _sys.modules[__name__ + "." + _subname] = _importlib.import_module(
-        "task_center_runner." + _subname
+        "task_center_runner." + _remap(_subname)
     )
 del _subname
 

@@ -32,7 +32,7 @@ from sandbox.api import ReadFileRequest, SandboxCaller, ShellRequest
 from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios import SCENARIO_REGISTRY
 from task_center_runner.scenarios.sandbox._metrics import PERF_SCHEMA
-from task_center_runner.squad.complex_project_build_probe import (
+from task_center_runner.agent.mock.complex_project_build_probe import (
     METRICS_PATH,
     WORKSPACE_ROOT,
 )

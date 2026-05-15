@@ -41,7 +41,7 @@ from task_center_runner.scenarios.sandbox._fixtures.refactor_passes import Refac
 from task_center_runner.scenarios.sandbox._fixtures.scheduler_demo_data import FixtureFile
 from task_center_runner.scenarios.sandbox._metrics import aggregate_perf_metrics
 from task_center_runner.audit.events import EventType
-from task_center_runner.squad.complex_project_build_probe import (
+from task_center_runner.agent.mock.complex_project_build_probe import (
     CallTool,
     EmitStreamEvent,
     METRICS_PATH,
@@ -72,7 +72,7 @@ from task_center_runner.squad.complex_project_build_probe import (
     _total_calls,
     _write_file,
 )
-from task_center_runner.squad.sandbox_probe import SandboxCheck
+from task_center_runner.agent.mock.sandbox_probe import SandboxCheck
 
 
 _LSP_NAMES = (

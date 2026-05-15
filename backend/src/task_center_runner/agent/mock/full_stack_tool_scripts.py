@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from task_center_runner.scenarios.base import ScenarioContext
-from task_center_runner.squad.tool_scripts import (
+from task_center_runner.agent.mock.tool_scripts import (
     PreparedToolScript,
     ToolScriptStep,
 )

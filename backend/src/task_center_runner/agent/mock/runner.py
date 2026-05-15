@@ -71,13 +71,13 @@ from task_center_runner.scenarios.base import (
     ScenarioContext,
 )
 from task_center_runner.hooks.registry import MutableMockState
-from task_center_runner.squad.prompt_inspector import (
+from task_center_runner.agent.mock.prompt_inspector import (
     LaunchRecord,
     PromptInspection,
     ToolCallRecord,
 )
-from task_center_runner.squad.sandbox_probe import SandboxCheck
-from task_center_runner.squad.full_stack_tool_scripts import (
+from task_center_runner.agent.mock.sandbox_probe import SandboxCheck
+from task_center_runner.agent.mock.full_stack_tool_scripts import (
     final_reconciliation_script as full_stack_final_reconciliation_script,
     inspect_full_user_input_script,
     layerstack_squash_lease_script,
@@ -87,10 +87,10 @@ from task_center_runner.squad.full_stack_tool_scripts import (
     recursive_oversized_matrix_script,
     verifier_checkpoint_script as full_stack_verifier_checkpoint_script,
 )
-from task_center_runner.squad.capacity_actions import (
+from task_center_runner.agent.mock.capacity_actions import (
     full_system_capacity_metrics_script,
 )
-from task_center_runner.squad.tool_scripts import (
+from task_center_runner.agent.mock.tool_scripts import (
     PreparedToolScriptEngine,
     execute_package_script,
     final_reconciliation_script,
@@ -981,7 +981,7 @@ class MockSquadRunner:
         *,
         smoke: bool,
     ) -> str:
-        from task_center_runner.squad.complex_project_build_probe import (
+        from task_center_runner.agent.mock.complex_project_build_probe import (
             run_complex_project_build_probe,
         )
 
@@ -1005,7 +1005,7 @@ class MockSquadRunner:
         *,
         smoke: bool,
     ) -> str:
-        from task_center_runner.squad.complex_project_build_shell_edit_lsp_probe import (
+        from task_center_runner.agent.mock.complex_project_build_shell_edit_lsp_probe import (
             run_complex_project_build_shell_edit_lsp_probe,
         )
 

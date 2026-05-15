@@ -5,7 +5,8 @@ specific benchmark adapter. The test enforces two layers of insulation:
 
 1. Module-graph: source files under ``core/`` MUST NOT import
    ``MockSquadRunner``, ``MutableMockState``, anything under
-   ``task_center_runner.squad``, or anything under
+   ``task_center_runner.agent.mock`` (or its legacy alias
+   ``task_center_runner.squad``), or anything under
    ``task_center_runner.benchmarks.sweevo``.
 
 2. Source-string: each ``core/*.py`` source MUST NOT contain
@@ -35,6 +36,8 @@ _FORBIDDEN_IMPORT_TOKENS = (
     "MutableMockState",
     "from task_center_runner.squad",
     "import task_center_runner.squad",
+    "from task_center_runner.agent.mock",
+    "import task_center_runner.agent.mock",
     "from task_center_runner.benchmarks.sweevo",
     "import task_center_runner.benchmarks.sweevo",
 )

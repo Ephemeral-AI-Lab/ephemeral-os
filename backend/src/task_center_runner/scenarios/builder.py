@@ -24,7 +24,7 @@ from task_center_runner.scenarios.lifecycle import ScenarioLifecycle
 
 if TYPE_CHECKING:
     from task_center_runner.core.config import RunContext
-    from task_center_runner.squad.runner import MockSquadRunner
+    from task_center_runner.agent.mock.runner import MockSquadRunner
 
 
 def build_scenario_config(
@@ -57,7 +57,7 @@ def build_scenario_config(
         # Imported lazily — see the deferred-import note at the top of
         # ``task_center_runner/squad/runner.py`` (the runner ↔ scenarios cycle
         # is pre-existing).
-        from task_center_runner.squad.runner import MockSquadRunner
+        from task_center_runner.agent.mock.runner import MockSquadRunner
 
         return MockSquadRunner(
             repo_dir=repo_dir,
