@@ -90,3 +90,22 @@ def test_timing_audit_signals_accept_stringified_timing_key_names() -> None:
         "occ_committed",
         "layer_stack_auto_squashed",
     )
+
+
+def test_timing_audit_signals_accept_timing_key_enum_members() -> None:
+    signals = timing_audit_signals(
+        {
+            TimingKey.PREPARE_TOTAL: 0.01,
+            TimingKey.APPLY_TOTAL: 0.02,
+            TimingKey.LAYER_TRANSACTION_LOCK_WAIT: 0.03,
+            TimingKey.COMMIT_PUBLISH_LAYER: 0.04,
+        },
+        status="ok",
+    )
+
+    assert signals == (
+        "occ_prepared",
+        "occ_committed",
+        "layer_stack_lease_acquired",
+        "layer_stack_layer_published",
+    )

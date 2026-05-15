@@ -77,10 +77,19 @@ def timing_audit_signals(
             "layer_stack.lease_",
             "layer_stack.transaction_lock_wait",
             "layer_stack.transaction_lock_held",
+            "layer_stack.transaction.lock_wait",
+            "layer_stack.transaction.lock_held",
         ),
     ):
         emitted.append("layer_stack_lease_acquired")
-    if _has_any_timing(timings, ("layer_stack.publish", "layer_stack.layer_")):
+    if _has_any_timing(
+        timings,
+        (
+            "layer_stack.publish",
+            "layer_stack.layer_",
+            "occ.commit.publish_layer",
+        ),
+    ):
         emitted.append("layer_stack_layer_published")
     if _has_auto_squash_fact(timings, payload or {}):
         emitted.append("layer_stack_auto_squashed")
