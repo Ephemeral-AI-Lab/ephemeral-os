@@ -12,8 +12,8 @@ import pytest
 
 from benchmarks.sweevo.models import SWEEvoInstance
 from task_center_runner.scenarios import SCENARIO_REGISTRY
-from task_center_runner.stores import TaskCenterStoreBundle
-from task_center_runner.sweevo_adapter import run_sweevo_scenario
+from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.benchmarks.sweevo.fixtures import run_sweevo_scenario
 
 
 pytestmark = pytest.mark.asyncio

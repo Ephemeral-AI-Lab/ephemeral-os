@@ -48,7 +48,7 @@ from task_center_runner.agent.mock.prompt_inspector import (
     ToolCallRecord,
 )
 from task_center_runner.agent.mock.sandbox_probe import SandboxCheck
-from task_center_runner.stores import (
+from task_center_runner.core.stores import (
     TaskCenterStoreBundle,
     create_per_test_task_center_stores,
 )

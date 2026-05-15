@@ -24,8 +24,8 @@ from task_center_runner.benchmarks.sweevo.prompt import build_sweevo_user_prompt
 from task_center_runner.benchmarks.sweevo.provisioner import SweevoProvisioner
 from task_center_runner.core.config import RunConfig
 from task_center_runner.core.engine import run_pipeline
-from task_center_runner.real_agent_bootstrap import bootstrap_real_agent_runtime
-from task_center_runner.stores import (
+from task_center_runner.core.bootstrap import bootstrap_real_agent_runtime
+from task_center_runner.core.stores import (
     TaskCenterStoreBundle,
     create_per_test_task_center_stores,
 )

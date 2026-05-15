@@ -24,7 +24,7 @@ from task_center_runner.hooks.registry import Hook
 from task_center_runner.runner import RunReport
 from task_center_runner.runner import run_scenario as _generic_run_scenario
 from task_center_runner.scenarios.base import Scenario
-from task_center_runner.stores import TaskCenterStoreBundle
+from task_center_runner.core.stores import TaskCenterStoreBundle
 
 _DEFAULT_INSTANCE_ID = "dask__dask_2023.3.2_2023.4.0"
 _SESSION_WORKSPACE_USED_ATTR = "_ephemeralos_sweevo_workspace_used_sandboxes"

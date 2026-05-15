@@ -143,7 +143,7 @@ def test_scenarios_register_hookset_cleanly(scenario_cls: type) -> None:
 
 def test_sweevo_adapter_keeps_dataset_entrypoint_separate() -> None:
     """SWE-EVO-specific prompt wiring lives outside the generic runner."""
-    from task_center_runner.sweevo_adapter import (
+    from task_center_runner.benchmarks.sweevo.fixtures import (
         run_sweevo_scenario,
     )
 

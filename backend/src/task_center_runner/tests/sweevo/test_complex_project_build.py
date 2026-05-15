@@ -36,8 +36,8 @@ from task_center_runner.agent.mock.complex_project_build_probe import (
     METRICS_PATH,
     WORKSPACE_ROOT,
 )
-from task_center_runner.stores import TaskCenterStoreBundle
-from task_center_runner.sweevo_adapter import run_sweevo_scenario
+from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.benchmarks.sweevo.fixtures import run_sweevo_scenario
 
 
 pytestmark = pytest.mark.asyncio

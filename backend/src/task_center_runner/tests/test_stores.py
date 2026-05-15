@@ -1,4 +1,4 @@
-"""Integration test for task_center_runner.stores — per-schema PostgreSQL isolation.
+"""Integration test for task_center_runner.core.stores — per-schema PostgreSQL isolation.
 
 Skipped when ``EPHEMERALOS_DATABASE_URL`` is not configured. When configured,
 verifies that:
@@ -16,7 +16,7 @@ import os
 import pytest
 from sqlalchemy import text
 
-from task_center_runner.stores import (
+from task_center_runner.core.stores import (
     TaskCenterStoreBundle,
     create_per_test_task_center_stores,
 )

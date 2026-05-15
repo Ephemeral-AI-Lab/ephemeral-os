@@ -47,7 +47,7 @@ from task_center_runner.audit.recorder import AuditRecorder
 from task_center_runner.audit.stream_bridge import stream_bridge
 from task_center_runner.core.config import RunConfig, RunContext
 from task_center_runner.core.report import PipelineReport
-from task_center_runner.stores import create_per_test_task_center_stores
+from task_center_runner.core.stores import create_per_test_task_center_stores
 
 
 def _default_run_dir(audit_dir: Path, ctx: RunContext) -> Path:

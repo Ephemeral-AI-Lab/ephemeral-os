@@ -20,8 +20,8 @@ from task_center_runner.hooks.builtins import (
 from task_center_runner.scenarios.full_case_user_input import (
     FullCaseUserInput,
 )
-from task_center_runner.stores import TaskCenterStoreBundle
-from task_center_runner.sweevo_adapter import run_sweevo_scenario
+from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.benchmarks.sweevo.fixtures import run_sweevo_scenario
 from benchmarks.sweevo.models import SWEEvoInstance
 
 

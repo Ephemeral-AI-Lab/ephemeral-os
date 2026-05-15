@@ -2,7 +2,7 @@
 
 Lifted from the former SWE-EVO live-test harness per
 ``docs/wiki/live-e2e-testing-framework-design.md``. Dataset-agnostic; SWE-EVO
-consumers wire through ``task_center_runner.sweevo_adapter``, which provides the SWE-EVO
+consumers wire through ``task_center_runner.benchmarks.sweevo.fixtures``, which provides the SWE-EVO
 sandbox provisioner and entry prompt builder.
 
 Subpackages:
@@ -24,7 +24,7 @@ Top-level modules:
 from __future__ import annotations
 
 from task_center_runner.runner import RunReport, run_scenario
-from task_center_runner.stores import (
+from task_center_runner.core.stores import (
     TaskCenterStoreBundle,
     create_per_test_task_center_stores,
 )

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from task_center_runner.sweevo_adapter import (  # noqa: F401
+from task_center_runner.benchmarks.sweevo.fixtures import (  # noqa: F401
     sweevo_instance,
     sweevo_sandbox,
     workspace,

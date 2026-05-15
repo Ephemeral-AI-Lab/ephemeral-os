@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from task_center.entry import TaskCenterSandboxBridge
 
     from task_center_runner.audit.bus import AuditEventBus
-    from task_center_runner.stores import TaskCenterStoreBundle
+    from task_center_runner.core.stores import TaskCenterStoreBundle
 
 
 @dataclass(frozen=True, slots=True)

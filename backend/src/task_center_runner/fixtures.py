@@ -1,7 +1,7 @@
 """Pytest fixtures for the live e2e framework — dataset-agnostic.
 
 Dataset-specific fixtures (e.g. ``sweevo_instance``, ``sweevo_sandbox``) live
-in consumer adapters such as ``task_center_runner.sweevo_adapter``. Tests that need a
+in consumer adapters such as ``task_center_runner.benchmarks.sweevo.fixtures``. Tests that need a
 real Daytona sandbox depend on the consumer fixture; tests that need only
 PG-backed stores depend on :func:`stores`.
 
@@ -20,7 +20,7 @@ import pytest
 
 from db.engine import get_engine, initialize_db
 from task_center_runner.core.fixtures import pipeline_run  # noqa: F401 — re-export for pytest_plugins
-from task_center_runner.stores import (
+from task_center_runner.core.stores import (
     TaskCenterStoreBundle,
     create_per_test_task_center_stores,
 )

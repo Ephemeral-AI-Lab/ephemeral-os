@@ -102,12 +102,15 @@ _MIRRORED_SUBMODULES = (
     "sweevo_adapter",
 )
 
-# Phase 5 of the restructure renamed ``squad/`` → ``agent/mock/`` inside
-# ``task_center_runner``. The external API stays ``live_e2e.squad.*`` for
-# one release; this prefix remap lets the shim's mirror list keep using the
-# old paths.
+# Phase 5 of the restructure rearranges several legacy top-level modules
+# (``squad/`` → ``agent/mock/``, ``stores`` → ``core/stores``, etc.). The
+# external ``live_e2e.*`` API is preserved for one release; this prefix
+# remap table lets the shim's mirror list keep using the old paths.
 _PREFIX_REMAPS = (
     ("squad", "agent.mock"),
+    ("stores", "core.stores"),
+    ("real_agent_bootstrap", "core.bootstrap"),
+    ("sweevo_adapter", "benchmarks.sweevo.fixtures"),
 )
 
 
