@@ -10,6 +10,7 @@ the in-use entrypoints until Phase 4 lands.
 from __future__ import annotations
 
 from task_center_runner.core.config import RunConfig, RunContext
+from task_center_runner.core.engine import run_pipeline
 from task_center_runner.core.lifecycle import LifecycleHooks, NoopLifecycle
 from task_center_runner.core.report import PipelineReport
 from task_center_runner.core.sandbox import (
@@ -27,4 +28,5 @@ __all__ = [
     "RunContext",
     "SandboxLease",
     "SandboxProvisioner",
+    "run_pipeline",
 ]

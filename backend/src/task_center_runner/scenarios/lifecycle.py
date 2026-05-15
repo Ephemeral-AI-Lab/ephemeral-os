@@ -56,7 +56,7 @@ class ScenarioLifecycle:
 
     def on_event(self, event: "Event") -> None:
         self._captured_events.append(event)
-        self._mutable_state.seen_events.add(event.type)
+        self._mutable_state.seen_events.append(event.type)
         for result in self._hook_set.fire(event, "post", self._mutable_state):
             self._hook_results.append(result)
 
