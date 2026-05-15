@@ -28,7 +28,7 @@ def write_change(*, path, final_content, source="api_write", base_hash=None):
         base_hash=base_hash,
     )
 
-from sandbox.occ.router import Router
+from sandbox.occ.preparer import ChangesetPreparer
 
 class _Gitignore:
     def __init__(self):
@@ -42,7 +42,7 @@ label = "occ.routing"
 before = sample_resource()
 started = time.perf_counter()
 gitignore = _Gitignore()
-router = Router(gitignore)
+router = ChangesetPreparer(gitignore)
 prepared = router.prepare_sync(
     [
         write_change(path="src/app.py", final_content=b"x"),
