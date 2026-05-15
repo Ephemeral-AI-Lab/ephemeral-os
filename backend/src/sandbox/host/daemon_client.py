@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import shlex
 from collections.abc import Mapping
 from typing import Any, Protocol
@@ -19,6 +20,8 @@ from sandbox.daemon_paths import (
 )
 from sandbox.host.runtime_bundle import bundle_hash
 from sandbox.provider.registry import get_adapter
+
+logger = logging.getLogger(__name__)
 
 # Daemon spawned once per sandbox via provider.exec; subsequent calls hit the
 # warm process via an AF_UNIX thin client (one envelope per call).
@@ -236,15 +239,21 @@ async def _check_daemon_readiness_after_spawn(
                 "original_op": original_op,
             },
         )
-    if response.get("ready") is not True and not _is_bootstrap_ready_response(
-        original_op,
-        response,
-    ):
-        raise _DaemonReadinessError(
-            kind="RuntimeNotReady",
-            message="daemon readiness check failed",
-            details={"response": response, "original_op": original_op},
-        )
+    if response.get("ready") is not True:
+        if _is_bootstrap_ready_response(original_op, response):
+            logger.warning(
+                "daemon-readiness: declaring %s ready despite control_plane "
+                "WorkspaceBindingError; original op will retry against an "
+                "unbound workspace and its own error path will surface the "
+                "binding failure if it persists",
+                original_op,
+            )
+        else:
+            raise _DaemonReadinessError(
+                kind="RuntimeNotReady",
+                message="daemon readiness check failed",
+                details={"response": response, "original_op": original_op},
+            )
 
 
 def _readiness_request_for_original(raw_payload: str) -> tuple[str, str]:
