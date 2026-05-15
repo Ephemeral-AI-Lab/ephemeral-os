@@ -14,7 +14,7 @@ from benchmarks.sweevo.dataset import select_sweevo_instance
 from benchmarks.sweevo.prompt import build_sweevo_user_prompt
 from task_center_runner.audit.events import Event, EventType
 from task_center_runner.hooks.builtins import (
-    assert_recursive_mission_closed_before_parent_guard,
+    assert_recursive_goal_closed_before_parent_guard,
     count_events,
 )
 from task_center_runner.scenarios.full_case_user_input import (
@@ -83,7 +83,7 @@ async def test_full_case_user_input_runs_dynamic_verifier_dag(
         stores=stores,
         extra_hooks=(
             count_events(EventType.VERIFIER_FAILURE, name="verifier_failures"),
-            assert_recursive_mission_closed_before_parent_guard(),
+            assert_recursive_goal_closed_before_parent_guard(),
         ),
     )
 
@@ -112,7 +112,7 @@ async def test_full_case_user_input_runs_dynamic_verifier_dag(
     assert any(
         event.type == EventType.PLANNER_PARTIAL_PLAN for event in report.events
     )
-    assert _continuation_episodes_follow_partial_attempts(report.graph_summary)
+    assert _continuation_iterations_follow_partial_attempts(report.graph_summary)
     assert _has_multi_dependency_verifier(report.graph_summary)
     assert any(event.type == EventType.VERIFIER_FAILURE for event in report.events)
     assert any(
@@ -123,13 +123,13 @@ async def test_full_case_user_input_runs_dynamic_verifier_dag(
     recursive_requested = [
         event
         for event in report.events
-        if event.type == EventType.RECURSIVE_MISSION_REQUESTED
+        if event.type == EventType.RECURSIVE_GOAL_REQUESTED
     ]
     assert recursive_requested
-    assert _recursive_mission_count(report.graph_summary) >= 1
+    assert _recursive_goal_count(report.graph_summary) >= 1
     _assert_event_order(
         report.events,
-        first=EventType.RECURSIVE_MISSION_COMPLETED,
+        first=EventType.RECURSIVE_GOAL_COMPLETED,
         second=EventType.VERIFIER_SUCCESS,
         second_checkpoint="recursive_return",
     )
@@ -147,7 +147,7 @@ async def test_full_case_user_input_runs_dynamic_verifier_dag(
     await _assert_daytona_workspace_tool_state(report.sandbox_id)
 
 
-def _continuation_episodes_follow_partial_attempts(
+def _continuation_iterations_follow_partial_attempts(
     graph_summary: dict[str, Any],
 ) -> bool:
     for goal in graph_summary["goals"]:
@@ -173,7 +173,7 @@ def _has_multi_dependency_verifier(graph_summary: dict[str, Any]) -> bool:
     return False
 
 
-def _recursive_mission_count(graph_summary: dict[str, Any]) -> int:
+def _recursive_goal_count(graph_summary: dict[str, Any]) -> int:
     return sum(
         1
         for goal in graph_summary["goals"]

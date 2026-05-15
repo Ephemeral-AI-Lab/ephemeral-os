@@ -804,7 +804,7 @@ def final_reconciliation_script(ctx: ScenarioContext) -> PreparedToolScript:
         "conflicts_detected": 3,
         "expected_tool_errors": 4,
         "unexpected_tool_errors": 0,
-        "recursive_missions": 1,
+        "recursive_goals": 1,
         "lsp_warm_p95_ms": 0,
         "manifest_start": 1,
         "manifest_end": 17,
@@ -820,7 +820,7 @@ def final_reconciliation_script(ctx: ScenarioContext) -> PreparedToolScript:
         "expected_tool_errors": 4,
         "unexpected_tool_errors": 0,
         "conflicts_detected": 3,
-        "recursive_missions": 1,
+        "recursive_goals": 1,
         "task_center_status": "done",
         "artifact": full_stack_metrics_path(ctx),
     }

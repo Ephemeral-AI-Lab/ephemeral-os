@@ -56,7 +56,7 @@ def _make_packet(packet_id: str = "pkt-1") -> ContextPacket:
                 },
             ),
         ],
-        metadata={"is_initial_episode": "false"},
+        metadata={"is_initial_iteration": "false"},
         source_ids=["iteration-1", "iteration-prior"],
     )
 
@@ -73,7 +73,7 @@ def test_round_trip_preserves_blocks_and_metadata(packet_store):
     prior = loaded.blocks[1]
     assert prior.metadata["iteration_sequence_no"] == "1"
     assert prior.metadata["source_label"] == "accepted"
-    assert loaded.metadata["is_initial_episode"] == "false"
+    assert loaded.metadata["is_initial_iteration"] == "false"
     assert loaded.source_ids == ["iteration-1", "iteration-prior"]
 
 

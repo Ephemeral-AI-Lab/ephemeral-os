@@ -1,4 +1,4 @@
-"""Episodic continuation via partial plan.
+"""Iterative continuation via partial plan.
 
 Reference scenario for iteration continuation: iteration 1 submits a partial plan
 with ``continuation_goal``, evaluator passes, iteration-manager spawns iteration
@@ -36,7 +36,7 @@ _CONTINUATION_GOAL = (
 class IterativeContinuation(ScenarioBase):
     """Iteration 1 partial plan → iteration 2 full plan; both pass."""
 
-    name = "pipeline.episodic_continuation"
+    name = "pipeline.iterative_continuation"
     expected_event_sequence: tuple[EventType, ...] = (
         EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,

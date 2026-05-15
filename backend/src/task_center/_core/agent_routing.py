@@ -30,7 +30,7 @@ from task_center.goal.handler import nested_goal_depth
 # Predicates
 # ---------------------------------------------------------------------------
 
-# Maximum nested-mission depth at which an executor profile still offers a
+# Maximum nested-goal depth at which an executor profile still offers a
 # handoff terminal. Above this, the leaf executor profile is selected (success
 # + failure terminals only). Range-named predicates encode the threshold so
 # renaming this constant does not require touching any frontmatter.

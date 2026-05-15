@@ -27,32 +27,32 @@ from task_center.iteration.state import (
 
 @pytest.fixture
 def deps_with_stores(
-    mission_store, episode_store, attempt_store, task_store
+    goal_store, iteration_store, attempt_store, task_store
 ) -> ContextEngineDeps:
     return ContextEngineDeps(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
     )
 
 
-def _seed_mission(mission_store, task_center_run_id, goal="goal"):
-    return mission_store.insert(
+def _seed_goal(goal_store, task_center_run_id, goal="goal"):
+    return goal_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t-entry",
         goal=goal,
     )
 
 
-def _seed_episode(
-    episode_store,
+def _seed_iteration(
+    iteration_store,
     *,
     goal_id: str,
     sequence_no: int,
     goal: str = "g",
 ):
-    return episode_store.insert(
+    return iteration_store.insert(
         goal_id=goal_id,
         sequence_no=sequence_no,
         creation_reason=IterationCreationReason.INITIAL,
@@ -61,20 +61,20 @@ def _seed_episode(
     )
 
 
-def _close_episode_succeeded(
-    episode_store, episode_id, *, spec: str, summary: str
+def _close_iteration_succeeded(
+    iteration_store, iteration_id, *, spec: str, summary: str
 ):
-    return episode_store.close_succeeded(
-        episode_id,
+    return iteration_store.close_succeeded(
+        iteration_id,
         task_specification=spec,
         task_summary=summary,
         closed_at=datetime.now(UTC),
     )
 
 
-def _seed_failed_attempt(attempt_store, episode_id, *, sequence_no: int):
+def _seed_failed_attempt(attempt_store, iteration_id, *, sequence_no: int):
     g = attempt_store.insert(
-        iteration_id=episode_id, attempt_sequence_no=sequence_no
+        iteration_id=iteration_id, attempt_sequence_no=sequence_no
     )
     attempt_store.set_plan_contract(
         g.id,
@@ -90,9 +90,9 @@ def _seed_failed_attempt(attempt_store, episode_id, *, sequence_no: int):
     )
 
 
-def _seed_running_attempt(attempt_store, episode_id, *, sequence_no: int):
+def _seed_running_attempt(attempt_store, iteration_id, *, sequence_no: int):
     return attempt_store.insert(
-        iteration_id=episode_id, attempt_sequence_no=sequence_no
+        iteration_id=iteration_id, attempt_sequence_no=sequence_no
     )
 
 
@@ -101,13 +101,13 @@ def _seed_running_attempt(attempt_store, episode_id, *, sequence_no: int):
 # ---------------------------------------------------------------------------
 
 
-def test_episode1_emits_one_merged_mission_episode_block(
-    deps_with_stores, mission_store, episode_store, attempt_store,
+def test_iteration1_emits_one_merged_goal_iteration_block(
+    deps_with_stores, goal_store, iteration_store, attempt_store,
     task_center_run_id,
 ):
-    request = _seed_mission(mission_store, task_center_run_id, goal="overall")
-    iteration = _seed_episode(
-        episode_store, goal_id=request.id, sequence_no=1, goal="overall"
+    request = _seed_goal(goal_store, task_center_run_id, goal="overall")
+    iteration = _seed_iteration(
+        iteration_store, goal_id=request.id, sequence_no=1, goal="overall"
     )
     g = _seed_running_attempt(attempt_store, iteration.id, sequence_no=1)
 
@@ -119,8 +119,8 @@ def test_episode1_emits_one_merged_mission_episode_block(
     )
     kinds = [b.kind for b in packet.blocks]
     assert kinds == ["iteration_statement"]
-    episode_goal = packet.blocks[0]
-    assert episode_goal.metadata["heading"] == "# Goal / Current Iteration"
+    iteration_goal = packet.blocks[0]
+    assert iteration_goal.metadata["heading"] == "# Goal / Current Iteration"
     assert packet.target_id == g.id
 
 
@@ -129,25 +129,25 @@ def test_episode1_emits_one_merged_mission_episode_block(
 # ---------------------------------------------------------------------------
 
 
-def test_episode2_emits_mission_prior_results_and_current_episode(
-    deps_with_stores, mission_store, episode_store, attempt_store,
+def test_iteration2_emits_goal_prior_results_and_current_iteration(
+    deps_with_stores, goal_store, iteration_store, attempt_store,
     task_center_run_id,
 ):
-    request = _seed_mission(mission_store, task_center_run_id, goal="overall")
-    episode1 = _seed_episode(
-        episode_store, goal_id=request.id, sequence_no=1, goal="episode1 goal"
+    request = _seed_goal(goal_store, task_center_run_id, goal="overall")
+    iteration1 = _seed_iteration(
+        iteration_store, goal_id=request.id, sequence_no=1, goal="iteration1 goal"
     )
-    _close_episode_succeeded(
-        episode_store, episode1.id, spec="episode1 spec", summary="episode1 summary"
+    _close_iteration_succeeded(
+        iteration_store, iteration1.id, spec="iteration1 spec", summary="iteration1 summary"
     )
-    episode2 = _seed_episode(
-        episode_store, goal_id=request.id, sequence_no=2, goal="episode2 goal"
+    iteration2 = _seed_iteration(
+        iteration_store, goal_id=request.id, sequence_no=2, goal="iteration2 goal"
     )
-    g = _seed_running_attempt(attempt_store, episode2.id, sequence_no=1)
+    g = _seed_running_attempt(attempt_store, iteration2.id, sequence_no=1)
 
     packet = _planner_build(
         ContextScope(
-            goal_id=request.id, iteration_id=episode2.id, attempt_id=g.id
+            goal_id=request.id, iteration_id=iteration2.id, attempt_id=g.id
         ),
         deps_with_stores,
     )
@@ -163,32 +163,32 @@ def test_episode2_emits_mission_prior_results_and_current_episode(
     assert prior_spec.priority == ContextPriority.HIGH
     assert prior_spec.metadata["iteration_sequence_no"] == "1"
     assert prior_spec.metadata["group_heading"] == "# Goal"
-    assert prior_spec.text == "episode1 spec"
-    episode_goal = packet.blocks[3]
-    assert episode_goal.metadata["heading"] == "# Current Iteration"
+    assert prior_spec.text == "iteration1 spec"
+    iteration_goal = packet.blocks[3]
+    assert iteration_goal.metadata["heading"] == "# Current Iteration"
 
 
-def test_episode3_emits_two_pairs_with_priority_split(
-    deps_with_stores, mission_store, episode_store, attempt_store,
+def test_iteration3_emits_two_pairs_with_priority_split(
+    deps_with_stores, goal_store, iteration_store, attempt_store,
     task_center_run_id,
 ):
-    request = _seed_mission(mission_store, task_center_run_id, goal="overall")
-    episode1 = _seed_episode(
-        episode_store, goal_id=request.id, sequence_no=1, goal="g1"
+    request = _seed_goal(goal_store, task_center_run_id, goal="overall")
+    iteration1 = _seed_iteration(
+        iteration_store, goal_id=request.id, sequence_no=1, goal="g1"
     )
-    _close_episode_succeeded(episode_store, episode1.id, spec="s1", summary="sum1")
-    episode2 = _seed_episode(
-        episode_store, goal_id=request.id, sequence_no=2, goal="g2"
+    _close_iteration_succeeded(iteration_store, iteration1.id, spec="s1", summary="sum1")
+    iteration2 = _seed_iteration(
+        iteration_store, goal_id=request.id, sequence_no=2, goal="g2"
     )
-    _close_episode_succeeded(episode_store, episode2.id, spec="s2", summary="sum2")
-    episode3 = _seed_episode(
-        episode_store, goal_id=request.id, sequence_no=3, goal="g3"
+    _close_iteration_succeeded(iteration_store, iteration2.id, spec="s2", summary="sum2")
+    iteration3 = _seed_iteration(
+        iteration_store, goal_id=request.id, sequence_no=3, goal="g3"
     )
-    g = _seed_running_attempt(attempt_store, episode3.id, sequence_no=1)
+    g = _seed_running_attempt(attempt_store, iteration3.id, sequence_no=1)
 
     packet = _planner_build(
         ContextScope(
-            goal_id=request.id, iteration_id=episode3.id, attempt_id=g.id
+            goal_id=request.id, iteration_id=iteration3.id, attempt_id=g.id
         ),
         deps_with_stores,
     )
@@ -204,28 +204,28 @@ def test_episode3_emits_two_pairs_with_priority_split(
 
 
 def test_missing_prior_spec_raises_context_engine_error(
-    deps_with_stores, mission_store, episode_store, attempt_store,
+    deps_with_stores, goal_store, iteration_store, attempt_store,
     task_center_run_id,
 ):
     """Closed iteration-1 with task_specification still null is an invariant
     violation; recipe must raise."""
-    request = _seed_mission(mission_store, task_center_run_id)
-    episode1 = _seed_episode(
-        episode_store, goal_id=request.id, sequence_no=1, goal="g1"
+    request = _seed_goal(goal_store, task_center_run_id)
+    iteration1 = _seed_iteration(
+        iteration_store, goal_id=request.id, sequence_no=1, goal="g1"
     )
     # Close via legacy set_status (does not write denormalized fields).
-    episode_store.set_status(
-        episode1.id, status=IterationStatus.SUCCEEDED, closed_at=datetime.now(UTC)
+    iteration_store.set_status(
+        iteration1.id, status=IterationStatus.SUCCEEDED, closed_at=datetime.now(UTC)
     )
-    episode2 = _seed_episode(
-        episode_store, goal_id=request.id, sequence_no=2, goal="g2"
+    iteration2 = _seed_iteration(
+        iteration_store, goal_id=request.id, sequence_no=2, goal="g2"
     )
-    g = _seed_running_attempt(attempt_store, episode2.id, sequence_no=1)
+    g = _seed_running_attempt(attempt_store, iteration2.id, sequence_no=1)
 
     with pytest.raises(ContextEngineError):
         _planner_build(
             ContextScope(
-                goal_id=request.id, iteration_id=episode2.id, attempt_id=g.id
+                goal_id=request.id, iteration_id=iteration2.id, attempt_id=g.id
             ),
             deps_with_stores,
         )
@@ -237,12 +237,12 @@ def test_missing_prior_spec_raises_context_engine_error(
 
 
 def test_three_failed_attempts_emit_three_high_priority_blocks(
-    deps_with_stores, mission_store, episode_store, attempt_store,
+    deps_with_stores, goal_store, iteration_store, attempt_store,
     task_center_run_id,
 ):
-    request = _seed_mission(mission_store, task_center_run_id)
-    iteration = _seed_episode(
-        episode_store, goal_id=request.id, sequence_no=1, goal="g"
+    request = _seed_goal(goal_store, task_center_run_id)
+    iteration = _seed_iteration(
+        iteration_store, goal_id=request.id, sequence_no=1, goal="g"
     )
     for n in (1, 2, 3):
         _seed_failed_attempt(attempt_store, iteration.id, sequence_no=n)
@@ -270,12 +270,12 @@ def test_three_failed_attempts_emit_three_high_priority_blocks(
 
 
 def test_failed_attempt_landscape_includes_plan_type_statuses_and_summaries(
-    deps_with_stores, mission_store, episode_store, attempt_store, task_store,
+    deps_with_stores, goal_store, iteration_store, attempt_store, task_store,
     task_center_run_id,
 ):
-    request = _seed_mission(mission_store, task_center_run_id)
-    iteration = _seed_episode(
-        episode_store, goal_id=request.id, sequence_no=1, goal="g"
+    request = _seed_goal(goal_store, task_center_run_id)
+    iteration = _seed_iteration(
+        iteration_store, goal_id=request.id, sequence_no=1, goal="g"
     )
     failed = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
     attempt_store.set_plan_contract(
@@ -341,12 +341,12 @@ def test_failed_attempt_landscape_includes_plan_type_statuses_and_summaries(
 
 
 def test_all_failed_attempts_render_as_high_priority_blocks(
-    deps_with_stores, mission_store, episode_store, attempt_store,
+    deps_with_stores, goal_store, iteration_store, attempt_store,
     task_center_run_id,
 ):
-    request = _seed_mission(mission_store, task_center_run_id)
-    iteration = _seed_episode(
-        episode_store, goal_id=request.id, sequence_no=1, goal="g"
+    request = _seed_goal(goal_store, task_center_run_id)
+    iteration = _seed_iteration(
+        iteration_store, goal_id=request.id, sequence_no=1, goal="g"
     )
     total = 8
     for n in range(1, total + 1):
@@ -380,7 +380,7 @@ def test_all_failed_attempts_render_as_high_priority_blocks(
 
 
 def test_iteration_2_plus_reading_a_structure(
-    deps_with_stores, mission_store, episode_store, attempt_store,
+    deps_with_stores, goal_store, iteration_store, attempt_store,
     task_center_run_id,
 ):
     """Structural lock for the planner Reading-A reframing (§4, Principle 4).
@@ -390,28 +390,28 @@ def test_iteration_2_plus_reading_a_structure(
     structural assertions (not full-text snapshots) so the test survives a
     future Reading-B rewrite.
     """
-    request = _seed_mission(mission_store, task_center_run_id, goal="overall goal")
-    episode1 = _seed_episode(
-        episode_store, goal_id=request.id, sequence_no=1, goal="iteration 1 goal"
+    request = _seed_goal(goal_store, task_center_run_id, goal="overall goal")
+    iteration1 = _seed_iteration(
+        iteration_store, goal_id=request.id, sequence_no=1, goal="iteration 1 goal"
     )
-    _close_episode_succeeded(
-        episode_store, episode1.id, spec="iter1 spec", summary="iter1 summary"
+    _close_iteration_succeeded(
+        iteration_store, iteration1.id, spec="iter1 spec", summary="iter1 summary"
     )
-    episode2 = _seed_episode(
-        episode_store, goal_id=request.id, sequence_no=2, goal="iteration 2 goal"
+    iteration2 = _seed_iteration(
+        iteration_store, goal_id=request.id, sequence_no=2, goal="iteration 2 goal"
     )
-    _close_episode_succeeded(
-        episode_store, episode2.id, spec="iter2 spec", summary="iter2 summary"
+    _close_iteration_succeeded(
+        iteration_store, iteration2.id, spec="iter2 spec", summary="iter2 summary"
     )
-    episode3 = _seed_episode(
-        episode_store, goal_id=request.id, sequence_no=3, goal="iteration 3 goal"
+    iteration3 = _seed_iteration(
+        iteration_store, goal_id=request.id, sequence_no=3, goal="iteration 3 goal"
     )
-    current_attempt = _seed_running_attempt(attempt_store, episode3.id, sequence_no=1)
+    current_attempt = _seed_running_attempt(attempt_store, iteration3.id, sequence_no=1)
 
     packet = _planner_build(
         ContextScope(
             goal_id=request.id,
-            iteration_id=episode3.id,
+            iteration_id=iteration3.id,
             attempt_id=current_attempt.id,
         ),
         deps_with_stores,

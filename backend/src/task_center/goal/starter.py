@@ -168,9 +168,9 @@ class GoalStarter:
                 f"No lifecycle target registered for TaskCenter task "
                 f"{parent_task_id!r}; goal start cannot proceed."
             )
-        target.mark_waiting_mission(
-            delegated_mission_id=goal.id,
-            delegated_episode_id=iteration.id,
+        target.mark_waiting_goal(
+            delegated_goal_id=goal.id,
+            delegated_iteration_id=iteration.id,
             delegated_attempt_id=attempt_id,
             goal=goal_str,
         )
@@ -188,7 +188,7 @@ class GoalStarter:
         Each step is independent; failures are logged via ``logger.exception``
         but never block subsequent steps. If parent restore fails we route a
         synthetic failed close-report so the parent does not stay orphaned in
-        ``WAITING_MISSION``.
+        ``WAITING_GOAL``.
         """
         now = datetime.now(UTC)
         runtime = self._runtime
@@ -233,11 +233,11 @@ class GoalStarter:
             task_id=parent_task_id, attempt_id=attempt_id
         )
         if target is not None:
-            target.restore_running_after_failed_mission_start()
+            target.restore_running_after_failed_goal_start()
             return
         self._runtime.task_store.set_task_status_if_current(
             parent_task_id,
-            expected_status=TaskCenterTaskStatus.WAITING_MISSION.value,
+            expected_status=TaskCenterTaskStatus.WAITING_GOAL.value,
             status=TaskCenterTaskStatus.RUNNING.value,
         )
 

@@ -277,7 +277,7 @@ async def _plugin_op_context_factory(
             task_center_run_id=_audit_field(caller_dict, "task_center_run_id"),
             task_center_task_id=_audit_field(caller_dict, "task_center_task_id"),
             task_center_attempt_id=_audit_field(caller_dict, "task_center_attempt_id"),
-            task_center_mission_id=_audit_field(caller_dict, "task_center_mission_id"),
+            task_center_goal_id=_audit_field(caller_dict, "task_center_goal_id"),
             task_center_request_id=_audit_field(caller_dict, "task_center_request_id"),
             tool_name=_audit_field(caller_dict, "tool_name"),
             tool_id=_audit_field(caller_dict, "tool_id"),

@@ -38,6 +38,7 @@ class _FakeSandboxApi:
         self,
         _sandbox_id: str,
         request: WriteFileRequest,
+        **_kwargs: object,
     ) -> WriteFileResult:
         path = self._key(request.path)
         self.files[path] = request.content
@@ -51,6 +52,7 @@ class _FakeSandboxApi:
         self,
         _sandbox_id: str,
         request: ReadFileRequest,
+        **_kwargs: object,
     ) -> ReadFileResult:
         path = self._key(request.path)
         exists = path in self.files
@@ -64,6 +66,7 @@ class _FakeSandboxApi:
         self,
         _sandbox_id: str,
         request: EditFileRequest,
+        **_kwargs: object,
     ) -> EditFileResult:
         path = self._key(request.path)
         content = self.files.get(path)
@@ -101,6 +104,7 @@ class _FakeSandboxApi:
         self,
         _sandbox_id: str,
         request: ShellRequest,
+        **_kwargs: object,
     ) -> ShellResult:
         command = request.command
         changed_paths: tuple[str, ...] = ()
@@ -204,25 +208,23 @@ async def test_run_scenario_correctness_testing_with_fake_sandbox(
     assert report.passed_sandbox_checks
 
     delegated = [
-        mission
-        for mission in report.graph_summary["missions"]
-        if len(mission["episodes"]) == 2
+        goal for goal in report.graph_summary["goals"] if len(goal["iterations"]) == 2
     ][0]
     assert delegated["status"] == "succeeded"
     assert [
         attempt["status"]
-        for episode in delegated["episodes"]
-        for attempt in episode["attempts"]
+        for iteration in delegated["iterations"]
+        for attempt in iteration["attempts"]
     ] == ["failed", "passed", "passed"]
-    assert delegated["episodes"][0]["continuation_goal"]
-    assert delegated["episodes"][1]["creation_reason"] == "partial_continuation"
+    assert delegated["iterations"][0]["continuation_goal"]
+    assert delegated["iterations"][1]["creation_reason"] == "partial_continuation"
 
     planner_reviews = [
         item for item in report.prompt_inspections if item.role == "planner"
     ]
     assert any(item.checks.get("failed_attempts") for item in planner_reviews)
     assert any(
-        item.checks.get("previous_episode_results") for item in planner_reviews
+        item.checks.get("previous_iteration_results") for item in planner_reviews
     )
 
     tool_names = {item.tool_name for item in report.tool_calls}
@@ -256,23 +258,23 @@ async def test_run_scenario_correctness_testing_with_fake_sandbox(
     assert (run_dir / "run.json").exists()
     assert (run_dir / "metrics.json").exists()
 
-    mission_dirs = list(run_dir.glob("mission_*_*"))
-    assert mission_dirs, f"no mission_NN_<id> dir under {run_dir}"
-    delegated_mission_dirs = []
-    for mission_dir in mission_dirs:
-        assert (mission_dir / "mission.json").exists()
-        if list(mission_dir.glob("episode_*_*")):
-            delegated_mission_dirs.append(mission_dir)
-    assert delegated_mission_dirs, "no mission with episodes — delegated path missing"
+    goal_dirs = list(run_dir.glob("goal_*_*"))
+    assert goal_dirs, f"no goal_NN_<id> dir under {run_dir}"
+    delegated_goal_dirs = []
+    for goal_dir in goal_dirs:
+        assert (goal_dir / "goal.json").exists()
+        if list(goal_dir.glob("iteration_*_*")):
+            delegated_goal_dirs.append(goal_dir)
+    assert delegated_goal_dirs, "no goal with iterations — delegated path missing"
     found_attempt_with_role_dir = False
-    for mission_dir in delegated_mission_dirs:
-        episode_dirs = list(mission_dir.glob("episode_*_*"))
-        for episode_dir in episode_dirs:
-            assert (episode_dir / "episode.json").exists()
-            attempt_dirs = list(episode_dir.glob("attempt_*_*"))
+    for goal_dir in delegated_goal_dirs:
+        iteration_dirs = list(goal_dir.glob("iteration_*_*"))
+        for iteration_dir in iteration_dirs:
+            assert (iteration_dir / "iteration.json").exists()
+            attempt_dirs = list(iteration_dir.glob("attempt_*_*"))
             if not attempt_dirs:
                 # Older run fixtures may include attempt-less entry artifacts.
-                # Delegated missions must still contain normal attempts.
+                # Delegated goals must still contain normal attempts.
                 continue
             for attempt_dir in attempt_dirs:
                 assert (attempt_dir / "attempt.json").exists()

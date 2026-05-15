@@ -52,8 +52,8 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     "full_case_user_input": FullCaseUserInput,
     "full_stack_adversarial": FullStackAdversarial,
     # Focused pipeline scenarios.
-    "pipeline.initial_mission": InitialGoal,
-    "pipeline.episodic_continuation": IterativeContinuation,
+    "pipeline.initial_goal": InitialGoal,
+    "pipeline.iterative_continuation": IterativeContinuation,
     "pipeline.attempt_retry_evaluator_failure": AttemptRetryEvaluatorFailure,
     "pipeline.attempt_retry_generator_failure": AttemptRetryGeneratorFailure,
     "pipeline.attempt_retry_planner_failure": AttemptRetryPlannerFailure,
@@ -64,8 +64,8 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     "pipeline.dependency_dag_parallel": DependencyDagParallel,
     "pipeline.generator_failure_quiescence": GeneratorFailureQuiescence,
     "pipeline.attempt_budget_exhausted": AttemptBudgetExhausted,
-    "pipeline.nested_mission": NestedGoal,
-    "pipeline.nested_mission_failure": NestedGoalFailure,
+    "pipeline.nested_goal": NestedGoal,
+    "pipeline.nested_goal_failure": NestedGoalFailure,
     "pipeline.partial_parent_planner_full_only": PartialParentPlannerFullOnly,
     # Composite capacity scenarios.
     "capacity.full_system_capacity_matrix": FullSystemCapacityMatrix,

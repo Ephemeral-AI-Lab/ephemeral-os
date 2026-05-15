@@ -42,7 +42,7 @@ def test_submission_tools_are_terminal_except_helper_requests() -> None:
         assert tool.is_terminal_tool is (name not in non_terminal)
 
 
-def test_custom_generator_agent_can_declare_mission_solution_terminal() -> None:
+def test_custom_generator_agent_can_declare_goal_solution_terminal() -> None:
     AgentDefinition(
         name="custom_generator",
         description="Custom generator agent.",

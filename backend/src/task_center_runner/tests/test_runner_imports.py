@@ -71,7 +71,7 @@ def test_prompt_inspector_accepts_current_failed_attempt_heading(
     )
     monkeypatch.setattr(
         runner,
-        "_current_attempt_and_episode",
+        "_current_attempt_and_iteration",
         lambda _metadata: (
             SimpleNamespace(attempt_sequence_no=2),
             SimpleNamespace(sequence_no=1),
@@ -96,6 +96,50 @@ def test_prompt_inspector_accepts_current_failed_attempt_heading(
     )
 
     assert inspection.checks["failed_attempts"]
+    assert inspection.passed
+
+
+def test_prompt_inspector_accepts_current_previous_iteration_sections(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runner = MockSquadRunner(
+        repo_dir="/tmp/live_e2e_test_repo",
+        bus=AuditEventBus(),
+        scenario=CorrectnessTesting(),
+        mutable_state=MutableMockState(),
+    )
+    monkeypatch.setattr(
+        runner,
+        "_current_attempt_and_iteration",
+        lambda _metadata: (
+            SimpleNamespace(attempt_sequence_no=1),
+            SimpleNamespace(sequence_no=2),
+        ),
+    )
+
+    inspection = runner._inspect_prompt(  # noqa: SLF001
+        prompt="\n".join(
+            [
+                "# Goal",
+                "Continue the delegated goal.",
+                "## Iteration 1 accepted plan",
+                "Earlier plan.",
+                "## Iteration 1 summary",
+                "Earlier result.",
+                "# Current Iteration",
+                "Next slice.",
+            ]
+        ),
+        agent_def=AgentDefinition(
+            name="planner",
+            description="test planner",
+            agent_kind=AgentKind.PLANNER,
+        ),
+        metadata=ExecutionMetadata(task_center_task_id="attempt-1:planner"),
+    )
+
+    assert inspection.checks["previous_iteration_results"]
+    assert inspection.checks["previous_iteration_results"]
     assert inspection.passed
 
 

@@ -40,7 +40,16 @@ def normalize_timing_map(raw: Mapping[object, object] | None) -> dict[str, float
 def _timing_key_text(key: object) -> str:
     if isinstance(key, Enum):
         return str(key.value)
-    return str(key)
+    text = str(key)
+    if text.startswith("TimingKey."):
+        from sandbox._shared.timing_keys import TimingKey
+
+        enum_name = text.removeprefix("TimingKey.")
+        try:
+            return str(TimingKey[enum_name].value)
+        except KeyError:
+            return text
+    return text
 
 
 __all__ = [

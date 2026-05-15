@@ -22,14 +22,14 @@ from task_center.iteration.state import (
 
 
 def _seed_segment(
-    mission_store, episode_store, task_center_run_id, attempt_budget=2
+    goal_store, iteration_store, task_center_run_id, attempt_budget=2
 ) -> str:
-    req = mission_store.insert(
+    req = goal_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t1",
         goal="g",
     )
-    seg = episode_store.insert(
+    seg = iteration_store.insert(
         goal_id=req.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
@@ -39,13 +39,13 @@ def _seed_segment(
     return seg.id
 
 
-def _make_manager(seg_id, episode_store, attempt_store):
+def _make_manager(seg_id, iteration_store, attempt_store):
     captured: list[IterationClosureReport] = []
     mgr = IterationManager(
         iteration_id=seg_id,
-        iteration_store=episode_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
-        on_episode_closed=captured.append,
+        on_iteration_closed=captured.append,
     )
     return mgr, captured
 
@@ -67,39 +67,39 @@ class _FailingStartOrchestrator:
         raise RuntimeError("orchestrator start failed")
 
 
-def test_initial_episode_creates_graph_sequence_1(
-    mission_store, episode_store, attempt_store, task_center_run_id
+def test_initial_iteration_creates_graph_sequence_1(
+    goal_store, iteration_store, attempt_store, task_center_run_id
 ):
     """Phase 01 exit: create iteration 1 with harness attempt sequence 1."""
-    seg_id = _seed_segment(mission_store, episode_store, task_center_run_id)
-    mgr, _ = _make_manager(seg_id, episode_store, attempt_store)
+    seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id)
+    mgr, _ = _make_manager(seg_id, iteration_store, attempt_store)
     g = mgr.create_initial_attempt()
     assert g.attempt_sequence_no == 1
-    seg = episode_store.get(seg_id)
+    seg = iteration_store.get(seg_id)
     assert seg is not None
     assert seg.attempt_ids == (g.id,)
 
 
 def test_retry_creates_graph_in_same_segment(
-    mission_store, episode_store, attempt_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_center_run_id
 ):
     """Phase 01 exit: retry creates another Attempt in the same iteration."""
-    seg_id = _seed_segment(mission_store, episode_store, task_center_run_id)
-    mgr, _ = _make_manager(seg_id, episode_store, attempt_store)
+    seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id)
+    mgr, _ = _make_manager(seg_id, iteration_store, attempt_store)
     g1 = mgr.create_initial_attempt()
     g2 = mgr.create_next_attempt(previous_attempt_id=g1.id)
     assert g2.iteration_id == seg_id
     assert g2.attempt_sequence_no == 2
-    seg = episode_store.get(seg_id)
+    seg = iteration_store.get(seg_id)
     assert seg is not None
     assert seg.attempt_ids == (g1.id, g2.id)
 
 
 def test_passing_graph_with_null_continuation_emits_terminal_success(
-    mission_store, episode_store, attempt_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_center_run_id
 ):
-    seg_id = _seed_segment(mission_store, episode_store, task_center_run_id)
-    mgr, captured = _make_manager(seg_id, episode_store, attempt_store)
+    seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id)
+    mgr, captured = _make_manager(seg_id, iteration_store, attempt_store)
     g = mgr.create_initial_attempt()
     # No continuation_goal set on the attempt.
     attempt_store.close(
@@ -108,16 +108,16 @@ def test_passing_graph_with_null_continuation_emits_terminal_success(
     mgr.handle_attempt_closed(g.id)
     assert len(captured) == 1
     assert isinstance(captured[0].outcome, TerminalSuccess)
-    seg = episode_store.get(seg_id)
+    seg = iteration_store.get(seg_id)
     assert seg is not None
     assert seg.status == IterationStatus.SUCCEEDED
 
 
 def test_passing_graph_with_continuation_emits_success_continue(
-    mission_store, episode_store, attempt_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_center_run_id
 ):
-    seg_id = _seed_segment(mission_store, episode_store, task_center_run_id)
-    mgr, captured = _make_manager(seg_id, episode_store, attempt_store)
+    seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id)
+    mgr, captured = _make_manager(seg_id, iteration_store, attempt_store)
     g = mgr.create_initial_attempt()
     attempt_store.set_plan_contract(
         g.id,
@@ -133,33 +133,33 @@ def test_passing_graph_with_continuation_emits_success_continue(
     outcome = captured[0].outcome
     assert isinstance(outcome, SuccessContinue)
     assert outcome.goal == "next-goal"
-    seg = episode_store.get(seg_id)
+    seg = iteration_store.get(seg_id)
     assert seg is not None
     assert seg.continuation_goal == "next-goal"
 
 
 def test_passing_graph_does_not_retry(
-    mission_store, episode_store, attempt_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_center_run_id
 ):
     """Spec rule: passing attempt always closes the iteration; no second attempt."""
-    seg_id = _seed_segment(mission_store, episode_store, task_center_run_id)
-    mgr, _ = _make_manager(seg_id, episode_store, attempt_store)
+    seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id)
+    mgr, _ = _make_manager(seg_id, iteration_store, attempt_store)
     g = mgr.create_initial_attempt()
     attempt_store.close(
         g.id, status=AttemptStatus.PASSED, fail_reason=None
     )
     mgr.handle_attempt_closed(g.id)
-    seg = episode_store.get(seg_id)
+    seg = iteration_store.get(seg_id)
     assert seg is not None
     assert seg.attempt_ids == (g.id,)
     assert seg.status == IterationStatus.SUCCEEDED
 
 
 def test_failed_attempt_with_budget_creates_next_graph(
-    mission_store, episode_store, attempt_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_center_run_id
 ):
-    seg_id = _seed_segment(mission_store, episode_store, task_center_run_id, attempt_budget=2)
-    mgr, captured = _make_manager(seg_id, episode_store, attempt_store)
+    seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id, attempt_budget=2)
+    mgr, captured = _make_manager(seg_id, iteration_store, attempt_store)
     g1 = mgr.create_initial_attempt()
     attempt_store.close(
         g1.id,
@@ -168,17 +168,17 @@ def test_failed_attempt_with_budget_creates_next_graph(
     )
     mgr.handle_attempt_closed(g1.id)
     assert captured == []  # No closure report yet — iteration still open.
-    seg = episode_store.get(seg_id)
+    seg = iteration_store.get(seg_id)
     assert seg is not None
     assert seg.is_open
     assert len(seg.attempt_ids) == 2
 
 
 def test_failed_partial_plan_graph_retries_without_propagating_continuation(
-    mission_store, episode_store, attempt_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_center_run_id
 ):
-    seg_id = _seed_segment(mission_store, episode_store, task_center_run_id, attempt_budget=2)
-    mgr, captured = _make_manager(seg_id, episode_store, attempt_store)
+    seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id, attempt_budget=2)
+    mgr, captured = _make_manager(seg_id, iteration_store, attempt_store)
     g1 = mgr.create_initial_attempt()
     attempt_store.set_plan_contract(
         g1.id,
@@ -195,7 +195,7 @@ def test_failed_partial_plan_graph_retries_without_propagating_continuation(
     mgr.handle_attempt_closed(g1.id)
 
     assert captured == []
-    seg = episode_store.get(seg_id)
+    seg = iteration_store.get(seg_id)
     assert seg is not None
     assert seg.is_open
     assert seg.continuation_goal is None
@@ -203,9 +203,9 @@ def test_failed_partial_plan_graph_retries_without_propagating_continuation(
 
 
 def test_manager_starts_orchestrator_when_factory_present(
-    mission_store, episode_store, attempt_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_center_run_id
 ):
-    seg_id = _seed_segment(mission_store, episode_store, task_center_run_id)
+    seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id)
     started: list[str] = []
 
     def factory(attempt, on_attempt_closed):
@@ -215,9 +215,9 @@ def test_manager_starts_orchestrator_when_factory_present(
     captured: list[IterationClosureReport] = []
     mgr = IterationManager(
         iteration_id=seg_id,
-        iteration_store=episode_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
-        on_episode_closed=captured.append,
+        on_iteration_closed=captured.append,
         orchestrator_factory=factory,
     )
 
@@ -227,9 +227,9 @@ def test_manager_starts_orchestrator_when_factory_present(
 
 
 def test_initial_graph_start_can_be_deferred(
-    mission_store, episode_store, attempt_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_center_run_id
 ):
-    seg_id = _seed_segment(mission_store, episode_store, task_center_run_id)
+    seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id)
     started: list[str] = []
 
     def factory(attempt, on_attempt_closed):
@@ -239,9 +239,9 @@ def test_initial_graph_start_can_be_deferred(
     captured: list[IterationClosureReport] = []
     mgr = IterationManager(
         iteration_id=seg_id,
-        iteration_store=episode_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
-        on_episode_closed=captured.append,
+        on_iteration_closed=captured.append,
         orchestrator_factory=factory,
     )
 
@@ -254,9 +254,9 @@ def test_initial_graph_start_can_be_deferred(
 
 
 def test_initial_start_failure_closes_inserted_graph(
-    mission_store, episode_store, attempt_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_center_run_id
 ):
-    seg_id = _seed_segment(mission_store, episode_store, task_center_run_id)
+    seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id)
 
     def factory(attempt, on_attempt_closed):
         del on_attempt_closed
@@ -265,16 +265,16 @@ def test_initial_start_failure_closes_inserted_graph(
     captured: list[IterationClosureReport] = []
     mgr = IterationManager(
         iteration_id=seg_id,
-        iteration_store=episode_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
-        on_episode_closed=captured.append,
+        on_iteration_closed=captured.append,
         orchestrator_factory=factory,
     )
 
     with pytest.raises(RuntimeError, match="orchestrator start failed"):
         mgr.create_initial_attempt()
 
-    iteration = episode_store.get(seg_id)
+    iteration = iteration_store.get(seg_id)
     assert iteration is not None
     assert len(iteration.attempt_ids) == 1
     attempt = attempt_store.get(iteration.attempt_ids[0])
@@ -285,9 +285,9 @@ def test_initial_start_failure_closes_inserted_graph(
 
 
 def test_deferred_start_failure_closes_inserted_graph(
-    mission_store, episode_store, attempt_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_center_run_id
 ):
-    seg_id = _seed_segment(mission_store, episode_store, task_center_run_id)
+    seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id)
 
     def factory(attempt, on_attempt_closed):
         del on_attempt_closed
@@ -296,9 +296,9 @@ def test_deferred_start_failure_closes_inserted_graph(
     captured: list[IterationClosureReport] = []
     mgr = IterationManager(
         iteration_id=seg_id,
-        iteration_store=episode_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
-        on_episode_closed=captured.append,
+        on_iteration_closed=captured.append,
         orchestrator_factory=factory,
     )
 
@@ -315,12 +315,12 @@ def test_deferred_start_failure_closes_inserted_graph(
 
 
 def test_retry_start_failure_exhausts_budget_and_emits_closure(
-    mission_store, episode_store, attempt_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_center_run_id
 ):
     """Retry-path startup failure closes the new attempt STARTUP_FAILED and,
     when budget is exhausted, emits ``attempt_plan_failed`` instead of
     leaving the iteration open."""
-    seg_id = _seed_segment(mission_store, episode_store, task_center_run_id, attempt_budget=2)
+    seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id, attempt_budget=2)
     started: list[str] = []
 
     def factory(attempt, on_attempt_closed):
@@ -332,9 +332,9 @@ def test_retry_start_failure_exhausts_budget_and_emits_closure(
     captured: list[IterationClosureReport] = []
     mgr = IterationManager(
         iteration_id=seg_id,
-        iteration_store=episode_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
-        on_episode_closed=captured.append,
+        on_iteration_closed=captured.append,
         orchestrator_factory=factory,
     )
     first_graph = mgr.create_initial_attempt()
@@ -346,7 +346,7 @@ def test_retry_start_failure_exhausts_budget_and_emits_closure(
 
     mgr.handle_attempt_closed(first_graph.id)
 
-    iteration = episode_store.get(seg_id)
+    iteration = iteration_store.get(seg_id)
     assert iteration is not None
     assert len(iteration.attempt_ids) == 2
     retry_attempt = attempt_store.get(iteration.attempt_ids[-1])
@@ -362,11 +362,11 @@ def test_retry_start_failure_exhausts_budget_and_emits_closure(
 
 
 def test_retry_start_failure_with_budget_remaining_creates_next_graph(
-    mission_store, episode_store, attempt_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_center_run_id
 ):
     """When budget remains after a startup failure on retry, the manager
     keeps trying until a non-failing factory or budget exhaustion."""
-    seg_id = _seed_segment(mission_store, episode_store, task_center_run_id, attempt_budget=3)
+    seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id, attempt_budget=3)
     started: list[str] = []
 
     def factory(attempt, on_attempt_closed):
@@ -378,9 +378,9 @@ def test_retry_start_failure_with_budget_remaining_creates_next_graph(
     captured: list[IterationClosureReport] = []
     mgr = IterationManager(
         iteration_id=seg_id,
-        iteration_store=episode_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
-        on_episode_closed=captured.append,
+        on_iteration_closed=captured.append,
         orchestrator_factory=factory,
     )
     first_graph = mgr.create_initial_attempt()
@@ -392,7 +392,7 @@ def test_retry_start_failure_with_budget_remaining_creates_next_graph(
 
     mgr.handle_attempt_closed(first_graph.id)
 
-    iteration = episode_store.get(seg_id)
+    iteration = iteration_store.get(seg_id)
     assert iteration is not None
     assert len(iteration.attempt_ids) == 3
     g2 = attempt_store.get(iteration.attempt_ids[1])
@@ -404,9 +404,9 @@ def test_retry_start_failure_with_budget_remaining_creates_next_graph(
 
 
 def test_failed_attempt_with_budget_starts_next_graph_orchestrator(
-    mission_store, episode_store, attempt_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_center_run_id
 ):
-    seg_id = _seed_segment(mission_store, episode_store, task_center_run_id, attempt_budget=2)
+    seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id, attempt_budget=2)
     started: list[str] = []
 
     def factory(attempt, on_attempt_closed):
@@ -416,9 +416,9 @@ def test_failed_attempt_with_budget_starts_next_graph_orchestrator(
     captured: list[IterationClosureReport] = []
     mgr = IterationManager(
         iteration_id=seg_id,
-        iteration_store=episode_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
-        on_episode_closed=captured.append,
+        on_iteration_closed=captured.append,
         orchestrator_factory=factory,
     )
     attempt = mgr.create_initial_attempt()
@@ -430,17 +430,17 @@ def test_failed_attempt_with_budget_starts_next_graph_orchestrator(
 
     mgr.handle_attempt_closed(attempt.id)
 
-    iteration = episode_store.get(seg_id)
+    iteration = iteration_store.get(seg_id)
     assert iteration is not None
     assert started == list(iteration.attempt_ids)
     assert captured == []
 
 
 def test_failed_attempt_without_budget_emits_attempt_plan_failed(
-    mission_store, episode_store, attempt_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_center_run_id
 ):
-    seg_id = _seed_segment(mission_store, episode_store, task_center_run_id, attempt_budget=2)
-    mgr, captured = _make_manager(seg_id, episode_store, attempt_store)
+    seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id, attempt_budget=2)
+    mgr, captured = _make_manager(seg_id, iteration_store, attempt_store)
     g1 = mgr.create_initial_attempt()
     attempt_store.set_plan_contract(
         g1.id, task_specification="spec1", evaluation_criteria=["a"], continuation_goal=None
@@ -452,7 +452,7 @@ def test_failed_attempt_without_budget_emits_attempt_plan_failed(
     )
     mgr.handle_attempt_closed(g1.id)
     # second attempt
-    seg = episode_store.get(seg_id)
+    seg = iteration_store.get(seg_id)
     assert seg is not None
     g2_id = seg.attempt_ids[-1]
     attempt_store.set_plan_contract(
@@ -471,10 +471,10 @@ def test_failed_attempt_without_budget_emits_attempt_plan_failed(
 
 
 def test_prior_attempt_history_ordered_by_graph_sequence(
-    mission_store, episode_store, attempt_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_center_run_id
 ):
-    seg_id = _seed_segment(mission_store, episode_store, task_center_run_id, attempt_budget=2)
-    mgr, captured = _make_manager(seg_id, episode_store, attempt_store)
+    seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id, attempt_budget=2)
+    mgr, captured = _make_manager(seg_id, iteration_store, attempt_store)
     g1 = mgr.create_initial_attempt()
     attempt_store.set_plan_contract(
         g1.id, task_specification="spec1", evaluation_criteria=["a"], continuation_goal=None
@@ -484,7 +484,7 @@ def test_prior_attempt_history_ordered_by_graph_sequence(
         fail_reason=AttemptFailReason.GENERATOR_FAILED,
     )
     mgr.handle_attempt_closed(g1.id)
-    seg = episode_store.get(seg_id)
+    seg = iteration_store.get(seg_id)
     assert seg is not None
     g2_id = seg.attempt_ids[-1]
     attempt_store.set_plan_contract(
@@ -504,12 +504,12 @@ def test_prior_attempt_history_ordered_by_graph_sequence(
 
 
 def test_creating_initial_graph_twice_raises(
-    mission_store, episode_store, attempt_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_center_run_id
 ):
     from task_center._core.types import TaskCenterInvariantViolation
 
-    seg_id = _seed_segment(mission_store, episode_store, task_center_run_id)
-    mgr, _ = _make_manager(seg_id, episode_store, attempt_store)
+    seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id)
+    mgr, _ = _make_manager(seg_id, iteration_store, attempt_store)
     mgr.create_initial_attempt()
     with pytest.raises(TaskCenterInvariantViolation):
         mgr.create_initial_attempt()

@@ -41,11 +41,11 @@ def packet_store():
 
 @pytest.fixture
 def deps_with_packet_store(
-    mission_store, episode_store, attempt_store, task_store, packet_store
+    goal_store, iteration_store, attempt_store, task_store, packet_store
 ) -> ContextEngineDeps:
     return ContextEngineDeps(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         context_packet_store=packet_store,
@@ -180,11 +180,11 @@ def test_missing_parent_packet_raises_context_engine_error(
 
 
 def test_missing_packet_store_raises_context_engine_error(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
     deps = ContextEngineDeps(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         context_packet_store=None,

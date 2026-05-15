@@ -23,7 +23,7 @@ class SubmitFullPlanInput(PlannerSubmissionBaseInput):
 
 @tool(
     name="submit_full_plan",
-    description="Submit a complete harness attempt plan for the current episode.",
+    description="Submit a complete harness attempt plan for the current iteration.",
     input_model=SubmitFullPlanInput,
     output_model=TextToolOutput,
     is_terminal_tool=True,

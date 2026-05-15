@@ -49,8 +49,8 @@ class _TestStoreBundle:
     engine: Engine
     session_factory: sessionmaker[Session]
     task_store: TaskCenterStore
-    mission_store: GoalStore
-    episode_store: IterationStore
+    goal_store: GoalStore
+    iteration_store: IterationStore
     attempt_store: AttemptStore
 
     def close(self) -> None:
@@ -76,8 +76,8 @@ def stores() -> Iterator[_TestStoreBundle]:
     )
     for store in (
         bundle.task_store,
-        bundle.mission_store,
-        bundle.episode_store,
+        bundle.goal_store,
+        bundle.iteration_store,
         bundle.attempt_store,
     ):
         store.initialize(session_factory)
@@ -136,14 +136,14 @@ def _make_recorder(
     )
 
 
-def test_mission_insert_writes_latest_snapshot(
+def test_goal_insert_writes_latest_snapshot(
     tmp_path: Path, stores: _TestStoreBundle
 ) -> None:
     _seed_run(stores)
     recorder = _make_recorder(tmp_path)
     recorder.start()
     try:
-        mission = stores.mission_store.insert(
+        goal = stores.goal_store.insert(
             task_center_run_id=_RUN_ID,
             requested_by_task_id="entry_task_1",
             goal="solve the problem",
@@ -151,31 +151,31 @@ def test_mission_insert_writes_latest_snapshot(
     finally:
         recorder.dispose()
 
-    mission_dir = recorder.run_dir / f"mission_01_{mission.id}"
-    snapshot = mission_dir / "mission.json"
+    goal_dir = recorder.run_dir / f"goal_01_{goal.id}"
+    snapshot = goal_dir / "goal.json"
     assert snapshot.exists()
     row = _read_json(snapshot)
-    assert row["id"] == mission.id
+    assert row["id"] == goal.id
     assert row["status"] == "open"
     assert "context" not in row
     assert "summary" not in row
-    assert not (mission_dir / "mission.jsonl").exists()
+    assert not (goal_dir / "goal.jsonl").exists()
 
 
-def test_mission_update_overwrites_latest_snapshot(
+def test_goal_update_overwrites_latest_snapshot(
     tmp_path: Path, stores: _TestStoreBundle
 ) -> None:
     _seed_run(stores)
     recorder = _make_recorder(tmp_path)
     recorder.start()
     try:
-        mission = stores.mission_store.insert(
+        goal = stores.goal_store.insert(
             task_center_run_id=_RUN_ID,
             requested_by_task_id="entry_task_1",
             goal="solve the problem",
         )
-        stores.mission_store.set_status(
-            mission.id,
+        stores.goal_store.set_status(
+            goal.id,
             status=GoalStatus.SUCCEEDED,
             final_outcome={"ok": True},
             closed_at=datetime.now(UTC),
@@ -183,50 +183,50 @@ def test_mission_update_overwrites_latest_snapshot(
     finally:
         recorder.dispose()
 
-    snapshot = recorder.run_dir / f"mission_01_{mission.id}" / "mission.json"
+    snapshot = recorder.run_dir / f"goal_01_{goal.id}" / "goal.json"
     row = _read_json(snapshot)
     assert row["status"] == "succeeded"
     assert row["final_outcome"] == {"ok": True}
 
 
-def test_episode_and_attempt_listeners(
+def test_iteration_and_attempt_listeners(
     tmp_path: Path, stores: _TestStoreBundle
 ) -> None:
     _seed_run(stores)
     recorder = _make_recorder(tmp_path)
     recorder.start()
     try:
-        mission = stores.mission_store.insert(
+        goal = stores.goal_store.insert(
             task_center_run_id=_RUN_ID,
             requested_by_task_id="entry_task_1",
             goal="solve the problem",
         )
-        episode = stores.episode_store.insert(
-            goal_id=mission.id,
+        iteration = stores.iteration_store.insert(
+            goal_id=goal.id,
             sequence_no=1,
             creation_reason=IterationCreationReason.INITIAL,
             goal="ep goal",
             attempt_budget=3,
         )
         attempt = stores.attempt_store.insert(
-            iteration_id=episode.id,
+            iteration_id=iteration.id,
             attempt_sequence_no=1,
         )
     finally:
         recorder.dispose()
 
-    mission_dir = recorder.run_dir / f"mission_01_{mission.id}"
-    episode_dir = mission_dir / f"episode_01_{episode.id}"
-    attempt_dir = episode_dir / f"attempt_01_{attempt.id}"
-    episode_row = _read_json(episode_dir / "episode.json")
+    goal_dir = recorder.run_dir / f"goal_01_{goal.id}"
+    iteration_dir = goal_dir / f"iteration_01_{iteration.id}"
+    attempt_dir = iteration_dir / f"attempt_01_{attempt.id}"
+    iteration_row = _read_json(iteration_dir / "iteration.json")
     attempt_row = _read_json(attempt_dir / "attempt.json")
-    assert episode_row["id"] == episode.id
-    assert "context" not in episode_row
-    assert "summary" not in episode_row
+    assert iteration_row["id"] == iteration.id
+    assert "context" not in iteration_row
+    assert "summary" not in iteration_row
     assert attempt_row["id"] == attempt.id
     assert "context" not in attempt_row
     assert "summary" not in attempt_row
-    assert not (episode_dir / "episode.jsonl").exists()
+    assert not (iteration_dir / "iteration.jsonl").exists()
     assert not (attempt_dir / "attempt.jsonl").exists()
 
 
@@ -268,20 +268,20 @@ def test_task_dir_placement_per_role(
     recorder = _make_recorder(tmp_path)
     recorder.start()
     try:
-        mission = stores.mission_store.insert(
+        goal = stores.goal_store.insert(
             task_center_run_id=_RUN_ID,
             requested_by_task_id="entry_task_1",
             goal="goal",
         )
-        episode = stores.episode_store.insert(
-            goal_id=mission.id,
+        iteration = stores.iteration_store.insert(
+            goal_id=goal.id,
             sequence_no=1,
             creation_reason=IterationCreationReason.INITIAL,
             goal="ep",
             attempt_budget=3,
         )
         attempt = stores.attempt_store.insert(
-            iteration_id=episode.id,
+            iteration_id=iteration.id,
             attempt_sequence_no=1,
         )
 
@@ -314,8 +314,8 @@ def test_task_dir_placement_per_role(
 
     attempt_dir = (
         recorder.run_dir
-        / f"mission_01_{mission.id}"
-        / f"episode_01_{episode.id}"
+        / f"goal_01_{goal.id}"
+        / f"iteration_01_{iteration.id}"
         / f"attempt_01_{attempt.id}"
     )
     assert (attempt_dir / "01_planner_task_planner" / "task.json").exists()
@@ -345,20 +345,20 @@ def test_generator_verifier_task_uses_verifier_dir_and_message_recorder(
     recorder = _make_recorder(tmp_path)
     recorder.start()
     try:
-        mission = stores.mission_store.insert(
+        goal = stores.goal_store.insert(
             task_center_run_id=_RUN_ID,
             requested_by_task_id="entry_task_1",
             goal="goal",
         )
-        episode = stores.episode_store.insert(
-            goal_id=mission.id,
+        iteration = stores.iteration_store.insert(
+            goal_id=goal.id,
             sequence_no=1,
             creation_reason=IterationCreationReason.INITIAL,
             goal="ep",
             attempt_budget=3,
         )
         attempt = stores.attempt_store.insert(
-            iteration_id=episode.id,
+            iteration_id=iteration.id,
             attempt_sequence_no=1,
         )
         _insert_task(
@@ -373,8 +373,8 @@ def test_generator_verifier_task_uses_verifier_dir_and_message_recorder(
 
     verifier_dir = (
         recorder.run_dir
-        / f"mission_01_{mission.id}"
-        / f"episode_01_{episode.id}"
+        / f"goal_01_{goal.id}"
+        / f"iteration_01_{iteration.id}"
         / f"attempt_01_{attempt.id}"
         / "01_verifier_task_verifier"
     )
@@ -424,7 +424,7 @@ def test_dispose_unregisters_listeners(
     recorder = _make_recorder(tmp_path)
     recorder.start()
     try:
-        m1 = stores.mission_store.insert(
+        m1 = stores.goal_store.insert(
             task_center_run_id=_RUN_ID,
             requested_by_task_id="entry_task_1",
             goal="g1",
@@ -432,14 +432,14 @@ def test_dispose_unregisters_listeners(
     finally:
         recorder.dispose()
 
-    m2 = stores.mission_store.insert(
+    m2 = stores.goal_store.insert(
         task_center_run_id=_RUN_ID,
         requested_by_task_id="entry_task_2",
         goal="g2",
     )
 
-    assert (recorder.run_dir / f"mission_01_{m1.id}").exists()
-    assert not (recorder.run_dir / f"mission_02_{m2.id}").exists()
+    assert (recorder.run_dir / f"goal_01_{m1.id}").exists()
+    assert not (recorder.run_dir / f"goal_02_{m2.id}").exists()
 
 
 def test_run_json_and_metrics_json_written(

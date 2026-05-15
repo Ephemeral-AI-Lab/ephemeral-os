@@ -113,7 +113,7 @@ class EphemeralAttemptAgentLauncher:
             task_center_run_id=launch.task_center_run_id,
             task_center_task_id=launch.task_id,
             task_center_attempt_id=launch.attempt_id,
-            task_center_mission_id=launch.goal_id,
+            task_center_goal_id=launch.goal_id,
             task_center_request_id=launch.goal_id,
             attempt_runtime=runtime,
             composer=runtime.composer,
@@ -175,8 +175,8 @@ class EphemeralAttemptAgentLauncher:
             return
         task = runtime.task_store.get_task(launch.task_id)
         if task is None or task.get("status") != TaskCenterTaskStatus.RUNNING.value:
-            # Entry-mode tasks may already be in WAITING_MISSION after a
-            # delegated mission start; or DONE/FAILED via a terminal. Either way,
+            # Entry-mode tasks may already be in WAITING_GOAL after a
+            # delegated goal start; or DONE/FAILED via a terminal. Either way,
             # the lifecycle owner has already moved the task off RUNNING.
             return
 
@@ -326,7 +326,7 @@ class LaunchBuilder:
             task_center_run_id=self.runtime.run_id_for_attempt(attempt),
             attempt_id=attempt.id,
             needs=(),
-            mission_id=iteration.goal_id,
+            goal_id=iteration.goal_id,
         )
 
     def for_generator(
@@ -351,7 +351,7 @@ class LaunchBuilder:
             task_center_run_id=task["task_center_run_id"],
             attempt_id=attempt.id,
             needs=tuple(task["needs"]),
-            mission_id=iteration.goal_id,
+            goal_id=iteration.goal_id,
         )
 
     def for_evaluator(self, *, attempt: Attempt, task_id: str) -> AgentLaunch:
@@ -368,7 +368,7 @@ class LaunchBuilder:
             task_center_run_id=self.runtime.run_id_for_attempt(attempt),
             attempt_id=attempt.id,
             needs=tuple(attempt.generator_task_ids),
-            mission_id=iteration.goal_id,
+            goal_id=iteration.goal_id,
         )
 
     def for_entry(
@@ -386,7 +386,7 @@ class LaunchBuilder:
             task_center_run_id=task_center_run_id,
             attempt_id=None,
             needs=(),
-            mission_id=None,
+            goal_id=None,
         )
 
     def _build(
@@ -399,7 +399,7 @@ class LaunchBuilder:
         task_center_run_id: str,
         attempt_id: str | None,
         needs: tuple[str, ...],
-        mission_id: str | None,
+        goal_id: str | None,
     ) -> AgentLaunch:
         bundle = self.runtime.require_composer().compose(
             base_agent_name=base_agent_name, scope=scope
@@ -413,7 +413,7 @@ class LaunchBuilder:
             rendered_prompt=bundle.rendered_prompt,
             needs=needs,
             context_packet_id=bundle.context_packet_id,
-            goal_id=mission_id,
+            goal_id=goal_id,
         )
 
     def _require_iteration(self, attempt: Attempt) -> Any:

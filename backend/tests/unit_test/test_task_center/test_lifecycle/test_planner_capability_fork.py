@@ -88,19 +88,19 @@ def _clear_definitions() -> None:
 
 
 def _runtime_with_composer(
-    mission_store, episode_store, attempt_store, task_store
+    goal_store, iteration_store, attempt_store, task_store
 ) -> tuple[AttemptDeps, _RecordingLauncher]:
     launcher = _RecordingLauncher()
     deps = ContextEngineDeps(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
     )
     composer = ContextComposer.default(ContextEngine(deps))
     runtime = AttemptDeps(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher,
@@ -113,18 +113,18 @@ def _runtime_with_composer(
 
 
 def _seed_partial_plan_caller(
-    mission_store,
-    episode_store,
+    goal_store,
+    iteration_store,
     attempt_store,
     task_store,
     task_center_run_id,
 ):
-    parent_req = mission_store.insert(
+    parent_req = goal_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t-entry",
         goal="parent",
     )
-    parent_seg = episode_store.insert(
+    parent_seg = iteration_store.insert(
         goal_id=parent_req.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
@@ -156,22 +156,22 @@ def _seed_partial_plan_caller(
 
 
 def test_partial_plan_caller_forks_child_planner_to_full_only(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
     runtime, launcher = _runtime_with_composer(
-        mission_store, episode_store, attempt_store, task_store
+        goal_store, iteration_store, attempt_store, task_store
     )
     _seed_partial_plan_caller(
-        mission_store, episode_store, attempt_store, task_store, task_center_run_id
+        goal_store, iteration_store, attempt_store, task_store, task_center_run_id
     )
 
     # Child request spawned by the partial-plan caller task.
-    child_req = mission_store.insert(
+    child_req = goal_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t-caller",
         goal="child",
     )
-    child_seg = episode_store.insert(
+    child_seg = iteration_store.insert(
         goal_id=child_req.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,

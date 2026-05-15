@@ -74,19 +74,19 @@ def _clear_definitions() -> None:
 
 @pytest.fixture
 def composer_runtime(
-    mission_store, episode_store, attempt_store, task_store
+    goal_store, iteration_store, attempt_store, task_store
 ) -> tuple[AttemptDeps, _RecordingLauncher]:
     launcher = _RecordingLauncher()
     deps = ContextEngineDeps(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
     )
     composer = ContextComposer.default(ContextEngine(deps))
     runtime = AttemptDeps(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher,
@@ -124,14 +124,14 @@ def _register_planner_agents() -> None:
 
 
 def _seed_request_segment_graph(
-    mission_store, episode_store, attempt_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_center_run_id
 ):
-    request = mission_store.insert(
+    request = goal_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t-entry",
         goal="overall",
     )
-    iteration = episode_store.insert(
+    iteration = iteration_store.insert(
         goal_id=request.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
@@ -145,19 +145,19 @@ def _seed_request_segment_graph(
 
 
 def _setup_partial_plan_ancestor(
-    mission_store,
-    episode_store,
+    goal_store,
+    iteration_store,
     attempt_store,
     task_store,
     task_center_run_id,
 ):
     """Ancestor caller submitted a partial plan → child planner should fork."""
-    parent_req = mission_store.insert(
+    parent_req = goal_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t-entry",
         goal="parent",
     )
-    parent_seg = episode_store.insert(
+    parent_seg = iteration_store.insert(
         goal_id=parent_req.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
@@ -190,8 +190,8 @@ def _setup_partial_plan_ancestor(
 
 def test_planner_launched_via_composer_uses_base_when_no_ancestor(
     composer_runtime,
-    mission_store,
-    episode_store,
+    goal_store,
+    iteration_store,
     attempt_store,
     task_store,
     task_center_run_id,
@@ -199,7 +199,7 @@ def test_planner_launched_via_composer_uses_base_when_no_ancestor(
     runtime, launcher = composer_runtime
     _register_planner_agents()
     request, iteration, attempt = _seed_request_segment_graph(
-        mission_store, episode_store, attempt_store, task_center_run_id
+        goal_store, iteration_store, attempt_store, task_center_run_id
     )
     orchestrator = AttemptOrchestrator(
         attempt=attempt, on_attempt_closed=lambda _id: None, runtime=runtime
@@ -217,8 +217,8 @@ def test_planner_launched_via_composer_uses_base_when_no_ancestor(
 
 def test_planner_forked_to_full_only_when_partial_plan_caller_present(
     composer_runtime,
-    mission_store,
-    episode_store,
+    goal_store,
+    iteration_store,
     attempt_store,
     task_store,
     task_center_run_id,
@@ -226,19 +226,19 @@ def test_planner_forked_to_full_only_when_partial_plan_caller_present(
     runtime, launcher = composer_runtime
     _register_planner_agents()
     _setup_partial_plan_ancestor(
-        mission_store,
-        episode_store,
+        goal_store,
+        iteration_store,
         attempt_store,
         task_store,
         task_center_run_id,
     )
     # Child request is spawned by the partial-plan caller task.
-    child_req = mission_store.insert(
+    child_req = goal_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t-caller",
         goal="child",
     )
-    child_seg = episode_store.insert(
+    child_seg = iteration_store.insert(
         goal_id=child_req.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,

@@ -76,7 +76,7 @@ class EntryTaskController:
             return
         self._finish_run(status="failed")
 
-    # ---- delegated-mission resume -----------------------------------------
+    # ---- delegated-goal resume -----------------------------------------
 
     def apply_goal_closure_report(
         self, report: GoalClosureReport
@@ -93,7 +93,7 @@ class EntryTaskController:
         try:
             updated = self.task_store.set_task_status_if_current(
                 self.task_id,
-                expected_status=TaskCenterTaskStatus.WAITING_MISSION.value,
+                expected_status=TaskCenterTaskStatus.WAITING_GOAL.value,
                 status=status.value,
                 summary={
                     "outcome": report.outcome,
@@ -112,23 +112,23 @@ class EntryTaskController:
             return
         self._finish_run(status="done" if succeeded else "failed")
 
-    # ---- waiting-on-delegated-mission -------------------------------------
+    # ---- waiting-on-delegated-goal -------------------------------------
 
-    def mark_waiting_mission(
+    def mark_waiting_goal(
         self,
         *,
-        delegated_mission_id: str,
-        delegated_episode_id: str,
+        delegated_goal_id: str,
+        delegated_iteration_id: str,
         delegated_attempt_id: str,
         goal: str,
     ) -> None:
-        """Park the entry task in ``WAITING_MISSION``."""
+        """Park the entry task in ``WAITING_GOAL``."""
         summary = {
-            "outcome": "mission_start",
-            "summary": "Waiting on delegated mission solution.",
+            "outcome": "goal_start",
+            "summary": "Waiting on delegated goal solution.",
             "payload": {
-                "goal_id": delegated_mission_id,
-                "initial_episode_id": delegated_episode_id,
+                "goal_id": delegated_goal_id,
+                "initial_iteration_id": delegated_iteration_id,
                 "initial_attempt_id": delegated_attempt_id,
                 "parent_attempt_id": None,
                 "goal": goal,
@@ -137,20 +137,20 @@ class EntryTaskController:
         updated = self.task_store.set_task_status_if_current(
             self.task_id,
             expected_status=TaskCenterTaskStatus.RUNNING.value,
-            status=TaskCenterTaskStatus.WAITING_MISSION.value,
+            status=TaskCenterTaskStatus.WAITING_GOAL.value,
             summary=summary,
         )
         if updated is None:
             raise TaskCenterInvariantViolation(
                 f"Entry task {self.task_id!r} was not running when the "
-                "delegated mission start tried to mark it waiting."
+                "delegated goal start tried to mark it waiting."
             )
 
-    def restore_running_after_failed_mission_start(self) -> None:
-        """Roll the entry task back to RUNNING after a failed mission start."""
+    def restore_running_after_failed_goal_start(self) -> None:
+        """Roll the entry task back to RUNNING after a failed goal start."""
         self.task_store.set_task_status_if_current(
             self.task_id,
-            expected_status=TaskCenterTaskStatus.WAITING_MISSION.value,
+            expected_status=TaskCenterTaskStatus.WAITING_GOAL.value,
             status=TaskCenterTaskStatus.RUNNING.value,
         )
 

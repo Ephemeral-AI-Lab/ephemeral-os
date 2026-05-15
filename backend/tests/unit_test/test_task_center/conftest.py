@@ -63,14 +63,14 @@ def session_factory():
 
 
 @pytest.fixture
-def mission_store(session_factory) -> GoalStore:
+def goal_store(session_factory) -> GoalStore:
     store = GoalStore()
     store.initialize(session_factory)
     return store
 
 
 @pytest.fixture
-def episode_store(session_factory) -> IterationStore:
+def iteration_store(session_factory) -> IterationStore:
     store = IterationStore()
     store.initialize(session_factory)
     return store
@@ -207,8 +207,8 @@ def register_test_agents(request):
 
 @pytest.fixture
 def composer(
-    mission_store,
-    episode_store,
+    goal_store,
+    iteration_store,
     attempt_store,
     task_store,
     context_packet_store,
@@ -217,8 +217,8 @@ def composer(
     """Real ContextComposer wired against the in-memory stores."""
     request.getfixturevalue("register_test_agents")
     deps = ContextEngineDeps(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         context_packet_store=context_packet_store,

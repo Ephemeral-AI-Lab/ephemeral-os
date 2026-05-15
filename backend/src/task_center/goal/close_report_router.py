@@ -3,7 +3,7 @@
 Owns the single delivery path from ``GoalHandler.close_goal`` to the
 parent ``AttemptOrchestrator.apply_goal_closure_report``. The runtime
 assumes no process restart: while a parent generator task is in
-``WAITING_MISSION`` its attempt cannot reach quiescence and its
+``WAITING_GOAL`` its attempt cannot reach quiescence and its
 orchestrator stays registered. A missing orchestrator at delivery time
 is a hard ``TaskCenterInvariantViolation``.
 """
@@ -44,7 +44,7 @@ class GoalClosureReportRouter:
                 requested_by_task_id=report.requested_by_task_id,
                 parent_attempt_id=attempt_id,
             )
-        if status != TaskCenterTaskStatus.WAITING_MISSION.value:
+        if status != TaskCenterTaskStatus.WAITING_GOAL.value:
             raise TaskCenterInvariantViolation(
                 f"TaskCenter task {report.requested_by_task_id!r} is not waiting "
                 "on a goal."

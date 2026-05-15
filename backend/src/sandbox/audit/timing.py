@@ -37,7 +37,16 @@ def timing_audit_signals(
         emitted.append("occ_prepared")
     if _has_timing(timings, "occ.") and status == "conflict":
         emitted.append("occ_conflicted")
-    elif _has_any_timing(timings, ("occ.commit.", "occ.apply.")) and status == "ok":
+    elif _has_any_timing(
+        timings,
+        (
+            "occ.commit.",
+            "occ.apply.",
+            "api.write.occ_apply_s",
+            "api.edit.occ_apply_s",
+            "command_exec.occ_apply_s",
+        ),
+    ) and status == "ok":
         emitted.append("occ_committed")
 
     if _has_any_timing(timings, ("overlay.", "command_exec.")):

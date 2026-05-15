@@ -401,25 +401,25 @@ class AuditRecorder:
     # Path resolution + numeric prefixes
     # ------------------------------------------------------------------
 
-    def _ensure_goal_dir(self, mission_id: str) -> Path:
-        cached = self._goal_dir.get(mission_id)
+    def _ensure_goal_dir(self, goal_id: str) -> Path:
+        cached = self._goal_dir.get(goal_id)
         if cached is not None:
             return cached
         self._goal_seq_counter += 1
         seq = self._goal_seq_counter
-        path = self._run_dir / f"goal_{seq:02d}_{mission_id}"
+        path = self._run_dir / f"goal_{seq:02d}_{goal_id}"
         path.mkdir(parents=True, exist_ok=True)
-        self._goal_dir[mission_id] = path
+        self._goal_dir[goal_id] = path
         return path
 
     def _ensure_iteration_dir(
-        self, mission_id: str, iteration_id: str, goal_dir: Path
+        self, goal_id: str, iteration_id: str, goal_dir: Path
     ) -> Path:
         cached = self._iteration_dir.get(iteration_id)
         if cached is not None:
             return cached
-        seq = self._iteration_seq_counter.get(mission_id, 0) + 1
-        self._iteration_seq_counter[mission_id] = seq
+        seq = self._iteration_seq_counter.get(goal_id, 0) + 1
+        self._iteration_seq_counter[goal_id] = seq
         path = goal_dir / f"iteration_{seq:02d}_{iteration_id}"
         path.mkdir(parents=True, exist_ok=True)
         self._iteration_dir[iteration_id] = path

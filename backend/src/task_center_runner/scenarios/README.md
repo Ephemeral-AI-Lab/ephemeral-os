@@ -22,9 +22,9 @@ conventions, and per-subpackage coverage matrix.
 
 1. Pick the right subpackage from the taxonomy in the wiki design doc.
 2. Copy the closest reference scenario:
-   - State-machine assertion → `pipeline/initial_mission.py`
+   - State-machine assertion → `pipeline/initial_goal.py`
    - DAG dependency assertion → `pipeline/dependency_dag_serial.py`
-   - Episodic continuation → `pipeline/episodic_continuation.py`
+   - Iterative continuation → `pipeline/iterative_continuation.py`
    - Attempt-retry assertion → `pipeline/attempt_retry_evaluator_failure.py`
    - Sandbox event assertion → `sandbox/occ_concurrent_conflicts.py`
    - Planner rejection assertion → `planner_validation/duplicate_local_id.py`

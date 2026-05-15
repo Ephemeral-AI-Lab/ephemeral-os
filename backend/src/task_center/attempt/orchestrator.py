@@ -162,7 +162,7 @@ class AttemptOrchestrator:
         """Resume a generator task waiting on a delegated goal.
 
         Idempotent: if the parent has already been resumed (status moved off
-        ``waiting_mission`` by an earlier delivery), return silently
+        ``waiting_goal`` by an earlier delivery), return silently
         without re-asserting attempt stage or appending another summary.
         """
         runtime = self._runtime
@@ -171,7 +171,7 @@ class AttemptOrchestrator:
             raise TaskCenterInvariantViolation(
                 f"Generator task {report.requested_by_task_id!r} not found"
             )
-        if task.get("status") != TaskCenterTaskStatus.WAITING_MISSION.value:
+        if task.get("status") != TaskCenterTaskStatus.WAITING_GOAL.value:
             # Already delivered; no further action.
             return
 
@@ -191,7 +191,7 @@ class AttemptOrchestrator:
 
         updated = runtime.task_store.set_task_status_if_current(
             report.requested_by_task_id,
-            expected_status=TaskCenterTaskStatus.WAITING_MISSION.value,
+            expected_status=TaskCenterTaskStatus.WAITING_GOAL.value,
             status=status.value,
             summary={
                 "outcome": report.outcome,

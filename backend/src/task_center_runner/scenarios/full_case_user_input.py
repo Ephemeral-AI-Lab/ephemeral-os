@@ -67,7 +67,7 @@ class FullCaseUserInput(ScenarioBase):
         return [asdict(package) for package in plan.packages]
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        if _is_recursive_mission(ctx):
+        if _is_recursive_goal(ctx):
             return self._recursive_planner_response(ctx)
         return self._root_planner_response(ctx)
 
@@ -75,9 +75,9 @@ class FullCaseUserInput(ScenarioBase):
         rendered_prompt = ctx.rendered_prompt or ctx.prompt or ""
         if "ACTION inspect_user_input" in rendered_prompt:
             return ("inspect_user_input",)
-        if "ACTION request_recursive_mission" in rendered_prompt:
+        if "ACTION request_recursive_goal" in rendered_prompt:
             package_id = _field(rendered_prompt, "package") or self._recursive_package_id or ""
-            return (f"request_recursive_mission:{package_id}",)
+            return (f"request_recursive_goal:{package_id}",)
         if "ACTION execute_package" in rendered_prompt:
             package_id = _field(rendered_prompt, "package") or "unknown"
             return (f"execute_package:{package_id}",)
@@ -130,7 +130,7 @@ class FullCaseUserInput(ScenarioBase):
             },
         )
 
-    def recursive_mission_goal(self, ctx: ScenarioContext) -> str | None:
+    def recursive_goal_goal(self, ctx: ScenarioContext) -> str | None:
         rendered_prompt = ctx.rendered_prompt or ""
         package_id = _field(rendered_prompt, "package") or self._recursive_package_id
         if not package_id:
@@ -298,7 +298,7 @@ class FullCaseUserInput(ScenarioBase):
                 {"id": delegate_id, "agent_name": "executor", "deps": recursive_deps}
             )
             task_specs[delegate_id] = (
-                f"ACTION request_recursive_mission package={recursive.id} "
+                f"ACTION request_recursive_goal package={recursive.id} "
                 f"risk={recursive.risk}"
             )
             recursive_guard = "verify_recursive_return"
@@ -375,7 +375,7 @@ class FullCaseUserInput(ScenarioBase):
         if self._user_input_plan is not None:
             return self._user_input_plan
         prompt = ""
-        if ctx.goal is not None and _is_root_mission(ctx):
+        if ctx.goal is not None and _is_root_goal(ctx):
             prompt = str(ctx.goal.goal or "")
         if not prompt:
             prompt = ctx.prompt or ctx.rendered_prompt or ""
@@ -388,7 +388,7 @@ class FullCaseUserInput(ScenarioBase):
         ctx: ScenarioContext,
         checkpoint: str,
     ) -> bool:
-        if not _is_root_mission(ctx):
+        if not _is_root_goal(ctx):
             return False
         iteration = ctx.iteration
         attempt = ctx.attempt
@@ -459,7 +459,7 @@ def _field(text: str, name: str) -> str | None:
     return None
 
 
-def _is_root_mission(ctx: ScenarioContext) -> bool:
+def _is_root_goal(ctx: ScenarioContext) -> bool:
     goal = ctx.goal
     if goal is None:
         return True
@@ -467,8 +467,8 @@ def _is_root_mission(ctx: ScenarioContext) -> bool:
     return requested_by.endswith(":entry")
 
 
-def _is_recursive_mission(ctx: ScenarioContext) -> bool:
-    return not _is_root_mission(ctx)
+def _is_recursive_goal(ctx: ScenarioContext) -> bool:
+    return not _is_root_goal(ctx)
 
 
 __all__ = ["FullCaseUserInput"]

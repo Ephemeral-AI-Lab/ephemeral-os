@@ -55,8 +55,8 @@ def full_system_capacity_metrics_script(ctx: ScenarioContext) -> PreparedToolScr
         "task_center_run_id": run_id,
         "profile": "project",
         "graph": {
-            "missions": 0,
-            "episodes": 0,
+            "goals": 0,
+            "iterations": 0,
             "attempts": 0,
             "tasks": 0,
             "max_depth": 0,

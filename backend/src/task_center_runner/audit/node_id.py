@@ -23,10 +23,10 @@ class NodeId:
     """Hierarchical breadcrumb identifying where in the run an event occurred."""
 
     task_center_run_id: str
-    mission_id: str | None = None
-    mission_seq: int | None = None
-    episode_id: str | None = None
-    episode_seq: int | None = None
+    goal_id: str | None = None
+    goal_seq: int | None = None
+    iteration_id: str | None = None
+    iteration_seq: int | None = None
     attempt_id: str | None = None
     attempt_seq: int | None = None
     agent_role: PrimaryRole | None = None

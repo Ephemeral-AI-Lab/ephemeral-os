@@ -51,27 +51,27 @@ def _tool_context(
     return ToolExecutionContextService(cwd="/tmp", services=metadata)
 
 
-def _build_runtime(mission_store, episode_store, attempt_store, task_store, *, composer):
-    request = mission_store.insert(
+def _build_runtime(goal_store, iteration_store, attempt_store, task_store, *, composer):
+    request = goal_store.insert(
         task_center_run_id="run1",
         requested_by_task_id="outer-task",
         goal="solve task",
     )
-    iteration = episode_store.insert(
+    iteration = iteration_store.insert(
         goal_id=request.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="solve task",
         attempt_budget=2,
     )
-    mission_store.append_iteration_id(request.id, iteration.id)
+    goal_store.append_iteration_id(request.id, iteration.id)
     attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
-    episode_store.append_attempt_id(iteration.id, attempt.id)
+    iteration_store.append_attempt_id(iteration.id, attempt.id)
     launcher = _FakeLauncher()
     registry = AttemptOrchestratorRegistry()
     runtime = AttemptDeps(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher,
@@ -89,11 +89,11 @@ def _build_runtime(mission_store, episode_store, attempt_store, task_store, *, c
 
 
 async def test_phase03_full_plan_through_evaluator_success(
-    mission_store, episode_store, attempt_store, task_store, composer
+    goal_store, iteration_store, attempt_store, task_store, composer
 ) -> None:
     runtime, orchestrator, attempt_id = _build_runtime(
-        mission_store,
-        episode_store,
+        goal_store,
+        iteration_store,
         attempt_store,
         task_store,
         composer=composer,

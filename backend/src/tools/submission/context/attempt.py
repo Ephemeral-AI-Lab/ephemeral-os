@@ -32,8 +32,8 @@ class AttemptSubmissionContext:
     task_center_task_id: str
     task: dict[str, Any]
     attempt: Attempt
-    episode: Iteration
-    mission: Goal
+    iteration: Iteration
+    goal: Goal
     runtime: AttemptDeps
     orchestrator: AttemptOrchestrator
 
@@ -113,16 +113,16 @@ def _resolve_attempt_context(
             f"Attempt {attempt_id!r} was not found."
         )
 
-    episode = runtime.iteration_store.get(attempt.iteration_id)
-    if episode is None:
+    iteration = runtime.iteration_store.get(attempt.iteration_id)
+    if iteration is None:
         raise AttemptSubmissionContextError(
             f"Iteration {attempt.iteration_id!r} was not found."
         )
 
-    mission = runtime.goal_store.get(episode.goal_id)
-    if mission is None:
+    goal = runtime.goal_store.get(iteration.goal_id)
+    if goal is None:
         raise AttemptSubmissionContextError(
-            f"Goal {episode.goal_id!r} was not found."
+            f"Goal {iteration.goal_id!r} was not found."
         )
 
     try:
@@ -134,8 +134,8 @@ def _resolve_attempt_context(
         task_center_task_id=task_id,
         task=task,
         attempt=attempt,
-        episode=episode,
-        mission=mission,
+        iteration=iteration,
+        goal=goal,
         runtime=runtime,
         orchestrator=orchestrator,
     )

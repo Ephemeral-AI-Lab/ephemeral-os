@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 
-def test_persistence_can_import_episode_state_before_manager_facade() -> None:
+def test_persistence_can_import_iteration_state_before_manager_facade() -> None:
     """A clean interpreter must not hit the iteration manager/persistence cycle."""
     backend_dir = Path(__file__).resolve().parents[4]
     src_dir = backend_dir / "src"

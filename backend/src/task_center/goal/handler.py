@@ -1,6 +1,6 @@
 """Goal boundary — handler + factory + closure router + repository + ancestry.
 
-Phase 7c absorbs ``mission/repository.py`` and ``mission/ancestry.py`` into
+Phase 7c absorbs ``goal/repository.py`` and ``goal/ancestry.py`` into
 this single module.
 """
 
@@ -152,7 +152,7 @@ class IterationFactory:
         attempt_store: AttemptStoreProtocol,
         manager_registry: IterationManagerRegistry,
         config: TaskCenterLifecycleConfig,
-        on_episode_closed,
+        on_iteration_closed,
         orchestrator_factory: OrchestratorFactory | None = None,
         task_store: TaskStoreProtocol | None = None,
     ) -> None:
@@ -161,7 +161,7 @@ class IterationFactory:
         self._attempt_store = attempt_store
         self._manager_registry = manager_registry
         self._config = config
-        self._on_episode_closed = on_episode_closed
+        self._on_iteration_closed = on_iteration_closed
         self._orchestrator_factory = orchestrator_factory
         self._task_store = task_store
 
@@ -212,7 +212,7 @@ class IterationFactory:
             iteration_id=iteration.id,
             iteration_store=self._iteration_store,
             attempt_store=self._attempt_store,
-            on_episode_closed=self._on_episode_closed,
+            on_iteration_closed=self._on_iteration_closed,
             orchestrator_factory=self._orchestrator_factory,
             task_store=self._task_store,
         )
@@ -324,7 +324,7 @@ class GoalHandler:
             attempt_store=attempt_store,
             manager_registry=manager_registry,
             config=config,
-            on_episode_closed=self.handle_iteration_closed,
+            on_iteration_closed=self.handle_iteration_closed,
             orchestrator_factory=orchestrator_factory,
             task_store=task_store,
         )

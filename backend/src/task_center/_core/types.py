@@ -45,11 +45,11 @@ def evaluator_task_id(attempt_id: str) -> str:
 
 @dataclass(frozen=True, slots=True)
 class TaskCenterLifecycleConfig:
-    """Configurable knobs for the mission/episode/attempt lifecycle.
+    """Configurable knobs for the goal/iteration/attempt lifecycle.
 
-    ``default_attempt_budget`` is applied to every Episode created by
-    ``MissionHandler`` unless overridden per-call. ``max_handoff_depth``
-    is the maximum nested-mission depth at which an executor profile
+    ``default_attempt_budget`` is applied to every Iteration created by
+    ``GoalHandler`` unless overridden per-call. ``max_handoff_depth``
+    is the maximum nested-goal depth at which an executor profile
     still offers a handoff terminal.
     """
 

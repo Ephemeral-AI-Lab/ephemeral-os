@@ -73,14 +73,14 @@ def test_packet_serialization_round_trip():
                 source_kind="iteration",
             )
         ],
-        metadata={"is_initial_episode": "true"},
+        metadata={"is_initial_iteration": "true"},
         source_ids=["seg"],
     )
     payload = packet.model_dump()
     restored = ContextPacket.model_validate(payload)
     assert restored.id == packet.id
     assert restored.blocks[0].text == "goal text"
-    assert restored.metadata["is_initial_episode"] == "true"
+    assert restored.metadata["is_initial_iteration"] == "true"
 
 
 def test_packet_extra_fields_rejected():

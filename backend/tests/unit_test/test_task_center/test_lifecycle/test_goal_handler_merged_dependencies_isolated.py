@@ -22,7 +22,7 @@ from task_center.goal.handler import (
 )
 
 
-MISSION_HANDLER_PATH = Path(merged.__file__)
+GOAL_HANDLER_PATH = Path(merged.__file__)
 
 
 def test_three_merged_classes_live_in_single_module() -> None:
@@ -30,7 +30,7 @@ def test_three_merged_classes_live_in_single_module() -> None:
         assert cls.__module__ == "task_center.goal.handler"
 
 
-def test_mission_handler_public_signature_preserved() -> None:
+def test_goal_handler_public_signature_preserved() -> None:
     expected_methods = {
         "__init__",
         "create_goal",
@@ -53,7 +53,7 @@ def test_mission_handler_public_signature_preserved() -> None:
     assert "config" in init_params
 
 
-def test_episode_factory_and_router_public_surface_preserved() -> None:
+def test_iteration_factory_and_router_public_surface_preserved() -> None:
     factory_methods = {
         "create_initial",
         "create_continuation",
@@ -70,21 +70,21 @@ def test_episode_factory_and_router_public_surface_preserved() -> None:
     assert router_methods <= router_actual
 
 
-def test_mission_closure_report_sink_alias_exists() -> None:
+def test_goal_closure_report_sink_alias_exists() -> None:
     # The Callable type alias is preserved as the public-callback hook.
     assert GoalClosureReportSink is not None
 
 
 def test_old_carved_out_modules_are_gone() -> None:
-    mission_dir = MISSION_HANDLER_PATH.parent
-    assert not (mission_dir / "episode_factory.py").exists()
-    assert not (mission_dir / "episode_closure_router.py").exists()
+    goal_dir = GOAL_HANDLER_PATH.parent
+    assert not (goal_dir / "iteration_factory.py").exists()
+    assert not (goal_dir / "iteration_closure_router.py").exists()
 
 
-def test_mission_handler_loc_ceiling_phase_4a() -> None:
+def test_goal_handler_loc_ceiling_phase_4a() -> None:
     """Phase 4a ceiling: ≤300 LoC. Phase 7c relaxes to ≤480 after
     repository+ancestry absorb. Both ceilings checked here so the test
     passes at Phase 4a and continues to guard through Phase 7c.
     """
-    loc = len(MISSION_HANDLER_PATH.read_text().splitlines())
+    loc = len(GOAL_HANDLER_PATH.read_text().splitlines())
     assert loc <= 480, f"goal/handler.py LoC={loc} exceeds Phase 7c ceiling 480"

@@ -24,7 +24,7 @@ from tools.submission.planner import (
 
 from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios._utils import (
-    is_recursive_mission,
+    is_recursive_goal,
     minimal_full_plan,
     preflight_full_plan,
 )
@@ -62,7 +62,7 @@ def _root_partial_plan() -> dict[str, Any]:
         ],
         "task_specs": {
             "delegate_child": (
-                f"ACTION request_recursive_mission package={_CHILD_PACKAGE_ID}"
+                f"ACTION request_recursive_goal package={_CHILD_PACKAGE_ID}"
             ),
             "recursive_return_guard": "VERIFY checkpoint=recursive_return",
         },
@@ -96,13 +96,13 @@ class PartialParentPlannerFullOnly(ScenarioBase):
         EventType.PLANNER_INVOKED,
         EventType.PLANNER_PARTIAL_PLAN,
         EventType.EXECUTOR_INVOKED,
-        EventType.RECURSIVE_MISSION_REQUESTED,
+        EventType.RECURSIVE_GOAL_REQUESTED,
         EventType.PLANNER_INVOKED,
         EventType.PLANNER_FULL_PLAN,
         EventType.EXECUTOR_SUCCESS,
         EventType.EVALUATOR_SUCCESS,
         EventType.VERIFIER_INVOKED,
-        EventType.RECURSIVE_MISSION_COMPLETED,
+        EventType.RECURSIVE_GOAL_COMPLETED,
         EventType.VERIFIER_SUCCESS,
         EventType.EVALUATOR_SUCCESS,
         EventType.PLANNER_INVOKED,
@@ -112,7 +112,7 @@ class PartialParentPlannerFullOnly(ScenarioBase):
     )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        if is_recursive_mission(ctx):
+        if is_recursive_goal(ctx):
             return ToolCallSpec(submit_full_plan, _child_full_plan())
         if ctx.iteration.sequence_no == 1:
             return ToolCallSpec(submit_partial_plan, _root_partial_plan())
@@ -130,8 +130,8 @@ class PartialParentPlannerFullOnly(ScenarioBase):
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
         rendered_prompt = ctx.rendered_prompt or ""
-        if "request_recursive_mission" in rendered_prompt:
-            return (f"request_recursive_mission:{_CHILD_PACKAGE_ID}",)
+        if "request_recursive_goal" in rendered_prompt:
+            return (f"request_recursive_goal:{_CHILD_PACKAGE_ID}",)
         if "ACTION recursive_" in rendered_prompt:
             return ("recursive_step",)
         return ("preflight",)
@@ -154,7 +154,7 @@ class PartialParentPlannerFullOnly(ScenarioBase):
             },
         )
 
-    def recursive_mission_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
+    def recursive_goal_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
         return _CHILD_GOAL
 
 

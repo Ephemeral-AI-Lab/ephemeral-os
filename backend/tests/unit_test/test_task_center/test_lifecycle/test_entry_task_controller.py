@@ -97,15 +97,15 @@ def test_mark_waiting_then_closure_report_success(
     entry_setup, task_store, task_center_run_id
 ):
     controller = entry_setup
-    controller.mark_waiting_mission(
-        delegated_mission_id="delegated-1",
-        delegated_episode_id="delegated-iteration",
+    controller.mark_waiting_goal(
+        delegated_goal_id="delegated-1",
+        delegated_iteration_id="delegated-iteration",
         delegated_attempt_id="delegated-attempt",
         goal="solve x",
     )
     task = task_store.get_task(controller.task_id)
     assert task is not None
-    assert task["status"] == TaskCenterTaskStatus.WAITING_MISSION.value
+    assert task["status"] == TaskCenterTaskStatus.WAITING_GOAL.value
 
     controller.apply_goal_closure_report(
         GoalClosureReport(
@@ -129,9 +129,9 @@ def test_closure_report_failure_marks_failed(
     entry_setup, task_store, task_center_run_id
 ):
     controller = entry_setup
-    controller.mark_waiting_mission(
-        delegated_mission_id="delegated-1",
-        delegated_episode_id="delegated-iteration",
+    controller.mark_waiting_goal(
+        delegated_goal_id="delegated-1",
+        delegated_iteration_id="delegated-iteration",
         delegated_attempt_id="delegated-attempt",
         goal="solve x",
     )
@@ -185,26 +185,26 @@ def test_mark_waiting_rejects_when_task_is_not_running(entry_setup, task_store):
     )
 
     with pytest.raises(TaskCenterInvariantViolation):
-        controller.mark_waiting_mission(
-            delegated_mission_id="r",
-            delegated_episode_id="s",
+        controller.mark_waiting_goal(
+            delegated_goal_id="r",
+            delegated_iteration_id="s",
             delegated_attempt_id="g",
             goal="g",
         )
 
 
-def test_restore_running_after_failed_mission_start_rolls_back_waiting(
+def test_restore_running_after_failed_goal_start_rolls_back_waiting(
     entry_setup, task_store
 ):
     controller = entry_setup
-    controller.mark_waiting_mission(
-        delegated_mission_id="r",
-        delegated_episode_id="s",
+    controller.mark_waiting_goal(
+        delegated_goal_id="r",
+        delegated_iteration_id="s",
         delegated_attempt_id="g",
         goal="g",
     )
 
-    controller.restore_running_after_failed_mission_start()
+    controller.restore_running_after_failed_goal_start()
 
     task = task_store.get_task(controller.task_id)
     assert task is not None

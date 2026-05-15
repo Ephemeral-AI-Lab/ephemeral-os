@@ -12,13 +12,13 @@ from task_center.iteration.state import (
 )
 
 
-def _seed_segment(mission_store, episode_store, task_center_run_id):
-    req = mission_store.insert(
+def _seed_segment(goal_store, iteration_store, task_center_run_id):
+    req = goal_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t-entry",
         goal="g",
     )
-    return episode_store.insert(
+    return iteration_store.insert(
         goal_id=req.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
@@ -28,10 +28,10 @@ def _seed_segment(mission_store, episode_store, task_center_run_id):
 
 
 def test_close_succeeded_writes_status_spec_summary_atomically(
-    mission_store, episode_store, task_center_run_id
+    goal_store, iteration_store, task_center_run_id
 ):
-    seg = _seed_segment(mission_store, episode_store, task_center_run_id)
-    closed = episode_store.close_succeeded(
+    seg = _seed_segment(goal_store, iteration_store, task_center_run_id)
+    closed = iteration_store.close_succeeded(
         seg.id,
         task_specification="resulting spec",
         task_summary="evaluator pass summary",
@@ -44,25 +44,25 @@ def test_close_succeeded_writes_status_spec_summary_atomically(
 
 
 def test_close_succeeded_persists_through_get(
-    mission_store, episode_store, task_center_run_id
+    goal_store, iteration_store, task_center_run_id
 ):
-    seg = _seed_segment(mission_store, episode_store, task_center_run_id)
-    episode_store.close_succeeded(
+    seg = _seed_segment(goal_store, iteration_store, task_center_run_id)
+    iteration_store.close_succeeded(
         seg.id,
         task_specification="spec",
         task_summary="summary",
     )
-    reloaded = episode_store.get(seg.id)
+    reloaded = iteration_store.get(seg.id)
     assert reloaded is not None
     assert reloaded.task_specification == "spec"
     assert reloaded.task_summary == "summary"
 
 
 def test_failed_close_leaves_denormalized_fields_null(
-    mission_store, episode_store, task_center_run_id
+    goal_store, iteration_store, task_center_run_id
 ):
-    seg = _seed_segment(mission_store, episode_store, task_center_run_id)
-    failed = episode_store.set_status(
+    seg = _seed_segment(goal_store, iteration_store, task_center_run_id)
+    failed = iteration_store.set_status(
         seg.id,
         status=IterationStatus.FAILED,
         closed_at=datetime.now(UTC),
@@ -72,19 +72,19 @@ def test_failed_close_leaves_denormalized_fields_null(
     assert failed.task_summary is None
 
 
-def test_close_succeeded_unknown_segment_raises(episode_store):
+def test_close_succeeded_unknown_segment_raises(iteration_store):
     with pytest.raises(LookupError):
-        episode_store.close_succeeded(
+        iteration_store.close_succeeded(
             "no-such-iteration",
             task_specification="x",
             task_summary="y",
         )
 
 
-def test_initial_episode_has_null_denormalized_fields(
-    mission_store, episode_store, task_center_run_id
+def test_initial_iteration_has_null_denormalized_fields(
+    goal_store, iteration_store, task_center_run_id
 ):
-    seg = _seed_segment(mission_store, episode_store, task_center_run_id)
+    seg = _seed_segment(goal_store, iteration_store, task_center_run_id)
     assert seg.task_specification is None
     assert seg.task_summary is None
 

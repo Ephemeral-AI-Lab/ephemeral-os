@@ -62,14 +62,14 @@ class IterationManager:
         iteration_id: str,
         iteration_store: IterationStoreProtocol,
         attempt_store: AttemptStoreProtocol,
-        on_episode_closed: ClosureReportSink,
+        on_iteration_closed: ClosureReportSink,
         orchestrator_factory: OrchestratorFactory | None = None,
         task_store: TaskStoreProtocol | None = None,
     ) -> None:
         self.iteration_id = iteration_id
         self._iteration_store = iteration_store
         self._attempt_store = attempt_store
-        self._on_episode_closed = on_episode_closed
+        self._on_iteration_closed = on_iteration_closed
         self._orchestrator_factory = orchestrator_factory
         # Optional — when present, the manager denormalizes the evaluator's
         # pass-summary text onto the iteration row at successful close so the
@@ -270,7 +270,7 @@ class IterationManager:
             final_attempt_id=attempt.id,
             outcome=TerminalSuccess(),
         )
-        self._on_episode_closed(report)
+        self._on_iteration_closed(report)
 
     def _emit_success_continue(self, attempt: Attempt) -> None:
         if attempt.continuation_goal is None:
@@ -282,7 +282,7 @@ class IterationManager:
             final_attempt_id=attempt.id,
             outcome=SuccessContinue(goal=attempt.continuation_goal),
         )
-        self._on_episode_closed(report)
+        self._on_iteration_closed(report)
 
     def _emit_attempt_plan_failed(self, last_attempt: Attempt) -> None:
         history = self._build_prior_attempt_history()
@@ -298,7 +298,7 @@ class IterationManager:
                 prior_attempt_history=history,
             ),
         )
-        self._on_episode_closed(report)
+        self._on_iteration_closed(report)
 
     def _build_prior_attempt_history(self) -> tuple[PriorAttemptEntry, ...]:
         attempts = self._attempt_store.list_for_iteration(self.iteration_id)

@@ -1,7 +1,7 @@
 """Shared helper-tool composer plumbing for ``ask_advisor`` / ``ask_resolver``.
 
 Both helper tools need the same setup: look up the parent task's persisted
-context_packet_id, derive the mission id, build a :class:`ContextScope`,
+context_packet_id, derive the goal id, build a :class:`ContextScope`,
 and call :meth:`ContextComposer.compose`. Centralised here so both call
 sites stay tiny.
 """
@@ -67,18 +67,18 @@ def compose_helper_bundle(
             "context_packet_id; helper inheritance unavailable."
         )
 
-    mission_id = context.task_center_mission_id or context.task_center_request_id
-    if not mission_id:
+    goal_id = context.task_center_goal_id or context.task_center_request_id
+    if not goal_id:
         parent_packet = deps.context_packet_store.get(parent_packet_id)
         if parent_packet is None:
             raise HelperComposeError(
                 f"ask_{helper_role}: parent packet {parent_packet_id!r} not found."
             )
-        mission_id = parent_packet.canonical_refs.goal_id
+        goal_id = parent_packet.canonical_refs.goal_id
 
     helper_task_id = f"{helper_role}:{uuid.uuid4()}"
     scope = ContextScope(
-        goal_id=mission_id,
+        goal_id=goal_id,
         task_id=helper_task_id,
         parent_packet_id=parent_packet_id,
         parent_task_id=parent_task_id,

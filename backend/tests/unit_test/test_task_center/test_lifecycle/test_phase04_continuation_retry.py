@@ -2,7 +2,7 @@
 
 Drives the full coordinator → handler → manager → orchestrator pipeline so
 that retry, continuation, and final close-report routing are exercised
-together. The parent task must remain in ``waiting_mission`` until the
+together. The parent task must remain in ``waiting_goal`` until the
 delegated goal closes terminally.
 """
 
@@ -48,11 +48,11 @@ class _FailOnLaunchNumber(_FakeLauncher):
 
 
 def _build_runtime(
-    mission_store, episode_store, attempt_store, task_store, *, composer, launcher=None
+    goal_store, iteration_store, attempt_store, task_store, *, composer, launcher=None
 ) -> AttemptDeps:
     return AttemptDeps(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher or _FakeLauncher(),
@@ -224,26 +224,26 @@ def _drive_delegated_attempt_to_fail(
 
 
 def test_delegated_continuation_waits_until_final_segment(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime = _build_runtime(
-        mission_store, episode_store, attempt_store, task_store, composer=composer
+        goal_store, iteration_store, attempt_store, task_store, composer=composer
     )
     parent_task_id, parent_attempt_id = _seed_outer_running_generator(
         runtime=runtime,
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         task_center_run_id=task_center_run_id,
     )
     coordinator = GoalStarter(runtime=runtime)
-    mission_start = coordinator.start(
+    goal_start = coordinator.start(
         parent_task_id=parent_task_id,
         goal="delegated continuation",
     )
 
-    segment1_initial_attempt_id = mission_start.initial_attempt_id
+    segment1_initial_attempt_id = goal_start.initial_attempt_id
 
     # Segment 1 passes with continuation goal — parent must remain WAITING.
     _drive_delegated_attempt_to_pass(
@@ -255,10 +255,10 @@ def test_delegated_continuation_waits_until_final_segment(
     assert parent_after_segment1 is not None
     assert (
         parent_after_segment1["status"]
-        == TaskCenterTaskStatus.WAITING_MISSION.value
+        == TaskCenterTaskStatus.WAITING_GOAL.value
     )
-    delegated_request_after_segment1 = mission_store.get(
-        mission_start.goal_id
+    delegated_request_after_segment1 = goal_store.get(
+        goal_start.goal_id
     )
     assert delegated_request_after_segment1 is not None
     assert delegated_request_after_segment1.status == GoalStatus.OPEN
@@ -266,7 +266,7 @@ def test_delegated_continuation_waits_until_final_segment(
 
     # Segment 2 starts from the new continuation attempt the handler created.
     segment2_id = delegated_request_after_segment1.iteration_ids[1]
-    segment2 = episode_store.get(segment2_id)
+    segment2 = iteration_store.get(segment2_id)
     assert segment2 is not None
     assert segment2.goal == "continue work"
     segment2_initial_attempt_id = segment2.attempt_ids[0]
@@ -278,8 +278,8 @@ def test_delegated_continuation_waits_until_final_segment(
     )
 
     parent_final = task_store.get_task(parent_task_id)
-    delegated_final = mission_store.get(mission_start.goal_id)
-    segment2_final = episode_store.get(segment2_id)
+    delegated_final = goal_store.get(goal_start.goal_id)
+    segment2_final = iteration_store.get(segment2_id)
     assert parent_final is not None
     assert parent_final["status"] == TaskCenterTaskStatus.DONE.value
     assert delegated_final is not None
@@ -289,12 +289,12 @@ def test_delegated_continuation_waits_until_final_segment(
 
 
 def test_continuation_startup_failure_reports_continuation_graph(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     launcher = _FailOnLaunchNumber(fail_on=6)
     runtime = _build_runtime(
-        mission_store,
-        episode_store,
+        goal_store,
+        iteration_store,
         attempt_store,
         task_store,
         composer=composer,
@@ -302,30 +302,30 @@ def test_continuation_startup_failure_reports_continuation_graph(
     )
     parent_task_id, parent_attempt_id = _seed_outer_running_generator(
         runtime=runtime,
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         task_center_run_id=task_center_run_id,
     )
     coordinator = GoalStarter(runtime=runtime)
-    mission_start = coordinator.start(
+    goal_start = coordinator.start(
         parent_task_id=parent_task_id,
         goal="delegated continuation",
     )
 
     _drive_delegated_attempt_to_pass(
         runtime=runtime,
-        delegated_attempt_id=mission_start.initial_attempt_id,
+        delegated_attempt_id=goal_start.initial_attempt_id,
         continuation_goal="continue work",
     )
 
-    request = mission_store.get(mission_start.goal_id)
+    request = goal_store.get(goal_start.goal_id)
     assert request is not None
     assert request.status == GoalStatus.FAILED
     assert request.final_outcome is not None
     segment2_id = request.iteration_ids[1]
-    segment2 = episode_store.get(segment2_id)
+    segment2 = iteration_store.get(segment2_id)
     assert segment2 is not None
     failed_attempt_id = segment2.attempt_ids[0]
     failed_attempt = attempt_store.get(failed_attempt_id)
@@ -341,36 +341,36 @@ def test_continuation_startup_failure_reports_continuation_graph(
 
 
 def test_delegated_retry_waits_until_final_graph(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime = _build_runtime(
-        mission_store, episode_store, attempt_store, task_store, composer=composer
+        goal_store, iteration_store, attempt_store, task_store, composer=composer
     )
     parent_task_id, parent_attempt_id = _seed_outer_running_generator(
         runtime=runtime,
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         task_center_run_id=task_center_run_id,
     )
     coordinator = GoalStarter(runtime=runtime)
-    mission_start = coordinator.start(
+    goal_start = coordinator.start(
         parent_task_id=parent_task_id,
         goal="delegated retry",
     )
 
     # Graph 1 fails — manager should retry inside same iteration, parent waits.
     _drive_delegated_attempt_to_fail(
-        runtime=runtime, delegated_attempt_id=mission_start.initial_attempt_id
+        runtime=runtime, delegated_attempt_id=goal_start.initial_attempt_id
     )
-    segment1 = episode_store.get(mission_start.initial_iteration_id)
+    segment1 = iteration_store.get(goal_start.initial_iteration_id)
     assert segment1 is not None
     assert len(segment1.attempt_ids) == 2
     parent_mid = task_store.get_task(parent_task_id)
     assert parent_mid is not None
-    assert parent_mid["status"] == TaskCenterTaskStatus.WAITING_MISSION.value
-    delegated_mid = mission_store.get(mission_start.goal_id)
+    assert parent_mid["status"] == TaskCenterTaskStatus.WAITING_GOAL.value
+    delegated_mid = goal_store.get(goal_start.goal_id)
     assert delegated_mid is not None
     assert delegated_mid.status == GoalStatus.OPEN
 
@@ -383,8 +383,8 @@ def test_delegated_retry_waits_until_final_graph(
     )
 
     parent_final = task_store.get_task(parent_task_id)
-    delegated_final = mission_store.get(mission_start.goal_id)
-    refreshed_segment = episode_store.get(mission_start.initial_iteration_id)
+    delegated_final = goal_store.get(goal_start.goal_id)
+    refreshed_segment = iteration_store.get(goal_start.initial_iteration_id)
     assert parent_final is not None
     assert parent_final["status"] == TaskCenterTaskStatus.DONE.value
     assert delegated_final is not None

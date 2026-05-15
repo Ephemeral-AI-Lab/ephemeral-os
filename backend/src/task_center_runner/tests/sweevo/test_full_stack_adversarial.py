@@ -14,7 +14,7 @@ from benchmarks.sweevo.dataset import select_sweevo_instance
 from benchmarks.sweevo.prompt import build_sweevo_user_prompt
 from task_center_runner.audit.events import Event, EventType
 from task_center_runner.hooks.builtins import (
-    assert_recursive_mission_closed_before_parent_guard,
+    assert_recursive_goal_closed_before_parent_guard,
     count_events,
 )
 from task_center_runner.scenarios.full_stack_adversarial import (
@@ -85,7 +85,7 @@ async def test_full_stack_adversarial_runs_agent_tool_script_matrix(
         stores=stores,
         extra_hooks=(
             count_events(EventType.VERIFIER_FAILURE, name="verifier_failures"),
-            assert_recursive_mission_closed_before_parent_guard(),
+            assert_recursive_goal_closed_before_parent_guard(),
         ),
     )
 
@@ -119,15 +119,15 @@ def _assert_task_center_shape(
     assert EventType.PLANNER_FULL_PLAN in seen
     assert EventType.PLANNER_PARTIAL_PLAN in seen
     assert EventType.VERIFIER_FAILURE in seen
-    assert EventType.RECURSIVE_MISSION_REQUESTED in seen
-    assert EventType.RECURSIVE_MISSION_COMPLETED in seen
+    assert EventType.RECURSIVE_GOAL_REQUESTED in seen
+    assert EventType.RECURSIVE_GOAL_COMPLETED in seen
     assert EventType.EVALUATOR_SUCCESS in seen
     assert EventType.FULL_STACK_SCRIPT_COMPLETED in seen
     assert _has_multi_dependency_verifier(graph_summary)
-    assert _recursive_mission_count(graph_summary) >= 1
+    assert _recursive_goal_count(graph_summary) >= 1
     _assert_event_order(
         events,
-        first=EventType.RECURSIVE_MISSION_COMPLETED,
+        first=EventType.RECURSIVE_GOAL_COMPLETED,
         second=EventType.VERIFIER_SUCCESS,
         second_checkpoint="recursive_return",
     )
@@ -149,7 +149,7 @@ def _has_multi_dependency_verifier(graph_summary: dict[str, Any]) -> bool:
     return False
 
 
-def _recursive_mission_count(graph_summary: dict[str, Any]) -> int:
+def _recursive_goal_count(graph_summary: dict[str, Any]) -> int:
     return sum(
         1
         for goal in graph_summary["goals"]
@@ -233,7 +233,7 @@ async def _assert_final_sandbox_state(
     final_payload = json.loads(final.content)
     assert final_payload["scenario"] == "full_stack_adversarial"
     assert final_payload["failed_cells"] == 0
-    assert final_payload["recursive_missions"] == 1
+    assert final_payload["recursive_goals"] == 1
     assert final_payload["manifest_end"] > final_payload["manifest_start"]
 
     lsp_path = "/testbed/.ephemeralos/sweevo-mock/full_stack/lsp-matrix.json"

@@ -66,7 +66,7 @@ def test_recursive_agent_loader_finds_harness_profiles() -> None:
     )
 
 
-def test_executor_handoff_profile_uses_mission_solution_terminal() -> None:
+def test_executor_handoff_profile_uses_goal_solution_terminal() -> None:
     handoff = _load_named(MAIN_PROFILE_DIR, "executor_success_handoff")
 
     assert "submit_execution_handoff" in handoff.terminals

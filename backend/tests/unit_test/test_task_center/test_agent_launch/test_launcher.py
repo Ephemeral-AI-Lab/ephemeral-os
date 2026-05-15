@@ -38,23 +38,23 @@ async def test_wait_for_idle_prunes_done_tasks_before_next_loop() -> None:
 
 @pytest.mark.asyncio
 async def test_missing_orchestrator_exhaustion_closes_attempt(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ) -> None:
-    goal = mission_store.insert(
+    goal = goal_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="outer-task",
         goal="solve",
     )
-    iteration = episode_store.insert(
+    iteration = iteration_store.insert(
         goal_id=goal.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="solve",
         attempt_budget=1,
     )
-    mission_store.append_iteration_id(goal.id, iteration.id)
+    goal_store.append_iteration_id(goal.id, iteration.id)
     attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
-    episode_store.append_attempt_id(iteration.id, attempt.id)
+    iteration_store.append_attempt_id(iteration.id, attempt.id)
     task_id = planner_task_id(attempt.id)
     task_store.upsert_task(
         task_id=task_id,
@@ -69,8 +69,8 @@ async def test_missing_orchestrator_exhaustion_closes_attempt(
         spawn_reason="attempt_planner",
     )
     runtime = AttemptDeps(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=_NoopLauncher(),

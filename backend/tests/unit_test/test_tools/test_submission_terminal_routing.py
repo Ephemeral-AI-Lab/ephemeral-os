@@ -45,11 +45,11 @@ async def _noop_emit(event) -> None:
 
 
 async def test_submit_execution_success_calls_apply_generator_submission(
-    mission_store, episode_store, attempt_store, task_store, composer
+    goal_store, iteration_store, attempt_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
@@ -72,11 +72,11 @@ async def test_submit_execution_success_calls_apply_generator_submission(
 
 
 async def test_submit_execution_failure_calls_apply_generator_submission(
-    mission_store, episode_store, attempt_store, task_store, composer
+    goal_store, iteration_store, attempt_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
@@ -98,11 +98,11 @@ async def test_submit_execution_failure_calls_apply_generator_submission(
 
 
 async def test_submit_verification_success_calls_apply_generator_submission(
-    mission_store, episode_store, attempt_store, task_store, composer
+    goal_store, iteration_store, attempt_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
@@ -123,11 +123,11 @@ async def test_submit_verification_success_calls_apply_generator_submission(
 
 
 async def test_submit_evaluation_success_calls_apply_evaluator_submission(
-    mission_store, episode_store, attempt_store, task_store, composer
+    goal_store, iteration_store, attempt_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
@@ -148,11 +148,11 @@ async def test_submit_evaluation_success_calls_apply_evaluator_submission(
 
 
 async def test_submit_evaluation_failure_calls_apply_evaluator_submission(
-    mission_store, episode_store, attempt_store, task_store, composer
+    goal_store, iteration_store, attempt_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
@@ -173,11 +173,11 @@ async def test_submit_evaluation_failure_calls_apply_evaluator_submission(
 
 
 async def test_submit_execution_handoff_starts_delegated_request(
-    mission_store, episode_store, attempt_store, task_store, composer
+    goal_store, iteration_store, attempt_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
@@ -192,27 +192,27 @@ async def test_submit_execution_handoff_starts_delegated_request(
     )
 
     task = task_store.get_task(generator_id)
-    delegated_request = mission_store.get(result.metadata["goal_id"])
-    initial_episode = episode_store.get(result.metadata["initial_iteration_id"])
+    delegated_request = goal_store.get(result.metadata["goal_id"])
+    initial_iteration = iteration_store.get(result.metadata["initial_iteration_id"])
     created_attempt = attempt_store.get(result.metadata["initial_attempt_id"])
 
     assert not result.is_error
     assert result.does_terminate
     assert task is not None
-    assert task["status"] == TaskCenterTaskStatus.WAITING_MISSION.value
+    assert task["status"] == TaskCenterTaskStatus.WAITING_GOAL.value
     assert delegated_request is not None
     assert delegated_request.status == GoalStatus.OPEN
     assert delegated_request.requested_by_task_id == generator_id
     assert delegated_request.goal == "solve delegated task"
-    assert initial_episode is not None
-    assert initial_episode.goal_id == delegated_request.id
+    assert initial_iteration is not None
+    assert initial_iteration.goal_id == delegated_request.id
     assert created_attempt is not None
-    assert created_attempt.iteration_id == initial_episode.id
+    assert created_attempt.iteration_id == initial_iteration.id
     assert created_attempt.stage == AttemptStage.PLAN
 
 
 async def test_submit_execution_handoff_entry_mode_uses_bound_controller(
-    mission_store, episode_store, attempt_store, task_store, composer
+    goal_store, iteration_store, attempt_store, task_store, composer
 ) -> None:
     from pathlib import Path
 
@@ -246,8 +246,8 @@ async def test_submit_execution_handoff_entry_mode_uses_bound_controller(
         task_store=task_store,
     )
     runtime = AttemptDeps(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=FakeLauncher(),
@@ -274,19 +274,19 @@ async def test_submit_execution_handoff_entry_mode_uses_bound_controller(
     )
 
     entry_task = task_store.get_task(entry_task_id)
-    delegated_mission = mission_store.get(result.metadata["goal_id"])
+    delegated_goal = goal_store.get(result.metadata["goal_id"])
 
     assert not result.is_error
     assert result.does_terminate
     assert result.metadata["attempt_id"] is None
     assert entry_task is not None
-    assert entry_task["status"] == TaskCenterTaskStatus.WAITING_MISSION.value
-    assert delegated_mission is not None
-    assert delegated_mission.requested_by_task_id == entry_task_id
+    assert entry_task["status"] == TaskCenterTaskStatus.WAITING_GOAL.value
+    assert delegated_goal is not None
+    assert delegated_goal.requested_by_task_id == entry_task_id
 
 
 async def test_submit_execution_handoff_accepts_any_generator_agent_profile(
-    mission_store, episode_store, attempt_store, task_store, composer
+    goal_store, iteration_store, attempt_store, task_store, composer
 ) -> None:
     from agents import AgentDefinition, AgentKind, register_definition
 
@@ -306,8 +306,8 @@ async def test_submit_execution_handoff_accepts_any_generator_agent_profile(
     )
 
     fixture = build_harness_fixture(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
@@ -328,15 +328,15 @@ async def test_submit_execution_handoff_accepts_any_generator_agent_profile(
     assert not result.is_error
     assert result.does_terminate
     assert task is not None
-    assert task["status"] == TaskCenterTaskStatus.WAITING_MISSION.value
+    assert task["status"] == TaskCenterTaskStatus.WAITING_GOAL.value
 
 
 async def test_submit_execution_handoff_return_updates_outer_generator(
-    mission_store, episode_store, attempt_store, task_store, composer
+    goal_store, iteration_store, attempt_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
@@ -397,7 +397,7 @@ async def test_submit_execution_handoff_return_updates_outer_generator(
 
     outer_task = task_store.get_task(outer_generator_id)
     outer_attempt = attempt_store.get(fixture.attempt_id)
-    delegated_request = mission_store.get(result.metadata["goal_id"])
+    delegated_request = goal_store.get(result.metadata["goal_id"])
 
     assert outer_task is not None
     assert outer_task["status"] == TaskCenterTaskStatus.DONE.value

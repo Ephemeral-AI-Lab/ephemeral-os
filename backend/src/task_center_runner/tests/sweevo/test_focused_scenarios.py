@@ -26,14 +26,14 @@ class FocusedScenarioCase:
     expected_status: str = "done"
     min_event_counts: Mapping[EventType, int] = field(default_factory=dict)
     absent_events: Sequence[EventType] = ()
-    mission_status: str = "succeeded"
-    episode_count: int | None = 1
+    goal_status: str = "succeeded"
+    iteration_count: int | None = 1
     attempt_count: int | None = None
 
 
 _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
     FocusedScenarioCase(
-        "pipeline.initial_mission",
+        "pipeline.initial_goal",
         min_event_counts={
             EventType.EXECUTOR_INVOKED: 1,
             EventType.EXECUTOR_SUCCESS: 1,
@@ -42,14 +42,14 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
         attempt_count=1,
     ),
     FocusedScenarioCase(
-        "pipeline.episodic_continuation",
+        "pipeline.iterative_continuation",
         min_event_counts={
             EventType.PLANNER_PARTIAL_PLAN: 1,
             EventType.PLANNER_FULL_PLAN: 1,
             EventType.EXECUTOR_SUCCESS: 2,
             EventType.EVALUATOR_SUCCESS: 2,
         },
-        episode_count=2,
+        iteration_count=2,
         attempt_count=2,
     ),
     FocusedScenarioCase(
@@ -135,7 +135,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EXECUTOR_FAILURE: 2,
         },
         absent_events=(EventType.EVALUATOR_INVOKED,),
-        mission_status="failed",
+        goal_status="failed",
         attempt_count=2,
     ),
     FocusedScenarioCase(
@@ -146,7 +146,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EXECUTOR_FAILURE: 2,
         },
         absent_events=(EventType.EVALUATOR_INVOKED,),
-        mission_status="failed",
+        goal_status="failed",
         attempt_count=2,
     ),
     FocusedScenarioCase(
@@ -170,7 +170,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EXECUTOR_INVOKED,
             EventType.EVALUATOR_INVOKED,
         ),
-        mission_status="failed",
+        goal_status="failed",
         attempt_count=2,
     ),
     FocusedScenarioCase(
@@ -185,7 +185,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EXECUTOR_INVOKED,
             EventType.EVALUATOR_INVOKED,
         ),
-        mission_status="failed",
+        goal_status="failed",
         attempt_count=2,
     ),
     FocusedScenarioCase(
@@ -200,7 +200,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EXECUTOR_INVOKED,
             EventType.EVALUATOR_INVOKED,
         ),
-        mission_status="failed",
+        goal_status="failed",
         attempt_count=2,
     ),
     FocusedScenarioCase(
@@ -216,7 +216,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EXECUTOR_INVOKED,
             EventType.EVALUATOR_INVOKED,
         ),
-        mission_status="failed",
+        goal_status="failed",
         attempt_count=2,
     ),
     FocusedScenarioCase(
@@ -231,7 +231,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EXECUTOR_INVOKED,
             EventType.EVALUATOR_INVOKED,
         ),
-        mission_status="failed",
+        goal_status="failed",
         attempt_count=2,
     ),
     FocusedScenarioCase(
@@ -246,7 +246,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EXECUTOR_INVOKED,
             EventType.EVALUATOR_INVOKED,
         ),
-        mission_status="failed",
+        goal_status="failed",
         attempt_count=2,
     ),
 )
@@ -323,9 +323,9 @@ def _assert_graph_shape(report: RunReport, case: FocusedScenarioCase) -> None:
     goals = report.graph_summary["goals"]
     assert len(goals) == 1, report.graph_summary
     goal = goals[0]
-    assert goal["status"] == case.mission_status
-    if case.episode_count is not None:
-        assert len(goal["iterations"]) == case.episode_count
+    assert goal["status"] == case.goal_status
+    if case.iteration_count is not None:
+        assert len(goal["iterations"]) == case.iteration_count
     if case.attempt_count is not None:
         attempts = [
             attempt

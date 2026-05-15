@@ -96,16 +96,16 @@ def _build_runtime_with_open_graph(
 def _set_parent_waiting(task_store, parent_task_id: str) -> None:
     task_store.set_task_status(
         parent_task_id,
-        status=TaskCenterTaskStatus.WAITING_MISSION.value,
+        status=TaskCenterTaskStatus.WAITING_GOAL.value,
     )
 
 
 def test_router_delivers_success_to_waiting_parent(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime, parent_attempt_id, parent_task_id = _build_runtime_with_open_graph(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         task_center_run_id=task_center_run_id,
@@ -132,27 +132,27 @@ def test_router_delivers_success_to_waiting_parent(
 
 
 def test_router_delivers_failure_marks_parent_failed_and_blocks_dependents(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
-    request = mission_store.insert(
+    request = goal_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="root",
         goal="outer",
     )
-    iteration = episode_store.insert(
+    iteration = iteration_store.insert(
         goal_id=request.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="outer",
         attempt_budget=2,
     )
-    mission_store.append_iteration_id(request.id, iteration.id)
+    goal_store.append_iteration_id(request.id, iteration.id)
     attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
-    episode_store.append_attempt_id(iteration.id, attempt.id)
+    iteration_store.append_attempt_id(iteration.id, attempt.id)
     registry = AttemptOrchestratorRegistry()
     runtime = AttemptDeps(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=_FakeLauncher(),
@@ -207,11 +207,11 @@ def test_router_delivers_failure_marks_parent_failed_and_blocks_dependents(
 
 
 def test_router_treats_done_parent_as_already_delivered(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime, _, parent_task_id = _build_runtime_with_open_graph(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         task_center_run_id=task_center_run_id,
@@ -236,14 +236,14 @@ def test_router_treats_done_parent_as_already_delivered(
 
 
 def test_router_raises_when_parent_orchestrator_missing(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
-    """No-restart invariant: while a parent task is in WAITING_MISSION
+    """No-restart invariant: while a parent task is in WAITING_GOAL
     its orchestrator must remain registered. A missing orchestrator at
     delivery time is a hard ``TaskCenterInvariantViolation``."""
     runtime, parent_attempt_id, parent_task_id = _build_runtime_with_open_graph(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         task_center_run_id=task_center_run_id,
@@ -266,15 +266,15 @@ def test_router_raises_when_parent_orchestrator_missing(
 
     parent_task = task_store.get_task(parent_task_id)
     assert parent_task is not None
-    assert parent_task["status"] == TaskCenterTaskStatus.WAITING_MISSION.value
+    assert parent_task["status"] == TaskCenterTaskStatus.WAITING_GOAL.value
 
 
 def test_router_rejects_running_parent(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime, _, parent_task_id = _build_runtime_with_open_graph(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         task_center_run_id=task_center_run_id,
@@ -296,11 +296,11 @@ def test_router_rejects_running_parent(
 
 
 def test_apply_closure_report_is_idempotent_on_second_delivery(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime, _, parent_task_id = _build_runtime_with_open_graph(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         task_center_run_id=task_center_run_id,
@@ -333,7 +333,7 @@ def test_apply_closure_report_is_idempotent_on_second_delivery(
 
 
 def test_router_routes_entry_mode_closure_report_through_controller(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     """Entry-mode close-report dispatch.
 
@@ -345,7 +345,7 @@ def test_router_routes_entry_mode_closure_report_through_controller(
     from task_center.entry import EntryTaskController
     from task_center.task_state import TaskCenterTaskRole
 
-    # Seed entry-mode caller in WAITING_MISSION.
+    # Seed entry-mode caller in WAITING_GOAL.
     entry_task_id = "entry-task"
     task_store.upsert_task(
         task_id=entry_task_id,
@@ -353,7 +353,7 @@ def test_router_routes_entry_mode_closure_report_through_controller(
         role=TaskCenterTaskRole.GENERATOR.value,
         agent_name="entry_executor",
         rendered_prompt="entry goal",
-        status=TaskCenterTaskStatus.WAITING_MISSION.value,
+        status=TaskCenterTaskStatus.WAITING_GOAL.value,
         summaries=[],
         needs=[],
         task_center_attempt_id=None,
@@ -365,8 +365,8 @@ def test_router_routes_entry_mode_closure_report_through_controller(
         task_store=task_store,
     )
     runtime = AttemptDeps(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=_FakeLauncher(),

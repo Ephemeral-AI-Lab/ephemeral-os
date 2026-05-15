@@ -25,7 +25,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 class InitialGoal(ScenarioBase):
     """Single goal, single iteration, single attempt — happy path."""
 
-    name = "pipeline.initial_mission"
+    name = "pipeline.initial_goal"
     expected_event_sequence: tuple[EventType, ...] = (
         EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,

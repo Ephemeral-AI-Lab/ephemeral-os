@@ -45,13 +45,13 @@ class _FailingLauncher:
 
 
 def _build_runtime(
-    mission_store, episode_store, attempt_store, task_store, *, composer, launcher=None
+    goal_store, iteration_store, attempt_store, task_store, *, composer, launcher=None
 ) -> AttemptDeps:
     launcher = launcher or _FakeLauncher()
     registry = AttemptOrchestratorRegistry()
     return AttemptDeps(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher,
@@ -104,16 +104,16 @@ def _seed_outer_generator_task(
     return parent_task_id, outer_attempt.id
 
 
-def test_mission_start_creates_request_segment_graph_and_marks_parent_waiting(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+def test_goal_start_creates_request_segment_graph_and_marks_parent_waiting(
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime = _build_runtime(
-        mission_store, episode_store, attempt_store, task_store, composer=composer
+        goal_store, iteration_store, attempt_store, task_store, composer=composer
     )
     parent_task_id, parent_attempt_id = _seed_outer_generator_task(
         task_store=task_store,
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_center_run_id=task_center_run_id,
     )
@@ -124,8 +124,8 @@ def test_mission_start_creates_request_segment_graph_and_marks_parent_waiting(
         goal="solve delegated task",
     )
 
-    delegated_request = mission_store.get(result.goal_id)
-    initial_episode = episode_store.get(result.initial_iteration_id)
+    delegated_request = goal_store.get(result.goal_id)
+    initial_iteration = iteration_store.get(result.initial_iteration_id)
     initial_graph = attempt_store.get(result.initial_attempt_id)
     parent_task = task_store.get_task(parent_task_id)
 
@@ -133,26 +133,26 @@ def test_mission_start_creates_request_segment_graph_and_marks_parent_waiting(
     assert delegated_request.status == GoalStatus.OPEN
     assert delegated_request.requested_by_task_id == parent_task_id
     assert delegated_request.goal == "solve delegated task"
-    assert initial_episode is not None
-    assert initial_episode.goal_id == delegated_request.id
+    assert initial_iteration is not None
+    assert initial_iteration.goal_id == delegated_request.id
     assert initial_graph is not None
-    assert initial_graph.iteration_id == initial_episode.id
+    assert initial_graph.iteration_id == initial_iteration.id
     assert parent_task is not None
-    assert parent_task["status"] == TaskCenterTaskStatus.WAITING_MISSION.value
+    assert parent_task["status"] == TaskCenterTaskStatus.WAITING_GOAL.value
     # Delegated orchestrator was started.
     assert runtime.orchestrator_registry.get(initial_graph.id) is not None
 
 
-def test_mission_start_startup_failure_leaves_parent_running(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+def test_goal_start_startup_failure_leaves_parent_running(
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime = _build_runtime(
-        mission_store, episode_store, attempt_store, task_store, composer=composer
+        goal_store, iteration_store, attempt_store, task_store, composer=composer
     )
     parent_task_id, parent_attempt_id = _seed_outer_generator_task(
         task_store=task_store,
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_center_run_id=task_center_run_id,
     )
@@ -186,30 +186,30 @@ def test_mission_start_startup_failure_leaves_parent_running(
     # The compensation path must mark the request and iteration cancelled.
     open_requests = [
         r
-        for r in mission_store.list_for_executor_task(parent_task_id)
+        for r in goal_store.list_for_executor_task(parent_task_id)
         if r.is_open
     ]
     assert open_requests == []
     cancelled = [
         r
-        for r in mission_store.list_for_executor_task(parent_task_id)
+        for r in goal_store.list_for_executor_task(parent_task_id)
         if r.status == GoalStatus.CANCELLED
     ]
     assert len(cancelled) == 1
     assert cancelled[0].requested_by_task_id == parent_task_id
-    cancelled_segment = episode_store.list_for_goal(cancelled[0].id)
+    cancelled_segment = iteration_store.list_for_goal(cancelled[0].id)
     assert len(cancelled_segment) == 1
     assert cancelled_segment[0].status == IterationStatus.CANCELLED
     assert runtime.manager_registry is not None
     assert runtime.manager_registry.get(cancelled_segment[0].id) is None
 
 
-def test_mission_start_startup_failure_closes_started_graph_and_deregisters_orchestrator(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+def test_goal_start_startup_failure_closes_started_graph_and_deregisters_orchestrator(
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime = _build_runtime(
-        mission_store,
-        episode_store,
+        goal_store,
+        iteration_store,
         attempt_store,
         task_store,
         launcher=_FailingLauncher(),
@@ -217,8 +217,8 @@ def test_mission_start_startup_failure_closes_started_graph_and_deregisters_orch
     )
     parent_task_id, parent_attempt_id = _seed_outer_generator_task(
         task_store=task_store,
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_center_run_id=task_center_run_id,
     )
@@ -232,10 +232,10 @@ def test_mission_start_startup_failure_closes_started_graph_and_deregisters_orch
 
     [cancelled_request] = [
         r
-        for r in mission_store.list_for_executor_task(parent_task_id)
+        for r in goal_store.list_for_executor_task(parent_task_id)
         if r.status == GoalStatus.CANCELLED
     ]
-    [cancelled_segment] = episode_store.list_for_goal(cancelled_request.id)
+    [cancelled_segment] = iteration_store.list_for_goal(cancelled_request.id)
     [failed_attempt] = attempt_store.list_for_iteration(cancelled_segment.id)
     assert failed_attempt.status == AttemptStatus.FAILED
     assert failed_attempt.fail_reason == AttemptFailReason.STARTUP_FAILED
@@ -247,16 +247,16 @@ def test_mission_start_startup_failure_closes_started_graph_and_deregisters_orch
     assert planner_task["status"] == TaskCenterTaskStatus.FAILED.value
 
 
-def test_mission_start_rejects_second_open_child_request_for_same_executor(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+def test_goal_start_rejects_second_open_child_request_for_same_executor(
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime = _build_runtime(
-        mission_store, episode_store, attempt_store, task_store, composer=composer
+        goal_store, iteration_store, attempt_store, task_store, composer=composer
     )
     parent_task_id, parent_attempt_id = _seed_outer_generator_task(
         task_store=task_store,
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_center_run_id=task_center_run_id,
     )
@@ -281,16 +281,16 @@ def test_mission_start_rejects_second_open_child_request_for_same_executor(
     assert "open delegated goal" in str(exc.value)
 
 
-def test_mission_start_rejects_non_running_parent(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+def test_goal_start_rejects_non_running_parent(
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime = _build_runtime(
-        mission_store, episode_store, attempt_store, task_store, composer=composer
+        goal_store, iteration_store, attempt_store, task_store, composer=composer
     )
     parent_task_id, parent_attempt_id = _seed_outer_generator_task(
         task_store=task_store,
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_center_run_id=task_center_run_id,
     )
@@ -307,8 +307,8 @@ def test_mission_start_rejects_non_running_parent(
     assert "not running" in str(exc.value)
 
 
-def test_mission_start_accepts_entry_mode_caller_with_no_parent_attempt(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+def test_goal_start_accepts_entry_mode_caller_with_no_parent_attempt(
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     """Entry-mode caller has ``parent_attempt_id=None``.
 
@@ -339,8 +339,8 @@ def test_mission_start_accepts_entry_mode_caller_with_no_parent_attempt(
         task_store=task_store,
     )
     runtime = AttemptDeps(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=_FakeLauncher(),
@@ -356,15 +356,15 @@ def test_mission_start_accepts_entry_mode_caller_with_no_parent_attempt(
         goal="solve delegated work",
     )
 
-    # Entry task is now WAITING_MISSION via the controller.
+    # Entry task is now WAITING_GOAL via the controller.
     entry_task = task_store.get_task(entry_task_id)
     assert entry_task is not None
-    assert entry_task["status"] == TaskCenterTaskStatus.WAITING_MISSION.value
+    assert entry_task["status"] == TaskCenterTaskStatus.WAITING_GOAL.value
     # Result carries None for parent_attempt_id (entry mode).
     assert result.parent_attempt_id is None
     # Delegated request + iteration + attempt were all created and started.
-    delegated_request = mission_store.get(result.goal_id)
-    delegated_segment = episode_store.get(result.initial_iteration_id)
+    delegated_request = goal_store.get(result.goal_id)
+    delegated_segment = iteration_store.get(result.initial_iteration_id)
     delegated_attempt = attempt_store.get(result.initial_attempt_id)
     assert delegated_request is not None
     assert delegated_request.status == GoalStatus.OPEN

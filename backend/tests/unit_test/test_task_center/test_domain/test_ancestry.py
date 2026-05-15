@@ -18,31 +18,31 @@ from task_center._core.types import TaskCenterInvariantViolation
 from task_center.goal.handler import nested_goal_depth
 
 
-def _stores(mission_store, episode_store, attempt_store, task_store):
+def _stores(goal_store, iteration_store, attempt_store, task_store):
     return dict(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
     )
 
 
-def _seed_mission(
-    mission_store,
+def _seed_goal(
+    goal_store,
     *,
     task_center_run_id: str,
     requested_by_task_id: str = "t-entry",
     goal: str = "g",
 ):
-    return mission_store.insert(
+    return goal_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id=requested_by_task_id,
         goal=goal,
     )
 
 
-def _seed_episode(episode_store, *, goal_id: str, sequence_no: int = 1):
-    return episode_store.insert(
+def _seed_iteration(iteration_store, *, goal_id: str, sequence_no: int = 1):
+    return iteration_store.insert(
         goal_id=goal_id,
         sequence_no=sequence_no,
         creation_reason=IterationCreationReason.INITIAL,
@@ -92,9 +92,9 @@ def _seed_task(
     )
 
 
-def _seed_nested_mission_chain(
-    mission_store,
-    episode_store,
+def _seed_nested_goal_chain(
+    goal_store,
+    iteration_store,
     attempt_store,
     task_store,
     *,
@@ -102,18 +102,18 @@ def _seed_nested_mission_chain(
     depth: int,
 ) -> list[str]:
     assert depth >= 1
-    mission_ids: list[str] = []
+    goal_ids: list[str] = []
     requested_by_task_id = "t-entry"
     for idx in range(depth):
-        goal = _seed_mission(
-            mission_store,
+        goal = _seed_goal(
+            goal_store,
             task_center_run_id=task_center_run_id,
             requested_by_task_id=requested_by_task_id,
         )
-        mission_ids.append(goal.id)
+        goal_ids.append(goal.id)
         if idx == depth - 1:
             break
-        iteration = _seed_episode(episode_store, goal_id=goal.id)
+        iteration = _seed_iteration(iteration_store, goal_id=goal.id)
         attempt = _seed_attempt(attempt_store, iteration_id=iteration.id)
         task_id = f"t-{idx}"
         _seed_task(
@@ -123,29 +123,29 @@ def _seed_nested_mission_chain(
             attempt_id=attempt.id,
         )
         requested_by_task_id = task_id
-    return mission_ids
+    return goal_ids
 
 
 def test_no_parent_task_returns_depth_1(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
-    goal = _seed_mission(
-        mission_store, task_center_run_id=task_center_run_id
+    goal = _seed_goal(
+        goal_store, task_center_run_id=task_center_run_id
     )
     assert (
         nested_goal_depth(
             goal_id=goal.id,
-            **_stores(mission_store, episode_store, attempt_store, task_store),
+            **_stores(goal_store, iteration_store, attempt_store, task_store),
         )
         == 1
     )
 
 
 def test_parent_task_with_no_attempt_returns_depth_1(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
-    goal = _seed_mission(
-        mission_store,
+    goal = _seed_goal(
+        goal_store,
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t-entry",
     )
@@ -158,18 +158,18 @@ def test_parent_task_with_no_attempt_returns_depth_1(
     assert (
         nested_goal_depth(
             goal_id=goal.id,
-            **_stores(mission_store, episode_store, attempt_store, task_store),
+            **_stores(goal_store, iteration_store, attempt_store, task_store),
         )
         == 1
     )
 
 
-def test_child_mission_returns_depth_2(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id
+def test_child_goal_returns_depth_2(
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
-    root_id, child_id = _seed_nested_mission_chain(
-        mission_store,
-        episode_store,
+    root_id, child_id = _seed_nested_goal_chain(
+        goal_store,
+        iteration_store,
         attempt_store,
         task_store,
         task_center_run_id=task_center_run_id,
@@ -178,25 +178,25 @@ def test_child_mission_returns_depth_2(
     assert (
         nested_goal_depth(
             goal_id=root_id,
-            **_stores(mission_store, episode_store, attempt_store, task_store),
+            **_stores(goal_store, iteration_store, attempt_store, task_store),
         )
         == 1
     )
     assert (
         nested_goal_depth(
             goal_id=child_id,
-            **_stores(mission_store, episode_store, attempt_store, task_store),
+            **_stores(goal_store, iteration_store, attempt_store, task_store),
         )
         == 2
     )
 
 
-def test_grandchild_mission_returns_depth_3(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id
+def test_grandchild_goal_returns_depth_3(
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
-    mission_ids = _seed_nested_mission_chain(
-        mission_store,
-        episode_store,
+    goal_ids = _seed_nested_goal_chain(
+        goal_store,
+        iteration_store,
         attempt_store,
         task_store,
         task_center_run_id=task_center_run_id,
@@ -204,33 +204,33 @@ def test_grandchild_mission_returns_depth_3(
     )
     assert (
         nested_goal_depth(
-            goal_id=mission_ids[-1],
-            **_stores(mission_store, episode_store, attempt_store, task_store),
+            goal_id=goal_ids[-1],
+            **_stores(goal_store, iteration_store, attempt_store, task_store),
         )
         == MAX_HANDOFF_DEPTH + 1
     )
 
 
-def test_unknown_mission_id_raises(
-    mission_store, episode_store, attempt_store, task_store
+def test_unknown_goal_id_raises(
+    goal_store, iteration_store, attempt_store, task_store
 ):
     with pytest.raises(TaskCenterInvariantViolation):
         nested_goal_depth(
             goal_id="nonexistent",
-            **_stores(mission_store, episode_store, attempt_store, task_store),
+            **_stores(goal_store, iteration_store, attempt_store, task_store),
         )
 
 
 def test_registered_predicates_cover_top_level_and_depth_thresholds(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
     saved = dict(PredicateRegistry._registry)
     PredicateRegistry.clear()
     register_builtin_predicates()
     try:
         deps = ContextEngineDeps(
-            goal_store=mission_store,
-            iteration_store=episode_store,
+            goal_store=goal_store,
+            iteration_store=iteration_store,
             attempt_store=attempt_store,
             task_store=task_store,
         )
@@ -254,20 +254,20 @@ def test_registered_predicates_cover_top_level_and_depth_thresholds(
         )
         assert PredicateRegistry.get("always")(top_level_ctx) is True
 
-        mission_ids = _seed_nested_mission_chain(
-            mission_store,
-            episode_store,
+        goal_ids = _seed_nested_goal_chain(
+            goal_store,
+            iteration_store,
             attempt_store,
             task_store,
             task_center_run_id=task_center_run_id,
             depth=MAX_HANDOFF_DEPTH + 1,
         )
         within_ctx = ResolverContext(
-            scope=ContextScope(goal_id=mission_ids[MAX_HANDOFF_DEPTH - 1]),
+            scope=ContextScope(goal_id=goal_ids[MAX_HANDOFF_DEPTH - 1]),
             deps=deps,
         )
         above_ctx = ResolverContext(
-            scope=ContextScope(goal_id=mission_ids[-1]),
+            scope=ContextScope(goal_id=goal_ids[-1]),
             deps=deps,
         )
 

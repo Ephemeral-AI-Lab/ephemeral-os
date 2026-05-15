@@ -74,18 +74,18 @@ CAPACITY_PACK_SPECS: tuple[CapacityPackSpec, ...] = (
         registry_name="pipeline.attempt_retry_generator_failure",
     ),
     CapacityPackSpec(
-        "pipeline.nested_mission",
+        "pipeline.nested_goal",
         "A",
         "pipeline",
         "T1",
-        registry_name="pipeline.nested_mission",
+        registry_name="pipeline.nested_goal",
     ),
     CapacityPackSpec(
-        "pipeline.nested_mission_failure",
+        "pipeline.nested_goal_failure",
         "A",
         "pipeline",
         "T1",
-        registry_name="pipeline.nested_mission_failure",
+        registry_name="pipeline.nested_goal_failure",
     ),
     CapacityPackSpec(
         "sandbox.setup_and_daemon",
@@ -222,7 +222,7 @@ CAPACITY_PACK_SPECS: tuple[CapacityPackSpec, ...] = (
         ),
     ),
     CapacityPackSpec(
-        "context.evaluator_episodic_continuation",
+        "context.evaluator_iterative_continuation",
         "E",
         "context",
         "T0",

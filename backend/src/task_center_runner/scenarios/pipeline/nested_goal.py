@@ -15,7 +15,7 @@ from tools.submission.verifier import (
 from tools.submission.planner import submit_full_plan
 
 from task_center_runner.audit.events import EventType
-from task_center_runner.scenarios._utils import is_recursive_mission
+from task_center_runner.scenarios._utils import is_recursive_goal
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
@@ -41,7 +41,7 @@ def _root_nested_plan(*, failing_child: bool) -> dict[str, Any]:
             },
         ],
         "task_specs": {
-            "delegate_child": f"ACTION request_recursive_mission package={package_id}",
+            "delegate_child": f"ACTION request_recursive_goal package={package_id}",
             "recursive_return_guard": "VERIFY checkpoint=recursive_return",
             "parent_reconciliation": (
                 "Run parent reconciliation after recursive close report."
@@ -76,7 +76,7 @@ def _child_failure_plan() -> dict[str, Any]:
             {"id": "child_always_fails", "agent_name": "executor", "deps": []},
         ],
         "task_specs": {
-            "child_always_fails": "ACTION child_failure reason=nested_mission",
+            "child_always_fails": "ACTION child_failure reason=nested_goal",
         },
     }
 
@@ -84,25 +84,25 @@ def _child_failure_plan() -> dict[str, Any]:
 class NestedGoal(ScenarioBase):
     """Parent generator delegates to a child goal, then reconciles."""
 
-    name = "pipeline.nested_mission"
+    name = "pipeline.nested_goal"
     expected_event_sequence: tuple[EventType, ...] = (
         EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
         EventType.PLANNER_FULL_PLAN,
-        EventType.RECURSIVE_MISSION_REQUESTED,
-        EventType.RECURSIVE_MISSION_COMPLETED,
+        EventType.RECURSIVE_GOAL_REQUESTED,
+        EventType.RECURSIVE_GOAL_COMPLETED,
         EventType.EVALUATOR_SUCCESS,
     )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        if is_recursive_mission(ctx):
+        if is_recursive_goal(ctx):
             return ToolCallSpec(submit_full_plan, _child_success_plan())
         return ToolCallSpec(submit_full_plan, _root_nested_plan(failing_child=False))
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
         rendered_prompt = ctx.rendered_prompt or ""
-        if "request_recursive_mission" in rendered_prompt:
-            return ("request_recursive_mission:child_success",)
+        if "request_recursive_goal" in rendered_prompt:
+            return ("request_recursive_goal:child_success",)
         if "ACTION recursive_" in rendered_prompt:
             return ("recursive_step",)
         return ("preflight",)
@@ -125,30 +125,30 @@ class NestedGoal(ScenarioBase):
             },
         )
 
-    def recursive_mission_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
+    def recursive_goal_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
         return "Run the delegated child goal and return a close report."
 
 
 class NestedGoalFailure(ScenarioBase):
     """Child goal exhausts attempts and parent goal fails cleanly."""
 
-    name = "pipeline.nested_mission_failure"
+    name = "pipeline.nested_goal_failure"
     expected_event_sequence: tuple[EventType, ...] = (
         EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
         EventType.PLANNER_FULL_PLAN,
-        EventType.RECURSIVE_MISSION_REQUESTED,
+        EventType.RECURSIVE_GOAL_REQUESTED,
     )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        if is_recursive_mission(ctx):
+        if is_recursive_goal(ctx):
             return ToolCallSpec(submit_full_plan, _child_failure_plan())
         return ToolCallSpec(submit_full_plan, _root_nested_plan(failing_child=True))
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
         rendered_prompt = ctx.rendered_prompt or ""
-        if "request_recursive_mission" in rendered_prompt:
-            return ("request_recursive_mission:child_failure",)
+        if "request_recursive_goal" in rendered_prompt:
+            return ("request_recursive_goal:child_failure",)
         if "child_failure" in rendered_prompt:
             return ("fail:Intentional child goal failure.",)
         return ("preflight",)
@@ -171,7 +171,7 @@ class NestedGoalFailure(ScenarioBase):
             },
         )
 
-    def recursive_mission_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
+    def recursive_goal_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
         return "Run a child goal that intentionally exhausts attempts."
 
 

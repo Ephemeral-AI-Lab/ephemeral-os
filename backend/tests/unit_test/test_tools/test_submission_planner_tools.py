@@ -37,11 +37,11 @@ def _valid_plan_payload() -> dict[str, object]:
 
 
 async def test_full_plan_routes_to_apply_plan_submission(
-    mission_store, episode_store, attempt_store, task_store, composer
+    goal_store, iteration_store, attempt_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
@@ -65,11 +65,11 @@ async def test_full_plan_routes_to_apply_plan_submission(
 
 
 async def test_partial_plan_routes_to_apply_plan_submission(
-    mission_store, episode_store, attempt_store, task_store, composer
+    goal_store, iteration_store, attempt_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
@@ -151,8 +151,8 @@ async def test_partial_plan_routes_to_apply_plan_submission(
     ],
 )
 async def test_plan_validation_errors_do_not_mutate_graph(
-    mission_store,
-    episode_store,
+    goal_store,
+    iteration_store,
     attempt_store,
     task_store,
     composer,
@@ -160,8 +160,8 @@ async def test_plan_validation_errors_do_not_mutate_graph(
     expected,
 ) -> None:
     fixture = build_harness_fixture(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
@@ -184,11 +184,11 @@ async def test_plan_validation_errors_do_not_mutate_graph(
 
 
 async def test_full_plan_rejects_continuation_goal(
-    mission_store, episode_store, attempt_store, task_store, composer
+    goal_store, iteration_store, attempt_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
@@ -212,11 +212,11 @@ async def test_full_plan_rejects_continuation_goal(
 
 
 async def test_partial_plan_rejects_blank_continuation_goal(
-    mission_store, episode_store, attempt_store, task_store, composer
+    goal_store, iteration_store, attempt_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,

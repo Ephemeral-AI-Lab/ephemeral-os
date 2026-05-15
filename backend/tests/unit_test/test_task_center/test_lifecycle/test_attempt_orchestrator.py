@@ -54,13 +54,13 @@ class _FailingEvaluatorComposer:
         return self._inner.compose(base_agent_name=base_agent_name, scope=scope)
 
 
-def _seed_graph(mission_store, episode_store, attempt_store, task_center_run_id):
-    request = mission_store.insert(
+def _seed_graph(goal_store, iteration_store, attempt_store, task_center_run_id):
+    request = goal_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="outer-task",
         goal="solve the task",
     )
-    iteration = episode_store.insert(
+    iteration = iteration_store.insert(
         goal_id=request.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
@@ -71,8 +71,8 @@ def _seed_graph(mission_store, episode_store, attempt_store, task_center_run_id)
 
 
 def _build_orchestrator(
-    mission_store,
-    episode_store,
+    goal_store,
+    iteration_store,
     attempt_store,
     task_store,
     task_center_run_id,
@@ -81,13 +81,13 @@ def _build_orchestrator(
     launcher=None,
 ):
     attempt = _seed_graph(
-        mission_store, episode_store, attempt_store, task_center_run_id
+        goal_store, iteration_store, attempt_store, task_center_run_id
     )
     launcher = launcher or _FakeLauncher()
     registry = AttemptOrchestratorRegistry()
     runtime = AttemptDeps(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher,
@@ -154,10 +154,10 @@ def _evaluator_submission(attempt_id: str, outcome: str) -> EvaluatorSubmission:
 
 
 def test_start_creates_planner_task_and_sets_graph_planner_id(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, launcher, _, _ = _build_orchestrator(
-        mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer=composer
+        goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
     )
 
     orchestrator.start()
@@ -172,10 +172,10 @@ def test_start_creates_planner_task_and_sets_graph_planner_id(
 
 
 def test_apply_plan_submission_persists_contract_and_generator_ids(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, launcher, _, _ = _build_orchestrator(
-        mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer=composer
+        goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     tasks = (
@@ -200,10 +200,10 @@ def test_apply_plan_submission_persists_contract_and_generator_ids(
 
 
 def test_apply_partial_plan_submission_stores_continuation_goal(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, _, _, _ = _build_orchestrator(
-        mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer=composer
+        goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
 
@@ -222,10 +222,10 @@ def test_apply_partial_plan_submission_stores_continuation_goal(
 
 
 def test_apply_planner_failure_marks_task_and_closes_graph(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, _, registry, closed = _build_orchestrator(
-        mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer=composer
+        goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
 
@@ -249,10 +249,10 @@ def test_apply_planner_failure_marks_task_and_closes_graph(
 
 
 def test_apply_generator_success_launches_newly_ready_dependents(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, launcher, _, _ = _build_orchestrator(
-        mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer=composer
+        goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -277,10 +277,10 @@ def test_apply_generator_success_launches_newly_ready_dependents(
 
 
 def test_missing_generator_agent_profile_is_invariant_violation(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, _, _, _ = _build_orchestrator(
-        mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer=composer
+        goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -317,12 +317,12 @@ def test_missing_generator_agent_profile_is_invariant_violation(
 
 
 def test_generator_launch_failure_marks_task_failed_and_closes_graph(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     launcher = _FailingRoleLauncher(TaskCenterTaskRole.GENERATOR)
     orchestrator, attempt, _, registry, closed = _build_orchestrator(
-        mission_store,
-        episode_store,
+        goal_store,
+        iteration_store,
         attempt_store,
         task_store,
         task_center_run_id,
@@ -351,12 +351,12 @@ def test_generator_launch_failure_marks_task_failed_and_closes_graph(
 
 
 def test_evaluator_launch_failure_marks_task_failed_and_closes_graph(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     launcher = _FailingRoleLauncher(TaskCenterTaskRole.EVALUATOR)
     orchestrator, attempt, _, registry, closed = _build_orchestrator(
-        mission_store,
-        episode_store,
+        goal_store,
+        iteration_store,
         attempt_store,
         task_store,
         task_center_run_id,
@@ -386,11 +386,11 @@ def test_evaluator_launch_failure_marks_task_failed_and_closes_graph(
 
 
 def test_evaluator_compose_failure_closes_graph(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, _, registry, closed = _build_orchestrator(
-        mission_store,
-        episode_store,
+        goal_store,
+        iteration_store,
         attempt_store,
         task_store,
         task_center_run_id,
@@ -417,11 +417,11 @@ def test_evaluator_compose_failure_closes_graph(
     assert registry.get(attempt.id) is None
 
 
-def test_waiting_mission_prevents_generator_quiescence(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+def test_waiting_goal_prevents_generator_quiescence(
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, _, _, closed = _build_orchestrator(
-        mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer=composer
+        goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -435,7 +435,7 @@ def test_waiting_mission_prevents_generator_quiescence(
     )
     task_store.set_task_status(
         generator_task_id(attempt.id, "a"),
-        status=TaskCenterTaskStatus.WAITING_MISSION.value,
+        status=TaskCenterTaskStatus.WAITING_GOAL.value,
     )
 
     orchestrator.apply_generator_submission(_generator_success(attempt.id, "b"))
@@ -446,11 +446,11 @@ def test_waiting_mission_prevents_generator_quiescence(
     assert closed == []
 
 
-def test_mission_closure_report_success_resumes_waiting_generator(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+def test_goal_closure_report_success_resumes_waiting_generator(
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, _, _, _ = _build_orchestrator(
-        mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer=composer
+        goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -462,7 +462,7 @@ def test_mission_closure_report_success_resumes_waiting_generator(
     task_id = generator_task_id(attempt.id, "a")
     task_store.set_task_status(
         task_id,
-        status=TaskCenterTaskStatus.WAITING_MISSION.value,
+        status=TaskCenterTaskStatus.WAITING_GOAL.value,
     )
 
     orchestrator.apply_goal_closure_report(
@@ -486,11 +486,11 @@ def test_mission_closure_report_success_resumes_waiting_generator(
     assert refreshed.stage == AttemptStage.EVALUATE
 
 
-def test_mission_closure_report_failure_blocks_dependents_and_closes_graph(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+def test_goal_closure_report_failure_blocks_dependents_and_closes_graph(
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, _, _, closed = _build_orchestrator(
-        mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer=composer
+        goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -506,7 +506,7 @@ def test_mission_closure_report_failure_blocks_dependents_and_closes_graph(
     dependent_id = generator_task_id(attempt.id, "b")
     task_store.set_task_status(
         task_id,
-        status=TaskCenterTaskStatus.WAITING_MISSION.value,
+        status=TaskCenterTaskStatus.WAITING_GOAL.value,
     )
 
     orchestrator.apply_goal_closure_report(
@@ -532,10 +532,10 @@ def test_mission_closure_report_failure_blocks_dependents_and_closes_graph(
 
 
 def test_apply_generator_failure_blocks_pending_descendants(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, _, _, _ = _build_orchestrator(
-        mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer=composer
+        goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -561,10 +561,10 @@ def test_apply_generator_failure_blocks_pending_descendants(
 
 
 def test_generator_failure_waits_then_closes_after_quiescence(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, _, _, closed = _build_orchestrator(
-        mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer=composer
+        goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -590,10 +590,10 @@ def test_generator_failure_waits_then_closes_after_quiescence(
 
 
 def test_all_generators_done_spawns_evaluator(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, launcher, _, _ = _build_orchestrator(
-        mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer=composer
+        goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -612,10 +612,10 @@ def test_all_generators_done_spawns_evaluator(
 
 
 def test_apply_evaluator_success_closes_graph_passed(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, _, _, closed = _build_orchestrator(
-        mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer=composer
+        goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -638,10 +638,10 @@ def test_apply_evaluator_success_closes_graph_passed(
 
 
 def test_apply_evaluator_failure_closes_graph_failed(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, _, _, closed = _build_orchestrator(
-        mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer=composer
+        goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(
@@ -664,10 +664,10 @@ def test_apply_evaluator_failure_closes_graph_failed(
 
 
 def test_orchestrator_never_creates_retry_attempt(
-    mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
+    goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, _, _, _ = _build_orchestrator(
-        mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer=composer
+        goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer=composer
     )
     orchestrator.start()
     orchestrator.apply_plan_submission(

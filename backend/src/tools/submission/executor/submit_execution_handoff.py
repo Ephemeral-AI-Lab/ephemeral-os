@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from task_center import StartedGoal
 
 
-class RequestMissionSolutionInput(BaseModel):
+class RequestGoalSolutionInput(BaseModel):
     goal: str = Field(..., min_length=1)
 
     @field_validator("goal")
@@ -36,7 +36,7 @@ class RequestMissionSolutionInput(BaseModel):
         "Request a delegated complex-task solution for the current generator task. "
         "This must be called before making edits."
     ),
-    input_model=RequestMissionSolutionInput,
+    input_model=RequestGoalSolutionInput,
     output_model=TextToolOutput,
     is_terminal_tool=True,
 )

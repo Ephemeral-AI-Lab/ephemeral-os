@@ -51,10 +51,10 @@ class _StubOrchestrator:
         self._cb(self._g.id)
 
 
-def _build_handler(mission_store, episode_store, attempt_store):
+def _build_handler(goal_store, iteration_store, attempt_store):
     return GoalHandler(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         manager_registry=IterationManagerRegistry(),
         config=TaskCenterLifecycleConfig(default_attempt_budget=2),
@@ -85,9 +85,9 @@ def _drive_segment(
 
 
 def test_smoke_terminal_success(
-    mission_store, episode_store, attempt_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_center_run_id
 ):
-    handler = _build_handler(mission_store, episode_store, attempt_store)
+    handler = _build_handler(goal_store, iteration_store, attempt_store)
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="exec-1",
@@ -100,17 +100,17 @@ def test_smoke_terminal_success(
         attempt_store=attempt_store,
         verdict=(AttemptStatus.PASSED, None, None),
     )
-    final_request = mission_store.get(req.id)
-    final_segment = episode_store.get(seg.id)
+    final_request = goal_store.get(req.id)
+    final_segment = iteration_store.get(seg.id)
     assert final_request is not None and final_segment is not None
     assert final_request.status == GoalStatus.SUCCEEDED
     assert final_segment.status == IterationStatus.SUCCEEDED
 
 
 def test_smoke_attempt_plan_failed(
-    mission_store, episode_store, attempt_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_center_run_id
 ):
-    handler = _build_handler(mission_store, episode_store, attempt_store)
+    handler = _build_handler(goal_store, iteration_store, attempt_store)
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="exec-1",
@@ -131,7 +131,7 @@ def test_smoke_attempt_plan_failed(
     )
     mgr.handle_attempt_closed(g1.id)
     # Second (and budget-final) attempt: also fail.
-    seg_after = episode_store.get(seg.id)
+    seg_after = iteration_store.get(seg.id)
     assert seg_after is not None
     g2_id = seg_after.attempt_ids[-1]
     attempt_store.set_plan_contract(
@@ -142,8 +142,8 @@ def test_smoke_attempt_plan_failed(
         fail_reason=AttemptFailReason.EVALUATOR_FAILED,
     )
     mgr.handle_attempt_closed(g2_id)
-    final_request = mission_store.get(req.id)
-    final_segment = episode_store.get(seg.id)
+    final_request = goal_store.get(req.id)
+    final_segment = iteration_store.get(seg.id)
     assert final_request is not None and final_segment is not None
     assert final_request.status == GoalStatus.FAILED
     assert final_segment.status == IterationStatus.FAILED
@@ -152,9 +152,9 @@ def test_smoke_attempt_plan_failed(
 
 
 def test_smoke_success_continue_then_terminal(
-    mission_store, episode_store, attempt_store, task_center_run_id
+    goal_store, iteration_store, attempt_store, task_center_run_id
 ):
-    handler = _build_handler(mission_store, episode_store, attempt_store)
+    handler = _build_handler(goal_store, iteration_store, attempt_store)
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="exec-1",
@@ -167,12 +167,12 @@ def test_smoke_success_continue_then_terminal(
         attempt_store=attempt_store,
         verdict=(AttemptStatus.PASSED, None, "next-goal"),
     )
-    refreshed = mission_store.get(req.id)
+    refreshed = goal_store.get(req.id)
     assert refreshed is not None
     assert len(refreshed.iteration_ids) == 2
     assert refreshed.is_open
     seg2_id = refreshed.iteration_ids[1]
-    seg2 = episode_store.get(seg2_id)
+    seg2 = iteration_store.get(seg2_id)
     assert seg2 is not None
     assert seg2.goal == "next-goal"
     # Drive iteration 2 to terminal success.
@@ -182,6 +182,6 @@ def test_smoke_success_continue_then_terminal(
         attempt_store=attempt_store,
         verdict=(AttemptStatus.PASSED, None, None),
     )
-    final_request = mission_store.get(req.id)
+    final_request = goal_store.get(req.id)
     assert final_request is not None
     assert final_request.status == GoalStatus.SUCCEEDED

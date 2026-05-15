@@ -114,11 +114,11 @@ def _graph(
 # ---- Request-level ------------------------------------------------------
 
 
-def test_assert_mission_open_passes_for_open():
+def test_assert_goal_open_passes_for_open():
     assert_goal_open(_request(status=GoalStatus.OPEN))
 
 
-def test_assert_mission_open_fails_for_closed():
+def test_assert_goal_open_fails_for_closed():
     for status in (
         GoalStatus.SUCCEEDED,
         GoalStatus.FAILED,
@@ -128,7 +128,7 @@ def test_assert_mission_open_fails_for_closed():
             assert_goal_open(_request(status=status))
 
 
-def test_assert_episode_id_unique_in_mission():
+def test_assert_iteration_id_unique_in_goal():
     assert_iteration_id_unique_in_goal(
         _request(iteration_ids=("s1", "s2")), "s3"
     )
@@ -138,7 +138,7 @@ def test_assert_episode_id_unique_in_mission():
         )
 
 
-def test_assert_episode_sequence_contiguous():
+def test_assert_iteration_sequence_contiguous():
     assert_iteration_sequence_contiguous(_request(iteration_ids=()), 1)
     assert_iteration_sequence_contiguous(_request(iteration_ids=("s1",)), 2)
     with pytest.raises(TaskCenterInvariantViolation):
@@ -147,7 +147,7 @@ def test_assert_episode_sequence_contiguous():
         assert_iteration_sequence_contiguous(_request(iteration_ids=("s1",)), 3)
 
 
-def test_assert_continuation_episode_predecessor_requires_succeeded_with_goal():
+def test_assert_continuation_iteration_predecessor_requires_succeeded_with_goal():
     succeeded_with_goal = _segment(
         status=IterationStatus.SUCCEEDED, continuation_goal="next"
     )
@@ -166,13 +166,13 @@ def test_assert_continuation_episode_predecessor_requires_succeeded_with_goal():
 # ---- Segment-level ------------------------------------------------------
 
 
-def test_assert_episode_open():
+def test_assert_iteration_open():
     assert_iteration_open(_segment(status=IterationStatus.OPEN))
     with pytest.raises(TaskCenterInvariantViolation):
         assert_iteration_open(_segment(status=IterationStatus.SUCCEEDED))
 
 
-def test_assert_episode_has_budget():
+def test_assert_iteration_has_budget():
     assert_iteration_has_budget(_segment(attempt_budget=2, attempt_ids=()))
     assert_iteration_has_budget(
         _segment(attempt_budget=2, attempt_ids=("g1",))
@@ -183,7 +183,7 @@ def test_assert_episode_has_budget():
         )
 
 
-def test_assert_attempt_belongs_to_episode():
+def test_assert_attempt_belongs_to_iteration():
     assert_attempt_belongs_to_iteration(
         _graph(iteration_id="s1"), _segment(sid="s1")
     )
@@ -222,7 +222,7 @@ def test_assert_fail_reason_present_on_failure():
 # ---- Manager registry ---------------------------------------------------
 
 
-def test_episode_manager_registry_enforces_uniqueness():
+def test_iteration_manager_registry_enforces_uniqueness():
     reg = IterationManagerRegistry()
 
     class _Fake:

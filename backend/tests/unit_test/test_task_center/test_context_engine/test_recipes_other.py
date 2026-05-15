@@ -17,26 +17,26 @@ from task_center.iteration.state import IterationCreationReason
 
 @pytest.fixture
 def deps(
-    mission_store, episode_store, attempt_store, task_store
+    goal_store, iteration_store, attempt_store, task_store
 ) -> ContextEngineDeps:
     return ContextEngineDeps(
-        goal_store=mission_store,
-        iteration_store=episode_store,
+        goal_store=goal_store,
+        iteration_store=iteration_store,
         attempt_store=attempt_store,
         task_store=task_store,
     )
 
 
-def _seed_mission(mission_store, task_center_run_id):
-    return mission_store.insert(
+def _seed_goal(goal_store, task_center_run_id):
+    return goal_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t-entry",
         goal="overall",
     )
 
 
-def _seed_episode(episode_store, *, goal_id):
-    return episode_store.insert(
+def _seed_iteration(iteration_store, *, goal_id):
+    return iteration_store.insert(
         goal_id=goal_id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
@@ -45,8 +45,8 @@ def _seed_episode(episode_store, *, goal_id):
     )
 
 
-def _seed_continuation_episode(episode_store, *, goal_id):
-    return episode_store.insert(
+def _seed_continuation_iteration(iteration_store, *, goal_id):
+    return iteration_store.insert(
         goal_id=goal_id,
         sequence_no=2,
         creation_reason=IterationCreationReason.PARTIAL_CONTINUATION,
@@ -61,10 +61,10 @@ def _seed_continuation_episode(episode_store, *, goal_id):
 
 
 def test_generator_emits_planned_task_spec_required_block(
-    deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
+    deps, goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
-    req = _seed_mission(mission_store, task_center_run_id)
-    iteration = _seed_episode(episode_store, goal_id=req.id)
+    req = _seed_goal(goal_store, task_center_run_id)
+    iteration = _seed_iteration(iteration_store, goal_id=req.id)
     attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
     attempt_store.set_plan_contract(
         attempt.id,
@@ -101,10 +101,10 @@ def test_generator_emits_planned_task_spec_required_block(
 
 
 def test_generator_does_not_emit_partial_plan_boundary(
-    deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
+    deps, goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
-    req = _seed_mission(mission_store, task_center_run_id)
-    iteration = _seed_episode(episode_store, goal_id=req.id)
+    req = _seed_goal(goal_store, task_center_run_id)
+    iteration = _seed_iteration(iteration_store, goal_id=req.id)
     attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
     attempt_store.set_plan_contract(
         attempt.id,
@@ -142,10 +142,10 @@ def test_generator_does_not_emit_partial_plan_boundary(
 
 
 def test_generator_dependency_summary_blocks(
-    deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
+    deps, goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
-    req = _seed_mission(mission_store, task_center_run_id)
-    iteration = _seed_episode(episode_store, goal_id=req.id)
+    req = _seed_goal(goal_store, task_center_run_id)
+    iteration = _seed_iteration(iteration_store, goal_id=req.id)
     attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
     # Upstream task with a recorded summary.
     task_store.upsert_task(
@@ -188,10 +188,10 @@ def test_generator_dependency_summary_blocks(
 
 
 def test_generator_missing_dependency_task_raises_context_error(
-    deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
+    deps, goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
-    req = _seed_mission(mission_store, task_center_run_id)
-    iteration = _seed_episode(episode_store, goal_id=req.id)
+    req = _seed_goal(goal_store, task_center_run_id)
+    iteration = _seed_iteration(iteration_store, goal_id=req.id)
     attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
     task_store.upsert_task(
         task_id="t-down",
@@ -223,10 +223,10 @@ def test_generator_missing_dependency_task_raises_context_error(
 
 
 def test_evaluator_emits_required_spec_and_criteria(
-    deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
+    deps, goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
-    req = _seed_mission(mission_store, task_center_run_id)
-    iteration = _seed_episode(episode_store, goal_id=req.id)
+    req = _seed_goal(goal_store, task_center_run_id)
+    iteration = _seed_iteration(iteration_store, goal_id=req.id)
     attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
     attempt_store.set_plan_contract(
         attempt.id,
@@ -269,10 +269,10 @@ def test_evaluator_emits_required_spec_and_criteria(
 
 
 def test_evaluator_renders_every_generator_summary_in_attempt_order(
-    deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
+    deps, goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
-    req = _seed_mission(mission_store, task_center_run_id)
-    iteration = _seed_episode(episode_store, goal_id=req.id)
+    req = _seed_goal(goal_store, task_center_run_id)
+    iteration = _seed_iteration(iteration_store, goal_id=req.id)
     attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
     attempt_store.set_plan_contract(
         attempt.id,
@@ -321,10 +321,10 @@ def test_evaluator_renders_every_generator_summary_in_attempt_order(
 
 
 def test_evaluator_missing_generator_task_raises_context_error(
-    deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
+    deps, goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
-    req = _seed_mission(mission_store, task_center_run_id)
-    iteration = _seed_episode(episode_store, goal_id=req.id)
+    req = _seed_goal(goal_store, task_center_run_id)
+    iteration = _seed_iteration(iteration_store, goal_id=req.id)
     attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
     attempt_store.set_plan_contract(
         attempt.id,
@@ -346,10 +346,10 @@ def test_evaluator_missing_generator_task_raises_context_error(
 
 
 def test_evaluator_emits_partial_plan_boundary_before_summaries(
-    deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
+    deps, goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
-    req = _seed_mission(mission_store, task_center_run_id)
-    iteration = _seed_episode(episode_store, goal_id=req.id)
+    req = _seed_goal(goal_store, task_center_run_id)
+    iteration = _seed_iteration(iteration_store, goal_id=req.id)
     attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
     attempt_store.set_plan_contract(
         attempt.id,
@@ -393,19 +393,19 @@ def test_evaluator_emits_partial_plan_boundary_before_summaries(
     assert packet.blocks[-1].kind == "evaluation_criteria"
 
 
-def test_evaluator_episode2_frame_precedes_attempt_contract(
-    deps, mission_store, episode_store, attempt_store, task_store, task_center_run_id
+def test_evaluator_iteration2_frame_precedes_attempt_contract(
+    deps, goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
-    req = _seed_mission(mission_store, task_center_run_id)
-    episode1 = _seed_episode(episode_store, goal_id=req.id)
-    episode_store.close_succeeded(
-        episode1.id,
+    req = _seed_goal(goal_store, task_center_run_id)
+    iteration1 = _seed_iteration(iteration_store, goal_id=req.id)
+    iteration_store.close_succeeded(
+        iteration1.id,
         task_specification="accepted plan",
         task_summary="accepted summary",
         closed_at=datetime.now(UTC),
     )
-    episode2 = _seed_continuation_episode(episode_store, goal_id=req.id)
-    attempt = attempt_store.insert(iteration_id=episode2.id, attempt_sequence_no=1)
+    iteration2 = _seed_continuation_iteration(iteration_store, goal_id=req.id)
+    attempt = attempt_store.insert(iteration_id=iteration2.id, attempt_sequence_no=1)
     attempt_store.set_plan_contract(
         attempt.id,
         task_specification="attempt plan",
@@ -415,7 +415,7 @@ def test_evaluator_episode2_frame_precedes_attempt_contract(
 
     packet = _evaluator_build(
         ContextScope(
-            goal_id=req.id, iteration_id=episode2.id, attempt_id=attempt.id
+            goal_id=req.id, iteration_id=iteration2.id, attempt_id=attempt.id
         ),
         deps,
     )
@@ -465,8 +465,8 @@ def test_entry_executor_emits_one_required_entry_request_block(
     assert block.kind == "entry_request"
     assert block.priority == ContextPriority.REQUIRED
     assert block.text == "user prompt"
-    # No mission_summary in entry-time context — it ships at close.
-    assert all(b.kind != "mission_summary" for b in packet.blocks)
+    # No goal_summary in entry-time context — it ships at close.
+    assert all(b.kind != "goal_summary" for b in packet.blocks)
 
 
 # ---------------------------------------------------------------------------

@@ -79,8 +79,8 @@ def test_pipeline_capacity_scenarios_encode_expected_graph_shapes() -> None:
     assert _deps_by_id(retry_planner_1) == {"a": ("missing",)}
     assert _deps_by_id(retry_planner_2) == {"preflight": ()}
 
-    nested_root = _planner_args("pipeline.nested_mission", root_ctx)
-    nested_child = _planner_args("pipeline.nested_mission", recursive_ctx)
+    nested_root = _planner_args("pipeline.nested_goal", root_ctx)
+    nested_child = _planner_args("pipeline.nested_goal", recursive_ctx)
     assert _deps_by_id(nested_root) == {
         "delegate_child": (),
         "recursive_return_guard": ("delegate_child",),
@@ -121,7 +121,7 @@ def _deps_by_id(plan: dict[str, Any]) -> dict[str, tuple[str, ...]]:
     return {str(task["id"]): tuple(task.get("deps") or ()) for task in plan["tasks"]}
 
 
-def _ctx(*, attempt_no: int = 1, episode_no: int = 1, recursive: bool = False) -> ScenarioContext:
+def _ctx(*, attempt_no: int = 1, iteration_no: int = 1, recursive: bool = False) -> ScenarioContext:
     requested_by = "parent-task-id" if recursive else "task-center-run:entry"
     return ScenarioContext(
         attempt=SimpleNamespace(
@@ -129,7 +129,7 @@ def _ctx(*, attempt_no: int = 1, episode_no: int = 1, recursive: bool = False) -
             evaluation_criteria=("criterion",),
             id=f"attempt-{attempt_no}",
         ),
-        iteration=SimpleNamespace(sequence_no=episode_no, mission_id="goal-id"),
+        iteration=SimpleNamespace(sequence_no=iteration_no, goal_id="goal-id"),
         goal=SimpleNamespace(requested_by_task_id=requested_by),
         prompt="capacity scenario pack offline test",
         metadata={},

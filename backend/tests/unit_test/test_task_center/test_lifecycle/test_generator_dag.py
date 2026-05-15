@@ -78,8 +78,8 @@ def test_running_dependent_of_failed_task_is_invariant_violation():
         blocked_descendant_ids(failed_task_id="a", task_records=records)
 
 
-def test_waiting_mission_is_not_quiescent_or_done():
-    records = [_task("a", "waiting_mission")]
+def test_waiting_goal_is_not_quiescent_or_done():
+    records = [_task("a", "waiting_goal")]
 
     state = summarize_generator_dag(records)
     assert not state.all_quiescent

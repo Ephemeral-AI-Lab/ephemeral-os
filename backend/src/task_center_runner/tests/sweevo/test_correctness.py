@@ -100,8 +100,8 @@ async def test_correctness_testing_scenario_runs_end_to_end(
         and any(ep["attempts"] for ep in goal["iterations"])
     ]
     assert delegated, "no goal with attempts in graph"
-    final_mission = delegated[-1]
-    assert final_mission["status"] == "succeeded"
+    final_goal = delegated[-1]
+    assert final_goal["status"] == "succeeded"
 
     # --- Audit tree on disk -------------------------------------------
     run_dir = report.run_dir
@@ -109,14 +109,14 @@ async def test_correctness_testing_scenario_runs_end_to_end(
     assert (run_dir / "run.json").exists()
     assert (run_dir / "metrics.json").exists()
 
-    mission_dirs = list(run_dir.glob("mission_*_*"))
-    assert mission_dirs, f"no mission_NN_<id> dir under {run_dir}"
+    goal_dirs = list(run_dir.glob("goal_*_*"))
+    assert goal_dirs, f"no goal_NN_<id> dir under {run_dir}"
     found_attempt_with_role_dir = False
-    for mission_dir in mission_dirs:
-        assert (mission_dir / "goal.json").exists()
-        for episode_dir in mission_dir.glob("episode_*_*"):
-            assert (episode_dir / "iteration.json").exists()
-            for attempt_dir in episode_dir.glob("attempt_*_*"):
+    for goal_dir in goal_dirs:
+        assert (goal_dir / "goal.json").exists()
+        for iteration_dir in goal_dir.glob("iteration_*_*"):
+            assert (iteration_dir / "iteration.json").exists()
+            for attempt_dir in iteration_dir.glob("attempt_*_*"):
                 assert (attempt_dir / "attempt.json").exists()
                 role_dirs = list(attempt_dir.glob("[0-9][0-9]_*"))
                 assert role_dirs, (

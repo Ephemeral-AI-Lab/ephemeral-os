@@ -21,6 +21,12 @@ def test_normalize_timing_map_projects_timing_key_enum_values() -> None:
     }
 
 
+def test_normalize_timing_map_projects_stringified_timing_key_names() -> None:
+    assert normalize_timing_map({"TimingKey.APPLY_COMMIT": "0.25"}) == {
+        "occ.apply.commit_s": 0.25,
+    }
+
+
 def test_record_elapsed_writes_and_returns_elapsed_seconds(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -64,3 +70,12 @@ def test_timing_audit_signals_classify_occ_conflict_without_commit() -> None:
     )
 
     assert signals == ("occ_prepared", "occ_conflicted")
+
+
+def test_timing_audit_signals_classify_public_api_occ_apply_as_commit() -> None:
+    signals = timing_audit_signals(
+        {"api.write.occ_apply_s": 0.02},
+        status="ok",
+    )
+
+    assert signals == ("occ_committed",)

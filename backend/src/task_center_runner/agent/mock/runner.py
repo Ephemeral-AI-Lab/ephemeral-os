@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import re
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
@@ -351,10 +352,10 @@ class MockSquadRunner:
                 )
                 return result
             if isinstance(action, str) and action.startswith(
-                "request_recursive_mission:"
+                "request_recursive_goal:"
             ):
                 package_id = action.split(":", 1)[1]
-                goal = self._scenario.recursive_mission_goal(ctx) or (
+                goal = self._scenario.recursive_goal_goal(ctx) or (
                     f"Resolve recursive package {package_id}."
                 )
                 result = await self._call_tool(
@@ -364,7 +365,7 @@ class MockSquadRunner:
                     emit,
                 )
                 self._publish(
-                    EventType.RECURSIVE_MISSION_REQUESTED,
+                    EventType.RECURSIVE_GOAL_REQUESTED,
                     metadata=metadata,
                     payload={
                         "package_id": package_id,
@@ -376,7 +377,7 @@ class MockSquadRunner:
                 "request_recursive_matrix:"
             ):
                 package_id = action.split(":", 1)[1]
-                goal = self._scenario.recursive_mission_goal(ctx) or (
+                goal = self._scenario.recursive_goal_goal(ctx) or (
                     f"Resolve recursive matrix package {package_id}."
                 )
                 result = await self._call_tool(
@@ -386,7 +387,7 @@ class MockSquadRunner:
                     emit,
                 )
                 self._publish(
-                    EventType.RECURSIVE_MISSION_REQUESTED,
+                    EventType.RECURSIVE_GOAL_REQUESTED,
                     metadata=metadata,
                     payload={
                         "package_id": package_id,
@@ -567,7 +568,7 @@ class MockSquadRunner:
         checkpoint = self._spec_field(rendered_prompt, "checkpoint") or "checkpoint"
         if checkpoint == "recursive_return":
             self._publish(
-                EventType.RECURSIVE_MISSION_COMPLETED,
+                EventType.RECURSIVE_GOAL_COMPLETED,
                 metadata=metadata,
                 payload=self._recursive_close_payload(metadata),
             )
@@ -1181,6 +1182,16 @@ class MockSquadRunner:
             )
         elif role == "planner":
             attempt, iteration = self._current_attempt_and_iteration(metadata)
+            previous_iteration_results = (
+                "# Previous Iteration Results" in prompt
+                or "# Previous Iteration Results" in prompt
+                or (
+                    re.search(r"^## Iteration \d+ accepted plan$", prompt, re.MULTILINE)
+                    is not None
+                    and re.search(r"^## Iteration \d+ summary$", prompt, re.MULTILINE)
+                    is not None
+                )
+            )
             checks = {
                 "goal": "# Goal" in prompt,
                 "current_iteration": (
@@ -1189,9 +1200,12 @@ class MockSquadRunner:
                 ),
             }
             if attempt.attempt_sequence_no > 1:
-                checks["failed_attempts"] = "# Prior Failed Attempts" in prompt
+                checks["failed_attempts"] = (
+                    "# Prior Failed Attempts" in prompt or "# Failed Attempts" in prompt
+                )
             if iteration.sequence_no > 1:
-                checks["previous_iteration_results"] = "# Previous Iteration Results" in prompt
+                checks["previous_iteration_results"] = previous_iteration_results
+                checks["previous_iteration_results"] = previous_iteration_results
             reason = (
                 "Planner context is goal and iteration scoped; retry planners "
                 "also receive failed-attempt evidence, and continuation planners "
@@ -1297,7 +1311,7 @@ class MockSquadRunner:
             task_center_run_id=str(metadata.get("task_center_run_id") or ""),
             task_center_task_id=str(metadata.get("task_center_task_id") or ""),
             task_center_attempt_id=str(metadata.get("task_center_attempt_id") or ""),
-            task_center_mission_id=str(metadata.get("task_center_mission_id") or ""),
+            task_center_goal_id=str(metadata.get("task_center_goal_id") or ""),
             task_center_request_id=str(metadata.get("task_center_request_id") or ""),
             tool_id=str(metadata.get("tool_id") or ""),
         )
@@ -1379,7 +1393,7 @@ class MockSquadRunner:
                 payload = summary.get("payload") if isinstance(summary, dict) else None
                 if not isinstance(payload, dict):
                     continue
-                close_report = payload.get("mission_closure_report")
+                close_report = payload.get("goal_closure_report")
                 if isinstance(close_report, dict):
                     return {
                         "goal_id": close_report.get("goal_id"),

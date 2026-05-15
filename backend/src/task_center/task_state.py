@@ -26,7 +26,7 @@ class SpawnReason(StrEnum):
 class TaskCenterTaskStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
-    WAITING_MISSION = "waiting_mission"
+    WAITING_GOAL = "waiting_goal"
     DONE = "done"
     FAILED = "failed"
     BLOCKED = "blocked"
