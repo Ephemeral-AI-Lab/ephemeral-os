@@ -14,7 +14,7 @@ from sandbox.layer_stack.manifest import Manifest
 from sandbox.timing import monotonic_now
 
 if TYPE_CHECKING:
-    from sandbox.layer_stack.layer_publisher import LayerPublisher
+    from sandbox.layer_stack.publisher import LayerPublisher
     from sandbox.layer_stack.manifest import FileManifestStore
 
 

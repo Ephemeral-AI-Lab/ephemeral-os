@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-import sandbox.layer_stack.layer_publisher as publisher_mod
+import sandbox.layer_stack.publisher as publisher_mod
 import sandbox.layer_stack.manifest as manifest_store_mod
 import sandbox.layer_stack.workspace_base as workspace_base_mod
 import sandbox.layer_stack.workspace_binding as binding_mod

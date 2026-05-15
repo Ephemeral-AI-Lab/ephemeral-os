@@ -75,7 +75,7 @@ correctness under race. Files needing this are flagged **(+ race)** below.
 | Order | File | Backs | Probe imports | Pass bar |
 |---:|---|---|---|---|
 | 1 | `layer_stack/test_manifest_lifecycle.py` **(+ race)** | E11 | `sandbox.layer_stack.manifest.model` | open/append/seal/list/load round-trip; survive simulated process restart; corrupted manifest detected. Race: N=8 concurrent appenders → no torn entries; total = N |
-| 2 | `layer_stack/test_publisher.py` **(+ race)** | E6, E9 | `sandbox.layer_stack.layer_publisher` | publish atomicity; idempotent on same digest; kill mid-publish leaves no dangling refs. Race: N=8 publishers same digest → exactly one canonical ref, 7 "already published" |
+| 2 | `layer_stack/test_publisher.py` **(+ race)** | E6, E9 | `sandbox.layer_stack.publisher` | publish atomicity; idempotent on same digest; kill mid-publish leaves no dangling refs. Race: N=8 publishers same digest → exactly one canonical ref, 7 "already published" |
 | 3 | `layer_stack/test_merged_view.py` | E5 | `sandbox.layer_stack.view.merged` | depth-100 path-to-content map correct; whiteouts override; opaque dirs respected |
 
 **Gate after 1a:** `pytest backend/tests/live_e2e_test/sandbox/layer_stack -k 'manifest or publisher or merged_view'` green.

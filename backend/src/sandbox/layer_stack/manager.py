@@ -14,7 +14,7 @@ from uuid import uuid4
 from sandbox.layer_stack.paths import remove_path, resolve_storage_path
 from sandbox.layer_stack.storage_lock import acquire_storage_writer_lock
 from sandbox.layer_stack.changes import LayerChange
-from sandbox.layer_stack.layer_publisher import LayerPublisher
+from sandbox.layer_stack.publisher import LayerPublisher
 from sandbox.layer_stack.lease import LeaseRegistry, WorkspaceLease
 from sandbox.layer_stack.maintenance import SquashService, manifest_still_ends_with
 from sandbox.layer_stack.manifest import (
