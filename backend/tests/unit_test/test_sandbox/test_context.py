@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from sandbox.provider.daytona.context import DaytonaContextPreparer
+from sandbox.provider.daytona.exec_context import DaytonaContextPreparer
 from tools._framework.core.base import ToolExecutionContextService
 
 
@@ -16,7 +16,7 @@ def _ctx(services=None) -> ToolExecutionContextService:
 
 
 def test_sandbox_exports_context_preparer() -> None:
-    from sandbox.provider.daytona.context import DaytonaContextPreparer as DCP
+    from sandbox.provider.daytona.exec_context import DaytonaContextPreparer as DCP
 
     assert DCP is DaytonaContextPreparer
 
@@ -66,7 +66,7 @@ def test_get_sandbox_caches_instance() -> None:
     tk = DaytonaContextPreparer(sandbox_id="sb-abc")
     fake_sb = MagicMock()
     with patch(
-        "sandbox.provider.daytona.context.DaytonaContextPreparer._get_sandbox"
+        "sandbox.provider.daytona.exec_context.DaytonaContextPreparer._get_sandbox"
     ) as mock_get:
         mock_get.return_value = fake_sb
         result = tk._get_sandbox()
@@ -143,8 +143,8 @@ def test_prepare_context_injects_workspace_metadata() -> None:
 
     with (
         patch.object(tk, "_get_sandbox", return_value=fake_sb),
-        patch("sandbox.provider.daytona.context.discover_workspace", return_value="/workspace"),
-        patch("sandbox.provider.daytona.context.has_registered_adapter", return_value=True),
+        patch("sandbox.provider.daytona.exec_context.discover_workspace", return_value="/workspace"),
+        patch("sandbox.provider.daytona.exec_context.has_registered_adapter", return_value=True),
     ):
         tk.prepare_context(ctx)
 
@@ -160,8 +160,8 @@ def test_prepare_context_no_cwd_skips_metadata_key() -> None:
 
     with (
         patch.object(tk, "_get_sandbox", return_value=fake_sb),
-        patch("sandbox.provider.daytona.context.discover_workspace", return_value=None),
-        patch("sandbox.provider.daytona.context.has_registered_adapter", return_value=True),
+        patch("sandbox.provider.daytona.exec_context.discover_workspace", return_value=None),
+        patch("sandbox.provider.daytona.exec_context.has_registered_adapter", return_value=True),
     ):
         tk.prepare_context(ctx)
 
@@ -178,10 +178,10 @@ def test_prepare_context_respects_preseeded_workspace_root_override() -> None:
     with (
         patch.object(tk, "_get_sandbox", return_value=fake_sb),
         patch(
-            "sandbox.provider.daytona.context.discover_workspace",
+            "sandbox.provider.daytona.exec_context.discover_workspace",
             return_value="/workspace",
         ) as discover_mock,
-        patch("sandbox.provider.daytona.context.has_registered_adapter", return_value=True),
+        patch("sandbox.provider.daytona.exec_context.has_registered_adapter", return_value=True),
     ):
         tk.prepare_context(ctx)
 
@@ -193,7 +193,7 @@ def test_prepare_context_respects_preseeded_workspace_root_override() -> None:
 
 def test_daytona_runtime_context_registers_provider_adapter() -> None:
     from sandbox.provider.daytona.adapter import DaytonaProviderAdapter
-    from sandbox.provider.daytona.context import prepare_daytona_runtime_context
+    from sandbox.provider.daytona.exec_context import prepare_daytona_runtime_context
     from sandbox.provider.registry import dispose_adapter, get_adapter
 
     sandbox_id = "daytona-context-provider-registration"
@@ -222,10 +222,10 @@ async def test_prepare_context_async_injects_workspace_metadata() -> None:
     with (
         patch.object(tk, "_get_sandbox_async", new=AsyncMock(return_value=fake_sb)),
         patch(
-            "sandbox.provider.daytona.context.discover_workspace_async",
+            "sandbox.provider.daytona.exec_context.discover_workspace_async",
             new=AsyncMock(return_value="/async/workspace"),
         ),
-        patch("sandbox.provider.daytona.context.has_registered_adapter", return_value=True),
+        patch("sandbox.provider.daytona.exec_context.has_registered_adapter", return_value=True),
     ):
         await tk.prepare_context_async(ctx)
 
@@ -242,10 +242,10 @@ async def test_prepare_context_async_no_cwd() -> None:
     with (
         patch.object(tk, "_get_sandbox_async", new=AsyncMock(return_value=fake_sb)),
         patch(
-            "sandbox.provider.daytona.context.discover_workspace_async",
+            "sandbox.provider.daytona.exec_context.discover_workspace_async",
             new=AsyncMock(return_value=None),
         ),
-        patch("sandbox.provider.daytona.context.has_registered_adapter", return_value=True),
+        patch("sandbox.provider.daytona.exec_context.has_registered_adapter", return_value=True),
     ):
         await tk.prepare_context_async(ctx)
 
@@ -262,10 +262,10 @@ async def test_prepare_context_async_respects_preseeded_workspace_root_override(
     with (
         patch.object(tk, "_get_sandbox_async", new=AsyncMock(return_value=fake_sb)),
         patch(
-            "sandbox.provider.daytona.context.discover_workspace_async",
+            "sandbox.provider.daytona.exec_context.discover_workspace_async",
             new=AsyncMock(return_value="/workspace"),
         ) as discover_mock,
-        patch("sandbox.provider.daytona.context.has_registered_adapter", return_value=True),
+        patch("sandbox.provider.daytona.exec_context.has_registered_adapter", return_value=True),
     ):
         await tk.prepare_context_async(ctx)
 

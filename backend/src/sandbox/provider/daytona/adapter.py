@@ -336,7 +336,7 @@ class DaytonaProviderAdapter:
 
     def context_preparer(self, sandbox_id: str) -> Any:
         """Return the daytona-specific context preparer for *sandbox_id*."""
-        from sandbox.provider.daytona.context import DaytonaContextPreparer
+        from sandbox.provider.daytona.exec_context import DaytonaContextPreparer
 
         return DaytonaContextPreparer(sandbox_id)
 
