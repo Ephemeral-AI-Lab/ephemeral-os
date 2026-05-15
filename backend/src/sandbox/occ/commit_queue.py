@@ -200,7 +200,7 @@ class CommitQueue:
                 )
         except BaseException as exc:
             for item in batch:
-                if not item.future.cancelled():
+                if not item.future.done():
                     item.future.set_exception(exc)
             if not isinstance(exc, Exception):
                 raise
