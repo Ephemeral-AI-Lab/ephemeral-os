@@ -10,7 +10,7 @@ from task_center.trial.orchestrator import TrialOrchestrator
 from task_center.trial.orchestrator_registry import (
     TrialOrchestratorRegistry,
 )
-from task_center.trial.runtime import AgentLaunch, AttemptDeps
+from task_center.trial.runtime import AgentLaunch, TrialDeps
 from task_center.iteration import IterationManagerRegistry
 from task_center.iteration.state import IterationCreationReason
 from task_center.task_state import GeneratorSubmission, PlannedGeneratorTask, PlannerSubmission
@@ -21,7 +21,7 @@ from tools._framework.core.runtime import ExecutionMetadata
 
 @dataclass
 class TaskCenterFixture:
-    runtime: AttemptDeps
+    runtime: TrialDeps
     orchestrator: TrialOrchestrator
     attempt_id: str
     request_id: str
@@ -49,23 +49,23 @@ def build_harness_fixture(
         requested_by_task_id="outer-task",
         goal="solve the task",
     )
-    episode = episode_store.insert(
+    iteration = episode_store.insert(
         goal_id=request.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="solve the task",
         trial_budget=2,
     )
-    mission_store.append_episode_id(request.id, episode.id)
-    attempt = attempt_store.insert(iteration_id=episode.id, trial_sequence_no=1)
-    episode_store.append_attempt_id(episode.id, attempt.id)
+    mission_store.append_iteration_id(request.id, iteration.id)
+    attempt = attempt_store.insert(iteration_id=iteration.id, trial_sequence_no=1)
+    episode_store.append_trial_id(iteration.id, attempt.id)
 
     launcher = FakeLauncher()
     registry = TrialOrchestratorRegistry()
-    runtime = AttemptDeps(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+    runtime = TrialDeps(
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher,
         orchestrator_registry=registry,
@@ -81,9 +81,9 @@ def build_harness_fixture(
     return TaskCenterFixture(
         runtime=runtime,
         orchestrator=orchestrator,
-        attempt_id=attempt.id,
+        trial_id=attempt.id,
         request_id=request.id,
-        iteration_id=episode.id,
+        iteration_id=iteration.id,
     )
 
 
@@ -97,7 +97,7 @@ def make_tool_context(
 ) -> ToolExecutionContextService:
     metadata = ExecutionMetadata(
         task_center_task_id=task_id,
-        task_center_attempt_id=fixture.attempt_id,
+        task_center_attempt_id=fixture.trial_id,
         attempt_runtime=fixture.runtime,
         conversation_messages=list(messages or []),
     )
@@ -110,14 +110,14 @@ def make_tool_context(
 
 def start_planner(fixture: TaskCenterFixture) -> str:
     fixture.orchestrator.start()
-    return planner_task_id(fixture.attempt_id)
+    return planner_task_id(fixture.trial_id)
 
 
 def apply_single_generator_plan(fixture: TaskCenterFixture, *, agent_name: str = "executor") -> str:
     planner_id = start_planner(fixture)
     fixture.orchestrator.apply_plan_submission(
         PlannerSubmission(
-            attempt_id=fixture.attempt_id,
+            trial_id=fixture.trial_id,
             planner_task_id=planner_id,
             kind="full",
             task_specification="spec",
@@ -134,18 +134,18 @@ def apply_single_generator_plan(fixture: TaskCenterFixture, *, agent_name: str =
             summary="plan",
         )
     )
-    return generator_task_id(fixture.attempt_id, "a")
+    return generator_task_id(fixture.trial_id, "a")
 
 
 def spawn_evaluator(fixture: TaskCenterFixture) -> str:
     generator_id = apply_single_generator_plan(fixture)
     fixture.orchestrator.apply_generator_submission(
         GeneratorSubmission(
-            attempt_id=fixture.attempt_id,
+            trial_id=fixture.trial_id,
             task_id=generator_id,
             outcome="success",
             summary="done",
             payload={},
         )
     )
-    return evaluator_task_id(fixture.attempt_id)
+    return evaluator_task_id(fixture.trial_id)

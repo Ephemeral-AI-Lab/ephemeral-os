@@ -1,4 +1,4 @@
-"""Invariant tests across request, episode, and attempt levels."""
+"""Invariant tests across request, iteration, and attempt levels."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ from task_center._core.types import TaskCenterInvariantViolation
 
 def _request(
     status: GoalStatus = GoalStatus.OPEN,
-    episode_ids: tuple[str, ...] = (),
+    iteration_ids: tuple[str, ...] = (),
 ) -> Goal:
     now = datetime.now(UTC)
     return Goal(
@@ -51,7 +51,7 @@ def _request(
         requested_by_task_id="t1",
         goal="g",
         status=status,
-        episode_ids=episode_ids,
+        iteration_ids=iteration_ids,
         final_outcome=None,
         created_at=now,
         updated_at=now,
@@ -62,9 +62,9 @@ def _request(
 def _segment(
     *,
     status: IterationStatus = IterationStatus.OPEN,
-    attempt_ids: tuple[str, ...] = (),
+    trial_ids: tuple[str, ...] = (),
     continuation_goal: str | None = None,
-    attempt_budget: int = 2,
+    trial_budget: int = 2,
     sid: str = "s1",
 ) -> Iteration:
     now = datetime.now(UTC)
@@ -74,9 +74,9 @@ def _segment(
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="g",
-        trial_budget=attempt_budget,
+        trial_budget=trial_budget,
         status=status,
-        trial_ids=attempt_ids,
+        trial_ids=trial_ids,
         continuation_goal=continuation_goal,
         created_at=now,
         updated_at=now,
@@ -88,13 +88,13 @@ def _graph(
     *,
     status: TrialStatus = TrialStatus.RUNNING,
     fail_reason: TrialFailReason | None = None,
-    episode_id: str = "s1",
+    iteration_id: str = "s1",
     gid: str = "g1",
 ) -> Trial:
     now = datetime.now(UTC)
     return Trial(
         id=gid,
-        iteration_id=episode_id,
+        iteration_id=iteration_id,
         trial_sequence_no=1,
         stage=TrialStage.PLAN,
         status=status,
@@ -130,21 +130,21 @@ def test_assert_mission_open_fails_for_closed():
 
 def test_assert_episode_id_unique_in_mission():
     assert_iteration_id_unique_in_goal(
-        _request(episode_ids=("s1", "s2")), "s3"
+        _request(iteration_ids=("s1", "s2")), "s3"
     )
     with pytest.raises(TaskCenterInvariantViolation):
         assert_iteration_id_unique_in_goal(
-            _request(episode_ids=("s1",)), "s1"
+            _request(iteration_ids=("s1",)), "s1"
         )
 
 
 def test_assert_episode_sequence_contiguous():
-    assert_iteration_sequence_contiguous(_request(episode_ids=()), 1)
-    assert_iteration_sequence_contiguous(_request(episode_ids=("s1",)), 2)
+    assert_iteration_sequence_contiguous(_request(iteration_ids=()), 1)
+    assert_iteration_sequence_contiguous(_request(iteration_ids=("s1",)), 2)
     with pytest.raises(TaskCenterInvariantViolation):
-        assert_iteration_sequence_contiguous(_request(episode_ids=("s1",)), 1)
+        assert_iteration_sequence_contiguous(_request(iteration_ids=("s1",)), 1)
     with pytest.raises(TaskCenterInvariantViolation):
-        assert_iteration_sequence_contiguous(_request(episode_ids=("s1",)), 3)
+        assert_iteration_sequence_contiguous(_request(iteration_ids=("s1",)), 3)
 
 
 def test_assert_continuation_episode_predecessor_requires_succeeded_with_goal():
@@ -226,7 +226,7 @@ def test_episode_manager_registry_enforces_uniqueness():
     reg = IterationManagerRegistry()
 
     class _Fake:
-        episode_id = "s1"
+        iteration_id = "s1"
 
     reg.register(_Fake())  # type: ignore[arg-type]
     assert reg.get("s1") is not None

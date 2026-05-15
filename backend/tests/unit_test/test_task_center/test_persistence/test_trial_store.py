@@ -80,7 +80,7 @@ def test_list_for_episode_orders_by_attempt_sequence_no(
     seg_id = _seed_segment(mission_store, episode_store, task_center_run_id)
     g2 = attempt_store.insert(iteration_id=seg_id, trial_sequence_no=2)
     g1 = attempt_store.insert(iteration_id=seg_id, trial_sequence_no=1)
-    listed = attempt_store.list_for_episode(seg_id)
+    listed = attempt_store.list_for_iteration(seg_id)
     assert [g.id for g in listed] == [g1.id, g2.id]
 
 

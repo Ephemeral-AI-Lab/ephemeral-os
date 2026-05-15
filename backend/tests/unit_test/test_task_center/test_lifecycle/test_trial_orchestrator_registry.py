@@ -12,7 +12,7 @@ from task_center.trial.orchestrator_registry import (
 
 class _FakeOrchestrator:
     def __init__(self, attempt_id: str) -> None:
-        self.attempt_id = attempt_id
+        self.trial_id = attempt_id
 
 
 def test_registry_enforces_one_orchestrator_per_graph():

@@ -5,8 +5,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from task_center.context_engine.packet import ContextPriority
-from task_center.context_engine.recipes.attempt_landscape import (
-    failed_attempt_landscape_blocks,
+from task_center.context_engine.recipes.trial_landscape import (
+    failed_trial_landscape_blocks,
 )
 from task_center.trial import (
     Trial,
@@ -19,7 +19,7 @@ from task_center.trial import (
 def _attempt(
     sequence_no: int,
     *,
-    attempt_id: str | None = None,
+    trial_id: str | None = None,
     status: TrialStatus = TrialStatus.FAILED,
     task_specification: str | None = None,
     evaluation_criteria: tuple[str, ...] = (),
@@ -30,7 +30,7 @@ def _attempt(
 ) -> Trial:
     now = datetime.now(UTC)
     return Trial(
-        id=attempt_id or f"attempt-{sequence_no}",
+        id=trial_id or f"attempt-{sequence_no}",
         iteration_id="seg-1",
         trial_sequence_no=sequence_no,
         stage=TrialStage.CLOSED,
@@ -51,14 +51,14 @@ def _attempt(
 def test_excludes_current_attempt_even_if_current_is_failed():
     current = _attempt(
         3,
-        attempt_id="current",
+        trial_id="current",
         task_specification="current spec",
         evaluation_criteria=("current crit",),
         fail_reason=TrialFailReason.PLANNER_FAILED,
     )
-    blocks = failed_attempt_landscape_blocks(
-        current_attempt_id=current.id,
-        attempts=[
+    blocks = failed_trial_landscape_blocks(
+        current_trial_id=current.id,
+        trials=[
             current,
             _attempt(
                 2,
@@ -81,9 +81,9 @@ def test_excludes_current_attempt_even_if_current_is_failed():
 
 
 def test_renders_missing_spec_empty_criteria_and_unknown_reason():
-    blocks = failed_attempt_landscape_blocks(
-        current_attempt_id=None,
-        attempts=[_attempt(1)],
+    blocks = failed_trial_landscape_blocks(
+        current_trial_id=None,
+        trials=[_attempt(1)],
     )
 
     assert len(blocks) == 1
@@ -113,9 +113,9 @@ def test_renders_plan_kind_statuses_and_generator_summaries():
                 },
             }.get(task_id)
 
-    blocks = failed_attempt_landscape_blocks(
-        current_attempt_id=None,
-        attempts=[
+    blocks = failed_trial_landscape_blocks(
+        current_trial_id=None,
+        trials=[
             _attempt(
                 1,
                 task_specification="partial spec",
@@ -139,9 +139,9 @@ def test_renders_plan_kind_statuses_and_generator_summaries():
 
 
 def test_renders_full_plan_kind_for_submitted_nonpartial_attempt():
-    blocks = failed_attempt_landscape_blocks(
-        current_attempt_id=None,
-        attempts=[
+    blocks = failed_trial_landscape_blocks(
+        current_trial_id=None,
+        trials=[
             _attempt(
                 1,
                 task_specification="submitted spec",
@@ -175,9 +175,9 @@ def test_evaluator_failure_renders_evaluator_judgment():
                 }
             }.get(task_id)
 
-    blocks = failed_attempt_landscape_blocks(
-        current_attempt_id=None,
-        attempts=[
+    blocks = failed_trial_landscape_blocks(
+        current_trial_id=None,
+        trials=[
             _attempt(
                 1,
                 task_specification="submitted spec",
@@ -220,9 +220,9 @@ def test_generator_failure_hides_evaluator_and_keeps_blocked_task_in_status_only
                 },
             }.get(task_id)
 
-    blocks = failed_attempt_landscape_blocks(
-        current_attempt_id=None,
-        attempts=[
+    blocks = failed_trial_landscape_blocks(
+        current_trial_id=None,
+        trials=[
             _attempt(
                 1,
                 task_specification="submitted spec",
@@ -256,9 +256,9 @@ def test_generator_summaries_include_every_task_in_failed_attempt():
 
     task_ids = tuple(f"t-{i}" for i in range(14))
 
-    blocks = failed_attempt_landscape_blocks(
-        current_attempt_id=None,
-        attempts=[
+    blocks = failed_trial_landscape_blocks(
+        current_trial_id=None,
+        trials=[
             _attempt(
                 1,
                 task_specification="spec",
@@ -280,9 +280,9 @@ def test_generator_summary_text_is_not_truncated():
         def get_task(self, task_id: str):
             return {"status": "done", "summaries": [{"summary": "x" * 850}]}
 
-    blocks = failed_attempt_landscape_blocks(
-        current_attempt_id=None,
-        attempts=[
+    blocks = failed_trial_landscape_blocks(
+        current_trial_id=None,
+        trials=[
             _attempt(
                 1,
                 task_specification="spec",
@@ -298,9 +298,9 @@ def test_generator_summary_text_is_not_truncated():
 
 
 def test_all_failed_attempts_render_in_sequence_order():
-    blocks = failed_attempt_landscape_blocks(
-        current_attempt_id=None,
-        attempts=[
+    blocks = failed_trial_landscape_blocks(
+        current_trial_id=None,
+        trials=[
             _attempt(
                 sequence_no,
                 task_specification=f"spec-{sequence_no}",
@@ -311,7 +311,7 @@ def test_all_failed_attempts_render_in_sequence_order():
         ],
     )
 
-    assert [block.metadata["attempt_sequence_no"] for block in blocks] == [
+    assert [block.metadata["trial_sequence_no"] for block in blocks] == [
         str(sequence_no) for sequence_no in range(1, 9)
     ]
     assert all(block.priority == ContextPriority.HIGH for block in blocks)

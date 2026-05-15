@@ -18,7 +18,7 @@ def test_insert_returns_dto(mission_store, task_center_run_id):
     )
     assert isinstance(req, Goal)
     assert req.is_open
-    assert reqiteration_ids == ()
+    assert req.iteration_ids == ()
 
 
 def test_get_round_trip(mission_store, task_center_run_id):
@@ -32,7 +32,7 @@ def test_get_round_trip(mission_store, task_center_run_id):
     assert got.id == inserted.id
     assert got.goal == "g"
     assert got.requested_by_task_id == "t1"
-    assert gotiteration_ids == ()
+    assert got.iteration_ids == ()
 
 
 def test_append_episode_id_persists_tuple(mission_store, task_center_run_id):
@@ -41,11 +41,11 @@ def test_append_episode_id_persists_tuple(mission_store, task_center_run_id):
         requested_by_task_id="t1",
         goal="g",
     )
-    after_first = mission_store.append_episode_id(req.id, "s1")
-    after_second = mission_store.append_episode_id(req.id, "s2")
-    assert after_firstiteration_ids == ("s1",)
-    assert after_seconditeration_ids == ("s1", "s2")
-    assert isinstance(after_seconditeration_ids, tuple)
+    after_first = mission_store.append_iteration_id(req.id, "s1")
+    after_second = mission_store.append_iteration_id(req.id, "s2")
+    assert after_first.iteration_ids == ("s1",)
+    assert after_second.iteration_ids == ("s1", "s2")
+    assert isinstance(after_second.iteration_ids, tuple)
 
 
 def test_set_status_records_outcome_and_closed_at(

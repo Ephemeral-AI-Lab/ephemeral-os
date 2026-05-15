@@ -13,7 +13,7 @@ from task_center.trial.orchestrator import TrialOrchestrator
 from task_center.trial.orchestrator_registry import (
     TrialOrchestratorRegistry,
 )
-from task_center.trial.runtime import AgentLaunch, AttemptDeps
+from task_center.trial.runtime import AgentLaunch, TrialDeps
 from task_center.iteration import IterationManagerRegistry
 from task_center.iteration.state import IterationCreationReason
 from task_center.task_state import TaskCenterTaskStatus, PlannedGeneratorTask, PlannerSubmission
@@ -30,33 +30,33 @@ class _FakeLauncher:
 
 def _build_runtime_with_open_graph(
     *,
-    mission_store,
-    episode_store,
-    attempt_store,
+    goal_store,
+    iteration_store,
+    trial_store,
     task_store,
     task_center_run_id: str,
     composer,
 ):
-    request = mission_store.insert(
+    request = goal_store.insert(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="root",
         goal="outer",
     )
-    episode = episode_store.insert(
+    iteration = iteration_store.insert(
         goal_id=request.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="outer",
         trial_budget=2,
     )
-    mission_store.append_episode_id(request.id, episode.id)
-    attempt = attempt_store.insert(iteration_id=episode.id, trial_sequence_no=1)
-    episode_store.append_attempt_id(episode.id, attempt.id)
+    goal_store.append_iteration_id(request.id, iteration.id)
+    attempt = trial_store.insert(iteration_id=iteration.id, trial_sequence_no=1)
+    iteration_store.append_trial_id(iteration.id, attempt.id)
     registry = TrialOrchestratorRegistry()
-    runtime = AttemptDeps(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+    runtime = TrialDeps(
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        trial_store=trial_store,
         task_store=task_store,
         agent_launcher=_FakeLauncher(),
         orchestrator_registry=registry,
@@ -104,9 +104,9 @@ def test_router_delivers_success_to_waiting_parent(
     mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime, parent_attempt_id, parent_task_id = _build_runtime_with_open_graph(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         task_store=task_store,
         task_center_run_id=task_center_run_id,
         composer=composer,
@@ -120,12 +120,12 @@ def test_router_delivers_success_to_waiting_parent(
             requested_by_task_id=parent_task_id,
             outcome="success",
             final_iteration_id="seg-1",
-            final_attempt_id="attempt-1",
+            final_trial_id="attempt-1",
         )
     )
 
     assert result.status == "delivered"
-    assert result.parent_attempt_id == parent_attempt_id
+    assert result.parent_trial_id == parent_attempt_id
     parent_task = task_store.get_task(parent_task_id)
     assert parent_task is not None
     assert parent_task["status"] == TaskCenterTaskStatus.DONE.value
@@ -139,21 +139,21 @@ def test_router_delivers_failure_marks_parent_failed_and_blocks_dependents(
         requested_by_task_id="root",
         goal="outer",
     )
-    episode = episode_store.insert(
+    iteration = episode_store.insert(
         goal_id=request.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="outer",
         trial_budget=2,
     )
-    mission_store.append_episode_id(request.id, episode.id)
-    attempt = attempt_store.insert(iteration_id=episode.id, trial_sequence_no=1)
-    episode_store.append_attempt_id(episode.id, attempt.id)
+    mission_store.append_iteration_id(request.id, iteration.id)
+    attempt = attempt_store.insert(iteration_id=iteration.id, trial_sequence_no=1)
+    episode_store.append_trial_id(iteration.id, attempt.id)
     registry = TrialOrchestratorRegistry()
-    runtime = AttemptDeps(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+    runtime = TrialDeps(
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         task_store=task_store,
         agent_launcher=_FakeLauncher(),
         orchestrator_registry=registry,
@@ -193,7 +193,7 @@ def test_router_delivers_failure_marks_parent_failed_and_blocks_dependents(
             requested_by_task_id=parent_task_id,
             outcome="failed",
             final_iteration_id="seg-1",
-            final_attempt_id="attempt-1",
+            final_trial_id="attempt-1",
         )
     )
 
@@ -210,9 +210,9 @@ def test_router_treats_done_parent_as_already_delivered(
     mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime, _, parent_task_id = _build_runtime_with_open_graph(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         task_store=task_store,
         task_center_run_id=task_center_run_id,
         composer=composer,
@@ -228,7 +228,7 @@ def test_router_treats_done_parent_as_already_delivered(
             requested_by_task_id=parent_task_id,
             outcome="success",
             final_iteration_id="seg-1",
-            final_attempt_id="attempt-1",
+            final_trial_id="attempt-1",
         )
     )
 
@@ -242,9 +242,9 @@ def test_router_raises_when_parent_orchestrator_missing(
     its orchestrator must remain registered. A missing orchestrator at
     delivery time is a hard ``TaskCenterInvariantViolation``."""
     runtime, parent_attempt_id, parent_task_id = _build_runtime_with_open_graph(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         task_store=task_store,
         task_center_run_id=task_center_run_id,
         composer=composer,
@@ -260,7 +260,7 @@ def test_router_raises_when_parent_orchestrator_missing(
                 requested_by_task_id=parent_task_id,
                 outcome="success",
                 final_iteration_id="seg-1",
-                final_attempt_id="attempt-1",
+                final_trial_id="attempt-1",
             )
         )
 
@@ -273,9 +273,9 @@ def test_router_rejects_running_parent(
     mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime, _, parent_task_id = _build_runtime_with_open_graph(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         task_store=task_store,
         task_center_run_id=task_center_run_id,
         composer=composer,
@@ -290,7 +290,7 @@ def test_router_rejects_running_parent(
                 requested_by_task_id=parent_task_id,
                 outcome="success",
                 final_iteration_id="seg-1",
-                final_attempt_id="attempt-1",
+                final_trial_id="attempt-1",
             )
         )
 
@@ -299,9 +299,9 @@ def test_apply_closure_report_is_idempotent_on_second_delivery(
     mission_store, episode_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
     runtime, _, parent_task_id = _build_runtime_with_open_graph(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         task_store=task_store,
         task_center_run_id=task_center_run_id,
         composer=composer,
@@ -316,14 +316,14 @@ def test_apply_closure_report_is_idempotent_on_second_delivery(
         requested_by_task_id=parent_task_id,
         outcome="success",
         final_iteration_id="seg-1",
-        final_attempt_id="attempt-1",
+        final_trial_id="attempt-1",
     )
     # Find the orchestrator and apply the close report twice. Second call
     # must be silently idempotent (CAS miss).
     parent_attempt_id = parent_task_before["task_center_attempt_id"]
     orchestrator = runtime.orchestrator_registry.get_or_raise(parent_attempt_id)
-    orchestrator.apply_mission_closure_report(report)
-    orchestrator.apply_mission_closure_report(report)
+    orchestrator.apply_goal_closure_report(report)
+    orchestrator.apply_goal_closure_report(report)
 
     parent_task = task_store.get_task(parent_task_id)
     assert parent_task is not None
@@ -338,9 +338,9 @@ def test_router_routes_entry_mode_closure_report_through_controller(
     """Entry-mode close-report dispatch.
 
     When the parent task has ``task_center_attempt_id=None``, the
-    router must look up :attr:`AttemptDeps.entry_task_controller`
+    router must look up :attr:`TrialDeps.entry_task_controller`
     instead of the orchestrator registry, and route the close report into
-    the controller's ``apply_mission_closure_report``.
+    the controller's ``apply_goal_closure_report``.
     """
     from task_center.entry import EntryTaskController
     from task_center.task_state import TaskCenterTaskRole
@@ -364,10 +364,10 @@ def test_router_routes_entry_mode_closure_report_through_controller(
         task_center_run_id=task_center_run_id,
         task_store=task_store,
     )
-    runtime = AttemptDeps(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+    runtime = TrialDeps(
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         task_store=task_store,
         agent_launcher=_FakeLauncher(),
         orchestrator_registry=TrialOrchestratorRegistry(),
@@ -383,12 +383,12 @@ def test_router_routes_entry_mode_closure_report_through_controller(
             requested_by_task_id=entry_task_id,
             outcome="success",
             final_iteration_id="delegated-seg",
-            final_attempt_id="delegated-attempt",
+            final_trial_id="delegated-attempt",
         )
     )
 
     assert result.status == "delivered"
-    assert result.parent_attempt_id is None
+    assert result.parent_trial_id is None
     entry_task = task_store.get_task(entry_task_id)
     run = task_store.get_run(task_center_run_id)
     assert entry_task is not None

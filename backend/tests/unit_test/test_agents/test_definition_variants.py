@@ -18,9 +18,9 @@ def test_variant_round_trips_through_pydantic():
         context_recipe="planner",
         variants=[
             AgentVariant(
-                when="nested_mission_depth_gt_1",
+                when="nested_goal_depth_gt_1",
                 use="planner_full_only",
-                note="depth >1 — nested planner inside another mission's attempt",
+                note="depth >1 — nested planner inside another goal's attempt",
                 required_context_blocks=[
                     AgentSelectionBlock(
                         kind="launch_notice",

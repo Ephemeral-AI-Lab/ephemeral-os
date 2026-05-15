@@ -53,31 +53,31 @@ class _StubOrchestrator:
 
 def _build_handler(mission_store, episode_store, attempt_store):
     return GoalHandler(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         manager_registry=IterationManagerRegistry(),
-        config=TaskCenterLifecycleConfig(default_trial_budget=2),
+        config=TaskCenterLifecycleConfig(default_attempt_budget=2),
     )
 
 
 def _drive_segment(
     *,
     handler,
-    episode_id: str,
-    attempt_store: TrialStore,
+    iteration_id: str,
+    trial_store: TrialStore,
     verdict: tuple[
         TrialStatus, TrialFailReason | None, str | None
     ],
 ) -> None:
-    """Run a stub orchestrator against the manager-owned episode."""
+    """Run a stub orchestrator against the manager-owned iteration."""
     registry = handler._manager_registry  # type: ignore[attr-defined]
-    mgr: IterationManager | None = registry.get(episode_id)
+    mgr: IterationManager | None = registry.get(iteration_id)
     assert mgr is not None
     g = mgr.create_initial_attempt()
     stub = _StubOrchestrator(
         attempt=g,
-        attempt_store=attempt_store,
+        attempt_store=trial_store,
         on_attempt_closed=mgr.handle_attempt_closed,
         verdict=verdict,
     )
@@ -88,16 +88,16 @@ def test_smoke_terminal_success(
     mission_store, episode_store, attempt_store, task_center_run_id
 ):
     handler = _build_handler(mission_store, episode_store, attempt_store)
-    req = handler.create_mission(
+    req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="exec-1",
         goal="solve X",
     )
-    seg, _ = handler.create_initial_episode_with_manager(goal_id=req.id)
+    seg, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
     _drive_segment(
         handler=handler,
         iteration_id=seg.id,
-        attempt_store=attempt_store,
+        trial_store=attempt_store,
         verdict=(TrialStatus.PASSED, None, None),
     )
     final_request = mission_store.get(req.id)
@@ -111,12 +111,12 @@ def test_smoke_attempt_plan_failed(
     mission_store, episode_store, attempt_store, task_center_run_id
 ):
     handler = _build_handler(mission_store, episode_store, attempt_store)
-    req = handler.create_mission(
+    req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="exec-1",
         goal="solve X",
     )
-    seg, _ = handler.create_initial_episode_with_manager(goal_id=req.id)
+    seg, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
     # First attempt: fail with a generator error.
     registry = handler._manager_registry  # type: ignore[attr-defined]
     mgr = registry.get(seg.id)
@@ -133,7 +133,7 @@ def test_smoke_attempt_plan_failed(
     # Second (and budget-final) attempt: also fail.
     seg_after = episode_store.get(seg.id)
     assert seg_after is not None
-    g2_id = seg_aftertrial_ids[-1]
+    g2_id = seg_after.trial_ids[-1]
     attempt_store.set_plan_contract(
         g2_id, task_specification="spec2", evaluation_criteria=["b"], continuation_goal=None
     )
@@ -155,31 +155,31 @@ def test_smoke_success_continue_then_terminal(
     mission_store, episode_store, attempt_store, task_center_run_id
 ):
     handler = _build_handler(mission_store, episode_store, attempt_store)
-    req = handler.create_mission(
+    req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="exec-1",
         goal="initial-goal",
     )
-    seg1, _ = handler.create_initial_episode_with_manager(goal_id=req.id)
+    seg1, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
     _drive_segment(
         handler=handler,
         iteration_id=seg1.id,
-        attempt_store=attempt_store,
+        trial_store=attempt_store,
         verdict=(TrialStatus.PASSED, None, "next-goal"),
     )
     refreshed = mission_store.get(req.id)
     assert refreshed is not None
-    assert len(refreshediteration_ids) == 2
+    assert len(refreshed.iteration_ids) == 2
     assert refreshed.is_open
-    seg2_id = refreshediteration_ids[1]
+    seg2_id = refreshed.iteration_ids[1]
     seg2 = episode_store.get(seg2_id)
     assert seg2 is not None
     assert seg2.goal == "next-goal"
-    # Drive episode 2 to terminal success.
+    # Drive iteration 2 to terminal success.
     _drive_segment(
         handler=handler,
         iteration_id=seg2_id,
-        attempt_store=attempt_store,
+        trial_store=attempt_store,
         verdict=(TrialStatus.PASSED, None, None),
     )
     final_request = mission_store.get(req.id)

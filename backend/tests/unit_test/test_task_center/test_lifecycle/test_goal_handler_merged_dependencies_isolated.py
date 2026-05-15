@@ -1,7 +1,7 @@
 """Phase 4a regression test — Goal handler family merger.
 
 Pins the three merged classes (IterationFactory, IterationClosureRouter,
-GoalHandler) to the single `mission/handler.py` module post-merger and
+GoalHandler) to the single `goal/handler.py` module post-merger and
 enforces the iter4 file-size ceiling (Phase 4a: ≤300 LoC; relaxed to
 ≤480 LoC at Phase 7c after repository+ancestry absorb).
 
@@ -33,11 +33,11 @@ def test_three_merged_classes_live_in_single_module() -> None:
 def test_mission_handler_public_signature_preserved() -> None:
     expected_methods = {
         "__init__",
-        "create_mission",
-        "create_initial_episode_with_manager",
-        "create_continuation_episode_with_manager",
-        "handle_episode_closed",
-        "close_mission",
+        "create_goal",
+        "create_initial_iteration_with_manager",
+        "create_continuation_iteration_with_manager",
+        "handle_iteration_closed",
+        "close_goal",
     }
     actual = {
         name for name in vars(GoalHandler) if not name.startswith("_")
@@ -46,9 +46,9 @@ def test_mission_handler_public_signature_preserved() -> None:
     assert not missing, f"GoalHandler missing public methods: {missing}"
 
     init_params = list(inspect.signature(GoalHandler).parameters)
-    assert "mission_store" in init_params
-    assert "episode_store" in init_params
-    assert "attempt_store" in init_params
+    assert "goal_store" in init_params
+    assert "iteration_store" in init_params
+    assert "trial_store" in init_params
     assert "manager_registry" in init_params
     assert "config" in init_params
 
@@ -87,4 +87,4 @@ def test_mission_handler_loc_ceiling_phase_4a() -> None:
     passes at Phase 4a and continues to guard through Phase 7c.
     """
     loc = len(MISSION_HANDLER_PATH.read_text().splitlines())
-    assert loc <= 480, f"mission/handler.py LoC={loc} exceeds Phase 7c ceiling 480"
+    assert loc <= 480, f"goal/handler.py LoC={loc} exceeds Phase 7c ceiling 480"

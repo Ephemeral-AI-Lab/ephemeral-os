@@ -29,9 +29,9 @@ def deps_with_stores(
     mission_store, episode_store, attempt_store, task_store
 ) -> ContextEngineDeps:
     return ContextEngineDeps(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         task_store=task_store,
     )
 
@@ -47,12 +47,12 @@ def _seed_mission(mission_store, task_center_run_id, goal="goal"):
 def _seed_episode(
     episode_store,
     *,
-    mission_id: str,
+    goal_id: str,
     sequence_no: int,
     goal: str = "g",
 ):
     return episode_store.insert(
-        goal_id=mission_id,
+        goal_id=goal_id,
         sequence_no=sequence_no,
         creation_reason=IterationCreationReason.INITIAL,
         goal=goal,
@@ -96,7 +96,7 @@ def _seed_running_attempt(attempt_store, episode_id, *, sequence_no: int):
 
 
 # ---------------------------------------------------------------------------
-# episode-1 branch
+# iteration-1 branch
 # ---------------------------------------------------------------------------
 
 
@@ -105,26 +105,26 @@ def test_episode1_emits_one_merged_mission_episode_block(
     task_center_run_id,
 ):
     request = _seed_mission(mission_store, task_center_run_id, goal="overall")
-    episode = _seed_episode(
+    iteration = _seed_episode(
         episode_store, goal_id=request.id, sequence_no=1, goal="overall"
     )
-    g = _seed_running_attempt(attempt_store, episode.id, sequence_no=1)
+    g = _seed_running_attempt(attempt_store, iteration.id, sequence_no=1)
 
     packet = _planner_build(
         ContextScope(
-            goal_id=request.id, iteration_id=episode.id, attempt_id=g.id
+            goal_id=request.id, iteration_id=iteration.id, trial_id=g.id
         ),
         deps_with_stores,
     )
     kinds = [b.kind for b in packet.blocks]
-    assert kinds == ["episode_goal"]
+    assert kinds == ["iteration_statement"]
     episode_goal = packet.blocks[0]
     assert episode_goal.metadata["heading"] == "# Goal / Current Iteration"
     assert packet.target_id == g.id
 
 
 # ---------------------------------------------------------------------------
-# episode-2 / episode-N branch
+# iteration-2 / iteration-N branch
 # ---------------------------------------------------------------------------
 
 
@@ -146,22 +146,22 @@ def test_episode2_emits_mission_prior_results_and_current_episode(
 
     packet = _planner_build(
         ContextScope(
-            goal_id=request.id, iteration_id=episode2.id, attempt_id=g.id
+            goal_id=request.id, iteration_id=episode2.id, trial_id=g.id
         ),
         deps_with_stores,
     )
     kinds = [b.kind for b in packet.blocks]
     assert kinds == [
-        "mission_goal",
-        "prior_episode_specification",
-        "prior_episode_summary",
-        "episode_goal",
+        "goal_statement",
+        "prior_iteration_specification",
+        "prior_iteration_summary",
+        "iteration_statement",
     ]
-    assert packet.blocks[0].metadata["heading"] == "# Goal"
+    assert packet.blocks[0].metadata["group_heading"] == "# Goal"
     prior_spec = packet.blocks[1]
     assert prior_spec.priority == ContextPriority.HIGH
-    assert prior_spec.metadata["episode_sequence_no"] == "1"
-    assert prior_spec.metadata["group_heading"] == "# Previous Iteration Results"
+    assert prior_spec.metadata["iteration_sequence_no"] == "1"
+    assert prior_spec.metadata["group_heading"] == "# Goal"
     assert prior_spec.text == "episode1 spec"
     episode_goal = packet.blocks[3]
     assert episode_goal.metadata["heading"] == "# Current Iteration"
@@ -187,18 +187,18 @@ def test_episode3_emits_two_pairs_with_priority_split(
 
     packet = _planner_build(
         ContextScope(
-            goal_id=request.id, iteration_id=episode3.id, attempt_id=g.id
+            goal_id=request.id, iteration_id=episode3.id, trial_id=g.id
         ),
         deps_with_stores,
     )
-    # Two prior episodes in sequence order; immediate prior is HIGH.
+    # Two prior iterations in sequence order; immediate prior is HIGH.
     prior_specs = [
-        b for b in packet.blocks if b.kind == "prior_episode_specification"
+        b for b in packet.blocks if b.kind == "prior_iteration_specification"
     ]
     assert len(prior_specs) == 2
-    assert prior_specs[0].metadata["episode_sequence_no"] == "1"
+    assert prior_specs[0].metadata["iteration_sequence_no"] == "1"
     assert prior_specs[0].priority == ContextPriority.MEDIUM
-    assert prior_specs[1].metadata["episode_sequence_no"] == "2"
+    assert prior_specs[1].metadata["iteration_sequence_no"] == "2"
     assert prior_specs[1].priority == ContextPriority.HIGH
 
 
@@ -206,7 +206,7 @@ def test_missing_prior_spec_raises_context_engine_error(
     deps_with_stores, mission_store, episode_store, attempt_store,
     task_center_run_id,
 ):
-    """Closed episode-1 with task_specification still null is an invariant
+    """Closed iteration-1 with task_specification still null is an invariant
     violation; recipe must raise."""
     request = _seed_mission(mission_store, task_center_run_id)
     episode1 = _seed_episode(
@@ -224,14 +224,14 @@ def test_missing_prior_spec_raises_context_engine_error(
     with pytest.raises(ContextEngineError):
         _planner_build(
             ContextScope(
-                goal_id=request.id, iteration_id=episode2.id, attempt_id=g.id
+                goal_id=request.id, iteration_id=episode2.id, trial_id=g.id
             ),
             deps_with_stores,
         )
 
 
 # ---------------------------------------------------------------------------
-# Failed-attempt landscape blocks (current episode retries)
+# Failed-attempt landscape blocks (current iteration retries)
 # ---------------------------------------------------------------------------
 
 
@@ -240,28 +240,28 @@ def test_three_failed_attempts_emit_three_high_priority_blocks(
     task_center_run_id,
 ):
     request = _seed_mission(mission_store, task_center_run_id)
-    episode = _seed_episode(
+    iteration = _seed_episode(
         episode_store, goal_id=request.id, sequence_no=1, goal="g"
     )
     for n in (1, 2, 3):
-        _seed_failed_attempt(attempt_store, episode.id, sequence_no=n)
-    current_attempt = _seed_running_attempt(attempt_store, episode.id, sequence_no=4)
+        _seed_failed_attempt(attempt_store, iteration.id, sequence_no=n)
+    current_attempt = _seed_running_attempt(attempt_store, iteration.id, sequence_no=4)
 
     packet = _planner_build(
         ContextScope(
             goal_id=request.id,
-            iteration_id=episode.id,
-            attempt_id=current_attempt.id,
+            iteration_id=iteration.id,
+            trial_id=current_attempt.id,
         ),
         deps_with_stores,
     )
     failed_blocks = [
-        b for b in packet.blocks if b.kind == "failed_attempt_landscape"
+        b for b in packet.blocks if b.kind == "failed_trial_landscape"
     ]
     assert len(failed_blocks) == 3
     for block in failed_blocks:
         assert block.priority == ContextPriority.HIGH
-    assert [b.metadata["attempt_sequence_no"] for b in failed_blocks] == [
+    assert [b.metadata["trial_sequence_no"] for b in failed_blocks] == [
         "1",
         "2",
         "3",
@@ -273,10 +273,10 @@ def test_failed_attempt_landscape_includes_plan_type_statuses_and_summaries(
     task_center_run_id,
 ):
     request = _seed_mission(mission_store, task_center_run_id)
-    episode = _seed_episode(
+    iteration = _seed_episode(
         episode_store, goal_id=request.id, sequence_no=1, goal="g"
     )
-    failed = attempt_store.insert(iteration_id=episode.id, trial_sequence_no=1)
+    failed = attempt_store.insert(iteration_id=iteration.id, trial_sequence_no=1)
     attempt_store.set_plan_contract(
         failed.id,
         task_specification="partial failed spec",
@@ -294,7 +294,7 @@ def test_failed_attempt_landscape_includes_plan_type_statuses_and_summaries(
         summaries=[{"summary": "implemented A"}],
         needs=[],
         task_center_attempt_id=failed.id,
-        spawn_reason="attempt_generator",
+        spawn_reason="trial_generator",
     )
     task_store.upsert_task(
         task_id="gen-b",
@@ -306,7 +306,7 @@ def test_failed_attempt_landscape_includes_plan_type_statuses_and_summaries(
         summaries=[{"summary": "B failed after creating fixture"}],
         needs=[],
         task_center_attempt_id=failed.id,
-        spawn_reason="attempt_generator",
+        spawn_reason="trial_generator",
     )
     attempt_store.close(
         failed.id,
@@ -314,19 +314,19 @@ def test_failed_attempt_landscape_includes_plan_type_statuses_and_summaries(
         fail_reason=TrialFailReason.EVALUATOR_FAILED,
         closed_at=datetime.now(UTC),
     )
-    current_attempt = _seed_running_attempt(attempt_store, episode.id, sequence_no=2)
+    current_attempt = _seed_running_attempt(attempt_store, iteration.id, sequence_no=2)
 
     packet = _planner_build(
         ContextScope(
             goal_id=request.id,
-            iteration_id=episode.id,
-            attempt_id=current_attempt.id,
+            iteration_id=iteration.id,
+            trial_id=current_attempt.id,
         ),
         deps_with_stores,
     )
 
     failed_blocks = [
-        b for b in packet.blocks if b.kind == "failed_attempt_landscape"
+        b for b in packet.blocks if b.kind == "failed_trial_landscape"
     ]
     assert len(failed_blocks) == 1
     text = failed_blocks[0].text
@@ -344,29 +344,29 @@ def test_all_failed_attempts_render_as_high_priority_blocks(
     task_center_run_id,
 ):
     request = _seed_mission(mission_store, task_center_run_id)
-    episode = _seed_episode(
+    iteration = _seed_episode(
         episode_store, goal_id=request.id, sequence_no=1, goal="g"
     )
     total = 8
     for n in range(1, total + 1):
-        _seed_failed_attempt(attempt_store, episode.id, sequence_no=n)
+        _seed_failed_attempt(attempt_store, iteration.id, sequence_no=n)
     current_attempt = _seed_running_attempt(
-        attempt_store, episode.id, sequence_no=total + 1
+        attempt_store, iteration.id, sequence_no=total + 1
     )
 
     packet = _planner_build(
         ContextScope(
             goal_id=request.id,
-            iteration_id=episode.id,
-            attempt_id=current_attempt.id,
+            iteration_id=iteration.id,
+            trial_id=current_attempt.id,
         ),
         deps_with_stores,
     )
     failed_blocks = [
-        b for b in packet.blocks if b.kind == "failed_attempt_landscape"
+        b for b in packet.blocks if b.kind == "failed_trial_landscape"
     ]
     assert len(failed_blocks) == total
-    assert [b.metadata["attempt_sequence_no"] for b in failed_blocks] == [
+    assert [b.metadata["trial_sequence_no"] for b in failed_blocks] == [
         str(n) for n in range(1, total + 1)
     ]
     assert all(block.priority == ContextPriority.HIGH for block in failed_blocks)

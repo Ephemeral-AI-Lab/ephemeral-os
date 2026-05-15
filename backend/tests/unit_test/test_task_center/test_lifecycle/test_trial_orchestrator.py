@@ -17,7 +17,7 @@ from task_center.trial.orchestrator_registry import (
 )
 from task_center.trial.runtime import (
     AgentLaunch,
-    AttemptDeps,
+    TrialDeps,
 )
 from task_center.task_state import EvaluatorSubmission, GeneratorSubmission, TaskCenterTaskRole, TaskCenterTaskStatus, PlannedGeneratorTask, PlannerFailureSubmission, PlannerSubmission
 from task_center._core.types import evaluator_task_id, generator_task_id, planner_task_id
@@ -60,14 +60,14 @@ def _seed_graph(mission_store, episode_store, attempt_store, task_center_run_id)
         requested_by_task_id="outer-task",
         goal="solve the task",
     )
-    episode = episode_store.insert(
+    iteration = episode_store.insert(
         goal_id=request.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="solve the task",
         trial_budget=2,
     )
-    return attempt_store.insert(iteration_id=episode.id, trial_sequence_no=1)
+    return attempt_store.insert(iteration_id=iteration.id, trial_sequence_no=1)
 
 
 def _build_orchestrator(
@@ -85,10 +85,10 @@ def _build_orchestrator(
     )
     launcher = launcher or _FakeLauncher()
     registry = TrialOrchestratorRegistry()
-    runtime = AttemptDeps(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+    runtime = TrialDeps(
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher,
         orchestrator_registry=registry,
@@ -465,13 +465,13 @@ def test_mission_closure_report_success_resumes_waiting_generator(
         status=TaskCenterTaskStatus.WAITING_MISSION.value,
     )
 
-    orchestrator.apply_mission_closure_report(
+    orchestrator.apply_goal_closure_report(
         GoalClosureReport(
             goal_id="delegated-1",
             requested_by_task_id=task_id,
             outcome="success",
-            final_iteration_id="episode-1",
-            final_attempt_id="attempt-1",
+            final_iteration_id="iteration-1",
+            final_trial_id="attempt-1",
         )
     )
 
@@ -509,13 +509,13 @@ def test_mission_closure_report_failure_blocks_dependents_and_closes_graph(
         status=TaskCenterTaskStatus.WAITING_MISSION.value,
     )
 
-    orchestrator.apply_mission_closure_report(
+    orchestrator.apply_goal_closure_report(
         GoalClosureReport(
             goal_id="delegated-1",
             requested_by_task_id=task_id,
             outcome="failed",
-            final_iteration_id="episode-1",
-            final_attempt_id="attempt-1",
+            final_iteration_id="iteration-1",
+            final_trial_id="attempt-1",
         )
     )
 
@@ -678,4 +678,4 @@ def test_orchestrator_never_creates_retry_attempt(
     )
     orchestrator.apply_generator_submission(_generator_failure(attempt.id, "a"))
 
-    assert len(attempt_store.list_for_episode(attempt.iteration_id)) == 1
+    assert len(attempt_store.list_for_iteration(attempt.iteration_id)) == 1

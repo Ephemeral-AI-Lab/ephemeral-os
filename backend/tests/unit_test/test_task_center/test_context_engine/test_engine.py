@@ -41,9 +41,9 @@ def deps() -> ContextEngineDeps:
             return None
 
     return ContextEngineDeps(
-        mission_store=_Stub(),  # type: ignore[arg-type]
-        episode_store=_Stub(),  # type: ignore[arg-type]
-        attempt_store=_Stub(),  # type: ignore[arg-type]
+        goal_store=_Stub(),  # type: ignore[arg-type]
+        iteration_store=_Stub(),  # type: ignore[arg-type]
+        trial_store=_Stub(),  # type: ignore[arg-type]
         task_store=_Stub(),  # type: ignore[arg-type]
     )
 
@@ -52,15 +52,15 @@ def _ok_recipe(recipe_id: str, *, required: frozenset[str]) -> ContextRecipe:
     def _build(scope: ContextScope, deps: ContextEngineDeps) -> ContextPacket:
         return ContextPacket(
             target_role="planner",
-            target_id=scope.attempt_id,
+            target_id=scope.trial_id,
             canonical_refs=ContextRefs(
-                goal_id=scope.mission_id,
-                iteration_id=scope.episode_id,
-                attempt_id=scope.attempt_id,
+                goal_id=scope.goal_id,
+                iteration_id=scope.iteration_id,
+                trial_id=scope.trial_id,
             ),
             blocks=[
                 ContextBlock(
-                    kind="episode_goal",
+                    kind="iteration_statement",
                     priority=ContextPriority.REQUIRED,
                     text="ok",
                 )
@@ -78,7 +78,7 @@ def test_unknown_recipe_id_raises_at_build(deps):
 
 def test_engine_validates_scope_before_calling_recipe(deps):
     RecipeRegistry.register(
-        _ok_recipe("r1", required=frozenset({"mission_id", "episode_id"}))
+        _ok_recipe("r1", required=frozenset({"goal_id", "iteration_id"}))
     )
     with pytest.raises(RecipeScopeError):
         ContextEngine(deps).build("r1", ContextScope(goal_id="r"))
@@ -88,15 +88,15 @@ def test_engine_dispatches_to_registered_recipe(deps):
     RecipeRegistry.register(
         _ok_recipe(
             "r1",
-            required=frozenset({"mission_id", "episode_id", "attempt_id"}),
+            required=frozenset({"goal_id", "iteration_id", "trial_id"}),
         )
     )
     packet = ContextEngine(deps).build(
         "r1",
-        ContextScope(goal_id="r", iteration_id="s", attempt_id="g"),
+        ContextScope(goal_id="r", iteration_id="s", trial_id="g"),
     )
     assert packet.target_id == "g"
-    assert packet.canonical_refs.mission_id == "r"
+    assert packet.canonical_refs.goal_id == "r"
 
 
 def test_recipe_registry_list_ids_returns_sorted():

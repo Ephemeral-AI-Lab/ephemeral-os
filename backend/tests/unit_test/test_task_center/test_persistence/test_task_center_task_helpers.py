@@ -28,7 +28,7 @@ def _upsert(
 
 
 def test_get_task_returns_serialized_task(task_store):
-    _upsert(task_store, task_id="g1:gen:a", attempt_id="g1")
+    _upsert(task_store, task_id="g1:gen:a", trial_id="g1")
 
     task = task_store.get_task("g1:gen:a")
 
@@ -53,8 +53,8 @@ def test_request_and_run_helpers_return_serialized_rows(task_store):
 
 
 def test_list_tasks_for_attempt_filters_by_attempt_id(task_store):
-    _upsert(task_store, task_id="g1:planner", attempt_id="g1", role="planner")
-    _upsert(task_store, task_id="g2:planner", attempt_id="g2", role="planner")
+    _upsert(task_store, task_id="g1:planner", trial_id="g1", role="planner")
+    _upsert(task_store, task_id="g2:planner", trial_id="g2", role="planner")
 
     tasks = task_store.list_tasks_for_attempt("g1")
 
@@ -62,7 +62,7 @@ def test_list_tasks_for_attempt_filters_by_attempt_id(task_store):
 
 
 def test_set_task_status_updates_status_and_appends_summary(task_store):
-    _upsert(task_store, task_id="g1:gen:a", attempt_id="g1")
+    _upsert(task_store, task_id="g1:gen:a", trial_id="g1")
 
     updated = task_store.set_task_status(
         "g1:gen:a", status="done", summary={"summary": "ok"}
@@ -76,7 +76,7 @@ def test_context_packet_id_round_trips_and_updates(task_store):
     _upsert(
         task_store,
         task_id="g1:gen:a",
-        attempt_id="g1",
+        trial_id="g1",
         context_packet_id="packet-1",
     )
 
@@ -91,9 +91,9 @@ def test_context_packet_id_round_trips_and_updates(task_store):
 
 
 def test_list_generator_tasks_excludes_planner_and_evaluator(task_store):
-    _upsert(task_store, task_id="g1:planner", attempt_id="g1", role="planner")
-    _upsert(task_store, task_id="g1:gen:a", attempt_id="g1", role="generator")
-    _upsert(task_store, task_id="g1:evaluator", attempt_id="g1", role="evaluator")
+    _upsert(task_store, task_id="g1:planner", trial_id="g1", role="planner")
+    _upsert(task_store, task_id="g1:gen:a", trial_id="g1", role="generator")
+    _upsert(task_store, task_id="g1:evaluator", trial_id="g1", role="evaluator")
 
     tasks = task_store.list_generator_tasks_for_attempt("g1")
 

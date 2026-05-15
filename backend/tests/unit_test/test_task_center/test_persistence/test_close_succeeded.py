@@ -75,7 +75,7 @@ def test_failed_close_leaves_denormalized_fields_null(
 def test_close_succeeded_unknown_segment_raises(episode_store):
     with pytest.raises(LookupError):
         episode_store.close_succeeded(
-            "no-such-episode",
+            "no-such-iteration",
             task_specification="x",
             task_summary="y",
         )
@@ -104,7 +104,7 @@ def test_evaluator_pass_summary_helper(
         summaries=[],
         needs=[],
         task_center_attempt_id=attempt_id,
-        spawn_reason="attempt_evaluator",
+        spawn_reason="trial_evaluator",
     )
     task_store.set_task_status(
         "ev-1",

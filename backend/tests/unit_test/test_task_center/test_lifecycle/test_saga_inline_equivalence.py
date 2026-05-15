@@ -22,7 +22,7 @@ from task_center.goal.starter import GoalStarter
 
 
 def test_saga_module_is_gone() -> None:
-    for path in ("task_center.saga", "task_center.mission.saga"):
+    for path in ("task_center.saga", "task_center.goal.saga"):
         with pytest.raises(ModuleNotFoundError):
             importlib.import_module(path)
 
@@ -31,9 +31,9 @@ def test_compensate_failed_start_signature_preserved() -> None:
     sig = inspect.signature(GoalStarter._compensate_failed_start)
     expected = {
         "self",
-        "mission",
-        "episode",
-        "initial_attempt_id",
+        "goal",
+        "iteration",
+        "initial_trial_id",
         "parent_task_id",
     }
     assert set(sig.parameters) == expected

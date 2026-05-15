@@ -320,7 +320,7 @@ class LaunchBuilder:
             scope=ContextScope.for_planner(
                 goal_id=iteration.goal_id,
                 iteration_id=iteration.id,
-                attempt_id=attempt.id,
+                trial_id=attempt.id,
             ),
             task_id=task_id,
             task_center_run_id=self.runtime.run_id_for_attempt(attempt),
@@ -344,7 +344,7 @@ class LaunchBuilder:
             scope=ContextScope.for_generator(
                 goal_id=iteration.goal_id,
                 iteration_id=iteration.id,
-                attempt_id=attempt.id,
+                trial_id=attempt.id,
                 task_id=task_id,
             ),
             task_id=task_id,
@@ -362,7 +362,7 @@ class LaunchBuilder:
             scope=ContextScope.for_evaluator(
                 goal_id=iteration.goal_id,
                 iteration_id=iteration.id,
-                attempt_id=attempt.id,
+                trial_id=attempt.id,
             ),
             task_id=task_id,
             task_center_run_id=self.runtime.run_id_for_attempt(attempt),

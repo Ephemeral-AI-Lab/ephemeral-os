@@ -39,6 +39,6 @@ def test_initialize_db_drops_legacy_attempt_table(tmp_path, monkeypatch):
     insp = inspect(eng)
     tables = set(insp.get_table_names())
     assert "task_center_attempt" not in tables
-    assert "missions" in tables
-    assert "episodes" in tables
+    assert "goals" in tables
+    assert "iterations" in tables
     assert "attempts" in tables

@@ -70,9 +70,9 @@ def stores() -> Iterator[_TestStoreBundle]:
         engine=engine,
         session_factory=session_factory,
         task_store=TaskCenterStore(),
-        mission_store=GoalStore(),
-        episode_store=IterationStore(),
-        attempt_store=TrialStore(),
+        goal_store=GoalStore(),
+        iteration_store=IterationStore(),
+        trial_store=TrialStore(),
     )
     for store in (
         bundle.task_store,

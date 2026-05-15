@@ -44,9 +44,9 @@ def deps_with_packet_store(
     mission_store, episode_store, attempt_store, task_store, packet_store
 ) -> ContextEngineDeps:
     return ContextEngineDeps(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         task_store=task_store,
         context_packet_store=packet_store,
     )
@@ -56,15 +56,15 @@ def _seed_parent_packet(packet_store) -> ContextPacket:
     packet = ContextPacket(
         target_role="planner",
         target_id="g-parent",
-        canonical_refs=ContextRefs(goal_id="req-A", attempt_id="g-parent"),
+        canonical_refs=ContextRefs(goal_id="req-A", trial_id="g-parent"),
         blocks=[
             ContextBlock(
-                kind="episode_goal",
+                kind="iteration_statement",
                 priority=ContextPriority.REQUIRED,
                 text="parent goal",
             ),
             ContextBlock(
-                kind="prior_episode_summary",
+                kind="prior_iteration_summary",
                 priority=ContextPriority.HIGH,
                 text="parent summary",
             ),
@@ -95,7 +95,7 @@ def _seed_parent_task(task_store, *, task_center_run_id, task_id, question):
         summaries=[],
         needs=[],
         task_center_attempt_id="g-parent",
-        spawn_reason="attempt_generator",
+        spawn_reason="trial_generator",
     )
 
 
@@ -157,7 +157,7 @@ def test_resolver_same_shape_target_role_resolver(
     )
     packet = _resolver_build(scope, deps_with_packet_store)
     assert packet.target_role == "resolver"
-    assert packet.blocks[0].kind == "episode_goal"
+    assert packet.blocks[0].kind == "iteration_statement"
 
 
 def test_missing_parent_packet_raises_context_engine_error(
@@ -183,9 +183,9 @@ def test_missing_packet_store_raises_context_engine_error(
     mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
     deps = ContextEngineDeps(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         task_store=task_store,
         context_packet_store=None,
     )

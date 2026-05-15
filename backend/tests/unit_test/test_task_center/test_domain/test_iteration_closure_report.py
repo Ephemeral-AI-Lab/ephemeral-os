@@ -25,61 +25,61 @@ def test_success_continue_carries_goal():
 
 def test_attempt_plan_failed_carries_history():
     e1 = PriorTrialEntry(
-        attempt_id="g1",
+        trial_id="g1",
         trial_sequence_no=1,
         task_specification=None,
         evaluation_criteria=(),
         fail_reason=TrialFailReason.GENERATOR_FAILED,
-        attempt_summary_id=None,
+        trial_summary_id=None,
         failure_landscape=None,
     )
-    o = TrialPlanFailed(failure_summary="bad", attempted_plan_history=(e1,))
-    assert o.kind == "attempt_plan_failed"
-    assert o.attempted_plan_history == (e1,)
+    o = TrialPlanFailed(failure_summary="bad", prior_trial_history=(e1,))
+    assert o.kind == "trial_plan_failed"
+    assert o.prior_trial_history == (e1,)
 
 
-def test_attempted_plan_history_orders_by_sequence_no():
+def test_prior_trial_history_orders_by_sequence_no():
     e1 = PriorTrialEntry(
-        attempt_id="g1",
+        trial_id="g1",
         trial_sequence_no=1,
         task_specification=None,
         evaluation_criteria=(),
         fail_reason=None,
-        attempt_summary_id=None,
+        trial_summary_id=None,
         failure_landscape=None,
     )
     e2 = PriorTrialEntry(
-        attempt_id="g2",
+        trial_id="g2",
         trial_sequence_no=2,
         task_specification=None,
         evaluation_criteria=(),
         fail_reason=None,
-        attempt_summary_id=None,
+        trial_summary_id=None,
         failure_landscape=None,
     )
-    seqs = [etrial_sequence_no for e in (e1, e2)]
+    seqs = [e.trial_sequence_no for e in (e1, e2)]
     assert seqs == sorted(seqs)
 
 
 def test_phase06_summary_fields_default_to_none():
     """Phase 06 fills these. Phase 01 must surface them as ``None``, not absent."""
     e = PriorTrialEntry(
-        attempt_id="g1",
+        trial_id="g1",
         trial_sequence_no=1,
         task_specification=None,
         evaluation_criteria=(),
         fail_reason=None,
-        attempt_summary_id=None,
+        trial_summary_id=None,
         failure_landscape=None,
     )
-    assert e.attempt_summary_id is None
+    assert e.trial_summary_id is None
     assert e.failure_landscape is None
 
 
 def test_closure_report_carries_outcome():
     rep = IterationClosureReport(
         iteration_id="s1",
-        final_attempt_id="g1",
+        final_trial_id="g1",
         outcome=TerminalSuccess(),
     )
     assert rep.outcome.kind == "terminal_success"

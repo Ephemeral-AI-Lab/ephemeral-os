@@ -12,33 +12,33 @@ def test_assert_fields_passes_when_all_present():
     scope = ContextScope(
         goal_id="r",
         iteration_id="s",
-        attempt_id="g",
+        trial_id="g",
         task_id="t",
     )
-    scope.assert_fields(frozenset({"mission_id", "episode_id", "attempt_id"}))
+    scope.assert_fields(frozenset({"goal_id", "iteration_id", "trial_id"}))
 
 
-def test_assert_fields_rejects_missing_episode():
+def test_assert_fields_rejects_missing_iteration():
     scope = ContextScope(goal_id="r")
     with pytest.raises(RecipeScopeError) as exc:
-        scope.assert_fields(frozenset({"mission_id", "episode_id"}))
-    assert "episode_id" in str(exc.value)
+        scope.assert_fields(frozenset({"goal_id", "iteration_id"}))
+    assert "iteration_id" in str(exc.value)
 
 
 def test_assert_fields_lists_all_missing_fields_sorted():
     scope = ContextScope(goal_id="r")
     with pytest.raises(RecipeScopeError) as exc:
         scope.assert_fields(
-            frozenset({"task_id", "episode_id", "attempt_id"})
+            frozenset({"task_id", "iteration_id", "trial_id"})
         )
     # Sorted output for deterministic error messages.
     msg = str(exc.value)
-    assert "attempt_id" in msg
-    assert "episode_id" in msg
+    assert "iteration_id" in msg
     assert "task_id" in msg
+    assert "trial_id" in msg
     # Check sorted ordering.
-    assert msg.index("attempt_id") < msg.index("episode_id")
-    assert msg.index("episode_id") < msg.index("task_id")
+    assert msg.index("iteration_id") < msg.index("task_id")
+    assert msg.index("task_id") < msg.index("trial_id")
 
 
 def test_helper_scope_fields_round_trip():
@@ -50,6 +50,6 @@ def test_helper_scope_fields_round_trip():
     )
     scope.assert_fields(
         frozenset(
-            {"mission_id", "task_id", "parent_packet_id", "parent_task_id"}
+            {"goal_id", "task_id", "parent_packet_id", "parent_task_id"}
         )
     )

@@ -16,7 +16,7 @@ from task_center.context_engine.packet import (
 def test_block_required_priority_rejects_blank_text():
     with pytest.raises(ValidationError):
         ContextBlock(
-            kind="episode_goal",
+            kind="iteration_statement",
             priority=ContextPriority.REQUIRED,
             text="   ",
         )
@@ -26,7 +26,7 @@ def test_block_high_priority_accepts_blank_text():
     """Only required blocks enforce non-blank — high/medium/low can carry
     structured placeholders."""
     block = ContextBlock(
-        kind="prior_episode_summary",
+        kind="prior_iteration_summary",
         priority=ContextPriority.HIGH,
         text="",
     )
@@ -35,12 +35,12 @@ def test_block_high_priority_accepts_blank_text():
 
 def test_block_metadata_round_trip():
     block = ContextBlock(
-        kind="prior_episode_specification",
+        kind="prior_iteration_specification",
         priority=ContextPriority.HIGH,
         text="spec",
-        metadata={"episode_sequence_no": "2", "source_label": "accepted"},
+        metadata={"iteration_sequence_no": "2", "source_label": "accepted"},
     )
-    assert block.metadata["episode_sequence_no"] == "2"
+    assert block.metadata["iteration_sequence_no"] == "2"
     assert block.metadata["source_label"] == "accepted"
 
 
@@ -61,16 +61,16 @@ def test_packet_serialization_round_trip():
         canonical_refs=ContextRefs(
             goal_id="req",
             iteration_id="seg",
-            attempt_id="g",
+            trial_id="g",
             task_id="t",
         ),
         blocks=[
             ContextBlock(
-                kind="episode_goal",
+                kind="iteration_statement",
                 priority=ContextPriority.REQUIRED,
                 text="goal text",
                 source_id="seg",
-                source_kind="episode",
+                source_kind="iteration",
             )
         ],
         metadata={"is_initial_episode": "true"},

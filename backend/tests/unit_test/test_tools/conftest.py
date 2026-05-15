@@ -189,9 +189,9 @@ def composer(
     register_test_agents,
 ) -> ContextComposer:
     deps = ContextEngineDeps(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         task_store=task_store,
         context_packet_store=context_packet_store,
     )

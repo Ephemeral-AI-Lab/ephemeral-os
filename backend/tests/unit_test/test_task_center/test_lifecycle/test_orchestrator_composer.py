@@ -1,6 +1,6 @@
 """US-014: orchestrator + dispatcher composer wiring.
 
-Confirms that when ``AttemptDeps.composer`` is set, the orchestrator
+Confirms that when ``TrialDeps.composer`` is set, the orchestrator
 asks the composer for the planner agent name and rendered_prompt, and that
 ``planner_full_only`` is selected when ancestry has a partial-plan caller.
 """
@@ -32,7 +32,7 @@ from task_center.trial.orchestrator_registry import (
 )
 from task_center.trial.runtime import (
     AgentLaunch,
-    AttemptDeps,
+    TrialDeps,
 )
 from task_center.iteration.state import IterationCreationReason
 
@@ -75,19 +75,19 @@ def _clear_definitions() -> None:
 @pytest.fixture
 def composer_runtime(
     mission_store, episode_store, attempt_store, task_store
-) -> tuple[AttemptDeps, _RecordingLauncher]:
+) -> tuple[TrialDeps, _RecordingLauncher]:
     launcher = _RecordingLauncher()
     deps = ContextEngineDeps(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         task_store=task_store,
     )
     composer = ContextComposer.default(ContextEngine(deps))
-    runtime = AttemptDeps(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+    runtime = TrialDeps(
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher,
         orchestrator_registry=TrialOrchestratorRegistry(),
@@ -106,7 +106,7 @@ def _register_planner_agents() -> None:
         terminals=["submit_full_plan", "submit_partial_plan"],
         variants=[
             AgentVariant(
-                when="nested_mission_depth_gt_1",
+                when="nested_goal_depth_gt_1",
                 use="planner_full_only",
             )
         ],
@@ -131,7 +131,7 @@ def _seed_request_segment_graph(
         requested_by_task_id="t-entry",
         goal="overall",
     )
-    episode = episode_store.insert(
+    iteration = episode_store.insert(
         goal_id=request.id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
@@ -139,9 +139,9 @@ def _seed_request_segment_graph(
         trial_budget=2,
     )
     attempt = attempt_store.insert(
-        iteration_id=episode.id, trial_sequence_no=1
+        iteration_id=iteration.id, trial_sequence_no=1
     )
-    return request, episode, attempt
+    return request, iteration, attempt
 
 
 def _setup_partial_plan_ancestor(
@@ -183,7 +183,7 @@ def _setup_partial_plan_ancestor(
         summaries=[],
         needs=[],
         task_center_attempt_id=caller_attempt.id,
-        spawn_reason="attempt_generator",
+        spawn_reason="trial_generator",
     )
     return parent_req
 
@@ -198,7 +198,7 @@ def test_planner_launched_via_composer_uses_base_when_no_ancestor(
 ):
     runtime, launcher = composer_runtime
     _register_planner_agents()
-    request, episode, attempt = _seed_request_segment_graph(
+    request, iteration, attempt = _seed_request_segment_graph(
         mission_store, episode_store, attempt_store, task_center_run_id
     )
     orchestrator = TrialOrchestrator(

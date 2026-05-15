@@ -130,12 +130,12 @@ def test_ac7_executor_variant_disjunction_total_across_depths(monkeypatch) -> No
     variant predicates — within / above partition the depth axis."""
     fake_depth = {"value": 0}
 
-    def _fake_nested_mission_depth(**_kwargs) -> int:
+    def _fake_nested_goal_depth(**_kwargs) -> int:
         return fake_depth["value"]
 
     monkeypatch.setattr(
         "task_center._core.agent_routing.nested_goal_depth",
-        _fake_nested_mission_depth,
+        _fake_nested_goal_depth,
     )
 
     class _S:
@@ -143,18 +143,18 @@ def test_ac7_executor_variant_disjunction_total_across_depths(monkeypatch) -> No
             return None
 
     deps = ContextEngineDeps(
-        mission_store=_S(),  # type: ignore[arg-type]
-        episode_store=_S(),  # type: ignore[arg-type]
-        attempt_store=_S(),  # type: ignore[arg-type]
+        goal_store=_S(),  # type: ignore[arg-type]
+        iteration_store=_S(),  # type: ignore[arg-type]
+        trial_store=_S(),  # type: ignore[arg-type]
         task_store=_S(),  # type: ignore[arg-type]
     )
     ctx = ResolverContext(scope=ContextScope(goal_id="m"), deps=deps)
 
     within = PredicateRegistry.get(
-        "nested_mission_depth_within_handoff_range"
+        "nested_goal_depth_within_handoff_range"
     )
     above = PredicateRegistry.get(
-        "nested_mission_depth_above_handoff_range"
+        "nested_goal_depth_above_handoff_range"
     )
 
     for depth in range(5):
@@ -177,9 +177,9 @@ def test_ac8_always_predicate_is_registered_and_unconditional() -> None:
             return None
 
     deps = ContextEngineDeps(
-        mission_store=_S(),  # type: ignore[arg-type]
-        episode_store=_S(),  # type: ignore[arg-type]
-        attempt_store=_S(),  # type: ignore[arg-type]
+        goal_store=_S(),  # type: ignore[arg-type]
+        iteration_store=_S(),  # type: ignore[arg-type]
+        trial_store=_S(),  # type: ignore[arg-type]
         task_store=_S(),  # type: ignore[arg-type]
     )
     assert pred(ResolverContext(scope=ContextScope(), deps=deps)) is True
@@ -323,7 +323,7 @@ def test_ac9_planner_md_shape_passes_validation() -> None:
     paradigmatic passing case: terminals cover the no-match branch, no
     ``always`` tail required."""
     _stub_recipe("planner")
-    PredicateRegistry.register("nested_mission_depth_gt_1", lambda ctx: False)
+    PredicateRegistry.register("nested_goal_depth_gt_1", lambda ctx: False)
     full_only = AgentDefinition(
         name="planner_full_only",
         description="planner",
@@ -337,7 +337,7 @@ def test_ac9_planner_md_shape_passes_validation() -> None:
         terminals=["submit_full_plan", "submit_partial_plan"],
         variants=[
             AgentVariant(
-                when="nested_mission_depth_gt_1", use="planner_full_only"
+                when="nested_goal_depth_gt_1", use="planner_full_only"
             )
         ],
     )

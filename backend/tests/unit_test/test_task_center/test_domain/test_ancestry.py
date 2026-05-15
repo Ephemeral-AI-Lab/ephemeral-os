@@ -1,4 +1,4 @@
-"""Unit tests for nested mission ancestry depth and predicate routing."""
+"""Unit tests for nested goal ancestry depth and predicate routing."""
 
 from __future__ import annotations
 
@@ -20,9 +20,9 @@ from task_center.goal.handler import nested_goal_depth
 
 def _stores(mission_store, episode_store, attempt_store, task_store):
     return dict(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         task_store=task_store,
     )
 
@@ -41,9 +41,9 @@ def _seed_mission(
     )
 
 
-def _seed_episode(episode_store, *, mission_id: str, sequence_no: int = 1):
+def _seed_episode(episode_store, *, goal_id: str, sequence_no: int = 1):
     return episode_store.insert(
-        goal_id=mission_id,
+        goal_id=goal_id,
         sequence_no=sequence_no,
         creation_reason=IterationCreationReason.INITIAL,
         goal="g",
@@ -54,11 +54,11 @@ def _seed_episode(episode_store, *, mission_id: str, sequence_no: int = 1):
 def _seed_attempt(
     attempt_store,
     *,
-    episode_id: str,
+    iteration_id: str,
     sequence_no: int = 1,
 ):
     attempt = attempt_store.insert(
-        iteration_id=episode_id, trial_sequence_no=sequence_no
+        iteration_id=iteration_id, trial_sequence_no=sequence_no
     )
     attempt_store.set_plan_contract(
         attempt.id,
@@ -75,7 +75,7 @@ def _seed_task(
     *,
     task_id: str,
     task_center_run_id: str,
-    attempt_id: str | None,
+    trial_id: str | None,
     role: str = "generator",
 ):
     task_store.upsert_task(
@@ -87,7 +87,7 @@ def _seed_task(
         status="running",
         summaries=[],
         needs=[],
-        task_center_attempt_id=attempt_id,
+        task_center_attempt_id=trial_id,
         spawn_reason="test_seed",
     )
 
@@ -105,22 +105,22 @@ def _seed_nested_mission_chain(
     mission_ids: list[str] = []
     requested_by_task_id = "t-entry"
     for idx in range(depth):
-        mission = _seed_mission(
+        goal = _seed_mission(
             mission_store,
             task_center_run_id=task_center_run_id,
             requested_by_task_id=requested_by_task_id,
         )
-        mission_ids.append(mission.id)
+        mission_ids.append(goal.id)
         if idx == depth - 1:
             break
-        episode = _seed_episode(episode_store, goal_id=mission.id)
-        attempt = _seed_attempt(attempt_store, iteration_id=episode.id)
+        iteration = _seed_episode(episode_store, goal_id=goal.id)
+        attempt = _seed_attempt(attempt_store, iteration_id=iteration.id)
         task_id = f"t-{idx}"
         _seed_task(
             task_store,
             task_id=task_id,
             task_center_run_id=task_center_run_id,
-            attempt_id=attempt.id,
+            trial_id=attempt.id,
         )
         requested_by_task_id = task_id
     return mission_ids
@@ -129,12 +129,12 @@ def _seed_nested_mission_chain(
 def test_no_parent_task_returns_depth_1(
     mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
-    mission = _seed_mission(
+    goal = _seed_mission(
         mission_store, task_center_run_id=task_center_run_id
     )
     assert (
         nested_goal_depth(
-            goal_id=mission.id,
+            goal_id=goal.id,
             **_stores(mission_store, episode_store, attempt_store, task_store),
         )
         == 1
@@ -144,7 +144,7 @@ def test_no_parent_task_returns_depth_1(
 def test_parent_task_with_no_attempt_returns_depth_1(
     mission_store, episode_store, attempt_store, task_store, task_center_run_id
 ):
-    mission = _seed_mission(
+    goal = _seed_mission(
         mission_store,
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t-entry",
@@ -153,11 +153,11 @@ def test_parent_task_with_no_attempt_returns_depth_1(
         task_store,
         task_id="t-entry",
         task_center_run_id=task_center_run_id,
-        attempt_id=None,
+        trial_id=None,
     )
     assert (
         nested_goal_depth(
-            goal_id=mission.id,
+            goal_id=goal.id,
             **_stores(mission_store, episode_store, attempt_store, task_store),
         )
         == 1
@@ -229,27 +229,27 @@ def test_registered_predicates_cover_top_level_and_depth_thresholds(
     register_builtin_predicates()
     try:
         deps = ContextEngineDeps(
-            mission_store=mission_store,
-            episode_store=episode_store,
-            attempt_store=attempt_store,
+            goal_store=mission_store,
+            iteration_store=episode_store,
+            trial_store=attempt_store,
             task_store=task_store,
         )
 
         top_level_ctx = ResolverContext(scope=ContextScope(), deps=deps)
         assert (
-            PredicateRegistry.get("nested_mission_depth_within_handoff_range")(
+            PredicateRegistry.get("nested_goal_depth_within_handoff_range")(
                 top_level_ctx
             )
             is True
         )
         assert (
-            PredicateRegistry.get("nested_mission_depth_above_handoff_range")(
+            PredicateRegistry.get("nested_goal_depth_above_handoff_range")(
                 top_level_ctx
             )
             is False
         )
         assert (
-            PredicateRegistry.get("nested_mission_depth_gt_1")(top_level_ctx)
+            PredicateRegistry.get("nested_goal_depth_gt_1")(top_level_ctx)
             is False
         )
         assert PredicateRegistry.get("always")(top_level_ctx) is True
@@ -272,32 +272,32 @@ def test_registered_predicates_cover_top_level_and_depth_thresholds(
         )
 
         assert (
-            PredicateRegistry.get("nested_mission_depth_within_handoff_range")(
+            PredicateRegistry.get("nested_goal_depth_within_handoff_range")(
                 within_ctx
             )
             is True
         )
         assert (
-            PredicateRegistry.get("nested_mission_depth_above_handoff_range")(
+            PredicateRegistry.get("nested_goal_depth_above_handoff_range")(
                 within_ctx
             )
             is False
         )
-        assert PredicateRegistry.get("nested_mission_depth_gt_1")(within_ctx) is True
+        assert PredicateRegistry.get("nested_goal_depth_gt_1")(within_ctx) is True
 
         assert (
-            PredicateRegistry.get("nested_mission_depth_within_handoff_range")(
+            PredicateRegistry.get("nested_goal_depth_within_handoff_range")(
                 above_ctx
             )
             is False
         )
         assert (
-            PredicateRegistry.get("nested_mission_depth_above_handoff_range")(
+            PredicateRegistry.get("nested_goal_depth_above_handoff_range")(
                 above_ctx
             )
             is True
         )
-        assert PredicateRegistry.get("nested_mission_depth_gt_1")(above_ctx) is True
+        assert PredicateRegistry.get("nested_goal_depth_gt_1")(above_ctx) is True
     finally:
         PredicateRegistry.clear()
         PredicateRegistry._registry.update(saved)

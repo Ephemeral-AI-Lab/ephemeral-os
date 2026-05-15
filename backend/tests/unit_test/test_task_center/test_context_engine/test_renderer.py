@@ -42,7 +42,7 @@ def test_required_blocks_never_compressed_under_budget():
     big_required = "A" * 4_000  # ≈1000 tokens
     blocks = [
         ContextBlock(
-            kind="episode_goal",
+            kind="iteration_statement",
             priority=ContextPriority.REQUIRED,
             text=big_required,
             source_id="seg-1",
@@ -96,13 +96,13 @@ def test_inherited_blocks_grouped_under_parent_context_section():
             text="helper assignment",
         ),
         ContextBlock(
-            kind="episode_goal",
+            kind="iteration_statement",
             priority=ContextPriority.HIGH,
             text="parent goal",
             metadata={"inherited_from_parent": "true"},
         ),
         ContextBlock(
-            kind="prior_episode_summary",
+            kind="prior_iteration_summary",
             priority=ContextPriority.MEDIUM,
             text="parent summary",
             metadata={"inherited_from_parent": "true"},
@@ -120,14 +120,14 @@ def test_inherited_blocks_grouped_under_parent_context_section():
 def test_block_subtitle_metadata_renders_under_heading():
     blocks = [
         ContextBlock(
-            kind="episode_goal",
+            kind="iteration_statement",
             priority=ContextPriority.REQUIRED,
             text="g",
-            metadata={"subtitle": "*(first episode)*"},
+            metadata={"subtitle": "*(first iteration)*"},
         )
     ]
     out = MarkdownPromptRenderer().render(_packet(blocks))
-    assert "*(first episode)*" in out
+    assert "*(first iteration)*" in out
 
 
 def test_block_heading_metadata_overrides_default_heading():

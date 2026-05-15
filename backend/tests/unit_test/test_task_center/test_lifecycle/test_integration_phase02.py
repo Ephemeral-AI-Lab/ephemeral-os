@@ -12,7 +12,7 @@ from task_center.trial.orchestrator_registry import (
 )
 from task_center.trial.runtime import (
     AgentLaunch,
-    AttemptDeps,
+    TrialDeps,
 )
 from task_center.task_state import EvaluatorSubmission, GeneratorSubmission, PlannedGeneratorTask, PlannerSubmission
 from task_center._core.types import evaluator_task_id, generator_task_id, planner_task_id
@@ -39,10 +39,10 @@ def _build_handler(
     launcher = _FakeLauncher()
     orchestrator_registry = TrialOrchestratorRegistry()
     manager_registry = IterationManagerRegistry()
-    runtime = AttemptDeps(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+    runtime = TrialDeps(
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher,
         orchestrator_registry=orchestrator_registry,
@@ -50,11 +50,11 @@ def _build_handler(
         composer=composer,
     )
     handler = GoalHandler(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         manager_registry=manager_registry,
-        config=TaskCenterLifecycleConfig(default_trial_budget=2),
+        config=TaskCenterLifecycleConfig(default_attempt_budget=2),
         orchestrator_factory=lambda attempt, on_attempt_closed: TrialOrchestrator(
             attempt=attempt,
             on_attempt_closed=on_attempt_closed,
@@ -118,13 +118,13 @@ def test_full_plan_execution_success_closes_request_success(
     handler, manager_registry, orchestrator_registry = _build_handler(
         mission_store, episode_store, attempt_store, task_store, composer=composer
     )
-    request = handler.create_mission(
+    request = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="executor-1",
         goal="g",
     )
-    episode, _ = handler.create_initial_episode_with_manager(goal_id=request.id)
-    manager = manager_registry.get(episode.id)
+    iteration, _ = handler.create_initial_iteration_with_manager(goal_id=request.id)
+    manager = manager_registry.get(iteration.id)
     assert manager is not None
     attempt = manager.create_initial_attempt()
     orchestrator = orchestrator_registry.get_or_raise(attempt.id)
@@ -134,14 +134,14 @@ def test_full_plan_execution_success_closes_request_success(
     orchestrator.apply_evaluator_submission(_evaluator_success(attempt.id))
 
     final_request = mission_store.get(request.id)
-    final_segment = episode_store.get(episode.id)
+    final_segment = episode_store.get(iteration.id)
     final_graph = attempt_store.get(attempt.id)
     assert final_request is not None and final_segment is not None
     assert final_graph is not None
     assert final_request.status == GoalStatus.SUCCEEDED
     assert final_segment.status == IterationStatus.SUCCEEDED
     assert final_graph.status == TrialStatus.PASSED
-    assert manager_registry.get(episode.id) is None
+    assert manager_registry.get(iteration.id) is None
 
 
 def test_generator_failure_retry_then_evaluator_success(
@@ -155,13 +155,13 @@ def test_generator_failure_retry_then_evaluator_success(
     handler, manager_registry, orchestrator_registry = _build_handler(
         mission_store, episode_store, attempt_store, task_store, composer=composer
     )
-    request = handler.create_mission(
+    request = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="executor-1",
         goal="g",
     )
-    episode, _ = handler.create_initial_episode_with_manager(goal_id=request.id)
-    manager = manager_registry.get(episode.id)
+    iteration, _ = handler.create_initial_iteration_with_manager(goal_id=request.id)
+    manager = manager_registry.get(iteration.id)
     assert manager is not None
     graph1 = manager.create_initial_attempt()
     orchestrator1 = orchestrator_registry.get_or_raise(graph1.id)
@@ -169,10 +169,10 @@ def test_generator_failure_retry_then_evaluator_success(
     orchestrator1.apply_plan_submission(_plan(graph1.id))
     orchestrator1.apply_generator_submission(_generator_failure(graph1.id))
 
-    refreshed_segment = episode_store.get(episode.id)
+    refreshed_segment = episode_store.get(iteration.id)
     assert refreshed_segment is not None
-    assert len(refreshed_segmenttrial_ids) == 2
-    graph2_id = refreshed_segmenttrial_ids[1]
+    assert len(refreshed_segment.trial_ids) == 2
+    graph2_id = refreshed_segment.trial_ids[1]
     orchestrator2 = orchestrator_registry.get_or_raise(graph2_id)
 
     orchestrator2.apply_plan_submission(_plan(graph2_id))
@@ -180,7 +180,7 @@ def test_generator_failure_retry_then_evaluator_success(
     orchestrator2.apply_evaluator_submission(_evaluator_success(graph2_id))
 
     final_request = mission_store.get(request.id)
-    final_segment = episode_store.get(episode.id)
+    final_segment = episode_store.get(iteration.id)
     final_graph2 = attempt_store.get(graph2_id)
     assert final_request is not None and final_segment is not None
     assert final_graph2 is not None

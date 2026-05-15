@@ -38,7 +38,7 @@ from task_center.trial.orchestrator_registry import (
 )
 from task_center.trial.runtime import (
     AgentLaunch,
-    AttemptDeps,
+    TrialDeps,
 )
 from task_center.iteration.state import IterationCreationReason
 
@@ -89,19 +89,19 @@ def _clear_definitions() -> None:
 
 def _runtime_with_composer(
     mission_store, episode_store, attempt_store, task_store
-) -> tuple[AttemptDeps, _RecordingLauncher]:
+) -> tuple[TrialDeps, _RecordingLauncher]:
     launcher = _RecordingLauncher()
     deps = ContextEngineDeps(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         task_store=task_store,
     )
     composer = ContextComposer.default(ContextEngine(deps))
-    runtime = AttemptDeps(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+    runtime = TrialDeps(
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher,
         orchestrator_registry=TrialOrchestratorRegistry(),
@@ -150,7 +150,7 @@ def _seed_partial_plan_caller(
         summaries=[],
         needs=[],
         task_center_attempt_id=caller_attempt.id,
-        spawn_reason="attempt_generator",
+        spawn_reason="trial_generator",
     )
     return parent_req
 

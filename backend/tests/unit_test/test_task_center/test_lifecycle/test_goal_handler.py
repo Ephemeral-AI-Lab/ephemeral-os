@@ -24,11 +24,11 @@ from task_center._core.types import TaskCenterInvariantViolation
 @pytest.fixture
 def handler(mission_store, episode_store, attempt_store):
     return GoalHandler(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         manager_registry=IterationManagerRegistry(),
-        config=TaskCenterLifecycleConfig(default_trial_budget=2),
+        config=TaskCenterLifecycleConfig(default_attempt_budget=2),
     )
 
 
@@ -36,7 +36,7 @@ def test_create_mission_links_executor(
     handler, mission_store, task_center_run_id
 ):
     """Phase 01 exit: submit_execution_handoff -> request linked to requested_by_task_id."""
-    req = handler.create_mission(
+    req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="executor-1",
         goal="solve X",
@@ -44,7 +44,7 @@ def test_create_mission_links_executor(
     assert req.requested_by_task_id == "executor-1"
     assert req.task_center_run_id == task_center_run_id
     assert req.is_open
-    assert reqiteration_ids == ()
+    assert req.iteration_ids == ()
     persisted = mission_store.get(req.id)
     assert persisted is not None
     assert persisted.requested_by_task_id == "executor-1"
@@ -53,50 +53,50 @@ def test_create_mission_links_executor(
 def test_request_records_segments_in_episode_ids(
     handler, mission_store, task_center_run_id
 ):
-    """Phase 01 exit: each request records created episodes in episode_ids."""
-    req = handler.create_mission(
+    """Phase 01 exit: each request records created iterations in episode_ids."""
+    req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t1",
         goal="g",
     )
-    seg, _ = handler.create_initial_episode_with_manager(goal_id=req.id)
+    seg, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
     refreshed = mission_store.get(req.id)
     assert refreshed is not None
-    assert refreshediteration_ids == (seg.id,)
+    assert refreshed.iteration_ids == (seg.id,)
 
 
 def test_initial_episode_has_sequence_one_and_initial_reason(handler, task_center_run_id):
-    req = handler.create_mission(
+    req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t1",
         goal="g",
     )
-    seg, _ = handler.create_initial_episode_with_manager(goal_id=req.id)
+    seg, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
     assert seg.sequence_no == 1
     assert seg.creation_reason == IterationCreationReason.INITIAL
     assert seg.goal == "g"
     assert seg.is_open
-    assert segtrial_budget == 2
+    assert seg.trial_budget == 2
 
 
 def test_continuation_segment_inherits_continuation_goal(
     handler, episode_store, task_center_run_id
 ):
-    """Phase 01 exit: continuation creates episode N+1 with goal from previous episode's continuation_goal."""
-    req = handler.create_mission(
+    """Phase 01 exit: continuation creates iteration N+1 with goal from previous iteration's continuation_goal."""
+    req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t1",
         goal="initial-goal",
     )
-    seg1, _ = handler.create_initial_episode_with_manager(goal_id=req.id)
+    seg1, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
     # Mark predecessor SUCCEEDED with a continuation_goal so the invariant passes.
     episode_store.set_continuation_goal(seg1.id, "next-goal")
     episode_store.set_status(seg1.id, status=IterationStatus.SUCCEEDED)
     seg1_succeeded = episode_store.get(seg1.id)
     assert seg1_succeeded is not None
 
-    seg2, _ = handler.create_continuation_episode_with_manager(
-        previous_episode=seg1_succeeded
+    seg2, _ = handler.create_continuation_iteration_with_manager(
+        previous_iteration=seg1_succeeded
     )
     assert seg2.sequence_no == 2
     assert seg2.creation_reason == IterationCreationReason.PARTIAL_CONTINUATION
@@ -107,37 +107,37 @@ def test_episode_ids_holds_multiple_segments(
     handler, mission_store, episode_store, task_center_run_id
 ):
     """Phase 01 exit: episode_ids can hold multiple Iteration ids for one request."""
-    req = handler.create_mission(
+    req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t1",
         goal="g1",
     )
-    seg1, _ = handler.create_initial_episode_with_manager(goal_id=req.id)
+    seg1, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
     episode_store.set_continuation_goal(seg1.id, "g2")
     episode_store.set_status(seg1.id, status=IterationStatus.SUCCEEDED)
     seg1_succeeded = episode_store.get(seg1.id)
     assert seg1_succeeded is not None
-    seg2, _ = handler.create_continuation_episode_with_manager(
-        previous_episode=seg1_succeeded
+    seg2, _ = handler.create_continuation_iteration_with_manager(
+        previous_iteration=seg1_succeeded
     )
     refreshed = mission_store.get(req.id)
     assert refreshed is not None
-    assert refreshediteration_ids == (seg1.id, seg2.id)
+    assert refreshed.iteration_ids == (seg1.id, seg2.id)
 
 
-def test_handle_episode_closed_terminal_success_closes_request_succeeded(
+def test_handle_iteration_closed_terminal_success_closes_request_succeeded(
     handler, mission_store, episode_store, task_center_run_id
 ):
-    req = handler.create_mission(
+    req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t1",
         goal="g",
     )
-    seg, _ = handler.create_initial_episode_with_manager(goal_id=req.id)
-    handler.handle_episode_closed(
+    seg, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
+    handler.handle_iteration_closed(
         IterationClosureReport(
             iteration_id=seg.id,
-            final_attempt_id="g1",
+            final_trial_id="g1",
             outcome=TerminalSuccess(),
         )
     )
@@ -146,26 +146,26 @@ def test_handle_episode_closed_terminal_success_closes_request_succeeded(
     assert final.status == GoalStatus.SUCCEEDED
     assert final.final_outcome == {
         "outcome": "success",
-        "final_episode_id": seg.id,
-        "final_attempt_id": "g1",
+        "final_iteration_id": seg.id,
+        "final_trial_id": "g1",
     }
 
 
-def test_handle_episode_closed_attempt_plan_failed_closes_request_failed(
+def test_handle_iteration_closed_attempt_plan_failed_closes_request_failed(
     handler, mission_store, task_center_run_id
 ):
-    req = handler.create_mission(
+    req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t1",
         goal="g",
     )
-    seg, _ = handler.create_initial_episode_with_manager(goal_id=req.id)
-    handler.handle_episode_closed(
+    seg, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
+    handler.handle_iteration_closed(
         IterationClosureReport(
             iteration_id=seg.id,
-            final_attempt_id="g1",
+            final_trial_id="g1",
             outcome=TrialPlanFailed(
-                failure_summary="boom", attempted_plan_history=()
+                failure_summary="boom", prior_trial_history=()
             ),
         )
     )
@@ -174,50 +174,50 @@ def test_handle_episode_closed_attempt_plan_failed_closes_request_failed(
     assert final.status == GoalStatus.FAILED
 
 
-def test_handle_episode_closed_success_continue_creates_continuation(
+def test_handle_iteration_closed_success_continue_creates_continuation(
     handler, mission_store, episode_store, task_center_run_id
 ):
-    req = handler.create_mission(
+    req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t1",
         goal="g",
     )
-    seg1, _ = handler.create_initial_episode_with_manager(goal_id=req.id)
+    seg1, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
     episode_store.set_continuation_goal(seg1.id, "next-goal")
     episode_store.set_status(seg1.id, status=IterationStatus.SUCCEEDED)
-    handler.handle_episode_closed(
+    handler.handle_iteration_closed(
         IterationClosureReport(
             iteration_id=seg1.id,
-            final_attempt_id="g1",
+            final_trial_id="g1",
             outcome=SuccessContinue(goal="next-goal"),
         )
     )
     refreshed = mission_store.get(req.id)
     assert refreshed is not None
-    assert len(refreshediteration_ids) == 2
-    seg2_id = refreshediteration_ids[1]
+    assert len(refreshed.iteration_ids) == 2
+    seg2_id = refreshed.iteration_ids[1]
     seg2 = episode_store.get(seg2_id)
     assert seg2 is not None
     assert seg2.sequence_no == 2
     assert seg2.goal == "next-goal"
 
 
-def test_handle_episode_closed_deregisters_manager(
+def test_handle_iteration_closed_deregisters_manager(
     handler, task_center_run_id
 ):
-    req = handler.create_mission(
+    req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t1",
         goal="g",
     )
-    seg, _ = handler.create_initial_episode_with_manager(goal_id=req.id)
+    seg, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
     # Access the registry through the handler's private attr for verification.
     reg = handler._manager_registry  # type: ignore[attr-defined]
     assert reg.get(seg.id) is not None
-    handler.handle_episode_closed(
+    handler.handle_iteration_closed(
         IterationClosureReport(
             iteration_id=seg.id,
-            final_attempt_id="g1",
+            final_trial_id="g1",
             outcome=TerminalSuccess(),
         )
     )
@@ -227,39 +227,39 @@ def test_handle_episode_closed_deregisters_manager(
 def test_continuation_segment_only_from_succeeded_predecessor_with_goal(
     handler, episode_store, task_center_run_id
 ):
-    req = handler.create_mission(
+    req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t1",
         goal="g",
     )
-    seg1, _ = handler.create_initial_episode_with_manager(goal_id=req.id)
+    seg1, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
 
     # Predecessor still OPEN -> invariant violation.
     with pytest.raises(TaskCenterInvariantViolation):
-        handler.create_continuation_episode_with_manager(previous_episode=seg1)
+        handler.create_continuation_iteration_with_manager(previous_iteration=seg1)
 
     # Predecessor SUCCEEDED but no continuation_goal -> invariant violation.
     episode_store.set_status(seg1.id, status=IterationStatus.SUCCEEDED)
     seg1_no_goal = episode_store.get(seg1.id)
     assert seg1_no_goal is not None
     with pytest.raises(TaskCenterInvariantViolation):
-        handler.create_continuation_episode_with_manager(previous_episode=seg1_no_goal)
+        handler.create_continuation_iteration_with_manager(previous_iteration=seg1_no_goal)
 
 
 def test_episode_manager_registry_enforces_unique_per_segment(
     handler, task_center_run_id
 ):
-    """Phase 01 spec: exactly one IterationManager active per open episode."""
-    req = handler.create_mission(
+    """Phase 01 spec: exactly one IterationManager active per open iteration."""
+    req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t1",
         goal="g",
     )
-    handler.create_initial_episode_with_manager(goal_id=req.id)
+    handler.create_initial_iteration_with_manager(goal_id=req.id)
     # Calling create_initial_episode again should fail because the request now
-    # has episode 1 — sequence_no 1 is no longer the contiguous next.
+    # has iteration 1 — sequence_no 1 is no longer the contiguous next.
     with pytest.raises(TaskCenterInvariantViolation):
-        handler.create_initial_episode_with_manager(goal_id=req.id)
+        handler.create_initial_iteration_with_manager(goal_id=req.id)
 
 
 def test_close_mission_delivers_closure_report_when_callback_set(
@@ -271,24 +271,24 @@ def test_close_mission_delivers_closure_report_when_callback_set(
         delivered.append(report)
 
     handler = GoalHandler(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         manager_registry=IterationManagerRegistry(),
-        config=TaskCenterLifecycleConfig(default_trial_budget=2),
+        config=TaskCenterLifecycleConfig(default_attempt_budget=2),
         deliver_closure_report=sink,
     )
-    req = handler.create_mission(
+    req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="executor-1",
         goal="g",
     )
-    handler.create_initial_episode_with_manager(goal_id=req.id)
-    handler.close_mission(
+    handler.create_initial_iteration_with_manager(goal_id=req.id)
+    handler.close_goal(
         goal_id=req.id,
         succeeded=True,
         final_iteration_id="seg",
-        final_attempt_id="g1",
+        final_trial_id="g1",
     )
     assert len(delivered) == 1
     assert delivered[0].outcome == "success"
@@ -302,10 +302,10 @@ def test_handler_passes_orchestrator_factory_to_spawned_manager(
 
     class _StartedOrchestrator:
         def __init__(self, attempt_id: str) -> None:
-            self.attempt_id = attempt_id
+            self.trial_id = attempt_id
 
         def start(self) -> None:
-            started.append(self.attempt_id)
+            started.append(self.trial_id)
 
     def factory(attempt, on_attempt_closed):
         del on_attempt_closed
@@ -313,20 +313,20 @@ def test_handler_passes_orchestrator_factory_to_spawned_manager(
 
     registry = IterationManagerRegistry()
     handler = GoalHandler(
-        mission_store=mission_store,
-        episode_store=episode_store,
-        attempt_store=attempt_store,
+        goal_store=mission_store,
+        iteration_store=episode_store,
+        trial_store=attempt_store,
         manager_registry=registry,
-        config=TaskCenterLifecycleConfig(default_trial_budget=2),
+        config=TaskCenterLifecycleConfig(default_attempt_budget=2),
         orchestrator_factory=factory,
     )
-    req = handler.create_mission(
+    req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="executor-1",
         goal="g",
     )
-    episode, _ = handler.create_initial_episode_with_manager(goal_id=req.id)
-    manager = registry.get(episode.id)
+    iteration, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
+    manager = registry.get(iteration.id)
     assert manager is not None
 
     attempt = manager.create_initial_attempt()
@@ -336,14 +336,14 @@ def test_handler_passes_orchestrator_factory_to_spawned_manager(
 
 def test_no_root_creation_reason_in_lifecycle(handler, task_center_run_id):
     """Phase 01 spec: 'root' creation reason is not allowed."""
-    # Indirect: handler-driven episode creation only ever uses INITIAL or
+    # Indirect: handler-driven iteration creation only ever uses INITIAL or
     # PARTIAL_CONTINUATION. There is no public path that produces 'root'.
-    req = handler.create_mission(
+    req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t1",
         goal="g",
     )
-    seg, _ = handler.create_initial_episode_with_manager(goal_id=req.id)
+    seg, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
     assert seg.creation_reason in (
         IterationCreationReason.INITIAL,
         IterationCreationReason.PARTIAL_CONTINUATION,

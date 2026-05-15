@@ -31,12 +31,12 @@ def test_required_blocks_kept_byte_for_byte_under_pressure():
     packet = _packet_with_budget(
         [
             ContextBlock(
-                kind="episode_goal",
+                kind="iteration_statement",
                 priority=ContextPriority.REQUIRED,
                 text=big_required_a,
             ),
             ContextBlock(
-                kind="mission_goal",
+                kind="goal_statement",
                 priority=ContextPriority.REQUIRED,
                 text=big_required_b,
             ),
@@ -140,9 +140,9 @@ def test_compression_preserves_remaining_packet_order():
     packet = _packet_with_budget(
         [
             ContextBlock(
-                kind="episode_goal",
+                kind="iteration_statement",
                 priority=ContextPriority.REQUIRED,
-                text="episode",
+                text="iteration",
             ),
             ContextBlock(
                 kind="low_background",
@@ -164,6 +164,6 @@ def test_compression_preserves_remaining_packet_order():
         budget=100,
     )
     out = MarkdownPromptRenderer().render(packet)
-    assert out.find("episode") < out.find("truncated for token budget")
+    assert out.find("iteration") < out.find("truncated for token budget")
     assert out.find("truncated for token budget") < out.find("attempt")
     assert out.find("attempt") < out.find("assigned")

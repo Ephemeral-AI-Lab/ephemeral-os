@@ -131,7 +131,7 @@ def test_unknown_context_recipe_rejected():
 def test_clean_setup_passes_validation():
     _stub_recipe("planner")
     _stub_recipe("generator")
-    PredicateRegistry.register("nested_mission_depth_gt_1", lambda ctx: False)
+    PredicateRegistry.register("nested_goal_depth_gt_1", lambda ctx: False)
     base = AgentDefinition(
         name="planner",
         description="planner",
@@ -139,7 +139,7 @@ def test_clean_setup_passes_validation():
         terminals=["submit_full_plan", "submit_partial_plan"],
         variants=[
             AgentVariant(
-                when="nested_mission_depth_gt_1", use="planner_full_only"
+                when="nested_goal_depth_gt_1", use="planner_full_only"
             )
         ],
     )

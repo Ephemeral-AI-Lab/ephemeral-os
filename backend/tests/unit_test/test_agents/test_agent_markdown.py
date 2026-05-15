@@ -30,7 +30,7 @@ def test_harness_agent_markdown_declares_notification_triggers() -> None:
     # if the variant fires, submit_partial_plan is never bound to the LLM
     # tool registry, so a soft reminder serves no purpose.
     assert planner.notification_triggers == []
-    assert handoff_executor.notification_triggers == ["request_mission_after_edit"]
+    assert handoff_executor.notification_triggers == ["request_goal_after_edit"]
     assert verifier.notification_triggers == ["resolver_limit"]
     assert evaluator.notification_triggers == ["resolver_limit"]
 
