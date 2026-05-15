@@ -19,6 +19,7 @@ from pathlib import Path
 
 from benchmarks.sweevo.models import SWEEvoInstance, SWEEvoResult, _REPO_DIR
 from runtime.app_factory import RuntimeConfig
+from task_center_runner.agent.real import real_agent_runner_factory
 from task_center_runner.benchmarks.sweevo.lifecycle import SweevoLifecycle
 from task_center_runner.benchmarks.sweevo.prompt import build_sweevo_user_prompt
 from task_center_runner.benchmarks.sweevo.provisioner import SweevoProvisioner
@@ -73,7 +74,7 @@ async def run_sweevo_real_agent(
         entry_prompt=build_sweevo_user_prompt(instance, repo_dir=repo_dir),
         repo_dir=repo_dir,
         sandbox=SweevoProvisioner(instance, sandbox_id, repo_dir=repo_dir),
-        runner_factory=lambda ctx: None,
+        runner_factory=real_agent_runner_factory,
         lifecycle=SweevoLifecycle(instance, repo_dir=repo_dir),
         bootstrap=bootstrap_real_agent_runtime,
         stores=bundle,
