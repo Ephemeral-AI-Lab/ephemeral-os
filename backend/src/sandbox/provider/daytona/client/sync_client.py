@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 import logging
 import os
 import threading
@@ -190,15 +191,38 @@ def _call_with_optional_timeout(
     timeout: float,
     **kwargs: Any,
 ) -> Any:
-    """Call a Daytona SDK method, passing timeout only when supported.
+    """Call a Daytona SDK method, enforcing the caller's timeout.
 
-    Daytona SDK versions differ here: create/start/stop/delete accept timeout,
-    while current get/list methods do not. Keep the timeout on methods that
-    expose it without breaking newer get/list signatures.
+    Daytona SDK versions differ: create/start/stop/delete accept ``timeout``,
+    while current get/list methods do not. When the method exposes ``timeout``
+    we hand it through; when it does not we wrap the call in a one-shot
+    worker thread and bound it with ``future.result(timeout=...)``. Health
+    probes and unauthenticated lookups need scheduler-degraded states to
+    surface within the caller's budget (cf. daytona_pending_build_root_cause)
+    rather than inheriting whatever transport-level default the SDK uses.
+
+    On external timeout we leak the worker thread until the underlying HTTP
+    call eventually returns — that is intentional; the alternative is a hang
+    on the caller.
     """
     if _accepts_timeout(fn):
         kwargs["timeout"] = timeout
-    return fn(*args, **kwargs)
+        return fn(*args, **kwargs)
+    executor = concurrent.futures.ThreadPoolExecutor(
+        max_workers=1,
+        thread_name_prefix="daytona-timeout-wrap",
+    )
+    try:
+        future = executor.submit(fn, *args, **kwargs)
+        try:
+            return future.result(timeout=timeout)
+        except concurrent.futures.TimeoutError as exc:
+            method = getattr(fn, "__name__", "call")
+            raise TimeoutError(
+                f"Daytona SDK {method!r} exceeded {timeout:.1f}s"
+            ) from exc
+    finally:
+        executor.shutdown(wait=False)
 
 
 def _accepts_timeout(fn: Any) -> bool:
