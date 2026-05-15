@@ -8,7 +8,6 @@ provider adapter's raw exec primitive by sandbox id.
 
 from __future__ import annotations
 
-import base64
 import gzip
 import hashlib
 import io
@@ -17,14 +16,13 @@ import shlex
 import tarfile
 import uuid
 from pathlib import Path
-from typing import Protocol
 
 from sandbox.daemon_paths import (
     BUNDLE_HASH_MARKER as _BUNDLE_HASH_MARKER,
     BUNDLE_REMOTE_DIR as _BUNDLE_REMOTE_DIR,
     BUNDLE_REMOTE_TARBALL as _BUNDLE_REMOTE_TARBALL,
 )
-from sandbox.models import RawExecResult
+from sandbox.host.chunked_upload import RawExecCallable, write_base64_chunks
 from sandbox.provider.registry import get_adapter
 
 __all__ = [
@@ -37,22 +35,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-# Keep chunks below observed provider argv limits while preserving base64
-# alignment so each chunk decodes independently.
-_CHUNK_SIZE = 32 * 1024
-
-
-class _RawExecCallable(Protocol):
-    async def __call__(
-        self,
-        sandbox_id: str,
-        command: str,
-        *,
-        cwd: str | None = None,
-        timeout: int | None = None,
-    ) -> RawExecResult: ...
-
 
 def _src_root() -> Path:
     """Return the orchestrator's ``backend/src/`` directory."""
@@ -265,7 +247,7 @@ async def ensure_runtime_uploaded(sandbox_id: str) -> str:
 
 async def _ensure_runtime_uploaded_with_exec(
     sandbox_id: str,
-    exec_fn: _RawExecCallable,
+    exec_fn: RawExecCallable,
 ) -> str:
     """Upload the runtime bundle using the provided un-guarded exec function."""
     digest = bundle_hash()
@@ -281,7 +263,6 @@ async def _ensure_runtime_uploaded_with_exec(
         return digest
 
     bundle = _runtime_bundle_bytes()
-    encoded = base64.b64encode(bundle).decode("ascii")
     staging_tarball = f"{_BUNDLE_REMOTE_TARBALL}.{uuid.uuid4().hex}.staging"
 
     setup = await exec_fn(
@@ -298,18 +279,17 @@ async def _ensure_runtime_uploaded_with_exec(
             f"{getattr(setup, 'stdout', '')}"
         )
 
-    for i in range(0, len(encoded), _CHUNK_SIZE):
-        chunk = encoded[i : i + _CHUNK_SIZE]
-        write_cmd = (
-            f"printf %s {shlex.quote(chunk)} | base64 -d "
-            f">> {shlex.quote(staging_tarball)}"
-        )
-        result = await exec_fn(sandbox_id, write_cmd, timeout=60)
-        if _exit_code(result) != 0:
-            raise RuntimeError(
-                f"runtime bundle chunk write failed at offset {i} "
-                f"(sandbox={sandbox_id!r}): {getattr(result, 'stdout', '')}"
-            )
+    chunk_count = await write_base64_chunks(
+        exec_fn,
+        sandbox_id,
+        content=bundle,
+        remote_path=staging_tarball,
+        check_result=_check_chunk_write,
+        failure_message=lambda offset: (
+            f"runtime bundle chunk write failed at offset {offset} "
+            f"(sandbox={sandbox_id!r})"
+        ),
+    )
 
     finalize_cmd = (
         f"cd {shlex.quote(_BUNDLE_REMOTE_DIR)} && "
@@ -326,11 +306,16 @@ async def _ensure_runtime_uploaded_with_exec(
     logger.info(
         "sandbox runtime bundle uploaded (%d bytes, %d chunks, sha=%s) to %s",
         len(bundle),
-        (len(encoded) + _CHUNK_SIZE - 1) // _CHUNK_SIZE,
+        chunk_count,
         digest[:8],
         sandbox_id,
     )
     return digest
+
+
+def _check_chunk_write(result: object, message: str) -> None:
+    if _exit_code(result) != 0:
+        raise RuntimeError(f"{message}: {getattr(result, 'stdout', '')}")
 
 
 def _exit_code(result: object) -> int:

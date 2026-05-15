@@ -14,7 +14,6 @@ first-callers share a single upload + setup cycle.
 from __future__ import annotations
 
 import asyncio
-import base64
 import gzip
 import hashlib
 import io
@@ -25,12 +24,12 @@ import shlex
 import tarfile
 import uuid
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any
 
 from plugins.core.discovery import DEFAULT_CATALOG_DIR
 from plugins.core.manifest import PluginManifest
 from sandbox.daemon_paths import BUNDLE_REMOTE_DIR
-from sandbox.models import RawExecResult
+from sandbox.host.chunked_upload import RawExecCallable, write_base64_chunks
 from sandbox.provider.registry import get_adapter
 
 __all__ = [
@@ -54,7 +53,6 @@ logger = logging.getLogger(__name__)
 # — so ``import plugins.catalog.<name>.runtime.server`` resolves naturally.
 PLUGIN_BUNDLE_REMOTE_ROOT = f"{BUNDLE_REMOTE_DIR}/plugins/catalog"
 
-_CHUNK_SIZE = 32 * 1024
 _PLUGIN_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 # 600s headroom for plugin setup scripts that download runtime binaries or
 # install small dependencies over the network while staying inside Daytona's
@@ -115,17 +113,6 @@ class PluginInstallError(RuntimeError):
     """Raised when plugin install fails (upload, setup.sh, or marker write)."""
 
 
-class _RawExecCallable(Protocol):
-    async def __call__(
-        self,
-        sandbox_id: str,
-        command: str,
-        *,
-        cwd: str | None = None,
-        timeout: int | None = None,
-    ) -> RawExecResult: ...
-
-
 _locks: dict[tuple[str, str], asyncio.Lock] = {}
 
 
@@ -148,7 +135,7 @@ async def ensure_installed(
     manifest: PluginManifest,
     *,
     setup_timeout: int = _DEFAULT_SETUP_TIMEOUT,
-    exec_fn: _RawExecCallable | None = None,
+    exec_fn: RawExecCallable | None = None,
 ) -> str:
     """Ensure *manifest*'s plugin bundle is installed on *sandbox_id*."""
     key = (sandbox_id, manifest.name)
@@ -241,7 +228,7 @@ def _normalize_tarinfo(info: tarfile.TarInfo) -> tarfile.TarInfo:
 
 
 async def _marker_present(
-    exec_fn: _RawExecCallable,
+    exec_fn: RawExecCallable,
     sandbox_id: str,
     plugin_name: str,
     digest: str,
@@ -256,7 +243,7 @@ async def _marker_present(
 
 
 async def _upload_and_run_setup(
-    exec_fn: _RawExecCallable,
+    exec_fn: RawExecCallable,
     *,
     sandbox_id: str,
     manifest: PluginManifest,
@@ -270,7 +257,6 @@ async def _upload_and_run_setup(
     tar_path = f"{staging_dir}/.bundle.tar.gz"
 
     bundle = _build_tar(manifest)
-    encoded = base64.b64encode(bundle).decode("ascii")
 
     acquire_lock = await exec_fn(
         sandbox_id,
@@ -300,17 +286,16 @@ async def _upload_and_run_setup(
         )
         _check(setup_dir, f"plugin install: failed to prepare {staging_dir}")
 
-        for offset in range(0, len(encoded), _CHUNK_SIZE):
-            chunk = encoded[offset : offset + _CHUNK_SIZE]
-            write = await exec_fn(
-                sandbox_id,
-                (
-                    f"printf %s {shlex.quote(chunk)} | base64 -d "
-                    f">> {shlex.quote(tar_path)}"
-                ),
-                timeout=60,
-            )
-            _check(write, f"plugin install: chunk write failed at offset {offset}")
+        await write_base64_chunks(
+            exec_fn,
+            sandbox_id,
+            content=bundle,
+            remote_path=tar_path,
+            check_result=_check,
+            failure_message=lambda offset: (
+                f"plugin install: chunk write failed at offset {offset}"
+            ),
+        )
 
         extract = await exec_fn(
             sandbox_id,
