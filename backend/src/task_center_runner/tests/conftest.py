@@ -9,4 +9,4 @@ from dotenv import load_dotenv
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 load_dotenv(_REPO_ROOT / ".env", override=False)
 
-pytest_plugins = ["task_center_runner.fixtures"]
+pytest_plugins = ["task_center_runner.core.fixtures"]

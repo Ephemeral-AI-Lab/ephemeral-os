@@ -1,34 +1,92 @@
-"""``pipeline_run`` pytest fixture — auto-awaits ``performance_report_task``.
+"""Pytest fixtures for ``task_center_runner`` — canonical location.
 
-Phase 3 of the task_center_runner restructure decouples perf-report writes
-from ``AuditRecorder.dispose()``: the report is now produced by an
-``asyncio.Task`` whose handle rides on
-``RunReport.performance_report_task`` /
-``RealAgentRunReport.performance_report_task`` /
-``PipelineReport.performance_report_task``. Tests that drive ``run_scenario`` /
-``run_sweevo_real_agent`` (and, in Phase 4, ``run_pipeline``) MUST await that
-task to avoid:
+Phase 5 of the restructure consolidates the former top-level
+``task_center_runner/fixtures.py`` (`db_engine`, `stores`, `audit_dir`)
+with the Phase-3 ``pipeline_run`` fixture into one module under
+``core/``. The legacy ``task_center_runner.fixtures`` path is preserved
+via the ``live_e2e/`` shim's prefix remap so any caller using the old
+path continues to resolve to this module.
 
-- ``Task was destroyed but it is pending!`` warnings at event-loop teardown;
-- silent loss of ``performance_report.json`` when the writer is interrupted.
+Fixtures:
 
-The ``pipeline_run`` fixture is the canonical test surface: callers pass each
-report they produce to ``pipeline_run(report)`` and the fixture awaits any
-non-None ``performance_report_task`` during teardown, logging the resulting
-path.
+- ``db_engine``: session-scoped; bootstraps the project PG engine if
+  ``EPHEMERALOS_DATABASE_URL`` is configured, else returns ``None``.
+- ``stores``: per-test; yields a PG-schema-isolated
+  ``TaskCenterStoreBundle``. Skips if ``db_engine`` is ``None``.
+- ``audit_dir``: per-test; resolves the audit base directory honoring
+  ``EOS_SWEEVO_AUDIT_TMP`` / ``EOS_SWEEVO_AUDIT_DIR``.
+- ``pipeline_run``: yields a tracker callable; on teardown awaits each
+  tracked report's ``performance_report_task`` so tests do not leak
+  unfinished asyncio tasks.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
 import pytest
 
+from db.engine import get_engine, initialize_db
+from task_center_runner.core.stores import (
+    TaskCenterStoreBundle,
+    create_per_test_task_center_stores,
+)
+
 
 _log = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="session")
+def db_engine() -> object | None:
+    """Initialize the shared project engine once per pytest worker.
+
+    Returns ``None`` (rather than skipping) when ``EPHEMERALOS_DATABASE_URL``
+    is not set so unit-test collections that happen to import this fixture
+    do not fail.
+    """
+    if not os.environ.get("EPHEMERALOS_DATABASE_URL"):
+        return None
+    if get_engine() is None:
+        initialize_db()
+    return get_engine()
+
+
+@pytest.fixture
+def stores(db_engine: object | None) -> Iterator[TaskCenterStoreBundle]:
+    """Per-test PG schema-isolated TaskCenter stores.
+
+    Skipped when ``EPHEMERALOS_DATABASE_URL`` is missing so unit-test
+    collections that import this fixture do not fail.
+    """
+    if db_engine is None:
+        pytest.skip(
+            "EPHEMERALOS_DATABASE_URL not set — task_center_runner requires PostgreSQL"
+        )
+    bundle = create_per_test_task_center_stores()
+    try:
+        yield bundle
+    finally:
+        bundle.close()
+
+
+@pytest.fixture
+def audit_dir(tmp_path: Path) -> Path:
+    """Resolve the audit base dir.
+
+    - ``EOS_SWEEVO_AUDIT_TMP=1`` → use the test's ``tmp_path``.
+    - ``EOS_SWEEVO_AUDIT_DIR`` set → use that absolute path.
+    - Otherwise → ``<repo>/.sweevo_runs/`` resolved.
+    """
+    if os.getenv("EOS_SWEEVO_AUDIT_TMP") == "1":
+        return tmp_path / "live_e2e_run"
+    override = os.getenv("EOS_SWEEVO_AUDIT_DIR")
+    base = Path(override) if override else Path(".sweevo_runs")
+    return base.resolve()
 
 
 @pytest.fixture
@@ -81,10 +139,6 @@ def pipeline_run() -> Iterator[Any]:
                 )
 
     if loop.is_running():
-        # Schedule on the running loop; the test caller is responsible for not
-        # exiting before the task can drain. This branch is unusual — pytest
-        # teardown runs after the test's event loop closes, so we rarely hit
-        # it. Logging only.
         _log.warning(
             "pipeline_run: event loop still running at teardown; "
             "perf-report draining may not complete before the loop closes."
@@ -93,4 +147,4 @@ def pipeline_run() -> Iterator[Any]:
         loop.run_until_complete(_drain())
 
 
-__all__ = ["pipeline_run"]
+__all__ = ["audit_dir", "db_engine", "pipeline_run", "stores"]
