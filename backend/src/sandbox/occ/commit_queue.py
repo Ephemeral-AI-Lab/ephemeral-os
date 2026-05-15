@@ -127,6 +127,7 @@ class CommitQueue:
             if isinstance(first, _StopItem):
                 return
             items = [first]
+            stop_seen = False
             # WR-04: drain the queue non-blockingly first. Only pay the
             # batch-window latency when the drain emptied the queue AND
             # we still have headroom; otherwise the sleep is dead
@@ -137,10 +138,10 @@ class CommitQueue:
                 except queue.Empty:
                     break
                 if isinstance(item, _StopItem):
-                    self._queue.put(item)
+                    stop_seen = True
                     break
                 items.append(item)
-            if self._batch_window_s > 0 and len(items) < self._max_batch_size:
+            if not stop_seen and self._batch_window_s > 0 and len(items) < self._max_batch_size:
                 time.sleep(self._batch_window_s)
                 while len(items) < self._max_batch_size:
                     try:
@@ -148,13 +149,15 @@ class CommitQueue:
                     except queue.Empty:
                         break
                     if isinstance(item, _StopItem):
-                        self._queue.put(item)
+                        stop_seen = True
                         break
                     items.append(item)
 
             pending = [item for item in items if not item.future.cancelled()]
             for batch in _disjoint_batches(pending):
                 self._commit_batch(batch)
+            if stop_seen:
+                return
 
     def _commit_batch(self, batch: list[_WorkItem]) -> None:
         if not batch:
