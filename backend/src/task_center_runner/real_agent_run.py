@@ -26,7 +26,8 @@ from benchmarks.sweevo.prompt import build_sweevo_user_prompt
 from task_center_runner.audit.bus import AuditEventBus
 from task_center_runner.audit.events import Event, EventType
 from task_center_runner.audit.node_id import NodeId
-from task_center_runner.audit.recorder import AuditRecorder, _atomic_write_json
+from task_center_runner.audit.io import atomic_write_json
+from task_center_runner.audit.recorder import AuditRecorder
 from task_center_runner.audit.stream_bridge import stream_bridge
 from task_center_runner.real_agent_bootstrap import bootstrap_real_agent_runtime
 from task_center_runner.stores import (
@@ -198,7 +199,7 @@ async def run_sweevo_real_agent(
                 "timeout" if aborted_by_timeout else (task_center_status or "unknown")
             )
 
-        _atomic_write_json(run_dir / "sweevo_result.json", dataclasses.asdict(result))
+        atomic_write_json(run_dir / "sweevo_result.json", dataclasses.asdict(result))
 
         return RealAgentRunReport(
             instance_id=instance.instance_id,

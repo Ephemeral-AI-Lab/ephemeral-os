@@ -11,8 +11,6 @@ events are mirrored into ``sandbox_events.jsonl``.
 
 from __future__ import annotations
 
-import json
-import os
 import time
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
@@ -25,6 +23,7 @@ from sqlalchemy import event
 from audit.jsonl import append_jsonl_event
 from task_center_runner.audit.bus import AuditEventBus
 from task_center_runner.audit.events import Event as AuditEvent
+from task_center_runner.audit.io import atomic_write_json
 from task_center_runner.audit.metrics import MetricsAggregator
 from task_center_runner.audit.performance_report import write_performance_reports
 from db.models.agent_run import AgentRunRecord
@@ -124,13 +123,7 @@ def _serialize_task(record: TaskCenterTaskRecord) -> dict[str, Any]:
     }
 
 
-def _atomic_write_json(path: Path, data: dict[str, Any]) -> None:
-    """Write ``data`` as JSON via tmp + os.replace."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp_path = path.with_suffix(path.suffix + ".tmp")
-    encoded = json.dumps(data, default=str, ensure_ascii=False)
-    tmp_path.write_text(encoded, encoding="utf-8")
-    os.replace(tmp_path, path)
+_atomic_write_json = atomic_write_json
 
 
 @dataclass(slots=True)

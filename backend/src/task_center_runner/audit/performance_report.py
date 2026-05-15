@@ -9,13 +9,14 @@ or TaskCenter state.
 from __future__ import annotations
 
 import json
-import os
 from collections import Counter
 from collections.abc import Iterable, Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from statistics import median
 from typing import Any
+
+from task_center_runner.audit.io import atomic_write_pretty_json, atomic_write_text
 
 REPORT_SCHEMA = "live_e2e.performance_report.v1"
 _SLOWEST_LIMIT = 25
@@ -633,19 +634,8 @@ def _short(value: object, max_len: int = 24) -> str:
     return text[: max_len - 3] + "..."
 
 
-def _atomic_write_json(path: Path, data: Mapping[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp_path = path.with_suffix(path.suffix + ".tmp")
-    encoded = json.dumps(data, default=str, ensure_ascii=False, indent=2)
-    tmp_path.write_text(encoded + "\n", encoding="utf-8")
-    os.replace(tmp_path, path)
-
-
-def _atomic_write_text(path: Path, data: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp_path = path.with_suffix(path.suffix + ".tmp")
-    tmp_path.write_text(data, encoding="utf-8")
-    os.replace(tmp_path, path)
+_atomic_write_json = atomic_write_pretty_json
+_atomic_write_text = atomic_write_text
 
 
 __all__ = [
