@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 from sandbox.models import RawExecResult
 from sandbox.provider.daytona.adapter import DaytonaProviderAdapter
-from sandbox.provider.daytona.bash import EXIT_MARKER
+from sandbox.provider.daytona.exec_wrapper import EXIT_MARKER
 
 
 class _FakeProcess:
