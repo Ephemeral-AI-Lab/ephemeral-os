@@ -8,6 +8,7 @@ single coroutine that returns a :class:`RunReport`.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import time
 import uuid
@@ -23,6 +24,7 @@ from task_center import TaskCenterSandboxBridge, start_task_center_entry_run
 from task_center_runner.audit.bus import AuditEventBus
 from task_center_runner.audit.events import Event, EventType
 from task_center_runner.audit.node_id import NodeId
+from task_center_runner.audit.performance_report import _write_perf_report_safe
 from task_center_runner.audit.recorder import AuditRecorder
 from task_center_runner.audit.stream_bridge import stream_bridge
 from task_center_runner.hooks.registry import (
@@ -73,6 +75,7 @@ class RunReport:
     requirement_ledger: list[dict[str, Any]] = field(default_factory=list)
     package_plan: list[dict[str, Any]] = field(default_factory=list)
     matrix_plan: list[dict[str, Any]] = field(default_factory=list)
+    performance_report_task: asyncio.Task[Path] | None = None
 
     @property
     def passed_prompt_inspections(self) -> bool:
@@ -281,13 +284,28 @@ async def run_scenario(
             package_plan=list(getattr(scenario, "package_plan", [])),
             matrix_plan=list(getattr(scenario, "matrix_plan", [])),
         )
-        return report
+        # Capture the perf-report snapshot BEFORE dispose so the post-dispose
+        # async writer sees the final in-memory metrics state. Phase 3 of the
+        # task_center_runner restructure moves the perf-report write out of
+        # AuditRecorder.dispose() into an asyncio task whose handle rides on
+        # ``RunReport.performance_report_task``; callers (and the
+        # ``pipeline_run`` fixture) must ``await`` it before exit.
+        perf_snapshot = (
+            recorder.metrics.performance_snapshot() if recorder is not None else None
+        )
     finally:
         bus_unsub()
         if recorder is not None:
             recorder.dispose()
         if owns_stores:
             bundle.close()
+
+    if perf_snapshot is not None:
+        report.performance_report_task = asyncio.create_task(
+            _write_perf_report_safe(report.run_dir, perf_snapshot),
+            name=f"perf_report:{report.task_center_run_id}",
+        )
+    return report
 
 
 __all__ = ["RunReport", "run_scenario"]

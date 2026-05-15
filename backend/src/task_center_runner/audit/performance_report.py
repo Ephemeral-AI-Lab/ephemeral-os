@@ -8,7 +8,9 @@ or TaskCenter state.
 
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 from collections import Counter
 from collections.abc import Iterable, Mapping
 from datetime import UTC, datetime
@@ -18,7 +20,9 @@ from typing import Any
 
 from task_center_runner.audit.io import atomic_write_pretty_json, atomic_write_text
 
-REPORT_SCHEMA = "live_e2e.performance_report.v1"
+logger = logging.getLogger(__name__)
+
+REPORT_SCHEMA = "task_center_runner.performance_report.v2"
 _SLOWEST_LIMIT = 25
 
 _SANDBOX_FAMILY_BY_EVENT: Mapping[str, str] = {
@@ -638,8 +642,28 @@ _atomic_write_json = atomic_write_pretty_json
 _atomic_write_text = atomic_write_text
 
 
+async def _write_perf_report_safe(
+    run_dir: Path, snapshot: Mapping[str, Any]
+) -> Path:
+    """Run :func:`write_performance_reports` off the event loop.
+
+    Failures are logged with ``exc_info=True`` and never propagate — perf reports
+    are observability, not correctness. Returns the expected report path so the
+    caller can ``await`` the task and check existence; if the write failed, the
+    file may not exist.
+    """
+    try:
+        await asyncio.to_thread(write_performance_reports, run_dir, snapshot)
+    except BaseException as exc:  # noqa: BLE001 — never crash the run on perf-report failures
+        logger.warning(
+            "Async perf-report failed for %s: %s", run_dir, exc, exc_info=True
+        )
+    return run_dir / "performance_report.json"
+
+
 __all__ = [
     "REPORT_SCHEMA",
+    "_write_perf_report_safe",
     "build_performance_report",
     "render_performance_report_markdown",
     "write_performance_reports",

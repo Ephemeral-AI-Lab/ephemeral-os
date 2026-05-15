@@ -27,6 +27,7 @@ from task_center_runner.audit.bus import AuditEventBus
 from task_center_runner.audit.events import Event, EventType
 from task_center_runner.audit.node_id import NodeId
 from task_center_runner.audit.io import atomic_write_json
+from task_center_runner.audit.performance_report import _write_perf_report_safe
 from task_center_runner.audit.recorder import AuditRecorder
 from task_center_runner.audit.stream_bridge import stream_bridge
 from task_center_runner.real_agent_bootstrap import bootstrap_real_agent_runtime
@@ -52,6 +53,7 @@ class RealAgentRunReport:
     task_center_status: str | None
     sweevo_result: SWEEvoResult
     aborted_by_timeout: bool = False
+    performance_report_task: asyncio.Task[Path] | None = None
 
 
 def _count_task_outcomes(task_rows: list[dict[str, Any]]) -> tuple[int, int, int]:
@@ -201,7 +203,7 @@ async def run_sweevo_real_agent(
 
         atomic_write_json(run_dir / "sweevo_result.json", dataclasses.asdict(result))
 
-        return RealAgentRunReport(
+        report = RealAgentRunReport(
             instance_id=instance.instance_id,
             task_center_run_id=tcrid,
             sandbox_id=sandbox_id,
@@ -210,10 +212,20 @@ async def run_sweevo_real_agent(
             sweevo_result=result,
             aborted_by_timeout=aborted_by_timeout,
         )
+        # Snapshot before dispose; the async perf-report task is created after
+        # the recorder is closed so the recorder's listeners stay attached
+        # while ``performance_snapshot`` reads the live in-memory state.
+        perf_snapshot = recorder.metrics.performance_snapshot()
     finally:
         recorder.dispose()
         if owns_stores:
             bundle.close()
+
+    report.performance_report_task = asyncio.create_task(
+        _write_perf_report_safe(report.run_dir, perf_snapshot),
+        name=f"perf_report:{report.task_center_run_id}",
+    )
+    return report
 
 
 __all__ = ["RealAgentRunReport", "run_sweevo_real_agent"]

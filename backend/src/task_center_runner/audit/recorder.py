@@ -25,7 +25,6 @@ from task_center_runner.audit.bus import AuditEventBus
 from task_center_runner.audit.events import Event as AuditEvent
 from task_center_runner.audit.io import atomic_write_json
 from task_center_runner.audit.metrics import MetricsAggregator
-from task_center_runner.audit.performance_report import write_performance_reports
 from db.models.agent_run import AgentRunRecord
 from db.models.attempt import AttemptRecord
 from db.models.episode import EpisodeRecord
@@ -308,10 +307,6 @@ class AuditRecorder:
             self._status = "finished"
         self._write_run_json()
         _atomic_write_json(self._run_dir / "metrics.json", self._metrics.snapshot())
-        write_performance_reports(
-            self._run_dir,
-            self._metrics.performance_snapshot(),
-        )
 
     # ------------------------------------------------------------------
     # Listener registration

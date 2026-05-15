@@ -465,7 +465,7 @@ def test_run_json_and_metrics_json_written(
     assert "per_tool" in payload
 
 
-def test_dispose_writes_detailed_performance_report(tmp_path: Path) -> None:
+def test_write_performance_reports_produces_detailed_report(tmp_path: Path) -> None:
     bus = AuditEventBus()
     recorder = _make_recorder(tmp_path, bus=bus)
     started = datetime.now(UTC)
@@ -555,14 +555,23 @@ def test_dispose_writes_detailed_performance_report(tmp_path: Path) -> None:
                 },
             )
         )
+        snapshot = recorder.metrics.performance_snapshot()
     finally:
         recorder.dispose()
 
     metrics_payload = _read_json(recorder.run_dir / "metrics.json")
     assert "samples" not in metrics_payload["per_tool"]["write_file"]
+    assert not (recorder.run_dir / "performance_report.json").exists(), (
+        "dispose() must no longer write the perf report; Phase 3 moved it to "
+        "an async post-dispose task driven by the caller."
+    )
+
+    from task_center_runner.audit.performance_report import write_performance_reports
+
+    write_performance_reports(recorder.run_dir, snapshot)
 
     report = _read_json(recorder.run_dir / "performance_report.json")
-    assert report["schema"] == "live_e2e.performance_report.v1"
+    assert report["schema"] == "task_center_runner.performance_report.v2"
     assert report["totals"]["tool_calls_total"] == 1
     assert report["tools"]["per_tool"]["write_file"]["p95_ms"] == 125.0
     assert report["tools"]["per_tool"]["write_file"]["samples"][0][
