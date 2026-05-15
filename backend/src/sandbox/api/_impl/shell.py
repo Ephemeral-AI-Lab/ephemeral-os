@@ -5,11 +5,7 @@ from __future__ import annotations
 from audit.base import AuditSink
 from sandbox.api._impl._audit import audited_operation
 from sandbox.api._impl._classifiers import is_shell_conflict
-from sandbox.api._impl._payload import (
-    error_message,
-    normalize_overlay_cwd,
-    timings_from_payload,
-)
+from sandbox.api._impl._payload import error_message, timings_from_payload
 from sandbox.api._impl._results import (
     shell_conflict_result,
     shell_error_result,
@@ -31,7 +27,7 @@ async def shell(
 ) -> ShellResult:
     """Run a shell command through sandbox-local overlay and OCC."""
     total_start = monotonic_now()
-    cwd = normalize_overlay_cwd(request.cwd)
+    cwd = (request.cwd or "").strip() or "."
     selected_transport = transport or DaemonSandboxTransport()
 
     async def _call() -> ShellResult:

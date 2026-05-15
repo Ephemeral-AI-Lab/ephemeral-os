@@ -23,7 +23,7 @@ def _seed_request(mission_store, task_center_run_id) -> str:
 def test_insert_returns_dto(episode_store, mission_store, task_center_run_id):
     request_id = _seed_request(mission_store, task_center_run_id)
     seg = episode_store.insert(
-        mission_id=request_id,
+        goal_id=request_id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="g",
@@ -38,7 +38,7 @@ def test_insert_returns_dto(episode_store, mission_store, task_center_run_id):
 def test_get_round_trip(episode_store, mission_store, task_center_run_id):
     request_id = _seed_request(mission_store, task_center_run_id)
     inserted = episode_store.insert(
-        mission_id=request_id,
+        goal_id=request_id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="g",
@@ -55,7 +55,7 @@ def test_append_attempt_id_preserves_order(
 ):
     request_id = _seed_request(mission_store, task_center_run_id)
     seg = episode_store.insert(
-        mission_id=request_id,
+        goal_id=request_id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="g",
@@ -73,7 +73,7 @@ def test_set_continuation_goal_and_status(
 ):
     request_id = _seed_request(mission_store, task_center_run_id)
     seg = episode_store.insert(
-        mission_id=request_id,
+        goal_id=request_id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="g",
@@ -95,14 +95,14 @@ def test_list_for_mission_orders_by_sequence_no(
 ):
     request_id = _seed_request(mission_store, task_center_run_id)
     s2 = episode_store.insert(
-        mission_id=request_id,
+        goal_id=request_id,
         sequence_no=2,
         creation_reason=IterationCreationReason.PARTIAL_CONTINUATION,
         goal="g2",
         trial_budget=2,
     )
     s1 = episode_store.insert(
-        mission_id=request_id,
+        goal_id=request_id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="g1",
@@ -115,18 +115,18 @@ def test_list_for_mission_orders_by_sequence_no(
 def test_get_by_sequence(episode_store, mission_store, task_center_run_id):
     request_id = _seed_request(mission_store, task_center_run_id)
     seg = episode_store.insert(
-        mission_id=request_id,
+        goal_id=request_id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="g",
         trial_budget=2,
     )
     found = episode_store.get_by_sequence(
-        mission_id=request_id, sequence_no=1
+        goal_id=request_id, sequence_no=1
     )
     assert found is not None
     assert found.id == seg.id
     missing = episode_store.get_by_sequence(
-        mission_id=request_id, sequence_no=99
+        goal_id=request_id, sequence_no=99
     )
     assert missing is None

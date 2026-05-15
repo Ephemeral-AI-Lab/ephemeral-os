@@ -15,7 +15,7 @@ from task_center.trial import (
 def _graph(**overrides) -> Trial:
     base = dict(
         id="g1",
-        episode_id="s1",
+        iteration_id="s1",
         trial_sequence_no=1,
         stage=TrialStage.PLAN,
         status=TrialStatus.RUNNING,

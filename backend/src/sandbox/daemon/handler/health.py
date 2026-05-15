@@ -16,7 +16,6 @@ from sandbox.layer_stack.workspace_binding import require_workspace_binding
 from sandbox.daemon import _toolbox as request_context
 from sandbox.daemon._toolbox import layer_stack_root as require_layer_stack_root
 from sandbox.daemon import occ_backend
-from sandbox.daemon.service import shell_runner
 from sandbox.daemon.occ_backend import OccBackend
 from sandbox.daemon.workspace_server import get_layer_stack_manager
 from sandbox.timing import monotonic_now
@@ -80,9 +79,6 @@ def _probe_control_plane(layer_stack_root: str) -> dict[str, object]:
 
 def _probe_data_plane(layer_stack_root: str) -> dict[str, object]:
     handlers_backend = request_context.services(layer_stack_root)
-    # Build shell data-plane services for the side effect: a crash here
-    # surfaces a broken OCC backend before any request hits api.shell.
-    shell_runner.services({"layer_stack_root": layer_stack_root})
     if not isinstance(handlers_backend, OccBackend):
         raise RuntimeError(
             "handler services returned "

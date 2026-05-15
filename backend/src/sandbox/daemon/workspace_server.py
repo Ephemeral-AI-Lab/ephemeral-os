@@ -59,7 +59,7 @@ def fence_stale_staging(layer_stack_root: str | Path) -> dict[str, object]:
                 continue
             inspected_dirs += 1
             try:
-                mtime = child.stat().st_mtime
+                mtime = child.lstat().st_mtime
             except OSError:
                 continue
             if mtime >= _DAEMON_STARTED_AT:

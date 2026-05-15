@@ -60,7 +60,7 @@ def mission_episode_blocks(
 
 def _episode_goal_block(episode: Episode, *, heading: str) -> ContextBlock:
     return ContextBlock(
-        kind=ContextBlockKind.EPISODE_GOAL,
+        kind=ContextBlockKind.ITERATION_STATEMENT,
         priority=ContextPriority.REQUIRED,
         text=episode.goal,
         source_id=episode.id,
@@ -71,7 +71,7 @@ def _episode_goal_block(episode: Episode, *, heading: str) -> ContextBlock:
 
 def _mission_goal_block(mission: Mission) -> ContextBlock:
     return ContextBlock(
-        kind=ContextBlockKind.MISSION_GOAL,
+        kind=ContextBlockKind.GOAL_STATEMENT,
         priority=ContextPriority.REQUIRED,
         text=mission.goal,
         source_id=mission.id,
@@ -108,7 +108,7 @@ def _previous_episode_result_blocks(
         }
         out.append(
             ContextBlock(
-                kind=ContextBlockKind.PRIOR_EPISODE_SPECIFICATION,
+                kind=ContextBlockKind.PRIOR_ITERATION_SPECIFICATION,
                 priority=priority,
                 text=prior.task_specification,
                 source_id=prior.id,
@@ -121,7 +121,7 @@ def _previous_episode_result_blocks(
         )
         out.append(
             ContextBlock(
-                kind=ContextBlockKind.PRIOR_EPISODE_SUMMARY,
+                kind=ContextBlockKind.PRIOR_ITERATION_SUMMARY,
                 priority=priority,
                 text=prior.task_summary,
                 source_id=prior.id,

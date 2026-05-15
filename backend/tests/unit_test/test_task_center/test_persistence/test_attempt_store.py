@@ -33,7 +33,7 @@ def test_insert_returns_running_planning_dto(
     attempt_store, episode_store, mission_store, task_center_run_id
 ):
     seg_id = _seed_segment(mission_store, episode_store, task_center_run_id)
-    g = attempt_store.insert(episode_id=seg_id, trial_sequence_no=1)
+    g = attempt_store.insert(iteration_id=seg_id, trial_sequence_no=1)
     assert isinstance(g, Trial)
     assert g.stage == TrialStage.PLAN
     assert g.status == TrialStatus.RUNNING
@@ -46,7 +46,7 @@ def test_set_plan_contract_persists_fields(
     attempt_store, episode_store, mission_store, task_center_run_id
 ):
     seg_id = _seed_segment(mission_store, episode_store, task_center_run_id)
-    g = attempt_store.insert(episode_id=seg_id, trial_sequence_no=1)
+    g = attempt_store.insert(iteration_id=seg_id, trial_sequence_no=1)
     g = attempt_store.set_plan_contract(
         g.id,
         task_specification="spec",
@@ -62,7 +62,7 @@ def test_close_records_status_fail_reason_and_closed_at(
     attempt_store, episode_store, mission_store, task_center_run_id
 ):
     seg_id = _seed_segment(mission_store, episode_store, task_center_run_id)
-    g = attempt_store.insert(episode_id=seg_id, trial_sequence_no=1)
+    g = attempt_store.insert(iteration_id=seg_id, trial_sequence_no=1)
     closed = attempt_store.close(
         g.id,
         status=TrialStatus.FAILED,
@@ -78,8 +78,8 @@ def test_list_for_episode_orders_by_attempt_sequence_no(
     attempt_store, episode_store, mission_store, task_center_run_id
 ):
     seg_id = _seed_segment(mission_store, episode_store, task_center_run_id)
-    g2 = attempt_store.insert(episode_id=seg_id, trial_sequence_no=2)
-    g1 = attempt_store.insert(episode_id=seg_id, trial_sequence_no=1)
+    g2 = attempt_store.insert(iteration_id=seg_id, trial_sequence_no=2)
+    g1 = attempt_store.insert(iteration_id=seg_id, trial_sequence_no=1)
     listed = attempt_store.list_for_episode(seg_id)
     assert [g.id for g in listed] == [g1.id, g2.id]
 
@@ -88,12 +88,12 @@ def test_get_by_sequence(
     attempt_store, episode_store, mission_store, task_center_run_id
 ):
     seg_id = _seed_segment(mission_store, episode_store, task_center_run_id)
-    g = attempt_store.insert(episode_id=seg_id, trial_sequence_no=1)
+    g = attempt_store.insert(iteration_id=seg_id, trial_sequence_no=1)
     found = attempt_store.get_by_sequence(
-        episode_id=seg_id, trial_sequence_no=1
+        iteration_id=seg_id, trial_sequence_no=1
     )
     assert found is not None and found.id == g.id
     missing = attempt_store.get_by_sequence(
-        episode_id=seg_id, trial_sequence_no=99
+        iteration_id=seg_id, trial_sequence_no=99
     )
     assert missing is None

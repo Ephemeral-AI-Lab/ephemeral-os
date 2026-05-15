@@ -10,8 +10,8 @@ from task_center.context_engine.scope import ContextScope
 
 def test_assert_fields_passes_when_all_present():
     scope = ContextScope(
-        mission_id="r",
-        episode_id="s",
+        goal_id="r",
+        iteration_id="s",
         attempt_id="g",
         task_id="t",
     )
@@ -19,14 +19,14 @@ def test_assert_fields_passes_when_all_present():
 
 
 def test_assert_fields_rejects_missing_episode():
-    scope = ContextScope(mission_id="r")
+    scope = ContextScope(goal_id="r")
     with pytest.raises(RecipeScopeError) as exc:
         scope.assert_fields(frozenset({"mission_id", "episode_id"}))
     assert "episode_id" in str(exc.value)
 
 
 def test_assert_fields_lists_all_missing_fields_sorted():
-    scope = ContextScope(mission_id="r")
+    scope = ContextScope(goal_id="r")
     with pytest.raises(RecipeScopeError) as exc:
         scope.assert_fields(
             frozenset({"task_id", "episode_id", "attempt_id"})
@@ -43,7 +43,7 @@ def test_assert_fields_lists_all_missing_fields_sorted():
 
 def test_helper_scope_fields_round_trip():
     scope = ContextScope(
-        mission_id="r",
+        goal_id="r",
         task_id="helper-1",
         parent_packet_id="pkt-1",
         parent_task_id="parent-task",

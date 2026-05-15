@@ -148,7 +148,7 @@ def test_ac7_executor_variant_disjunction_total_across_depths(monkeypatch) -> No
         attempt_store=_S(),  # type: ignore[arg-type]
         task_store=_S(),  # type: ignore[arg-type]
     )
-    ctx = ResolverContext(scope=ContextScope(mission_id="m"), deps=deps)
+    ctx = ResolverContext(scope=ContextScope(goal_id="m"), deps=deps)
 
     within = PredicateRegistry.get(
         "nested_mission_depth_within_handoff_range"
@@ -184,7 +184,7 @@ def test_ac8_always_predicate_is_registered_and_unconditional() -> None:
     )
     assert pred(ResolverContext(scope=ContextScope(), deps=deps)) is True
     assert (
-        pred(ResolverContext(scope=ContextScope(mission_id="x"), deps=deps))
+        pred(ResolverContext(scope=ContextScope(goal_id="x"), deps=deps))
         is True
     )
 

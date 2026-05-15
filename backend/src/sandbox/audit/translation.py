@@ -50,7 +50,11 @@ def events_from_result(
         caller=caller,
     )
     payload = operation_payload(operation=operation, result=result)
-    terminal_type = _terminal_type(payload["status"])
+    terminal_type = events.OPERATION_COMPLETED
+    if payload["status"] == "conflict":
+        terminal_type = events.OPERATION_CONFLICTED
+    elif payload["status"] == "error":
+        terminal_type = events.OPERATION_FAILED
     emitted = [
         AuditEvent(
             source="sandbox",
@@ -147,14 +151,6 @@ def _status_from_result(result: SandboxResultBase) -> str:
     return "ok"
 
 
-def _terminal_type(status: object) -> str:
-    if status == "conflict":
-        return events.OPERATION_CONFLICTED
-    if status == "error":
-        return events.OPERATION_FAILED
-    return events.OPERATION_COMPLETED
-
-
 def _subsystem_events(
     *,
     node: AuditNode,
@@ -165,26 +161,18 @@ def _subsystem_events(
         return []
 
     return [
-        _subsystem_event(_EVENT_BY_SIGNAL[signal], node, payload)
+        AuditEvent(
+            source="sandbox",
+            type=_EVENT_BY_SIGNAL[signal],
+            node=node,
+            payload=dict(payload),
+        )
         for signal in timing_audit_signals(
             timings,
             status=payload.get("status"),
             payload=payload,
         )
     ]
-
-
-def _subsystem_event(
-    event_type: str,
-    node: AuditNode,
-    payload: Mapping[str, Any],
-) -> AuditEvent:
-    return AuditEvent(
-        source="sandbox",
-        type=event_type,
-        node=node,
-        payload=dict(payload),
-    )
 
 
 def _none_if_empty(value: str | None) -> str | None:

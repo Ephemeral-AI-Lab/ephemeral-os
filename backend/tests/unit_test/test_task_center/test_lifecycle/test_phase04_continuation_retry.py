@@ -258,7 +258,7 @@ def test_delegated_continuation_waits_until_final_segment(
         == TaskCenterTaskStatus.WAITING_MISSION.value
     )
     delegated_request_after_segment1 = mission_store.get(
-        mission_startgoal_id
+        mission_start.goal_id
     )
     assert delegated_request_after_segment1 is not None
     assert delegated_request_after_segment1.status == GoalStatus.OPEN
@@ -278,7 +278,7 @@ def test_delegated_continuation_waits_until_final_segment(
     )
 
     parent_final = task_store.get_task(parent_task_id)
-    delegated_final = mission_store.get(mission_startgoal_id)
+    delegated_final = mission_store.get(mission_start.goal_id)
     segment2_final = episode_store.get(segment2_id)
     assert parent_final is not None
     assert parent_final["status"] == TaskCenterTaskStatus.DONE.value
@@ -320,7 +320,7 @@ def test_continuation_startup_failure_reports_continuation_graph(
         continuation_goal="continue work",
     )
 
-    request = mission_store.get(mission_startgoal_id)
+    request = mission_store.get(mission_start.goal_id)
     assert request is not None
     assert request.status == GoalStatus.FAILED
     assert request.final_outcome is not None
@@ -370,7 +370,7 @@ def test_delegated_retry_waits_until_final_graph(
     parent_mid = task_store.get_task(parent_task_id)
     assert parent_mid is not None
     assert parent_mid["status"] == TaskCenterTaskStatus.WAITING_MISSION.value
-    delegated_mid = mission_store.get(mission_startgoal_id)
+    delegated_mid = mission_store.get(mission_start.goal_id)
     assert delegated_mid is not None
     assert delegated_mid.status == GoalStatus.OPEN
 
@@ -383,7 +383,7 @@ def test_delegated_retry_waits_until_final_graph(
     )
 
     parent_final = task_store.get_task(parent_task_id)
-    delegated_final = mission_store.get(mission_startgoal_id)
+    delegated_final = mission_store.get(mission_start.goal_id)
     refreshed_segment = episode_store.get(mission_start.initial_episode_id)
     assert parent_final is not None
     assert parent_final["status"] == TaskCenterTaskStatus.DONE.value

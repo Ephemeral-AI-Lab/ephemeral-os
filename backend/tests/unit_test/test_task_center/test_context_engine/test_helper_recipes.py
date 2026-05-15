@@ -56,7 +56,7 @@ def _seed_parent_packet(packet_store) -> ContextPacket:
     packet = ContextPacket(
         target_role="planner",
         target_id="g-parent",
-        canonical_refs=ContextRefs(mission_id="req-A", attempt_id="g-parent"),
+        canonical_refs=ContextRefs(goal_id="req-A", attempt_id="g-parent"),
         blocks=[
             ContextBlock(
                 kind="episode_goal",
@@ -117,7 +117,7 @@ def test_advisor_emits_only_demoted_inherited_parent_context(
         question="advise me on X",
     )
     scope = ContextScope(
-        mission_id="req-A",
+        goal_id="req-A",
         task_id="helper-1",
         parent_packet_id=parent_packet.id,
         parent_task_id="t-parent",
@@ -150,7 +150,7 @@ def test_resolver_same_shape_target_role_resolver(
         question="resolve question",
     )
     scope = ContextScope(
-        mission_id="req-A",
+        goal_id="req-A",
         task_id="resolver-1",
         parent_packet_id=parent_packet.id,
         parent_task_id="t-parent",
@@ -170,7 +170,7 @@ def test_missing_parent_packet_raises_context_engine_error(
         question="q",
     )
     scope = ContextScope(
-        mission_id="req-A",
+        goal_id="req-A",
         task_id="helper-1",
         parent_packet_id="missing-packet",
         parent_task_id="t-parent",
@@ -196,7 +196,7 @@ def test_missing_packet_store_raises_context_engine_error(
         question="q",
     )
     scope = ContextScope(
-        mission_id="req-A",
+        goal_id="req-A",
         task_id="helper-1",
         parent_packet_id="any",
         parent_task_id="t-parent",
@@ -212,6 +212,6 @@ def test_helper_required_scope_fields_enforced():
         RESOLVER_RECIPE,
     )
     for recipe in (ADVISOR_RECIPE, RESOLVER_RECIPE):
-        scope = ContextScope(mission_id="r")
+        scope = ContextScope(goal_id="r")
         with pytest.raises(RecipeScopeError):
             scope.assert_fields(recipe.required_scope_fields)

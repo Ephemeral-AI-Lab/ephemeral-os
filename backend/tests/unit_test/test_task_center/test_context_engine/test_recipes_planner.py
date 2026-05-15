@@ -52,7 +52,7 @@ def _seed_episode(
     goal: str = "g",
 ):
     return episode_store.insert(
-        mission_id=mission_id,
+        goal_id=mission_id,
         sequence_no=sequence_no,
         creation_reason=IterationCreationReason.INITIAL,
         goal=goal,
@@ -73,7 +73,7 @@ def _close_episode_succeeded(
 
 def _seed_failed_attempt(attempt_store, episode_id, *, sequence_no: int):
     g = attempt_store.insert(
-        episode_id=episode_id, trial_sequence_no=sequence_no
+        iteration_id=episode_id, trial_sequence_no=sequence_no
     )
     attempt_store.set_plan_contract(
         g.id,
@@ -91,7 +91,7 @@ def _seed_failed_attempt(attempt_store, episode_id, *, sequence_no: int):
 
 def _seed_running_attempt(attempt_store, episode_id, *, sequence_no: int):
     return attempt_store.insert(
-        episode_id=episode_id, trial_sequence_no=sequence_no
+        iteration_id=episode_id, trial_sequence_no=sequence_no
     )
 
 

@@ -10,12 +10,6 @@ from sandbox.timing import normalize_timing_map
 _INTERNAL_ERROR_PREFIX = "internal_error: "
 
 
-def normalize_overlay_cwd(cwd: str | None) -> str:
-    """Normalize public shell cwd values for overlay execution."""
-    normalized = (cwd or "").strip()
-    return normalized or "."
-
-
 def error_message(error: BaseException) -> str:
     message = str(getattr(error, "message", "") or error)
     if message.startswith(_INTERNAL_ERROR_PREFIX):
@@ -51,6 +45,7 @@ def timings_from_payload(raw: object) -> dict[str, float]:
 
 
 def int_from_payload(value: object, *, default: int) -> int:
+    """Return an integer boundary value without accepting bool-as-int."""
     if value is None:
         return default
     if isinstance(value, bool):
@@ -64,7 +59,6 @@ __all__ = [
     "conflict_from_payload",
     "error_message",
     "int_from_payload",
-    "normalize_overlay_cwd",
     "paths_from_payload",
     "timings_from_payload",
 ]

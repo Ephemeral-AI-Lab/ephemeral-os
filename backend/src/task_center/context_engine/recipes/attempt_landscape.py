@@ -46,7 +46,7 @@ def failed_attempt_landscape_blocks(
     )
     return [
         ContextBlock(
-            kind=ContextBlockKind.FAILED_ATTEMPT_LANDSCAPE,
+            kind=ContextBlockKind.FAILED_TRIAL_LANDSCAPE,
             priority=ContextPriority.HIGH,
             text=_render_failed_attempt(a, task_store=task_store),
             source_id=a.id,

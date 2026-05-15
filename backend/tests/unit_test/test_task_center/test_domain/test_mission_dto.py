@@ -46,10 +46,10 @@ def test_request_dto_is_frozen():
 
 def test_closure_report_constructs():
     rep = GoalClosureReport(
-        mission_id="r1",
+        goal_id="r1",
         requested_by_task_id="t1",
         outcome="success",
-        final_episode_id="s1",
+        final_iteration_id="s1",
         final_attempt_id="g1",
     )
     assert rep.outcome == "success"

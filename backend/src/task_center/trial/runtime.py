@@ -47,7 +47,7 @@ class AgentLaunch:
     rendered_prompt: str
     needs: tuple[str, ...]
     context_packet_id: str | None = None
-    mission_id: str | None = None
+    goal_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -179,7 +179,7 @@ class GeneratorTaskLifecycle:
             "outcome": "mission_start",
             "summary": "Waiting on delegated mission solution.",
             "payload": {
-                "mission_id": delegated_mission_id,
+                "goal_id": delegated_mission_id,
                 "initial_episode_id": delegated_episode_id,
                 "initial_attempt_id": delegated_attempt_id,
                 "parent_attempt_id": self.attempt_id,

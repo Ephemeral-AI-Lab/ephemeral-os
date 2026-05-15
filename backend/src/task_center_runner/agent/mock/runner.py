@@ -368,7 +368,7 @@ class MockSquadRunner:
                     metadata=metadata,
                     payload={
                         "package_id": package_id,
-                        "mission_id": result.metadata.get("mission_id"),
+                        "goal_id": result.metadata.get("goal_id"),
                     },
                 )
                 return result
@@ -390,7 +390,7 @@ class MockSquadRunner:
                     metadata=metadata,
                     payload={
                         "package_id": package_id,
-                        "mission_id": result.metadata.get("mission_id"),
+                        "goal_id": result.metadata.get("goal_id"),
                     },
                 )
                 return result
@@ -1385,7 +1385,7 @@ class MockSquadRunner:
                 close_report = payload.get("mission_closure_report")
                 if isinstance(close_report, dict):
                     return {
-                        "mission_id": close_report.get("mission_id"),
+                        "goal_id": close_report.get("goal_id"),
                         "requested_by_task_id": close_report.get(
                             "requested_by_task_id"
                         ),

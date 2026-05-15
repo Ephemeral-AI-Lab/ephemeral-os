@@ -98,8 +98,8 @@ def test_mark_waiting_then_closure_report_success(
 ):
     controller = entry_setup
     controller.mark_waiting_mission(
-        delegated_mission_id="delegated-1",
-        delegated_episode_id="delegated-episode",
+        delegated_goal_id="delegated-1",
+        delegated_iteration_id="delegated-episode",
         delegated_attempt_id="delegated-attempt",
         goal="solve x",
     )
@@ -109,10 +109,10 @@ def test_mark_waiting_then_closure_report_success(
 
     controller.apply_mission_closure_report(
         GoalClosureReport(
-            mission_id="delegated-1",
+            goal_id="delegated-1",
             requested_by_task_id=controller.task_id,
             outcome="success",
-            final_episode_id="delegated-episode",
+            final_iteration_id="delegated-episode",
             final_attempt_id="delegated-attempt",
         )
     )
@@ -130,18 +130,18 @@ def test_closure_report_failure_marks_failed(
 ):
     controller = entry_setup
     controller.mark_waiting_mission(
-        delegated_mission_id="delegated-1",
-        delegated_episode_id="delegated-episode",
+        delegated_goal_id="delegated-1",
+        delegated_iteration_id="delegated-episode",
         delegated_attempt_id="delegated-attempt",
         goal="solve x",
     )
 
     controller.apply_mission_closure_report(
         GoalClosureReport(
-            mission_id="delegated-1",
+            goal_id="delegated-1",
             requested_by_task_id=controller.task_id,
             outcome="failed",
-            final_episode_id="delegated-episode",
+            final_iteration_id="delegated-episode",
             final_attempt_id="delegated-attempt",
         )
     )
@@ -162,10 +162,10 @@ def test_closure_report_idempotent_when_task_already_terminal(
 
     controller.apply_mission_closure_report(
         GoalClosureReport(
-            mission_id="delegated-1",
+            goal_id="delegated-1",
             requested_by_task_id=controller.task_id,
             outcome="failed",
-            final_episode_id="delegated-episode",
+            final_iteration_id="delegated-episode",
             final_attempt_id=None,
         )
     )
@@ -186,8 +186,8 @@ def test_mark_waiting_rejects_when_task_is_not_running(entry_setup, task_store):
 
     with pytest.raises(TaskCenterInvariantViolation):
         controller.mark_waiting_mission(
-            delegated_mission_id="r",
-            delegated_episode_id="s",
+            delegated_goal_id="r",
+            delegated_iteration_id="s",
             delegated_attempt_id="g",
             goal="g",
         )
@@ -198,8 +198,8 @@ def test_restore_running_after_failed_mission_start_rolls_back_waiting(
 ):
     controller = entry_setup
     controller.mark_waiting_mission(
-        delegated_mission_id="r",
-        delegated_episode_id="s",
+        delegated_goal_id="r",
+        delegated_iteration_id="s",
         delegated_attempt_id="g",
         goal="g",
     )

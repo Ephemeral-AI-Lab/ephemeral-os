@@ -127,7 +127,7 @@ class EntryTaskController:
             "outcome": "mission_start",
             "summary": "Waiting on delegated mission solution.",
             "payload": {
-                "mission_id": delegated_mission_id,
+                "goal_id": delegated_mission_id,
                 "initial_episode_id": delegated_episode_id,
                 "initial_attempt_id": delegated_attempt_id,
                 "parent_attempt_id": None,

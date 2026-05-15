@@ -8,7 +8,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from sandbox.provider.daytona.client import client_cache_key
+from sandbox.provider.daytona.client import (
+    DaytonaUnavailableError,
+    build_sdk_client,
+    client_cache_key,
+)
 
 
 class _DaytonaConfig:
@@ -87,3 +91,25 @@ async def test_sync_and_async_clients_use_factory_isolated_cache_keys(
             client_mod._cached_client_key = None
         with client_mod._async_client_lock:
             client_mod._cached_clients.clear()
+
+
+def test_client_cache_key_rejects_unknown_factory() -> None:
+    with pytest.raises(ValueError, match="unsupported Daytona SDK factory"):
+        client_cache_key(  # type: ignore[arg-type]
+            "OtherDaytona",
+            api_key="secret-key",
+            api_url="https://daytona.example",
+            target="target-a",
+        )
+
+
+def test_build_sdk_client_rejects_unknown_factory_before_import() -> None:
+    with pytest.raises(ValueError, match="unsupported Daytona SDK factory"):
+        build_sdk_client(  # type: ignore[arg-type]
+            "OtherDaytona",
+            api_key="secret-key",
+            api_url="https://daytona.example",
+            target="target-a",
+            unavailable_cls=DaytonaUnavailableError,
+            not_installed_message="not installed",
+        )

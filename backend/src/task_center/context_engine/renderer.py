@@ -25,11 +25,11 @@ _TOKEN_BUDGET_KEY = "token_budget"
 _CHARS_PER_TOKEN = 4
 
 _DEFAULT_HEADINGS: dict[str, str] = {
-    "mission_goal": "# Mission",
-    "episode_goal": "# Current Episode",
-    "prior_episode_specification": "# Previous Episode Results",
-    "prior_episode_summary": "# Previous Episode Results",
-    "failed_attempt_landscape": "# Prior Failed Attempts",
+    "goal_statement": "# Mission",
+    "iteration_statement": "# Current Iteration",
+    "prior_iteration_specification": "# Previous Iteration Results",
+    "prior_iteration_summary": "# Previous Iteration Results",
+    "failed_trial_landscape": "# Prior Failed Attempts",
     "partial_plan_boundary": "# Partial Plan Boundary",
     "planned_task_spec": "# Assigned Task",
     "task_specification": "# Attempt Plan",

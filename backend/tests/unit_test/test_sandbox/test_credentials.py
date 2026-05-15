@@ -82,3 +82,10 @@ class TestLoadCredentials:
         (root / "pyproject.toml").write_text("[project]\n", encoding="utf-8")
 
         assert _find_project_root(nested / "credentials.py") == root
+
+    def test_project_root_lookup_falls_back_to_start_for_shallow_paths(self, tmp_path):
+        from sandbox.provider.daytona.client import _find_project_root
+
+        start = tmp_path / "client.py"
+
+        assert _find_project_root(start) == start

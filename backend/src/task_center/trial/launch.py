@@ -113,8 +113,8 @@ class EphemeralAttemptAgentLauncher:
             task_center_run_id=launch.task_center_run_id,
             task_center_task_id=launch.task_id,
             task_center_attempt_id=launch.attempt_id,
-            task_center_mission_id=launch.mission_id,
-            task_center_request_id=launch.mission_id,
+            task_center_mission_id=launch.goal_id,
+            task_center_request_id=launch.goal_id,
             attempt_runtime=runtime,
             composer=runtime.composer,
         )
@@ -318,8 +318,8 @@ class LaunchBuilder:
             role=TaskCenterTaskRole.PLANNER,
             base_agent_name=PLANNER_AGENT_NAME,
             scope=ContextScope.for_planner(
-                mission_id=iteration.goal_id,
-                episode_id=iteration.id,
+                goal_id=iteration.goal_id,
+                iteration_id=iteration.id,
                 attempt_id=attempt.id,
             ),
             task_id=task_id,
@@ -342,8 +342,8 @@ class LaunchBuilder:
             role=TaskCenterTaskRole.GENERATOR,
             base_agent_name=base_agent_name,
             scope=ContextScope.for_generator(
-                mission_id=iteration.goal_id,
-                episode_id=iteration.id,
+                goal_id=iteration.goal_id,
+                iteration_id=iteration.id,
                 attempt_id=attempt.id,
                 task_id=task_id,
             ),
@@ -360,8 +360,8 @@ class LaunchBuilder:
             role=TaskCenterTaskRole.EVALUATOR,
             base_agent_name=EVALUATOR_AGENT_NAME,
             scope=ContextScope.for_evaluator(
-                mission_id=iteration.goal_id,
-                episode_id=iteration.id,
+                goal_id=iteration.goal_id,
+                iteration_id=iteration.id,
                 attempt_id=attempt.id,
             ),
             task_id=task_id,
@@ -413,7 +413,7 @@ class LaunchBuilder:
             rendered_prompt=bundle.rendered_prompt,
             needs=needs,
             context_packet_id=bundle.context_packet_id,
-            mission_id=mission_id,
+            goal_id=mission_id,
         )
 
     def _require_iteration(self, attempt: Trial) -> Any:

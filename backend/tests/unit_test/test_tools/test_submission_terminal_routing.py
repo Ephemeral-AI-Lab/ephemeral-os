@@ -205,9 +205,9 @@ async def test_submit_execution_handoff_starts_delegated_request(
     assert delegated_request.requested_by_task_id == generator_id
     assert delegated_request.goal == "solve delegated task"
     assert initial_episode is not None
-    assert initial_episodegoal_id == delegated_request.id
+    assert initial_episode.goal_id == delegated_request.id
     assert created_attempt is not None
-    assert created_attemptiteration_id == initial_episode.id
+    assert created_attempt.iteration_id == initial_episode.id
     assert created_attempt.stage == TrialStage.PLAN
 
 

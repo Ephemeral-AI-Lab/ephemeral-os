@@ -37,7 +37,7 @@ def _seed_mission(mission_store, task_center_run_id):
 
 def _seed_episode(episode_store, *, mission_id):
     return episode_store.insert(
-        mission_id=mission_id,
+        goal_id=mission_id,
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="g",
@@ -47,7 +47,7 @@ def _seed_episode(episode_store, *, mission_id):
 
 def _seed_continuation_episode(episode_store, *, mission_id):
     return episode_store.insert(
-        mission_id=mission_id,
+        goal_id=mission_id,
         sequence_no=2,
         creation_reason=IterationCreationReason.PARTIAL_CONTINUATION,
         goal="g2",
@@ -458,7 +458,7 @@ def test_entry_executor_emits_one_required_entry_request_block(
         ContextScope(task_id="entry"),
         deps,
     )
-    assert packet.canonical_refsgoal_id is None
+    assert packet.canonical_refs.mission_id is None
     assert packet.canonical_refs.task_id == "entry"
     assert len(packet.blocks) == 1
     block = packet.blocks[0]

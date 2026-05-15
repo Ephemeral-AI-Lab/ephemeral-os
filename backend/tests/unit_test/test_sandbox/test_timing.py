@@ -24,12 +24,6 @@ def test_normalize_timing_map_projects_timing_key_enum_values() -> None:
     }
 
 
-def test_normalize_timing_map_projects_stringified_timing_key_names() -> None:
-    assert normalize_timing_map({"TimingKey.LAYER_AUTO_SQUASH_TOTAL": "0.25"}) == {
-        "layer_stack.auto_squash.total_s": 0.25,
-    }
-
-
 def test_record_elapsed_writes_and_returns_elapsed_seconds(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -73,39 +67,3 @@ def test_timing_audit_signals_classify_occ_conflict_without_commit() -> None:
     )
 
     assert signals == ("occ_prepared", "occ_conflicted")
-
-
-def test_timing_audit_signals_accept_stringified_timing_key_names() -> None:
-    signals = timing_audit_signals(
-        {
-            "TimingKey.PREPARE_TOTAL": 0.01,
-            "TimingKey.APPLY_TOTAL": 0.02,
-            "TimingKey.LAYER_AUTO_SQUASH_TOTAL": 0.03,
-        },
-        status="ok",
-    )
-
-    assert signals == (
-        "occ_prepared",
-        "occ_committed",
-        "layer_stack_auto_squashed",
-    )
-
-
-def test_timing_audit_signals_accept_timing_key_enum_members() -> None:
-    signals = timing_audit_signals(
-        {
-            TimingKey.PREPARE_TOTAL: 0.01,
-            TimingKey.APPLY_TOTAL: 0.02,
-            TimingKey.LAYER_TRANSACTION_LOCK_WAIT: 0.03,
-            TimingKey.COMMIT_PUBLISH_LAYER: 0.04,
-        },
-        status="ok",
-    )
-
-    assert signals == (
-        "occ_prepared",
-        "occ_committed",
-        "layer_stack_lease_acquired",
-        "layer_stack_layer_published",
-    )

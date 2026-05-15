@@ -67,7 +67,7 @@ async def submit_execution_handoff(
             "submission_kind": "mission_start",
             "task_center_task_id": started_mission.parent_task_id,
             "attempt_id": started_mission.parent_attempt_id,
-            "mission_id": started_mission.mission_id,
+            "goal_id": started_mission.mission_id,
             "initial_episode_id": started_mission.initial_episode_id,
             "initial_attempt_id": started_mission.initial_attempt_id,
         },

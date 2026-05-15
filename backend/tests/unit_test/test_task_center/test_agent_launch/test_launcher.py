@@ -52,9 +52,9 @@ async def test_missing_orchestrator_exhaustion_closes_attempt(
         goal="solve",
         trial_budget=1,
     )
-    mission_store.append_episode_id(mission.id, episode.id)
+    mission_store.append_iteration_id(mission.id, episode.id)
     attempt = attempt_store.insert(iteration_id=episode.id, trial_sequence_no=1)
-    episode_store.append_attempt_id(episode.id, attempt.id)
+    episode_store.append_trial_id(episode.id, attempt.id)
     task_id = planner_task_id(attempt.id)
     task_store.upsert_task(
         task_id=task_id,

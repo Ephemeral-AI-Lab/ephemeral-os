@@ -20,15 +20,7 @@ def committed_paths(
 ) -> tuple[str, ...]:
     """Return paths of every COMMITTED ``FileResult``, or a single-path fallback."""
     committed = tuple(f.path for f in files if is_published_status(f.status) and f.path)
-    if committed:
-        return committed
-    aborted = next(
-        (f for f in files if not is_published_status(f.status) and f.path),
-        None,
-    )
-    if aborted is not None:
-        return (aborted.path,)
-    return (fallback_path,)
+    return committed or tuple(f.path for f in files if f.path)[:1] or (fallback_path,)
 
 
 def published_paths(files: Sequence[FileResult]) -> tuple[str, ...]:

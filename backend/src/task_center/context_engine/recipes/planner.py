@@ -20,18 +20,18 @@ from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
 
 PLANNER_ID = "planner"
-_REQUIRED_FIELDS = frozenset({"mission_id", "episode_id", "attempt_id"})
+_REQUIRED_FIELDS = frozenset({"goal_id", "iteration_id", "attempt_id"})
 
 
 def _planner_build(
     scope: ContextScope, deps: ContextEngineDeps
 ) -> ContextPacket:
-    mission = deps.mission_store.get(scope.mission_id)
+    mission = deps.mission_store.get(scope.goal_id)
     if mission is None:
-        raise ContextEngineError(f"Mission {scope.mission_id!r} not found")
-    episode = deps.episode_store.get(scope.episode_id)
+        raise ContextEngineError(f"Mission {scope.goal_id!r} not found")
+    episode = deps.episode_store.get(scope.iteration_id)
     if episode is None:
-        raise ContextEngineError(f"Episode {scope.episode_id!r} not found")
+        raise ContextEngineError(f"Episode {scope.iteration_id!r} not found")
 
     blocks = mission_episode_blocks(
         mission=mission,
@@ -50,8 +50,8 @@ def _planner_build(
         target_role="planner",
         target_id=scope.attempt_id,
         canonical_refs=ContextRefs(
-            mission_id=mission.id,
-            episode_id=episode.id,
+            goal_id=mission.id,
+            iteration_id=episode.id,
             attempt_id=scope.attempt_id,
         ),
         blocks=blocks,

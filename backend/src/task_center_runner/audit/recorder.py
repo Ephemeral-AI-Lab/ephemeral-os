@@ -67,7 +67,7 @@ def _serialize_mission(record: MissionRecord) -> dict[str, Any]:
 def _serialize_episode(record: EpisodeRecord) -> dict[str, Any]:
     return {
         "id": record.id,
-        "mission_id": record.mission_id,
+        "goal_id": record.mission_id,
         "sequence_no": record.sequence_no,
         "creation_reason": record.creation_reason,
         "goal": record.goal,
@@ -86,7 +86,7 @@ def _serialize_episode(record: EpisodeRecord) -> dict[str, Any]:
 def _serialize_attempt(record: AttemptRecord) -> dict[str, Any]:
     return {
         "id": record.id,
-        "episode_id": record.episode_id,
+        "iteration_id": record.episode_id,
         "attempt_sequence_no": record.attempt_sequence_no,
         "stage": record.stage,
         "status": record.status,

@@ -8,6 +8,7 @@ import inspect
 import logging
 import os
 import threading
+import time
 import weakref
 from hashlib import sha256
 from inspect import Parameter, signature
@@ -40,7 +41,7 @@ def _find_project_root(start: Path) -> Path:
     for candidate in (start.parent, *start.parents):
         if (candidate / "pyproject.toml").is_file() or (candidate / ".git").exists():
             return candidate
-    return start.parents[6]
+    return start
 
 
 _PROJECT_ROOT = _find_project_root(Path(__file__).resolve())
@@ -93,7 +94,7 @@ def client_cache_key(
     target: str,
 ) -> DaytonaClientCacheKey:
     """Return the cache key for one Daytona SDK factory."""
-    assert factory_name in ("Daytona", "AsyncDaytona")
+    _validate_factory_name(factory_name)
     credential_hash = sha256(f"{api_key}\0{api_url}".encode()).hexdigest()
     return factory_name, credential_hash, target
 
@@ -108,7 +109,7 @@ def build_sdk_client(
     not_installed_message: str,
 ) -> Any:
     """Import the Daytona SDK factory and build a configured client."""
-    assert factory_name in ("Daytona", "AsyncDaytona")
+    _validate_factory_name(factory_name)
     try:
         import daytona_sdk
     except ImportError as exc:
@@ -122,6 +123,11 @@ def build_sdk_client(
     if target:
         cfg_kwargs["target"] = target
     return factory(config_cls(**cfg_kwargs))
+
+
+def _validate_factory_name(factory_name: str) -> None:
+    if factory_name not in ("Daytona", "AsyncDaytona"):
+        raise ValueError(f"unsupported Daytona SDK factory: {factory_name!r}")
 
 
 def _credential_value(
@@ -379,18 +385,24 @@ async def get_async_sandbox(sandbox_id: str) -> Any:
 
 
 def close_client(client: Any) -> None:
+    closer = _start_async_close_thread(client)
+    if closer is not None:
+        _join_close_threads([closer], timeout=5.0)
+
+
+def _start_async_close_thread(client: Any) -> threading.Thread | None:
     if client is None:
-        return
+        return None
     close_fn = getattr(client, "close", None)
     if not callable(close_fn):
-        return
+        return None
     try:
         close_result = close_fn()
     except Exception:
         logger.debug("Failed to close cached AsyncDaytona client", exc_info=True)
-        return
+        return None
     if not inspect.isawaitable(close_result):
-        return
+        return None
 
     def _run_close() -> None:
         close_loop: asyncio.AbstractEventLoop | None = None
@@ -410,9 +422,21 @@ def close_client(client: Any) -> None:
         daemon=True,
     )
     closer.start()
-    closer.join(timeout=5.0)
-    if closer.is_alive():
-        logger.warning("Timed out waiting for AsyncDaytona client close")
+    return closer
+
+
+def _join_close_threads(
+    closers: list[threading.Thread],
+    *,
+    timeout: float,
+) -> None:
+    deadline = time.monotonic() + timeout
+    for closer in closers:
+        remaining = max(0.0, deadline - time.monotonic())
+        closer.join(timeout=remaining)
+    for closer in closers:
+        if closer.is_alive():
+            logger.warning("Timed out waiting for AsyncDaytona client close")
 
 
 async def async_close_client(client: Any) -> None:
@@ -444,8 +468,12 @@ async def shutdown_cached_client_async() -> None:
                 fallback_clients.append(client)
     for client in active_loop_clients:
         await async_close_client(client)
-    for client in fallback_clients:
-        close_client(client)
+    fallback_closers = [
+        closer
+        for client in fallback_clients
+        if (closer := _start_async_close_thread(client)) is not None
+    ]
+    _join_close_threads(fallback_closers, timeout=5.0)
 
 
 try:

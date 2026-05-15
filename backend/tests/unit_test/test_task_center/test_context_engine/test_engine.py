@@ -54,8 +54,8 @@ def _ok_recipe(recipe_id: str, *, required: frozenset[str]) -> ContextRecipe:
             target_role="planner",
             target_id=scope.attempt_id,
             canonical_refs=ContextRefs(
-                mission_id=scopegoal_id,
-                episode_id=scopeiteration_id,
+                goal_id=scope.mission_id,
+                iteration_id=scope.episode_id,
                 attempt_id=scope.attempt_id,
             ),
             blocks=[
@@ -73,7 +73,7 @@ def _ok_recipe(recipe_id: str, *, required: frozenset[str]) -> ContextRecipe:
 def test_unknown_recipe_id_raises_at_build(deps):
     engine = ContextEngine(deps)
     with pytest.raises(ContextEngineError):
-        engine.build("missing", ContextScope(mission_id="r"))
+        engine.build("missing", ContextScope(goal_id="r"))
 
 
 def test_engine_validates_scope_before_calling_recipe(deps):
@@ -81,7 +81,7 @@ def test_engine_validates_scope_before_calling_recipe(deps):
         _ok_recipe("r1", required=frozenset({"mission_id", "episode_id"}))
     )
     with pytest.raises(RecipeScopeError):
-        ContextEngine(deps).build("r1", ContextScope(mission_id="r"))
+        ContextEngine(deps).build("r1", ContextScope(goal_id="r"))
 
 
 def test_engine_dispatches_to_registered_recipe(deps):
@@ -93,10 +93,10 @@ def test_engine_dispatches_to_registered_recipe(deps):
     )
     packet = ContextEngine(deps).build(
         "r1",
-        ContextScope(mission_id="r", episode_id="s", attempt_id="g"),
+        ContextScope(goal_id="r", iteration_id="s", attempt_id="g"),
     )
     assert packet.target_id == "g"
-    assert packet.canonical_refsgoal_id == "r"
+    assert packet.canonical_refs.mission_id == "r"
 
 
 def test_recipe_registry_list_ids_returns_sorted():

@@ -43,7 +43,7 @@ def _seed_mission(
 
 def _seed_episode(episode_store, *, mission_id: str, sequence_no: int = 1):
     return episode_store.insert(
-        mission_id=mission_id,
+        goal_id=mission_id,
         sequence_no=sequence_no,
         creation_reason=IterationCreationReason.INITIAL,
         goal="g",
@@ -58,7 +58,7 @@ def _seed_attempt(
     sequence_no: int = 1,
 ):
     attempt = attempt_store.insert(
-        episode_id=episode_id, trial_sequence_no=sequence_no
+        iteration_id=episode_id, trial_sequence_no=sequence_no
     )
     attempt_store.set_plan_contract(
         attempt.id,
@@ -177,14 +177,14 @@ def test_child_mission_returns_depth_2(
     )
     assert (
         nested_goal_depth(
-            mission_id=root_id,
+            goal_id=root_id,
             **_stores(mission_store, episode_store, attempt_store, task_store),
         )
         == 1
     )
     assert (
         nested_goal_depth(
-            mission_id=child_id,
+            goal_id=child_id,
             **_stores(mission_store, episode_store, attempt_store, task_store),
         )
         == 2
@@ -204,7 +204,7 @@ def test_grandchild_mission_returns_depth_3(
     )
     assert (
         nested_goal_depth(
-            mission_id=mission_ids[-1],
+            goal_id=mission_ids[-1],
             **_stores(mission_store, episode_store, attempt_store, task_store),
         )
         == MAX_HANDOFF_DEPTH + 1
@@ -216,7 +216,7 @@ def test_unknown_mission_id_raises(
 ):
     with pytest.raises(TaskCenterInvariantViolation):
         nested_goal_depth(
-            mission_id="nonexistent",
+            goal_id="nonexistent",
             **_stores(mission_store, episode_store, attempt_store, task_store),
         )
 
@@ -263,11 +263,11 @@ def test_registered_predicates_cover_top_level_and_depth_thresholds(
             depth=MAX_HANDOFF_DEPTH + 1,
         )
         within_ctx = ResolverContext(
-            scope=ContextScope(mission_id=mission_ids[MAX_HANDOFF_DEPTH - 1]),
+            scope=ContextScope(goal_id=mission_ids[MAX_HANDOFF_DEPTH - 1]),
             deps=deps,
         )
         above_ctx = ResolverContext(
-            scope=ContextScope(mission_id=mission_ids[-1]),
+            scope=ContextScope(goal_id=mission_ids[-1]),
             deps=deps,
         )
 

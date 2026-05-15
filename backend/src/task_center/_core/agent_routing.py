@@ -105,7 +105,7 @@ def _depth(ctx: ResolverContext) -> int:
     Scopes without a goal (e.g. the top-level entry executor) have no
     caller-trial ancestry by construction, so depth is zero.
     """
-    goal_id = ctx.scope.mission_id
+    goal_id = ctx.scope.goal_id
     if goal_id is None:
         return 0
     return nested_goal_depth(

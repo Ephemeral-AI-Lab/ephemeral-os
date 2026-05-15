@@ -78,7 +78,7 @@ def test_phase06_summary_fields_default_to_none():
 
 def test_closure_report_carries_outcome():
     rep = IterationClosureReport(
-        episode_id="s1",
+        iteration_id="s1",
         final_attempt_id="g1",
         outcome=TerminalSuccess(),
     )

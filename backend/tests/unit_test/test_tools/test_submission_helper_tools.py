@@ -48,7 +48,7 @@ def _seed_parent_packet(context_packet_store) -> ContextPacket:
         target_role="planner",
         target_id="g-parent",
         canonical_refs=ContextRefs(
-            mission_id=PARENT_MISSION_ID, attempt_id="g-parent"
+            goal_id=PARENT_MISSION_ID, attempt_id="g-parent"
         ),
         blocks=[
             ContextBlock(
@@ -86,7 +86,7 @@ def _helper_context(
         composer=composer,
         task_center_task_id=PARENT_TASK_ID,
         task_center_run_id=PARENT_RUN_ID,
-        task_center_mission_id=mission_id,
+        task_center_goal_id=mission_id,
         task_center_request_id="legacy-request-id",
     )
     metadata["role"] = role

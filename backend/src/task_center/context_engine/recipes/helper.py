@@ -26,7 +26,7 @@ from task_center.context_engine.scope import ContextScope
 ADVISOR_ID = "advisor"
 RESOLVER_ID = "resolver"
 
-_REQUIRED_FIELDS = frozenset({"mission_id", "task_id", "parent_packet_id"})
+_REQUIRED_FIELDS = frozenset({"goal_id", "task_id", "parent_packet_id"})
 
 _DEMOTION = {
     ContextPriority.REQUIRED: ContextPriority.HIGH,
@@ -71,7 +71,7 @@ def _build_helper_packet(
         target_role=target_role,
         target_id=scope.task_id,
         canonical_refs=ContextRefs(
-            mission_id=scope.mission_id,
+            goal_id=scope.goal_id,
             task_id=scope.task_id,
         ),
         blocks=blocks,

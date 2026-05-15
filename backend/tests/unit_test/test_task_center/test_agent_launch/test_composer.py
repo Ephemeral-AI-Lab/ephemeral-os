@@ -80,13 +80,13 @@ def _ok_recipe(recipe_id: str):
             target_role="planner",
             target_id=scope.attempt_id,
             canonical_refs=ContextRefs(
-                mission_id=scopegoal_id,
-                episode_id=scopeiteration_id,
+                goal_id=scope.goal_id,
+                iteration_id=scope.iteration_id,
                 attempt_id=scope.attempt_id,
             ),
             blocks=[
                 ContextBlock(
-                    kind="episode_goal",
+                    kind="iteration_statement",
                     priority=ContextPriority.REQUIRED,
                     text="goal",
                 )
@@ -96,7 +96,7 @@ def _ok_recipe(recipe_id: str):
     return ContextRecipe(
         id=recipe_id,
         required_scope_fields=frozenset(
-            {"mission_id", "episode_id", "attempt_id"}
+            {"goal_id", "iteration_id", "attempt_id"}
         ),
         build=_build,
     )
@@ -130,7 +130,7 @@ def test_compose_threads_calls_in_order(packet_store):
     bundle = composer.compose(
         base_agent_name="planner",
         scope=ContextScope(
-            mission_id="r", episode_id="s", attempt_id="g"
+            goal_id="r", iteration_id="s", attempt_id="g"
         ),
     )
     assert isinstance(bundle, LaunchBundle)
@@ -177,7 +177,7 @@ def test_required_context_blocks_appended_before_render(packet_store):
     bundle = composer.compose(
         base_agent_name="planner",
         scope=ContextScope(
-            mission_id="r", episode_id="s", attempt_id="g"
+            goal_id="r", iteration_id="s", attempt_id="g"
         ),
     )
     assert bundle.agent_def.name == "planner_full_only"
@@ -211,7 +211,7 @@ def test_compose_persists_packet_only_with_store():
     bundle = composer.compose(
         base_agent_name="planner",
         scope=ContextScope(
-            mission_id="r", episode_id="s", attempt_id="g"
+            goal_id="r", iteration_id="s", attempt_id="g"
         ),
     )
     assert bundle.context_packet_id is None
@@ -239,7 +239,7 @@ def test_resolver_engine_renderer_called_with_correct_args(packet_store):
     )
 
     scope = ContextScope(
-        mission_id="r", episode_id="s", attempt_id="g"
+        goal_id="r", iteration_id="s", attempt_id="g"
     )
     bundle = composer.compose(base_agent_name="planner", scope=scope)
     renderer.render.assert_called_once()
@@ -256,5 +256,5 @@ def test_missing_context_recipe_raises_before_render(packet_store):
     with pytest.raises(MissingContextRecipeError):
         composer.compose(
             base_agent_name="bare",
-            scope=ContextScope(mission_id="r"),
+            scope=ContextScope(goal_id="r"),
         )

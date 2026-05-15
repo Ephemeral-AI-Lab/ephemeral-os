@@ -74,11 +74,11 @@ def compose_helper_bundle(
             raise HelperComposeError(
                 f"ask_{helper_role}: parent packet {parent_packet_id!r} not found."
             )
-        mission_id = parent_packet.canonical_refs.mission_id
+        mission_id = parent_packet.canonical_refs.goal_id
 
     helper_task_id = f"{helper_role}:{uuid.uuid4()}"
     scope = ContextScope(
-        mission_id=mission_id,
+        goal_id=mission_id,
         task_id=helper_task_id,
         parent_packet_id=parent_packet_id,
         parent_task_id=parent_task_id,

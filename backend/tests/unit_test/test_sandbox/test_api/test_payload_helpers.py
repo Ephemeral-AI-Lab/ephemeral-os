@@ -7,7 +7,6 @@ import pytest
 from sandbox.api._impl._payload import (
     error_message,
     int_from_payload,
-    normalize_overlay_cwd,
 )
 from sandbox.api._impl._classifiers import is_edit_conflict, is_shell_conflict
 from sandbox.models import SandboxCaller
@@ -28,13 +27,6 @@ def test_sandbox_caller_audit_fields_keeps_required_keys_and_non_empty_fields() 
         "task_center_run_id": "tc-run",
         "tool_id": "tool-1",
     }
-
-
-def test_normalize_overlay_cwd_strips_non_empty_paths() -> None:
-    assert normalize_overlay_cwd(None) == "."
-    assert normalize_overlay_cwd("") == "."
-    assert normalize_overlay_cwd("   ") == "."
-    assert normalize_overlay_cwd("  src/pkg  ") == "src/pkg"
 
 
 def test_error_message_strips_internal_error_prefix() -> None:

@@ -101,15 +101,7 @@ def test_daemon_ready_reports_incomplete_data_plane_backend(
     def incomplete_services(_layer_stack_root: str) -> _Backend:
         return _Backend()
 
-    def fake_shell_services(_args: dict[str, object]) -> tuple[object, object, object, Path]:
-        return object(), object(), object(), tmp_path
-
     monkeypatch.setattr(health.request_context, "services", incomplete_services)
-    monkeypatch.setattr(
-        health.shell_runner,
-        "services",
-        fake_shell_services,
-    )
 
     response = health.runtime_ready(
         {"layer_stack_root": (tmp_path / "stack").as_posix()}
@@ -138,18 +130,10 @@ def test_daemon_ready_reports_mutation_gate_failure(
     def fake_services(_layer_stack_root: str) -> _Backend:
         return _Backend()
 
-    def fake_shell_services(_args: dict[str, object]) -> tuple[object, object, object, Path]:
-        return object(), object(), object(), tmp_path
-
     def fail_backend(_layer_stack_root: str) -> object:
         raise RuntimeError("synthetic mutation-gate failure")
 
     monkeypatch.setattr(health.request_context, "services", fake_services)
-    monkeypatch.setattr(
-        health.shell_runner,
-        "services",
-        fake_shell_services,
-    )
     monkeypatch.setattr(health.occ_backend, "build_occ_backend", fail_backend)
 
     response = health.runtime_ready(
@@ -178,15 +162,7 @@ def test_daemon_ready_reports_incomplete_mutation_gate_backend(
     def fake_services(_layer_stack_root: str) -> _Backend:
         return _Backend()
 
-    def fake_shell_services(_args: dict[str, object]) -> tuple[object, object, object, Path]:
-        return object(), object(), object(), tmp_path
-
     monkeypatch.setattr(health.request_context, "services", fake_services)
-    monkeypatch.setattr(
-        health.shell_runner,
-        "services",
-        fake_shell_services,
-    )
     monkeypatch.setattr(
         health.occ_backend,
         "build_occ_backend",

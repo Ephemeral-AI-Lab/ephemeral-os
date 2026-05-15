@@ -116,10 +116,10 @@ def test_router_delivers_success_to_waiting_parent(
 
     result = router.deliver(
         GoalClosureReport(
-            mission_id="delegated-1",
+            goal_id="delegated-1",
             requested_by_task_id=parent_task_id,
             outcome="success",
-            final_episode_id="seg-1",
+            final_iteration_id="seg-1",
             final_attempt_id="attempt-1",
         )
     )
@@ -189,10 +189,10 @@ def test_router_delivers_failure_marks_parent_failed_and_blocks_dependents(
 
     result = router.deliver(
         GoalClosureReport(
-            mission_id="delegated-1",
+            goal_id="delegated-1",
             requested_by_task_id=parent_task_id,
             outcome="failed",
-            final_episode_id="seg-1",
+            final_iteration_id="seg-1",
             final_attempt_id="attempt-1",
         )
     )
@@ -224,10 +224,10 @@ def test_router_treats_done_parent_as_already_delivered(
 
     result = router.deliver(
         GoalClosureReport(
-            mission_id="delegated-1",
+            goal_id="delegated-1",
             requested_by_task_id=parent_task_id,
             outcome="success",
-            final_episode_id="seg-1",
+            final_iteration_id="seg-1",
             final_attempt_id="attempt-1",
         )
     )
@@ -256,10 +256,10 @@ def test_router_raises_when_parent_orchestrator_missing(
     with pytest.raises(TaskCenterInvariantViolation):
         router.deliver(
             GoalClosureReport(
-                mission_id="delegated-1",
+                goal_id="delegated-1",
                 requested_by_task_id=parent_task_id,
                 outcome="success",
-                final_episode_id="seg-1",
+                final_iteration_id="seg-1",
                 final_attempt_id="attempt-1",
             )
         )
@@ -286,10 +286,10 @@ def test_router_rejects_running_parent(
     with pytest.raises(TaskCenterInvariantViolation):
         router.deliver(
             GoalClosureReport(
-                mission_id="delegated-1",
+                goal_id="delegated-1",
                 requested_by_task_id=parent_task_id,
                 outcome="success",
-                final_episode_id="seg-1",
+                final_iteration_id="seg-1",
                 final_attempt_id="attempt-1",
             )
         )
@@ -312,10 +312,10 @@ def test_apply_closure_report_is_idempotent_on_second_delivery(
     summary_count_before = len(parent_task_before["summaries"])
 
     report = GoalClosureReport(
-        mission_id="delegated-1",
+        goal_id="delegated-1",
         requested_by_task_id=parent_task_id,
         outcome="success",
-        final_episode_id="seg-1",
+        final_iteration_id="seg-1",
         final_attempt_id="attempt-1",
     )
     # Find the orchestrator and apply the close report twice. Second call
@@ -379,10 +379,10 @@ def test_router_routes_entry_mode_closure_report_through_controller(
     router = GoalClosureReportRouter(runtime=runtime)
     result = router.deliver(
         GoalClosureReport(
-            mission_id="delegated-x",
+            goal_id="delegated-x",
             requested_by_task_id=entry_task_id,
             outcome="success",
-            final_episode_id="delegated-seg",
+            final_iteration_id="delegated-seg",
             final_attempt_id="delegated-attempt",
         )
     )

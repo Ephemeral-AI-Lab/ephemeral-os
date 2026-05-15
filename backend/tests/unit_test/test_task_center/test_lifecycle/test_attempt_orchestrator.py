@@ -467,10 +467,10 @@ def test_mission_closure_report_success_resumes_waiting_generator(
 
     orchestrator.apply_mission_closure_report(
         GoalClosureReport(
-            mission_id="delegated-1",
+            goal_id="delegated-1",
             requested_by_task_id=task_id,
             outcome="success",
-            final_episode_id="episode-1",
+            final_iteration_id="episode-1",
             final_attempt_id="attempt-1",
         )
     )
@@ -511,10 +511,10 @@ def test_mission_closure_report_failure_blocks_dependents_and_closes_graph(
 
     orchestrator.apply_mission_closure_report(
         GoalClosureReport(
-            mission_id="delegated-1",
+            goal_id="delegated-1",
             requested_by_task_id=task_id,
             outcome="failed",
-            final_episode_id="episode-1",
+            final_iteration_id="episode-1",
             final_attempt_id="attempt-1",
         )
     )
@@ -678,4 +678,4 @@ def test_orchestrator_never_creates_retry_attempt(
     )
     orchestrator.apply_generator_submission(_generator_failure(attempt.id, "a"))
 
-    assert len(attempt_store.list_for_episode(attemptiteration_id)) == 1
+    assert len(attempt_store.list_for_episode(attempt.iteration_id)) == 1

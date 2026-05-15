@@ -178,7 +178,7 @@ def test_smoke_success_continue_then_terminal(
     # Drive episode 2 to terminal success.
     _drive_segment(
         handler=handler,
-        episode_id=seg2_id,
+        iteration_id=seg2_id,
         attempt_store=attempt_store,
         verdict=(TrialStatus.PASSED, None, None),
     )

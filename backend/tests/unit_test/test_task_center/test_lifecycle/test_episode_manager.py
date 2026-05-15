@@ -42,7 +42,7 @@ def _seed_segment(
 def _make_manager(seg_id, episode_store, attempt_store):
     captured: list[IterationClosureReport] = []
     mgr = IterationManager(
-        episode_id=seg_id,
+        iteration_id=seg_id,
         episode_store=episode_store,
         attempt_store=attempt_store,
         on_episode_closed=captured.append,
@@ -88,7 +88,7 @@ def test_retry_creates_graph_in_same_segment(
     mgr, _ = _make_manager(seg_id, episode_store, attempt_store)
     g1 = mgr.create_initial_attempt()
     g2 = mgr.create_next_attempt(previous_attempt_id=g1.id)
-    assert g2iteration_id == seg_id
+    assert g2.iteration_id == seg_id
     assert g2trial_sequence_no == 2
     seg = episode_store.get(seg_id)
     assert seg is not None
@@ -214,7 +214,7 @@ def test_manager_starts_orchestrator_when_factory_present(
 
     captured: list[IterationClosureReport] = []
     mgr = IterationManager(
-        episode_id=seg_id,
+        iteration_id=seg_id,
         episode_store=episode_store,
         attempt_store=attempt_store,
         on_episode_closed=captured.append,
@@ -238,7 +238,7 @@ def test_initial_graph_start_can_be_deferred(
 
     captured: list[IterationClosureReport] = []
     mgr = IterationManager(
-        episode_id=seg_id,
+        iteration_id=seg_id,
         episode_store=episode_store,
         attempt_store=attempt_store,
         on_episode_closed=captured.append,
@@ -264,7 +264,7 @@ def test_initial_start_failure_closes_inserted_graph(
 
     captured: list[IterationClosureReport] = []
     mgr = IterationManager(
-        episode_id=seg_id,
+        iteration_id=seg_id,
         episode_store=episode_store,
         attempt_store=attempt_store,
         on_episode_closed=captured.append,
@@ -295,7 +295,7 @@ def test_deferred_start_failure_closes_inserted_graph(
 
     captured: list[IterationClosureReport] = []
     mgr = IterationManager(
-        episode_id=seg_id,
+        iteration_id=seg_id,
         episode_store=episode_store,
         attempt_store=attempt_store,
         on_episode_closed=captured.append,
@@ -331,7 +331,7 @@ def test_retry_start_failure_exhausts_budget_and_emits_closure(
 
     captured: list[IterationClosureReport] = []
     mgr = IterationManager(
-        episode_id=seg_id,
+        iteration_id=seg_id,
         episode_store=episode_store,
         attempt_store=attempt_store,
         on_episode_closed=captured.append,
@@ -377,7 +377,7 @@ def test_retry_start_failure_with_budget_remaining_creates_next_graph(
 
     captured: list[IterationClosureReport] = []
     mgr = IterationManager(
-        episode_id=seg_id,
+        iteration_id=seg_id,
         episode_store=episode_store,
         attempt_store=attempt_store,
         on_episode_closed=captured.append,
@@ -415,7 +415,7 @@ def test_failed_attempt_with_budget_starts_next_graph_orchestrator(
 
     captured: list[IterationClosureReport] = []
     mgr = IterationManager(
-        episode_id=seg_id,
+        iteration_id=seg_id,
         episode_store=episode_store,
         attempt_store=attempt_store,
         on_episode_closed=captured.append,

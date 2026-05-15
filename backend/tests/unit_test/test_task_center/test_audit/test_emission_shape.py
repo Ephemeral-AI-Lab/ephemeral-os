@@ -54,7 +54,7 @@ _BASE_KEYS = frozenset(
 def test_task_ready_payload_shape_is_stable() -> None:
     sink = CollectingSink()
     TaskCenterAuditEmitter(sink).task_ready(
-        _TASK, attempt_id="attempt-1", satisfied_dependency_ids=("dep-1",)
+        _TASK, trial_id="attempt-1", satisfied_dependency_ids=("dep-1",)
     )
     payload = sink.events[0].payload
     assert sink.events[0].type == events.TASK_READY
@@ -63,7 +63,7 @@ def test_task_ready_payload_shape_is_stable() -> None:
 
 def test_task_launched_payload_shape_is_stable() -> None:
     sink = CollectingSink()
-    TaskCenterAuditEmitter(sink).task_launched(_TASK, attempt_id="attempt-1")
+    TaskCenterAuditEmitter(sink).task_launched(_TASK, trial_id="attempt-1")
     payload = sink.events[0].payload
     assert sink.events[0].type == events.TASK_LAUNCHED
     assert frozenset(payload) == _BASE_KEYS
@@ -73,7 +73,7 @@ def test_task_failed_payload_shape_is_stable() -> None:
     sink = CollectingSink()
     TaskCenterAuditEmitter(sink).task_failed(
         _TASK,
-        attempt_id="attempt-1",
+        trial_id="attempt-1",
         fail_reason="agent_launch_failed",
         summary="boom",
     )

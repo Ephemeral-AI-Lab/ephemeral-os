@@ -83,6 +83,56 @@ class TestShutdownCachedClient:
 
         assert len(mod._cached_clients) == 0
 
+    def test_async_shutdown_joins_fallback_loop_closers_once(self, monkeypatch):
+        import sandbox.provider.daytona.client as mod
+
+        client_a = object()
+        client_b = object()
+        loop_a = asyncio.new_event_loop()
+        loop_b = asyncio.new_event_loop()
+        started: list[object] = []
+        joined: list[tuple[list[object], float]] = []
+
+        def fake_start(client: object) -> object:
+            started.append(client)
+            return f"closer-{len(started)}"
+
+        def fake_join(closers: list[object], *, timeout: float) -> None:
+            joined.append((closers, timeout))
+
+        with mod._async_client_lock:
+            mod._cached_clients.clear()
+            mod._cached_clients[loop_a] = (
+                client_cache_key(
+                    "AsyncDaytona",
+                    api_key="key-a",
+                    api_url="url",
+                    target="target",
+                ),
+                client_a,
+            )
+            mod._cached_clients[loop_b] = (
+                client_cache_key(
+                    "AsyncDaytona",
+                    api_key="key-b",
+                    api_url="url",
+                    target="target",
+                ),
+                client_b,
+            )
+
+        monkeypatch.setattr(mod, "_start_async_close_thread", fake_start)
+        monkeypatch.setattr(mod, "_join_close_threads", fake_join)
+        try:
+            asyncio.run(mod.shutdown_cached_client_async())
+        finally:
+            loop_a.close()
+            loop_b.close()
+
+        assert started == [client_a, client_b]
+        assert joined == [(["closer-1", "closer-2"], 5.0)]
+        assert len(mod._cached_clients) == 0
+
     def test_async_shutdown_closes_active_loop_client(self):
         import sandbox.provider.daytona.client as mod
 

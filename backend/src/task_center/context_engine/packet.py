@@ -30,11 +30,11 @@ class ContextPriority(StrEnum):
 class ContextBlockKind(StrEnum):
     """Convenience constants for known kinds. ``ContextBlock.kind`` accepts any string."""
 
-    MISSION_GOAL = "mission_goal"
-    EPISODE_GOAL = "episode_goal"
-    PRIOR_EPISODE_SPECIFICATION = "prior_episode_specification"
-    PRIOR_EPISODE_SUMMARY = "prior_episode_summary"
-    FAILED_ATTEMPT_LANDSCAPE = "failed_attempt_landscape"
+    GOAL_STATEMENT = "goal_statement"
+    ITERATION_STATEMENT = "iteration_statement"
+    PRIOR_ITERATION_SPECIFICATION = "prior_iteration_specification"
+    PRIOR_ITERATION_SUMMARY = "prior_iteration_summary"
+    FAILED_TRIAL_LANDSCAPE = "failed_trial_landscape"
     PARTIAL_PLAN_BOUNDARY = "partial_plan_boundary"
     PLANNED_TASK_SPEC = "planned_task_spec"
     TASK_SPECIFICATION = "task_specification"
@@ -48,8 +48,8 @@ class ContextBlockKind(StrEnum):
 class ContextRefs(BaseModel):
     """Canonical row references attached to every packet."""
 
-    mission_id: str | None = None
-    episode_id: str | None = None
+    goal_id: str | None = None
+    iteration_id: str | None = None
     attempt_id: str | None = None
     task_id: str | None = None
 

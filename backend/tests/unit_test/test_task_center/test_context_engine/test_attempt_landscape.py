@@ -31,7 +31,7 @@ def _attempt(
     now = datetime.now(UTC)
     return Trial(
         id=attempt_id or f"attempt-{sequence_no}",
-        episode_id="seg-1",
+        iteration_id="seg-1",
         trial_sequence_no=sequence_no,
         stage=TrialStage.CLOSED,
         status=status,

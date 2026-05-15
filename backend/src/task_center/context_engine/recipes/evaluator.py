@@ -23,7 +23,7 @@ from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
 
 EVALUATOR_ID = "evaluator"
-_REQUIRED_FIELDS = frozenset({"mission_id", "attempt_id"})
+_REQUIRED_FIELDS = frozenset({"goal_id", "attempt_id"})
 
 
 def _evaluator_build(
@@ -32,10 +32,10 @@ def _evaluator_build(
     attempt = deps.attempt_store.get(scope.attempt_id)
     if attempt is None:
         raise ContextEngineError(f"Attempt {scope.attempt_id!r} not found")
-    mission = deps.mission_store.get(scope.mission_id)
+    mission = deps.mission_store.get(scope.goal_id)
     if mission is None:
-        raise ContextEngineError(f"Mission {scope.mission_id!r} not found")
-    episode_id = scope.episode_id or attempt.episode_id
+        raise ContextEngineError(f"Mission {scope.goal_id!r} not found")
+    episode_id = scope.iteration_id or attempt.episode_id
     episode = deps.episode_store.get(episode_id)
     if episode is None:
         raise ContextEngineError(f"Episode {episode_id!r} not found")
@@ -115,8 +115,8 @@ def _evaluator_build(
         target_role="evaluator",
         target_id=scope.attempt_id,
         canonical_refs=ContextRefs(
-            mission_id=scope.mission_id,
-            episode_id=episode.id,
+            goal_id=scope.goal_id,
+            iteration_id=episode.id,
             attempt_id=scope.attempt_id,
         ),
         blocks=blocks,

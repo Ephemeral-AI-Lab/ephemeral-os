@@ -287,7 +287,7 @@ def test_close_mission_delivers_closure_report_when_callback_set(
     handler.close_mission(
         goal_id=req.id,
         succeeded=True,
-        final_episode_id="seg",
+        final_iteration_id="seg",
         final_attempt_id="g1",
     )
     assert len(delivered) == 1

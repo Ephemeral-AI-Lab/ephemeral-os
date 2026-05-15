@@ -124,7 +124,7 @@ def test_mission_start_creates_request_segment_graph_and_marks_parent_waiting(
         goal="solve delegated task",
     )
 
-    delegated_request = mission_store.get(resultgoal_id)
+    delegated_request = mission_store.get(result.goal_id)
     initial_episode = episode_store.get(result.initial_episode_id)
     initial_graph = attempt_store.get(result.initial_attempt_id)
     parent_task = task_store.get_task(parent_task_id)
@@ -134,9 +134,9 @@ def test_mission_start_creates_request_segment_graph_and_marks_parent_waiting(
     assert delegated_request.requested_by_task_id == parent_task_id
     assert delegated_request.goal == "solve delegated task"
     assert initial_episode is not None
-    assert initial_episodegoal_id == delegated_request.id
+    assert initial_episode.goal_id == delegated_request.id
     assert initial_graph is not None
-    assert initial_graphiteration_id == initial_episode.id
+    assert initial_graph.iteration_id == initial_episode.id
     assert parent_task is not None
     assert parent_task["status"] == TaskCenterTaskStatus.WAITING_MISSION.value
     # Delegated orchestrator was started.
@@ -363,7 +363,7 @@ def test_mission_start_accepts_entry_mode_caller_with_no_parent_attempt(
     # Result carries None for parent_attempt_id (entry mode).
     assert result.parent_attempt_id is None
     # Delegated request + episode + attempt were all created and started.
-    delegated_request = mission_store.get(resultgoal_id)
+    delegated_request = mission_store.get(result.goal_id)
     delegated_segment = episode_store.get(result.initial_episode_id)
     delegated_attempt = attempt_store.get(result.initial_attempt_id)
     assert delegated_request is not None

@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 
 GENERATOR_ID = "generator"
-_REQUIRED_FIELDS = frozenset({"mission_id", "attempt_id", "task_id"})
+_REQUIRED_FIELDS = frozenset({"goal_id", "attempt_id", "task_id"})
 
 
 def _generator_build(
@@ -71,8 +71,8 @@ def _generator_build(
         target_role="generator",
         target_id=scope.task_id,
         canonical_refs=ContextRefs(
-            mission_id=scope.mission_id,
-            episode_id=scope.episode_id or attempt.episode_id,
+            goal_id=scope.goal_id,
+            iteration_id=scope.iteration_id or attempt.iteration_id,
             attempt_id=scope.attempt_id,
             task_id=scope.task_id,
         ),

@@ -70,7 +70,7 @@ def _segment(
     now = datetime.now(UTC)
     return Iteration(
         id=sid,
-        mission_id="r1",
+        goal_id="r1",
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="g",
@@ -94,7 +94,7 @@ def _graph(
     now = datetime.now(UTC)
     return Trial(
         id=gid,
-        episode_id=episode_id,
+        iteration_id=episode_id,
         trial_sequence_no=1,
         stage=TrialStage.PLAN,
         status=status,
@@ -173,23 +173,23 @@ def test_assert_episode_open():
 
 
 def test_assert_episode_has_budget():
-    assert_iteration_has_budget(_segment(trial_budget=2, attempt_ids=()))
+    assert_iteration_has_budget(_segment(trial_budget=2, trial_ids=()))
     assert_iteration_has_budget(
-        _segment(trial_budget=2, attempt_ids=("g1",))
+        _segment(trial_budget=2, trial_ids=("g1",))
     )
     with pytest.raises(TaskCenterInvariantViolation):
         assert_iteration_has_budget(
-            _segment(trial_budget=2, attempt_ids=("g1", "g2"))
+            _segment(trial_budget=2, trial_ids=("g1", "g2"))
         )
 
 
 def test_assert_attempt_belongs_to_episode():
     assert_trial_belongs_to_iteration(
-        _graph(episode_id="s1"), _segment(sid="s1")
+        _graph(iteration_id="s1"), _segment(sid="s1")
     )
     with pytest.raises(TaskCenterInvariantViolation):
         assert_trial_belongs_to_iteration(
-            _graph(episode_id="s1"), _segment(sid="s2")
+            _graph(iteration_id="s1"), _segment(sid="s2")
         )
 
 
@@ -197,10 +197,10 @@ def test_assert_attempt_belongs_to_episode():
 
 
 def test_assert_attempt_sequence_contiguous():
-    assert_trial_sequence_contiguous(_segment(attempt_ids=()), 1)
-    assert_trial_sequence_contiguous(_segment(attempt_ids=("g1",)), 2)
+    assert_trial_sequence_contiguous(_segment(trial_ids=()), 1)
+    assert_trial_sequence_contiguous(_segment(trial_ids=("g1",)), 2)
     with pytest.raises(TaskCenterInvariantViolation):
-        assert_trial_sequence_contiguous(_segment(attempt_ids=("g1",)), 1)
+        assert_trial_sequence_contiguous(_segment(trial_ids=("g1",)), 1)
 
 
 def test_assert_fail_reason_present_on_failure():
