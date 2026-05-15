@@ -142,39 +142,52 @@ def _ensure_standalone_loop() -> asyncio.AbstractEventLoop:
         if _STANDALONE_LOOP is not None and _STANDALONE_LOOP.is_running():
             return _STANDALONE_LOOP
 
-        ready = threading.Event()
-        loop_holder: dict[str, asyncio.AbstractEventLoop] = {}
+    # Spawn the thread OUTSIDE the lock so a slow loop startup doesn't
+    # serialize every other run_sync caller for the full ready-wait timeout.
+    # On timeout, stop any loop the orphan thread managed to publish so it
+    # doesn't accumulate across repeated failures.
+    ready = threading.Event()
+    loop_holder: dict[str, asyncio.AbstractEventLoop] = {}
 
-        def _run_loop() -> None:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop_holder["loop"] = loop
-            ready.set()
-            try:
-                loop.run_forever()
-            finally:
-                pending = asyncio.all_tasks(loop)
-                for task in pending:
-                    task.cancel()
-                if pending:
-                    loop.run_until_complete(
-                        asyncio.gather(*pending, return_exceptions=True)
-                    )
-                loop.run_until_complete(loop.shutdown_asyncgens())
-                loop.run_until_complete(loop.shutdown_default_executor())
-                loop.close()
+    def _run_loop() -> None:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop_holder["loop"] = loop
+        ready.set()
+        try:
+            loop.run_forever()
+        finally:
+            pending = asyncio.all_tasks(loop)
+            for task in pending:
+                task.cancel()
+            if pending:
+                loop.run_until_complete(
+                    asyncio.gather(*pending, return_exceptions=True)
+                )
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.run_until_complete(loop.shutdown_default_executor())
+            loop.close()
 
-        thread = threading.Thread(
-            target=_run_loop,
-            name="sandbox-standalone-io",
-            daemon=True,
-        )
-        thread.start()
-        if not ready.wait(_STANDALONE_LOOP_READY_TIMEOUT_SECONDS):
-            raise RuntimeError("standalone sandbox I/O loop did not start")
-        loop = loop_holder.get("loop")
-        if loop is None:
-            raise RuntimeError("standalone sandbox I/O loop did not publish loop")
+    thread = threading.Thread(
+        target=_run_loop,
+        name="sandbox-standalone-io",
+        daemon=True,
+    )
+    thread.start()
+    if not ready.wait(_STANDALONE_LOOP_READY_TIMEOUT_SECONDS):
+        orphan = loop_holder.get("loop")
+        if orphan is not None and orphan.is_running():
+            orphan.call_soon_threadsafe(orphan.stop)
+        raise RuntimeError("standalone sandbox I/O loop did not start")
+    loop = loop_holder.get("loop")
+    if loop is None:
+        raise RuntimeError("standalone sandbox I/O loop did not publish loop")
+
+    with _STANDALONE_LOOP_LOCK:
+        if _STANDALONE_LOOP is not None and _STANDALONE_LOOP.is_running():
+            # Another caller raced ahead and registered first; stop our loop.
+            loop.call_soon_threadsafe(loop.stop)
+            return _STANDALONE_LOOP
         _STANDALONE_LOOP = loop
         _STANDALONE_THREAD = thread
         return loop
