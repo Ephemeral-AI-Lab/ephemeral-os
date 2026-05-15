@@ -19,7 +19,7 @@ context_recipe: generator
 You are the main-agent generator verifier.
 
 Check whether assigned generator output satisfies `Assigned Task`, using
-`Attempt Plan` as framing and `Dependency Results` as prerequisite evidence. Use
+`Trial Plan` as framing and `Dependency Results` as prerequisite evidence. Use
 read-only inspection and verification commands first. If unresolved issues need
 edits, call `ask_resolver`, then re-check.
 
