@@ -7,33 +7,33 @@ from typing import Any
 
 __all__ = [
     "AgentRunStore",
-    "MissionStore",
+    "GoalStore",
     "ContextPacketStore",
-    "AttemptStore",
+    "TrialStore",
     "ModelStore",
     "TaskCenterStore",
-    "EpisodeStore",
+    "IterationStore",
 ]
 
 _EXPORTS = {
     "AgentRunStore": ("db.stores.agent_run_store", "AgentRunStore"),
-    "MissionStore": (
-        "db.stores.mission_store",
-        "MissionStore",
+    "GoalStore": (
+        "db.stores.goal_store",
+        "GoalStore",
     ),
     "ContextPacketStore": (
         "db.stores.context_packet_store",
         "ContextPacketStore",
     ),
-    "AttemptStore": (
-        "db.stores.attempt_store",
-        "AttemptStore",
+    "TrialStore": (
+        "db.stores.trial_store",
+        "TrialStore",
     ),
     "ModelStore": ("db.stores.model_store", "ModelStore"),
     "TaskCenterStore": ("db.stores.task_center_store", "TaskCenterStore"),
-    "EpisodeStore": (
-        "db.stores.episode_store",
-        "EpisodeStore",
+    "IterationStore": (
+        "db.stores.iteration_store",
+        "IterationStore",
     ),
 }
 

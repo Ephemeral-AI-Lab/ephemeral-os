@@ -1,11 +1,11 @@
-"""Mission persistence store. Returns frozen DTOs."""
+"""Goal persistence store. Returns frozen DTOs."""
 
 from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
 
-from db.models.mission import MissionRecord
+from db.models.goal import GoalRecord
 from db.stores.base import SyncStoreMixin
 from task_center.mission.state import (
     Mission,
@@ -13,8 +13,8 @@ from task_center.mission.state import (
 )
 
 
-class MissionStore(SyncStoreMixin):
-    """CRUD for Mission. Returns frozen Mission DTOs."""
+class GoalStore(SyncStoreMixin):
+    """CRUD for Goal. Returns frozen Mission DTOs."""
 
     def insert(
         self,
@@ -25,13 +25,13 @@ class MissionStore(SyncStoreMixin):
     ) -> Mission:
         with self._sf() as db:
             now = datetime.now(UTC)
-            record = MissionRecord(
+            record = GoalRecord(
                 id=str(uuid.uuid4()),
                 task_center_run_id=task_center_run_id,
                 requested_by_task_id=requested_by_task_id,
                 goal=goal,
                 status=MissionStatus.OPEN.value,
-                episode_ids=[],
+                iteration_ids=[],
                 final_outcome=None,
                 created_at=now,
                 updated_at=now,
@@ -41,37 +41,37 @@ class MissionStore(SyncStoreMixin):
             db.refresh(record)
             return self._to_dto(record)
 
-    def get(self, mission_id: str) -> Mission | None:
+    def get(self, goal_id: str) -> Mission | None:
         with self._sf() as db:
-            record = db.get(MissionRecord, mission_id)
+            record = db.get(GoalRecord, goal_id)
             return self._to_dto(record) if record is not None else None
 
-    def append_episode_id(
-        self, mission_id: str, episode_id: str
+    def append_iteration_id(
+        self, goal_id: str, iteration_id: str
     ) -> Mission:
         with self._sf() as db:
-            record = db.get(MissionRecord, mission_id)
+            record = db.get(GoalRecord, goal_id)
             if record is None:
-                raise LookupError(f"Mission {mission_id!r} not found")
-            ids = list(record.episode_ids or [])
-            ids.append(episode_id)
-            record.episode_ids = ids
+                raise LookupError(f"Goal {goal_id!r} not found")
+            ids = list(record.iteration_ids or [])
+            ids.append(iteration_id)
+            record.iteration_ids = ids
             db.commit()
             db.refresh(record)
             return self._to_dto(record)
 
     def set_status(
         self,
-        mission_id: str,
+        goal_id: str,
         *,
         status: MissionStatus,
         final_outcome: dict | None,
         closed_at: datetime | None = None,
     ) -> Mission:
         with self._sf() as db:
-            record = db.get(MissionRecord, mission_id)
+            record = db.get(GoalRecord, goal_id)
             if record is None:
-                raise LookupError(f"Mission {mission_id!r} not found")
+                raise LookupError(f"Goal {goal_id!r} not found")
             record.status = status.value
             record.final_outcome = final_outcome
             if closed_at is not None:
@@ -85,12 +85,12 @@ class MissionStore(SyncStoreMixin):
     ) -> list[Mission]:
         with self._sf() as db:
             q = (
-                db.query(MissionRecord)
+                db.query(GoalRecord)
                 .filter(
-                    MissionRecord.requested_by_task_id
+                    GoalRecord.requested_by_task_id
                     == requested_by_task_id
                 )
-                .order_by(MissionRecord.created_at.asc())
+                .order_by(GoalRecord.created_at.asc())
             )
             return [self._to_dto(r) for r in q.all()]
 
@@ -99,23 +99,23 @@ class MissionStore(SyncStoreMixin):
     ) -> list[Mission]:
         with self._sf() as db:
             q = (
-                db.query(MissionRecord)
+                db.query(GoalRecord)
                 .filter(
-                    MissionRecord.task_center_run_id
+                    GoalRecord.task_center_run_id
                     == task_center_run_id
                 )
-                .order_by(MissionRecord.created_at.asc())
+                .order_by(GoalRecord.created_at.asc())
             )
             return [self._to_dto(r) for r in q.all()]
 
-    def _to_dto(self, record: MissionRecord) -> Mission:
+    def _to_dto(self, record: GoalRecord) -> Mission:
         return Mission(
             id=record.id,
             task_center_run_id=record.task_center_run_id,
             requested_by_task_id=record.requested_by_task_id,
             goal=record.goal,
             status=MissionStatus(record.status),
-            episode_ids=tuple(record.episode_ids or ()),
+            episode_ids=tuple(record.iteration_ids or ()),
             final_outcome=record.final_outcome,
             created_at=record.created_at,
             updated_at=record.updated_at,

@@ -1,6 +1,6 @@
 """TaskCenter request/run/task persistence store.
 
-Harness-graph persistence has moved to ``db.stores.attempt_store``
+Harness-graph persistence has moved to ``db.stores.trial_store``
 and is owned by the new three-axis (request / segment / graph) schema.
 """
 
