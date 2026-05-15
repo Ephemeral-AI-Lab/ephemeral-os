@@ -47,7 +47,6 @@ from task_center_runner.squad.prompt_inspector import (
     PromptInspection,
     ToolCallRecord,
 )
-from task_center_runner.squad.runner import MockSquadRunner
 from task_center_runner.squad.sandbox_probe import SandboxCheck
 from task_center_runner.stores import (
     TaskCenterStoreBundle,
@@ -174,25 +173,14 @@ async def run_scenario(
         instance_id=instance_id,
     )
 
-    runner_box: list[MockSquadRunner | None] = [None]
-    original_factory = config.runner_factory
-
-    def _capturing_factory(ctx: Any) -> Any:
-        squad = original_factory(ctx)
-        runner_box[0] = squad  # type: ignore[assignment]
-        return squad
-
     # ``registered_mock_agents`` registers the mock agent definitions for the
     # duration of the run; restore the registry on exit. The original
     # ``run_scenario`` wrapped its core call in this context manager too.
     with registered_mock_agents():
-        config = _dataclasses.replace(
-            config, runner_factory=_capturing_factory, stores=bundle
-        )
+        config = _dataclasses.replace(config, stores=bundle)
         pipeline_report = await run_pipeline(config)
 
     try:
-        squad = runner_box[0]
         graph_summary = _graph_summary(bundle, pipeline_report.task_center_run_id)
     finally:
         if owns_stores:
@@ -211,16 +199,16 @@ async def run_scenario(
         seen_event_types=list(mutable_state.seen_events),
         hook_results=list(lifecycle.hook_results),
         mutable_state_flags=dict(mutable_state.flags),
-        # Phase 4g-step2: launches / tool_calls / prompt_inspections now come
-        # from MOCK_* events accumulated by the lifecycle subscriber, not from
-        # MockSquadRunner's list attributes. ``sandbox_checks`` still uses the
-        # runner attribute because probe helpers append to it via pass-by-ref
-        # without yet publishing MOCK_SANDBOX_CHECK_RECORDED events; Phase
-        # 4g-step3 threads publish through those helpers.
+        # Phase 4g (steps 1-3a): all 4 mock-record streams now flow through
+        # the audit bus as MOCK_* events; ``ScenarioLifecycle`` accumulates
+        # them and the shim assembles the legacy ``RunReport`` view from the
+        # lifecycle alone. ``MockSquadRunner.launches`` etc. remain populated
+        # via the Phase 4d dual-write but the shim does not read them; Phase
+        # 4g-step3b deletes those attributes.
         launches=list(lifecycle.launches),
         tool_calls=list(lifecycle.tool_calls),
         prompt_inspections=list(lifecycle.prompt_inspections),
-        sandbox_checks=list(squad.sandbox_checks) if squad is not None else [],
+        sandbox_checks=list(lifecycle.sandbox_checks),
         metrics=dict(pipeline_report.metrics),
         graph_summary=graph_summary,
         entry_prompt_sha256=hashlib.sha256(entry_prompt.encode("utf-8")).hexdigest(),

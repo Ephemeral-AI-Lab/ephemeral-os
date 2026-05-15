@@ -40,6 +40,7 @@ from task_center_runner.scenarios.sandbox._fixtures.lsp_expectations import (
 from task_center_runner.scenarios.sandbox._fixtures.refactor_passes import RefactorPass
 from task_center_runner.scenarios.sandbox._fixtures.scheduler_demo_data import FixtureFile
 from task_center_runner.scenarios.sandbox._metrics import aggregate_perf_metrics
+from task_center_runner.audit.events import EventType
 from task_center_runner.squad.complex_project_build_probe import (
     CallTool,
     EmitStreamEvent,
@@ -47,6 +48,7 @@ from task_center_runner.squad.complex_project_build_probe import (
     ProbeContext,
     ProbeStats,
     PublishEvent,
+    PublishMockRecord,
     RecordToolCheck,
     WORKSPACE_ROOT,
     _api_edit_noop_batch,
@@ -117,6 +119,7 @@ async def run_complex_project_build_shell_edit_lsp_probe(
     emit: EmitStreamEvent,
     call_tool: CallTool,
     publish: PublishEvent,
+    publish_mock_record: PublishMockRecord,
     record_tool_check: RecordToolCheck,
     caller,
     sandbox_id: str,
@@ -130,6 +133,7 @@ async def run_complex_project_build_shell_edit_lsp_probe(
         emit=emit,
         call_tool=call_tool,
         publish=publish,
+        publish_mock_record=publish_mock_record,
         record_tool_check=record_tool_check,
         caller=caller,
         sandbox_id=sandbox_id,
@@ -445,13 +449,13 @@ async def _phase_e_diagnostic_probe(
         ),
         timeout=30,
     )
-    ctx.sandbox_checks.append(
-        SandboxCheck(
-            name="diagnostic_probe.import_after_repair",
-            passed=_shell_exit_code(import_check) == 0,
-            detail=f"exit_code={_shell_exit_code(import_check)}",
-        )
+    _check_record = SandboxCheck(
+        name="diagnostic_probe.import_after_repair",
+        passed=_shell_exit_code(import_check) == 0,
+        detail=f"exit_code={_shell_exit_code(import_check)}",
     )
+    ctx.sandbox_checks.append(_check_record)
+    ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
     stats.phases.append(
         {
             "name": "E_diagnostic_probe",
@@ -549,13 +553,13 @@ async def _apply_shell_edit(
     if result.is_error or exit_code != 0 or payload is None:
         stats.shell_edit_errors += 1
         detail = f"exit_code={exit_code} stdout={_shell_stdout(result)[-300:]!r}"
-        ctx.sandbox_checks.append(
-            SandboxCheck(
-                name=f"shell_edit.{_short(path)}",
-                passed=False,
-                detail=detail,
-            )
+        _check_record = SandboxCheck(
+            name=f"shell_edit.{_short(path)}",
+            passed=False,
+            detail=detail,
         )
+        ctx.sandbox_checks.append(_check_record)
+        ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
         raise RuntimeError(f"shell edit failed: {description}: {detail}")
 
     stats.shell_edit_payloads.append(payload)
@@ -576,17 +580,17 @@ async def _apply_shell_edit(
     changed_paths = tuple(
         str(p) for p in (result.metadata or {}).get("changed_paths", ())
     )
-    ctx.sandbox_checks.append(
-        SandboxCheck(
-            name=f"shell_edit.{_short(path)}",
-            passed=passed,
-            detail=(
-                f"description={description!r} changed={changed} "
-                f"changed_paths={changed_paths}"
-            ),
-            changed_paths=changed_paths,
-        )
+    _check_record = SandboxCheck(
+        name=f"shell_edit.{_short(path)}",
+        passed=passed,
+        detail=(
+            f"description={description!r} changed={changed} "
+            f"changed_paths={changed_paths}"
+        ),
+        changed_paths=changed_paths,
     )
+    ctx.sandbox_checks.append(_check_record)
+    ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
     if not passed:
         raise RuntimeError(f"shell edit verification failed: {description}")
     return result
@@ -1043,13 +1047,13 @@ def _record_lsp_semantic_check(
     stats.lsp_semantic_checks[tool_name] = stats.lsp_semantic_checks.get(tool_name, 0) + 1
     if not passed:
         stats.lsp_semantic_failures += 1
-    ctx.sandbox_checks.append(
-        SandboxCheck(
-            name=f"semantic.{tool_name}.{label}",
-            passed=passed,
-            detail=detail,
-        )
+    _check_record = SandboxCheck(
+        name=f"semantic.{tool_name}.{label}",
+        passed=passed,
+        detail=detail,
     )
+    ctx.sandbox_checks.append(_check_record)
+    ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
     if not passed:
         raise RuntimeError(f"semantic {tool_name} check failed: {label}: {detail}")
 

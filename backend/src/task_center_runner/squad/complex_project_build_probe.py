@@ -77,6 +77,7 @@ from task_center_runner.squad.sandbox_probe import SandboxCheck
 EmitStreamEvent = Callable[[StreamEvent], Awaitable[None]]
 CallTool = Callable[..., Awaitable[ToolResult]]
 PublishEvent = Callable[..., None]
+PublishMockRecord = Callable[..., None]
 RecordToolCheck = Callable[[str, ToolResult], None]
 
 
@@ -120,6 +121,7 @@ class ProbeContext:
     emit: EmitStreamEvent
     call_tool: CallTool
     publish: PublishEvent
+    publish_mock_record: PublishMockRecord
     record_tool_check: RecordToolCheck
     caller: SandboxCaller
     sandbox_id: str
@@ -138,6 +140,7 @@ async def run_complex_project_build_probe(
     emit: EmitStreamEvent,
     call_tool: CallTool,
     publish: PublishEvent,
+    publish_mock_record: PublishMockRecord,
     record_tool_check: RecordToolCheck,
     caller: SandboxCaller,
     sandbox_id: str,
@@ -151,6 +154,7 @@ async def run_complex_project_build_probe(
         emit=emit,
         call_tool=call_tool,
         publish=publish,
+        publish_mock_record=publish_mock_record,
         record_tool_check=record_tool_check,
         caller=caller,
         sandbox_id=sandbox_id,
@@ -253,21 +257,21 @@ async def _phase0_bootstrap(ctx: ProbeContext, stats: ProbeStats) -> None:
             f"stderr={candidate_result.stderr!r}"
         )
     if mkdir_result is None:
-        ctx.sandbox_checks.append(
-            SandboxCheck(
-                name="api.shell.bootstrap.mkdir_workspace",
-                passed=False,
-                detail=last_err,
-            )
-        )
-        raise RuntimeError(f"mkdir {WORKSPACE_ROOT} failed: {last_err}")
-    ctx.sandbox_checks.append(
-        SandboxCheck(
+        _check_record = SandboxCheck(
             name="api.shell.bootstrap.mkdir_workspace",
-            passed=True,
-            detail=f"exit_code={mkdir_result.exit_code}",
+            passed=False,
+            detail=last_err,
         )
+        ctx.sandbox_checks.append(_check_record)
+        ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
+        raise RuntimeError(f"mkdir {WORKSPACE_ROOT} failed: {last_err}")
+    _check_record = SandboxCheck(
+        name="api.shell.bootstrap.mkdir_workspace",
+        passed=True,
+        detail=f"exit_code={mkdir_result.exit_code}",
     )
+    ctx.sandbox_checks.append(_check_record)
+    ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
 
     rebind = await call_daemon_api(
         ctx.sandbox_id,
@@ -275,13 +279,13 @@ async def _phase0_bootstrap(ctx: ProbeContext, stats: ProbeStats) -> None:
         {"workspace_root": WORKSPACE_ROOT, "reset": True},
         timeout=240,
     )
-    ctx.sandbox_checks.append(
-        SandboxCheck(
-            name="api.build_workspace_base.ephemeral_os",
-            passed=bool(rebind.get("success")),
-            detail=f"workspace_root={WORKSPACE_ROOT}",
-        )
+    _check_record = SandboxCheck(
+        name="api.build_workspace_base.ephemeral_os",
+        passed=bool(rebind.get("success")),
+        detail=f"workspace_root={WORKSPACE_ROOT}",
     )
+    ctx.sandbox_checks.append(_check_record)
+    ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
     if not rebind.get("success"):
         raise RuntimeError(
             f"workspace rebind to {WORKSPACE_ROOT} failed: {rebind!r}"
@@ -347,13 +351,13 @@ async def _phase0_bootstrap(ctx: ProbeContext, stats: ProbeStats) -> None:
         ReadFileRequest(path=f"{WORKSPACE_ROOT}/.gitignore", caller=ctx.caller),
     )
     stats.api_read_count += 1
-    ctx.sandbox_checks.append(
-        SandboxCheck(
-            name="api.read_file.bootstrap.gitignore",
-            passed=bool(api_read.success and api_read.exists),
-            detail=f"bytes={len(api_read.content) if api_read.success else 0}",
-        )
+    _check_record = SandboxCheck(
+        name="api.read_file.bootstrap.gitignore",
+        passed=bool(api_read.success and api_read.exists),
+        detail=f"bytes={len(api_read.content) if api_read.success else 0}",
     )
+    ctx.sandbox_checks.append(_check_record)
+    ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
 
     api_shell = await sandbox_api.shell(
         ctx.sandbox_id,
@@ -367,16 +371,16 @@ async def _phase0_bootstrap(ctx: ProbeContext, stats: ProbeStats) -> None:
     )
     if api_shell.success and api_shell.exit_code == 0:
         stats.api_shell_count += 1
-    ctx.sandbox_checks.append(
-        SandboxCheck(
-            name="api.shell.bootstrap.workspace_exists",
-            passed=bool(api_shell.success and api_shell.exit_code == 0),
-            detail=(
-                f"exit_code={api_shell.exit_code} "
-                f"stdout={api_shell.stdout!r} stderr={api_shell.stderr!r}"
-            ),
-        )
+    _check_record = SandboxCheck(
+        name="api.shell.bootstrap.workspace_exists",
+        passed=bool(api_shell.success and api_shell.exit_code == 0),
+        detail=(
+            f"exit_code={api_shell.exit_code} "
+            f"stdout={api_shell.stdout!r} stderr={api_shell.stderr!r}"
+        ),
     )
+    ctx.sandbox_checks.append(_check_record)
+    ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
 
     api_shell_status = await sandbox_api.shell(
         ctx.sandbox_id,
@@ -390,19 +394,19 @@ async def _phase0_bootstrap(ctx: ProbeContext, stats: ProbeStats) -> None:
     )
     if api_shell_status.success and api_shell_status.exit_code == 0:
         stats.api_shell_count += 1
-    ctx.sandbox_checks.append(
-        SandboxCheck(
-            name="api.shell.bootstrap.workspace_cwd",
-            passed=bool(
-                api_shell_status.success and api_shell_status.exit_code == 0
-            ),
-            detail=(
-                f"exit_code={api_shell_status.exit_code} "
-                f"stdout={api_shell_status.stdout!r} "
-                f"stderr={api_shell_status.stderr!r}"
-            ),
-        )
+    _check_record = SandboxCheck(
+        name="api.shell.bootstrap.workspace_cwd",
+        passed=bool(
+            api_shell_status.success and api_shell_status.exit_code == 0
+        ),
+        detail=(
+            f"exit_code={api_shell_status.exit_code} "
+            f"stdout={api_shell_status.stdout!r} "
+            f"stderr={api_shell_status.stderr!r}"
+        ),
     )
+    ctx.sandbox_checks.append(_check_record)
+    ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
 
     stats.phases.append(
         {
@@ -599,16 +603,16 @@ async def _projection_consistency_check(
     tool_stripped = _strip_line_number_prefix(tool_read)
     api_stripped = api_content.rstrip("\n")
     matches = bool(tool_stripped) and tool_stripped == api_stripped
-    ctx.sandbox_checks.append(
-        SandboxCheck(
-            name=f"api.read_file.equal_to_tool.{_short(path)}",
-            passed=matches,
-            detail=(
-                f"tool_lines={tool_stripped.count(chr(10)) + 1} "
-                f"api_lines={api_stripped.count(chr(10)) + 1}"
-            ),
-        )
+    _check_record = SandboxCheck(
+        name=f"api.read_file.equal_to_tool.{_short(path)}",
+        passed=matches,
+        detail=(
+            f"tool_lines={tool_stripped.count(chr(10)) + 1} "
+            f"api_lines={api_stripped.count(chr(10)) + 1}"
+        ),
     )
+    ctx.sandbox_checks.append(_check_record)
+    ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
 
 
 async def _api_edit_noop_batch(
@@ -640,13 +644,13 @@ async def _api_edit_noop_batch(
         ),
     )
     stats.api_edit_count += 1
-    ctx.sandbox_checks.append(
-        SandboxCheck(
-            name=f"api.edit_file.batch_noop.{_short(path)}",
-            passed=bool(result.success and result.applied_edits >= 0),
-            detail=f"applied_edits={result.applied_edits} status={result.status}",
-        )
+    _check_record = SandboxCheck(
+        name=f"api.edit_file.batch_noop.{_short(path)}",
+        passed=bool(result.success and result.applied_edits >= 0),
+        detail=f"applied_edits={result.applied_edits} status={result.status}",
     )
+    ctx.sandbox_checks.append(_check_record)
+    ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
 
 
 # ---------------------------------------------------------------------------
@@ -894,13 +898,13 @@ async def _phase_f_pytest(
     )
     stdout = _shell_stdout(result)
     exit_code = _shell_exit_code(result)
-    ctx.sandbox_checks.append(
-        SandboxCheck(
-            name="shell.pytest.full_run",
-            passed=exit_code == 0,
-            detail=f"exit_code={exit_code} bytes={len(stdout)}",
-        )
+    _check_record = SandboxCheck(
+        name="shell.pytest.full_run",
+        passed=exit_code == 0,
+        detail=f"exit_code={exit_code} bytes={len(stdout)}",
     )
+    ctx.sandbox_checks.append(_check_record)
+    ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
 
     stats.phases.append(
         {
@@ -959,13 +963,13 @@ async def _phase_f_per_module_imports(
             timeout=30,
         )
         exit_code = _shell_exit_code(result)
-        ctx.sandbox_checks.append(
-            SandboxCheck(
-                name=f"module.import.{dotted}",
-                passed=exit_code == 0,
-                detail=f"exit_code={exit_code}",
-            )
+        _check_record = SandboxCheck(
+            name=f"module.import.{dotted}",
+            passed=exit_code == 0,
+            detail=f"exit_code={exit_code}",
         )
+        ctx.sandbox_checks.append(_check_record)
+        ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
     stats.phases.append(
         {
             "name": "F_per_module_imports",
@@ -1024,16 +1028,16 @@ async def _phase_f_tri_source_consistency(
             and api_content == cat_stdout
             and api_content == tool_stripped
         )
-        ctx.sandbox_checks.append(
-            SandboxCheck(
-                name=f"projection.tri_source.{_short(path)}",
-                passed=passed,
-                detail=(
-                    f"tool={len(tool_stripped)} cat={len(cat_stdout)} "
-                    f"api={len(api_content)} cat_exit={_shell_exit_code(cat)}"
-                ),
-            )
+        _check_record = SandboxCheck(
+            name=f"projection.tri_source.{_short(path)}",
+            passed=passed,
+            detail=(
+                f"tool={len(tool_stripped)} cat={len(cat_stdout)} "
+                f"api={len(api_content)} cat_exit={_shell_exit_code(cat)}"
+            ),
         )
+        ctx.sandbox_checks.append(_check_record)
+        ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
 
 
 async def _shell_cat_with_retry(
@@ -1094,13 +1098,13 @@ async def _phase_f_intentional_conflicts(
         and tool_reason
         and "anchor not found" in tool_reason
     )
-    ctx.sandbox_checks.append(
-        SandboxCheck(
-            name="tool.edit_file.intentional_conflict",
-            passed=tool_passed,
-            detail=f"reason={tool_reason!r}",
-        )
+    _check_record = SandboxCheck(
+        name="tool.edit_file.intentional_conflict",
+        passed=tool_passed,
+        detail=f"reason={tool_reason!r}",
     )
+    ctx.sandbox_checks.append(_check_record)
+    ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
     if tool_passed:
         ctx.publish(
             EventType.SANDBOX_CONFLICT_DETECTED,
@@ -1131,13 +1135,13 @@ async def _phase_f_intentional_conflicts(
     except Exception as exc:
         api_conflict_reason = str(exc)
         api_passed = "anchor not found" in api_conflict_reason
-    ctx.sandbox_checks.append(
-        SandboxCheck(
-            name="api.edit_file.intentional_conflict",
-            passed=api_passed,
-            detail=f"reason={api_conflict_reason!r}",
-        )
+    _check_record = SandboxCheck(
+        name="api.edit_file.intentional_conflict",
+        passed=api_passed,
+        detail=f"reason={api_conflict_reason!r}",
     )
+    ctx.sandbox_checks.append(_check_record)
+    ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
     if api_passed:
         ctx.publish(
             EventType.SANDBOX_CONFLICT_DETECTED,
