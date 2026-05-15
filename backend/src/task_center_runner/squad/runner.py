@@ -7,6 +7,7 @@ through ``execute_tool_once``.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from collections.abc import Awaitable, Callable
 from pathlib import Path
@@ -182,22 +183,22 @@ class MockSquadRunner:
         )
         task_id = str(metadata.get("task_center_task_id") or "")
         attempt_id = str(metadata.get("task_center_attempt_id") or "") or None
-        self.launches.append(
-            LaunchRecord(
-                task_id=task_id,
-                attempt_id=attempt_id,
-                agent_name=agent_def.name,
-                role=str(agent_def.agent_kind.value or ""),
-                prompt_preview=prompt[:500],
-            )
+        _launch_record = LaunchRecord(
+            task_id=task_id,
+            attempt_id=attempt_id,
+            agent_name=agent_def.name,
+            role=str(agent_def.agent_kind.value or ""),
+            prompt_preview=prompt[:500],
         )
-        self.prompt_inspections.append(
-            self._inspect_prompt(
-                prompt=prompt,
-                agent_def=agent_def,
-                metadata=metadata,
-            )
+        self.launches.append(_launch_record)
+        self._publish_mock_record(EventType.MOCK_LAUNCH_RECORDED, _launch_record)
+        _prompt_inspection = self._inspect_prompt(
+            prompt=prompt,
+            agent_def=agent_def,
+            metadata=metadata,
         )
+        self.prompt_inspections.append(_prompt_inspection)
+        self._publish_mock_record(EventType.MOCK_PROMPT_INSPECTED, _prompt_inspection)
         self._record_initial_messages(
             agent_def=agent_def,
             prompt=prompt,
@@ -749,14 +750,14 @@ class MockSquadRunner:
             audit_sink=self._sandbox_audit_sink,
         )
         passed = result.success and result.applied_edits == 2
-        self.sandbox_checks.append(
-            SandboxCheck(
-                name="api.edit_file.batch",
-                passed=passed,
-                detail=f"applied_edits={result.applied_edits} status={result.status}",
-                changed_paths=tuple(result.changed_paths),
-            )
+        _sandbox_check = SandboxCheck(
+            name="api.edit_file.batch",
+            passed=passed,
+            detail=f"applied_edits={result.applied_edits} status={result.status}",
+            changed_paths=tuple(result.changed_paths),
         )
+        self.sandbox_checks.append(_sandbox_check)
+        self._publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _sandbox_check)
         if passed:
             self._publish(
                 EventType.SANDBOX_BATCH_EDIT_APPLIED,
@@ -789,14 +790,14 @@ class MockSquadRunner:
         )
         passed = not result.success
         detail = result.conflict_reason or result.status or "conflict reported"
-        self.sandbox_checks.append(
-            SandboxCheck(
-                name="api.edit_file.conflict_detection",
-                passed=passed,
-                detail=detail,
-                changed_paths=tuple(result.changed_paths),
-            )
+        _sandbox_check = SandboxCheck(
+            name="api.edit_file.conflict_detection",
+            passed=passed,
+            detail=detail,
+            changed_paths=tuple(result.changed_paths),
         )
+        self.sandbox_checks.append(_sandbox_check)
+        self._publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _sandbox_check)
         if passed:
             self._publish(
                 EventType.SANDBOX_CONFLICT_DETECTED,
@@ -920,17 +921,17 @@ class MockSquadRunner:
         conflict_reason = str(conflict_meta.get("conflict_reason") or "")
         conflict_changed_paths = list(conflict_meta.get("changed_paths") or ())
         conflict_passed = bool(conflict_result.is_error and conflict_reason)
-        self.sandbox_checks.append(
-            SandboxCheck(
-                name="tool.edit_file.intentional_conflict",
-                passed=conflict_passed,
-                detail=(
-                    f"status={conflict_status} reason={conflict_reason!r} "
-                    f"is_error={conflict_result.is_error}"
-                ),
-                changed_paths=tuple(str(p) for p in conflict_changed_paths),
-            )
+        _sandbox_check = SandboxCheck(
+            name="tool.edit_file.intentional_conflict",
+            passed=conflict_passed,
+            detail=(
+                f"status={conflict_status} reason={conflict_reason!r} "
+                f"is_error={conflict_result.is_error}"
+            ),
+            changed_paths=tuple(str(p) for p in conflict_changed_paths),
         )
+        self.sandbox_checks.append(_sandbox_check)
+        self._publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _sandbox_check)
         if not conflict_passed:
             raise RuntimeError(
                 "Intentional missing-anchor edit unexpectedly succeeded."
@@ -1121,14 +1122,14 @@ class MockSquadRunner:
                 run_id=run_id,
             )
         )
-        self.tool_calls.append(
-            ToolCallRecord(
-                task_id=str(metadata.get("task_center_task_id") or ""),
-                tool_name=tool_obj.name,
-                is_error=result.is_error,
-                metadata=dict(result.metadata or {}),
-            )
+        _tool_call_record = ToolCallRecord(
+            task_id=str(metadata.get("task_center_task_id") or ""),
+            tool_name=tool_obj.name,
+            is_error=result.is_error,
+            metadata=dict(result.metadata or {}),
         )
+        self.tool_calls.append(_tool_call_record)
+        self._publish_mock_record(EventType.MOCK_TOOL_CALL_RECORDED, _tool_call_record)
         if result.is_error and not allow_error:
             raise RuntimeError(f"{tool_obj.name} failed: {result.output}")
         return result
@@ -1136,14 +1137,14 @@ class MockSquadRunner:
     def _record_tool_check(self, name: str, result: ToolResult) -> None:
         changed_paths = tuple(str(path) for path in result.metadata.get("changed_paths", ()))
         status = str(result.metadata.get("status") or "ok")
-        self.sandbox_checks.append(
-            SandboxCheck(
-                name=name,
-                passed=not result.is_error,
-                detail=status,
-                changed_paths=changed_paths,
-            )
+        _sandbox_check = SandboxCheck(
+            name=name,
+            passed=not result.is_error,
+            detail=status,
+            changed_paths=changed_paths,
         )
+        self.sandbox_checks.append(_sandbox_check)
+        self._publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _sandbox_check)
 
     def _assert_read_contains(
         self,
@@ -1157,13 +1158,13 @@ class MockSquadRunner:
             payload = {"content": result.output}
         content = str(payload.get("content") or "")
         passed = needle in content
-        self.sandbox_checks.append(
-            SandboxCheck(
-                name=check_name,
-                passed=passed,
-                detail=f"needle={needle!r}",
-            )
+        _sandbox_check = SandboxCheck(
+            name=check_name,
+            passed=passed,
+            detail=f"needle={needle!r}",
         )
+        self.sandbox_checks.append(_sandbox_check)
+        self._publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _sandbox_check)
         if not passed:
             raise RuntimeError(f"{check_name} did not find {needle!r}.")
 
@@ -1452,6 +1453,28 @@ class MockSquadRunner:
             tool_name=tool_name,
         )
         self._bus.publish(Event(type=event_type, node=node, payload=payload or {}))
+
+    def _publish_mock_record(
+        self, event_type: EventType, record: Any
+    ) -> None:
+        """Phase 4 — mirror a list-append into the audit bus as a MOCK_* event.
+
+        Dual-write seam: the existing ``self.launches`` / ``self.tool_calls`` /
+        ``self.prompt_inspections`` / ``self.sandbox_checks`` lists keep their
+        contents (the legacy ``RunReport`` view still reads them), and the same
+        record is also emitted as a ``MOCK_*`` ``Event`` so a Phase-4e shim
+        subscriber can rebuild those lists from bus events alone — preparing
+        for Phase 4g removal of the list attributes.
+        """
+        if self._bus is None:
+            return
+        payload = (
+            dataclasses.asdict(record)
+            if dataclasses.is_dataclass(record) and not isinstance(record, type)
+            else dict(record)
+        )
+        node = NodeId(task_center_run_id=self._task_center_run_id)
+        self._bus.publish(Event(type=event_type, node=node, payload=payload))
 
 
 __all__ = ["MockSquadRunner"]
