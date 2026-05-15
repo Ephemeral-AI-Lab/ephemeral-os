@@ -13,7 +13,7 @@ pytestmark = pytest.mark.asyncio
 
 _BODY = r"""
 import subprocess
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 from sandbox.overlay import read_output_ref
 from sandbox.overlay import OverlayRuntimeInvoker
 from sandbox.overlay import OverlayShellRequest
@@ -22,7 +22,7 @@ label = "overlay.native.runtime_invoker"
 before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
-manager = LayerStackManager(root / "stack")
+manager = LayerStack(root / "stack")
 manifest = manager.read_active_manifest()
 invoker = OverlayRuntimeInvoker(storage_root=manager.storage_root, runtime_root=root / "runtime")
 

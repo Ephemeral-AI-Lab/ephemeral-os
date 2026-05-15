@@ -207,7 +207,7 @@ async def test_write_edit_read_share_lease_registry_with_shell(
     write_services = request_services(stack.as_posix())
     manager_via_singleton = get_layer_stack_manager(stack.as_posix())
 
-    # The write/edit/read services point at the same LayerStackManager singleton
+    # The write/edit/read services point at the same LayerStack singleton
     # as the shell path; the LeaseRegistry is internal to that manager, so all
     # four flows pin layers through one registry.
     assert write_services.manager is manager_via_singleton

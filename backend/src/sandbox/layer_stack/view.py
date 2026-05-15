@@ -51,7 +51,7 @@ class MergedView:
     def evict_layer_index(self, layer_id: str) -> None:
         """Drop the cached presence index for ``layer_id``.
 
-        Called by ``LayerStackManager`` after a layer dir is removed; without
+        Called by ``LayerStack`` after a layer dir is removed; without
         this the cache grows unboundedly on long-running daemons.
         """
         self._layer_index_cache.pop(layer_id, None)
@@ -171,7 +171,7 @@ class MergedView:
 
         ``share_inodes=True`` hardlinks regular files from source layers. Only safe
         when the caller treats *destination* as read-only (e.g. the overlay
-        lowerdir from :meth:`LayerStackManager.prepare_workspace_snapshot`);
+        lowerdir from :meth:`LayerStack.prepare_workspace_snapshot`);
         a writer would corrupt the source layer through the shared inode.
         """
         dest = Path(destination)

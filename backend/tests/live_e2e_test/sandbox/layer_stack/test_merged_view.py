@@ -18,13 +18,13 @@ from sandbox.layer_stack.changes import (
     OpaqueDirLayerChange,
     WriteLayerChange,
 )
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 
 label = "layer_stack.merged_view"
 before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
-manager = LayerStackManager(root / "stack")
+manager = LayerStack(root / "stack")
 
 for index in range(100):
     manager.publish_changes([

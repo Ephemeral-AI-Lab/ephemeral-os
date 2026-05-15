@@ -211,7 +211,7 @@ def test_occ_policy_modules_depend_on_layer_stack_ports_not_manager() -> None:
         occ_root / "ports.py",
     }
     forbidden = (
-        "sandbox.layer_stack.manager",
+        "sandbox.layer_stack.stack",
         "sandbox.layer_stack.view",
         "sandbox.layer_stack.publisher",
         "sandbox.layer_stack.lease",

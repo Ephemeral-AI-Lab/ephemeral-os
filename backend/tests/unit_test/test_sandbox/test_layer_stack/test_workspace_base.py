@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 import sandbox.layer_stack.workspace_base as workspace_base_module
-from sandbox.layer_stack import LayerStackManager
+from sandbox.layer_stack import LayerStack
 from sandbox.layer_stack.workspace_base import (
     WORKSPACE_BASE_LAYER_ID,
     WorkspaceBaseAlreadyExistsError,
@@ -34,7 +34,7 @@ def test_workspace_base_writes_full_manifest_binding(tmp_path: Path) -> None:
         layer_stack_root=stack,
     )
 
-    manager = LayerStackManager(stack)
+    manager = LayerStack(stack)
     manifest = manager.read_active_manifest()
     assert manifest.version == 1
     assert manifest.layers[0].layer_id == WORKSPACE_BASE_LAYER_ID
@@ -87,7 +87,7 @@ def test_repeated_base_build_fails_unless_reset_requested(tmp_path: Path) -> Non
         layer_stack_root=stack,
         reset=True,
     )
-    manager = LayerStackManager(stack)
+    manager = LayerStack(stack)
     content, exists = manager.read_text("a.txt")
     assert exists is True
     assert content == "second\n"

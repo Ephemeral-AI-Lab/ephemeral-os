@@ -10,7 +10,7 @@ from typing import Protocol
 
 from sandbox.layer_stack.changes import LayerChange
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.layer_stack.manager import CommitStagingArea
+from sandbox.layer_stack.stack import CommitStagingArea
 
 
 @dataclass(frozen=True)

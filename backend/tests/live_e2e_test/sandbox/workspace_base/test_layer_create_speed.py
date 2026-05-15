@@ -28,7 +28,7 @@ seed = _seed_workspace_files(
 stack_root = _phase01_root(label)
 binding, base_timings = _build_base(stack_root)
 workspace_inv = _inventory(WORKSPACE_ROOT)
-manager = LayerStackManager(stack_root)
+manager = LayerStack(stack_root)
 rows = []
 
 

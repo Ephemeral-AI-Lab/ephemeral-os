@@ -17,7 +17,7 @@ from sandbox.occ.commit_queue import CommitQueue
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from sandbox.layer_stack.manager import LayerStackManager
+    from sandbox.layer_stack.stack import LayerStack
 from sandbox.occ.router import Router
 from sandbox.timing_keys import TimingKey
 from sandbox.daemon.async_bridge import run_sync_in_executor
@@ -33,7 +33,7 @@ class OccService:
         self,
         *,
         gitignore: GitignoreMatcher,
-        layer_stack: LayerStackManager,
+        layer_stack: LayerStack,
         orchestrator: Router | None = None,
         transaction: CommitTransaction | None = None,
         commit_queue: CommitQueue | None = None,

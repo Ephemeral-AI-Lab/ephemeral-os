@@ -8,7 +8,7 @@ import asyncio
 from pathlib import Path
 
 from sandbox.layer_stack.changes import WriteLayerChange
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 from sandbox.occ.changeset import FileStatus
 from sandbox.occ.hashing import ContentHasher
 from sandbox.occ.commit_transaction import CommitTransaction
@@ -31,7 +31,7 @@ def _source(tmp_path: Path, name: str, content: bytes) -> Path:
     return path
 
 
-def _publish(stack: LayerStackManager, tmp_path: Path, rel: str, content: bytes) -> None:
+def _publish(stack: LayerStack, tmp_path: Path, rel: str, content: bytes) -> None:
     source = _source(tmp_path, rel.replace("/", "-"), content)
     stack.publish_changes(
         [
@@ -47,7 +47,7 @@ def _publish(stack: LayerStackManager, tmp_path: Path, rel: str, content: bytes)
 def test_concurrent_prepared_commits_revalidate_latest_manifest(
     tmp_path: Path,
 ) -> None:
-    stack = LayerStackManager(tmp_path / "stack")
+    stack = LayerStack(tmp_path / "stack")
     _publish(stack, tmp_path, "src/app.py", b"base\n")
     snapshot = stack.read_active_manifest()
     service = OccService(gitignore=_Gitignore(), layer_stack=stack)

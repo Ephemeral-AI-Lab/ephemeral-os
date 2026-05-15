@@ -7,7 +7,7 @@ from pathlib import Path
 from sandbox.layer_stack import (
     DeleteLayerChange,
     WriteLayerChange,
-    LayerStackManager,
+    LayerStack,
 )
 from sandbox.layer_stack.manifest import LayerRef
 
@@ -20,7 +20,7 @@ def _source(tmp_path: Path, name: str, content: bytes) -> str:
 
 
 def _publish(
-    manager: LayerStackManager,
+    manager: LayerStack,
     tmp_path: Path,
     rel: str,
     content: bytes,
@@ -35,12 +35,12 @@ def _publish(
     )
 
 
-def _layer_path(manager: LayerStackManager, layer: LayerRef) -> Path:
+def _layer_path(manager: LayerStack, layer: LayerRef) -> Path:
     return manager.storage_root / layer.path
 
 
 def test_squash_replaces_old_active_suffix_with_checkpoint(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     _publish(manager, tmp_path, "a.txt", b"a1")
     _publish(manager, tmp_path, "b.txt", b"b1")
     _publish(manager, tmp_path, "a.txt", b"a2")
@@ -57,7 +57,7 @@ def test_squash_replaces_old_active_suffix_with_checkpoint(tmp_path: Path) -> No
 
 
 def test_squash_checkpoint_preserves_delete_semantics(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     _publish(manager, tmp_path, "deleted.txt", b"old")
     manager.publish_changes([DeleteLayerChange(path="deleted.txt")])
 
@@ -71,7 +71,7 @@ def test_squash_checkpoint_preserves_delete_semantics(tmp_path: Path) -> None:
 def test_leased_snapshot_remains_readable_until_release_after_squash(
     tmp_path: Path,
 ) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     _publish(manager, tmp_path, "a.txt", b"a1")
     _publish(manager, tmp_path, "b.txt", b"b1")
     _publish(manager, tmp_path, "a.txt", b"a2")

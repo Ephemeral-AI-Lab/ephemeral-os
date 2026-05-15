@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.layer_stack import WriteLayerChange, LayerStackManager
+from sandbox.layer_stack import WriteLayerChange, LayerStack
 from sandbox.daemon.service.layer_stack_client import LayerStackClient
 from sandbox.execution.contract import CommandExecRequest, MountMode
 from sandbox.execution.orchestrator import execute_command
@@ -31,7 +31,7 @@ def _source(tmp_path: Path, name: str, content: bytes) -> str:
 async def test_no_occ_orchestrator_removes_intermediate_dirs_but_keeps_outputs(
     tmp_path: Path,
 ) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     manager.publish_changes(
         [
             WriteLayerChange(
@@ -88,7 +88,7 @@ async def test_no_occ_orchestrator_removes_intermediate_dirs_but_keeps_outputs(
 async def test_no_occ_orchestrator_cleans_intermediate_dirs_even_on_nonzero_exit(
     tmp_path: Path,
 ) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     manager.publish_changes(
         [
             WriteLayerChange(

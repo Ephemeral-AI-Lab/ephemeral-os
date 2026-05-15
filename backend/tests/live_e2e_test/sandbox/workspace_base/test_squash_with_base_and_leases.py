@@ -105,7 +105,7 @@ def _publish_depth(manager, root, depth):
 def _squash_no_lease(depth):
     stack_root = _phase01_root(label, "no-lease-%03d" % depth)
     binding, timings = _build_base(stack_root)
-    manager = LayerStackManager(stack_root)
+    manager = LayerStack(stack_root)
     _publish_depth(manager, stack_root, depth)
     before_manifest = manager.read_active_manifest()
     before_dest = stack_root / "before-squash"
@@ -149,7 +149,7 @@ for depth in depths:
 
 lease_stack = _phase01_root(label, "lease")
 lease_binding, lease_timings = _build_base(lease_stack)
-manager = LayerStackManager(lease_stack)
+manager = LayerStack(lease_stack)
 manifest_a, _ = _publish_changes(manager, [
     WriteLayerChange(
         path="phase01-squash-lease/value.txt",

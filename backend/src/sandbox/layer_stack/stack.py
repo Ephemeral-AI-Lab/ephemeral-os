@@ -79,7 +79,7 @@ class PrepareWorkspaceSnapshotResult:
         }
 
 
-class LayerStackManager:
+class LayerStack:
     """Coordinates active manifests, snapshot leases, reads, and publishes."""
 
     def __init__(

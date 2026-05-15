@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sandbox.layer_stack import WriteLayerChange, LayerStackManager
+from sandbox.layer_stack import WriteLayerChange, LayerStack
 from sandbox.occ.gitignore import SnapshotGitignoreOracle
 from sandbox.occ.hashing import ContentHasher
 
 
-def _publish(manager: LayerStackManager, tmp_path: Path, rel: str, content: bytes) -> None:
+def _publish(manager: LayerStack, tmp_path: Path, rel: str, content: bytes) -> None:
     source = tmp_path / "sources" / rel.replace("/", "-")
     source.parent.mkdir(parents=True, exist_ok=True)
     source.write_bytes(content)
@@ -24,13 +24,13 @@ def _publish(manager: LayerStackManager, tmp_path: Path, rel: str, content: byte
     )
 
 
-def _seed_repo(manager: LayerStackManager, tmp_path: Path) -> None:
+def _seed_repo(manager: LayerStack, tmp_path: Path) -> None:
     _publish(manager, tmp_path, ".gitignore", b"build/*\n!build/keep.txt\n")
     _publish(manager, tmp_path, "pkg/.gitignore", b"*.tmp\n!important.tmp\n")
 
 
 def test_snapshot_oracle_reads_gitignore_from_layer_stack(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     _seed_repo(manager, tmp_path)
 
     oracle = SnapshotGitignoreOracle(manager)
@@ -42,7 +42,7 @@ def test_snapshot_oracle_reads_gitignore_from_layer_stack(tmp_path: Path) -> Non
 
 
 def test_snapshot_oracle_reuses_pathspec_reader_per_manifest(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     _seed_repo(manager, tmp_path)
     oracle = SnapshotGitignoreOracle(manager)
 
@@ -56,7 +56,7 @@ def test_snapshot_oracle_reuses_pathspec_reader_per_manifest(tmp_path: Path) -> 
 
 
 def test_snapshot_oracle_separates_cache_by_manifest_version(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     _publish(manager, tmp_path, ".gitignore", b"*.log\n")
     oracle = SnapshotGitignoreOracle(manager)
 
@@ -72,7 +72,7 @@ def test_snapshot_oracle_separates_cache_by_manifest_version(tmp_path: Path) -> 
 def test_snapshot_oracle_does_not_materialize_gitignore_workspace(
     tmp_path: Path,
 ) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     _seed_repo(manager, tmp_path)
 
     oracle = SnapshotGitignoreOracle(manager)

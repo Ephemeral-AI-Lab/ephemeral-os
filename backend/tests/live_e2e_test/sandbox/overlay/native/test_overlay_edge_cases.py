@@ -15,7 +15,7 @@ _BODY = r"""
 import errno
 from unittest import mock
 from sandbox.layer_stack.changes import LayerChange, WriteLayerChange
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 from sandbox.overlay import mount_snapshot
 import sandbox.overlay.mounts as mount_mod
 
@@ -23,7 +23,7 @@ label = "overlay.native.overlay_edge_cases"
 before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
-manager = LayerStackManager(root / "stack")
+manager = LayerStack(root / "stack")
 
 empty = mount_snapshot(
     manifest=manager.read_active_manifest(),

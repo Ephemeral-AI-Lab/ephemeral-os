@@ -13,13 +13,13 @@ pytestmark = pytest.mark.asyncio
 
 _SQUASH_BODY = r"""
 from sandbox.layer_stack.changes import LayerChange, WriteLayerChange
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 
 label = "layer_stack.squash"
 before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
-manager = LayerStackManager(root / "stack")
+manager = LayerStack(root / "stack")
 
 for index in range(6):
     manager.publish_changes([
@@ -53,13 +53,13 @@ _emit(label, started, before, {
 
 _RACE_BODY = r"""
 from sandbox.layer_stack.changes import LayerChange, WriteLayerChange
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 
 label = "layer_stack.squash_under_race"
 before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
-manager = LayerStackManager(root / "stack")
+manager = LayerStack(root / "stack")
 
 for index in range(5):
     manager.publish_changes([

@@ -95,7 +95,7 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/execution/overlay_change.py",
         "sandbox/execution/overlay_capture.py",
         "sandbox/layer_stack/manifest.py",
-        "sandbox/layer_stack/manager.py",
+        "sandbox/layer_stack/stack.py",
         "sandbox/layer_stack/workspace_binding.py",
         "sandbox/occ/overlay.py",
         "sandbox/occ/changeset.py",

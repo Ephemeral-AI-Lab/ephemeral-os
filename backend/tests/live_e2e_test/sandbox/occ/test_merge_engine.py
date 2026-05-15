@@ -14,7 +14,7 @@ pytestmark = pytest.mark.asyncio
 _MERGE_BODY = r"""
 import sandbox.occ.stage as merge_facade
 from sandbox.layer_stack.changes import LayerChange, WriteLayerChange
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 from sandbox.occ.changeset import PreparedPathGroup, RouteDecision
 from sandbox.occ.changeset import EditChange, FileStatus, WriteChange
 from sandbox.occ.changeset import build_api_write_change, build_overlay_write_change
@@ -53,7 +53,7 @@ label = "occ.merge_engine"
 before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
-stack = LayerStackManager(root / "stack")
+stack = LayerStack(root / "stack")
 _publish(stack, "src/app.py", b"alpha\nbeta\n")
 _publish(stack, "src/crlf.txt", b"a\r\nb\r\n")
 _publish(stack, "src/bin.dat", b"\x00\x01\x02")

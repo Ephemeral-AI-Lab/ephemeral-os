@@ -115,7 +115,7 @@ correctness under race. Files needing this are flagged **(+ race)** below.
 | 16 | `layer_stack/test_squash.py` **(+ race)** | `sandbox.layer_stack.squash.squash` | coalesce N→1 correct; idempotent; kill mid-squash recovers. Race: squash + concurrent appender → no torn manifest, no lost append |
 | 17 | `layer_stack/test_changes_aggregation.py` **(+ race)** | `sandbox.layer_stack.changes` | dedup; ordering; rename pairs; out-of-order writes. Race: N=8 concurrent producers → dedup invariant holds, ordering deterministic per-path |
 | 18 | `layer_stack/test_lease_registry.py` **(+ race)** | `sandbox.layer_stack.lease.registry` | register/release/expire; killed-shell sweep; double-release. Race: N=16 concurrent register → unique lease ids, no double-allocation |
-| 19 | `layer_stack/test_stack_manager_integration.py` **(+ race)** | `sandbox.layer_stack.manager` | full happy path end-to-end; failure injection at each phase. Race: N=4 agents through stack_manager concurrently → end-state consistent with per-agent records |
+| 19 | `layer_stack/test_stack_manager_integration.py` **(+ race)** | `sandbox.layer_stack.stack` | full happy path end-to-end; failure injection at each phase. Race: N=4 agents through stack_manager concurrently → end-state consistent with per-agent records |
 
 ### Verification gate
 ```bash

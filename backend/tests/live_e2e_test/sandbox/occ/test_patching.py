@@ -13,7 +13,7 @@ pytestmark = pytest.mark.asyncio
 
 _BODY = r"""
 from sandbox.layer_stack.changes import LayerChange, WriteLayerChange
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 from sandbox.occ.changeset import EditChange, FileStatus
 from sandbox.occ.service import OccService
 
@@ -25,7 +25,7 @@ label = "occ.patching"
 before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
-stack = LayerStackManager(root / "stack")
+stack = LayerStack(root / "stack")
 stack.publish_changes([
     WriteLayerChange(path="src/app.py", source_path=str(_source(root, "app", b"alpha\nbeta\n"))),
     WriteLayerChange(path="src/no_newline.py", source_path=str(_source(root, "nonewline", b"tail"))),

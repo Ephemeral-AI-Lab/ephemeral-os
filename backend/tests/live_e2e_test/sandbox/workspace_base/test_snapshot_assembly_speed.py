@@ -130,7 +130,7 @@ for workload in ("base_only", "append", "overwrite", "delete", "symlink", "opaqu
     if summary_binding is None:
         summary_binding = binding
         summary_timings = dict(timings)
-    manager = LayerStackManager(stack_root)
+    manager = LayerStack(stack_root)
     if workload == "base_only":
         _measure_materialize(workload, manager, stack_root, 0, "cold")
         _measure_materialize(workload, manager, stack_root, 0, "warm")

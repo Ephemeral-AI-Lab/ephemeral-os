@@ -18,13 +18,13 @@ from sandbox.layer_stack.changes import (
     WriteLayerChange,
     aggregate_layer_changes,
 )
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 
 label = "layer_stack.changes_aggregation"
 before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
-manager = LayerStackManager(root / "stack")
+manager = LayerStack(root / "stack")
 manager.publish_changes([
     WriteLayerChange(path="old/name.txt", source_path=str(_source(root, "old-name", b"old\n"))),
 ])
@@ -64,13 +64,13 @@ from sandbox.layer_stack.changes import (
     WriteLayerChange,
     aggregate_layer_changes,
 )
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 
 label = "layer_stack.changes_aggregation_under_race"
 before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
-manager = LayerStackManager(root / "stack")
+manager = LayerStack(root / "stack")
 n = 8
 barrier = threading.Barrier(n)
 

@@ -13,7 +13,7 @@ from tests.occ_change_helpers import write_change
 from pathlib import Path
 
 from sandbox.layer_stack.changes import WriteLayerChange
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 from sandbox.occ.changeset import RouteDecision
 from sandbox.occ.changeset import (
     ChangesetResult,
@@ -44,7 +44,7 @@ def _source(tmp_path: Path, name: str, content: bytes) -> Path:
     return path
 
 
-def _publish(stack: LayerStackManager, tmp_path: Path, rel: str, content: bytes) -> None:
+def _publish(stack: LayerStack, tmp_path: Path, rel: str, content: bytes) -> None:
     source = _source(tmp_path, rel.replace("/", "-"), content)
     stack.publish_changes(
         [
@@ -58,7 +58,7 @@ def _publish(stack: LayerStackManager, tmp_path: Path, rel: str, content: bytes)
 
 
 def _service(
-    stack: LayerStackManager,
+    stack: LayerStack,
     *,
     ignored: set[str] | None = None,
 ) -> OccService:
@@ -85,7 +85,7 @@ def _statuses(result: ChangesetResult) -> list[FileStatus]:
 def test_gitignored_same_path_writes_are_occ_skipped_last_writer_wins(
     tmp_path: Path,
 ) -> None:
-    stack = LayerStackManager(tmp_path / "stack")
+    stack = LayerStack(tmp_path / "stack")
     service = _service(stack, ignored={"dist/out.js"})
     stale_snapshot = stack.read_active_manifest()
 
@@ -120,7 +120,7 @@ def test_gitignored_same_path_writes_are_occ_skipped_last_writer_wins(
 def test_gitignored_delete_uses_last_writer_wins_against_stale_snapshot(
     tmp_path: Path,
 ) -> None:
-    stack = LayerStackManager(tmp_path / "stack")
+    stack = LayerStack(tmp_path / "stack")
     _publish(stack, tmp_path, "dist/cache.bin", b"leased\n")
     stale_snapshot = stack.read_active_manifest()
     _publish(stack, tmp_path, "dist/cache.bin", b"active\n")
@@ -139,7 +139,7 @@ def test_gitignored_delete_uses_last_writer_wins_against_stale_snapshot(
 def test_tracked_same_path_stale_shell_write_aborts_with_aborted_version(
     tmp_path: Path,
 ) -> None:
-    stack = LayerStackManager(tmp_path / "stack")
+    stack = LayerStack(tmp_path / "stack")
     _publish(stack, tmp_path, "src/app.py", b"leased\n")
     stale_snapshot = stack.read_active_manifest()
     _publish(stack, tmp_path, "src/app.py", b"active\n")
@@ -165,7 +165,7 @@ def test_tracked_same_path_stale_shell_write_aborts_with_aborted_version(
 def test_current_mixed_shell_tracked_conflict_drops_gitignored_occ_skipped_output(
     tmp_path: Path,
 ) -> None:
-    stack = LayerStackManager(tmp_path / "stack")
+    stack = LayerStack(tmp_path / "stack")
     _publish(stack, tmp_path, "src/app.py", b"leased\n")
     stale_snapshot = stack.read_active_manifest()
     _publish(stack, tmp_path, "src/app.py", b"active\n")
@@ -197,7 +197,7 @@ def test_current_mixed_shell_tracked_conflict_drops_gitignored_occ_skipped_outpu
 def test_gitignore_occ_skipped_route_is_fixed_after_prepare_even_if_oracle_changes(
     tmp_path: Path,
 ) -> None:
-    stack = LayerStackManager(tmp_path / "stack")
+    stack = LayerStack(tmp_path / "stack")
     gitignore = _MutableGitignore({"dist/out.js"})
     service = OccService(gitignore=gitignore, layer_stack=stack)
 
@@ -228,7 +228,7 @@ def test_gitignore_occ_skipped_route_is_fixed_after_prepare_even_if_oracle_chang
 def test_tracked_route_is_fixed_after_prepare_even_if_path_becomes_ignored(
     tmp_path: Path,
 ) -> None:
-    stack = LayerStackManager(tmp_path / "stack")
+    stack = LayerStack(tmp_path / "stack")
     _publish(stack, tmp_path, "dist/out.js", b"leased\n")
     stale_snapshot = stack.read_active_manifest()
     _publish(stack, tmp_path, "dist/out.js", b"active\n")

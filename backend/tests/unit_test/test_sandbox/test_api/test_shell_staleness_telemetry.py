@@ -10,7 +10,7 @@ from uuid import uuid4
 
 import pytest
 
-from sandbox.layer_stack import WriteLayerChange, LayerStackManager
+from sandbox.layer_stack import WriteLayerChange, LayerStack
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.occ.hashing import ContentHasher
 from sandbox.occ.changeset import build_api_write_change
@@ -67,7 +67,7 @@ class _BlockingCommandRunner:
 
 @dataclass(frozen=True)
 class _StaleShellRun:
-    manager: LayerStackManager
+    manager: LayerStack
     result: dict[str, object]
     snapshot_version: int
     active_version_before_release: int
@@ -99,7 +99,7 @@ async def test_shell_accepts_occ_clean_write_after_manifest_advances(
 
 
 async def test_daemon_gitignore_uses_layer_stack_snapshot(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / f"stack-{uuid4().hex}")
+    manager = LayerStack(tmp_path / f"stack-{uuid4().hex}")
     _publish(manager, tmp_path, ".gitignore", b"dist/\n")
     occ_backend.clear_backend_cache()
     services = request_services(str(manager.storage_root))
@@ -126,7 +126,7 @@ async def _run_occ_clean_stale_shell(
     (workspace / "config.yaml").write_text("value: v1\n", encoding="utf-8")
     stack = tmp_path / f"stack-{uuid4().hex}"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
-    manager = LayerStackManager(stack)
+    manager = LayerStack(stack)
     runner = _BlockingCommandRunner(manager.read_active_manifest().version)
     monkeypatch.setattr(
         shell_runner,
@@ -184,7 +184,7 @@ def _source(tmp_path: Path, name: str, content: bytes) -> Path:
 
 
 def _publish(
-    manager: LayerStackManager,
+    manager: LayerStack,
     tmp_path: Path,
     rel: str,
     content: bytes,

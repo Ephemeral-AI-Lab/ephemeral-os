@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.layer_stack import WriteLayerChange, LayerStackManager
+from sandbox.layer_stack import WriteLayerChange, LayerStack
 
 
 def _source(tmp_path: Path, name: str, content: bytes) -> str:
@@ -18,7 +18,7 @@ def _source(tmp_path: Path, name: str, content: bytes) -> str:
 
 
 def test_acquire_and_release_pin_exact_layer_refs(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     manifest = manager.publish_changes(
         [
             WriteLayerChange(
@@ -46,7 +46,7 @@ def test_acquire_and_release_pin_exact_layer_refs(tmp_path: Path) -> None:
 
 
 def test_releasing_old_snapshot_does_not_unpin_new_active_layer(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     manager.publish_changes(
         [
             WriteLayerChange(
@@ -76,7 +76,7 @@ def test_releasing_old_snapshot_does_not_unpin_new_active_layer(tmp_path: Path) 
 
 
 def test_release_lease_keeps_active_layer_storage(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     manifest = manager.publish_changes(
         [
             WriteLayerChange(
@@ -99,7 +99,7 @@ def test_release_lease_removes_unreferenced_layers_outside_manager_lock(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     manager.publish_changes(
         [
             WriteLayerChange(
@@ -134,7 +134,7 @@ def test_release_lease_removes_unreferenced_layers_outside_manager_lock(
 def test_prepare_workspace_snapshot_returns_distinct_transient_lowerdirs_per_lease(
     tmp_path: Path,
 ) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     manager.publish_changes(
         [
             WriteLayerChange(
@@ -171,7 +171,7 @@ def test_prepare_workspace_snapshot_failure_releases_lease_and_drops_partial_low
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     manager.publish_changes(
         [
             WriteLayerChange(
@@ -215,7 +215,7 @@ def test_layer_stack_manager_preserves_existing_materialized_dir_on_init(
     marker = legacy / "marker"
     marker.write_text("keep\n", encoding="utf-8")
 
-    manager = LayerStackManager(stack)
+    manager = LayerStack(stack)
 
     assert manager.storage_root == stack
     assert marker.read_text(encoding="utf-8") == "keep\n"

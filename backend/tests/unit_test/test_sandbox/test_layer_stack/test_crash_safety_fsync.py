@@ -18,7 +18,7 @@ import sandbox.layer_stack.publisher as publisher_mod
 import sandbox.layer_stack.manifest as manifest_store_mod
 import sandbox.layer_stack.workspace_base as workspace_base_mod
 import sandbox.layer_stack.workspace_binding as binding_mod
-from sandbox.layer_stack import WriteLayerChange, LayerStackManager
+from sandbox.layer_stack import WriteLayerChange, LayerStack
 from sandbox.layer_stack.manifest import (
     LayerRef,
     Manifest,
@@ -105,7 +105,7 @@ def test_publish_layer_fsyncs_staged_files_and_parent_dir(
     recorder.install(monkeypatch, publisher_mod)
 
     storage_root = tmp_path / "stack"
-    manager = LayerStackManager(storage_root)
+    manager = LayerStack(storage_root)
     source = tmp_path / "source.txt"
     source.write_bytes(b"hello\n")
 

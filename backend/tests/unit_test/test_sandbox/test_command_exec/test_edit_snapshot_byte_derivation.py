@@ -14,7 +14,7 @@ from unittest.mock import patch
 
 import pytest
 
-from sandbox.layer_stack import LayerStackManager
+from sandbox.layer_stack import LayerStack
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.occ.changeset import WriteChange
 from sandbox.daemon import occ_backend
@@ -172,7 +172,7 @@ async def test_in_workspace_edit_same_path_M_gt_N_surfaces_hard_conflict(
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
     services = request_services(stack.as_posix())
-    manager: LayerStackManager = services.manager
+    manager: LayerStack = services.manager
     occ_service = services.occ_client._service  # type: ignore[attr-defined]
 
     # Lease snapshot N=1 (the leased identity command-exec would carry).

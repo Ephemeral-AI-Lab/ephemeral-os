@@ -1,6 +1,6 @@
 """Lease-pinning invariant — Phase 3 verification D.
 
-`LayerStackManager._remove_unreferenced_layers` is the sole site that
+`LayerStack._remove_unreferenced_layers` is the sole site that
 calls `MergedView.evict_layer_index`. The system-design invariant from
 Phase 2.5 §"System-design invariants to preserve" is:
 
@@ -26,7 +26,7 @@ import pytest
 from sandbox.layer_stack import (
     DeleteLayerChange,
     WriteLayerChange,
-    LayerStackManager,
+    LayerStack,
 )
 
 
@@ -38,7 +38,7 @@ def _source(tmp_path: Path, name: str, content: bytes) -> str:
 
 
 def _publish_layer(
-    manager: LayerStackManager,
+    manager: LayerStack,
     *,
     tmp_path: Path,
     label: str,
@@ -78,7 +78,7 @@ def test_eviction_skips_layers_pinned_by_active_leases(
     evict_log: list[str],
 ) -> None:
     """4 active leases on historical manifests block eviction of their layers."""
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
 
     # Build 5 layers L1..L5 (publisher prepends the newest, so layers[0]
     # in the active manifest is L5 — but we keep our own L1..L5 mapping).
@@ -180,7 +180,7 @@ def test_eviction_strict_set_after_squash(
     evict_log: list[str],
 ) -> None:
     """Squash-driven eviction must respect leases on pre-squash layer ids."""
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     layer_ids: list[str] = []
     for index in range(1, 5):
         manager.publish_changes(

@@ -11,9 +11,9 @@ from sandbox.layer_stack.changes import (
     aggregate_layer_changes,
     normalize_layer_path,
 )
-from sandbox.layer_stack.manager import (
+from sandbox.layer_stack.stack import (
     CommitStagingArea,
-    LayerStackManager,
+    LayerStack,
     PrepareWorkspaceSnapshotResult,
 )
 from sandbox.layer_stack.manifest import (
@@ -36,7 +36,7 @@ __all__ = [
     "DeleteLayerChange",
     "LayerChange",
     "LayerRef",
-    "LayerStackManager",
+    "LayerStack",
     "LayerStackStorageError",
     "LayerStackTransaction",
     "MANIFEST_SCHEMA_VERSION",

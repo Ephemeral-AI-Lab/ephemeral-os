@@ -8,7 +8,7 @@ reset ``/testbed`` and any sandbox-runtime layer/overlay/OCC state.
 
 The live suite must exercise the Daytona sandbox, either through direct
 in-sandbox probes or through the public sandbox API, never through a local
-``LayerStackManager`` or process-local OCC/overlay registry.
+``LayerStack`` or process-local OCC/overlay registry.
 """
 
 from __future__ import annotations

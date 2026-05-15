@@ -300,7 +300,7 @@ def _projection_for_root(layer_stack_root: str) -> WorkspaceProjection:
     key = _validate_projection_root(layer_stack_root)
     projection = _PROJECTIONS.get(key)
     if projection is None:
-        # Share the daemon's cached LayerStackManager so the plugin path
+        # Share the daemon's cached LayerStack so the plugin path
         # doesn't open a second writer flock + transaction RLock over the
         # same storage root; the previous behavior (constructing a fresh
         # manager) left the lock leaked on LRU eviction.

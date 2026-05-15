@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.layer_stack import WriteLayerChange, LayerStackManager
+from sandbox.layer_stack import WriteLayerChange, LayerStack
 from sandbox.daemon.service.layer_stack_client import LayerStackClient
 from sandbox.execution.contract import (
     CommandExecRequest,
@@ -27,7 +27,7 @@ def _source(tmp_path: Path, name: str, content: bytes) -> str:
 
 
 def _request(
-    manager: LayerStackManager,
+    manager: LayerStack,
     *,
     command: tuple[str, ...],
     request_id: str = "request-a",
@@ -61,7 +61,7 @@ def test_overlay_capture_timings_are_immutable() -> None:
 async def test_orchestrator_overlay_executes_against_leased_manifest_without_publish(
     tmp_path: Path,
 ) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     manager.publish_changes(
         [
             WriteLayerChange(
@@ -111,7 +111,7 @@ async def test_orchestrator_overlay_executes_against_leased_manifest_without_pub
 async def test_orchestrator_overlay_releases_lease_when_runtime_fails(
     tmp_path: Path,
 ) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     manager.publish_changes(
         [
             WriteLayerChange(
@@ -150,7 +150,7 @@ async def test_orchestrator_overlay_releases_lease_when_runtime_fails(
 async def test_overlay_run_handler_supports_layer_stack_snapshot_requests(
     tmp_path: Path,
 ) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     manager.publish_changes(
         [
             WriteLayerChange(

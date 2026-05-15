@@ -6,11 +6,11 @@ from contextlib import AbstractContextManager
 from pathlib import Path
 
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.layer_stack.manager import (
-    LayerStackManager,
+from sandbox.layer_stack.stack import (
+    LayerStack,
     PrepareWorkspaceSnapshotResult,
 )
-from sandbox.layer_stack.manager import CommitStagingArea
+from sandbox.layer_stack.stack import CommitStagingArea
 from sandbox.occ.ports import CommitTransactionPort
 from sandbox.daemon.workspace_server import get_layer_stack_manager
 
@@ -22,7 +22,7 @@ class LayerStackClient:
     lease API onto the manager's positional signature.
     """
 
-    def __init__(self, layer_stack_root: str | Path | LayerStackManager) -> None:
+    def __init__(self, layer_stack_root: str | Path | LayerStack) -> None:
         if isinstance(layer_stack_root, (str, Path)):
             self.manager = get_layer_stack_manager(layer_stack_root)
         else:

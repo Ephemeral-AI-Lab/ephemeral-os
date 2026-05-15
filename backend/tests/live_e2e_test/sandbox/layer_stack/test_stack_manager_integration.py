@@ -13,13 +13,13 @@ pytestmark = pytest.mark.asyncio
 
 _INTEGRATION_BODY = r"""
 from sandbox.layer_stack.changes import LayerChange, WriteLayerChange
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 
 label = "layer_stack.stack_manager_integration"
 before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
-manager = LayerStackManager(root / "stack")
+manager = LayerStack(root / "stack")
 
 base = manager.publish_changes([
     WriteLayerChange(path="src/app.py", source_path=str(_source(root, "app-base", b"base\n"))),
@@ -72,13 +72,13 @@ _emit(label, started, before, {
 
 _RACE_BODY = r"""
 from sandbox.layer_stack.changes import LayerChange, WriteLayerChange
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 
 label = "layer_stack.stack_manager_integration_under_race"
 before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
-manager = LayerStackManager(root / "stack")
+manager = LayerStack(root / "stack")
 manager.publish_changes([
     WriteLayerChange(path="shared/base.txt", source_path=str(_source(root, "base", b"base\n"))),
 ])

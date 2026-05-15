@@ -9,7 +9,7 @@ import concurrent.futures
 import threading
 
 from sandbox.layer_stack.manifest import LayerRef, Manifest
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 from sandbox.occ.changeset import ChangesetResult
 from sandbox.occ.maintenance import AutoSquashMaintenancePolicy
 from sandbox.occ.service import OccService
@@ -25,7 +25,7 @@ class _Gitignore:
 
 
 def _auto_squash_service(
-    stack: LayerStackManager,
+    stack: LayerStack,
     *,
     max_depth: int,
 ) -> OccService:
@@ -44,7 +44,7 @@ def test_occ_publications_auto_squash_without_direct_squash_call(
     tmp_path,
 ) -> None:
     max_depth = 4
-    stack = LayerStackManager(tmp_path / "stack")
+    stack = LayerStack(tmp_path / "stack")
     service = _auto_squash_service(stack, max_depth=max_depth)
 
     for index in range(8):
@@ -74,7 +74,7 @@ def test_occ_publications_auto_squash_without_direct_squash_call(
 
 def test_auto_squash_preserves_active_lease_view(tmp_path) -> None:
     max_depth = 3
-    stack = LayerStackManager(tmp_path / "stack")
+    stack = LayerStack(tmp_path / "stack")
     service = _auto_squash_service(stack, max_depth=max_depth)
 
     seed = asyncio.run(
@@ -117,7 +117,7 @@ def test_auto_squash_preserves_active_lease_view(tmp_path) -> None:
 
 def test_auto_squash_uses_fixed_constant_depth(tmp_path) -> None:
     max_depth = 6
-    stack = LayerStackManager(tmp_path / "stack")
+    stack = LayerStack(tmp_path / "stack")
     service = _auto_squash_service(stack, max_depth=max_depth)
     observed_max_depths: list[float] = []
 

@@ -9,7 +9,7 @@ import pytest
 
 from sandbox.layer_stack import (
     DeleteLayerChange,
-    LayerStackManager,
+    LayerStack,
     LayerStackStorageError,
     OpaqueDirLayerChange,
     SymlinkLayerChange,
@@ -25,7 +25,7 @@ def _source(tmp_path: Path, name: str, content: bytes) -> str:
 
 
 def test_read_uses_leased_manifest_not_advanced_active_manifest(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     manager.publish_changes(
         [
             WriteLayerChange(
@@ -50,7 +50,7 @@ def test_read_uses_leased_manifest_not_advanced_active_manifest(tmp_path: Path) 
 
 
 def test_stale_layer_read_raises_typed_storage_error(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     manifest = manager.publish_changes(
         [
             WriteLayerChange(
@@ -70,7 +70,7 @@ def test_stale_layer_read_raises_typed_storage_error(tmp_path: Path) -> None:
 
 
 def test_whiteout_hides_older_file(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     manager.publish_changes(
         [
             WriteLayerChange(
@@ -86,7 +86,7 @@ def test_whiteout_hides_older_file(tmp_path: Path) -> None:
 
 
 def test_opaque_dir_hides_older_children(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     manager.publish_changes(
         [
             WriteLayerChange(
@@ -128,7 +128,7 @@ def test_index_driven_list_dir_handles_files_whiteouts_and_opaque_marker(
     return ``(None, False)`` for the whited-out path, and must report
     the symlink target unchanged.
     """
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     # Layer 1: seed gone.txt + keep.txt + a subdir nested/x.txt + a symlink.
     manager.publish_changes(
         [
@@ -177,7 +177,7 @@ def test_index_driven_list_dir_handles_files_whiteouts_and_opaque_marker(
 
 
 def test_materialize_matches_point_reads_and_preserves_symlinks(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     manager.publish_changes(
         [
             WriteLayerChange(

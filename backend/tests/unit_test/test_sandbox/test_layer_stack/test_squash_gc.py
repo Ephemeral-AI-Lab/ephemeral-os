@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.layer_stack import WriteLayerChange, LayerStackManager
+from sandbox.layer_stack import WriteLayerChange, LayerStack
 from sandbox.layer_stack.manifest import LayerRef, Manifest, write_manifest_atomic
 from sandbox.layer_stack.squash import SquashPlan
 
@@ -19,7 +19,7 @@ def _source(tmp_path: Path, name: str, content: bytes) -> str:
 
 
 def _publish(
-    manager: LayerStackManager,
+    manager: LayerStack,
     tmp_path: Path,
     rel: str,
     content: bytes,
@@ -34,18 +34,18 @@ def _publish(
     )
 
 
-def _layer_path(manager: LayerStackManager, layer: LayerRef) -> Path:
+def _layer_path(manager: LayerStack, layer: LayerRef) -> Path:
     return manager.storage_root / layer.path
 
 
-def _digest_path(manager: LayerStackManager, layer: LayerRef) -> Path:
+def _digest_path(manager: LayerStack, layer: LayerRef) -> Path:
     return manager.storage_root / ".layer-metadata" / f"{layer.layer_id}.digest"
 
 
 def test_squash_gc_keeps_active_and_leased_layers_then_release_removes_only_old_refs(
     tmp_path: Path,
 ) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     _publish(manager, tmp_path, "a.txt", b"a1")
     _publish(manager, tmp_path, "b.txt", b"b1")
     _publish(manager, tmp_path, "a.txt", b"a2")
@@ -72,7 +72,7 @@ def test_squash_gc_keeps_active_and_leased_layers_then_release_removes_only_old_
 def test_squash_gc_removes_digest_metadata_for_deleted_suffix_layers(
     tmp_path: Path,
 ) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     for index in range(4):
         _publish(
             manager,
@@ -98,7 +98,7 @@ def test_squash_gc_removes_digest_metadata_for_deleted_suffix_layers(
 def test_release_lease_does_not_delete_layers_still_in_active_manifest(
     tmp_path: Path,
 ) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     manifest = _publish(manager, tmp_path, "active.txt", b"still-active\n")
     lease = manager.acquire_snapshot_lease("active-reader")
 
@@ -112,7 +112,7 @@ def test_release_lease_does_not_delete_layers_still_in_active_manifest(
 def test_checkpoint_relabel_moves_prebuilt_checkpoint_to_publish_version(
     tmp_path: Path,
 ) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     for index in range(3):
         _publish(
             manager,
@@ -139,7 +139,7 @@ def test_suffix_cas_keeps_concurrent_prefix_append_and_versions_checkpoint(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     for index in range(5):
         _publish(
             manager,
@@ -182,7 +182,7 @@ def test_suffix_cas_mismatch_discards_unpublished_checkpoint(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     for index in range(5):
         _publish(
             manager,
@@ -221,7 +221,7 @@ def test_squash_pins_planned_suffix_during_checkpoint_build(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     for index in range(5):
         _publish(
             manager,

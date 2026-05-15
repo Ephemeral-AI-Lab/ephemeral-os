@@ -16,7 +16,7 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
 
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 from sandbox.occ.client import OccClient
 from sandbox.occ.gitignore import SnapshotGitignoreOracle
 from sandbox.occ.maintenance import AutoSquashMaintenancePolicy
@@ -39,7 +39,7 @@ class OccBackend:
     occ_service: OccService
     occ_client: OccClient
     gitignore: SnapshotGitignoreOracle
-    manager: LayerStackManager
+    manager: LayerStack
 
 
 _MAX_BACKEND_CACHE_ENTRIES = 256

@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 from sandbox.daemon.rpc.dispatcher import dispatch_envelope_async
-from sandbox.layer_stack import LayerStackManager
+from sandbox.layer_stack import LayerStack
 
 
 async def _run(
@@ -21,7 +21,7 @@ async def _run(
     command: tuple[str, ...],
     env: dict[str, str] | None = None,
 ) -> tuple[int, str, str]:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     result = await dispatch_envelope_async(
         {
             "op": "overlay.run",

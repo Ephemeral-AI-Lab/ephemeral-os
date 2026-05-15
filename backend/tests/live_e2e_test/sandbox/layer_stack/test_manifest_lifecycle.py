@@ -14,7 +14,7 @@ pytestmark = pytest.mark.asyncio
 _LIFECYCLE_BODY = r"""
 from sandbox.layer_stack.changes import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manifest import LayerRef, Manifest, read_manifest, write_manifest_atomic
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 
 label = "layer_stack.manifest_lifecycle"
 before = sample_resource()
@@ -33,7 +33,7 @@ manifest = Manifest(
 write_manifest_atomic(manifest_file, manifest)
 assert read_manifest(manifest_file) == manifest
 
-manager = LayerStackManager(root / "stack")
+manager = LayerStack(root / "stack")
 first = manager.publish_changes([
     WriteLayerChange(path="pkg/value.txt", source_path=str(_source(root, "value-1", b"one"))),
 ])
@@ -41,7 +41,7 @@ lease = manager.acquire_snapshot_lease("request-a")
 second = manager.publish_changes([
     WriteLayerChange(path="pkg/value.txt", source_path=str(_source(root, "value-2", b"two"))),
 ])
-restarted = LayerStackManager(root / "stack")
+restarted = LayerStack(root / "stack")
 assert restarted.read_active_manifest() == second
 assert restarted.read_text("pkg/value.txt") == ("two", True)
 assert restarted.read_text("pkg/value.txt", manifest=lease.manifest) == ("one", True)
@@ -68,13 +68,13 @@ _emit(label, started, before, {
 
 _RACE_BODY = r"""
 from sandbox.layer_stack.changes import LayerChange, WriteLayerChange
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 
 label = "layer_stack.manifest_lifecycle_under_race"
 before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
-manager = LayerStackManager(root / "stack")
+manager = LayerStack(root / "stack")
 n = 8
 barrier = threading.Barrier(n)
 latencies = []

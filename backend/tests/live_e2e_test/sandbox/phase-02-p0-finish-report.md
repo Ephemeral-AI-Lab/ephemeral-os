@@ -18,8 +18,8 @@ Runtime helpers added to support the Phase 2 contract:
 - `sandbox.layer_stack.changes.aggregate_layer_changes`
 - `LeaseRegistry.expire_older_than`
 - `LeaseRegistry.sweep_dead_owners`
-- `LayerStackManager.expire_leases_older_than`
-- `LayerStackManager.sweep_dead_lease_owners`
+- `LayerStack.expire_leases_older_than`
+- `LayerStack.sweep_dead_lease_owners`
 
 ## Verification
 

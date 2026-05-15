@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 from sandbox.layer_stack.manifest import manifest_root_hash
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -45,7 +45,7 @@ class ProjectionHandle:
     lowerdir: str
     manifest_version: int
     root_hash: str
-    _manager: LayerStackManager
+    _manager: LayerStack
     _released: bool = False
 
     def release(self) -> None:
@@ -61,7 +61,7 @@ class ProjectionHandle:
 
 
 class WorkspaceProjection:
-    """Wrapper around :class:`LayerStackManager` for plugin runtime ops.
+    """Wrapper around :class:`LayerStack` for plugin runtime ops.
 
     Constructor takes a layer_stack_root (filesystem path); each acquire call
     materializes the active manifest into a transient lowerdir and returns a
@@ -74,15 +74,15 @@ class WorkspaceProjection:
         self,
         layer_stack_root: str | Path,
         *,
-        manager: LayerStackManager | None = None,
+        manager: LayerStack | None = None,
     ) -> None:
         self._layer_stack_root = Path(layer_stack_root).resolve()
-        # Reuse the daemon's cached LayerStackManager when one is injected so
+        # Reuse the daemon's cached LayerStack when one is injected so
         # the plugin path and the OCC backend share a single writer flock +
         # transaction RLock. Constructing a fresh manager here is the legacy
         # path retained for unit tests and out-of-daemon callers.
         self._manager = (
-            manager if manager is not None else LayerStackManager(self._layer_stack_root)
+            manager if manager is not None else LayerStack(self._layer_stack_root)
         )
 
     @property

@@ -7,7 +7,7 @@ from tests.occ_change_helpers import write_change
 from pathlib import Path
 
 from sandbox.layer_stack.changes import LayerChange, WriteLayerChange
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 from sandbox.occ.changeset import PreparedPathGroup, RouteDecision
 from sandbox.occ.changeset import (
     EditChange,
@@ -26,7 +26,7 @@ def _source(tmp_path: Path, name: str, content: bytes) -> Path:
     return path
 
 
-def _publish(stack: LayerStackManager, tmp_path: Path, rel: str, content: bytes) -> None:
+def _publish(stack: LayerStack, tmp_path: Path, rel: str, content: bytes) -> None:
     source = _source(tmp_path, rel.replace("/", "-"), content)
     stack.publish_changes(
         [
@@ -56,7 +56,7 @@ def _stage_write(tmp_path: Path):
 
 
 def test_tracked_write_requires_active_hash_to_match_prepared_base(tmp_path: Path) -> None:
-    stack = LayerStackManager(tmp_path / "stack")
+    stack = LayerStack(tmp_path / "stack")
     _publish(stack, tmp_path, "src/app.py", b"active\n")
     merge = GatedStager(stack)
     group = PreparedPathGroup(
@@ -82,7 +82,7 @@ def test_tracked_write_requires_active_hash_to_match_prepared_base(tmp_path: Pat
 
 
 def test_tracked_edit_applies_unique_anchor_to_active_content(tmp_path: Path) -> None:
-    stack = LayerStackManager(tmp_path / "stack")
+    stack = LayerStack(tmp_path / "stack")
     _publish(stack, tmp_path, "src/app.py", b"alpha\nbeta\n")
     merge = GatedStager(stack)
     group = PreparedPathGroup(
@@ -104,7 +104,7 @@ def test_tracked_edit_applies_unique_anchor_to_active_content(tmp_path: Path) ->
 
 
 def test_tracked_edit_aborts_when_anchor_is_ambiguous(tmp_path: Path) -> None:
-    stack = LayerStackManager(tmp_path / "stack")
+    stack = LayerStack(tmp_path / "stack")
     _publish(stack, tmp_path, "src/app.py", b"x\nx\n")
     merge = GatedStager(stack)
     group = PreparedPathGroup(
@@ -126,7 +126,7 @@ def test_tracked_edit_aborts_when_anchor_is_ambiguous(tmp_path: Path) -> None:
 def test_tracked_opaque_dir_overlay_change_stages_storage_change(
     tmp_path: Path,
 ) -> None:
-    stack = LayerStackManager(tmp_path / "stack")
+    stack = LayerStack(tmp_path / "stack")
     merge = GatedStager(stack)
     opaque_group = PreparedPathGroup(
         path=".omc/results",
@@ -146,7 +146,7 @@ def test_tracked_opaque_dir_overlay_change_stages_storage_change(
 
 
 def test_tracked_symlink_overlay_change_is_rejected(tmp_path: Path) -> None:
-    stack = LayerStackManager(tmp_path / "stack")
+    stack = LayerStack(tmp_path / "stack")
     merge = GatedStager(stack)
     group = PreparedPathGroup(
         path="link",

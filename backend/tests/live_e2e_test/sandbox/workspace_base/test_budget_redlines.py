@@ -70,7 +70,7 @@ def _publish_write(manager, root, index):
 materialize_times = []
 materialize_root = _phase01_root(label, "materialize")
 binding, timings = _build_base(materialize_root)
-manager = LayerStackManager(materialize_root)
+manager = LayerStack(materialize_root)
 if summary_binding is None:
     summary_binding = binding
     summary_timings = dict(timings)
@@ -96,7 +96,7 @@ for depth in depths:
         continue
     stack_root = _phase01_root(label, "squash-%03d" % depth)
     binding, timings = _build_base(stack_root)
-    manager = LayerStackManager(stack_root)
+    manager = LayerStack(stack_root)
     for index in range(depth):
         _publish_write(manager, stack_root, index)
     before = manager.read_active_manifest().depth

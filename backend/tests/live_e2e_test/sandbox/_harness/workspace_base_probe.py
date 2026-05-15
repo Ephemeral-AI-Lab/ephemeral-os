@@ -16,7 +16,7 @@ WORKSPACE_BASE_PROBE_PRELUDE = (
     + r"""
 from sandbox.layer_stack.changes import LayerChange
 from sandbox.layer_stack.manifest import manifest_path, read_manifest
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 from sandbox.layer_stack.workspace_binding import workspace_binding_path
 from sandbox.layer_stack.workspace_base import build_workspace_base
 

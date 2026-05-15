@@ -7,7 +7,7 @@ from tests.occ_change_helpers import write_change
 import asyncio
 
 from sandbox.layer_stack.changes import WriteLayerChange
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 from sandbox.occ.changeset import RouteDecision
 from sandbox.occ.changeset import DeleteChange, EditChange, WriteChange
 from sandbox.occ.gitignore import GitignoreMatcher
@@ -29,8 +29,8 @@ def _never_ignored() -> GitignoreMatcher:
     return _NeverIgnored()
 
 
-def _stack_with_file(tmp_path, rel: str, content: bytes) -> LayerStackManager:
-    stack = LayerStackManager(tmp_path / "layers")
+def _stack_with_file(tmp_path, rel: str, content: bytes) -> LayerStack:
+    stack = LayerStack(tmp_path / "layers")
     source = tmp_path / "payload"
     source.write_bytes(content)
     stack.publish_changes(
@@ -111,7 +111,7 @@ def test_chained_writes_use_running_base_hash(tmp_path) -> None:
 
 
 def test_missing_snapshot_path_infers_none_base_hash(tmp_path) -> None:
-    stack = LayerStackManager(tmp_path / "layers")
+    stack = LayerStack(tmp_path / "layers")
     snapshot = stack.read_active_manifest()
     service = OccService(
         gitignore=_never_ignored(), layer_stack=stack

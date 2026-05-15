@@ -14,13 +14,13 @@ pytestmark = pytest.mark.asyncio
 _PUBLISHER_BODY = r"""
 from sandbox.layer_stack.changes import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 
 label = "layer_stack.publisher"
 before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
-manager = LayerStackManager(root / "stack")
+manager = LayerStack(root / "stack")
 
 payload = b"payload\n"
 change = WriteLayerChange(
@@ -66,13 +66,13 @@ _emit(label, started, before, {
 
 _RACE_BODY = r"""
 from sandbox.layer_stack.changes import LayerChange, WriteLayerChange
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 
 label = "layer_stack.publisher_under_race"
 before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
-manager = LayerStackManager(root / "stack")
+manager = LayerStack(root / "stack")
 n = 8
 barrier = threading.Barrier(n)
 payload = b"same-digest\n"

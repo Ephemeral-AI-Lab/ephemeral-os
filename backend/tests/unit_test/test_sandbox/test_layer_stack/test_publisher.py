@@ -10,7 +10,7 @@ import pytest
 import sandbox.layer_stack.publisher as publisher_mod
 from sandbox.layer_stack import (
     WriteLayerChange,
-    LayerStackManager,
+    LayerStack,
     ManifestConflictError,
 )
 from sandbox.layer_stack.manifest import (
@@ -32,7 +32,7 @@ def _source(tmp_path: Path, name: str, content: bytes) -> Path:
 
 
 def test_publish_empty_changes_is_noop(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
 
     with manager.commit_transaction() as transaction:
         before = transaction.snapshot()
@@ -44,7 +44,7 @@ def test_publish_empty_changes_is_noop(tmp_path: Path) -> None:
 
 
 def test_publish_layer_writes_immutable_layer_and_manifest(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     source = _source(tmp_path, "created.txt", b"created")
 
     manifest = manager.publish_changes(
@@ -68,7 +68,7 @@ def test_publish_reads_write_source_once(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     source = _source(tmp_path, "created.txt", b"created")
     original_read_bytes = Path.read_bytes
     source_reads = 0
@@ -97,7 +97,7 @@ def test_publish_reads_write_source_once(
 def test_same_digest_publish_returns_active_manifest_without_new_layer(
     tmp_path: Path,
 ) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     source = _source(tmp_path, "created.txt", b"created")
     change = WriteLayerChange(
                  path="pkg/created.txt",
@@ -116,7 +116,7 @@ def test_same_digest_publish_returns_active_manifest_without_new_layer(
 def test_content_hash_mismatch_preserves_manifest_and_removes_staging(
     tmp_path: Path,
 ) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     source = _source(tmp_path, "bad.txt", b"actual")
 
     with pytest.raises(ValueError, match="content hash mismatch"):
@@ -137,7 +137,7 @@ def test_content_hash_mismatch_preserves_manifest_and_removes_staging(
 def test_transaction_publish_layer_rejects_source_outside_source_root(
     tmp_path: Path,
 ) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     trusted_root = tmp_path / "staging"
     trusted_root.mkdir()
     source = _source(tmp_path, "outside.txt", b"outside")
@@ -200,7 +200,7 @@ def test_late_manifest_conflict_removes_unreferenced_layer(
 
 
 def test_transaction_detects_manifest_conflict_before_publish(tmp_path: Path) -> None:
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     source = _source(tmp_path, "created.txt", b"created")
 
     with manager.commit_transaction() as transaction:

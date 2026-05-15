@@ -12,7 +12,7 @@ pytestmark = pytest.mark.asyncio
 
 
 _DIRECT_BODY = r"""
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 from sandbox.occ.changeset import ChangesetResult, FileStatus, WriteChange
 from sandbox.occ.changeset import build_api_write_change, build_overlay_write_change
 
@@ -38,7 +38,7 @@ label = "occ.direct_route"
 before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
-stack = LayerStackManager(root / "stack")
+stack = LayerStack(root / "stack")
 service = OccService(gitignore=_Gitignore(), layer_stack=stack)
 
 empty = service.apply_changeset_sync([], snapshot=stack.read_active_manifest())
@@ -69,7 +69,7 @@ _emit(label, started, before, {
 
 
 _RACE_BODY = r"""
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 from sandbox.occ.changeset import WriteChange
 from sandbox.occ.changeset import build_api_write_change, build_overlay_write_change
 
@@ -95,7 +95,7 @@ label = "occ.direct_route_under_race"
 before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
-stack = LayerStackManager(root / "stack")
+stack = LayerStack(root / "stack")
 service = OccService(gitignore=_Gitignore(), layer_stack=stack)
 n = 8
 barrier = threading.Barrier(n)

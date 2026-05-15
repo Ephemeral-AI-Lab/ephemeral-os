@@ -7,7 +7,7 @@ from tests.occ_change_helpers import write_change
 from pathlib import Path
 
 from sandbox.layer_stack.changes import LayerChange, WriteLayerChange
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 from sandbox.occ.changeset import PreparedPathGroup, RouteDecision
 from sandbox.occ.changeset import (
     EditChange,
@@ -26,7 +26,7 @@ def _source(tmp_path: Path, name: str, content: bytes) -> Path:
     return path
 
 
-def _publish(stack: LayerStackManager, tmp_path: Path, rel: str, content: bytes) -> None:
+def _publish(stack: LayerStack, tmp_path: Path, rel: str, content: bytes) -> None:
     source = _source(tmp_path, rel.replace("/", "-"), content)
     stack.publish_changes(
         [
@@ -56,7 +56,7 @@ def _stage_write(tmp_path: Path):
 
 
 def test_direct_write_stages_last_writer_wins_content(tmp_path: Path) -> None:
-    stack = LayerStackManager(tmp_path / "stack")
+    stack = LayerStack(tmp_path / "stack")
     merge = DirectStager(stack)
     group = PreparedPathGroup(
         path="dist/app.js",
@@ -84,7 +84,7 @@ def test_direct_edit_rejects_missing_anchor(tmp_path: Path) -> None:
     GatedStager. The pre-fix `continue` silently accepted bogus edits on
     gitignored paths while tracked paths got rejected — a contract violation.
     """
-    stack = LayerStackManager(tmp_path / "stack")
+    stack = LayerStack(tmp_path / "stack")
     _publish(stack, tmp_path, "dist/app.js", b"alpha\n")
     merge = DirectStager(stack)
     group = PreparedPathGroup(
@@ -105,7 +105,7 @@ def test_direct_edit_rejects_missing_anchor(tmp_path: Path) -> None:
 
 
 def test_direct_symlink_and_opaque_dir_stage_storage_changes(tmp_path: Path) -> None:
-    stack = LayerStackManager(tmp_path / "stack")
+    stack = LayerStack(tmp_path / "stack")
     merge = DirectStager(stack)
     symlink_group = PreparedPathGroup(
         path="link",
@@ -141,7 +141,7 @@ def test_direct_symlink_and_opaque_dir_stage_storage_changes(tmp_path: Path) -> 
 def test_direct_same_path_opaque_dir_respects_later_write(
     tmp_path: Path,
 ) -> None:
-    stack = LayerStackManager(tmp_path / "stack")
+    stack = LayerStack(tmp_path / "stack")
     merge = DirectStager(stack)
     group = PreparedPathGroup(
         path="cache",

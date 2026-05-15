@@ -7,7 +7,7 @@ from pathlib import Path
 from sandbox.layer_stack import (
     DeleteLayerChange,
     WriteLayerChange,
-    LayerStackManager,
+    LayerStack,
 )
 from sandbox.layer_stack.layer_index import (
     OPAQUE_MARKER,
@@ -64,7 +64,7 @@ def test_has_ancestor_in_walks_strict_ancestors() -> None:
 
 def test_indexed_read_handles_nested_whiteout(tmp_path: Path) -> None:
     """`dist/.wh.foo` must hide `dist/foo` from older layers via the index."""
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     manager.publish_changes(
         [
             WriteLayerChange(
@@ -80,7 +80,7 @@ def test_indexed_read_handles_nested_whiteout(tmp_path: Path) -> None:
 
 def test_indexed_read_evicts_after_layer_removal(tmp_path: Path) -> None:
     """Cache eviction wired through `_remove_unreferenced_layers`."""
-    manager = LayerStackManager(tmp_path / "stack")
+    manager = LayerStack(tmp_path / "stack")
     manager.publish_changes(
         [
             WriteLayerChange(

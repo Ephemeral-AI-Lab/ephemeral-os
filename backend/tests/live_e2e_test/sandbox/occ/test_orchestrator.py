@@ -13,7 +13,7 @@ pytestmark = pytest.mark.asyncio
 
 _ORCHESTRATOR_BODY = r"""
 from sandbox.layer_stack.changes import LayerChange, WriteLayerChange
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 from sandbox.occ.changeset import CommitOptions, RouteDecision
 from sandbox.occ.changeset import FileStatus, WriteChange
 from sandbox.occ.changeset import build_api_write_change, build_overlay_write_change
@@ -52,7 +52,7 @@ label = "occ.orchestrator"
 before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
-stack = LayerStackManager(root / "stack")
+stack = LayerStack(root / "stack")
 service = OccService(gitignore=_Gitignore({"dist/app.js"}), layer_stack=stack)
 _publish(stack, "src/app.py", b"base\n")
 snapshot = stack.read_active_manifest()
@@ -89,7 +89,7 @@ conflict = service.apply_changeset_sync(
 )
 assert conflict.files[0].status is FileStatus.ABORTED_VERSION
 
-restarted_stack = LayerStackManager(root / "stack")
+restarted_stack = LayerStack(root / "stack")
 restarted_service = OccService(gitignore=_Gitignore(), layer_stack=restarted_stack)
 after_restart = restarted_service.apply_changeset_sync(
     [write_change(path="src/restart.py", final_content=b"ok\n")],
@@ -110,7 +110,7 @@ _emit(label, started, before, {
 
 _RACE_BODY = r"""
 from sandbox.layer_stack.changes import LayerChange, WriteLayerChange
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 from sandbox.occ.changeset import WriteChange
 from sandbox.occ.changeset import build_api_write_change, build_overlay_write_change
 
@@ -146,7 +146,7 @@ label = "occ.orchestrator_under_race"
 before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
-stack = LayerStackManager(root / "stack")
+stack = LayerStack(root / "stack")
 service = OccService(gitignore=_Gitignore(), layer_stack=stack)
 _publish(stack, "src/app.py", b"base\n")
 snapshot = stack.read_active_manifest()

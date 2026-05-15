@@ -7,8 +7,8 @@ import threading
 import time
 from pathlib import Path
 
-from sandbox.layer_stack.manager import (
-    LayerStackManager,
+from sandbox.layer_stack.stack import (
+    LayerStack,
     PrepareWorkspaceSnapshotResult,
 )
 from sandbox.layer_stack.manifest import manifest_path, read_manifest
@@ -24,18 +24,18 @@ from sandbox.layer_stack.workspace_binding import (
 from sandbox.timing import monotonic_now
 
 _MANAGER_CACHE_LOCK = threading.RLock()
-_MANAGER_CACHE: dict[str, LayerStackManager] = {}
+_MANAGER_CACHE: dict[str, LayerStack] = {}
 _DAEMON_STARTED_AT = time.time()
 _FENCED_STAGING_ROOTS: set[str] = set()
 
 
-def get_layer_stack_manager(layer_stack_root: str | Path) -> LayerStackManager:
+def get_layer_stack_manager(layer_stack_root: str | Path) -> LayerStack:
     key = str(Path(layer_stack_root).resolve(strict=False))
     with _MANAGER_CACHE_LOCK:
         _fence_stale_staging_once(key)
         manager = _MANAGER_CACHE.get(key)
         if manager is None:
-            manager = LayerStackManager(key)
+            manager = LayerStack(key)
             _MANAGER_CACHE[key] = manager
         return manager
 

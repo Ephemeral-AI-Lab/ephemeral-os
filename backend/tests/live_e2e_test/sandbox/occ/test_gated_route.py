@@ -13,7 +13,7 @@ pytestmark = pytest.mark.asyncio
 
 _GATED_BODY = r"""
 from sandbox.layer_stack.changes import LayerChange, WriteLayerChange
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 from sandbox.occ.changeset import FileStatus, WriteChange
 from sandbox.occ.changeset import build_api_write_change, build_overlay_write_change
 
@@ -49,7 +49,7 @@ label = "occ.gated_route"
 before = sample_resource()
 started = time.perf_counter()
 root = _case_root(label)
-stack = LayerStackManager(root / "stack")
+stack = LayerStack(root / "stack")
 service = OccService(gitignore=_Gitignore(), layer_stack=stack)
 _publish(stack, "src/race.py", b"base\n")
 snapshot = stack.read_active_manifest()

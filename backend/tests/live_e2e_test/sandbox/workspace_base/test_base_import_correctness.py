@@ -35,7 +35,7 @@ except FileExistsError:
 
 stack_root = _phase01_root(label)
 binding, timings = _build_base(stack_root)
-manager = LayerStackManager(stack_root)
+manager = LayerStack(stack_root)
 base_layer = stack_root / "layers" / "B000001-base"
 raw_inventory = _inventory(WORKSPACE_ROOT)
 base_inventory = _inventory(base_layer)

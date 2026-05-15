@@ -8,7 +8,7 @@ import asyncio
 from pathlib import Path
 
 from sandbox.layer_stack.changes import WriteLayerChange
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.layer_stack.stack import LayerStack
 from sandbox.occ.changeset import FileStatus
 from sandbox.occ.hashing import ContentHasher
 from sandbox.occ.service import OccService
@@ -29,7 +29,7 @@ def _source(tmp_path: Path, name: str, content: bytes) -> Path:
     return path
 
 
-def _publish(stack: LayerStackManager, tmp_path: Path, rel: str, content: bytes) -> None:
+def _publish(stack: LayerStack, tmp_path: Path, rel: str, content: bytes) -> None:
     source = _source(tmp_path, rel.replace("/", "-"), content)
     stack.publish_changes(
         [
@@ -43,7 +43,7 @@ def _publish(stack: LayerStackManager, tmp_path: Path, rel: str, content: bytes)
 
 
 def test_shell_occ_gated_conflict_holds_occ_skipped_outputs(tmp_path: Path) -> None:
-    stack = LayerStackManager(tmp_path / "stack")
+    stack = LayerStack(tmp_path / "stack")
     _publish(stack, tmp_path, "src/app.py", b"leased\n")
     snapshot = stack.read_active_manifest()
     _publish(stack, tmp_path, "src/app.py", b"active\n")
