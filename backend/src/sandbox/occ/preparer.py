@@ -23,7 +23,7 @@ from sandbox.occ.gitignore import (
     SnapshotGitignoreMatcher,
 )
 from sandbox.occ.hashing import ContentHasher
-from sandbox.timing_keys import TimingKey
+from sandbox._shared.timing_keys import TimingKey
 from sandbox._shared.clock import monotonic_now
 
 BaseHashReader = Callable[[str], str | None]

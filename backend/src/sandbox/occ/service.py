@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from sandbox.layer_stack.stack import LayerStack
 from sandbox.occ.preparer import ChangesetPreparer
-from sandbox.timing_keys import TimingKey
+from sandbox._shared.timing_keys import TimingKey
 from sandbox.daemon.async_bridge import run_sync_in_executor
 from sandbox._shared.clock import monotonic_now
 

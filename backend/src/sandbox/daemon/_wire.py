@@ -10,7 +10,7 @@ from sandbox.occ.changeset import (
     is_published_status,
     is_success_status,
 )
-from sandbox.timing_keys import TimingKey
+from sandbox._shared.timing_keys import TimingKey
 
 
 def committed_paths(

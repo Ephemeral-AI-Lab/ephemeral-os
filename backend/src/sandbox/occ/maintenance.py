@@ -8,7 +8,7 @@ from typing import Protocol, runtime_checkable
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset import ChangesetResult
 from sandbox.occ.protocols import SnapshotReader
-from sandbox.timing_keys import TimingKey
+from sandbox._shared.timing_keys import TimingKey
 from sandbox._shared.clock import monotonic_now
 
 

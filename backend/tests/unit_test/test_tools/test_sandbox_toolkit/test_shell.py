@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 
 from sandbox.api import ShellResult
-from sandbox.timing_keys import TimingKey
+from sandbox._shared.timing_keys import TimingKey
 from tools._framework.core.base import ToolExecutionContextService
 import tools.sandbox.shell as shell_module
 from tools.sandbox.shell import shell

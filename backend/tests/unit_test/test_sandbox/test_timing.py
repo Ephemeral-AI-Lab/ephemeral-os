@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from sandbox.timing_keys import TimingKey
+from sandbox._shared.timing_keys import TimingKey
 from sandbox._shared.clock import normalize_timing_map, record_elapsed
 from sandbox.audit.timing import timing_audit_signals
 
