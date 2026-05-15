@@ -35,6 +35,7 @@ import time
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 from task_center import TaskCenterSandboxBridge, start_task_center_entry_run
 
@@ -141,8 +142,15 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
     aborted_by_timeout = False
     handle = None
     try:
+        # ``start_task_center_entry_run`` reads only ``config.cwd`` off this
+        # object; real-LLM callers may pre-build a full
+        # ``runtime.app_factory.RuntimeConfig`` and pass it via
+        # ``config.extras["runtime_config"]`` if extra attributes are needed.
+        runtime_cfg = config.extras.get(
+            "runtime_config", SimpleNamespace(cwd=config.repo_dir)
+        )
         handle = start_task_center_entry_run(
-            config=config,  # task_center accepts duck-typed config; cwd is read off RunConfig
+            config=runtime_cfg,
             prompt=config.entry_prompt,
             sandbox_id=lease.sandbox_id,
             on_agent_event=_on_agent_event,
