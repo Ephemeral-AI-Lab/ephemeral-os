@@ -15,7 +15,7 @@ from typing import Any, Protocol, runtime_checkable
 import pathspec
 
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.occ.ports import SnapshotReader
+from sandbox.occ.protocols import SnapshotReader
 
 ReadGitignoreFn = Callable[[str], str | None]
 

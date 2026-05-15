@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset import CommitOptions, PreparedChangeset
 from sandbox.occ.changeset import Change, ChangesetResult
-from sandbox.occ.ports import WorkspaceBindingReader
+from sandbox.occ.protocols import WorkspaceBindingReader
 
 if TYPE_CHECKING:
     from sandbox.occ.service import OccService

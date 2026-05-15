@@ -20,7 +20,7 @@ from sandbox.occ.changeset import (
     RouteDecision,
 )
 from sandbox.occ.hashing import ContentHasher
-from sandbox.occ.ports import (
+from sandbox.occ.protocols import (
     CommitPublisher,
     CommitTransactionPort,
     CommitStagingStore,

@@ -28,7 +28,7 @@ from sandbox.occ.changeset import (
     PreparedPathGroup,
 )
 from sandbox.occ.hashing import ContentHasher
-from sandbox.occ.ports import SnapshotReader
+from sandbox.occ.protocols import SnapshotReader
 from sandbox.occ.stage_policy import (
     FinalKind,
     StageWrite,

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from sandbox.layer_stack.manifest import manifest_path, read_manifest
 from sandbox.layer_stack.workspace_binding import require_workspace_binding
-from sandbox.occ.ports import WorkspaceBindingSnapshot
+from sandbox.occ.protocols import WorkspaceBindingSnapshot
 
 
 class RuntimeWorkspaceBindingReader:

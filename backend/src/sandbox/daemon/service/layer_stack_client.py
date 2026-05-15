@@ -11,7 +11,7 @@ from sandbox.layer_stack.stack import (
     PrepareWorkspaceSnapshotResult,
 )
 from sandbox.layer_stack.stack import CommitStagingArea
-from sandbox.occ.ports import CommitTransactionPort
+from sandbox.occ.protocols import CommitTransactionPort
 from sandbox.daemon.workspace_server import get_layer_stack_manager
 
 

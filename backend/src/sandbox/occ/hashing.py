@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.occ.ports import SnapshotReader
+from sandbox.occ.protocols import SnapshotReader
 
 
 class ContentHasher:
