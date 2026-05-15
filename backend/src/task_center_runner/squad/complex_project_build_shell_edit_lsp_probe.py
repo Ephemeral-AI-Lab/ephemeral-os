@@ -123,7 +123,6 @@ async def run_complex_project_build_shell_edit_lsp_probe(
     record_tool_check: RecordToolCheck,
     caller,
     sandbox_id: str,
-    sandbox_checks: list[SandboxCheck],
     smoke: bool,
 ) -> str:
     """Run the mixed shell-edit + LSP probe and return summary.json path."""
@@ -137,7 +136,6 @@ async def run_complex_project_build_shell_edit_lsp_probe(
         record_tool_check=record_tool_check,
         caller=caller,
         sandbox_id=sandbox_id,
-        sandbox_checks=sandbox_checks,
         smoke=smoke,
     )
     stats = ShellEditLspStats()
@@ -454,7 +452,6 @@ async def _phase_e_diagnostic_probe(
         passed=_shell_exit_code(import_check) == 0,
         detail=f"exit_code={_shell_exit_code(import_check)}",
     )
-    ctx.sandbox_checks.append(_check_record)
     ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
     stats.phases.append(
         {
@@ -558,7 +555,6 @@ async def _apply_shell_edit(
             passed=False,
             detail=detail,
         )
-        ctx.sandbox_checks.append(_check_record)
         ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
         raise RuntimeError(f"shell edit failed: {description}: {detail}")
 
@@ -589,7 +585,6 @@ async def _apply_shell_edit(
         ),
         changed_paths=changed_paths,
     )
-    ctx.sandbox_checks.append(_check_record)
     ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
     if not passed:
         raise RuntimeError(f"shell edit verification failed: {description}")
@@ -1052,7 +1047,6 @@ def _record_lsp_semantic_check(
         passed=passed,
         detail=detail,
     )
-    ctx.sandbox_checks.append(_check_record)
     ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
     if not passed:
         raise RuntimeError(f"semantic {tool_name} check failed: {label}: {detail}")

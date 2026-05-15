@@ -151,10 +151,6 @@ class MockSquadRunner:
         self._scenario: Scenario = scenario or CorrectnessTesting()
         self._mutable_state = mutable_state
         self._audit_recorder = audit_recorder
-        self.launches: list[LaunchRecord] = []
-        self.tool_calls: list[ToolCallRecord] = []
-        self.prompt_inspections: list[PromptInspection] = []
-        self.sandbox_checks: list[SandboxCheck] = []
         self._script_engine = PreparedToolScriptEngine(self._call_tool)
 
     async def __call__(
@@ -190,14 +186,12 @@ class MockSquadRunner:
             role=str(agent_def.agent_kind.value or ""),
             prompt_preview=prompt[:500],
         )
-        self.launches.append(_launch_record)
         self._publish_mock_record(EventType.MOCK_LAUNCH_RECORDED, _launch_record)
         _prompt_inspection = self._inspect_prompt(
             prompt=prompt,
             agent_def=agent_def,
             metadata=metadata,
         )
-        self.prompt_inspections.append(_prompt_inspection)
         self._publish_mock_record(EventType.MOCK_PROMPT_INSPECTED, _prompt_inspection)
         self._record_initial_messages(
             agent_def=agent_def,
@@ -756,7 +750,6 @@ class MockSquadRunner:
             detail=f"applied_edits={result.applied_edits} status={result.status}",
             changed_paths=tuple(result.changed_paths),
         )
-        self.sandbox_checks.append(_sandbox_check)
         self._publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _sandbox_check)
         if passed:
             self._publish(
@@ -796,7 +789,6 @@ class MockSquadRunner:
             detail=detail,
             changed_paths=tuple(result.changed_paths),
         )
-        self.sandbox_checks.append(_sandbox_check)
         self._publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _sandbox_check)
         if passed:
             self._publish(
@@ -930,7 +922,6 @@ class MockSquadRunner:
             ),
             changed_paths=tuple(str(p) for p in conflict_changed_paths),
         )
-        self.sandbox_checks.append(_sandbox_check)
         self._publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _sandbox_check)
         if not conflict_passed:
             raise RuntimeError(
@@ -1004,7 +995,6 @@ class MockSquadRunner:
             record_tool_check=self._record_tool_check,
             caller=self._caller(metadata),
             sandbox_id=sandbox_id,
-            sandbox_checks=self.sandbox_checks,
             smoke=smoke,
         )
 
@@ -1029,7 +1019,6 @@ class MockSquadRunner:
             record_tool_check=self._record_tool_check,
             caller=self._caller(metadata),
             sandbox_id=sandbox_id,
-            sandbox_checks=self.sandbox_checks,
             smoke=smoke,
         )
 
@@ -1130,7 +1119,6 @@ class MockSquadRunner:
             is_error=result.is_error,
             metadata=dict(result.metadata or {}),
         )
-        self.tool_calls.append(_tool_call_record)
         self._publish_mock_record(EventType.MOCK_TOOL_CALL_RECORDED, _tool_call_record)
         if result.is_error and not allow_error:
             raise RuntimeError(f"{tool_obj.name} failed: {result.output}")
@@ -1145,7 +1133,6 @@ class MockSquadRunner:
             detail=status,
             changed_paths=changed_paths,
         )
-        self.sandbox_checks.append(_sandbox_check)
         self._publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _sandbox_check)
 
     def _assert_read_contains(
@@ -1165,7 +1152,6 @@ class MockSquadRunner:
             passed=passed,
             detail=f"needle={needle!r}",
         )
-        self.sandbox_checks.append(_sandbox_check)
         self._publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _sandbox_check)
         if not passed:
             raise RuntimeError(f"{check_name} did not find {needle!r}.")

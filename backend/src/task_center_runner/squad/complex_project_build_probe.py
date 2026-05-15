@@ -125,7 +125,6 @@ class ProbeContext:
     record_tool_check: RecordToolCheck
     caller: SandboxCaller
     sandbox_id: str
-    sandbox_checks: list[SandboxCheck]
     smoke: bool
 
 
@@ -144,7 +143,6 @@ async def run_complex_project_build_probe(
     record_tool_check: RecordToolCheck,
     caller: SandboxCaller,
     sandbox_id: str,
-    sandbox_checks: list[SandboxCheck],
     smoke: bool,
 ) -> str:
     """Run the complex_project_build probe and return its summary path."""
@@ -158,7 +156,6 @@ async def run_complex_project_build_probe(
         record_tool_check=record_tool_check,
         caller=caller,
         sandbox_id=sandbox_id,
-        sandbox_checks=sandbox_checks,
         smoke=smoke,
     )
     stats = ProbeStats()
@@ -262,7 +259,6 @@ async def _phase0_bootstrap(ctx: ProbeContext, stats: ProbeStats) -> None:
             passed=False,
             detail=last_err,
         )
-        ctx.sandbox_checks.append(_check_record)
         ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
         raise RuntimeError(f"mkdir {WORKSPACE_ROOT} failed: {last_err}")
     _check_record = SandboxCheck(
@@ -270,7 +266,6 @@ async def _phase0_bootstrap(ctx: ProbeContext, stats: ProbeStats) -> None:
         passed=True,
         detail=f"exit_code={mkdir_result.exit_code}",
     )
-    ctx.sandbox_checks.append(_check_record)
     ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
 
     rebind = await call_daemon_api(
@@ -284,7 +279,6 @@ async def _phase0_bootstrap(ctx: ProbeContext, stats: ProbeStats) -> None:
         passed=bool(rebind.get("success")),
         detail=f"workspace_root={WORKSPACE_ROOT}",
     )
-    ctx.sandbox_checks.append(_check_record)
     ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
     if not rebind.get("success"):
         raise RuntimeError(
@@ -356,7 +350,6 @@ async def _phase0_bootstrap(ctx: ProbeContext, stats: ProbeStats) -> None:
         passed=bool(api_read.success and api_read.exists),
         detail=f"bytes={len(api_read.content) if api_read.success else 0}",
     )
-    ctx.sandbox_checks.append(_check_record)
     ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
 
     api_shell = await sandbox_api.shell(
@@ -379,7 +372,6 @@ async def _phase0_bootstrap(ctx: ProbeContext, stats: ProbeStats) -> None:
             f"stdout={api_shell.stdout!r} stderr={api_shell.stderr!r}"
         ),
     )
-    ctx.sandbox_checks.append(_check_record)
     ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
 
     api_shell_status = await sandbox_api.shell(
@@ -405,7 +397,6 @@ async def _phase0_bootstrap(ctx: ProbeContext, stats: ProbeStats) -> None:
             f"stderr={api_shell_status.stderr!r}"
         ),
     )
-    ctx.sandbox_checks.append(_check_record)
     ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
 
     stats.phases.append(
@@ -611,7 +602,6 @@ async def _projection_consistency_check(
             f"api_lines={api_stripped.count(chr(10)) + 1}"
         ),
     )
-    ctx.sandbox_checks.append(_check_record)
     ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
 
 
@@ -649,7 +639,6 @@ async def _api_edit_noop_batch(
         passed=bool(result.success and result.applied_edits >= 0),
         detail=f"applied_edits={result.applied_edits} status={result.status}",
     )
-    ctx.sandbox_checks.append(_check_record)
     ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
 
 
@@ -903,7 +892,6 @@ async def _phase_f_pytest(
         passed=exit_code == 0,
         detail=f"exit_code={exit_code} bytes={len(stdout)}",
     )
-    ctx.sandbox_checks.append(_check_record)
     ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
 
     stats.phases.append(
@@ -968,7 +956,6 @@ async def _phase_f_per_module_imports(
             passed=exit_code == 0,
             detail=f"exit_code={exit_code}",
         )
-        ctx.sandbox_checks.append(_check_record)
         ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
     stats.phases.append(
         {
@@ -1036,7 +1023,6 @@ async def _phase_f_tri_source_consistency(
                 f"api={len(api_content)} cat_exit={_shell_exit_code(cat)}"
             ),
         )
-        ctx.sandbox_checks.append(_check_record)
         ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
 
 
@@ -1103,7 +1089,6 @@ async def _phase_f_intentional_conflicts(
         passed=tool_passed,
         detail=f"reason={tool_reason!r}",
     )
-    ctx.sandbox_checks.append(_check_record)
     ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
     if tool_passed:
         ctx.publish(
@@ -1140,7 +1125,6 @@ async def _phase_f_intentional_conflicts(
         passed=api_passed,
         detail=f"reason={api_conflict_reason!r}",
     )
-    ctx.sandbox_checks.append(_check_record)
     ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
     if api_passed:
         ctx.publish(
