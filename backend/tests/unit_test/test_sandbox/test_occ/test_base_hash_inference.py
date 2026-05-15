@@ -6,7 +6,7 @@ from tests.occ_change_helpers import write_change
 
 import asyncio
 
-from sandbox.layer_stack.layer_change import WriteLayerChange
+from sandbox.layer_stack.changes import WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset import RouteDecision
 from sandbox.occ.changeset import DeleteChange, EditChange, WriteChange

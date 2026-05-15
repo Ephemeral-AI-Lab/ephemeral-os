@@ -12,7 +12,7 @@ pytestmark = pytest.mark.asyncio
 
 
 _COMMIT_TRANSACTION_BODY = r"""
-from sandbox.layer_stack.layer_change import LayerChange, WriteLayerChange
+from sandbox.layer_stack.changes import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset import CommitOptions
 from sandbox.occ.changeset import ChangesetResult, FileStatus, WriteChange
@@ -97,7 +97,7 @@ _emit(label, started, before, {
 
 
 _RACE_BODY = r"""
-from sandbox.layer_stack.layer_change import LayerChange, WriteLayerChange
+from sandbox.layer_stack.changes import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset import FileStatus, WriteChange
 from sandbox.occ.changeset import build_api_write_change, build_overlay_write_change

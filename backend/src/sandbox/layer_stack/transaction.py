@@ -9,7 +9,7 @@ from pathlib import Path
 from types import TracebackType
 from typing import TYPE_CHECKING
 
-from sandbox.layer_stack.layer_change import LayerChange
+from sandbox.layer_stack.changes import LayerChange
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.timing import monotonic_now
 

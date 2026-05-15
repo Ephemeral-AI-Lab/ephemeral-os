@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from sandbox.layer_stack.layer_change import normalize_layer_path
+from sandbox.layer_stack.changes import normalize_layer_path
 
 OverlayPathChangeKind = Literal["write", "delete", "symlink", "opaque_dir"]
 

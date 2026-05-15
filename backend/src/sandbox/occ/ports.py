@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
-from sandbox.layer_stack.layer_change import LayerChange
+from sandbox.layer_stack.changes import LayerChange
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.layer_stack.manager import CommitStagingArea
 

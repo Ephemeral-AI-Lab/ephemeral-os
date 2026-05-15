@@ -9,7 +9,7 @@ from pathlib import Path
 from types import TracebackType
 from uuid import uuid4
 
-from sandbox.layer_stack.layer_change import LayerChange, WriteLayerChange
+from sandbox.layer_stack.changes import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset import (
     ChangesetResult,

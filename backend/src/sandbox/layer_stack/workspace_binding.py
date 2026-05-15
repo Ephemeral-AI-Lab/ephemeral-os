@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from sandbox.layer_stack.paths import fsync_path
-from sandbox.layer_stack.layer_change import normalize_layer_path
+from sandbox.layer_stack.changes import normalize_layer_path
 
 
 WORKSPACE_BINDING_FILE = "workspace.json"

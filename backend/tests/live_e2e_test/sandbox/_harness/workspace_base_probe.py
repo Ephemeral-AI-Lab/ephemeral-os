@@ -14,7 +14,7 @@ from .sandbox_fixture import SandboxHandle
 WORKSPACE_BASE_PROBE_PRELUDE = (
     NATIVE_CASE_PRELUDE
     + r"""
-from sandbox.layer_stack.layer_change import LayerChange
+from sandbox.layer_stack.changes import LayerChange
 from sandbox.layer_stack.manifest import manifest_path, read_manifest
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.layer_stack.workspace_binding import workspace_binding_path

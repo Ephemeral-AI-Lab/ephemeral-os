@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sandbox.layer_stack.layer_change import (
+from sandbox.layer_stack.changes import (
     DeleteLayerChange,
     OpaqueDirLayerChange,
     SymlinkLayerChange,

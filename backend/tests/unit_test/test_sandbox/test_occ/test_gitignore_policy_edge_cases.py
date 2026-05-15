@@ -12,7 +12,7 @@ from tests.occ_change_helpers import write_change
 
 from pathlib import Path
 
-from sandbox.layer_stack.layer_change import WriteLayerChange
+from sandbox.layer_stack.changes import WriteLayerChange
 from sandbox.layer_stack.manager import LayerStackManager
 from sandbox.occ.changeset import RouteDecision
 from sandbox.occ.changeset import (

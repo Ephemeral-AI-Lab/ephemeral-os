@@ -10,7 +10,7 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 
 from sandbox.layer_stack.paths import allocate_unique_layer_paths, fsync_path, remove_path
-from sandbox.layer_stack.layer_change import (
+from sandbox.layer_stack.changes import (
     LayerChange,
     PreparedLayerChange,
     aggregate_layer_changes,
