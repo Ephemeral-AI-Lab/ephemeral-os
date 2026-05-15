@@ -63,9 +63,9 @@ class ContextEngineDeps:
     tests is one keyword argument.
     """
 
-    mission_store: GoalStoreProtocol
-    episode_store: IterationStoreProtocol
-    attempt_store: TrialStoreProtocol
+    goal_store: GoalStoreProtocol
+    iteration_store: IterationStoreProtocol
+    trial_store: TrialStoreProtocol
     task_store: TaskStoreProtocol
 
     # Optional: when supplied, the composer persists rendered packet inputs.

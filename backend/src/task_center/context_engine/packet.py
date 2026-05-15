@@ -50,7 +50,7 @@ class ContextRefs(BaseModel):
 
     goal_id: str | None = None
     iteration_id: str | None = None
-    attempt_id: str | None = None
+    trial_id: str | None = None
     task_id: str | None = None
 
     model_config = ConfigDict(extra="forbid")

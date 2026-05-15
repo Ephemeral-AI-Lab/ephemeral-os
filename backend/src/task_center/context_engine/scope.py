@@ -28,7 +28,7 @@ class ContextScope:
 
     # Optional identity fields — recipes declare which of these they need.
     iteration_id: str | None = None
-    attempt_id: str | None = None
+    trial_id: str | None = None
     task_id: str | None = None
 
     # Helper-spawn fields — present only when a helper (advisor / resolver) is
@@ -57,13 +57,13 @@ class ContextScope:
         *,
         goal_id: str,
         iteration_id: str,
-        attempt_id: str,
+        trial_id: str,
     ) -> ContextScope:
         """Scope shape required by the planner recipe."""
         return cls(
             goal_id=goal_id,
             iteration_id=iteration_id,
-            attempt_id=attempt_id,
+            trial_id=trial_id,
         )
 
     @classmethod
@@ -72,14 +72,14 @@ class ContextScope:
         *,
         goal_id: str,
         iteration_id: str,
-        attempt_id: str,
+        trial_id: str,
         task_id: str,
     ) -> ContextScope:
         """Scope shape required by the generator recipe."""
         return cls(
             goal_id=goal_id,
             iteration_id=iteration_id,
-            attempt_id=attempt_id,
+            trial_id=trial_id,
             task_id=task_id,
         )
 
@@ -89,13 +89,13 @@ class ContextScope:
         *,
         goal_id: str,
         iteration_id: str,
-        attempt_id: str,
+        trial_id: str,
     ) -> ContextScope:
         """Scope shape required by the evaluator recipe."""
         return cls(
             goal_id=goal_id,
             iteration_id=iteration_id,
-            attempt_id=attempt_id,
+            trial_id=trial_id,
         )
 
     @classmethod

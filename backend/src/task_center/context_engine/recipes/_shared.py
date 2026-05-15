@@ -1,7 +1,7 @@
 """Shared block builders + helpers used by multiple recipes.
 
 Lives outside any single recipe module so generator / evaluator / planner /
-attempt_landscape don't import from each other.
+trial_landscape don't import from each other.
 """
 
 from __future__ import annotations
@@ -14,13 +14,12 @@ from task_center.context_engine.packet import (
     ContextBlockKind,
     ContextPriority,
 )
-from task_center.iteration.state import Iteration as Episode
-from task_center.goal.state import Goal as Mission
+from task_center.iteration.state import Iteration
+from task_center.goal.state import Goal
 
-MISSION_EPISODE_HEADING = "# Mission / Current Episode"
-MISSION_HEADING = "# Mission"
-CURRENT_EPISODE_HEADING = "# Current Episode"
-PREVIOUS_EPISODE_RESULTS_HEADING = "# Previous Episode Results"
+GOAL_ITERATION_HEADING = "# Goal / Current Iteration"
+GOAL_HEADING = "# Goal"
+CURRENT_ITERATION_HEADING = "# Current Iteration"
 
 
 def latest_summary_text(summaries: list[Any] | None) -> str:
@@ -38,55 +37,58 @@ def latest_summary_text(summaries: list[Any] | None) -> str:
     return str(last.get("summary") or last.get("outcome") or "(empty)")
 
 
-def mission_episode_blocks(
+def goal_iteration_blocks(
     *,
-    mission: Mission,
-    current_episode: Episode,
-    episodes: list[Episode],
+    goal: Goal,
+    current_iteration: Iteration,
+    iterations: list[Iteration],
 ) -> list[ContextBlock]:
-    """Return the mission/episode frame in LLM-facing semantic order."""
-    if current_episode.sequence_no == 1:
-        return [_episode_goal_block(current_episode, heading=MISSION_EPISODE_HEADING)]
+    """Return the goal/iteration frame in LLM-facing semantic order."""
+    if current_iteration.sequence_no == 1:
+        return [_iteration_statement_block(current_iteration, heading=GOAL_ITERATION_HEADING)]
 
     return [
-        _mission_goal_block(mission),
-        *_previous_episode_result_blocks(
-            current=current_episode,
-            episodes=episodes,
+        _goal_statement_block(goal),
+        *_prior_iteration_blocks(
+            current=current_iteration,
+            iterations=iterations,
         ),
-        _episode_goal_block(current_episode, heading=CURRENT_EPISODE_HEADING),
+        _iteration_statement_block(current_iteration, heading=CURRENT_ITERATION_HEADING),
     ]
 
 
-def _episode_goal_block(episode: Episode, *, heading: str) -> ContextBlock:
+def _iteration_statement_block(iteration: Iteration, *, heading: str) -> ContextBlock:
     return ContextBlock(
         kind=ContextBlockKind.ITERATION_STATEMENT,
         priority=ContextPriority.REQUIRED,
-        text=episode.goal,
-        source_id=episode.id,
-        source_kind="episode",
+        text=iteration.goal,
+        source_id=iteration.id,
+        source_kind="iteration",
         metadata={"heading": heading},
     )
 
 
-def _mission_goal_block(mission: Mission) -> ContextBlock:
+def _goal_statement_block(goal: Goal) -> ContextBlock:
     return ContextBlock(
         kind=ContextBlockKind.GOAL_STATEMENT,
         priority=ContextPriority.REQUIRED,
-        text=mission.goal,
-        source_id=mission.id,
-        source_kind="mission",
-        metadata={"heading": MISSION_HEADING},
+        text=goal.goal,
+        source_id=goal.id,
+        source_kind="goal",
+        metadata={
+            "group_heading": GOAL_HEADING,
+            "subheading": "Goal",
+        },
     )
 
 
-def _previous_episode_result_blocks(
+def _prior_iteration_blocks(
     *,
-    current: Episode,
-    episodes: list[Episode],
+    current: Iteration,
+    iterations: list[Iteration],
 ) -> list[ContextBlock]:
     priors = sorted(
-        (s for s in episodes if s.sequence_no < current.sequence_no),
+        (s for s in iterations if s.sequence_no < current.sequence_no),
         key=lambda s: s.sequence_no,
     )
     out: list[ContextBlock] = []
@@ -94,7 +96,7 @@ def _previous_episode_result_blocks(
     for prior in priors:
         if prior.task_specification is None or prior.task_summary is None:
             raise ContextEngineError(
-                f"Prior episode {prior.id!r} (seq={prior.sequence_no}) is "
+                f"Prior iteration {prior.id!r} (seq={prior.sequence_no}) is "
                 "missing task_specification or task_summary; chain integrity violated."
             )
         priority = (
@@ -103,8 +105,8 @@ def _previous_episode_result_blocks(
             else ContextPriority.MEDIUM
         )
         base_meta = {
-            "episode_sequence_no": str(prior.sequence_no),
-            "group_heading": PREVIOUS_EPISODE_RESULTS_HEADING,
+            "iteration_sequence_no": str(prior.sequence_no),
+            "group_heading": GOAL_HEADING,
         }
         out.append(
             ContextBlock(
@@ -112,10 +114,10 @@ def _previous_episode_result_blocks(
                 priority=priority,
                 text=prior.task_specification,
                 source_id=prior.id,
-                source_kind="episode",
+                source_kind="iteration",
                 metadata={
                     **base_meta,
-                    "subheading": f"Episode {prior.sequence_no} accepted plan",
+                    "subheading": f"Iteration {prior.sequence_no} accepted plan",
                 },
             )
         )
@@ -125,10 +127,10 @@ def _previous_episode_result_blocks(
                 priority=priority,
                 text=prior.task_summary,
                 source_id=prior.id,
-                source_kind="episode",
+                source_kind="iteration",
                 metadata={
                     **base_meta,
-                    "subheading": f"Episode {prior.sequence_no} summary",
+                    "subheading": f"Iteration {prior.sequence_no} summary",
                 },
             )
         )
