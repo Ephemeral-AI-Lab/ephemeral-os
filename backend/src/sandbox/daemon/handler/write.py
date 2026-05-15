@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import stat
 from uuid import uuid4
 
 from sandbox.layer_stack.workspace_binding import require_workspace_binding
@@ -178,7 +180,7 @@ def _write_out_of_workspace(
             },
         }
     write_start = monotonic_now()
-    write_text_no_follow(abs_path, content)
+    _atomic_overwrite_no_follow(abs_path, content)
     write_elapsed = monotonic_now() - write_start
     return {
         "success": True,
@@ -191,6 +193,34 @@ def _write_out_of_workspace(
             "api.write.total_s": monotonic_now() - total_start,
         },
     }
+
+
+def _atomic_overwrite_no_follow(abs_path: str, content: str) -> None:
+    """Overwrite ``abs_path`` atomically; refuse to follow symlinks at the dest.
+
+    Writes ``content`` to a sibling temp file then ``os.replace`` to the
+    destination so a crash leaves either the old file intact or the new
+    file in place — never a torn write. The pre-rename ``lstat`` preserves
+    the ``write_text_no_follow`` contract by refusing to silently replace
+    a symlink with a regular file (race window is small and the in-workspace
+    OCC path is the authoritative write surface anyway).
+    """
+    tmp_path = f"{abs_path}.tmp.{uuid4().hex}"
+    write_text_no_follow(tmp_path, content, create_only=True)
+    try:
+        try:
+            existing = os.lstat(abs_path)
+        except FileNotFoundError:
+            existing = None
+        if existing is not None and stat.S_ISLNK(existing.st_mode):
+            raise ValueError(f"refusing to follow symlink: {abs_path}")
+        os.replace(tmp_path, abs_path)
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
 
 
 __all__ = ["write_file"]
