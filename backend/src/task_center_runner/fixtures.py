@@ -19,6 +19,7 @@ from pathlib import Path
 import pytest
 
 from db.engine import get_engine, initialize_db
+from task_center_runner.core.fixtures import pipeline_run  # noqa: F401 — re-export for pytest_plugins
 from task_center_runner.stores import (
     TaskCenterStoreBundle,
     create_per_test_task_center_stores,
@@ -76,5 +77,6 @@ def audit_dir(tmp_path: Path) -> Path:
 __all__ = [
     "audit_dir",
     "db_engine",
+    "pipeline_run",
     "stores",
 ]
