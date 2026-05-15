@@ -1,40 +1,47 @@
-"""``run_scenario`` — orchestration entry point for the live e2e framework.
+"""``run_scenario`` — thin shim around :func:`task_center_runner.core.engine.run_pipeline`.
 
-Generic over the dataset: callers pass in the entry-prompt string and the
-sandbox id, and the framework wires the AuditEventBus, AuditRecorder,
-MockSquadRunner, scenario hooks, and ``start_task_center_entry_run`` into a
-single coroutine that returns a :class:`RunReport`.
+Phase 4e of the task_center_runner restructure
+(.omc/plans/task_center_runner-restructure.md). The legacy ``run_scenario``
+contract is preserved (same arguments, same :class:`RunReport` shape — see
+``tests/golden/run_report_structural.json``), but the actual orchestration
+now happens inside :func:`task_center_runner.core.engine.run_pipeline`.
+
+What the shim adds on top of the engine:
+
+- Constructs ``RunConfig`` via :func:`build_scenario_config` so the
+  ``MockSquadRunner`` factory, ``MutableMockState``, ``HookSet``, and
+  ``ScenarioLifecycle`` all share state inside one place.
+- Wraps the ``runner_factory`` to capture the ``MockSquadRunner`` instance
+  via a list-box; the shim reads ``squad.launches``/``tool_calls``/
+  ``prompt_inspections``/``sandbox_checks`` for the legacy ``RunReport``
+  view. Phase 4g will switch this to ``MOCK_*`` event accumulation and
+  delete the list attributes — the engine remains literally
+  runner-agnostic in both phases.
+- Owns the ``TaskCenterStoreBundle`` lifecycle: passes the bundle to
+  ``run_pipeline`` via ``config.stores`` so the engine does not close it,
+  then computes :func:`_graph_summary` against the still-open stores before
+  closing.
 """
 
 from __future__ import annotations
 
 import asyncio
+import dataclasses as _dataclasses
 import hashlib
-import time
-import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
 
-from task_center import TaskCenterSandboxBridge, start_task_center_entry_run
-
-from task_center_runner.audit.bus import AuditEventBus
 from task_center_runner.audit.events import Event, EventType
-from task_center_runner.audit.node_id import NodeId
-from task_center_runner.audit.performance_report import _write_perf_report_safe
-from task_center_runner.audit.recorder import AuditRecorder
-from task_center_runner.audit.stream_bridge import stream_bridge
+from task_center_runner.core.engine import run_pipeline
 from task_center_runner.hooks.registry import (
     Hook,
     HookResult,
-    HookSet,
-    MutableMockState,
 )
 from task_center_runner.scenarios.base import Scenario
-from task_center_runner.squad.definitions import registered_mock_agents
+from task_center_runner.scenarios.builder import build_scenario_config
+from task_center_runner.squad.definitions import registered_mock_agents  # noqa: F401 — re-export
 from task_center_runner.squad.prompt_inspector import (
     LaunchRecord,
     PromptInspection,
@@ -149,163 +156,74 @@ async def run_scenario(
 ) -> RunReport:
     """Run *scenario* end-to-end against ``sandbox_id``.
 
-    Bus, recorder, scenario hooks, and the squad runner are wired here. The
-    real :func:`task_center.start_task_center_entry_run` is invoked with
-    the per-test PG stores so every ORM commit fires the recorder's listeners.
+    Thin shim over :func:`run_pipeline`. The legacy ``RunReport`` view is
+    rebuilt from the ``PipelineReport`` plus state accumulated by the
+    ``ScenarioLifecycle`` and the ``MockSquadRunner`` instance captured via
+    a wrapped ``runner_factory``.
     """
     owns_stores = stores is None
     bundle = stores or create_per_test_task_center_stores()
-    bus = AuditEventBus()
-    mutable_state = MutableMockState()
-    captured_events: list[Event] = []
-    hook_results: list[HookResult] = []
-    hook_set = HookSet()
-    for hook in scenario.hooks():
-        hook_set.register(hook)
-    for hook in extra_hooks:
-        hook_set.register(hook)
 
-    def _on_event(event: Event) -> None:
-        captured_events.append(event)
-        mutable_state.seen_events.append(event.type)
-        for result in hook_set.fire(event, "post", mutable_state):
-            hook_results.append(result)
-
-    bus_unsub = bus.subscribe(_on_event)
-    started = time.perf_counter()
-
-    recorder: AuditRecorder | None = None
-    handle: Any = None
-    recorder_holder: list[AuditRecorder | None] = [None]
-    bridge_run_id = ""
-
-    async def _on_agent_event(event: Any) -> None:
-        bridge_cb = stream_bridge(bus, task_center_run_id=bridge_run_id)
-        await bridge_cb(event)
-        rec_obj = recorder_holder[0]
-        if rec_obj is None:
-            return
-        agent_run_id = str(getattr(event, "run_id", "") or "")
-        if not agent_run_id:
-            return
-        per_task = rec_obj.message_recorder_for_agent_run(agent_run_id)
-        if per_task is None:
-            per_task = rec_obj.message_recorder_for_task(agent_run_id)
-        if per_task is not None:
-            per_task.emit(event)
-
-    self_run_id = uuid.uuid4().hex[:12]
-    run_dir = (
-        Path(audit_dir)
-        / "scenario_logs"
-        / scenario.name
-        / f"{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}_{self_run_id}"
-    )
-    recorder = AuditRecorder(
-        run_dir,
-        task_center_run_id="",  # empty → recorder accepts all rows in this run
-        bus=bus,
-        scenario_name=scenario.name,
-        instance_id=instance_id,
+    config, mutable_state, lifecycle = build_scenario_config(
+        scenario,
         sandbox_id=sandbox_id,
+        audit_dir=audit_dir,
+        repo_dir=repo_dir,
+        entry_prompt=entry_prompt,
+        extra_hooks=extra_hooks,
+        instance_id=instance_id,
     )
-    recorder.start()
-    recorder_holder[0] = recorder
+
+    runner_box: list[MockSquadRunner | None] = [None]
+    original_factory = config.runner_factory
+
+    def _capturing_factory(ctx: Any) -> Any:
+        squad = original_factory(ctx)
+        runner_box[0] = squad  # type: ignore[assignment]
+        return squad
+
+    # ``registered_mock_agents`` registers the mock agent definitions for the
+    # duration of the run; restore the registry on exit. The original
+    # ``run_scenario`` wrapped its core call in this context manager too.
+    with registered_mock_agents():
+        config = _dataclasses.replace(
+            config, runner_factory=_capturing_factory, stores=bundle
+        )
+        pipeline_report = await run_pipeline(config)
 
     try:
-        with registered_mock_agents():
-            squad = MockSquadRunner(
-                repo_dir=repo_dir,
-                bus=bus,
-                task_center_run_id="",
-                scenario=scenario,
-                mutable_state=mutable_state,
-                audit_recorder=recorder,
-            )
-            handle = start_task_center_entry_run(
-                config=SimpleNamespace(cwd=repo_dir),
-                prompt=entry_prompt,
-                sandbox_id=sandbox_id,
-                on_agent_event=_on_agent_event,
-                task_store=bundle.task_store,
-                mission_store=bundle.mission_store,
-                episode_store=bundle.episode_store,
-                attempt_store=bundle.attempt_store,
-                runner=squad,
-                context_packet_store=bundle.context_packet_store,
-                sandbox_bridge=TaskCenterSandboxBridge(
-                    start_fn=lambda existing_id: {"id": existing_id}
-                ),
-            )
-            tcrid = str(handle.task_center_run_id)
-            squad._task_center_run_id = tcrid  # noqa: SLF001 — late binding
-            bridge_run_id = tcrid
-            recorder.bind_task_center_run_id(tcrid)
-            bus.publish(
-                Event(
-                    type=EventType.RUN_STARTED,
-                    node=NodeId(task_center_run_id=tcrid),
-                )
-            )
-            await handle.launcher.wait_for_idle()
-            bus.publish(
-                Event(
-                    type=EventType.RUN_COMPLETED,
-                    node=NodeId(task_center_run_id=tcrid),
-                )
-            )
-
-        run = bundle.task_store.get_run(tcrid) or {}
-        duration = time.perf_counter() - started
-        report = RunReport(
-            scenario_name=scenario.name,
-            task_center_run_id=tcrid,
-            request_id=str(handle.request_id),
-            sandbox_id=str(handle.sandbox_id),
-            instance_id=instance_id,
-            run_dir=run_dir,
-            task_center_status=run.get("status"),
-            duration_s=duration,
-            events=captured_events,
-            seen_event_types=list(mutable_state.seen_events),
-            hook_results=hook_results,
-            mutable_state_flags=dict(mutable_state.flags),
-            launches=list(squad.launches),
-            tool_calls=list(squad.tool_calls),
-            prompt_inspections=list(squad.prompt_inspections),
-            sandbox_checks=list(squad.sandbox_checks),
-            metrics=recorder.metrics.snapshot() if recorder is not None else {},
-            graph_summary=_graph_summary(bundle, tcrid),
-            entry_prompt_sha256=hashlib.sha256(
-                entry_prompt.encode("utf-8")
-            ).hexdigest(),
-            entry_prompt_length=len(entry_prompt),
-            requirement_ledger=list(getattr(scenario, "requirement_ledger", [])),
-            package_plan=list(getattr(scenario, "package_plan", [])),
-            matrix_plan=list(getattr(scenario, "matrix_plan", [])),
-        )
-        # Capture the perf-report snapshot BEFORE dispose so the post-dispose
-        # async writer sees the final in-memory metrics state. Phase 3 of the
-        # task_center_runner restructure moves the perf-report write out of
-        # AuditRecorder.dispose() into an asyncio task whose handle rides on
-        # ``RunReport.performance_report_task``; callers (and the
-        # ``pipeline_run`` fixture) must ``await`` it before exit.
-        perf_snapshot = (
-            recorder.metrics.performance_snapshot() if recorder is not None else None
-        )
+        squad = runner_box[0]
+        graph_summary = _graph_summary(bundle, pipeline_report.task_center_run_id)
     finally:
-        bus_unsub()
-        if recorder is not None:
-            recorder.dispose()
         if owns_stores:
             bundle.close()
 
-    if perf_snapshot is not None:
-        report.performance_report_task = asyncio.create_task(
-            _write_perf_report_safe(report.run_dir, perf_snapshot),
-            name=f"perf_report:{report.task_center_run_id}",
-        )
-    return report
+    return RunReport(
+        scenario_name=scenario.name,
+        task_center_run_id=pipeline_report.task_center_run_id,
+        request_id=pipeline_report.request_id,
+        sandbox_id=pipeline_report.sandbox_id,
+        instance_id=pipeline_report.instance_id,
+        run_dir=pipeline_report.run_dir,
+        task_center_status=pipeline_report.task_center_status,
+        duration_s=pipeline_report.duration_s,
+        events=list(lifecycle.captured_events),
+        seen_event_types=list(mutable_state.seen_events),
+        hook_results=list(lifecycle.hook_results),
+        mutable_state_flags=dict(mutable_state.flags),
+        launches=list(squad.launches) if squad is not None else [],
+        tool_calls=list(squad.tool_calls) if squad is not None else [],
+        prompt_inspections=list(squad.prompt_inspections) if squad is not None else [],
+        sandbox_checks=list(squad.sandbox_checks) if squad is not None else [],
+        metrics=dict(pipeline_report.metrics),
+        graph_summary=graph_summary,
+        entry_prompt_sha256=hashlib.sha256(entry_prompt.encode("utf-8")).hexdigest(),
+        entry_prompt_length=len(entry_prompt),
+        requirement_ledger=list(getattr(scenario, "requirement_ledger", [])),
+        package_plan=list(getattr(scenario, "package_plan", [])),
+        matrix_plan=list(getattr(scenario, "matrix_plan", [])),
+        performance_report_task=pipeline_report.performance_report_task,
+    )
 
 
 __all__ = ["RunReport", "run_scenario"]
