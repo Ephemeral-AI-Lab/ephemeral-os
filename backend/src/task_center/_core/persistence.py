@@ -20,26 +20,26 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Protocol
 
-from task_center.attempt.state import (
-    Attempt,
-    AttemptFailReason,
-    AttemptStage,
-    AttemptStatus,
+from task_center.trial.state import (
+    Trial,
+    TrialFailReason,
+    TrialStage,
+    TrialStatus,
 )
-from task_center.episode.state import (
-    Episode,
-    EpisodeCreationReason,
-    EpisodeStatus,
+from task_center.iteration.state import (
+    Iteration,
+    IterationCreationReason,
+    IterationStatus,
 )
-from task_center.mission.state import Mission, MissionStatus
+from task_center.goal.state import Goal, GoalStatus
 
 # Row dicts returned by the task store. Always a serialized snapshot, never
 # a live ORM row.
 TaskRow = dict[str, Any]
 
 
-class MissionStoreProtocol(Protocol):
-    """Narrow contract for the mission persistence surface."""
+class GoalStoreProtocol(Protocol):
+    """Narrow contract for the goal persistence surface."""
 
     is_ready: bool
 
@@ -49,30 +49,30 @@ class MissionStoreProtocol(Protocol):
         task_center_run_id: str,
         requested_by_task_id: str,
         goal: str,
-    ) -> Mission: ...
+    ) -> Goal: ...
 
-    def get(self, goal_id: str) -> Mission | None: ...
+    def get(self, goal_id: str) -> Goal | None: ...
 
     def append_iteration_id(
         self, goal_id: str, iteration_id: str
-    ) -> Mission: ...
+    ) -> Goal: ...
 
     def set_status(
         self,
         goal_id: str,
         *,
-        status: MissionStatus,
+        status: GoalStatus,
         final_outcome: dict[str, Any] | None,
         closed_at: datetime | None,
-    ) -> Mission: ...
+    ) -> Goal: ...
 
     def list_for_executor_task(
         self, executor_task_id: str
-    ) -> list[Mission]: ...
+    ) -> list[Goal]: ...
 
 
-class EpisodeStoreProtocol(Protocol):
-    """Narrow contract for the episode persistence surface."""
+class IterationStoreProtocol(Protocol):
+    """Narrow contract for the iteration persistence surface."""
 
     is_ready: bool
 
@@ -81,65 +81,65 @@ class EpisodeStoreProtocol(Protocol):
         *,
         goal_id: str,
         sequence_no: int,
-        creation_reason: EpisodeCreationReason,
+        creation_reason: IterationCreationReason,
         goal: str,
-        attempt_budget: int,
-    ) -> Episode: ...
+        trial_budget: int,
+    ) -> Iteration: ...
 
-    def get(self, iteration_id: str) -> Episode | None: ...
+    def get(self, iteration_id: str) -> Iteration | None: ...
 
     def append_trial_id(
         self, iteration_id: str, trial_id: str
-    ) -> Episode: ...
+    ) -> Iteration: ...
 
     def set_status(
         self,
         iteration_id: str,
         *,
-        status: EpisodeStatus,
+        status: IterationStatus,
         closed_at: datetime | None,
-    ) -> Episode: ...
+    ) -> Iteration: ...
 
     def set_continuation_goal(
         self, iteration_id: str, *, continuation_goal: str | None
-    ) -> Episode: ...
+    ) -> Iteration: ...
 
     def close_succeeded(
         self,
         iteration_id: str,
         *,
-        closed_at: datetime,
-        final_trial_id: str,
-        continuation_goal: str | None,
-    ) -> Episode: ...
+        task_specification: str,
+        task_summary: str,
+        closed_at: datetime | None = None,
+    ) -> Iteration: ...
 
-    def list_for_mission(self, goal_id: str) -> list[Episode]: ...
+    def list_for_goal(self, goal_id: str) -> list[Iteration]: ...
 
 
-class AttemptStoreProtocol(Protocol):
-    """Narrow contract for the attempt persistence surface."""
+class TrialStoreProtocol(Protocol):
+    """Narrow contract for the trial persistence surface."""
 
     is_ready: bool
 
     def insert(
-        self, *, iteration_id: str, attempt_sequence_no: int
-    ) -> Attempt: ...
+        self, *, iteration_id: str, trial_sequence_no: int
+    ) -> Trial: ...
 
-    def get(self, trial_id: str) -> Attempt | None: ...
+    def get(self, trial_id: str) -> Trial | None: ...
 
-    def set_stage(self, trial_id: str, stage: AttemptStage) -> Attempt: ...
+    def set_stage(self, trial_id: str, stage: TrialStage) -> Trial: ...
 
     def set_planner_task_id(
         self, trial_id: str, planner_task_id: str
-    ) -> Attempt: ...
+    ) -> Trial: ...
 
     def set_generator_task_ids(
         self, trial_id: str, generator_task_ids: list[str]
-    ) -> Attempt: ...
+    ) -> Trial: ...
 
     def set_evaluator_task_id(
         self, trial_id: str, evaluator_task_id: str
-    ) -> Attempt: ...
+    ) -> Trial: ...
 
     def set_plan_contract(
         self,
@@ -148,18 +148,18 @@ class AttemptStoreProtocol(Protocol):
         task_specification: str,
         evaluation_criteria: list[str],
         continuation_goal: str | None,
-    ) -> Attempt: ...
+    ) -> Trial: ...
 
     def close(
         self,
         trial_id: str,
         *,
-        status: AttemptStatus,
-        fail_reason: AttemptFailReason | None,
+        status: TrialStatus,
+        fail_reason: TrialFailReason | None,
         closed_at: datetime,
-    ) -> Attempt: ...
+    ) -> Trial: ...
 
-    def list_for_episode(self, iteration_id: str) -> list[Attempt]: ...
+    def list_for_iteration(self, iteration_id: str) -> list[Trial]: ...
 
 
 class TaskStoreProtocol(Protocol):
@@ -232,9 +232,9 @@ class TaskStoreProtocol(Protocol):
 
 
 __all__ = [
-    "MissionStoreProtocol",
-    "EpisodeStoreProtocol",
-    "AttemptStoreProtocol",
+    "GoalStoreProtocol",
+    "IterationStoreProtocol",
+    "TrialStoreProtocol",
     "TaskStoreProtocol",
     "TaskRow",
 ]

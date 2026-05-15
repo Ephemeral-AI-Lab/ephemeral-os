@@ -1,4 +1,4 @@
-"""Dependency-boundary tests for the Phase 02 overlay modules."""
+"""Dependency-boundary tests for snapshot-overlay support modules."""
 
 from __future__ import annotations
 
@@ -43,20 +43,24 @@ def test_phase02_forbidden_overlay_modules_do_not_exist() -> None:
         assert not (execution_root / rel).exists()
 
 
-def test_phase02_runtime_bundle_contains_snapshot_runtime_without_ndjson() -> None:
+def test_runtime_bundle_contains_unified_snapshot_runtime_without_ndjson() -> None:
     raw = _runtime_bundle_bytes()
 
     with tarfile.open(fileobj=io.BytesIO(raw), mode="r:gz") as tar:
         names = set(tar.getnames())
 
-    assert "sandbox/execution/overlay_worker.py" in names
     assert "sandbox/execution/overlay_capture.py" in names
     assert "sandbox/execution/overlay_change.py" in names
     assert "sandbox/execution/overlay_result.py" in names
+    assert "sandbox/execution/overlay_request.py" in names
+    assert "sandbox/execution/orchestrator.py" in names
+    assert "sandbox/execution/workspace_capture.py" in names
+    assert "sandbox/execution/workspace_mount.py" in names
     assert "sandbox/daemon/handler/overlay.py" in names
-    assert "sandbox/execution/overlay_mounts.py" in names
-    assert "sandbox/execution/overlay_runner.py" in names
-    assert "sandbox/execution/overlay_pipeline.py" in names
+    assert "sandbox/execution/overlay_worker.py" not in names
+    assert "sandbox/execution/overlay_mounts.py" not in names
+    assert "sandbox/execution/overlay_runner.py" not in names
+    assert "sandbox/execution/overlay_pipeline.py" not in names
     assert "sandbox/layer_stack/manifest.py" in names
     assert "sandbox/overlay/cli.py" not in names
     assert "sandbox/overlay/invoker.py" not in names

@@ -126,6 +126,9 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
     recorder.start()
 
     runner = config.runner_factory(ctx)
+    bind_audit_recorder = getattr(runner, "bind_audit_recorder", None)
+    if callable(bind_audit_recorder):
+        bind_audit_recorder(recorder)
     bridge_factory = config.bridge_factory or _default_bridge
     bridge = bridge_factory()
     bridge_run_id = ""

@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 class CommandExecPolicy:
     """Tenant/test-injectable command execution policy."""
 
+    host_env_keys: frozenset[str] | None = None
     restricted_env_keys: frozenset[str] = field(
         default_factory=lambda: frozenset(
             {
@@ -43,11 +44,20 @@ class CommandExecPolicy:
     )
 
     def command_environment(self, extra: Mapping[str, str]) -> dict[str, str]:
+        host_env = (
+            dict(os.environ)
+            if self.host_env_keys is None
+            else {
+                key: os.environ[key]
+                for key in self.host_env_keys
+                if key in os.environ
+            }
+        )
         safe_extra = {
             k: v for k, v in extra.items() if k not in self.restricted_env_keys
         }
         return {
-            **os.environ,
+            **host_env,
             **safe_extra,
             **{str(k): str(v) for k, v in self.command_env_defaults.items()},
         }
@@ -60,6 +70,11 @@ class CommandExecPolicy:
 
     def to_payload(self) -> dict[str, object]:
         return {
+            "host_env_keys": (
+                sorted(self.host_env_keys)
+                if self.host_env_keys is not None
+                else None
+            ),
             "restricted_env_keys": sorted(self.restricted_env_keys),
             "workspace_env_keys": sorted(self.workspace_env_keys),
             "forbidden_overlay_path_chars": list(self.forbidden_overlay_path_chars),
@@ -87,7 +102,14 @@ class CommandExecPolicy:
             if isinstance(forbidden_raw, list)
             else defaults.forbidden_overlay_path_chars
         )
+        host_env_keys_raw = payload.get("host_env_keys")
+        host_env_keys = (
+            frozenset(str(item) for item in host_env_keys_raw)
+            if isinstance(host_env_keys_raw, list)
+            else None
+        )
         return cls(
+            host_env_keys=host_env_keys,
             restricted_env_keys=_strings(
                 "restricted_env_keys",
                 tuple(defaults.restricted_env_keys),

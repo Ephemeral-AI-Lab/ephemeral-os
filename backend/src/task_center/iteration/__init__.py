@@ -1,62 +1,62 @@
-"""Episode package facade.
+"""Iteration package facade.
 
-Episode DTOs/enums live in :mod:`task_center.episode.state`; lifecycle
-coordination lives in :mod:`task_center.episode.manager`.
+Iteration DTOs/enums live in :mod:`task_center.iteration.state`; lifecycle
+coordination lives in :mod:`task_center.iteration.manager`.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from task_center.episode.state import (
-    AttemptedPlanEntry,
-    AttemptPlanFailed,
+from task_center.iteration.state import (
+    PriorTrialEntry,
+    TrialPlanFailed,
     ClosureOutcome,
-    Episode,
-    EpisodeClosureReport,
-    EpisodeCreationReason,
-    EpisodeStatus,
+    Iteration,
+    IterationClosureReport,
+    IterationCreationReason,
+    IterationStatus,
     SuccessContinue,
     TerminalSuccess,
 )
 
 if TYPE_CHECKING:
-    from task_center.episode.manager import (
+    from task_center.iteration.manager import (
         AttemptClosedCallback,
         ClosureReportSink,
-        EpisodeManager,
-        EpisodeManagerRegistry,
+        IterationManager,
+        IterationManagerRegistry,
         OrchestratorFactory,
     )
 
 _MANAGER_EXPORTS: dict[str, tuple[str, str]] = {
     "AttemptClosedCallback": (
-        "task_center.episode.manager",
+        "task_center.iteration.manager",
         "AttemptClosedCallback",
     ),
     "ClosureReportSink": (
-        "task_center.episode.manager",
+        "task_center.iteration.manager",
         "ClosureReportSink",
     ),
-    "EpisodeManager": ("task_center.episode.manager", "EpisodeManager"),
-    "EpisodeManagerRegistry": (
-        "task_center.episode.manager",
-        "EpisodeManagerRegistry",
+    "IterationManager": ("task_center.iteration.manager", "IterationManager"),
+    "IterationManagerRegistry": (
+        "task_center.iteration.manager",
+        "IterationManagerRegistry",
     ),
     "OrchestratorFactory": (
-        "task_center.episode.manager",
+        "task_center.iteration.manager",
         "OrchestratorFactory",
     ),
 }
 
 _STATE_EXPORTS = [
-    "AttemptPlanFailed",
-    "AttemptedPlanEntry",
+    "TrialPlanFailed",
+    "PriorTrialEntry",
     "ClosureOutcome",
-    "Episode",
-    "EpisodeClosureReport",
-    "EpisodeCreationReason",
-    "EpisodeStatus",
+    "Iteration",
+    "IterationClosureReport",
+    "IterationCreationReason",
+    "IterationStatus",
     "SuccessContinue",
     "TerminalSuccess",
 ]
@@ -66,7 +66,7 @@ def __getattr__(name: str) -> object:
     target = _MANAGER_EXPORTS.get(name)
     if target is None:
         raise AttributeError(
-            f"module 'task_center.episode' has no attribute {name!r}"
+            f"module 'task_center.iteration' has no attribute {name!r}"
         )
     module_path, attr = target
     import importlib
@@ -79,16 +79,16 @@ def __getattr__(name: str) -> object:
 
 __all__ = [
     "AttemptClosedCallback",
-    "AttemptPlanFailed",
-    "AttemptedPlanEntry",
+    "TrialPlanFailed",
+    "PriorTrialEntry",
     "ClosureOutcome",
     "ClosureReportSink",
-    "Episode",
-    "EpisodeClosureReport",
-    "EpisodeCreationReason",
-    "EpisodeManager",
-    "EpisodeManagerRegistry",
-    "EpisodeStatus",
+    "Iteration",
+    "IterationClosureReport",
+    "IterationCreationReason",
+    "IterationManager",
+    "IterationManagerRegistry",
+    "IterationStatus",
     "OrchestratorFactory",
     "SuccessContinue",
     "TerminalSuccess",

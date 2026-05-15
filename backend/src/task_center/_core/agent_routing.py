@@ -23,7 +23,7 @@ from task_center.context_engine.packet import (
     ContextPriority,
 )
 from task_center.context_engine.scope import ContextScope
-from task_center.mission.handler import nested_mission_depth
+from task_center.goal.handler import nested_mission_depth
 
 
 # ---------------------------------------------------------------------------

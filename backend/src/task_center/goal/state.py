@@ -1,4 +1,4 @@
-"""Mission domain DTO and enums."""
+"""Goal domain DTO and enums."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from enum import StrEnum
 from typing import Any, Literal
 
 
-class MissionStatus(StrEnum):
+class GoalStatus(StrEnum):
     OPEN = "open"
     SUCCEEDED = "succeeded"
     FAILED = "failed"
@@ -16,15 +16,15 @@ class MissionStatus(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
-class Mission:
-    """Immutable view of a persisted Mission."""
+class Goal:
+    """Immutable view of a persisted Goal."""
 
     id: str
     task_center_run_id: str
     requested_by_task_id: str
     goal: str
-    status: MissionStatus
-    episode_ids: tuple[str, ...]
+    status: GoalStatus
+    iteration_ids: tuple[str, ...]
     final_outcome: dict[str, Any] | None
     created_at: datetime
     updated_at: datetime
@@ -32,28 +32,28 @@ class Mission:
 
     @property
     def is_open(self) -> bool:
-        return self.status == MissionStatus.OPEN
+        return self.status == GoalStatus.OPEN
 
 
 @dataclass(frozen=True, slots=True)
-class MissionClosureReport:
-    """Final report attached to ``requested_by_task_id`` when the mission closes.
+class GoalClosureReport:
+    """Final report attached to ``requested_by_task_id`` when the goal closes.
 
-    ``final_attempt_id`` is normally the passing or final failed attempt.
+    ``final_trial_id`` is normally the passing or final failed trial.
     It remains nullable for defensive compensation paths.
     """
 
-    mission_id: str
+    goal_id: str
     requested_by_task_id: str
     outcome: Literal["success", "failed"]
-    final_episode_id: str
-    final_attempt_id: str | None
+    final_iteration_id: str
+    final_trial_id: str | None
 
     def to_final_outcome(self) -> dict[str, str | None]:
         return {
             "outcome": self.outcome,
-            "final_episode_id": self.final_episode_id,
-            "final_attempt_id": self.final_attempt_id,
+            "final_iteration_id": self.final_iteration_id,
+            "final_trial_id": self.final_trial_id,
         }
 
 
@@ -64,4 +64,4 @@ CloseReportDeliveryStatus = Literal["delivered", "already_delivered"]
 class CloseReportDeliveryResult:
     status: CloseReportDeliveryStatus
     requested_by_task_id: str
-    parent_attempt_id: str | None
+    parent_trial_id: str | None

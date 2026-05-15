@@ -12,15 +12,15 @@ from typing import Any
 
 from audit.base import AuditEvent, AuditNode, AuditSink, NoopAuditSink
 
-from task_center.attempt.state import (
-    Attempt,
-    AttemptFailReason,
-    AttemptStage,
-    AttemptStatus,
+from task_center.trial.state import (
+    Trial,
+    TrialFailReason,
+    TrialStage,
+    TrialStatus,
 )
-from task_center.episode.state import Episode, EpisodeStatus
+from task_center.iteration.state import Iteration, IterationStatus
 from task_center._core.types import TaskCenterInvariantViolation
-from task_center.mission.state import Mission
+from task_center.goal.state import Goal
 from task_center.task_state import TaskCenterTaskRole
 
 
@@ -150,30 +150,30 @@ def _text(value: Any) -> str | None:
 # ---- Domain invariants -----------------------------------------------------
 
 
-def assert_goal_open(goal: Mission) -> None:
+def assert_goal_open(goal: Goal) -> None:
     if not goal.is_open:
         raise TaskCenterInvariantViolation(
             f"Goal {goal.id!r} is not open (status={goal.status})"
         )
 
 
-def assert_iteration_id_unique_in_goal(goal: Mission, iteration_id: str) -> None:
-    if iteration_id in goal.episode_ids:
+def assert_iteration_id_unique_in_goal(goal: Goal, iteration_id: str) -> None:
+    if iteration_id in goal.iteration_ids:
         raise TaskCenterInvariantViolation(
             f"Iteration {iteration_id!r} already present in Goal {goal.id!r} iteration list"
         )
 
 
-def assert_iteration_sequence_contiguous(goal: Mission, new_sequence_no: int) -> None:
-    expected = len(goal.episode_ids) + 1
+def assert_iteration_sequence_contiguous(goal: Goal, new_sequence_no: int) -> None:
+    expected = len(goal.iteration_ids) + 1
     if new_sequence_no != expected:
         raise TaskCenterInvariantViolation(
             f"Iteration sequence_no must be contiguous: expected {expected}, got {new_sequence_no}"
         )
 
 
-def assert_continuation_iteration_predecessor(previous: Episode) -> None:
-    if previous.status != EpisodeStatus.SUCCEEDED:
+def assert_continuation_iteration_predecessor(previous: Iteration) -> None:
+    if previous.status != IterationStatus.SUCCEEDED:
         raise TaskCenterInvariantViolation(
             f"Continuation requires predecessor iteration {previous.id!r} to be SUCCEEDED, "
             f"not {previous.status}"
@@ -185,31 +185,31 @@ def assert_continuation_iteration_predecessor(previous: Episode) -> None:
         )
 
 
-def assert_iteration_open(iteration: Episode) -> None:
+def assert_iteration_open(iteration: Iteration) -> None:
     if not iteration.is_open:
         raise TaskCenterInvariantViolation(
             f"Iteration {iteration.id!r} is not open (status={iteration.status})"
         )
 
 
-def assert_iteration_has_budget(iteration: Episode) -> None:
+def assert_iteration_has_budget(iteration: Iteration) -> None:
     if not iteration.has_budget_remaining:
         raise TaskCenterInvariantViolation(
             f"Iteration {iteration.id!r} trial budget exhausted "
-            f"({iteration.attempt_count}/{iteration.attempt_budget})"
+            f"({iteration.trial_count}/{iteration.trial_budget})"
         )
 
 
-def assert_trial_belongs_to_iteration(trial: Attempt, iteration: Episode) -> None:
-    if trial.episode_id != iteration.id:
+def assert_trial_belongs_to_iteration(trial: Trial, iteration: Iteration) -> None:
+    if trial.iteration_id != iteration.id:
         raise TaskCenterInvariantViolation(
-            f"Trial {trial.id!r} (iteration {trial.episode_id!r}) does not "
+            f"Trial {trial.id!r} (iteration {trial.iteration_id!r}) does not "
             f"belong to Iteration {iteration.id!r}"
         )
 
 
-def assert_trial_sequence_contiguous(iteration: Episode, new_sequence_no: int) -> None:
-    expected = len(iteration.attempt_ids) + 1
+def assert_trial_sequence_contiguous(iteration: Iteration, new_sequence_no: int) -> None:
+    expected = len(iteration.trial_ids) + 1
     if new_sequence_no != expected:
         raise TaskCenterInvariantViolation(
             f"Trial trial_sequence_no must be contiguous: expected {expected}, "
@@ -217,14 +217,14 @@ def assert_trial_sequence_contiguous(iteration: Episode, new_sequence_no: int) -
         )
 
 
-def assert_fail_reason_present_on_failure(trial: Attempt) -> None:
-    if trial.status == AttemptStatus.FAILED and trial.fail_reason is None:
+def assert_fail_reason_present_on_failure(trial: Trial) -> None:
+    if trial.status == TrialStatus.FAILED and trial.fail_reason is None:
         raise TaskCenterInvariantViolation(
             f"Trial {trial.id!r} closed FAILED with no fail_reason"
         )
 
 
-def assert_trial_stage(trial: Attempt, expected: AttemptStage) -> None:
+def assert_trial_stage(trial: Trial, expected: TrialStage) -> None:
     if trial.stage != expected:
         raise TaskCenterInvariantViolation(
             f"Trial {trial.id!r} expected stage {expected.value!r}, "
@@ -232,36 +232,36 @@ def assert_trial_stage(trial: Attempt, expected: AttemptStage) -> None:
         )
 
 
-def assert_trial_not_closed(trial: Attempt) -> None:
+def assert_trial_not_closed(trial: Trial) -> None:
     if trial.is_closed:
         raise TaskCenterInvariantViolation(f"Trial {trial.id!r} is already closed")
 
 
 def assert_valid_trial_close(
-    *, status: AttemptStatus, fail_reason: AttemptFailReason | None
+    *, status: TrialStatus, fail_reason: TrialFailReason | None
 ) -> None:
-    if status == AttemptStatus.FAILED and fail_reason is None:
+    if status == TrialStatus.FAILED and fail_reason is None:
         raise TaskCenterInvariantViolation("Failed trial close requires fail_reason")
-    if status == AttemptStatus.PASSED and fail_reason is not None:
+    if status == TrialStatus.PASSED and fail_reason is not None:
         raise TaskCenterInvariantViolation("Passed trial close cannot have fail_reason")
-    if status == AttemptStatus.RUNNING:
+    if status == TrialStatus.RUNNING:
         raise TaskCenterInvariantViolation("Cannot close trial with running status")
 
 
-def assert_task_belongs_to_trial(task: dict[str, Any], trial: Attempt) -> None:
+def assert_task_belongs_to_trial(task: dict[str, Any], trial: Trial) -> None:
     if task.get("task_center_attempt_id") != trial.id:
         raise TaskCenterInvariantViolation(
             f"Task {task.get('id')!r} does not belong to Trial {trial.id!r}"
         )
 
 
-def assert_generator_task_for_submission(task: dict[str, Any], trial: Attempt) -> None:
+def assert_generator_task_for_submission(task: dict[str, Any], trial: Trial) -> None:
     assert_task_belongs_to_trial(task, trial)
     if task.get("role") != TaskCenterTaskRole.GENERATOR.value:
         raise TaskCenterInvariantViolation(f"Task {task.get('id')!r} is not a generator task")
 
 
-def assert_evaluator_task_for_submission(task: dict[str, Any], trial: Attempt) -> None:
+def assert_evaluator_task_for_submission(task: dict[str, Any], trial: Trial) -> None:
     assert_task_belongs_to_trial(task, trial)
     if task.get("role") != TaskCenterTaskRole.EVALUATOR.value:
         raise TaskCenterInvariantViolation(f"Task {task.get('id')!r} is not an evaluator task")

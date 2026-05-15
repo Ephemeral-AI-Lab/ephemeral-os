@@ -1,4 +1,4 @@
-"""AttemptOrchestrator state machine."""
+"""TrialOrchestrator state machine."""
 
 from __future__ import annotations
 
@@ -7,17 +7,17 @@ from collections.abc import Callable
 from dataclasses import asdict
 from datetime import UTC, datetime
 
-from task_center.mission.state import MissionClosureReport
+from task_center.goal.state import GoalClosureReport
 from task_center._core.types import TaskCenterInvariantViolation
-from task_center.attempt.dispatcher import AttemptDispatcher
-from task_center.attempt.state import (
-    Attempt,
-    AttemptFailReason,
-    AttemptStage,
-    AttemptStatus,
+from task_center.trial.dispatcher import AttemptDispatcher
+from task_center.trial.state import (
+    Trial,
+    TrialFailReason,
+    TrialStage,
+    TrialStatus,
 )
-from task_center.attempt.runtime import AttemptDeps
-from task_center.attempt.launch import LaunchBuilder
+from task_center.trial.runtime import AttemptDeps
+from task_center.trial.launch import LaunchBuilder
 from task_center._core.types import generator_task_id, planner_task_id
 from task_center.task_state import (
     SpawnReason,
@@ -29,29 +29,29 @@ from task_center.task_state import (
     PlannerFailureSubmission,
     PlannerSubmission,
 )
-from task_center.attempt.generator_dag import (
+from task_center.trial.generator_dag import (
     dependency_task_ids,
     ordered_generator_tasks,
 )
 from task_center._core.infra import (
     assert_evaluator_task_for_submission,
     assert_generator_task_for_submission,
-    assert_attempt_not_closed,
-    assert_attempt_stage,
-    assert_task_belongs_to_attempt,
-    assert_valid_attempt_close,
+    assert_trial_not_closed,
+    assert_trial_stage,
+    assert_task_belongs_to_trial,
+    assert_valid_trial_close,
 )
 
 logger = logging.getLogger(__name__)
 
 
-class AttemptOrchestrator:
-    """Runs one planner -> generator DAG -> evaluator harness attempt."""
+class TrialOrchestrator:
+    """Runs one planner -> generator DAG -> evaluator harness trial."""
 
     def __init__(
         self,
         *,
-        attempt: Attempt,
+        attempt: Trial,
         on_attempt_closed: Callable[[str], None],
         runtime: AttemptDeps,
     ) -> None:
@@ -66,19 +66,19 @@ class AttemptOrchestrator:
         )
 
     @property
-    def attempt_id(self) -> str:
+    def trial_id(self) -> str:
         return self._attempt.id
 
     def start(self) -> None:
         runtime = self._runtime
-        attempt = self._assert_stage(AttemptStage.PLAN)
-        if attempt.status != AttemptStatus.RUNNING:
+        attempt = self._assert_stage(TrialStage.PLAN)
+        if attempt.status != TrialStatus.RUNNING:
             raise TaskCenterInvariantViolation(
-                f"Attempt {attempt.id!r} is not running"
+                f"Trial {attempt.id!r} is not running"
             )
         if attempt.planner_task_id is not None:
             raise TaskCenterInvariantViolation(
-                f"Attempt {attempt.id!r} already has a planner task"
+                f"Trial {attempt.id!r} already has a planner task"
             )
 
         task_id = planner_task_id(attempt.id)
@@ -98,7 +98,7 @@ class AttemptOrchestrator:
                 needs=[],
                 task_center_attempt_id=attempt.id,
                 context_packet_id=launch.context_packet_id,
-                spawn_reason=SpawnReason.ATTEMPT_PLANNER.value,
+                spawn_reason=SpawnReason.TRIAL_PLANNER.value,
             )
             runtime.attempt_store.set_planner_task_id(attempt.id, task_id)
             runtime.agent_launcher.launch(launch)
@@ -124,7 +124,7 @@ class AttemptOrchestrator:
         self._persist_plan_contract(submission)
         generator_ids = self._persist_generator_tasks(submission.tasks)
         runtime.attempt_store.set_generator_task_ids(attempt.id, list(generator_ids))
-        runtime.attempt_store.set_stage(attempt.id, AttemptStage.GENERATE)
+        runtime.attempt_store.set_stage(attempt.id, TrialStage.GENERATE)
         self._dispatcher.dispatch_ready_work()
 
     def apply_planner_failure(
@@ -140,7 +140,7 @@ class AttemptOrchestrator:
                 "summary": submission.summary,
             },
         )
-        self._close_attempt(AttemptStatus.FAILED, AttemptFailReason.PLANNER_FAILED)
+        self._close_attempt(TrialStatus.FAILED, TrialFailReason.PLANNER_FAILED)
 
     def apply_generator_submission(
         self, submission: GeneratorSubmission
@@ -158,12 +158,12 @@ class AttemptOrchestrator:
         self._mark_evaluator(submission)
         self._dispatcher.dispatch_ready_work()
 
-    def apply_mission_closure_report(self, report: MissionClosureReport) -> None:
-        """Resume a generator task waiting on a delegated mission.
+    def apply_goal_closure_report(self, report: GoalClosureReport) -> None:
+        """Resume a generator task waiting on a delegated goal.
 
         Idempotent: if the parent has already been resumed (status moved off
         ``waiting_mission`` by an earlier delivery), return silently
-        without re-asserting attempt stage or appending another summary.
+        without re-asserting trial stage or appending another summary.
         """
         runtime = self._runtime
         task = runtime.task_store.get_task(report.requested_by_task_id)
@@ -175,18 +175,18 @@ class AttemptOrchestrator:
             # Already delivered; no further action.
             return
 
-        attempt = self._assert_stage(AttemptStage.GENERATE)
+        attempt = self._assert_stage(TrialStage.GENERATE)
         assert_generator_task_for_submission(task, attempt)
 
         if report.outcome == "success":
             status = TaskCenterTaskStatus.DONE
             summary = (
-                f"Delegated mission {report.mission_id} succeeded."
+                f"Delegated goal {report.goal_id} succeeded."
             )
         else:
             status = TaskCenterTaskStatus.FAILED
             summary = (
-                f"Delegated mission {report.mission_id} failed."
+                f"Delegated goal {report.goal_id} failed."
             )
 
         updated = runtime.task_store.set_task_status_if_current(
@@ -197,8 +197,8 @@ class AttemptOrchestrator:
                 "outcome": report.outcome,
                 "summary": summary,
                 "payload": {
-                    "mission_closure_report": asdict(report),
-                    "submission_kind": "mission_closure_report",
+                    "goal_closure_report": asdict(report),
+                    "submission_kind": "goal_closure_report",
                 },
             },
         )
@@ -209,19 +209,19 @@ class AttemptOrchestrator:
             self._dispatcher.block_failed_descendants(report.requested_by_task_id)
         self._dispatcher.dispatch_ready_work()
 
-    def _validate_planner_submission(self, planner_task_id: str) -> Attempt:
-        attempt = self._assert_stage(AttemptStage.PLAN)
+    def _validate_planner_submission(self, planner_task_id: str) -> Trial:
+        attempt = self._assert_stage(TrialStage.PLAN)
         if attempt.planner_task_id != planner_task_id:
             raise TaskCenterInvariantViolation(
                 f"Planner submission task {planner_task_id!r} does not "
-                f"match attempt planner {attempt.planner_task_id!r}"
+                f"match trial planner {attempt.planner_task_id!r}"
             )
         planner_task = self._runtime.task_store.get_task(planner_task_id)
         if planner_task is None:
             raise TaskCenterInvariantViolation(
                 f"Planner task {planner_task_id!r} not found"
             )
-        assert_task_belongs_to_attempt(planner_task, attempt)
+        assert_task_belongs_to_trial(planner_task, attempt)
         if planner_task["role"] != TaskCenterTaskRole.PLANNER.value:
             raise TaskCenterInvariantViolation(
                 f"Task {planner_task_id!r} is not a planner task"
@@ -260,13 +260,13 @@ class AttemptOrchestrator:
                 summaries=[],
                 needs=list(needs),
                 task_center_attempt_id=attempt.id,
-                spawn_reason=SpawnReason.ATTEMPT_GENERATOR.value,
+                spawn_reason=SpawnReason.TRIAL_GENERATOR.value,
             )
             task_ids.append(task_id)
         return tuple(task_ids)
 
     def _mark_generator(self, submission: GeneratorSubmission) -> None:
-        attempt = self._assert_stage(AttemptStage.GENERATE)
+        attempt = self._assert_stage(TrialStage.GENERATE)
         task = self._runtime.task_store.get_task(submission.task_id)
         if task is None:
             raise TaskCenterInvariantViolation(
@@ -280,11 +280,11 @@ class AttemptOrchestrator:
         )
 
     def _mark_evaluator(self, submission: EvaluatorSubmission) -> None:
-        attempt = self._assert_stage(AttemptStage.EVALUATE)
+        attempt = self._assert_stage(TrialStage.EVALUATE)
         if attempt.evaluator_task_id != submission.task_id:
             raise TaskCenterInvariantViolation(
                 f"Evaluator submission task {submission.task_id!r} does not "
-                f"match attempt evaluator {attempt.evaluator_task_id!r}"
+                f"match trial evaluator {attempt.evaluator_task_id!r}"
             )
         task = self._runtime.task_store.get_task(submission.task_id)
         if task is None:
@@ -319,15 +319,15 @@ class AttemptOrchestrator:
 
     def _close_attempt(
         self,
-        status: AttemptStatus,
-        fail_reason: AttemptFailReason | None,
+        status: TrialStatus,
+        fail_reason: TrialFailReason | None,
     ) -> None:
-        assert_valid_attempt_close(status=status, fail_reason=fail_reason)
+        assert_valid_trial_close(status=status, fail_reason=fail_reason)
         attempt = self._fresh_attempt()
-        assert_attempt_not_closed(attempt)
-        if attempt.status != AttemptStatus.RUNNING:
+        assert_trial_not_closed(attempt)
+        if attempt.status != TrialStatus.RUNNING:
             raise TaskCenterInvariantViolation(
-                f"Attempt {attempt.id!r} is not running"
+                f"Trial {attempt.id!r} is not running"
             )
         self._runtime.attempt_store.close(
             attempt.id,
@@ -339,9 +339,9 @@ class AttemptOrchestrator:
         self._on_attempt_closed(attempt.id)
 
     def _mark_startup_failed(self, *, planner_task_id: str) -> None:
-        # Owns planner-task cleanup + registry deregistration. EpisodeManager's
+        # Owns planner-task cleanup + registry deregistration. IterationManager's
         # _close_attempt_after_startup_failure (its catch in
-        # _start_orchestrator_if_configured) owns the attempt-close in both
+        # _start_orchestrator_if_configured) owns the trial-close in both
         # paths — factory raises and start() raises.
         runtime = self._runtime
         runtime.orchestrator_registry.deregister(self._attempt.id)
@@ -351,34 +351,34 @@ class AttemptOrchestrator:
                 expected_status=TaskCenterTaskStatus.RUNNING.value,
                 status=TaskCenterTaskStatus.FAILED.value,
                 summary={
-                    "fail_reason": AttemptFailReason.STARTUP_FAILED.value,
+                    "fail_reason": TrialFailReason.STARTUP_FAILED.value,
                 },
             )
         except LookupError:
             pass
         except Exception:
             logger.exception(
-                "AttemptOrchestrator: startup task cleanup failed",
+                "TrialOrchestrator: startup task cleanup failed",
             )
 
-    def _fresh_attempt(self) -> Attempt:
+    def _fresh_attempt(self) -> Trial:
         attempt = self._runtime.attempt_store.get(self._attempt.id)
         if attempt is None:
             raise TaskCenterInvariantViolation(
-                f"Attempt {self._attempt.id!r} not found"
+                f"Trial {self._attempt.id!r} not found"
             )
         self._attempt = attempt
         return attempt
 
-    def _assert_stage(self, expected: AttemptStage) -> Attempt:
+    def _assert_stage(self, expected: TrialStage) -> Trial:
         attempt = self._fresh_attempt()
-        assert_attempt_not_closed(attempt)
-        assert_attempt_stage(attempt, expected)
+        assert_trial_not_closed(attempt)
+        assert_trial_stage(attempt, expected)
         return attempt
 
     def _assert_submission_attempt(self, attempt_id: str) -> None:
         if attempt_id != self._attempt.id:
             raise TaskCenterInvariantViolation(
                 f"Submission attempt {attempt_id!r} does not match orchestrator "
-                f"attempt {self._attempt.id!r}"
+                f"trial {self._attempt.id!r}"
             )

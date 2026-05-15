@@ -81,6 +81,7 @@ class WorkspaceCapture:
     changes: Sequence[OverlayPathChange]
     snapshot_version: int
     mount_mode: MountMode
+    snapshot_manifest: SnapshotManifest | None = None
 
     def __post_init__(self) -> None:
         self.mount_mode = MountMode(self.mount_mode)
@@ -93,6 +94,8 @@ class CommandExecResult:
     exit_code: int
     stdout: str
     stderr: str
+    stdout_ref: str
+    stderr_ref: str
     workspace_capture: WorkspaceCapture
     occ_result: ChangesetResult
     timings: dict[str, float] = field(default_factory=dict)

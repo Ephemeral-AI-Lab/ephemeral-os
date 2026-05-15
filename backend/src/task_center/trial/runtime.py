@@ -1,4 +1,4 @@
-"""Runtime + lifecycle dependency seams for harness attempt orchestration.
+"""Runtime + lifecycle dependency seams for harness trial orchestration.
 
 Phase 7e merger: bundles the former ``attempt/lifecycle.py``
 (``LifecycleTarget`` protocol + ``GeneratorTaskLifecycle``) into this module
@@ -14,27 +14,27 @@ from typing import TYPE_CHECKING, Protocol
 
 from audit.base import AuditSink, NoopAuditSink
 
-from task_center.attempt.state import Attempt
+from task_center.trial.state import Trial
 from task_center._core.types import TaskCenterLifecycleConfig
-from task_center.episode import EpisodeManagerRegistry
+from task_center.iteration import IterationManagerRegistry
 from task_center._core.types import TaskCenterInvariantViolation
 from task_center._core.persistence import (
-    AttemptStoreProtocol,
-    EpisodeStoreProtocol,
-    MissionStoreProtocol,
+    TrialStoreProtocol,
+    IterationStoreProtocol,
+    GoalStoreProtocol,
     TaskStoreProtocol,
 )
-from task_center._core.types import RegisteredAttemptOrchestrator
+from task_center._core.types import RegisteredTrialOrchestrator
 from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 
 if TYPE_CHECKING:
-    from task_center.attempt.launch import EphemeralAttemptAgentLauncher
-    from task_center.attempt.orchestrator_registry import (
-        AttemptOrchestratorRegistry,
+    from task_center.trial.launch import EphemeralAttemptAgentLauncher
+    from task_center.trial.orchestrator_registry import (
+        TrialOrchestratorRegistry,
     )
     from task_center.context_engine.core import ContextComposer
     from task_center.entry import EntryTaskController
-    from task_center.mission.state import MissionClosureReport
+    from task_center.goal.state import GoalClosureReport
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,13 +52,13 @@ class AgentLaunch:
 
 @dataclass(frozen=True, slots=True)
 class AttemptDeps:
-    mission_store: MissionStoreProtocol
-    episode_store: EpisodeStoreProtocol
-    attempt_store: AttemptStoreProtocol
+    mission_store: GoalStoreProtocol
+    episode_store: IterationStoreProtocol
+    attempt_store: TrialStoreProtocol
     task_store: TaskStoreProtocol
     agent_launcher: EphemeralAttemptAgentLauncher
-    orchestrator_registry: AttemptOrchestratorRegistry
-    manager_registry: EpisodeManagerRegistry | None = None
+    orchestrator_registry: TrialOrchestratorRegistry
+    manager_registry: IterationManagerRegistry | None = None
     lifecycle_config: TaskCenterLifecycleConfig = field(default_factory=TaskCenterLifecycleConfig)
     # When set, orchestrator + dispatcher route launches through the composer
     # to obtain a rendered rendered_prompt + selected agent definition.
@@ -71,20 +71,20 @@ class AttemptDeps:
     entry_task_controller: EntryTaskController | None = None
     audit_sink: AuditSink = field(default_factory=NoopAuditSink)
 
-    def run_id_for_attempt(self, attempt: Attempt) -> str:
-        episode = self.episode_store.get(attempt.episode_id)
-        if episode is None:
+    def run_id_for_attempt(self, attempt: Trial) -> str:
+        iteration = self.episode_store.get(attempt.iteration_id)
+        if iteration is None:
             raise TaskCenterInvariantViolation(
-                f"Episode {attempt.episode_id!r} not found for "
-                f"Attempt {attempt.id!r}"
+                f"Iteration {attempt.iteration_id!r} not found for "
+                f"Trial {attempt.id!r}"
             )
-        mission = self.mission_store.get(episode.mission_id)
-        if mission is None:
+        goal = self.mission_store.get(iteration.goal_id)
+        if goal is None:
             raise TaskCenterInvariantViolation(
-                f"Mission {episode.mission_id!r} not "
-                f"found for Episode {episode.id!r}"
+                f"Goal {iteration.goal_id!r} not "
+                f"found for Iteration {iteration.id!r}"
             )
-        return mission.task_center_run_id
+        return goal.task_center_run_id
 
     def require_composer(self) -> ContextComposer:
         if self.composer is None:
@@ -122,7 +122,7 @@ class AttemptDeps:
 
 
 class LifecycleTarget(Protocol):
-    """Lifecycle owner for one parent task waiting on a delegated mission.
+    """Lifecycle owner for one parent task waiting on a delegated goal.
 
     Implementations: :class:`EntryTaskController` (entry mode), and
     :class:`GeneratorTaskLifecycle` (attempt mode).
@@ -130,8 +130,8 @@ class LifecycleTarget(Protocol):
 
     task_id: str
 
-    def apply_mission_closure_report(
-        self, report: MissionClosureReport
+    def apply_goal_closure_report(
+        self, report: GoalClosureReport
     ) -> None: ...
 
     def mark_waiting_mission(
@@ -148,24 +148,24 @@ class LifecycleTarget(Protocol):
 
 @dataclass(frozen=True, slots=True)
 class GeneratorTaskLifecycle:
-    """:class:`LifecycleTarget` for a generator task inside an attempt."""
+    """:class:`LifecycleTarget` for a generator task inside a trial."""
 
     task_id: str
     attempt_id: str
     task_store: TaskStoreProtocol
-    orchestrator_lookup: Callable[[str], RegisteredAttemptOrchestrator | None]
+    orchestrator_lookup: Callable[[str], RegisteredTrialOrchestrator | None]
 
-    def apply_mission_closure_report(
-        self, report: MissionClosureReport
+    def apply_goal_closure_report(
+        self, report: GoalClosureReport
     ) -> None:
         orchestrator = self.orchestrator_lookup(self.attempt_id)
         if orchestrator is None:
             raise TaskCenterInvariantViolation(
-                f"Parent AttemptOrchestrator for attempt {self.attempt_id!r} is "
+                f"Parent TrialOrchestrator for trial {self.attempt_id!r} is "
                 "not registered; close-report delivery requires an active "
                 "parent orchestrator."
             )
-        orchestrator.apply_mission_closure_report(report)
+        orchestrator.apply_goal_closure_report(report)
 
     def mark_waiting_mission(
         self,

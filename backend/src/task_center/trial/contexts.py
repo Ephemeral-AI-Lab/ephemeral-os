@@ -11,22 +11,22 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol
 
 from task_center._core.persistence import (
-    EpisodeStoreProtocol,
-    MissionStoreProtocol,
+    GoalStoreProtocol,
+    IterationStoreProtocol,
 )
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
-    from task_center.attempt.state import Attempt
+    from task_center.trial.state import Trial
     from task_center.context_engine.core import ContextComposer
 
 
 class LaunchCtx(Protocol):
     """Dependencies for :class:`LaunchBuilder` — composer access + stores."""
 
-    mission_store: MissionStoreProtocol
-    episode_store: EpisodeStoreProtocol
+    mission_store: GoalStoreProtocol
+    episode_store: IterationStoreProtocol
 
-    def run_id_for_attempt(self, attempt: Attempt) -> str: ...
+    def run_id_for_attempt(self, attempt: Trial) -> str: ...
 
     def require_composer(self) -> ContextComposer: ...
 

@@ -1,15 +1,15 @@
-"""TaskCenter attempt lifecycle package."""
+"""TaskCenter trial lifecycle package."""
 
-from task_center.attempt.state import (
-    Attempt,
-    AttemptFailReason,
-    AttemptStage,
-    AttemptStatus,
+from task_center.trial.state import (
+    Trial,
+    TrialFailReason,
+    TrialStage,
+    TrialStatus,
 )
 
 __all__ = [
-    "Attempt",
-    "AttemptFailReason",
-    "AttemptStage",
-    "AttemptStatus",
+    "Trial",
+    "TrialFailReason",
+    "TrialStage",
+    "TrialStatus",
 ]

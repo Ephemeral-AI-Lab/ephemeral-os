@@ -16,8 +16,8 @@ from typing import TYPE_CHECKING, Any
 
 from agents import get_definition
 from message.stream_events import StreamEvent
-from task_center.attempt.runtime import AgentLaunch, AttemptDeps
-from task_center.attempt.state import AttemptFailReason, AttemptStatus
+from task_center.trial.runtime import AgentLaunch, AttemptDeps
+from task_center.trial.state import TrialFailReason, TrialStatus
 from task_center.context_engine.scope import ContextScope
 from task_center._core.types import TaskCenterInvariantViolation
 from task_center.task_state import (
@@ -32,9 +32,9 @@ from tools import ExecutionMetadata
 if TYPE_CHECKING:
     from agents import AgentDefinition
     from runtime.app_factory import RuntimeConfig
-    from task_center.attempt.orchestrator import AttemptOrchestrator
-    from task_center.attempt.state import Attempt
-    from task_center.attempt.contexts import LaunchCtx
+    from task_center.trial.orchestrator import TrialOrchestrator
+    from task_center.trial.state import Trial
+    from task_center.trial.contexts import LaunchCtx
 
 logger = logging.getLogger(__name__)
 
@@ -44,9 +44,9 @@ AgentStreamEmitter = Callable[[StreamEvent], Awaitable[None]]
 
 
 class EphemeralAttemptAgentLauncher:
-    """Schedules attempt-scoped ephemeral agents and reports run exhaustion.
+    """Schedules trial-scoped ephemeral agents and reports run exhaustion.
 
-    Terminal submission tools mutate the harness attempt during the agent run.
+    Terminal submission tools mutate the harness trial during the agent run.
     If an agent exits or crashes while its task is still ``running``, the
     launcher synthesizes the matching harness failure submission so lifecycle
     ownership remains in the orchestrator.
@@ -183,10 +183,10 @@ class EphemeralAttemptAgentLauncher:
         _report_exhaustion(self, runtime, launch, summary=summary)
 
 
-_ROLE_FAIL_REASONS: dict[TaskCenterTaskRole, AttemptFailReason] = {
-    TaskCenterTaskRole.PLANNER: AttemptFailReason.PLANNER_FAILED,
-    TaskCenterTaskRole.GENERATOR: AttemptFailReason.GENERATOR_FAILED,
-    TaskCenterTaskRole.EVALUATOR: AttemptFailReason.EVALUATOR_FAILED,
+_ROLE_FAIL_REASONS: dict[TaskCenterTaskRole, TrialFailReason] = {
+    TaskCenterTaskRole.PLANNER: TrialFailReason.PLANNER_FAILED,
+    TaskCenterTaskRole.GENERATOR: TrialFailReason.GENERATOR_FAILED,
+    TaskCenterTaskRole.EVALUATOR: TrialFailReason.EVALUATOR_FAILED,
 }
 
 
@@ -196,7 +196,7 @@ def _fail_unowned_attempt(
     *,
     summary: str,
 ) -> None:
-    """Close task + attempt directly when the orchestrator is missing."""
+    """Close task + trial directly when the orchestrator is missing."""
     logger.error(
         "EphemeralAttemptAgentLauncher: missing orchestrator for unfinished task",
         extra={"task_id": launch.task_id, "attempt_id": launch.attempt_id},
@@ -208,21 +208,21 @@ def _fail_unowned_attempt(
     )
     if launch.attempt_id is None:
         return
-    attempt = runtime.attempt_store.get(launch.attempt_id)
-    if attempt is None or attempt.is_closed:
+    trial = runtime.attempt_store.get(launch.attempt_id)
+    if trial is None or trial.is_closed:
         return
     runtime.attempt_store.close(
-        attempt.id,
-        status=AttemptStatus.FAILED,
+        trial.id,
+        status=TrialStatus.FAILED,
         fail_reason=_ROLE_FAIL_REASONS[launch.role],
         closed_at=datetime.now(UTC),
     )
     manager_registry = runtime.manager_registry
     if manager_registry is None:
         return
-    manager = manager_registry.get(attempt.episode_id)
+    manager = manager_registry.get(trial.iteration_id)
     if manager is not None:
-        manager.handle_attempt_closed(attempt.id)
+        manager.handle_attempt_closed(trial.id)
 
 
 def _require_attempt_orchestrator(
@@ -231,7 +231,7 @@ def _require_attempt_orchestrator(
     launch: AgentLaunch,
     *,
     summary: str,
-) -> AttemptOrchestrator | None:
+) -> TrialOrchestrator | None:
     if launch.attempt_id is None:
         raise TaskCenterInvariantViolation(
             f"Role {launch.role!r} exhaustion report requires launch.attempt_id."
@@ -312,38 +312,38 @@ class LaunchBuilder:
 
     runtime: LaunchCtx
 
-    def for_planner(self, *, attempt: Attempt, task_id: str) -> AgentLaunch:
-        episode = self._require_episode(attempt)
+    def for_planner(self, *, attempt: Trial, task_id: str) -> AgentLaunch:
+        iteration = self._require_iteration(attempt)
         return self._build(
             role=TaskCenterTaskRole.PLANNER,
             base_agent_name=PLANNER_AGENT_NAME,
             scope=ContextScope.for_planner(
-                mission_id=episode.mission_id,
-                episode_id=episode.id,
+                mission_id=iteration.goal_id,
+                episode_id=iteration.id,
                 attempt_id=attempt.id,
             ),
             task_id=task_id,
             task_center_run_id=self.runtime.run_id_for_attempt(attempt),
             attempt_id=attempt.id,
             needs=(),
-            mission_id=episode.mission_id,
+            mission_id=iteration.goal_id,
         )
 
     def for_generator(
         self,
         *,
-        attempt: Attempt,
+        attempt: Trial,
         task: dict[str, Any],
         base_agent_name: str,
     ) -> AgentLaunch:
-        episode = self._require_episode(attempt)
+        iteration = self._require_iteration(attempt)
         task_id = str(task["id"])
         return self._build(
             role=TaskCenterTaskRole.GENERATOR,
             base_agent_name=base_agent_name,
             scope=ContextScope.for_generator(
-                mission_id=episode.mission_id,
-                episode_id=episode.id,
+                mission_id=iteration.goal_id,
+                episode_id=iteration.id,
                 attempt_id=attempt.id,
                 task_id=task_id,
             ),
@@ -351,24 +351,24 @@ class LaunchBuilder:
             task_center_run_id=task["task_center_run_id"],
             attempt_id=attempt.id,
             needs=tuple(task["needs"]),
-            mission_id=episode.mission_id,
+            mission_id=iteration.goal_id,
         )
 
-    def for_evaluator(self, *, attempt: Attempt, task_id: str) -> AgentLaunch:
-        episode = self._require_episode(attempt)
+    def for_evaluator(self, *, attempt: Trial, task_id: str) -> AgentLaunch:
+        iteration = self._require_iteration(attempt)
         return self._build(
             role=TaskCenterTaskRole.EVALUATOR,
             base_agent_name=EVALUATOR_AGENT_NAME,
             scope=ContextScope.for_evaluator(
-                mission_id=episode.mission_id,
-                episode_id=episode.id,
+                mission_id=iteration.goal_id,
+                episode_id=iteration.id,
                 attempt_id=attempt.id,
             ),
             task_id=task_id,
             task_center_run_id=self.runtime.run_id_for_attempt(attempt),
             attempt_id=attempt.id,
             needs=tuple(attempt.generator_task_ids),
-            mission_id=episode.mission_id,
+            mission_id=iteration.goal_id,
         )
 
     def for_entry(
@@ -416,10 +416,10 @@ class LaunchBuilder:
             mission_id=mission_id,
         )
 
-    def _require_episode(self, attempt: Attempt) -> Any:
-        episode = self.runtime.episode_store.get(attempt.episode_id)
-        if episode is None:
+    def _require_iteration(self, attempt: Trial) -> Any:
+        iteration = self.runtime.episode_store.get(attempt.iteration_id)
+        if iteration is None:
             raise TaskCenterInvariantViolation(
-                f"Episode {attempt.episode_id!r} not found"
+                f"Iteration {attempt.iteration_id!r} not found"
             )
-        return episode
+        return iteration

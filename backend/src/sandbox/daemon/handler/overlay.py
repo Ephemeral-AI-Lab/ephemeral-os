@@ -3,12 +3,37 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
+from typing import cast
 
-from sandbox.layer_stack.manager import LayerStackManager
+from sandbox.daemon.service.layer_stack_client import LayerStackClient
+from sandbox.execution.contract import (
+    CommandExecRequest,
+    MountMode,
+    ShellProcessResult,
+    WorkspaceReplacementMountSpec,
+)
+from sandbox.execution.orchestrator import execute_command
 from sandbox.execution.overlay_request import OverlayShellRequest
 from sandbox.execution.overlay_result import OverlayCapture
-from sandbox.execution.overlay_runner import OverlaySnapshotRunner
+from sandbox.execution.policy import CommandExecPolicy
+from sandbox.execution.workspace_mount import run_workspace_replaced_command
+from sandbox.layer_stack.manifest import Manifest
+
+_OVERLAY_COMMAND_POLICY = CommandExecPolicy(
+    host_env_keys=frozenset(
+        {
+            "PATH",
+            "HOME",
+            "USER",
+            "LANG",
+            "LC_ALL",
+            "TERM",
+            "TZ",
+        }
+    ),
+)
 
 
 async def handle(args: dict[str, Any]) -> dict[str, Any]:
@@ -19,10 +44,68 @@ async def handle(args: dict[str, Any]) -> dict[str, Any]:
 
 
 async def _handle_snapshot_overlay(args: dict[str, Any]) -> OverlayCapture:
-    manager = LayerStackManager(str(args["layer_stack_root"]))
-    runner = OverlaySnapshotRunner(manager)
-    request = OverlayShellRequest.from_dict(_snapshot_request_payload(args))
-    return await runner.shell(request)
+    layer_stack = LayerStackClient(str(args["layer_stack_root"]))
+    overlay_request = OverlayShellRequest.from_dict(_snapshot_request_payload(args))
+    result = await execute_command(
+        _command_request(
+            overlay_request,
+            layer_stack_root=layer_stack.storage_root,
+            workspace_root=str(args.get("workspace_root") or "/workspace"),
+        ),
+        layer_stack=layer_stack,
+        occ_client=None,
+        storage_root=layer_stack.storage_root,
+        occ_apply=False,
+        mount_mode=MountMode.COPY_BACKED,
+        command_runner=_run_overlay_command,
+    )
+    return OverlayCapture(
+        exit_code=result.exit_code,
+        stdout_ref=result.stdout_ref,
+        stderr_ref=result.stderr_ref,
+        snapshot_version=result.workspace_capture.snapshot_version,
+        changes=tuple(result.workspace_capture.changes),
+        snapshot_manifest=cast(
+            Manifest | None,
+            result.workspace_capture.snapshot_manifest,
+        ),
+        timings=result.timings,
+    )
+
+
+def _command_request(
+    request: OverlayShellRequest,
+    *,
+    layer_stack_root: Path,
+    workspace_root: str,
+) -> CommandExecRequest:
+    return CommandExecRequest(
+        request_id=request.request_id,
+        workspace_ref=layer_stack_root.as_posix(),
+        workspace_root=workspace_root,
+        command=request.command,
+        cwd=request.cwd,
+        env=request.env,
+        timeout_seconds=request.timeout_seconds,
+    )
+
+
+def _run_overlay_command(
+    *,
+    spec: WorkspaceReplacementMountSpec,
+    request: CommandExecRequest,
+    run_dir: str | Path,
+    timings: dict[str, float],
+    mount_mode: MountMode | None = None,
+) -> ShellProcessResult:
+    return run_workspace_replaced_command(
+        spec=spec,
+        request=request,
+        run_dir=run_dir,
+        timings=timings,
+        mount_mode=mount_mode,
+        policy=_OVERLAY_COMMAND_POLICY,
+    )
 
 
 def _snapshot_request_payload(args: dict[str, Any]) -> dict[str, Any]:

@@ -1,4 +1,4 @@
-"""Phase 02 snapshot-overlay runner tests."""
+"""Snapshot-overlay tests for the unified command orchestrator path."""
 
 from __future__ import annotations
 
@@ -8,9 +8,14 @@ from pathlib import Path
 import pytest
 
 from sandbox.layer_stack import WriteLayerChange, LayerStackManager
-from sandbox.execution.overlay_request import OverlayShellRequest
+from sandbox.daemon.service.layer_stack_client import LayerStackClient
+from sandbox.execution.contract import (
+    CommandExecRequest,
+    MountMode,
+    WorkspaceReplacementMountSpec,
+)
+from sandbox.execution.orchestrator import execute_command
 from sandbox.execution.overlay_result import OverlayCapture
-from sandbox.execution.overlay_runner import OverlaySnapshotRunner
 from sandbox.daemon.rpc.dispatcher import dispatch_envelope_async
 
 
@@ -19,6 +24,23 @@ def _source(tmp_path: Path, name: str, content: bytes) -> str:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(content)
     return str(path)
+
+
+def _request(
+    manager: LayerStackManager,
+    *,
+    command: tuple[str, ...],
+    request_id: str = "request-a",
+) -> CommandExecRequest:
+    return CommandExecRequest(
+        request_id=request_id,
+        workspace_ref=manager.storage_root.as_posix(),
+        workspace_root="/workspace",
+        command=command,
+        cwd=".",
+        env={},
+        timeout_seconds=5,
+    )
 
 
 def test_overlay_capture_timings_are_immutable() -> None:
@@ -36,7 +58,7 @@ def test_overlay_capture_timings_are_immutable() -> None:
 
 
 @pytest.mark.asyncio
-async def test_snapshot_runner_executes_against_leased_manifest_without_publish(
+async def test_orchestrator_overlay_executes_against_leased_manifest_without_publish(
     tmp_path: Path,
 ) -> None:
     manager = LayerStackManager(tmp_path / "stack")
@@ -48,30 +70,36 @@ async def test_snapshot_runner_executes_against_leased_manifest_without_publish(
             )
         ]
     )
-    runner = OverlaySnapshotRunner(manager)
-    request = OverlayShellRequest(
-        request_id="request-a",
+    request = _request(
+        manager,
         command=(
             "bash",
             "-lc",
             "printf 'new\\n' > pkg/value.txt; printf out; printf err >&2",
         ),
-        cwd=".",
-        env={},
-        timeout_seconds=5,
     )
 
-    envelope = await runner.shell(request)
+    result = await execute_command(
+        request,
+        layer_stack=LayerStackClient(manager),
+        occ_client=None,
+        storage_root=manager.storage_root,
+        occ_apply=False,
+        mount_mode=MountMode.COPY_BACKED,
+    )
 
-    assert envelope.exit_code == 0
-    assert envelope.snapshot_version == 1
-    assert Path(envelope.stdout_ref).read_text(encoding="utf-8") == "out"
-    assert Path(envelope.stderr_ref).read_text(encoding="utf-8") == "err"
+    assert result.exit_code == 0
+    assert result.workspace_capture.snapshot_version == 1
+    assert result.stdout == "out"
+    assert result.stderr == "err"
+    assert Path(result.stdout_ref).read_text(encoding="utf-8") == "out"
+    assert Path(result.stderr_ref).read_text(encoding="utf-8") == "err"
     assert manager.read_text("pkg/value.txt") == ("old\n", True)
     assert manager.pinned_layers() == ()
+    assert result.occ_result.files == ()
 
-    assert len(envelope.changes) == 1
-    change = envelope.changes[0]
+    assert len(result.workspace_capture.changes) == 1
+    change = result.workspace_capture.changes[0]
     assert change.path == "pkg/value.txt"
     assert change.kind == "write"
     assert change.content_path is not None
@@ -80,7 +108,9 @@ async def test_snapshot_runner_executes_against_leased_manifest_without_publish(
 
 
 @pytest.mark.asyncio
-async def test_snapshot_runner_releases_lease_when_runtime_fails(tmp_path: Path) -> None:
+async def test_orchestrator_overlay_releases_lease_when_runtime_fails(
+    tmp_path: Path,
+) -> None:
     manager = LayerStackManager(tmp_path / "stack")
     manager.publish_changes(
         [
@@ -91,24 +121,27 @@ async def test_snapshot_runner_releases_lease_when_runtime_fails(tmp_path: Path)
         ]
     )
 
-    class _FailingInvoker:
-        async def invoke(self, **_kwargs):
-            raise RuntimeError("runtime failed")
-
-        def invoke_sync(self, **_kwargs):
-            raise RuntimeError("runtime failed")
-
-    runner = OverlaySnapshotRunner(manager, invoker=_FailingInvoker())
-    request = OverlayShellRequest(
-        request_id="request-a",
-        command=("bash", "-lc", "true"),
-        cwd=".",
-        env={},
-        timeout_seconds=5,
-    )
+    def failing_runner(
+        *,
+        spec: WorkspaceReplacementMountSpec,
+        request: CommandExecRequest,
+        run_dir: str | Path,
+        timings: dict[str, float],
+        mount_mode: MountMode | None = None,
+    ) -> object:
+        del spec, request, run_dir, timings, mount_mode
+        raise RuntimeError("runtime failed")
 
     with pytest.raises(RuntimeError, match="runtime failed"):
-        await runner.shell(request)
+        await execute_command(
+            _request(manager, command=("bash", "-lc", "true")),
+            layer_stack=LayerStackClient(manager),
+            occ_client=None,
+            storage_root=manager.storage_root,
+            occ_apply=False,
+            mount_mode=MountMode.COPY_BACKED,
+            command_runner=failing_runner,
+        )
 
     assert manager.pinned_layers() == ()
 

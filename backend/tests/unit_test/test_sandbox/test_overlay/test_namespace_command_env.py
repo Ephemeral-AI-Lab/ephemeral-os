@@ -1,8 +1,8 @@
-"""Environment isolation tests for ``overlay.namespace.command.run_user_command``.
+"""Environment isolation tests for daemon ``overlay.run``.
 
-Host environment variables (secrets, tokens, etc.) must not
-leak into the user command. Only an explicit minimal allow-list plus any
-caller-supplied ``env`` should be visible to the child process.
+Host environment variables (secrets, tokens, etc.) must not leak into the user
+command. Only an explicit minimal allow-list plus any caller-supplied ``env``
+should be visible to the child process.
 """
 
 from __future__ import annotations
@@ -11,36 +11,39 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.execution.overlay_worker import run_user_command
+from sandbox.daemon.rpc.dispatcher import dispatch_envelope_async
+from sandbox.layer_stack import LayerStackManager
 
 
-def _run(
+async def _run(
     tmp_path: Path,
     *,
     command: tuple[str, ...],
     env: dict[str, str] | None = None,
 ) -> tuple[int, str, str]:
-    workspace = tmp_path / "workspace"
-    workspace.mkdir()
-    stdout_ref = tmp_path / "stdout.bin"
-    stderr_ref = tmp_path / "stderr.bin"
-    result = run_user_command(
-        command=command,
-        workspace_root=workspace,
-        cwd=".",
-        env=dict(env or {}),
-        timeout_seconds=10,
-        stdout_ref=stdout_ref,
-        stderr_ref=stderr_ref,
+    manager = LayerStackManager(tmp_path / "stack")
+    result = await dispatch_envelope_async(
+        {
+            "op": "overlay.run",
+            "args": {
+                "layer_stack_root": manager.storage_root.as_posix(),
+                "request_id": "env-test",
+                "command": list(command),
+                "cwd": ".",
+                "env": dict(env or {}),
+                "timeout_seconds": 10,
+            },
+        }
     )
     return (
-        result.exit_code,
-        Path(result.stdout_ref).read_text(encoding="utf-8"),
-        Path(result.stderr_ref).read_text(encoding="utf-8"),
+        int(result["exit_code"]),
+        Path(str(result["stdout_ref"])).read_text(encoding="utf-8"),
+        Path(str(result["stderr_ref"])).read_text(encoding="utf-8"),
     )
 
 
-def test_host_secrets_do_not_leak_into_user_command(
+@pytest.mark.asyncio
+async def test_host_secrets_do_not_leak_into_user_command(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -48,7 +51,7 @@ def test_host_secrets_do_not_leak_into_user_command(
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-leaked")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-leaked")
 
-    exit_code, stdout, _stderr = _run(
+    exit_code, stdout, _stderr = await _run(
         tmp_path,
         command=(
             "sh",
@@ -64,13 +67,14 @@ def test_host_secrets_do_not_leak_into_user_command(
     assert stdout == "unset|unset|unset"
 
 
-def test_printenv_does_not_expose_host_secret(
+@pytest.mark.asyncio
+async def test_printenv_does_not_expose_host_secret(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIA-leaked")
 
-    exit_code, stdout, _stderr = _run(
+    exit_code, stdout, _stderr = await _run(
         tmp_path,
         command=("printenv", "AWS_ACCESS_KEY_ID"),
     )
@@ -81,13 +85,14 @@ def test_printenv_does_not_expose_host_secret(
     assert stdout == ""
 
 
-def test_caller_env_is_visible_to_user_command(
+@pytest.mark.asyncio
+async def test_caller_env_is_visible_to_user_command(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIA-leaked")
 
-    exit_code, stdout, _stderr = _run(
+    exit_code, stdout, _stderr = await _run(
         tmp_path,
         command=("sh", "-c", "printf '%s' \"$MY_VAR\""),
         env={"MY_VAR": "caller-value"},
@@ -97,13 +102,14 @@ def test_caller_env_is_visible_to_user_command(
     assert stdout == "caller-value"
 
 
-def test_path_is_present_so_basic_commands_resolve(
+@pytest.mark.asyncio
+async def test_path_is_present_so_basic_commands_resolve(
     tmp_path: Path,
 ) -> None:
     # The minimal env must include PATH (or POSIX builtin sh resolution
     # must work) so callers can keep invoking commands like ``printf``,
     # ``sh``, ``printenv`` without explicitly supplying PATH every time.
-    exit_code, stdout, _stderr = _run(
+    exit_code, stdout, _stderr = await _run(
         tmp_path,
         command=("sh", "-c", "printf ok"),
     )

@@ -153,6 +153,9 @@ class MockSquadRunner:
         self._audit_recorder = audit_recorder
         self._script_engine = PreparedToolScriptEngine(self._call_tool)
 
+    def bind_audit_recorder(self, audit_recorder: Any | None) -> None:
+        self._audit_recorder = audit_recorder
+
     async def __call__(
         self,
         config: Any,

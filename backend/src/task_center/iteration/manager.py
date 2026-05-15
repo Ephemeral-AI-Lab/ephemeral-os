@@ -1,8 +1,8 @@
-"""Episode lifecycle manager and process-local registry.
+"""Iteration lifecycle manager and process-local registry.
 
-``EpisodeManager`` is the sole creator of Attempt records inside its owned
-episode and the only emitter of ``EpisodeClosureReport``.
-``EpisodeManagerRegistry`` is the process-local one-manager-per-open-episode
+``IterationManager`` is the sole creator of Trial records inside its owned
+iteration and the only emitter of ``IterationClosureReport``.
+``IterationManagerRegistry`` is the process-local one-manager-per-open-iteration
 registry.
 """
 
@@ -13,32 +13,32 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 
 from task_center._core.infra import (
-    assert_attempt_belongs_to_episode,
-    assert_attempt_sequence_contiguous,
-    assert_episode_has_budget,
-    assert_episode_open,
+    assert_trial_belongs_to_iteration,
+    assert_trial_sequence_contiguous,
+    assert_iteration_has_budget,
+    assert_iteration_open,
     assert_fail_reason_present_on_failure,
 )
 from task_center._core.persistence import (
-    AttemptStoreProtocol,
-    EpisodeStoreProtocol,
+    TrialStoreProtocol,
+    IterationStoreProtocol,
     TaskStoreProtocol,
 )
 from task_center._core.types import (
-    RegisteredAttemptOrchestrator,
+    RegisteredTrialOrchestrator,
     TaskCenterInvariantViolation,
 )
-from task_center.attempt.state import (
-    Attempt,
-    AttemptFailReason,
-    AttemptStatus,
+from task_center.trial.state import (
+    Trial,
+    TrialFailReason,
+    TrialStatus,
 )
-from task_center.episode.state import (
-    AttemptedPlanEntry,
-    AttemptPlanFailed,
-    Episode,
-    EpisodeClosureReport,
-    EpisodeStatus,
+from task_center.iteration.state import (
+    PriorTrialEntry,
+    TrialPlanFailed,
+    Iteration,
+    IterationClosureReport,
+    IterationStatus,
     SuccessContinue,
     TerminalSuccess,
 )
@@ -46,120 +46,120 @@ from task_center.episode.state import (
 logger = logging.getLogger(__name__)
 
 
-ClosureReportSink = Callable[[EpisodeClosureReport], None]
+ClosureReportSink = Callable[[IterationClosureReport], None]
 AttemptClosedCallback = Callable[[str], None]
 OrchestratorFactory = Callable[
-    [Attempt, AttemptClosedCallback], RegisteredAttemptOrchestrator
+    [Trial, AttemptClosedCallback], RegisteredTrialOrchestrator
 ]
 
 
-class EpisodeManager:
-    """Manages one open Episode's lifecycle."""
+class IterationManager:
+    """Manages one open Iteration's lifecycle."""
 
     def __init__(
         self,
         *,
-        episode_id: str,
-        episode_store: EpisodeStoreProtocol,
-        attempt_store: AttemptStoreProtocol,
+        iteration_id: str,
+        episode_store: IterationStoreProtocol,
+        attempt_store: TrialStoreProtocol,
         on_episode_closed: ClosureReportSink,
         orchestrator_factory: OrchestratorFactory | None = None,
         task_store: TaskStoreProtocol | None = None,
     ) -> None:
-        self.episode_id = episode_id
+        self.iteration_id = iteration_id
         self._episode_store = episode_store
         self._attempt_store = attempt_store
         self._on_episode_closed = on_episode_closed
         self._orchestrator_factory = orchestrator_factory
         # Optional — when present, the manager denormalizes the evaluator's
-        # pass-summary text onto the episode row at successful close so the
+        # pass-summary text onto the iteration row at successful close so the
         # context engine's planner recipe can read it on retry / chain.
         self._task_store = task_store
 
     # ---- public API -----------------------------------------------------
 
-    def create_initial_attempt(self) -> Attempt:
-        """Create attempt sequence 1 and start its orchestrator."""
+    def create_initial_attempt(self) -> Trial:
+        """Create trial sequence 1 and start its orchestrator."""
         attempt = self.create_unstarted_initial_attempt()
         self.start_attempt(attempt)
         return attempt
 
-    def create_unstarted_initial_attempt(self) -> Attempt:
-        """Create attempt sequence 1 without starting its orchestrator."""
-        episode = self._current_episode_snapshot()
-        assert_episode_open(episode)
-        if episode.attempt_ids:
+    def create_unstarted_initial_attempt(self) -> Trial:
+        """Create trial sequence 1 without starting its orchestrator."""
+        iteration = self._current_iteration_snapshot()
+        assert_iteration_open(iteration)
+        if iteration.trial_ids:
             raise TaskCenterInvariantViolation(
-                f"Episode {episode.id!r} already has attempts; use "
+                f"Iteration {iteration.id!r} already has trials; use "
                 f"create_next_attempt"
             )
-        return self._insert_attempt(episode, attempt_sequence_no=1)
+        return self._insert_attempt(iteration, trial_sequence_no=1)
 
-    def start_attempt(self, attempt: Attempt) -> None:
-        """Start an attempt that belongs to this manager's open episode."""
-        episode = self._current_episode_snapshot()
-        assert_episode_open(episode)
-        assert_attempt_belongs_to_episode(attempt, episode)
+    def start_attempt(self, attempt: Trial) -> None:
+        """Start a trial that belongs to this manager's open iteration."""
+        iteration = self._current_iteration_snapshot()
+        assert_iteration_open(iteration)
+        assert_trial_belongs_to_iteration(attempt, iteration)
         self._start_orchestrator_if_configured(attempt)
 
     def create_next_attempt(
         self, *, previous_attempt_id: str
-    ) -> Attempt:
-        """Called after a failed attempt if the episode still has budget."""
-        episode = self._current_episode_snapshot()
-        assert_episode_open(episode)
-        assert_episode_has_budget(episode)
-        if episode.latest_attempt_id != previous_attempt_id:
+    ) -> Trial:
+        """Called after a failed trial if the iteration still has budget."""
+        iteration = self._current_iteration_snapshot()
+        assert_iteration_open(iteration)
+        assert_iteration_has_budget(iteration)
+        if iteration.latest_trial_id != previous_attempt_id:
             raise TaskCenterInvariantViolation(
                 f"previous_attempt_id {previous_attempt_id!r} is not "
-                f"the latest attempt of episode {episode.id!r} "
-                f"(latest={episode.latest_attempt_id!r})"
+                f"the latest trial of iteration {iteration.id!r} "
+                f"(latest={iteration.latest_trial_id!r})"
             )
         attempt = self._insert_attempt(
-            episode, attempt_sequence_no=episode.attempt_count + 1
+            iteration, trial_sequence_no=iteration.trial_count + 1
         )
         self._start_orchestrator_if_configured(attempt)
         return attempt
 
     def handle_attempt_closed(self, attempt_id: str) -> None:
-        """Entry point for the closed-attempt callback from the orchestrator."""
+        """Entry point for the closed-trial callback from the orchestrator."""
         attempt = self._attempt_store.get(attempt_id)
         if attempt is None:
             raise TaskCenterInvariantViolation(
-                f"Attempt {attempt_id!r} not found"
+                f"Trial {attempt_id!r} not found"
             )
-        episode = self._current_episode_snapshot()
-        assert_episode_open(episode)
-        assert_attempt_belongs_to_episode(attempt, episode)
+        iteration = self._current_iteration_snapshot()
+        assert_iteration_open(iteration)
+        assert_trial_belongs_to_iteration(attempt, iteration)
         assert_fail_reason_present_on_failure(attempt)
 
-        if attempt.status == AttemptStatus.PASSED:
-            self._close_episode_passed(attempt)
+        if attempt.status == TrialStatus.PASSED:
+            self._close_iteration_passed(attempt)
         else:
             self._retry_or_close_failed(attempt)
 
     # ---- internal -------------------------------------------------------
 
-    def _current_episode_snapshot(self) -> Episode:
-        episode = self._episode_store.get(self.episode_id)
-        if episode is None:
+    def _current_iteration_snapshot(self) -> Iteration:
+        iteration = self._episode_store.get(self.iteration_id)
+        if iteration is None:
             raise TaskCenterInvariantViolation(
-                f"Episode {self.episode_id!r} not found"
+                f"Iteration {self.iteration_id!r} not found"
             )
-        return episode
+        return iteration
 
     def _insert_attempt(
-        self, episode: Episode, *, attempt_sequence_no: int
-    ) -> Attempt:
-        assert_attempt_sequence_contiguous(episode, attempt_sequence_no)
+        self, iteration: Iteration, *, trial_sequence_no: int
+    ) -> Trial:
+        assert_trial_sequence_contiguous(iteration, trial_sequence_no)
         attempt = self._attempt_store.insert(
-            episode_id=episode.id,
-            attempt_sequence_no=attempt_sequence_no,
+            iteration_id=iteration.id,
+            trial_sequence_no=trial_sequence_no,
         )
-        self._episode_store.append_attempt_id(episode.id, attempt.id)
+        self._episode_store.append_trial_id(iteration.id, attempt.id)
         return attempt
 
-    def _start_orchestrator_if_configured(self, attempt: Attempt) -> None:
+    def _start_orchestrator_if_configured(self, attempt: Trial) -> None:
         if self._orchestrator_factory is None:
             return
         try:
@@ -171,31 +171,31 @@ class EpisodeManager:
             self._close_attempt_after_startup_failure(attempt)
             raise
 
-    def _close_attempt_after_startup_failure(self, attempt: Attempt) -> None:
+    def _close_attempt_after_startup_failure(self, attempt: Trial) -> None:
         try:
             latest = self._attempt_store.get(attempt.id)
             if latest is None or latest.is_closed:
                 return
             self._attempt_store.close(
                 attempt.id,
-                status=AttemptStatus.FAILED,
-                fail_reason=AttemptFailReason.STARTUP_FAILED,
+                status=TrialStatus.FAILED,
+                fail_reason=TrialFailReason.STARTUP_FAILED,
                 closed_at=datetime.now(UTC),
             )
         except Exception:
             logger.exception(
-                "EpisodeManager: startup attempt cleanup failed",
+                "IterationManager: startup trial cleanup failed",
             )
 
-    def _close_episode_passed(self, attempt: Attempt) -> None:
+    def _close_iteration_passed(self, attempt: Trial) -> None:
         self._episode_store.set_continuation_goal(
-            self.episode_id, attempt.continuation_goal
+            self.iteration_id, attempt.continuation_goal
         )
         # Atomically transition status + write the denormalized
-        # task_specification (from the passing attempt) and task_summary
-        # (from the evaluator's pass summary text) onto the episode row.
+        # task_specification (from the passing trial) and task_summary
+        # (from the evaluator's pass summary text) onto the iteration row.
         self._episode_store.close_succeeded(
-            self.episode_id,
+            self.iteration_id,
             task_specification=attempt.task_specification or "",
             task_summary=self._evaluator_pass_summary_for(attempt),
             closed_at=datetime.now(UTC),
@@ -205,7 +205,7 @@ class EpisodeManager:
         else:
             self._emit_success_continue(attempt)
 
-    def _evaluator_pass_summary_for(self, attempt: Attempt) -> str:
+    def _evaluator_pass_summary_for(self, attempt: Trial) -> str:
         """Resolve the evaluator's success-summary text for *attempt*.
 
         Empty string when the manager is configured without a ``task_store``
@@ -215,132 +215,132 @@ class EpisodeManager:
             return ""
         return self._task_store.get_evaluator_pass_summary(attempt.id)
 
-    def _retry_or_close_failed(self, attempt: Attempt) -> None:
+    def _retry_or_close_failed(self, attempt: Trial) -> None:
         while True:
-            episode = self._current_episode_snapshot()
-            if not episode.has_budget_remaining:
-                self._close_episode_failed(attempt)
+            iteration = self._current_iteration_snapshot()
+            if not iteration.has_budget_remaining:
+                self._close_iteration_failed(attempt)
                 return
             try:
                 self.create_next_attempt(previous_attempt_id=attempt.id)
                 return
             except Exception:
-                # Retry start failed; the new attempt was inserted and closed
+                # Retry start failed; the new trial was inserted and closed
                 # STARTUP_FAILED before the exception propagated. Re-enter the
-                # retry decision on the new closed attempt instead of leaving
-                # the episode open.
+                # retry decision on the new closed trial instead of leaving
+                # the iteration open.
                 retry_attempt = self._latest_failed_attempt_for(
                     previous_id=attempt.id
                 )
                 if retry_attempt is None:
                     raise
                 logger.warning(
-                    "EpisodeManager: retry start failure for episode %r; "
-                    "treating new attempt %r as a failed attempt",
-                    self.episode_id,
+                    "IterationManager: retry start failure for iteration %r; "
+                    "treating new trial %r as a failed trial",
+                    self.iteration_id,
                     retry_attempt.id,
                     exc_info=True,
                 )
                 attempt = retry_attempt
                 continue
 
-    def _close_episode_failed(self, attempt: Attempt) -> None:
+    def _close_iteration_failed(self, attempt: Trial) -> None:
         self._episode_store.set_status(
-            self.episode_id,
-            status=EpisodeStatus.FAILED,
+            self.iteration_id,
+            status=IterationStatus.FAILED,
             closed_at=datetime.now(UTC),
         )
-        self._emit_attempt_plan_failed(attempt)
+        self._emit_trial_plan_failed(attempt)
 
     def _latest_failed_attempt_for(
         self, *, previous_id: str
-    ) -> Attempt | None:
-        episode = self._current_episode_snapshot()
-        latest_id = episode.latest_attempt_id
+    ) -> Trial | None:
+        iteration = self._current_iteration_snapshot()
+        latest_id = iteration.latest_trial_id
         if latest_id is None or latest_id == previous_id:
             return None
         retry_attempt = self._attempt_store.get(latest_id)
-        if retry_attempt is None or retry_attempt.status != AttemptStatus.FAILED:
+        if retry_attempt is None or retry_attempt.status != TrialStatus.FAILED:
             return None
         return retry_attempt
 
-    def _emit_terminal_success(self, attempt: Attempt) -> None:
-        report = EpisodeClosureReport(
-            episode_id=self.episode_id,
-            final_attempt_id=attempt.id,
+    def _emit_terminal_success(self, attempt: Trial) -> None:
+        report = IterationClosureReport(
+            iteration_id=self.iteration_id,
+            final_trial_id=attempt.id,
             outcome=TerminalSuccess(),
         )
         self._on_episode_closed(report)
 
-    def _emit_success_continue(self, attempt: Attempt) -> None:
+    def _emit_success_continue(self, attempt: Trial) -> None:
         if attempt.continuation_goal is None:
             raise TaskCenterInvariantViolation(
                 "success_continue requires a non-null continuation_goal"
             )
-        report = EpisodeClosureReport(
-            episode_id=self.episode_id,
-            final_attempt_id=attempt.id,
+        report = IterationClosureReport(
+            iteration_id=self.iteration_id,
+            final_trial_id=attempt.id,
             outcome=SuccessContinue(goal=attempt.continuation_goal),
         )
         self._on_episode_closed(report)
 
-    def _emit_attempt_plan_failed(self, last_attempt: Attempt) -> None:
-        history = self._build_attempted_plan_history()
-        report = EpisodeClosureReport(
-            episode_id=self.episode_id,
-            final_attempt_id=last_attempt.id,
-            outcome=AttemptPlanFailed(
+    def _emit_trial_plan_failed(self, last_attempt: Trial) -> None:
+        history = self._build_prior_trial_history()
+        report = IterationClosureReport(
+            iteration_id=self.iteration_id,
+            final_trial_id=last_attempt.id,
+            outcome=TrialPlanFailed(
                 failure_summary=(
                     last_attempt.fail_reason.value
                     if last_attempt.fail_reason is not None
                     else "unknown"
                 ),
-                attempted_plan_history=history,
+                prior_trial_history=history,
             ),
         )
         self._on_episode_closed(report)
 
-    def _build_attempted_plan_history(self) -> tuple[AttemptedPlanEntry, ...]:
-        attempts = self._attempt_store.list_for_episode(self.episode_id)
+    def _build_prior_trial_history(self) -> tuple[PriorTrialEntry, ...]:
+        trials = self._attempt_store.list_for_iteration(self.iteration_id)
         return tuple(
-            AttemptedPlanEntry(
-                attempt_id=g.id,
-                attempt_sequence_no=g.attempt_sequence_no,
+            PriorTrialEntry(
+                trial_id=g.id,
+                trial_sequence_no=g.trial_sequence_no,
                 task_specification=g.task_specification,
                 evaluation_criteria=g.evaluation_criteria,
                 fail_reason=g.fail_reason,
-                attempt_summary_id=None,
+                trial_summary_id=None,
                 failure_landscape=None,
             )
-            for g in attempts
+            for g in trials
         )
 
 
-class EpisodeManagerRegistry:
-    """In-memory registry enforcing one-manager-per-open-episode."""
+class IterationManagerRegistry:
+    """In-memory registry enforcing one-manager-per-open-iteration."""
 
     def __init__(self) -> None:
-        self._by_episode_id: dict[str, EpisodeManager] = {}
+        self._by_iteration_id: dict[str, IterationManager] = {}
 
-    def register(self, manager: EpisodeManager) -> None:
-        episode_id = manager.episode_id
-        if episode_id in self._by_episode_id:
+    def register(self, manager: IterationManager) -> None:
+        iteration_id = manager.iteration_id
+        if iteration_id in self._by_iteration_id:
             raise TaskCenterInvariantViolation(
-                f"EpisodeManager already registered for episode {episode_id!r}"
+                f"IterationManager already registered for iteration {iteration_id!r}"
             )
-        self._by_episode_id[episode_id] = manager
+        self._by_iteration_id[iteration_id] = manager
 
-    def get(self, episode_id: str) -> EpisodeManager | None:
-        return self._by_episode_id.get(episode_id)
+    def get(self, iteration_id: str) -> IterationManager | None:
+        return self._by_iteration_id.get(iteration_id)
 
-    def deregister(self, episode_id: str) -> None:
-        self._by_episode_id.pop(episode_id, None)
+    def deregister(self, iteration_id: str) -> None:
+        self._by_iteration_id.pop(iteration_id, None)
 
 
 __all__ = [
     "AttemptClosedCallback",
     "ClosureReportSink",
-    "EpisodeManager",
-    "EpisodeManagerRegistry",
+    "IterationManager",
+    "IterationManagerRegistry",
     "OrchestratorFactory",
 ]

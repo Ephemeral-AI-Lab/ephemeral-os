@@ -30,6 +30,7 @@ def run_workspace_replaced_command(
     run_dir: str | Path,
     timings: dict[str, float],
     strategies: Sequence[ExecutionStrategy] | None = None,
+    mount_mode: MountMode | None = None,
     policy: CommandExecPolicy = DEFAULT_COMMAND_EXEC_POLICY,
 ) -> ShellProcessResult:
     """Run a command with the assigned workspace replaced by the leased view."""
@@ -38,13 +39,7 @@ def run_workspace_replaced_command(
     strategy_list: tuple[ExecutionStrategy, ...] = (
         tuple(strategies)
         if strategies is not None
-        else (
-            PrivateNamespaceStrategy(
-                available=detect_private_mount_namespace(),
-                policy=policy,
-            ),
-            CopyBackedStrategy(policy=policy),
-        )
+        else _strategies_for_mount_mode(mount_mode, policy=policy)
     )
     for strategy in strategy_list:
         if not strategy.is_available():
@@ -64,6 +59,30 @@ def run_workspace_replaced_command(
         )
         timings[fallback_key] = 1.0
     raise RuntimeError("no command execution strategy succeeded")
+
+
+def _strategies_for_mount_mode(
+    mount_mode: MountMode | None,
+    *,
+    policy: CommandExecPolicy,
+) -> tuple[ExecutionStrategy, ...]:
+    if mount_mode is None:
+        return (
+            PrivateNamespaceStrategy(
+                available=detect_private_mount_namespace(),
+                policy=policy,
+            ),
+            CopyBackedStrategy(policy=policy),
+        )
+    selected = MountMode(mount_mode)
+    if selected == MountMode.COPY_BACKED:
+        return (CopyBackedStrategy(policy=policy),)
+    return (
+        PrivateNamespaceStrategy(
+            available=detect_private_mount_namespace(),
+            policy=policy,
+        ),
+    )
 
 
 __all__ = [

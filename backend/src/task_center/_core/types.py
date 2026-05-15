@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
-    from task_center.mission.state import MissionClosureReport
+    from task_center.goal.state import GoalClosureReport
 
 
 # ---- Exceptions ------------------------------------------------------------
@@ -60,21 +60,21 @@ class TaskCenterLifecycleConfig:
 # ---- Runtime Protocols (cycle-safe collaboration seams) --------------------
 
 
-class RegisteredAttemptOrchestrator(Protocol):
-    """The slice of :class:`AttemptOrchestrator` observed by collaborators."""
+class RegisteredTrialOrchestrator(Protocol):
+    """The slice of :class:`TrialOrchestrator` observed by collaborators."""
 
     @property
     def trial_id(self) -> str: ...
 
     def start(self) -> None: ...
 
-    def apply_mission_closure_report(
-        self, report: MissionClosureReport
+    def apply_goal_closure_report(
+        self, report: GoalClosureReport
     ) -> None: ...
 
 
 __all__ = [
-    "RegisteredAttemptOrchestrator",
+    "RegisteredTrialOrchestrator",
     "TaskCenterInvariantViolation",
     "TaskCenterLifecycleConfig",
     "evaluator_task_id",

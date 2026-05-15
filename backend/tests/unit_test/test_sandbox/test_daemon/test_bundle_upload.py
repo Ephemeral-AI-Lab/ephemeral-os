@@ -94,14 +94,10 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/execution/workspace_mount.py",
         "sandbox/execution/workspace_capture.py",
         "sandbox/layer_stack/workspace_base.py",
-        "sandbox/execution/overlay_worker.py",
         "sandbox/execution/overlay_change.py",
         "sandbox/execution/overlay_capture.py",
         "sandbox/execution/overlay_result.py",
         "sandbox/execution/overlay_request.py",
-        "sandbox/execution/overlay_mounts.py",
-        "sandbox/execution/overlay_pipeline.py",
-        "sandbox/execution/overlay_runner.py",
         "sandbox/layer_stack/manifest.py",
         "sandbox/layer_stack/manager.py",
         "sandbox/layer_stack/workspace_binding.py",
@@ -129,6 +125,10 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/overlay/namespace/mounts.py",
         "sandbox/overlay/runner/runtime_invoker.py",
         "sandbox/overlay/runner/snapshot_overlay_runner.py",
+        "sandbox/execution/overlay_mounts.py",
+        "sandbox/execution/overlay_pipeline.py",
+        "sandbox/execution/overlay_runner.py",
+        "sandbox/execution/overlay_worker.py",
     ]
     present_removed = [p for p in removed if (extract_dir / p).exists()]
     assert present_removed == []
