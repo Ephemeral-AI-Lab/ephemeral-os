@@ -1,32 +1,118 @@
-"""Live E2E testing framework — generic scenario harness.
+"""Backward-compat shim — re-exports from ``task_center_runner``.
 
-Lifted from the former SWE-EVO live-test harness per
-``docs/wiki/live-e2e-testing-framework-design.md``. Dataset-agnostic; SWE-EVO
-consumers wire through ``live_e2e.sweevo_adapter``, which provides the SWE-EVO
-sandbox provisioner and entry prompt builder.
+This package was renamed to ``task_center_runner`` per
+``.omc/plans/task_center_runner-restructure.md`` (Phase 1). This shim survives
+one release so external imports ``from live_e2e.*`` continue to resolve to the
+canonical modules in ``task_center_runner.*``. New code MUST import from
+``task_center_runner``; this shim will be removed when all call sites are
+migrated.
 
-Subpackages:
-
-- ``audit``     — event bus, lifecycle observer, recorder, metrics
-- ``hooks``     — Hook protocol + registry + built-in hooks
-- ``scenarios`` — Scenario protocol + concrete scenarios
-- ``squad``     — mock-agent squad runner, prompt inspector, sandbox probe
-- ``tests``     — pytest live e2e tests (PG-backed integration + Daytona-gated)
-
-Top-level modules:
-
-- ``stores``    — :class:`TaskCenterStoreBundle` + ``create_per_test_task_center_stores``
-- ``runner``    — ``run_scenario`` orchestration entry point (added in S-3)
-- ``fixtures``  — pytest fixtures (audit_dir, stores) (added in S-3)
-- ``sweevo_adapter`` — SWE-EVO prompt, sandbox, and pytest fixture adapter
+Silent (no ``DeprecationWarning``) per the plan's user-locked decision #9.
 """
 
 from __future__ import annotations
 
-from live_e2e.runner import RunReport, run_scenario
-from live_e2e.stores import (
+import importlib as _importlib
+import sys as _sys
+
+# Mirror every public ``task_center_runner`` submodule into ``sys.modules``
+# under the ``live_e2e`` namespace. After this, ``from live_e2e.audit.bus
+# import X`` resolves to the SAME module object as ``from
+# task_center_runner.audit.bus import X``, so pytest fixture identity,
+# ``isinstance`` checks, and module-level singletons all behave as if the
+# rename never happened.
+_MIRRORED_SUBMODULES = (
+    "audit",
+    "audit.bus",
+    "audit.events",
+    "audit.legacy",
+    "audit.metrics",
+    "audit.node_id",
+    "audit.performance_report",
+    "audit.recorder",
+    "audit.sandbox_events",
+    "audit.stream_bridge",
+    "fixtures",
+    "hooks",
+    "hooks.builtins",
+    "hooks.registry",
+    "real_agent_bootstrap",
+    "real_agent_run",
+    "runner",
+    "scenarios",
+    "scenarios._utils",
+    "scenarios._utils.inspectors",
+    "scenarios._utils.mission_helpers",
+    "scenarios._utils.plans",
+    "scenarios.base",
+    "scenarios.capacity",
+    "scenarios.capacity.full_system_capacity_matrix",
+    "scenarios.capacity.pack_catalog",
+    "scenarios.context",
+    "scenarios.correctness_testing",
+    "scenarios.full_case_user_input",
+    "scenarios.full_stack_adversarial",
+    "scenarios.pipeline",
+    "scenarios.pipeline.attempt_budget_exhausted",
+    "scenarios.pipeline.attempt_retry_evaluator_failure",
+    "scenarios.pipeline.attempt_retry_generator_failure",
+    "scenarios.pipeline.attempt_retry_planner_failure",
+    "scenarios.pipeline.dependency_blocked_descendants",
+    "scenarios.pipeline.dependency_dag_diamond",
+    "scenarios.pipeline.dependency_dag_mixed",
+    "scenarios.pipeline.dependency_dag_parallel",
+    "scenarios.pipeline.dependency_dag_serial",
+    "scenarios.pipeline.episodic_continuation",
+    "scenarios.pipeline.generator_failure_quiescence",
+    "scenarios.pipeline.initial_mission",
+    "scenarios.pipeline.nested_mission",
+    "scenarios.pipeline.partial_parent_planner_full_only",
+    "scenarios.planner_validation",
+    "scenarios.planner_validation.cycle_in_deps",
+    "scenarios.planner_validation.duplicate_local_id",
+    "scenarios.planner_validation.empty_tasks",
+    "scenarios.planner_validation.partial_without_continuation_goal",
+    "scenarios.planner_validation.unknown_agent_name",
+    "scenarios.planner_validation.unknown_dep",
+    "scenarios.sandbox",
+    "scenarios.sandbox._fixtures",
+    "scenarios.sandbox._fixtures.lsp_expectations",
+    "scenarios.sandbox._fixtures.refactor_passes",
+    "scenarios.sandbox._fixtures.scheduler_demo_data",
+    "scenarios.sandbox._metrics",
+    "scenarios.sandbox.auto_squash_commit_resume",
+    "scenarios.sandbox.complex_project_build",
+    "scenarios.sandbox.complex_project_build_shell_edit_lsp",
+    "scenarios.sandbox.occ_concurrent_conflicts",
+    "scenarios.tools",
+    "scenarios.user_input",
+    "squad",
+    "squad.capacity_actions",
+    "squad.capacity_actions.metrics",
+    "squad.capacity_actions.types",
+    "squad.complex_project_build_probe",
+    "squad.complex_project_build_shell_edit_lsp_probe",
+    "squad.definitions",
+    "squad.full_stack_tool_scripts",
+    "squad.prompt_inspector",
+    "squad.runner",
+    "squad.sandbox_probe",
+    "squad.tool_scripts",
+    "stores",
+    "sweevo_adapter",
+)
+
+for _subname in _MIRRORED_SUBMODULES:
+    _sys.modules[__name__ + "." + _subname] = _importlib.import_module(
+        "task_center_runner." + _subname
+    )
+del _subname
+
+from task_center_runner import (  # noqa: E402,F401
+    RunReport,
     TaskCenterStoreBundle,
     create_per_test_task_center_stores,
+    run_scenario,
 )
 
 __all__ = [
