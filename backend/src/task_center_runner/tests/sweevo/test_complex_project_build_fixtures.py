@@ -44,6 +44,16 @@ from task_center_runner.agent.mock.complex_project_build_shell_edit_lsp_probe im
 _PY_SUFFIXES = (".py",)
 
 
+class _ProbeCtx:
+    def __init__(self) -> None:
+        self.sandbox_checks: list[object] = []
+        self.mock_records: list[tuple[object, object]] = []
+
+    def publish_mock_record(self, event_type: object, record: object) -> None:
+        self.mock_records.append((event_type, record))
+        self.sandbox_checks.append(record)
+
+
 def _final_loc(text: str) -> int:
     return text.count("\n") + (1 if text and not text.endswith("\n") else 0)
 
@@ -224,7 +234,7 @@ async def test_broken_lsp_diagnostic_requires_at_least_one_diagnostic(
 
     with pytest.raises(RuntimeError, match="semantic lsp.diagnostics check failed"):
         await _assert_lsp_diagnostics(
-            SimpleNamespace(sandbox_checks=[]),
+            _ProbeCtx(),
             ShellEditLspStats(),
             rel_path="scheduler_demo/_lsp_error_probe.py",
             expect_clean=False,
@@ -267,7 +277,7 @@ async def test_broken_lsp_diagnostic_always_uses_nonblocking_calls(
     )
 
     await _assert_lsp_diagnostics(
-        SimpleNamespace(sandbox_checks=[]),
+        _ProbeCtx(),
         ShellEditLspStats(),
         rel_path="scheduler_demo/_lsp_error_probe.py",
         expect_clean=False,

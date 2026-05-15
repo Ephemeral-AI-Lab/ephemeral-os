@@ -22,7 +22,7 @@ from agents import (
 
 
 _MAIN_PROFILE_DIR = (
-    Path(__file__).resolve().parents[2] / "agents" / "profile" / "main"
+    Path(__file__).resolve().parents[3] / "agents" / "profile" / "main"
 )
 
 
