@@ -18,7 +18,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from sandbox.daemon_paths import BUNDLE_REMOTE_DIR, BUNDLE_REMOTE_TARBALL
+from sandbox.daemon.paths import BUNDLE_REMOTE_DIR, BUNDLE_REMOTE_TARBALL
 from sandbox.host.runtime_bundle import (
     _ensure_runtime_uploaded_with_exec,
     _runtime_bundle_bytes,
@@ -54,7 +54,7 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
     required = [
         "sandbox/__init__.py",
         "sandbox/daemon/async_bridge.py",
-        "sandbox/daemon_paths.py",
+        "sandbox/daemon/paths.py",
         "sandbox/_shared/models.py",
         "sandbox/_shared/clock.py",
         "sandbox/_shared/timing_keys.py",

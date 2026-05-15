@@ -8,7 +8,7 @@ import shlex
 from collections.abc import Mapping
 from typing import Any, Protocol
 
-from sandbox.daemon_paths import (
+from sandbox.daemon.paths import (
     BUNDLE_REMOTE_DIR,
     DAEMON_ENV_SIGNATURE_PATH,
     DAEMON_LAUNCH_SCRIPT_PATH,

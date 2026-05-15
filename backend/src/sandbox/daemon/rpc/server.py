@@ -39,7 +39,7 @@ import os
 import signal
 from pathlib import Path
 
-from sandbox.daemon_paths import DAEMON_PID_PATH, DAEMON_SOCKET_PATH
+from sandbox.daemon.paths import DAEMON_PID_PATH, DAEMON_SOCKET_PATH
 from sandbox.daemon.rpc import dispatcher
 from sandbox._shared.clock import monotonic_now
 

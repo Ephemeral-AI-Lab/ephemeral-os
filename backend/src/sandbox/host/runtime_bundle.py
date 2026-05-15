@@ -17,7 +17,7 @@ import tarfile
 import uuid
 from pathlib import Path
 
-from sandbox.daemon_paths import (
+from sandbox.daemon.paths import (
     BUNDLE_HASH_MARKER as _BUNDLE_HASH_MARKER,
     BUNDLE_REMOTE_DIR as _BUNDLE_REMOTE_DIR,
     BUNDLE_REMOTE_TARBALL as _BUNDLE_REMOTE_TARBALL,
@@ -140,11 +140,9 @@ def _runtime_bundle_bytes() -> bytes:
     sandbox_dir = src / "sandbox"
     raw = io.BytesIO()
     with tarfile.open(fileobj=raw, mode="w") as tar:
-        for name in (
-            "__init__.py",
-            "daemon_paths.py",
-        ):
-            _add_if_exists(tar, sandbox_dir / name, arcname=f"sandbox/{name}")
+        _add_if_exists(
+            tar, sandbox_dir / "__init__.py", arcname="sandbox/__init__.py"
+        )
 
         shared_dir = sandbox_dir / "_shared"
         _add_python_tree(
