@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import signal
 import subprocess
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -74,21 +75,38 @@ def subprocess_to_refs(
     stdout_path.parent.mkdir(parents=True, exist_ok=True)
     stderr_path.parent.mkdir(parents=True, exist_ok=True)
     with stdout_path.open("wb") as stdout_file, stderr_path.open("wb") as stderr_file:
+        # start_new_session=True puts the child into its own process group so
+        # we can SIGKILL the whole tree on timeout — `subprocess.run` would
+        # leave grandchildren (e.g. `bash -c "sleep 1000 &"`) alive otherwise.
+        proc = subprocess.Popen(
+            list(command),
+            cwd=cwd,
+            env=dict(env),
+            stdout=stdout_file,
+            stderr=stderr_file,
+            start_new_session=True,
+        )
         try:
-            completed = subprocess.run(
-                list(command),
-                cwd=cwd,
-                env=dict(env),
-                stdout=stdout_file,
-                stderr=stderr_file,
-                timeout=timeout_seconds,
-                check=False,
-            )
-            return int(completed.returncode)
-        except subprocess.TimeoutExpired:
-            if timeout_exit_code is None:
-                raise
-            return timeout_exit_code
+            try:
+                return int(proc.wait(timeout=timeout_seconds))
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except (ProcessLookupError, PermissionError):
+                    pass
+                try:
+                    proc.wait(timeout=2.0)
+                except subprocess.TimeoutExpired:
+                    pass
+                if timeout_exit_code is None:
+                    raise
+                return timeout_exit_code
+        finally:
+            if proc.poll() is None:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except (ProcessLookupError, PermissionError):
+                    pass
 
 
 def run_command_to_refs(
