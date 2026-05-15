@@ -103,7 +103,7 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/occ/commit_transaction.py",
         "sandbox/occ/gitignore.py",
         "sandbox/occ/hashing.py",
-        "sandbox/occ/router.py",
+        "sandbox/occ/preparer.py",
         "sandbox/occ/stage.py",
         "sandbox/occ/stage_policy.py",
     ]

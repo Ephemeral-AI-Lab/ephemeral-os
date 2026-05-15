@@ -10,7 +10,7 @@ from sandbox.occ.changeset import (
     OpaqueDirChange,
     SymlinkChange,
 )
-from sandbox.occ.router import Router
+from sandbox.occ.preparer import ChangesetPreparer
 
 
 class _Gitignore:
@@ -24,7 +24,7 @@ class _Gitignore:
 
 
 def _prepare(changes, *, ignored: set[str] | None = None):
-    router = Router(_Gitignore(ignored))
+    router = ChangesetPreparer(_Gitignore(ignored))
     return router.prepare_sync(
         changes,
         snapshot=None,
@@ -54,7 +54,7 @@ def test_routes_occ_gated_occ_skipped_drop_and_reject_groups() -> None:
 
 def test_special_change_kinds_consult_gitignore_before_routing() -> None:
     gitignore = _Gitignore({"cache", "ignored-link"})
-    router = Router(gitignore)
+    router = ChangesetPreparer(gitignore)
     prepared = router.prepare_sync(
         [
             SymlinkChange(path="bin/data.dat", target="/tmp/data"),

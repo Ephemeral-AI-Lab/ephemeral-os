@@ -23,7 +23,7 @@ def test_phase03_occ_preparation_modules_do_not_import_overlay_or_legacy_apply()
     occ_root = Path(sandbox.occ.__file__).resolve().parent
     phase03_files = [
         occ_root / "service.py",
-        occ_root / "router.py",
+        occ_root / "preparer.py",
         occ_root / "changeset.py",
         occ_root / "gitignore.py",
         occ_root / "hashing.py",

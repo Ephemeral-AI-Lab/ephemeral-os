@@ -8,7 +8,7 @@ from uuid import uuid4
 from sandbox.layer_stack.workspace_binding import require_workspace_binding
 from sandbox.occ.changeset import build_api_write_change
 from sandbox.occ.hashing import ContentHasher
-from sandbox.occ.router import prepare_single_path_changeset
+from sandbox.occ.preparer import prepare_single_path_changeset
 from sandbox.daemon.async_bridge import run_sync_in_executor
 from sandbox.daemon._toolbox import (
     classify_path,

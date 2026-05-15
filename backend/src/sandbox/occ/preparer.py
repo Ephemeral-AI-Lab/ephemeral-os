@@ -29,7 +29,7 @@ from sandbox.timing import monotonic_now
 BaseHashReader = Callable[[str], str | None]
 
 
-class Router:
+class ChangesetPreparer:
     """Prepare direct and gated path groups for a typed changeset."""
 
     def __init__(self, gitignore: GitignoreMatcher) -> None:
@@ -227,7 +227,7 @@ def prepare_single_path_changeset(
     atomic: bool = False,
 ) -> PreparedChangeset:
     """Prepare one path through the shared router fast branch."""
-    return Router(gitignore).prepare_single_path_sync(
+    return ChangesetPreparer(gitignore).prepare_single_path_sync(
         change,
         snapshot=snapshot,
         base_hash_reader=base_hash_reader,
@@ -237,6 +237,6 @@ def prepare_single_path_changeset(
 
 __all__ = [
     "BaseHashReader",
-    "Router",
+    "ChangesetPreparer",
     "prepare_single_path_changeset",
 ]

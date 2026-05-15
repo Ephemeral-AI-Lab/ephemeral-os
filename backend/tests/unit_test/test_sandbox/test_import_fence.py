@@ -279,7 +279,7 @@ def test_command_exec_imports_only_client_protocol_boundaries() -> None:
         "sandbox.occ.gitignore",
         "sandbox.occ.stage",
         "sandbox.occ.stage",
-        "sandbox.occ.router",
+        "sandbox.occ.preparer",
         "sandbox.occ.hashing",
         "sandbox.daemon.workspace_server",
     )

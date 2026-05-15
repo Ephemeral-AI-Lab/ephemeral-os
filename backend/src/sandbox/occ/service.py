@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from sandbox.layer_stack.stack import LayerStack
-from sandbox.occ.router import Router
+from sandbox.occ.preparer import ChangesetPreparer
 from sandbox.timing_keys import TimingKey
 from sandbox.daemon.async_bridge import run_sync_in_executor
 from sandbox.timing import monotonic_now
@@ -34,13 +34,13 @@ class OccService:
         *,
         gitignore: GitignoreMatcher,
         layer_stack: LayerStack,
-        orchestrator: Router | None = None,
+        orchestrator: ChangesetPreparer | None = None,
         transaction: CommitTransaction | None = None,
         commit_queue: CommitQueue | None = None,
         maintenance: MaintenancePolicy | None = None,
     ) -> None:
         self._snapshot_reader = layer_stack
-        self._orchestrator = orchestrator or Router(gitignore)
+        self._orchestrator = orchestrator or ChangesetPreparer(gitignore)
         self._transaction = transaction or CommitTransaction(
             snapshot_reader=layer_stack,
             staging=layer_stack,
