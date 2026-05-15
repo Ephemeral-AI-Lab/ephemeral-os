@@ -7,6 +7,7 @@ from typing import Any, Literal
 
 from audit.base import AuditEvent, AuditNode, JsonValue
 
+from sandbox._conflict_markers import ALL_CONFLICT_MARKERS
 from sandbox.audit import events
 from sandbox.models import GuardedResultBase, SandboxCaller, SandboxResultBase
 from sandbox.timing import normalize_timing_map, timing_audit_signals
@@ -193,16 +194,7 @@ def _none_if_empty(value: str | None) -> str | None:
     return stripped or None
 
 
-_CONFLICT_ERROR_MARKERS = (
-    "anchor not found",
-    "anchor occurrence count mismatch",
-    "aborted_overlap",
-    "aborted_version",
-    "content changed",
-    "old_text_not_found",
-    "overlay capture refuses escaping symlink target",
-    "unsupported tracked change kind: symlinkchange",
-)
+_CONFLICT_ERROR_MARKERS = ALL_CONFLICT_MARKERS
 
 
 def _conflict_reason_from_error(error: BaseException) -> str | None:

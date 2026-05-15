@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from sandbox._conflict_markers import (
+    EDIT_CONFLICT_MARKERS as _EDIT_CONFLICT_MARKERS,
+    SHELL_CONFLICT_MARKERS as _SHELL_CONFLICT_MARKERS,
+)
 from sandbox.api._impl._payload import error_message
 
 _EDIT_CONFLICT_CODES = {
@@ -12,21 +16,11 @@ _EDIT_CONFLICT_CODES = {
     "anchor_occurrence_count_mismatch",
     "old_text_not_found",
 }
-_EDIT_CONFLICT_MARKERS = (
-    "anchor not found",
-    "anchor occurrence count mismatch",
-    "aborted_overlap",
-    "old_text_not_found",
-)
 _SHELL_CONFLICT_CODES = {
     "overlay_escape",
     "rejected_symlink",
     "unsupported_symlink_change",
 }
-_SHELL_CONFLICT_MARKERS = (
-    "overlay capture refuses escaping symlink target",
-    "unsupported tracked change kind: symlinkchange",
-)
 
 
 def _error_code(error: BaseException) -> str | None:
