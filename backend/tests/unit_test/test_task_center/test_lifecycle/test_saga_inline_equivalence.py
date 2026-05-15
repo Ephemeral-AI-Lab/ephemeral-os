@@ -33,7 +33,7 @@ def test_compensate_failed_start_signature_preserved() -> None:
         "self",
         "goal",
         "iteration",
-        "initial_trial_id",
+        "initial_attempt_id",
         "parent_task_id",
     }
     assert set(sig.parameters) == expected

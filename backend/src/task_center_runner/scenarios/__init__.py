@@ -13,10 +13,10 @@ from task_center_runner.scenarios.correctness_testing import CorrectnessTesting
 from task_center_runner.scenarios.full_case_user_input import FullCaseUserInput
 from task_center_runner.scenarios.full_stack_adversarial import FullStackAdversarial
 from task_center_runner.scenarios.pipeline import (
-    TrialBudgetExhausted,
-    TrialRetryEvaluatorFailure,
-    TrialRetryGeneratorFailure,
-    TrialRetryPlannerFailure,
+    AttemptBudgetExhausted,
+    AttemptRetryEvaluatorFailure,
+    AttemptRetryGeneratorFailure,
+    AttemptRetryPlannerFailure,
     DependencyBlockedDescendants,
     DependencyDagDiamond,
     DependencyDagMixed,
@@ -54,16 +54,16 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     # Focused pipeline scenarios.
     "pipeline.initial_mission": InitialGoal,
     "pipeline.episodic_continuation": IterativeContinuation,
-    "pipeline.attempt_retry_evaluator_failure": TrialRetryEvaluatorFailure,
-    "pipeline.attempt_retry_generator_failure": TrialRetryGeneratorFailure,
-    "pipeline.attempt_retry_planner_failure": TrialRetryPlannerFailure,
+    "pipeline.attempt_retry_evaluator_failure": AttemptRetryEvaluatorFailure,
+    "pipeline.attempt_retry_generator_failure": AttemptRetryGeneratorFailure,
+    "pipeline.attempt_retry_planner_failure": AttemptRetryPlannerFailure,
     "pipeline.dependency_blocked_descendants": DependencyBlockedDescendants,
     "pipeline.dependency_dag_diamond": DependencyDagDiamond,
     "pipeline.dependency_dag_serial": DependencyDagSerial,
     "pipeline.dependency_dag_mixed": DependencyDagMixed,
     "pipeline.dependency_dag_parallel": DependencyDagParallel,
     "pipeline.generator_failure_quiescence": GeneratorFailureQuiescence,
-    "pipeline.attempt_budget_exhausted": TrialBudgetExhausted,
+    "pipeline.attempt_budget_exhausted": AttemptBudgetExhausted,
     "pipeline.nested_mission": NestedGoal,
     "pipeline.nested_mission_failure": NestedGoalFailure,
     "pipeline.partial_parent_planner_full_only": PartialParentPlannerFullOnly,
@@ -90,10 +90,10 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
 }
 
 __all__ = [
-    "TrialBudgetExhausted",
-    "TrialRetryEvaluatorFailure",
-    "TrialRetryGeneratorFailure",
-    "TrialRetryPlannerFailure",
+    "AttemptBudgetExhausted",
+    "AttemptRetryEvaluatorFailure",
+    "AttemptRetryGeneratorFailure",
+    "AttemptRetryPlannerFailure",
     "AutoSquashCommitResume",
     "ComplexProjectBuild",
     "ComplexProjectBuildShellEditLsp",

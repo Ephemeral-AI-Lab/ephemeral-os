@@ -1,6 +1,6 @@
-"""Trial persistence model — horizontal-retry axis of harness work.
+"""Attempt persistence model — horizontal-retry axis of harness work.
 
-A Trial is one full planner -> generator -> evaluator run inside an
+A Attempt is one full planner -> generator -> evaluator run inside an
 Iteration.
 """
 
@@ -14,10 +14,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 from db.base import Base
 
 
-class TrialRecord(Base):
-    """Persisted Trial (horizontal retry axis)."""
+class AttemptRecord(Base):
+    """Persisted Attempt (horizontal retry axis)."""
 
-    __tablename__ = "trials"
+    __tablename__ = "attempts"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     iteration_id: Mapped[str] = mapped_column(
@@ -25,7 +25,7 @@ class TrialRecord(Base):
         ForeignKey("iterations.id", ondelete="CASCADE"),
         index=True,
     )
-    trial_sequence_no: Mapped[int] = mapped_column(Integer)
+    attempt_sequence_no: Mapped[int] = mapped_column(Integer)
     stage: Mapped[str] = mapped_column(String(16))
     status: Mapped[str] = mapped_column(String(16))
     planner_task_id: Mapped[str | None] = mapped_column(String(96), nullable=True)
@@ -49,13 +49,13 @@ class TrialRecord(Base):
     __table_args__ = (
         UniqueConstraint(
             "iteration_id",
-            "trial_sequence_no",
-            name="uq_trial_iteration_sequence",
+            "attempt_sequence_no",
+            name="uq_attempt_iteration_sequence",
         ),
     )
 
     def __repr__(self) -> str:
         return (
-            f"<TrialRecord id={self.id!r} "
-            f"seq={self.trial_sequence_no} stage={self.stage!r}>"
+            f"<AttemptRecord id={self.id!r} "
+            f"seq={self.attempt_sequence_no} stage={self.stage!r}>"
         )

@@ -34,7 +34,7 @@ class ContextBlockKind(StrEnum):
     ITERATION_STATEMENT = "iteration_statement"
     PRIOR_ITERATION_SPECIFICATION = "prior_iteration_specification"
     PRIOR_ITERATION_SUMMARY = "prior_iteration_summary"
-    FAILED_TRIAL_LANDSCAPE = "failed_trial_landscape"
+    FAILED_ATTEMPT_LANDSCAPE = "failed_attempt_landscape"
     PARTIAL_PLAN_BOUNDARY = "partial_plan_boundary"
     PLANNED_TASK_SPEC = "planned_task_spec"
     TASK_SPECIFICATION = "task_specification"
@@ -50,7 +50,7 @@ class ContextRefs(BaseModel):
 
     goal_id: str | None = None
     iteration_id: str | None = None
-    trial_id: str | None = None
+    attempt_id: str | None = None
     task_id: str | None = None
 
     model_config = ConfigDict(extra="forbid")

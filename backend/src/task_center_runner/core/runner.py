@@ -100,22 +100,22 @@ def _graph_summary(
     for goal in bundle.goal_store.list_for_run(task_center_run_id):
         iterations: list[dict[str, Any]] = []
         for iteration in bundle.iteration_store.list_for_goal(goal.id):
-            trials: list[dict[str, Any]] = []
-            for trial in bundle.trial_store.list_for_iteration(iteration.id):
-                task_rows = bundle.task_store.list_tasks_for_trial(trial.id)
-                trials.append(
+            attempts: list[dict[str, Any]] = []
+            for attempt in bundle.attempt_store.list_for_iteration(iteration.id):
+                task_rows = bundle.task_store.list_tasks_for_attempt(attempt.id)
+                attempts.append(
                     {
-                        "id": trial.id,
-                        "sequence_no": trial.trial_sequence_no,
-                        "stage": trial.stage.value,
-                        "status": trial.status.value,
+                        "id": attempt.id,
+                        "sequence_no": attempt.attempt_sequence_no,
+                        "stage": attempt.stage.value,
+                        "status": attempt.status.value,
                         "fail_reason": (
-                            trial.fail_reason.value
-                            if trial.fail_reason is not None
+                            attempt.fail_reason.value
+                            if attempt.fail_reason is not None
                             else None
                         ),
-                        "continuation_goal": trial.continuation_goal,
-                        "task_ids": list(trial.generator_task_ids),
+                        "continuation_goal": attempt.continuation_goal,
+                        "task_ids": list(attempt.generator_task_ids),
                         "tasks": task_rows,
                     }
                 )
@@ -127,7 +127,7 @@ def _graph_summary(
                     "status": iteration.status.value,
                     "goal": iteration.goal,
                     "continuation_goal": iteration.continuation_goal,
-                    "trials": trials,
+                    "attempts": attempts,
                 }
             )
         goals.append(

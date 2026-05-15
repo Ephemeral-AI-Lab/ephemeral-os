@@ -48,7 +48,7 @@ def _seed_parent_packet(context_packet_store) -> ContextPacket:
         target_role="planner",
         target_id="g-parent",
         canonical_refs=ContextRefs(
-            goal_id=PARENT_MISSION_ID, trial_id="g-parent"
+            goal_id=PARENT_MISSION_ID, attempt_id="g-parent"
         ),
         blocks=[
             ContextBlock(
@@ -74,7 +74,7 @@ def _seed_parent_task(task_store, *, packet_id: str) -> None:
         needs=[],
         task_center_attempt_id="g-parent",
         context_packet_id=packet_id,
-        spawn_reason="trial_generator",
+        spawn_reason="attempt_generator",
     )
 
 

@@ -61,7 +61,7 @@ def test_packet_serialization_round_trip():
         canonical_refs=ContextRefs(
             goal_id="req",
             iteration_id="seg",
-            trial_id="g",
+            attempt_id="g",
             task_id="t",
         ),
         blocks=[

@@ -27,7 +27,7 @@ class NodeId:
     mission_seq: int | None = None
     episode_id: str | None = None
     episode_seq: int | None = None
-    trial_id: str | None = None
+    attempt_id: str | None = None
     attempt_seq: int | None = None
     agent_role: PrimaryRole | None = None
     agent_name: str | None = None

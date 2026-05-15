@@ -1,6 +1,6 @@
 """Unit tests for the SWE-EVO live e2e AuditRecorder.
 
-Exercises the 4 ORM commit listeners (Goal/Iteration/Trial/Task) plus the
+Exercises the 4 ORM commit listeners (Goal/Iteration/Attempt/Task) plus the
 agent_run_id -> task_id mapping listener, the per-Task message recorder
 gating by primary role, and the run.json/metrics.json writers.
 """
@@ -26,7 +26,7 @@ from db.models.task_center import (
     TaskCenterRunRecord,
     TaskCenterTaskRecord,
 )
-from db.stores.trial_store import TrialStore
+from db.stores.attempt_store import AttemptStore
 from db.stores.iteration_store import IterationStore
 from db.stores.goal_store import GoalStore
 from db.stores.task_center_store import TaskCenterStore
@@ -51,7 +51,7 @@ class _TestStoreBundle:
     task_store: TaskCenterStore
     mission_store: GoalStore
     episode_store: IterationStore
-    attempt_store: TrialStore
+    attempt_store: AttemptStore
 
     def close(self) -> None:
         self.engine.dispose()
@@ -72,7 +72,7 @@ def stores() -> Iterator[_TestStoreBundle]:
         task_store=TaskCenterStore(),
         goal_store=GoalStore(),
         iteration_store=IterationStore(),
-        trial_store=TrialStore(),
+        attempt_store=AttemptStore(),
     )
     for store in (
         bundle.task_store,
@@ -206,11 +206,11 @@ def test_episode_and_attempt_listeners(
             sequence_no=1,
             creation_reason=IterationCreationReason.INITIAL,
             goal="ep goal",
-            trial_budget=3,
+            attempt_budget=3,
         )
         attempt = stores.attempt_store.insert(
             iteration_id=episode.id,
-            trial_sequence_no=1,
+            attempt_sequence_no=1,
         )
     finally:
         recorder.dispose()
@@ -278,11 +278,11 @@ def test_task_dir_placement_per_role(
             sequence_no=1,
             creation_reason=IterationCreationReason.INITIAL,
             goal="ep",
-            trial_budget=3,
+            attempt_budget=3,
         )
         attempt = stores.attempt_store.insert(
             iteration_id=episode.id,
-            trial_sequence_no=1,
+            attempt_sequence_no=1,
         )
 
         _insert_task(stores, task_id="entry_task_1", role="entry_executor")
@@ -355,11 +355,11 @@ def test_generator_verifier_task_uses_verifier_dir_and_message_recorder(
             sequence_no=1,
             creation_reason=IterationCreationReason.INITIAL,
             goal="ep",
-            trial_budget=3,
+            attempt_budget=3,
         )
         attempt = stores.attempt_store.insert(
             iteration_id=episode.id,
-            trial_sequence_no=1,
+            attempt_sequence_no=1,
         )
         _insert_task(
             stores,

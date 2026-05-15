@@ -34,7 +34,7 @@ def _make_packet(packet_id: str = "pkt-1") -> ContextPacket:
         target_role="planner",
         target_id="g-1",
         canonical_refs=ContextRefs(
-            goal_id="req-A", iteration_id="iteration-1", trial_id="g-1"
+            goal_id="req-A", iteration_id="iteration-1", attempt_id="g-1"
         ),
         blocks=[
             ContextBlock(

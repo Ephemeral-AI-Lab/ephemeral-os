@@ -27,7 +27,7 @@ class ToolCallSpec:
 class ScenarioContext:
     """Live state visible to a scenario at a decision point."""
 
-    trial: Any  # Trial | None
+    attempt: Any  # Attempt | None
     iteration: Any  # Iteration | None
     goal: Any  # Goal | None
     prompt: str

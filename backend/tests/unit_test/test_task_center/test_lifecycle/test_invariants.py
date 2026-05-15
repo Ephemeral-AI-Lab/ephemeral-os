@@ -14,10 +14,10 @@ from task_center._core.infra import (
 )
 from task_center._core.infra import (
     assert_fail_reason_present_on_failure,
-    assert_trial_sequence_contiguous,
+    assert_attempt_sequence_contiguous,
 )
 from task_center._core.infra import (
-    assert_trial_belongs_to_iteration,
+    assert_attempt_belongs_to_iteration,
     assert_iteration_has_budget,
     assert_iteration_open,
 )
@@ -26,11 +26,11 @@ from task_center.goal.state import (
     Goal,
     GoalStatus,
 )
-from task_center.trial import (
-    Trial,
-    TrialFailReason,
-    TrialStage,
-    TrialStatus,
+from task_center.attempt import (
+    Attempt,
+    AttemptFailReason,
+    AttemptStage,
+    AttemptStatus,
 )
 from task_center.iteration.state import (
     Iteration,
@@ -62,9 +62,9 @@ def _request(
 def _segment(
     *,
     status: IterationStatus = IterationStatus.OPEN,
-    trial_ids: tuple[str, ...] = (),
+    attempt_ids: tuple[str, ...] = (),
     continuation_goal: str | None = None,
-    trial_budget: int = 2,
+    attempt_budget: int = 2,
     sid: str = "s1",
 ) -> Iteration:
     now = datetime.now(UTC)
@@ -74,9 +74,9 @@ def _segment(
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="g",
-        trial_budget=trial_budget,
+        attempt_budget=attempt_budget,
         status=status,
-        trial_ids=trial_ids,
+        attempt_ids=attempt_ids,
         continuation_goal=continuation_goal,
         created_at=now,
         updated_at=now,
@@ -86,17 +86,17 @@ def _segment(
 
 def _graph(
     *,
-    status: TrialStatus = TrialStatus.RUNNING,
-    fail_reason: TrialFailReason | None = None,
+    status: AttemptStatus = AttemptStatus.RUNNING,
+    fail_reason: AttemptFailReason | None = None,
     iteration_id: str = "s1",
     gid: str = "g1",
-) -> Trial:
+) -> Attempt:
     now = datetime.now(UTC)
-    return Trial(
+    return Attempt(
         id=gid,
         iteration_id=iteration_id,
-        trial_sequence_no=1,
-        stage=TrialStage.PLAN,
+        attempt_sequence_no=1,
+        stage=AttemptStage.PLAN,
         status=status,
         planner_task_id=None,
         task_specification=None,
@@ -173,22 +173,22 @@ def test_assert_episode_open():
 
 
 def test_assert_episode_has_budget():
-    assert_iteration_has_budget(_segment(trial_budget=2, trial_ids=()))
+    assert_iteration_has_budget(_segment(attempt_budget=2, attempt_ids=()))
     assert_iteration_has_budget(
-        _segment(trial_budget=2, trial_ids=("g1",))
+        _segment(attempt_budget=2, attempt_ids=("g1",))
     )
     with pytest.raises(TaskCenterInvariantViolation):
         assert_iteration_has_budget(
-            _segment(trial_budget=2, trial_ids=("g1", "g2"))
+            _segment(attempt_budget=2, attempt_ids=("g1", "g2"))
         )
 
 
 def test_assert_attempt_belongs_to_episode():
-    assert_trial_belongs_to_iteration(
+    assert_attempt_belongs_to_iteration(
         _graph(iteration_id="s1"), _segment(sid="s1")
     )
     with pytest.raises(TaskCenterInvariantViolation):
-        assert_trial_belongs_to_iteration(
+        assert_attempt_belongs_to_iteration(
             _graph(iteration_id="s1"), _segment(sid="s2")
         )
 
@@ -197,25 +197,25 @@ def test_assert_attempt_belongs_to_episode():
 
 
 def test_assert_attempt_sequence_contiguous():
-    assert_trial_sequence_contiguous(_segment(trial_ids=()), 1)
-    assert_trial_sequence_contiguous(_segment(trial_ids=("g1",)), 2)
+    assert_attempt_sequence_contiguous(_segment(attempt_ids=()), 1)
+    assert_attempt_sequence_contiguous(_segment(attempt_ids=("g1",)), 2)
     with pytest.raises(TaskCenterInvariantViolation):
-        assert_trial_sequence_contiguous(_segment(trial_ids=("g1",)), 1)
+        assert_attempt_sequence_contiguous(_segment(attempt_ids=("g1",)), 1)
 
 
 def test_assert_fail_reason_present_on_failure():
     assert_fail_reason_present_on_failure(
-        _graph(status=TrialStatus.PASSED)
+        _graph(status=AttemptStatus.PASSED)
     )
     assert_fail_reason_present_on_failure(
         _graph(
-            status=TrialStatus.FAILED,
-            fail_reason=TrialFailReason.GENERATOR_FAILED,
+            status=AttemptStatus.FAILED,
+            fail_reason=AttemptFailReason.GENERATOR_FAILED,
         )
     )
     with pytest.raises(TaskCenterInvariantViolation):
         assert_fail_reason_present_on_failure(
-            _graph(status=TrialStatus.FAILED, fail_reason=None)
+            _graph(status=AttemptStatus.FAILED, fail_reason=None)
         )
 
 

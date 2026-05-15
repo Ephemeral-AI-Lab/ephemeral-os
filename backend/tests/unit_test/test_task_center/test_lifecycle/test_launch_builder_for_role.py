@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import inspect
 
-from task_center.trial.launch import LaunchBuilder
+from task_center.attempt.launch import LaunchBuilder
 
 
 def test_launch_builder_public_surface_preserved() -> None:

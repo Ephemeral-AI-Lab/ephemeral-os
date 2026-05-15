@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from task_center.goal.state import GoalStatus
-from task_center.trial import TrialStage, TrialStatus
+from task_center.attempt import AttemptStage, AttemptStatus
 from task_center.task_state import (
     EvaluatorSubmission,
     GeneratorSubmission,
@@ -50,7 +50,7 @@ async def test_submit_execution_success_calls_apply_generator_submission(
     fixture = build_harness_fixture(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
     )
@@ -77,7 +77,7 @@ async def test_submit_execution_failure_calls_apply_generator_submission(
     fixture = build_harness_fixture(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
     )
@@ -103,7 +103,7 @@ async def test_submit_verification_success_calls_apply_generator_submission(
     fixture = build_harness_fixture(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
     )
@@ -128,7 +128,7 @@ async def test_submit_evaluation_success_calls_apply_evaluator_submission(
     fixture = build_harness_fixture(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
     )
@@ -141,10 +141,10 @@ async def test_submit_evaluation_success_calls_apply_evaluator_submission(
         emit=_noop_emit,
     )
 
-    attempt = attempt_store.get(fixture.trial_id)
+    attempt = attempt_store.get(fixture.attempt_id)
     assert not result.is_error
     assert attempt is not None
-    assert attempt.status == TrialStatus.PASSED
+    assert attempt.status == AttemptStatus.PASSED
 
 
 async def test_submit_evaluation_failure_calls_apply_evaluator_submission(
@@ -153,7 +153,7 @@ async def test_submit_evaluation_failure_calls_apply_evaluator_submission(
     fixture = build_harness_fixture(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
     )
@@ -166,10 +166,10 @@ async def test_submit_evaluation_failure_calls_apply_evaluator_submission(
         emit=_noop_emit,
     )
 
-    attempt = attempt_store.get(fixture.trial_id)
+    attempt = attempt_store.get(fixture.attempt_id)
     assert not result.is_error
     assert attempt is not None
-    assert attempt.status == TrialStatus.FAILED
+    assert attempt.status == AttemptStatus.FAILED
 
 
 async def test_submit_execution_handoff_starts_delegated_request(
@@ -178,7 +178,7 @@ async def test_submit_execution_handoff_starts_delegated_request(
     fixture = build_harness_fixture(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
     )
@@ -194,7 +194,7 @@ async def test_submit_execution_handoff_starts_delegated_request(
     task = task_store.get_task(generator_id)
     delegated_request = mission_store.get(result.metadata["goal_id"])
     initial_episode = episode_store.get(result.metadata["initial_iteration_id"])
-    created_attempt = attempt_store.get(result.metadata["initial_trial_id"])
+    created_attempt = attempt_store.get(result.metadata["initial_attempt_id"])
 
     assert not result.is_error
     assert result.does_terminate
@@ -208,7 +208,7 @@ async def test_submit_execution_handoff_starts_delegated_request(
     assert initial_episode.goal_id == delegated_request.id
     assert created_attempt is not None
     assert created_attempt.iteration_id == initial_episode.id
-    assert created_attempt.stage == TrialStage.PLAN
+    assert created_attempt.stage == AttemptStage.PLAN
 
 
 async def test_submit_execution_handoff_entry_mode_uses_bound_controller(
@@ -216,10 +216,10 @@ async def test_submit_execution_handoff_entry_mode_uses_bound_controller(
 ) -> None:
     from pathlib import Path
 
-    from task_center.trial.orchestrator_registry import (
-        TrialOrchestratorRegistry,
+    from task_center.attempt.orchestrator_registry import (
+        AttemptOrchestratorRegistry,
     )
-    from task_center.trial.runtime import TrialDeps
+    from task_center.attempt.runtime import AttemptDeps
     from task_center.entry import EntryTaskController
     from task_center.iteration import IterationManagerRegistry
     from tools._framework.core.context import ToolExecutionContextService
@@ -245,13 +245,13 @@ async def test_submit_execution_handoff_entry_mode_uses_bound_controller(
         task_center_run_id="run1",
         task_store=task_store,
     )
-    runtime = TrialDeps(
+    runtime = AttemptDeps(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=FakeLauncher(),
-        orchestrator_registry=TrialOrchestratorRegistry(),
+        orchestrator_registry=AttemptOrchestratorRegistry(),
         manager_registry=IterationManagerRegistry(),
         composer=composer,
         entry_task_controller=controller,
@@ -308,7 +308,7 @@ async def test_submit_execution_handoff_accepts_any_generator_agent_profile(
     fixture = build_harness_fixture(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
     )
@@ -337,7 +337,7 @@ async def test_submit_execution_handoff_return_updates_outer_generator(
     fixture = build_harness_fixture(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
     )
@@ -349,7 +349,7 @@ async def test_submit_execution_handoff_return_updates_outer_generator(
         make_tool_context(fixture, outer_generator_id),
         emit=_noop_emit,
     )
-    delegated_attempt_id = result.metadata["initial_trial_id"]
+    delegated_attempt_id = result.metadata["initial_attempt_id"]
     delegated_orchestrator = fixture.runtime.orchestrator_registry.get_or_raise(
         delegated_attempt_id
     )
@@ -396,15 +396,15 @@ async def test_submit_execution_handoff_return_updates_outer_generator(
     )
 
     outer_task = task_store.get_task(outer_generator_id)
-    outer_attempt = attempt_store.get(fixture.trial_id)
+    outer_attempt = attempt_store.get(fixture.attempt_id)
     delegated_request = mission_store.get(result.metadata["goal_id"])
 
     assert outer_task is not None
     assert outer_task["status"] == TaskCenterTaskStatus.DONE.value
     assert outer_task["summaries"][-1]["payload"]["goal_closure_report"][
-        "final_trial_id"
+        "final_attempt_id"
     ] == delegated_attempt_id
     assert outer_attempt is not None
-    assert outer_attempt.stage == TrialStage.EVALUATE
+    assert outer_attempt.stage == AttemptStage.EVALUATE
     assert delegated_request is not None
     assert delegated_request.status == GoalStatus.SUCCEEDED

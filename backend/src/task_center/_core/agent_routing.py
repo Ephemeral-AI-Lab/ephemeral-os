@@ -103,7 +103,7 @@ def _depth(ctx: ResolverContext) -> int:
     """Return the nested-goal depth for ``ctx``.
 
     Scopes without a goal (e.g. the top-level entry executor) have no
-    caller-trial ancestry by construction, so depth is zero.
+    caller-attempt ancestry by construction, so depth is zero.
     """
     goal_id = ctx.scope.goal_id
     if goal_id is None:
@@ -112,7 +112,7 @@ def _depth(ctx: ResolverContext) -> int:
         goal_id=goal_id,
         goal_store=ctx.deps.goal_store,
         iteration_store=ctx.deps.iteration_store,
-        trial_store=ctx.deps.trial_store,
+        attempt_store=ctx.deps.attempt_store,
         task_store=ctx.deps.task_store,
     )
 
@@ -128,7 +128,7 @@ def _nested_goal_depth_above_handoff_range(ctx: ResolverContext) -> bool:
 
 
 def _nested_goal_depth_gt_1(ctx: ResolverContext) -> bool:
-    """True when depth > 1 — caller trial is itself inside another goal."""
+    """True when depth > 1 — caller attempt is itself inside another goal."""
     return _depth(ctx) > 1
 
 

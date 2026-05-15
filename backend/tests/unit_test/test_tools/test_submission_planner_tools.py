@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.trial import TrialStage
+from task_center.attempt import AttemptStage
 from tools._framework.execution.tool_call import execute_tool_once
 from tools.submission.planner import submit_full_plan, submit_partial_plan
 
@@ -42,7 +42,7 @@ async def test_full_plan_routes_to_apply_plan_submission(
     fixture = build_harness_fixture(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
     )
@@ -55,12 +55,12 @@ async def test_full_plan_routes_to_apply_plan_submission(
         emit=_noop_emit,
     )
 
-    attempt = attempt_store.get(fixture.trial_id)
+    attempt = attempt_store.get(fixture.attempt_id)
     assert not result.is_error
     assert result.does_terminate
     assert result.metadata["submission_kind"] == "planner_full"
     assert attempt is not None
-    assert attempt.stage == TrialStage.GENERATE
+    assert attempt.stage == AttemptStage.GENERATE
     assert attempt.generator_task_ids
 
 
@@ -70,7 +70,7 @@ async def test_partial_plan_routes_to_apply_plan_submission(
     fixture = build_harness_fixture(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
     )
@@ -84,7 +84,7 @@ async def test_partial_plan_routes_to_apply_plan_submission(
         emit=_noop_emit,
     )
 
-    attempt = attempt_store.get(fixture.trial_id)
+    attempt = attempt_store.get(fixture.attempt_id)
     assert not result.is_error
     assert attempt is not None
     assert attempt.continuation_goal == "  continue with phase 2  "
@@ -162,7 +162,7 @@ async def test_plan_validation_errors_do_not_mutate_graph(
     fixture = build_harness_fixture(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
     )
@@ -176,11 +176,11 @@ async def test_plan_validation_errors_do_not_mutate_graph(
         emit=_noop_emit,
     )
 
-    attempt = attempt_store.get(fixture.trial_id)
+    attempt = attempt_store.get(fixture.attempt_id)
     assert result.is_error
     assert expected in result.output
     assert attempt is not None
-    assert attempt.stage == TrialStage.PLAN
+    assert attempt.stage == AttemptStage.PLAN
 
 
 async def test_full_plan_rejects_continuation_goal(
@@ -189,7 +189,7 @@ async def test_full_plan_rejects_continuation_goal(
     fixture = build_harness_fixture(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
     )
@@ -203,12 +203,12 @@ async def test_full_plan_rejects_continuation_goal(
         emit=_noop_emit,
     )
 
-    attempt = attempt_store.get(fixture.trial_id)
+    attempt = attempt_store.get(fixture.attempt_id)
     assert result.is_error
     assert "continuation_goal" in result.output
     assert "Extra inputs are not permitted" in result.output
     assert attempt is not None
-    assert attempt.stage == TrialStage.PLAN
+    assert attempt.stage == AttemptStage.PLAN
 
 
 async def test_partial_plan_rejects_blank_continuation_goal(
@@ -217,7 +217,7 @@ async def test_partial_plan_rejects_blank_continuation_goal(
     fixture = build_harness_fixture(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         composer=composer,
     )
@@ -231,8 +231,8 @@ async def test_partial_plan_rejects_blank_continuation_goal(
         emit=_noop_emit,
     )
 
-    attempt = attempt_store.get(fixture.trial_id)
+    attempt = attempt_store.get(fixture.attempt_id)
     assert result.is_error
     assert "continuation_goal must be nonblank" in result.output
     assert attempt is not None
-    assert attempt.stage == TrialStage.PLAN
+    assert attempt.stage == AttemptStage.PLAN

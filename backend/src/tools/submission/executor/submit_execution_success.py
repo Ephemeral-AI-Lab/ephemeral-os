@@ -9,7 +9,7 @@ from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput, ToolResult
 from tools.submission.context import (
-    TrialSubmissionContextError,
+    AttemptSubmissionContextError,
     resolve_executor_submission_context,
 )
 
@@ -37,7 +37,7 @@ async def submit_execution_success(
         submission_context.submit_executor_success(
             summary=summary, artifacts=artifacts
         )
-    except (TrialSubmissionContextError, TaskCenterInvariantViolation) as exc:
+    except (AttemptSubmissionContextError, TaskCenterInvariantViolation) as exc:
         return ToolResult(output=str(exc), is_error=True)
 
     return ToolResult(

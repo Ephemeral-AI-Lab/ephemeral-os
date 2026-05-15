@@ -118,7 +118,7 @@ class FullStackAdversarial(ScenarioBase):
             ctx.mutable_state is not None
             and ctx.mutable_state.consume_failure(
                 role="verifier",
-                trial_id=str(ctx.trial.id),
+                attempt_id=str(ctx.attempt.id),
                 checkpoint=checkpoint,
             )
         )
@@ -146,13 +146,13 @@ class FullStackAdversarial(ScenarioBase):
 
     def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         if _is_root_mission(ctx) and ctx.iteration.sequence_no == 1:
-            if ctx.trial.trial_sequence_no == 1:
+            if ctx.attempt.attempt_sequence_no == 1:
                 return ToolCallSpec(
                     submit_evaluation_failure,
                     {
                         "summary": (
                             "Intentional inventory retry so the next planner "
-                            "sees failed-trial context before subsystem work."
+                            "sees failed-attempt context before subsystem work."
                         ),
                         "failed_criteria": [
                             "Retry context was not yet exercised.",
@@ -163,7 +163,7 @@ class FullStackAdversarial(ScenarioBase):
             submit_evaluation_success,
             {
                 "summary": "Full-stack adversarial evidence accepted.",
-                "passed_criteria": list(ctx.trial.evaluation_criteria),
+                "passed_criteria": list(ctx.attempt.evaluation_criteria),
             },
         )
 
@@ -187,10 +187,10 @@ class FullStackAdversarial(ScenarioBase):
 
     def _root_planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         iteration = ctx.iteration
-        trial = ctx.trial
+        attempt = ctx.attempt
         self._ensure_user_input_plan(ctx)
         self._ensure_matrix_cells(ctx)
-        if iteration.sequence_no == 1 and trial.trial_sequence_no == 1:
+        if iteration.sequence_no == 1 and attempt.attempt_sequence_no == 1:
             return ToolCallSpec(submit_full_plan, _inventory_plan(kind="full"))
         if iteration.sequence_no == 1:
             return ToolCallSpec(
@@ -203,7 +203,7 @@ class FullStackAdversarial(ScenarioBase):
                     ),
                 ),
             )
-        if iteration.sequence_no == 2 and trial.trial_sequence_no == 1:
+        if iteration.sequence_no == 2 and attempt.attempt_sequence_no == 1:
             return ToolCallSpec(submit_partial_plan, self._subsystem_wave_plan(ctx))
         if iteration.sequence_no == 2:
             return ToolCallSpec(submit_partial_plan, self._retry_continuation_plan(ctx))

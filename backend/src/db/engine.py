@@ -101,17 +101,18 @@ def _drop_legacy_tables(engine: Engine) -> None:
                 conn.execute(text(f'DROP TABLE IF EXISTS "{name}"'))
 
 
-_LEGACY_TIER_TABLES: frozenset[str] = frozenset({"missions", "episodes", "attempts"})
+_LEGACY_TIER_TABLES: frozenset[str] = frozenset({"missions", "episodes", "trials"})
 
 
 def init_db_with_legacy_check(engine: Engine) -> None:
     """Pre-create_all gate: refuse to start if pre-rename tier tables linger.
 
-    The 2026-05-15 Goal/Iteration/Trial rename renamed `missions`/`episodes`/
-    `attempts` to `goals`/`iterations`/`trials`. SQLAlchemy's `create_all`
-    will create the new tables but leave the old ones intact, silently
-    splitting state across two schemas. This gate detects that case and
-    points the developer at the one-shot drop script.
+    Two prior renames stamped legacy table names that must be cleared from
+    stale dev DBs: 2026-05-15 renamed `missions`/`episodes` to
+    `goals`/`iterations`; 2026-05-16 renamed `trials` back to `attempts`.
+    SQLAlchemy's `create_all` will create the new tables but leave the old
+    ones intact, silently splitting state across two schemas. This gate
+    detects that case and points the developer at the one-shot drop script.
     """
     insp = inspect(engine)
     present = _LEGACY_TIER_TABLES & set(insp.get_table_names())

@@ -142,8 +142,8 @@ def _assert_task_center_shape(
 def _has_multi_dependency_verifier(graph_summary: dict[str, Any]) -> bool:
     for goal in graph_summary["goals"]:
         for iteration in goal["iterations"]:
-            for trial in iteration["trials"]:
-                for task in trial["tasks"]:
+            for attempt in iteration["attempts"]:
+                for task in attempt["tasks"]:
                     if task.get("agent_name") == "verifier" and len(task["needs"]) > 1:
                         return True
     return False

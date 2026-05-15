@@ -134,15 +134,15 @@ def _assert_graph_shape(graph_summary: dict[str, Any]) -> None:
     assert root["status"] == "succeeded"
     assert all(goal["status"] == "succeeded" for goal in recursive)
 
-    trials = [
-        trial
+    attempts = [
+        attempt
         for goal in goals
         for iteration in goal["iterations"]
-        for trial in iteration["trials"]
+        for attempt in iteration["attempts"]
     ]
-    tasks = [task for trial in trials for task in trial["tasks"]]
+    tasks = [task for attempt in attempts for task in attempt["tasks"]]
     assert len(root["iterations"]) >= 3
-    assert len(trials) >= 5
+    assert len(attempts) >= 5
     assert len(tasks) >= 20
     assert any(
         task.get("id", "").endswith(":capacity_metrics_summary") for task in tasks
@@ -151,7 +151,7 @@ def _assert_graph_shape(graph_summary: dict[str, Any]) -> None:
         task.get("agent_name") == "verifier" and len(task["needs"]) > 1
         for task in tasks
     )
-    assert max(len(trial["tasks"]) for trial in trials) >= 5
+    assert max(len(attempt["tasks"]) for attempt in attempts) >= 5
 
 
 def _assert_tool_and_event_capacity(report: Any) -> None:

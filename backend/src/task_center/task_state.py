@@ -17,9 +17,9 @@ class TaskCenterTaskRole(StrEnum):
 class SpawnReason(StrEnum):
     """Why a task row was created. Replaces free-form spawn_reason strings."""
 
-    TRIAL_PLANNER = "trial_planner"
-    TRIAL_GENERATOR = "trial_generator"
-    TRIAL_EVALUATOR = "trial_evaluator"
+    ATTEMPT_PLANNER = "attempt_planner"
+    ATTEMPT_GENERATOR = "attempt_generator"
+    ATTEMPT_EVALUATOR = "attempt_evaluator"
     ENTRY_EXECUTOR = "entry_executor"
 
 

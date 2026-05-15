@@ -7,10 +7,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from task_center.trial.launch import EphemeralTrialAgentLauncher
-from task_center.trial import TrialFailReason, TrialStatus
-from task_center.trial.orchestrator_registry import TrialOrchestratorRegistry
-from task_center.trial.runtime import AgentLaunch, TrialDeps
+from task_center.attempt.launch import EphemeralAttemptAgentLauncher
+from task_center.attempt import AttemptFailReason, AttemptStatus
+from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
+from task_center.attempt.runtime import AgentLaunch, AttemptDeps
 from task_center.iteration.state import IterationCreationReason
 from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 from task_center._core.types import planner_task_id
@@ -23,7 +23,7 @@ class _NoopLauncher:
 
 @pytest.mark.asyncio
 async def test_wait_for_idle_prunes_done_tasks_before_next_loop() -> None:
-    launcher = EphemeralTrialAgentLauncher(
+    launcher = EphemeralAttemptAgentLauncher(
         config=SimpleNamespace(),
         runtime=lambda: None,
     )
@@ -50,11 +50,11 @@ async def test_missing_orchestrator_exhaustion_closes_attempt(
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="solve",
-        trial_budget=1,
+        attempt_budget=1,
     )
     mission_store.append_iteration_id(goal.id, iteration.id)
-    attempt = attempt_store.insert(iteration_id=iteration.id, trial_sequence_no=1)
-    episode_store.append_trial_id(iteration.id, attempt.id)
+    attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
+    episode_store.append_attempt_id(iteration.id, attempt.id)
     task_id = planner_task_id(attempt.id)
     task_store.upsert_task(
         task_id=task_id,
@@ -66,17 +66,17 @@ async def test_missing_orchestrator_exhaustion_closes_attempt(
         summaries=[],
         needs=[],
         task_center_attempt_id=attempt.id,
-        spawn_reason="trial_planner",
+        spawn_reason="attempt_planner",
     )
-    runtime = TrialDeps(
+    runtime = AttemptDeps(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=_NoopLauncher(),
-        orchestrator_registry=TrialOrchestratorRegistry(),
+        orchestrator_registry=AttemptOrchestratorRegistry(),
     )
-    launcher = EphemeralTrialAgentLauncher(
+    launcher = EphemeralAttemptAgentLauncher(
         config=SimpleNamespace(),
         runtime=lambda: runtime,
     )
@@ -100,5 +100,5 @@ async def test_missing_orchestrator_exhaustion_closes_attempt(
     assert task is not None
     assert task["status"] == TaskCenterTaskStatus.FAILED.value
     assert refreshed is not None
-    assert refreshed.status == TrialStatus.FAILED
-    assert refreshed.fail_reason == TrialFailReason.PLANNER_FAILED
+    assert refreshed.status == AttemptStatus.FAILED
+    assert refreshed.fail_reason == AttemptFailReason.PLANNER_FAILED

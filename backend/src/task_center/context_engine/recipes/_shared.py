@@ -1,7 +1,7 @@
 """Shared block builders + helpers used by multiple recipes.
 
 Lives outside any single recipe module so generator / evaluator / planner /
-trial_landscape don't import from each other.
+attempt_landscape don't import from each other.
 """
 
 from __future__ import annotations

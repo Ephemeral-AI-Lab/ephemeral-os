@@ -10,7 +10,7 @@ from task_center._core.agent_routing import (
     ResolverContext,
     register_builtin_predicates,
 )
-from task_center.trial import TrialStage
+from task_center.attempt import AttemptStage
 from task_center.context_engine.core import ContextEngineDeps
 from task_center.context_engine.scope import ContextScope
 from task_center.iteration.state import IterationCreationReason
@@ -22,7 +22,7 @@ def _stores(mission_store, episode_store, attempt_store, task_store):
     return dict(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
     )
 
@@ -47,7 +47,7 @@ def _seed_episode(episode_store, *, goal_id: str, sequence_no: int = 1):
         sequence_no=sequence_no,
         creation_reason=IterationCreationReason.INITIAL,
         goal="g",
-        trial_budget=2,
+        attempt_budget=2,
     )
 
 
@@ -58,7 +58,7 @@ def _seed_attempt(
     sequence_no: int = 1,
 ):
     attempt = attempt_store.insert(
-        iteration_id=iteration_id, trial_sequence_no=sequence_no
+        iteration_id=iteration_id, attempt_sequence_no=sequence_no
     )
     attempt_store.set_plan_contract(
         attempt.id,
@@ -66,7 +66,7 @@ def _seed_attempt(
         evaluation_criteria=["c1"],
         continuation_goal=None,
     )
-    attempt_store.set_stage(attempt.id, TrialStage.GENERATE)
+    attempt_store.set_stage(attempt.id, AttemptStage.GENERATE)
     return attempt
 
 
@@ -75,7 +75,7 @@ def _seed_task(
     *,
     task_id: str,
     task_center_run_id: str,
-    trial_id: str | None,
+    attempt_id: str | None,
     role: str = "generator",
 ):
     task_store.upsert_task(
@@ -87,7 +87,7 @@ def _seed_task(
         status="running",
         summaries=[],
         needs=[],
-        task_center_attempt_id=trial_id,
+        task_center_attempt_id=attempt_id,
         spawn_reason="test_seed",
     )
 
@@ -120,7 +120,7 @@ def _seed_nested_mission_chain(
             task_store,
             task_id=task_id,
             task_center_run_id=task_center_run_id,
-            trial_id=attempt.id,
+            attempt_id=attempt.id,
         )
         requested_by_task_id = task_id
     return mission_ids
@@ -153,7 +153,7 @@ def test_parent_task_with_no_attempt_returns_depth_1(
         task_store,
         task_id="t-entry",
         task_center_run_id=task_center_run_id,
-        trial_id=None,
+        attempt_id=None,
     )
     assert (
         nested_goal_depth(
@@ -231,7 +231,7 @@ def test_registered_predicates_cover_top_level_and_depth_thresholds(
         deps = ContextEngineDeps(
             goal_store=mission_store,
             iteration_store=episode_store,
-            trial_store=attempt_store,
+            attempt_store=attempt_store,
             task_store=task_store,
         )
 

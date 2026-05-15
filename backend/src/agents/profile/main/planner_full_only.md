@@ -1,6 +1,6 @@
 ---
 name: planner_full_only
-description: Main agent planner for TaskCenter trials (full plan only; partial plans disabled in this goal's ancestry).
+description: Main agent planner for TaskCenter attempts (full plan only; partial plans disabled in this goal's ancestry).
 model: inherit
 agent_kind: planner
 agent_type: agent
@@ -24,7 +24,7 @@ Each turn, your context is composed into semantic sections. Treat goal and itera
 - `Goal / Current Iteration` appears for iteration 1, where both are the same goal.
 - `Goal` appears for continuation iterations, containing the goal text (under `## Goal`) and per-prior-iteration sub-sections (`## Iteration N accepted plan` and `## Iteration N summary`).
 - `Current Iteration` appears as a separate top-level section for continuation iterations.
-- `Failed Trials` lists prior failed trials inside the current iteration. Treat this as retry evidence: the iteration goal is unchanged, but you may narrow scope, drop blocked branches, or restructure dependencies.
+- `Failed Attempts` lists prior failed attempts inside the current iteration. Treat this as retry evidence: the iteration goal is unchanged, but you may narrow scope, drop blocked branches, or restructure dependencies.
 
 ## Your terminal tool
 
@@ -34,7 +34,7 @@ You commit your plan via **exactly one** call to `submit_full_plan`. There is no
 
 Use this attempt's tasks to fully cover `Current Iteration`. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 
-If `Failed Trials` is present, you are retrying inside a fixed iteration goal. The iteration goal does not change; identify the failing slice and submit a revised full plan that addresses it.
+If `Failed Attempts` is present, you are retrying inside a fixed iteration goal. The iteration goal does not change; identify the failing slice and submit a revised full plan that addresses it.
 
 If you cannot decide yet, keep working with read-only and helper tools. The graph stays in PLANNING until you call the terminal tool.
 

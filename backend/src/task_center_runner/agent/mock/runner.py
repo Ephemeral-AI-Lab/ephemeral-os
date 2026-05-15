@@ -31,7 +31,7 @@ from sandbox.api import (
     SandboxCaller,
     SearchReplaceEdit,
 )
-from task_center.trial.state import Trial
+from task_center.attempt.state import Attempt
 from task_center.iteration.state import Iteration
 from tools._framework.core.base import BaseTool
 from tools._framework.core.context import ToolExecutionContextService
@@ -181,10 +181,10 @@ class MockSquadRunner:
             extra_tool_metadata=extra_tool_metadata,
         )
         task_id = str(metadata.get("task_center_task_id") or "")
-        trial_id = str(metadata.get("task_center_attempt_id") or "") or None
+        attempt_id = str(metadata.get("task_center_attempt_id") or "") or None
         _launch_record = LaunchRecord(
             task_id=task_id,
-            trial_id=trial_id,
+            attempt_id=attempt_id,
             agent_name=agent_def.name,
             role=str(agent_def.agent_kind.value or ""),
             prompt_preview=prompt[:500],
@@ -613,13 +613,13 @@ class MockSquadRunner:
         prompt: str,
         metadata: ExecutionMetadata,
     ) -> ScenarioContext:
-        trial, iteration = self._current_trial_and_iteration(metadata)
+        attempt, iteration = self._current_attempt_and_iteration(metadata)
         runtime = metadata.get("attempt_runtime")
         goal = runtime.goal_store.get(iteration.goal_id)
         task_id = str(metadata.get("task_center_task_id") or "")
         task = runtime.task_store.get_task(task_id) if task_id else None
         return ScenarioContext(
-            trial=trial,
+            attempt=attempt,
             iteration=iteration,
             goal=goal,
             prompt=prompt,
@@ -1180,7 +1180,7 @@ class MockSquadRunner:
                 "required entry_request block before it delegates the goal."
             )
         elif role == "planner":
-            trial, iteration = self._current_trial_and_iteration(metadata)
+            attempt, iteration = self._current_attempt_and_iteration(metadata)
             checks = {
                 "goal": "# Goal" in prompt,
                 "current_iteration": (
@@ -1188,27 +1188,27 @@ class MockSquadRunner:
                     or "# Goal / Current Iteration" in prompt
                 ),
             }
-            if trial.trial_sequence_no > 1:
-                checks["failed_attempts"] = "# Prior Failed Trials" in prompt
+            if attempt.attempt_sequence_no > 1:
+                checks["failed_attempts"] = "# Prior Failed Attempts" in prompt
             if iteration.sequence_no > 1:
                 checks["previous_iteration_results"] = "# Previous Iteration Results" in prompt
             reason = (
                 "Planner context is goal and iteration scoped; retry planners "
-                "also receive failed-trial evidence, and continuation planners "
+                "also receive failed-attempt evidence, and continuation planners "
                 "receive previous iteration results."
             )
         elif role == "executor":
             checks = {
-                "trial_plan": "# Trial Plan" in prompt,
+                "attempt_plan": "# Attempt Plan" in prompt,
                 "assigned_task": "# Assigned Task" in prompt,
             }
             reason = (
                 "Executor context is local to the current planned task with the "
-                "trial contract as framing."
+                "attempt contract as framing."
             )
         elif role == "verifier":
             checks = {
-                "trial_plan": "# Trial Plan" in prompt,
+                "attempt_plan": "# Attempt Plan" in prompt,
                 "assigned_task": "# Assigned Task" in prompt,
             }
             reason = (
@@ -1217,12 +1217,12 @@ class MockSquadRunner:
             )
         elif role == "evaluator":
             checks = {
-                "trial_plan": "# Trial Plan" in prompt,
+                "attempt_plan": "# Attempt Plan" in prompt,
                 "dependency_results": "# Dependency Results" in prompt,
                 "evaluation_criteria": "# Evaluation Criteria" in prompt,
             }
             reason = (
-                "Evaluator context is graph-local: trial contract, completed "
+                "Evaluator context is graph-local: attempt contract, completed "
                 "generator evidence, and the criteria it must judge."
             )
         else:
@@ -1257,21 +1257,21 @@ class MockSquadRunner:
             run_id=self._stream_run_id(metadata),
         )
 
-    def _current_trial_and_iteration(
+    def _current_attempt_and_iteration(
         self,
         metadata: ExecutionMetadata,
-    ) -> tuple[Trial, Iteration]:
+    ) -> tuple[Attempt, Iteration]:
         runtime = metadata.get("attempt_runtime")
         if runtime is None:
-            raise RuntimeError("Missing TrialDeps in mocked agent metadata.")
-        trial_id = str(metadata.get("task_center_attempt_id") or "")
-        trial = runtime.trial_store.get(trial_id)
-        if trial is None:
-            raise RuntimeError(f"Trial {trial_id!r} not found.")
-        iteration = runtime.iteration_store.get(trial.iteration_id)
+            raise RuntimeError("Missing AttemptDeps in mocked agent metadata.")
+        attempt_id = str(metadata.get("task_center_attempt_id") or "")
+        attempt = runtime.attempt_store.get(attempt_id)
+        if attempt is None:
+            raise RuntimeError(f"Attempt {attempt_id!r} not found.")
+        iteration = runtime.iteration_store.get(attempt.iteration_id)
         if iteration is None:
-            raise RuntimeError(f"Iteration {trial.iteration_id!r} not found.")
-        return trial, iteration
+            raise RuntimeError(f"Iteration {attempt.iteration_id!r} not found.")
+        return attempt, iteration
 
     def _probe_path(self) -> str:
         return ".ephemeralos/sweevo-mock/probe.txt"
@@ -1423,7 +1423,7 @@ class MockSquadRunner:
         agent_name: str | None = None
         agent_role: str | None = None
         agent_run_id: str | None = None
-        trial_id: str | None = None
+        attempt_id: str | None = None
         if agent_def is not None:
             agent_name = agent_def.name or None
             agent_role = str(agent_def.agent_kind.value or "") or None
@@ -1431,13 +1431,13 @@ class MockSquadRunner:
             if agent_name is None:
                 agent_name = str(metadata.agent_name or "") or None
             agent_run_id = str(metadata.agent_run_id or "") or None
-            trial_id = str(metadata.get("task_center_attempt_id") or "") or None
+            attempt_id = str(metadata.get("task_center_attempt_id") or "") or None
         node = NodeId(
             task_center_run_id=self._task_center_run_id,
             agent_name=agent_name,
             agent_role=agent_role,  # type: ignore[arg-type]
             agent_run_id=agent_run_id,
-            trial_id=trial_id,
+            attempt_id=attempt_id,
             tool_name=tool_name,
         )
         self._bus.publish(Event(type=event_type, node=node, payload=payload or {}))

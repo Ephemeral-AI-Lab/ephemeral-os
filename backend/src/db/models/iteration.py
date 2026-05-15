@@ -1,7 +1,7 @@
 """Iteration persistence model — vertical-continuation axis of harness work.
 
-An Iteration owns an ordered list of ``Trial`` ids representing the
-horizontal (retry) progression within a single segment's trial budget.
+An Iteration owns an ordered list of ``Attempt`` ids representing the
+horizontal (retry) progression within a single segment's attempt budget.
 """
 
 from __future__ import annotations
@@ -28,9 +28,9 @@ class IterationRecord(Base):
     sequence_no: Mapped[int] = mapped_column(Integer)
     creation_reason: Mapped[str] = mapped_column(String(32))
     goal: Mapped[str] = mapped_column(Text)
-    trial_budget: Mapped[int] = mapped_column(Integer)
+    attempt_budget: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(16))
-    trial_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
+    attempt_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
     continuation_goal: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)

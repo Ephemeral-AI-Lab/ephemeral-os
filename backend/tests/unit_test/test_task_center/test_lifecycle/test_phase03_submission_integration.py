@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.trial import TrialStatus
-from task_center.trial.orchestrator import TrialOrchestrator
-from task_center.trial.orchestrator_registry import (
-    TrialOrchestratorRegistry,
+from task_center.attempt import AttemptStatus
+from task_center.attempt.orchestrator import AttemptOrchestrator
+from task_center.attempt.orchestrator_registry import (
+    AttemptOrchestratorRegistry,
 )
-from task_center.trial.runtime import AgentLaunch, TrialDeps
+from task_center.attempt.runtime import AgentLaunch, AttemptDeps
 from task_center.iteration import IterationManagerRegistry
 from task_center.iteration.state import IterationCreationReason
 from task_center._core.types import evaluator_task_id, generator_task_id, planner_task_id
@@ -36,7 +36,7 @@ async def _noop_emit(event) -> None:
 
 
 def _tool_context(
-    runtime: TrialDeps,
+    runtime: AttemptDeps,
     attempt_id: str,
     task_id: str,
     *,
@@ -62,24 +62,24 @@ def _build_runtime(mission_store, episode_store, attempt_store, task_store, *, c
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="solve task",
-        trial_budget=2,
+        attempt_budget=2,
     )
     mission_store.append_iteration_id(request.id, iteration.id)
-    attempt = attempt_store.insert(iteration_id=iteration.id, trial_sequence_no=1)
-    episode_store.append_trial_id(iteration.id, attempt.id)
+    attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
+    episode_store.append_attempt_id(iteration.id, attempt.id)
     launcher = _FakeLauncher()
-    registry = TrialOrchestratorRegistry()
-    runtime = TrialDeps(
+    registry = AttemptOrchestratorRegistry()
+    runtime = AttemptDeps(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher,
         orchestrator_registry=registry,
         manager_registry=IterationManagerRegistry(),
         composer=composer,
     )
-    orchestrator = TrialOrchestrator(
+    orchestrator = AttemptOrchestrator(
         attempt=attempt,
         on_attempt_closed=lambda attempt_id: None,
         runtime=runtime,
@@ -129,4 +129,4 @@ async def test_phase03_full_plan_through_evaluator_success(
     assert not generator_result.is_error
     assert not evaluator_result.is_error
     assert attempt is not None
-    assert attempt.status == TrialStatus.PASSED
+    assert attempt.status == AttemptStatus.PASSED

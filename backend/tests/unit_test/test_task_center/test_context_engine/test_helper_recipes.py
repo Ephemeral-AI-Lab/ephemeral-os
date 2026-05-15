@@ -46,7 +46,7 @@ def deps_with_packet_store(
     return ContextEngineDeps(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         context_packet_store=packet_store,
     )
@@ -56,7 +56,7 @@ def _seed_parent_packet(packet_store) -> ContextPacket:
     packet = ContextPacket(
         target_role="planner",
         target_id="g-parent",
-        canonical_refs=ContextRefs(goal_id="req-A", trial_id="g-parent"),
+        canonical_refs=ContextRefs(goal_id="req-A", attempt_id="g-parent"),
         blocks=[
             ContextBlock(
                 kind="iteration_statement",
@@ -95,7 +95,7 @@ def _seed_parent_task(task_store, *, task_center_run_id, task_id, question):
         summaries=[],
         needs=[],
         task_center_attempt_id="g-parent",
-        spawn_reason="trial_generator",
+        spawn_reason="attempt_generator",
     )
 
 
@@ -185,7 +185,7 @@ def test_missing_packet_store_raises_context_engine_error(
     deps = ContextEngineDeps(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         context_packet_store=None,
     )

@@ -39,7 +39,7 @@ class Goal:
 class GoalClosureReport:
     """Final report attached to ``requested_by_task_id`` when the goal closes.
 
-    ``final_trial_id`` is normally the passing or final failed trial.
+    ``final_attempt_id`` is normally the passing or final failed attempt.
     It remains nullable for defensive compensation paths.
     """
 
@@ -47,13 +47,13 @@ class GoalClosureReport:
     requested_by_task_id: str
     outcome: Literal["success", "failed"]
     final_iteration_id: str
-    final_trial_id: str | None
+    final_attempt_id: str | None
 
     def to_final_outcome(self) -> dict[str, str | None]:
         return {
             "outcome": self.outcome,
             "final_iteration_id": self.final_iteration_id,
-            "final_trial_id": self.final_trial_id,
+            "final_attempt_id": self.final_attempt_id,
         }
 
 
@@ -64,4 +64,4 @@ CloseReportDeliveryStatus = Literal["delivered", "already_delivered"]
 class CloseReportDeliveryResult:
     status: CloseReportDeliveryStatus
     requested_by_task_id: str
-    parent_trial_id: str | None
+    parent_attempt_id: str | None

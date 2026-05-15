@@ -113,7 +113,7 @@ def test_mark_waiting_then_closure_report_success(
             requested_by_task_id=controller.task_id,
             outcome="success",
             final_iteration_id="delegated-iteration",
-            final_trial_id="delegated-attempt",
+            final_attempt_id="delegated-attempt",
         )
     )
 
@@ -142,7 +142,7 @@ def test_closure_report_failure_marks_failed(
             requested_by_task_id=controller.task_id,
             outcome="failed",
             final_iteration_id="delegated-iteration",
-            final_trial_id="delegated-attempt",
+            final_attempt_id="delegated-attempt",
         )
     )
 
@@ -166,7 +166,7 @@ def test_closure_report_idempotent_when_task_already_terminal(
             requested_by_task_id=controller.task_id,
             outcome="failed",
             final_iteration_id="delegated-iteration",
-            final_trial_id=None,
+            final_attempt_id=None,
         )
     )
 

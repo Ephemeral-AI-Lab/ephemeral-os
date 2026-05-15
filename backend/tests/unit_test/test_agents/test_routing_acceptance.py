@@ -145,7 +145,7 @@ def test_ac7_executor_variant_disjunction_total_across_depths(monkeypatch) -> No
     deps = ContextEngineDeps(
         goal_store=_S(),  # type: ignore[arg-type]
         iteration_store=_S(),  # type: ignore[arg-type]
-        trial_store=_S(),  # type: ignore[arg-type]
+        attempt_store=_S(),  # type: ignore[arg-type]
         task_store=_S(),  # type: ignore[arg-type]
     )
     ctx = ResolverContext(scope=ContextScope(goal_id="m"), deps=deps)
@@ -179,7 +179,7 @@ def test_ac8_always_predicate_is_registered_and_unconditional() -> None:
     deps = ContextEngineDeps(
         goal_store=_S(),  # type: ignore[arg-type]
         iteration_store=_S(),  # type: ignore[arg-type]
-        trial_store=_S(),  # type: ignore[arg-type]
+        attempt_store=_S(),  # type: ignore[arg-type]
         task_store=_S(),  # type: ignore[arg-type]
     )
     assert pred(ResolverContext(scope=ContextScope(), deps=deps)) is True

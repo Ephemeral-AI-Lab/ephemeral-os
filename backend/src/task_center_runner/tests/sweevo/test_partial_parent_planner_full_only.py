@@ -72,7 +72,7 @@ def _assert_partial_parent_graph(graph_summary: dict[str, Any]) -> None:
     )
 
     assert len(root["iterations"]) == 2
-    assert root["iterations"][0]["trials"][-1]["continuation_goal"]
+    assert root["iterations"][0]["attempts"][-1]["continuation_goal"]
     assert str(child["requested_by_task_id"]).endswith(":delegate_child")
 
 

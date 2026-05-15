@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from task_center.trial.launch import AttemptAgentRunner
+from task_center.attempt.launch import AttemptAgentRunner
 from task_center_runner.core.lifecycle import LifecycleHooks, NoopLifecycle
 from task_center_runner.core.sandbox import SandboxProvisioner
 

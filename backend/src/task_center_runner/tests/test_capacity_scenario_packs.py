@@ -124,10 +124,10 @@ def _deps_by_id(plan: dict[str, Any]) -> dict[str, tuple[str, ...]]:
 def _ctx(*, attempt_no: int = 1, episode_no: int = 1, recursive: bool = False) -> ScenarioContext:
     requested_by = "parent-task-id" if recursive else "task-center-run:entry"
     return ScenarioContext(
-        trial=SimpleNamespace(
-            trial_sequence_no=attempt_no,
+        attempt=SimpleNamespace(
+            attempt_sequence_no=attempt_no,
             evaluation_criteria=("criterion",),
-            id=f"trial-{attempt_no}",
+            id=f"attempt-{attempt_no}",
         ),
         iteration=SimpleNamespace(sequence_no=episode_no, mission_id="goal-id"),
         goal=SimpleNamespace(requested_by_task_id=requested_by),

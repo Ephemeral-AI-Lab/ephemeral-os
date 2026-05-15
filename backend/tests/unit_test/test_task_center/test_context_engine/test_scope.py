@@ -12,10 +12,10 @@ def test_assert_fields_passes_when_all_present():
     scope = ContextScope(
         goal_id="r",
         iteration_id="s",
-        trial_id="g",
+        attempt_id="g",
         task_id="t",
     )
-    scope.assert_fields(frozenset({"goal_id", "iteration_id", "trial_id"}))
+    scope.assert_fields(frozenset({"goal_id", "iteration_id", "attempt_id"}))
 
 
 def test_assert_fields_rejects_missing_iteration():
@@ -29,16 +29,16 @@ def test_assert_fields_lists_all_missing_fields_sorted():
     scope = ContextScope(goal_id="r")
     with pytest.raises(RecipeScopeError) as exc:
         scope.assert_fields(
-            frozenset({"task_id", "iteration_id", "trial_id"})
+            frozenset({"task_id", "iteration_id", "attempt_id"})
         )
     # Sorted output for deterministic error messages.
     msg = str(exc.value)
     assert "iteration_id" in msg
     assert "task_id" in msg
-    assert "trial_id" in msg
+    assert "attempt_id" in msg
     # Check sorted ordering.
+    assert msg.index("attempt_id") < msg.index("iteration_id")
     assert msg.index("iteration_id") < msg.index("task_id")
-    assert msg.index("task_id") < msg.index("trial_id")
 
 
 def test_helper_scope_fields_round_trip():

@@ -53,7 +53,7 @@ def deps() -> ContextEngineDeps:
 
     return ContextEngineDeps(
         goal_store=_S(), iteration_store=_S(),  # type: ignore[arg-type]
-        trial_store=_S(), task_store=_S(),  # type: ignore[arg-type]
+        attempt_store=_S(), task_store=_S(),  # type: ignore[arg-type]
     )
 
 

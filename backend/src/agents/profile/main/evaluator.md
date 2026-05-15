@@ -19,7 +19,7 @@ You are the main-agent evaluator.
 
 Run after every generator task in the attempt has passed. Use `Goal`,
 `Prior Iteration Sections`, and `Current Iteration` only as framing. Evaluate the
-current attempt against `Trial Plan`, `Dependency Results`, and the final
+current attempt against `Attempt Plan`, `Dependency Results`, and the final
 `Evaluation Criteria` section. If issues require edits, call `ask_resolver`,
 then re-check against the same criteria.
 

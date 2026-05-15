@@ -6,10 +6,10 @@ Failures here mean a regression in `task_center/` proper. See
 ``docs/wiki/live-e2e-scenario-suite-design.md`` for the full coverage matrix.
 
 Implemented (reference scenarios):
-- :class:`TrialBudgetExhausted`
-- :class:`TrialRetryEvaluatorFailure`
-- :class:`TrialRetryGeneratorFailure`
-- :class:`TrialRetryPlannerFailure`
+- :class:`AttemptBudgetExhausted`
+- :class:`AttemptRetryEvaluatorFailure`
+- :class:`AttemptRetryGeneratorFailure`
+- :class:`AttemptRetryPlannerFailure`
 - :class:`DependencyBlockedDescendants`
 - :class:`DependencyDagDiamond`
 - :class:`DependencyDagMixed`
@@ -25,17 +25,17 @@ Implemented (reference scenarios):
 
 from __future__ import annotations
 
-from task_center_runner.scenarios.pipeline.trial_budget_exhausted import (
-    TrialBudgetExhausted,
+from task_center_runner.scenarios.pipeline.attempt_budget_exhausted import (
+    AttemptBudgetExhausted,
 )
-from task_center_runner.scenarios.pipeline.trial_retry_evaluator_failure import (
-    TrialRetryEvaluatorFailure,
+from task_center_runner.scenarios.pipeline.attempt_retry_evaluator_failure import (
+    AttemptRetryEvaluatorFailure,
 )
-from task_center_runner.scenarios.pipeline.trial_retry_generator_failure import (
-    TrialRetryGeneratorFailure,
+from task_center_runner.scenarios.pipeline.attempt_retry_generator_failure import (
+    AttemptRetryGeneratorFailure,
 )
-from task_center_runner.scenarios.pipeline.trial_retry_planner_failure import (
-    TrialRetryPlannerFailure,
+from task_center_runner.scenarios.pipeline.attempt_retry_planner_failure import (
+    AttemptRetryPlannerFailure,
 )
 from task_center_runner.scenarios.pipeline.dependency_blocked_descendants import (
     DependencyBlockedDescendants,
@@ -68,10 +68,10 @@ from task_center_runner.scenarios.pipeline.partial_parent_planner_full_only impo
 )
 
 __all__ = [
-    "TrialBudgetExhausted",
-    "TrialRetryEvaluatorFailure",
-    "TrialRetryGeneratorFailure",
-    "TrialRetryPlannerFailure",
+    "AttemptBudgetExhausted",
+    "AttemptRetryEvaluatorFailure",
+    "AttemptRetryGeneratorFailure",
+    "AttemptRetryPlannerFailure",
     "DependencyBlockedDescendants",
     "DependencyDagDiamond",
     "DependencyDagMixed",

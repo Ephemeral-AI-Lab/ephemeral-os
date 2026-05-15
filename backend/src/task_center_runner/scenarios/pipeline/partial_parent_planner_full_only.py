@@ -2,7 +2,7 @@
 
 The root goal's first iteration submits a partial plan with
 ``continuation_goal``. Its executor then requests a child goal. Because the
-child goal's parent task belongs to that partial-planned trial, the child
+child goal's parent task belongs to that partial-planned attempt, the child
 planner must be selected through the ``planner`` agent.md variant and launch as
 ``planner_full_only``. The root continuation iteration still launches the normal
 ``planner`` because it is not a child goal.
@@ -34,7 +34,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 _CHILD_PACKAGE_ID = "partial_parent_child"
 _CHILD_GOAL = (
     "Resolve the delegated child goal requested by an executor whose parent "
-    "trial submitted a partial plan."
+    "attempt submitted a partial plan."
 )
 _CONTINUATION_GOAL = (
     "Run the root follow-up iteration after the delegated child goal has "
@@ -150,7 +150,7 @@ class PartialParentPlannerFullOnly(ScenarioBase):
             submit_evaluation_success,
             {
                 "summary": "Planner routing scenario branch passed.",
-                "passed_criteria": list(ctx.trial.evaluation_criteria),
+                "passed_criteria": list(ctx.attempt.evaluation_criteria),
             },
         )
 

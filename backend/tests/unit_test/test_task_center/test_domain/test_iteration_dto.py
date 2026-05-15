@@ -18,9 +18,9 @@ def _seg(**overrides) -> Iteration:
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="g",
-        trial_budget=2,
+        attempt_budget=2,
         status=IterationStatus.OPEN,
-        trial_ids=(),
+        attempt_ids=(),
         continuation_goal=None,
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
@@ -31,24 +31,24 @@ def _seg(**overrides) -> Iteration:
 
 
 def test_attempt_count_equals_len_of_attempt_ids():
-    assert _seg(trial_ids=()).trial_count == 0
-    assert _seg(trial_ids=("g1",)).trial_count == 1
-    assert _seg(trial_ids=("g1", "g2")).trial_count == 2
+    assert _seg(attempt_ids=()).attempt_count == 0
+    assert _seg(attempt_ids=("g1",)).attempt_count == 1
+    assert _seg(attempt_ids=("g1", "g2")).attempt_count == 2
 
 
 def test_has_budget_remaining_flips_at_boundary():
-    assert _seg(trial_budget=2, trial_ids=()).has_budget_remaining
+    assert _seg(attempt_budget=2, attempt_ids=()).has_budget_remaining
     assert _seg(
-        trial_budget=2, trial_ids=("g1",)
+        attempt_budget=2, attempt_ids=("g1",)
     ).has_budget_remaining
     assert not _seg(
-        trial_budget=2, trial_ids=("g1", "g2")
+        attempt_budget=2, attempt_ids=("g1", "g2")
     ).has_budget_remaining
 
 
 def test_latest_attempt_id_returns_last():
-    assert _seg().latest_trial_id is None
-    assert _seg(trial_ids=("a", "b")).latest_trial_id == "b"
+    assert _seg().latest_attempt_id is None
+    assert _seg(attempt_ids=("a", "b")).latest_attempt_id == "b"
 
 
 def test_is_open_matches_status():

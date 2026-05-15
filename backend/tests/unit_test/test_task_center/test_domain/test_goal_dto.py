@@ -50,6 +50,6 @@ def test_closure_report_constructs():
         requested_by_task_id="t1",
         outcome="success",
         final_iteration_id="s1",
-        final_trial_id="g1",
+        final_attempt_id="g1",
     )
     assert rep.outcome == "success"

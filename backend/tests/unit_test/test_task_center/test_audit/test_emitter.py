@@ -29,7 +29,7 @@ def test_task_ready_event_preserves_pending_status_and_dependencies() -> None:
             "needs": ["dep-1", "dep-2"],
             "context_packet_id": "packet-1",
         },
-        trial_id="attempt-1",
+        attempt_id="attempt-1",
         satisfied_dependency_ids=("dep-1", "dep-2"),
     )
 
@@ -58,7 +58,7 @@ def test_task_failed_event_includes_fail_reason_and_summary() -> None:
             "status": "failed",
             "needs": [],
         },
-        trial_id="attempt-1",
+        attempt_id="attempt-1",
         fail_reason="agent_launch_failed",
         summary="Evaluator agent launch failed.",
     )

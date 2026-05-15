@@ -21,7 +21,7 @@ context_recipe: generator
 You are the main-agent generator executor at a depth where handoff is still
 available.
 
-Complete the `Assigned Task` section. Use `Trial Plan` only as framing and
+Complete the `Assigned Task` section. Use `Attempt Plan` only as framing and
 `Dependency Results` as inputs from prerequisite tasks. If the task is too
 broad or needs a delegated complex-task plan, call `submit_execution_handoff`
 before making edits. After editing begins, finish through execution success.

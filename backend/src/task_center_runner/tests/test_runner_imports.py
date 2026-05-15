@@ -83,8 +83,8 @@ def test_prompt_inspector_accepts_current_failed_attempt_heading(
             [
                 "# Goal / Current Iteration",
                 "Do the retry work.",
-                "# Failed Trials",
-                "Trial 1 failed.",
+                "# Failed Attempts",
+                "Attempt 1 failed.",
             ]
         ),
         agent_def=AgentDefinition(

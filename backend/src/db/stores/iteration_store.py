@@ -24,7 +24,7 @@ class IterationStore(SyncStoreMixin):
         sequence_no: int,
         creation_reason: IterationCreationReason,
         goal: str,
-        trial_budget: int,
+        attempt_budget: int,
     ) -> Iteration:
         with self._sf() as db:
             now = datetime.now(UTC)
@@ -34,9 +34,9 @@ class IterationStore(SyncStoreMixin):
                 sequence_no=sequence_no,
                 creation_reason=creation_reason.value,
                 goal=goal,
-                trial_budget=trial_budget,
+                attempt_budget=attempt_budget,
                 status=IterationStatus.OPEN.value,
-                trial_ids=[],
+                attempt_ids=[],
                 continuation_goal=None,
                 created_at=now,
                 updated_at=now,
@@ -51,14 +51,14 @@ class IterationStore(SyncStoreMixin):
             record = db.get(IterationRecord, iteration_id)
             return self._to_dto(record) if record is not None else None
 
-    def append_trial_id(self, iteration_id: str, trial_id: str) -> Iteration:
+    def append_attempt_id(self, iteration_id: str, attempt_id: str) -> Iteration:
         with self._sf() as db:
             record = db.get(IterationRecord, iteration_id)
             if record is None:
                 raise LookupError(f"Iteration {iteration_id!r} not found")
-            ids = list(record.trial_ids or [])
-            ids.append(trial_id)
-            record.trial_ids = ids
+            ids = list(record.attempt_ids or [])
+            ids.append(attempt_id)
+            record.attempt_ids = ids
             db.commit()
             db.refresh(record)
             return self._to_dto(record)
@@ -158,9 +158,9 @@ class IterationStore(SyncStoreMixin):
             sequence_no=record.sequence_no,
             creation_reason=IterationCreationReason(record.creation_reason),
             goal=record.goal,
-            trial_budget=record.trial_budget,
+            attempt_budget=record.attempt_budget,
             status=IterationStatus(record.status),
-            trial_ids=tuple(record.trial_ids or ()),
+            attempt_ids=tuple(record.attempt_ids or ()),
             continuation_goal=record.continuation_goal,
             created_at=record.created_at,
             updated_at=record.updated_at,

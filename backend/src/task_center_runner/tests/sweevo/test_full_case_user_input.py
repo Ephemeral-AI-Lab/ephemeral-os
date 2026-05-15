@@ -157,7 +157,7 @@ def _continuation_episodes_follow_partial_attempts(
             if iteration["sequence_no"] <= 1:
                 continue
             previous = by_sequence[iteration["sequence_no"] - 1]
-            final_attempt = previous["trials"][-1]
+            final_attempt = previous["attempts"][-1]
             if not final_attempt["continuation_goal"]:
                 return False
     return True
@@ -166,8 +166,8 @@ def _continuation_episodes_follow_partial_attempts(
 def _has_multi_dependency_verifier(graph_summary: dict[str, Any]) -> bool:
     for goal in graph_summary["goals"]:
         for iteration in goal["iterations"]:
-            for trial in iteration["trials"]:
-                for task in trial["tasks"]:
+            for attempt in iteration["attempts"]:
+                for task in attempt["tasks"]:
                     if task.get("agent_name") == "verifier" and len(task["needs"]) > 1:
                         return True
     return False
@@ -228,7 +228,7 @@ def _assert_audit_tree_roles(run_dir: Path) -> None:
     goal_dirs = sorted(run_dir.glob("goal_*_*"))
     assert goal_dirs
     assert list(run_dir.glob("goal_*_*/iteration_*_*"))
-    assert list(run_dir.glob("goal_*_*/iteration_*_*/trial_*_*"))
+    assert list(run_dir.glob("goal_*_*/iteration_*_*/attempt_*_*"))
     first_goal = goal_dirs[0]
     goal = _json_file(first_goal / "goal.json")
     requested_by = goal["requested_by_task_id"]
@@ -236,7 +236,7 @@ def _assert_audit_tree_roles(run_dir: Path) -> None:
     iteration_files = sorted(first_goal.glob("iteration_*_*/iteration.json"))
     assert iteration_files
     first_iteration = _json_file(iteration_files[0])
-    assert first_iteration["trial_ids"], "first goal must be delegated work"
+    assert first_iteration["attempt_ids"], "first goal must be delegated work"
 
 
 def _assert_message_jsonl_contains_tool_scripts(run_dir: Path) -> None:

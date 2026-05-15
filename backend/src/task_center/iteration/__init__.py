@@ -9,8 +9,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from task_center.iteration.state import (
-    PriorTrialEntry,
-    TrialPlanFailed,
+    PriorAttemptEntry,
+    AttemptPlanFailed,
     ClosureOutcome,
     Iteration,
     IterationClosureReport,
@@ -50,8 +50,8 @@ _MANAGER_EXPORTS: dict[str, tuple[str, str]] = {
 }
 
 _STATE_EXPORTS = [
-    "TrialPlanFailed",
-    "PriorTrialEntry",
+    "AttemptPlanFailed",
+    "PriorAttemptEntry",
     "ClosureOutcome",
     "Iteration",
     "IterationClosureReport",
@@ -79,8 +79,8 @@ def __getattr__(name: str) -> object:
 
 __all__ = [
     "AttemptClosedCallback",
-    "TrialPlanFailed",
-    "PriorTrialEntry",
+    "AttemptPlanFailed",
+    "PriorAttemptEntry",
     "ClosureOutcome",
     "ClosureReportSink",
     "Iteration",

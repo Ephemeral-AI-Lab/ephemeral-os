@@ -26,28 +26,28 @@ if TYPE_CHECKING:
 
 
 GENERATOR_ID = "generator"
-_REQUIRED_FIELDS = frozenset({"goal_id", "trial_id", "task_id"})
+_REQUIRED_FIELDS = frozenset({"goal_id", "attempt_id", "task_id"})
 
 
 def _generator_build(
     scope: ContextScope, deps: ContextEngineDeps
 ) -> ContextPacket:
-    trial = deps.trial_store.get(scope.trial_id)
-    if trial is None:
-        raise ContextEngineError(f"Trial {scope.trial_id!r} not found")
+    attempt = deps.attempt_store.get(scope.attempt_id)
+    if attempt is None:
+        raise ContextEngineError(f"Attempt {scope.attempt_id!r} not found")
     task = deps.task_store.get_task(scope.task_id)
     if task is None:
         raise ContextEngineError(f"TaskCenterTask {scope.task_id!r} not found")
 
     blocks: list[ContextBlock] = []
-    if trial.task_specification:
+    if attempt.task_specification:
         blocks.append(
             ContextBlock(
                 kind=ContextBlockKind.TASK_SPECIFICATION,
                 priority=ContextPriority.HIGH,
-                text=trial.task_specification,
-                source_id=trial.id,
-                source_kind="trial",
+                text=attempt.task_specification,
+                source_id=attempt.id,
+                source_kind="attempt",
             )
         )
 
@@ -72,8 +72,8 @@ def _generator_build(
         target_id=scope.task_id,
         canonical_refs=ContextRefs(
             goal_id=scope.goal_id,
-            iteration_id=scope.iteration_id or trial.iteration_id,
-            trial_id=scope.trial_id,
+            iteration_id=scope.iteration_id or attempt.iteration_id,
+            attempt_id=scope.attempt_id,
             task_id=scope.task_id,
         ),
         blocks=blocks,

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.trial import launch as launcher_module
+from task_center.attempt import launch as launcher_module
 from task_center._core.types import TaskCenterInvariantViolation
 
 
@@ -46,7 +46,7 @@ def test_report_exhaustion_unknown_role_raises() -> None:
     fake_role.__repr__ = lambda self: "<fake-role>"  # type: ignore[method-assign]
     fake_launch = MagicMock()
     fake_launch.role = fake_role
-    fake_launch.trial_id = "a1"
+    fake_launch.attempt_id = "a1"
     fake_launch.task_id = "t1"
 
     # Stub _require_attempt_orchestrator to return a non-None orchestrator

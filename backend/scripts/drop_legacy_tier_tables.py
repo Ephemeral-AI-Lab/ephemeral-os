@@ -1,10 +1,12 @@
-"""One-shot script to drop pre-rename tier tables (missions/episodes/attempts).
+"""One-shot script to drop pre-rename tier tables (missions/episodes/trials).
 
-The 2026-05-15 Goal/Iteration/Trial rename renamed the tier tables. SQLAlchemy's
-``create_all`` produces the new tables but leaves the old ones intact. The
-startup gate ``db.engine.init_db_with_legacy_check`` refuses to proceed while
-the old names exist; run this script once on the affected database to clear
-them, then restart.
+Two prior renames left stamps on dev DBs: 2026-05-15 renamed
+``missions``/``episodes`` to ``goals``/``iterations``; 2026-05-16 renamed
+``trials`` back to ``attempts``. SQLAlchemy's ``create_all`` produces the
+new tables but leaves the old ones intact. The startup gate
+``db.engine.init_db_with_legacy_check`` refuses to proceed while the old
+names exist; run this script once on the affected database to clear them,
+then restart.
 
 Usage:
     python -m backend.scripts.drop_legacy_tier_tables --db-url <url>
@@ -20,8 +22,8 @@ import sys
 from sqlalchemy import create_engine, inspect, text
 
 
-# Drop in dependency order: trials → iterations → goals (children before parents).
-_LEGACY_TABLES_IN_DROP_ORDER: tuple[str, ...] = ("attempts", "episodes", "missions")
+# Drop in FK-dependency order: trials → episodes → missions (children before parents).
+_LEGACY_TABLES_IN_DROP_ORDER: tuple[str, ...] = ("trials", "episodes", "missions")
 
 
 def drop_legacy_tier_tables(db_url: str) -> list[str]:
@@ -43,7 +45,7 @@ def drop_legacy_tier_tables(db_url: str) -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Drop pre-rename tier tables (missions/episodes/attempts)."
+        description="Drop pre-rename tier tables (missions/episodes/trials)."
     )
     parser.add_argument(
         "--db-url",

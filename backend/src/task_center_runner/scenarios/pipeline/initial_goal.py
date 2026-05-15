@@ -1,13 +1,13 @@
-"""Initial goal, single trial, single success.
+"""Initial goal, single attempt, single success.
 
 Reference scenario for the simplest task_center happy path: entry executor
 delegates → planner emits one full plan → executor runs ``preflight`` →
 evaluator passes → goal closes succeeded. One goal, one iteration
-(``creation_reason=INITIAL``), one trial (``trial_sequence_no=1``).
+(``creation_reason=INITIAL``), one attempt (``attempt_sequence_no=1``).
 
-Use this as the template for any "single-trial success in a particular
+Use this as the template for any "single-attempt success in a particular
 configuration" scenario. Branch on ``ctx.iteration.sequence_no`` and
-``ctx.trial.trial_sequence_no`` to cover more configurations.
+``ctx.attempt.attempt_sequence_no`` to cover more configurations.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 
 class InitialGoal(ScenarioBase):
-    """Single goal, single iteration, single trial — happy path."""
+    """Single goal, single iteration, single attempt — happy path."""
 
     name = "pipeline.initial_mission"
     expected_event_sequence: tuple[EventType, ...] = (
@@ -47,7 +47,7 @@ class InitialGoal(ScenarioBase):
             submit_evaluation_success,
             {
                 "summary": "Initial goal preflight evidence accepted.",
-                "passed_criteria": list(ctx.trial.evaluation_criteria),
+                "passed_criteria": list(ctx.attempt.evaluation_criteria),
             },
         )
 

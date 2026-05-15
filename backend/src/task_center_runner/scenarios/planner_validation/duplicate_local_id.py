@@ -2,12 +2,12 @@
 
 Reference scenario for the planner-validation subpackage. The planner emits a
 full plan whose ``tasks`` list contains two entries sharing ``id="dup"``.
-``ordered_generator_tasks`` (``task_center/trial/generator_dag.py``) rejects
+``ordered_generator_tasks`` (``task_center/attempt/generator_dag.py``) rejects
 the duplicate ids inside the planner submission tool; the orchestrator surfaces
-this as a planner failure and closes the trial with
+this as a planner failure and closes the attempt with
 ``fail_reason="planner_failed"``.
 
-Both trials in the iteration run the same invalid plan, so iteration 1 closes
+Both attempts in the iteration run the same invalid plan, so iteration 1 closes
 with ``status=failed`` and the goal closes ``status=failed``. No generator
 or evaluator was launched.
 
@@ -43,7 +43,7 @@ def _duplicate_local_id_plan() -> dict[str, Any]:
 
 
 class PlannerDuplicateLocalId(ScenarioBase):
-    """Planner returns a duplicate-id plan; trial closes planner_failed."""
+    """Planner returns a duplicate-id plan; attempt closes planner_failed."""
 
     name = "planner_validation.duplicate_local_id"
     expected_event_sequence: tuple[EventType, ...] = (
@@ -60,14 +60,14 @@ class PlannerDuplicateLocalId(ScenarioBase):
 
     def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         # Should never be invoked — both planner submissions are rejected
-        # before the trial reaches the evaluator stage. The implementation
+        # before the attempt reaches the evaluator stage. The implementation
         # exists only so the scenario satisfies the protocol; its presence in
         # ``expected_event_sequence`` is intentionally omitted.
         return ToolCallSpec(
             submit_evaluation_failure,
             {
                 "summary": "Unexpected evaluator invocation under invalid plan.",
-                "failed_criteria": list(ctx.trial.evaluation_criteria),
+                "failed_criteria": list(ctx.attempt.evaluation_criteria),
             },
         )
 

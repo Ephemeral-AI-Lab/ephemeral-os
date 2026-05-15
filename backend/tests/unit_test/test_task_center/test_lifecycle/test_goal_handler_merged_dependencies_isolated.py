@@ -48,7 +48,7 @@ def test_mission_handler_public_signature_preserved() -> None:
     init_params = list(inspect.signature(GoalHandler).parameters)
     assert "goal_store" in init_params
     assert "iteration_store" in init_params
-    assert "trial_store" in init_params
+    assert "attempt_store" in init_params
     assert "manager_registry" in init_params
     assert "config" in init_params
 

@@ -4,7 +4,7 @@ The entry executor is not a Goal. It is the top-level user-request agent
 that can either complete directly or call ``submit_execution_handoff`` to start
 the first delegated Goal. Lifecycle events flow through
 :class:`EntryTaskController`, which is attached to
-:class:`TrialDeps.entry_task_controller` so the launcher, close-report
+:class:`AttemptDeps.entry_task_controller` so the launcher, close-report
 router, and submission tools can dispatch entry-mode events consistently.
 """
 
@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING
 from db.stores import (
     GoalStore,
     ContextPacketStore,
-    TrialStore,
+    AttemptStore,
     TaskCenterStore,
     IterationStore,
 )
@@ -35,15 +35,15 @@ from task_center._core.agent_routing import (
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.context_engine.scope import ContextScope
 from task_center.entry import EntryTaskController, TaskCenterSandboxBinding, TaskCenterSandboxBridge
-from task_center.trial.launch import (
+from task_center.attempt.launch import (
     AgentStreamEmitter,
     AttemptAgentRunner,
-    EphemeralTrialAgentLauncher,
+    EphemeralAttemptAgentLauncher,
 )
-from task_center.trial.orchestrator_registry import (
-    TrialOrchestratorRegistry,
+from task_center.attempt.orchestrator_registry import (
+    AttemptOrchestratorRegistry,
 )
-from task_center.trial.runtime import AgentLaunch, TrialDeps
+from task_center.attempt.runtime import AgentLaunch, AttemptDeps
 from task_center.iteration import IterationManagerRegistry
 from task_center.task_state import (
     SpawnReason,
@@ -64,7 +64,7 @@ class TaskCenterEntryHandle:
     task_center_run_id: str
     binding: TaskCenterSandboxBinding
     entry_task_id: str
-    launcher: EphemeralTrialAgentLauncher
+    launcher: EphemeralAttemptAgentLauncher
 
     @property
     def sandbox_id(self) -> str:
@@ -80,7 +80,7 @@ def start_task_center_entry_run(
     task_store: TaskCenterStore,
     goal_store: GoalStore,
     iteration_store: IterationStore,
-    trial_store: TrialStore,
+    attempt_store: AttemptStore,
     runner: AttemptAgentRunner | None = None,
     context_packet_store: ContextPacketStore | None = None,
     sandbox_bridge: TaskCenterSandboxBridge | None = None,
@@ -94,7 +94,7 @@ def start_task_center_entry_run(
         task_store=task_store,
         goal_store=goal_store,
         iteration_store=iteration_store,
-        trial_store=trial_store,
+        attempt_store=attempt_store,
         runner=runner,
         context_packet_store=context_packet_store,
         sandbox_bridge=sandbox_bridge,
@@ -114,7 +114,7 @@ class TaskCenterEntryCoordinator:
         task_store: TaskCenterStore,
         goal_store: GoalStore,
         iteration_store: IterationStore,
-        trial_store: TrialStore,
+        attempt_store: AttemptStore,
         runner: AttemptAgentRunner | None = None,
         context_packet_store: ContextPacketStore | None = None,
         sandbox_bridge: TaskCenterSandboxBridge | None = None,
@@ -126,7 +126,7 @@ class TaskCenterEntryCoordinator:
         self._task_store = task_store
         self._goal_store = goal_store
         self._iteration_store = iteration_store
-        self._trial_store = trial_store
+        self._attempt_store = attempt_store
         self._runner = runner
         self._context_packet_store = context_packet_store
         self._sandbox_bridge = sandbox_bridge or TaskCenterSandboxBridge()
@@ -170,7 +170,7 @@ class TaskCenterEntryCoordinator:
             task_store=self._task_store,
             goal_store=self._goal_store,
             iteration_store=self._iteration_store,
-            trial_store=self._trial_store,
+            attempt_store=self._attempt_store,
         )
 
     def _create_top_level_run(
@@ -201,9 +201,9 @@ class TaskCenterEntryCoordinator:
         *,
         manager_registry: IterationManagerRegistry,
         entry_task_controller: EntryTaskController,
-    ) -> tuple[TrialDeps, EphemeralTrialAgentLauncher]:
-        runtime_ref: TrialDeps | None = None
-        launcher = EphemeralTrialAgentLauncher(
+    ) -> tuple[AttemptDeps, EphemeralAttemptAgentLauncher]:
+        runtime_ref: AttemptDeps | None = None
+        launcher = EphemeralAttemptAgentLauncher(
             config=self._config,
             runtime=lambda: runtime_ref,
             sandbox_id=self._sandbox_id,
@@ -211,13 +211,13 @@ class TaskCenterEntryCoordinator:
             runner=self._runner,
         )
         composer = self._build_composer()
-        runtime = TrialDeps(
+        runtime = AttemptDeps(
             goal_store=self._goal_store,
             iteration_store=self._iteration_store,
-            trial_store=self._trial_store,
+            attempt_store=self._attempt_store,
             task_store=self._task_store,
             agent_launcher=launcher,
-            orchestrator_registry=TrialOrchestratorRegistry(),
+            orchestrator_registry=AttemptOrchestratorRegistry(),
             manager_registry=manager_registry,
             lifecycle_config=TaskCenterLifecycleConfig(),
             composer=composer,
@@ -249,7 +249,7 @@ class TaskCenterEntryCoordinator:
         deps = ContextEngineDeps(
             goal_store=self._goal_store,
             iteration_store=self._iteration_store,
-            trial_store=self._trial_store,
+            attempt_store=self._attempt_store,
             task_store=self._task_store,
             context_packet_store=self._context_packet_store,
         )
@@ -280,7 +280,7 @@ class TaskCenterEntryCoordinator:
     def _launch_entry_executor(
         self,
         *,
-        runtime: TrialDeps,
+        runtime: AttemptDeps,
         controller: EntryTaskController,
         task_center_run_id: str,
     ) -> None:
@@ -303,11 +303,11 @@ class TaskCenterEntryCoordinator:
     def _build_entry_launch(
         self,
         *,
-        runtime: TrialDeps,
+        runtime: AttemptDeps,
         controller: EntryTaskController,
         task_center_run_id: str,
     ) -> AgentLaunch:
-        from task_center.trial.launch import LaunchBuilder
+        from task_center.attempt.launch import LaunchBuilder
 
         return LaunchBuilder(runtime=runtime).for_entry(
             task_id=controller.task_id,
@@ -334,12 +334,12 @@ def _assert_stores_ready(
     task_store: TaskCenterStore,
     goal_store: GoalStore,
     iteration_store: IterationStore,
-    trial_store: TrialStore,
+    attempt_store: AttemptStore,
 ) -> None:
     if not (
         task_store.is_ready
         and goal_store.is_ready
         and iteration_store.is_ready
-        and trial_store.is_ready
+        and attempt_store.is_ready
     ):
         raise RuntimeError("TaskCenter stores are not ready.")

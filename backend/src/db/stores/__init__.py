@@ -9,7 +9,7 @@ __all__ = [
     "AgentRunStore",
     "GoalStore",
     "ContextPacketStore",
-    "TrialStore",
+    "AttemptStore",
     "ModelStore",
     "TaskCenterStore",
     "IterationStore",
@@ -25,9 +25,9 @@ _EXPORTS = {
         "db.stores.context_packet_store",
         "ContextPacketStore",
     ),
-    "TrialStore": (
-        "db.stores.trial_store",
-        "TrialStore",
+    "AttemptStore": (
+        "db.stores.attempt_store",
+        "AttemptStore",
     ),
     "ModelStore": ("db.stores.model_store", "ModelStore"),
     "TaskCenterStore": ("db.stores.task_center_store", "TaskCenterStore"),

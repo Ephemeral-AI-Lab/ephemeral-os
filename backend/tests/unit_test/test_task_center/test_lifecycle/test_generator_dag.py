@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from task_center._core.types import TaskCenterInvariantViolation
-from task_center.trial.generator_dag import (
+from task_center.attempt.generator_dag import (
     blocked_descendant_ids,
     ordered_generator_tasks,
     ready_pending_generator_ids,

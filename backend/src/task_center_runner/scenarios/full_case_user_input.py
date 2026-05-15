@@ -94,7 +94,7 @@ class FullCaseUserInput(ScenarioBase):
             ctx.mutable_state is not None
             and ctx.mutable_state.consume_failure(
                 role="verifier",
-                trial_id=str(ctx.trial.id),
+                attempt_id=str(ctx.attempt.id),
                 checkpoint=checkpoint,
             )
         )
@@ -121,12 +121,12 @@ class FullCaseUserInput(ScenarioBase):
         )
 
     def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        trial = ctx.trial
+        attempt = ctx.attempt
         return ToolCallSpec(
             submit_evaluation_success,
             {
                 "summary": "Mock evaluator accepted verifier-gated evidence.",
-                "passed_criteria": list(trial.evaluation_criteria),
+                "passed_criteria": list(attempt.evaluation_criteria),
             },
         )
 
@@ -154,9 +154,9 @@ class FullCaseUserInput(ScenarioBase):
 
     def _root_planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         iteration = ctx.iteration
-        trial = ctx.trial
+        attempt = ctx.attempt
         self._ensure_user_input_plan(ctx)
-        if iteration.sequence_no == 1 and trial.trial_sequence_no == 1:
+        if iteration.sequence_no == 1 and attempt.attempt_sequence_no == 1:
             return ToolCallSpec(submit_full_plan, _inventory_plan(kind="full"))
         if iteration.sequence_no == 1:
             return ToolCallSpec(
@@ -391,14 +391,14 @@ class FullCaseUserInput(ScenarioBase):
         if not _is_root_mission(ctx):
             return False
         iteration = ctx.iteration
-        trial = ctx.trial
+        attempt = ctx.attempt
         return (
             iteration.sequence_no == 1
-            and trial.trial_sequence_no == 1
+            and attempt.attempt_sequence_no == 1
             and checkpoint == "inventory"
         ) or (
             iteration.sequence_no == 2
-            and trial.trial_sequence_no == 1
+            and attempt.attempt_sequence_no == 1
             and checkpoint == "final_pre_evaluator"
         )
 

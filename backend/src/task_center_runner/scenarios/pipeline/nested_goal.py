@@ -70,7 +70,7 @@ def _child_success_plan() -> dict[str, Any]:
 
 def _child_failure_plan() -> dict[str, Any]:
     return {
-        "task_specification": "Child goal fails every trial.",
+        "task_specification": "Child goal fails every attempt.",
         "evaluation_criteria": ["Parent receives a failed child close report."],
         "tasks": [
             {"id": "child_always_fails", "agent_name": "executor", "deps": []},
@@ -121,7 +121,7 @@ class NestedGoal(ScenarioBase):
             submit_evaluation_success,
             {
                 "summary": "Nested goal completed before parent reconciliation.",
-                "passed_criteria": list(ctx.trial.evaluation_criteria),
+                "passed_criteria": list(ctx.attempt.evaluation_criteria),
             },
         )
 
@@ -130,7 +130,7 @@ class NestedGoal(ScenarioBase):
 
 
 class NestedGoalFailure(ScenarioBase):
-    """Child goal exhausts trials and parent goal fails cleanly."""
+    """Child goal exhausts attempts and parent goal fails cleanly."""
 
     name = "pipeline.nested_mission_failure"
     expected_event_sequence: tuple[EventType, ...] = (
@@ -167,12 +167,12 @@ class NestedGoalFailure(ScenarioBase):
             submit_evaluation_failure,
             {
                 "summary": "Nested goal failure should not reach evaluator.",
-                "failed_criteria": list(ctx.trial.evaluation_criteria),
+                "failed_criteria": list(ctx.attempt.evaluation_criteria),
             },
         )
 
     def recursive_mission_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
-        return "Run a child goal that intentionally exhausts trials."
+        return "Run a child goal that intentionally exhausts attempts."
 
 
 __all__ = ["NestedGoal", "NestedGoalFailure"]

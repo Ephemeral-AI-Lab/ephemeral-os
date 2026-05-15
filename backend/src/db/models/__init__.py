@@ -3,7 +3,7 @@
 from db.models.agent_run import AgentRunRecord
 from db.models.goal import GoalRecord
 from db.models.context_packet import ContextPacketRecord
-from db.models.trial import TrialRecord
+from db.models.attempt import AttemptRecord
 from db.models.model_registration import ModelRegistrationRecord
 from db.models.task_center import (
     TaskCenterRequestRecord,
@@ -16,7 +16,7 @@ __all__ = [
     "AgentRunRecord",
     "GoalRecord",
     "ContextPacketRecord",
-    "TrialRecord",
+    "AttemptRecord",
     "ModelRegistrationRecord",
     "TaskCenterRequestRecord",
     "TaskCenterRunRecord",

@@ -1,4 +1,4 @@
-"""TrialOrchestrator state machine."""
+"""AttemptOrchestrator state machine."""
 
 from __future__ import annotations
 
@@ -9,15 +9,15 @@ from datetime import UTC, datetime
 
 from task_center.goal.state import GoalClosureReport
 from task_center._core.types import TaskCenterInvariantViolation
-from task_center.trial.dispatcher import TrialDispatcher
-from task_center.trial.state import (
-    Trial,
-    TrialFailReason,
-    TrialStage,
-    TrialStatus,
+from task_center.attempt.dispatcher import AttemptDispatcher
+from task_center.attempt.state import (
+    Attempt,
+    AttemptFailReason,
+    AttemptStage,
+    AttemptStatus,
 )
-from task_center.trial.runtime import TrialDeps
-from task_center.trial.launch import LaunchBuilder
+from task_center.attempt.runtime import AttemptDeps
+from task_center.attempt.launch import LaunchBuilder
 from task_center._core.types import generator_task_id, planner_task_id
 from task_center.task_state import (
     SpawnReason,
@@ -29,56 +29,56 @@ from task_center.task_state import (
     PlannerFailureSubmission,
     PlannerSubmission,
 )
-from task_center.trial.generator_dag import (
+from task_center.attempt.generator_dag import (
     dependency_task_ids,
     ordered_generator_tasks,
 )
 from task_center._core.infra import (
     assert_evaluator_task_for_submission,
     assert_generator_task_for_submission,
-    assert_trial_not_closed,
-    assert_trial_stage,
-    assert_task_belongs_to_trial,
-    assert_valid_trial_close,
+    assert_attempt_not_closed,
+    assert_attempt_stage,
+    assert_task_belongs_to_attempt,
+    assert_valid_attempt_close,
 )
 
 logger = logging.getLogger(__name__)
 
 
-class TrialOrchestrator:
-    """Runs one planner -> generator DAG -> evaluator harness trial."""
+class AttemptOrchestrator:
+    """Runs one planner -> generator DAG -> evaluator harness attempt."""
 
     def __init__(
         self,
         *,
-        attempt: Trial,
+        attempt: Attempt,
         on_attempt_closed: Callable[[str], None],
-        runtime: TrialDeps,
+        runtime: AttemptDeps,
     ) -> None:
         self._attempt = attempt
         self._on_attempt_closed = on_attempt_closed
         self._runtime = runtime
 
-        self._dispatcher = TrialDispatcher(
+        self._dispatcher = AttemptDispatcher(
             attempt_id=attempt.id,
             runtime=runtime,
             close_attempt=self._close_attempt,
         )
 
     @property
-    def trial_id(self) -> str:
+    def attempt_id(self) -> str:
         return self._attempt.id
 
     def start(self) -> None:
         runtime = self._runtime
-        attempt = self._assert_stage(TrialStage.PLAN)
-        if attempt.status != TrialStatus.RUNNING:
+        attempt = self._assert_stage(AttemptStage.PLAN)
+        if attempt.status != AttemptStatus.RUNNING:
             raise TaskCenterInvariantViolation(
-                f"Trial {attempt.id!r} is not running"
+                f"Attempt {attempt.id!r} is not running"
             )
         if attempt.planner_task_id is not None:
             raise TaskCenterInvariantViolation(
-                f"Trial {attempt.id!r} already has a planner task"
+                f"Attempt {attempt.id!r} already has a planner task"
             )
 
         task_id = planner_task_id(attempt.id)
@@ -98,9 +98,9 @@ class TrialOrchestrator:
                 needs=[],
                 task_center_attempt_id=attempt.id,
                 context_packet_id=launch.context_packet_id,
-                spawn_reason=SpawnReason.TRIAL_PLANNER.value,
+                spawn_reason=SpawnReason.ATTEMPT_PLANNER.value,
             )
-            runtime.trial_store.set_planner_task_id(attempt.id, task_id)
+            runtime.attempt_store.set_planner_task_id(attempt.id, task_id)
             runtime.agent_launcher.launch(launch)
             self._dispatcher.dispatch_ready_work()
         except Exception:
@@ -123,8 +123,8 @@ class TrialOrchestrator:
         )
         self._persist_plan_contract(submission)
         generator_ids = self._persist_generator_tasks(submission.tasks)
-        runtime.trial_store.set_generator_task_ids(attempt.id, list(generator_ids))
-        runtime.trial_store.set_stage(attempt.id, TrialStage.GENERATE)
+        runtime.attempt_store.set_generator_task_ids(attempt.id, list(generator_ids))
+        runtime.attempt_store.set_stage(attempt.id, AttemptStage.GENERATE)
         self._dispatcher.dispatch_ready_work()
 
     def apply_planner_failure(
@@ -140,7 +140,7 @@ class TrialOrchestrator:
                 "summary": submission.summary,
             },
         )
-        self._close_attempt(TrialStatus.FAILED, TrialFailReason.PLANNER_FAILED)
+        self._close_attempt(AttemptStatus.FAILED, AttemptFailReason.PLANNER_FAILED)
 
     def apply_generator_submission(
         self, submission: GeneratorSubmission
@@ -163,7 +163,7 @@ class TrialOrchestrator:
 
         Idempotent: if the parent has already been resumed (status moved off
         ``waiting_mission`` by an earlier delivery), return silently
-        without re-asserting trial stage or appending another summary.
+        without re-asserting attempt stage or appending another summary.
         """
         runtime = self._runtime
         task = runtime.task_store.get_task(report.requested_by_task_id)
@@ -175,7 +175,7 @@ class TrialOrchestrator:
             # Already delivered; no further action.
             return
 
-        attempt = self._assert_stage(TrialStage.GENERATE)
+        attempt = self._assert_stage(AttemptStage.GENERATE)
         assert_generator_task_for_submission(task, attempt)
 
         if report.outcome == "success":
@@ -209,19 +209,19 @@ class TrialOrchestrator:
             self._dispatcher.block_failed_descendants(report.requested_by_task_id)
         self._dispatcher.dispatch_ready_work()
 
-    def _validate_planner_submission(self, planner_task_id: str) -> Trial:
-        attempt = self._assert_stage(TrialStage.PLAN)
+    def _validate_planner_submission(self, planner_task_id: str) -> Attempt:
+        attempt = self._assert_stage(AttemptStage.PLAN)
         if attempt.planner_task_id != planner_task_id:
             raise TaskCenterInvariantViolation(
                 f"Planner submission task {planner_task_id!r} does not "
-                f"match trial planner {attempt.planner_task_id!r}"
+                f"match attempt planner {attempt.planner_task_id!r}"
             )
         planner_task = self._runtime.task_store.get_task(planner_task_id)
         if planner_task is None:
             raise TaskCenterInvariantViolation(
                 f"Planner task {planner_task_id!r} not found"
             )
-        assert_task_belongs_to_trial(planner_task, attempt)
+        assert_task_belongs_to_attempt(planner_task, attempt)
         if planner_task["role"] != TaskCenterTaskRole.PLANNER.value:
             raise TaskCenterInvariantViolation(
                 f"Task {planner_task_id!r} is not a planner task"
@@ -229,7 +229,7 @@ class TrialOrchestrator:
         return attempt
 
     def _persist_plan_contract(self, submission: PlannerSubmission) -> None:
-        self._runtime.trial_store.set_plan_contract(
+        self._runtime.attempt_store.set_plan_contract(
             submission.attempt_id,
             task_specification=submission.task_specification,
             evaluation_criteria=list(submission.evaluation_criteria),
@@ -260,13 +260,13 @@ class TrialOrchestrator:
                 summaries=[],
                 needs=list(needs),
                 task_center_attempt_id=attempt.id,
-                spawn_reason=SpawnReason.TRIAL_GENERATOR.value,
+                spawn_reason=SpawnReason.ATTEMPT_GENERATOR.value,
             )
             task_ids.append(task_id)
         return tuple(task_ids)
 
     def _mark_generator(self, submission: GeneratorSubmission) -> None:
-        attempt = self._assert_stage(TrialStage.GENERATE)
+        attempt = self._assert_stage(AttemptStage.GENERATE)
         task = self._runtime.task_store.get_task(submission.task_id)
         if task is None:
             raise TaskCenterInvariantViolation(
@@ -280,11 +280,11 @@ class TrialOrchestrator:
         )
 
     def _mark_evaluator(self, submission: EvaluatorSubmission) -> None:
-        attempt = self._assert_stage(TrialStage.EVALUATE)
+        attempt = self._assert_stage(AttemptStage.EVALUATE)
         if attempt.evaluator_task_id != submission.task_id:
             raise TaskCenterInvariantViolation(
                 f"Evaluator submission task {submission.task_id!r} does not "
-                f"match trial evaluator {attempt.evaluator_task_id!r}"
+                f"match attempt evaluator {attempt.evaluator_task_id!r}"
             )
         task = self._runtime.task_store.get_task(submission.task_id)
         if task is None:
@@ -319,17 +319,17 @@ class TrialOrchestrator:
 
     def _close_attempt(
         self,
-        status: TrialStatus,
-        fail_reason: TrialFailReason | None,
+        status: AttemptStatus,
+        fail_reason: AttemptFailReason | None,
     ) -> None:
-        assert_valid_trial_close(status=status, fail_reason=fail_reason)
+        assert_valid_attempt_close(status=status, fail_reason=fail_reason)
         attempt = self._fresh_attempt()
-        assert_trial_not_closed(attempt)
-        if attempt.status != TrialStatus.RUNNING:
+        assert_attempt_not_closed(attempt)
+        if attempt.status != AttemptStatus.RUNNING:
             raise TaskCenterInvariantViolation(
-                f"Trial {attempt.id!r} is not running"
+                f"Attempt {attempt.id!r} is not running"
             )
-        self._runtime.trial_store.close(
+        self._runtime.attempt_store.close(
             attempt.id,
             status=status,
             fail_reason=fail_reason,
@@ -341,7 +341,7 @@ class TrialOrchestrator:
     def _mark_startup_failed(self, *, planner_task_id: str) -> None:
         # Owns planner-task cleanup + registry deregistration. IterationManager's
         # _close_attempt_after_startup_failure (its catch in
-        # _start_orchestrator_if_configured) owns the trial-close in both
+        # _start_orchestrator_if_configured) owns the attempt-close in both
         # paths — factory raises and start() raises.
         runtime = self._runtime
         runtime.orchestrator_registry.deregister(self._attempt.id)
@@ -351,34 +351,34 @@ class TrialOrchestrator:
                 expected_status=TaskCenterTaskStatus.RUNNING.value,
                 status=TaskCenterTaskStatus.FAILED.value,
                 summary={
-                    "fail_reason": TrialFailReason.STARTUP_FAILED.value,
+                    "fail_reason": AttemptFailReason.STARTUP_FAILED.value,
                 },
             )
         except LookupError:
             pass
         except Exception:
             logger.exception(
-                "TrialOrchestrator: startup task cleanup failed",
+                "AttemptOrchestrator: startup task cleanup failed",
             )
 
-    def _fresh_attempt(self) -> Trial:
-        attempt = self._runtime.trial_store.get(self._attempt.id)
+    def _fresh_attempt(self) -> Attempt:
+        attempt = self._runtime.attempt_store.get(self._attempt.id)
         if attempt is None:
             raise TaskCenterInvariantViolation(
-                f"Trial {self._attempt.id!r} not found"
+                f"Attempt {self._attempt.id!r} not found"
             )
         self._attempt = attempt
         return attempt
 
-    def _assert_stage(self, expected: TrialStage) -> Trial:
+    def _assert_stage(self, expected: AttemptStage) -> Attempt:
         attempt = self._fresh_attempt()
-        assert_trial_not_closed(attempt)
-        assert_trial_stage(attempt, expected)
+        assert_attempt_not_closed(attempt)
+        assert_attempt_stage(attempt, expected)
         return attempt
 
     def _assert_submission_attempt(self, attempt_id: str) -> None:
         if attempt_id != self._attempt.id:
             raise TaskCenterInvariantViolation(
                 f"Submission attempt {attempt_id!r} does not match orchestrator "
-                f"trial {self._attempt.id!r}"
+                f"attempt {self._attempt.id!r}"
             )

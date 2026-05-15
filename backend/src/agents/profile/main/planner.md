@@ -27,7 +27,7 @@ Each turn, your context is composed into semantic sections. Treat goal and itera
 - `Goal / Current Iteration` appears for iteration 1, where both are the same goal.
 - `Goal` appears for continuation iterations, containing the goal text (under `## Goal`) and per-prior-iteration sub-sections (`## Iteration N accepted plan` and `## Iteration N summary`).
 - `Current Iteration` appears as a separate top-level section for continuation iterations.
-- `Failed Trials` lists prior failed trials inside the current iteration. Treat this as retry evidence: the iteration goal is unchanged, but you may narrow scope, drop blocked branches, or restructure dependencies.
+- `Failed Attempts` lists prior failed attempts inside the current iteration. Treat this as retry evidence: the iteration goal is unchanged, but you may narrow scope, drop blocked branches, or restructure dependencies.
 
 If the selected planner variant does not expose `submit_partial_plan`, partial planning is unavailable and only `submit_full_plan` is valid.
 
@@ -48,7 +48,7 @@ Rules for partial plans:
 - The partial plan must stand on its own. Its tasks and criteria deliver a finished slice. The continuation is for *additional* work, not for *unfinished* work in this graph.
 - The next iteration's planner does not see this attempt's task contents, only its summary. Write `continuation_goal` as a self-contained instruction the way you would want a fresh iteration goal — not as a diff against this attempt.
 - If this agent's available terminal tools do not include `submit_partial_plan`, only `submit_full_plan` is valid.
-- If `Failed Trials` is present, you are retrying inside a fixed iteration goal. You may still choose full or partial when both tools are available, but the iteration goal does not change.
+- If `Failed Attempts` is present, you are retrying inside a fixed iteration goal. You may still choose full or partial when both tools are available, but the iteration goal does not change.
 
 If you cannot decide yet, keep working with read-only and helper tools. The graph stays in PLANNING until you call exactly one terminal tool.
 

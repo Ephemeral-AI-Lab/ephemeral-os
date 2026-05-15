@@ -19,7 +19,7 @@ their shared upstream completes.
 
 All seven nodes run the lightweight ``preflight`` action; evaluator passes.
 Asserts: 7 ``EXECUTOR_INVOKED`` events, goal ``status=succeeded``,
-graph_summary shows one goal with one iteration and one passed trial
+graph_summary shows one goal with one iteration and one passed attempt
 containing all seven generator tasks.
 """
 
@@ -87,7 +87,7 @@ class DependencyDagMixed(ScenarioBase):
             submit_evaluation_success,
             {
                 "summary": "Mixed-topology DAG completed; all fan-in nodes ran.",
-                "passed_criteria": list(ctx.trial.evaluation_criteria),
+                "passed_criteria": list(ctx.attempt.evaluation_criteria),
             },
         )
 

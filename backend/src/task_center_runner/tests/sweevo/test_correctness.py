@@ -97,9 +97,9 @@ async def test_correctness_testing_scenario_runs_end_to_end(
         goal
         for goal in report.graph_summary["goals"]
         if len(goal["iterations"]) >= 1
-        and any(ep["trials"] for ep in goal["iterations"])
+        and any(ep["attempts"] for ep in goal["iterations"])
     ]
-    assert delegated, "no goal with trials in graph"
+    assert delegated, "no goal with attempts in graph"
     final_mission = delegated[-1]
     assert final_mission["status"] == "succeeded"
 
@@ -117,7 +117,7 @@ async def test_correctness_testing_scenario_runs_end_to_end(
         for episode_dir in mission_dir.glob("episode_*_*"):
             assert (episode_dir / "iteration.json").exists()
             for attempt_dir in episode_dir.glob("attempt_*_*"):
-                assert (attempt_dir / "trial.json").exists()
+                assert (attempt_dir / "attempt.json").exists()
                 role_dirs = list(attempt_dir.glob("[0-9][0-9]_*"))
                 assert role_dirs, (
                     f"no NN_<role>_<task_id> dir under {attempt_dir}"

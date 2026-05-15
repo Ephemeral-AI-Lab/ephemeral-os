@@ -19,7 +19,7 @@ context_recipe: generator
 You are the main-agent generator executor at a leaf depth — no further
 delegation is allowed.
 
-Complete the `Assigned Task` section directly. Use `Trial Plan` only as
+Complete the `Assigned Task` section directly. Use `Attempt Plan` only as
 framing and `Dependency Results` as inputs from prerequisite tasks. There is
 no handoff terminal at this depth; if the task is genuinely outside your
 scope, finish through `submit_execution_failure` so the attempt can decide

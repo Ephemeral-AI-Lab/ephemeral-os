@@ -1,6 +1,6 @@
 """US-014: orchestrator + dispatcher composer wiring.
 
-Confirms that when ``TrialDeps.composer`` is set, the orchestrator
+Confirms that when ``AttemptDeps.composer`` is set, the orchestrator
 asks the composer for the planner agent name and rendered_prompt, and that
 ``planner_full_only`` is selected when ancestry has a partial-plan caller.
 """
@@ -26,13 +26,13 @@ from task_center._core.agent_routing import (
 )
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.context_engine.recipes_registry import RecipeRegistry
-from task_center.trial.orchestrator import TrialOrchestrator
-from task_center.trial.orchestrator_registry import (
-    TrialOrchestratorRegistry,
+from task_center.attempt.orchestrator import AttemptOrchestrator
+from task_center.attempt.orchestrator_registry import (
+    AttemptOrchestratorRegistry,
 )
-from task_center.trial.runtime import (
+from task_center.attempt.runtime import (
     AgentLaunch,
-    TrialDeps,
+    AttemptDeps,
 )
 from task_center.iteration.state import IterationCreationReason
 
@@ -75,22 +75,22 @@ def _clear_definitions() -> None:
 @pytest.fixture
 def composer_runtime(
     mission_store, episode_store, attempt_store, task_store
-) -> tuple[TrialDeps, _RecordingLauncher]:
+) -> tuple[AttemptDeps, _RecordingLauncher]:
     launcher = _RecordingLauncher()
     deps = ContextEngineDeps(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
     )
     composer = ContextComposer.default(ContextEngine(deps))
-    runtime = TrialDeps(
+    runtime = AttemptDeps(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher,
-        orchestrator_registry=TrialOrchestratorRegistry(),
+        orchestrator_registry=AttemptOrchestratorRegistry(),
         manager_registry=None,
         lifecycle_config=TaskCenterLifecycleConfig(),
         composer=composer,
@@ -136,10 +136,10 @@ def _seed_request_segment_graph(
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="seg goal",
-        trial_budget=2,
+        attempt_budget=2,
     )
     attempt = attempt_store.insert(
-        iteration_id=iteration.id, trial_sequence_no=1
+        iteration_id=iteration.id, attempt_sequence_no=1
     )
     return request, iteration, attempt
 
@@ -162,10 +162,10 @@ def _setup_partial_plan_ancestor(
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="parent seg",
-        trial_budget=2,
+        attempt_budget=2,
     )
     caller_attempt = attempt_store.insert(
-        iteration_id=parent_seg.id, trial_sequence_no=1
+        iteration_id=parent_seg.id, attempt_sequence_no=1
     )
     attempt_store.set_plan_contract(
         caller_attempt.id,
@@ -183,7 +183,7 @@ def _setup_partial_plan_ancestor(
         summaries=[],
         needs=[],
         task_center_attempt_id=caller_attempt.id,
-        spawn_reason="trial_generator",
+        spawn_reason="attempt_generator",
     )
     return parent_req
 
@@ -201,7 +201,7 @@ def test_planner_launched_via_composer_uses_base_when_no_ancestor(
     request, iteration, attempt = _seed_request_segment_graph(
         mission_store, episode_store, attempt_store, task_center_run_id
     )
-    orchestrator = TrialOrchestrator(
+    orchestrator = AttemptOrchestrator(
         attempt=attempt, on_attempt_closed=lambda _id: None, runtime=runtime
     )
     orchestrator.start()
@@ -243,12 +243,12 @@ def test_planner_forked_to_full_only_when_partial_plan_caller_present(
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="child seg",
-        trial_budget=2,
+        attempt_budget=2,
     )
     child_graph = attempt_store.insert(
-        iteration_id=child_seg.id, trial_sequence_no=1
+        iteration_id=child_seg.id, attempt_sequence_no=1
     )
-    orchestrator = TrialOrchestrator(
+    orchestrator = AttemptOrchestrator(
         attempt=child_graph,
         on_attempt_closed=lambda _id: None,
         runtime=runtime,

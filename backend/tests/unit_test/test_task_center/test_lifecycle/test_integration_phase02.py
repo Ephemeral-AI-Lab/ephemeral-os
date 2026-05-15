@@ -5,14 +5,14 @@ from __future__ import annotations
 from task_center._core.types import TaskCenterLifecycleConfig
 from task_center.goal.handler import GoalHandler
 from task_center.goal.state import GoalStatus
-from task_center.trial import TrialStatus
-from task_center.trial.orchestrator import TrialOrchestrator
-from task_center.trial.orchestrator_registry import (
-    TrialOrchestratorRegistry,
+from task_center.attempt import AttemptStatus
+from task_center.attempt.orchestrator import AttemptOrchestrator
+from task_center.attempt.orchestrator_registry import (
+    AttemptOrchestratorRegistry,
 )
-from task_center.trial.runtime import (
+from task_center.attempt.runtime import (
     AgentLaunch,
-    TrialDeps,
+    AttemptDeps,
 )
 from task_center.task_state import EvaluatorSubmission, GeneratorSubmission, PlannedGeneratorTask, PlannerSubmission
 from task_center._core.types import evaluator_task_id, generator_task_id, planner_task_id
@@ -37,12 +37,12 @@ def _build_handler(
     composer,
 ):
     launcher = _FakeLauncher()
-    orchestrator_registry = TrialOrchestratorRegistry()
+    orchestrator_registry = AttemptOrchestratorRegistry()
     manager_registry = IterationManagerRegistry()
-    runtime = TrialDeps(
+    runtime = AttemptDeps(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         agent_launcher=launcher,
         orchestrator_registry=orchestrator_registry,
@@ -52,10 +52,10 @@ def _build_handler(
     handler = GoalHandler(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         manager_registry=manager_registry,
         config=TaskCenterLifecycleConfig(default_attempt_budget=2),
-        orchestrator_factory=lambda attempt, on_attempt_closed: TrialOrchestrator(
+        orchestrator_factory=lambda attempt, on_attempt_closed: AttemptOrchestrator(
             attempt=attempt,
             on_attempt_closed=on_attempt_closed,
             runtime=runtime,
@@ -140,7 +140,7 @@ def test_full_plan_execution_success_closes_request_success(
     assert final_graph is not None
     assert final_request.status == GoalStatus.SUCCEEDED
     assert final_segment.status == IterationStatus.SUCCEEDED
-    assert final_graph.status == TrialStatus.PASSED
+    assert final_graph.status == AttemptStatus.PASSED
     assert manager_registry.get(iteration.id) is None
 
 
@@ -171,8 +171,8 @@ def test_generator_failure_retry_then_evaluator_success(
 
     refreshed_segment = episode_store.get(iteration.id)
     assert refreshed_segment is not None
-    assert len(refreshed_segment.trial_ids) == 2
-    graph2_id = refreshed_segment.trial_ids[1]
+    assert len(refreshed_segment.attempt_ids) == 2
+    graph2_id = refreshed_segment.attempt_ids[1]
     orchestrator2 = orchestrator_registry.get_or_raise(graph2_id)
 
     orchestrator2.apply_plan_submission(_plan(graph2_id))
@@ -186,4 +186,4 @@ def test_generator_failure_retry_then_evaluator_success(
     assert final_graph2 is not None
     assert final_request.status == GoalStatus.SUCCEEDED
     assert final_segment.status == IterationStatus.SUCCEEDED
-    assert final_graph2.status == TrialStatus.PASSED
+    assert final_graph2.status == AttemptStatus.PASSED

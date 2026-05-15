@@ -15,9 +15,9 @@ from task_center.context_engine.recipes.planner import (
 )
 from task_center.context_engine.renderer import MarkdownPromptRenderer
 from task_center.context_engine.scope import ContextScope
-from task_center.trial import (
-    TrialFailReason,
-    TrialStatus,
+from task_center.attempt import (
+    AttemptFailReason,
+    AttemptStatus,
 )
 from task_center.iteration.state import (
     IterationCreationReason,
@@ -32,7 +32,7 @@ def deps_with_stores(
     return ContextEngineDeps(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
     )
 
@@ -57,7 +57,7 @@ def _seed_episode(
         sequence_no=sequence_no,
         creation_reason=IterationCreationReason.INITIAL,
         goal=goal,
-        trial_budget=2,
+        attempt_budget=2,
     )
 
 
@@ -74,7 +74,7 @@ def _close_episode_succeeded(
 
 def _seed_failed_attempt(attempt_store, episode_id, *, sequence_no: int):
     g = attempt_store.insert(
-        iteration_id=episode_id, trial_sequence_no=sequence_no
+        iteration_id=episode_id, attempt_sequence_no=sequence_no
     )
     attempt_store.set_plan_contract(
         g.id,
@@ -84,15 +84,15 @@ def _seed_failed_attempt(attempt_store, episode_id, *, sequence_no: int):
     )
     return attempt_store.close(
         g.id,
-        status=TrialStatus.FAILED,
-        fail_reason=TrialFailReason.GENERATOR_FAILED,
+        status=AttemptStatus.FAILED,
+        fail_reason=AttemptFailReason.GENERATOR_FAILED,
         closed_at=datetime.now(UTC),
     )
 
 
 def _seed_running_attempt(attempt_store, episode_id, *, sequence_no: int):
     return attempt_store.insert(
-        iteration_id=episode_id, trial_sequence_no=sequence_no
+        iteration_id=episode_id, attempt_sequence_no=sequence_no
     )
 
 
@@ -113,7 +113,7 @@ def test_episode1_emits_one_merged_mission_episode_block(
 
     packet = _planner_build(
         ContextScope(
-            goal_id=request.id, iteration_id=iteration.id, trial_id=g.id
+            goal_id=request.id, iteration_id=iteration.id, attempt_id=g.id
         ),
         deps_with_stores,
     )
@@ -147,7 +147,7 @@ def test_episode2_emits_mission_prior_results_and_current_episode(
 
     packet = _planner_build(
         ContextScope(
-            goal_id=request.id, iteration_id=episode2.id, trial_id=g.id
+            goal_id=request.id, iteration_id=episode2.id, attempt_id=g.id
         ),
         deps_with_stores,
     )
@@ -188,7 +188,7 @@ def test_episode3_emits_two_pairs_with_priority_split(
 
     packet = _planner_build(
         ContextScope(
-            goal_id=request.id, iteration_id=episode3.id, trial_id=g.id
+            goal_id=request.id, iteration_id=episode3.id, attempt_id=g.id
         ),
         deps_with_stores,
     )
@@ -225,7 +225,7 @@ def test_missing_prior_spec_raises_context_engine_error(
     with pytest.raises(ContextEngineError):
         _planner_build(
             ContextScope(
-                goal_id=request.id, iteration_id=episode2.id, trial_id=g.id
+                goal_id=request.id, iteration_id=episode2.id, attempt_id=g.id
             ),
             deps_with_stores,
         )
@@ -252,17 +252,17 @@ def test_three_failed_attempts_emit_three_high_priority_blocks(
         ContextScope(
             goal_id=request.id,
             iteration_id=iteration.id,
-            trial_id=current_attempt.id,
+            attempt_id=current_attempt.id,
         ),
         deps_with_stores,
     )
     failed_blocks = [
-        b for b in packet.blocks if b.kind == "failed_trial_landscape"
+        b for b in packet.blocks if b.kind == "failed_attempt_landscape"
     ]
     assert len(failed_blocks) == 3
     for block in failed_blocks:
         assert block.priority == ContextPriority.HIGH
-    assert [b.metadata["trial_sequence_no"] for b in failed_blocks] == [
+    assert [b.metadata["attempt_sequence_no"] for b in failed_blocks] == [
         "1",
         "2",
         "3",
@@ -277,7 +277,7 @@ def test_failed_attempt_landscape_includes_plan_type_statuses_and_summaries(
     iteration = _seed_episode(
         episode_store, goal_id=request.id, sequence_no=1, goal="g"
     )
-    failed = attempt_store.insert(iteration_id=iteration.id, trial_sequence_no=1)
+    failed = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
     attempt_store.set_plan_contract(
         failed.id,
         task_specification="partial failed spec",
@@ -295,7 +295,7 @@ def test_failed_attempt_landscape_includes_plan_type_statuses_and_summaries(
         summaries=[{"summary": "implemented A"}],
         needs=[],
         task_center_attempt_id=failed.id,
-        spawn_reason="trial_generator",
+        spawn_reason="attempt_generator",
     )
     task_store.upsert_task(
         task_id="gen-b",
@@ -307,12 +307,12 @@ def test_failed_attempt_landscape_includes_plan_type_statuses_and_summaries(
         summaries=[{"summary": "B failed after creating fixture"}],
         needs=[],
         task_center_attempt_id=failed.id,
-        spawn_reason="trial_generator",
+        spawn_reason="attempt_generator",
     )
     attempt_store.close(
         failed.id,
-        status=TrialStatus.FAILED,
-        fail_reason=TrialFailReason.EVALUATOR_FAILED,
+        status=AttemptStatus.FAILED,
+        fail_reason=AttemptFailReason.EVALUATOR_FAILED,
         closed_at=datetime.now(UTC),
     )
     current_attempt = _seed_running_attempt(attempt_store, iteration.id, sequence_no=2)
@@ -321,13 +321,13 @@ def test_failed_attempt_landscape_includes_plan_type_statuses_and_summaries(
         ContextScope(
             goal_id=request.id,
             iteration_id=iteration.id,
-            trial_id=current_attempt.id,
+            attempt_id=current_attempt.id,
         ),
         deps_with_stores,
     )
 
     failed_blocks = [
-        b for b in packet.blocks if b.kind == "failed_trial_landscape"
+        b for b in packet.blocks if b.kind == "failed_attempt_landscape"
     ]
     assert len(failed_blocks) == 1
     text = failed_blocks[0].text
@@ -359,15 +359,15 @@ def test_all_failed_attempts_render_as_high_priority_blocks(
         ContextScope(
             goal_id=request.id,
             iteration_id=iteration.id,
-            trial_id=current_attempt.id,
+            attempt_id=current_attempt.id,
         ),
         deps_with_stores,
     )
     failed_blocks = [
-        b for b in packet.blocks if b.kind == "failed_trial_landscape"
+        b for b in packet.blocks if b.kind == "failed_attempt_landscape"
     ]
     assert len(failed_blocks) == total
-    assert [b.metadata["trial_sequence_no"] for b in failed_blocks] == [
+    assert [b.metadata["attempt_sequence_no"] for b in failed_blocks] == [
         str(n) for n in range(1, total + 1)
     ]
     assert all(block.priority == ContextPriority.HIGH for block in failed_blocks)
@@ -412,7 +412,7 @@ def test_iteration_2_plus_reading_a_structure(
         ContextScope(
             goal_id=request.id,
             iteration_id=episode3.id,
-            trial_id=current_attempt.id,
+            attempt_id=current_attempt.id,
         ),
         deps_with_stores,
     )

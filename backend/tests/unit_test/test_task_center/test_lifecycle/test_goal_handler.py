@@ -9,7 +9,7 @@ from task_center.goal.handler import GoalHandler
 from task_center.iteration import IterationManagerRegistry
 from task_center.goal.state import GoalStatus
 from task_center.iteration.state import (
-    TrialPlanFailed,
+    AttemptPlanFailed,
     SuccessContinue,
     IterationClosureReport,
     TerminalSuccess,
@@ -26,7 +26,7 @@ def handler(mission_store, episode_store, attempt_store):
     return GoalHandler(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         manager_registry=IterationManagerRegistry(),
         config=TaskCenterLifecycleConfig(default_attempt_budget=2),
     )
@@ -76,7 +76,7 @@ def test_initial_episode_has_sequence_one_and_initial_reason(handler, task_cente
     assert seg.creation_reason == IterationCreationReason.INITIAL
     assert seg.goal == "g"
     assert seg.is_open
-    assert seg.trial_budget == 2
+    assert seg.attempt_budget == 2
 
 
 def test_continuation_segment_inherits_continuation_goal(
@@ -137,7 +137,7 @@ def test_handle_iteration_closed_terminal_success_closes_request_succeeded(
     handler.handle_iteration_closed(
         IterationClosureReport(
             iteration_id=seg.id,
-            final_trial_id="g1",
+            final_attempt_id="g1",
             outcome=TerminalSuccess(),
         )
     )
@@ -147,7 +147,7 @@ def test_handle_iteration_closed_terminal_success_closes_request_succeeded(
     assert final.final_outcome == {
         "outcome": "success",
         "final_iteration_id": seg.id,
-        "final_trial_id": "g1",
+        "final_attempt_id": "g1",
     }
 
 
@@ -163,9 +163,9 @@ def test_handle_iteration_closed_attempt_plan_failed_closes_request_failed(
     handler.handle_iteration_closed(
         IterationClosureReport(
             iteration_id=seg.id,
-            final_trial_id="g1",
-            outcome=TrialPlanFailed(
-                failure_summary="boom", prior_trial_history=()
+            final_attempt_id="g1",
+            outcome=AttemptPlanFailed(
+                failure_summary="boom", prior_attempt_history=()
             ),
         )
     )
@@ -188,7 +188,7 @@ def test_handle_iteration_closed_success_continue_creates_continuation(
     handler.handle_iteration_closed(
         IterationClosureReport(
             iteration_id=seg1.id,
-            final_trial_id="g1",
+            final_attempt_id="g1",
             outcome=SuccessContinue(goal="next-goal"),
         )
     )
@@ -217,7 +217,7 @@ def test_handle_iteration_closed_deregisters_manager(
     handler.handle_iteration_closed(
         IterationClosureReport(
             iteration_id=seg.id,
-            final_trial_id="g1",
+            final_attempt_id="g1",
             outcome=TerminalSuccess(),
         )
     )
@@ -273,7 +273,7 @@ def test_close_mission_delivers_closure_report_when_callback_set(
     handler = GoalHandler(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         manager_registry=IterationManagerRegistry(),
         config=TaskCenterLifecycleConfig(default_attempt_budget=2),
         deliver_closure_report=sink,
@@ -288,7 +288,7 @@ def test_close_mission_delivers_closure_report_when_callback_set(
         goal_id=req.id,
         succeeded=True,
         final_iteration_id="seg",
-        final_trial_id="g1",
+        final_attempt_id="g1",
     )
     assert len(delivered) == 1
     assert delivered[0].outcome == "success"
@@ -302,10 +302,10 @@ def test_handler_passes_orchestrator_factory_to_spawned_manager(
 
     class _StartedOrchestrator:
         def __init__(self, attempt_id: str) -> None:
-            self.trial_id = attempt_id
+            self.attempt_id = attempt_id
 
         def start(self) -> None:
-            started.append(self.trial_id)
+            started.append(self.attempt_id)
 
     def factory(attempt, on_attempt_closed):
         del on_attempt_closed
@@ -315,7 +315,7 @@ def test_handler_passes_orchestrator_factory_to_spawned_manager(
     handler = GoalHandler(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         manager_registry=registry,
         config=TaskCenterLifecycleConfig(default_attempt_budget=2),
         orchestrator_factory=factory,

@@ -1,4 +1,4 @@
-"""Failed trial landscape blocks for planner context."""
+"""Failed attempt landscape blocks for planner context."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from task_center.context_engine.packet import (
     ContextPriority,
 )
 from task_center.context_engine.recipes._shared import latest_summary_text
-from task_center.trial.state import Trial, TrialStatus
+from task_center.attempt.state import Attempt, AttemptStatus
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
     from task_center._core.persistence import TaskStoreProtocol
@@ -21,7 +21,7 @@ _MISSING_TASK_ROW_STATUS = "missing task row"
 _PREMATURE_STATUSES = frozenset({"failed", "blocked", _MISSING_TASK_ROW_STATUS})
 _EMPTY_SUMMARY_PLACEHOLDERS = frozenset({"(empty)", "(no summary recorded)"})
 
-FAILED_TRIAL_LANDSCAPE = ContextBlockKind.FAILED_TRIAL_LANDSCAPE
+FAILED_ATTEMPT_LANDSCAPE = ContextBlockKind.FAILED_ATTEMPT_LANDSCAPE
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,48 +32,48 @@ class _GeneratorOutcome:
     summary: str | None
 
 
-def failed_trial_landscape_blocks(
+def failed_attempt_landscape_blocks(
     *,
-    current_trial_id: str | None,
-    trials: list[Trial],
+    current_attempt_id: str | None,
+    attempts: list[Attempt],
     task_store: TaskStoreProtocol | None = None,
 ) -> list[ContextBlock]:
     failed = sorted(
         (
             t
-            for t in trials
-            if t.status == TrialStatus.FAILED and t.id != current_trial_id
+            for t in attempts
+            if t.status == AttemptStatus.FAILED and t.id != current_attempt_id
         ),
-        key=lambda t: t.trial_sequence_no,
+        key=lambda t: t.attempt_sequence_no,
     )
     return [
         ContextBlock(
-            kind=ContextBlockKind.FAILED_TRIAL_LANDSCAPE,
+            kind=ContextBlockKind.FAILED_ATTEMPT_LANDSCAPE,
             priority=ContextPriority.HIGH,
-            text=_render_failed_trial(t, task_store=task_store),
+            text=_render_failed_attempt(t, task_store=task_store),
             source_id=t.id,
-            source_kind="trial",
+            source_kind="attempt",
             metadata={
-                "trial_sequence_no": str(t.trial_sequence_no),
-                "group_heading": "# Prior Failed Trials",
-                "subheading": f"Trial {t.trial_sequence_no}",
+                "attempt_sequence_no": str(t.attempt_sequence_no),
+                "group_heading": "# Prior Failed Attempts",
+                "subheading": f"Attempt {t.attempt_sequence_no}",
             },
         )
         for t in failed
     ]
 
 
-def _render_failed_trial(
-    trial: Trial, *, task_store: TaskStoreProtocol | None
+def _render_failed_attempt(
+    attempt: Attempt, *, task_store: TaskStoreProtocol | None
 ) -> str:
-    outcomes = _generator_outcomes(trial, task_store=task_store)
+    outcomes = _generator_outcomes(attempt, task_store=task_store)
 
-    if trial.continuation_goal:
+    if attempt.continuation_goal:
         plan_kind = "partial"
     elif (
-        trial.task_specification
-        or trial.evaluation_criteria
-        or trial.generator_task_ids
+        attempt.task_specification
+        or attempt.evaluation_criteria
+        or attempt.generator_task_ids
     ):
         plan_kind = "full"
     else:
@@ -82,20 +82,20 @@ def _render_failed_trial(
     sections = [
         "### Accepted Plan\n\n"
         f"Plan type: {plan_kind}\n\n"
-        f"Specification:\n{trial.task_specification or '(not submitted)'}",
+        f"Specification:\n{attempt.task_specification or '(not submitted)'}",
         _render_generator_outcomes(outcomes),
     ]
 
     has_premature = any(o.status in _PREMATURE_STATUSES for o in outcomes)
-    if not has_premature and task_store and trial.evaluator_task_id is not None:
-        evaluator_task = task_store.get_task(trial.evaluator_task_id)
+    if not has_premature and task_store and attempt.evaluator_task_id is not None:
+        evaluator_task = task_store.get_task(attempt.evaluator_task_id)
         evaluator_summary = (
             "(missing evaluator task row)"
             if evaluator_task is None
             else latest_summary_text(evaluator_task.get("summaries"))
         )
         criteria_block = (
-            "\n".join(f"  - {c}" for c in trial.evaluation_criteria) or "  (none)"
+            "\n".join(f"  - {c}" for c in attempt.evaluation_criteria) or "  (none)"
         )
         sections.append(
             "### Evaluator Judgment\n\n"
@@ -128,13 +128,13 @@ def _render_generator_outcomes(outcomes: list[_GeneratorOutcome]) -> str:
 
 
 def _generator_outcomes(
-    trial: Trial, *, task_store: TaskStoreProtocol | None
+    attempt: Attempt, *, task_store: TaskStoreProtocol | None
 ) -> list[_GeneratorOutcome]:
-    if task_store is None or not trial.generator_task_ids:
+    if task_store is None or not attempt.generator_task_ids:
         return []
 
     outcomes: list[_GeneratorOutcome] = []
-    for task_id in trial.generator_task_ids:
+    for task_id in attempt.generator_task_ids:
         task = task_store.get_task(task_id)
         if task is None:
             outcomes.append(

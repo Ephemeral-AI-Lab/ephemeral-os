@@ -23,7 +23,7 @@ def _seed_segment(mission_store, episode_store, task_center_run_id):
         sequence_no=1,
         creation_reason=IterationCreationReason.INITIAL,
         goal="g",
-        trial_budget=2,
+        attempt_budget=2,
     )
 
 
@@ -104,7 +104,7 @@ def test_evaluator_pass_summary_helper(
         summaries=[],
         needs=[],
         task_center_attempt_id=attempt_id,
-        spawn_reason="trial_evaluator",
+        spawn_reason="attempt_evaluator",
     )
     task_store.set_task_status(
         "ev-1",

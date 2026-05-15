@@ -119,16 +119,16 @@ def fail_verifier_at(*, checkpoint: str) -> Hook:
                 asserted=True,
                 extras={"armed": False},
             )
-        trial_id = event.node.trial_id or "*"
+        attempt_id = event.node.attempt_id or "*"
         state.inject_failure(
             role="verifier",
-            trial_id=trial_id,
+            attempt_id=attempt_id,
             checkpoint=checkpoint,
         )
         return HookResult(
             name=f"fail_verifier_at:{checkpoint}",
             asserted=True,
-            extras={"armed": True, "trial_id": trial_id},
+            extras={"armed": True, "attempt_id": attempt_id},
         )
 
     return Hook(

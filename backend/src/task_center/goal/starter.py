@@ -21,10 +21,10 @@ from task_center.goal.state import (
     GoalStatus,
 )
 from task_center._core.types import TaskCenterInvariantViolation
-from task_center.trial.orchestrator import TrialOrchestrator
+from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.iteration import OrchestratorFactory
-from task_center.trial.state import TrialFailReason, TrialStatus
-from task_center.trial.runtime import TrialDeps
+from task_center.attempt.state import AttemptFailReason, AttemptStatus
+from task_center.attempt.runtime import AttemptDeps
 from task_center.iteration.state import Iteration, IterationStatus
 from task_center.task_state import TaskCenterTaskStatus
 
@@ -37,7 +37,7 @@ class StartedGoal:
     parent_attempt_id: str | None  # None when caller is the top-level executor
     goal_id: str
     initial_iteration_id: str
-    initial_trial_id: str
+    initial_attempt_id: str
     goal: str
 
 
@@ -47,12 +47,12 @@ class GoalStarter:
     def __init__(
         self,
         *,
-        runtime: TrialDeps,
+        runtime: AttemptDeps,
         orchestrator_factory: OrchestratorFactory | None = None,
     ) -> None:
         self._runtime = runtime
         self._orchestrator_factory = orchestrator_factory or (
-            lambda attempt, on_attempt_closed: TrialOrchestrator(
+            lambda attempt, on_attempt_closed: AttemptOrchestrator(
                 attempt=attempt,
                 on_attempt_closed=on_attempt_closed,
                 runtime=self._runtime,
@@ -94,7 +94,7 @@ class GoalStarter:
             self._compensate_failed_start(
                 goal=created_goal,
                 iteration=iteration,
-                initial_trial_id=initial_attempt.id if initial_attempt else None,
+                initial_attempt_id=initial_attempt.id if initial_attempt else None,
                 parent_task_id=parent_task_id,
             )
             raise
@@ -104,7 +104,7 @@ class GoalStarter:
             parent_attempt_id=parent_attempt_id,
             goal_id=created_goal.id,
             initial_iteration_id=iteration.id,
-            initial_trial_id=initial_attempt.id,
+            initial_attempt_id=initial_attempt.id,
             goal=goal,
         )
 
@@ -118,7 +118,7 @@ class GoalStarter:
         return GoalHandler(
             goal_store=self._runtime.goal_store,
             iteration_store=self._runtime.iteration_store,
-            trial_store=self._runtime.trial_store,
+            attempt_store=self._runtime.attempt_store,
             manager_registry=manager_registry,
             config=self._runtime.lifecycle_config,
             deliver_closure_report=router.deliver,
@@ -180,10 +180,10 @@ class GoalStarter:
         *,
         goal: Goal,
         iteration: Iteration,
-        initial_trial_id: str | None,
+        initial_attempt_id: str | None,
         parent_task_id: str,
     ) -> None:
-        """Best-effort rollback: trial -> iteration -> goal -> parent.
+        """Best-effort rollback: attempt -> iteration -> goal -> parent.
 
         Each step is independent; failures are logged via ``logger.exception``
         but never block subsequent steps. If parent restore fails we route a
@@ -203,8 +203,8 @@ class GoalStarter:
                 )
                 return False
 
-        _do("close_unstarted_trial", lambda: self._close_unstarted_trial(
-            initial_trial_id, now=now
+        _do("close_unstarted_attempt", lambda: self._close_unstarted_attempt(
+            initial_attempt_id, now=now
         ))
         _do("cancel_iteration", lambda: runtime.iteration_store.set_status(
             iteration.id, status=IterationStatus.CANCELLED, closed_at=now
@@ -221,7 +221,7 @@ class GoalStarter:
                 requested_by_task_id=parent_task_id,
                 outcome="failed",
                 final_iteration_id=iteration.id,
-                final_trial_id=initial_trial_id,
+                final_attempt_id=initial_attempt_id,
             )))
         if runtime.manager_registry is not None:
             runtime.manager_registry.deregister(iteration.id)
@@ -241,18 +241,18 @@ class GoalStarter:
             status=TaskCenterTaskStatus.RUNNING.value,
         )
 
-    def _close_unstarted_trial(
-        self, trial_id: str | None, *, now: datetime
+    def _close_unstarted_attempt(
+        self, attempt_id: str | None, *, now: datetime
     ) -> None:
-        if trial_id is None:
+        if attempt_id is None:
             return
-        trial = self._runtime.trial_store.get(trial_id)
-        if trial is None or trial.is_closed:
+        attempt = self._runtime.attempt_store.get(attempt_id)
+        if attempt is None or attempt.is_closed:
             return
-        self._runtime.trial_store.close(
-            trial_id,
-            status=TrialStatus.FAILED,
-            fail_reason=TrialFailReason.STARTUP_FAILED,
+        self._runtime.attempt_store.close(
+            attempt_id,
+            status=AttemptStatus.FAILED,
+            fail_reason=AttemptFailReason.STARTUP_FAILED,
             closed_at=now,
         )
 

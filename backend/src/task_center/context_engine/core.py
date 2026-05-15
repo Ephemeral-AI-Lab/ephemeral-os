@@ -30,7 +30,7 @@ from task_center.context_engine.scope import ContextScope
 if TYPE_CHECKING:  # pragma: no cover - typing-only
     from task_center._core.agent_routing import RuleBasedAgentResolver
     from task_center._core.persistence import (
-        TrialStoreProtocol,
+        AttemptStoreProtocol,
         IterationStoreProtocol,
         GoalStoreProtocol,
         TaskStoreProtocol,
@@ -65,7 +65,7 @@ class ContextEngineDeps:
 
     goal_store: GoalStoreProtocol
     iteration_store: IterationStoreProtocol
-    trial_store: TrialStoreProtocol
+    attempt_store: AttemptStoreProtocol
     task_store: TaskStoreProtocol
 
     # Optional: when supplied, the composer persists rendered packet inputs.

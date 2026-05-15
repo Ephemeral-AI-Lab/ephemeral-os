@@ -20,7 +20,7 @@ import db.models  # noqa: F401
 from db.models.task_center import TaskCenterRequestRecord, TaskCenterRunRecord
 from db.stores.goal_store import GoalStore
 from db.stores.context_packet_store import ContextPacketStore
-from db.stores.trial_store import TrialStore
+from db.stores.attempt_store import AttemptStore
 from db.stores.task_center_store import TaskCenterStore
 from db.stores.iteration_store import IterationStore
 from task_center.context_engine.core import ContextComposer, ContextEngine, ContextEngineDeps
@@ -76,8 +76,8 @@ def episode_store(session_factory) -> IterationStore:
 
 
 @pytest.fixture
-def attempt_store(session_factory) -> TrialStore:
-    store = TrialStore()
+def attempt_store(session_factory) -> AttemptStore:
+    store = AttemptStore()
     store.initialize(session_factory)
     return store
 
@@ -191,7 +191,7 @@ def composer(
     deps = ContextEngineDeps(
         goal_store=mission_store,
         iteration_store=episode_store,
-        trial_store=attempt_store,
+        attempt_store=attempt_store,
         task_store=task_store,
         context_packet_store=context_packet_store,
     )

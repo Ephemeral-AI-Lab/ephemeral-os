@@ -1,9 +1,9 @@
-"""TrialDispatcher — DAG dispatch helper for TrialOrchestrator.
+"""AttemptDispatcher — DAG dispatch helper for AttemptOrchestrator.
 
-Owns the launch/quiescence state machine for one trial's generators and
+Owns the launch/quiescence state machine for one attempt's generators and
 evaluator. Calls back into the orchestrator's ``_close_attempt`` for the actual
-trial-closing transition; the orchestrator remains the only owner of
-close-trial state and the on_attempt_closed signal to ``IterationManager``.
+attempt-closing transition; the orchestrator remains the only owner of
+close-attempt state and the on_attempt_closed signal to ``IterationManager``.
 """
 
 from __future__ import annotations
@@ -13,18 +13,18 @@ from collections.abc import Callable
 
 from task_center._core.infra import TaskCenterAuditEmitter
 from task_center._core.types import TaskCenterInvariantViolation
-from task_center.trial.state import (
-    Trial,
-    TrialFailReason,
-    TrialStage,
-    TrialStatus,
+from task_center.attempt.state import (
+    Attempt,
+    AttemptFailReason,
+    AttemptStage,
+    AttemptStatus,
 )
-from task_center.trial.runtime import (
+from task_center.attempt.runtime import (
     AgentLaunch,
-    TrialDeps,
+    AttemptDeps,
 )
-from task_center.trial.launch import LaunchBuilder
-from task_center.trial.generator_dag import (
+from task_center.attempt.launch import LaunchBuilder
+from task_center.attempt.generator_dag import (
     blocked_descendant_ids,
     ready_pending_generator_ids,
     summarize_generator_dag,
@@ -40,18 +40,18 @@ logger = logging.getLogger(__name__)
 
 
 CloseGraphCallback = Callable[
-    [TrialStatus, TrialFailReason | None], None
+    [AttemptStatus, AttemptFailReason | None], None
 ]
 
 
-class TrialDispatcher:
+class AttemptDispatcher:
     """Drives the generator-DAG and evaluator launch/quiescence machine."""
 
     def __init__(
         self,
         *,
         attempt_id: str,
-        runtime: TrialDeps,
+        runtime: AttemptDeps,
         close_attempt: CloseGraphCallback,
     ) -> None:
         self._attempt_id = attempt_id
@@ -66,15 +66,15 @@ class TrialDispatcher:
         if attempt.is_closed:
             return
         # PLAN and CLOSED stages are no-ops.
-        if attempt.stage == TrialStage.GENERATE:
+        if attempt.stage == AttemptStage.GENERATE:
             self._dispatch_generating(attempt)
-        elif attempt.stage == TrialStage.EVALUATE:
+        elif attempt.stage == AttemptStage.EVALUATE:
             self._dispatch_evaluating(attempt)
 
     def block_failed_descendants(self, failed_task_id: str) -> None:
         runtime = self._runtime
         attempt = self._fresh_attempt()
-        task_records = runtime.task_store.list_generator_tasks_for_trial(
+        task_records = runtime.task_store.list_generator_tasks_for_attempt(
             attempt.id
         )
         for task_id in blocked_descendant_ids(
@@ -89,9 +89,9 @@ class TrialDispatcher:
 
     # ---- internal -------------------------------------------------------
 
-    def _dispatch_generating(self, attempt: Trial) -> None:
+    def _dispatch_generating(self, attempt: Attempt) -> None:
         runtime = self._runtime
-        task_records = runtime.task_store.list_generator_tasks_for_trial(
+        task_records = runtime.task_store.list_generator_tasks_for_attempt(
             attempt.id
         )
         ready_ids = ready_pending_generator_ids(task_records)
@@ -113,18 +113,18 @@ class TrialDispatcher:
 
         if state.any_failed_or_blocked:
             self._close_attempt(
-                TrialStatus.FAILED,
-                TrialFailReason.GENERATOR_FAILED,
+                AttemptStatus.FAILED,
+                AttemptFailReason.GENERATOR_FAILED,
             )
             return
 
         if state.all_done:
             self._spawn_evaluator(attempt)
 
-    def _dispatch_evaluating(self, attempt: Trial) -> None:
+    def _dispatch_evaluating(self, attempt: Attempt) -> None:
         if attempt.evaluator_task_id is None:
             raise TaskCenterInvariantViolation(
-                f"Trial {attempt.id!r} is evaluating with no evaluator task"
+                f"Attempt {attempt.id!r} is evaluating with no evaluator task"
             )
         runtime = self._runtime
         evaluator_task = runtime.task_store.get_task(attempt.evaluator_task_id)
@@ -134,11 +134,11 @@ class TrialDispatcher:
             )
         status = TaskCenterTaskStatus(evaluator_task["status"])
         if status == TaskCenterTaskStatus.DONE:
-            self._close_attempt(TrialStatus.PASSED, None)
+            self._close_attempt(AttemptStatus.PASSED, None)
         elif status == TaskCenterTaskStatus.FAILED:
             self._close_attempt(
-                TrialStatus.FAILED,
-                TrialFailReason.EVALUATOR_FAILED,
+                AttemptStatus.FAILED,
+                AttemptFailReason.EVALUATOR_FAILED,
             )
 
     def _mark_launch_failed(
@@ -157,13 +157,13 @@ class TrialDispatcher:
         if failed_task is not None:
             self._audit.task_failed(
                 failed_task,
-                trial_id=attempt_id,
+                attempt_id=attempt_id,
                 fail_reason="agent_launch_failed",
                 summary=summary,
             )
 
     def _launch_ready_generator(
-        self, *, attempt: Trial, task_id: str
+        self, *, attempt: Attempt, task_id: str
     ) -> bool:
         runtime = self._runtime
         current = runtime.task_store.get_task(task_id)
@@ -176,7 +176,7 @@ class TrialDispatcher:
             )
         self._audit.task_ready(
             current,
-            trial_id=attempt.id,
+            attempt_id=attempt.id,
             satisfied_dependency_ids=tuple(
                 str(dep) for dep in current.get("needs", ()) or ()
             ),
@@ -184,7 +184,7 @@ class TrialDispatcher:
         task = runtime.task_store.set_task_status(
             task_id, status=TaskCenterTaskStatus.RUNNING.value
         )
-        self._audit.task_launched(task, trial_id=attempt.id)
+        self._audit.task_launched(task, attempt_id=attempt.id)
         try:
             launch = LaunchBuilder(runtime=runtime).for_generator(
                 attempt=attempt,
@@ -199,7 +199,7 @@ class TrialDispatcher:
             runtime.agent_launcher.launch(launch)
         except Exception:
             logger.exception(
-                "TrialDispatcher: generator launch failed",
+                "AttemptDispatcher: generator launch failed",
                 extra={"task_id": task_id, "attempt_id": attempt.id},
             )
             self._mark_launch_failed(
@@ -214,7 +214,7 @@ class TrialDispatcher:
             self._runtime.agent_launcher.launch(launch)
         except Exception:
             logger.exception(
-                "TrialDispatcher: evaluator launch failed",
+                "AttemptDispatcher: evaluator launch failed",
                 extra={
                     "task_id": launch.task_id,
                     "attempt_id": launch.attempt_id,
@@ -226,10 +226,10 @@ class TrialDispatcher:
                 role="Evaluator",
             )
             self._close_attempt(
-                TrialStatus.FAILED, TrialFailReason.EVALUATOR_FAILED
+                AttemptStatus.FAILED, AttemptFailReason.EVALUATOR_FAILED
             )
 
-    def _spawn_evaluator(self, attempt: Trial) -> None:
+    def _spawn_evaluator(self, attempt: Attempt) -> None:
         if attempt.evaluator_task_id is not None:
             return
         runtime = self._runtime
@@ -250,7 +250,7 @@ class TrialDispatcher:
             }
             self._audit.task_ready(
                 ready_task,
-                trial_id=attempt.id,
+                attempt_id=attempt.id,
                 satisfied_dependency_ids=tuple(attempt.generator_task_ids),
             )
             runtime.task_store.upsert_task(
@@ -264,17 +264,17 @@ class TrialDispatcher:
                 needs=list(attempt.generator_task_ids),
                 task_center_attempt_id=attempt.id,
                 context_packet_id=launch.context_packet_id,
-                spawn_reason=SpawnReason.TRIAL_EVALUATOR.value,
+                spawn_reason=SpawnReason.ATTEMPT_EVALUATOR.value,
             )
             task = runtime.task_store.get_task(task_id)
             if task is not None:
-                self._audit.task_launched(task, trial_id=attempt.id)
-            runtime.trial_store.set_evaluator_task_id(attempt.id, task_id)
-            runtime.trial_store.set_stage(attempt.id, TrialStage.EVALUATE)
+                self._audit.task_launched(task, attempt_id=attempt.id)
+            runtime.attempt_store.set_evaluator_task_id(attempt.id, task_id)
+            runtime.attempt_store.set_stage(attempt.id, AttemptStage.EVALUATE)
             self._launch_evaluator(launch)
         except Exception:
             logger.exception(
-                "TrialDispatcher: evaluator spawn failed",
+                "AttemptDispatcher: evaluator spawn failed",
                 extra={"task_id": task_id, "attempt_id": attempt.id},
             )
             try:
@@ -290,15 +290,15 @@ class TrialDispatcher:
             except LookupError:
                 pass
             self._close_attempt(
-                TrialStatus.FAILED,
-                TrialFailReason.EVALUATOR_FAILED,
+                AttemptStatus.FAILED,
+                AttemptFailReason.EVALUATOR_FAILED,
             )
             raise
 
-    def _fresh_attempt(self) -> Trial:
-        attempt = self._runtime.trial_store.get(self._attempt_id)
+    def _fresh_attempt(self) -> Attempt:
+        attempt = self._runtime.attempt_store.get(self._attempt_id)
         if attempt is None:
             raise TaskCenterInvariantViolation(
-                f"Trial {self._attempt_id!r} not found"
+                f"Attempt {self._attempt_id!r} not found"
             )
         return attempt

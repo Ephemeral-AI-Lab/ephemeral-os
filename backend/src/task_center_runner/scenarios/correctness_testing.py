@@ -1,7 +1,7 @@
 """correctness_testing scenario — the only scenario shipped this phase.
 
-One composite that exercises entry → goal → iteration 1 (trial 1 fails;
-trial 2 passes via partial plan) → continuation iteration (trial 1 passes
+One composite that exercises entry → goal → iteration 1 (attempt 1 fails;
+attempt 2 passes via partial plan) → continuation iteration (attempt 1 passes
 via full plan + final probe) → goal close. Validates the full happy path
 plus one failure path per plan §10.
 """
@@ -125,8 +125,8 @@ class CorrectnessTesting(ScenarioBase):
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         iteration = ctx.iteration
-        trial = ctx.trial
-        if iteration.sequence_no == 1 and trial.trial_sequence_no == 1:
+        attempt = ctx.attempt
+        if iteration.sequence_no == 1 and attempt.attempt_sequence_no == 1:
             return ToolCallSpec(submit_full_plan, dict(_PREFLIGHT_FULL_PLAN))
         if iteration.sequence_no == 1:
             return ToolCallSpec(submit_partial_plan, dict(_INTEGRITY_PARTIAL_PLAN))
@@ -142,14 +142,14 @@ class CorrectnessTesting(ScenarioBase):
 
     def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         iteration = ctx.iteration
-        trial = ctx.trial
-        if iteration.sequence_no == 1 and trial.trial_sequence_no == 1:
+        attempt = ctx.attempt
+        if iteration.sequence_no == 1 and attempt.attempt_sequence_no == 1:
             return ToolCallSpec(
                 submit_evaluation_failure,
                 {
                     "summary": (
                         "Intentional mock failure to verify iteration retry and "
-                        "failed-trial context."
+                        "failed-attempt context."
                     ),
                     "failed_criteria": [
                         "Retry path was exercised by evaluator feedback.",
@@ -159,8 +159,8 @@ class CorrectnessTesting(ScenarioBase):
         return ToolCallSpec(
             submit_evaluation_success,
             {
-                "summary": "Mock evaluator accepted the current trial evidence.",
-                "passed_criteria": list(trial.evaluation_criteria),
+                "summary": "Mock evaluator accepted the current attempt evidence.",
+                "passed_criteria": list(attempt.evaluation_criteria),
             },
         )
 

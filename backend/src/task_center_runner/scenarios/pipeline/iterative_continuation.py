@@ -69,7 +69,7 @@ class IterativeContinuation(ScenarioBase):
             submit_evaluation_success,
             {
                 "summary": "Continuation-iteration preflight evidence accepted.",
-                "passed_criteria": list(ctx.trial.evaluation_criteria),
+                "passed_criteria": list(ctx.attempt.evaluation_criteria),
             },
         )
 

@@ -43,7 +43,7 @@ def deps() -> ContextEngineDeps:
     return ContextEngineDeps(
         goal_store=_Stub(),  # type: ignore[arg-type]
         iteration_store=_Stub(),  # type: ignore[arg-type]
-        trial_store=_Stub(),  # type: ignore[arg-type]
+        attempt_store=_Stub(),  # type: ignore[arg-type]
         task_store=_Stub(),  # type: ignore[arg-type]
     )
 
@@ -52,11 +52,11 @@ def _ok_recipe(recipe_id: str, *, required: frozenset[str]) -> ContextRecipe:
     def _build(scope: ContextScope, deps: ContextEngineDeps) -> ContextPacket:
         return ContextPacket(
             target_role="planner",
-            target_id=scope.trial_id,
+            target_id=scope.attempt_id,
             canonical_refs=ContextRefs(
                 goal_id=scope.goal_id,
                 iteration_id=scope.iteration_id,
-                trial_id=scope.trial_id,
+                attempt_id=scope.attempt_id,
             ),
             blocks=[
                 ContextBlock(
@@ -88,12 +88,12 @@ def test_engine_dispatches_to_registered_recipe(deps):
     RecipeRegistry.register(
         _ok_recipe(
             "r1",
-            required=frozenset({"goal_id", "iteration_id", "trial_id"}),
+            required=frozenset({"goal_id", "iteration_id", "attempt_id"}),
         )
     )
     packet = ContextEngine(deps).build(
         "r1",
-        ContextScope(goal_id="r", iteration_id="s", trial_id="g"),
+        ContextScope(goal_id="r", iteration_id="s", attempt_id="g"),
     )
     assert packet.target_id == "g"
     assert packet.canonical_refs.goal_id == "r"

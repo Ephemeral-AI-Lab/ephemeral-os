@@ -7,8 +7,8 @@ from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput, ToolResult
 from tools.submission.context import (
-    TrialSubmissionContextError,
-    resolve_trial_submission_context,
+    AttemptSubmissionContextError,
+    resolve_attempt_submission_context,
 )
 from tools.submission.planner._schemas import (
     PlanTaskInput,
@@ -37,8 +37,8 @@ async def submit_full_plan(
     context: ToolExecutionContextService,
 ) -> ToolResult:
     try:
-        submission_context = resolve_trial_submission_context(context)
-    except TrialSubmissionContextError as exc:
+        submission_context = resolve_attempt_submission_context(context)
+    except AttemptSubmissionContextError as exc:
         return ToolResult(output=str(exc), is_error=True)
 
     submission, error = build_planner_submission(

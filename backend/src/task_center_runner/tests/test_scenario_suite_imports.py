@@ -102,10 +102,10 @@ def test_subpackage_imports_are_clean() -> None:
     )
 
     assert pipeline.__all__ == [
-        "TrialBudgetExhausted",
-        "TrialRetryEvaluatorFailure",
-        "TrialRetryGeneratorFailure",
-        "TrialRetryPlannerFailure",
+        "AttemptBudgetExhausted",
+        "AttemptRetryEvaluatorFailure",
+        "AttemptRetryGeneratorFailure",
+        "AttemptRetryPlannerFailure",
         "DependencyBlockedDescendants",
         "DependencyDagDiamond",
         "DependencyDagMixed",

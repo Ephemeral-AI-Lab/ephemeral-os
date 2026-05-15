@@ -1,16 +1,16 @@
 """GoalClosureReport delivery router.
 
 Owns the single delivery path from ``GoalHandler.close_goal`` to the
-parent ``TrialOrchestrator.apply_goal_closure_report``. The runtime
+parent ``AttemptOrchestrator.apply_goal_closure_report``. The runtime
 assumes no process restart: while a parent generator task is in
-``WAITING_MISSION`` its trial cannot reach quiescence and its
+``WAITING_MISSION`` its attempt cannot reach quiescence and its
 orchestrator stays registered. A missing orchestrator at delivery time
 is a hard ``TaskCenterInvariantViolation``.
 """
 
 from __future__ import annotations
 
-from task_center.trial.runtime import TrialDeps
+from task_center.attempt.runtime import AttemptDeps
 from task_center._core.types import TaskCenterInvariantViolation
 from task_center.goal.state import (
     CloseReportDeliveryResult,
@@ -22,7 +22,7 @@ from task_center.task_state import TaskCenterTaskStatus
 class GoalClosureReportRouter:
     """Single delivery path for final ``GoalClosureReport``s."""
 
-    def __init__(self, *, runtime: TrialDeps) -> None:
+    def __init__(self, *, runtime: AttemptDeps) -> None:
         self._runtime = runtime
 
     def deliver(
@@ -42,7 +42,7 @@ class GoalClosureReportRouter:
             return CloseReportDeliveryResult(
                 status="already_delivered",
                 requested_by_task_id=report.requested_by_task_id,
-                parent_trial_id=attempt_id,
+                parent_attempt_id=attempt_id,
             )
         if status != TaskCenterTaskStatus.WAITING_MISSION.value:
             raise TaskCenterInvariantViolation(
@@ -57,7 +57,7 @@ class GoalClosureReportRouter:
             kind = (
                 "entry controller"
                 if attempt_id is None
-                else f"TrialOrchestrator for trial {attempt_id!r}"
+                else f"AttemptOrchestrator for attempt {attempt_id!r}"
             )
             raise TaskCenterInvariantViolation(
                 f"TaskCenter task {report.requested_by_task_id!r}: "
@@ -68,5 +68,5 @@ class GoalClosureReportRouter:
         return CloseReportDeliveryResult(
             status="delivered",
             requested_by_task_id=report.requested_by_task_id,
-            parent_trial_id=attempt_id,
+            parent_attempt_id=attempt_id,
         )

@@ -164,7 +164,7 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
             task_store=bundle.task_store,
             goal_store=bundle.goal_store,
             iteration_store=bundle.iteration_store,
-            trial_store=bundle.trial_store,
+            attempt_store=bundle.attempt_store,
             context_packet_store=bundle.context_packet_store,
             runner=runner,
             sandbox_bridge=bridge,

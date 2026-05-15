@@ -5,35 +5,35 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from task_center.context_engine.packet import ContextPriority
-from task_center.context_engine.recipes.trial_landscape import (
-    failed_trial_landscape_blocks,
+from task_center.context_engine.recipes.attempt_landscape import (
+    failed_attempt_landscape_blocks,
 )
-from task_center.trial import (
-    Trial,
-    TrialFailReason,
-    TrialStage,
-    TrialStatus,
+from task_center.attempt import (
+    Attempt,
+    AttemptFailReason,
+    AttemptStage,
+    AttemptStatus,
 )
 
 
 def _attempt(
     sequence_no: int,
     *,
-    trial_id: str | None = None,
-    status: TrialStatus = TrialStatus.FAILED,
+    attempt_id: str | None = None,
+    status: AttemptStatus = AttemptStatus.FAILED,
     task_specification: str | None = None,
     evaluation_criteria: tuple[str, ...] = (),
     generator_task_ids: tuple[str, ...] = (),
     evaluator_task_id: str | None = None,
     continuation_goal: str | None = None,
-    fail_reason: TrialFailReason | None = None,
-) -> Trial:
+    fail_reason: AttemptFailReason | None = None,
+) -> Attempt:
     now = datetime.now(UTC)
-    return Trial(
-        id=trial_id or f"attempt-{sequence_no}",
+    return Attempt(
+        id=attempt_id or f"attempt-{sequence_no}",
         iteration_id="seg-1",
-        trial_sequence_no=sequence_no,
-        stage=TrialStage.CLOSED,
+        attempt_sequence_no=sequence_no,
+        stage=AttemptStage.CLOSED,
         status=status,
         planner_task_id=None,
         task_specification=task_specification,
@@ -51,27 +51,27 @@ def _attempt(
 def test_excludes_current_attempt_even_if_current_is_failed():
     current = _attempt(
         3,
-        trial_id="current",
+        attempt_id="current",
         task_specification="current spec",
         evaluation_criteria=("current crit",),
-        fail_reason=TrialFailReason.PLANNER_FAILED,
+        fail_reason=AttemptFailReason.PLANNER_FAILED,
     )
-    blocks = failed_trial_landscape_blocks(
-        current_trial_id=current.id,
-        trials=[
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=current.id,
+        attempts=[
             current,
             _attempt(
                 2,
                 task_specification="older spec",
                 evaluation_criteria=("older crit",),
-                fail_reason=TrialFailReason.GENERATOR_FAILED,
+                fail_reason=AttemptFailReason.GENERATOR_FAILED,
             ),
-            _attempt(4, status=TrialStatus.RUNNING),
+            _attempt(4, status=AttemptStatus.RUNNING),
             _attempt(
                 1,
                 task_specification="oldest spec",
                 evaluation_criteria=("oldest crit",),
-                fail_reason=TrialFailReason.EVALUATOR_FAILED,
+                fail_reason=AttemptFailReason.EVALUATOR_FAILED,
             ),
         ],
     )
@@ -81,9 +81,9 @@ def test_excludes_current_attempt_even_if_current_is_failed():
 
 
 def test_renders_missing_spec_empty_criteria_and_unknown_reason():
-    blocks = failed_trial_landscape_blocks(
-        current_trial_id=None,
-        trials=[_attempt(1)],
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=None,
+        attempts=[_attempt(1)],
     )
 
     assert len(blocks) == 1
@@ -113,16 +113,16 @@ def test_renders_plan_kind_statuses_and_generator_summaries():
                 },
             }.get(task_id)
 
-    blocks = failed_trial_landscape_blocks(
-        current_trial_id=None,
-        trials=[
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=None,
+        attempts=[
             _attempt(
                 1,
                 task_specification="partial spec",
                 evaluation_criteria=("criterion",),
                 generator_task_ids=("t-a", "t-b", "t-missing"),
                 continuation_goal="continue with admin tools",
-                fail_reason=TrialFailReason.EVALUATOR_FAILED,
+                fail_reason=AttemptFailReason.EVALUATOR_FAILED,
             )
         ],
         task_store=TaskStore(),
@@ -139,14 +139,14 @@ def test_renders_plan_kind_statuses_and_generator_summaries():
 
 
 def test_renders_full_plan_kind_for_submitted_nonpartial_attempt():
-    blocks = failed_trial_landscape_blocks(
-        current_trial_id=None,
-        trials=[
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=None,
+        attempts=[
             _attempt(
                 1,
                 task_specification="submitted spec",
                 evaluation_criteria=("criterion",),
-                fail_reason=TrialFailReason.EVALUATOR_FAILED,
+                fail_reason=AttemptFailReason.EVALUATOR_FAILED,
             )
         ],
     )
@@ -175,16 +175,16 @@ def test_evaluator_failure_renders_evaluator_judgment():
                 }
             }.get(task_id)
 
-    blocks = failed_trial_landscape_blocks(
-        current_trial_id=None,
-        trials=[
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=None,
+        attempts=[
             _attempt(
                 1,
                 task_specification="submitted spec",
                 evaluation_criteria=("total criterion",),
                 generator_task_ids=("t-a",),
                 evaluator_task_id="eval-1",
-                fail_reason=TrialFailReason.EVALUATOR_FAILED,
+                fail_reason=AttemptFailReason.EVALUATOR_FAILED,
             )
         ],
         task_store=TaskStore(),
@@ -220,16 +220,16 @@ def test_generator_failure_hides_evaluator_and_keeps_blocked_task_in_status_only
                 },
             }.get(task_id)
 
-    blocks = failed_trial_landscape_blocks(
-        current_trial_id=None,
-        trials=[
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=None,
+        attempts=[
             _attempt(
                 1,
                 task_specification="submitted spec",
                 evaluation_criteria=("criterion",),
                 generator_task_ids=("t-a", "t-b", "t-c"),
                 evaluator_task_id="eval-1",
-                fail_reason=TrialFailReason.GENERATOR_FAILED,
+                fail_reason=AttemptFailReason.GENERATOR_FAILED,
             )
         ],
         task_store=TaskStore(),
@@ -256,14 +256,14 @@ def test_generator_summaries_include_every_task_in_failed_attempt():
 
     task_ids = tuple(f"t-{i}" for i in range(14))
 
-    blocks = failed_trial_landscape_blocks(
-        current_trial_id=None,
-        trials=[
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=None,
+        attempts=[
             _attempt(
                 1,
                 task_specification="spec",
                 generator_task_ids=task_ids,
-                fail_reason=TrialFailReason.GENERATOR_FAILED,
+                fail_reason=AttemptFailReason.GENERATOR_FAILED,
             )
         ],
         task_store=TaskStore(),
@@ -280,14 +280,14 @@ def test_generator_summary_text_is_not_truncated():
         def get_task(self, task_id: str):
             return {"status": "done", "summaries": [{"summary": "x" * 850}]}
 
-    blocks = failed_trial_landscape_blocks(
-        current_trial_id=None,
-        trials=[
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=None,
+        attempts=[
             _attempt(
                 1,
                 task_specification="spec",
                 generator_task_ids=("t-a",),
-                fail_reason=TrialFailReason.GENERATOR_FAILED,
+                fail_reason=AttemptFailReason.GENERATOR_FAILED,
             )
         ],
         task_store=TaskStore(),
@@ -298,20 +298,20 @@ def test_generator_summary_text_is_not_truncated():
 
 
 def test_all_failed_attempts_render_in_sequence_order():
-    blocks = failed_trial_landscape_blocks(
-        current_trial_id=None,
-        trials=[
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=None,
+        attempts=[
             _attempt(
                 sequence_no,
                 task_specification=f"spec-{sequence_no}",
                 evaluation_criteria=(f"crit-{sequence_no}",),
-                fail_reason=TrialFailReason.GENERATOR_FAILED,
+                fail_reason=AttemptFailReason.GENERATOR_FAILED,
             )
             for sequence_no in range(8, 0, -1)
         ],
     )
 
-    assert [block.metadata["trial_sequence_no"] for block in blocks] == [
+    assert [block.metadata["attempt_sequence_no"] for block in blocks] == [
         str(sequence_no) for sequence_no in range(1, 9)
     ]
     assert all(block.priority == ContextPriority.HIGH for block in blocks)

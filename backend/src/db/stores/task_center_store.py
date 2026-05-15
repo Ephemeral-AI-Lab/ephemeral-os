@@ -1,6 +1,6 @@
 """TaskCenter request/run/task persistence store.
 
-Harness-graph persistence has moved to ``db.stores.trial_store``
+Harness-graph persistence has moved to ``db.stores.attempt_store``
 and is owned by the new three-axis (request / segment / graph) schema.
 """
 
@@ -210,7 +210,7 @@ class TaskCenterStore(SyncStoreMixin):
             )
             return [_serialize_task(record) for record in q.all()]
 
-    def list_tasks_for_trial(
+    def list_tasks_for_attempt(
         self, attempt_id: str
     ) -> list[SerializedRow]:
         with self._sf() as db:
@@ -224,7 +224,7 @@ class TaskCenterStore(SyncStoreMixin):
             )
             return [_serialize_task(record) for record in q.all()]
 
-    def list_generator_tasks_for_trial(
+    def list_generator_tasks_for_attempt(
         self, attempt_id: str
     ) -> list[SerializedRow]:
         with self._sf() as db:

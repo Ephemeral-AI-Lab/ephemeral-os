@@ -23,9 +23,9 @@ def test_persistence_can_import_episode_state_before_manager_facade() -> None:
             "-c",
             "\n".join(
                 [
-                    "from task_center._core.persistence import TrialStoreProtocol",
+                    "from task_center._core.persistence import AttemptStoreProtocol",
                     "from task_center.iteration import Iteration, IterationManagerRegistry",
-                    "assert TrialStoreProtocol",
+                    "assert AttemptStoreProtocol",
                     "assert Iteration",
                     "assert IterationManagerRegistry",
                 ]

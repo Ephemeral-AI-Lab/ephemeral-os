@@ -4,7 +4,7 @@ External callers import lifecycle types, orchestrators, submissions, and
 sandbox helpers from this package root::
 
     from task_center import (
-        TrialOrchestrator,
+        AttemptOrchestrator,
         ContextScope,
         start_task_center_entry_run,
     )
@@ -29,14 +29,14 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from task_center.context_engine.core import ContextComposer, LaunchBundle
     from task_center._core.agent_routing import PredicateRegistry
-    from task_center.trial.generator_dag import ordered_generator_tasks
-    from task_center.trial.orchestrator import TrialOrchestrator
-    from task_center.trial.runtime import TrialDeps
-    from task_center.trial.state import (
-        Trial,
-        TrialFailReason,
-        TrialStage,
-        TrialStatus,
+    from task_center.attempt.generator_dag import ordered_generator_tasks
+    from task_center.attempt.orchestrator import AttemptOrchestrator
+    from task_center.attempt.runtime import AttemptDeps
+    from task_center.attempt.state import (
+        Attempt,
+        AttemptFailReason,
+        AttemptStage,
+        AttemptStatus,
     )
     from task_center.context_engine.core import (
         AgentDefinitionValidationError,
@@ -69,15 +69,15 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "task_center.context_engine.core",
         "AgentDefinitionValidationError",
     ),
-    "Trial": ("task_center.trial.state", "Trial"),
-    "TrialDeps": ("task_center.trial.runtime", "TrialDeps"),
-    "TrialFailReason": ("task_center.trial.state", "TrialFailReason"),
-    "TrialOrchestrator": (
-        "task_center.trial.orchestrator",
-        "TrialOrchestrator",
+    "Attempt": ("task_center.attempt.state", "Attempt"),
+    "AttemptDeps": ("task_center.attempt.runtime", "AttemptDeps"),
+    "AttemptFailReason": ("task_center.attempt.state", "AttemptFailReason"),
+    "AttemptOrchestrator": (
+        "task_center.attempt.orchestrator",
+        "AttemptOrchestrator",
     ),
-    "TrialStage": ("task_center.trial.state", "TrialStage"),
-    "TrialStatus": ("task_center.trial.state", "TrialStatus"),
+    "AttemptStage": ("task_center.attempt.state", "AttemptStage"),
+    "AttemptStatus": ("task_center.attempt.state", "AttemptStatus"),
     "ContextComposer": ("task_center.context_engine.core", "ContextComposer"),
     "ContextPacket": ("task_center.context_engine.packet", "ContextPacket"),
     "ContextScope": ("task_center.context_engine.scope", "ContextScope"),
@@ -117,7 +117,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "TaskCenterSandboxBridge",
     ),
     "ordered_generator_tasks": (
-        "task_center.trial.generator_dag",
+        "task_center.attempt.generator_dag",
         "ordered_generator_tasks",
     ),
     "start_task_center_entry_run": (

@@ -1,7 +1,7 @@
 """AuditRecorder — directory writer + ORM commit listeners.
 
 Wires five SQLAlchemy ``after_insert``/``after_update`` listeners (one per
-``GoalRecord``/``IterationRecord``/``TrialRecord``/``TaskCenterTaskRecord``
+``GoalRecord``/``IterationRecord``/``AttemptRecord``/``TaskCenterTaskRecord``
 plus a fifth on ``AgentRunRecord`` for ``agent_run_id`` -> ``task_id``
 mapping). Task stream events append conversation-message rows to
 ``message.jsonl``. Lifecycle rows are mirrored as latest-state ``*.json``
@@ -26,7 +26,7 @@ from task_center_runner.audit.events import Event as AuditEvent
 from task_center_runner.audit.io import atomic_write_json
 from task_center_runner.audit.metrics import MetricsAggregator
 from db.models.agent_run import AgentRunRecord
-from db.models.trial import TrialRecord
+from db.models.attempt import AttemptRecord
 from db.models.iteration import IterationRecord
 from db.models.goal import GoalRecord
 from db.models.task_center import TaskCenterTaskRecord
@@ -38,7 +38,7 @@ PRIMARY_ROLES: frozenset[str] = frozenset(
 )
 
 # Roles which earn an ``NN_<role>_<task_id>`` directory under the parent
-# trial — superset of the primary message-recorder allowlist (we still
+# attempt — superset of the primary message-recorder allowlist (we still
 # want the ``task.json`` snapshot for ``generator`` rows).
 _ATTEMPT_CHILD_ROLES: frozenset[str] = frozenset(
     {"planner", "executor", "verifier", "evaluator", "generator"}
@@ -71,9 +71,9 @@ def _serialize_iteration(record: IterationRecord) -> dict[str, Any]:
         "sequence_no": record.sequence_no,
         "creation_reason": record.creation_reason,
         "goal": record.goal,
-        "trial_budget": record.trial_budget,
+        "attempt_budget": record.attempt_budget,
         "status": record.status,
-        "trial_ids": list(record.trial_ids or []),
+        "attempt_ids": list(record.attempt_ids or []),
         "continuation_goal": record.continuation_goal,
         "task_specification": record.task_specification,
         "task_summary": record.task_summary,
@@ -83,11 +83,11 @@ def _serialize_iteration(record: IterationRecord) -> dict[str, Any]:
     }
 
 
-def _serialize_trial(record: TrialRecord) -> dict[str, Any]:
+def _serialize_attempt(record: AttemptRecord) -> dict[str, Any]:
     return {
         "id": record.id,
         "iteration_id": record.iteration_id,
-        "trial_sequence_no": record.trial_sequence_no,
+        "attempt_sequence_no": record.attempt_sequence_no,
         "stage": record.stage,
         "status": record.status,
         "planner_task_id": record.planner_task_id,
@@ -158,14 +158,14 @@ class AuditRecorder:
 
         self._goal_dir: dict[str, Path] = {}
         self._iteration_dir: dict[str, Path] = {}
-        self._trial_dir: dict[str, Path] = {}
+        self._attempt_dir: dict[str, Path] = {}
         self._task_dir: dict[str, Path] = {}
         self._task_recorder: dict[str, AgentMessageJsonlRecorder] = {}
         self._agent_run_to_task: dict[str, str] = {}
 
         self._goal_seq_counter: int = 0
         self._iteration_seq_counter: dict[str, int] = {}
-        self._trial_seq_counter: dict[str, int] = {}
+        self._attempt_seq_counter: dict[str, int] = {}
         self._role_seq_counter: dict[str, int] = {}
 
         self._listeners: list[_ListenerHandle] = []
@@ -235,14 +235,14 @@ class AuditRecorder:
             lambda mapper, connection, target: self._handle_iteration(target),
         )
         self._register(
-            TrialRecord,
+            AttemptRecord,
             "after_insert",
-            lambda mapper, connection, target: self._handle_trial(target),
+            lambda mapper, connection, target: self._handle_attempt(target),
         )
         self._register(
-            TrialRecord,
+            AttemptRecord,
             "after_update",
-            lambda mapper, connection, target: self._handle_trial(target),
+            lambda mapper, connection, target: self._handle_attempt(target),
         )
         self._register(
             TaskCenterTaskRecord,
@@ -343,14 +343,14 @@ class AuditRecorder:
         )
         _atomic_write_json(iteration_dir / "iteration.json", _serialize_iteration(target))
 
-    def _handle_trial(self, target: TrialRecord) -> None:
+    def _handle_attempt(self, target: AttemptRecord) -> None:
         iteration_dir = self._iteration_dir.get(target.iteration_id)
         if iteration_dir is None:
             return
-        trial_dir = self._ensure_trial_dir(
+        attempt_dir = self._ensure_attempt_dir(
             target.iteration_id, target.id, iteration_dir
         )
-        _atomic_write_json(trial_dir / "trial.json", _serialize_trial(target))
+        _atomic_write_json(attempt_dir / "attempt.json", _serialize_attempt(target))
 
     def _handle_task(self, target: TaskCenterTaskRecord) -> None:
         if (
@@ -425,17 +425,17 @@ class AuditRecorder:
         self._iteration_dir[iteration_id] = path
         return path
 
-    def _ensure_trial_dir(
-        self, iteration_id: str, trial_id: str, iteration_dir: Path
+    def _ensure_attempt_dir(
+        self, iteration_id: str, attempt_id: str, iteration_dir: Path
     ) -> Path:
-        cached = self._trial_dir.get(trial_id)
+        cached = self._attempt_dir.get(attempt_id)
         if cached is not None:
             return cached
-        seq = self._trial_seq_counter.get(iteration_id, 0) + 1
-        self._trial_seq_counter[iteration_id] = seq
-        path = iteration_dir / f"trial_{seq:02d}_{trial_id}"
+        seq = self._attempt_seq_counter.get(iteration_id, 0) + 1
+        self._attempt_seq_counter[iteration_id] = seq
+        path = iteration_dir / f"attempt_{seq:02d}_{attempt_id}"
         path.mkdir(parents=True, exist_ok=True)
-        self._trial_dir[trial_id] = path
+        self._attempt_dir[attempt_id] = path
         return path
 
     def _resolve_task_dir(
@@ -444,16 +444,16 @@ class AuditRecorder:
         role = self._display_role(target)
         if self._is_entry_executor(target):
             return self._run_dir / f"entry_executor_{target.id}"
-        trial_id = target.task_center_attempt_id
+        attempt_id = target.task_center_attempt_id
         if (
             role in _ATTEMPT_CHILD_ROLES
-            and trial_id
-            and trial_id in self._trial_dir
+            and attempt_id
+            and attempt_id in self._attempt_dir
         ):
-            trial_dir = self._trial_dir[trial_id]
-            seq = self._role_seq_counter.get(trial_id, 0) + 1
-            self._role_seq_counter[trial_id] = seq
-            return trial_dir / f"{seq:02d}_{role}_{target.id}"
+            attempt_dir = self._attempt_dir[attempt_id]
+            seq = self._role_seq_counter.get(attempt_id, 0) + 1
+            self._role_seq_counter[attempt_id] = seq
+            return attempt_dir / f"{seq:02d}_{role}_{target.id}"
         return None
 
     @staticmethod

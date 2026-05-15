@@ -1,8 +1,8 @@
 """``evaluator`` recipe — context for one evaluator spawn.
 
-Emits goal/iteration framing, the current trial plan, dependency results,
+Emits goal/iteration framing, the current attempt plan, dependency results,
 and the evaluation criteria in presentation order. The criteria block remains
-last so pass/fail authority is anchored to the current trial contract.
+last so pass/fail authority is anchored to the current attempt contract.
 """
 
 from __future__ import annotations
@@ -23,19 +23,19 @@ from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
 
 EVALUATOR_ID = "evaluator"
-_REQUIRED_FIELDS = frozenset({"goal_id", "trial_id"})
+_REQUIRED_FIELDS = frozenset({"goal_id", "attempt_id"})
 
 
 def _evaluator_build(
     scope: ContextScope, deps: ContextEngineDeps
 ) -> ContextPacket:
-    trial = deps.trial_store.get(scope.trial_id)
-    if trial is None:
-        raise ContextEngineError(f"Trial {scope.trial_id!r} not found")
+    attempt = deps.attempt_store.get(scope.attempt_id)
+    if attempt is None:
+        raise ContextEngineError(f"Attempt {scope.attempt_id!r} not found")
     goal = deps.goal_store.get(scope.goal_id)
     if goal is None:
         raise ContextEngineError(f"Goal {scope.goal_id!r} not found")
-    iteration_id = scope.iteration_id or trial.iteration_id
+    iteration_id = scope.iteration_id or attempt.iteration_id
     iteration = deps.iteration_store.get(iteration_id)
     if iteration is None:
         raise ContextEngineError(f"Iteration {iteration_id!r} not found")
@@ -45,44 +45,44 @@ def _evaluator_build(
         current_iteration=iteration,
         iterations=deps.iteration_store.list_for_goal(goal.id),
     )
-    if trial.task_specification:
+    if attempt.task_specification:
         blocks.append(
             ContextBlock(
                 kind=ContextBlockKind.TASK_SPECIFICATION,
                 priority=ContextPriority.REQUIRED,
-                text=trial.task_specification,
-                source_id=trial.id,
-                source_kind="trial",
+                text=attempt.task_specification,
+                source_id=attempt.id,
+                source_kind="attempt",
             )
         )
-    if trial.continuation_goal:
+    if attempt.continuation_goal:
         blocks.append(
             ContextBlock(
                 kind=ContextBlockKind.PARTIAL_PLAN_BOUNDARY,
                 priority=ContextPriority.REQUIRED,
                 text=(
                     "plan_kind: partial\n"
-                    f"continuation_goal: {trial.continuation_goal}\n\n"
-                    "This trial is intentionally partial. If it passes, "
+                    f"continuation_goal: {attempt.continuation_goal}\n\n"
+                    "This attempt is intentionally partial. If it passes, "
                     "the continuation_goal becomes the next iteration. Do not "
                     "treat continuation work as missing from the current "
-                    "trial; judge this trial against the Trial Plan "
+                    "attempt; judge this attempt against the Attempt Plan "
                     "and Evaluation Criteria."
                 ),
-                source_id=trial.id,
-                source_kind="trial",
+                source_id=attempt.id,
+                source_kind="attempt",
                 metadata={"plan_kind": "partial"},
             )
         )
 
-    for task_id in trial.generator_task_ids:
+    for task_id in attempt.generator_task_ids:
         task = deps.task_store.get_task(task_id)
         if task is None:
             # ``generator_task_ids`` are planner-submitted DAG nodes persisted
-            # on the trial; a missing row here is a harness invariant
+            # on the attempt; a missing row here is a harness invariant
             # violation, not a tolerable absence.
             raise ContextEngineError(
-                f"Generator task {task_id!r} referenced by trial is missing; "
+                f"Generator task {task_id!r} referenced by attempt is missing; "
                 "evaluator context cannot be assembled without dependency results."
             )
         blocks.append(
@@ -99,25 +99,25 @@ def _evaluator_build(
                 },
             )
         )
-    criteria = list(trial.evaluation_criteria)
+    criteria = list(attempt.evaluation_criteria)
     if criteria:
         blocks.append(
             ContextBlock(
                 kind=ContextBlockKind.EVALUATION_CRITERIA,
                 priority=ContextPriority.REQUIRED,
                 text="\n".join(f"- {c}" for c in criteria),
-                source_id=trial.id,
-                source_kind="trial",
+                source_id=attempt.id,
+                source_kind="attempt",
             )
         )
 
     return ContextPacket(
         target_role="evaluator",
-        target_id=scope.trial_id,
+        target_id=scope.attempt_id,
         canonical_refs=ContextRefs(
             goal_id=scope.goal_id,
             iteration_id=iteration.id,
-            trial_id=scope.trial_id,
+            attempt_id=scope.attempt_id,
         ),
         blocks=blocks,
         source_ids=[b.source_id for b in blocks if b.source_id],
