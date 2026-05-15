@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 
 from task_center.goal.state import GoalClosureReport
 from task_center._core.types import TaskCenterInvariantViolation
-from task_center.trial.dispatcher import AttemptDispatcher
+from task_center.trial.dispatcher import TrialDispatcher
 from task_center.trial.state import (
     Trial,
     TrialFailReason,
@@ -59,7 +59,7 @@ class TrialOrchestrator:
         self._on_attempt_closed = on_attempt_closed
         self._runtime = runtime
 
-        self._dispatcher = AttemptDispatcher(
+        self._dispatcher = TrialDispatcher(
             attempt_id=attempt.id,
             runtime=runtime,
             close_attempt=self._close_attempt,

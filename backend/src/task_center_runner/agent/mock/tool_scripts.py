@@ -285,7 +285,7 @@ def execute_package_script(
 
 
 def recursive_step_script(ctx: ScenarioContext) -> PreparedToolScript:
-    """Persist evidence for a delegated recursive mission step."""
+    """Persist evidence for a delegated recursive goal step."""
     task_id = _safe_slug(ctx.task_id or "recursive")
     rendered_prompt = ctx.rendered_prompt or ""
     evidence_path = f"{_RECURSIVE_DIR}/{task_id}.json"
@@ -343,7 +343,7 @@ def recursive_step_script(ctx: ScenarioContext) -> PreparedToolScript:
     )
     return PreparedToolScript(
         name="recursive_step",
-        summary="Recursive mission step completed with sandbox evidence.",
+        summary="Recursive goal step completed with sandbox evidence.",
         artifact=_RECURSIVE_CLOSE_PATH if is_close else evidence_path,
         steps=tuple(steps),
     )

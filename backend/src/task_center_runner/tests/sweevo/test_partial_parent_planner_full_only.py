@@ -58,21 +58,21 @@ def _tool_count(tool_calls: list[Any], tool_name: str) -> int:
 
 
 def _assert_partial_parent_graph(graph_summary: dict[str, Any]) -> None:
-    missions = graph_summary["missions"]
-    assert len(missions) == 2, graph_summary
+    goals = graph_summary["goals"]
+    assert len(goals) == 2, graph_summary
     root = next(
-        mission
-        for mission in missions
-        if str(mission["requested_by_task_id"]).endswith(":entry")
+        goal
+        for goal in goals
+        if str(goal["requested_by_task_id"]).endswith(":entry")
     )
     child = next(
-        mission
-        for mission in missions
-        if not str(mission["requested_by_task_id"]).endswith(":entry")
+        goal
+        for goal in goals
+        if not str(goal["requested_by_task_id"]).endswith(":entry")
     )
 
-    assert len(root["episodes"]) == 2
-    assert root["episodes"][0]["attempts"][-1]["continuation_goal"]
+    assert len(root["iterations"]) == 2
+    assert root["iterations"][0]["trials"][-1]["continuation_goal"]
     assert str(child["requested_by_task_id"]).endswith(":delegate_child")
 
 

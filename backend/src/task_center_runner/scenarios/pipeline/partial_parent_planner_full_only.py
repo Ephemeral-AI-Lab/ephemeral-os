@@ -1,11 +1,11 @@
 """Partial parent executor routes a child planner to ``planner_full_only``.
 
-The root mission's first episode submits a partial plan with
-``continuation_goal``. Its executor then requests a child mission. Because the
-child mission's parent task belongs to that partial-planned attempt, the child
+The root goal's first iteration submits a partial plan with
+``continuation_goal``. Its executor then requests a child goal. Because the
+child goal's parent task belongs to that partial-planned trial, the child
 planner must be selected through the ``planner`` agent.md variant and launch as
-``planner_full_only``. The root continuation episode still launches the normal
-``planner`` because it is not a child mission.
+``planner_full_only``. The root continuation iteration still launches the normal
+``planner`` because it is not a child goal.
 """
 
 from __future__ import annotations
@@ -33,11 +33,11 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 _CHILD_PACKAGE_ID = "partial_parent_child"
 _CHILD_GOAL = (
-    "Resolve the delegated child mission requested by an executor whose parent "
-    "attempt submitted a partial plan."
+    "Resolve the delegated child goal requested by an executor whose parent "
+    "trial submitted a partial plan."
 )
 _CONTINUATION_GOAL = (
-    "Run the root follow-up episode after the delegated child mission has "
+    "Run the root follow-up iteration after the delegated child goal has "
     "returned its close report."
 )
 
@@ -46,11 +46,11 @@ def _root_partial_plan() -> dict[str, Any]:
     return {
         "task_specification": (
             "Execute the first root slice by delegating one oversized branch to "
-            "a child mission, then continue the root mission afterward."
+            "a child goal, then continue the root goal afterward."
         ),
         "evaluation_criteria": [
-            "The child mission is requested from the parent executor task.",
-            "The parent observes the child mission close report before evaluation.",
+            "The child goal is requested from the parent executor task.",
+            "The parent observes the child goal close report before evaluation.",
         ],
         "tasks": [
             {"id": "delegate_child", "agent_name": "executor", "deps": []},
@@ -73,11 +73,11 @@ def _root_partial_plan() -> dict[str, Any]:
 def _child_full_plan() -> dict[str, Any]:
     return minimal_full_plan(
         task_specification=(
-            "Run a full child-mission preflight to prove the delegated mission "
+            "Run a full child-goal preflight to prove the delegated goal "
             "cannot emit another partial plan."
         ),
         evaluation_criteria=[
-            "The child mission completes through a full plan.",
+            "The child goal completes through a full plan.",
         ],
         task_id="child_reconcile",
         task_spec=(
@@ -88,7 +88,7 @@ def _child_full_plan() -> dict[str, Any]:
 
 
 class PartialParentPlannerFullOnly(ScenarioBase):
-    """Child mission from a partial parent gets the full-only planner profile."""
+    """Child goal from a partial parent gets the full-only planner profile."""
 
     name = "pipeline.partial_parent_planner_full_only"
     expected_event_sequence: tuple[EventType, ...] = (
@@ -114,7 +114,7 @@ class PartialParentPlannerFullOnly(ScenarioBase):
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         if is_recursive_mission(ctx):
             return ToolCallSpec(submit_full_plan, _child_full_plan())
-        if ctx.episode.sequence_no == 1:
+        if ctx.iteration.sequence_no == 1:
             return ToolCallSpec(submit_partial_plan, _root_partial_plan())
         return ToolCallSpec(
             submit_full_plan,
@@ -123,7 +123,7 @@ class PartialParentPlannerFullOnly(ScenarioBase):
                     "Run the root continuation follow-up as a normal full plan."
                 ),
                 evaluation_criteria=(
-                    "The root continuation episode completed as a full plan.",
+                    "The root continuation iteration completed as a full plan.",
                 ),
             ),
         )
@@ -150,7 +150,7 @@ class PartialParentPlannerFullOnly(ScenarioBase):
             submit_evaluation_success,
             {
                 "summary": "Planner routing scenario branch passed.",
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
+                "passed_criteria": list(ctx.trial.evaluation_criteria),
             },
         )
 

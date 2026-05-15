@@ -96,50 +96,50 @@ def _graph_summary(
     bundle: TaskCenterStoreBundle,
     task_center_run_id: str,
 ) -> dict[str, Any]:
-    missions: list[dict[str, Any]] = []
-    for mission in bundle.mission_store.list_for_run(task_center_run_id):
-        episodes: list[dict[str, Any]] = []
-        for episode in bundle.episode_store.list_for_mission(mission.id):
-            attempts: list[dict[str, Any]] = []
-            for attempt in bundle.attempt_store.list_for_episode(episode.id):
-                task_rows = bundle.task_store.list_tasks_for_attempt(attempt.id)
-                attempts.append(
+    goals: list[dict[str, Any]] = []
+    for goal in bundle.goal_store.list_for_run(task_center_run_id):
+        iterations: list[dict[str, Any]] = []
+        for iteration in bundle.iteration_store.list_for_goal(goal.id):
+            trials: list[dict[str, Any]] = []
+            for trial in bundle.trial_store.list_for_iteration(iteration.id):
+                task_rows = bundle.task_store.list_tasks_for_trial(trial.id)
+                trials.append(
                     {
-                        "id": attempt.id,
-                        "sequence_no": attempt.attempt_sequence_no,
-                        "stage": attempt.stage.value,
-                        "status": attempt.status.value,
+                        "id": trial.id,
+                        "sequence_no": trial.trial_sequence_no,
+                        "stage": trial.stage.value,
+                        "status": trial.status.value,
                         "fail_reason": (
-                            attempt.fail_reason.value
-                            if attempt.fail_reason is not None
+                            trial.fail_reason.value
+                            if trial.fail_reason is not None
                             else None
                         ),
-                        "continuation_goal": attempt.continuation_goal,
-                        "task_ids": list(attempt.generator_task_ids),
+                        "continuation_goal": trial.continuation_goal,
+                        "task_ids": list(trial.generator_task_ids),
                         "tasks": task_rows,
                     }
                 )
-            episodes.append(
+            iterations.append(
                 {
-                    "id": episode.id,
-                    "sequence_no": episode.sequence_no,
-                    "creation_reason": episode.creation_reason.value,
-                    "status": episode.status.value,
-                    "goal": episode.goal,
-                    "continuation_goal": episode.continuation_goal,
-                    "attempts": attempts,
+                    "id": iteration.id,
+                    "sequence_no": iteration.sequence_no,
+                    "creation_reason": iteration.creation_reason.value,
+                    "status": iteration.status.value,
+                    "goal": iteration.goal,
+                    "continuation_goal": iteration.continuation_goal,
+                    "trials": trials,
                 }
             )
-        missions.append(
+        goals.append(
             {
-                "id": mission.id,
-                "status": mission.status.value,
-                "requested_by_task_id": mission.requested_by_task_id,
-                "final_outcome": mission.final_outcome,
-                "episodes": episodes,
+                "id": goal.id,
+                "status": goal.status.value,
+                "requested_by_task_id": goal.requested_by_task_id,
+                "final_outcome": goal.final_outcome,
+                "iterations": iterations,
             }
         )
-    return {"missions": missions}
+    return {"goals": goals}
 
 
 async def run_scenario(

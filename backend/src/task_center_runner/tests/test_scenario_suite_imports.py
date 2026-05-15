@@ -102,20 +102,20 @@ def test_subpackage_imports_are_clean() -> None:
     )
 
     assert pipeline.__all__ == [
-        "AttemptBudgetExhausted",
-        "AttemptRetryEvaluatorFailure",
-        "AttemptRetryGeneratorFailure",
-        "AttemptRetryPlannerFailure",
+        "TrialBudgetExhausted",
+        "TrialRetryEvaluatorFailure",
+        "TrialRetryGeneratorFailure",
+        "TrialRetryPlannerFailure",
         "DependencyBlockedDescendants",
         "DependencyDagDiamond",
         "DependencyDagMixed",
         "DependencyDagParallel",
         "DependencyDagSerial",
-        "EpisodicContinuation",
+        "IterativeContinuation",
         "GeneratorFailureQuiescence",
-        "InitialMission",
-        "NestedMission",
-        "NestedMissionFailure",
+        "InitialGoal",
+        "NestedGoal",
+        "NestedGoalFailure",
         "PartialParentPlannerFullOnly",
     ]
     assert sandbox.__all__ == [

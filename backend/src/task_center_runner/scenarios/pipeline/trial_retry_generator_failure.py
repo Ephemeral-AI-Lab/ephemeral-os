@@ -1,4 +1,4 @@
-"""Attempt retry after a generator failure."""
+"""Trial retry after a generator failure."""
 
 from __future__ import annotations
 
@@ -14,10 +14,10 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 def _retry_generator_plan() -> dict[str, Any]:
     return {
-        "task_specification": "Run one generator task that fails only on attempt 1.",
+        "task_specification": "Run one generator task that fails only on trial 1.",
         "evaluation_criteria": [
-            "Attempt 1 records a terminal generator failure.",
-            "Attempt 2 reruns the generator task with a revised task id.",
+            "Trial 1 records a terminal generator failure.",
+            "Trial 2 reruns the generator task with a revised task id.",
         ],
         "tasks": [
             {"id": "generator_retry_probe", "agent_name": "executor", "deps": []},
@@ -30,8 +30,8 @@ def _retry_generator_plan() -> dict[str, Any]:
     }
 
 
-class AttemptRetryGeneratorFailure(ScenarioBase):
-    """Attempt 1 generator fails, attempt 2 succeeds."""
+class TrialRetryGeneratorFailure(ScenarioBase):
+    """Trial 1 generator fails, trial 2 succeeds."""
 
     name = "pipeline.attempt_retry_generator_failure"
     expected_event_sequence: tuple[EventType, ...] = (
@@ -52,18 +52,18 @@ class AttemptRetryGeneratorFailure(ScenarioBase):
         return ToolCallSpec(submit_full_plan, _retry_generator_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
-        if ctx.attempt.attempt_sequence_no == 1:
-            return ("fail:Intentional first-attempt generator failure.",)
+        if ctx.trial.trial_sequence_no == 1:
+            return ("fail:Intentional first-trial generator failure.",)
         return ("preflight",)
 
     def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         return ToolCallSpec(
             submit_evaluation_success,
             {
-                "summary": "Generator retry recovered on attempt 2.",
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
+                "summary": "Generator retry recovered on trial 2.",
+                "passed_criteria": list(ctx.trial.evaluation_criteria),
             },
         )
 
 
-__all__ = ["AttemptRetryGeneratorFailure"]
+__all__ = ["TrialRetryGeneratorFailure"]

@@ -1,4 +1,4 @@
-"""AttemptDispatcher — DAG dispatch helper for TrialOrchestrator.
+"""TrialDispatcher — DAG dispatch helper for TrialOrchestrator.
 
 Owns the launch/quiescence state machine for one trial's generators and
 evaluator. Calls back into the orchestrator's ``_close_attempt`` for the actual
@@ -44,7 +44,7 @@ CloseGraphCallback = Callable[
 ]
 
 
-class AttemptDispatcher:
+class TrialDispatcher:
     """Drives the generator-DAG and evaluator launch/quiescence machine."""
 
     def __init__(
@@ -74,7 +74,7 @@ class AttemptDispatcher:
     def block_failed_descendants(self, failed_task_id: str) -> None:
         runtime = self._runtime
         attempt = self._fresh_attempt()
-        task_records = runtime.task_store.list_generator_tasks_for_attempt(
+        task_records = runtime.task_store.list_generator_tasks_for_trial(
             attempt.id
         )
         for task_id in blocked_descendant_ids(
@@ -91,7 +91,7 @@ class AttemptDispatcher:
 
     def _dispatch_generating(self, attempt: Trial) -> None:
         runtime = self._runtime
-        task_records = runtime.task_store.list_generator_tasks_for_attempt(
+        task_records = runtime.task_store.list_generator_tasks_for_trial(
             attempt.id
         )
         ready_ids = ready_pending_generator_ids(task_records)
@@ -199,7 +199,7 @@ class AttemptDispatcher:
             runtime.agent_launcher.launch(launch)
         except Exception:
             logger.exception(
-                "AttemptDispatcher: generator launch failed",
+                "TrialDispatcher: generator launch failed",
                 extra={"task_id": task_id, "attempt_id": attempt.id},
             )
             self._mark_launch_failed(
@@ -214,7 +214,7 @@ class AttemptDispatcher:
             self._runtime.agent_launcher.launch(launch)
         except Exception:
             logger.exception(
-                "AttemptDispatcher: evaluator launch failed",
+                "TrialDispatcher: evaluator launch failed",
                 extra={
                     "task_id": launch.task_id,
                     "attempt_id": launch.attempt_id,
@@ -274,7 +274,7 @@ class AttemptDispatcher:
             self._launch_evaluator(launch)
         except Exception:
             logger.exception(
-                "AttemptDispatcher: evaluator spawn failed",
+                "TrialDispatcher: evaluator spawn failed",
                 extra={"task_id": task_id, "attempt_id": attempt.id},
             )
             try:

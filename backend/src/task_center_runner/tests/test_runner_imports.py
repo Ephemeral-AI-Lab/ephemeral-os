@@ -81,10 +81,10 @@ def test_prompt_inspector_accepts_current_failed_attempt_heading(
     inspection = runner._inspect_prompt(  # noqa: SLF001
         prompt="\n".join(
             [
-                "# Mission / Current Episode",
+                "# Goal / Current Iteration",
                 "Do the retry work.",
-                "# Prior Failed Attempts",
-                "Attempt 1 failed.",
+                "# Failed Trials",
+                "Trial 1 failed.",
             ]
         ),
         agent_def=AgentDefinition(

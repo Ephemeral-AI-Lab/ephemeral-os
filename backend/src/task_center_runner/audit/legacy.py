@@ -65,7 +65,7 @@ def _legacy_node(event: AuditEvent) -> NodeId:
         task_center_run_id=node.task_center_run_id or "",
         mission_id=node.mission_id,
         episode_id=node.episode_id,
-        attempt_id=node.attempt_id,
+        trial_id=node.trial_id,
         agent_name=node.agent_name,
         agent_run_id=node.agent_run_id or node.task_center_task_id,
         tool_name=node.tool_name,

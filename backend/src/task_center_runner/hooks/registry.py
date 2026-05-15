@@ -45,10 +45,10 @@ class MutableMockState:
         self,
         *,
         role: str,
-        attempt_id: str,
+        trial_id: str,
         checkpoint: str | None = None,
     ) -> None:
-        key = (role, attempt_id, checkpoint)
+        key = (role, trial_id, checkpoint)
         self._failures[key] = int(self._failures.get(key, 0)) + 1
 
     def replace_next_planner_response(self, spec: Any) -> None:
@@ -58,12 +58,12 @@ class MutableMockState:
         self,
         *,
         role: str,
-        attempt_id: str,
+        trial_id: str,
         checkpoint: str | None = None,
     ) -> bool:
         keys = (
-            (role, attempt_id, checkpoint),
-            (role, attempt_id, None),
+            (role, trial_id, checkpoint),
+            (role, trial_id, None),
             (role, "*", checkpoint),
             (role, "*", None),
         )

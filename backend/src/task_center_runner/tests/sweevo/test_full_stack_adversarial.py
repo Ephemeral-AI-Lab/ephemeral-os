@@ -140,10 +140,10 @@ def _assert_task_center_shape(
 
 
 def _has_multi_dependency_verifier(graph_summary: dict[str, Any]) -> bool:
-    for mission in graph_summary["missions"]:
-        for episode in mission["episodes"]:
-            for attempt in episode["attempts"]:
-                for task in attempt["tasks"]:
+    for goal in graph_summary["goals"]:
+        for iteration in goal["iterations"]:
+            for trial in iteration["trials"]:
+                for task in trial["tasks"]:
                     if task.get("agent_name") == "verifier" and len(task["needs"]) > 1:
                         return True
     return False
@@ -152,8 +152,8 @@ def _has_multi_dependency_verifier(graph_summary: dict[str, Any]) -> bool:
 def _recursive_mission_count(graph_summary: dict[str, Any]) -> int:
     return sum(
         1
-        for mission in graph_summary["missions"]
-        if not str(mission["requested_by_task_id"]).endswith(":entry")
+        for goal in graph_summary["goals"]
+        if not str(goal["requested_by_task_id"]).endswith(":entry")
     )
 
 

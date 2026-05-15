@@ -27,9 +27,9 @@ class ToolCallSpec:
 class ScenarioContext:
     """Live state visible to a scenario at a decision point."""
 
-    attempt: Any  # Attempt | None
-    episode: Any  # Episode | None
-    mission: Any  # Mission | None
+    trial: Any  # Trial | None
+    iteration: Any  # Iteration | None
+    goal: Any  # Goal | None
     prompt: str
     metadata: Any  # ExecutionMetadata
     audit_recorder: Any  # AuditRecorder | None
@@ -58,7 +58,7 @@ class Scenario(Protocol):
 
     def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec: ...
 
-    def recursive_mission_goal(self, ctx: ScenarioContext) -> str | None: ...
+    def recursive_goal(self, ctx: ScenarioContext) -> str | None: ...
 
     def hooks(self) -> Sequence[Hook]: ...
 
@@ -96,7 +96,7 @@ class ScenarioBase:
     def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         raise NotImplementedError
 
-    def recursive_mission_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
+    def recursive_goal(self, ctx: ScenarioContext) -> str | None:  # noqa: ARG002
         return None
 
     def hooks(self) -> Sequence[Hook]:

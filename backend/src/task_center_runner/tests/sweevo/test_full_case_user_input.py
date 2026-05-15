@@ -150,24 +150,24 @@ async def test_full_case_user_input_runs_dynamic_verifier_dag(
 def _continuation_episodes_follow_partial_attempts(
     graph_summary: dict[str, Any],
 ) -> bool:
-    for mission in graph_summary["missions"]:
-        episodes = mission["episodes"]
-        by_sequence = {episode["sequence_no"]: episode for episode in episodes}
-        for episode in episodes:
-            if episode["sequence_no"] <= 1:
+    for goal in graph_summary["goals"]:
+        iterations = goal["iterations"]
+        by_sequence = {iteration["sequence_no"]: iteration for iteration in iterations}
+        for iteration in iterations:
+            if iteration["sequence_no"] <= 1:
                 continue
-            previous = by_sequence[episode["sequence_no"] - 1]
-            final_attempt = previous["attempts"][-1]
+            previous = by_sequence[iteration["sequence_no"] - 1]
+            final_attempt = previous["trials"][-1]
             if not final_attempt["continuation_goal"]:
                 return False
     return True
 
 
 def _has_multi_dependency_verifier(graph_summary: dict[str, Any]) -> bool:
-    for mission in graph_summary["missions"]:
-        for episode in mission["episodes"]:
-            for attempt in episode["attempts"]:
-                for task in attempt["tasks"]:
+    for goal in graph_summary["goals"]:
+        for iteration in goal["iterations"]:
+            for trial in iteration["trials"]:
+                for task in trial["tasks"]:
                     if task.get("agent_name") == "verifier" and len(task["needs"]) > 1:
                         return True
     return False
@@ -176,8 +176,8 @@ def _has_multi_dependency_verifier(graph_summary: dict[str, Any]) -> bool:
 def _recursive_mission_count(graph_summary: dict[str, Any]) -> int:
     return sum(
         1
-        for mission in graph_summary["missions"]
-        if not str(mission["requested_by_task_id"]).endswith(":entry")
+        for goal in graph_summary["goals"]
+        if not str(goal["requested_by_task_id"]).endswith(":entry")
     )
 
 
@@ -225,18 +225,18 @@ def _assert_audit_tree_roles(run_dir: Path) -> None:
         role_segments.add(role_dir.name.split("_", 2)[1])
         assert (role_dir / "task.json").exists()
     assert {"executor", "verifier", "evaluator"}.issubset(role_segments)
-    mission_dirs = sorted(run_dir.glob("mission_*_*"))
-    assert mission_dirs
-    assert list(run_dir.glob("mission_*_*/episode_*_*"))
-    assert list(run_dir.glob("mission_*_*/episode_*_*/attempt_*_*"))
-    first_mission = mission_dirs[0]
-    mission = _json_file(first_mission / "mission.json")
-    requested_by = mission["requested_by_task_id"]
+    goal_dirs = sorted(run_dir.glob("goal_*_*"))
+    assert goal_dirs
+    assert list(run_dir.glob("goal_*_*/iteration_*_*"))
+    assert list(run_dir.glob("goal_*_*/iteration_*_*/trial_*_*"))
+    first_goal = goal_dirs[0]
+    goal = _json_file(first_goal / "goal.json")
+    requested_by = goal["requested_by_task_id"]
     assert str(requested_by).endswith(":entry")
-    episode_files = sorted(first_mission.glob("episode_*_*/episode.json"))
-    assert episode_files
-    first_episode = _json_file(episode_files[0])
-    assert first_episode["attempt_ids"], "first mission must be delegated work"
+    iteration_files = sorted(first_goal.glob("iteration_*_*/iteration.json"))
+    assert iteration_files
+    first_iteration = _json_file(iteration_files[0])
+    assert first_iteration["trial_ids"], "first goal must be delegated work"
 
 
 def _assert_message_jsonl_contains_tool_scripts(run_dir: Path) -> None:

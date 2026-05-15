@@ -1,11 +1,11 @@
 """Episodic continuation via partial plan.
 
-Reference scenario for episode continuation: episode 1 submits a partial plan
-with ``continuation_goal``, evaluator passes, episode-manager spawns episode
+Reference scenario for iteration continuation: iteration 1 submits a partial plan
+with ``continuation_goal``, evaluator passes, iteration-manager spawns iteration
 2 with ``creation_reason=PARTIAL_CONTINUATION`` and ``goal=<continuation_goal>``.
-Episode 2 submits a full plan, evaluator passes, mission closes succeeded.
+Iteration 2 submits a full plan, evaluator passes, goal closes succeeded.
 
-Asserts: 2 episodes per mission, episode 2 has ``creation_reason`` =
+Asserts: 2 iterations per goal, iteration 2 has ``creation_reason`` =
 ``PARTIAL_CONTINUATION``.
 """
 
@@ -28,13 +28,13 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 
 _CONTINUATION_GOAL = (
-    "Run a final preflight readback against the continuation episode "
-    "to confirm the harness wired episode 2 with the partial-plan goal."
+    "Run a final preflight readback against the continuation iteration "
+    "to confirm the harness wired iteration 2 with the partial-plan goal."
 )
 
 
-class EpisodicContinuation(ScenarioBase):
-    """Episode 1 partial plan → episode 2 full plan; both pass."""
+class IterativeContinuation(ScenarioBase):
+    """Iteration 1 partial plan → iteration 2 full plan; both pass."""
 
     name = "pipeline.episodic_continuation"
     expected_event_sequence: tuple[EventType, ...] = (
@@ -54,7 +54,7 @@ class EpisodicContinuation(ScenarioBase):
     )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        if ctx.episode.sequence_no == 1:
+        if ctx.iteration.sequence_no == 1:
             return ToolCallSpec(
                 submit_partial_plan,
                 preflight_partial_plan(continuation_goal=_CONTINUATION_GOAL),
@@ -68,10 +68,10 @@ class EpisodicContinuation(ScenarioBase):
         return ToolCallSpec(
             submit_evaluation_success,
             {
-                "summary": "Continuation-episode preflight evidence accepted.",
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
+                "summary": "Continuation-iteration preflight evidence accepted.",
+                "passed_criteria": list(ctx.trial.evaluation_criteria),
             },
         )
 
 
-__all__ = ["EpisodicContinuation"]
+__all__ = ["IterativeContinuation"]

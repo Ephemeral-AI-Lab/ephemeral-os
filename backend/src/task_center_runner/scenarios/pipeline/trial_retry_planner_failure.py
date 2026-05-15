@@ -1,4 +1,4 @@
-"""Attempt retry after an invalid planner submission."""
+"""Trial retry after an invalid planner submission."""
 
 from __future__ import annotations
 
@@ -15,8 +15,8 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 def _unknown_dependency_plan() -> dict[str, Any]:
     return {
-        "task_specification": "Invalid first attempt with an unknown dependency.",
-        "evaluation_criteria": ["Planner failure triggers an attempt retry."],
+        "task_specification": "Invalid first trial with an unknown dependency.",
+        "evaluation_criteria": ["Planner failure triggers an trial retry."],
         "tasks": [
             {"id": "a", "agent_name": "executor", "deps": ["missing"]},
         ],
@@ -24,8 +24,8 @@ def _unknown_dependency_plan() -> dict[str, Any]:
     }
 
 
-class AttemptRetryPlannerFailure(ScenarioBase):
-    """Attempt 1 planner fails validation, attempt 2 emits a valid plan."""
+class TrialRetryPlannerFailure(ScenarioBase):
+    """Trial 1 planner fails validation, trial 2 emits a valid plan."""
 
     name = "pipeline.attempt_retry_planner_failure"
     expected_event_sequence: tuple[EventType, ...] = (
@@ -40,7 +40,7 @@ class AttemptRetryPlannerFailure(ScenarioBase):
     )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        if ctx.attempt.attempt_sequence_no == 1:
+        if ctx.trial.trial_sequence_no == 1:
             return ToolCallSpec(submit_full_plan, _unknown_dependency_plan())
         return ToolCallSpec(
             submit_full_plan,
@@ -49,7 +49,7 @@ class AttemptRetryPlannerFailure(ScenarioBase):
                     "Retry with a valid plan after the planner failure."
                 ),
                 evaluation_criteria=(
-                    "Retry planner saw failed-attempt context.",
+                    "Retry planner saw failed-trial context.",
                     "Workspace preflight completed.",
                 ),
             ),
@@ -63,9 +63,9 @@ class AttemptRetryPlannerFailure(ScenarioBase):
             submit_evaluation_success,
             {
                 "summary": "Planner retry recovered with a valid plan.",
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
+                "passed_criteria": list(ctx.trial.evaluation_criteria),
             },
         )
 
 
-__all__ = ["AttemptRetryPlannerFailure"]
+__all__ = ["TrialRetryPlannerFailure"]

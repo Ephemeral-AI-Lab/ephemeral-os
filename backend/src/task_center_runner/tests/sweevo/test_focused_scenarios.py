@@ -28,7 +28,7 @@ class FocusedScenarioCase:
     absent_events: Sequence[EventType] = ()
     mission_status: str = "succeeded"
     episode_count: int | None = 1
-    attempt_count: int | None = None
+    trial_count: int | None = None
 
 
 _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
@@ -39,7 +39,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EXECUTOR_SUCCESS: 1,
             EventType.EVALUATOR_SUCCESS: 1,
         },
-        attempt_count=1,
+        trial_count=1,
     ),
     FocusedScenarioCase(
         "pipeline.episodic_continuation",
@@ -50,7 +50,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EVALUATOR_SUCCESS: 2,
         },
         episode_count=2,
-        attempt_count=2,
+        trial_count=2,
     ),
     FocusedScenarioCase(
         "pipeline.attempt_retry_evaluator_failure",
@@ -60,7 +60,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EVALUATOR_FAILURE: 1,
             EventType.EVALUATOR_SUCCESS: 1,
         },
-        attempt_count=2,
+        trial_count=2,
     ),
     FocusedScenarioCase(
         "pipeline.attempt_retry_planner_failure",
@@ -71,7 +71,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EXECUTOR_SUCCESS: 1,
             EventType.EVALUATOR_SUCCESS: 1,
         },
-        attempt_count=2,
+        trial_count=2,
     ),
     FocusedScenarioCase(
         "pipeline.attempt_retry_generator_failure",
@@ -81,7 +81,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EXECUTOR_SUCCESS: 1,
             EventType.EVALUATOR_SUCCESS: 1,
         },
-        attempt_count=2,
+        trial_count=2,
     ),
     FocusedScenarioCase(
         "pipeline.dependency_dag_serial",
@@ -89,7 +89,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EXECUTOR_INVOKED: 3,
             EventType.EXECUTOR_SUCCESS: 3,
         },
-        attempt_count=1,
+        trial_count=1,
     ),
     FocusedScenarioCase(
         "pipeline.dependency_dag_mixed",
@@ -97,7 +97,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EXECUTOR_INVOKED: 7,
             EventType.EXECUTOR_SUCCESS: 7,
         },
-        attempt_count=1,
+        trial_count=1,
     ),
     FocusedScenarioCase(
         "pipeline.dependency_dag_parallel",
@@ -105,7 +105,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EXECUTOR_INVOKED: 4,
             EventType.EXECUTOR_SUCCESS: 4,
         },
-        attempt_count=1,
+        trial_count=1,
     ),
     FocusedScenarioCase(
         "pipeline.dependency_dag_diamond",
@@ -113,7 +113,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EXECUTOR_INVOKED: 4,
             EventType.EXECUTOR_SUCCESS: 4,
         },
-        attempt_count=1,
+        trial_count=1,
     ),
     FocusedScenarioCase(
         "pipeline.generator_failure_quiescence",
@@ -124,7 +124,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EXECUTOR_FAILURE: 1,
             EventType.EVALUATOR_SUCCESS: 1,
         },
-        attempt_count=2,
+        trial_count=2,
     ),
     FocusedScenarioCase(
         "pipeline.dependency_blocked_descendants",
@@ -136,10 +136,10 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
         },
         absent_events=(EventType.EVALUATOR_INVOKED,),
         mission_status="failed",
-        attempt_count=2,
+        trial_count=2,
     ),
     FocusedScenarioCase(
-        "pipeline.attempt_budget_exhausted",
+        "pipeline.trial_budget_exhausted",
         expected_status="failed",
         min_event_counts={
             EventType.PLANNER_FULL_PLAN: 2,
@@ -147,7 +147,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
         },
         absent_events=(EventType.EVALUATOR_INVOKED,),
         mission_status="failed",
-        attempt_count=2,
+        trial_count=2,
     ),
     FocusedScenarioCase(
         "sandbox.occ_concurrent_conflicts",
@@ -156,7 +156,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.SANDBOX_CONFLICT_DETECTED: 1,
             EventType.EXECUTOR_SUCCESS: 1,
         },
-        attempt_count=1,
+        trial_count=1,
     ),
     FocusedScenarioCase(
         "planner_validation.duplicate_local_id",
@@ -171,7 +171,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EVALUATOR_INVOKED,
         ),
         mission_status="failed",
-        attempt_count=2,
+        trial_count=2,
     ),
     FocusedScenarioCase(
         "planner_validation.unknown_dep",
@@ -186,7 +186,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EVALUATOR_INVOKED,
         ),
         mission_status="failed",
-        attempt_count=2,
+        trial_count=2,
     ),
     FocusedScenarioCase(
         "planner_validation.cycle_in_deps",
@@ -201,7 +201,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EVALUATOR_INVOKED,
         ),
         mission_status="failed",
-        attempt_count=2,
+        trial_count=2,
     ),
     FocusedScenarioCase(
         "planner_validation.partial_without_continuation_goal",
@@ -217,7 +217,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EVALUATOR_INVOKED,
         ),
         mission_status="failed",
-        attempt_count=2,
+        trial_count=2,
     ),
     FocusedScenarioCase(
         "planner_validation.unknown_agent_name",
@@ -232,7 +232,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EVALUATOR_INVOKED,
         ),
         mission_status="failed",
-        attempt_count=2,
+        trial_count=2,
     ),
     FocusedScenarioCase(
         "planner_validation.empty_tasks",
@@ -247,7 +247,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.EVALUATOR_INVOKED,
         ),
         mission_status="failed",
-        attempt_count=2,
+        trial_count=2,
     ),
 )
 
@@ -320,16 +320,16 @@ def _assert_event_counts(report: RunReport, case: FocusedScenarioCase) -> None:
 
 
 def _assert_graph_shape(report: RunReport, case: FocusedScenarioCase) -> None:
-    missions = report.graph_summary["missions"]
-    assert len(missions) == 1, report.graph_summary
-    mission = missions[0]
-    assert mission["status"] == case.mission_status
+    goals = report.graph_summary["goals"]
+    assert len(goals) == 1, report.graph_summary
+    goal = goals[0]
+    assert goal["status"] == case.mission_status
     if case.episode_count is not None:
-        assert len(mission["episodes"]) == case.episode_count
-    if case.attempt_count is not None:
-        attempts = [
-            attempt
-            for episode in mission["episodes"]
-            for attempt in episode["attempts"]
+        assert len(goal["iterations"]) == case.episode_count
+    if case.trial_count is not None:
+        trials = [
+            trial
+            for iteration in goal["iterations"]
+            for trial in iteration["trials"]
         ]
-        assert len(attempts) == case.attempt_count
+        assert len(trials) == case.trial_count

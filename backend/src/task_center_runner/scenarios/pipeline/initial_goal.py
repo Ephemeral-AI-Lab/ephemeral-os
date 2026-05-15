@@ -1,13 +1,13 @@
-"""Initial mission, single attempt, single success.
+"""Initial goal, single trial, single success.
 
 Reference scenario for the simplest task_center happy path: entry executor
 delegates → planner emits one full plan → executor runs ``preflight`` →
-evaluator passes → mission closes succeeded. One mission, one episode
-(``creation_reason=INITIAL``), one attempt (``attempt_sequence_no=1``).
+evaluator passes → goal closes succeeded. One goal, one iteration
+(``creation_reason=INITIAL``), one trial (``trial_sequence_no=1``).
 
-Use this as the template for any "single-attempt success in a particular
-configuration" scenario. Branch on ``ctx.episode.sequence_no`` and
-``ctx.attempt.attempt_sequence_no`` to cover more configurations.
+Use this as the template for any "single-trial success in a particular
+configuration" scenario. Branch on ``ctx.iteration.sequence_no`` and
+``ctx.trial.trial_sequence_no`` to cover more configurations.
 """
 
 from __future__ import annotations
@@ -22,8 +22,8 @@ from task_center_runner.scenarios._utils import preflight_full_plan
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
-class InitialMission(ScenarioBase):
-    """Single mission, single episode, single attempt — happy path."""
+class InitialGoal(ScenarioBase):
+    """Single goal, single iteration, single trial — happy path."""
 
     name = "pipeline.initial_mission"
     expected_event_sequence: tuple[EventType, ...] = (
@@ -46,10 +46,10 @@ class InitialMission(ScenarioBase):
         return ToolCallSpec(
             submit_evaluation_success,
             {
-                "summary": "Initial mission preflight evidence accepted.",
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
+                "summary": "Initial goal preflight evidence accepted.",
+                "passed_criteria": list(ctx.trial.evaluation_criteria),
             },
         )
 
 
-__all__ = ["InitialMission"]
+__all__ = ["InitialGoal"]

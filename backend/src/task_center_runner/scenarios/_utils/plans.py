@@ -56,7 +56,7 @@ def preflight_partial_plan(
         "Workspace preflight completed.",
     ),
 ) -> dict[str, Any]:
-    """Partial plan with continuation_goal; drives PARTIAL_CONTINUATION episode."""
+    """Partial plan with continuation_goal; drives PARTIAL_CONTINUATION iteration."""
     plan = minimal_full_plan(
         task_specification=task_specification,
         evaluation_criteria=list(evaluation_criteria),

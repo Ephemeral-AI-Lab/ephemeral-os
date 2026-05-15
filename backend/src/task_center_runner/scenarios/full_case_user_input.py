@@ -94,7 +94,7 @@ class FullCaseUserInput(ScenarioBase):
             ctx.mutable_state is not None
             and ctx.mutable_state.consume_failure(
                 role="verifier",
-                attempt_id=str(ctx.attempt.id),
+                trial_id=str(ctx.trial.id),
                 checkpoint=checkpoint,
             )
         )
@@ -121,12 +121,12 @@ class FullCaseUserInput(ScenarioBase):
         )
 
     def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        attempt = ctx.attempt
+        trial = ctx.trial
         return ToolCallSpec(
             submit_evaluation_success,
             {
                 "summary": "Mock evaluator accepted verifier-gated evidence.",
-                "passed_criteria": list(attempt.evaluation_criteria),
+                "passed_criteria": list(trial.evaluation_criteria),
             },
         )
 
@@ -153,30 +153,30 @@ class FullCaseUserInput(ScenarioBase):
         return ()
 
     def _root_planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        episode = ctx.episode
-        attempt = ctx.attempt
+        iteration = ctx.iteration
+        trial = ctx.trial
         self._ensure_user_input_plan(ctx)
-        if episode.sequence_no == 1 and attempt.attempt_sequence_no == 1:
+        if iteration.sequence_no == 1 and trial.trial_sequence_no == 1:
             return ToolCallSpec(submit_full_plan, _inventory_plan(kind="full"))
-        if episode.sequence_no == 1:
+        if iteration.sequence_no == 1:
             return ToolCallSpec(
                 submit_partial_plan,
                 _inventory_plan(
                     kind="partial",
                     continuation_goal=(
                         "Execute the dynamic package DAG with verifier "
-                        "checkpoints and recursive mission handling."
+                        "checkpoints and recursive goal handling."
                     ),
                 ),
             )
-        if episode.sequence_no == 2:
+        if iteration.sequence_no == 2:
             args = self._implementation_plan(ctx)
             return ToolCallSpec(submit_partial_plan, args)
         return ToolCallSpec(submit_full_plan, self._final_reconciliation_plan(ctx))
 
     def _recursive_planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        episode = ctx.episode
-        if episode.sequence_no == 1:
+        iteration = ctx.iteration
+        if iteration.sequence_no == 1:
             return ToolCallSpec(
                 submit_partial_plan,
                 {
@@ -206,7 +206,7 @@ class FullCaseUserInput(ScenarioBase):
                     ),
                 },
             )
-        if episode.sequence_no == 2:
+        if iteration.sequence_no == 2:
             return ToolCallSpec(
                 submit_partial_plan,
                 {
@@ -237,7 +237,7 @@ class FullCaseUserInput(ScenarioBase):
         return ToolCallSpec(
             submit_full_plan,
             {
-                "task_specification": "Close the delegated package mission.",
+                "task_specification": "Close the delegated package goal.",
                 "evaluation_criteria": [
                     "Recursive close report summarizes package evidence.",
                     "Recursive final verifier passed.",
@@ -333,7 +333,7 @@ class FullCaseUserInput(ScenarioBase):
             "task_specs": task_specs,
             "continuation_goal": (
                 "Run final release-bundle reconciliation after package evidence "
-                "and recursive mission output are available."
+                "and recursive goal output are available."
             ),
         }
 
@@ -375,8 +375,8 @@ class FullCaseUserInput(ScenarioBase):
         if self._user_input_plan is not None:
             return self._user_input_plan
         prompt = ""
-        if ctx.mission is not None and _is_root_mission(ctx):
-            prompt = str(ctx.mission.goal or "")
+        if ctx.goal is not None and _is_root_mission(ctx):
+            prompt = str(ctx.goal.goal or "")
         if not prompt:
             prompt = ctx.prompt or ctx.rendered_prompt or ""
         self._root_prompt = prompt
@@ -390,15 +390,15 @@ class FullCaseUserInput(ScenarioBase):
     ) -> bool:
         if not _is_root_mission(ctx):
             return False
-        episode = ctx.episode
-        attempt = ctx.attempt
+        iteration = ctx.iteration
+        trial = ctx.trial
         return (
-            episode.sequence_no == 1
-            and attempt.attempt_sequence_no == 1
+            iteration.sequence_no == 1
+            and trial.trial_sequence_no == 1
             and checkpoint == "inventory"
         ) or (
-            episode.sequence_no == 2
-            and attempt.attempt_sequence_no == 1
+            iteration.sequence_no == 2
+            and trial.trial_sequence_no == 1
             and checkpoint == "final_pre_evaluator"
         )
 
@@ -460,10 +460,10 @@ def _field(text: str, name: str) -> str | None:
 
 
 def _is_root_mission(ctx: ScenarioContext) -> bool:
-    mission = ctx.mission
-    if mission is None:
+    goal = ctx.goal
+    if goal is None:
         return True
-    requested_by = str(mission.requested_by_task_id or "")
+    requested_by = str(goal.requested_by_task_id or "")
     return requested_by.endswith(":entry")
 
 

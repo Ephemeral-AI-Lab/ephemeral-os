@@ -1,13 +1,13 @@
-"""Attempt retry on evaluator failure.
+"""Trial retry on evaluator failure.
 
-Reference scenario for the attempt-retry path. Episode 1 / Attempt 1: planner
+Reference scenario for the trial-retry path. Iteration 1 / Trial 1: planner
 emits a full plan, executor runs ``preflight``, evaluator returns
-``submit_evaluation_failure`` — episode-manager creates Attempt 2 (budget
-permits). Attempt 2: planner emits a full plan, executor runs ``preflight``,
-evaluator passes — mission closes succeeded.
+``submit_evaluation_failure`` — iteration-manager creates Trial 2 (budget
+permits). Trial 2: planner emits a full plan, executor runs ``preflight``,
+evaluator passes — goal closes succeeded.
 
-Asserts: 1 episode with 2 attempts; attempt 1 ``fail_reason="evaluator_failed"``,
-attempt 2 ``status=PASSED``; mission ``status=succeeded``.
+Asserts: 1 iteration with 2 trials; trial 1 ``fail_reason="evaluator_failed"``,
+trial 2 ``status=PASSED``; goal ``status=succeeded``.
 """
 
 from __future__ import annotations
@@ -25,8 +25,8 @@ from task_center_runner.scenarios._utils import preflight_full_plan
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
-class AttemptRetryEvaluatorFailure(ScenarioBase):
-    """Attempt 1 fails (evaluator), attempt 2 passes — same episode."""
+class TrialRetryEvaluatorFailure(ScenarioBase):
+    """Trial 1 fails (evaluator), trial 2 passes — same iteration."""
 
     name = "pipeline.attempt_retry_evaluator_failure"
     expected_event_sequence: tuple[EventType, ...] = (
@@ -52,13 +52,13 @@ class AttemptRetryEvaluatorFailure(ScenarioBase):
         return ("preflight",)
 
     def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        if ctx.attempt.attempt_sequence_no == 1:
+        if ctx.trial.trial_sequence_no == 1:
             return ToolCallSpec(
                 submit_evaluation_failure,
                 {
                     "summary": (
                         "Intentional evaluator failure to exercise the "
-                        "single-episode attempt retry path."
+                        "single-iteration trial retry path."
                     ),
                     "failed_criteria": ["Workspace preflight completed."],
                 },
@@ -66,10 +66,10 @@ class AttemptRetryEvaluatorFailure(ScenarioBase):
         return ToolCallSpec(
             submit_evaluation_success,
             {
-                "summary": "Retry attempt accepted after retry context delivered.",
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
+                "summary": "Retry trial accepted after retry context delivered.",
+                "passed_criteria": list(ctx.trial.evaluation_criteria),
             },
         )
 
 
-__all__ = ["AttemptRetryEvaluatorFailure"]
+__all__ = ["TrialRetryEvaluatorFailure"]

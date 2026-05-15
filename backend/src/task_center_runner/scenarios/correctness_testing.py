@@ -1,8 +1,8 @@
 """correctness_testing scenario — the only scenario shipped this phase.
 
-One composite that exercises entry → mission → episode 1 (attempt 1 fails;
-attempt 2 passes via partial plan) → continuation episode (attempt 1 passes
-via full plan + final probe) → mission close. Validates the full happy path
+One composite that exercises entry → goal → iteration 1 (trial 1 fails;
+trial 2 passes via partial plan) → continuation iteration (trial 1 passes
+via full plan + final probe) → goal close. Validates the full happy path
 plus one failure path per plan §10.
 """
 
@@ -71,7 +71,7 @@ _INTEGRITY_PARTIAL_PLAN: dict = {
         ),
     },
     "continuation_goal": (
-        "Run the final SWE-EVO mock grading episode after sandbox integrity "
+        "Run the final SWE-EVO mock grading iteration after sandbox integrity "
         "evidence has been persisted."
     ),
 }
@@ -79,10 +79,10 @@ _INTEGRITY_PARTIAL_PLAN: dict = {
 _FINAL_PROBE_FULL_PLAN: dict = {
     "task_specification": (
         "Confirm the sandbox integrity artifacts remain readable in the "
-        "continuation episode and close the benchmark mission."
+        "continuation iteration and close the benchmark goal."
     ),
     "evaluation_criteria": [
-        "Continuation episode received previous episode context.",
+        "Continuation iteration received previous iteration context.",
         "Persisted sandbox evidence is readable from the workspace.",
     ],
     "tasks": [{"id": "final_probe", "agent_name": "executor", "deps": []}],
@@ -124,11 +124,11 @@ class CorrectnessTesting(ScenarioBase):
     )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        episode = ctx.episode
-        attempt = ctx.attempt
-        if episode.sequence_no == 1 and attempt.attempt_sequence_no == 1:
+        iteration = ctx.iteration
+        trial = ctx.trial
+        if iteration.sequence_no == 1 and trial.trial_sequence_no == 1:
             return ToolCallSpec(submit_full_plan, dict(_PREFLIGHT_FULL_PLAN))
-        if episode.sequence_no == 1:
+        if iteration.sequence_no == 1:
             return ToolCallSpec(submit_partial_plan, dict(_INTEGRITY_PARTIAL_PLAN))
         return ToolCallSpec(submit_full_plan, dict(_FINAL_PROBE_FULL_PLAN))
 
@@ -141,15 +141,15 @@ class CorrectnessTesting(ScenarioBase):
         return ("preflight",)
 
     def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        episode = ctx.episode
-        attempt = ctx.attempt
-        if episode.sequence_no == 1 and attempt.attempt_sequence_no == 1:
+        iteration = ctx.iteration
+        trial = ctx.trial
+        if iteration.sequence_no == 1 and trial.trial_sequence_no == 1:
             return ToolCallSpec(
                 submit_evaluation_failure,
                 {
                     "summary": (
-                        "Intentional mock failure to verify episode retry and "
-                        "failed-attempt context."
+                        "Intentional mock failure to verify iteration retry and "
+                        "failed-trial context."
                     ),
                     "failed_criteria": [
                         "Retry path was exercised by evaluator feedback.",
@@ -159,8 +159,8 @@ class CorrectnessTesting(ScenarioBase):
         return ToolCallSpec(
             submit_evaluation_success,
             {
-                "summary": "Mock evaluator accepted the current attempt evidence.",
-                "passed_criteria": list(attempt.evaluation_criteria),
+                "summary": "Mock evaluator accepted the current trial evidence.",
+                "passed_criteria": list(trial.evaluation_criteria),
             },
         )
 

@@ -27,7 +27,7 @@ class PromptInspection:
 @dataclass(frozen=True, slots=True)
 class LaunchRecord:
     task_id: str
-    attempt_id: str | None
+    trial_id: str | None
     agent_name: str
     role: str
     prompt_preview: str

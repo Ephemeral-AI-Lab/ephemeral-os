@@ -118,31 +118,31 @@ def _require_daytona_healthy() -> None:
 
 
 def _assert_graph_shape(graph_summary: dict[str, Any]) -> None:
-    missions = graph_summary["missions"]
-    assert len(missions) >= 2, graph_summary
+    goals = graph_summary["goals"]
+    assert len(goals) >= 2, graph_summary
     root = next(
-        mission
-        for mission in missions
-        if str(mission["requested_by_task_id"]).endswith(":entry")
+        goal
+        for goal in goals
+        if str(goal["requested_by_task_id"]).endswith(":entry")
     )
     recursive = [
-        mission
-        for mission in missions
-        if not str(mission["requested_by_task_id"]).endswith(":entry")
+        goal
+        for goal in goals
+        if not str(goal["requested_by_task_id"]).endswith(":entry")
     ]
     assert recursive, graph_summary
     assert root["status"] == "succeeded"
-    assert all(mission["status"] == "succeeded" for mission in recursive)
+    assert all(goal["status"] == "succeeded" for goal in recursive)
 
-    attempts = [
-        attempt
-        for mission in missions
-        for episode in mission["episodes"]
-        for attempt in episode["attempts"]
+    trials = [
+        trial
+        for goal in goals
+        for iteration in goal["iterations"]
+        for trial in iteration["trials"]
     ]
-    tasks = [task for attempt in attempts for task in attempt["tasks"]]
-    assert len(root["episodes"]) >= 3
-    assert len(attempts) >= 5
+    tasks = [task for trial in trials for task in trial["tasks"]]
+    assert len(root["iterations"]) >= 3
+    assert len(trials) >= 5
     assert len(tasks) >= 20
     assert any(
         task.get("id", "").endswith(":capacity_metrics_summary") for task in tasks
@@ -151,7 +151,7 @@ def _assert_graph_shape(graph_summary: dict[str, Any]) -> None:
         task.get("agent_name") == "verifier" and len(task["needs"]) > 1
         for task in tasks
     )
-    assert max(len(attempt["tasks"]) for attempt in attempts) >= 5
+    assert max(len(trial["tasks"]) for trial in trials) >= 5
 
 
 def _assert_tool_and_event_capacity(report: Any) -> None:

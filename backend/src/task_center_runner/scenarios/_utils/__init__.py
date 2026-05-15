@@ -1,9 +1,9 @@
-"""Shared scenario helpers — plan factories, mission predicates, parsers."""
+"""Shared scenario helpers — plan factories, goal predicates, parsers."""
 
 from __future__ import annotations
 
 from task_center_runner.scenarios._utils.inspectors import field
-from task_center_runner.scenarios._utils.mission_helpers import (
+from task_center_runner.scenarios._utils.goal_helpers import (
     is_recursive_mission,
     is_root_mission,
 )

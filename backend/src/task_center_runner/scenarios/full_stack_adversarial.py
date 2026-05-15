@@ -118,7 +118,7 @@ class FullStackAdversarial(ScenarioBase):
             ctx.mutable_state is not None
             and ctx.mutable_state.consume_failure(
                 role="verifier",
-                attempt_id=str(ctx.attempt.id),
+                trial_id=str(ctx.trial.id),
                 checkpoint=checkpoint,
             )
         )
@@ -145,14 +145,14 @@ class FullStackAdversarial(ScenarioBase):
         )
 
     def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        if _is_root_mission(ctx) and ctx.episode.sequence_no == 1:
-            if ctx.attempt.attempt_sequence_no == 1:
+        if _is_root_mission(ctx) and ctx.iteration.sequence_no == 1:
+            if ctx.trial.trial_sequence_no == 1:
                 return ToolCallSpec(
                     submit_evaluation_failure,
                     {
                         "summary": (
                             "Intentional inventory retry so the next planner "
-                            "sees failed-attempt context before subsystem work."
+                            "sees failed-trial context before subsystem work."
                         ),
                         "failed_criteria": [
                             "Retry context was not yet exercised.",
@@ -163,7 +163,7 @@ class FullStackAdversarial(ScenarioBase):
             submit_evaluation_success,
             {
                 "summary": "Full-stack adversarial evidence accepted.",
-                "passed_criteria": list(ctx.attempt.evaluation_criteria),
+                "passed_criteria": list(ctx.trial.evaluation_criteria),
             },
         )
 
@@ -186,13 +186,13 @@ class FullStackAdversarial(ScenarioBase):
         return ()
 
     def _root_planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        episode = ctx.episode
-        attempt = ctx.attempt
+        iteration = ctx.iteration
+        trial = ctx.trial
         self._ensure_user_input_plan(ctx)
         self._ensure_matrix_cells(ctx)
-        if episode.sequence_no == 1 and attempt.attempt_sequence_no == 1:
+        if iteration.sequence_no == 1 and trial.trial_sequence_no == 1:
             return ToolCallSpec(submit_full_plan, _inventory_plan(kind="full"))
-        if episode.sequence_no == 1:
+        if iteration.sequence_no == 1:
             return ToolCallSpec(
                 submit_partial_plan,
                 _inventory_plan(
@@ -203,15 +203,15 @@ class FullStackAdversarial(ScenarioBase):
                     ),
                 ),
             )
-        if episode.sequence_no == 2 and attempt.attempt_sequence_no == 1:
+        if iteration.sequence_no == 2 and trial.trial_sequence_no == 1:
             return ToolCallSpec(submit_partial_plan, self._subsystem_wave_plan(ctx))
-        if episode.sequence_no == 2:
+        if iteration.sequence_no == 2:
             return ToolCallSpec(submit_partial_plan, self._retry_continuation_plan(ctx))
         return ToolCallSpec(submit_full_plan, self._final_plan(ctx))
 
     def _recursive_planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
-        episode = ctx.episode
-        if episode.sequence_no == 1:
+        iteration = ctx.iteration
+        if iteration.sequence_no == 1:
             return ToolCallSpec(
                 submit_partial_plan,
                 {
@@ -258,7 +258,7 @@ class FullStackAdversarial(ScenarioBase):
         return ToolCallSpec(
             submit_full_plan,
             {
-                "task_specification": "Close delegated full-stack matrix mission.",
+                "task_specification": "Close delegated full-stack matrix goal.",
                 "evaluation_criteria": [
                     "Recursive close report was written through tools.",
                     "Recursive final verifier read the close report.",
@@ -369,7 +369,7 @@ class FullStackAdversarial(ScenarioBase):
             ),
             "evaluation_criteria": [
                 "Retry planner saw failed verifier context.",
-                "Recursive mission completes before parent final guard.",
+                "Recursive goal completes before parent final guard.",
                 "Final reconciliation reads subsystem and recursive artifacts.",
             ],
             "tasks": [
@@ -440,8 +440,8 @@ class FullStackAdversarial(ScenarioBase):
         if self._user_input_plan is not None:
             return self._user_input_plan
         prompt = ""
-        if ctx.mission is not None and _is_root_mission(ctx):
-            prompt = str(ctx.mission.goal or "")
+        if ctx.goal is not None and _is_root_mission(ctx):
+            prompt = str(ctx.goal.goal or "")
         if not prompt:
             prompt = ctx.prompt or ctx.rendered_prompt or ""
         self._root_prompt = prompt
@@ -555,10 +555,10 @@ def _field(text: str, name: str) -> str | None:
 
 
 def _is_root_mission(ctx: ScenarioContext) -> bool:
-    mission = ctx.mission
-    if mission is None:
+    goal = ctx.goal
+    if goal is None:
         return True
-    requested_by = str(mission.requested_by_task_id or "")
+    requested_by = str(goal.requested_by_task_id or "")
     return requested_by.endswith(":entry")
 
 

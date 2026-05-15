@@ -205,7 +205,7 @@ class TaskStoreProtocol(Protocol):
 
     def get_task(self, task_id: str) -> TaskRow | None: ...
 
-    def list_generator_tasks_for_attempt(
+    def list_generator_tasks_for_trial(
         self, trial_id: str
     ) -> list[TaskRow]: ...
 

@@ -210,7 +210,7 @@ class TaskCenterStore(SyncStoreMixin):
             )
             return [_serialize_task(record) for record in q.all()]
 
-    def list_tasks_for_attempt(
+    def list_tasks_for_trial(
         self, attempt_id: str
     ) -> list[SerializedRow]:
         with self._sf() as db:
@@ -224,7 +224,7 @@ class TaskCenterStore(SyncStoreMixin):
             )
             return [_serialize_task(record) for record in q.all()]
 
-    def list_generator_tasks_for_attempt(
+    def list_generator_tasks_for_trial(
         self, attempt_id: str
     ) -> list[SerializedRow]:
         with self._sf() as db:

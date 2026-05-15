@@ -38,7 +38,7 @@ PRIMARY_ROLES: frozenset[str] = frozenset(
 )
 
 # Roles which earn an ``NN_<role>_<task_id>`` directory under the parent
-# attempt — superset of the primary message-recorder allowlist (we still
+# trial — superset of the primary message-recorder allowlist (we still
 # want the ``task.json`` snapshot for ``generator`` rows).
 _ATTEMPT_CHILD_ROLES: frozenset[str] = frozenset(
     {"planner", "executor", "verifier", "evaluator", "generator"}
@@ -156,16 +156,16 @@ class AuditRecorder:
         self._instance_id = instance_id
         self._sandbox_id = sandbox_id
 
-        self._mission_dir: dict[str, Path] = {}
-        self._episode_dir: dict[str, Path] = {}
-        self._attempt_dir: dict[str, Path] = {}
+        self._goal_dir: dict[str, Path] = {}
+        self._iteration_dir: dict[str, Path] = {}
+        self._trial_dir: dict[str, Path] = {}
         self._task_dir: dict[str, Path] = {}
         self._task_recorder: dict[str, AgentMessageJsonlRecorder] = {}
         self._agent_run_to_task: dict[str, str] = {}
 
-        self._mission_seq_counter: int = 0
-        self._episode_seq_counter: dict[str, int] = {}
-        self._attempt_seq_counter: dict[str, int] = {}
+        self._goal_seq_counter: int = 0
+        self._iteration_seq_counter: dict[str, int] = {}
+        self._trial_seq_counter: dict[str, int] = {}
         self._role_seq_counter: dict[str, int] = {}
 
         self._listeners: list[_ListenerHandle] = []
@@ -331,26 +331,26 @@ class AuditRecorder:
             and target.task_center_run_id != self._task_center_run_id
         ):
             return
-        mission_dir = self._ensure_mission_dir(target.id)
-        _atomic_write_json(mission_dir / "mission.json", _serialize_goal(target))
+        goal_dir = self._ensure_goal_dir(target.id)
+        _atomic_write_json(goal_dir / "goal.json", _serialize_goal(target))
 
     def _handle_iteration(self, target: IterationRecord) -> None:
-        mission_dir = self._mission_dir.get(target.goal_id)
-        if mission_dir is None:
+        goal_dir = self._goal_dir.get(target.goal_id)
+        if goal_dir is None:
             return
-        episode_dir = self._ensure_episode_dir(
-            target.goal_id, target.id, mission_dir
+        iteration_dir = self._ensure_iteration_dir(
+            target.goal_id, target.id, goal_dir
         )
-        _atomic_write_json(episode_dir / "episode.json", _serialize_iteration(target))
+        _atomic_write_json(iteration_dir / "iteration.json", _serialize_iteration(target))
 
     def _handle_trial(self, target: TrialRecord) -> None:
-        episode_dir = self._episode_dir.get(target.iteration_id)
-        if episode_dir is None:
+        iteration_dir = self._iteration_dir.get(target.iteration_id)
+        if iteration_dir is None:
             return
-        attempt_dir = self._ensure_attempt_dir(
-            target.iteration_id, target.id, episode_dir
+        trial_dir = self._ensure_trial_dir(
+            target.iteration_id, target.id, iteration_dir
         )
-        _atomic_write_json(attempt_dir / "attempt.json", _serialize_trial(target))
+        _atomic_write_json(trial_dir / "trial.json", _serialize_trial(target))
 
     def _handle_task(self, target: TaskCenterTaskRecord) -> None:
         if (
@@ -401,41 +401,41 @@ class AuditRecorder:
     # Path resolution + numeric prefixes
     # ------------------------------------------------------------------
 
-    def _ensure_mission_dir(self, mission_id: str) -> Path:
-        cached = self._mission_dir.get(mission_id)
+    def _ensure_goal_dir(self, mission_id: str) -> Path:
+        cached = self._goal_dir.get(mission_id)
         if cached is not None:
             return cached
-        self._mission_seq_counter += 1
-        seq = self._mission_seq_counter
-        path = self._run_dir / f"mission_{seq:02d}_{mission_id}"
+        self._goal_seq_counter += 1
+        seq = self._goal_seq_counter
+        path = self._run_dir / f"goal_{seq:02d}_{mission_id}"
         path.mkdir(parents=True, exist_ok=True)
-        self._mission_dir[mission_id] = path
+        self._goal_dir[mission_id] = path
         return path
 
-    def _ensure_episode_dir(
-        self, mission_id: str, episode_id: str, mission_dir: Path
+    def _ensure_iteration_dir(
+        self, mission_id: str, iteration_id: str, goal_dir: Path
     ) -> Path:
-        cached = self._episode_dir.get(episode_id)
+        cached = self._iteration_dir.get(iteration_id)
         if cached is not None:
             return cached
-        seq = self._episode_seq_counter.get(mission_id, 0) + 1
-        self._episode_seq_counter[mission_id] = seq
-        path = mission_dir / f"episode_{seq:02d}_{episode_id}"
+        seq = self._iteration_seq_counter.get(mission_id, 0) + 1
+        self._iteration_seq_counter[mission_id] = seq
+        path = goal_dir / f"iteration_{seq:02d}_{iteration_id}"
         path.mkdir(parents=True, exist_ok=True)
-        self._episode_dir[episode_id] = path
+        self._iteration_dir[iteration_id] = path
         return path
 
-    def _ensure_attempt_dir(
-        self, episode_id: str, attempt_id: str, episode_dir: Path
+    def _ensure_trial_dir(
+        self, iteration_id: str, trial_id: str, iteration_dir: Path
     ) -> Path:
-        cached = self._attempt_dir.get(attempt_id)
+        cached = self._trial_dir.get(trial_id)
         if cached is not None:
             return cached
-        seq = self._attempt_seq_counter.get(episode_id, 0) + 1
-        self._attempt_seq_counter[episode_id] = seq
-        path = episode_dir / f"attempt_{seq:02d}_{attempt_id}"
+        seq = self._trial_seq_counter.get(iteration_id, 0) + 1
+        self._trial_seq_counter[iteration_id] = seq
+        path = iteration_dir / f"trial_{seq:02d}_{trial_id}"
         path.mkdir(parents=True, exist_ok=True)
-        self._attempt_dir[attempt_id] = path
+        self._trial_dir[trial_id] = path
         return path
 
     def _resolve_task_dir(
@@ -444,16 +444,16 @@ class AuditRecorder:
         role = self._display_role(target)
         if self._is_entry_executor(target):
             return self._run_dir / f"entry_executor_{target.id}"
-        attempt_id = target.task_center_attempt_id
+        trial_id = target.task_center_attempt_id
         if (
             role in _ATTEMPT_CHILD_ROLES
-            and attempt_id
-            and attempt_id in self._attempt_dir
+            and trial_id
+            and trial_id in self._trial_dir
         ):
-            attempt_dir = self._attempt_dir[attempt_id]
-            seq = self._role_seq_counter.get(attempt_id, 0) + 1
-            self._role_seq_counter[attempt_id] = seq
-            return attempt_dir / f"{seq:02d}_{role}_{target.id}"
+            trial_dir = self._trial_dir[trial_id]
+            seq = self._role_seq_counter.get(trial_id, 0) + 1
+            self._role_seq_counter[trial_id] = seq
+            return trial_dir / f"{seq:02d}_{role}_{target.id}"
         return None
 
     @staticmethod

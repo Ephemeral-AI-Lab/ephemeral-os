@@ -7,8 +7,8 @@ conventions, and per-subpackage coverage matrix.
 ## Layout
 
 - `base.py` — `Scenario` protocol, `ScenarioBase`, `ScenarioContext`, `ToolCallSpec`.
-- `_utils/` — shared helpers (plan factories, mission/recursive predicates, task_input parsers).
-- `pipeline/` — task_center state-machine scenarios (mission/episode/attempt control flow).
+- `_utils/` — shared helpers (plan factories, goal/recursive predicates, task_input parsers).
+- `pipeline/` — task_center state-machine scenarios (goal/iteration/trial control flow).
 - `sandbox/` — sandbox subsystem scenarios (OCC, overlay, layerstack, LSP, daemon).
 - `capacity/` — composite scenarios that intentionally span multiple subsystem owners.
 - `tools/` — tool execution, gate hooks, notifications, max-step.
@@ -25,7 +25,7 @@ conventions, and per-subpackage coverage matrix.
    - State-machine assertion → `pipeline/initial_mission.py`
    - DAG dependency assertion → `pipeline/dependency_dag_serial.py`
    - Episodic continuation → `pipeline/episodic_continuation.py`
-   - Attempt-retry assertion → `pipeline/attempt_retry_evaluator_failure.py`
+   - Trial-retry assertion → `pipeline/trial_retry_evaluator_failure.py`
    - Sandbox event assertion → `sandbox/occ_concurrent_conflicts.py`
    - Planner rejection assertion → `planner_validation/duplicate_local_id.py`
 3. Update `SCENARIO_REGISTRY` in `__init__.py`.
