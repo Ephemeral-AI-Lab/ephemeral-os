@@ -70,9 +70,20 @@ class WorkspaceProjection:
     must reconcile itself with the latest projection.
     """
 
-    def __init__(self, layer_stack_root: str | Path) -> None:
+    def __init__(
+        self,
+        layer_stack_root: str | Path,
+        *,
+        manager: LayerStackManager | None = None,
+    ) -> None:
         self._layer_stack_root = Path(layer_stack_root).resolve()
-        self._manager = LayerStackManager(self._layer_stack_root)
+        # Reuse the daemon's cached LayerStackManager when one is injected so
+        # the plugin path and the OCC backend share a single writer flock +
+        # transaction RLock. Constructing a fresh manager here is the legacy
+        # path retained for unit tests and out-of-daemon callers.
+        self._manager = (
+            manager if manager is not None else LayerStackManager(self._layer_stack_root)
+        )
 
     @property
     def layer_stack_root(self) -> Path:

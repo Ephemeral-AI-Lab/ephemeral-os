@@ -22,6 +22,7 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
+from sandbox.daemon.service.workspace_server import get_layer_stack_manager
 from sandbox.models import SandboxCaller
 from sandbox.plugin.projection import WorkspaceProjection
 from sandbox.plugin.runtime.context import PluginOpContext
@@ -297,7 +298,12 @@ def _projection_for_root(layer_stack_root: str) -> WorkspaceProjection:
     key = _validate_projection_root(layer_stack_root)
     projection = _PROJECTIONS.get(key)
     if projection is None:
-        projection = WorkspaceProjection(key)
+        # Share the daemon's cached LayerStackManager so the plugin path
+        # doesn't open a second writer flock + transaction RLock over the
+        # same storage root; the previous behavior (constructing a fresh
+        # manager) left the lock leaked on LRU eviction.
+        manager = get_layer_stack_manager(key)
+        projection = WorkspaceProjection(key, manager=manager)
         _PROJECTIONS[key] = projection
         if len(_PROJECTIONS) > _MAX_PROJECTIONS:
             _PROJECTIONS.popitem(last=False)
