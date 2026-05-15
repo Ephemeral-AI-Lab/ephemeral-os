@@ -1,7 +1,7 @@
 """AuditRecorder — directory writer + ORM commit listeners.
 
 Wires five SQLAlchemy ``after_insert``/``after_update`` listeners (one per
-``MissionRecord``/``EpisodeRecord``/``AttemptRecord``/``TaskCenterTaskRecord``
+``GoalRecord``/``IterationRecord``/``TrialRecord``/``TaskCenterTaskRecord``
 plus a fifth on ``AgentRunRecord`` for ``agent_run_id`` -> ``task_id``
 mapping). Task stream events append conversation-message rows to
 ``message.jsonl``. Lifecycle rows are mirrored as latest-state ``*.json``
@@ -26,9 +26,9 @@ from task_center_runner.audit.events import Event as AuditEvent
 from task_center_runner.audit.io import atomic_write_json
 from task_center_runner.audit.metrics import MetricsAggregator
 from db.models.agent_run import AgentRunRecord
-from db.models.trial import TrialRecord as AttemptRecord
-from db.models.iteration import IterationRecord as EpisodeRecord
-from db.models.goal import GoalRecord as MissionRecord
+from db.models.trial import TrialRecord
+from db.models.iteration import IterationRecord
+from db.models.goal import GoalRecord
 from db.models.task_center import TaskCenterTaskRecord
 from message.agent_message_recorder import AgentMessageJsonlRecorder
 
@@ -49,14 +49,14 @@ def _isoformat(value: datetime | None) -> str | None:
     return value.isoformat() if value is not None else None
 
 
-def _serialize_mission(record: MissionRecord) -> dict[str, Any]:
+def _serialize_goal(record: GoalRecord) -> dict[str, Any]:
     return {
         "id": record.id,
         "task_center_run_id": record.task_center_run_id,
         "requested_by_task_id": record.requested_by_task_id,
         "goal": record.goal,
         "status": record.status,
-        "episode_ids": list(record.episode_ids or []),
+        "iteration_ids": list(record.iteration_ids or []),
         "final_outcome": record.final_outcome,
         "created_at": _isoformat(record.created_at),
         "updated_at": _isoformat(record.updated_at),
@@ -64,16 +64,16 @@ def _serialize_mission(record: MissionRecord) -> dict[str, Any]:
     }
 
 
-def _serialize_episode(record: EpisodeRecord) -> dict[str, Any]:
+def _serialize_iteration(record: IterationRecord) -> dict[str, Any]:
     return {
         "id": record.id,
-        "goal_id": record.mission_id,
+        "goal_id": record.goal_id,
         "sequence_no": record.sequence_no,
         "creation_reason": record.creation_reason,
         "goal": record.goal,
-        "attempt_budget": record.attempt_budget,
+        "trial_budget": record.trial_budget,
         "status": record.status,
-        "attempt_ids": list(record.attempt_ids or []),
+        "trial_ids": list(record.trial_ids or []),
         "continuation_goal": record.continuation_goal,
         "task_specification": record.task_specification,
         "task_summary": record.task_summary,
@@ -83,11 +83,11 @@ def _serialize_episode(record: EpisodeRecord) -> dict[str, Any]:
     }
 
 
-def _serialize_attempt(record: AttemptRecord) -> dict[str, Any]:
+def _serialize_trial(record: TrialRecord) -> dict[str, Any]:
     return {
         "id": record.id,
-        "iteration_id": record.episode_id,
-        "attempt_sequence_no": record.attempt_sequence_no,
+        "iteration_id": record.iteration_id,
+        "trial_sequence_no": record.trial_sequence_no,
         "stage": record.stage,
         "status": record.status,
         "planner_task_id": record.planner_task_id,
@@ -215,34 +215,34 @@ class AuditRecorder:
         self._status = "running"
 
         self._register(
-            MissionRecord,
+            GoalRecord,
             "after_insert",
-            lambda mapper, connection, target: self._handle_mission(target),
+            lambda mapper, connection, target: self._handle_goal(target),
         )
         self._register(
-            MissionRecord,
+            GoalRecord,
             "after_update",
-            lambda mapper, connection, target: self._handle_mission(target),
+            lambda mapper, connection, target: self._handle_goal(target),
         )
         self._register(
-            EpisodeRecord,
+            IterationRecord,
             "after_insert",
-            lambda mapper, connection, target: self._handle_episode(target),
+            lambda mapper, connection, target: self._handle_iteration(target),
         )
         self._register(
-            EpisodeRecord,
+            IterationRecord,
             "after_update",
-            lambda mapper, connection, target: self._handle_episode(target),
+            lambda mapper, connection, target: self._handle_iteration(target),
         )
         self._register(
-            AttemptRecord,
+            TrialRecord,
             "after_insert",
-            lambda mapper, connection, target: self._handle_attempt(target),
+            lambda mapper, connection, target: self._handle_trial(target),
         )
         self._register(
-            AttemptRecord,
+            TrialRecord,
             "after_update",
-            lambda mapper, connection, target: self._handle_attempt(target),
+            lambda mapper, connection, target: self._handle_trial(target),
         )
         self._register(
             TaskCenterTaskRecord,
@@ -325,32 +325,32 @@ class AuditRecorder:
     # Handlers
     # ------------------------------------------------------------------
 
-    def _handle_mission(self, target: MissionRecord) -> None:
+    def _handle_goal(self, target: GoalRecord) -> None:
         if (
             self._task_center_run_id
             and target.task_center_run_id != self._task_center_run_id
         ):
             return
         mission_dir = self._ensure_mission_dir(target.id)
-        _atomic_write_json(mission_dir / "mission.json", _serialize_mission(target))
+        _atomic_write_json(mission_dir / "mission.json", _serialize_goal(target))
 
-    def _handle_episode(self, target: EpisodeRecord) -> None:
-        mission_dir = self._mission_dir.get(target.mission_id)
+    def _handle_iteration(self, target: IterationRecord) -> None:
+        mission_dir = self._mission_dir.get(target.goal_id)
         if mission_dir is None:
             return
         episode_dir = self._ensure_episode_dir(
-            target.mission_id, target.id, mission_dir
+            target.goal_id, target.id, mission_dir
         )
-        _atomic_write_json(episode_dir / "episode.json", _serialize_episode(target))
+        _atomic_write_json(episode_dir / "episode.json", _serialize_iteration(target))
 
-    def _handle_attempt(self, target: AttemptRecord) -> None:
-        episode_dir = self._episode_dir.get(target.episode_id)
+    def _handle_trial(self, target: TrialRecord) -> None:
+        episode_dir = self._episode_dir.get(target.iteration_id)
         if episode_dir is None:
             return
         attempt_dir = self._ensure_attempt_dir(
-            target.episode_id, target.id, episode_dir
+            target.iteration_id, target.id, episode_dir
         )
-        _atomic_write_json(attempt_dir / "attempt.json", _serialize_attempt(target))
+        _atomic_write_json(attempt_dir / "attempt.json", _serialize_trial(target))
 
     def _handle_task(self, target: TaskCenterTaskRecord) -> None:
         if (
