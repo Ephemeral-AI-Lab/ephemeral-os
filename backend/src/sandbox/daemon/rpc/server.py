@@ -59,17 +59,19 @@ MAX_REQUEST_BYTES = 16 * 1024 * 1024
 REQUEST_READ_TIMEOUT_S = 30.0
 
 
-def _request_too_large_envelope() -> dict[str, object]:
+def _error_envelope(
+    kind: str,
+    message: str,
+    details: dict[str, object] | None = None,
+) -> dict[str, object]:
     return {
         "success": False,
         "warnings": [],
         "timings": {},
         "error": {
-            "kind": "request_too_large",
-            "message": (
-                f"daemon request exceeds {MAX_REQUEST_BYTES} byte limit"
-            ),
-            "details": {"limit": MAX_REQUEST_BYTES},
+            "kind": kind,
+            "message": message,
+            "details": details or {},
         },
     }
 
@@ -91,7 +93,12 @@ async def _handle_connection(
             # mean "client exceeded MAX_REQUEST_BYTES" and must surface the
             # structured envelope rather than dropping the connection.
             payload = json.dumps(
-                _request_too_large_envelope(), separators=(",", ":")
+                _error_envelope(
+                    "request_too_large",
+                    f"daemon request exceeds {MAX_REQUEST_BYTES} byte limit",
+                    {"limit": MAX_REQUEST_BYTES},
+                ),
+                separators=(",", ":"),
             ).encode("utf-8") + b"\n"
             writer.write(payload)
             with contextlib.suppress(Exception):
@@ -107,28 +114,17 @@ async def _handle_connection(
         try:
             envelope = json.loads(raw.decode("utf-8"))
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-            response = {
-                "success": False,
-                "warnings": [],
-                "timings": {},
-                "error": {
-                    "kind": "bad_json",
-                    "message": "daemon request must be valid JSON",
-                    "details": {"message": str(exc)},
-                },
-            }
+            response = _error_envelope(
+                "bad_json",
+                "daemon request must be valid JSON",
+                {"message": str(exc)},
+            )
         else:
             if not isinstance(envelope, dict):
-                response = {
-                    "success": False,
-                    "warnings": [],
-                    "timings": {},
-                    "error": {
-                        "kind": "invalid_envelope",
-                        "message": "daemon envelope must be a JSON object",
-                        "details": {},
-                    },
-                }
+                response = _error_envelope(
+                    "invalid_envelope",
+                    "daemon envelope must be a JSON object",
+                )
             else:
                 response = await dispatcher.dispatch_envelope_async(
                     envelope, boot_t0=boot_t0

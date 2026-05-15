@@ -30,7 +30,6 @@ from sandbox.plugin.runtime import register_plugin_op
 @pytest.fixture(autouse=True)
 def _isolate_plugin_state() -> Iterator[None]:
     handler_mod._LOADED.clear()
-    handler_mod._LOADED_DIGEST.clear()
     handler_mod._PROJECTIONS.clear()
     registry_mod._PENDING.clear()
     pre_existing = [
@@ -38,7 +37,6 @@ def _isolate_plugin_state() -> Iterator[None]:
     ]
     yield
     handler_mod._LOADED.clear()
-    handler_mod._LOADED_DIGEST.clear()
     handler_mod._PROJECTIONS.clear()
     registry_mod._PENDING.clear()
     for name in [

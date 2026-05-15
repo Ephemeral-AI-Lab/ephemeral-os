@@ -125,6 +125,25 @@ def build_sdk_client(
     return factory(config_cls(**cfg_kwargs))
 
 
+def _client_config(
+    factory_name: DaytonaFactoryName,
+    *,
+    unavailable_cls: type[Exception],
+    not_configured_message: str,
+) -> tuple[DaytonaClientCacheKey, str, str, str]:
+    api_key, api_url, target = load_required_credentials(
+        unavailable_cls=unavailable_cls,
+        not_configured_message=not_configured_message,
+    )
+    current_key = client_cache_key(
+        factory_name,
+        api_key=api_key,
+        api_url=api_url,
+        target=target,
+    )
+    return current_key, api_key, api_url, target
+
+
 def _validate_factory_name(factory_name: str) -> None:
     if factory_name not in ("Daytona", "AsyncDaytona"):
         raise ValueError(f"unsupported Daytona SDK factory: {factory_name!r}")
@@ -254,17 +273,12 @@ def acquire_client() -> Any:
     """Return a cached Daytona client, creating one if config changed."""
     global _cached_client, _cached_client_key
 
-    api_key, api_url, target = load_required_credentials(
+    current_key, api_key, api_url, target = _client_config(
+        "Daytona",
         unavailable_cls=DaytonaUnavailableError,
         not_configured_message=(
             "Daytona is not configured. Set DAYTONA_API_KEY and DAYTONA_API_URL."
         ),
-    )
-    current_key = client_cache_key(
-        "Daytona",
-        api_key=api_key,
-        api_url=api_url,
-        target=target,
     )
 
     stale_client: Any = None
@@ -317,24 +331,15 @@ _cached_clients: weakref.WeakKeyDictionary[
 ] = weakref.WeakKeyDictionary()
 
 
-def _load_credentials() -> tuple[str, str, str]:
-    return load_required_credentials(
+def get_async_daytona_client() -> Any:
+    """Return a loop-local cached AsyncDaytona client."""
+    loop = asyncio.get_running_loop()
+    current_key, api_key, api_url, target = _client_config(
+        "AsyncDaytona",
         unavailable_cls=AsyncDaytonaUnavailableError,
         not_configured_message=(
             "Async Daytona is not configured. Set DAYTONA_API_KEY and DAYTONA_API_URL."
         ),
-    )
-
-
-def get_async_daytona_client() -> Any:
-    """Return a loop-local cached AsyncDaytona client."""
-    loop = asyncio.get_running_loop()
-    api_key, api_url, target = _load_credentials()
-    current_key = client_cache_key(
-        "AsyncDaytona",
-        api_key=api_key,
-        api_url=api_url,
-        target=target,
     )
     stale_clients: list[Any] = []
 

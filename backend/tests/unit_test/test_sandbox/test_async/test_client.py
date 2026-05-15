@@ -23,7 +23,6 @@ class TestGetAsyncSandbox:
         import sandbox.provider.daytona.client as mod
 
         loop = asyncio.get_running_loop()
-        monkeypatch.setattr(mod, "_load_credentials", lambda: ("async-key", "https://async-url", ""))
         with mod._async_client_lock:
             mod._cached_clients.clear()
             mod._cached_clients[loop] = (
@@ -57,7 +56,6 @@ class TestGetAsyncSandbox:
         import sandbox.provider.daytona.client as mod
 
         loop = asyncio.get_running_loop()
-        monkeypatch.setattr(mod, "_load_credentials", lambda: ("async-key", "https://async-url", ""))
         with mod._async_client_lock:
             mod._cached_clients.clear()
             mod._cached_clients[loop] = (

@@ -1169,3 +1169,122 @@ Failures and fixes:
 
 Next phase recommendation:
 - Continue behavior-preserving reductions with provider Daytona client cache deduplication or plugin handler state consolidation. Avoid host upload-overlap removal and copy-backed capture ownership changes unless explicitly switching to behavior-bearing cleanup.
+
+## Phase 9.2 - Daytona Client Cache Config Deduplication
+
+Status: complete
+
+Scope:
+- Deduplicate the sync and async Daytona client credential/key derivation inside `sandbox.provider.daytona.client`.
+- Keep sync and async public entry points, exception classes, cache keys, stale-client closing, and loop-local async caching behavior unchanged.
+- Update tests that reached the removed private async credential helper.
+
+Implementation notes:
+- Added `_client_config(...)` to centralize required credential loading plus `DaytonaClientCacheKey` construction for both `Daytona` and `AsyncDaytona` factories.
+- `acquire_client()` still returns the cached sync client before constructing a replacement SDK client.
+- `get_async_daytona_client()` still returns the loop-local cached async client before constructing a replacement SDK client.
+- Removed the async-only private `_load_credentials()` helper and adjusted cache tests to exercise the public environment-backed path.
+
+Changed files:
+- `backend/src/sandbox/provider/daytona/client.py`
+- `backend/tests/unit_test/test_sandbox/test_async/test_client.py`
+- `.planning/sandbox-REVIEW-DEFERRED-IMPLEMENTATION.md`
+
+Deleted files:
+- None
+
+Compatibility shims:
+- None. Removed helper was private to the Daytona client module.
+
+Tests and guards run:
+- `.venv/bin/ruff check backend/src/sandbox/provider/daytona/client.py backend/tests/unit_test/test_sandbox/test_async/test_client.py` - passed
+- `.venv/bin/pytest backend/tests/unit_test/test_sandbox/test_daytona_client_cache.py backend/tests/unit_test/test_sandbox/test_credentials.py backend/tests/unit_test/test_sandbox/test_lifecycle.py backend/tests/unit_test/test_sandbox/test_async/test_client.py backend/tests/unit_test/test_sandbox/test_providers/test_daytona_adapter.py backend/tests/unit_test/test_sandbox/test_provider_registry.py -q` - 33 passed
+- `.venv/bin/pytest backend/tests/unit_test/test_sandbox -q` - 547 passed, 1 skipped, 1 expected deprecation warning
+- `rg -n "_load_credentials|from sandbox\\.provider\\.daytona\\.client\\." backend/src/sandbox backend/tests/unit_test/test_sandbox` - no stale private helper or deep Daytona client imports
+- `git diff --stat` - current tracked diff shows this phase plus Phase 9.3 at 49 insertions, 49 deletions across 5 files
+- `git diff --check` - clean
+
+Failures and fixes:
+- The first refactor attempt accidentally built a new SDK client before checking the async cache. Existing async client cache tests caught this immediately. Fixed by returning only config data from `_client_config(...)` and preserving the cache-hit-before-build order.
+
+Next phase recommendation:
+- Continue behavior-preserving reductions in plugin loaded-state bookkeeping. Avoid provider package moves unless the public flattening boundary is being actively implemented.
+
+## Phase 9.3 - Consolidate Plugin Loaded State
+
+Status: complete
+
+Scope:
+- Collapse the duplicate plugin loaded-state maps in `sandbox.plugin.handler`.
+- Keep plugin ensure/status/unload semantics, warm-failure recovery behavior, and operation registration behavior unchanged.
+- Update tests that reached the removed private digest map.
+
+Implementation notes:
+- Added private `_LoadedPlugin` state containing registered ops and digest.
+- Replaced `_LOADED` plus `_LOADED_DIGEST` with a single `_LOADED` map.
+- `plugin_ensure` still warms runtime code before marking a plugin loaded, preserving the BL-01 recovery behavior.
+- `plugin_status`, `loaded_plugins_snapshot`, and `_unload_plugin_runtime` now read both ops and digest from the single loaded-state record.
+
+Changed files:
+- `backend/src/sandbox/plugin/handler.py`
+- `backend/tests/unit_test/test_sandbox/test_plugin_handler.py`
+- `backend/tests/unit_test/test_sandbox/test_plugin_lifecycle_wedge.py`
+- `.planning/sandbox-REVIEW-DEFERRED-IMPLEMENTATION.md`
+
+Deleted files:
+- None
+
+Compatibility shims:
+- None. Removed digest map was private test-visible state, not public plugin API.
+
+Tests and guards run:
+- `.venv/bin/ruff check backend/src/sandbox/plugin/handler.py backend/tests/unit_test/test_sandbox/test_plugin_handler.py backend/tests/unit_test/test_sandbox/test_plugin_lifecycle_wedge.py` - passed
+- `.venv/bin/pytest backend/tests/unit_test/test_sandbox/test_plugin_handler.py backend/tests/unit_test/test_sandbox/test_plugin_lifecycle_wedge.py backend/tests/unit_test/test_sandbox/test_plugin_runtime_registry.py backend/tests/unit_test/test_sandbox/test_plugin_projection.py -q` - 20 passed, 1 expected deprecation warning
+- `.venv/bin/pytest backend/tests/unit_test/test_sandbox -q` - 547 passed, 1 skipped, 1 expected deprecation warning
+- `rg -n "_LOADED_DIGEST|sandbox\\.plugin\\.runtime\\.(context|registry)" backend/src/sandbox backend/tests/unit_test/test_sandbox` - no stale digest map or removed runtime submodule imports
+- `git diff --stat` - current tracked diff shows this phase plus Phase 9.2 at 49 insertions, 49 deletions across 5 files
+- `git diff --check` - clean
+
+Failures and fixes:
+- None after implementation. A final readability pass parenthesized the unload fallback iterable and ruff remained clean.
+
+Next phase recommendation:
+- Stop the behavior-preserving batch here unless continuing into another explicitly small subsystem cleanup. The next high-LOC reductions are more likely to be behavior-bearing or public-boundary work: host upload overlap removal, copy-backed capture ownership, and provider/daemon package moves.
+
+## Phase 9.4 - Daemon RPC Error Envelope Deduplication
+
+Status: complete
+
+Scope:
+- Replace repeated daemon RPC error-envelope literals in `sandbox.daemon.rpc.server` with one private helper.
+- Preserve the exact wire response fields, error kinds, messages, and details for oversized requests, invalid JSON, and non-object envelopes.
+- Do not move files or change dispatcher behavior.
+
+Implementation notes:
+- Added `_error_envelope(kind, message, details=None)` for the common daemon wire error shape.
+- The oversized-request branch now uses the same helper directly instead of a one-off `_request_too_large_envelope` wrapper.
+- Existing timing augmentation after successful parse/dispatch is unchanged.
+
+Changed files:
+- `backend/src/sandbox/daemon/rpc/server.py`
+- `.planning/sandbox-REVIEW-DEFERRED-IMPLEMENTATION.md`
+
+Deleted files:
+- None
+
+Compatibility shims:
+- None needed. Removed helper was private and single-use.
+
+Tests and guards run:
+- `.venv/bin/ruff check backend/src/sandbox/daemon/rpc/server.py` - passed
+- `.venv/bin/pytest backend/tests/unit_test/test_sandbox/test_daemon/test_daemon.py backend/tests/unit_test/test_sandbox/test_daemon/test_server_hardening.py backend/tests/unit_test/test_sandbox/test_daemon/test_server_dispatch.py -q` - 17 passed
+- `.venv/bin/pytest backend/tests/unit_test/test_sandbox -q` - 547 passed, 1 skipped, 1 expected deprecation warning
+- `rg -n "_request_too_large_envelope|daemon request must be valid JSON|daemon envelope must be a JSON object|request_too_large" backend/src/sandbox/daemon/rpc/server.py backend/tests/unit_test/test_sandbox/test_daemon` - no stale private helper; expected wire strings remain
+- `git diff --stat` - includes this phase, Phases 9.2-9.3, report updates, and unrelated dirty TaskCenter files already present in the worktree
+- `git diff --check` - clean
+
+Failures and fixes:
+- None. The initial helper pass left a new one-call wrapper; removed it before the final guard.
+
+Next phase recommendation:
+- Continue only with exact, still-present behavior-preserving items. S7, S8, S9, and the daemon health dead-probe cleanup are already implemented in the current checkout. Larger remaining LOC reductions now mostly require public-boundary moves or behavior decisions.

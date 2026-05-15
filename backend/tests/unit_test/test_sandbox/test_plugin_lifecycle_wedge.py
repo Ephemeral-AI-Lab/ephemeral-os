@@ -1,6 +1,6 @@
 """Regression test for BL-01: failed warm must not wedge the plugin registry.
 
-Before the fix, ``plugin_ensure`` wrote ``_LOADED``/``_LOADED_DIGEST`` *before*
+Before the fix, ``plugin_ensure`` wrote ``_LOADED`` *before*
 awaiting ``_warm_plugin_runtime``. When warm raised, those mutations were not
 rolled back, so every subsequent call (with the same digest) took the
 "already loaded" branch and re-invoked warm, which kept failing forever — only
@@ -28,7 +28,6 @@ from sandbox.plugin.runtime import register_plugin_op
 @pytest.fixture(autouse=True)
 def _isolate_plugin_state() -> Iterator[None]:
     handler_mod._LOADED.clear()
-    handler_mod._LOADED_DIGEST.clear()
     handler_mod._PROJECTIONS.clear()
     registry_mod._PENDING.clear()
     pre_existing = [
@@ -36,7 +35,6 @@ def _isolate_plugin_state() -> Iterator[None]:
     ]
     yield
     handler_mod._LOADED.clear()
-    handler_mod._LOADED_DIGEST.clear()
     handler_mod._PROJECTIONS.clear()
     registry_mod._PENDING.clear()
     for name in [n for n in sys.modules if n.startswith("plugins.catalog.")]:
@@ -99,7 +97,6 @@ def test_plugin_ensure_recovers_from_transient_warm_failure(
     assert "wedge_demo" not in handler_mod._LOADED, (
         "BL-01: _LOADED was written before warm completed; registry is wedged"
     )
-    assert "wedge_demo" not in handler_mod._LOADED_DIGEST
     assert "plugins.catalog.wedge_demo.runtime.server" not in sys.modules
 
     _inject_runtime("wedge_demo", "hover")
@@ -116,7 +113,7 @@ def test_plugin_ensure_recovers_from_transient_warm_failure(
 
     # Now the registry is populated.
     assert "wedge_demo" in handler_mod._LOADED
-    assert handler_mod._LOADED_DIGEST["wedge_demo"] == "a"
+    assert handler_mod._LOADED["wedge_demo"].digest == "a"
 
     # Warm was invoked exactly twice (once failed, once succeeded).
     assert calls == [1, 2]

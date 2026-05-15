@@ -19,6 +19,7 @@ import logging
 import re
 import sys
 from collections import OrderedDict
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -51,9 +52,13 @@ class PluginEnsureError(RuntimeError):
     """Raised when api.plugin.ensure fails to load a plugin runtime."""
 
 
-# Process-local registry of loaded plugins → list of registered op names.
-_LOADED: dict[str, list[str]] = {}
-_LOADED_DIGEST: dict[str, str] = {}
+@dataclass
+class _LoadedPlugin:
+    ops: list[str]
+    digest: str
+
+
+_LOADED: dict[str, _LoadedPlugin] = {}
 # Per-layer-stack-root WorkspaceProjection cache so plugin sessions reuse
 # the same projection across calls.
 _MAX_PROJECTIONS = 256
@@ -83,21 +88,19 @@ async def _plugin_ensure_locked(
     digest: str,
     args: dict[str, Any],
 ) -> dict[str, Any]:
-    if (
-        plugin_name in _LOADED
-        and (not digest or _LOADED_DIGEST.get(plugin_name) == digest)
-    ):
+    loaded = _LOADED.get(plugin_name)
+    if loaded is not None and (not digest or loaded.digest == digest):
         warm_result = await _warm_plugin_runtime(plugin_name, args)
         return {
             "success": True,
             "plugin": plugin_name,
-            "digest": _LOADED_DIGEST.get(plugin_name, ""),
-            "registered_ops": list(_LOADED[plugin_name]),
+            "digest": loaded.digest,
+            "registered_ops": list(loaded.ops),
             "runtime_loaded": True,
             "already_loaded": True,
             **warm_result,
         }
-    if plugin_name in _LOADED:
+    if loaded is not None:
         await _unload_plugin_runtime(plugin_name)
 
     runtime_module = f"plugins.catalog.{plugin_name}.runtime.server"
@@ -121,8 +124,8 @@ async def _plugin_ensure_locked(
         context_factory=_plugin_op_context_factory,
         trusted_caller=True,
     )
-    # Warm BEFORE writing _LOADED/_LOADED_DIGEST so a failed warm doesn't
-    # wedge the registry (BL-01). On warm failure roll back the dispatcher
+    # Warm BEFORE writing _LOADED so a failed warm doesn't wedge the registry
+    # (BL-01). On warm failure roll back the dispatcher
     # entries we just registered so the next call retries cleanly.
     try:
         warm_result = (
@@ -138,8 +141,7 @@ async def _plugin_ensure_locked(
         _evict_plugin_runtime_modules(plugin_name)
         importlib.invalidate_caches()
         raise
-    _LOADED[plugin_name] = registered_ops
-    _LOADED_DIGEST[plugin_name] = digest
+    _LOADED[plugin_name] = _LoadedPlugin(ops=registered_ops, digest=digest)
     if not registered_ops and not runtime_loaded:
         # Stateless plugin with no runtime — fine, idempotent.
         logger.debug(
@@ -161,8 +163,8 @@ async def plugin_status(args: dict[str, Any]) -> dict[str, Any]:
     return {
         "success": True,
         "loaded_plugins": [
-            {"name": name, "ops": list(ops)}
-            for name, ops in sorted(_LOADED.items())
+            {"name": name, "ops": list(loaded.ops)}
+            for name, loaded in sorted(_LOADED.items())
         ],
         "pending": [
             {
@@ -176,7 +178,7 @@ async def plugin_status(args: dict[str, Any]) -> dict[str, Any]:
 
 def loaded_plugins_snapshot() -> dict[str, list[str]]:
     """Read-only view of the in-process loaded-plugin map (for tests)."""
-    return {name: list(ops) for name, ops in _LOADED.items()}
+    return {name: list(loaded.ops) for name, loaded in _LOADED.items()}
 
 
 async def _warm_plugin_runtime(
@@ -210,9 +212,9 @@ async def _unload_plugin_runtime(plugin_name: str) -> None:
     await _evict_plugin_sessions(plugin_name)
     from sandbox.daemon.rpc.dispatcher import OP_TABLE
 
-    for op in _LOADED.pop(plugin_name, []):
+    loaded = _LOADED.pop(plugin_name, None)
+    for op in (loaded.ops if loaded is not None else ()):
         OP_TABLE.pop(op, None)
-    _LOADED_DIGEST.pop(plugin_name, None)
     clear_plugin_registrations(plugin_name)
     _evict_plugin_runtime_modules(plugin_name)
     importlib.invalidate_caches()
