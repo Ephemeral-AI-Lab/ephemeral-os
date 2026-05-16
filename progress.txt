@@ -200,3 +200,71 @@ from data each recipe already fetched.
 - Hint is REQUIRED priority → never compressed under token budget (renderer.py:_compress only drops
   LOW/MEDIUM).
 
+## Session: 2026-05-16 — Tier B: Plumb evaluator per-criterion verdicts forward
+
+### Plan summary
+SWE-EVO PR descriptions are multi-bullet changelogs (`backend/config/benchmarks/sweevo_gpt5_2025_08_07_pr_descriptions.csv`).
+The harness was dropping structured per-criterion evaluator verdicts on the floor: submission
+tools accept `passed_criteria` / `failed_criteria` lists and orchestrator._write_submission_status
+persists them on the evaluator task row's `summaries[-1]["payload"]`, but `attempt_landscape.py`
+and `iteration/manager.py:_evaluator_pass_summary_for` only read the free-text summary. Tier B
+is a rendering-only plumbing fix — no Attempt/Iteration schema, no Alembic, no audit-contract
+field changes.
+
+### Stories
+- B1: Surface evaluator verdicts in failed_attempt_landscape (`Passed criteria:` / `Failed criteria:` lines under Evaluator Judgment).
+- B2: Append `Passed criteria:` block to `Iteration.task_summary` at successful close so the next iteration's planner sees done items via prior_iteration_summary.
+- B3: Extend `planner_instruction` text in all 4 branches with list-shape strategy hint (wide-DAG-with-per-bullet-criterion vs continues-goal-slicing).
+- B4: pytest + ruff + architect + deslop.
+
+### Key invariants (must NOT regress)
+- TaskStoreProtocol.get_evaluator_pass_summary(attempt_id) -> str signature unchanged.
+- Attempt and Iteration dataclasses unchanged (no new fields, no Alembic).
+- Existing test_attempt_landscape.py:test_evaluator_failure_renders_evaluator_judgment renders identically when payload absent.
+- Hint text remains profile-variant agnostic (no _BANNED_TERMINAL_TOOL_NAMES leak).
+- generator ends on PLANNED_TASK_SPEC; evaluator ends on EVALUATION_CRITERIA — unchanged.
+
+### Implementation summary (2026-05-16)
+- attempt_landscape.py: extended `_render_failed_attempt` Evaluator Judgment branch to append
+  `Passed criteria:` and `Failed criteria:` bullet blocks. Added `_evaluator_verdicts(task) -> tuple[list[str], list[str]]`
+  helper with defensive isinstance ladder against malformed `summaries[-1]['payload']` (context-engine
+  recipes must not crash on foreign data).
+- iteration/manager.py: extended `_evaluator_pass_summary_for` to fetch `attempt.evaluator_task_id`
+  via `task_store.get_task(...)` and append `Passed criteria:\n  - …` block when payload carries
+  passed_criteria. Added `_evaluator_passed_criteria(attempt) -> list[str]` helper. Edge case
+  `free_text="" + passed=[...]` returns just the block (no leading blank line).
+- recipes/role_instruction.py: extended all 4 planner branches with 1–2 sentences describing the
+  wide-DAG-with-per-bullet-criterion vs continues-goal-slicing tradeoff for list-shaped goals (e.g.
+  PR-description changelogs). Each branch contains the new locked substrings 'list of independent items'
+  and 'one criterion per item'.
+- Tests: 4 new tests in test_attempt_landscape.py (test_evaluator_judgment_includes_passed_criteria,
+  _includes_failed_criteria, _omits_verdicts_when_payload_empty, _renders_mixed_verdicts) cover the
+  rendering matrix. 2 new tests in test_iteration_manager.py (test_close_iteration_passed_appends_passed_criteria,
+  _omits_criteria_when_payload_empty) with new `_FakeTaskStore` + `_make_manager_with_task_store` helpers.
+  test_role_instruction.py: 4 planner branch tests gain new substring assertions in lockstep.
+
+### Verification
+- .venv/bin/pytest backend/tests/unit_test/test_task_center/: 282 passed.
+- .venv/bin/pytest backend/tests/unit_test/{test_tools,test_agents,test_engine,test_prompt}: 341 passed.
+- .venv/bin/ruff check on changed paths: clean.
+- rg banned terminal-tool names in role_instruction.py: 0 hits (variant-agnostic hint preserved).
+- Architect agent reviewer: APPROVED. All 22 ACs MET against B1/B2/B3. Two non-blocking
+  follow-ups noted (shared `_core/evaluator_payload.py` helper if a third caller appears;
+  test for `free_text="" + non-empty passed_criteria` branch — both deferred).
+- ai-slop-cleaner pass: no-op (architect-approved diff is already surgical; defensive isinstance
+  ladders are belt-and-suspenders for foreign-data rendering, not slop; helper duplication is
+  justified by caller-specific projection shapes).
+- Post-deslop regression: 282 passed, ruff clean.
+
+### Codebase landmarks (for future iterations)
+- Evaluator verdict persistence path: `orchestrator._write_submission_status` writes
+  `summary={"outcome", "summary", "payload": payload}` to `task_store.set_task_status`'s summary
+  arg. Reading back: `task.get("summaries")[-1].get("payload").get("passed_criteria" | "failed_criteria")`.
+- Per-criterion-verdict rendering seam (planner retry context): `attempt_landscape.py:_render_failed_attempt`
+  appends `Passed criteria:` / `Failed criteria:` lines to the Evaluator Judgment section.
+- Per-criterion-verdict iteration-handoff seam: `iteration/manager.py:_evaluator_pass_summary_for`
+  composes the free-text evaluator summary + structured passed_criteria block, which the
+  iteration store denormalises onto `Iteration.task_summary` at close.
+- New locked substring contracts in test_role_instruction.py for planner branches:
+  'list of independent items' AND 'one criterion per item' — future planner-hint refinements must
+  preserve both.

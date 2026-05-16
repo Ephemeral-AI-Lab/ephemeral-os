@@ -50,6 +50,8 @@ def test_planner_iter1_no_failed_attempts():
     _assert_role_instruction_shape(block)
     assert "first attempt" in block.text
     assert "continuation_goal" in block.text
+    assert "list of independent items" in block.text
+    assert "one criterion per item" in block.text
 
 
 def test_planner_iter1_with_failed_attempts():
@@ -59,6 +61,8 @@ def test_planner_iter1_with_failed_attempts():
     _assert_role_instruction_shape(block)
     assert "prior attempts in this iteration failed" in block.text
     assert "meaningfully different" in block.text
+    assert "list of independent items" in block.text
+    assert "one criterion per item" in block.text
 
 
 def test_planner_iter_n_no_failed_attempts():
@@ -68,6 +72,8 @@ def test_planner_iter_n_no_failed_attempts():
     _assert_role_instruction_shape(block)
     assert "Previous Iteration Results" in block.text
     assert "continue from where the prior iteration ended" in block.text
+    assert "list of independent items" in block.text
+    assert "one criterion per item" in block.text
 
 
 def test_planner_iter_n_with_failed_attempts():
@@ -77,6 +83,8 @@ def test_planner_iter_n_with_failed_attempts():
     _assert_role_instruction_shape(block)
     assert "Previous Iteration Results" in block.text
     assert "Prior Failed Attempts" in block.text
+    assert "list of independent items" in block.text
+    assert "one criterion per item" in block.text
 
 
 # ---------------------------------------------------------------------------

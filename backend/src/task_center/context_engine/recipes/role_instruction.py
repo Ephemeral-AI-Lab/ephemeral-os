@@ -46,7 +46,14 @@ def planner_instruction(
             "decomposes the iteration goal into generator tasks with a clear "
             "evaluation contract. If you cannot solve the iteration in one "
             "attempt, submit a partial plan with a continuation_goal so the "
-            "next iteration can pick up where this one ends."
+            "next iteration can pick up where this one ends. "
+            "When the iteration goal is a list of independent items (for "
+            "example a PR-description changelog of features and fixes), "
+            "prefer a wide parallel DAG with one sibling generator task per "
+            "item and one criterion per item; coalescing into a single "
+            "'all items done' criterion turns partial progress into total "
+            "failure. If one attempt cannot fit every item, bind a tighter "
+            "set of items here and defer the rest via continuation_goal."
         )
     elif iteration_sequence_no == 1 and has_failed_attempts:
         text = (
@@ -54,7 +61,12 @@ def planner_instruction(
             "One or more prior attempts in this iteration failed (see "
             "Prior Failed Attempts). Diagnose why earlier attempts failed and "
             "choose a meaningfully different decomposition, scope, or "
-            "evaluation contract — do not repeat a failing strategy."
+            "evaluation contract — do not repeat a failing strategy. "
+            "When the iteration goal is a list of independent items, the "
+            "prior failure landscape tells you which items already passed "
+            "their criterion and which did not; keep one criterion per item "
+            "and narrow this attempt's scope to the failing or skipped "
+            "items rather than re-running the full list."
         )
     elif iteration_sequence_no >= 2 and not has_failed_attempts:
         text = (
@@ -62,7 +74,12 @@ def planner_instruction(
             "prior iteration produced concrete results (see Previous "
             "Iteration Results). Your decomposition should continue from "
             "where the prior iteration ended — build on prior outputs, do "
-            "not redo their work."
+            "not redo their work. "
+            "When the iteration goal is a list of independent items, consult "
+            "Previous Iteration Results for which items already passed and "
+            "plan only the remaining items, keeping one criterion per item "
+            "so the evaluator can report per-item pass/fail rather than a "
+            "single coarse verdict."
         )
     else:
         text = (
@@ -71,7 +88,12 @@ def planner_instruction(
             "Results) and one or more attempts in the current iteration have "
             "failed (see Prior Failed Attempts). Build on prior-iteration "
             "outputs and avoid repeating the failure modes from the current "
-            "iteration."
+            "iteration. "
+            "When the iteration goal is a list of independent items, lean "
+            "on Previous Iteration Results for done items and on Prior "
+            "Failed Attempts for items the current iteration has already "
+            "tried unsuccessfully; keep one criterion per item and narrow "
+            "scope to items with a credible path to passing this attempt."
         )
     return _block(text)
 

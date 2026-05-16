@@ -99,12 +99,52 @@ def _render_failed_attempt(
         criteria_block = (
             "\n".join(f"  - {c}" for c in attempt.evaluation_criteria) or "  (none)"
         )
-        sections.append(
+        judgment = (
             "### Evaluator Judgment\n\n"
             f"Evaluation criteria:\n{criteria_block}\n\n"
             f"Evaluator summary:\n{evaluator_summary}"
         )
+        passed, failed = _evaluator_verdicts(evaluator_task)
+        if passed:
+            judgment += "\n\nPassed criteria:\n" + "\n".join(f"  - {c}" for c in passed)
+        if failed:
+            judgment += "\n\nFailed criteria:\n" + "\n".join(f"  - {c}" for c in failed)
+        sections.append(judgment)
     return "\n\n".join(sections)
+
+
+def _evaluator_verdicts(
+    evaluator_task: dict | None,
+) -> tuple[list[str], list[str]]:
+    """Pull passed_criteria / failed_criteria from the evaluator task's latest payload.
+
+    The orchestrator persists the evaluator submission as
+    ``summaries[-1] = {"outcome", "summary", "payload": {...}}``; payload may
+    carry ``passed_criteria`` (success path) or ``failed_criteria`` (failure
+    path). Missing keys or non-list values collapse to empty lists so the
+    caller can branch with ``if passed:`` / ``if failed:`` without further
+    defensive checks.
+    """
+    if evaluator_task is None:
+        return [], []
+    summaries = evaluator_task.get("summaries")
+    if not summaries:
+        return [], []
+    latest = summaries[-1]
+    if not isinstance(latest, dict):
+        return [], []
+    payload = latest.get("payload") or {}
+    if not isinstance(payload, dict):
+        return [], []
+
+    def _str_list(value: object) -> list[str]:
+        if not isinstance(value, list):
+            return []
+        return [str(item) for item in value if item]
+
+    return _str_list(payload.get("passed_criteria")), _str_list(
+        payload.get("failed_criteria")
+    )
 
 
 def _render_generator_outcomes(outcomes: list[_GeneratorOutcome]) -> str:

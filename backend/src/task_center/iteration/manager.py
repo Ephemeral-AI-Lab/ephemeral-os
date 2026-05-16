@@ -208,10 +208,50 @@ class IterationManager:
 
         Empty string when the manager is configured without a ``task_store``
         (test seams) or when the evaluator never recorded a summary.
+
+        When the evaluator submission carried a ``passed_criteria`` payload,
+        append a structured ``Passed criteria:`` block so the next iteration's
+        planner sees the done-items list via ``prior_iteration_summary`` —
+        the iteration store denormalises this string onto ``Iteration.task_summary``.
         """
         if self._task_store is None:
             return ""
-        return self._task_store.get_evaluator_pass_summary(attempt.id)
+        free_text = self._task_store.get_evaluator_pass_summary(attempt.id)
+        passed = self._evaluator_passed_criteria(attempt)
+        if not passed:
+            return free_text
+        block = "Passed criteria:\n" + "\n".join(f"  - {c}" for c in passed)
+        if not free_text:
+            return block
+        return f"{free_text}\n\n{block}"
+
+    def _evaluator_passed_criteria(self, attempt: Attempt) -> list[str]:
+        """Pull ``passed_criteria`` from the evaluator task's latest payload.
+
+        The orchestrator persists evaluator submissions as
+        ``summaries[-1] = {"outcome", "summary", "payload": {...}}``; on a
+        success submission the payload carries ``passed_criteria``. Defensive
+        against missing rows, non-dict summaries, and absent payload keys.
+        """
+        task_store = self._task_store
+        if task_store is None or attempt.evaluator_task_id is None:
+            return []
+        task = task_store.get_task(attempt.evaluator_task_id)
+        if task is None:
+            return []
+        summaries = task.get("summaries")
+        if not summaries:
+            return []
+        latest = summaries[-1]
+        if not isinstance(latest, dict):
+            return []
+        payload = latest.get("payload") or {}
+        if not isinstance(payload, dict):
+            return []
+        raw = payload.get("passed_criteria")
+        if not isinstance(raw, list):
+            return []
+        return [str(item) for item in raw if item]
 
     def _retry_or_close_failed(self, attempt: Attempt) -> None:
         while True:

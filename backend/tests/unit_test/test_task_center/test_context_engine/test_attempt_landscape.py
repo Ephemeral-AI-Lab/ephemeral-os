@@ -199,6 +199,170 @@ def test_evaluator_failure_renders_evaluator_judgment():
     assert "fail_reason" not in blocks[0].text
 
 
+def test_evaluator_judgment_includes_passed_criteria():
+    class TaskStore:
+        def get_task(self, task_id: str):
+            return {
+                "t-a": {
+                    "status": "done",
+                    "summaries": [{"summary": "generator completed"}],
+                },
+                "eval-1": {
+                    "summaries": [
+                        {
+                            "outcome": "success",
+                            "summary": "looks good",
+                            "payload": {"passed_criteria": ["c1", "c2"]},
+                        }
+                    ]
+                },
+            }.get(task_id)
+
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=None,
+        attempts=[
+            _attempt(
+                1,
+                task_specification="spec",
+                evaluation_criteria=("c1", "c2"),
+                generator_task_ids=("t-a",),
+                evaluator_task_id="eval-1",
+                fail_reason=AttemptFailReason.EVALUATOR_FAILED,
+            )
+        ],
+        task_store=TaskStore(),
+    )
+
+    text = blocks[0].text
+    assert "### Evaluator Judgment" in text
+    assert "Passed criteria:\n  - c1\n  - c2" in text
+    assert "Failed criteria:" not in text
+
+
+def test_evaluator_judgment_includes_failed_criteria():
+    class TaskStore:
+        def get_task(self, task_id: str):
+            return {
+                "t-a": {
+                    "status": "done",
+                    "summaries": [{"summary": "generator completed"}],
+                },
+                "eval-1": {
+                    "summaries": [
+                        {
+                            "outcome": "failure",
+                            "summary": "criterion X not met",
+                            "payload": {"failed_criteria": ["cX"]},
+                        }
+                    ]
+                },
+            }.get(task_id)
+
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=None,
+        attempts=[
+            _attempt(
+                1,
+                task_specification="spec",
+                evaluation_criteria=("cX",),
+                generator_task_ids=("t-a",),
+                evaluator_task_id="eval-1",
+                fail_reason=AttemptFailReason.EVALUATOR_FAILED,
+            )
+        ],
+        task_store=TaskStore(),
+    )
+
+    text = blocks[0].text
+    assert "Failed criteria:\n  - cX" in text
+    assert "Passed criteria:" not in text
+
+
+def test_evaluator_judgment_omits_verdicts_when_payload_empty():
+    class TaskStore:
+        def get_task(self, task_id: str):
+            return {
+                "t-a": {
+                    "status": "done",
+                    "summaries": [{"summary": "generator completed"}],
+                },
+                "eval-1": {
+                    "summaries": [
+                        {
+                            "outcome": "failure",
+                            "summary": "no structured verdict",
+                            "payload": {},
+                        }
+                    ]
+                },
+            }.get(task_id)
+
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=None,
+        attempts=[
+            _attempt(
+                1,
+                task_specification="spec",
+                evaluation_criteria=("c1",),
+                generator_task_ids=("t-a",),
+                evaluator_task_id="eval-1",
+                fail_reason=AttemptFailReason.EVALUATOR_FAILED,
+            )
+        ],
+        task_store=TaskStore(),
+    )
+
+    text = blocks[0].text
+    assert "### Evaluator Judgment" in text
+    assert "Passed criteria:" not in text
+    assert "Failed criteria:" not in text
+
+
+def test_evaluator_judgment_renders_mixed_verdicts():
+    class TaskStore:
+        def get_task(self, task_id: str):
+            return {
+                "t-a": {
+                    "status": "done",
+                    "summaries": [{"summary": "generator completed"}],
+                },
+                "eval-1": {
+                    "summaries": [
+                        {
+                            "outcome": "failure",
+                            "summary": "mixed",
+                            "payload": {
+                                "passed_criteria": ["c1"],
+                                "failed_criteria": ["c2"],
+                            },
+                        }
+                    ]
+                },
+            }.get(task_id)
+
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=None,
+        attempts=[
+            _attempt(
+                1,
+                task_specification="spec",
+                evaluation_criteria=("c1", "c2"),
+                generator_task_ids=("t-a",),
+                evaluator_task_id="eval-1",
+                fail_reason=AttemptFailReason.EVALUATOR_FAILED,
+            )
+        ],
+        task_store=TaskStore(),
+    )
+
+    text = blocks[0].text
+    passed_idx = text.index("Passed criteria:")
+    failed_idx = text.index("Failed criteria:")
+    assert passed_idx < failed_idx
+    assert "  - c1" in text
+    assert "  - c2" in text
+
+
 def test_generator_failure_hides_evaluator_and_keeps_blocked_task_in_status_only():
     class TaskStore:
         def get_task(self, task_id: str):

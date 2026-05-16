@@ -113,6 +113,103 @@ def test_passing_graph_with_null_continuation_emits_terminal_success(
     assert seg.status == IterationStatus.SUCCEEDED
 
 
+class _FakeTaskStore:
+    """Minimal TaskStoreProtocol surface used by _evaluator_pass_summary_for."""
+
+    def __init__(
+        self,
+        *,
+        free_text: str = "",
+        evaluator_task_id: str | None = None,
+        evaluator_task: dict | None = None,
+    ) -> None:
+        self._free_text = free_text
+        self._evaluator_task_id = evaluator_task_id
+        self._evaluator_task = evaluator_task
+
+    def get_evaluator_pass_summary(self, attempt_id: str) -> str:
+        return self._free_text
+
+    def get_task(self, task_id: str):
+        if task_id == self._evaluator_task_id:
+            return self._evaluator_task
+        return None
+
+
+def _make_manager_with_task_store(seg_id, iteration_store, attempt_store, task_store):
+    captured: list[IterationClosureReport] = []
+    mgr = IterationManager(
+        iteration_id=seg_id,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        on_iteration_closed=captured.append,
+        task_store=task_store,
+    )
+    return mgr, captured
+
+
+def test_close_iteration_passed_appends_passed_criteria(
+    goal_store, iteration_store, attempt_store, task_center_run_id
+):
+    seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id)
+    g = attempt_store.insert(iteration_id=seg_id, attempt_sequence_no=1)
+    iteration_store.append_attempt_id(seg_id, g.id)
+    attempt_store.set_evaluator_task_id(g.id, "eval-1")
+    attempt_store.close(g.id, status=AttemptStatus.PASSED, fail_reason=None)
+    task_store = _FakeTaskStore(
+        free_text="looks good",
+        evaluator_task_id="eval-1",
+        evaluator_task={
+            "summaries": [
+                {
+                    "outcome": "success",
+                    "summary": "looks good",
+                    "payload": {"passed_criteria": ["c1", "c2"]},
+                }
+            ],
+        },
+    )
+    mgr, _ = _make_manager_with_task_store(
+        seg_id, iteration_store, attempt_store, task_store
+    )
+    mgr.handle_attempt_closed(g.id)
+    seg = iteration_store.get(seg_id)
+    assert seg is not None
+    assert seg.task_summary is not None
+    assert "looks good" in seg.task_summary
+    assert "Passed criteria:\n  - c1\n  - c2" in seg.task_summary
+
+
+def test_close_iteration_passed_omits_criteria_when_payload_empty(
+    goal_store, iteration_store, attempt_store, task_center_run_id
+):
+    seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id)
+    g = attempt_store.insert(iteration_id=seg_id, attempt_sequence_no=1)
+    iteration_store.append_attempt_id(seg_id, g.id)
+    attempt_store.set_evaluator_task_id(g.id, "eval-1")
+    attempt_store.close(g.id, status=AttemptStatus.PASSED, fail_reason=None)
+    task_store = _FakeTaskStore(
+        free_text="all good",
+        evaluator_task_id="eval-1",
+        evaluator_task={
+            "summaries": [
+                {
+                    "outcome": "success",
+                    "summary": "all good",
+                    "payload": {},
+                }
+            ],
+        },
+    )
+    mgr, _ = _make_manager_with_task_store(
+        seg_id, iteration_store, attempt_store, task_store
+    )
+    mgr.handle_attempt_closed(g.id)
+    seg = iteration_store.get(seg_id)
+    assert seg is not None
+    assert seg.task_summary == "all good"
+
+
 def test_passing_graph_with_continuation_emits_success_continue(
     goal_store, iteration_store, attempt_store, task_center_run_id
 ):
