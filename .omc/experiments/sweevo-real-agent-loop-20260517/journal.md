@@ -38,3 +38,40 @@ Starting state: branch `codex/fix-dot-path-normalization-tests` at `2cba70f5f` (
 **Audit refs:** `.omc/experiments/sweevo-real-agent-loop-20260517/iter-1/console.log`
 
 **Guard:** `.venv/bin/pytest backend/tests/unit_test/test_benchmarks/test_sweevo_csv_runner_cli.py -q` -> `10 passed in 0.44s`.
+
+## Iter 2 — 2026-05-17 00:50
+
+**Hypothesis:** CSV runner bare-image fallback will pass snapshot preflight and reach sandbox provisioning/audit creation.
+**Primary surface touched:** none — infra validation
+**Infra patches (if any):**
+- `backend/src/task_center_runner/core/bootstrap.py:18` fix real-agent bootstrap profile root after the file moved under `task_center_runner/core`.
+- `backend/tests/unit_test/test_task_center_runner/test_real_agent_bootstrap.py:4` add a path guard for production agent profile loading.
+**Change-set:**
+- `backend/src/task_center_runner/core/bootstrap.py`
+- `backend/tests/unit_test/test_task_center_runner/test_real_agent_bootstrap.py`
+
+**Run outcome:**
+- resolved: false
+- f2p: n/a
+- p2p_broken: n/a
+- duration_s: 20
+- status: crashed
+- terminal failure mode: real-agent bootstrap asserted missing profile root at `backend/src/task_center_runner/agents/profile`.
+
+**Checklist scores (§2):**
+1. planner-terminal: n/a (bootstrap stopped before TaskCenter agents)
+2. planner-explore: n/a (bootstrap stopped before TaskCenter agents)
+3. planner-dag: n/a (bootstrap stopped before TaskCenter agents)
+4. planner-task-specs: n/a (bootstrap stopped before TaskCenter agents)
+5. executor-terminal: n/a (bootstrap stopped before TaskCenter agents)
+6. verifier-terminal: n/a (bootstrap stopped before TaskCenter agents)
+7. evaluator-terminal: n/a (bootstrap stopped before TaskCenter agents)
+8. nesting+parallelism: n/a (bootstrap stopped before TaskCenter agents)
+9. context-engine: n/a (bootstrap stopped before context rendering)
+10. perf: n/a (only sandbox creation ran)
+
+**Top finding (the one thing to fix next):** Sandbox creation now works through the bare-image path, but `bootstrap_real_agent_runtime` used a stale `_PROFILE_ROOT` derived from the old file location and failed before loading the production planner/executor/verifier/evaluator profiles.
+**Next hypothesis:** after fixing `_PROFILE_ROOT`, the same command will enter TaskCenter agent execution and produce per-agent audit messages.
+**Audit refs:** `.omc/experiments/sweevo-real-agent-loop-20260517/iter-2/console.log`
+
+**Guard:** `.venv/bin/pytest backend/tests/unit_test/test_task_center_runner/test_real_agent_bootstrap.py -q` -> `1 passed in 0.35s`; `.venv/bin/pytest backend/tests/unit_test/test_benchmarks/test_sweevo_csv_runner_cli.py -q` -> `10 passed in 0.39s`.
