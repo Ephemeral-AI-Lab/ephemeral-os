@@ -75,3 +75,45 @@ Starting state: branch `codex/fix-dot-path-normalization-tests` at `2cba70f5f` (
 **Audit refs:** `.omc/experiments/sweevo-real-agent-loop-20260517/iter-2/console.log`
 
 **Guard:** `.venv/bin/pytest backend/tests/unit_test/test_task_center_runner/test_real_agent_bootstrap.py -q` -> `1 passed in 0.35s`; `.venv/bin/pytest backend/tests/unit_test/test_benchmarks/test_sweevo_csv_runner_cli.py -q` -> `10 passed in 0.39s`.
+
+## Iter 3 — 2026-05-17 00:51
+
+**Hypothesis:** fixed profile bootstrap will let the CSV runner enter TaskCenter agent execution and produce per-agent audit messages.
+**Primary surface touched:** none — infra validation
+**Infra patches (if any):**
+- `backend/src/benchmarks/sweevo/__main__.py:428` use host cwd for `RuntimeConfig.cwd` instead of sandbox `/testbed`.
+- `backend/src/task_center_runner/core/real_agent_run.py:72` apply the same host-cwd split to the direct real-agent shim.
+- `backend/src/task_center_runner/benchmarks/sweevo/csv_runner.py:86` forward sandbox `/testbed` through `ExecutionMetadata.repo_root` / `exec_cwd` for non-entry real agents.
+**Change-set:**
+- `backend/src/benchmarks/sweevo/__main__.py`
+- `backend/src/task_center_runner/core/real_agent_run.py`
+- `backend/src/task_center_runner/benchmarks/sweevo/csv_runner.py`
+- `backend/tests/unit_test/test_benchmarks/test_sweevo_csv_runner_cli.py`
+- `backend/tests/unit_test/test_task_center_runner/test_sweevo_csv_runner_dispatch.py`
+- `backend/tests/unit_test/test_task_center_runner/test_real_agent_run.py`
+
+**Run outcome:**
+- resolved: false
+- f2p: 0/0
+- p2p_broken: 0
+- duration_s: 51
+- status: failed
+- terminal failure mode: planner agents crashed before model/tool work because host runtime cwd was set to sandbox path `/testbed`.
+
+**Checklist scores (§2):**
+1. planner-terminal: unobservable (planner crashed before response)
+2. planner-explore: unobservable (planner crashed before tool use)
+3. planner-dag: unobservable (no submitted plan)
+4. planner-task-specs: unobservable (no submitted plan)
+5. executor-terminal: n/a (no generator tasks launched)
+6. verifier-terminal: n/a (no verifier tasks launched)
+7. evaluator-terminal: n/a (no evaluator task launched)
+8. nesting+parallelism: n/a (no nested execution reached)
+9. context-engine: unobservable (planner prompt rendered, but agent crashed before consuming it)
+10. perf: pass (only entry handoff observed; `submit_execution_handoff` 84.755 ms, no sandbox hot-path events)
+
+**Top finding (the one thing to fix next):** The real-agent runtime conflated host cwd and sandbox repo dir. Host prompt assembly tried to create `/testbed/.ephemeralos` locally; sandbox tools still need `/testbed`, but only through execution metadata.
+**Next hypothesis:** after splitting host `RuntimeConfig.cwd` from sandbox `repo_root` / `exec_cwd`, planners will reach model/tool execution instead of crashing at spawn.
+**Audit refs:** `.omc/experiments/sweevo-real-agent-loop-20260517/iter-3/console.log`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T165257Z_37c040559e9c/run.json`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T165257Z_37c040559e9c/sweevo_result.json`
+
+**Guard:** `.venv/bin/pytest backend/tests/unit_test/test_benchmarks/test_sweevo_csv_runner_cli.py -q` -> `10 passed in 0.41s`; `.venv/bin/pytest backend/tests/unit_test/test_task_center_runner/test_sweevo_csv_runner_dispatch.py -q` -> `5 passed in 0.38s`; `.venv/bin/pytest backend/tests/unit_test/test_task_center_runner/test_real_agent_run.py -q` -> `1 passed in 0.38s`.

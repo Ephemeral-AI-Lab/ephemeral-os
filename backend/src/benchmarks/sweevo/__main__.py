@@ -425,7 +425,7 @@ async def _cmd_csv_runner(args: argparse.Namespace) -> int:
         )
         _step(f"csv_runner: audit_dir={audit_dir} max_duration_s={args.max_duration_s}")
         _step("csv_runner: building RunConfig (provisioner, runner_factory, lifecycle)")
-        runtime_cfg = RuntimeConfig(cwd=args.repo_dir, external_api_client=None)
+        runtime_cfg = RuntimeConfig(cwd=str(Path.cwd()), external_api_client=None)
         config = RunConfig(
             entry_prompt=goal,
             repo_dir=args.repo_dir,

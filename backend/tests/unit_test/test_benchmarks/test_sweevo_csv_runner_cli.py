@@ -205,6 +205,7 @@ def test_csv_runner_bare_image_skips_snapshot_preflight(
         return {"sandbox_id": "sbx-1"}
 
     async def fake_run_pipeline(_config: Any) -> SimpleNamespace:
+        captured["config"] = _config
         return SimpleNamespace(
             task_center_status="completed",
             task_center_run_id="run-1",
@@ -224,6 +225,8 @@ def test_csv_runner_bare_image_skips_snapshot_preflight(
     assert rc == 0
     assert captured["create_kwargs"]["snapshot_name"] == ""
     assert captured["create_kwargs"]["register_snapshot"] is False
+    assert captured["config"].repo_dir == "/testbed"
+    assert captured["config"].extras["runtime_config"].cwd == str(Path.cwd())
 
 
 def test_help_message_lists_csv_runner(capsys: pytest.CaptureFixture[str]) -> None:

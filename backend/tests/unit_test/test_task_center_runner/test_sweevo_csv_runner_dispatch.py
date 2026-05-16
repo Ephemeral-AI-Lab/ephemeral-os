@@ -178,7 +178,12 @@ async def test_non_entry_falls_through_to_real_runner(
     assert forwarded["persist_agent_run"] is True
     assert forwarded["task_id"] == "t-planner"
     assert forwarded["on_event"] is None
-    assert forwarded["extra_tool_metadata"] is metadata
+    forwarded_metadata = forwarded["extra_tool_metadata"]
+    assert forwarded_metadata is not metadata
+    assert forwarded_metadata.repo_root == "/r"
+    assert forwarded_metadata.exec_cwd == "/r"
+    assert forwarded_metadata.sandbox_id == "sbx-2"
+    assert forwarded_metadata.agent_name == "planner"
     raising_execute_tool_once.assert_not_called()
 
 

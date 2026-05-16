@@ -69,7 +69,7 @@ async def run_sweevo_real_agent(
     owns_stores = stores is None
     bundle = stores or create_per_test_task_center_stores()
 
-    runtime_cfg = RuntimeConfig(cwd=repo_dir, external_api_client=None)
+    runtime_cfg = RuntimeConfig(cwd=str(Path.cwd()), external_api_client=None)
     config = RunConfig(
         entry_prompt=build_sweevo_user_prompt(instance, repo_dir=repo_dir),
         repo_dir=repo_dir,

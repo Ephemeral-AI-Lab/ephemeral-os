@@ -83,6 +83,17 @@ def build_selective_entry_mock_runner_factory(
         # Lazy-import to keep the engine.api dependency edge contained.
         from engine.api import run_ephemeral_agent
 
+        if isinstance(extra_tool_metadata, ExecutionMetadata):
+            metadata = extra_tool_metadata.copy()
+        else:
+            metadata = ExecutionMetadata()
+            metadata.update(extra_tool_metadata or {})
+        metadata = metadata.with_overrides(
+            sandbox_id=str(sandbox_id or ""),
+            agent_name=str(getattr(agent_def, "name", "") or ""),
+            repo_root=repo_dir,
+            exec_cwd=repo_dir,
+        )
         return await run_ephemeral_agent(
             config,
             prompt,
@@ -91,7 +102,7 @@ def build_selective_entry_mock_runner_factory(
             persist_agent_run=persist_agent_run,
             task_id=task_id,
             on_event=on_event,
-            extra_tool_metadata=extra_tool_metadata,
+            extra_tool_metadata=metadata,
         )
 
     async def _run_entry_executor_via_handoff(
