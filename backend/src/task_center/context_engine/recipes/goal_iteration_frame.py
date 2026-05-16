@@ -1,7 +1,10 @@
-"""Shared block builders + helpers used by multiple recipes.
+"""Goal / iteration framing blocks shared by multiple recipes.
 
-Lives outside any single recipe module so generator / evaluator / planner /
-attempt_landscape don't import from each other.
+Owns :func:`goal_iteration_blocks` (the goal / current-iteration frame
+emitted by planner and evaluator) and :func:`latest_summary_text` (used
+by generator, evaluator, and attempt_landscape to read the most recent
+summary off a task row). Living in its own module keeps the consuming
+recipe modules independent of each other.
 """
 
 from __future__ import annotations

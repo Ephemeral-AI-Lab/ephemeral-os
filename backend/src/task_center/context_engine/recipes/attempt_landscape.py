@@ -10,7 +10,9 @@ from task_center.context_engine.packet import (
     ContextBlockKind,
     ContextPriority,
 )
-from task_center.context_engine.recipes._shared import latest_summary_text
+from task_center.context_engine.recipes.goal_iteration_frame import (
+    latest_summary_text,
+)
 from task_center.attempt.state import Attempt, AttemptStatus
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only

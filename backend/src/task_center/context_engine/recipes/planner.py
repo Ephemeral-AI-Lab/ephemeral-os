@@ -12,7 +12,9 @@ from __future__ import annotations
 
 from task_center.context_engine.core import ContextEngineDeps, ContextEngineError
 from task_center.context_engine.packet import ContextPacket, ContextRefs
-from task_center.context_engine.recipes._shared import goal_iteration_blocks
+from task_center.context_engine.recipes.goal_iteration_frame import (
+    goal_iteration_blocks,
+)
 from task_center.context_engine.recipes.attempt_landscape import (
     failed_attempt_landscape_blocks,
 )
