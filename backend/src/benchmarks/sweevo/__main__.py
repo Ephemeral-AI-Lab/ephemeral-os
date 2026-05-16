@@ -358,6 +358,7 @@ async def _cmd_csv_runner(args: argparse.Namespace) -> int:
         create_sweevo_test_sandbox,
         verify_sweevo_snapshot_exists,
     )
+    from benchmarks.sweevo.models import _has_explicit_sweevo_image_version
     from task_center_runner.benchmarks.sweevo.csv_runner import (
         build_selective_entry_mock_runner_factory,
     )
@@ -389,14 +390,21 @@ async def _cmd_csv_runner(args: argparse.Namespace) -> int:
     _step(f"csv_runner: instance loaded — repo={instance.repo}")
     _bootstrap_sandbox_provider()
 
-    _step("csv_runner: verifying sweevo snapshot is registered")
-    try:
-        snapshot_name = verify_sweevo_snapshot_exists(instance)
-    except SnapshotNotRegisteredError as exc:
-        _step(f"csv_runner: snapshot missing: {exc}")
-        print(str(exc), file=sys.stderr)
-        return 2
-    _step(f"csv_runner: snapshot ok — snapshot_name={snapshot_name}")
+    snapshot_name = ""
+    if _has_explicit_sweevo_image_version(instance.docker_image):
+        _step("csv_runner: verifying sweevo snapshot is registered")
+        try:
+            snapshot_name = verify_sweevo_snapshot_exists(instance)
+        except SnapshotNotRegisteredError as exc:
+            _step(f"csv_runner: snapshot missing: {exc}")
+            print(str(exc), file=sys.stderr)
+            return 2
+        _step(f"csv_runner: snapshot ok — snapshot_name={snapshot_name}")
+    else:
+        _step(
+            "csv_runner: snapshot preflight skipped — image has no explicit "
+            "non-latest version; using image directly"
+        )
 
     _step("csv_runner: creating sweevo test sandbox")
     sandbox_result = await create_sweevo_test_sandbox(

@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import asyncio
 import sys
+from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -123,7 +125,7 @@ def test_csv_runner_missing_snapshot_returns_2(
         patch="",
         fail_to_pass=[],
         pass_to_pass=[],
-        docker_image="img",
+        docker_image="example/image:1",
         test_cmds="pytest",
         environment_setup_commit="",
     )
@@ -158,6 +160,70 @@ def test_csv_runner_missing_snapshot_returns_2(
     assert rc == 2
     assert "register_sweevo_snapshot" in err
     assert "is not registered" in err
+
+
+def test_csv_runner_bare_image_skips_snapshot_preflight(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from benchmarks.sweevo import dataset as dataset_mod
+    from benchmarks.sweevo import prompt as prompt_mod
+    from benchmarks.sweevo import sandbox as sandbox_mod
+    import sandbox.api as sandbox_api
+    from task_center_runner.core import engine as engine_mod
+
+    captured: dict[str, Any] = {}
+
+    def fake_load_pr_description(instance_id: str, *, csv_path: Any = None) -> str:
+        return "fix the bug"
+
+    monkeypatch.setattr(prompt_mod, "load_pr_description", fake_load_pr_description)
+
+    fake_instance = dataset_mod.SWEEvoInstance(
+        instance_id="dask__dask_2023.3.2_2023.4.0",
+        repo="dask/dask",
+        base_commit="abc",
+        problem_statement="",
+        patch="",
+        fail_to_pass=[],
+        pass_to_pass=[],
+        docker_image="example/image",
+        test_cmds="pytest",
+        environment_setup_commit="",
+    )
+    monkeypatch.setattr(
+        dataset_mod, "load_sweevo_instance", lambda **_kw: fake_instance
+    )
+    monkeypatch.setattr(sweevo_main, "_bootstrap_sandbox_provider", lambda: None)
+    monkeypatch.setattr(
+        sandbox_mod,
+        "verify_sweevo_snapshot_exists",
+        lambda _instance: pytest.fail("bare image must not require snapshot preflight"),
+    )
+
+    async def fake_create(*_args: Any, **kwargs: Any) -> dict[str, object]:
+        captured["create_kwargs"] = kwargs
+        return {"sandbox_id": "sbx-1"}
+
+    async def fake_run_pipeline(_config: Any) -> SimpleNamespace:
+        return SimpleNamespace(
+            task_center_status="completed",
+            task_center_run_id="run-1",
+            lifecycle_extras={
+                "sweevo_result": SimpleNamespace(resolved=True, fix_rate=1.0)
+            },
+            run_dir=Path("/tmp/sweevo-run"),
+        )
+
+    monkeypatch.setattr(sandbox_mod, "create_sweevo_test_sandbox", fake_create)
+    monkeypatch.setattr(engine_mod, "run_pipeline", fake_run_pipeline)
+    monkeypatch.setattr(sandbox_api, "delete_sandbox", lambda _sandbox_id: None)
+
+    args = sweevo_main._build_parser().parse_args(_argv())
+    rc = asyncio.run(sweevo_main._cmd_csv_runner(args))
+
+    assert rc == 0
+    assert captured["create_kwargs"]["snapshot_name"] == ""
+    assert captured["create_kwargs"]["register_snapshot"] is False
 
 
 def test_help_message_lists_csv_runner(capsys: pytest.CaptureFixture[str]) -> None:
