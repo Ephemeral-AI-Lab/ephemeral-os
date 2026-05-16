@@ -153,3 +153,39 @@ Starting state: branch `codex/fix-dot-path-normalization-tests` at `2cba70f5f` (
 **Audit refs:** `.omc/experiments/sweevo-real-agent-loop-20260517/iter-4/console.log`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T165722Z_3398e9f9cf69/goal_01_bb2fb154-ad23-4155-a9f5-1239da47dc2f/iteration_01_9c7e845b-b555-4d58-9f05-8cf9be37746e/attempt_01_17f63ac1-b9de-4093-be74-d7dbe7f75f02/01_planner_17f63ac1-b9de-4093-be74-d7dbe7f75f02:planner/message.jsonl`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T165722Z_3398e9f9cf69/goal_02_094c1599-7a4e-4cb1-803f-f60c16b06e52/iteration_01_08cbf9c2-06bd-46e8-afef-e8fed65fe8be/attempt_01_05dfce16-81f0-4cc9-9e4d-e547d92b79e7/01_planner_05dfce16-81f0-4cc9-9e4d-e547d92b79e7:planner/message.jsonl`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T165722Z_3398e9f9cf69/metrics.json`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T165722Z_3398e9f9cf69/sandbox_events.jsonl`
 
 **Guard:** `.venv/bin/pytest backend/tests/unit_test/test_agents/test_planner_full_only_md.py -q` -> `8 passed in 0.22s`.
+
+## Iter 5 — 2026-05-17 01:32
+
+**Hypothesis:** explicit planner graph-agent names will prevent invalid `agent_name` retry loops and let nested handoffs launch executable tasks.
+**Primary surface touched:** prompts
+**Infra patches (if any):** none
+**Change-set:**
+- `backend/src/agents/profile/main/planner.md`
+- `backend/src/agents/profile/main/planner_full_only.md`
+- `backend/tests/unit_test/test_agents/test_planner_full_only_md.py`
+
+**Run outcome:**
+- resolved: false
+- f2p: 0/61
+- p2p_broken: 6246
+- duration_s: 552
+- status: completed
+- terminal failure mode: planners treated the Dask 2023.4.0 release notes as a request to author release-note docs, not as code-repair behavior deltas.
+
+**Checklist scores (§2):**
+1. planner-terminal: fail (both attempts used `submit_plan_closes_goal` for document-generation plans that did not cover the SWE-EVO code-repair goal)
+2. planner-explore: fail (planner did no codebase exploration before deciding the task was release-note writing)
+3. planner-dag: fail (single doc-generation task; no code-fix decomposition)
+4. planner-task-specs: fail (specs were self-contained but scoped to writing `release-notes-2023.4.0.rst`, not changing Dask behavior)
+5. executor-terminal: fail (attempt 1 claimed a nonexistent docs artifact; attempt 2 succeeded after writing a release-note file only)
+6. verifier-terminal: n/a (no verifier launched)
+7. evaluator-terminal: fail (attempt 2 evaluator passed the wrong document-generation goal while SWE-EVO resolved=false)
+8. nesting+parallelism: n/a (no nested goal; retry repeated the same wrong doc-generation shape)
+9. context-engine: fail (planner context lacked a benchmark/code-repair framing for release-note-shaped PR descriptions)
+10. perf: pass (`api.shell.overlay_s` max 2.580s; no OCC retry storm or layerstack warnings observed)
+
+**Top finding (the one thing to fix next):** The context/prompt stack hands the planner raw release notes as the goal without saying they are behavior deltas for the checked-out repo. The planner reasonably interpreted the text literally and produced release-note documents, which the internal evaluator accepted while the external SWE-EVO harness failed every f2p and broke all p2p.
+**Next hypothesis:** if planner profiles explicitly say release notes/changelogs/PR descriptions in a repo are code-repair targets unless a document artifact is explicitly requested, planners will produce implementation tasks instead of release-note-writing tasks.
+**Audit refs:** `.omc/experiments/sweevo-real-agent-loop-20260517/iter-5/console.log`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T173453Z_6bb38b07b2ab/sweevo_result.json`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T173453Z_6bb38b07b2ab/goal_01_2db1e830-95e0-44d4-8d70-add8929e309b/iteration_01_f080a84d-700e-4e52-8add-6449c44ba531/attempt_01_e16ad500-11ed-435d-aef2-919a6507c845/01_planner_e16ad500-11ed-435d-aef2-919a6507c845:planner/message.jsonl`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T173453Z_6bb38b07b2ab/goal_01_2db1e830-95e0-44d4-8d70-add8929e309b/iteration_01_f080a84d-700e-4e52-8add-6449c44ba531/attempt_02_62ca2889-456c-48a5-a1a8-c9043e77c0f4/03_evaluator_62ca2889-456c-48a5-a1a8-c9043e77c0f4:evaluator/message.jsonl`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T173453Z_6bb38b07b2ab/metrics.json`
+
+**Guard:** `.venv/bin/pytest backend/tests/unit_test/test_agents/test_planner_full_only_md.py -q` -> `9 passed in 0.22s`.

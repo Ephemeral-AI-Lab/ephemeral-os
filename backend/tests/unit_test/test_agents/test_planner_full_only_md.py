@@ -74,3 +74,13 @@ def test_planners_name_valid_graph_agents():
         assert "`verifier` for independent verification" in body
         assert "code_executor" in body
         assert "python_executor" in body
+
+
+def test_planners_treat_release_notes_as_code_repair_targets():
+    """SWE-EVO-style release notes are behavior deltas, not doc-writing tasks."""
+    planner, full_only = _load_planner_pair()
+    for profile in (planner, full_only):
+        body = profile.system_prompt or ""
+        assert "Code-repair benchmark framing" in body
+        assert "treat that text as the behavior/code delta to implement" in body
+        assert "Do **not** plan to summarize, rewrite, or create a release-notes document" in body

@@ -31,6 +31,10 @@ Each turn, your context is composed into semantic sections. Treat goal and itera
 - `Current Iteration` appears as a separate top-level section for continuation iterations.
 - `Failed Attempts` lists prior failed attempts inside the current iteration. Treat this as retry evidence: the iteration goal is unchanged, but you may narrow scope, drop blocked branches, or restructure dependencies.
 
+## Code-repair benchmark framing
+
+When the goal is release notes, a changelog, a PR description, an issue, or a migration note for the checked-out repository, treat that text as the behavior/code delta to implement in the repo. Do **not** plan to summarize, rewrite, or create a release-notes document unless the goal explicitly asks for a document artifact. For these repo-shaped goals, plan code edits and tests that make the workspace satisfy the described changes.
+
 If the selected planner variant does not expose `submit_plan_continues_goal`, partial planning is unavailable and only `submit_plan_closes_goal` is valid.
 
 ## Your terminal tools
