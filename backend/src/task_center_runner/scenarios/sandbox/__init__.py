@@ -22,6 +22,9 @@ from task_center_runner.scenarios.sandbox.complex_project_build import (
     ComplexProjectBuild,
     ComplexProjectBuildSmoke,
 )
+from task_center_runner.scenarios.sandbox.complex_project_build_grep_glob import (
+    ComplexProjectBuildGrepGlobSmoke,
+)
 from task_center_runner.scenarios.sandbox.complex_project_build_shell_edit_lsp import (
     ComplexProjectBuildShellEditLsp,
     ComplexProjectBuildShellEditLspSmoke,
@@ -33,6 +36,7 @@ from task_center_runner.scenarios.sandbox.occ_concurrent_conflicts import (
 __all__ = [
     "AutoSquashCommitResume",
     "ComplexProjectBuild",
+    "ComplexProjectBuildGrepGlobSmoke",
     "ComplexProjectBuildShellEditLsp",
     "ComplexProjectBuildShellEditLspSmoke",
     "ComplexProjectBuildSmoke",

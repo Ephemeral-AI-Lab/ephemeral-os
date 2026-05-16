@@ -9,6 +9,8 @@ allowed_tools:
   - write_file
   - edit_file
   - shell
+  - glob
+  - grep
   - run_subagent
   - ask_advisor
 terminals:

@@ -6,6 +6,7 @@ agent_kind: advisor
 agent_type: agent
 allowed_tools:
   - read_file
+  - glob
 terminals:
   - submit_advisor_feedback
 context_recipe: advisor

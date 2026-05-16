@@ -6,6 +6,7 @@ agent_kind: explorer
 agent_type: subagent
 allowed_tools:
   - read_file
+  - glob
 terminals:
   - submit_exploration_result
 ---

@@ -6,7 +6,7 @@ import logging
 import shutil
 import tempfile
 import threading
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
@@ -223,6 +223,9 @@ class LayerStack:
         manifest: Manifest | None = None,
     ) -> tuple[str, ...]:
         return self._view.list_dir(path, manifest or self.read_active_manifest())
+
+    def iter_paths(self, manifest: Manifest | None = None) -> Iterator[str]:
+        return self._view.iter_paths(manifest or self.read_active_manifest())
 
     def materialize(self, destination: str | Path, manifest: Manifest | None = None) -> None:
         self._view.materialize(destination, manifest or self.read_active_manifest())

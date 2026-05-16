@@ -155,10 +155,51 @@ class ShellResult(GuardedResultBase):
     warnings: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True, kw_only=True)
+class GlobRequest(SandboxRequestBase):
+    pattern: str
+    path: str | None = None
+
+
+@dataclass(frozen=True, kw_only=True)
+class GlobResult(SandboxResultBase):
+    filenames: tuple[str, ...] = ()
+    num_files: int = 0
+    truncated: bool = False
+
+
+@dataclass(frozen=True, kw_only=True)
+class SearchContentRequest(SandboxRequestBase):
+    pattern: str
+    path: str | None = None
+    glob_filter: str | None = None
+    output_mode: str = "files_with_matches"
+    head_limit: int | None = None
+    offset: int = 0
+    case_insensitive: bool = False
+    line_numbers: bool = False
+    multiline: bool = False
+
+
+@dataclass(frozen=True, kw_only=True)
+class SearchContentResult(SandboxResultBase):
+    mode: str = "files_with_matches"
+    filenames: tuple[str, ...] = ()
+    content: str = ""
+    num_files: int = 0
+    num_lines: int = 0
+    num_matches: int = 0
+    applied_limit: int | None = None
+    applied_offset: int = 0
+    truncated: bool = False
+
+
 __all__ = [
     "ConflictInfo",
     "EditFileRequest",
     "EditFileResult",
+    "GlobRequest",
+    "GlobResult",
     "GuardedResultBase",
     "RawExecResult",
     "ReadFileRequest",
@@ -166,6 +207,8 @@ __all__ = [
     "SandboxCaller",
     "SandboxRequestBase",
     "SandboxResultBase",
+    "SearchContentRequest",
+    "SearchContentResult",
     "SearchReplaceEdit",
     "ShellRequest",
     "ShellResult",

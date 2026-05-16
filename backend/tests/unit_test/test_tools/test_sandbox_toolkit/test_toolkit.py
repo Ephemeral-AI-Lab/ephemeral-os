@@ -26,6 +26,8 @@ def test_sandbox_exports_expected_tools():
         "read_file",
         "write_file",
         "edit_file",
+        "glob",
+        "grep",
     }
     assert names == expected
     assert not any(name.startswith("daytona_") for name in names)
@@ -43,6 +45,8 @@ async def test_registered_api_backed_tools_require_sandbox_id():
             "new_text": "new",
         },
         "shell": {"command": "echo hi"},
+        "glob": {"pattern": "*.py"},
+        "grep": {"pattern": "needle"},
     }
 
     assert set(api_inputs).issubset(tools_by_name)
@@ -101,7 +105,7 @@ def test_missing_sandbox_tool_absent():
 
 def test_sandbox_tool_count():
     tools = make_sandbox_tools()
-    assert len(tools) == 4
+    assert len(tools) == 6
 
 
 def test_sandbox_tools_omit_instruction_block():

@@ -20,6 +20,8 @@ SandboxOperation = Literal[
     "shell",
     "raw_exec",
     "plugin",
+    "glob_files",
+    "search_content",
 ]
 
 

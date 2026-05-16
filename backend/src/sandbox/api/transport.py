@@ -14,6 +14,8 @@ DAEMON_OP_READ_FILE = "api.v1.read_file"
 DAEMON_OP_WRITE_FILE = "api.v1.write_file"
 DAEMON_OP_EDIT_FILE = "api.v1.edit_file"
 DAEMON_OP_SHELL = "api.v1.shell"
+DAEMON_OP_FIND_FILES = "api.v1.find_files"
+DAEMON_OP_SEARCH_CONTENT = "api.v1.search_content"
 
 
 class DaemonSandboxTransport:
@@ -37,7 +39,9 @@ class DaemonSandboxTransport:
 
 __all__ = [
     "DAEMON_OP_EDIT_FILE",
+    "DAEMON_OP_FIND_FILES",
     "DAEMON_OP_READ_FILE",
+    "DAEMON_OP_SEARCH_CONTENT",
     "DAEMON_OP_SHELL",
     "DAEMON_OP_WRITE_FILE",
     "DaemonSandboxTransport",

@@ -9,7 +9,7 @@ from sandbox.daemon.handler import (
     workspace,
 )
 from sandbox.plugin import handler as plugin_handler
-from sandbox.daemon.handler import edit, read, write
+from sandbox.daemon.handler import edit, read, search, write
 from sandbox.daemon.rpc import dispatcher as server
 from sandbox.daemon.service import shell_runner
 
@@ -24,6 +24,10 @@ def test_daemon_op_table_routes_to_current_handler_layout() -> None:
         "api.v1.edit_file": edit.edit_file,
         "api.read_file": read.read_file,
         "api.v1.read_file": read.read_file,
+        "api.find_files": search.find_files,
+        "api.v1.find_files": search.find_files,
+        "api.search_content": search.search_content,
+        "api.v1.search_content": search.search_content,
         "api.shell": shell_runner.execute_shell_api,
         "api.v1.shell": shell_runner.execute_shell_api,
         "api.layer_metrics": metrics.layer_metrics,

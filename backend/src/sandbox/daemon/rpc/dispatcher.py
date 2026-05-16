@@ -178,7 +178,16 @@ def _to_response_dict(result: Any) -> dict[str, Any]:
 
 def _load_peer_bootstraps() -> None:
     from sandbox.plugin import handler as plugin_handler
-    from sandbox.daemon.handler import edit, health, metrics, overlay, read, workspace, write
+    from sandbox.daemon.handler import (
+        edit,
+        health,
+        metrics,
+        overlay,
+        read,
+        search,
+        workspace,
+        write,
+    )
     from sandbox.daemon.service import shell_runner
 
     bootstrap: dict[str, Handler] = {
@@ -189,12 +198,16 @@ def _load_peer_bootstraps() -> None:
         "api.layer_stack.fence_stale_staging": workspace.fence_stale_staging,
         "api.edit_file": edit.edit_file,
         "api.v1.edit_file": edit.edit_file,
+        "api.find_files": search.find_files,
+        "api.v1.find_files": search.find_files,
         "api.layer_metrics": metrics.layer_metrics,
         "api.plugin.ensure": plugin_handler.plugin_ensure,
         "api.plugin.status": plugin_handler.plugin_status,
         "api.read_file": read.read_file,
         "api.v1.read_file": read.read_file,
         "api.runtime.ready": health.runtime_ready,
+        "api.search_content": search.search_content,
+        "api.v1.search_content": search.search_content,
         "api.shell": shell_runner.execute_shell_api,
         "api.v1.shell": shell_runner.execute_shell_api,
         "api.workspace_binding": workspace.workspace_binding,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import AbstractContextManager
 from pathlib import Path
 
@@ -48,6 +49,9 @@ class LayerStackClient:
         manifest: Manifest,
     ) -> tuple[str, bool]:
         return self.manager.read_text(path, manifest)
+
+    def iter_paths(self, manifest: Manifest) -> Iterator[str]:
+        return self.manager.iter_paths(manifest)
 
     def materialize(
         self,

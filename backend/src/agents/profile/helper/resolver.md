@@ -9,6 +9,8 @@ allowed_tools:
   - write_file
   - edit_file
   - shell
+  - glob
+  - grep
 terminals:
   - submit_resolver_result
 context_recipe: resolver

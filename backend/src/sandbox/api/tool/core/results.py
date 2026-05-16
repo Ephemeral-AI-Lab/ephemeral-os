@@ -14,8 +14,10 @@ from sandbox.api.tool.core.daemon_response import (
 from sandbox._shared.models import (
     ConflictInfo,
     EditFileResult,
+    GlobResult,
     GuardedResultBase,
     ReadFileResult,
+    SearchContentResult,
     ShellResult,
 )
 
@@ -28,6 +30,40 @@ def read_result_from_daemon_response(raw: Mapping[str, object]) -> ReadFileResul
         exists=bool(raw.get("exists", False)),
         content=str(raw.get("content", "")),
         encoding=str(raw.get("encoding", "utf-8")),
+        timings=timings_from_daemon_response(raw.get("timings")),
+    )
+
+
+def glob_result_from_daemon_response(raw: Mapping[str, object]) -> GlobResult:
+    return GlobResult(
+        success=bool(raw.get("success", False)),
+        filenames=paths_from_daemon_response(raw.get("filenames")),
+        num_files=int_from_daemon_response(raw.get("num_files"), default=0),
+        truncated=bool(raw.get("truncated", False)),
+        timings=timings_from_daemon_response(raw.get("timings")),
+    )
+
+
+def search_content_result_from_daemon_response(
+    raw: Mapping[str, object],
+) -> SearchContentResult:
+    applied_limit_raw = raw.get("applied_limit")
+    applied_limit = (
+        int_from_daemon_response(applied_limit_raw, default=0)
+        if applied_limit_raw is not None
+        else None
+    )
+    return SearchContentResult(
+        success=bool(raw.get("success", False)),
+        mode=str(raw.get("mode", "files_with_matches")),
+        filenames=paths_from_daemon_response(raw.get("filenames")),
+        content=str(raw.get("content", "")),
+        num_files=int_from_daemon_response(raw.get("num_files"), default=0),
+        num_lines=int_from_daemon_response(raw.get("num_lines"), default=0),
+        num_matches=int_from_daemon_response(raw.get("num_matches"), default=0),
+        applied_limit=applied_limit,
+        applied_offset=int_from_daemon_response(raw.get("applied_offset"), default=0),
+        truncated=bool(raw.get("truncated", False)),
         timings=timings_from_daemon_response(raw.get("timings")),
     )
 

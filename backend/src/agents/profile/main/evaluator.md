@@ -7,6 +7,8 @@ agent_type: agent
 allowed_tools:
   - read_file
   - shell
+  - glob
+  - grep
   - ask_resolver
 terminals:
   - submit_evaluation_success

@@ -40,6 +40,7 @@ from task_center_runner.scenarios.planner_validation import (
 from task_center_runner.scenarios.sandbox import (
     AutoSquashCommitResume,
     ComplexProjectBuild,
+    ComplexProjectBuildGrepGlobSmoke,
     ComplexProjectBuildShellEditLsp,
     ComplexProjectBuildShellEditLspSmoke,
     ComplexProjectBuildSmoke,
@@ -72,6 +73,7 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     # Focused sandbox scenarios.
     "sandbox.auto_squash_commit_resume": AutoSquashCommitResume,
     "sandbox.complex_project_build": ComplexProjectBuild,
+    "sandbox.complex_project_build_grep_glob_smoke": ComplexProjectBuildGrepGlobSmoke,
     "sandbox.complex_project_build_shell_edit_lsp": ComplexProjectBuildShellEditLsp,
     "sandbox.complex_project_build_shell_edit_lsp_smoke": (
         ComplexProjectBuildShellEditLspSmoke
@@ -96,6 +98,7 @@ __all__ = [
     "AttemptRetryPlannerFailure",
     "AutoSquashCommitResume",
     "ComplexProjectBuild",
+    "ComplexProjectBuildGrepGlobSmoke",
     "ComplexProjectBuildShellEditLsp",
     "ComplexProjectBuildShellEditLspSmoke",
     "ComplexProjectBuildSmoke",

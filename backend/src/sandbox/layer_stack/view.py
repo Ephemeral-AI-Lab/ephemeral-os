@@ -5,6 +5,7 @@ from __future__ import annotations
 import errno
 import os
 import shutil
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Literal
 
@@ -159,6 +160,37 @@ class MergedView:
                 return tuple(sorted(names))
 
         return tuple(sorted(names))
+
+    def iter_paths(self, manifest: Manifest) -> Iterator[str]:
+        """Yield every visible workspace-relative file path in the manifest.
+
+        Walks layers newest-first (matching ``read_bytes`` semantics).
+        For each path, newer layers shadow older entries; whiteouts and
+        opaque-dir markers in newer layers mask matching files in older
+        layers. Symlinks are listed as paths (not followed).
+
+        Output is sorted alphabetically for deterministic test order.
+        """
+        visible: set[str] = set()
+        whiteouts_seen: set[str] = set()
+        opaque_dirs_seen: set[str] = set()
+
+        for layer in manifest.layers:
+            index = self._layer_index(layer)
+            for path in index.files:
+                if path in visible:
+                    continue
+                if path in whiteouts_seen:
+                    continue
+                if has_ancestor_in(path, whiteouts_seen):
+                    continue
+                if has_ancestor_in(path, opaque_dirs_seen):
+                    continue
+                visible.add(path)
+            whiteouts_seen.update(index.whiteouts)
+            opaque_dirs_seen.update(index.opaque_dirs)
+
+        yield from sorted(visible)
 
     def materialize(
         self,
