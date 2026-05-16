@@ -11,7 +11,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
 
-from sandbox.layer_stack.paths import remove_path, resolve_storage_path
+from sandbox.layer_stack.paths import (
+    TRANSIENT_LOWERDIR_DIR,
+    remove_path,
+    resolve_storage_path,
+)
 from sandbox.layer_stack.storage_lock import acquire_storage_writer_lock
 from sandbox.layer_stack.changes import LayerChange
 from sandbox.layer_stack.publisher import LayerPublisher
@@ -35,8 +39,6 @@ from sandbox.layer_stack.view import MergedView, SymlinkLookup
 from sandbox._shared.clock import monotonic_now
 
 logger = logging.getLogger(__name__)
-
-_TRANSIENT_LOWERDIR_DIR = "transient-lowerdirs"
 
 
 def _safe_request_part(value: str) -> str:
@@ -138,7 +140,7 @@ class LayerStack:
             lowerdir = (
                 self.storage_root
                 / "runtime"
-                / _TRANSIENT_LOWERDIR_DIR
+                / TRANSIENT_LOWERDIR_DIR
                 / f"{_safe_request_part(owner_request_id)}-{uuid4().hex[:8]}"
                 / "lower"
             )

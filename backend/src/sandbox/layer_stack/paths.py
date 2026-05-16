@@ -7,6 +7,12 @@ import shutil
 from collections.abc import Callable
 from pathlib import Path, PurePosixPath
 
+# Per-snapshot scratch directories live at
+# ``<storage_root>/runtime/<TRANSIENT_LOWERDIR_DIR>/<request-id>/lower``.
+# Shared between the layer_stack snapshot path (which creates them) and the
+# execution orchestrator cleanup path (which validates and removes them).
+TRANSIENT_LOWERDIR_DIR = "transient-lowerdirs"
+
 
 def join_layer_path(root: Path, rel: str) -> Path:
     if not rel:
@@ -80,6 +86,7 @@ def allocate_unique_layer_paths(
 
 
 __all__ = [
+    "TRANSIENT_LOWERDIR_DIR",
     "allocate_unique_layer_paths",
     "fsync_path",
     "join_layer_path",

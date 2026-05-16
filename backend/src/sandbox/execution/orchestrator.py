@@ -34,11 +34,10 @@ from sandbox.occ.changeset import ChangesetResult, CommitOptions
 from sandbox.occ.overlay_change_conversion import overlay_path_changes_to_occ_changes
 from sandbox.execution.path_change import OverlayPathChange
 from sandbox.daemon.async_bridge import run_sync_in_executor
+from sandbox.layer_stack.paths import TRANSIENT_LOWERDIR_DIR
 from sandbox._shared.clock import monotonic_now
 
 logger = logging.getLogger(__name__)
-
-_TRANSIENT_LOWERDIR_DIR = "transient-lowerdirs"
 
 WorkspaceCommandRunner = Callable[
     ...,
@@ -309,10 +308,10 @@ def _drop_transient_lowerdir(lease: object, *, storage_root: Path) -> None:
         return
     lowerdir = Path(raw)
     scratch_dir = lowerdir.parent
-    transient_root = storage_root / "runtime" / _TRANSIENT_LOWERDIR_DIR
+    transient_root = storage_root / "runtime" / TRANSIENT_LOWERDIR_DIR
     if (
         lowerdir.name != "lower"
-        or scratch_dir.parent.name != _TRANSIENT_LOWERDIR_DIR
+        or scratch_dir.parent.name != TRANSIENT_LOWERDIR_DIR
         or not scratch_dir.resolve(strict=False).is_relative_to(
             transient_root.resolve(strict=False)
         )
