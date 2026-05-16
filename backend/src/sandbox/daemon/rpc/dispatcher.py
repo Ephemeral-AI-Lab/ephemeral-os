@@ -30,12 +30,17 @@ OP_TABLE: dict[str, Handler] = {}
 def register_op(op: str, handler: Handler) -> None:
     """Register a daemon operation handler.
 
-    Peer bootstrap modules call this at import time. Dispatch remains a table
-    lookup; peer-specific branching belongs in peer handlers or pipelines.
+    Peer bootstrap modules call this at import time. Re-registering the
+    *same* handler under the same op is a no-op (so bootstrap can re-run
+    safely from tests); registering a *different* handler under an
+    already-claimed op raises so peer collisions surface loudly.
     """
     if not isinstance(op, str) or not op:
         raise ValueError("op must be a non-empty string")
-    if op in OP_TABLE:
+    existing = OP_TABLE.get(op)
+    if existing is handler:
+        return
+    if existing is not None:
         raise ValueError(f"runtime op already registered: {op}")
     OP_TABLE[op] = handler
 
@@ -173,11 +178,10 @@ def _to_response_dict(result: Any) -> dict[str, Any]:
 
 def _load_peer_bootstraps() -> None:
     from sandbox.plugin import handler as plugin_handler
-    from sandbox.daemon.handler import edit, health, metrics, read, workspace, write
-    from sandbox.daemon.handler import overlay as overlay_run
+    from sandbox.daemon.handler import edit, health, metrics, overlay, read, workspace, write
     from sandbox.daemon.service import shell_runner
 
-    OP_TABLE.update({
+    bootstrap: dict[str, Handler] = {
         "api.ensure_workspace_base": workspace.ensure_workspace_base,
         "api.build_workspace_base": workspace.build_workspace_base,
         "api.prepare_workspace_snapshot": workspace.prepare_workspace_snapshot,
@@ -196,8 +200,10 @@ def _load_peer_bootstraps() -> None:
         "api.workspace_binding": workspace.workspace_binding,
         "api.write_file": write.write_file,
         "api.v1.write_file": write.write_file,
-        "overlay.run": overlay_run.handle,
-    })
+        "overlay.run": overlay.run_snapshot_overlay,
+    }
+    for op, handler in bootstrap.items():
+        register_op(op, handler)
 
 
 _load_peer_bootstraps()

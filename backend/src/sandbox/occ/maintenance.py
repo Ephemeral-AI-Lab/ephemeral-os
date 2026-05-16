@@ -7,7 +7,7 @@ from typing import Protocol, runtime_checkable
 
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset import ChangesetResult
-from sandbox.occ.protocols import SnapshotReader
+from sandbox.occ.ports import LayerSnapshotReader
 from sandbox._shared.timing_keys import TimingKey
 from sandbox._shared.clock import monotonic_now
 
@@ -31,7 +31,7 @@ class AutoSquashMaintenancePolicy:
     def __init__(
         self,
         *,
-        snapshot_reader: SnapshotReader,
+        snapshot_reader: LayerSnapshotReader,
         squasher: SquashPort,
         max_depth: int,
     ) -> None:

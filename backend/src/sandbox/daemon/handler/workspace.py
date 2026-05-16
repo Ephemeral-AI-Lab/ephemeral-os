@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from sandbox.layer_stack.workspace_binding import require_workspace_binding
-from sandbox.daemon._toolbox import (
-    layer_stack_root as require_layer_stack_root,
+from sandbox.daemon.request_context import (
     require_arg,
+    require_layer_stack_root,
 )
 from sandbox.daemon import workspace_server
 from sandbox._shared.clock import monotonic_now

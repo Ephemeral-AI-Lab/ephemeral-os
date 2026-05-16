@@ -109,7 +109,7 @@ The daemon's deepest module chains:
 | `sandbox.daemon.occ_backend` | 4 |
 | `sandbox.occ.changeset` | 4 |
 | `sandbox.occ.gitignore` | 4 |
-| `sandbox.occ.hashing` | 4 |
+| `sandbox.occ.content_hashing` | 4 |
 | `sandbox.layer_stack.workspace_binding` | 3 (boundary case) |
 
 The `handler/tools/` subpackage is the highest-leverage target. It contains exactly three files (`edit.py`, `read.py`, `write.py`); flattening into `handler/` brings every public verb to ≤4 hops and matches the existing one-file-per-verb pattern for `health`/`metrics`/`overlay`/`workspace`. `dispatcher.py:178` already imports them as a group — the rename is a one-line change there plus `git mv`.

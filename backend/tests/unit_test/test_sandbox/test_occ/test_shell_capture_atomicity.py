@@ -32,8 +32,8 @@ async def test_shell_uses_occ_client_apply_changeset(
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    services = shell_runner.services({"layer_stack_root": stack.as_posix()})
-    occ_client = services[1]
+    backend = occ_backend.build_occ_backend(stack.as_posix())
+    occ_client = backend.occ_client
     assert isinstance(occ_client, OccClient), (
         "Shell capture must reach OCC through OccClient — direct OccService "
         "binding is forbidden by the plan §Shared OCC Publish Gate."

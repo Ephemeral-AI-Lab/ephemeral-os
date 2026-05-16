@@ -12,14 +12,13 @@ import pytest
 
 from sandbox.layer_stack import WriteLayerChange, LayerStack
 from sandbox.layer_stack.workspace_base import build_workspace_base
-from sandbox.occ.hashing import ContentHasher
+from sandbox.occ.content_hashing import ContentHasher
 from sandbox.occ.changeset import build_api_write_change
 from sandbox.occ.changeset import CommitOptions
 from sandbox.occ.changeset import FileStatus
 from sandbox.execution.contract import ShellProcessResult
 from sandbox.daemon import occ_backend
 from sandbox.daemon.service import shell_runner
-from sandbox.daemon._toolbox import services as request_services
 
 
 class _BlockingCommandRunner:
@@ -102,7 +101,7 @@ async def test_daemon_gitignore_uses_layer_stack_snapshot(tmp_path: Path) -> Non
     manager = LayerStack(tmp_path / f"stack-{uuid4().hex}")
     _publish(manager, tmp_path, ".gitignore", b"dist/\n")
     occ_backend.clear_backend_cache()
-    services = request_services(str(manager.storage_root))
+    services = occ_backend.build_occ_backend(str(manager.storage_root))
 
     # Reach through the OCC client to its underlying OccService for the assertion.
     result = await services.occ_client._service.apply_changeset(

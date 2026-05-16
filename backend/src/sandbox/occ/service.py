@@ -6,22 +6,19 @@ from collections.abc import Sequence
 from dataclasses import replace
 from typing import cast
 
+from sandbox._shared.clock import monotonic_now
+from sandbox._shared.timing_keys import TimingKey
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset import CommitOptions, PreparedChangeset
 from sandbox.occ.changeset import Change, ChangesetResult
-from sandbox.occ.commit_transaction import CommitTransaction
-from sandbox.occ.gitignore import GitignoreMatcher
-from sandbox.occ.hashing import infer_manifest_base_hash
-from sandbox.occ.maintenance import MaintenancePolicy
+from sandbox.occ.changeset_preparation import ChangesetPreparer
 from sandbox.occ.commit_queue import CommitQueue
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from sandbox.layer_stack.stack import LayerStack
-from sandbox.occ.preparer import ChangesetPreparer
-from sandbox._shared.timing_keys import TimingKey
+from sandbox.occ.commit_transaction import CommitTransaction
+from sandbox.occ.content_hashing import infer_snapshot_base_hash
+from sandbox.occ.gitignore import GitignoreMatcher
+from sandbox.occ.maintenance import MaintenancePolicy
+from sandbox.occ.ports import OccLayerStackPort
 from sandbox.daemon.async_bridge import run_sync_in_executor
-from sandbox._shared.clock import monotonic_now
 
 AUTO_SQUASH_MAX_DEPTH = 32
 
@@ -33,14 +30,14 @@ class OccService:
         self,
         *,
         gitignore: GitignoreMatcher,
-        layer_stack: LayerStack,
-        orchestrator: ChangesetPreparer | None = None,
+        layer_stack: OccLayerStackPort,
+        preparer: ChangesetPreparer | None = None,
         transaction: CommitTransaction | None = None,
         commit_queue: CommitQueue | None = None,
         maintenance: MaintenancePolicy | None = None,
     ) -> None:
         self._snapshot_reader = layer_stack
-        self._orchestrator = orchestrator or ChangesetPreparer(gitignore)
+        self._preparer = preparer or ChangesetPreparer(gitignore)
         self._transaction = transaction or CommitTransaction(
             snapshot_reader=layer_stack,
             staging=layer_stack,
@@ -228,14 +225,14 @@ class OccService:
         snapshot_reader = self._snapshot_reader
 
         def base_hash_reader(path: str) -> str | None:
-            return infer_manifest_base_hash(
+            return infer_snapshot_base_hash(
                 snapshot_reader=snapshot_reader,
                 manifest=effective_snapshot,
                 path=path,
             )
 
         prepare_start = monotonic_now()
-        prepared = self._orchestrator.prepare_sync(
+        prepared = self._preparer.prepare_sync(
             changes,
             snapshot=effective_snapshot,
             options=commit_options,

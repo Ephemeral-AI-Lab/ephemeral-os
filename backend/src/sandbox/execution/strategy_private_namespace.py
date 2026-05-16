@@ -23,7 +23,7 @@ from sandbox.execution.strategy_base import ExecutionStrategy
 
 NAMESPACE_INFRA_EXIT_CODE = 125
 NAMESPACE_CONTROL_REF = "namespace-control.json"
-NAMESPACE_FALLBACK_STRATEGY = "copy_backed"
+NAMESPACE_FALLBACK_STRATEGY = MountMode.COPY_BACKED.value
 
 
 class PrivateNamespaceStrategy(ExecutionStrategy):

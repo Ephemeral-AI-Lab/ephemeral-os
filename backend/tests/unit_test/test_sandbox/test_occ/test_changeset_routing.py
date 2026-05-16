@@ -10,7 +10,7 @@ from sandbox.occ.changeset import (
     OpaqueDirChange,
     SymlinkChange,
 )
-from sandbox.occ.preparer import ChangesetPreparer
+from sandbox.occ.changeset_preparation import ChangesetPreparer
 
 
 class _Gitignore:

@@ -38,14 +38,14 @@ _OVERLAY_COMMAND_POLICY = CommandExecPolicy(
 )
 
 
-async def handle(args: dict[str, Any]) -> dict[str, Any]:
+async def run_snapshot_overlay(args: dict[str, Any]) -> dict[str, Any]:
     if "layer_stack_root" not in args:
         raise ValueError("overlay.run requires layer_stack_root")
-    capture = await _handle_snapshot_overlay(args)
+    capture = await _run_snapshot_overlay(args)
     return capture.to_dict()
 
 
-async def _handle_snapshot_overlay(args: dict[str, Any]) -> OverlayCapture:
+async def _run_snapshot_overlay(args: dict[str, Any]) -> OverlayCapture:
     layer_stack = LayerStackClient(str(args["layer_stack_root"]))
     overlay_request = OverlayShellRequest.from_dict(_snapshot_request_payload(args))
     result = await execute_command(
@@ -126,4 +126,4 @@ def _snapshot_request_payload(args: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-__all__ = ["handle"]
+__all__ = ["run_snapshot_overlay"]

@@ -1,20 +1,23 @@
-"""Shared scaffolding for the per-verb handler modules.
+"""Per-request context shared by every daemon handler module.
 
-Owns the single source of truth for:
+Single source of truth for:
 
-* the in-workspace classifier predicate (``classify_path``),
-* the host-side single-path / ``layer_stack_root`` validation contract,
-* the result projection helpers used by ``write`` and
-  ``edit`` to turn a :class:`ChangesetResult` into the
-  host-visible payload.
+* the in-workspace classifier predicate (:func:`classify_path`),
+* the host-side request-argument validation contract
+  (:func:`require_arg`, :func:`require_layer_stack_root`,
+  :func:`required_single_path`),
+* no-follow filesystem helpers used by out-of-workspace verbs
+  (:func:`read_bytes_no_follow`, :func:`write_text_no_follow`),
+* result-payload projection used by ``write``/``edit`` to turn a
+  :class:`ChangesetResult` into the host-visible response
+  (:func:`project_changeset`, :func:`project_conflict`).
 
-The OCC backend tuple ``(LayerStackClient, OccClient, SnapshotGitignoreOracle,
-LayerStack)`` is owned by :mod:`sandbox.daemon.occ_backend`.
-The ``services`` helper is the canonical per-verb access point.
+The OCC backend tuple is owned by :mod:`sandbox.daemon.occ_backend`; handlers
+call :func:`sandbox.daemon.occ_backend.build_occ_backend` directly.
 
 ``shell`` does NOT use this module — the dispatcher routes it directly to
-``service.shell_runner``, whose worker scaffolding still owns its own service
-entrypoint and timing helpers.
+:mod:`sandbox.daemon.service.shell_runner`, which owns its own argv/env
+validation and timing helpers.
 """
 
 from __future__ import annotations
@@ -27,14 +30,12 @@ from typing import Literal, NamedTuple
 
 from sandbox.occ.changeset import ChangesetResult
 from sandbox.occ.gitignore import SnapshotGitignoreOracle
-from sandbox.daemon._wire import (
+from sandbox.daemon.result_projection import (
     committed_paths,
     conflict_and_status,
     conflict_to_dict,
     gitignore_cache_timings,
 )
-from sandbox.daemon import occ_backend
-from sandbox.daemon.occ_backend import OccBackend
 from sandbox._shared.clock import monotonic_now
 
 # -- classifier predicate ---------------------------------------------------
@@ -109,7 +110,7 @@ def require_arg(args: Mapping[str, object], key: str) -> str:
     return value
 
 
-def layer_stack_root(args: Mapping[str, object]) -> str:
+def require_layer_stack_root(args: Mapping[str, object]) -> str:
     return require_arg(args, "layer_stack_root")
 
 
@@ -125,13 +126,6 @@ def required_single_path(args: Mapping[str, object]) -> str:
     if not path:
         raise ValueError("path is required")
     return path
-
-
-# -- service cache (delegates to occ_backend) -------------------------------
-
-
-def services(layer_stack_root: str) -> OccBackend:
-    return occ_backend.build_occ_backend(layer_stack_root)
 
 
 # -- no-follow host filesystem helpers --------------------------------------
@@ -264,12 +258,11 @@ def project_conflict(
 __all__ = [
     "ClassifiedPath",
     "classify_path",
-    "layer_stack_root",
     "project_changeset",
     "project_conflict",
     "read_bytes_no_follow",
-    "required_single_path",
     "require_arg",
-    "services",
+    "require_layer_stack_root",
+    "required_single_path",
     "write_text_no_follow",
 ]

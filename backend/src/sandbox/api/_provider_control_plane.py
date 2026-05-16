@@ -1,4 +1,4 @@
-"""Public sandbox control verbs: lifecycle, discovery, preview URLs."""
+"""Provider-backed sandbox lifecycle, discovery, and preview URL verbs."""
 
 from __future__ import annotations
 

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from sandbox.layer_stack import WriteLayerChange, LayerStack
 from sandbox.occ.gitignore import SnapshotGitignoreOracle
-from sandbox.occ.hashing import ContentHasher
+from sandbox.occ.content_hashing import ContentHasher
 
 
 def _publish(manager: LayerStack, tmp_path: Path, rel: str, content: bytes) -> None:

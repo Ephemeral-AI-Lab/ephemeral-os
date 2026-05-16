@@ -95,7 +95,6 @@ async def test_cas_retry_exhaustion_returns_conflict_result(tmp_path: Path) -> N
     from sandbox.occ.commit_queue import MAX_OCC_CAS_RETRIES
     from sandbox.daemon import occ_backend
     from sandbox.daemon.handler import write
-    from sandbox.daemon._toolbox import services as request_services
 
     occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
@@ -103,7 +102,7 @@ async def test_cas_retry_exhaustion_returns_conflict_result(tmp_path: Path) -> N
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    services = request_services(stack.as_posix())
+    services = occ_backend.build_occ_backend(stack.as_posix())
     publisher = services.manager._publisher  # type: ignore[attr-defined]
 
     call_counter = {"n": 0}
@@ -151,9 +150,7 @@ def test_single_occ_backend_cache_per_layer_stack_root(
     the per-verb handler scaffolding (write/edit/read/shell) and the
     api-handler manager helper all resolve through the same factory.
     """
-    from sandbox.daemon import _toolbox as request_context
     from sandbox.daemon import occ_backend
-    from sandbox.daemon.service import shell_runner
 
     occ_backend.clear_backend_cache()
 
@@ -200,16 +197,8 @@ def test_single_occ_backend_cache_per_layer_stack_root(
 
     backend_a = occ_backend.build_occ_backend("/tmp/a")
 
-    # The per-verb scaffolding resolves to the cached OccBackend instance.
-    via_common = request_context.services("/tmp/a")
-    assert via_common is backend_a
+    # Every per-verb scaffolding path resolves to the cached OccBackend
+    # regardless of trailing path noise; handlers (edit/read/write/shell)
+    # all dereference fields off this single instance.
+    assert occ_backend.build_occ_backend("/tmp/a") is backend_a
     assert occ_backend.build_occ_backend("/tmp/a/.") is backend_a
-
-    # shell_runner returns a 4-tuple; the first three fields
-    # identity-match the cached OccBackend's fields.
-    via_command_exec_4tuple = shell_runner.services(
-        {"layer_stack_root": "/tmp/a"},
-    )
-    assert via_command_exec_4tuple[0] is backend_a.layer_stack
-    assert via_command_exec_4tuple[1] is backend_a.occ_client
-    assert via_command_exec_4tuple[2] is backend_a.gitignore

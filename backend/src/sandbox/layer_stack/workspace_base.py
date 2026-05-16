@@ -17,6 +17,7 @@ from sandbox.layer_stack.manifest import (
     Manifest,
     manifest_path,
     read_manifest,
+    write_layer_digest_atomic,
     write_manifest_atomic,
 )
 from sandbox.layer_stack.workspace_binding import (
@@ -120,7 +121,7 @@ def build_workspace_base(
     # _write_base_layer's per-file content_hash recheck already catches
     # mid-flight file edits at write time; no second full-tree rescan.
     layer_ref = _write_base_layer(stack, entries)
-    _write_base_digest_sidecar(stack, layer_ref.layer_id, root_hash)
+    write_layer_digest_atomic(stack, layer_ref.layer_id, root_hash)
     record_elapsed(timings, "workspace_base.write_layer_s", write_layer_start)
     manifest = Manifest(version=1, layers=(layer_ref,))
     write_manifest_start = monotonic_now()
@@ -276,22 +277,6 @@ def _write_base_layer(stack: Path, entries: tuple[_BaseEntry, ...]) -> LayerRef:
         shutil.rmtree(layer_dir, ignore_errors=True)
         raise
     return LayerRef(layer_id=layer_id, path=f"{LAYERS_DIR}/{layer_id}")
-
-
-_BASE_METADATA_DIR = ".layer-metadata"
-
-
-def _write_base_digest_sidecar(stack: Path, layer_id: str, root_hash: str) -> None:
-    metadata_dir = stack / _BASE_METADATA_DIR
-    metadata_dir.mkdir(parents=True, exist_ok=True)
-    digest_path = metadata_dir / f"{layer_id}.digest"
-    fd = os.open(str(digest_path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
-    try:
-        os.write(fd, root_hash.encode("ascii") + b"\n")
-        os.fsync(fd)
-    finally:
-        os.close(fd)
-    fsync_path(metadata_dir)
 
 
 def _file_hash(path: Path) -> str:

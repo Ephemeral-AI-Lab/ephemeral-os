@@ -29,7 +29,7 @@ def write_change(*, path, final_content, source="api_write", base_hash=None):
         base_hash=base_hash,
     )
 
-from sandbox.occ.hashing import ContentHasher
+from sandbox.occ.content_hashing import ContentHasher
 from sandbox.occ.service import OccService
 
 class _Gitignore:

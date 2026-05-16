@@ -11,7 +11,7 @@ from sandbox.layer_stack.changes import WriteLayerChange
 from sandbox.layer_stack.stack import LayerStack
 from sandbox.occ.changeset import CommitOptions
 from sandbox.occ.changeset import ChangesetResult, FileStatus
-from sandbox.occ.hashing import ContentHasher
+from sandbox.occ.content_hashing import ContentHasher
 from sandbox.occ.service import OccService
 
 

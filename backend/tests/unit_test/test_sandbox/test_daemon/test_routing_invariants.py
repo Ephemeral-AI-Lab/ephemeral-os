@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from sandbox.daemon.handler import overlay as overlay_run
 from sandbox.daemon.handler import (
     health,
     metrics,
+    overlay,
     workspace,
 )
 from sandbox.plugin import handler as plugin_handler
@@ -36,7 +36,7 @@ def test_daemon_op_table_routes_to_current_handler_layout() -> None:
             workspace.release_workspace_snapshot
         ),
         "api.workspace_binding": workspace.workspace_binding,
-        "overlay.run": overlay_run.handle,
+        "overlay.run": overlay.run_snapshot_overlay,
         "api.runtime.ready": health.runtime_ready,
         "api.layer_stack.fence_stale_staging": (
             workspace.fence_stale_staging

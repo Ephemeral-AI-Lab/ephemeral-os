@@ -72,10 +72,10 @@ def test_daemon_ready_reports_data_plane_failure(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    def fail_services(_layer_stack_root: str) -> object:
+    def fail_backend(_layer_stack_root: str) -> object:
         raise RuntimeError("synthetic data-plane failure")
 
-    monkeypatch.setattr(health.request_context, "services", fail_services)
+    monkeypatch.setattr(health.occ_backend, "build_occ_backend", fail_backend)
 
     response = health.runtime_ready(
         {"layer_stack_root": (tmp_path / "stack").as_posix()}
@@ -98,10 +98,12 @@ def test_daemon_ready_reports_incomplete_data_plane_backend(
     class _Backend:
         layer_stack = object()
 
-    def incomplete_services(_layer_stack_root: str) -> _Backend:
+    def incomplete_backend(_layer_stack_root: str) -> _Backend:
         return _Backend()
 
-    monkeypatch.setattr(health.request_context, "services", incomplete_services)
+    monkeypatch.setattr(
+        health.occ_backend, "build_occ_backend", incomplete_backend
+    )
 
     response = health.runtime_ready(
         {"layer_stack_root": (tmp_path / "stack").as_posix()}
@@ -121,19 +123,9 @@ def test_daemon_ready_reports_mutation_gate_failure(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    class _Backend:
-        layer_stack = object()
-        occ_client = object()
-        gitignore = object()
-        manager = object()
-
-    def fake_services(_layer_stack_root: str) -> _Backend:
-        return _Backend()
-
     def fail_backend(_layer_stack_root: str) -> object:
         raise RuntimeError("synthetic mutation-gate failure")
 
-    monkeypatch.setattr(health.request_context, "services", fake_services)
     monkeypatch.setattr(health.occ_backend, "build_occ_backend", fail_backend)
 
     response = health.runtime_ready(
@@ -159,14 +151,13 @@ def test_daemon_ready_reports_incomplete_mutation_gate_backend(
         occ_client = object()
         gitignore = object()
 
-    def fake_services(_layer_stack_root: str) -> _Backend:
+    def fake_backend(_layer_stack_root: str) -> _Backend:
         return _Backend()
 
-    monkeypatch.setattr(health.request_context, "services", fake_services)
     monkeypatch.setattr(
         health.occ_backend,
         "build_occ_backend",
-        fake_services,
+        fake_backend,
     )
 
     response = health.runtime_ready(

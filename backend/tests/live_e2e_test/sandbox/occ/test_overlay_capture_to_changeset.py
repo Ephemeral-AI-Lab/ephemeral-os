@@ -13,7 +13,7 @@ pytestmark = pytest.mark.asyncio
 
 _OVERLAY_CAPTURE_BODY = r"""
 from sandbox.occ.changeset import DeleteChange, OpaqueDirChange, SymlinkChange, WriteChange
-from sandbox.occ.overlay import overlay_path_changes_to_occ_changes
+from sandbox.occ.overlay_change_conversion import overlay_path_changes_to_occ_changes
 from sandbox.overlay import OverlayPathChange, content_hash
 from sandbox.overlay import capture_changes
 from sandbox.layer_stack.manifest import Manifest

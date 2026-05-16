@@ -16,25 +16,25 @@ from sandbox.execution import (
 )
 from sandbox.layer_stack.workspace_binding import require_workspace_binding
 from sandbox.occ.gitignore import SnapshotGitignoreOracle
-from sandbox.daemon._toolbox import layer_stack_root
-from sandbox.daemon._wire import (
+from sandbox.daemon.occ_backend import build_occ_backend
+from sandbox.daemon.request_context import require_layer_stack_root
+from sandbox.daemon.result_projection import (
     conflict_and_status,
     conflict_to_dict,
     gitignore_cache_timings,
     published_paths,
 )
-from sandbox.daemon import occ_backend
 
 
 async def execute_shell_api(args: dict[str, object]) -> dict[str, object]:
     """Public ``api.shell`` execution entrypoint used by the handler layer."""
-    layer_stack, occ_client, gitignore, storage_root = services(args)
+    backend = build_occ_backend(require_layer_stack_root(args))
     result = await _execute_shell(
         args,
-        layer_stack=layer_stack,
-        occ_client=occ_client,
-        gitignore=gitignore,
-        storage_root=storage_root,
+        layer_stack=backend.layer_stack,
+        occ_client=backend.occ_client,
+        gitignore=backend.gitignore,
+        storage_root=backend.layer_stack.storage_root,
     )
     return _payload_from_result(result)
 
@@ -87,23 +87,6 @@ def _payload_from_result(result: CommandExecResult) -> dict[str, object]:
     }
 
 
-def services(
-    args: Mapping[str, object],
-) -> tuple[
-    WorkspaceLeaseClient,
-    OCCMutationClient,
-    SnapshotGitignoreOracle,
-    Path,
-]:
-    backend = occ_backend.build_occ_backend(layer_stack_root(args))
-    return (
-        backend.layer_stack,
-        backend.occ_client,
-        backend.gitignore,
-        backend.layer_stack.storage_root,
-    )
-
-
 # WR-08: conservative argv-size cap below typical Linux ARG_MAX (~128 KiB).
 # A caller pushing a large blob into a single argv element used to trip
 # the kernel's E2BIG at exec time with an opaque OSError; this surfaces a
@@ -126,7 +109,7 @@ def _command_request(args: Mapping[str, object]) -> CommandExecRequest:
             "stream large blobs via stdin instead"
         )
     timeout = args.get("timeout_seconds", args.get("timeout"))
-    workspace_ref = layer_stack_root(args)
+    workspace_ref = require_layer_stack_root(args)
     binding = require_workspace_binding(workspace_ref)
     env = _safe_env(_mapping(args.get("env")))
     return CommandExecRequest(

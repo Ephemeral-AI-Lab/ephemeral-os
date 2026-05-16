@@ -13,9 +13,9 @@ from sandbox.occ.changeset import (
 from sandbox.occ.client import OccClient
 from sandbox.occ.commit_queue import CommitQueue
 from sandbox.occ.commit_transaction import CommitTransaction
-from sandbox.occ.preparer import ChangesetPreparer
+from sandbox.occ.changeset_preparation import ChangesetPreparer
 from sandbox.occ.service import OccService
-from sandbox.occ.stage import DirectStager, GatedStager
+from sandbox.occ.path_staging import DirectStager, GatedStager
 
 __all__ = [
     "Change",

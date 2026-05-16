@@ -1,4 +1,4 @@
-"""Narrow layer-stack role ports consumed by OCC."""
+"""Layer-stack and workspace-binding ports consumed by OCC."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ class WorkspaceBindingSnapshot:
     layer_stack_root: str
 
 
-class SnapshotReader(Protocol):
+class LayerSnapshotReader(Protocol):
     """Read immutable snapshot content without exposing storage layout."""
 
     def read_active_manifest(self) -> Manifest: ...
@@ -38,7 +38,7 @@ class SnapshotReader(Protocol):
     ) -> tuple[str, bool]: ...
 
 
-class CommitStagingStore(Protocol):
+class LayerCommitStagingStore(Protocol):
     """Allocate and drop OCC-owned staging directories."""
 
     def allocate_commit_staging(self, request_id: str) -> CommitStagingArea: ...
@@ -46,7 +46,9 @@ class CommitStagingStore(Protocol):
     def drop_commit_staging(self, staging_id: str) -> None: ...
 
 
-class CommitTransactionPort(Protocol):
+class LayerCommitTransaction(Protocol):
+    """Active layer-stack commit transaction used by one OCC publish."""
+
     @property
     def lock_wait_s(self) -> float: ...
 
@@ -64,10 +66,19 @@ class CommitTransactionPort(Protocol):
     ) -> Manifest: ...
 
 
-class CommitPublisher(Protocol):
+class LayerCommitPublisher(Protocol):
     """Publish accepted staged changes through the storage CAS primitive."""
 
-    def commit_transaction(self) -> AbstractContextManager[CommitTransactionPort]: ...
+    def commit_transaction(self) -> AbstractContextManager[LayerCommitTransaction]: ...
+
+
+class OccLayerStackPort(
+    LayerSnapshotReader,
+    LayerCommitStagingStore,
+    LayerCommitPublisher,
+    Protocol,
+):
+    """Combined layer-stack capability needed by the OCC service."""
 
 
 class WorkspaceBindingReader(Protocol):
@@ -80,11 +91,12 @@ class WorkspaceBindingReader(Protocol):
 
 
 __all__ = [
-    "CommitPublisher",
     "CommitStagingArea",
-    "CommitStagingStore",
-    "CommitTransactionPort",
-    "SnapshotReader",
+    "LayerCommitPublisher",
+    "LayerCommitTransaction",
+    "LayerCommitStagingStore",
+    "LayerSnapshotReader",
+    "OccLayerStackPort",
     "WorkspaceBindingReader",
     "WorkspaceBindingSnapshot",
 ]

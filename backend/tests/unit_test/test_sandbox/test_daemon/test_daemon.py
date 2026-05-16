@@ -11,7 +11,6 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.daemon import _toolbox as request_context
 from sandbox.daemon.handler import workspace as workspace_handler
 from sandbox.daemon.rpc import dispatcher as server
 from sandbox.daemon.rpc import server as daemon
@@ -210,9 +209,9 @@ def test_services_cached_per_layer_stack_root(
         ),
     )
 
-    a1 = request_context.services("/tmp/a")
-    a2 = request_context.services("/tmp/a")
-    b1 = request_context.services("/tmp/b")
+    a1 = occ_backend.build_occ_backend("/tmp/a")
+    a2 = occ_backend.build_occ_backend("/tmp/a")
+    b1 = occ_backend.build_occ_backend("/tmp/b")
 
     assert a1 is a2  # same root → cached tuple
     assert a1.manager is not b1.manager  # different roots → distinct managers

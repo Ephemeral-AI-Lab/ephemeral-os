@@ -15,8 +15,8 @@ from sandbox.occ.changeset import (
     OpaqueDirChange,
     SymlinkChange,
 )
-from sandbox.occ.stage import DirectStager
-from sandbox.occ.hashing import ContentHasher
+from sandbox.occ.path_staging import DirectStager
+from sandbox.occ.content_hashing import ContentHasher
 
 
 def _source(tmp_path: Path, name: str, content: bytes) -> Path:

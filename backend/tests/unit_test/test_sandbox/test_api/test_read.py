@@ -1,11 +1,11 @@
-"""Tests for ``sandbox.api._impl.read``."""
+"""Tests for ``sandbox.api._tool_verbs.read``."""
 
 from __future__ import annotations
 
 import pytest
 
 from sandbox.api import ReadFileRequest, SandboxCaller
-import sandbox.api._impl.read as read_module
+import sandbox.api._tool_verbs.read as read_module
 
 
 @pytest.mark.asyncio

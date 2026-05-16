@@ -12,7 +12,7 @@ pytestmark = pytest.mark.asyncio
 
 
 _MERGE_BODY = r"""
-import sandbox.occ.stage as merge_facade
+import sandbox.occ.path_staging as merge_facade
 from sandbox.layer_stack.changes import LayerChange, WriteLayerChange
 from sandbox.layer_stack.stack import LayerStack
 from sandbox.occ.changeset import PreparedPathGroup, RouteDecision
@@ -31,7 +31,7 @@ def write_change(*, path, final_content, source="api_write", base_hash=None):
         base_hash=base_hash,
     )
 
-from sandbox.occ.hashing import ContentHasher
+from sandbox.occ.content_hashing import ContentHasher
 
 def _publish(stack, rel, content):
     stack.publish_changes([

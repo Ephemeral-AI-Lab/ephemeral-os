@@ -1,6 +1,6 @@
 """Phase 05 — in-workspace edit byte derivation tests.
 
-In-workspace edit reads bytes via the SnapshotReader port (LayerStackClient
+In-workspace edit reads bytes via the LayerSnapshotReader port (LayerStackClient
 .read_bytes), validates anchors against snapshot N, derives final bytes,
 and submits a single WriteChange to OCC. OCC sees only final bytes —
 not search/replace anchors — so it cannot silently re-derive against
@@ -18,7 +18,6 @@ from sandbox.layer_stack import LayerStack
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.occ.changeset import WriteChange
 from sandbox.daemon import occ_backend
-from sandbox.daemon._toolbox import services as request_services
 from sandbox.daemon.handler import edit, write
 
 
@@ -33,7 +32,7 @@ async def test_in_workspace_edit_reads_bytes_via_snapshot_reader(
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    services = request_services(stack.as_posix())
+    services = occ_backend.build_occ_backend(stack.as_posix())
     seen_manifests: list[object] = []
     real_read_bytes = services.layer_stack.read_bytes
 
@@ -59,10 +58,10 @@ async def test_in_workspace_edit_reads_bytes_via_snapshot_reader(
     assert result["success"] is True
     assert result["changed_paths"] == ["a.txt"]
     assert result["applied_edits"] == 1
-    # The handler reached SnapshotReader.read_bytes with a leased manifest at
+    # The handler reached LayerSnapshotReader.read_bytes with a leased manifest at
     # least once (OCC may call back through the same port for base-hash
     # inference + revalidation; the first call is the byte-derivation read).
-    assert seen_manifests, "edit handler must read bytes via SnapshotReader port"
+    assert seen_manifests, "edit handler must read bytes via LayerSnapshotReader port"
     assert seen_manifests[0] is not None
 
 
@@ -78,7 +77,7 @@ async def test_in_workspace_edit_submits_write_change_with_derived_bytes(
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    services = request_services(stack.as_posix())
+    services = occ_backend.build_occ_backend(stack.as_posix())
 
     submitted_changes: list[object] = []
     real_commit = services.occ_client.commit_prepared
@@ -162,7 +161,7 @@ async def test_in_workspace_edit_same_path_M_gt_N_surfaces_hard_conflict(
     from sandbox.occ.changeset import build_api_write_change
     from sandbox.occ.changeset import CommitOptions
     from sandbox.occ.changeset import FileStatus
-    from sandbox.occ.hashing import ContentHasher
+    from sandbox.occ.content_hashing import ContentHasher
 
     occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
@@ -171,7 +170,7 @@ async def test_in_workspace_edit_same_path_M_gt_N_surfaces_hard_conflict(
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    services = request_services(stack.as_posix())
+    services = occ_backend.build_occ_backend(stack.as_posix())
     manager: LayerStack = services.manager
     occ_service = services.occ_client._service  # type: ignore[attr-defined]
 

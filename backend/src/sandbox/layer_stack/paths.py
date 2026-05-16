@@ -30,9 +30,7 @@ def resolve_storage_path(storage_root: Path, path: str) -> Path:
     joined = storage_root / candidate
     resolved = joined.resolve(strict=False)
     storage_resolved = storage_root.resolve(strict=False)
-    if resolved != storage_resolved and not resolved.is_relative_to(
-        storage_resolved
-    ):
+    if not resolved.is_relative_to(storage_resolved):
         raise ValueError(
             f"layer path escapes storage_root: {path!r} -> {resolved}"
         )

@@ -24,8 +24,10 @@ from sandbox.layer_stack.manifest import (
     LayerRef,
     Manifest,
     ManifestConflictError,
+    layer_digest_path,
     manifest_path,
     read_manifest,
+    write_layer_digest_atomic,
     write_manifest_atomic,
 )
 from sandbox._shared.clock import monotonic_now, record_elapsed
@@ -72,11 +74,11 @@ class LayerPublisher:
             source_root=source_root,
         )
         if _head_layer_digest(self._storage_root, active) == layer_digest:
-            _record_prepare_elapsed(timings, prepare_start)
+            record_elapsed(timings, "layer_stack.publish.prepare_changes_s", prepare_start)
             record_elapsed(timings, "layer_stack.publish.idempotent_s", total_start)
             record_elapsed(timings, "layer_stack.publish.total_s", total_start)
             return active
-        _record_prepare_elapsed(timings, prepare_start)
+        record_elapsed(timings, "layer_stack.publish.prepare_changes_s", prepare_start)
 
         allocate_start = monotonic_now()
         layer_id, staging_dir, layer_dir = self._allocate_layer_paths(active.version + 1)
@@ -95,7 +97,7 @@ class LayerPublisher:
             layer_dir.parent.mkdir(parents=True, exist_ok=True)
             os.replace(staging_dir, layer_dir)
             fsync_path(layer_dir.parent)
-            _write_layer_digest(self._storage_root, layer_id, layer_digest)
+            write_layer_digest_atomic(self._storage_root, layer_id, layer_digest)
             record_elapsed(timings, "layer_stack.publish.replace_staging_s", replace_start)
         except Exception:
             shutil.rmtree(staging_dir, ignore_errors=True)
@@ -113,7 +115,7 @@ class LayerPublisher:
         record_elapsed(timings, "layer_stack.publish.read_latest_manifest_s", read_latest_start)
         if latest != active:
             remove_path(layer_dir)
-            _digest_path(self._storage_root, layer_id).unlink(missing_ok=True)
+            layer_digest_path(self._storage_root, layer_id).unlink(missing_ok=True)
             raise ManifestConflictError(
                 "active manifest changed during layer publish: "
                 f"expected version {active.version}, found version {latest.version}"
@@ -123,7 +125,7 @@ class LayerPublisher:
             write_manifest_atomic(self._manifest_file, new_manifest)
         except Exception:
             remove_path(layer_dir)
-            _digest_path(self._storage_root, layer_id).unlink(missing_ok=True)
+            layer_digest_path(self._storage_root, layer_id).unlink(missing_ok=True)
             raise
         record_elapsed(timings, "layer_stack.publish.write_manifest_s", write_manifest_start)
         record_elapsed(timings, "layer_stack.publish.total_s", total_start)
@@ -143,15 +145,6 @@ def _default_layer_id(next_version: int) -> str:
     return f"L{next_version:06d}-{uuid.uuid4().hex[:8]}"
 
 
-def _record_prepare_elapsed(
-    timings: dict[str, float] | None,
-    prepare_start: float,
-) -> None:
-    if timings is None:
-        return
-    timings["layer_stack.publish.prepare_changes_s"] = monotonic_now() - prepare_start
-
-
 def _prepare_changes(
     changes: Sequence[LayerChange],
     *,
@@ -169,28 +162,6 @@ def _prepare_changes(
     return tuple(prepared), digest.hexdigest()
 
 
-def _metadata_dir(storage_root: Path) -> Path:
-    return storage_root / ".layer-metadata"
-
-
-def _digest_path(storage_root: Path, layer_id: str) -> Path:
-    return _metadata_dir(storage_root) / f"{layer_id}.digest"
-
-
-def _write_layer_digest(storage_root: Path, layer_id: str, digest: str) -> None:
-    metadata = _metadata_dir(storage_root)
-    metadata.mkdir(parents=True, exist_ok=True)
-    target = _digest_path(storage_root, layer_id)
-    data = digest.encode("utf-8")
-    fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
-    try:
-        os.write(fd, data)
-        os.fsync(fd)
-    finally:
-        os.close(fd)
-    fsync_path(metadata)
-
-
 def _fsync_tree_files(root: Path) -> None:
     """fsync every regular file under *root* (skip symlinks)."""
     for current_root, _dirnames, filenames in os.walk(root, followlinks=False):
@@ -205,7 +176,7 @@ def _head_layer_digest(storage_root: Path, active: Manifest) -> str | None:
     if not active.layers:
         return None
     try:
-        return _digest_path(storage_root, active.layers[0].layer_id).read_text(
+        return layer_digest_path(storage_root, active.layers[0].layer_id).read_text(
             encoding="utf-8",
         )
     except OSError:

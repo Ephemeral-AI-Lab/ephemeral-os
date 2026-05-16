@@ -1,11 +1,11 @@
-"""Tests for ``sandbox.api._impl.edit``."""
+"""Tests for ``sandbox.api._tool_verbs.edit``."""
 
 from __future__ import annotations
 
 import pytest
 
 from sandbox.api import EditFileRequest, SandboxCaller, SearchReplaceEdit
-from sandbox.api._impl.edit import edit_file
+from sandbox.api._tool_verbs.edit import edit_file
 
 
 @pytest.mark.asyncio

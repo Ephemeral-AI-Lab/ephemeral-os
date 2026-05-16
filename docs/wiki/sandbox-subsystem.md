@@ -24,7 +24,7 @@ _Source: explore agent draft, 2026-05-10. See `.omc/wiki-draft/sandbox.md`._
 
 Sync lifecycle/discovery calls route through `api/lifecycle.py`,
 `api/discovery.py`, and `api/preview_urls.py`. Tool verbs route through
-`api/_impl/{shell,raw_exec,read,write,edit}.py`.
+`api/_tool_verbs/{shell,raw_exec,read,write,edit}.py`.
 
 ## Subsystem map
 

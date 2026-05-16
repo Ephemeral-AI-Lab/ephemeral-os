@@ -4,10 +4,10 @@ Request and result dataclasses are owned by :mod:`sandbox.models`; they are
 re-exported here to preserve the existing public import path.
 
 Import ordering is load-bearing: ``sandbox.models`` must bind before
-``sandbox.api._control`` runs, because the chain
-``_control -> host.lifecycle -> plugin.session -> tools.sandbox._lib.session``
-re-enters this package looking for ``SandboxCaller``. Do not let an
-auto-formatter reorder these blocks.
+``sandbox.api._provider_control_plane`` runs, because the chain
+``_provider_control_plane -> host.lifecycle -> plugin.session ->
+tools.sandbox._lib.session`` re-enters this package looking for
+``SandboxCaller``. Do not let an auto-formatter reorder these blocks.
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ from sandbox._shared.models import (
     WriteFileRequest,
     WriteFileResult,
 )
-from sandbox.api._control import (  # isort: skip -- models must precede control
+from sandbox.api._provider_control_plane import (  # isort: skip -- models precede control plane
     configured_sandbox_defaults,
     context_preparer_for,
     create_sandbox,
@@ -45,11 +45,11 @@ from sandbox.api._control import (  # isort: skip -- models must precede control
     start_sandbox,
     stop_sandbox,
 )
-from sandbox.api._impl.edit import edit_file
-from sandbox.api._impl.raw_exec import raw_exec
-from sandbox.api._impl.read import read_file
-from sandbox.api._impl.shell import shell
-from sandbox.api._impl.write import write_file
+from sandbox.api._tool_verbs.edit import edit_file
+from sandbox.api._tool_verbs.raw_exec import raw_exec
+from sandbox.api._tool_verbs.read import read_file
+from sandbox.api._tool_verbs.shell import shell
+from sandbox.api._tool_verbs.write import write_file
 
 __all__ = [
     "ConflictInfo",

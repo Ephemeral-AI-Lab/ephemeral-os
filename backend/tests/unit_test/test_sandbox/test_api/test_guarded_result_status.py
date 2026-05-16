@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from sandbox.daemon._wire import (
+from sandbox.daemon.result_projection import (
     committed_paths,
     conflict_and_status,
     conflict_to_dict,

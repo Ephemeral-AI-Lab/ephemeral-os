@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from sandbox.layer_stack.workspace_binding import read_workspace_binding
-from sandbox.daemon._toolbox import layer_stack_root as require_layer_stack_root
 from sandbox.daemon import occ_backend
+from sandbox.daemon.request_context import require_layer_stack_root
 
 
 async def layer_metrics(args: dict[str, object]) -> dict[str, object]:

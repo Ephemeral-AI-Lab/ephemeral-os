@@ -277,10 +277,10 @@ def test_command_exec_imports_only_client_protocol_boundaries() -> None:
         "sandbox.occ.service",
         "sandbox.occ.commit_transaction",
         "sandbox.occ.gitignore",
-        "sandbox.occ.stage",
-        "sandbox.occ.stage",
-        "sandbox.occ.preparer",
-        "sandbox.occ.hashing",
+        "sandbox.occ.path_staging",
+        "sandbox.occ.path_staging",
+        "sandbox.occ.changeset_preparation",
+        "sandbox.occ.content_hashing",
         "sandbox.daemon.workspace_server",
     )
     for module in _python_files(command_exec_root):

@@ -31,7 +31,7 @@ from sandbox.execution.strategy_private_namespace import (
     detect_private_mount_namespace,
 )
 from sandbox.occ.changeset import ChangesetResult, CommitOptions
-from sandbox.occ.overlay import overlay_path_changes_to_occ_changes
+from sandbox.occ.overlay_change_conversion import overlay_path_changes_to_occ_changes
 from sandbox.execution.path_change import OverlayPathChange
 from sandbox.daemon.async_bridge import run_sync_in_executor
 from sandbox._shared.clock import monotonic_now
@@ -280,7 +280,9 @@ async def _apply_workspace_capture(
 
 
 def _drop_non_capture_run_dir_entries(run_dir: Path) -> None:
-    for name in ("workspace", "work", "lower", "merged"):
+    # Only "workspace" and "work" are ever created (by CopyBackedStrategy);
+    # the namespace strategy mounts in-place and never writes them.
+    for name in ("workspace", "work"):
         shutil.rmtree(run_dir / name, ignore_errors=True)
 
 
@@ -293,12 +295,9 @@ def _run_dir(storage_root: Path, request_id: str) -> Path:
         char if char.isalnum() or char in ("-", "_") else "-"
         for char in request_id
     ).strip("-")
-    run_parent = _command_exec_runtime_root(storage_root)
-    return run_parent / f"{safe_id or 'request'}-{uuid4().hex[:8]}"
-
-
-def _command_exec_runtime_root(storage_root: Path) -> Path:
-    return storage_root / "runtime" / "command_exec"
+    return storage_root / "runtime" / "command_exec" / (
+        f"{safe_id or 'request'}-{uuid4().hex[:8]}"
+    )
 
 
 def _drop_transient_lowerdir(lease: object, *, storage_root: Path) -> None:

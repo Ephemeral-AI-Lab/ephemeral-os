@@ -11,7 +11,7 @@ from sandbox.layer_stack.stack import LayerStack
 from sandbox.occ.changeset import RouteDecision
 from sandbox.occ.changeset import DeleteChange, EditChange, WriteChange
 from sandbox.occ.gitignore import GitignoreMatcher
-from sandbox.occ.hashing import ContentHasher
+from sandbox.occ.content_hashing import ContentHasher
 from sandbox.occ.service import OccService
 
 _HASHER = ContentHasher()

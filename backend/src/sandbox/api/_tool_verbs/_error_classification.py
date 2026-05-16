@@ -1,4 +1,4 @@
-"""Client-side error classification for public sandbox API verbs."""
+"""Classify daemon-raised errors into public sandbox API result statuses."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from sandbox.audit.conflict_markers import (
     EDIT_CONFLICT_MARKERS as _EDIT_CONFLICT_MARKERS,
     SHELL_CONFLICT_MARKERS as _SHELL_CONFLICT_MARKERS,
 )
-from sandbox.api._impl._payload import error_message
+from sandbox.api._tool_verbs._daemon_payload import error_message
 
 _EDIT_CONFLICT_CODES = {
     "aborted_overlap",
@@ -50,6 +50,3 @@ def is_shell_conflict(error: BaseException) -> bool:
         return True
     lowered = error_message(error).lower()
     return any(marker in lowered for marker in _SHELL_CONFLICT_MARKERS)
-
-
-__all__ = ["is_edit_conflict", "is_shell_conflict"]

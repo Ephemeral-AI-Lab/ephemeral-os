@@ -22,7 +22,7 @@ from sandbox.occ.changeset import (
     FileStatus,
 )
 from sandbox.occ.commit_transaction import CommitTransaction
-from sandbox.occ.hashing import ContentHasher
+from sandbox.occ.content_hashing import ContentHasher
 from sandbox.occ.service import OccService
 
 

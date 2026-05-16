@@ -22,11 +22,11 @@ from sandbox.occ.gitignore import (
     GitignoreMatcher,
     SnapshotGitignoreMatcher,
 )
-from sandbox.occ.hashing import ContentHasher
+from sandbox.occ.content_hashing import ContentHasher
 from sandbox._shared.timing_keys import TimingKey
 from sandbox._shared.clock import monotonic_now
 
-BaseHashReader = Callable[[str], str | None]
+BaseHashLookup = Callable[[str], str | None]
 
 
 class ChangesetPreparer:
@@ -44,7 +44,7 @@ class ChangesetPreparer:
         *,
         snapshot: Manifest | None,
         options: CommitOptions,
-        base_hash_reader: BaseHashReader | None = None,
+        base_hash_reader: BaseHashLookup | None = None,
     ) -> PreparedChangeset:
         """Route changes and infer gated base hashes synchronously by path."""
         group_start = monotonic_now()
@@ -76,7 +76,7 @@ class ChangesetPreparer:
         change: Change,
         *,
         snapshot: Manifest,
-        base_hash_reader: BaseHashReader | None = None,
+        base_hash_reader: BaseHashLookup | None = None,
         atomic: bool = False,
     ) -> PreparedChangeset:
         """Prepare one path through the same routing rules as batch prepare."""
@@ -178,7 +178,7 @@ class ChangesetPreparer:
         route: RouteDecision,
         changes: tuple[Change, ...],
         message: str | None,
-        base_hash_reader: BaseHashReader | None,
+        base_hash_reader: BaseHashLookup | None,
     ) -> PreparedPathGroup:
         if (
             route is not RouteDecision.GATED
@@ -223,7 +223,7 @@ def prepare_single_path_changeset(
     *,
     snapshot: Manifest,
     gitignore: SnapshotGitignoreMatcher,
-    base_hash_reader: BaseHashReader | None = None,
+    base_hash_reader: BaseHashLookup | None = None,
     atomic: bool = False,
 ) -> PreparedChangeset:
     """Prepare one path through the shared router fast branch."""
@@ -236,7 +236,7 @@ def prepare_single_path_changeset(
 
 
 __all__ = [
-    "BaseHashReader",
+    "BaseHashLookup",
     "ChangesetPreparer",
     "prepare_single_path_changeset",
 ]

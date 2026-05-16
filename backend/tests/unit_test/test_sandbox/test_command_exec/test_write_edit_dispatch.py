@@ -14,10 +14,9 @@ import pytest
 
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.daemon.handler import metrics
-from sandbox.daemon._toolbox import (
+from sandbox.daemon.request_context import (
     ClassifiedPath,
     classify_path,
-    services as request_services,
 )
 from sandbox.daemon.handler import edit, read, write
 from sandbox.daemon.rpc import dispatcher as server
@@ -204,7 +203,7 @@ async def test_write_edit_read_share_lease_registry_with_shell(
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    write_services = request_services(stack.as_posix())
+    write_services = occ_backend.build_occ_backend(stack.as_posix())
     manager_via_singleton = get_layer_stack_manager(stack.as_posix())
 
     # The write/edit/read services point at the same LayerStack singleton

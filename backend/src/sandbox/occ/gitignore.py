@@ -15,7 +15,7 @@ from typing import Any, Protocol, runtime_checkable
 import pathspec
 
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.occ.protocols import SnapshotReader
+from sandbox.occ.ports import LayerSnapshotReader
 
 ReadGitignoreFn = Callable[[str], str | None]
 
@@ -162,12 +162,12 @@ class PathspecGitignoreOracle:
 class SnapshotGitignoreOracle:
     """Evaluate gitignore rules directly from a layer-stack snapshot.
 
-    The oracle reads ``.gitignore`` files through ``SnapshotReader.read_text``.
+    The oracle reads ``.gitignore`` files through ``LayerSnapshotReader.read_text``.
     It keeps one pathspec evaluator per manifest version so repeated lookups in
     the same runtime process reuse parsed ``.gitignore`` specs and path verdicts.
     """
 
-    def __init__(self, snapshot_reader: SnapshotReader) -> None:
+    def __init__(self, snapshot_reader: LayerSnapshotReader) -> None:
         self._snapshot_reader = snapshot_reader
         self._oracles: dict[int, PathspecGitignoreOracle] = {}
         self.cache_hits: int = 0

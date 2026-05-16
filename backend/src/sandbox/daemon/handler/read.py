@@ -6,11 +6,11 @@ from pathlib import Path
 from uuid import uuid4
 
 from sandbox.layer_stack.workspace_binding import require_workspace_binding
-from sandbox.daemon._toolbox import (
+from sandbox.daemon.occ_backend import build_occ_backend
+from sandbox.daemon.request_context import (
     classify_path,
-    layer_stack_root as require_layer_stack_root,
+    require_layer_stack_root,
     required_single_path,
-    services as backend_services,
 )
 from sandbox._shared.clock import monotonic_now
 
@@ -47,7 +47,7 @@ def _read_in_workspace(
     layer_path: str,
     total_start: float,
 ) -> dict[str, object]:
-    services = backend_services(layer_stack_root)
+    services = build_occ_backend(layer_stack_root)
     request_id = uuid4().hex
     lease_start = monotonic_now()
     lease = services.manager.acquire_snapshot_lease(request_id)

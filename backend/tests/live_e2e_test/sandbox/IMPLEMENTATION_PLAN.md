@@ -91,10 +91,10 @@ correctness under race. Files needing this are flagged **(+ race)** below.
 | 6 | `occ/test_serial_merger.py` **(+ race, required)** | `sandbox.occ.commit_queue` | ordering, fairness, no starvation; cancel mid-wait. Race: N=16 waiters → FIFO upheld, no waiter starves > 30 s |
 | 7 | `occ/test_routing.py` | `sandbox.occ.routing` | direct vs gated decision per payload; route override priority |
 | 8 | `occ/test_content_gitignore_oracle.py` | `sandbox.occ.gitignore` | nested .gitignore; `!` re-include; case-folding fs |
-| 9 | `occ/test_direct_route.py` **(+ race)** | `sandbox.occ.stage` | empty changeset; 10k-path changeset; no contention. Race: N=8 direct commits disjoint paths → all succeed, no lock blow-up |
-| 10 | `occ/test_gated_route.py` **(race-by-definition)** | `sandbox.occ.stage` | first-commits-wins; both-reject; partial overlap (test is inherently concurrent — confirm spec, not added) |
+| 9 | `occ/test_direct_route.py` **(+ race)** | `sandbox.occ.path_staging` | empty changeset; 10k-path changeset; no contention. Race: N=8 direct commits disjoint paths → all succeed, no lock blow-up |
+| 10 | `occ/test_gated_route.py` **(race-by-definition)** | `sandbox.occ.path_staging` | first-commits-wins; both-reject; partial overlap (test is inherently concurrent — confirm spec, not added) |
 | 11 | `occ/test_merge_engine.py` | `sandbox.occ.merge` | non-conflict hunks; conflict hunks; binary; CRLF/LF |
-| 12 | `occ/test_overlay_capture_to_changeset.py` | `sandbox.occ.overlay` | overlay-with-whiteouts → changeset; renames; mixed tracked/gitignored |
+| 12 | `occ/test_overlay_capture_to_changeset.py` | `sandbox.occ.overlay_change_conversion` | overlay-with-whiteouts → changeset; renames; mixed tracked/gitignored |
 
 `overlay/native/` files (P0):
 

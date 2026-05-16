@@ -20,6 +20,29 @@ MANIFEST_SCHEMA_VERSION = 1
 ACTIVE_MANIFEST_FILE = "manifest.json"
 LAYERS_DIR = "layers"
 STAGING_DIR = "staging"
+LAYER_METADATA_DIR = ".layer-metadata"
+
+
+def layer_digest_path(storage_root: str | Path, layer_id: str) -> Path:
+    """Resolve the per-layer digest sidecar path used for publish idempotency."""
+    return Path(storage_root) / LAYER_METADATA_DIR / f"{layer_id}.digest"
+
+
+def write_layer_digest_atomic(
+    storage_root: str | Path,
+    layer_id: str,
+    digest: str,
+) -> None:
+    """Persist a per-layer digest sidecar with the same fsync discipline as the manifest."""
+    target = layer_digest_path(storage_root, layer_id)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
+    try:
+        os.write(fd, digest.encode("utf-8"))
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    fsync_path(target.parent)
 
 
 @dataclass(frozen=True, order=True)
@@ -166,6 +189,7 @@ class FileManifestStore:
 __all__ = [
     "ACTIVE_MANIFEST_FILE",
     "FileManifestStore",
+    "LAYER_METADATA_DIR",
     "LAYERS_DIR",
     "LayerRef",
     "MANIFEST_SCHEMA_VERSION",
@@ -173,8 +197,10 @@ __all__ = [
     "ManifestConflictError",
     "STAGING_DIR",
     "empty_manifest",
+    "layer_digest_path",
     "manifest_path",
     "manifest_root_hash",
     "read_manifest",
+    "write_layer_digest_atomic",
     "write_manifest_atomic",
 ]

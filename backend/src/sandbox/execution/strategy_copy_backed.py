@@ -29,8 +29,6 @@ from sandbox.execution.strategy_base import ExecutionStrategy
 from sandbox.execution.subprocess_runner import run_command_to_refs
 from sandbox._shared.clock import monotonic_now
 
-WORKSPACE_ENV_KEYS = frozenset({"WORKSPACE_DIR", "PWD", "OLDPWD"})
-
 
 class CopyBackedStrategy(ExecutionStrategy):
     """Run a command against a copied lowerdir and capture that upperdir."""
@@ -151,7 +149,7 @@ def rewrite_declared_workspace_env(
     *,
     workspace_root: str,
     mounted_workspace_root: str,
-    workspace_env_keys: AbstractSet[str] = WORKSPACE_ENV_KEYS,
+    workspace_env_keys: AbstractSet[str] = DEFAULT_COMMAND_EXEC_POLICY.workspace_env_keys,
 ) -> dict[str, str]:
     """Rewrite env values that explicitly name the assigned workspace."""
     root = str(workspace_root).rstrip("/") or "/"
@@ -213,7 +211,6 @@ def _path_starts_at(value: str, index: int, workspace_root: str) -> bool:
 
 __all__ = [
     "CopyBackedStrategy",
-    "WORKSPACE_ENV_KEYS",
     "rewrite_declared_workspace_env",
     "rewrite_declared_workspace_refs",
 ]

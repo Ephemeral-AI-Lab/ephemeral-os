@@ -33,8 +33,8 @@ def test_phase03_occ_preparation_modules_do_not_import_overlay_or_legacy_apply()
     ]
 
     forbidden_exact = {
-        "sandbox.occ.stage.direct_merge_coordinator",
-        "sandbox.occ.stage.gated_coordinator",
+        "sandbox.occ.path_staging.direct_merge_coordinator",
+        "sandbox.occ.path_staging.gated_coordinator",
     }
     forbidden_prefix = ("sandbox.execution.overlay_",)
     hits: list[tuple[str, str]] = []

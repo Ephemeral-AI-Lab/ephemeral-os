@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import pytest
 
-from sandbox.api._impl._payload import (
+from sandbox.api._tool_verbs._daemon_payload import (
     error_message,
-    int_from_payload,
+    int_from_daemon_payload,
 )
-from sandbox.api._impl._classifiers import is_edit_conflict, is_shell_conflict
+from sandbox.api._tool_verbs._error_classification import (
+    is_edit_conflict,
+    is_shell_conflict,
+)
 from sandbox._shared.models import SandboxCaller
 
 
@@ -35,18 +38,18 @@ def test_error_message_strips_internal_error_prefix() -> None:
     )
 
 
-def test_int_from_payload_is_strict_about_boundary_types() -> None:
-    assert int_from_payload(3, default=0) == 3
-    assert int_from_payload(None, default=7) == 7
+def test_int_from_daemon_payload_is_strict_about_boundary_types() -> None:
+    assert int_from_daemon_payload(3, default=0) == 3
+    assert int_from_daemon_payload(None, default=7) == 7
     with pytest.raises(TypeError):
-        int_from_payload(True, default=0)
+        int_from_daemon_payload(True, default=0)
     with pytest.raises(TypeError):
-        int_from_payload("1", default=0)
+        int_from_daemon_payload("1", default=0)
     with pytest.raises(TypeError):
-        int_from_payload(1.5, default=0)
+        int_from_daemon_payload(1.5, default=0)
 
 
-def test_conflict_classifiers_prefer_typed_error_codes() -> None:
+def test_conflict_error_classification_prefer_typed_error_codes() -> None:
     class CodedError(RuntimeError):
         code = "anchor_not_found"
 

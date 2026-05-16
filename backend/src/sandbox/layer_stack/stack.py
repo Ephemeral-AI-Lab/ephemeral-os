@@ -24,6 +24,7 @@ from sandbox.layer_stack.manifest import (
     LayerRef,
     Manifest,
     empty_manifest,
+    layer_digest_path,
     manifest_root_hash,
 )
 from sandbox.layer_stack.transaction import (
@@ -311,7 +312,7 @@ class LayerStack:
         removed: list[str] = []
         for layer in layers:
             remove_path(self._layer_path(layer))
-            _layer_digest_path(self.storage_root, layer.layer_id).unlink(missing_ok=True)
+            layer_digest_path(self.storage_root, layer.layer_id).unlink(missing_ok=True)
             self._view.evict_layer_index(layer.layer_id)
             removed.append(layer.layer_id)
         return tuple(removed)
@@ -320,7 +321,3 @@ class LayerStack:
         if self._storage_writer_lock is not None:
             self._storage_writer_lock.close()
             self._storage_writer_lock = None
-
-
-def _layer_digest_path(storage_root: Path, layer_id: str) -> Path:
-    return storage_root / ".layer-metadata" / f"{layer_id}.digest"

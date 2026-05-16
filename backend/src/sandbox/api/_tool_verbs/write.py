@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from audit.base import AuditSink
-from sandbox.api._impl._audit import audited_operation
-from sandbox.api._impl._results import guarded_result_from_payload
+from sandbox.api._tool_verbs._operation_audit import audited_operation
+from sandbox.api._tool_verbs._result_builders import guarded_result_from_daemon_payload
 from sandbox.api.protocol import SandboxTransport
 from sandbox.api.timeouts import WRITE_FILE_TIMEOUT_S
 from sandbox.api.transport import DAEMON_OP_WRITE_FILE, DaemonSandboxTransport
@@ -35,7 +35,7 @@ async def write_file(
             },
             timeout=WRITE_FILE_TIMEOUT_S,
         )
-        return guarded_result_from_payload(WriteFileResult, raw)
+        return guarded_result_from_daemon_payload(WriteFileResult, raw)
 
     return await audited_operation(
         audit_sink=audit_sink,

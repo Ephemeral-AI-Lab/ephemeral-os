@@ -28,7 +28,7 @@ def write_change(*, path, final_content, source="api_write", base_hash=None):
         base_hash=base_hash,
     )
 
-from sandbox.occ.preparer import ChangesetPreparer
+from sandbox.occ.changeset_preparation import ChangesetPreparer
 
 class _Gitignore:
     def __init__(self):

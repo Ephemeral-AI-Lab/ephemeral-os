@@ -27,9 +27,9 @@ from sandbox.occ.changeset import (
     WriteChange,
     PreparedPathGroup,
 )
-from sandbox.occ.hashing import ContentHasher
-from sandbox.occ.protocols import SnapshotReader
-from sandbox.occ.stage_policy import (
+from sandbox.occ.content_hashing import ContentHasher
+from sandbox.occ.ports import LayerSnapshotReader
+from sandbox.occ.path_staging_policy import (
     FinalKind,
     StageWrite,
     StageWriteFromPath,
@@ -123,7 +123,7 @@ class Stager:
 
     def __init__(
         self,
-        snapshot_reader: SnapshotReader,
+        snapshot_reader: LayerSnapshotReader,
         profile: _RouteProfile,
         *,
         hasher: ContentHasher | None = None,
@@ -131,19 +131,6 @@ class Stager:
         self._snapshot_reader = snapshot_reader
         self._profile = profile
         self._hasher = hasher
-
-    @classmethod
-    def direct(cls, snapshot_reader: SnapshotReader) -> Stager:
-        return cls(snapshot_reader, _DIRECT_PROFILE)
-
-    @classmethod
-    def gated(
-        cls,
-        snapshot_reader: SnapshotReader,
-        *,
-        hasher: ContentHasher | None = None,
-    ) -> Stager:
-        return cls(snapshot_reader, _GATED_PROFILE, hasher=hasher or ContentHasher())
 
     def stage_group(
         self,
@@ -320,18 +307,18 @@ class Stager:
         return None
 
 
-def DirectStager(snapshot_reader: SnapshotReader) -> Stager:
+def DirectStager(snapshot_reader: LayerSnapshotReader) -> Stager:
     """Stage direct (gitignored / untracked) changes with last-writer-wins."""
-    return Stager.direct(snapshot_reader)
+    return Stager(snapshot_reader, _DIRECT_PROFILE)
 
 
 def GatedStager(
-    snapshot_reader: SnapshotReader,
+    snapshot_reader: LayerSnapshotReader,
     *,
     hasher: ContentHasher | None = None,
 ) -> Stager:
     """Stage tracked changes, validating each step's base-hash chain."""
-    return Stager.gated(snapshot_reader, hasher=hasher)
+    return Stager(snapshot_reader, _GATED_PROFILE, hasher=hasher or ContentHasher())
 
 
 __all__ = ["DirectStager", "GatedStager", "Stager"]

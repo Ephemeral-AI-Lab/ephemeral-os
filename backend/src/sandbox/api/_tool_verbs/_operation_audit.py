@@ -1,4 +1,4 @@
-"""Shared audit wrapper for sandbox API tool verbs."""
+"""Audit event publication around sandbox API tool verb dispatch."""
 
 from __future__ import annotations
 
@@ -67,6 +67,3 @@ async def audited_operation(
         result=result,
     )
     return result
-
-
-__all__ = ["audited_operation"]

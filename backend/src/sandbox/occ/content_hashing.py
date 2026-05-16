@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 
 from sandbox.layer_stack.manifest import Manifest
-from sandbox.occ.protocols import SnapshotReader
+from sandbox.occ.ports import LayerSnapshotReader
 
 
 class ContentHasher:
@@ -20,9 +20,9 @@ class ContentHasher:
         return self.hash_bytes(content)
 
 
-def infer_manifest_base_hash(
+def infer_snapshot_base_hash(
     *,
-    snapshot_reader: SnapshotReader,
+    snapshot_reader: LayerSnapshotReader,
     manifest: Manifest,
     path: str,
 ) -> str | None:
@@ -35,5 +35,5 @@ def infer_manifest_base_hash(
 
 __all__ = [
     "ContentHasher",
-    "infer_manifest_base_hash",
+    "infer_snapshot_base_hash",
 ]

@@ -1,4 +1,4 @@
-"""cwd and environment policy for workspace-replaced commands."""
+"""Subprocess execution and cwd resolution for workspace-replaced commands."""
 
 from __future__ import annotations
 

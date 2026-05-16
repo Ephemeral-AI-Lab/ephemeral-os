@@ -19,15 +19,15 @@ from sandbox.occ.changeset import (
     PreparedPathGroup,
     RouteDecision,
 )
-from sandbox.occ.hashing import ContentHasher
-from sandbox.occ.protocols import (
-    CommitPublisher,
-    CommitTransactionPort,
-    CommitStagingStore,
-    SnapshotReader,
+from sandbox.occ.content_hashing import ContentHasher
+from sandbox.occ.ports import (
+    LayerCommitPublisher,
+    LayerCommitTransaction,
+    LayerCommitStagingStore,
+    LayerSnapshotReader,
 )
-from sandbox.occ.stage import DirectStager, GatedStager
-from sandbox.occ.stage_policy import MergePolicy, StagedChanges
+from sandbox.occ.path_staging import DirectStager, GatedStager
+from sandbox.occ.path_staging_policy import MergePolicy, StagedChanges
 from sandbox._shared.timing_keys import TimingKey
 from sandbox._shared.clock import monotonic_now
 
@@ -44,9 +44,9 @@ class CommitTransaction:
     def __init__(
         self,
         *,
-        snapshot_reader: SnapshotReader,
-        staging: CommitStagingStore,
-        publisher: CommitPublisher,
+        snapshot_reader: LayerSnapshotReader,
+        staging: LayerCommitStagingStore,
+        publisher: LayerCommitPublisher,
     ) -> None:
         self._snapshot_reader = snapshot_reader
         self._staging = staging
@@ -183,7 +183,7 @@ class CommitTransaction:
 class _FileSystemLayerChangeStager:
     def __init__(
         self,
-        staging: CommitStagingStore,
+        staging: LayerCommitStagingStore,
         *,
         hasher: ContentHasher,
     ) -> None:
@@ -350,7 +350,7 @@ def _atomic_or_overlay_dropped(
 def _finish_timings(
     timings: dict[str, float],
     total_start: float,
-    transaction: CommitTransactionPort,
+    transaction: LayerCommitTransaction,
 ) -> dict[str, float]:
     return {
         **timings,

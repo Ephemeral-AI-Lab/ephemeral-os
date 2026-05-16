@@ -1,7 +1,7 @@
 """Single source of truth for conflict-error message markers.
 
 Both ``sandbox.audit.translation._conflict_reason_from_error`` and
-``sandbox.api._impl._classifiers.is_edit_conflict``/``is_shell_conflict``
+``sandbox.api._tool_verbs._error_classification.is_edit_conflict``/``is_shell_conflict``
 inspect raised-error messages to decide whether a failure is a recoverable
 conflict or a hard error. They must agree — if they drift, a verb that
 raises ``X`` can have its audit event reclassified as
