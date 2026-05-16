@@ -628,6 +628,85 @@ async def reset_sweevo_workspace(sandbox_id: str) -> str:
     return await setup_sweevo_sandbox(instance, sandbox_id, repo_dir)
 
 
+async def apply_layerstack_to_repo(
+    sandbox_id: str,
+    repo_dir: str = _REPO_DIR,
+) -> None:
+    """Materialize the active public-tool layerstack back onto ``repo_dir``.
+
+    Agent tools mutate the layerstack-backed workspace view, while SWE-EVO
+    grading still runs raw provider commands against the repository path. Before
+    applying the test patch or running pytest, sync the active layerstack view
+    back into the base checkout so the grader sees the agent's edits.
+    """
+    from sandbox.host.daemon_client import call_daemon_api
+
+    request_id = f"sweevo-eval-materialize-{uuid4().hex}"
+    lease_id = ""
+    snapshot = await call_daemon_api(
+        sandbox_id,
+        "api.prepare_workspace_snapshot",
+        {"request_id": request_id},
+        timeout=240,
+    )
+    lowerdir = str(snapshot.get("lowerdir") or "").strip()
+    lease_id = str(snapshot.get("lease_id") or "").strip()
+    if not lowerdir or not lease_id:
+        raise RuntimeError(f"invalid layerstack snapshot response: {snapshot!r}")
+
+    try:
+        await _exec(
+            sandbox_id,
+            _materialize_layerstack_command(lowerdir, repo_dir),
+            timeout=_DEFAULT_SANDBOX_SETUP_TIMEOUT,
+        )
+    finally:
+        try:
+            await call_daemon_api(
+                sandbox_id,
+                "api.release_workspace_snapshot",
+                {"lease_id": lease_id},
+                timeout=60,
+            )
+        except Exception:
+            logger.warning(
+                "Failed to release SWE-EVO materialization lease %s", lease_id,
+                exc_info=True,
+            )
+
+
+def _materialize_layerstack_command(lowerdir: str, repo_dir: str) -> str:
+    script = f"""
+import shutil
+import uuid
+from pathlib import Path
+
+src = Path({lowerdir!r})
+dst = Path({repo_dir!r})
+if not src.is_dir():
+    raise RuntimeError(f"materialized layerstack view is missing: {{src}}")
+if not (src / ".git").exists():
+    raise RuntimeError(f"materialized layerstack view lacks .git: {{src}}")
+
+parent = dst.parent
+tmp = parent / f".{{dst.name}}.layerstack-materialized-{{uuid.uuid4().hex}}"
+backup = parent / f".{{dst.name}}.pre-layerstack-{{uuid.uuid4().hex}}"
+shutil.copytree(src, tmp, symlinks=True)
+if dst.exists():
+    dst.rename(backup)
+try:
+    tmp.rename(dst)
+except Exception:
+    if backup.exists() and not dst.exists():
+        backup.rename(dst)
+    raise
+if backup.exists():
+    shutil.rmtree(backup)
+print(f"MATERIALIZED_LAYERSTACK {{src}} -> {{dst}}")
+"""
+    return f"python - <<'PY'\n{script}PY"
+
+
 async def _rebuild_sweevo_workspace_base(
     sandbox_id: str,
     repo_dir: str,

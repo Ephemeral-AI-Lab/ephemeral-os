@@ -189,3 +189,42 @@ Starting state: branch `codex/fix-dot-path-normalization-tests` at `2cba70f5f` (
 **Audit refs:** `.omc/experiments/sweevo-real-agent-loop-20260517/iter-5/console.log`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T173453Z_6bb38b07b2ab/sweevo_result.json`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T173453Z_6bb38b07b2ab/goal_01_2db1e830-95e0-44d4-8d70-add8929e309b/iteration_01_f080a84d-700e-4e52-8add-6449c44ba531/attempt_01_e16ad500-11ed-435d-aef2-919a6507c845/01_planner_e16ad500-11ed-435d-aef2-919a6507c845:planner/message.jsonl`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T173453Z_6bb38b07b2ab/goal_01_2db1e830-95e0-44d4-8d70-add8929e309b/iteration_01_f080a84d-700e-4e52-8add-6449c44ba531/attempt_02_62ca2889-456c-48a5-a1a8-c9043e77c0f4/03_evaluator_62ca2889-456c-48a5-a1a8-c9043e77c0f4:evaluator/message.jsonl`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T173453Z_6bb38b07b2ab/metrics.json`
 
 **Guard:** `.venv/bin/pytest backend/tests/unit_test/test_agents/test_planner_full_only_md.py -q` -> `9 passed in 0.22s`.
+
+## Iter 6 — 2026-05-17 01:44
+
+**Hypothesis:** planner release-note framing will make the first plan target Dask code behavior instead of writing release-note documents.
+**Primary surface touched:** none — infra-only
+**Infra patches (if any):**
+- `backend/src/benchmarks/sweevo/sandbox.py:631` materializes the active layerstack snapshot back onto `/testbed` so raw grader commands see agent edits.
+- `backend/src/benchmarks/sweevo/evaluation.py:42` applies layerstack materialization and extracts `agent_patch` before applying the SWE-EVO test patch and running tests.
+**Change-set:**
+- `backend/src/benchmarks/sweevo/evaluation.py`
+- `backend/src/benchmarks/sweevo/sandbox.py`
+- `backend/tests/unit_test/test_benchmarks/test_sweevo_evaluation.py`
+- `backend/tests/unit_test/test_benchmarks/test_sweevo_sandbox.py`
+
+**Run outcome:**
+- resolved: false
+- f2p: 0/61
+- p2p_broken: 6246
+- duration_s: 1353
+- status: completed
+- terminal failure mode: internal TaskCenter passed attempt 2, but SWE-EVO graded raw `/testbed` without layerstack edits; `agent_patch` was empty.
+
+**Checklist scores (§2):**
+1. planner-terminal: fail (attempt 1 closed-goal on a monolithic release bundle; attempt 2 narrowed only after evaluator failure)
+2. planner-explore: fail (attempt 2 over-explored despite a single named failed criterion)
+3. planner-dag: fail (attempt 1 emitted one broad executor task instead of independent PR slices)
+4. planner-task-specs: fail (attempt 1 spec was self-contained but too broad for the executor budget)
+5. executor-terminal: fail (attempt 1 submitted success while its own summary said many PRs remained)
+6. verifier-terminal: n/a
+7. evaluator-terminal: pass (failed partial work, requested resolver, then passed only after checking the narrow retry)
+8. nesting+parallelism: fail (no parallel siblings for independent PR fixes; retry planner burned time before narrow plan)
+9. context-engine: fail (retry context carried the failed criterion, but did not make "plan only the failed slice" prominent enough)
+10. perf: fail (`api.shell.overlay_s` max 7.93s; pytest/shell calls committed pycache/cache noise including a 96-path changeset)
+
+**Top finding (the one thing to fix next):** The external SWE-EVO evaluator was reading the provider checkout, not the layerstack-backed workspace that agents edited. The internal evaluator saw tool-layer changes, but `sweevo_result.json` had `agent_patch: ""`, f2p stayed 0/61, and all p2p broke because tests ran against the unmodified base repo plus test patch.
+**Next hypothesis:** if `evaluate_sweevo_result` materializes the active layerstack back onto `/testbed` before extracting the patch, applying the test patch, and running pytest, the external grader will see agent edits and produce a non-empty patch / non-zero f2p.
+**Audit refs:** `.omc/experiments/sweevo-real-agent-loop-20260517/iter-6/console.log`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T174529Z_9de60a9bdb94/sweevo_result.json`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T174529Z_9de60a9bdb94/sandbox_events.jsonl`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T174529Z_9de60a9bdb94/performance_report.md`
+
+**Guard:** `.venv/bin/pytest backend/tests/unit_test/test_benchmarks/test_sweevo_evaluation.py -q` -> `3 passed in 0.17s`; `.venv/bin/pytest backend/tests/unit_test/test_benchmarks/test_sweevo_sandbox.py -q` -> `8 passed in 14.19s`; `.venv/bin/pytest backend/tests/unit_test/test_task_center_runner/test_sweevo_lifecycle_aggregate.py -q` -> `5 passed in 0.38s`; `.venv/bin/pytest backend/tests/unit_test/test_benchmarks/test_sweevo_csv_runner_cli.py -q` -> `10 passed in 0.35s`; `.venv/bin/ruff check backend/src/benchmarks/sweevo/evaluation.py backend/src/benchmarks/sweevo/sandbox.py backend/tests/unit_test/test_benchmarks/test_sweevo_evaluation.py backend/tests/unit_test/test_benchmarks/test_sweevo_sandbox.py` -> pass.

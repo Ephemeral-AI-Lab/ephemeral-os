@@ -3,6 +3,63 @@ from __future__ import annotations
 import pytest
 
 from benchmarks.sweevo import evaluation as sweevo_evaluation
+from benchmarks.sweevo.models import SWEEvoInstance, SWEEvoResult
+
+
+def _instance() -> SWEEvoInstance:
+    return SWEEvoInstance(
+        instance_id="dask__dask_2023.3.2_2023.4.0",
+        repo="dask/dask",
+        base_commit="abc",
+        problem_statement="",
+        patch="",
+        test_patch="diff --git a/test b/test\n",
+        fail_to_pass=["tests/test_fix.py::test_case"],
+        pass_to_pass=[],
+        docker_image="example/image",
+        test_cmds="pytest -q",
+        environment_setup_commit="",
+    )
+
+
+@pytest.mark.asyncio
+async def test_evaluate_materializes_layerstack_before_patch_and_tests(monkeypatch):
+    calls: list[str] = []
+
+    async def fake_apply_layerstack(_sandbox_id: str, _repo_dir: str) -> None:
+        calls.append("materialize")
+
+    async def fake_extract_patch(_sandbox_id: str, _repo_dir: str) -> str:
+        calls.append("extract_patch")
+        return "diff --git a/dask/config.py b/dask/config.py\n"
+
+    async def fake_ensure_patch(_instance, _sandbox_id: str, _repo_dir: str) -> None:
+        calls.append("test_patch")
+
+    async def fake_run_tests(
+        _sandbox_id: str,
+        _repo_dir: str,
+        test_ids: list[str],
+        _test_cmds: str,
+    ) -> int:
+        calls.append("run_tests")
+        return len(test_ids)
+
+    monkeypatch.setattr(sweevo_evaluation, "apply_layerstack_to_repo", fake_apply_layerstack)
+    monkeypatch.setattr(sweevo_evaluation, "_extract_combined_patch", fake_extract_patch)
+    monkeypatch.setattr(sweevo_evaluation, "ensure_sweevo_test_patch", fake_ensure_patch)
+    monkeypatch.setattr(sweevo_evaluation, "_run_test_set", fake_run_tests)
+
+    result = await sweevo_evaluation.evaluate_sweevo_result(
+        _instance(),
+        SWEEvoResult(plan_id="plan", instance_id="dask__dask_2023.3.2_2023.4.0"),
+        "sbx-1",
+        "/testbed",
+    )
+
+    assert calls == ["materialize", "extract_patch", "test_patch", "run_tests"]
+    assert result.agent_patch.startswith("diff --git")
+    assert result.resolved is True
 
 
 @pytest.mark.asyncio

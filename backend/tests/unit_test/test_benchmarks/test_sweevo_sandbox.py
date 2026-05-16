@@ -152,6 +152,48 @@ async def test_setup_sweevo_sandbox_rebuilds_workspace_base_after_raw_setup(
 
 
 @pytest.mark.asyncio
+async def test_apply_layerstack_to_repo_materializes_snapshot_and_releases(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    daemon_calls: list[tuple[str, dict[str, object]]] = []
+    commands: list[str] = []
+
+    async def fake_call_daemon_api(
+        _sandbox_id: str,
+        op: str,
+        args: dict[str, object],
+        **_kwargs: object,
+    ) -> dict[str, object]:
+        daemon_calls.append((op, args))
+        if op == "api.prepare_workspace_snapshot":
+            return {"lease_id": "lease-1", "lowerdir": "/layers/current"}
+        return {"success": True}
+
+    async def fake_exec(_sandbox_id: str, command: str, **_kwargs: object) -> str:
+        commands.append(command)
+        return ""
+
+    monkeypatch.setattr(
+        "sandbox.host.daemon_client.call_daemon_api",
+        fake_call_daemon_api,
+    )
+    monkeypatch.setattr(sweevo_sandbox, "_exec", fake_exec)
+
+    await sweevo_sandbox.apply_layerstack_to_repo("sbx-1", "/testbed")
+
+    assert daemon_calls[0][0] == "api.prepare_workspace_snapshot"
+    assert str(daemon_calls[0][1]["request_id"]).startswith("sweevo-eval-materialize-")
+    assert daemon_calls[1] == (
+        "api.release_workspace_snapshot",
+        {"lease_id": "lease-1"},
+    )
+    assert len(commands) == 1
+    assert "Path('/layers/current')" in commands[0]
+    assert "Path('/testbed')" in commands[0]
+    assert "MATERIALIZED_LAYERSTACK" in commands[0]
+
+
+@pytest.mark.asyncio
 async def test_named_sweevo_sandbox_is_configured_before_reuse(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
