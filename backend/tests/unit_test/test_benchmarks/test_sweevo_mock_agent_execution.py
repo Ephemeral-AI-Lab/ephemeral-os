@@ -1,9 +1,18 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
 import pytest
+
+pytestmark = pytest.mark.skipif(
+    not os.environ.get("EPHEMERALOS_DATABASE_URL"),
+    reason=(
+        "EPHEMERALOS_DATABASE_URL not configured — create_per_test_task_center_stores "
+        "requires PostgreSQL"
+    ),
+)
 
 from benchmarks.sweevo.models import SWEEvoInstance
 from benchmarks.sweevo.prompt import build_sweevo_user_prompt
