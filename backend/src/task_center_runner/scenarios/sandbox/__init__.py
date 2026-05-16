@@ -7,6 +7,8 @@ content read back through the sandbox toolkit.
 Implemented (reference scenarios):
 - :class:`AutoSquashCommitResume`
 - :class:`ComplexProjectBuild`
+- :class:`ComplexProjectBuildGrepGlob`
+- :class:`ComplexProjectBuildGrepGlobSmoke`
 - :class:`ComplexProjectBuildShellEditLsp`
 - :class:`ComplexProjectBuildShellEditLspSmoke`
 - :class:`ComplexProjectBuildSmoke`
@@ -23,6 +25,7 @@ from task_center_runner.scenarios.sandbox.complex_project_build import (
     ComplexProjectBuildSmoke,
 )
 from task_center_runner.scenarios.sandbox.complex_project_build_grep_glob import (
+    ComplexProjectBuildGrepGlob,
     ComplexProjectBuildGrepGlobSmoke,
 )
 from task_center_runner.scenarios.sandbox.complex_project_build_shell_edit_lsp import (
@@ -36,6 +39,7 @@ from task_center_runner.scenarios.sandbox.occ_concurrent_conflicts import (
 __all__ = [
     "AutoSquashCommitResume",
     "ComplexProjectBuild",
+    "ComplexProjectBuildGrepGlob",
     "ComplexProjectBuildGrepGlobSmoke",
     "ComplexProjectBuildShellEditLsp",
     "ComplexProjectBuildShellEditLspSmoke",

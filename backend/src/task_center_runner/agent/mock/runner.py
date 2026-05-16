@@ -541,6 +541,18 @@ class MockSquadRunner:
                 )
                 summary = "Complex project-build shell-edit LSP smoke probe passed."
                 artifacts = [summary_path]
+            elif action == "complex_project_build_grep_glob":
+                summary_path = await self._run_complex_project_build_grep_glob_probe(
+                    metadata, emit, smoke=False
+                )
+                summary = "Complex project-build grep/glob probe passed."
+                artifacts = [summary_path]
+            elif action == "complex_project_build_grep_glob_smoke":
+                summary_path = await self._run_complex_project_build_grep_glob_probe(
+                    metadata, emit, smoke=True
+                )
+                summary = "Complex project-build grep/glob smoke probe passed."
+                artifacts = [summary_path]
             else:
                 raise RuntimeError(f"Unknown executor action: {action!r}")
         result = await self._call_tool(
@@ -1015,6 +1027,30 @@ class MockSquadRunner:
 
         sandbox_id = self._require_sandbox_id(metadata)
         return await run_complex_project_build_shell_edit_lsp_probe(
+            metadata=metadata,
+            emit=emit,
+            call_tool=self._call_tool,
+            publish=self._publish,
+            publish_mock_record=self._publish_mock_record,
+            record_tool_check=self._record_tool_check,
+            caller=self._caller(metadata),
+            sandbox_id=sandbox_id,
+            smoke=smoke,
+        )
+
+    async def _run_complex_project_build_grep_glob_probe(
+        self,
+        metadata: ExecutionMetadata,
+        emit: EmitStreamEvent,
+        *,
+        smoke: bool,
+    ) -> str:
+        from task_center_runner.agent.mock.complex_project_build_grep_glob_probe import (
+            run_complex_project_build_grep_glob_probe,
+        )
+
+        sandbox_id = self._require_sandbox_id(metadata)
+        return await run_complex_project_build_grep_glob_probe(
             metadata=metadata,
             emit=emit,
             call_tool=self._call_tool,

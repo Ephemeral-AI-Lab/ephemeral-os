@@ -1,11 +1,4 @@
-"""Complex project-build scenario exercising the new grep and glob tools.
-
-The scenario asks the planner-executor-evaluator triad to drive an end-to-end
-workspace exploration where the executor uses ``glob`` to enumerate Python
-files, ``grep`` to locate a known anchor across them, ``edit_file`` to replace
-the anchor, and a follow-up read to verify the edit landed. Live-only — the
-matching pytest test is gated on EPHEMERALOS_DATABASE_URL.
-"""
+"""Complex project-build scenarios exercising grep, glob, and edit_file."""
 
 from __future__ import annotations
 
@@ -16,6 +9,41 @@ from tools.submission.planner import submit_full_plan
 
 from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
+
+
+_FULL_PLAN = {
+    "task_specification": (
+        "Build the scheduler_demo project under /ephemeral-os using a heavy "
+        "structured search/edit workload: glob must enumerate candidate files, "
+        "grep must locate anchors before and after edits, edit_file must apply "
+        "the mutations, and the full run must drive at least 2000 toolkit tool "
+        "calls."
+    ),
+    "evaluation_criteria": [
+        "Workspace base is rebound to /ephemeral-os and pytest runs there.",
+        "`glob` is used repeatedly to enumerate exact files and Python file sets.",
+        "`grep` is used repeatedly in files_with_matches, count, and content modes.",
+        "`edit_file` mutations are bracketed by grep/glob verification.",
+        "The heavy full run records at least 2000 toolkit tool calls.",
+        "Final pytest exit code is 0.",
+        "Tri-source projection (read_file == shell cat == sandbox.api) agrees byte-for-byte.",
+        "The emitted summary/perf artifacts include grep_glob counters.",
+    ],
+    "tasks": [
+        {
+            "id": "complex_project_build_grep_glob",
+            "agent_name": "executor",
+            "deps": [],
+        },
+    ],
+    "task_specs": {
+        "complex_project_build_grep_glob": (
+            "Run the heavy grep + glob + edit_file project-build probe under "
+            "/ephemeral-os and emit /ephemeral-os/.metrics/perf.json plus "
+            "/ephemeral-os/.metrics/summary.json."
+        ),
+    },
+}
 
 
 _SMOKE_PLAN = {
@@ -60,6 +88,31 @@ _EXPECTED_EVENT_SEQUENCE: tuple[EventType, ...] = (
 )
 
 
+class ComplexProjectBuildGrepGlob(ScenarioBase):
+    """Full heavy grep + glob + edit_file project-build scenario."""
+
+    name = "sandbox.complex_project_build_grep_glob"
+    expected_event_sequence: tuple[EventType, ...] = _EXPECTED_EVENT_SEQUENCE
+
+    def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
+        return ToolCallSpec(submit_full_plan, dict(_FULL_PLAN))
+
+    def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
+        return ("complex_project_build_grep_glob",)
+
+    def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+        return ToolCallSpec(
+            submit_evaluation_success,
+            {
+                "summary": (
+                    "Heavy grep + glob + edit_file project-build probe under "
+                    "/ephemeral-os completed with pytest and projection checks passing."
+                ),
+                "passed_criteria": list(ctx.attempt.evaluation_criteria),
+            },
+        )
+
+
 class ComplexProjectBuildGrepGlobSmoke(ScenarioBase):
     """Smoke variant of the grep + glob workflow scenario."""
 
@@ -86,4 +139,4 @@ class ComplexProjectBuildGrepGlobSmoke(ScenarioBase):
         )
 
 
-__all__ = ["ComplexProjectBuildGrepGlobSmoke"]
+__all__ = ["ComplexProjectBuildGrepGlob", "ComplexProjectBuildGrepGlobSmoke"]
