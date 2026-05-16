@@ -58,7 +58,7 @@ async def test_sync_and_async_clients_use_factory_isolated_cache_keys(
         client_mod._cached_clients.clear()
 
     try:
-        sync_client = client_mod.acquire_client()
+        sync_client = client_mod.get_sync_daytona_client()
         async_client = client_mod.get_async_daytona_client()
 
         assert isinstance(sync_client, _SyncDaytona)

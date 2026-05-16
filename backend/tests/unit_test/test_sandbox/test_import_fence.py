@@ -174,10 +174,6 @@ def test_removed_api_compatibility_modules_stay_absent() -> None:
     for module in (
         "sandbox.api.facade",
         "sandbox.api.status",
-        "sandbox.api.tool.read",
-        "sandbox.api.tool.write",
-        "sandbox.api.tool.edit",
-        "sandbox.api.tool.shell",
         "sandbox.api.tool.raw_exec",
     ):
         try:

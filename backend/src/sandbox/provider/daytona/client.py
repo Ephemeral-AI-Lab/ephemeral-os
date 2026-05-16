@@ -269,7 +269,7 @@ _cached_client: Any | None = None
 _cached_client_key: DaytonaClientCacheKey | None = None
 
 
-def acquire_client() -> Any:
+def get_sync_daytona_client() -> Any:
     """Return a cached Daytona client, creating one if config changed."""
     global _cached_client, _cached_client_key
 
@@ -313,7 +313,7 @@ def acquire_client() -> Any:
 
 def fetch_sandbox(sandbox_id: str) -> Any:
     """Fetch a pre-created sandbox by ID."""
-    client = acquire_client()
+    client = get_sync_daytona_client()
     sandbox = call_with_optional_timeout(
         client.get,
         sandbox_id,
@@ -497,7 +497,7 @@ __all__ = [
     "SANDBOX_TIMEOUT_SECONDS",
     "SNAPSHOT_LABEL",
     "SNAPSHOT_PAGE_LIMIT",
-    "acquire_client",
+    "get_sync_daytona_client",
     "async_close_client",
     "build_sdk_client",
     "call_with_optional_timeout",

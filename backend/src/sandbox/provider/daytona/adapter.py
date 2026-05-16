@@ -17,8 +17,8 @@ from sandbox.provider.daytona.client import (
     SANDBOX_TIMEOUT_SECONDS,
     SNAPSHOT_LABEL,
     SNAPSHOT_PAGE_LIMIT,
-    acquire_client,
     call_with_optional_timeout,
+    get_sync_daytona_client,
     creation_param_classes,
     fetch_sandbox,
     get_async_sandbox,
@@ -124,7 +124,7 @@ class DaytonaProviderAdapter:
                 "default_image": None,
             }
         try:
-            client = acquire_client()
+            client = get_sync_daytona_client()
             call_with_optional_timeout(
                 client.list,
                 limit=1,
@@ -154,7 +154,7 @@ class DaytonaProviderAdapter:
             }
 
     def list_snapshots(self) -> list[dict[str, Any]]:
-        client = acquire_client()
+        client = get_sync_daytona_client()
         snapshot_api = getattr(client, "snapshot", None)
         if snapshot_api and hasattr(snapshot_api, "list"):
             items = paginate_all(snapshot_api.list, SNAPSHOT_PAGE_LIMIT)
@@ -201,7 +201,7 @@ class DaytonaProviderAdapter:
         if normalized_image:
             clean_labels[IMAGE_LABEL] = normalized_image
 
-        client = acquire_client()
+        client = get_sync_daytona_client()
         CreateSandboxFromSnapshotParams, CreateSandboxFromImageParams = (
             creation_param_classes()
         )
@@ -237,7 +237,7 @@ class DaytonaProviderAdapter:
         return _serialize_raw(fetch_sandbox(sandbox_id))
 
     def list(self) -> list[dict[str, Any]]:
-        client = acquire_client()
+        client = get_sync_daytona_client()
         items = paginate_all(client.list, LIST_PAGE_LIMIT)
         sandboxes = [_serialize_raw(sb) for sb in items]
         sandboxes.sort(key=lambda item: item.get("created_at") or "", reverse=True)
