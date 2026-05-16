@@ -35,7 +35,7 @@ from task_center.goal.ancestry import nested_goal_depth
 # + failure terminals only). Mirrors
 # :attr:`TaskCenterLifecycleConfig.max_handoff_depth`; kept as a module
 # constant so predicates do not need a runtime config lookup.
-MAX_HANDOFF_DEPTH: int = 2
+MAX_HANDOFF_DEPTH: int = 3
 
 
 @dataclass(frozen=True, slots=True)

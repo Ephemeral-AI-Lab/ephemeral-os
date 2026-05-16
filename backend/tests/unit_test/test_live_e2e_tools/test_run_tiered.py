@@ -96,9 +96,9 @@ def test_load_real_tiers_toml_parses():
     here = Path(run_tiered.__file__).resolve().parent
     tiers = load_tier_configs(here / "tiers.toml")
     ids = [t.id for t in tiers]
-    assert ids == [0, 1, 2, 3, 4, 5, 6]
+    assert ids == [0, 1, 2, 3, 4, 5, 6, 7]
     assert tiers[0].kind == "tier0_health"
-    assert tiers[6].cascade == "none"
+    assert tiers[-1].cascade == "warn"
 
 
 # --------------------------------------------------------------------------

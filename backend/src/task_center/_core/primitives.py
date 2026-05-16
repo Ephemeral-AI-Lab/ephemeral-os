@@ -47,7 +47,7 @@ class TaskCenterLifecycleConfig:
     """
 
     default_attempt_budget: int = 2
-    max_handoff_depth: int = 2
+    max_handoff_depth: int = 3
 
 
 __all__ = [
