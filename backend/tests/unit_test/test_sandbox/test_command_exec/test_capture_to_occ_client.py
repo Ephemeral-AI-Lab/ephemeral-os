@@ -10,6 +10,7 @@ import pytest
 from sandbox.execution.contract import ShellProcessResult
 from sandbox.execution.orchestrator import _drop_transient_lowerdir
 from sandbox.layer_stack.manifest import Manifest
+from sandbox.layer_stack.paths import TRANSIENT_LOWERDIR_DIR
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.layer_stack.workspace_binding import WorkspaceBinding, write_workspace_binding_atomic
 from sandbox.occ.changeset import ChangesetResult, FileResult, FileStatus
@@ -112,7 +113,7 @@ async def test_shell_capture_goes_through_occ_client_before_lease_release(
             base_root_hash="a" * 64,
         )
     )
-    lower_parent = stack / "runtime" / "transient-lowerdirs" / "req-1"
+    lower_parent = stack / "runtime" / TRANSIENT_LOWERDIR_DIR / "req-1"
     lower = lower_parent / "lower"
     lower.mkdir(parents=True)
     layer_stack = _LayerStackClient(lower)
@@ -233,7 +234,7 @@ def test_drop_transient_lowerdir_refuses_matching_path_outside_storage_root(
 ) -> None:
     storage_root = tmp_path / "stack"
     outside_root = tmp_path / "outside"
-    lower = outside_root / "runtime" / "transient-lowerdirs" / "req-1" / "lower"
+    lower = outside_root / "runtime" / TRANSIENT_LOWERDIR_DIR / "req-1" / "lower"
     lower.mkdir(parents=True)
 
     _drop_transient_lowerdir(
