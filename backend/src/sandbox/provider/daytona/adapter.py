@@ -23,12 +23,27 @@ from sandbox.provider.daytona.client import (
     fetch_sandbox,
     get_async_sandbox,
     load_credentials,
-    normalize_dict,
-    normalize_optional_text,
     paginate_all,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def normalize_optional_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    return normalized or None
+
+
+def normalize_dict(payload: dict[str, str] | None) -> dict[str, str]:
+    if not payload:
+        return {}
+    return {
+        str(k).strip(): str(v).strip()
+        for k, v in payload.items()
+        if str(k).strip()
+    }
 
 
 def _serialize_raw(raw: Any, *, assigned_agents: list[str] | None = None) -> dict[str, Any]:
@@ -343,4 +358,6 @@ class DaytonaProviderAdapter:
 
 __all__ = [
     "DaytonaProviderAdapter",
+    "normalize_dict",
+    "normalize_optional_text",
 ]

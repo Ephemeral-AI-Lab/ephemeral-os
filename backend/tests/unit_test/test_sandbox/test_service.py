@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from sandbox.provider.daytona.client import (
+from sandbox.provider.daytona.adapter import (
     normalize_dict,
     normalize_optional_text,
-    timeout_seconds_from_env,
 )
+from sandbox.provider.daytona.client import timeout_seconds_from_env
 
 
 class TestNormalizeHelpers:

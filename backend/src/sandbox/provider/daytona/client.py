@@ -164,23 +164,6 @@ def _load_dotenv_values() -> dict[str, str]:
     }
 
 
-def normalize_optional_text(value: str | None) -> str | None:
-    if value is None:
-        return None
-    normalized = value.strip()
-    return normalized or None
-
-
-def normalize_dict(payload: dict[str, str] | None) -> dict[str, str]:
-    if not payload:
-        return {}
-    return {
-        str(k).strip(): str(v).strip()
-        for k, v in payload.items()
-        if str(k).strip()
-    }
-
-
 def creation_param_classes() -> tuple[Any, Any]:
     """Import and return Daytona SDK sandbox creation parameter classes."""
     try:
@@ -509,8 +492,6 @@ __all__ = [
     "get_async_sandbox",
     "load_credentials",
     "load_required_credentials",
-    "normalize_dict",
-    "normalize_optional_text",
     "paginate_all",
     "shutdown_cached_client_async",
     "timeout_seconds_from_env",
