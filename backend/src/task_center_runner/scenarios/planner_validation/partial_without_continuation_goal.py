@@ -14,7 +14,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 def _partial_without_goal() -> dict[str, Any]:
     return {
-        "task_specification": "Invalid partial plan with no continuation goal.",
+        "plan_spec": "Invalid partial plan with no continuation goal.",
         "evaluation_criteria": ["Partial plan must declare a continuation goal."],
         "tasks": [{"id": "a", "agent_name": "executor", "deps": []}],
         "task_specs": {"a": "Run a workspace preflight."},

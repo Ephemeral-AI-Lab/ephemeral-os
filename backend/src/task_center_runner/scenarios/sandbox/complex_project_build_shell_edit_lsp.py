@@ -12,7 +12,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 
 _FULL_PLAN = {
-    "task_specification": (
+    "plan_spec": (
         "Build the scheduler_demo project under /ephemeral-os using a mixed "
         "edit workload: roughly one third shell-based file mutations, the "
         "remaining edits through edit_file, and at least 200 semantic LSP "
@@ -47,7 +47,7 @@ _FULL_PLAN = {
 
 
 _SMOKE_PLAN = {
-    "task_specification": (
+    "plan_spec": (
         "Smoke variant of the mixed shell-edit + LSP saturation project-build "
         "probe with the same routing rule and reduced edit/LSP floors."
     ),

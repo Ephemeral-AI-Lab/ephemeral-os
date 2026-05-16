@@ -15,7 +15,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 def _unknown_dependency_plan() -> dict[str, Any]:
     return {
-        "task_specification": "Invalid first attempt with an unknown dependency.",
+        "plan_spec": "Invalid first attempt with an unknown dependency.",
         "evaluation_criteria": ["Planner failure triggers an attempt retry."],
         "tasks": [
             {"id": "a", "agent_name": "executor", "deps": ["missing"]},
@@ -45,7 +45,7 @@ class AttemptRetryPlannerFailure(ScenarioBase):
         return ToolCallSpec(
             submit_plan_closes_goal,
             preflight_full_plan(
-                task_specification=(
+                plan_spec=(
                     "Retry with a valid plan after the planner failure."
                 ),
                 evaluation_criteria=(

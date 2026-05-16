@@ -32,7 +32,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 def _always_fail_plan() -> dict[str, Any]:
     return {
-        "task_specification": (
+        "plan_spec": (
             "Single generator task that intentionally fails every attempt "
             "to exercise the iteration attempt-budget exhaustion path."
         ),

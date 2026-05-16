@@ -16,9 +16,9 @@ below is checked by `backend/src/live_e2e/tests/test_capacity_scenario_packs.py`
 
 ### `pipeline.attempt_retry_generator_failure`
 
-### `pipeline.nested_mission`
+### `pipeline.nested_goal`
 
-### `pipeline.nested_mission_failure`
+### `pipeline.nested_goal_failure`
 
 ## Pack B - Sandbox Runtime
 
@@ -62,7 +62,7 @@ below is checked by `backend/src/live_e2e/tests/test_capacity_scenario_packs.py`
 
 ### `context.generator_with_dependencies`
 
-### `context.evaluator_episodic_continuation`
+### `context.evaluator_iterative_continuation`
 
 ### `context.helper_resolver_inheritance`
 

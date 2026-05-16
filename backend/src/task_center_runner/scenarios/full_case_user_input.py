@@ -180,7 +180,7 @@ class FullCaseUserInput(ScenarioBase):
             return ToolCallSpec(
                 submit_plan_continues_goal,
                 {
-                    "task_specification": "Decompose the oversized delegated package.",
+                    "plan_spec": "Decompose the oversized delegated package.",
                     "evaluation_criteria": [
                         "Recursive package inventory was produced.",
                         "Recursive verifier accepted decomposition coverage.",
@@ -210,7 +210,7 @@ class FullCaseUserInput(ScenarioBase):
             return ToolCallSpec(
                 submit_plan_continues_goal,
                 {
-                    "task_specification": "Execute delegated package subtasks.",
+                    "plan_spec": "Execute delegated package subtasks.",
                     "evaluation_criteria": [
                         "Recursive package probes completed.",
                         "Recursive wave guard passed.",
@@ -237,7 +237,7 @@ class FullCaseUserInput(ScenarioBase):
         return ToolCallSpec(
             submit_plan_closes_goal,
             {
-                "task_specification": "Close the delegated package goal.",
+                "plan_spec": "Close the delegated package goal.",
                 "evaluation_criteria": [
                     "Recursive close report summarizes package evidence.",
                     "Recursive final verifier passed.",
@@ -321,7 +321,7 @@ class FullCaseUserInput(ScenarioBase):
             f"dependency_count={len(final_deps)}"
         )
         return {
-            "task_specification": (
+            "plan_spec": (
                 "Execute dynamic SWE-EVO package DAG from the rendered user input."
             ),
             "evaluation_criteria": [
@@ -341,7 +341,7 @@ class FullCaseUserInput(ScenarioBase):
         plan = self._ensure_user_input_plan(ctx)
         high_risk_count = sum(1 for item in plan.requirements if item.risk == "high")
         return {
-            "task_specification": "Reconcile final SWE-EVO coverage evidence.",
+            "plan_spec": "Reconcile final SWE-EVO coverage evidence.",
             "evaluation_criteria": [
                 "High-risk requirement categories have verifier evidence.",
                 "Final evaluator runs after the final verifier passes.",
@@ -409,7 +409,7 @@ def _inventory_plan(
     continuation_goal: str | None = None,
 ) -> dict[str, Any]:
     args: dict[str, Any] = {
-        "task_specification": "Inventory rendered SWE-EVO user-input requirements.",
+        "plan_spec": "Inventory rendered SWE-EVO user-input requirements.",
         "evaluation_criteria": [
             "Requirement ledger was built from the already-rendered user input.",
             "Package DAG policy can be derived from the requirement ledger.",

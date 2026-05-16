@@ -27,7 +27,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 
 _AUTO_SQUASH_PLAN = {
-    "task_specification": (
+    "plan_spec": (
         "Drive the sandbox toolkit through enough write/edit calls to cross "
         "the OCC auto-squash depth threshold and capture commit-resume "
         "timing evidence."

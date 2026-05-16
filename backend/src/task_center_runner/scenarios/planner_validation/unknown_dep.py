@@ -14,7 +14,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 def _unknown_dep_plan() -> dict[str, Any]:
     return {
-        "task_specification": "Invalid plan: task b depends on unknown local id z.",
+        "plan_spec": "Invalid plan: task b depends on unknown local id z.",
         "evaluation_criteria": ["Unknown dependency is rejected."],
         "tasks": [
             {"id": "a", "agent_name": "executor", "deps": []},

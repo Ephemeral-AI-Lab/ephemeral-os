@@ -32,7 +32,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 
 _FULL_PLAN = {
-    "task_specification": (
+    "plan_spec": (
         "Build a small stdlib-only Python scheduler library inside a freshly "
         "initialized /ephemeral-os git repo, exercising the layer stack, "
         "overlay capture, OCC apply path, and Pyright LSP across many files."
@@ -67,7 +67,7 @@ _FULL_PLAN = {
 
 
 _SMOKE_PLAN = {
-    "task_specification": (
+    "plan_spec": (
         "Smoke variant of the complex project-build probe — covers the same "
         "phases but with a smaller fixture set so it can run pre-merge."
     ),

@@ -18,7 +18,7 @@ def _parallel_fanin_plan() -> dict[str, Any]:
         "sandbox root."
     )
     return {
-        "task_specification": "Run parallel roots a, b, c before fan-in task d.",
+        "plan_spec": "Run parallel roots a, b, c before fan-in task d.",
         "evaluation_criteria": [
             "Root tasks a, b, and c completed.",
             "Fan-in task d launched only after all three parents completed.",

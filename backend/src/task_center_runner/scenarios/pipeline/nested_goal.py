@@ -22,7 +22,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 def _root_nested_plan(*, failing_child: bool) -> dict[str, Any]:
     package_id = "child_failure" if failing_child else "child_success"
     return {
-        "task_specification": "Delegate one oversized branch to a child goal.",
+        "plan_spec": "Delegate one oversized branch to a child goal.",
         "evaluation_criteria": [
             "Child goal is linked to the parent generator task.",
             "Parent graph does not finish before the child goal closes.",
@@ -52,7 +52,7 @@ def _root_nested_plan(*, failing_child: bool) -> dict[str, Any]:
 
 def _child_success_plan() -> dict[str, Any]:
     return {
-        "task_specification": "Execute a two-task child goal and close it.",
+        "plan_spec": "Execute a two-task child goal and close it.",
         "evaluation_criteria": [
             "Both child slices completed.",
             "Child close report can be delivered to the parent.",
@@ -70,7 +70,7 @@ def _child_success_plan() -> dict[str, Any]:
 
 def _child_failure_plan() -> dict[str, Any]:
     return {
-        "task_specification": "Child goal fails every attempt.",
+        "plan_spec": "Child goal fails every attempt.",
         "evaluation_criteria": ["Parent receives a failed child close report."],
         "tasks": [
             {"id": "child_always_fails", "agent_name": "executor", "deps": []},

@@ -12,7 +12,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 
 _FULL_PLAN = {
-    "task_specification": (
+    "plan_spec": (
         "Build the scheduler_demo project under /ephemeral-os using a heavy "
         "structured search/edit workload: glob must enumerate candidate files, "
         "grep must locate anchors before and after edits, edit_file must apply "
@@ -47,7 +47,7 @@ _FULL_PLAN = {
 
 
 _SMOKE_PLAN = {
-    "task_specification": (
+    "plan_spec": (
         "Smoke variant of the grep + glob workflow probe. The executor uses "
         "`glob` to find candidate files, `grep` to locate a known anchor, "
         "`edit_file` to replace the anchor, and a final read or grep to "

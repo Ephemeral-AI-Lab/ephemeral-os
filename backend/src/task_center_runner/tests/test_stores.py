@@ -45,7 +45,7 @@ def test_per_schema_isolation_round_trip() -> None:
     bundle = create_per_test_task_center_stores()
     schema = bundle.schema
     try:
-        assert schema.startswith("live_e2e_")
+        assert schema.startswith("task_center_runner_")
         with bundle.engine.connect() as conn:
             existing = conn.execute(
                 text(

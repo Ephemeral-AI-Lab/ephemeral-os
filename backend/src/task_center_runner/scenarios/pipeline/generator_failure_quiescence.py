@@ -43,7 +43,7 @@ _FAIL_TAG = "ACTION fail_on_attempt=1"
 
 def _three_plus_one_plan() -> dict[str, Any]:
     return {
-        "task_specification": (
+        "plan_spec": (
             "Three parallel preflight roots feeding into a final preflight."
         ),
         "evaluation_criteria": [

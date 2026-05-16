@@ -14,7 +14,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 def _cycle_plan() -> dict[str, Any]:
     return {
-        "task_specification": "Invalid plan: a depends on b and b depends on a.",
+        "plan_spec": "Invalid plan: a depends on b and b depends on a.",
         "evaluation_criteria": ["Dependency cycles are rejected."],
         "tasks": [
             {"id": "a", "agent_name": "executor", "deps": ["b"]},

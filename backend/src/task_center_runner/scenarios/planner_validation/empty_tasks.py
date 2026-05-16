@@ -14,7 +14,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 def _empty_tasks_plan() -> dict[str, Any]:
     return {
-        "task_specification": "Invalid full plan with no generator tasks.",
+        "plan_spec": "Invalid full plan with no generator tasks.",
         "evaluation_criteria": ["Empty full plans are rejected before dispatch."],
         "tasks": [],
         "task_specs": {},

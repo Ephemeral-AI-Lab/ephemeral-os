@@ -29,7 +29,7 @@ from task_center_runner.scenarios.base import (
 
 
 _PREFLIGHT_FULL_PLAN: dict = {
-    "task_specification": (
+    "plan_spec": (
         "Preflight the SWE-EVO workspace and expose an evaluator retry signal "
         "without making benchmark source edits."
     ),
@@ -47,7 +47,7 @@ _PREFLIGHT_FULL_PLAN: dict = {
 }
 
 _INTEGRITY_PARTIAL_PLAN: dict = {
-    "task_specification": (
+    "plan_spec": (
         "Validate sandbox read/write/edit/shell consistency, direct OCC file "
         "mutation, gated shell mutation, batch edit handling, and conflict "
         "reporting for the SWE-EVO workspace."
@@ -77,7 +77,7 @@ _INTEGRITY_PARTIAL_PLAN: dict = {
 }
 
 _FINAL_PROBE_FULL_PLAN: dict = {
-    "task_specification": (
+    "plan_spec": (
         "Confirm the sandbox integrity artifacts remain readable in the "
         "continuation iteration and close the benchmark goal."
     ),

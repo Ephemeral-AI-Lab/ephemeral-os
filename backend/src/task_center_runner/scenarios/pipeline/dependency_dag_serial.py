@@ -28,7 +28,7 @@ def _serial_chain_plan() -> dict[str, Any]:
         "sandbox root."
     )
     return {
-        "task_specification": "Run a serial preflight chain a → b → c.",
+        "plan_spec": "Run a serial preflight chain a → b → c.",
         "evaluation_criteria": [
             "All three preflight nodes completed.",
             "Tasks ran in dependency order.",

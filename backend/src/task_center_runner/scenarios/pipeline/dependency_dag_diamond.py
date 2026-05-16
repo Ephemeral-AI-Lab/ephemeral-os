@@ -18,7 +18,7 @@ def _diamond_plan() -> dict[str, Any]:
         "sandbox root."
     )
     return {
-        "task_specification": "Run diamond graph a -> b,c -> d.",
+        "plan_spec": "Run diamond graph a -> b,c -> d.",
         "evaluation_criteria": [
             "Task a completed before b and c.",
             "Task d received dependency results from b and c.",

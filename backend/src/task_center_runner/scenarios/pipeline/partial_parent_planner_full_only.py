@@ -44,7 +44,7 @@ _CONTINUATION_GOAL = (
 
 def _root_partial_plan() -> dict[str, Any]:
     return {
-        "task_specification": (
+        "plan_spec": (
             "Execute the first root slice by delegating one oversized branch to "
             "a child goal, then continue the root goal afterward."
         ),
@@ -72,7 +72,7 @@ def _root_partial_plan() -> dict[str, Any]:
 
 def _child_full_plan() -> dict[str, Any]:
     return minimal_full_plan(
-        task_specification=(
+        plan_spec=(
             "Run a full child-goal preflight to prove the delegated goal "
             "cannot emit another partial plan."
         ),
@@ -119,7 +119,7 @@ class PartialParentPlannerFullOnly(ScenarioBase):
         return ToolCallSpec(
             submit_plan_closes_goal,
             preflight_full_plan(
-                task_specification=(
+                plan_spec=(
                     "Run the root continuation follow-up as a normal full plan."
                 ),
                 evaluation_criteria=(

@@ -41,7 +41,7 @@ def _mixed_topology_plan() -> dict[str, Any]:
         "sandbox root."
     )
     return {
-        "task_specification": (
+        "plan_spec": (
             "Mixed-topology DAG: a → (b,c) → d → (e,f) → g."
         ),
         "evaluation_criteria": [

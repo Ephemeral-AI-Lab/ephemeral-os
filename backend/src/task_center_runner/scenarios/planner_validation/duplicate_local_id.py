@@ -30,7 +30,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 def _duplicate_local_id_plan() -> dict[str, Any]:
     return {
-        "task_specification": (
+        "plan_spec": (
             "Intentionally invalid plan: two tasks share the same local id."
         ),
         "evaluation_criteria": ["Plan must be rejected by the orchestrator."],

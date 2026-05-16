@@ -14,7 +14,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 def _blocked_descendants_plan() -> dict[str, Any]:
     return {
-        "task_specification": (
+        "plan_spec": (
             "Fail root task a and prove descendants b, c, and d never launch."
         ),
         "evaluation_criteria": [

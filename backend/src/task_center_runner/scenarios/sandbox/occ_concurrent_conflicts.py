@@ -28,7 +28,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 
 _INTEGRITY_PLAN = {
-    "task_specification": (
+    "plan_spec": (
         "Drive the sandbox toolkit through write, read, edit, shell, batch "
         "edit, and a stale-edit conflict to exercise OCC + overlay + "
         "layerstack."

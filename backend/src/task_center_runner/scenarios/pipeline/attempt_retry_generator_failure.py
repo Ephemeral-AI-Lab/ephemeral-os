@@ -14,7 +14,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 def _retry_generator_plan() -> dict[str, Any]:
     return {
-        "task_specification": "Run one generator task that fails only on attempt 1.",
+        "plan_spec": "Run one generator task that fails only on attempt 1.",
         "evaluation_criteria": [
             "Attempt 1 records a terminal generator failure.",
             "Attempt 2 reruns the generator task with a revised task id.",

@@ -14,7 +14,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 def _unknown_agent_plan() -> dict[str, Any]:
     return {
-        "task_specification": "Invalid plan references an unregistered agent.",
+        "plan_spec": "Invalid plan references an unregistered agent.",
         "evaluation_criteria": ["Unknown generator agent is rejected."],
         "tasks": [
             {"id": "a", "agent_name": "missing_generator_agent", "deps": []},

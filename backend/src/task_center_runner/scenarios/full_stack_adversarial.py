@@ -215,7 +215,7 @@ class FullStackAdversarial(ScenarioBase):
             return ToolCallSpec(
                 submit_plan_continues_goal,
                 {
-                    "task_specification": (
+                    "plan_spec": (
                         "Execute delegated oversized full-stack matrix slices."
                     ),
                     "evaluation_criteria": [
@@ -258,7 +258,7 @@ class FullStackAdversarial(ScenarioBase):
         return ToolCallSpec(
             submit_plan_closes_goal,
             {
-                "task_specification": "Close delegated full-stack matrix goal.",
+                "plan_spec": "Close delegated full-stack matrix goal.",
                 "evaluation_criteria": [
                     "Recursive close report was written through tools.",
                     "Recursive final verifier read the close report.",
@@ -339,7 +339,7 @@ class FullStackAdversarial(ScenarioBase):
             ),
         }
         return {
-            "task_specification": (
+            "plan_spec": (
                 "Run the full-stack subsystem wave using only agent tool scripts."
             ),
             "evaluation_criteria": [
@@ -363,7 +363,7 @@ class FullStackAdversarial(ScenarioBase):
         package_id = recursive.id if recursive is not None else "pkg_recursive_unknown"
         self._recursive_package_id = package_id
         return {
-            "task_specification": (
+            "plan_spec": (
                 "Continue after subsystem verifier failure with recursive "
                 "delegation and parent reconciliation."
             ),
@@ -407,7 +407,7 @@ class FullStackAdversarial(ScenarioBase):
         plan = self._ensure_user_input_plan(ctx)
         high_risk_count = sum(1 for item in plan.requirements if item.risk == "high")
         return {
-            "task_specification": "Close the full-stack adversarial scenario.",
+            "plan_spec": "Close the full-stack adversarial scenario.",
             "evaluation_criteria": [
                 "Final metrics summary row exists with zero failed cells.",
                 "Final verifier reads canonical reconciliation evidence.",
@@ -504,7 +504,7 @@ def _inventory_plan(
     continuation_goal: str | None = None,
 ) -> dict[str, Any]:
     args: dict[str, Any] = {
-        "task_specification": "Inventory rendered SWE-EVO user input.",
+        "plan_spec": "Inventory rendered SWE-EVO user input.",
         "evaluation_criteria": [
             "Rendered prompt was parsed without reconstructing CSV data.",
             "Requirement ledger and package graph were written through tools.",
