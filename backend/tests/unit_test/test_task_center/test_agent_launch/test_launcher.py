@@ -13,7 +13,7 @@ from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistr
 from task_center.attempt.runtime import AgentLaunch, AttemptDeps
 from task_center.iteration.state import IterationCreationReason
 from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
-from task_center._core.types import planner_task_id
+from task_center._core.primitives import planner_task_id
 
 
 class _NoopLauncher:

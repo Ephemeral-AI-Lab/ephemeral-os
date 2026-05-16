@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from db.stores.attempt_store import AttemptStore
-from task_center._core.types import TaskCenterLifecycleConfig
+from task_center._core.primitives import TaskCenterLifecycleConfig
 from task_center.goal.handler import GoalHandler
 from task_center.iteration import IterationManager, IterationManagerRegistry
 from task_center.goal.state import GoalStatus

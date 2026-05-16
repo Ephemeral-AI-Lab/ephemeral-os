@@ -7,7 +7,7 @@ from typing import Any, Protocol
 
 
 class SandboxTransport(Protocol):
-    """Transport used by public tool verbs to call the sandbox runtime."""
+    """Transport used by public workspace operations to call the sandbox runtime."""
 
     async def call(
         self,

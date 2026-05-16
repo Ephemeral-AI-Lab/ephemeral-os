@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from task_center.goal.state import GoalClosureReport
-from task_center._core.types import TaskCenterInvariantViolation
+from task_center._core.primitives import TaskCenterInvariantViolation
 from task_center.attempt import (
     AttemptFailReason,
     AttemptStage,
@@ -20,7 +20,7 @@ from task_center.attempt.runtime import (
     AttemptDeps,
 )
 from task_center.task_state import EvaluatorSubmission, GeneratorSubmission, TaskCenterTaskRole, TaskCenterTaskStatus, PlannedGeneratorTask, PlannerFailureSubmission, PlannerSubmission
-from task_center._core.types import evaluator_task_id, generator_task_id, planner_task_id
+from task_center._core.primitives import evaluator_task_id, generator_task_id, planner_task_id
 from task_center.iteration.state import IterationCreationReason
 
 

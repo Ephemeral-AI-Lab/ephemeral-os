@@ -18,7 +18,7 @@ from agents import (
     register_definition,
     unregister_definition,
 )
-from task_center._core.types import TaskCenterLifecycleConfig
+from task_center._core.primitives import TaskCenterLifecycleConfig
 from task_center.context_engine.core import ContextComposer, ContextEngine, ContextEngineDeps
 from task_center._core.agent_routing import (
     PredicateRegistry,

@@ -16,15 +16,17 @@ _Source: explore agent draft, 2026-05-10. See `.omc/wiki-draft/sandbox.md`._
 
 ## Top-level surface
 
-`sandbox/api/__init__.py` re-exports module-level lifecycle and tool verbs from
-`sandbox/api/default.py`; there is no `SandboxClient` facade layer.
+`sandbox/api/__init__.py` re-exports module-level lifecycle, guarded workspace operations,
+and the raw exec escape hatch; there is no `SandboxClient` facade
+layer.
 
 - Sync lifecycle: `create_sandbox`, `start_sandbox`, `stop_sandbox`, `delete_sandbox`, `ensure_sandbox_running`, `get_sandbox`, `list_sandboxes`, `get_health`
-- Async tool verbs: `shell`, `raw_exec`, `read_file`, `write_file`, `edit_file`
+- Async guarded workspace operations: `shell`, `read_file`, `write_file`, `edit_file`; raw exec escape hatch: `raw_exec`
 
-Sync lifecycle/discovery calls route through `api/lifecycle.py`,
-`api/discovery.py`, and `api/preview_urls.py`. Tool verbs route through
-`api/_tool_verbs/{shell,raw_exec,read,write,edit}.py`.
+Sync lifecycle/discovery calls route through `api/_sandbox_control.py`.
+Guarded workspace operations route through
+`api/tool/{shell,read,write,edit}.py`; raw exec routes through
+`api/_raw_exec.py`.
 
 ## Subsystem map
 

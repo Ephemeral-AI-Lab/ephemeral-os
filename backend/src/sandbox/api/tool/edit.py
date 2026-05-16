@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from audit.base import AuditSink
-from sandbox.api._tool_verbs._daemon_payload import error_message, int_from_daemon_payload
-from sandbox.api._tool_verbs._error_classification import is_edit_conflict
-from sandbox.api._tool_verbs._operation_audit import audited_operation
-from sandbox.api._tool_verbs._result_builders import (
+from sandbox.api.tool.core.audit import audited_operation
+from sandbox.api.tool.core.conflicts import is_edit_conflict
+from sandbox.api.tool.core.daemon_response import (
+    error_message,
+    int_from_daemon_response,
+)
+from sandbox.api.tool.core.results import (
     edit_conflict_result,
-    guarded_result_from_daemon_payload,
+    guarded_result_from_daemon_response,
 )
 from sandbox.api.protocol import SandboxTransport
 from sandbox.api.timeouts import EDIT_FILE_TIMEOUT_S
@@ -42,10 +45,10 @@ async def edit_file(
             },
             timeout=EDIT_FILE_TIMEOUT_S,
         )
-        return guarded_result_from_daemon_payload(
+        return guarded_result_from_daemon_response(
             EditFileResult,
             raw,
-            applied_edits=int_from_daemon_payload(raw.get("applied_edits"), default=0),
+            applied_edits=int_from_daemon_response(raw.get("applied_edits"), default=0),
         )
 
     def _conflict_from_error(exc: BaseException) -> EditFileResult | None:

@@ -23,7 +23,7 @@ from task_center.context_engine.packet import (
     ContextPriority,
 )
 from task_center.context_engine.scope import ContextScope
-from task_center.goal.handler import nested_goal_depth
+from task_center.goal.ancestry import nested_goal_depth
 
 
 # ---------------------------------------------------------------------------
@@ -32,28 +32,10 @@ from task_center.goal.handler import nested_goal_depth
 
 # Maximum nested-goal depth at which an executor profile still offers a
 # handoff terminal. Above this, the leaf executor profile is selected (success
-# + failure terminals only). Range-named predicates encode the threshold so
-# renaming this constant does not require touching any frontmatter.
-#
-# Mutable so :class:`task_center.config.TaskCenterLifecycleConfig` can override
-# it at startup via :func:`configure_max_handoff_depth`. Predicates read the
-# current value at each invocation.
+# + failure terminals only). Mirrors
+# :attr:`TaskCenterLifecycleConfig.max_handoff_depth`; kept as a module
+# constant so predicates do not need a runtime config lookup.
 MAX_HANDOFF_DEPTH: int = 2
-
-
-def configure_max_handoff_depth(value: int) -> None:
-    """Set the runtime handoff-depth threshold (called by app startup).
-
-    Calling this before ``register_builtin_predicates`` is fine — the
-    predicates capture the module-level name at call time, not at
-    registration.
-    """
-    global MAX_HANDOFF_DEPTH
-    if value < 0:
-        raise ValueError(
-            f"max_handoff_depth must be >= 0, got {value!r}"
-        )
-    MAX_HANDOFF_DEPTH = value
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,12 +100,12 @@ def _depth(ctx: ResolverContext) -> int:
 
 
 def _nested_goal_depth_within_handoff_range(ctx: ResolverContext) -> bool:
-    """True when depth ≤ MAX_HANDOFF_DEPTH (executor may still hand off)."""
+    """True when depth ≤ threshold (executor may still hand off)."""
     return _depth(ctx) <= MAX_HANDOFF_DEPTH
 
 
 def _nested_goal_depth_above_handoff_range(ctx: ResolverContext) -> bool:
-    """True when depth > MAX_HANDOFF_DEPTH (leaf executor, no further handoff)."""
+    """True when depth > threshold (leaf executor, no further handoff)."""
     return _depth(ctx) > MAX_HANDOFF_DEPTH
 
 

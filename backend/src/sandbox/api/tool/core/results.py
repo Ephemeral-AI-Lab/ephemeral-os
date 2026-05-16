@@ -5,11 +5,11 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TypeVar
 
-from sandbox.api._tool_verbs._daemon_payload import (
-    conflict_from_daemon_payload,
-    int_from_daemon_payload,
-    paths_from_daemon_payload,
-    timings_from_daemon_payload,
+from sandbox.api.tool.core.daemon_response import (
+    conflict_from_daemon_response,
+    int_from_daemon_response,
+    paths_from_daemon_response,
+    timings_from_daemon_response,
 )
 from sandbox._shared.models import (
     ConflictInfo,
@@ -22,27 +22,27 @@ from sandbox._shared.models import (
 TGuarded = TypeVar("TGuarded", bound=GuardedResultBase)
 
 
-def read_result_from_daemon_payload(raw: Mapping[str, object]) -> ReadFileResult:
+def read_result_from_daemon_response(raw: Mapping[str, object]) -> ReadFileResult:
     return ReadFileResult(
         success=bool(raw.get("success", False)),
         exists=bool(raw.get("exists", False)),
         content=str(raw.get("content", "")),
         encoding=str(raw.get("encoding", "utf-8")),
-        timings=timings_from_daemon_payload(raw.get("timings")),
+        timings=timings_from_daemon_response(raw.get("timings")),
     )
 
 
-def guarded_result_from_daemon_payload(
+def guarded_result_from_daemon_response(
     result_cls: type[TGuarded],
     raw: Mapping[str, object],
     *,
     timings: dict[str, float] | None = None,
     **extra: object,
 ) -> TGuarded:
-    conflict = conflict_from_daemon_payload(raw.get("conflict"))
+    conflict = conflict_from_daemon_response(raw.get("conflict"))
     return result_cls(
         success=bool(raw.get("success", False)),
-        changed_paths=paths_from_daemon_payload(raw.get("changed_paths")),
+        changed_paths=paths_from_daemon_response(raw.get("changed_paths")),
         status=str(raw.get("status", "")),
         conflict=conflict,
         conflict_reason=(
@@ -53,24 +53,24 @@ def guarded_result_from_daemon_payload(
         timings=(
             timings
             if timings is not None
-            else timings_from_daemon_payload(raw.get("timings"))
+            else timings_from_daemon_response(raw.get("timings"))
         ),
         **extra,
     )
 
 
-def shell_result_from_daemon_payload(
+def shell_result_from_daemon_response(
     raw: Mapping[str, object],
     *,
     timings: dict[str, float],
 ) -> ShellResult:
-    return guarded_result_from_daemon_payload(
+    return guarded_result_from_daemon_response(
         ShellResult,
         raw,
-        exit_code=int_from_daemon_payload(raw.get("exit_code"), default=1),
+        exit_code=int_from_daemon_response(raw.get("exit_code"), default=1),
         stdout=str(raw.get("stdout", "")),
         stderr=str(raw.get("stderr", "")),
-        warnings=paths_from_daemon_payload(raw.get("warnings")),
+        warnings=paths_from_daemon_response(raw.get("warnings")),
         timings=timings,
     )
 

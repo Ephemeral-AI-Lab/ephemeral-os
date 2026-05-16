@@ -8,7 +8,7 @@ from sandbox.audit.conflict_markers import (
     EDIT_CONFLICT_MARKERS as _EDIT_CONFLICT_MARKERS,
     SHELL_CONFLICT_MARKERS as _SHELL_CONFLICT_MARKERS,
 )
-from sandbox.api._tool_verbs._daemon_payload import error_message
+from sandbox.api.tool.core.daemon_response import error_message
 
 _EDIT_CONFLICT_CODES = {
     "aborted_overlap",

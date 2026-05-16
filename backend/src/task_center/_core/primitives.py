@@ -1,18 +1,11 @@
 """TaskCenter package primitives — exceptions, ids, config, runtime Protocols.
 
-Phase 7a bundle: collapses former `_core/exceptions.py`, `_core/ids.py`,
-`_core/config.py`, and `_core/protocols.py` into a single primitive types
-module. Persistence I/O Protocols stay in `_core/persistence.py` per the
-iter4 plan amendment.
+Persistence I/O Protocols live in :mod:`task_center._core.persistence`.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Protocol
-
-if TYPE_CHECKING:  # pragma: no cover - typing-only
-    from task_center.goal.state import GoalClosureReport
 
 
 # ---- Exceptions ------------------------------------------------------------
@@ -57,24 +50,7 @@ class TaskCenterLifecycleConfig:
     max_handoff_depth: int = 2
 
 
-# ---- Runtime Protocols (cycle-safe collaboration seams) --------------------
-
-
-class RegisteredAttemptOrchestrator(Protocol):
-    """The slice of :class:`AttemptOrchestrator` observed by collaborators."""
-
-    @property
-    def attempt_id(self) -> str: ...
-
-    def start(self) -> None: ...
-
-    def apply_goal_closure_report(
-        self, report: GoalClosureReport
-    ) -> None: ...
-
-
 __all__ = [
-    "RegisteredAttemptOrchestrator",
     "TaskCenterInvariantViolation",
     "TaskCenterLifecycleConfig",
     "evaluator_task_id",

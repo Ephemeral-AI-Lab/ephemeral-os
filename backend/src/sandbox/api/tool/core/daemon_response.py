@@ -1,4 +1,4 @@
-"""Daemon response payload coercion for public sandbox API tool verbs."""
+"""Coerce daemon responses for guarded workspace operations."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ def error_message(error: BaseException) -> str:
     return message
 
 
-def conflict_from_daemon_payload(raw: object) -> ConflictInfo | None:
+def conflict_from_daemon_response(raw: object) -> ConflictInfo | None:
     if not isinstance(raw, dict):
         return None
     conflict_file = raw.get("conflict_file")
@@ -32,19 +32,19 @@ def conflict_from_daemon_payload(raw: object) -> ConflictInfo | None:
     )
 
 
-def paths_from_daemon_payload(raw: object) -> tuple[str, ...]:
+def paths_from_daemon_response(raw: object) -> tuple[str, ...]:
     if not isinstance(raw, Iterable) or isinstance(raw, (str, bytes, dict)):
         return ()
     return tuple(str(path) for path in raw if str(path or "").strip())
 
 
-def timings_from_daemon_payload(raw: object) -> dict[str, float]:
+def timings_from_daemon_response(raw: object) -> dict[str, float]:
     if not isinstance(raw, dict):
         return {}
     return normalize_timing_map(raw)
 
 
-def int_from_daemon_payload(value: object, *, default: int) -> int:
+def int_from_daemon_response(value: object, *, default: int) -> int:
     """Return an integer boundary value without accepting bool-as-int."""
     if value is None:
         return default

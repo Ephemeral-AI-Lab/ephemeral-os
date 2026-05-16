@@ -1,4 +1,4 @@
-"""Unified OCC stager parameterised by route.
+"""OCC path-group staging by route.
 
 The same validation+staging loop drives both routes; the only per-route
 differences are (a) whether to enforce the base-hash predicate before
@@ -8,14 +8,19 @@ status to return when an EditChange targets a missing file.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Literal
 
 from sandbox.layer_stack.changes import (
     DeleteLayerChange,
+    LayerChange,
     OpaqueDirLayerChange,
     SymlinkLayerChange,
 )
 from sandbox.layer_stack.manifest import Manifest
+from sandbox._shared.clock import monotonic_now
+from sandbox._shared.timing_keys import TimingKey
 from sandbox.occ.changeset import (
     Change,
     DeleteChange,
@@ -29,15 +34,20 @@ from sandbox.occ.changeset import (
 )
 from sandbox.occ.content_hashing import ContentHasher
 from sandbox.occ.ports import LayerSnapshotReader
-from sandbox.occ.path_staging_policy import (
-    FinalKind,
-    StageWrite,
-    StageWriteFromPath,
-    StagedChanges,
-    with_timings,
-)
-from sandbox._shared.timing_keys import TimingKey
-from sandbox._shared.clock import monotonic_now
+
+StageWriteBytes = Callable[[str, bytes], LayerChange]
+StageWriteFile = Callable[[str, str, str, bytes | None], LayerChange]
+FinalLayerChangeKind = Literal["write", "delete", "symlink", "opaque_dir"]
+StagedLayerChanges = tuple[LayerChange, ...]
+
+
+def _with_timings(result: FileResult, timings: dict[str, float]) -> FileResult:
+    return FileResult(
+        path=result.path,
+        status=result.status,
+        message=result.message,
+        timings={**result.timings, **timings},
+    )
 
 
 def apply_edit_content(
@@ -71,8 +81,8 @@ def apply_edit_content(
 
 
 @dataclass(frozen=True)
-class _RouteProfile:
-    """Route-specific configuration for the unified Stager."""
+class _StagingRouteProfile:
+    """Route-specific configuration for path-group staging."""
 
     name: str
     check_hash: bool
@@ -83,7 +93,7 @@ class _RouteProfile:
     timing_stage: TimingKey
 
 
-_DIRECT_PROFILE = _RouteProfile(
+_DIRECT_PROFILE = _StagingRouteProfile(
     name="direct",
     check_hash=False,
     supports_symlinks=True,
@@ -93,7 +103,7 @@ _DIRECT_PROFILE = _RouteProfile(
     timing_stage=TimingKey.DIRECT_STAGE_DELTA,
 )
 
-_GATED_PROFILE = _RouteProfile(
+_GATED_PROFILE = _StagingRouteProfile(
     name="tracked",
     check_hash=True,
     supports_symlinks=False,
@@ -105,10 +115,10 @@ _GATED_PROFILE = _RouteProfile(
 
 
 @dataclass
-class _StageState:
+class _PathStageState:
     content: bytes
     initial_exists: bool
-    final_kind: FinalKind
+    final_kind: FinalLayerChangeKind
     symlink_target: str | None = None
     final_content_path: str | None = None
     final_precomputed_hash: str | None = None
@@ -118,13 +128,13 @@ class _StageState:
         return self.final_kind != "delete"
 
 
-class Stager:
+class _PathGroupStager:
     """Validate and stage one prepared path group, parameterised by route."""
 
     def __init__(
         self,
         snapshot_reader: LayerSnapshotReader,
-        profile: _RouteProfile,
+        profile: _StagingRouteProfile,
         *,
         hasher: ContentHasher | None = None,
     ) -> None:
@@ -137,9 +147,9 @@ class Stager:
         group: PreparedPathGroup,
         *,
         active_manifest: Manifest,
-        stage_write: StageWrite,
-        stage_write_from_path: StageWriteFromPath | None = None,
-    ) -> tuple[FileResult, StagedChanges | None]:
+        stage_write: StageWriteBytes,
+        stage_write_from_path: StageWriteFile | None = None,
+    ) -> tuple[FileResult, StagedLayerChanges | None]:
         try:
             return self._stage_group(group, active_manifest, stage_write, stage_write_from_path)
         except Exception as exc:
@@ -152,9 +162,9 @@ class Stager:
         self,
         group: PreparedPathGroup,
         active_manifest: Manifest,
-        stage_write: StageWrite,
-        stage_write_from_path: StageWriteFromPath | None,
-    ) -> tuple[FileResult, StagedChanges | None]:
+        stage_write: StageWriteBytes,
+        stage_write_from_path: StageWriteFile | None,
+    ) -> tuple[FileResult, StagedLayerChanges | None]:
         profile = self._profile
         timings: dict[str, float] = {}
 
@@ -164,7 +174,7 @@ class Stager:
         )
         timings[profile.timing_read] = monotonic_now() - read_start
 
-        state = _StageState(
+        state = _PathStageState(
             content=current_content or b"",
             initial_exists=current_exists,
             final_kind="write" if current_exists else "delete",
@@ -175,7 +185,7 @@ class Stager:
             result = self._apply_change(change, state, group.path)
             if result is not None:
                 timings[profile.timing_apply] = monotonic_now() - apply_start
-                return with_timings(result, timings), None
+                return _with_timings(result, timings), None
         timings[profile.timing_apply] = monotonic_now() - apply_start
 
         stage_start = monotonic_now()
@@ -190,7 +200,7 @@ class Stager:
     def _apply_change(
         self,
         change: Change,
-        state: _StageState,
+        state: _PathStageState,
         path: str,
     ) -> FileResult | None:
         if isinstance(change, OpaqueDirChange):
@@ -264,7 +274,11 @@ class Stager:
             message=f"unsupported {self._profile.name} change kind: {type(change).__name__}",
         )
 
-    def _hash_mismatch(self, state: _StageState, base_hash: str | None) -> FileStatus | None:
+    def _hash_mismatch(
+        self,
+        state: _PathStageState,
+        base_hash: str | None,
+    ) -> FileStatus | None:
         """Return ABORTED_VERSION if the gated hash chain disagrees, else None."""
         if not self._profile.check_hash or self._hasher is None:
             return None
@@ -277,10 +291,10 @@ class Stager:
     def _build_delta(
         self,
         path: str,
-        state: _StageState,
-        stage_write: StageWrite,
-        stage_write_from_path: StageWriteFromPath | None,
-    ) -> StagedChanges | None:
+        state: _PathStageState,
+        stage_write: StageWriteBytes,
+        stage_write_from_path: StageWriteFile | None,
+    ) -> StagedLayerChanges | None:
         if state.final_kind == "opaque_dir":
             return (OpaqueDirLayerChange(path=path),)
         if state.final_kind == "symlink" and state.symlink_target is not None:
@@ -307,18 +321,31 @@ class Stager:
         return None
 
 
-def DirectStager(snapshot_reader: LayerSnapshotReader) -> Stager:
+class DirectStager(_PathGroupStager):
     """Stage direct (gitignored / untracked) changes with last-writer-wins."""
-    return Stager(snapshot_reader, _DIRECT_PROFILE)
+
+    def __init__(self, snapshot_reader: LayerSnapshotReader) -> None:
+        super().__init__(snapshot_reader, _DIRECT_PROFILE)
 
 
-def GatedStager(
-    snapshot_reader: LayerSnapshotReader,
-    *,
-    hasher: ContentHasher | None = None,
-) -> Stager:
+class GatedStager(_PathGroupStager):
     """Stage tracked changes, validating each step's base-hash chain."""
-    return Stager(snapshot_reader, _GATED_PROFILE, hasher=hasher or ContentHasher())
+
+    def __init__(
+        self,
+        snapshot_reader: LayerSnapshotReader,
+        *,
+        hasher: ContentHasher | None = None,
+    ) -> None:
+        super().__init__(
+            snapshot_reader,
+            _GATED_PROFILE,
+            hasher=hasher or ContentHasher(),
+        )
 
 
-__all__ = ["DirectStager", "GatedStager", "Stager"]
+__all__ = [
+    "DirectStager",
+    "GatedStager",
+    "StagedLayerChanges",
+]

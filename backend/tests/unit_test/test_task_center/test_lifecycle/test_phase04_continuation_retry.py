@@ -25,7 +25,7 @@ from task_center.iteration.state import (
     IterationStatus,
 )
 from task_center.task_state import EvaluatorSubmission, GeneratorSubmission, TaskCenterTaskStatus, PlannedGeneratorTask, PlannerSubmission
-from task_center._core.types import evaluator_task_id, generator_task_id, planner_task_id
+from task_center._core.primitives import evaluator_task_id, generator_task_id, planner_task_id
 
 
 class _FakeLauncher:

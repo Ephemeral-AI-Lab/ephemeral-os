@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from task_center._core.types import TaskCenterLifecycleConfig
+from task_center._core.primitives import TaskCenterLifecycleConfig
 from task_center.goal.handler import GoalHandler
 from task_center.goal.state import GoalStatus
 from task_center.attempt import AttemptStatus
@@ -15,7 +15,7 @@ from task_center.attempt.runtime import (
     AttemptDeps,
 )
 from task_center.task_state import EvaluatorSubmission, GeneratorSubmission, PlannedGeneratorTask, PlannerSubmission
-from task_center._core.types import evaluator_task_id, generator_task_id, planner_task_id
+from task_center._core.primitives import evaluator_task_id, generator_task_id, planner_task_id
 from task_center.iteration import IterationManagerRegistry
 from task_center.iteration.state import IterationStatus
 

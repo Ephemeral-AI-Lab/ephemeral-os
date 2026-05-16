@@ -9,6 +9,8 @@ from pathlib import Path
 from types import TracebackType
 from uuid import uuid4
 
+from sandbox._shared.clock import monotonic_now
+from sandbox._shared.timing_keys import TimingKey
 from sandbox.layer_stack.changes import LayerChange, WriteLayerChange
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset import (
@@ -26,10 +28,11 @@ from sandbox.occ.ports import (
     LayerCommitStagingStore,
     LayerSnapshotReader,
 )
-from sandbox.occ.path_staging import DirectStager, GatedStager
-from sandbox.occ.path_staging_policy import MergePolicy, StagedChanges
-from sandbox._shared.timing_keys import TimingKey
-from sandbox._shared.clock import monotonic_now
+from sandbox.occ.path_staging import (
+    DirectStager,
+    GatedStager,
+    StagedLayerChanges,
+)
 
 # Below this threshold, a buffered Python read+write is cheaper than
 # shutil.copyfile (which pays open/sendfile/close per call). Above it,
@@ -54,7 +57,7 @@ class CommitTransaction:
         self._hasher = ContentHasher()
         self._gated = GatedStager(snapshot_reader, hasher=self._hasher)
         self._direct = DirectStager(snapshot_reader)
-        self._policies: Mapping[RouteDecision, MergePolicy] = {
+        self._policies: Mapping[RouteDecision, DirectStager | GatedStager] = {
             RouteDecision.DIRECT: self._direct,
             RouteDecision.GATED: self._gated,
         }
@@ -143,7 +146,7 @@ class CommitTransaction:
         *,
         active_manifest: Manifest,
         stager: _FileSystemLayerChangeStager,
-    ) -> tuple[FileResult, StagedChanges | None]:
+    ) -> tuple[FileResult, StagedLayerChanges | None]:
         if group.route is RouteDecision.DROP:
             return (
                 FileResult(
@@ -287,7 +290,7 @@ _FAILURE_STATUSES = frozenset(
     }
 )
 
-_Validation = tuple[PreparedPathGroup, FileResult, StagedChanges | None]
+_Validation = tuple[PreparedPathGroup, FileResult, StagedLayerChanges | None]
 
 
 def _accumulate_route_timings(

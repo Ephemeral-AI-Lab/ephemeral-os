@@ -506,7 +506,7 @@ def test_prior_attempt_history_ordered_by_graph_sequence(
 def test_creating_initial_graph_twice_raises(
     goal_store, iteration_store, attempt_store, task_center_run_id
 ):
-    from task_center._core.types import TaskCenterInvariantViolation
+    from task_center._core.primitives import TaskCenterInvariantViolation
 
     seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id)
     mgr, _ = _make_manager(seg_id, iteration_store, attempt_store)

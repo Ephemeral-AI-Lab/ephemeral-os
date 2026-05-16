@@ -12,22 +12,20 @@ import logging
 from collections.abc import Callable
 from datetime import UTC, datetime
 
-from task_center._core.infra import (
+from task_center._core.invariants import (
     assert_attempt_belongs_to_iteration,
     assert_attempt_sequence_contiguous,
+    assert_fail_reason_present_on_failure,
     assert_iteration_has_budget,
     assert_iteration_open,
-    assert_fail_reason_present_on_failure,
 )
 from task_center._core.persistence import (
     AttemptStoreProtocol,
     IterationStoreProtocol,
     TaskStoreProtocol,
 )
-from task_center._core.types import (
-    RegisteredAttemptOrchestrator,
-    TaskCenterInvariantViolation,
-)
+from task_center._core.primitives import TaskCenterInvariantViolation
+from task_center.attempt.orchestrator_registry import RegisteredAttemptOrchestrator
 from task_center.attempt.state import (
     Attempt,
     AttemptFailReason,

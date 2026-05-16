@@ -52,7 +52,7 @@ if TYPE_CHECKING:
         IterationCreationReason,
         IterationStatus,
     )
-    from task_center._core.types import TaskCenterInvariantViolation
+    from task_center._core.primitives import TaskCenterInvariantViolation
     from task_center.goal.starter import GoalStarter, StartedGoal
     from task_center.goal.state import Goal, GoalStatus
     from task_center.task_state import (
@@ -109,7 +109,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     ),
     "StartedGoal": ("task_center.goal.starter", "StartedGoal"),
     "TaskCenterInvariantViolation": (
-        "task_center._core.types",
+        "task_center._core.primitives",
         "TaskCenterInvariantViolation",
     ),
     "TaskCenterSandboxBridge": (

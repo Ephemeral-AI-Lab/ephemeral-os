@@ -14,7 +14,7 @@ from task_center.attempt.runtime import AgentLaunch, AttemptDeps
 from task_center.iteration import IterationManagerRegistry
 from task_center.iteration.state import IterationCreationReason
 from task_center.task_state import GeneratorSubmission, PlannedGeneratorTask, PlannerSubmission
-from task_center._core.types import evaluator_task_id, generator_task_id, planner_task_id
+from task_center._core.primitives import evaluator_task_id, generator_task_id, planner_task_id
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.runtime import ExecutionMetadata
 

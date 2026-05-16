@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 from sandbox.layer_stack.changes import normalize_layer_path
 from sandbox.occ.changeset import (
@@ -11,7 +12,9 @@ from sandbox.occ.changeset import (
     build_overlay_write_change,
 )
 from sandbox.occ.changeset import Change, OpaqueDirChange, SymlinkChange
-from sandbox.execution.path_change import OverlayPathChange
+
+if TYPE_CHECKING:
+    from sandbox.execution.path_change import OverlayPathChange
 
 
 def overlay_path_changes_to_occ_changes(

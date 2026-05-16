@@ -8,7 +8,7 @@ from task_center.goal.close_report_router import (
     GoalClosureReportRouter,
 )
 from task_center.goal.state import GoalClosureReport
-from task_center._core.types import TaskCenterInvariantViolation
+from task_center._core.primitives import TaskCenterInvariantViolation
 from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
@@ -17,7 +17,7 @@ from task_center.attempt.runtime import AgentLaunch, AttemptDeps
 from task_center.iteration import IterationManagerRegistry
 from task_center.iteration.state import IterationCreationReason
 from task_center.task_state import TaskCenterTaskStatus, PlannedGeneratorTask, PlannerSubmission
-from task_center._core.types import generator_task_id
+from task_center._core.primitives import generator_task_id
 
 
 class _FakeLauncher:

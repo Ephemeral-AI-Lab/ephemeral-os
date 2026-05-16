@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from task_center._core.types import TaskCenterLifecycleConfig
+from task_center._core.primitives import TaskCenterLifecycleConfig
 from task_center.goal.handler import GoalHandler
 from task_center.iteration import IterationManagerRegistry
 from task_center.goal.state import GoalStatus
@@ -18,7 +18,7 @@ from task_center.iteration.state import (
     IterationCreationReason,
     IterationStatus,
 )
-from task_center._core.types import TaskCenterInvariantViolation
+from task_center._core.primitives import TaskCenterInvariantViolation
 
 
 @pytest.fixture

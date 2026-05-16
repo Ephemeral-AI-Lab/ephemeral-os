@@ -97,15 +97,15 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/layer_stack/manifest.py",
         "sandbox/layer_stack/stack.py",
         "sandbox/layer_stack/workspace_binding.py",
-        "sandbox/occ/overlay.py",
         "sandbox/occ/changeset.py",
+        "sandbox/occ/changeset_preparation.py",
         "sandbox/occ/commit_queue.py",
         "sandbox/occ/commit_transaction.py",
+        "sandbox/occ/content_hashing.py",
         "sandbox/occ/gitignore.py",
-        "sandbox/occ/hashing.py",
-        "sandbox/occ/preparer.py",
-        "sandbox/occ/stage.py",
-        "sandbox/occ/stage_policy.py",
+        "sandbox/occ/overlay_change_conversion.py",
+        "sandbox/occ/path_staging.py",
+        "sandbox/occ/ports.py",
     ]
     missing = [p for p in required if not (extract_dir / p).exists()]
     assert missing == [], f"bundle is missing required paths: {missing}"

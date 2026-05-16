@@ -1,9 +1,4 @@
-"""Production launcher + LaunchBuilder for TaskCenter harness agents.
-
-Phase 7d merger: bundles the former ``attempt/launcher.py`` (run-exhaustion
-reporting + EphemeralAttemptAgentLauncher) and ``attempt/launch_builder.py``
-(role-specific AgentLaunch construction) into one module.
-"""
+"""Production launcher + LaunchBuilder for TaskCenter harness agents."""
 
 from __future__ import annotations
 
@@ -12,14 +7,18 @@ import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 from agents import get_definition
 from message.stream_events import StreamEvent
+from task_center._core.persistence import (
+    GoalStoreProtocol,
+    IterationStoreProtocol,
+)
 from task_center.attempt.runtime import AgentLaunch, AttemptDeps
 from task_center.attempt.state import AttemptFailReason, AttemptStatus
 from task_center.context_engine.scope import ContextScope
-from task_center._core.types import TaskCenterInvariantViolation
+from task_center._core.primitives import TaskCenterInvariantViolation
 from task_center.task_state import (
     EvaluatorSubmission,
     GeneratorSubmission,
@@ -34,7 +33,22 @@ if TYPE_CHECKING:
     from runtime.app_factory import RuntimeConfig
     from task_center.attempt.orchestrator import AttemptOrchestrator
     from task_center.attempt.state import Attempt
-    from task_center.attempt.contexts import LaunchCtx
+    from task_center.context_engine.core import ContextComposer
+
+
+class LaunchBuilderDeps(Protocol):
+    """Narrow seam :class:`LaunchBuilder` requires from :class:`AttemptDeps`.
+
+    Declared as a Protocol so tests can pass a structurally compatible context
+    without constructing a full :class:`AttemptDeps`.
+    """
+
+    goal_store: GoalStoreProtocol
+    iteration_store: IterationStoreProtocol
+
+    def run_id_for_attempt(self, attempt: Attempt) -> str: ...
+
+    def require_composer(self) -> ContextComposer: ...
 
 logger = logging.getLogger(__name__)
 
@@ -310,7 +324,7 @@ EVALUATOR_AGENT_NAME = "evaluator"
 class LaunchBuilder:
     """Build :class:`AgentLaunch` records for each harness role."""
 
-    runtime: LaunchCtx
+    runtime: LaunchBuilderDeps
 
     def for_planner(self, *, attempt: Attempt, task_id: str) -> AgentLaunch:
         iteration = self._require_iteration(attempt)

@@ -1,11 +1,11 @@
-"""Tests for the un-guarded ``sandbox.api._tool_verbs.raw_exec`` primitive."""
+"""Tests for the un-guarded ``sandbox.api._raw_exec`` primitive."""
 
 from __future__ import annotations
 
 import pytest
 
 from sandbox.api import RawExecResult
-from sandbox.api._tool_verbs.raw_exec import raw_exec
+from sandbox.api._raw_exec import raw_exec
 from sandbox.provider.registry import dispose_adapter, register_adapter
 
 

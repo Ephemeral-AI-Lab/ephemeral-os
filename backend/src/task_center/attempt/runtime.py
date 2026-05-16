@@ -1,9 +1,10 @@
-"""Runtime + lifecycle dependency seams for harness attempt orchestration.
+"""Runtime DI bundle (:class:`AttemptDeps`) + lifecycle target protocol.
 
-Phase 7e merger: bundles the former ``attempt/lifecycle.py``
-(``LifecycleTarget`` protocol + ``GeneratorTaskLifecycle``) into this module
-so the runtime DI surface and the polymorphic parent-task lifecycle owner
-sit side-by-side.
+Includes :class:`AttemptDeps` (the launcher/orchestrator/store seam threaded
+into every spawn) plus :class:`LifecycleTarget` and
+:class:`GeneratorTaskLifecycle`, which expose a uniform parent-task waiter
+surface for both entry-mode (``EntryTaskController``) and attempt-mode
+(generator inside an :class:`AttemptOrchestrator`).
 """
 
 from __future__ import annotations
@@ -15,22 +16,22 @@ from typing import TYPE_CHECKING, Protocol
 from audit.base import AuditSink, NoopAuditSink
 
 from task_center.attempt.state import Attempt
-from task_center._core.types import TaskCenterLifecycleConfig
+from task_center._core.primitives import TaskCenterLifecycleConfig
 from task_center.iteration import IterationManagerRegistry
-from task_center._core.types import TaskCenterInvariantViolation
+from task_center._core.primitives import TaskCenterInvariantViolation
 from task_center._core.persistence import (
     AttemptStoreProtocol,
     IterationStoreProtocol,
     GoalStoreProtocol,
     TaskStoreProtocol,
 )
-from task_center._core.types import RegisteredAttemptOrchestrator
 from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 
 if TYPE_CHECKING:
     from task_center.attempt.launch import EphemeralAttemptAgentLauncher
     from task_center.attempt.orchestrator_registry import (
         AttemptOrchestratorRegistry,
+        RegisteredAttemptOrchestrator,
     )
     from task_center.context_engine.core import ContextComposer
     from task_center.entry import EntryTaskController

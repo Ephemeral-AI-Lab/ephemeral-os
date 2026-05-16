@@ -23,11 +23,11 @@ def test_phase03_occ_preparation_modules_do_not_import_overlay_or_legacy_apply()
     occ_root = Path(sandbox.occ.__file__).resolve().parent
     phase03_files = [
         occ_root / "service.py",
-        occ_root / "preparer.py",
+        occ_root / "changeset_preparation.py",
         occ_root / "changeset.py",
         occ_root / "gitignore.py",
-        occ_root / "hashing.py",
-        occ_root / "stage.py",
+        occ_root / "content_hashing.py",
+        occ_root / "path_staging.py",
         occ_root / "commit_transaction.py",
         occ_root / "commit_queue.py",
     ]
@@ -53,7 +53,7 @@ def test_phase03_occ_preparation_modules_do_not_import_overlay_or_legacy_apply()
 
 def test_overlay_capture_module_is_the_occ_overlay_bridge() -> None:
     occ_root = Path(sandbox.occ.__file__).resolve().parent
-    imports = _imports(occ_root / "overlay.py")
+    imports = _imports(occ_root / "overlay_change_conversion.py")
 
     assert "sandbox.execution.path_change" in imports
     assert "sandbox.occ.changeset" in imports
@@ -61,7 +61,8 @@ def test_overlay_capture_module_is_the_occ_overlay_bridge() -> None:
 
 def test_overlay_capture_conversion_does_not_import_occ_service() -> None:
     occ_root = Path(sandbox.occ.__file__).resolve().parent
-    imports = _imports(occ_root / "overlay.py")
+    imports = _imports(occ_root / "overlay_change_conversion.py")
 
     assert "sandbox.occ.service" not in imports
+    assert not (occ_root / "overlay.py").exists()
     assert not (occ_root / "overlay_capture.py").exists()

@@ -11,8 +11,8 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 
-from task_center._core.infra import TaskCenterAuditEmitter
-from task_center._core.types import TaskCenterInvariantViolation
+from task_center._core.audit import TaskCenterAuditEmitter
+from task_center._core.primitives import TaskCenterInvariantViolation
 from task_center.attempt.state import (
     Attempt,
     AttemptFailReason,
@@ -29,7 +29,7 @@ from task_center.attempt.generator_dag import (
     ready_pending_generator_ids,
     summarize_generator_dag,
 )
-from task_center._core.types import evaluator_task_id
+from task_center._core.primitives import evaluator_task_id
 from task_center.task_state import (
     SpawnReason,
     TaskCenterTaskRole,

@@ -7,39 +7,42 @@ from collections.abc import Callable
 from dataclasses import asdict
 from datetime import UTC, datetime
 
-from task_center.goal.state import GoalClosureReport
-from task_center._core.types import TaskCenterInvariantViolation
+from task_center._core.invariants import (
+    assert_attempt_not_closed,
+    assert_attempt_stage,
+    assert_evaluator_task_for_submission,
+    assert_generator_task_for_submission,
+    assert_task_belongs_to_attempt,
+    assert_valid_attempt_close,
+)
+from task_center._core.primitives import (
+    TaskCenterInvariantViolation,
+    generator_task_id,
+    planner_task_id,
+)
 from task_center.attempt.dispatcher import AttemptDispatcher
+from task_center.attempt.generator_dag import (
+    dependency_task_ids,
+    ordered_generator_tasks,
+)
+from task_center.attempt.launch import LaunchBuilder
+from task_center.attempt.runtime import AttemptDeps
 from task_center.attempt.state import (
     Attempt,
     AttemptFailReason,
     AttemptStage,
     AttemptStatus,
 )
-from task_center.attempt.runtime import AttemptDeps
-from task_center.attempt.launch import LaunchBuilder
-from task_center._core.types import generator_task_id, planner_task_id
+from task_center.goal.state import GoalClosureReport
 from task_center.task_state import (
-    SpawnReason,
     EvaluatorSubmission,
     GeneratorSubmission,
-    TaskCenterTaskRole,
-    TaskCenterTaskStatus,
     PlannedGeneratorTask,
     PlannerFailureSubmission,
     PlannerSubmission,
-)
-from task_center.attempt.generator_dag import (
-    dependency_task_ids,
-    ordered_generator_tasks,
-)
-from task_center._core.infra import (
-    assert_evaluator_task_for_submission,
-    assert_generator_task_for_submission,
-    assert_attempt_not_closed,
-    assert_attempt_stage,
-    assert_task_belongs_to_attempt,
-    assert_valid_attempt_close,
+    SpawnReason,
+    TaskCenterTaskRole,
+    TaskCenterTaskStatus,
 )
 
 logger = logging.getLogger(__name__)

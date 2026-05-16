@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from audit.base import AuditSink
-from sandbox.api._tool_verbs._operation_audit import audited_operation
-from sandbox.api._tool_verbs._result_builders import read_result_from_daemon_payload
+from sandbox.api.tool.core.audit import audited_operation
+from sandbox.api.tool.core.results import read_result_from_daemon_response
 from sandbox.api.protocol import SandboxTransport
 from sandbox.api.timeouts import READ_FILE_TIMEOUT_S
 from sandbox.api.transport import DAEMON_OP_READ_FILE, DaemonSandboxTransport
@@ -28,7 +28,7 @@ async def read_file(
             {"path": request.path, "caller": request.caller.audit_fields()},
             timeout=READ_FILE_TIMEOUT_S,
         )
-        return read_result_from_daemon_payload(raw)
+        return read_result_from_daemon_response(raw)
 
     return await audited_operation(
         audit_sink=audit_sink,

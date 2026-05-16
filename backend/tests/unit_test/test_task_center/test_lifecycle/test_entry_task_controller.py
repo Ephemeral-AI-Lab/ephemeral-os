@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from task_center.entry import EntryTaskController
-from task_center._core.types import TaskCenterInvariantViolation
+from task_center._core.primitives import TaskCenterInvariantViolation
 from task_center.goal.state import GoalClosureReport
 from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 

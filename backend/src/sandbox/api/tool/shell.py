@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 from audit.base import AuditSink
-from sandbox.api._tool_verbs._daemon_payload import error_message, timings_from_daemon_payload
-from sandbox.api._tool_verbs._error_classification import is_shell_conflict
-from sandbox.api._tool_verbs._operation_audit import audited_operation
-from sandbox.api._tool_verbs._result_builders import (
+from sandbox.api.tool.core.audit import audited_operation
+from sandbox.api.tool.core.conflicts import is_shell_conflict
+from sandbox.api.tool.core.daemon_response import (
+    error_message,
+    timings_from_daemon_response,
+)
+from sandbox.api.tool.core.results import (
     shell_conflict_result,
     shell_error_result,
-    shell_result_from_daemon_payload,
+    shell_result_from_daemon_response,
 )
 from sandbox.api.protocol import SandboxTransport
 from sandbox.api.timeouts import shell_dispatch_timeout
@@ -50,9 +53,9 @@ async def shell(
             },
             timeout=shell_dispatch_timeout(request.timeout),
         )
-        timings = timings_from_daemon_payload(raw.get("timings"))
+        timings = timings_from_daemon_response(raw.get("timings"))
         timings["api.shell.dispatch_total_s"] = monotonic_now() - total_start
-        return shell_result_from_daemon_payload(raw, timings=timings)
+        return shell_result_from_daemon_response(raw, timings=timings)
 
     def _conflict_from_error(exc: BaseException) -> ShellResult | None:
         if not is_shell_conflict(exc):

@@ -6,8 +6,8 @@ from collections import deque
 from dataclasses import dataclass
 from typing import Any
 
-from task_center._core.types import TaskCenterInvariantViolation
-from task_center._core.types import generator_task_id
+from task_center._core.primitives import TaskCenterInvariantViolation
+from task_center._core.primitives import generator_task_id
 from task_center.task_state import (
     TaskCenterTaskStatus,
     PlannedGeneratorTask,

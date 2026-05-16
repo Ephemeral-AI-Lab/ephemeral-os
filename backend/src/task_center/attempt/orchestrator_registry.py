@@ -9,8 +9,25 @@ this registry — the cycle is broken at the type level.
 
 from __future__ import annotations
 
-from task_center._core.types import TaskCenterInvariantViolation
-from task_center._core.types import RegisteredAttemptOrchestrator
+from typing import TYPE_CHECKING, Protocol
+
+from task_center._core.primitives import TaskCenterInvariantViolation
+
+if TYPE_CHECKING:  # pragma: no cover - typing-only
+    from task_center.goal.state import GoalClosureReport
+
+
+class RegisteredAttemptOrchestrator(Protocol):
+    """The slice of :class:`AttemptOrchestrator` observed by collaborators."""
+
+    @property
+    def attempt_id(self) -> str: ...
+
+    def start(self) -> None: ...
+
+    def apply_goal_closure_report(
+        self, report: GoalClosureReport
+    ) -> None: ...
 
 
 class AttemptOrchestratorRegistry:
@@ -45,3 +62,6 @@ class AttemptOrchestratorRegistry:
 
     def deregister(self, attempt_id: str) -> None:
         self._by_attempt_id.pop(attempt_id, None)
+
+
+__all__ = ["AttemptOrchestratorRegistry", "RegisteredAttemptOrchestrator"]

@@ -13,8 +13,8 @@ Plan: .omc/plans/task-center-folder-reframe-20260514.md (lever #18, AC #12)
 from __future__ import annotations
 
 from audit.base import AuditEvent
-from task_center._core import infra as events
-from task_center._core.infra import TaskCenterAuditEmitter
+from task_center._core import audit as events
+from task_center._core.audit import TaskCenterAuditEmitter
 
 
 class CollectingSink:

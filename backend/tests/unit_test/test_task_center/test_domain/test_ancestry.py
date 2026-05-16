@@ -14,8 +14,8 @@ from task_center.attempt import AttemptStage
 from task_center.context_engine.core import ContextEngineDeps
 from task_center.context_engine.scope import ContextScope
 from task_center.iteration.state import IterationCreationReason
-from task_center._core.types import TaskCenterInvariantViolation
-from task_center.goal.handler import nested_goal_depth
+from task_center._core.primitives import TaskCenterInvariantViolation
+from task_center.goal.ancestry import nested_goal_depth
 
 
 def _stores(goal_store, iteration_store, attempt_store, task_store):

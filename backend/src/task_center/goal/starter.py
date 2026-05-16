@@ -20,7 +20,7 @@ from task_center.goal.state import (
     Goal,
     GoalStatus,
 )
-from task_center._core.types import TaskCenterInvariantViolation
+from task_center._core.primitives import TaskCenterInvariantViolation
 from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.iteration import OrchestratorFactory
 from task_center.attempt.state import AttemptFailReason, AttemptStatus

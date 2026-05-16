@@ -22,16 +22,13 @@ from db.stores import (
     IterationStore,
 )
 from agents import validate_agent_definitions_resolved
-from task_center._core.types import TaskCenterLifecycleConfig
+from task_center._core.primitives import TaskCenterLifecycleConfig
 from task_center.context_engine.core import (
     ContextComposer,
     ContextEngine,
     ContextEngineDeps,
 )
-from task_center._core.agent_routing import (
-    configure_max_handoff_depth,
-    register_builtin_predicates,
-)
+from task_center._core.agent_routing import register_builtin_predicates
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.entry import EntryTaskController, TaskCenterSandboxBinding, TaskCenterSandboxBridge
 from task_center.attempt.launch import (
@@ -132,7 +129,12 @@ class TaskCenterEntryCoordinator:
 
     def start(self) -> TaskCenterEntryHandle:
         """Create and launch the entry executor."""
-        self._assert_stores_ready()
+        _assert_stores_ready(
+            task_store=self._task_store,
+            goal_store=self._goal_store,
+            iteration_store=self._iteration_store,
+            attempt_store=self._attempt_store,
+        )
         request_id, run_id, entry_task_id, binding = self._create_top_level_run()
         manager_registry = IterationManagerRegistry()
 
@@ -163,14 +165,6 @@ class TaskCenterEntryCoordinator:
         )
 
     # ---- internal: setup ---------------------------------------------------
-
-    def _assert_stores_ready(self) -> None:
-        _assert_stores_ready(
-            task_store=self._task_store,
-            goal_store=self._goal_store,
-            iteration_store=self._iteration_store,
-            attempt_store=self._attempt_store,
-        )
 
     def _create_top_level_run(
         self,
@@ -240,9 +234,6 @@ class TaskCenterEntryCoordinator:
         teardown — this method is not a sandbox.
         """
         register_builtin_predicates()
-        configure_max_handoff_depth(
-            TaskCenterLifecycleConfig().max_handoff_depth
-        )
         register_builtin_recipes()
         validate_agent_definitions_resolved()
         deps = ContextEngineDeps(

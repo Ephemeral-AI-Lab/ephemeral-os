@@ -6,20 +6,16 @@ from datetime import UTC, datetime
 
 import pytest
 
-from task_center._core.infra import (
-    assert_continuation_iteration_predecessor,
-    assert_goal_open,
-    assert_iteration_id_unique_in_goal,
-    assert_iteration_sequence_contiguous,
-)
-from task_center._core.infra import (
-    assert_fail_reason_present_on_failure,
-    assert_attempt_sequence_contiguous,
-)
-from task_center._core.infra import (
+from task_center._core.invariants import (
     assert_attempt_belongs_to_iteration,
+    assert_attempt_sequence_contiguous,
+    assert_continuation_iteration_predecessor,
+    assert_fail_reason_present_on_failure,
+    assert_goal_open,
     assert_iteration_has_budget,
+    assert_iteration_id_unique_in_goal,
     assert_iteration_open,
+    assert_iteration_sequence_contiguous,
 )
 from task_center.iteration import IterationManagerRegistry
 from task_center.goal.state import (
@@ -37,7 +33,7 @@ from task_center.iteration.state import (
     IterationCreationReason,
     IterationStatus,
 )
-from task_center._core.types import TaskCenterInvariantViolation
+from task_center._core.primitives import TaskCenterInvariantViolation
 
 
 def _request(

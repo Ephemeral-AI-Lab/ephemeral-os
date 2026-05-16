@@ -12,7 +12,7 @@ from task_center.goal.starter import (
     StartedGoal,
 )
 from task_center.goal.state import GoalStatus
-from task_center._core.types import TaskCenterInvariantViolation
+from task_center._core.primitives import TaskCenterInvariantViolation
 from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
@@ -27,7 +27,7 @@ from task_center.iteration.state import (
     IterationStatus,
     )
 from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
-from task_center._core.types import planner_task_id
+from task_center._core.primitives import planner_task_id
 
 
 class _FakeLauncher:

@@ -24,36 +24,38 @@ from sandbox.api import (
 _API_ROOT = Path(sandbox_api.__file__).parent
 _EXPECTED_API_ROOT_ENTRIES = {
     "__init__.py",
-    "_provider_control_plane.py",
-    "_tool_verbs",
+    "_sandbox_control.py",
+    "_raw_exec.py",
+    "tool",
     "protocol.py",
     "timeouts.py",
     "transport.py",
 }
 _MODEL_ONLY_MODULES = {
     "__init__.py",
-    "_tool_verbs/__init__.py",
+    "tool/__init__.py",
+    "tool/core/__init__.py",
 }
 _PUBLIC_VERB_IMPORT_ALLOWLIST = {
-    "_tool_verbs/read.py": {
+    "tool/read.py": {
         "audit.base",
         "sandbox._shared.models",
     },
-    "_tool_verbs/write.py": {
+    "tool/write.py": {
         "audit.base",
         "sandbox._shared.models",
     },
-    "_tool_verbs/edit.py": {
+    "tool/edit.py": {
         "audit.base",
         "sandbox._shared.models",
     },
-    "_tool_verbs/shell.py": {
+    "tool/shell.py": {
         "audit.base",
         "sandbox.audit.operation",
         "sandbox._shared.models",
         "sandbox._shared.clock",
     },
-    "_tool_verbs/raw_exec.py": {
+    "_raw_exec.py": {
         "audit.base",
         "sandbox._shared.models",
         "sandbox.provider.registry",
@@ -106,7 +108,8 @@ def test_api_package_uses_module_level_default_wrappers() -> None:
     sorted(
             [
                 *_API_ROOT.glob("*.py"),
-                *(_API_ROOT / "_tool_verbs").glob("*.py"),
+                *(_API_ROOT / "tool").glob("*.py"),
+                *(_API_ROOT / "tool" / "core").glob("*.py"),
             ]
         ),
     )
