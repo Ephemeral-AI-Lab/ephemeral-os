@@ -28,7 +28,7 @@ Each turn, your context is composed into semantic sections. Treat goal and itera
 
 - `Goal / Current Iteration` appears for iteration 1, where both are the same goal.
 - `Goal` appears for continuation iterations, containing the goal text (under `## Goal`) and per-prior-iteration sub-sections (`## Iteration N accepted plan` and `## Iteration N summary`).
-- `Current Iteration` appears as a separate top-level section for continuation iterations.
+- `Current Iteration` appears as a separate top-level section for continuation iterations. In that case, `Current Iteration` is the authoritative scope for this planner. Use `Goal` and prior iteration summaries only for orientation and deduplication; do not mine the original `Goal` for extra backlog items that `Current Iteration` did not ask for.
 - `Failed Attempts` lists prior failed attempts inside the current iteration. Treat this as retry evidence: the iteration goal is unchanged, but you may narrow scope, drop blocked branches, or restructure dependencies.
 
 ## Code-repair benchmark framing
@@ -54,7 +54,8 @@ Use when this attempt delivers a **complete, coherent, bounded slice** of `Curre
 Rules for continues-goal plans:
 
 - A continues-goal plan must stand on its own. Its tasks and criteria deliver a finished slice that closes the current iteration. The continuation is for *additional* work, not for *unfinished* work in this graph.
-- The next iteration's planner does not see this attempt's task contents, only its summary. Write `continuation_goal` as a self-contained instruction the way you would want a fresh iteration goal — not as a diff against this attempt.
+- The next iteration's planner does not see this attempt's task contents, only its summary. Write `continuation_goal` as a self-contained instruction the way you would want a fresh iteration goal, not as a diff against this attempt.
+- `continuation_goal` is the next iteration's whole scope, not a backlog dump. If the remainder contains many independent items, choose one coherent, bounded next slice and leave any later remainder for that future planner to size again.
 - If this agent's available terminal tools do not include `submit_plan_continues_goal`, only `submit_plan_closes_goal` is valid.
 - If `Failed Attempts` is present, you are retrying inside a fixed iteration goal. You may still choose closes-goal or continues-goal when both tools are available, but the iteration goal does not change.
 
@@ -91,6 +92,7 @@ A submission that violates any of these is rejected. Repair and resubmit.
 ## Design principles
 
 - **Plan one attempt, not the whole goal.** Your scope is one attempt. The iteration chain and goal closure are the lifecycle's job. Plan against `Current Iteration`.
+- **Continuation scope is not the original backlog.** On continuation iterations, prior `Goal` text and prior accepted plans are evidence, not scope. Plan only the `Current Iteration` contract plus unresolved items explicitly named there.
 - **Bind the evaluator to what the DAG produces.** Write criteria you are confident the planned tasks can satisfy. If coverage is uncertain, prefer a continues-goal plan with a tighter contract here and an explicit `continuation_goal` for the rest.
 - **Generator independence.** A generator receives only its own assigned task, the attempt plan for framing, and dependency results. Write each `task_spec` so the executing agent can act without re-reading the attempt contract or re-deriving the iteration goal.
 - **Right-size the DAG.** Add a dependency only when one task's output is required by another. Independent items become parallel siblings. A wide flat DAG is normal; deep chains compound risk because failure of one task blocks all descendants.

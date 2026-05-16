@@ -228,3 +228,40 @@ Starting state: branch `codex/fix-dot-path-normalization-tests` at `2cba70f5f` (
 **Audit refs:** `.omc/experiments/sweevo-real-agent-loop-20260517/iter-6/console.log`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T174529Z_9de60a9bdb94/sweevo_result.json`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T174529Z_9de60a9bdb94/sandbox_events.jsonl`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T174529Z_9de60a9bdb94/performance_report.md`
 
 **Guard:** `.venv/bin/pytest backend/tests/unit_test/test_benchmarks/test_sweevo_evaluation.py -q` -> `3 passed in 0.17s`; `.venv/bin/pytest backend/tests/unit_test/test_benchmarks/test_sweevo_sandbox.py -q` -> `8 passed in 14.19s`; `.venv/bin/pytest backend/tests/unit_test/test_task_center_runner/test_sweevo_lifecycle_aggregate.py -q` -> `5 passed in 0.38s`; `.venv/bin/pytest backend/tests/unit_test/test_benchmarks/test_sweevo_csv_runner_cli.py -q` -> `10 passed in 0.35s`; `.venv/bin/ruff check backend/src/benchmarks/sweevo/evaluation.py backend/src/benchmarks/sweevo/sandbox.py backend/tests/unit_test/test_benchmarks/test_sweevo_evaluation.py backend/tests/unit_test/test_benchmarks/test_sweevo_sandbox.py` -> pass.
+
+## Iter 7 — 2026-05-17 02:14
+
+**Hypothesis:** materializing the active layerstack back onto `/testbed` before SWE-EVO grading will make the external evaluator see agent edits and produce a non-empty patch / non-zero f2p.
+**Primary surface touched:** prompts | role_instruction
+**Infra patches (if any):** none
+**Change-set:**
+- `backend/src/agents/profile/main/planner.md`
+- `backend/src/agents/profile/main/planner_full_only.md`
+- `backend/src/task_center/context_engine/recipes/role_instruction.py`
+- `backend/tests/unit_test/test_task_center/test_context_engine/test_role_instruction.py`
+
+**Run outcome:**
+- resolved: false
+- f2p: n/a (no `sweevo_result.json`; interrupted before external grading)
+- p2p_broken: n/a
+- duration_s: 2260
+- status: failed (operator interrupted)
+- terminal failure mode: continuation planner re-expanded the original release backlog and one broad executor looped on `categorize` annotations for >170 messages, preventing SWE-EVO grading.
+
+**Checklist scores (§2):**
+1. planner-terminal: fail (iteration 1 used continues-goal with a 19-item backlog dump; iteration 2 then used closes-goal on an over-broad continuation)
+2. planner-explore: fail (iteration 2 over-explored unrelated CI/dependabot items and repeated broad repo searches despite prior summaries)
+3. planner-dag: fail (DAGs were wide, but the continuation DAG included unrelated release-maintenance tasks instead of the next bounded slice)
+4. planner-task-specs: fail (continuation specs were self-contained but over-prescriptive and included broad maintenance tasks outside the likely f2p surface)
+5. executor-terminal: fail (`pr10120_categorize_annotations` stayed in a repeated edit/test loop; earlier evaluator passed despite known pytest/config failure evidence)
+6. verifier-terminal: n/a
+7. evaluator-terminal: fail (iteration 1 evaluator passed after tool-limit warning and masked pytest failures; no iteration 2 evaluator reached)
+8. nesting+parallelism: fail (top-level siblings ran concurrently, but continuation consumed another broad release-wide pass)
+9. context-engine: fail (`Current Iteration` allowed the planner to treat continuation as the full remaining release backlog instead of the next bounded slice)
+10. perf: fail (run burned ~2260s before grading; executor loops committed pycache/cache noise and repeated shell checks)
+
+**Top finding (the one thing to fix next):** Continuation scope is under-specified. The first planner wrote a `continuation_goal` as a full remaining backlog, and the next planner treated `Goal` plus prior summaries as permission to re-plan the original release bundle. This prevents causal iteration and can block external grading entirely.
+**Next hypothesis:** if planner prompts and the role_instruction recipe say `Current Iteration` is authoritative on continuation iterations and `continuation_goal` must be the next bounded slice rather than a backlog dump, planners will create smaller continuation graphs and reach grading sooner.
+**Audit refs:** `.omc/experiments/sweevo-real-agent-loop-20260517/iter-7/console.log`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T181611Z_7168aea16df6/goal_01_d2e78e8f-61ac-4a1a-8d73-1fa7de013341/iteration_01_fee68a0f-1bb1-4fba-b1e2-dae6d7799aa0/attempt_01_3d1bc35b-02e7-4597-bfdf-38d917ad77bc/01_planner_3d1bc35b-02e7-4597-bfdf-38d917ad77bc:planner/message.jsonl`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T181611Z_7168aea16df6/goal_01_d2e78e8f-61ac-4a1a-8d73-1fa7de013341/iteration_02_fd4bf30c-b8e0-444c-8ea4-c22ceae859a3/attempt_01_069d5d13-b12d-468f-9551-95ef97976cfa/01_planner_069d5d13-b12d-468f-9551-95ef97976cfa:planner/message.jsonl`; `.sweevo_runs/benchmark/sweevo_csv/dask__dask_2023.3.2_2023.4.0/20260516T181611Z_7168aea16df6/goal_01_d2e78e8f-61ac-4a1a-8d73-1fa7de013341/iteration_02_fd4bf30c-b8e0-444c-8ea4-c22ceae859a3/attempt_01_069d5d13-b12d-468f-9551-95ef97976cfa/02_executor_069d5d13-b12d-468f-9551-95ef97976cfa:gen:pr10120_categorize_annotations/message.jsonl`
+
+**Guard:** `.venv/bin/pytest backend/tests/unit_test/test_task_center/test_context_engine/test_role_instruction.py -q` -> `9 passed in 0.08s`; `.venv/bin/pytest backend/tests/unit_test/test_agents/test_planner_full_only_md.py -q` -> `9 passed in 0.23s`; `.venv/bin/ruff check backend/src/task_center/context_engine/recipes/role_instruction.py backend/tests/unit_test/test_task_center/test_context_engine/test_role_instruction.py` -> pass.
