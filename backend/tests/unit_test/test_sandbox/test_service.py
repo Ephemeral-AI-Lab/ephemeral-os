@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from sandbox.provider.daytona.adapter import (
-    normalize_dict,
-    normalize_optional_text,
+    _normalize_dict as normalize_dict,
+    _normalize_optional_text as normalize_optional_text,
 )
 from sandbox.provider.daytona.client import timeout_seconds_from_env
 

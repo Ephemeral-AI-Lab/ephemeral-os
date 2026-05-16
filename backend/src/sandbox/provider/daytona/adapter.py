@@ -29,14 +29,14 @@ from sandbox.provider.daytona.client import (
 logger = logging.getLogger(__name__)
 
 
-def normalize_optional_text(value: str | None) -> str | None:
+def _normalize_optional_text(value: str | None) -> str | None:
     if value is None:
         return None
     normalized = value.strip()
     return normalized or None
 
 
-def normalize_dict(payload: dict[str, str] | None) -> dict[str, str]:
+def _normalize_dict(payload: dict[str, str] | None) -> dict[str, str]:
     if not payload:
         return {}
     return {
@@ -76,7 +76,7 @@ def _serialize_raw(raw: Any, *, assigned_agents: list[str] | None = None) -> dic
             break
     if image is None:
         for attr in ("image", "image_name", "snapshot"):
-            val = normalize_optional_text(getattr(raw, attr, None))
+            val = _normalize_optional_text(getattr(raw, attr, None))
             if val:
                 image = val
                 break
@@ -199,16 +199,16 @@ class DaytonaProviderAdapter:
         env_vars: dict[str, str] | None = None,
         labels: dict[str, str] | None = None,
     ) -> dict[str, Any]:
-        normalized_name = normalize_optional_text(name)
-        normalized_snapshot = normalize_optional_text(snapshot)
-        normalized_image = normalize_optional_text(image)
+        normalized_name = _normalize_optional_text(name)
+        normalized_snapshot = _normalize_optional_text(snapshot)
+        normalized_image = _normalize_optional_text(image)
         if not normalized_name:
             raise ValueError("Sandbox name is required")
         if normalized_snapshot and normalized_image:
             raise ValueError("Pass either snapshot or image, not both.")
 
-        clean_env = normalize_dict(env_vars)
-        clean_labels = normalize_dict(labels)
+        clean_env = _normalize_dict(env_vars)
+        clean_labels = _normalize_dict(labels)
         clean_labels["managed_by"] = APP_MANAGED_BY
         clean_labels["created_via"] = APP_CREATED_VIA
         if normalized_snapshot:
@@ -284,7 +284,7 @@ class DaytonaProviderAdapter:
 
     def set_labels(self, sandbox_id: str, labels: dict[str, str]) -> dict[str, Any]:
         raw = fetch_sandbox(sandbox_id)
-        raw.set_labels(normalize_dict(labels))
+        raw.set_labels(_normalize_dict(labels))
         _refresh(raw)
         return _serialize_raw(raw)
 
@@ -358,6 +358,4 @@ class DaytonaProviderAdapter:
 
 __all__ = [
     "DaytonaProviderAdapter",
-    "normalize_dict",
-    "normalize_optional_text",
 ]
