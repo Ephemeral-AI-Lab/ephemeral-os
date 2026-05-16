@@ -20,7 +20,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from tools.submission.evaluator import submit_evaluation_success
-from tools.submission.planner import submit_full_plan
+from tools.submission.planner import submit_plan_closes_goal
 
 from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
@@ -72,7 +72,7 @@ class AutoSquashCommitResume(ScenarioBase):
     )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_full_plan, dict(_AUTO_SQUASH_PLAN))
+        return ToolCallSpec(submit_plan_closes_goal, dict(_AUTO_SQUASH_PLAN))
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("auto_squash_commit_resume_probe",)

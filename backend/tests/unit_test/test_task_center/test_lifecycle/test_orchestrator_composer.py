@@ -103,7 +103,7 @@ def _register_planner_agents() -> None:
         name="planner",
         description="planner",
         context_recipe="planner",
-        terminals=["submit_full_plan", "submit_partial_plan"],
+        terminals=["submit_plan_closes_goal", "submit_plan_continues_goal"],
         variants=[
             AgentVariant(
                 when="nested_goal_depth_gt_1",
@@ -116,7 +116,7 @@ def _register_planner_agents() -> None:
         name="planner_full_only",
         description="planner",
         context_recipe="planner",
-        terminals=["submit_full_plan"],
+        terminals=["submit_plan_closes_goal"],
         system_prompt="PLANNER FULL ONLY",
     )
     register_definition(base)

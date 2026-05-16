@@ -18,8 +18,8 @@ from tools.submission.verifier import (
     submit_verification_success,
 )
 from tools.submission.planner import (
-    submit_full_plan,
-    submit_partial_plan,
+    submit_plan_closes_goal,
+    submit_plan_continues_goal,
 )
 
 from task_center_runner.audit.events import EventType
@@ -113,11 +113,11 @@ class PartialParentPlannerFullOnly(ScenarioBase):
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         if is_recursive_goal(ctx):
-            return ToolCallSpec(submit_full_plan, _child_full_plan())
+            return ToolCallSpec(submit_plan_closes_goal, _child_full_plan())
         if ctx.iteration.sequence_no == 1:
-            return ToolCallSpec(submit_partial_plan, _root_partial_plan())
+            return ToolCallSpec(submit_plan_continues_goal, _root_partial_plan())
         return ToolCallSpec(
-            submit_full_plan,
+            submit_plan_closes_goal,
             preflight_full_plan(
                 task_specification=(
                     "Run the root continuation follow-up as a normal full plan."

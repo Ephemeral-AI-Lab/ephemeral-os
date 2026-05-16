@@ -63,7 +63,7 @@ def planner_with_variant():
         name="planner",
         description="planner",
         context_recipe="planner",
-        terminals=["submit_full_plan", "submit_partial_plan"],
+        terminals=["submit_plan_closes_goal", "submit_plan_continues_goal"],
         variants=[
             AgentVariant(
                 when="needs_full_only",
@@ -83,7 +83,7 @@ def planner_with_variant():
         name="planner_full_only",
         description="planner",
         context_recipe="planner",
-        terminals=["submit_full_plan"],
+        terminals=["submit_plan_closes_goal"],
     )
     register_definition(base)
     register_definition(full_only)
@@ -117,7 +117,7 @@ def test_variant_predicate_match_picks_target(deps):
         deps=deps,
     )
     assert sel.agent_def.name == "planner_full_only"
-    assert "submit_partial_plan" not in sel.agent_def.terminals
+    assert "submit_plan_continues_goal" not in sel.agent_def.terminals
     assert len(sel.required_context_blocks) == 1
     assert sel.required_context_blocks[0].kind == "launch_notice"
     assert sel.reason == "ancestry has partial-plan caller"

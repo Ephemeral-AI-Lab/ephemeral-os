@@ -18,7 +18,7 @@ from tools.submission.evaluator import (
     submit_evaluation_failure,
     submit_evaluation_success,
 )
-from tools.submission.planner import submit_full_plan
+from tools.submission.planner import submit_plan_closes_goal
 
 from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios._utils import preflight_full_plan
@@ -46,7 +46,7 @@ class AttemptRetryEvaluatorFailure(ScenarioBase):
     )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_full_plan, preflight_full_plan())
+        return ToolCallSpec(submit_plan_closes_goal, preflight_full_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("preflight",)

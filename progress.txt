@@ -63,3 +63,67 @@
   broken in HEAD because backend/src/server/ was deleted. This pre-dates the Ralph session — the
   plan explicitly scoped only `server.app_factory` (HTTP routers and server.entrypoint were not
   part of the recovery). Worth a follow-up issue.
+
+## Session: 2026-05-16 — Main-Agent Prompt Base + Planner Tool/Field Rename
+
+### Plan
+.omc/prd.json (3-phase ralplan-approved plan)
+
+### Phase 1 — main-role base prompt + evidence preamble
+- backend/src/prompt/runtime_prompt.py: new build_main_role_base_prompt() (~9-line constant body),
+  evidence preamble prepended in build_runtime_context_message when at least one source file is
+  non-empty.
+- backend/src/prompt/__init__.py: exports build_main_role_base_prompt.
+- backend/src/engine/agent/factory.py: _MAIN_AGENT_KINDS frozenset + _should_inject_main_role_base
+  predicate, called inside _build_agent_system_prompt between runtime base and agent_def body.
+  Gating: agent_type=='agent' AND agent_kind in main set AND name != 'entry_executor' (entry_executor
+  has agent_kind=EXECUTOR but lives outside the goal/iteration/attempt tree).
+- Tests: parametrized inclusion (planner/evaluator/verifier/executor/executor_success_handoff/
+  executor_success_failure), parametrized exclusion (entry_executor/advisor/resolver/explorer),
+  subagent exclusion, runtime->base->body ordering, preamble present/absent. 26 targeted tests green.
+
+### Phase 2a — planner tool rename
+- submit_full_plan → submit_plan_closes_goal; submit_partial_plan → submit_plan_continues_goal.
+- File renames (mv), tool name strings, class names (SubmitPlanClosesGoalInput,
+  SubmitPlanContinuesGoalInput), function names, descriptions updated.
+- tools/submission/planner/__init__.py exports + tools/submission/_factory.py registrations swapped.
+- planner.md: added closes-vs-continues semantic sentence; updated frontmatter terminals + body.
+  "Rules for partial plans:" -> "Rules for continues-goal plans:"; "partial only" -> "continues-goal only".
+- planner_full_only.md: frontmatter terminals shrunk to just submit_plan_closes_goal; body
+  rewritten ("Continuing the goal is disabled in this attempt.") with NO mention of the disallowed
+  submit_plan_continues_goal tool name (to satisfy test_full_only_body_contains_no_partial_plan_prose).
+- Mass sed across 54 files (4 patterns: 2 snake_case + 2 CamelCase) handled all fixtures.
+- test_planner_capability_fork.py:201 assertion updated to new prose ("Continuing the goal is disabled").
+- rg "submit_full_plan|submit_partial_plan" backend/ returns 0.
+
+### Phase 2b — task_specification -> plan_spec (boundary only, per Architect scope-limit)
+- _schemas.py:PlannerSubmissionBaseInput.task_specification -> plan_spec (plus validator
+  _validate_plan_spec).
+- Both renamed tool files: function parameter task_specification -> plan_spec; tool body maps
+  plan_spec -> task_specification at the build_planner_submission(...) keyword-arg boundary.
+- Deliberately NOT renamed (per Architect scope-limit): PlannerSubmission DTO field at
+  task_state.py:61, ContextBlockKind.TASK_SPECIFICATION enum at packet.py:40, DB columns at
+  db/models/attempt.py:32 + iteration.py:50, audit JSON keys at recorder.py:78,94 — these all keep
+  the historical name to avoid Alembic migration + audit-contract breakage.
+- planner.md and planner_full_only.md bodies sed-replaced task_specification -> plan_spec.
+- Two test sites that build tool-input payloads (not PlannerSubmission DTO) updated:
+  test_submission_planner_tools.py:26 and test_phase03_submission_integration.py:106.
+- Other test sites that construct PlannerSubmission DTO keep task_specification (correct: internal name).
+
+### Verification
+- .venv/bin/pytest on test_tools + test_agents + test_task_center + test_engine + test_prompt: 607 passed.
+- .venv/bin/ruff check on changed paths: clean.
+- Full unit-test sweep (.venv/bin/pytest backend/tests/unit_test/): 1432 passed, 1 skipped, 4 pre-existing
+  failures (all "EPHEMERALOS_DATABASE_URL not configured" env-gated; tracebacks reference no renamed
+  symbol).
+- Architect agent review: APPROVED (no defects, no partial ACs).
+- ai-slop-cleaner pass: no changes required; diff is already surgical and minimal.
+- Post-deslop regression: 607 passed, ruff clean.
+
+### Codebase landmarks (for future iterations)
+- Main-role base injection seam: backend/src/engine/agent/factory.py:_should_inject_main_role_base.
+- Runtime prompt assembly order: runtime base -> main-role base (new) -> agent body -> runtime
+  context (issue + PR files with evidence preamble) -> termination condition (auto-appended).
+- Planner-tool boundary mapping: tools/submission/planner/submit_plan_closes_goal.py:47 and
+  submit_plan_continues_goal.py:56 — boundary kwarg `task_specification=plan_spec` maps the
+  LLM-facing field name to the internal PlannerSubmission DTO field name.

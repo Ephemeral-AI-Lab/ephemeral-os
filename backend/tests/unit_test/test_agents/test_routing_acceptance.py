@@ -327,13 +327,13 @@ def test_ac9_planner_md_shape_passes_validation() -> None:
         name="planner_full_only",
         description="planner",
         context_recipe="planner",
-        terminals=["submit_full_plan"],
+        terminals=["submit_plan_closes_goal"],
     )
     planner = AgentDefinition(
         name="planner",
         description="planner",
         context_recipe="planner",
-        terminals=["submit_full_plan", "submit_partial_plan"],
+        terminals=["submit_plan_closes_goal", "submit_plan_continues_goal"],
         variants=[
             AgentVariant(
                 when="nested_goal_depth_gt_1", use="planner_full_only"

@@ -31,7 +31,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from tools.submission.evaluator import submit_evaluation_success
-from tools.submission.planner import submit_full_plan
+from tools.submission.planner import submit_plan_closes_goal
 
 from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios._utils import field as _field
@@ -94,7 +94,7 @@ class GeneratorFailureQuiescence(ScenarioBase):
     )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_full_plan, _three_plus_one_plan())
+        return ToolCallSpec(submit_plan_closes_goal, _three_plus_one_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
         rendered_prompt = ctx.rendered_prompt or ctx.prompt or ""

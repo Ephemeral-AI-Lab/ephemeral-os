@@ -1,13 +1,13 @@
 """Planner submission tools."""
 
-from tools.submission.planner.submit_full_plan import (
+from tools.submission.planner.submit_plan_closes_goal import (
     PlanTaskInput,
-    submit_full_plan,
+    submit_plan_closes_goal,
 )
-from tools.submission.planner.submit_partial_plan import submit_partial_plan
+from tools.submission.planner.submit_plan_continues_goal import submit_plan_continues_goal
 
 __all__ = [
     "PlanTaskInput",
-    "submit_full_plan",
-    "submit_partial_plan",
+    "submit_plan_closes_goal",
+    "submit_plan_continues_goal",
 ]

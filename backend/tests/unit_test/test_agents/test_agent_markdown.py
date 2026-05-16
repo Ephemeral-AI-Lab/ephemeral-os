@@ -27,7 +27,7 @@ def test_harness_agent_markdown_declares_notification_triggers() -> None:
 
     # The planner's recursive_partial_plan notification trigger was retired
     # in favour of the agent.md `terminals:` filter on planner_full_only —
-    # if the variant fires, submit_partial_plan is never bound to the LLM
+    # if the variant fires, submit_plan_continues_goal is never bound to the LLM
     # tool registry, so a soft reminder serves no purpose.
     assert planner.notification_triggers == []
     assert handoff_executor.notification_triggers == ["request_goal_after_edit"]

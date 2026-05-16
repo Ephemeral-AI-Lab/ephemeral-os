@@ -40,7 +40,7 @@ def test_schema_summary_prints_live_input_and_output_models():
 
     summary = format_tool_schema_summary(tools, include_descriptions=False)
 
-    assert "Tool: submit_full_plan" in summary
+    assert "Tool: submit_plan_closes_goal" in summary
     assert "Tool: submit_evaluation_success" in summary
     assert "Tool: submit_advisor_feedback" in summary
 

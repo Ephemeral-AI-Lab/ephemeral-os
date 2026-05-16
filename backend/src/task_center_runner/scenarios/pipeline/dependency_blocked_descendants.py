@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from tools.submission.evaluator import submit_evaluation_failure
-from tools.submission.planner import submit_full_plan
+from tools.submission.planner import submit_plan_closes_goal
 
 from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
@@ -53,7 +53,7 @@ class DependencyBlockedDescendants(ScenarioBase):
     )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_full_plan, _blocked_descendants_plan())
+        return ToolCallSpec(submit_plan_closes_goal, _blocked_descendants_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
         if "ACTION fail_root" in (ctx.rendered_prompt or ""):

@@ -42,17 +42,24 @@ class PlanTaskInput(BaseModel):
 
 
 class PlannerSubmissionBaseInput(BaseModel):
+    """Planner submission boundary schema.
+
+    ``plan_spec`` is the LLM-facing name for the plan-level contract; downstream
+    DTO / DB / audit layers retain the historical ``task_specification`` name to
+    avoid migration churn (the rename is scope-limited to this boundary).
+    """
+
     model_config = ConfigDict(extra="forbid")
 
-    task_specification: str = Field(..., min_length=1)
+    plan_spec: str = Field(..., min_length=1)
     evaluation_criteria: list[str] = Field(..., min_length=1)
     tasks: list[PlanTaskInput] = Field(..., min_length=1)
     task_specs: dict[str, str] = Field(..., min_length=1)
 
-    @field_validator("task_specification")
+    @field_validator("plan_spec")
     @classmethod
-    def _validate_task_specification(cls, value: str) -> str:
-        return validate_nonblank(value, "task_specification")
+    def _validate_plan_spec(cls, value: str) -> str:
+        return validate_nonblank(value, "plan_spec")
 
     @field_validator("evaluation_criteria")
     @classmethod

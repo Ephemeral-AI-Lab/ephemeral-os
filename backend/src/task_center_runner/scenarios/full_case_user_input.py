@@ -12,8 +12,8 @@ from tools.submission.verifier import (
     submit_verification_success,
 )
 from tools.submission.planner import (
-    submit_full_plan,
-    submit_partial_plan,
+    submit_plan_closes_goal,
+    submit_plan_continues_goal,
 )
 
 from task_center_runner.audit.events import EventType
@@ -157,10 +157,10 @@ class FullCaseUserInput(ScenarioBase):
         attempt = ctx.attempt
         self._ensure_user_input_plan(ctx)
         if iteration.sequence_no == 1 and attempt.attempt_sequence_no == 1:
-            return ToolCallSpec(submit_full_plan, _inventory_plan(kind="full"))
+            return ToolCallSpec(submit_plan_closes_goal, _inventory_plan(kind="full"))
         if iteration.sequence_no == 1:
             return ToolCallSpec(
-                submit_partial_plan,
+                submit_plan_continues_goal,
                 _inventory_plan(
                     kind="partial",
                     continuation_goal=(
@@ -171,14 +171,14 @@ class FullCaseUserInput(ScenarioBase):
             )
         if iteration.sequence_no == 2:
             args = self._implementation_plan(ctx)
-            return ToolCallSpec(submit_partial_plan, args)
-        return ToolCallSpec(submit_full_plan, self._final_reconciliation_plan(ctx))
+            return ToolCallSpec(submit_plan_continues_goal, args)
+        return ToolCallSpec(submit_plan_closes_goal, self._final_reconciliation_plan(ctx))
 
     def _recursive_planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         iteration = ctx.iteration
         if iteration.sequence_no == 1:
             return ToolCallSpec(
-                submit_partial_plan,
+                submit_plan_continues_goal,
                 {
                     "task_specification": "Decompose the oversized delegated package.",
                     "evaluation_criteria": [
@@ -208,7 +208,7 @@ class FullCaseUserInput(ScenarioBase):
             )
         if iteration.sequence_no == 2:
             return ToolCallSpec(
-                submit_partial_plan,
+                submit_plan_continues_goal,
                 {
                     "task_specification": "Execute delegated package subtasks.",
                     "evaluation_criteria": [
@@ -235,7 +235,7 @@ class FullCaseUserInput(ScenarioBase):
                 },
             )
         return ToolCallSpec(
-            submit_full_plan,
+            submit_plan_closes_goal,
             {
                 "task_specification": "Close the delegated package goal.",
                 "evaluation_criteria": [

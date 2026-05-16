@@ -102,7 +102,7 @@ def test_planner_validation_capacity_scenarios_encode_rejection_cases() -> None:
     missing_goal = SCENARIO_REGISTRY[
         "planner_validation.partial_without_continuation_goal"
     ]().planner_response(_ctx())
-    assert missing_goal.tool.name == "submit_partial_plan"
+    assert missing_goal.tool.name == "submit_plan_continues_goal"
     assert "continuation_goal" not in missing_goal.args
 
     unknown_agent = _planner_args("planner_validation.unknown_agent_name", _ctx())

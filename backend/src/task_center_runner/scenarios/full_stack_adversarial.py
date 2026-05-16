@@ -15,8 +15,8 @@ from tools.submission.verifier import (
     submit_verification_success,
 )
 from tools.submission.planner import (
-    submit_full_plan,
-    submit_partial_plan,
+    submit_plan_closes_goal,
+    submit_plan_continues_goal,
 )
 
 from task_center_runner.audit.events import EventType
@@ -191,10 +191,10 @@ class FullStackAdversarial(ScenarioBase):
         self._ensure_user_input_plan(ctx)
         self._ensure_matrix_cells(ctx)
         if iteration.sequence_no == 1 and attempt.attempt_sequence_no == 1:
-            return ToolCallSpec(submit_full_plan, _inventory_plan(kind="full"))
+            return ToolCallSpec(submit_plan_closes_goal, _inventory_plan(kind="full"))
         if iteration.sequence_no == 1:
             return ToolCallSpec(
-                submit_partial_plan,
+                submit_plan_continues_goal,
                 _inventory_plan(
                     kind="partial",
                     continuation_goal=(
@@ -204,16 +204,16 @@ class FullStackAdversarial(ScenarioBase):
                 ),
             )
         if iteration.sequence_no == 2 and attempt.attempt_sequence_no == 1:
-            return ToolCallSpec(submit_partial_plan, self._subsystem_wave_plan(ctx))
+            return ToolCallSpec(submit_plan_continues_goal, self._subsystem_wave_plan(ctx))
         if iteration.sequence_no == 2:
-            return ToolCallSpec(submit_partial_plan, self._retry_continuation_plan(ctx))
-        return ToolCallSpec(submit_full_plan, self._final_plan(ctx))
+            return ToolCallSpec(submit_plan_continues_goal, self._retry_continuation_plan(ctx))
+        return ToolCallSpec(submit_plan_closes_goal, self._final_plan(ctx))
 
     def _recursive_planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         iteration = ctx.iteration
         if iteration.sequence_no == 1:
             return ToolCallSpec(
-                submit_partial_plan,
+                submit_plan_continues_goal,
                 {
                     "task_specification": (
                         "Execute delegated oversized full-stack matrix slices."
@@ -256,7 +256,7 @@ class FullStackAdversarial(ScenarioBase):
                 },
             )
         return ToolCallSpec(
-            submit_full_plan,
+            submit_plan_closes_goal,
             {
                 "task_specification": "Close delegated full-stack matrix goal.",
                 "evaluation_criteria": [

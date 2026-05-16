@@ -177,7 +177,7 @@ async def test_ask_advisor_runs_advisor_with_inherited_parent_context(
         result = await execute_tool_once(
             ask_advisor,
             {
-                "tool_name": "submit_full_plan",
+                "tool_name": "submit_plan_closes_goal",
                 "tool_payloads": [{"task": "a"}],
                 "prompt": "review this",
             },
@@ -198,7 +198,7 @@ async def test_ask_advisor_runs_advisor_with_inherited_parent_context(
     # Original advisor question is appended as the request section.
     assert "# Advisor request" in composed_prompt
     assert "review this" in composed_prompt
-    assert "submit_full_plan" in composed_prompt
+    assert "submit_plan_closes_goal" in composed_prompt
 
 
 async def test_ask_advisor_errors_when_composer_missing() -> None:
@@ -215,7 +215,7 @@ async def test_ask_advisor_errors_when_composer_missing() -> None:
         result = await execute_tool_once(
             ask_advisor,
             {
-                "tool_name": "submit_full_plan",
+                "tool_name": "submit_plan_closes_goal",
                 "tool_payloads": [],
                 "prompt": "advise",
             },

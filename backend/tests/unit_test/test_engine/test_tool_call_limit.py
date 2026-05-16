@@ -101,9 +101,9 @@ async def test_execute_tool_call_increments_counter_on_unknown_tool():
 
 @pytest.mark.asyncio
 async def test_execute_tool_call_allows_terminal_tool_when_budget_exhausted():
-    ctx = _ctx(limit=2, used=2, terminal_tools={"submit_full_plan"})
+    ctx = _ctx(limit=2, used=2, terminal_tools={"submit_plan_closes_goal"})
     ctx.tool_registry.get = lambda _name: None  # type: ignore[method-assign]
-    result = await execute_tool_call(ctx, "submit_full_plan", "id1", {})
+    result = await execute_tool_call(ctx, "submit_plan_closes_goal", "id1", {})
 
     assert result.is_error
     assert "Unknown tool" in result.content

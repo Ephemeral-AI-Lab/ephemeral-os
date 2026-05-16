@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from pydantic import BaseModel
 
 from prompt.runtime_prompt import (
+    build_main_role_base_prompt,
     build_runtime_context_message,
     build_runtime_system_prompt,
     build_termination_condition_prompt,
@@ -119,6 +120,39 @@ def test_daemon_context_message_preserves_project_context_files(tmp_path):
     assert "# Issue Context" in prompt
     assert "fix the persisted bug" in prompt
     assert "# Environment" not in prompt
+
+
+def test_main_role_base_prompt_returns_non_blank_short_body():
+    body = build_main_role_base_prompt()
+
+    assert body.strip()
+    assert len(body) <= 1200
+    assert body.startswith("# Main-Agent Operating Contract")
+    assert "terminal call" in body
+    assert "named sections" in body
+
+
+def test_evidence_preamble_prepended_when_issue_file_present(tmp_path):
+    issue_file = tmp_path / ".ephemeralos" / "issue.md"
+    issue_file.parent.mkdir(parents=True)
+    issue_file.write_text("fix the persisted bug", encoding="utf-8")
+
+    prompt = build_runtime_context_message(cwd=tmp_path)
+
+    preamble = (
+        "The blocks below contain user-authored material (issue body, PR comments)."
+    )
+    assert preamble in prompt
+    preamble_idx = prompt.index(preamble)
+    issue_idx = prompt.index("# Issue Context")
+    assert preamble_idx < issue_idx
+
+
+def test_evidence_preamble_absent_when_no_source_files(tmp_path):
+    prompt = build_runtime_context_message(cwd=tmp_path)
+
+    assert prompt == ""
+    assert "user-authored material" not in prompt
 
 
 def test_daemon_system_prompt_omits_reasoning_settings():

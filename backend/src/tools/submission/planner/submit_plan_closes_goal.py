@@ -1,4 +1,4 @@
-"""submit_full_plan terminal tool."""
+"""submit_plan_closes_goal terminal tool."""
 
 from __future__ import annotations
 
@@ -17,19 +17,19 @@ from tools.submission.planner._schemas import (
 )
 
 
-class SubmitFullPlanInput(PlannerSubmissionBaseInput):
+class SubmitPlanClosesGoalInput(PlannerSubmissionBaseInput):
     pass
 
 
 @tool(
-    name="submit_full_plan",
-    description="Submit a complete harness attempt plan for the current iteration.",
-    input_model=SubmitFullPlanInput,
+    name="submit_plan_closes_goal",
+    description="Submit a plan that closes the goal on evaluator PASS (fully covers the current iteration; no continuation).",
+    input_model=SubmitPlanClosesGoalInput,
     output_model=TextToolOutput,
     is_terminal_tool=True,
 )
-async def submit_full_plan(
-    task_specification: str,
+async def submit_plan_closes_goal(
+    plan_spec: str,
     evaluation_criteria: list[str],
     tasks: list[PlanTaskInput],
     task_specs: dict[str, str],
@@ -44,7 +44,7 @@ async def submit_full_plan(
     submission, error = build_planner_submission(
         submission_context=submission_context,
         kind="full",
-        task_specification=task_specification,
+        task_specification=plan_spec,
         evaluation_criteria=evaluation_criteria,
         tasks=[PlanTaskInput.model_validate(task) for task in tasks],
         task_specs=task_specs,

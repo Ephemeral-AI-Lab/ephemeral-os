@@ -19,16 +19,16 @@ from tools.submission.verifier import (
     submit_verification_success,
 )
 from tools.submission.planner import (
-    submit_full_plan,
-    submit_partial_plan,
+    submit_plan_closes_goal,
+    submit_plan_continues_goal,
 )
 from tools.submission.explorer.submit_exploration_result import submit_exploration_result
 
 
 def make_submission_tools() -> list[BaseTool]:
     return [
-        submit_full_plan,
-        submit_partial_plan,
+        submit_plan_closes_goal,
+        submit_plan_continues_goal,
         submit_execution_handoff,
         submit_execution_success,
         submit_execution_failure,

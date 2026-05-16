@@ -6,7 +6,7 @@ import pytest
 
 from task_center.attempt import AttemptStage
 from tools._framework.execution.tool_call import execute_tool_once
-from tools.submission.planner import submit_full_plan, submit_partial_plan
+from tools.submission.planner import submit_plan_closes_goal, submit_plan_continues_goal
 
 from .submission_test_utils import (
     build_harness_fixture,
@@ -23,7 +23,7 @@ async def _noop_emit(event) -> None:
 
 def _valid_plan_payload() -> dict[str, object]:
     return {
-        "task_specification": "Implement the requested change.",
+        "plan_spec": "Implement the requested change.",
         "evaluation_criteria": ["tests pass"],
         "tasks": [
             {"id": "a", "agent_name": "executor", "deps": []},
@@ -49,7 +49,7 @@ async def test_full_plan_routes_to_apply_plan_submission(
     planner_id = start_planner(fixture)
 
     result = await execute_tool_once(
-        submit_full_plan,
+        submit_plan_closes_goal,
         _valid_plan_payload(),
         make_tool_context(fixture, planner_id),
         emit=_noop_emit,
@@ -78,7 +78,7 @@ async def test_partial_plan_routes_to_apply_plan_submission(
     payload = {**_valid_plan_payload(), "continuation_goal": "  continue with phase 2  "}
 
     result = await execute_tool_once(
-        submit_partial_plan,
+        submit_plan_continues_goal,
         payload,
         make_tool_context(fixture, planner_id),
         emit=_noop_emit,
@@ -170,7 +170,7 @@ async def test_plan_validation_errors_do_not_mutate_graph(
     payload = {**_valid_plan_payload(), **payload_update}
 
     result = await execute_tool_once(
-        submit_full_plan,
+        submit_plan_closes_goal,
         payload,
         make_tool_context(fixture, planner_id),
         emit=_noop_emit,
@@ -197,7 +197,7 @@ async def test_full_plan_rejects_continuation_goal(
     payload = {**_valid_plan_payload(), "continuation_goal": "continue later"}
 
     result = await execute_tool_once(
-        submit_full_plan,
+        submit_plan_closes_goal,
         payload,
         make_tool_context(fixture, planner_id),
         emit=_noop_emit,
@@ -225,7 +225,7 @@ async def test_partial_plan_rejects_blank_continuation_goal(
     payload = {**_valid_plan_payload(), "continuation_goal": " "}
 
     result = await execute_tool_once(
-        submit_partial_plan,
+        submit_plan_continues_goal,
         payload,
         make_tool_context(fixture, planner_id),
         emit=_noop_emit,

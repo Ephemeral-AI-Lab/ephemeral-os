@@ -15,8 +15,8 @@ from tools.submission.evaluator import (
     submit_evaluation_success,
 )
 from tools.submission.planner import (
-    submit_full_plan,
-    submit_partial_plan,
+    submit_plan_closes_goal,
+    submit_plan_continues_goal,
 )
 
 from task_center_runner.audit.events import EventType
@@ -127,10 +127,10 @@ class CorrectnessTesting(ScenarioBase):
         iteration = ctx.iteration
         attempt = ctx.attempt
         if iteration.sequence_no == 1 and attempt.attempt_sequence_no == 1:
-            return ToolCallSpec(submit_full_plan, dict(_PREFLIGHT_FULL_PLAN))
+            return ToolCallSpec(submit_plan_closes_goal, dict(_PREFLIGHT_FULL_PLAN))
         if iteration.sequence_no == 1:
-            return ToolCallSpec(submit_partial_plan, dict(_INTEGRITY_PARTIAL_PLAN))
-        return ToolCallSpec(submit_full_plan, dict(_FINAL_PROBE_FULL_PLAN))
+            return ToolCallSpec(submit_plan_continues_goal, dict(_INTEGRITY_PARTIAL_PLAN))
+        return ToolCallSpec(submit_plan_closes_goal, dict(_FINAL_PROBE_FULL_PLAN))
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
         prompt = ctx.prompt or ""

@@ -59,8 +59,8 @@ from tools.submission.verifier import (
     submit_verification_success,
 )
 from tools.submission.planner import (
-    submit_full_plan,
-    submit_partial_plan,
+    submit_plan_closes_goal,
+    submit_plan_continues_goal,
 )
 
 from task_center_runner.audit.bus import AuditEventBus
@@ -101,8 +101,8 @@ from task_center_runner.agent.mock.tool_scripts import (
 )
 
 _PLANNER_EVENT_BY_TOOL: dict[str, EventType] = {
-    submit_full_plan.name: EventType.PLANNER_FULL_PLAN,
-    submit_partial_plan.name: EventType.PLANNER_PARTIAL_PLAN,
+    submit_plan_closes_goal.name: EventType.PLANNER_FULL_PLAN,
+    submit_plan_continues_goal.name: EventType.PLANNER_PARTIAL_PLAN,
 }
 
 _EVALUATOR_EVENT_BY_TOOL: dict[str, EventType] = {

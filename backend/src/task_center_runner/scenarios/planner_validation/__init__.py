@@ -1,6 +1,6 @@
 """Planner submission rejection scenarios.
 
-Each scenario emits an invalid ``submit_full_plan`` / ``submit_partial_plan``
+Each scenario emits an invalid ``submit_plan_closes_goal`` / ``submit_plan_continues_goal``
 and asserts the attempt closes with ``fail_reason="planner_failed"``, no
 generator/evaluator ran, and the right ``TaskCenterInvariantViolation`` was
 surfaced.

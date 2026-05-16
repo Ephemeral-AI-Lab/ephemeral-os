@@ -1,4 +1,4 @@
-"""submit_partial_plan terminal tool."""
+"""submit_plan_continues_goal terminal tool."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from tools.submission.planner._schemas import (
 )
 
 
-class SubmitPartialPlanInput(PlannerSubmissionBaseInput):
+class SubmitPlanContinuesGoalInput(PlannerSubmissionBaseInput):
     continuation_goal: str = Field(..., min_length=1)
 
     @field_validator("continuation_goal")
@@ -30,14 +30,14 @@ class SubmitPartialPlanInput(PlannerSubmissionBaseInput):
 
 
 @tool(
-    name="submit_partial_plan",
-    description="Submit a bounded harness attempt plan with a continuation goal.",
-    input_model=SubmitPartialPlanInput,
+    name="submit_plan_continues_goal",
+    description="Submit a plan that closes the current iteration on evaluator PASS and continues the goal via a new iteration spawned from continuation_goal.",
+    input_model=SubmitPlanContinuesGoalInput,
     output_model=TextToolOutput,
     is_terminal_tool=True,
 )
-async def submit_partial_plan(
-    task_specification: str,
+async def submit_plan_continues_goal(
+    plan_spec: str,
     evaluation_criteria: list[str],
     tasks: list[PlanTaskInput],
     task_specs: dict[str, str],
@@ -53,7 +53,7 @@ async def submit_partial_plan(
     submission, error = build_planner_submission(
         submission_context=submission_context,
         kind="partial",
-        task_specification=task_specification,
+        task_specification=plan_spec,
         evaluation_criteria=evaluation_criteria,
         tasks=[PlanTaskInput.model_validate(task) for task in tasks],
         task_specs=task_specs,

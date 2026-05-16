@@ -18,7 +18,7 @@ from tools._framework.core.runtime import ExecutionMetadata
 from tools._framework.execution.tool_call import execute_tool_once
 from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.executor import submit_execution_success
-from tools.submission.planner import submit_full_plan
+from tools.submission.planner import submit_plan_closes_goal
 
 pytestmark = pytest.mark.asyncio
 
@@ -101,9 +101,9 @@ async def test_phase03_full_plan_through_evaluator_success(
     orchestrator.start()
 
     planner_result = await execute_tool_once(
-        submit_full_plan,
+        submit_plan_closes_goal,
         {
-            "task_specification": "Implement and verify a change.",
+            "plan_spec": "Implement and verify a change.",
             "evaluation_criteria": ["generator passed"],
             "tasks": [{"id": "a", "agent_name": "executor", "deps": []}],
             "task_specs": {"a": "Do the work."},

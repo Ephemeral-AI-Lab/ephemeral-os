@@ -22,7 +22,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from tools.submission.evaluator import submit_evaluation_failure
-from tools.submission.planner import submit_full_plan
+from tools.submission.planner import submit_plan_closes_goal
 
 from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
@@ -53,7 +53,7 @@ class PlannerDuplicateLocalId(ScenarioBase):
     )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_full_plan, _duplicate_local_id_plan())
+        return ToolCallSpec(submit_plan_closes_goal, _duplicate_local_id_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ()

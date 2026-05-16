@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from tools.submission.evaluator import submit_evaluation_success
-from tools.submission.planner import submit_full_plan
+from tools.submission.planner import submit_plan_closes_goal
 
 from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
@@ -49,7 +49,7 @@ class AttemptRetryGeneratorFailure(ScenarioBase):
     )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_full_plan, _retry_generator_plan())
+        return ToolCallSpec(submit_plan_closes_goal, _retry_generator_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
         if ctx.attempt.attempt_sequence_no == 1:

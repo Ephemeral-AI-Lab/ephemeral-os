@@ -12,7 +12,7 @@ from tools.submission.evaluator import (
 from tools.submission.verifier import (
     submit_verification_success,
 )
-from tools.submission.planner import submit_full_plan
+from tools.submission.planner import submit_plan_closes_goal
 
 from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios._utils import is_recursive_goal
@@ -96,8 +96,8 @@ class NestedGoal(ScenarioBase):
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         if is_recursive_goal(ctx):
-            return ToolCallSpec(submit_full_plan, _child_success_plan())
-        return ToolCallSpec(submit_full_plan, _root_nested_plan(failing_child=False))
+            return ToolCallSpec(submit_plan_closes_goal, _child_success_plan())
+        return ToolCallSpec(submit_plan_closes_goal, _root_nested_plan(failing_child=False))
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
         rendered_prompt = ctx.rendered_prompt or ""
@@ -142,8 +142,8 @@ class NestedGoalFailure(ScenarioBase):
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         if is_recursive_goal(ctx):
-            return ToolCallSpec(submit_full_plan, _child_failure_plan())
-        return ToolCallSpec(submit_full_plan, _root_nested_plan(failing_child=True))
+            return ToolCallSpec(submit_plan_closes_goal, _child_failure_plan())
+        return ToolCallSpec(submit_plan_closes_goal, _root_nested_plan(failing_child=True))
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
         rendered_prompt = ctx.rendered_prompt or ""

@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from tools.submission.evaluator import submit_evaluation_failure
-from tools.submission.planner import submit_partial_plan
+from tools.submission.planner import submit_plan_continues_goal
 
 from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
@@ -22,7 +22,7 @@ def _partial_without_goal() -> dict[str, Any]:
 
 
 class PlannerPartialWithoutContinuationGoal(ScenarioBase):
-    """submit_partial_plan call omits required continuation_goal."""
+    """submit_plan_continues_goal call omits required continuation_goal."""
 
     name = "planner_validation.partial_without_continuation_goal"
     expected_event_sequence: tuple[EventType, ...] = (
@@ -32,7 +32,7 @@ class PlannerPartialWithoutContinuationGoal(ScenarioBase):
     )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_partial_plan, _partial_without_goal())
+        return ToolCallSpec(submit_plan_continues_goal, _partial_without_goal())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ()

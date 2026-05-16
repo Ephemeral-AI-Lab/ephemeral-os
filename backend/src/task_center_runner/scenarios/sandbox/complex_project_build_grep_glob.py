@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from tools.submission.evaluator import submit_evaluation_success
-from tools.submission.planner import submit_full_plan
+from tools.submission.planner import submit_plan_closes_goal
 
 from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
@@ -95,7 +95,7 @@ class ComplexProjectBuildGrepGlob(ScenarioBase):
     expected_event_sequence: tuple[EventType, ...] = _EXPECTED_EVENT_SEQUENCE
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_full_plan, dict(_FULL_PLAN))
+        return ToolCallSpec(submit_plan_closes_goal, dict(_FULL_PLAN))
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("complex_project_build_grep_glob",)
@@ -120,7 +120,7 @@ class ComplexProjectBuildGrepGlobSmoke(ScenarioBase):
     expected_event_sequence: tuple[EventType, ...] = _EXPECTED_EVENT_SEQUENCE
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_full_plan, dict(_SMOKE_PLAN))
+        return ToolCallSpec(submit_plan_closes_goal, dict(_SMOKE_PLAN))
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("complex_project_build_grep_glob_smoke",)

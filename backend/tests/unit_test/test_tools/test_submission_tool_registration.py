@@ -12,8 +12,8 @@ from tools.submission.planner import PlanTaskInput
 
 
 PHASE03_TOOLS = (
-    "submit_full_plan",
-    "submit_partial_plan",
+    "submit_plan_closes_goal",
+    "submit_plan_continues_goal",
     "submit_execution_handoff",
     "submit_execution_success",
     "submit_execution_failure",

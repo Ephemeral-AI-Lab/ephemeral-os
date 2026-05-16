@@ -131,7 +131,7 @@ def register_test_agents(isolated_agent_registries):
             description="test planner",
             agent_kind=AgentKind.PLANNER,
             context_recipe="planner",
-            terminals=["submit_full_plan", "submit_partial_plan"],
+            terminals=["submit_plan_closes_goal", "submit_plan_continues_goal"],
         )
     )
     register_definition(

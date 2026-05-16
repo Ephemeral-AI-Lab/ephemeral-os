@@ -47,8 +47,8 @@ async def test_partial_parent_routes_child_planner_to_full_only_agent_md(
         "planner_full_only",
         "planner",
     ]
-    assert _tool_count(report.tool_calls, "submit_partial_plan") == 1
-    assert _tool_count(report.tool_calls, "submit_full_plan") == 2
+    assert _tool_count(report.tool_calls, "submit_plan_continues_goal") == 1
+    assert _tool_count(report.tool_calls, "submit_plan_closes_goal") == 2
     _assert_partial_parent_graph(report.graph_summary)
     _assert_full_only_agent_md_was_recorded(report.run_dir)
 
@@ -80,7 +80,7 @@ def _assert_full_only_agent_md_was_recorded(run_dir: Path) -> None:
     prompts = list(_system_prompts_for(run_dir, "planner_full_only"))
     assert prompts, f"no planner_full_only system prompt in {run_dir}"
     assert any("Partial planning is disabled" in prompt for prompt in prompts)
-    assert all("submit_partial_plan" not in prompt for prompt in prompts)
+    assert all("submit_plan_continues_goal" not in prompt for prompt in prompts)
 
 
 def _system_prompts_for(run_dir: Path, agent_name: str) -> Iterator[str]:

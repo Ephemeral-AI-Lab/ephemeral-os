@@ -17,13 +17,17 @@ if TYPE_CHECKING:
     from engine.query.context import QueryContext
     from tools import ToolRegistry
 
-from agents import AgentDefinition
+from agents import AgentDefinition, AgentKind
 from config import Settings
 from message.messages import ConversationMessage
 from message.stream_events import StreamEvent
 from providers.provider import make_api_client
 from providers.types import UsageSnapshot
-from prompt import build_runtime_context_message, build_runtime_system_prompt
+from prompt import (
+    build_main_role_base_prompt,
+    build_runtime_context_message,
+    build_runtime_system_prompt,
+)
 from tools import (
     ExecutionMetadata,
     SANDBOX_CONTEXT,
@@ -271,6 +275,30 @@ def _build_context_preparers(
     return [sandbox_api.context_preparer_for(sandbox_id)]
 
 
+_MAIN_AGENT_KINDS: frozenset[AgentKind] = frozenset(
+    {
+        AgentKind.PLANNER,
+        AgentKind.EXECUTOR,
+        AgentKind.VERIFIER,
+        AgentKind.EVALUATOR,
+    }
+)
+
+
+def _should_inject_main_role_base(agent_def: AgentDefinition) -> bool:
+    """True when *agent_def* is a main role inside the attempt harness.
+
+    ``entry_executor`` is excluded by name: it shares ``agent_kind=EXECUTOR``
+    with the in-harness executor variants but is the top-level carve-out that
+    lives outside the goal/iteration/attempt tree (see ``entry_executor.md``).
+    """
+    return (
+        agent_def.agent_type == "agent"
+        and agent_def.agent_kind in _MAIN_AGENT_KINDS
+        and agent_def.name != "entry_executor"
+    )
+
+
 def _build_agent_system_prompt(
     config: RuntimeConfig,
     agent_def: AgentDefinition | None,
@@ -284,6 +312,8 @@ def _build_agent_system_prompt(
     )
     if base:
         parts.append(base)
+    if agent_def is not None and _should_inject_main_role_base(agent_def):
+        parts.append(build_main_role_base_prompt())
     if agent_def is not None and agent_def.system_prompt:
         parts.append(agent_def.system_prompt)
     return "\n\n".join(part for part in parts if part.strip())

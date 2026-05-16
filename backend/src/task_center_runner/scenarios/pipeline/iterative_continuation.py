@@ -15,8 +15,8 @@ from collections.abc import Sequence
 
 from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.planner import (
-    submit_full_plan,
-    submit_partial_plan,
+    submit_plan_closes_goal,
+    submit_plan_continues_goal,
 )
 
 from task_center_runner.audit.events import EventType
@@ -56,10 +56,10 @@ class IterativeContinuation(ScenarioBase):
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         if ctx.iteration.sequence_no == 1:
             return ToolCallSpec(
-                submit_partial_plan,
+                submit_plan_continues_goal,
                 preflight_partial_plan(continuation_goal=_CONTINUATION_GOAL),
             )
-        return ToolCallSpec(submit_full_plan, preflight_full_plan())
+        return ToolCallSpec(submit_plan_closes_goal, preflight_full_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ("preflight",)
