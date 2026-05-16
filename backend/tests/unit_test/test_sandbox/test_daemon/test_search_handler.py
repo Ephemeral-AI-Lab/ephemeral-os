@@ -269,6 +269,30 @@ def test_search_content_head_limit_truncates(tmp_path: Path) -> None:
     assert result["applied_limit"] == 5
 
 
+def test_search_content_exact_head_limit_does_not_mark_truncated(
+    tmp_path: Path,
+) -> None:
+    files = {f"f{i:03d}.txt": "needle\n" for i in range(5)}
+    stack, _ = _seed_workspace(tmp_path, files=files)
+
+    files_mode = _search_content_sync(
+        _args(stack, pattern="needle", head_limit=5)
+    )
+    count_mode = _search_content_sync(
+        _args(stack, pattern="needle", output_mode="count", head_limit=5)
+    )
+    content_mode = _search_content_sync(
+        _args(stack, pattern="needle", output_mode="content", head_limit=5)
+    )
+
+    assert files_mode["filenames"] == [f"f{i:03d}.txt" for i in range(5)]
+    assert files_mode["truncated"] is False
+    assert count_mode["num_files"] == 5
+    assert count_mode["truncated"] is False
+    assert content_mode["num_lines"] == 5
+    assert content_mode["truncated"] is False
+
+
 def test_search_content_zero_head_limit_is_unlimited(tmp_path: Path) -> None:
     """``head_limit=0`` is the documented unlimited sentinel — scanning must
     not stop at the 250-entry default and ``applied_limit`` must surface as

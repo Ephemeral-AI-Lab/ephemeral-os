@@ -194,11 +194,11 @@ def _search_content_sync(args: dict[str, Any]) -> dict[str, Any]:
                 observed_files += 1
                 if observed_files <= offset:
                     continue
-                matched_filenames.append(layer_path)
-                total_matches += 1
                 if head_limit and len(matched_filenames) >= head_limit:
                     truncated = True
                     break
+                matched_filenames.append(layer_path)
+                total_matches += 1
             elif mode == "count":
                 count = len(regex.findall(text))
                 if count <= 0:
@@ -206,11 +206,11 @@ def _search_content_sync(args: dict[str, Any]) -> dict[str, Any]:
                 observed_files += 1
                 if observed_files <= offset:
                     continue
-                match_counts.append((layer_path, count))
-                total_matches += count
                 if head_limit and len(match_counts) >= head_limit:
                     truncated = True
                     break
+                match_counts.append((layer_path, count))
+                total_matches += count
             else:
                 file_lines = text.splitlines()
                 file_matched = False
@@ -230,14 +230,14 @@ def _search_content_sync(args: dict[str, Any]) -> dict[str, Any]:
                         truncated = True
                         stop = True
                         break
-                    content_segments.append(rendered)
-                    content_size += rendered_size
-                    lines_emitted += 1
-                    file_matched = True
                     if head_limit and lines_emitted >= head_limit:
                         truncated = True
                         stop = True
                         break
+                    content_segments.append(rendered)
+                    content_size += rendered_size
+                    lines_emitted += 1
+                    file_matched = True
                 if file_matched:
                     matched_filenames.append(layer_path)
                 if stop:
