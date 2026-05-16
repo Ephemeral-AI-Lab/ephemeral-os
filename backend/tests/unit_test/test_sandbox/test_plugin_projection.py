@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 from sandbox.layer_stack import WriteLayerChange
 from sandbox.plugin.projection import (
@@ -110,3 +111,36 @@ def test_active_manifest_key_matches_handle(tmp_path: Path) -> None:
     handle = projection.acquire("probe")
     assert projection.active_manifest_key() == handle.manifest_key
     handle.release()
+
+
+def test_acquire_retries_transient_missing_layer_file(tmp_path: Path) -> None:
+    class FlakyManager:
+        def __init__(self) -> None:
+            self.calls = 0
+            self.released: list[str] = []
+
+        def prepare_workspace_snapshot(self, *, owner_request_id: str):
+            self.calls += 1
+            if self.calls == 1:
+                raise FileNotFoundError("layer file disappeared during materialize")
+            lowerdir = tmp_path / "lower"
+            lowerdir.mkdir()
+            return SimpleNamespace(
+                lease_id=f"lease-{owner_request_id}",
+                manifest_version=3,
+                root_hash="abc123",
+                lowerdir=lowerdir.as_posix(),
+            )
+
+        def release_lease(self, lease_id: str) -> None:
+            self.released.append(lease_id)
+
+    manager = FlakyManager()
+    projection = WorkspaceProjection(tmp_path / "stack", manager=manager)  # type: ignore[arg-type]
+
+    handle = projection.acquire("lsp")
+
+    assert manager.calls == 2
+    assert handle.lease_id == "lease-lsp"
+    handle.release()
+    assert manager.released == ["lease-lsp"]

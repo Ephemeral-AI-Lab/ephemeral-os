@@ -18,8 +18,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from sandbox.layer_stack.stack import LayerStack
+from sandbox.layer_stack.stack import LayerStack, PrepareWorkspaceSnapshotResult
 from sandbox.layer_stack.manifest import manifest_root_hash
+from sandbox.layer_stack.view import LayerStackStorageError
 
 if TYPE_CHECKING:  # pragma: no cover
     pass
@@ -90,9 +91,7 @@ class WorkspaceProjection:
         return self._layer_stack_root
 
     def acquire(self, owner_request_id: str) -> ProjectionHandle:
-        result = self._manager.prepare_workspace_snapshot(
-            owner_request_id=owner_request_id,
-        )
+        result = self._prepare_snapshot_with_retry(owner_request_id)
         return ProjectionHandle(
             lease_id=result.lease_id,
             manifest_key=build_manifest_key(
@@ -103,6 +102,18 @@ class WorkspaceProjection:
             root_hash=result.root_hash,
             _manager=self._manager,
         )
+
+    def _prepare_snapshot_with_retry(
+        self, owner_request_id: str
+    ) -> PrepareWorkspaceSnapshotResult:
+        try:
+            return self._manager.prepare_workspace_snapshot(
+                owner_request_id=owner_request_id,
+            )
+        except (FileNotFoundError, LayerStackStorageError):
+            return self._manager.prepare_workspace_snapshot(
+                owner_request_id=owner_request_id,
+            )
 
     def active_manifest_key(self) -> str:
         manifest = self._manager.read_active_manifest()

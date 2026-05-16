@@ -20,10 +20,16 @@ import argparse
 import sys
 
 from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.engine import make_url
 
 
 # Drop in FK-dependency order: trials → episodes → missions (children before parents).
 _LEGACY_TABLES_IN_DROP_ORDER: tuple[str, ...] = ("trials", "episodes", "missions")
+
+
+def _drop_table_statement(name: str, *, cascade: bool) -> str:
+    suffix = " CASCADE" if cascade else ""
+    return f'DROP TABLE IF EXISTS "{name}"{suffix}'
 
 
 def drop_legacy_tier_tables(db_url: str) -> list[str]:
@@ -32,13 +38,14 @@ def drop_legacy_tier_tables(db_url: str) -> list[str]:
     Returns the list of tables actually dropped (empty if none were present).
     """
     engine = create_engine(db_url)
+    cascade = not make_url(db_url).drivername.startswith("sqlite")
     insp = inspect(engine)
     existing = set(insp.get_table_names())
     dropped: list[str] = []
     with engine.begin() as conn:
         for name in _LEGACY_TABLES_IN_DROP_ORDER:
             if name in existing:
-                conn.execute(text(f'DROP TABLE IF EXISTS "{name}"'))
+                conn.execute(text(_drop_table_statement(name, cascade=cascade)))
                 dropped.append(name)
     return dropped
 
