@@ -2,6 +2,7 @@
 name: executor_success_handoff
 description: Generator executor — depth-shallow profile (success + handoff, no failure terminal).
 model: inherit
+tool_call_limit: 75
 agent_kind: executor
 agent_type: agent
 allowed_tools:

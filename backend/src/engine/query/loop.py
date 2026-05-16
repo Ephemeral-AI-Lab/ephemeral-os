@@ -263,6 +263,17 @@ async def _handle_tool_dispatch_branch(
         context.exit_reason = QueryExitReason.RESOURCE_LIMIT
         if background_manager is not None:
             await background_manager.cancel_all()
+        # Keep the transcript well-formed: tool_use blocks in the assistant
+        # message must be paired with tool_result blocks in the next user
+        # message. `dispatch_assistant_tools` produces one tool_result per
+        # tool_use (including rejections), so `tool_results` is always
+        # non-empty here when the assistant produced tool_uses; the guard is
+        # defensive against future refactors only. Without this append the
+        # retry path (and any caller reading ``agent.messages``) would see
+        # orphan tool_uses and the next provider call would reject the
+        # transcript.
+        if tool_results:
+            messages.append(ConversationMessage(role="user", content=list(tool_results)))
         yield (
             ToolExecutionCompleted(
                 tool_name="",

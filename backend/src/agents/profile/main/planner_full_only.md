@@ -2,6 +2,7 @@
 name: planner_full_only
 description: Main agent planner for TaskCenter attempts (closes-goal only; continues-goal disabled in this goal's ancestry).
 model: inherit
+tool_call_limit: 100
 agent_kind: planner
 agent_type: agent
 allowed_tools:

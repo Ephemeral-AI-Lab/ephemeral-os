@@ -20,7 +20,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
 from agents import AgentDefinition
-from message.messages import ConversationMessage, ToolResultBlock
+from engine.query.context import QueryExitReason
+from message.messages import ConversationMessage, TextBlock, ToolResultBlock
 from message.stream_events import StreamEvent, ToolExecutionCompleted
 from tools import ExecutionMetadata, ToolResult
 
@@ -43,6 +44,54 @@ class EphemeralRunResult:
     terminal_result: ToolResult | None
     agent_name: str
     event_count: int
+
+
+def _build_retry_nudge(
+    exit_reason: QueryExitReason,
+    terminal_tools: set[str],
+) -> str:
+    """Compose the user-facing nudge appended before a retry attempt."""
+    names = ", ".join(sorted(terminal_tools))
+    if exit_reason == QueryExitReason.RESOURCE_LIMIT:
+        return (
+            f"Your tool-call budget was exhausted before you terminated. "
+            f"You have been granted a fresh budget for one final attempt. "
+            f"You MUST terminate immediately by calling one of: {names}. "
+            f"Deliver whatever results you have so far via the terminal tool."
+        )
+    return (
+        f"You replied with plain text without calling a terminal tool. "
+        f"You MUST terminate now by calling one of: {names}. "
+        f"Deliver your result via the terminal tool."
+    )
+
+
+def _prepare_retry_transcript(
+    messages: list[ConversationMessage],
+    exit_reason: QueryExitReason,
+    nudge: str,
+) -> None:
+    """Inject the retry nudge into *messages* in place.
+
+    On ``RESOURCE_LIMIT`` the transcript ends with a ``user`` message holding
+    the tool_results from the cut-off batch; we merge the nudge into that
+    message so role alternation stays idiomatic. On ``TEXT_RESPONSE`` the
+    last message is the assistant's plain reply, so a fresh user message is
+    appended.
+    """
+    if (
+        exit_reason == QueryExitReason.RESOURCE_LIMIT
+        and messages
+        and messages[-1].role == "user"
+    ):
+        messages[-1] = ConversationMessage(
+            role="user",
+            content=[*messages[-1].content, TextBlock(text=nudge)],
+        )
+    else:
+        messages.append(
+            ConversationMessage(role="user", content=[TextBlock(text=nudge)])
+        )
 
 
 def _last_terminal_tool_result(
@@ -82,6 +131,7 @@ async def run_ephemeral_agent(
     on_event: AgentStreamEmitter | None = None,
     on_agent_spawned: Callable[[Any], None] | None = None,
     extra_tool_metadata: ExecutionMetadata | dict[str, Any] | None = None,
+    max_terminal_retries: int = 1,
 ) -> EphemeralRunResult:
     """Spawn → track → run → persist a minimal agent run.
 
@@ -90,8 +140,16 @@ async def run_ephemeral_agent(
     ``task_center_tasks`` row. Subagent dispatches omit ``task_id`` and remain
     transient background work.
 
-    Terminal tools end the run immediately. There is no same-run retry loop;
-    callers that need recovery must spawn a fresh agent run with a new prompt.
+    Terminal tools end the run immediately on success. When the agent exits
+    without delivering a terminal result — either by exhausting its tool-call
+    budget (``RESOURCE_LIMIT``) or by replying in plain text
+    (``TEXT_RESPONSE``) — the lifecycle injects a nudge prompt naming the
+    available terminal tools, resets the tool-call budget and the
+    budget-warning notification state, and re-enters the query loop, up to
+    ``max_terminal_retries`` additional attempts. Crashes are never retried
+    (callers that need recovery must spawn a fresh agent run with a new
+    prompt). Pass ``max_terminal_retries=0`` to opt out and preserve the
+    single-shot contract.
     """
     from engine.agent.run_tracker import AgentRunTracker
     from engine.agent.factory import spawn_agent
@@ -146,26 +204,67 @@ async def run_ephemeral_agent(
     terminal_result: ToolResult | None = None
 
     try:
-        try:
-            async for event in agent.run(prompt):
-                event_count += 1
-                if (
-                    isinstance(event, ToolExecutionCompleted)
-                    and event.does_terminate
-                    and not event.is_error
-                ):
-                    terminal_result = ToolResult(
-                        output=event.output,
-                        is_error=event.is_error,
-                        metadata=dict(event.metadata or {}),
-                        does_terminate=True,
-                    )
-                if on_event is not None:
-                    await on_event(event)
-        except Exception as exc:
-            run_error = str(exc)
-            logger.exception("run_ephemeral_agent: agent run crashed")
+        current_prompt: str | None = prompt
+        max_attempts = max_terminal_retries + 1
+        for attempt_idx in range(max_attempts):
+            is_last_attempt = attempt_idx == max_attempts - 1
+            try:
+                async for event in agent.run(current_prompt, auto_close=False):
+                    event_count += 1
+                    if (
+                        isinstance(event, ToolExecutionCompleted)
+                        and event.does_terminate
+                        and not event.is_error
+                    ):
+                        terminal_result = ToolResult(
+                            output=event.output,
+                            is_error=event.is_error,
+                            metadata=dict(event.metadata or {}),
+                            does_terminate=True,
+                        )
+                    if on_event is not None:
+                        await on_event(event)
+            except Exception as exc:
+                run_error = str(exc)
+                logger.exception("run_ephemeral_agent: agent run crashed")
+                break  # crashes are never retried
+
+            if terminal_result is not None or is_last_attempt:
+                break
+
+            exit_reason = getattr(agent.query_context, "exit_reason", None)
+            terminal_tools: set[str] = getattr(
+                agent.query_context, "terminal_tools", set()
+            ) or set()
+            if (
+                exit_reason
+                not in {
+                    QueryExitReason.RESOURCE_LIMIT,
+                    QueryExitReason.TEXT_RESPONSE,
+                }
+                or not terminal_tools
+            ):
+                break
+
+            # Prepare retry: fresh budget, fresh exit reason, re-armed budget
+            # warning rule, and a nudge appended to the live transcript.
+            agent.query_context.tool_calls_used = 0
+            agent.query_context.exit_reason = None
+            notification_state = getattr(
+                agent.query_context, "notification_state", None
+            )
+            if isinstance(notification_state, dict):
+                notification_state.pop("budget_warning", None)
+            nudge = _build_retry_nudge(exit_reason, terminal_tools)
+            _prepare_retry_transcript(agent.messages, exit_reason, nudge)
+            current_prompt = None
     finally:
+        close = getattr(agent, "close", None)
+        if close is not None:
+            try:
+                await close()
+            except Exception:
+                logger.debug("run_ephemeral_agent: agent.close raised", exc_info=True)
         if not run_error and terminal_result is None:
             terminal_result = agent.query_context.terminal_result or _last_terminal_tool_result(
                 agent.messages

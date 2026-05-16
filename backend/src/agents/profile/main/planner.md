@@ -2,6 +2,7 @@
 name: planner
 description: Main agent planner for TaskCenter harness graphs.
 model: inherit
+tool_call_limit: 100
 agent_kind: planner
 agent_type: agent
 allowed_tools:

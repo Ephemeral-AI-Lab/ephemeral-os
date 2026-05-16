@@ -70,13 +70,31 @@ class EphemeralAgent:
         """
         return self._messages
 
-    async def run(self, prompt: str) -> AsyncIterator[StreamEvent]:
-        """Execute one provider request for the given prompt."""
+    async def run(
+        self,
+        prompt: str | None,
+        *,
+        auto_close: bool = True,
+    ) -> AsyncIterator[StreamEvent]:
+        """Execute one provider request and stream its events.
+
+        Args:
+            prompt: User prompt to append before invoking the query loop. Pass
+                ``None`` to resume from the current transcript (used by the
+                retry path in :func:`run_ephemeral_agent`, which injects its
+                own nudge message directly into ``self._messages`` to keep
+                role alternation idiomatic).
+            auto_close: When ``True`` (default) the API client is released in
+                ``finally``. Retry callers pass ``False`` and call
+                :meth:`close` once after the final attempt.
+        """
         from engine.query.loop import run_query
 
-        self.total_usage = UsageSnapshot()
+        if self.total_usage is None:
+            self.total_usage = UsageSnapshot()
         try:
-            self._messages = [*self._messages, ConversationMessage.from_user_text(prompt)]
+            if prompt is not None:
+                self._messages = [*self._messages, ConversationMessage.from_user_text(prompt)]
             messages, event_iter = await run_query(
                 self.query_context, self._messages
             )
@@ -87,7 +105,8 @@ class EphemeralAgent:
                     self.total_usage.output_tokens += usage.output_tokens
                 yield event
         finally:
-            await self.close()
+            if auto_close:
+                await self.close()
 
     async def close(self) -> None:
         """Release resources held by the agent's API client."""
