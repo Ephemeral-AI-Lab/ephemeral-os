@@ -118,9 +118,10 @@ def test_iteration1_emits_one_merged_goal_iteration_block(
         deps_with_stores,
     )
     kinds = [b.kind for b in packet.blocks]
-    assert kinds == ["iteration_statement"]
+    assert kinds == ["iteration_statement", "role_instruction"]
     iteration_goal = packet.blocks[0]
     assert iteration_goal.metadata["heading"] == "# Goal / Current Iteration"
+    assert packet.blocks[-1].kind == "role_instruction"
     assert packet.target_id == g.id
 
 
@@ -157,6 +158,7 @@ def test_iteration2_emits_goal_prior_results_and_current_iteration(
         "prior_iteration_specification",
         "prior_iteration_summary",
         "iteration_statement",
+        "role_instruction",
     ]
     assert packet.blocks[0].metadata["group_heading"] == "# Goal"
     prior_spec = packet.blocks[1]
@@ -166,6 +168,7 @@ def test_iteration2_emits_goal_prior_results_and_current_iteration(
     assert prior_spec.text == "iteration1 spec"
     iteration_goal = packet.blocks[3]
     assert iteration_goal.metadata["heading"] == "# Current Iteration"
+    assert packet.blocks[-1].kind == "role_instruction"
 
 
 def test_iteration3_emits_two_pairs_with_priority_split(

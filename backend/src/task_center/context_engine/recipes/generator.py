@@ -20,6 +20,9 @@ from task_center.context_engine.packet import (
 from task_center.context_engine.recipes.goal_iteration_frame import (
     latest_summary_text,
 )
+from task_center.context_engine.recipes.role_instruction import (
+    generator_instruction,
+)
 from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
 
@@ -53,12 +56,14 @@ def _generator_build(
             )
         )
 
+    needs = tuple(str(dep) for dep in task.get("needs") or ())
     blocks.extend(
         _dependency_summary_blocks(
-            needs=tuple(str(dep) for dep in task.get("needs") or ()),
+            needs=needs,
             task_store=deps.task_store,
         )
     )
+    blocks.append(generator_instruction(has_deps=bool(needs)))
     blocks.append(
         ContextBlock(
             kind=ContextBlockKind.PLANNED_TASK_SPEC,

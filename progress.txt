@@ -127,3 +127,76 @@
 - Planner-tool boundary mapping: tools/submission/planner/submit_plan_closes_goal.py:47 and
   submit_plan_continues_goal.py:56 — boundary kwarg `task_specification=plan_spec` maps the
   LLM-facing field name to the internal PlannerSubmission DTO field name.
+
+## Session: 2026-05-16 — Context-Aware ROLE_INSTRUCTION Block
+
+### Plan summary
+Add ContextBlockKind.ROLE_INSTRUCTION (REQUIRED priority) emitted by planner/generator/evaluator
+recipes via shared helpers in non-auto-registered recipes/role_instruction.py. Branch facts derived
+from data each recipe already fetched.
+
+### Stories
+- P1: Kind + heading + helper module (8 branches, locked substring contracts)
+- P2: Wire helpers into planner / generator / evaluator
+- P3: Branch-matrix tests + ordering regressions + registration-safety guard
+- P4: pytest + ruff + slop + architect
+
+### Key invariants (must NOT regress)
+- generator ends on PLANNED_TASK_SPEC.
+- evaluator ends on EVALUATION_CRITERIA when criteria is non-empty; on ROLE_INSTRUCTION when criteria
+  is empty (new edge-case test).
+- recipes auto-discovery: role_instruction.py must NOT expose a *_RECIPE symbol; guard test asserts.
+- entry_executor not modified.
+
+### Branch-fact derivations (single source of truth)
+- planner: has_failed_attempts = any(b.kind == FAILED_ATTEMPT_LANDSCAPE for b in blocks).
+  iteration_sequence_no = iteration.sequence_no.
+- generator: has_deps = bool(needs); needs = tuple(str(dep) for dep in task.get("needs") or ()).
+- evaluator: is_partial = bool(attempt.continuation_goal).
+
+### Implementation summary (2026-05-16)
+- packet.py: added ContextBlockKind.ROLE_INSTRUCTION = "role_instruction".
+- renderer.py: added "role_instruction" -> "# How to Proceed" to _DEFAULT_HEADINGS.
+- recipes/role_instruction.py (NEW): module docstring warns against *_RECIPE symbols (auto-discovery
+  guard). Three helpers — planner_instruction (4 branches), generator_instruction (2 branches),
+  evaluator_instruction (2 branches) — all return REQUIRED-priority ContextBlock via private _block()
+  helper. Text is profile-variant agnostic (no terminal-tool names).
+- recipes/planner.py: derived has_failed_attempts = any(b.kind == FAILED_ATTEMPT_LANDSCAPE for b in
+  blocks); planner_instruction appended LAST (planner has no obligation anchor today; hint becomes
+  the anchor).
+- recipes/generator.py: extracted `needs` to local, then generator_instruction(has_deps=bool(needs))
+  inserted AFTER deps, BEFORE PLANNED_TASK_SPEC. PLANNED_TASK_SPEC remains last.
+- recipes/evaluator.py: evaluator_instruction(is_partial=bool(attempt.continuation_goal)) appended
+  BEFORE `if criteria:`. EVALUATION_CRITERIA remains last when present; hint lands last when criteria
+  is empty (covered by new test).
+- tests/test_role_instruction.py (NEW): 8 branch tests + test_module_exposes_no_recipe_symbols guard
+  that asserts no *_RECIPE suffix AND no ContextRecipe isinstance on any public attribute.
+- tests/test_recipes_planner.py: kind-sequence assertions updated for iter1 and iter2+ paths;
+  packet.blocks[-1].kind == "role_instruction" asserted.
+- tests/test_recipes_other.py: generator + evaluator kind sequences updated to include
+  role_instruction at N-2 (or N-1 when criteria empty). New test_evaluator_with_empty_criteria_ends_on_role_instruction.
+
+### Verification
+- .venv/bin/pytest backend/tests/unit_test/test_task_center/test_context_engine/: 72 passed.
+- .venv/bin/pytest backend/tests/unit_test/test_task_center/: 276 passed.
+- .venv/bin/pytest backend/tests/unit_test/: 1442 passed, 1 skipped, 4 pre-existing failures
+  (test_benchmarks + test_live_e2e_tools + test_plugins LSP factory registry-pollution; none
+  reference context_engine or role_instruction — verified via grep).
+- .venv/bin/ruff check on changed paths: clean.
+- Architect agent reviewer: APPROVED against P1–P3 acceptance criteria (verified each substring
+  contract, single-source-of-truth derivation, obligation-last invariant in all paths, and
+  registration-safety guard correctness).
+- ai-slop-cleaner pass: no changes required (locked-substring contracts intentionally couple test
+  assertions to hint wording; copy edits belong in a follow-up PR with text+tests updated together).
+- Post-deslop regression: 72 passed, ruff clean.
+
+### Codebase landmarks (for future iterations)
+- ROLE_INSTRUCTION block emission seam: backend/src/task_center/context_engine/recipes/role_instruction.py
+  (helper module, NOT a recipe — recipes/__init__.py auto-discovery would register it otherwise).
+- Branch-fact derivations live in the consuming recipes (single source of truth):
+  - planner.py: has_failed_attempts derived from already-built blocks list.
+  - generator.py: has_deps = bool(needs) where needs was already needed for _dependency_summary_blocks.
+  - evaluator.py: is_partial = bool(attempt.continuation_goal).
+- Hint is REQUIRED priority → never compressed under token budget (renderer.py:_compress only drops
+  LOW/MEDIUM).
+

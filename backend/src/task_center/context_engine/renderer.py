@@ -38,6 +38,7 @@ _DEFAULT_HEADINGS: dict[str, str] = {
     "completed_task_summary": "# Dependency Results",
     "artifact_reference": "# Artifact reference",
     "entry_request": "# Entry request",
+    "role_instruction": "# How to Proceed",
 }
 
 

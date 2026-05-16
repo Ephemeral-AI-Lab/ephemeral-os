@@ -11,12 +11,19 @@ See plan §3.3.6 for the full block taxonomy. The recipe reads:
 from __future__ import annotations
 
 from task_center.context_engine.core import ContextEngineDeps, ContextEngineError
-from task_center.context_engine.packet import ContextPacket, ContextRefs
+from task_center.context_engine.packet import (
+    ContextBlockKind,
+    ContextPacket,
+    ContextRefs,
+)
 from task_center.context_engine.recipes.goal_iteration_frame import (
     goal_iteration_blocks,
 )
 from task_center.context_engine.recipes.attempt_landscape import (
     failed_attempt_landscape_blocks,
+)
+from task_center.context_engine.recipes.role_instruction import (
+    planner_instruction,
 )
 from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
@@ -45,6 +52,15 @@ def _planner_build(
             current_attempt_id=scope.attempt_id,
             attempts=deps.attempt_store.list_for_iteration(iteration.id),
             task_store=deps.task_store,
+        )
+    )
+    has_failed_attempts = any(
+        b.kind == ContextBlockKind.FAILED_ATTEMPT_LANDSCAPE for b in blocks
+    )
+    blocks.append(
+        planner_instruction(
+            iteration_sequence_no=iteration.sequence_no,
+            has_failed_attempts=has_failed_attempts,
         )
     )
 

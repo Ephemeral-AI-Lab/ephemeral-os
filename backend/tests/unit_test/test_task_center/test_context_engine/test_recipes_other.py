@@ -94,7 +94,8 @@ def test_generator_emits_planned_task_spec_required_block(
         deps,
     )
     kinds = [b.kind for b in packet.blocks]
-    assert kinds == ["task_specification", "planned_task_spec"]
+    assert kinds == ["task_specification", "role_instruction", "planned_task_spec"]
+    assert packet.blocks[-1].kind == "planned_task_spec"
     assert packet.blocks[-1].priority == ContextPriority.REQUIRED
     assert packet.blocks[-1].text == "do thing X"
     assert "task_specification" in kinds
@@ -136,6 +137,7 @@ def test_generator_does_not_emit_partial_plan_boundary(
 
     assert [b.kind for b in packet.blocks] == [
         "task_specification",
+        "role_instruction",
         "planned_task_spec",
     ]
     assert "future iteration work" not in "\n".join(b.text for b in packet.blocks)
@@ -185,6 +187,11 @@ def test_generator_dependency_summary_blocks(
     assert dep_blocks[0].metadata["group_heading"] == "# Dependency Results"
     assert "produced X" in dep_blocks[0].text
     assert packet.blocks[-1].kind == "planned_task_spec"
+    kinds = [b.kind for b in packet.blocks]
+    dep_idx = kinds.index("dependency_summary")
+    role_idx = kinds.index("role_instruction")
+    spec_idx = kinds.index("planned_task_spec")
+    assert dep_idx < role_idx < spec_idx
 
 
 def test_generator_missing_dependency_task_raises_context_error(
@@ -258,6 +265,7 @@ def test_evaluator_emits_required_spec_and_criteria(
         "iteration_statement",
         "task_specification",
         "completed_task_summary",
+        "role_instruction",
         "evaluation_criteria",
     ]
     assert all(
@@ -266,6 +274,7 @@ def test_evaluator_emits_required_spec_and_criteria(
     )
     assert packet.blocks[0].metadata["heading"] == "# Goal / Current Iteration"
     assert packet.blocks[2].metadata["group_heading"] == "# Dependency Results"
+    assert packet.blocks[-2].kind == "role_instruction"
 
 
 def test_evaluator_renders_every_generator_summary_in_attempt_order(
@@ -383,6 +392,7 @@ def test_evaluator_emits_partial_plan_boundary_before_summaries(
         "task_specification",
         "partial_plan_boundary",
         "completed_task_summary",
+        "role_instruction",
         "evaluation_criteria",
     ]
     boundary = packet.blocks[2]
@@ -391,6 +401,7 @@ def test_evaluator_emits_partial_plan_boundary_before_summaries(
     assert "continuation_goal: build admin tools next" in boundary.text
     assert "Do not treat continuation work as missing" in boundary.text
     assert packet.blocks[-1].kind == "evaluation_criteria"
+    assert packet.blocks[-2].kind == "role_instruction"
 
 
 def test_evaluator_iteration2_frame_precedes_attempt_contract(
@@ -426,12 +437,42 @@ def test_evaluator_iteration2_frame_precedes_attempt_contract(
         "prior_iteration_summary",
         "iteration_statement",
         "task_specification",
+        "role_instruction",
         "evaluation_criteria",
     ]
     assert packet.blocks[0].metadata["group_heading"] == "# Goal"
     assert packet.blocks[1].metadata["group_heading"] == "# Goal"
     assert packet.blocks[3].metadata["heading"] == "# Current Iteration"
     assert packet.blocks[-1].kind == "evaluation_criteria"
+    assert packet.blocks[-2].kind == "role_instruction"
+
+
+def test_evaluator_with_empty_criteria_ends_on_role_instruction(
+    deps, goal_store, iteration_store, attempt_store, task_store, task_center_run_id
+):
+    """When evaluation_criteria is empty the recipe omits EVALUATION_CRITERIA;
+    ROLE_INSTRUCTION must then be the last block, since the hint is inserted
+    unconditionally."""
+    req = _seed_goal(goal_store, task_center_run_id)
+    iteration = _seed_iteration(iteration_store, goal_id=req.id)
+    attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
+    attempt_store.set_plan_contract(
+        attempt.id,
+        task_specification="evaluator spec",
+        evaluation_criteria=[],
+        continuation_goal=None,
+    )
+
+    packet = _evaluator_build(
+        ContextScope(
+            goal_id=req.id, iteration_id=iteration.id, attempt_id=attempt.id
+        ),
+        deps,
+    )
+
+    kinds = [b.kind for b in packet.blocks]
+    assert "evaluation_criteria" not in kinds
+    assert packet.blocks[-1].kind == "role_instruction"
 
 
 # ---------------------------------------------------------------------------

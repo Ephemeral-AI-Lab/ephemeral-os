@@ -19,6 +19,9 @@ from task_center.context_engine.recipes.goal_iteration_frame import (
     goal_iteration_blocks,
     latest_summary_text,
 )
+from task_center.context_engine.recipes.role_instruction import (
+    evaluator_instruction,
+)
 from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
 
@@ -99,6 +102,9 @@ def _evaluator_build(
                 },
             )
         )
+    blocks.append(
+        evaluator_instruction(is_partial=bool(attempt.continuation_goal))
+    )
     criteria = list(attempt.evaluation_criteria)
     if criteria:
         blocks.append(
