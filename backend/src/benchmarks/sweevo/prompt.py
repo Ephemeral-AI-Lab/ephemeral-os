@@ -72,6 +72,34 @@ def pr_description_for_instance(
     return instance.problem_statement
 
 
+def load_pr_description(
+    instance_id: str,
+    *,
+    csv_path: str | os.PathLike[str] | None = None,
+) -> str:
+    """Return the SWE-EVO PR description for *instance_id* — strict variant.
+
+    Unlike :func:`pr_description_for_instance` (which silently falls back),
+    this raises ``FileNotFoundError`` when the CSV is missing, ``KeyError``
+    when the row is absent, and ``ValueError`` when the row's value is
+    empty. Reuses :func:`load_pr_description_overrides`'s LRU cache.
+    """
+    resolved_csv = os.fspath(
+        csv_path
+        or os.environ.get(_PR_DESCRIPTION_CSV_ENV)
+        or _PR_DESCRIPTION_CSV_PATH
+    )
+    if not Path(resolved_csv).exists():
+        raise FileNotFoundError(f"PR descriptions CSV not found: {resolved_csv}")
+    overrides = load_pr_description_overrides(resolved_csv)
+    if instance_id not in overrides:
+        raise KeyError(f"instance_id {instance_id!r} not found in {resolved_csv}")
+    value = overrides[instance_id]
+    if not value or value.isspace():
+        raise ValueError(f"row for {instance_id!r} has empty pr_description")
+    return value
+
+
 def build_sweevo_user_prompt(
     instance: SWEEvoInstance,
     repo_dir: str = _REPO_DIR,
@@ -103,6 +131,7 @@ __all__ = [
     "_PR_DESCRIPTION_CSV_ENV",
     "_PR_DESCRIPTION_CSV_PATH",
     "build_sweevo_user_prompt",
+    "load_pr_description",
     "load_pr_description_overrides",
     "pr_description_for_instance",
 ]

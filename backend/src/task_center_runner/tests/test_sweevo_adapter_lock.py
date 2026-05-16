@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from task_center_runner import sweevo_adapter
+from task_center_runner.benchmarks.sweevo import fixtures as sweevo_adapter
 
 
 def test_lock_slug_keeps_instance_ids_filesystem_safe() -> None:

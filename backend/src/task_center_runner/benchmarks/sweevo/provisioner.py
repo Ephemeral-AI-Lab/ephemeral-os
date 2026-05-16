@@ -26,14 +26,25 @@ if TYPE_CHECKING:
 class SweevoProvisioner:
     """``SandboxProvisioner`` that seeds an existing sandbox for SWE-EVO."""
 
-    def __init__(self, instance: SWEEvoInstance, sandbox_id: str, *, repo_dir: str) -> None:
+    def __init__(
+        self,
+        instance: SWEEvoInstance,
+        sandbox_id: str,
+        *,
+        repo_dir: str,
+        install_lsp: bool = False,
+    ) -> None:
         self._instance = instance
         self._sandbox_id = sandbox_id
         self._repo_dir = repo_dir
+        self._install_lsp = install_lsp
 
     async def provision(self, ctx: "RunContext") -> SandboxLease:
         await setup_sweevo_sandbox(
-            self._instance, self._sandbox_id, repo_dir=self._repo_dir
+            self._instance,
+            self._sandbox_id,
+            repo_dir=self._repo_dir,
+            install_lsp=self._install_lsp,
         )
         return SandboxLease(
             sandbox_id=self._sandbox_id,

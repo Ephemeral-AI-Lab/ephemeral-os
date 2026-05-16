@@ -268,3 +268,109 @@ field changes.
 - New locked substring contracts in test_role_instruction.py for planner branches:
   'list of independent items' AND 'one criterion per item' — future planner-hint refinements must
   preserve both.
+
+## Session: 2026-05-16 — SWE-EVO CSV-Driven Real-Agent Benchmarker (Option A)
+
+### Plan
+.omc/plans/sweevo-csv-real-agent-benchmarker-20260516.md (RALPLAN-DR Short Mode)
+
+### Stories (all green)
+- US-001: Strict `load_pr_description` in benchmarks/sweevo/prompt.py (FileNotFoundError / KeyError / ValueError; shares LRU cache).
+- US-002: `SnapshotNotRegisteredError` + `verify_sweevo_snapshot_exists` in benchmarks/sweevo/sandbox.py with R5 enum-repr normalization.
+- US-003: `install_lsp` kwarg threaded through `setup_sweevo_sandbox` + `SweevoProvisioner` (default False keeps all existing callers unchanged).
+- US-004: `aggregate_jsonl_path` kwarg on `SweevoLifecycle` with atomic O_APPEND single-write per `after_run`.
+- US-005: NEW `task_center_runner/benchmarks/sweevo/csv_runner.py` — `build_selective_entry_mock_runner_factory(goal, repo_dir)`. R1 kwarg-drift guard at `test_runner_kwargs_contract.py` enforces the launcher's frozen set `{agent_def, sandbox_id, persist_agent_run, task_id, on_event, extra_tool_metadata}` (config + prompt positional).
+- US-006: `--csv-runner` flag + `_cmd_csv_runner` in benchmarks/sweevo/__main__.py. R6: try/finally opens immediately after `create_sweevo_test_sandbox`, NOT around `run_pipeline` — so LSP-install failures inside `SweevoProvisioner.provision` still destroy the sandbox.
+
+### Key invariants (must NOT regress)
+- Additive only: zero edits to `MockSquadRunner`, `run_sweevo_real_agent` shim, `EphemeralAttemptAgentLauncher`, `run_ephemeral_agent`, agent registry, or `entry_executor.md`.
+- Entry-prompt = raw CSV string (byte-for-byte with the closure-captured `goal`); does NOT go through `build_sweevo_user_prompt`.
+- Fresh sandbox always: `sandbox_name=""`, `register_snapshot=False` (snapshot pre-verified), `reuse_existing_auto=False`.
+- LSP plugin eager-installed via `ensure_installed(parse_plugin_manifest(DEFAULT_CATALOG_DIR / "lsp"))`.
+- Aggregate JSONL schema matches plan §3 (instance_id, run_id, resolved, fix_rate, F2P/P2P counts, duration_s, task counts, status, error, sandbox_id, timestamp_utc).
+- Option A registry-bypass tradeoff (ADR §8) accepted: audit log records `agent_name="entry_executor"` but the system_prompt + tool whitelist are bypassed for deterministic handoff.
+
+### Files added (7)
+- backend/src/task_center_runner/benchmarks/sweevo/csv_runner.py
+- backend/src/task_center_runner/tests/sweevo/test_csv_real_agent.py (gated by EOS_SWEEVO_REAL_AGENT_TESTS=1 + EOS_LIVE_TESTS=1 + EPHEMERALOS_DATABASE_URL)
+- backend/tests/unit_test/test_benchmarks/test_sweevo_prompt_loader.py (8 tests)
+- backend/tests/unit_test/test_benchmarks/test_sweevo_snapshot_verifier.py (6 tests)
+- backend/tests/unit_test/test_benchmarks/test_sweevo_sandbox_install_lsp.py (5 tests)
+- backend/tests/unit_test/test_benchmarks/test_sweevo_csv_runner_cli.py (9 tests)
+- backend/tests/unit_test/test_task_center_runner/test_sweevo_lifecycle_aggregate.py (5 tests)
+- backend/tests/unit_test/test_task_center_runner/test_sweevo_csv_runner_dispatch.py (5 tests)
+- backend/tests/unit_test/test_task_center/test_agent_launch/test_runner_kwargs_contract.py (1 test — R1 drift guard)
+
+### Files modified (6, all additive)
+- backend/src/benchmarks/sweevo/prompt.py — added `load_pr_description` strict variant + `__all__` entry.
+- backend/src/benchmarks/sweevo/sandbox.py — added `SnapshotNotRegisteredError`, `verify_sweevo_snapshot_exists`, `install_lsp` kwarg on `setup_sweevo_sandbox`.
+- backend/src/benchmarks/sweevo/__init__.py — re-exported the two new sandbox symbols.
+- backend/src/benchmarks/sweevo/__main__.py — added `--csv-runner` + `--csv-path` flags + `_cmd_csv_runner` async function + main() dispatch.
+- backend/src/task_center_runner/benchmarks/sweevo/provisioner.py — added `install_lsp` kwarg and provision-time forwarding.
+- backend/src/task_center_runner/benchmarks/sweevo/lifecycle.py — added `aggregate_jsonl_path` kwarg + `_append_aggregate_line` helper.
+
+### Verification
+- New tests: 39 unit + 1 gated live (collects, skipped without env). All 39 unit green.
+- Full unit sweep `.venv/bin/pytest backend/tests/unit_test/`: 1487 passed, 1 skipped, 4 failed. The 4 failures match the documented pre-existing baseline (test_sweevo_mock_agent_execution, test_sweevo_sandbox.test_setup_sweevo_sandbox_rebuilds_workspace_base_after_raw_setup, test_run_tiered.test_load_real_tiers_toml_parses, test_lsp_catalog.test_each_lsp_tool_creatable_via_factory) — verified pre-existing on HEAD.
+- `.venv/bin/ruff check` on every changed path: clean.
+- Grep invariants verified:
+  - `rg 'register_snapshot=' backend/src/benchmarks/sweevo/__main__.py` → `_cmd_csv_runner` explicitly sets `register_snapshot=False` (line 280).
+  - `rg 'reuse_existing_auto=' backend/src/benchmarks/sweevo/__main__.py` → `reuse_existing_auto=False` (line 281).
+  - `rg 'agent_def.name == .entry_executor.' backend/src/task_center_runner/benchmarks/sweevo/csv_runner.py` → only inside the factory closure dispatch.
+- Architect agent review: APPROVED-WITH-NITS. 3 NITs (gated-test layout deviation justified per execution_constraints; audit_dir.resolve() asymmetry mirrors the existing `_cmd_real_agent` / `_cmd_scenario` pattern per CLAUDE.md "Match existing style"; CLI branch ordering is reasonable). No BLOCKER / MAJOR findings.
+- ai-slop-cleaner pass: trimmed redundant 9-step WHAT enumeration from `_cmd_csv_runner` docstring + redundant inline `# R6` comment; kept the non-obvious R6 try/finally ordering invariant in the docstring (per CLAUDE.md "Don't explain WHAT").
+- Post-deslop regression: 39 new unit tests green; gated test still collects; ruff clean.
+- HEAD did NOT drift during this session (still 9141bf928e76b76aab5700c1638de915022945ec at session end).
+
+### Codebase landmarks (for future iterations)
+- Selective per-launch runner-factory pattern lives at `task_center_runner/benchmarks/sweevo/csv_runner.py:build_selective_entry_mock_runner_factory`. Re-usable for other selective-mock benchmark variants (mock-planner-only, mock-evaluator-only) without engine changes.
+- The R1 frozen kwarg set the production launcher passes to its runner is locked at `test_runner_kwargs_contract.py`. Any future drift in `EphemeralAttemptAgentLauncher._run_launch` will surface here loudly.
+- The R5 snapshot-state normalization (`str(state).split('.')[-1].lower()`) is in `verify_sweevo_snapshot_exists` per Daytona SDK enum-repr drift defense; adapter.py:184 only does `str(...)` so callers must strip the prefix.
+- R6 ordering invariant: any future SWE-EVO CLI runner that creates its own Daytona sandbox MUST open `try`/`finally` immediately after `create_sweevo_test_sandbox` returns, not around `run_pipeline`. LSP install runs inside `SweevoProvisioner.provision` (which `run_pipeline` invokes); wrapping only `run_pipeline` would leak the sandbox.
+- Plan §6 LIVE-RUN ACs (CLI exits 0, F2P/P2P captured, fresh sandbox invariant, mock-only-entry invariant from a real run) are deferred to the human gate (`EOS_SWEEVO_REAL_AGENT_TESTS=1 + EOS_LIVE_TESTS=1 + EPHEMERALOS_DATABASE_URL`). Wiring-level ACs all locally verified.
+
+## Session: 2026-05-16 — Engine-layer retry test coverage (RETRY_TESTING_PLAN.md)
+
+### Plan
+backend/tests/RETRY_TESTING_PLAN.md (P0+P1 matrix; §4 real-LLM + §5 mock-runner refactor deferred per the plan's own recommendation).
+
+### Stories (all green)
+- R1: `_fake_provider.py` (FakeProviderClient async-generator pattern; ScriptedTurn/ScriptedToolUse dataclasses; raises if asked for more turns than scripted). `_retry_test_support.py` (ScriptedRetryAgent test double + tool fixtures + real-loop agent builder).
+- R2: 8 e2e tests (R1 smoke + 7 plan §1b rows). RESOURCE_LIMIT trigger pattern documented in module docstring: pre-seed `tool_calls_used = tool_call_limit` because the reserved-slot rule blocks non-terminal calls from reaching limit when `terminal_tools` is non-empty.
+- R3: 8 plan §1c lifecycle bookkeeping tests.
+- R4: 5 plan §1d multi-attempt tests (including max_terminal_retries=100 boundary).
+- R5: 37 tests (33 parametrized matrix + 4 named) — loads live profile registry via `load_agents_tree`; covers all 10 profiles with non-empty terminals (advisor, resolver, entry_executor, evaluator, executor_success_failure, executor_success_handoff, verifier, planner, planner_full_only, explorer).
+- R6: 6 plan §1f side-effect tests. Row 1 reframed per advisor guidance: visible invariant is "retry boundary does not stomp user-owned tool_metadata" (cancel_all happens in loop's finally, not in the retry wrapper).
+- R7: 5 plan §2a subagent tests. Monkeypatches BOTH `engine.api.run_ephemeral_agent` and `engine.agent.lifecycle.run_ephemeral_agent` (engine.api uses lazy __getattr__ proxy).
+- R8: 8 plan §2b helper tool tests (4 advisor + 4 resolver). `compose_helper_bundle` stubbed via `sys.modules[...]` because the ask_helper `__init__` re-exports the FunctionTool under the submodule name (string-path monkeypatch collides).
+- R9: 5 plan §2c launcher tests (4 plan rows + 1 static-source guard `test_launcher_runner_kwargs_do_not_disable_engine_retry`). Uses the in-memory SQLite conftest from `test_task_center/conftest.py` + the `register_test_agents` fixture; no real DB required.
+
+### Files added (11)
+- backend/tests/unit_test/test_engine/_fake_provider.py
+- backend/tests/unit_test/test_engine/_retry_test_support.py
+- backend/tests/unit_test/test_engine/test_engine_retry_end_to_end.py
+- backend/tests/unit_test/test_engine/test_retry_state_integrity.py
+- backend/tests/unit_test/test_engine/test_retry_multi_attempt.py
+- backend/tests/unit_test/test_engine/test_retry_profile_matrix.py
+- backend/tests/unit_test/test_engine/test_retry_side_effects.py
+- backend/tests/unit_test/test_tools/test_subagent_retry.py
+- backend/tests/unit_test/test_tools/test_ask_advisor_retry.py
+- backend/tests/unit_test/test_tools/test_ask_resolver_retry.py
+- backend/tests/unit_test/test_task_center/test_agent_launch/test_attempt_launcher_retry.py
+
+### Files modified (0)
+This is a test-only PR. No production code touched.
+
+### Verification
+- `.venv/bin/pytest backend/tests/unit_test/test_engine/`: 212 passed (130 existing + 82 new).
+- `.venv/bin/pytest backend/tests/unit_test/test_tools/test_*_retry.py`: 13 passed (5 subagent + 4 advisor + 4 resolver).
+- `.venv/bin/pytest backend/tests/unit_test/test_task_center/test_agent_launch/test_attempt_launcher_retry.py`: 5 passed.
+- `.venv/bin/pytest backend/tests/unit_test/` full sweep: 1572 passed, 1 skipped, 4 pre-existing failures (the documented baseline — verified pre-existing on HEAD).
+- `.venv/bin/ruff check` on every new file: clean (3 unused-import warnings auto-fixed; no remaining issues).
+
+### Codebase landmarks (for future iterations)
+- The shared test scaffolding lives at `backend/tests/unit_test/test_engine/_fake_provider.py` (FakeProviderClient) and `_retry_test_support.py` (ScriptedRetryAgent + tool fixtures + real-loop agent builder). Re-use for any future retry / engine-layer test that wants real-loop coverage without a live provider.
+- The static guard `test_launcher_runner_kwargs_do_not_disable_engine_retry` (in `test_attempt_launcher_retry.py`) locks the invariant that `EphemeralAttemptAgentLauncher._run_launch` does NOT pass `max_terminal_retries` — the engine's default of 1 retry is the contract. Companion to `test_runner_kwargs_contract.py`'s frozen-kwarg set.
+- RESOURCE_LIMIT post-dispatch with `terminal_tools` non-empty requires pre-seeding `tool_calls_used = tool_call_limit`. The reserved-slot rule (`_consume_tool_budget_or_reject` in `tools/_framework/execution/tool_call.py`) blocks non-terminal calls at `tool_calls_used == limit - 1`, so non-terminals alone can never push the counter to limit. This is the structural quirk that any future real-loop RESOURCE_LIMIT test must work around.
+- For helper tools (`ask_advisor`, `ask_resolver`, `run_subagent`), monkeypatching must hit BOTH `engine.api.run_ephemeral_agent` and `engine.agent.lifecycle.run_ephemeral_agent` because `engine.api` is a lazy proxy that may or may not have cached the canonical reference yet at call time.
+- The `tools.ask_helper.{ask_advisor,ask_resolver}` import path is ambiguous: the submodule and the FunctionTool share the name. Use `sys.modules["tools.ask_helper.ask_advisor"]` for module-level monkeypatching of compose_helper_bundle.

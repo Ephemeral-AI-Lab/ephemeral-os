@@ -89,7 +89,8 @@ async def test_setup_sweevo_sandbox_rebuilds_workspace_base_after_raw_setup(
     commands: list[str] = []
     daemon_calls: list[tuple[str, dict[str, object]]] = []
 
-    async def fake_wait(_sandbox_id: str) -> None:
+    async def fake_wait(_sandbox_id: str, *, attempts: int = 6) -> None:
+        del attempts
         return None
 
     async def fake_exec(_sandbox_id: str, command: str, **_kwargs: object) -> str:

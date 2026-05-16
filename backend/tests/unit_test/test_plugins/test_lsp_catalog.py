@@ -26,9 +26,19 @@ _LSP_DIR = (
 
 @pytest.fixture(autouse=True)
 def _isolate_loader() -> Iterator[None]:
+    from tools._framework import factory as factory_mod
+
     loader_mod._LOAD_CACHE.clear()
     pre = {
         name for name in sys.modules if name.startswith("plugins.catalog.")
+    }
+    # Drop any LSP factory entries left over from a prior import so the
+    # round-trip ``register_tool_instance`` call in this suite (which does
+    # not pass ``override=True``) does not collide.
+    pre_lsp_factories = {
+        name: factory_mod._factories.pop(name)
+        for name in list(factory_mod._factories)
+        if name.startswith("lsp.")
     }
     yield
     loader_mod._LOAD_CACHE.clear()
@@ -38,6 +48,11 @@ def _isolate_loader() -> Iterator[None]:
         if n.startswith("plugins.catalog.") and n not in pre
     ]:
         sys.modules.pop(name, None)
+    # Clear any new LSP factory entries this test created, then restore the
+    # pre-test set so prior state is preserved for downstream tests.
+    for name in [n for n in list(factory_mod._factories) if n.startswith("lsp.")]:
+        factory_mod._factories.pop(name, None)
+    factory_mod._factories.update(pre_lsp_factories)
 
 
 def test_lsp_manifest_parses() -> None:

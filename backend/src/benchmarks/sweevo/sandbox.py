@@ -486,6 +486,48 @@ def resolve_sweevo_snapshot(
     return snapshot_name or instance.docker_image
 
 
+class SnapshotNotRegisteredError(RuntimeError):
+    """Raised when a SWE-EVO snapshot is missing or in a non-active state.
+
+    The CSV benchmarker fails-fast on this so a missing snapshot surfaces
+    before sandbox creation rather than after a 30-minute LLM run.
+    """
+
+
+def verify_sweevo_snapshot_exists(instance: SWEEvoInstance) -> str:
+    """Assert the Daytona snapshot for *instance* exists and is active.
+
+    Returns the snapshot name on success. Raises
+    :class:`SnapshotNotRegisteredError` if the snapshot is missing or in
+    any state other than ``active`` (normalized against Daytona SDK
+    enum-repr drift, mirroring adapter.py:60-70).
+    """
+    name = default_sweevo_snapshot_name(instance)
+    snapshots = sandbox_api.list_snapshots()
+    match = next((s for s in snapshots if s.get("name") == name), None)
+    if match is None:
+        raise SnapshotNotRegisteredError(
+            f"Daytona snapshot {name!r} for instance "
+            f"{instance.instance_id!r} is not registered. Pre-register it "
+            f"before invoking the CSV benchmarker, e.g. by calling "
+            f"benchmarks.sweevo.sandbox.register_sweevo_snapshot(instance) "
+            f"from a Python shell."
+        )
+    # Defensive normalization against Daytona SDK enum-repr drift — the
+    # snapshot path at adapter.py:184 does ``str(getattr(s, 'state'))``
+    # which yields strings like ``'SnapshotState.ACTIVE'``. Strip the
+    # enum prefix and lowercase before comparing.
+    state = str(match.get("state", "unknown")).split(".")[-1].lower()
+    if state != "active":
+        raise SnapshotNotRegisteredError(
+            f"Daytona snapshot {name!r} for instance "
+            f"{instance.instance_id!r} is in state {state!r}, expected "
+            f"'active'. Clean up any error-state zombie snapshot before "
+            f"the benchmark can use it."
+        )
+    return name
+
+
 # ---------------------------------------------------------------------------
 # Sandbox setup
 # ---------------------------------------------------------------------------
@@ -498,8 +540,16 @@ async def setup_sweevo_sandbox(
     *,
     on_progress: ProgressCallback | None = None,
     exec_ready_attempts: int = 6,
+    install_lsp: bool = False,
 ) -> str:
-    """Prepare the sandbox by checking out the repo at the base commit."""
+    """Prepare the sandbox by checking out the repo at the base commit.
+
+    When *install_lsp* is true, the LSP catalog plugin is installed via
+    :func:`sandbox.plugin.install.ensure_installed` after the workspace
+    is rebuilt. Defaults to False so existing callers (live tiers, mock
+    e2e tests, ``_cmd_real_agent``, ``_cmd_scenario``) keep their
+    pre-install-lsp behavior.
+    """
     _progress(on_progress, f"[setup] waiting for sandbox exec readiness sandbox_id={sandbox_id}")
     await _wait_for_sandbox_exec_ready(sandbox_id, attempts=exec_ready_attempts)
     _progress(on_progress, f"[setup] checking repository at {repo_dir}")
@@ -538,6 +588,15 @@ async def setup_sweevo_sandbox(
         logger.info("Set project_dir label to %s", repo_dir)
     except Exception as exc:
         logger.warning("Could not set project_dir label: %s", exc)
+
+    if install_lsp:
+        from plugins.core.discovery import DEFAULT_CATALOG_DIR
+        from plugins.core.manifest import parse_plugin_manifest
+        from sandbox.plugin.install import ensure_installed
+
+        _progress(on_progress, "[setup] installing LSP plugin")
+        manifest = parse_plugin_manifest(DEFAULT_CATALOG_DIR / "lsp")
+        await ensure_installed(sandbox_id, manifest)
 
     logger.info(
         "SWE-EVO sandbox %s ready: %s @ %s",
