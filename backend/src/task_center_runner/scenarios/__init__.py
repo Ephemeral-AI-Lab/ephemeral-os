@@ -22,6 +22,7 @@ from task_center_runner.scenarios.pipeline import (
     DependencyDagMixed,
     DependencyDagParallel,
     DependencyDagSerial,
+    FirstThreeMessagesCapture,
     IterativeContinuation,
     GeneratorFailureQuiescence,
     InitialGoal,
@@ -55,6 +56,7 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     "full_stack_adversarial": FullStackAdversarial,
     # Focused pipeline scenarios.
     "pipeline.initial_goal": InitialGoal,
+    "pipeline.first_three_messages_capture": FirstThreeMessagesCapture,
     "pipeline.iterative_continuation": IterativeContinuation,
     "pipeline.attempt_retry_evaluator_failure": AttemptRetryEvaluatorFailure,
     "pipeline.attempt_retry_generator_failure": AttemptRetryGeneratorFailure,
@@ -111,6 +113,7 @@ __all__ = [
     "DependencyDagMixed",
     "DependencyDagParallel",
     "DependencyDagSerial",
+    "FirstThreeMessagesCapture",
     "IterativeContinuation",
     "FullCaseUserInput",
     "FullSystemCapacityMatrix",

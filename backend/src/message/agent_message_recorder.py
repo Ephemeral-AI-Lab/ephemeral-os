@@ -120,12 +120,20 @@ class AgentMessageJsonlRecorder:
         user_prompt: str,
         agent_name: str,
         run_id: str,
+        seeded_initial_messages: list[ConversationMessage] | None = None,
     ) -> None:
         """Append the system and initial user messages once.
 
         The live engine sends the system prompt outside the provider
         ``messages`` array, but the benchmark transcript stores it explicitly
         so ``message.jsonl`` can be replayed as a full agent conversation.
+
+        For the two-user-message launch shape (see
+        ``task_center/attempt/launch.py:140-148``), ``seeded_initial_messages``
+        carries the messages the launcher passed via the ``initial_messages``
+        kwarg (i.e. the composer's context_message). They are written
+        BETWEEN the system row and the ``user_prompt`` (= role_instruction)
+        row so on-disk transcripts hold the full three-message launch shape.
         """
         if self._initial_messages_recorded:
             return
@@ -136,6 +144,15 @@ class AgentMessageJsonlRecorder:
                 run_id=run_id,
                 role="system",
                 content=[{"type": "text", "text": system_prompt}],
+            )
+        for seeded in seeded_initial_messages or []:
+            self._record_message(
+                agent_name=agent_name,
+                run_id=run_id,
+                role=seeded.role,
+                content=[
+                    block.model_dump(mode="json") for block in seeded.content
+                ],
             )
         message = ConversationMessage.from_user_text(user_prompt)
         self._record_message(

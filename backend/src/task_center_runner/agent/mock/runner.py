@@ -201,6 +201,7 @@ class MockSquadRunner:
             agent_def=agent_def,
             prompt=prompt,
             metadata=metadata,
+            seeded_initial_messages=kwargs.get("initial_messages"),
         )
 
         # Publish invocation event.
@@ -1293,6 +1294,7 @@ class MockSquadRunner:
         agent_def: AgentDefinition,
         prompt: str,
         metadata: ExecutionMetadata,
+        seeded_initial_messages: list[ConversationMessage] | None = None,
     ) -> None:
         task_id = str(metadata.get("task_center_task_id") or "")
         if not task_id or self._audit_recorder is None:
@@ -1305,6 +1307,7 @@ class MockSquadRunner:
             user_prompt=prompt,
             agent_name=agent_def.name,
             run_id=self._stream_run_id(metadata),
+            seeded_initial_messages=list(seeded_initial_messages or []),
         )
 
     def _current_attempt_and_iteration(

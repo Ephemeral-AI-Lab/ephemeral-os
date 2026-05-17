@@ -52,6 +52,9 @@ from task_center_runner.scenarios.pipeline.dependency_dag_parallel import (
 from task_center_runner.scenarios.pipeline.dependency_dag_serial import (
     DependencyDagSerial,
 )
+from task_center_runner.scenarios.pipeline.first_three_messages_capture import (
+    FirstThreeMessagesCapture,
+)
 from task_center_runner.scenarios.pipeline.iterative_continuation import (
     IterativeContinuation,
 )
@@ -77,6 +80,7 @@ __all__ = [
     "DependencyDagMixed",
     "DependencyDagParallel",
     "DependencyDagSerial",
+    "FirstThreeMessagesCapture",
     "IterativeContinuation",
     "GeneratorFailureQuiescence",
     "InitialGoal",

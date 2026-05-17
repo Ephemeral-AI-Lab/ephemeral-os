@@ -63,24 +63,32 @@ def build_query_run_request(
 def _record_initial_messages_once(
     context: QueryContext, messages: list[ConversationMessage]
 ) -> None:
-    """Write the system prompt + first user message to the task's message.jsonl.
+    """Write the system prompt + every initial user message once.
 
     The recorder ignores repeated calls via its ``_initial_messages_recorded``
     flag, so this is safe on every turn. The audit recorder is reached via a
     module-level registry keyed by ``agent_run_id`` (see
     ``message.agent_message_recorder.register_recorder_for_agent_run``).
+
+    For two-user-message launches the launcher seeds
+    ``initial_messages=[context_message]`` and passes ``role_instruction``
+    as the spawn prompt — we hand the recorder the additional seeded user
+    rows so the on-disk transcript holds the full launch shape (system +
+    user_msg_1 + user_msg_2) rather than just system + the last user row.
     """
     recorder = recorder_for_agent_run(context.run_id)
     if recorder is None:
         return
-    user_prompt = _first_user_prompt_text(messages)
-    if user_prompt is None:
+    last_user_prompt = _last_user_prompt_text(messages)
+    if last_user_prompt is None:
         return
+    seeded = _user_messages_before_last(messages)
     recorder.record_initial_messages(
         system_prompt=context.system_prompt,
-        user_prompt=user_prompt,
+        user_prompt=last_user_prompt,
         agent_name=context.agent_name,
         run_id=context.run_id,
+        seeded_initial_messages=seeded,
     )
 
 
@@ -94,3 +102,39 @@ def _first_user_prompt_text(messages: list[ConversationMessage]) -> str | None:
                 parts.append(block.text)
         return "".join(parts) if parts else ""
     return None
+
+
+def _last_user_prompt_text(messages: list[ConversationMessage]) -> str | None:
+    """Return the last contiguous user message's text in the prefix.
+
+    The launcher path is: system + initial_messages[...] + spawn_prompt.
+    Every entry is either a user message (text) or a follow-up that arrives
+    after the first turn. We only care about the prefix of user messages
+    before any assistant turn. We treat the LAST of those as the spawn
+    prompt and everything before as seeded initial messages.
+    """
+    prefix: list[ConversationMessage] = []
+    for message in messages:
+        if message.role != "user":
+            break
+        prefix.append(message)
+    if not prefix:
+        return None
+    last = prefix[-1]
+    parts: list[str] = []
+    for block in last.content:
+        if isinstance(block, TextBlock):
+            parts.append(block.text)
+    return "".join(parts) if parts else ""
+
+
+def _user_messages_before_last(
+    messages: list[ConversationMessage],
+) -> list[ConversationMessage]:
+    """Return every seeded user message except the spawn-prompt one."""
+    prefix: list[ConversationMessage] = []
+    for message in messages:
+        if message.role != "user":
+            break
+        prefix.append(message)
+    return prefix[:-1]
