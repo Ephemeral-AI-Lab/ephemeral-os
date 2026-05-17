@@ -1,31 +1,13 @@
-.PHONY: dev backend frontend install build clean
+.PHONY: install test lint clean
 
-# Start both backend and frontend for development
-dev: backend frontend
-
-# Start the FastAPI backend on port 8420 (hot-reload enabled)
-backend:
-	-lsof -ti:8420 | xargs kill -9 2>/dev/null || true
-	EPHEMERALOS_DEV=1 .venv/bin/python backend/src/__main__.py &
-
-# Start the Vite dev server on port 5173 (proxies /api to backend)
-frontend:
-	-lsof -ti:5173 | xargs kill -9 2>/dev/null || true
-	cd frontend/web && npm run dev
-
-# Install all dependencies
 install:
-	uv sync
-	cd frontend/web && npm install
+	uv sync --extra dev
 
-# Build the frontend for production
-build:
-	cd frontend/web && npm run build
+test:
+	uv run pytest -q
 
-# Start production server (serves built frontend from dist/)
-serve:
-	.venv/bin/python backend/src/__main__.py
+lint:
+	uv run ruff check backend/src backend/tests
 
-# Clean build artifacts
 clean:
-	rm -rf frontend/web/dist frontend/web/node_modules/.vite
+	rm -rf .pytest_cache .ruff_cache .mypy_cache backend/.pytest_cache

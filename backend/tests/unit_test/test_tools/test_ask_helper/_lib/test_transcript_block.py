@@ -1,0 +1,267 @@
+"""Tests for ``tools.ask_helper._lib._transcript.build_parent_transcript``.
+
+Locks the two-stage filter (drop ``role=='system'`` defensively, drop the
+first N user messages based on mode), the per-mode tool-input strip
+rules, the message-count cap, the tool-result truncation, and the
+total-byte cap with elision marker.
+"""
+
+from __future__ import annotations
+
+import logging
+
+from message.messages import (
+    ConversationMessage,
+    TextBlock,
+    ThinkingBlock,
+    ToolResultBlock,
+    ToolUseBlock,
+)
+from tools.ask_helper._lib._transcript import (
+    MAX_BASH_COMMAND_CHARS,
+    MAX_TOOL_RESULT_CHARS,
+    MAX_TRANSCRIPT_BYTES,
+    MAX_TRANSCRIPT_MESSAGES,
+    build_parent_transcript,
+)
+
+
+def _user(text: str) -> ConversationMessage:
+    return ConversationMessage(role="user", content=[TextBlock(text=text)])
+
+
+def _assistant(text: str) -> ConversationMessage:
+    return ConversationMessage(role="assistant", content=[TextBlock(text=text)])
+
+
+def _assistant_tool(name: str, **kwargs) -> ConversationMessage:
+    return ConversationMessage(
+        role="assistant", content=[ToolUseBlock(name=name, input=kwargs)]
+    )
+
+
+def _assistant_thinking() -> ConversationMessage:
+    return ConversationMessage(
+        role="assistant", content=[ThinkingBlock(text="planning…")]
+    )
+
+
+def _user_tool_result(content: str, *, is_error: bool = False) -> ConversationMessage:
+    return ConversationMessage(
+        role="user",
+        content=[
+            ToolResultBlock(tool_use_id="t1", content=content, is_error=is_error)
+        ],
+    )
+
+
+# ---- Shared filter behaviour --------------------------------------------
+
+
+def test_empty_messages_returns_none():
+    assert build_parent_transcript([], mode="advisor") is None
+    assert build_parent_transcript([], mode="resolver") is None
+
+
+def test_first_non_user_message_returns_none_and_logs_warning(caplog):
+    caplog.set_level(logging.WARNING)
+    out = build_parent_transcript([_assistant("hi")], mode="advisor")
+    assert out is None
+    assert any(
+        "first non-system message has role" in rec.message
+        for rec in caplog.records
+    )
+
+
+def test_system_messages_filtered_defensively():
+    class _Sys:
+        role = "system"
+        content = [TextBlock(text="ignored")]
+
+    msgs = [
+        _Sys(),
+        _user("user_msg_1"),
+        _user("user_msg_2"),
+        _assistant("kept after filter"),
+    ]
+    out = build_parent_transcript(msgs, mode="advisor")
+    assert out is not None
+    assert "ignored" not in out
+    assert "user_msg_1" not in out
+    assert "user_msg_2" not in out
+    assert "kept after filter" in out
+
+
+# ---- Drop-first-N rule branches on mode -------------------------------
+
+
+def test_advisor_mode_drops_first_two_user_messages():
+    msgs = [
+        _user("user_msg_1 (context)"),
+        _user("user_msg_2 (task)"),
+        _assistant_tool("Bash", command="pytest"),
+        _user_tool_result("2 failed", is_error=True),
+    ]
+    out = build_parent_transcript(msgs, mode="advisor")
+    assert out is not None
+    assert "user_msg_1" not in out
+    assert "user_msg_2" not in out
+    assert "tool_use: Bash" in out
+    assert "2 failed" in out
+
+
+def test_resolver_mode_drops_only_first_user_message():
+    msgs = [
+        _user("spawn prompt"),
+        _assistant_tool("Bash", command="pytest"),
+        _user_tool_result("2 failed", is_error=True),
+    ]
+    out = build_parent_transcript(msgs, mode="resolver")
+    assert out is not None
+    assert "spawn prompt" not in out
+    assert "tool_use: Bash" in out
+
+
+def test_advisor_mode_returns_none_when_only_first_two_messages_present():
+    msgs = [_user("user_msg_1"), _user("user_msg_2")]
+    assert build_parent_transcript(msgs, mode="advisor") is None
+
+
+# ---- Tool-use input filter rules per §4.6 -----------------------------
+
+
+def test_advisor_strips_inputs_for_write_edit_notebookedit():
+    msgs = [
+        _user("user_msg_1"),
+        _user("user_msg_2"),
+        _assistant_tool("Write", file_path="x.py", content="secret"),
+        _assistant_tool("Edit", file_path="y.py", old_string="a", new_string="b"),
+        _assistant_tool("NotebookEdit", path="z.ipynb"),
+    ]
+    out = build_parent_transcript(msgs, mode="advisor")
+    assert out is not None
+    assert "tool_use: Write" in out
+    assert "tool_use: Edit" in out
+    assert "tool_use: NotebookEdit" in out
+    assert "(input elided)" in out
+    assert "secret" not in out
+    assert "old_string" not in out
+
+
+def test_advisor_renders_bash_command_only_with_cap():
+    long_command = "echo " + ("X" * (MAX_BASH_COMMAND_CHARS + 200))
+    msgs = [
+        _user("user_msg_1"),
+        _user("user_msg_2"),
+        _assistant_tool("Bash", command=long_command),
+    ]
+    out = build_parent_transcript(msgs, mode="advisor")
+    assert out is not None
+    assert "tool_use: Bash" in out
+    # Full command is NOT present; truncation marker IS.
+    assert long_command not in out
+    assert "truncated" in out
+
+
+def test_advisor_keeps_full_input_for_read_grep_glob():
+    msgs = [
+        _user("user_msg_1"),
+        _user("user_msg_2"),
+        _assistant_tool("Read", file_path="src/auth.py"),
+    ]
+    out = build_parent_transcript(msgs, mode="advisor")
+    assert out is not None
+    assert "tool_use: Read" in out
+    assert "src/auth.py" in out
+
+
+def test_advisor_drops_thinking_blocks():
+    msgs = [
+        _user("user_msg_1"),
+        _user("user_msg_2"),
+        _assistant_thinking(),
+        _assistant("after-thinking text"),
+    ]
+    out = build_parent_transcript(msgs, mode="advisor")
+    assert out is not None
+    assert "_(thinking)_" not in out
+    assert "after-thinking text" in out
+
+
+def test_resolver_renders_thinking_as_marker():
+    msgs = [
+        _user("spawn prompt"),
+        _assistant_thinking(),
+        _assistant("after-thinking text"),
+    ]
+    out = build_parent_transcript(msgs, mode="resolver")
+    assert out is not None
+    assert "_(thinking)_" in out
+
+
+def test_resolver_keeps_full_inputs_including_write():
+    msgs = [
+        _user("spawn prompt"),
+        _assistant_tool("Write", file_path="x.py", content="full content"),
+    ]
+    out = build_parent_transcript(msgs, mode="resolver")
+    assert out is not None
+    assert "full content" in out
+
+
+# ---- Tool-result rendering ---------------------------------------------
+
+
+def test_tool_result_content_truncated_at_max_chars():
+    huge = "X" * (MAX_TOOL_RESULT_CHARS + 5_000)
+    msgs = [
+        _user("user_msg_1"),
+        _user("user_msg_2"),
+        _assistant_tool("Bash", command="something"),
+        _user_tool_result(huge),
+    ]
+    out = build_parent_transcript(msgs, mode="advisor")
+    assert out is not None
+    assert huge not in out
+    assert "truncated" in out
+    assert "X" * 64 in out
+
+
+def test_tool_result_error_flag_renders_marker():
+    msgs = [
+        _user("user_msg_1"),
+        _user("user_msg_2"),
+        _assistant_tool("Bash", command="echo"),
+        _user_tool_result("boom", is_error=True),
+    ]
+    out = build_parent_transcript(msgs, mode="advisor")
+    assert out is not None
+    assert "tool_result [error]" in out
+
+
+# ---- Caps --------------------------------------------------------------
+
+
+def test_message_count_capped_at_max_transcript_messages():
+    msgs = (
+        [_user("user_msg_1"), _user("user_msg_2")]
+        + [_assistant(f"msg {i}") for i in range(200)]
+    )
+    out = build_parent_transcript(msgs, mode="advisor")
+    assert out is not None
+    boundary = 200 - MAX_TRANSCRIPT_MESSAGES
+    assert f"msg {boundary}" in out  # first kept
+    assert f"msg {boundary - 1}" not in out  # last dropped
+    assert "msg 199" in out
+
+
+def test_byte_cap_emits_elision_marker_for_oversized_transcript():
+    big_text = "B" * 4_000  # 4 KB per assistant msg
+    msgs = (
+        [_user("user_msg_1"), _user("user_msg_2")]
+        + [_assistant(big_text) for _ in range(20)]
+    )
+    out = build_parent_transcript(msgs, mode="advisor")
+    assert out is not None
+    assert len(out.encode("utf-8")) <= MAX_TRANSCRIPT_BYTES
+    assert "earlier message" in out and "elided" in out

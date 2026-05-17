@@ -13,7 +13,11 @@ from benchmarks.sweevo.models import (
     _DEFAULT_SWEEVO_TEST_TIMEOUT,
     _REPO_DIR,
 )
-from benchmarks.sweevo.sandbox import _exec, ensure_sweevo_test_patch
+from benchmarks.sweevo.sandbox import (
+    _exec,
+    apply_layerstack_to_repo,
+    ensure_sweevo_test_patch,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,10 +39,14 @@ async def evaluate_sweevo_result(
     repo_dir: str = _REPO_DIR,
 ) -> SWEEvoResult:
     """Run FAIL_TO_PASS and PASS_TO_PASS tests to score the result."""
-    # Step 1: Apply test patch
+    # Step 1: Publish agent tool-layer edits back to the raw checkout used by pytest.
+    await apply_layerstack_to_repo(sandbox_id, repo_dir)
+    result.agent_patch = await _extract_combined_patch(sandbox_id, repo_dir)
+
+    # Step 2: Apply test patch
     await ensure_sweevo_test_patch(instance, sandbox_id, repo_dir)
 
-    # Step 2: Run FAIL_TO_PASS tests
+    # Step 3: Run FAIL_TO_PASS tests
     f2p_passed = 0
     f2p_total = len(instance.fail_to_pass)
     if f2p_total > 0:
@@ -46,7 +54,7 @@ async def evaluate_sweevo_result(
             sandbox_id, repo_dir, instance.fail_to_pass, instance.test_cmds
         )
 
-    # Step 3: Run PASS_TO_PASS tests
+    # Step 4: Run PASS_TO_PASS tests
     p2p_total = len(instance.pass_to_pass)
     p2p_passed = 0
     if p2p_total > 0:
@@ -56,7 +64,7 @@ async def evaluate_sweevo_result(
 
     p2p_broken = p2p_total - p2p_passed
 
-    # Step 4: Compute metrics
+    # Step 5: Compute metrics
     result.fail_to_pass_passed = f2p_passed
     result.fail_to_pass_total = f2p_total
     result.pass_to_pass_broken = p2p_broken

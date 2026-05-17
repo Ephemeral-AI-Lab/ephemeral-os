@@ -1,12 +1,15 @@
-"""TaskCenter request/run/task/harness-graph persistence models."""
+"""TaskCenter request/run/task persistence models.
+
+Harness-graph persistence has been moved to ``db.models.attempt`` and
+is owned by the new three-axis (request / segment / graph) schema.
+"""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy import JSON, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db.base import Base
@@ -50,7 +53,6 @@ class TaskCenterRunRecord(Base):
         ForeignKey("task_center_requests.id", ondelete="CASCADE"),
         index=True,
     )
-    root_task_id: Mapped[str | None] = mapped_column(String(96), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="running")
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
@@ -63,11 +65,6 @@ class TaskCenterRunRecord(Base):
         back_populates="run",
         cascade="all, delete-orphan",
     )
-    harness_graphs: Mapped[list["TaskCenterHarnessGraphRecord"]] = relationship(
-        "TaskCenterHarnessGraphRecord",
-        back_populates="run",
-        cascade="all, delete-orphan",
-    )
 
     def __repr__(self) -> str:
         return f"<TaskCenterRunRecord id={self.id!r} status={self.status!r}>"
@@ -77,19 +74,25 @@ class TaskCenterTaskRecord(Base):
     __tablename__ = "task_center_tasks"
 
     id: Mapped[str] = mapped_column(String(96), primary_key=True)
-    run_id: Mapped[str] = mapped_column(
+    task_center_run_id: Mapped[str] = mapped_column(
         String(36),
         ForeignKey("task_center_runs.id", ondelete="CASCADE"),
         index=True,
     )
     role: Mapped[str] = mapped_column(String(32))
-    task_input: Mapped[str] = mapped_column(Text)
+    agent_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    context_message: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(32))
     summaries: Mapped[list[dict]] = mapped_column(JSON, default=list)
     needs: Mapped[list[str]] = mapped_column(JSON, default=list)
-    task_center_harness_graph_id: Mapped[str | None] = mapped_column(
+    task_center_attempt_id: Mapped[str | None] = mapped_column(
         String(96), nullable=True
     )
+    context_packet_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    # Stage 6: fix-executor recovery wiring (round-tripped to/from
+    # ``Task.fix_target_id`` / ``Task.spawn_reason``).
+    fix_target_id: Mapped[str | None] = mapped_column(String(96), nullable=True)
+    spawn_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
@@ -108,33 +111,3 @@ class TaskCenterTaskRecord(Base):
 
     def __repr__(self) -> str:
         return f"<TaskCenterTaskRecord id={self.id!r} status={self.status!r}>"
-
-
-class TaskCenterHarnessGraphRecord(Base):
-    """Persisted harness graph (planner + executor children + evaluator)."""
-
-    __tablename__ = "task_center_harness_graph"
-
-    id: Mapped[str] = mapped_column(String(96), primary_key=True)
-    run_id: Mapped[str] = mapped_column(
-        String(36),
-        ForeignKey("task_center_runs.id", ondelete="CASCADE"),
-        index=True,
-    )
-    parent_task_id: Mapped[str] = mapped_column(String(96))
-    planner_task_id: Mapped[str] = mapped_column(String(96))
-    evaluator_task_id: Mapped[str | None] = mapped_column(String(96), nullable=True)
-    executor_task_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC)
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
-    )
-
-    run: Mapped[TaskCenterRunRecord] = relationship(back_populates="harness_graphs")
-
-    def __repr__(self) -> str:
-        return f"<TaskCenterHarnessGraphRecord id={self.id!r}>"

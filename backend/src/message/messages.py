@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Annotated, Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 
 class TextBlock(BaseModel):
@@ -46,7 +49,7 @@ class ToolResultBlock(BaseModel):
 
 
 class SystemNotificationBlock(BaseModel):
-    """Engine-generated notification for the model wrapped in tags.
+    """Engine-generated reminder for the model wrapped in tags.
 
     This is a first-class content block — distinct from a user-authored
     TextBlock — so the engine and UI can treat it
@@ -61,7 +64,7 @@ class SystemNotificationBlock(BaseModel):
 
     On the wire (Anthropic and other providers that only accept ``text``
     blocks mid-conversation), this block is serialized as a ``text`` block
-    whose body is wrapped in ``<system-notification>...</system-notification>``
+    whose body is wrapped in ``<system-reminder>...</system-reminder>``
     tags. See :func:`serialize_content_block`. The role of the parent
     :class:`ConversationMessage` should be ``"user"`` because Anthropic's
     API does not accept arbitrary roles in the messages array.
@@ -69,24 +72,6 @@ class SystemNotificationBlock(BaseModel):
 
     type: Literal["system_notification"] = "system_notification"
     text: str
-    # Free-form category so the UI / filters can group notifications.
-    # Examples: "background_progress", "task_warning", "context_update".
-    category: str = ""
-
-
-class BackgroundTaskStateBlock(BaseModel):
-    """Engine-generated per-task background state for API-view reduction."""
-
-    type: Literal["background_task_state"] = "background_task_state"
-    task_id: str
-    tool_name: str
-    task_type: str
-    status: Literal["running", "completed", "failed", "cancelled"]
-    source: Literal["engine_progress", "engine_terminal", "tool_snapshot"]
-    text: str
-    run_id: str | None = None
-    cancel_reason: str | None = None
-    completion_mode: str | None = None
 
 
 ContentBlock = Annotated[
@@ -94,33 +79,9 @@ ContentBlock = Annotated[
     | ThinkingBlock
     | ToolUseBlock
     | ToolResultBlock
-    | SystemNotificationBlock
-    | BackgroundTaskStateBlock,
+    | SystemNotificationBlock,
     Field(discriminator="type"),
 ]
-
-
-def _background_task_state_body(block: BackgroundTaskStateBlock) -> str:
-    lines = [f"Tool: {block.tool_name}"]
-    if block.run_id:
-        lines.append(f"Run ID: {block.run_id}")
-    if block.completion_mode:
-        lines.append(f"Completion Mode: {block.completion_mode}")
-    if block.cancel_reason:
-        lines.append(f"Cancel Reason: {block.cancel_reason}")
-    if block.text:
-        lines.append(block.text)
-    return "\n".join(lines)
-
-
-def render_background_task_state_text(block: BackgroundTaskStateBlock) -> str:
-    """Return a human-readable representation of a background task state."""
-    header = (
-        f'Background task_id="{block.task_id}" '
-        f'status="{block.status}" source="{block.source}"'
-    )
-    body = _background_task_state_body(block)
-    return f"{header}\n{body}" if body else header
 
 
 class ConversationMessage(BaseModel):
@@ -150,18 +111,6 @@ class ConversationMessage(BaseModel):
     def system_notification_text(self) -> str:
         """Concatenated text of all system-notification blocks (no tags)."""
         return "\n".join(b.text for b in self.system_notifications)
-
-    @property
-    def background_task_states(self) -> list[BackgroundTaskStateBlock]:
-        """Return all background task state blocks contained in this message."""
-        return [b for b in self.content if isinstance(b, BackgroundTaskStateBlock)]
-
-    @property
-    def background_task_state_text(self) -> str:
-        """Concatenated human-readable background task state text."""
-        return "\n\n".join(
-            render_background_task_state_text(b) for b in self.background_task_states
-        )
 
     @property
     def thinking(self) -> str:
@@ -202,28 +151,11 @@ def serialize_content_block(block: ContentBlock) -> dict[str, Any]:
     if isinstance(block, SystemNotificationBlock):
         # Anthropic and most providers do not accept arbitrary block types
         # mid-conversation. Flatten to a text block whose body is wrapped
-        # in <system-notification> tags so the model recognises it as engine-
+        # in <system-reminder> tags so the model recognises it as engine-
         # generated guidance rather than user input.
         return {
             "type": "text",
-            "text": f"<system-notification>\n{block.text}\n</system-notification>",
-        }
-
-    if isinstance(block, BackgroundTaskStateBlock):
-        body = _background_task_state_body(block)
-        completion_attr = (
-            f' completion_mode="{block.completion_mode}"'
-            if block.completion_mode
-            else ""
-        )
-        return {
-            "type": "text",
-            "text": (
-                f'<background-task task_id="{block.task_id}" '
-                f'status="{block.status}" source="{block.source}"{completion_attr}>\n'
-                f"{body}\n"
-                "</background-task>"
-            ),
+            "text": f"<system-reminder>\n{block.text}\n</system-reminder>",
         }
 
     if isinstance(block, ToolUseBlock):
@@ -259,6 +191,11 @@ def assistant_message_from_api(raw_message: Any) -> ConversationMessage:
                     name=getattr(raw_block, "name", ""),
                     input=dict(getattr(raw_block, "input", {}) or {}),
                 )
+            )
+        else:
+            logger.debug(
+                "assistant_message_from_api: dropping unrecognized block type %r",
+                block_type,
             )
 
     return ConversationMessage(role="assistant", content=content)

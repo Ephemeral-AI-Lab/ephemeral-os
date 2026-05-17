@@ -2,7 +2,7 @@
 
 Model/LLM configuration lives exclusively in the ``model_registrations``
 DB table — see :mod:`config.model_config`. This module owns only the
-non-model settings (system prompt, database, daytona, UI).
+provider-neutral non-model settings (system prompt, database, UI).
 """
 
 from __future__ import annotations
@@ -29,6 +29,13 @@ class DatabaseSettings(BaseModel):
     echo: bool = False
 
 
+class SandboxSettings(BaseModel):
+    """Sandbox provider defaults."""
+
+    default_image: str = ""
+    default_snapshot: str = ""
+
+
 class Settings(BaseModel):
     """Main settings model for EphemeralOS (non-model config)."""
 
@@ -38,10 +45,8 @@ class Settings(BaseModel):
     # Database
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
 
-    # Daytona sandbox
-    daytona_api_key: str = ""
-    daytona_api_url: str = ""
-    daytona_target: str = ""
+    # Sandbox
+    sandbox: SandboxSettings = Field(default_factory=SandboxSettings)
 
     # UI
     theme: str = "default"
@@ -73,17 +78,18 @@ def _apply_env_overrides(settings: Settings) -> Settings:
         db = settings.database.model_copy(update={"url": database_url})
         updates["database"] = db
 
-    daytona_api_key = _get_override("DAYTONA_API_KEY")
-    if daytona_api_key:
-        updates["daytona_api_key"] = daytona_api_key
-
-    daytona_api_url = _get_override("DAYTONA_API_URL")
-    if daytona_api_url:
-        updates["daytona_api_url"] = daytona_api_url
-
-    daytona_target = _get_override("DAYTONA_TARGET")
-    if daytona_target:
-        updates["daytona_target"] = daytona_target
+    sandbox_default_image = _get_override("EPHEMERALOS_SANDBOX_DEFAULT_IMAGE")
+    sandbox_default_snapshot = _get_override("EPHEMERALOS_SANDBOX_DEFAULT_SNAPSHOT")
+    if sandbox_default_image:
+        sandbox = settings.sandbox.model_copy(
+            update={"default_image": sandbox_default_image}
+        )
+        updates["sandbox"] = sandbox
+    if sandbox_default_snapshot:
+        sandbox = updates.get("sandbox", settings.sandbox).model_copy(
+            update={"default_snapshot": sandbox_default_snapshot}
+        )
+        updates["sandbox"] = sandbox
 
     if not updates:
         return settings

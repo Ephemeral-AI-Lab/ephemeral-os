@@ -10,7 +10,6 @@ from .defaults import (
     DEFAULT_RETRY_STATUS_CODES,
     DEFAULT_DATABASE_POOL_SIZE,
     DEFAULT_DATABASE_MAX_OVERFLOW,
-    DEFAULT_SANDBOX_CI_ROOT,
 )
 from .paths import (
     get_config_agents_dir,
@@ -21,10 +20,17 @@ from .paths import (
     get_logs_dir,
     get_repo_config_dir,
 )
-from .settings import DatabaseSettings, Settings, load_settings, save_settings
+from .settings import (
+    DatabaseSettings,
+    SandboxSettings,
+    Settings,
+    load_settings,
+    save_settings,
+)
 
 __all__ = [
     "DatabaseSettings",
+    "SandboxSettings",
     "Settings",
     "get_config_agents_dir",
     "get_config_dir",
@@ -41,5 +47,4 @@ __all__ = [
     "DEFAULT_RETRY_STATUS_CODES",
     "DEFAULT_DATABASE_POOL_SIZE",
     "DEFAULT_DATABASE_MAX_OVERFLOW",
-    "DEFAULT_SANDBOX_CI_ROOT",
 ]

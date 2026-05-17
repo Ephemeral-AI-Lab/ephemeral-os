@@ -1,0 +1,554 @@
+"""Main-agent path retry coverage at the attempt-launcher seam.
+
+Plan reference: ``backend/tests/RETRY_TESTING_PLAN.md`` §2c rows 1-4.
+
+Engine retry lives *inside* :func:`run_ephemeral_agent`. The launcher's
+runner kwarg defaults to that callable. Tests below substitute a
+recording fake runner so we can assert:
+
+- The launcher invokes the runner exactly once per ``launch`` (retry is
+  invisible to the launcher).
+- An exhausted-retry result (``status='completed'`` +
+  ``terminal_result=None``) closes the task ``FAILED`` via the
+  exhaustion-reporter path, leaving the harness free to schedule a new
+  attempt row.
+- Kwargs passed to the runner include ``persist_agent_run=True`` and
+  ``task_id`` of the launch — but NO ``max_terminal_retries`` override,
+  so the engine's default of 1 retry applies for every harness role
+  including continuation planners.
+- Token-usage accounting comes through unchanged — the launcher
+  doesn't manipulate the runner's reported counters.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import inspect
+from types import SimpleNamespace
+from typing import Any
+
+import pytest
+
+from engine.agent.lifecycle import EphemeralRunResult
+from task_center._core.primitives import planner_task_id
+from task_center.attempt import AttemptFailReason, AttemptStatus
+from task_center.attempt.launch import EphemeralAttemptAgentLauncher
+from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
+from task_center.attempt.runtime import AgentLaunch, AttemptDeps
+from task_center.iteration.state import IterationCreationReason
+from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
+from tools._framework.core.base import ToolResult
+
+
+def _seed_planner_attempt(
+    *,
+    goal_store: Any,
+    iteration_store: Any,
+    attempt_store: Any,
+    task_store: Any,
+    task_center_run_id: str,
+    attempt_sequence_no: int = 1,
+) -> tuple[Any, Any, str]:
+    """Insert a goal/iteration/attempt/planner-task row set; return key handles."""
+    goal = goal_store.insert(
+        task_center_run_id=task_center_run_id,
+        requested_by_task_id="outer-task",
+        goal="solve",
+    )
+    iteration = iteration_store.insert(
+        goal_id=goal.id,
+        sequence_no=1,
+        creation_reason=IterationCreationReason.INITIAL,
+        goal="solve",
+        attempt_budget=4,
+    )
+    goal_store.append_iteration_id(goal.id, iteration.id)
+    attempt = attempt_store.insert(
+        iteration_id=iteration.id,
+        attempt_sequence_no=attempt_sequence_no,
+    )
+    iteration_store.append_attempt_id(iteration.id, attempt.id)
+    task_id = planner_task_id(attempt.id)
+    task_store.upsert_task(
+        task_id=task_id,
+        task_center_run_id=task_center_run_id,
+        role=TaskCenterTaskRole.PLANNER.value,
+        agent_name="planner",
+        context_message="plan",
+        status=TaskCenterTaskStatus.RUNNING.value,
+        summaries=[],
+        needs=[],
+        task_center_attempt_id=attempt.id,
+        spawn_reason="attempt_planner",
+    )
+    return goal, attempt, task_id
+
+
+def _build_launch(*, attempt: Any, goal: Any, task_id: str, task_center_run_id: str) -> AgentLaunch:
+    return AgentLaunch(
+        task_id=task_id,
+        task_center_run_id=task_center_run_id,
+        attempt_id=attempt.id,
+        role=TaskCenterTaskRole.PLANNER,
+        agent_name="planner",
+        context_message="plan context",
+        role_instruction_message="plan the work",
+        needs=(),
+        goal_id=goal.id,
+    )
+
+
+def _build_deps(
+    *, goal_store: Any, iteration_store: Any, attempt_store: Any, task_store: Any
+) -> AttemptDeps:
+    return AttemptDeps(
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+        agent_launcher=SimpleNamespace(),  # noqa: ARG002 - launcher unused for these tests
+        orchestrator_registry=AttemptOrchestratorRegistry(),
+    )
+
+
+@pytest.mark.asyncio
+async def test_main_planner_engine_retry_keeps_attempt_sequence_no_at_one(
+    goal_store,
+    iteration_store,
+    attempt_store,
+    task_store,
+    task_center_run_id,
+    register_test_agents,
+) -> None:
+    """A successful inner runner result keeps the attempt sequence at 1.
+
+    Engine retry happens INSIDE the runner; from the launcher's POV the
+    inner call resolved successfully (planner's terminal submission mutated
+    the task to DONE) and no exhaustion-reporting fires. The runner is
+    called exactly once.
+    """
+    goal, attempt, task_id = _seed_planner_attempt(
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+        task_center_run_id=task_center_run_id,
+    )
+    launch = _build_launch(
+        attempt=attempt, goal=goal, task_id=task_id, task_center_run_id=task_center_run_id
+    )
+    deps = _build_deps(
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+    )
+
+    captured_kwargs: list[dict[str, Any]] = []
+
+    async def _success_runner(*args: Any, **kwargs: Any) -> EphemeralRunResult:
+        captured_kwargs.append(kwargs)
+        # Simulate the planner's terminal submission tool transitioning
+        # the task off RUNNING — real submission tools do this via
+        # ``set_task_status``.
+        task_store.set_task_status(
+            task_id, status=TaskCenterTaskStatus.DONE.value, summary={}
+        )
+        return EphemeralRunResult(
+            status="completed",
+            error=None,
+            terminal_result=ToolResult(
+                output="full plan", is_error=False, does_terminate=True
+            ),
+            agent_name="planner",
+            event_count=12,
+        )
+
+    launcher = EphemeralAttemptAgentLauncher(
+        config=SimpleNamespace(),
+        runtime=lambda: deps,
+        runner=_success_runner,
+    )
+    launcher.launch(launch)
+    await asyncio.wait_for(launcher.wait_for_idle(), timeout=1.0)
+
+    # Exactly ONE runner invocation per launch — engine retry is internal.
+    assert len(captured_kwargs) == 1
+    # The attempt was NOT replaced or rerun by the launcher.
+    refreshed_attempt = attempt_store.get(attempt.id)
+    assert refreshed_attempt is not None
+    assert refreshed_attempt.attempt_sequence_no == 1
+    # Task moved off RUNNING via the simulated terminal submission.
+    refreshed_task = task_store.get_task(task_id)
+    assert refreshed_task is not None
+    assert refreshed_task["status"] == TaskCenterTaskStatus.DONE.value
+
+
+@pytest.mark.asyncio
+async def test_main_planner_engine_retry_exhausted_marks_attempt_failed(
+    goal_store,
+    iteration_store,
+    attempt_store,
+    task_store,
+    task_center_run_id,
+    register_test_agents,
+) -> None:
+    """Inner retries exhausted → launcher closes that one Attempt FAILED.
+
+    With no orchestrator registered, the launcher falls back to the
+    _fail_unowned_attempt path which closes the task FAILED and the
+    attempt with PLANNER_FAILED. The harness is then free to schedule
+    a new attempt_sequence_no=2 (not exercised here — the assertion is
+    that the failure was recorded on attempt_sequence_no=1).
+    """
+    goal, attempt, task_id = _seed_planner_attempt(
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+        task_center_run_id=task_center_run_id,
+    )
+    launch = _build_launch(
+        attempt=attempt, goal=goal, task_id=task_id, task_center_run_id=task_center_run_id
+    )
+    deps = _build_deps(
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+    )
+
+    runner_calls: list[int] = []
+
+    async def _exhausted_runner(*args: Any, **kwargs: Any) -> EphemeralRunResult:
+        runner_calls.append(1)
+        # Engine retries exhausted internally — no terminal_result, but
+        # not a crash either.
+        return EphemeralRunResult(
+            status="completed",
+            error=None,
+            terminal_result=None,
+            agent_name="planner",
+            event_count=8,
+        )
+
+    launcher = EphemeralAttemptAgentLauncher(
+        config=SimpleNamespace(),
+        runtime=lambda: deps,
+        runner=_exhausted_runner,
+    )
+    launcher.launch(launch)
+    await asyncio.wait_for(launcher.wait_for_idle(), timeout=1.0)
+
+    # One runner call (the retry exhaustion is the runner's concern).
+    assert len(runner_calls) == 1
+    # The launcher marked this Attempt FAILED — harness can now create
+    # attempt_sequence_no=2.
+    refreshed_attempt = attempt_store.get(attempt.id)
+    assert refreshed_attempt is not None
+    assert refreshed_attempt.attempt_sequence_no == 1
+    assert refreshed_attempt.status == AttemptStatus.FAILED
+    assert refreshed_attempt.fail_reason == AttemptFailReason.PLANNER_FAILED
+    refreshed_task = task_store.get_task(task_id)
+    assert refreshed_task is not None
+    assert refreshed_task["status"] == TaskCenterTaskStatus.FAILED.value
+
+
+@pytest.mark.asyncio
+async def test_attempt_harness_records_engine_retry_token_usage(
+    goal_store,
+    iteration_store,
+    attempt_store,
+    task_store,
+    task_center_run_id,
+    register_test_agents,
+) -> None:
+    """Token-count accounting passes through unchanged from the inner runner.
+
+    The launcher does NOT manipulate ``event_count`` or any token-count
+    field on the runner's :class:`EphemeralRunResult`. Use a runner that
+    reports an aggregated multi-attempt count and assert the launcher
+    forwards it untouched (proxy: the result reaches the runner's
+    own bookkeeping — the launcher only inspects ``status``).
+    """
+    goal, attempt, task_id = _seed_planner_attempt(
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+        task_center_run_id=task_center_run_id,
+    )
+    launch = _build_launch(
+        attempt=attempt, goal=goal, task_id=task_id, task_center_run_id=task_center_run_id
+    )
+    deps = _build_deps(
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+    )
+
+    captured_results: list[EphemeralRunResult] = []
+
+    async def _runner(*args: Any, **kwargs: Any) -> EphemeralRunResult:
+        result = EphemeralRunResult(
+            status="completed",
+            error=None,
+            terminal_result=ToolResult(
+                output="plan", is_error=False, does_terminate=True
+            ),
+            agent_name="planner",
+            event_count=42,  # mimics aggregated cross-attempt count
+        )
+        captured_results.append(result)
+        task_store.set_task_status(
+            task_id, status=TaskCenterTaskStatus.DONE.value, summary={}
+        )
+        return result
+
+    launcher = EphemeralAttemptAgentLauncher(
+        config=SimpleNamespace(),
+        runtime=lambda: deps,
+        runner=_runner,
+    )
+    launcher.launch(launch)
+    await asyncio.wait_for(launcher.wait_for_idle(), timeout=1.0)
+
+    # The runner's result reached the launcher's flow unchanged — the
+    # launcher consumed it without rewriting event_count.
+    assert len(captured_results) == 1
+    assert captured_results[0].event_count == 42
+
+
+@pytest.mark.asyncio
+async def test_continuation_planner_attempt_inherits_default_retry(
+    goal_store,
+    iteration_store,
+    attempt_store,
+    task_store,
+    task_center_run_id,
+    register_test_agents,
+) -> None:
+    """For attempt_sequence_no>1, the launcher still passes default-retry kwargs.
+
+    The launcher's runner-call kwargs are role/sequence-agnostic. The
+    runner default in ``engine.api`` applies ``max_terminal_retries=1``
+    unconditionally. This test asserts that for a continuation planner
+    (attempt_sequence_no=2) the launcher does NOT add a
+    ``max_terminal_retries=0`` override — the inner default holds.
+    """
+    goal, attempt, task_id = _seed_planner_attempt(
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+        task_center_run_id=task_center_run_id,
+        attempt_sequence_no=2,
+    )
+    launch = _build_launch(
+        attempt=attempt, goal=goal, task_id=task_id, task_center_run_id=task_center_run_id
+    )
+    deps = _build_deps(
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+    )
+
+    captured_kwargs: list[dict[str, Any]] = []
+
+    async def _runner(*args: Any, **kwargs: Any) -> EphemeralRunResult:
+        captured_kwargs.append(kwargs)
+        task_store.set_task_status(
+            task_id, status=TaskCenterTaskStatus.DONE.value, summary={}
+        )
+        return EphemeralRunResult(
+            status="completed",
+            error=None,
+            terminal_result=ToolResult(
+                output="continuation plan",
+                is_error=False,
+                does_terminate=True,
+            ),
+            agent_name="planner",
+            event_count=1,
+        )
+
+    launcher = EphemeralAttemptAgentLauncher(
+        config=SimpleNamespace(),
+        runtime=lambda: deps,
+        runner=_runner,
+    )
+    launcher.launch(launch)
+    await asyncio.wait_for(launcher.wait_for_idle(), timeout=1.0)
+
+    assert len(captured_kwargs) == 1
+    # The launcher does NOT override the engine retry knob — the inner
+    # default of 1 retry applies to continuation planners too.
+    assert "max_terminal_retries" not in captured_kwargs[0]
+    # Sanity check: the launch still routed through with the correct
+    # task_id binding.
+    assert captured_kwargs[0]["task_id"] == task_id
+    assert captured_kwargs[0]["persist_agent_run"] is True
+
+
+def test_launcher_runner_kwargs_do_not_disable_engine_retry() -> None:
+    """Static check: launcher source does NOT pass ``max_terminal_retries``.
+
+    Catches refactors that try to push the retry knob from the engine
+    default (1) down to 0 at the launcher seam. The frozen kwarg set is
+    locked at :mod:`test_runner_kwargs_contract` — this check is a
+    redundant safety net specifically for the retry concern.
+    """
+    source = inspect.getsource(EphemeralAttemptAgentLauncher._run_launch)
+    assert "max_terminal_retries" not in source, (
+        "EphemeralAttemptAgentLauncher._run_launch must NOT pass a "
+        "``max_terminal_retries`` kwarg — the engine default of 1 retry "
+        "is the contract. If you intentionally disabled retry here, "
+        "update this test and explain why in the PR description."
+    )
+
+
+@pytest.mark.asyncio
+async def test_main_agent_launches_with_two_user_messages(
+    goal_store,
+    iteration_store,
+    attempt_store,
+    task_store,
+    task_center_run_id,
+    register_test_agents,
+) -> None:
+    """Non-entry agents launch with initial_messages=[<context>] + prompt=<role_instruction>."""
+    from message.messages import ConversationMessage
+
+    goal, attempt, task_id = _seed_planner_attempt(
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+        task_center_run_id=task_center_run_id,
+    )
+    launch = _build_launch(
+        attempt=attempt, goal=goal, task_id=task_id, task_center_run_id=task_center_run_id
+    )
+    deps = _build_deps(
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+    )
+
+    captured: list[dict[str, Any]] = []
+
+    async def _spy_runner(*args: Any, **kwargs: Any) -> EphemeralRunResult:
+        captured.append({"args": args, "kwargs": kwargs})
+        task_store.set_task_status(
+            task_id, status=TaskCenterTaskStatus.DONE.value, summary={}
+        )
+        return EphemeralRunResult(
+            status="completed",
+            error=None,
+            terminal_result=ToolResult(
+                output="plan", is_error=False, does_terminate=True
+            ),
+            agent_name="planner",
+            event_count=1,
+        )
+
+    launcher = EphemeralAttemptAgentLauncher(
+        config=SimpleNamespace(),
+        runtime=lambda: deps,
+        runner=_spy_runner,
+    )
+    launcher.launch(launch)
+    await asyncio.wait_for(launcher.wait_for_idle(), timeout=1.0)
+
+    assert len(captured) == 1
+    args = captured[0]["args"]
+    kwargs = captured[0]["kwargs"]
+    # Spawn prompt is the role_instruction text from _build_launch.
+    assert args[1] == "plan the work"
+    # initial_messages carries the rendered context (one user msg).
+    initial_messages = kwargs.get("initial_messages")
+    assert isinstance(initial_messages, list)
+    assert len(initial_messages) == 1
+    msg = initial_messages[0]
+    assert isinstance(msg, ConversationMessage)
+    assert msg.role == "user"
+    assert msg.text == "plan context"
+
+
+@pytest.mark.asyncio
+async def test_entry_executor_falls_back_to_single_user_message(
+    goal_store,
+    iteration_store,
+    attempt_store,
+    task_store,
+    task_center_run_id,
+    register_test_agents,
+) -> None:
+    """Agents whose recipe emits no role_instruction launch single-message.
+
+    The launcher must NOT pass initial_messages when role_instruction_message
+    is None or empty — the context_message becomes the spawn prompt directly.
+    """
+    goal, attempt, task_id = _seed_planner_attempt(
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+        task_center_run_id=task_center_run_id,
+    )
+    # Use the planner agent (registered by the fixture) but with
+    # ``role_instruction_message=None`` to exercise the single-message
+    # fallback. The fallback decision in ``_run_launch`` keys on
+    # ``role_instruction_message``, not on role.
+    launch = AgentLaunch(
+        task_id=task_id,
+        task_center_run_id=task_center_run_id,
+        attempt_id=attempt.id,
+        role=TaskCenterTaskRole.PLANNER,
+        agent_name="planner",
+        context_message="execute this task",
+        role_instruction_message=None,  # no role_instruction recipe
+        needs=(),
+        goal_id=goal.id,
+    )
+    deps = _build_deps(
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+    )
+
+    captured: list[dict[str, Any]] = []
+
+    async def _spy_runner(*args: Any, **kwargs: Any) -> EphemeralRunResult:
+        captured.append({"args": args, "kwargs": kwargs})
+        task_store.set_task_status(
+            task_id, status=TaskCenterTaskStatus.DONE.value, summary={}
+        )
+        return EphemeralRunResult(
+            status="completed",
+            error=None,
+            terminal_result=ToolResult(
+                output="ok", is_error=False, does_terminate=True
+            ),
+            agent_name="entry_executor",
+            event_count=1,
+        )
+
+    launcher = EphemeralAttemptAgentLauncher(
+        config=SimpleNamespace(),
+        runtime=lambda: deps,
+        runner=_spy_runner,
+    )
+    launcher.launch(launch)
+    await asyncio.wait_for(launcher.wait_for_idle(), timeout=1.0)
+
+    assert len(captured) == 1
+    args = captured[0]["args"]
+    kwargs = captured[0]["kwargs"]
+    # Context becomes the spawn prompt; no initial_messages seeded.
+    assert args[1] == "execute this task"
+    assert kwargs.get("initial_messages") is None

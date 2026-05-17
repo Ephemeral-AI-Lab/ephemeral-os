@@ -37,3 +37,11 @@ def ensure_default_no_proxy() -> None:
 
 
 ensure_default_no_proxy()
+
+
+from benchmarks.sweevo.sandbox import (  # noqa: E402 — must follow no_proxy setup
+    SnapshotNotRegisteredError,
+    verify_sweevo_snapshot_exists,
+)
+
+__all__ = ["SnapshotNotRegisteredError", "verify_sweevo_snapshot_exists"]

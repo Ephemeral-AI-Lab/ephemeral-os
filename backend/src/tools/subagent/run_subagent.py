@@ -5,11 +5,11 @@ working while the subagent runs. Peek progress with
 ``check_background_task_result(task_id)``; block on completion with
 ``wait_background_tasks()``.
 
-The subagent must terminate via a registered terminal tool (typically
-``submit_exploration_result``); whatever ``ToolResult`` the engine stamps
-with ``does_terminate=True`` becomes this tool's output. If the subagent
-exits without calling a terminal tool, the bg task is marked failed and
-``check_background_task_result`` falls back to the message peek.
+The subagent must terminate via a registered terminal tool; whatever
+``ToolResult`` the engine stamps with ``does_terminate=True`` becomes this
+tool's output. If the subagent exits without calling a terminal tool, the bg
+task is marked failed and ``check_background_task_result`` falls back to the
+message peek.
 
 Subagents cannot spawn further subagents — recursion is rejected at
 validation time so the focused-worker contract holds.
@@ -24,6 +24,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from engine.background.subagent_policy import SUBAGENT_TASK_TYPE
 from message.messages import (
     ConversationMessage,
     TextBlock,
@@ -31,8 +32,8 @@ from message.messages import (
     ToolResultBlock,
     ToolUseBlock,
 )
-from tools.core.base import ExecutionMetadata, TextToolOutput, ToolExecutionContextService, ToolResult
-from tools.core.decorator import tool
+from tools._framework.core.base import ExecutionMetadata, TextToolOutput, ToolExecutionContextService, ToolResult
+from tools._framework.core.decorator import tool
 
 logger = logging.getLogger(__name__)
 
@@ -159,18 +160,18 @@ def _validate_run_subagent_request(
 @tool(
     name="run_subagent",
     description=(
-        "Spawns a registered subagent as a background task. The subagent "
-        "receives `prompt` as its only input and must finish by calling its "
-        "terminal tool (typically submit_exploration_result); that tool's "
-        "text output is delivered as this tool's result. Use "
-        "check_background_task_result(task_id) to peek progress or fetch "
-        "the finished result."
+        "Spawn a registered subagent as a background task. The subagent receives `prompt` as "
+        "its only input and must finish by calling its terminal tool; that text becomes "
+        "this tool's result. Use for "
+        "parallelizable, focused investigations or context-isolated work. Peek progress or "
+        "fetch the finished result with check_background_task_result(task_id); block on "
+        "completion with wait_background_tasks. Subagents cannot spawn further subagents."
     ),
     short_description="Spawn a subagent in the background.",
     input_model=RunSubagentInput,
     output_model=TextToolOutput,
     background="always",
-    task_type="subagent",
+    task_type=SUBAGENT_TASK_TYPE,
 )
 async def run_subagent(
     agent_name: str,
@@ -179,7 +180,7 @@ async def run_subagent(
     context: ToolExecutionContextService,
 ) -> ToolResult:
     """Spawn a named subagent and rejoin via the background-task lifecycle."""
-    from engine.runtime.lifecycle import run_ephemeral_agent
+    from engine.api import run_ephemeral_agent
 
     validation = _validate_run_subagent_request(
         agent_name=agent_name,
@@ -197,8 +198,7 @@ async def run_subagent(
 
     sub_meta = ExecutionMetadata()
     sub_meta["agent_type"] = "subagent"
-    if sub_def.role:
-        sub_meta["role"] = sub_def.role
+    sub_meta["role"] = sub_def.agent_kind.value
 
     def _on_spawned(agent: Any) -> None:
         # Register the live-peek provider so check_background_task_result
@@ -206,19 +206,37 @@ async def run_subagent(
         # (and after, if the terminal tool was never called).
         if bg_manager is None or not isinstance(bg_task_id, str):
             return
+        # Snapshot `agent.messages` at progress-provider invocation time so
+        # the iteration inside `format_last_n_messages` cannot observe a
+        # partially constructed tail if the subagent appends concurrently.
+        # asyncio cooperative scheduling makes this safe today, but the
+        # copy makes the contract explicit and robust to future preemption.
         bg_manager.set_progress_provider(
             bg_task_id,
-            lambda last_n: format_last_n_messages(agent.messages, last_n),
+            lambda last_n: format_last_n_messages(list(agent.messages), last_n),
         )
 
+    # Subagents have NO ContextScope and do NOT go through the composer —
+    # the isolation contract forbids inheriting the parent's scope. Split
+    # the launch directly: caller's free-text prompt is user msg 1
+    # (initial_messages[0]); a static identity-instruction block from
+    # role_instruction.py is user msg 2 (the spawn prompt). Only one
+    # subagent class exists today (explorer); a static test guards that
+    # invariant so adding another class forces a revisit here.
+    from task_center.context_engine.recipes.role_instruction import (
+        explorer_instruction,
+    )
+
+    role_text = explorer_instruction().text
     result = await run_ephemeral_agent(
         parent_cfg,
-        prompt,
+        role_text,
         agent_def=sub_def,
         sandbox_id=sandbox_id,
         persist_agent_run=False,
         extra_tool_metadata=sub_meta,
         on_agent_spawned=_on_spawned,
+        initial_messages=[ConversationMessage.from_user_text(prompt)],
     )
 
     # Stamp the metadata flag check_background_task_result uses to

@@ -1,0 +1,38 @@
+# Live E2E Scenarios
+
+Concrete scenarios that drive the live-e2e harness. See
+`docs/wiki/live-e2e-scenario-suite-design.md` for the full taxonomy, naming
+conventions, and per-subpackage coverage matrix.
+
+## Layout
+
+- `base.py` — `Scenario` protocol, `ScenarioBase`, `ScenarioContext`, `ToolCallSpec`.
+- `_utils/` — shared helpers (plan factories, goal/recursive predicates, task_input parsers).
+- `pipeline/` — task_center state-machine scenarios (goal/iteration/attempt control flow).
+- `sandbox/` — sandbox subsystem scenarios (OCC, overlay, layerstack, LSP, daemon).
+- `capacity/` — composite scenarios that intentionally span multiple subsystem owners.
+- `tools/` — tool execution, gate hooks, notifications, max-step.
+- `context/` — context engine recipe rendering.
+- `planner_validation/` — invalid plan rejection.
+- `correctness_testing.py`, `full_case_user_input.py`, `full_stack_adversarial.py` —
+  composite end-to-end scenarios (existing). Slated to move under `composite/`
+  in a follow-up; left at the top level for now.
+
+## Adding a scenario
+
+1. Pick the right subpackage from the taxonomy in the wiki design doc.
+2. Copy the closest reference scenario:
+   - State-machine assertion → `pipeline/initial_goal.py`
+   - DAG dependency assertion → `pipeline/dependency_dag_serial.py`
+   - Iterative continuation → `pipeline/iterative_continuation.py`
+   - Attempt-retry assertion → `pipeline/attempt_retry_evaluator_failure.py`
+   - Sandbox event assertion → `sandbox/occ_concurrent_conflicts.py`
+   - Planner rejection assertion → `planner_validation/duplicate_local_id.py`
+3. Update `SCENARIO_REGISTRY` in `__init__.py`.
+4. Add paired smoke/full tests under
+   `backend/src/task_center_runner/tests/<package>/test_<scenario>_{smoke,full}.py`
+   when the scenario has both profiles. Keep shared assertions in a private
+   helper such as `_project_build_contracts.py` instead of using a `smoke`
+   boolean in the test entrypoint.
+5. Run `uv run pytest backend/src/task_center_runner/tests/test_scenario_suite_imports.py -q`
+   to verify protocol conformance and registry membership.

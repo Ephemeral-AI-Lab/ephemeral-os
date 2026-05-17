@@ -1,0 +1,196 @@
+"""PromptRenderer — pure function over :class:`ContextPacket`.
+
+The renderer never touches stores or runtime objects. It walks blocks in packet
+order, applies per-kind headings, and respects ``packet.metadata['token_budget']``
+when present. Priority is a compression policy, not a presentation-order policy.
+"""
+
+from __future__ import annotations
+
+from task_center.context_engine.packet import (
+    ContextBlock,
+    ContextPacket,
+    ContextPriority,
+)
+
+_TOKEN_BUDGET_KEY = "token_budget"
+
+# Approximate, deterministic token estimate (4 chars ≈ 1 token). Used for
+# compression decisions; the renderer does not call out to a tokenizer.
+_CHARS_PER_TOKEN = 4
+
+_DEFAULT_HEADINGS: dict[str, str] = {
+    "goal_statement": "# Goal",
+    "iteration_statement": "# Current Iteration",
+    "prior_iteration_specification": "# Previous Iteration Results",
+    "prior_iteration_summary": "# Previous Iteration Results",
+    "failed_attempt_landscape": "# Prior Failed Attempts",
+    "partial_plan_boundary": "# Partial Plan Boundary",
+    "planned_task_spec": "# Assigned Task",
+    "task_specification": "# Attempt Plan",
+    "evaluation_criteria": "# Evaluation Criteria",
+    "dependency_summary": "# Dependency Results",
+    "completed_task_summary": "# Dependency Results",
+    "artifact_reference": "# Artifact reference",
+    "entry_request": "# Entry request",
+    "parent_transcript": "# Parent transcript",
+}
+
+
+def _humanize(kind: str) -> str:
+    return kind.replace("_", " ").strip().capitalize()
+
+
+def _heading_for(block: ContextBlock, headings: dict[str, str]) -> str:
+    return (
+        block.metadata.get("heading")
+        or headings.get(block.kind)
+        or f"# {_humanize(block.kind)}"
+    )
+
+
+def _estimate_tokens(text: str) -> int:
+    return max(1, (len(text) + _CHARS_PER_TOKEN - 1) // _CHARS_PER_TOKEN)
+
+
+class MarkdownPromptRenderer:
+    """Default markdown renderer.
+
+    Implements the compression policy from plan §3.4 / phase-06 §"Token and
+    compression policy":
+
+    1. Always include ``required`` blocks verbatim.
+    2. Include ``high`` blocks; if over budget, truncate longest ``low`` first,
+       then ``medium``, never ``required`` / ``high``.
+    3. Replace truncated bodies with a one-line evidence reference if
+       ``source_id`` is set; otherwise an ellipsis marker.
+    """
+
+    def __init__(self, headings: dict[str, str] | None = None) -> None:
+        self._headings = headings if headings is not None else _DEFAULT_HEADINGS
+
+    def render_context(self, packet: ContextPacket) -> str:
+        """Render world-state context, excluding role_instruction blocks.
+
+        role_instruction blocks travel as a separate user message; the
+        ``# How to Proceed`` heading is gone.
+        """
+        context_blocks = [
+            b for b in packet.blocks if b.kind != "role_instruction"
+        ]
+        kept_blocks = self._compress(context_blocks, budget=self._budget_from(packet))
+        sections = self._render_blocks(kept_blocks)
+        return "\n\n".join(s for s in sections if s).strip() + "\n"
+
+    def render_role_instruction(self, packet: ContextPacket) -> str | None:
+        """Concatenate every role_instruction block's text.
+
+        Returns ``None`` when the packet carries no role_instruction block;
+        helpers / entry agents that don't emit one fall back to a single
+        user-message launch at the call site.
+        """
+        role_blocks = [
+            b for b in packet.blocks if b.kind == "role_instruction"
+        ]
+        if not role_blocks:
+            return None
+        return "\n\n".join(b.text.strip() for b in role_blocks)
+
+    # ---- internals ------------------------------------------------------
+
+    @staticmethod
+    def _budget_from(packet: ContextPacket) -> int | None:
+        raw = packet.metadata.get(_TOKEN_BUDGET_KEY)
+        if not raw:
+            return None
+        try:
+            value = int(raw)
+            return value if value > 0 else None
+        except ValueError:
+            return None
+
+    def _render_blocks(self, blocks: list[ContextBlock]) -> list[str]:
+        out: list[str] = []
+        index = 0
+        while index < len(blocks):
+            block = blocks[index]
+            group_heading = block.metadata.get("group_heading")
+            if group_heading:
+                group: list[ContextBlock] = []
+                while (
+                    index < len(blocks)
+                    and blocks[index].metadata.get("group_heading") == group_heading
+                ):
+                    group.append(blocks[index])
+                    index += 1
+                out.append(self._render_group(group_heading, group))
+                continue
+
+            out.append(self._render_block(block))
+            index += 1
+        return out
+
+    def _render_block(self, block: ContextBlock) -> str:
+        section = _heading_for(block, self._headings)
+        subtitle = block.metadata.get("subtitle")
+        if subtitle:
+            section += f"\n{subtitle}"
+        section += f"\n\n{block.text.strip()}"
+        return section
+
+    @staticmethod
+    def _render_group(heading: str, blocks: list[ContextBlock]) -> str:
+        parts = [heading]
+        for block in blocks:
+            subheading = block.metadata.get("subheading") or _humanize(block.kind)
+            parts.append(f"## {subheading}\n\n{block.text.strip()}")
+        return "\n\n".join(parts)
+
+    def _compress(
+        self,
+        blocks: list[ContextBlock],
+        *,
+        budget: int | None,
+    ) -> list[ContextBlock]:
+        """Apply the token-budget compression policy and return a fresh list.
+
+        The input ``blocks`` list is never mutated: truncated entries are
+        replaced via ``ContextBlock.model_copy`` (returns a new Pydantic model).
+        """
+        if budget is None:
+            return list(blocks)
+
+        kept = list(blocks)
+        running = sum(_estimate_tokens(b.text) for b in kept)
+        if running <= budget:
+            return kept
+
+        for drop_priority in (ContextPriority.LOW, ContextPriority.MEDIUM):
+            if running <= budget:
+                break
+            droppable = sorted(
+                (
+                    (idx, b)
+                    for idx, b in enumerate(kept)
+                    if b.priority == drop_priority
+                ),
+                key=lambda pair: -_estimate_tokens(pair[1].text),
+            )
+            for idx, block in droppable:
+                if running <= budget:
+                    break
+                replacement = _truncate(block)
+                running += _estimate_tokens(replacement.text) - _estimate_tokens(block.text)
+                kept[idx] = replacement
+        return kept
+
+
+def _truncate(block: ContextBlock) -> ContextBlock:
+    if block.source_id:
+        text = (
+            f"({block.kind}: see source {block.source_id} — "
+            f"truncated for token budget)"
+        )
+    else:
+        text = f"({block.kind}: … truncated for token budget)"
+    return block.model_copy(update={"text": text})

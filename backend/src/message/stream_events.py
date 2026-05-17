@@ -5,7 +5,7 @@ from typing import Any
 
 from providers.types import UsageSnapshot
 from message.messages import ConversationMessage
-from notification.events import SystemNotification
+from notification import SystemNotification
 
 
 # Identity fields carried by every StreamEvent:
@@ -53,6 +53,7 @@ class ToolExecutionStarted:
 
     tool_name: str
     tool_input: dict[str, Any]
+    tool_id: str = ""
     agent_name: str = ""
     run_id: str = ""
 
@@ -109,18 +110,6 @@ class BackgroundTaskStarted:
     run_id: str = ""
 
 
-@dataclass(frozen=True)
-class BackgroundTaskCompleted:
-    """A background task has finished."""
-
-    task_id: str
-    tool_name: str
-    output: str
-    is_error: bool = False
-    agent_name: str = ""
-    run_id: str = ""
-
-
 StreamEvent = (
     ThinkingDelta
     | AssistantTextDelta
@@ -130,6 +119,5 @@ StreamEvent = (
     | ToolExecutionProgress
     | ToolExecutionCancelled
     | BackgroundTaskStarted
-    | BackgroundTaskCompleted
     | SystemNotification
 )

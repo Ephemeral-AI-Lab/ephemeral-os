@@ -25,7 +25,7 @@
 
 One Command (**oh**) to Launch **EphemeralOS** and Unlock All Agent Harnesses. 
 
-Supports CLI agent integration including OpenClaw, nanobot, Cursor, and more.
+Supports CLI agent integration including nanobot, Cursor, and more.
 
 <p align="center">
   <img src="assets/cli-typing.gif" alt="EphemeralOS Terminal Demo" width="800">
@@ -245,28 +245,45 @@ export EPHEMERALOS_MODEL=qwen3.5-flash
 uv run oh
 ```
 
+### Sandbox Defaults
+
+Sandbox creation uses the provider default unless a sandbox default is configured.
+Set the default image or snapshot in `~/.ephemeralos/settings.json`:
+
+```json
+{
+  "sandbox": {
+    "default_snapshot": "sweevo-psf-requests-3738",
+    "default_image": "ghcr.io/example/sandbox:latest"
+  }
+}
+```
+
+`default_snapshot` takes precedence over `default_image` because Daytona treats
+snapshot and image creation as different APIs. The same values can be supplied
+with `EPHEMERALOS_SANDBOX_DEFAULT_SNAPSHOT` and
+`EPHEMERALOS_SANDBOX_DEFAULT_IMAGE`.
+
 ---
 
 ## 🏗️ Harness Architecture
 
-EphemeralOS implements the core Agent Harness pattern across the live backend and frontend runtime surfaces:
+EphemeralOS implements the core Agent Harness pattern across the Python backend runtime:
 
 ```
 backend/src/
   engine/          # 🧠 Agent loop, streaming executor, background task lifecycle
-  tools/           # 🔧 Built-in tools: sandbox, CI, context, memory, subagent
-  skills/          # 📚 Skill registry internals and read-only API
-  agents/          # 🤖 Agent definition loading, builder, registry, CRUD API
-  server/          # 🌐 FastAPI app, SSE protocol, state snapshots
+  tools/           # 🔧 Built-in tools: sandbox, skills, subagent, submissions
+  skills/          # 📚 File-backed skill discovery and registry internals
+  agents/          # 🤖 Agent definition loading and profile assets
+  runtime/         # ⚙️ Runtime config and store bootstrap
   sandbox/         # 🧪 Sandbox lifecycle, workspace discovery, credentials
-  prompts/         # 📝 Runtime/system prompt assembly and capability awareness
+  prompt/          # 📝 Runtime prompt assembly and environment context
+  live_e2e/        # 🧪 Scenario harnesses and SWE-EVO adapters
   config/          # ⚙️ Settings, model resolution, paths
 backend/config/
   agents/          # 🤖 Optional local agent definitions (empty by default)
-  skills/          # 📚 Skill API and registry internals
-frontend/
-  web/             # 🖥️ React dashboard (agents, tools, sessions, sandboxes)
-  terminal/        # 💬 Terminal UI components and backend session controls
+  skills/          # 📚 Bundled skill definitions
 ```
 
 ### The Agent Loop
@@ -308,18 +325,17 @@ flowchart LR
 
 ## ✨ Features
 
-### 🔧 Tools (30 Built-In)
+### 🔧 Built-In Tool Surfaces
 
 Current runtime inventory:
 
 | Surface | Count | Description |
 |--------|------:|-------------|
 | `sandbox_operations` | 7 | Remote sandbox file I/O, atomic edits, semantic rename, and `daytona_shell` execution |
-| `code_intelligence` | 4 | Workspace structure, symbol lookup, references, and diagnostics |
 | `context_read` / `context_write` | 3 / 4 | File notes plus scope and staleness checks |
 | `memory` | 3 | Exploration cache reuse and edit-history conflict prediction |
 | `subagent` | 1 | `run_subagent` for bounded configured subagent work |
-| Runtime `background` | 3 | `check_background_progress`, `wait_for_background_task`, `cancel_background_task` |
+| Runtime `background` | 3 | `check_background_task_result`, `wait_background_tasks`, `cancel_background_task` |
 
 Every tool has:
 - **Pydantic input validation** — structured, type-safe inputs
@@ -353,7 +369,6 @@ oh plugin enable <name>
 
 EphemeralOS is useful as a lightweight harness layer around Claude-style tooling conventions:
 
-- **OpenClaw-oriented workflows** can reuse Markdown-first knowledge and command-driven collaboration patterns.
 - **Claude-style plugins** stay portable because EphemeralOS keeps those formats familiar.
 - **Background subagent work** maps onto the built-in subagent and background execution primitives.
 

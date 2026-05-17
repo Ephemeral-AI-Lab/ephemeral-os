@@ -1,0 +1,55 @@
+"""Domain DTO tests for Goal."""
+
+from __future__ import annotations
+
+from dataclasses import FrozenInstanceError
+from datetime import UTC, datetime
+
+import pytest
+
+from task_center.goal.state import (
+    GoalClosureReport,
+    Goal,
+    GoalStatus,
+)
+
+
+def _request(**overrides) -> Goal:
+    base = dict(
+        id="r1",
+        task_center_run_id="run1",
+        requested_by_task_id="t1",
+        goal="goal",
+        status=GoalStatus.OPEN,
+        iteration_ids=(),
+        final_outcome=None,
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+        closed_at=None,
+    )
+    base.update(overrides)
+    return Goal(**base)
+
+
+def test_is_open_matches_status():
+    assert _request(status=GoalStatus.OPEN).is_open is True
+    assert _request(status=GoalStatus.SUCCEEDED).is_open is False
+    assert _request(status=GoalStatus.FAILED).is_open is False
+    assert _request(status=GoalStatus.CANCELLED).is_open is False
+
+
+def test_request_dto_is_frozen():
+    req = _request()
+    with pytest.raises(FrozenInstanceError):
+        req.status = GoalStatus.SUCCEEDED  # type: ignore[misc]
+
+
+def test_closure_report_constructs():
+    rep = GoalClosureReport(
+        goal_id="r1",
+        requested_by_task_id="t1",
+        outcome="success",
+        final_iteration_id="s1",
+        final_attempt_id="g1",
+    )
+    assert rep.outcome == "success"

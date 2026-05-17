@@ -9,13 +9,15 @@ import re
 from datetime import datetime, UTC
 from typing import Any
 
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
 from db.models.model_registration import ModelRegistrationRecord
+from db.stores.base import SyncStoreMixin
 
 logger = logging.getLogger(__name__)
 
 _SECRET_MARKERS = ("api_key", "auth_token", "access_token", "secret", "password", "authorization")
+_MODEL_ID_KEYS = ("model", "id", "model_id")
 
 
 def _resolve_env_placeholders(value: Any) -> Any:
@@ -73,31 +75,23 @@ def _to_dict(row: ModelRegistrationRecord, *, redact: bool = False) -> dict[str,
         "class_path": row.class_path,
         "kwargs": kwargs,
         "is_active": row.is_active,
-        "model_id": kwargs.get("id") or kwargs.get("model") or kwargs.get("model_id"),
+        "model_id": _first_present(kwargs, _MODEL_ID_KEYS),
         "created_at": row.created_at.isoformat() if row.created_at else None,
         "updated_at": row.updated_at.isoformat() if row.updated_at else None,
     }
 
 
-class ModelStore:
+def _first_present(kwargs: dict[str, Any], keys: tuple[str, ...]) -> Any:
+    for key in keys:
+        if key in kwargs:
+            return kwargs[key]
+    return None
+
+
+class ModelStore(SyncStoreMixin):
     """CRUD operations for model registrations."""
 
-    def __init__(self) -> None:
-        self._session_factory: sessionmaker[Session] | None = None
-
-    def initialize(self, session_factory: sessionmaker[Session]) -> None:
-        self._session_factory = session_factory
-        logger.info("ModelStore initialised")
-
-    @property
-    def is_available(self) -> bool:
-        return self._session_factory is not None
-
-    @property
-    def _sf(self) -> sessionmaker[Session]:
-        if self._session_factory is None:
-            raise RuntimeError("ModelStore not initialised")
-        return self._session_factory
+    _store_label = "ModelStore"
 
     # -- writes ----------------------------------------------------------------
 
@@ -168,7 +162,14 @@ class ModelStore:
             db.delete(record)
             db.commit()
             if was_active:
-                first = db.query(ModelRegistrationRecord).first()
+                first = (
+                    db.query(ModelRegistrationRecord)
+                    .order_by(
+                        ModelRegistrationRecord.created_at.asc(),
+                        ModelRegistrationRecord.id.asc(),
+                    )
+                    .first()
+                )
                 if first is not None:
                     first.is_active = True
                     db.commit()

@@ -1,9 +1,7 @@
 """Shared stream-event printer for single- and multi-agent runs.
 
-Mirrors the dense column-aligned log style used by the e2e conftest's
-eval harness (``tests/test_e2e/conftest.py``) but keyed on
-``(agent_name, run_id)`` so concurrent agents can coexist without
-interleaving mid-sentence.
+Uses a dense column-aligned log style keyed on ``(agent_name, run_id)``
+so concurrent agents can coexist without interleaving mid-sentence.
 
 Key ideas:
 
@@ -11,27 +9,21 @@ Key ideas:
   events from different agents are buffered independently and printed
   once per completed assistant message, so two workers streaming at once
   don't clobber each other's prose and the console shows full blocks.
-- **Lineage via bg task_id.** A ``BackgroundTaskStarted`` whose
-  ``tool_name == "run_subagent"`` is treated as a spawn; its
-  ``task_id`` becomes the child's run_id so the child's own events
-  indent one level deeper than the dispatching parent.
 - **Color per agent.** Each distinct ``agent_name`` is assigned a
-  stable ANSI color from an 8-color palette (deterministic via hash)
-  so the eye can follow one worker down a wall of output.
-- **Summary.** ``summary()`` returns per-agent counts (tool calls,
-  subagents spawned) plus totals for a closing one-liner.
+  stable ANSI color from an 8-color palette (deterministic via insertion
+  order) so the eye can follow one worker down a wall of output.
 """
 
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
 from message.stream_events import (
     AssistantMessageComplete,
     AssistantTextDelta,
-    BackgroundTaskCompleted,
     BackgroundTaskStarted,
     StreamEvent,
     ThinkingDelta,
@@ -40,7 +32,7 @@ from message.stream_events import (
     ToolExecutionProgress,
     ToolExecutionStarted,
 )
-from notification.events import SystemNotification
+from notification import SystemNotification
 
 
 _PALETTE = (
@@ -69,10 +61,6 @@ def _full_text(text: str) -> str:
 
 
 
-def _subagent_completion_detail_lines(output: str) -> list[str]:
-    return []
-
-
 def _parse_shell_structured_error(
     tool_name: str,
     output: str,
@@ -88,7 +76,7 @@ def _parse_shell_structured_error(
         isinstance(payload, dict)
         and payload.get("status") == "error"
         and "cwd" in payload
-        and "shells_run" in payload
+        and {"command", "exit_code"} <= set(payload)
     ):
         return payload
     return None
@@ -102,21 +90,16 @@ def _append_detail(lines: list[str], value: object) -> None:
 
 def _format_shell_structured_error(payload: dict[str, Any]) -> str:
     lines: list[str] = []
-    shell_outputs = payload.get("shell_outputs")
-    if isinstance(shell_outputs, list):
-        for shell_output in shell_outputs[:3]:
-            if not isinstance(shell_output, dict):
-                continue
-            command = str(shell_output.get("command") or "").strip()
-            exit_code = shell_output.get("exit_code", "?")
-            if command:
-                _append_detail(lines, f"$ {command} -> exit {exit_code}")
-            stderr = str(shell_output.get("stderr") or "").strip()
-            stdout = str(shell_output.get("stdout") or "").strip()
-            if stderr and stderr != stdout:
-                _append_detail(lines, stderr)
-            elif stdout:
-                _append_detail(lines, stdout)
+    command = str(payload.get("command") or "").strip()
+    exit_code = payload.get("exit_code", "?")
+    if command:
+        _append_detail(lines, f"$ {command} -> exit {exit_code}")
+    stderr = str(payload.get("stderr") or "").strip()
+    stdout = str(payload.get("stdout") or "").strip()
+    if stderr and stderr != stdout:
+        _append_detail(lines, stderr)
+    elif stdout:
+        _append_detail(lines, stdout)
 
     _append_detail(lines, payload.get("error"))
     _append_detail(lines, payload.get("script_stdout"))
@@ -128,8 +111,10 @@ def _format_shell_structured_error(payload: dict[str, Any]) -> str:
 
     if lines:
         return "\n".join(lines)
-    shells_run = payload.get("shells_run", "?")
-    return f"status=error shells_run={shells_run}"
+    changed = payload.get("changed_paths")
+    if isinstance(changed, list):
+        return f"status=error changed_paths={len(changed)}"
+    return "status=error"
 
 
 def _format_tool_completion_output(
@@ -145,11 +130,28 @@ def _format_tool_completion_output(
     return f" {rendered}" if rendered else ""
 
 
+def _json_log_value(value: object) -> str:
+    return json.dumps(str(value), ensure_ascii=True)
+
+
+def format_background_start_detail(tool_name: str, tool_input: dict[str, Any]) -> str:
+    """Return compact launch context for background-start log lines."""
+    if tool_name != "run_subagent":
+        return ""
+
+    parts: list[str] = []
+    agent_name = tool_input.get("agent_name")
+    if agent_name is not None:
+        parts.append(f"agent_name={_json_log_value(agent_name)}")
+    if "prompt" in tool_input:
+        parts.append(f"prompt={_json_log_value(tool_input.get('prompt'))}")
+    return f" {' '.join(parts)}" if parts else ""
+
+
 @dataclass
 class _AgentTotals:
     color: str = ""
     tool_calls: int = 0
-    subagents_spawned: int = 0
 
 
 @dataclass
@@ -174,17 +176,13 @@ class MultiAgentEventPrinter:
         sink: "Any" = None,
         timestamps: bool = False,
     ) -> None:
-        import time as _time
-
         self._color = color
         self._tag_width = tag_width
         self._sink = sink  # callable taking a line; default = print
         self._timestamps = timestamps
-        self._start = _time.monotonic()
+        self._start = time.monotonic()
         self._agent_totals: dict[str, _AgentTotals] = {}
         self._lanes: dict[tuple[str, str], _LaneState] = {}
-        self._depth: dict[str, int] = {}  # run_id -> depth
-        self._run_to_agent: dict[str, str] = {}  # run_id -> agent_name
         self._palette_idx = 0
 
     # ------------------------------------------------------------------
@@ -239,61 +237,21 @@ class MultiAgentEventPrinter:
                 f"{self._c('red', 'x  cancelled:')}  {event.tool_name} {_full_text(event.reason)}",
             )
         elif isinstance(event, BackgroundTaskStarted):
+            detail = format_background_start_detail(event.tool_name, event.tool_input)
             self._line(
                 agent,
                 run_id,
-                f"{self._c('blue', '>> bg_start:')}   {event.tool_name} task_id={event.task_id}",
-            )
-        elif isinstance(event, BackgroundTaskCompleted):
-            status = self._c("red", "ERROR") if event.is_error else self._c("green", "ok")
-            output = _format_tool_completion_output(
-                tool_name=event.tool_name,
-                output=event.output,
-                is_error=event.is_error,
-            )
-            self._line(
-                agent,
-                run_id,
-                f"{self._c('blue', '<< bg_done:')}    {event.tool_name} [{status}]"
-                f"{output}",
+                f"{self._c('blue', '>> bg_start:')}   {event.tool_name} task_id={event.task_id}{detail}",
             )
         elif isinstance(event, AssistantMessageComplete):
             # Print full thinking/text blocks once per completed message.
             self._flush_buffers(agent, run_id)
         elif isinstance(event, SystemNotification):
-            tag = f"[system{':' + event.category if event.category else ''}]"
-            self._line(agent, run_id, f"{tag} {_full_text(event.text)}")
-
-    def raw_line(self, agent: str, body: str) -> None:
-        """Print a free-form line with the same column/tag/color treatment.
-
-        Used by callers that don't produce ``StreamEvent``s (e.g. the sweevo
-        CLI tailing pytest output in a sandbox) so the visual style stays
-        consistent with agent-driven runs.
-        """
-        self._flush_buffers(agent)
-        self._line(agent, "", body)
+            self._line(agent, run_id, f"[system] {_full_text(event.text)}")
 
     def flush(self) -> None:
         for agent, run_id in list(self._lanes):
             self._flush_buffers(agent, run_id)
-
-    def summary(self) -> dict[str, Any]:
-        per_agent = {
-            name: {
-                "tool_calls": st.tool_calls,
-                "subagents_spawned": st.subagents_spawned,
-            }
-            for name, st in self._agent_totals.items()
-        }
-        totals = {
-            "agents": len(self._agent_totals),
-            "tool_calls": sum(st.tool_calls for st in self._agent_totals.values()),
-            "subagents_spawned": sum(
-                st.subagents_spawned for st in self._agent_totals.values()
-            ),
-        }
-        return {"per_agent": per_agent, "totals": totals}
 
     # ------------------------------------------------------------------
     # Internals
@@ -345,21 +303,17 @@ class MultiAgentEventPrinter:
                 self._flush_lane(lane_agent, lane_run_id)
 
     def _line(self, agent: str, run_id: str, body: str) -> None:
-        import time as _time
-
-        depth = self._depth.get(run_id, 0) if run_id else 0
-        indent = "  " * depth
         tag = self._agent_tag(agent, run_id)
         lines = body.splitlines() or [""]
         continuation = self._c("dim", "│ ") if self._color else "│ "
         for idx, segment in enumerate(lines):
             prefix = continuation if idx else ""
             if self._timestamps:
-                elapsed = _time.monotonic() - self._start
+                elapsed = time.monotonic() - self._start
                 stamp = f"{_DIM}[{elapsed:7.1f}s]{_RESET}" if self._color else f"[{elapsed:7.1f}s]"
-                line = f"{stamp} {tag} {indent}{prefix}{segment}"
+                line = f"{stamp} {tag} {prefix}{segment}"
             else:
-                line = f"{tag} {indent}{prefix}{segment}"
+                line = f"{tag} {prefix}{segment}"
             if self._sink is not None:
                 self._sink(line)
             else:
@@ -370,13 +324,10 @@ class MultiAgentEventPrinter:
         name = agent[: self._tag_width].ljust(self._tag_width)
         raw = f"[{name}]"
         if run_id:
-            raw += f" [{self._format_run_id(run_id)}]"
+            raw += f" [{run_id}]"
         if self._color and st.color:
             return f"{st.color}{raw}{_RESET}"
         return raw
-
-    def _format_run_id(self, run_id: str) -> str:
-        return run_id
 
     def _c(self, key: str, text: str) -> str:
         if not self._color:

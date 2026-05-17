@@ -1,0 +1,104 @@
+# Progressive live-test tier configuration.
+#
+# Encodes plan §3 (progressive-live-test-tiers-design-20260508.md).
+# Each tier is run by run_tiered.py; cascade rules decide whether a
+# failure aborts later tiers.
+#
+# Cascade values:
+#   abort_all  — fail aborts every subsequent tier (tier 0 only)
+#   abort_ge N — fail aborts every tier whose id >= N (plan "abort 2+")
+#   abort_eq N — fail aborts only the single tier with id == N (plan "abort 5")
+#   warn       — fail proceeds (logs only)
+#   none       — terminal tier, no cascade
+
+[[tier]]
+id = 0
+name = "preflight"
+wall_budget_s = 30
+kind = "tier0_health"
+cascade = "abort_all"
+api_url = "http://localhost:3000/api"
+
+[[tier]]
+id = 1
+name = "smoke"
+# Plan §3 specified 60s but did not account for the per-tier pytest +
+# Daytona session-scoped sandbox bring-up cost (~60-90s on a cold
+# runner). 180s gives the smoke loop ~90s of actual budget.
+wall_budget_s = 180
+per_cell_budget_s = 15
+kind = "pytest"
+pytest_args = ["backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase00_smoke.py"]
+cascade = "abort_ge"
+cascade_target = 2
+
+[[tier]]
+id = 2
+name = "k_scaling_spot_check"
+wall_budget_s = 120
+per_cell_budget_s = 60
+kind = "pytest"
+pytest_args = [
+    "backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase06_large_capture_scaling.py::test_phase06_large_capture_k1000_spot_check",
+]
+cascade = "warn"
+
+[[tier]]
+id = 3
+name = "single_axis_matrices"
+wall_budget_s = 600
+per_cell_budget_s = 60
+kind = "pytest"
+pytest_args = [
+    "backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase07_complex_capture_metrics.py",
+]
+cascade = "warn"
+
+[[tier]]
+id = 4
+name = "cross_axis_matrices"
+wall_budget_s = 1500
+per_cell_budget_s = 90
+kind = "pytest"
+pytest_args = [
+    "backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase09_complex_e2e.py::test_phase09_size_x_kind",
+    "backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase09_size_x_concurrency.py",
+    "backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase09_kind_x_concurrency.py",
+]
+cascade = "abort_eq"
+cascade_target = 5
+
+[[tier]]
+id = 5
+name = "soak"
+wall_budget_s = 900
+kind = "pytest"
+pytest_args = [
+    "backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase08_dev_shm_bounded.py",
+]
+cascade = "abort_eq"
+cascade_target = 6
+
+[[tier]]
+id = 6
+name = "adversarial"
+wall_budget_s = 600
+per_cell_budget_s = 60
+kind = "pytest"
+pytest_args = [
+    "backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase09_complex_e2e.py::test_phase09_adversarial",
+]
+cascade = "warn"
+
+[[tier]]
+id = 7
+name = "sweevo_mock_framework"
+# ~90s sandbox bring-up + ~30s/test * ~12 tests budget headroom (plan §14).
+wall_budget_s = 600
+per_cell_budget_s = 60
+kind = "pytest"
+pytest_args = [
+    "backend/src/live_e2e/tests/sweevo/",
+    "-q",
+]
+cascade = "warn"

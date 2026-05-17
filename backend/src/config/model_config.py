@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 logger = logging.getLogger(__name__)
+_MODEL_ID_KEYS = ("model", "id", "model_id")
 
 
 class NoActiveModelError(RuntimeError):
@@ -13,14 +14,14 @@ class NoActiveModelError(RuntimeError):
 
 
 def _resolve_store() -> Any:
-    from server.app_factory import ensure_runtime_stores_ready, model_store
+    from runtime.app_factory import ensure_runtime_stores_ready, model_store
 
-    if store_unavailable := (model_store is None or not getattr(model_store, "is_available", False)):
+    if store_unavailable := (model_store is None or not getattr(model_store, "is_ready", False)):
         try:
             ensure_runtime_stores_ready()
         except Exception:
             logger.debug("Failed to bootstrap runtime stores for model resolution", exc_info=True)
-        if store_unavailable and getattr(model_store, "is_available", False):
+        if store_unavailable and getattr(model_store, "is_ready", False):
             return model_store
 
     return model_store
@@ -33,7 +34,7 @@ def get_active_model_kwargs() -> dict[str, Any]:
     no active row exists.
     """
     store = _resolve_store()
-    if store is None or not getattr(store, "is_available", False):
+    if store is None or not getattr(store, "is_ready", False):
         raise NoActiveModelError("ModelStore is not initialised")
     active = store.get_active_resolved()
     if not active:
@@ -52,10 +53,17 @@ def try_get_active_model_kwargs() -> dict[str, Any] | None:
 
 def get_active_model_id() -> str:
     kwargs = get_active_model_kwargs()
-    model = kwargs.get("model") or kwargs.get("id") or kwargs.get("model_id")
-    if not model:
+    model = _first_present(kwargs, _MODEL_ID_KEYS)
+    if model is None or not str(model).strip():
         raise NoActiveModelError("Active model registration has no 'model' id")
     return str(model)
+
+
+def _first_present(kwargs: dict[str, Any], keys: tuple[str, ...]) -> Any:
+    for key in keys:
+        if key in kwargs:
+            return kwargs[key]
+    return None
 
 
 def get_active_max_tokens(default: int = 16384) -> int:

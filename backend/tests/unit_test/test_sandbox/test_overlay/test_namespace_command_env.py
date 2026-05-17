@@ -1,0 +1,118 @@
+"""Environment isolation tests for daemon ``overlay.run``.
+
+Host environment variables (secrets, tokens, etc.) must not leak into the user
+command. Only an explicit minimal allow-list plus any caller-supplied ``env``
+should be visible to the child process.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from sandbox.daemon.rpc.dispatcher import dispatch_envelope_async
+from sandbox.layer_stack import LayerStack
+
+
+async def _run(
+    tmp_path: Path,
+    *,
+    command: tuple[str, ...],
+    env: dict[str, str] | None = None,
+) -> tuple[int, str, str]:
+    manager = LayerStack(tmp_path / "stack")
+    result = await dispatch_envelope_async(
+        {
+            "op": "overlay.run",
+            "args": {
+                "layer_stack_root": manager.storage_root.as_posix(),
+                "request_id": "env-test",
+                "command": list(command),
+                "cwd": ".",
+                "env": dict(env or {}),
+                "timeout_seconds": 10,
+            },
+        }
+    )
+    return (
+        int(result["exit_code"]),
+        Path(str(result["stdout_ref"])).read_text(encoding="utf-8"),
+        Path(str(result["stderr_ref"])).read_text(encoding="utf-8"),
+    )
+
+
+@pytest.mark.asyncio
+async def test_host_secrets_do_not_leak_into_user_command(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIA-leaked")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-leaked")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-leaked")
+
+    exit_code, stdout, _stderr = await _run(
+        tmp_path,
+        command=(
+            "sh",
+            "-c",
+            "printf '%s|%s|%s' "
+            "\"${AWS_ACCESS_KEY_ID-unset}\" "
+            "\"${ANTHROPIC_API_KEY-unset}\" "
+            "\"${OPENAI_API_KEY-unset}\"",
+        ),
+    )
+
+    assert exit_code == 0
+    assert stdout == "unset|unset|unset"
+
+
+@pytest.mark.asyncio
+async def test_printenv_does_not_expose_host_secret(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIA-leaked")
+
+    exit_code, stdout, _stderr = await _run(
+        tmp_path,
+        command=("printenv", "AWS_ACCESS_KEY_ID"),
+    )
+
+    # printenv returns 1 when the requested var is unset; assert that and
+    # confirm no value was printed.
+    assert exit_code == 1
+    assert stdout == ""
+
+
+@pytest.mark.asyncio
+async def test_caller_env_is_visible_to_user_command(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIA-leaked")
+
+    exit_code, stdout, _stderr = await _run(
+        tmp_path,
+        command=("sh", "-c", "printf '%s' \"$MY_VAR\""),
+        env={"MY_VAR": "caller-value"},
+    )
+
+    assert exit_code == 0
+    assert stdout == "caller-value"
+
+
+@pytest.mark.asyncio
+async def test_path_is_present_so_basic_commands_resolve(
+    tmp_path: Path,
+) -> None:
+    # The minimal env must include PATH (or POSIX builtin sh resolution
+    # must work) so callers can keep invoking commands like ``printf``,
+    # ``sh``, ``printenv`` without explicitly supplying PATH every time.
+    exit_code, stdout, _stderr = await _run(
+        tmp_path,
+        command=("sh", "-c", "printf ok"),
+    )
+
+    assert exit_code == 0
+    assert stdout == "ok"

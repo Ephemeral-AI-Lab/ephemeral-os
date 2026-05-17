@@ -1,23 +1,36 @@
-"""Agents module — first-class agent definitions, validation, and registry.
+"""Public facade for agent definitions, validation, loading, and tracking."""
 
-Import from here instead of deep paths::
+from __future__ import annotations
 
-    from agents import AgentDefinition, get_definition
-"""
-
-from agents.registry import (
+from .definition.loader import load_agents_dir, load_agents_tree
+from .definition.registry import (
     get_definition,
+    list_dispatchable_subagent_names,
     list_definitions,
     register_definition,
     unregister_definition,
 )
-from agents.types import AgentDefinition, ModeDefinition
+from .definition.model import (
+    AgentDefinition,
+    AgentKind,
+    AgentSelectionBlock,
+    AgentType,
+    AgentVariant,
+)
+from .definition.resolved_validation import validate_agent_definitions_resolved
 
 __all__ = [
     "AgentDefinition",
-    "ModeDefinition",
+    "AgentKind",
+    "AgentSelectionBlock",
+    "AgentType",
+    "AgentVariant",
     "get_definition",
+    "list_dispatchable_subagent_names",
     "list_definitions",
+    "load_agents_dir",
+    "load_agents_tree",
     "register_definition",
     "unregister_definition",
+    "validate_agent_definitions_resolved",
 ]

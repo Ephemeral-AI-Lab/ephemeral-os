@@ -1,15 +1,11 @@
-"""Sandbox service — Daytona sandbox lifecycle management."""
+"""Sandbox package — public API, host, daemon, and provider.
 
-from sandbox.exc import AsyncDaytonaUnavailableError, DaytonaUnavailableError
-from sandbox.context import DaytonaContextPreparer
-from sandbox.service import SandboxProxy, SandboxService, acquire_client, fetch_sandbox
+Sub-packages:
+- ``sandbox.api``      — public verbs (lifecycle, read/write/edit/shell, raw_exec)
+- ``sandbox.host``     — orchestrator-side setup, daemon client, and recovery
+- ``sandbox.provider`` — provider adapter registry and provider implementations
+- ``sandbox.daemon``   — in-sandbox dispatcher and services
 
-__all__ = [
-    "AsyncDaytonaUnavailableError",
-    "DaytonaContextPreparer",
-    "DaytonaUnavailableError",
-    "SandboxProxy",
-    "SandboxService",
-    "acquire_client",
-    "fetch_sandbox",
-]
+Import directly from sub-packages — this top-level ``__init__`` intentionally
+re-exports nothing.
+"""

@@ -1,11 +1,15 @@
-"""TaskCenter request/run/task/harness-graph persistence store."""
+"""TaskCenter request/run/task persistence store.
+
+Harness-graph persistence has moved to ``db.stores.attempt_store``
+and is owned by the new three-axis (request / segment / graph) schema.
+"""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
 from db.models.task_center import (
-    TaskCenterHarnessGraphRecord,
     TaskCenterRequestRecord,
     TaskCenterRunRecord,
     TaskCenterTaskRecord,
@@ -13,11 +17,10 @@ from db.models.task_center import (
 from db.stores.base import SyncStoreMixin
 
 
-def persisted_task_id(run_id: str, task_id: str) -> str:
-    return f"{run_id}:{task_id}"
+SerializedRow = dict[str, Any]
 
 
-def _serialize_request(record: TaskCenterRequestRecord) -> dict:
+def _serialize_request(record: TaskCenterRequestRecord) -> SerializedRow:
     return {
         "id": record.id,
         "cwd": record.cwd,
@@ -28,40 +31,30 @@ def _serialize_request(record: TaskCenterRequestRecord) -> dict:
     }
 
 
-def _serialize_run(record: TaskCenterRunRecord) -> dict:
+def _serialize_run(record: TaskCenterRunRecord) -> SerializedRow:
     return {
         "id": record.id,
         "request_id": record.request_id,
-        "root_task_id": record.root_task_id,
         "status": record.status,
         "started_at": record.started_at.isoformat() if record.started_at else None,
         "finished_at": record.finished_at.isoformat() if record.finished_at else None,
     }
 
 
-def _serialize_task(record: TaskCenterTaskRecord) -> dict:
+def _serialize_task(record: TaskCenterTaskRecord) -> SerializedRow:
     return {
         "id": record.id,
-        "run_id": record.run_id,
+        "task_center_run_id": record.task_center_run_id,
         "role": record.role,
-        "task_input": record.task_input,
+        "agent_name": record.agent_name,
+        "context_message": record.context_message,
         "status": record.status,
         "summaries": record.summaries or [],
         "needs": record.needs or [],
-        "task_center_harness_graph_id": record.task_center_harness_graph_id,
-        "created_at": record.created_at.isoformat() if record.created_at else None,
-        "updated_at": record.updated_at.isoformat() if record.updated_at else None,
-    }
-
-
-def _serialize_harness_graph(record: TaskCenterHarnessGraphRecord) -> dict:
-    return {
-        "id": record.id,
-        "run_id": record.run_id,
-        "parent_task_id": record.parent_task_id,
-        "planner_task_id": record.planner_task_id,
-        "evaluator_task_id": record.evaluator_task_id,
-        "executor_task_ids": record.executor_task_ids or [],
+        "task_center_attempt_id": record.task_center_attempt_id,
+        "context_packet_id": record.context_packet_id,
+        "fix_target_id": record.fix_target_id,
+        "spawn_reason": record.spawn_reason,
         "created_at": record.created_at.isoformat() if record.created_at else None,
         "updated_at": record.updated_at.isoformat() if record.updated_at else None,
     }
@@ -77,7 +70,7 @@ class TaskCenterStore(SyncStoreMixin):
         cwd: str,
         sandbox_id: str | None,
         request_prompt: str,
-    ) -> TaskCenterRequestRecord:
+    ) -> SerializedRow:
         with self._sf() as db:
             now = datetime.now(UTC)
             record = TaskCenterRequestRecord(
@@ -91,13 +84,16 @@ class TaskCenterStore(SyncStoreMixin):
             db.add(record)
             db.commit()
             db.refresh(record)
-            return record
+            return _serialize_request(record)
 
-    def get_request(self, request_id: str) -> TaskCenterRequestRecord | None:
+    def get_request(self, request_id: str) -> SerializedRow | None:
         with self._sf() as db:
-            return db.get(TaskCenterRequestRecord, request_id)
+            record = db.get(TaskCenterRequestRecord, request_id)
+            return _serialize_request(record) if record is not None else None
 
-    def list_requests(self, cwd: str | None = None, limit: int = 20) -> list[dict]:
+    def list_requests(
+        self, cwd: str | None = None, limit: int = 20
+    ) -> list[SerializedRow]:
         with self._sf() as db:
             q = db.query(TaskCenterRequestRecord)
             if cwd:
@@ -108,12 +104,12 @@ class TaskCenterStore(SyncStoreMixin):
     def create_run(
         self,
         *,
-        run_id: str,
+        task_center_run_id: str,
         request_id: str,
-    ) -> TaskCenterRunRecord:
+    ) -> SerializedRow:
         with self._sf() as db:
             record = TaskCenterRunRecord(
-                id=run_id,
+                id=task_center_run_id,
                 request_id=request_id,
                 status="running",
                 started_at=datetime.now(UTC),
@@ -121,30 +117,25 @@ class TaskCenterStore(SyncStoreMixin):
             db.add(record)
             db.commit()
             db.refresh(record)
-            return record
+            return _serialize_run(record)
 
-    def set_run_root(self, run_id: str, root_task_id: str) -> None:
+    def finish_run(self, task_center_run_id: str, status: str) -> None:
         with self._sf() as db:
-            record = db.get(TaskCenterRunRecord, run_id)
-            if record is None:
-                return
-            record.root_task_id = root_task_id
-            db.commit()
-
-    def finish_run(self, run_id: str, status: str) -> None:
-        with self._sf() as db:
-            record = db.get(TaskCenterRunRecord, run_id)
+            record = db.get(TaskCenterRunRecord, task_center_run_id)
             if record is None:
                 return
             record.status = status
             record.finished_at = datetime.now(UTC)
             db.commit()
 
-    def get_run(self, run_id: str) -> TaskCenterRunRecord | None:
+    def get_run(self, task_center_run_id: str) -> SerializedRow | None:
         with self._sf() as db:
-            return db.get(TaskCenterRunRecord, run_id)
+            record = db.get(TaskCenterRunRecord, task_center_run_id)
+            return _serialize_run(record) if record is not None else None
 
-    def list_runs_for_request(self, request_id: str, limit: int = 50) -> list[dict]:
+    def list_runs_for_request(
+        self, request_id: str, limit: int = 50
+    ) -> list[SerializedRow]:
         with self._sf() as db:
             q = (
                 db.query(TaskCenterRunRecord)
@@ -158,13 +149,17 @@ class TaskCenterStore(SyncStoreMixin):
         self,
         *,
         task_id: str,
-        run_id: str,
+        task_center_run_id: str,
         role: str,
-        task_input: str,
+        context_message: str,
         status: str,
-        summaries: list[dict],
+        summaries: list[SerializedRow],
         needs: list[str],
-        task_center_harness_graph_id: str | None,
+        task_center_attempt_id: str | None,
+        agent_name: str | None = None,
+        context_packet_id: str | None = None,
+        fix_target_id: str | None = None,
+        spawn_reason: str | None = None,
     ) -> None:
         with self._sf() as db:
             now = datetime.now(UTC)
@@ -172,74 +167,164 @@ class TaskCenterStore(SyncStoreMixin):
             if record is None:
                 record = TaskCenterTaskRecord(
                     id=task_id,
-                    run_id=run_id,
+                    task_center_run_id=task_center_run_id,
                     role=role,
-                    task_input=task_input,
+                    agent_name=agent_name,
+                    context_message=context_message,
                     status=status,
                     summaries=summaries,
                     needs=needs,
-                    task_center_harness_graph_id=task_center_harness_graph_id,
+                    task_center_attempt_id=task_center_attempt_id,
+                    context_packet_id=context_packet_id,
+                    fix_target_id=fix_target_id,
+                    spawn_reason=spawn_reason,
                     created_at=now,
                     updated_at=now,
                 )
                 db.add(record)
             else:
                 record.role = role
-                record.task_input = task_input
+                record.agent_name = agent_name
+                record.context_message = context_message
                 record.status = status
                 record.summaries = summaries
                 record.needs = needs
-                record.task_center_harness_graph_id = task_center_harness_graph_id
+                record.task_center_attempt_id = task_center_attempt_id
+                record.context_packet_id = context_packet_id
+                record.fix_target_id = fix_target_id
+                record.spawn_reason = spawn_reason
                 record.updated_at = now
             db.commit()
 
-    def upsert_harness_graph(
-        self,
-        *,
-        graph_id: str,
-        run_id: str,
-        parent_task_id: str,
-        planner_task_id: str,
-        evaluator_task_id: str | None,
-        executor_task_ids: list[str],
-    ) -> None:
+    def get_task(self, task_id: str) -> SerializedRow | None:
         with self._sf() as db:
-            now = datetime.now(UTC)
-            record = db.get(TaskCenterHarnessGraphRecord, graph_id)
-            if record is None:
-                record = TaskCenterHarnessGraphRecord(
-                    id=graph_id,
-                    run_id=run_id,
-                    parent_task_id=parent_task_id,
-                    planner_task_id=planner_task_id,
-                    evaluator_task_id=evaluator_task_id,
-                    executor_task_ids=executor_task_ids,
-                    created_at=now,
-                    updated_at=now,
-                )
-                db.add(record)
-            else:
-                record.parent_task_id = parent_task_id
-                record.planner_task_id = planner_task_id
-                record.evaluator_task_id = evaluator_task_id
-                record.executor_task_ids = executor_task_ids
-                record.updated_at = now
-            db.commit()
+            record = db.get(TaskCenterTaskRecord, task_id)
+            return _serialize_task(record) if record is not None else None
 
-    def list_tasks_for_run(self, run_id: str) -> list[dict]:
+    def list_tasks_for_run(self, task_center_run_id: str) -> list[SerializedRow]:
         with self._sf() as db:
             q = (
                 db.query(TaskCenterTaskRecord)
-                .filter(TaskCenterTaskRecord.run_id == run_id)
+                .filter(TaskCenterTaskRecord.task_center_run_id == task_center_run_id)
                 .order_by(TaskCenterTaskRecord.created_at.asc())
             )
             return [_serialize_task(record) for record in q.all()]
 
-    def list_harness_graphs_for_run(self, run_id: str) -> list[dict]:
+    def list_tasks_for_attempt(
+        self, attempt_id: str
+    ) -> list[SerializedRow]:
         with self._sf() as db:
             q = (
-                db.query(TaskCenterHarnessGraphRecord)
-                .filter(TaskCenterHarnessGraphRecord.run_id == run_id)
-                .order_by(TaskCenterHarnessGraphRecord.created_at.asc())
+                db.query(TaskCenterTaskRecord)
+                .filter(
+                    TaskCenterTaskRecord.task_center_attempt_id
+                    == attempt_id
+                )
+                .order_by(TaskCenterTaskRecord.created_at.asc())
             )
-            return [_serialize_harness_graph(record) for record in q.all()]
+            return [_serialize_task(record) for record in q.all()]
+
+    def list_generator_tasks_for_attempt(
+        self, attempt_id: str
+    ) -> list[SerializedRow]:
+        with self._sf() as db:
+            q = (
+                db.query(TaskCenterTaskRecord)
+                .filter(
+                    TaskCenterTaskRecord.task_center_attempt_id
+                    == attempt_id,
+                    TaskCenterTaskRecord.role == "generator",
+                )
+                .order_by(TaskCenterTaskRecord.created_at.asc())
+            )
+            return [_serialize_task(record) for record in q.all()]
+
+    def get_evaluator_pass_summary(self, attempt_id: str) -> str:
+        """Return the evaluator's latest success-summary text for *graph*.
+
+        Used by the segment manager to denormalize the closing evaluator's
+        summary onto the segment row at success-close. Returns an empty
+        string when no evaluator task is found for the graph or the
+        evaluator never recorded a summary (defensive fallback — the caller
+        treats empty strings as ``null``-equivalent).
+        """
+        with self._sf() as db:
+            record = (
+                db.query(TaskCenterTaskRecord)
+                .filter(
+                    TaskCenterTaskRecord.task_center_attempt_id
+                    == attempt_id,
+                    TaskCenterTaskRecord.role == "evaluator",
+                )
+                .order_by(TaskCenterTaskRecord.created_at.desc())
+                .first()
+            )
+            if record is None:
+                return ""
+            summaries = record.summaries or []
+            if not summaries:
+                return ""
+            latest = summaries[-1]
+            return str(latest.get("summary") or "") if isinstance(latest, dict) else ""
+
+    def set_task_status(
+        self,
+        task_id: str,
+        *,
+        status: str,
+        summary: SerializedRow | None = None,
+    ) -> SerializedRow:
+        with self._sf() as db:
+            record = db.get(TaskCenterTaskRecord, task_id)
+            if record is None:
+                raise LookupError(f"TaskCenterTask {task_id!r} not found")
+            record.status = status
+            if summary is not None:
+                record.summaries = [*(record.summaries or []), summary]
+            record.updated_at = datetime.now(UTC)
+            db.commit()
+            db.refresh(record)
+            return _serialize_task(record)
+
+    def set_task_context_packet_id(
+        self,
+        task_id: str,
+        *,
+        context_packet_id: str | None,
+    ) -> SerializedRow:
+        with self._sf() as db:
+            record = db.get(TaskCenterTaskRecord, task_id)
+            if record is None:
+                raise LookupError(f"TaskCenterTask {task_id!r} not found")
+            record.context_packet_id = context_packet_id
+            record.updated_at = datetime.now(UTC)
+            db.commit()
+            db.refresh(record)
+            return _serialize_task(record)
+
+    def set_task_status_if_current(
+        self,
+        task_id: str,
+        *,
+        expected_status: str,
+        status: str,
+        summary: SerializedRow | None = None,
+    ) -> SerializedRow | None:
+        """Compare-and-set task status. Returns the new row, or ``None`` on mismatch.
+
+        The CAS miss is the idempotency primitive for parent-task transitions
+        in the complex-task-handoff lifecycle.
+        """
+        with self._sf() as db:
+            record = db.get(TaskCenterTaskRecord, task_id)
+            if record is None:
+                raise LookupError(f"TaskCenterTask {task_id!r} not found")
+            if record.status != expected_status:
+                return None
+            record.status = status
+            if summary is not None:
+                record.summaries = [*(record.summaries or []), summary]
+            record.updated_at = datetime.now(UTC)
+            db.commit()
+            db.refresh(record)
+            return _serialize_task(record)
