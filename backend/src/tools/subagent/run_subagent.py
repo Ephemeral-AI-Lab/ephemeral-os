@@ -216,14 +216,27 @@ async def run_subagent(
             lambda last_n: format_last_n_messages(list(agent.messages), last_n),
         )
 
+    # Subagents have NO ContextScope and do NOT go through the composer —
+    # the isolation contract forbids inheriting the parent's scope. Split
+    # the launch directly: caller's free-text prompt is user msg 1
+    # (initial_messages[0]); a static identity-instruction block from
+    # role_instruction.py is user msg 2 (the spawn prompt). Only one
+    # subagent class exists today (explorer); a static test guards that
+    # invariant so adding another class forces a revisit here.
+    from task_center.context_engine.recipes.role_instruction import (
+        explorer_instruction,
+    )
+
+    role_text = explorer_instruction().text
     result = await run_ephemeral_agent(
         parent_cfg,
-        prompt,
+        role_text,
         agent_def=sub_def,
         sandbox_id=sandbox_id,
         persist_agent_run=False,
         extra_tool_metadata=sub_meta,
         on_agent_spawned=_on_spawned,
+        initial_messages=[ConversationMessage.from_user_text(prompt)],
     )
 
     # Stamp the metadata flag check_background_task_result uses to

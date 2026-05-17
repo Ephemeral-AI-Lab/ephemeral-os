@@ -18,7 +18,7 @@ def _upsert(
         task_center_run_id="run1",
         role=role,
         agent_name=role,
-        rendered_prompt=f"input-{task_id}",
+        context_message=f"input-{task_id}",
         status=status,
         summaries=[],
         needs=needs or [],

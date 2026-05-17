@@ -258,7 +258,7 @@ class AttemptDispatcher:
                 task_center_run_id=launch.task_center_run_id,
                 role=TaskCenterTaskRole.EVALUATOR.value,
                 agent_name=launch.agent_name,
-                rendered_prompt=launch.rendered_prompt,
+                context_message=launch.context_message,
                 status=TaskCenterTaskStatus.RUNNING.value,
                 summaries=[],
                 needs=list(attempt.generator_task_ids),

@@ -206,7 +206,14 @@ async def test_parallel_subagents_retry_independently(
     """Two parallel run_subagent invocations don't cross-contaminate."""
 
     async def _fake(*args: Any, **kwargs: Any) -> EphemeralRunResult:
-        prompt = args[1] if len(args) > 1 else kwargs.get("prompt", "")
+        # P2.2: the caller's prompt is now passed via initial_messages[0];
+        # args[1] is the static explorer role-instruction text.
+        initial = kwargs.get("initial_messages") or []
+        prompt = ""
+        if initial:
+            prompt = "".join(
+                getattr(block, "text", "") for block in initial[0].content
+            )
         # Yield control to interleave the two coroutines.
         await asyncio.sleep(0)
         return EphemeralRunResult(

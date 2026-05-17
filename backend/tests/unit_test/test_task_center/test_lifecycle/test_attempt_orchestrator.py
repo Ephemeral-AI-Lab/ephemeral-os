@@ -300,7 +300,7 @@ def test_missing_generator_agent_profile_is_invariant_violation(
         task_center_run_id=task_b["task_center_run_id"],
         role=task_b["role"],
         agent_name=None,
-        rendered_prompt=task_b["rendered_prompt"],
+        context_message=task_b["context_message"],
         status=task_b["status"],
         summaries=task_b["summaries"],
         needs=task_b["needs"],

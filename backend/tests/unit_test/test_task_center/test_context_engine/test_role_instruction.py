@@ -8,9 +8,13 @@ from task_center.context_engine.packet import (
 )
 from task_center.context_engine.recipes import role_instruction
 from task_center.context_engine.recipes.role_instruction import (
+    _ADVISOR_DEFAULT,
+    _ADVISOR_INSTRUCTIONS,
+    advisor_instruction,
     evaluator_instruction,
     generator_instruction,
     planner_instruction,
+    resolver_instruction,
 )
 from task_center.context_engine.recipes_registry import ContextRecipe
 
@@ -155,3 +159,107 @@ def test_module_exposes_no_recipe_symbols():
             f"role_instruction must not expose a ContextRecipe instance; "
             f"found {attr_name!r}."
         )
+
+
+# ---------------------------------------------------------------------------
+# Advisor dispatch — per-terminal instructions + default fallback.
+# (Advisor is profile-variant-bound to one .md, so unlike planner/generator/
+# evaluator the per-terminal coupling is allowed and expected.)
+# ---------------------------------------------------------------------------
+
+
+_EXPECTED_ADVISOR_TERMINALS = frozenset(
+    {
+        "submit_plan_closes_goal",
+        "submit_plan_continues_goal",
+        "submit_evaluation_success",
+        "submit_evaluation_failure",
+        "submit_execution_success",
+        "submit_execution_failure",
+        "submit_execution_handoff",
+        "submit_verification_success",
+        "submit_verification_failure",
+        "submit_exploration_result",
+    }
+)
+
+
+def _assert_advisor_block_shape(block) -> None:
+    assert block.kind == ContextBlockKind.ROLE_INSTRUCTION.value
+    assert block.priority == ContextPriority.REQUIRED
+    assert len(block.text.strip()) > 0
+
+
+def test_advisor_instruction_covers_all_known_terminals():
+    assert set(_ADVISOR_INSTRUCTIONS.keys()) == _EXPECTED_ADVISOR_TERMINALS
+    texts = list(_ADVISOR_INSTRUCTIONS.values())
+    # Each entry is distinct so the advisor's instructions are not
+    # boilerplate copy-paste.
+    assert len(set(texts)) == len(texts)
+    for tool_name in _ADVISOR_INSTRUCTIONS:
+        block = advisor_instruction(tool_name=tool_name)
+        _assert_advisor_block_shape(block)
+        assert block.text == _ADVISOR_INSTRUCTIONS[tool_name]
+
+
+def test_advisor_instruction_falls_back_to_default():
+    block = advisor_instruction(tool_name="never_seen_terminal_name")
+    _assert_advisor_block_shape(block)
+    assert block.text == _ADVISOR_DEFAULT
+
+
+def test_advisor_dispatch_keys_match_submission_filenames():
+    """Every advisor dispatch key matches a backend/src/tools/submission/submit_*.py file."""
+    import pathlib
+
+    repo_root = pathlib.Path(__file__).resolve().parents[5]
+    submission_dir = repo_root / "backend" / "src" / "tools" / "submission"
+    on_disk = {
+        path.stem
+        for path in submission_dir.rglob("submit_*.py")
+        if path.is_file()
+    }
+    assert _EXPECTED_ADVISOR_TERMINALS <= on_disk, (
+        f"Advisor dispatch keys missing on disk: "
+        f"{_EXPECTED_ADVISOR_TERMINALS - on_disk}"
+    )
+
+
+def test_resolver_instruction_mentions_parent_transcript():
+    block = resolver_instruction()
+    _assert_advisor_block_shape(block)
+    assert "parent transcript" in block.text.lower()
+
+
+# Carve-outs: helper self-terminals (advisor/resolver) don't self-advise, so
+# they are not expected to appear as _ADVISOR_INSTRUCTIONS keys.
+_ADVISOR_DISPATCH_CARVE_OUTS = frozenset(
+    {"submit_advisor_feedback", "submit_resolver_result"}
+)
+
+
+def test_every_submission_terminal_has_advisor_dispatch_entry():
+    """Reverse-direction guard for the Phase 1 dispatch test.
+
+    A new `submit_*.py` terminal landing without an `_ADVISOR_INSTRUCTIONS`
+    entry would silently fall back to `_ADVISOR_DEFAULT`. This test fails
+    loudly on that case so the contributor adds an entry (or documents the
+    fallback intent by extending the carve-out set).
+    """
+    import pathlib
+
+    repo_root = pathlib.Path(__file__).resolve().parents[5]
+    submission_dir = repo_root / "backend" / "src" / "tools" / "submission"
+    on_disk = {
+        path.stem
+        for path in submission_dir.rglob("submit_*.py")
+        if path.is_file()
+    }
+    expected_dispatch_keys = on_disk - _ADVISOR_DISPATCH_CARVE_OUTS
+    missing = expected_dispatch_keys - set(_ADVISOR_INSTRUCTIONS.keys())
+    assert not missing, (
+        f"submit_*.py terminals missing from _ADVISOR_INSTRUCTIONS dispatch: "
+        f"{sorted(missing)}. Add an entry to recipes/role_instruction.py or "
+        f"extend _ADVISOR_DISPATCH_CARVE_OUTS in this test if the fallback "
+        f"to _ADVISOR_DEFAULT is intentional."
+    )

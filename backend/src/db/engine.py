@@ -70,6 +70,7 @@ _DROPPED_COLUMNS: dict[str, set[str]] = {
 _RENAMED_COLUMNS: dict[str, dict[str, str]] = {
     "task_center_tasks": {
         "run_id": "task_center_run_id",
+        "rendered_prompt": "context_message",
     },
 }
 
@@ -232,15 +233,6 @@ def _add_missing_columns(engine: Engine) -> None:
                     conn.execute(
                         text(f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {col_type}')
                     )
-                    if table.name == "task_center_tasks" and col.name == "rendered_prompt":
-                        if "spec" in existing:
-                            conn.execute(
-                                text(
-                                    'UPDATE "task_center_tasks" '
-                                    'SET "rendered_prompt" = "spec" '
-                                    'WHERE "rendered_prompt" IS NULL'
-                                )
-                            )
         for stale in stale_columns:
             logger.info("Dropping obsolete column %s.%s", table.name, stale)
         if stale_columns:

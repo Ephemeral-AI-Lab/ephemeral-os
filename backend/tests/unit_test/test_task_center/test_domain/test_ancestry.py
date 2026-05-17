@@ -83,7 +83,7 @@ def _seed_task(
         task_center_run_id=task_center_run_id,
         role=role,
         agent_name=role,
-        rendered_prompt="input",
+        context_message="input",
         status="running",
         summaries=[],
         needs=[],

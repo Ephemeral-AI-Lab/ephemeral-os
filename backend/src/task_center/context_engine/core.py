@@ -86,10 +86,19 @@ class ContextEngine:
 
 @dataclass(frozen=True, slots=True)
 class LaunchBundle:
-    """The composer's output: everything the launcher needs."""
+    """The composer's output: everything the launcher needs.
+
+    The launch is split into two user messages:
+
+    * ``context_message`` — rendered world state, no role_instruction inline.
+    * ``role_instruction_message`` — per-call ask; ``None`` for agents (e.g.
+      entry_executor) whose recipe emits no role_instruction block, signalling
+      the launcher to fall back to a single user-message launch.
+    """
 
     agent_def: AgentDefinition
-    rendered_prompt: str
+    context_message: str
+    role_instruction_message: str | None
     packet: ContextPacket
     context_packet_id: str | None
 
@@ -130,7 +139,8 @@ class ContextComposer:
         context_packet_id = store.insert(packet) if store is not None else None
         return LaunchBundle(
             agent_def=selection.agent_def,
-            rendered_prompt=self.renderer.render(packet),
+            context_message=self.renderer.render_context(packet),
+            role_instruction_message=self.renderer.render_role_instruction(packet),
             packet=packet,
             context_packet_id=context_packet_id,
         )

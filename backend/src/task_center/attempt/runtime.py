@@ -40,12 +40,25 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, slots=True)
 class AgentLaunch:
+    """Launch descriptor for one harness agent run.
+
+    The launch carries two user-message payloads:
+
+    * ``context_message`` — rendered world state (post-renderer,
+      pre-role_instruction). Persisted into
+      ``task_center_tasks.context_message`` for traceability.
+    * ``role_instruction_message`` — per-call ask; ``None`` for agents
+      whose recipe emits no role_instruction (e.g. entry_executor), signalling
+      the launcher to fall back to a single user-message launch.
+    """
+
     task_id: str
     task_center_run_id: str
     attempt_id: str | None
     role: TaskCenterTaskRole
     agent_name: str
-    rendered_prompt: str
+    context_message: str
+    role_instruction_message: str | None
     needs: tuple[str, ...]
     context_packet_id: str | None = None
     goal_id: str | None = None
@@ -62,7 +75,7 @@ class AttemptDeps:
     manager_registry: IterationManagerRegistry | None = None
     lifecycle_config: TaskCenterLifecycleConfig = field(default_factory=TaskCenterLifecycleConfig)
     # When set, orchestrator + dispatcher route launches through the composer
-    # to obtain a rendered rendered_prompt + selected agent definition.
+    # to obtain a rendered context_message + selected agent definition.
     # Optional so existing tests can continue without composer wiring.
     composer: ContextComposer | None = None
     # Lifecycle controller for the top-level entry executor. ``None`` for

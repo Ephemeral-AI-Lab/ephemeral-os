@@ -47,7 +47,7 @@ def _serialize_task(record: TaskCenterTaskRecord) -> SerializedRow:
         "task_center_run_id": record.task_center_run_id,
         "role": record.role,
         "agent_name": record.agent_name,
-        "rendered_prompt": record.rendered_prompt,
+        "context_message": record.context_message,
         "status": record.status,
         "summaries": record.summaries or [],
         "needs": record.needs or [],
@@ -151,7 +151,7 @@ class TaskCenterStore(SyncStoreMixin):
         task_id: str,
         task_center_run_id: str,
         role: str,
-        rendered_prompt: str,
+        context_message: str,
         status: str,
         summaries: list[SerializedRow],
         needs: list[str],
@@ -170,7 +170,7 @@ class TaskCenterStore(SyncStoreMixin):
                     task_center_run_id=task_center_run_id,
                     role=role,
                     agent_name=agent_name,
-                    rendered_prompt=rendered_prompt,
+                    context_message=context_message,
                     status=status,
                     summaries=summaries,
                     needs=needs,
@@ -185,7 +185,7 @@ class TaskCenterStore(SyncStoreMixin):
             else:
                 record.role = role
                 record.agent_name = agent_name
-                record.rendered_prompt = rendered_prompt
+                record.context_message = context_message
                 record.status = status
                 record.summaries = summaries
                 record.needs = needs

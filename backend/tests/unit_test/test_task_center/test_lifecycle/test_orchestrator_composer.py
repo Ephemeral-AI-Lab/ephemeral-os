@@ -1,7 +1,7 @@
 """US-014: orchestrator + dispatcher composer wiring.
 
 Confirms that when ``AttemptDeps.composer`` is set, the orchestrator
-asks the composer for the planner agent name and rendered_prompt, and that
+asks the composer for the planner agent name and context_message, and that
 ``planner_full_only`` is selected when ancestry has a partial-plan caller.
 """
 
@@ -178,7 +178,7 @@ def _setup_partial_plan_ancestor(
         task_center_run_id=task_center_run_id,
         role="generator",
         agent_name="executor",
-        rendered_prompt="x",
+        context_message="x",
         status="running",
         summaries=[],
         needs=[],
@@ -212,7 +212,7 @@ def test_planner_launched_via_composer_uses_base_when_no_ancestor(
     assert selected is not None
     assert selected.system_prompt == "PLANNER"
     assert launched.context_packet_id is None  # no packet store wired
-    assert "Goal / Current Iteration" in launched.rendered_prompt
+    assert "Goal / Current Iteration" in launched.context_message
 
 
 def test_planner_forked_to_full_only_when_partial_plan_caller_present(

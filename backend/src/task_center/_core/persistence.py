@@ -192,7 +192,7 @@ class TaskStoreProtocol(Protocol):
         task_id: str,
         task_center_run_id: str,
         role: str,
-        rendered_prompt: str,
+        context_message: str,
         status: str,
         summaries: list[Any],
         needs: list[str],

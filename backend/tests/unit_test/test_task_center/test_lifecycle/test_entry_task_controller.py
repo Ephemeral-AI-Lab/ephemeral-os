@@ -17,7 +17,7 @@ def _seed_entry_task(*, task_store, task_center_run_id: str) -> str:
         task_center_run_id=task_center_run_id,
         role=TaskCenterTaskRole.GENERATOR.value,
         agent_name="entry_executor",
-        rendered_prompt="entry goal",
+        context_message="entry goal",
         status=TaskCenterTaskStatus.RUNNING.value,
         summaries=[],
         needs=[],

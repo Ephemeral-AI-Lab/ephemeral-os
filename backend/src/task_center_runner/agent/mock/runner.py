@@ -576,8 +576,8 @@ class MockSquadRunner:
         emit: EmitStreamEvent,
     ) -> ToolResult:
         ctx = self._scenario_context(prompt=prompt, metadata=metadata)
-        rendered_prompt = ctx.rendered_prompt or prompt
-        checkpoint = self._spec_field(rendered_prompt, "checkpoint") or "checkpoint"
+        context_message = ctx.context_message or prompt
+        checkpoint = self._spec_field(context_message, "checkpoint") or "checkpoint"
         if checkpoint == "recursive_return":
             self._publish(
                 EventType.RECURSIVE_GOAL_COMPLETED,
@@ -603,7 +603,7 @@ class MockSquadRunner:
                 event_type,
                 agent_def=None,
                 metadata=metadata,
-                payload=self._verifier_payload(rendered_prompt),
+                payload=self._verifier_payload(context_message),
             )
         return result
 
@@ -641,7 +641,7 @@ class MockSquadRunner:
             mutable_state=self._mutable_state,
             task_id=task_id or None,
             agent_name=str(metadata.agent_name or "") or None,
-            rendered_prompt=(str(task.get("rendered_prompt") or "") if task else None),
+            context_message=(str(task.get("context_message") or "") if task else None),
             graph_summary=None,
             requirement_ledger=getattr(self._scenario, "requirement_ledger", None),
             package_plan=getattr(self._scenario, "package_plan", None),
@@ -1372,9 +1372,9 @@ class MockSquadRunner:
         if runtime is not None and task_id:
             task = runtime.task_store.get_task(task_id)
             if task is not None:
-                rendered_prompt = str(task.get("rendered_prompt") or "")
-                if rendered_prompt:
-                    return rendered_prompt
+                context_message = str(task.get("context_message") or "")
+                if context_message:
+                    return context_message
         return fallback
 
     def _invocation_payload(
@@ -1384,26 +1384,26 @@ class MockSquadRunner:
         metadata: ExecutionMetadata,
     ) -> dict[str, Any]:
         task_id = str(metadata.get("task_center_task_id") or "")
-        rendered_prompt = ""
+        context_message = ""
         deps: list[str] = []
         runtime = metadata.get("attempt_runtime")
         if runtime is not None and task_id:
             task = runtime.task_store.get_task(task_id)
             if task is not None:
-                rendered_prompt = str(task.get("rendered_prompt") or "")
+                context_message = str(task.get("context_message") or "")
                 deps = [str(item) for item in task.get("needs", [])]
         payload = {
             "task_id": task_id,
             "prompt_preview": prompt[:500],
             "dependency_count": len(deps),
         }
-        payload.update(self._verifier_payload(rendered_prompt))
+        payload.update(self._verifier_payload(context_message))
         return payload
 
-    def _verifier_payload(self, rendered_prompt: str) -> dict[str, Any]:
-        checkpoint = self._spec_field(rendered_prompt, "checkpoint")
-        wave_id = self._spec_field(rendered_prompt, "wave")
-        dependency_count = self._spec_field(rendered_prompt, "dependency_count")
+    def _verifier_payload(self, context_message: str) -> dict[str, Any]:
+        checkpoint = self._spec_field(context_message, "checkpoint")
+        wave_id = self._spec_field(context_message, "wave")
+        dependency_count = self._spec_field(context_message, "dependency_count")
         payload: dict[str, Any] = {}
         if checkpoint is not None:
             payload["checkpoint"] = checkpoint

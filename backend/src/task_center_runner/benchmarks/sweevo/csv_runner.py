@@ -79,6 +79,7 @@ def build_selective_entry_mock_runner_factory(
         task_id: str,
         on_event: Callable[[Any], Awaitable[None]] | None,
         extra_tool_metadata: Any,
+        initial_messages: Any = None,
     ) -> Any:
         # Lazy-import to keep the engine.api dependency edge contained.
         from engine.api import run_ephemeral_agent
@@ -103,6 +104,7 @@ def build_selective_entry_mock_runner_factory(
             task_id=task_id,
             on_event=on_event,
             extra_tool_metadata=metadata,
+            initial_messages=initial_messages,
         )
 
     async def _run_entry_executor_via_handoff(

@@ -100,10 +100,10 @@ class NestedGoal(ScenarioBase):
         return ToolCallSpec(submit_plan_closes_goal, _root_nested_plan(failing_child=False))
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
-        rendered_prompt = ctx.rendered_prompt or ""
-        if "request_recursive_goal" in rendered_prompt:
+        context_message = ctx.context_message or ""
+        if "request_recursive_goal" in context_message:
             return ("request_recursive_goal:child_success",)
-        if "ACTION recursive_" in rendered_prompt:
+        if "ACTION recursive_" in context_message:
             return ("recursive_step",)
         return ("preflight",)
 
@@ -146,10 +146,10 @@ class NestedGoalFailure(ScenarioBase):
         return ToolCallSpec(submit_plan_closes_goal, _root_nested_plan(failing_child=True))
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
-        rendered_prompt = ctx.rendered_prompt or ""
-        if "request_recursive_goal" in rendered_prompt:
+        context_message = ctx.context_message or ""
+        if "request_recursive_goal" in context_message:
             return ("request_recursive_goal:child_failure",)
-        if "child_failure" in rendered_prompt:
+        if "child_failure" in context_message:
             return ("fail:Intentional child goal failure.",)
         return ("preflight",)
 

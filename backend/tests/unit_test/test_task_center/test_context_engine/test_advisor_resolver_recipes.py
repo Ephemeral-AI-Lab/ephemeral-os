@@ -90,7 +90,7 @@ def _seed_parent_task(task_store, *, task_center_run_id, task_id, question):
         task_center_run_id=task_center_run_id,
         role="generator",
         agent_name="executor",
-        rendered_prompt=question,
+        context_message=question,
         status="running",
         summaries=[],
         needs=[],
@@ -215,3 +215,60 @@ def test_helper_required_scope_fields_enforced():
         scope = ContextScope(goal_id="r")
         with pytest.raises(RecipeScopeError):
             scope.assert_fields(recipe.required_scope_fields)
+
+
+def test_helper_inheritance_filters_role_instruction(
+    deps_with_packet_store, packet_store, task_store, task_center_run_id
+):
+    """Inherited blocks must NOT include kind=='role_instruction'.
+
+    Two-user-message launch shape: the helper tool appends its OWN
+    role_instruction post-compose; inheriting the parent's role_instruction
+    would concatenate two unrelated instructions into the helper's user msg 2.
+    """
+    parent_packet = ContextPacket(
+        target_role="planner",
+        target_id="g-parent",
+        canonical_refs=ContextRefs(goal_id="req-A", attempt_id="g-parent"),
+        blocks=[
+            ContextBlock(
+                kind="iteration_statement",
+                priority=ContextPriority.REQUIRED,
+                text="parent goal",
+            ),
+            ContextBlock(
+                kind="role_instruction",
+                priority=ContextPriority.REQUIRED,
+                text="parent role instruction — must not leak to helper",
+            ),
+            ContextBlock(
+                kind="dependency_summary",
+                priority=ContextPriority.MEDIUM,
+                text="dep info",
+            ),
+        ],
+    )
+    packet_store.insert(parent_packet)
+    _seed_parent_task(
+        task_store,
+        task_center_run_id=task_center_run_id,
+        task_id="t-parent",
+        question="advise me",
+    )
+
+    scope = ContextScope(
+        goal_id="req-A",
+        task_id="helper-1",
+        parent_packet_id=parent_packet.id,
+        parent_task_id="t-parent",
+    )
+    helper_packet = _advisor_build(scope, deps_with_packet_store)
+
+    inherited_kinds = [b.kind for b in helper_packet.blocks]
+    assert "role_instruction" not in inherited_kinds
+    # The other blocks still inherit (priority-demoted).
+    assert "iteration_statement" in inherited_kinds
+    assert "dependency_summary" in inherited_kinds
+    # Sanity: the parent's role_instruction text is NOT present anywhere.
+    for block in helper_packet.blocks:
+        assert "parent role instruction" not in block.text

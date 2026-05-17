@@ -261,7 +261,7 @@ class TaskCenterEntryCoordinator:
             task_center_run_id=task_center_run_id,
             role=TaskCenterTaskRole.ENTRY_EXECUTOR.value,
             agent_name=ENTRY_AGENT_NAME,
-            rendered_prompt=self._prompt,
+            context_message=self._prompt,
             status=TaskCenterTaskStatus.RUNNING.value,
             summaries=[],
             needs=[],

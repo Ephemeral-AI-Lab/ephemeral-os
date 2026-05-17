@@ -12,6 +12,11 @@ allowed_tools:
   - shell
   - glob
   - grep
+  - lsp.hover
+  - lsp.find_definitions
+  - lsp.find_references
+  - lsp.query_symbols
+  - lsp.diagnostics
   - run_subagent
   - ask_advisor
 terminals:

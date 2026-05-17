@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Protocol
 
 from agents import get_definition
+from message.messages import ConversationMessage
 from message.stream_events import StreamEvent
 from task_center._core.persistence import (
     GoalStoreProtocol,
@@ -132,16 +133,30 @@ class EphemeralAttemptAgentLauncher:
             attempt_runtime=runtime,
             composer=runtime.composer,
         )
+        # Two-user-message launch when the recipe emitted a role_instruction.
+        # entry_executor (and any future recipe with no role_instruction) falls
+        # back to the legacy single-user-message shape — passing context as the
+        # spawn prompt without seeding initial_messages.
+        role_instruction = launch.role_instruction_message
+        if role_instruction:
+            runner_prompt = role_instruction
+            runner_initial_messages: list[ConversationMessage] | None = [
+                ConversationMessage.from_user_text(launch.context_message)
+            ]
+        else:
+            runner_prompt = launch.context_message
+            runner_initial_messages = None
         try:
             result: Any = await runner(
                 self._config,
-                launch.rendered_prompt,
+                runner_prompt,
                 agent_def=agent_def,
                 sandbox_id=self._sandbox_id,
                 persist_agent_run=True,
                 task_id=launch.task_id,
                 on_event=self._on_event,
                 extra_tool_metadata=metadata,
+                initial_messages=runner_initial_messages,
             )
         except Exception as exc:  # pragma: no cover - defensive runner boundary
             logger.exception(
@@ -424,7 +439,8 @@ class LaunchBuilder:
             attempt_id=attempt_id,
             role=role,
             agent_name=bundle.agent_def.name,
-            rendered_prompt=bundle.rendered_prompt,
+            context_message=bundle.context_message,
+            role_instruction_message=bundle.role_instruction_message,
             needs=needs,
             context_packet_id=bundle.context_packet_id,
             goal_id=goal_id,

@@ -56,6 +56,10 @@ def _build_helper_packet(
         raise ContextEngineError(
             f"Parent packet {scope.parent_packet_id!r} not found"
         )
+    # Skip inherited role_instruction blocks: the helper tool appends its own
+    # role_instruction after compose, and the renderer concatenates every
+    # role_instruction text. Inheriting the parent's instruction would
+    # contaminate user msg 2 with the parent's ask.
     blocks = [
         ContextBlock(
             kind=parent_block.kind,
@@ -66,6 +70,7 @@ def _build_helper_packet(
             metadata={**parent_block.metadata, "inherited_from_parent": "true"},
         )
         for parent_block in parent_packet.blocks
+        if parent_block.kind != "role_instruction"
     ]
     return ContextPacket(
         target_role=target_role,

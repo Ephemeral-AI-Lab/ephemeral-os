@@ -38,7 +38,7 @@ _DEFAULT_HEADINGS: dict[str, str] = {
     "completed_task_summary": "# Dependency Results",
     "artifact_reference": "# Artifact reference",
     "entry_request": "# Entry request",
-    "role_instruction": "# How to Proceed",
+    "parent_transcript": "# Parent transcript",
 }
 
 
@@ -78,8 +78,16 @@ class MarkdownPromptRenderer:
     def __init__(self, headings: dict[str, str] | None = None) -> None:
         self._headings = headings if headings is not None else _DEFAULT_HEADINGS
 
-    def render(self, packet: ContextPacket) -> str:
-        kept_blocks = self._compress(packet.blocks, budget=self._budget_from(packet))
+    def render_context(self, packet: ContextPacket) -> str:
+        """Render world-state context, excluding role_instruction blocks.
+
+        role_instruction blocks travel as a separate user message; the
+        ``# How to Proceed`` heading is gone.
+        """
+        context_blocks = [
+            b for b in packet.blocks if b.kind != "role_instruction"
+        ]
+        kept_blocks = self._compress(context_blocks, budget=self._budget_from(packet))
         helper_owned = [b for b in kept_blocks if not _is_inherited(b)]
         inherited = [b for b in kept_blocks if _is_inherited(b)]
         sections = self._render_blocks(helper_owned)
@@ -87,6 +95,20 @@ class MarkdownPromptRenderer:
             sections.append("# Parent context")
             sections.extend(self._render_blocks(inherited))
         return "\n\n".join(s for s in sections if s).strip() + "\n"
+
+    def render_role_instruction(self, packet: ContextPacket) -> str | None:
+        """Concatenate every role_instruction block's text.
+
+        Returns ``None`` when the packet carries no role_instruction block;
+        helpers / entry agents that don't emit one fall back to a single
+        user-message launch at the call site.
+        """
+        role_blocks = [
+            b for b in packet.blocks if b.kind == "role_instruction"
+        ]
+        if not role_blocks:
+            return None
+        return "\n\n".join(b.text.strip() for b in role_blocks)
 
     # ---- internals ------------------------------------------------------
 

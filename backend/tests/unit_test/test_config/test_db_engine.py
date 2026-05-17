@@ -180,6 +180,8 @@ def test_initialize_db_renames_task_center_child_run_id_columns(
     run_columns = {col["name"] for col in insp.get_columns("task_center_runs")}
     assert "task_center_run_id" in columns
     assert "agent_name" in columns
+    assert "context_message" in columns
+    assert "rendered_prompt" not in columns
     assert "run_id" not in columns
     assert "root_task_id" not in run_columns
     # Phase 01 drops the legacy task_center_attempt table after init.
@@ -266,7 +268,7 @@ def test_initialize_db_migrates_legacy_agent_runs_schema(
         task_center_run_id="run",
         role="executor",
         agent_name="executor",
-        rendered_prompt="prompt",
+        context_message="prompt",
         status="running",
         summaries=[],
         needs=[],
@@ -283,6 +285,20 @@ def test_initialize_db_migrates_legacy_agent_runs_schema(
     assert tasks[0]["task_center_run_id"] == "run"
     assert "run_id" not in tasks[0]
     assert agent_run_store.get_run("agent1") is not None
+
+
+def test_initialize_db_fresh_sqlite_creates_context_message_column(
+    tmp_path: Path,
+) -> None:
+    """Fresh DB boot creates ``context_message`` (not ``rendered_prompt``)."""
+    db_path = tmp_path / "fresh.db"
+    sf = engine_mod.initialize_db(DatabaseSettings(url=f"sqlite:///{db_path}"))
+    assert sf is not None
+    engine = engine_mod.get_engine()
+    assert engine is not None
+    columns = {col["name"] for col in inspect(engine).get_columns("task_center_tasks")}
+    assert "context_message" in columns
+    assert "rendered_prompt" not in columns
 
 
 def test_initialize_db_drops_dead_task_center_lifecycle_columns(

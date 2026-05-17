@@ -24,6 +24,7 @@ _FROZEN_KWARG_SET: frozenset[str] = frozenset(
         "task_id",
         "on_event",
         "extra_tool_metadata",
+        "initial_messages",
     }
 )
 

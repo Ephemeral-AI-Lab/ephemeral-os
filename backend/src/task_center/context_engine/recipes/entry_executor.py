@@ -26,7 +26,7 @@ def _entry_executor_build(
     block = ContextBlock(
         kind=ContextBlockKind.ENTRY_REQUEST,
         priority=ContextPriority.REQUIRED,
-        text=str(task.get("rendered_prompt") or ""),
+        text=str(task.get("context_message") or ""),
         source_id=scope.task_id,
         source_kind="task_center_task",
     )

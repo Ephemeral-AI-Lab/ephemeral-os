@@ -32,7 +32,7 @@ def test_packet_order_is_semantic_order_not_priority_order():
             kind="medium", priority=ContextPriority.MEDIUM, text="medium"
         ),
     ]
-    out = MarkdownPromptRenderer().render(_packet(blocks))
+    out = MarkdownPromptRenderer().render_context(_packet(blocks))
     assert out.find("Low") < out.find("High")
     assert out.find("High") < out.find("Required")
     assert out.find("Required") < out.find("Medium")
@@ -54,7 +54,7 @@ def test_required_blocks_never_compressed_under_budget():
             source_id="src-low",
         ),
     ]
-    out = MarkdownPromptRenderer().render(_packet(blocks, token_budget="100"))
+    out = MarkdownPromptRenderer().render_context(_packet(blocks, token_budget="100"))
     assert big_required in out
     # The low block should be replaced with the truncation marker.
     assert "B" * 4_000 not in out
@@ -82,7 +82,7 @@ def test_low_blocks_compressed_before_medium_blocks():
         ),
     ]
     # Budget is just enough for required + medium + truncation message.
-    out = MarkdownPromptRenderer().render(_packet(blocks, token_budget="1100"))
+    out = MarkdownPromptRenderer().render_context(_packet(blocks, token_budget="1100"))
     # Low truncated, medium kept verbatim.
     assert "L" * 4_000 not in out
     assert "M" * 4_000 in out
@@ -108,7 +108,7 @@ def test_inherited_blocks_grouped_under_parent_context_section():
             metadata={"inherited_from_parent": "true"},
         ),
     ]
-    out = MarkdownPromptRenderer().render(_packet(blocks))
+    out = MarkdownPromptRenderer().render_context(_packet(blocks))
     parent_idx = out.find("# Parent context")
     assert parent_idx > 0, "expected '# Parent context' section"
     assert out.find("parent goal") > parent_idx
@@ -126,7 +126,7 @@ def test_block_subtitle_metadata_renders_under_heading():
             metadata={"subtitle": "*(first iteration)*"},
         )
     ]
-    out = MarkdownPromptRenderer().render(_packet(blocks))
+    out = MarkdownPromptRenderer().render_context(_packet(blocks))
     assert "*(first iteration)*" in out
 
 
@@ -139,7 +139,7 @@ def test_block_heading_metadata_overrides_default_heading():
             metadata={"heading": "# Custom heading"},
         )
     ]
-    out = MarkdownPromptRenderer().render(_packet(blocks))
+    out = MarkdownPromptRenderer().render_context(_packet(blocks))
     assert out.startswith("# Custom heading\n\nbody")
     assert "# Custom kind" not in out
 
@@ -165,7 +165,7 @@ def test_dependency_results_render_as_one_grouped_section():
             },
         ),
     ]
-    out = MarkdownPromptRenderer().render(_packet(blocks))
+    out = MarkdownPromptRenderer().render_context(_packet(blocks))
     assert out.count("# Dependency Results") == 1
     assert "## dep-a\n\ndep output" in out
     assert "## task-b\n\ncompleted output" in out
@@ -177,8 +177,8 @@ def test_render_is_deterministic_for_fixed_packet():
         ContextBlock(kind="b", priority=ContextPriority.HIGH, text="b"),
     ]
     packet = _packet(blocks)
-    a = MarkdownPromptRenderer().render(packet)
-    b = MarkdownPromptRenderer().render(packet)
+    a = MarkdownPromptRenderer().render_context(packet)
+    b = MarkdownPromptRenderer().render_context(packet)
     assert a == b
 
 
@@ -193,6 +193,76 @@ def test_renderer_does_not_perform_io_or_store_reads(tmp_path, monkeypatch):
     # by the absence of any store parameter in render's signature.
     import inspect
 
-    sig = inspect.signature(MarkdownPromptRenderer().render)
+    sig = inspect.signature(MarkdownPromptRenderer().render_context)
     assert list(sig.parameters) == ["packet"]
-    MarkdownPromptRenderer().render(_packet(blocks))
+    MarkdownPromptRenderer().render_context(_packet(blocks))
+
+
+# ---------------------------------------------------------------------------
+# Two-user-message split: render_context excludes role_instruction;
+# render_role_instruction returns concatenated text or None.
+# ---------------------------------------------------------------------------
+
+
+def test_render_context_excludes_role_instruction_blocks():
+    blocks = [
+        ContextBlock(
+            kind="iteration_statement",
+            priority=ContextPriority.REQUIRED,
+            text="world state",
+        ),
+        ContextBlock(
+            kind="role_instruction",
+            priority=ContextPriority.REQUIRED,
+            text="how to proceed body",
+        ),
+    ]
+    out = MarkdownPromptRenderer().render_context(_packet(blocks))
+    assert "world state" in out
+    assert "# How to Proceed" not in out
+    assert "how to proceed body" not in out
+
+
+def test_render_role_instruction_returns_none_when_absent():
+    blocks = [
+        ContextBlock(
+            kind="iteration_statement",
+            priority=ContextPriority.REQUIRED,
+            text="world state",
+        ),
+    ]
+    assert MarkdownPromptRenderer().render_role_instruction(_packet(blocks)) is None
+
+
+def test_render_role_instruction_concatenates_multiple_blocks():
+    blocks = [
+        ContextBlock(
+            kind="role_instruction",
+            priority=ContextPriority.REQUIRED,
+            text="first instruction",
+        ),
+        ContextBlock(
+            kind="iteration_statement",
+            priority=ContextPriority.REQUIRED,
+            text="world state",
+        ),
+        ContextBlock(
+            kind="role_instruction",
+            priority=ContextPriority.REQUIRED,
+            text="second instruction",
+        ),
+    ]
+    out = MarkdownPromptRenderer().render_role_instruction(_packet(blocks))
+    assert out is not None
+    assert "first instruction" in out
+    assert "second instruction" in out
+    # Joined by blank line, both texts present in concatenation order.
+    assert out.index("first instruction") < out.index("second instruction")
+
+
+def test_default_headings_no_longer_maps_role_instruction():
+    from task_center.context_engine.renderer import _DEFAULT_HEADINGS
+
+    assert "role_instruction" not in _DEFAULT_HEADINGS
+    # Parent transcript heading is wired (transcript-mode helper).
+    assert _DEFAULT_HEADINGS.get("parent_transcript") == "# Parent transcript"

@@ -233,7 +233,7 @@ async def test_submit_execution_handoff_entry_mode_uses_bound_controller(
         task_center_run_id="run1",
         role=TaskCenterTaskRole.ENTRY_EXECUTOR.value,
         agent_name="entry_executor",
-        rendered_prompt="top-level goal",
+        context_message="top-level goal",
         status=TaskCenterTaskStatus.RUNNING.value,
         summaries=[],
         needs=[],

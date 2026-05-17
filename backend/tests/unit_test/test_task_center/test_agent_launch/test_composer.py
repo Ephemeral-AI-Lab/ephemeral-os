@@ -137,7 +137,7 @@ def test_compose_threads_calls_in_order(packet_store):
     assert bundle.agent_def.name == "planner"
     assert bundle.agent_def.system_prompt == "SYSTEM PROMPT"
     assert bundle.context_packet_id is not None
-    assert "Current Iteration" in bundle.rendered_prompt
+    assert "Current Iteration" in bundle.context_message
     # Packet was persisted.
     assert packet_store.get(bundle.context_packet_id) is not None
 
@@ -183,7 +183,7 @@ def test_required_context_blocks_appended_before_render(packet_store):
     assert bundle.agent_def.name == "planner_full_only"
     kinds = [b.kind for b in bundle.packet.blocks]
     assert "launch_notice" in kinds
-    assert "variant selected." in bundle.rendered_prompt
+    assert "variant selected." in bundle.context_message
 
 
 def test_compose_persists_packet_only_with_store():
@@ -231,7 +231,8 @@ def test_resolver_engine_renderer_called_with_correct_args(packet_store):
     deps = _stub_deps(packet_store)
     engine = ContextEngine(deps)
     renderer = MagicMock()
-    renderer.render.return_value = "RENDERED"
+    renderer.render_context.return_value = "RENDERED"
+    renderer.render_role_instruction.return_value = "ROLE INSTRUCTION"
     composer = ContextComposer(
         resolver=RuleBasedAgentResolver(),
         engine=engine,
@@ -242,10 +243,12 @@ def test_resolver_engine_renderer_called_with_correct_args(packet_store):
         goal_id="r", iteration_id="s", attempt_id="g"
     )
     bundle = composer.compose(base_agent_name="planner", scope=scope)
-    renderer.render.assert_called_once()
-    rendered_packet = renderer.render.call_args[0][0]
+    renderer.render_context.assert_called_once()
+    rendered_packet = renderer.render_context.call_args[0][0]
     assert isinstance(rendered_packet, ContextPacket)
-    assert bundle.rendered_prompt == "RENDERED"
+    renderer.render_role_instruction.assert_called_once()
+    assert bundle.context_message == "RENDERED"
+    assert bundle.role_instruction_message == "ROLE INSTRUCTION"
 
 
 def test_missing_context_recipe_raises_before_render(packet_store):

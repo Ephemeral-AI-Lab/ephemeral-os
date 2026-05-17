@@ -79,7 +79,7 @@ def _assert_partial_parent_graph(graph_summary: dict[str, Any]) -> None:
 def _assert_full_only_agent_md_was_recorded(run_dir: Path) -> None:
     prompts = list(_system_prompts_for(run_dir, "planner_full_only"))
     assert prompts, f"no planner_full_only system prompt in {run_dir}"
-    assert any("Partial planning is disabled" in prompt for prompt in prompts)
+    assert any("Continuing the goal is disabled" in prompt for prompt in prompts)
     assert all("submit_plan_continues_goal" not in prompt for prompt in prompts)
 
 

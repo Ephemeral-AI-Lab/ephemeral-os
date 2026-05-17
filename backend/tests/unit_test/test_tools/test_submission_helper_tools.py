@@ -68,7 +68,7 @@ def _seed_parent_task(task_store, *, packet_id: str) -> None:
         task_center_run_id=PARENT_RUN_ID,
         role="generator",
         agent_name="executor",
-        rendered_prompt="parent task input",
+        context_message="parent task input",
         status="running",
         summaries=[],
         needs=[],
@@ -161,6 +161,7 @@ async def test_ask_advisor_runs_advisor_with_inherited_parent_context(
     async def _fake_run(*args, **kwargs):
         seen["agent_def"] = kwargs["agent_def"].name
         seen["prompt"] = args[1]
+        seen["initial_messages"] = kwargs.get("initial_messages")
         return EphemeralRunResult(
             status="completed",
             error=None,
@@ -191,11 +192,17 @@ async def test_ask_advisor_runs_advisor_with_inherited_parent_context(
     assert result.output == "approved"
     assert result.metadata["verdict"] == "approve"
     assert seen["agent_def"] == "advisor"
-    composed_prompt = str(seen["prompt"])
-    # Composer-built parent inheritance section is present.
-    assert "# Parent context" in composed_prompt
-    assert "parent goal text" in composed_prompt
+    # Two-user-message launch: context lives in initial_messages[0],
+    # role_instruction + Advisor request live in the prompt (user msg 2).
+    initial_messages = seen["initial_messages"]
+    assert isinstance(initial_messages, list) and len(initial_messages) == 1
+    context_text = "".join(
+        b.text for b in initial_messages[0].content if hasattr(b, "text")
+    )
+    assert "# Parent context" in context_text
+    assert "parent goal text" in context_text
     # Original advisor question is appended as the request section.
+    composed_prompt = str(seen["prompt"])
     assert "# Advisor request" in composed_prompt
     assert "review this" in composed_prompt
     assert "submit_plan_closes_goal" in composed_prompt
@@ -247,6 +254,7 @@ async def test_ask_resolver_runs_resolver_with_inherited_parent_context(
 
     async def _fake_run(*args, **kwargs):
         seen["prompt"] = args[1]
+        seen["initial_messages"] = kwargs.get("initial_messages")
         return EphemeralRunResult(
             status="completed",
             error=None,
@@ -274,8 +282,13 @@ async def test_ask_resolver_runs_resolver_with_inherited_parent_context(
 
     assert not result.is_error
     assert result.metadata["resolver"]["resolved"] is True
+    initial_messages = seen["initial_messages"]
+    assert isinstance(initial_messages, list) and len(initial_messages) == 1
+    context_text = "".join(
+        b.text for b in initial_messages[0].content if hasattr(b, "text")
+    )
+    assert "# Parent context" in context_text
+    assert "parent goal text" in context_text
     composed_prompt = str(seen["prompt"])
-    assert "# Parent context" in composed_prompt
-    assert "parent goal text" in composed_prompt
     assert "# Resolver request" in composed_prompt
     assert "fix bug" in composed_prompt

@@ -74,7 +74,7 @@ def _seed_planner_attempt(
         task_center_run_id=task_center_run_id,
         role=TaskCenterTaskRole.PLANNER.value,
         agent_name="planner",
-        rendered_prompt="plan",
+        context_message="plan",
         status=TaskCenterTaskStatus.RUNNING.value,
         summaries=[],
         needs=[],
@@ -91,7 +91,8 @@ def _build_launch(*, attempt: Any, goal: Any, task_id: str, task_center_run_id: 
         attempt_id=attempt.id,
         role=TaskCenterTaskRole.PLANNER,
         agent_name="planner",
-        rendered_prompt="plan",
+        context_message="plan context",
+        role_instruction_message="plan the work",
         needs=(),
         goal_id=goal.id,
     )
@@ -406,3 +407,148 @@ def test_launcher_runner_kwargs_do_not_disable_engine_retry() -> None:
         "is the contract. If you intentionally disabled retry here, "
         "update this test and explain why in the PR description."
     )
+
+
+@pytest.mark.asyncio
+async def test_main_agent_launches_with_two_user_messages(
+    goal_store,
+    iteration_store,
+    attempt_store,
+    task_store,
+    task_center_run_id,
+    register_test_agents,
+) -> None:
+    """Non-entry agents launch with initial_messages=[<context>] + prompt=<role_instruction>."""
+    from message.messages import ConversationMessage
+
+    goal, attempt, task_id = _seed_planner_attempt(
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+        task_center_run_id=task_center_run_id,
+    )
+    launch = _build_launch(
+        attempt=attempt, goal=goal, task_id=task_id, task_center_run_id=task_center_run_id
+    )
+    deps = _build_deps(
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+    )
+
+    captured: list[dict[str, Any]] = []
+
+    async def _spy_runner(*args: Any, **kwargs: Any) -> EphemeralRunResult:
+        captured.append({"args": args, "kwargs": kwargs})
+        task_store.set_task_status(
+            task_id, status=TaskCenterTaskStatus.DONE.value, summary={}
+        )
+        return EphemeralRunResult(
+            status="completed",
+            error=None,
+            terminal_result=ToolResult(
+                output="plan", is_error=False, does_terminate=True
+            ),
+            agent_name="planner",
+            event_count=1,
+        )
+
+    launcher = EphemeralAttemptAgentLauncher(
+        config=SimpleNamespace(),
+        runtime=lambda: deps,
+        runner=_spy_runner,
+    )
+    launcher.launch(launch)
+    await asyncio.wait_for(launcher.wait_for_idle(), timeout=1.0)
+
+    assert len(captured) == 1
+    args = captured[0]["args"]
+    kwargs = captured[0]["kwargs"]
+    # Spawn prompt is the role_instruction text from _build_launch.
+    assert args[1] == "plan the work"
+    # initial_messages carries the rendered context (one user msg).
+    initial_messages = kwargs.get("initial_messages")
+    assert isinstance(initial_messages, list)
+    assert len(initial_messages) == 1
+    msg = initial_messages[0]
+    assert isinstance(msg, ConversationMessage)
+    assert msg.role == "user"
+    assert msg.text == "plan context"
+
+
+@pytest.mark.asyncio
+async def test_entry_executor_falls_back_to_single_user_message(
+    goal_store,
+    iteration_store,
+    attempt_store,
+    task_store,
+    task_center_run_id,
+    register_test_agents,
+) -> None:
+    """Agents whose recipe emits no role_instruction launch single-message.
+
+    The launcher must NOT pass initial_messages when role_instruction_message
+    is None or empty — the context_message becomes the spawn prompt directly.
+    """
+    goal, attempt, task_id = _seed_planner_attempt(
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+        task_center_run_id=task_center_run_id,
+    )
+    # Use the planner agent (registered by the fixture) but with
+    # ``role_instruction_message=None`` to exercise the single-message
+    # fallback. The fallback decision in ``_run_launch`` keys on
+    # ``role_instruction_message``, not on role.
+    launch = AgentLaunch(
+        task_id=task_id,
+        task_center_run_id=task_center_run_id,
+        attempt_id=attempt.id,
+        role=TaskCenterTaskRole.PLANNER,
+        agent_name="planner",
+        context_message="execute this task",
+        role_instruction_message=None,  # no role_instruction recipe
+        needs=(),
+        goal_id=goal.id,
+    )
+    deps = _build_deps(
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+    )
+
+    captured: list[dict[str, Any]] = []
+
+    async def _spy_runner(*args: Any, **kwargs: Any) -> EphemeralRunResult:
+        captured.append({"args": args, "kwargs": kwargs})
+        task_store.set_task_status(
+            task_id, status=TaskCenterTaskStatus.DONE.value, summary={}
+        )
+        return EphemeralRunResult(
+            status="completed",
+            error=None,
+            terminal_result=ToolResult(
+                output="ok", is_error=False, does_terminate=True
+            ),
+            agent_name="entry_executor",
+            event_count=1,
+        )
+
+    launcher = EphemeralAttemptAgentLauncher(
+        config=SimpleNamespace(),
+        runtime=lambda: deps,
+        runner=_spy_runner,
+    )
+    launcher.launch(launch)
+    await asyncio.wait_for(launcher.wait_for_idle(), timeout=1.0)
+
+    assert len(captured) == 1
+    args = captured[0]["args"]
+    kwargs = captured[0]["kwargs"]
+    # Context becomes the spawn prompt; no initial_messages seeded.
+    assert args[1] == "execute this task"
+    assert kwargs.get("initial_messages") is None

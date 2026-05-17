@@ -4,10 +4,15 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from message.messages import ConversationMessage
+from task_center.context_engine.recipes.role_instruction import (
+    resolver_instruction,
+)
 from tools.ask_helper._lib._compose import (
     HelperComposeError,
     compose_helper_bundle,
 )
+from tools.ask_helper._lib._transcript import build_parent_transcript_block
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput, ToolResult
@@ -60,14 +65,28 @@ async def ask_resolver(
     except HelperComposeError as exc:
         return exc.to_tool_result()
 
-    composed_input = bundle.rendered_prompt.rstrip() + "\n\n" + _issue_section(
+    # Append the resolver's own role_instruction and (when available) a
+    # transcript block summarising the parent's run. Mutating the bundle
+    # packet here does not leak into the persisted parent packet — compose()
+    # already inserted that copy.
+    bundle.packet.blocks.append(resolver_instruction())
+    parent_messages = getattr(context, "conversation_messages", None) or []
+    transcript_block = build_parent_transcript_block(parent_messages)
+    if transcript_block is not None:
+        bundle.packet.blocks.append(transcript_block)
+
+    renderer = context.composer.renderer  # type: ignore[union-attr]
+    context_text = renderer.render_context(bundle.packet)
+    role_text = renderer.render_role_instruction(bundle.packet) or ""
+    ask_section = _issue_section(
         issues_to_resolve=issues_to_resolve,
         issue_context=issue_context,
     )
+    user_msg_2 = role_text.rstrip() + "\n\n" + ask_section
 
     result = await run_ephemeral_agent(
         runtime_config,
-        composed_input,
+        user_msg_2,
         agent_def=bundle.agent_def,
         sandbox_id=context.sandbox_id or None,
         persist_agent_run=False,
@@ -75,6 +94,7 @@ async def ask_resolver(
             role="resolver",
             agent_type="agent",
         ),
+        initial_messages=[ConversationMessage.from_user_text(context_text)],
     )
     if result.status == "failed":
         return ToolResult(output=f"ask_resolver: resolver crashed: {result.error}", is_error=True)

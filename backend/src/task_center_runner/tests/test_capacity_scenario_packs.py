@@ -137,5 +137,5 @@ def _ctx(*, attempt_no: int = 1, iteration_no: int = 1, recursive: bool = False)
         mutable_state=None,
         task_id="task-id",
         agent_name="executor",
-        rendered_prompt="",
+        context_message="",
     )

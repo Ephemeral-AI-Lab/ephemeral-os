@@ -55,7 +55,7 @@ def test_required_blocks_kept_byte_for_byte_under_pressure():
         ],
         budget=50,  # very tight budget
     )
-    out = MarkdownPromptRenderer().render(packet)
+    out = MarkdownPromptRenderer().render_context(packet)
     assert big_required_a in out, "required block A must survive verbatim"
     assert big_required_b in out, "required block B must survive verbatim"
 
@@ -84,7 +84,7 @@ def test_low_blocks_truncate_before_medium_when_budget_allows_medium():
         ],
         budget=600,
     )
-    out = MarkdownPromptRenderer().render(packet)
+    out = MarkdownPromptRenderer().render_context(packet)
     assert ("LOW-drop_" * 1_000) not in out, "low block should be truncated"
     assert ("MED-keep_" * 200) in out, "medium block should survive"
 
@@ -104,8 +104,8 @@ def test_render_output_is_deterministic_for_fixed_packet():
         ),
     ]
     packet = _packet_with_budget(blocks, budget=100)
-    a = MarkdownPromptRenderer().render(packet)
-    b = MarkdownPromptRenderer().render(packet)
+    a = MarkdownPromptRenderer().render_context(packet)
+    b = MarkdownPromptRenderer().render_context(packet)
     assert a == b
 
 
@@ -132,7 +132,7 @@ def test_high_priority_blocks_kept_when_only_low_medium_present_to_truncate():
         ],
         budget=300,
     )
-    out = MarkdownPromptRenderer().render(packet)
+    out = MarkdownPromptRenderer().render_context(packet)
     assert ("HIGH-keep_" * 500) in out, "high block must not be truncated"
 
 
@@ -163,7 +163,7 @@ def test_compression_preserves_remaining_packet_order():
         ],
         budget=100,
     )
-    out = MarkdownPromptRenderer().render(packet)
+    out = MarkdownPromptRenderer().render_context(packet)
     assert out.find("iteration") < out.find("truncated for token budget")
     assert out.find("truncated for token budget") < out.find("attempt")
     assert out.find("attempt") < out.find("assigned")

@@ -230,11 +230,11 @@ def execute_package_script(
     payload = {
         "task_id": ctx.task_id,
         "package_id": package_id,
-        "wave": _field(ctx.rendered_prompt or "", "wave"),
-        "subsystem": _field(ctx.rendered_prompt or "", "subsystem")
+        "wave": _field(ctx.context_message or "", "wave"),
+        "subsystem": _field(ctx.context_message or "", "subsystem")
         or package.get("subsystem"),
-        "risk": _field(ctx.rendered_prompt or "", "risk") or package.get("risk"),
-        "item_count": _field(ctx.rendered_prompt or "", "item_count")
+        "risk": _field(ctx.context_message or "", "risk") or package.get("risk"),
+        "item_count": _field(ctx.context_message or "", "item_count")
         or len(package.get("item_ids") or ()),
         "item_ids": list(package.get("item_ids") or ()),
         "edited": False,
@@ -287,14 +287,14 @@ def execute_package_script(
 def recursive_step_script(ctx: ScenarioContext) -> PreparedToolScript:
     """Persist evidence for a delegated recursive goal step."""
     task_id = _safe_slug(ctx.task_id or "recursive")
-    rendered_prompt = ctx.rendered_prompt or ""
+    context_message = ctx.context_message or ""
     evidence_path = f"{_RECURSIVE_DIR}/{task_id}.json"
-    is_close = "recursive_reconcile" in rendered_prompt
+    is_close = "recursive_reconcile" in context_message
     payload = {
         "task_id": ctx.task_id,
-        "action": rendered_prompt,
-        "checkpoint": _field(rendered_prompt, "checkpoint"),
-        "slice": _field(rendered_prompt, "slice"),
+        "action": context_message,
+        "checkpoint": _field(context_message, "checkpoint"),
+        "slice": _field(context_message, "slice"),
         "close_report": is_close,
     }
     steps: list[ToolScriptStep] = [
@@ -351,8 +351,8 @@ def recursive_step_script(ctx: ScenarioContext) -> PreparedToolScript:
 
 def final_reconciliation_script(ctx: ScenarioContext) -> PreparedToolScript:
     """Write and verify final release-bundle reconciliation evidence."""
-    stage = _field(ctx.rendered_prompt or "", "stage") or "final"
-    high_risk_count = _field(ctx.rendered_prompt or "", "high_risk_count")
+    stage = _field(ctx.context_message or "", "stage") or "final"
+    high_risk_count = _field(ctx.context_message or "", "high_risk_count")
     payload = {
         "task_id": ctx.task_id,
         "stage": stage,
@@ -413,7 +413,7 @@ def final_reconciliation_script(ctx: ScenarioContext) -> PreparedToolScript:
 
 def verifier_checkpoint_script(ctx: ScenarioContext) -> PreparedToolScript:
     """Run verifier readback checks for the requested checkpoint."""
-    checkpoint = _field(ctx.rendered_prompt or "", "checkpoint") or "checkpoint"
+    checkpoint = _field(ctx.context_message or "", "checkpoint") or "checkpoint"
     if checkpoint == "inventory":
         read_path = _LEDGER_PATH
     elif checkpoint == "recursive_return":

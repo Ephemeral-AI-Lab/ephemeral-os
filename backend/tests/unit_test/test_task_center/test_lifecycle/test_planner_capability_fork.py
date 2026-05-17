@@ -145,7 +145,7 @@ def _seed_partial_plan_caller(
         task_center_run_id=task_center_run_id,
         role="generator",
         agent_name="executor",
-        rendered_prompt="x",
+        context_message="x",
         status="running",
         summaries=[],
         needs=[],

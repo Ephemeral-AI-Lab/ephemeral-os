@@ -81,7 +81,7 @@ class TaskCenterTaskRecord(Base):
     )
     role: Mapped[str] = mapped_column(String(32))
     agent_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    rendered_prompt: Mapped[str] = mapped_column(Text)
+    context_message: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(32))
     summaries: Mapped[list[dict]] = mapped_column(JSON, default=list)
     needs: Mapped[list[str]] = mapped_column(JSON, default=list)

@@ -293,7 +293,7 @@ def test_failed_attempt_landscape_includes_plan_type_statuses_and_summaries(
         task_center_run_id=task_center_run_id,
         role="generator",
         agent_name="executor",
-        rendered_prompt="a",
+        context_message="a",
         status="done",
         summaries=[{"summary": "implemented A"}],
         needs=[],
@@ -305,7 +305,7 @@ def test_failed_attempt_landscape_includes_plan_type_statuses_and_summaries(
         task_center_run_id=task_center_run_id,
         role="generator",
         agent_name="executor",
-        rendered_prompt="b",
+        context_message="b",
         status="failed",
         summaries=[{"summary": "B failed after creating fixture"}],
         needs=[],
@@ -438,7 +438,7 @@ def test_iteration_2_plus_reading_a_structure(
 
     # 2. Renderer output structure (heading-line presence, not full body text):
     renderer = MarkdownPromptRenderer()
-    rendered = renderer.render(packet)
+    rendered = renderer.render_context(packet)
     # H1 "# Goal" is the very first line; check presence + no extra H1 Goals.
     assert rendered.startswith("# Goal\n")
     assert rendered.count("\n# Goal\n") == 0  # only one # Goal H1, at top

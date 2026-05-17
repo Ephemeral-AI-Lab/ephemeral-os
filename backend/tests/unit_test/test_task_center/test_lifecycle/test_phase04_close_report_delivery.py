@@ -352,7 +352,7 @@ def test_router_routes_entry_mode_closure_report_through_controller(
         task_center_run_id=task_center_run_id,
         role=TaskCenterTaskRole.GENERATOR.value,
         agent_name="entry_executor",
-        rendered_prompt="entry goal",
+        context_message="entry goal",
         status=TaskCenterTaskStatus.WAITING_GOAL.value,
         summaries=[],
         needs=[],

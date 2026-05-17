@@ -113,7 +113,7 @@ def _serialize_task(record: TaskCenterTaskRecord) -> dict[str, Any]:
         "task_center_run_id": record.task_center_run_id,
         "role": record.role,
         "agent_name": record.agent_name,
-        "rendered_prompt": record.rendered_prompt,
+        "context_message": record.context_message,
         "status": record.status,
         "summaries": list(record.summaries or []),
         "needs": list(record.needs or []),

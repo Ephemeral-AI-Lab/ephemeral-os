@@ -6,6 +6,10 @@ import json
 
 from pydantic import BaseModel, Field
 
+from message.messages import ConversationMessage
+from task_center.context_engine.recipes.role_instruction import (
+    advisor_instruction,
+)
 from tools.ask_helper._lib._compose import (
     HelperComposeError,
     compose_helper_bundle,
@@ -70,15 +74,24 @@ async def ask_advisor(
     except HelperComposeError as exc:
         return exc.to_tool_result()
 
-    composed_input = bundle.rendered_prompt.rstrip() + "\n\n" + _question_section(
+    # Append the advisor's own role_instruction AFTER compose: the persisted
+    # parent packet (inserted in compose) is unaffected, and grandchild
+    # helpers inheriting from the parent still won't see this instruction.
+    bundle.packet.blocks.append(advisor_instruction(tool_name=tool_name))
+
+    renderer = context.composer.renderer  # type: ignore[union-attr]
+    context_text = renderer.render_context(bundle.packet)
+    role_text = renderer.render_role_instruction(bundle.packet) or ""
+    ask_section = _question_section(
         tool_name=tool_name,
         tool_payloads=tool_payloads,
         prompt=prompt,
     )
+    user_msg_2 = role_text.rstrip() + "\n\n" + ask_section
 
     result = await run_ephemeral_agent(
         runtime_config,
-        composed_input,
+        user_msg_2,
         agent_def=bundle.agent_def,
         sandbox_id=context.sandbox_id or None,
         persist_agent_run=False,
@@ -86,6 +99,7 @@ async def ask_advisor(
             role="advisor",
             agent_type="agent",
         ),
+        initial_messages=[ConversationMessage.from_user_text(context_text)],
     )
     if result.status == "failed":
         return ToolResult(output=f"ask_advisor: advisor crashed: {result.error}", is_error=True)
