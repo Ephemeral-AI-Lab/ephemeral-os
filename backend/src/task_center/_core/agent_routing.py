@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import ClassVar
 
 from agents import get_definition
@@ -149,6 +150,7 @@ class AgentSelection:
     context_recipe: str
     required_context_blocks: tuple[ContextBlock, ...] = ()
     reason: str | None = None
+    skill_path: Path | None = None
 
 
 class RuleBasedAgentResolver:
@@ -167,6 +169,7 @@ class RuleBasedAgentResolver:
             return AgentSelection(
                 agent_def=base,
                 context_recipe=self._require_recipe(base),
+                skill_path=base.skill,
             )
 
         ctx = ResolverContext(scope=scope, deps=deps)
@@ -178,6 +181,7 @@ class RuleBasedAgentResolver:
         return AgentSelection(
             agent_def=base,
             context_recipe=self._require_recipe(base),
+            skill_path=base.skill,
         )
 
     # ---- internals ------------------------------------------------------
@@ -205,6 +209,7 @@ class RuleBasedAgentResolver:
                 _to_context_block(b) for b in variant.required_context_blocks
             ),
             reason=variant.note or None,
+            skill_path=target.skill,
         )
 
     @staticmethod

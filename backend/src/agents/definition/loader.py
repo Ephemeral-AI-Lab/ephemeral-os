@@ -35,6 +35,15 @@ def _load_agent_files(paths: Iterable[Path]) -> list[AgentDefinition]:
                 "frontmatter field. Declare one of planner / executor / verifier / "
                 "evaluator / advisor / explorer / resolver."
             )
+        skill_value = data.get("skill")
+        if skill_value:
+            skill_path = (path.parent / str(skill_value)).resolve()
+            if not skill_path.is_file():
+                raise FileNotFoundError(
+                    f"Agent profile {path} declares skill: {skill_value!r}, "
+                    f"but {skill_path} does not exist."
+                )
+            data["skill"] = skill_path
         try:
             agents.append(AgentDefinition.model_validate(data))
         except ValidationError:

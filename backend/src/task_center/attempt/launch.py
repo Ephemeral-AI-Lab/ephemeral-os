@@ -133,14 +133,26 @@ class EphemeralAttemptAgentLauncher:
             attempt_runtime=runtime,
             composer=runtime.composer,
         )
-        # Two-user-message launch when the recipe emitted a role_instruction.
-        # entry_executor (and any future recipe with no role_instruction) falls
-        # back to the legacy single-user-message shape — passing context as the
-        # spawn prompt without seeding initial_messages.
+        # Launch shape:
+        #   - 4 rows when both role_instruction and skill_message are present
+        #     (planner with a declared skill: system + context + role_instruction
+        #     + skill). Row 3 keeps its existing terminal-catalog auto-append;
+        #     row 4 holds the skill body + a duplicate <terminal_selection>
+        #     block rendered from the same registry source.
+        #   - 3 rows when role_instruction is present without a skill (today's
+        #     main-agent default).
+        #   - 2 rows for entry_executor (no role_instruction).
         role_instruction = launch.role_instruction_message
-        if role_instruction:
-            runner_prompt = role_instruction
+        skill_message = launch.skill_message
+        if role_instruction and skill_message:
+            runner_prompt = skill_message
             runner_initial_messages: list[ConversationMessage] | None = [
+                ConversationMessage.from_user_text(launch.context_message),
+                ConversationMessage.from_user_text(role_instruction),
+            ]
+        elif role_instruction:
+            runner_prompt = role_instruction
+            runner_initial_messages = [
                 ConversationMessage.from_user_text(launch.context_message)
             ]
         else:
@@ -444,6 +456,7 @@ class LaunchBuilder:
             needs=needs,
             context_packet_id=bundle.context_packet_id,
             goal_id=goal_id,
+            skill_message=bundle.skill_message,
         )
 
     def _require_iteration(self, attempt: Attempt) -> Any:

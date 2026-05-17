@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from enum import StrEnum
+from pathlib import Path
 from typing import Any, Literal, Protocol, runtime_checkable
 
 from pydantic import (
@@ -143,6 +144,13 @@ class AgentDefinition(BaseModel):
     # Rules evaluated at the top of every model turn (see
     # the notification rule engine. Empty list = no notifications.
     notification_rules: list[AgentNotificationRule] = Field(default_factory=list)
+
+    # --- skill (Round 3) ---
+    # Absolute path to the agent's workflow SKILL.md, resolved by the loader
+    # from the relative ``skill:`` frontmatter field. ``None`` when no skill is
+    # declared. Skill-equipped agents get row 4 (skill + terminal_selection)
+    # composed at launch.
+    skill: Path | None = None
 
     # --- context engine (ContextComposer) ---
     # Recipe id resolved at compose time. Required when the agent is launched

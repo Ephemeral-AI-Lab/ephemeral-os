@@ -62,6 +62,7 @@ class AgentLaunch:
     needs: tuple[str, ...]
     context_packet_id: str | None = None
     goal_id: str | None = None
+    skill_message: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

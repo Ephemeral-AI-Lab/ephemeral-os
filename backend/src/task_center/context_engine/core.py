@@ -12,6 +12,7 @@ Exceptions are re-exported from :mod:`.exceptions` so existing callers that
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
 from agents import AgentDefinition
@@ -99,6 +100,7 @@ class LaunchBundle:
     agent_def: AgentDefinition
     context_message: str
     role_instruction_message: str | None
+    skill_message: str | None
     packet: ContextPacket
     context_packet_id: str | None
 
@@ -146,13 +148,76 @@ class ContextComposer:
         role_instruction_message = _append_terminal_catalog(
             role_instruction_message, selection.agent_def
         )
+        skill_message = build_skill_message(
+            selection.skill_path, selection.agent_def
+        )
         return LaunchBundle(
             agent_def=selection.agent_def,
             context_message=self.renderer.render_context(packet),
             role_instruction_message=role_instruction_message,
+            skill_message=skill_message,
             packet=packet,
             context_packet_id=context_packet_id,
         )
+
+
+def build_skill_message(
+    skill_path: Path | None,
+    agent_def: AgentDefinition,
+) -> str | None:
+    """Compose the row-4 skill + terminal_selection message.
+
+    Returns ``None`` when no skill is declared. When a skill is declared, the
+    return is the row-4 body:
+
+        Load skill: <skill-folder-name>
+
+        <skill>
+        <frontmatter-stripped skill body>
+        </skill>
+
+        <terminal_selection>
+        Pick exactly one based on outcome:
+        - <tool_name>: <selection_guidance>
+        ...
+        </terminal_selection>
+
+    The ``<terminal_selection>`` block is rendered from the shared registry at
+    ``tools/_terminals/registry.py`` — the same source as the row-3 catalog —
+    so the two render targets cannot drift.
+    """
+    if skill_path is None:
+        return None
+    from config.markdown import parse_markdown_frontmatter
+    from tools._terminals.registry import render_terminal_catalog
+
+    raw = skill_path.read_text(encoding="utf-8")
+    _, body = parse_markdown_frontmatter(raw)
+    body = body.strip()
+    skill_name = skill_path.parent.name
+
+    parts = [
+        f"Load skill: {skill_name}",
+        "",
+        "<skill>",
+        body,
+        "</skill>",
+    ]
+    if agent_def.terminals:
+        catalog = render_terminal_catalog(
+            list(agent_def.terminals), focus="selection_guidance"
+        )
+        parts.extend(
+            [
+                "",
+                "<terminal_selection>",
+                "Pick exactly one based on outcome:",
+                "",
+                catalog,
+                "</terminal_selection>",
+            ]
+        )
+    return "\n".join(parts)
 
 
 def _append_terminal_catalog(
