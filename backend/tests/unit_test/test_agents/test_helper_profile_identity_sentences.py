@@ -22,7 +22,7 @@ def _read_profile(profile_subpath: str) -> str:
 
 def test_advisor_profile_body_contains_identity_sentence():
     body = _read_profile("helper/advisor.md")
-    assert "You are the advisor helper agent." in body
+    assert "You are an advisor agent." in body
 
 
 def test_resolver_profile_body_contains_identity_sentence():

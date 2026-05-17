@@ -137,10 +137,45 @@ class ContextComposer:
             packet.blocks.extend(selection.required_context_blocks)
         store = self.engine.deps.context_packet_store
         context_packet_id = store.insert(packet) if store is not None else None
+        # Append the parent-facing terminal-tool catalog (from the shared
+        # registry in ``tools/_terminals/registry.py``) to the role-instruction
+        # message. Kept here — rather than inside each recipe — because the
+        # composer is the single point where ``agent_def.terminals`` is in
+        # scope; recipes get only ``scope`` and ``deps``.
+        role_instruction_message = self.renderer.render_role_instruction(packet)
+        role_instruction_message = _append_terminal_catalog(
+            role_instruction_message, selection.agent_def
+        )
         return LaunchBundle(
             agent_def=selection.agent_def,
             context_message=self.renderer.render_context(packet),
-            role_instruction_message=self.renderer.render_role_instruction(packet),
+            role_instruction_message=role_instruction_message,
             packet=packet,
             context_packet_id=context_packet_id,
         )
+
+
+def _append_terminal_catalog(
+    role_instruction_message: str | None,
+    agent_def: AgentDefinition,
+) -> str | None:
+    """Append the parent-facing terminal-tool catalog to user_msg_2."""
+    if role_instruction_message is None:
+        return None
+    if not agent_def.terminals:
+        return role_instruction_message
+    from tools._terminals.registry import render_terminal_catalog
+
+    catalog = render_terminal_catalog(
+        list(agent_def.terminals), focus="selection_guidance"
+    )
+    return (
+        f"{role_instruction_message.rstrip()}\n\n"
+        "# Terminal tools you may call\n\n"
+        f"Pick exactly one based on outcome:\n\n{catalog}\n\n"
+        "# Your task\n\n"
+        "Execute the role described above. Before any terminal submission, "
+        "call ask_advisor with your chosen tool_name and intended payload. "
+        "Submit your chosen terminal only after the advisor returns "
+        '"approve".'
+    )

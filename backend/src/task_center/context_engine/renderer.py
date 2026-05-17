@@ -3,10 +3,6 @@
 The renderer never touches stores or runtime objects. It walks blocks in packet
 order, applies per-kind headings, and respects ``packet.metadata['token_budget']``
 when present. Priority is a compression policy, not a presentation-order policy.
-
-Inherited blocks (``metadata['inherited_from_parent'] == 'true'``) are
-segregated under a single ``# Parent context`` heading so helper agents see
-their own contract first and the parent's frame underneath.
 """
 
 from __future__ import annotations
@@ -17,7 +13,6 @@ from task_center.context_engine.packet import (
     ContextPriority,
 )
 
-_INHERITED_FLAG = "inherited_from_parent"
 _TOKEN_BUDGET_KEY = "token_budget"
 
 # Approximate, deterministic token estimate (4 chars ≈ 1 token). Used for
@@ -58,10 +53,6 @@ def _estimate_tokens(text: str) -> int:
     return max(1, (len(text) + _CHARS_PER_TOKEN - 1) // _CHARS_PER_TOKEN)
 
 
-def _is_inherited(block: ContextBlock) -> bool:
-    return block.metadata.get(_INHERITED_FLAG) == "true"
-
-
 class MarkdownPromptRenderer:
     """Default markdown renderer.
 
@@ -88,12 +79,7 @@ class MarkdownPromptRenderer:
             b for b in packet.blocks if b.kind != "role_instruction"
         ]
         kept_blocks = self._compress(context_blocks, budget=self._budget_from(packet))
-        helper_owned = [b for b in kept_blocks if not _is_inherited(b)]
-        inherited = [b for b in kept_blocks if _is_inherited(b)]
-        sections = self._render_blocks(helper_owned)
-        if inherited:
-            sections.append("# Parent context")
-            sections.extend(self._render_blocks(inherited))
+        sections = self._render_blocks(kept_blocks)
         return "\n\n".join(s for s in sections if s).strip() + "\n"
 
     def render_role_instruction(self, packet: ContextPacket) -> str | None:

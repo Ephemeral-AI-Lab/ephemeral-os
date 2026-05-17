@@ -1,9 +1,8 @@
 """ContextScope — identity surface every recipe sees.
 
-The scope carries identity (goal / iteration / attempt / task ids) and
-helper parent references. It does **not** carry store handles; those live
-on :class:`ContextEngineDeps` so recipes can be swapped without touching
-call sites.
+The scope carries identity (goal / iteration / attempt / task ids). It
+does **not** carry store handles; those live on :class:`ContextEngineDeps`
+so recipes can be swapped without touching call sites.
 
 The role-specific factory classmethods (:meth:`for_planner`,
 :meth:`for_generator`, etc.) document the required fields per role at the
@@ -30,11 +29,6 @@ class ContextScope:
     iteration_id: str | None = None
     attempt_id: str | None = None
     task_id: str | None = None
-
-    # Helper-spawn fields — present only when a helper (advisor / resolver) is
-    # being launched by a parent agent via ``ask_advisor`` / ``run_subagent``.
-    parent_packet_id: str | None = None
-    parent_task_id: str | None = None
 
     def assert_fields(self, required: frozenset[str]) -> None:
         """Raise :class:`RecipeScopeError` if any required field is None."""

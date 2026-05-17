@@ -182,7 +182,6 @@ def test_only_one_subagent_class_registered() -> None:
         f"{[d.name for d in subagents]}. Adding a new subagent class "
         "requires revisiting run_subagent.py to decide whether the static "
         "explorer_instruction() text still applies or per-class dispatch "
-        "is needed (mirror the Phase 1 advisor_instruction / "
-        "resolver_instruction two-factory pattern if so)."
+        "is needed."
     )
     assert subagents[0].name == "explorer"

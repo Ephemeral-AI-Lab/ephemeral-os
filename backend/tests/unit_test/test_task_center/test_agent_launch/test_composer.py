@@ -251,6 +251,107 @@ def test_resolver_engine_renderer_called_with_correct_args(packet_store):
     assert bundle.role_instruction_message == "ROLE INSTRUCTION"
 
 
+def _ok_recipe_with_role_instruction(recipe_id: str):
+    """Recipe that emits a role_instruction block so compose() has something to
+    extend with the terminal-tool catalog (acceptance criterion §6 #8).
+    """
+
+    def _build(scope: ContextScope, deps: ContextEngineDeps) -> ContextPacket:
+        return ContextPacket(
+            target_role="planner",
+            target_id=scope.attempt_id,
+            canonical_refs=ContextRefs(
+                goal_id=scope.goal_id,
+                iteration_id=scope.iteration_id,
+                attempt_id=scope.attempt_id,
+            ),
+            blocks=[
+                ContextBlock(
+                    kind="iteration_statement",
+                    priority=ContextPriority.REQUIRED,
+                    text="goal",
+                ),
+                ContextBlock(
+                    kind="role_instruction",
+                    priority=ContextPriority.REQUIRED,
+                    text="HOW TO PROCEED",
+                ),
+            ],
+        )
+
+    return ContextRecipe(
+        id=recipe_id,
+        required_scope_fields=frozenset(
+            {"goal_id", "iteration_id", "attempt_id"}
+        ),
+        build=_build,
+    )
+
+
+def test_compose_appends_terminal_catalog_to_role_instruction(packet_store):
+    """§6 #8: main-agent user_msg_2 must list every terminal with selection_guidance."""
+    from tools._terminals.registry import TERMINAL_DESCRIPTORS
+
+    RecipeRegistry.register(_ok_recipe_with_role_instruction("planner"))
+    register_definition(
+        AgentDefinition(
+            name="planner",
+            description="planner",
+            context_recipe="planner",
+            terminals=["submit_plan_closes_goal", "submit_plan_continues_goal"],
+        )
+    )
+    deps = _stub_deps(packet_store)
+    composer = ContextComposer.default(ContextEngine(deps))
+    bundle = composer.compose(
+        base_agent_name="planner",
+        scope=ContextScope(
+            goal_id="r", iteration_id="s", attempt_id="g"
+        ),
+    )
+
+    role_msg = bundle.role_instruction_message
+    assert role_msg is not None
+    # Original role_instruction text is preserved.
+    assert "HOW TO PROCEED" in role_msg
+    # Catalog heading + each parent-facing selection_guidance from the
+    # registry shows up in user_msg_2.
+    assert "# Terminal tools you may call" in role_msg
+    for terminal in ("submit_plan_closes_goal", "submit_plan_continues_goal"):
+        assert terminal in role_msg
+        guidance = TERMINAL_DESCRIPTORS[terminal].selection_guidance
+        # First substantive fragment of the guidance must appear verbatim.
+        assert guidance[:30] in role_msg
+    # The closing instruction reinforces the advisor-loop discipline.
+    assert "ask_advisor" in role_msg
+
+
+def test_compose_skips_catalog_when_agent_has_no_terminals(packet_store):
+    """A profile that declares no terminals leaves role_instruction unchanged."""
+    RecipeRegistry.register(_ok_recipe_with_role_instruction("planner"))
+    register_definition(
+        AgentDefinition(
+            name="planner",
+            description="planner",
+            context_recipe="planner",
+            terminals=[],
+        )
+    )
+    deps = _stub_deps(packet_store)
+    composer = ContextComposer.default(ContextEngine(deps))
+    bundle = composer.compose(
+        base_agent_name="planner",
+        scope=ContextScope(
+            goal_id="r", iteration_id="s", attempt_id="g"
+        ),
+    )
+
+    role_msg = bundle.role_instruction_message
+    assert role_msg is not None
+    assert "HOW TO PROCEED" in role_msg
+    assert "# Terminal tools you may call" not in role_msg
+
+
 def test_missing_context_recipe_raises_before_render(packet_store):
     base = AgentDefinition(name="bare", description="bare")
     register_definition(base)

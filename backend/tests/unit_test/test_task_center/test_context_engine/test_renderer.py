@@ -88,35 +88,6 @@ def test_low_blocks_compressed_before_medium_blocks():
     assert "M" * 4_000 in out
 
 
-def test_inherited_blocks_grouped_under_parent_context_section():
-    blocks = [
-        ContextBlock(
-            kind="planned_task_spec",
-            priority=ContextPriority.REQUIRED,
-            text="helper assignment",
-        ),
-        ContextBlock(
-            kind="iteration_statement",
-            priority=ContextPriority.HIGH,
-            text="parent goal",
-            metadata={"inherited_from_parent": "true"},
-        ),
-        ContextBlock(
-            kind="prior_iteration_summary",
-            priority=ContextPriority.MEDIUM,
-            text="parent summary",
-            metadata={"inherited_from_parent": "true"},
-        ),
-    ]
-    out = MarkdownPromptRenderer().render_context(_packet(blocks))
-    parent_idx = out.find("# Parent context")
-    assert parent_idx > 0, "expected '# Parent context' section"
-    assert out.find("parent goal") > parent_idx
-    assert out.find("parent summary") > parent_idx
-    # Helper-owned assignment renders before the Parent context heading.
-    assert out.find("helper assignment") < parent_idx
-
-
 def test_block_subtitle_metadata_renders_under_heading():
     blocks = [
         ContextBlock(

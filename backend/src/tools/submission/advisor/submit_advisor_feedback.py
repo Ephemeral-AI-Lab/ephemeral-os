@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.decorator import tool
@@ -12,22 +12,22 @@ from tools._framework.core.results import TextToolOutput, ToolResult
 
 
 class SubmitAdvisorFeedbackInput(BaseModel):
-    verdict: Literal["approve", "revise", "reject"]
+    verdict: Literal["approve", "reject"]
     summary: str = Field(..., min_length=1)
-    risks: list[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(extra="forbid")
 
 
 @tool(
     name="submit_advisor_feedback",
-    description="Submit advisor helper feedback.",
+    description="Submit advisor helper feedback (verdict + summary).",
     input_model=SubmitAdvisorFeedbackInput,
     output_model=TextToolOutput,
     is_terminal_tool=True,
 )
 async def submit_advisor_feedback(
-    verdict: Literal["approve", "revise", "reject"],
+    verdict: Literal["approve", "reject"],
     summary: str,
-    risks: list[str],
     *,
     context: ToolExecutionContextService,
 ) -> ToolResult:
@@ -37,6 +37,5 @@ async def submit_advisor_feedback(
         metadata={
             "helper_role": "advisor",
             "verdict": verdict,
-            "risks": risks,
         },
     )

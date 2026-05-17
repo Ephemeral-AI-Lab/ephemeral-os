@@ -32,6 +32,14 @@ evaluator harness.
 Finish via `submit_execution_success` when the request is complete and verified,
 or `submit_execution_failure` when the request cannot be completed.
 
+## Submission discipline
+
+- Before any terminal submission, call `ask_advisor` with the terminal tool you intend to call and the payload you intend to send.
+- If the advisor returns verdict `"approve"`, submit immediately.
+- If the advisor returns verdict `"reject"`, address the issues in the advisor's summary — do additional work, fix the payload, or switch to a different terminal — then re-call `ask_advisor` with the revised tool and payload. Do not submit a terminal until you have received an `"approve"`. On approve, still read the summary's residual-risks bullet (if any).
+
+Submit exactly one terminal tool per run.
+
 **Why entry_executor keeps all three terminals.** Non-entry executors are
 depth-gated by the resolver: the `executor_success_handoff` variant exposes
 success + handoff, the `executor_success_failure` variant exposes success +
