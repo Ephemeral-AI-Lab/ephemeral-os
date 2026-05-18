@@ -6,7 +6,6 @@ import pytest
 
 from agents import (
     AgentDefinition,
-    AgentSelectionBlock,
     AgentVariant,
     list_definitions,
     register_definition,
@@ -69,13 +68,6 @@ def planner_with_variant():
                 when="needs_full_only",
                 use="planner_full_only",
                 note="ancestry has partial-plan caller",
-                required_context_blocks=[
-                    AgentSelectionBlock(
-                        kind="launch_notice",
-                        priority="required",
-                        text="variant selected.",
-                    )
-                ],
             )
         ],
     )

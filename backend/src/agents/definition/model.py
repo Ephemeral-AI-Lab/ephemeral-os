@@ -55,24 +55,6 @@ class AgentNotificationRule(Protocol):
     fire_once: bool
 
 
-class AgentSelectionBlock(BaseModel):
-    """Frontmatter-safe subset of :class:`ContextBlock`.
-
-    Variants declare these directly on the agent definition; the resolver
-    converts them into real ``ContextBlock`` instances and appends them to the
-    packet after recipe build.
-    """
-
-    kind: str = Field(min_length=1)
-    priority: str = Field(default="required")
-    text: str
-    source_id: str | None = None
-    source_kind: str | None = None
-    metadata: dict[str, str] = Field(default_factory=dict)
-
-    model_config = ConfigDict(extra="forbid")
-
-
 class AgentVariant(BaseModel):
     """One frontmatter-declared capability variant.
 
@@ -84,7 +66,6 @@ class AgentVariant(BaseModel):
     when: str = Field(min_length=1)
     use: str = Field(min_length=1)
     note: str = ""
-    required_context_blocks: list[AgentSelectionBlock] = Field(default_factory=list)
 
     model_config = ConfigDict(extra="forbid")
 

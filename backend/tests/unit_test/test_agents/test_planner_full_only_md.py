@@ -55,7 +55,6 @@ def test_planner_variants_declare_full_only_target():
     variant = planner.variants[0]
     assert variant.when == "nested_goal_depth_gt_1"
     assert variant.use == "planner_full_only"
-    assert variant.required_context_blocks == []
 
 
 def test_planner_no_longer_lists_recursive_partial_plan_trigger():
