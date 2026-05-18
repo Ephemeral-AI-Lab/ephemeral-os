@@ -11,7 +11,7 @@ import sandbox.execution.orchestrator as command_runner
 from sandbox.execution.contract import CommandExecRequest
 from sandbox.execution.contract import MountMode
 from sandbox.execution.contract import ShellProcessResult
-from sandbox.execution.contract import WorkspaceReplacementMountSpec
+from sandbox.execution.contract import OverlayLayout
 from sandbox.execution import namespace_child as namespace_helper
 from sandbox.execution.overlay_capture import capture_changes
 from sandbox.execution.strategy_copy_backed import (
@@ -33,11 +33,11 @@ def test_copy_backed_mount_captures_only_workspace_changes(
     lower.mkdir()
     (lower / "input.txt").write_text("base\n", encoding="utf-8")
     outside = tmp_path / "outside.txt"
-    spec = WorkspaceReplacementMountSpec(
+    spec = OverlayLayout(
         workspace_root="/testbed",
-        lowerdir=str(lower),
-        upperdir=str(tmp_path / "upper"),
-        workdir=str(tmp_path / "work"),
+        base_repo=str(lower),
+        writes=str(tmp_path / "upper"),
+        kernel_scratch=str(tmp_path / "work"),
         scratch_root=str(tmp_path),
     )
     request = CommandExecRequest(
@@ -65,8 +65,8 @@ def test_copy_backed_mount_captures_only_workspace_changes(
         strategies=(CopyBackedStrategy(),),
     )
     changes = capture_changes(
-        spec.upperdir,
-        lowerdir=spec.lowerdir,
+        spec.writes,
+        lowerdir=spec.base_repo,
         workspace_root=process.mounted_workspace_root,
         timings=timings,
     )
@@ -84,11 +84,11 @@ def test_copy_backed_mount_rewrites_absolute_workspace_references(
 ) -> None:
     lower = tmp_path / "lower"
     lower.mkdir()
-    spec = WorkspaceReplacementMountSpec(
+    spec = OverlayLayout(
         workspace_root="/testbed",
-        lowerdir=str(lower),
-        upperdir=str(tmp_path / "upper"),
-        workdir=str(tmp_path / "work"),
+        base_repo=str(lower),
+        writes=str(tmp_path / "upper"),
+        kernel_scratch=str(tmp_path / "work"),
         scratch_root=str(tmp_path),
     )
     request = CommandExecRequest(
@@ -107,8 +107,8 @@ def test_copy_backed_mount_rewrites_absolute_workspace_references(
         strategies=(CopyBackedStrategy(),),
     )
     changes = capture_changes(
-        spec.upperdir,
-        lowerdir=spec.lowerdir,
+        spec.writes,
+        lowerdir=spec.base_repo,
         workspace_root=process.mounted_workspace_root,
         timings=timings,
     )
@@ -125,11 +125,11 @@ def test_copy_backed_mount_rewrites_workspace_env_values(
 ) -> None:
     lower = tmp_path / "lower"
     lower.mkdir()
-    spec = WorkspaceReplacementMountSpec(
+    spec = OverlayLayout(
         workspace_root="/testbed",
-        lowerdir=str(lower),
-        upperdir=str(tmp_path / "upper"),
-        workdir=str(tmp_path / "work"),
+        base_repo=str(lower),
+        writes=str(tmp_path / "upper"),
+        kernel_scratch=str(tmp_path / "work"),
         scratch_root=str(tmp_path),
     )
     request = CommandExecRequest(
@@ -161,11 +161,11 @@ def test_namespace_mount_failure_falls_back_to_copy_backed(
     lower.mkdir()
     stderr_ref = tmp_path / "run" / "stderr.bin"
 
-    spec = WorkspaceReplacementMountSpec(
+    spec = OverlayLayout(
         workspace_root="/testbed",
-        lowerdir=str(lower),
-        upperdir=str(tmp_path / "upper"),
-        workdir=str(tmp_path / "work"),
+        base_repo=str(lower),
+        writes=str(tmp_path / "upper"),
+        kernel_scratch=str(tmp_path / "work"),
         scratch_root=str(tmp_path),
     )
     request = CommandExecRequest(
