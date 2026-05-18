@@ -13,7 +13,7 @@ from sandbox.execution.contract import (
     CommandExecRequest,
     MountMode,
     OverlayCapture,
-    WorkspaceReplacementMountSpec,
+    OverlayLayout,
 )
 from sandbox.execution.orchestrator import execute_command
 from sandbox.daemon.rpc.dispatcher import dispatch_envelope_async
@@ -123,7 +123,7 @@ async def test_orchestrator_overlay_releases_lease_when_runtime_fails(
 
     def failing_runner(
         *,
-        spec: WorkspaceReplacementMountSpec,
+        spec: OverlayLayout,
         request: CommandExecRequest,
         run_dir: str | Path,
         timings: dict[str, float],

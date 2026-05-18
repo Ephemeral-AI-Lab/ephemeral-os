@@ -68,7 +68,7 @@ async def test_shell_uses_occ_client_apply_changeset(
 
     def fake_run(*, spec, request, run_dir, timings):
         del request
-        upper = Path(spec.upperdir)
+        upper = Path(spec.writes)
         upper.mkdir(parents=True, exist_ok=True)
         out = upper / "out.txt"
         out.write_text("shell wrote me\n", encoding="utf-8")

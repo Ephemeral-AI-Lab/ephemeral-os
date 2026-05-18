@@ -41,11 +41,11 @@ class _BlockingCommandRunner:
         self.started.set()
         if not self.released.wait(timeout=10):
             raise TimeoutError("blocking command runner timed out")
-        upper = Path(spec.upperdir)
+        upper = Path(spec.writes)
         upper.mkdir(parents=True, exist_ok=True)
         output = upper / "generated" / "output.json"
         output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_bytes((Path(spec.lowerdir) / "config.yaml").read_bytes())
+        output.write_bytes((Path(spec.base_repo) / "config.yaml").read_bytes())
         stdout_ref = Path(run_dir) / "stdout.bin"
         stderr_ref = Path(run_dir) / "stderr.bin"
         stdout_ref.write_text("done\n", encoding="utf-8")

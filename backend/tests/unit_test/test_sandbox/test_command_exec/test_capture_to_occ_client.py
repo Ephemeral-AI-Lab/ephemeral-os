@@ -121,7 +121,7 @@ async def test_shell_capture_goes_through_occ_client_before_lease_release(
 
     def fake_run_workspace_replaced_command(*, spec, request, run_dir, timings):
         del request
-        upper = Path(spec.upperdir)
+        upper = Path(spec.writes)
         upper.mkdir(parents=True)
         output = upper / "generated" / "output.txt"
         output.parent.mkdir(parents=True)
@@ -187,11 +187,11 @@ async def test_shell_uses_transient_lowerdir_and_removes_it(
 
     def fake_run_workspace_replaced_command(*, spec, request, run_dir, timings):
         del request
-        lowerdir = Path(spec.lowerdir)
+        lowerdir = Path(spec.base_repo)
         captured_lowerdirs.append(lowerdir)
         assert lowerdir.is_dir()
         assert (lowerdir / "input.txt").read_text(encoding="utf-8") == "base\n"
-        Path(spec.upperdir).mkdir(parents=True, exist_ok=True)
+        Path(spec.writes).mkdir(parents=True, exist_ok=True)
         stdout_ref = Path(run_dir) / "stdout.bin"
         stderr_ref = Path(run_dir) / "stderr.bin"
         stdout_ref.write_text("done\n", encoding="utf-8")
