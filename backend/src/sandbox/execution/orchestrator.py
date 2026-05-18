@@ -19,7 +19,8 @@ from sandbox.execution.contract import (
     WorkspaceCapture,
     WorkspaceLeaseClient,
 )
-from sandbox.execution.overlay_capture import capture_changes
+from sandbox.execution.overlay.capture import walk_upperdir
+from sandbox.execution.overlay.change_synthesis import synthesize_writes
 from sandbox.execution.env_policy import (
     DEFAULT_COMMAND_EXEC_POLICY,
     CommandExecPolicy,
@@ -137,14 +138,13 @@ async def execute_command(
 
         capture_start = monotonic_now()
         if process.mount_mode == MountMode.COPY_BACKED:
-            path_changes = capture_changes(
-                spec.writes,
-                lowerdir=spec.base_repo,
-                workspace_root=process.mounted_workspace_root,
+            synthesize_writes(
+                merged=Path(process.mounted_workspace_root),
+                base_repo=Path(spec.base_repo),
+                into=Path(spec.writes),
                 timings=timings,
             )
-        else:
-            path_changes = capture_changes(spec.writes, timings=timings)
+        path_changes = walk_upperdir(spec.writes, timings=timings)
         timings["command_exec.capture_upperdir_s"] = (
             monotonic_now() - capture_start
         )

@@ -13,7 +13,8 @@ from sandbox.execution.contract import MountMode
 from sandbox.execution.contract import ShellProcessResult
 from sandbox.execution.contract import OverlayLayout
 from sandbox.execution.overlay import kernel_mount
-from sandbox.execution.overlay_capture import capture_changes
+from sandbox.execution.overlay.capture import walk_upperdir
+from sandbox.execution.overlay.change_synthesis import synthesize_writes
 from sandbox.execution.strategy_copy_backed import (
     CopyBackedStrategy,
     rewrite_declared_workspace_refs,
@@ -64,12 +65,13 @@ def test_copy_backed_mount_captures_only_workspace_changes(
         timings=timings,
         strategies=(CopyBackedStrategy(),),
     )
-    changes = capture_changes(
-        spec.writes,
-        lowerdir=spec.base_repo,
-        workspace_root=process.mounted_workspace_root,
+    synthesize_writes(
+        merged=Path(process.mounted_workspace_root),
+        base_repo=Path(spec.base_repo),
+        into=Path(spec.writes),
         timings=timings,
     )
+    changes = walk_upperdir(spec.writes, timings=timings)
 
     assert process.exit_code == 0
     assert Path(process.stdout_ref).read_text(encoding="utf-8") == "base\n"
@@ -106,12 +108,13 @@ def test_copy_backed_mount_rewrites_absolute_workspace_references(
         timings=timings,
         strategies=(CopyBackedStrategy(),),
     )
-    changes = capture_changes(
-        spec.writes,
-        lowerdir=spec.base_repo,
-        workspace_root=process.mounted_workspace_root,
+    synthesize_writes(
+        merged=Path(process.mounted_workspace_root),
+        base_repo=Path(spec.base_repo),
+        into=Path(spec.writes),
         timings=timings,
     )
+    changes = walk_upperdir(spec.writes, timings=timings)
 
     assert process.exit_code == 0
     assert (

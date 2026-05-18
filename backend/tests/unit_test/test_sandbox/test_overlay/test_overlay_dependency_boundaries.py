@@ -49,7 +49,8 @@ def test_runtime_bundle_contains_unified_snapshot_runtime_without_ndjson() -> No
     with tarfile.open(fileobj=io.BytesIO(raw), mode="r:gz") as tar:
         names = set(tar.getnames())
 
-    assert "sandbox/execution/overlay_capture.py" in names
+    assert "sandbox/execution/overlay/capture.py" in names
+    assert "sandbox/execution/overlay/change_synthesis.py" in names
     assert "sandbox/execution/path_change.py" in names
     assert "sandbox/execution/contract.py" in names
     assert "sandbox/execution/orchestrator.py" in names
