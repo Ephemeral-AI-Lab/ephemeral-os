@@ -1,5 +1,5 @@
 # entry_executor — root delegation (single-user-message launch)
-- source: `entry_executor_8f561abb-f410-4292-9f46-b19e8fa7945d:entry/message.jsonl`
+- source: `entry_executor_fd45e33b-6e77-4568-90a9-b7eb81e9bc6d:entry/message.jsonl`
 
 ## system
 
@@ -36,6 +36,7 @@ contract that governs non-entry executors.
 ## user_msg_1
 
 ```
+<context>
 <entry_request>
 <Workspace Root>
 /testbed
@@ -1870,4 +1871,5 @@ Can you help me implement the necessary changes to the repository so that the re
 I've already taken care of all changes to any of the test files described in the <pr_description>. This means you DON'T have to modify the testing logic or any of the tests in any way!
 Your task is to make the minimal changes to non-tests files in the /testbed directory to ensure the <pr_description> is satisfied.
 </entry_request>
+</context>
 ```

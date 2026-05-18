@@ -45,41 +45,19 @@ def test_agent_system_prompt_includes_runtime_base_and_agent_body_only(monkeypat
 @pytest.mark.parametrize(
     ("name", "kind"),
     [
-        ("planner", AgentKind.PLANNER),
-        ("evaluator", AgentKind.EVALUATOR),
-        ("verifier", AgentKind.VERIFIER),
-        ("executor", AgentKind.EXECUTOR),
-        ("executor_success_handoff", AgentKind.EXECUTOR),
-        ("executor_success_failure", AgentKind.EXECUTOR),
-    ],
-)
-def test_main_role_base_included_for_main_agents(monkeypatch, name, kind):
-    _stub_runtime_base(monkeypatch)
-
-    prompt = runtime_agent._build_agent_system_prompt(
-        SimpleNamespace(cwd="/tmp"),
-        AgentDefinition(
-            name=name,
-            description="d",
-            agent_kind=kind,
-            system_prompt="role body",
-        ),
-        settings=None,
-    )
-
-    assert _MAIN_ROLE_BASE_HEADER in prompt
-
-
-@pytest.mark.parametrize(
-    ("name", "kind"),
-    [
         ("entry_executor", AgentKind.EXECUTOR),
         ("advisor", AgentKind.ADVISOR),
         ("resolver", AgentKind.RESOLVER),
         ("explorer", AgentKind.EXPLORER),
     ],
 )
-def test_main_role_base_excluded_for_non_main_agents(monkeypatch, name, kind):
+def test_main_role_base_not_injected_at_runtime(monkeypatch, name, kind):
+    """Post-v3.3: the main-role operating contract is prepended at
+    agent-definition LOAD time (see ``agents/profile/main/_main_role_contract.md``
+    + ``agents/definition/loader.py``), not at runtime. When the test builds
+    an ``AgentDefinition`` directly with ``system_prompt="role body"``, the
+    runtime factory MUST NOT re-inject the contract on top.
+    """
     _stub_runtime_base(monkeypatch)
 
     prompt = runtime_agent._build_agent_system_prompt(
@@ -112,23 +90,3 @@ def test_main_role_base_excluded_for_subagent(monkeypatch):
     )
 
     assert _MAIN_ROLE_BASE_HEADER not in prompt
-
-
-def test_main_role_base_ordering_between_runtime_and_agent_body(monkeypatch):
-    _stub_runtime_base(monkeypatch, "RUNTIME_BASE_MARKER")
-
-    prompt = runtime_agent._build_agent_system_prompt(
-        SimpleNamespace(cwd="/tmp"),
-        AgentDefinition(
-            name="planner",
-            description="d",
-            agent_kind=AgentKind.PLANNER,
-            system_prompt="AGENT_BODY_MARKER",
-        ),
-        settings=None,
-    )
-
-    runtime_idx = prompt.index("RUNTIME_BASE_MARKER")
-    base_idx = prompt.index(_MAIN_ROLE_BASE_HEADER)
-    body_idx = prompt.index("AGENT_BODY_MARKER")
-    assert runtime_idx < base_idx < body_idx

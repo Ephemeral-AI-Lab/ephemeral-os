@@ -77,7 +77,7 @@ def _write_case(
         parts.extend(["", "## user_msg_2", "", "```", user_msg_2.rstrip(), "```"])
     if user_msg_3:
         parts.extend([
-            "", "## user_msg_3 — row 4 (skill + terminal_selection)", "", "```", user_msg_3.rstrip(), "```",
+            "", "## user_msg_3 — row 4 (skill + terminal_tool_selection)", "", "```", user_msg_3.rstrip(), "```",
         ])
     parts.append("")
     case_path.write_text("\n".join(parts))

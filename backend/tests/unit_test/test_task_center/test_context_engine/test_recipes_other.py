@@ -94,7 +94,7 @@ def test_generator_emits_planned_task_spec_required_block(
         deps,
     )
     kinds = [b.kind for b in packet.blocks]
-    assert kinds == ["task_specification", "role_instruction", "planned_task_spec"]
+    assert kinds == ["task_specification", "planned_task_spec"]
     assert packet.blocks[-1].kind == "planned_task_spec"
     assert packet.blocks[-1].priority == ContextPriority.REQUIRED
     assert packet.blocks[-1].text == "do thing X"
@@ -142,12 +142,12 @@ def test_generator_emits_nested_attempt_plan_with_handoff_goal_child(
     assert kinds == [
         "task_specification",
         "task_specification",
-        "role_instruction",
         "planned_task_spec",
     ]
     plan_spec_block, handoff_block = packet.blocks[0], packet.blocks[1]
     assert plan_spec_block.metadata["child_tag"] == "plan_spec"
     assert handoff_block.metadata["child_tag"] == "next_iteration_handoff_goal"
+    assert handoff_block.metadata["is_partial"] == "true"
     assert plan_spec_block.metadata["group_id"] == handoff_block.metadata["group_id"]
     assert plan_spec_block.metadata["group_tag"] == "attempt_plan"
     assert handoff_block.text == "future iteration work"
@@ -200,9 +200,8 @@ def test_generator_dependency_summary_blocks(
     assert packet.blocks[-1].kind == "planned_task_spec"
     kinds = [b.kind for b in packet.blocks]
     dep_idx = kinds.index("dependency_summary")
-    role_idx = kinds.index("role_instruction")
     spec_idx = kinds.index("planned_task_spec")
-    assert dep_idx < role_idx < spec_idx
+    assert dep_idx < spec_idx
 
 
 def test_generator_missing_dependency_task_raises_context_error(
@@ -276,7 +275,6 @@ def test_evaluator_emits_required_spec_and_criteria(
         "iteration_statement",
         "task_specification",
         "completed_task_summary",
-        "role_instruction",
         "evaluation_criteria",
     ]
     assert all(
@@ -285,7 +283,7 @@ def test_evaluator_emits_required_spec_and_criteria(
     )
     assert packet.blocks[0].metadata["tag"] == "goal_current_iteration"
     assert packet.blocks[2].metadata["group_tag"] == "completed_tasks"
-    assert packet.blocks[-2].kind == "role_instruction"
+    assert packet.blocks[-1].kind == "evaluation_criteria"
 
 
 def test_evaluator_renders_every_generator_summary_in_attempt_order(
@@ -409,7 +407,6 @@ def test_evaluator_continues_goal_emits_nested_handoff_child_no_boundary_block(
         "task_specification",
         "task_specification",
         "completed_task_summary",
-        "role_instruction",
         "evaluation_criteria",
     ]
     assert "partial_plan_boundary" not in kinds, (
@@ -418,6 +415,7 @@ def test_evaluator_continues_goal_emits_nested_handoff_child_no_boundary_block(
     plan_spec_block, handoff_block = packet.blocks[1], packet.blocks[2]
     assert plan_spec_block.metadata["child_tag"] == "plan_spec"
     assert handoff_block.metadata["child_tag"] == "next_iteration_handoff_goal"
+    assert handoff_block.metadata["is_partial"] == "true"
     assert plan_spec_block.metadata["group_id"] == handoff_block.metadata["group_id"]
     assert plan_spec_block.metadata["group_tag"] == "attempt_plan"
     assert handoff_block.text == "build admin tools next"
@@ -456,7 +454,6 @@ def test_evaluator_iteration2_frame_precedes_attempt_contract(
         "prior_iteration_summary",
         "iteration_statement",
         "task_specification",
-        "role_instruction",
         "evaluation_criteria",
     ]
     assert packet.blocks[0].metadata["tag"] == "goal"
@@ -465,15 +462,15 @@ def test_evaluator_iteration2_frame_precedes_attempt_contract(
     assert packet.blocks[3].metadata["child_tag"] == "iteration_goal"
     assert packet.blocks[3].metadata["group_tag"] == "iteration"
     assert packet.blocks[-1].kind == "evaluation_criteria"
-    assert packet.blocks[-2].kind == "role_instruction"
 
 
-def test_evaluator_with_empty_criteria_ends_on_role_instruction(
+def test_evaluator_with_empty_criteria_omits_criteria_block(
     deps, goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
-    """When evaluation_criteria is empty the recipe omits EVALUATION_CRITERIA;
-    ROLE_INSTRUCTION must then be the last block, since the hint is inserted
-    unconditionally."""
+    """When evaluation_criteria is empty the recipe omits the
+    ``<evaluation_criteria>`` block. Task-guidance prose is now assembled
+    at launch time by ``AgentEntryComposer`` rather than emitted as a packet
+    block, so the packet ends on the attempt-plan group."""
     req = _seed_goal(goal_store, task_center_run_id)
     iteration = _seed_iteration(iteration_store, goal_id=req.id)
     attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
@@ -493,7 +490,7 @@ def test_evaluator_with_empty_criteria_ends_on_role_instruction(
 
     kinds = [b.kind for b in packet.blocks]
     assert "evaluation_criteria" not in kinds
-    assert packet.blocks[-1].kind == "role_instruction"
+    assert all(b.kind != "role_instruction" for b in packet.blocks)
 
 
 # ---------------------------------------------------------------------------

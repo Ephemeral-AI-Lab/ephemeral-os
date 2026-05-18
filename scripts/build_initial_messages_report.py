@@ -71,7 +71,7 @@ class CapturedAgent:
     system: str
     user_msg_1: str
     user_msg_2: str  # empty string when the launch shape only seeded one user message
-    # Row 4 — the skill + terminal_selection composite. Non-empty only for
+    # Row 4 — the skill + terminal_tool_selection composite. Non-empty only for
     # planner launches in v1 (Round 3 ships skills for planner variants only).
     skill_row: str = ""
 
@@ -101,7 +101,7 @@ def _read_initial_rows(message_path: Path) -> tuple[str, str, str, str]:
     * 4 rows = skill-equipped planner (system + context + role_instruction +
       skill row 4). The skill row carries the
       ``Load skill: <name>`` header plus the ``<skill>`` and
-      ``<terminal_selection>`` blocks.
+      ``<terminal_tool_selection>`` blocks.
     """
     rows: list[dict] = []
     with message_path.open() as fh:
@@ -831,7 +831,7 @@ def render_report(
         if cap.skill_row:
             out.append(
                 "**row 4** (verbatim, `message.jsonl` row 4 — skill body + "
-                "`<terminal_selection>` composite from `build_skill_message`):\n"
+                "`<terminal_tool_selection>` composite from `build_skill_message`):\n"
             )
             out.append(_fmt_message("skill", _truncate(cap.skill_row)))
         verdict = coherence_verdict(

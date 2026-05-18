@@ -48,7 +48,7 @@ def test_build_skill_message_has_load_header_skill_block_and_terminal_block(
     assert "Workflow text." in skill_block
 
 
-def test_terminal_selection_block_matches_registry_catalog(tmp_path: Path):
+def test_terminal_tool_selection_block_matches_registry_catalog(tmp_path: Path):
     """Row 4's <terminal_tool_selection> renders from the same registry call as row 3."""
     skill_file = tmp_path / "planner" / "SKILL.md"
     skill_file.parent.mkdir()
@@ -71,7 +71,7 @@ def test_terminal_selection_block_matches_registry_catalog(tmp_path: Path):
     )
 
 
-def test_terminal_selection_block_skipped_when_no_terminals(tmp_path: Path):
+def test_terminal_tool_selection_block_skipped_when_no_terminals(tmp_path: Path):
     skill_file = tmp_path / "planner" / "SKILL.md"
     skill_file.parent.mkdir()
     skill_file.write_text("# body")

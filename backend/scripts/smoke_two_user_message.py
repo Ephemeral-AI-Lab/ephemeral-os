@@ -1,28 +1,20 @@
-"""Two-user-message launch smoke gate (plan §7 Step 7).
+"""Per-agent launch-message shape smoke gate (plan v3.3 §7 Step 7).
 
 BLOCKING pre-merge gate — does NOT run in CI (live API cost). The plan author
-runs this script locally before merging the two-user-message-shape change and
-pastes the output in the PR description.
+runs this script locally before merging the multi-row launch-message refactor
+and pastes the output in the PR description.
 
-The script has TWO modes:
+Mode:
 
-* ``--dry-run`` (default): runs offline. Composes a planner ``LaunchBundle``
-  against in-memory stores, asserts the structural invariants the renderer
-  split is supposed to guarantee, and prints both launch shapes side-by-side
-  so a reviewer can visually compare them without burning API credits.
+* ``--dry-run`` (default): runs offline. Composes a planner
+  ``AgentEntryMessages`` against in-memory stores, asserts the structural
+  invariants the wire shape is supposed to guarantee, and prints the four
+  rows so a reviewer can visually inspect them without burning API credits.
 
-* ``--live``: runs the FULL gate. Spawns a real planner against an Anthropic
-  endpoint TWICE — once with the legacy single-user-message launch shape,
-  once with the new two-user-message launch shape — and asserts SEMANTIC
-  equivalence: same ``task_count``, same ``agent_name`` multiset across
-  produced tasks, same ``terminal_decision`` (``continues_goal`` vs
-  ``closes_goal``).
-
-  ``--live`` requires the production runtime config + Anthropic credentials.
-  If it fails, STOP. Either the Anthropic ``[user, user]`` merge differs from
-  the merged-concatenation behavior we assumed, or the renderer split shifted
-  a signal the model relied on. Re-open OQ §10 #1 with the divergent
-  transcript before merging.
+* ``--live``: documented as a manual procedure — the live runtime needs a
+  full composer + stores + sandbox + Anthropic credential set, which differs
+  per developer machine. This script gates the structural smoke; the live
+  comparison is a manual step the plan author runs locally.
 
 Run examples::
 
@@ -43,6 +35,7 @@ if str(_BACKEND_SRC) not in sys.path:
     sys.path.insert(0, str(_BACKEND_SRC))
 
 
+from task_center.agent_launch.skill_message import _wrap_task_guidance  # noqa: E402
 from task_center.context_engine.packet import (  # noqa: E402
     ContextBlock,
     ContextBlockKind,
@@ -51,6 +44,9 @@ from task_center.context_engine.packet import (  # noqa: E402
     ContextRefs,
 )
 from task_center.context_engine.renderer import XmlPromptRenderer  # noqa: E402
+from task_center.task_guidance.builders import (  # noqa: E402
+    build_planner_task_guidance,
+)
 
 
 def _build_demo_packet() -> ContextPacket:
@@ -71,73 +67,89 @@ def _build_demo_packet() -> ContextPacket:
             ContextBlock(
                 kind=ContextBlockKind.ITERATION_STATEMENT,
                 priority=ContextPriority.REQUIRED,
-                text="Iteration 1: implement and verify two-user-message shape.",
-            ),
-            ContextBlock(
-                kind=ContextBlockKind.ROLE_INSTRUCTION,
-                priority=ContextPriority.REQUIRED,
-                text=(
-                    "You are planning the first attempt for this iteration's "
-                    "goal. Propose a plan that decomposes the iteration goal "
-                    "into generator tasks with a clear evaluation contract."
-                ),
+                text="Iteration 1: implement and verify the four-row launch shape.",
+                metadata={
+                    "tag": "goal_current_iteration",
+                    "iteration_no": "1",
+                },
             ),
         ],
     )
 
 
-def _print_shape(label: str, prompt: str, initial_messages_text: str | None) -> None:
+def _make_planner_def():
+    from agents import AgentDefinition, AgentKind
+
+    return AgentDefinition(
+        name="planner",
+        description="planner",
+        agent_kind=AgentKind.PLANNER,
+        context_recipe="planner",
+        terminals=["submit_plan_closes_goal", "submit_plan_continues_goal"],
+    )
+
+
+def _print_shape(label: str, lines: list[str]) -> None:
     print(f"=== {label} ===")
-    if initial_messages_text is not None:
-        print("initial_messages[0] (user msg 1):")
-        print(initial_messages_text)
-        print()
-        print("prompt (user msg 2):")
-    else:
-        print("prompt (single user msg):")
-    print(prompt)
+    for ln in lines:
+        print(ln)
     print()
 
 
 def _dry_run() -> int:
     packet = _build_demo_packet()
     renderer = XmlPromptRenderer()
-    context_text = renderer.render_context(packet)
-    role_text = renderer.render_role_instruction(packet)
+    body = renderer.render_context(packet)
+    context_message = "<context>\n" + body + "</context>\n"
+
+    agent_def = _make_planner_def()
+    prose = build_planner_task_guidance(
+        agent_def=agent_def, packet=packet, scope=None  # type: ignore[arg-type]
+    )
+    task_guidance = _wrap_task_guidance(prose, agent_def)
 
     # Structural assertions the production launch path relies on.
-    assert role_text is not None, "planner-shaped packet must yield role_instruction"
-    assert "# How to Proceed" not in context_text, (
-        "render_context still emits the legacy '# How to Proceed' heading"
+    assert context_message.startswith("<context>\n"), (
+        "row-2 context envelope must start with '<context>\\n'"
+    )
+    assert context_message.rstrip().endswith("</context>"), (
+        "row-2 context envelope must end with '</context>'"
+    )
+    assert task_guidance is not None, (
+        "planner-shaped packet must yield a task_guidance row"
+    )
+    assert task_guidance.startswith("<Task Guidance>\n"), (
+        "row-3 task_guidance envelope must start with '<Task Guidance>\\n'"
+    )
+    assert task_guidance.rstrip().endswith("</Task Guidance>"), (
+        "row-3 task_guidance envelope must end with '</Task Guidance>'"
+    )
+    assert task_guidance.count("<terminal_tool_selection>") == 1, (
+        "row-3 must include exactly one <terminal_tool_selection> block"
     )
 
-    legacy_prompt = context_text.rstrip() + "\n\n" + role_text
-    new_prompt = role_text  # user msg 2
-
     _print_shape(
-        "LEGACY (single user message — concatenated context + role_instruction)",
-        legacy_prompt,
-        initial_messages_text=None,
+        "ROW 2 (user msg 1 — <context> envelope)",
+        [context_message],
     )
     _print_shape(
-        "NEW (two user messages — context as initial_messages, role_instruction as prompt)",
-        new_prompt,
-        initial_messages_text=context_text,
+        "ROW 3 (user msg 2 — <Task Guidance> envelope with <terminal_tool_selection>)",
+        [task_guidance],
     )
     print(
-        "STRUCTURAL SMOKE: context_message has no '# How to Proceed' heading "
-        "and role_instruction_message is non-empty — OK."
+        "STRUCTURAL SMOKE: <context> envelope OK, <Task Guidance> envelope "
+        "OK, <terminal_tool_selection> count == 1 — OK."
     )
     print(
         "LIVE GATE: this dry-run does NOT prove semantic equivalence under "
-        "Anthropic. Re-run with --live before merging to compare planner "
-        "outputs across the two launch shapes."
+        "the model provider. Re-run with --live before merging to compare "
+        "planner outputs across the two launch shapes."
     )
     return 0
 
 
 def _live_run() -> int:
-    """Live Anthropic two-shape comparison.
+    """Live model-provider comparison.
 
     Intentionally NOT implemented inline: the live runtime needs a full
     composer + stores + sandbox + Anthropic credential set, which differs
@@ -147,11 +159,10 @@ def _live_run() -> int:
     """
     print(
         "ERROR: --live mode requires the operator to wire production stores "
-        "+ Anthropic credentials. The plan documents the manual procedure "
-        "(plan §7 Step 7); the structural --dry-run smoke is gated by this "
-        "script but the live comparison is a manual step the plan author "
-        "runs locally before merging. Paste the live output in the PR "
-        "description.",
+        "+ Anthropic credentials. The plan documents the manual procedure; "
+        "the structural --dry-run smoke is gated by this script but the "
+        "live comparison is a manual step the plan author runs locally "
+        "before merging. Paste the live output in the PR description.",
         file=sys.stderr,
     )
     return 2
@@ -162,7 +173,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--live",
         action="store_true",
-        help="Run the full Anthropic two-shape comparison (cost-bearing).",
+        help="Run the full live-provider two-shape comparison (cost-bearing).",
     )
     args = parser.parse_args(argv)
     if args.live:

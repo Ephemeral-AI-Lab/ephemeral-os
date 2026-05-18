@@ -24,15 +24,17 @@ The following is the parent agent's user_msg_1 verbatim — the engineered conte
 
 ---
 
+<context>
 <attempt_plan>
 <plan_spec>
 Run a workspace preflight probe.
 </plan_spec>
 </attempt_plan>
 
-<assigned_task task_id="6923d6e8-ece0-4330-bc67-7183a4c0a1d0:gen:preflight">
+<assigned_task task_id="b52c7264-d56c-42d7-bc76-72d3e6c8aaef:gen:preflight">
 Run a lightweight workspace preflight and report the observed sandbox root.
 </assigned_task>
+</context>
 
 
 # Parent agent's original task
@@ -41,19 +43,17 @@ The following is the parent agent's user_msg_2 verbatim — the role-specific in
 
 ---
 
+<Task Guidance>
 You are executing one generator task. This task has no dependencies on other generator tasks in the same attempt. Read the `<assigned_task>` below and produce the deliverable, then submit per your role's contract.
 
-# Terminal tools you may call
-
+<terminal_tool_selection>
 Pick exactly one based on outcome:
 
 - `submit_execution_handoff` — Call when bounded progress is made but further work is needed. Name the next bounded slice; do not kick the problem downstream without specifying what's needed.
 
 - `submit_execution_success` — Call when the `<assigned_task>` deliverable is complete, exists at the claimed location, satisfies the task specification, and any verification the criteria specify has been run and passed.
-
-# Your task
-
-Execute the role described above. Before any terminal submission, call ask_advisor with your chosen tool_name and intended payload. Submit your chosen terminal only after the advisor returns "approve".
+</terminal_tool_selection>
+</Task Guidance>
 
 # Parent transcript
 

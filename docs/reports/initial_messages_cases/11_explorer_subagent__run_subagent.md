@@ -1,4 +1,4 @@
-# explorer subagent — invoked via run_subagent (programmatic; user_msg_1 = parent's free-text prompt; user_msg_2 = explorer_instruction().text)
+# explorer subagent — invoked via run_subagent (programmatic; user_msg_1 = parent's free-text prompt; user_msg_2 = build_explorer_task_guidance())
 - source: `programmatic construction`
 
 ## system

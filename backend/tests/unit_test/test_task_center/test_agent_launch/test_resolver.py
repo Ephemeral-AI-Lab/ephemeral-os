@@ -105,7 +105,11 @@ def test_empty_variants_returns_base_fast_path(deps):
     assert isinstance(sel, AgentSelection)
     assert sel.agent_def.name == "generator"
     assert sel.context_recipe == "generator"
-    assert sel.required_context_blocks == ()
+    # Post-v3.3: ``required_context_blocks`` is no longer on AgentSelection.
+    # Variant-declared blocks (if any) are silently ignored — the
+    # ``required_context_blocks`` field on ``AgentVariant`` is deprecated
+    # and slated for removal in follow-up #5.
+    assert not hasattr(sel, "required_context_blocks")
 
 
 @pytest.mark.usefixtures("planner_with_variant")
@@ -118,8 +122,6 @@ def test_variant_predicate_match_picks_target(deps):
     )
     assert sel.agent_def.name == "planner_full_only"
     assert "submit_plan_continues_goal" not in sel.agent_def.terminals
-    assert len(sel.required_context_blocks) == 1
-    assert sel.required_context_blocks[0].kind == "launch_notice"
     assert sel.reason == "ancestry has partial-plan caller"
 
 

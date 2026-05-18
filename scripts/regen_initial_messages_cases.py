@@ -49,11 +49,23 @@ def _text_of(row: dict) -> str:
 
 
 def _latest_run() -> Path:
-    base = REPO / "backend" / ".sweevo_runs" / "scenario_logs" / "pipeline.initial_messages_capture"
-    runs = sorted(base.iterdir(), reverse=True)
+    """Return the newest scenario run dir across known audit base dirs.
+
+    The audit base is picked at fixture-resolution time; pytest invoked from
+    the repo root writes to ``<repo>/.sweevo_runs`` while older runs may sit
+    under ``backend/.sweevo_runs``. Scan both and pick the most recent.
+    """
+    candidates = [
+        REPO / ".sweevo_runs" / "scenario_logs" / "pipeline.initial_messages_capture",
+        REPO / "backend" / ".sweevo_runs" / "scenario_logs" / "pipeline.initial_messages_capture",
+    ]
+    runs: list[Path] = []
+    for base in candidates:
+        if base.is_dir():
+            runs.extend(p for p in base.iterdir() if p.is_dir())
     if not runs:
-        raise SystemExit(f"No runs under {base}")
-    return runs[0]
+        raise SystemExit(f"No runs under {candidates!r}")
+    return max(runs, key=lambda p: p.stat().st_mtime)
 
 
 def _agents_under(run_dir: Path) -> dict[str, tuple[str, str, Path]]:
