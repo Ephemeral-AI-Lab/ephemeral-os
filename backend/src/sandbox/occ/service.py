@@ -101,6 +101,7 @@ class OccService:
         snapshot: Manifest | None = None,
         options: CommitOptions | None = None,
     ) -> ChangesetResult:
+        """Synchronous twin of :meth:`apply_changeset`."""
         total_start = monotonic_now()
         prepared = self.prepare_changeset_sync(
             changes,

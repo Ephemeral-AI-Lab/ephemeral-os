@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
-from sandbox.layer_stack.paths import fsync_path
+from sandbox.layer_stack.paths import (
+    fsync_path,
+    replace_via_tmp_fsynced,
+    write_bytes_fsynced,
+)
 
 
 class ManifestConflictError(RuntimeError):
@@ -36,12 +39,7 @@ def write_layer_digest_atomic(
     """Persist a per-layer digest sidecar with the same fsync discipline as the manifest."""
     target = layer_digest_path(storage_root, layer_id)
     target.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
-    try:
-        os.write(fd, digest.encode("utf-8"))
-        os.fsync(fd)
-    finally:
-        os.close(fd)
+    write_bytes_fsynced(target, digest.encode("utf-8"))
     fsync_path(target.parent)
 
 
@@ -155,18 +153,8 @@ def read_manifest(path: str | Path) -> Manifest:
 
 
 def write_manifest_atomic(path: str | Path, manifest: Manifest) -> None:
-    manifest_file = Path(path)
-    manifest_file.parent.mkdir(parents=True, exist_ok=True)
-    tmp = manifest_file.with_name(f".{manifest_file.name}.tmp")
     data = json.dumps(manifest.to_dict(), indent=2, sort_keys=True).encode("utf-8")
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
-    try:
-        os.write(fd, data)
-        os.fsync(fd)
-    finally:
-        os.close(fd)
-    os.replace(tmp, manifest_file)
-    fsync_path(manifest_file.parent)
+    replace_via_tmp_fsynced(Path(path), data)
 
 
 class FileManifestStore:

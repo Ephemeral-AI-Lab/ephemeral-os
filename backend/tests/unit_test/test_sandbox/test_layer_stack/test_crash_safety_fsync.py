@@ -14,10 +14,9 @@ from pathlib import Path
 
 import pytest
 
+import sandbox.layer_stack.paths as paths_mod
 import sandbox.layer_stack.publisher as publisher_mod
-import sandbox.layer_stack.manifest as manifest_store_mod
 import sandbox.layer_stack.workspace_base as workspace_base_mod
-import sandbox.layer_stack.workspace_binding as binding_mod
 from sandbox.layer_stack import WriteLayerChange, LayerStack
 from sandbox.layer_stack.manifest import (
     LayerRef,
@@ -52,7 +51,7 @@ def test_write_manifest_atomic_fsyncs_file_and_parent_dir(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     recorder = _FsyncRecorder()
-    recorder.install(monkeypatch, manifest_store_mod)
+    recorder.install(monkeypatch, paths_mod)
 
     manifest_file = tmp_path / "manifest.json"
     write_manifest_atomic(
@@ -74,7 +73,7 @@ def test_workspace_binding_write_atomic_fsyncs_file_and_parent_dir(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     recorder = _FsyncRecorder()
-    recorder.install(monkeypatch, binding_mod)
+    recorder.install(monkeypatch, paths_mod)
 
     workspace = tmp_path / "workspace"
     workspace.mkdir()

@@ -12,8 +12,8 @@ from typing import Literal
 from sandbox.layer_stack.paths import join_layer_path, remove_path
 from sandbox.layer_stack.changes import normalize_layer_path
 from sandbox.layer_stack.layer_index import (
-    OPAQUE_MARKER as _OPAQUE_MARKER,
-    WHITEOUT_PREFIX as _WHITEOUT_PREFIX,
+    OPAQUE_MARKER,
+    WHITEOUT_PREFIX,
     LayerIndex,
     build_layer_index,
     has_ancestor_in,
@@ -240,7 +240,7 @@ class MergedView:
         whiteouts: list[Path] = []
         regulars: list[Path] = []
         for entry in sorted(layer_dir.rglob("*"), key=lambda item: item.as_posix()):
-            if entry.name == _OPAQUE_MARKER:
+            if entry.name == OPAQUE_MARKER:
                 opaques.append(entry)
             elif _is_whiteout(entry.name):
                 whiteouts.append(entry)
@@ -252,7 +252,7 @@ class MergedView:
 
         for whiteout in whiteouts:
             rel = whiteout.relative_to(layer_dir)
-            remove_path(dest / rel.parent / whiteout.name[len(_WHITEOUT_PREFIX) :])
+            remove_path(dest / rel.parent / whiteout.name[len(WHITEOUT_PREFIX) :])
 
         for entry in regulars:
             target = dest / entry.relative_to(layer_dir)
@@ -291,7 +291,7 @@ def _direct_child_segment(name: str, prefix: str) -> str | None:
 
 
 def _is_whiteout(name: str) -> bool:
-    return name.startswith(_WHITEOUT_PREFIX) and name != _OPAQUE_MARKER
+    return name.startswith(WHITEOUT_PREFIX) and name != OPAQUE_MARKER
 
 
 def _stale_layer_error(layer: LayerRef, rel: str) -> LayerStackStorageError:

@@ -31,10 +31,7 @@ from sandbox.layer_stack.manifest import (
     layer_digest_path,
     manifest_root_hash,
 )
-from sandbox.layer_stack.transaction import (
-    LayerStackTransaction,
-    LayerStackTransactionHandle,
-)
+from sandbox.layer_stack.transaction import LayerStackTransaction
 from sandbox.layer_stack.view import MergedView, SymlinkLookup
 from sandbox._shared.clock import monotonic_now
 
@@ -111,11 +108,6 @@ class LayerStack:
         self._view = view or MergedView(self.storage_root)
         self._publisher = publisher or LayerPublisher(self.storage_root)
         self._squash = squash or SquashService(self.storage_root)
-        self._transaction_handle = LayerStackTransactionHandle(
-            lock=self._lock,
-            manifest_store=self._manifest_store,
-            publisher=self._publisher,
-        )
 
     def read_active_manifest(self) -> Manifest:
         return self._manifest_store.read()
@@ -231,7 +223,11 @@ class LayerStack:
         self._view.materialize(destination, manifest or self.read_active_manifest())
 
     def commit_transaction(self) -> LayerStackTransaction:
-        return LayerStackTransaction(self._transaction_handle)
+        return LayerStackTransaction(
+            lock=self._lock,
+            manifest_store=self._manifest_store,
+            publisher=self._publisher,
+        )
 
     def allocate_commit_staging(self, request_id: str) -> CommitStagingArea:
         parent = self.storage_root / STAGING_DIR

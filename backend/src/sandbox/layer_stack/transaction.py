@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Sequence
-from dataclasses import dataclass
 from pathlib import Path
 from types import TracebackType
 from typing import TYPE_CHECKING
@@ -18,18 +17,19 @@ if TYPE_CHECKING:
     from sandbox.layer_stack.manifest import FileManifestStore
 
 
-@dataclass(frozen=True)
-class LayerStackTransactionHandle:
-    lock: threading.RLock
-    manifest_store: FileManifestStore
-    publisher: LayerPublisher
-
-
 class LayerStackTransaction:
     """Process-local active-manifest transaction shell."""
 
-    def __init__(self, handle: LayerStackTransactionHandle) -> None:
-        self._handle = handle
+    def __init__(
+        self,
+        *,
+        lock: threading.RLock,
+        manifest_store: FileManifestStore,
+        publisher: LayerPublisher,
+    ) -> None:
+        self._lock = lock
+        self._manifest_store = manifest_store
+        self._publisher = publisher
         self._manifest: Manifest | None = None
         self._entered = False
         self._lock_acquired_at: float | None = None
@@ -38,12 +38,12 @@ class LayerStackTransaction:
 
     def __enter__(self) -> LayerStackTransaction:
         wait_start = monotonic_now()
-        self._handle.lock.acquire()
+        self._lock.acquire()
         acquired_at = monotonic_now()
         self._lock_wait_s = acquired_at - wait_start
         self._lock_acquired_at = acquired_at
         self._entered = True
-        self._manifest = self._handle.manifest_store.read()
+        self._manifest = self._manifest_store.read()
         return self
 
     def __exit__(
@@ -58,7 +58,7 @@ class LayerStackTransaction:
         if self._lock_acquired_at is not None:
             self._lock_held_s = monotonic_now() - self._lock_acquired_at
             self._lock_acquired_at = None
-        self._handle.lock.release()
+        self._lock.release()
 
     def snapshot(self) -> Manifest:
         return self._require_manifest()
@@ -71,7 +71,7 @@ class LayerStackTransaction:
         timings: dict[str, float] | None = None,
     ) -> Manifest:
         current = self._require_manifest()
-        new_manifest = self._handle.publisher.publish_layer(
+        new_manifest = self._publisher.publish_layer(
             tuple(changes),
             expected_manifest=current,
             source_root=source_root,
@@ -96,7 +96,4 @@ class LayerStackTransaction:
         return self._manifest
 
 
-__all__ = [
-    "LayerStackTransaction",
-    "LayerStackTransactionHandle",
-]
+__all__ = ["LayerStackTransaction"]

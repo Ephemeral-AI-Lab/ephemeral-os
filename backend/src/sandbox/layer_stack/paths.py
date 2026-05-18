@@ -52,6 +52,30 @@ def fsync_path(path: Path) -> None:
         os.close(fd)
 
 
+def write_bytes_fsynced(path: Path, data: bytes) -> None:
+    """Write *data* to *path* and fsync the file before returning.
+
+    Caller is responsible for fsyncing the parent directory after the
+    final ``os.replace`` (for replace-style atomic writes) or directly
+    (for in-place writes that establish a new file).
+    """
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
+    try:
+        os.write(fd, data)
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def replace_via_tmp_fsynced(target: Path, data: bytes) -> None:
+    """Atomically install *data* at *target* with a tmp+rename+fsync dance."""
+    target.parent.mkdir(parents=True, exist_ok=True)
+    tmp = target.with_name(f".{target.name}.tmp")
+    write_bytes_fsynced(tmp, data)
+    os.replace(tmp, target)
+    fsync_path(target.parent)
+
+
 def relative_symlink_target_escapes(target: str) -> bool:
     """Return True if a relative symlink target walks out of its directory."""
     depth = 0
@@ -92,5 +116,7 @@ __all__ = [
     "join_layer_path",
     "relative_symlink_target_escapes",
     "remove_path",
+    "replace_via_tmp_fsynced",
     "resolve_storage_path",
+    "write_bytes_fsynced",
 ]

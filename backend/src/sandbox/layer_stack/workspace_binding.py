@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import json
-import os
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
-from sandbox.layer_stack.paths import fsync_path
+from sandbox.layer_stack.paths import replace_via_tmp_fsynced
 from sandbox.layer_stack.changes import normalize_layer_path
 
 
@@ -104,18 +103,8 @@ def write_workspace_binding_atomic(binding: WorkspaceBinding) -> None:
         workspace_root=binding.workspace_root,
         layer_stack_root=binding.layer_stack_root,
     )
-    path = workspace_binding_path(binding.layer_stack_root)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f".{path.name}.tmp")
     data = json.dumps(binding.to_dict(), indent=2, sort_keys=True).encode("utf-8")
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
-    try:
-        os.write(fd, data)
-        os.fsync(fd)
-    finally:
-        os.close(fd)
-    os.replace(tmp, path)
-    fsync_path(path.parent)
+    replace_via_tmp_fsynced(workspace_binding_path(binding.layer_stack_root), data)
 
 
 def validate_workspace_binding_paths(

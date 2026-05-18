@@ -79,8 +79,7 @@ class PathspecGitignoreOracle:
         return result
 
     def filter_ignored(self, paths: Iterable[str]) -> set[str]:
-        unique_paths = list(dict.fromkeys(paths))
-        return {p for p in unique_paths if self.is_ignored(p)}
+        return {p for p in paths if self.is_ignored(p)}
 
     def _evaluate_file(self, path: str) -> bool:
         rel = path.lstrip("/")
@@ -112,7 +111,7 @@ class PathspecGitignoreOracle:
             if not excluded:
                 excluded = self._match_with_inheritance(accum, as_directory=True)
             self._dir_cache[accum] = excluded
-        return self._dir_cache.get(dir_rel, excluded)
+        return excluded
 
     def _match_with_inheritance(self, path: str, *, as_directory: bool) -> bool:
         """Last-match-wins evaluation across every ``.gitignore`` above *path*.
