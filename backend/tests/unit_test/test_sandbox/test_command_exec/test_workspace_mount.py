@@ -15,11 +15,11 @@ from sandbox.execution.contract import OverlayLayout
 from sandbox.execution.overlay import kernel_mount
 from sandbox.execution.overlay.capture import walk_upperdir
 from sandbox.execution.overlay.change_synthesis import synthesize_writes
-from sandbox.execution.strategy_copy_backed import (
+from sandbox.execution.strategies.copy_backed import (
     CopyBackedStrategy,
     rewrite_declared_workspace_refs,
 )
-from sandbox.execution.strategy_private_namespace import (
+from sandbox.execution.strategies.namespace import (
     NAMESPACE_CONTROL_REF,
     NAMESPACE_FALLBACK_STRATEGY,
     NAMESPACE_INFRA_EXIT_CODE,
@@ -369,3 +369,24 @@ def test_namespace_mount_passes_fd_paths_to_mount_subprocess(
 
     assert calls
     assert calls[0]["kwargs"]["pass_fds"] == inputs.fds
+
+
+def test_namespace_helper_module_path_in_strategy_argv_is_importable() -> None:
+    """Pin the `python -m` module path so a rename of the child file fails fast.
+
+    On macOS the namespace strategy cannot actually run (needs Linux user
+    namespaces), so the argv-string vs filesystem agreement is our only
+    pre-merge check that the path the strategy hands to ``unshare`` actually
+    resolves to a real module.
+    """
+    import importlib.util
+    import inspect
+
+    from sandbox.execution.strategies import namespace as namespace_strategy
+
+    source = inspect.getsource(namespace_strategy.PrivateNamespaceStrategy.run)
+    assert '"sandbox.execution.strategies.namespace_child"' in source
+    assert (
+        importlib.util.find_spec("sandbox.execution.strategies.namespace_child")
+        is not None
+    )

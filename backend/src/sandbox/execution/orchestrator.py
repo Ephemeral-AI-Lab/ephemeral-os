@@ -24,9 +24,9 @@ from sandbox.execution.env_policy import (
     DEFAULT_COMMAND_EXEC_POLICY,
     CommandExecPolicy,
 )
-from sandbox.execution.strategy_base import ExecutionStrategy
-from sandbox.execution.strategy_copy_backed import CopyBackedStrategy
-from sandbox.execution.strategy_private_namespace import (
+from sandbox.execution.strategies.base import ExecutionStrategy
+from sandbox.execution.strategies.copy_backed import CopyBackedStrategy
+from sandbox.execution.strategies.namespace import (
     PrivateNamespaceStrategy,
     detect_private_mount_namespace,
 )

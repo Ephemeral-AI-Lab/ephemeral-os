@@ -27,7 +27,7 @@ from sandbox.execution.overlay.kernel_mount import (
     umount,
     validate_mount_inputs,
 )
-from sandbox.execution.strategy_private_namespace import (
+from sandbox.execution.strategies.namespace import (
     NAMESPACE_FALLBACK_STRATEGY,
     NAMESPACE_INFRA_EXIT_CODE,
 )
