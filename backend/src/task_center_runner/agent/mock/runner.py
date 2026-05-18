@@ -123,6 +123,28 @@ async def _noop_emit(_event: Any) -> None:
 EmitStreamEvent = Callable[[StreamEvent], Awaitable[None]]
 
 
+def _initial_message_text(message: Any) -> str:
+    """Extract the text payload from a ``ConversationMessage`` (or dict).
+
+    The mock runner's ``__call__`` accepts ``initial_messages`` as either a
+    list of ``ConversationMessage`` instances (production wiring) or raw
+    dicts (some legacy fixtures). Both shapes expose ``content`` as a list
+    of blocks with ``type=="text"``.
+    """
+    content = getattr(message, "content", None)
+    if content is None and isinstance(message, dict):
+        content = message.get("content")
+    if not content:
+        return ""
+    parts: list[str] = []
+    for block in content:
+        if hasattr(block, "text"):
+            parts.append(str(block.text))
+        elif isinstance(block, dict) and block.get("type") == "text":
+            parts.append(str(block.get("text", "")))
+    return "\n".join(parts)
+
+
 class MockSquadRunner:
     """Deterministic agent execution handlers that call real tools."""
 
@@ -191,8 +213,18 @@ class MockSquadRunner:
             prompt_preview=prompt[:500],
         )
         self._publish_mock_record(EventType.MOCK_LAUNCH_RECORDED, _launch_record)
+        # Inspect the full wire surface: launch ``prompt`` plus any seeded
+        # ``initial_messages``. Post-v3.3 the context envelope lands in
+        # ``initial_messages[0]`` and the Task Guidance row lands either in
+        # ``prompt`` (3-row launch) or ``initial_messages[1]`` (4-row launch
+        # for skill-equipped planners). Checking ``prompt`` alone would miss
+        # the ``<context>`` envelope every time.
+        seeded_initial = kwargs.get("initial_messages") or []
+        wire_payload = "\n".join(
+            [prompt] + [_initial_message_text(m) for m in seeded_initial]
+        )
         _prompt_inspection = self._inspect_prompt(
-            prompt=prompt,
+            prompt=wire_payload,
             agent_def=agent_def,
             metadata=metadata,
         )
@@ -201,7 +233,7 @@ class MockSquadRunner:
             agent_def=agent_def,
             prompt=prompt,
             metadata=metadata,
-            seeded_initial_messages=kwargs.get("initial_messages"),
+            seeded_initial_messages=seeded_initial,
         )
 
         # Publish invocation event.
@@ -1204,12 +1236,19 @@ class MockSquadRunner:
         agent_def: AgentDefinition,
         metadata: ExecutionMetadata,
     ) -> PromptInspection:
+        """Verify the spawn's launch payload carries the right XML envelopes.
+
+        Post v3.3 the wire shape is XML-tagged blocks wrapped in a
+        ``<context>...</context>`` envelope (row 2) plus a
+        ``<Task Guidance>...</Task Guidance>`` envelope (row 3). The
+        inspector checks for the tag opens — not the old markdown headings.
+        """
         role = str(agent_def.agent_kind.value or "")
         checks: dict[str, bool]
         reason: str
         if agent_def.name == "entry_executor":
             checks = {
-                "entry_request_heading": "# Entry request" in prompt,
+                "entry_request": "<entry_request>" in prompt,
                 "workspace_root": self._repo_dir in prompt,
                 "pr_description": "<pr_description>" in prompt,
             }
@@ -1219,30 +1258,20 @@ class MockSquadRunner:
             )
         elif role == "planner":
             attempt, iteration = self._current_attempt_and_iteration(metadata)
-            previous_iteration_results = (
-                "# Previous Iteration Results" in prompt
-                or "# Previous Iteration Results" in prompt
-                or (
-                    re.search(r"^## Iteration \d+ accepted plan$", prompt, re.MULTILINE)
-                    is not None
-                    and re.search(r"^## Iteration \d+ summary$", prompt, re.MULTILINE)
-                    is not None
-                )
-            )
             checks = {
-                "goal": "# Goal" in prompt,
+                "goal": "<goal>" in prompt or "<goal_current_iteration>" in prompt,
                 "current_iteration": (
-                    "# Current Iteration" in prompt
-                    or "# Goal / Current Iteration" in prompt
-                ),
+                    "<iteration " in prompt and 'status="current"' in prompt
+                ) or "<goal_current_iteration>" in prompt,
             }
             if attempt.attempt_sequence_no > 1:
-                checks["failed_attempts"] = (
-                    "# Prior Failed Attempts" in prompt or "# Failed Attempts" in prompt
-                )
+                checks["failed_attempts"] = 'status="failed"' in prompt
             if iteration.sequence_no > 1:
-                checks["previous_iteration_results"] = previous_iteration_results
-                checks["previous_iteration_results"] = previous_iteration_results
+                checks["previous_iteration_results"] = (
+                    'status="prior"' in prompt
+                    and "<accepted_plan>" in prompt
+                    and "<summary>" in prompt
+                )
             reason = (
                 "Planner context is goal and iteration scoped; retry planners "
                 "also receive failed-attempt evidence, and continuation planners "
@@ -1250,8 +1279,8 @@ class MockSquadRunner:
             )
         elif role == "executor":
             checks = {
-                "attempt_plan": "# Attempt Plan" in prompt,
-                "assigned_task": "# Assigned Task" in prompt,
+                "attempt_plan": "<attempt_plan>" in prompt,
+                "assigned_task": "<assigned_task" in prompt,
             }
             reason = (
                 "Executor context is local to the current planned task with the "
@@ -1259,8 +1288,8 @@ class MockSquadRunner:
             )
         elif role == "verifier":
             checks = {
-                "attempt_plan": "# Attempt Plan" in prompt,
-                "assigned_task": "# Assigned Task" in prompt,
+                "attempt_plan": "<attempt_plan>" in prompt,
+                "assigned_task": "<assigned_task" in prompt,
             }
             reason = (
                 "Verifier context is a generator task profile with the assigned "
@@ -1268,9 +1297,9 @@ class MockSquadRunner:
             )
         elif role == "evaluator":
             checks = {
-                "attempt_plan": "# Attempt Plan" in prompt,
-                "dependency_results": "# Dependency Results" in prompt,
-                "evaluation_criteria": "# Evaluation Criteria" in prompt,
+                "attempt_plan": "<attempt_plan>" in prompt,
+                "completed_tasks": "<completed_tasks>" in prompt,
+                "evaluation_criteria": "<evaluation_criteria>" in prompt,
             }
             reason = (
                 "Evaluator context is graph-local: attempt contract, completed "

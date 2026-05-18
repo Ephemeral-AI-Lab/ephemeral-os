@@ -1,6 +1,10 @@
-"""Generate cases 13/14/15 from existing scenario runs that close
+"""Generate cases 12/13/14/15 from existing scenario runs that close
 the previously-flagged content gaps in the initial_messages_cases
 directory.
+
+* Case 12 — planner_full_only variant routed in a child-goal context
+  (no submit_plan_continues_goal terminal). Source:
+  pipeline.partial_parent_planner_full_only.
 
 * Case 13 — planner that sees a *rich* `<attempt status="failed">` body
   (real plan_spec, real `<generator_outcomes>`, real
@@ -96,6 +100,44 @@ def _write_case(
     case_path.write_text("\n".join(parts))
 
 
+def case_12_planner_full_only_child_goal() -> None:
+    """Capture case 12 from the partial_parent_planner_full_only scenario.
+
+    The scenario submits a partial plan in the parent goal, then delegates a
+    child goal. The child goal's planner is resolved via the
+    ``nested_goal_depth_gt_1`` variant to ``planner_full_only`` (no
+    ``submit_plan_continues_goal`` terminal).
+    """
+    run = _latest_run("pipeline.partial_parent_planner_full_only")
+    # The child goal directory is ``goal_02_*`` (root is goal_01).
+    candidates = list(run.rglob("goal_02_*/iteration_01_*/attempt_01_*/01_planner_*:planner/message.jsonl"))
+    assert len(candidates) == 1, candidates
+    jsonl = candidates[0]
+    rel = jsonl.relative_to(run)
+    system, um1, um2, um3 = _read_initial_rows(jsonl)
+    _write_case(
+        case_path=CASES_DIR / "12_planner_full_only__child_goal__delegated_from_partial_parent.md",
+        title=(
+            "planner_full_only — child goal delegated from a partial-plan parent "
+            "(variant target: only `submit_plan_closes_goal` is available)"
+        ),
+        source=f"pipeline.partial_parent_planner_full_only/{run.name}/{rel}",
+        notes=(
+            "The parent attempt submitted a partial plan that delegated work to a "
+            "child goal. The child goal's planner is resolved through the "
+            "``nested_goal_depth_gt_1`` variant to ``planner_full_only`` — a leaf "
+            "planner profile whose ``terminals:`` frontmatter list omits "
+            "``submit_plan_continues_goal``. Row 4's ``<terminal_tool_selection>`` "
+            "block therefore lists only ``submit_plan_closes_goal``."
+        ),
+        system=system,
+        user_msg_1=um1,
+        user_msg_2=um2,
+        user_msg_3=um3,
+    )
+    print(f"wrote {CASES_DIR}/12_planner_full_only__child_goal__delegated_from_partial_parent.md")
+
+
 def case_13_planner_after_evaluator_failure() -> None:
     run = _latest_run("pipeline.attempt_retry_evaluator_failure")
     # iter1 attempt 2 planner
@@ -142,10 +184,11 @@ def case_14_executor_with_dependency_results() -> None:
             "DAG `a → b → c`; task `b` runs with `deps=[\"a\"]`, so its composer "
             "renders the `<dependency_results>` group (one `<dependency id=...>` "
             "child per upstream task) between `<attempt_plan>` and `<assigned_task>`. "
-            "The role_instruction (row 3) is the `has_deps=True` branch of "
-            "`generator_instruction`, opening with \"This task has dependencies on "
-            "other generator tasks…\". This is the variant the existing initial_messages "
-            "scenario could not exercise because its plans only have single-task DAGs."
+            "Row 3's `<Task Guidance>` is the `has_deps=True` branch of "
+            "`build_generator_task_guidance`, opening with \"You are executing one "
+            "generator task with one or more dependency outputs already available…\". "
+            "This is the variant the existing initial_messages scenario could not "
+            "exercise because its plans only have single-task DAGs."
         ),
         system=system,
         user_msg_1=um1,
@@ -186,6 +229,7 @@ def case_15_evaluator_pre_failure_submission() -> None:
 
 def main() -> int:
     CASES_DIR.mkdir(parents=True, exist_ok=True)
+    case_12_planner_full_only_child_goal()
     case_13_planner_after_evaluator_failure()
     case_14_executor_with_dependency_results()
     case_15_evaluator_pre_failure_submission()
