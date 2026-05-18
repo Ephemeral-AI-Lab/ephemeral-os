@@ -247,10 +247,9 @@ class CommandExecutor(Protocol):
 
 # ---- spec ------------------------------------------------------------------
 
-# OverlayLayout was extracted to sandbox.execution.overlay.layout in the
-# Option-A refactor (Step 2). Re-exported via the top-of-file import so
-# existing imports keep resolving; the deprecated alias is removed in Step 10.
-WorkspaceReplacementMountSpec = OverlayLayout
+# OverlayLayout lives in sandbox.execution.overlay.layout; re-exported here
+# for convenience so contract.py is still the single import surface for the
+# execution-package types.
 
 
 __all__ = [
@@ -266,6 +265,5 @@ __all__ = [
     "SnapshotManifest",
     "WorkspaceCapture",
     "WorkspaceLeaseClient",
-    "WorkspaceReplacementMountSpec",
     "WorkspaceSnapshotLease",
 ]

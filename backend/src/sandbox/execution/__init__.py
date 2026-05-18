@@ -11,7 +11,6 @@ from sandbox.execution.contract import (
     SnapshotManifest,
     WorkspaceCapture,
     WorkspaceLeaseClient,
-    WorkspaceReplacementMountSpec,
     WorkspaceSnapshotLease,
 )
 from sandbox.execution.runner import run_workspace_replaced_command
@@ -31,7 +30,6 @@ __all__ = [
     "SnapshotManifest",
     "WorkspaceCapture",
     "WorkspaceLeaseClient",
-    "WorkspaceReplacementMountSpec",
     "WorkspaceSnapshotLease",
     "execute_command",
     "run_workspace_replaced_command",
