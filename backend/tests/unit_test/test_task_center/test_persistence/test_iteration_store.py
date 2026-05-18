@@ -68,7 +68,7 @@ def test_append_attempt_id_preserves_order(
     assert s2.attempt_count == 2
 
 
-def test_set_continuation_goal_and_status(
+def test_set_iteration_handoff_goal_and_status(
     iteration_store, goal_store, task_center_run_id
 ):
     request_id = _seed_request(goal_store, task_center_run_id)
@@ -79,8 +79,8 @@ def test_set_continuation_goal_and_status(
         goal="g",
         attempt_budget=2,
     )
-    seg = iteration_store.set_continuation_goal(seg.id, "next-goal")
-    assert seg.continuation_goal == "next-goal"
+    seg = iteration_store.set_iteration_handoff_goal(seg.id, "next-goal")
+    assert seg.next_iteration_handoff_goal == "next-goal"
     seg = iteration_store.set_status(
         seg.id,
         status=IterationStatus.SUCCEEDED,

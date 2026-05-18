@@ -44,9 +44,9 @@ class PlanTaskInput(BaseModel):
 class PlannerSubmissionBaseInput(BaseModel):
     """Planner submission boundary schema.
 
-    ``plan_spec`` is the LLM-facing name for the plan-level contract; downstream
-    DTO / DB / audit layers retain the historical ``task_specification`` name to
-    avoid migration churn (the rename is scope-limited to this boundary).
+    ``plan_spec`` is the LLM-facing name for the plan-level contract; the same
+    name is preserved through the DTO layer. Only the DB column retains the
+    historical ``task_specification`` name (see FU-2 for the column rename).
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -105,11 +105,11 @@ def build_planner_submission(
     *,
     submission_context: AttemptSubmissionContext,
     kind: Literal["full", "partial"],
-    task_specification: str,
+    plan_spec: str,
     evaluation_criteria: list[str],
     tasks: list[PlanTaskInput],
     task_specs: dict[str, str],
-    continuation_goal: str | None,
+    next_iteration_handoff_goal: str | None,
 ) -> tuple[PlannerSubmission | None, str | None]:
     task_id = submission_context.task_center_task_id
     if task_id != submission_context.attempt.planner_task_id:
@@ -160,10 +160,10 @@ def build_planner_submission(
             attempt_id=submission_context.attempt.id,
             planner_task_id=task_id,
             kind=kind,
-            task_specification=task_specification,
+            plan_spec=plan_spec,
             evaluation_criteria=tuple(evaluation_criteria),
             tasks=planned,
-            continuation_goal=continuation_goal,
+            next_iteration_handoff_goal=next_iteration_handoff_goal,
             summary=f"Accepted {kind} planner submission.",
         ),
         None,

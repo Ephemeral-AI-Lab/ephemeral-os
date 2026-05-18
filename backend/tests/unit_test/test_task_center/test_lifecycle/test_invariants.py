@@ -59,7 +59,7 @@ def _segment(
     *,
     status: IterationStatus = IterationStatus.OPEN,
     attempt_ids: tuple[str, ...] = (),
-    continuation_goal: str | None = None,
+    next_iteration_handoff_goal: str | None = None,
     attempt_budget: int = 2,
     sid: str = "s1",
 ) -> Iteration:
@@ -73,7 +73,7 @@ def _segment(
         attempt_budget=attempt_budget,
         status=status,
         attempt_ids=attempt_ids,
-        continuation_goal=continuation_goal,
+        next_iteration_handoff_goal=next_iteration_handoff_goal,
         created_at=now,
         updated_at=now,
         closed_at=None,
@@ -95,11 +95,11 @@ def _graph(
         stage=AttemptStage.PLAN,
         status=status,
         planner_task_id=None,
-        task_specification=None,
+        plan_spec=None,
         evaluation_criteria=(),
         generator_task_ids=(),
         evaluator_task_id=None,
-        continuation_goal=None,
+        next_iteration_handoff_goal=None,
         fail_reason=fail_reason,
         created_at=now,
         updated_at=now,
@@ -145,17 +145,17 @@ def test_assert_iteration_sequence_contiguous():
 
 def test_assert_continuation_iteration_predecessor_requires_succeeded_with_goal():
     succeeded_with_goal = _segment(
-        status=IterationStatus.SUCCEEDED, continuation_goal="next"
+        status=IterationStatus.SUCCEEDED, next_iteration_handoff_goal="next"
     )
     assert_continuation_iteration_predecessor(succeeded_with_goal)
 
     with pytest.raises(TaskCenterInvariantViolation):
         assert_continuation_iteration_predecessor(
-            _segment(status=IterationStatus.OPEN, continuation_goal="next")
+            _segment(status=IterationStatus.OPEN, next_iteration_handoff_goal="next")
         )
     with pytest.raises(TaskCenterInvariantViolation):
         assert_continuation_iteration_predecessor(
-            _segment(status=IterationStatus.SUCCEEDED, continuation_goal=None)
+            _segment(status=IterationStatus.SUCCEEDED, next_iteration_handoff_goal=None)
         )
 
 

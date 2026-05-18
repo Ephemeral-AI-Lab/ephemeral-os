@@ -44,11 +44,11 @@ async def submit_plan_closes_goal(
     submission, error = build_planner_submission(
         submission_context=submission_context,
         kind="full",
-        task_specification=plan_spec,
+        plan_spec=plan_spec,
         evaluation_criteria=evaluation_criteria,
         tasks=[PlanTaskInput.model_validate(task) for task in tasks],
         task_specs=task_specs,
-        continuation_goal=None,
+        next_iteration_handoff_goal=None,
     )
     if error is not None or submission is None:
         return ToolResult(output=error or "Invalid planner submission.", is_error=True)

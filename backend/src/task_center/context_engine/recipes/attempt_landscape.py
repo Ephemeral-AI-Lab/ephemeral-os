@@ -1,19 +1,42 @@
-"""Failed attempt landscape blocks for planner context."""
+"""Failed attempt landscape blocks for planner context.
+
+Each failed attempt produces one block whose ``text`` is the pre-rendered XML
+body of ``<attempt attempt_no="N" status="failed">…</attempt>``. The renderer
+groups every failed-attempt block (plus the current iteration's
+``<iteration_goal>`` child when present) under the same
+``<iteration status="current">`` parent via the shared
+:func:`current_iteration_group_id`.
+
+The body contains:
+
+* ``<attempt_plan>`` with nested ``<plan_spec>`` and (when present)
+  ``<next_iteration_handoff_goal>`` children — both wrap planner-supplied text.
+* ``<generator_outcomes>`` with a recipe-generated ``<status_summary>`` and one
+  ``<task id="..." status="...">`` child per generator task. Per-task summary
+  text is user-supplied and so gets the hostile-body sanitizer applied below.
+* ``<evaluator_judgment status="bypassed" reason="generator_failed">`` when the
+  attempt died before the evaluator ran; ``<evaluator_judgment status="ran"
+  verdict="fail">`` otherwise.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from task_center.context_engine.exceptions import ContextEngineError
 from task_center.context_engine.packet import (
     ContextBlock,
     ContextBlockKind,
     ContextPriority,
 )
 from task_center.context_engine.recipes.goal_iteration_frame import (
+    current_iteration_group_attrs,
+    current_iteration_group_id,
     latest_summary_text,
 )
 from task_center.attempt.state import Attempt, AttemptStatus
+from task_center.iteration.state import Iteration
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
     from task_center._core.persistence import TaskStoreProtocol
@@ -22,6 +45,21 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only
 _MISSING_TASK_ROW_STATUS = "missing task row"
 _PREMATURE_STATUSES = frozenset({"failed", "blocked", _MISSING_TASK_ROW_STATUS})
 _EMPTY_SUMMARY_PLACEHOLDERS = frozenset({"(empty)", "(no summary recorded)"})
+
+# Closers a recipe MUST refuse to leak into user content. Kept here (not in the
+# renderer) because the recipe is the layer that embeds user text into a
+# structured XML body; the renderer only sees the final assembled text.
+_STRUCTURAL_CLOSERS: tuple[str, ...] = (
+    "</attempt_plan>",
+    "</plan_spec>",
+    "</next_iteration_handoff_goal>",
+    "</generator_outcomes>",
+    "</status_summary>",
+    "</task>",
+    "</evaluator_judgment>",
+    "</attempt>",
+    "</iteration>",
+)
 
 FAILED_ATTEMPT_LANDSCAPE = ContextBlockKind.FAILED_ATTEMPT_LANDSCAPE
 
@@ -37,6 +75,7 @@ class _GeneratorOutcome:
 def failed_attempt_landscape_blocks(
     *,
     current_attempt_id: str | None,
+    iteration: Iteration,
     attempts: list[Attempt],
     task_store: TaskStoreProtocol | None = None,
 ) -> list[ContextBlock]:
@@ -48,69 +87,159 @@ def failed_attempt_landscape_blocks(
         ),
         key=lambda t: t.attempt_sequence_no,
     )
+    group_id = current_iteration_group_id(iteration)
+    group_attrs = current_iteration_group_attrs(iteration)
     return [
         ContextBlock(
             kind=ContextBlockKind.FAILED_ATTEMPT_LANDSCAPE,
             priority=ContextPriority.HIGH,
-            text=_render_failed_attempt(t, task_store=task_store),
+            text=_render_failed_attempt_body(t, task_store=task_store),
             source_id=t.id,
             source_kind="attempt",
             metadata={
-                "attempt_sequence_no": str(t.attempt_sequence_no),
-                "group_heading": "# Prior Failed Attempts",
-                "subheading": f"Attempt {t.attempt_sequence_no}",
+                "group_id": group_id,
+                "group_tag": "iteration",
+                "group_attrs": group_attrs,
+                "child_tag": "attempt",
+                "attrs": f'attempt_no="{t.attempt_sequence_no}" status="failed"',
+                # The body is hand-assembled XML; the recipe sanitizes the
+                # user-supplied fragments it embeds.
+                "pre_rendered_xml": "true",
             },
         )
         for t in failed
     ]
 
 
-def _render_failed_attempt(
+def _render_failed_attempt_body(
+    attempt: Attempt, *, task_store: TaskStoreProtocol | None
+) -> str:
+    """Render the inside of ``<attempt attempt_no="N" status="failed">…</attempt>``."""
+    sections: list[str] = [_render_attempt_plan(attempt), _render_generator_outcomes_xml(attempt, task_store=task_store)]
+    sections.append(_render_evaluator_judgment(attempt, task_store=task_store))
+    return "\n".join(sections)
+
+
+def _render_attempt_plan(attempt: Attempt) -> str:
+    plan_spec = _sanitize_user_text(attempt.plan_spec or "(not submitted)", attempt.id)
+    children = [f"<plan_spec>\n{plan_spec}\n</plan_spec>"]
+    if attempt.next_iteration_handoff_goal:
+        handoff = _sanitize_user_text(attempt.next_iteration_handoff_goal, attempt.id)
+        children.append(
+            f"<next_iteration_handoff_goal>\n{handoff}\n</next_iteration_handoff_goal>"
+        )
+    return "<attempt_plan>\n" + "\n".join(children) + "\n</attempt_plan>"
+
+
+def _render_generator_outcomes_xml(
     attempt: Attempt, *, task_store: TaskStoreProtocol | None
 ) -> str:
     outcomes = _generator_outcomes(attempt, task_store=task_store)
-
-    if attempt.continuation_goal:
-        plan_kind = "partial"
-    elif (
-        attempt.task_specification
-        or attempt.evaluation_criteria
-        or attempt.generator_task_ids
-    ):
-        plan_kind = "full"
+    if not outcomes:
+        status_summary = "(no generator tasks recorded)"
     else:
-        plan_kind = "unsubmitted"
-
-    sections = [
-        "### Accepted Plan\n\n"
-        f"Plan type: {plan_kind}\n\n"
-        f"Specification:\n{attempt.task_specification or '(not submitted)'}",
-        _render_generator_outcomes(outcomes),
+        status_summary = "\n".join(
+            (
+                f"{o.task_id}: {o.status} by {o.blocked_by}"
+                if o.blocked_by
+                else f"{o.task_id}: {o.status}"
+            )
+            for o in outcomes
+        )
+    parts: list[str] = [
+        "<generator_outcomes>",
+        "<status_summary>",
+        status_summary,
+        "</status_summary>",
     ]
+    for o in outcomes:
+        if o.summary and o.summary not in _EMPTY_SUMMARY_PLACEHOLDERS:
+            body = _sanitize_user_text(o.summary, attempt.id)
+            parts.append(
+                f'<task id="{o.task_id}" status="{o.status}">\n{body}\n</task>'
+            )
+        else:
+            parts.append(
+                f'<task id="{o.task_id}" status="{o.status}"/>'
+            )
+    parts.append("</generator_outcomes>")
+    return "\n".join(parts)
 
+
+def _render_evaluator_judgment(
+    attempt: Attempt, *, task_store: TaskStoreProtocol | None
+) -> str:
+    outcomes = _generator_outcomes(attempt, task_store=task_store)
     has_premature = any(o.status in _PREMATURE_STATUSES for o in outcomes)
-    if not has_premature and task_store and attempt.evaluator_task_id is not None:
-        evaluator_task = task_store.get_task(attempt.evaluator_task_id)
-        evaluator_summary = (
-            "(missing evaluator task row)"
-            if evaluator_task is None
-            else latest_summary_text(evaluator_task.get("summaries"))
+    if has_premature:
+        failed_ids = sorted(
+            o.task_id for o in outcomes if o.status in _PREMATURE_STATUSES
         )
-        criteria_block = (
-            "\n".join(f"  - {c}" for c in attempt.evaluation_criteria) or "  (none)"
+        reason = (
+            "Evaluator skipped because generator task(s) failed: "
+            f"{', '.join(failed_ids)}."
+            if failed_ids
+            else "Evaluator skipped: generator outcomes never recorded."
         )
-        judgment = (
-            "### Evaluator Judgment\n\n"
-            f"Evaluation criteria:\n{criteria_block}\n\n"
-            f"Evaluator summary:\n{evaluator_summary}"
+        return (
+            '<evaluator_judgment status="bypassed" reason="generator_failed">\n'
+            f"{reason}\n"
+            "</evaluator_judgment>"
         )
-        passed, failed = _evaluator_verdicts(evaluator_task)
-        if passed:
-            judgment += "\n\nPassed criteria:\n" + "\n".join(f"  - {c}" for c in passed)
-        if failed:
-            judgment += "\n\nFailed criteria:\n" + "\n".join(f"  - {c}" for c in failed)
-        sections.append(judgment)
-    return "\n\n".join(sections)
+    if task_store is None or attempt.evaluator_task_id is None:
+        return (
+            '<evaluator_judgment status="ran" verdict="fail">\n'
+            "(no evaluator summary recorded)\n"
+            "</evaluator_judgment>"
+        )
+    evaluator_task = task_store.get_task(attempt.evaluator_task_id)
+    evaluator_summary = (
+        "(missing evaluator task row)"
+        if evaluator_task is None
+        else latest_summary_text(evaluator_task.get("summaries"))
+    )
+    body_parts: list[str] = []
+    criteria_lines = "\n".join(
+        _sanitize_user_text(c, attempt.id) for c in attempt.evaluation_criteria
+    ) or "(none)"
+    body_parts.append(
+        "<evaluation_criteria>\n" + criteria_lines + "\n</evaluation_criteria>"
+    )
+    body_parts.append(
+        "<evaluator_summary>\n"
+        + _sanitize_user_text(evaluator_summary, attempt.id)
+        + "\n</evaluator_summary>"
+    )
+    passed, failed = _evaluator_verdicts(evaluator_task)
+    if passed:
+        body_parts.append(
+            "<passed_criteria>\n"
+            + "\n".join(_sanitize_user_text(c, attempt.id) for c in passed)
+            + "\n</passed_criteria>"
+        )
+    if failed:
+        body_parts.append(
+            "<failed_criteria>\n"
+            + "\n".join(_sanitize_user_text(c, attempt.id) for c in failed)
+            + "\n</failed_criteria>"
+        )
+    return (
+        '<evaluator_judgment status="ran" verdict="fail">\n'
+        + "\n".join(body_parts)
+        + "\n</evaluator_judgment>"
+    )
+
+
+def _sanitize_user_text(text: str, source_id: str) -> str:
+    """Raise if user-supplied text contains a structural closer this body emits."""
+    for closer in _STRUCTURAL_CLOSERS:
+        if closer in text:
+            raise ContextEngineError(
+                f"Failed-attempt body for {source_id!r} contains structural "
+                f"closer {closer!r}. Rewrite the offending field to avoid this "
+                "closer, or surface it under a different ContextBlockKind."
+            )
+    return text
 
 
 def _evaluator_verdicts(
@@ -147,28 +276,6 @@ def _evaluator_verdicts(
     )
 
 
-def _render_generator_outcomes(outcomes: list[_GeneratorOutcome]) -> str:
-    if not outcomes:
-        status_lines = ["- (no generator tasks recorded)"]
-    else:
-        status_lines = [
-            f"- {o.task_id}: {o.status} by {o.blocked_by}"
-            if o.blocked_by
-            else f"- {o.task_id}: {o.status}"
-            for o in outcomes
-        ]
-    body = "### Generator Outcomes\n\nStatus summary:\n" + "\n".join(status_lines)
-
-    details = [
-        f"#### {o.task_id}\n\n{o.summary}"
-        for o in outcomes
-        if o.summary and o.summary not in _EMPTY_SUMMARY_PLACEHOLDERS
-    ]
-    if details:
-        body += "\n\n" + "\n\n".join(details)
-    return body
-
-
 def _generator_outcomes(
     attempt: Attempt, *, task_store: TaskStoreProtocol | None
 ) -> list[_GeneratorOutcome]:
@@ -200,7 +307,7 @@ def _generator_outcomes(
                 task_id=task_id,
                 status=str(task.get("status") or "unknown"),
                 blocked_by=blocked_by,
-                summary=latest_summary_text(summaries).strip(),
+                summary=latest_summary_text(summaries),
             )
         )
     return outcomes

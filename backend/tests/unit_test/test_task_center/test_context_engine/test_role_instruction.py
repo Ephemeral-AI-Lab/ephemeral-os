@@ -50,11 +50,11 @@ def _assert_role_instruction_shape(block) -> None:
 
 def test_planner_iter1_no_failed_attempts():
     block = planner_instruction(
-        iteration_sequence_no=1, has_failed_attempts=False
+        iteration_no=1, has_failed_attempts=False
     )
     _assert_role_instruction_shape(block)
     assert "first attempt" in block.text
-    assert "continuation_goal" in block.text
+    assert "next_iteration_handoff_goal" in block.text
     assert "list of independent items" in block.text
     assert "one criterion per item" in block.text
     assert "next bounded slice" in block.text
@@ -63,7 +63,7 @@ def test_planner_iter1_no_failed_attempts():
 
 def test_planner_iter1_with_failed_attempts():
     block = planner_instruction(
-        iteration_sequence_no=1, has_failed_attempts=True
+        iteration_no=1, has_failed_attempts=True
     )
     _assert_role_instruction_shape(block)
     assert "prior attempts in this iteration failed" in block.text
@@ -74,12 +74,12 @@ def test_planner_iter1_with_failed_attempts():
 
 def test_planner_iter_n_no_failed_attempts():
     block = planner_instruction(
-        iteration_sequence_no=3, has_failed_attempts=False
+        iteration_no=3, has_failed_attempts=False
     )
     _assert_role_instruction_shape(block)
-    assert "Previous Iteration Results" in block.text
+    assert '<iteration status="prior">' in block.text
     assert "continue from where the prior iteration ended" in block.text
-    assert "Current Iteration text is the authoritative scope" in block.text
+    assert "authoritative scope" in block.text
     assert "do not add backlog items" in block.text
     assert "list of independent items" in block.text
     assert "one criterion per item" in block.text
@@ -87,12 +87,12 @@ def test_planner_iter_n_no_failed_attempts():
 
 def test_planner_iter_n_with_failed_attempts():
     block = planner_instruction(
-        iteration_sequence_no=2, has_failed_attempts=True
+        iteration_no=2, has_failed_attempts=True
     )
     _assert_role_instruction_shape(block)
-    assert "Previous Iteration Results" in block.text
-    assert "Prior Failed Attempts" in block.text
-    assert "Current Iteration text is the authoritative scope" in block.text
+    assert '<iteration status="prior">' in block.text
+    assert '<attempt status="failed">' in block.text
+    assert "authoritative scope" in block.text
     assert "do not add backlog items" in block.text
     assert "list of independent items" in block.text
     assert "one criterion per item" in block.text
@@ -113,7 +113,7 @@ def test_generator_no_deps():
 def test_generator_with_deps():
     block = generator_instruction(has_deps=True)
     _assert_role_instruction_shape(block)
-    assert "Dependency Results" in block.text
+    assert "<dependency_results>" in block.text
     assert "fixed inputs" in block.text
 
 
@@ -125,14 +125,24 @@ def test_generator_with_deps():
 def test_evaluator_full_plan():
     block = evaluator_instruction(is_partial=False)
     _assert_role_instruction_shape(block)
-    assert "Evaluation Criteria" in block.text
+    assert "<attempt_plan>" in block.text
+    assert "<evaluation_criteria>" in block.text
     assert "pass/fail" in block.text
 
 
 def test_evaluator_partial_plan():
     block = evaluator_instruction(is_partial=True)
     _assert_role_instruction_shape(block)
-    assert "Partial Plan Boundary" in block.text
+    # The PARTIAL_PLAN_BOUNDARY block is gone; structural signal lives in
+    # <next_iteration_handoff_goal> inside <attempt_plan>.
+    assert "<next_iteration_handoff_goal>" in block.text
+    assert "<attempt_plan>" in block.text
+    # Two pinned sentences MUST survive (the architect-flagged regression).
+    assert (
+        "make progress and hand off remaining work via "
+        "`next_iteration_handoff_goal`"
+        in block.text
+    )
     assert (
         "do not penalize for incomplete work that was explicitly deferred"
         in block.text

@@ -34,8 +34,8 @@ def test_attempt_agent_launcher_protocol_gone() -> None:
 def test_concrete_classes_importable() -> None:
     from task_center._core.agent_routing import RuleBasedAgentResolver
     from task_center.attempt.launch import EphemeralAttemptAgentLauncher
-    from task_center.context_engine.renderer import MarkdownPromptRenderer
+    from task_center.context_engine.renderer import XmlPromptRenderer
 
     assert RuleBasedAgentResolver is not None
-    assert MarkdownPromptRenderer is not None
+    assert XmlPromptRenderer is not None
     assert EphemeralAttemptAgentLauncher is not None

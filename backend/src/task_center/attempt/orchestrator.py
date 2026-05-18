@@ -112,10 +112,10 @@ class AttemptOrchestrator:
 
     def apply_plan_submission(self, submission: PlannerSubmission) -> None:
         self._assert_submission_attempt(submission.attempt_id)
-        if submission.kind == "full" and submission.continuation_goal is not None:
-            raise TaskCenterInvariantViolation("Full plans cannot set continuation_goal")
-        if submission.kind == "partial" and submission.continuation_goal is None:
-            raise TaskCenterInvariantViolation("Partial plans require continuation_goal")
+        if submission.kind == "full" and submission.next_iteration_handoff_goal is not None:
+            raise TaskCenterInvariantViolation("Full plans cannot set next_iteration_handoff_goal")
+        if submission.kind == "partial" and submission.next_iteration_handoff_goal is None:
+            raise TaskCenterInvariantViolation("Partial plans require next_iteration_handoff_goal")
 
         attempt = self._validate_planner_submission(submission.planner_task_id)
         runtime = self._runtime
@@ -234,9 +234,9 @@ class AttemptOrchestrator:
     def _persist_plan_contract(self, submission: PlannerSubmission) -> None:
         self._runtime.attempt_store.set_plan_contract(
             submission.attempt_id,
-            task_specification=submission.task_specification,
+            plan_spec=submission.plan_spec,
             evaluation_criteria=list(submission.evaluation_criteria),
-            continuation_goal=submission.continuation_goal,
+            next_iteration_handoff_goal=submission.next_iteration_handoff_goal,
         )
 
     def _persist_generator_tasks(

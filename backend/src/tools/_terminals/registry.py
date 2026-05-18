@@ -95,13 +95,13 @@ TERMINAL_DESCRIPTORS: dict[str, TerminalToolDescriptor] = {
         selection_guidance=(
             "Call when this attempt delivers a complete, coherent, bounded "
             "slice of Current Iteration and a clear remainder exists. The "
-            "continuation_goal is the next iteration's whole scope, not a "
+            "next_iteration_handoff_goal is the next iteration's whole scope, not a "
             "backlog dump."
         ),
         advisor_review_focus=(
-            "The planner DEFERS remaining work via a continuation_goal. "
+            "The planner DEFERS remaining work via a next_iteration_handoff_goal. "
             "Confirm the partial scope is genuinely smaller than the "
-            "iteration goal and that the continuation_goal is the next "
+            "iteration goal and that the next_iteration_handoff_goal is the next "
             "bounded slice — NOT a dump of the entire remaining backlog. "
             "Verify the in-scope items have one evaluation criterion each "
             "and the deferred items are clearly named so the next iteration "
@@ -133,7 +133,7 @@ TERMINAL_DESCRIPTORS: dict[str, TerminalToolDescriptor] = {
             "The evaluator proposes to FAIL the attempt. Confirm the failing "
             "criteria are accurately named and that the failure is on the "
             "attempt's promised scope (NOT on work deferred via "
-            "continuation_goal). Flag failures that punish the attempt for "
+            "next_iteration_handoff_goal). Flag failures that punish the attempt for "
             "items outside the iteration goal."
         ),
     ),

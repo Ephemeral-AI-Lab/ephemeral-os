@@ -1,4 +1,4 @@
-"""Direct tests for failed attempt landscape helper behavior."""
+"""Direct tests for failed attempt landscape helper behavior (XML body)."""
 
 from __future__ import annotations
 
@@ -14,6 +14,29 @@ from task_center.attempt import (
     AttemptStage,
     AttemptStatus,
 )
+from task_center.iteration.state import (
+    Iteration,
+    IterationCreationReason,
+    IterationStatus,
+)
+
+
+def _iteration(sequence_no: int = 1) -> Iteration:
+    now = datetime.now(UTC)
+    return Iteration(
+        id="seg-1",
+        goal_id="g-1",
+        sequence_no=sequence_no,
+        creation_reason=IterationCreationReason.INITIAL,
+        goal="iteration goal",
+        attempt_budget=2,
+        status=IterationStatus.OPEN,
+        attempt_ids=(),
+        next_iteration_handoff_goal=None,
+        created_at=now,
+        updated_at=now,
+        closed_at=None,
+    )
 
 
 def _attempt(
@@ -21,11 +44,11 @@ def _attempt(
     *,
     attempt_id: str | None = None,
     status: AttemptStatus = AttemptStatus.FAILED,
-    task_specification: str | None = None,
+    plan_spec: str | None = None,
     evaluation_criteria: tuple[str, ...] = (),
     generator_task_ids: tuple[str, ...] = (),
     evaluator_task_id: str | None = None,
-    continuation_goal: str | None = None,
+    next_iteration_handoff_goal: str | None = None,
     fail_reason: AttemptFailReason | None = None,
 ) -> Attempt:
     now = datetime.now(UTC)
@@ -36,11 +59,11 @@ def _attempt(
         stage=AttemptStage.CLOSED,
         status=status,
         planner_task_id=None,
-        task_specification=task_specification,
+        plan_spec=plan_spec,
         evaluation_criteria=evaluation_criteria,
         generator_task_ids=generator_task_ids,
         evaluator_task_id=evaluator_task_id,
-        continuation_goal=continuation_goal,
+        next_iteration_handoff_goal=next_iteration_handoff_goal,
         fail_reason=fail_reason,
         created_at=now,
         updated_at=now,
@@ -52,24 +75,25 @@ def test_excludes_current_attempt_even_if_current_is_failed():
     current = _attempt(
         3,
         attempt_id="current",
-        task_specification="current spec",
+        plan_spec="current spec",
         evaluation_criteria=("current crit",),
         fail_reason=AttemptFailReason.PLANNER_FAILED,
     )
     blocks = failed_attempt_landscape_blocks(
         current_attempt_id=current.id,
+        iteration=_iteration(),
         attempts=[
             current,
             _attempt(
                 2,
-                task_specification="older spec",
+                plan_spec="older spec",
                 evaluation_criteria=("older crit",),
                 fail_reason=AttemptFailReason.GENERATOR_FAILED,
             ),
             _attempt(4, status=AttemptStatus.RUNNING),
             _attempt(
                 1,
-                task_specification="oldest spec",
+                plan_spec="oldest spec",
                 evaluation_criteria=("oldest crit",),
                 fail_reason=AttemptFailReason.EVALUATOR_FAILED,
             ),
@@ -80,23 +104,69 @@ def test_excludes_current_attempt_even_if_current_is_failed():
     assert all(block.priority == ContextPriority.HIGH for block in blocks)
 
 
-def test_renders_missing_spec_empty_criteria_and_unknown_reason():
+def test_block_metadata_carries_group_id_and_attempt_attrs():
     blocks = failed_attempt_landscape_blocks(
         current_attempt_id=None,
-        attempts=[_attempt(1)],
+        iteration=_iteration(sequence_no=3),
+        attempts=[
+            _attempt(1, plan_spec="spec1", fail_reason=AttemptFailReason.PLANNER_FAILED),
+        ],
+    )
+    block = blocks[0]
+    assert block.metadata["group_id"] == "iteration_3_current"
+    assert block.metadata["group_tag"] == "iteration"
+    assert block.metadata["group_attrs"] == 'iteration_no="3" status="current"'
+    assert block.metadata["child_tag"] == "attempt"
+    assert block.metadata["attrs"] == 'attempt_no="1" status="failed"'
+
+
+def test_renders_attempt_plan_xml_with_plan_spec_child():
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=None,
+        iteration=_iteration(),
+        attempts=[_attempt(1, plan_spec="submitted spec")],
+    )
+    body = blocks[0].text
+    assert "<attempt_plan>" in body
+    assert "<plan_spec>\nsubmitted spec\n</plan_spec>" in body
+    assert "</attempt_plan>" in body
+    assert "<next_iteration_handoff_goal>" not in body, (
+        "absent handoff goal must not produce a child element"
     )
 
-    assert len(blocks) == 1
-    assert "### Accepted Plan" in blocks[0].text
-    assert "Plan type: unsubmitted" in blocks[0].text
-    assert "Specification:\n(not submitted)" in blocks[0].text
-    assert "### Generator Outcomes" in blocks[0].text
-    assert "Status summary:\n- (no generator tasks recorded)" in blocks[0].text
-    assert "continuation_goal" not in blocks[0].text
-    assert "fail_reason" not in blocks[0].text
+
+def test_renders_attempt_plan_xml_with_handoff_goal_child():
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=None,
+        iteration=_iteration(),
+        attempts=[
+            _attempt(
+                1,
+                plan_spec="partial spec",
+                next_iteration_handoff_goal="continue with admin tools",
+            )
+        ],
+    )
+    body = blocks[0].text
+    assert "<plan_spec>\npartial spec\n</plan_spec>" in body
+    assert (
+        "<next_iteration_handoff_goal>\ncontinue with admin tools\n"
+        "</next_iteration_handoff_goal>"
+    ) in body
 
 
-def test_renders_plan_kind_statuses_and_generator_summaries():
+def test_renders_unsubmitted_attempt_plan_marker():
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=None,
+        iteration=_iteration(),
+        attempts=[_attempt(1)],
+    )
+    body = blocks[0].text
+    assert "<attempt_plan>" in body
+    assert "<plan_spec>\n(not submitted)\n</plan_spec>" in body
+
+
+def test_renders_generator_outcomes_status_summary_and_task_children():
     class TaskStore:
         def get_task(self, task_id: str):
             return {
@@ -105,7 +175,7 @@ def test_renders_plan_kind_statuses_and_generator_summaries():
                     "summaries": [
                         {"summary": "first summary"},
                         {"summary": "built catalog slice"},
-                    ]
+                    ],
                 },
                 "t-b": {
                     "status": "done",
@@ -115,73 +185,89 @@ def test_renders_plan_kind_statuses_and_generator_summaries():
 
     blocks = failed_attempt_landscape_blocks(
         current_attempt_id=None,
+        iteration=_iteration(),
         attempts=[
             _attempt(
                 1,
-                task_specification="partial spec",
+                plan_spec="partial spec",
                 evaluation_criteria=("criterion",),
                 generator_task_ids=("t-a", "t-b", "t-missing"),
-                continuation_goal="continue with admin tools",
+                next_iteration_handoff_goal="continue with admin tools",
                 fail_reason=AttemptFailReason.EVALUATOR_FAILED,
             )
         ],
         task_store=TaskStore(),
     )
 
-    assert len(blocks) == 1
-    assert "Plan type: partial" in blocks[0].text
-    assert "continue with admin tools" not in blocks[0].text
-    assert "- t-a: done" in blocks[0].text
-    assert "- t-b: done" in blocks[0].text
-    assert "- t-missing: missing task row" in blocks[0].text
-    assert "#### t-a\n\nbuilt catalog slice" in blocks[0].text
-    assert "#### t-b\n\nverified checkout" in blocks[0].text
+    body = blocks[0].text
+    assert "<generator_outcomes>" in body
+    assert "<status_summary>" in body
+    assert "t-a: done" in body
+    assert "t-b: done" in body
+    assert "t-missing: missing task row" in body
+    assert (
+        '<task id="t-a" status="done">\nbuilt catalog slice\n</task>'
+    ) in body
+    assert (
+        '<task id="t-b" status="done">\nverified checkout\n</task>'
+    ) in body
 
 
-def test_renders_full_plan_kind_for_submitted_nonpartial_attempt():
-    blocks = failed_attempt_landscape_blocks(
-        current_attempt_id=None,
-        attempts=[
-            _attempt(
-                1,
-                task_specification="submitted spec",
-                evaluation_criteria=("criterion",),
-                fail_reason=AttemptFailReason.EVALUATOR_FAILED,
-            )
-        ],
-    )
-
-    assert "Plan type: full" in blocks[0].text
-
-
-def test_evaluator_failure_renders_evaluator_judgment():
+def test_renders_evaluator_judgment_bypassed_on_generator_failure():
     class TaskStore:
         def get_task(self, task_id: str):
             return {
-                "t-a": {
-                    "status": "done",
-                    "summaries": [{"summary": "generator completed"}],
-                },
-                "eval-1": {
-                    "summaries": [
-                        {"summary": "older evaluator note"},
-                        {
-                            "summary": (
-                                "checkout review displayed 3197 before submit "
-                                "\nwhile confirmation displayed 3411"
-                            )
-                        },
-                    ]
-                }
+                "t-a": {"status": "done", "summaries": [{"summary": "ok"}]},
+                "t-b": {"status": "failed", "summaries": [{"summary": "boom"}]},
+                "eval-1": {"summaries": [{"summary": "should not be read"}]},
             }.get(task_id)
 
     blocks = failed_attempt_landscape_blocks(
         current_attempt_id=None,
+        iteration=_iteration(),
         attempts=[
             _attempt(
                 1,
-                task_specification="submitted spec",
-                evaluation_criteria=("total criterion",),
+                plan_spec="spec",
+                evaluation_criteria=("c1",),
+                generator_task_ids=("t-a", "t-b"),
+                evaluator_task_id="eval-1",
+                fail_reason=AttemptFailReason.GENERATOR_FAILED,
+            )
+        ],
+        task_store=TaskStore(),
+    )
+    body = blocks[0].text
+    assert (
+        '<evaluator_judgment status="bypassed" reason="generator_failed">'
+    ) in body
+    assert "task(s) failed: t-b" in body
+    assert "should not be read" not in body
+
+
+def test_renders_evaluator_judgment_ran_with_fail_verdict():
+    class TaskStore:
+        def get_task(self, task_id: str):
+            return {
+                "t-a": {"status": "done", "summaries": [{"summary": "generator ok"}]},
+                "eval-1": {
+                    "summaries": [
+                        {
+                            "summary": "checkout review failed total mismatch",
+                            "payload": {"failed_criteria": ["total"]},
+                        }
+                    ]
+                },
+            }.get(task_id)
+
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=None,
+        iteration=_iteration(),
+        attempts=[
+            _attempt(
+                1,
+                plan_spec="spec",
+                evaluation_criteria=("total",),
                 generator_task_ids=("t-a",),
                 evaluator_task_id="eval-1",
                 fail_reason=AttemptFailReason.EVALUATOR_FAILED,
@@ -189,29 +275,23 @@ def test_evaluator_failure_renders_evaluator_judgment():
         ],
         task_store=TaskStore(),
     )
-
-    assert "### Evaluator Judgment" in blocks[0].text
-    assert "Evaluation criteria:\n  - total criterion" in blocks[0].text
-    assert (
-        "Evaluator summary:\ncheckout review displayed 3197 before submit"
-        in blocks[0].text
-    )
-    assert "fail_reason" not in blocks[0].text
+    body = blocks[0].text
+    assert '<evaluator_judgment status="ran" verdict="fail">' in body
+    assert "<evaluation_criteria>\ntotal\n</evaluation_criteria>" in body
+    assert "checkout review failed total mismatch" in body
+    assert "<failed_criteria>\ntotal\n</failed_criteria>" in body
 
 
-def test_evaluator_judgment_includes_passed_criteria():
+def test_evaluator_judgment_includes_passed_criteria_when_payload_carries_them():
     class TaskStore:
         def get_task(self, task_id: str):
             return {
-                "t-a": {
-                    "status": "done",
-                    "summaries": [{"summary": "generator completed"}],
-                },
+                "t-a": {"status": "done", "summaries": [{"summary": "generator ok"}]},
                 "eval-1": {
                     "summaries": [
                         {
                             "outcome": "success",
-                            "summary": "looks good",
+                            "summary": "passing summary",
                             "payload": {"passed_criteria": ["c1", "c2"]},
                         }
                     ]
@@ -220,10 +300,11 @@ def test_evaluator_judgment_includes_passed_criteria():
 
     blocks = failed_attempt_landscape_blocks(
         current_attempt_id=None,
+        iteration=_iteration(),
         attempts=[
             _attempt(
                 1,
-                task_specification="spec",
+                plan_spec="spec",
                 evaluation_criteria=("c1", "c2"),
                 generator_task_ids=("t-a",),
                 evaluator_task_id="eval-1",
@@ -232,252 +313,24 @@ def test_evaluator_judgment_includes_passed_criteria():
         ],
         task_store=TaskStore(),
     )
-
-    text = blocks[0].text
-    assert "### Evaluator Judgment" in text
-    assert "Passed criteria:\n  - c1\n  - c2" in text
-    assert "Failed criteria:" not in text
-
-
-def test_evaluator_judgment_includes_failed_criteria():
-    class TaskStore:
-        def get_task(self, task_id: str):
-            return {
-                "t-a": {
-                    "status": "done",
-                    "summaries": [{"summary": "generator completed"}],
-                },
-                "eval-1": {
-                    "summaries": [
-                        {
-                            "outcome": "failure",
-                            "summary": "criterion X not met",
-                            "payload": {"failed_criteria": ["cX"]},
-                        }
-                    ]
-                },
-            }.get(task_id)
-
-    blocks = failed_attempt_landscape_blocks(
-        current_attempt_id=None,
-        attempts=[
-            _attempt(
-                1,
-                task_specification="spec",
-                evaluation_criteria=("cX",),
-                generator_task_ids=("t-a",),
-                evaluator_task_id="eval-1",
-                fail_reason=AttemptFailReason.EVALUATOR_FAILED,
-            )
-        ],
-        task_store=TaskStore(),
-    )
-
-    text = blocks[0].text
-    assert "Failed criteria:\n  - cX" in text
-    assert "Passed criteria:" not in text
-
-
-def test_evaluator_judgment_omits_verdicts_when_payload_empty():
-    class TaskStore:
-        def get_task(self, task_id: str):
-            return {
-                "t-a": {
-                    "status": "done",
-                    "summaries": [{"summary": "generator completed"}],
-                },
-                "eval-1": {
-                    "summaries": [
-                        {
-                            "outcome": "failure",
-                            "summary": "no structured verdict",
-                            "payload": {},
-                        }
-                    ]
-                },
-            }.get(task_id)
-
-    blocks = failed_attempt_landscape_blocks(
-        current_attempt_id=None,
-        attempts=[
-            _attempt(
-                1,
-                task_specification="spec",
-                evaluation_criteria=("c1",),
-                generator_task_ids=("t-a",),
-                evaluator_task_id="eval-1",
-                fail_reason=AttemptFailReason.EVALUATOR_FAILED,
-            )
-        ],
-        task_store=TaskStore(),
-    )
-
-    text = blocks[0].text
-    assert "### Evaluator Judgment" in text
-    assert "Passed criteria:" not in text
-    assert "Failed criteria:" not in text
-
-
-def test_evaluator_judgment_renders_mixed_verdicts():
-    class TaskStore:
-        def get_task(self, task_id: str):
-            return {
-                "t-a": {
-                    "status": "done",
-                    "summaries": [{"summary": "generator completed"}],
-                },
-                "eval-1": {
-                    "summaries": [
-                        {
-                            "outcome": "failure",
-                            "summary": "mixed",
-                            "payload": {
-                                "passed_criteria": ["c1"],
-                                "failed_criteria": ["c2"],
-                            },
-                        }
-                    ]
-                },
-            }.get(task_id)
-
-    blocks = failed_attempt_landscape_blocks(
-        current_attempt_id=None,
-        attempts=[
-            _attempt(
-                1,
-                task_specification="spec",
-                evaluation_criteria=("c1", "c2"),
-                generator_task_ids=("t-a",),
-                evaluator_task_id="eval-1",
-                fail_reason=AttemptFailReason.EVALUATOR_FAILED,
-            )
-        ],
-        task_store=TaskStore(),
-    )
-
-    text = blocks[0].text
-    passed_idx = text.index("Passed criteria:")
-    failed_idx = text.index("Failed criteria:")
-    assert passed_idx < failed_idx
-    assert "  - c1" in text
-    assert "  - c2" in text
-
-
-def test_generator_failure_hides_evaluator_and_keeps_blocked_task_in_status_only():
-    class TaskStore:
-        def get_task(self, task_id: str):
-            return {
-                "t-a": {
-                    "status": "done",
-                    "summaries": [{"summary": "completed dependency"}],
-                },
-                "t-b": {
-                    "status": "failed",
-                    "summaries": [{"summary": "failed after partial edit"}],
-                },
-                "t-c": {
-                    "status": "blocked",
-                    "summaries": [{"blocked_by": "t-b"}],
-                },
-                "eval-1": {
-                    "summaries": [{"summary": "should not render"}],
-                },
-            }.get(task_id)
-
-    blocks = failed_attempt_landscape_blocks(
-        current_attempt_id=None,
-        attempts=[
-            _attempt(
-                1,
-                task_specification="submitted spec",
-                evaluation_criteria=("criterion",),
-                generator_task_ids=("t-a", "t-b", "t-c"),
-                evaluator_task_id="eval-1",
-                fail_reason=AttemptFailReason.GENERATOR_FAILED,
-            )
-        ],
-        task_store=TaskStore(),
-    )
-
-    text = blocks[0].text
-    assert "- t-a: done" in text
-    assert "- t-b: failed" in text
-    assert "- t-c: blocked by t-b" in text
-    assert "#### t-a\n\ncompleted dependency" in text
-    assert "#### t-b\n\nfailed after partial edit" in text
-    assert "#### t-c" not in text
-    assert "### Evaluator Judgment" not in text
-    assert "should not render" not in text
-
-
-def test_generator_summaries_include_every_task_in_failed_attempt():
-    class TaskStore:
-        def get_task(self, task_id: str):
-            return {
-                "status": "done",
-                "summaries": [{"summary": f"summary for {task_id}"}],
-            }
-
-    task_ids = tuple(f"t-{i}" for i in range(14))
-
-    blocks = failed_attempt_landscape_blocks(
-        current_attempt_id=None,
-        attempts=[
-            _attempt(
-                1,
-                task_specification="spec",
-                generator_task_ids=task_ids,
-                fail_reason=AttemptFailReason.GENERATOR_FAILED,
-            )
-        ],
-        task_store=TaskStore(),
-    )
-
-    for task_id in task_ids:
-        assert f"- {task_id}: done" in blocks[0].text
-        assert f"#### {task_id}" in blocks[0].text
-    assert "generator summaries omitted" not in blocks[0].text
-
-
-def test_generator_summary_text_is_not_truncated():
-    class TaskStore:
-        def get_task(self, task_id: str):
-            return {"status": "done", "summaries": [{"summary": "x" * 850}]}
-
-    blocks = failed_attempt_landscape_blocks(
-        current_attempt_id=None,
-        attempts=[
-            _attempt(
-                1,
-                task_specification="spec",
-                generator_task_ids=("t-a",),
-                fail_reason=AttemptFailReason.GENERATOR_FAILED,
-            )
-        ],
-        task_store=TaskStore(),
-    )
-
-    assert "x" * 850 in blocks[0].text
-    assert "truncated" not in blocks[0].text
+    body = blocks[0].text
+    assert "<passed_criteria>\nc1\nc2\n</passed_criteria>" in body
 
 
 def test_all_failed_attempts_render_in_sequence_order():
+    attempts = [
+        _attempt(3, plan_spec="spec3", fail_reason=AttemptFailReason.PLANNER_FAILED),
+        _attempt(1, plan_spec="spec1", fail_reason=AttemptFailReason.PLANNER_FAILED),
+        _attempt(2, plan_spec="spec2", fail_reason=AttemptFailReason.PLANNER_FAILED),
+    ]
     blocks = failed_attempt_landscape_blocks(
         current_attempt_id=None,
-        attempts=[
-            _attempt(
-                sequence_no,
-                task_specification=f"spec-{sequence_no}",
-                evaluation_criteria=(f"crit-{sequence_no}",),
-                fail_reason=AttemptFailReason.GENERATOR_FAILED,
-            )
-            for sequence_no in range(8, 0, -1)
-        ],
+        iteration=_iteration(),
+        attempts=attempts,
     )
-
-    assert [block.metadata["attempt_sequence_no"] for block in blocks] == [
-        str(sequence_no) for sequence_no in range(1, 9)
+    assert [b.source_id for b in blocks] == ["attempt-1", "attempt-2", "attempt-3"]
+    assert [b.metadata["attrs"] for b in blocks] == [
+        'attempt_no="1" status="failed"',
+        'attempt_no="2" status="failed"',
+        'attempt_no="3" status="failed"',
     ]
-    assert all(block.priority == ContextPriority.HIGH for block in blocks)
-    assert all("truncated_count" not in block.metadata for block in blocks)
-    assert all("omitted" not in block.text for block in blocks)

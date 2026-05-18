@@ -82,15 +82,15 @@ def test_initial_iteration_has_sequence_one_and_initial_reason(handler, task_cen
 def test_continuation_segment_inherits_continuation_goal(
     handler, iteration_store, task_center_run_id
 ):
-    """Phase 01 exit: continuation creates iteration N+1 with goal from previous iteration's continuation_goal."""
+    """Phase 01 exit: continuation creates iteration N+1 with goal from previous iteration's next_iteration_handoff_goal."""
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t1",
         goal="initial-goal",
     )
     seg1, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
-    # Mark predecessor SUCCEEDED with a continuation_goal so the invariant passes.
-    iteration_store.set_continuation_goal(seg1.id, "next-goal")
+    # Mark predecessor SUCCEEDED with a next_iteration_handoff_goal so the invariant passes.
+    iteration_store.set_iteration_handoff_goal(seg1.id, "next-goal")
     iteration_store.set_status(seg1.id, status=IterationStatus.SUCCEEDED)
     seg1_succeeded = iteration_store.get(seg1.id)
     assert seg1_succeeded is not None
@@ -113,7 +113,7 @@ def test_iteration_ids_holds_multiple_segments(
         goal="g1",
     )
     seg1, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
-    iteration_store.set_continuation_goal(seg1.id, "g2")
+    iteration_store.set_iteration_handoff_goal(seg1.id, "g2")
     iteration_store.set_status(seg1.id, status=IterationStatus.SUCCEEDED)
     seg1_succeeded = iteration_store.get(seg1.id)
     assert seg1_succeeded is not None
@@ -183,7 +183,7 @@ def test_handle_iteration_closed_success_continue_creates_continuation(
         goal="g",
     )
     seg1, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
-    iteration_store.set_continuation_goal(seg1.id, "next-goal")
+    iteration_store.set_iteration_handoff_goal(seg1.id, "next-goal")
     iteration_store.set_status(seg1.id, status=IterationStatus.SUCCEEDED)
     handler.handle_iteration_closed(
         IterationClosureReport(
@@ -238,7 +238,7 @@ def test_continuation_segment_only_from_succeeded_predecessor_with_goal(
     with pytest.raises(TaskCenterInvariantViolation):
         handler.create_continuation_iteration_with_manager(previous_iteration=seg1)
 
-    # Predecessor SUCCEEDED but no continuation_goal -> invariant violation.
+    # Predecessor SUCCEEDED but no next_iteration_handoff_goal -> invariant violation.
     iteration_store.set_status(seg1.id, status=IterationStatus.SUCCEEDED)
     seg1_no_goal = iteration_store.get(seg1.id)
     assert seg1_no_goal is not None

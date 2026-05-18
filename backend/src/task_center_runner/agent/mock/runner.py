@@ -309,7 +309,7 @@ class MockSquadRunner:
                 agent_def=None,
                 metadata=metadata,
                 payload={
-                    "task_specification": spec.args.get("plan_spec", ""),
+                    "plan_spec": spec.args.get("plan_spec", ""),
                     "evaluation_criteria": criteria,
                     "task_count": len(tasks),
                 },

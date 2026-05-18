@@ -137,7 +137,7 @@ def test_compose_threads_calls_in_order(packet_store):
     assert bundle.agent_def.name == "planner"
     assert bundle.agent_def.system_prompt == "SYSTEM PROMPT"
     assert bundle.context_packet_id is not None
-    assert "Current Iteration" in bundle.context_message
+    assert "<current_iteration>\ngoal\n</current_iteration>" in bundle.context_message
     # Packet was persisted.
     assert packet_store.get(bundle.context_packet_id) is not None
 
@@ -158,6 +158,7 @@ def test_required_context_blocks_appended_before_render(packet_store):
                         kind="launch_notice",
                         priority="required",
                         text="variant selected.",
+                        metadata={"tag": "launch_notice"},
                     )
                 ],
             )

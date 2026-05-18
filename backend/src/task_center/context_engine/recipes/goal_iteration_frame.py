@@ -1,17 +1,29 @@
 """Goal / iteration framing blocks shared by multiple recipes.
 
-Owns :func:`goal_iteration_blocks` (the goal / current-iteration frame
-emitted by planner and evaluator) and :func:`latest_summary_text` (used
-by generator, evaluator, and attempt_landscape to read the most recent
-summary off a task row). Living in its own module keeps the consuming
-recipe modules independent of each other.
+Owns :func:`goal_iteration_blocks` (the goal / current-iteration frame emitted
+by planner and evaluator) and :func:`latest_summary_text` (used by generator,
+evaluator, and attempt_landscape to read the most recent summary off a task
+row). Living in its own module keeps the consuming recipe modules independent
+of each other.
+
+The XML structure produced by this module:
+
+* Iteration 1 (no prior iterations): one standalone block tagged
+  ``<goal_current_iteration>``.
+* Iteration N ≥ 2: a standalone ``<goal>`` block, then one
+  ``<iteration iteration_no="K" status="prior">`` group per prior iteration
+  (each wrapping ``<accepted_plan>`` + ``<summary>``), then the current
+  iteration's group (``<iteration iteration_no="N" status="current">``) which
+  contains an ``<iteration_goal>`` child — and may pick up additional siblings
+  (e.g. failed attempts) when later blocks share the same
+  :attr:`current_iteration_group_id`.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from task_center.context_engine.core import ContextEngineError
+from task_center.context_engine.exceptions import ContextEngineError
 from task_center.context_engine.packet import (
     ContextBlock,
     ContextBlockKind,
@@ -20,9 +32,60 @@ from task_center.context_engine.packet import (
 from task_center.iteration.state import Iteration
 from task_center.goal.state import Goal
 
-GOAL_ITERATION_HEADING = "# Goal / Current Iteration"
-GOAL_HEADING = "# Goal"
-CURRENT_ITERATION_HEADING = "# Current Iteration"
+
+def current_iteration_group_id(iteration: Iteration) -> str:
+    """Shared group key for blocks wrapped in ``<iteration status="current">``."""
+    return f"iteration_{iteration.sequence_no}_current"
+
+
+def current_iteration_group_attrs(iteration: Iteration) -> str:
+    return f'iteration_no="{iteration.sequence_no}" status="current"'
+
+
+_ATTEMPT_PLAN_GROUP_PREFIX = "attempt_plan_"
+
+
+def attempt_plan_blocks(attempt, *, priority: ContextPriority) -> list[ContextBlock]:
+    """Emit the ``<attempt_plan>`` group: ``<plan_spec>`` + optional handoff child.
+
+    Shared by generator and evaluator recipes; only ``priority`` differs
+    (generator uses HIGH, evaluator uses REQUIRED). Returns an empty list when
+    the attempt has no ``plan_spec``; callers gate on truthiness before
+    extending their block list.
+    """
+    if not attempt.plan_spec:
+        return []
+    group_id = f"{_ATTEMPT_PLAN_GROUP_PREFIX}{attempt.id}"
+    blocks: list[ContextBlock] = [
+        ContextBlock(
+            kind=ContextBlockKind.TASK_SPECIFICATION,
+            priority=priority,
+            text=attempt.plan_spec,
+            source_id=attempt.id,
+            source_kind="attempt",
+            metadata={
+                "group_id": group_id,
+                "group_tag": "attempt_plan",
+                "child_tag": "plan_spec",
+            },
+        )
+    ]
+    if attempt.next_iteration_handoff_goal:
+        blocks.append(
+            ContextBlock(
+                kind=ContextBlockKind.TASK_SPECIFICATION,
+                priority=priority,
+                text=attempt.next_iteration_handoff_goal,
+                source_id=attempt.id,
+                source_kind="attempt",
+                metadata={
+                    "group_id": group_id,
+                    "group_tag": "attempt_plan",
+                    "child_tag": "next_iteration_handoff_goal",
+                },
+            )
+        )
+    return blocks
 
 
 def latest_summary_text(summaries: list[Any] | None) -> str:
@@ -48,39 +111,51 @@ def goal_iteration_blocks(
 ) -> list[ContextBlock]:
     """Return the goal/iteration frame in LLM-facing semantic order."""
     if current_iteration.sequence_no == 1:
-        return [_iteration_statement_block(current_iteration, heading=GOAL_ITERATION_HEADING)]
+        return [_goal_current_iteration_block(current_iteration)]
 
-    return [
-        _goal_statement_block(goal),
-        *_prior_iteration_blocks(
-            current=current_iteration,
-            iterations=iterations,
-        ),
-        _iteration_statement_block(current_iteration, heading=CURRENT_ITERATION_HEADING),
-    ]
+    blocks: list[ContextBlock] = [_goal_statement_block(goal)]
+    blocks.extend(_prior_iteration_blocks(current=current_iteration, iterations=iterations))
+    blocks.append(_current_iteration_goal_child(current_iteration))
+    return blocks
 
 
-def _iteration_statement_block(iteration: Iteration, *, heading: str) -> ContextBlock:
+def _goal_current_iteration_block(iteration: Iteration) -> ContextBlock:
+    """Iteration 1: a single standalone ``<goal_current_iteration>`` block."""
     return ContextBlock(
         kind=ContextBlockKind.ITERATION_STATEMENT,
         priority=ContextPriority.REQUIRED,
         text=iteration.goal,
         source_id=iteration.id,
         source_kind="iteration",
-        metadata={"heading": heading},
+        metadata={"tag": "goal_current_iteration"},
     )
 
 
 def _goal_statement_block(goal: Goal) -> ContextBlock:
+    """Iteration N ≥ 2: standalone ``<goal>`` block."""
     return ContextBlock(
         kind=ContextBlockKind.GOAL_STATEMENT,
         priority=ContextPriority.REQUIRED,
         text=goal.goal,
         source_id=goal.id,
         source_kind="goal",
+        metadata={"tag": "goal"},
+    )
+
+
+def _current_iteration_goal_child(iteration: Iteration) -> ContextBlock:
+    """Child block inside ``<iteration status="current">``: ``<iteration_goal>``."""
+    return ContextBlock(
+        kind=ContextBlockKind.ITERATION_STATEMENT,
+        priority=ContextPriority.REQUIRED,
+        text=iteration.goal,
+        source_id=iteration.id,
+        source_kind="iteration",
         metadata={
-            "group_heading": GOAL_HEADING,
-            "subheading": "Goal",
+            "group_id": current_iteration_group_id(iteration),
+            "group_tag": "iteration",
+            "group_attrs": current_iteration_group_attrs(iteration),
+            "child_tag": "iteration_goal",
         },
     )
 
@@ -97,30 +172,32 @@ def _prior_iteration_blocks(
     out: list[ContextBlock] = []
     immediate_prior = current.sequence_no - 1
     for prior in priors:
-        if prior.task_specification is None or prior.task_summary is None:
+        if prior.plan_spec is None or prior.task_summary is None:
             raise ContextEngineError(
                 f"Prior iteration {prior.id!r} (seq={prior.sequence_no}) is "
-                "missing task_specification or task_summary; chain integrity violated."
+                "missing plan_spec or task_summary; chain integrity violated."
             )
         priority = (
             ContextPriority.HIGH
             if prior.sequence_no == immediate_prior
             else ContextPriority.MEDIUM
         )
-        base_meta = {
-            "iteration_sequence_no": str(prior.sequence_no),
-            "group_heading": GOAL_HEADING,
-        }
+        group_id = f"iteration_{prior.sequence_no}_prior"
+        group_attrs = (
+            f'iteration_no="{prior.sequence_no}" status="prior"'
+        )
         out.append(
             ContextBlock(
                 kind=ContextBlockKind.PRIOR_ITERATION_SPECIFICATION,
                 priority=priority,
-                text=prior.task_specification,
+                text=prior.plan_spec,
                 source_id=prior.id,
                 source_kind="iteration",
                 metadata={
-                    **base_meta,
-                    "subheading": f"Iteration {prior.sequence_no} accepted plan",
+                    "group_id": group_id,
+                    "group_tag": "iteration",
+                    "group_attrs": group_attrs,
+                    "child_tag": "accepted_plan",
                 },
             )
         )
@@ -132,8 +209,10 @@ def _prior_iteration_blocks(
                 source_id=prior.id,
                 source_kind="iteration",
                 metadata={
-                    **base_meta,
-                    "subheading": f"Iteration {prior.sequence_no} summary",
+                    "group_id": group_id,
+                    "group_tag": "iteration",
+                    "group_attrs": group_attrs,
+                    "child_tag": "summary",
                 },
             )
         )

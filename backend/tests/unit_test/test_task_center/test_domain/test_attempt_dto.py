@@ -20,11 +20,11 @@ def _graph(**overrides) -> Attempt:
         stage=AttemptStage.PLAN,
         status=AttemptStatus.RUNNING,
         planner_task_id=None,
-        task_specification=None,
+        plan_spec=None,
         evaluation_criteria=(),
         generator_task_ids=(),
         evaluator_task_id=None,
-        continuation_goal=None,
+        next_iteration_handoff_goal=None,
         fail_reason=None,
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
@@ -34,9 +34,9 @@ def _graph(**overrides) -> Attempt:
     return Attempt(**base)
 
 
-def test_has_partial_continuation_matches_continuation_goal():
-    assert _graph(continuation_goal=None).has_partial_continuation is False
-    assert _graph(continuation_goal="x").has_partial_continuation is True
+def test_has_iteration_handoff_matches_continuation_goal():
+    assert _graph(next_iteration_handoff_goal=None).has_iteration_handoff is False
+    assert _graph(next_iteration_handoff_goal="x").has_iteration_handoff is True
 
 
 def test_is_closed_matches_stage():

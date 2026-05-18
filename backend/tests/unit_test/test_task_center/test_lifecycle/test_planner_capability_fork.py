@@ -136,9 +136,9 @@ def _seed_partial_plan_caller(
     )
     attempt_store.set_plan_contract(
         caller_attempt.id,
-        task_specification="parent spec",
+        plan_spec="parent spec",
         evaluation_criteria=["c"],
-        continuation_goal="continue here",
+        next_iteration_handoff_goal="continue here",
     )
     task_store.upsert_task(
         task_id="t-caller",

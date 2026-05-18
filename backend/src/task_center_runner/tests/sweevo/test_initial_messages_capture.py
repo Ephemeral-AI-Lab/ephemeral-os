@@ -149,11 +149,12 @@ async def test_initial_messages_capture(
             ), f"{rel}: rows 2-4 must all be user messages"
             role_instruction = texts[2]
             skill_row = texts[3]
-            assert "# Goal" in user_msg_1, f"{rel}: missing goal block"
+            assert "<goal" in user_msg_1, f"{rel}: missing <goal*> XML tag"
             assert (
-                "# Current Iteration" in user_msg_1
-                or "Goal / Current Iteration" in user_msg_1
-            ), f"{rel}: missing iteration block"
+                "<current_iteration" in user_msg_1
+                or "<iteration_goal" in user_msg_1
+                or "<goal_current_iteration" in user_msg_1
+            ), f"{rel}: missing current-iteration XML tag"
             assert "# Terminal tools you may call" in role_instruction, (
                 f"{rel}: row 3 missing terminal catalog heading"
             )
@@ -199,8 +200,8 @@ async def test_initial_messages_capture(
                 f"{rel}: executor needs >=3 initial rows, got {len(rows)}"
             )
             assert (
-                "Attempt Plan" in user_msg_1 or "Assigned Task" in user_msg_1
-            ), f"{rel}: missing attempt plan / assigned task"
+                "<attempt_plan" in user_msg_1 or "<assigned_task" in user_msg_1
+            ), f"{rel}: missing <attempt_plan> / <assigned_task> XML tag"
             role_instruction = texts[2]
             assert "# Terminal tools you may call" in role_instruction, (
                 f"{rel}: row 3 missing terminal catalog heading"
@@ -216,8 +217,8 @@ async def test_initial_messages_capture(
                 f"{rel}: evaluator needs >=3 initial rows, got {len(rows)}"
             )
             assert (
-                "Evaluation Criteria" in user_msg_1
-            ), f"{rel}: missing evaluation criteria"
+                "<evaluation_criteria" in user_msg_1
+            ), f"{rel}: missing <evaluation_criteria> XML tag"
             for i in range(min(3, len(rows))):
                 assert not texts[i].startswith("Load skill:"), (
                     f"{rel}: evaluator must not see a row-4 skill in v1"

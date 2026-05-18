@@ -25,7 +25,7 @@ from task_center.context_engine.exceptions import (
 )
 from task_center.context_engine.packet import ContextPacket
 from task_center.context_engine.recipes_registry import RecipeRegistry
-from task_center.context_engine.renderer import MarkdownPromptRenderer
+from task_center.context_engine.renderer import XmlPromptRenderer
 from task_center.context_engine.scope import ContextScope
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
@@ -111,7 +111,7 @@ class ContextComposer:
 
     resolver: RuleBasedAgentResolver
     engine: ContextEngine
-    renderer: MarkdownPromptRenderer
+    renderer: XmlPromptRenderer
 
     @classmethod
     def default(cls, engine: ContextEngine) -> ContextComposer:
@@ -121,7 +121,7 @@ class ContextComposer:
         return cls(
             resolver=RuleBasedAgentResolver(),
             engine=engine,
-            renderer=MarkdownPromptRenderer(),
+            renderer=XmlPromptRenderer(),
         )
 
     def compose(

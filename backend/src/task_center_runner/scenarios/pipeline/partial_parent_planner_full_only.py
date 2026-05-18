@@ -1,7 +1,7 @@
 """Partial parent executor routes a child planner to ``planner_full_only``.
 
 The root goal's first iteration submits a partial plan with
-``continuation_goal``. Its executor then requests a child goal. Because the
+``next_iteration_handoff_goal``. Its executor then requests a child goal. Because the
 child goal's parent task belongs to that partial-planned attempt, the child
 planner must be selected through the ``planner`` agent.md variant and launch as
 ``planner_full_only``. The root continuation iteration still launches the normal
@@ -66,7 +66,7 @@ def _root_partial_plan() -> dict[str, Any]:
             ),
             "recursive_return_guard": "VERIFY checkpoint=recursive_return",
         },
-        "continuation_goal": _CONTINUATION_GOAL,
+        "next_iteration_handoff_goal": _CONTINUATION_GOAL,
     }
 
 

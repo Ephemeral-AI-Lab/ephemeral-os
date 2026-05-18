@@ -100,15 +100,15 @@ class IterationStoreProtocol(Protocol):
         closed_at: datetime | None,
     ) -> Iteration: ...
 
-    def set_continuation_goal(
-        self, iteration_id: str, *, continuation_goal: str | None
+    def set_iteration_handoff_goal(
+        self, iteration_id: str, *, next_iteration_handoff_goal: str | None
     ) -> Iteration: ...
 
     def close_succeeded(
         self,
         iteration_id: str,
         *,
-        task_specification: str,
+        plan_spec: str,
         task_summary: str,
         closed_at: datetime | None = None,
     ) -> Iteration: ...
@@ -145,9 +145,9 @@ class AttemptStoreProtocol(Protocol):
         self,
         attempt_id: str,
         *,
-        task_specification: str,
+        plan_spec: str,
         evaluation_criteria: list[str],
-        continuation_goal: str | None,
+        next_iteration_handoff_goal: str | None,
     ) -> Attempt: ...
 
     def close(

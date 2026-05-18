@@ -39,13 +39,13 @@ class _StubOrchestrator:
         self._verdict = verdict
 
     def start(self) -> None:
-        status, fail_reason, continuation_goal = self._verdict
-        if continuation_goal is not None:
+        status, fail_reason, next_iteration_handoff_goal = self._verdict
+        if next_iteration_handoff_goal is not None:
             self._gs.set_plan_contract(
                 self._g.id,
-                task_specification="stub-spec",
+                plan_spec="stub-spec",
                 evaluation_criteria=["stub-criterion"],
-                continuation_goal=continuation_goal,
+                next_iteration_handoff_goal=next_iteration_handoff_goal,
             )
         self._gs.close(self._g.id, status=status, fail_reason=fail_reason)
         self._cb(self._g.id)
@@ -123,7 +123,7 @@ def test_smoke_attempt_plan_failed(
     assert mgr is not None
     g1 = mgr.create_initial_attempt()
     attempt_store.set_plan_contract(
-        g1.id, task_specification="spec1", evaluation_criteria=["a"], continuation_goal=None
+        g1.id, plan_spec="spec1", evaluation_criteria=["a"], next_iteration_handoff_goal=None
     )
     attempt_store.close(
         g1.id, status=AttemptStatus.FAILED,
@@ -135,7 +135,7 @@ def test_smoke_attempt_plan_failed(
     assert seg_after is not None
     g2_id = seg_after.attempt_ids[-1]
     attempt_store.set_plan_contract(
-        g2_id, task_specification="spec2", evaluation_criteria=["b"], continuation_goal=None
+        g2_id, plan_spec="spec2", evaluation_criteria=["b"], next_iteration_handoff_goal=None
     )
     attempt_store.close(
         g2_id, status=AttemptStatus.FAILED,

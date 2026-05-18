@@ -109,16 +109,16 @@ def _plan(
     *,
     tasks: tuple[PlannedGeneratorTask, ...],
     kind: str = "full",
-    continuation_goal: str | None = None,
+    next_iteration_handoff_goal: str | None = None,
 ) -> PlannerSubmission:
     return PlannerSubmission(
         attempt_id=attempt_id,
         planner_task_id=planner_task_id(attempt_id),
         kind=kind,  # type: ignore[arg-type]
-        task_specification="spec",
+        plan_spec="spec",
         evaluation_criteria=("criterion",),
         tasks=tasks,
-        continuation_goal=continuation_goal,
+        next_iteration_handoff_goal=next_iteration_handoff_goal,
         summary="plan accepted",
     )
 
@@ -188,7 +188,7 @@ def test_apply_plan_submission_persists_contract_and_generator_ids(
     refreshed = attempt_store.get(attempt.id)
     assert refreshed is not None
     assert refreshed.stage == AttemptStage.GENERATE
-    assert refreshed.task_specification == "spec"
+    assert refreshed.plan_spec == "spec"
     assert refreshed.generator_task_ids == (
         generator_task_id(attempt.id, "a"),
         generator_task_id(attempt.id, "b"),
@@ -212,13 +212,13 @@ def test_apply_partial_plan_submission_stores_continuation_goal(
             attempt.id,
             tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
             kind="partial",
-            continuation_goal="continue here",
+            next_iteration_handoff_goal="continue here",
         )
     )
 
     refreshed = attempt_store.get(attempt.id)
     assert refreshed is not None
-    assert refreshed.continuation_goal == "continue here"
+    assert refreshed.next_iteration_handoff_goal == "continue here"
 
 
 def test_apply_planner_failure_marks_task_and_closes_graph(

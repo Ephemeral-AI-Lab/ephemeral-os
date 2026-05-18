@@ -34,7 +34,7 @@ def test_full_only_body_contains_no_partial_plan_prose():
     _, full_only = _load_planner_pair()
     body = full_only.system_prompt or ""
     assert "submit_plan_continues_goal" not in body
-    assert "continuation_goal" not in body
+    assert "next_iteration_handoff_goal" not in body
 
 
 def test_full_only_has_no_variants():

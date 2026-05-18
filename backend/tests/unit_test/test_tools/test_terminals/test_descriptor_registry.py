@@ -15,7 +15,6 @@ from __future__ import annotations
 import pathlib
 import re
 
-import pytest
 
 from tools._terminals.registry import (
     TERMINAL_DESCRIPTORS,

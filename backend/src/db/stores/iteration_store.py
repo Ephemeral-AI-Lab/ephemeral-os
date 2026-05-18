@@ -37,6 +37,7 @@ class IterationStore(SyncStoreMixin):
                 attempt_budget=attempt_budget,
                 status=IterationStatus.OPEN.value,
                 attempt_ids=[],
+                # DB column name pinned by ADR (FU-2 renames the column).
                 continuation_goal=None,
                 created_at=now,
                 updated_at=now,
@@ -63,14 +64,15 @@ class IterationStore(SyncStoreMixin):
             db.refresh(record)
             return self._to_dto(record)
 
-    def set_continuation_goal(
-        self, iteration_id: str, continuation_goal: str | None
+    def set_iteration_handoff_goal(
+        self, iteration_id: str, next_iteration_handoff_goal: str | None
     ) -> Iteration:
         with self._sf() as db:
             record = db.get(IterationRecord, iteration_id)
             if record is None:
                 raise LookupError(f"Iteration {iteration_id!r} not found")
-            record.continuation_goal = continuation_goal
+            # DB column name continuation_goal pinned by ADR (FU-2 renames the column).
+            record.continuation_goal = next_iteration_handoff_goal
             db.commit()
             db.refresh(record)
             return self._to_dto(record)
@@ -127,13 +129,13 @@ class IterationStore(SyncStoreMixin):
         self,
         iteration_id: str,
         *,
-        task_specification: str,
+        plan_spec: str,
         task_summary: str,
         closed_at: datetime | None = None,
     ) -> Iteration:
         """Atomically transition to SUCCEEDED + write denormalized fields.
 
-        All three writes (status, task_specification, task_summary) happen
+        All three writes (status, plan_spec, task_summary) happen
         inside one ``db.commit()`` so a mid-write crash leaves the row
         untouched. Continuation-segment spawn happens *after* this returns
         and reads the just-closed row's denormalized fields.
@@ -143,7 +145,8 @@ class IterationStore(SyncStoreMixin):
             if record is None:
                 raise LookupError(f"Iteration {iteration_id!r} not found")
             record.status = IterationStatus.SUCCEEDED.value
-            record.task_specification = task_specification
+            # DB column name task_specification pinned by ADR (FU-2 renames the column).
+            record.task_specification = plan_spec
             record.task_summary = task_summary
             if closed_at is not None:
                 record.closed_at = closed_at
@@ -161,10 +164,12 @@ class IterationStore(SyncStoreMixin):
             attempt_budget=record.attempt_budget,
             status=IterationStatus(record.status),
             attempt_ids=tuple(record.attempt_ids or ()),
-            continuation_goal=record.continuation_goal,
+            # DB column name continuation_goal pinned by ADR (FU-2 renames the column).
+            next_iteration_handoff_goal=record.continuation_goal,
             created_at=record.created_at,
             updated_at=record.updated_at,
             closed_at=record.closed_at,
-            task_specification=record.task_specification,
+            # DB column name task_specification pinned by ADR (FU-2 renames the column).
+            plan_spec=record.task_specification,
             task_summary=record.task_summary,
         )

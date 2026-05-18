@@ -69,10 +69,10 @@ def _plan(attempt_id: str) -> PlannerSubmission:
         attempt_id=attempt_id,
         planner_task_id=planner_task_id(attempt_id),
         kind="full",
-        task_specification="spec",
+        plan_spec="spec",
         evaluation_criteria=("criterion",),
         tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
-        continuation_goal=None,
+        next_iteration_handoff_goal=None,
         summary="plan",
     )
 

@@ -101,7 +101,7 @@ def test_passing_graph_with_null_continuation_emits_terminal_success(
     seg_id = _seed_segment(goal_store, iteration_store, task_center_run_id)
     mgr, captured = _make_manager(seg_id, iteration_store, attempt_store)
     g = mgr.create_initial_attempt()
-    # No continuation_goal set on the attempt.
+    # No next_iteration_handoff_goal set on the attempt.
     attempt_store.close(
         g.id, status=AttemptStatus.PASSED, fail_reason=None
     )
@@ -218,9 +218,9 @@ def test_passing_graph_with_continuation_emits_success_continue(
     g = mgr.create_initial_attempt()
     attempt_store.set_plan_contract(
         g.id,
-        task_specification="spec",
+        plan_spec="spec",
         evaluation_criteria=["c1"],
-        continuation_goal="next-goal",
+        next_iteration_handoff_goal="next-goal",
     )
     attempt_store.close(
         g.id, status=AttemptStatus.PASSED, fail_reason=None
@@ -232,7 +232,7 @@ def test_passing_graph_with_continuation_emits_success_continue(
     assert outcome.goal == "next-goal"
     seg = iteration_store.get(seg_id)
     assert seg is not None
-    assert seg.continuation_goal == "next-goal"
+    assert seg.next_iteration_handoff_goal == "next-goal"
 
 
 def test_passing_graph_does_not_retry(
@@ -279,9 +279,9 @@ def test_failed_partial_plan_graph_retries_without_propagating_continuation(
     g1 = mgr.create_initial_attempt()
     attempt_store.set_plan_contract(
         g1.id,
-        task_specification="partial slice",
+        plan_spec="partial slice",
         evaluation_criteria=["slice passes"],
-        continuation_goal="next slice",
+        next_iteration_handoff_goal="next slice",
     )
     attempt_store.close(
         g1.id,
@@ -295,7 +295,7 @@ def test_failed_partial_plan_graph_retries_without_propagating_continuation(
     seg = iteration_store.get(seg_id)
     assert seg is not None
     assert seg.is_open
-    assert seg.continuation_goal is None
+    assert seg.next_iteration_handoff_goal is None
     assert len(seg.attempt_ids) == 2
 
 
@@ -540,7 +540,7 @@ def test_failed_attempt_without_budget_emits_attempt_plan_failed(
     mgr, captured = _make_manager(seg_id, iteration_store, attempt_store)
     g1 = mgr.create_initial_attempt()
     attempt_store.set_plan_contract(
-        g1.id, task_specification="spec1", evaluation_criteria=["a"], continuation_goal=None
+        g1.id, plan_spec="spec1", evaluation_criteria=["a"], next_iteration_handoff_goal=None
     )
     attempt_store.close(
         g1.id,
@@ -553,7 +553,7 @@ def test_failed_attempt_without_budget_emits_attempt_plan_failed(
     assert seg is not None
     g2_id = seg.attempt_ids[-1]
     attempt_store.set_plan_contract(
-        g2_id, task_specification="spec2", evaluation_criteria=["b"], continuation_goal=None
+        g2_id, plan_spec="spec2", evaluation_criteria=["b"], next_iteration_handoff_goal=None
     )
     attempt_store.close(
         g2_id,
@@ -574,7 +574,7 @@ def test_prior_attempt_history_ordered_by_graph_sequence(
     mgr, captured = _make_manager(seg_id, iteration_store, attempt_store)
     g1 = mgr.create_initial_attempt()
     attempt_store.set_plan_contract(
-        g1.id, task_specification="spec1", evaluation_criteria=["a"], continuation_goal=None
+        g1.id, plan_spec="spec1", evaluation_criteria=["a"], next_iteration_handoff_goal=None
     )
     attempt_store.close(
         g1.id, status=AttemptStatus.FAILED,
@@ -585,7 +585,7 @@ def test_prior_attempt_history_ordered_by_graph_sequence(
     assert seg is not None
     g2_id = seg.attempt_ids[-1]
     attempt_store.set_plan_contract(
-        g2_id, task_specification="spec2", evaluation_criteria=["b"], continuation_goal=None
+        g2_id, plan_spec="spec2", evaluation_criteria=["b"], next_iteration_handoff_goal=None
     )
     attempt_store.close(
         g2_id, status=AttemptStatus.FAILED,

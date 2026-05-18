@@ -35,7 +35,6 @@ class ContextBlockKind(StrEnum):
     PRIOR_ITERATION_SPECIFICATION = "prior_iteration_specification"
     PRIOR_ITERATION_SUMMARY = "prior_iteration_summary"
     FAILED_ATTEMPT_LANDSCAPE = "failed_attempt_landscape"
-    PARTIAL_PLAN_BOUNDARY = "partial_plan_boundary"
     PLANNED_TASK_SPEC = "planned_task_spec"
     TASK_SPECIFICATION = "task_specification"
     EVALUATION_CRITERIA = "evaluation_criteria"

@@ -30,6 +30,7 @@ class AttemptStore(SyncStoreMixin):
                 stage=AttemptStage.PLAN.value,
                 status=AttemptStatus.RUNNING.value,
                 planner_task_id=None,
+                # DB column names task_specification/continuation_goal pinned by ADR (FU-2 renames the columns).
                 task_specification=None,
                 evaluation_criteria=[],
                 generator_task_ids=[],
@@ -65,17 +66,18 @@ class AttemptStore(SyncStoreMixin):
         self,
         attempt_id: str,
         *,
-        task_specification: str,
+        plan_spec: str,
         evaluation_criteria: list[str],
-        continuation_goal: str | None,
+        next_iteration_handoff_goal: str | None,
     ) -> Attempt:
         with self._sf() as db:
             record = db.get(AttemptRecord, attempt_id)
             if record is None:
                 raise LookupError(f"Attempt {attempt_id!r} not found")
-            record.task_specification = task_specification
+            # DB column names task_specification/continuation_goal pinned by ADR (FU-2 renames the columns).
+            record.task_specification = plan_spec
             record.evaluation_criteria = list(evaluation_criteria)
-            record.continuation_goal = continuation_goal
+            record.continuation_goal = next_iteration_handoff_goal
             db.commit()
             db.refresh(record)
             return self._to_dto(record)
@@ -168,11 +170,12 @@ class AttemptStore(SyncStoreMixin):
             stage=AttemptStage(record.stage),
             status=AttemptStatus(record.status),
             planner_task_id=record.planner_task_id,
-            task_specification=record.task_specification,
+            # DB column names task_specification/continuation_goal pinned by ADR (FU-2 renames the columns).
+            plan_spec=record.task_specification,
             evaluation_criteria=tuple(record.evaluation_criteria or ()),
             generator_task_ids=tuple(record.generator_task_ids or ()),
             evaluator_task_id=record.evaluator_task_id,
-            continuation_goal=record.continuation_goal,
+            next_iteration_handoff_goal=record.continuation_goal,
             fail_reason=(
                 AttemptFailReason(record.fail_reason)
                 if record.fail_reason is not None

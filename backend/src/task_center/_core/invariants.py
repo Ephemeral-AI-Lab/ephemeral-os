@@ -50,10 +50,10 @@ def assert_continuation_iteration_predecessor(previous: Iteration) -> None:
             f"Continuation requires predecessor iteration {previous.id!r} to be SUCCEEDED, "
             f"not {previous.status}"
         )
-    if previous.continuation_goal is None:
+    if previous.next_iteration_handoff_goal is None:
         raise TaskCenterInvariantViolation(
             f"Continuation requires predecessor iteration {previous.id!r} to have a "
-            f"continuation_goal; none was recorded"
+            f"next_iteration_handoff_goal; none was recorded"
         )
 
 

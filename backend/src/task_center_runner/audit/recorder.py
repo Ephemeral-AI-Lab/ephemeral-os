@@ -69,6 +69,9 @@ def _serialize_goal(record: GoalRecord) -> dict[str, Any]:
 
 
 def _serialize_iteration(record: IterationRecord) -> dict[str, Any]:
+    # DB column name pinned by ADR (FU-2 renames the column); intentional read
+    # of legacy name from stable ORM attribute. Audit dict keys stay stable for
+    # forensic compatibility — they will rename together with the DB column.
     return {
         "id": record.id,
         "goal_id": record.goal_id,
@@ -88,6 +91,9 @@ def _serialize_iteration(record: IterationRecord) -> dict[str, Any]:
 
 
 def _serialize_attempt(record: AttemptRecord) -> dict[str, Any]:
+    # DB column name pinned by ADR (FU-2 renames the column); intentional read
+    # of legacy name from stable ORM attribute. Audit dict keys stay stable for
+    # forensic compatibility — they will rename together with the DB column.
     return {
         "id": record.id,
         "iteration_id": record.iteration_id,

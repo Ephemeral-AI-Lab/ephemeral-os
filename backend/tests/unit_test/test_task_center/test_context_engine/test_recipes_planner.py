@@ -13,7 +13,7 @@ from task_center.context_engine.packet import (
 from task_center.context_engine.recipes.planner import (
     _planner_build,
 )
-from task_center.context_engine.renderer import MarkdownPromptRenderer
+from task_center.context_engine.renderer import XmlPromptRenderer
 from task_center.context_engine.scope import ContextScope
 from task_center.attempt import (
     AttemptFailReason,
@@ -66,7 +66,7 @@ def _close_iteration_succeeded(
 ):
     return iteration_store.close_succeeded(
         iteration_id,
-        task_specification=spec,
+        plan_spec=spec,
         task_summary=summary,
         closed_at=datetime.now(UTC),
     )
@@ -78,9 +78,9 @@ def _seed_failed_attempt(attempt_store, iteration_id, *, sequence_no: int):
     )
     attempt_store.set_plan_contract(
         g.id,
-        task_specification=f"spec-{sequence_no}",
+        plan_spec=f"spec-{sequence_no}",
         evaluation_criteria=[f"crit-{sequence_no}-a", f"crit-{sequence_no}-b"],
-        continuation_goal=None,
+        next_iteration_handoff_goal=None,
     )
     return attempt_store.close(
         g.id,
@@ -120,7 +120,7 @@ def test_iteration1_emits_one_merged_goal_iteration_block(
     kinds = [b.kind for b in packet.blocks]
     assert kinds == ["iteration_statement", "role_instruction"]
     iteration_goal = packet.blocks[0]
-    assert iteration_goal.metadata["heading"] == "# Goal / Current Iteration"
+    assert iteration_goal.metadata["tag"] == "goal_current_iteration"
     assert packet.blocks[-1].kind == "role_instruction"
     assert packet.target_id == g.id
 
@@ -160,14 +160,17 @@ def test_iteration2_emits_goal_prior_results_and_current_iteration(
         "iteration_statement",
         "role_instruction",
     ]
-    assert packet.blocks[0].metadata["group_heading"] == "# Goal"
+    assert packet.blocks[0].metadata["tag"] == "goal"
     prior_spec = packet.blocks[1]
     assert prior_spec.priority == ContextPriority.HIGH
-    assert prior_spec.metadata["iteration_sequence_no"] == "1"
-    assert prior_spec.metadata["group_heading"] == "# Goal"
+    assert prior_spec.metadata["child_tag"] == "accepted_plan"
+    assert prior_spec.metadata["group_tag"] == "iteration"
+    assert prior_spec.metadata["group_attrs"] == 'iteration_no="1" status="prior"'
     assert prior_spec.text == "iteration1 spec"
     iteration_goal = packet.blocks[3]
-    assert iteration_goal.metadata["heading"] == "# Current Iteration"
+    assert iteration_goal.metadata["child_tag"] == "iteration_goal"
+    assert iteration_goal.metadata["group_tag"] == "iteration"
+    assert iteration_goal.metadata["group_attrs"] == 'iteration_no="2" status="current"'
     assert packet.blocks[-1].kind == "role_instruction"
 
 
@@ -200,9 +203,9 @@ def test_iteration3_emits_two_pairs_with_priority_split(
         b for b in packet.blocks if b.kind == "prior_iteration_specification"
     ]
     assert len(prior_specs) == 2
-    assert prior_specs[0].metadata["iteration_sequence_no"] == "1"
+    assert prior_specs[0].metadata["group_attrs"] == 'iteration_no="1" status="prior"'
     assert prior_specs[0].priority == ContextPriority.MEDIUM
-    assert prior_specs[1].metadata["iteration_sequence_no"] == "2"
+    assert prior_specs[1].metadata["group_attrs"] == 'iteration_no="2" status="prior"'
     assert prior_specs[1].priority == ContextPriority.HIGH
 
 
@@ -210,7 +213,7 @@ def test_missing_prior_spec_raises_context_engine_error(
     deps_with_stores, goal_store, iteration_store, attempt_store,
     task_center_run_id,
 ):
-    """Closed iteration-1 with task_specification still null is an invariant
+    """Closed iteration-1 with plan_spec still null is an invariant
     violation; recipe must raise."""
     request = _seed_goal(goal_store, task_center_run_id)
     iteration1 = _seed_iteration(
@@ -265,10 +268,10 @@ def test_three_failed_attempts_emit_three_high_priority_blocks(
     assert len(failed_blocks) == 3
     for block in failed_blocks:
         assert block.priority == ContextPriority.HIGH
-    assert [b.metadata["attempt_sequence_no"] for b in failed_blocks] == [
-        "1",
-        "2",
-        "3",
+    assert [b.metadata["attrs"] for b in failed_blocks] == [
+        'attempt_no="1" status="failed"',
+        'attempt_no="2" status="failed"',
+        'attempt_no="3" status="failed"',
     ]
 
 
@@ -283,9 +286,9 @@ def test_failed_attempt_landscape_includes_plan_type_statuses_and_summaries(
     failed = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
     attempt_store.set_plan_contract(
         failed.id,
-        task_specification="partial failed spec",
+        plan_spec="partial failed spec",
         evaluation_criteria=["criterion"],
-        continuation_goal="continue with later slice",
+        next_iteration_handoff_goal="continue with later slice",
     )
     attempt_store.set_generator_task_ids(failed.id, ["gen-a", "gen-b"])
     task_store.upsert_task(
@@ -334,13 +337,21 @@ def test_failed_attempt_landscape_includes_plan_type_statuses_and_summaries(
     ]
     assert len(failed_blocks) == 1
     text = failed_blocks[0].text
-    assert "Plan type: partial" in text
-    assert "continue with later slice" not in text
-    assert "- gen-a: done" in text
-    assert "- gen-b: failed" in text
-    assert "#### gen-a\n\nimplemented A" in text
-    assert "#### gen-b\n\nB failed after creating fixture" in text
+    assert "<attempt_plan>" in text
+    assert "<plan_spec>\npartial failed spec\n</plan_spec>" in text
+    assert (
+        "<next_iteration_handoff_goal>\ncontinue with later slice\n"
+        "</next_iteration_handoff_goal>"
+    ) in text
+    assert "<generator_outcomes>" in text
+    assert "gen-a: done" in text
+    assert "gen-b: failed" in text
+    assert '<task id="gen-a" status="done">\nimplemented A\n</task>' in text
     assert "fail_reason" not in text
+    # Generator failure bypasses evaluator regardless of evaluator_task_id.
+    assert (
+        '<evaluator_judgment status="bypassed" reason="generator_failed">'
+    ) in text
 
 
 def test_all_failed_attempts_render_as_high_priority_blocks(
@@ -370,8 +381,8 @@ def test_all_failed_attempts_render_as_high_priority_blocks(
         b for b in packet.blocks if b.kind == "failed_attempt_landscape"
     ]
     assert len(failed_blocks) == total
-    assert [b.metadata["attempt_sequence_no"] for b in failed_blocks] == [
-        str(n) for n in range(1, total + 1)
+    assert [b.metadata["attrs"] for b in failed_blocks] == [
+        f'attempt_no="{n}" status="failed"' for n in range(1, total + 1)
     ]
     assert all(block.priority == ContextPriority.HIGH for block in failed_blocks)
     assert all("truncated_count" not in block.metadata for block in failed_blocks)
@@ -436,20 +447,27 @@ def test_iteration_2_plus_reading_a_structure(
         "iteration_statement",
     ]
 
-    # 2. Renderer output structure (heading-line presence, not full body text):
-    renderer = MarkdownPromptRenderer()
+    # 2. Renderer output structure (XML tags, not markdown headings):
+    renderer = XmlPromptRenderer()
     rendered = renderer.render_context(packet)
-    # H1 "# Goal" is the very first line; check presence + no extra H1 Goals.
-    assert rendered.startswith("# Goal\n")
-    assert rendered.count("\n# Goal\n") == 0  # only one # Goal H1, at top
-    assert "\n# Current Iteration\n" in rendered
-    assert "## Iteration 1 accepted plan" in rendered
-    assert "## Iteration 1 summary" in rendered
-    assert "## Iteration 2 accepted plan" in rendered
-    assert "## Iteration 2 summary" in rendered
+    assert rendered.startswith("<goal>\n")
+    assert "</goal>" in rendered
+    # Current iteration's <iteration_goal> child wrapped under status="current".
+    assert '<iteration iteration_no="3" status="current">' in rendered
+    assert "<iteration_goal>\niteration 3 goal\n</iteration_goal>" in rendered
+    # Two prior iterations wrap their plan + summary children.
+    for n in (1, 2):
+        assert f'<iteration iteration_no="{n}" status="prior">' in rendered
+        assert f"<accepted_plan>\niter{n} spec\n</accepted_plan>" in rendered
+        assert f"<summary>\niter{n} summary\n</summary>" in rendered
 
-    # 3. group_heading metadata contract (§2.7 invariant):
-    goal_group = [
-        b for b in packet.blocks if b.metadata.get("group_heading") == "# Goal"
-    ]
-    assert len(goal_group) == 5  # 1 goal_statement + 2 × (spec + summary)
+    # 3. Each prior iteration shares a group_id; the standalone <goal> block
+    # carries metadata['tag'] without a group_id.
+    assert packet.blocks[0].metadata["tag"] == "goal"
+    assert "group_id" not in packet.blocks[0].metadata
+    group_ids = {
+        b.metadata.get("group_id")
+        for b in packet.blocks
+        if b.kind in {"prior_iteration_specification", "prior_iteration_summary"}
+    }
+    assert group_ids == {"iteration_1_prior", "iteration_2_prior"}

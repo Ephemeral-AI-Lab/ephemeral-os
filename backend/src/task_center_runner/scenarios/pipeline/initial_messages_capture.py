@@ -13,7 +13,7 @@ Combines three orthogonal composer branches into one live run so a single
    ``# Prior Failed Attempts`` evidence.
 
 2. **Continuation goal** — iteration 1 submits a *partial* plan with a
-   ``continuation_goal`` once the retry recovers. The iteration manager
+   ``next_iteration_handoff_goal`` once the retry recovers. The iteration manager
    spawns iteration 2 with ``creation_reason=PARTIAL_CONTINUATION``;
    iteration 2's planner sees ``# Previous Iteration Results``.
 
@@ -88,7 +88,7 @@ class InitialMessagesCapture(ScenarioBase):
 
     Iteration 1, attempt 1: planner submits an invalid plan → TOOL_CALL_ERROR.
     Iteration 1, attempt 2: planner submits a partial plan with a
-    continuation_goal; executor runs preflight; evaluator passes.
+    next_iteration_handoff_goal; executor runs preflight; evaluator passes.
     Iteration 2, attempt 1: planner submits a full plan; executor runs
     preflight; evaluator passes; goal closes succeeded.
     """
@@ -129,7 +129,7 @@ class InitialMessagesCapture(ScenarioBase):
                 )
             return ToolCallSpec(
                 submit_plan_continues_goal,
-                preflight_partial_plan(continuation_goal=_CONTINUATION_GOAL),
+                preflight_partial_plan(next_iteration_handoff_goal=_CONTINUATION_GOAL),
             )
         return ToolCallSpec(submit_plan_closes_goal, preflight_full_plan())
 

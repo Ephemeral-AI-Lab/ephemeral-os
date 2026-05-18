@@ -21,17 +21,22 @@ from tools.submission.planner._schemas import (
 
 
 class SubmitPlanContinuesGoalInput(PlannerSubmissionBaseInput):
-    continuation_goal: str = Field(..., min_length=1)
+    next_iteration_handoff_goal: str = Field(..., min_length=1)
 
-    @field_validator("continuation_goal")
+    @field_validator("next_iteration_handoff_goal")
     @classmethod
-    def _validate_continuation_goal(cls, value: str) -> str:
-        return validate_nonblank(value, "continuation_goal")
+    def _validate_next_iteration_handoff_goal(cls, value: str) -> str:
+        return validate_nonblank(value, "next_iteration_handoff_goal")
 
 
 @tool(
     name="submit_plan_continues_goal",
-    description="Submit a plan that closes the current iteration on evaluator PASS and continues the goal via a new iteration spawned from continuation_goal.",
+    description=(
+        "Submit a plan when this iteration is too risky to complete in one shot. "
+        "Closes the current iteration on evaluator PASS and continues the goal "
+        "via a new iteration spawned from next_iteration_handoff_goal — the "
+        "bounded slice you hand off to the next iteration."
+    ),
     input_model=SubmitPlanContinuesGoalInput,
     output_model=TextToolOutput,
     is_terminal_tool=True,
@@ -41,7 +46,7 @@ async def submit_plan_continues_goal(
     evaluation_criteria: list[str],
     tasks: list[PlanTaskInput],
     task_specs: dict[str, str],
-    continuation_goal: str,
+    next_iteration_handoff_goal: str,
     *,
     context: ToolExecutionContextService,
 ) -> ToolResult:
@@ -53,11 +58,11 @@ async def submit_plan_continues_goal(
     submission, error = build_planner_submission(
         submission_context=submission_context,
         kind="partial",
-        task_specification=plan_spec,
+        plan_spec=plan_spec,
         evaluation_criteria=evaluation_criteria,
         tasks=[PlanTaskInput.model_validate(task) for task in tasks],
         task_specs=task_specs,
-        continuation_goal=continuation_goal,
+        next_iteration_handoff_goal=next_iteration_handoff_goal,
     )
     if error is not None or submission is None:
         return ToolResult(output=error or "Invalid planner submission.", is_error=True)

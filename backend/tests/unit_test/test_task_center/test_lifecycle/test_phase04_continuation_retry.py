@@ -101,7 +101,7 @@ def _seed_outer_running_generator(
             attempt_id=outer_attempt.id,
             planner_task_id=planner_task_id(outer_attempt.id),
             kind="full",
-            task_specification="outer spec",
+            plan_spec="outer spec",
             evaluation_criteria=("outer ok",),
             tasks=(
                 PlannedGeneratorTask(
@@ -111,7 +111,7 @@ def _seed_outer_running_generator(
                     task_spec="execute outer",
                 ),
             ),
-            continuation_goal=None,
+            next_iteration_handoff_goal=None,
             summary="outer plan",
         )
     )
@@ -123,17 +123,17 @@ def _drive_delegated_attempt_to_pass(
     *,
     runtime: AttemptDeps,
     delegated_attempt_id: str,
-    continuation_goal: str | None,
+    next_iteration_handoff_goal: str | None,
 ) -> None:
     """Plan, execute, and pass the delegated attempt."""
     delegated = runtime.orchestrator_registry.get_or_raise(delegated_attempt_id)
-    if continuation_goal is None:
+    if next_iteration_handoff_goal is None:
         delegated.apply_plan_submission(
             PlannerSubmission(
                 attempt_id=delegated_attempt_id,
                 planner_task_id=planner_task_id(delegated_attempt_id),
                 kind="full",
-                task_specification="delegated spec",
+                plan_spec="delegated spec",
                 evaluation_criteria=("delegated ok",),
                 tasks=(
                     PlannedGeneratorTask(
@@ -143,7 +143,7 @@ def _drive_delegated_attempt_to_pass(
                         task_spec="do delegated",
                     ),
                 ),
-                continuation_goal=None,
+                next_iteration_handoff_goal=None,
                 summary="delegated plan",
             )
         )
@@ -153,7 +153,7 @@ def _drive_delegated_attempt_to_pass(
                 attempt_id=delegated_attempt_id,
                 planner_task_id=planner_task_id(delegated_attempt_id),
                 kind="partial",
-                task_specification="delegated spec",
+                plan_spec="delegated spec",
                 evaluation_criteria=("delegated ok",),
                 tasks=(
                     PlannedGeneratorTask(
@@ -163,7 +163,7 @@ def _drive_delegated_attempt_to_pass(
                         task_spec="do delegated",
                     ),
                 ),
-                continuation_goal=continuation_goal,
+                next_iteration_handoff_goal=next_iteration_handoff_goal,
                 summary="delegated plan",
             )
         )
@@ -198,7 +198,7 @@ def _drive_delegated_attempt_to_fail(
             attempt_id=delegated_attempt_id,
             planner_task_id=planner_task_id(delegated_attempt_id),
             kind="full",
-            task_specification="delegated spec",
+            plan_spec="delegated spec",
             evaluation_criteria=("delegated ok",),
             tasks=(
                 PlannedGeneratorTask(
@@ -208,7 +208,7 @@ def _drive_delegated_attempt_to_fail(
                     task_spec="do delegated",
                 ),
             ),
-            continuation_goal=None,
+            next_iteration_handoff_goal=None,
             summary="delegated plan",
         )
     )
@@ -249,7 +249,7 @@ def test_delegated_continuation_waits_until_final_segment(
     _drive_delegated_attempt_to_pass(
         runtime=runtime,
         delegated_attempt_id=segment1_initial_attempt_id,
-        continuation_goal="continue work",
+        next_iteration_handoff_goal="continue work",
     )
     parent_after_segment1 = task_store.get_task(parent_task_id)
     assert parent_after_segment1 is not None
@@ -274,7 +274,7 @@ def test_delegated_continuation_waits_until_final_segment(
     _drive_delegated_attempt_to_pass(
         runtime=runtime,
         delegated_attempt_id=segment2_initial_attempt_id,
-        continuation_goal=None,
+        next_iteration_handoff_goal=None,
     )
 
     parent_final = task_store.get_task(parent_task_id)
@@ -317,7 +317,7 @@ def test_continuation_startup_failure_reports_continuation_graph(
     _drive_delegated_attempt_to_pass(
         runtime=runtime,
         delegated_attempt_id=goal_start.initial_attempt_id,
-        continuation_goal="continue work",
+        next_iteration_handoff_goal="continue work",
     )
 
     request = goal_store.get(goal_start.goal_id)
@@ -379,7 +379,7 @@ def test_delegated_retry_waits_until_final_graph(
     _drive_delegated_attempt_to_pass(
         runtime=runtime,
         delegated_attempt_id=retry_attempt_id,
-        continuation_goal=None,
+        next_iteration_handoff_goal=None,
     )
 
     parent_final = task_store.get_task(parent_task_id)

@@ -11,6 +11,12 @@ text branches on scope-derived facts the caller has already computed; the
 helper never touches stores. Text is profile-variant agnostic — it never
 names terminal submission tools, since "Generator" alone resolves to four
 distinct profile variants and "Planner" to two.
+
+**Tag mention convention.** Role text references context structure via XML
+tag mentions (``<attempt_plan>``, ``<iteration status="prior">``) instead of
+markdown heading text. Tool parameters keep their backtick form
+(``next_iteration_handoff_goal``) so the planner can tell a context section
+from a tool argument at a glance.
 """
 
 from __future__ import annotations
@@ -32,76 +38,79 @@ def _block(text: str) -> ContextBlock:
 
 def planner_instruction(
     *,
-    iteration_sequence_no: int,
+    iteration_no: int,
     has_failed_attempts: bool,
 ) -> ContextBlock:
     """Hint for the planner role.
 
-    Branches on (iteration_sequence_no == 1 vs >= 2) × (has_failed_attempts).
+    Branches on (iteration_no == 1 vs >= 2) × (has_failed_attempts).
     """
-    if iteration_sequence_no == 1 and not has_failed_attempts:
+    if iteration_no == 1 and not has_failed_attempts:
         text = (
             "You are planning the first attempt for this iteration's goal. "
             "No prior attempts exist in this iteration. Propose a plan that "
             "decomposes the iteration goal into generator tasks with a clear "
             "evaluation contract. If you cannot solve the iteration in one "
-            "attempt, submit a partial plan with a continuation_goal so the "
-            "next iteration can pick up where this one ends. "
+            "attempt, submit a partial plan with a `next_iteration_handoff_goal` "
+            "so the next iteration can pick up where this one ends. "
             "When the iteration goal is a list of independent items (for "
             "example a PR-description changelog of features and fixes), "
             "prefer a wide parallel DAG with one sibling generator task per "
             "item and one criterion per item; coalescing into a single "
             "'all items done' criterion turns partial progress into total "
             "failure. If one attempt cannot fit every item, bind a tighter "
-            "set of items here. If you defer work via continuation_goal, make "
-            "that continuation_goal the next bounded slice only; do not dump "
+            "set of items here. If you defer work via `next_iteration_handoff_goal`, "
+            "make that handoff the next bounded slice only; do not dump "
             "the entire remaining backlog into it."
         )
-    elif iteration_sequence_no == 1 and has_failed_attempts:
+    elif iteration_no == 1 and has_failed_attempts:
         text = (
             "You are planning a follow-up attempt for this iteration's goal. "
-            "One or more prior attempts in this iteration failed (see "
-            "Prior Failed Attempts). Diagnose why earlier attempts failed and "
-            "choose a meaningfully different decomposition, scope, or "
-            "evaluation contract — do not repeat a failing strategy. "
-            "When the iteration goal is a list of independent items, the "
-            "prior failure landscape tells you which items already passed "
-            "their criterion and which did not; keep one criterion per item "
-            "and narrow this attempt's scope to the failing or skipped "
-            "items rather than re-running the full list."
+            "One or more prior attempts in this iteration failed (see the "
+            '`<attempt status="failed">` blocks inside '
+            '`<iteration status="current">`). Diagnose why earlier attempts '
+            "failed and choose a meaningfully different decomposition, "
+            "scope, or evaluation contract — do not repeat a failing "
+            "strategy. When the iteration goal is a list of independent "
+            "items, the prior failure landscape tells you which items "
+            "already passed their criterion and which did not; keep one "
+            "criterion per item and narrow this attempt's scope to the "
+            "failing or skipped items rather than re-running the full list."
         )
-    elif iteration_sequence_no >= 2 and not has_failed_attempts:
+    elif iteration_no >= 2 and not has_failed_attempts:
         text = (
             "You are planning the first attempt for a later iteration. The "
-            "prior iteration produced concrete results (see Previous "
-            "Iteration Results). Your decomposition should continue from "
-            "where the prior iteration ended — build on prior outputs, do "
-            "not redo their work. The Current Iteration text is the "
-            "authoritative scope for this planner; use the original Goal only "
-            "for orientation and do not add backlog items that Current "
-            "Iteration did not explicitly name. "
-            "When the iteration goal is a list of independent items, consult "
-            "Previous Iteration Results for which items already passed and "
-            "plan only the remaining items, keeping one criterion per item "
-            "so the evaluator can report per-item pass/fail rather than a "
-            "single coarse verdict."
+            "prior iteration produced concrete results (see "
+            '`<iteration status="prior">` blocks). Your decomposition should '
+            "continue from where the prior iteration ended — build on prior "
+            "outputs, do not redo their work. The `<iteration_goal>` inside "
+            '`<iteration status="current">` is the authoritative scope for '
+            "this planner; use the standalone `<goal>` only for orientation "
+            "and do not add backlog items that the current iteration's goal "
+            "did not explicitly name. When the iteration goal is a list of "
+            'independent items, consult `<iteration status="prior">` for '
+            "which items already passed and plan only the remaining items, "
+            "keeping one criterion per item so the evaluator can report "
+            "per-item pass/fail rather than a single coarse verdict."
         )
     else:
         text = (
             "You are planning a follow-up attempt for a later iteration. "
-            "Earlier iterations produced results (see Previous Iteration "
-            "Results) and one or more attempts in the current iteration have "
-            "failed (see Prior Failed Attempts). Build on prior-iteration "
+            'Earlier iterations produced results (see `<iteration status="prior">` '
+            'blocks) and one or more attempts in the current iteration have '
+            'failed (see the `<attempt status="failed">` blocks inside '
+            '`<iteration status="current">`). Build on prior-iteration '
             "outputs and avoid repeating the failure modes from the current "
-            "iteration. The Current Iteration text is the authoritative scope "
-            "for this planner; use the original Goal only for orientation and "
-            "do not add backlog items that Current Iteration did not "
-            "explicitly name. "
-            "When the iteration goal is a list of independent items, lean "
-            "on Previous Iteration Results for done items and on Prior "
-            "Failed Attempts for items the current iteration has already "
-            "tried unsuccessfully; keep one criterion per item and narrow "
-            "scope to items with a credible path to passing this attempt."
+            "iteration. The `<iteration_goal>` inside "
+            '`<iteration status="current">` is the authoritative scope for '
+            "this planner; use the standalone `<goal>` only for orientation "
+            "and do not add backlog items that the current iteration's goal "
+            "did not explicitly name. When the iteration goal is a list of "
+            'independent items, lean on `<iteration status="prior">` for '
+            'done items and on the `<attempt status="failed">` blocks for '
+            "items the current iteration has already tried unsuccessfully; "
+            "keep one criterion per item and narrow scope to items with a "
+            "credible path to passing this attempt."
         )
     return _block(text)
 
@@ -114,17 +123,17 @@ def generator_instruction(*, has_deps: bool) -> ContextBlock:
     if has_deps:
         text = (
             "You are executing one generator task with one or more "
-            "dependency outputs already available (see Dependency Results). "
+            "dependency outputs already available (see `<dependency_results>`). "
             "Treat the dependency outputs as fixed inputs; do not redo their "
-            "work. Read the assigned task and produce the deliverable, then "
-            "submit per your role's contract."
+            "work. Read the `<assigned_task>` and produce the deliverable, "
+            "then submit per your role's contract."
         )
     else:
         text = (
             "You are executing one generator task. This task has no "
             "dependencies on other generator tasks in the same attempt. "
-            "Read the assigned task below and produce the deliverable, then "
-            "submit per your role's contract."
+            "Read the `<assigned_task>` below and produce the deliverable, "
+            "then submit per your role's contract."
         )
     return _block(text)
 
@@ -132,21 +141,26 @@ def generator_instruction(*, has_deps: bool) -> ContextBlock:
 def evaluator_instruction(*, is_partial: bool) -> ContextBlock:
     """Hint for the evaluator role.
 
-    Branches on whether the attempt is a partial (continuation) plan.
+    Branches on whether the attempt is a partial (continuation) plan. The
+    structural signal — that the attempt declared a handoff — travels via the
+    ``<next_iteration_handoff_goal>`` child of ``<attempt_plan>``. The
+    behavioral guidance below is the single source of truth for partial-plan
+    semantics after the PARTIAL_PLAN_BOUNDARY block was removed.
     """
     if is_partial:
         text = (
-            "You are evaluating an intentionally partial attempt (see "
-            "Partial Plan Boundary). This attempt is not expected to solve "
-            "the full iteration goal — it is expected to make progress and "
-            "hand off remaining work via continuation_goal. Pass/fail "
-            "against the Evaluation Criteria for what this attempt promised; "
+            "You are evaluating an intentionally partial attempt (see the "
+            "`<next_iteration_handoff_goal>` child of `<attempt_plan>`). "
+            "This attempt is not expected to solve the full iteration goal "
+            "— it is expected to make progress and hand off remaining work "
+            "via `next_iteration_handoff_goal`. Pass/fail against "
+            "`<evaluation_criteria>` for what this attempt promised; "
             "do not penalize for incomplete work that was explicitly deferred."
         )
     else:
         text = (
-            "You are evaluating a complete attempt. Use the Attempt Plan "
-            "and the Evaluation Criteria as your authority — pass/fail the "
+            "You are evaluating a complete attempt. Use `<attempt_plan>` "
+            "and `<evaluation_criteria>` as your authority — pass/fail the "
             "attempt against the criteria, not against your own preferences. "
             "Treat the iteration goal as the scope; do not penalize the "
             "attempt for work outside the iteration goal."
@@ -174,5 +188,3 @@ def explorer_instruction() -> ContextBlock:
         "tool submit_exploration_result."
     )
     return _block(text)
-
-

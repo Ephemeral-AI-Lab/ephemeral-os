@@ -50,7 +50,7 @@ from task_center.context_engine.packet import (  # noqa: E402
     ContextPriority,
     ContextRefs,
 )
-from task_center.context_engine.renderer import MarkdownPromptRenderer  # noqa: E402
+from task_center.context_engine.renderer import XmlPromptRenderer  # noqa: E402
 
 
 def _build_demo_packet() -> ContextPacket:
@@ -101,7 +101,7 @@ def _print_shape(label: str, prompt: str, initial_messages_text: str | None) -> 
 
 def _dry_run() -> int:
     packet = _build_demo_packet()
-    renderer = MarkdownPromptRenderer()
+    renderer = XmlPromptRenderer()
     context_text = renderer.render_context(packet)
     role_text = renderer.render_role_instruction(packet)
 

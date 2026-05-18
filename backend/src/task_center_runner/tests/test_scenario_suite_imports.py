@@ -111,6 +111,7 @@ def test_subpackage_imports_are_clean() -> None:
         "DependencyDagMixed",
         "DependencyDagParallel",
         "DependencyDagSerial",
+        "InitialMessagesCapture",
         "IterativeContinuation",
         "GeneratorFailureQuiescence",
         "InitialGoal",

@@ -37,11 +37,11 @@ class Attempt:
     stage: AttemptStage
     status: AttemptStatus
     planner_task_id: str | None
-    task_specification: str | None
+    plan_spec: str | None
     evaluation_criteria: tuple[str, ...]
     generator_task_ids: tuple[str, ...]
     evaluator_task_id: str | None
-    continuation_goal: str | None
+    next_iteration_handoff_goal: str | None
     fail_reason: AttemptFailReason | None
     created_at: datetime
     updated_at: datetime
@@ -52,5 +52,5 @@ class Attempt:
         return self.stage == AttemptStage.CLOSED
 
     @property
-    def has_partial_continuation(self) -> bool:
-        return self.continuation_goal is not None
+    def has_iteration_handoff(self) -> bool:
+        return self.next_iteration_handoff_goal is not None

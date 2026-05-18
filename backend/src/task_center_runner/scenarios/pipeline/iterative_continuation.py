@@ -1,8 +1,8 @@
 """Iterative continuation via partial plan.
 
 Reference scenario for iteration continuation: iteration 1 submits a partial plan
-with ``continuation_goal``, evaluator passes, iteration-manager spawns iteration
-2 with ``creation_reason=PARTIAL_CONTINUATION`` and ``goal=<continuation_goal>``.
+with ``next_iteration_handoff_goal``, evaluator passes, iteration-manager spawns iteration
+2 with ``creation_reason=PARTIAL_CONTINUATION`` and ``goal=<next_iteration_handoff_goal>``.
 Iteration 2 submits a full plan, evaluator passes, goal closes succeeded.
 
 Asserts: 2 iterations per goal, iteration 2 has ``creation_reason`` =
@@ -57,7 +57,7 @@ class IterativeContinuation(ScenarioBase):
         if ctx.iteration.sequence_no == 1:
             return ToolCallSpec(
                 submit_plan_continues_goal,
-                preflight_partial_plan(continuation_goal=_CONTINUATION_GOAL),
+                preflight_partial_plan(next_iteration_handoff_goal=_CONTINUATION_GOAL),
             )
         return ToolCallSpec(submit_plan_closes_goal, preflight_full_plan())
 

@@ -70,7 +70,7 @@ _INTEGRITY_PARTIAL_PLAN: dict = {
             "edit_file, shell, a batch public edit, and an expected conflict."
         ),
     },
-    "continuation_goal": (
+    "next_iteration_handoff_goal": (
         "Run the final SWE-EVO mock grading iteration after sandbox integrity "
         "evidence has been persisted."
     ),

@@ -169,9 +169,9 @@ def _setup_partial_plan_ancestor(
     )
     attempt_store.set_plan_contract(
         caller_attempt.id,
-        task_specification="caller spec",
+        plan_spec="caller spec",
         evaluation_criteria=["c"],
-        continuation_goal="continue here",   # ← partial plan
+        next_iteration_handoff_goal="continue here",   # ← partial plan
     )
     task_store.upsert_task(
         task_id="t-caller",
@@ -212,7 +212,7 @@ def test_planner_launched_via_composer_uses_base_when_no_ancestor(
     assert selected is not None
     assert selected.system_prompt == "PLANNER"
     assert launched.context_packet_id is None  # no packet store wired
-    assert "Goal / Current Iteration" in launched.context_message
+    assert "<goal_current_iteration>" in launched.context_message
 
 
 def test_planner_forked_to_full_only_when_partial_plan_caller_present(

@@ -27,7 +27,7 @@ def test_attempt_plan_failed_carries_history():
     e1 = PriorAttemptEntry(
         attempt_id="g1",
         attempt_sequence_no=1,
-        task_specification=None,
+        plan_spec=None,
         evaluation_criteria=(),
         fail_reason=AttemptFailReason.GENERATOR_FAILED,
         attempt_summary_id=None,
@@ -42,7 +42,7 @@ def test_prior_attempt_history_orders_by_sequence_no():
     e1 = PriorAttemptEntry(
         attempt_id="g1",
         attempt_sequence_no=1,
-        task_specification=None,
+        plan_spec=None,
         evaluation_criteria=(),
         fail_reason=None,
         attempt_summary_id=None,
@@ -51,7 +51,7 @@ def test_prior_attempt_history_orders_by_sequence_no():
     e2 = PriorAttemptEntry(
         attempt_id="g2",
         attempt_sequence_no=2,
-        task_specification=None,
+        plan_spec=None,
         evaluation_criteria=(),
         fail_reason=None,
         attempt_summary_id=None,
@@ -66,7 +66,7 @@ def test_phase06_summary_fields_default_to_none():
     e = PriorAttemptEntry(
         attempt_id="g1",
         attempt_sequence_no=1,
-        task_specification=None,
+        plan_spec=None,
         evaluation_criteria=(),
         fail_reason=None,
         attempt_summary_id=None,

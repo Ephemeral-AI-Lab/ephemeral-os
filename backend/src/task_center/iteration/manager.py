@@ -186,19 +186,19 @@ class IterationManager:
             )
 
     def _close_iteration_passed(self, attempt: Attempt) -> None:
-        self._iteration_store.set_continuation_goal(
-            self.iteration_id, attempt.continuation_goal
+        self._iteration_store.set_iteration_handoff_goal(
+            self.iteration_id, attempt.next_iteration_handoff_goal
         )
         # Atomically transition status + write the denormalized
-        # task_specification (from the passing attempt) and task_summary
+        # plan_spec (from the passing attempt) and task_summary
         # (from the evaluator's pass summary text) onto the iteration row.
         self._iteration_store.close_succeeded(
             self.iteration_id,
-            task_specification=attempt.task_specification or "",
+            plan_spec=attempt.plan_spec or "",
             task_summary=self._evaluator_pass_summary_for(attempt),
             closed_at=datetime.now(UTC),
         )
-        if attempt.continuation_goal is None:
+        if attempt.next_iteration_handoff_goal is None:
             self._emit_terminal_success(attempt)
         else:
             self._emit_success_continue(attempt)
@@ -311,14 +311,14 @@ class IterationManager:
         self._on_iteration_closed(report)
 
     def _emit_success_continue(self, attempt: Attempt) -> None:
-        if attempt.continuation_goal is None:
+        if attempt.next_iteration_handoff_goal is None:
             raise TaskCenterInvariantViolation(
-                "success_continue requires a non-null continuation_goal"
+                "success_continue requires a non-null next_iteration_handoff_goal"
             )
         report = IterationClosureReport(
             iteration_id=self.iteration_id,
             final_attempt_id=attempt.id,
-            outcome=SuccessContinue(goal=attempt.continuation_goal),
+            outcome=SuccessContinue(goal=attempt.next_iteration_handoff_goal),
         )
         self._on_iteration_closed(report)
 
@@ -344,7 +344,7 @@ class IterationManager:
             PriorAttemptEntry(
                 attempt_id=g.id,
                 attempt_sequence_no=g.attempt_sequence_no,
-                task_specification=g.task_specification,
+                plan_spec=g.plan_spec,
                 evaluation_criteria=g.evaluation_criteria,
                 fail_reason=g.fail_reason,
                 attempt_summary_id=None,

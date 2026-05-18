@@ -120,7 +120,7 @@ def apply_single_generator_plan(fixture: TaskCenterFixture, *, agent_name: str =
             attempt_id=fixture.attempt_id,
             planner_task_id=planner_id,
             kind="full",
-            task_specification="spec",
+            plan_spec="spec",
             evaluation_criteria=("criterion",),
             tasks=(
                 PlannedGeneratorTask(
@@ -130,7 +130,7 @@ def apply_single_generator_plan(fixture: TaskCenterFixture, *, agent_name: str =
                     task_spec="do A",
                 ),
             ),
-            continuation_goal=None,
+            next_iteration_handoff_goal=None,
             summary="plan",
         )
     )

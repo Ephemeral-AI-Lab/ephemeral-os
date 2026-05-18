@@ -49,13 +49,13 @@ def test_set_plan_contract_persists_fields(
     g = attempt_store.insert(iteration_id=seg_id, attempt_sequence_no=1)
     g = attempt_store.set_plan_contract(
         g.id,
-        task_specification="spec",
+        plan_spec="spec",
         evaluation_criteria=["c1", "c2"],
-        continuation_goal="next",
+        next_iteration_handoff_goal="next",
     )
-    assert g.task_specification == "spec"
+    assert g.plan_spec == "spec"
     assert g.evaluation_criteria == ("c1", "c2")
-    assert g.continuation_goal == "next"
+    assert g.next_iteration_handoff_goal == "next"
 
 
 def test_close_records_status_fail_reason_and_closed_at(

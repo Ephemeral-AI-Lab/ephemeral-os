@@ -33,12 +33,12 @@ def test_close_succeeded_writes_status_spec_summary_atomically(
     seg = _seed_segment(goal_store, iteration_store, task_center_run_id)
     closed = iteration_store.close_succeeded(
         seg.id,
-        task_specification="resulting spec",
+        plan_spec="resulting spec",
         task_summary="evaluator pass summary",
         closed_at=datetime.now(UTC),
     )
     assert closed.status == IterationStatus.SUCCEEDED
-    assert closed.task_specification == "resulting spec"
+    assert closed.plan_spec == "resulting spec"
     assert closed.task_summary == "evaluator pass summary"
     assert closed.closed_at is not None
 
@@ -49,12 +49,12 @@ def test_close_succeeded_persists_through_get(
     seg = _seed_segment(goal_store, iteration_store, task_center_run_id)
     iteration_store.close_succeeded(
         seg.id,
-        task_specification="spec",
+        plan_spec="spec",
         task_summary="summary",
     )
     reloaded = iteration_store.get(seg.id)
     assert reloaded is not None
-    assert reloaded.task_specification == "spec"
+    assert reloaded.plan_spec == "spec"
     assert reloaded.task_summary == "summary"
 
 
@@ -68,7 +68,7 @@ def test_failed_close_leaves_denormalized_fields_null(
         closed_at=datetime.now(UTC),
     )
     assert failed.status == IterationStatus.FAILED
-    assert failed.task_specification is None
+    assert failed.plan_spec is None
     assert failed.task_summary is None
 
 
@@ -76,7 +76,7 @@ def test_close_succeeded_unknown_segment_raises(iteration_store):
     with pytest.raises(LookupError):
         iteration_store.close_succeeded(
             "no-such-iteration",
-            task_specification="x",
+            plan_spec="x",
             task_summary="y",
         )
 
@@ -85,7 +85,7 @@ def test_initial_iteration_has_null_denormalized_fields(
     goal_store, iteration_store, task_center_run_id
 ):
     seg = _seed_segment(goal_store, iteration_store, task_center_run_id)
-    assert seg.task_specification is None
+    assert seg.plan_spec is None
     assert seg.task_summary is None
 
 

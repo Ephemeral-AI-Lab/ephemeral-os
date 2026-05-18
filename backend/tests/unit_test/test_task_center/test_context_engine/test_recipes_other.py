@@ -68,9 +68,9 @@ def test_generator_emits_planned_task_spec_required_block(
     attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
     attempt_store.set_plan_contract(
         attempt.id,
-        task_specification="attempt spec framing",
+        plan_spec="attempt spec framing",
         evaluation_criteria=["c1"],
-        continuation_goal=None,
+        next_iteration_handoff_goal=None,
     )
     task_id = "t-1"
     task_store.upsert_task(
@@ -101,17 +101,20 @@ def test_generator_emits_planned_task_spec_required_block(
     assert "task_specification" in kinds
 
 
-def test_generator_does_not_emit_partial_plan_boundary(
+def test_generator_emits_nested_attempt_plan_with_handoff_goal_child(
     deps, goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
+    """Continues-goal attempt produces two TASK_SPECIFICATION children
+    (``<plan_spec>`` + ``<next_iteration_handoff_goal>``) under the same
+    ``<attempt_plan>`` group — no PARTIAL_PLAN_BOUNDARY block."""
     req = _seed_goal(goal_store, task_center_run_id)
     iteration = _seed_iteration(iteration_store, goal_id=req.id)
     attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
     attempt_store.set_plan_contract(
         attempt.id,
-        task_specification="attempt spec framing",
+        plan_spec="attempt spec framing",
         evaluation_criteria=["c1"],
-        continuation_goal="future iteration work",
+        next_iteration_handoff_goal="future iteration work",
     )
     task_store.upsert_task(
         task_id="t-1",
@@ -135,12 +138,19 @@ def test_generator_does_not_emit_partial_plan_boundary(
         deps,
     )
 
-    assert [b.kind for b in packet.blocks] == [
+    kinds = [b.kind for b in packet.blocks]
+    assert kinds == [
+        "task_specification",
         "task_specification",
         "role_instruction",
         "planned_task_spec",
     ]
-    assert "future iteration work" not in "\n".join(b.text for b in packet.blocks)
+    plan_spec_block, handoff_block = packet.blocks[0], packet.blocks[1]
+    assert plan_spec_block.metadata["child_tag"] == "plan_spec"
+    assert handoff_block.metadata["child_tag"] == "next_iteration_handoff_goal"
+    assert plan_spec_block.metadata["group_id"] == handoff_block.metadata["group_id"]
+    assert plan_spec_block.metadata["group_tag"] == "attempt_plan"
+    assert handoff_block.text == "future iteration work"
 
 
 def test_generator_dependency_summary_blocks(
@@ -183,8 +193,9 @@ def test_generator_dependency_summary_blocks(
     )
     dep_blocks = [b for b in packet.blocks if b.kind == "dependency_summary"]
     assert len(dep_blocks) == 1
-    assert dep_blocks[0].metadata["dep_id"] == "t-up"
-    assert dep_blocks[0].metadata["group_heading"] == "# Dependency Results"
+    assert dep_blocks[0].metadata["child_tag"] == "dependency"
+    assert dep_blocks[0].metadata["group_tag"] == "dependency_results"
+    assert dep_blocks[0].metadata["attrs"] == 'id="t-up"'
     assert "produced X" in dep_blocks[0].text
     assert packet.blocks[-1].kind == "planned_task_spec"
     kinds = [b.kind for b in packet.blocks]
@@ -237,9 +248,9 @@ def test_evaluator_emits_required_spec_and_criteria(
     attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
     attempt_store.set_plan_contract(
         attempt.id,
-        task_specification="evaluator spec",
+        plan_spec="evaluator spec",
         evaluation_criteria=["c1", "c2"],
-        continuation_goal=None,
+        next_iteration_handoff_goal=None,
     )
     attempt_store.set_generator_task_ids(attempt.id, ["t-a"])
     task_store.upsert_task(
@@ -272,8 +283,8 @@ def test_evaluator_emits_required_spec_and_criteria(
         b.priority == ContextPriority.REQUIRED
         for b in [packet.blocks[1], packet.blocks[-1]]
     )
-    assert packet.blocks[0].metadata["heading"] == "# Goal / Current Iteration"
-    assert packet.blocks[2].metadata["group_heading"] == "# Dependency Results"
+    assert packet.blocks[0].metadata["tag"] == "goal_current_iteration"
+    assert packet.blocks[2].metadata["group_tag"] == "completed_tasks"
     assert packet.blocks[-2].kind == "role_instruction"
 
 
@@ -285,9 +296,9 @@ def test_evaluator_renders_every_generator_summary_in_attempt_order(
     attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
     attempt_store.set_plan_contract(
         attempt.id,
-        task_specification="evaluator spec",
+        plan_spec="evaluator spec",
         evaluation_criteria=["all work passes"],
-        continuation_goal=None,
+        next_iteration_handoff_goal=None,
     )
     task_ids = [f"t-{i}" for i in range(14)]
     attempt_store.set_generator_task_ids(attempt.id, task_ids)
@@ -323,8 +334,11 @@ def test_evaluator_renders_every_generator_summary_in_attempt_order(
     ]
     assert all(block.priority == ContextPriority.HIGH for block in summary_blocks)
     assert all(
-        block.metadata["group_heading"] == "# Dependency Results"
+        block.metadata["group_tag"] == "completed_tasks"
         for block in summary_blocks
+    )
+    assert all(
+        block.metadata["child_tag"] == "task" for block in summary_blocks
     )
     assert packet.blocks[-1].kind == "evaluation_criteria"
 
@@ -337,9 +351,9 @@ def test_evaluator_missing_generator_task_raises_context_error(
     attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
     attempt_store.set_plan_contract(
         attempt.id,
-        task_specification="evaluator spec",
+        plan_spec="evaluator spec",
         evaluation_criteria=["all work passes"],
-        continuation_goal=None,
+        next_iteration_handoff_goal=None,
     )
     attempt_store.set_generator_task_ids(attempt.id, ["t-missing"])
 
@@ -354,17 +368,19 @@ def test_evaluator_missing_generator_task_raises_context_error(
         )
 
 
-def test_evaluator_emits_partial_plan_boundary_before_summaries(
+def test_evaluator_continues_goal_emits_nested_handoff_child_no_boundary_block(
     deps, goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
+    """Continues-goal attempts emit a ``<next_iteration_handoff_goal>`` child
+    under ``<attempt_plan>``; the previous PARTIAL_PLAN_BOUNDARY block is gone."""
     req = _seed_goal(goal_store, task_center_run_id)
     iteration = _seed_iteration(iteration_store, goal_id=req.id)
     attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
     attempt_store.set_plan_contract(
         attempt.id,
-        task_specification="partial attempt spec",
+        plan_spec="partial attempt spec",
         evaluation_criteria=["current slice passes"],
-        continuation_goal="build admin tools next",
+        next_iteration_handoff_goal="build admin tools next",
     )
     attempt_store.set_generator_task_ids(attempt.id, ["t-a"])
     task_store.upsert_task(
@@ -387,21 +403,24 @@ def test_evaluator_emits_partial_plan_boundary_before_summaries(
         deps,
     )
 
-    assert [b.kind for b in packet.blocks] == [
+    kinds = [b.kind for b in packet.blocks]
+    assert kinds == [
         "iteration_statement",
         "task_specification",
-        "partial_plan_boundary",
+        "task_specification",
         "completed_task_summary",
         "role_instruction",
         "evaluation_criteria",
     ]
-    boundary = packet.blocks[2]
-    assert boundary.priority == ContextPriority.REQUIRED
-    assert "plan_kind: partial" in boundary.text
-    assert "continuation_goal: build admin tools next" in boundary.text
-    assert "Do not treat continuation work as missing" in boundary.text
-    assert packet.blocks[-1].kind == "evaluation_criteria"
-    assert packet.blocks[-2].kind == "role_instruction"
+    assert "partial_plan_boundary" not in kinds, (
+        "PARTIAL_PLAN_BOUNDARY enum/block removal must hold"
+    )
+    plan_spec_block, handoff_block = packet.blocks[1], packet.blocks[2]
+    assert plan_spec_block.metadata["child_tag"] == "plan_spec"
+    assert handoff_block.metadata["child_tag"] == "next_iteration_handoff_goal"
+    assert plan_spec_block.metadata["group_id"] == handoff_block.metadata["group_id"]
+    assert plan_spec_block.metadata["group_tag"] == "attempt_plan"
+    assert handoff_block.text == "build admin tools next"
 
 
 def test_evaluator_iteration2_frame_precedes_attempt_contract(
@@ -411,7 +430,7 @@ def test_evaluator_iteration2_frame_precedes_attempt_contract(
     iteration1 = _seed_iteration(iteration_store, goal_id=req.id)
     iteration_store.close_succeeded(
         iteration1.id,
-        task_specification="accepted plan",
+        plan_spec="accepted plan",
         task_summary="accepted summary",
         closed_at=datetime.now(UTC),
     )
@@ -419,9 +438,9 @@ def test_evaluator_iteration2_frame_precedes_attempt_contract(
     attempt = attempt_store.insert(iteration_id=iteration2.id, attempt_sequence_no=1)
     attempt_store.set_plan_contract(
         attempt.id,
-        task_specification="attempt plan",
+        plan_spec="attempt plan",
         evaluation_criteria=["criterion"],
-        continuation_goal=None,
+        next_iteration_handoff_goal=None,
     )
 
     packet = _evaluator_build(
@@ -440,9 +459,11 @@ def test_evaluator_iteration2_frame_precedes_attempt_contract(
         "role_instruction",
         "evaluation_criteria",
     ]
-    assert packet.blocks[0].metadata["group_heading"] == "# Goal"
-    assert packet.blocks[1].metadata["group_heading"] == "# Goal"
-    assert packet.blocks[3].metadata["heading"] == "# Current Iteration"
+    assert packet.blocks[0].metadata["tag"] == "goal"
+    assert packet.blocks[1].metadata["child_tag"] == "accepted_plan"
+    assert packet.blocks[1].metadata["group_tag"] == "iteration"
+    assert packet.blocks[3].metadata["child_tag"] == "iteration_goal"
+    assert packet.blocks[3].metadata["group_tag"] == "iteration"
     assert packet.blocks[-1].kind == "evaluation_criteria"
     assert packet.blocks[-2].kind == "role_instruction"
 
@@ -458,9 +479,9 @@ def test_evaluator_with_empty_criteria_ends_on_role_instruction(
     attempt = attempt_store.insert(iteration_id=iteration.id, attempt_sequence_no=1)
     attempt_store.set_plan_contract(
         attempt.id,
-        task_specification="evaluator spec",
+        plan_spec="evaluator spec",
         evaluation_criteria=[],
-        continuation_goal=None,
+        next_iteration_handoff_goal=None,
     )
 
     packet = _evaluator_build(

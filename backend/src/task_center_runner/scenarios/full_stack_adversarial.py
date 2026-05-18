@@ -197,7 +197,7 @@ class FullStackAdversarial(ScenarioBase):
                 submit_plan_continues_goal,
                 _inventory_plan(
                     kind="partial",
-                    continuation_goal=(
+                    next_iteration_handoff_goal=(
                         "Execute the adversarial subsystem wave with OCC, "
                         "overlay, layer-stack, and LSP coverage."
                     ),
@@ -250,7 +250,7 @@ class FullStackAdversarial(ScenarioBase):
                             "VERIFY checkpoint=recursive_wave dependency_count=2"
                         ),
                     },
-                    "continuation_goal": (
+                    "next_iteration_handoff_goal": (
                         "Write the recursive full-stack close report and verify it."
                     ),
                 },
@@ -351,7 +351,7 @@ class FullStackAdversarial(ScenarioBase):
             ],
             "tasks": tasks,
             "task_specs": task_specs,
-            "continuation_goal": (
+            "next_iteration_handoff_goal": (
                 "Retry with recursive oversized matrix delegation and final "
                 "reconciliation after subsystem artifacts exist."
             ),
@@ -398,7 +398,7 @@ class FullStackAdversarial(ScenarioBase):
                     "VERIFY checkpoint=recursive_return dependency_count=2"
                 ),
             },
-            "continuation_goal": (
+            "next_iteration_handoff_goal": (
                 "Run the final release guard and evaluator after recursive close."
             ),
         }
@@ -501,7 +501,7 @@ class FullStackAdversarial(ScenarioBase):
 def _inventory_plan(
     *,
     kind: str,
-    continuation_goal: str | None = None,
+    next_iteration_handoff_goal: str | None = None,
 ) -> dict[str, Any]:
     args: dict[str, Any] = {
         "plan_spec": "Inventory rendered SWE-EVO user input.",
@@ -524,8 +524,8 @@ def _inventory_plan(
         },
     }
     if kind == "partial":
-        assert continuation_goal is not None
-        args["continuation_goal"] = continuation_goal
+        assert next_iteration_handoff_goal is not None
+        args["next_iteration_handoff_goal"] = next_iteration_handoff_goal
     return args
 
 

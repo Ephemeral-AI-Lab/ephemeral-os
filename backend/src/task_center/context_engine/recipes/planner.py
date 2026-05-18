@@ -50,6 +50,7 @@ def _planner_build(
     blocks.extend(
         failed_attempt_landscape_blocks(
             current_attempt_id=scope.attempt_id,
+            iteration=iteration,
             attempts=deps.attempt_store.list_for_iteration(iteration.id),
             task_store=deps.task_store,
         )
@@ -59,7 +60,7 @@ def _planner_build(
     )
     blocks.append(
         planner_instruction(
-            iteration_sequence_no=iteration.sequence_no,
+            iteration_no=iteration.sequence_no,
             has_failed_attempts=has_failed_attempts,
         )
     )

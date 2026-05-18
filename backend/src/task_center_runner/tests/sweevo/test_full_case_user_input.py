@@ -158,7 +158,7 @@ def _continuation_iterations_follow_partial_attempts(
                 continue
             previous = by_sequence[iteration["sequence_no"] - 1]
             final_attempt = previous["attempts"][-1]
-            if not final_attempt["continuation_goal"]:
+            if not final_attempt["next_iteration_handoff_goal"]:
                 return False
     return True
 

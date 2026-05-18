@@ -58,10 +58,10 @@ class PlannerSubmission:
     attempt_id: str
     planner_task_id: str
     kind: Literal["full", "partial"]
-    task_specification: str
+    plan_spec: str
     evaluation_criteria: tuple[str, ...]
     tasks: tuple[PlannedGeneratorTask, ...]
-    continuation_goal: str | None
+    next_iteration_handoff_goal: str | None
     summary: str
 
 

@@ -48,7 +48,7 @@ def preflight_full_plan(
 
 def preflight_partial_plan(
     *,
-    continuation_goal: str,
+    next_iteration_handoff_goal: str,
     plan_spec: str = (
         "Run a workspace preflight probe and continue with the follow-up goal."
     ),
@@ -56,7 +56,7 @@ def preflight_partial_plan(
         "Workspace preflight completed.",
     ),
 ) -> dict[str, Any]:
-    """Partial plan with continuation_goal; drives PARTIAL_CONTINUATION iteration."""
+    """Partial plan with next_iteration_handoff_goal; drives PARTIAL_CONTINUATION iteration."""
     plan = minimal_full_plan(
         plan_spec=plan_spec,
         evaluation_criteria=list(evaluation_criteria),
@@ -66,7 +66,7 @@ def preflight_partial_plan(
             "sandbox root."
         ),
     )
-    plan["continuation_goal"] = continuation_goal
+    plan["next_iteration_handoff_goal"] = next_iteration_handoff_goal
     return plan
 
 

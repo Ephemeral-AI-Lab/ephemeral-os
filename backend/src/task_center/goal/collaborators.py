@@ -156,12 +156,12 @@ class IterationFactory:
         assert_continuation_iteration_predecessor(previous_iteration)
         new_sequence_no = previous_iteration.sequence_no + 1
         assert_iteration_sequence_contiguous(goal, new_sequence_no=new_sequence_no)
-        # predecessor invariant guarantees continuation_goal is not None.
+        # predecessor invariant guarantees next_iteration_handoff_goal is not None.
         return self._insert_and_spawn(
             goal=goal,
             sequence_no=new_sequence_no,
             creation_reason=IterationCreationReason.PARTIAL_CONTINUATION,
-            iteration_goal=previous_iteration.continuation_goal,  # type: ignore[arg-type]
+            iteration_goal=previous_iteration.next_iteration_handoff_goal,  # type: ignore[arg-type]
         )
 
     def _insert_and_spawn(

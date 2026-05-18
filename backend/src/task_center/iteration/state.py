@@ -34,13 +34,13 @@ class Iteration:
     attempt_budget: int
     status: IterationStatus
     attempt_ids: tuple[str, ...]
-    continuation_goal: str | None
+    next_iteration_handoff_goal: str | None
     created_at: datetime
     updated_at: datetime
     closed_at: datetime | None
     # Denormalized from the iteration's passing harness attempt at close. Both
     # null while open and on failed close.
-    task_specification: str | None = None
+    plan_spec: str | None = None
     task_summary: str | None = None
 
     @property
@@ -69,7 +69,7 @@ class PriorAttemptEntry:
 
     attempt_id: str
     attempt_sequence_no: int
-    task_specification: str | None
+    plan_spec: str | None
     evaluation_criteria: tuple[str, ...]
     fail_reason: AttemptFailReason | None
     attempt_summary_id: str | None

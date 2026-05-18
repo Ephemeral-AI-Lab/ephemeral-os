@@ -62,9 +62,9 @@ def _seed_attempt(
     )
     attempt_store.set_plan_contract(
         attempt.id,
-        task_specification="spec",
+        plan_spec="spec",
         evaluation_criteria=["c1"],
-        continuation_goal=None,
+        next_iteration_handoff_goal=None,
     )
     attempt_store.set_stage(attempt.id, AttemptStage.GENERATE)
     return attempt

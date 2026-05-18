@@ -1,10 +1,21 @@
 # Initial-Messages Capture Report
 
+> **Historical snapshot.** This report was captured before the XML context
+> rendering migration (ralplan_xml_context_format, 2026-05-18). The rendered
+> user_msg_1 samples below show the **legacy markdown-heading layout**; the
+> current renderer (`XmlPromptRenderer`) emits XML-tagged blocks
+> (`<goal>`, `<iteration iteration_no="N" status="…">`, `<attempt_plan>`,
+> `<dependency_results>`, `<assigned_task>`, `<evaluation_criteria>`, …) per
+> `backend/src/task_center/context_engine/recipes/*.py`. Re-running the
+> `pipeline.initial_messages_capture` scenario regenerates this report
+> against the new format. The structural taxonomy descriptions below remain
+> useful as a coverage matrix.
+
 ## What this report contains
 
 Initial messages observed at agent launch (system + user_msg_1 + user_msg_2), per agent role. Captured from a live run of the new scenario `pipeline.initial_messages_capture` (continuation goal + attempt retry across 2 iterations) executed against real Postgres + real Daytona sandbox + real composer + real recorder; only the agent LLM is replaced with the deterministic `MockSquadRunner`.
 
-- **Main agents (planner, executor, evaluator)** — three messages: system from `agents/profile/main/<name>.md`; user_msg_1 = the composer's context block (goal + iteration + dependency results + attempt plan + evaluation criteria, rendered by `MarkdownPromptRenderer.render_context`); user_msg_2 = the spawn prompt (the role_instruction body for the agent's iteration/attempt position from `recipes/role_instruction.py` plus the terminal-tool catalog appended by `_append_terminal_catalog`).
+- **Main agents (planner, executor, evaluator)** — three messages: system from `agents/profile/main/<name>.md`; user_msg_1 = the composer's context block (goal + iteration + dependency results + attempt plan + evaluation criteria, rendered by `XmlPromptRenderer.render_context` in current code — captured here when the renderer was named `MarkdownPromptRenderer`); user_msg_2 = the spawn prompt (the role_instruction body for the agent's iteration/attempt position from `recipes/role_instruction.py` plus the terminal-tool catalog appended by `_append_terminal_catalog`).
 
 - **entry_executor** — two messages (no role_instruction recipe block); user_msg_2 is empty.
 
