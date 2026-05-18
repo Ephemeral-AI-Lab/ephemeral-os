@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-import sandbox.execution.orchestrator as command_runner
+import sandbox.execution.runner as command_runner
 from sandbox.execution.contract import CommandExecRequest
 from sandbox.execution.contract import MountMode
 from sandbox.execution.contract import ShellProcessResult

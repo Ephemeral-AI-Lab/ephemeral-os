@@ -1,4 +1,9 @@
-"""Command-exec orchestration service."""
+"""Command-exec top-level lifecycle: lease -> run -> capture -> OCC apply.
+
+The ``*_ref`` arguments (stdout_ref, stderr_ref, control_ref) are local
+filesystem paths used as IPC handles between the strategy that wrote the
+output and the service that reads it back. They are not URLs.
+"""
 
 from __future__ import annotations
 
@@ -11,25 +16,16 @@ from uuid import uuid4
 from sandbox.execution.contract import (
     CommandExecRequest,
     CommandExecResult,
-    MountMode,
     OCCMutationClient,
     OverlayLayout,
+    MountMode,
     SnapshotManifest,
     ShellProcessResult,
     WorkspaceCapture,
     WorkspaceLeaseClient,
 )
 from sandbox.execution.overlay.capture import walk_upperdir
-from sandbox.execution.env_policy import (
-    DEFAULT_COMMAND_EXEC_POLICY,
-    CommandExecPolicy,
-)
-from sandbox.execution.strategies.base import ExecutionStrategy
-from sandbox.execution.strategies.copy_backed import CopyBackedStrategy
-from sandbox.execution.strategies.namespace import (
-    PrivateNamespaceStrategy,
-    detect_private_mount_namespace,
-)
+from sandbox.execution.runner import run_workspace_replaced_command
 from sandbox.occ.changeset import ChangesetResult, CommitOptions
 from sandbox.occ.overlay_change_conversion import overlay_path_changes_to_occ_changes
 from sandbox.execution.path_change import OverlayPathChange
@@ -43,44 +39,6 @@ WorkspaceCommandRunner = Callable[
     ...,
     ShellProcessResult,
 ]
-
-
-def run_workspace_replaced_command(
-    *,
-    spec: OverlayLayout,
-    request: CommandExecRequest,
-    run_dir: str | Path,
-    timings: dict[str, float],
-    strategies: Sequence[ExecutionStrategy] | None = None,
-    mount_mode: MountMode | None = None,
-    policy: CommandExecPolicy = DEFAULT_COMMAND_EXEC_POLICY,
-) -> ShellProcessResult:
-    """Run a command with the assigned workspace replaced by the leased view."""
-    run_root = Path(run_dir)
-    run_root.mkdir(parents=True, exist_ok=True)
-    strategy_list: tuple[ExecutionStrategy, ...] = (
-        tuple(strategies)
-        if strategies is not None
-        else _strategies_for_mount_mode(mount_mode, policy=policy)
-    )
-    for strategy in strategy_list:
-        if not strategy.is_available():
-            continue
-        process = strategy.run(
-            spec=spec,
-            request=request,
-            run_dir=run_root,
-            timings=timings,
-        )
-        if not strategy.is_recoverable_failure(process, run_dir=run_root):
-            return process
-        fallback_key = (
-            "command_exec.private_mount_fallback"
-            if strategy.name == MountMode.PRIVATE_NAMESPACE.value
-            else f"command_exec.{strategy.name}_fallback"
-        )
-        timings[fallback_key] = 1.0
-    raise RuntimeError("no command execution strategy succeeded")
 
 
 async def execute_command(
@@ -215,33 +173,6 @@ async def execute_command(
             _drop_non_capture_run_dir_entries(run_dir)
         else:
             shutil.rmtree(run_dir, ignore_errors=True)
-
-
-def _strategies_for_mount_mode(
-    mount_mode: MountMode | None,
-    *,
-    policy: CommandExecPolicy,
-) -> tuple[ExecutionStrategy, ...]:
-    modes = (
-        (MountMode.PRIVATE_NAMESPACE, MountMode.COPY_BACKED)
-        if mount_mode is None
-        else (MountMode(mount_mode),)
-    )
-    return tuple(_build_strategy(mode, policy=policy) for mode in modes)
-
-
-def _build_strategy(
-    mode: MountMode, *, policy: CommandExecPolicy
-) -> ExecutionStrategy:
-    # detect_private_mount_namespace() is only invoked for modes that
-    # actually need it, so callers pinning COPY_BACKED never pay the
-    # `unshare -Urm true` probe cost.
-    if mode is MountMode.COPY_BACKED:
-        return CopyBackedStrategy(policy=policy)
-    return PrivateNamespaceStrategy(
-        available=detect_private_mount_namespace(),
-        policy=policy,
-    )
 
 
 async def _apply_workspace_capture(

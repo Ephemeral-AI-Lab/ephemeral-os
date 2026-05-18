@@ -16,10 +16,8 @@ from sandbox.execution.contract import (
     OverlayShellRequest,
     ShellProcessResult,
 )
-from sandbox.execution.orchestrator import (
-    execute_command,
-    run_workspace_replaced_command,
-)
+from sandbox.execution.runner import run_workspace_replaced_command
+from sandbox.execution.service import execute_command
 from sandbox.execution.env_policy import CommandExecPolicy
 from sandbox.layer_stack.manifest import Manifest
 

@@ -15,7 +15,7 @@ from sandbox.execution.contract import (
     OverlayCapture,
     OverlayLayout,
 )
-from sandbox.execution.orchestrator import execute_command
+from sandbox.execution.service import execute_command
 from sandbox.daemon.rpc.dispatcher import dispatch_envelope_async
 
 

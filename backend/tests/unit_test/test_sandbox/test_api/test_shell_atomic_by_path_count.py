@@ -19,7 +19,7 @@ from typing import Any
 import pytest
 
 from sandbox.execution.contract import CommandExecRequest
-from sandbox.execution import orchestrator as command_executor
+from sandbox.execution import service as command_executor
 from sandbox.occ.changeset import CommitOptions
 from sandbox.occ.changeset import ChangesetResult, WriteChange
 
