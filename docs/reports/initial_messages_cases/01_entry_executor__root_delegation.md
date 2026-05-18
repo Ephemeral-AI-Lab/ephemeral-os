@@ -1,12 +1,19 @@
-# evaluator — iteration 1, attempt 2 (evaluator_instruction branch: is_partial=True; partial plan boundary present)
-- source: `goal_01_d0c5bdce-c899-4bf2-84c3-c059392202a1/iteration_01_8d48b35f-ed78-46b3-9b21-0143084aa868/attempt_02_0560d8e0-ea1c-4d92-967c-c8bc477a38e9/03_evaluator_0560d8e0-ea1c-4d92-967c-c8bc477a38e9:evaluator/message.jsonl`
+# entry_executor — root delegation (single-user-message launch)
+- source: `entry_executor_8f561abb-f410-4292-9f46-b19e8fa7945d:entry/message.jsonl`
 
 ## system
 
 ```
-You are the **main-agent evaluator**.
+You are the **entry executor** — the agent that receives the top-level user request.
 
-Run after every generator task in the attempt has passed. Evaluate the current attempt against the `<attempt_plan>`, `<dependency_results>`, and `<evaluation_criteria>` blocks. If issues require edits, call `ask_resolver` (a blocking helper that may edit files), then re-check against the same criteria.
+Decide whether to act directly or delegate the work as a goal. Small,
+self-contained requests can be handled here with the editor and shell tools.
+Larger requests should be planned via `submit_execution_handoff`, which
+spawns a complex-task request that goes through the full planner / generator /
+evaluator harness.
+
+Finish via `submit_execution_success` when the request is complete and verified,
+or `submit_execution_failure` when the request cannot be completed.
 
 ## Submission discipline
 
@@ -16,16 +23,20 @@ Run after every generator task in the attempt has passed. Evaluate the current a
 
 Submit exactly one terminal tool per run.
 
-## Terminal tools
-
-- `submit_evaluation_success` — every entry in `<evaluation_criteria>` is satisfied; the attempt closes successfully and (depending on the planner's submission kind) closes the goal or continues it via the planned continuation iteration.
-- `submit_evaluation_failure` — one or more criteria fail; the graph enters retry or failure handling.
+**Why entry_executor keeps all three terminals.** Non-entry executors are
+depth-gated by the resolver: the `executor_success_handoff` variant exposes
+success + handoff, the `executor_success_failure` variant exposes success +
+failure. The entry executor is the documented carve-out — it sits outside the
+goal/iteration/attempt tree (no parent attempt to return to) and terminates
+the user-facing request directly, so it retains the full success / handoff /
+failure surface. See `docs/wiki/role-generator.md` for the depth-gating
+contract that governs non-entry executors.
 ```
 
 ## user_msg_1
 
 ```
-<goal_current_iteration>
+<entry_request>
 <Workspace Root>
 /testbed
 <Workspace Root>
@@ -1858,42 +1869,5 @@ Related tickets
 Can you help me implement the necessary changes to the repository so that the requirements specified in the <pr_description> are met?
 I've already taken care of all changes to any of the test files described in the <pr_description>. This means you DON'T have to modify the testing logic or any of the tests in any way!
 Your task is to make the minimal changes to non-tests files in the /testbed directory to ensure the <pr_description> is satisfied.
-</goal_current_iteration>
-
-<attempt_plan>
-<plan_spec>
-Run a workspace preflight probe and continue with the follow-up goal.
-</plan_spec>
-<next_iteration_handoff_goal>
-Continue the initial-messages capture by running one more preflight in iteration 2 so the continuation planner sees prior iteration results.
-</next_iteration_handoff_goal>
-</attempt_plan>
-
-<completed_tasks>
-<task id="0560d8e0-ea1c-4d92-967c-c8bc477a38e9:gen:preflight" status="done">
-Workspace preflight completed.
-</task>
-</completed_tasks>
-
-<evaluation_criteria>
-- Workspace preflight completed.
-</evaluation_criteria>
-```
-
-## user_msg_2
-
-```
-You are evaluating an intentionally partial attempt (see the `<next_iteration_handoff_goal>` child of `<attempt_plan>`). This attempt is not expected to solve the full iteration goal — it is expected to make progress and hand off remaining work via `next_iteration_handoff_goal`. Pass/fail against `<evaluation_criteria>` for what this attempt promised; do not penalize for incomplete work that was explicitly deferred.
-
-# Terminal tools you may call
-
-Pick exactly one based on outcome:
-
-- `submit_evaluation_success` — Call when every entry in `<evaluation_criteria>` is satisfied; the attempt closes successfully and the planner's submission kind determines whether the goal closes or continues.
-
-- `submit_evaluation_failure` — Call when one or more entries in `<evaluation_criteria>` fail. The graph enters retry or failure handling.
-
-# Your task
-
-Execute the role described above. Before any terminal submission, call ask_advisor with your chosen tool_name and intended payload. Submit your chosen terminal only after the advisor returns "approve".
+</entry_request>
 ```

@@ -1,12 +1,12 @@
 # executor — iteration 2, attempt 1 (continuation full; routed to executor_success_handoff variant; generator_instruction: has_deps=False)
-- source: `goal_01_1dc1d572-b410-4c5c-8436-e3282e12f36f/iteration_02_d5f7093c-2973-4309-90ae-34fa3ef23cf4/attempt_01_5352eda5-3bbe-4085-a96f-cfe21922ae63/02_executor_5352eda5-3bbe-4085-a96f-cfe21922ae63:gen:preflight/message.jsonl`
+- source: `goal_01_d0c5bdce-c899-4bf2-84c3-c059392202a1/iteration_02_e80b7bd2-da91-4853-8d4b-ad5d3edd4952/attempt_01_9424b5b2-ee7a-4137-b425-f27b75f8a46f/02_executor_9424b5b2-ee7a-4137-b425-f27b75f8a46f:gen:preflight/message.jsonl`
 
 ## system
 
 ```
 You are the **main-agent generator executor** at a depth where handoff is still available.
 
-Complete the `Assigned Task`. If the task is too broad or genuinely needs a delegated complex-task plan, call `submit_execution_handoff`
+Complete the `<assigned_task>`. If the task is too broad or genuinely needs a delegated complex-task plan, call `submit_execution_handoff`
 
 ## Submission discipline
 
@@ -27,19 +27,21 @@ This profile intentionally does not expose `submit_execution_failure`. Unfinishe
 ## user_msg_1
 
 ```
-# Attempt Plan
-
+<attempt_plan>
+<plan_spec>
 Run a workspace preflight probe.
+</plan_spec>
+</attempt_plan>
 
-# Assigned Task
-
+<assigned_task task_id="9424b5b2-ee7a-4137-b425-f27b75f8a46f:gen:preflight">
 Run a lightweight workspace preflight and report the observed sandbox root.
+</assigned_task>
 ```
 
 ## user_msg_2
 
 ```
-You are executing one generator task. This task has no dependencies on other generator tasks in the same attempt. Read the assigned task below and produce the deliverable, then submit per your role's contract.
+You are executing one generator task. This task has no dependencies on other generator tasks in the same attempt. Read the `<assigned_task>` below and produce the deliverable, then submit per your role's contract.
 
 # Terminal tools you may call
 
@@ -47,7 +49,7 @@ Pick exactly one based on outcome:
 
 - `submit_execution_handoff` — Call when bounded progress is made but further work is needed. Name the next bounded slice; do not kick the problem downstream without specifying what's needed.
 
-- `submit_execution_success` — Call when the assigned task's deliverable is complete, exists at the claimed location, satisfies the task specification, and any verification the criteria specify has been run and passed.
+- `submit_execution_success` — Call when the `<assigned_task>` deliverable is complete, exists at the claimed location, satisfies the task specification, and any verification the criteria specify has been run and passed.
 
 # Your task
 

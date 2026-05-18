@@ -11,10 +11,11 @@ decision point only after the plan is internally coherent.
 
 ## Bound the scope before you decompose
 
-1. Re-read `Current Iteration`. That is the scope contract for this
-   attempt. `Goal` and prior iteration summaries are orientation only —
-   do not mine them for backlog items the current iteration did not name.
-2. List the deliverables `Current Iteration` actually requires. If the
+1. Re-read `<iteration_goal>` inside `<iteration status="current">`. That
+   is the scope contract for this attempt. `<goal>` and
+   `<iteration status="prior">` blocks are orientation only — do not mine
+   them for backlog items the current iteration did not name.
+2. List the deliverables `<iteration_goal>` actually requires. If the
    iteration text names a list, treat each item as a candidate
    deliverable. If it names a single coherent change, treat that as one
    deliverable.
@@ -54,10 +55,10 @@ iteration over packing too many deliverables into one plan.
 Before reaching the submission step, classify your plan:
 
 - **Full coverage.** The proposed tasks plus their evaluation criteria
-  exhaust `Current Iteration`. Nothing in the iteration text is
+  exhaust `<iteration_goal>`. Nothing in the iteration text is
   deliberately deferred. This is the default and the desired posture.
 - **Partial coverage.** The proposed tasks deliver a complete, coherent,
-  bounded slice of `Current Iteration` and a clear remainder exists. The
+  bounded slice of `<iteration_goal>` and a clear remainder exists. The
   remainder is large enough to be its own iteration goal, not a few
   extra tasks you could have included here. The remainder is something
   you can describe as a self-contained instruction for a future planner
@@ -72,9 +73,10 @@ for unfinished work.
 
 ## Retry posture
 
-When `Failed Attempts` appears in your context, you are inside a fixed
-iteration goal. The iteration scope does not change on retry. Use prior
-attempt evidence to:
+When `<attempt status="failed">` blocks appear inside
+`<iteration status="current">`, you are inside a fixed iteration goal.
+The iteration scope does not change on retry. Use prior attempt evidence
+to:
 
 - Drop the slice that failed and rework it. Do not re-run the same plan
   unchanged.

@@ -1,12 +1,13 @@
-# evaluator — iteration 1, attempt 2 (evaluator_instruction branch: is_partial=True; partial plan boundary present)
-- source: `goal_01_d0c5bdce-c899-4bf2-84c3-c059392202a1/iteration_01_8d48b35f-ed78-46b3-9b21-0143084aa868/attempt_02_0560d8e0-ea1c-4d92-967c-c8bc477a38e9/03_evaluator_0560d8e0-ea1c-4d92-967c-c8bc477a38e9:evaluator/message.jsonl`
+# evaluator — attempt 1 (proceeds to `submit_evaluation_failure`); same user_msg_1 shape as a passing evaluator, captured for completeness on the evaluator-failure path
+- source: `pipeline.attempt_retry_evaluator_failure/20260518T164149Z_6ecabe0cfcfd/goal_01_d15484aa-949e-4e61-8f3a-03baa148c8c2/iteration_01_3f74e000-c645-4937-82e9-6f2ff4500028/attempt_01_f2396c55-c4b1-439e-98de-6ce394d7101e/03_evaluator_f2396c55-c4b1-439e-98de-6ce394d7101e:evaluator/message.jsonl`
+- notes: Closes Gap 5 in the original gap report. The evaluator's *input* shape is identical regardless of the verdict the evaluator decides to submit — the failure path is the agent's behavior (`submit_evaluation_failure` with `summary` + `failed_criteria`), not a context-engine branch. This case documents the input prompt that precedes such a decision so readers can audit the full failure path alongside cases 07 (partial-success) and 08 (complete-success). The downstream effect of `submit_evaluation_failure` is what case 13's planner sees as the rich `<attempt status="failed">` block.
 
 ## system
 
 ```
 You are the **main-agent evaluator**.
 
-Run after every generator task in the attempt has passed. Evaluate the current attempt against the `<attempt_plan>`, `<dependency_results>`, and `<evaluation_criteria>` blocks. If issues require edits, call `ask_resolver` (a blocking helper that may edit files), then re-check against the same criteria.
+Run after every generator task in the attempt has passed. Evaluate the current attempt against the `Attempt Plan`, `Dependency Results`, and `Evaluation Criteria` sections. If issues require edits, call `ask_resolver` (a blocking helper that may edit files), then re-check against the same criteria.
 
 ## Submission discipline
 
@@ -18,7 +19,7 @@ Submit exactly one terminal tool per run.
 
 ## Terminal tools
 
-- `submit_evaluation_success` — every entry in `<evaluation_criteria>` is satisfied; the attempt closes successfully and (depending on the planner's submission kind) closes the goal or continues it via the planned continuation iteration.
+- `submit_evaluation_success` — every entry in `Evaluation Criteria` is satisfied; the attempt closes successfully and (depending on the planner's submission kind) closes the goal or continues it via the planned continuation iteration.
 - `submit_evaluation_failure` — one or more criteria fail; the graph enters retry or failure handling.
 ```
 
@@ -1862,15 +1863,12 @@ Your task is to make the minimal changes to non-tests files in the /testbed dire
 
 <attempt_plan>
 <plan_spec>
-Run a workspace preflight probe and continue with the follow-up goal.
+Run a workspace preflight probe.
 </plan_spec>
-<next_iteration_handoff_goal>
-Continue the initial-messages capture by running one more preflight in iteration 2 so the continuation planner sees prior iteration results.
-</next_iteration_handoff_goal>
 </attempt_plan>
 
 <completed_tasks>
-<task id="0560d8e0-ea1c-4d92-967c-c8bc477a38e9:gen:preflight" status="done">
+<task id="f2396c55-c4b1-439e-98de-6ce394d7101e:gen:preflight" status="done">
 Workspace preflight completed.
 </task>
 </completed_tasks>
@@ -1883,17 +1881,23 @@ Workspace preflight completed.
 ## user_msg_2
 
 ```
-You are evaluating an intentionally partial attempt (see the `<next_iteration_handoff_goal>` child of `<attempt_plan>`). This attempt is not expected to solve the full iteration goal — it is expected to make progress and hand off remaining work via `next_iteration_handoff_goal`. Pass/fail against `<evaluation_criteria>` for what this attempt promised; do not penalize for incomplete work that was explicitly deferred.
+You are evaluating a complete attempt. Use `<attempt_plan>` and `<evaluation_criteria>` as your authority — pass/fail the attempt against the criteria, not against your own preferences. Treat the iteration goal as the scope; do not penalize the attempt for work outside the iteration goal.
 
 # Terminal tools you may call
 
 Pick exactly one based on outcome:
 
-- `submit_evaluation_success` — Call when every entry in `<evaluation_criteria>` is satisfied; the attempt closes successfully and the planner's submission kind determines whether the goal closes or continues.
+- `submit_evaluation_success` — Call when every entry in Evaluation Criteria is satisfied; the attempt closes successfully and the planner's submission kind determines whether the goal closes or continues.
 
-- `submit_evaluation_failure` — Call when one or more entries in `<evaluation_criteria>` fail. The graph enters retry or failure handling.
+- `submit_evaluation_failure` — Call when one or more criteria fail. The graph enters retry or failure handling.
 
 # Your task
 
 Execute the role described above. Before any terminal submission, call ask_advisor with your chosen tool_name and intended payload. Submit your chosen terminal only after the advisor returns "approve".
+```
+
+## user_msg_3 — row 4 (skill + terminal_selection)
+
+```
+Calling submit_evaluation_failure.
 ```

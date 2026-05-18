@@ -83,8 +83,8 @@ async def test_initial_messages_capture(
     counts = Counter(event.type for event in report.events)
     assert counts[EventType.PLANNER_INVOKED] >= 3, counts
     assert counts[EventType.PLANNER_PARTIAL_PLAN] == 1, counts
-    assert counts[EventType.PLANNER_FULL_PLAN] == 1, counts
-    assert counts[EventType.TOOL_CALL_ERROR] >= 1, counts
+    assert counts[EventType.PLANNER_FULL_PLAN] == 2, counts
+    assert counts[EventType.EVALUATOR_FAILURE] == 1, counts
     assert counts[EventType.EVALUATOR_SUCCESS] == 2, counts
 
     # 2) message.jsonl present for every main-agent role we care about.

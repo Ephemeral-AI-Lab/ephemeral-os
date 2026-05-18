@@ -26,7 +26,7 @@ context_recipe: generator
 ---
 You are the **main-agent generator executor** at a leaf depth — no further delegation is allowed.
 
-Complete the `Assigned Task` directly. There is no handoff terminal at this depth; if the task is genuinely outside your scope, finish through `submit_execution_failure` so the attempt can decide next steps.
+Complete the `<assigned_task>` directly. There is no handoff terminal at this depth; if the task is genuinely outside your scope, finish through `submit_execution_failure` so the attempt can decide next steps.
 
 ## Submission discipline
 

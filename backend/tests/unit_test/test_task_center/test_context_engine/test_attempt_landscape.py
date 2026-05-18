@@ -155,15 +155,47 @@ def test_renders_attempt_plan_xml_with_handoff_goal_child():
     ) in body
 
 
-def test_renders_unsubmitted_attempt_plan_marker():
+def test_planner_failed_renders_compact_bypassed_body():
+    """A PLANNER_FAILED attempt never produced a plan, generators, or evaluator
+    output, so the body collapses to three self-closing status tags. Emitting
+    the rich shape with placeholder bodies (``(not submitted)`` /
+    ``(no generator tasks recorded)`` / ``status="ran" verdict="fail"``) would
+    lie about which stages actually ran — in particular the evaluator
+    never ran, so ``status="ran"`` is structurally wrong.
+    """
     blocks = failed_attempt_landscape_blocks(
         current_attempt_id=None,
         iteration=_iteration(),
-        attempts=[_attempt(1)],
+        attempts=[
+            _attempt(1, fail_reason=AttemptFailReason.PLANNER_FAILED)
+        ],
     )
     body = blocks[0].text
-    assert "<attempt_plan>" in body
-    assert "<plan_spec>\n(not submitted)\n</plan_spec>" in body
+    assert body == (
+        '<attempt_plan status="unsubmitted"/>\n'
+        '<generator_outcomes status="not_started"/>\n'
+        '<evaluator_judgment status="bypassed" reason="planner_failed"/>'
+    )
+
+
+def test_startup_failed_renders_compact_bypassed_body():
+    """STARTUP_FAILED attempts couldn't even launch the planner — same shape
+    as PLANNER_FAILED but the bypass ``reason`` carries the startup value so
+    downstream consumers can distinguish the two failure modes.
+    """
+    blocks = failed_attempt_landscape_blocks(
+        current_attempt_id=None,
+        iteration=_iteration(),
+        attempts=[
+            _attempt(1, fail_reason=AttemptFailReason.STARTUP_FAILED)
+        ],
+    )
+    body = blocks[0].text
+    assert body == (
+        '<attempt_plan status="unsubmitted"/>\n'
+        '<generator_outcomes status="not_started"/>\n'
+        '<evaluator_judgment status="bypassed" reason="startup_failed"/>'
+    )
 
 
 def test_renders_generator_outcomes_status_summary_and_task_children():

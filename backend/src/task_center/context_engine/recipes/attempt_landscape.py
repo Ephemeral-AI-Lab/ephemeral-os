@@ -35,7 +35,7 @@ from task_center.context_engine.recipes.goal_iteration_frame import (
     current_iteration_group_id,
     latest_summary_text,
 )
-from task_center.attempt.state import Attempt, AttemptStatus
+from task_center.attempt.state import Attempt, AttemptFailReason, AttemptStatus
 from task_center.iteration.state import Iteration
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
@@ -45,6 +45,15 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only
 _MISSING_TASK_ROW_STATUS = "missing task row"
 _PREMATURE_STATUSES = frozenset({"failed", "blocked", _MISSING_TASK_ROW_STATUS})
 _EMPTY_SUMMARY_PLACEHOLDERS = frozenset({"(empty)", "(no summary recorded)"})
+
+# fail_reasons where no plan was ever committed, so neither generators nor
+# the evaluator had a chance to run. The recipe collapses such attempts to a
+# minimal body with explicit "bypassed" status attributes — emitting an
+# `<evaluator_judgment status="ran" verdict="fail">` block with
+# "(no evaluator summary recorded)" would lie about whether the evaluator ran.
+_NO_DOWNSTREAM_STAGES = frozenset(
+    {AttemptFailReason.PLANNER_FAILED, AttemptFailReason.STARTUP_FAILED}
+)
 
 # Closers a recipe MUST refuse to leak into user content. Kept here (not in the
 # renderer) because the recipe is the layer that embeds user text into a
@@ -115,8 +124,18 @@ def _render_failed_attempt_body(
     attempt: Attempt, *, task_store: TaskStoreProtocol | None
 ) -> str:
     """Render the inside of ``<attempt attempt_no="N" status="failed">…</attempt>``."""
-    sections: list[str] = [_render_attempt_plan(attempt), _render_generator_outcomes_xml(attempt, task_store=task_store)]
-    sections.append(_render_evaluator_judgment(attempt, task_store=task_store))
+    if attempt.fail_reason in _NO_DOWNSTREAM_STAGES:
+        reason = attempt.fail_reason.value
+        return (
+            f'<attempt_plan status="unsubmitted"/>\n'
+            f'<generator_outcomes status="not_started"/>\n'
+            f'<evaluator_judgment status="bypassed" reason="{reason}"/>'
+        )
+    sections: list[str] = [
+        _render_attempt_plan(attempt),
+        _render_generator_outcomes_xml(attempt, task_store=task_store),
+        _render_evaluator_judgment(attempt, task_store=task_store),
+    ]
     return "\n".join(sections)
 
 

@@ -1,12 +1,13 @@
-# executor — iteration 1, attempt 2 (continuation partial; routed to executor_success_handoff variant; generator_instruction: has_deps=False)
-- source: `goal_01_d0c5bdce-c899-4bf2-84c3-c059392202a1/iteration_01_8d48b35f-ed78-46b3-9b21-0143084aa868/attempt_02_0560d8e0-ea1c-4d92-967c-c8bc477a38e9/02_executor_0560d8e0-ea1c-4d92-967c-c8bc477a38e9:gen:preflight/message.jsonl`
+# executor — dependency_results branch (generator task `b`, deps: [`a`]); user_msg_1 carries a real `<dependency_results>` block
+- source: `pipeline.dependency_dag_serial/20260518T164232Z_da47a06c86c8/goal_01_ff9582e2-270a-4485-8719-7e7f1288d90b/iteration_01_e8248a0e-b609-4ae6-98fe-c7fd361a0503/attempt_01_80414020-070f-4fe9-b1ef-17cedb22aad5/03_executor_80414020-070f-4fe9-b1ef-17cedb22aad5:gen:b/message.jsonl`
+- notes: Closes Gap 3 in the original gap report. The scenario submits a serial DAG `a → b → c`; task `b` runs with `deps=["a"]`, so its composer renders the `<dependency_results>` group (one `<dependency id=...>` child per upstream task) between `<attempt_plan>` and `<assigned_task>`. The role_instruction (row 3) is the `has_deps=True` branch of `generator_instruction`, opening with "This task has dependencies on other generator tasks…". This is the variant the existing initial_messages scenario could not exercise because its plans only have single-task DAGs.
 
 ## system
 
 ```
 You are the **main-agent generator executor** at a depth where handoff is still available.
 
-Complete the `<assigned_task>`. If the task is too broad or genuinely needs a delegated complex-task plan, call `submit_execution_handoff`
+Complete the `Assigned Task`. If the task is too broad or genuinely needs a delegated complex-task plan, call `submit_execution_handoff`
 
 ## Submission discipline
 
@@ -29,14 +30,17 @@ This profile intentionally does not expose `submit_execution_failure`. Unfinishe
 ```
 <attempt_plan>
 <plan_spec>
-Run a workspace preflight probe and continue with the follow-up goal.
+Run a serial preflight chain a → b → c.
 </plan_spec>
-<next_iteration_handoff_goal>
-Continue the initial-messages capture by running one more preflight in iteration 2 so the continuation planner sees prior iteration results.
-</next_iteration_handoff_goal>
 </attempt_plan>
 
-<assigned_task task_id="0560d8e0-ea1c-4d92-967c-c8bc477a38e9:gen:preflight">
+<dependency_results>
+<dependency id="80414020-070f-4fe9-b1ef-17cedb22aad5:gen:a">
+Workspace preflight completed.
+</dependency>
+</dependency_results>
+
+<assigned_task task_id="80414020-070f-4fe9-b1ef-17cedb22aad5:gen:b">
 Run a lightweight workspace preflight and report the observed sandbox root.
 </assigned_task>
 ```
@@ -44,7 +48,7 @@ Run a lightweight workspace preflight and report the observed sandbox root.
 ## user_msg_2
 
 ```
-You are executing one generator task. This task has no dependencies on other generator tasks in the same attempt. Read the `<assigned_task>` below and produce the deliverable, then submit per your role's contract.
+You are executing one generator task with one or more dependency outputs already available (see `<dependency_results>`). Treat the dependency outputs as fixed inputs; do not redo their work. Read the `<assigned_task>` and produce the deliverable, then submit per your role's contract.
 
 # Terminal tools you may call
 
@@ -52,9 +56,15 @@ Pick exactly one based on outcome:
 
 - `submit_execution_handoff` — Call when bounded progress is made but further work is needed. Name the next bounded slice; do not kick the problem downstream without specifying what's needed.
 
-- `submit_execution_success` — Call when the `<assigned_task>` deliverable is complete, exists at the claimed location, satisfies the task specification, and any verification the criteria specify has been run and passed.
+- `submit_execution_success` — Call when the assigned task's deliverable is complete, exists at the claimed location, satisfies the task specification, and any verification the criteria specify has been run and passed.
 
 # Your task
 
 Execute the role described above. Before any terminal submission, call ask_advisor with your chosen tool_name and intended payload. Submit your chosen terminal only after the advisor returns "approve".
+```
+
+## user_msg_3 — row 4 (skill + terminal_selection)
+
+```
+Calling shell.
 ```

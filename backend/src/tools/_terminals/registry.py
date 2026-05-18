@@ -36,15 +36,16 @@ TERMINAL_DESCRIPTORS: dict[str, TerminalToolDescriptor] = {
     "submit_execution_success": TerminalToolDescriptor(
         name="submit_execution_success",
         selection_guidance=(
-            "Call when the assigned task's deliverable is complete, exists "
+            "Call when the `<assigned_task>` deliverable is complete, exists "
             "at the claimed location, satisfies the task specification, and "
             "any verification the criteria specify has been run and passed."
         ),
         advisor_review_focus=(
-            "Verify the assigned task's deliverable actually exists at the "
+            "Verify the `<assigned_task>` deliverable actually exists at the "
             "claimed location, satisfies the task specification, and is "
-            "consistent with the dependency outputs. Flag stub deliverables, "
-            "TODO markers, and any divergence from the task contract."
+            "consistent with the `<dependency_results>` outputs. Flag stub "
+            "deliverables, TODO markers, and any divergence from the task "
+            "contract."
         ),
     ),
     "submit_execution_failure": TerminalToolDescriptor(
@@ -76,65 +77,65 @@ TERMINAL_DESCRIPTORS: dict[str, TerminalToolDescriptor] = {
     "submit_plan_closes_goal": TerminalToolDescriptor(
         name="submit_plan_closes_goal",
         selection_guidance=(
-            "Call when this attempt's tasks fully cover Current Iteration. "
-            "On evaluator PASS, the iteration closes terminally and the goal "
-            "can succeed."
+            "Call when this attempt's tasks fully cover the current "
+            "`<iteration_goal>`. On evaluator PASS, the iteration closes "
+            "terminally and the goal can succeed."
         ),
         advisor_review_focus=(
-            "The planner proposes to CLOSE the iteration goal in this "
-            "attempt. Review the proposed decomposition against Current "
-            "Iteration: does every required item have a generator task, are "
-            "evaluation criteria one-per-item where the goal is a list, and "
-            "does the plan avoid a coarse 'all items done' criterion that "
-            "turns partial progress into total failure? Flag missing items, "
-            "mis-scoped tasks, and dependency mistakes."
+            "The planner proposes to CLOSE the current `<iteration_goal>` in "
+            "this attempt. Review the proposed decomposition against "
+            "`<iteration_goal>`: does every required item have a generator "
+            "task, are evaluation criteria one-per-item where the goal is a "
+            "list, and does the plan avoid a coarse 'all items done' "
+            "criterion that turns partial progress into total failure? Flag "
+            "missing items, mis-scoped tasks, and dependency mistakes."
         ),
     ),
     "submit_plan_continues_goal": TerminalToolDescriptor(
         name="submit_plan_continues_goal",
         selection_guidance=(
             "Call when this attempt delivers a complete, coherent, bounded "
-            "slice of Current Iteration and a clear remainder exists. The "
-            "next_iteration_handoff_goal is the next iteration's whole scope, not a "
-            "backlog dump."
+            "slice of the current `<iteration_goal>` and a clear remainder "
+            "exists. The `next_iteration_handoff_goal` is the next "
+            "iteration's whole scope, not a backlog dump."
         ),
         advisor_review_focus=(
-            "The planner DEFERS remaining work via a next_iteration_handoff_goal. "
-            "Confirm the partial scope is genuinely smaller than the "
-            "iteration goal and that the next_iteration_handoff_goal is the next "
-            "bounded slice — NOT a dump of the entire remaining backlog. "
-            "Verify the in-scope items have one evaluation criterion each "
-            "and the deferred items are clearly named so the next iteration "
-            "can pick up cleanly."
+            "The planner DEFERS remaining work via a "
+            "`next_iteration_handoff_goal`. Confirm the partial scope is "
+            "genuinely smaller than `<iteration_goal>` and that the "
+            "`next_iteration_handoff_goal` is the next bounded slice — NOT a "
+            "dump of the entire remaining backlog. Verify the in-scope items "
+            "have one evaluation criterion each and the deferred items are "
+            "clearly named so the next iteration can pick up cleanly."
         ),
     ),
     "submit_evaluation_success": TerminalToolDescriptor(
         name="submit_evaluation_success",
         selection_guidance=(
-            "Call when every entry in Evaluation Criteria is satisfied; the "
-            "attempt closes successfully and the planner's submission kind "
-            "determines whether the goal closes or continues."
+            "Call when every entry in `<evaluation_criteria>` is satisfied; "
+            "the attempt closes successfully and the planner's submission "
+            "kind determines whether the goal closes or continues."
         ),
         advisor_review_focus=(
-            "The evaluator proposes to PASS the attempt. Re-read the "
-            "Evaluation Criteria; for each criterion, verify the attempt's "
-            "deliverables actually satisfy it. Flag any criterion the "
-            "evaluator is glossing over and any deliverable that satisfies "
-            "the letter but not the intent of the criterion."
+            "The evaluator proposes to PASS the attempt. Re-read "
+            "`<evaluation_criteria>`; for each criterion, verify the "
+            "attempt's deliverables actually satisfy it. Flag any criterion "
+            "the evaluator is glossing over and any deliverable that "
+            "satisfies the letter but not the intent of the criterion."
         ),
     ),
     "submit_evaluation_failure": TerminalToolDescriptor(
         name="submit_evaluation_failure",
         selection_guidance=(
-            "Call when one or more criteria fail. The graph enters retry or "
-            "failure handling."
+            "Call when one or more entries in `<evaluation_criteria>` fail. "
+            "The graph enters retry or failure handling."
         ),
         advisor_review_focus=(
             "The evaluator proposes to FAIL the attempt. Confirm the failing "
             "criteria are accurately named and that the failure is on the "
             "attempt's promised scope (NOT on work deferred via "
-            "next_iteration_handoff_goal). Flag failures that punish the attempt for "
-            "items outside the iteration goal."
+            "`next_iteration_handoff_goal`). Flag failures that punish the "
+            "attempt for items outside the current `<iteration_goal>`."
         ),
     ),
     "submit_verification_success": TerminalToolDescriptor(

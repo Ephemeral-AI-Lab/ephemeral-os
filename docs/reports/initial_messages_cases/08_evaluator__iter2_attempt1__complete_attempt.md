@@ -1,12 +1,12 @@
-# evaluator — iteration 2, attempt 1 (evaluator_instruction branch: is_partial=False; complete attempt)
-- source: `goal_01_1dc1d572-b410-4c5c-8436-e3282e12f36f/iteration_02_d5f7093c-2973-4309-90ae-34fa3ef23cf4/attempt_01_5352eda5-3bbe-4085-a96f-cfe21922ae63/03_evaluator_5352eda5-3bbe-4085-a96f-cfe21922ae63:evaluator/message.jsonl`
+# evaluator — iteration 2, attempt 1 (evaluator_instruction branch: is_partial=False; complete plan attempt)
+- source: `goal_01_d0c5bdce-c899-4bf2-84c3-c059392202a1/iteration_02_e80b7bd2-da91-4853-8d4b-ad5d3edd4952/attempt_01_9424b5b2-ee7a-4137-b425-f27b75f8a46f/03_evaluator_9424b5b2-ee7a-4137-b425-f27b75f8a46f:evaluator/message.jsonl`
 
 ## system
 
 ```
 You are the **main-agent evaluator**.
 
-Run after every generator task in the attempt has passed. Evaluate the current attempt against the `Attempt Plan`, `Dependency Results`, and `Evaluation Criteria` sections. If issues require edits, call `ask_resolver` (a blocking helper that may edit files), then re-check against the same criteria.
+Run after every generator task in the attempt has passed. Evaluate the current attempt against the `<attempt_plan>`, `<dependency_results>`, and `<evaluation_criteria>` blocks. If issues require edits, call `ask_resolver` (a blocking helper that may edit files), then re-check against the same criteria.
 
 ## Submission discipline
 
@@ -18,17 +18,14 @@ Submit exactly one terminal tool per run.
 
 ## Terminal tools
 
-- `submit_evaluation_success` — every entry in `Evaluation Criteria` is satisfied; the attempt closes successfully and (depending on the planner's submission kind) closes the goal or continues it via the planned continuation iteration.
+- `submit_evaluation_success` — every entry in `<evaluation_criteria>` is satisfied; the attempt closes successfully and (depending on the planner's submission kind) closes the goal or continues it via the planned continuation iteration.
 - `submit_evaluation_failure` — one or more criteria fail; the graph enters retry or failure handling.
 ```
 
 ## user_msg_1
 
 ```
-# Goal
-
-## Goal
-
+<goal>
 <Workspace Root>
 /testbed
 <Workspace Root>
@@ -1861,46 +1858,52 @@ Related tickets
 Can you help me implement the necessary changes to the repository so that the requirements specified in the <pr_description> are met?
 I've already taken care of all changes to any of the test files described in the <pr_description>. This means you DON'T have to modify the testing logic or any of the tests in any way!
 Your task is to make the minimal changes to non-tests files in the /testbed directory to ensure the <pr_description> is satisfied.
+</goal>
 
-## Iteration 1 accepted plan
-
+<iteration iteration_no="1" status="prior">
+<accepted_plan>
 Run a workspace preflight probe and continue with the follow-up goal.
+</accepted_plan>
+<summary>
 
-## Iteration 1 summary
+</summary>
+</iteration>
 
+<iteration iteration_no="2" status="current">
+<iteration_goal>
+Continue the initial-messages capture by running one more preflight in iteration 2 so the continuation planner sees prior iteration results.
+</iteration_goal>
+</iteration>
 
-
-# Current Iteration
-
-Continue the first-three-messages capture by running one more preflight in iteration 2 so the continuation planner sees prior iteration results.
-
-# Attempt Plan
-
+<attempt_plan>
+<plan_spec>
 Run a workspace preflight probe.
+</plan_spec>
+</attempt_plan>
 
-# Dependency Results
-
-## 5352eda5-3bbe-4085-a96f-cfe21922ae63:gen:preflight
-
+<completed_tasks>
+<task id="9424b5b2-ee7a-4137-b425-f27b75f8a46f:gen:preflight" status="done">
 Workspace preflight completed.
+</task>
+</completed_tasks>
 
-# Evaluation Criteria
-
+<evaluation_criteria>
 - Workspace preflight completed.
+</evaluation_criteria>
 ```
 
 ## user_msg_2
 
 ```
-You are evaluating a complete attempt. Use the Attempt Plan and the Evaluation Criteria as your authority — pass/fail the attempt against the criteria, not against your own preferences. Treat the iteration goal as the scope; do not penalize the attempt for work outside the iteration goal.
+You are evaluating a complete attempt. Use `<attempt_plan>` and `<evaluation_criteria>` as your authority — pass/fail the attempt against the criteria, not against your own preferences. Treat the iteration goal as the scope; do not penalize the attempt for work outside the iteration goal.
 
 # Terminal tools you may call
 
 Pick exactly one based on outcome:
 
-- `submit_evaluation_success` — Call when every entry in Evaluation Criteria is satisfied; the attempt closes successfully and the planner's submission kind determines whether the goal closes or continues.
+- `submit_evaluation_success` — Call when every entry in `<evaluation_criteria>` is satisfied; the attempt closes successfully and the planner's submission kind determines whether the goal closes or continues.
 
-- `submit_evaluation_failure` — Call when one or more criteria fail. The graph enters retry or failure handling.
+- `submit_evaluation_failure` — Call when one or more entries in `<evaluation_criteria>` fail. The graph enters retry or failure handling.
 
 # Your task
 

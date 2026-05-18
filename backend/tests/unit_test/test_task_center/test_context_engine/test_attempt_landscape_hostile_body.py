@@ -69,7 +69,13 @@ def _attempt(
         generator_task_ids=generator_task_ids,
         evaluator_task_id=evaluator_task_id,
         next_iteration_handoff_goal=next_iteration_handoff_goal,
-        fail_reason=AttemptFailReason.PLANNER_FAILED,
+        # EVALUATOR_FAILED routes through the rich body where every
+        # user-supplied fragment (plan_spec / handoff_goal / criteria /
+        # generator summaries) is embedded and must be sanitized. The
+        # PLANNER_FAILED / STARTUP_FAILED paths collapse to a compact body
+        # that embeds no user text, so the hostile-body sanitizer is moot
+        # there — see test_attempt_landscape.py for those branches.
+        fail_reason=AttemptFailReason.EVALUATOR_FAILED,
         created_at=now,
         updated_at=now,
         closed_at=now,

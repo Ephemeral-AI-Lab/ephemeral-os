@@ -264,7 +264,7 @@ async def test_advisor_launches_with_two_user_messages(
     # text fragments.
     assert "submit_execution_success" in user_msg_2
     assert "submit_execution_failure" in user_msg_2
-    assert "Verify the assigned task's deliverable" in user_msg_2
+    assert "Verify the `<assigned_task>` deliverable" in user_msg_2
     assert "# Pending submission" in user_msg_2
     assert "submit_execution_success" in user_msg_2
     assert "shipped" in user_msg_2

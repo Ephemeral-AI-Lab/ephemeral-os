@@ -1,4 +1,4 @@
-# explorer subagent — invoked via run_subagent (programmatic; built by tools/subagent/run_subagent.py + recipes/role_instruction.py:explorer_instruction)
+# explorer subagent — invoked via run_subagent (programmatic; user_msg_1 = parent's free-text prompt; user_msg_2 = explorer_instruction().text)
 - source: `programmatic construction`
 
 ## system

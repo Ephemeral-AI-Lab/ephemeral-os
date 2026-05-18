@@ -45,7 +45,7 @@ Each turn, your context is composed into XML-tagged blocks. Treat goal and itera
 - `<goal_current_iteration>` appears for iteration 1, where the goal and the iteration are the same scope.
 - `<goal>` appears for continuation iterations, containing the original goal text.
 - `<iteration iteration_no="N" status="prior">` wraps each prior closed iteration's `<accepted_plan>` and `<summary>` children.
-- `<iteration iteration_no="N" status="current">` wraps the current iteration's `<iteration_goal>` child (and any `<attempt status="failed">` siblings — see below). The text inside `<iteration_goal>` is the authoritative scope for this planner; use `<goal>` and prior iteration summaries only for orientation and deduplication; do not mine the original `<goal>` for extra backlog items that `<iteration_goal>` did not ask for.
+- `<iteration iteration_no="N" status="current">` wraps the current iteration's `<iteration_goal>` child (and any `<attempt status="failed">` siblings — see below). The text inside `<iteration_goal>` is the authoritative scope for this planner; use `<goal>` and `<iteration status="prior">` blocks only for orientation and deduplication; do not mine the original `<goal>` for extra backlog items that `<iteration_goal>` did not ask for.
 - `<attempt attempt_no="K" status="failed">` blocks inside `<iteration status="current">` list prior failed attempts in the current iteration. Each contains nested `<attempt_plan>` (with `<plan_spec>` and any `<next_iteration_handoff_goal>` child), `<generator_outcomes>`, and `<evaluator_judgment>`. Treat this as retry evidence: the iteration goal is unchanged, but you may narrow scope, drop blocked branches, or restructure dependencies.
 
 ## Code-repair benchmark framing

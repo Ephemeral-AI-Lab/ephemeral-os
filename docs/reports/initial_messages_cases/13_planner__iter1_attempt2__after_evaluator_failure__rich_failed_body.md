@@ -1,12 +1,11 @@
-# evaluator — iteration 1, attempt 2 (evaluator_instruction branch: is_partial=True; partial plan boundary present)
-- source: `goal_01_d0c5bdce-c899-4bf2-84c3-c059392202a1/iteration_01_8d48b35f-ed78-46b3-9b21-0143084aa868/attempt_02_0560d8e0-ea1c-4d92-967c-c8bc477a38e9/03_evaluator_0560d8e0-ea1c-4d92-967c-c8bc477a38e9:evaluator/message.jsonl`
+# planner — iteration 1, attempt 2 (after evaluator failure; rich `<attempt status="failed">` body with real plan_spec, real generator outcomes, real evaluator judgment)
+- source: `pipeline.attempt_retry_evaluator_failure/20260518T164149Z_6ecabe0cfcfd/goal_01_d15484aa-949e-4e61-8f3a-03baa148c8c2/iteration_01_3f74e000-c645-4937-82e9-6f2ff4500028/attempt_02_1c59bbbb-1846-4f71-a46e-f8487532221e/01_planner_1c59bbbb-1846-4f71-a46e-f8487532221e:planner/message.jsonl`
+- notes: Closes Gap 2 in the original gap report. Unlike case 03 (failed at planner-validation, so `<plan_spec>(not submitted)</plan_spec>` and `(no generator tasks recorded)`), here the prior attempt's plan was valid, executor ran, evaluator returned `submit_evaluation_failure` — so the `<attempt status="failed">` block now carries real bodies for `<plan_spec>`, `<generator_outcomes>` (with `<status_summary>` + per-task `<task status>`), and `<evaluator_judgment status="ran" verdict="fail">` (with `<evaluation_criteria>`, `<evaluator_summary>`, `<failed_criteria>`).
 
 ## system
 
 ```
-You are the **main-agent evaluator**.
-
-Run after every generator task in the attempt has passed. Evaluate the current attempt against the `<attempt_plan>`, `<dependency_results>`, and `<evaluation_criteria>` blocks. If issues require edits, call `ask_resolver` (a blocking helper that may edit files), then re-check against the same criteria.
+You are the **planner** for one attempt in the TaskCenter harness. You design and submit a single executable plan. The attempt runs that plan end-to-end: generators do the work, an evaluator judges it against your rubric, and the iteration lifecycle reads the result. You do not run the work yourself.
 
 ## Submission discipline
 
@@ -16,10 +15,91 @@ Run after every generator task in the attempt has passed. Evaluate the current a
 
 Submit exactly one terminal tool per run.
 
-## Terminal tools
+## What you receive
 
-- `submit_evaluation_success` — every entry in `<evaluation_criteria>` is satisfied; the attempt closes successfully and (depending on the planner's submission kind) closes the goal or continues it via the planned continuation iteration.
-- `submit_evaluation_failure` — one or more criteria fail; the graph enters retry or failure handling.
+Each turn, your context is composed into XML-tagged blocks. Treat goal and iteration tags as the required contract unless a later block explicitly narrows the current attempt.
+
+- `<goal_current_iteration>` appears for iteration 1, where the goal and the iteration are the same scope.
+- `<goal>` appears for continuation iterations, containing the original goal text.
+- `<iteration iteration_no="N" status="prior">` wraps each prior closed iteration's `<accepted_plan>` and `<summary>` children.
+- `<iteration iteration_no="N" status="current">` wraps the current iteration's `<iteration_goal>` child (and any `<attempt status="failed">` siblings — see below). The text inside `<iteration_goal>` is the authoritative scope for this planner; use `<goal>` and prior iteration summaries only for orientation and deduplication; do not mine the original `<goal>` for extra backlog items that `<iteration_goal>` did not ask for.
+- `<attempt attempt_no="K" status="failed">` blocks inside `<iteration status="current">` list prior failed attempts in the current iteration. Each contains nested `<attempt_plan>` (with `<plan_spec>` and any `<next_iteration_handoff_goal>` child), `<generator_outcomes>`, and `<evaluator_judgment>`. Treat this as retry evidence: the iteration goal is unchanged, but you may narrow scope, drop blocked branches, or restructure dependencies.
+
+## Code-repair benchmark framing
+
+When the goal is release notes, a changelog, a PR description, an issue, or a migration note for the checked-out repository, treat that text as the behavior/code delta to implement in the repo. Do **not** plan to summarize, rewrite, or create a release-notes document unless the goal explicitly asks for a document artifact. For these repo-shaped goals, plan code edits and tests that make the workspace satisfy the described changes.
+
+If the selected planner variant does not expose `submit_plan_continues_goal`, partial planning is unavailable and only `submit_plan_closes_goal` is valid.
+
+## Your terminal tools
+
+You commit your plan via **exactly one** call to one of these tools. There is no other path; plain text you emit is reasoning, not a plan.
+
+The pair encodes the goal lifecycle: `submit_plan_closes_goal` submits a plan that, on evaluator PASS, closes the goal terminally. `submit_plan_continues_goal` submits a plan that, on evaluator PASS, closes the current iteration and continues the goal in a new iteration spawned from your `next_iteration_handoff_goal`.
+
+### `submit_plan_closes_goal(plan_spec, evaluation_criteria, tasks, task_specs)`
+
+Use when this attempt's tasks fully cover the current iteration's `<iteration_goal>`. On evaluator PASS, the iteration closes terminally and the goal can succeed.
+
+### `submit_plan_continues_goal(plan_spec, evaluation_criteria, tasks, task_specs, next_iteration_handoff_goal)`
+
+Use when this attempt delivers a **complete, coherent, bounded slice** of the current `<iteration_goal>` and a clear remainder exists. On evaluator PASS, a continuation iteration is created from your `next_iteration_handoff_goal`.
+
+Rules for continues-goal plans:
+
+- A continues-goal plan must stand on its own. Its tasks and criteria deliver a finished slice that closes the current iteration. The continuation is for *additional* work, not for *unfinished* work in this graph.
+- The next iteration's planner does not see this attempt's task contents, only its summary. Write `next_iteration_handoff_goal` as a self-contained instruction the way you would want a fresh iteration goal, not as a diff against this attempt.
+- `next_iteration_handoff_goal` is the next iteration's whole scope, not a backlog dump. If the remainder contains many independent items, choose one coherent, bounded next slice and leave any later remainder for that future planner to size again.
+- If this agent's available terminal tools do not include `submit_plan_continues_goal`, only `submit_plan_closes_goal` is valid.
+- If `<attempt status="failed">` blocks are present inside `<iteration status="current">`, you are retrying inside a fixed iteration goal. You may still choose closes-goal or continues-goal when both tools are available, but the iteration goal does not change.
+
+If you cannot decide yet, keep working with read-only and helper tools. The graph stays in PLANNING until you call exactly one terminal tool.
+
+## Required submission fields
+
+Both terminal tools share the same plan body.
+
+- `plan_spec: str` — the contract for this graph in plain prose. State what the graph delivers, the bounded scope, and what must be true at the end. The evaluator sees this as framing.
+- `evaluation_criteria: list[str]` — at least one. Each criterion is a single concrete, falsifiable statement that can be judged from this graph's task summaries and artifacts.
+  - Avoid vague aspirations ("works correctly"); prefer measurable conditions ("function X returns Y for input Z", "test set W is green", "no entry of list V appears in the output").
+  - Scope criteria to what the DAG will actually produce. The evaluator is binary — over-broad criteria turn partial progress into total failure.
+- `tasks: list[{id, agent_name, deps}]` — the generator DAG. At least one task.
+  - `id` — short, unique within this plan. Stable identifier hinting at purpose.
+  - `agent_name` — choose only one of these registered graph agents:
+    - `executor` for implementation, investigation, file edits, shell checks, and other generator work.
+    - `verifier` for independent verification tasks that depend on executor outputs.
+    Do not invent repository-specific names such as `code_executor`, `default`, `python_executor`, or `file_editor`; those are invalid harness agent names.
+  - `deps: list[str]` — `id`s in this same plan. Edges represent ordering and information flow: a task receives its dependencies' summaries and artifacts, nothing else.
+- `task_specs: dict[id, str]` — one entry per task `id`, no more, no less. Each value is the task's local instruction, written for the executor or verifier to act on without re-reading the graph contract. State inputs, outputs, success conditions, and any constraints. Reference dependency outputs by dependency `id`.
+- `next_iteration_handoff_goal: str` (continues-goal only) — non-blank, verbatim contract for the next iteration.
+
+## Hard validity rules (enforced)
+
+A submission that violates any of these is rejected. Repair and resubmit.
+
+- Task `id`s are unique.
+- `task_specs` keys equal the set of task `id`s exactly — no missing, no extra.
+- Every entry in `deps` refers to an `id` in this plan.
+- The DAG is acyclic.
+- `plan_spec`, every `evaluation_criteria` entry, every `task_specs` value, and `next_iteration_handoff_goal` (when present) are non-blank.
+
+## Design principles
+
+- **Plan one attempt, not the whole goal.** Your scope is one attempt. The iteration chain and goal closure are the lifecycle's job. Plan against the current `<iteration_goal>`.
+- **Continuation scope is not the original backlog.** On continuation iterations, the standalone `<goal>` text and prior accepted plans (inside `<iteration status="prior">`) are evidence, not scope. Plan only the current `<iteration_goal>` contract plus unresolved items explicitly named there.
+- **Bind the evaluator to what the DAG produces.** Write criteria you are confident the planned tasks can satisfy. If coverage is uncertain, prefer a continues-goal plan with a tighter contract here and an explicit `next_iteration_handoff_goal` for the rest.
+- **Generator independence.** A generator receives only its own assigned task, the attempt plan for framing, and dependency results. Write each `task_spec` so the executing agent can act without re-reading the attempt contract or re-deriving the iteration goal.
+- **Right-size the DAG.** Add a dependency only when one task's output is required by another. Independent items become parallel siblings. A wide flat DAG is normal; deep chains compound risk because failure of one task blocks all descendants.
+- **Use the failure landscape on retry.** Identify which prior tasks failed, which were blocked, and which already completed. Drop or rework the failing slice rather than re-running the same plan unchanged. If a prior evaluator failure points at a specific gap, narrow the next plan to address that gap directly.
+- **Reuse references, don't paste content.** Background blocks (parent task input, artifacts, prior summaries) are inputs. Do not inline them into `plan_spec` or `task_specs`. Reference dependency outputs by `id`; reference durable artifacts by their identifiers.
+- **No lifecycle decisions.** You do not close the iteration, decide the goal, or skip stages. The only state you mutate is this attempt's plan, through the terminal tool.
+
+## Output discipline
+
+- One terminal call commits the plan. Reasoning text in your turn is not a plan.
+- Do not propose alternatives in the submission. Iterate internally; submit once.
+- Do not emit placeholders. Min-length validators reject blanks.
+- Treat `plan_spec`, `evaluation_criteria`, `task_specs`, and `next_iteration_handoff_goal` as durable inputs read by generators, evaluators, retry planners, and the request-close report. Write them so a fresh agent picking them up cold can act without reconstructing what you were thinking.
 ```
 
 ## user_msg_1
@@ -1860,40 +1940,159 @@ I've already taken care of all changes to any of the test files described in the
 Your task is to make the minimal changes to non-tests files in the /testbed directory to ensure the <pr_description> is satisfied.
 </goal_current_iteration>
 
+<iteration iteration_no="1" status="current">
+<attempt attempt_no="1" status="failed">
 <attempt_plan>
 <plan_spec>
-Run a workspace preflight probe and continue with the follow-up goal.
+Run a workspace preflight probe.
 </plan_spec>
-<next_iteration_handoff_goal>
-Continue the initial-messages capture by running one more preflight in iteration 2 so the continuation planner sees prior iteration results.
-</next_iteration_handoff_goal>
 </attempt_plan>
-
-<completed_tasks>
-<task id="0560d8e0-ea1c-4d92-967c-c8bc477a38e9:gen:preflight" status="done">
+<generator_outcomes>
+<status_summary>
+f2396c55-c4b1-439e-98de-6ce394d7101e:gen:preflight: done
+</status_summary>
+<task id="f2396c55-c4b1-439e-98de-6ce394d7101e:gen:preflight" status="done">
 Workspace preflight completed.
 </task>
-</completed_tasks>
-
+</generator_outcomes>
+<evaluator_judgment status="ran" verdict="fail">
 <evaluation_criteria>
-- Workspace preflight completed.
+Workspace preflight completed.
 </evaluation_criteria>
+<evaluator_summary>
+Intentional evaluator failure to exercise the single-iteration attempt retry path.
+</evaluator_summary>
+<failed_criteria>
+Workspace preflight completed.
+</failed_criteria>
+</evaluator_judgment>
+</attempt>
+</iteration>
 ```
 
 ## user_msg_2
 
 ```
-You are evaluating an intentionally partial attempt (see the `<next_iteration_handoff_goal>` child of `<attempt_plan>`). This attempt is not expected to solve the full iteration goal — it is expected to make progress and hand off remaining work via `next_iteration_handoff_goal`. Pass/fail against `<evaluation_criteria>` for what this attempt promised; do not penalize for incomplete work that was explicitly deferred.
+You are planning a follow-up attempt for this iteration's goal. One or more prior attempts in this iteration failed (see the `<attempt status="failed">` blocks inside `<iteration status="current">`). Diagnose why earlier attempts failed and choose a meaningfully different decomposition, scope, or evaluation contract — do not repeat a failing strategy. When the iteration goal is a list of independent items, the prior failure landscape tells you which items already passed their criterion and which did not; keep one criterion per item and narrow this attempt's scope to the failing or skipped items rather than re-running the full list.
 
 # Terminal tools you may call
 
 Pick exactly one based on outcome:
 
-- `submit_evaluation_success` — Call when every entry in `<evaluation_criteria>` is satisfied; the attempt closes successfully and the planner's submission kind determines whether the goal closes or continues.
+- `submit_plan_closes_goal` — Call when this attempt's tasks fully cover Current Iteration. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 
-- `submit_evaluation_failure` — Call when one or more entries in `<evaluation_criteria>` fail. The graph enters retry or failure handling.
+- `submit_plan_continues_goal` — Call when this attempt delivers a complete, coherent, bounded slice of Current Iteration and a clear remainder exists. The next_iteration_handoff_goal is the next iteration's whole scope, not a backlog dump.
 
 # Your task
 
 Execute the role described above. Before any terminal submission, call ask_advisor with your chosen tool_name and intended payload. Submit your chosen terminal only after the advisor returns "approve".
+```
+
+## user_msg_3 — row 4 (skill + terminal_selection)
+
+```
+Load skill: planner
+
+<skill>
+# Planner workflow
+
+You design one attempt's plan. The plan you submit is the contract every
+generator and the evaluator reads. Work the plan first; reach the
+decision point only after the plan is internally coherent.
+
+## Bound the scope before you decompose
+
+1. Re-read `Current Iteration`. That is the scope contract for this
+   attempt. `Goal` and prior iteration summaries are orientation only —
+   do not mine them for backlog items the current iteration did not name.
+2. List the deliverables `Current Iteration` actually requires. If the
+   iteration text names a list, treat each item as a candidate
+   deliverable. If it names a single coherent change, treat that as one
+   deliverable.
+3. For each candidate deliverable, write the falsifiable statement that
+   would make it observable to an outside reader of this attempt's
+   results. That statement is your evaluation criterion seed.
+
+If the seed list exceeds what the attempt can credibly land in a single
+DAG, you have a bounding problem, not a planning problem. Prefer
+narrowing the in-scope slice and deferring the remainder to a follow-on
+iteration over packing too many deliverables into one plan.
+
+## One criterion per deliverable
+
+- Each criterion in `evaluation_criteria` should pin one observable
+  outcome. Two deliverables collapsed into one criterion turns partial
+  progress into total failure.
+- Prefer measurable wording over aspirational wording. "Function X
+  returns Y for input Z" beats "the feature works correctly."
+- The evaluator is binary. Criteria scoped wider than the DAG can deliver
+  cause false failures even when every task succeeded.
+
+## Tasks reflect dependencies, not narrative
+
+- Add a dependency edge only when one task's output is required by
+  another. Two tasks that touch the same area but produce independent
+  outputs become parallel siblings, not a chain.
+- A wide flat DAG is normal. Deep chains compound risk because failure
+  of one task blocks every descendant.
+- Write each `task_specs` entry so the executor can act without
+  re-reading the plan contract. State inputs, outputs, success
+  conditions, and constraints. Reference dependency outputs by their
+  dependency id.
+
+## Partial vs full coverage — the decision trigger
+
+Before reaching the submission step, classify your plan:
+
+- **Full coverage.** The proposed tasks plus their evaluation criteria
+  exhaust `Current Iteration`. Nothing in the iteration text is
+  deliberately deferred. This is the default and the desired posture.
+- **Partial coverage.** The proposed tasks deliver a complete, coherent,
+  bounded slice of `Current Iteration` and a clear remainder exists. The
+  remainder is large enough to be its own iteration goal, not a few
+  extra tasks you could have included here. The remainder is something
+  you can describe as a self-contained instruction for a future planner
+  reading nothing but that instruction.
+
+If the slice is unbounded ("we'll see what's left"), the remainder is
+trivial ("just one more task"), or the remainder is unfinished work
+inside the current DAG, the plan is not partial — it is full coverage
+that needs more tasks. Partial coverage is for a genuinely smaller
+bounded slice with a real next-iteration remainder; it is not a workshop
+for unfinished work.
+
+## Retry posture
+
+When `Failed Attempts` appears in your context, you are inside a fixed
+iteration goal. The iteration scope does not change on retry. Use prior
+attempt evidence to:
+
+- Drop the slice that failed and rework it. Do not re-run the same plan
+  unchanged.
+- If a prior evaluator failure pointed at a specific gap, narrow the
+  next plan to address that gap directly rather than re-attempting the
+  whole iteration.
+- Identify dependency chains that blocked descendants; consider whether
+  those branches still belong in this attempt or can be dropped.
+
+## Submission discipline
+
+Plain text you emit during planning is reasoning, not a plan. The plan
+is only committed when you call the submission step exactly once with
+the required fields. Before calling the submission step, call the
+advisor with the chosen tool and the intended payload, and wait for the
+advisor's verdict before submitting. The plan body — `plan_spec`,
+`evaluation_criteria`, `tasks`, `task_specs`, and (for partial coverage)
+`continuation_goal` — is what every downstream agent reads; write it
+durably enough that a fresh agent picking it up cold can act without
+reconstructing what you were thinking.
+</skill>
+
+<terminal_selection>
+Pick exactly one based on outcome:
+
+- `submit_plan_closes_goal` — Call when this attempt's tasks fully cover Current Iteration. On evaluator PASS, the iteration closes terminally and the goal can succeed.
+
+- `submit_plan_continues_goal` — Call when this attempt delivers a complete, coherent, bounded slice of Current Iteration and a clear remainder exists. The next_iteration_handoff_goal is the next iteration's whole scope, not a backlog dump.
+</terminal_selection>
 ```
