@@ -12,9 +12,9 @@ from sandbox.execution.contract import (
     CommandExecRequest,
     MountMode,
     OverlayCapture,
+    OverlayLayout,
     OverlayShellRequest,
     ShellProcessResult,
-    WorkspaceReplacementMountSpec,
 )
 from sandbox.execution.orchestrator import (
     execute_command,
@@ -94,7 +94,7 @@ def _command_request(
 
 def _run_overlay_command(
     *,
-    spec: WorkspaceReplacementMountSpec,
+    spec: OverlayLayout,
     request: CommandExecRequest,
     run_dir: str | Path,
     timings: dict[str, float],
