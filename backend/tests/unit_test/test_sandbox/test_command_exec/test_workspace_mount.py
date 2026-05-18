@@ -270,13 +270,13 @@ def test_workspace_rewrite_rewrites_quoted_shell_paths() -> None:
 def test_mount_spec_rejects_paths_outside_scratch_root(tmp_path: Path) -> None:
     with pytest.raises(
         ValueError,
-        match="upperdir must be strictly under scratch_root",
+        match="writes must be strictly under scratch_root",
     ):
-        WorkspaceReplacementMountSpec(
+        OverlayLayout(
             workspace_root="/testbed",
-            lowerdir=str(tmp_path / "lower"),
-            upperdir="/tmp/not-owned",
-            workdir=str(tmp_path / "work"),
+            base_repo=str(tmp_path / "lower"),
+            writes="/tmp/not-owned",
+            kernel_scratch=str(tmp_path / "work"),
             scratch_root=str(tmp_path),
         )
 
@@ -284,25 +284,25 @@ def test_mount_spec_rejects_paths_outside_scratch_root(tmp_path: Path) -> None:
 def test_mount_spec_rejects_scratch_root_itself(tmp_path: Path) -> None:
     with pytest.raises(
         ValueError,
-        match="upperdir must be strictly under scratch_root",
+        match="writes must be strictly under scratch_root",
     ):
-        WorkspaceReplacementMountSpec(
+        OverlayLayout(
             workspace_root="/testbed",
-            lowerdir=str(tmp_path / "lower"),
-            upperdir=str(tmp_path),
-            workdir=str(tmp_path / "work"),
+            base_repo=str(tmp_path / "lower"),
+            writes=str(tmp_path),
+            kernel_scratch=str(tmp_path / "work"),
             scratch_root=str(tmp_path),
         )
 
 
 def test_mount_spec_rejects_duplicate_mount_paths(tmp_path: Path) -> None:
     shared = tmp_path / "same"
-    with pytest.raises(ValueError, match="workdir must be distinct from upperdir"):
-        WorkspaceReplacementMountSpec(
+    with pytest.raises(ValueError, match="kernel_scratch must be distinct from writes"):
+        OverlayLayout(
             workspace_root="/testbed",
-            lowerdir=str(tmp_path / "lower"),
-            upperdir=str(shared),
-            workdir=str(shared),
+            base_repo=str(tmp_path / "lower"),
+            writes=str(shared),
+            kernel_scratch=str(shared),
             scratch_root=str(tmp_path),
         )
 
