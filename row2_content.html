@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Row 2 — user_msg_1 (context block)</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 980px; margin: 2em auto; padding: 0 1em; line-height: 1.55; color: #1f2328; }
+h1 { border-bottom: 1px solid #d0d7de; padding-bottom: .3em; }
+h2 { border-bottom: 1px solid #d0d7de; padding-bottom: .3em; margin-top: 1.6em; }
+h3 { margin-top: 1.4em; }
+h4 { margin-top: 1.2em; }
+pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+pre { background: #f6f8fa; padding: 12px; border-radius: 6px; overflow-x: auto; }
+code { background: #eff1f3; padding: .1em .3em; border-radius: 3px; font-size: 90%; }
+pre code { background: transparent; padding: 0; }
+blockquote { border-left: 4px solid #d0d7de; padding: 0 1em; color: #57606a; margin: 1em 0; }
+ul, ol { padding-left: 2em; }
+li { margin: .15em 0; }
+a { color: #0969da; text-decoration: none; }
+a:hover { text-decoration: underline; }
+hr { border: 0; border-top: 1px solid #d0d7de; margin: 2em 0; }
+.workspace-root { background: #fff8c5; padding: .5em 1em; border-radius: 4px; border: 1px solid #d4a72c; display: inline-block; }
+.pr-section { background: #f6f8fa; border-left: 4px solid #0969da; padding: .5em 1em; margin: 1em 0; }
+.checkbox { font-family: monospace; }
+table { border-collapse: collapse; margin: 1em 0; }
+th, td { border: 1px solid #d0d7de; padding: 6px 13px; }
+th { background: #f6f8fa; }
+</style>
+</head>
+<body>
+
+<goal>
+
+<h1>Row 2 — user_msg_1 (context block)</h1>
+
+<h2>Goal</h2>
+
+<h3>Goal</h3>
+
+<p class="workspace-root"><strong>Workspace Root:</strong> <code>/testbed</code></p>
+
+<p>I've uploaded a python code repository in the directory <code>/testbed</code>. Consider the following PR description:</p>
+
+<blockquote>
+<h2>2023.4.0</h2>
+
+<p>Released on April 14, 2023</p>
+
+<h3>Enhancements</h3>
+<ul>
+<li>Override old default values in <code>update_defaults</code> (<a href="#pr-10159">:pr:`10159`</a>) <em>Gabe Joseph</em></li>
+<li>Add a CLI command to <code>list</code> and <code>get</code> a value from dask config (<a href="#pr-9936">:pr:`9936`</a>) <em>Irina Truong</em></li>
+<li>Handle string-based engine argument to <code>read_json</code> (<a href="#pr-9947">:pr:`9947`</a>) <em>Richard (Rick) Zamora</em></li>
+<li>Avoid deprecated <code>GroupBy.dtypes</code> (<a href="#pr-10111">:pr:`10111`</a>) <em>Irina Truong</em></li>
+</ul>
+
+<h3>Bug Fixes</h3>
+<ul>
+<li>Revert <code>grouper</code>-related changes (<a href="#pr-10182">:pr:`10182`</a>) <em>Irina Truong</em></li>
+<li><code>GroupBy.cov</code> raising for non-numeric grouping column (<a href="#pr-10171">:pr:`10171`</a>) <em>Patrick Hoefler</em></li>
+<li>Updates for <code>Index</code> supporting <code>numpy</code> numeric dtypes (<a href="#pr-10154">:pr:`10154`</a>) <em>Irina Truong</em></li>
+<li>Preserve <code>dtype</code> for partitioning columns when read with <code>pyarrow</code> (<a href="#pr-10115">:pr:`10115`</a>) <em>Patrick Hoefler</em></li>
+<li>Fix annotations for <code>to_hdf</code> (<a href="#pr-10123">:pr:`10123`</a>) <em>Hendrik Makait</em></li>
+<li>Handle <code>None</code> column name when checking if columns are all numeric (<a href="#pr-10128">:pr:`10128`</a>) <em>Lawrence Mitchell</em></li>
+<li>Fix <code>valid_divisions</code> when passed a <code>tuple</code> (<a href="#pr-10126">:pr:`10126`</a>) <em>Brian Phillips</em></li>
+<li>Maintain annotations in <code>DataFrame.categorize</code> (<a href="#pr-10120">:pr:`10120`</a>) <em>Hendrik Makait</em></li>
+<li>Fix handling of missing min/max parquet statistics during filtering (<a href="#pr-10042">:pr:`10042`</a>) <em>Richard (Rick) Zamora</em></li>
+</ul>
+
+<h3>Deprecations</h3>
+<ul>
+<li>Deprecate <code>use_nullable_dtypes=</code> and add <code>dtype_backend=</code> (<a href="#pr-10076">:pr:`10076`</a>) <em>Irina Truong</em></li>
+<li>Deprecate <code>convert_dtype</code> in <code>Series.apply</code> (<a href="#pr-10133">:pr:`10133`</a>) <em>Irina Truong</em></li>
+</ul>
+
+<h3>Documentation</h3>
+<ul>
+<li>Document <code>Generator</code> based random number generation (<a href="#pr-10134">:pr:`10134`</a>) <em>Eray Aslan</em></li>
+</ul>
+
+<h3>Maintenance</h3>
+<ul>
+<li>Update <code>dataframe.convert_string</code> to <code>dataframe.convert-string</code> (<a href="#pr-10191">:pr:`10191`</a>) <em>Irina Truong</em></li>
+<li>Add <code>python-cityhash</code> to CI environments (<a href="#pr-10190">:pr:`10190`</a>) <em>Charles Blackmon-Luca</em></li>
+<li>Temporarily pin <code>scikit-image</code> to fix Windows CI (<a href="#pr-10186">:pr:`10186`</a>) <em>Patrick Hoefler</em></li>
+<li>Handle pandas deprecation warnings for <code>to_pydatetime</code> and <code>apply</code> (<a href="#pr-10168">:pr:`10168`</a>) <em>Patrick Hoefler</em></li>
+<li>Drop <code>bokeh&lt;3</code> restriction (<a href="#pr-10177">:pr:`10177`</a>) <em>James Bourbeau</em></li>
+<li>Fix failing tests under copy-on-write (<a href="#pr-10173">:pr:`10173`</a>) <em>Patrick Hoefler</em></li>
+<li>Allow <code>pyarrow</code> CI to fail (<a href="#pr-10176">:pr:`10176`</a>) <em>James Bourbeau</em></li>
+<li>Switch to <code>Generator</code> for random number generation in <code>dask.array</code> (<a href="#pr-10003">:pr:`10003`</a>) <em>Eray Aslan</em></li>
+<li>Bump <code>peter-evans/create-pull-request</code> from 4 to 5 (<a href="#pr-10166">:pr:`10166`</a>)</li>
+<li>Fix flaky <code>modf</code> operation in <code>test_arithmetic</code> (<a href="#pr-10162">:pr:`10162`</a>) <em>Irina Truong</em></li>
+<li>Temporarily remove <code>xarray</code> from CI with <code>pandas</code> 2.0 (<a href="#pr-10153">:pr:`10153`</a>) <em>James Bourbeau</em></li>
+<li>Fix <code>update_graph</code> counting logic in <code>test_default_scheduler_on_worker</code> (<a href="#pr-10145">:pr:`10145`</a>) <em>James Bourbeau</em></li>
+<li>Fix documentation build with <code>pandas</code> 2.0 (<a href="#pr-10138">:pr:`10138`</a>) <em>James Bourbeau</em></li>
+<li>Remove <code>dask/gpu</code> from gpuCI update reviewers (<a href="#pr-10135">:pr:`10135`</a>) <em>Charles Blackmon-Luca</em></li>
+<li>Update gpuCI <code>RAPIDS_VER</code> to <code>23.06</code> (<a href="#pr-10129">:pr:`10129`</a>)</li>
+<li>Bump <code>actions/stale</code> from 6 to 8 (<a href="#pr-10121">:pr:`10121`</a>)</li>
+<li>Use declarative <code>setuptools</code> (<a href="#pr-10102">:pr:`10102`</a>) <em>Thomas Grainger</em></li>
+<li>Relax <code>assert_eq</code> checks on <code>Scalar</code>-like objects (<a href="#pr-10125">:pr:`10125`</a>) <em>Matthew Rocklin</em></li>
+<li>Upgrade readthedocs config to ubuntu 22.04 and Python 3.11 (<a href="#pr-10124">:pr:`10124`</a>) <em>Thomas Grainger</em></li>
+<li>Bump <code>actions/checkout</code> from 3.4.0 to 3.5.0 (<a href="#pr-10122">:pr:`10122`</a>)</li>
+<li>Fix <code>test_null_partition_pyarrow</code> in <code>pyarrow</code> CI build (<a href="#pr-10116">:pr:`10116`</a>) <em>Irina Truong</em></li>
+<li>Drop distributed pack (<a href="#pr-9988">:pr:`9988`</a>) <em>Florian Jetter</em></li>
+<li>Make <code>dask.compatibility</code> private (<a href="#pr-10114">:pr:`10114`</a>) <em>Jacob Tomlinson</em></li>
+</ul>
+</blockquote>
+
+<hr>
+
+<h3 id="pr-10166">PR 10166</h3>
+<div class="pr-section">
+<p>Bumps <a href="https://github.com/peter-evans/create-pull-request">peter-evans/create-pull-request</a> from 4 to 5.</p>
+
+<h4>Release notes</h4>
+<p>Sourced from <a href="https://api.github.com/repos/peter-evans/create-pull-request/releases">peter-evans/create-pull-request's releases</a>.</p>
+
+<h4>Create Pull Request v5.0.0</h4>
+<p><strong>Behaviour changes</strong></p>
+<ul>
+<li>The action will no longer leave the local repository checked out on the pull request branch. Instead, it will leave the repository checked out on the branch or commit that it was when the action started.</li>
+<li>When using <code>add-paths</code>, uncommitted changes will no longer be destroyed. They will be stashed and restored at the end of the action run.</li>
+</ul>
+
+<p><strong>What's new</strong></p>
+<ul>
+<li>Adds input <code>body-path</code>, the path to a file containing the pull request body.</li>
+<li>At the end of the action run the local repository is now checked out on the branch or commit that it was when the action started.</li>
+<li>Any uncommitted tracked or untracked changes are now stashed and restored at the end of the action run.</li>
+<li>The proxy implementation has been revised. Continues to support <code>http_proxy</code>, <code>https_proxy</code> and <code>no_proxy</code>.</li>
+<li>Now sets the git <code>safe.directory</code> configuration for the local repository path.</li>
+<li>Now determines the git directory path using the <code>git rev-parse --git-dir</code> command.</li>
+<li>Improved handling of the <code>team-reviewers</code> input and associated errors.</li>
+</ul>
+
+<h4>Create Pull Request v4.2.4</h4>
+<p>Patches some recent security vulnerabilities.</p>
+
+<h4>Dependabot commands and options</h4>
+<ul>
+<li><code>@dependabot rebase</code> — rebase this PR</li>
+<li><code>@dependabot recreate</code> — recreate this PR</li>
+<li><code>@dependabot merge</code> — merge after CI passes</li>
+<li><code>@dependabot squash and merge</code> — squash and merge after CI passes</li>
+<li><code>@dependabot cancel merge</code> — cancel a previously requested merge</li>
+<li><code>@dependabot reopen</code> — reopen this PR if closed</li>
+<li><code>@dependabot close</code> — close this PR and stop recreating it</li>
+<li><code>@dependabot ignore this major version</code> / <code>minor version</code> / <code>dependency</code></li>
+</ul>
+</div>
+
+<h3 id="pr-10171">PR 10171</h3>
+<div class="pr-section">
+<ul>
+<li>Closes #xxxx</li>
+<li>Tests added / passed</li>
+<li>Passes <code>pre-commit run --all-files</code></li>
+</ul>
+<p>Came across this when looking into non nano support in groupby.</p>
+</div>
+
+<h3 id="pr-10111">PR 10111</h3>
+<div class="pr-section">
+<p>Following this change in upstream: <a href="https://api.github.com/repos/pandas-dev/pandas/pull/51997">pandas-dev/pandas#51997</a></p>
+
+<p>Xref <a href="https://github.com/dask/dask/actions/runs/4892807746">#10089</a></p>
+
+<pre><code>Python 3.10 Test Summary
+dask/dataframe/tests/test_dataframe.py::test_apply: Failed: DID NOT WARN.
+No warnings of type (&lt;class 'FutureWarning'&gt;,) were emitted.
+The list of emitted warnings is: [].</code></pre>
+
+<p>Fixes this failure in upstream build:</p>
+<pre><code>FutureWarning: DataFrameGroupBy.dtypes is deprecated and will be removed
+in a future version. Check the dtypes on the base object instead</code></pre>
+</div>
+
+<h3 id="pr-10126">PR 10126</h3>
+<div class="pr-section">
+<ul>
+<li>Closes #xxxx</li>
+<li>Tests added / passed</li>
+<li>Passes <code>pre-commit run --all-files</code></li>
+</ul>
+
+<p><code>pd.isnull(tuple)</code> returns a bool not a series so the <code>valid_divisions</code> function fails with the following error if a tuple is passed:</p>
+<pre><code>if pd.isnull(divisions).any():
+AttributeError: 'bool' object has no attribute 'any'</code></pre>
+</div>
+
+<h3 id="pr-10138">PR 10138</h3>
+<div class="pr-section">
+<p>Our documentation build is currently failing since the <code>pandas=2.0</code> release came out earlier today. This is because a few methods in the DataFrame API were removed.</p>
+
+<pre><code>WARNING: autosummary: failed to import DataFrame.append.
+Possible hints:
+* AttributeError: type object 'DataFrame' has no attribute 'append'
+* ModuleNotFoundError: No module named 'dask.dataframe.DataFrame'
+WARNING: autosummary: failed to import Series.append.
+WARNING: autosummary: failed to import Series.iteritems.</code></pre>
+
+<p>This PR removes those corresponding methods from our API docs.</p>
+</div>
+
+<h3 id="pr-10168">PR 10168</h3>
+<div class="pr-section">
+<ul>
+<li>xref <a href="https://github.com/dask/dask/actions/runs/4892807746">#10089</a></li>
+<li>Tests added / passed</li>
+<li>Passes <code>pre-commit run --all-files</code></li>
+</ul>
+</div>
+
+<h3 id="pr-9947">PR 9947</h3>
+<div class="pr-section">
+<p>TODO: Still haven't tested this locally with a pandas nightly</p>
+<ul>
+<li>Closes #9943</li>
+</ul>
+<p>Pandas added a new <code>engine</code> keyword to <code>pd.read_json</code> today to switch to <code>pyarrow.json.read_json</code> instead of the pandas implementation. Since the <code>read_json</code> function from Dask has its own keyword, the Dask function needs a different name for the option.</p>
+</div>
+
+<h3 id="pr-10123">PR 10123</h3>
+<div class="pr-section">
+<p>Sibling to <a href="https://api.github.com/repos/dask/distributed/pull/7708">dask/distributed#7708</a></p>
+<ul>
+<li>Tests added / passed</li>
+<li>Passes <code>pre-commit run --all-files</code></li>
+</ul>
+</div>
+
+<h3 id="pr-10125">PR 10125</h3>
+<div class="pr-section">
+<p>This is part of an effort to reuse <code>assert_eq</code> on other objects that are similar to Dask Dataframe, but not exactly Dask dataframe objects.</p>
+<p>This was done previously with Series/Dataframe types above; now we allow any object that isn't a Series/DataFrame/Index to be interpreted as a Scalar. Previously this would raise an exception.</p>
+</div>
+
+<h3 id="pr-9936">PR 9936</h3>
+<div class="pr-section">
+<p>Adds two cli commands, <code>dask config get</code> to get a value from dask config:</p>
+
+<pre><code>&gt; dask config get distributed.scheduler.dashboard
+bokeh-application:
+  allow_websocket_origin:
+  - '*'
+  check_unused_sessions_milliseconds: 500
+  keep_alive_milliseconds: 500
+status:
+  task-stream-length: 1000
+tasks:
+  task-stream-length: 100000
+tls:
+  ca-file: null
+  cert: null
+  key: null</code></pre>
+
+<p>or <code>dask config list</code> to print the whole config:</p>
+
+<pre><code>&gt; dask config list
+array:
+  backend: numpy
+  slicing:
+    split-large-chunks: null
+  svg:
+    size: 120
+coiled:
+...</code></pre>
+
+<p>Partially implements #9746. Proposed CLI:</p>
+<pre><code>dask config get foo.bar  # prints value of foo.bar (or nothing if not set?)
+dask config get  # prints entire dask config
+dask config set foo.bar 123  # adds/updates foo.bar in the appropriate YAML file</code></pre>
+</div>
+
+<h3 id="pr-9988">PR 9988</h3>
+<div class="pr-section">
+<p>Counterpart to <a href="https://api.github.com/repos/dask/distributed/pull/7564">dask/distributed#7564</a></p>
+</div>
+
+<h3 id="pr-10134">PR 10134</h3>
+<div class="pr-section">
+<p>Create a page to document <code>Generator</code> based random number generation behaviour and use <code>Generator</code> based random number generation in examples.</p>
+
+<p>Closes #8547. When the same random seed is used for both dask and numpy, the output of <code>random.normal()</code> do not match each other.</p>
+
+<p><strong>Using deprecated random.seed():</strong></p>
+<pre><code>import dask.array as da
+da.random.seed(42)
+da.random.normal(0, 1, size=10).compute()
+# array([-1.31918189,  0.11348963,  1.2427626 , -1.26858024,  2.27840845,
+#         0.57524507, -1.14656226,  0.90500015, -1.17130718, -0.89184311])
+
+import numpy as np
+np.random.seed(42)
+np.random.normal(0, 1 ,size=10)
+# array([ 0.49671415, -0.1382643 ,  0.64768854,  1.52302986, -0.23415337,
+#        -0.23413696,  1.57921282,  0.76743473, -0.46947439,  0.54256004])</code></pre>
+
+<p><strong>Environment:</strong></p>
+<ul>
+<li>Dask version: 2021.12.0</li>
+<li>Python version: 3.9</li>
+<li>Operating System: Ubuntu 20.04.3 LTS (Focal Fossa)</li>
+<li>Install method: conda</li>
+</ul>
+</div>
+
+<h3 id="pr-10159">PR 10159</h3>
+<div class="pr-section">
+<p>Closes #10155. The <code>update_defaults</code> function doesn't quite do what the name implies, because it doesn't actually override values that were previously set as defaults:</p>
+
+<pre><code>In [1]: import dask.config
+In [2]: len(dask.config.defaults)
+Out[2]: 1
+In [3]: dask.config.defaults[0]['dataframe']['backend']
+Out[3]: 'pandas'
+In [4]: dask.config.get("dataframe.backend")
+Out[4]: 'pandas'
+In [5]: dask.config.update_defaults({'dataframe': {'backend': 'cudf'}})
+In [6]: dask.config.get("dataframe.backend")
+Out[6]: 'pandas'</code></pre>
+
+<p>The <code>update</code> function, when used in "old" mode, will only set keys that don't already exist:</p>
+<pre><code>if priority == "new" or k not in old:
+    old[k] = v</code></pre>
+</div>
+
+<h3 id="pr-10177">PR 10177</h3>
+<div class="pr-section">
+<p>Companion PR to <a href="https://api.github.com/repos/dask/distributed/pull/7413">dask/distributed#7413</a></p>
+</div>
+
+<h3 id="pr-10154">PR 10154</h3>
+<div class="pr-section">
+<p>Fix for upstream failures on Windows related to index <code>dtype</code> changes in <code>pandas&gt;=2</code>. The failures are related to dtype, not platform, but only show up on Windows in our test suite because <code>np.random</code> is an <code>int32</code> there.</p>
+
+<p>Closes #10146.</p>
+
+<pre><code>FAILED test_append_known_divisions_to_unknown_divisions_works[fastparquet]
+FAILED test_append_known_divisions_to_unknown_divisions_works[pyarrow]
+FAILED test_partitioned_preserve_index[fastparquet-fastparquet]
+FAILED test_partitioned_preserve_index[pyarrow-fastparquet]
+FAILED test_groupby_unique[disk/tasks]
+FAILED test_groupby_value_counts[disk-foo/by1, tasks-foo/by1]
+FAILED test_meta_nonempty_index</code></pre>
+</div>
+
+<h3 id="pr-10129">PR 10129</h3>
+<div class="pr-section">
+<p>New cuDF and ucx-py nightly versions have been detected. Updated <code>axis.yaml</code> to use <code>23.06</code>.</p>
+</div>
+
+<h3 id="pr-10122">PR 10122</h3>
+<div class="pr-section">
+<p>Bumps <a href="https://github.com/actions/checkout">actions/checkout</a> from 3.4.0 to 3.5.0.</p>
+<h4>v3.5.0 — What's Changed</h4>
+<ul>
+<li>Add new public key for known_hosts (#1237)</li>
+</ul>
+</div>
+
+<h3 id="pr-10128">PR 10128</h3>
+<div class="pr-section">
+<p>We cannot ask for the names of the grouper since if the data frame has a column named <code>None</code> we cannot distinguish it as a grouping column from the case where the groupby argument is not a column selection (e.g. a function that assigns rows to groups). To fix this, just perform the groupby on <code>meta</code> and see what we get out.</p>
+
+<p>Closes #10127.</p>
+
+<pre><code>import pandas as pd
+import dask.dataframe as dd
+
+df = pd.DataFrame({"a": [1, 2, 3], None: ["a", "b", "c"]})
+ddf = dd.from_pandas(df, npartitions=1)
+
+# I expect this to raise NotImplementedError
+ddf.groupby(lambda x: x % 2).mean(numeric_only=False).compute()</code></pre>
+</div>
+
+<h3 id="pr-10135">PR 10135</h3>
+<div class="pr-section">
+<p>Resolves failures that started cropping up in the gpuCI updating workflow due to the fact that the <code>dask/gpu</code> team isn't a collaborator on this repo.</p>
+</div>
+
+<h3 id="pr-10182">PR 10182</h3>
+<div class="pr-section">
+<p>Follow-up for <a href="https://api.github.com/repos/dask/dask/pull/10154">#10154</a>. <code>grouper</code> accessor is not supported by dask-cudf, see <a href="https://api.github.com/repos/dask/dask/pull/10181">#10181</a>.</p>
+</div>
+
+<h3 id="pr-10190">PR 10190</h3>
+<div class="pr-section">
+<p>Now that <code>python-cityhash</code> is on conda-forge, we should be good to add this to our CI environments along with the other hasher libraries.</p>
+</div>
+
+<h3 id="pr-10162">PR 10162</h3>
+<div class="pr-section">
+<p>Possibly fix an intermittent failure:</p>
+<pre><code>FAILED dask/array/tests/test_array_core.py::test_arithmetic
+- RuntimeWarning: invalid value encountered in modf</code></pre>
+</div>
+
+<h3 id="pr-10076">PR 10076</h3>
+<div class="pr-section">
+<p>Xref <a href="https://api.github.com/repos/pandas-dev/pandas/pull/51853">pandas-dev/pandas#51853</a>, <a href="https://api.github.com/repos/geopandas/dask-geopandas/pull/242">geopandas/dask-geopandas#242</a>.</p>
+<p>Closes #10062. In pandas-dev/pandas#51853, pandas deprecated <code>use_nullable_dtypes=</code> in I/O functions in favor of a new <code>dtype_backend=</code> keyword. The global <code>dtype_backend</code> config option has been removed in favor of the corresponding keyword.</p>
+</div>
+
+<h3 id="pr-10186">PR 10186</h3>
+<div class="pr-section">
+<p>xref #10183. We started seeing some interesting (unrelated) failures on PRs with errors like:</p>
+<pre><code>concurrent.futures.process.BrokenProcessPool: A process in the process pool
+was terminated abruptly while the future was running or pending.</code></pre>
+</div>
+
+<h3 id="pr-10003">PR 10003</h3>
+<div class="pr-section">
+<p>Use <code>Generator</code> internally instead of <code>RandomState</code> for random number generation. <code>Generator</code> based random number generation was introduced via <code>e2c74</code> and brings improvements compared to now-maintenance-only <code>RandomState</code> class.</p>
+<ul>
+<li>use <code>da.random.default_rng()</code> to create a Generator based random number generator</li>
+<li>make sure we use the correct distribution names for the new Generator class (<code>randint</code> -&gt; <code>integers</code> and so on)</li>
+</ul>
+</div>
+
+<h3 id="pr-10173">PR 10173</h3>
+<div class="pr-section">
+<ul>
+<li>Closes #xxxx</li>
+<li>Tests added / passed</li>
+<li>Passes <code>pre-commit run --all-files</code></li>
+</ul>
+<p>Small updates. ChainedIndexing will stop working with CoW in all cases.</p>
+</div>
+
+<h3 id="pr-10145">PR 10145</h3>
+<div class="pr-section">
+<p>Closes #10144. <code>dask/tests/test_distributed.py::test_default_scheduler_on_worker</code> has started failing on main and PRs. Testing locally, it appears <a href="https://github.com/dask/distributed/pull/7656">dask/distributed#7656</a> is where things started failing.</p>
+</div>
+
+<h3 id="pr-10102">PR 10102</h3>
+<div class="pr-section">
+<p>Closes #10032. Increasingly there is a move by Python projects to use <code>pyproject.toml</code> to declare their metadata and dependencies and away from <code>setup.py</code>. Like #10055 but keeps setuptools and versioneer for now; maybe dask and distributed can move to hatchling/hatch-vcs in the future.</p>
+</div>
+
+<h3 id="pr-10133">PR 10133</h3>
+<div class="pr-section">
+<p>Xref <a href="https://api.github.com/repos/pandas-dev/pandas/pull/52257">pandas-dev/pandas#52257</a>. Fixes the following upstream failures:</p>
+<pre><code>dask/dataframe/tests/test_dataframe.py::test_apply:
+FutureWarning: the convert_dtype parameter is deprecated and will be removed in a future version.
+Do `ser.astype(object).apply()` instead if you want `convert_dtype=False`.
+dask/dataframe/tests/test_dataframe.py::test_apply_infer_columns:
+FutureWarning: same as above.</code></pre>
+</div>
+
+<h3 id="pr-10124">PR 10124</h3>
+<div class="pr-section">
+<ul>
+<li>Tests added / passed</li>
+<li>Passes <code>pre-commit run --all-files</code></li>
+</ul>
+</div>
+
+<h3 id="pr-10191">PR 10191</h3>
+<div class="pr-section">
+<p>Cosmetic change, just to be consistent with the rest of the config settings.</p>
+</div>
+
+<h3 id="pr-10115">PR 10115</h3>
+<div class="pr-section">
+<p>Closes #9966. With <code>pandas==2.0</code>, when reading parquet with partitioning on an integer column, the column is read back as a <code>CategoryDtype</code>, but its dtype is not consistent with pyarrow.</p>
+
+<pre><code>import pandas as pd
+import dask.dataframe as dd
+import pyarrow as pa
+import pyarrow.parquet as pq
+from pyarrow.dataset import HivePartitioning, write_dataset
+
+df = pd.DataFrame({"col1": [1, 2], "col2": ["a", "b"]})
+
+pa_path = "foo.parquet"
+table = pa.Table.from_pandas(df)
+partitioning = HivePartitioning(pa.schema([("col1", pa.int32())]))
+
+write_dataset(
+    data=table,
+    base_dir=pa_path,
+    basename_template="part.{i}.parquet",
+    format="parquet",
+    partitioning=partitioning,
+)
+
+df_dask = dd.read_parquet(pa_path, engine="pyarrow").compute()
+table2 = pq.read_table(pa_path)
+df_arrow = table2.to_pandas()
+print(f"{df_dask['col1'].dtype.categories=}")
+# Index([1, 2], dtype='int64')
+print(f"{df_arrow['col1'].dtype.categories=}")
+# Index([1, 2], dtype='int32')</code></pre>
+
+<p>This happens with pandas 2.0. With 1.5, categories were of dtype <code>int64</code>, whether they were read with pyarrow or dask.</p>
+</div>
+
+<h3 id="pr-10114">PR 10114</h3>
+<div class="pr-section">
+<p>xref #10113. In dask-kubernetes we were using <code>dask.compatibility.entry_points</code> which were recently removed (#10070) and restored again (#10113). Opening this PR to rename it to <code>dask._compatibility</code> with a fallback shim and deprecation warning.</p>
+</div>
+
+<h3 id="pr-10121">PR 10121</h3>
+<div class="pr-section">
+<p>Bumps <a href="https://github.com/actions/stale">actions/stale</a> from 6 to 8.</p>
+
+<h4>v8.0.0</h4>
+<p>⚠️ This version contains breaking changes ⚠️</p>
+<ul>
+<li>New option <code>labels-to-remove-when-stale</code> enables users to specify list of comma delimited labels that will be removed when the issue or PR becomes stale.</li>
+<li>Skip deleting the branch in the upstream of a forked repo.</li>
+<li>Abort the build on the error.</li>
+</ul>
+
+<h4>v7.0.0</h4>
+<p>⚠️ This version contains breaking changes ⚠️</p>
+<ul>
+<li>Allow <code>daysBeforeStale</code> options to be float.</li>
+<li>Use cache in <code>check-dist.yml</code>.</li>
+<li>Update how stale handles exempt items.</li>
+</ul>
+</div>
+
+<h3 id="pr-10042">PR 10042</h3>
+<div class="pr-section">
+<p>Tweaks logic in <code>apply_filters</code>, and improves test coverage for filtering on columns with missing min/max statistics.</p>
+
+<p>Closes #9975. Since the update to fastparquet 2023.2.0, the test suite fails with the following error:</p>
+<pre><code>TypeError: An error occurred while calling the read_parquet method registered to the pandas backend.
+Original Message: '&lt;=' not supported between instances of 'NoneType' and 'str'</code></pre>
+
+<p>The failing case is <code>test_select_filtered_column[fastparquet]</code>. The root cause is in <code>apply_conjunction</code> within <code>apply_filters</code>:</p>
+
+<pre><code>def apply_conjunction(parts, statistics, conjunction):
+    for column, operator, value in conjunction:
+        if operator == "in" and not isinstance(value, (list, set, tuple)):
+            raise TypeError("Value of 'in' filter must be a list, set, or tuple.")
+        out_parts = []
+        out_statistics = []
+        for part, stats in zip(parts, statistics):
+            if "filter" in stats and stats["filter"]:
+                continue  # Filtered by engine
+            try:
+                c = toolz.groupby("name", stats["columns"])[column][0]
+                min = c["min"]
+                max = c["max"]
+            except KeyError:
+                out_parts.append(part)
+                out_statistics.append(stats)
+            else:
+                if (
+                    operator in ("==", "=")
+                    and min &lt;= value &lt;= max
+                    or operator == "!="
+                    and (min != value or max != value)
+                    or operator == "&lt;"
+                    and min &lt; value
+                    or operator == "&lt;="
+                    and min &lt;= value
+                    or operator == "&gt;"
+                    and max &gt; value
+                    or operator == "&gt;="
+                    and max &gt;= value
+                    or operator == "in"
+                    and any(min &lt;= item &lt;= max for item in value)
+                ):
+                    out_parts.append(part)
+                    out_statistics.append(stats)
+        parts, statistics = out_parts, out_statistics
+    return parts, statistics</code></pre>
+
+<p>When <code>min</code> and <code>max</code> are <code>None</code> (missing statistics), comparisons fail.</p>
+
+<p><strong>Environment:</strong></p>
+<ul>
+<li>Dask version: 2023.2.0</li>
+<li>Python version: 3.10.9</li>
+<li>Fastparquet version: 2023.2.0</li>
+<li>Pandas version: 1.5.3</li>
+<li>OS: openSUSE Tumbleweed</li>
+</ul>
+</div>
+
+<h3 id="pr-10176">PR 10176</h3>
+<div class="pr-section">
+<p>Follow-up to #10097. Now that <code>pandas=2.0</code> is out we can run our <code>dataframe.convert-string=True</code> CI build without <code>continue-on-error: ${{ matrix.extra == 'pyarrow' }}</code>.</p>
+</div>
+
+<h3 id="pr-10116">PR 10116</h3>
+<div class="pr-section">
+<p>Fixed <code>test_null_partition_pyarrow</code> that breaks in pyarrow build. Xref <a href="https://api.github.com/repos/apache/arrow/pull/34445">apache/arrow#34445</a>.</p>
+
+<pre><code>FAILED dask/dataframe/io/tests/test_parquet.py::test_null_partition_pyarrow[None]
+- AssertionError: DataFrame.index are different
+Attribute "dtype" are different
+[left]:  int64
+[right]: Int64</code></pre>
+</div>
+
+<h3 id="pr-10153">PR 10153</h3>
+<div class="pr-section">
+<p>xref #10152. <code>dask/array/tests/test_reductions.py::test_mean_func_does_not_warn</code> started failing recently:</p>
+
+<pre><code>def test_mean_func_does_not_warn():
+    xr = pytest.importorskip("xarray")
+    a = xr.DataArray(da.from_array(np.full((10, 10), np.nan)))
+    with warnings.catch_warnings(record=True) as rec:
+        a.mean().compute()
+    assert not rec  # did not warn
+# E   assert not [&lt;warnings.WarningMessage object at 0x7f4ab608c050&gt;]</code></pre>
+
+<p>Patrick mentioned offline that we're pulling in an old version of xarray (0.19.0).</p>
+</div>
+
+<h3 id="pr-10120">PR 10120</h3>
+<div class="pr-section">
+<p>Sibling to <a href="https://api.github.com/repos/dask/distributed/pull/7708">dask/distributed#7708</a>. Closes #10118.</p>
+
+<h4>Problem</h4>
+<p><code>DataFrame.categorize</code> drops all annotations from the input graph when computing the categories even if low level fusion is deactivated.</p>
+
+<h4>Example</h4>
+<pre><code>from __future__ import annotations
+import dask
+import dask.dataframe as dd
+from dask.distributed import Client, LocalCluster
+
+def foo():
+    cluster = LocalCluster()
+    client = Client(cluster)
+    df = dask.datasets.timeseries(
+        start="2000-01-01",
+        end="2000-03-01",
+        dtypes={"x": float, "y": str},
+        freq="10 s",
+    )
+    df = dd.shuffle.shuffle(df, "x", shuffle="p2p")
+    df = df.categorize(columns=["y"])
+    df.compute()
+
+if __name__ == "__main__":
+    foo()</code></pre>
+
+<h4>Where do we drop annotations?</h4>
+<p>Within <code>categorize</code>, we compute the categories. In this step, we convert from a high-level graph to a low-level one without preserving the annotations:</p>
+
+<pre><code>dsk.update(df.dask)
+# Compute the categories
+categories, index = compute_as_if_collection(
+    df.__class__, dsk, (prefix, 0), **kwargs
+)</code></pre>
+</div>
+
+<hr>
+
+<p>Can you help me implement the necessary changes to the repository so that the requirements specified in the <code>&lt;pr_description&gt;</code> are met?</p>
+
+<p>I've already taken care of all changes to any of the test files described in the <code>&lt;pr_description&gt;</code>. This means you DON'T have to modify the testing logic or any of the tests in any way!</p>
+
+<p>Your task is to make the minimal changes to non-tests files in the <code>/testbed</code> directory to ensure the <code>&lt;pr_description&gt;</code> is satisfied.</p>
+
+<h2>Iteration 1 accepted plan</h2>
+<p>Run a workspace preflight probe and continue with the follow-up goal.</p>
+
+<h2>Iteration 1 summary</h2>
+<p>(none)</p>
+
+<hr>
+
+<h1>Current Iteration</h1>
+<p>Continue the first-three-messages capture by running one more preflight in iteration 2 so the continuation planner sees prior iteration results.</p>
+
+</goal>
+
+</body>
+</html>

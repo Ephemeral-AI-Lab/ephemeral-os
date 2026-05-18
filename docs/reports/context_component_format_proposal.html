@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Context Component Format Proposal</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         max-width: 1100px; margin: 2em auto; padding: 0 1em; line-height: 1.55;
+         color: #1f2328; background: #fafbfc; }
+  h1 { border-bottom: 2px solid #d0d7de; padding-bottom: .3em; }
+  h2 { margin-top: 1.8em; color: #0550ae; }
+  h3 { margin-top: 1.2em; }
+  .side-by-side { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5em; margin: 1em 0; }
+  .panel { background: #fff; border: 1px solid #d0d7de; border-radius: 8px; padding: 1em 1.2em; }
+  .panel h4 { margin-top: 0; padding-bottom: .4em; border-bottom: 1px solid #d0d7de; }
+  .old h4 { color: #b35900; }
+  .new h4 { color: #0a7c2f; }
+
+  /* Markdown-style preview */
+  .md-preview { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+                font-size: 13px; background: #f6f8fa; padding: 12px;
+                border-radius: 6px; white-space: pre-wrap; line-height: 1.5; }
+  .md-h1 { color: #0550ae; font-weight: bold; }
+  .md-h2 { color: #6f42c1; font-weight: bold; }
+  .md-h3 { color: #d97706; }
+
+  /* XML-style preview */
+  .xml-preview { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+                 font-size: 13px; background: #f6f8fa; padding: 12px;
+                 border-radius: 6px; white-space: pre-wrap; line-height: 1.5; }
+  .xml-tag { color: #0a7c2f; font-weight: 600; }
+  .xml-attr { color: #b35900; }
+  .xml-val { color: #0550ae; }
+  .xml-body { color: #1f2328; }
+
+  /* Live HTML rendering of the proposed component */
+  .live-render { background: #fff; border: 1px solid #d0d7de;
+                 border-radius: 8px; padding: 1em 1.2em; margin: 1em 0; }
+  iteration { display: block; border: 2px solid #0a7c2f; border-radius: 8px;
+              padding: .8em 1em; margin: .8em 0; background: #f0fdf4; }
+  iteration[status="current"] { border-color: #0550ae; background: #eff6ff; }
+  iteration[status="prior"] { border-color: #b35900; background: #fff8e1; }
+  iteration::before { content: "iteration " attr(iteration_no) " · " attr(status);
+                      display: block; font-weight: 700; color: #57606a;
+                      font-family: ui-monospace, monospace; font-size: 12px;
+                      margin-bottom: .5em; text-transform: uppercase; letter-spacing: .05em; }
+  accepted_plan, summary, goal, current_iteration {
+    display: block; padding: .6em .8em; margin: .4em 0;
+    background: #fff; border-left: 3px solid #0969da; border-radius: 4px;
+  }
+  accepted_plan::before { content: "accepted_plan"; }
+  summary::before { content: "summary"; }
+  goal::before { content: "goal"; }
+  current_iteration::before { content: "current_iteration"; }
+  accepted_plan::before, summary::before, goal::before, current_iteration::before {
+    display: block; font-family: ui-monospace, monospace; font-size: 11px;
+    color: #57606a; text-transform: uppercase; letter-spacing: .05em;
+    margin-bottom: .3em;
+  }
+  goal { border-left-color: #0550ae; background: #eff6ff; }
+  current_iteration { border-left-color: #6f42c1; background: #f5f0ff; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+  th, td { border: 1px solid #d0d7de; padding: 8px 12px; text-align: left; }
+  th { background: #f6f8fa; }
+  code { background: #eff1f3; padding: .15em .4em; border-radius: 3px;
+         font-family: ui-monospace, monospace; font-size: 90%; }
+  .note { background: #fff8c5; border-left: 4px solid #d4a72c;
+          padding: .8em 1em; border-radius: 4px; margin: 1em 0; }
+</style>
+</head>
+<body>
+
+<h1>Context Component Format Proposal</h1>
+
+<p>Comparing the current markdown rendering vs. proposed XML-component rendering
+for the <code>goal_iteration_frame</code> recipe output. Attribute change:
+<code>sequence_no</code> → <code>iteration_no</code>.</p>
+
+<h2>1. Side-by-side: same data, two renderings</h2>
+
+<div class="side-by-side">
+
+  <div class="panel old">
+    <h4>Current (markdown headings)</h4>
+    <div class="md-preview"><span class="md-h1"># Goal</span>
+
+<span class="md-h2">## Goal</span>
+
+Make the workspace pass the 2023.4.0 PR description.
+
+<span class="md-h2">## Iteration 1 accepted plan</span>
+
+Run a workspace preflight probe and continue
+with the follow-up goal.
+
+<span class="md-h2">## Iteration 1 summary</span>
+
+(empty)
+
+<span class="md-h1"># Current Iteration</span>
+
+Continue the first-three-messages capture by
+running one more preflight in iteration 2.</div>
+  </div>
+
+  <div class="panel new">
+    <h4>Proposed (XML components)</h4>
+    <div class="xml-preview"><span class="xml-tag">&lt;goal&gt;</span>
+Make the workspace pass the 2023.4.0 PR description.
+<span class="xml-tag">&lt;/goal&gt;</span>
+
+<span class="xml-tag">&lt;iteration</span> <span class="xml-attr">iteration_no</span>=<span class="xml-val">"1"</span> <span class="xml-attr">status</span>=<span class="xml-val">"prior"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;accepted_plan&gt;</span>
+  Run a workspace preflight probe and continue
+  with the follow-up goal.
+  <span class="xml-tag">&lt;/accepted_plan&gt;</span>
+  <span class="xml-tag">&lt;summary&gt;</span>
+  (empty)
+  <span class="xml-tag">&lt;/summary&gt;</span>
+<span class="xml-tag">&lt;/iteration&gt;</span>
+
+<span class="xml-tag">&lt;current_iteration</span> <span class="xml-attr">iteration_no</span>=<span class="xml-val">"2"</span><span class="xml-tag">&gt;</span>
+Continue the first-three-messages capture by
+running one more preflight in iteration 2.
+<span class="xml-tag">&lt;/current_iteration&gt;</span></div>
+  </div>
+
+</div>
+
+<h2>2. Live HTML rendering of the proposed format</h2>
+
+<p>Browsers happily render custom elements as block containers; CSS makes the
+component structure visible at a glance.</p>
+
+<div class="live-render">
+
+<goal>Make the workspace pass the 2023.4.0 PR description.</goal>
+
+<iteration iteration_no="1" status="prior">
+  <accepted_plan>Run a workspace preflight probe and continue with the follow-up goal.</accepted_plan>
+  <summary>(empty)</summary>
+</iteration>
+
+<iteration iteration_no="2" status="prior">
+  <accepted_plan>Continue the first-three-messages capture by running one more preflight in iteration 2 so the continuation planner sees prior iteration results.</accepted_plan>
+  <summary>Preflight probe completed; captured baseline. No code changes made.</summary>
+</iteration>
+
+<current_iteration iteration_no="3">
+Implement minimal changes to non-test files so the dask 2023.4.0 PR description's described behavior holds. Test files are already updated upstream and must not be modified.
+</current_iteration>
+
+</div>
+
+<h2>3. Attribute schema</h2>
+
+<table>
+  <tr><th>Tag</th><th>Attributes</th><th>Notes</th></tr>
+  <tr><td><code>&lt;goal&gt;</code></td><td>—</td><td>Top-level goal text. One per packet.</td></tr>
+  <tr><td><code>&lt;iteration&gt;</code></td><td><code>iteration_no</code>, <code>status</code></td><td><code>status ∈ {prior, current}</code>. <code>iteration_no</code> replaces former <code>sequence_no</code> wording.</td></tr>
+  <tr><td><code>&lt;accepted_plan&gt;</code></td><td>—</td><td>Child of <code>&lt;iteration&gt;</code>. Replaces <code>## Iteration N accepted plan</code>.</td></tr>
+  <tr><td><code>&lt;summary&gt;</code></td><td>—</td><td>Child of <code>&lt;iteration&gt;</code>. Replaces <code>## Iteration N summary</code>.</td></tr>
+  <tr><td><code>&lt;current_iteration&gt;</code></td><td><code>iteration_no</code></td><td>Inline body, no child tags. Authoritative scope for the planner.</td></tr>
+</table>
+
+<h2>4. What this gains vs. costs</h2>
+
+<table>
+  <tr><th>Property</th><th>Current markdown</th><th>Proposed XML</th></tr>
+  <tr><td>Section closure</td><td>Implicit (next <code>##</code>)</td><td>Explicit <code>&lt;/tag&gt;</code></td></tr>
+  <tr><td>Body containing <code>##</code> headings</td><td>Section can drift</td><td>Tags are inert to content</td></tr>
+  <tr><td>Nesting depth</td><td>1 level (<code>#</code> → <code>##</code>)</td><td>Arbitrary</td></tr>
+  <tr><td>Metadata exposure</td><td>Stringified into heading</td><td>Native attributes (<code>iteration_no="1"</code>)</td></tr>
+  <tr><td>Claude attention</td><td>Decent</td><td>Strong (Anthropic-recommended)</td></tr>
+  <tr><td>Auditing / extraction</td><td>Heading-state regex</td><td>One-shot tag regex</td></tr>
+  <tr><td>Renders as HTML</td><td>Requires markdown processor</td><td>Browser-native</td></tr>
+  <tr><td>Test snapshots</td><td>Existing baseline</td><td>Mechanical migration needed</td></tr>
+  <tr><td>Token overhead</td><td>Slightly cheaper</td><td>~3-5% more (negligible)</td></tr>
+</table>
+
+<h2>5. Where the change lives</h2>
+
+<p>Almost entirely in <code>backend/src/task_center/context_engine/renderer.py</code>
+(<code>_render_block</code> + <code>_render_group</code>). Recipes already produce
+structured <code>ContextBlock</code>s with the necessary metadata; the renderer
+just stops stringifying it into headings and starts wrapping in tags.</p>
+
+<div class="note">
+  <strong>Rename:</strong> per your call, the iteration ordinal attribute is
+  <code>iteration_no</code>, not <code>sequence_no</code>. The underlying
+  <code>Iteration.sequence_no</code> field on the state model can stay as-is;
+  only the rendered attribute name changes.
+</div>
+
+</body>
+</html>

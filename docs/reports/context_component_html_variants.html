@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Context Components — XML vs HTML Variants</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         max-width: 1180px; margin: 2em auto; padding: 0 1em; line-height: 1.55;
+         color: #1f2328; background: #fafbfc; }
+  h1 { border-bottom: 2px solid #d0d7de; padding-bottom: .3em; }
+  h2 { margin-top: 2em; color: #0550ae; border-bottom: 1px solid #d0d7de; padding-bottom: .2em; }
+  h3 { margin-top: 1.4em; }
+  .panel { background: #fff; border: 1px solid #d0d7de; border-radius: 8px; padding: 1em 1.2em; margin: 1em 0; }
+  pre { background: #f6f8fa; padding: 12px; border-radius: 6px; overflow-x: auto;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;
+        line-height: 1.5; }
+  code { background: #eff1f3; padding: .15em .4em; border-radius: 3px;
+         font-family: ui-monospace, monospace; font-size: 90%; }
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+  th, td { border: 1px solid #d0d7de; padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { background: #f6f8fa; }
+
+  /* Variant A: invalid HTML (works in browser, fails validator) */
+  .v-a iteration { display: block; border: 2px solid #b35900; border-radius: 6px;
+                   padding: .6em .8em; margin: .5em 0; background: #fff8e1; }
+  .v-a iteration::before { content: "iteration " attr(iteration_no);
+                           display: block; font-family: ui-monospace, monospace;
+                           font-size: 11px; color: #57606a; margin-bottom: .3em;
+                           text-transform: uppercase; letter-spacing: .05em; }
+  .v-a accepted_plan, .v-a summary {
+    display: block; padding: .4em .6em; margin: .3em 0;
+    background: #fff; border-left: 3px solid #0969da; border-radius: 4px;
+  }
+
+  /* Variant B: HTML5 custom elements (hyphen-named, valid) */
+  task-iteration { display: block; border: 2px solid #0a7c2f; border-radius: 6px;
+                   padding: .6em .8em; margin: .5em 0; background: #f0fdf4; }
+  task-iteration::before { content: "iteration " attr(iteration-no);
+                           display: block; font-family: ui-monospace, monospace;
+                           font-size: 11px; color: #57606a; margin-bottom: .3em;
+                           text-transform: uppercase; letter-spacing: .05em; }
+  accepted-plan, iteration-summary {
+    display: block; padding: .4em .6em; margin: .3em 0;
+    background: #fff; border-left: 3px solid #0969da; border-radius: 4px;
+  }
+
+  /* Variant C: semantic HTML with classes */
+  .iteration { border: 2px solid #0550ae; border-radius: 6px;
+               padding: .6em .8em; margin: .5em 0; background: #eff6ff; }
+  .iteration > header { font-family: ui-monospace, monospace; font-size: 11px;
+                        color: #57606a; margin-bottom: .3em;
+                        text-transform: uppercase; letter-spacing: .05em; }
+  .iteration > section { padding: .4em .6em; margin: .3em 0;
+                         background: #fff; border-left: 3px solid #0969da;
+                         border-radius: 4px; }
+  .iteration > section > h4 { margin: 0 0 .3em 0; font-size: 12px;
+                              color: #57606a; text-transform: uppercase;
+                              letter-spacing: .05em; font-family: ui-monospace, monospace; }
+  .iteration > section > p { margin: 0; }
+
+  .verdict-good { color: #0a7c2f; font-weight: 600; }
+  .verdict-bad  { color: #cf222e; font-weight: 600; }
+  .verdict-meh  { color: #b35900; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>XML → HTML: three ways to spell the same component</h1>
+
+<p>The XML you saw before <em>renders</em> in browsers but isn't valid HTML5.
+Below are three variants that all encode the same iteration component, ranked
+by HTML compliance.</p>
+
+<h2>Variant A — XML-as-rendered-by-browser <span class="verdict-meh">(works, but not valid HTML)</span></h2>
+
+<div class="panel">
+<p>What the previous proposal showed. Browsers render it; an HTML5 validator
+would flag every tag.</p>
+
+<pre>&lt;iteration iteration_no="1" status="prior"&gt;
+  &lt;accepted_plan&gt;
+    Run a workspace preflight probe and continue with the follow-up goal.
+  &lt;/accepted_plan&gt;
+  &lt;summary&gt;(empty)&lt;/summary&gt;
+&lt;/iteration&gt;</pre>
+
+<p><strong>Live render:</strong></p>
+<div class="v-a">
+  <iteration iteration_no="1" status="prior">
+    <accepted_plan>Run a workspace preflight probe and continue with the follow-up goal.</accepted_plan>
+    <summary>(empty)</summary>
+  </iteration>
+</div>
+
+<p><strong>Validator verdict:</strong> <span class="verdict-bad">Fail.</span>
+Custom element names without hyphens, attribute name <code>iteration_no</code>
+with underscore.</p>
+</div>
+
+
+<h2>Variant B — HTML5 custom elements <span class="verdict-good">(valid HTML5)</span></h2>
+
+<div class="panel">
+<p>Custom element names must contain a hyphen per the
+<a href="https://html.spec.whatwg.org/multipage/custom-elements.html#valid-custom-element-name">HTML5 spec</a>.
+Attributes should be lowercase with hyphens.</p>
+
+<pre>&lt;task-iteration iteration-no="1" status="prior"&gt;
+  &lt;accepted-plan&gt;
+    Run a workspace preflight probe and continue with the follow-up goal.
+  &lt;/accepted-plan&gt;
+  &lt;iteration-summary&gt;(empty)&lt;/iteration-summary&gt;
+&lt;/task-iteration&gt;</pre>
+
+<p><strong>Live render:</strong></p>
+<task-iteration iteration-no="1" status="prior">
+  <accepted-plan>Run a workspace preflight probe and continue with the follow-up goal.</accepted-plan>
+  <iteration-summary>(empty)</iteration-summary>
+</task-iteration>
+
+<p><strong>Validator verdict:</strong> <span class="verdict-good">Pass.</span>
+All tag names are valid custom-element names; all attribute names are lowercase.</p>
+</div>
+
+
+<h2>Variant C — Semantic HTML with classes &amp; data-* <span class="verdict-good">(most portable)</span></h2>
+
+<div class="panel">
+<p>Use the standard HTML element vocabulary (<code>&lt;section&gt;</code>,
+<code>&lt;article&gt;</code>, <code>&lt;header&gt;</code>) and put the type info in
+<code>class</code> + <code>data-*</code>. This is the most portable form — works
+in every parser, every renderer, every framework.</p>
+
+<pre>&lt;article class="iteration" data-iteration-no="1" data-status="prior"&gt;
+  &lt;header&gt;Iteration 1 · prior&lt;/header&gt;
+  &lt;section class="accepted-plan"&gt;
+    &lt;h4&gt;Accepted Plan&lt;/h4&gt;
+    &lt;p&gt;Run a workspace preflight probe and continue with the follow-up goal.&lt;/p&gt;
+  &lt;/section&gt;
+  &lt;section class="summary"&gt;
+    &lt;h4&gt;Summary&lt;/h4&gt;
+    &lt;p&gt;(empty)&lt;/p&gt;
+  &lt;/section&gt;
+&lt;/article&gt;</pre>
+
+<p><strong>Live render:</strong></p>
+<article class="iteration" data-iteration-no="1" data-status="prior">
+  <header>Iteration 1 · prior</header>
+  <section class="accepted-plan">
+    <h4>Accepted Plan</h4>
+    <p>Run a workspace preflight probe and continue with the follow-up goal.</p>
+  </section>
+  <section class="summary">
+    <h4>Summary</h4>
+    <p>(empty)</p>
+  </section>
+</article>
+
+<p><strong>Validator verdict:</strong> <span class="verdict-good">Pass.</span>
+Only standard HTML elements + custom <code>data-*</code> attributes.</p>
+</div>
+
+
+<h2>Comparison</h2>
+
+<table>
+  <tr>
+    <th>Property</th>
+    <th>A — Plain XML tags</th>
+    <th>B — HTML5 custom elements</th>
+    <th>C — Semantic HTML + classes</th>
+  </tr>
+  <tr>
+    <td>HTML5 validator</td>
+    <td class="verdict-bad">Fail</td>
+    <td class="verdict-good">Pass</td>
+    <td class="verdict-good">Pass</td>
+  </tr>
+  <tr>
+    <td>Renders in browser</td>
+    <td>Yes (as inline by default)</td>
+    <td>Yes (block via CSS)</td>
+    <td>Yes (block via CSS)</td>
+  </tr>
+  <tr>
+    <td>LLM legibility (Claude)</td>
+    <td>Highest — clean tag names</td>
+    <td>Good — extra noise (<code>task-</code>, <code>iteration-</code>)</td>
+    <td>Lower — class/data lookup needed</td>
+  </tr>
+  <tr>
+    <td>Parser tooling</td>
+    <td>Any XML parser</td>
+    <td>HTML parser</td>
+    <td>HTML parser</td>
+  </tr>
+  <tr>
+    <td>CSS targeting</td>
+    <td>Tag selector</td>
+    <td>Tag selector</td>
+    <td>Class selector</td>
+  </tr>
+  <tr>
+    <td>JS framework friendly</td>
+    <td>Awkward (unknown elements)</td>
+    <td>Native (Web Components story)</td>
+    <td>Native</td>
+  </tr>
+  <tr>
+    <td>Token cost</td>
+    <td>Lowest</td>
+    <td>Medium (longer names)</td>
+    <td>Highest (verbose)</td>
+  </tr>
+  <tr>
+    <td>Best for</td>
+    <td>LLM prompt — primary audience is Claude</td>
+    <td>LLM prompt + browser dev tooling</td>
+    <td>Human-facing UI dashboards</td>
+  </tr>
+</table>
+
+
+<h2>Recommendation for the renderer</h2>
+
+<div class="panel">
+<p><strong>The renderer's output is consumed by Claude, not by a browser or
+HTML validator.</strong> "Is it valid HTML?" is the wrong question; the right
+question is "do the structural tags help the LLM segment the context?"</p>
+
+<p>For the prompt: <strong>Variant A (plain XML tags)</strong> is fine and the
+cleanest. Claude is explicitly trained on this pattern. The transcript is not
+served to a browser; it lives in <code>message.jsonl</code> and gets fed to a
+model API.</p>
+
+<p>For the debug viewer / transcript inspector (if you want one):
+<strong>Variant B or C</strong> in a separate HTML-rendering layer that
+post-processes the raw prompt. The wire format stays XML-clean; a viewer
+transforms it to valid HTML on read.</p>
+
+<p>Concrete split:</p>
+<ul>
+  <li><strong>Wire format (what Claude sees):</strong> Variant A — tight,
+  semantic, low token cost.</li>
+  <li><strong>Debug viewer (what humans see in a browser):</strong> Variant B
+  or C — produced by a one-pass transform from A.</li>
+</ul>
+</div>
+
+</body>
+</html>
