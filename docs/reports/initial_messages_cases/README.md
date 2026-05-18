@@ -2,12 +2,19 @@
 
 One markdown file per agent launch position the test contract cares about.
 Each file shows the initial rows `AgentMessageJsonlRecorder.record_initial_messages`
-writes to `message.jsonl` — system, user_msg_1 (composer context), user_msg_2
-(role_instruction + terminal catalog), and (for planners only) user_msg_3
-(skill + `<terminal_selection>`).
+writes to `message.jsonl`:
 
-All `user_msg_1` bodies are rendered by `XmlPromptRenderer` (commit
-`74288ba3a` — wraps each block verbatim in its XML tag; no headings).
+* **system** — agent profile body, prepended with
+  `agents/profile/main/_main_role_contract.md` for the seven main-role
+  profiles (excludes `entry_executor`).
+* **user_msg_1** — `<context>...</context>` envelope around the rendered
+  packet (`XmlPromptRenderer`).
+* **user_msg_2** — `<Task Guidance>...</Task Guidance>` envelope around
+  role-specific prose from `task_center/task_guidance/builders.py`. Ends
+  with a single `<terminal_tool_selection>` block (omitted for
+  `entry_executor`).
+* **user_msg_3 — row 4** (planner only) — `Load skill: planner` header +
+  `<skill>` body + a byte-equal `<terminal_tool_selection>` block (AC #15).
 
 ## Index
 

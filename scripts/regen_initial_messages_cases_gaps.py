@@ -24,7 +24,15 @@ from pathlib import Path
 
 REPO = Path("/Users/yifanxu/machine_learning/LoVC/EphemeralOS")
 CASES_DIR = REPO / "docs" / "reports" / "initial_messages_cases"
-BACKEND_RUNS = REPO / "backend" / ".sweevo_runs" / "scenario_logs"
+
+# The pytest audit_dir fixture defaults to ``.sweevo_runs`` relative to
+# cwd. When pytest runs from the repo root, runs land under
+# ``<repo>/.sweevo_runs``; older runs may sit under
+# ``<repo>/backend/.sweevo_runs``. Scan both.
+_AUDIT_BASES = (
+    REPO / ".sweevo_runs" / "scenario_logs",
+    REPO / "backend" / ".sweevo_runs" / "scenario_logs",
+)
 
 
 def _text_of(row: dict) -> str:
@@ -54,11 +62,16 @@ def _read_initial_rows(path: Path) -> tuple[str, str, str, str]:
 
 
 def _latest_run(scenario: str) -> Path:
-    base = BACKEND_RUNS / scenario
-    runs = sorted(base.iterdir(), reverse=True)
+    runs: list[Path] = []
+    for base in _AUDIT_BASES:
+        candidate = base / scenario
+        if candidate.is_dir():
+            runs.extend(p for p in candidate.iterdir() if p.is_dir())
     if not runs:
-        raise SystemExit(f"no runs under {base}")
-    return runs[0]
+        raise SystemExit(
+            f"no runs for scenario {scenario!r} under any of {list(_AUDIT_BASES)!r}"
+        )
+    return max(runs, key=lambda p: p.stat().st_mtime)
 
 
 def _write_case(
