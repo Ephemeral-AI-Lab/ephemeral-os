@@ -7,9 +7,10 @@ this registry so the two prompts never drift.
 
 Catalog rendering is consumed in two places:
 
-* ``ContextComposer.compose()`` appends the parent-facing catalog to
-  ``role_instruction_message`` whenever the resolved ``agent_def`` declares
-  terminals — that lands the catalog in the parent's ``user_msg_2``.
+* ``AgentEntryComposer.compose()`` produces two byte-equal
+  ``<terminal_tool_selection>`` blocks at launch time: one inside
+  ``task_guidance`` (row 3) and one inside ``skill`` (row 4) whenever the
+  resolved ``agent_def`` declares both task-guidance prose and a skill.
 * ``ask_advisor`` calls :func:`render_terminal_catalog` with
   ``focus="advisor_review_focus"`` keyed on the parent's terminals, so the
   advisor sees the same set viewed through the auditor's lens.

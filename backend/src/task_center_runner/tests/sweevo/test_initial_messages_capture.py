@@ -4,23 +4,23 @@ Runs ``pipeline.initial_messages_capture`` with the standard SWE-EVO
 sandbox + stores fixtures, then asserts the captured ``message.jsonl``
 trees carry the right shape for every iteration position and attempt:
 
-* planner launches — 4 rows (system + context + role_instruction + skill);
-  row 4 is the row-4 composite from
-  ``task_center/context_engine/core.py:build_skill_message``. The
-  ``<terminal_selection>`` block in row 4 must match the row-3 catalog
-  content character-for-character (both render from
-  ``render_terminal_catalog(focus="selection_guidance", ...)``).
-* executor / evaluator launches — 3 rows (system + context +
-  role_instruction); no skill is declared in v1.
-* entry_executor — 2 rows (single-user-message launch).
+* planner launches — 4 rows (system + ``<context>`` envelope +
+  ``<Task Guidance>`` envelope + skill row). The row-4 skill row's
+  ``<terminal_tool_selection>`` block must match the row-3 block
+  byte-for-byte — both render from
+  ``render_terminal_catalog(focus="selection_guidance", ...)`` (AC #15).
+* executor / evaluator launches — 3 rows (system + ``<context>`` +
+  ``<Task Guidance>``); no skill is declared in v1.
+* entry_executor — 2 rows (system + entry-shape user message; no
+  ``<Task Guidance>`` and no skill).
 
 For helper (advisor / resolver) and subagent (explorer) initial-message
 construction, see ``scripts/build_initial_messages_report.py`` — the
 mock-runner does not invoke helpers today, so the report builder calls the
 real builder functions in ``tools/ask_helper/_lib/_compose.py`` and
-``task_center/context_engine/recipes/role_instruction.py`` against a
-realistic parent context. Once ``MockSquadRunner`` grows a helper dispatch,
-this test should be extended to also collect ``advisor`` / ``resolver`` /
+``task_center/task_guidance/builders.py`` against a realistic parent
+context. Once ``MockSquadRunner`` grows a helper dispatch, this test
+should be extended to also collect ``advisor`` / ``resolver`` /
 ``explorer`` ``message.jsonl`` trees from the live run.
 """
 
@@ -137,8 +137,18 @@ async def test_initial_messages_capture(
         # appended during execution; assertions below pin only the first
         # N rows (the launch-time initial messages recorded by
         # ``AgentMessageJsonlRecorder.record_initial_messages``).
+        # Every non-entry main agent's context row 2 must wrap in
+        # <context>...</context> (AC #1).
+        if not role_dir.startswith("entry_executor"):
+            assert user_msg_1.startswith("<context>\n"), (
+                f"{rel}: row 2 does not start with '<context>\\n'"
+            )
+            assert user_msg_1.rstrip().endswith("</context>"), (
+                f"{rel}: row 2 does not end with '</context>'"
+            )
+
         if "planner" in role_dir:
-            # Planner — 4 initial rows: system + context + role_instruction
+            # Planner — 4 initial rows: system + <context> + <Task Guidance>
             # + skill.
             assert len(rows) >= 4, (
                 f"{rel}: planner needs >=4 initial rows for the skill "
@@ -147,7 +157,7 @@ async def test_initial_messages_capture(
             assert all(
                 rows[i].get("role") == "user" for i in (1, 2, 3)
             ), f"{rel}: rows 2-4 must all be user messages"
-            role_instruction = texts[2]
+            task_guidance = texts[2]
             skill_row = texts[3]
             assert "<goal" in user_msg_1, f"{rel}: missing <goal*> XML tag"
             assert (
@@ -155,8 +165,14 @@ async def test_initial_messages_capture(
                 or "<iteration_goal" in user_msg_1
                 or "<goal_current_iteration" in user_msg_1
             ), f"{rel}: missing current-iteration XML tag"
-            assert "# Terminal tools you may call" in role_instruction, (
-                f"{rel}: row 3 missing terminal catalog heading"
+            assert task_guidance.startswith("<Task Guidance>\n"), (
+                f"{rel}: row 3 does not start with '<Task Guidance>\\n'"
+            )
+            assert task_guidance.rstrip().endswith("</Task Guidance>"), (
+                f"{rel}: row 3 does not end with '</Task Guidance>'"
+            )
+            assert "<terminal_tool_selection>" in task_guidance, (
+                f"{rel}: row 3 missing <terminal_tool_selection> block"
             )
             assert skill_row.startswith("Load skill: planner"), (
                 f"{rel}: row 4 does not start with `Load skill: planner...`"
@@ -165,12 +181,12 @@ async def test_initial_messages_capture(
                 f"{rel}: row 4 missing <skill> block"
             )
             assert (
-                "<terminal_selection>" in skill_row
-                and "</terminal_selection>" in skill_row
-            ), f"{rel}: row 4 missing <terminal_selection> block"
+                "<terminal_tool_selection>" in skill_row
+                and "</terminal_tool_selection>" in skill_row
+            ), f"{rel}: row 4 missing <terminal_tool_selection> block"
 
-            # AC #6 — row 4 <terminal_selection> content matches the
-            # row 3 catalog content character-for-character.
+            # AC #15 — row 4 <terminal_tool_selection> content matches the
+            # row 3 block byte-for-byte (between the open/close tags).
             terminals = (
                 full_only_terminals
                 if "planner_full_only" in role_dir
@@ -179,32 +195,40 @@ async def test_initial_messages_capture(
             expected_catalog = render_terminal_catalog(
                 terminals, focus="selection_guidance"
             )
-            assert expected_catalog in role_instruction, (
+            row3_block = task_guidance.split(
+                "<terminal_tool_selection>\n", 1
+            )[1].split("\n</terminal_tool_selection>", 1)[0]
+            row4_block = skill_row.split(
+                "<terminal_tool_selection>\n", 1
+            )[1].split("\n</terminal_tool_selection>", 1)[0]
+            assert row3_block == row4_block, (
+                f"{rel}: row-3 and row-4 <terminal_tool_selection> bodies "
+                "differ"
+            )
+            assert expected_catalog in row3_block, (
                 f"{rel}: row 3 catalog does not match registry render"
             )
-            row4_block = skill_row.split("<terminal_selection>", 1)[1].split(
-                "</terminal_selection>", 1
-            )[0]
-            assert expected_catalog in row4_block, (
-                f"{rel}: row 4 <terminal_selection> does not contain "
-                f"the row 3 catalog text verbatim"
-            )
         elif role_dir.startswith("entry_executor"):
-            # Entry executor: 2 initial rows (system + single user message).
+            # Entry executor: 2 initial rows (system + entry-shape user
+            # message). The recipe carries no role/task_guidance, so the
+            # composer collapses to the 2-row launch shape.
             assert rows[0].get("role") == "system"
             assert rows[1].get("role") == "user"
         elif "executor" in role_dir:
-            # Executor: 3 initial rows (system + context + role_instruction);
-            # no skill is declared in v1.
+            # Executor: 3 initial rows (system + <context> +
+            # <Task Guidance>); no skill is declared in v1.
             assert len(rows) >= 3, (
                 f"{rel}: executor needs >=3 initial rows, got {len(rows)}"
             )
             assert (
                 "<attempt_plan" in user_msg_1 or "<assigned_task" in user_msg_1
             ), f"{rel}: missing <attempt_plan> / <assigned_task> XML tag"
-            role_instruction = texts[2]
-            assert "# Terminal tools you may call" in role_instruction, (
-                f"{rel}: row 3 missing terminal catalog heading"
+            task_guidance = texts[2]
+            assert task_guidance.startswith("<Task Guidance>\n"), (
+                f"{rel}: row 3 does not start with '<Task Guidance>\\n'"
+            )
+            assert "<terminal_tool_selection>" in task_guidance, (
+                f"{rel}: row 3 missing <terminal_tool_selection> block"
             )
             # And the executor must NOT have a skill row — there is no
             # ``Load skill:`` prefix anywhere in the first three rows.
@@ -219,6 +243,10 @@ async def test_initial_messages_capture(
             assert (
                 "<evaluation_criteria" in user_msg_1
             ), f"{rel}: missing <evaluation_criteria> XML tag"
+            task_guidance = texts[2]
+            assert task_guidance.startswith("<Task Guidance>\n"), (
+                f"{rel}: row 3 does not start with '<Task Guidance>\\n'"
+            )
             for i in range(min(3, len(rows))):
                 assert not texts[i].startswith("Load skill:"), (
                     f"{rel}: evaluator must not see a row-4 skill in v1"
@@ -245,11 +273,12 @@ def _write_report(
     lines.append("# Initial Messages Capture — Live Run\n")
     lines.append(f"Source run directory: `{run_dir}`\n")
     lines.append(
-        "Up to four rows per agent: system + composer's context block + "
-        "role_instruction (with terminal catalog) + skill (row 4 — planner "
-        "only in v1). Helpers (advisor / resolver) and subagent (explorer) "
-        "are constructed by `scripts/build_initial_messages_report.py` — "
-        "see `docs/reports/initial_messages_report.md`.\n"
+        "Up to four rows per agent: system + <context> envelope + "
+        "<Task Guidance> envelope (with embedded <terminal_tool_selection>) "
+        "+ skill row (row 4 — planner only in v1). Helpers (advisor / "
+        "resolver) and subagent (explorer) are constructed by "
+        "`scripts/build_initial_messages_report.py` — see "
+        "`docs/reports/initial_messages_report.md`.\n"
     )
     for rel, cap in sorted(captured.items()):
         rows = list(cap["rows"])
@@ -268,12 +297,17 @@ def _write_report(
         lines.append(f"## `{rel}`\n")
         lines.append("**system**\n")
         lines.append(f"```\n{system.strip()[:6000]}\n```\n")
-        lines.append("**user_msg_1** (context block)\n")
+        lines.append("**user_msg_1** (<context> envelope)\n")
         lines.append(f"```\n{user_msg_1.strip()[:6000]}\n```\n")
         if user_msg_2:
-            lines.append("**user_msg_2** (role_instruction + terminal catalog)\n")
+            lines.append(
+                "**user_msg_2** (<Task Guidance> envelope, with "
+                "<terminal_tool_selection>)\n"
+            )
             lines.append(f"```\n{user_msg_2.strip()[:6000]}\n```\n")
         if skill_row:
-            lines.append("**user_msg_3 — row 4** (skill + terminal_selection)\n")
+            lines.append(
+                "**user_msg_3 — row 4** (skill + <terminal_tool_selection>)\n"
+            )
             lines.append(f"```\n{skill_row.strip()[:6000]}\n```\n")
     dest.write_text("\n".join(lines) + "\n")

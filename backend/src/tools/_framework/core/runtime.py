@@ -40,7 +40,7 @@ class ExecutionMetadata:
     task_center_goal_id: str | None = None
     task_center_request_id: str | None = None
     attempt_runtime: Any | None = None
-    # Per-request ContextComposer used by helper tools (ask_advisor /
+    # Per-request AgentEntryComposer used by helper tools (ask_advisor /
     # ask_resolver) to build the parent-inheriting prompt for the helper agent.
     composer: Any | None = None
     conversation_messages: list[Any] = field(default_factory=list)

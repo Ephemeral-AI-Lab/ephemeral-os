@@ -32,9 +32,9 @@ from tools import ExecutionMetadata
 if TYPE_CHECKING:
     from agents import AgentDefinition
     from runtime.app_factory import RuntimeConfig
+    from task_center.agent_launch.composer import AgentEntryComposer
     from task_center.attempt.orchestrator import AttemptOrchestrator
     from task_center.attempt.state import Attempt
-    from task_center.context_engine.core import ContextComposer
 
 
 class LaunchBuilderDeps(Protocol):
@@ -49,7 +49,7 @@ class LaunchBuilderDeps(Protocol):
 
     def run_id_for_attempt(self, attempt: Attempt) -> str: ...
 
-    def require_composer(self) -> ContextComposer: ...
+    def require_composer(self) -> AgentEntryComposer: ...
 
 logger = logging.getLogger(__name__)
 
@@ -134,29 +134,29 @@ class EphemeralAttemptAgentLauncher:
             composer=runtime.composer,
         )
         # Launch shape:
-        #   - 4 rows when both role_instruction and skill_message are present
-        #     (planner with a declared skill: system + context + role_instruction
-        #     + skill). Row 3 keeps its existing terminal-catalog auto-append;
-        #     row 4 holds the skill body + a duplicate <terminal_selection>
-        #     block rendered from the same registry source.
-        #   - 3 rows when role_instruction is present without a skill (today's
+        #   - 4 rows when both task_guidance and skill are present
+        #     (planner with a declared skill: system + <context> +
+        #     <Task Guidance> + skill). Row 3 carries the role prose plus a
+        #     <terminal_tool_selection> block; row 4 carries the skill body
+        #     plus an identical (byte-equal) <terminal_tool_selection> block.
+        #   - 3 rows when task_guidance is present without a skill (today's
         #     main-agent default).
-        #   - 2 rows for entry_executor (no role_instruction).
-        role_instruction = launch.role_instruction_message
-        skill_message = launch.skill_message
-        if role_instruction and skill_message:
+        #   - 2 rows for entry_executor (no task_guidance).
+        task_guidance = launch.task_guidance
+        skill_message = launch.skill
+        if task_guidance and skill_message:
             runner_prompt = skill_message
             runner_initial_messages: list[ConversationMessage] | None = [
-                ConversationMessage.from_user_text(launch.context_message),
-                ConversationMessage.from_user_text(role_instruction),
+                ConversationMessage.from_user_text(launch.context),
+                ConversationMessage.from_user_text(task_guidance),
             ]
-        elif role_instruction:
-            runner_prompt = role_instruction
+        elif task_guidance:
+            runner_prompt = task_guidance
             runner_initial_messages = [
-                ConversationMessage.from_user_text(launch.context_message)
+                ConversationMessage.from_user_text(launch.context)
             ]
         else:
-            runner_prompt = launch.context_message
+            runner_prompt = launch.context
             runner_initial_messages = None
         try:
             result: Any = await runner(
@@ -442,7 +442,7 @@ class LaunchBuilder:
         needs: tuple[str, ...],
         goal_id: str | None,
     ) -> AgentLaunch:
-        bundle = self.runtime.require_composer().compose(
+        messages = self.runtime.require_composer().compose(
             base_agent_name=base_agent_name, scope=scope
         )
         return AgentLaunch(
@@ -450,13 +450,13 @@ class LaunchBuilder:
             task_center_run_id=task_center_run_id,
             attempt_id=attempt_id,
             role=role,
-            agent_name=bundle.agent_def.name,
-            context_message=bundle.context_message,
-            role_instruction_message=bundle.role_instruction_message,
+            agent_name=messages.agent_def.name,
+            context=messages.context,
+            task_guidance=messages.task_guidance,
             needs=needs,
-            context_packet_id=bundle.context_packet_id,
+            context_packet_id=messages.context_packet_id,
             goal_id=goal_id,
-            skill_message=bundle.skill_message,
+            skill=messages.skill,
         )
 
     def _require_iteration(self, attempt: Attempt) -> Any:

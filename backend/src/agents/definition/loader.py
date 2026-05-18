@@ -15,9 +15,42 @@ from .model import AgentDefinition
 logger = logging.getLogger(__name__)
 
 
+# Profiles whose ``system_prompt`` is prepended with
+# ``_main_role_contract.md``. Path-based: every ``.md`` directly under
+# ``agents/profile/main/`` that is not ``entry_executor.md`` (the top-level
+# carve-out that lives outside the goal/iteration/attempt tree) and is not a
+# ``_*.md`` private include.
+_MAIN_PROFILE_DIRNAME = "main"
+_MAIN_ROLE_CONTRACT_NAME = "_main_role_contract.md"
+_ENTRY_EXECUTOR_NAME = "entry_executor"
+
+
+def _main_role_contract_text(profile_path: Path) -> str | None:
+    """Return the contract markdown body for an in-harness main profile.
+
+    Returns ``None`` when the profile is not in scope (not under ``main/``,
+    is ``entry_executor.md``, is itself a ``_*.md`` private include, or the
+    contract file is missing).
+    """
+    if profile_path.parent.name != _MAIN_PROFILE_DIRNAME:
+        return None
+    if profile_path.stem == _ENTRY_EXECUTOR_NAME:
+        return None
+    if profile_path.name.startswith("_"):
+        return None
+    contract_path = profile_path.parent / _MAIN_ROLE_CONTRACT_NAME
+    if not contract_path.is_file():
+        return None
+    return contract_path.read_text(encoding="utf-8").rstrip()
+
+
 def _load_agent_files(paths: Iterable[Path]) -> list[AgentDefinition]:
     agents: list[AgentDefinition] = []
     for path in sorted(paths):
+        if path.name.startswith("_"):
+            # ``_*.md`` are private includes (e.g. ``_main_role_contract.md``)
+            # — not standalone agent profiles. Skip them.
+            continue
         try:
             fm, body = parse_markdown_frontmatter(path.read_text(encoding="utf-8"))
         except OSError:
@@ -27,7 +60,12 @@ def _load_agent_files(paths: Iterable[Path]) -> list[AgentDefinition]:
         if not data.get("name"):
             data["name"] = path.stem
         data["description"] = str(data.get("description") or f"Agent: {data['name']}")
-        if body:
+        contract = _main_role_contract_text(path)
+        if contract is not None and body:
+            data["system_prompt"] = f"{contract}\n\n{body}"
+        elif contract is not None:
+            data["system_prompt"] = contract
+        elif body:
             data["system_prompt"] = body
         if "agent_kind" not in data:
             raise ValueError(

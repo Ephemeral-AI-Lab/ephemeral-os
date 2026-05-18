@@ -82,6 +82,7 @@ def attempt_plan_blocks(attempt, *, priority: ContextPriority) -> list[ContextBl
                     "group_id": group_id,
                     "group_tag": "attempt_plan",
                     "child_tag": "next_iteration_handoff_goal",
+                    "is_partial": "true",
                 },
             )
         )
@@ -127,7 +128,10 @@ def _goal_current_iteration_block(iteration: Iteration) -> ContextBlock:
         text=iteration.goal,
         source_id=iteration.id,
         source_kind="iteration",
-        metadata={"tag": "goal_current_iteration"},
+        metadata={
+            "tag": "goal_current_iteration",
+            "iteration_no": str(iteration.sequence_no),
+        },
     )
 
 
@@ -156,6 +160,7 @@ def _current_iteration_goal_child(iteration: Iteration) -> ContextBlock:
             "group_tag": "iteration",
             "group_attrs": current_iteration_group_attrs(iteration),
             "child_tag": "iteration_goal",
+            "iteration_no": str(iteration.sequence_no),
         },
     )
 

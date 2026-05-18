@@ -148,14 +148,14 @@ class AgentDefinition(BaseModel):
     # --- skill (Round 3) ---
     # Absolute path to the agent's workflow SKILL.md, resolved by the loader
     # from the relative ``skill:`` frontmatter field. ``None`` when no skill is
-    # declared. Skill-equipped agents get row 4 (skill + terminal_selection)
-    # composed at launch.
+    # declared. Skill-equipped agents get row 4 (skill +
+    # terminal_tool_selection) composed at launch.
     skill: Path | None = None
 
-    # --- context engine (ContextComposer) ---
+    # --- context engine (AgentEntryComposer) ---
     # Recipe id resolved at compose time. Required when the agent is launched
-    # via ``ContextComposer``; helper / subagent definitions that pre-date the
-    # context engine may keep this null.
+    # via ``AgentEntryComposer``; helper / subagent definitions that pre-date
+    # the context engine may keep this null.
     context_recipe: str | None = None
     # Frontmatter-declared capability variants. Empty list = no variants
     # (resolver fast-paths). Variant chaining is forbidden — the

@@ -28,12 +28,12 @@ from task_center._core.persistence import (
 from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 
 if TYPE_CHECKING:
+    from task_center.agent_launch.composer import AgentEntryComposer
     from task_center.attempt.launch import EphemeralAttemptAgentLauncher
     from task_center.attempt.orchestrator_registry import (
         AttemptOrchestratorRegistry,
         RegisteredAttemptOrchestrator,
     )
-    from task_center.context_engine.core import ContextComposer
     from task_center.entry import EntryTaskController
     from task_center.goal.state import GoalClosureReport
 
@@ -42,14 +42,16 @@ if TYPE_CHECKING:
 class AgentLaunch:
     """Launch descriptor for one harness agent run.
 
-    The launch carries two user-message payloads:
+    The launch carries up to three user-message payloads matching the wire
+    shape composed by :class:`AgentEntryComposer`:
 
-    * ``context_message`` — rendered world state (post-renderer,
-      pre-role_instruction). Persisted into
-      ``task_center_tasks.context_message`` for traceability.
-    * ``role_instruction_message`` — per-call ask; ``None`` for agents
-      whose recipe emits no role_instruction (e.g. entry_executor), signalling
-      the launcher to fall back to a single user-message launch.
+    * ``context`` — ``<context>...</context>`` envelope around rendered
+      packet blocks. Persisted into the task row for traceability.
+    * ``task_guidance`` — ``<Task Guidance>...</Task Guidance>`` envelope
+      around the per-agent role prose; ``None`` for entry_executor (2-row
+      launch shape).
+    * ``skill`` — row-4 ``Load skill:`` + ``<terminal_tool_selection>``
+      body; ``None`` when the agent declares no skill.
     """
 
     task_id: str
@@ -57,12 +59,12 @@ class AgentLaunch:
     attempt_id: str | None
     role: TaskCenterTaskRole
     agent_name: str
-    context_message: str
-    role_instruction_message: str | None
+    context: str
+    task_guidance: str | None
     needs: tuple[str, ...]
     context_packet_id: str | None = None
     goal_id: str | None = None
-    skill_message: str | None = None
+    skill: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,9 +78,9 @@ class AttemptDeps:
     manager_registry: IterationManagerRegistry | None = None
     lifecycle_config: TaskCenterLifecycleConfig = field(default_factory=TaskCenterLifecycleConfig)
     # When set, orchestrator + dispatcher route launches through the composer
-    # to obtain a rendered context_message + selected agent definition.
+    # to obtain a rendered context envelope + selected agent definition.
     # Optional so existing tests can continue without composer wiring.
-    composer: ContextComposer | None = None
+    composer: AgentEntryComposer | None = None
     # Lifecycle controller for the top-level entry executor. ``None`` for
     # delegated-only runtimes.
     # The close-report router and launcher use this to dispatch lifecycle
@@ -101,10 +103,10 @@ class AttemptDeps:
             )
         return goal.task_center_run_id
 
-    def require_composer(self) -> ContextComposer:
+    def require_composer(self) -> AgentEntryComposer:
         if self.composer is None:
             raise TaskCenterInvariantViolation(
-                "AttemptDeps requires a ContextComposer for harness "
+                "AttemptDeps requires an AgentEntryComposer for harness "
                 "agent launches; none was wired."
             )
         return self.composer

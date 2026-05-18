@@ -331,61 +331,10 @@ def test_hostile_body_planted_inside_grouped_attempt_plan_raises():
 
 
 # ---------------------------------------------------------------------------
-# Two-user-message split: render_context excludes role_instruction;
-# render_role_instruction returns concatenated text or None.
+# Post-v3.3: render_context is the single entry point. role_instruction blocks
+# no longer exist — task-guidance prose lives in
+# ``task_center/task_guidance/builders.py`` and is wrapped by the composer.
 # ---------------------------------------------------------------------------
-
-
-def test_render_context_excludes_role_instruction_blocks():
-    blocks = [
-        ContextBlock(
-            kind="iteration_statement",
-            priority=ContextPriority.REQUIRED,
-            text="world state",
-        ),
-        ContextBlock(
-            kind="role_instruction",
-            priority=ContextPriority.REQUIRED,
-            text="how to proceed body",
-        ),
-    ]
-    out = XmlPromptRenderer().render_context(_packet(blocks))
-    assert "world state" in out
-    assert "how to proceed body" not in out
-
-
-def test_render_role_instruction_returns_none_when_absent():
-    blocks = [
-        ContextBlock(
-            kind="iteration_statement",
-            priority=ContextPriority.REQUIRED,
-            text="world state",
-        ),
-    ]
-    assert XmlPromptRenderer().render_role_instruction(_packet(blocks)) is None
-
-
-def test_render_role_instruction_concatenates_multiple_blocks_verbatim():
-    blocks = [
-        ContextBlock(
-            kind="role_instruction",
-            priority=ContextPriority.REQUIRED,
-            text="first instruction",
-        ),
-        ContextBlock(
-            kind="iteration_statement",
-            priority=ContextPriority.REQUIRED,
-            text="world state",
-        ),
-        ContextBlock(
-            kind="role_instruction",
-            priority=ContextPriority.REQUIRED,
-            text="  second instruction with leading spaces  ",
-        ),
-    ]
-    out = XmlPromptRenderer().render_role_instruction(_packet(blocks))
-    assert out is not None
-    assert out == "first instruction\n\n  second instruction with leading spaces  "
 
 
 def test_default_tags_no_longer_maps_role_instruction():

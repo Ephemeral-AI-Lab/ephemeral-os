@@ -73,31 +73,14 @@ class XmlPromptRenderer:
         self._tags = tags if tags is not None else _DEFAULT_TAGS
 
     def render_context(self, packet: ContextPacket) -> str:
-        """Render world-state context, excluding role_instruction blocks."""
-        context_blocks = [
-            b for b in packet.blocks if b.kind != "role_instruction"
-        ]
+        """Render world-state context."""
         kept_blocks = self._compress(
-            context_blocks, budget=self._budget_from(packet)
+            list(packet.blocks), budget=self._budget_from(packet)
         )
         self._validate_no_structural_closers(kept_blocks)
         sections = self._render_blocks(kept_blocks)
         body = "\n\n".join(s for s in sections if s)
         return body + "\n" if body else ""
-
-    def render_role_instruction(self, packet: ContextPacket) -> str | None:
-        """Concatenate every role_instruction block's text verbatim.
-
-        Returns ``None`` when the packet carries no role_instruction block;
-        helpers / entry agents that don't emit one fall back to a single
-        user-message launch at the call site.
-        """
-        role_blocks = [
-            b for b in packet.blocks if b.kind == "role_instruction"
-        ]
-        if not role_blocks:
-            return None
-        return "\n\n".join(b.text for b in role_blocks)
 
     # ---- internals ------------------------------------------------------
 

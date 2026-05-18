@@ -9,6 +9,11 @@ task. XML shape:
   upstream task; omitted when the assigned task has no deps.
 * ``<assigned_task task_id="...">`` standalone block — the generator's local
   contract, anchored last so the agent ends on its concrete obligation.
+
+Role-specific prose lives in
+``task_center/task_guidance/builders.py:build_generator_task_guidance`` and
+is assembled at launch time by ``AgentEntryComposer`` — recipes no longer
+emit ``role_instruction`` blocks.
 """
 
 from __future__ import annotations
@@ -27,9 +32,6 @@ from task_center.context_engine.packet import (
 from task_center.context_engine.recipes.goal_iteration_frame import (
     attempt_plan_blocks,
     latest_summary_text,
-)
-from task_center.context_engine.recipes.role_instruction import (
-    generator_instruction,
 )
 from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
@@ -65,7 +67,6 @@ def _generator_build(
             task_store=deps.task_store,
         )
     )
-    blocks.append(generator_instruction(has_deps=bool(needs)))
     blocks.append(
         ContextBlock(
             kind=ContextBlockKind.PLANNED_TASK_SPEC,

@@ -36,10 +36,21 @@ the mock runner does not currently invoke them — those initial-message
 captures are produced programmatically by
 ``scripts/build_initial_messages_report.py``, which calls the real
 builder functions in ``tools/ask_helper/_lib/_compose.py`` and
-``task_center/context_engine/recipes/role_instruction.py``. Adding a
-helper/subagent dispatch branch to ``MockSquadRunner`` is left as a
-follow-up; the matching scenario hook is the ``call_helpers_in_executor``
-flag below, which the runner can grow into later.
+``task_center/task_guidance/builders.py`` (specifically
+``build_explorer_task_guidance`` for the subagent's row-2 prose).
+Adding a helper/subagent dispatch branch to ``MockSquadRunner`` is left
+as a follow-up; the matching scenario hook is the
+``call_helpers_in_executor`` flag below, which the runner can grow into
+later.
+
+Wire shape (post v3.3 — see ``docs/reports/initial_messages_cases/README.md``):
+
+* system + ``<context>`` envelope + ``<Task Guidance>`` envelope + skill
+  row for planner launches (4 rows).
+* system + ``<context>`` + ``<Task Guidance>`` for executor / evaluator
+  launches (3 rows; no skill declared in v1).
+* system + entry-shape user message for entry_executor (2 rows; no
+  ``<Task Guidance>`` and no skill).
 """
 
 from __future__ import annotations

@@ -42,7 +42,6 @@ class ContextBlockKind(StrEnum):
     COMPLETED_TASK_SUMMARY = "completed_task_summary"
     ARTIFACT_REFERENCE = "artifact_reference"
     ENTRY_REQUEST = "entry_request"
-    ROLE_INSTRUCTION = "role_instruction"
 
 
 class ContextRefs(BaseModel):

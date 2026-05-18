@@ -23,7 +23,8 @@ from db.stores.context_packet_store import ContextPacketStore
 from db.stores.attempt_store import AttemptStore
 from db.stores.task_center_store import TaskCenterStore
 from db.stores.iteration_store import IterationStore
-from task_center.context_engine.core import ContextComposer, ContextEngine, ContextEngineDeps
+from task_center.agent_launch.composer import AgentEntryComposer
+from task_center.context_engine.core import ContextEngine, ContextEngineDeps
 from task_center._core.agent_routing import (
     PredicateRegistry,
     register_builtin_predicates,
@@ -187,7 +188,7 @@ def composer(
     task_store,
     context_packet_store,
     register_test_agents,
-) -> ContextComposer:
+) -> AgentEntryComposer:
     deps = ContextEngineDeps(
         goal_store=goal_store,
         iteration_store=iteration_store,
@@ -195,4 +196,4 @@ def composer(
         task_store=task_store,
         context_packet_store=context_packet_store,
     )
-    return ContextComposer.default(ContextEngine(deps))
+    return AgentEntryComposer.default(ContextEngine(deps))

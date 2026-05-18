@@ -8,14 +8,17 @@ XML shape:
 
 * Goal frame from :func:`goal_iteration_blocks`.
 * ``<attempt_plan>`` group with ``<plan_spec>`` and, on a continues-goal
-  attempt, ``<next_iteration_handoff_goal>`` child.
+  attempt, ``<next_iteration_handoff_goal>`` child. The handoff child block
+  carries ``metadata["is_partial"] = "true"`` — task-guidance builders branch
+  on that signal.
 * ``<completed_tasks>`` group with one ``<task id="..." status="...">`` per
   generator task.
 * ``<evaluation_criteria>`` standalone block.
 
 The previous ``PARTIAL_PLAN_BOUNDARY`` block is gone: the structural signal
-travels via the nested ``<next_iteration_handoff_goal>`` child, and the
-behavioral guidance survives in :func:`evaluator_instruction(is_partial=True)`.
+travels via the nested ``<next_iteration_handoff_goal>`` child plus
+``metadata["is_partial"]``; the behavioral guidance lives in
+``task_center/task_guidance/builders.py:build_evaluator_task_guidance``.
 """
 
 from __future__ import annotations
@@ -33,9 +36,6 @@ from task_center.context_engine.recipes.goal_iteration_frame import (
     attempt_plan_blocks,
     goal_iteration_blocks,
     latest_summary_text,
-)
-from task_center.context_engine.recipes.role_instruction import (
-    evaluator_instruction,
 )
 from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
@@ -69,9 +69,6 @@ def _evaluator_build(
 
     blocks.extend(_completed_tasks_blocks(attempt, deps))
 
-    blocks.append(
-        evaluator_instruction(is_partial=bool(attempt.next_iteration_handoff_goal))
-    )
     criteria = list(attempt.evaluation_criteria)
     if criteria:
         blocks.append(

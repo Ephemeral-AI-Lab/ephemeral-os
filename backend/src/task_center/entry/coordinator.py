@@ -23,8 +23,8 @@ from db.stores import (
 )
 from agents import validate_agent_definitions_resolved
 from task_center._core.primitives import TaskCenterLifecycleConfig
+from task_center.agent_launch.composer import AgentEntryComposer
 from task_center.context_engine.core import (
-    ContextComposer,
     ContextEngine,
     ContextEngineDeps,
 )
@@ -223,7 +223,7 @@ class TaskCenterEntryCoordinator:
         runtime_ref = runtime
         return runtime, launcher
 
-    def _build_composer(self) -> ContextComposer:
+    def _build_composer(self) -> AgentEntryComposer:
         """Construct the composer + register built-in predicates / recipes.
 
         Predicate and recipe registration are idempotent — re-registration is
@@ -247,7 +247,7 @@ class TaskCenterEntryCoordinator:
             task_store=self._task_store,
             context_packet_store=self._context_packet_store,
         )
-        return ContextComposer.default(ContextEngine(deps))
+        return AgentEntryComposer.default(ContextEngine(deps))
 
     def _write_entry_task_row(
         self,

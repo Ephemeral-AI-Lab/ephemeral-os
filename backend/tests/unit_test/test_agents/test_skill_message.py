@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from agents import AgentDefinition, AgentKind
-from task_center.context_engine.core import build_skill_message
+from task_center.agent_launch.skill_message import build_skill_message
 from tools._terminals.registry import render_terminal_catalog
 
 
@@ -39,7 +39,7 @@ def test_build_skill_message_has_load_header_skill_block_and_terminal_block(
 
     assert msg.startswith("Load skill: planner\n")
     assert "<skill>" in msg and "</skill>" in msg
-    assert "<terminal_selection>" in msg and "</terminal_selection>" in msg
+    assert "<terminal_tool_selection>" in msg and "</terminal_tool_selection>" in msg
 
     # Frontmatter is stripped — the `name:` key MUST NOT appear in the body.
     skill_block = msg.split("<skill>", 1)[1].split("</skill>", 1)[0]
@@ -49,7 +49,7 @@ def test_build_skill_message_has_load_header_skill_block_and_terminal_block(
 
 
 def test_terminal_selection_block_matches_registry_catalog(tmp_path: Path):
-    """Row 4's <terminal_selection> renders from the same registry call as row 3."""
+    """Row 4's <terminal_tool_selection> renders from the same registry call as row 3."""
     skill_file = tmp_path / "planner" / "SKILL.md"
     skill_file.parent.mkdir()
     skill_file.write_text("# body")
@@ -63,11 +63,11 @@ def test_terminal_selection_block_matches_registry_catalog(tmp_path: Path):
     expected_catalog = render_terminal_catalog(
         list(planner_def.terminals), focus="selection_guidance"
     )
-    block = msg.split("<terminal_selection>", 1)[1].split(
-        "</terminal_selection>", 1
+    block = msg.split("<terminal_tool_selection>", 1)[1].split(
+        "</terminal_tool_selection>", 1
     )[0]
     assert expected_catalog in block, (
-        "row-4 <terminal_selection> must include the same catalog text as row 3"
+        "row-4 <terminal_tool_selection> must include the same catalog text as row 3"
     )
 
 
@@ -84,7 +84,7 @@ def test_terminal_selection_block_skipped_when_no_terminals(tmp_path: Path):
 
     msg = build_skill_message(skill_file, plain_def)
     assert msg is not None
-    assert "<terminal_selection>" not in msg
+    assert "<terminal_tool_selection>" not in msg
 
 
 def test_skill_name_derives_from_parent_folder(tmp_path: Path):

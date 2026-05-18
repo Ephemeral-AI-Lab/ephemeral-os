@@ -4,17 +4,17 @@ Reads the message.jsonl captures from the most recent
 ``pipeline.initial_messages_capture`` run under
 ``backend/.sweevo_runs/scenario_logs/`` and writes one .md file per
 agent role/iteration/attempt position, matching the historical naming
-convention. Post-XML renderer (commit 74288ba3a): user_msg_1 is rendered
-verbatim with XML envelopes (``<goal>``, ``<iteration status="current">``,
-``<attempt_plan>``, etc.); the case file presents the four rows
-(system, user_msg_1, user_msg_2 / role_instruction, user_msg_3 / skill)
-that the recorder writes for that agent's launch shape.
+convention. Wire shape (post-v3.3): user_msg_1 is the ``<context>``
+envelope around the rendered packet, user_msg_2 is the
+``<Task Guidance>`` envelope with embedded ``<terminal_tool_selection>``,
+and user_msg_3 (planner only) is the skill row with its own
+``<terminal_tool_selection>``.
 
 Also produces the helper / subagent cases (09 advisor, 10 resolver, 11
 explorer) by calling the real builder code in
 ``tools/ask_helper/_lib/_compose.py`` and
-``recipes/role_instruction.py`` against a representative parent context
-lifted from the same live capture.
+``task_center/task_guidance/builders.py`` against a representative
+parent context lifted from the same live capture.
 """
 
 from __future__ import annotations
@@ -32,9 +32,7 @@ from agents import get_definition, load_agents_tree, register_definition
 for _ad in load_agents_tree(SRC / "agents" / "profile"):
     register_definition(_ad)
 
-from task_center.context_engine.recipes.role_instruction import (
-    explorer_instruction,
-)
+from task_center.task_guidance.builders import build_explorer_task_guidance
 from tools.ask_helper._lib._compose import HelperMessages, assemble_user_msg_1
 from tools.ask_helper.ask_advisor import _build_advisor_user_msg_2
 from tools.ask_helper.ask_resolver import _build_resolver_user_msg_2
@@ -121,7 +119,7 @@ def _write_case(
         parts.append("```")
     if user_msg_3:
         parts.append("")
-        parts.append("## user_msg_3 — row 4 (skill + terminal_selection)")
+        parts.append("## user_msg_3 — row 4 (skill + terminal_tool_selection)")
         parts.append("")
         parts.append("```")
         parts.append(user_msg_3.rstrip())
@@ -280,12 +278,12 @@ def regenerate_helpers(run_dir: Path) -> None:
         "list every module that registers a context-recipe id and report "
         "file paths plus line numbers."
     )
-    explorer_um2 = explorer_instruction().text
+    explorer_um2 = build_explorer_task_guidance()
     _write_case(
         case_path=CASES_DIR / "11_explorer_subagent__run_subagent.md",
         title="explorer subagent — invoked via run_subagent "
         "(programmatic; user_msg_1 = parent's free-text prompt; "
-        "user_msg_2 = explorer_instruction().text)",
+        "user_msg_2 = build_explorer_task_guidance())",
         source="programmatic construction",
         system=explorer_def.system_prompt or "",
         user_msg_1=explorer_um1,

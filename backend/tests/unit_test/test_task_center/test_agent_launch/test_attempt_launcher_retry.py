@@ -91,8 +91,8 @@ def _build_launch(*, attempt: Any, goal: Any, task_id: str, task_center_run_id: 
         attempt_id=attempt.id,
         role=TaskCenterTaskRole.PLANNER,
         agent_name="planner",
-        context_message="plan context",
-        role_instruction_message="plan the work",
+        context="plan context",
+        task_guidance="plan the work",
         needs=(),
         goal_id=goal.id,
     )
@@ -418,7 +418,7 @@ async def test_main_agent_launches_with_two_user_messages(
     task_center_run_id,
     register_test_agents,
 ) -> None:
-    """Non-entry agents launch with initial_messages=[<context>] + prompt=<role_instruction>."""
+    """Non-entry agents launch with initial_messages=[<context>] + prompt=<task_guidance>."""
     from message.messages import ConversationMessage
 
     goal, attempt, task_id = _seed_planner_attempt(
@@ -466,7 +466,7 @@ async def test_main_agent_launches_with_two_user_messages(
     assert len(captured) == 1
     args = captured[0]["args"]
     kwargs = captured[0]["kwargs"]
-    # Spawn prompt is the role_instruction text from _build_launch.
+    # Spawn prompt is the task_guidance text from _build_launch.
     assert args[1] == "plan the work"
     # initial_messages carries the rendered context (one user msg).
     initial_messages = kwargs.get("initial_messages")
@@ -487,10 +487,10 @@ async def test_entry_executor_falls_back_to_single_user_message(
     task_center_run_id,
     register_test_agents,
 ) -> None:
-    """Agents whose recipe emits no role_instruction launch single-message.
+    """Agents whose recipe emits no task_guidance launch single-message.
 
-    The launcher must NOT pass initial_messages when role_instruction_message
-    is None or empty — the context_message becomes the spawn prompt directly.
+    The launcher must NOT pass initial_messages when task_guidance
+    is None or empty — the context becomes the spawn prompt directly.
     """
     goal, attempt, task_id = _seed_planner_attempt(
         goal_store=goal_store,
@@ -500,17 +500,17 @@ async def test_entry_executor_falls_back_to_single_user_message(
         task_center_run_id=task_center_run_id,
     )
     # Use the planner agent (registered by the fixture) but with
-    # ``role_instruction_message=None`` to exercise the single-message
+    # ``task_guidance=None`` to exercise the single-message
     # fallback. The fallback decision in ``_run_launch`` keys on
-    # ``role_instruction_message``, not on role.
+    # ``task_guidance``, not on role.
     launch = AgentLaunch(
         task_id=task_id,
         task_center_run_id=task_center_run_id,
         attempt_id=attempt.id,
         role=TaskCenterTaskRole.PLANNER,
         agent_name="planner",
-        context_message="execute this task",
-        role_instruction_message=None,  # no role_instruction recipe
+        context="execute this task",
+        task_guidance=None,  # no task-guidance prose
         needs=(),
         goal_id=goal.id,
     )

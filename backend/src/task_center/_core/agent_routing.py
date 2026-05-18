@@ -13,15 +13,11 @@ from pathlib import Path
 from typing import ClassVar
 
 from agents import get_definition
-from agents import AgentDefinition, AgentSelectionBlock, AgentVariant
+from agents import AgentDefinition, AgentVariant
 from task_center.context_engine.core import (
     AgentDefinitionValidationError,
     ContextEngineDeps,
     MissingContextRecipeError,
-)
-from task_center.context_engine.packet import (
-    ContextBlock,
-    ContextPriority,
 )
 from task_center.context_engine.scope import ContextScope
 from task_center.goal.ancestry import nested_goal_depth
@@ -144,11 +140,10 @@ def register_builtin_predicates() -> None:
 
 @dataclass(frozen=True, slots=True)
 class AgentSelection:
-    """Resolver output: the picked agent + its recipe + extra blocks."""
+    """Resolver output: the picked agent + its recipe + skill path."""
 
     agent_def: AgentDefinition
     context_recipe: str
-    required_context_blocks: tuple[ContextBlock, ...] = ()
     reason: str | None = None
     skill_path: Path | None = None
 
@@ -205,9 +200,6 @@ class RuleBasedAgentResolver:
         return AgentSelection(
             agent_def=target,
             context_recipe=self._require_recipe(target),
-            required_context_blocks=tuple(
-                _to_context_block(b) for b in variant.required_context_blocks
-            ),
             reason=variant.note or None,
             skill_path=target.skill,
         )
@@ -217,18 +209,6 @@ class RuleBasedAgentResolver:
         if not definition.context_recipe:
             raise MissingContextRecipeError(
                 f"Agent {definition.name!r} has no context_recipe declared in "
-                "frontmatter; it cannot be launched via ContextComposer."
+                "frontmatter; it cannot be launched via AgentEntryComposer."
             )
         return definition.context_recipe
-
-
-def _to_context_block(block: AgentSelectionBlock) -> ContextBlock:
-    """Convert frontmatter-safe block into a real :class:`ContextBlock`."""
-    return ContextBlock(
-        kind=block.kind,
-        priority=ContextPriority(block.priority),
-        text=block.text,
-        source_id=block.source_id,
-        source_kind=block.source_kind,
-        metadata=dict(block.metadata),
-    )

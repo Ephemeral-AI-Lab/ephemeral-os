@@ -27,7 +27,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from task_center.context_engine.core import ContextComposer, LaunchBundle
+    from task_center.agent_launch.composer import AgentEntryComposer
+    from task_center.agent_launch.entry_messages import AgentEntryMessages
     from task_center._core.agent_routing import PredicateRegistry
     from task_center.attempt.generator_dag import ordered_generator_tasks
     from task_center.attempt.orchestrator import AttemptOrchestrator
@@ -78,7 +79,14 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     ),
     "AttemptStage": ("task_center.attempt.state", "AttemptStage"),
     "AttemptStatus": ("task_center.attempt.state", "AttemptStatus"),
-    "ContextComposer": ("task_center.context_engine.core", "ContextComposer"),
+    "AgentEntryComposer": (
+        "task_center.agent_launch.composer",
+        "AgentEntryComposer",
+    ),
+    "AgentEntryMessages": (
+        "task_center.agent_launch.entry_messages",
+        "AgentEntryMessages",
+    ),
     "ContextPacket": ("task_center.context_engine.packet", "ContextPacket"),
     "ContextScope": ("task_center.context_engine.scope", "ContextScope"),
     "EntryTaskController": (
@@ -93,7 +101,6 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "IterationStatus": ("task_center.iteration.state", "IterationStatus"),
     "EvaluatorSubmission": ("task_center.task_state", "EvaluatorSubmission"),
     "GeneratorSubmission": ("task_center.task_state", "GeneratorSubmission"),
-    "LaunchBundle": ("task_center.context_engine.core", "LaunchBundle"),
     "Goal": ("task_center.goal.state", "Goal"),
     "GoalStarter": ("task_center.goal.starter", "GoalStarter"),
     "GoalStatus": ("task_center.goal.state", "GoalStatus"),
