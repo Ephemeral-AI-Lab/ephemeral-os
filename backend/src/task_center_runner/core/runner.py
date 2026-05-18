@@ -114,9 +114,10 @@ def _graph_summary(
                             if attempt.fail_reason is not None
                             else None
                         ),
-                        # Dict key pinned to "continuation_goal" by Option B
-                        # (graph-summary key tracks DB column name until FU-2).
-                        "continuation_goal": attempt.next_iteration_handoff_goal,
+                        # Dict key mirrors the Python attribute name so test
+                        # consumers can read ``attempt["next_iteration_handoff_goal"]``
+                        # without having to know the DB column alias.
+                        "next_iteration_handoff_goal": attempt.next_iteration_handoff_goal,
                         "task_ids": list(attempt.generator_task_ids),
                         "tasks": task_rows,
                     }
@@ -128,9 +129,8 @@ def _graph_summary(
                     "creation_reason": iteration.creation_reason.value,
                     "status": iteration.status.value,
                     "goal": iteration.goal,
-                    # Dict key pinned to "continuation_goal" by Option B
-                    # (graph-summary key tracks DB column name until FU-2).
-                    "continuation_goal": iteration.next_iteration_handoff_goal,
+                    # Dict key mirrors the Python attribute name.
+                    "next_iteration_handoff_goal": iteration.next_iteration_handoff_goal,
                     "attempts": attempts,
                 }
             )
