@@ -1,6 +1,6 @@
-"""Live regression for the first-three-messages capture scenario.
+"""Live regression for the initial-messages capture scenario.
 
-Runs ``pipeline.first_three_messages_capture`` with the standard SWE-EVO
+Runs ``pipeline.initial_messages_capture`` with the standard SWE-EVO
 sandbox + stores fixtures, then asserts the captured ``message.jsonl``
 trees carry the right shape for every iteration position and attempt:
 
@@ -14,8 +14,8 @@ trees carry the right shape for every iteration position and attempt:
   role_instruction); no skill is declared in v1.
 * entry_executor — 2 rows (single-user-message launch).
 
-For helper (advisor / resolver) and subagent (explorer) first-message
-construction, see ``scripts/build_first_three_messages_report.py`` — the
+For helper (advisor / resolver) and subagent (explorer) initial-message
+construction, see ``scripts/build_initial_messages_report.py`` — the
 mock-runner does not invoke helpers today, so the report builder calls the
 real builder functions in ``tools/ask_helper/_lib/_compose.py`` and
 ``task_center/context_engine/recipes/role_instruction.py`` against a
@@ -45,14 +45,14 @@ from tools._terminals.registry import render_terminal_catalog
 pytestmark = pytest.mark.asyncio
 
 
-_SCENARIO_NAME = "pipeline.first_three_messages_capture"
+_SCENARIO_NAME = "pipeline.initial_messages_capture"
 
 
 @pytest.mark.skipif(
     not os.environ.get("EPHEMERALOS_DATABASE_URL"),
     reason="EPHEMERALOS_DATABASE_URL not set - task_center_runner requires PostgreSQL",
 )
-async def test_first_three_messages_capture(
+async def test_initial_messages_capture(
     sweevo_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
@@ -224,7 +224,7 @@ async def test_first_three_messages_capture(
                 )
 
     # 4) Emit the markdown report next to the run.
-    report_path = report.run_dir / "first_three_messages_report.md"
+    report_path = report.run_dir / "initial_messages_report.md"
     _write_report(report.run_dir, captured, report_path)
     assert report_path.exists()
 
@@ -241,14 +241,14 @@ def _write_report(
     run_dir: Path, captured: dict[str, dict[str, object]], dest: Path
 ) -> None:
     lines: list[str] = []
-    lines.append("# First-Three-Messages Capture — Live Run\n")
+    lines.append("# Initial Messages Capture — Live Run\n")
     lines.append(f"Source run directory: `{run_dir}`\n")
     lines.append(
         "Up to four rows per agent: system + composer's context block + "
         "role_instruction (with terminal catalog) + skill (row 4 — planner "
         "only in v1). Helpers (advisor / resolver) and subagent (explorer) "
-        "are constructed by `scripts/build_first_three_messages_report.py` — "
-        "see `docs/reports/first_three_messages_report.md`.\n"
+        "are constructed by `scripts/build_initial_messages_report.py` — "
+        "see `docs/reports/initial_messages_report.md`.\n"
     )
     for rel, cap in sorted(captured.items()):
         rows = list(cap["rows"])

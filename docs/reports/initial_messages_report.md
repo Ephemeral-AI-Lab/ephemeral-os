@@ -1,8 +1,8 @@
-# First-Three-Messages Capture Report
+# Initial-Messages Capture Report
 
 ## What this report contains
 
-First three messages observed at agent launch (system + user_msg_1 + user_msg_2), per agent role. Captured from a live run of the new scenario `pipeline.first_three_messages_capture` (continuation goal + attempt retry across 2 iterations) executed against real Postgres + real Daytona sandbox + real composer + real recorder; only the agent LLM is replaced with the deterministic `MockSquadRunner`.
+Initial messages observed at agent launch (system + user_msg_1 + user_msg_2), per agent role. Captured from a live run of the new scenario `pipeline.initial_messages_capture` (continuation goal + attempt retry across 2 iterations) executed against real Postgres + real Daytona sandbox + real composer + real recorder; only the agent LLM is replaced with the deterministic `MockSquadRunner`.
 
 - **Main agents (planner, executor, evaluator)** — three messages: system from `agents/profile/main/<name>.md`; user_msg_1 = the composer's context block (goal + iteration + dependency results + attempt plan + evaluation criteria, rendered by `MarkdownPromptRenderer.render_context`); user_msg_2 = the spawn prompt (the role_instruction body for the agent's iteration/attempt position from `recipes/role_instruction.py` plus the terminal-tool catalog appended by `_append_terminal_catalog`).
 
@@ -18,14 +18,14 @@ Source for main-agent rows: existing live-e2e runs under `.sweevo_runs/scenario_
 
 | Agent role | Routing / variant | Iteration position | Attempt | Source |
 |---|---|---|---|---|
-| entry_executor | executor_01747bb4-5017-4d39-891b-525b68b8340f:entry | — | — | pipeline.first_three_messages_capture/20260517T180110Z_d89a97f85ee7 |
-| planner | planner_e7322874-e73e-471d-98df-ac0ce7c157e1:planner | iteration_01_a79c7c19-34cf-4bf6-919e-90a85afb9b2f | attempt_01_e7322874-e73e-471d-98df-ac0ce7c157e1 | pipeline.first_three_messages_capture/20260517T180110Z_d89a97f85ee7 |
-| planner | planner_dc0544d6-cac3-4e75-9932-287f4146d4b0:planner | iteration_01_a79c7c19-34cf-4bf6-919e-90a85afb9b2f | attempt_02_dc0544d6-cac3-4e75-9932-287f4146d4b0 | pipeline.first_three_messages_capture/20260517T180110Z_d89a97f85ee7 |
-| planner | planner_5352eda5-3bbe-4085-a96f-cfe21922ae63:planner | iteration_02_d5f7093c-2973-4309-90ae-34fa3ef23cf4 | attempt_01_5352eda5-3bbe-4085-a96f-cfe21922ae63 | pipeline.first_three_messages_capture/20260517T180110Z_d89a97f85ee7 |
-| executor | executor_dc0544d6-cac3-4e75-9932-287f4146d4b0:gen:preflight | iteration_01_a79c7c19-34cf-4bf6-919e-90a85afb9b2f | attempt_02_dc0544d6-cac3-4e75-9932-287f4146d4b0 | pipeline.first_three_messages_capture/20260517T180110Z_d89a97f85ee7 |
-| executor | executor_5352eda5-3bbe-4085-a96f-cfe21922ae63:gen:preflight | iteration_02_d5f7093c-2973-4309-90ae-34fa3ef23cf4 | attempt_01_5352eda5-3bbe-4085-a96f-cfe21922ae63 | pipeline.first_three_messages_capture/20260517T180110Z_d89a97f85ee7 |
-| evaluator | evaluator_dc0544d6-cac3-4e75-9932-287f4146d4b0:evaluator | iteration_01_a79c7c19-34cf-4bf6-919e-90a85afb9b2f | attempt_02_dc0544d6-cac3-4e75-9932-287f4146d4b0 | pipeline.first_three_messages_capture/20260517T180110Z_d89a97f85ee7 |
-| evaluator | evaluator_5352eda5-3bbe-4085-a96f-cfe21922ae63:evaluator | iteration_02_d5f7093c-2973-4309-90ae-34fa3ef23cf4 | attempt_01_5352eda5-3bbe-4085-a96f-cfe21922ae63 | pipeline.first_three_messages_capture/20260517T180110Z_d89a97f85ee7 |
+| entry_executor | executor_01747bb4-5017-4d39-891b-525b68b8340f:entry | — | — | pipeline.initial_messages_capture/20260517T180110Z_d89a97f85ee7 |
+| planner | planner_e7322874-e73e-471d-98df-ac0ce7c157e1:planner | iteration_01_a79c7c19-34cf-4bf6-919e-90a85afb9b2f | attempt_01_e7322874-e73e-471d-98df-ac0ce7c157e1 | pipeline.initial_messages_capture/20260517T180110Z_d89a97f85ee7 |
+| planner | planner_dc0544d6-cac3-4e75-9932-287f4146d4b0:planner | iteration_01_a79c7c19-34cf-4bf6-919e-90a85afb9b2f | attempt_02_dc0544d6-cac3-4e75-9932-287f4146d4b0 | pipeline.initial_messages_capture/20260517T180110Z_d89a97f85ee7 |
+| planner | planner_5352eda5-3bbe-4085-a96f-cfe21922ae63:planner | iteration_02_d5f7093c-2973-4309-90ae-34fa3ef23cf4 | attempt_01_5352eda5-3bbe-4085-a96f-cfe21922ae63 | pipeline.initial_messages_capture/20260517T180110Z_d89a97f85ee7 |
+| executor | executor_dc0544d6-cac3-4e75-9932-287f4146d4b0:gen:preflight | iteration_01_a79c7c19-34cf-4bf6-919e-90a85afb9b2f | attempt_02_dc0544d6-cac3-4e75-9932-287f4146d4b0 | pipeline.initial_messages_capture/20260517T180110Z_d89a97f85ee7 |
+| executor | executor_5352eda5-3bbe-4085-a96f-cfe21922ae63:gen:preflight | iteration_02_d5f7093c-2973-4309-90ae-34fa3ef23cf4 | attempt_01_5352eda5-3bbe-4085-a96f-cfe21922ae63 | pipeline.initial_messages_capture/20260517T180110Z_d89a97f85ee7 |
+| evaluator | evaluator_dc0544d6-cac3-4e75-9932-287f4146d4b0:evaluator | iteration_01_a79c7c19-34cf-4bf6-919e-90a85afb9b2f | attempt_02_dc0544d6-cac3-4e75-9932-287f4146d4b0 | pipeline.initial_messages_capture/20260517T180110Z_d89a97f85ee7 |
+| evaluator | evaluator_5352eda5-3bbe-4085-a96f-cfe21922ae63:evaluator | iteration_02_d5f7093c-2973-4309-90ae-34fa3ef23cf4 | attempt_01_5352eda5-3bbe-4085-a96f-cfe21922ae63 | pipeline.initial_messages_capture/20260517T180110Z_d89a97f85ee7 |
 | advisor | helper/subagent | — | — | programmatic |
 | resolver | helper/subagent | — | — | programmatic |
 | explorer | helper/subagent | — | — | programmatic |
@@ -37,10 +37,10 @@ Every main-agent row below is harvested verbatim from `message.jsonl` written by
 ### entry_executor (root delegation)
 
 - `agent_name`: `entry_executor`
-- `scenario`: `pipeline.first_three_messages_capture`
+- `scenario`: `pipeline.initial_messages_capture`
 - `run_id`: `20260517T180110Z_d89a97f85ee7`
 - `role_dir`: `entry_executor_01747bb4-5017-4d39-891b-525b68b8340f:entry`
-- source file: `pipeline.first_three_messages_capture/20260517T180110Z_d89a97f85ee7/entry_executor_01747bb4-5017-4d39-891b-525b68b8340f:entry/message.jsonl`
+- source file: `pipeline.initial_messages_capture/20260517T180110Z_d89a97f85ee7/entry_executor_01747bb4-5017-4d39-891b-525b68b8340f:entry/message.jsonl`
 
 **system** (verbatim, `message.jsonl` row 1):
 
@@ -193,10 +193,10 @@ Checks: `{'system_nonempty': True, 'user_msg_1_nonempty': True, 'um1_has_entry_r
 ### planner — iter1 attempt1 (invalid plan)
 
 - `agent_name`: `planner`
-- `scenario`: `pipeline.first_three_messages_capture`
+- `scenario`: `pipeline.initial_messages_capture`
 - `run_id`: `20260517T180110Z_d89a97f85ee7`
 - `role_dir`: `01_planner_e7322874-e73e-471d-98df-ac0ce7c157e1:planner`
-- source file: `pipeline.first_three_messages_capture/20260517T180110Z_d89a97f85ee7/01_planner_e7322874-e73e-471d-98df-ac0ce7c157e1:planner/message.jsonl`
+- source file: `pipeline.initial_messages_capture/20260517T180110Z_d89a97f85ee7/01_planner_e7322874-e73e-471d-98df-ac0ce7c157e1:planner/message.jsonl`
 
 **system** (verbatim, `message.jsonl` row 1):
 
@@ -403,10 +403,10 @@ Checks: `{'system_nonempty': True, 'user_msg_1_nonempty': True, 'user_msg_2_none
 ### planner — iter1 attempt2 (after planner failure)
 
 - `agent_name`: `planner`
-- `scenario`: `pipeline.first_three_messages_capture`
+- `scenario`: `pipeline.initial_messages_capture`
 - `run_id`: `20260517T180110Z_d89a97f85ee7`
 - `role_dir`: `01_planner_dc0544d6-cac3-4e75-9932-287f4146d4b0:planner`
-- source file: `pipeline.first_three_messages_capture/20260517T180110Z_d89a97f85ee7/01_planner_dc0544d6-cac3-4e75-9932-287f4146d4b0:planner/message.jsonl`
+- source file: `pipeline.initial_messages_capture/20260517T180110Z_d89a97f85ee7/01_planner_dc0544d6-cac3-4e75-9932-287f4146d4b0:planner/message.jsonl`
 
 **system** (verbatim, `message.jsonl` row 1):
 
@@ -613,10 +613,10 @@ Checks: `{'system_nonempty': True, 'user_msg_1_nonempty': True, 'user_msg_2_none
 ### planner — iter2 attempt1 (continuation, full plan)
 
 - `agent_name`: `planner`
-- `scenario`: `pipeline.first_three_messages_capture`
+- `scenario`: `pipeline.initial_messages_capture`
 - `run_id`: `20260517T180110Z_d89a97f85ee7`
 - `role_dir`: `01_planner_5352eda5-3bbe-4085-a96f-cfe21922ae63:planner`
-- source file: `pipeline.first_three_messages_capture/20260517T180110Z_d89a97f85ee7/01_planner_5352eda5-3bbe-4085-a96f-cfe21922ae63:planner/message.jsonl`
+- source file: `pipeline.initial_messages_capture/20260517T180110Z_d89a97f85ee7/01_planner_5352eda5-3bbe-4085-a96f-cfe21922ae63:planner/message.jsonl`
 
 **system** (verbatim, `message.jsonl` row 1):
 
@@ -825,10 +825,10 @@ Checks: `{'system_nonempty': True, 'user_msg_1_nonempty': True, 'user_msg_2_none
 ### executor — iter1 attempt2 (continuation partial)
 
 - `agent_name`: `executor`
-- `scenario`: `pipeline.first_three_messages_capture`
+- `scenario`: `pipeline.initial_messages_capture`
 - `run_id`: `20260517T180110Z_d89a97f85ee7`
 - `role_dir`: `02_executor_dc0544d6-cac3-4e75-9932-287f4146d4b0:gen:preflight`
-- source file: `pipeline.first_three_messages_capture/20260517T180110Z_d89a97f85ee7/02_executor_dc0544d6-cac3-4e75-9932-287f4146d4b0:gen:preflight/message.jsonl`
+- source file: `pipeline.initial_messages_capture/20260517T180110Z_d89a97f85ee7/02_executor_dc0544d6-cac3-4e75-9932-287f4146d4b0:gen:preflight/message.jsonl`
 
 **system** (verbatim, `message.jsonl` row 1):
 
@@ -889,10 +889,10 @@ Checks: `{'system_nonempty': True, 'user_msg_1_nonempty': True, 'user_msg_2_none
 ### executor — iter2 attempt1 (continuation full)
 
 - `agent_name`: `executor`
-- `scenario`: `pipeline.first_three_messages_capture`
+- `scenario`: `pipeline.initial_messages_capture`
 - `run_id`: `20260517T180110Z_d89a97f85ee7`
 - `role_dir`: `02_executor_5352eda5-3bbe-4085-a96f-cfe21922ae63:gen:preflight`
-- source file: `pipeline.first_three_messages_capture/20260517T180110Z_d89a97f85ee7/02_executor_5352eda5-3bbe-4085-a96f-cfe21922ae63:gen:preflight/message.jsonl`
+- source file: `pipeline.initial_messages_capture/20260517T180110Z_d89a97f85ee7/02_executor_5352eda5-3bbe-4085-a96f-cfe21922ae63:gen:preflight/message.jsonl`
 
 **system** (verbatim, `message.jsonl` row 1):
 
@@ -953,10 +953,10 @@ Checks: `{'system_nonempty': True, 'user_msg_1_nonempty': True, 'user_msg_2_none
 ### evaluator — partial-plan attempt
 
 - `agent_name`: `evaluator`
-- `scenario`: `pipeline.first_three_messages_capture`
+- `scenario`: `pipeline.initial_messages_capture`
 - `run_id`: `20260517T180110Z_d89a97f85ee7`
 - `role_dir`: `03_evaluator_dc0544d6-cac3-4e75-9932-287f4146d4b0:evaluator`
-- source file: `pipeline.first_three_messages_capture/20260517T180110Z_d89a97f85ee7/03_evaluator_dc0544d6-cac3-4e75-9932-287f4146d4b0:evaluator/message.jsonl`
+- source file: `pipeline.initial_messages_capture/20260517T180110Z_d89a97f85ee7/03_evaluator_dc0544d6-cac3-4e75-9932-287f4146d4b0:evaluator/message.jsonl`
 
 **system** (verbatim, `message.jsonl` row 1):
 
@@ -1114,10 +1114,10 @@ Checks: `{'system_nonempty': True, 'user_msg_1_nonempty': True, 'user_msg_2_none
 ### evaluator — full-plan attempt
 
 - `agent_name`: `evaluator`
-- `scenario`: `pipeline.first_three_messages_capture`
+- `scenario`: `pipeline.initial_messages_capture`
 - `run_id`: `20260517T180110Z_d89a97f85ee7`
 - `role_dir`: `03_evaluator_5352eda5-3bbe-4085-a96f-cfe21922ae63:evaluator`
-- source file: `pipeline.first_three_messages_capture/20260517T180110Z_d89a97f85ee7/03_evaluator_5352eda5-3bbe-4085-a96f-cfe21922ae63:evaluator/message.jsonl`
+- source file: `pipeline.initial_messages_capture/20260517T180110Z_d89a97f85ee7/03_evaluator_5352eda5-3bbe-4085-a96f-cfe21922ae63:evaluator/message.jsonl`
 
 **system** (verbatim, `message.jsonl` row 1):
 
@@ -2431,5 +2431,5 @@ Checks: `{'system_nonempty': True, 'user_msg_1_nonempty': True, 'user_msg_2_none
 - **Instruction quality:** main-agent system prompts (in `agents/profile/main/<name>.md`) embed selection criteria, hard validity rules, and design principles. Helper user_msg_2 enforces tri-part summary structure (advisor) or per-issue resolution (resolver). Explorer user_msg_2 demands concrete findings (file paths, line numbers, symbols).
 - **Verdict — PASS for all sampled roles.** The presence contract is satisfied across the iteration / attempt / routing matrix.
 - **Gap closed:** `AgentMessageJsonlRecorder.record_initial_messages` was extended to accept `seeded_initial_messages` and write them between the system row and the spawn-prompt row. Both the live engine (`engine/query/request.py:_record_initial_messages_once`) and the mock runner (`task_center_runner/agent/mock/runner.py:_record_initial_messages`) now feed seeded messages through. Captured `message.jsonl` files for planner / executor / evaluator now hold three initial rows (system + user_msg_1 + user_msg_2); entry_executor stays at two by design (single-user-message recipe).
-- **Scope notes:** the new scenario file `backend/src/task_center_runner/scenarios/pipeline/first_three_messages_capture.py` registers a complex run (2 iterations with continuation_goal + attempt retry + helper/subagent invocations). The matching pytest test `backend/src/task_center_runner/tests/sweevo/test_first_three_messages_capture.py` was attempted live with the containerised postgres (`backend/docker-compose.postgres.yml`) providing `EPHEMERALOS_DATABASE_URL`. The live run reached the `sweevo_sandbox` session fixture and then **timed out in Daytona sandbox creation** after 300s (`DaytonaTimeoutError: Function 'create' exceeded timeout of 300.0 seconds`) — see the `Daytona pending_build hang root cause` memory entry. The composer / recorder / planner-validation pipeline this report audits is exercised identically by the most recent live runs of `pipeline.iterative_continuation` and `pipeline.attempt_retry_planner_failure`, which is why those are the captured-row source.
+- **Scope notes:** the new scenario file `backend/src/task_center_runner/scenarios/pipeline/initial_messages_capture.py` registers a complex run (2 iterations with continuation_goal + attempt retry + helper/subagent invocations). The matching pytest test `backend/src/task_center_runner/tests/sweevo/test_initial_messages_capture.py` was attempted live with the containerised postgres (`backend/docker-compose.postgres.yml`) providing `EPHEMERALOS_DATABASE_URL`. The live run reached the `sweevo_sandbox` session fixture and then **timed out in Daytona sandbox creation** after 300s (`DaytonaTimeoutError: Function 'create' exceeded timeout of 300.0 seconds`) — see the `Daytona pending_build hang root cause` memory entry. The composer / recorder / planner-validation pipeline this report audits is exercised identically by the most recent live runs of `pipeline.iterative_continuation` and `pipeline.attempt_retry_planner_failure`, which is why those are the captured-row source.
 

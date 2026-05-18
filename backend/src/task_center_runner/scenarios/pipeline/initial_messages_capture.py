@@ -1,6 +1,8 @@
-"""Scenario that exercises the complex composer paths whose first messages
-the matching report (``docs/reports/first_three_messages_report.md``)
-captures.
+"""Scenario that exercises the complex composer paths whose initial
+messages the matching report (``docs/reports/initial_messages_report.md``)
+captures. Pre-Round-3 this captured exactly three rows per main agent;
+Round 3 grew planners to four rows (row 4 = skill composite), so the
+name was generalized to "initial messages."
 
 Combines three orthogonal composer branches into one live run so a single
 ``message.jsonl`` tree carries every variant we want to inspect:
@@ -24,9 +26,9 @@ Combines three orthogonal composer branches into one live run so a single
    chatter.
 
 This scenario does NOT trigger advisor / resolver / subagent calls because
-the mock runner does not currently invoke them — those first-three-message
+the mock runner does not currently invoke them — those initial-message
 captures are produced programmatically by
-``scripts/build_first_three_messages_report.py``, which calls the real
+``scripts/build_initial_messages_report.py``, which calls the real
 builder functions in ``tools/ask_helper/_lib/_compose.py`` and
 ``task_center/context_engine/recipes/role_instruction.py``. Adding a
 helper/subagent dispatch branch to ``MockSquadRunner`` is left as a
@@ -58,9 +60,9 @@ from task_center_runner.scenarios.base import (
 
 
 _CONTINUATION_GOAL = (
-    "Continue the first-three-messages capture by running one more "
-    "preflight in iteration 2 so the continuation planner sees prior "
-    "iteration results."
+    "Continue the initial-messages capture by running one more preflight "
+    "in iteration 2 so the continuation planner sees prior iteration "
+    "results."
 )
 
 
@@ -81,7 +83,7 @@ def _invalid_plan_with_unknown_dep() -> dict[str, Any]:
     }
 
 
-class FirstThreeMessagesCapture(ScenarioBase):
+class InitialMessagesCapture(ScenarioBase):
     """Continuation + attempt retry, single executor task per attempt.
 
     Iteration 1, attempt 1: planner submits an invalid plan → TOOL_CALL_ERROR.
@@ -91,7 +93,7 @@ class FirstThreeMessagesCapture(ScenarioBase):
     preflight; evaluator passes; goal closes succeeded.
     """
 
-    name = "pipeline.first_three_messages_capture"
+    name = "pipeline.initial_messages_capture"
 
     # Bonus knob a future MockSquadRunner extension can read to invoke
     # ask_advisor / ask_resolver / run_subagent inline from the executor
@@ -139,7 +141,7 @@ class FirstThreeMessagesCapture(ScenarioBase):
             submit_evaluation_success,
             {
                 "summary": (
-                    "Captured planner / executor / evaluator first messages "
+                    "Captured planner / executor / evaluator initial messages "
                     f"for iteration {ctx.iteration.sequence_no}."
                 ),
                 "passed_criteria": list(ctx.attempt.evaluation_criteria),
@@ -147,4 +149,4 @@ class FirstThreeMessagesCapture(ScenarioBase):
         )
 
 
-__all__ = ["FirstThreeMessagesCapture"]
+__all__ = ["InitialMessagesCapture"]

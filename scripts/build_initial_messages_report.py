@@ -1,20 +1,18 @@
-"""Harvest first-three-messages for every agent role and write a report.
+"""Harvest initial-messages for every agent role and write a report.
 
 Sources:
-- main agents (entry_executor, planner, executor, evaluator) — first 2 message.jsonl
-  rows (system + user_prompt) from existing live-e2e runs under
-  ``.sweevo_runs/scenario_logs/<scenario>/<run>/...``. The third message
-  (user_msg_1 = context_message) is captured separately because the recorder
-  only stores the spawn prompt, not the seeded initial_messages list. We
-  recover it directly from the renderer by re-rendering a representative
-  packet shape; see :func:`_synthesise_main_user_msg_1`.
+- main agents (entry_executor, planner, executor, evaluator) — initial
+  message.jsonl rows from existing live-e2e runs under
+  ``.sweevo_runs/scenario_logs/<scenario>/<run>/...``. Round 3 planners
+  produce four rows (system + context + role_instruction + skill);
+  executor / evaluator produce three; entry_executor produces two.
 - helpers (advisor, resolver) — programmatically constructed via the actual
   builder functions in ``tools/ask_helper/_lib/_compose.py`` against
   realistic parent context taken from a real planner/executor prompt.
 - subagent (explorer) — system prompt + (parent free-text prompt) user_msg_1
   + (explorer_instruction) user_msg_2.
 
-Writes ``docs/reports/first_three_messages_report.md``. Pure harvester — no
+Writes ``docs/reports/initial_messages_report.md``. Pure harvester — no
 sandbox, no DB, no agent execution. Only the existing on-disk artefacts and
 the live builder code paths are used.
 """
@@ -53,7 +51,7 @@ from task_center.context_engine.recipes.role_instruction import (  # noqa: E402
 
 
 RUNS_DIR = REPO / ".sweevo_runs" / "scenario_logs"
-REPORT_PATH = REPO / "docs" / "reports" / "first_three_messages_report.md"
+REPORT_PATH = REPO / "docs" / "reports" / "initial_messages_report.md"
 
 
 # ----------------------------------------------------------------------------
@@ -161,7 +159,7 @@ def harvest_main_agents() -> list[CapturedAgent]:
     """
     # Prefer the new live scenario run when present — it carries all branches
     # in one tree (attempt retry + continuation + 2 iterations).
-    primary = "pipeline.first_three_messages_capture"
+    primary = "pipeline.initial_messages_capture"
     primary_run = _latest_run(primary)
     if primary_run is not None:
         sources = [
@@ -730,13 +728,13 @@ def render_report(
 ) -> str:
     main_constructed = main_constructed or []
     out: list[str] = []
-    out.append("# First-Three-Messages Capture Report\n")
+    out.append("# Initial-Messages Capture Report\n")
     out.append(
         "## What this report contains\n\n"
-        "First three messages observed at agent launch (system + "
+        "Initial messages observed at agent launch (system + "
         "user_msg_1 + user_msg_2), per agent role. Captured from a live "
         "run of the new scenario "
-        "`pipeline.first_three_messages_capture` (continuation goal + "
+        "`pipeline.initial_messages_capture` (continuation goal + "
         "attempt retry across 2 iterations) executed against real "
         "Postgres + real Daytona sandbox + real composer + real recorder; "
         "only the agent LLM is replaced with the deterministic "
@@ -952,11 +950,11 @@ def render_report(
         "entry_executor stays at two by design (single-user-message recipe).\n"
         "- **Scope notes:** the new scenario file "
         "`backend/src/task_center_runner/scenarios/pipeline/"
-        "first_three_messages_capture.py` registers a complex run (2 "
+        "initial_messages_capture.py` registers a complex run (2 "
         "iterations with continuation_goal + attempt retry + helper/"
         "subagent invocations). The matching pytest test "
         "`backend/src/task_center_runner/tests/sweevo/"
-        "test_first_three_messages_capture.py` was attempted live with the "
+        "test_initial_messages_capture.py` was attempted live with the "
         "containerised postgres (`backend/docker-compose.postgres.yml`) "
         "providing `EPHEMERALOS_DATABASE_URL`. The live run reached the "
         "`sweevo_sandbox` session fixture and then **timed out in Daytona "
