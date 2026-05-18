@@ -26,7 +26,7 @@ from sandbox.execution.env_policy import (
     CommandExecPolicy,
 )
 from sandbox.execution.overlay.change_synthesis import synthesize_writes
-from sandbox.execution.strategy_base import ExecutionStrategy
+from sandbox.execution.strategies.base import ExecutionStrategy
 from sandbox.execution.subprocess_runner import run_command_to_refs
 from sandbox._shared.clock import monotonic_now
 

@@ -19,7 +19,7 @@ from sandbox.execution.env_policy import (
     DEFAULT_COMMAND_EXEC_POLICY,
     CommandExecPolicy,
 )
-from sandbox.execution.strategy_base import ExecutionStrategy
+from sandbox.execution.strategies.base import ExecutionStrategy
 
 NAMESPACE_INFRA_EXIT_CODE = 125
 NAMESPACE_CONTROL_REF = "namespace-control.json"
@@ -93,7 +93,7 @@ class PrivateNamespaceStrategy(ExecutionStrategy):
                     "-Urm",
                     sys.executable,
                     "-m",
-                    "sandbox.execution.namespace_child",
+                    "sandbox.execution.strategies.namespace_child",
                     str(payload_ref),
                 ],
                 stdout=stdout_file,
