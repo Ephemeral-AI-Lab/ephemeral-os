@@ -248,13 +248,18 @@ class CommandExecutor(Protocol):
 
 
 @dataclass
-class WorkspaceReplacementMountSpec:
-    """Filesystem inputs for replacing the assigned workspace root."""
+class OverlayLayout:
+    """Filesystem inputs for replacing the assigned workspace root.
+
+    ``kernel_scratch`` is consumed only by the kernel overlay mount in
+    ``overlay/kernel_mount.py``; the copy-backed strategy ignores it. It is
+    kept on the shared layout for pragmatism — see Option-A refactor §3 #4.
+    """
 
     workspace_root: str
-    lowerdir: str
-    upperdir: str
-    workdir: str
+    base_repo: str
+    writes: str
+    kernel_scratch: str
     scratch_root: str
 
     def __post_init__(self) -> None:
@@ -264,7 +269,7 @@ class WorkspaceReplacementMountSpec:
             raise ValueError("scratch_root must not be empty")
         scratch_root = Path(self.scratch_root).resolve(strict=False)
         resolved_paths: dict[str, Path] = {}
-        for field_name in ("lowerdir", "upperdir", "workdir"):
+        for field_name in ("base_repo", "writes", "kernel_scratch"):
             if not str(getattr(self, field_name)).strip():
                 raise ValueError(f"{field_name} must not be empty")
             path = Path(str(getattr(self, field_name))).resolve(strict=False)
@@ -284,6 +289,11 @@ class WorkspaceReplacementMountSpec:
             seen[path] = field_name
 
 
+# Deprecated alias retained for one release; removed in Step 10 of the
+# execution-package Option-A refactor. New code should import OverlayLayout.
+WorkspaceReplacementMountSpec = OverlayLayout
+
+
 __all__ = [
     "CommandExecRequest",
     "CommandExecResult",
@@ -291,6 +301,7 @@ __all__ = [
     "MountMode",
     "OCCMutationClient",
     "OverlayCapture",
+    "OverlayLayout",
     "OverlayShellRequest",
     "ShellProcessResult",
     "SnapshotManifest",

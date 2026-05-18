@@ -18,8 +18,8 @@ from typing import AbstractSet
 from sandbox.execution.contract import (
     CommandExecRequest,
     MountMode,
+    OverlayLayout,
     ShellProcessResult,
-    WorkspaceReplacementMountSpec,
 )
 from sandbox.execution.env_policy import (
     DEFAULT_COMMAND_EXEC_POLICY,
@@ -48,26 +48,26 @@ class CopyBackedStrategy(ExecutionStrategy):
     def run(
         self,
         *,
-        spec: WorkspaceReplacementMountSpec,
+        spec: OverlayLayout,
         request: CommandExecRequest,
         run_dir: Path,
         timings: dict[str, float],
     ) -> ShellProcessResult:
-        lowerdir = Path(spec.lowerdir)
-        upperdir = Path(spec.upperdir)
-        workdir = Path(spec.workdir)
+        base_repo = Path(spec.base_repo)
+        writes = Path(spec.writes)
+        kernel_scratch = Path(spec.kernel_scratch)
         merged = run_dir / "workspace"
         stdout_ref = run_dir / "stdout.bin"
         stderr_ref = run_dir / "stderr.bin"
 
         mount_start = monotonic_now()
-        for directory in (upperdir, workdir, merged):
+        for directory in (writes, kernel_scratch, merged):
             _assert_under_scratch_root(directory, spec)
             if directory.exists():
                 shutil.rmtree(directory)
             directory.mkdir(parents=True)
-        if lowerdir.exists():
-            shutil.copytree(lowerdir, merged, symlinks=True, dirs_exist_ok=True)
+        if base_repo.exists():
+            shutil.copytree(base_repo, merged, symlinks=True, dirs_exist_ok=True)
         timings["command_exec.mount_workspace_s"] = monotonic_now() - mount_start
 
         run_request = replace(
@@ -117,7 +117,7 @@ class CopyBackedStrategy(ExecutionStrategy):
 
 def _assert_under_scratch_root(
     path: Path,
-    spec: WorkspaceReplacementMountSpec,
+    spec: OverlayLayout,
 ) -> None:
     scratch_root = Path(spec.scratch_root).resolve(strict=False)
     resolved = path.resolve(strict=False)

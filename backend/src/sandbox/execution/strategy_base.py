@@ -7,8 +7,8 @@ from typing import Protocol
 
 from sandbox.execution.contract import (
     CommandExecRequest,
+    OverlayLayout,
     ShellProcessResult,
-    WorkspaceReplacementMountSpec,
 )
 
 
@@ -22,7 +22,7 @@ class ExecutionStrategy(Protocol):
     def run(
         self,
         *,
-        spec: WorkspaceReplacementMountSpec,
+        spec: OverlayLayout,
         request: CommandExecRequest,
         run_dir: Path,
         timings: dict[str, float],

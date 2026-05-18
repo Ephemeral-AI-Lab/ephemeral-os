@@ -13,11 +13,11 @@ from sandbox.execution.contract import (
     CommandExecResult,
     MountMode,
     OCCMutationClient,
+    OverlayLayout,
     SnapshotManifest,
     ShellProcessResult,
     WorkspaceCapture,
     WorkspaceLeaseClient,
-    WorkspaceReplacementMountSpec,
 )
 from sandbox.execution.overlay_capture import capture_changes
 from sandbox.execution.env_policy import (
@@ -47,7 +47,7 @@ WorkspaceCommandRunner = Callable[
 
 def run_workspace_replaced_command(
     *,
-    spec: WorkspaceReplacementMountSpec,
+    spec: OverlayLayout,
     request: CommandExecRequest,
     run_dir: str | Path,
     timings: dict[str, float],
@@ -118,11 +118,11 @@ async def execute_command(
 
     released = False
     try:
-        spec = WorkspaceReplacementMountSpec(
+        spec = OverlayLayout(
             workspace_root=request.workspace_root,
-            lowerdir=lease.lowerdir,
-            upperdir=str(run_dir / "upper"),
-            workdir=str(run_dir / "work"),
+            base_repo=lease.lowerdir,
+            writes=str(run_dir / "upper"),
+            kernel_scratch=str(run_dir / "work"),
             scratch_root=str(storage_root),
         )
         runner_kwargs = {
@@ -138,13 +138,13 @@ async def execute_command(
         capture_start = monotonic_now()
         if process.mount_mode == MountMode.COPY_BACKED:
             path_changes = capture_changes(
-                spec.upperdir,
-                lowerdir=spec.lowerdir,
+                spec.writes,
+                lowerdir=spec.base_repo,
                 workspace_root=process.mounted_workspace_root,
                 timings=timings,
             )
         else:
-            path_changes = capture_changes(spec.upperdir, timings=timings)
+            path_changes = capture_changes(spec.writes, timings=timings)
         timings["command_exec.capture_upperdir_s"] = (
             monotonic_now() - capture_start
         )
