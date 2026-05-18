@@ -19,7 +19,7 @@ class IterationStatus(StrEnum):
 
 class IterationCreationReason(StrEnum):
     INITIAL = "initial"
-    PARTIAL_CONTINUATION = "partial_continuation"
+    DEFERRED_GOAL_CONTINUATION = "partial_continuation"
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,7 +34,7 @@ class Iteration:
     attempt_budget: int
     status: IterationStatus
     attempt_ids: tuple[str, ...]
-    next_iteration_handoff_goal: str | None
+    deferred_goal_for_next_iteration: str | None
     created_at: datetime
     updated_at: datetime
     closed_at: datetime | None
@@ -82,9 +82,9 @@ class TerminalSuccess:
 
 
 @dataclass(frozen=True, slots=True)
-class SuccessContinue:
-    goal: str
-    kind: Literal["success_continue"] = "success_continue"
+class SuccessDeferred:
+    deferred_goal_for_next_iteration: str
+    kind: Literal["success_deferred"] = "success_deferred"
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,7 +94,7 @@ class AttemptPlanFailed:
     kind: Literal["attempt_plan_failed"] = "attempt_plan_failed"
 
 
-ClosureOutcome = TerminalSuccess | SuccessContinue | AttemptPlanFailed
+ClosureOutcome = TerminalSuccess | SuccessDeferred | AttemptPlanFailed
 
 
 @dataclass(frozen=True, slots=True)

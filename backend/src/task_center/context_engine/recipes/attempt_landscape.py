@@ -10,7 +10,7 @@ groups every failed-attempt block (plus the current iteration's
 The body contains:
 
 * ``<attempt_plan>`` with nested ``<plan_spec>`` and (when present)
-  ``<next_iteration_handoff_goal>`` children — both wrap planner-supplied text.
+  ``<deferred_goal_for_next_iteration>`` children — both wrap planner-supplied text.
 * ``<generator_outcomes>`` with a recipe-generated ``<status_summary>`` and one
   ``<task id="..." status="...">`` child per generator task. Per-task summary
   text is user-supplied and so gets the hostile-body sanitizer applied below.
@@ -61,7 +61,7 @@ _NO_DOWNSTREAM_STAGES = frozenset(
 _STRUCTURAL_CLOSERS: tuple[str, ...] = (
     "</attempt_plan>",
     "</plan_spec>",
-    "</next_iteration_handoff_goal>",
+    "</deferred_goal_for_next_iteration>",
     "</generator_outcomes>",
     "</status_summary>",
     "</task>",
@@ -142,10 +142,10 @@ def _render_failed_attempt_body(
 def _render_attempt_plan(attempt: Attempt) -> str:
     plan_spec = _sanitize_user_text(attempt.plan_spec or "(not submitted)", attempt.id)
     children = [f"<plan_spec>\n{plan_spec}\n</plan_spec>"]
-    if attempt.next_iteration_handoff_goal:
-        handoff = _sanitize_user_text(attempt.next_iteration_handoff_goal, attempt.id)
+    if attempt.deferred_goal_for_next_iteration:
+        handoff = _sanitize_user_text(attempt.deferred_goal_for_next_iteration, attempt.id)
         children.append(
-            f"<next_iteration_handoff_goal>\n{handoff}\n</next_iteration_handoff_goal>"
+            f"<deferred_goal_for_next_iteration>\n{handoff}\n</deferred_goal_for_next_iteration>"
         )
     return "<attempt_plan>\n" + "\n".join(children) + "\n</attempt_plan>"
 

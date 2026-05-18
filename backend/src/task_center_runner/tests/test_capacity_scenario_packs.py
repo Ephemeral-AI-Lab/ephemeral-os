@@ -100,10 +100,10 @@ def test_planner_validation_capacity_scenarios_encode_rejection_cases() -> None:
     assert _deps_by_id(cycle) == {"a": ("b",), "b": ("a",)}
 
     missing_goal = SCENARIO_REGISTRY[
-        "planner_validation.partial_without_continuation_goal"
+        "planner_validation.defers_without_deferred_goal"
     ]().planner_response(_ctx())
-    assert missing_goal.tool.name == "submit_plan_continues_goal"
-    assert "next_iteration_handoff_goal" not in missing_goal.args
+    assert missing_goal.tool.name == "submit_plan_defers_goal"
+    assert "deferred_goal_for_next_iteration" not in missing_goal.args
 
     unknown_agent = _planner_args("planner_validation.unknown_agent_name", _ctx())
     assert unknown_agent["tasks"][0]["agent_name"] == "missing_generator_agent"

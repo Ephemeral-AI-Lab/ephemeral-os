@@ -6,7 +6,7 @@ from task_center.attempt import AttemptFailReason
 from task_center.iteration.state import (
     PriorAttemptEntry,
     AttemptPlanFailed,
-    SuccessContinue,
+    SuccessDeferred,
     IterationClosureReport,
     TerminalSuccess,
 )
@@ -17,10 +17,10 @@ def test_terminal_success_constructs():
     assert o.kind == "terminal_success"
 
 
-def test_success_continue_carries_goal():
-    o = SuccessContinue(goal="next")
-    assert o.kind == "success_continue"
-    assert o.goal == "next"
+def test_success_deferred_carries_deferred_goal():
+    o = SuccessDeferred(deferred_goal_for_next_iteration="next")
+    assert o.kind == "success_deferred"
+    assert o.deferred_goal_for_next_iteration == "next"
 
 
 def test_attempt_plan_failed_carries_history():

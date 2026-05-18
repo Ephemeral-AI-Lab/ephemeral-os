@@ -16,7 +16,7 @@ from task_center.iteration.state import (
     IterationClosureReport,
     IterationCreationReason,
     IterationStatus,
-    SuccessContinue,
+    SuccessDeferred,
     TerminalSuccess,
 )
 
@@ -57,7 +57,7 @@ _STATE_EXPORTS = [
     "IterationClosureReport",
     "IterationCreationReason",
     "IterationStatus",
-    "SuccessContinue",
+    "SuccessDeferred",
     "TerminalSuccess",
 ]
 
@@ -90,6 +90,6 @@ __all__ = [
     "IterationManagerRegistry",
     "IterationStatus",
     "OrchestratorFactory",
-    "SuccessContinue",
+    "SuccessDeferred",
     "TerminalSuccess",
 ]

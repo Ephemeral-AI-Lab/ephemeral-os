@@ -1,5 +1,5 @@
-# evaluator — iteration 1, attempt 2 (evaluator_instruction branch: is_partial=True; partial plan boundary present)
-- source: `goal_01_7184719f-61d7-4854-85b0-bf99617383c2/iteration_01_39822180-9bd4-4b97-9974-9000db830318/attempt_02_c0b8559a-f5c1-44dc-99f5-cd9a9a8fc2f1/03_evaluator_c0b8559a-f5c1-44dc-99f5-cd9a9a8fc2f1:evaluator/message.jsonl`
+# evaluator — iteration 1, attempt 2 (evaluator_instruction branch: has_deferred_goal_for_next_iteration=True; attempt with a deferred goal)
+- source: `goal_01_e7e09fbf-830b-4d30-bf55-28ef7badeb15/iteration_01_441ceae4-65b7-498e-9f51-a80b5a289e44/attempt_02_14a63bbe-88e8-4fc1-bef6-a7ff55d0f4f1/03_evaluator_14a63bbe-88e8-4fc1-bef6-a7ff55d0f4f1:evaluator/message.jsonl`
 
 ## system
 
@@ -1873,13 +1873,13 @@ Your task is to make the minimal changes to non-tests files in the /testbed dire
 <plan_spec>
 Run a workspace preflight probe and continue with the follow-up goal.
 </plan_spec>
-<next_iteration_handoff_goal>
+<deferred_goal_for_next_iteration>
 Continue the initial-messages capture by running one more preflight in iteration 2 so the continuation planner sees prior iteration results.
-</next_iteration_handoff_goal>
+</deferred_goal_for_next_iteration>
 </attempt_plan>
 
 <completed_tasks>
-<task id="c0b8559a-f5c1-44dc-99f5-cd9a9a8fc2f1:gen:preflight" status="done">
+<task id="14a63bbe-88e8-4fc1-bef6-a7ff55d0f4f1:gen:preflight" status="done">
 Workspace preflight completed.
 </task>
 </completed_tasks>
@@ -1894,7 +1894,7 @@ Workspace preflight completed.
 
 ```
 <Task Guidance>
-You are evaluating an intentionally partial attempt (see the `<next_iteration_handoff_goal>` child of `<attempt_plan>`). This attempt is not expected to solve the full iteration goal — it is expected to make progress and hand off remaining work via `next_iteration_handoff_goal`. Pass/fail against `<evaluation_criteria>` for what this attempt promised; do not penalize for incomplete work that was explicitly deferred.
+You are evaluating an intentionally partial attempt (see the `<deferred_goal_for_next_iteration>` child of `<attempt_plan>`). This attempt is not expected to solve the full iteration goal — it is expected to make progress and hand off remaining work via `deferred_goal_for_next_iteration`. Pass/fail against `<evaluation_criteria>` for what this attempt promised; do not penalize for incomplete work that was explicitly deferred.
 
 <terminal_tool_selection>
 Pick exactly one based on outcome:

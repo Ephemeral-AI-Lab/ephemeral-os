@@ -11,6 +11,7 @@ from tools.submission.context import (
     resolve_attempt_submission_context,
 )
 from tools.submission.planner._schemas import (
+    SUBMISSION_KIND_PLANNER_COMPLETES,
     PlanTaskInput,
     PlannerSubmissionBaseInput,
     build_planner_submission,
@@ -43,12 +44,12 @@ async def submit_plan_closes_goal(
 
     submission, error = build_planner_submission(
         submission_context=submission_context,
-        kind="full",
+        kind="completes",
         plan_spec=plan_spec,
         evaluation_criteria=evaluation_criteria,
         tasks=[PlanTaskInput.model_validate(task) for task in tasks],
         task_specs=task_specs,
-        next_iteration_handoff_goal=None,
+        deferred_goal_for_next_iteration=None,
     )
     if error is not None or submission is None:
         return ToolResult(output=error or "Invalid planner submission.", is_error=True)
@@ -61,7 +62,7 @@ async def submit_plan_closes_goal(
     return ToolResult(
         output="Accepted planner submission.",
         metadata={
-            "submission_kind": "planner_full",
+            "submission_kind": SUBMISSION_KIND_PLANNER_COMPLETES,
             "task_center_task_id": submission_context.task_center_task_id,
             "attempt_id": submission_context.attempt.id,
         },

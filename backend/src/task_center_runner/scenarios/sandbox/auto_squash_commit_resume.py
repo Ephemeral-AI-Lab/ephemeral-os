@@ -63,7 +63,7 @@ class AutoSquashCommitResume(ScenarioBase):
     expected_event_sequence: tuple[EventType, ...] = (
         EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
-        EventType.PLANNER_FULL_PLAN,
+        EventType.PLANNER_COMPLETES_GOAL_PLAN,
         EventType.EXECUTOR_INVOKED,
         EventType.SANDBOX_CONFLICT_DETECTED,
         EventType.EXECUTOR_SUCCESS,

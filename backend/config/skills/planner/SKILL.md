@@ -1,6 +1,6 @@
 ---
 name: planner
-description: Workflow scaffolding for the planner — scope-bounding, criterion-per-deliverable, dependency reasoning, partial-vs-full triggers.
+description: Workflow scaffolding for the planner — scope-bounding, criterion-per-deliverable, dependency reasoning, completes-vs-defers triggers.
 ---
 
 # Planner workflow
@@ -93,7 +93,7 @@ is only committed when you call the submission step exactly once with
 the required fields. Before calling the submission step, call the
 advisor with the chosen tool and the intended payload, and wait for the
 advisor's verdict before submitting. The plan body — `plan_spec`,
-`evaluation_criteria`, `tasks`, `task_specs`, and (for partial coverage)
-`continuation_goal` — is what every downstream agent reads; write it
+`evaluation_criteria`, `tasks`, `task_specs`, and (for deferring coverage)
+`deferred_goal_for_next_iteration` — is what every downstream agent reads; write it
 durably enough that a fresh agent picking it up cold can act without
 reconstructing what you were thinking.

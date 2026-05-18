@@ -1,6 +1,6 @@
 ---
 name: planner_full_only
-description: Workflow scaffolding for the depth-restricted planner — partial coverage is unavailable; bound the iteration slice and plan full coverage.
+description: Workflow scaffolding for the depth-restricted planner — deferring coverage is unavailable; bound the iteration slice and plan complete coverage.
 ---
 
 # Planner workflow (full-coverage only)

@@ -85,7 +85,7 @@ def _make_planner_def():
         description="planner",
         agent_kind=AgentKind.PLANNER,
         context_recipe="planner",
-        terminals=["submit_plan_closes_goal", "submit_plan_continues_goal"],
+        terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
     )
 
 

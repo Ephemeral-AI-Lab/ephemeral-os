@@ -29,7 +29,7 @@ async def test_partial_parent_routes_child_planner_to_full_only_agent_md(
     audit_dir: Path,
     stores: TaskCenterStoreBundle,
 ) -> None:
-    scenario = SCENARIO_REGISTRY["pipeline.partial_parent_planner_full_only"]()
+    scenario = SCENARIO_REGISTRY["pipeline.deferred_parent_planner_full_only"]()
     report = await run_sweevo_scenario(
         scenario,
         instance=sweevo_instance,
@@ -47,7 +47,7 @@ async def test_partial_parent_routes_child_planner_to_full_only_agent_md(
         "planner_full_only",
         "planner",
     ]
-    assert _tool_count(report.tool_calls, "submit_plan_continues_goal") == 1
+    assert _tool_count(report.tool_calls, "submit_plan_defers_goal") == 1
     assert _tool_count(report.tool_calls, "submit_plan_closes_goal") == 2
     _assert_partial_parent_graph(report.graph_summary)
     _assert_full_only_agent_md_was_recorded(report.run_dir)
@@ -72,7 +72,7 @@ def _assert_partial_parent_graph(graph_summary: dict[str, Any]) -> None:
     )
 
     assert len(root["iterations"]) == 2
-    assert root["iterations"][0]["attempts"][-1]["next_iteration_handoff_goal"]
+    assert root["iterations"][0]["attempts"][-1]["deferred_goal_for_next_iteration"]
     assert str(child["requested_by_task_id"]).endswith(":delegate_child")
 
 
@@ -80,7 +80,7 @@ def _assert_full_only_agent_md_was_recorded(run_dir: Path) -> None:
     prompts = list(_system_prompts_for(run_dir, "planner_full_only"))
     assert prompts, f"no planner_full_only system prompt in {run_dir}"
     assert any("Continuing the goal is disabled" in prompt for prompt in prompts)
-    assert all("submit_plan_continues_goal" not in prompt for prompt in prompts)
+    assert all("submit_plan_defers_goal" not in prompt for prompt in prompts)
 
 
 def _system_prompts_for(run_dir: Path, agent_name: str) -> Iterator[str]:

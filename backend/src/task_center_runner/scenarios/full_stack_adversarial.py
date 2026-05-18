@@ -16,7 +16,7 @@ from tools.submission.verifier import (
 )
 from tools.submission.planner import (
     submit_plan_closes_goal,
-    submit_plan_continues_goal,
+    submit_plan_defers_goal,
 )
 
 from task_center_runner.audit.events import EventType
@@ -51,9 +51,9 @@ class FullStackAdversarial(ScenarioBase):
     expected_event_sequence: tuple[EventType, ...] = (
         EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
-        EventType.PLANNER_FULL_PLAN,
+        EventType.PLANNER_COMPLETES_GOAL_PLAN,
         EventType.EVALUATOR_FAILURE,
-        EventType.PLANNER_PARTIAL_PLAN,
+        EventType.PLANNER_DEFERS_GOAL_PLAN,
         EventType.VERIFIER_FAILURE,
         EventType.RECURSIVE_GOAL_REQUESTED,
         EventType.RECURSIVE_GOAL_COMPLETED,
@@ -191,29 +191,29 @@ class FullStackAdversarial(ScenarioBase):
         self._ensure_user_input_plan(ctx)
         self._ensure_matrix_cells(ctx)
         if iteration.sequence_no == 1 and attempt.attempt_sequence_no == 1:
-            return ToolCallSpec(submit_plan_closes_goal, _inventory_plan(kind="full"))
+            return ToolCallSpec(submit_plan_closes_goal, _inventory_plan(kind="completes"))
         if iteration.sequence_no == 1:
             return ToolCallSpec(
-                submit_plan_continues_goal,
+                submit_plan_defers_goal,
                 _inventory_plan(
-                    kind="partial",
-                    next_iteration_handoff_goal=(
+                    kind="defers",
+                    deferred_goal_for_next_iteration=(
                         "Execute the adversarial subsystem wave with OCC, "
                         "overlay, layer-stack, and LSP coverage."
                     ),
                 ),
             )
         if iteration.sequence_no == 2 and attempt.attempt_sequence_no == 1:
-            return ToolCallSpec(submit_plan_continues_goal, self._subsystem_wave_plan(ctx))
+            return ToolCallSpec(submit_plan_defers_goal, self._subsystem_wave_plan(ctx))
         if iteration.sequence_no == 2:
-            return ToolCallSpec(submit_plan_continues_goal, self._retry_continuation_plan(ctx))
+            return ToolCallSpec(submit_plan_defers_goal, self._retry_deferred_plan(ctx))
         return ToolCallSpec(submit_plan_closes_goal, self._final_plan(ctx))
 
     def _recursive_planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         iteration = ctx.iteration
         if iteration.sequence_no == 1:
             return ToolCallSpec(
-                submit_plan_continues_goal,
+                submit_plan_defers_goal,
                 {
                     "plan_spec": (
                         "Execute delegated oversized full-stack matrix slices."
@@ -250,7 +250,7 @@ class FullStackAdversarial(ScenarioBase):
                             "VERIFY checkpoint=recursive_wave dependency_count=2"
                         ),
                     },
-                    "next_iteration_handoff_goal": (
+                    "deferred_goal_for_next_iteration": (
                         "Write the recursive full-stack close report and verify it."
                     ),
                 },
@@ -351,13 +351,13 @@ class FullStackAdversarial(ScenarioBase):
             ],
             "tasks": tasks,
             "task_specs": task_specs,
-            "next_iteration_handoff_goal": (
+            "deferred_goal_for_next_iteration": (
                 "Retry with recursive oversized matrix delegation and final "
                 "reconciliation after subsystem artifacts exist."
             ),
         }
 
-    def _retry_continuation_plan(self, ctx: ScenarioContext) -> dict[str, Any]:
+    def _retry_deferred_plan(self, ctx: ScenarioContext) -> dict[str, Any]:
         plan = self._ensure_user_input_plan(ctx)
         recursive = _recursive_package(plan.packages)
         package_id = recursive.id if recursive is not None else "pkg_recursive_unknown"
@@ -398,7 +398,7 @@ class FullStackAdversarial(ScenarioBase):
                     "VERIFY checkpoint=recursive_return dependency_count=2"
                 ),
             },
-            "next_iteration_handoff_goal": (
+            "deferred_goal_for_next_iteration": (
                 "Run the final release guard and evaluator after recursive close."
             ),
         }
@@ -501,7 +501,7 @@ class FullStackAdversarial(ScenarioBase):
 def _inventory_plan(
     *,
     kind: str,
-    next_iteration_handoff_goal: str | None = None,
+    deferred_goal_for_next_iteration: str | None = None,
 ) -> dict[str, Any]:
     args: dict[str, Any] = {
         "plan_spec": "Inventory rendered SWE-EVO user input.",
@@ -523,9 +523,9 @@ def _inventory_plan(
             "inventory_guard": "VERIFY checkpoint=inventory dependency_count=1",
         },
     }
-    if kind == "partial":
-        assert next_iteration_handoff_goal is not None
-        args["next_iteration_handoff_goal"] = next_iteration_handoff_goal
+    if kind == "defers":
+        assert deferred_goal_for_next_iteration is not None
+        args["deferred_goal_for_next_iteration"] = deferred_goal_for_next_iteration
     return args
 
 

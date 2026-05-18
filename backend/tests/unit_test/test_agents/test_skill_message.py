@@ -17,7 +17,7 @@ def _make_planner_def(terminals: list[str] | None = None) -> AgentDefinition:
         context_recipe="planner",
         terminals=terminals
         if terminals is not None
-        else ["submit_plan_closes_goal", "submit_plan_continues_goal"],
+        else ["submit_plan_closes_goal", "submit_plan_defers_goal"],
     )
 
 
@@ -54,7 +54,7 @@ def test_terminal_tool_selection_block_matches_registry_catalog(tmp_path: Path):
     skill_file.parent.mkdir()
     skill_file.write_text("# body")
     planner_def = _make_planner_def(
-        terminals=["submit_plan_closes_goal", "submit_plan_continues_goal"]
+        terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"]
     )
 
     msg = build_skill_message(skill_file, planner_def)

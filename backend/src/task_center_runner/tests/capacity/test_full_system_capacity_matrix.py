@@ -166,7 +166,7 @@ def _assert_tool_and_event_capacity(report: Any) -> None:
     )
 
     required_events = {
-        EventType.PLANNER_PARTIAL_PLAN,
+        EventType.PLANNER_DEFERS_GOAL_PLAN,
         EventType.VERIFIER_FAILURE,
         EventType.RECURSIVE_GOAL_REQUESTED,
         EventType.RECURSIVE_GOAL_COMPLETED,

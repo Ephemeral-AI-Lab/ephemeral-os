@@ -44,16 +44,16 @@ def assert_iteration_sequence_contiguous(goal: Goal, new_sequence_no: int) -> No
         )
 
 
-def assert_continuation_iteration_predecessor(previous: Iteration) -> None:
+def assert_predecessor_has_deferred_goal_for_next_iteration(previous: Iteration) -> None:
     if previous.status != IterationStatus.SUCCEEDED:
         raise TaskCenterInvariantViolation(
             f"Continuation requires predecessor iteration {previous.id!r} to be SUCCEEDED, "
             f"not {previous.status}"
         )
-    if previous.next_iteration_handoff_goal is None:
+    if previous.deferred_goal_for_next_iteration is None:
         raise TaskCenterInvariantViolation(
             f"Continuation requires predecessor iteration {previous.id!r} to have a "
-            f"next_iteration_handoff_goal; none was recorded"
+            f"deferred_goal_for_next_iteration; none was recorded"
         )
 
 
@@ -144,7 +144,7 @@ __all__ = [
     "assert_attempt_not_closed",
     "assert_attempt_sequence_contiguous",
     "assert_attempt_stage",
-    "assert_continuation_iteration_predecessor",
+    "assert_predecessor_has_deferred_goal_for_next_iteration",
     "assert_evaluator_task_for_submission",
     "assert_fail_reason_present_on_failure",
     "assert_generator_task_for_submission",

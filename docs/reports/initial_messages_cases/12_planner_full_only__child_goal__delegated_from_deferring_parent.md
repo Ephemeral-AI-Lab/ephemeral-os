@@ -1,6 +1,6 @@
 # planner_full_only — child goal delegated from a partial-plan parent (variant target: only `submit_plan_closes_goal` is available)
-- source: `pipeline.partial_parent_planner_full_only/20260518T213118Z_cf9cf3003e90/goal_02_83a72018-8fa0-404b-9041-0493dfc168ea/iteration_01_e27304da-a30f-40b6-a98c-d7c910c180f0/attempt_01_15e8656a-a166-484a-9018-4aea1e082323/01_planner_15e8656a-a166-484a-9018-4aea1e082323:planner/message.jsonl`
-- notes: The parent attempt submitted a partial plan that delegated work to a child goal. The child goal's planner is resolved through the ``nested_goal_depth_gt_1`` variant to ``planner_full_only`` — a leaf planner profile whose ``terminals:`` frontmatter list omits ``submit_plan_continues_goal``. Row 4's ``<terminal_tool_selection>`` block therefore lists only ``submit_plan_closes_goal``.
+- source: `pipeline.deferred_parent_planner_full_only/20260518T223048Z_c7ebf0a7c41b/goal_02_1d1be4ea-5979-4169-b842-3712fccbe290/iteration_01_c8a8b2fe-dd95-48f1-b39c-232d8c68d687/attempt_01_61ef54c2-fe78-4d2b-ba1d-2a4ddb8dcb8b/01_planner_61ef54c2-fe78-4d2b-ba1d-2a4ddb8dcb8b:planner/message.jsonl`
+- notes: The parent attempt submitted a partial plan that delegated work to a child goal. The child goal's planner is resolved through the ``nested_goal_depth_gt_1`` variant to ``planner_full_only`` — a leaf planner profile whose ``terminals:`` frontmatter list omits ``submit_plan_defers_goal``. Row 4's ``<terminal_tool_selection>`` block therefore lists only ``submit_plan_closes_goal``.
 
 ## system
 
@@ -109,7 +109,7 @@ Resolve the delegated child goal requested by an executor whose parent attempt s
 
 ```
 <Task Guidance>
-You are planning the first attempt for this iteration's goal. No prior attempts exist in this iteration. Propose a plan that decomposes the iteration goal into generator tasks with a clear evaluation contract. If you cannot solve the iteration in one attempt, submit a partial plan with a `next_iteration_handoff_goal` so the next iteration can pick up where this one ends. When the iteration goal is a list of independent items (for example a PR-description changelog of features and fixes), prefer a wide parallel DAG with one sibling generator task per item and one criterion per item; coalescing into a single 'all items done' criterion turns partial progress into total failure. If one attempt cannot fit every item, bind a tighter set of items here. If you defer work via `next_iteration_handoff_goal`, make that handoff the next bounded slice only; do not dump the entire remaining backlog into it.
+You are planning the first attempt for this iteration's goal. No prior attempts exist in this iteration. Propose a plan that decomposes the iteration goal into generator tasks with a clear evaluation contract. If you cannot solve the iteration in one attempt, submit a partial plan with a `deferred_goal_for_next_iteration` so the next iteration can pick up where this one ends. When the iteration goal is a list of independent items (for example a PR-description changelog of features and fixes), prefer a wide parallel DAG with one sibling generator task per item and one criterion per item; coalescing into a single 'all items done' criterion turns partial progress into total failure. If one attempt cannot fit every item, bind a tighter set of items here. If you defer work via `deferred_goal_for_next_iteration`, make that handoff the next bounded slice only; do not dump the entire remaining backlog into it.
 
 <terminal_tool_selection>
 Pick exactly one based on outcome:

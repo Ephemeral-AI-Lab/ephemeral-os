@@ -76,7 +76,7 @@ Source: `task_center/context_engine/recipes/evaluator.py:30-106`. Required scope
 | 2..N | `prior_episode_specification` + `prior_episode_summary` pairs (under `# Previous Episode Results`) | HIGH for immediate prior, MEDIUM for older | `sequence_no > 1` |
 | N+1 | `episode_goal` (under `# Current Episode`) | REQUIRED | `sequence_no > 1` |
 | N+2 | `task_specification` | **REQUIRED** | `attempt.task_specification` non-empty |
-| N+3 | `partial_plan_boundary` | **REQUIRED** | `attempt.continuation_goal` non-empty |
+| N+3 | `partial_plan_boundary` | **REQUIRED** | `attempt.deferred_goal_for_next_iteration` non-empty |
 | ... | `completed_task_summary` × N (under `# Dependency Results`) | HIGH | One per id in `attempt.generator_task_ids`; rendered via `latest_summary_text` |
 | last | `evaluation_criteria` | **REQUIRED** | `attempt.evaluation_criteria` non-empty, bullet-formatted |
 
@@ -128,8 +128,8 @@ Two terminal tools (`tools/submission/main_agent/evaluator/`):
 
 | Verdict + attempt state | Episode result |
 |---|---|
-| PASS, `continuation_goal is None` | `EpisodeClosureReport(outcome=TerminalSuccess)` → episode closes; mission can succeed. |
-| PASS, `continuation_goal is not None` | `EpisodeClosureReport(outcome=SuccessContinue(goal=...))` → new continuation episode created with `creation_reason=PARTIAL_CONTINUATION`. |
+| PASS, `deferred_goal_for_next_iteration is None` | `EpisodeClosureReport(outcome=TerminalSuccess)` → episode closes; mission can succeed. |
+| PASS, `deferred_goal_for_next_iteration is not None` | `EpisodeClosureReport(outcome=SuccessDeferred(deferred_goal_for_next_iteration=...))` → new continuation episode created with `creation_reason=DEFERRED_GOAL_CONTINUATION`. |
 | FAIL, episode has budget remaining | New attempt created via `create_next_attempt` → new planner spawn with this attempt added to the failed landscape. |
 | FAIL, episode budget exhausted | `_close_episode_failed` → `AttemptPlanFailed(failure_summary, attempted_plan_history)` propagates up. |
 
@@ -159,9 +159,9 @@ There is no runtime pre-hook that checks resolver-loop closure before success. S
 
 The evaluator _can_ use `read_file`/`shell` to inspect the sandbox directly. But the prompt-level rubric application is summary-driven; the sandbox tools exist for adjudicating gaps the summaries don't fully resolve.
 
-**5. PASS is irreversible; FAIL is retryable.** A PASS closes the attempt and may close the entire episode (if no `continuation_goal`). A FAIL closes the attempt but the episode lives on while budget remains. This asymmetry shapes evaluator caution: passing too easily is harder to recover from than failing too strictly.
+**5. PASS is irreversible; FAIL is retryable.** A PASS closes the attempt and may close the entire episode (if no `deferred_goal_for_next_iteration`). A FAIL closes the attempt but the episode lives on while budget remains. This asymmetry shapes evaluator caution: passing too easily is harder to recover from than failing too strictly.
 
-**6. The evaluator is the only role with a binary closing authority over an episode.** A planner failure or a generator failure also closes the attempt as FAILED, but the episode merely retries. Only the evaluator's PASS can deliver `TerminalSuccess` or `SuccessContinue`. Only its FAILED + exhausted budget delivers `AttemptPlanFailed`. The lifecycle's terminal outcomes flow through this one role.
+**6. The evaluator is the only role with a binary closing authority over an episode.** A planner failure or a generator failure also closes the attempt as FAILED, but the episode merely retries. Only the evaluator's PASS can deliver `TerminalSuccess` or `SuccessDeferred`. Only its FAILED + exhausted budget delivers `AttemptPlanFailed`. The lifecycle's terminal outcomes flow through this one role.
 
 **7. The resolver-loop signal is asymmetric.** The `resolver_limit` notification reminder fires regardless of whether the evaluator intends to pass or fail. The intent is to keep the evaluator honest about unresolved fixes when considering success — submitting failure honestly is always allowed, but waving through a success when the resolver loop has not closed should be a deliberate decision the evaluator owns.
 
@@ -211,7 +211,7 @@ This section traces — end-to-end — how the evaluator's `task_input` string i
 │      blocks  = mission_episode_blocks(mission, episode, episodes)       │
 │      if attempt.task_specification:                                     │
 │          blocks += [ task_specification block REQUIRED ]                │
-│      if attempt.continuation_goal:                                      │
+│      if attempt.deferred_goal_for_next_iteration:                                      │
 │          blocks += [ partial_plan_boundary block REQUIRED ]             │
 │      for task_id in attempt.generator_task_ids:                         │
 │          task = task_store.get_task(task_id)                            │
@@ -276,11 +276,11 @@ Builder decisions:
   attempt.task_specification truthy
     → append task_specification block REQUIRED
 
-  attempt.continuation_goal truthy
+  attempt.deferred_goal_for_next_iteration truthy
     → append partial_plan_boundary block REQUIRED
       text starts with:
         plan_kind: partial
-        continuation_goal: ...
+        deferred_goal_for_next_iteration: ...
 
   for task_id in ["gen-1","gen-2","gen-3"]:
     latest_summary_text(summaries):
@@ -406,7 +406,7 @@ The framing front-loads context (mission → prior history → current goal), th
                 │   ├── attempt.task_specification ───► task_specification block
                 │   │                                    (REQUIRED)
                 │   │
-                │   ├── attempt.continuation_goal ────► partial_plan_boundary block
+                │   ├── attempt.deferred_goal_for_next_iteration ────► partial_plan_boundary block
                 │   │                                    (REQUIRED, partial attempts only)
                 │   ├── attempt.evaluation_criteria ──► evaluation_criteria block
                 │   │   "- "-joined into bullets        (REQUIRED, last position)

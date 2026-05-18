@@ -16,6 +16,13 @@ from task_center import (
 from tools.submission.context import AttemptSubmissionContext
 
 
+# `submission_kind` payload string constants.
+# Symbol names reflect the new vocabulary; string VALUES are pinned to the
+# legacy form until FU-2 (separate PR) updates persisted audit dict values.
+SUBMISSION_KIND_PLANNER_DEFERS = "planner_partial"
+SUBMISSION_KIND_PLANNER_COMPLETES = "planner_full"
+
+
 class PlanTaskInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -104,12 +111,12 @@ def _is_generator_capable_agent(agent_name: str) -> bool:
 def build_planner_submission(
     *,
     submission_context: AttemptSubmissionContext,
-    kind: Literal["full", "partial"],
+    kind: Literal["completes", "defers"],
     plan_spec: str,
     evaluation_criteria: list[str],
     tasks: list[PlanTaskInput],
     task_specs: dict[str, str],
-    next_iteration_handoff_goal: str | None,
+    deferred_goal_for_next_iteration: str | None,
 ) -> tuple[PlannerSubmission | None, str | None]:
     task_id = submission_context.task_center_task_id
     if task_id != submission_context.attempt.planner_task_id:
@@ -163,7 +170,7 @@ def build_planner_submission(
             plan_spec=plan_spec,
             evaluation_criteria=tuple(evaluation_criteria),
             tasks=planned,
-            next_iteration_handoff_goal=next_iteration_handoff_goal,
+            deferred_goal_for_next_iteration=deferred_goal_for_next_iteration,
             summary=f"Accepted {kind} planner submission.",
         ),
         None,

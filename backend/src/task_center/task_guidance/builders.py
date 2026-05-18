@@ -10,8 +10,8 @@ Discrete metadata signals (added in goal_iteration_frame.py / attempt_landscape.
 * ``metadata["iteration_no"]`` — set on the ``<iteration_goal>`` /
   ``<goal_current_iteration>`` block carrying the current iteration's
   sequence number (str). Read as ``int(...)`` here.
-* ``metadata["is_partial"] == "true"`` — set on the
-  ``<next_iteration_handoff_goal>`` child of ``<attempt_plan>`` when the
+* ``metadata["has_deferred_goal_for_next_iteration"] == "true"`` — set on the
+  ``<deferred_goal_for_next_iteration>`` child of ``<attempt_plan>`` when the
   current attempt is a continues-goal (partial) plan.
 * ``block.kind == "failed_attempt_landscape"`` — any block of this kind in
   the packet means the planner is retrying after a failed attempt.
@@ -21,7 +21,7 @@ Discrete metadata signals (added in goal_iteration_frame.py / attempt_landscape.
 **Tag mention convention.** Prose references context structure via XML tag
 mentions (``<attempt_plan>``, ``<iteration status="prior">``) instead of
 markdown heading text. Tool parameter names keep their backtick form
-(``next_iteration_handoff_goal``) so the planner can tell a context section
+(``deferred_goal_for_next_iteration``) so the planner can tell a context section
 from a tool argument at a glance.
 """
 
@@ -59,9 +59,9 @@ def _has_dependency_results(packet: ContextPacket) -> bool:
     return any(b.kind == "dependency_summary" for b in packet.blocks)
 
 
-def _is_partial_plan(packet: ContextPacket) -> bool:
+def _has_deferred_goal_for_next_iteration_plan(packet: ContextPacket) -> bool:
     for block in packet.blocks:
-        if block.metadata.get("is_partial") == "true":
+        if block.metadata.get("has_deferred_goal_for_next_iteration") == "true":
             return True
     return False
 
@@ -84,7 +84,7 @@ def build_planner_task_guidance(
             "No prior attempts exist in this iteration. Propose a plan that "
             "decomposes the iteration goal into generator tasks with a clear "
             "evaluation contract. If you cannot solve the iteration in one "
-            "attempt, submit a partial plan with a `next_iteration_handoff_goal` "
+            "attempt, submit a partial plan with a `deferred_goal_for_next_iteration` "
             "so the next iteration can pick up where this one ends. "
             "When the iteration goal is a list of independent items (for "
             "example a PR-description changelog of features and fixes), "
@@ -92,7 +92,7 @@ def build_planner_task_guidance(
             "item and one criterion per item; coalescing into a single "
             "'all items done' criterion turns partial progress into total "
             "failure. If one attempt cannot fit every item, bind a tighter "
-            "set of items here. If you defer work via `next_iteration_handoff_goal`, "
+            "set of items here. If you defer work via `deferred_goal_for_next_iteration`, "
             "make that handoff the next bounded slice only; do not dump "
             "the entire remaining backlog into it."
         )
@@ -176,13 +176,13 @@ def build_evaluator_task_guidance(
     scope: ContextScope,  # noqa: ARG001 - dispatch signature
 ) -> str:
     """Evaluator task-guidance. Branches on partial-plan signal."""
-    if _is_partial_plan(packet):
+    if _has_deferred_goal_for_next_iteration_plan(packet):
         return (
             "You are evaluating an intentionally partial attempt (see the "
-            "`<next_iteration_handoff_goal>` child of `<attempt_plan>`). "
+            "`<deferred_goal_for_next_iteration>` child of `<attempt_plan>`). "
             "This attempt is not expected to solve the full iteration goal "
             "— it is expected to make progress and hand off remaining work "
-            "via `next_iteration_handoff_goal`. Pass/fail against "
+            "via `deferred_goal_for_next_iteration`. Pass/fail against "
             "`<evaluation_criteria>` for what this attempt promised; "
             "do not penalize for incomplete work that was explicitly deferred."
         )

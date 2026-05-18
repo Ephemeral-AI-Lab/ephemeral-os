@@ -137,7 +137,7 @@ def test_clean_setup_passes_validation():
         name="planner",
         description="planner",
         context_recipe="planner",
-        terminals=["submit_plan_closes_goal", "submit_plan_continues_goal"],
+        terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
         variants=[
             AgentVariant(
                 when="nested_goal_depth_gt_1", use="planner_full_only"

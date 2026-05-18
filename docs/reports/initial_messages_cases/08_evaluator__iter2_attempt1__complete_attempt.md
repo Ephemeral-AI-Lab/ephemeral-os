@@ -1,5 +1,5 @@
-# evaluator — iteration 2, attempt 1 (evaluator_instruction branch: is_partial=False; complete plan attempt)
-- source: `goal_01_7184719f-61d7-4854-85b0-bf99617383c2/iteration_02_fd96e282-5cb5-4c45-8227-062d523add77/attempt_01_31d02d9a-b881-4283-a03b-a756593c25e5/03_evaluator_31d02d9a-b881-4283-a03b-a756593c25e5:evaluator/message.jsonl`
+# evaluator — iteration 2, attempt 1 (evaluator_instruction branch: has_deferred_goal_for_next_iteration=False; complete plan attempt)
+- source: `goal_01_e7e09fbf-830b-4d30-bf55-28ef7badeb15/iteration_02_3bddf543-f575-464a-b744-e895714e7036/attempt_01_fce0389b-9320-44b1-90bb-05685fb10f84/03_evaluator_fce0389b-9320-44b1-90bb-05685fb10f84:evaluator/message.jsonl`
 
 ## system
 
@@ -1891,7 +1891,7 @@ Run a workspace preflight probe.
 </attempt_plan>
 
 <completed_tasks>
-<task id="31d02d9a-b881-4283-a03b-a756593c25e5:gen:preflight" status="done">
+<task id="fce0389b-9320-44b1-90bb-05685fb10f84:gen:preflight" status="done">
 Workspace preflight completed.
 </task>
 </completed_tasks>

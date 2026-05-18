@@ -162,26 +162,26 @@ def regenerate_main_cases(run_dir: Path) -> None:
                 fname = "03_planner__iter1_attempt2__after_evaluator_failure.md"
                 title = "planner — iteration 1, attempt 2 (after evaluator failure; planner_instruction branch: iter==1, has failed attempts with rich `<attempt status=\"failed\">` body — real `<plan_spec>`, `<generator_outcomes>`, `<evaluator_judgment status=\"ran\" verdict=\"fail\">`)"
             elif iteration.startswith("iteration_02") and attempt.startswith("attempt_01"):
-                fname = "04_planner__iter2_attempt1__continuation_full.md"
-                title = "planner — iteration 2, attempt 1 (continuation; planner_instruction branch: iter>1, no failed attempts)"
+                fname = "04_planner__iter2_attempt1__deferred_followup.md"
+                title = "planner — iteration 2, attempt 1 (deferred-goal follow-up; planner_instruction branch: iter>1, no failed attempts)"
             else:
                 continue
             case_specs.append((fname, title, rel, dict()))
         elif "executor" in role_dir:
             if iteration.startswith("iteration_01"):
-                fname = "05_executor__iter1_attempt2__continuation_partial__handoff_variant.md"
-                title = "executor — iteration 1, attempt 2 (continuation partial; routed to executor_success_handoff variant; generator_instruction: has_deps=False)"
+                fname = "05_executor__iter1_attempt2__deferred_variant.md"
+                title = "executor — iteration 1, attempt 2 (attempt with deferred goal; routed to executor_success_handoff variant; generator_instruction: has_deps=False)"
             else:
-                fname = "06_executor__iter2_attempt1__continuation_full__handoff_variant.md"
-                title = "executor — iteration 2, attempt 1 (continuation full; routed to executor_success_handoff variant; generator_instruction: has_deps=False)"
+                fname = "06_executor__iter2_attempt1__deferred_followup_variant.md"
+                title = "executor — iteration 2, attempt 1 (deferred-goal follow-up; routed to executor_success_handoff variant; generator_instruction: has_deps=False)"
             case_specs.append((fname, title, rel, dict()))
         elif "evaluator" in role_dir:
             if iteration.startswith("iteration_01"):
-                fname = "07_evaluator__iter1_attempt2__partial_attempt.md"
-                title = "evaluator — iteration 1, attempt 2 (evaluator_instruction branch: is_partial=True; partial plan boundary present)"
+                fname = "07_evaluator__iter1_attempt2__attempt_with_deferral.md"
+                title = "evaluator — iteration 1, attempt 2 (evaluator_instruction branch: has_deferred_goal_for_next_iteration=True; attempt with a deferred goal)"
             else:
                 fname = "08_evaluator__iter2_attempt1__complete_attempt.md"
-                title = "evaluator — iteration 2, attempt 1 (evaluator_instruction branch: is_partial=False; complete plan attempt)"
+                title = "evaluator — iteration 2, attempt 1 (evaluator_instruction branch: has_deferred_goal_for_next_iteration=False; complete plan attempt)"
             case_specs.append((fname, title, rel, dict()))
 
     for fname, title, rel, _extra in case_specs:

@@ -7,7 +7,7 @@ the recipe layer:
 
 * planner: ``iteration_no`` × ``has_failed_attempts`` → 4 branches.
 * generator: ``has_deps`` → 2 branches.
-* evaluator: ``is_partial`` → 2 branches.
+* evaluator: ``has_deferred_goal_for_next_iteration`` → 2 branches.
 * explorer: static prose (no branches; no packet input either).
 
 Builders never accept kwargs other than the dispatch trio. Branches
@@ -105,8 +105,8 @@ def _partial_handoff_block() -> ContextBlock:
         metadata={
             "group_id": "attempt_plan_x",
             "group_tag": "attempt_plan",
-            "child_tag": "next_iteration_handoff_goal",
-            "is_partial": "true",
+            "child_tag": "deferred_goal_for_next_iteration",
+            "has_deferred_goal_for_next_iteration": "true",
         },
     )
 
@@ -190,7 +190,7 @@ def test_generator_with_deps():
 
 
 # ---------------------------------------------------------------------------
-# Evaluator — 2-branch matrix on is_partial.
+# Evaluator — 2-branch matrix on has_deferred_goal_for_next_iteration.
 # ---------------------------------------------------------------------------
 
 
@@ -211,7 +211,7 @@ def test_evaluator_partial_attempt():
         scope=None,  # type: ignore[arg-type]
     )
     assert "intentionally partial attempt" in prose
-    assert "next_iteration_handoff_goal" in prose
+    assert "deferred_goal_for_next_iteration" in prose
 
 
 # ---------------------------------------------------------------------------

@@ -104,7 +104,7 @@ def _register_planner_agents() -> None:
         name="planner",
         description="planner",
         context_recipe="planner",
-        terminals=["submit_plan_closes_goal", "submit_plan_continues_goal"],
+        terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
         variants=[
             AgentVariant(
                 when="nested_goal_depth_gt_1",
@@ -172,7 +172,7 @@ def _setup_partial_plan_ancestor(
         caller_attempt.id,
         plan_spec="caller spec",
         evaluation_criteria=["c"],
-        next_iteration_handoff_goal="continue here",   # ← partial plan
+        deferred_goal_for_next_iteration="continue here",   # ← partial plan
     )
     task_store.upsert_task(
         task_id="t-caller",

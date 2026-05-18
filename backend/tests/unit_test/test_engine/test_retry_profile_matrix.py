@@ -134,7 +134,7 @@ def test_planner_full_only_nudges_single_terminal() -> None:
     )
     assert "submit_plan_closes_goal" in nudge
     # The other planner terminal must NOT leak in.
-    assert "submit_plan_continues_goal" not in nudge
+    assert "submit_plan_defers_goal" not in nudge
 
 
 @pytest.mark.parametrize("profile_def", PROFILES, ids=PROFILE_IDS)

@@ -361,7 +361,7 @@ async def test_submit_execution_handoff_return_updates_outer_generator(
         PlannerSubmission(
             attempt_id=delegated_attempt_id,
             planner_task_id=delegated_planner_id,
-            kind="full",
+            kind="completes",
             plan_spec="Solve delegated task.",
             evaluation_criteria=("delegated task passed",),
             tasks=(
@@ -372,7 +372,7 @@ async def test_submit_execution_handoff_return_updates_outer_generator(
                     task_spec="Do delegated work.",
                 ),
             ),
-            next_iteration_handoff_goal=None,
+            deferred_goal_for_next_iteration=None,
             summary="Accepted delegated plan.",
         )
     )

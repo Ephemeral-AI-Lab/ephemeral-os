@@ -1,5 +1,5 @@
-# executor — iteration 1, attempt 2 (continuation partial; routed to executor_success_handoff variant; generator_instruction: has_deps=False)
-- source: `goal_01_7184719f-61d7-4854-85b0-bf99617383c2/iteration_01_39822180-9bd4-4b97-9974-9000db830318/attempt_02_c0b8559a-f5c1-44dc-99f5-cd9a9a8fc2f1/02_executor_c0b8559a-f5c1-44dc-99f5-cd9a9a8fc2f1:gen:preflight/message.jsonl`
+# executor — iteration 2, attempt 1 (deferred-goal follow-up; routed to executor_success_handoff variant; generator_instruction: has_deps=False)
+- source: `goal_01_e7e09fbf-830b-4d30-bf55-28ef7badeb15/iteration_02_3bddf543-f575-464a-b744-e895714e7036/attempt_01_fce0389b-9320-44b1-90bb-05685fb10f84/02_executor_fce0389b-9320-44b1-90bb-05685fb10f84:gen:preflight/message.jsonl`
 
 ## system
 
@@ -38,14 +38,11 @@ This profile intentionally does not expose `submit_execution_failure`. Unfinishe
 <context>
 <attempt_plan>
 <plan_spec>
-Run a workspace preflight probe and continue with the follow-up goal.
+Run a workspace preflight probe.
 </plan_spec>
-<next_iteration_handoff_goal>
-Continue the initial-messages capture by running one more preflight in iteration 2 so the continuation planner sees prior iteration results.
-</next_iteration_handoff_goal>
 </attempt_plan>
 
-<assigned_task task_id="c0b8559a-f5c1-44dc-99f5-cd9a9a8fc2f1:gen:preflight">
+<assigned_task task_id="fce0389b-9320-44b1-90bb-05685fb10f84:gen:preflight">
 Run a lightweight workspace preflight and report the observed sandbox root.
 </assigned_task>
 </context>

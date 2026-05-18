@@ -10,7 +10,7 @@ from task_center_runner.scenarios._utils.goal_helpers import (
 from task_center_runner.scenarios._utils.plans import (
     minimal_full_plan,
     preflight_full_plan,
-    preflight_partial_plan,
+    preflight_defers_plan,
 )
 
 __all__ = [
@@ -19,5 +19,5 @@ __all__ = [
     "is_root_goal",
     "minimal_full_plan",
     "preflight_full_plan",
-    "preflight_partial_plan",
+    "preflight_defers_plan",
 ]

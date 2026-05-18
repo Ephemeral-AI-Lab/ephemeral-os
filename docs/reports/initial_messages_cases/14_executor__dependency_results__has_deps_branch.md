@@ -1,5 +1,5 @@
 # executor — dependency_results branch (generator task `b`, deps: [`a`]); user_msg_1 carries a real `<dependency_results>` block
-- source: `pipeline.dependency_dag_serial/20260518T212729Z_7945964ac854/goal_01_d6ee21e0-b7ee-4f11-bce1-44959c80b307/iteration_01_8baf047e-8e9c-44fe-92c6-100f0f091f1c/attempt_01_0dc39e5d-2702-4b9d-afa0-b120c75da809/03_executor_0dc39e5d-2702-4b9d-afa0-b120c75da809:gen:b/message.jsonl`
+- source: `pipeline.dependency_dag_serial/20260518T222944Z_161ea35f4f33/goal_01_00231bb3-13ea-4251-a4a2-d7a62913f94f/iteration_01_b057915e-aeff-4d37-9c8c-b3a85ed9fab5/attempt_01_fc712cba-f792-4e50-a97f-c09569457528/03_executor_fc712cba-f792-4e50-a97f-c09569457528:gen:b/message.jsonl`
 - notes: Closes Gap 3 in the original gap report. The scenario submits a serial DAG `a → b → c`; task `b` runs with `deps=["a"]`, so its composer renders the `<dependency_results>` group (one `<dependency id=...>` child per upstream task) between `<attempt_plan>` and `<assigned_task>`. Row 3's `<Task Guidance>` is the `has_deps=True` branch of `build_generator_task_guidance`, opening with "You are executing one generator task with one or more dependency outputs already available…". This is the variant the existing initial_messages scenario could not exercise because its plans only have single-task DAGs.
 
 ## system
@@ -44,12 +44,12 @@ Run a serial preflight chain a → b → c.
 </attempt_plan>
 
 <dependency_results>
-<dependency id="0dc39e5d-2702-4b9d-afa0-b120c75da809:gen:a">
+<dependency id="fc712cba-f792-4e50-a97f-c09569457528:gen:a">
 Workspace preflight completed.
 </dependency>
 </dependency_results>
 
-<assigned_task task_id="0dc39e5d-2702-4b9d-afa0-b120c75da809:gen:b">
+<assigned_task task_id="fc712cba-f792-4e50-a97f-c09569457528:gen:b">
 Run a lightweight workspace preflight and report the observed sandbox root.
 </assigned_task>
 </context>

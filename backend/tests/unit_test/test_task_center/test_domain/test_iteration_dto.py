@@ -21,7 +21,7 @@ def _seg(**overrides) -> Iteration:
         attempt_budget=2,
         status=IterationStatus.OPEN,
         attempt_ids=(),
-        next_iteration_handoff_goal=None,
+        deferred_goal_for_next_iteration=None,
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
         closed_at=None,

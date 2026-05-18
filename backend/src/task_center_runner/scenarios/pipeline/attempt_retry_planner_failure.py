@@ -32,7 +32,7 @@ class AttemptRetryPlannerFailure(ScenarioBase):
         EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
         EventType.PLANNER_INVOKED,
-        EventType.PLANNER_FULL_PLAN,
+        EventType.PLANNER_COMPLETES_GOAL_PLAN,
         EventType.EXECUTOR_INVOKED,
         EventType.EXECUTOR_SUCCESS,
         EventType.EVALUATOR_INVOKED,

@@ -100,8 +100,8 @@ class IterationStoreProtocol(Protocol):
         closed_at: datetime | None,
     ) -> Iteration: ...
 
-    def set_iteration_handoff_goal(
-        self, iteration_id: str, *, next_iteration_handoff_goal: str | None
+    def set_deferred_goal_for_next_iteration(
+        self, iteration_id: str, *, deferred_goal_for_next_iteration: str | None
     ) -> Iteration: ...
 
     def close_succeeded(
@@ -147,7 +147,7 @@ class AttemptStoreProtocol(Protocol):
         *,
         plan_spec: str,
         evaluation_criteria: list[str],
-        next_iteration_handoff_goal: str | None,
+        deferred_goal_for_next_iteration: str | None,
     ) -> Attempt: ...
 
     def close(

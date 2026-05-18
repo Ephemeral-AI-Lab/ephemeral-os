@@ -74,7 +74,7 @@ def _build_runtime_with_open_graph(
         PlannerSubmission(
             attempt_id=attempt.id,
             planner_task_id=f"{attempt.id}:planner",
-            kind="full",
+            kind="completes",
             plan_spec="spec",
             evaluation_criteria=("c",),
             tasks=(
@@ -85,7 +85,7 @@ def _build_runtime_with_open_graph(
                     task_spec="do",
                 ),
             ),
-            next_iteration_handoff_goal=None,
+            deferred_goal_for_next_iteration=None,
             summary="plan",
         )
     )
@@ -171,14 +171,14 @@ def test_router_delivers_failure_marks_parent_failed_and_blocks_dependents(
         PlannerSubmission(
             attempt_id=attempt.id,
             planner_task_id=f"{attempt.id}:planner",
-            kind="full",
+            kind="completes",
             plan_spec="spec",
             evaluation_criteria=("c",),
             tasks=(
                 PlannedGeneratorTask("a", "executor", (), "do A"),
                 PlannedGeneratorTask("b", "executor", ("a",), "do B"),
             ),
-            next_iteration_handoff_goal=None,
+            deferred_goal_for_next_iteration=None,
             summary="plan",
         )
     )

@@ -9,7 +9,7 @@ import pytest
 from task_center._core.invariants import (
     assert_attempt_belongs_to_iteration,
     assert_attempt_sequence_contiguous,
-    assert_continuation_iteration_predecessor,
+    assert_predecessor_has_deferred_goal_for_next_iteration,
     assert_fail_reason_present_on_failure,
     assert_goal_open,
     assert_iteration_has_budget,
@@ -59,7 +59,7 @@ def _segment(
     *,
     status: IterationStatus = IterationStatus.OPEN,
     attempt_ids: tuple[str, ...] = (),
-    next_iteration_handoff_goal: str | None = None,
+    deferred_goal_for_next_iteration: str | None = None,
     attempt_budget: int = 2,
     sid: str = "s1",
 ) -> Iteration:
@@ -73,7 +73,7 @@ def _segment(
         attempt_budget=attempt_budget,
         status=status,
         attempt_ids=attempt_ids,
-        next_iteration_handoff_goal=next_iteration_handoff_goal,
+        deferred_goal_for_next_iteration=deferred_goal_for_next_iteration,
         created_at=now,
         updated_at=now,
         closed_at=None,
@@ -99,7 +99,7 @@ def _graph(
         evaluation_criteria=(),
         generator_task_ids=(),
         evaluator_task_id=None,
-        next_iteration_handoff_goal=None,
+        deferred_goal_for_next_iteration=None,
         fail_reason=fail_reason,
         created_at=now,
         updated_at=now,
@@ -145,17 +145,17 @@ def test_assert_iteration_sequence_contiguous():
 
 def test_assert_continuation_iteration_predecessor_requires_succeeded_with_goal():
     succeeded_with_goal = _segment(
-        status=IterationStatus.SUCCEEDED, next_iteration_handoff_goal="next"
+        status=IterationStatus.SUCCEEDED, deferred_goal_for_next_iteration="next"
     )
-    assert_continuation_iteration_predecessor(succeeded_with_goal)
+    assert_predecessor_has_deferred_goal_for_next_iteration(succeeded_with_goal)
 
     with pytest.raises(TaskCenterInvariantViolation):
-        assert_continuation_iteration_predecessor(
-            _segment(status=IterationStatus.OPEN, next_iteration_handoff_goal="next")
+        assert_predecessor_has_deferred_goal_for_next_iteration(
+            _segment(status=IterationStatus.OPEN, deferred_goal_for_next_iteration="next")
         )
     with pytest.raises(TaskCenterInvariantViolation):
-        assert_continuation_iteration_predecessor(
-            _segment(status=IterationStatus.SUCCEEDED, next_iteration_handoff_goal=None)
+        assert_predecessor_has_deferred_goal_for_next_iteration(
+            _segment(status=IterationStatus.SUCCEEDED, deferred_goal_for_next_iteration=None)
         )
 
 

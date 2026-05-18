@@ -60,7 +60,7 @@ def test_scan_ignores_frontmatter(tmp_path: Path):
 
 
 def test_validate_skill_files_raises_with_definition_name(tmp_path: Path):
-    path = _write_skill(tmp_path, "Submit submit_plan_continues_goal now.")
+    path = _write_skill(tmp_path, "Submit submit_plan_defers_goal now.")
     bad = AgentDefinition(
         name="bad_planner",
         description="bad",
@@ -71,7 +71,7 @@ def test_validate_skill_files_raises_with_definition_name(tmp_path: Path):
     with pytest.raises(SkillLintError) as exc:
         validate_skill_files([bad])
     assert "bad_planner" in str(exc.value)
-    assert "submit_plan_continues_goal" in str(exc.value)
+    assert "submit_plan_defers_goal" in str(exc.value)
 
 
 def test_validate_skill_files_ignores_definitions_without_skill():

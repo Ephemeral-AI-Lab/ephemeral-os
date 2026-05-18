@@ -20,7 +20,7 @@ from tools.submission.verifier import (
 )
 from tools.submission.planner import (
     submit_plan_closes_goal,
-    submit_plan_continues_goal,
+    submit_plan_defers_goal,
 )
 from tools.submission.explorer.submit_exploration_result import submit_exploration_result
 
@@ -28,7 +28,7 @@ from tools.submission.explorer.submit_exploration_result import submit_explorati
 def make_submission_tools() -> list[BaseTool]:
     return [
         submit_plan_closes_goal,
-        submit_plan_continues_goal,
+        submit_plan_defers_goal,
         submit_execution_handoff,
         submit_execution_success,
         submit_execution_failure,

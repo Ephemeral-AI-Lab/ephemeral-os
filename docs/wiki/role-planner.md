@@ -37,8 +37,8 @@ The planner is **not** a Mission. It is a single TaskCenter task with role `plan
 | Event | Effect |
 |---|---|
 | `AttemptOrchestrator.start()` | Creates planner task row (status `RUNNING`), composes `planner_v1` context, launches agent. |
-| Planner agent emits `submit_full_plan` | Validates, calls `apply_plan_submission(kind="full")` → planner task `DONE`, attempt stage→`generating`, generator rows inserted `PENDING`. |
-| Planner agent emits `submit_partial_plan` | Same as full + records `continuation_goal`; episode chain will branch on evaluator PASS. |
+| Planner agent emits `submit_full_plan` | Validates, calls `apply_plan_submission(kind="completes")` → planner task `DONE`, attempt stage→`generating`, generator rows inserted `PENDING`. |
+| Planner agent emits `submit_partial_plan` | Same as full + records `deferred_goal_for_next_iteration`; episode chain will branch on evaluator PASS. |
 | Agent run ends without terminal | `EphemeralAttemptAgentLauncher._report_unfinished_running_task` synthesizes `apply_planner_failure` → attempt closes `FAILED`/`planner_failed`. |
 | Validity error inside `apply_plan_submission` | `TaskCenterInvariantViolation` returned to tool result; agent may retry submission within the same turn. |
 
@@ -106,9 +106,9 @@ Two terminal tools, sharing `PlannerSubmissionBaseInput` (`tools/submission/main
 
 The DAG covers the entire `Current Episode`. Evaluator PASS closes the episode terminally; mission can succeed.
 
-### `submit_partial_plan(...same..., continuation_goal)`
+### `submit_partial_plan(...same..., deferred_goal_for_next_iteration)`
 
-The DAG covers a bounded slice; `continuation_goal` is the verbatim contract for the next episode. Evaluator PASS triggers `EpisodeManager._close_episode_passed` → `SuccessContinue(goal=continuation_goal)` → `MissionHandler.create_continuation_episode_with_manager` → new Episode with `creation_reason=PARTIAL_CONTINUATION`.
+The DAG covers a bounded slice; `deferred_goal_for_next_iteration` is the verbatim contract for the next episode. Evaluator PASS triggers `EpisodeManager._close_episode_passed` → `SuccessDeferred(deferred_goal_for_next_iteration=deferred_goal_for_next_iteration)` → `MissionHandler.create_deferred_episode_with_manager` → new Episode with `creation_reason=DEFERRED_GOAL_CONTINUATION`.
 
 ### Hard validity (rejected pre-orchestrator)
 
@@ -118,7 +118,7 @@ Built into `build_planner_submission` (`_schemas.py:86-152`):
 - `task_specs` keys exactly equal task ids (no missing, no extra).
 - Every `deps` entry refers to an id in `tasks`.
 - DAG is acyclic — enforced by `ordered_generator_tasks` topological sort (`task_center/attempt/generator_dag.py:17`).
-- `task_specification`, every criterion, every task spec, and `continuation_goal` (when present) are non-blank.
+- `task_specification`, every criterion, every task spec, and `deferred_goal_for_next_iteration` (when present) are non-blank.
 - Every `agent_name` is registered and has `role ∈ {executor, verifier}` (`_schemas.py:79-83`).
 - Caller is the attempt's own planner task (`task_id == attempt.planner_task_id`).
 
@@ -133,7 +133,7 @@ A rejection returns an error tool result; the agent can correct and call again w
 | `planner` | default | Both `submit_full_plan` and `submit_partial_plan` are available. |
 | `planner_full_only` | when the mission ancestry is nested under another attempt (`when: nested_mission_depth_gt_1`) | Only `submit_full_plan` is exposed. System prompt explicitly forbids deferring remainder work. |
 
-**Why `planner_full_only` exists.** Partial planning creates an episodic continuation _on top of_ the current episode. Allowing a descendant planner to _also_ partial-plan would make the continuation chain ambiguous: whose `continuation_goal` extends the parent's mission? The depth rule eliminates the question — any planner running inside a nested mission (`nested_mission_depth > 1`) must fully cover its scope. The depth helper lives at `task_center/mission/ancestry.py:nested_mission_depth`; the predicate is registered in `task_center/agent_launch/predicates.py`.
+**Why `planner_full_only` exists.** Partial planning creates an episodic continuation _on top of_ the current episode. Allowing a descendant planner to _also_ partial-plan would make the continuation chain ambiguous: whose `deferred_goal_for_next_iteration` extends the parent's mission? The depth rule eliminates the question — any planner running inside a nested mission (`nested_mission_depth > 1`) must fully cover its scope. The depth helper lives at `task_center/mission/ancestry.py:nested_mission_depth`; the predicate is registered in `task_center/agent_launch/predicates.py`.
 
 ## Constraints
 
@@ -147,7 +147,7 @@ Failures surface as `AttemptSubmissionContextError`, which the tool converts int
 
 ## Key insights
 
-**1. The planner is fire-and-forget.** Submission is its only state mutation, and after the call the planner cannot influence what happens to its plan. This is intentional: it forces the planner to write _durable_ artifacts. Every field (`task_specification`, `evaluation_criteria`, `task_specs`, `continuation_goal`) will be read by some other role that does not have the planner's context. Write them so a fresh agent picking them up cold can act without reconstructing what the planner was thinking.
+**1. The planner is fire-and-forget.** Submission is its only state mutation, and after the call the planner cannot influence what happens to its plan. This is intentional: it forces the planner to write _durable_ artifacts. Every field (`task_specification`, `evaluation_criteria`, `task_specs`, `deferred_goal_for_next_iteration`) will be read by some other role that does not have the planner's context. Write them so a fresh agent picking them up cold can act without reconstructing what the planner was thinking.
 
 **2. Four audiences, one submission.** The four submission fields target four distinct readers:
 
@@ -158,9 +158,9 @@ Failures surface as `AttemptSubmissionContextError`, which the tool converts int
 | `tasks[]` | Dispatcher (not an LLM); next planner via `failed_attempt_landscape` | Persisted as DAG rows |
 | `task_specs[id]` | The single generator with that id | `generator_v1` REQUIRED `planned_task_spec` block (last position) |
 
-Leakage between audiences is a planning bug: criteria-language in a task_spec, task-level detail in the global task_specification, or rubric in the continuation_goal all confuse the wrong reader.
+Leakage between audiences is a planning bug: criteria-language in a task_spec, task-level detail in the global task_specification, or rubric in the deferred_goal_for_next_iteration all confuse the wrong reader.
 
-**3. Criteria are the planner's auto-handcuffs.** The evaluator returns binary verdicts (`submit_evaluation_success`/`submit_evaluation_failure`). Over-broad criteria mean partial progress becomes total failure; over-narrow criteria let trivially-passing plans through. The planner's only defense against an unforgiving evaluator is to write criteria it is _confident_ the planned DAG will satisfy. If coverage is uncertain, a partial plan with a tighter criterion set and an explicit `continuation_goal` outperforms a brittle full plan.
+**3. Criteria are the planner's auto-handcuffs.** The evaluator returns binary verdicts (`submit_evaluation_success`/`submit_evaluation_failure`). Over-broad criteria mean partial progress becomes total failure; over-narrow criteria let trivially-passing plans through. The planner's only defense against an unforgiving evaluator is to write criteria it is _confident_ the planned DAG will satisfy. If coverage is uncertain, a partial plan with a tighter criterion set and an explicit `deferred_goal_for_next_iteration` outperforms a brittle full plan.
 
 **4. The planner is the only role that sees retry history.** `failed_attempt_landscape_blocks` is unique to `planner_v1`. It carries the previous attempt's plan kind (`unsubmitted`, `full`, or `partial`), continuation goal, criteria, latest generator summaries, and fail reason. For evaluator failures, the fail reason includes the evaluator's latest summary when recorded. The evaluator and generators operate context-free with respect to retry — they judge and execute the present attempt. This places retrospection where it can act: the planner can drop a failing slice, narrow scope, preserve achieved work, or restructure dependencies. Neither the evaluator nor the generator has the authority to do any of those.
 
@@ -170,7 +170,7 @@ Leakage between audiences is a planning bug: criteria-language in a task_spec, t
 
 **7. The planner cannot run code.** No `shell`, no `write_file`, no `edit_file`. This is a deliberate capability restriction, not an oversight. A planner that could test its plan would either (a) waste budget on speculative execution before committing, or (b) blur the planner/generator boundary by doing the work itself. The plan-vs-execute split is structural.
 
-**8. Continuation goals are written for a stranger.** The next episode's planner does not see this attempt's task contents — only its `task_summary` aggregation. `continuation_goal` must read like a fresh episode goal, not like a diff against this attempt's plan.
+**8. Continuation goals are written for a stranger.** The next episode's planner does not see this attempt's task contents — only its `task_summary` aggregation. `deferred_goal_for_next_iteration` must read like a fresh episode goal, not like a diff against this attempt's plan.
 
 ## Context building workflow
 

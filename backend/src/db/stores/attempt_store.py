@@ -30,7 +30,7 @@ class AttemptStore(SyncStoreMixin):
                 stage=AttemptStage.PLAN.value,
                 status=AttemptStatus.RUNNING.value,
                 planner_task_id=None,
-                # DB column names task_specification/continuation_goal pinned by ADR (FU-2 renames the columns).
+                # DB column name `continuation_goal` pinned to legacy persistence form; Python DTO field is `deferred_goal_for_next_iteration`. FU-2 (separate PR) renames the column.
                 task_specification=None,
                 evaluation_criteria=[],
                 generator_task_ids=[],
@@ -68,16 +68,16 @@ class AttemptStore(SyncStoreMixin):
         *,
         plan_spec: str,
         evaluation_criteria: list[str],
-        next_iteration_handoff_goal: str | None,
+        deferred_goal_for_next_iteration: str | None,
     ) -> Attempt:
         with self._sf() as db:
             record = db.get(AttemptRecord, attempt_id)
             if record is None:
                 raise LookupError(f"Attempt {attempt_id!r} not found")
-            # DB column names task_specification/continuation_goal pinned by ADR (FU-2 renames the columns).
+            # DB column name `continuation_goal` pinned to legacy persistence form; Python DTO field is `deferred_goal_for_next_iteration`. FU-2 (separate PR) renames the column.
             record.task_specification = plan_spec
             record.evaluation_criteria = list(evaluation_criteria)
-            record.continuation_goal = next_iteration_handoff_goal
+            record.continuation_goal = deferred_goal_for_next_iteration
             db.commit()
             db.refresh(record)
             return self._to_dto(record)
@@ -170,12 +170,12 @@ class AttemptStore(SyncStoreMixin):
             stage=AttemptStage(record.stage),
             status=AttemptStatus(record.status),
             planner_task_id=record.planner_task_id,
-            # DB column names task_specification/continuation_goal pinned by ADR (FU-2 renames the columns).
+            # DB column name `continuation_goal` pinned to legacy persistence form; Python DTO field is `deferred_goal_for_next_iteration`. FU-2 (separate PR) renames the column.
             plan_spec=record.task_specification,
             evaluation_criteria=tuple(record.evaluation_criteria or ()),
             generator_task_ids=tuple(record.generator_task_ids or ()),
             evaluator_task_id=record.evaluator_task_id,
-            next_iteration_handoff_goal=record.continuation_goal,
+            deferred_goal_for_next_iteration=record.continuation_goal,
             fail_reason=(
                 AttemptFailReason(record.fail_reason)
                 if record.fail_reason is not None

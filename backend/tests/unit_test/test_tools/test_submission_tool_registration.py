@@ -13,7 +13,7 @@ from tools.submission.planner import PlanTaskInput
 
 PHASE03_TOOLS = (
     "submit_plan_closes_goal",
-    "submit_plan_continues_goal",
+    "submit_plan_defers_goal",
     "submit_execution_handoff",
     "submit_execution_success",
     "submit_execution_failure",
@@ -31,6 +31,13 @@ PHASE03_TOOLS = (
 
 def test_submission_tools_registered() -> None:
     assert all(has_tool(name) for name in PHASE03_TOOLS)
+
+
+def test_tool_registry_renamed() -> None:
+    """PR 1 acceptance tripwire: planner-defers tool name is new, old is gone."""
+    assert has_tool("submit_plan_defers_goal")
+    assert has_tool("submit_plan_closes_goal")
+    assert not has_tool("submit_plan_continues_goal")
 
 
 def test_submission_tools_are_terminal_except_helper_requests() -> None:

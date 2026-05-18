@@ -110,7 +110,7 @@ async def test_full_case_user_input_runs_dynamic_verifier_dag(
     assert verifier_count < executor_count
 
     assert any(
-        event.type == EventType.PLANNER_PARTIAL_PLAN for event in report.events
+        event.type == EventType.PLANNER_DEFERS_GOAL_PLAN for event in report.events
     )
     assert _continuation_iterations_follow_partial_attempts(report.graph_summary)
     assert _has_multi_dependency_verifier(report.graph_summary)
@@ -158,7 +158,7 @@ def _continuation_iterations_follow_partial_attempts(
                 continue
             previous = by_sequence[iteration["sequence_no"] - 1]
             final_attempt = previous["attempts"][-1]
-            if not final_attempt["next_iteration_handoff_goal"]:
+            if not final_attempt["deferred_goal_for_next_iteration"]:
                 return False
     return True
 

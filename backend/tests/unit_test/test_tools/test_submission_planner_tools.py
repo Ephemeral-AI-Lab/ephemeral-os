@@ -6,7 +6,7 @@ import pytest
 
 from task_center.attempt import AttemptStage
 from tools._framework.execution.tool_call import execute_tool_once
-from tools.submission.planner import submit_plan_closes_goal, submit_plan_continues_goal
+from tools.submission.planner import submit_plan_closes_goal, submit_plan_defers_goal
 
 from .submission_test_utils import (
     build_harness_fixture,
@@ -75,10 +75,10 @@ async def test_partial_plan_routes_to_apply_plan_submission(
         composer=composer,
     )
     planner_id = start_planner(fixture)
-    payload = {**_valid_plan_payload(), "next_iteration_handoff_goal": "  continue with phase 2  "}
+    payload = {**_valid_plan_payload(), "deferred_goal_for_next_iteration": "  continue with phase 2  "}
 
     result = await execute_tool_once(
-        submit_plan_continues_goal,
+        submit_plan_defers_goal,
         payload,
         make_tool_context(fixture, planner_id),
         emit=_noop_emit,
@@ -87,7 +87,7 @@ async def test_partial_plan_routes_to_apply_plan_submission(
     attempt = attempt_store.get(fixture.attempt_id)
     assert not result.is_error
     assert attempt is not None
-    assert attempt.next_iteration_handoff_goal == "  continue with phase 2  "
+    assert attempt.deferred_goal_for_next_iteration == "  continue with phase 2  "
 
 
 @pytest.mark.parametrize(
@@ -194,7 +194,7 @@ async def test_full_plan_rejects_continuation_goal(
         composer=composer,
     )
     planner_id = start_planner(fixture)
-    payload = {**_valid_plan_payload(), "next_iteration_handoff_goal": "continue later"}
+    payload = {**_valid_plan_payload(), "deferred_goal_for_next_iteration": "continue later"}
 
     result = await execute_tool_once(
         submit_plan_closes_goal,
@@ -205,7 +205,7 @@ async def test_full_plan_rejects_continuation_goal(
 
     attempt = attempt_store.get(fixture.attempt_id)
     assert result.is_error
-    assert "next_iteration_handoff_goal" in result.output
+    assert "deferred_goal_for_next_iteration" in result.output
     assert "Extra inputs are not permitted" in result.output
     assert attempt is not None
     assert attempt.stage == AttemptStage.PLAN
@@ -222,10 +222,10 @@ async def test_partial_plan_rejects_blank_continuation_goal(
         composer=composer,
     )
     planner_id = start_planner(fixture)
-    payload = {**_valid_plan_payload(), "next_iteration_handoff_goal": " "}
+    payload = {**_valid_plan_payload(), "deferred_goal_for_next_iteration": " "}
 
     result = await execute_tool_once(
-        submit_plan_continues_goal,
+        submit_plan_defers_goal,
         payload,
         make_tool_context(fixture, planner_id),
         emit=_noop_emit,
@@ -233,6 +233,6 @@ async def test_partial_plan_rejects_blank_continuation_goal(
 
     attempt = attempt_store.get(fixture.attempt_id)
     assert result.is_error
-    assert "next_iteration_handoff_goal must be nonblank" in result.output
+    assert "deferred_goal_for_next_iteration must be nonblank" in result.output
     assert attempt is not None
     assert attempt.stage == AttemptStage.PLAN

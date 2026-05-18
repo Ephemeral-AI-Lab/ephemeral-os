@@ -131,7 +131,7 @@ auto-covered.
 
 ```python
 PROFILES_AND_TERMINALS = [
-    ("planner",              {"submit_plan_closes_goal", "submit_plan_continues_goal"}),
+    ("planner",              {"submit_plan_closes_goal", "submit_plan_defers_goal"}),
     ("planner_full_only",    {"submit_plan_closes_goal"}),
     ("executor_success_failure",  {"submit_execution_success", "submit_execution_failure"}),
     ("executor_success_handoff",  {"submit_execution_success", "submit_execution_handoff"}),
@@ -237,7 +237,7 @@ If §5 lands (engine-routed mock), the following scenarios become valuable:
 
 | Scenario name                                  | Failure injected                                          | Expected event sequence change                                |
 |------------------------------------------------|-----------------------------------------------------------|---------------------------------------------------------------|
-| `pipeline.planner_text_response_engine_retry`  | Planner attempt 1: TEXT_RESPONSE                          | PLANNER_INVOKED × 1 (one Attempt), PLANNER_FULL_PLAN once after retry succeeds; no extra Attempt row |
+| `pipeline.planner_text_response_engine_retry`  | Planner attempt 1: TEXT_RESPONSE                          | PLANNER_INVOKED × 1 (one Attempt), PLANNER_COMPLETES_GOAL_PLAN once after retry succeeds; no extra Attempt row |
 | `pipeline.executor_budget_engine_retry`        | Generator attempt 1: RESOURCE_LIMIT                       | EXECUTOR_INVOKED × 1, EXECUTOR_SUCCESS after retry          |
 | `pipeline.evaluator_text_response_engine_retry`| Evaluator attempt 1: TEXT_RESPONSE                        | EVALUATOR_INVOKED × 1, EVALUATOR_SUCCESS after retry        |
 | `pipeline.engine_retry_then_attempt_retry`     | Planner engine retry exhausts; attempt harness creates seq_no=2 | PLANNER_INVOKED × 2, second one full plan after attempt-harness retry |

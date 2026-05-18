@@ -23,15 +23,15 @@ writes to `message.jsonl`:
 | 01 | `entry_executor` — root delegation | `pipeline.initial_messages_capture` | single-user-message launch |
 | 02 | planner — iter1 attempt1, fresh | `pipeline.initial_messages_capture` | `planner_instruction` branch: `iter==1`, no failed attempts |
 | 03 | planner — iter1 attempt2, after evaluator failure | `pipeline.initial_messages_capture` | `<attempt status="failed">` body is **fully populated** — real `<plan_spec>`, `<generator_outcomes>` with per-task summary, and `<evaluator_judgment status="ran" verdict="fail">` with `<evaluation_criteria>` / `<evaluator_summary>` / `<failed_criteria>` (scenario submits a valid plan that the evaluator rejects, so all downstream stages produce real evidence) |
-| 04 | planner — iter2 attempt1, continuation | `pipeline.initial_messages_capture` | `<iteration status="prior">` + `<iteration status="current">` group |
-| 05 | executor — iter1 attempt2 (partial plan, handoff variant) | `pipeline.initial_messages_capture` | `<next_iteration_handoff_goal>` present |
-| 06 | executor — iter2 attempt1 (full plan, handoff variant) | `pipeline.initial_messages_capture` | no `<next_iteration_handoff_goal>` |
-| 07 | evaluator — iter1 attempt2 (partial attempt) | `pipeline.initial_messages_capture` | passing path |
+| 04 | planner — iter2 attempt1, deferred-goal follow-up | `pipeline.initial_messages_capture` | `<iteration status="prior">` + `<iteration status="current">` group |
+| 05 | executor — iter1 attempt2 (attempt with deferred goal, handoff variant) | `pipeline.initial_messages_capture` | `<deferred_goal_for_next_iteration>` present |
+| 06 | executor — iter2 attempt1 (complete plan, handoff variant) | `pipeline.initial_messages_capture` | no `<deferred_goal_for_next_iteration>` |
+| 07 | evaluator — iter1 attempt2 (attempt with a deferred goal) | `pipeline.initial_messages_capture` | passing path |
 | 08 | evaluator — iter2 attempt1 (complete attempt) | `pipeline.initial_messages_capture` | passing path |
 | 09 | advisor — invoked by executor pre-submission | programmatic via `tools/ask_helper/_lib/_compose.py` | mock runner does not invoke helpers today |
 | 10 | resolver — invoked by verifier/evaluator on issues | programmatic via `tools/ask_helper/_lib/_compose.py` + `ask_resolver._build_resolver_user_msg_2` | mock runner does not invoke helpers today |
 | 11 | explorer subagent — invoked via `run_subagent` | programmatic via `explorer_instruction().text` | mock runner does not invoke subagents today |
-| 12 | planner_full_only — child goal, delegated from partial-parent | `pipeline.partial_parent_planner_full_only` | terminal catalog has `submit_plan_closes_goal` only |
+| 12 | planner_full_only — child goal, delegated from deferring parent | `pipeline.deferred_parent_planner_full_only` | terminal catalog has `submit_plan_closes_goal` only |
 | 13 | planner — iter1 attempt2, after evaluator failure (cross-reference from focused-scenario suite) | `pipeline.attempt_retry_evaluator_failure` | Same shape as case 03; kept as a focused-reference example from a single-purpose scenario. Case 03 is the canonical reference. |
 | 14 | executor — `has_deps=True` branch, `<dependency_results>` block | `pipeline.dependency_dag_serial` | task `b` of serial chain `a → b → c`; deps: `[a]` |
 | 15 | evaluator — pre `submit_evaluation_failure` | `pipeline.attempt_retry_evaluator_failure` | input shape matches a passing evaluator; the failure path is the agent's decision, not a renderer branch |
@@ -77,8 +77,8 @@ re-emit the case files:
 .venv/bin/pytest backend/src/task_center_runner/tests/sweevo/test_initial_messages_capture.py
 .venv/bin/python scripts/regen_initial_messages_cases.py
 
-# Captures case 12 from pipeline.partial_parent_planner_full_only
-.venv/bin/pytest backend/src/task_center_runner/tests/sweevo/test_partial_parent_planner_full_only.py
+# Captures case 12 from pipeline.deferred_parent_planner_full_only
+.venv/bin/pytest backend/src/task_center_runner/tests/sweevo/test_deferred_parent_planner_full_only.py
 
 # Captures cases 13..15 from the focused-reference scenarios
 .venv/bin/pytest 'backend/src/task_center_runner/tests/sweevo/test_focused_scenarios.py::test_focused_reference_scenario_runs[pipeline.attempt_retry_evaluator_failure]' \
@@ -86,7 +86,6 @@ re-emit the case files:
 .venv/bin/python scripts/regen_initial_messages_cases_gaps.py
 ```
 
-Cases 12 was authored by hand from a single capture; if the
-`partial_parent_planner_full_only` scenario's prompts shift, regenerate
-case 12 manually by adapting the case-12 file from that run's
-`goal_02/.../01_planner_*/message.jsonl`.
+Case 12 is captured by `regen_initial_messages_cases_gaps.py` from the
+`pipeline.deferred_parent_planner_full_only` scenario run; if the scenario's
+prompts shift, re-run the test and rerun the gaps script.

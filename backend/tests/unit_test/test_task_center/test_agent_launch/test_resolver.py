@@ -62,7 +62,7 @@ def planner_with_variant():
         name="planner",
         description="planner",
         context_recipe="planner",
-        terminals=["submit_plan_closes_goal", "submit_plan_continues_goal"],
+        terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
         variants=[
             AgentVariant(
                 when="needs_full_only",
@@ -113,7 +113,7 @@ def test_variant_predicate_match_picks_target(deps):
         deps=deps,
     )
     assert sel.agent_def.name == "planner_full_only"
-    assert "submit_plan_continues_goal" not in sel.agent_def.terminals
+    assert "submit_plan_defers_goal" not in sel.agent_def.terminals
     assert sel.reason == "ancestry has partial-plan caller"
 
 

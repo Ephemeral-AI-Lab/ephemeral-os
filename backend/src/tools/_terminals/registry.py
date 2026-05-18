@@ -92,19 +92,19 @@ TERMINAL_DESCRIPTORS: dict[str, TerminalToolDescriptor] = {
             "missing items, mis-scoped tasks, and dependency mistakes."
         ),
     ),
-    "submit_plan_continues_goal": TerminalToolDescriptor(
-        name="submit_plan_continues_goal",
+    "submit_plan_defers_goal": TerminalToolDescriptor(
+        name="submit_plan_defers_goal",
         selection_guidance=(
             "Call when this attempt delivers a complete, coherent, bounded "
             "slice of the current `<iteration_goal>` and a clear remainder "
-            "exists. The `next_iteration_handoff_goal` is the next "
+            "exists. The `deferred_goal_for_next_iteration` is the next "
             "iteration's whole scope, not a backlog dump."
         ),
         advisor_review_focus=(
             "The planner DEFERS remaining work via a "
-            "`next_iteration_handoff_goal`. Confirm the partial scope is "
+            "`deferred_goal_for_next_iteration`. Confirm the partial scope is "
             "genuinely smaller than `<iteration_goal>` and that the "
-            "`next_iteration_handoff_goal` is the next bounded slice — NOT a "
+            "`deferred_goal_for_next_iteration` is the next bounded slice — NOT a "
             "dump of the entire remaining backlog. Verify the in-scope items "
             "have one evaluation criterion each and the deferred items are "
             "clearly named so the next iteration can pick up cleanly."
@@ -135,7 +135,7 @@ TERMINAL_DESCRIPTORS: dict[str, TerminalToolDescriptor] = {
             "The evaluator proposes to FAIL the attempt. Confirm the failing "
             "criteria are accurately named and that the failure is on the "
             "attempt's promised scope (NOT on work deferred via "
-            "`next_iteration_handoff_goal`). Flag failures that punish the "
+            "`deferred_goal_for_next_iteration`). Flag failures that punish the "
             "attempt for items outside the current `<iteration_goal>`."
         ),
     ),

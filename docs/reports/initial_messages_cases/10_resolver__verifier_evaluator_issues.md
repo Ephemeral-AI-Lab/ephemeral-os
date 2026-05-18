@@ -29,7 +29,7 @@ Run a workspace preflight probe.
 </plan_spec>
 </attempt_plan>
 
-<assigned_task task_id="b52c7264-d56c-42d7-bc76-72d3e6c8aaef:gen:preflight">
+<assigned_task task_id="050f51d3-258c-436a-94d8-64c5bd7fde36:gen:preflight">
 Run a lightweight workspace preflight and report the observed sandbox root.
 </assigned_task>
 </context>

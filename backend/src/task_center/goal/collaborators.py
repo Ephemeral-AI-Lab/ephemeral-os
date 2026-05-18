@@ -16,7 +16,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 
 from task_center._core.invariants import (
-    assert_continuation_iteration_predecessor,
+    assert_predecessor_has_deferred_goal_for_next_iteration,
     assert_goal_open,
     assert_iteration_id_unique_in_goal,
     assert_iteration_sequence_contiguous,
@@ -43,7 +43,7 @@ from task_center.iteration.state import (
     IterationClosureReport,
     IterationCreationReason,
     IterationStatus,
-    SuccessContinue,
+    SuccessDeferred,
     TerminalSuccess,
 )
 
@@ -148,20 +148,20 @@ class IterationFactory:
             iteration_goal=goal.goal,
         )
 
-    def create_continuation(
+    def create_from_deferred_goal(
         self, *, previous_iteration: Iteration,
     ) -> tuple[Iteration, IterationManager]:
         goal = self._goal_repository.require(previous_iteration.goal_id)
         assert_goal_open(goal)
-        assert_continuation_iteration_predecessor(previous_iteration)
+        assert_predecessor_has_deferred_goal_for_next_iteration(previous_iteration)
         new_sequence_no = previous_iteration.sequence_no + 1
         assert_iteration_sequence_contiguous(goal, new_sequence_no=new_sequence_no)
-        # predecessor invariant guarantees next_iteration_handoff_goal is not None.
+        # predecessor invariant guarantees deferred_goal_for_next_iteration is not None.
         return self._insert_and_spawn(
             goal=goal,
             sequence_no=new_sequence_no,
-            creation_reason=IterationCreationReason.PARTIAL_CONTINUATION,
-            iteration_goal=previous_iteration.next_iteration_handoff_goal,  # type: ignore[arg-type]
+            creation_reason=IterationCreationReason.DEFERRED_GOAL_CONTINUATION,
+            iteration_goal=previous_iteration.deferred_goal_for_next_iteration,  # type: ignore[arg-type]
         )
 
     def _insert_and_spawn(
@@ -216,11 +216,11 @@ class IterationClosureRouter:
             )
         try:
             outcome = report.outcome
-            if isinstance(outcome, SuccessContinue):
-                next_iteration, next_manager = self._factory.create_continuation(
+            if isinstance(outcome, SuccessDeferred):
+                next_iteration, next_manager = self._factory.create_from_deferred_goal(
                     previous_iteration=iteration
                 )
-                self._start_continuation(
+                self._start_deferred_iteration(
                     next_iteration=next_iteration,
                     next_manager=next_manager,
                     previous_report=report,
@@ -239,7 +239,7 @@ class IterationClosureRouter:
         finally:
             self._manager_registry.deregister(iteration.id)
 
-    def _start_continuation(
+    def _start_deferred_iteration(
         self,
         *,
         next_iteration: Iteration,

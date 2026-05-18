@@ -222,7 +222,7 @@ CAPACITY_PACK_SPECS: tuple[CapacityPackSpec, ...] = (
         ),
     ),
     CapacityPackSpec(
-        "context.evaluator_iterative_continuation",
+        "context.evaluator_iterative_deferral",
         "E",
         "context",
         "T0",
@@ -266,11 +266,11 @@ CAPACITY_PACK_SPECS: tuple[CapacityPackSpec, ...] = (
         registry_name="planner_validation.cycle_in_deps",
     ),
     CapacityPackSpec(
-        "planner_validation.partial_without_continuation_goal",
+        "planner_validation.defers_without_deferred_goal",
         "F",
         "planner_validation",
         "T0",
-        registry_name="planner_validation.partial_without_continuation_goal",
+        registry_name="planner_validation.defers_without_deferred_goal",
     ),
     CapacityPackSpec(
         "planner_validation.unknown_agent_name",

@@ -49,7 +49,7 @@ def _seed_continuation_iteration(iteration_store, *, goal_id):
     return iteration_store.insert(
         goal_id=goal_id,
         sequence_no=2,
-        creation_reason=IterationCreationReason.PARTIAL_CONTINUATION,
+        creation_reason=IterationCreationReason.DEFERRED_GOAL_CONTINUATION,
         goal="g2",
         attempt_budget=2,
     )
@@ -70,7 +70,7 @@ def test_generator_emits_planned_task_spec_required_block(
         attempt.id,
         plan_spec="attempt spec framing",
         evaluation_criteria=["c1"],
-        next_iteration_handoff_goal=None,
+        deferred_goal_for_next_iteration=None,
     )
     task_id = "t-1"
     task_store.upsert_task(
@@ -101,11 +101,11 @@ def test_generator_emits_planned_task_spec_required_block(
     assert "task_specification" in kinds
 
 
-def test_generator_emits_nested_attempt_plan_with_handoff_goal_child(
+def test_generator_emits_nested_attempt_plan_with_deferred_goal_child(
     deps, goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
     """Continues-goal attempt produces two TASK_SPECIFICATION children
-    (``<plan_spec>`` + ``<next_iteration_handoff_goal>``) under the same
+    (``<plan_spec>`` + ``<deferred_goal_for_next_iteration>``) under the same
     ``<attempt_plan>`` group — no PARTIAL_PLAN_BOUNDARY block."""
     req = _seed_goal(goal_store, task_center_run_id)
     iteration = _seed_iteration(iteration_store, goal_id=req.id)
@@ -114,7 +114,7 @@ def test_generator_emits_nested_attempt_plan_with_handoff_goal_child(
         attempt.id,
         plan_spec="attempt spec framing",
         evaluation_criteria=["c1"],
-        next_iteration_handoff_goal="future iteration work",
+        deferred_goal_for_next_iteration="future iteration work",
     )
     task_store.upsert_task(
         task_id="t-1",
@@ -146,8 +146,8 @@ def test_generator_emits_nested_attempt_plan_with_handoff_goal_child(
     ]
     plan_spec_block, handoff_block = packet.blocks[0], packet.blocks[1]
     assert plan_spec_block.metadata["child_tag"] == "plan_spec"
-    assert handoff_block.metadata["child_tag"] == "next_iteration_handoff_goal"
-    assert handoff_block.metadata["is_partial"] == "true"
+    assert handoff_block.metadata["child_tag"] == "deferred_goal_for_next_iteration"
+    assert handoff_block.metadata["has_deferred_goal_for_next_iteration"] == "true"
     assert plan_spec_block.metadata["group_id"] == handoff_block.metadata["group_id"]
     assert plan_spec_block.metadata["group_tag"] == "attempt_plan"
     assert handoff_block.text == "future iteration work"
@@ -249,7 +249,7 @@ def test_evaluator_emits_required_spec_and_criteria(
         attempt.id,
         plan_spec="evaluator spec",
         evaluation_criteria=["c1", "c2"],
-        next_iteration_handoff_goal=None,
+        deferred_goal_for_next_iteration=None,
     )
     attempt_store.set_generator_task_ids(attempt.id, ["t-a"])
     task_store.upsert_task(
@@ -296,7 +296,7 @@ def test_evaluator_renders_every_generator_summary_in_attempt_order(
         attempt.id,
         plan_spec="evaluator spec",
         evaluation_criteria=["all work passes"],
-        next_iteration_handoff_goal=None,
+        deferred_goal_for_next_iteration=None,
     )
     task_ids = [f"t-{i}" for i in range(14)]
     attempt_store.set_generator_task_ids(attempt.id, task_ids)
@@ -351,7 +351,7 @@ def test_evaluator_missing_generator_task_raises_context_error(
         attempt.id,
         plan_spec="evaluator spec",
         evaluation_criteria=["all work passes"],
-        next_iteration_handoff_goal=None,
+        deferred_goal_for_next_iteration=None,
     )
     attempt_store.set_generator_task_ids(attempt.id, ["t-missing"])
 
@@ -366,10 +366,10 @@ def test_evaluator_missing_generator_task_raises_context_error(
         )
 
 
-def test_evaluator_continues_goal_emits_nested_handoff_child_no_boundary_block(
+def test_evaluator_defers_goal_emits_nested_deferred_child_no_boundary_block(
     deps, goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
-    """Continues-goal attempts emit a ``<next_iteration_handoff_goal>`` child
+    """Defers-goal attempts emit a ``<deferred_goal_for_next_iteration>`` child
     under ``<attempt_plan>``; the previous PARTIAL_PLAN_BOUNDARY block is gone."""
     req = _seed_goal(goal_store, task_center_run_id)
     iteration = _seed_iteration(iteration_store, goal_id=req.id)
@@ -378,7 +378,7 @@ def test_evaluator_continues_goal_emits_nested_handoff_child_no_boundary_block(
         attempt.id,
         plan_spec="partial attempt spec",
         evaluation_criteria=["current slice passes"],
-        next_iteration_handoff_goal="build admin tools next",
+        deferred_goal_for_next_iteration="build admin tools next",
     )
     attempt_store.set_generator_task_ids(attempt.id, ["t-a"])
     task_store.upsert_task(
@@ -414,8 +414,8 @@ def test_evaluator_continues_goal_emits_nested_handoff_child_no_boundary_block(
     )
     plan_spec_block, handoff_block = packet.blocks[1], packet.blocks[2]
     assert plan_spec_block.metadata["child_tag"] == "plan_spec"
-    assert handoff_block.metadata["child_tag"] == "next_iteration_handoff_goal"
-    assert handoff_block.metadata["is_partial"] == "true"
+    assert handoff_block.metadata["child_tag"] == "deferred_goal_for_next_iteration"
+    assert handoff_block.metadata["has_deferred_goal_for_next_iteration"] == "true"
     assert plan_spec_block.metadata["group_id"] == handoff_block.metadata["group_id"]
     assert plan_spec_block.metadata["group_tag"] == "attempt_plan"
     assert handoff_block.text == "build admin tools next"
@@ -438,7 +438,7 @@ def test_evaluator_iteration2_frame_precedes_attempt_contract(
         attempt.id,
         plan_spec="attempt plan",
         evaluation_criteria=["criterion"],
-        next_iteration_handoff_goal=None,
+        deferred_goal_for_next_iteration=None,
     )
 
     packet = _evaluator_build(
@@ -478,7 +478,7 @@ def test_evaluator_with_empty_criteria_omits_criteria_block(
         attempt.id,
         plan_spec="evaluator spec",
         evaluation_criteria=[],
-        next_iteration_handoff_goal=None,
+        deferred_goal_for_next_iteration=None,
     )
 
     packet = _evaluator_build(

@@ -23,18 +23,18 @@ from task_center_runner.scenarios.pipeline import (
     DependencyDagParallel,
     DependencyDagSerial,
     InitialMessagesCapture,
-    IterativeContinuation,
+    IterativeDeferral,
     GeneratorFailureQuiescence,
     InitialGoal,
     NestedGoal,
     NestedGoalFailure,
-    PartialParentPlannerFullOnly,
+    DeferredParentPlannerFullOnly,
 )
 from task_center_runner.scenarios.planner_validation import (
     PlannerCycleInDeps,
     PlannerDuplicateLocalId,
     PlannerEmptyTasks,
-    PlannerPartialWithoutContinuationGoal,
+    PlannerDefersWithoutDeferredGoal,
     PlannerUnknownAgentName,
     PlannerUnknownDep,
 )
@@ -57,7 +57,7 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     # Focused pipeline scenarios.
     "pipeline.initial_goal": InitialGoal,
     "pipeline.initial_messages_capture": InitialMessagesCapture,
-    "pipeline.iterative_continuation": IterativeContinuation,
+    "pipeline.iterative_deferral": IterativeDeferral,
     "pipeline.attempt_retry_evaluator_failure": AttemptRetryEvaluatorFailure,
     "pipeline.attempt_retry_generator_failure": AttemptRetryGeneratorFailure,
     "pipeline.attempt_retry_planner_failure": AttemptRetryPlannerFailure,
@@ -70,7 +70,7 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     "pipeline.attempt_budget_exhausted": AttemptBudgetExhausted,
     "pipeline.nested_goal": NestedGoal,
     "pipeline.nested_goal_failure": NestedGoalFailure,
-    "pipeline.partial_parent_planner_full_only": PartialParentPlannerFullOnly,
+    "pipeline.deferred_parent_planner_full_only": DeferredParentPlannerFullOnly,
     # Composite capacity scenarios.
     "capacity.full_system_capacity_matrix": FullSystemCapacityMatrix,
     # Focused sandbox scenarios.
@@ -88,8 +88,8 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     "planner_validation.cycle_in_deps": PlannerCycleInDeps,
     "planner_validation.duplicate_local_id": PlannerDuplicateLocalId,
     "planner_validation.empty_tasks": PlannerEmptyTasks,
-    "planner_validation.partial_without_continuation_goal": (
-        PlannerPartialWithoutContinuationGoal
+    "planner_validation.defers_without_deferred_goal": (
+        PlannerDefersWithoutDeferredGoal
     ),
     "planner_validation.unknown_agent_name": PlannerUnknownAgentName,
     "planner_validation.unknown_dep": PlannerUnknownDep,
@@ -114,7 +114,7 @@ __all__ = [
     "DependencyDagParallel",
     "DependencyDagSerial",
     "InitialMessagesCapture",
-    "IterativeContinuation",
+    "IterativeDeferral",
     "FullCaseUserInput",
     "FullSystemCapacityMatrix",
     "FullStackAdversarial",
@@ -122,12 +122,12 @@ __all__ = [
     "InitialGoal",
     "NestedGoal",
     "NestedGoalFailure",
-    "PartialParentPlannerFullOnly",
+    "DeferredParentPlannerFullOnly",
     "OccConcurrentConflicts",
     "PlannerCycleInDeps",
     "PlannerDuplicateLocalId",
     "PlannerEmptyTasks",
-    "PlannerPartialWithoutContinuationGoal",
+    "PlannerDefersWithoutDeferredGoal",
     "PlannerUnknownAgentName",
     "PlannerUnknownDep",
     "SCENARIO_REGISTRY",

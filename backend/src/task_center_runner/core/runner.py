@@ -115,9 +115,9 @@ def _graph_summary(
                             else None
                         ),
                         # Dict key mirrors the Python attribute name so test
-                        # consumers can read ``attempt["next_iteration_handoff_goal"]``
+                        # consumers can read ``attempt["deferred_goal_for_next_iteration"]``
                         # without having to know the DB column alias.
-                        "next_iteration_handoff_goal": attempt.next_iteration_handoff_goal,
+                        "deferred_goal_for_next_iteration": attempt.deferred_goal_for_next_iteration,
                         "task_ids": list(attempt.generator_task_ids),
                         "tasks": task_rows,
                     }
@@ -130,7 +130,7 @@ def _graph_summary(
                     "status": iteration.status.value,
                     "goal": iteration.goal,
                     # Dict key mirrors the Python attribute name.
-                    "next_iteration_handoff_goal": iteration.next_iteration_handoff_goal,
+                    "deferred_goal_for_next_iteration": iteration.deferred_goal_for_next_iteration,
                     "attempts": attempts,
                 }
             )

@@ -24,7 +24,7 @@ conventions, and per-subpackage coverage matrix.
 2. Copy the closest reference scenario:
    - State-machine assertion → `pipeline/initial_goal.py`
    - DAG dependency assertion → `pipeline/dependency_dag_serial.py`
-   - Iterative continuation → `pipeline/iterative_continuation.py`
+   - Iterative continuation → `pipeline/iterative_deferral.py`
    - Attempt-retry assertion → `pipeline/attempt_retry_evaluator_failure.py`
    - Sandbox event assertion → `sandbox/occ_concurrent_conflicts.py`
    - Planner rejection assertion → `planner_validation/duplicate_local_id.py`

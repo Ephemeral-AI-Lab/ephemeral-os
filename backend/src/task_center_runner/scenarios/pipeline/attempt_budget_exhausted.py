@@ -56,12 +56,12 @@ class AttemptBudgetExhausted(ScenarioBase):
         EventType.ENTRY_EXECUTOR_INVOKED,
         # Attempt 1 — planner ok, executor fails, no evaluator.
         EventType.PLANNER_INVOKED,
-        EventType.PLANNER_FULL_PLAN,
+        EventType.PLANNER_COMPLETES_GOAL_PLAN,
         EventType.EXECUTOR_INVOKED,
         EventType.EXECUTOR_FAILURE,
         # Attempt 2 — same outcome, budget exhausted after this.
         EventType.PLANNER_INVOKED,
-        EventType.PLANNER_FULL_PLAN,
+        EventType.PLANNER_COMPLETES_GOAL_PLAN,
         EventType.EXECUTOR_INVOKED,
         EventType.EXECUTOR_FAILURE,
     )

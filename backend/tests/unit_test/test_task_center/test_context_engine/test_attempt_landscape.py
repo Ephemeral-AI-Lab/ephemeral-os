@@ -32,7 +32,7 @@ def _iteration(sequence_no: int = 1) -> Iteration:
         attempt_budget=2,
         status=IterationStatus.OPEN,
         attempt_ids=(),
-        next_iteration_handoff_goal=None,
+        deferred_goal_for_next_iteration=None,
         created_at=now,
         updated_at=now,
         closed_at=None,
@@ -48,7 +48,7 @@ def _attempt(
     evaluation_criteria: tuple[str, ...] = (),
     generator_task_ids: tuple[str, ...] = (),
     evaluator_task_id: str | None = None,
-    next_iteration_handoff_goal: str | None = None,
+    deferred_goal_for_next_iteration: str | None = None,
     fail_reason: AttemptFailReason | None = None,
 ) -> Attempt:
     now = datetime.now(UTC)
@@ -63,7 +63,7 @@ def _attempt(
         evaluation_criteria=evaluation_criteria,
         generator_task_ids=generator_task_ids,
         evaluator_task_id=evaluator_task_id,
-        next_iteration_handoff_goal=next_iteration_handoff_goal,
+        deferred_goal_for_next_iteration=deferred_goal_for_next_iteration,
         fail_reason=fail_reason,
         created_at=now,
         updated_at=now,
@@ -130,12 +130,12 @@ def test_renders_attempt_plan_xml_with_plan_spec_child():
     assert "<attempt_plan>" in body
     assert "<plan_spec>\nsubmitted spec\n</plan_spec>" in body
     assert "</attempt_plan>" in body
-    assert "<next_iteration_handoff_goal>" not in body, (
+    assert "<deferred_goal_for_next_iteration>" not in body, (
         "absent handoff goal must not produce a child element"
     )
 
 
-def test_renders_attempt_plan_xml_with_handoff_goal_child():
+def test_renders_attempt_plan_xml_with_deferred_goal_child():
     blocks = failed_attempt_landscape_blocks(
         current_attempt_id=None,
         iteration=_iteration(),
@@ -143,15 +143,15 @@ def test_renders_attempt_plan_xml_with_handoff_goal_child():
             _attempt(
                 1,
                 plan_spec="partial spec",
-                next_iteration_handoff_goal="continue with admin tools",
+                deferred_goal_for_next_iteration="continue with admin tools",
             )
         ],
     )
     body = blocks[0].text
     assert "<plan_spec>\npartial spec\n</plan_spec>" in body
     assert (
-        "<next_iteration_handoff_goal>\ncontinue with admin tools\n"
-        "</next_iteration_handoff_goal>"
+        "<deferred_goal_for_next_iteration>\ncontinue with admin tools\n"
+        "</deferred_goal_for_next_iteration>"
     ) in body
 
 
@@ -224,7 +224,7 @@ def test_renders_generator_outcomes_status_summary_and_task_children():
                 plan_spec="partial spec",
                 evaluation_criteria=("criterion",),
                 generator_task_ids=("t-a", "t-b", "t-missing"),
-                next_iteration_handoff_goal="continue with admin tools",
+                deferred_goal_for_next_iteration="continue with admin tools",
                 fail_reason=AttemptFailReason.EVALUATOR_FAILED,
             )
         ],

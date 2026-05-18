@@ -39,7 +39,7 @@ _LSP_NAMES = (
 _SUBMISSION_TOOL_NAMES = {
     "submit_execution_handoff",
     "submit_plan_closes_goal",
-    "submit_plan_continues_goal",
+    "submit_plan_defers_goal",
     "submit_execution_success",
     "submit_execution_failure",
     "submit_evaluation_success",

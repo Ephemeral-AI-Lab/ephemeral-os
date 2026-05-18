@@ -116,8 +116,8 @@ def _assert_task_center_shape(
     events: list[Event],
 ) -> None:
     seen = {event.type for event in events}
-    assert EventType.PLANNER_FULL_PLAN in seen
-    assert EventType.PLANNER_PARTIAL_PLAN in seen
+    assert EventType.PLANNER_COMPLETES_GOAL_PLAN in seen
+    assert EventType.PLANNER_DEFERS_GOAL_PLAN in seen
     assert EventType.VERIFIER_FAILURE in seen
     assert EventType.RECURSIVE_GOAL_REQUESTED in seen
     assert EventType.RECURSIVE_GOAL_COMPLETED in seen

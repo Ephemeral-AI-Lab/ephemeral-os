@@ -42,10 +42,10 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
         attempt_count=1,
     ),
     FocusedScenarioCase(
-        "pipeline.iterative_continuation",
+        "pipeline.iterative_deferral",
         min_event_counts={
-            EventType.PLANNER_PARTIAL_PLAN: 1,
-            EventType.PLANNER_FULL_PLAN: 1,
+            EventType.PLANNER_DEFERS_GOAL_PLAN: 1,
+            EventType.PLANNER_COMPLETES_GOAL_PLAN: 1,
             EventType.EXECUTOR_SUCCESS: 2,
             EventType.EVALUATOR_SUCCESS: 2,
         },
@@ -55,7 +55,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
     FocusedScenarioCase(
         "pipeline.attempt_retry_evaluator_failure",
         min_event_counts={
-            EventType.PLANNER_FULL_PLAN: 2,
+            EventType.PLANNER_COMPLETES_GOAL_PLAN: 2,
             EventType.EXECUTOR_SUCCESS: 2,
             EventType.EVALUATOR_FAILURE: 1,
             EventType.EVALUATOR_SUCCESS: 1,
@@ -66,7 +66,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
         "pipeline.attempt_retry_planner_failure",
         min_event_counts={
             EventType.PLANNER_INVOKED: 2,
-            EventType.PLANNER_FULL_PLAN: 1,
+            EventType.PLANNER_COMPLETES_GOAL_PLAN: 1,
             EventType.TOOL_CALL_ERROR: 1,
             EventType.EXECUTOR_SUCCESS: 1,
             EventType.EVALUATOR_SUCCESS: 1,
@@ -76,7 +76,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
     FocusedScenarioCase(
         "pipeline.attempt_retry_generator_failure",
         min_event_counts={
-            EventType.PLANNER_FULL_PLAN: 2,
+            EventType.PLANNER_COMPLETES_GOAL_PLAN: 2,
             EventType.EXECUTOR_FAILURE: 1,
             EventType.EXECUTOR_SUCCESS: 1,
             EventType.EVALUATOR_SUCCESS: 1,
@@ -118,7 +118,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
     FocusedScenarioCase(
         "pipeline.generator_failure_quiescence",
         min_event_counts={
-            EventType.PLANNER_FULL_PLAN: 2,
+            EventType.PLANNER_COMPLETES_GOAL_PLAN: 2,
             EventType.EXECUTOR_INVOKED: 7,
             EventType.EXECUTOR_SUCCESS: 6,
             EventType.EXECUTOR_FAILURE: 1,
@@ -130,7 +130,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
         "pipeline.dependency_blocked_descendants",
         expected_status="failed",
         min_event_counts={
-            EventType.PLANNER_FULL_PLAN: 2,
+            EventType.PLANNER_COMPLETES_GOAL_PLAN: 2,
             EventType.EXECUTOR_INVOKED: 2,
             EventType.EXECUTOR_FAILURE: 2,
         },
@@ -142,7 +142,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
         "pipeline.attempt_budget_exhausted",
         expected_status="failed",
         min_event_counts={
-            EventType.PLANNER_FULL_PLAN: 2,
+            EventType.PLANNER_COMPLETES_GOAL_PLAN: 2,
             EventType.EXECUTOR_FAILURE: 2,
         },
         absent_events=(EventType.EVALUATOR_INVOKED,),
@@ -166,7 +166,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.TOOL_CALL_ERROR: 2,
         },
         absent_events=(
-            EventType.PLANNER_FULL_PLAN,
+            EventType.PLANNER_COMPLETES_GOAL_PLAN,
             EventType.EXECUTOR_INVOKED,
             EventType.EVALUATOR_INVOKED,
         ),
@@ -181,7 +181,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.TOOL_CALL_ERROR: 2,
         },
         absent_events=(
-            EventType.PLANNER_FULL_PLAN,
+            EventType.PLANNER_COMPLETES_GOAL_PLAN,
             EventType.EXECUTOR_INVOKED,
             EventType.EVALUATOR_INVOKED,
         ),
@@ -196,7 +196,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.TOOL_CALL_ERROR: 2,
         },
         absent_events=(
-            EventType.PLANNER_FULL_PLAN,
+            EventType.PLANNER_COMPLETES_GOAL_PLAN,
             EventType.EXECUTOR_INVOKED,
             EventType.EVALUATOR_INVOKED,
         ),
@@ -204,15 +204,15 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
         attempt_count=2,
     ),
     FocusedScenarioCase(
-        "planner_validation.partial_without_continuation_goal",
+        "planner_validation.defers_without_deferred_goal",
         expected_status="failed",
         min_event_counts={
             EventType.PLANNER_INVOKED: 2,
             EventType.TOOL_CALL_ERROR: 2,
         },
         absent_events=(
-            EventType.PLANNER_FULL_PLAN,
-            EventType.PLANNER_PARTIAL_PLAN,
+            EventType.PLANNER_COMPLETES_GOAL_PLAN,
+            EventType.PLANNER_DEFERS_GOAL_PLAN,
             EventType.EXECUTOR_INVOKED,
             EventType.EVALUATOR_INVOKED,
         ),
@@ -227,7 +227,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.TOOL_CALL_ERROR: 2,
         },
         absent_events=(
-            EventType.PLANNER_FULL_PLAN,
+            EventType.PLANNER_COMPLETES_GOAL_PLAN,
             EventType.EXECUTOR_INVOKED,
             EventType.EVALUATOR_INVOKED,
         ),
@@ -242,7 +242,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
             EventType.TOOL_CALL_ERROR: 2,
         },
         absent_events=(
-            EventType.PLANNER_FULL_PLAN,
+            EventType.PLANNER_COMPLETES_GOAL_PLAN,
             EventType.EXECUTOR_INVOKED,
             EventType.EVALUATOR_INVOKED,
         ),

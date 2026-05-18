@@ -1,5 +1,5 @@
 # evaluator — attempt 1 (proceeds to `submit_evaluation_failure`); same user_msg_1 shape as a passing evaluator, captured for completeness on the evaluator-failure path
-- source: `pipeline.attempt_retry_evaluator_failure/20260518T212742Z_04794ad2be49/goal_01_55ae1bac-898f-47b3-9be0-780ca1f5ded6/iteration_01_a1e165a0-7f7d-4c8f-a5bb-b4791671c552/attempt_01_5dccbe28-44d5-440a-8b36-cb3411b68c00/03_evaluator_5dccbe28-44d5-440a-8b36-cb3411b68c00:evaluator/message.jsonl`
+- source: `pipeline.attempt_retry_evaluator_failure/20260518T223037Z_abf9d86842c1/goal_01_8be99581-68b0-4694-9f37-c33c0685841e/iteration_01_01a12592-123b-4329-afc5-d7944f27984c/attempt_01_e87f7f14-87e7-4604-9ac8-59cd0c6178ae/03_evaluator_e87f7f14-87e7-4604-9ac8-59cd0c6178ae:evaluator/message.jsonl`
 - notes: Closes Gap 5 in the original gap report. The evaluator's *input* shape is identical regardless of the verdict the evaluator decides to submit — the failure path is the agent's behavior (`submit_evaluation_failure` with `summary` + `failed_criteria`), not a context-engine branch. This case documents the input prompt that precedes such a decision so readers can audit the full failure path alongside cases 07 (partial-success) and 08 (complete-success). The downstream effect of `submit_evaluation_failure` is what case 13's planner sees as the rich `<attempt status="failed">` block.
 
 ## system
@@ -1877,7 +1877,7 @@ Run a workspace preflight probe.
 </attempt_plan>
 
 <completed_tasks>
-<task id="5dccbe28-44d5-440a-8b36-cb3411b68c00:gen:preflight" status="done">
+<task id="e87f7f14-87e7-4604-9ac8-59cd0c6178ae:gen:preflight" status="done">
 Workspace preflight completed.
 </task>
 </completed_tasks>

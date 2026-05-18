@@ -80,7 +80,7 @@ def _seed_failed_attempt(attempt_store, iteration_id, *, sequence_no: int):
         g.id,
         plan_spec=f"spec-{sequence_no}",
         evaluation_criteria=[f"crit-{sequence_no}-a", f"crit-{sequence_no}-b"],
-        next_iteration_handoff_goal=None,
+        deferred_goal_for_next_iteration=None,
     )
     return attempt_store.close(
         g.id,
@@ -287,7 +287,7 @@ def test_failed_attempt_landscape_includes_plan_type_statuses_and_summaries(
         failed.id,
         plan_spec="partial failed spec",
         evaluation_criteria=["criterion"],
-        next_iteration_handoff_goal="continue with later slice",
+        deferred_goal_for_next_iteration="continue with later slice",
     )
     attempt_store.set_generator_task_ids(failed.id, ["gen-a", "gen-b"])
     task_store.upsert_task(
@@ -339,8 +339,8 @@ def test_failed_attempt_landscape_includes_plan_type_statuses_and_summaries(
     assert "<attempt_plan>" in text
     assert "<plan_spec>\npartial failed spec\n</plan_spec>" in text
     assert (
-        "<next_iteration_handoff_goal>\ncontinue with later slice\n"
-        "</next_iteration_handoff_goal>"
+        "<deferred_goal_for_next_iteration>\ncontinue with later slice\n"
+        "</deferred_goal_for_next_iteration>"
     ) in text
     assert "<generator_outcomes>" in text
     assert "gen-a: done" in text

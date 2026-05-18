@@ -13,7 +13,7 @@ from tools.submission.verifier import (
 )
 from tools.submission.planner import (
     submit_plan_closes_goal,
-    submit_plan_continues_goal,
+    submit_plan_defers_goal,
 )
 
 from task_center_runner.audit.events import EventType
@@ -37,13 +37,13 @@ class FullCaseUserInput(ScenarioBase):
     expected_event_sequence: tuple[EventType, ...] = (
         EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
-        EventType.PLANNER_FULL_PLAN,
+        EventType.PLANNER_COMPLETES_GOAL_PLAN,
         EventType.EXECUTOR_INVOKED,
         EventType.EXECUTOR_SUCCESS,
         EventType.VERIFIER_INVOKED,
         EventType.VERIFIER_FAILURE,
         EventType.PLANNER_INVOKED,
-        EventType.PLANNER_PARTIAL_PLAN,
+        EventType.PLANNER_DEFERS_GOAL_PLAN,
         EventType.EVALUATOR_SUCCESS,
     )
 
@@ -157,13 +157,13 @@ class FullCaseUserInput(ScenarioBase):
         attempt = ctx.attempt
         self._ensure_user_input_plan(ctx)
         if iteration.sequence_no == 1 and attempt.attempt_sequence_no == 1:
-            return ToolCallSpec(submit_plan_closes_goal, _inventory_plan(kind="full"))
+            return ToolCallSpec(submit_plan_closes_goal, _inventory_plan(kind="completes"))
         if iteration.sequence_no == 1:
             return ToolCallSpec(
-                submit_plan_continues_goal,
+                submit_plan_defers_goal,
                 _inventory_plan(
-                    kind="partial",
-                    next_iteration_handoff_goal=(
+                    kind="defers",
+                    deferred_goal_for_next_iteration=(
                         "Execute the dynamic package DAG with verifier "
                         "checkpoints and recursive goal handling."
                     ),
@@ -171,14 +171,14 @@ class FullCaseUserInput(ScenarioBase):
             )
         if iteration.sequence_no == 2:
             args = self._implementation_plan(ctx)
-            return ToolCallSpec(submit_plan_continues_goal, args)
+            return ToolCallSpec(submit_plan_defers_goal, args)
         return ToolCallSpec(submit_plan_closes_goal, self._final_reconciliation_plan(ctx))
 
     def _recursive_planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         iteration = ctx.iteration
         if iteration.sequence_no == 1:
             return ToolCallSpec(
-                submit_plan_continues_goal,
+                submit_plan_defers_goal,
                 {
                     "plan_spec": "Decompose the oversized delegated package.",
                     "evaluation_criteria": [
@@ -200,7 +200,7 @@ class FullCaseUserInput(ScenarioBase):
                             "dependency_count=1"
                         ),
                     },
-                    "next_iteration_handoff_goal": (
+                    "deferred_goal_for_next_iteration": (
                         "Execute the delegated package subtasks and verify "
                         "their local integration."
                     ),
@@ -208,7 +208,7 @@ class FullCaseUserInput(ScenarioBase):
             )
         if iteration.sequence_no == 2:
             return ToolCallSpec(
-                submit_plan_continues_goal,
+                submit_plan_defers_goal,
                 {
                     "plan_spec": "Execute delegated package subtasks.",
                     "evaluation_criteria": [
@@ -231,7 +231,7 @@ class FullCaseUserInput(ScenarioBase):
                             "VERIFY checkpoint=recursive_wave dependency_count=2"
                         ),
                     },
-                    "next_iteration_handoff_goal": "Reconcile recursive package evidence.",
+                    "deferred_goal_for_next_iteration": "Reconcile recursive package evidence.",
                 },
             )
         return ToolCallSpec(
@@ -331,7 +331,7 @@ class FullCaseUserInput(ScenarioBase):
             ],
             "tasks": tasks,
             "task_specs": task_specs,
-            "next_iteration_handoff_goal": (
+            "deferred_goal_for_next_iteration": (
                 "Run final release-bundle reconciliation after package evidence "
                 "and recursive goal output are available."
             ),
@@ -406,7 +406,7 @@ class FullCaseUserInput(ScenarioBase):
 def _inventory_plan(
     *,
     kind: str,
-    next_iteration_handoff_goal: str | None = None,
+    deferred_goal_for_next_iteration: str | None = None,
 ) -> dict[str, Any]:
     args: dict[str, Any] = {
         "plan_spec": "Inventory rendered SWE-EVO user-input requirements.",
@@ -427,9 +427,9 @@ def _inventory_plan(
             "inventory_guard": "VERIFY checkpoint=inventory dependency_count=1",
         },
     }
-    if kind == "partial":
-        assert next_iteration_handoff_goal is not None
-        args["next_iteration_handoff_goal"] = next_iteration_handoff_goal
+    if kind == "defers":
+        assert deferred_goal_for_next_iteration is not None
+        args["deferred_goal_for_next_iteration"] = deferred_goal_for_next_iteration
     return args
 
 

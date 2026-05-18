@@ -6,13 +6,13 @@ from collections.abc import Sequence
 from typing import Any
 
 from tools.submission.evaluator import submit_evaluation_failure
-from tools.submission.planner import submit_plan_continues_goal
+from tools.submission.planner import submit_plan_defers_goal
 
 from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
-def _partial_without_goal() -> dict[str, Any]:
+def _defers_without_goal() -> dict[str, Any]:
     return {
         "plan_spec": "Invalid partial plan with no continuation goal.",
         "evaluation_criteria": ["Partial plan must declare a continuation goal."],
@@ -21,10 +21,10 @@ def _partial_without_goal() -> dict[str, Any]:
     }
 
 
-class PlannerPartialWithoutContinuationGoal(ScenarioBase):
-    """submit_plan_continues_goal call omits required continuation_goal."""
+class PlannerDefersWithoutDeferredGoal(ScenarioBase):
+    """submit_plan_defers_goal call omits required continuation_goal."""
 
-    name = "planner_validation.partial_without_continuation_goal"
+    name = "planner_validation.defers_without_deferred_goal"
     expected_event_sequence: tuple[EventType, ...] = (
         EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
@@ -32,7 +32,7 @@ class PlannerPartialWithoutContinuationGoal(ScenarioBase):
     )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_plan_continues_goal, _partial_without_goal())
+        return ToolCallSpec(submit_plan_defers_goal, _defers_without_goal())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
         return ()
@@ -47,4 +47,4 @@ class PlannerPartialWithoutContinuationGoal(ScenarioBase):
         )
 
 
-__all__ = ["PlannerPartialWithoutContinuationGoal"]
+__all__ = ["PlannerDefersWithoutDeferredGoal"]

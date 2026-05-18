@@ -68,7 +68,38 @@ def test_append_attempt_id_preserves_order(
     assert s2.attempt_count == 2
 
 
-def test_set_iteration_handoff_goal_and_status(
+def test_deferred_goal_dto_field_maps_to_continuation_goal_db_column(
+    iteration_store, goal_store, task_center_run_id
+):
+    """PR 1 carve-out gate: Python DTO field `deferred_goal_for_next_iteration`
+    translates at the store seam to legacy DB column `continuation_goal`.
+    FU-2 (separate PR) renames the column. Until then, this round-trip pins the
+    seam so a future raw-SQL query against `iteration.deferred_goal_for_next_iteration`
+    (which does NOT exist as a column) fails this test loudly.
+    """
+    from db.models.iteration import IterationRecord
+
+    request_id = _seed_request(goal_store, task_center_run_id)
+    seg = iteration_store.insert(
+        goal_id=request_id,
+        sequence_no=1,
+        creation_reason=IterationCreationReason.INITIAL,
+        goal="g",
+        attempt_budget=2,
+    )
+    seg = iteration_store.set_deferred_goal_for_next_iteration(seg.id, "deferred-scope")
+    assert seg.deferred_goal_for_next_iteration == "deferred-scope"
+
+    with iteration_store._sf() as db:  # noqa: SLF001
+        record = db.get(IterationRecord, seg.id)
+        # The DB column literal is still `continuation_goal` (FU-2 pin).
+        assert record.continuation_goal == "deferred-scope"
+        # The DTO field name `deferred_goal_for_next_iteration` is NOT an ORM
+        # column — accessing it on the raw record must fail.
+        assert not hasattr(IterationRecord, "deferred_goal_for_next_iteration")
+
+
+def test_set_deferred_goal_for_next_iteration_and_status(
     iteration_store, goal_store, task_center_run_id
 ):
     request_id = _seed_request(goal_store, task_center_run_id)
@@ -79,8 +110,8 @@ def test_set_iteration_handoff_goal_and_status(
         goal="g",
         attempt_budget=2,
     )
-    seg = iteration_store.set_iteration_handoff_goal(seg.id, "next-goal")
-    assert seg.next_iteration_handoff_goal == "next-goal"
+    seg = iteration_store.set_deferred_goal_for_next_iteration(seg.id, "next-goal")
+    assert seg.deferred_goal_for_next_iteration == "next-goal"
     seg = iteration_store.set_status(
         seg.id,
         status=IterationStatus.SUCCEEDED,
@@ -97,7 +128,7 @@ def test_list_for_goal_orders_by_sequence_no(
     s2 = iteration_store.insert(
         goal_id=request_id,
         sequence_no=2,
-        creation_reason=IterationCreationReason.PARTIAL_CONTINUATION,
+        creation_reason=IterationCreationReason.DEFERRED_GOAL_CONTINUATION,
         goal="g2",
         attempt_budget=2,
     )

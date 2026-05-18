@@ -109,7 +109,7 @@ def _plan(
     *,
     tasks: tuple[PlannedGeneratorTask, ...],
     kind: str = "full",
-    next_iteration_handoff_goal: str | None = None,
+    deferred_goal_for_next_iteration: str | None = None,
 ) -> PlannerSubmission:
     return PlannerSubmission(
         attempt_id=attempt_id,
@@ -118,7 +118,7 @@ def _plan(
         plan_spec="spec",
         evaluation_criteria=("criterion",),
         tasks=tasks,
-        next_iteration_handoff_goal=next_iteration_handoff_goal,
+        deferred_goal_for_next_iteration=deferred_goal_for_next_iteration,
         summary="plan accepted",
     )
 
@@ -211,14 +211,14 @@ def test_apply_partial_plan_submission_stores_continuation_goal(
         _plan(
             attempt.id,
             tasks=(PlannedGeneratorTask("a", "executor", (), "do A"),),
-            kind="partial",
-            next_iteration_handoff_goal="continue here",
+            kind="defers",
+            deferred_goal_for_next_iteration="continue here",
         )
     )
 
     refreshed = attempt_store.get(attempt.id)
     assert refreshed is not None
-    assert refreshed.next_iteration_handoff_goal == "continue here"
+    assert refreshed.deferred_goal_for_next_iteration == "continue here"
 
 
 def test_apply_planner_failure_marks_task_and_closes_graph(

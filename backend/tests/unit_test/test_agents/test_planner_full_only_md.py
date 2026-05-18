@@ -27,14 +27,14 @@ def test_both_planner_definitions_load():
 def test_full_only_terminals_exclude_partial_plan():
     _, full_only = _load_planner_pair()
     assert "submit_plan_closes_goal" in full_only.terminals
-    assert "submit_plan_continues_goal" not in full_only.terminals
+    assert "submit_plan_defers_goal" not in full_only.terminals
 
 
 def test_full_only_body_contains_no_partial_plan_prose():
     _, full_only = _load_planner_pair()
     body = full_only.system_prompt or ""
-    assert "submit_plan_continues_goal" not in body
-    assert "next_iteration_handoff_goal" not in body
+    assert "submit_plan_defers_goal" not in body
+    assert "deferred_goal_for_next_iteration" not in body
 
 
 def test_full_only_has_no_variants():

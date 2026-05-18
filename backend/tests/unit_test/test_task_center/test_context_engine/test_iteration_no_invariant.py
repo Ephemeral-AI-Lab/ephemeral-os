@@ -46,10 +46,10 @@ class _FakeGoal:
 
 
 class _FakeAttempt:
-    def __init__(self, *, id: str, plan_spec: str | None, next_iteration_handoff_goal: str | None):
+    def __init__(self, *, id: str, plan_spec: str | None, deferred_goal_for_next_iteration: str | None):
         self.id = id
         self.plan_spec = plan_spec
-        self.next_iteration_handoff_goal = next_iteration_handoff_goal
+        self.deferred_goal_for_next_iteration = deferred_goal_for_next_iteration
 
 
 def _parse_iteration_no_from_group_attrs(group_attrs: str) -> int | None:
@@ -136,30 +136,30 @@ def test_goal_iteration_blocks_full_frame_invariant():
     _assert_invariant(blocks)
 
 
-def test_partial_attempt_plan_handoff_block_carries_is_partial_metadata():
+def test_attempt_plan_with_deferred_goal_block_carries_metadata():
     """The partial-plan handoff child is the signal carrier for the
     evaluator task-guidance branch. Its presence is what flips the
-    branch; the AC #17 invariant doesn't apply to is_partial (it's a
+    branch; the AC #17 invariant doesn't apply to has_deferred_goal_for_next_iteration (it's a
     single field, not a paired one)."""
     attempt = _FakeAttempt(
         id="a",
         plan_spec="plan body",
-        next_iteration_handoff_goal="future work",
+        deferred_goal_for_next_iteration="future work",
     )
     blocks = attempt_plan_blocks(attempt, priority=ContextPriority.REQUIRED)
-    handoffs = [b for b in blocks if b.metadata.get("child_tag") == "next_iteration_handoff_goal"]
+    handoffs = [b for b in blocks if b.metadata.get("child_tag") == "deferred_goal_for_next_iteration"]
     assert len(handoffs) == 1
-    assert handoffs[0].metadata["is_partial"] == "true"
+    assert handoffs[0].metadata["has_deferred_goal_for_next_iteration"] == "true"
 
 
-def test_full_attempt_plan_has_no_handoff_block():
+def test_attempt_plan_without_deferred_goal_has_no_block():
     """Closes-goal attempts (no handoff) do not emit the handoff child,
     so the partial branch never fires from a packet that has only a
     plan_spec block."""
     attempt = _FakeAttempt(
         id="a",
         plan_spec="plan body",
-        next_iteration_handoff_goal=None,
+        deferred_goal_for_next_iteration=None,
     )
     blocks = attempt_plan_blocks(attempt, priority=ContextPriority.REQUIRED)
-    assert all(b.metadata.get("is_partial") != "true" for b in blocks)
+    assert all(b.metadata.get("has_deferred_goal_for_next_iteration") != "true" for b in blocks)

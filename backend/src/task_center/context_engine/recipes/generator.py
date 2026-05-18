@@ -3,7 +3,7 @@
 Emits the current attempt plan, dependency results, and the assigned local
 task. XML shape:
 
-* ``<attempt_plan>`` group with ``<plan_spec>`` (and ``<next_iteration_handoff_goal>``
+* ``<attempt_plan>`` group with ``<plan_spec>`` (and ``<deferred_goal_for_next_iteration>``
   when the parent attempt is a continues-goal plan).
 * ``<dependency_results>`` group with one ``<dependency id="...">`` child per
   upstream task; omitted when the assigned task has no deps.

@@ -149,13 +149,13 @@ def harvest_main_agents() -> list[CapturedAgent]:
     """Pick representative main-agent first messages from existing runs.
 
     Selects:
-    - entry_executor from pipeline.iterative_continuation (deepest live coverage)
+    - entry_executor from pipeline.iterative_deferral (deepest live coverage)
     - planner iter 1 attempt 1 (continuation: partial plan path)
     - planner iter 2 attempt 1 (continuation: full plan after partial)
     - planner iter 1 attempt 2 from attempt_retry_planner_failure (failed-attempts path)
-    - executor (one task) from iterative_continuation
-    - evaluator from iterative_continuation iter 1 (partial-plan evaluator branch)
-    - evaluator from iterative_continuation iter 2 (full-plan evaluator branch)
+    - executor (one task) from iterative_deferral
+    - evaluator from iterative_deferral iter 1 (partial-plan evaluator branch)
+    - evaluator from iterative_deferral iter 2 (full-plan evaluator branch)
     """
     # Prefer the new live scenario run when present — it carries all branches
     # in one tree (attempt retry + continuation + 2 iterations).
@@ -174,13 +174,13 @@ def harvest_main_agents() -> list[CapturedAgent]:
         ]
     else:
         sources = [
-            ("entry_executor (root delegation)", "pipeline.iterative_continuation", lambda r: _select_role(r, "entry_executor_")),
-            ("planner — iter1 attempt1 (continuation partial)", "pipeline.iterative_continuation", lambda r: _select_role(r, "planner_", iteration="iteration_01", attempt="attempt_01")),
-            ("planner — iter2 attempt1 (continuation full)", "pipeline.iterative_continuation", lambda r: _select_role(r, "planner_", iteration="iteration_02", attempt="attempt_01")),
+            ("entry_executor (root delegation)", "pipeline.iterative_deferral", lambda r: _select_role(r, "entry_executor_")),
+            ("planner — iter1 attempt1 (continuation partial)", "pipeline.iterative_deferral", lambda r: _select_role(r, "planner_", iteration="iteration_01", attempt="attempt_01")),
+            ("planner — iter2 attempt1 (continuation full)", "pipeline.iterative_deferral", lambda r: _select_role(r, "planner_", iteration="iteration_02", attempt="attempt_01")),
             ("planner — iter1 attempt2 (after planner failure)", "pipeline.attempt_retry_planner_failure", lambda r: _select_role(r, "planner_", iteration="iteration_01", attempt="attempt_02")),
-            ("executor — generator task (no deps)", "pipeline.iterative_continuation", lambda r: _select_role(r, "executor_", iteration="iteration_01", attempt="attempt_01")),
-            ("evaluator — partial-plan attempt", "pipeline.iterative_continuation", lambda r: _select_role(r, "evaluator_", iteration="iteration_01", attempt="attempt_01")),
-            ("evaluator — full-plan attempt", "pipeline.iterative_continuation", lambda r: _select_role(r, "evaluator_", iteration="iteration_02", attempt="attempt_01")),
+            ("executor — generator task (no deps)", "pipeline.iterative_deferral", lambda r: _select_role(r, "executor_", iteration="iteration_01", attempt="attempt_01")),
+            ("evaluator — partial-plan attempt", "pipeline.iterative_deferral", lambda r: _select_role(r, "evaluator_", iteration="iteration_01", attempt="attempt_01")),
+            ("evaluator — full-plan attempt", "pipeline.iterative_deferral", lambda r: _select_role(r, "evaluator_", iteration="iteration_02", attempt="attempt_01")),
         ]
     captures: list[CapturedAgent] = []
     for label, scenario, selector in sources:
@@ -329,9 +329,9 @@ def build_main_constructed() -> list[ConstructedAgent]:
         ("iter1 attempt2 (after failed plan)", 1, True,
          "# Goal\n\n<root goal>\n\n# Current Iteration\n\nIteration 1 (retry).\n\n# Prior Failed Attempts\n\nAttempt 1: rejected — unknown dependency `missing`."),
         ("iter2 attempt1 (continuation, no prior failure)", 2, False,
-         "# Goal\n\n<root goal>\n\n# Current Iteration\n\nIteration 2 (PARTIAL_CONTINUATION) — continuation_goal from iteration 1.\n\n# Previous Iteration Results\n\n## Iteration 1 accepted plan\n\n<partial plan_spec>\n\n## Iteration 1 summary\n\nWorkspace preflight completed."),
+         "# Goal\n\n<root goal>\n\n# Current Iteration\n\nIteration 2 (DEFERRED_GOAL_CONTINUATION) — continuation_goal from iteration 1.\n\n# Previous Iteration Results\n\n## Iteration 1 accepted plan\n\n<partial plan_spec>\n\n## Iteration 1 summary\n\nWorkspace preflight completed."),
         ("iter2 attempt2 (continuation + prior failure)", 2, True,
-         "# Goal\n\n<root goal>\n\n# Current Iteration\n\nIteration 2 (PARTIAL_CONTINUATION).\n\n# Previous Iteration Results\n\n## Iteration 1 accepted plan\n\n<partial plan>\n\n## Iteration 1 summary\n\nDone.\n\n# Prior Failed Attempts\n\nAttempt 1 in iteration 2: rejected by evaluator."),
+         "# Goal\n\n<root goal>\n\n# Current Iteration\n\nIteration 2 (DEFERRED_GOAL_CONTINUATION).\n\n# Previous Iteration Results\n\n## Iteration 1 accepted plan\n\n<partial plan>\n\n## Iteration 1 summary\n\nDone.\n\n# Prior Failed Attempts\n\nAttempt 1 in iteration 2: rejected by evaluator."),
     ]
     for label, iter_n, failed, um1 in planner_variants:
         role_text = planner_instruction(
@@ -374,13 +374,13 @@ def build_main_constructed() -> list[ConstructedAgent]:
             ))
 
     # --- Evaluator — 2 branches ---
-    for is_partial, label in ((True, "partial attempt"), (False, "complete attempt")):
-        role_text = evaluator_instruction(is_partial=is_partial).text
+    for has_deferred_goal_for_next_iteration, label in ((True, "partial attempt"), (False, "complete attempt")):
+        role_text = evaluator_instruction(has_deferred_goal_for_next_iteration=has_deferred_goal_for_next_iteration).text
         um2 = _append_catalog(role_text, evaluator_def)
         partial_block = (
             "\n\n# Partial Plan Boundary\n\nIntentionally partial; "
             "continuation_goal is set."
-            if is_partial
+            if has_deferred_goal_for_next_iteration
             else ""
         )
         um1 = (
@@ -547,7 +547,7 @@ def synthesise_main_user_msg_1(capture: CapturedAgent) -> str:
             return (
                 "# Goal\n\n<root goal text>\n\n"
                 "# Current Iteration\n\n"
-                "Iteration 2 (PARTIAL_CONTINUATION) — continue from the "
+                "Iteration 2 (DEFERRED_GOAL_CONTINUATION) — continue from the "
                 "continuation_goal supplied by iteration 1's partial plan.\n\n"
                 "# Previous Iteration Results\n\n"
                 "## Iteration 1 accepted plan\n\n"
@@ -963,7 +963,7 @@ def render_report(
         "`Daytona pending_build hang root cause` memory entry. The "
         "composer / recorder / planner-validation pipeline this report "
         "audits is exercised identically by the most recent live runs of "
-        "`pipeline.iterative_continuation` and "
+        "`pipeline.iterative_deferral` and "
         "`pipeline.attempt_retry_planner_failure`, which is why those are "
         "the captured-row source.\n"
     )

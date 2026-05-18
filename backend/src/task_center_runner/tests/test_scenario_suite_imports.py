@@ -112,12 +112,12 @@ def test_subpackage_imports_are_clean() -> None:
         "DependencyDagParallel",
         "DependencyDagSerial",
         "InitialMessagesCapture",
-        "IterativeContinuation",
+        "IterativeDeferral",
         "GeneratorFailureQuiescence",
         "InitialGoal",
         "NestedGoal",
         "NestedGoalFailure",
-        "PartialParentPlannerFullOnly",
+        "DeferredParentPlannerFullOnly",
     ]
     assert sandbox.__all__ == [
         "AutoSquashCommitResume",
@@ -133,7 +133,7 @@ def test_subpackage_imports_are_clean() -> None:
         "PlannerCycleInDeps",
         "PlannerDuplicateLocalId",
         "PlannerEmptyTasks",
-        "PlannerPartialWithoutContinuationGoal",
+        "PlannerDefersWithoutDeferredGoal",
         "PlannerUnknownAgentName",
         "PlannerUnknownDep",
     ]

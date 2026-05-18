@@ -41,7 +41,7 @@ class Attempt:
     evaluation_criteria: tuple[str, ...]
     generator_task_ids: tuple[str, ...]
     evaluator_task_id: str | None
-    next_iteration_handoff_goal: str | None
+    deferred_goal_for_next_iteration: str | None
     fail_reason: AttemptFailReason | None
     created_at: datetime
     updated_at: datetime
@@ -52,5 +52,5 @@ class Attempt:
         return self.stage == AttemptStage.CLOSED
 
     @property
-    def has_iteration_handoff(self) -> bool:
-        return self.next_iteration_handoff_goal is not None
+    def has_deferred_goal_for_next_iteration(self) -> bool:
+        return self.deferred_goal_for_next_iteration is not None

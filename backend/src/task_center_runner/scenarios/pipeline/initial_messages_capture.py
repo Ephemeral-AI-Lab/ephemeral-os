@@ -18,8 +18,8 @@ Combines three orthogonal composer branches into one live run so a single
    (handoff) to drive the continuation branch (#2 below).
 
 2. **Continuation goal** — iteration 1 attempt 2 submits a *partial* plan
-   with a ``next_iteration_handoff_goal``. The iteration manager spawns
-   iteration 2 with ``creation_reason=PARTIAL_CONTINUATION``; iteration 2's
+   with a ``deferred_goal_for_next_iteration``. The iteration manager spawns
+   iteration 2 with ``creation_reason=DEFERRED_GOAL_CONTINUATION``; iteration 2's
    planner sees a ``<iteration iteration_no="1" status="prior">`` group
    with the accepted plan and summary.
 
@@ -63,13 +63,13 @@ from tools.submission.evaluator import (
 )
 from tools.submission.planner import (
     submit_plan_closes_goal,
-    submit_plan_continues_goal,
+    submit_plan_defers_goal,
 )
 
 from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios._utils import (
     preflight_full_plan,
-    preflight_partial_plan,
+    preflight_defers_plan,
 )
 from task_center_runner.scenarios.base import (
     ScenarioBase,
@@ -93,7 +93,7 @@ class InitialMessagesCapture(ScenarioBase):
     attempt is closed FAILED with rich, fully-rendered retry evidence.
     Iteration 1, attempt 2: planner sees that retry evidence in a
     ``<attempt status="failed">`` block, submits a partial plan with a
-    ``next_iteration_handoff_goal``; executor runs preflight; evaluator
+    ``deferred_goal_for_next_iteration``; executor runs preflight; evaluator
     passes.
     Iteration 2, attempt 1: planner submits a full plan; executor runs
     preflight; evaluator passes; goal closes succeeded.
@@ -110,7 +110,7 @@ class InitialMessagesCapture(ScenarioBase):
         EventType.ENTRY_EXECUTOR_INVOKED,
         # Iteration 1 attempt 1 — full submission then evaluator failure.
         EventType.PLANNER_INVOKED,
-        EventType.PLANNER_FULL_PLAN,
+        EventType.PLANNER_COMPLETES_GOAL_PLAN,
         EventType.EXECUTOR_INVOKED,
         EventType.EXECUTOR_SUCCESS,
         EventType.EVALUATOR_INVOKED,
@@ -118,14 +118,14 @@ class InitialMessagesCapture(ScenarioBase):
         # Iteration 1 attempt 2 — planner submits partial plan after seeing
         # the rich failed-attempt block from attempt 1.
         EventType.PLANNER_INVOKED,
-        EventType.PLANNER_PARTIAL_PLAN,
+        EventType.PLANNER_DEFERS_GOAL_PLAN,
         EventType.EXECUTOR_INVOKED,
         EventType.EXECUTOR_SUCCESS,
         EventType.EVALUATOR_INVOKED,
         EventType.EVALUATOR_SUCCESS,
         # Iteration 2 — full plan after continuation.
         EventType.PLANNER_INVOKED,
-        EventType.PLANNER_FULL_PLAN,
+        EventType.PLANNER_COMPLETES_GOAL_PLAN,
         EventType.EXECUTOR_INVOKED,
         EventType.EXECUTOR_SUCCESS,
         EventType.EVALUATOR_INVOKED,
@@ -142,8 +142,8 @@ class InitialMessagesCapture(ScenarioBase):
                     submit_plan_closes_goal, preflight_full_plan()
                 )
             return ToolCallSpec(
-                submit_plan_continues_goal,
-                preflight_partial_plan(next_iteration_handoff_goal=_CONTINUATION_GOAL),
+                submit_plan_defers_goal,
+                preflight_defers_plan(deferred_goal_for_next_iteration=_CONTINUATION_GOAL),
             )
         return ToolCallSpec(submit_plan_closes_goal, preflight_full_plan())
 

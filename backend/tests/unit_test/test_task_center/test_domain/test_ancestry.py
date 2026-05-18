@@ -64,7 +64,7 @@ def _seed_attempt(
         attempt.id,
         plan_spec="spec",
         evaluation_criteria=["c1"],
-        next_iteration_handoff_goal=None,
+        deferred_goal_for_next_iteration=None,
     )
     attempt_store.set_stage(attempt.id, AttemptStage.GENERATE)
     return attempt

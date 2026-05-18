@@ -12,7 +12,7 @@ with ``status=failed`` and the goal closes ``status=failed``. No generator
 or evaluator was launched.
 
 Asserts: ``report.task_center_status == "failed"``; the seen event sequence
-contains two planner invocations, no accepted ``PLANNER_FULL_PLAN``, and no
+contains two planner invocations, no accepted ``PLANNER_COMPLETES_GOAL_PLAN``, and no
 ``EXECUTOR_INVOKED`` or ``EVALUATOR_INVOKED`` events.
 """
 

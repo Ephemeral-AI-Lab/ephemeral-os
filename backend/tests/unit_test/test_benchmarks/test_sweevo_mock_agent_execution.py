@@ -225,7 +225,7 @@ async def test_run_scenario_correctness_testing_with_fake_sandbox(
         for iteration in delegated["iterations"]
         for attempt in iteration["attempts"]
     ] == ["failed", "passed", "passed"]
-    assert delegated["iterations"][0]["next_iteration_handoff_goal"]
+    assert delegated["iterations"][0]["deferred_goal_for_next_iteration"]
     assert delegated["iterations"][1]["creation_reason"] == "partial_continuation"
 
     planner_reviews = [
@@ -240,7 +240,7 @@ async def test_run_scenario_correctness_testing_with_fake_sandbox(
     assert {
         "submit_execution_handoff",
         "submit_plan_closes_goal",
-        "submit_plan_continues_goal",
+        "submit_plan_defers_goal",
         "write_file",
         "read_file",
         "edit_file",

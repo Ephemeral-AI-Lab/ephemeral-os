@@ -1,7 +1,7 @@
 """Partial parent executor routes a child planner to ``planner_full_only``.
 
 The root goal's first iteration submits a partial plan with
-``next_iteration_handoff_goal``. Its executor then requests a child goal. Because the
+``deferred_goal_for_next_iteration``. Its executor then requests a child goal. Because the
 child goal's parent task belongs to that partial-planned attempt, the child
 planner must be selected through the ``planner`` agent.md variant and launch as
 ``planner_full_only``. The root continuation iteration still launches the normal
@@ -19,7 +19,7 @@ from tools.submission.verifier import (
 )
 from tools.submission.planner import (
     submit_plan_closes_goal,
-    submit_plan_continues_goal,
+    submit_plan_defers_goal,
 )
 
 from task_center_runner.audit.events import EventType
@@ -42,7 +42,7 @@ _CONTINUATION_GOAL = (
 )
 
 
-def _root_partial_plan() -> dict[str, Any]:
+def _root_defers_plan() -> dict[str, Any]:
     return {
         "plan_spec": (
             "Execute the first root slice by delegating one oversized branch to "
@@ -66,7 +66,7 @@ def _root_partial_plan() -> dict[str, Any]:
             ),
             "recursive_return_guard": "VERIFY checkpoint=recursive_return",
         },
-        "next_iteration_handoff_goal": _CONTINUATION_GOAL,
+        "deferred_goal_for_next_iteration": _CONTINUATION_GOAL,
     }
 
 
@@ -87,18 +87,18 @@ def _child_full_plan() -> dict[str, Any]:
     )
 
 
-class PartialParentPlannerFullOnly(ScenarioBase):
+class DeferredParentPlannerFullOnly(ScenarioBase):
     """Child goal from a partial parent gets the full-only planner profile."""
 
-    name = "pipeline.partial_parent_planner_full_only"
+    name = "pipeline.deferred_parent_planner_full_only"
     expected_event_sequence: tuple[EventType, ...] = (
         EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
-        EventType.PLANNER_PARTIAL_PLAN,
+        EventType.PLANNER_DEFERS_GOAL_PLAN,
         EventType.EXECUTOR_INVOKED,
         EventType.RECURSIVE_GOAL_REQUESTED,
         EventType.PLANNER_INVOKED,
-        EventType.PLANNER_FULL_PLAN,
+        EventType.PLANNER_COMPLETES_GOAL_PLAN,
         EventType.EXECUTOR_SUCCESS,
         EventType.EVALUATOR_SUCCESS,
         EventType.VERIFIER_INVOKED,
@@ -106,7 +106,7 @@ class PartialParentPlannerFullOnly(ScenarioBase):
         EventType.VERIFIER_SUCCESS,
         EventType.EVALUATOR_SUCCESS,
         EventType.PLANNER_INVOKED,
-        EventType.PLANNER_FULL_PLAN,
+        EventType.PLANNER_COMPLETES_GOAL_PLAN,
         EventType.EXECUTOR_SUCCESS,
         EventType.EVALUATOR_SUCCESS,
     )
@@ -115,7 +115,7 @@ class PartialParentPlannerFullOnly(ScenarioBase):
         if is_recursive_goal(ctx):
             return ToolCallSpec(submit_plan_closes_goal, _child_full_plan())
         if ctx.iteration.sequence_no == 1:
-            return ToolCallSpec(submit_plan_continues_goal, _root_partial_plan())
+            return ToolCallSpec(submit_plan_defers_goal, _root_defers_plan())
         return ToolCallSpec(
             submit_plan_closes_goal,
             preflight_full_plan(
@@ -158,4 +158,4 @@ class PartialParentPlannerFullOnly(ScenarioBase):
         return _CHILD_GOAL
 
 
-__all__ = ["PartialParentPlannerFullOnly"]
+__all__ = ["DeferredParentPlannerFullOnly"]

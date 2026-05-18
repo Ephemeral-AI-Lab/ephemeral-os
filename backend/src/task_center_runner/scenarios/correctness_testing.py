@@ -16,7 +16,7 @@ from tools.submission.evaluator import (
 )
 from tools.submission.planner import (
     submit_plan_closes_goal,
-    submit_plan_continues_goal,
+    submit_plan_defers_goal,
 )
 
 from task_center_runner.audit.events import EventType
@@ -70,7 +70,7 @@ _INTEGRITY_PARTIAL_PLAN: dict = {
             "edit_file, shell, a batch public edit, and an expected conflict."
         ),
     },
-    "next_iteration_handoff_goal": (
+    "deferred_goal_for_next_iteration": (
         "Run the final SWE-EVO mock grading iteration after sandbox integrity "
         "evidence has been persisted."
     ),
@@ -102,13 +102,13 @@ class CorrectnessTesting(ScenarioBase):
     expected_event_sequence: tuple[EventType, ...] = (
         EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
-        EventType.PLANNER_FULL_PLAN,
+        EventType.PLANNER_COMPLETES_GOAL_PLAN,
         EventType.EXECUTOR_INVOKED,
         EventType.EXECUTOR_SUCCESS,
         EventType.EVALUATOR_INVOKED,
         EventType.EVALUATOR_FAILURE,
         EventType.PLANNER_INVOKED,
-        EventType.PLANNER_PARTIAL_PLAN,
+        EventType.PLANNER_DEFERS_GOAL_PLAN,
         EventType.EXECUTOR_INVOKED,
         EventType.SANDBOX_BATCH_EDIT_APPLIED,
         EventType.SANDBOX_CONFLICT_DETECTED,
@@ -116,7 +116,7 @@ class CorrectnessTesting(ScenarioBase):
         EventType.EVALUATOR_INVOKED,
         EventType.EVALUATOR_SUCCESS,
         EventType.PLANNER_INVOKED,
-        EventType.PLANNER_FULL_PLAN,
+        EventType.PLANNER_COMPLETES_GOAL_PLAN,
         EventType.EXECUTOR_INVOKED,
         EventType.EXECUTOR_SUCCESS,
         EventType.EVALUATOR_INVOKED,
@@ -129,7 +129,7 @@ class CorrectnessTesting(ScenarioBase):
         if iteration.sequence_no == 1 and attempt.attempt_sequence_no == 1:
             return ToolCallSpec(submit_plan_closes_goal, dict(_PREFLIGHT_FULL_PLAN))
         if iteration.sequence_no == 1:
-            return ToolCallSpec(submit_plan_continues_goal, dict(_INTEGRITY_PARTIAL_PLAN))
+            return ToolCallSpec(submit_plan_defers_goal, dict(_INTEGRITY_PARTIAL_PLAN))
         return ToolCallSpec(submit_plan_closes_goal, dict(_FINAL_PROBE_FULL_PLAN))
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:

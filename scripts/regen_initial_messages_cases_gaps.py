@@ -3,8 +3,8 @@ the previously-flagged content gaps in the initial_messages_cases
 directory.
 
 * Case 12 — planner_full_only variant routed in a child-goal context
-  (no submit_plan_continues_goal terminal). Source:
-  pipeline.partial_parent_planner_full_only.
+  (no submit_plan_defers_goal terminal). Source:
+  pipeline.deferred_parent_planner_full_only.
 
 * Case 13 — planner that sees a *rich* `<attempt status="failed">` body
   (real plan_spec, real `<generator_outcomes>`, real
@@ -101,14 +101,14 @@ def _write_case(
 
 
 def case_12_planner_full_only_child_goal() -> None:
-    """Capture case 12 from the partial_parent_planner_full_only scenario.
+    """Capture case 12 from the deferred_parent_planner_full_only scenario.
 
     The scenario submits a partial plan in the parent goal, then delegates a
     child goal. The child goal's planner is resolved via the
     ``nested_goal_depth_gt_1`` variant to ``planner_full_only`` (no
-    ``submit_plan_continues_goal`` terminal).
+    ``submit_plan_defers_goal`` terminal).
     """
-    run = _latest_run("pipeline.partial_parent_planner_full_only")
+    run = _latest_run("pipeline.deferred_parent_planner_full_only")
     # The child goal directory is ``goal_02_*`` (root is goal_01).
     candidates = list(run.rglob("goal_02_*/iteration_01_*/attempt_01_*/01_planner_*:planner/message.jsonl"))
     assert len(candidates) == 1, candidates
@@ -116,18 +116,18 @@ def case_12_planner_full_only_child_goal() -> None:
     rel = jsonl.relative_to(run)
     system, um1, um2, um3 = _read_initial_rows(jsonl)
     _write_case(
-        case_path=CASES_DIR / "12_planner_full_only__child_goal__delegated_from_partial_parent.md",
+        case_path=CASES_DIR / "12_planner_full_only__child_goal__delegated_from_deferring_parent.md",
         title=(
             "planner_full_only — child goal delegated from a partial-plan parent "
             "(variant target: only `submit_plan_closes_goal` is available)"
         ),
-        source=f"pipeline.partial_parent_planner_full_only/{run.name}/{rel}",
+        source=f"pipeline.deferred_parent_planner_full_only/{run.name}/{rel}",
         notes=(
             "The parent attempt submitted a partial plan that delegated work to a "
             "child goal. The child goal's planner is resolved through the "
             "``nested_goal_depth_gt_1`` variant to ``planner_full_only`` — a leaf "
             "planner profile whose ``terminals:`` frontmatter list omits "
-            "``submit_plan_continues_goal``. Row 4's ``<terminal_tool_selection>`` "
+            "``submit_plan_defers_goal``. Row 4's ``<terminal_tool_selection>`` "
             "block therefore lists only ``submit_plan_closes_goal``."
         ),
         system=system,
@@ -135,7 +135,7 @@ def case_12_planner_full_only_child_goal() -> None:
         user_msg_2=um2,
         user_msg_3=um3,
     )
-    print(f"wrote {CASES_DIR}/12_planner_full_only__child_goal__delegated_from_partial_parent.md")
+    print(f"wrote {CASES_DIR}/12_planner_full_only__child_goal__delegated_from_deferring_parent.md")
 
 
 def case_13_planner_after_evaluator_failure() -> None:

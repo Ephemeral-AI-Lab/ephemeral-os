@@ -68,7 +68,7 @@ class DependencyDagMixed(ScenarioBase):
     expected_event_sequence: tuple[EventType, ...] = (
         EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
-        EventType.PLANNER_FULL_PLAN,
+        EventType.PLANNER_COMPLETES_GOAL_PLAN,
         # Sibling executor events interleave non-deterministically. Focused
         # tests assert the seven invoked/success counts and graph topology.
         EventType.EXECUTOR_INVOKED,

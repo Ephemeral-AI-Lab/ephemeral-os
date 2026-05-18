@@ -15,12 +15,12 @@ Implemented (reference scenarios):
 - :class:`DependencyDagMixed`
 - :class:`DependencyDagParallel`
 - :class:`DependencyDagSerial`
-- :class:`IterativeContinuation`
+- :class:`IterativeDeferral`
 - :class:`GeneratorFailureQuiescence`
 - :class:`InitialGoal`
 - :class:`NestedGoal`
 - :class:`NestedGoalFailure`
-- :class:`PartialParentPlannerFullOnly`
+- :class:`DeferredParentPlannerFullOnly`
 """
 
 from __future__ import annotations
@@ -55,8 +55,8 @@ from task_center_runner.scenarios.pipeline.dependency_dag_serial import (
 from task_center_runner.scenarios.pipeline.initial_messages_capture import (
     InitialMessagesCapture,
 )
-from task_center_runner.scenarios.pipeline.iterative_continuation import (
-    IterativeContinuation,
+from task_center_runner.scenarios.pipeline.iterative_deferral import (
+    IterativeDeferral,
 )
 from task_center_runner.scenarios.pipeline.generator_failure_quiescence import (
     GeneratorFailureQuiescence,
@@ -66,8 +66,8 @@ from task_center_runner.scenarios.pipeline.nested_goal import (
     NestedGoal,
     NestedGoalFailure,
 )
-from task_center_runner.scenarios.pipeline.partial_parent_planner_full_only import (
-    PartialParentPlannerFullOnly,
+from task_center_runner.scenarios.pipeline.deferred_parent_planner_full_only import (
+    DeferredParentPlannerFullOnly,
 )
 
 __all__ = [
@@ -81,10 +81,10 @@ __all__ = [
     "DependencyDagParallel",
     "DependencyDagSerial",
     "InitialMessagesCapture",
-    "IterativeContinuation",
+    "IterativeDeferral",
     "GeneratorFailureQuiescence",
     "InitialGoal",
     "NestedGoal",
     "NestedGoalFailure",
-    "PartialParentPlannerFullOnly",
+    "DeferredParentPlannerFullOnly",
 ]

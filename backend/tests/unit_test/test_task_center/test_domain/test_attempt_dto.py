@@ -24,7 +24,7 @@ def _graph(**overrides) -> Attempt:
         evaluation_criteria=(),
         generator_task_ids=(),
         evaluator_task_id=None,
-        next_iteration_handoff_goal=None,
+        deferred_goal_for_next_iteration=None,
         fail_reason=None,
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
@@ -34,9 +34,9 @@ def _graph(**overrides) -> Attempt:
     return Attempt(**base)
 
 
-def test_has_iteration_handoff_matches_continuation_goal():
-    assert _graph(next_iteration_handoff_goal=None).has_iteration_handoff is False
-    assert _graph(next_iteration_handoff_goal="x").has_iteration_handoff is True
+def test_has_deferred_goal_for_next_iteration_matches_deferred_goal():
+    assert _graph(deferred_goal_for_next_iteration=None).has_deferred_goal_for_next_iteration is False
+    assert _graph(deferred_goal_for_next_iteration="x").has_deferred_goal_for_next_iteration is True
 
 
 def test_is_closed_matches_stage():

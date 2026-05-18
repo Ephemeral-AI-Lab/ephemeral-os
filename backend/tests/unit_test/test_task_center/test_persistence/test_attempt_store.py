@@ -51,11 +51,11 @@ def test_set_plan_contract_persists_fields(
         g.id,
         plan_spec="spec",
         evaluation_criteria=["c1", "c2"],
-        next_iteration_handoff_goal="next",
+        deferred_goal_for_next_iteration="next",
     )
     assert g.plan_spec == "spec"
     assert g.evaluation_criteria == ("c1", "c2")
-    assert g.next_iteration_handoff_goal == "next"
+    assert g.deferred_goal_for_next_iteration == "next"
 
 
 def test_close_records_status_fail_reason_and_closed_at(

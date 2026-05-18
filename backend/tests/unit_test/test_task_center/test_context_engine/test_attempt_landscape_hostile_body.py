@@ -41,7 +41,7 @@ def _iteration() -> Iteration:
         attempt_budget=2,
         status=IterationStatus.OPEN,
         attempt_ids=(),
-        next_iteration_handoff_goal=None,
+        deferred_goal_for_next_iteration=None,
         created_at=now,
         updated_at=now,
         closed_at=None,
@@ -51,7 +51,7 @@ def _iteration() -> Iteration:
 def _attempt(
     *,
     plan_spec: str | None = "spec",
-    next_iteration_handoff_goal: str | None = None,
+    deferred_goal_for_next_iteration: str | None = None,
     evaluation_criteria: tuple[str, ...] = (),
     generator_task_ids: tuple[str, ...] = (),
     evaluator_task_id: str | None = None,
@@ -68,9 +68,9 @@ def _attempt(
         evaluation_criteria=evaluation_criteria,
         generator_task_ids=generator_task_ids,
         evaluator_task_id=evaluator_task_id,
-        next_iteration_handoff_goal=next_iteration_handoff_goal,
+        deferred_goal_for_next_iteration=deferred_goal_for_next_iteration,
         # EVALUATOR_FAILED routes through the rich body where every
-        # user-supplied fragment (plan_spec / handoff_goal / criteria /
+        # user-supplied fragment (plan_spec / deferred_goal_for_next_iteration / criteria /
         # generator summaries) is embedded and must be sanitized. The
         # PLANNER_FAILED / STARTUP_FAILED paths collapse to a compact body
         # that embeds no user text, so the hostile-body sanitizer is moot
@@ -98,10 +98,10 @@ def test_hostile_plan_spec_raises_with_full_error_contract(closer: str):
 
 
 @pytest.mark.parametrize("closer", _STRUCTURAL_CLOSERS)
-def test_hostile_handoff_goal_raises(closer: str):
+def test_hostile_deferred_goal_raises(closer: str):
     attempt = _attempt(
         plan_spec="ok",
-        next_iteration_handoff_goal=f"start {closer} end",
+        deferred_goal_for_next_iteration=f"start {closer} end",
     )
     with pytest.raises(ContextEngineError) as exc:
         failed_attempt_landscape_blocks(

@@ -112,10 +112,10 @@ class AttemptOrchestrator:
 
     def apply_plan_submission(self, submission: PlannerSubmission) -> None:
         self._assert_submission_attempt(submission.attempt_id)
-        if submission.kind == "full" and submission.next_iteration_handoff_goal is not None:
-            raise TaskCenterInvariantViolation("Full plans cannot set next_iteration_handoff_goal")
-        if submission.kind == "partial" and submission.next_iteration_handoff_goal is None:
-            raise TaskCenterInvariantViolation("Partial plans require next_iteration_handoff_goal")
+        if submission.kind == "completes" and submission.deferred_goal_for_next_iteration is not None:
+            raise TaskCenterInvariantViolation("Full plans cannot set deferred_goal_for_next_iteration")
+        if submission.kind == "defers" and submission.deferred_goal_for_next_iteration is None:
+            raise TaskCenterInvariantViolation("Partial plans require deferred_goal_for_next_iteration")
 
         attempt = self._validate_planner_submission(submission.planner_task_id)
         runtime = self._runtime
@@ -236,7 +236,7 @@ class AttemptOrchestrator:
             submission.attempt_id,
             plan_spec=submission.plan_spec,
             evaluation_criteria=list(submission.evaluation_criteria),
-            next_iteration_handoff_goal=submission.next_iteration_handoff_goal,
+            deferred_goal_for_next_iteration=submission.deferred_goal_for_next_iteration,
         )
 
     def _persist_generator_tasks(

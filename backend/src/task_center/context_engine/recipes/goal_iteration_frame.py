@@ -70,19 +70,19 @@ def attempt_plan_blocks(attempt, *, priority: ContextPriority) -> list[ContextBl
             },
         )
     ]
-    if attempt.next_iteration_handoff_goal:
+    if attempt.deferred_goal_for_next_iteration:
         blocks.append(
             ContextBlock(
                 kind=ContextBlockKind.TASK_SPECIFICATION,
                 priority=priority,
-                text=attempt.next_iteration_handoff_goal,
+                text=attempt.deferred_goal_for_next_iteration,
                 source_id=attempt.id,
                 source_kind="attempt",
                 metadata={
                     "group_id": group_id,
                     "group_tag": "attempt_plan",
-                    "child_tag": "next_iteration_handoff_goal",
-                    "is_partial": "true",
+                    "child_tag": "deferred_goal_for_next_iteration",
+                    "has_deferred_goal_for_next_iteration": "true",
                 },
             )
         )

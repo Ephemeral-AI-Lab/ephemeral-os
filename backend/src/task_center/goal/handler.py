@@ -84,10 +84,10 @@ class GoalHandler:
     ) -> tuple[Iteration, IterationManager]:
         return self._factory.create_initial(goal_id=goal_id)
 
-    def create_continuation_iteration_with_manager(
+    def create_deferred_iteration_with_manager(
         self, *, previous_iteration: Iteration,
     ) -> tuple[Iteration, IterationManager]:
-        return self._factory.create_continuation(previous_iteration=previous_iteration)
+        return self._factory.create_from_deferred_goal(previous_iteration=previous_iteration)
 
     def handle_iteration_closed(self, report: IterationClosureReport) -> None:
         self._router.route(report)

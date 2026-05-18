@@ -8,16 +8,16 @@ XML shape:
 
 * Goal frame from :func:`goal_iteration_blocks`.
 * ``<attempt_plan>`` group with ``<plan_spec>`` and, on a continues-goal
-  attempt, ``<next_iteration_handoff_goal>`` child. The handoff child block
-  carries ``metadata["is_partial"] = "true"`` — task-guidance builders branch
+  attempt, ``<deferred_goal_for_next_iteration>`` child. The handoff child block
+  carries ``metadata["has_deferred_goal_for_next_iteration"] = "true"`` — task-guidance builders branch
   on that signal.
 * ``<completed_tasks>`` group with one ``<task id="..." status="...">`` per
   generator task.
 * ``<evaluation_criteria>`` standalone block.
 
 The previous ``PARTIAL_PLAN_BOUNDARY`` block is gone: the structural signal
-travels via the nested ``<next_iteration_handoff_goal>`` child plus
-``metadata["is_partial"]``; the behavioral guidance lives in
+travels via the nested ``<deferred_goal_for_next_iteration>`` child plus
+``metadata["has_deferred_goal_for_next_iteration"]``; the behavioral guidance lives in
 ``task_center/task_guidance/builders.py:build_evaluator_task_guidance``.
 """
 

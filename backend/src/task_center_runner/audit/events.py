@@ -25,15 +25,15 @@ class EventType(StrEnum):
     GOAL_REQUESTED = "goal_requested"
     ITERATION_STARTED = "iteration_started"
     ITERATION_COMPLETED = "iteration_completed"
-    ITERATION_CONTINUATION_CREATED = "iteration_continuation_created"
+    ITERATION_FROM_DEFERRED_GOAL_CREATED = "iteration_continuation_created"
     ATTEMPT_STARTED = "attempt_started"
     ATTEMPT_PASSED = "attempt_passed"
     ATTEMPT_FAILED = "attempt_failed"
 
     # agent invocations
     PLANNER_INVOKED = "planner_invoked"
-    PLANNER_FULL_PLAN = "planner_full_plan"
-    PLANNER_PARTIAL_PLAN = "planner_partial_plan"
+    PLANNER_COMPLETES_GOAL_PLAN = "planner_full_plan"
+    PLANNER_DEFERS_GOAL_PLAN = "planner_partial_plan"
     PLANNER_REPLAN = "planner_replan"
     EXECUTOR_INVOKED = "executor_invoked"
     EXECUTOR_SUCCESS = "executor_success"

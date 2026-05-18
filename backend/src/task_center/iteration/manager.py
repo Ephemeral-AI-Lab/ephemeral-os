@@ -37,7 +37,7 @@ from task_center.iteration.state import (
     Iteration,
     IterationClosureReport,
     IterationStatus,
-    SuccessContinue,
+    SuccessDeferred,
     TerminalSuccess,
 )
 
@@ -186,8 +186,8 @@ class IterationManager:
             )
 
     def _close_iteration_passed(self, attempt: Attempt) -> None:
-        self._iteration_store.set_iteration_handoff_goal(
-            self.iteration_id, attempt.next_iteration_handoff_goal
+        self._iteration_store.set_deferred_goal_for_next_iteration(
+            self.iteration_id, attempt.deferred_goal_for_next_iteration
         )
         # Atomically transition status + write the denormalized
         # plan_spec (from the passing attempt) and task_summary
@@ -198,10 +198,10 @@ class IterationManager:
             task_summary=self._evaluator_pass_summary_for(attempt),
             closed_at=datetime.now(UTC),
         )
-        if attempt.next_iteration_handoff_goal is None:
+        if attempt.deferred_goal_for_next_iteration is None:
             self._emit_terminal_success(attempt)
         else:
-            self._emit_success_continue(attempt)
+            self._emit_success_deferred(attempt)
 
     def _evaluator_pass_summary_for(self, attempt: Attempt) -> str:
         """Resolve the evaluator's success-summary text for *attempt*.
@@ -310,15 +310,15 @@ class IterationManager:
         )
         self._on_iteration_closed(report)
 
-    def _emit_success_continue(self, attempt: Attempt) -> None:
-        if attempt.next_iteration_handoff_goal is None:
+    def _emit_success_deferred(self, attempt: Attempt) -> None:
+        if attempt.deferred_goal_for_next_iteration is None:
             raise TaskCenterInvariantViolation(
-                "success_continue requires a non-null next_iteration_handoff_goal"
+                "success_deferred requires a non-null deferred_goal_for_next_iteration"
             )
         report = IterationClosureReport(
             iteration_id=self.iteration_id,
             final_attempt_id=attempt.id,
-            outcome=SuccessContinue(goal=attempt.next_iteration_handoff_goal),
+            outcome=SuccessDeferred(deferred_goal_for_next_iteration=attempt.deferred_goal_for_next_iteration),
         )
         self._on_iteration_closed(report)
 

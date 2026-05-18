@@ -275,7 +275,7 @@ def test_renderer_preserves_fenced_code_block_indentation():
         ("</attempt_plan>", "attempt_plan"),
         ("</iteration>", "iteration"),
         ("</plan_spec>", "plan_spec"),
-        ("</next_iteration_handoff_goal>", "next_iteration_handoff_goal"),
+        ("</deferred_goal_for_next_iteration>", "deferred_goal_for_next_iteration"),
         ("</evaluation_criteria>", "evaluation_criteria"),
         ("</completed_tasks>", "completed_tasks"),
         ("</dependency_results>", "dependency_results"),

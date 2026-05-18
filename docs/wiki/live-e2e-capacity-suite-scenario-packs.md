@@ -62,7 +62,7 @@ below is checked by `backend/src/live_e2e/tests/test_capacity_scenario_packs.py`
 
 ### `context.generator_with_dependencies`
 
-### `context.evaluator_iterative_continuation`
+### `context.evaluator_iterative_deferral`
 
 ### `context.helper_resolver_inheritance`
 
@@ -74,7 +74,7 @@ below is checked by `backend/src/live_e2e/tests/test_capacity_scenario_packs.py`
 
 ### `planner_validation.cycle_in_deps`
 
-### `planner_validation.partial_without_continuation_goal`
+### `planner_validation.defers_without_deferred_goal`
 
 ### `planner_validation.unknown_agent_name`
 

@@ -10,7 +10,7 @@ from task_center.iteration import IterationManagerRegistry
 from task_center.goal.state import GoalStatus
 from task_center.iteration.state import (
     AttemptPlanFailed,
-    SuccessContinue,
+    SuccessDeferred,
     IterationClosureReport,
     TerminalSuccess,
 )
@@ -82,24 +82,24 @@ def test_initial_iteration_has_sequence_one_and_initial_reason(handler, task_cen
 def test_continuation_segment_inherits_continuation_goal(
     handler, iteration_store, task_center_run_id
 ):
-    """Phase 01 exit: continuation creates iteration N+1 with goal from previous iteration's next_iteration_handoff_goal."""
+    """Phase 01 exit: continuation creates iteration N+1 with goal from previous iteration's deferred_goal_for_next_iteration."""
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t1",
         goal="initial-goal",
     )
     seg1, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
-    # Mark predecessor SUCCEEDED with a next_iteration_handoff_goal so the invariant passes.
-    iteration_store.set_iteration_handoff_goal(seg1.id, "next-goal")
+    # Mark predecessor SUCCEEDED with a deferred_goal_for_next_iteration so the invariant passes.
+    iteration_store.set_deferred_goal_for_next_iteration(seg1.id, "next-goal")
     iteration_store.set_status(seg1.id, status=IterationStatus.SUCCEEDED)
     seg1_succeeded = iteration_store.get(seg1.id)
     assert seg1_succeeded is not None
 
-    seg2, _ = handler.create_continuation_iteration_with_manager(
+    seg2, _ = handler.create_deferred_iteration_with_manager(
         previous_iteration=seg1_succeeded
     )
     assert seg2.sequence_no == 2
-    assert seg2.creation_reason == IterationCreationReason.PARTIAL_CONTINUATION
+    assert seg2.creation_reason == IterationCreationReason.DEFERRED_GOAL_CONTINUATION
     assert seg2.goal == "next-goal"
 
 
@@ -113,11 +113,11 @@ def test_iteration_ids_holds_multiple_segments(
         goal="g1",
     )
     seg1, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
-    iteration_store.set_iteration_handoff_goal(seg1.id, "g2")
+    iteration_store.set_deferred_goal_for_next_iteration(seg1.id, "g2")
     iteration_store.set_status(seg1.id, status=IterationStatus.SUCCEEDED)
     seg1_succeeded = iteration_store.get(seg1.id)
     assert seg1_succeeded is not None
-    seg2, _ = handler.create_continuation_iteration_with_manager(
+    seg2, _ = handler.create_deferred_iteration_with_manager(
         previous_iteration=seg1_succeeded
     )
     refreshed = goal_store.get(req.id)
@@ -183,13 +183,13 @@ def test_handle_iteration_closed_success_continue_creates_continuation(
         goal="g",
     )
     seg1, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
-    iteration_store.set_iteration_handoff_goal(seg1.id, "next-goal")
+    iteration_store.set_deferred_goal_for_next_iteration(seg1.id, "next-goal")
     iteration_store.set_status(seg1.id, status=IterationStatus.SUCCEEDED)
     handler.handle_iteration_closed(
         IterationClosureReport(
             iteration_id=seg1.id,
             final_attempt_id="g1",
-            outcome=SuccessContinue(goal="next-goal"),
+            outcome=SuccessDeferred(deferred_goal_for_next_iteration="next-goal"),
         )
     )
     refreshed = goal_store.get(req.id)
@@ -236,14 +236,14 @@ def test_continuation_segment_only_from_succeeded_predecessor_with_goal(
 
     # Predecessor still OPEN -> invariant violation.
     with pytest.raises(TaskCenterInvariantViolation):
-        handler.create_continuation_iteration_with_manager(previous_iteration=seg1)
+        handler.create_deferred_iteration_with_manager(previous_iteration=seg1)
 
-    # Predecessor SUCCEEDED but no next_iteration_handoff_goal -> invariant violation.
+    # Predecessor SUCCEEDED but no deferred_goal_for_next_iteration -> invariant violation.
     iteration_store.set_status(seg1.id, status=IterationStatus.SUCCEEDED)
     seg1_no_goal = iteration_store.get(seg1.id)
     assert seg1_no_goal is not None
     with pytest.raises(TaskCenterInvariantViolation):
-        handler.create_continuation_iteration_with_manager(previous_iteration=seg1_no_goal)
+        handler.create_deferred_iteration_with_manager(previous_iteration=seg1_no_goal)
 
 
 def test_iteration_manager_registry_enforces_unique_per_segment(
@@ -337,7 +337,7 @@ def test_handler_passes_orchestrator_factory_to_spawned_manager(
 def test_no_root_creation_reason_in_lifecycle(handler, task_center_run_id):
     """Phase 01 spec: 'root' creation reason is not allowed."""
     # Indirect: handler-driven iteration creation only ever uses INITIAL or
-    # PARTIAL_CONTINUATION. There is no public path that produces 'root'.
+    # DEFERRED_GOAL_CONTINUATION. There is no public path that produces 'root'.
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
         requested_by_task_id="t1",
@@ -346,5 +346,5 @@ def test_no_root_creation_reason_in_lifecycle(handler, task_center_run_id):
     seg, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
     assert seg.creation_reason in (
         IterationCreationReason.INITIAL,
-        IterationCreationReason.PARTIAL_CONTINUATION,
+        IterationCreationReason.DEFERRED_GOAL_CONTINUATION,
     )

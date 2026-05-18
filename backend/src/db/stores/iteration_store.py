@@ -37,7 +37,7 @@ class IterationStore(SyncStoreMixin):
                 attempt_budget=attempt_budget,
                 status=IterationStatus.OPEN.value,
                 attempt_ids=[],
-                # DB column name pinned by ADR (FU-2 renames the column).
+                # DB column name `continuation_goal` pinned to legacy persistence form; Python DTO field is `deferred_goal_for_next_iteration`. FU-2 (separate PR) renames the column.
                 continuation_goal=None,
                 created_at=now,
                 updated_at=now,
@@ -64,15 +64,15 @@ class IterationStore(SyncStoreMixin):
             db.refresh(record)
             return self._to_dto(record)
 
-    def set_iteration_handoff_goal(
-        self, iteration_id: str, next_iteration_handoff_goal: str | None
+    def set_deferred_goal_for_next_iteration(
+        self, iteration_id: str, deferred_goal_for_next_iteration: str | None
     ) -> Iteration:
         with self._sf() as db:
             record = db.get(IterationRecord, iteration_id)
             if record is None:
                 raise LookupError(f"Iteration {iteration_id!r} not found")
-            # DB column name continuation_goal pinned by ADR (FU-2 renames the column).
-            record.continuation_goal = next_iteration_handoff_goal
+            # DB column name `continuation_goal` pinned to legacy persistence form; Python DTO field is `deferred_goal_for_next_iteration`. FU-2 (separate PR) renames the column.
+            record.continuation_goal = deferred_goal_for_next_iteration
             db.commit()
             db.refresh(record)
             return self._to_dto(record)
@@ -164,8 +164,8 @@ class IterationStore(SyncStoreMixin):
             attempt_budget=record.attempt_budget,
             status=IterationStatus(record.status),
             attempt_ids=tuple(record.attempt_ids or ()),
-            # DB column name continuation_goal pinned by ADR (FU-2 renames the column).
-            next_iteration_handoff_goal=record.continuation_goal,
+            # DB column name `continuation_goal` pinned to legacy persistence form; Python DTO field is `deferred_goal_for_next_iteration`. FU-2 (separate PR) renames the column.
+            deferred_goal_for_next_iteration=record.continuation_goal,
             created_at=record.created_at,
             updated_at=record.updated_at,
             closed_at=record.closed_at,

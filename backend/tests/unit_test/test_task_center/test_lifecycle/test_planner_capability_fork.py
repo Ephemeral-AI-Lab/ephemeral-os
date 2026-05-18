@@ -6,7 +6,7 @@ a child request, then asserts the planner spawned for the child:
 * is the ``planner_full_only`` agent (resolver swapped via the variant);
 * selects the full-only agent definition;
 * the registered ``planner_full_only`` AgentDefinition has
-  ``terminals`` without ``submit_plan_continues_goal`` (the gate is the agent.md
+  ``terminals`` without ``submit_plan_defers_goal`` (the gate is the agent.md
   ``terminals:`` filter — the model never sees the tool when the variant
   fires).
 """
@@ -139,7 +139,7 @@ def _seed_partial_plan_caller(
         caller_attempt.id,
         plan_spec="parent spec",
         evaluation_criteria=["c"],
-        next_iteration_handoff_goal="continue here",
+        deferred_goal_for_next_iteration="continue here",
     )
     task_store.upsert_task(
         task_id="t-caller",
@@ -195,10 +195,10 @@ def test_partial_plan_caller_forks_child_planner_to_full_only(
     # (a) selected agent is planner_full_only.
     assert launched.agent_name == "planner_full_only"
     # (b) the registered planner_full_only definition's terminals list does
-    #     not include submit_plan_continues_goal (the gate is the agent.md filter).
+    #     not include submit_plan_defers_goal (the gate is the agent.md filter).
     full_only = get_definition("planner_full_only")
     assert full_only is not None
     assert full_only.system_prompt is not None
     assert "Continuing the goal is disabled" in full_only.system_prompt
     assert "submit_plan_closes_goal" in full_only.terminals
-    assert "submit_plan_continues_goal" not in full_only.terminals
+    assert "submit_plan_defers_goal" not in full_only.terminals
