@@ -239,23 +239,13 @@ class OCCMutationClient(Protocol):
     ) -> ChangesetResult: ...
 
 
-class CommandExecutor(Protocol):
-    """Runnable command-exec boundary exposed to daemon/API adapters."""
-
-    async def run(self, request: CommandExecRequest) -> CommandExecResult: ...
-
-
-# ---- spec ------------------------------------------------------------------
-
-# OverlayLayout lives in sandbox.execution.overlay.layout; re-exported here
-# for convenience so contract.py is still the single import surface for the
-# execution-package types.
+# OverlayLayout lives in sandbox.execution.overlay.layout; re-exported above
+# so contract.py stays the single import surface for execution-package types.
 
 
 __all__ = [
     "CommandExecRequest",
     "CommandExecResult",
-    "CommandExecutor",
     "MountMode",
     "OCCMutationClient",
     "OverlayCapture",

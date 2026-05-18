@@ -3,7 +3,6 @@
 from sandbox.execution.contract import (
     CommandExecRequest,
     CommandExecResult,
-    CommandExecutor,
     MountMode,
     OCCMutationClient,
     OverlayLayout,
@@ -21,7 +20,6 @@ __all__ = [
     "CommandExecPolicy",
     "CommandExecRequest",
     "CommandExecResult",
-    "CommandExecutor",
     "DEFAULT_COMMAND_EXEC_POLICY",
     "MountMode",
     "OCCMutationClient",
