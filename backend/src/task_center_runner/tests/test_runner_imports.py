@@ -81,10 +81,10 @@ def test_prompt_inspector_accepts_current_failed_attempt_heading(
     inspection = runner._inspect_prompt(  # noqa: SLF001
         prompt="\n".join(
             [
-                "# Goal / Current Iteration",
-                "Do the retry work.",
-                "# Failed Attempts",
-                "Attempt 1 failed.",
+                "<goal>Do the retry work.</goal>",
+                "<iteration status=\"current\">",
+                "<attempt status=\"failed\">Attempt 1 failed.</attempt>",
+                "</iteration>",
             ]
         ),
         agent_def=AgentDefinition(
@@ -120,14 +120,14 @@ def test_prompt_inspector_accepts_current_previous_iteration_sections(
     inspection = runner._inspect_prompt(  # noqa: SLF001
         prompt="\n".join(
             [
-                "# Goal",
-                "Continue the delegated goal.",
-                "## Iteration 1 accepted plan",
-                "Earlier plan.",
-                "## Iteration 1 summary",
-                "Earlier result.",
-                "# Current Iteration",
+                "<goal>Continue the delegated goal.</goal>",
+                "<iteration status=\"prior\">",
+                "<accepted_plan>Earlier plan.</accepted_plan>",
+                "<summary>Earlier result.</summary>",
+                "</iteration>",
+                "<iteration status=\"current\">",
                 "Next slice.",
+                "</iteration>",
             ]
         ),
         agent_def=AgentDefinition(
@@ -138,7 +138,6 @@ def test_prompt_inspector_accepts_current_previous_iteration_sections(
         metadata=ExecutionMetadata(task_center_task_id="attempt-1:planner"),
     )
 
-    assert inspection.checks["previous_iteration_results"]
     assert inspection.checks["previous_iteration_results"]
     assert inspection.passed
 
