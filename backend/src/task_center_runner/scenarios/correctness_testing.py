@@ -133,7 +133,7 @@ class CorrectnessTesting(ScenarioBase):
         return ToolCallSpec(submit_plan_closes_goal, dict(_FINAL_PROBE_FULL_PLAN))
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
-        prompt = ctx.prompt or ""
+        prompt = ctx.context_message or ctx.prompt or ""
         if "sandbox filesystem" in prompt or "sandbox read/write/edit" in prompt:
             return ("sandbox_integrity",)
         if "squash marker" in prompt:
