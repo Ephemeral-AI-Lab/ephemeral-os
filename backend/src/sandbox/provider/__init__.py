@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from sandbox.provider.bootstrap import bootstrap_sandbox_provider
 from sandbox.provider.protocol import ProviderAdapter
 from sandbox.provider.registry import (
     dispose_adapter,
@@ -14,6 +15,7 @@ from sandbox.provider.registry import (
 
 __all__ = [
     "ProviderAdapter",
+    "bootstrap_sandbox_provider",
     "dispose_adapter",
     "get_adapter",
     "get_default_provider",

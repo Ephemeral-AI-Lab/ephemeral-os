@@ -78,13 +78,13 @@ async def sweevo_sandbox(
     sweevo_instance: SWEEvoInstance,
 ) -> AsyncIterator[dict[str, object]]:
     """Provision a real Daytona sandbox for the configured SWE-EVO instance."""
-    from sandbox.provider.daytona.bootstrap import bootstrap_daytona_provider
+    from sandbox.provider.bootstrap import bootstrap_sandbox_provider
 
     from benchmarks.sweevo.sandbox import create_sweevo_test_sandbox
 
     lock = _acquire_sweevo_session_lock(sweevo_instance.instance_id)
     try:
-        bootstrap_daytona_provider()
+        bootstrap_sandbox_provider()
         yield await create_sweevo_test_sandbox(
             sweevo_instance,
             register_snapshot=True,

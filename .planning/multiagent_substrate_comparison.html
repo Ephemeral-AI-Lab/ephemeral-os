@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>EphemeralOS vs Multi-Agent Coding Frameworks — Substrate Comparison</title>
+<style>
+  :root {
+    --bg: #fafaf7;
+    --fg: #1a1a1a;
+    --muted: #5a5a5a;
+    --rule: #d8d4cb;
+    --accent: #6a3d1c;
+    --accent-soft: #f0e7da;
+    --good: #1d6b2a;
+    --weak: #a14a1f;
+    --bad: #8a1f1f;
+    --code-bg: #f3efe6;
+  }
+  html { font-size: 15px; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
+    line-height: 1.55;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 3rem 2.5rem 5rem;
+  }
+  header {
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 1.5rem;
+    margin-bottom: 2.5rem;
+  }
+  header .meta {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+  }
+  h1 {
+    font-size: 1.85rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0;
+    color: var(--accent);
+  }
+  h2 {
+    font-size: 1.35rem;
+    margin-top: 3rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 0.4rem;
+    color: var(--accent);
+  }
+  h3 {
+    font-size: 1.1rem;
+    margin-top: 2rem;
+    margin-bottom: 0.6rem;
+    color: var(--fg);
+  }
+  h4 {
+    font-size: 0.95rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.4rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  p { margin: 0.6rem 0; }
+  ul, ol { margin: 0.5rem 0 0.8rem 1.3rem; }
+  li { margin-bottom: 0.3rem; }
+  code {
+    background: var(--code-bg);
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.88em;
+  }
+  pre {
+    background: var(--code-bg);
+    padding: 1rem 1.2rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    border-left: 3px solid var(--accent);
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1rem 0;
+    font-size: 0.88rem;
+  }
+  th, td {
+    padding: 0.55rem 0.7rem;
+    border-bottom: 1px solid var(--rule);
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: var(--accent-soft);
+    font-weight: 600;
+    color: var(--accent);
+  }
+  tr:hover td { background: rgba(106, 61, 28, 0.03); }
+  .pill {
+    display: inline-block;
+    padding: 0.1rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .pill-good  { background: #d8ecd8; color: var(--good); }
+  .pill-weak  { background: #f4e3d0; color: var(--weak); }
+  .pill-bad   { background: #f0d4d4; color: var(--bad);  }
+  .pill-neutral { background: #e0dccf; color: var(--muted); }
+  .callout {
+    border-left: 4px solid var(--accent);
+    background: var(--accent-soft);
+    padding: 0.9rem 1.2rem;
+    margin: 1.2rem 0;
+    border-radius: 0 4px 4px 0;
+  }
+  .callout-title {
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 0.3rem;
+  }
+  .toc {
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 1rem 1.5rem;
+    margin: 2rem 0;
+    font-size: 0.88rem;
+  }
+  .toc h4 { margin-top: 0; }
+  .toc ol { columns: 2; column-gap: 2rem; margin-bottom: 0; }
+  .verdict {
+    border: 2px solid var(--accent);
+    background: #fff;
+    padding: 1.5rem 1.8rem;
+    border-radius: 6px;
+    margin: 2rem 0;
+  }
+  .verdict h3 { margin-top: 0; color: var(--accent); }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>EphemeralOS vs Multi-Agent Coding Substrates</h1>
+  <div class="meta">
+    Comprehensive comparison of shared-workspace multi-agent execution architectures.
+    Focus: long-horizon tasks, maximum parallelism, harness-gated write correctness.
+  </div>
+</header>
+
+<div class="toc">
+  <h4>Contents</h4>
+  <ol>
+    <li><a href="#problem">The Substrate Problem</a></li>
+    <li><a href="#three-tier">EphemeralOS Architecture</a></li>
+    <li><a href="#capabilities">Capability Requirements</a></li>
+    <li><a href="#categories">Competitor Categories</a></li>
+    <li><a href="#per-competitor">Per-Competitor Analysis</a></li>
+    <li><a href="#matrix">Capability Matrix</a></li>
+    <li><a href="#scenarios">Workload Scenarios</a></li>
+    <li><a href="#open">Open Risks</a></li>
+    <li><a href="#verdict">Verdict</a></li>
+  </ol>
+</div>
+
+<!-- ───────────────────────── Section 1 ───────────────────────── -->
+<h2 id="problem">1. The Substrate Problem</h2>
+
+<p>
+A multi-agent coding framework is judged by one capability: <strong>can N agents
+run real coding workloads — pytest, pip install, cargo build, type-checkers, formatters,
+LSP queries — concurrently against a single evolving codebase, without corruption,
+without paying O(N) for isolation?</strong>
+</p>
+
+<p>
+Three substrate-level guarantees are required. None of them are prompt-level concerns;
+they live below the agent's reasoning layer.
+</p>
+
+<table>
+  <thead>
+    <tr><th>Guarantee</th><th>What breaks without it</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>G1. Frozen reads during long-running commands</strong></td>
+      <td>
+        A tool call that runs 30s–several minutes (pytest, builds, installs) sees
+        sibling writes mid-flight. Its result reflects no coherent workspace state.
+        The consuming agent reasons against a hallucination.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>G2. Conflict detection for concurrent writes</strong></td>
+      <td>
+        Two agents edit the same file. Last-writer-wins corrupts work. No prompt
+        convention catches this — the corruption happens below the agent.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>G3. Per-agent workspace cost stays bounded</strong></td>
+      <td>
+        Forking a worktree costs 5s + O(repo_size) per agent. At 10 agents on a
+        1 GB repo: 10 GB disk + 50s setup. At 100 agents: infeasible. Parallelism
+        ceiling is hit by physics, not by ambition.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <div class="callout-title">The hidden first-order problem</div>
+  Most analyses focus on G2 (write conflicts) because OCC and merge tooling make
+  it discussable. But <strong>G1 is the real precondition</strong>: without frozen reads,
+  long-running tools tear sibling state and produce meaningless results. G2 only
+  matters once G1 is solved, because tool outputs are the input to every decision.
+  Most public competitors silently fail G1 and call their architecture "multi-agent"
+  anyway.
+</div>
+
+<!-- ───────────────────────── Section 2 ───────────────────────── -->
+<h2 id="three-tier">2. EphemeralOS Architecture — Three-Tier Isolation</h2>
+
+<p>
+The substrate decomposes into three nested isolation boundaries. Each has one job;
+none overlap. This separation is the source of the O(1) space property and the
+per-tool-call snapshot semantics.
+</p>
+
+<pre>
+   ┌─ Layer storage ──────────────────────────────────────────────┐
+   │  Immutable, append-only, single shared copy of all bytes.    │
+   │  Every layer is a content-addressed directory; manifest      │
+   │  versions name ordered sequences of layers.                  │
+   │                                                              │
+   │   layers/                                                    │
+   │     ├─ layer_0/   (immutable)                                │
+   │     ├─ layer_1/                                              │
+   │     └─ layer_N/                                              │
+   │                                                              │
+   │  ┌─ Per-lease lowerdir clone ─────────────────────────────┐  │
+   │  │  Identity + lifecycle isolation.                       │  │
+   │  │  Each lease gets its own lowerdir assembly that        │  │
+   │  │  references shared layers via cheap composition        │  │
+   │  │  (symlinks / colon-list to immutable dirs).            │  │
+   │  │  O(1) bytes — only references are per-lease.           │  │
+   │  │                                                        │  │
+   │  │   transient_lowerdirs/                                 │  │
+   │  │     ├─ lease_A/  (pins manifest v12)                   │  │
+   │  │     └─ lease_B/  (pins manifest v15)                   │  │
+   │  │                                                        │  │
+   │  │  ┌─ Per-tool-call upperdir ──────────────────────────┐ │  │
+   │  │  │  Write isolation.                                 │ │  │
+   │  │  │  Every byte the command writes lands here:        │ │  │
+   │  │  │    - source edits  (git-tracked)                  │ │  │
+   │  │  │    - install output (.venv, node_modules)         │ │  │
+   │  │  │    - generated artifacts, cache files             │ │  │
+   │  │  │  At commit: capture upperdir → ChangeSet →        │ │  │
+   │  │  │  route per path (GATED vs DIRECT) → OCC publish.  │ │  │
+   │  │  └───────────────────────────────────────────────────┘ │  │
+   │  └────────────────────────────────────────────────────────┘  │
+   └──────────────────────────────────────────────────────────────┘
+</pre>
+
+<h3>2.1 The two-route commit policy</h3>
+
+<p>
+At commit time, each path in the upperdir is routed by policy:
+</p>
+
+<table>
+  <thead>
+    <tr><th>Route</th><th>Path class</th><th>Policy</th><th>Why correct</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>GATED</code></td>
+      <td>git-tracked source</td>
+      <td>OCC: revalidate base_hash against active manifest; reject on stale</td>
+      <td>Code edits are semantically conflicting; reject + retry surfaces the conflict</td>
+    </tr>
+    <tr>
+      <td><code>DIRECT</code></td>
+      <td>gitignored output (installs, caches, build artifacts)</td>
+      <td>Last-writer-wins on commit</td>
+      <td>Installs are idempotent; concurrent <code>pip install foo</code> converges. Divergent installs surface to the next lease as a visible state change.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <div class="callout-title">Why this matters: gitignored writes are first-class</div>
+  Worktree-based substrates can't see gitignored content as workspace state.
+  Concurrent <code>pip install</code> into a shared <code>.venv</code> is undefined behavior.
+  EphemeralOS captures gitignored writes in the upperdir alongside source edits
+  and publishes both — with the appropriate conflict policy per path class.
+  <strong>Same primitive, two policies, both correctness problems solved.</strong>
+</div>
+
+<h3>2.2 The agent taxonomy</h3>
+
+<p>
+Three agent classes with distinct lifecycles and contracts, each answering a different
+correctness question.
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Class</th>
+      <th>Problem solved</th>
+      <th>Contract</th>
+      <th>Persistence</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Main agents</strong><br><span class="small">Planner / Generator / Evaluator</span></td>
+      <td>Typed task lifecycle progression with a quality gate</td>
+      <td>DAG with typed submissions (<code>completes|defers</code>); monotonic state machine; hard invariant violations on illegal transitions</td>
+      <td>Persisted via stores; iterations and attempts tracked</td>
+    </tr>
+    <tr>
+      <td><strong>Subagents</strong><br><span class="small">via <code>run_subagent</code></span></td>
+      <td>Parallel exploration / fan-out without blowing parent context</td>
+      <td>Background task; must terminate via registered terminal tool; <strong>no recursion</strong> (rejected at validation)</td>
+      <td>Ephemeral; single-shot</td>
+    </tr>
+    <tr>
+      <td><strong>Helper agents</strong><br><span class="small">via <code>ask_advisor</code>, <code>ask_resolver</code></span></td>
+      <td>Independent read-only QA before terminal submission</td>
+      <td>Blocking; sees parent's contract verbatim + filtered transcript; returns structured verdict (approve/reject)</td>
+      <td>None — no side effects</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>2.3 The context engine</h3>
+
+<p>
+Context per agent is recipe-routed, role-scoped, deterministic.
+<code>ContextScope</code> factories (<code>for_planner</code>, <code>for_generator</code>,
+<code>for_evaluator</code>) enforce required identity fields statically; the
+<code>RecipeRegistry</code> maps role to a typed builder; the resulting
+<code>ContextPacket</code> renders to XML with a deterministic
+<code>what_in_context</code> outline that mirrors the render 1:1.
+</p>
+
+<p>
+The implication: as roles multiply, prompt-assembly complexity stays
+<code>O(roles)</code>, not <code>O(roles × memory_subsystems × channel_adapters)</code>.
+This is where most multi-agent frameworks die before the substrate matters.
+</p>
+
+<!-- ───────────────────────── Section 3 ───────────────────────── -->
+<h2 id="capabilities">3. Capability Requirements For The Comparison</h2>
+
+<p>
+Eight capabilities define the multi-agent coding ceiling. The competitive
+analysis scores each system on each capability.
+</p>
+
+<table>
+  <thead>
+    <tr><th>#</th><th>Capability</th><th>Why it matters</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>C1</td><td>Frozen reads during long commands</td><td>G1 above — coherent tool results under parallelism</td></tr>
+    <tr><td>C2</td><td>Online write conflict detection</td><td>G2 — catch conflicts while agents are alive to retry</td></tr>
+    <tr><td>C3</td><td>Concurrent gitignored writes (installs)</td><td>Real coding workloads need pip/npm/cargo in parallel</td></tr>
+    <tr><td>C4</td><td>O(1) workspace space across N agents</td><td>G3 — high N parallelism is affordable</td></tr>
+    <tr><td>C5</td><td>O(1) agent spawn time</td><td>Per-tool-call granularity, cheap subagents, helpers</td></tr>
+    <tr><td>C6</td><td>Typed task DAG with quality gate</td><td>Lifecycle correctness beyond "the leader said done"</td></tr>
+    <tr><td>C7</td><td>Independent reviewer/helper class</td><td>QA that doesn't collapse into the worker's prompt</td></tr>
+    <tr><td>C8</td><td>Role-scoped deterministic context</td><td>Scales to many roles without prompt-soup drift</td></tr>
+  </tbody>
+</table>
+
+<!-- ───────────────────────── Section 4 ───────────────────────── -->
+<h2 id="categories">4. Competitor Categories</h2>
+
+<p>
+Public multi-agent / coding-agent systems fall into four substrate categories.
+Within each category, products are largely interchangeable on the substrate axis;
+they differ on prompts, models, UX, and integrations.
+</p>
+
+<table>
+  <thead>
+    <tr><th>Category</th><th>Substrate model</th><th>Representative products</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>A. Single-agent</td>
+      <td>One workspace, one worker. No concurrency to solve.</td>
+      <td>Claude Code, Aider, SWE-agent, Cursor inline, Continue.dev, Replit Agent</td>
+    </tr>
+    <tr>
+      <td>B. Fork-per-task</td>
+      <td>Branch + sandbox per task; merge via PR</td>
+      <td>GitHub Copilot Coding Agent, OpenAI Codex (cloud, 2025), Sweep, Cursor Background Agents</td>
+    </tr>
+    <tr>
+      <td>C. Fork-per-agent</td>
+      <td>Sandbox per agent; parallel containers; coordinator + git merge</td>
+      <td>Devin / Devin Teams (Cognition), Factory.ai Droids, OpenHands Cloud (multi-session)</td>
+    </tr>
+    <tr>
+      <td>D. Orchestration frameworks</td>
+      <td>Multi-agent role/graph layer; no sandbox substrate</td>
+      <td>AutoGen, CrewAI, LangGraph, MetaGPT, ChatDev, Magentic-One, JiuwenSwarm</td>
+    </tr>
+    <tr>
+      <td>★ Shared-workspace + OCC</td>
+      <td>Per-tool-call snapshot lease, OCC commits, O(1) space</td>
+      <td><strong>EphemeralOS</strong> (no public peer)</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ───────────────────────── Section 5 ───────────────────────── -->
+<h2 id="per-competitor">5. Per-Competitor Analysis</h2>
+
+<h3>5.1 Category A — Single-Agent CLIs and IDE Agents</h3>
+<p class="small">Claude Code, Aider, SWE-agent, Cursor inline, Continue.dev, Replit Agent, Bolt.new, v0</p>
+
+<p>
+These are the strongest single-agent systems in the field. They are not multi-agent
+products and do not claim to be; their "subagent" features (Claude Code's Task tool,
+Cursor's parallel agents) are fan-out without sandbox CC — siblings share the same
+on-disk workspace and last-writer-wins applies the moment two of them touch the same file.
+</p>
+
+<ul>
+  <li><strong>Strength.</strong> Best-in-class prompts, models, and tool design for the single-writer regime. Aider's git-diff-as-edit-format is the canonical example.</li>
+  <li><strong>Substrate ceiling.</strong> Effectively 1 concurrent writer per workspace. Parallelism, where it exists, is fragile.</li>
+  <li><strong>Vs EphemeralOS.</strong> EphemeralOS subsumes the single-agent case as a 1-agent DAG. The reverse direction — lifting these systems to safe parallelism — requires substrate work they have not done.</li>
+</ul>
+
+<h3>5.2 Category B — Fork-per-Task (PR as Merge Layer)</h3>
+<p class="small">GitHub Copilot Coding Agent, OpenAI Codex cloud, Sweep, Cursor Background Agents (in this mode)</p>
+
+<p>
+The dominant production pattern in 2025. Each task gets a fresh sandbox + branch;
+the agent runs to completion in isolation; output is a PR. Humans (or another
+agent) merge.
+</p>
+
+<table>
+  <thead><tr><th>Capability</th><th>Score</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>C1 frozen reads</td><td><span class="pill pill-good">yes</span></td><td>Each task has its own sandbox; siblings can't tear reads</td></tr>
+    <tr><td>C2 online conflict detection</td><td><span class="pill pill-bad">no</span></td><td>Conflicts surface at PR merge, post-hoc, at file/hunk granularity. Agent has already exited.</td></tr>
+    <tr><td>C3 concurrent gitignored</td><td><span class="pill pill-good">yes</span></td><td>Each sandbox has its own filesystem</td></tr>
+    <tr><td>C4 O(1) space</td><td><span class="pill pill-bad">O(N)</span></td><td>Full repo + container per task</td></tr>
+    <tr><td>C5 O(1) spawn</td><td><span class="pill pill-bad">~seconds–minutes</span></td><td>Container provisioning + checkout</td></tr>
+    <tr><td>C6 typed DAG + gate</td><td><span class="pill pill-bad">no</span></td><td>Tasks are flat; "merge a PR" is the only gate</td></tr>
+    <tr><td>C7 helper class</td><td><span class="pill pill-bad">no</span></td><td>Code review is a separate human/agent pass, not a typed primitive</td></tr>
+    <tr><td>C8 typed context</td><td><span class="pill pill-bad">no</span></td><td>Context is prompt-engineered per product</td></tr>
+  </tbody>
+</table>
+
+<p>
+<strong>Verdict.</strong> Solves G1 and G3-by-paying-O(N). Forces all collaboration
+through git merges, which means agents cannot share partial in-progress state.
+Caps practical parallelism at "PR-shaped independent tasks." Cannot support
+"swarm of agents collaborating on one evolving feature."
+</p>
+
+<h3>5.3 Category C — Fork-per-Agent (Parallel Sandboxes, Coordinator)</h3>
+<p class="small">Devin / Devin Teams (Cognition), Factory.ai Droids, OpenHands Cloud, Cursor Background Agents fanned out</p>
+
+<p>
+Explicit multi-agent products. Each agent gets its own sandbox; a coordinator
+decomposes work and merges results. Public details on internal substrate vary,
+but the available evidence (docs, demos, PR flows) suggests fork-per-agent with
+git-based merge.
+</p>
+
+<table>
+  <thead><tr><th>Capability</th><th>Score</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>C1 frozen reads</td><td><span class="pill pill-good">yes</span></td><td>Per-agent sandbox isolation</td></tr>
+    <tr><td>C2 online conflict detection</td><td><span class="pill pill-weak">partial</span></td><td>Merge time, coordinator-mediated. No within-agent OCC.</td></tr>
+    <tr><td>C3 concurrent gitignored</td><td><span class="pill pill-good">yes</span></td><td>Per-sandbox</td></tr>
+    <tr><td>C4 O(1) space</td><td><span class="pill pill-bad">O(N)</span></td><td>Full container + checkout per agent</td></tr>
+    <tr><td>C5 O(1) spawn</td><td><span class="pill pill-bad">~seconds–minutes</span></td><td>Container cold-start</td></tr>
+    <tr><td>C6 typed DAG + gate</td><td><span class="pill pill-weak">partial</span></td><td>Coordinator decomposes; gate is "did the coordinator approve"</td></tr>
+    <tr><td>C7 helper class</td><td><span class="pill pill-weak">partial</span></td><td>Some products have "reviewer" droids; not a typed substrate primitive</td></tr>
+    <tr><td>C8 typed context</td><td><span class="pill pill-bad">no</span></td><td>Prompt-engineered per product</td></tr>
+  </tbody>
+</table>
+
+<p>
+<strong>Verdict.</strong> Better than Category B at sustaining concurrent work,
+but the O(N) cost of agent isolation caps team size in practice. Per-tool-call
+granularity is impossible — spawning a fresh sandbox per command would cost more
+than the command. The "merge cliff" moves from per-task to per-agent, but
+doesn't disappear.
+</p>
+
+<h3>5.4 Category D — Orchestration Frameworks (No Sandbox Layer)</h3>
+<p class="small">AutoGen, CrewAI, LangGraph, MetaGPT, ChatDev, Magentic-One, JiuwenSwarm</p>
+
+<p>
+The closest <em>conceptual</em> peers — explicit multi-agent roles, sometimes typed
+graphs (LangGraph), sometimes role-based "company" structures (MetaGPT/ChatDev).
+But the substrate question is left to the user: writes go to whatever local
+filesystem you wire up.
+</p>
+
+<table>
+  <thead><tr><th>Capability</th><th>Score</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>C1 frozen reads</td><td><span class="pill pill-bad">no</span></td><td>No isolation layer; siblings see each other's mutations live</td></tr>
+    <tr><td>C2 online conflict detection</td><td><span class="pill pill-bad">no</span></td><td>Last-writer-wins on shared filesystem</td></tr>
+    <tr><td>C3 concurrent gitignored</td><td><span class="pill pill-bad">no</span></td><td>Same shared mutable workspace; installs collide</td></tr>
+    <tr><td>C4 O(1) space</td><td><span class="pill pill-good">yes</span></td><td>But because there's no isolation at all</td></tr>
+    <tr><td>C5 O(1) spawn</td><td><span class="pill pill-good">yes</span></td><td>In-process agents</td></tr>
+    <tr><td>C6 typed DAG + gate</td><td><span class="pill pill-weak">partial</span></td><td>LangGraph has typed state; quality gate is a "critic" agent prompt</td></tr>
+    <tr><td>C7 helper class</td><td><span class="pill pill-bad">no</span></td><td>Reviewers are role-prompted workers</td></tr>
+    <tr><td>C8 typed context</td><td><span class="pill pill-weak">partial</span></td><td>LangGraph state typing; no role-scoped recipe registry</td></tr>
+  </tbody>
+</table>
+
+<p>
+<strong>Verdict.</strong> These are <em>orchestration libraries</em>, not
+<em>execution substrates</em>. For text-handoff workflows (research → analyze → write)
+they're fine — the artifacts are independent. For shared-codebase multi-writer
+work they fail G1 catastrophically; parallel agents tear each other's reads and
+produce hallucinated results. JiuwenSwarm is representative: the "Team" mode is
+a coordination layer atop a substrate that has no concurrent-write primitive.
+</p>
+
+<h3>5.5 Star Category — Shared-Workspace + OCC</h3>
+<p class="small">EphemeralOS (no documented public peer)</p>
+
+<table>
+  <thead><tr><th>Capability</th><th>Score</th><th>Mechanism</th></tr></thead>
+  <tbody>
+    <tr><td>C1 frozen reads</td><td><span class="pill pill-good">yes</span></td><td>Per-lease lowerdir clone pins manifest version; commands read coherent snapshot</td></tr>
+    <tr><td>C2 online conflict detection</td><td><span class="pill pill-good">yes</span></td><td>OCC base_hash revalidation at commit; stale → reject + retry</td></tr>
+    <tr><td>C3 concurrent gitignored</td><td><span class="pill pill-good">yes</span></td><td>DIRECT route, last-writer-wins; correct semantics for idempotent installs</td></tr>
+    <tr><td>C4 O(1) space</td><td><span class="pill pill-good">yes</span></td><td>Shared immutable layer bytes; lowerdir clones are references</td></tr>
+    <tr><td>C5 O(1) spawn</td><td><span class="pill pill-good">yes</span></td><td>Mount overlay in tens of ms; cheap per-tool-call granularity</td></tr>
+    <tr><td>C6 typed DAG + gate</td><td><span class="pill pill-good">yes</span></td><td>Planner / Generator / Evaluator with typed submissions and hard invariants</td></tr>
+    <tr><td>C7 helper class</td><td><span class="pill pill-good">yes</span></td><td><code>ask_advisor</code>, <code>ask_resolver</code> — blocking read-only verdict</td></tr>
+    <tr><td>C8 typed context</td><td><span class="pill pill-good">yes</span></td><td>Recipe-registered, scope-validated, deterministic ContextPacket</td></tr>
+  </tbody>
+</table>
+
+<!-- ───────────────────────── Section 6 ───────────────────────── -->
+<h2 id="matrix">6. Capability Matrix</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th></th>
+      <th>C1<br>frozen<br>reads</th>
+      <th>C2<br>online<br>OCC</th>
+      <th>C3<br>concurrent<br>installs</th>
+      <th>C4<br>O(1)<br>space</th>
+      <th>C5<br>O(1)<br>spawn</th>
+      <th>C6<br>typed DAG<br>+ gate</th>
+      <th>C7<br>helper<br>class</th>
+      <th>C8<br>typed<br>context</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>EphemeralOS</strong></td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-good">yes</span></td>
+    </tr>
+    <tr>
+      <td>Claude Code / Aider / SWE-agent</td>
+      <td><span class="pill pill-neutral">n/a (1)</span></td>
+      <td><span class="pill pill-neutral">n/a (1)</span></td>
+      <td><span class="pill pill-neutral">n/a (1)</span></td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-weak">loose</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+    </tr>
+    <tr>
+      <td>GitHub Copilot Coding Agent</td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-bad">O(N)</span></td>
+      <td><span class="pill pill-bad">slow</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+    </tr>
+    <tr>
+      <td>OpenAI Codex cloud (2025)</td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-bad">O(N)</span></td>
+      <td><span class="pill pill-bad">slow</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+    </tr>
+    <tr>
+      <td>Cursor Background Agents</td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-bad">O(N)</span></td>
+      <td><span class="pill pill-bad">slow</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+    </tr>
+    <tr>
+      <td>Devin / Devin Teams</td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-weak">merge-time</span></td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-bad">O(N)</span></td>
+      <td><span class="pill pill-bad">slow</span></td>
+      <td><span class="pill pill-weak">partial</span></td>
+      <td><span class="pill pill-weak">partial</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+    </tr>
+    <tr>
+      <td>Factory.ai Droids</td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-weak">merge-time</span></td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-bad">O(N)</span></td>
+      <td><span class="pill pill-bad">slow</span></td>
+      <td><span class="pill pill-weak">partial</span></td>
+      <td><span class="pill pill-weak">partial</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+    </tr>
+    <tr>
+      <td>OpenHands Cloud</td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-bad">O(N)</span></td>
+      <td><span class="pill pill-bad">slow</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+    </tr>
+    <tr>
+      <td>LangGraph / AutoGen / CrewAI</td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-weak">partial</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-weak">partial</span></td>
+    </tr>
+    <tr>
+      <td>MetaGPT / ChatDev / Magentic-One</td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-weak">partial</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+    </tr>
+    <tr>
+      <td>JiuwenSwarm</td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-good">yes</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+      <td><span class="pill pill-bad">no</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="small">
+<strong>Reading guide.</strong> "O(N)" in C4/C5 columns indicates per-agent
+container/checkout cost — sustains low parallelism but breaks at high N. "no" in
+C1/C2/C3 indicates the system has no substrate-level answer and relies on
+whatever filesystem the user wires up.
+</p>
+
+<!-- ───────────────────────── Section 7 ───────────────────────── -->
+<h2 id="scenarios">7. Workload Scenarios</h2>
+
+<p>
+The capability scores translate to concrete pass/fail outcomes on representative
+workloads.
+</p>
+
+<h3>Scenario 1: Ten agents run pytest in parallel on the same repo</h3>
+<ul>
+  <li><strong>Category D (LangGraph/AutoGen/CrewAI/MetaGPT/JiuwenSwarm):</strong> pytests tear each other's imports as siblings rewrite source mid-collection. Results are noise.</li>
+  <li><strong>Category B/C (Copilot, Codex, Devin, Factory):</strong> works — but needs 10 containers, ~10× repo size on disk, ~30–60s of cold-start before any agent begins.</li>
+  <li><strong>EphemeralOS:</strong> ten leases against shared layers; each pytest reads its own frozen lowerdir; commits gate at the OCC layer; tens of ms to mount each lease.</li>
+</ul>
+
+<h3>Scenario 2: Two agents both add a new dependency to <code>pyproject.toml</code></h3>
+<ul>
+  <li><strong>Category D:</strong> last-writer-wins on the file. One agent's dependency silently lost. Both <code>pip install</code> calls race in shared <code>.venv</code>.</li>
+  <li><strong>Category B/C:</strong> separate sandboxes; both produce PRs; humans resolve at merge time. Agents can't react to each other's choices.</li>
+  <li><strong>EphemeralOS:</strong> OCC catches the <code>pyproject.toml</code> conflict on the second commit (GATED route); loser retries against new base. Concurrent <code>pip install</code> succeeds because each runs in its own upperdir (DIRECT route).</li>
+</ul>
+
+<h3>Scenario 3: Subagent fans out 20 helpers to explore alternative implementations</h3>
+<ul>
+  <li><strong>Category D:</strong> no sandbox isolation. 20 helpers trample each other's writes.</li>
+  <li><strong>Category B/C:</strong> 20 × container_size disk; 20 × cold_start time. Often infeasible at scale.</li>
+  <li><strong>EphemeralOS:</strong> 20 cheap leases; subagent contract bounds resource accounting; helpers terminate via registered terminal tools.</li>
+</ul>
+
+<h3>Scenario 4: Long-horizon task spans days, dozens of attempts</h3>
+<ul>
+  <li><strong>Category D:</strong> no typed iteration model. Lost goals, drift across attempts.</li>
+  <li><strong>Category B/C:</strong> task closes when PR merges. "Long-horizon" is multiple sequential PRs; no in-substrate continuity.</li>
+  <li><strong>EphemeralOS:</strong> Goal → Iteration → Attempt with persisted stores. Replanning is a typed operation with hard invariants on dependent-task state.</li>
+</ul>
+
+<!-- ───────────────────────── Section 8 ───────────────────────── -->
+<h2 id="open">8. Open Risks Specific To EphemeralOS</h2>
+
+<p>
+Honest critique requires naming what could still go wrong. After the substrate
+corrections, all remaining concerns live <em>above</em> the substrate.
+</p>
+
+<table>
+  <thead>
+    <tr><th>Risk</th><th>Severity</th><th>Mitigation path</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Hotspot file contention</strong> — repeated STALE_BASE rejection on hub files (<code>pyproject.toml</code>, lockfiles, schema definitions)</td>
+      <td>Workload-dependent. Real for some refactors.</td>
+      <td>Empirical: depends on agent decomposition quality. Possible hybrid (advisory locks on hotspots) if it becomes systemic.</td>
+    </tr>
+    <tr>
+      <td><strong>Evaluator richness</strong> — the typed quality gate is only as good as the Evaluator's epistemic content</td>
+      <td>Content problem, not substrate problem</td>
+      <td>Library of evaluator recipes; composable evaluators; eventually multi-judge consensus</td>
+    </tr>
+    <tr>
+      <td><strong>Helper population</strong> — substrate ready for many helper classes; only <code>ask_advisor</code> and <code>ask_resolver</code> populated today</td>
+      <td>Capacity not yet realized</td>
+      <td>Register more helper recipes: security audit, performance check, test coverage, dependency review</td>
+    </tr>
+    <tr>
+      <td><strong>Cross-attempt learning</strong> — what does Attempt N+1 inherit from Attempt N beyond workspace state?</td>
+      <td>Underspecified publicly</td>
+      <td>Persistent attempt summaries fed into next planner's context recipe</td>
+    </tr>
+    <tr>
+      <td><strong>Adoption surface</strong> — substrate is all-or-nothing; cannot adopt 10% of it</td>
+      <td>Market risk, not technical</td>
+      <td>Modular slicing of public APIs even if internal coupling stays tight</td>
+    </tr>
+    <tr>
+      <td><strong>Squash service correctness</strong> — manifest version monotonicity through compaction with in-flight leases</td>
+      <td>Real implementation surface</td>
+      <td>Already designed for (<code>manifest_still_ends_with</code>, lease registry); needs ongoing testing</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ───────────────────────── Section 9 ───────────────────────── -->
+<h2 id="verdict">9. Verdict</h2>
+
+<div class="verdict">
+  <h3>The shared-workspace multi-agent category has no public peer.</h3>
+
+  <p>
+  Across every other product category, the substrate selects itself into a low-N
+  regime:
+  </p>
+
+  <ul>
+    <li><strong>Single-agent systems</strong> don't have multi-writer concerns because they have one writer.</li>
+    <li><strong>Fork-per-task systems</strong> pay O(N) disk and O(N) cold-start time, capping parallelism at the small number of tasks a CI budget tolerates.</li>
+    <li><strong>Fork-per-agent systems</strong> pay the same cost at finer granularity, capping team size at the small number of agents the substrate can afford to provision.</li>
+    <li><strong>Orchestration frameworks</strong> have no substrate at all; their "multi-agent" claim collapses the moment two agents touch the same file or run a long-running command concurrently.</li>
+  </ul>
+
+  <p>
+  EphemeralOS is the only documented architecture that achieves all eight capabilities
+  simultaneously, and the reason is structural: <strong>per-lease overlay clones on shared
+  immutable layer bytes</strong> dissolves the asymmetry between "isolation" and "cost"
+  that constrains every competitor. Other systems must choose between fine-grained
+  isolation (expensive) and shared state (corrupting). EphemeralOS gets both — cheap
+  per-tool-call isolation <em>and</em> a shared evolving workspace — because the
+  isolation lives in mount composition, not byte duplication.
+  </p>
+
+  <p>
+  The two-route commit policy (GATED for git-tracked OCC, DIRECT for gitignored
+  last-writer-wins) closes the loop. It is the only design that handles concurrent
+  source edits <em>and</em> concurrent installs <em>and</em> long-running commands
+  <em>and</em> shared workspace evolution within a single primitive.
+  </p>
+
+  <p>
+  Above the substrate, the three-tier agent taxonomy (main / subagent / helper) and
+  the recipe-typed context engine give the framework headroom to scale roles
+  without prompt-soup drift. These are not the unique substrate advantages — they
+  could be replicated by a sufficiently disciplined competitor — but they require
+  the cheap substrate underneath to be usable at the granularity the system targets.
+  </p>
+
+  <p>
+  <strong>The ceiling argument.</strong> For complex long-horizon coding tasks executed
+  by as many parallel agents as possible with harness-gated correctness, EphemeralOS's
+  ceiling is bounded only by sandbox provider capacity. Every competitor's ceiling is
+  bounded by substrate cost (O(N) regimes) or substrate absence (no isolation at all).
+  This is a structural, not incremental, gap — and not one that closes by writing
+  better prompts.
+  </p>
+</div>
+
+<h3>What changes the picture</h3>
+
+<p>
+The substrate advantage is decisive <em>conditional on the market needing shared-workspace
+multi-agent</em>. If the field continues to satisfy itself with PR-shaped fork-per-task
+output, EphemeralOS's structural lead earns less than its technical merit deserves. The
+honest open question is timing: the architecture is correct for where the field is
+going; the open variable is when the field arrives.
+</p>
+
+<p>
+What would accelerate the gap closing:
+</p>
+
+<ol>
+  <li>Real workloads where many agents must collaborate on one evolving feature in tight time (game-development sprints, large refactors, complex incident response).</li>
+  <li>Pricing pressure on per-agent container costs as agent counts rise.</li>
+  <li>Demand for "agent swarms" that mainstream products start advertising and then fail to deliver under shared-state scrutiny.</li>
+</ol>
+
+<p>
+Until then, EphemeralOS's design is the answer to a question the field has not yet
+loudly asked. That's the standard position of substrate infrastructure: invisible
+until the workload demands it, then suddenly the only viable foundation. The
+architecture is built to be in that position.
+</p>
+
+<footer>
+  Prepared from EphemeralOS source review (task_center, sandbox/layer_stack, sandbox/occ,
+  context_engine, tools/subagent, tools/ask_helper) and public documentation of
+  competing products. Substrate corrections incorporated through six clarifications:
+  (1) single overlay with lowerdir list, not stacked; (2) substrate cost small vs RPC;
+  (3) O(1) space and spawn time; (4) overlay solves both git-tracked and gitignored
+  concurrent writes via two-route policy; (5) frozen lowerdir enables long-running
+  commands; (6) per-lease lowerdir clone with shared underlying immutable layer bytes.
+</footer>
+
+</body>
+</html>

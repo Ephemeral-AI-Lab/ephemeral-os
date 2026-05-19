@@ -56,11 +56,11 @@ def _step(msg: str) -> None:
 
 
 def _bootstrap_sandbox_provider() -> None:
-    from sandbox.provider.daytona.bootstrap import bootstrap_daytona_provider
+    from sandbox.provider.bootstrap import bootstrap_sandbox_provider
 
-    _step("bootstrap: importing daytona provider")
-    bootstrap_daytona_provider()
-    _step("bootstrap: daytona provider ready")
+    _step("bootstrap: selecting sandbox provider via EOS_SANDBOX_PROVIDER")
+    bootstrap_sandbox_provider()
+    _step("bootstrap: sandbox provider ready")
 
 
 def _kill_other_sweevo_processes() -> None:

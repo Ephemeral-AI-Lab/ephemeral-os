@@ -63,6 +63,20 @@ class ProviderAdapter(Protocol):
         timeout: int | None = None,
     ) -> RawExecResult: ...
 
+    # -- Context preparation -------------------------------------------------
+
+    def context_preparer(self, sandbox_id: str) -> Any:
+        """Return a provider-specific context-preparer object for *sandbox_id*.
+
+        The returned object implements ``prepare_context(context)`` and
+        ``prepare_context_async(context)`` so sandbox tools can inject
+        provider-aware runtime metadata without importing provider modules.
+        Promoted from the duck-typed ``getattr(adapter, "context_preparer", ...)``
+        call at ``sandbox/api/_sandbox_control.py`` so static analysis has a
+        fixed point for every concrete adapter.
+        """
+        ...
+
 
 __all__ = [
     "ProviderAdapter",

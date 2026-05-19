@@ -502,9 +502,12 @@ def register_sweevo_snapshot(
     cpu: int = 2,
     disk: int = 10,
 ) -> str:
-    """Register a SWE-EVO Docker image as a Daytona snapshot."""
-    import subprocess
+    """Register a SWE-EVO Docker image as a provider snapshot.
 
+    Branches on the active provider name. Unknown providers raise
+    ``NotImplementedError`` rather than silently skipping — see PLAN_v4 §6
+    Step 5.
+    """
     if not instance.docker_image:
         raise ValueError(f"Instance {instance.instance_id} has no docker_image")
 
@@ -514,7 +517,25 @@ def register_sweevo_snapshot(
 
     image_ref = _normalize_sweevo_image_ref(instance.docker_image)
 
-    logger.info("Registering SWE-EVO snapshot '%s' from %s", name, image_ref)
+    from sandbox.provider.registry import get_default_provider
+
+    provider_name = getattr(get_default_provider(), "name", "")
+    if provider_name == "daytona":
+        return _register_sweevo_snapshot_daytona(name, image_ref, cpu=cpu, disk=disk)
+    if provider_name == "docker":
+        return _register_sweevo_snapshot_docker(name, image_ref)
+    raise NotImplementedError(
+        f"register_sweevo_snapshot does not support provider={provider_name!r}; "
+        "supported: 'daytona', 'docker'"
+    )
+
+
+def _register_sweevo_snapshot_daytona(
+    name: str, image_ref: str, *, cpu: int, disk: int
+) -> str:
+    import subprocess
+
+    logger.info("Registering SWE-EVO snapshot '%s' from %s (daytona)", name, image_ref)
     result = subprocess.run(
         [
             "daytona",
@@ -537,6 +558,30 @@ def register_sweevo_snapshot(
     if result.returncode != 0:
         raise RuntimeError(f"Failed to register snapshot {name}: {result.stderr}")
     logger.info("Registered snapshot: %s", name)
+    return name
+
+
+def _register_sweevo_snapshot_docker(name: str, image_ref: str) -> str:
+    import subprocess
+
+    logger.info("Registering SWE-EVO snapshot '%s' from %s (docker)", name, image_ref)
+    pull = subprocess.run(
+        ["docker", "pull", image_ref],
+        capture_output=True,
+        text=True,
+        timeout=_DEFAULT_SNAPSHOT_CREATE_TIMEOUT,
+    )
+    if pull.returncode != 0:
+        raise RuntimeError(f"docker pull {image_ref} failed: {pull.stderr}")
+    tag = subprocess.run(
+        ["docker", "tag", image_ref, name],
+        capture_output=True,
+        text=True,
+        timeout=_DEFAULT_SNAPSHOT_CREATE_TIMEOUT,
+    )
+    if tag.returncode != 0:
+        raise RuntimeError(f"docker tag {image_ref} {name} failed: {tag.stderr}")
+    logger.info("Registered snapshot: %s (docker)", name)
     return name
 
 

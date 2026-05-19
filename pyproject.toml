@@ -32,6 +32,9 @@ dependencies = [
 daytona = [
     "daytona-sdk>=0.149.0",
 ]
+docker = [
+    "docker>=7.0.0",
+]
 dev = [
     "mcp>=1.0.0",
     "pexpect>=4.9.0",

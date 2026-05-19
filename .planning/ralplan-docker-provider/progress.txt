@@ -1,0 +1,38 @@
+PROGRESS — ralplan-docker-provider (PLAN_v4)
+
+Iteration: 2026-05-20 ralph run
+
+WHAT LANDED
+- backend/src/sandbox/provider/protocol.py: context_preparer formally on Protocol.
+- backend/src/sandbox/provider/bootstrap.py: NEW dispatcher; EOS_SANDBOX_PROVIDER (case-insensitive) + per-platform defaults (darwin→daytona, linux→docker). Sentinel-gated (_PROVIDER_BOOTSTRAPPED + _PROVIDER_BOOTSTRAP_LOCK). _reset_for_tests private helper exposed.
+- backend/src/sandbox/provider/__init__.py: exports bootstrap_sandbox_provider.
+- backend/src/sandbox/provider/docker/__init__.py + adapter.py + client.py + exec_context.py + workspace.py + bootstrap.py — full new package mirroring Daytona's public surface. Docker SDK imports are lazy (get_docker_client raises only at first use), so darwin/no-SDK env imports cleanly.
+- Three call-site switches: task_center_runner/core/bootstrap.py, task_center_runner/benchmarks/sweevo/fixtures.py, benchmarks/sweevo/__main__.py — all now call bootstrap_sandbox_provider.
+- benchmarks/sweevo/sandbox.py: register_sweevo_snapshot branches on get_default_provider().name with explicit NotImplementedError on unknown provider. Internal helpers _register_sweevo_snapshot_daytona / _register_sweevo_snapshot_docker.
+- backend/scripts/preflight_docker_a2_caps.sh: Linux-CI preflight probe for §6 Step 0 (unshare -Urm + detect_private_mount_namespace + depth-1 overlay mount under A.2 caps). Bails cleanly on non-Linux.
+- backend/scripts/smoke_docker_provider.sh: manual smoke runner asserting PRIVATE_NAMESPACE ratio ≥95%. Bails cleanly on non-Linux.
+- backend/tests/unit_test/test_sandbox/test_provider/: test_protocol_conformance.py, test_dispatcher.py, test_docker_adapter.py, test_register_sweevo_snapshot.py. 35 tests, all pass on darwin (no docker daemon required — SDK mocked).
+- backend/tests/integration_test/{test_sandbox,test_benchmarks}/: test_docker_post_lifecycle.py, test_provider_parity.py, test_sweevo_docker_smoke.py + data/daytona_baseline_p95.json scaffold. All runtime gates skipif Linux+EOS_HAVE_DOCKER=1+EOS_SANDBOX_PROVIDER=docker — they SKIP on darwin and run on Linux CI.
+- pyproject.toml: docker = ["docker>=7.0.0"] optional-dependencies group.
+
+VERIFICATION
+- .venv/bin/ruff check backend/src/sandbox/provider backend/tests/unit_test/test_sandbox/test_provider backend/tests/integration_test → clean.
+- .venv/bin/pytest backend/tests/unit_test/test_sandbox/test_provider backend/tests/integration_test → 36 passed, 3 skipped (skip = darwin integration gates working as intended).
+- EOS_SANDBOX_PROVIDER=daytona .venv/bin/pytest backend/tests/unit_test/test_sandbox → 628 passed, 1 skipped (Daytona regression gate, criterion 2).
+- .venv/bin/pytest backend/tests/unit_test/test_benchmarks (excluding three pre-existing live_e2e-import failures on main) → 46 passed.
+
+DARWIN-DEFERRED (require Linux + docker daemon)
+- §6 Step 0 preflight green: run backend/scripts/preflight_docker_a2_caps.sh on Linux CI runner.
+- §5.3 acceptance bars (a) ≥95% PRIVATE_NAMESPACE ratio, (b) docker p95 ≤ 1.25 × daytona baseline, (c) post-squash still PRIVATE_NAMESPACE: implemented in test_sweevo_docker_smoke.py + manual smoke_docker_provider.sh. Both skip on darwin.
+- daytona_baseline_p95.json is a scaffold (p50/p95/p99 = 0). One-time baseline collection on Linux CI under EOS_SANDBOX_PROVIDER=daytona required before (b) becomes meaningful; test asserts baseline file age <180 days.
+- Acceptance criterion 6 (no host/daemon edits): observability log line in host/lifecycle.py NOT added — plan §5.4 says "only if not already logged" and the existing one-line discipline is preserved.
+
+LEARNINGS
+- The Daytona adapter ALREADY had context_preparer (adapter.py line 352); the Protocol add at PLAN_v4 Step 1 is purely a typing formalization with zero runtime behavior change.
+- conftest.py at backend/tests/conftest.py prepends backend/src to sys.path so plain `from sandbox.provider...` imports work in tests without a build install.
+- pre-existing on main: backend/tests/unit_test/test_benchmarks/test_sweevo_{audit_recorder,mock_agent_execution,sandbox_event_monitor}.py fail collection on `from live_e2e.audit.bus import AuditEventBus`. Verified pre-existing via `git stash` round-trip; NOT caused by this work.
+
+FOLLOW-UPS (deferred per ADR)
+- Lift prepare_sandbox_runtime_context to sandbox/host/workspace.py (refactor to accept resolved project_root string instead of provider-typed sandbox handle).
+- Re-baseline daytona_baseline_p95.json annually.
+- Investigate Docker Desktop seccomp tuning on darwin if opt-in users observe persistent COPY_BACKED fallback.

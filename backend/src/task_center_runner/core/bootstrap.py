@@ -41,9 +41,9 @@ def bootstrap_real_agent_runtime() -> None:
     if _BOOTSTRAPPED:
         return
 
-    from sandbox.provider.daytona.bootstrap import bootstrap_daytona_provider
+    from sandbox.provider.bootstrap import bootstrap_sandbox_provider
 
-    bootstrap_daytona_provider()
+    bootstrap_sandbox_provider()
 
     from runtime.app_factory import ensure_runtime_stores_ready
 
