@@ -146,6 +146,49 @@ The session-scoped `live_sandbox` fixture starts one Daytona sandbox per run
 and resets `/testbed` before each test with `git reset --hard HEAD` plus
 `git clean -fdx`.
 
+## Running on Docker
+
+The same suite runs under the Docker provider on a Linux host. Selection is by
+env var; tests are provider-agnostic.
+
+| Env var                  | Required        | Purpose                                                                                  |
+|--------------------------|-----------------|------------------------------------------------------------------------------------------|
+| `EOS_SANDBOX_PROVIDER`   | yes             | Set to `docker` to route `live_sandbox` through `DockerProviderAdapter`.                 |
+| `EOS_LIVE_E2E_IMAGE`     | yes (docker)    | Local-or-pullable image tag. **No fallback to `default_image` under docker** — missing this env var is a hard fixture skip. |
+| `EOS_DOCKER_PRIVILEGED`  | no              | `1` swaps `DEFAULT_RUN_FLAGS` (CAP_SYS_ADMIN + seccomp/apparmor unconfined) for `--privileged`. |
+
+**Linux-only.** The Docker provider is unsupported on darwin (Docker Desktop's
+VM does not surface the host namespaces the overlay slice relies on).
+
+**Image-bake requirements** (operator responsibility — the suite no longer
+silently inherits these from a SaaS image):
+
+- Container runs as root with the capability set produced by
+  `sandbox.provider.docker.client.resolve_run_flags()`.
+- `unshare -Urm true` succeeds inside the container.
+- `git` is on `PATH`.
+- `/testbed` exists and is writable.
+- The runtime bundle marker installs via `setup_after_create` on first
+  fixture bring-up.
+
+```bash
+export EOS_SANDBOX_PROVIDER=docker
+export EOS_LIVE_E2E_IMAGE=my-registry/eos-live-e2e:latest
+.venv/bin/pytest backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase00_smoke.py -v
+```
+
+For the full progressive tier sweep:
+
+```bash
+bash backend/scripts/run_live_e2e_docker.sh
+```
+
+The script bails on non-Linux hosts and forwards `--provider docker` plus
+tiers 0–6 to `run_tiered`. Tier 0 runs a real capability probe inside the
+configured image (daemon up, image local, `git`/`/testbed`/`unshare -Urm`,
+`EOS_DOCKER_PRIVILEGED` value captured) so misconfiguration fails loud
+before any pytest runs.
+
 ## Defaults
 
 | Plan question | Adopted default |

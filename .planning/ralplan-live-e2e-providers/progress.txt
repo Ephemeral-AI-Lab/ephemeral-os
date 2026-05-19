@@ -1,0 +1,57 @@
+PLAN_v2 implementation — completed 2026-05-20
+
+S1: live_sandbox fixture
+  - Replaced bootstrap_daytona_provider import/call with bootstrap_sandbox_provider.
+  - Added _resolve_live_image(provider_name) with daytona-only settings fallback.
+  - Sandbox/ subtree free of provider.daytona/provider.docker imports.
+
+S2: conftest marker
+  - "live: marks live Daytona-backed end-to-end tests" -> "live provider-backed end-to-end tests (gated by EOS_SANDBOX_PROVIDER; opt-in by directory)".
+
+S3: tier0 docker branch
+  - Added _resolve_provider_for_probe(), _docker_run_flags(), probe_tier0_docker().
+  - probe_tier0() dispatches docker -> capability probe, daytona -> unchanged HTTP stack, unknown -> Tier0Result(passed=False).
+  - Single source of truth for run flags via sandbox.provider.docker.client.resolve_run_flags (lazy import).
+  - 4 sub-checks each recorded in notes: docker_info, image_inspect, capability_probe, eos_docker_privileged.
+
+S4: run_tiered + tiers.toml
+  - Added --provider {docker,daytona} flag; exports EOS_SANDBOX_PROVIDER to child env.
+  - write_summary records provider field per row; main() prints `provider=<name>` first.
+  - Deleted [[tier]] id=7 (sweevo_mock_framework); tier 5 cascade_target=6 unchanged.
+  - load_tier_configs returns 7 entries (0..6).
+
+S5: README + run_live_e2e_docker.sh
+  - README "Running on Docker" section: env matrix, Linux-only caveat, image-bake list.
+  - backend/scripts/run_live_e2e_docker.sh: Linux-only check, EOS_SANDBOX_PROVIDER=docker, --provider docker --tier 0,1,2,3,4,5,6.
+
+S6: unit tests
+  - test_live_harness_provider_resolution.py: 5 parametrized cases from PLAN §5.1.
+  - test_tier0_docker_probe.py: happy path + 5 failure paths + dispatcher branches (docker/daytona/unknown).
+  - Both import via sys.path injection of backend/tests because live_e2e_test is in norecursedirs.
+
+S7: full verification
+  - ruff clean on all edited python files.
+  - .venv/bin/pytest backend/tests/unit_test/test_sandbox -> 642 passed, 1 skipped.
+  - bash -n on script passes.
+
+Files modified:
+  backend/tests/live_e2e_test/sandbox/_harness/sandbox_fixture.py
+  backend/tests/live_e2e_test/conftest.py
+  backend/tests/live_e2e_test/_tools/tier0_health.py
+  backend/tests/live_e2e_test/_tools/run_tiered.py
+  backend/tests/live_e2e_test/_tools/tiers.toml
+  backend/tests/live_e2e_test/sandbox/README.md
+
+Files created:
+  backend/scripts/run_live_e2e_docker.sh (exec)
+  backend/tests/unit_test/test_sandbox/test_provider/test_live_harness_provider_resolution.py
+  backend/tests/unit_test/test_sandbox/test_provider/test_tier0_docker_probe.py
+
+Operator gates deferred (require live Linux+Docker host):
+  - PLAN criterion 6 Daytona regression baseline diff (needs creds + Linux endpoint).
+  - PLAN criterion 3 full tier 0-6 sweep on Linux+Docker.
+  Both documented in README and run_live_e2e_docker.sh.
+
+Notes / learnings:
+  - live_e2e_test is in pyproject norecursedirs but is a real Python package (has __init__.py everywhere). Importing via sys.path.insert("backend/tests") + "live_e2e_test.x.y" works cleanly for unit tests that need to call into the live harness without bringing up Daytona.
+  - tier0_health does have one allowed reference to sandbox.provider.docker.client.resolve_run_flags (single source of truth per Step 3); the criterion 1 zero-hits rule is enforced on the sandbox/ subtree, which is the spirit of the contract.

@@ -1,5 +1,6 @@
 # Progressive live-test tier configuration.
 #
+# Tiers 0–6: tier 0 is provider-aware preflight, tiers 1–6 are pure pytest.
 # Encodes plan §3 (progressive-live-test-tiers-design-20260508.md).
 # Each tier is run by run_tiered.py; cascade rules decide whether a
 # failure aborts later tiers.
@@ -87,18 +88,5 @@ per_cell_budget_s = 60
 kind = "pytest"
 pytest_args = [
     "backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase09_complex_e2e.py::test_phase09_adversarial",
-]
-cascade = "warn"
-
-[[tier]]
-id = 7
-name = "sweevo_mock_framework"
-# ~90s sandbox bring-up + ~30s/test * ~12 tests budget headroom (plan §14).
-wall_budget_s = 600
-per_cell_budget_s = 60
-kind = "pytest"
-pytest_args = [
-    "backend/src/live_e2e/tests/sweevo/",
-    "-q",
 ]
 cascade = "warn"

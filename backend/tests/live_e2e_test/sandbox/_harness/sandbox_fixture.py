@@ -13,6 +13,7 @@ in-sandbox probes or through the public sandbox API, never through a local
 
 from __future__ import annotations
 
+import os
 import shlex
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
@@ -40,7 +41,7 @@ from sandbox.api import (
     WriteFileResult,
 )
 from sandbox.host.bootstrap import setup_after_create
-from sandbox.provider.daytona.bootstrap import bootstrap_daytona_provider
+from sandbox.provider.bootstrap import bootstrap_sandbox_provider
 from sandbox.provider.registry import get_default_provider, register_adapter
 
 from .native_probe import (
@@ -162,17 +163,36 @@ def _make_caller() -> SandboxCaller:
     return SandboxCaller(agent_id="live-e2e-tests")
 
 
-def _bring_up_sandbox(name: str) -> str:
-    bootstrap_daytona_provider()
-    settings = load_settings()
-    image = settings.sandbox.default_image.strip()
-    if not image:
+def _resolve_live_image(provider_name: str) -> str:
+    """Resolve the live-e2e image string, with provider-gated fallback.
+
+    EOS_LIVE_E2E_IMAGE always wins. Under daytona, fall back to
+    settings.sandbox.default_image. Under any other provider, missing
+    EOS_LIVE_E2E_IMAGE is a hard fixture skip with a clear message.
+    """
+    explicit = (os.environ.get("EOS_LIVE_E2E_IMAGE") or "").strip()
+    if explicit:
+        return explicit
+    if provider_name == "daytona":
+        image = load_settings().sandbox.default_image.strip()
+        if image:
+            return image
         pytest.skip(
-            "live test requires settings.sandbox.default_image (set "
-            "EPHEMERALOS_SANDBOX_DEFAULT_IMAGE in .env to a prebaked "
-            "image with git, /testbed, and the runtime bundle marker)"
+            "live test requires EOS_LIVE_E2E_IMAGE or settings.sandbox.default_image "
+            "(set EPHEMERALOS_SANDBOX_DEFAULT_IMAGE in .env) — a prebaked image "
+            "with git, /testbed, and the runtime bundle marker"
         )
+    pytest.skip(
+        f"live test under EOS_SANDBOX_PROVIDER={provider_name} requires "
+        "EOS_LIVE_E2E_IMAGE to be set to a locally-available image tag "
+        "with git, /testbed, and the runtime bundle marker."
+    )
+
+
+def _bring_up_sandbox(name: str) -> str:
+    bootstrap_sandbox_provider()
     provider = get_default_provider()
+    image = _resolve_live_image(provider.name)
     created = provider.create(
         name=name,
         image=image,

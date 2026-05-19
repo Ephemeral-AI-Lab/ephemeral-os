@@ -40,7 +40,8 @@ pytestmark = [pytest.mark.live]
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers",
-        "live: marks live Daytona-backed end-to-end tests (opt-in via env)",
+        "live: live provider-backed end-to-end tests "
+        "(gated by EOS_SANDBOX_PROVIDER; opt-in by directory)",
     )
 
 

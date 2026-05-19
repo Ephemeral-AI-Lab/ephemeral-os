@@ -24,8 +24,10 @@ the workaround.
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -297,6 +299,103 @@ def _recover_runner_bootstrap(timeout_s: float = 30.0) -> tuple[bool, str]:
     return True, f"runner_restart_succeeded=true; {cleanup_note}"
 
 
+def _resolve_provider_for_probe() -> str:
+    raw = os.environ.get("EOS_SANDBOX_PROVIDER")
+    if raw is not None:
+        return raw.strip().lower()
+    if sys.platform == "darwin":
+        return "daytona"
+    if sys.platform.startswith("linux"):
+        return "docker"
+    return "unknown"
+
+
+def _docker_run_flags() -> list[str]:
+    """CLI flags equivalent to DockerProviderAdapter.create — single source of truth."""
+    from sandbox.provider.docker.client import resolve_run_flags
+
+    return list(resolve_run_flags())
+
+
+def probe_tier0_docker(
+    *,
+    image: str | None = None,
+    timeout_s: float = 30.0,
+) -> Tier0Result:
+    """Tier-0 probe for the Docker provider.
+
+    Four sub-checks (each recorded separately in notes):
+      1. ``docker info``                                — daemon up
+      2. ``docker image inspect $EOS_LIVE_E2E_IMAGE``   — image local
+      3. capability probe in a throwaway container     — git + /testbed + unshare -Urm
+      4. EOS_DOCKER_PRIVILEGED value                   — captured for artifact diff
+    """
+    start = time.perf_counter()
+    image = image if image is not None else os.environ.get("EOS_LIVE_E2E_IMAGE", "")
+    notes: list[str] = []
+    privileged_value = os.environ.get("EOS_DOCKER_PRIVILEGED", "")
+    notes.append(f"eos_docker_privileged={privileged_value!r}")
+
+    if shutil.which("docker") is None:
+        return Tier0Result(
+            passed=False,
+            api_health="error",
+            docker_available=False,
+            elapsed_s=time.perf_counter() - start,
+            notes="; ".join([*notes, "docker_info=docker_unavailable"]),
+        )
+
+    info = subprocess.run(  # noqa: S603 — fixed argv
+        ["docker", "info"],
+        capture_output=True, text=True, timeout=timeout_s, check=False,
+    )
+    if info.returncode != 0:
+        notes.append(f"docker_info=fail rc={info.returncode}")
+        return Tier0Result(
+            passed=False, api_health="error", docker_available=True,
+            elapsed_s=time.perf_counter() - start, notes="; ".join(notes),
+        )
+    notes.append("docker_info=ok")
+
+    if not image:
+        notes.append("image_inspect=missing_EOS_LIVE_E2E_IMAGE")
+        return Tier0Result(
+            passed=False, api_health="error", docker_available=True,
+            elapsed_s=time.perf_counter() - start, notes="; ".join(notes),
+        )
+
+    inspect = subprocess.run(  # noqa: S603 — fixed argv
+        ["docker", "image", "inspect", image],
+        capture_output=True, text=True, timeout=timeout_s, check=False,
+    )
+    if inspect.returncode != 0:
+        notes.append(f"image_inspect=fail image={image!r}")
+        return Tier0Result(
+            passed=False, api_health="error", docker_available=True,
+            elapsed_s=time.perf_counter() - start, notes="; ".join(notes),
+        )
+    notes.append(f"image_inspect=ok image={image!r}")
+
+    cap_script = "command -v git >/dev/null && test -w /testbed && unshare -Urm true"
+    cap_argv = ["docker", "run", "--rm", *_docker_run_flags(), image, "sh", "-c", cap_script]
+    cap = subprocess.run(  # noqa: S603 — fixed argv
+        cap_argv, capture_output=True, text=True, timeout=timeout_s, check=False,
+    )
+    if cap.returncode != 0:
+        detail = (cap.stderr or cap.stdout).strip().replace("\n", " ")[:200]
+        notes.append(f"capability_probe=fail rc={cap.returncode} detail={detail!r}")
+        return Tier0Result(
+            passed=False, api_health="error", docker_available=True,
+            elapsed_s=time.perf_counter() - start, notes="; ".join(notes),
+        )
+    notes.append("capability_probe=ok")
+
+    return Tier0Result(
+        passed=True, api_health="ok", docker_available=True,
+        elapsed_s=time.perf_counter() - start, notes="; ".join(notes),
+    )
+
+
 def probe_tier0(
     api_url: str = "http://localhost:3000/api",
     *,
@@ -305,10 +404,23 @@ def probe_tier0(
 ) -> Tier0Result:
     """Run the tier-0 probe and return a structured result.
 
+    Dispatches on ``EOS_SANDBOX_PROVIDER``: daytona keeps the HTTP-health +
+    stuck-rows + runner-bootstrap probe stack; docker runs the four-sub-check
+    capability probe in :func:`probe_tier0_docker`; unknown providers fail loud.
+
     By default this does NOT execute the destructive recovery SQL. Pass
     ``auto_recover=True`` only from the runner when the operator has
     confirmed they want stuck rows force-destroyed.
     """
+    provider = _resolve_provider_for_probe()
+    if provider == "docker":
+        return probe_tier0_docker(timeout_s=max(timeout_s, 30.0))
+    if provider != "daytona":
+        return Tier0Result(
+            passed=False, api_health="error",
+            notes=f"unsupported provider for tier 0 probe: {provider!r}",
+        )
+
     start = time.perf_counter()
     health_url = api_url.rstrip("/") + "/health"
     api_health, health_note = _check_api_health(health_url, timeout_s)
@@ -382,6 +494,7 @@ def probe_tier0(
 __all__ = [
     "Tier0Result",
     "probe_tier0",
+    "probe_tier0_docker",
     "_check_api_health",
     "_detect_stuck_rows",
     "_detect_runner_bootstrap_issue",

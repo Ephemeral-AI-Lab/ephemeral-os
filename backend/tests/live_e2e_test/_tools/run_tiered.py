@@ -617,7 +617,13 @@ class RunSummary:
         return 0
 
 
-def write_summary(outcomes: list[TierOutcome], path: Path, run_id: str) -> None:
+def write_summary(
+    outcomes: list[TierOutcome],
+    path: Path,
+    run_id: str,
+    *,
+    provider: str | None = None,
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as fh:
         for outcome in outcomes:
@@ -631,6 +637,7 @@ def write_summary(outcomes: list[TierOutcome], path: Path, run_id: str) -> None:
                 "failed_cells": outcome.failed_cells,
                 "notes": outcome.notes,
                 "run_id": run_id,
+                "provider": provider,
             }
             fh.write(json.dumps(row, sort_keys=True, separators=(",", ":")))
             fh.write("\n")
@@ -649,6 +656,7 @@ def run(
     progress_logger: ProgressLogger | None = None,
     progress_interval_s: float = 15.0,
     clock: Callable[[], float] = time.monotonic,
+    provider: str | None = None,
 ) -> RunSummary:
     if run_id is None:
         run_id = _dt.datetime.now(_dt.timezone.utc).strftime(
@@ -702,7 +710,7 @@ def run(
         cascade.record(tier, outcome.status)
 
     summary_path = results_dir / f"progressive-test-summary-{run_id}.jsonl"
-    write_summary(outcomes, summary_path, run_id)
+    write_summary(outcomes, summary_path, run_id, provider=provider)
     return RunSummary(run_id=run_id, outcomes=outcomes, summary_path=summary_path)
 
 
@@ -735,7 +743,19 @@ def main(argv: list[str] | None = None) -> int:
         default=15.0,
         help="Seconds between midflight progress logs for pytest tiers.",
     )
+    parser.add_argument(
+        "--provider",
+        choices=("docker", "daytona"),
+        default=None,
+        help=(
+            "Sandbox provider for child tiers. When set, exports "
+            "EOS_SANDBOX_PROVIDER=<value> into the child pytest env."
+        ),
+    )
     args = parser.parse_args(argv)
+
+    if args.provider is not None:
+        os.environ["EOS_SANDBOX_PROVIDER"] = args.provider
 
     here = Path(__file__).resolve().parent
     config = Path(args.config) if args.config else here / "tiers.toml"
@@ -743,6 +763,10 @@ def main(argv: list[str] | None = None) -> int:
 
     project_root = here.parent.parent.parent.parent  # ~/.../EphemeralOS
     results_dir = project_root / ".omc" / "results"
+
+    resolved_provider = args.provider or os.environ.get("EOS_SANDBOX_PROVIDER")
+    if resolved_provider:
+        print(f"provider={resolved_provider}", flush=True)
 
     summary = run(
         tiers,
@@ -753,6 +777,7 @@ def main(argv: list[str] | None = None) -> int:
         no_cascade=args.no_cascade,
         progress_logger=lambda message: print(message, flush=True),
         progress_interval_s=args.progress_interval_s,
+        provider=resolved_provider,
     )
 
     print(f"\n[run_tiered] summary={summary.summary_path}")
