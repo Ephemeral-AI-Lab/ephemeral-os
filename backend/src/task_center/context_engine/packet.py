@@ -34,13 +34,10 @@ class ContextBlockKind(StrEnum):
     ITERATION_STATEMENT = "iteration_statement"
     PRIOR_ITERATION_SPECIFICATION = "prior_iteration_specification"
     PRIOR_ITERATION_SUMMARY = "prior_iteration_summary"
-    FAILED_ATTEMPT_LANDSCAPE = "failed_attempt_landscape"
+    FAILED_ATTEMPT = "failed_attempt"
     PLANNED_TASK_SPEC = "planned_task_spec"
     TASK_SPECIFICATION = "task_specification"
-    EVALUATION_CRITERIA = "evaluation_criteria"
     DEPENDENCY_SUMMARY = "dependency_summary"
-    COMPLETED_TASK_SUMMARY = "completed_task_summary"
-    ARTIFACT_REFERENCE = "artifact_reference"
     ENTRY_REQUEST = "entry_request"
 
 

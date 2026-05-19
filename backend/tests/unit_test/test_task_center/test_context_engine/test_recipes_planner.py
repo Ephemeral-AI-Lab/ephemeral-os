@@ -270,7 +270,7 @@ def test_three_failed_attempts_emit_three_high_priority_blocks(
         deps_with_stores,
     )
     failed_blocks = [
-        b for b in packet.blocks if b.kind == "failed_attempt_landscape"
+        b for b in packet.blocks if b.kind == "failed_attempt"
     ]
     assert len(failed_blocks) == 3
     for block in failed_blocks:
@@ -282,7 +282,7 @@ def test_three_failed_attempts_emit_three_high_priority_blocks(
     ]
 
 
-def test_failed_attempt_landscape_includes_plan_type_statuses_and_summaries(
+def test_failed_attempt_includes_plan_type_statuses_and_summaries(
     deps_with_stores, goal_store, iteration_store, attempt_store, task_store,
     task_center_run_id,
 ):
@@ -340,7 +340,7 @@ def test_failed_attempt_landscape_includes_plan_type_statuses_and_summaries(
     )
 
     failed_blocks = [
-        b for b in packet.blocks if b.kind == "failed_attempt_landscape"
+        b for b in packet.blocks if b.kind == "failed_attempt"
     ]
     assert len(failed_blocks) == 1
     text = failed_blocks[0].text
@@ -388,7 +388,7 @@ def test_all_failed_attempts_render_as_high_priority_blocks(
         deps_with_stores,
     )
     failed_blocks = [
-        b for b in packet.blocks if b.kind == "failed_attempt_landscape"
+        b for b in packet.blocks if b.kind == "failed_attempt"
     ]
     assert len(failed_blocks) == total
     assert [b.metadata["attrs"] for b in failed_blocks] == [

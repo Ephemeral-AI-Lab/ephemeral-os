@@ -77,7 +77,7 @@ Source: `task_center/context_engine/recipes/planner.py:37-77`. Required scope: `
 | 1 | `mission_goal` (under `# Mission`) | REQUIRED | `sequence_no > 1` | `mission.goal` |
 | 2..N | `prior_episode_specification` + `prior_episode_summary` pairs (under `# Previous Episode Results`) | HIGH for immediate prior, MEDIUM for older | `sequence_no > 1`, one pair per closed predecessor | `episode.task_specification` + `episode.task_summary` |
 | N+1 | `episode_goal` (under `# Current Episode`) | REQUIRED | `sequence_no > 1` | `episode.goal` |
-| last | `failed_attempt_landscape[]` (under `# Prior Failed Attempts`) | HIGH | any failed attempt in current episode | accepted plan, generator outcome status summary, useful generator summaries, and evaluator criteria/summary only when an evaluator ran |
+| last | `failed_attempt[]` (under `# Prior Failed Attempts`) | HIGH | any failed attempt in current episode | accepted plan, generator outcome status summary, useful generator summaries, and evaluator criteria/summary only when an evaluator ran |
 
 **Why this order:** The episode contract anchors the front of the prompt; the failure landscape closes it. The planner ends its read on retry evidence so the most-recent failure shapes its planning choices.
 
@@ -155,14 +155,14 @@ Failures surface as `AttemptSubmissionContextError`, which the tool converts int
 |---|---|---|
 | `task_specification` | Evaluator (framing), Generator (framing) | `evaluator_v1` REQUIRED block; `generator_v1` HIGH block |
 | `evaluation_criteria[]` | Evaluator (verdict basis) | `evaluator_v1` REQUIRED block, bullet-formatted |
-| `tasks[]` | Dispatcher (not an LLM); next planner via `failed_attempt_landscape` | Persisted as DAG rows |
+| `tasks[]` | Dispatcher (not an LLM); next planner via `failed_attempt` | Persisted as DAG rows |
 | `task_specs[id]` | The single generator with that id | `generator_v1` REQUIRED `planned_task_spec` block (last position) |
 
 Leakage between audiences is a planning bug: criteria-language in a task_spec, task-level detail in the global task_specification, or rubric in the deferred_goal_for_next_iteration all confuse the wrong reader.
 
 **3. Criteria are the planner's auto-handcuffs.** The evaluator returns binary verdicts (`submit_evaluation_success`/`submit_evaluation_failure`). Over-broad criteria mean partial progress becomes total failure; over-narrow criteria let trivially-passing plans through. The planner's only defense against an unforgiving evaluator is to write criteria it is _confident_ the planned DAG will satisfy. If coverage is uncertain, a partial plan with a tighter criterion set and an explicit `deferred_goal_for_next_iteration` outperforms a brittle full plan.
 
-**4. The planner is the only role that sees retry history.** `failed_attempt_landscape_blocks` is unique to `planner_v1`. It carries the previous attempt's plan kind (`unsubmitted`, `full`, or `partial`), continuation goal, criteria, latest generator summaries, and fail reason. For evaluator failures, the fail reason includes the evaluator's latest summary when recorded. The evaluator and generators operate context-free with respect to retry — they judge and execute the present attempt. This places retrospection where it can act: the planner can drop a failing slice, narrow scope, preserve achieved work, or restructure dependencies. Neither the evaluator nor the generator has the authority to do any of those.
+**4. The planner is the only role that sees retry history.** `failed_attempt_blocks` is unique to `planner_v1`. It carries the previous attempt's plan kind (`unsubmitted`, `full`, or `partial`), continuation goal, criteria, latest generator summaries, and fail reason. For evaluator failures, the fail reason includes the evaluator's latest summary when recorded. The evaluator and generators operate context-free with respect to retry — they judge and execute the present attempt. This places retrospection where it can act: the planner can drop a failing slice, narrow scope, preserve achieved work, or restructure dependencies. Neither the evaluator nor the generator has the authority to do any of those.
 
 **5. Wide-flat DAGs are normal; deep chains compound risk.** A generator failure blocks all transitive descendants (`blocked_descendant_ids`, `generator_dag.py:90`); the attempt then closes `FAILED/generator_failed`. A deep chain turns one stuck task into a whole-attempt loss. A wide flat DAG with independent siblings parallelizes throughput and isolates failures.
 
@@ -211,7 +211,7 @@ This section traces — end-to-end — how the planner's `task_input` string is 
 │      attempts  = attempt_store.list_for_episode(episode_id)             │
 │                                                                         │
 │      blocks  = mission_episode_blocks(...)                              │
-│      blocks += failed_attempt_landscape_blocks(...)                     │
+│      blocks += failed_attempt_blocks(...)                     │
 │                                                                         │
 │      return ContextPacket(target_role="planner", blocks=blocks, ...)    │
 └──────────────────────────────────┬──────────────────────────────────────┘
@@ -242,9 +242,9 @@ Two independent dimensions branch the recipe — episode sequence number, and wh
 | Case | Episode | Failed attempts | Builders invoked | Block kinds emitted (in order) |
 |---|---|---|---|---|
 | **A — first attempt, first episode** | `seq=1` | none | `mission_episode_blocks` → 1 block | `episode_goal` |
-| **B — retry, first episode** | `seq=1` | ≥1 | `mission_episode_blocks` + `failed_attempt_landscape_blocks` | `episode_goal`, `failed_attempt_landscape*` |
+| **B — retry, first episode** | `seq=1` | ≥1 | `mission_episode_blocks` + `failed_attempt_blocks` | `episode_goal`, `failed_attempt*` |
 | **C — first attempt, continuation** | `seq≥2` | none | `mission_episode_blocks` → 3+ blocks | `mission_goal`, (`prior_episode_specification` + `prior_episode_summary`)×K, `episode_goal` |
-| **D — retry, continuation** | `seq≥2` | ≥1 | both | `mission_goal`, (prior_episode pairs)×K, `episode_goal`, `failed_attempt_landscape*` |
+| **D — retry, continuation** | `seq≥2` | ≥1 | both | `mission_goal`, (prior_episode pairs)×K, `episode_goal`, `failed_attempt*` |
 
 ### Walk-through: Case A — the simplest packet
 
@@ -262,7 +262,7 @@ Builder decisions:
     current_episode.sequence_no == 1
       → return [ episode_goal_block(heading="# Mission / Current Episode") ]
 
-  failed_attempt_landscape_blocks:
+  failed_attempt_blocks:
     failed = [ a for a in attempts if a.status == FAILED and a.id != current ]
     failed == []  → return []
 
@@ -307,19 +307,19 @@ Builder decisions:
         - prior_episode_summary(Episode#1, priority=HIGH)            [group=# Previous Episode Results]
         - episode_goal_block(Episode#2, heading="# Current Episode")
 
-  failed_attempt_landscape_blocks:
+  failed_attempt_blocks:
     failed = [Attempt#1, Attempt#2]    sorted by attempt_sequence_no
     emit:
-        - failed_attempt_landscape(Attempt#1, priority=HIGH)         [group=# Prior Failed Attempts]
-        - failed_attempt_landscape(Attempt#2, priority=HIGH)         [group=# Prior Failed Attempts]
+        - failed_attempt(Attempt#1, priority=HIGH)         [group=# Prior Failed Attempts]
+        - failed_attempt(Attempt#2, priority=HIGH)         [group=# Prior Failed Attempts]
 
 Final block sequence (in packet order):
   [0] mission_goal                                    REQUIRED
   [1] prior_episode_specification (Ep#1)              HIGH      group=# Previous Episode Results
   [2] prior_episode_summary       (Ep#1)              HIGH      group=# Previous Episode Results
   [3] episode_goal                (Ep#2, current)     REQUIRED
-  [4] failed_attempt_landscape    (Attempt#1)         HIGH      group=# Prior Failed Attempts
-  [5] failed_attempt_landscape    (Attempt#2)         HIGH      group=# Prior Failed Attempts
+  [4] failed_attempt    (Attempt#1)         HIGH      group=# Prior Failed Attempts
+  [5] failed_attempt    (Attempt#2)         HIGH      group=# Prior Failed Attempts
 ```
 
 Rendered `task_input` (Case D):
@@ -428,7 +428,7 @@ The planner prompt is assembled by reading **four stores** and one constant. The
                 │   │    MEDIUM for older)
                 │   │
                 │   │           ┌── attempt.task_specification ───┐
-                │   │           ├── attempt.evaluation_criteria ──┼─► failed_attempt_landscape
+                │   │           ├── attempt.evaluation_criteria ──┼─► failed_attempt
                 │   │           ├── attempt.generator_task_ids ───┤   block (one per failed attempt
                 │   │           └── attempt.evaluator_task_id ─────┘   except current)
 mission_store ──┘   │
@@ -446,13 +446,13 @@ task results because the current attempt has not generated anything yet.
 
 ### Large retry landscape in practice
 
-Imagine an unusually retry-heavy episode with 9 prior failed attempts. The path through `failed_attempt_landscape_blocks`:
+Imagine an unusually retry-heavy episode with 9 prior failed attempts. The path through `failed_attempt_blocks`:
 
 ```
 failed = [F1, F2, F3, F4, F5, F6, F7, F8, F9]   # sorted by attempt_sequence_no
 
 Final blocks:
-  failed_attempt_landscape(F1..F9)            HIGH     × 9 blocks
+  failed_attempt(F1..F9)            HIGH     × 9 blocks
 ```
 
 If the resulting packet still exceeds `metadata["token_budget"]`, `MarkdownPromptRenderer._compress` (`renderer.py:201-235`) drops or truncates blocks by priority:

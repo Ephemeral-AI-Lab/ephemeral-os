@@ -2,7 +2,7 @@
 
 Two emitters, one body shape:
 
-* :func:`failed_attempt_landscape_blocks` — one block per failed prior attempt,
+* :func:`failed_attempt_blocks` — one block per failed prior attempt,
   attrs ``status="prior" verdict="fail"`` (planner + evaluator).
 * :func:`current_attempt_block` — one block for the attempt currently being
   evaluated, attrs ``status="current"`` (evaluator only).
@@ -37,11 +37,11 @@ from task_center.context_engine.packet import (
     ContextBlockKind,
     ContextPriority,
 )
-from task_center.context_engine.recipes.goal_iteration_frame import (
+from task_center.context_engine.recipes.iterations import (
     current_iteration_group_attrs,
     current_iteration_group_id,
-    latest_summary_text,
 )
+from task_center.context_engine.recipes.summaries import latest_summary_text
 from task_center.iteration.state import Iteration
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
@@ -84,7 +84,7 @@ class _GeneratorOutcome:
     summary: str | None
 
 
-def failed_attempt_landscape_blocks(
+def failed_attempt_blocks(
     *,
     current_attempt_id: str | None,
     iteration: Iteration,
@@ -104,7 +104,7 @@ def failed_attempt_landscape_blocks(
     group_attrs = current_iteration_group_attrs(iteration)
     return [
         ContextBlock(
-            kind=ContextBlockKind.FAILED_ATTEMPT_LANDSCAPE,
+            kind=ContextBlockKind.FAILED_ATTEMPT,
             priority=ContextPriority.HIGH,
             text=_render_failed_attempt_body(t, task_store=task_store),
             source_id=t.id,
@@ -143,7 +143,7 @@ def current_attempt_block(
     group_attrs = current_iteration_group_attrs(iteration)
     return [
         ContextBlock(
-            kind=ContextBlockKind.FAILED_ATTEMPT_LANDSCAPE,
+            kind=ContextBlockKind.FAILED_ATTEMPT,
             priority=ContextPriority.REQUIRED,
             text=body,
             source_id=attempt.id,

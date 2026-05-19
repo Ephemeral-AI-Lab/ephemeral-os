@@ -64,7 +64,7 @@ ContextPacket
 
 **ContextPriority** (`packet.py:18-24`): `required | high | medium | low`. Compression drops `low` first, then `medium`; `required`/`high` never truncated (`renderer.py:215-235`).
 
-**ContextBlockKind** constants (`packet.py:31-46`): `mission_goal`, `episode_goal`, `prior_episode_specification`, `prior_episode_summary`, `failed_attempt_landscape`, `partial_plan_boundary`, `planned_task_spec`, `task_specification`, `evaluation_criteria`, `dependency_summary`, `completed_task_summary`, `artifact_reference`, `entry_request`.
+**ContextBlockKind** constants (`packet.py:31-46`): `mission_goal`, `episode_goal`, `prior_episode_specification`, `prior_episode_summary`, `failed_attempt`, `partial_plan_boundary`, `planned_task_spec`, `task_specification`, `evaluation_criteria`, `dependency_summary`, `completed_task_summary`, `artifact_reference`, `entry_request`.
 
 **ContextRefs** (`packet.py:48-56`): mission/episode/attempt/task ids.
 
@@ -78,13 +78,13 @@ Inherited blocks (`metadata["inherited_from_parent"] == "true"`) render under `"
 ### planner_v1
 **`recipes/planner.py`** | Required scope: `{mission_id, episode_id, attempt_id}`.
 
-Calls `mission_episode_blocks(...)` (`_mission_episode.py:20-40`) then `failed_attempt_landscape_blocks(...)` (`attempt_landscape.py:15-77`).
+Calls `mission_episode_blocks(...)` (`_mission_episode.py:20-40`) then `failed_attempt_blocks(...)` (`attempts.py:15-77`).
 
 **Episode frame branch** (`_mission_episode.py:27-40`):
 - `episode.sequence_no == 1` → single `episode_goal` block, heading `"# Mission / Current Episode"`.
 - `sequence_no > 1` → `mission_goal` + N prior-episode pairs (`prior_episode_specification` + `prior_episode_summary` per closed episode, sorted by `sequence_no`) + `episode_goal`. Immediate prior `priority=HIGH`; older `priority=MEDIUM` (`_mission_episode.py:84-87`). Missing prior fields → `ContextEngineError`.
 
-**Retry branch** (`attempt_landscape.py`): failed attempts = `status==FAILED AND id != current_attempt_id`. Zero failed -> no blocks. Each failed attempt renders one `failed_attempt_landscape` block (`priority=HIGH`) under `"# Prior Failed Attempts"` with `Accepted Plan`, `Generator Outcomes`, and, only when all generators completed and an evaluator task exists, `Evaluator Judgment`. The generator section includes status for every planned generator task and detailed subsections only for useful stored summaries. The recipe does not render a separate failure-reason section.
+**Retry branch** (`attempts.py`): failed attempts = `status==FAILED AND id != current_attempt_id`. Zero failed -> no blocks. Each failed attempt renders one `failed_attempt` block (`priority=HIGH`) under `"# Prior Failed Attempts"` with `Accepted Plan`, `Generator Outcomes`, and, only when all generators completed and an evaluator task exists, `Evaluator Judgment`. The generator section includes status for every planned generator task and detailed subsections only for useful stored summaries. The recipe does not render a separate failure-reason section.
 
 ### generator_v1
 **`recipes/generator.py`** | Required scope: `{mission_id, attempt_id, task_id}`.
@@ -112,14 +112,14 @@ Block order: `mission_episode_blocks(...)` → `task_specification` → optional
 
 **Criteria presence** (`evaluator.py:84-94`): `attempt.evaluation_criteria` non-empty → single `evaluation_criteria` block (`priority=REQUIRED`), bullet-formatted.
 
-Note: evaluator does **not** call `failed_attempt_landscape_blocks`; prior failure history is planner-only.
+Note: evaluator does **not** call `failed_attempt_blocks`; prior failure history is planner-only.
 
 ## Per-state matrix
 
 | Scenario | Recipe | What changes | Key conditional |
 |---|---|---|---|
 | Initial mission (ep 1, attempt 1) | planner_v1 | Single `episode_goal` block, combined heading; no failed-attempts | `_mission_episode.py:27-28` |
-| Attempt retry after failure (ep 1, attempt N>1) | planner_v1 | Adds N-1 `failed_attempt_landscape` under `"# Prior Failed Attempts"` with accepted plan, generator outcome statuses, useful generator summaries, and evaluator judgment when present | `attempt_landscape.py` |
+| Attempt retry after failure (ep 1, attempt N>1) | planner_v1 | Adds N-1 `failed_attempt` under `"# Prior Failed Attempts"` with accepted plan, generator outcome statuses, useful generator summaries, and evaluator judgment when present | `attempts.py` |
 | Episodic continuation (ep 2+) | planner_v1, evaluator_v1 | Adds `mission_goal` + prior-episode pairs; immediate prior `HIGH`, older `MEDIUM` | `_mission_episode.py:30-40`, `84-87` |
 | Generator — with dependency outputs | generator_v1 | Adds `dependency_summary` blocks under `"# Dependency Results"` | `generator.py:61-65`, `91-115` |
 | Generator — no dependencies | generator_v1 | No `dependency_summary` blocks | `generator.py:62`: `needs` empty |
@@ -156,7 +156,7 @@ Wrap or subclass `ContextComposer.compose`, capture, assert, forward to launcher
 | Component | Status |
 |---|---|
 | `ContextEngine.build` + all recipes | REAL |
-| `mission_episode_blocks`, `failed_attempt_landscape_blocks`, `_dependency_summary_blocks` | REAL |
+| `mission_episode_blocks`, `failed_attempt_blocks`, `_dependency_summary_blocks` | REAL |
 | `MarkdownPromptRenderer.render` | REAL |
 | `ContextComposer.compose` | REAL |
 | `AgentResolver.resolve` | REAL |

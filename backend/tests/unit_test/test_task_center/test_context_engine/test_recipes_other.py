@@ -278,7 +278,7 @@ def test_evaluator_emits_current_attempt_block_with_plan_and_criteria_inline(
     assert kinds == [
         "goal_statement",
         "iteration_statement",
-        "failed_attempt_landscape",
+        "failed_attempt",
     ]
     goal_block, iteration_goal_block, current_attempt = packet.blocks
     assert goal_block.metadata["tag"] == "goal"
@@ -335,7 +335,7 @@ def test_evaluator_renders_every_generator_summary_in_attempt_order(
 
     current_attempt_blocks = [
         b for b in packet.blocks
-        if b.kind == "failed_attempt_landscape"
+        if b.kind == "failed_attempt"
         and 'status="current"' in b.metadata.get("attrs", "")
     ]
     assert len(current_attempt_blocks) == 1
@@ -377,7 +377,7 @@ def test_evaluator_missing_generator_task_does_not_raise(
     )
     current = [
         b for b in packet.blocks
-        if b.kind == "failed_attempt_landscape"
+        if b.kind == "failed_attempt"
         and 'status="current"' in b.metadata.get("attrs", "")
     ]
     assert current
@@ -419,7 +419,7 @@ def test_evaluator_defers_goal_inlines_deferred_child_in_attempt_body(
 
     current = [
         b for b in packet.blocks
-        if b.kind == "failed_attempt_landscape"
+        if b.kind == "failed_attempt"
         and 'status="current"' in b.metadata.get("attrs", "")
     ][0]
     assert current.metadata["has_deferred_goal_for_next_iteration"] == "true"
@@ -461,7 +461,7 @@ def test_evaluator_iteration2_frame_then_current_attempt(
         "prior_iteration_specification",
         "prior_iteration_summary",
         "iteration_statement",
-        "failed_attempt_landscape",
+        "failed_attempt",
     ]
     assert packet.blocks[0].metadata["tag"] == "goal"
     assert packet.blocks[1].metadata["child_tag"] == "accepted_plan"
@@ -499,7 +499,7 @@ def test_evaluator_with_empty_criteria_omits_criteria_block(
     assert "evaluation_criteria" not in kinds
     current = [
         b for b in packet.blocks
-        if b.kind == "failed_attempt_landscape"
+        if b.kind == "failed_attempt"
         and 'status="current"' in b.metadata.get("attrs", "")
     ]
     assert current

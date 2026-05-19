@@ -62,7 +62,7 @@ def _iteration_goal_block(seq_no: int) -> ContextBlock:
 
 def _prior_attempt_block() -> ContextBlock:
     return ContextBlock(
-        kind="failed_attempt_landscape",
+        kind="failed_attempt",
         priority=ContextPriority.HIGH,
         text="(failed body)",
         metadata={
@@ -179,7 +179,7 @@ def test_planner_full_only_directive_marks_one_attempt():
 
 def test_evaluator_outline_with_prior_and_current_attempt():
     current_attempt = ContextBlock(
-        kind="failed_attempt_landscape",
+        kind="failed_attempt",
         priority=ContextPriority.REQUIRED,
         text="(current body)",
         metadata={

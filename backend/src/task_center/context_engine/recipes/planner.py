@@ -5,7 +5,7 @@ The recipe reads:
 * the goal / current iteration frame;
 * every prior closed-succeeded iteration projection for iteration 2+;
 * every failed attempt in the current iteration except the running one
-  (``failed_attempt_landscape`` blocks, ordered by ``attempt_sequence_no``).
+  (``failed_attempt`` blocks, ordered by ``attempt_sequence_no``).
 
 The ``<Task Guidance>`` row is assembled at launch time by
 ``AgentEntryComposer`` via the registry-driven
@@ -20,11 +20,11 @@ from task_center.context_engine.packet import (
     ContextPacket,
     ContextRefs,
 )
-from task_center.context_engine.recipes.goal_iteration_frame import (
+from task_center.context_engine.recipes.iterations import (
     goal_iteration_blocks,
 )
-from task_center.context_engine.recipes.attempt_landscape import (
-    failed_attempt_landscape_blocks,
+from task_center.context_engine.recipes.attempts import (
+    failed_attempt_blocks,
 )
 from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
@@ -49,7 +49,7 @@ def _planner_build(
         iterations=deps.iteration_store.list_for_goal(goal.id),
     )
     blocks.extend(
-        failed_attempt_landscape_blocks(
+        failed_attempt_blocks(
             current_attempt_id=scope.attempt_id,
             iteration=iteration,
             attempts=deps.attempt_store.list_for_iteration(iteration.id),

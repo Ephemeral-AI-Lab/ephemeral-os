@@ -44,7 +44,7 @@ def _iter_current_goal(seq_no: int = 1) -> ContextBlock:
 
 def _prior_attempt() -> ContextBlock:
     return ContextBlock(
-        kind="failed_attempt_landscape",
+        kind="failed_attempt",
         priority=ContextPriority.HIGH,
         text="(failed body)",
         metadata={
@@ -60,7 +60,7 @@ def _prior_attempt() -> ContextBlock:
 
 def _current_attempt() -> ContextBlock:
     return ContextBlock(
-        kind="failed_attempt_landscape",
+        kind="failed_attempt",
         priority=ContextPriority.REQUIRED,
         text="(current body)",
         metadata={

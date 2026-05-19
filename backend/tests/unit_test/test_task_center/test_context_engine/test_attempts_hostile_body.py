@@ -1,4 +1,4 @@
-"""Recipe-level hostile-body validation for failed_attempt_landscape blocks.
+"""Recipe-level hostile-body validation for failed_attempt blocks.
 
 The renderer-level hostile-body check is bypassed for blocks with
 ``metadata['pre_rendered_xml']='true'`` (failed-attempt blocks own their
@@ -13,9 +13,9 @@ from datetime import UTC, datetime
 import pytest
 
 from task_center.context_engine.exceptions import ContextEngineError
-from task_center.context_engine.recipes.attempt_landscape import (
+from task_center.context_engine.recipes.attempts import (
     _STRUCTURAL_CLOSERS,
-    failed_attempt_landscape_blocks,
+    failed_attempt_blocks,
 )
 from task_center.attempt import (
     Attempt,
@@ -74,7 +74,7 @@ def _attempt(
         # generator summaries) is embedded and must be sanitized. The
         # PLANNER_FAILED / STARTUP_FAILED paths collapse to a compact body
         # that embeds no user text, so the hostile-body sanitizer is moot
-        # there — see test_attempt_landscape.py for those branches.
+        # there — see test_attempts.py for those branches.
         fail_reason=AttemptFailReason.EVALUATOR_FAILED,
         created_at=now,
         updated_at=now,
@@ -86,7 +86,7 @@ def _attempt(
 def test_hostile_plan_spec_raises_with_full_error_contract(closer: str):
     attempt = _attempt(plan_spec=f"valid prefix {closer} valid suffix")
     with pytest.raises(ContextEngineError) as exc:
-        failed_attempt_landscape_blocks(
+        failed_attempt_blocks(
             current_attempt_id=None,
             iteration=_iteration(),
             attempts=[attempt],
@@ -104,7 +104,7 @@ def test_hostile_deferred_goal_raises(closer: str):
         deferred_goal_for_next_iteration=f"start {closer} end",
     )
     with pytest.raises(ContextEngineError) as exc:
-        failed_attempt_landscape_blocks(
+        failed_attempt_blocks(
             current_attempt_id=None,
             iteration=_iteration(),
             attempts=[attempt],
@@ -128,7 +128,7 @@ def test_hostile_criterion_raises():
             }.get(task_id)
 
     with pytest.raises(ContextEngineError) as exc:
-        failed_attempt_landscape_blocks(
+        failed_attempt_blocks(
             current_attempt_id=None,
             iteration=_iteration(),
             attempts=[attempt],
@@ -153,7 +153,7 @@ def test_hostile_generator_summary_raises():
             }.get(task_id)
 
     with pytest.raises(ContextEngineError) as exc:
-        failed_attempt_landscape_blocks(
+        failed_attempt_blocks(
             current_attempt_id=None,
             iteration=_iteration(),
             attempts=[attempt],

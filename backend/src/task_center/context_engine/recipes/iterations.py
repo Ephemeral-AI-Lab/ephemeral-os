@@ -1,10 +1,8 @@
-"""Goal / iteration framing blocks shared by multiple recipes.
+"""Goal + iteration scaffold blocks shared by planner and evaluator recipes.
 
-Owns :func:`goal_iteration_blocks` (the goal / current-iteration frame emitted
-by planner and evaluator) and :func:`latest_summary_text` (used by generator,
-evaluator, and attempt_landscape to read the most recent summary off a task
-row). Living in its own module keeps the consuming recipe modules independent
-of each other.
+Owns :func:`goal_iteration_blocks` — the standalone ``<goal>`` block followed
+by prior + current iteration groups. Living in its own module keeps consuming
+recipe modules independent of each other.
 
 The XML structure produced by this module is the same for every iteration:
 
@@ -21,8 +19,6 @@ current iteration's group by sharing :func:`current_iteration_group_id`.
 """
 
 from __future__ import annotations
-
-from typing import Any
 
 from task_center.context_engine.exceptions import ContextEngineError
 from task_center.context_engine.packet import (
@@ -47,21 +43,6 @@ def current_iteration_group_attrs(iteration: Iteration) -> str:
 # full text twice is pure noise; the planner / evaluator skills know what
 # this marker means.
 _ITERATION_GOAL_IDENTITY_BODY = "(identical to &lt;goal&gt;)"
-
-
-def latest_summary_text(summaries: list[Any] | None) -> str:
-    """Return the most recent summary string from a task's summaries list.
-
-    Tasks carry a ``summaries`` list of dicts; both generator (dependency
-    summaries) and evaluator (completed-task summaries) want the latest entry,
-    preferring ``summary`` then ``outcome``, falling back to a placeholder.
-    """
-    if not summaries:
-        return "(no summary recorded)"
-    last = summaries[-1]
-    if not isinstance(last, dict):
-        return str(last)
-    return str(last.get("summary") or last.get("outcome") or "(empty)")
 
 
 def goal_iteration_blocks(

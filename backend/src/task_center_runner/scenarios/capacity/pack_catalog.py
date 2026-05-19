@@ -208,7 +208,7 @@ CAPACITY_PACK_SPECS: tuple[CapacityPackSpec, ...] = (
         "T0",
         test_path=(
             "backend/tests/unit_test/test_task_center/test_context_engine/"
-            "test_attempt_landscape.py"
+            "test_attempts.py"
         ),
     ),
     CapacityPackSpec(

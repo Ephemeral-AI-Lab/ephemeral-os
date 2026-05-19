@@ -4,7 +4,7 @@ For every ``ContextBlock`` where ``metadata["iteration_no"]`` is set AND
 ``metadata["group_attrs"]`` contains ``iteration_no="``, the two integers
 agree. Both derive from the same ``Iteration.sequence_no`` in the same
 ``ContextBlock(...)`` constructor in
-``recipes/goal_iteration_frame.py:_current_iteration_goal_child``, so drift
+``recipes/iterations.py:_current_iteration_goal_child``, so drift
 is impossible by construction. This test pins the pairing — if a future
 refactor splits the construction across two sites, the test fails before
 the captures do.
@@ -20,11 +20,11 @@ from task_center.context_engine.packet import (
     ContextBlock,
     ContextPriority,
 )
-from task_center.context_engine.recipes.goal_iteration_frame import (
+from task_center.context_engine.recipes.iterations import (
     _current_iteration_goal_child,
     goal_iteration_blocks,
 )
-from task_center.context_engine.recipes.attempt_landscape import (
+from task_center.context_engine.recipes.attempts import (
     current_attempt_block,
 )
 

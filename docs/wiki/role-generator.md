@@ -484,7 +484,7 @@ Each recipe places its highest-priority _operational_ block last so the agent's 
 
 | Recipe         | Closes on                                                |
 | -------------- | -------------------------------------------------------- |
-| `planner_v1`   | `failed_attempt_landscape` (HIGH) — the retry evidence   |
+| `planner_v1`   | `failed_attempt` (HIGH) — the retry evidence   |
 | `evaluator_v1` | `evaluation_criteria` (REQUIRED) — the verdict basis     |
 | `generator_v1` | `planned_task_spec` (REQUIRED) — the concrete obligation |
 

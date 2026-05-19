@@ -40,15 +40,11 @@ _DEFAULT_TAGS: dict[str, str] = {
     "iteration_statement": "iteration_goal",
     "prior_iteration_specification": "accepted_plan",
     "prior_iteration_summary": "summary",
-    "failed_attempt_landscape": "attempt",
+    "failed_attempt": "attempt",
     "planned_task_spec": "assigned_task",
     "task_specification": "plan_spec",
-    "evaluation_criteria": "evaluation_criteria",
     "dependency_summary": "dependency",
-    "completed_task_summary": "task",
-    "artifact_reference": "artifact_reference",
     "entry_request": "entry_request",
-    "parent_transcript": "parent_transcript",
 }
 
 
@@ -68,9 +64,6 @@ class XmlPromptRenderer:
     3. Replace truncated bodies with a one-line evidence reference if
        ``source_id`` is set; otherwise an ellipsis marker.
     """
-
-    def __init__(self, tags: dict[str, str] | None = None) -> None:
-        self._tags = tags if tags is not None else _DEFAULT_TAGS
 
     def render_context(self, packet: ContextPacket) -> str:
         """Render world-state context."""
@@ -131,7 +124,7 @@ class XmlPromptRenderer:
         group_attrs = first.metadata.get("group_attrs", "")
         children: list[str] = []
         for block in blocks:
-            child_tag = block.metadata.get("child_tag") or self._tags.get(block.kind)
+            child_tag = block.metadata.get("child_tag") or _DEFAULT_TAGS.get(block.kind)
             if child_tag is None:
                 raise ContextEngineError(
                     f"No tag mapping for kind {block.kind!r} "
@@ -150,7 +143,7 @@ class XmlPromptRenderer:
         )
 
     def _tag_for(self, block: ContextBlock) -> str:
-        tag = block.metadata.get("tag") or self._tags.get(block.kind)
+        tag = block.metadata.get("tag") or _DEFAULT_TAGS.get(block.kind)
         if tag is None:
             raise ContextEngineError(
                 f"No tag mapping for kind {block.kind!r}"
@@ -169,11 +162,11 @@ class XmlPromptRenderer:
 
         A block opts out of this check by setting
         ``metadata['pre_rendered_xml'] = 'true'``. Recipes that hand-assemble
-        nested XML inside ``block.text`` (e.g. failed-attempt landscape) own
-        the responsibility for sanitizing the user-supplied fragments they
-        embed — the renderer trusts the recipe-controlled wrapper.
+        nested XML inside ``block.text`` (the ``attempts`` recipe) own the
+        responsibility for sanitizing the user-supplied fragments they embed
+        — the renderer trusts the recipe-controlled wrapper.
         """
-        tags = set(self._tags.values())
+        tags = set(_DEFAULT_TAGS.values())
         for block in blocks:
             for key in ("tag", "child_tag", "group_tag"):
                 value = block.metadata.get(key)

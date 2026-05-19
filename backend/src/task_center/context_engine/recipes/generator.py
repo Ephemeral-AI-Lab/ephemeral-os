@@ -30,9 +30,7 @@ from task_center.context_engine.packet import (
     ContextPriority,
     ContextRefs,
 )
-from task_center.context_engine.recipes.goal_iteration_frame import (
-    latest_summary_text,
-)
+from task_center.context_engine.recipes.summaries import latest_summary_text
 from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
 

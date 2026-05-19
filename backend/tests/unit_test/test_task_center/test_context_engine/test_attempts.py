@@ -5,9 +5,9 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from task_center.context_engine.packet import ContextPriority
-from task_center.context_engine.recipes.attempt_landscape import (
+from task_center.context_engine.recipes.attempts import (
     current_attempt_block,
-    failed_attempt_landscape_blocks,
+    failed_attempt_blocks,
 )
 from task_center.attempt import (
     Attempt,
@@ -80,7 +80,7 @@ def test_excludes_current_attempt_even_if_current_is_failed():
         evaluation_criteria=("current crit",),
         fail_reason=AttemptFailReason.PLANNER_FAILED,
     )
-    blocks = failed_attempt_landscape_blocks(
+    blocks = failed_attempt_blocks(
         current_attempt_id=current.id,
         iteration=_iteration(),
         attempts=[
@@ -106,7 +106,7 @@ def test_excludes_current_attempt_even_if_current_is_failed():
 
 
 def test_prior_attempt_block_metadata_carries_status_and_verdict():
-    blocks = failed_attempt_landscape_blocks(
+    blocks = failed_attempt_blocks(
         current_attempt_id=None,
         iteration=_iteration(sequence_no=3),
         attempts=[
@@ -124,7 +124,7 @@ def test_prior_attempt_block_metadata_carries_status_and_verdict():
 
 
 def test_prior_attempt_body_emits_flat_plan_spec_child():
-    blocks = failed_attempt_landscape_blocks(
+    blocks = failed_attempt_blocks(
         current_attempt_id=None,
         iteration=_iteration(),
         attempts=[_attempt(1, plan_spec="submitted spec")],
@@ -140,7 +140,7 @@ def test_prior_attempt_body_emits_flat_plan_spec_child():
 
 
 def test_prior_attempt_body_emits_deferred_goal_when_present():
-    blocks = failed_attempt_landscape_blocks(
+    blocks = failed_attempt_blocks(
         current_attempt_id=None,
         iteration=_iteration(),
         attempts=[
@@ -160,7 +160,7 @@ def test_prior_attempt_body_emits_deferred_goal_when_present():
 
 
 def test_planner_failed_renders_compact_bypassed_body():
-    blocks = failed_attempt_landscape_blocks(
+    blocks = failed_attempt_blocks(
         current_attempt_id=None,
         iteration=_iteration(),
         attempts=[
@@ -176,7 +176,7 @@ def test_planner_failed_renders_compact_bypassed_body():
 
 
 def test_startup_failed_renders_compact_bypassed_body():
-    blocks = failed_attempt_landscape_blocks(
+    blocks = failed_attempt_blocks(
         current_attempt_id=None,
         iteration=_iteration(),
         attempts=[
@@ -208,7 +208,7 @@ def test_prior_body_emits_status_summary_and_task_children():
                 },
             }.get(task_id)
 
-    blocks = failed_attempt_landscape_blocks(
+    blocks = failed_attempt_blocks(
         current_attempt_id=None,
         iteration=_iteration(),
         attempts=[
@@ -249,7 +249,7 @@ def test_prior_body_bypassed_on_generator_failure():
                 "eval-1": {"summaries": [{"summary": "should not be read"}]},
             }.get(task_id)
 
-    blocks = failed_attempt_landscape_blocks(
+    blocks = failed_attempt_blocks(
         current_attempt_id=None,
         iteration=_iteration(),
         attempts=[
@@ -287,7 +287,7 @@ def test_prior_body_renders_evaluator_children_with_failed_criteria():
                 },
             }.get(task_id)
 
-    blocks = failed_attempt_landscape_blocks(
+    blocks = failed_attempt_blocks(
         current_attempt_id=None,
         iteration=_iteration(),
         attempts=[
@@ -327,7 +327,7 @@ def test_prior_body_includes_passed_criteria_when_payload_carries_them():
                 },
             }.get(task_id)
 
-    blocks = failed_attempt_landscape_blocks(
+    blocks = failed_attempt_blocks(
         current_attempt_id=None,
         iteration=_iteration(),
         attempts=[
@@ -352,7 +352,7 @@ def test_all_failed_attempts_render_in_sequence_order():
         _attempt(1, plan_spec="spec1", fail_reason=AttemptFailReason.PLANNER_FAILED),
         _attempt(2, plan_spec="spec2", fail_reason=AttemptFailReason.PLANNER_FAILED),
     ]
-    blocks = failed_attempt_landscape_blocks(
+    blocks = failed_attempt_blocks(
         current_attempt_id=None,
         iteration=_iteration(),
         attempts=attempts,

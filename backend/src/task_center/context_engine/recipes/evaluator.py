@@ -16,11 +16,11 @@ from task_center.context_engine.packet import (
     ContextPacket,
     ContextRefs,
 )
-from task_center.context_engine.recipes.attempt_landscape import (
+from task_center.context_engine.recipes.attempts import (
     current_attempt_block,
-    failed_attempt_landscape_blocks,
+    failed_attempt_blocks,
 )
-from task_center.context_engine.recipes.goal_iteration_frame import (
+from task_center.context_engine.recipes.iterations import (
     goal_iteration_blocks,
 )
 from task_center.context_engine.recipes_registry import ContextRecipe
@@ -50,7 +50,7 @@ def _evaluator_build(
         iterations=deps.iteration_store.list_for_goal(goal.id),
     )
     blocks.extend(
-        failed_attempt_landscape_blocks(
+        failed_attempt_blocks(
             current_attempt_id=attempt.id,
             iteration=iteration,
             attempts=deps.attempt_store.list_for_iteration(iteration.id),

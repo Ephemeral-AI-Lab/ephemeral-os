@@ -25,7 +25,7 @@ Companion to [`OPTIMIZED_USER_MSG_1.md`](OPTIMIZED_USER_MSG_1.md). That document
 | Concern | Current (`renderer.py:_DEFAULT_TAGS` / `builders.py`) | Target (`OPTIMIZED_USER_MSG_1.md`) |
 |---|---|---|
 | `iteration_statement` tag | `current_iteration` | `iteration` + `attrs='status="current"'` |
-| `failed_attempt_landscape` tag | `attempt` (no enforced attrs) | `attempt` + `attrs='status="prior" verdict="fail"'` |
+| `failed_attempt` tag | `attempt` (no enforced attrs) | `attempt` + `attrs='status="prior" verdict="fail"'` |
 | `task_specification` tag | `attempt_plan` (wrapper) | `plan_spec` (no wrapper) |
 | Task Guidance body | hand-authored prose, 4 planner branches + 2 evaluator branches + 2 generator branches | `render_what_in_context(packet) + ROLE_DIRECTIVES[role] + render_terminal_catalog(...)` |
 | Skill files | planner only | planner + executor + evaluator |
@@ -71,8 +71,8 @@ Tests:
 **Modifies recipes to emit the target tag shape.**
 
 Files:
-- `recipes/goal_iteration_frame.py`: emit `<iteration status="current">` (not `<current_iteration>`); always emit even for iter1 attempt1 with `<iteration_goal>(identical to <goal>)</iteration_goal>` body.
-- `recipes/attempt_landscape.py`: emit `<attempt status="prior" verdict="fail">` (not bare `<attempt>`); drop `<generator_outcomes>` and `<evaluator_judgment>` wrappers; promote children.
+- `recipes/iterations.py`: emit `<iteration status="current">` (not `<current_iteration>`); always emit even for iter1 attempt1 with `<iteration_goal>(identical to <goal>)</iteration_goal>` body.
+- `recipes/attempts.py`: emit `<attempt status="prior" verdict="fail">` (not bare `<attempt>`); drop `<generator_outcomes>` and `<evaluator_judgment>` wrappers; promote children.
 - `recipes/evaluator.py`: nest `<attempt status="current">` under `<iteration status="current">`; drop `<attempt_plan>` and `<completed_tasks>` wrappers; promote children.
 - `recipes/generator.py`: drop `<dependency_results>` wrapper; emit `<dependency>` siblings directly; drop `<deferred_goal_for_next_iteration>` from executor packets.
 - `renderer.py:_DEFAULT_TAGS`: update mapping table to match the spec.

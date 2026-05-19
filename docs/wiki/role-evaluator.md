@@ -88,7 +88,7 @@ Source: `task_center/context_engine/recipes/evaluator.py:30-106`. Required scope
 |---|---|---|
 | Mission/episode framing | Yes (REQUIRED) | Yes (REQUIRED) |
 | Prior episode results | Yes | Yes |
-| `failed_attempt_landscape` | **Yes** | **No** |
+| `failed_attempt` | **Yes** | **No** |
 | `task_specification` | No (planner _writes_ it) | Yes (REQUIRED) |
 | `partial_plan_boundary` | No | Yes, when the current attempt is partial |
 | Generator task summaries | Yes, for failed prior attempts only | Yes (HIGH, all current-attempt generators) |
@@ -153,7 +153,7 @@ There is no runtime pre-hook that checks resolver-loop closure before success. S
 - The evaluator must not invent middle ground; the only nuanced surface is `passed_criteria[]` / `failed_criteria[]` in the payload, which is informational not authoritative.
 - A subjective criterion ("looks good") is structurally problematic — there is no way to render a "looks _kind of_ good" outcome.
 
-**3. The evaluator does not see retry history.** `failed_attempt_landscape` is planner-only. The evaluator judges the present attempt; it does not learn from prior verdicts. This is the right factoring: retrospection lives where action follows it (the planner, who can replan). The evaluator's job is local correctness.
+**3. The evaluator does not see retry history.** `failed_attempt` is planner-only. The evaluator judges the present attempt; it does not learn from prior verdicts. This is the right factoring: retrospection lives where action follows it (the planner, who can replan). The evaluator's job is local correctness.
 
 **4. The evaluator sees summaries, not work.** The `completed_task_summary` blocks render `latest_summary_text(task.summaries)` — the last summary the generator wrote on submission. Not the diff. Not the tool calls. Not the conversation. This forces a contract: **generators must write summaries that capture what they did and what is now true**, because that's the surface the judge consults.
 

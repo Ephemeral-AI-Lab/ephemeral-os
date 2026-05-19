@@ -211,8 +211,8 @@ Retry planner packet:
 ```text
 Final block sequence (planner_v1, packet order):
   [0] episode_goal (mission/current retry scope)     REQUIRED  heading=# Mission / Current Episode
-  [1] failed_attempt_landscape (Attempt#1 in Ep#1)   HIGH      group=# Prior Failed Attempts
-  [2] failed_attempt_landscape (Attempt#2 in Ep#1)   HIGH      group=# Prior Failed Attempts
+  [1] failed_attempt (Attempt#1 in Ep#1)   HIGH      group=# Prior Failed Attempts
+  [2] failed_attempt (Attempt#2 in Ep#1)   HIGH      group=# Prior Failed Attempts
 ```
 
 Retry generator packet:
@@ -269,7 +269,7 @@ Final block sequence (planner_v1, packet order):
   [1] prior_episode_specification (Ep#1)             HIGH      group=# Previous Episode Results
   [2] prior_episode_summary       (Ep#1)             HIGH      group=# Previous Episode Results
   [3] episode_goal (Ep#2 current retry scope)        REQUIRED  heading=# Current Episode
-  [4] failed_attempt_landscape (Attempt#1 in Ep#2)   HIGH      group=# Prior Failed Attempts
+  [4] failed_attempt (Attempt#1 in Ep#2)   HIGH      group=# Prior Failed Attempts
 ```
 
 ### Scenario 5: Large Evaluator Context
