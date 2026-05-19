@@ -1,0 +1,42 @@
+"""Description for the cancel_background_task tool."""
+
+from __future__ import annotations
+
+
+def get_cancel_background_task_description() -> str:
+    return (
+        "Cancel a running background task by id, or the sole running task with\n"
+        "`task_id=\"auto\"`.\n"
+        "\n"
+        "Use this when:\n"
+        "- You launched a subagent or backgrounded shell command that's no longer\n"
+        "  useful (wrong scope, superseded, the user changed direction).\n"
+        "- The task is wasting tokens/time and you want it to stop early.\n"
+        "  Subagents will be interrupted and salvage any partial result before\n"
+        "  reaching a terminal state.\n"
+        "\n"
+        "Do NOT use for:\n"
+        "- Cancelling all tasks at once — `task_id=\"all\"` is rejected. Cancel\n"
+        "  each task explicitly so your choice is auditable.\n"
+        "- Stopping finished tasks — those return an error.\n"
+        "\n"
+        "Capabilities and constraints:\n"
+        "- Mutating: the task is marked cancelled and removed from the running\n"
+        "  pool.\n"
+        "- `task_id=\"auto\"` resolves to the sole running task; if 0 or >1 are\n"
+        "  running, you get an error with a listing.\n"
+        "- For subagents: cancellation requests a graceful early-stop; the\n"
+        "  subagent is interrupted and may emit a partial terminal result before\n"
+        "  settling.\n"
+        "- `reason` is optional but recommended — it's surfaced in the\n"
+        "  cancellation message and helps post-hoc analysis.\n"
+        "\n"
+        "Output shape:\n"
+        "- Plaintext acknowledgement, including the reason when you supplied\n"
+        "  one.\n"
+        "\n"
+        "Common pitfalls:\n"
+        "- Cancelling a task whose result you actually need — the cancelled\n"
+        "  status returns `[cancelled]` and a peek, NOT the would-be terminal\n"
+        "  output."
+    )

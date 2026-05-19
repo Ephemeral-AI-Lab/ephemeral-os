@@ -1,0 +1,13 @@
+"""Package for the `submit_execution_handoff` tool.
+
+`__init__.py` re-exports the impl module so that
+`tools...submit_execution_handoff` and `tools...submit_execution_handoff.submit_execution_handoff` resolve to the same module —
+keeps monkeypatching `tools...submit_execution_handoff.<name>` working after the
+tool was moved into its own package.
+"""
+
+import sys
+
+from . import submit_execution_handoff as _impl
+
+sys.modules[__name__] = _impl
