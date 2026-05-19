@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import shlex
@@ -33,6 +34,11 @@ _PYTHON_CANDIDATES = ("python3.13", "python3.12", "python3.11", "python3.10", "p
 _THIN_CLIENT_CONNECT_FAILED = 97
 _THIN_CLIENT_IO_FAILED = 98
 _DAEMON_SPAWN_TIMEOUT = 20
+# Bounded retry on CONNECT_FAILED: under parallel agent load the daemon's
+# accept queue can transiently refuse new connections immediately after spawn.
+# These delays give the daemon time to bind/accept before declaring readiness
+# a hard failure. Total worst-case added latency: ~3.5s before raising.
+_CONNECT_RETRY_DELAYS_S: tuple[float, ...] = (0.25, 0.5, 1.0, 2.0)
 DAEMON_PROTOCOL_VERSION = 1
 DAEMON_PROTOCOL_FIELD = "_eos_daemon_protocol_version"
 
@@ -197,9 +203,10 @@ async def _dispatch_once_with_retry(
         },
         separators=(",", ":"),
     )
-    readiness_result = await exec_fn(
-        sandbox_id,
-        _daemon_thin_client_command(readiness_payload),
+    readiness_result = await _call_thin_client_with_connect_retry(
+        exec_fn=exec_fn,
+        sandbox_id=sandbox_id,
+        payload=readiness_payload,
         cwd=cwd,
         timeout=30,
     )
@@ -250,9 +257,44 @@ async def _dispatch_once_with_retry(
                 details={"response": response, "original_op": op},
             )
 
+    return await _call_thin_client_with_connect_retry(
+        exec_fn=exec_fn,
+        sandbox_id=sandbox_id,
+        payload=raw_payload,
+        cwd=cwd,
+        timeout=timeout,
+    )
+
+
+async def _call_thin_client_with_connect_retry(
+    *,
+    exec_fn: _DaemonExec,
+    sandbox_id: str,
+    payload: str,
+    cwd: str,
+    timeout: int | None,
+) -> Any:
+    """Dispatch one envelope, retrying transient CONNECT_FAILED responses.
+
+    The in-sandbox daemon's accept queue can transiently refuse connections
+    immediately after spawn, or while many parallel agent runs land on the
+    socket at once. A bounded backoff retry absorbs that without surfacing a
+    user-visible tool failure.
+    """
+    last_result: Any = None
+    for delay in _CONNECT_RETRY_DELAYS_S:
+        last_result = await exec_fn(
+            sandbox_id,
+            _daemon_thin_client_command(payload),
+            cwd=cwd,
+            timeout=timeout,
+        )
+        if _exit_code(last_result) != _THIN_CLIENT_CONNECT_FAILED:
+            return last_result
+        await asyncio.sleep(delay)
     return await exec_fn(
         sandbox_id,
-        _daemon_thin_client_command(raw_payload),
+        _daemon_thin_client_command(payload),
         cwd=cwd,
         timeout=timeout,
     )

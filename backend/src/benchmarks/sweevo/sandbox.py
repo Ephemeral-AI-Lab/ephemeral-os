@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import logging
+import os
 import shlex
 import time
 from collections.abc import Callable
@@ -144,6 +145,78 @@ def _find_existing_sandbox_by_name(service: Any, name: str) -> dict[str, Any] | 
         if sandbox.get("name") == name:
             return sandbox
     return None
+
+
+_DEFAULT_GLOBAL_SANDBOX_QUOTA = 5
+
+
+def _global_sandbox_quota() -> int:
+    """Maximum number of Daytona sandboxes to keep before a fresh run.
+
+    Configurable via ``EOS_SWEEVO_SANDBOX_QUOTA`` (default 5). Set to 0 to
+    disable the guard. Sandboxes beyond this cap (oldest first) are deleted
+    so the next test doesn't hit a Daytona quota-exhaustion failure.
+    """
+    raw = os.getenv("EOS_SWEEVO_SANDBOX_QUOTA", "")
+    if not raw.strip():
+        return _DEFAULT_GLOBAL_SANDBOX_QUOTA
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return _DEFAULT_GLOBAL_SANDBOX_QUOTA
+
+
+def _enforce_global_sandbox_quota(service: Any) -> list[str]:
+    """Delete the oldest sandboxes once the account-wide cap is exceeded.
+
+    Daytona accounts have a hard quota on concurrent sandboxes. When the
+    test suite leaks sandboxes across runs (e.g. interrupted teardown,
+    pending_build failures) the count grows until ``provider.create()`` hangs
+    300s on every new test. This guard runs before fresh-sandbox creation:
+    list all sandboxes, keep the ``_global_sandbox_quota()`` most recent,
+    delete the rest.
+
+    Best-effort: returns the list of deleted ids; individual failures are
+    logged and swallowed so a slow-deleting zombie does not block the test.
+    """
+    keep = _global_sandbox_quota()
+    if keep <= 0:
+        return []
+    sandboxes = _safe_list_sandboxes(service)
+    if len(sandboxes) <= keep:
+        return []
+    # _safe_list_sandboxes already returns newest-first (provider .list()
+    # sorts by created_at desc), but we re-sort defensively to make the
+    # contract local to this function.
+    sorted_sandboxes = sorted(
+        sandboxes,
+        key=lambda item: str(item.get("created_at") or ""),
+        reverse=True,
+    )
+    victims = sorted_sandboxes[keep:]
+    deleted: list[str] = []
+    logger.warning(
+        "Global SWE-EVO sandbox quota guard: %s sandboxes present, keeping "
+        "%s newest, deleting %s",
+        len(sandboxes),
+        keep,
+        len(victims),
+    )
+    for sandbox in victims:
+        sandbox_id = str(sandbox.get("id") or "")
+        if not sandbox_id:
+            continue
+        try:
+            service.delete_sandbox(sandbox_id)
+            deleted.append(sandbox_id)
+        except Exception:
+            logger.warning(
+                "Quota guard: failed to delete sandbox %s (%s)",
+                sandbox.get("name") or "",
+                sandbox_id,
+                exc_info=True,
+            )
+    return deleted
 
 
 def _prune_auto_sweevo_sandboxes_for_fresh_run(
@@ -923,6 +996,13 @@ async def create_sweevo_test_sandbox(
             logger.info(
                 "Pruned %s stale SWE-EVO sandboxes before fresh run for %s",
                 len(deleted),
+                instance.instance_id,
+            )
+        quota_deleted = _enforce_global_sandbox_quota(service)
+        if quota_deleted:
+            logger.info(
+                "Quota guard deleted %s sandboxes before fresh run for %s",
+                len(quota_deleted),
                 instance.instance_id,
             )
 

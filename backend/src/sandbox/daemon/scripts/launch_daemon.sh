@@ -16,6 +16,26 @@ MODULE=$7
 
 mkdir -p "$(dirname "$SOCK")"
 
+# Fast-path: if the daemon is already up with the correct env, do not enter
+# the critical section at all. This avoids per-call flock contention when
+# the daemon is healthy (the steady-state case).
+if [ -S "$SOCK" ] && [ -f "$PID" ] && kill -0 "$(cat "$PID" 2>/dev/null)" 2>/dev/null; then
+    if [ -f "$ENV_FILE" ] && [ "$(cat "$ENV_FILE")" = "$ENV_SIG" ]; then
+        exit 0
+    fi
+fi
+
+# Serialise the kill+respawn window so N parallel callers don't each delete
+# the socket and race to bind it. Inside the critical section we re-check
+# liveness because another caller may have spawned the daemon while we were
+# waiting on the lock. We hold the lock for at most ~10s (the bind wait
+# below); concurrent callers either fast-path out or block briefly.
+LOCK_FILE="${SOCK}.launch.lock"
+if command -v flock >/dev/null 2>&1; then
+    exec 9>"$LOCK_FILE"
+    flock 9
+fi
+
 if [ -S "$SOCK" ] && [ -f "$PID" ] && kill -0 "$(cat "$PID" 2>/dev/null)" 2>/dev/null; then
     if [ -f "$ENV_FILE" ] && [ "$(cat "$ENV_FILE")" = "$ENV_SIG" ]; then
         exit 0
