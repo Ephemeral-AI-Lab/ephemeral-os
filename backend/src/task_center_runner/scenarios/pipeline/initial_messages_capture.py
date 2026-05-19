@@ -10,12 +10,13 @@ Combines three orthogonal composer branches into one live run so a single
 1. **Attempt retry** — iteration 1 attempt 1's planner submits a valid full
    plan, the executor runs the assigned task, and the evaluator returns
    ``submit_evaluation_failure``. Attempt 2 then sees a fully-populated
-   ``<iteration status="current">`` / ``<attempt status="failed">`` block
-   in its planner context: real ``<plan_spec>``, real
-   ``<generator_outcomes>`` with per-task summaries, and a real
-   ``<evaluator_judgment status="ran" verdict="fail">`` carrying the
-   evaluator's failed_criteria. Attempt 2 then submits a partial plan
-   (handoff) to drive the continuation branch (#2 below).
+   ``<iteration status="current">`` / ``<attempt status="prior"
+   verdict="fail">`` block in its planner context: real ``<plan_spec>``,
+   per-task ``<status_summary>`` + ``<task>`` summaries, plus
+   ``<evaluator_summary>`` and ``<failed_criteria>`` (no enclosing
+   ``<generator_outcomes>`` or ``<evaluator_judgment>`` wrappers).
+   Attempt 2 then submits a partial plan (handoff) to drive the
+   continuation branch (#2 below).
 
 2. **Continuation goal** — iteration 1 attempt 2 submits a *partial* plan
    with a ``deferred_goal_for_next_iteration``. The iteration manager spawns
@@ -43,12 +44,12 @@ as a follow-up; the matching scenario hook is the
 ``call_helpers_in_executor`` flag below, which the runner can grow into
 later.
 
-Wire shape (post v3.3 — see ``docs/reports/initial_messages_cases/README.md``):
+Wire shape (see ``docs/reports/initial_messages_cases/README.md``):
 
 * system + ``<context>`` envelope + ``<Task Guidance>`` envelope + skill
-  row for planner launches (4 rows).
-* system + ``<context>`` + ``<Task Guidance>`` for executor / evaluator
-  launches (3 rows; no skill declared in v1).
+  row for planner / executor / evaluator launches (4 rows each — skills
+  carry operational heuristics; ``<Task Guidance>`` carries the
+  deterministic outline + role directive).
 * system + entry-shape user message for entry_executor (2 rows; no
   ``<Task Guidance>`` and no skill).
 """
@@ -92,9 +93,9 @@ class InitialMessagesCapture(ScenarioBase):
     runs preflight; evaluator returns ``submit_evaluation_failure`` so the
     attempt is closed FAILED with rich, fully-rendered retry evidence.
     Iteration 1, attempt 2: planner sees that retry evidence in a
-    ``<attempt status="failed">`` block, submits a partial plan with a
-    ``deferred_goal_for_next_iteration``; executor runs preflight; evaluator
-    passes.
+    ``<attempt status="prior" verdict="fail">`` block, submits a partial
+    plan with a ``deferred_goal_for_next_iteration``; executor runs
+    preflight; evaluator passes.
     Iteration 2, attempt 1: planner submits a full plan; executor runs
     preflight; evaluator passes; goal closes succeeded.
     """
@@ -157,16 +158,17 @@ class InitialMessagesCapture(ScenarioBase):
         ):
             # Intentional first-attempt evaluator failure so the next
             # planner's context carries a fully-populated
-            # `<attempt status="failed">` block (real plan_spec, real
-            # generator outcomes, real evaluator judgment). Without this
-            # the retry attempt would only see the compact "bypassed"
-            # body emitted for planner-validation failures.
+            # `<attempt status="prior" verdict="fail">` block (real
+            # plan_spec, real per-task summaries, real evaluator
+            # commentary). Without this the retry attempt would only see
+            # the compact "bypassed" body emitted for planner-validation
+            # failures.
             return ToolCallSpec(
                 submit_evaluation_failure,
                 {
                     "summary": (
                         "Intentional first-attempt evaluator failure to "
-                        "exercise the rich `<attempt status=\"failed\">` "
+                        "exercise the rich failed-prior-attempt "
                         "retry-evidence rendering in the next attempt's "
                         "planner context."
                     ),

@@ -1,13 +1,9 @@
-"""Exact-name dispatch for per-agent task-guidance builders.
+"""Dispatch for the registry-driven ``<Task Guidance>`` builder.
 
-The composer looks up the builder by ``agent_def.name`` after variant
-resolution — variant targets (``planner_full_only``,
-``executor_success_handoff``, ``executor_success_failure``) appear in this
-table directly, not by way of their base profile.
-
-Names absent from this table get no row 3. That includes ``entry_executor``
-(2-row launch shape) and the ``executor`` router profile (purely a variant
-parent, never a launch target).
+Every agent name whose launch produces a ``<Task Guidance>`` envelope routes
+through the same :func:`build_task_guidance` — there's no per-role builder.
+The presence of a row here means "emit row 3 for this agent name"; absence
+means "no row 3" (entry_executor is the only main-role case).
 
 Helpers and subagents (``advisor``, ``resolver``, ``explorer``) bypass the
 composer entirely — they live in ``tools/ask_helper/`` and
@@ -21,11 +17,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-from task_center.task_guidance.builders import (
-    build_evaluator_task_guidance,
-    build_generator_task_guidance,
-    build_planner_task_guidance,
-)
+from task_center.task_guidance.builders import build_task_guidance
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
     from agents import AgentDefinition
@@ -36,26 +28,26 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only
 TaskGuidanceBuilder = Callable[..., str]
 
 
-TASK_GUIDANCE_BUILDERS: dict[str, TaskGuidanceBuilder] = {
-    "planner": build_planner_task_guidance,
-    "planner_full_only": build_planner_task_guidance,
-    "executor_success_handoff": build_generator_task_guidance,
-    "executor_success_failure": build_generator_task_guidance,
-    # ``generator_verifier.md`` registers as ``name: verifier`` in its
-    # frontmatter; the dispatch key matches the registered agent name, not
-    # the source filename.
-    "verifier": build_generator_task_guidance,
-    "evaluator": build_evaluator_task_guidance,
-}
+_AGENTS_WITH_TASK_GUIDANCE: frozenset[str] = frozenset(
+    {
+        "planner",
+        "planner_full_only",
+        "executor_success_handoff",
+        "executor_success_failure",
+        # ``generator_verifier.md`` registers as ``name: verifier`` in its
+        # frontmatter; dispatch keys match the registered agent name, not the
+        # source filename.
+        "verifier",
+        "evaluator",
+    }
+)
 
 
 def task_guidance_builder_for(agent_name: str) -> TaskGuidanceBuilder | None:
-    """Look up a task-guidance builder by exact agent name.
-
-    ``None`` means "no row 3" — the launcher collapses to a 2-row entry
-    shape or skips ``<Task Guidance>`` entirely.
-    """
-    return TASK_GUIDANCE_BUILDERS.get(agent_name)
+    """Return the single registry-driven builder, or ``None`` for no-row-3 agents."""
+    if agent_name in _AGENTS_WITH_TASK_GUIDANCE:
+        return build_task_guidance
+    return None
 
 
-__all__ = ["TASK_GUIDANCE_BUILDERS", "task_guidance_builder_for"]
+__all__ = ["task_guidance_builder_for"]

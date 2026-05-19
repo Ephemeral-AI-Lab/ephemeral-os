@@ -1,5 +1,5 @@
 # evaluator — iteration 2, attempt 1 (evaluator_instruction branch: has_deferred_goal_for_next_iteration=False; complete plan attempt)
-- source: `goal_01_e7e09fbf-830b-4d30-bf55-28ef7badeb15/iteration_02_3bddf543-f575-464a-b744-e895714e7036/attempt_01_fce0389b-9320-44b1-90bb-05685fb10f84/03_evaluator_fce0389b-9320-44b1-90bb-05685fb10f84:evaluator/message.jsonl`
+- source: `goal_01_fbfb251b-5b0e-4a20-ba38-6fbadd718b22/iteration_02_97b63eaa-f56b-4b60-b0a3-da13ee0eb93a/attempt_01_2d414b29-f828-4322-b2ba-2714776cb68d/03_evaluator_2d414b29-f828-4322-b2ba-2714776cb68d:evaluator/message.jsonl`
 
 ## system
 
@@ -1882,23 +1882,18 @@ Run a workspace preflight probe and continue with the follow-up goal.
 <iteration_goal>
 Continue the initial-messages capture by running one more preflight in iteration 2 so the continuation planner sees prior iteration results.
 </iteration_goal>
-</iteration>
-
-<attempt_plan>
+<attempt attempt_no="1" status="current">
 <plan_spec>
 Run a workspace preflight probe.
 </plan_spec>
-</attempt_plan>
-
-<completed_tasks>
-<task id="fce0389b-9320-44b1-90bb-05685fb10f84:gen:preflight" status="done">
+<task id="2d414b29-f828-4322-b2ba-2714776cb68d:gen:preflight" status="done">
 Workspace preflight completed.
 </task>
-</completed_tasks>
-
 <evaluation_criteria>
-- Workspace preflight completed.
+Workspace preflight completed.
 </evaluation_criteria>
+</attempt>
+</iteration>
 </context>
 ```
 
@@ -1906,14 +1901,100 @@ Workspace preflight completed.
 
 ```
 <Task Guidance>
-You are evaluating a complete attempt. Use `<attempt_plan>` and `<evaluation_criteria>` as your authority — pass/fail the attempt against the criteria, not against your own preferences. Treat the iteration goal as the scope; do not penalize the attempt for work outside the iteration goal.
+What's in context:
+- <goal> — user's request
+- <iteration status="prior"> — previous iteration's work
+  - <accepted_plan> — prior iteration's accepted plan
+  - <summary> — prior iteration's summary
+- <iteration status="current"> — active iteration
+  - <iteration_goal> — active iteration's scope
+  - <attempt status="current"> — active attempt
+
+What to do:
+- Verify the current attempt against <evaluation_criteria>.
 
 <terminal_tool_selection>
-Pick exactly one based on outcome:
-
 - `submit_evaluation_success` — Call when every entry in `<evaluation_criteria>` is satisfied; the attempt closes successfully and the planner's submission kind determines whether the goal closes or continues.
 
 - `submit_evaluation_failure` — Call when one or more entries in `<evaluation_criteria>` fail. The graph enters retry or failure handling.
 </terminal_tool_selection>
 </Task Guidance>
+```
+
+## user_msg_3 — row 4 (skill + terminal_tool_selection)
+
+```
+Load skill: evaluator
+
+<skill>
+# Evaluator workflow
+
+You pass or fail one attempt against its `<evaluation_criteria>`. The
+attempt's `<plan_spec>` frames the scope; the criteria are the authority.
+Your terminal call is binary — every criterion must pass for a success
+verdict, every failure must name the failing criterion.
+
+## Use the criteria as authority
+
+- Read every entry in `<evaluation_criteria>` once and let it drive your
+  verdict. The criteria were written by the planner to fit the
+  surrounding `<plan_spec>` — treat them as the contract, not as
+  suggestions.
+- Do not penalize the attempt for work outside the iteration goal. If a
+  criterion is met but a related-but-unstated outcome is missing, the
+  criterion is met. Failing on unstated expectations is your preference,
+  not the contract.
+- Ground your verdict in evidence the attempt actually produced: the
+  per-task `<task>` summaries, plan_spec assertions, and any artifacts
+  the criteria reference. Skip aesthetic judgments.
+
+## Honor the iteration scope
+
+- The active iteration's `<iteration_goal>` bounds what the attempt was
+  asked to deliver. Items not named in `<iteration_goal>` are out of
+  scope for this verdict — flag them in commentary if useful, but do
+  not let them flip the verdict.
+- `<iteration status="prior">` blocks are background. They tell you what
+  prior iterations already produced; they are not additional criteria
+  for this attempt.
+
+## Deferred-attempt handling
+
+- If the current attempt's body contains
+  `<deferred_goal_for_next_iteration>`, the planner declared this
+  attempt a bounded slice with a remainder. Evaluate only the slice the
+  criteria describe — the remainder is the next iteration's contract,
+  not yours.
+- Do not require completeness against the original `<goal>` when the
+  iteration was framed as deferring. Doing so makes every partial
+  attempt fail by default.
+
+## Pick the right terminal
+
+Your terminal options live in row 3's `<terminal_tool_selection>` block.
+Read that catalog and let the criteria decide:
+
+- Every criterion in `<evaluation_criteria>` is satisfied → success
+  path. Cite the criterion plus the per-task evidence that satisfies
+  it. The summary becomes durable context for the goal close-out.
+- At least one criterion is not satisfied → failure path. Name every
+  failing criterion in the failed list. The graph enters retry or
+  failure handling; an incomplete failed-criteria list robs the retry
+  planner of the signal it needs.
+
+## Output discipline
+
+- Treat the summary field as the durable verdict-explanation downstream
+  agents read cold. State which criterion drove the verdict and what
+  evidence supports it.
+- No alternative verdicts in the summary. You submit once, with one
+  outcome.
+- Reference artifacts and per-task summaries by id; do not inline.
+</skill>
+
+<terminal_tool_selection>
+- `submit_evaluation_success` — Call when every entry in `<evaluation_criteria>` is satisfied; the attempt closes successfully and the planner's submission kind determines whether the goal closes or continues.
+
+- `submit_evaluation_failure` — Call when one or more entries in `<evaluation_criteria>` fail. The graph enters retry or failure handling.
+</terminal_tool_selection>
 ```

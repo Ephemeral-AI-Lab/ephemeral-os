@@ -160,11 +160,9 @@ async def test_initial_messages_capture(
             task_guidance = texts[2]
             skill_row = texts[3]
             assert "<goal" in user_msg_1, f"{rel}: missing <goal*> XML tag"
-            assert (
-                "<current_iteration" in user_msg_1
-                or "<iteration_goal" in user_msg_1
-                or "<goal_current_iteration" in user_msg_1
-            ), f"{rel}: missing current-iteration XML tag"
+            assert "<iteration_goal" in user_msg_1, (
+                f"{rel}: missing <iteration_goal> XML tag"
+            )
             assert task_guidance.startswith("<Task Guidance>\n"), (
                 f"{rel}: row 3 does not start with '<Task Guidance>\\n'"
             )
@@ -215,14 +213,17 @@ async def test_initial_messages_capture(
             assert rows[0].get("role") == "system"
             assert rows[1].get("role") == "user"
         elif "executor" in role_dir:
-            # Executor: 3 initial rows (system + <context> +
-            # <Task Guidance>); no skill is declared in v1.
-            assert len(rows) >= 3, (
-                f"{rel}: executor needs >=3 initial rows, got {len(rows)}"
+            # Executor: 4 initial rows (system + <context> + <Task Guidance>
+            # + skill). Skills carry operational heuristics (treat
+            # `<dependency>` as fixed inputs, verify deliverable at claimed
+            # location).
+            assert len(rows) >= 4, (
+                f"{rel}: executor needs >=4 initial rows for the skill "
+                f"composite, got {len(rows)}"
             )
             assert (
-                "<attempt_plan" in user_msg_1 or "<assigned_task" in user_msg_1
-            ), f"{rel}: missing <attempt_plan> / <assigned_task> XML tag"
+                "<plan_spec" in user_msg_1 or "<assigned_task" in user_msg_1
+            ), f"{rel}: missing <plan_spec> / <assigned_task> XML tag"
             task_guidance = texts[2]
             assert task_guidance.startswith("<Task Guidance>\n"), (
                 f"{rel}: row 3 does not start with '<Task Guidance>\\n'"
@@ -230,15 +231,19 @@ async def test_initial_messages_capture(
             assert "<terminal_tool_selection>" in task_guidance, (
                 f"{rel}: row 3 missing <terminal_tool_selection> block"
             )
-            # And the executor must NOT have a skill row — there is no
-            # ``Load skill:`` prefix anywhere in the first three rows.
-            for i in range(min(3, len(rows))):
-                assert not texts[i].startswith("Load skill:"), (
-                    f"{rel}: executor must not see a row-4 skill in v1"
-                )
+            skill_row = texts[3]
+            assert skill_row.startswith("Load skill: executor"), (
+                f"{rel}: row 4 does not start with `Load skill: executor`"
+            )
+            assert "<skill>" in skill_row and "</skill>" in skill_row, (
+                f"{rel}: row 4 missing <skill> block"
+            )
         elif "evaluator" in role_dir:
-            assert len(rows) >= 3, (
-                f"{rel}: evaluator needs >=3 initial rows, got {len(rows)}"
+            # Evaluator: 4 initial rows (system + <context> + <Task Guidance>
+            # + skill). Skill carries pass/fail discipline heuristics.
+            assert len(rows) >= 4, (
+                f"{rel}: evaluator needs >=4 initial rows for the skill "
+                f"composite, got {len(rows)}"
             )
             assert (
                 "<evaluation_criteria" in user_msg_1
@@ -247,10 +252,13 @@ async def test_initial_messages_capture(
             assert task_guidance.startswith("<Task Guidance>\n"), (
                 f"{rel}: row 3 does not start with '<Task Guidance>\\n'"
             )
-            for i in range(min(3, len(rows))):
-                assert not texts[i].startswith("Load skill:"), (
-                    f"{rel}: evaluator must not see a row-4 skill in v1"
-                )
+            skill_row = texts[3]
+            assert skill_row.startswith("Load skill: evaluator"), (
+                f"{rel}: row 4 does not start with `Load skill: evaluator`"
+            )
+            assert "<skill>" in skill_row and "</skill>" in skill_row, (
+                f"{rel}: row 4 missing <skill> block"
+            )
 
     # 4) Emit the markdown report next to the run.
     report_path = report.run_dir / "initial_messages_report.md"

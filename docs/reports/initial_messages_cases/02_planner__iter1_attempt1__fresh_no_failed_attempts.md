@@ -1,5 +1,5 @@
 # planner — iteration 1, attempt 1 (fresh; planner_instruction branch: iter==1, no failed attempts)
-- source: `goal_01_e7e09fbf-830b-4d30-bf55-28ef7badeb15/iteration_01_441ceae4-65b7-498e-9f51-a80b5a289e44/attempt_01_050f51d3-258c-436a-94d8-64c5bd7fde36/01_planner_050f51d3-258c-436a-94d8-64c5bd7fde36:planner/message.jsonl`
+- source: `goal_01_fbfb251b-5b0e-4a20-ba38-6fbadd718b22/iteration_01_0a1dec0a-37ca-422e-bf81-c51ea647bb7d/attempt_01_5e5e7926-859f-4e8d-bf16-c11723a06438/01_planner_5e5e7926-859f-4e8d-bf16-c11723a06438:planner/message.jsonl`
 
 ## system
 
@@ -113,7 +113,7 @@ A submission that violates any of these is rejected. Repair and resubmit.
 
 ```
 <context>
-<goal_current_iteration>
+<goal>
 <Workspace Root>
 /testbed
 <Workspace Root>
@@ -1946,7 +1946,13 @@ Related tickets
 Can you help me implement the necessary changes to the repository so that the requirements specified in the <pr_description> are met?
 I've already taken care of all changes to any of the test files described in the <pr_description>. This means you DON'T have to modify the testing logic or any of the tests in any way!
 Your task is to make the minimal changes to non-tests files in the /testbed directory to ensure the <pr_description> is satisfied.
-</goal_current_iteration>
+</goal>
+
+<iteration iteration_no="1" status="current">
+<iteration_goal>
+(identical to &lt;goal&gt;)
+</iteration_goal>
+</iteration>
 </context>
 ```
 
@@ -1954,11 +1960,15 @@ Your task is to make the minimal changes to non-tests files in the /testbed dire
 
 ```
 <Task Guidance>
-You are planning the first attempt for this iteration's goal. No prior attempts exist in this iteration. Propose a plan that decomposes the iteration goal into generator tasks with a clear evaluation contract. If you cannot solve the iteration in one attempt, submit a partial plan with a `deferred_goal_for_next_iteration` so the next iteration can pick up where this one ends. When the iteration goal is a list of independent items (for example a PR-description changelog of features and fixes), prefer a wide parallel DAG with one sibling generator task per item and one criterion per item; coalescing into a single 'all items done' criterion turns partial progress into total failure. If one attempt cannot fit every item, bind a tighter set of items here. If you defer work via `deferred_goal_for_next_iteration`, make that handoff the next bounded slice only; do not dump the entire remaining backlog into it.
+What's in context:
+- <goal> — user's request
+- <iteration status="current"> — active iteration
+  - <iteration_goal> — active iteration's scope
+
+What to do:
+- Plan for <iteration_goal>.
 
 <terminal_tool_selection>
-Pick exactly one based on outcome:
-
 - `submit_plan_closes_goal` — Call when this attempt's tasks fully cover the current `<iteration_goal>`. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 
 - `submit_plan_defers_goal` — Call when this attempt delivers a complete, coherent, bounded slice of the current `<iteration_goal>` and a clear remainder exists. The `deferred_goal_for_next_iteration` is the next iteration's whole scope, not a backlog dump.
@@ -2069,8 +2079,6 @@ reconstructing what you were thinking.
 </skill>
 
 <terminal_tool_selection>
-Pick exactly one based on outcome:
-
 - `submit_plan_closes_goal` — Call when this attempt's tasks fully cover the current `<iteration_goal>`. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 
 - `submit_plan_defers_goal` — Call when this attempt delivers a complete, coherent, bounded slice of the current `<iteration_goal>` and a clear remainder exists. The `deferred_goal_for_next_iteration` is the next iteration's whole scope, not a backlog dump.

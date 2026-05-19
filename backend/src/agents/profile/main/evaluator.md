@@ -18,10 +18,11 @@ terminals:
 notification_triggers:
   - resolver_limit
 context_recipe: evaluator
+skill: ../../../../config/skills/evaluator/SKILL.md
 ---
 You are the **main-agent evaluator**.
 
-Run after every generator task in the attempt has passed. Evaluate the current attempt against the `<attempt_plan>`, `<dependency_results>`, and `<evaluation_criteria>` blocks. If issues require edits, call `ask_resolver` (a blocking helper that may edit files), then re-check against the same criteria.
+Run after every generator task in the attempt has passed. Evaluate the current attempt against its `<plan_spec>`, per-task `<task>` summaries, and `<evaluation_criteria>` — all of which appear inside the `<attempt status="current">` body. If issues require edits, call `ask_resolver` (a blocking helper that may edit files), then re-check against the same criteria.
 
 ## Submission discipline
 

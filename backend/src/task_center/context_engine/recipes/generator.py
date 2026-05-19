@@ -1,19 +1,20 @@
 """``generator`` recipe — context for one generator task spawn.
 
-Emits the current attempt plan, dependency results, and the assigned local
-task. XML shape:
+Emits the current attempt's ``<plan_spec>``, dependency outputs as flat
+``<dependency>`` siblings, and the assigned local task. XML shape:
 
-* ``<attempt_plan>`` group with ``<plan_spec>`` (and ``<deferred_goal_for_next_iteration>``
-  when the parent attempt is a continues-goal plan).
-* ``<dependency_results>`` group with one ``<dependency id="...">`` child per
-  upstream task; omitted when the assigned task has no deps.
-* ``<assigned_task task_id="...">`` standalone block — the generator's local
-  contract, anchored last so the agent ends on its concrete obligation.
+* ``<plan_spec>`` — standalone block (no surrounding wrapper).
+* ``<dependency id="...">`` siblings — one per upstream task, omitted when
+  the assigned task has no deps.
+* ``<assigned_task task_id="...">`` — the generator's local contract, anchored
+  last so the agent ends on its concrete obligation.
 
-Role-specific prose lives in
-``task_center/task_guidance/builders.py:build_generator_task_guidance`` and
-is assembled at launch time by ``AgentEntryComposer`` — recipes no longer
-emit ``role_instruction`` blocks.
+The planner-only ``<deferred_goal_for_next_iteration>`` is intentionally
+absent: it is a planner / evaluator concern and would distract executors.
+
+The ``<Task Guidance>`` row is assembled at launch time by
+``AgentEntryComposer`` via the registry-driven
+``task_center/task_guidance/builders.py:build_task_guidance``.
 """
 
 from __future__ import annotations
@@ -30,7 +31,6 @@ from task_center.context_engine.packet import (
     ContextRefs,
 )
 from task_center.context_engine.recipes.goal_iteration_frame import (
-    attempt_plan_blocks,
     latest_summary_text,
 )
 from task_center.context_engine.recipes_registry import ContextRecipe
@@ -42,8 +42,6 @@ if TYPE_CHECKING:
 
 GENERATOR_ID = "generator"
 _REQUIRED_FIELDS = frozenset({"goal_id", "attempt_id", "task_id"})
-
-_DEPENDENCY_RESULTS_GROUP_PREFIX = "dependency_results_"
 
 
 def _generator_build(
@@ -57,15 +55,21 @@ def _generator_build(
         raise ContextEngineError(f"TaskCenterTask {scope.task_id!r} not found")
 
     blocks: list[ContextBlock] = []
-    blocks.extend(attempt_plan_blocks(attempt, priority=ContextPriority.HIGH))
+    if attempt.plan_spec:
+        blocks.append(
+            ContextBlock(
+                kind=ContextBlockKind.TASK_SPECIFICATION,
+                priority=ContextPriority.HIGH,
+                text=attempt.plan_spec,
+                source_id=attempt.id,
+                source_kind="attempt",
+                metadata={"tag": "plan_spec"},
+            )
+        )
 
     needs = tuple(str(dep) for dep in task.get("needs") or ())
     blocks.extend(
-        _dependency_results_blocks(
-            attempt_id=attempt.id,
-            needs=needs,
-            task_store=deps.task_store,
-        )
+        _dependency_blocks(needs=needs, task_store=deps.task_store)
     )
     blocks.append(
         ContextBlock(
@@ -95,15 +99,14 @@ def _generator_build(
     )
 
 
-def _dependency_results_blocks(
+def _dependency_blocks(
     *,
-    attempt_id: str,
     needs: tuple[str, ...],
     task_store: TaskStoreProtocol,
 ) -> list[ContextBlock]:
+    """Emit flat ``<dependency id="...">`` siblings, one per upstream task."""
     if not needs:
         return []
-    group_id = f"{_DEPENDENCY_RESULTS_GROUP_PREFIX}{attempt_id}"
     out: list[ContextBlock] = []
     for dep_id in needs:
         dep = task_store.get_task(dep_id)
@@ -122,9 +125,7 @@ def _dependency_results_blocks(
                 source_id=dep_id,
                 source_kind="task_center_task",
                 metadata={
-                    "group_id": group_id,
-                    "group_tag": "dependency_results",
-                    "child_tag": "dependency",
+                    "tag": "dependency",
                     "attrs": f'id="{dep_id}"',
                 },
             )

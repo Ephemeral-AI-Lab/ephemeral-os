@@ -1,21 +1,20 @@
-"""Task-guidance builder branch matrix (AC #13).
+"""Registry-driven ``<Task Guidance>`` builder behaviour.
 
-The composer dispatches by exact agent name and hands the builder
-``(agent_def, packet, scope)``. Each builder branches on discrete
-``block.kind`` / ``block.metadata`` signals embedded in the packet by
-the recipe layer:
+The single :func:`build_task_guidance` composes its two labelled sections
+deterministically:
 
-* planner: ``iteration_no`` × ``has_failed_attempts`` → 4 branches.
-* generator: ``has_deps`` → 2 branches.
-* evaluator: ``has_deferred_goal_for_next_iteration`` → 2 branches.
-* explorer: static prose (no branches; no packet input either).
+* ``What's in context:`` — outline produced by :func:`render_what_in_context`
+  from the packet alone (no per-role branching).
+* ``What to do:`` — one line lifted from :data:`ROLE_DIRECTIVES` by exact
+  agent name.
 
-Builders never accept kwargs other than the dispatch trio. Branches
-are tested via canned packets so the builders stay decoupled from the
-real recipe machinery.
+The explorer builder remains a standalone helper for subagent-launch paths
+that bypass the composer; it takes no arguments.
 """
 
 from __future__ import annotations
+
+import inspect
 
 import pytest
 
@@ -26,88 +25,81 @@ from task_center.context_engine.packet import (
     ContextPriority,
     ContextRefs,
 )
+from task_center.context_engine.role_directives import ROLE_DIRECTIVES
 from task_center.task_guidance.builders import (
-    build_evaluator_task_guidance,
     build_explorer_task_guidance,
-    build_generator_task_guidance,
-    build_planner_task_guidance,
+    build_task_guidance,
 )
 
 
-def _planner_def() -> AgentDefinition:
-    return AgentDefinition(
-        name="planner",
-        description="planner",
-        agent_kind=AgentKind.PLANNER,
+def _agent_def(name: str, kind: AgentKind = AgentKind.PLANNER) -> AgentDefinition:
+    return AgentDefinition(name=name, description=name, agent_kind=kind)
+
+
+def _goal_block() -> ContextBlock:
+    return ContextBlock(
+        kind="goal_statement",
+        priority=ContextPriority.REQUIRED,
+        text="goal body",
+        metadata={"tag": "goal"},
     )
 
 
-def _executor_def() -> AgentDefinition:
-    return AgentDefinition(
-        name="executor",
-        description="executor",
-        agent_kind=AgentKind.EXECUTOR,
-    )
-
-
-def _evaluator_def() -> AgentDefinition:
-    return AgentDefinition(
-        name="evaluator",
-        description="evaluator",
-        agent_kind=AgentKind.EVALUATOR,
-    )
-
-
-def _iteration_block(seq_no: int) -> ContextBlock:
+def _iteration_goal_block(seq_no: int) -> ContextBlock:
     return ContextBlock(
         kind="iteration_statement",
         priority=ContextPriority.REQUIRED,
-        text=f"iteration {seq_no} goal",
-        metadata={"iteration_no": str(seq_no), "tag": "goal_current_iteration"},
+        text="(identical to &lt;goal&gt;)",
+        metadata={
+            "group_id": f"iteration_{seq_no}_current",
+            "group_tag": "iteration",
+            "group_attrs": f'iteration_no="{seq_no}" status="current"',
+            "child_tag": "iteration_goal",
+            "iteration_no": str(seq_no),
+        },
     )
 
 
-def _failed_attempt_block() -> ContextBlock:
+def _prior_attempt_block() -> ContextBlock:
     return ContextBlock(
         kind="failed_attempt_landscape",
         priority=ContextPriority.HIGH,
         text="(failed body)",
         metadata={
-            "group_id": "iter_1_current",
+            "group_id": "iteration_1_current",
             "group_tag": "iteration",
             "group_attrs": 'iteration_no="1" status="current"',
             "child_tag": "attempt",
-            "attrs": 'attempt_no="1" status="failed"',
+            "attrs": 'attempt_no="1" status="prior" verdict="fail"',
             "pre_rendered_xml": "true",
         },
     )
 
 
-def _dep_block() -> ContextBlock:
+def _dep_block(dep_id: str = "dep-a") -> ContextBlock:
     return ContextBlock(
         kind="dependency_summary",
         priority=ContextPriority.MEDIUM,
         text="dep output",
-        metadata={
-            "group_id": "deps",
-            "group_tag": "dependency_results",
-            "child_tag": "dependency",
-            "attrs": 'id="dep-a"',
-        },
+        metadata={"tag": "dependency", "attrs": f'id="{dep_id}"'},
     )
 
 
-def _partial_handoff_block() -> ContextBlock:
+def _plan_spec_block() -> ContextBlock:
     return ContextBlock(
         kind="task_specification",
+        priority=ContextPriority.HIGH,
+        text="plan body",
+        metadata={"tag": "plan_spec"},
+    )
+
+
+def _assigned_task_block() -> ContextBlock:
+    return ContextBlock(
+        kind="planned_task_spec",
         priority=ContextPriority.REQUIRED,
-        text="future iteration work",
-        metadata={
-            "group_id": "attempt_plan_x",
-            "group_tag": "attempt_plan",
-            "child_tag": "deferred_goal_for_next_iteration",
-            "has_deferred_goal_for_next_iteration": "true",
-        },
+        text="task body",
+        metadata={"tag": "assigned_task", "attrs": 'task_id="t1"'},
     )
 
 
@@ -120,143 +112,137 @@ def _packet(blocks: list[ContextBlock]) -> ContextPacket:
 
 
 # ---------------------------------------------------------------------------
-# Planner — 4-branch matrix on (iteration_no == 1 vs >= 2) × has_failed_attempts.
+# Section composition.
 # ---------------------------------------------------------------------------
 
 
-def test_planner_iter1_no_failed_attempts():
-    prose = build_planner_task_guidance(
-        agent_def=_planner_def(),
-        packet=_packet([_iteration_block(1)]),
+def test_planner_iter1_fresh_outline():
+    prose = build_task_guidance(
+        agent_def=_agent_def("planner"),
+        packet=_packet([_goal_block(), _iteration_goal_block(1)]),
         scope=None,  # type: ignore[arg-type]
     )
-    assert "planning the first attempt" in prose
-    assert "No prior attempts exist in this iteration" in prose
+    assert "What's in context:" in prose
+    assert "- <goal> — user's request" in prose
+    assert '- <iteration status="current"> — active iteration' in prose
+    assert "  - <iteration_goal> — active iteration's scope" in prose
+    assert "What to do:\n- Plan for <iteration_goal>." in prose
 
 
-def test_planner_iter1_with_failed_attempts():
-    prose = build_planner_task_guidance(
-        agent_def=_planner_def(),
-        packet=_packet([_iteration_block(1), _failed_attempt_block()]),
+def test_planner_iter1_after_failure_outline():
+    prose = build_task_guidance(
+        agent_def=_agent_def("planner"),
+        packet=_packet(
+            [_goal_block(), _iteration_goal_block(1), _prior_attempt_block()]
+        ),
         scope=None,  # type: ignore[arg-type]
     )
-    assert "follow-up attempt for this iteration's goal" in prose
-    assert "do not repeat a failing" in prose
+    assert (
+        '  - <attempt status="prior" verdict="fail"> — failed prior attempt'
+    ) in prose
 
 
-def test_planner_iter2_no_failed_attempts():
-    prose = build_planner_task_guidance(
-        agent_def=_planner_def(),
-        packet=_packet([_iteration_block(2)]),
+def test_executor_outline_with_deps():
+    prose = build_task_guidance(
+        agent_def=_agent_def("executor_success_handoff", AgentKind.EXECUTOR),
+        packet=_packet([_plan_spec_block(), _dep_block(), _assigned_task_block()]),
         scope=None,  # type: ignore[arg-type]
     )
-    assert "first attempt for a later iteration" in prose
-    assert "prior iteration produced" in prose
+    assert "- <plan_spec> — attempt's plan" in prose
+    assert "- <dependency> — upstream task output" in prose
+    assert "- <assigned_task> — your assigned task" in prose
+    assert "Complete <assigned_task>." in prose
 
 
-def test_planner_iter2_with_failed_attempts():
-    prose = build_planner_task_guidance(
-        agent_def=_planner_def(),
-        packet=_packet([_iteration_block(2), _failed_attempt_block()]),
+def test_executor_no_handoff_directive_for_failure_variant():
+    prose = build_task_guidance(
+        agent_def=_agent_def("executor_success_failure", AgentKind.EXECUTOR),
+        packet=_packet([_plan_spec_block(), _assigned_task_block()]),
         scope=None,  # type: ignore[arg-type]
     )
-    assert "follow-up attempt for a later iteration" in prose
-    assert "Earlier iterations produced results" in prose
+    assert (
+        "Complete <assigned_task>. No handoff option." in prose
+    )
+
+
+def test_planner_full_only_directive_marks_one_attempt():
+    prose = build_task_guidance(
+        agent_def=_agent_def("planner_full_only"),
+        packet=_packet([_goal_block(), _iteration_goal_block(1)]),
+        scope=None,  # type: ignore[arg-type]
+    )
+    assert (
+        "Plan for <iteration_goal>. No defer option — must close in one attempt."
+        in prose
+    )
+
+
+def test_evaluator_outline_with_prior_and_current_attempt():
+    current_attempt = ContextBlock(
+        kind="failed_attempt_landscape",
+        priority=ContextPriority.REQUIRED,
+        text="(current body)",
+        metadata={
+            "group_id": "iteration_1_current",
+            "group_tag": "iteration",
+            "group_attrs": 'iteration_no="1" status="current"',
+            "child_tag": "attempt",
+            "attrs": 'attempt_no="2" status="current"',
+            "pre_rendered_xml": "true",
+        },
+    )
+    prose = build_task_guidance(
+        agent_def=_agent_def("evaluator", AgentKind.EVALUATOR),
+        packet=_packet(
+            [
+                _goal_block(),
+                _iteration_goal_block(1),
+                _prior_attempt_block(),
+                current_attempt,
+            ]
+        ),
+        scope=None,  # type: ignore[arg-type]
+    )
+    assert '  - <attempt status="prior" verdict="fail"> — failed prior attempt' in prose
+    assert '  - <attempt status="current"> — active attempt' in prose
+    assert "Verify the current attempt against <evaluation_criteria>." in prose
+
+
+def test_unknown_agent_raises():
+    with pytest.raises(KeyError, match="ROLE_DIRECTIVES"):
+        build_task_guidance(
+            agent_def=_agent_def("nonexistent"),
+            packet=_packet([_goal_block()]),
+            scope=None,  # type: ignore[arg-type]
+        )
 
 
 # ---------------------------------------------------------------------------
-# Generator — 2-branch matrix on has_deps.
+# Explorer subagent — static prose, no inputs, no branches.
 # ---------------------------------------------------------------------------
 
 
-def test_generator_no_deps():
-    prose = build_generator_task_guidance(
-        agent_def=_executor_def(),
-        packet=_packet([]),
-        scope=None,  # type: ignore[arg-type]
-    )
-    assert "no dependencies" in prose
-    assert "<dependency_results>" not in prose
-
-
-def test_generator_with_deps():
-    prose = build_generator_task_guidance(
-        agent_def=_executor_def(),
-        packet=_packet([_dep_block()]),
-        scope=None,  # type: ignore[arg-type]
-    )
-    assert "<dependency_results>" in prose
-    assert "fixed inputs" in prose
-
-
-# ---------------------------------------------------------------------------
-# Evaluator — 2-branch matrix on has_deferred_goal_for_next_iteration.
-# ---------------------------------------------------------------------------
-
-
-def test_evaluator_complete_attempt():
-    prose = build_evaluator_task_guidance(
-        agent_def=_evaluator_def(),
-        packet=_packet([]),
-        scope=None,  # type: ignore[arg-type]
-    )
-    assert "evaluating a complete attempt" in prose
-    assert "intentionally partial" not in prose
-
-
-def test_evaluator_partial_attempt():
-    prose = build_evaluator_task_guidance(
-        agent_def=_evaluator_def(),
-        packet=_packet([_partial_handoff_block()]),
-        scope=None,  # type: ignore[arg-type]
-    )
-    assert "intentionally partial attempt" in prose
-    assert "deferred_goal_for_next_iteration" in prose
-
-
-# ---------------------------------------------------------------------------
-# Explorer — static prose, no inputs, no branches.
-# ---------------------------------------------------------------------------
-
-
-def test_explorer_static_prose():
+def test_explorer_static_prose_uses_role_directive():
     prose = build_explorer_task_guidance()
-    assert "explorer subagent" in prose
+    assert ROLE_DIRECTIVES["explorer"] in prose
     assert "submit_exploration_result" in prose
 
 
 def test_explorer_takes_no_arguments():
-    """The explorer builder is the only one that bypasses the composer
-    (subagents have no scope), so it accepts no kwargs."""
-    import inspect
-
     sig = inspect.signature(build_explorer_task_guidance)
     assert list(sig.parameters) == []
 
 
 # ---------------------------------------------------------------------------
-# Dispatch signature contract: builders accept (agent_def, packet, scope)
-# via keyword only, no positional. The composer always passes kwargs.
+# Dispatch signature contract.
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize(
-    "builder",
-    [
-        build_planner_task_guidance,
-        build_generator_task_guidance,
-        build_evaluator_task_guidance,
-    ],
-)
-def test_composer_dispatch_signature(builder):
-    import inspect
-
-    sig = inspect.signature(builder)
+def test_composer_dispatch_signature():
+    sig = inspect.signature(build_task_guidance)
     params = list(sig.parameters)
-    assert params == ["agent_def", "packet", "scope"], (
-        f"{builder.__name__} signature drifted: {params}"
-    )
+    assert params == ["agent_def", "packet", "scope"], params
     for name, param in sig.parameters.items():
         assert param.kind == inspect.Parameter.KEYWORD_ONLY, (
-            f"{builder.__name__}.{name} must be keyword-only"
+            f"build_task_guidance.{name} must be keyword-only"
         )

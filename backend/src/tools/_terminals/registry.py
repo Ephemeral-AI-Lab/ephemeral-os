@@ -44,7 +44,7 @@ TERMINAL_DESCRIPTORS: dict[str, TerminalToolDescriptor] = {
         advisor_review_focus=(
             "Verify the `<assigned_task>` deliverable actually exists at the "
             "claimed location, satisfies the task specification, and is "
-            "consistent with the `<dependency_results>` outputs. Flag stub "
+            "consistent with the `<dependency>` outputs. Flag stub "
             "deliverables, TODO markers, and any divergence from the task "
             "contract."
         ),

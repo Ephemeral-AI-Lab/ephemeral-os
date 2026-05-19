@@ -6,17 +6,18 @@ evaluator, and attempt_landscape to read the most recent summary off a task
 row). Living in its own module keeps the consuming recipe modules independent
 of each other.
 
-The XML structure produced by this module:
+The XML structure produced by this module is the same for every iteration:
 
-* Iteration 1 (no prior iterations): one standalone block tagged
-  ``<goal_current_iteration>``.
-* Iteration N ≥ 2: a standalone ``<goal>`` block, then one
-  ``<iteration iteration_no="K" status="prior">`` group per prior iteration
-  (each wrapping ``<accepted_plan>`` + ``<summary>``), then the current
-  iteration's group (``<iteration iteration_no="N" status="current">``) which
-  contains an ``<iteration_goal>`` child — and may pick up additional siblings
-  (e.g. failed attempts) when later blocks share the same
-  :attr:`current_iteration_group_id`.
+* Standalone ``<goal>`` block.
+* One ``<iteration iteration_no="K" status="prior">`` group per prior closed
+  iteration (each wrapping ``<accepted_plan>`` + ``<summary>``).
+* The current iteration's group ``<iteration iteration_no="N" status="current">``
+  containing an ``<iteration_goal>`` child. For iteration 1 the
+  ``<iteration_goal>`` body reads ``(identical to <goal>)`` rather than
+  duplicating the goal text.
+
+Additional blocks (failed attempts, the current attempt's plan) join the
+current iteration's group by sharing :func:`current_iteration_group_id`.
 """
 
 from __future__ import annotations
@@ -42,51 +43,10 @@ def current_iteration_group_attrs(iteration: Iteration) -> str:
     return f'iteration_no="{iteration.sequence_no}" status="current"'
 
 
-_ATTEMPT_PLAN_GROUP_PREFIX = "attempt_plan_"
-
-
-def attempt_plan_blocks(attempt, *, priority: ContextPriority) -> list[ContextBlock]:
-    """Emit the ``<attempt_plan>`` group: ``<plan_spec>`` + optional handoff child.
-
-    Shared by generator and evaluator recipes; only ``priority`` differs
-    (generator uses HIGH, evaluator uses REQUIRED). Returns an empty list when
-    the attempt has no ``plan_spec``; callers gate on truthiness before
-    extending their block list.
-    """
-    if not attempt.plan_spec:
-        return []
-    group_id = f"{_ATTEMPT_PLAN_GROUP_PREFIX}{attempt.id}"
-    blocks: list[ContextBlock] = [
-        ContextBlock(
-            kind=ContextBlockKind.TASK_SPECIFICATION,
-            priority=priority,
-            text=attempt.plan_spec,
-            source_id=attempt.id,
-            source_kind="attempt",
-            metadata={
-                "group_id": group_id,
-                "group_tag": "attempt_plan",
-                "child_tag": "plan_spec",
-            },
-        )
-    ]
-    if attempt.deferred_goal_for_next_iteration:
-        blocks.append(
-            ContextBlock(
-                kind=ContextBlockKind.TASK_SPECIFICATION,
-                priority=priority,
-                text=attempt.deferred_goal_for_next_iteration,
-                source_id=attempt.id,
-                source_kind="attempt",
-                metadata={
-                    "group_id": group_id,
-                    "group_tag": "attempt_plan",
-                    "child_tag": "deferred_goal_for_next_iteration",
-                    "has_deferred_goal_for_next_iteration": "true",
-                },
-            )
-        )
-    return blocks
+# For iteration 1 the iteration goal equals the user's request. Echoing the
+# full text twice is pure noise; the planner / evaluator skills know what
+# this marker means.
+_ITERATION_GOAL_IDENTITY_BODY = "(identical to &lt;goal&gt;)"
 
 
 def latest_summary_text(summaries: list[Any] | None) -> str:
@@ -110,33 +70,21 @@ def goal_iteration_blocks(
     current_iteration: Iteration,
     iterations: list[Iteration],
 ) -> list[ContextBlock]:
-    """Return the goal/iteration frame in LLM-facing semantic order."""
-    if current_iteration.sequence_no == 1:
-        return [_goal_current_iteration_block(current_iteration)]
+    """Return the goal/iteration frame in LLM-facing semantic order.
 
+    Always emits ``<goal>`` followed by zero or more ``<iteration status="prior">``
+    groups and the ``<iteration status="current">`` group with its
+    ``<iteration_goal>`` child. Iteration 1's iteration goal collapses to the
+    literal marker ``(identical to <goal>)``.
+    """
     blocks: list[ContextBlock] = [_goal_statement_block(goal)]
     blocks.extend(_prior_iteration_blocks(current=current_iteration, iterations=iterations))
     blocks.append(_current_iteration_goal_child(current_iteration))
     return blocks
 
 
-def _goal_current_iteration_block(iteration: Iteration) -> ContextBlock:
-    """Iteration 1: a single standalone ``<goal_current_iteration>`` block."""
-    return ContextBlock(
-        kind=ContextBlockKind.ITERATION_STATEMENT,
-        priority=ContextPriority.REQUIRED,
-        text=iteration.goal,
-        source_id=iteration.id,
-        source_kind="iteration",
-        metadata={
-            "tag": "goal_current_iteration",
-            "iteration_no": str(iteration.sequence_no),
-        },
-    )
-
-
 def _goal_statement_block(goal: Goal) -> ContextBlock:
-    """Iteration N ≥ 2: standalone ``<goal>`` block."""
+    """Standalone ``<goal>`` block (every iteration)."""
     return ContextBlock(
         kind=ContextBlockKind.GOAL_STATEMENT,
         priority=ContextPriority.REQUIRED,
@@ -148,11 +96,19 @@ def _goal_statement_block(goal: Goal) -> ContextBlock:
 
 
 def _current_iteration_goal_child(iteration: Iteration) -> ContextBlock:
-    """Child block inside ``<iteration status="current">``: ``<iteration_goal>``."""
+    """Child block inside ``<iteration status="current">``: ``<iteration_goal>``.
+
+    For iteration 1 the body collapses to ``(identical to <goal>)`` since the
+    iteration scope is the user's request verbatim.
+    """
+    if iteration.sequence_no == 1:
+        body = _ITERATION_GOAL_IDENTITY_BODY
+    else:
+        body = iteration.goal
     return ContextBlock(
         kind=ContextBlockKind.ITERATION_STATEMENT,
         priority=ContextPriority.REQUIRED,
-        text=iteration.goal,
+        text=body,
         source_id=iteration.id,
         source_kind="iteration",
         metadata={

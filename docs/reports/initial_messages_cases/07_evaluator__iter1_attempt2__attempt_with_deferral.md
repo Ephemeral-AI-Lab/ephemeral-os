@@ -1,5 +1,5 @@
 # evaluator — iteration 1, attempt 2 (evaluator_instruction branch: has_deferred_goal_for_next_iteration=True; attempt with a deferred goal)
-- source: `goal_01_e7e09fbf-830b-4d30-bf55-28ef7badeb15/iteration_01_441ceae4-65b7-498e-9f51-a80b5a289e44/attempt_02_14a63bbe-88e8-4fc1-bef6-a7ff55d0f4f1/03_evaluator_14a63bbe-88e8-4fc1-bef6-a7ff55d0f4f1:evaluator/message.jsonl`
+- source: `goal_01_fbfb251b-5b0e-4a20-ba38-6fbadd718b22/iteration_01_0a1dec0a-37ca-422e-bf81-c51ea647bb7d/attempt_02_1aa3a2fc-1252-4ca7-a28a-f0a78abb4eb0/03_evaluator_1aa3a2fc-1252-4ca7-a28a-f0a78abb4eb0:evaluator/message.jsonl`
 
 ## system
 
@@ -34,7 +34,7 @@ Submit exactly one terminal tool per run.
 
 ```
 <context>
-<goal_current_iteration>
+<goal>
 <Workspace Root>
 /testbed
 <Workspace Root>
@@ -1867,26 +1867,47 @@ Related tickets
 Can you help me implement the necessary changes to the repository so that the requirements specified in the <pr_description> are met?
 I've already taken care of all changes to any of the test files described in the <pr_description>. This means you DON'T have to modify the testing logic or any of the tests in any way!
 Your task is to make the minimal changes to non-tests files in the /testbed directory to ensure the <pr_description> is satisfied.
-</goal_current_iteration>
+</goal>
 
-<attempt_plan>
+<iteration iteration_no="1" status="current">
+<iteration_goal>
+(identical to &lt;goal&gt;)
+</iteration_goal>
+<attempt attempt_no="1" status="prior" verdict="fail">
+<plan_spec>
+Run a workspace preflight probe.
+</plan_spec>
+<status_summary>
+5e5e7926-859f-4e8d-bf16-c11723a06438:gen:preflight: done
+</status_summary>
+<task id="5e5e7926-859f-4e8d-bf16-c11723a06438:gen:preflight" status="done">
+Workspace preflight completed.
+</task>
+<evaluation_criteria>
+Workspace preflight completed.
+</evaluation_criteria>
+<evaluator_summary>
+Intentional first-attempt evaluator failure to exercise the rich failed-prior-attempt retry-evidence rendering in the next attempt's planner context.
+</evaluator_summary>
+<failed_criteria>
+Workspace preflight completed.
+</failed_criteria>
+</attempt>
+<attempt attempt_no="2" status="current">
 <plan_spec>
 Run a workspace preflight probe and continue with the follow-up goal.
 </plan_spec>
 <deferred_goal_for_next_iteration>
 Continue the initial-messages capture by running one more preflight in iteration 2 so the continuation planner sees prior iteration results.
 </deferred_goal_for_next_iteration>
-</attempt_plan>
-
-<completed_tasks>
-<task id="14a63bbe-88e8-4fc1-bef6-a7ff55d0f4f1:gen:preflight" status="done">
+<task id="1aa3a2fc-1252-4ca7-a28a-f0a78abb4eb0:gen:preflight" status="done">
 Workspace preflight completed.
 </task>
-</completed_tasks>
-
 <evaluation_criteria>
-- Workspace preflight completed.
+Workspace preflight completed.
 </evaluation_criteria>
+</attempt>
+</iteration>
 </context>
 ```
 
@@ -1894,14 +1915,98 @@ Workspace preflight completed.
 
 ```
 <Task Guidance>
-You are evaluating an intentionally partial attempt (see the `<deferred_goal_for_next_iteration>` child of `<attempt_plan>`). This attempt is not expected to solve the full iteration goal — it is expected to make progress and hand off remaining work via `deferred_goal_for_next_iteration`. Pass/fail against `<evaluation_criteria>` for what this attempt promised; do not penalize for incomplete work that was explicitly deferred.
+What's in context:
+- <goal> — user's request
+- <iteration status="current"> — active iteration
+  - <iteration_goal> — active iteration's scope
+  - <attempt status="prior" verdict="fail"> — failed prior attempt
+  - <attempt status="current"> — active attempt
+
+What to do:
+- Verify the current attempt against <evaluation_criteria>.
 
 <terminal_tool_selection>
-Pick exactly one based on outcome:
-
 - `submit_evaluation_success` — Call when every entry in `<evaluation_criteria>` is satisfied; the attempt closes successfully and the planner's submission kind determines whether the goal closes or continues.
 
 - `submit_evaluation_failure` — Call when one or more entries in `<evaluation_criteria>` fail. The graph enters retry or failure handling.
 </terminal_tool_selection>
 </Task Guidance>
+```
+
+## user_msg_3 — row 4 (skill + terminal_tool_selection)
+
+```
+Load skill: evaluator
+
+<skill>
+# Evaluator workflow
+
+You pass or fail one attempt against its `<evaluation_criteria>`. The
+attempt's `<plan_spec>` frames the scope; the criteria are the authority.
+Your terminal call is binary — every criterion must pass for a success
+verdict, every failure must name the failing criterion.
+
+## Use the criteria as authority
+
+- Read every entry in `<evaluation_criteria>` once and let it drive your
+  verdict. The criteria were written by the planner to fit the
+  surrounding `<plan_spec>` — treat them as the contract, not as
+  suggestions.
+- Do not penalize the attempt for work outside the iteration goal. If a
+  criterion is met but a related-but-unstated outcome is missing, the
+  criterion is met. Failing on unstated expectations is your preference,
+  not the contract.
+- Ground your verdict in evidence the attempt actually produced: the
+  per-task `<task>` summaries, plan_spec assertions, and any artifacts
+  the criteria reference. Skip aesthetic judgments.
+
+## Honor the iteration scope
+
+- The active iteration's `<iteration_goal>` bounds what the attempt was
+  asked to deliver. Items not named in `<iteration_goal>` are out of
+  scope for this verdict — flag them in commentary if useful, but do
+  not let them flip the verdict.
+- `<iteration status="prior">` blocks are background. They tell you what
+  prior iterations already produced; they are not additional criteria
+  for this attempt.
+
+## Deferred-attempt handling
+
+- If the current attempt's body contains
+  `<deferred_goal_for_next_iteration>`, the planner declared this
+  attempt a bounded slice with a remainder. Evaluate only the slice the
+  criteria describe — the remainder is the next iteration's contract,
+  not yours.
+- Do not require completeness against the original `<goal>` when the
+  iteration was framed as deferring. Doing so makes every partial
+  attempt fail by default.
+
+## Pick the right terminal
+
+Your terminal options live in row 3's `<terminal_tool_selection>` block.
+Read that catalog and let the criteria decide:
+
+- Every criterion in `<evaluation_criteria>` is satisfied → success
+  path. Cite the criterion plus the per-task evidence that satisfies
+  it. The summary becomes durable context for the goal close-out.
+- At least one criterion is not satisfied → failure path. Name every
+  failing criterion in the failed list. The graph enters retry or
+  failure handling; an incomplete failed-criteria list robs the retry
+  planner of the signal it needs.
+
+## Output discipline
+
+- Treat the summary field as the durable verdict-explanation downstream
+  agents read cold. State which criterion drove the verdict and what
+  evidence supports it.
+- No alternative verdicts in the summary. You submit once, with one
+  outcome.
+- Reference artifacts and per-task summaries by id; do not inline.
+</skill>
+
+<terminal_tool_selection>
+- `submit_evaluation_success` — Call when every entry in `<evaluation_criteria>` is satisfied; the attempt closes successfully and the planner's submission kind determines whether the goal closes or continues.
+
+- `submit_evaluation_failure` — Call when one or more entries in `<evaluation_criteria>` fail. The graph enters retry or failure handling.
+</terminal_tool_selection>
 ```

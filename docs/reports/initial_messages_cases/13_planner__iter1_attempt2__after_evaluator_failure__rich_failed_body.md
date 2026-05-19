@@ -1,13 +1,13 @@
-# planner — iteration 1, attempt 2 (after evaluator failure; rich `<attempt status="failed">` body with real plan_spec, real generator outcomes, real evaluator judgment)
-- source: `pipeline.attempt_retry_evaluator_failure/20260518T223037Z_abf9d86842c1/goal_01_8be99581-68b0-4694-9f37-c33c0685841e/iteration_01_01a12592-123b-4329-afc5-d7944f27984c/attempt_02_a814ffc2-37e4-488c-a933-bb1a0f43458f/01_planner_a814ffc2-37e4-488c-a933-bb1a0f43458f:planner/message.jsonl`
-- notes: Closes Gap 2 in the original gap report. Unlike case 03 (failed at planner-validation, so `<plan_spec>(not submitted)</plan_spec>` and `(no generator tasks recorded)`), here the prior attempt's plan was valid, executor ran, evaluator returned `submit_evaluation_failure` — so the `<attempt status="failed">` block now carries real bodies for `<plan_spec>`, `<generator_outcomes>` (with `<status_summary>` + per-task `<task status>`), and `<evaluator_judgment status="ran" verdict="fail">` (with `<evaluation_criteria>`, `<evaluator_summary>`, `<failed_criteria>`).
+# planner — iteration 1, attempt 2 (after evaluator failure; rich `<attempt status="prior" verdict="fail">` body with real plan_spec, real per-task summaries, real evaluator commentary)
+- source: `pipeline.attempt_retry_evaluator_failure/20260519T152210Z_5e3875108eaf/goal_01_0eb38258-503a-4502-a041-d18cb9fd221c/iteration_01_00776041-a80f-486d-bed4-625ca8e2c353/attempt_02_5a950514-35be-4172-acf5-e8e1051b74ea/01_planner_5a950514-35be-4172-acf5-e8e1051b74ea:planner/message.jsonl`
+- notes: Closes Gap 2 in the original gap report. The prior attempt's plan was valid, executor ran, evaluator returned `submit_evaluation_failure` — so the `<attempt status="prior" verdict="fail">` block carries real flat-child bodies: `<plan_spec>`, `<status_summary>`, per-task `<task>` summaries, `<evaluation_criteria>`, `<evaluator_summary>`, and `<failed_criteria>` — no wrapping `<attempt_plan>`/`<generator_outcomes>`/`<evaluator_judgment>` groups.
 
 ## system
 
 ```
 # Main-Agent Operating Contract
 
-Your context arrives as XML-tagged blocks (`<goal>`, `<goal_current_iteration>`, `<iteration status="prior">`, `<iteration status="current">` with its `<iteration_goal>` and `<attempt status="failed">` children, `<attempt_plan>`, `<assigned_task>`, `<dependency_results>`, `<evaluation_criteria>`); treat them as the bounded contract for this run. Use only what they contain — do not invent goals, criteria, or constraints they did not state — and when a later block narrows an earlier one, the narrowed scope wins.
+Your context arrives as XML-tagged blocks (`<goal>`, `<iteration status="prior">`, `<iteration status="current">` with its `<iteration_goal>` and `<attempt>` children, `<plan_spec>`, `<assigned_task>`, `<dependency>`, `<evaluation_criteria>`); treat them as the bounded contract for this run. Use only what they contain — do not invent goals, criteria, or constraints they did not state — and when a later block narrows an earlier one, the narrowed scope wins.
 
 You commit your work through one terminal call from your declared terminal set. That call ends the run immediately: reasoning text is not a deliverable, there is no second submission, and there is no recovery in the same run. Use read-only and helper tools until you are decided; submit once.
 
@@ -27,11 +27,10 @@ Submit exactly one terminal tool per run.
 
 Each turn, your context is composed into XML-tagged blocks. Treat goal and iteration tags as the required contract unless a later block explicitly narrows the current attempt.
 
-- `<goal_current_iteration>` appears for iteration 1, where the goal and the iteration are the same scope.
-- `<goal>` appears for continuation iterations, containing the original goal text.
+- `<goal>` carries the user's original request and is present in every planner context.
 - `<iteration iteration_no="N" status="prior">` wraps each prior closed iteration's `<accepted_plan>` and `<summary>` children.
-- `<iteration iteration_no="N" status="current">` wraps the current iteration's `<iteration_goal>` child (and any `<attempt status="failed">` siblings — see below). The text inside `<iteration_goal>` is the authoritative scope for this planner; use `<goal>` and `<iteration status="prior">` blocks only for orientation and deduplication; do not mine the original `<goal>` for extra backlog items that `<iteration_goal>` did not ask for.
-- `<attempt attempt_no="K" status="failed">` blocks inside `<iteration status="current">` list prior failed attempts in the current iteration. Each contains nested `<attempt_plan>` (with `<plan_spec>` and any `<deferred_goal_for_next_iteration>` child), `<generator_outcomes>`, and `<evaluator_judgment>`. Treat this as retry evidence: the iteration goal is unchanged, but you may narrow scope, drop blocked branches, or restructure dependencies.
+- `<iteration iteration_no="N" status="current">` wraps the current iteration's `<iteration_goal>` child (and any `<attempt>` siblings — see below). The text inside `<iteration_goal>` is the authoritative scope for this planner; for iteration 1 it reads `(identical to <goal>)`. Use `<goal>` and `<iteration status="prior">` blocks only for orientation and deduplication; do not mine the original `<goal>` for extra backlog items that `<iteration_goal>` did not ask for.
+- `<attempt attempt_no="K" status="prior" verdict="fail">` blocks inside `<iteration status="current">` list prior failed attempts in the current iteration. Each carries `<plan_spec>`, `<status_summary>`, per-task `<task>` summaries, `<evaluation_criteria>`, `<evaluator_summary>`, and any `<failed_criteria>` / `<passed_criteria>` — all as direct children (no enclosing wrapper). Treat this as retry evidence: the iteration goal is unchanged, but you may narrow scope, drop blocked branches, or restructure dependencies.
 
 ## Code-repair benchmark framing
 
@@ -114,7 +113,7 @@ A submission that violates any of these is rejected. Repair and resubmit.
 
 ```
 <context>
-<goal_current_iteration>
+<goal>
 <Workspace Root>
 /testbed
 <Workspace Root>
@@ -1947,24 +1946,22 @@ Related tickets
 Can you help me implement the necessary changes to the repository so that the requirements specified in the <pr_description> are met?
 I've already taken care of all changes to any of the test files described in the <pr_description>. This means you DON'T have to modify the testing logic or any of the tests in any way!
 Your task is to make the minimal changes to non-tests files in the /testbed directory to ensure the <pr_description> is satisfied.
-</goal_current_iteration>
+</goal>
 
 <iteration iteration_no="1" status="current">
-<attempt attempt_no="1" status="failed">
-<attempt_plan>
+<iteration_goal>
+(identical to &lt;goal&gt;)
+</iteration_goal>
+<attempt attempt_no="1" status="prior" verdict="fail">
 <plan_spec>
 Run a workspace preflight probe.
 </plan_spec>
-</attempt_plan>
-<generator_outcomes>
 <status_summary>
-e87f7f14-87e7-4604-9ac8-59cd0c6178ae:gen:preflight: done
+39c29d22-1b6c-4ff9-ae95-3daa511fc613:gen:preflight: done
 </status_summary>
-<task id="e87f7f14-87e7-4604-9ac8-59cd0c6178ae:gen:preflight" status="done">
+<task id="39c29d22-1b6c-4ff9-ae95-3daa511fc613:gen:preflight" status="done">
 Workspace preflight completed.
 </task>
-</generator_outcomes>
-<evaluator_judgment status="ran" verdict="fail">
 <evaluation_criteria>
 Workspace preflight completed.
 </evaluation_criteria>
@@ -1974,7 +1971,6 @@ Intentional evaluator failure to exercise the single-iteration attempt retry pat
 <failed_criteria>
 Workspace preflight completed.
 </failed_criteria>
-</evaluator_judgment>
 </attempt>
 </iteration>
 </context>
@@ -1984,11 +1980,16 @@ Workspace preflight completed.
 
 ```
 <Task Guidance>
-You are planning a follow-up attempt for this iteration's goal. One or more prior attempts in this iteration failed (see the `<attempt status="failed">` blocks inside `<iteration status="current">`). Diagnose why earlier attempts failed and choose a meaningfully different decomposition, scope, or evaluation contract — do not repeat a failing strategy. When the iteration goal is a list of independent items, the prior failure landscape tells you which items already passed their criterion and which did not; keep one criterion per item and narrow this attempt's scope to the failing or skipped items rather than re-running the full list.
+What's in context:
+- <goal> — user's request
+- <iteration status="current"> — active iteration
+  - <iteration_goal> — active iteration's scope
+  - <attempt status="prior" verdict="fail"> — failed prior attempt
+
+What to do:
+- Plan for <iteration_goal>.
 
 <terminal_tool_selection>
-Pick exactly one based on outcome:
-
 - `submit_plan_closes_goal` — Call when this attempt's tasks fully cover the current `<iteration_goal>`. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 
 - `submit_plan_defers_goal` — Call when this attempt delivers a complete, coherent, bounded slice of the current `<iteration_goal>` and a clear remainder exists. The `deferred_goal_for_next_iteration` is the next iteration's whole scope, not a backlog dump.
@@ -2099,8 +2100,6 @@ reconstructing what you were thinking.
 </skill>
 
 <terminal_tool_selection>
-Pick exactly one based on outcome:
-
 - `submit_plan_closes_goal` — Call when this attempt's tasks fully cover the current `<iteration_goal>`. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 
 - `submit_plan_defers_goal` — Call when this attempt delivers a complete, coherent, bounded slice of the current `<iteration_goal>` and a clear remainder exists. The `deferred_goal_for_next_iteration` is the next iteration's whole scope, not a backlog dump.

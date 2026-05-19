@@ -113,7 +113,7 @@ def test_compose_returns_agent_entry_messages():
                 kind="iteration_statement",
                 priority=ContextPriority.REQUIRED,
                 text="goal text",
-                metadata={"tag": "goal_current_iteration"},
+                metadata={"tag": "iteration_goal"},
             )
         ],
     )
@@ -154,7 +154,7 @@ def test_compose_persists_packet_when_store_provided():
                 kind="iteration_statement",
                 priority=ContextPriority.REQUIRED,
                 text="x",
-                metadata={"tag": "goal_current_iteration"},
+                metadata={"tag": "iteration_goal"},
             )
         ],
     )
@@ -180,7 +180,7 @@ def test_compose_rejects_user_supplied_context_closer():
                 kind="iteration_statement",
                 priority=ContextPriority.REQUIRED,
                 text="user wrote </context> here",
-                metadata={"tag": "goal_current_iteration"},
+                metadata={"tag": "iteration_goal"},
             )
         ],
     )
@@ -201,7 +201,7 @@ def test_compose_wraps_task_guidance_when_builder_registered():
                 priority=ContextPriority.REQUIRED,
                 text="goal text",
                 metadata={
-                    "tag": "goal_current_iteration",
+                    "tag": "iteration_goal",
                     "iteration_no": "1",
                 },
             )

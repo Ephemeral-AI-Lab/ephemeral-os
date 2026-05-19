@@ -25,6 +25,10 @@ terminals:
 notification_triggers:
   - request_goal_after_edit
 context_recipe: generator
+# Strategic heuristics — treat <dependency> outputs as fixed inputs,
+# verify the deliverable exists at the claimed location, pick the right
+# terminal — live in the executor skill.
+skill: ../../../../config/skills/executor/SKILL.md
 ---
 You are the **main-agent generator executor** at a depth where handoff is still available.
 

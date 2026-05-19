@@ -1,5 +1,5 @@
 # planner — iteration 2, attempt 1 (deferred-goal follow-up; planner_instruction branch: iter>1, no failed attempts)
-- source: `goal_01_e7e09fbf-830b-4d30-bf55-28ef7badeb15/iteration_02_3bddf543-f575-464a-b744-e895714e7036/attempt_01_fce0389b-9320-44b1-90bb-05685fb10f84/01_planner_fce0389b-9320-44b1-90bb-05685fb10f84:planner/message.jsonl`
+- source: `goal_01_fbfb251b-5b0e-4a20-ba38-6fbadd718b22/iteration_02_97b63eaa-f56b-4b60-b0a3-da13ee0eb93a/attempt_01_2d414b29-f828-4322-b2ba-2714776cb68d/01_planner_2d414b29-f828-4322-b2ba-2714776cb68d:planner/message.jsonl`
 
 ## system
 
@@ -1969,11 +1969,18 @@ Continue the initial-messages capture by running one more preflight in iteration
 
 ```
 <Task Guidance>
-You are planning the first attempt for a later iteration. The prior iteration produced concrete results (see `<iteration status="prior">` blocks). Your decomposition should continue from where the prior iteration ended — build on prior outputs, do not redo their work. The `<iteration_goal>` inside `<iteration status="current">` is the authoritative scope for this planner; use the standalone `<goal>` only for orientation and do not add backlog items that the current iteration's goal did not explicitly name. When the iteration goal is a list of independent items, consult `<iteration status="prior">` for which items already passed and plan only the remaining items, keeping one criterion per item so the evaluator can report per-item pass/fail rather than a single coarse verdict.
+What's in context:
+- <goal> — user's request
+- <iteration status="prior"> — previous iteration's work
+  - <accepted_plan> — prior iteration's accepted plan
+  - <summary> — prior iteration's summary
+- <iteration status="current"> — active iteration
+  - <iteration_goal> — active iteration's scope
+
+What to do:
+- Plan for <iteration_goal>.
 
 <terminal_tool_selection>
-Pick exactly one based on outcome:
-
 - `submit_plan_closes_goal` — Call when this attempt's tasks fully cover the current `<iteration_goal>`. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 
 - `submit_plan_defers_goal` — Call when this attempt delivers a complete, coherent, bounded slice of the current `<iteration_goal>` and a clear remainder exists. The `deferred_goal_for_next_iteration` is the next iteration's whole scope, not a backlog dump.
@@ -2084,8 +2091,6 @@ reconstructing what you were thinking.
 </skill>
 
 <terminal_tool_selection>
-Pick exactly one based on outcome:
-
 - `submit_plan_closes_goal` — Call when this attempt's tasks fully cover the current `<iteration_goal>`. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 
 - `submit_plan_defers_goal` — Call when this attempt delivers a complete, coherent, bounded slice of the current `<iteration_goal>` and a clear remainder exists. The `deferred_goal_for_next_iteration` is the next iteration's whole scope, not a backlog dump.

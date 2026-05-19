@@ -1,16 +1,16 @@
 """``planner`` recipe — context for one attempt planner spawn.
 
-See plan §3.3.6 for the full block taxonomy. The recipe reads:
+The recipe reads:
 
 * the goal / current iteration frame;
 * every prior closed-succeeded iteration projection for iteration 2+;
 * every failed attempt in the current iteration except the running one
   (``failed_attempt_landscape`` blocks, ordered by ``attempt_sequence_no``).
 
-Role-specific prose lives in
-``task_center/task_guidance/builders.py:build_planner_task_guidance`` and is
-assembled at launch time by ``AgentEntryComposer`` — recipes no longer emit
-``role_instruction`` blocks.
+The ``<Task Guidance>`` row is assembled at launch time by
+``AgentEntryComposer`` via the registry-driven
+``task_center/task_guidance/builders.py:build_task_guidance`` — recipes
+emit only context blocks.
 """
 
 from __future__ import annotations

@@ -29,6 +29,7 @@ def _entry_executor_build(
         text=str(task.get("context_message") or ""),
         source_id=scope.task_id,
         source_kind="task_center_task",
+        metadata={"tag": "entry_request"},
     )
     return ContextPacket(
         target_role="executor",

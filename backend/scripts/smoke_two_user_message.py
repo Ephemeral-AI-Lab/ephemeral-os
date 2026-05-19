@@ -45,7 +45,7 @@ from task_center.context_engine.packet import (  # noqa: E402
 )
 from task_center.context_engine.renderer import XmlPromptRenderer  # noqa: E402
 from task_center.task_guidance.builders import (  # noqa: E402
-    build_planner_task_guidance,
+    build_task_guidance,
 )
 
 
@@ -63,13 +63,17 @@ def _build_demo_packet() -> ContextPacket:
                 kind=ContextBlockKind.GOAL_STATEMENT,
                 priority=ContextPriority.REQUIRED,
                 text="Ship the smoke-test gate as a runnable script.",
+                metadata={"tag": "goal"},
             ),
             ContextBlock(
                 kind=ContextBlockKind.ITERATION_STATEMENT,
                 priority=ContextPriority.REQUIRED,
-                text="Iteration 1: implement and verify the four-row launch shape.",
+                text="(identical to &lt;goal&gt;)",
                 metadata={
-                    "tag": "goal_current_iteration",
+                    "group_id": "iteration_1_current",
+                    "group_tag": "iteration",
+                    "group_attrs": 'iteration_no="1" status="current"',
+                    "child_tag": "iteration_goal",
                     "iteration_no": "1",
                 },
             ),
@@ -103,7 +107,7 @@ def _dry_run() -> int:
     context_message = "<context>\n" + body + "</context>\n"
 
     agent_def = _make_planner_def()
-    prose = build_planner_task_guidance(
+    prose = build_task_guidance(
         agent_def=agent_def, packet=packet, scope=None  # type: ignore[arg-type]
     )
     task_guidance = _wrap_task_guidance(prose, agent_def)

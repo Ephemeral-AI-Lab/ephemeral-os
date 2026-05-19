@@ -1,4 +1,4 @@
-"""Direct tests for failed attempt landscape helper behavior (XML body)."""
+"""Direct tests for the ``<attempt>`` emitters (XML body + metadata)."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 
 from task_center.context_engine.packet import ContextPriority
 from task_center.context_engine.recipes.attempt_landscape import (
+    current_attempt_block,
     failed_attempt_landscape_blocks,
 )
 from task_center.attempt import (
@@ -104,7 +105,7 @@ def test_excludes_current_attempt_even_if_current_is_failed():
     assert all(block.priority == ContextPriority.HIGH for block in blocks)
 
 
-def test_block_metadata_carries_group_id_and_attempt_attrs():
+def test_prior_attempt_block_metadata_carries_status_and_verdict():
     blocks = failed_attempt_landscape_blocks(
         current_attempt_id=None,
         iteration=_iteration(sequence_no=3),
@@ -117,25 +118,28 @@ def test_block_metadata_carries_group_id_and_attempt_attrs():
     assert block.metadata["group_tag"] == "iteration"
     assert block.metadata["group_attrs"] == 'iteration_no="3" status="current"'
     assert block.metadata["child_tag"] == "attempt"
-    assert block.metadata["attrs"] == 'attempt_no="1" status="failed"'
+    assert block.metadata["attrs"] == (
+        'attempt_no="1" status="prior" verdict="fail"'
+    )
 
 
-def test_renders_attempt_plan_xml_with_plan_spec_child():
+def test_prior_attempt_body_emits_flat_plan_spec_child():
     blocks = failed_attempt_landscape_blocks(
         current_attempt_id=None,
         iteration=_iteration(),
         attempts=[_attempt(1, plan_spec="submitted spec")],
     )
     body = blocks[0].text
-    assert "<attempt_plan>" in body
     assert "<plan_spec>\nsubmitted spec\n</plan_spec>" in body
-    assert "</attempt_plan>" in body
+    # No <attempt_plan> wrapper anymore.
+    assert "<attempt_plan>" not in body
+    assert "</attempt_plan>" not in body
     assert "<deferred_goal_for_next_iteration>" not in body, (
         "absent handoff goal must not produce a child element"
     )
 
 
-def test_renders_attempt_plan_xml_with_deferred_goal_child():
+def test_prior_attempt_body_emits_deferred_goal_when_present():
     blocks = failed_attempt_landscape_blocks(
         current_attempt_id=None,
         iteration=_iteration(),
@@ -156,13 +160,6 @@ def test_renders_attempt_plan_xml_with_deferred_goal_child():
 
 
 def test_planner_failed_renders_compact_bypassed_body():
-    """A PLANNER_FAILED attempt never produced a plan, generators, or evaluator
-    output, so the body collapses to three self-closing status tags. Emitting
-    the rich shape with placeholder bodies (``(not submitted)`` /
-    ``(no generator tasks recorded)`` / ``status="ran" verdict="fail"``) would
-    lie about which stages actually ran — in particular the evaluator
-    never ran, so ``status="ran"`` is structurally wrong.
-    """
     blocks = failed_attempt_landscape_blocks(
         current_attempt_id=None,
         iteration=_iteration(),
@@ -172,17 +169,13 @@ def test_planner_failed_renders_compact_bypassed_body():
     )
     body = blocks[0].text
     assert body == (
-        '<attempt_plan status="unsubmitted"/>\n'
-        '<generator_outcomes status="not_started"/>\n'
-        '<evaluator_judgment status="bypassed" reason="planner_failed"/>'
+        '<plan_spec status="unsubmitted"/>\n'
+        '<status_summary status="not_started"/>\n'
+        '<evaluator_summary status="bypassed" reason="planner_failed"/>'
     )
 
 
 def test_startup_failed_renders_compact_bypassed_body():
-    """STARTUP_FAILED attempts couldn't even launch the planner — same shape
-    as PLANNER_FAILED but the bypass ``reason`` carries the startup value so
-    downstream consumers can distinguish the two failure modes.
-    """
     blocks = failed_attempt_landscape_blocks(
         current_attempt_id=None,
         iteration=_iteration(),
@@ -192,13 +185,13 @@ def test_startup_failed_renders_compact_bypassed_body():
     )
     body = blocks[0].text
     assert body == (
-        '<attempt_plan status="unsubmitted"/>\n'
-        '<generator_outcomes status="not_started"/>\n'
-        '<evaluator_judgment status="bypassed" reason="startup_failed"/>'
+        '<plan_spec status="unsubmitted"/>\n'
+        '<status_summary status="not_started"/>\n'
+        '<evaluator_summary status="bypassed" reason="startup_failed"/>'
     )
 
 
-def test_renders_generator_outcomes_status_summary_and_task_children():
+def test_prior_body_emits_status_summary_and_task_children():
     class TaskStore:
         def get_task(self, task_id: str):
             return {
@@ -232,7 +225,9 @@ def test_renders_generator_outcomes_status_summary_and_task_children():
     )
 
     body = blocks[0].text
-    assert "<generator_outcomes>" in body
+    # Wrappers are gone; status_summary + task siblings sit at attempt scope.
+    assert "<generator_outcomes>" not in body
+    assert "</generator_outcomes>" not in body
     assert "<status_summary>" in body
     assert "t-a: done" in body
     assert "t-b: done" in body
@@ -245,7 +240,7 @@ def test_renders_generator_outcomes_status_summary_and_task_children():
     ) in body
 
 
-def test_renders_evaluator_judgment_bypassed_on_generator_failure():
+def test_prior_body_bypassed_on_generator_failure():
     class TaskStore:
         def get_task(self, task_id: str):
             return {
@@ -271,13 +266,13 @@ def test_renders_evaluator_judgment_bypassed_on_generator_failure():
     )
     body = blocks[0].text
     assert (
-        '<evaluator_judgment status="bypassed" reason="generator_failed">'
+        '<evaluator_summary status="bypassed" reason="generator_failed">'
     ) in body
     assert "task(s) failed: t-b" in body
     assert "should not be read" not in body
 
 
-def test_renders_evaluator_judgment_ran_with_fail_verdict():
+def test_prior_body_renders_evaluator_children_with_failed_criteria():
     class TaskStore:
         def get_task(self, task_id: str):
             return {
@@ -308,13 +303,15 @@ def test_renders_evaluator_judgment_ran_with_fail_verdict():
         task_store=TaskStore(),
     )
     body = blocks[0].text
-    assert '<evaluator_judgment status="ran" verdict="fail">' in body
+    # No <evaluator_judgment> wrapper.
+    assert "<evaluator_judgment" not in body
+    assert "</evaluator_judgment>" not in body
     assert "<evaluation_criteria>\ntotal\n</evaluation_criteria>" in body
     assert "checkout review failed total mismatch" in body
     assert "<failed_criteria>\ntotal\n</failed_criteria>" in body
 
 
-def test_evaluator_judgment_includes_passed_criteria_when_payload_carries_them():
+def test_prior_body_includes_passed_criteria_when_payload_carries_them():
     class TaskStore:
         def get_task(self, task_id: str):
             return {
@@ -362,7 +359,59 @@ def test_all_failed_attempts_render_in_sequence_order():
     )
     assert [b.source_id for b in blocks] == ["attempt-1", "attempt-2", "attempt-3"]
     assert [b.metadata["attrs"] for b in blocks] == [
-        'attempt_no="1" status="failed"',
-        'attempt_no="2" status="failed"',
-        'attempt_no="3" status="failed"',
+        'attempt_no="1" status="prior" verdict="fail"',
+        'attempt_no="2" status="prior" verdict="fail"',
+        'attempt_no="3" status="prior" verdict="fail"',
     ]
+
+
+# ---------------------------------------------------------------------------
+# Current attempt block.
+# ---------------------------------------------------------------------------
+
+
+def test_current_attempt_block_emits_status_current_attrs():
+    blocks = current_attempt_block(
+        attempt=_attempt(
+            2,
+            status=AttemptStatus.RUNNING,
+            plan_spec="active spec",
+            evaluation_criteria=("crit-a",),
+        ),
+        iteration=_iteration(sequence_no=1),
+    )
+    assert len(blocks) == 1
+    block = blocks[0]
+    assert block.metadata["group_id"] == "iteration_1_current"
+    assert block.metadata["group_tag"] == "iteration"
+    assert block.metadata["child_tag"] == "attempt"
+    assert block.metadata["attrs"] == 'attempt_no="2" status="current"'
+    assert block.metadata["pre_rendered_xml"] == "true"
+    assert "<plan_spec>\nactive spec\n</plan_spec>" in block.text
+    assert "<evaluation_criteria>\ncrit-a\n</evaluation_criteria>" in block.text
+
+
+def test_current_attempt_block_includes_deferred_goal():
+    blocks = current_attempt_block(
+        attempt=_attempt(
+            2,
+            status=AttemptStatus.RUNNING,
+            plan_spec="partial",
+            deferred_goal_for_next_iteration="next slice",
+        ),
+        iteration=_iteration(sequence_no=1),
+    )
+    block = blocks[0]
+    assert block.metadata["has_deferred_goal_for_next_iteration"] == "true"
+    assert (
+        "<deferred_goal_for_next_iteration>\nnext slice\n"
+        "</deferred_goal_for_next_iteration>"
+    ) in block.text
+
+
+def test_current_attempt_block_omitted_without_plan_spec():
+    blocks = current_attempt_block(
+        attempt=_attempt(1, plan_spec=None, status=AttemptStatus.RUNNING),
+        iteration=_iteration(),
+    )
+    assert blocks == []

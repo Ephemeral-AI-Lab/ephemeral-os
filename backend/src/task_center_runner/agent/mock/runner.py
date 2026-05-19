@@ -1259,13 +1259,15 @@ class MockSquadRunner:
         elif role == "planner":
             attempt, iteration = self._current_attempt_and_iteration(metadata)
             checks = {
-                "goal": "<goal>" in prompt or "<goal_current_iteration>" in prompt,
+                "goal": "<goal>" in prompt,
                 "current_iteration": (
                     "<iteration " in prompt and 'status="current"' in prompt
-                ) or "<goal_current_iteration>" in prompt,
+                ),
             }
             if attempt.attempt_sequence_no > 1:
-                checks["failed_attempts"] = 'status="failed"' in prompt
+                checks["failed_attempts"] = (
+                    'status="prior" verdict="fail"' in prompt
+                )
             if iteration.sequence_no > 1:
                 checks["previous_iteration_results"] = (
                     'status="prior"' in prompt
@@ -1279,7 +1281,7 @@ class MockSquadRunner:
             )
         elif role == "executor":
             checks = {
-                "attempt_plan": "<attempt_plan>" in prompt,
+                "plan_spec": "<plan_spec>" in prompt,
                 "assigned_task": "<assigned_task" in prompt,
             }
             reason = (
@@ -1288,7 +1290,7 @@ class MockSquadRunner:
             )
         elif role == "verifier":
             checks = {
-                "attempt_plan": "<attempt_plan>" in prompt,
+                "plan_spec": "<plan_spec>" in prompt,
                 "assigned_task": "<assigned_task" in prompt,
             }
             reason = (
@@ -1297,13 +1299,13 @@ class MockSquadRunner:
             )
         elif role == "evaluator":
             checks = {
-                "attempt_plan": "<attempt_plan>" in prompt,
-                "completed_tasks": "<completed_tasks>" in prompt,
+                "plan_spec": "<plan_spec>" in prompt,
+                "task_outcomes": "<task " in prompt,
                 "evaluation_criteria": "<evaluation_criteria>" in prompt,
             }
             reason = (
-                "Evaluator context is graph-local: attempt contract, completed "
-                "generator evidence, and the criteria it must judge."
+                "Evaluator context is graph-local: the active attempt's "
+                "plan_spec, per-task outcomes, and the criteria it must judge."
             )
         else:
             checks = {"known_role": False}

@@ -1,5 +1,5 @@
 # evaluator — attempt 1 (proceeds to `submit_evaluation_failure`); same user_msg_1 shape as a passing evaluator, captured for completeness on the evaluator-failure path
-- source: `pipeline.attempt_retry_evaluator_failure/20260518T223037Z_abf9d86842c1/goal_01_8be99581-68b0-4694-9f37-c33c0685841e/iteration_01_01a12592-123b-4329-afc5-d7944f27984c/attempt_01_e87f7f14-87e7-4604-9ac8-59cd0c6178ae/03_evaluator_e87f7f14-87e7-4604-9ac8-59cd0c6178ae:evaluator/message.jsonl`
+- source: `pipeline.attempt_retry_evaluator_failure/20260519T152210Z_5e3875108eaf/goal_01_0eb38258-503a-4502-a041-d18cb9fd221c/iteration_01_00776041-a80f-486d-bed4-625ca8e2c353/attempt_01_39c29d22-1b6c-4ff9-ae95-3daa511fc613/03_evaluator_39c29d22-1b6c-4ff9-ae95-3daa511fc613:evaluator/message.jsonl`
 - notes: Closes Gap 5 in the original gap report. The evaluator's *input* shape is identical regardless of the verdict the evaluator decides to submit — the failure path is the agent's behavior (`submit_evaluation_failure` with `summary` + `failed_criteria`), not a context-engine branch. This case documents the input prompt that precedes such a decision so readers can audit the full failure path alongside cases 07 (partial-success) and 08 (complete-success). The downstream effect of `submit_evaluation_failure` is what case 13's planner sees as the rich `<attempt status="failed">` block.
 
 ## system
@@ -7,7 +7,7 @@
 ```
 # Main-Agent Operating Contract
 
-Your context arrives as XML-tagged blocks (`<goal>`, `<goal_current_iteration>`, `<iteration status="prior">`, `<iteration status="current">` with its `<iteration_goal>` and `<attempt status="failed">` children, `<attempt_plan>`, `<assigned_task>`, `<dependency_results>`, `<evaluation_criteria>`); treat them as the bounded contract for this run. Use only what they contain — do not invent goals, criteria, or constraints they did not state — and when a later block narrows an earlier one, the narrowed scope wins.
+Your context arrives as XML-tagged blocks (`<goal>`, `<iteration status="prior">`, `<iteration status="current">` with its `<iteration_goal>` and `<attempt>` children, `<plan_spec>`, `<assigned_task>`, `<dependency>`, `<evaluation_criteria>`); treat them as the bounded contract for this run. Use only what they contain — do not invent goals, criteria, or constraints they did not state — and when a later block narrows an earlier one, the narrowed scope wins.
 
 You commit your work through one terminal call from your declared terminal set. That call ends the run immediately: reasoning text is not a deliverable, there is no second submission, and there is no recovery in the same run. Use read-only and helper tools until you are decided; submit once.
 
@@ -15,7 +15,7 @@ Submission fields are read cold by downstream agents without your conversation. 
 
 You are the **main-agent evaluator**.
 
-Run after every generator task in the attempt has passed. Evaluate the current attempt against the `<attempt_plan>`, `<dependency_results>`, and `<evaluation_criteria>` blocks. If issues require edits, call `ask_resolver` (a blocking helper that may edit files), then re-check against the same criteria.
+Run after every generator task in the attempt has passed. Evaluate the current attempt against its `<plan_spec>`, per-task `<task>` summaries, and `<evaluation_criteria>` — all of which appear inside the `<attempt status="current">` body. If issues require edits, call `ask_resolver` (a blocking helper that may edit files), then re-check against the same criteria.
 
 ## Submission discipline
 
@@ -35,7 +35,7 @@ Submit exactly one terminal tool per run.
 
 ```
 <context>
-<goal_current_iteration>
+<goal>
 <Workspace Root>
 /testbed
 <Workspace Root>
@@ -1868,23 +1868,24 @@ Related tickets
 Can you help me implement the necessary changes to the repository so that the requirements specified in the <pr_description> are met?
 I've already taken care of all changes to any of the test files described in the <pr_description>. This means you DON'T have to modify the testing logic or any of the tests in any way!
 Your task is to make the minimal changes to non-tests files in the /testbed directory to ensure the <pr_description> is satisfied.
-</goal_current_iteration>
+</goal>
 
-<attempt_plan>
+<iteration iteration_no="1" status="current">
+<iteration_goal>
+(identical to &lt;goal&gt;)
+</iteration_goal>
+<attempt attempt_no="1" status="current">
 <plan_spec>
 Run a workspace preflight probe.
 </plan_spec>
-</attempt_plan>
-
-<completed_tasks>
-<task id="e87f7f14-87e7-4604-9ac8-59cd0c6178ae:gen:preflight" status="done">
+<task id="39c29d22-1b6c-4ff9-ae95-3daa511fc613:gen:preflight" status="done">
 Workspace preflight completed.
 </task>
-</completed_tasks>
-
 <evaluation_criteria>
-- Workspace preflight completed.
+Workspace preflight completed.
 </evaluation_criteria>
+</attempt>
+</iteration>
 </context>
 ```
 
@@ -1892,11 +1893,16 @@ Workspace preflight completed.
 
 ```
 <Task Guidance>
-You are evaluating a complete attempt. Use `<attempt_plan>` and `<evaluation_criteria>` as your authority — pass/fail the attempt against the criteria, not against your own preferences. Treat the iteration goal as the scope; do not penalize the attempt for work outside the iteration goal.
+What's in context:
+- <goal> — user's request
+- <iteration status="current"> — active iteration
+  - <iteration_goal> — active iteration's scope
+  - <attempt status="current"> — active attempt
+
+What to do:
+- Verify the current attempt against <evaluation_criteria>.
 
 <terminal_tool_selection>
-Pick exactly one based on outcome:
-
 - `submit_evaluation_success` — Call when every entry in `<evaluation_criteria>` is satisfied; the attempt closes successfully and the planner's submission kind determines whether the goal closes or continues.
 
 - `submit_evaluation_failure` — Call when one or more entries in `<evaluation_criteria>` fail. The graph enters retry or failure handling.
@@ -1907,5 +1913,77 @@ Pick exactly one based on outcome:
 ## user_msg_3 — row 4 (skill + terminal_tool_selection)
 
 ```
-Calling submit_evaluation_failure.
+Load skill: evaluator
+
+<skill>
+# Evaluator workflow
+
+You pass or fail one attempt against its `<evaluation_criteria>`. The
+attempt's `<plan_spec>` frames the scope; the criteria are the authority.
+Your terminal call is binary — every criterion must pass for a success
+verdict, every failure must name the failing criterion.
+
+## Use the criteria as authority
+
+- Read every entry in `<evaluation_criteria>` once and let it drive your
+  verdict. The criteria were written by the planner to fit the
+  surrounding `<plan_spec>` — treat them as the contract, not as
+  suggestions.
+- Do not penalize the attempt for work outside the iteration goal. If a
+  criterion is met but a related-but-unstated outcome is missing, the
+  criterion is met. Failing on unstated expectations is your preference,
+  not the contract.
+- Ground your verdict in evidence the attempt actually produced: the
+  per-task `<task>` summaries, plan_spec assertions, and any artifacts
+  the criteria reference. Skip aesthetic judgments.
+
+## Honor the iteration scope
+
+- The active iteration's `<iteration_goal>` bounds what the attempt was
+  asked to deliver. Items not named in `<iteration_goal>` are out of
+  scope for this verdict — flag them in commentary if useful, but do
+  not let them flip the verdict.
+- `<iteration status="prior">` blocks are background. They tell you what
+  prior iterations already produced; they are not additional criteria
+  for this attempt.
+
+## Deferred-attempt handling
+
+- If the current attempt's body contains
+  `<deferred_goal_for_next_iteration>`, the planner declared this
+  attempt a bounded slice with a remainder. Evaluate only the slice the
+  criteria describe — the remainder is the next iteration's contract,
+  not yours.
+- Do not require completeness against the original `<goal>` when the
+  iteration was framed as deferring. Doing so makes every partial
+  attempt fail by default.
+
+## Pick the right terminal
+
+Your terminal options live in row 3's `<terminal_tool_selection>` block.
+Read that catalog and let the criteria decide:
+
+- Every criterion in `<evaluation_criteria>` is satisfied → success
+  path. Cite the criterion plus the per-task evidence that satisfies
+  it. The summary becomes durable context for the goal close-out.
+- At least one criterion is not satisfied → failure path. Name every
+  failing criterion in the failed list. The graph enters retry or
+  failure handling; an incomplete failed-criteria list robs the retry
+  planner of the signal it needs.
+
+## Output discipline
+
+- Treat the summary field as the durable verdict-explanation downstream
+  agents read cold. State which criterion drove the verdict and what
+  evidence supports it.
+- No alternative verdicts in the summary. You submit once, with one
+  outcome.
+- Reference artifacts and per-task summaries by id; do not inline.
+</skill>
+
+<terminal_tool_selection>
+- `submit_evaluation_success` — Call when every entry in `<evaluation_criteria>` is satisfied; the attempt closes successfully and the planner's submission kind determines whether the goal closes or continues.
+
+- `submit_evaluation_failure` — Call when one or more entries in `<evaluation_criteria>` fail. The graph enters retry or failure handling.
+</terminal_tool_selection>
 ```

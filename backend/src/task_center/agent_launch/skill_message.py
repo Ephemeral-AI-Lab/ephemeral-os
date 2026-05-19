@@ -35,8 +35,6 @@ def _render_terminal_tool_selection_block(agent_def: AgentDefinition) -> str | N
     )
     return (
         "<terminal_tool_selection>\n"
-        "Pick exactly one based on outcome:\n"
-        "\n"
         f"{catalog}\n"
         "</terminal_tool_selection>"
     )

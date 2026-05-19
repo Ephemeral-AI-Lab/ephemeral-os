@@ -1,4 +1,4 @@
-"""AC #17 — iteration_no invariant.
+"""iteration_no invariant on the ``<iteration_goal>`` child.
 
 For every ``ContextBlock`` where ``metadata["iteration_no"]`` is set AND
 ``metadata["group_attrs"]`` contains ``iteration_no="``, the two integers
@@ -18,20 +18,27 @@ import pytest
 
 from task_center.context_engine.packet import (
     ContextBlock,
-    ContextPacket,
     ContextPriority,
-    ContextRefs,
 )
 from task_center.context_engine.recipes.goal_iteration_frame import (
     _current_iteration_goal_child,
-    _goal_current_iteration_block,
-    attempt_plan_blocks,
     goal_iteration_blocks,
+)
+from task_center.context_engine.recipes.attempt_landscape import (
+    current_attempt_block,
 )
 
 
 class _FakeIteration:
-    def __init__(self, *, id: str, sequence_no: int, goal: str, plan_spec: str | None = None, task_summary: str | None = None):
+    def __init__(
+        self,
+        *,
+        id: str,
+        sequence_no: int,
+        goal: str,
+        plan_spec: str | None = None,
+        task_summary: str | None = None,
+    ):
         self.id = id
         self.sequence_no = sequence_no
         self.goal = goal
@@ -46,14 +53,27 @@ class _FakeGoal:
 
 
 class _FakeAttempt:
-    def __init__(self, *, id: str, plan_spec: str | None, deferred_goal_for_next_iteration: str | None):
+    def __init__(
+        self,
+        *,
+        id: str,
+        attempt_sequence_no: int,
+        plan_spec: str | None,
+        deferred_goal_for_next_iteration: str | None,
+        generator_task_ids: tuple[str, ...] = (),
+        evaluator_task_id: str | None = None,
+        evaluation_criteria: tuple[str, ...] = (),
+    ):
         self.id = id
+        self.attempt_sequence_no = attempt_sequence_no
         self.plan_spec = plan_spec
         self.deferred_goal_for_next_iteration = deferred_goal_for_next_iteration
+        self.generator_task_ids = generator_task_ids
+        self.evaluator_task_id = evaluator_task_id
+        self.evaluation_criteria = evaluation_criteria
 
 
 def _parse_iteration_no_from_group_attrs(group_attrs: str) -> int | None:
-    """Extract the integer behind ``iteration_no="N"`` in a group_attrs string."""
     match = re.search(r'iteration_no="(\d+)"', group_attrs)
     return int(match.group(1)) if match else None
 
@@ -72,27 +92,24 @@ def _assert_invariant(blocks: list[ContextBlock]) -> None:
         )
 
 
-def test_iteration_1_standalone_block_carries_iteration_no_metadata():
-    """Iteration 1 block has metadata['iteration_no'] but no group_attrs;
-    invariant doesn't apply (one operand missing) so the assertion below
-    is just that the metadata key IS set."""
-    block = _goal_current_iteration_block(
-        _FakeIteration(id="i1", sequence_no=1, goal="goal text")
-    )
-    assert block.metadata["iteration_no"] == "1"
-    # No group_attrs on the standalone block — invariant vacuously holds.
-    _assert_invariant([block])
-
-
-def test_iteration_N_current_child_pairs_metadata_and_group_attrs():
-    """Iteration N≥2 ``<iteration_goal>`` child has BOTH metadata and
-    group_attrs ``iteration_no``; they must agree."""
+def test_current_iteration_goal_child_pairs_metadata_and_group_attrs():
+    """The ``<iteration_goal>`` child carries BOTH metadata and group_attrs
+    iteration_no; they must agree."""
     block = _current_iteration_goal_child(
         _FakeIteration(id="i7", sequence_no=7, goal="iter 7")
     )
     assert block.metadata["iteration_no"] == "7"
     assert 'iteration_no="7"' in block.metadata["group_attrs"]
     _assert_invariant([block])
+
+
+def test_iter1_iteration_goal_body_uses_identity_marker():
+    """Iteration 1's ``<iteration_goal>`` collapses to the literal marker."""
+    block = _current_iteration_goal_child(
+        _FakeIteration(id="i1", sequence_no=1, goal="iter 1 goal")
+    )
+    assert block.text == "(identical to &lt;goal&gt;)"
+    assert block.metadata["iteration_no"] == "1"
 
 
 @pytest.mark.parametrize("seq_no", [1, 2, 3, 5, 12, 99])
@@ -108,17 +125,16 @@ def test_invariant_catches_planted_drift():
     block = _current_iteration_goal_child(
         _FakeIteration(id="i", sequence_no=3, goal="g")
     )
-    # Plant the drift by rebuilding the model with a mutated metadata dict.
     bad_metadata = dict(block.metadata)
-    bad_metadata["iteration_no"] = "9999"  # group_attrs still has iteration_no="3"
+    bad_metadata["iteration_no"] = "9999"
     bad = block.model_copy(update={"metadata": bad_metadata})
     with pytest.raises(AssertionError, match="iteration_no drift"):
         _assert_invariant([bad])
 
 
 def test_goal_iteration_blocks_full_frame_invariant():
-    """The full Iteration N≥2 frame from ``goal_iteration_blocks``:
-    standalone ``<goal>`` + prior iteration groups + current iteration goal."""
+    """The full Iteration N≥2 frame: standalone ``<goal>`` + prior iteration
+    groups + current iteration goal."""
     goal = _FakeGoal(id="g", goal="overall goal")
     prior = _FakeIteration(
         id="i1",
@@ -136,30 +152,31 @@ def test_goal_iteration_blocks_full_frame_invariant():
     _assert_invariant(blocks)
 
 
-def test_attempt_plan_with_deferred_goal_block_carries_metadata():
-    """The partial-plan handoff child is the signal carrier for the
-    evaluator task-guidance branch. Its presence is what flips the
-    branch; the AC #17 invariant doesn't apply to has_deferred_goal_for_next_iteration (it's a
-    single field, not a paired one)."""
+def test_current_attempt_block_carries_deferred_goal_signal():
+    """The current attempt's block surfaces ``has_deferred_goal_for_next_iteration``
+    when the planner submitted a continues-goal plan."""
+    iteration = _FakeIteration(id="i1", sequence_no=1, goal="iter 1 goal")
     attempt = _FakeAttempt(
         id="a",
+        attempt_sequence_no=2,
         plan_spec="plan body",
         deferred_goal_for_next_iteration="future work",
     )
-    blocks = attempt_plan_blocks(attempt, priority=ContextPriority.REQUIRED)
-    handoffs = [b for b in blocks if b.metadata.get("child_tag") == "deferred_goal_for_next_iteration"]
-    assert len(handoffs) == 1
-    assert handoffs[0].metadata["has_deferred_goal_for_next_iteration"] == "true"
+    blocks = current_attempt_block(attempt=attempt, iteration=iteration)
+    assert len(blocks) == 1
+    assert (
+        blocks[0].metadata["has_deferred_goal_for_next_iteration"] == "true"
+    )
+    assert blocks[0].metadata["attrs"].endswith('status="current"')
+    assert blocks[0].priority == ContextPriority.REQUIRED
 
 
-def test_attempt_plan_without_deferred_goal_has_no_block():
-    """Closes-goal attempts (no handoff) do not emit the handoff child,
-    so the partial branch never fires from a packet that has only a
-    plan_spec block."""
+def test_current_attempt_block_omitted_when_no_plan_spec():
+    iteration = _FakeIteration(id="i1", sequence_no=1, goal="iter 1 goal")
     attempt = _FakeAttempt(
         id="a",
-        plan_spec="plan body",
+        attempt_sequence_no=1,
+        plan_spec=None,
         deferred_goal_for_next_iteration=None,
     )
-    blocks = attempt_plan_blocks(attempt, priority=ContextPriority.REQUIRED)
-    assert all(b.metadata.get("has_deferred_goal_for_next_iteration") != "true" for b in blocks)
+    assert current_attempt_block(attempt=attempt, iteration=iteration) == []

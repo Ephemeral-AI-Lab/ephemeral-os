@@ -1,5 +1,5 @@
 # planner_full_only — child goal delegated from a partial-plan parent (variant target: only `submit_plan_closes_goal` is available)
-- source: `pipeline.deferred_parent_planner_full_only/20260518T223048Z_c7ebf0a7c41b/goal_02_1d1be4ea-5979-4169-b842-3712fccbe290/iteration_01_c8a8b2fe-dd95-48f1-b39c-232d8c68d687/attempt_01_61ef54c2-fe78-4d2b-ba1d-2a4ddb8dcb8b/01_planner_61ef54c2-fe78-4d2b-ba1d-2a4ddb8dcb8b:planner/message.jsonl`
+- source: `pipeline.deferred_parent_planner_full_only/20260519T152817Z_edf7bd817ca4/goal_02_f99e6010-5892-491f-a998-ff509950f1f5/iteration_01_0d6d8af9-fa2e-43b5-99cf-05bce307d3b6/attempt_01_24593898-7737-48b4-ac97-68cf86b9840d/01_planner_24593898-7737-48b4-ac97-68cf86b9840d:planner/message.jsonl`
 - notes: The parent attempt submitted a partial plan that delegated work to a child goal. The child goal's planner is resolved through the ``nested_goal_depth_gt_1`` variant to ``planner_full_only`` — a leaf planner profile whose ``terminals:`` frontmatter list omits ``submit_plan_defers_goal``. Row 4's ``<terminal_tool_selection>`` block therefore lists only ``submit_plan_closes_goal``.
 
 ## system
@@ -7,7 +7,7 @@
 ```
 # Main-Agent Operating Contract
 
-Your context arrives as XML-tagged blocks (`<goal>`, `<goal_current_iteration>`, `<iteration status="prior">`, `<iteration status="current">` with its `<iteration_goal>` and `<attempt status="failed">` children, `<attempt_plan>`, `<assigned_task>`, `<dependency_results>`, `<evaluation_criteria>`); treat them as the bounded contract for this run. Use only what they contain — do not invent goals, criteria, or constraints they did not state — and when a later block narrows an earlier one, the narrowed scope wins.
+Your context arrives as XML-tagged blocks (`<goal>`, `<iteration status="prior">`, `<iteration status="current">` with its `<iteration_goal>` and `<attempt>` children, `<plan_spec>`, `<assigned_task>`, `<dependency>`, `<evaluation_criteria>`); treat them as the bounded contract for this run. Use only what they contain — do not invent goals, criteria, or constraints they did not state — and when a later block narrows an earlier one, the narrowed scope wins.
 
 You commit your work through one terminal call from your declared terminal set. That call ends the run immediately: reasoning text is not a deliverable, there is no second submission, and there is no recovery in the same run. Use read-only and helper tools until you are decided; submit once.
 
@@ -29,11 +29,10 @@ Submit exactly one terminal tool per run.
 
 Each turn, your context is composed into XML-tagged blocks. Treat goal and iteration tags as the required contract unless a later block explicitly narrows the current attempt.
 
-- `<goal_current_iteration>` appears for iteration 1, where the goal and the iteration are the same scope.
-- `<goal>` appears for continuation iterations, containing the original goal text.
+- `<goal>` carries the user's original request and is present in every planner context.
 - `<iteration iteration_no="N" status="prior">` wraps each prior closed iteration's `<accepted_plan>` and `<summary>` children.
-- `<iteration iteration_no="N" status="current">` wraps the current iteration's `<iteration_goal>` child (and any `<attempt status="failed">` siblings — see below). The text inside `<iteration_goal>` is the authoritative scope for this planner; use `<goal>` and `<iteration status="prior">` blocks only for orientation and deduplication; do not mine the original `<goal>` for extra backlog items that `<iteration_goal>` did not ask for.
-- `<attempt attempt_no="K" status="failed">` blocks inside `<iteration status="current">` list prior failed attempts in the current iteration. Treat this as retry evidence: the iteration goal is unchanged, but you may narrow scope, drop blocked branches, or restructure dependencies.
+- `<iteration iteration_no="N" status="current">` wraps the current iteration's `<iteration_goal>` child (and any `<attempt>` siblings — see below). The text inside `<iteration_goal>` is the authoritative scope for this planner; for iteration 1 it reads `(identical to <goal>)`. Use `<goal>` and `<iteration status="prior">` blocks only for orientation and deduplication; do not mine the original `<goal>` for extra backlog items that `<iteration_goal>` did not ask for.
+- `<attempt attempt_no="K" status="prior" verdict="fail">` blocks inside `<iteration status="current">` list prior failed attempts in the current iteration. Treat this as retry evidence: the iteration goal is unchanged, but you may narrow scope, drop blocked branches, or restructure dependencies.
 
 ## Code-repair benchmark framing
 
@@ -99,9 +98,9 @@ A submission that violates any of these is rejected. Repair and resubmit.
 
 ```
 <context>
-<goal_current_iteration>
+<goal>
 Resolve the delegated child goal requested by an executor whose parent attempt submitted a partial plan.
-</goal_current_iteration>
+</goal>
 </context>
 ```
 
@@ -109,11 +108,13 @@ Resolve the delegated child goal requested by an executor whose parent attempt s
 
 ```
 <Task Guidance>
-You are planning the first attempt for this iteration's goal. No prior attempts exist in this iteration. Propose a plan that decomposes the iteration goal into generator tasks with a clear evaluation contract. If you cannot solve the iteration in one attempt, submit a partial plan with a `deferred_goal_for_next_iteration` so the next iteration can pick up where this one ends. When the iteration goal is a list of independent items (for example a PR-description changelog of features and fixes), prefer a wide parallel DAG with one sibling generator task per item and one criterion per item; coalescing into a single 'all items done' criterion turns partial progress into total failure. If one attempt cannot fit every item, bind a tighter set of items here. If you defer work via `deferred_goal_for_next_iteration`, make that handoff the next bounded slice only; do not dump the entire remaining backlog into it.
+What's in context:
+- <goal> — user's request
+
+What to do:
+- Plan for <iteration_goal>. No defer option — must close in one attempt.
 
 <terminal_tool_selection>
-Pick exactly one based on outcome:
-
 - `submit_plan_closes_goal` — Call when this attempt's tasks fully cover the current `<iteration_goal>`. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 </terminal_tool_selection>
 </Task Guidance>
@@ -204,8 +205,6 @@ picking it up cold can act without reconstructing what you were thinking.
 </skill>
 
 <terminal_tool_selection>
-Pick exactly one based on outcome:
-
 - `submit_plan_closes_goal` — Call when this attempt's tasks fully cover the current `<iteration_goal>`. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 </terminal_tool_selection>
 ```

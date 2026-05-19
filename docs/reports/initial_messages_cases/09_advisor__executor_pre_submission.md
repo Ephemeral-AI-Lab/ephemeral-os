@@ -25,13 +25,11 @@ The following is the parent agent's user_msg_1 verbatim — the engineered conte
 ---
 
 <context>
-<attempt_plan>
 <plan_spec>
 Run a workspace preflight probe.
 </plan_spec>
-</attempt_plan>
 
-<assigned_task task_id="050f51d3-258c-436a-94d8-64c5bd7fde36:gen:preflight">
+<assigned_task task_id="5e5e7926-859f-4e8d-bf16-c11723a06438:gen:preflight">
 Run a lightweight workspace preflight and report the observed sandbox root.
 </assigned_task>
 </context>
@@ -44,11 +42,14 @@ The following is the parent agent's user_msg_2 verbatim — the role-specific in
 ---
 
 <Task Guidance>
-You are executing one generator task. This task has no dependencies on other generator tasks in the same attempt. Read the `<assigned_task>` below and produce the deliverable, then submit per your role's contract.
+What's in context:
+- <plan_spec> — attempt's plan
+- <assigned_task> — your assigned task
+
+What to do:
+- Complete <assigned_task>.
 
 <terminal_tool_selection>
-Pick exactly one based on outcome:
-
 - `submit_execution_handoff` — Call when bounded progress is made but further work is needed. Name the next bounded slice; do not kick the problem downstream without specifying what's needed.
 
 - `submit_execution_success` — Call when the `<assigned_task>` deliverable is complete, exists at the claimed location, satisfies the task specification, and any verification the criteria specify has been run and passed.
@@ -71,7 +72,7 @@ The parent could submit any of the following terminals. Review focus for each:
 
 - `submit_execution_handoff` — Verify the handoff scope is specific and actionable. Flag vague handoffs that just kick the problem downstream without naming what's needed.
 
-- `submit_execution_success` — Verify the `<assigned_task>` deliverable actually exists at the claimed location, satisfies the task specification, and is consistent with the `<dependency_results>` outputs. Flag stub deliverables, TODO markers, and any divergence from the task contract.
+- `submit_execution_success` — Verify the `<assigned_task>` deliverable actually exists at the claimed location, satisfies the task specification, and is consistent with the `<dependency>` outputs. Flag stub deliverables, TODO markers, and any divergence from the task contract.
 
 These entries pair with the parent-facing selection criteria the parent saw in its original task; both views come from the same terminal-tool registry.
 

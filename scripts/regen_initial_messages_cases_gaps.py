@@ -148,17 +148,18 @@ def case_13_planner_after_evaluator_failure() -> None:
     system, um1, um2, um3 = _read_initial_rows(jsonl)
     _write_case(
         case_path=CASES_DIR / "13_planner__iter1_attempt2__after_evaluator_failure__rich_failed_body.md",
-        title="planner — iteration 1, attempt 2 (after evaluator failure; rich `<attempt status=\"failed\">` body with real plan_spec, real generator outcomes, real evaluator judgment)",
+        title="planner — iteration 1, attempt 2 (after evaluator failure; rich `<attempt status=\"prior\" verdict=\"fail\">` body with real plan_spec, real per-task summaries, real evaluator commentary)",
         source=f"pipeline.attempt_retry_evaluator_failure/{run.name}/{rel}",
         notes=(
-            "Closes Gap 2 in the original gap report. Unlike case 03 "
-            "(failed at planner-validation, so `<plan_spec>(not submitted)</plan_spec>` "
-            "and `(no generator tasks recorded)`), here the prior attempt's plan was "
-            "valid, executor ran, evaluator returned `submit_evaluation_failure` — so "
-            "the `<attempt status=\"failed\">` block now carries real bodies for "
-            "`<plan_spec>`, `<generator_outcomes>` (with `<status_summary>` + per-task "
-            "`<task status>`), and `<evaluator_judgment status=\"ran\" verdict=\"fail\">` "
-            "(with `<evaluation_criteria>`, `<evaluator_summary>`, `<failed_criteria>`)."
+            "Closes Gap 2 in the original gap report. The prior attempt's "
+            "plan was valid, executor ran, evaluator returned "
+            "`submit_evaluation_failure` — so the "
+            "`<attempt status=\"prior\" verdict=\"fail\">` block carries "
+            "real flat-child bodies: `<plan_spec>`, `<status_summary>`, "
+            "per-task `<task>` summaries, `<evaluation_criteria>`, "
+            "`<evaluator_summary>`, and `<failed_criteria>` — no wrapping "
+            "`<attempt_plan>`/`<generator_outcomes>`/`<evaluator_judgment>` "
+            "groups."
         ),
         system=system,
         user_msg_1=um1,
@@ -177,16 +178,16 @@ def case_14_executor_with_dependency_results() -> None:
     system, um1, um2, um3 = _read_initial_rows(jsonl)
     _write_case(
         case_path=CASES_DIR / "14_executor__dependency_results__has_deps_branch.md",
-        title="executor — dependency_results branch (generator task `b`, deps: [`a`]); user_msg_1 carries a real `<dependency_results>` block",
+        title="executor — has_deps branch (generator task `b`, deps: [`a`]); user_msg_1 carries flat `<dependency>` siblings",
         source=f"pipeline.dependency_dag_serial/{run.name}/{rel}",
         notes=(
             "Closes Gap 3 in the original gap report. The scenario submits a serial "
             "DAG `a → b → c`; task `b` runs with `deps=[\"a\"]`, so its composer "
-            "renders the `<dependency_results>` group (one `<dependency id=...>` "
-            "child per upstream task) between `<attempt_plan>` and `<assigned_task>`. "
-            "Row 3's `<Task Guidance>` is the `has_deps=True` branch of "
-            "`build_generator_task_guidance`, opening with \"You are executing one "
-            "generator task with one or more dependency outputs already available…\". "
+            "renders one flat `<dependency id=...>` block per upstream task "
+            "between `<plan_spec>` and `<assigned_task>` (no wrapping group). "
+            "Row 3's `<Task Guidance>` follows the registry-driven shape: a "
+            "deterministic outline (`<plan_spec>`, `<dependency>`, `<assigned_task>`) "
+            "plus the executor's role directive. "
             "This is the variant the existing initial_messages scenario could not "
             "exercise because its plans only have single-task DAGs."
         ),

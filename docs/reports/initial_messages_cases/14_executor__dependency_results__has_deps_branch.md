@@ -1,13 +1,13 @@
-# executor — dependency_results branch (generator task `b`, deps: [`a`]); user_msg_1 carries a real `<dependency_results>` block
-- source: `pipeline.dependency_dag_serial/20260518T222944Z_161ea35f4f33/goal_01_00231bb3-13ea-4251-a4a2-d7a62913f94f/iteration_01_b057915e-aeff-4d37-9c8c-b3a85ed9fab5/attempt_01_fc712cba-f792-4e50-a97f-c09569457528/03_executor_fc712cba-f792-4e50-a97f-c09569457528:gen:b/message.jsonl`
-- notes: Closes Gap 3 in the original gap report. The scenario submits a serial DAG `a → b → c`; task `b` runs with `deps=["a"]`, so its composer renders the `<dependency_results>` group (one `<dependency id=...>` child per upstream task) between `<attempt_plan>` and `<assigned_task>`. Row 3's `<Task Guidance>` is the `has_deps=True` branch of `build_generator_task_guidance`, opening with "You are executing one generator task with one or more dependency outputs already available…". This is the variant the existing initial_messages scenario could not exercise because its plans only have single-task DAGs.
+# executor — has_deps branch (generator task `b`, deps: [`a`]); user_msg_1 carries flat `<dependency>` siblings
+- source: `pipeline.dependency_dag_serial/20260519T152241Z_d88c83980f87/goal_01_5afa90cc-b74f-49b3-b490-5bc73d2680ff/iteration_01_2eabad13-67a4-441e-b799-77b8cf03ca3f/attempt_01_dd69fbe6-2bb4-40a0-8a25-d8bda9fc87ea/03_executor_dd69fbe6-2bb4-40a0-8a25-d8bda9fc87ea:gen:b/message.jsonl`
+- notes: Closes Gap 3 in the original gap report. The scenario submits a serial DAG `a → b → c`; task `b` runs with `deps=["a"]`, so its composer renders one flat `<dependency id=...>` block per upstream task between `<plan_spec>` and `<assigned_task>` (no wrapping group). Row 3's `<Task Guidance>` follows the registry-driven shape: a deterministic outline (`<plan_spec>`, `<dependency>`, `<assigned_task>`) plus the executor's role directive. This is the variant the existing initial_messages scenario could not exercise because its plans only have single-task DAGs.
 
 ## system
 
 ```
 # Main-Agent Operating Contract
 
-Your context arrives as XML-tagged blocks (`<goal>`, `<goal_current_iteration>`, `<iteration status="prior">`, `<iteration status="current">` with its `<iteration_goal>` and `<attempt status="failed">` children, `<attempt_plan>`, `<assigned_task>`, `<dependency_results>`, `<evaluation_criteria>`); treat them as the bounded contract for this run. Use only what they contain — do not invent goals, criteria, or constraints they did not state — and when a later block narrows an earlier one, the narrowed scope wins.
+Your context arrives as XML-tagged blocks (`<goal>`, `<iteration status="prior">`, `<iteration status="current">` with its `<iteration_goal>` and `<attempt>` children, `<plan_spec>`, `<assigned_task>`, `<dependency>`, `<evaluation_criteria>`); treat them as the bounded contract for this run. Use only what they contain — do not invent goals, criteria, or constraints they did not state — and when a later block narrows an earlier one, the narrowed scope wins.
 
 You commit your work through one terminal call from your declared terminal set. That call ends the run immediately: reasoning text is not a deliverable, there is no second submission, and there is no recovery in the same run. Use read-only and helper tools until you are decided; submit once.
 
@@ -37,19 +37,15 @@ This profile intentionally does not expose `submit_execution_failure`. Unfinishe
 
 ```
 <context>
-<attempt_plan>
 <plan_spec>
 Run a serial preflight chain a → b → c.
 </plan_spec>
-</attempt_plan>
 
-<dependency_results>
-<dependency id="fc712cba-f792-4e50-a97f-c09569457528:gen:a">
+<dependency id="dd69fbe6-2bb4-40a0-8a25-d8bda9fc87ea:gen:a">
 Workspace preflight completed.
 </dependency>
-</dependency_results>
 
-<assigned_task task_id="fc712cba-f792-4e50-a97f-c09569457528:gen:b">
+<assigned_task task_id="dd69fbe6-2bb4-40a0-8a25-d8bda9fc87ea:gen:b">
 Run a lightweight workspace preflight and report the observed sandbox root.
 </assigned_task>
 </context>
@@ -59,11 +55,15 @@ Run a lightweight workspace preflight and report the observed sandbox root.
 
 ```
 <Task Guidance>
-You are executing one generator task with one or more dependency outputs already available (see `<dependency_results>`). Treat the dependency outputs as fixed inputs; do not redo their work. Read the `<assigned_task>` and produce the deliverable, then submit per your role's contract.
+What's in context:
+- <plan_spec> — attempt's plan
+- <dependency> — upstream task output
+- <assigned_task> — your assigned task
+
+What to do:
+- Complete <assigned_task>.
 
 <terminal_tool_selection>
-Pick exactly one based on outcome:
-
 - `submit_execution_handoff` — Call when bounded progress is made but further work is needed. Name the next bounded slice; do not kick the problem downstream without specifying what's needed.
 
 - `submit_execution_success` — Call when the `<assigned_task>` deliverable is complete, exists at the claimed location, satisfies the task specification, and any verification the criteria specify has been run and passed.
@@ -74,5 +74,70 @@ Pick exactly one based on outcome:
 ## user_msg_3 — row 4 (skill + terminal_tool_selection)
 
 ```
-Calling shell.
+Load skill: executor
+
+<skill>
+# Executor workflow
+
+You complete one generator task and submit one terminal call. The
+`<plan_spec>` is the surrounding contract; the `<assigned_task>` is your
+local obligation. Anything past the task spec is reasoning, not a
+deliverable.
+
+## Read the contract before you touch the workspace
+
+1. Read `<assigned_task>`. The task spec names the inputs, the
+   deliverable, and the success conditions. Treat these as the only
+   acceptance bar — they were chosen to fit the surrounding `<plan_spec>`
+   and the evaluator's `<evaluation_criteria>`.
+2. Read every `<dependency>` block. Dependency outputs are fixed
+   inputs — you do not redo their work, and you do not invent
+   substitutes. Reference upstream artifacts by their `id` rather than
+   inlining their contents.
+3. If the task spec is ambiguous, prefer the narrowest reading that
+   satisfies the evaluation contract. Do not invent additional
+   deliverables.
+
+## Produce the deliverable, then verify it
+
+- The deliverable must exist at the location the task spec names. Before
+  you submit, confirm with a read tool that the file or output you claim
+  is in place.
+- If the task spec specifies a verification step (a test, a probe, a
+  shell check), run it and let the result drive your terminal choice.
+  Do not paste an unrun command into the submission as if it had run.
+- Quote concrete evidence — file paths, line numbers, command output —
+  not aspirations.
+
+## Pick the right terminal
+
+Your terminal options live in row 3's `<terminal_tool_selection>` block.
+Read that catalog and let the work decide:
+
+- A finished deliverable that satisfies the task spec and passes any
+  required verification is the success path. Pick it when the next task
+  in the DAG (or the evaluator) could pick up your output cold and act
+  on it without re-deriving anything.
+- Bounded progress that still needs work is the handoff path when your
+  role variant exposes it. Name the next bounded slice — what
+  specifically is needed, by whom — so the downstream agent inherits a
+  concrete handoff, not a vague kick. If your variant exposes only
+  success, do not partial-submit; finish or report failure on the
+  variant that allows it.
+
+## Output discipline
+
+- Reasoning text in the run is not a deliverable. The summary field is
+  the only durable artifact downstream agents see.
+- Reference artifacts by identifier; do not paste contents into the
+  summary.
+- Do not re-state the plan or the iteration goal — the evaluator already
+  has them. State what changed in the workspace as a result of this task.
+</skill>
+
+<terminal_tool_selection>
+- `submit_execution_handoff` — Call when bounded progress is made but further work is needed. Name the next bounded slice; do not kick the problem downstream without specifying what's needed.
+
+- `submit_execution_success` — Call when the `<assigned_task>` deliverable is complete, exists at the claimed location, satisfies the task specification, and any verification the criteria specify has been run and passed.
+</terminal_tool_selection>
 ```

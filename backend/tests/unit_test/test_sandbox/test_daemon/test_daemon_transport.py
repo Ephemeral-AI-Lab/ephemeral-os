@@ -288,6 +288,48 @@ async def test_daemon_transport_does_not_retry_after_io_failure() -> None:
     assert exc.value.kind == "RuntimeExecFailed"
 
 
+async def test_call_thin_client_with_connect_retry_retries_transient_connect_failures(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    attempts: list[str] = []
+    sleeps: list[float] = []
+    responses: list[Any] = [
+        SimpleNamespace(
+            stdout="",
+            stderr="EOS_DAEMON_CONNECT_FAILED:ConnectionRefusedError",
+            exit_code=command._THIN_CLIENT_CONNECT_FAILED,
+        ),
+        SimpleNamespace(
+            stdout="",
+            stderr="EOS_DAEMON_CONNECT_FAILED:ConnectionRefusedError",
+            exit_code=command._THIN_CLIENT_CONNECT_FAILED,
+        ),
+        SimpleNamespace(stdout=_ok_response(), stderr="", exit_code=0),
+    ]
+
+    async def fake_exec(_sandbox_id: str, command_str: str, **_: Any) -> Any:
+        attempts.append(command_str)
+        return responses.pop(0)
+
+    async def fake_sleep(delay: float) -> None:
+        sleeps.append(delay)
+
+    monkeypatch.setattr(command.asyncio, "sleep", fake_sleep)
+
+    result = await command._call_thin_client_with_connect_retry(
+        exec_fn=fake_exec,
+        sandbox_id="sb-1",
+        payload='{"op":"api.read_file"}',
+        cwd="/runtime",
+        timeout=15,
+    )
+
+    assert result.exit_code == 0
+    assert len(attempts) == 3
+    assert all("thin_client.py" in attempt for attempt in attempts)
+    assert sleeps == list(command._CONNECT_RETRY_DELAYS_S[:2])
+
+
 async def test_daemon_transport_rejects_exec_result_without_exit_code() -> None:
     async def fake_exec(_sandbox_id: str, _command_str: str, **_: Any) -> Any:
         return SimpleNamespace(stdout="", stderr="")

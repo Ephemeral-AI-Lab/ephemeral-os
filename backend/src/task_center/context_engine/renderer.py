@@ -37,12 +37,12 @@ _CHARS_PER_TOKEN = 4
 # (inside a group); the kind→tag mapping is the fallback.
 _DEFAULT_TAGS: dict[str, str] = {
     "goal_statement": "goal",
-    "iteration_statement": "current_iteration",
+    "iteration_statement": "iteration_goal",
     "prior_iteration_specification": "accepted_plan",
     "prior_iteration_summary": "summary",
     "failed_attempt_landscape": "attempt",
     "planned_task_spec": "assigned_task",
-    "task_specification": "attempt_plan",
+    "task_specification": "plan_spec",
     "evaluation_criteria": "evaluation_criteria",
     "dependency_summary": "dependency",
     "completed_task_summary": "task",

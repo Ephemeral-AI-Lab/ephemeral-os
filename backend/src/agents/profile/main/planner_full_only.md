@@ -14,7 +14,7 @@ allowed_tools:
 terminals:
   - submit_plan_closes_goal
 notification_triggers: []
-context_recipe: planner
+context_recipe: planner_full_only
 # Skill loaded into row 4 at launch; see planner.md for the layout
 # rationale. The folder name doubles as the SkillRegistry slug used by
 # load_skill_reference.
@@ -36,11 +36,10 @@ Submit exactly one terminal tool per run.
 
 Each turn, your context is composed into XML-tagged blocks. Treat goal and iteration tags as the required contract unless a later block explicitly narrows the current attempt.
 
-- `<goal_current_iteration>` appears for iteration 1, where the goal and the iteration are the same scope.
-- `<goal>` appears for continuation iterations, containing the original goal text.
+- `<goal>` carries the user's original request and is present in every planner context.
 - `<iteration iteration_no="N" status="prior">` wraps each prior closed iteration's `<accepted_plan>` and `<summary>` children.
-- `<iteration iteration_no="N" status="current">` wraps the current iteration's `<iteration_goal>` child (and any `<attempt status="failed">` siblings — see below). The text inside `<iteration_goal>` is the authoritative scope for this planner; use `<goal>` and `<iteration status="prior">` blocks only for orientation and deduplication; do not mine the original `<goal>` for extra backlog items that `<iteration_goal>` did not ask for.
-- `<attempt attempt_no="K" status="failed">` blocks inside `<iteration status="current">` list prior failed attempts in the current iteration. Treat this as retry evidence: the iteration goal is unchanged, but you may narrow scope, drop blocked branches, or restructure dependencies.
+- `<iteration iteration_no="N" status="current">` wraps the current iteration's `<iteration_goal>` child (and any `<attempt>` siblings — see below). The text inside `<iteration_goal>` is the authoritative scope for this planner; for iteration 1 it reads `(identical to <goal>)`. Use `<goal>` and `<iteration status="prior">` blocks only for orientation and deduplication; do not mine the original `<goal>` for extra backlog items that `<iteration_goal>` did not ask for.
+- `<attempt attempt_no="K" status="prior" verdict="fail">` blocks inside `<iteration status="current">` list prior failed attempts in the current iteration. Treat this as retry evidence: the iteration goal is unchanged, but you may narrow scope, drop blocked branches, or restructure dependencies.
 
 ## Code-repair benchmark framing
 

@@ -1,24 +1,11 @@
 """``evaluator`` recipe — context for one evaluator spawn.
 
-Emits goal/iteration framing, the current attempt plan, completed-task
-summaries, and the evaluation criteria. The criteria block remains last so
-pass/fail authority is anchored to the current attempt contract.
-
-XML shape:
-
-* Goal frame from :func:`goal_iteration_blocks`.
-* ``<attempt_plan>`` group with ``<plan_spec>`` and, on a continues-goal
-  attempt, ``<deferred_goal_for_next_iteration>`` child. The handoff child block
-  carries ``metadata["has_deferred_goal_for_next_iteration"] = "true"`` — task-guidance builders branch
-  on that signal.
-* ``<completed_tasks>`` group with one ``<task id="..." status="...">`` per
-  generator task.
-* ``<evaluation_criteria>`` standalone block.
-
-The previous ``PARTIAL_PLAN_BOUNDARY`` block is gone: the structural signal
-travels via the nested ``<deferred_goal_for_next_iteration>`` child plus
-``metadata["has_deferred_goal_for_next_iteration"]``; the behavioral guidance lives in
-``task_center/task_guidance/builders.py:build_evaluator_task_guidance``.
+Emits goal/iteration framing followed by the failed-prior attempts and the
+current attempt — every ``<attempt>`` is a child of the active
+``<iteration status="current">`` group. The attempt body inlines
+``<plan_spec>``, optional ``<deferred_goal_for_next_iteration>``, per-task
+``<task>`` summaries, and ``<evaluation_criteria>`` as siblings (no
+``<attempt_plan>`` / ``<completed_tasks>`` wrappers).
 """
 
 from __future__ import annotations
@@ -26,24 +13,21 @@ from __future__ import annotations
 from task_center.context_engine.exceptions import ContextEngineError
 from task_center.context_engine.core import ContextEngineDeps
 from task_center.context_engine.packet import (
-    ContextBlock,
-    ContextBlockKind,
     ContextPacket,
-    ContextPriority,
     ContextRefs,
 )
+from task_center.context_engine.recipes.attempt_landscape import (
+    current_attempt_block,
+    failed_attempt_landscape_blocks,
+)
 from task_center.context_engine.recipes.goal_iteration_frame import (
-    attempt_plan_blocks,
     goal_iteration_blocks,
-    latest_summary_text,
 )
 from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
 
 EVALUATOR_ID = "evaluator"
 _REQUIRED_FIELDS = frozenset({"goal_id", "attempt_id"})
-
-_COMPLETED_TASKS_GROUP_PREFIX = "completed_tasks_"
 
 
 def _evaluator_build(
@@ -65,22 +49,21 @@ def _evaluator_build(
         current_iteration=iteration,
         iterations=deps.iteration_store.list_for_goal(goal.id),
     )
-    blocks.extend(attempt_plan_blocks(attempt, priority=ContextPriority.REQUIRED))
-
-    blocks.extend(_completed_tasks_blocks(attempt, deps))
-
-    criteria = list(attempt.evaluation_criteria)
-    if criteria:
-        blocks.append(
-            ContextBlock(
-                kind=ContextBlockKind.EVALUATION_CRITERIA,
-                priority=ContextPriority.REQUIRED,
-                text="\n".join(f"- {c}" for c in criteria),
-                source_id=attempt.id,
-                source_kind="attempt",
-                metadata={"tag": "evaluation_criteria"},
-            )
+    blocks.extend(
+        failed_attempt_landscape_blocks(
+            current_attempt_id=attempt.id,
+            iteration=iteration,
+            attempts=deps.attempt_store.list_for_iteration(iteration.id),
+            task_store=deps.task_store,
         )
+    )
+    blocks.extend(
+        current_attempt_block(
+            attempt=attempt,
+            iteration=iteration,
+            task_store=deps.task_store,
+        )
+    )
 
     return ContextPacket(
         target_role="evaluator",
@@ -93,40 +76,6 @@ def _evaluator_build(
         blocks=blocks,
         source_ids=[b.source_id for b in blocks if b.source_id],
     )
-
-
-def _completed_tasks_blocks(attempt, deps: ContextEngineDeps) -> list[ContextBlock]:
-    if not attempt.generator_task_ids:
-        return []
-    group_id = f"{_COMPLETED_TASKS_GROUP_PREFIX}{attempt.id}"
-    blocks: list[ContextBlock] = []
-    for task_id in attempt.generator_task_ids:
-        task = deps.task_store.get_task(task_id)
-        if task is None:
-            # ``generator_task_ids`` are planner-submitted DAG nodes persisted
-            # on the attempt; a missing row here is a harness invariant
-            # violation, not a tolerable absence.
-            raise ContextEngineError(
-                f"Generator task {task_id!r} referenced by attempt is missing; "
-                "evaluator context cannot be assembled without dependency results."
-            )
-        status = str(task.get("status") or "unknown")
-        blocks.append(
-            ContextBlock(
-                kind=ContextBlockKind.COMPLETED_TASK_SUMMARY,
-                priority=ContextPriority.HIGH,
-                text=latest_summary_text(task.get("summaries")),
-                source_id=task_id,
-                source_kind="task_center_task",
-                metadata={
-                    "group_id": group_id,
-                    "group_tag": "completed_tasks",
-                    "child_tag": "task",
-                    "attrs": f'id="{task_id}" status="{status}"',
-                },
-            )
-        )
-    return blocks
 
 
 EVALUATOR_RECIPE = ContextRecipe(

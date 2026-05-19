@@ -101,10 +101,12 @@ def _seed_running_attempt(attempt_store, iteration_id, *, sequence_no: int):
 # ---------------------------------------------------------------------------
 
 
-def test_iteration1_emits_one_merged_goal_iteration_block(
+def test_iteration1_emits_goal_then_current_iteration_child(
     deps_with_stores, goal_store, iteration_store, attempt_store,
     task_center_run_id,
 ):
+    """Iteration 1 now emits standalone ``<goal>`` plus a current-iteration
+    group whose ``<iteration_goal>`` body is the identity marker."""
     request = _seed_goal(goal_store, task_center_run_id, goal="overall")
     iteration = _seed_iteration(
         iteration_store, goal_id=request.id, sequence_no=1, goal="overall"
@@ -118,10 +120,16 @@ def test_iteration1_emits_one_merged_goal_iteration_block(
         deps_with_stores,
     )
     kinds = [b.kind for b in packet.blocks]
-    assert kinds == ["iteration_statement"]
-    iteration_goal = packet.blocks[0]
-    assert iteration_goal.metadata["tag"] == "goal_current_iteration"
+    assert kinds == ["goal_statement", "iteration_statement"]
+    goal_block, iteration_goal = packet.blocks
+    assert goal_block.metadata["tag"] == "goal"
+    assert iteration_goal.metadata["child_tag"] == "iteration_goal"
+    assert iteration_goal.metadata["group_tag"] == "iteration"
+    assert iteration_goal.metadata["group_attrs"] == (
+        'iteration_no="1" status="current"'
+    )
     assert iteration_goal.metadata["iteration_no"] == "1"
+    assert iteration_goal.text == "(identical to &lt;goal&gt;)"
     assert packet.target_id == g.id
 
 
@@ -268,9 +276,9 @@ def test_three_failed_attempts_emit_three_high_priority_blocks(
     for block in failed_blocks:
         assert block.priority == ContextPriority.HIGH
     assert [b.metadata["attrs"] for b in failed_blocks] == [
-        'attempt_no="1" status="failed"',
-        'attempt_no="2" status="failed"',
-        'attempt_no="3" status="failed"',
+        'attempt_no="1" status="prior" verdict="fail"',
+        'attempt_no="2" status="prior" verdict="fail"',
+        'attempt_no="3" status="prior" verdict="fail"',
     ]
 
 
@@ -336,20 +344,23 @@ def test_failed_attempt_landscape_includes_plan_type_statuses_and_summaries(
     ]
     assert len(failed_blocks) == 1
     text = failed_blocks[0].text
-    assert "<attempt_plan>" in text
+    # No wrappers — children are flat siblings under <attempt>.
+    assert "<attempt_plan>" not in text
+    assert "<generator_outcomes>" not in text
+    assert "<evaluator_judgment" not in text
     assert "<plan_spec>\npartial failed spec\n</plan_spec>" in text
     assert (
         "<deferred_goal_for_next_iteration>\ncontinue with later slice\n"
         "</deferred_goal_for_next_iteration>"
     ) in text
-    assert "<generator_outcomes>" in text
+    assert "<status_summary>" in text
     assert "gen-a: done" in text
     assert "gen-b: failed" in text
     assert '<task id="gen-a" status="done">\nimplemented A\n</task>' in text
     assert "fail_reason" not in text
     # Generator failure bypasses evaluator regardless of evaluator_task_id.
     assert (
-        '<evaluator_judgment status="bypassed" reason="generator_failed">'
+        '<evaluator_summary status="bypassed" reason="generator_failed">'
     ) in text
 
 
@@ -381,7 +392,8 @@ def test_all_failed_attempts_render_as_high_priority_blocks(
     ]
     assert len(failed_blocks) == total
     assert [b.metadata["attrs"] for b in failed_blocks] == [
-        f'attempt_no="{n}" status="failed"' for n in range(1, total + 1)
+        f'attempt_no="{n}" status="prior" verdict="fail"'
+        for n in range(1, total + 1)
     ]
     assert all(block.priority == ContextPriority.HIGH for block in failed_blocks)
     assert all("truncated_count" not in block.metadata for block in failed_blocks)

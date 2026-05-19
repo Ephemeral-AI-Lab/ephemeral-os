@@ -25,6 +25,50 @@ def _instance() -> SWEEvoInstance:
     )
 
 
+def test_global_sandbox_quota_uses_env_override_and_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("EOS_SWEEVO_SANDBOX_QUOTA", raising=False)
+    assert sweevo_sandbox._global_sandbox_quota() == 5
+
+    monkeypatch.setenv("EOS_SWEEVO_SANDBOX_QUOTA", "3")
+    assert sweevo_sandbox._global_sandbox_quota() == 3
+
+    monkeypatch.setenv("EOS_SWEEVO_SANDBOX_QUOTA", "invalid")
+    assert sweevo_sandbox._global_sandbox_quota() == 5
+
+
+def test_enforce_global_sandbox_quota_keeps_newest_and_swallow_delete_failures(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("EOS_SWEEVO_SANDBOX_QUOTA", "2")
+    delete_calls: list[str] = []
+
+    def delete_sandbox(sandbox_id: str) -> None:
+        delete_calls.append(sandbox_id)
+        if sandbox_id == "sbx-3":
+            raise RuntimeError("slow zombie")
+
+    service = SimpleNamespace(
+        delete_sandbox=delete_sandbox,
+    )
+    monkeypatch.setattr(
+        sweevo_sandbox,
+        "_safe_list_sandboxes",
+        lambda _service: [
+            {"id": "sbx-2", "created_at": "2026-05-17T00:00:00Z"},
+            {"id": "sbx-4", "created_at": "2026-05-15T00:00:00Z"},
+            {"id": "sbx-1", "created_at": "2026-05-18T00:00:00Z"},
+            {"id": "sbx-3", "created_at": "2026-05-16T00:00:00Z"},
+        ],
+    )
+
+    deleted = sweevo_sandbox._enforce_global_sandbox_quota(service)
+
+    assert deleted == ["sbx-4"]
+    assert delete_calls == ["sbx-3", "sbx-4"]
+
+
 @pytest.mark.asyncio
 async def test_ensure_sweevo_test_patch_uploads_bytes_before_path(
     monkeypatch: pytest.MonkeyPatch,

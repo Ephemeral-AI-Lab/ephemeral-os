@@ -213,7 +213,8 @@ def test_planner_launched_via_composer_uses_base_when_no_ancestor(
     assert selected is not None
     assert selected.system_prompt == "PLANNER"
     assert launched.context_packet_id is None  # no packet store wired
-    assert "<goal_current_iteration>" in launched.context
+    assert '<iteration iteration_no="1" status="current">' in launched.context
+    assert "<iteration_goal>" in launched.context
 
 
 def test_planner_forked_to_full_only_when_partial_plan_caller_present(
