@@ -3,13 +3,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import pytest
-
-from sandbox.execution.overlay.new_mount_api import OVL_MAX_STACK_GUARD
 from sandbox.layer_stack import WriteLayerChange, LayerStack
-from sandbox.layer_stack.stack import LayerStackTooDeep
 
 
 def _source(tmp_path: Path, name: str, content: bytes) -> str:
@@ -83,12 +79,12 @@ def test_prepare_materialize_false_registers_pin_via_lease_registry(
     assert manager.pinned_layers() == ()
 
 
-def test_prepare_materialize_false_raises_when_depth_exceeds_guard(
+def test_prepare_materialize_false_returns_all_deep_layer_paths(
     tmp_path: Path,
 ) -> None:
     manager = LayerStack(tmp_path / "stack")
-    # Publish OVL_MAX_STACK_GUARD + 1 layers, each with a distinct file.
-    for i in range(OVL_MAX_STACK_GUARD + 1):
+    layer_count = 111
+    for i in range(layer_count):
         manager.publish_changes(
             [
                 WriteLayerChange(
@@ -98,10 +94,12 @@ def test_prepare_materialize_false_raises_when_depth_exceeds_guard(
             ]
         )
 
-    with pytest.raises(LayerStackTooDeep):
-        manager.prepare_workspace_snapshot("request-deep", materialize=False)
+    result = manager.prepare_workspace_snapshot("request-deep", materialize=False)
 
-    # Verify no lease was left dangling.
+    assert result.layer_paths is not None
+    assert len(result.layer_paths) == layer_count
+    assert manager.active_lease_count() == 1
+    manager.release_lease(result.lease_id)
     assert manager.active_lease_count() == 0
 
 

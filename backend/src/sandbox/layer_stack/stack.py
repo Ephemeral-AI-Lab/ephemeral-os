@@ -39,15 +39,6 @@ from sandbox.layer_stack.transaction import LayerStackTransaction
 from sandbox.layer_stack.view import MergedView, SymlinkLookup
 from sandbox._shared.clock import monotonic_now
 
-# Cannot import from sandbox.execution.overlay.new_mount_api — circular dep:
-# stack → execution.__init__ → execution.service → occ → layer_stack.stack
-# Keep in sync with OVL_MAX_STACK_GUARD in new_mount_api.py (value = 110).
-_OVL_MAX_STACK_GUARD: int = 110
-
-
-class LayerStackTooDeep(ValueError):
-    """Raised when manifest depth exceeds the overlay stack guard."""
-
 logger = logging.getLogger(__name__)
 
 
@@ -157,11 +148,6 @@ class LayerStack:
                 layer_paths = tuple(
                     self._layer_path(layer).as_posix() for layer in manifest.layers
                 )
-                if len(layer_paths) > _OVL_MAX_STACK_GUARD:
-                    raise LayerStackTooDeep(
-                        f"manifest depth {len(layer_paths)} exceeds "
-                        f"OVL_MAX_STACK_GUARD={_OVL_MAX_STACK_GUARD}"
-                    )
                 return PrepareWorkspaceSnapshotResult(
                     lease_id=lease.lease_id,
                     manifest_version=manifest.version,

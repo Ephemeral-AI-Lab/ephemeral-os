@@ -47,7 +47,7 @@ Primary external reference (cited inline at Step 2 / §10):
 ### 1.1 Principles (4, reframed for honesty per Architect A3)
 
 1. **No per-lease workspace materialization on the command-exec hot path WHEN the new mount API is available.** Reads against an unchanged manifest must not copy bytes. Hosts without the new mount API fall through to the existing materialize path; this dual-path is explicit and time-bounded (see Follow-up #5 in §6: sunset target = Linux ≥ 5.11 floor by 2027-Q1, when Debian bookworm-LTS minimum is reached for EphemeralOS supported targets).
-2. **Kernel-enforced bounds over runtime checks.** The overlay layer count is bounded by `OVL_MAX_STACK = 500` (empirically bisected this session); we let the kernel reject N > 500 explicitly, and pre-empt it via a tight `OVL_MAX_STACK_GUARD = 110` — i.e., +10% headroom above `AUTO_SQUASH_MAX_DEPTH = 100` (per Architect redline: 450 would catch nothing in practice; 110 catches squash-pressure drift early).
+2. **Kernel-enforced bounds over runtime checks.** The overlay layer count is bounded by `OVL_MAX_STACK = 500` (empirically bisected this session); runtime code does not maintain a separate depth guard. `AUTO_SQUASH_MAX_DEPTH = 100` keeps normal manifests well under the kernel ceiling, and squash health is observed through manifest-depth telemetry.
 3. **Fail fast over silent truncation.** Classic `mount(2)` data-string truncates at PAGE_SIZE (4 KiB) silently — proven this session at manifest depth ≈ 128. The new mount API per-call `lowerdir+=` API has explicit EINVAL semantics at the boundary and is the only correct path.
 4. **Surgical scope: command-exec namespace strategy only.** Plugin/LSP (`WorkspaceProjection`), copy-backed fallback, and squash-checkpoint construction stay on `MergedView.materialize`. They are explicitly out of scope; rationale in §2.
 
@@ -56,7 +56,7 @@ Primary external reference (cited inline at Step 2 / §10):
 | # | Driver | What it pins |
 |---|---|---|
 | D1 | The current `MergedView.materialize` invocation at `stack.py:153` hits EXDEV between `/tmp/eos-sandbox-runtime/layer-stack` (overlay2-backed) and `/eos-mount-scratch` (tmpfs 2 GB) on every lease, falling through to `shutil.copy2` per file (`view.py:266-269`). The 2 GB tmpfs is a hard concurrency ceiling — N concurrent leases × workspace_bytes → eviction. | We must eliminate the intermediate lowerdir tree; not "make it faster". |
-| D2 | Empirical `OVL_MAX_STACK = 500` (bisected this session); util-linux `mount(8)` argv-truncates around 800-byte option strings (`overlay_depth_cap_root_cause.md` — wrong cause attribution there: 16 is not a kernel limit, it's util-linux). `AUTO_SQUASH_MAX_DEPTH = 100` keeps us 5× under the kernel ceiling, and the new `OVL_MAX_STACK_GUARD = 110` keeps us at a tight pre-empt threshold. | We use the new mount API (`fsopen`/`fsconfig`/`fsmount`/`move_mount`), not the classic `mount(2)` data-string. |
+| D2 | Empirical `OVL_MAX_STACK = 500` (bisected this session); util-linux `mount(8)` argv-truncates around 800-byte option strings (`overlay_depth_cap_root_cause.md` — wrong cause attribution there: 16 is not a kernel limit, it's util-linux). `AUTO_SQUASH_MAX_DEPTH = 100` keeps us 5× under the kernel ceiling; runtime intentionally relies on the kernel for the hard limit. | We use the new mount API (`fsopen`/`fsconfig`/`fsmount`/`move_mount`), not the classic `mount(2)` data-string. |
 | D3 | Hot-path budget: command-exec is invoked on every agent shell. Current per-call cost includes `layer_stack.materialize_s` plus `command_exec.mount_workspace_s`; the prepare path's `materialize_s` is reported by `_metrics.py:148-163` and visible in the perf payload. | Whatever replaces materialize must remove the materialize cost AND not regress the mount cost AND not introduce per-read CPU regression as M grows (Bound C in §5). The cost target is `materialize_s → 0`, `mount_workspace_s` unchanged or lower, and per-read CPU growth linear in M with a tight slope budget. |
 
 ### 1.3 Viable options (steelmanned per Architect A1)
@@ -70,10 +70,10 @@ Replace `MergedView.materialize` invocation in `prepare_workspace_snapshot` with
 | Pros | Cons |
 |---|---|
 | Eliminates per-lease lowerdir disk cost — true O(1) (per Bound A in §5). | Requires Linux ≥ 5.2 for `fsopen` family + `lowerdir+=` (5.2 added the new API, `lowerdir+=` is overlayfs-only post 5.11). Fallback path needed for older kernels. |
-| Removes the EXDEV pathological case entirely — kernel just opens dir-fds in storage, no cross-FS staging. | Bound by OVL_MAX_STACK = 500. We're 5× under via `AUTO_SQUASH_MAX_DEPTH = 100` but adds a hard pre-mount guard at 110. |
+| Removes the EXDEV pathological case entirely — kernel just opens dir-fds in storage, no cross-FS staging. | Bound by OVL_MAX_STACK = 500. Normal operation stays well under this through `AUTO_SQUASH_MAX_DEPTH = 100`; the kernel owns the hard failure boundary. |
 | Surfaces depth violations as explicit EINVAL on `fsconfig`, not silent truncation. | ctypes wrappers add a maintenance surface (libc symbol lookups, syscall numbers per-arch). Risk: aarch64 vs x86_64 syscall numbers. Mitigation: use `libc.syscall(SYS_xxx, ...)` resolved via `os.uname().machine`; assert syscall-number stability via unit test. |
 | Empirically validated this session in CAP_SYS_ADMIN container at N=4..500. | Layer-eviction race: kernel holds dirs open via mount; squash `rmtree` deletes dir entries. Need to verify lease-pin invariant survives. (Pre-mortem #3.) |
-| Per-read CPU cost grows linearly in M (overlayfs walks the layer chain on each negative-dentry lookup), but the kernel walk is microseconds-per-layer in cache. Quantified in Bound C (§5.4) with a hard slope budget. | Per-read CPU regression at very high M (>100). Mitigated by `OVL_MAX_STACK_GUARD = 110` keeping M small; verified by Bound C harness. |
+| Per-read CPU cost grows linearly in M (overlayfs walks the layer chain on each negative-dentry lookup), but the kernel walk is microseconds-per-layer in cache. Quantified in Bound C (§5.4) with a hard slope budget. | Per-read CPU regression at very high M (>100). Mitigated by squash keeping normal manifests near the target depth; verified by Bound C harness. |
 
 **Option B — Refcount-cached materialization keyed by manifest version (INVALIDATED).**
 
@@ -189,7 +189,7 @@ Each step lists files+line ranges, what changes, and the verification check. Ste
 
 Per Critic minor-finding §1.1: until we run a live aarch64 mount the aarch64 path is asserted-equal-to-x86_64 by unit test only. Add ADR Consequence (§6 Negative): "aarch64 syscall path is empirically unvalidated; first production aarch64 host will be canary."
 
-Constants: `FSCONFIG_SET_STRING=1`, `FSCONFIG_CMD_CREATE=6`, `MOVE_MOUNT_F_EMPTY_PATH=0x00000004`, `OVL_MAX_STACK=500`, `OVL_MAX_STACK_GUARD=110` (per Architect A4 Step 9 redline: `OVL_MAX_STACK_GUARD = AUTO_SQUASH_MAX_DEPTH + 10 = 110`, 10% over the squash target, catches squash-pressure drift; rationale recorded inline).
+Constants: `FSCONFIG_SET_STRING=1`, `FSCONFIG_CMD_CREATE=6`, `MOVE_MOUNT_F_EMPTY_PATH=0x00000004`, `OVL_MAX_STACK=500`. No separate runtime stack-depth guard is kept; squash-health drift is tracked by `resource.layer_stack.manifest_depth`.
 
 A module-level `def probe_supported() -> bool` that does an empty `fsopen("overlay")` close-on-success. Probe handles three negative cases distinctly (Critic minor C7): `ENOSYS` (kernel too old), `EPERM` (seccomp/cgroup denial), `EBADF` (caller-context misconfig). All three → `False` plus a structured log line naming the errno.
 
@@ -261,14 +261,14 @@ Implementation uses `new_mount_api`:
 6. `mfd = fsmount(fd, 0, 0)`
 7. `move_mount(mfd, b"", AT_FDCWD, workspace_root, MOVE_MOUNT_F_EMPTY_PATH)`
 
-Errors surface as `OSError` with errno; pre-mount guard raises `WorkspaceLayerDepthExceeded` if `len(layer_paths) > OVL_MAX_STACK_GUARD = 110`. `validate_mount_inputs` at line 62 changes accordingly: open one fd per layer in `layer_paths`; per-layer `O_DIRECTORY | O_NOFOLLOW`. The `MountInputs.fds` tuple grows.
+Errors surface as `OSError` with errno from the new mount API. `validate_mount_inputs` at line 62 changes accordingly: open one fd per layer in `layer_paths`; per-layer `O_DIRECTORY | O_NOFOLLOW`. The `MountInputs.fds` tuple grows.
 
 **Verification:**
-- Unit: `test_kernel_mount.py::test_mount_overlay_raises_on_depth_over_guard` (uses a fake new_mount_api; asserts at 111).
+- Unit: `test_kernel_mount.py` validates syscall ordering and propagates kernel `OSError` failures from the new mount API.
 - Live (in-sandbox via existing `_harness/native_cases.py`): a new test that does N=1, 10, 50, 100, 110 layer mounts and reads back a marker from each layer.
 - Live: the 2a marker test (canonical content-correctness gate).
 
-**Acceptance:** N=110 succeeds; N=111 raises `WorkspaceLayerDepthExceeded(...)`; 2a marker test asserts ordering-correctness.
+**Acceptance:** N=110 succeeds; depths beyond the kernel overlay limit fail through the kernel mount API; 2a marker test asserts ordering-correctness.
 
 ### Step 3 — `PrepareWorkspaceSnapshotResult` gains `layer_paths`; new prepare flag
 
@@ -286,11 +286,6 @@ lease = self._leases.acquire(manifest, owner_request_id)   # SAME pin path as ma
 # so iterate manifest.layers as-is (newest-first per view.py:178/214).
 # If 2a resolves the opposite, iterate reversed(manifest.layers) instead.
 layer_paths = tuple(self._layer_path(layer).as_posix() for layer in manifest.layers)
-if len(layer_paths) > OVL_MAX_STACK_GUARD:
-    raise WorkspaceLayerDepthExceeded(
-        f"manifest depth {len(layer_paths)} exceeds OVL_MAX_STACK_GUARD={OVL_MAX_STACK_GUARD}"
-        f"; squash target is AUTO_SQUASH_MAX_DEPTH={AUTO_SQUASH_MAX_DEPTH}"
-    )
 return PrepareWorkspaceSnapshotResult(
     lease_id=lease.lease_id,
     manifest_version=manifest.version,
@@ -310,7 +305,7 @@ return PrepareWorkspaceSnapshotResult(
 - Unit: `test_snapshot_lease.py::test_prepare_with_materialize_false_returns_layer_paths`.
 - Unit: `test_snapshot_lease.py::test_prepare_with_materialize_false_skips_view_materialize` — assert `MergedView.materialize` is not invoked.
 - Unit: `test_snapshot_lease.py::test_prepare_materialize_false_registers_pin_via_lease_registry` — Critic M3: holds the lease, calls `LeaseRegistry.pinned_layers()`, asserts the manifest's layers are returned.
-- Unit: `test_snapshot_lease.py::test_prepare_raises_when_depth_exceeds_guard` — depth 111 raises; covers the guard.
+- Unit: `test_prepare_materialize_false_returns_all_deep_layer_paths` — depth 111 is accepted and all layer paths are returned.
 
 **Acceptance:** `result.layer_paths == tuple(layer_path for layer in manifest.layers)` in 2a-resolved order; no transient lowerdir tree is created; `LeaseRegistry.pinned_layers()` returns the expected refs.
 
@@ -367,8 +362,6 @@ class LayerPathsLayout:
                     f"layer path {path!r} must be under layer_storage_root "
                     f"{self.layer_storage_root!r}"
                 )
-        if len(self.layer_paths) > OVL_MAX_STACK_GUARD:
-            raise WorkspaceLayerDepthExceeded(...)
         # ... existing writes/kernel_scratch checks ...
 
 OverlayLayout = MaterializeLayout | LayerPathsLayout   # type alias for ergonomics
@@ -469,18 +462,18 @@ Payload builder dispatches on `isinstance(spec, LayerPathsLayout)`. For `Materia
 
 **Acceptance:** RPC client receives `layer_paths` in response when `materialize=False` requested; receives `lowerdir` (existing) when `materialize=True` (default for plugin path).
 
-### Step 9 — Pre-mount guard `OVL_MAX_STACK_GUARD = 110`
+### Step 9 — Remove runtime depth guard; rely on kernel limit and telemetry
 
-**Rationale (Architect A4 Step 9 redline):** Old value 450 catches nothing — `AUTO_SQUASH_MAX_DEPTH = 100` is the squash target, so a properly-functioning system runs at depth ~100. A guard at 110 = 10% headroom is tight enough to detect squash-pressure drift (e.g., a partially-failed squash leaving depth at 130) while permitting the normal `AUTO_SQUASH_MAX_DEPTH + 4 = 104` peak observed in `task_center_runner/agent/mock/runner.py:863`. The kernel hard limit `OVL_MAX_STACK = 500` is a backstop, not a target.
+**Rationale:** `AUTO_SQUASH_MAX_DEPTH = 100` is the operational target, while `OVL_MAX_STACK = 500` is the kernel-owned hard boundary. Keeping a second runtime guard makes behavior diverge from the kernel and creates another policy surface to tune. Squash-pressure drift should be detected through manifest-depth telemetry, not a typed pre-mount exception.
 
-**File:** `backend/src/sandbox/layer_stack/stack.py:126-179` (already added in Step 3 inline) and `backend/src/sandbox/execution/overlay/layout.py` (LayerPathsLayout `__post_init__`, Step 4).
+**File:** `backend/src/sandbox/layer_stack/stack.py:126-179` and `backend/src/sandbox/execution/overlay/layout.py`.
 
 **Verification:**
-- Unit: `test_snapshot_lease.py::test_prepare_raises_when_depth_exceeds_guard` (depth 111 raises).
-- Unit: `test_overlay_layout.py::test_layer_paths_layout_rejects_depth_over_guard` (depth 111 raises before mount).
-- Metric `layer_stack.depth_guard_violations_total` increments on each rejection.
+- Unit: `test_prepare_materialize_false_returns_all_deep_layer_paths` proves `materialize=False` returns all layer paths instead of rejecting depth 111.
+- Unit: `test_layer_paths_layout_accepts_deep_layer_paths` proves layout validation no longer owns a depth ceiling.
+- Metric `resource.layer_stack.manifest_depth` p99 remains the squash-health signal.
 
-**Acceptance:** Manifest of depth 111 raises before any fd is opened; `AUTO_SQUASH_MAX_DEPTH + 4 = 104` (the canonical peak from sweevo scenarios) passes; depth 500 also raises (well above guard).
+**Acceptance:** Manifest depth above 110 is accepted by runtime validation; normal squash keeps depth near `AUTO_SQUASH_MAX_DEPTH`; depths beyond `OVL_MAX_STACK` fail at the kernel mount boundary.
 
 ### Step 10 — Daemon-startup probe + capability advertising
 
@@ -493,7 +486,7 @@ Payload builder dispatches on `isinstance(spec, LayerPathsLayout)`. For `Materia
 
 **Additional checks at daemon startup (Critic minor C7 + §10 Q3 resolution):**
 - Inspect `resource.getrlimit(resource.RLIMIT_NOFILE)`. If soft limit < 8192, attempt `setrlimit(RLIMIT_NOFILE, (8192, hard))`; if hard < 8192, log a daemon-startup warning that high-concurrency lease workloads may hit EMFILE.
-  - 8192 budget justification: At `OVL_MAX_STACK_GUARD = 110` layers × 32 concurrent leases peak observed in `complex_project_build_full` runs × overhead headroom (per-lease 3 non-layer fds + room for unrelated daemon sockets) → ~4-5k working set; 8192 is 1.6-2× headroom.
+  - 8192 budget justification: 110 observed/target-adjacent layers × 32 concurrent leases peak observed in `complex_project_build_full` runs × overhead headroom (per-lease 3 non-layer fds + room for unrelated daemon sockets) → ~4-5k working set; 8192 is 1.6-2× headroom.
 
 **Change:** On daemon boot:
 1. Call `new_mount_api.probe_supported()`.
@@ -639,7 +632,7 @@ For every numeric metric: pass condition is `post_value ≤ max(baseline_median 
 
 If the post run violates the data-driven threshold for `command_exec.mount_workspace_s`:
 1. Check `overlay.new_mount_api.unavailable_total` — if > 0, the feature probe is failing and we fell back to materialize+mount(8). Investigate `probe_supported` failure mode.
-2. Check `layer_stack.depth_guard_violations_total` — if > 0, the manifest is exceeding the depth guard; suggests squash isn't running.
+2. Check `resource.layer_stack.manifest_depth` p99 — if it is drifting above the squash target, squash may not be running.
 3. Compare measured `command_exec.layer_count` distribution against baseline — Bound C regression would show as growing mount cost at the same depth.
 
 If `complex_project_build_shell_edit_lsp` fails: the plugin path is regressed. Verify Step 11 (no changes to materialize=True branch).
@@ -689,7 +682,7 @@ For each N:
 
 ### 5.3 Acceptance — Bound B (manifest depth)
 
-**Procedure:** Fix N=10 concurrent leases. Vary manifest depth M ∈ {1, 10, 50, 100, 110}. (Stop at 110 — `OVL_MAX_STACK_GUARD`; depth 111+ should hit the guard, separately tested in unit.)
+**Procedure:** Fix N=10 concurrent leases. Vary manifest depth M ∈ {1, 10, 50, 100, 110}. Depths above 110 are allowed by runtime validation; the hard failure boundary is the kernel `OVL_MAX_STACK` ceiling.
 
 **Pass condition (falsifiable):**
 ```
@@ -795,7 +788,7 @@ Add a `materialize=False` mode to `prepare_workspace_snapshot` returning a tuple
 
 **Drivers:**
 - D1: EXDEV copy across tmpfs is a hard 2 GiB concurrency wall.
-- D2: `OVL_MAX_STACK = 500` empirically validated (this session, N-bisected); util-linux `mount(8)` truncates ≥ ~128 silently; new mount API surfaces EINVAL at boundary; `OVL_MAX_STACK_GUARD = 110` catches squash-pressure drift early.
+- D2: `OVL_MAX_STACK = 500` empirically validated (this session, N-bisected); util-linux `mount(8)` truncates ≥ ~128 silently; new mount API surfaces EINVAL at the kernel boundary; squash-pressure drift is observed through manifest-depth telemetry.
 - D3: Command-exec is invoked per agent shell; `materialize_s` is on the hot path and visible in `_metrics.py:148-163`. Bound C (per-read CPU as M grows) ensures the layer-walk cost doesn't silently regress.
 
 **Alternatives considered:**
@@ -805,7 +798,7 @@ Add a `materialize=False` mode to `prepare_workspace_snapshot` returning a tuple
 - Plugin-path inclusion. Invalidated for this plan — LSP needs a real on-disk tree for `file://` URIs; mounting overlay per-LSP-session has different lifetime invariants. Follow-up.
 
 **Why chosen:**
-Option A is the only path that achieves Bound A (per-lease lowerdir disk cost = O(1) in N concurrent leases), Bound B (cost = O(1) in M manifest depth, up to OVL_MAX_STACK_GUARD = 110), AND keeps Bound C steady-state read cost within budget. It is empirically validated this session for N ∈ {4..500}. The fallback (Step 10) preserves correctness on hosts where the new mount API is unavailable, with a stated sunset target.
+Option A is the only path that achieves Bound A (per-lease lowerdir disk cost = O(1) in N concurrent leases), Bound B (cost = O(1) in M manifest depth within the supported squash target range), AND keeps Bound C steady-state read cost within budget. It is empirically validated this session for N ∈ {4..500}. The fallback (Step 10) preserves correctness on hosts where the new mount API is unavailable, with a stated sunset target.
 
 **Consequences:**
 
@@ -814,15 +807,15 @@ Option A is the only path that achieves Bound A (per-lease lowerdir disk cost = 
 | Per-lease disk cost = O(1) (just upperdir + small workdir). | New kernel-API surface (ctypes, per-arch syscall numbers). |
 | The 2 GiB `/eos-mount-scratch` tmpfs ceiling no longer scales with concurrent lease count. | Adds feature-probe + dual-path complexity (Step 10). **Dual-path debt is explicit and time-bounded — sunset criterion in Follow-up #5.** Mitigation: probe at daemon boot, log once. |
 | Removes EXDEV cross-FS pathology entirely. | Layer dirs are held open by kernel mounts; squash eviction must respect lease pinning. **Pinning invariant is recorded inline in Step 3 — `LeaseRegistry.acquire(manifest, ...)` remains sole pinning entry, `manifest.layers` flows unchanged through `_refcounts`** — Pre-mortem #3 covers integration test. |
-| OVL_MAX_STACK violations now fail explicitly (`WorkspaceLayerDepthExceeded` at the guard, EINVAL at fsconfig boundary if guard somehow bypassed) rather than silently truncating (mount(8)). | Old `overlay_depth_cap_root_cause.md` memory note is superseded; "16-layer cap" claim was a util-linux argv-size symptom, not a kernel limit. Memory note update tracked in Follow-up #3. |
-| Steady-state per-read CPU growth bounded at ≤ 50µs/layer (Bound C). | Per-read CPU does grow linearly in M (overlay layer walk); kept negligible by `OVL_MAX_STACK_GUARD = 110`. |
+| OVL_MAX_STACK violations now fail explicitly at the kernel mount boundary rather than silently truncating through `mount(8)`. | Old `overlay_depth_cap_root_cause.md` memory note is superseded; "16-layer cap" claim was a util-linux argv-size symptom, not a kernel limit. Memory note update tracked in Follow-up #3. |
+| Steady-state per-read CPU growth bounded at ≤ 50µs/layer (Bound C). | Per-read CPU does grow linearly in M (overlay layer walk); kept negligible by squash keeping normal manifests near `AUTO_SQUASH_MAX_DEPTH`. |
 | Critic minor §1.1: aarch64 path is unit-tested via syscall-number equality but not yet live-validated. | First production aarch64 host is the canary; if syscall numbers diverge we get an explicit unit-test failure on landing, not a silent prod break. |
 
 **Follow-ups (out of scope, tracked):**
 1. **Plugin/LSP path on direct overlay mount** — `WorkspaceProjection.acquire` to mount overlay at a stable path per Pyright session lifetime. Different invariants: mount lives across many shell commands; eviction must be plugin-session-scoped. Tracked in `.planning/follow-ups.md`.
 2. **Copy-backed fallback retirement** — once new mount API is the dominant path, copy-backed is only for hosts without CAP_SYS_ADMIN; consider removing it from the public contract.
-3. **Update `overlay_depth_cap_root_cause.md` memory note** — record that the 16-cap was util-linux argv truncation; the real ceiling is OVL_MAX_STACK = 500; the new guard is 110.
-4. **Squash target depth tuning** — `AUTO_SQUASH_MAX_DEPTH = 100` is conservative; the new ceiling allows up to ~400. Consider raising to reduce squash frequency. **Coordination required with the new `OVL_MAX_STACK_GUARD = 110`** — raising squash target above ~110 requires raising the guard.
+3. **Update `overlay_depth_cap_root_cause.md` memory note** — record that the 16-cap was util-linux argv truncation; the real ceiling is OVL_MAX_STACK = 500; there is no separate runtime stack-depth guard.
+4. **Squash target depth tuning** — `AUTO_SQUASH_MAX_DEPTH = 100` is conservative; the kernel ceiling allows up to ~500. Consider raising the target only with fresh Bound B/C validation and manifest-depth alert updates.
 5. **Sunset criterion for the materialize fallback (Architect A3 — dual-path debt):** Remove the `materialize=True` branch from `execute_command` (Step 5) when the minimum supported kernel of all EphemeralOS deployment targets reaches Linux ≥ 5.11 (the `lowerdir+` floor). Target date is TBD pending a deployment-target survey of EphemeralOS hosts (the survey is a prerequisite to scheduling the cleanup phase). Provisional planning hook: revisit at the next milestone after `overlay.new_mount_api.unavailable_total` stays at 0 across all production hosts for 90 consecutive days. Until then, the dual path is intentional and accepted. Operator runbook stays "if probe is False, materialize is used; metric `overlay.new_mount_api.unavailable_total > 0` is an info signal, not an alert."
 6. **aarch64 live validation** — first production aarch64 host runs the full Step 8 integration suite as a canary; if it fails, gate aarch64 to materialize-only via `os.uname().machine` until verified.
 
@@ -830,15 +823,15 @@ Option A is the only path that achieves Bound A (per-lease lowerdir disk cost = 
 
 ## 7. Pre-mortem and mitigations (four independent failure families)
 
-### 7.1 Manifest depth exceeds `OVL_MAX_STACK_GUARD = 110`
+### 7.1 Manifest depth drifts above squash target
 
-**Failure mode:** A workload that produces more layers than `AUTO_SQUASH_MAX_DEPTH` can keep up with (e.g., squash temporarily paused, or many small writes during a long-running agent session) reaches depth > 110. The pre-mount guard at Step 3 raises `WorkspaceLayerDepthExceeded` BEFORE any fd is opened. Daemon catches and surfaces a clear error code. Agent sees explicit "depth guard exceeded" message, not opaque mount failure.
+**Failure mode:** A workload that produces more layers than `AUTO_SQUASH_MAX_DEPTH` can keep up with (e.g., squash temporarily paused, or many small writes during a long-running agent session) drifts well above the target depth. Runtime validation no longer rejects at 110; the kernel remains the hard failure boundary.
 
-**Leading indicator:** `layer_stack.prepare_workspace_snapshot.depth_p99 > 100` for > 5 minutes; `layer_stack.depth_guard_violations_total > 0`.
+**Leading indicator:** `layer_stack.prepare_workspace_snapshot.depth_p99 > 100` for > 5 minutes; `resource.layer_stack.manifest_depth` p99 above the target range.
 
-**Mitigation:** Pre-mount guard at `OVL_MAX_STACK_GUARD = 110` (Step 9) raises a typed exception (`WorkspaceLayerDepthExceeded`) BEFORE any fd is opened. Daemon catches and surfaces a clear error code. Operator dashboard panel for `depth_p99`. Squash plan target depth pinned ≤ 100 (verified at `occ/service.py:23`). Note: this is the **only** failure family in this list rooted in `OVL_MAX_STACK`; eviction (§7.3) is a separate failure family.
+**Mitigation:** Operator dashboard panel for `depth_p99`. Squash plan target depth pinned ≤ 100 (verified at `occ/service.py:23`). If depth approaches `OVL_MAX_STACK`, the new mount API returns a kernel failure instead of the old silent `mount(8)` truncation. Eviction (§7.3) is a separate failure family.
 
-**Detection in tests:** Unit `test_overlay_layout.py::test_layer_paths_layout_rejects_depth_over_guard` (depth 111 raises) + live e2e check that `complex_project_build` at peak depth 104 passes (since 104 < 110).
+**Detection in tests:** Unit `test_overlay_layout.py::test_layer_paths_layout_accepts_deep_layer_paths` + live e2e check that `complex_project_build` at peak depth ~104 still passes and reports manifest-depth telemetry.
 
 ### 7.2 `fsopen` / `fsconfig` ENOSYS on host kernel or seccomp denial
 
@@ -876,7 +869,7 @@ Option A is the only path that achieves Bound A (per-lease lowerdir disk cost = 
 
 **Detection in tests:** The adversarial self-test runs alongside the regular Bound A sweep on every CI invocation of `heavy_enabled` live_e2e.
 
-These four scenarios are **independent failure families**: depth-guard (§7.1, design-time bound enforcement), kernel availability (§7.2, runtime capability), eviction race (§7.3, runtime lifetime), and measurement validity (§7.4, observability). Pre-mortem completeness gate (deliberate mode) is met.
+These four scenarios are **independent failure families**: manifest-depth (§7.1, design-time bound enforcement), kernel availability (§7.2, runtime capability), eviction race (§7.3, runtime lifetime), and measurement validity (§7.4, observability). Pre-mortem completeness gate (deliberate mode) is met.
 
 ---
 
@@ -887,9 +880,9 @@ These four scenarios are **independent failure families**: depth-guard (§7.1, d
 | Test file | What it tests | Acceptance |
 |---|---|---|
 | `test_sandbox/test_execution/test_new_mount_api.py` | `probe_supported()` returns True/False correctly; syscall number table covers x86_64 + aarch64. | All cases pass; ENOSYS → False; EPERM → False; EBADF → False (Critic C7). |
-| `test_sandbox/test_execution/test_kernel_mount.py` | `mount_overlay(layer_paths=...)` raises on depth > 110 guard; honors `MOVE_MOUNT_F_EMPTY_PATH`. | Depth 111 raises `WorkspaceLayerDepthExceeded`; mock-libc trace records correct syscall sequence. |
-| `test_sandbox/test_execution/test_overlay_layout.py` | `LayerPathsLayout` accepts paths under `layer_storage_root`; rejects empty `layer_paths`; rejects paths outside the root; rejects depth > 110. `MaterializeLayout` invariants unchanged. | All branches covered; **no `__post_init__` flag branching** — per-dataclass validation only. |
-| `test_sandbox/test_layer_stack/test_snapshot_lease.py` (extend existing) | `prepare_workspace_snapshot(materialize=False)` returns `layer_paths` in 2a-resolved order; doesn't invoke `MergedView.materialize`; raises on depth > 110 guard; **registers pin via `LeaseRegistry.pinned_layers()` (Critic M3)**. | All four assertions pass. |
+| `test_sandbox/test_execution/test_kernel_mount.py` | `mount_overlay(layer_paths=...)` honors `MOVE_MOUNT_F_EMPTY_PATH` and propagates kernel mount failures. | Mock-libc trace records correct syscall sequence. |
+| `test_sandbox/test_execution/test_overlay_layout.py` | `LayerPathsLayout` accepts paths under `layer_storage_root`; rejects empty `layer_paths`; rejects paths outside the root; accepts deep layer lists. `MaterializeLayout` invariants unchanged. | All branches covered; **no `__post_init__` flag branching** — per-dataclass validation only. |
+| `test_sandbox/test_layer_stack/test_snapshot_lease.py` (extend existing) | `prepare_workspace_snapshot(materialize=False)` returns `layer_paths` in 2a-resolved order; doesn't invoke `MergedView.materialize`; accepts depth > 110; **registers pin via `LeaseRegistry.pinned_layers()` (Critic M3)**. | All four assertions pass. |
 | `test_sandbox/test_execution/test_execution_service.py` (extend) | `execute_command` picks `LayerPathsLayout` for namespace mode on supported kernel; falls back to `MaterializeLayout` when probe negative; `_drop_transient_lowerdir` is skipped for layer_paths leases; **`EOS_OVERLAY_FORCE_MATERIALIZE=1` mid-flight flip takes effect on next call (Critic minor / §10 Q5)**. | Four parametrized cases. |
 | `test_sandbox/test_execution/test_namespace_child_payload.py` (new) | Payload schema round-trips `layer_paths`; backwards compat: payloads with only `lowerdir` still parse (until copy-backed retirement). | Round-trip equality. |
 | `test_sandbox/test_execution/test_capability.py` (new) | Capability probe gates the materialize-vs-not decision at **daemon startup** (Architect A4 Step 10). Daemon startup bumps `RLIMIT_NOFILE` to ≥ 8192 (Critic C7 / §10 Q3). | Both branches; rlimit check verified. |
@@ -924,7 +917,7 @@ These four scenarios are **independent failure families**: depth-guard (§7.1, d
 | `layer_stack.materialize_count` reported by `_metrics.py:161` | After change, ≈ 0 for namespace mode (any non-zero means we re-engaged materialize). |
 | `layer_stack.materialize_s_total` | After change, < 0.5s aggregate per scenario (was multi-seconds). |
 | `overlay.new_mount_api.unavailable_total` | Reported at daemon boot. = 0 on supported hosts. |
-| `layer_stack.depth_guard_violations_total` | Reported. = 0 in healthy runs; > 0 fires the depth-guard alert. |
+| `resource.layer_stack.manifest_depth` p99 | Reported. Healthy runs stay near the squash target; sustained drift fires the manifest-depth alert. |
 | `command_exec.mount_workspace_s` p95 | Stays within `max(baseline_median × 1.20, baseline_median + 3σ)` (data-driven, Critic M5). |
 | Daemon-startup `ulimit -n` log line | ≥ 8192 after boot. |
 
@@ -939,7 +932,7 @@ Metrics added/preserved:
 | `layer_stack.materialize_s` | gauge (seconds) | Already at `stack.py:162`; expect 0 in new mode. |
 | `layer_stack.materialize_count` | counter | Already aggregated at `_metrics.py:161`; expect 0 in new mode. |
 | `layer_stack.depth_p99` | gauge | NEW — emit in `prepare_workspace_snapshot` (depth = `len(manifest.layers)`). |
-| `layer_stack.depth_guard_violations_total` | counter | NEW — increment when guard raises. |
+| `resource.layer_stack.manifest_depth` p99 | gauge | NEW — record active manifest depth for squash-health alerting. |
 | `overlay.new_mount_api.unavailable_total` | counter | NEW — set at boot if probe returns False; carries errno label. |
 | `command_exec.mount_workspace_s` | gauge | Already at `namespace_child.py:82`. |
 | `command_exec.layer_count` | gauge | NEW — `len(layer_paths)` per lease, for correlation with `mount_workspace_s` and Bound C. |
@@ -947,7 +940,7 @@ Metrics added/preserved:
 | `daemon.startup.rlimit_nofile` | gauge | NEW — `RLIMIT_NOFILE` soft limit at boot. |
 
 Dashboards/alerts (operator):
-- Panel: `layer_stack.depth_p99` over time. Alert ≥ 100 (since guard fires at 110).
+- Panel: `layer_stack.depth_p99` over time. Alert on sustained drift above the squash target.
 - Panel: `overlay.new_mount_api.unavailable_total` rate. Info signal > 0 at boot (NOT alert — older kernel hosts are a supported configuration until 2027-Q1).
 - Panel: `layer_stack.materialize_count` / shell_count ratio. Alert ≥ 0.05 (post-change should be ~0).
 - Panel: `command_exec.negative_lookup_cpu_ms` p95 by `command_exec.layer_count` bucket. Alert if slope > 50µs/layer.
@@ -973,7 +966,7 @@ These are questions where reasonable people could disagree; iter-2 resolves the 
 
 ### Remaining (engineering notes, non-blocking)
 
-- **Squash target depth retuning under new guard.** Follow-up #4 in §6 — if we eventually raise `AUTO_SQUASH_MAX_DEPTH` to reduce squash frequency, we must coordinate with `OVL_MAX_STACK_GUARD = 110`. Tracked.
+- **Squash target depth retuning.** Follow-up #4 in §6 — if we eventually raise `AUTO_SQUASH_MAX_DEPTH` to reduce squash frequency, rerun Bound B/C and update manifest-depth alerts. Tracked.
 - **aarch64 production canary.** Follow-up #6 in §6 — first prod aarch64 host validates the syscall-number assertion; until then, the syscall-equality unit test is the only check. Tracked.
 
 ---

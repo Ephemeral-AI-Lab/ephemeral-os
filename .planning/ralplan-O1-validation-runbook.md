@@ -140,7 +140,7 @@ For every numeric metric: `post_value ≤ max(baseline_median × 1.20, baseline_
 
 **If `command_exec.mount_workspace_s` regresses:**
 1. Check `overlay.new_mount_api.unavailable_total` — if > 0, probe_supported() is failing and fell back to materialize+mount(8).
-2. Check `layer_stack.depth_guard_violations_total` — if > 0, manifest depth exceeded OVL_MAX_STACK_GUARD=110; squash may not be running.
+2. Check `resource.layer_stack.manifest_depth` p99 — if it is drifting above the squash target, squash may not be running.
 3. Compare `command_exec.layer_count` distribution against baseline — a Bound C regression shows as growing mount cost at the same depth.
 
 **If `complex_project_build_shell_edit_lsp` fails:** the plugin path is regressed. Verify Step 11 (materialize=True branch is untouched).

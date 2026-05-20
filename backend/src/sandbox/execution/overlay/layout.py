@@ -5,11 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from sandbox.execution.overlay.new_mount_api import (
-    OVL_MAX_STACK_GUARD,
-    LayerStackTooDeep,
-)
-
 
 @dataclass
 class MaterializeLayout:
@@ -68,11 +63,6 @@ class LayerPathsLayout:
             raise ValueError("layer_paths must not be empty")
         if not str(self.layer_storage_root).strip():
             raise ValueError("layer_storage_root must not be empty")
-        if len(self.layer_paths) > OVL_MAX_STACK_GUARD:
-            raise LayerStackTooDeep(
-                f"manifest depth {len(self.layer_paths)} exceeds "
-                f"OVL_MAX_STACK_GUARD={OVL_MAX_STACK_GUARD}"
-            )
         layer_storage_root = Path(self.layer_storage_root).resolve(strict=False)
         for path_str in self.layer_paths:
             path = Path(path_str).resolve(strict=False)

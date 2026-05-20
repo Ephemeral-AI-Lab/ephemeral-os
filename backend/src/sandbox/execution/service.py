@@ -28,7 +28,6 @@ from sandbox.execution.contract import (
     WorkspaceLeaseClient,
 )
 from sandbox.execution.overlay.capability import new_mount_api_supported
-from sandbox.execution.overlay.new_mount_api import LayerStackTooDeep
 from sandbox.execution.overlay.capture import walk_upperdir
 from sandbox.execution.resource_audit import command_exec_resource_timings
 from sandbox.execution.runner import run_workspace_replaced_command
@@ -111,15 +110,7 @@ async def execute_command(
         }
         if mount_mode is not None:
             runner_kwargs["mount_mode"] = mount_mode
-        try:
-            process = await run_sync_in_executor(command_runner, **runner_kwargs)
-        except LayerStackTooDeep:
-            logger.warning(
-                "command_exec.layer_depth_exceeded_total workspace_ref=%s layer_count=%s",
-                request.workspace_ref,
-                len(lease.layer_paths) if lease.layer_paths is not None else "?",
-            )
-            raise
+        process = await run_sync_in_executor(command_runner, **runner_kwargs)
 
         capture_start = monotonic_now()
         path_changes = walk_upperdir(spec.writes, timings=timings)

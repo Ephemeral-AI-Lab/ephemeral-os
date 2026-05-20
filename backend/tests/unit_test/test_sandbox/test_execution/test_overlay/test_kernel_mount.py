@@ -11,17 +11,14 @@ import pytest
 
 import sandbox.execution.overlay.kernel_mount as km
 from sandbox.execution.overlay.kernel_mount import (
-    MountInputs,
     mount_overlay,
     validate_mount_inputs,
 )
 from sandbox.execution.overlay.new_mount_api import (
-    OVL_MAX_STACK_GUARD,
     SYS_fsconfig,
     SYS_fsmount,
     SYS_fsopen,
     SYS_move_mount,
-    LayerStackTooDeep,
 )
 
 _IS_LINUX = sys.platform == "linux"
@@ -43,22 +40,6 @@ def _make_libc_mock(return_value: int = 0, errno_val: int = 0) -> MagicMock:
 
     mock.syscall.side_effect = fake_syscall
     return mock
-
-
-# ---------------------------------------------------------------------------
-# mount_overlay — depth guard
-# ---------------------------------------------------------------------------
-
-
-def test_mount_overlay_raises_layer_stack_too_deep(monkeypatch: pytest.MonkeyPatch) -> None:
-    too_many = tuple(Path(f"/storage/L{i}") for i in range(OVL_MAX_STACK_GUARD + 1))
-    with pytest.raises(LayerStackTooDeep, match="exceeds OVL_MAX_STACK_GUARD"):
-        mount_overlay(
-            workspace_root=Path("/workspace"),
-            layer_paths=too_many,
-            upperdir=Path("/scratch/upper"),
-            workdir=Path("/scratch/work"),
-        )
 
 
 def test_mount_overlay_raises_on_missing_libc(

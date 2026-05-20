@@ -9,7 +9,7 @@ from __future__ import annotations
 import ctypes
 import errno
 import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -20,14 +20,11 @@ from sandbox.execution.overlay.new_mount_api import (
     FSCONFIG_SET_STRING,
     MOVE_MOUNT_F_EMPTY_PATH,
     OVL_MAX_STACK,
-    OVL_MAX_STACK_GUARD,
     SYS_fsconfig,
     SYS_fsmount,
     SYS_fsopen,
     SYS_move_mount,
-    LayerStackTooDeep,
     MountAPIUnavailable,
-    probe_supported,
 )
 
 _IS_LINUX = sys.platform == "linux"
@@ -64,7 +61,6 @@ def test_constants_values() -> None:
     assert FSCONFIG_CMD_CREATE == 6
     assert MOVE_MOUNT_F_EMPTY_PATH == 0x00000004
     assert AT_FDCWD == -100
-    assert OVL_MAX_STACK_GUARD == 110
     assert OVL_MAX_STACK == 500
 
 
@@ -268,8 +264,3 @@ def test_libc_or_raise_raises_when_no_libc(monkeypatch: pytest.MonkeyPatch) -> N
 def test_mount_api_unavailable_is_oserror() -> None:
     exc = MountAPIUnavailable("no libc")
     assert isinstance(exc, OSError)
-
-
-def test_layer_stack_too_deep_is_valueerror() -> None:
-    exc = LayerStackTooDeep("too deep")
-    assert isinstance(exc, ValueError)

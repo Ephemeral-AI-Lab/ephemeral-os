@@ -13,10 +13,8 @@ These numbers have been stable on both architectures since Linux 5.2.
 A unit test asserts equality across arch entries so a future arch addition
 that diverges will fail loudly instead of silently regressing.
 
-OVL_MAX_STACK_GUARD = 110: 10% above AUTO_SQUASH_MAX_DEPTH=100. Catches
-squash-pressure drift early while permitting the canonical peak of
-AUTO_SQUASH_MAX_DEPTH + 4 = 104 observed in complex_project_build_full.
-The kernel hard limit OVL_MAX_STACK = 500 is a backstop, not a target.
+The kernel hard limit OVL_MAX_STACK = 500 is the only overlay layer ceiling;
+runtime code does not maintain a separate depth ceiling.
 """
 
 from __future__ import annotations
@@ -59,12 +57,7 @@ MOVE_MOUNT_F_EMPTY_PATH: int = 0x00000004
 
 AT_FDCWD: int = -100
 
-# ---------------------------------------------------------------------------
-# Depth guard (see module docstring for rationale)
-# ---------------------------------------------------------------------------
-
 OVL_MAX_STACK: int = 500
-OVL_MAX_STACK_GUARD: int = 110
 
 
 # ---------------------------------------------------------------------------
@@ -74,10 +67,6 @@ OVL_MAX_STACK_GUARD: int = 110
 
 class MountAPIUnavailable(OSError):
     """Raised when the new mount API syscalls are not accessible."""
-
-
-class LayerStackTooDeep(ValueError):
-    """Raised when layer count exceeds OVL_MAX_STACK_GUARD."""
 
 
 # ---------------------------------------------------------------------------
@@ -226,9 +215,7 @@ __all__ = [
     "MOVE_MOUNT_F_EMPTY_PATH",
     "AT_FDCWD",
     "OVL_MAX_STACK",
-    "OVL_MAX_STACK_GUARD",
     "MountAPIUnavailable",
-    "LayerStackTooDeep",
     "probe_supported",
     "fsopen",
     "fsconfig_string",

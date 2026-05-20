@@ -24,12 +24,10 @@ from sandbox.execution.overlay.new_mount_api import (
     FSCONFIG_CMD_CREATE,
     FSCONFIG_SET_STRING,
     MOVE_MOUNT_F_EMPTY_PATH,
-    OVL_MAX_STACK_GUARD,
     SYS_fsconfig,
     SYS_fsmount,
     SYS_fsopen,
     SYS_move_mount,
-    LayerStackTooDeep,
     _get_libc,
 )
 
@@ -59,13 +57,7 @@ def mount_overlay(
     """Mount an overlay filesystem using the new mount API (fsopen/fsconfig/fsmount).
 
     layer_paths must be ordered newest-first (first element = highest priority lower).
-    Raises LayerStackTooDeep if len(layer_paths) > OVL_MAX_STACK_GUARD.
     """
-    if len(layer_paths) > OVL_MAX_STACK_GUARD:
-        raise LayerStackTooDeep(
-            f"layer count {len(layer_paths)} exceeds OVL_MAX_STACK_GUARD={OVL_MAX_STACK_GUARD}"
-        )
-
     libc = _get_libc()
     if libc is None:
         raise OSError("libc not found; cannot call fsopen")

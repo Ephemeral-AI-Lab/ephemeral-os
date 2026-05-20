@@ -9,10 +9,6 @@ from sandbox.execution.overlay.layout import (
     MaterializeLayout,
     OverlayLayout,
 )
-from sandbox.execution.overlay.new_mount_api import (
-    OVL_MAX_STACK_GUARD,
-    LayerStackTooDeep,
-)
 
 
 # ---------------------------------------------------------------------------
@@ -137,30 +133,17 @@ def test_layer_paths_layout_rejects_path_outside_layer_storage_root() -> None:
         )
 
 
-def test_layer_paths_layout_rejects_depth_over_guard() -> None:
-    too_many = tuple(f"/storage/layers/L{i}" for i in range(OVL_MAX_STACK_GUARD + 1))
-    with pytest.raises(LayerStackTooDeep):
-        LayerPathsLayout(
-            workspace_root="/workspace",
-            layer_paths=too_many,
-            layer_storage_root="/storage/layers",
-            writes="/scratch/upper",
-            kernel_scratch="/scratch/work",
-            scratch_root="/scratch",
-        )
-
-
-def test_layer_paths_layout_accepts_depth_at_guard() -> None:
-    at_guard = tuple(f"/storage/layers/L{i}" for i in range(OVL_MAX_STACK_GUARD))
+def test_layer_paths_layout_accepts_deep_layer_paths() -> None:
+    deep_layers = tuple(f"/storage/layers/L{i}" for i in range(250))
     spec = LayerPathsLayout(
         workspace_root="/workspace",
-        layer_paths=at_guard,
+        layer_paths=deep_layers,
         layer_storage_root="/storage/layers",
         writes="/scratch/upper",
         kernel_scratch="/scratch/work",
         scratch_root="/scratch",
     )
-    assert len(spec.layer_paths) == OVL_MAX_STACK_GUARD
+    assert len(spec.layer_paths) == len(deep_layers)
 
 
 def test_layer_paths_layout_rejects_writes_outside_scratch_root() -> None:

@@ -188,12 +188,10 @@ This eliminates the per-lease attribution bug (whole-tmpfs `df` was the problem 
   All four bounds + ring 2 perf pass
               │
               v
-  STRIP THE GUARD (T10) — `OVL_MAX_STACK_GUARD` and
-  `LayerStackTooDeep` per CLAUDE.md §2 ("no error
-  handling for impossible scenarios"). Manifest depth
-  is bounded by `AUTO_SQUASH_MAX_DEPTH = 100`; squash
-  health is observed via `resource.layer_stack.
-  manifest_depth` p99 alert.
+  T10 complete: runtime no longer has a separate stack-depth
+  guard or typed depth exception. Manifest depth is bounded by
+  `AUTO_SQUASH_MAX_DEPTH = 100`; squash health is observed via
+  `resource.layer_stack.manifest_depth` p99 alert.
 ```
 
 ---
@@ -234,8 +232,8 @@ T8b   worker-4    Capture baseline on parent of 2a529c67f                   ~20m
 T9.1  worker-4    Ring 1 correctness (both paths)                           ~15m
 T9.2  worker-4    Ring 2 perf vs baseline (heavy_enabled sweevo)            ~45m
 T9.3  worker-4    Ring 3 saturation (optional)                              ~30m
-T10   worker-1    Strip OVL_MAX_STACK_GUARD per CLAUDE.md §2                ~15m
-T11   lead        ADR closure + memory note update                          ~10m
+T10   worker-1    Strip runtime stack-manifest-depth per CLAUDE.md §2          DONE
+T11   lead        ADR closure + memory note update                          DONE
 ```
 
 Each task ends with an atomic commit. Per-task commits ≠ stage `git add .` — list files explicitly (parallel codex sessions are active in unrelated paths per `feedback_parallel_user_commits.md` memory).
@@ -254,5 +252,5 @@ The verification passes iff, on Linux + CAP_SYS_ADMIN:
 6. **Ring 2 performance**: `mount_workspace_s` p50 ≤ baseline × 0.30; all other metrics within `max(median × 1.10, median + 3σ)`.
 7. **Adversarial self-test**: both injected regressions (upper write + forced materialize) are caught and named.
 
-On pass: strip the guard (T10), update the ADR + memory note (T11), close the team.
+On pass: guard removal (T10) and ADR/memory-note closure (T11) are complete; close the team.
 On fail at any step: stop the pipeline, diagnose, do not advance.
