@@ -25,7 +25,7 @@ class AgentKind(StrEnum):
     (emitted by ``factory.py`` and ``run_subagent.py``) continue to see the
     same string set. Planner and executor profiles can participate in
     launch-time terminal-tool routing; ADVISOR / EXPLORER / RESOLVER are
-    helper / subagent kinds that never declare ``variants:``.
+    helper / subagent kinds.
     """
 
     PLANNER = "planner"
@@ -53,21 +53,6 @@ class AgentNotificationRule(Protocol):
     body: Callable[..., str]
     trigger: Callable[..., bool]
     fire_once: bool
-
-
-class AgentVariant(BaseModel):
-    """One frontmatter-declared capability variant.
-
-    Resolution is short-circuit + first-match-wins by declared order. The
-    target ``use:`` agent must be registered, must not declare its own
-    ``variants:`` (no chaining), and must have a ``context_recipe``.
-    """
-
-    when: str = Field(min_length=1)
-    use: str = Field(min_length=1)
-    note: str = ""
-
-    model_config = ConfigDict(extra="forbid")
 
 
 class AgentDefinition(BaseModel):
@@ -99,7 +84,7 @@ class AgentDefinition(BaseModel):
 
     # --- agent kind ---
     # Canonical category of this profile (planner / executor / verifier /
-    # evaluator / advisor / explorer / resolver). Routing predicates and the
+    # evaluator / advisor / explorer / resolver). Routing logic and the
     # planner submission gate read this; audit consumers read the same set of
     # strings via ``agent_kind.value`` through the ``metadata["role"]`` key
     # emitted by ``factory.py`` and ``run_subagent.py``. Profile MDs MUST
@@ -110,8 +95,8 @@ class AgentDefinition(BaseModel):
     agent_kind: AgentKind = AgentKind.EXECUTOR
     # Planner-submission gate. Only profiles explicitly flagged True may be
     # named as ``agent_name`` in a planner submission. Defaults False so that
-    # entry_executor, helper/subagent profiles, and resolver-variant targets
-    # are never planner-submittable by accident.
+    # entry_executor and helper/subagent profiles are never planner-submittable
+    # by accident.
     dispatchable_by_planner: bool = False
 
     # --- agent type: regular agent or subagent (worker) ---
@@ -145,12 +130,6 @@ class AgentDefinition(BaseModel):
     # via ``AgentEntryComposer``; helper / subagent definitions that pre-date
     # the context engine may keep this null.
     context_recipe: str | None = None
-    # Frontmatter-declared capability variants. Empty list = no variants
-    # (resolver fast-paths). Variant chaining is forbidden — the
-    # ``use:`` target must itself have empty ``variants``; enforced by
-    # ``validate_agent_definitions_resolved``.
-    variants: list[AgentVariant] = Field(default_factory=list)
-
     model_config = ConfigDict(
         populate_by_name=True,
         arbitrary_types_allowed=True,

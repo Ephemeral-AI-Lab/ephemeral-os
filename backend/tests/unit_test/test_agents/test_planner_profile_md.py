@@ -23,7 +23,11 @@ def test_single_planner_definition_loads():
     planner = _load_planner()
     assert planner.agent_kind == AgentKind.PLANNER
     assert planner.context_recipe == "planner"
-    assert planner.variants == []
+
+
+def test_main_profiles_do_not_declare_legacy_variants():
+    for path in PLANNER_DIR.glob("*.md"):
+        assert "\nvariants:" not in path.read_text(encoding="utf-8")
 
 
 def test_planner_declares_full_terminal_surface_for_router_to_filter():

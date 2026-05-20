@@ -25,10 +25,6 @@ from db.stores.task_center_store import TaskCenterStore
 from db.stores.iteration_store import IterationStore
 from task_center.agent_launch.composer import AgentEntryComposer
 from task_center.context_engine.core import ContextEngine, ContextEngineDeps
-from task_center._core.terminal_tool_routing import (
-    PredicateRegistry,
-    register_builtin_predicates,
-)
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.context_engine.recipes_registry import RecipeRegistry
 
@@ -110,28 +106,23 @@ def task_center_run_id() -> str:
 # Production paths (orchestrator + dispatcher + entry coordinator) require a
 # ``ContextComposer`` on ``AttemptDeps``. Lifecycle tests that exercise
 # planner/generator/evaluator launches need (a) a composer wired into the
-# runtime, (b) registered context recipes + predicates, and (c) minimal test
-# agent definitions so the resolver can look up a target agent.
+# runtime, (b) registered context recipes, and (c) minimal test agent
+# definitions so the router can look up a target agent.
 #
 # Tests opt in by depending on the ``composer`` fixture below.
 
 
 @pytest.fixture
 def isolated_agent_registries():
-    """Save + restore predicate / recipe / agent registries for test isolation."""
-    saved_predicates = dict(PredicateRegistry._registry)
+    """Save + restore recipe / agent registries for test isolation."""
     saved_recipes = dict(RecipeRegistry._registry)
     saved_definitions = list_definitions()
-    PredicateRegistry.clear()
     RecipeRegistry.clear()
     _clear_definitions()
-    register_builtin_predicates()
     register_builtin_recipes()
     yield
-    PredicateRegistry.clear()
     RecipeRegistry.clear()
     _clear_definitions()
-    PredicateRegistry._registry.update(saved_predicates)
     RecipeRegistry._registry.update(saved_recipes)
     for definition in saved_definitions:
         register_definition(definition)

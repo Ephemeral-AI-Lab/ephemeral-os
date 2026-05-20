@@ -36,7 +36,7 @@ writes to `message.jsonl`:
 | 09 | advisor — invoked by executor pre-submission | programmatic via `tools/ask_helper/_lib/_compose.py` | mock runner does not invoke helpers today |
 | 10 | resolver — invoked by verifier/evaluator on issues | programmatic via `tools/ask_helper/_lib/_compose.py` + `ask_resolver._build_resolver_user_msg_2` | mock runner does not invoke helpers today |
 | 11 | explorer subagent — invoked via `run_subagent` | programmatic via `build_explorer_task_guidance()` | mock runner does not invoke subagents today |
-| 12 | planner_closes_goal — child goal, delegated from deferring parent | `pipeline.deferred_parent_planner_closes_goal` | terminal catalog has `submit_plan_closes_goal` only |
+| 12 | planner — child goal, delegated from deferring parent | `pipeline.deferred_parent_planner_terminal_routing` | terminal catalog has `submit_plan_closes_goal` only |
 | 13 | planner — iter1 attempt2, after evaluator failure (cross-reference from focused-scenario suite) | `pipeline.attempt_retry_evaluator_failure` | Same shape as case 03; kept as a focused-reference example from a single-purpose scenario. Case 03 is the canonical reference. |
 | 14 | executor — `has_deps=True` branch with flat `<dependency>` siblings | `pipeline.dependency_dag_serial` | task `b` of serial chain `a → b → c`; deps: `[a]`. No `<dependency_results>` wrapper — each upstream task becomes a flat `<dependency id="...">` block between `<plan_spec>` and `<assigned_task>`. |
 | 15 | evaluator — pre `submit_evaluation_failure` | `pipeline.attempt_retry_evaluator_failure` | input shape matches a passing evaluator; the failure path is the agent's decision, not a renderer branch |
@@ -45,7 +45,7 @@ writes to `message.jsonl`:
 
 Closed:
 
-* **Gap 1** — `planner_closes_goal` variant terminal catalog (case 12)
+* **Gap 1** — planner close-only terminal catalog (case 12)
 * **Gap 2** — rich `<attempt status="prior" verdict="fail">` body. Closed natively in case 03 (the main scenario was updated to submit a valid plan + evaluator failure rather than an invalid plan rejected by validation). Case 13 keeps the same shape from a focused-reference scenario.
 * **Gap 3** — flat `<dependency>` siblings in executor user_msg_1 (case 14)
 * **Gap 5** — evaluator that proceeds to `submit_evaluation_failure` (case 15; iter1 attempt 1 of the main scenario also exercises this path now)
@@ -78,8 +78,8 @@ re-emit the case files:
 .venv/bin/pytest backend/src/task_center_runner/tests/sweevo/test_initial_messages_capture.py
 .venv/bin/python scripts/regen_initial_messages_cases.py
 
-# Captures case 12 from pipeline.deferred_parent_planner_closes_goal
-.venv/bin/pytest backend/src/task_center_runner/tests/sweevo/test_deferred_parent_planner_closes_goal.py
+# Captures case 12 from pipeline.deferred_parent_planner_terminal_routing
+.venv/bin/pytest backend/src/task_center_runner/tests/sweevo/test_deferred_parent_planner_terminal_routing.py
 
 # Captures cases 13..15 from the focused-reference scenarios
 .venv/bin/pytest 'backend/src/task_center_runner/tests/sweevo/test_focused_scenarios.py::test_focused_reference_scenario_runs[pipeline.attempt_retry_evaluator_failure]' \
@@ -88,5 +88,5 @@ re-emit the case files:
 ```
 
 Case 12 is captured by `regen_initial_messages_cases_gaps.py` from the
-`pipeline.deferred_parent_planner_closes_goal` scenario run; if the scenario's
+`pipeline.deferred_parent_planner_terminal_routing` scenario run; if the scenario's
 prompts shift, re-run the test and rerun the gaps script.

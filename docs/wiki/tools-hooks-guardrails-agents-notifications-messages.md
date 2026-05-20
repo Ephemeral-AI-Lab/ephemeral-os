@@ -141,7 +141,6 @@ Both assembled into `AgentDefinition.notification_rules` at agent launch time.
 | `notification_triggers` | `list[str]` | Trigger ids → `NotificationRule` |
 | `notification_rules` | `list[AgentNotificationRule]` | Evaluated each turn |
 | `context_recipe` | `str \| None` | ContextComposer recipe id |
-| `variants` | `list[AgentVariant]` | Capability variants (first-match-wins) |
 
 ### Loading
 - `load_agents_dir(directory)` (`loader.py:37`) — non-recursive `.md` load; YAML frontmatter + Markdown body
@@ -151,7 +150,7 @@ Both assembled into `AgentDefinition.notification_rules` at agent launch time.
 - `list_dispatchable_subagent_names()` (`registry.py:34`)
 
 ### Validation
-- `validate_agent_definitions_resolved()` (`resolved_validation.py:9`) — verifies `context_recipe` registered, each `variant.when` predicate registered, `variant.use` exists with no own variants, variant recipes registered. Raises `AgentDefinitionValidationError`.
+- `validate_agent_definitions_resolved()` (`resolved_validation.py:9`) — verifies each declared `context_recipe` is registered. Raises `AgentDefinitionValidationError`.
 - `AgentDefinitionValidator` (`tool_validation.py:27`) — validates `allowed_tools`/`terminals` against live `ToolRegistry`.
 
 ### Profiles

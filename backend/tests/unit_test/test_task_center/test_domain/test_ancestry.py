@@ -1,13 +1,12 @@
-"""Unit tests for nested goal ancestry depth and predicate routing."""
+"""Unit tests for nested goal ancestry depth and terminal routing helpers."""
 
 from __future__ import annotations
 
 import pytest
 
 from task_center._core.terminal_tool_routing import (
-    PredicateRegistry,
     ResolverContext,
-    register_builtin_predicates,
+    _nested_goal_depth_gt_1,
 )
 from task_center.attempt import AttemptStage
 from task_center.context_engine.core import ContextEngineDeps
@@ -220,41 +219,30 @@ def test_unknown_goal_id_raises(
         )
 
 
-def test_registered_predicates_cover_nested_depth_and_always(
+def test_terminal_router_nested_depth_helper(
     goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
-    saved = dict(PredicateRegistry._registry)
-    PredicateRegistry.clear()
-    register_builtin_predicates()
-    try:
-        deps = ContextEngineDeps(
-            goal_store=goal_store,
-            iteration_store=iteration_store,
-            attempt_store=attempt_store,
-            task_store=task_store,
-        )
+    deps = ContextEngineDeps(
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+    )
 
-        top_level_ctx = ResolverContext(scope=ContextScope(), deps=deps)
-        assert (
-            PredicateRegistry.get("nested_goal_depth_gt_1")(top_level_ctx)
-            is False
-        )
-        assert PredicateRegistry.get("always")(top_level_ctx) is True
+    top_level_ctx = ResolverContext(scope=ContextScope(), deps=deps)
+    assert _nested_goal_depth_gt_1(top_level_ctx) is False
 
-        goal_ids = _seed_nested_goal_chain(
-            goal_store,
-            iteration_store,
-            attempt_store,
-            task_store,
-            task_center_run_id=task_center_run_id,
-            depth=3,
-        )
-        child_ctx = ResolverContext(
-            scope=ContextScope(goal_id=goal_ids[-1]),
-            deps=deps,
-        )
+    goal_ids = _seed_nested_goal_chain(
+        goal_store,
+        iteration_store,
+        attempt_store,
+        task_store,
+        task_center_run_id=task_center_run_id,
+        depth=3,
+    )
+    child_ctx = ResolverContext(
+        scope=ContextScope(goal_id=goal_ids[-1]),
+        deps=deps,
+    )
 
-        assert PredicateRegistry.get("nested_goal_depth_gt_1")(child_ctx) is True
-    finally:
-        PredicateRegistry.clear()
-        PredicateRegistry._registry.update(saved)
+    assert _nested_goal_depth_gt_1(child_ctx) is True

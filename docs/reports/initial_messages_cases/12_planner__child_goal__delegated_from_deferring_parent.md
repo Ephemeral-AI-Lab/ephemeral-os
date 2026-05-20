@@ -1,6 +1,6 @@
-# planner_closes_goal — child goal delegated from a partial-plan parent (variant target: only `submit_plan_closes_goal` is available)
-- source: `pipeline.deferred_parent_planner_closes_goal/20260519T152817Z_edf7bd817ca4/goal_02_f99e6010-5892-491f-a998-ff509950f1f5/iteration_01_0d6d8af9-fa2e-43b5-99cf-05bce307d3b6/attempt_01_24593898-7737-48b4-ac97-68cf86b9840d/01_planner_24593898-7737-48b4-ac97-68cf86b9840d:planner/message.jsonl`
-- notes: The parent attempt submitted a partial plan that delegated work to a child goal. The child goal's planner is resolved through the ``nested_goal_depth_gt_1`` variant to ``planner_closes_goal`` — a leaf planner profile whose ``terminals:`` frontmatter list omits ``submit_plan_defers_goal``. Row 4's ``<terminal_tool_selection>`` block therefore lists only ``submit_plan_closes_goal``.
+# planner - child goal delegated from a partial-plan parent (only `submit_plan_closes_goal` is available)
+- source: `pipeline.deferred_parent_planner_terminal_routing/20260519T152817Z_edf7bd817ca4/goal_02_f99e6010-5892-491f-a998-ff509950f1f5/iteration_01_0d6d8af9-fa2e-43b5-99cf-05bce307d3b6/attempt_01_24593898-7737-48b4-ac97-68cf86b9840d/01_planner_24593898-7737-48b4-ac97-68cf86b9840d:planner/message.jsonl`
+- notes: The parent attempt submitted a partial plan that delegated work to a child goal. The child goal still launches the `planner` profile, but terminal routing uses `nested_goal_depth_gt_1` to expose only `submit_plan_closes_goal`. Row 4's `<terminal_tool_selection>` block therefore lists only that terminal.
 
 ## system
 
@@ -123,7 +123,7 @@ What to do:
 ## user_msg_3 — row 4 (skill + terminal_tool_selection)
 
 ```
-Load skill: planner_closes_goal
+Load skill: planner
 
 <skill>
 # Planner workflow (full-coverage only)

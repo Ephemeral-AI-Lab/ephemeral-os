@@ -12,7 +12,6 @@ from agents import (
     unregister_definition,
 )
 from task_center._core.terminal_tool_routing import (
-    PredicateRegistry,
     TerminalToolRouter,
     TerminalToolSelection,
 )
@@ -22,14 +21,10 @@ from task_center.context_engine.scope import ContextScope
 
 @pytest.fixture(autouse=True)
 def _isolate_registries():
-    saved_predicates = dict(PredicateRegistry._registry)
     saved_definitions = list_definitions()
-    PredicateRegistry.clear()
     _clear_definitions()
     yield
-    PredicateRegistry.clear()
     _clear_definitions()
-    PredicateRegistry._registry.update(saved_predicates)
     for definition in saved_definitions:
         register_definition(definition)
 

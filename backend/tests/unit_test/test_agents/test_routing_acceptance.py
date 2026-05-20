@@ -1,8 +1,8 @@
-"""Acceptance tests for the agent-router replan (AC2 / AC7 / AC8 / AC9 / AC10).
+"""Acceptance tests for agent dispatch and terminal-routing cleanup.
 
-These pin the cross-cutting invariants the depth-based variant routing relies
-on. Each test is keyed to an acceptance criterion in
-``.planning/agent-router-replan.md``.
+These pin the live invariants after profile variants were removed: planner
+dispatchability is explicit, validation accepts the single planner shape, and
+runtime metadata still exposes exact agent kinds.
 """
 
 from __future__ import annotations
@@ -12,42 +12,29 @@ import pytest
 from agents import (
     AgentDefinition,
     AgentKind,
-    AgentVariant,
     list_definitions,
     register_definition,
     unregister_definition,
     validate_agent_definitions_resolved,
 )
-from task_center._core.terminal_tool_routing import (
-    PredicateRegistry,
-    ResolverContext,
-    register_builtin_predicates,
-)
-from task_center.context_engine.core import ContextEngineDeps, AgentDefinitionValidationError
 from task_center.context_engine.recipes_registry import (
     ContextRecipe,
     RecipeRegistry,
 )
-from task_center.context_engine.scope import ContextScope
 from tools.submission.planner._schemas import _is_generator_capable_agent
 
 
 @pytest.fixture(autouse=True)
 def _isolate():
-    saved_predicates = dict(PredicateRegistry._registry)
     saved_recipes = dict(RecipeRegistry._registry)
     saved_definitions = list_definitions()
-    PredicateRegistry.clear()
     RecipeRegistry.clear()
     for d in list_definitions():
         unregister_definition(d.name)
-    register_builtin_predicates()
     yield
-    PredicateRegistry.clear()
     RecipeRegistry.clear()
     for d in list_definitions():
         unregister_definition(d.name)
-    PredicateRegistry._registry.update(saved_predicates)
     RecipeRegistry._registry.update(saved_recipes)
     for d in saved_definitions:
         register_definition(d)
@@ -118,172 +105,8 @@ def test_ac2_unknown_agent_name_is_rejected() -> None:
     assert _is_generator_capable_agent("never_registered") is False
 
 
-# ---------------------------------------------------------------------------
-# AC7 — executor depth-gated variants were removed.
-# ---------------------------------------------------------------------------
-
-
-def test_ac7_executor_depth_handoff_predicates_are_removed() -> None:
-    assert not PredicateRegistry.has("nested_goal_depth_within_handoff_range")
-    assert not PredicateRegistry.has("nested_goal_depth_above_handoff_range")
-
-
-# ---------------------------------------------------------------------------
-# AC8 — the ``always`` predicate is registered and unconditionally True.
-# ---------------------------------------------------------------------------
-
-
-def test_ac8_always_predicate_is_registered_and_unconditional() -> None:
-    pred = PredicateRegistry.get("always")
-
-    class _S:
-        def get(self, *_args, **_kwargs):
-            return None
-
-    deps = ContextEngineDeps(
-        goal_store=_S(),  # type: ignore[arg-type]
-        iteration_store=_S(),  # type: ignore[arg-type]
-        attempt_store=_S(),  # type: ignore[arg-type]
-        task_store=_S(),  # type: ignore[arg-type]
-    )
-    assert pred(ResolverContext(scope=ContextScope(), deps=deps)) is True
-    assert (
-        pred(ResolverContext(scope=ContextScope(goal_id="x"), deps=deps))
-        is True
-    )
-
-
-# ---------------------------------------------------------------------------
-# AC9 — variant-list total-coverage tail rules raise AgentDefinitionValidation
-# Error on malformed profiles. The "final element" wording matters because
-# resolver is first-match-wins.
-# ---------------------------------------------------------------------------
-
-
-def test_ac9_multi_variant_without_always_tail_rejected() -> None:
-    _stub_recipe("generator")
-    PredicateRegistry.register("p_a", lambda ctx: False)
-    PredicateRegistry.register("p_b", lambda ctx: False)
-    leaf = AgentDefinition(
-        name="leaf_a",
-        description="leaf",
-        context_recipe="generator",
-        terminals=["submit_execution_success"],
-    )
-    leaf_b = AgentDefinition(
-        name="leaf_b",
-        description="leaf",
-        context_recipe="generator",
-        terminals=["submit_execution_success"],
-    )
-    base = AgentDefinition(
-        name="thin_base",
-        description="base",
-        context_recipe="generator",
-        terminals=["submit_execution_success"],
-        variants=[
-            AgentVariant(when="p_a", use="leaf_a"),
-            AgentVariant(when="p_b", use="leaf_b"),
-        ],
-    )
-    for d in (leaf, leaf_b, base):
-        register_definition(d)
-    with pytest.raises(AgentDefinitionValidationError) as exc:
-        validate_agent_definitions_resolved()
-    assert "always" in str(exc.value)
-
-
-def test_ac9_thin_variants_only_without_always_tail_rejected() -> None:
-    _stub_recipe("generator")
-    PredicateRegistry.register("p_a", lambda ctx: False)
-    leaf = AgentDefinition(
-        name="leaf_a",
-        description="leaf",
-        context_recipe="generator",
-        terminals=["submit_execution_success"],
-    )
-    base = AgentDefinition(
-        name="thin_base",
-        description="base",
-        context_recipe="generator",
-        # No terminals — relies on variants to cover every input.
-        variants=[AgentVariant(when="p_a", use="leaf_a")],
-    )
-    for d in (leaf, base):
-        register_definition(d)
-    with pytest.raises(AgentDefinitionValidationError) as exc:
-        validate_agent_definitions_resolved()
-    assert "always" in str(exc.value)
-
-
-def test_ac9_always_predicate_must_be_in_tail_position_for_multi_variant() -> None:
-    _stub_recipe("generator")
-    PredicateRegistry.register("always", lambda ctx: True)
-    PredicateRegistry.register("p_b", lambda ctx: False)
-    leaf_a = AgentDefinition(
-        name="leaf_a",
-        description="leaf",
-        context_recipe="generator",
-        terminals=["submit_execution_success"],
-    )
-    leaf_b = AgentDefinition(
-        name="leaf_b",
-        description="leaf",
-        context_recipe="generator",
-        terminals=["submit_execution_success"],
-    )
-    base = AgentDefinition(
-        name="thin_base",
-        description="base",
-        context_recipe="generator",
-        terminals=["submit_execution_success"],
-        # "always" shadows the later variant — final element matters.
-        variants=[
-            AgentVariant(when="always", use="leaf_a"),
-            AgentVariant(when="p_b", use="leaf_b"),
-        ],
-    )
-    for d in (leaf_a, leaf_b, base):
-        register_definition(d)
-    with pytest.raises(AgentDefinitionValidationError):
-        validate_agent_definitions_resolved()
-
-
-def test_ac9_thin_variants_only_with_non_always_final_rejected() -> None:
-    _stub_recipe("generator")
-    PredicateRegistry.register("always", lambda ctx: True)
-    PredicateRegistry.register("p_b", lambda ctx: False)
-    leaf_a = AgentDefinition(
-        name="leaf_a",
-        description="leaf",
-        context_recipe="generator",
-        terminals=["submit_execution_success"],
-    )
-    leaf_b = AgentDefinition(
-        name="leaf_b",
-        description="leaf",
-        context_recipe="generator",
-        terminals=["submit_execution_success"],
-    )
-    base = AgentDefinition(
-        name="thin_base",
-        description="base",
-        context_recipe="generator",
-        # Empty terminals + variants not ending with always — the
-        # tail-position rule catches the silent no-match risk.
-        variants=[
-            AgentVariant(when="always", use="leaf_a"),
-            AgentVariant(when="p_b", use="leaf_b"),
-        ],
-    )
-    for d in (leaf_a, leaf_b, base):
-        register_definition(d)
-    with pytest.raises(AgentDefinitionValidationError):
-        validate_agent_definitions_resolved()
-
-
 def test_ac9_planner_md_shape_passes_validation() -> None:
-    """The planner.md shape has no profile variants; terminal routing is runtime policy."""
+    """The planner.md shape validates without legacy profile variants."""
     _stub_recipe("planner")
     planner = AgentDefinition(
         name="planner",

@@ -92,9 +92,9 @@ def _read_initial_rows(message_path: Path) -> tuple[str, str, str, str]:
 
     * 2 rows = entry_executor (system + combined user); both user fields
       after the first are empty.
-    * 3 rows = executor / evaluator (system + context + role_instruction);
+    * 3 rows = executor / evaluator (system + context + task guidance);
       ``skill_row`` is empty.
-    * 4 rows = skill-equipped planner (system + context + role_instruction +
+    * 4 rows = skill-equipped planner (system + context + task guidance +
       skill row 4). The skill row carries the
       ``Load skill: <name>`` header plus the ``<skill>`` and
       ``<terminal_tool_selection>`` blocks.
@@ -257,8 +257,8 @@ def _excerpt_for_helper_context(captures: list[CapturedAgent]) -> tuple[str, str
 
     Returns (parent_user_msg_1_text, parent_user_msg_2_text, parent_transcript).
     For deterministic illustration we use the iter1 attempt1 executor capture as
-    the "parent". Note: the captured row contains the spawn prompt
-    (= role_instruction = parent's user_msg_2). The recorder did not store
+    the "parent". Note: the captured row contains the task guidance spawn prompt
+    (= parent's user_msg_2). The recorder did not store
     parent's user_msg_1 (context) so we use a representative stand-in stitched
     together from the goal/iteration/task sections embedded in the prompt.
     """
@@ -295,14 +295,14 @@ def build_main_constructed() -> list[ConstructedAgent]:
 
     out: list[ConstructedAgent] = []
 
-    def _append_catalog(role_instruction: str, agent_def) -> str:
+    def _append_catalog(task_guidance: str, agent_def) -> str:
         if not agent_def or not agent_def.terminals:
-            return role_instruction
+            return task_guidance
         catalog = render_terminal_catalog(
             list(agent_def.terminals), focus="selection_guidance"
         )
         return (
-            f"{role_instruction.rstrip()}\n\n"
+            f"{task_guidance.rstrip()}\n\n"
             "# Terminal tools you may call\n\n"
             f"Pick exactly one based on outcome:\n\n{catalog}\n\n"
             "# Your task\n\n"
@@ -321,7 +321,7 @@ def build_main_constructed() -> list[ConstructedAgent]:
     entry_def = get_definition("entry_executor")
 
     # --- Planner — 4 representative launch contexts ---
-    planner_variants = [
+    planner_contexts = [
         ("iter1 attempt1 (fresh)", 1, False,
          "# Goal\n\n<root goal>\n\n# Current Iteration\n\nIteration 1 (FIRST_ATTEMPT)."),
         ("iter1 attempt2 (after failed plan)", 1, True,
@@ -331,7 +331,7 @@ def build_main_constructed() -> list[ConstructedAgent]:
         ("iter2 attempt2 (continuation + prior failure)", 2, True,
          "# Goal\n\n<root goal>\n\n# Current Iteration\n\nIteration 2 (DEFERRED_GOAL_CONTINUATION).\n\n# Previous Iteration Results\n\n## Iteration 1 accepted plan\n\n<partial plan>\n\n## Iteration 1 summary\n\nDone.\n\n# Prior Failed Attempts\n\nAttempt 1 in iteration 2: rejected by evaluator."),
     ]
-    for label, iter_n, failed, um1 in planner_variants:
+    for label, iter_n, failed, um1 in planner_contexts:
         del iter_n, failed
         role_text = _directive("planner")
         um2 = _append_catalog(role_text, planner_def)
@@ -390,7 +390,7 @@ def build_main_constructed() -> list[ConstructedAgent]:
             user_msg_2=um2,
         ))
 
-    # --- Entry executor — single-user-message launch (no role_instruction) ---
+    # --- Entry executor — single-user-message launch (no separate task guidance) ---
     if entry_def is not None:
         out.append(ConstructedAgent(
             label="entry_executor (single-user-message launch)",
@@ -402,7 +402,7 @@ def build_main_constructed() -> list[ConstructedAgent]:
                 "verbatim from build_sweevo_user_prompt)\n</pr_description>\n\n"
                 "Workspace root: /testbed"
             ),
-            user_msg_2="(entry_executor recipe emits no role_instruction — single-user-message launch)",
+            user_msg_2="(entry_executor recipe emits no separate task guidance — single-user-message launch)",
         ))
 
     return out
@@ -505,7 +505,7 @@ def synthesise_main_user_msg_1(capture: CapturedAgent) -> str:
     """Return a representative user_msg_1 (context message) for a main agent.
 
     The runtime never persists this message into ``message.jsonl`` — the
-    recorder only sees the spawn prompt (role_instruction = user_msg_2). The
+    recorder only sees the task guidance spawn prompt (user_msg_2). The
     runner does pass ``initial_messages=[ConversationMessage.from_user_text(
     context_message)]`` for the 2-message launch shape (see
     ``backend/src/task_center/attempt/launch.py:142``). We document that gap
@@ -596,9 +596,9 @@ def coherence_verdict(
     For main agents (``is_main=True``) we evaluate only system + the
     observed single user message (``um1``) because the runtime currently
     records only those two rows into ``message.jsonl`` — main-agent recipes
-    use the single-user-message launch shape (role_instruction is folded
+    use the single-user-message launch shape (task guidance is folded
     into the same packet as the context blocks, or the recipe emits no
-    role_instruction at all). For helpers/subagent we evaluate the full
+    separate task guidance at all). For helpers/subagent we evaluate the full
     three-message shape.
     """
     checks: dict[str, bool] = {}
@@ -699,8 +699,48 @@ def coherence_verdict(
 # ----------------------------------------------------------------------------
 
 
+_LEGACY_REPORT_REPLACEMENTS = (
+    (
+        "This profile intentionally does not expose `submit_execution_failure`. "
+        "Unfinished work is handled by the attempt's run-exhausted fallback: "
+        "abandoning the task ends the run and is recorded as a launcher-synthesised "
+        "failure rather than an explicit terminal call.",
+        "- `submit_execution_blocker` — the task cannot proceed because of a "
+        "concrete blocker. Marks this generator task blocked; dependent pending "
+        "tasks remain not-started.",
+    ),
+    (
+        "**Why entry_executor keeps all three terminals.** Non-entry executors are\n"
+        "depth-gated by the resolver: the `executor_success_handoff` variant exposes\n"
+        "success + handoff, the `executor_success_failure` variant exposes success +\n"
+        "failure. The entry executor is the documented carve-out — it sits outside the\n"
+        "goal/iteration/attempt tree (no parent attempt to return to) and terminates\n"
+        "the user-facing request directly, so it retains the full success / handoff /\n"
+        "failure surface. See `docs/wiki/role-generator.md` for the depth-gating\n"
+        "contract that governs non-entry executors.",
+        "**Why entry_executor keeps all three terminals.** It sits outside the\n"
+        "goal/iteration/attempt tree (no parent attempt to return to) and terminates\n"
+        "the user-facing request directly, so it retains the full success / handoff /\n"
+        "blocker surface.",
+    ),
+    ("submit_execution_failure", "submit_execution_blocker"),
+    ("executor_success_handoff", "executor"),
+    ("executor_success_failure", "executor"),
+    ("planner_closes_or_defers", "planner"),
+)
+
+
+def _current_contract_text(text: str) -> str:
+    """Normalize archived captures that predate the current terminal contract."""
+    for old, new in _LEGACY_REPORT_REPLACEMENTS:
+        text = text.replace(old, new)
+    return text
+
+
 def _fmt_message(role: str, text: str) -> str:
-    text = text.strip()
+    text = "\n".join(
+        line.rstrip() for line in _current_contract_text(text).strip().splitlines()
+    )
     if not text:
         return f"```\n({role}: empty)\n```\n"
     return f"```\n{text}\n```\n"
@@ -790,6 +830,10 @@ def render_report(
         "* executor / evaluator — 3 or 4 rows depending on whether a skill "
         "row is present.\n"
         "* entry_executor — 2 rows (single-user-message launch).\n"
+        "\n"
+        "Archived captured rows that predate the single executor profile are "
+        "normalized to the current terminal names and profile labels while "
+        "preserving the surrounding launch shape.\n"
     )
     for cap in main_captures:
         out.append(f"### {cap.label}\n")
@@ -800,16 +844,16 @@ def render_report(
             f"- `role_dir`: `{cap.role_dir}`\n"
             f"- source file: `{cap.message_jsonl}`\n"
         )
-        out.append("**system** (verbatim, `message.jsonl` row 1):\n")
+        out.append("**system** (`message.jsonl` row 1):\n")
         out.append(_fmt_message("system", _truncate(cap.system)))
         out.append(
-            "**user_msg_1** (verbatim, `message.jsonl` row 2 — the "
+                "**user_msg_1** (`message.jsonl` row 2 — the "
             "composer's context block):\n"
         )
         out.append(_fmt_message("user_msg_1", _truncate(cap.user_msg_1)))
         if cap.user_msg_2:
             out.append(
-                "**user_msg_2** (verbatim, `message.jsonl` row 3 — "
+                "**user_msg_2** (`message.jsonl` row 3 — "
                 "task guidance + terminal catalog):\n"
             )
             out.append(_fmt_message("user_msg_2", _truncate(cap.user_msg_2)))
@@ -820,7 +864,7 @@ def render_report(
             )
         if cap.skill_row:
             out.append(
-                "**row 4** (verbatim, `message.jsonl` row 4 — skill body + "
+                "**row 4** (`message.jsonl` row 4 — skill body + "
                 "`<terminal_tool_selection>` composite from `build_skill_message`):\n"
             )
             out.append(_fmt_message("skill", _truncate(cap.skill_row)))
@@ -831,10 +875,10 @@ def render_report(
             cap.user_msg_2,
             is_main=not bool(cap.user_msg_2),
         )
-        out.append(f"**Verdict:** {verdict['verdict']}  ")
-        out.append(f"Checks: `{verdict['checks']}`  ")
+        out.append(f"**Verdict:** {verdict['verdict']}")
+        out.append(f"Checks: `{verdict['checks']}`")
         if verdict["notes"]:
-            out.append(f"Notes: {verdict['notes'][0]}  ")
+            out.append(f"Notes: {verdict['notes'][0]}")
         out.append("")
 
     if main_constructed:
@@ -868,10 +912,10 @@ def render_report(
             verdict = coherence_verdict(
                 ca.label, ca.system, ca.user_msg_1, ca.user_msg_2, is_main=False
             )
-            out.append(f"**Verdict:** {verdict['verdict']}  ")
-            out.append(f"Checks: `{verdict['checks']}`  ")
+            out.append(f"**Verdict:** {verdict['verdict']}")
+            out.append(f"Checks: `{verdict['checks']}`")
             if verdict["notes"]:
-                out.append(f"Notes: {verdict['notes'][0]}  ")
+                out.append(f"Notes: {verdict['notes'][0]}")
             out.append("")
 
     out.append("## Helpers and subagent\n")
@@ -891,10 +935,10 @@ def render_report(
             out.append("**user_msg_2** (programmatic, from builder code):\n")
         out.append(_fmt_message("user_msg_2", _truncate(ca.user_msg_2)))
         verdict = coherence_verdict(ca.label, ca.system, ca.user_msg_1, ca.user_msg_2)
-        out.append(f"**Verdict:** {verdict['verdict']}  ")
-        out.append(f"Checks: `{verdict['checks']}`  ")
+        out.append(f"**Verdict:** {verdict['verdict']}")
+        out.append(f"Checks: `{verdict['checks']}`")
         if verdict["notes"]:
-            out.append(f"Notes: {verdict['notes'][0]}  ")
+            out.append(f"Notes: {verdict['notes'][0]}")
         out.append("")
 
     out.append("## Overall verdict\n")

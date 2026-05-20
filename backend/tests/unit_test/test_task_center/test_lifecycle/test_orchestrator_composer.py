@@ -20,10 +20,6 @@ from agents import (
 from task_center._core.primitives import TaskCenterLifecycleConfig
 from task_center.agent_launch.composer import AgentEntryComposer
 from task_center.context_engine.core import ContextEngine, ContextEngineDeps
-from task_center._core.terminal_tool_routing import (
-    PredicateRegistry,
-    register_builtin_predicates,
-)
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.context_engine.recipes_registry import RecipeRegistry
 from task_center.attempt.orchestrator import AttemptOrchestrator
@@ -49,19 +45,14 @@ class _RecordingLauncher:
 
 @pytest.fixture(autouse=True)
 def _isolate_global_registries():
-    saved_predicates = dict(PredicateRegistry._registry)
     saved_recipes = dict(RecipeRegistry._registry)
     saved_definitions = list_definitions()
-    PredicateRegistry.clear()
     RecipeRegistry.clear()
     _clear_definitions()
-    register_builtin_predicates()
     register_builtin_recipes()
     yield
-    PredicateRegistry.clear()
     RecipeRegistry.clear()
     _clear_definitions()
-    PredicateRegistry._registry.update(saved_predicates)
     RecipeRegistry._registry.update(saved_recipes)
     for definition in saved_definitions:
         register_definition(definition)

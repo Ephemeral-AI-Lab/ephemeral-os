@@ -96,6 +96,7 @@ def test_prompt_inspector_accepts_current_failed_attempt_heading(
             name="planner",
             description="test planner",
             agent_kind=AgentKind.PLANNER,
+            terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
         ),
         metadata=ExecutionMetadata(task_center_task_id="attempt-2:planner"),
     )
@@ -139,6 +140,7 @@ def test_prompt_inspector_accepts_current_previous_iteration_sections(
             name="planner",
             description="test planner",
             agent_kind=AgentKind.PLANNER,
+            terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
         ),
         metadata=ExecutionMetadata(task_center_task_id="attempt-1:planner"),
     )

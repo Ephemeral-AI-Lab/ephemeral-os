@@ -28,7 +28,6 @@ from task_center.context_engine.core import (
     ContextEngine,
     ContextEngineDeps,
 )
-from task_center._core.terminal_tool_routing import register_builtin_predicates
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.entry.controller import EntryTaskController
 from task_center.entry.sandbox_bridge import (
@@ -224,20 +223,17 @@ class TaskCenterEntryCoordinator:
         return runtime, launcher
 
     def _build_composer(self) -> AgentEntryComposer:
-        """Construct the composer + register built-in predicates / recipes.
+        """Construct the composer and register built-in recipes.
 
-        Predicate and recipe registration are idempotent — re-registration is
-        the intended steady-state behaviour: each entry-coordinator startup
-        re-asserts the builtin set and cross-validates every loaded
-        :class:`AgentDefinition` so a typo in a frontmatter ``variants:``
-        block, a dangling target, a chained variant, or an unknown
-        ``context_recipe`` fails the spawn here rather than during the first
-        model turn. Tests that intentionally mutate the process-global
-        :class:`PredicateRegistry` or :class:`RecipeRegistry` between
-        coordinator builds should reset them to a known state in their own
-        teardown — this method is not a sandbox.
+        Recipe registration is idempotent — re-registration is the intended
+        steady-state behaviour: each entry-coordinator startup re-asserts the
+        builtin set and cross-validates every loaded :class:`AgentDefinition`
+        so an unknown ``context_recipe`` fails the spawn here rather than
+        during the first model turn. Tests that intentionally mutate the
+        process-global :class:`RecipeRegistry` between coordinator builds
+        should reset it to a known state in their own teardown — this method
+        is not a sandbox.
         """
-        register_builtin_predicates()
         register_builtin_recipes()
         validate_agent_definitions_resolved()
         deps = ContextEngineDeps(

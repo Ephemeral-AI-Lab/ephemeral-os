@@ -22,4 +22,4 @@ class MissingContextRecipeError(ContextEngineError):
 
 class AgentDefinitionValidationError(ContextEngineError):
     """A registered :class:`AgentDefinition` references unknown or invalid
-    variants / predicates / context recipes — caught at startup."""
+    context recipes or agent definition references - caught at startup."""

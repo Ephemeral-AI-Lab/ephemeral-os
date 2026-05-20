@@ -30,14 +30,10 @@ _REQUIRED_FRAGMENTS = (
 
 
 def _main_profile_mds() -> list[pathlib.Path]:
-    """Profiles that should carry the discipline — exclude pure routing thin entry points."""
+    """Profiles that should carry the discipline paragraph."""
     out: list[pathlib.Path] = []
     for md_path in _MAIN_PROFILE_DIR.glob("*.md"):
         text = md_path.read_text(encoding="utf-8")
-        # ``executor.md`` is a thin routing entry point with empty body — its
-        # variant targets carry the discipline.
-        if md_path.name == "executor.md":
-            continue
         if "agent_kind" not in text:
             continue
         out.append(md_path)

@@ -25,10 +25,6 @@ from db.stores.task_center_store import TaskCenterStore
 from db.stores.iteration_store import IterationStore
 from task_center.agent_launch.composer import AgentEntryComposer
 from task_center.context_engine.core import ContextEngine, ContextEngineDeps
-from task_center._core.terminal_tool_routing import (
-    PredicateRegistry,
-    register_builtin_predicates,
-)
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.context_engine.recipes_registry import RecipeRegistry
 
@@ -99,20 +95,15 @@ def context_packet_store(session_factory) -> ContextPacketStore:
 
 @pytest.fixture
 def isolated_agent_registries():
-    """Save + restore predicate / recipe / agent registries for test isolation."""
-    saved_predicates = dict(PredicateRegistry._registry)
+    """Save + restore recipe / agent registries for test isolation."""
     saved_recipes = dict(RecipeRegistry._registry)
     saved_definitions = list_definitions()
-    PredicateRegistry.clear()
     RecipeRegistry.clear()
     _clear_definitions()
-    register_builtin_predicates()
     register_builtin_recipes()
     yield
-    PredicateRegistry.clear()
     RecipeRegistry.clear()
     _clear_definitions()
-    PredicateRegistry._registry.update(saved_predicates)
     RecipeRegistry._registry.update(saved_recipes)
     for definition in saved_definitions:
         register_definition(definition)

@@ -14,7 +14,6 @@ from .definition.model import (
     AgentDefinition,
     AgentKind,
     AgentType,
-    AgentVariant,
 )
 from .definition.resolved_validation import validate_agent_definitions_resolved
 
@@ -22,7 +21,6 @@ __all__ = [
     "AgentDefinition",
     "AgentKind",
     "AgentType",
-    "AgentVariant",
     "get_definition",
     "list_dispatchable_subagent_names",
     "list_definitions",

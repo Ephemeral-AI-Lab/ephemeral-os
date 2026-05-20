@@ -8,10 +8,8 @@ tool registration see the same launch-specific terminal set.
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import ClassVar
 
 from agents import get_definition
 from agents import AgentDefinition, AgentKind
@@ -24,51 +22,12 @@ from task_center.context_engine.scope import ContextScope
 from task_center.goal.ancestry import nested_goal_depth
 
 
-# ---------------------------------------------------------------------------
-# Predicates
-# ---------------------------------------------------------------------------
-
 @dataclass(frozen=True, slots=True)
 class ResolverContext:
-    """Identity + dependency bundle handed to every predicate."""
+    """Identity + dependency bundle for launch-time terminal routing."""
 
     scope: ContextScope
     deps: ContextEngineDeps
-
-
-PredicateFn = Callable[[ResolverContext], bool]
-
-
-class PredicateRegistry:
-    """Process-global predicate registry. Tests use ``clear`` to start fresh."""
-
-    _registry: ClassVar[dict[str, PredicateFn]] = {}
-
-    @classmethod
-    def register(cls, name: str, fn: PredicateFn) -> None:
-        cls._registry[name] = fn
-
-    @classmethod
-    def get(cls, key: str) -> PredicateFn:
-        try:
-            return cls._registry[key]
-        except KeyError as exc:
-            raise KeyError(
-                f"PredicateRegistry: {key!r} is not registered. "
-                f"Known: {sorted(cls._registry)!r}"
-            ) from exc
-
-    @classmethod
-    def has(cls, key: str) -> bool:
-        return key in cls._registry
-
-    @classmethod
-    def list_ids(cls) -> list[str]:
-        return sorted(cls._registry)
-
-    @classmethod
-    def clear(cls) -> None:
-        cls._registry.clear()
 
 
 def _depth(ctx: ResolverContext) -> int:
@@ -92,20 +51,6 @@ def _depth(ctx: ResolverContext) -> int:
 def _nested_goal_depth_gt_1(ctx: ResolverContext) -> bool:
     """True when depth > 1 — caller attempt is itself inside another goal."""
     return _depth(ctx) > 1
-
-
-def _always(ctx: ResolverContext) -> bool:
-    """Total-coverage tail predicate — always True regardless of context."""
-    return True
-
-
-def register_builtin_predicates() -> None:
-    """Idempotent — safe to call from app startup."""
-    PredicateRegistry.register(
-        "nested_goal_depth_gt_1",
-        _nested_goal_depth_gt_1,
-    )
-    PredicateRegistry.register("always", _always)
 
 
 # ---------------------------------------------------------------------------

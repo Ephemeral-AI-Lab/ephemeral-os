@@ -11,14 +11,11 @@ import pytest
 from agents import (
     AgentDefinition,
     AgentKind,
+    list_definitions,
     register_definition,
     unregister_definition,
 )
-from task_center._core.terminal_tool_routing import (
-    PredicateRegistry,
-    TerminalToolRouter,
-    _always,
-)
+from task_center._core.terminal_tool_routing import TerminalToolRouter
 from task_center.context_engine.scope import ContextScope
 
 
@@ -32,14 +29,15 @@ class _Deps:
 
 
 @pytest.fixture(autouse=True)
-def _isolate_predicate_registry():
-    saved = dict(PredicateRegistry._registry)
-    PredicateRegistry.clear()
-    PredicateRegistry.register("always", _always)
+def _isolate_agent_definitions():
+    saved = list_definitions()
+    for definition in saved:
+        unregister_definition(definition.name)
     yield
-    PredicateRegistry.clear()
-    for name, fn in saved.items():
-        PredicateRegistry.register(name, fn)
+    for definition in list_definitions():
+        unregister_definition(definition.name)
+    for definition in saved:
+        register_definition(definition)
 
 
 def _make_definition(
@@ -59,7 +57,7 @@ def _make_definition(
     )
 
 
-def test_resolve_returns_skill_path_from_base_when_no_variants(
+def test_resolve_returns_skill_path_from_registered_definition(
     tmp_path: Path, monkeypatch
 ):
     skill_file = tmp_path / "SKILL.md"

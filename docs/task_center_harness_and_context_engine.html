@@ -1032,7 +1032,6 @@ representations are derived from the same blocks and can never disagree.
 
 <pre><code>ROLE_DIRECTIVES: dict[str, str] = {
     "planner":                    "Plan for &lt;iteration_goal&gt;.",
-    "planner_closes_goal":          "Plan for &lt;goal&gt; with a single non-deferring submission.",
     "executor":   "Complete &lt;assigned_task&gt;.",
     "executor":   "Complete &lt;assigned_task&gt;.",
     "evaluator":                  "Verify the current attempt against &lt;evaluation_criteria&gt;.",
@@ -1062,12 +1061,6 @@ generators in different DAG positions get the same directive but distinct contex
     <td><span class="pill planner">planner</span></td>
     <td><code>goal_id, iteration_id, attempt_id</code></td>
     <td><code>&lt;goal&gt;</code>, prior <code>&lt;iteration&gt;</code> groups, current <code>&lt;iteration status=&quot;current&quot;&gt;</code> with <code>&lt;iteration_goal&gt;</code>, all failed <code>&lt;attempt&gt;</code> blocks for this iteration.</td>
-  </tr>
-  <tr>
-    <td><code>planner_closes_goal</code></td>
-    <td><span class="pill planner">planner</span></td>
-    <td><code>goal_id</code></td>
-    <td>Single <code>&lt;goal&gt;</code> block. Used for leaf-node planners (nested depth &gt; 1) where <code>defers</code> is forbidden; no iteration scaffolding.</td>
   </tr>
   <tr>
     <td><code>generator</code></td>
@@ -1183,19 +1176,21 @@ return AgentEntryMessages(
     context_packet_id=context_id,
 )</code></pre>
 
-<h3>8.1 Predicate-based agent selection</h3>
+<h3>8.1 Launch-time terminal routing</h3>
 
 <p>
-<code>RuleBasedAgentResolver</code> loads the base <code>AgentDefinition</code>, then walks
-its declared variants. Each variant carries a <code>when</code> field naming a predicate in
-<code>PredicateRegistry</code>; the first predicate that matches the
-<code>ResolverContext(scope, deps)</code> wins.
+<code>TerminalToolRouter</code> loads the registered <code>AgentDefinition</code>, then returns
+an effective copy with the launch-specific terminal set. The registered
+definition remains unchanged; the effective copy is what row 3, row 4, and the
+runtime tool registry all see.
 </p>
 
-<pre><code>for variant in base.variants:
-    predicate = PredicateRegistry.get(variant.when)
-    if predicate(ctx):
-        return self._select_variant_target(variant)
+<pre><code>definition = get_definition(base_agent_name)
+terminals = filter_planner_deferral_by_depth(definition, scope)
+return TerminalToolSelection(
+    agent_def=definition.model_copy(update={"terminals": terminals}),
+    context_recipe=definition.context_recipe,
+)
 </code></pre>
 
 <p>
@@ -1219,8 +1214,8 @@ same profile and the same terminal surface regardless of goal ancestry.
 
 <p>
 The terminal-tool selection block is the agent&apos;s list of allowed terminal submissions
-(e.g. <code>submit_plan_completes</code> + <code>submit_plan_defers</code> for a planner with
-defer enabled; just <code>submit_plan_completes</code> for <code>planner_closes_goal</code>). It
+(e.g. <code>submit_plan_closes_goal</code> + <code>submit_plan_defers_goal</code> for a planner with
+defer enabled; just <code>submit_plan_closes_goal</code> when deferral is filtered). It
 is appended to both row 3 and row 4 so the agent sees consistent submission rules
 regardless of which row it reads first.
 </p>
@@ -1256,8 +1251,8 @@ IterationMgr   AttemptOrch.   Launcher   Composer   RecipeRegistry   ContextEngi
      │              │             │   scope = ContextScope.for_planner(                 │          │       │      │         │
      │              │             │     goal_id = G, iteration_id = I2, attempt_id = A2))         │       │      │         │
      │              │             ├──────────▶│             │                │           │          │       │      │         │
-     │              │             │           │ resolver.resolve(&quot;planner&quot;, scope)                │       │      │         │
-     │              │             │           │   → AgentSelection(agent_def, context_recipe = &quot;planner&quot;, skill_path)       │
+     │              │             │           │ router.resolve(&quot;planner&quot;, scope)                  │       │      │         │
+     │              │             │           │   → TerminalToolSelection(agent_def, context_recipe = &quot;planner&quot;, skill_path) │
      │              │             │           │ engine.build(&quot;planner&quot;, scope)            │          │       │      │         │
      │              │             │           ├────────────▶│                │           │          │       │      │         │
      │              │             │           │             │ get(&quot;planner&quot;)│           │          │       │      │         │

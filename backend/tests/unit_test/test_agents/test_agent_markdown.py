@@ -44,7 +44,6 @@ def test_recursive_agent_loader_finds_harness_profiles() -> None:
         "evaluator",
     } <= set(by_name)
     assert by_name["executor"].agent_kind == AgentKind.EXECUTOR
-    assert by_name["executor"].variants == []
     assert by_name["executor"].terminals == [
         "submit_execution_handoff",
         "submit_execution_success",
