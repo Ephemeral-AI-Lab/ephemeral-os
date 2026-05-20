@@ -40,7 +40,15 @@ def test_get_central_config_file_path(tmp_path: Path, monkeypatch):
     monkeypatch.delenv("EPHEMERALOS_CONFIG_DIR", raising=False)
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
     path = get_central_config_file_path()
-    assert path == tmp_path / ".ephemeralos" / "ephemeralos.yaml"
+    assert path.name == "ephemeralos.yaml"
+    assert path.parent.name == "EphemeralOS"
+
+
+def test_get_central_config_file_path_env_override(tmp_path: Path, monkeypatch):
+    custom = tmp_path / "custom_config"
+    monkeypatch.setenv("EPHEMERALOS_CONFIG_DIR", str(custom))
+    path = get_central_config_file_path()
+    assert path == custom / "ephemeralos.yaml"
 
 
 def test_get_data_dir_default(tmp_path: Path, monkeypatch):

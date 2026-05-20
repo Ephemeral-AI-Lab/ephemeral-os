@@ -18,6 +18,7 @@ from agents import list_definitions
 from task_center_runner import RunReport, run_scenario
 from task_center_runner.audit.bus import AuditEventBus
 from task_center_runner.hooks.registry import HookSet, MutableMockState
+from task_center_runner.scenarios.base import ScenarioContext
 from task_center_runner.scenarios.correctness_testing import CorrectnessTesting
 from task_center_runner.scenarios.full_case_user_input import FullCaseUserInput
 from task_center_runner.scenarios.full_stack_adversarial import FullStackAdversarial
@@ -27,6 +28,10 @@ from task_center_runner.agent.mock.definitions import (
 )
 from task_center_runner.agent.mock.runner import MockSquadRunner
 from tools._framework.core.runtime import ExecutionMetadata
+from tools.submission.planner import (
+    submit_plan_closes_goal,
+    submit_plan_defers_goal,
+)
 
 
 def test_runner_top_level_exports_are_callable() -> None:
@@ -142,6 +147,42 @@ def test_prompt_inspector_accepts_current_previous_iteration_sections(
     assert inspection.passed
 
 
+def test_prompt_inspector_accepts_planner_full_only_goal_only_context() -> None:
+    runner = MockSquadRunner(
+        repo_dir="/tmp/live_e2e_test_repo",
+        bus=AuditEventBus(),
+        scenario=CorrectnessTesting(),
+        mutable_state=MutableMockState(),
+    )
+
+    inspection = runner._inspect_prompt(  # noqa: SLF001
+        prompt="\n".join(
+            [
+                "<context>",
+                "<goal>Close this delegated recursive goal.</goal>",
+                "</context>",
+                "<Task Guidance>",
+                "Use submit_plan_closes_goal to close this goal in one attempt.",
+                "</Task Guidance>",
+            ]
+        ),
+        agent_def=AgentDefinition(
+            name="planner_full_only",
+            description="test full-only planner",
+            agent_kind=AgentKind.PLANNER,
+        ),
+        metadata=ExecutionMetadata(task_center_task_id="recursive-1:planner"),
+    )
+
+    assert inspection.checks == {
+        "goal": True,
+        "goal_only_context": True,
+        "closes_goal_terminal": True,
+        "no_defer_terminal": True,
+    }
+    assert inspection.passed
+
+
 def test_registered_mock_agents_install_and_restore() -> None:
     initial = {d.name for d in list_definitions()}
     with registered_mock_agents():
@@ -182,6 +223,35 @@ def test_scenarios_register_hookset_cleanly(scenario_cls: type) -> None:
         "full_stack_adversarial",
     }
     assert hasattr(scenario, "expected_event_sequence")
+
+
+def test_full_stack_recursive_planner_full_only_closes_goal() -> None:
+    scenario = FullStackAdversarial()
+    ctx = ScenarioContext(
+        attempt=SimpleNamespace(attempt_sequence_no=1, evaluation_criteria=()),
+        iteration=SimpleNamespace(sequence_no=1, goal_id="recursive-goal"),
+        goal=SimpleNamespace(requested_by_task_id="parent-task:executor"),
+        prompt="Run delegated recursive matrix.",
+        metadata=ExecutionMetadata(agent_name="planner_full_only"),
+        audit_recorder=None,
+        mutable_state=None,
+        task_id="recursive-goal:planner",
+        agent_name="planner_full_only",
+        context_message=None,
+    )
+
+    spec = scenario.planner_response(ctx)
+
+    assert spec.tool.name == submit_plan_closes_goal.name
+    assert spec.tool.name != submit_plan_defers_goal.name
+    assert "deferred_goal_for_next_iteration" not in spec.args
+    task_ids = {task["id"] for task in spec.args["tasks"]}
+    assert {
+        "recursive_oversized_a",
+        "recursive_oversized_b",
+        "recursive_closure_report",
+        "recursive_close_guard",
+    } <= task_ids
 
 
 def test_sweevo_adapter_keeps_dataset_entrypoint_separate() -> None:

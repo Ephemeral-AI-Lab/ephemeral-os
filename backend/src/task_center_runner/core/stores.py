@@ -1,19 +1,19 @@
-"""Per-test PostgreSQL schema isolation for live e2e TaskCenter stores.
+"""Per-test database isolation for live e2e TaskCenter stores.
 
 Reuses the project's shared SQLAlchemy engine via ``db.engine.initialize_db()``
-and carves a fresh schema per test so concurrent tests do not collide and the
-production ``public`` schema is never touched.
+and carves a fresh isolated store per test so concurrent tests do not collide.
 
-Schema routing uses SQLAlchemy's ``schema_translate_map`` execution option on
-a per-bundle engine clone — no engine-level listeners, no cross-test leakage.
+PostgreSQL uses a per-test schema routed through ``schema_translate_map``.
+SQLite uses a per-test database file next to the configured SQLite database.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from uuid import uuid4
 
-from sqlalchemy import Engine, MetaData, text
+from sqlalchemy import Engine, MetaData, create_engine, event, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from db.base import Base
@@ -28,7 +28,7 @@ from db.stores.task_center_store import TaskCenterStore
 
 @dataclass(slots=True)
 class TaskCenterStoreBundle:
-    """Bundle of TaskCenter stores bound to a per-test PostgreSQL schema."""
+    """Bundle of TaskCenter stores bound to an isolated test database."""
 
     engine: Engine
     schema: str
@@ -38,15 +38,33 @@ class TaskCenterStoreBundle:
     iteration_store: IterationStore
     attempt_store: AttemptStore
     context_packet_store: ContextPacketStore
+    owns_engine: bool = False
+    cleanup_paths: tuple[Path, ...] = ()
 
     def close(self) -> None:
-        """Drop the per-test schema. The shared engine is never disposed."""
-        with self.engine.begin() as conn:
-            conn.execute(text(f'DROP SCHEMA IF EXISTS "{self.schema}" CASCADE'))
+        """Release per-test database resources."""
+        if self.engine.dialect.name == "postgresql":
+            with self.engine.begin() as conn:
+                conn.execute(text(f'DROP SCHEMA IF EXISTS "{self.schema}" CASCADE'))
+            return
+
+        if self.owns_engine:
+            self.engine.dispose()
+        for path in self.cleanup_paths:
+            for candidate in (
+                path,
+                Path(f"{path}-wal"),
+                Path(f"{path}-shm"),
+                Path(f"{path}-journal"),
+            ):
+                try:
+                    candidate.unlink()
+                except FileNotFoundError:
+                    pass
 
 
 def _ensure_initialized() -> Engine:
-    """Bootstrap the shared engine when needed; reject non-postgres dialects."""
+    """Bootstrap the shared engine when needed."""
     engine = get_engine()
     if engine is None:
         initialize_db()
@@ -54,48 +72,21 @@ def _ensure_initialized() -> Engine:
     if engine is None:
         raise RuntimeError(
             "EPHEMERALOS_DATABASE_URL not configured — set it to the project "
-            "PostgreSQL DSN before running task_center_runner tests."
-        )
-    if engine.dialect.name != "postgresql":
-        raise RuntimeError(
-            f"task_center_runner requires PostgreSQL, got dialect={engine.dialect.name!r}"
+            "database URL before running task_center_runner tests."
         )
     return engine
 
 
-def create_per_test_task_center_stores(
-    *, schema_prefix: str = "task_center_runner"
+def _initialize_bundle(
+    *,
+    engine: Engine,
+    schema: str,
+    session_factory: sessionmaker[Session],
+    owns_engine: bool = False,
+    cleanup_paths: tuple[Path, ...] = (),
 ) -> TaskCenterStoreBundle:
-    """Carve a fresh schema, run create_all against it, return wired stores.
-
-    DDL is emitted against a cloned metadata bound to the new schema; DML
-    issued by the ORM against the original ``Base`` mappers is rewritten via
-    ``schema_translate_map`` on a per-bundle engine clone so it lands in the
-    per-test schema instead of ``public``.
-    """
-    shared_engine = _ensure_initialized()
-    schema = f"{schema_prefix}_{uuid4().hex[:12]}"
-
-    with shared_engine.begin() as conn:
-        conn.execute(text(f'CREATE SCHEMA "{schema}"'))
-
-    test_metadata = MetaData(schema=schema)
-    for table in Base.metadata.sorted_tables:
-        table.to_metadata(test_metadata, schema=schema)
-    test_metadata.create_all(shared_engine)
-
-    # The bundle's `engine` is a per-bundle clone of the shared engine with a
-    # schema_translate_map option, so any sessionmaker bound to ``bundle.engine``
-    # sends DML to the per-test schema rather than ``public``.
-    routed_engine = shared_engine.execution_options(
-        schema_translate_map={None: schema}
-    )
-    session_factory = sessionmaker(
-        bind=routed_engine, autoflush=False, expire_on_commit=False
-    )
-
     bundle = TaskCenterStoreBundle(
-        engine=routed_engine,
+        engine=engine,
         schema=schema,
         session_factory=session_factory,
         task_store=TaskCenterStore(),
@@ -103,6 +94,8 @@ def create_per_test_task_center_stores(
         iteration_store=IterationStore(),
         attempt_store=AttemptStore(),
         context_packet_store=ContextPacketStore(),
+        owns_engine=owns_engine,
+        cleanup_paths=cleanup_paths,
     )
     for store in (
         bundle.task_store,
@@ -113,6 +106,94 @@ def create_per_test_task_center_stores(
     ):
         store.initialize(session_factory)
     return bundle
+
+
+def _create_postgresql_bundle(
+    shared_engine: Engine, *, schema_prefix: str
+) -> TaskCenterStoreBundle:
+    """Carve a fresh PostgreSQL schema and route ORM calls into it."""
+    schema = f"{schema_prefix}_{uuid4().hex[:12]}"
+
+    with shared_engine.begin() as conn:
+        conn.execute(text(f'CREATE SCHEMA "{schema}"'))
+
+    test_metadata = MetaData(schema=schema)
+    for table in Base.metadata.sorted_tables:
+        table.to_metadata(test_metadata, schema=schema)
+    test_metadata.create_all(shared_engine)
+
+    routed_engine = shared_engine.execution_options(
+        schema_translate_map={None: schema}
+    )
+    session_factory = sessionmaker(
+        bind=routed_engine, autoflush=False, expire_on_commit=False
+    )
+    return _initialize_bundle(
+        engine=routed_engine,
+        schema=schema,
+        session_factory=session_factory,
+    )
+
+
+def _sqlite_bundle_path(shared_engine: Engine, schema: str) -> Path | None:
+    database = shared_engine.url.database
+    if not database or database == ":memory:":
+        return None
+    base_path = Path(database).expanduser().resolve()
+    bundle_dir = base_path.parent / "task_center_runner"
+    bundle_dir.mkdir(parents=True, exist_ok=True)
+    return bundle_dir / f"{schema}.db"
+
+
+def _create_sqlite_bundle(
+    shared_engine: Engine, *, schema_prefix: str
+) -> TaskCenterStoreBundle:
+    """Create an isolated SQLite database file for one test bundle."""
+    schema = f"{schema_prefix}_{uuid4().hex[:12]}"
+    db_path = _sqlite_bundle_path(shared_engine, schema)
+    if db_path is None:
+        sqlite_url = "sqlite:///:memory:"
+        cleanup_paths: tuple[Path, ...] = ()
+    else:
+        sqlite_url = f"sqlite:///{db_path}"
+        cleanup_paths = (db_path,)
+
+    engine = create_engine(sqlite_url, echo=shared_engine.echo)
+
+    @event.listens_for(engine, "connect")
+    def _configure_sqlite(dbapi_connection: object, _: object) -> None:
+        cursor = dbapi_connection.cursor()
+        try:
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.execute("PRAGMA busy_timeout=30000")
+            cursor.execute("PRAGMA journal_mode=WAL")
+        finally:
+            cursor.close()
+
+    Base.metadata.create_all(engine)
+    session_factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+    return _initialize_bundle(
+        engine=engine,
+        schema=schema,
+        session_factory=session_factory,
+        owns_engine=True,
+        cleanup_paths=cleanup_paths,
+    )
+
+
+def create_per_test_task_center_stores(
+    *, schema_prefix: str = "task_center_runner"
+) -> TaskCenterStoreBundle:
+    """Return isolated TaskCenter stores for the configured database dialect."""
+    shared_engine = _ensure_initialized()
+    if shared_engine.dialect.name == "postgresql":
+        return _create_postgresql_bundle(shared_engine, schema_prefix=schema_prefix)
+    if shared_engine.dialect.name == "sqlite":
+        return _create_sqlite_bundle(shared_engine, schema_prefix=schema_prefix)
+    raise RuntimeError(
+        "task_center_runner supports PostgreSQL or SQLite, "
+        f"got dialect={shared_engine.dialect.name!r}"
+    )
 
 
 __all__ = [

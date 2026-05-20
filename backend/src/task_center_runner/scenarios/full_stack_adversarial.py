@@ -211,6 +211,8 @@ class FullStackAdversarial(ScenarioBase):
 
     def _recursive_planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         iteration = ctx.iteration
+        if ctx.agent_name == "planner_full_only":
+            return ToolCallSpec(submit_plan_closes_goal, _recursive_full_only_plan())
         if iteration.sequence_no == 1:
             return ToolCallSpec(
                 submit_plan_defers_goal,
@@ -527,6 +529,40 @@ def _inventory_plan(
         assert deferred_goal_for_next_iteration is not None
         args["deferred_goal_for_next_iteration"] = deferred_goal_for_next_iteration
     return args
+
+
+def _recursive_full_only_plan() -> dict[str, Any]:
+    """Single-attempt recursive plan for goals routed to planner_full_only."""
+    return {
+        "plan_spec": "Close delegated oversized full-stack matrix in one attempt.",
+        "evaluation_criteria": [
+            "Both recursive executor slices wrote evidence.",
+            "Recursive close report was written after slice evidence.",
+            "Recursive final verifier read the close report.",
+        ],
+        "tasks": [
+            {"id": "recursive_oversized_a", "agent_name": "executor", "deps": []},
+            {"id": "recursive_oversized_b", "agent_name": "executor", "deps": []},
+            {
+                "id": "recursive_closure_report",
+                "agent_name": "executor",
+                "deps": ["recursive_oversized_a", "recursive_oversized_b"],
+            },
+            {
+                "id": "recursive_close_guard",
+                "agent_name": "verifier",
+                "deps": ["recursive_closure_report"],
+            },
+        ],
+        "task_specs": {
+            "recursive_oversized_a": "ACTION recursive_oversized_matrix slice=a",
+            "recursive_oversized_b": "ACTION recursive_oversized_matrix slice=b",
+            "recursive_closure_report": (
+                "ACTION recursive_oversized_matrix slice=close close=true"
+            ),
+            "recursive_close_guard": "VERIFY checkpoint=recursive_final dependency_count=1",
+        },
+    }
 
 
 def _package_for_subsystem(

@@ -14,6 +14,11 @@ _CENTRAL_CONFIG_FILE_NAME = "ephemeralos.yaml"
 _REPO_CONFIG_DIR_NAME = "config"
 
 
+def get_project_root() -> Path:
+    """Return the source checkout root for this repository."""
+    return Path(__file__).resolve().parents[3]
+
+
 def get_repo_config_dir() -> Path:
     """Return the repository-bundled config directory.
 
@@ -71,7 +76,20 @@ def get_config_file_path() -> Path:
 
 
 def get_central_config_file_path() -> Path:
-    """Return the path to the central YAML config file."""
+    """Return the path to the central YAML config file.
+
+    Resolution order:
+    1. ``EPHEMERALOS_CONFIG_DIR`` / ``ephemeralos.yaml``
+    2. repository root ``ephemeralos.yaml`` when present
+    3. ``~/.ephemeralos/ephemeralos.yaml``
+    """
+    if os.environ.get("EPHEMERALOS_CONFIG_DIR"):
+        return get_config_dir() / _CENTRAL_CONFIG_FILE_NAME
+
+    repo_config = get_project_root() / _CENTRAL_CONFIG_FILE_NAME
+    if repo_config.exists():
+        return repo_config
+
     return get_config_dir() / _CENTRAL_CONFIG_FILE_NAME
 
 

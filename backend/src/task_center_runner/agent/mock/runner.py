@@ -1256,6 +1256,17 @@ class MockSquadRunner:
                 "Entry executor receives the exact SWE-EVO user request as a "
                 "required entry_request block before it delegates the goal."
             )
+        elif agent_def.name == "planner_full_only":
+            checks = {
+                "goal": "<goal>" in prompt,
+                "goal_only_context": "<iteration " not in prompt,
+                "closes_goal_terminal": "submit_plan_closes_goal" in prompt,
+                "no_defer_terminal": "submit_plan_defers_goal" not in prompt,
+            }
+            reason = (
+                "Full-only planner context is intentionally goal-only and exposes "
+                "only the closes-goal terminal."
+            )
         elif role == "planner":
             attempt, iteration = self._current_attempt_and_iteration(metadata)
             checks = {
@@ -1267,6 +1278,7 @@ class MockSquadRunner:
             if attempt.attempt_sequence_no > 1:
                 checks["failed_attempts"] = (
                     'status="prior" verdict="fail"' in prompt
+                    or 'status="failed"' in prompt
                 )
             if iteration.sequence_no > 1:
                 checks["previous_iteration_results"] = (

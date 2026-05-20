@@ -48,6 +48,7 @@ from sandbox.api import (
     ShellRequest,
 )
 from sandbox.host.daemon_client import call_daemon_api
+from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
 from tools._framework.core.base import BaseTool
 from tools._framework.core.results import ToolResult
 from tools._framework.core.runtime import ExecutionMetadata
@@ -83,6 +84,7 @@ RecordToolCheck = Callable[[str, ToolResult], None]
 
 WORKSPACE_ROOT = "/ephemeral-os"
 METRICS_PATH = f"{WORKSPACE_ROOT}/.metrics/perf.json"
+_FULL_AUTO_SQUASH_EVENT_FLOOR = 10
 
 
 @dataclass
@@ -174,6 +176,7 @@ async def run_complex_project_build_probe(
     selected_paths = frozenset(f.relative_path for f in selected_files)
     await _phase_d_refactor(ctx, stats, refactor_passes, selected_paths)
     amp_pairs = await _phase_d_edit_amplification(ctx, stats, selected_files)
+    auto_squash_mutations = await _phase_e_auto_squash_saturation(ctx, stats)
     pytest_exit_code, pytest_stdout = await _phase_f_pytest(ctx, stats)
     await _phase_f_per_module_imports(ctx, stats, selected_files)
     await _phase_f_lsp_saturation(ctx, stats, selected_files)
@@ -191,6 +194,7 @@ async def run_complex_project_build_probe(
         pytest_exit_code=pytest_exit_code,
         pytest_stdout=pytest_stdout,
         amp_pairs=amp_pairs,
+        auto_squash_mutations=auto_squash_mutations,
     )
 
     return summary_path
@@ -765,6 +769,61 @@ async def _phase_d_edit_amplification(
     return pairs
 
 
+async def _phase_e_auto_squash_saturation(
+    ctx: ProbeContext,
+    stats: ProbeStats,
+) -> int:
+    """Drive the full probe past the repeated auto-squash floor.
+
+    The full contract requires at least ten real layer-stack auto-squash
+    events. Read amplification satisfies the tool-call floor cheaply, but
+    read-only calls do not create layers. This phase adds real edit mutations
+    only when the full probe has not already crossed the squash floor.
+    """
+    if ctx.smoke:
+        return 0
+    if _auto_squash_count(stats) >= _FULL_AUTO_SQUASH_EVENT_FLOOR:
+        return 0
+
+    phase_started = time.monotonic()
+    path = f"{WORKSPACE_ROOT}/auto_squash_probe.txt"
+    current = "auto_squash_probe=0\n"
+    await _write_file(ctx, stats, path=path, content=current)
+
+    mutation_count = 1
+    edit_count = 0
+    max_edits = (_FULL_AUTO_SQUASH_EVENT_FLOOR + 2) * (AUTO_SQUASH_MAX_DEPTH + 1)
+    while _auto_squash_count(stats) < _FULL_AUTO_SQUASH_EVENT_FLOOR:
+        next_value = f"auto_squash_probe={edit_count + 1}\n"
+        await _edit_file(
+            ctx,
+            stats,
+            path=path,
+            old_text=current,
+            new_text=next_value,
+            description=f"auto squash saturation #{edit_count + 1}",
+        )
+        current = next_value
+        edit_count += 1
+        mutation_count += 1
+        if edit_count > max_edits:
+            raise RuntimeError(
+                "auto-squash saturation did not reach "
+                f"{_FULL_AUTO_SQUASH_EVENT_FLOOR} events after {edit_count} edits"
+            )
+
+    stats.phases.append(
+        {
+            "name": "E_auto_squash_saturation",
+            "duration_s": time.monotonic() - phase_started,
+            "tool_calls_at_end": _total_calls(stats),
+            "mutation_calls": mutation_count,
+            "squash_count_at_end": _auto_squash_count(stats),
+        }
+    )
+    return mutation_count
+
+
 def _tool_call_floor(*, smoke: bool) -> int:
     return 250 if smoke else 2000
 
@@ -1114,6 +1173,7 @@ async def _phase_f_emit_metrics(
     pytest_exit_code: int,
     pytest_stdout: str,
     amp_pairs: int,
+    auto_squash_mutations: int,
 ) -> str:
     perf_payload = aggregate_perf_metrics(
         run_id=str(ctx.metadata.get("task_center_task_id") or ""),
@@ -1150,6 +1210,7 @@ async def _phase_f_emit_metrics(
         "selected_file_count": len(selected_files),
         "refactor_pass_count": len(refactor_passes),
         "amp_pairs": amp_pairs,
+        "auto_squash_mutations": auto_squash_mutations,
         "pytest_exit_code": pytest_exit_code,
         "pytest_stdout_tail": pytest_stdout[-2048:],
         "metrics_path": METRICS_PATH,
@@ -1356,6 +1417,16 @@ def _capture_metadata(tool_name: str, result: ToolResult) -> dict[str, Any]:
         "is_error": bool(result.is_error),
         "metadata": dict(result.metadata or {}),
     }
+
+
+def _auto_squash_count(stats: ProbeStats) -> int:
+    count = 0
+    for entry in stats.tool_call_metadata:
+        metadata = entry.get("metadata") or {}
+        timings = metadata.get("timings") or {}
+        if isinstance(timings, dict) and timings.get("layer_stack.auto_squash.total_s"):
+            count += 1
+    return count
 
 
 def _shell_stdout(result: ToolResult) -> str:

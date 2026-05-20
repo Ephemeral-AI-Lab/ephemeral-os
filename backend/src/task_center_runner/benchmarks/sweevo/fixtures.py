@@ -82,10 +82,14 @@ async def sweevo_sandbox(
     from sandbox.provider.bootstrap import bootstrap_sandbox_provider
 
     from benchmarks.sweevo.sandbox import create_sweevo_test_sandbox
+    from task_center_runner.tests.sweevo._sandbox_health import (
+        require_sandbox_provider_healthy,
+    )
 
     lock = _acquire_sweevo_session_lock(sweevo_instance.instance_id)
     try:
         bootstrap_sandbox_provider()
+        require_sandbox_provider_healthy(sweevo_instance)
         yield await create_sweevo_test_sandbox(
             sweevo_instance,
             register_snapshot=True,
