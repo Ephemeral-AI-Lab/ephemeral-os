@@ -7,7 +7,6 @@ import asyncio
 import pytest
 
 from sandbox.host.daemon_client import DEFAULT_LAYER_STACK_ROOT
-from sandbox.layer_stack.paths import TRANSIENT_LOWERDIR_DIR
 
 from .._harness.concurrency import gather_with_barrier
 from .._harness.integrated_cases import (
@@ -32,6 +31,7 @@ pytestmark = pytest.mark.asyncio
 
 AUTO_SQUASH_MAX_DEPTH = 32
 AUTO_SQUASH_TRIGGER_WRITES = AUTO_SQUASH_MAX_DEPTH + 4
+_TRANSIENT_LOWERDIR_DIR = "transient-lowerdirs"
 
 
 async def test_concurrent_public_shell_leases_survive_mutation_burst(
@@ -495,7 +495,7 @@ def _assert_no_cache_shell_timings(
 
 
 async def _transient_lowerdir_parent_count(handle: SandboxHandle) -> int:
-    root = f"{DEFAULT_LAYER_STACK_ROOT}/runtime/{TRANSIENT_LOWERDIR_DIR}"
+    root = f"{DEFAULT_LAYER_STACK_ROOT}/runtime/{_TRANSIENT_LOWERDIR_DIR}"
     result = await handle.raw_exec(
         handle.sandbox_id,
         (

@@ -1,136 +1,62 @@
-"""Bound C: negative-lookup CPU slope <= 50 µs/layer as manifest depth M grows.
-
-Procedure: for each M∈{1,10,50,100,110}: mount a workspace with M layers;
-inside the mount, run `find . -name __NONEXISTENT_FILE__` 3 times (median
-wall-clock CPU). Check slope between adjacent (M_lo, M_hi) pairs.
-
-Skips on non-Linux or missing CAP_SYS_ADMIN.
-T7 executes this in a CAP_SYS_ADMIN Docker container.
-"""
+"""Bound C: successful file reads have bounded CPU slope by manifest depth."""
 
 from __future__ import annotations
 
-import statistics
-import subprocess
+import asyncio
 import sys
-import time
 from pathlib import Path
 
 import pytest
 
-from ..._harness.lease_resource_probe import assert_bound_c
+from ..._harness.lease_resource_probe import (
+    NEW_MOUNT_API,
+    ShellTelemetry,
+    assert_read_cpu_slope_by_depth,
+    build_layer_stack,
+    fail_if_depth_errors,
+    has_cap_sys_admin,
+    run_shell_batch,
+)
 
 
 pytestmark = pytest.mark.skipif(
-    sys.platform != "linux",
-    reason="Bound C requires Linux (overlay mount syscalls)",
+    sys.platform != "linux" or not has_cap_sys_admin(),
+    reason="O(1) overlay verification requires Linux with private mount namespaces",
 )
 
-_MANIFEST_DEPTHS = (1, 10, 50, 100, 110)
-_NEGATIVE_LOOKUP_REPEATS = 3
-
-
-def _make_layer_dirs(base: Path, count: int) -> list[Path]:
-    dirs = []
-    for i in range(count):
-        d = base / f"layer_{i:04d}"
-        d.mkdir(parents=True, exist_ok=True)
-        # Add enough files to make the lookup realistic
-        for j in range(20):
-            (d / f"file_{j}.txt").write_text(f"layer {i} file {j}\n")
-        dirs.append(d)
-    return dirs
-
-
-def _mount_read_only_overlay(layer_dirs: list[Path], merged: Path) -> None:
-    import ctypes
-    import ctypes.util
-    import os
-
-    libc = ctypes.CDLL(ctypes.util.find_library("c"), use_errno=True)
-    libc.syscall.restype = ctypes.c_long
-
-    SYS_fsopen = 430
-    SYS_fsconfig = 431
-    SYS_fsmount = 432
-    SYS_move_mount = 429
-    FSCONFIG_SET_STRING = 1
-    FSCONFIG_CMD_CREATE = 6
-    MOVE_MOUNT_F_EMPTY_PATH = 4
-    AT_FDCWD = -100
-
-    fd = libc.syscall(SYS_fsopen, b"overlay", 0)
-    if fd < 0:
-        err = ctypes.get_errno()
-        raise OSError(err, f"fsopen errno={err}")
-    try:
-        for d in layer_dirs:
-            rc = libc.syscall(SYS_fsconfig, fd, FSCONFIG_SET_STRING, b"lowerdir+", str(d).encode(), 0)
-            if rc < 0:
-                err = ctypes.get_errno()
-                raise OSError(err, f"fsconfig lowerdir+ errno={err}")
-        rc = libc.syscall(SYS_fsconfig, fd, FSCONFIG_CMD_CREATE, 0, 0, 0)
-        if rc < 0:
-            err = ctypes.get_errno()
-            raise OSError(err, f"fsconfig CREATE errno={err}")
-        mfd = libc.syscall(SYS_fsmount, fd, 0, 0)
-        if mfd < 0:
-            err = ctypes.get_errno()
-            raise OSError(err, f"fsmount errno={err}")
-        try:
-            rc = libc.syscall(SYS_move_mount, mfd, b"", AT_FDCWD, str(merged).encode(), MOVE_MOUNT_F_EMPTY_PATH)
-            if rc < 0:
-                err = ctypes.get_errno()
-                raise OSError(err, f"move_mount errno={err}")
-        finally:
-            os.close(mfd)
-    finally:
-        os.close(fd)
-
-
-def _measure_negative_lookup_cpu_ms(workspace_dir: Path, repeats: int = 3) -> float:
-    """Run `find . -name __NONEXISTENT_FILE__` inside workspace_dir, return median CPU ms."""
-    samples = []
-    for _ in range(repeats):
-        t0 = time.process_time()
-        subprocess.run(
-            ["find", ".", "-name", "__NONEXISTENT_FILE__"],
-            cwd=str(workspace_dir),
-            capture_output=True,
-            timeout=30,
-        )
-        elapsed_ms = (time.process_time() - t0) * 1000.0
-        samples.append(elapsed_ms)
-    return statistics.median(samples)
+_MANIFEST_DEPTHS = (2, 10, 50, 100, 110)
+_READ_REPEATS = 3
+_COMMAND = "cat known_file.bin >/dev/null"
 
 
 def test_bound_c_per_read_cpu_slope(tmp_path: Path) -> None:
-    """Bound C: negative-lookup CPU slope <= 50 µs/layer across M in {1,10,50,100,110}.
+    """Use command-exec child CPU telemetry for successful bottom-layer reads."""
+    asyncio.run(_run_bound_c(tmp_path))
 
-    Checks slope between every adjacent (M_lo, M_hi) depth pair.
-    A slope violation means steady-state shell read cost is growing too fast.
-    """
-    import os
 
-    cpu_ms_by_depth: dict[int, float] = {}
+async def _run_bound_c(tmp_path: Path) -> None:
+    rows_by_depth: dict[int, list[ShellTelemetry]] = {}
+    errors: dict[int, BaseException] = {}
 
-    for m in _MANIFEST_DEPTHS:
-        depth_base = tmp_path / f"M{m}"
-        depth_base.mkdir()
-        layers = _make_layer_dirs(depth_base / "layers", m)
-        merged = depth_base / "merged"
-        merged.mkdir()
-
+    for depth in _MANIFEST_DEPTHS:
         try:
-            _mount_read_only_overlay(layers, merged)
-        except OSError as exc:
-            pytest.skip(f"Overlay mount failed (missing CAP_SYS_ADMIN?): {exc}")
+            case_root = tmp_path / f"M{depth}"
+            stack = build_layer_stack(
+                case_root,
+                manifest_depth=depth,
+                base_payload_bytes=1024,
+            )
+            rows_by_depth[depth] = await run_shell_batch(
+                stack=stack,
+                workspace_root=case_root / "workspace-root",
+                scratch_root=case_root / "scratch-new-api",
+                requested_path=NEW_MOUNT_API,
+                commands=[_COMMAND] * _READ_REPEATS,
+                request_prefix=f"read-M{depth}",
+            )
+        except BaseException as exc:
+            errors[depth] = exc
+            continue
 
-        try:
-            cpu_ms = _measure_negative_lookup_cpu_ms(merged, _NEGATIVE_LOOKUP_REPEATS)
-        finally:
-            os.system(f"umount {merged} 2>/dev/null")
-
-        cpu_ms_by_depth[m] = cpu_ms
-
-    assert_bound_c(cpu_ms_by_depth)
+    fail_if_depth_errors(errors, label="Bound C")
+    assert_read_cpu_slope_by_depth(rows_by_depth)

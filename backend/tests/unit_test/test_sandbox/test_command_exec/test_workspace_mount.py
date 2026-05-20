@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -356,8 +355,6 @@ def test_namespace_mount_passes_fd_paths_to_new_mount_api(
     )
     syscalls: list[tuple[object, ...]] = []
 
-    import ctypes
-
     mock_libc = type("MockLibc", (), {})()
 
     def fake_syscall(*args: object) -> int:
@@ -379,7 +376,7 @@ def test_namespace_mount_passes_fd_paths_to_new_mount_api(
         inputs.close()
 
     syscall_numbers = [call[0] for call in syscalls]
-    from sandbox.execution.overlay.new_mount_api import SYS_fsopen, SYS_fsconfig, SYS_fsmount, SYS_move_mount
+    from sandbox.execution.overlay.new_mount_api import SYS_fsconfig, SYS_fsopen
     assert SYS_fsopen in syscall_numbers
     assert SYS_fsconfig in syscall_numbers
 

@@ -155,6 +155,8 @@ async def test_shell_capture_goes_through_occ_client_before_lease_release(
         stderr_ref.write_text("", encoding="utf-8")
         timings["command_exec.mount_workspace_s"] = 0.001
         timings["command_exec.run_command_s"] = 0.002
+        timings["cmd.exec.user_s"] = 0.0005
+        timings["cmd.exec.system_s"] = 0.0001
         return ShellProcessResult(
             exit_code=0,
             stdout_ref=str(stdout_ref),
@@ -228,6 +230,8 @@ async def test_shell_uses_transient_lowerdir_and_removes_it(
         stderr_ref.write_text("", encoding="utf-8")
         timings["command_exec.mount_workspace_s"] = 0.001
         timings["command_exec.run_command_s"] = 0.001
+        timings["cmd.exec.user_s"] = 0.0005
+        timings["cmd.exec.system_s"] = 0.0001
         return ShellProcessResult(
             exit_code=0,
             stdout_ref=str(stdout_ref),

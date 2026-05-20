@@ -159,7 +159,8 @@ docker run --rm \
     tests/live_e2e_test/sandbox/overlay/native/test_o1_lease_count_bound.py \
     tests/live_e2e_test/sandbox/overlay/native/test_o1_manifest_depth_bound.py \
     tests/live_e2e_test/sandbox/overlay/native/test_o1_per_read_cpu_bound.py \
-    tests/live_e2e_test/sandbox/overlay/native/test_o1_adversarial_harness_self_test.py"
+    tests/live_e2e_test/sandbox/overlay/native/test_o1_adversarial_harness_self_test.py \
+    tests/live_e2e_test/sandbox/overlay/native/test_o1_memory_bound.py"
 ```
 
 **Per-metric drilldown:** check `.sweevo_runs/<run_id>/o1_audit.json` for per-bound pass/fail detail.
