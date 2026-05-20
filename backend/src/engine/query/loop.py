@@ -349,13 +349,18 @@ async def _run_query_loop(
 
             if not final_message.tool_uses:
                 has_terminal = context.terminal_result is not None
-                if not has_terminal and context.terminal_tools:
+                tolerance = context.max_tolerance_after_max_tool_call
+                # In-loop nudge requires (a) terminal tools to call, (b) no
+                # terminal result yet, and (c) a tolerance budget. Without a
+                # tolerance budget there is no upper bound, so we must not
+                # loop — fall through to the TEXT_RESPONSE exit instead.
+                if (
+                    not has_terminal
+                    and context.terminal_tools
+                    and tolerance is not None
+                ):
                     context.text_only_no_terminal_turns += 1
-                    tolerance = context.max_tolerance_after_max_tool_call
-                    if (
-                        tolerance is not None
-                        and context.overshoot_units > tolerance
-                    ):
+                    if context.overshoot_units > tolerance:
                         # Distinguish text-only ceiling from tool-overflow
                         # ceiling so post-mortem audit can separate "burned
                         # through tools" from "refused to terminate after
