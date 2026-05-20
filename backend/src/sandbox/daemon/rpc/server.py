@@ -1,10 +1,12 @@
-"""AF_UNIX server for the resident in-sandbox daemon.
+"""AF_UNIX/TCP server for the resident in-sandbox daemon.
 
 Replaces the per-call ``python -m sandbox.daemon.rpc.dispatcher <json>`` boot path
 with a single long-lived process that listens on AF_UNIX. Each host call
 still goes through ``provider.exec(...)`` (Daytona constraint), but the
 per-call command is now a thin client that connects to the socket, sends
-one newline-terminated JSON envelope, and prints the JSON response.
+one newline-terminated JSON envelope, and prints the JSON response. Docker
+sandboxes may also expose the same daemon over a loopback-published TCP port
+to avoid a per-tool ``docker exec`` hop.
 
 Wire format (newline-delimited JSON):
 
@@ -47,6 +49,7 @@ logger = logging.getLogger("sandbox.daemon.rpc.server")
 
 DEFAULT_SOCKET_PATH = DAEMON_SOCKET_PATH
 DEFAULT_PID_PATH = DAEMON_PID_PATH
+DAEMON_AUTH_FIELD = "_eos_daemon_auth_token"
 
 # Cap a single request envelope to bound the daemon's per-connection memory and
 # convert oversize payloads into a structured ``request_too_large`` error rather
@@ -79,6 +82,8 @@ def _error_envelope(
 async def _handle_connection(
     reader: asyncio.StreamReader,
     writer: asyncio.StreamWriter,
+    *,
+    auth_token: str | None = None,
 ) -> None:
     boot_t0 = monotonic_now()
     try:
@@ -124,6 +129,11 @@ async def _handle_connection(
                 response = _error_envelope(
                     "invalid_envelope",
                     "daemon envelope must be a JSON object",
+                )
+            elif auth_token is not None and envelope.pop(DAEMON_AUTH_FIELD, None) != auth_token:
+                response = _error_envelope(
+                    "unauthorized",
+                    "daemon request authentication failed",
                 )
             else:
                 response = await dispatcher.dispatch_envelope_async(
@@ -171,7 +181,14 @@ def _remove_pid(pid_path: Path) -> None:
         pid_path.unlink()
 
 
-async def serve(socket_path: Path, pid_path: Path) -> None:
+async def serve(
+    socket_path: Path,
+    pid_path: Path,
+    *,
+    tcp_host: str | None = None,
+    tcp_port: int | None = None,
+    auth_token: str | None = None,
+) -> None:
     _prepare_socket_path(socket_path)
     # Force the initial socket inode permissions to ``0o700`` via umask so the
     # window between bind() (inside ``start_unix_server``) and the explicit
@@ -180,16 +197,33 @@ async def serve(socket_path: Path, pid_path: Path) -> None:
     # boundary must surface to the daemon's exit path.
     old_umask = os.umask(0o077)
     try:
-        server = await asyncio.start_unix_server(
-            _handle_connection,
+        unix_server = await asyncio.start_unix_server(
+            lambda reader, writer: _handle_connection(reader, writer),
             path=str(socket_path),
             limit=MAX_REQUEST_BYTES,
         )
     finally:
         os.umask(old_umask)
     os.chmod(socket_path, 0o600)
+    tcp_server: asyncio.AbstractServer | None = None
+    if tcp_host and tcp_port:
+        tcp_server = await asyncio.start_server(
+            lambda reader, writer: _handle_connection(
+                reader,
+                writer,
+                auth_token=auth_token,
+            ),
+            host=tcp_host,
+            port=tcp_port,
+            limit=MAX_REQUEST_BYTES,
+        )
     _write_pid(pid_path)
-    logger.info("daemon listening on %s pid=%s", socket_path, os.getpid())
+    logger.info(
+        "daemon listening on %s pid=%s tcp=%s",
+        socket_path,
+        os.getpid(),
+        f"{tcp_host}:{tcp_port}" if tcp_server is not None else "disabled",
+    )
 
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
@@ -202,11 +236,18 @@ async def serve(socket_path: Path, pid_path: Path) -> None:
             loop.add_signal_handler(sig, _signal_stop)
 
     try:
-        async with server:
-            serve_task = asyncio.create_task(server.serve_forever())
+        servers = [unix_server]
+        if tcp_server is not None:
+            servers.append(tcp_server)
+        async with contextlib.AsyncExitStack() as stack:
+            for server in servers:
+                await stack.enter_async_context(server)
+            serve_tasks = [
+                asyncio.create_task(server.serve_forever()) for server in servers
+            ]
             stop_task = asyncio.create_task(stop.wait())
             done, pending = await asyncio.wait(
-                {serve_task, stop_task},
+                {*serve_tasks, stop_task},
                 return_when=asyncio.FIRST_COMPLETED,
             )
             for task in pending:

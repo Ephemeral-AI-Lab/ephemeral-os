@@ -104,7 +104,7 @@ async def call_plugin(
                 op,
                 exc,
             )
-            return _error_result("install", plugin, op, str(exc))
+            return _error_result("install", plugin, op, _exception_message(exc))
 
         if _runtime_loaded.get((sandbox_id, plugin)) != digest:
             try:
@@ -127,7 +127,7 @@ async def call_plugin(
                     op,
                     exc,
                 )
-                return _error_result("ensure-runtime", plugin, op, str(exc))
+                return _error_result("ensure-runtime", plugin, op, _exception_message(exc))
             _runtime_loaded[(sandbox_id, plugin)] = digest
 
     caller = caller_from_context(context)
@@ -157,7 +157,7 @@ async def call_plugin(
             op,
             exc,
         )
-        return _error_result("dispatch", plugin, op, str(exc))
+        return _error_result("dispatch", plugin, op, _exception_message(exc))
 
     return _wrap_response(response, plugin=plugin, op=op)
 
@@ -210,6 +210,13 @@ def _error_result(step: str, plugin: str, op: str, message: str) -> ToolResult:
         is_error=True,
         metadata={"plugin": plugin, "op": op, "step": step},
     )
+
+
+def _exception_message(exc: Exception) -> str:
+    message = str(exc)
+    if message:
+        return message
+    return exc.__class__.__name__
 
 
 def reset_session_cache() -> None:

@@ -154,14 +154,13 @@ env var; tests are provider-agnostic.
 | Env var                  | Required        | Purpose                                                                                  |
 |--------------------------|-----------------|------------------------------------------------------------------------------------------|
 | `EOS_SANDBOX_PROVIDER`   | yes             | Set to `docker` to route `live_sandbox` through `DockerProviderAdapter`.                 |
-| `EOS_LIVE_E2E_IMAGE`     | yes (docker)    | Local-or-pullable image tag. **No fallback to `default_image` under docker** — missing this env var is a hard fixture skip. |
+| `EOS_LIVE_E2E_IMAGE`     | no              | Optional override. If unset, Docker uses `settings.sandbox.default_image` / `EPHEMERALOS_SANDBOX_DEFAULT_IMAGE`, matching Daytona. |
 | `EOS_DOCKER_PRIVILEGED`  | no              | `1` swaps `DEFAULT_RUN_FLAGS` (CAP_SYS_ADMIN + seccomp/apparmor unconfined) for `--privileged`. |
 
 **Linux-only.** The Docker provider is unsupported on darwin (Docker Desktop's
 VM does not surface the host namespaces the overlay slice relies on).
 
-**Image-bake requirements** (operator responsibility — the suite no longer
-silently inherits these from a SaaS image):
+**Image-bake requirements** (operator responsibility):
 
 - Container runs as root with the capability set produced by
   `sandbox.provider.docker.client.resolve_run_flags()`.
@@ -173,6 +172,7 @@ silently inherits these from a SaaS image):
 
 ```bash
 export EOS_SANDBOX_PROVIDER=docker
+# Optional when EPHEMERALOS_SANDBOX_DEFAULT_IMAGE already points at the image.
 export EOS_LIVE_E2E_IMAGE=my-registry/eos-live-e2e:latest
 .venv/bin/pytest backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase00_smoke.py -v
 ```

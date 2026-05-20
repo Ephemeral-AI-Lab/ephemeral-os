@@ -15,6 +15,7 @@ satisfy:
 from __future__ import annotations
 
 import ast
+import inspect
 import json
 from types import SimpleNamespace
 
@@ -28,10 +29,15 @@ from task_center_runner.scenarios.sandbox._fixtures.scheduler_demo_data import (
     SMOKE_FILE_PATHS,
 )
 from task_center_runner.agent.mock import complex_project_build_probe as complex_probe
+from task_center_runner.agent.mock import complex_project_build_grep_glob_probe as grep_glob_probe
 from task_center_runner.agent.mock import complex_project_build_shell_edit_lsp_probe as shell_lsp_probe
 from task_center_runner.agent.mock.complex_project_build_probe import (
+    ProbeStats,
     _compute_amp_pairs,
     _importable_dotted_names,
+    _tool_call_floor,
+    _toolkit_calls,
+    _total_calls,
 )
 from task_center_runner.agent.mock.complex_project_build_shell_edit_lsp_probe import (
     ShellEditLspStats,
@@ -189,6 +195,25 @@ def test_diagnostic_probe_uses_syntax_error_payload() -> None:
     assert "missing_value" not in broken
 
 
+def test_complex_project_build_probe_avoids_destructive_git_shell_commands() -> None:
+    source = inspect.getsource(complex_probe)
+    forbidden = ("git add", "git commit", "git init", "git status", "command -v git")
+    assert all(token not in source for token in forbidden)
+    assert "phase=%s" in source
+
+
+def test_grep_glob_probe_avoids_git_shell_checkpoints() -> None:
+    source = inspect.getsource(grep_glob_probe)
+    assert "git status" not in source
+    assert "phase=%s" in source
+
+
+def test_shell_edit_lsp_probe_avoids_git_shell_checkpoints() -> None:
+    source = inspect.getsource(shell_lsp_probe)
+    assert "git status" not in source
+    assert "phase=%s" in source
+
+
 @pytest.mark.asyncio
 async def test_shell_cat_retry_recovers_transient_transport_error(
     monkeypatch: pytest.MonkeyPatch,
@@ -324,16 +349,46 @@ def test_compute_mixed_amp_pairs_meets_logical_edit_floors() -> None:
         )
 
 
-def test_compute_amp_pairs_meets_phase1_floor() -> None:
-    """Phase 2 N2: helper must auto-size such that smoke ≥6 and full ≥30
-    against the current fixture set (matches Phase 1 amp_pairs constants
-    with headroom for future fixture additions)."""
+def test_compute_amp_pairs_meets_ratio_without_mutation_bloat() -> None:
+    """Edit amplification should satisfy ratio without owning call-floor padding."""
     smoke = tuple(f for f in SCHEDULER_DEMO_FILES if f.relative_path in SMOKE_FILE_PATHS)
     full = SCHEDULER_DEMO_FILES
-    smoke_pairs = _compute_amp_pairs(smoke, smoke=True)
-    full_pairs = _compute_amp_pairs(full, smoke=False)
-    assert smoke_pairs >= 6, f"smoke amp_pairs={smoke_pairs}, want ≥6"
-    assert full_pairs >= 30, f"full amp_pairs={full_pairs}, want ≥30"
+    for selected, smoke_flag in ((smoke, True), (full, False)):
+        pairs = _compute_amp_pairs(selected, smoke=smoke_flag)
+        write_count = sum(1 for f in selected if f.skeleton)
+        patch_count = sum(len(f.patches) for f in selected)
+        py_anchor_count = sum(
+            1
+            for fixture in selected
+            if fixture.relative_path.endswith(".py")
+            and "from __future__ import annotations" in fixture.final
+        )
+        edit_count = patch_count + (2 * py_anchor_count * pairs)
+        assert edit_count / write_count >= 4.0
+        assert pairs < 10, (
+            f"smoke={smoke_flag} pairs={pairs} should not pad the tool-call floor"
+        )
+
+
+def test_tool_call_floor_keeps_heavy_and_smoke_contracts_explicit() -> None:
+    assert _tool_call_floor(smoke=True) == 250
+    assert _tool_call_floor(smoke=False) == 2000
+
+
+def test_tool_call_floor_uses_toolkit_calls_not_direct_api_calls() -> None:
+    stats = ProbeStats(
+        write_count=2,
+        edit_count=4,
+        read_count=8,
+        shell_count=1,
+        lsp_counts={"lsp.hover": 3},
+        api_read_count=100,
+        api_edit_count=7,
+        api_shell_count=2,
+    )
+
+    assert _toolkit_calls(stats) == 18
+    assert _total_calls(stats) == 127
 
 
 def test_importable_dotted_names_covers_source_modules() -> None:

@@ -6,6 +6,7 @@ import importlib
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -24,6 +25,10 @@ _tier0 = _load_tier0()
 
 def _completed(returncode: int, stdout: str = "", stderr: str = "") -> subprocess.CompletedProcess:
     return subprocess.CompletedProcess(args=[], returncode=returncode, stdout=stdout, stderr=stderr)
+
+
+def _settings_with_image(image: str) -> SimpleNamespace:
+    return SimpleNamespace(sandbox=SimpleNamespace(default_image=image))
 
 
 def test_docker_probe_happy_path(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -49,6 +54,28 @@ def test_docker_probe_happy_path(monkeypatch: pytest.MonkeyPatch) -> None:
     assert calls[2][:3] == ["docker", "run", "--rm"]
 
 
+def test_docker_probe_falls_back_to_default_image(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("EOS_LIVE_E2E_IMAGE", raising=False)
+    monkeypatch.setenv("EOS_DOCKER_PRIVILEGED", "")
+    calls = []
+
+    def fake_run(argv, **kwargs):
+        calls.append(argv)
+        return _completed(0)
+
+    with patch.object(_tier0.shutil, "which", return_value="/usr/bin/docker"), \
+         patch("config.settings.load_settings", return_value=_settings_with_image("default:tag")), \
+         patch.object(_tier0.subprocess, "run", side_effect=fake_run):
+        result = _tier0.probe_tier0_docker()
+
+    assert result.passed is True
+    assert "image_inspect=ok image='default:tag'" in result.notes
+    assert calls[1] == ["docker", "image", "inspect", "default:tag"]
+    assert calls[2][-4:-1] == ["default:tag", "sh", "-c"]
+
+
 def test_docker_probe_daemon_down(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("EOS_LIVE_E2E_IMAGE", "my-image:tag")
     with patch.object(_tier0.shutil, "which", return_value="/usr/bin/docker"), \
@@ -61,10 +88,11 @@ def test_docker_probe_daemon_down(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_docker_probe_missing_image_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("EOS_LIVE_E2E_IMAGE", raising=False)
     with patch.object(_tier0.shutil, "which", return_value="/usr/bin/docker"), \
+         patch("config.settings.load_settings", return_value=_settings_with_image("")), \
          patch.object(_tier0.subprocess, "run", return_value=_completed(0)):
         result = _tier0.probe_tier0_docker()
     assert result.passed is False
-    assert "missing_EOS_LIVE_E2E_IMAGE" in result.notes
+    assert "missing_live_image_default" in result.notes
 
 
 def test_docker_probe_image_inspect_fail(monkeypatch: pytest.MonkeyPatch) -> None:

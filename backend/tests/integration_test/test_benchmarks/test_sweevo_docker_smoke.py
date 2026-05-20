@@ -4,7 +4,7 @@ Implements the three acceptance bars from PLAN_v4 §5.3:
 
 (a) ≥95% of NAMESPACE-strategy execs report mount_mode=PRIVATE_NAMESPACE
 (b) p95 exec latency within ±25% of the Daytona baseline file
-(c) post-squash execs still report PRIVATE_NAMESPACE after auto-squash at depth 32
+(c) post-squash execs still report PRIVATE_NAMESPACE after auto-squash
 
 Linux+Docker-gated; auto-skips on darwin and when EOS_HAVE_DOCKER!=1.
 """
@@ -94,7 +94,7 @@ async def test_sweevo_docker_smoke_mount_ratio_and_perf() -> None:
             f"{daytona_p95:.0f}ms"
         )
 
-    # (c) post-squash execs still PRIVATE_NAMESPACE (auto-squash at depth 32)
+    # (c) post-squash execs still PRIVATE_NAMESPACE after auto-squash
     post_squash = [r for r in namespace_execs if getattr(r, "post_squash", False)]
     if post_squash:
         bad = [r for r in post_squash if r.mount_mode != MountMode.PRIVATE_NAMESPACE]

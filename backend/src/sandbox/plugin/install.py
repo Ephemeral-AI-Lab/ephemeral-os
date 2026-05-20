@@ -114,6 +114,7 @@ class PluginInstallError(RuntimeError):
 
 
 _locks: dict[tuple[str, str], asyncio.Lock] = {}
+_installed_digests: dict[tuple[str, str], str] = {}
 
 
 def plugin_install_dir(plugin_name: str) -> str:
@@ -139,11 +140,17 @@ async def ensure_installed(
 ) -> str:
     """Ensure *manifest*'s plugin bundle is installed on *sandbox_id*."""
     key = (sandbox_id, manifest.name)
+    digest = _bundle_hash(manifest)
+    if _installed_digests.get(key) == digest:
+        return digest
+
     lock = _locks.setdefault(key, asyncio.Lock())
     async with lock:
+        if _installed_digests.get(key) == digest:
+            return digest
         executor = exec_fn or get_adapter(sandbox_id).exec
-        digest = _bundle_hash(manifest)
         if await _marker_present(executor, sandbox_id, manifest.name, digest):
+            _installed_digests[key] = digest
             return digest
         await _upload_and_run_setup(
             executor,
@@ -152,6 +159,7 @@ async def ensure_installed(
             digest=digest,
             setup_timeout=setup_timeout,
         )
+        _installed_digests[key] = digest
         return digest
 
 
@@ -160,6 +168,8 @@ def forget(sandbox_id: str) -> None:
     sandbox_id = str(sandbox_id or "").strip()
     for key in [key for key in _locks if key[0] == sandbox_id]:
         _locks.pop(key, None)
+    for key in [key for key in _installed_digests if key[0] == sandbox_id]:
+        _installed_digests.pop(key, None)
 
 
 def _bundle_hash(manifest: PluginManifest) -> str:

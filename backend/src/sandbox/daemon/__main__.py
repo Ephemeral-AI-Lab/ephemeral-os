@@ -17,18 +17,42 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="sandbox.daemon")
     parser.add_argument("--socket", default=DEFAULT_SOCKET_PATH)
     parser.add_argument("--pid-file", default=DEFAULT_PID_PATH)
+    parser.add_argument("--tcp-host", default=os.environ.get("EOS_DAEMON_TCP_HOST"))
+    parser.add_argument(
+        "--tcp-port",
+        type=int,
+        default=_optional_int(os.environ.get("EOS_DAEMON_TCP_PORT")),
+    )
+    parser.add_argument(
+        "--auth-token",
+        default=os.environ.get("EOS_DAEMON_AUTH_TOKEN"),
+    )
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     pid_lock_fd: int | None = None
     try:
         pid_lock_fd = _acquire_pid_lock(Path(args.pid_file))
-        asyncio.run(serve(Path(args.socket), Path(args.pid_file)))
+        asyncio.run(
+            serve(
+                Path(args.socket),
+                Path(args.pid_file),
+                tcp_host=args.tcp_host,
+                tcp_port=args.tcp_port,
+                auth_token=args.auth_token,
+            )
+        )
     except KeyboardInterrupt:
         return 0
     finally:
         if pid_lock_fd is not None:
             os.close(pid_lock_fd)
     return 0
+
+
+def _optional_int(value: str | None) -> int | None:
+    if value is None or not value.strip():
+        return None
+    return int(value)
 
 
 def _acquire_pid_lock(pid_path: Path) -> int:

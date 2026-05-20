@@ -12,7 +12,15 @@ from unittest.mock import MagicMock
 import pytest
 
 from sandbox._shared.models import RawExecResult
-from sandbox.provider.docker.adapter import DockerProviderAdapter
+from sandbox.provider.docker.adapter import (
+    DAEMON_AUTH_ENV,
+    DAEMON_TCP_ENABLED_LABEL,
+    DAEMON_TCP_ENV_HOST,
+    DAEMON_TCP_ENV_PORT,
+    DAEMON_TCP_INTERNAL_PORT,
+    DAEMON_TCP_PORT_LABEL,
+    DockerProviderAdapter,
+)
 
 
 def _fake_container(
@@ -21,6 +29,8 @@ def _fake_container(
     name: str = "/sweevo-test",
     image: str = "sweevo:latest",
     labels: dict[str, str] | None = None,
+    env: list[str] | None = None,
+    ports: dict[str, object] | None = None,
     state_status: str = "running",
     working_dir: str = "/repo",
 ) -> MagicMock:
@@ -35,10 +45,11 @@ def _fake_container(
             "Image": image,
             "Labels": labels or {},
             "WorkingDir": working_dir,
-            "Env": [],
+            "Env": env or [],
             "Cmd": ["sleep", "infinity"],
         },
         "State": {"Status": state_status},
+        "NetworkSettings": {"Ports": ports or {}},
     }
     return container
 
@@ -86,6 +97,7 @@ def test_create_calls_containers_create_with_default_caps(
 ) -> None:
     monkeypatch.delenv("EOS_DOCKER_PRIVILEGED", raising=False)
     monkeypatch.delenv("EOS_DOCKER_NO_PRIVILEGE", raising=False)
+    monkeypatch.delenv("EOS_DOCKER_DAEMON_TCP", raising=False)
 
     result = adapter.create(name="sb1", image="sweevo:abc", labels={"project_dir": "/repo"})
 
@@ -100,9 +112,49 @@ def test_create_calls_containers_create_with_default_caps(
     assert "apparmor=unconfined" in kwargs["security_opt"]
     assert kwargs["labels"]["managed_by"] == "eos"
     assert kwargs["labels"]["project_dir"] == "/repo"
+    assert kwargs["labels"][DAEMON_TCP_ENABLED_LABEL] == "1"
+    assert kwargs["labels"][DAEMON_TCP_PORT_LABEL] == str(DAEMON_TCP_INTERNAL_PORT)
+    assert kwargs["environment"][DAEMON_TCP_ENV_HOST] == "0.0.0.0"
+    assert kwargs["environment"][DAEMON_TCP_ENV_PORT] == str(DAEMON_TCP_INTERNAL_PORT)
+    assert kwargs["environment"][DAEMON_AUTH_ENV]
+    assert kwargs["ports"] == {
+        f"{DAEMON_TCP_INTERNAL_PORT}/tcp": ("127.0.0.1", None)
+    }
     # container.start() called
     fake_client.containers.create.return_value.start.assert_called_once()
     assert result["name"] == "sweevo-test"
+
+
+def test_create_can_disable_tcp_daemon_endpoint(
+    adapter: DockerProviderAdapter, fake_client: MagicMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("EOS_DOCKER_DAEMON_TCP", "0")
+
+    adapter.create(name="sb1", image="sweevo:abc")
+
+    kwargs = fake_client.containers.create.call_args.kwargs
+    assert DAEMON_TCP_ENABLED_LABEL not in kwargs["labels"]
+    assert DAEMON_TCP_ENV_HOST not in kwargs["environment"]
+    assert "ports" not in kwargs
+
+
+def test_create_pulls_missing_image_once(
+    adapter: DockerProviderAdapter, fake_client: MagicMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class ImageNotFound(Exception):
+        explanation = "No such image: sweevo:abc"
+
+    monkeypatch.delenv("EOS_DOCKER_PRIVILEGED", raising=False)
+    monkeypatch.delenv("EOS_DOCKER_NO_PRIVILEGE", raising=False)
+    container = _fake_container(image="sweevo:abc")
+    fake_client.containers.create.side_effect = [ImageNotFound(), container]
+
+    result = adapter.create(name="sb1", image="sweevo:abc")
+
+    fake_client.images.pull.assert_called_once_with("sweevo:abc")
+    assert fake_client.containers.create.call_count == 2
+    container.start.assert_called_once()
+    assert result["image"] == "sweevo:abc"
 
 
 def test_create_privileged_escape_hatch(
@@ -155,6 +207,20 @@ def test_list_filters_by_managed_by_label(
     assert len(out) == 2
 
 
+def test_set_labels_preserves_container_id(
+    adapter: DockerProviderAdapter, fake_client: MagicMock
+) -> None:
+    container = fake_client.containers.get.return_value
+
+    result = adapter.set_labels("c-1", {"project_dir": "/repo2"})
+
+    fake_client.containers.get.assert_called_with("c-1")
+    fake_client.containers.create.assert_not_called()
+    container.stop.assert_not_called()
+    container.remove.assert_not_called()
+    assert result["id"] == "c-1"
+
+
 def test_get_signed_preview_url_shape(adapter: DockerProviderAdapter) -> None:
     result = adapter.get_signed_preview_url("any", 8080)
     assert result == {"url": None, "reason": "docker provider has no signed preview URL"}
@@ -162,6 +228,47 @@ def test_get_signed_preview_url_shape(adapter: DockerProviderAdapter) -> None:
 
 def test_get_build_logs_url_returns_none(adapter: DockerProviderAdapter) -> None:
     assert adapter.get_build_logs_url("any") is None
+
+
+def test_get_daemon_tcp_endpoint_reads_loopback_port(
+    adapter: DockerProviderAdapter, fake_client: MagicMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("EOS_DOCKER_DAEMON_TCP", raising=False)
+    fake_client.containers.get.return_value = _fake_container(
+        labels={
+            DAEMON_TCP_ENABLED_LABEL: "1",
+            DAEMON_TCP_PORT_LABEL: str(DAEMON_TCP_INTERNAL_PORT),
+        },
+        env=[f"{DAEMON_AUTH_ENV}=secret-token"],
+        ports={
+            f"{DAEMON_TCP_INTERNAL_PORT}/tcp": [
+                {"HostIp": "0.0.0.0", "HostPort": "53913"}
+            ]
+        },
+    )
+
+    endpoint = adapter.get_daemon_tcp_endpoint("c-1")
+
+    assert endpoint == {
+        "host": "127.0.0.1",
+        "port": 53913,
+        "internal_port": DAEMON_TCP_INTERNAL_PORT,
+        "auth_token": "secret-token",
+    }
+
+
+def test_get_daemon_tcp_endpoint_returns_none_without_port_mapping(
+    adapter: DockerProviderAdapter, fake_client: MagicMock
+) -> None:
+    fake_client.containers.get.return_value = _fake_container(
+        labels={
+            DAEMON_TCP_ENABLED_LABEL: "1",
+            DAEMON_TCP_PORT_LABEL: str(DAEMON_TCP_INTERNAL_PORT),
+        },
+        env=[f"{DAEMON_AUTH_ENV}=secret-token"],
+    )
+
+    assert adapter.get_daemon_tcp_endpoint("c-1") is None
 
 
 def test_exec_returns_raw_exec_result(adapter: DockerProviderAdapter, fake_client: MagicMock) -> None:

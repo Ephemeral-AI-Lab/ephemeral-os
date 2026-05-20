@@ -6,7 +6,7 @@ Drives the public sandbox toolkit through ``AUTO_SQUASH_MAX_DEPTH + 4``
 missing-anchor edit conflict. Captures every tool's timing metadata into a
 sandbox summary artifact so the paired test can assert on
 ``occ.apply.commit_resume_wait_s``, ``layer_stack.auto_squash.total_s``, and
-``layer_stack.auto_squash.depth_before > 32``.
+``layer_stack.auto_squash.depth_before > AUTO_SQUASH_MAX_DEPTH``.
 
 This isolates the OCC mutation critical path that crosses
 ``AUTO_SQUASH_MAX_DEPTH`` and proves behavior equivalence while measuring
@@ -19,12 +19,15 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
 from tools.submission.evaluator import submit_evaluation_success
 from tools.submission.planner import submit_plan_closes_goal
 
 from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
+
+_AUTO_SQUASH_WRITE_COUNT = AUTO_SQUASH_MAX_DEPTH + 4
 
 _AUTO_SQUASH_PLAN = {
     "plan_spec": (
@@ -47,9 +50,10 @@ _AUTO_SQUASH_PLAN = {
     ],
     "task_specs": {
         "auto_squash_commit_resume_probe": (
-            "Run the auto-squash commit-resume probe: 36 sequential writes "
-            "to cross the depth threshold, post-threshold edits, interleaved "
-            "reads, a shell readback, and one intentional missing-anchor "
+            "Run the auto-squash commit-resume probe: "
+            f"{_AUTO_SQUASH_WRITE_COUNT} sequential writes to cross the "
+            "depth threshold, post-threshold edits, interleaved reads, a "
+            "shell readback, and one intentional missing-anchor "
             "edit conflict."
         ),
     },

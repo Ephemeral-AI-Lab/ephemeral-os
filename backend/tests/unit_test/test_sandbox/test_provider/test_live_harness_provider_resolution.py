@@ -70,12 +70,12 @@ def test_env_unset_daytona_falls_back_to_settings(
         assert _resolve_live_image("daytona") == "registry/daytona-image:v1"
 
 
-def test_env_unset_docker_skips(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_env_unset_docker_falls_back_to_settings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.delenv("EOS_LIVE_E2E_IMAGE", raising=False)
     with _patch_settings("registry/daytona-image:v1"):
-        with pytest.raises(pytest.skip.Exception) as excinfo:
-            _resolve_live_image("docker")
-    assert "EOS_LIVE_E2E_IMAGE" in str(excinfo.value)
+        assert _resolve_live_image("docker") == "registry/daytona-image:v1"
 
 
 def test_env_unset_daytona_empty_settings_skips(
@@ -85,3 +85,12 @@ def test_env_unset_daytona_empty_settings_skips(
     with _patch_settings("   "):
         with pytest.raises(pytest.skip.Exception):
             _resolve_live_image("daytona")
+
+
+def test_env_unset_docker_empty_settings_skips(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("EOS_LIVE_E2E_IMAGE", raising=False)
+    with _patch_settings("   "):
+        with pytest.raises(pytest.skip.Exception):
+            _resolve_live_image("docker")

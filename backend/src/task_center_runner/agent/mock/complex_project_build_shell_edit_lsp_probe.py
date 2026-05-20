@@ -246,12 +246,7 @@ async def _phase_b_mixed_patches(
                 await _api_edit_noop_batch(ctx, stats, path)
         await _projection_consistency_check(ctx, stats, path)
 
-    await _shell(
-        ctx,
-        stats,
-        command=f"cd {WORKSPACE_ROOT} && git status --short | wc -l",
-        timeout=180,
-    )
+    await _shell_phase_checkpoint(ctx, stats, "mixed_patches")
     stats.phases.append(
         {
             "name": "B_mixed_patches",
@@ -323,12 +318,7 @@ async def _phase_d_mixed_refactor(
                 label=f"{pass_.name}.clean",
             )
 
-        await _shell(
-            ctx,
-            stats,
-            command=f"cd {WORKSPACE_ROOT} && git status --short | wc -l",
-            timeout=180,
-        )
+        await _shell_phase_checkpoint(ctx, stats, f"mixed_refactor_{pass_.name}")
 
     stats.phases.append(
         {
@@ -336,6 +326,19 @@ async def _phase_d_mixed_refactor(
             "duration_s": time.monotonic() - phase_started,
             "tool_calls_at_end": _total_calls(stats),
         }
+    )
+
+
+async def _shell_phase_checkpoint(
+    ctx: ProbeContext,
+    stats: ShellEditLspStats,
+    phase: str,
+) -> None:
+    await _shell(
+        ctx,
+        stats,
+        command=f"printf 'phase=%s\\n' {phase!r}",
+        timeout=180,
     )
 
 

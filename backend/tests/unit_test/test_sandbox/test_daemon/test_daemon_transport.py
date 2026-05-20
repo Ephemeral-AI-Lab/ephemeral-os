@@ -68,6 +68,115 @@ async def test_daemon_uses_daemon_thin_client_by_default() -> None:
     assert "thin_client.py" in seen[0]
 
 
+async def test_daemon_uses_tcp_endpoint_before_thin_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen_tcp: list[tuple[command._DaemonTcpEndpoint, str, int | None]] = []
+
+    async def fake_tcp(
+        endpoint: command._DaemonTcpEndpoint,
+        payload: str,
+        *,
+        timeout: int | None,
+    ) -> Any:
+        seen_tcp.append((endpoint, payload, timeout))
+        return SimpleNamespace(stdout=_ok_response(), stderr="", exit_code=0)
+
+    async def fake_exec(_sandbox_id: str, _command_str: str, **_: Any) -> Any:
+        raise AssertionError("thin client should not run when TCP succeeds")
+
+    monkeypatch.setattr(command, "_call_tcp_daemon", fake_tcp)
+    endpoint = command._DaemonTcpEndpoint(
+        host="127.0.0.1",
+        port=53913,
+        internal_port=37657,
+        auth_token="secret",
+    )
+
+    response = await command._call_daemon(
+        exec_fn=fake_exec,
+        sandbox_id="sb-1",
+        op="api.read_file",
+        args={"path": "a"},
+        timeout=15,
+        tcp_endpoint=endpoint,
+    )
+
+    assert response == {"success": True, "timings": {}}
+    assert seen_tcp == [
+        (
+            endpoint,
+            '{"op":"api.read_file","args":{"path":"a"}}',
+            15,
+        )
+    ]
+
+
+async def test_daemon_tcp_endpoint_falls_back_to_thin_client_on_connect_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen_exec: list[str] = []
+
+    async def fake_tcp(
+        _endpoint: command._DaemonTcpEndpoint,
+        _payload: str,
+        *,
+        timeout: int | None,
+    ) -> Any:
+        return SimpleNamespace(
+            stdout="",
+            stderr="EOS_DAEMON_CONNECT_FAILED:ConnectionRefusedError",
+            exit_code=command._THIN_CLIENT_CONNECT_FAILED,
+        )
+
+    async def fake_exec(_sandbox_id: str, command_str: str, **_: Any) -> Any:
+        seen_exec.append(command_str)
+        return SimpleNamespace(stdout=_ok_response(), stderr="", exit_code=0)
+
+    monkeypatch.setattr(command, "_call_tcp_daemon", fake_tcp)
+    endpoint = command._DaemonTcpEndpoint(
+        host="127.0.0.1",
+        port=53913,
+        internal_port=37657,
+        auth_token="secret",
+    )
+
+    response = await command._call_daemon(
+        exec_fn=fake_exec,
+        sandbox_id="sb-1",
+        op="api.read_file",
+        args={"path": "a"},
+        tcp_endpoint=endpoint,
+    )
+
+    assert response == {"success": True, "timings": {}}
+    assert len(seen_exec) == 1
+    assert "thin_client.py" in seen_exec[0]
+
+
+async def test_daemon_tcp_empty_response_is_connect_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_inner(
+        _endpoint: command._DaemonTcpEndpoint,
+        _payload: str,
+    ) -> str:
+        return ""
+
+    monkeypatch.setattr(command, "_call_tcp_daemon_inner", fake_inner)
+    endpoint = command._DaemonTcpEndpoint(
+        host="127.0.0.1",
+        port=53913,
+        internal_port=37657,
+        auth_token="secret",
+    )
+
+    result = await command._call_tcp_daemon(endpoint, "{}", timeout=1)
+
+    assert result.exit_code == command._THIN_CLIENT_CONNECT_FAILED
+    assert result.stderr == "EOS_DAEMON_CONNECT_FAILED:empty_response"
+
+
 def test_daemon_commands_do_not_forward_host_env(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -96,6 +205,22 @@ def test_daemon_spawn_tracks_runtime_bundle_signature(
     assert "runtime.env" in daemon_spawn
     assert "runtime_bundle_sha=sha-current" in daemon_spawn
     assert "launch_daemon.sh" in daemon_spawn
+
+
+def test_daemon_spawn_signature_tracks_tcp_port(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(command, "bundle_hash", lambda: "sha-current")
+    endpoint = command._DaemonTcpEndpoint(
+        host="127.0.0.1",
+        port=53913,
+        internal_port=37657,
+        auth_token="secret",
+    )
+
+    daemon_spawn = command._daemon_spawn_command(tcp_endpoint=endpoint)
+
+    assert "runtime_bundle_sha=sha-current;daemon_tcp_port=37657" in daemon_spawn
 
 
 async def test_ensure_daemon_current_runs_spawn_command(

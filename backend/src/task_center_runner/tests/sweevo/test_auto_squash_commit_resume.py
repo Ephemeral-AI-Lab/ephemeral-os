@@ -10,7 +10,8 @@ public sandbox toolkit and asserts the contract from
   ``sandbox_events.jsonl``.
 - At least one tool result includes ``layer_stack.auto_squash.total_s``.
 - At least one tool result includes ``occ.apply.commit_resume_wait_s``.
-- ``layer_stack.auto_squash.depth_before > 32`` appears in timing metadata.
+- ``layer_stack.auto_squash.depth_before > AUTO_SQUASH_MAX_DEPTH`` appears in
+  timing metadata.
 - Final ``read_file`` and ``shell`` readback agree on committed contents.
 - The intentional missing-anchor edit reports a conflict with non-empty
   ``conflict_reason``, ``is_error == True``, and the same payload shape as the
@@ -31,6 +32,7 @@ import pytest
 import sandbox.api as sandbox_api
 from benchmarks.sweevo.models import SWEEvoInstance
 from sandbox.api import ReadFileRequest, SandboxCaller, ShellRequest
+from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
 
 from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios import SCENARIO_REGISTRY
@@ -107,9 +109,13 @@ async def test_auto_squash_commit_resume_crosses_depth_threshold(
         for timings in timings_records
     ), "no tool result reported occ.apply.commit_resume_wait_s"
     assert any(
-        float(timings.get("layer_stack.auto_squash.depth_before", 0.0)) > 32.0
+        float(timings.get("layer_stack.auto_squash.depth_before", 0.0))
+        > float(AUTO_SQUASH_MAX_DEPTH)
         for timings in timings_records
-    ), "no tool result reported layer_stack.auto_squash.depth_before > 32"
+    ), (
+        "no tool result reported "
+        f"layer_stack.auto_squash.depth_before > {AUTO_SQUASH_MAX_DEPTH}"
+    )
 
     intentional_conflict = _find_intentional_conflict(report.tool_calls)
     assert intentional_conflict is not None, "intentional conflict tool call missing"
@@ -181,11 +187,11 @@ async def _assert_final_workspace_state(
     assert summary_read.exists
     summary_payload = json.loads(summary_read.content)
     assert summary_payload["probe"] == "auto_squash_commit_resume"
-    assert summary_payload["write_count"] == 36
+    assert summary_payload["write_count"] == AUTO_SQUASH_MAX_DEPTH + 4
     assert summary_payload["conflict_status"] == conflict_status
     assert summary_payload["conflict_reason"] == conflict_reason
     assert summary_payload["conflict_is_error"] is True
-    assert float(summary_payload["max_depth_before"]) > 32.0
+    assert float(summary_payload["max_depth_before"]) > float(AUTO_SQUASH_MAX_DEPTH)
     assert float(summary_payload["max_auto_squash_total_s"]) >= 0.0
     assert float(summary_payload["max_commit_resume_wait_s"]) >= 0.0
 

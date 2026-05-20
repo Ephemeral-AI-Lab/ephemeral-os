@@ -20,7 +20,7 @@ from sandbox.occ.maintenance import MaintenancePolicy
 from sandbox.occ.ports import OccLayerStackPort
 from sandbox.daemon.async_bridge import run_sync_in_executor
 
-AUTO_SQUASH_MAX_DEPTH = 32
+AUTO_SQUASH_MAX_DEPTH = 100
 
 
 class OccService:

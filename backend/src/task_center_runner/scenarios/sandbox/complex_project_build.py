@@ -1,9 +1,9 @@
 """Complex project-build layer-stack projection scenario.
 
-Drives a freshly-initialized ``/ephemeral-os`` git repository through a
-multi-phase build (skeleton + patch progression + refactor passes + pytest +
-LSP saturation + tri-source projection consistency + intentional conflicts +
-perf metrics emission) per
+Drives a freshly-initialized ``/ephemeral-os`` workspace through a multi-phase
+build (skeleton + patch progression + refactor passes + pytest + LSP
+saturation + tri-source projection consistency + intentional conflicts + perf
+metrics emission) per
 ``.omc/plans/complex-build-from-scratch-layer-stack-projection-verification-plan-20260511.md``.
 
 Two scenario classes are exported:
@@ -34,7 +34,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 _FULL_PLAN = {
     "plan_spec": (
         "Build a small stdlib-only Python scheduler library inside a freshly "
-        "initialized /ephemeral-os git repo, exercising the layer stack, "
+        "initialized /ephemeral-os workspace, exercising the layer stack, "
         "overlay capture, OCC apply path, and Pyright LSP across many files."
     ),
     "evaluation_criteria": [

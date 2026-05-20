@@ -166,14 +166,14 @@ def _make_caller() -> SandboxCaller:
 def _resolve_live_image(provider_name: str) -> str:
     """Resolve the live-e2e image string, with provider-gated fallback.
 
-    EOS_LIVE_E2E_IMAGE always wins. Under daytona, fall back to
-    settings.sandbox.default_image. Under any other provider, missing
-    EOS_LIVE_E2E_IMAGE is a hard fixture skip with a clear message.
+    EOS_LIVE_E2E_IMAGE always wins. Daytona and Docker both fall back to
+    settings.sandbox.default_image so scenario tests use the same default
+    prebaked image unless the operator overrides it.
     """
     explicit = (os.environ.get("EOS_LIVE_E2E_IMAGE") or "").strip()
     if explicit:
         return explicit
-    if provider_name == "daytona":
+    if provider_name in {"daytona", "docker"}:
         image = load_settings().sandbox.default_image.strip()
         if image:
             return image
@@ -184,8 +184,9 @@ def _resolve_live_image(provider_name: str) -> str:
         )
     pytest.skip(
         f"live test under EOS_SANDBOX_PROVIDER={provider_name} requires "
-        "EOS_LIVE_E2E_IMAGE to be set to a locally-available image tag "
-        "with git, /testbed, and the runtime bundle marker."
+        "EOS_LIVE_E2E_IMAGE or settings.sandbox.default_image to resolve "
+        "to a locally-available image tag with git, /testbed, and the "
+        "runtime bundle marker."
     )
 
 

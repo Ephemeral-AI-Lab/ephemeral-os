@@ -317,6 +317,16 @@ def _docker_run_flags() -> list[str]:
     return list(resolve_run_flags())
 
 
+def _resolve_docker_probe_image(image: str | None) -> str:
+    explicit = (image or os.environ.get("EOS_LIVE_E2E_IMAGE") or "").strip()
+    if explicit:
+        return explicit
+
+    from config.settings import load_settings
+
+    return load_settings().sandbox.default_image.strip()
+
+
 def probe_tier0_docker(
     *,
     image: str | None = None,
@@ -326,12 +336,12 @@ def probe_tier0_docker(
 
     Four sub-checks (each recorded separately in notes):
       1. ``docker info``                                — daemon up
-      2. ``docker image inspect $EOS_LIVE_E2E_IMAGE``   — image local
+      2. ``docker image inspect <resolved image>``      — image local
       3. capability probe in a throwaway container     — git + /testbed + unshare -Urm
       4. EOS_DOCKER_PRIVILEGED value                   — captured for artifact diff
     """
     start = time.perf_counter()
-    image = image if image is not None else os.environ.get("EOS_LIVE_E2E_IMAGE", "")
+    image = _resolve_docker_probe_image(image)
     notes: list[str] = []
     privileged_value = os.environ.get("EOS_DOCKER_PRIVILEGED", "")
     notes.append(f"eos_docker_privileged={privileged_value!r}")
@@ -358,7 +368,7 @@ def probe_tier0_docker(
     notes.append("docker_info=ok")
 
     if not image:
-        notes.append("image_inspect=missing_EOS_LIVE_E2E_IMAGE")
+        notes.append("image_inspect=missing_live_image_default")
         return Tier0Result(
             passed=False, api_health="error", docker_available=True,
             elapsed_s=time.perf_counter() - start, notes="; ".join(notes),

@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import dataclasses
 import json
-import re
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
@@ -32,6 +31,7 @@ from sandbox.api import (
     SandboxCaller,
     SearchReplaceEdit,
 )
+from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
 from task_center.attempt.state import Attempt
 from task_center.iteration.state import Iteration
 from tools._framework.core.base import BaseTool
@@ -854,13 +854,13 @@ class MockSquadRunner:
         emit: EmitStreamEvent,
     ) -> str:
         # Drives the OCC mutation critical path until layer-stack depth
-        # crosses AUTO_SQUASH_MAX_DEPTH (32), then issues edits, reads, a
+        # crosses AUTO_SQUASH_MAX_DEPTH, then issues edits, reads, a
         # shell readback, and one intentional missing-anchor edit conflict.
         # Captures every tool's timing metadata into a sandbox summary
         # artifact so the paired test can assert on commit_resume_wait_s,
-        # auto_squash.total_s, and depth_before > 32.
+        # auto_squash.total_s, and depth_before > AUTO_SQUASH_MAX_DEPTH.
         probe_dir = ".ephemeralos/sweevo-mock/auto_squash_commit_resume"
-        write_count = 36  # AUTO_SQUASH_MAX_DEPTH (32) + 4
+        write_count = AUTO_SQUASH_MAX_DEPTH + 4
         write_paths: list[str] = []
         write_metadata: list[dict[str, Any]] = []
         for index in range(write_count):

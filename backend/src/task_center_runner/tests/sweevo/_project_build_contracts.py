@@ -11,6 +11,7 @@ from xml.etree import ElementTree
 
 import sandbox.api as sandbox_api
 from sandbox.api import ReadFileRequest, SandboxCaller, ShellRequest
+from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
 
 from task_center_runner.agent.mock.complex_project_build_grep_glob_probe import (
     METRICS_PATH as GREP_GLOB_METRICS_PATH,
@@ -316,7 +317,9 @@ async def _assert_complex_build_contract(
     if contract.require_layer_squash_metrics:
         layer = perf.get("layer_stack") or {}
         assert int(layer.get("squash_count") or 0) >= 10
-        assert float(layer.get("max_depth_before") or 0.0) > 32.0
+        assert float(layer.get("max_depth_before") or 0.0) > float(
+            AUTO_SQUASH_MAX_DEPTH
+        )
 
     summary = await _read_json(
         sandbox_id,

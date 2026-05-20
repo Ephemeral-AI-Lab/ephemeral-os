@@ -122,6 +122,37 @@ def test_call_plugin_install_failure_surfaces_error(
     assert "install boom" in result.output
 
 
+def test_call_plugin_blank_install_error_names_exception(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest = _seed_demo_manifest(tmp_path)
+    monkeypatch.setattr(
+        session_mod, "_manifest_cache", {"demo": manifest}, raising=False
+    )
+
+    async def boom_install(sandbox_id: str, m: PluginManifest) -> str:
+        del sandbox_id, m
+        raise TimeoutError()
+
+    async def never_dispatch(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("dispatch should not be reached after install fails")
+
+    result = asyncio.run(
+        call_plugin(
+            _make_context(),
+            plugin="demo",
+            op="run",
+            payload={},
+            install_runner=boom_install,
+            daemon_dispatcher=never_dispatch,
+        )
+    )
+
+    assert result.is_error
+    assert result.metadata["step"] == "install"
+    assert "TimeoutError" in result.output
+
+
 def test_call_plugin_dispatch_error_surfaces(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

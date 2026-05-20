@@ -1,10 +1,10 @@
 """Probe handler for the ``sandbox.complex_project_build`` scenario.
 
 Drives the full plan §6 phase sequence inside a freshly-initialized
-``/ephemeral-os`` git repository, with the layer-stack/OCC/overlay binding
-rebound to that workspace root. The probe is split into a smoke variant (≥250
-calls, 6 source files, 1 refactor pass) and a full variant (≥2,000 calls, 21
-source files, 3 refactor passes).
+``/ephemeral-os`` workspace, with the layer-stack/OCC/overlay binding rebound
+to that workspace root. The probe is split into a smoke variant (≥250 calls,
+6 source files, 1 refactor pass) and a full variant (≥2,000 calls, 21 source
+files, 3 refactor passes).
 
 Public entry point: :func:`run_complex_project_build_probe`. The runner
 delegates here from ``MockSquadRunner._run_executor`` so this module owns the
@@ -179,6 +179,7 @@ async def run_complex_project_build_probe(
     await _phase_f_lsp_saturation(ctx, stats, selected_files)
     await _phase_f_tri_source_consistency(ctx, stats, selected_files)
     await _phase_f_intentional_conflicts(ctx, stats, selected_files)
+    await _phase_f_read_amplification(ctx, stats, selected_files)
 
     wall_seconds = time.monotonic() - started_at
     summary_path = await _phase_f_emit_metrics(
@@ -216,7 +217,7 @@ def _select_refactor_passes(smoke: bool) -> tuple[RefactorPass, ...]:
 
 
 # ---------------------------------------------------------------------------
-# Phase 0 — sandbox bootstrap (workspace rebind + git init)
+# Phase 0 — sandbox bootstrap (workspace rebind)
 # ---------------------------------------------------------------------------
 
 
@@ -291,36 +292,6 @@ async def _phase0_bootstrap(ctx: ProbeContext, stats: ProbeStats) -> None:
     ctx.metadata.cwd = WORKSPACE_ROOT
     ctx.metadata.exec_cwd = WORKSPACE_ROOT
 
-    install = await _shell(
-        ctx,
-        stats,
-        command=(
-            "set -e; if ! command -v git >/dev/null 2>&1; then "
-            "(apt-get update -y && apt-get install -y --no-install-recommends git) "
-            "|| (apk add --no-cache git) "
-            "|| (yum install -y git) "
-            "; fi; "
-            "command -v git || { echo 'git unavailable'; exit 1; }"
-        ),
-        timeout=600,
-    )
-    if install.is_error:
-        raise RuntimeError(f"git install failed: {install.output}")
-
-    init = await _shell(
-        ctx,
-        stats,
-        command=(
-            f"set -e && cd {WORKSPACE_ROOT} && "
-            f"git init -b main && "
-            f"git config user.email 'mock@ephemeral-os.test' && "
-            f"git config user.name 'Mock Agent'"
-        ),
-        timeout=120,
-    )
-    if init.is_error:
-        raise RuntimeError(f"git init failed: {init.output}")
-
     await _write_file(
         ctx,
         stats,
@@ -332,12 +303,7 @@ async def _phase0_bootstrap(ctx: ProbeContext, stats: ProbeStats) -> None:
         stats,
         path=f"{WORKSPACE_ROOT}/.gitignore",
     )
-    await _shell(
-        ctx,
-        stats,
-        command=f"cd {WORKSPACE_ROOT} && git add .gitignore && git commit -m 'init'",
-        timeout=120,
-    )
+    await _shell_phase_checkpoint(ctx, stats, phase="init")
 
     # Direct sandbox.api round-trip — counts toward saturation (§7.15–17).
     api_read = await sandbox_api.read_file(
@@ -458,12 +424,7 @@ async def _phase_a_skeleton(
             args={"file_path": f"{WORKSPACE_ROOT}/{fixture.relative_path}"},
         )
 
-    await _shell(
-        ctx,
-        stats,
-        command=f"cd {WORKSPACE_ROOT} && git add -A && git commit -m 'skeleton'",
-        timeout=180,
-    )
+    await _shell_phase_checkpoint(ctx, stats, phase="skeleton")
 
     stats.phases.append(
         {
@@ -522,13 +483,7 @@ async def _phase_b_apply_patches(
         # Cross-check: tool.read_file vs sandbox.api.read_file content equality.
         await _projection_consistency_check(ctx, stats, path)
 
-    # One git commit at the end of the phase block.
-    await _shell(
-        ctx,
-        stats,
-        command=f"cd {WORKSPACE_ROOT} && git add -A && git commit -m 'patches' || true",
-        timeout=180,
-    )
+    await _shell_phase_checkpoint(ctx, stats, phase=section_name)
 
     stats.phases.append(
         {
@@ -712,16 +667,7 @@ async def _phase_d_refactor(
                 description=f"{pass_.name} revert",
             )
 
-        # Commit so each pass is a discrete log entry.
-        await _shell(
-            ctx,
-            stats,
-            command=(
-                f"cd {WORKSPACE_ROOT} && git add -A && "
-                f"git commit -m 'refactor: {pass_.name}' || true"
-            ),
-            timeout=180,
-        )
+        await _shell_phase_checkpoint(ctx, stats, phase=f"refactor:{pass_.name}")
 
     stats.phases.append(
         {
@@ -738,23 +684,13 @@ def _compute_amp_pairs(
     smoke: bool,
     edit_write_ratio_floor: float = 4.0,
     headroom: float = 1.25,
-    phase1_full_floor: int = 30,
-    phase1_smoke_floor: int = 6,
 ) -> int:
-    """Size the Phase D' amplification so §13.6 (edit:write ≥4×) + §7.2
-    (≥2000 toolkit calls for full) both hold without a magic constant.
+    """Size the Phase D' amplification so §13.6 (edit:write ≥4×) holds.
 
     Returns the per-anchor ``pairs`` value (each pair = 2 ``edit_file`` calls
-    — forward + revert) computed from the §13.6 ratio target plus a §7.2
-    tool-call floor pad.
-
-    ``phase1_full_floor`` / ``phase1_smoke_floor`` are regression anchors,
-    not principled floors: they keep this from returning a *smaller* value
-    than the Phase 1 magic constants (30 / 6) if the formula auto-scales
-    down as the fixture set grows. ``floor_pairs`` from §7.2 already
-    provides the principled lower bound; these anchors only kick in if the
-    formula would otherwise regress call volume below Phase 1's known-good
-    behaviour.
+    — forward + revert) computed from the §13.6 ratio target. The overall
+    §7.2 tool-call floor is topped up with non-mutating reads later so Docker
+    runs do not spend the budget on thousands of layer-producing edits.
     """
     py_anchor_count = sum(
         1 for f in selected_files
@@ -767,14 +703,7 @@ def _compute_amp_pairs(
     existing_edits_est = sum(len(f.patches) for f in selected_files)
     target_edits = int(edit_write_ratio_floor * headroom * write_count_est)
     deficit = max(0, target_edits - existing_edits_est)
-    pairs_from_ratio = (deficit + 2 * py_anchor_count - 1) // (2 * py_anchor_count)
-    if not smoke:
-        # baseline = observed non-amp toolkit call count from Phase 1 full
-        # run (bootstrap + patches + refactor + F-phases ≈600); §7.2 floor 2000.
-        baseline = 600
-        floor_pairs = (2000 - baseline + 2 * py_anchor_count - 1) // (2 * py_anchor_count)
-        return max(pairs_from_ratio, floor_pairs, phase1_full_floor)
-    return max(pairs_from_ratio, phase1_smoke_floor)
+    return (deficit + 2 * py_anchor_count - 1) // (2 * py_anchor_count)
 
 
 async def _phase_d_edit_amplification(
@@ -834,6 +763,46 @@ async def _phase_d_edit_amplification(
         }
     )
     return pairs
+
+
+def _tool_call_floor(*, smoke: bool) -> int:
+    return 250 if smoke else 2000
+
+
+async def _phase_f_read_amplification(
+    ctx: ProbeContext,
+    stats: ProbeStats,
+    selected: Sequence[FixtureFile],
+) -> int:
+    """Meet the tool-call floor without creating extra layer-stack commits."""
+    floor = _tool_call_floor(smoke=ctx.smoke)
+    if _toolkit_calls(stats) >= floor:
+        return 0
+
+    phase_started = time.monotonic()
+    targets = tuple(f for f in selected if f.skeleton)
+    if not targets:
+        return 0
+
+    read_calls = 0
+    while _toolkit_calls(stats) < floor:
+        fixture = targets[read_calls % len(targets)]
+        await _read_file(
+            ctx,
+            stats,
+            path=f"{WORKSPACE_ROOT}/{fixture.relative_path}",
+        )
+        read_calls += 1
+
+    stats.phases.append(
+        {
+            "name": "F_read_amplification",
+            "duration_s": time.monotonic() - phase_started,
+            "tool_calls_at_end": _total_calls(stats),
+            "read_calls": read_calls,
+        }
+    )
+    return read_calls
 
 
 async def _resolve_anchor_position(
@@ -1190,6 +1159,7 @@ async def _phase_f_emit_metrics(
             "read": stats.read_count,
             "shell": stats.shell_count,
             "lsp": dict(stats.lsp_counts),
+            "toolkit_total": _toolkit_calls(stats),
             "edit_to_write_ratio": stats.edit_to_write_ratio(),
         },
         "api_calls": {
@@ -1314,6 +1284,25 @@ async def _shell(
     return result
 
 
+async def _shell_phase_checkpoint(
+    ctx: ProbeContext,
+    stats: ProbeStats,
+    *,
+    phase: str,
+) -> None:
+    """Exercise shell around phase boundaries without mutating workspace state."""
+    result = await _shell(
+        ctx,
+        stats,
+        command=f"printf 'phase=%s\\n' {phase!r}",
+        timeout=120,
+    )
+    if result.is_error or _shell_exit_code(result) != 0:
+        raise RuntimeError(
+            f"shell phase checkpoint failed for {phase}: {_shell_stdout(result)}"
+        )
+
+
 async def _lsp(
     ctx: ProbeContext,
     stats: ProbeStats,
@@ -1399,14 +1388,20 @@ def _short(path: str) -> str:
 
 def _total_calls(stats: ProbeStats) -> int:
     return (
+        _toolkit_calls(stats)
+        + stats.api_read_count
+        + stats.api_edit_count
+        + stats.api_shell_count
+    )
+
+
+def _toolkit_calls(stats: ProbeStats) -> int:
+    return (
         stats.write_count
         + stats.edit_count
         + stats.read_count
         + stats.shell_count
         + sum(stats.lsp_counts.values())
-        + stats.api_read_count
-        + stats.api_edit_count
-        + stats.api_shell_count
     )
 
 

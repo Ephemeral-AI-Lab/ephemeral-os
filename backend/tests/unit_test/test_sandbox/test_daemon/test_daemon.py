@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import socket
 import tempfile
 import uuid
 from pathlib import Path
@@ -22,6 +23,12 @@ def _short_socket_path() -> tuple[Path, Path]:
     base = Path(tempfile.gettempdir()) / f"eos-daemon-{uuid.uuid4().hex[:8]}"
     base.mkdir(parents=True, exist_ok=True)
     return base / "runtime.sock", base / "runtime.pid"
+
+
+def _free_tcp_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return int(sock.getsockname()[1])
 
 
 @pytest.fixture(autouse=True)
@@ -123,6 +130,63 @@ async def test_daemon_serves_one_envelope_per_connection() -> None:
         # regardless of daemon uptime (regression guard for module-level
         # ``_BOOT_T0`` leaking into daemon mode).
         assert second["timings"]["runtime.boot_to_dispatch_s"] < 0.05
+    finally:
+        serve_task.cancel()
+        try:
+            await serve_task
+        except (asyncio.CancelledError, Exception):
+            pass
+
+
+async def test_daemon_serves_tcp_with_auth_token() -> None:
+    socket_path, pid_path = _short_socket_path()
+    tcp_port = _free_tcp_port()
+
+    async def echo(args: dict[str, object]) -> dict[str, object]:
+        return {"success": True, "value": args["value"]}
+
+    server.register_op("test.echo", echo)
+
+    serve_task = asyncio.create_task(
+        daemon.serve(
+            socket_path,
+            pid_path,
+            tcp_host="127.0.0.1",
+            tcp_port=tcp_port,
+            auth_token="secret",
+        )
+    )
+    try:
+        for _ in range(50):
+            if socket_path.exists():
+                break
+            await asyncio.sleep(0.02)
+        assert socket_path.exists(), "daemon never bound socket"
+
+        async def call(envelope: dict[str, object]) -> dict[str, object]:
+            reader, writer = await asyncio.open_connection("127.0.0.1", tcp_port)
+            writer.write(json.dumps(envelope).encode("utf-8") + b"\n")
+            if writer.can_write_eof():
+                writer.write_eof()
+            await writer.drain()
+            raw = await reader.read()
+            writer.close()
+            await writer.wait_closed()
+            return json.loads(raw.decode("utf-8").strip())
+
+        unauthorized = await call({"op": "test.echo", "args": {"value": 1}})
+        authorized = await call(
+            {
+                daemon.DAEMON_AUTH_FIELD: "secret",
+                "op": "test.echo",
+                "args": {"value": 2},
+            }
+        )
+
+        assert unauthorized["success"] is False
+        assert unauthorized["error"]["kind"] == "unauthorized"
+        assert authorized["success"] is True
+        assert authorized["value"] == 2
     finally:
         serve_task.cancel()
         try:

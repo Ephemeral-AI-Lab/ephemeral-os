@@ -23,6 +23,7 @@ from sandbox.plugin.install import (
 @pytest.fixture(autouse=True)
 def _clear_install_caches(tmp_path: Path) -> Iterator[None]:
     install_mod._locks.clear()
+    install_mod._installed_digests.clear()
     # Tests stage plugin source trees under tmp_path and expect setup.sh to
     # run; opt them into the trusted-setup allowlist so the C1 gate doesn't
     # refuse the test fixture's source_dir.
@@ -30,6 +31,7 @@ def _clear_install_caches(tmp_path: Path) -> Iterator[None]:
     install_mod._TRUSTED_SETUP_ROOTS.add(resolved)
     yield
     install_mod._locks.clear()
+    install_mod._installed_digests.clear()
     install_mod._TRUSTED_SETUP_ROOTS.discard(resolved)
 
 
@@ -151,12 +153,13 @@ def test_marker_miss_uploads_and_runs_setup(tmp_path: Path) -> None:
     assert any(".staging-" in c for c in fake.calls)
 
 
-def test_install_does_not_use_sticky_marker_cache(tmp_path: Path) -> None:
+def test_hot_install_uses_process_cache_until_forget(tmp_path: Path) -> None:
     plugin_dir = _seed_demo_plugin(tmp_path)
     manifest = parse_plugin_manifest(plugin_dir)
     fake = _FakeExec(marker_present=False)
 
     asyncio.run(ensure_installed("sb-1", manifest, exec_fn=fake))
+    cold_call_count = len(fake.calls)
     asyncio.run(ensure_installed("sb-1", manifest, exec_fn=fake))
 
     setup_runs = [
@@ -164,7 +167,30 @@ def test_install_does_not_use_sticky_marker_cache(tmp_path: Path) -> None:
         for command in fake.calls
         if "setup.sh" in command and "EOS_PLUGIN_DIR" in command
     ]
+    marker_checks = [
+        command
+        for command in fake.calls
+        if command.startswith("test -f")
+    ]
+    assert len(setup_runs) == 1
+    assert len(marker_checks) == 2
+    assert len(fake.calls) == cold_call_count
+
+    install_mod.forget("sb-1")
+    asyncio.run(ensure_installed("sb-1", manifest, exec_fn=fake))
+
+    setup_runs = [
+        command
+        for command in fake.calls
+        if "setup.sh" in command and "EOS_PLUGIN_DIR" in command
+    ]
+    marker_checks = [
+        command
+        for command in fake.calls
+        if command.startswith("test -f")
+    ]
     assert len(setup_runs) == 2
+    assert len(marker_checks) == 4
 
 
 def test_setup_failure_surfaces_clear_error(tmp_path: Path) -> None:

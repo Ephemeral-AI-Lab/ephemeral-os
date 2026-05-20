@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
+import secrets
 import shlex
 from typing import Any
 
@@ -22,6 +24,12 @@ logger = logging.getLogger(__name__)
 
 APP_MANAGED_BY = "eos"
 APP_CREATED_VIA = "ephemeral_os"
+DAEMON_TCP_INTERNAL_PORT = 37657
+DAEMON_TCP_ENABLED_LABEL = "eos.daemon.tcp.enabled"
+DAEMON_TCP_PORT_LABEL = "eos.daemon.tcp.port"
+DAEMON_TCP_ENV_HOST = "EOS_DAEMON_TCP_HOST"
+DAEMON_TCP_ENV_PORT = "EOS_DAEMON_TCP_PORT"
+DAEMON_AUTH_ENV = "EOS_DAEMON_AUTH_TOKEN"
 
 
 def _normalize_dict(payload: dict[str, str] | None) -> dict[str, str]:
@@ -52,6 +60,23 @@ def _serialize_container(container: Any) -> dict[str, Any]:
     }
 
 
+def _container_env(container: Any) -> dict[str, str]:
+    attrs = getattr(container, "attrs", None) or {}
+    config = attrs.get("Config") or {}
+    env: dict[str, str] = {}
+    for item in config.get("Env") or []:
+        if not isinstance(item, str) or "=" not in item:
+            continue
+        key, value = item.split("=", 1)
+        env[key] = value
+    return env
+
+
+def _docker_daemon_tcp_enabled() -> bool:
+    raw = os.environ.get("EOS_DOCKER_DAEMON_TCP", "1").strip().lower()
+    return raw not in {"0", "false", "no", "off"}
+
+
 def _serialize_image(image: Any) -> dict[str, Any]:
     """Translate ``docker.models.images.Image`` into a Daytona-snapshot-shaped dict."""
     tags = list(getattr(image, "tags", None) or [])
@@ -63,6 +88,13 @@ def _serialize_image(image: Any) -> dict[str, Any]:
         "id": getattr(image, "id", None) or attrs.get("Id"),
         "tags": tags,
     }
+
+
+def _is_image_not_found(exc: Exception) -> bool:
+    if type(exc).__name__ == "ImageNotFound":
+        return True
+    detail = str(getattr(exc, "explanation", "") or exc).lower()
+    return "no such image" in detail or "image not found" in detail
 
 
 class DockerProviderAdapter:
@@ -137,18 +169,41 @@ class DockerProviderAdapter:
             merged_labels["snapshot"] = snapshot
         merged_labels.update(_normalize_dict(labels))
 
+        environment = _normalize_dict(env_vars)
         host_kwargs = host_config_kwargs()
+        if _docker_daemon_tcp_enabled():
+            environment.update(
+                {
+                    DAEMON_TCP_ENV_HOST: "0.0.0.0",
+                    DAEMON_TCP_ENV_PORT: str(DAEMON_TCP_INTERNAL_PORT),
+                    DAEMON_AUTH_ENV: secrets.token_urlsafe(32),
+                }
+            )
+            merged_labels[DAEMON_TCP_ENABLED_LABEL] = "1"
+            merged_labels[DAEMON_TCP_PORT_LABEL] = str(DAEMON_TCP_INTERNAL_PORT)
+            host_kwargs.setdefault(
+                "ports",
+                {f"{DAEMON_TCP_INTERNAL_PORT}/tcp": ("127.0.0.1", None)},
+            )
 
-        container = client.containers.create(
-            image=image_ref,
-            name=name,
-            command=["sleep", "infinity"],
-            detach=True,
-            tty=False,
-            environment=_normalize_dict(env_vars),
-            labels=merged_labels,
+        create_kwargs = {
+            "image": image_ref,
+            "name": name,
+            "command": ["sleep", "infinity"],
+            "detach": True,
+            "tty": False,
+            "environment": environment,
+            "labels": merged_labels,
             **host_kwargs,
-        )
+        }
+        try:
+            container = client.containers.create(**create_kwargs)
+        except Exception as exc:
+            if not _is_image_not_found(exc):
+                raise
+            logger.info("Docker image %s missing locally; pulling before create", image_ref)
+            client.images.pull(image_ref)
+            container = client.containers.create(**create_kwargs)
         container.start()
         container.reload()
         return _serialize_container(container)
@@ -195,39 +250,28 @@ class DockerProviderAdapter:
     def set_labels(self, sandbox_id: str, labels: dict[str, str]) -> dict[str, Any]:
         """Update container labels.
 
-        Docker does not support live label mutation; we recreate the container
-        with merged labels preserving image, env, and command.
+        Docker does not support live label mutation. Recreating the container
+        changes its id, but the sandbox lifecycle treats ids as stable, so this
+        method preserves the existing container and logs ignored label changes.
         """
-        client = self._get_client()
-        existing = client.containers.get(sandbox_id)
+        existing = self._get_client().containers.get(sandbox_id)
         existing.reload()
         attrs = existing.attrs or {}
         config = attrs.get("Config") or {}
-        merged_labels = dict(config.get("Labels") or {})
-        merged_labels.update(_normalize_dict(labels))
-
-        new_image = config.get("Image")
-        env = config.get("Env") or []
-        command = config.get("Cmd") or ["sleep", "infinity"]
-        name = (getattr(existing, "name", None) or attrs.get("Name") or "").lstrip("/")
-
-        existing.stop()
-        existing.remove(force=True)
-
-        host_kwargs = host_config_kwargs()
-        replacement = client.containers.create(
-            image=new_image,
-            name=name,
-            command=command,
-            detach=True,
-            tty=False,
-            environment=env,
-            labels=merged_labels,
-            **host_kwargs,
-        )
-        replacement.start()
-        replacement.reload()
-        return _serialize_container(replacement)
+        current_labels = {
+            str(key): str(value)
+            for key, value in (config.get("Labels") or {}).items()
+        }
+        requested_labels = _normalize_dict(labels)
+        merged_labels = {**current_labels, **requested_labels}
+        if merged_labels != current_labels:
+            logger.warning(
+                "Docker provider cannot mutate labels for existing container %s; "
+                "ignoring label changes for keys=%s",
+                sandbox_id,
+                sorted(requested_labels),
+            )
+        return _serialize_container(existing)
 
     # -- Preview / observability --------------------------------------------
 
@@ -239,6 +283,58 @@ class DockerProviderAdapter:
 
     def get_build_logs_url(self, sandbox_id: str) -> str | None:
         return None
+
+    def get_daemon_tcp_endpoint(self, sandbox_id: str) -> dict[str, Any] | None:
+        """Return the host-side TCP endpoint for the resident daemon, if mapped."""
+        if not _docker_daemon_tcp_enabled():
+            return None
+        container = self._get_client().containers.get(sandbox_id)
+        container.reload()
+        attrs = getattr(container, "attrs", None) or {}
+        config = attrs.get("Config") or {}
+        labels = config.get("Labels") or {}
+        if labels.get(DAEMON_TCP_ENABLED_LABEL) != "1":
+            return None
+
+        raw_internal_port = labels.get(DAEMON_TCP_PORT_LABEL) or str(
+            DAEMON_TCP_INTERNAL_PORT
+        )
+        try:
+            internal_port = int(raw_internal_port)
+        except (TypeError, ValueError):
+            return None
+
+        bindings = (
+            (attrs.get("NetworkSettings") or {})
+            .get("Ports", {})
+            .get(f"{internal_port}/tcp")
+        )
+        if not bindings:
+            return None
+        binding = next(
+            (
+                item
+                for item in bindings
+                if isinstance(item, dict) and item.get("HostPort")
+            ),
+            None,
+        )
+        if binding is None:
+            return None
+        host = str(binding.get("HostIp") or "127.0.0.1")
+        if host in {"0.0.0.0", "::"}:
+            host = "127.0.0.1"
+        try:
+            host_port = int(str(binding["HostPort"]))
+        except (TypeError, ValueError):
+            return None
+        token = _container_env(container).get(DAEMON_AUTH_ENV, "")
+        return {
+            "host": host,
+            "port": host_port,
+            "internal_port": internal_port,
+            "auth_token": token,
+        }
 
     # -- Exec ----------------------------------------------------------------
 
