@@ -256,32 +256,37 @@ async def _handle_tool_dispatch_branch(
         context.exit_reason = QueryExitReason.TOOL_STOP
         return
 
+    tolerance = context.max_tolerance_after_max_tool_call
     if (
         context.tool_call_limit is not None
-        and context.tool_calls_used >= context.tool_call_limit
+        and tolerance is not None
+        and context.overshoot_units > tolerance
     ):
         context.exit_reason = QueryExitReason.RESOURCE_LIMIT
         if background_manager is not None:
             await background_manager.cancel_all()
         # Keep the transcript well-formed: tool_use blocks in the assistant
         # message must be paired with tool_result blocks in the next user
-        # message. `dispatch_assistant_tools` produces one tool_result per
-        # tool_use (including rejections), so `tool_results` is always
-        # non-empty here when the assistant produced tool_uses; the guard is
-        # defensive against future refactors only. Without this append the
-        # retry path (and any caller reading ``agent.messages``) would see
-        # orphan tool_uses and the next provider call would reject the
-        # transcript.
+        # message. ``dispatch_assistant_tools`` produces one tool_result per
+        # tool_use, so ``tool_results`` is always non-empty here when the
+        # assistant produced tool_uses; the guard is defensive against
+        # future refactors only.
         if tool_results:
             messages.append(ConversationMessage(role="user", content=list(tool_results)))
         yield (
             ToolExecutionCompleted(
                 tool_name="",
-                output=f"Agent stopped: tool_call_limit ({context.tool_call_limit}) exceeded.",
+                output=(
+                    f"Agent stopped: overshoot ({context.overshoot_units}) "
+                    f"exceeded tolerance ({tolerance}) without a terminal "
+                    f"tool call. Soft limit={context.tool_call_limit}, "
+                    f"calls used={context.tool_calls_used}, text-only "
+                    f"turns={context.text_only_no_terminal_turns}."
+                ),
                 is_error=True,
             ),
-                None,
-            )
+            None,
+        )
         for event in flush_system_notification_events(notification_service):
             yield event, None
         return
@@ -343,6 +348,30 @@ async def _run_query_loop(
             ), state.usage
 
             if not final_message.tool_uses:
+                has_terminal = context.terminal_result is not None
+                if not has_terminal and context.terminal_tools:
+                    context.text_only_no_terminal_turns += 1
+                    tolerance = context.max_tolerance_after_max_tool_call
+                    if (
+                        tolerance is not None
+                        and context.overshoot_units > tolerance
+                    ):
+                        # Distinguish text-only ceiling from tool-overflow
+                        # ceiling so post-mortem audit can separate "burned
+                        # through tools" from "refused to terminate after
+                        # being asked."
+                        context.exit_reason = QueryExitReason.TERMINAL_REFUSED
+                        for event in flush_system_notification_events(
+                            notification_service
+                        ):
+                            yield event, None
+                        break
+                    # missing_terminal_reminder will fire on the next
+                    # dispatch_rules evaluation (top of the next loop
+                    # iteration), injecting a user message that asks the
+                    # model to call a terminal tool.
+                    context.exit_reason = None
+                    continue
                 for event in flush_system_notification_events(notification_service):
                     yield event, None
                 context.exit_reason = QueryExitReason.TEXT_RESPONSE

@@ -16,9 +16,10 @@ from tools import ExecutionMetadata, ToolRegistry, ToolResult
 class QueryExitReason(StrEnum):
     """Why the query loop exited."""
 
-    TEXT_RESPONSE = "text_response"      # no tool_uses in response
+    TEXT_RESPONSE = "text_response"      # no tool_uses (within tolerance)
     TOOL_STOP = "tool_stop"              # terminal tool succeeded
-    RESOURCE_LIMIT = "resource_limit"    # budget exhausted or max_tokens
+    RESOURCE_LIMIT = "resource_limit"    # overshoot_units > tolerance via tool path
+    TERMINAL_REFUSED = "terminal_refused"  # overshoot_units > tolerance via text-only path
 
 
 @dataclass(frozen=True)

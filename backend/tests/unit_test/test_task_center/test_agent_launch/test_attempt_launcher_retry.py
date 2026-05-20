@@ -1,21 +1,19 @@
-"""Main-agent path retry coverage at the attempt-launcher seam.
+"""Main-agent runner-seam coverage at the attempt launcher.
 
-Plan reference: ``backend/tests/RETRY_TESTING_PLAN.md`` §2c rows 1-4.
+After Phase 2 of the agent-loop termination refactor, the engine no longer
+exposes a ``max_terminal_retries`` knob. The runner makes a single attempt;
+soft-warning notifications + the overshoot tolerance budget handle gentle
+recovery inside the query loop. Tests below substitute a recording fake
+runner so we can assert:
 
-Engine retry lives *inside* :func:`run_ephemeral_agent`. The launcher's
-runner kwarg defaults to that callable. Tests below substitute a
-recording fake runner so we can assert:
-
-- The launcher invokes the runner exactly once per ``launch`` (retry is
-  invisible to the launcher).
-- An exhausted-retry result (``status='completed'`` +
+- The launcher invokes the runner exactly once per ``launch``.
+- A no-terminal result (``status='completed'`` +
   ``terminal_result=None``) closes the task ``FAILED`` via the
   exhaustion-reporter path, leaving the harness free to schedule a new
   attempt row.
 - Kwargs passed to the runner include ``persist_agent_run=True`` and
-  ``task_id`` of the launch — but NO ``max_terminal_retries`` override,
-  so the engine's default of 1 retry applies for every harness role
-  including continuation planners.
+  ``task_id`` of the launch. The deleted ``max_terminal_retries`` kwarg
+  must not reappear — the static-source check below guards that.
 - Token-usage accounting comes through unchanged — the launcher
   doesn't manipulate the runner's reported counters.
 """
@@ -122,10 +120,9 @@ async def test_main_planner_engine_retry_keeps_attempt_sequence_no_at_one(
 ) -> None:
     """A successful inner runner result keeps the attempt sequence at 1.
 
-    Engine retry happens INSIDE the runner; from the launcher's POV the
-    inner call resolved successfully (planner's terminal submission mutated
-    the task to DONE) and no exhaustion-reporting fires. The runner is
-    called exactly once.
+    The runner's single attempt resolved successfully (planner's
+    terminal submission mutated the task to DONE) and no
+    exhaustion-reporting fires. The runner is called exactly once.
     """
     goal, attempt, task_id = _seed_planner_attempt(
         goal_store=goal_store,
@@ -172,7 +169,7 @@ async def test_main_planner_engine_retry_keeps_attempt_sequence_no_at_one(
     launcher.launch(launch)
     await asyncio.wait_for(launcher.wait_for_idle(), timeout=1.0)
 
-    # Exactly ONE runner invocation per launch — engine retry is internal.
+    # Exactly ONE runner invocation per launch.
     assert len(captured_kwargs) == 1
     # The attempt was NOT replaced or rerun by the launcher.
     refreshed_attempt = attempt_store.get(attempt.id)
@@ -185,7 +182,7 @@ async def test_main_planner_engine_retry_keeps_attempt_sequence_no_at_one(
 
 
 @pytest.mark.asyncio
-async def test_main_planner_engine_retry_exhausted_marks_attempt_failed(
+async def test_main_planner_no_terminal_result_marks_attempt_failed(
     goal_store,
     iteration_store,
     attempt_store,
@@ -193,7 +190,7 @@ async def test_main_planner_engine_retry_exhausted_marks_attempt_failed(
     task_center_run_id,
     register_test_agents,
 ) -> None:
-    """Inner retries exhausted → launcher closes that one Attempt FAILED.
+    """Runner returns no terminal_result → launcher closes that one Attempt FAILED.
 
     With no orchestrator registered, the launcher falls back to the
     _fail_unowned_attempt path which closes the task FAILED and the
@@ -222,8 +219,9 @@ async def test_main_planner_engine_retry_exhausted_marks_attempt_failed(
 
     async def _exhausted_runner(*args: Any, **kwargs: Any) -> EphemeralRunResult:
         runner_calls.append(1)
-        # Engine retries exhausted internally — no terminal_result, but
-        # not a crash either.
+        # Agent exited gracefully without delivering a terminal result
+        # (e.g. text-only response, or overshoot-tolerance exhausted).
+        # No crash, but no terminal_result either.
         return EphemeralRunResult(
             status="completed",
             error=None,
@@ -240,7 +238,7 @@ async def test_main_planner_engine_retry_exhausted_marks_attempt_failed(
     launcher.launch(launch)
     await asyncio.wait_for(launcher.wait_for_idle(), timeout=1.0)
 
-    # One runner call (the retry exhaustion is the runner's concern).
+    # One runner call — recovery is the query loop's concern, not the launcher's.
     assert len(runner_calls) == 1
     # The launcher marked this Attempt FAILED — harness can now create
     # attempt_sequence_no=2.
@@ -255,7 +253,7 @@ async def test_main_planner_engine_retry_exhausted_marks_attempt_failed(
 
 
 @pytest.mark.asyncio
-async def test_attempt_harness_records_engine_retry_token_usage(
+async def test_attempt_harness_records_runner_token_usage(
     goal_store,
     iteration_store,
     attempt_store,
@@ -263,13 +261,11 @@ async def test_attempt_harness_records_engine_retry_token_usage(
     task_center_run_id,
     register_test_agents,
 ) -> None:
-    """Token-count accounting passes through unchanged from the inner runner.
+    """Token-count accounting passes through unchanged from the runner.
 
     The launcher does NOT manipulate ``event_count`` or any token-count
-    field on the runner's :class:`EphemeralRunResult`. Use a runner that
-    reports an aggregated multi-attempt count and assert the launcher
-    forwards it untouched (proxy: the result reaches the runner's
-    own bookkeeping — the launcher only inspects ``status``).
+    field on the runner's :class:`EphemeralRunResult`. The result reaches
+    the runner's own bookkeeping — the launcher only inspects ``status``.
     """
     goal, attempt, task_id = _seed_planner_attempt(
         goal_store=goal_store,
@@ -321,7 +317,7 @@ async def test_attempt_harness_records_engine_retry_token_usage(
 
 
 @pytest.mark.asyncio
-async def test_continuation_planner_attempt_inherits_default_retry(
+async def test_continuation_planner_attempt_does_not_pass_retry_kwarg(
     goal_store,
     iteration_store,
     attempt_store,
@@ -329,13 +325,12 @@ async def test_continuation_planner_attempt_inherits_default_retry(
     task_center_run_id,
     register_test_agents,
 ) -> None:
-    """For attempt_sequence_no>1, the launcher still passes default-retry kwargs.
+    """For attempt_sequence_no>1, the launcher does not pass ``max_terminal_retries``.
 
-    The launcher's runner-call kwargs are role/sequence-agnostic. The
-    runner default in ``engine.api`` applies ``max_terminal_retries=1``
-    unconditionally. This test asserts that for a continuation planner
-    (attempt_sequence_no=2) the launcher does NOT add a
-    ``max_terminal_retries=0`` override — the inner default holds.
+    The kwarg was deleted in Phase 2 of the agent-loop termination
+    refactor. This test pins the launcher's runner-call kwargs to the
+    post-deletion shape: ``persist_agent_run`` and ``task_id`` present,
+    no resurrection of ``max_terminal_retries``.
     """
     goal, attempt, task_id = _seed_planner_attempt(
         goal_store=goal_store,
@@ -383,8 +378,7 @@ async def test_continuation_planner_attempt_inherits_default_retry(
     await asyncio.wait_for(launcher.wait_for_idle(), timeout=1.0)
 
     assert len(captured_kwargs) == 1
-    # The launcher does NOT override the engine retry knob — the inner
-    # default of 1 retry applies to continuation planners too.
+    # The launcher must not pass the deleted ``max_terminal_retries`` kwarg.
     assert "max_terminal_retries" not in captured_kwargs[0]
     # Sanity check: the launch still routed through with the correct
     # task_id binding.
@@ -392,20 +386,21 @@ async def test_continuation_planner_attempt_inherits_default_retry(
     assert captured_kwargs[0]["persist_agent_run"] is True
 
 
-def test_launcher_runner_kwargs_do_not_disable_engine_retry() -> None:
+def test_launcher_runner_kwargs_do_not_reference_deleted_retry_kwarg() -> None:
     """Static check: launcher source does NOT pass ``max_terminal_retries``.
 
-    Catches refactors that try to push the retry knob from the engine
-    default (1) down to 0 at the launcher seam. The frozen kwarg set is
-    locked at :mod:`test_runner_kwargs_contract` — this check is a
-    redundant safety net specifically for the retry concern.
+    The kwarg was deleted from ``run_ephemeral_agent`` in Phase 2 of the
+    agent-loop termination refactor. Re-introducing it at the launcher
+    seam would raise ``TypeError`` at runtime; this static check catches
+    such refactors at test time.
     """
     source = inspect.getsource(EphemeralAttemptAgentLauncher._run_launch)
     assert "max_terminal_retries" not in source, (
         "EphemeralAttemptAgentLauncher._run_launch must NOT pass a "
-        "``max_terminal_retries`` kwarg — the engine default of 1 retry "
-        "is the contract. If you intentionally disabled retry here, "
-        "update this test and explain why in the PR description."
+        "``max_terminal_retries`` kwarg — the engine deleted that kwarg "
+        "in Phase 2 of the agent-loop termination refactor. The soft-"
+        "limit + overshoot tolerance pathway in the query loop now "
+        "handles graceful recovery instead."
     )
 
 

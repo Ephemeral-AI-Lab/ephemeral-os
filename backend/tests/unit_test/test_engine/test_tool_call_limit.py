@@ -1,9 +1,10 @@
-"""Tests for ``tool_call_limit`` enforcement.
+"""Tests for ``tool_call_limit`` accounting.
 
-The engine loop is integration-heavy, so these tests target the small,
-pure helpers around query budgeting and tool execution. ``execute_tool_call``
-counts every dispatch attempt and rejects with a structured error once the
-cap is reached.
+After Phase 2 of the agent-loop termination refactor, ``execute_tool_call``
+only counts dispatch attempts — it never rejects on budget. Hard-failure on
+overshoot lives in the loop, gated on
+``overshoot_units > max_tolerance_after_max_tool_call``; soft signaling is
+delivered by the ``budget_overflow_reminder`` notification rule.
 """
 
 from __future__ import annotations
@@ -107,25 +108,28 @@ def test_agent_definition_coerces_tolerance_string():
     assert a.max_tolerance_after_max_tool_call == 7
 
 
-# ---------- execute_tool_call budget enforcement -----------------------------
+# ---------- execute_tool_call counter-only behavior --------------------------
 
 
 @pytest.mark.asyncio
-async def test_execute_tool_call_rejects_when_over_budget():
+async def test_execute_tool_call_counts_past_limit_without_rejecting():
+    """`tool_call_limit` is a soft threshold; never produces a budget error."""
     ctx = _ctx(limit=2, used=2)
+    ctx.tool_registry.get = lambda _name: None  # type: ignore[method-assign]
+
     result = await execute_tool_call(ctx, "any_tool", "id1", {})
-    assert result.is_error
-    assert "tool_call_limit exceeded" in result.content
-    # Counter is NOT advanced past the cap on rejection.
-    assert ctx.tool_calls_used == 2
+
+    # The only error is "Unknown tool" (registry mock returns None) — no
+    # budget rejection. Counter advances past the soft limit.
+    assert "tool_call_limit" not in result.content
+    assert "terminal call reserved" not in result.content
+    assert ctx.tool_calls_used == 3
 
 
 @pytest.mark.asyncio
 async def test_execute_tool_call_increments_counter_on_unknown_tool():
     """Counting happens at dispatch attempt, before tool resolution."""
     ctx = _ctx(limit=10, used=0)
-    # The mock tool registry returns None → "Unknown tool" path. The
-    # counter should still have incremented because dispatch was attempted.
     ctx.tool_registry.get = lambda _name: None  # type: ignore[method-assign]
     result = await execute_tool_call(ctx, "ghost", "id1", {})
     assert result.is_error
@@ -134,28 +138,17 @@ async def test_execute_tool_call_increments_counter_on_unknown_tool():
 
 
 @pytest.mark.asyncio
-async def test_execute_tool_call_allows_terminal_tool_when_budget_exhausted():
-    ctx = _ctx(limit=2, used=2, terminal_tools={"submit_plan_closes_goal"})
-    ctx.tool_registry.get = lambda _name: None  # type: ignore[method-assign]
-    result = await execute_tool_call(ctx, "submit_plan_closes_goal", "id1", {})
-
-    assert result.is_error
-    assert "Unknown tool" in result.content
-    assert "tool_call_limit exceeded" not in result.content
-    assert ctx.tool_calls_used == 2
-
-
-@pytest.mark.asyncio
-async def test_execute_tool_call_reserves_last_call_for_terminal_tool():
+async def test_execute_tool_call_does_not_reserve_last_call_for_terminal():
+    """The pre-Phase-2 "reserved last call" gate is gone — non-terminal at
+    `limit - 1` proceeds normally."""
     ctx = _ctx(limit=2, used=1, terminal_tools={"submit_execution_success"})
     ctx.tool_registry.get = lambda _name: None  # type: ignore[method-assign]
 
     result = await execute_tool_call(ctx, "read_file", "id1", {})
 
-    assert result.is_error
-    assert "terminal call reserved" in result.content
-    assert "submit_execution_success" in result.content
-    assert ctx.tool_calls_used == 1
+    assert "terminal call reserved" not in result.content
+    # Counter advances; reservation logic removed.
+    assert ctx.tool_calls_used == 2
 
 
 @pytest.mark.asyncio
@@ -163,13 +156,11 @@ async def test_execute_tool_call_unlimited_budget_does_not_count():
     ctx = _ctx(limit=None, used=0)
     ctx.tool_registry.get = lambda _name: None  # type: ignore[method-assign]
     await execute_tool_call(ctx, "ghost", "id1", {})
-    # ``None`` limit short-circuits the budget gate; counter stays put.
+    # ``None`` limit short-circuits the counter; counter stays put.
     assert ctx.tool_calls_used == 0
 
 
 # ---------- budget warning ---------------------------------------------------
-# The imperative budget-warning notification was removed from tool_execution.
-# Budget warnings now fire as a notification rule (see
-# `backend/src/notification/library/budget_warning.py`) evaluated by
-# `dispatch_rules` in the query loop. Rule-level coverage lives in
-# `backend/tests/test_notification/`.
+# Budget warnings (50/75/90%) fire as the ``budget_warning`` notification rule;
+# overshoot reminders fire as ``budget_overflow_reminder``. Rule-level coverage
+# lives in `backend/tests/unit_test/test_notification/`.

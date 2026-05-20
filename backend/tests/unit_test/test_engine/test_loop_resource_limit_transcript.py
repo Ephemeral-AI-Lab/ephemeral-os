@@ -1,12 +1,11 @@
-"""Coverage for the RESOURCE_LIMIT transcript fix in `_handle_tool_dispatch_branch`.
+"""Coverage for the RESOURCE_LIMIT transcript pairing in `_handle_tool_dispatch_branch`.
 
-The retry path in :func:`run_ephemeral_agent` relies on the query loop leaving
-a well-formed transcript when it cuts the agent off at the tool-call budget:
-specifically, the partial tool_result blocks for the cut-off batch must land in
-``messages`` so that the assistant's orphan tool_uses are paired.
-
-This module exercises the loop branch directly with a mocked
-``dispatch_assistant_tools`` to lock in that contract.
+The hard-cap exit (``overshoot_units > tolerance``) must leave a
+well-formed transcript: the partial tool_result blocks for the cut-off
+batch must land in ``messages`` so the assistant's orphan tool_uses are
+paired. This invariant survived the Phase 2 hard-cap flip (from
+``used >= limit`` to ``overshoot_units > tolerance``); the assertion
+below locks it in at the new exit condition.
 """
 
 from __future__ import annotations
@@ -32,7 +31,7 @@ from tools._framework.core.base import ExecutionMetadata
 from tools._framework.core.registry import ToolRegistry
 
 
-def _build_context(*, used: int, limit: int) -> QueryContext:
+def _build_context(*, used: int, limit: int, tolerance: int) -> QueryContext:
     return QueryContext(
         api_client=MagicMock(),
         tool_registry=ToolRegistry(),
@@ -42,6 +41,7 @@ def _build_context(*, used: int, limit: int) -> QueryContext:
         max_tokens=32,
         tool_call_limit=limit,
         tool_calls_used=used,
+        max_tolerance_after_max_tool_call=tolerance,
         tool_metadata=ExecutionMetadata(),
         terminal_tools={"submit_x"},
     )
@@ -51,14 +51,18 @@ def _build_context(*, used: int, limit: int) -> QueryContext:
 async def test_resource_limit_exit_appends_tool_results_to_transcript(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Hitting the budget while tool_uses are in flight must NOT orphan them.
+    """Hard-cap exit while tool_uses are in flight must NOT orphan them.
 
-    Before this fix, the loop returned early at the RESOURCE_LIMIT check
-    without appending the dispatched tool_results, leaving the assistant's
-    tool_use blocks unpaired. The retry path (and any follow-up provider
-    call) would then fail with a malformed-transcript error.
+    Pre-state: ``tool_calls_used == limit + tolerance`` (overshoot exactly
+    at the cap, *not yet* over). The assistant's two tool_uses bump the
+    counter by 2 during dispatch (mocked here by directly advancing
+    ``tool_calls_used`` in the fake), so ``overshoot_units > tolerance``
+    becomes true and the hard exit fires. The transcript must still pair
+    the assistant's tool_use blocks with tool_result blocks before exiting.
     """
-    context = _build_context(used=1, limit=1)
+    limit, tolerance = 1, 0
+    # used = limit + tolerance + 1 → overshoot_units = tolerance + 1 > tolerance.
+    context = _build_context(used=limit + tolerance + 1, limit=limit, tolerance=tolerance)
     assistant_tool_uses = [
         ToolUseBlock(id="tu_1", name="read_file", input={"path": "foo.txt"}),
         ToolUseBlock(id="tu_2", name="read_file", input={"path": "bar.txt"}),

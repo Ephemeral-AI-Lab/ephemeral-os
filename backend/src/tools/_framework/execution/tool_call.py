@@ -23,61 +23,23 @@ if TYPE_CHECKING:
 EmitStreamEvent = Callable[[StreamEvent], Awaitable[None]]
 
 
-def _build_budget_exceeded_error(
-    tool_use_id: str,
-    tool_call_limit: int,
-) -> ToolResultBlock:
-    return ToolResultBlock(
-        tool_use_id=tool_use_id,
-        content=(
-            f"tool_call_limit exceeded: {tool_call_limit} tool "
-            f"calls already used. The agent run will terminate after "
-            f"this response — wrap up and summarize your progress now to "
-            f"preserve partial work."
-        ),
-        is_error=True,
-    )
-
-
-def _build_terminal_budget_reserved_error(
-    tool_use_id: str,
-    tool_call_limit: int,
-    terminal_tools: set[str],
-) -> ToolResultBlock:
-    tool_list = ", ".join(sorted(terminal_tools))
-    return ToolResultBlock(
-        tool_use_id=tool_use_id,
-        content=(
-            f"tool_call_limit terminal call reserved: {tool_call_limit - 1} "
-            f"of {tool_call_limit} tool calls already used. The last call is "
-            f"reserved for terminal submission via {tool_list}."
-        ),
-        is_error=True,
-    )
-
-
 async def _consume_tool_budget_or_reject(
     context: QueryContext,
     tool_name: str,
     tool_use_id: str,
 ) -> ToolResultBlock | None:
-    if context.tool_call_limit is None:
-        return None
-    if context.tool_calls_used >= context.tool_call_limit:
-        if tool_name in context.terminal_tools:
-            return None
-        return _build_budget_exceeded_error(tool_use_id, context.tool_call_limit)
-    if (
-        context.terminal_tools
-        and context.tool_calls_used == context.tool_call_limit - 1
-        and tool_name not in context.terminal_tools
-    ):
-        return _build_terminal_budget_reserved_error(
-            tool_use_id,
-            context.tool_call_limit,
-            context.terminal_tools,
-        )
-    context.tool_calls_used += 1
+    """Increment the per-run tool-call counter. Never rejects.
+
+    Soft-limit signaling is delivered via the ``budget_overflow_reminder``
+    notification rule; hard-failure is the loop's responsibility when
+    ``overshoot_units > max_tolerance_after_max_tool_call``. The return type
+    is preserved at ``ToolResultBlock | None`` for one PR boundary —
+    Phase 3 removes the ``Optional`` and the dead rejection-handling
+    branches in ``dispatch.py`` and ``loop.py:_consume_provider_stream``.
+    """
+    del tool_name, tool_use_id  # signature preserved for call-site stability
+    if context.tool_call_limit is not None:
+        context.tool_calls_used += 1
     return None
 
 
