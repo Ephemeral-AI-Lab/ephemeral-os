@@ -29,7 +29,7 @@ The following is the parent agent's user_msg_1 verbatim — the engineered conte
 Run a workspace preflight probe.
 </plan_spec>
 
-<assigned_task task_id="5e5e7926-859f-4e8d-bf16-c11723a06438:gen:preflight">
+<assigned_task task_id="f8d7f40f-2bb8-4147-8291-4e0d7d2719b9:gen:preflight">
 Run a lightweight workspace preflight and report the observed sandbox root.
 </assigned_task>
 </context>

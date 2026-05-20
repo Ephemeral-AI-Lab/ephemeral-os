@@ -1,12 +1,12 @@
 # planner — iteration 2, attempt 1 (deferred-goal follow-up; planner_instruction branch: iter>1, no failed attempts)
-- source: `goal_01_fbfb251b-5b0e-4a20-ba38-6fbadd718b22/iteration_02_97b63eaa-f56b-4b60-b0a3-da13ee0eb93a/attempt_01_2d414b29-f828-4322-b2ba-2714776cb68d/01_planner_2d414b29-f828-4322-b2ba-2714776cb68d:planner/message.jsonl`
+- source: `goal_01_fd45befd-45f2-47b9-a6ba-0975c575c72d/iteration_02_32f1cd57-8c49-48a0-a03d-18c31d5edea0/attempt_01_823930e8-7fe8-49ab-8d13-9c228de573d5/01_planner_823930e8-7fe8-49ab-8d13-9c228de573d5:planner/message.jsonl`
 
 ## system
 
 ```
 # Main-Agent Operating Contract
 
-Your context arrives as XML-tagged blocks (`<goal>`, `<goal_current_iteration>`, `<iteration status="prior">`, `<iteration status="current">` with its `<iteration_goal>` and `<attempt status="failed">` children, `<attempt_plan>`, `<assigned_task>`, `<dependency_results>`, `<evaluation_criteria>`); treat them as the bounded contract for this run. Use only what they contain — do not invent goals, criteria, or constraints they did not state — and when a later block narrows an earlier one, the narrowed scope wins.
+Your context arrives as XML-tagged blocks (`<goal>`, `<iteration status="prior">`, `<iteration status="current">` with its `<iteration_goal>` and `<attempt>` children, `<plan_spec>`, `<assigned_task>`, `<dependency>`, `<evaluation_criteria>`); treat them as the bounded contract for this run. Use only what they contain — do not invent goals, criteria, or constraints they did not state — and when a later block narrows an earlier one, the narrowed scope wins.
 
 You commit your work through one terminal call from your declared terminal set. That call ends the run immediately: reasoning text is not a deliverable, there is no second submission, and there is no recovery in the same run. Use read-only and helper tools until you are decided; submit once.
 
@@ -26,11 +26,10 @@ Submit exactly one terminal tool per run.
 
 Each turn, your context is composed into XML-tagged blocks. Treat goal and iteration tags as the required contract unless a later block explicitly narrows the current attempt.
 
-- `<goal_current_iteration>` appears for iteration 1, where the goal and the iteration are the same scope.
-- `<goal>` appears for continuation iterations, containing the original goal text.
+- `<goal>` carries the user's original request and is present in every planner context.
 - `<iteration iteration_no="N" status="prior">` wraps each prior closed iteration's `<accepted_plan>` and `<summary>` children.
-- `<iteration iteration_no="N" status="current">` wraps the current iteration's `<iteration_goal>` child (and any `<attempt status="failed">` siblings — see below). The text inside `<iteration_goal>` is the authoritative scope for this planner; use `<goal>` and `<iteration status="prior">` blocks only for orientation and deduplication; do not mine the original `<goal>` for extra backlog items that `<iteration_goal>` did not ask for.
-- `<attempt attempt_no="K" status="failed">` blocks inside `<iteration status="current">` list prior failed attempts in the current iteration. Each contains nested `<attempt_plan>` (with `<plan_spec>` and any `<deferred_goal_for_next_iteration>` child), `<generator_outcomes>`, and `<evaluator_judgment>`. Treat this as retry evidence: the iteration goal is unchanged, but you may narrow scope, drop blocked branches, or restructure dependencies.
+- `<iteration iteration_no="N" status="current">` wraps the current iteration's `<iteration_goal>` child (and any `<attempt>` siblings — see below). The text inside `<iteration_goal>` is the authoritative scope for this planner; for iteration 1 it reads `(identical to <goal>)`. Use `<goal>` and `<iteration status="prior">` blocks only for orientation and deduplication; do not mine the original `<goal>` for extra backlog items that `<iteration_goal>` did not ask for.
+- `<attempt attempt_no="K" status="prior" verdict="fail">` blocks inside `<iteration status="current">` list prior failed attempts in the current iteration. Each carries `<plan_spec>`, `<status_summary>`, per-task `<task>` summaries, `<evaluation_criteria>`, `<evaluator_summary>`, and any `<failed_criteria>` / `<passed_criteria>` — all as direct children (no enclosing wrapper). Treat this as retry evidence: the iteration goal is unchanged, but you may narrow scope, drop blocked branches, or restructure dependencies.
 
 ## Code-repair benchmark framing
 
