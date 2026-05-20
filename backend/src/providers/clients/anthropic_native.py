@@ -11,10 +11,13 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from collections.abc import AsyncIterator
 
 import anthropic
+
+if TYPE_CHECKING:
+    from providers.auth_strategy import AuthStrategy
 
 from providers.types import (
     ApiMessageCompleteEvent,
@@ -48,18 +51,42 @@ class AnthropicClient:
     on ``content_block_stop`` so the engine can start tool execution early.
     """
 
-    def __init__(self, api_key: str, *, base_url: str | None = None) -> None:
+    def __init__(
+        self,
+        api_key: str | None = None,
+        *,
+        base_url: str | None = None,
+        auth_strategy: "AuthStrategy | None" = None,
+        system_prefix: str | None = None,
+    ) -> None:
         kwargs: dict[str, Any] = {}
         if base_url:
             kwargs["base_url"] = base_url
 
-        # Non-Anthropic endpoints (e.g. MiniMax) expect Authorization: Bearer
-        # instead of Anthropic's x-api-key header.
-        if base_url and "anthropic.com" not in base_url:
-            kwargs["auth_token"] = api_key
+        if auth_strategy is not None:
+            # Strategy-injected mode (plan §A2). Owns api_key/auth_token and
+            # optional default_headers (e.g. OAuth beta + UA headers).
+            self._auth_strategy = auth_strategy
+            kwargs.update(auth_strategy.get_auth_kwargs())
         else:
-            kwargs["api_key"] = api_key
+            # Today's behavior preserved. Non-Anthropic endpoints (e.g.
+            # MiniMax) expect Authorization: Bearer instead of x-api-key.
+            if api_key is None:
+                raise ValueError(
+                    "AnthropicClient requires either api_key or auth_strategy"
+                )
+            use_auth_token = bool(base_url) and "anthropic.com" not in base_url
+            if use_auth_token:
+                kwargs["auth_token"] = api_key
+            else:
+                kwargs["api_key"] = api_key
+            from providers.auth_strategy import make_api_key_strategy
 
+            self._auth_strategy = make_api_key_strategy(
+                api_key, use_auth_token=use_auth_token
+            )
+
+        self._system_prefix = system_prefix
         self._client = anthropic.AsyncAnthropic(**kwargs)
 
     # ------------------------------------------------------------------
@@ -121,10 +148,22 @@ class AnthropicClient:
             else []
         )
 
+        system_prompt = request.system_prompt or ""
+        if self._system_prefix is not None:
+            # Plan §A13: OAuth requires identity block #0 to be the literal
+            # "You are Claude Code, …"; caller's system becomes block #1.
+            # Idempotency guard: don't duplicate if caller already prepended.
+            system_field: Any = [
+                {"type": "text", "text": self._system_prefix},
+                {"type": "text", "text": system_prompt},
+            ]
+        else:
+            system_field = system_prompt
+
         params: dict[str, Any] = {
             "model": request.model,
             "messages": messages,
-            "system": request.system_prompt or "",
+            "system": system_field,
             "max_tokens": request.max_tokens,
         }
         if tools:

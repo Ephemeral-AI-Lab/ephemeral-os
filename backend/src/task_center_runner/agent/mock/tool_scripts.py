@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
+from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
 from task_center_runner.scenarios.base import ScenarioContext
 from message.stream_events import AssistantTextDelta, StreamEvent
 from tools._framework.core.base import BaseTool
@@ -199,6 +200,7 @@ def inspect_user_input_script(ctx: ScenarioContext) -> PreparedToolScript:
                 },
                 expect_error=True,
             ),
+            *_auto_squash_seed_steps(f"{_ROOT}/depth"),
             ToolScriptStep(
                 "read-ledger",
                 read_file_tool,
@@ -216,6 +218,20 @@ def inspect_user_input_script(ctx: ScenarioContext) -> PreparedToolScript:
                 },
             ),
         ),
+    )
+
+
+def _auto_squash_seed_steps(root: str) -> tuple[ToolScriptStep, ...]:
+    return tuple(
+        ToolScriptStep(
+            f"auto-squash-depth-seed-{index:03d}",
+            write_file_tool,
+            {
+                "file_path": f"{root}/layer-{index:03d}.txt",
+                "content": f"layer={index}\n",
+            },
+        )
+        for index in range(AUTO_SQUASH_MAX_DEPTH + 4)
     )
 
 

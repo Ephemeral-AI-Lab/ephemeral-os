@@ -9,7 +9,8 @@ from sandbox.layer_stack import (
     WriteLayerChange,
     LayerStack,
 )
-from sandbox.layer_stack.manifest import LayerRef
+from sandbox.layer_stack.manifest import LayerRef, Manifest
+from sandbox.layer_stack.squash import CheckpointSegment, SquashService
 
 
 def _source(tmp_path: Path, name: str, content: bytes) -> str:
@@ -39,7 +40,7 @@ def _layer_path(manager: LayerStack, layer: LayerRef) -> Path:
     return manager.storage_root / layer.path
 
 
-def test_squash_replaces_old_active_suffix_with_checkpoint(tmp_path: Path) -> None:
+def test_squash_replaces_unleased_layers_with_checkpoint(tmp_path: Path) -> None:
     manager = LayerStack(tmp_path / "stack")
     _publish(manager, tmp_path, "a.txt", b"a1")
     _publish(manager, tmp_path, "b.txt", b"b1")
@@ -49,11 +50,34 @@ def test_squash_replaces_old_active_suffix_with_checkpoint(tmp_path: Path) -> No
     manifest = manager.squash(max_depth=2)
 
     assert manifest is not None
-    assert manifest.depth == 2
-    assert manifest.layers[-1].layer_id.startswith("B")
-    assert all(not _layer_path(manager, layer).exists() for layer in before.layers[-2:])
+    assert manifest.depth == 1
+    assert manifest.layers[0].layer_id.startswith("B")
+    assert all(not _layer_path(manager, layer).exists() for layer in before.layers)
     assert manager.read_text("a.txt") == ("a2", True)
     assert manager.read_text("b.txt") == ("b1", True)
+
+
+def test_squash_plan_collapses_each_unpinned_run_around_pinned_layers(
+    tmp_path: Path,
+) -> None:
+    layers = tuple(
+        LayerRef(layer_id=f"L{index:06d}", path=f"layers/L{index:06d}")
+        for index in range(7)
+    )
+    plan = SquashService(tmp_path / "stack").plan(
+        Manifest(version=1, layers=layers),
+        max_depth=2,
+        pinned_layers=(layers[3],),
+    )
+
+    assert plan is not None
+    assert plan.entries == (
+        CheckpointSegment(layers[:3]),
+        layers[3],
+        CheckpointSegment(layers[4:]),
+    )
+    assert plan.squashed_layers == (*layers[:3], *layers[4:])
+    assert plan.resulting_depth == 3
 
 
 def test_squash_checkpoint_preserves_delete_semantics(tmp_path: Path) -> None:
@@ -79,17 +103,28 @@ def test_leased_snapshot_remains_readable_until_release_after_squash(
     leased_layers = lease.manifest.layers
 
     _publish(manager, tmp_path, "c.txt", b"c1")
+    _publish(manager, tmp_path, "d.txt", b"d1")
+    _publish(manager, tmp_path, "e.txt", b"e1")
     squashed = manager.squash(max_depth=2)
 
     assert squashed is not None
-    assert squashed.depth == 2
+    assert squashed.depth == 4
+    assert squashed.layers[0].layer_id.startswith("B")
+    assert squashed.layers[1:] == leased_layers
     assert manager.read_text("a.txt", manifest=lease.manifest) == ("a2", True)
     assert manager.read_text("b.txt", manifest=lease.manifest) == ("b1", True)
     assert all(_layer_path(manager, layer).is_dir() for layer in leased_layers)
 
     assert manager.release_lease(lease.lease_id) is True
 
+    assert all(_layer_path(manager, layer).is_dir() for layer in leased_layers)
+    final_squash = manager.squash(max_depth=2)
+
+    assert final_squash is not None
+    assert final_squash.depth == 1
     assert all(not _layer_path(manager, layer).exists() for layer in leased_layers)
     assert manager.read_text("a.txt") == ("a2", True)
     assert manager.read_text("b.txt") == ("b1", True)
     assert manager.read_text("c.txt") == ("c1", True)
+    assert manager.read_text("d.txt") == ("d1", True)
+    assert manager.read_text("e.txt") == ("e1", True)

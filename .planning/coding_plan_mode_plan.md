@@ -1,6 +1,6 @@
 # Coding Plan Mode for EphemeralOS
 
-**Status:** APPROVED v6 — RALPLAN consensus reached at iteration 5; v6 amendment applied for user-requested namespace reorg (`providers/clients/api/` + `providers/clients/coding_plan/`).
+**Status:** APPROVED v8.1 + v9 amendment (progressive de-risking); Phase 0.3 = GO, Phase 0 = GO, Phase 0.7 = SHIP-AS-IS (all 2026-05-20) — v6 baseline approved at iteration 5; v7 amendment (three-repo cross-verification) ran ralplan consensus loop: Planner v7 → Architect (PROCEED-WITH-AMENDMENTS, 5 items) + Critic (ITERATE, +2 items) → Planner v8 (7 fixes) → Architect re-review (PROCEED-WITH-AMENDMENTS, 2 stale ADR phrases) → v8.1 textual cleanup → Critic re-review **APPROVE**.
 **Owner:** Yifan
 **Date:** 2026-05-20
 **Iteration log:** v1 → Architect (6 items) → v2 → Critic (10 items) → v3 → Architect re-review (4 FLAGs) → v4 → Critic partial re-review (1 wire-ordering FLAG) → v5 → Critic final (APPROVE-WITH-NOTES, `try_get_active_model_kwargs` swap applied) → APPROVED.
@@ -204,9 +204,11 @@ Probed on macOS dev machine 2026-05-20. Resolves Critic OQ#6.
 
 | Phase | Scope | Estimate | Entry / exit gate |
 |---|---|---|---|
-| **0. Codex stream-translation spike** | A4 spike. Output: `codex_event_mapping.md`. Decision: GO / EXTEND-UNION / RECONSIDER. | 1 day | **Exit:** mapping table written; decision recorded. |
+| **0. Codex stream-translation spike** | A4 spike. Output: `codex_event_mapping.md` (only). Decision: GO / EXTEND-UNION / RECONSIDER. | 1 day | **Exit:** mapping table written; decision recorded. |
+| **0.3. Anthropic OAuth end-to-end smoke spike** | Throwaway script (`scripts/spike_anthropic_oauth.py`) exercises the real OAuth endpoint with our exact payload shape (identity preamble + a real recipe system prompt + 3 synthetic user messages + 3-5 real tool schemas from `backend/src/tools/`). Output: `.planning/anthropic_oauth_smoke.md`. Decision: GO / RECONSIDER. See §6.5 below. | 0.5 day, parallel with Phase 0.5 / 0.7 | **Exit:** smoke report written; GO decision recorded (required before Phase 1 starts). |
 | **0.5. Linux credential probe (if applicable)** | Probe Anthropic OAuth credential storage on Linux dev host. | 0.5 day, parallel with Phase 0 | **Exit:** Linux path documented or formally deferred to Phase 1.5. |
-| **1. Anthropic plan + factory + class_path activation** | A1, A2, A3 (macOS only), A5, A6, A7, A8, A9, A10, A11, A12. Behind `EOS_PLAN_MODE_ENABLED=1` flag. | 1-2 days | **Exit:** one end-to-end task on Claude Max via plan-mode row; token-leak suite green; API-mode regression suite green. |
+| **0.7. Codex schema-validity probe** | Dry-call every `backend/src/tools/` schema against Codex Responses API via a thin direct-HTTPS harness (or stub Codex client). Output: `codex_schema_validity_report.md`. Decision: SHIP-AS-IS / SHIP-WITH-SANITIZER. | 1 day, parallel with Phase 0.5 | **Exit:** report written; A16 marked active or N/A. |
+| **1. Anthropic plan + factory + class_path activation** | A1, A2, A3 (macOS only), A5, A6, A7, A8, A9, A10, A11, A12. Behind `EOS_PLAN_MODE_ENABLED=1` flag. **Entry gate:** Phase 0.3 returned GO. | 1-2 days | **Exit:** one end-to-end task on Claude Max via plan-mode row; token-leak suite green; API-mode regression suite green. |
 | **2. Codex plan client** | A4. Reuses factory + auth-strategy machinery where applicable. | 1 day | **Exit:** one end-to-end task on ChatGPT Plus. |
 | **3. Capability-parity benchmark** | Sweevo apples-to-apples with pinned tolerance gate. | 1 day | **Exit:** gate passes on `complex_project_build`. |
 | **4. (Deferred) Subprocess patterns** | B / C for vendors gated behind their own CLI. | TBD on demand | **Trigger:** user-reported vendor coverage gap. |
@@ -280,22 +282,25 @@ Three independent implementations, same exact string, same position, same condit
 
 **(c) Decision.** **Option 1a — transport-layer transparent prepend inside `AnthropicClient` when the active `AuthStrategy` is an OAuth strategy.** The caller's `system` (recipe-produced) is unchanged; the client wraps it.
 
-**Rationale over alternatives.** Recipe-layer injection (Option 1b) would require every recipe under `backend/src/engine/context_engine/recipes/*` to know whether the active strategy is OAuth — that's a leak of transport concern into the prompt layer, violating Principle 2 ("provider selection is data, not branches"). A middleware hook on `AuthStrategy` (Option 1c) smears a single concern across two protocols (`AuthStrategy` for credentials, plus a system-block hook). The identity block is *vendor impersonation* and belongs with the strategy that does the impersonating. The Claude-Code OAuth strategy already exists to impersonate Claude Code; making it own the identity block is cohesive (Principle 5, amended).
+**Rationale over alternatives.** Recipe-layer injection (Option 1b) would require every recipe under `backend/src/task_center/context_engine/recipes/*` to know whether the active strategy is OAuth — that's a leak of transport concern into the prompt layer, violating Principle 2 ("provider selection is data, not branches"). A middleware hook on `AuthStrategy` (Option 1c) smears a single concern across two protocols (`AuthStrategy` for credentials, plus a system-block hook). The identity block is *vendor impersonation* and belongs with the strategy that does the impersonating. The Claude-Code OAuth strategy already exists to impersonate Claude Code; making it own the identity block is cohesive (Principle 5, amended).
 
 **(d) Acceptance criteria amendment — net-new A13.**
 
-**A13.** `AnthropicClient.stream_message()` consults the active `AuthStrategy` for an optional `get_required_system_prefix() -> str | None` method (new on `AuthStrategy` Protocol; default implementation returns `None`). When non-None, the client prepends a `{"type": "text", "text": <prefix>}` block as `system[0]` before sending; the caller's `system` blocks become `system[1..N]`. `make_claude_oauth_strategy()` returns the exact literal `"You are Claude Code, Anthropic's official CLI for Claude."`. `make_api_key_strategy()` returns `None` (no prepend — Principle 3: API mode unchanged).
+**A13.** `AnthropicClient.__init__` gains a new optional kwarg `system_prefix: str | None = None`, stored on `self._system_prefix`. `AnthropicClient.stream_message()` prepends a `{"type": "text", "text": self._system_prefix}` block as `system[0]` before sending iff `self._system_prefix is not None`; the caller's `system` blocks become `system[1..N]`. The `AuthStrategy` Protocol itself stays unchanged — strictly two methods (`get_auth_kwargs` + `refresh`). Server-spec strings do NOT leak into the credential abstraction.
 
-  **Wire site.** Insertion happens inside `AnthropicClient.stream_message` (`backend/src/providers/clients/api/anthropic_native.py`) immediately before the `self._client.messages.stream(**params)` call at line 138. The recipe layer (`backend/src/engine/context_engine/recipes/*`) is untouched — A13 is invisible to it.
+  **Source of the prefix.** The factory `make_claude_oauth_strategy()` in `provider.py` constructs the OAuth strategy AND the prefix string `"You are Claude Code, Anthropic's official CLI for Claude."` side-by-side, then passes BOTH to `AnthropicClient(auth_strategy=..., system_prefix=...)`. The API-key path passes nothing (`system_prefix=None` by default), preserving Principle 3 exactly. The strategy object never sees or owns the prefix.
 
-  **Idempotency guard.** If `params["system"]` already begins with a block whose `text` equals the required prefix verbatim, do NOT prepend a duplicate. (Defensive: lets the same recipe round-trip if someone ever calls `stream_message` with pre-massaged input, e.g. replay tests.)
+  **Wire site.** Insertion happens inside `AnthropicClient.stream_message` (`backend/src/providers/clients/api/anthropic_native.py`) immediately before the `self._client.messages.stream(**params)` call at line 138. The recipe layer (`backend/src/task_center/context_engine/recipes/*`) is untouched — A13 is invisible to it.
 
-  **Sub-bullets on A2.** `AuthStrategy` Protocol gains a third method: `get_required_system_prefix() -> str | None` with default returning `None`. The two existing implementations updated in the same patch: `api_key_strategy` → returns `None`; `claude_oauth_strategy` → returns the literal.
+  **Idempotency guard.** If `params["system"]` already begins with a block whose `text` equals `self._system_prefix` verbatim, do NOT prepend a duplicate. (Defensive: lets the same recipe round-trip if someone ever calls `stream_message` with pre-massaged input, e.g. replay tests.)
+
+  **Sub-bullet update on A2.** `AuthStrategy` Protocol remains exactly two methods (`get_auth_kwargs() -> dict[str, str]`, `refresh() -> bool`) — NO third method. The vendor-impersonation identity string is a server-spec detail that flows through the client constructor (`system_prefix` kwarg), wired up by the factory adjacent to the strategy. This keeps the credential abstraction clean and avoids smearing transport concerns across the Protocol.
 
 **(e) Verification.** New unit test `test_anthropic_oauth_system_prefix.py`:
-  1. Construct `AnthropicClient` with `api_key_strategy`; call `stream_message` with `system=[{"type":"text","text":"You are a helpful Python tutor"}]`; assert the request sent to the SDK has `system[0].text == "You are a helpful Python tutor"` (no prepend).
-  2. Same with `claude_oauth_strategy`; assert `system[0].text == "You are Claude Code, Anthropic's official CLI for Claude."` AND `system[1].text == "You are a helpful Python tutor"`.
-  3. Idempotency: with `claude_oauth_strategy`, feed `system=[{"type":"text","text":"You are Claude Code, Anthropic's official CLI for Claude."}, {"type":"text","text":"<recipe>"}]`; assert `len(system) == 2` (no duplicate prepend).
+  1. Construct `AnthropicClient(auth_strategy=api_key_strategy, system_prefix=None)`; call `stream_message` with `system=[{"type":"text","text":"You are a helpful Python tutor"}]`; assert the request sent to the SDK has `system[0].text == "You are a helpful Python tutor"` (no prepend).
+  2. Construct `AnthropicClient(auth_strategy=claude_oauth_strategy, system_prefix="You are Claude Code, Anthropic's official CLI for Claude.")`; same call; assert `system[0].text == "You are Claude Code, Anthropic's official CLI for Claude."` AND `system[1].text == "You are a helpful Python tutor"`.
+  3. Idempotency: with the OAuth-configured client, feed `system=[{"type":"text","text":"You are Claude Code, Anthropic's official CLI for Claude."}, {"type":"text","text":"<recipe>"}]`; assert `len(system) == 2` (no duplicate prepend).
+  4. Factory test: call `make_claude_oauth_strategy()` (or whatever the factory entry point becomes); assert the constructed `AnthropicClient` has `self._system_prefix` set to the exact literal and `self._auth_strategy` is the OAuth strategy.
 
 ---
 
@@ -310,25 +315,28 @@ Three independent implementations, same exact string, same position, same condit
 - pi: `packages/ai/src/providers/anthropic.ts:840-940` region — collision rewriter against fixed allowlist.
 - openclaw: `src/agents/anthropic-transport-stream.ts:~1072` — same fixed allowlist pattern.
 
-**(c) Codebase context.** Our tools live under `backend/src/engine/tools/`. We do **not** import Claude Code's tools. A name collision (e.g. if we happen to have a tool named `Read`) would be coincidental. Per CLAUDE.md §1 we should not silently rename — we should fail loud.
+**(c) Codebase context.** Our tools live under `backend/src/tools/`. All current tool names are snake_case (`read_file`, `edit_file`, `shell`, `glob`, `grep`, `write_file`, `run_subagent`, etc.) — none collide with the Claude-Code PascalCase reserved set today. The risk is purely future drift: someone adding a new tool named `Read` or `Bash` that silently triggers Anthropic-side weirdness.
 
-**(d) Decision.** **Option 2c — assert no-collision at registration time; fail loud.** Plus a documented escape via `kwargs_json` if a future need arises.
+**(d) Decision.** **Option 2d — single CI test, no runtime code.** A constructor-time assertion + custom exception class + override flag was originally proposed (Option 2c), but reviewers concurred: shipping defensive runtime machinery for a collision that cannot exist today (all our tool names are snake_case) is a CLAUDE.md §2 violation (no speculative code). Future-proofing instead lives in a single CI guard.
 
-**Rationale over alternatives.** Blanket prefixing (Option 2a, hermes) renames *every* tool unconditionally, which churns audit trails and reduces Anthropic-side fidelity for the 99% case where there's no collision. Rename-on-collision (Option 2b, pi/openclaw) silently masks what is, in our codebase, almost certainly a bug — if someone genuinely wants a tool called `Read`, they should know they're shadowing a Claude-Code primitive. Failing at registration (2c) follows CLAUDE.md §1 (surface confusion) and Principle 7 (defensive validation at registration over runtime surprises).
+**Rationale over alternatives.** Blanket prefixing (Option 2a, hermes) churns audit trails. Rename-on-collision (Option 2b, pi/openclaw) silently masks bugs. Runtime guard with exception + override flag (Option 2c) is dead-on-arrival code — the override would never fire, the exception would never raise. The CI test (2d) achieves the same future-proofing at zero runtime cost.
 
 **(e) Acceptance criteria amendment — net-new A14.**
 
-**A14.** `AnthropicPlanClient` (i.e. instantiation under `class_path` resolving into `providers.clients.coding_plan.anthropic.*` AND active strategy is an OAuth strategy — gate is strategy, not class) asserts at `__init__` time that none of the registered tool names collide with the Claude-Code canonical reserved set. The reserved set is a module-level constant in `providers/clients/coding_plan/anthropic.py::CLAUDE_CODE_RESERVED_TOOL_NAMES`, frozen list of: `Read`, `Edit`, `Bash`, `Glob`, `Grep`, `Write`, `WebFetch`, `WebSearch`, `TodoWrite`, `Task`, `MultiEdit`, `NotebookEdit`, `BashOutput`, `KillShell`, `ExitPlanMode`. Collision raises `PlanModeToolCollisionError(f"Tool name {n!r} collides with Claude Code built-in; rename or set kwargs_json.allow_tool_name_collisions=true to override")`. Override flag exists for future need but is **off** in all Day 1 registrations.
+**A14.** A single CI unit test at `backend/tests/unit_test/test_tools/test_no_claude_code_collision.py` enumerates every registered tool name in `backend/src/tools/` and asserts that no name appears in the frozenset of Claude Code reserved names: `{"Read", "Edit", "Bash", "Glob", "Grep", "Write", "WebFetch", "WebSearch", "TodoWrite", "Task", "MultiEdit", "NotebookEdit", "BashOutput", "KillShell", "ExitPlanMode"}`. The frozenset is defined **inline in the test file**, NOT exported as a module constant — it has no other consumers, and inlining keeps coding_plan client code free of dead defensive machinery.
 
-  **Where:** `AnthropicPlanClient.__init__` runs the check after the tool registry is resolved. Tool registry resolution happens in `backend/src/engine/agent/factory.py` (existing surface); the check fits there or at first `stream_message` invocation — pick whichever surface owns the resolved tool list at client-construction time. Verified at planning time: `factory.py:340` is where `db_kwargs` reaches the client; the tool list is constructed earlier in the agent factory flow. **Implementation note:** if the tool list is not available at client `__init__`, fall back to checking on first `stream_message` call (one-time, cached). Functionally equivalent; surface depends on what's wired today.
+  **Rationale.** Today: zero collisions (all snake_case). Tomorrow: if someone introduces a PascalCase tool named e.g. `Read`, CI fails before merge. No runtime code, no exception class, no override flag, no `__init__`-time check. Pure future-proofing via test.
 
-**Sub-bullet on A3** (extension to A3's OAuth strategy): no change needed — A14 is independent of A3.
+  **What was rejected (and why) — explicit non-ship list:**
+   - `PlanModeToolCollisionError` exception class: NOT shipped. Would never raise.
+   - `CLAUDE_CODE_RESERVED_TOOL_NAMES` module constant in `providers/clients/coding_plan/anthropic.py`: NOT shipped. The frozenset lives only in the test file.
+   - `kwargs_json.allow_tool_name_collisions` override flag: NOT shipped. Would have no use case.
+   - Runtime constructor check inside `AnthropicPlanClient.__init__`: NOT shipped. Same reason.
 
-**(e) Verification.** New unit test `test_tool_name_collision_guard.py`:
-  1. Construct `AnthropicPlanClient` with a tool list containing `Read`; assert `PlanModeToolCollisionError` raised with the exact tool name in the message.
-  2. Same with `kwargs_json={"allow_tool_name_collisions": True}`; assert no raise.
-  3. Construct with no colliding tools (our actual production tool set); assert no raise.
-  4. Verify the production tool list at planning time: add a grep step to the test that scans `backend/src/engine/tools/` for tool-name declarations and asserts none match the reserved set. This catches accidental collisions introduced in future tool additions, not just at instantiation. (Closes the "we don't know our names yet" gap.)
+**(e) Verification.** Single unit test `backend/tests/unit_test/test_tools/test_no_claude_code_collision.py`:
+  1. Enumerate every tool-name declaration under `backend/src/tools/` (use the same enumeration the framework uses to register tools — discover at test time via the tool registry, NOT by re-implementing the scan).
+  2. Assert the set intersection with the inline frozenset is empty.
+  3. Failure message names the colliding tool(s) and points the author at this CI rule.
 
 ---
 
@@ -361,12 +369,16 @@ v6's A4 currently reads: *"POSTs to `chatgpt.com/backend-api/codex`"* — endpoi
 
 **A4 (amended sub-bullets — DOES NOT renumber).** `CodexResponsesClient.__init__` constructs the following header set for every request:
   - `Authorization: Bearer <tokens.access_token>` (existing).
-  - `ChatGPT-Account-Id: <chatgpt_account_id>` — extracted by decoding `tokens.id_token` (JWT, three base64url segments) and reading the `chatgpt_account_id` claim from the payload. **Pure decode, no signature verification** — we're identifying the account we already authenticated, not validating Anthropic's signature.
+  - `ChatGPT-Account-Id: <chatgpt_account_id>` — extracted by decoding `tokens.id_token` (JWT, three base64url segments) and reading the `chatgpt_account_id` claim from the payload. **Pure decode, no signature verification** — we're identifying the account we already authenticated, not validating OpenAI's signature.
   - `originator: codex_cli_rs`.
   - `User-Agent: codex_cli_rs/0.125` (pinned version string matching hermes minimum app-server version; revisit if Cloudflare tightens). Stored as `CODEX_ORIGINATOR_VERSION` module constant for single-source-of-truth.
   - `OpenAI-Beta: responses=experimental`.
 
-**A15.** `CodexResponsesClient.__init__` validates that `~/.codex/auth.json` contains both `tokens.access_token` and `tokens.id_token`. Missing `id_token` → raise `CodexCredentialIncompleteError("id_token absent from ~/.codex/auth.json — re-run `codex login`")`. The `chatgpt_account_id` extraction is unit-tested with a fabricated JWT (three base64url segments, middle = `{"chatgpt_account_id":"abc-123"}`); test asserts the extracted value matches.
+**A15.** `CodexResponsesClient.__init__` validates that `~/.codex/auth.json` contains both `tokens.access_token` and `tokens.id_token`, and that the JWT-decoded `id_token` payload contains a `chatgpt_account_id` claim. Missing `id_token` → raise `CodexCredentialIncompleteError("id_token absent from ~/.codex/auth.json — re-run `codex login`")`. Missing claim → same exception class, message names the claim. The `chatgpt_account_id` extraction is unit-tested with a fabricated JWT (three base64url segments, middle = `{"chatgpt_account_id":"abc-123"}`); test asserts the extracted value matches.
+
+  **Convergence evidence.** Convergence on the `chatgpt_account_id` JWT-claim path is confirmed across hermes + pi (hermes: `agent/auxiliary_client.py:444-480` extracts `payload["chatgpt_account_id"]`; pi: `providers/openai-codex-responses.ts:1300-1310` extracts the same claim). openclaw uses the `ChatGPT-Account-Id` header but the JWT-extraction site was not directly observed in the cross-repo study (`unknown from repo via WebFetch` per the openclaw subagent report); treated as one-degree-less-confirmed. Phase 0 manual smoke is the final empirical gate before merge.
+
+  **Mid-stream refresh handling.** If `tokens.id_token` is rotated mid-run (e.g., via `auth_strategy.refresh()` per A7's retry-once flow), `CodexResponsesClient` re-extracts `chatgpt_account_id` from the new `id_token` and updates the cached `ChatGPT-Account-Id` header before the retry request. If extraction fails on refresh (malformed JWT, missing claim), the client raises `CodexCredentialIncompleteError` on the next `stream_message` call, mirroring `__init__` behavior. No silent reuse of the stale account-id; no swallowing of decode errors.
 
 **(e) Verification.** New unit tests:
   - `test_codex_jwt_decode.py`: feed fabricated JWT; assert correct `chatgpt_account_id` extraction. Feed malformed JWT (two segments); assert raise. Feed missing-claim payload; assert raise.
@@ -390,7 +402,7 @@ The sanitizer normalizes schemas pre-request. Without it, Codex returns `HTTP 40
 - hermes: dedicated module `tools/schema_sanitizer.py`. Exists *because* the Codex backend is stricter than Anthropic; the file's docstring states this.
 - pi & openclaw: lighter-weight schema normalization in their Codex adapter paths (less aggressive than hermes; presumably their tool set is smaller).
 
-**(c) Codebase context.** Our tool schemas live next to each tool (e.g. `backend/src/engine/tools/*/schema.py` patterns from prior tools refactor — confirmed by recent git log: `tools: upgrade docstrings + restructure each tool into a package`). Exact rejection set is empirical; we don't know which of our schemas will trip Codex until we test.
+**(c) Codebase context.** Our tool schemas live next to each tool (e.g. `backend/src/tools/*/schema.py` patterns from prior tools refactor — confirmed by recent git log: `tools: upgrade docstrings + restructure each tool into a package`). Exact rejection set is empirical; we don't know which of our schemas will trip Codex until we test.
 
 **(d) Decision.** **Option 4a — extend Phase 0 spike to produce a Codex schema-validity report. Add sanitizer only if rejections are observed.**
 
@@ -398,14 +410,14 @@ The sanitizer normalizes schemas pre-request. Without it, Codex returns `HTTP 40
 
 **(d) Acceptance criteria amendment — A4 + Phase 0 gate amendment + net-new A16.**
 
-**Phase 0 spike output gate (amended — extends existing gate in §Verification Plan).** Spike now produces TWO artifacts:
-  1. `.planning/codex_event_mapping.md` (existing, unchanged from v6).
-  2. `.planning/codex_schema_validity_report.md` (**new**) — runs every tool schema from `backend/src/engine/tools/` through a Codex Responses API `tools=[...]` dry-call (minimal request, empty user message, capture the validation response). Records: schema source file, full request payload, full response, classification (ACCEPTED / REJECTED-with-reason). Gate decision matrix:
-     - **GO** if 0 rejections. No sanitizer needed; A16 marked N/A.
-     - **GO-WITH-SANITIZER** if ≥1 rejection, all rejection patterns map to known hermes-sanitizer transformations. A16 active: port the minimum subset of transformations needed.
-     - **RECONSIDER** if rejections include patterns hermes' sanitizer does not cover. Surfaces a genuinely new constraint; replan Phase 2 scope.
+**Phase 0 stays single-output.** Phase 0 deliverable is ONLY `.planning/codex_event_mapping.md`. Gate decisions are GO / EXTEND-UNION / RECONSIDER — see §Verification Plan. The schema-validity question moves to its own phase (Phase 0.7) so that Phase 0 can ship in 1 day on stream translation alone, and the schema dry-call work — which materially requires a working Codex client or a thin direct-HTTPS test harness — has its own scoped phase.
 
-**A16.** *(conditional — only active if Phase 0 returns GO-WITH-SANITIZER)* `CodexResponsesClient.__init__` runs every tool schema through `providers/clients/coding_plan/codex_schema_sanitizer.py::sanitize_tool_schema()` before stashing in `self._tools`. The sanitizer implements **only the transformations required by Phase 0 evidence** — no speculative hermes-port. Each sanitizer transformation has a unit test driven from the Phase-0 report; the report is the authoritative spec.
+**Phase 0.7 (new) — Codex schema-validity probe.** 1 day, parallel with Phase 0.5 (Linux credential probe). Deliverable: `.planning/codex_schema_validity_report.md` — runs every tool schema from `backend/src/tools/` through a Codex Responses API `tools=[...]` dry-call (minimal request, empty user message, capture the validation response). Records: schema source file, full request payload, full response, classification (ACCEPTED / REJECTED-with-reason). Tooling: either a minimal direct-HTTPS test harness (requests + the five Cloudflare-allowlist headers from A4) or a stub `CodexResponsesClient` if Phase 1's Codex client is already buildable enough for dry-calls. Gate decision matrix:
+  - **SHIP-AS-IS** if 0 rejections. No sanitizer needed; A16 marked N/A and dropped from Phase 2.
+  - **SHIP-WITH-SANITIZER** if ≥1 rejection. A16 active: port the minimum subset of hermes-sanitizer transformations needed by evidence.
+  - (RECONSIDER folds into SHIP-WITH-SANITIZER with an extra "unknown transformation needed" note — does not block Phase 2; it informs sanitizer scope.)
+
+**A16.** *(conditional — active iff Phase 0.7 returns SHIP-WITH-SANITIZER)* `CodexResponsesClient.__init__` runs every tool schema through `providers/clients/coding_plan/codex_schema_sanitizer.py::sanitize_tool_schema()` before stashing in `self._tools`. The sanitizer implements **only the transformations required by Phase 0.7 evidence** — no speculative hermes-port. Each sanitizer transformation has a unit test driven from the Phase-0.7 report; the report is the authoritative spec.
 
 **(e) Verification.**
   - Phase 0 spike report (above).
@@ -414,13 +426,46 @@ The sanitizer normalizes schemas pre-request. Without it, Codex returns `HTTP 40
 
 ---
 
+---
+
+### Finding 5 (v8 net-new) — Plan-mode 4xx/5xx observability
+
+**(a) Constraint.** When Anthropic or OpenAI rotates an allowlist, changes the required identity string, or tightens rate limits, plan-mode requests will start returning 4xx/5xx. Without a structured drift signal, breakage looks like our bug — the user sees opaque failures with no provider attribution. Pre-mortem #4 already calls this out as a likely failure mode; we need *signal*, not pre-emptive gating.
+
+**(b) Decision.** **Option 5a — structured log line at the 4xx/5xx exception boundary inside each client's `stream_message`.** Monitor, don't gate.
+
+**Rationale over alternatives.** Adding a new audit-record field (Option 5b) would gate a feature on schema work for what is fundamentally a debugging affordance. The existing per-event audit structure (`task_center_runner/audit/recorder.py`) does not need extending — a `logging.getLogger(__name__)` line at the right boundary gives operators what they need (provider attribution, status code, error class, retry decision) without touching audit dataclasses.
+
+**(c) Acceptance criteria amendment — net-new A17.**
+
+**A17.** `AnthropicClient.stream_message` and `CodexResponsesClient.stream_message` emit a structured log line via the module-level `log = logging.getLogger(__name__)` (already present in `backend/src/providers/clients/api/anthropic_native.py:36`; mirrored in the new Codex client) tagged with the literal string `plan_mode_error` plus structured fields:
+  - `provider`: `"anthropic"` | `"codex"`.
+  - `status_code`: int (e.g. 429, 500, 403).
+  - `error_class`: short symbolic name (e.g. `"rate_limit"`, `"server_error"`, `"cloudflare_challenge"`, `"unauthorized"`).
+  - `retry_attempted`: bool — whether A7's refresh-and-retry path fired.
+
+  **Wire site (Anthropic).** Inside `AnthropicClient.stream_message`, at the existing `except anthropic.APIStatusError` boundary (`anthropic_native.py:205`). Emit the log line BEFORE re-raising or retrying. Gated on `self._system_prefix is not None` (i.e. only when plan mode is active — API-mode 4xx/5xx is already logged elsewhere and is not the drift signal we care about here).
+
+  **Wire site (Codex).** Inside `CodexResponsesClient.stream_message`, at the equivalent HTTPX `HTTPStatusError` (or `httpx.Response.raise_for_status()` failure) boundary. Same field set. No gate needed — the Codex client only runs in plan mode by construction.
+
+  **Audit recorder untouched.** `task_center_runner/audit/recorder.py` is NOT modified. Per-event audit dataclasses do not gain a new field. Rationale: log lines are sufficient for drift detection; promoting them to audit-record state is premature.
+
+  **Rationale (CLAUDE.md §2 check).** This adds one log line at two existing exception boundaries — minimum code that solves the problem. No new abstractions, no new exception classes.
+
+**(d) Verification.** New unit test `test_plan_mode_error_log.py`:
+  1. Feed a recorded 429 response to `AnthropicClient` with `system_prefix=<oauth literal>`; assert one `plan_mode_error` log line emitted with `provider="anthropic"`, `status_code=429`, `error_class="rate_limit"`, `retry_attempted=<bool from A7 path>`.
+  2. Same for a recorded 500.
+  3. Feed a recorded 403 with `cf-mitigated: challenge` header to `CodexResponsesClient`; assert log line with `provider="codex"`, `status_code=403`, `error_class="cloudflare_challenge"`.
+  4. API-mode (no `system_prefix`) regression: feed a 429 to `AnthropicClient` with `system_prefix=None`; assert NO `plan_mode_error` log line (the regular API-error log path still fires; that is unchanged behavior).
+
+---
+
 ### RALPLAN-DR delta
 
 **Principles amended / added.**
 - P2 amended: "provider selection is data, not branches" — extend: vendor-protocol quirks (identity block, originator headers, schema sanitization) live inside the client/strategy, never leak to recipe layer or caller config.
-- P5 amended: "auth artifacts stay where the vendor put them" — extend: vendor *identity* artifacts (system block #0, originator string, UA, account-id JWT claim) are vendor-impersonation surface and live with the auth strategy that does the impersonating.
-- **P7 (new): Defensive validation at registration time over runtime surprises.** Tool-name collisions, Codex-incompatible schemas, and missing JWT claims fail at client construction, not on a mid-stream vendor 4xx/5xx.
-- **P8 (new): Phase 0 scope expands monotonically on cross-vendor evidence.** Adding the schema-validity report is justified by three-repo convergence on schema-strictness; we do not pre-emptively add scope without such evidence.
+- P5 amended: "auth artifacts stay where the vendor put them" — extend: vendor *identity* artifacts (system block #0 string, originator string, UA, account-id JWT claim) belong with the factory/client surface that owns the vendor-impersonation wiring (not on the credential abstraction itself; see v8 A13 correction).
+- *(P7 and P8 were proposed in v7 and dropped in v8. Rationale: A14 collapsed to a single CI test makes P7's "defensive validation at registration time" non-load-bearing, and A16 already justifies itself via Phase 0.7 evidence without needing a meta-principle to authorize evidence-gating. Avoiding bootstrap-justified principles.)*
 
 **Decision Drivers (additive).** Vendor server-side enforcement is opaque — three independent implementations converging on the same hard-coded strings is the strongest signal we'll get of vendor contract. Treat convergence as evidence.
 
@@ -438,11 +483,12 @@ The sanitizer normalizes schemas pre-request. Without it, Codex returns `HTTP 40
 ### ADR addendum
 
 **Consequences (extended from v6).**
-- Add one method to `AuthStrategy` Protocol (`get_required_system_prefix`), two new client-side runtime checks (tool collision, JWT-claim presence), four new request headers on Codex side, one conditional sanitizer module.
+- Add one optional constructor kwarg (`system_prefix`) to `AnthropicClient`, wired by `make_claude_oauth_strategy()` factory (v8 — replaces v7's Protocol-method approach); one client-side runtime check (JWT-claim presence on Codex); four new request headers on Codex side; one conditional sanitizer module. **Tool-name collision is enforced by CI test only**, not runtime code (v8).
 - Net new acceptance criteria: A13 (identity block), A14 (tool collision guard), A15 (Codex JWT claim), A16 (Codex schema sanitizer, conditional).
 - Phase 0 spike output extended: schema validity report added next to event mapping table. Phase 0 still 1 day estimated; running tool schemas through a dry-call is automatable in a script.
 - **Accepted impersonation cost:** we ship `originator: codex_cli_rs` and `system[0]: "You are Claude Code…"`. Both are vendor-impersonation. Plan mode remains `experimental`; user is responsible for vendor ToS (unchanged from v6).
-- **Backwards-compatibility preserved:** A13 is OAuth-strategy-gated; `api_key_strategy.get_required_system_prefix()` returns `None`; API mode is bit-identical to today. A14 is plan-client-gated; API-mode clients have no collision check (Principle 3).
+- **Backwards-compatibility preserved:** A13 is gated by the constructor `system_prefix` kwarg defaulting to `None` (factory passes the literal only when constructing the OAuth-mode client); API mode is bit-identical to today. A14 is a CI test only — runtime is unchanged in both modes.
+- **Ban exit ramp.** If the user account is banned by Anthropic or OpenAI under their ToS (the risk Pre-mortem #3 covers), restore-to-API-mode is trivial: remove the plan-mode `class_path` value from the active `model_registrations` row and the system falls back to today's API-mode behavior. A8 ensures no OAuth tokens were ever persisted in our DB, so no purge step is needed — credentials live only in the vendor's storage (macOS Keychain / `~/.codex/auth.json`).
 
 **Drivers (additive).** Three-repo convergence as primary evidence for vendor-contract constraints.
 
@@ -455,7 +501,7 @@ The sanitizer normalizes schemas pre-request. Without it, Codex returns `HTTP 40
 **Why chosen (additive).** Each chosen option places vendor-quirk knowledge inside the smallest unit that already owns the corresponding concern (strategy for impersonation, client for transport, spike for evidence). No new abstractions; A13–A16 ride existing seams.
 
 **Follow-ups (additive).**
-- If a third plan-mode vendor lands (Phase 4 subprocess patterns), revisit P7 to see if registration-time validation generalizes into a shared protocol.
+- If a third plan-mode vendor lands (Phase 4 subprocess patterns), revisit whether registration-time validation should be promoted to a named principle (v7's P7 was dropped in v8 as bootstrap-justification; revisit if a real generalization need emerges).
 - Watch for Cloudflare allowlist rotation; Phase 2 manual smoke is the canary.
 
 ---
@@ -463,7 +509,108 @@ The sanitizer normalizes schemas pre-request. Without it, Codex returns `HTTP 40
 ## 7. Iteration log — v7 entry
 
 - **v7 (this amendment):** Cross-verification against hermes-agent, earendil-works/pi, and openclaw (2026-05-20). Closes four gaps in v6: (1) Anthropic OAuth identity-block #0 must be prepended (A13); (2) tool-name collisions with Claude Code built-ins must fail loud at registration (A14); (3) Codex Responses requires Cloudflare-allowlist headers including JWT-decoded `ChatGPT-Account-Id` (A4 sub-bullets + A15); (4) Codex stricter schema validation — Phase 0 spike extended to produce a schema-validity report, sanitizer added only on evidence (A16 conditional). Principles P7 + P8 added. Pre-mortem scenario #4 added. ADR consequences extended. v6 sections 1–5 untouched; all existing acceptance criteria A1–A12 unchanged.
+- **Architect re-review of v7 (PROCEED-WITH-AMENDMENTS, 5 items):** A13 leaks server-spec onto `AuthStrategy` Protocol; A14 ships runtime machinery that cannot trigger today (CLAUDE.md §2); A15 typo ("Anthropic's signature" → "OpenAI's signature") and missing convergence statement; Phase 0 over-scoped by folding schema validity into a 1-day spike; path references use stale `backend/src/engine/tools/`.
+- **Critic re-review of v7 (ITERATE, 7 items — 5 concurring with Architect + 2 net-new):** concurs on the five above; flags (Major #5) missing plan-mode 4xx/5xx observability — drift detection needs structured signal; flags (Skeptic note) ADR consequences lack explicit ban-exit-ramp documentation.
+- **v8 (this revision):** Surgical edits to v7. (1) A13 moved off `AuthStrategy` Protocol; identity prefix now flows via `AnthropicClient(system_prefix=...)` constructor kwarg, wired by `make_claude_oauth_strategy()` factory side-by-side with the strategy. Protocol stays exactly 2 methods (`get_auth_kwargs` + `refresh`). Idempotency guard preserved. (2) A14 collapsed to a single CI test at `backend/tests/unit_test/test_tools/test_no_claude_code_collision.py`; exception class, module constant, override flag, and runtime check all dropped. (3) A15 typo fixed; convergence evidence statement added (hermes + pi confirmed at named line ranges; openclaw treated as one-degree-less-confirmed; Phase 0 manual smoke is the final gate); mid-stream `id_token` refresh handling specified — `CodexResponsesClient` re-extracts `chatgpt_account_id` on refresh, raises `CodexCredentialIncompleteError` on failure. (4) Phase 0 split: Phase 0 stays 1 day for stream translation only (`codex_event_mapping.md`, GO / EXTEND-UNION / RECONSIDER); new Phase 0.7 (1 day, parallel with 0.5) owns schema validity (`codex_schema_validity_report.md`, SHIP-AS-IS / SHIP-WITH-SANITIZER); A16 gating rewritten as "active iff Phase 0.7 returns SHIP-WITH-SANITIZER". (5) P7 and P8 dropped from RALPLAN-DR principles section — A14 collapse removes P7's load, A16's evidence-gating self-justifies without needing P8 as cover; comment preserved noting the drop for future readers. (6) Search-replaced `backend/src/engine/tools/` → `backend/src/tools/` across the v7 amendment. (7) New A17 — structured `plan_mode_error` log line at the `APIStatusError` / `HTTPStatusError` boundaries in both clients (`provider`, `status_code`, `error_class`, `retry_attempted` fields); audit recorder untouched; new test `test_plan_mode_error_log.py` covers 429 / 500 / 403-cf-challenge. (8) ADR consequences extended with explicit ban-exit-ramp sentence — remove plan-mode `class_path` from active row, fall back to today's API mode, no token-purge needed because A8 prevents persistence. Status header bumped v6 → v8.
 
 ---
 
-*End of draft v7 amendment.*
+- **v8.1 (this revision):** Architect re-review of v8 caught two stale phrases in the ADR addendum that referenced v7's design (`get_required_system_prefix` Protocol method at :485, `revisit P7` follow-up at :503). Both updated in place to match v8's actual design. No acceptance-criteria or scope changes. Sub-revision rather than v9 because it is purely textual cleanup.
+
+---
+
+## 6.5 v9 amendment — progressive de-risking (Phase 0.3 + A18)
+
+**Status:** APPROVED v8.1 baseline + v9 additive amendment. v9 introduces a new entry-gate spike (Phase 0.3) and a new live e2e acceptance criterion (A18). No existing acceptance criteria modified.
+
+### Rationale
+
+v8.1 derisks Codex stream translation (Phase 0) and Codex schema validity (Phase 0.7) before Phase 1 commits to the larger refactor. There is no equivalent early-evidence gate for the **Anthropic OAuth side** of plan mode — Phase 1 bundles 10+ acceptance criteria (A1–A12) over 1-2 days, and if Anthropic's OAuth contract rejects our specific payload shape (custom recipe system prompt at `system[1]`, our snake_case custom tool schemas, the 3-message spawn shape) at the END of Phase 1, the refactor is wasted. v9 closes that asymmetry by adding a parallel 0.5-day spike.
+
+Separately, v8.1's verification plan covers unit tests + recorded-fixture integration + manual smoke. There is no automated live e2e test that exercises plan mode through a real sandbox, with real custom tools, against a real OAuth endpoint. A18 adds that layer alongside the existing `EOS_SWEEVO_REAL_AGENT_TESTS` pattern.
+
+Both additions are progressive-derisking — they surface contract / wire breakage earlier (Phase 0.3) and later (A18, CI-gated in Phase 3) with low marginal cost.
+
+### Phase 0.3 — Anthropic OAuth end-to-end smoke spike
+
+**Duration:** 0.5 day, parallel with Phase 0.5 / Phase 0.7.
+
+**Deliverables.**
+- Throwaway spike script at `scripts/spike_anthropic_oauth.py` (NOT under `backend/src/`; deleted before Phase 1 PR lands).
+- Report at `.planning/anthropic_oauth_smoke.md` containing: request headers (token redacted), full response (first 5 KB if streamed), GO / RECONSIDER decision.
+
+**What the script does.**
+1. Reads OAuth credentials from macOS keychain via `security find-generic-password -s "Claude Code-credentials" -a "$USER" -w`. Parses the JSON blob; extracts `claudeAiOauth.accessToken`.
+2. Constructs `POST https://api.anthropic.com/v1/messages` with:
+   - `Authorization: Bearer <accessToken>`
+   - `anthropic-beta: claude-code-20250219,oauth-2025-04-20`
+   - `User-Agent: claude-cli/<latest>` (provisional — Phase 1 mitmproxy pins exact value; the smoke spike just needs SOMETHING accepted)
+   - `x-app: cli`
+   - `anthropic-version: 2023-06-01`
+   - `system`: two blocks. Block #0 = the Claude-Code identity literal (`"You are Claude Code, Anthropic's official CLI for Claude."`, per A13). Block #1 = a REAL recipe system prompt loaded from `backend/src/task_center/context_engine/recipes/` (script reads the recipe registry to identify and pick a representative recipe).
+   - `messages`: 3 synthetic user messages mirroring `backend/src/engine/agent/factory.py`'s spawn-prompt shape (script reads `factory.py` to confirm the 3-message pattern; if the exact shape resists extraction in 0.5 day, fall back to placeholder strings clearly annotated as "representative, not extracted from factory").
+   - `tools`: 3-5 REAL tool schemas serialized from `backend/src/tools/` (expected representative set: `read_file`, `edit_file`, `shell`, `glob`, `grep` — script reads the tool registry to identify the exact entries).
+3. Streams the response and asserts: (a) HTTP 200, (b) at least one `content_block` of type `text` OR `tool_use`, (c) no content-filter rejection in error fields.
+
+**Gate.** **GO required before Phase 1 starts** (added to the Phase 1 entry gate in §Phases table above).
+
+- **GO:** All three assertions pass. Phase 1 starts as planned.
+- **RECONSIDER:** Any assertion fails. Triggers scope re-examination: sanitize recipe system prompt for competitor-name mentions, rewrite tool schemas, swap the beta header set, investigate `cf-mitigated`-style challenges, etc. Phase 1 does not start until the failure mode is understood and either resolved in the spike or a new acceptance criterion is added to absorb the work.
+
+### A18 — Live e2e smoke tests for plan mode
+
+**Net-new acceptance criterion (additive; nothing existing changes).**
+
+**A18.** New live e2e test file at `backend/src/task_center_runner/tests/sweevo/test_real_agent_plan_mode.py`, sibling of the existing `backend/src/task_center_runner/tests/sweevo/test_real_agent.py`. Mirrors the existing real-agent gating pattern: `pytest.mark.skipif(os.getenv("EOS_SWEEVO_REAL_AGENT_TESTS") != "1", reason="Real-agent live e2e gated by EOS_SWEEVO_REAL_AGENT_TESTS=1")`. Additional `pytest.mark.skipif` skips when plan-mode credentials are absent (no `Claude Code-credentials` keychain entry on macOS / no `~/.codex/auth.json`), so unprivileged CI still passes. Depends on function-scoped `workspace` fixture (same as `test_real_agent.py`).
+
+**Test cases (three minimum).**
+
+1. **Anthropic plan-mode + custom tools, end-to-end.** Register a plan-mode `model_registrations` row with `class_path="providers.clients.api.anthropic_native:AnthropicClient"` (or whichever class A5's dispatch contract pins for the plan-mode side — test reads v8 A5 to confirm the exact dispatch + `kwargs_json` shape and mirrors it). `kwargs_json` sets `{"auth": "claude_oauth", "system_prefix": "You are Claude Code, Anthropic's official CLI for Claude."}` (per A13). Run a canonical SWE-EVO instance via `run_sweevo_real_agent`. Assert:
+   - `plan_mode_active == true` in the recorded `run.json` (per A11).
+   - At least one `tool_use` event uses a custom EphemeralOS tool (e.g. `read_file` or `shell`).
+   - The recorded sandbox-touched-files set matches the expected SWE-EVO diff envelope.
+   - No `plan_mode_error` log lines at 4xx/5xx (per A17).
+
+2. **Codex plan-mode + custom tools, end-to-end.** Equivalent for Codex via `class_path="providers.clients.coding_plan.codex:CodexResponsesClient"`. Same four assertions.
+
+3. **API-mode regression.** Existing `test_real_agent.py` flow runs unchanged with no `class_path` set: `plan_mode_active == false`, no `plan_mode_error` noise. (If this is fully redundant with `test_real_agent.py` post-Phase-1, replace the body with a cross-reference comment rather than re-asserting.)
+
+**Why this matters (and what A18 catches that earlier layers don't).** A8 unit tests use static analysis + recorded fixtures. A11 unit tests use mocked stores. A17 unit tests feed recorded HTTP responses. None of those exercise: (i) keychain / `~/.codex/auth.json` reads on a real dev box, (ii) the Anthropic identity preamble actually unblocking the request server-side, (iii) Codex's Cloudflare allowlist + JWT-extracted account-id actually passing live, (iv) our snake_case custom tools surviving the OAuth wire and getting invoked by the model, (v) sandbox + plan mode + layerstack/OCC composing end-to-end. A18 is the only layer that does.
+
+**Verification phase.** A18 is part of **Phase 3** (capability-parity benchmark). Phase 3 already runs sweevo `complex_project_build`; A18 runs alongside under the same `EOS_SWEEVO_REAL_AGENT_TESTS=1` gate.
+
+### RALPLAN-DR delta (v9)
+
+- **Principles.** None added. Progressive de-risking is implicit in v6's phase-gate structure; v9 just tightens coverage symmetry between Codex and Anthropic.
+- **Pre-mortem #4 (Anthropic identity-block string change / Cloudflare allowlist shift).** Mitigation now empirically gated by **Phase 0.3** (drift surfaces before Phase 1 starts) AND by **A18** (drift surfaces in CI / manual live e2e). Existing mitigations (A10 notice, A12 kill-switch, `CODEX_ORIGINATOR_VERSION` constant) unchanged.
+- **Acceptance criteria added.** A18. No others.
+
+---
+
+## 7. Iteration log — v9 entry
+
+- **v9 (this amendment, progressive de-risking):** User-requested additive amendment after v8.1 APPROVED. Closes two asymmetries: (a) v8.1 derisks the Codex side of plan mode with Phase 0 (stream translation) and Phase 0.7 (schema validity) but has no equivalent early-evidence gate for the Anthropic OAuth side — Phase 1 bundles 10+ acceptance criteria and a contract rejection at end-of-Phase-1 wastes 1-2 days; (b) v8.1's verification covers unit tests + recorded fixtures + manual smoke but has no automated live e2e that proves plan mode + real OAuth + real sandbox + our custom tools compose end-to-end. Additions: (1) **Phase 0.3** — 0.5-day throwaway smoke spike (`scripts/spike_anthropic_oauth.py` + `.planning/anthropic_oauth_smoke.md`) that POSTs to `api.anthropic.com/v1/messages` with our actual payload shape (identity preamble + real recipe system prompt + 3-message spawn shape + 3-5 real custom tool schemas read from `backend/src/tools/`); GO required before Phase 1 starts; (2) **A18** — live e2e tests at `backend/src/task_center_runner/tests/sweevo/test_real_agent_plan_mode.py` mirroring the existing `EOS_SWEEVO_REAL_AGENT_TESTS=1` pattern; three cases (Anthropic plan-mode, Codex plan-mode, API-mode regression) asserting `plan_mode_active`, custom-tool invocation, sandbox-diff envelope, and no `plan_mode_error` noise; runs in Phase 3. Pre-mortem #4 mitigation strengthened by gating drift detection on Phase 0.3 + A18. No existing acceptance criteria modified; no principles added. Status header bumped to `APPROVED v8.1 + v9 amendment (progressive de-risking)`.
+
+- **v9.0-correction (textual, 2026-05-20):** Phase 0.3 / Codex schema-probe spike implementations surfaced a path typo in v9 §6.5. The plan repeatedly referenced `backend/src/engine/context_engine/recipes/` (three occurrences); actual repo path is `backend/src/task_center/context_engine/recipes/`. All three corrected via search-replace. No acceptance-criteria changes; spike scripts (`scripts/spike_anthropic_oauth.py`, `scripts/spike_codex_stream.py`, `scripts/spike_codex_schema_probe.py`) handle both paths gracefully via try/except so no implementation rework needed. Documentation-only follow-up; no review pass required.
+
+- **v9.1 (Phase 0.3 execution, 2026-05-20):** Phase 0.3 spike `scripts/spike_anthropic_oauth.py --live` executed against operator's macOS Keychain `Claude Code-credentials` (subscription `max`, tier `default_claude_max_20x`). First attempt returned HTTP 400 `tools.0.custom.output_schema: Extra inputs are not permitted` — root cause: `BaseTool.to_api_schema()` emits a Pydantic-derived `output_schema` field that the OAuth Messages-API rejects. Spike fixed to strip tool payloads down to `{name, description, input_schema}` before sending. Re-run returned HTTP 200 with model `claude-sonnet-4-5-20250929`, two well-formed `tool_use` content blocks invoking custom `shell` tool, `stop_reason=tool_use`, no `cf-mitigated` challenge, no content-filter rejection. **Verdict: GO.** Phase 1 cleared to start, with one new mechanical requirement: `AnthropicClient.stream_message()` under the OAuth strategy must filter outgoing tool schemas to the Anthropic-Messages-API allowlist (`name`, `description`, `input_schema`). This is a one-line transformation; it does NOT require recipe-layer changes (Principle 2 preserved) and does NOT add a new acceptance criterion (covered under A13's wire-site discipline). Full run log in `.planning/anthropic_oauth_smoke.md`.
+
+- **v9.2 (Phase 0 + Phase 0.7 execution corrections, 2026-05-20):** Live Codex spikes (`spike_codex_stream.py --live` + `spike_codex_schema_probe.py --live`) surfaced three corrections to v8.1/v9 claims. The live runs are authoritative; the plan body is now stale where it conflicts. Verdicts: **Phase 0 = GO** (event union sufficient, see `.planning/codex_event_mapping.md`); **Phase 0.7 = SHIP-AS-IS** (all 23 EphemeralOS tools PASS, A16 = N/A, see `.planning/codex_schema_validity_report.md`).
+
+  **Correction 1 — A15 JWT claim path (Auth0-namespaced, not top-level).** Plan A15 cites hermes + pi convergence on `payload["chatgpt_account_id"]`. Empirical id_token from `codex login` on this machine has the claim at `payload["https://api.openai.com/auth"]["chatgpt_account_id"]` (Auth0 namespaced-claim convention). Phase 2 `CodexResponsesClient` MUST check the namespace first, fall back to top-level for forward-compat: `payload.get("https://api.openai.com/auth", {}).get("chatgpt_account_id") or payload.get("chatgpt_account_id")`. Treat the convergence evidence as one-degree-less-confirmed (hermes/pi may have been observed in different account configurations). No test changes — `test_codex_jwt_decode.py`'s fabricated JWT must include the Auth0 namespace.
+
+  **Correction 2 — A4 model gating (ChatGPT-account auth rejects `gpt-5-codex` and `gpt-5`).** ChatGPT-account auth on `chatgpt.com/backend-api/codex/responses` returns HTTP 400 `"<model> is not supported when using Codex with a ChatGPT account"` for both `gpt-5-codex` and `gpt-5`. The accepted model is whatever the user's local `~/.codex/config.toml` declares (`gpt-5.5` on this machine). Phase 2 MUST read the model from `~/.codex/config.toml` `model = "..."` line; do NOT hard-code `gpt-5-codex` as A4's implicit baseline suggested. Default to `gpt-5.5` only if config absent. (Note: this is per-machine config, not a vendor constant.)
+
+  **Correction 3 — Codex Responses tool envelope is FLAT.** Codex Responses API rejects the Chat-Completions nested `{"type":"function","function":{"name":...}}` shape with HTTP 400 `"Missing required parameter: 'tools[0].name'"`. The accepted envelope is FLAT: `{"type":"function","name":..., "description":..., "parameters":...}` at the top level. Phase 2 `CodexResponsesClient` MUST emit the flat envelope. This was an unstated assumption in v8.1 §A4; pin it explicitly here.
+
+  **Correction 4 — `max_output_tokens` rejected by ChatGPT-account auth.** Codex Responses API returns HTTP 400 `"Unsupported parameter: max_output_tokens"` for ChatGPT-account requests. Phase 2 MUST omit `max_output_tokens` from the request body under ChatGPT-account auth. (Codex CLI does not set it.)
+
+  **A16 status:** marked **N/A**. All 23 EphemeralOS tools round-trip through Codex Responses unchanged. Hermes' `schema_sanitizer.py` is not needed for our tool set. If future tools introduce `$ref`/`anyOf` constructs, re-run `scripts/spike_codex_schema_probe.py`; the SHIP-WITH-SANITIZER branch then activates A16 as originally specified.
+
+  **A14 status:** **DONE** (S5 ralph round-1). 24 tests pass; zero collisions with Claude Code reserved set across all 23 tools.
+
+  **Phase 1 entry-gate:** with Phase 0.3 GO + Phase 0 GO + Phase 0.7 SHIP-AS-IS recorded, the progressive-de-risking contract is satisfied. Phase 1 (Anthropic refactor: A1, A2, A3-macOS, A5, A6, A7, A8, A9, A10, A11, A12, A13) cleared to start.
+
+  **Phase 1 schema-strip note:** Phase 0.3 live spike revealed that `BaseTool.to_api_schema()` emits an extra `output_schema` field (Pydantic-derived) that Anthropic's OAuth Messages-API rejects with HTTP 400. Production `AnthropicClient.stream_message` MUST strip outgoing tool schemas to `{name, description, input_schema}` before sending. Per advisor, this transformation is always-on (the field is just dropped — harmless under API-key auth where Anthropic also doesn't expect it; required under OAuth where it is rejected). No new acceptance criterion needed; this is the wire-site discipline noted under A13.
+
+*End of plan, v9 + v9.0-correction + v9.1 + v9.2.*

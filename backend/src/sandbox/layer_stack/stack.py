@@ -20,7 +20,11 @@ from sandbox.layer_stack.storage_lock import acquire_storage_writer_lock
 from sandbox.layer_stack.changes import LayerChange
 from sandbox.layer_stack.publisher import LayerPublisher
 from sandbox.layer_stack.lease import LeaseRegistry, WorkspaceLease
-from sandbox.layer_stack.squash import SquashService, manifest_still_ends_with
+from sandbox.layer_stack.squash import (
+    CheckpointSegment,
+    SquashService,
+    manifest_still_matches_plan,
+)
 from sandbox.layer_stack.manifest import (
     FileManifestStore,
     LAYERS_DIR,
@@ -259,7 +263,12 @@ class LayerStack:
     def squash(self, *, max_depth: int) -> Manifest | None:
         with self._lock:
             active = self._manifest_store.read()
-            plan = self._squash.plan(active, max_depth=max_depth)
+            pinned_layers = self._leases.pinned_layers()
+            plan = self._squash.plan(
+                active,
+                max_depth=max_depth,
+                pinned_layers=pinned_layers,
+            )
             if plan is None:
                 return None
             squash_lease = self._leases.acquire(
@@ -267,34 +276,47 @@ class LayerStack:
                 f"squash-{uuid4().hex}",
             )
 
-        checkpoint: LayerRef | None = None
+        checkpoints: list[LayerRef] = []
         checkpoint_committed = False
         try:
-            checkpoint = self._squash.build_checkpoint(plan)
+            for segment in plan.checkpoint_segments:
+                checkpoints.append(
+                    self._squash.build_checkpoint(
+                        segment,
+                        active_version=plan.active_version,
+                    )
+                )
             with self._lock:
                 current = self._manifest_store.read()
-                if not manifest_still_ends_with(
-                    current,
-                    plan.suffix_to_checkpoint,
-                ):
+                if not manifest_still_matches_plan(current, plan):
                     return None
                 next_version = current.version + 1
-                if not checkpoint.layer_id.startswith(f"B{next_version:06d}-"):
-                    checkpoint = self._squash.relabel_checkpoint(
-                        checkpoint,
-                        manifest_version=next_version,
-                    )
-                live_prefix = current.layers[: -len(plan.suffix_to_checkpoint)]
+                checkpoint_index = 0
+                new_layers: list[LayerRef] = []
+                for entry in plan.entries:
+                    if isinstance(entry, CheckpointSegment):
+                        checkpoint = checkpoints[checkpoint_index]
+                        if not checkpoint.layer_id.startswith(f"B{next_version:06d}-"):
+                            checkpoint = self._squash.relabel_checkpoint(
+                                checkpoint,
+                                manifest_version=next_version,
+                            )
+                            checkpoints[checkpoint_index] = checkpoint
+                        new_layers.append(checkpoint)
+                        checkpoint_index += 1
+                    else:
+                        new_layers.append(entry)
                 new_manifest = Manifest(
                     version=next_version,
-                    layers=(*live_prefix, checkpoint),
+                    layers=tuple(new_layers),
                 )
                 self._manifest_store.write(new_manifest)
                 checkpoint_committed = True
             return new_manifest
         finally:
-            if checkpoint is not None and not checkpoint_committed:
-                self._squash.discard_checkpoint(checkpoint)
+            if not checkpoint_committed:
+                for checkpoint in checkpoints:
+                    self._squash.discard_checkpoint(checkpoint)
             self.release_lease(squash_lease.lease_id)
 
     def _layer_path(self, layer: LayerRef) -> Path:

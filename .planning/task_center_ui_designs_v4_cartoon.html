@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Task Center — Cartoon Edition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Caveat:wght@400;700&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:    #fff8ec;
+    --paper-2:  #fff1d4;
+    --ink:      #2a2438;
+    --ink-soft: #5b5170;
+    --line:     #2a2438;
+
+    --planner:   #6fb3ff;  /* blue scroll */
+    --generator: #b78cff;  /* purple bot  */
+    --evaluator: #ffb35c;  /* orange judge */
+    --handoff:   #ff7e8a;  /* pink portal  */
+
+    --goal:      #88d96a;
+    --iter:      #ffd966;
+    --attempt:   #ffaf78;
+    --sandbox:   #6fd9c9;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Patrick Hand", "Comic Sans MS", cursive;
+    background:
+      radial-gradient(circle at 10% 10%, #fff5d8 0%, transparent 40%),
+      radial-gradient(circle at 90% 80%, #ffe6c2 0%, transparent 40%),
+      var(--paper);
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1.4;
+    min-height: 100vh;
+  }
+  /* paper grain */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(42,36,56,0.06) 1px, transparent 0);
+    background-size: 20px 20px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  header.page {
+    padding: 28px 36px 18px;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+  }
+  header.page h1 {
+    font-family: "Caveat", cursive;
+    font-weight: 700;
+    font-size: 46px;
+    margin: 0;
+    color: var(--ink);
+    transform: rotate(-1.5deg);
+    display: inline-block;
+  }
+  header.page h1::after {
+    content: "";
+    display: block;
+    width: 80%;
+    height: 8px;
+    margin: -6px auto 0;
+    background: var(--evaluator);
+    border-radius: 50%;
+    transform: skew(-8deg);
+    opacity: 0.55;
+  }
+  header.page .sub {
+    font-size: 18px;
+    color: var(--ink-soft);
+    margin-top: 6px;
+    transform: rotate(-0.5deg);
+    display: inline-block;
+  }
+
+  .stage {
+    position: relative;
+    z-index: 1;
+    padding: 24px 36px 40px;
+  }
+
+  .legend {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 8px 0 30px;
+  }
+  .legend .item {
+    background: white;
+    border: 3px solid var(--ink);
+    border-radius: 30px;
+    padding: 6px 14px 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: "Fredoka", sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .legend .item:nth-child(odd) { transform: rotate(-1.5deg); }
+  .legend .item:nth-child(even) { transform: rotate(1deg); }
+  .legend .em { font-size: 22px; }
+
+  /* ---------- COMIC PANEL FRAME ---------- */
+  .panel {
+    background: white;
+    border: 4px solid var(--ink);
+    border-radius: 22px;
+    box-shadow: 6px 6px 0 var(--ink);
+    padding: 24px 28px 28px;
+    margin-bottom: 28px;
+    position: relative;
+  }
+  .panel.tilt-l { transform: rotate(-0.6deg); }
+  .panel.tilt-r { transform: rotate(0.4deg); }
+  .panel .panel-title {
+    font-family: "Caveat", cursive;
+    font-size: 30px;
+    font-weight: 700;
+    margin: -8px 0 8px;
+    color: var(--ink);
+    display: inline-block;
+    background: var(--iter);
+    padding: 2px 14px 0;
+    border-radius: 8px;
+    transform: rotate(-1deg);
+    border: 3px solid var(--ink);
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .panel .panel-sub {
+    color: var(--ink-soft);
+    margin: 4px 0 14px;
+    font-size: 16px;
+  }
+
+  /* ---------- STICKERS (goal/iter/attempt) ---------- */
+  .sticker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border: 3px solid var(--ink);
+    border-radius: 30px;
+    background: white;
+    font-family: "Fredoka", sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    box-shadow: 3px 3px 0 var(--ink);
+    color: var(--ink);
+  }
+  .sticker.goal    { background: var(--goal); }
+  .sticker.iter    { background: var(--iter); }
+  .sticker.attempt { background: var(--attempt); }
+  .sticker.sandbox { background: var(--sandbox); }
+  .sticker.handoff { background: var(--handoff); color: white; }
+  .sticker .em { font-size: 20px; line-height: 1; }
+  .sticker .num { font-family: "Caveat", cursive; font-size: 22px; padding: 0 4px; }
+
+  /* ---------- STATUS DOTS ---------- */
+  .dot {
+    width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid var(--ink);
+    display: inline-block; flex-shrink: 0;
+  }
+  .d-running { background: var(--evaluator); animation: bounce 0.9s ease-in-out infinite; }
+  .d-done    { background: var(--goal); }
+  .d-fail    { background: var(--handoff); }
+  .d-pending { background: #d9d2c0; }
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+
+  /* ---------- CHARACTER AVATARS ---------- */
+  .char {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 3.5px solid var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    box-shadow: 3px 3px 0 var(--ink);
+    flex-shrink: 0;
+    position: relative;
+  }
+  .char.planner   { background: var(--planner); }
+  .char.generator { background: var(--generator); }
+  .char.evaluator { background: var(--evaluator); }
+  .char.handoff   { background: var(--handoff); }
+  .char.sandbox   { background: var(--sandbox); }
+  .char .badge {
+    position: absolute;
+    bottom: -6px;
+    right: -6px;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: white;
+    border: 2.5px solid var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+  }
+
+  /* ---------- SPEECH BUBBLE ---------- */
+  .bubble {
+    position: relative;
+    background: white;
+    border: 3px solid var(--ink);
+    border-radius: 18px;
+    padding: 8px 14px;
+    box-shadow: 3px 3px 0 var(--ink);
+    font-size: 15px;
+    color: var(--ink);
+    line-height: 1.35;
+    max-width: 360px;
+  }
+  .bubble::before {
+    content: "";
+    position: absolute;
+    left: -14px;
+    top: 18px;
+    width: 0; height: 0;
+    border-top: 9px solid transparent;
+    border-bottom: 9px solid transparent;
+    border-right: 14px solid var(--ink);
+  }
+  .bubble::after {
+    content: "";
+    position: absolute;
+    left: -9px;
+    top: 20px;
+    width: 0; height: 0;
+    border-top: 7px solid transparent;
+    border-bottom: 7px solid transparent;
+    border-right: 10px solid white;
+  }
+  .bubble.right::before { left: auto; right: -14px; border-right: 0; border-left: 14px solid var(--ink); }
+  .bubble.right::after  { left: auto; right: -9px;  border-right: 0; border-left: 10px solid white; }
+
+  .row {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .row .name {
+    font-family: "Fredoka", sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+  }
+  .row .name .tag {
+    display: inline-block;
+    background: var(--ink);
+    color: white;
+    padding: 1px 8px;
+    border-radius: 8px;
+    font-size: 11px;
+    margin-left: 6px;
+  }
+
+  /* ---------- SECTION : THE STORY ---------- */
+  .story-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 22px;
+    margin-top: 16px;
+  }
+  .story-card {
+    background: var(--paper-2);
+    border: 3px solid var(--ink);
+    border-radius: 16px;
+    padding: 14px 16px;
+    box-shadow: 4px 4px 0 var(--ink);
+    position: relative;
+  }
+  .story-card.tilt-l { transform: rotate(-1deg); }
+  .story-card.tilt-r { transform: rotate(0.8deg); }
+  .story-card .num-big {
+    position: absolute;
+    top: -16px;
+    left: -10px;
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: var(--handoff);
+    color: white;
+    border: 3px solid var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Caveat", cursive;
+    font-weight: 700;
+    font-size: 24px;
+    box-shadow: 2px 2px 0 var(--ink);
+  }
+  .story-card h4 {
+    margin: 6px 0 8px;
+    font-family: "Fredoka", sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+  }
+  .story-card p { margin: 0; font-size: 15px; color: var(--ink); line-height: 1.45; }
+
+  /* ---------- SECTION : MAIN PIPELINE (the comic panel) ---------- */
+  .comic-pipeline {
+    display: grid;
+    grid-template-columns: 1fr 60px 1.5fr 60px 1fr;
+    align-items: center;
+    gap: 0;
+    margin: 16px 0 6px;
+  }
+  .stage-box {
+    background: white;
+    border: 3px solid var(--ink);
+    border-radius: 18px;
+    padding: 14px;
+    box-shadow: 4px 4px 0 var(--ink);
+    text-align: center;
+  }
+  .stage-box.p { background: #e7f2ff; }
+  .stage-box.g { background: #f1e8ff; }
+  .stage-box.e { background: #fff1dc; }
+  .stage-box .char { margin: 0 auto 8px; }
+  .stage-box .nm { font-family: "Fredoka", sans-serif; font-weight: 700; font-size: 18px; }
+  .stage-box .desc { font-size: 14px; color: var(--ink-soft); margin-top: 4px; }
+  .stage-box.p { transform: rotate(-1deg); }
+  .stage-box.e { transform: rotate(1deg); }
+
+  .arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .arrow svg { width: 100%; height: 60px; }
+  .arrow .lbl {
+    position: absolute;
+    top: -2px;
+    font-family: "Caveat", cursive;
+    font-size: 18px;
+    color: var(--ink-soft);
+    background: var(--paper);
+    padding: 0 6px;
+    transform: rotate(-3deg);
+  }
+
+  .gen-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .gen-pair .stage-box { padding: 10px; }
+  .gen-pair .stage-box .char { width: 48px; height: 48px; font-size: 22px; }
+  .gen-pair .stage-box .nm { font-size: 14px; }
+  .gen-pair .stage-box.g { transform: rotate(0deg); }
+  .gen-pair .stage-box.g:first-child { transform: rotate(-1.5deg); }
+  .gen-pair .stage-box.g:last-child  { transform: rotate(1.5deg); }
+
+  /* ---------- NESTED GOAL (portal!) ---------- */
+  .portal {
+    grid-column: 1 / -1;
+    margin-top: 20px;
+    border: 3.5px dashed var(--handoff);
+    border-radius: 20px;
+    padding: 14px 18px 18px;
+    background:
+      radial-gradient(ellipse at top, rgba(255,126,138,0.12) 0%, transparent 60%),
+      #fff7f8;
+    position: relative;
+  }
+  .portal::before {
+    content: "✨ NESTED GOAL ✨";
+    position: absolute;
+    top: -14px;
+    left: 24px;
+    background: var(--handoff);
+    color: white;
+    padding: 3px 12px 1px;
+    border: 3px solid var(--ink);
+    border-radius: 14px;
+    font-family: "Fredoka", sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    box-shadow: 2px 2px 0 var(--ink);
+    transform: rotate(-2deg);
+  }
+  .portal .pgrid {
+    display: grid;
+    grid-template-columns: 1fr 40px 1fr 40px 1fr;
+    gap: 0;
+    align-items: center;
+    margin-top: 8px;
+  }
+  .portal .stage-box { box-shadow: 2px 2px 0 var(--ink); padding: 8px; }
+  .portal .stage-box .char { width: 38px; height: 38px; font-size: 18px; box-shadow: 2px 2px 0 var(--ink); }
+  .portal .stage-box .nm { font-size: 13px; }
+
+  /* ---------- ITERATION CHAIN ---------- */
+  .iter-chain {
+    display: grid;
+    grid-template-columns: 1fr 80px 1fr;
+    gap: 0;
+    align-items: stretch;
+    margin-top: 18px;
+  }
+  .iter-card {
+    background: white;
+    border: 3px solid var(--ink);
+    border-radius: 18px;
+    padding: 14px 16px;
+    box-shadow: 4px 4px 0 var(--ink);
+  }
+  .iter-card.tilt-l { transform: rotate(-0.8deg); }
+  .iter-card.tilt-r { transform: rotate(0.5deg); }
+  .iter-card .ih {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  }
+  .iter-card .ih h3 {
+    margin: 0; font-family: "Fredoka", sans-serif; font-weight: 700; font-size: 18px;
+  }
+  .iter-card .attempts {
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .att-chip {
+    border: 2.5px solid var(--ink);
+    border-radius: 18px;
+    padding: 4px 12px;
+    background: white;
+    font-family: "Fredoka", sans-serif;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    box-shadow: 2px 2px 0 var(--ink);
+  }
+  .att-chip.done { background: #c8edb7; }
+  .att-chip.fail { background: #ffc7cc; }
+  .att-chip.live { background: var(--evaluator); }
+  .iter-arrow-big {
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+  }
+  .iter-arrow-big svg { width: 76px; height: 60px; }
+  .iter-arrow-big .lbl {
+    font-family: "Caveat", cursive;
+    font-size: 17px;
+    color: var(--ink-soft);
+    text-align: center;
+    margin-top: -4px;
+    transform: rotate(-3deg);
+  }
+
+  /* ---------- TIMELINE STRIP ---------- */
+  .timeline {
+    background: var(--paper-2);
+    border: 3px solid var(--ink);
+    border-radius: 18px;
+    padding: 14px 16px;
+    box-shadow: 4px 4px 0 var(--ink);
+    margin-top: 8px;
+  }
+  .tl-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 10px 0;
+    border-bottom: 2px dashed rgba(42,36,56,0.15);
+  }
+  .tl-item:last-child { border-bottom: 0; }
+  .tl-item .ts {
+    font-family: "Fredoka", sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--ink-soft);
+    width: 70px;
+    flex-shrink: 0;
+    padding-top: 24px;
+  }
+  .tl-item .what { flex: 1; font-size: 15px; }
+  .tl-item .what .who { font-family: "Fredoka", sans-serif; font-weight: 700; }
+
+  /* ---------- footer note ---------- */
+  .doodle-note {
+    text-align: center;
+    font-family: "Caveat", cursive;
+    font-size: 24px;
+    color: var(--ink-soft);
+    margin: 30px 0 10px;
+    transform: rotate(-1deg);
+  }
+  .doodle-note::before { content: "「 "; color: var(--handoff); }
+  .doodle-note::after  { content: " 」"; color: var(--handoff); }
+</style>
+</head>
+<body>
+
+<header class="page">
+  <h1>The Task Center, in Cartoon</h1>
+  <div class="sub">a not-so-serious tour of Goals, Iterations, Attempts &amp; their tiny agent friends</div>
+</header>
+
+<div class="stage">
+
+  <!-- ========================================== -->
+  <!-- LEGEND : meet the cast                     -->
+  <!-- ========================================== -->
+  <div class="legend">
+    <div class="item"><span class="em">📜</span> Planner</div>
+    <div class="item"><span class="em">🤖</span> Generator</div>
+    <div class="item"><span class="em">⚖️</span> Evaluator</div>
+    <div class="item"><span class="em">🌀</span> Handoff (nested goal)</div>
+    <div class="item"><span class="em">📦</span> Sandbox</div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- PANEL 1 : Meet the model                   -->
+  <!-- ========================================== -->
+  <section class="panel tilt-l">
+    <div class="panel-title">Meet the model 🎬</div>
+    <div class="panel-sub">Three nested boxes, one rule each. That's it.</div>
+
+    <div class="story-grid">
+      <div class="story-card tilt-l">
+        <div class="num-big">1</div>
+        <h4><span class="sticker goal"><span class="em">🎯</span>Goal</span></h4>
+        <p>The thing the user asked for. Created once. May be created again by a generator (see #4 — nested goals).</p>
+      </div>
+      <div class="story-card">
+        <div class="num-big">2</div>
+        <h4><span class="sticker iter"><span class="em">📐</span>Iteration</span></h4>
+        <p>One <i>segment</i> of work toward the goal. Iter N+1 only fires if iter N said "I'm done locally, but the goal isn't" — i.e., a <b>continuation</b>.</p>
+      </div>
+      <div class="story-card tilt-r">
+        <div class="num-big">3</div>
+        <h4><span class="sticker attempt"><span class="em">🎲</span>Attempt</span></h4>
+        <p>One full try inside an iteration. If it fails, you retry: Attempt N+1 fires from the same iteration. Capped by <b>attempt_budget</b>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- PANEL 2 : Inside ONE attempt               -->
+  <!-- ========================================== -->
+  <section class="panel tilt-r">
+    <div class="panel-title">Inside one attempt 🎭</div>
+    <div class="panel-sub">Three roles take the stage in order: planner ▸ generator(s) ▸ evaluator.</div>
+
+    <div class="comic-pipeline">
+      <div class="stage-box p">
+        <div class="char planner">📜<div class="badge">✓</div></div>
+        <div class="nm">Planner</div>
+        <div class="desc">writes the task spec<br>&amp; evaluation criteria</div>
+      </div>
+      <div class="arrow">
+        <svg viewBox="0 0 60 60" preserveAspectRatio="none">
+          <path d="M 4 30 Q 30 10 56 30" stroke="#2a2438" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <polygon points="50,22 60,30 50,38" fill="#2a2438"/>
+        </svg>
+      </div>
+      <div class="stage-box g" style="background:#f1e8ff;">
+        <div style="font-family:'Fredoka',sans-serif; font-weight:700; font-size:18px; margin-bottom:10px;">Generators <span style="font-family:'Caveat',cursive; font-size:18px; color: var(--ink-soft);">(parallel DAG)</span></div>
+        <div class="gen-pair">
+          <div class="stage-box g">
+            <div class="char generator">🤖</div>
+            <div class="nm">gen A</div>
+            <div class="desc">edits code</div>
+          </div>
+          <div class="stage-box g">
+            <div class="char generator">🤖<div class="badge" style="background:var(--handoff); color:white;">🌀</div></div>
+            <div class="nm">gen B</div>
+            <div class="desc">may yell "HANDOFF!"</div>
+          </div>
+        </div>
+      </div>
+      <div class="arrow">
+        <svg viewBox="0 0 60 60" preserveAspectRatio="none">
+          <path d="M 4 30 Q 30 50 56 30" stroke="#2a2438" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <polygon points="50,22 60,30 50,38" fill="#2a2438"/>
+        </svg>
+      </div>
+      <div class="stage-box e">
+        <div class="char evaluator">⚖️</div>
+        <div class="nm">Evaluator</div>
+        <div class="desc">checks each criterion<br>pass · fail · continue?</div>
+      </div>
+    </div>
+
+    <!-- Dialogue strip -->
+    <div style="margin-top: 26px; display: flex; flex-direction: column; gap: 14px;">
+      <div class="row">
+        <div class="char planner">📜</div>
+        <div>
+          <div class="name">Planner <span class="tag">turn 1</span></div>
+          <div class="bubble">"Right. I want <b>no <i>_buffer</i></b> in <i>recorder.py</i>, tests still green, events visible without flush. Three criteria. Off you trot."</div>
+        </div>
+      </div>
+      <div class="row" style="justify-content: flex-end;">
+        <div style="display:flex; flex-direction:column; align-items:flex-end;">
+          <div class="name">Generator A <span class="tag">code-writer</span></div>
+          <div class="bubble right">"Editing <code>recorder.py</code>… −18 / +9 ✏️ Done!"</div>
+        </div>
+        <div class="char generator">🤖</div>
+      </div>
+      <div class="row" style="justify-content: flex-end;">
+        <div style="display:flex; flex-direction:column; align-items:flex-end;">
+          <div class="name">Generator B <span class="tag">test-runner</span></div>
+          <div class="bubble right" style="background: #fff1f3;">"Ehhh, the overflow test is <b>flaky</b>. I'm gonna delegate this whole sub-problem 🌀 (calling <code>submit_execution_handoff</code>)"</div>
+        </div>
+        <div class="char handoff">🌀</div>
+      </div>
+      <div class="row">
+        <div class="char evaluator">⚖️</div>
+        <div>
+          <div class="name">Evaluator <span class="tag">final</span></div>
+          <div class="bubble">"Hmm. 3/3 criteria pass <b>locally</b>, but the goal isn't fully solved yet. I'm marking this iteration as <b>needs continuation</b> ➜ <i>"clean up call-sites in stores.py"</i>."</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- PANEL 3 : Iteration chain                  -->
+  <!-- ========================================== -->
+  <section class="panel tilt-l">
+    <div class="panel-title">The iteration chain 🧗</div>
+    <div class="panel-sub">When an iteration closes with a <i>continuation_goal</i>, the next iteration picks up where it left off.</div>
+
+    <div class="iter-chain">
+      <div class="iter-card tilt-l">
+        <div class="ih">
+          <span class="sticker iter"><span class="em">📐</span>Iter <span class="num">1</span></span>
+          <span class="dot d-done"></span>
+          <span style="font-family:'Caveat',cursive; font-size:20px; color: var(--ink-soft);">closed · "I did my bit"</span>
+        </div>
+        <div class="attempts">
+          <span class="att-chip fail"><span class="dot d-fail"></span>A 1.1</span>
+          <span class="att-chip done"><span class="dot d-done"></span>A 1.2</span>
+        </div>
+        <div style="margin-top: 10px; font-size: 14px; color: var(--ink-soft);">
+          summary: <i>"removed buffer in recorder.py; tests green"</i>
+        </div>
+      </div>
+
+      <div class="iter-arrow-big">
+        <svg viewBox="0 0 76 60">
+          <path d="M 4 30 Q 38 4 72 30" stroke="#ff7e8a" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="6 4"/>
+          <polygon points="64,22 76,30 64,38" fill="#ff7e8a"/>
+        </svg>
+        <div class="lbl">continuation</div>
+      </div>
+
+      <div class="iter-card tilt-r">
+        <div class="ih">
+          <span class="sticker iter"><span class="em">📐</span>Iter <span class="num">2</span></span>
+          <span class="dot d-running"></span>
+          <span style="font-family:'Caveat',cursive; font-size:20px; color: var(--ink-soft);">running · "okay, the rest"</span>
+        </div>
+        <div class="attempts">
+          <span class="att-chip fail"><span class="dot d-fail"></span>A 2.1</span>
+          <span class="att-chip live"><span class="dot d-running"></span>A 2.2 ◀</span>
+        </div>
+        <div style="margin-top: 10px; font-size: 14px; color: var(--ink-soft);">
+          goal: <i>"remove buffer call-sites in stores.py"</i>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center; margin-top:18px; font-family:'Caveat',cursive; font-size:22px; color: var(--ink-soft);">
+      ↳ If iter 2 also says "still more to do" → iter 3 will appear. (Budget caps the chain.)
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- PANEL 4 : Nested goal portal               -->
+  <!-- ========================================== -->
+  <section class="panel tilt-r">
+    <div class="panel-title">The Nested-Goal Portal 🌀</div>
+    <div class="panel-sub">A generator can call <code>submit_execution_handoff(goal)</code> mid-attempt and spawn a whole new <b>Goal</b> inside itself. Yes — Goal → Iter → Att <i>inside</i> Goal → Iter → Att. Turtles.</div>
+
+    <!-- the parent attempt + portal -->
+    <div style="background: var(--paper-2); border: 3px solid var(--ink); border-radius: 18px; padding: 16px; box-shadow: 4px 4px 0 var(--ink);">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom: 10px;">
+        <span class="sticker goal"><span class="em">🎯</span>Goal A</span>
+        <span style="font-family:'Caveat',cursive; font-size: 22px;">→</span>
+        <span class="sticker iter"><span class="em">📐</span>Iter <span class="num">2</span></span>
+        <span style="font-family:'Caveat',cursive; font-size: 22px;">→</span>
+        <span class="sticker attempt"><span class="em">🎲</span>Attempt <span class="num">2.2</span></span>
+        <span class="dot d-running" style="margin-left:6px;"></span>
+      </div>
+
+      <div class="comic-pipeline" style="grid-template-columns: 0.9fr 50px 1.6fr 50px 0.9fr;">
+        <div class="stage-box p">
+          <div class="char planner">📜<div class="badge">✓</div></div>
+          <div class="nm">Planner</div>
+        </div>
+        <div class="arrow"><svg viewBox="0 0 60 60" preserveAspectRatio="none"><path d="M 4 30 Q 30 14 56 30" stroke="#2a2438" stroke-width="2.5" fill="none" stroke-linecap="round"/><polygon points="50,22 60,30 50,38" fill="#2a2438"/></svg></div>
+        <div class="stage-box g">
+          <div style="font-family:'Fredoka',sans-serif; font-weight:700; font-size:16px; margin-bottom:8px;">Generators</div>
+          <div class="gen-pair">
+            <div class="stage-box g">
+              <div class="char generator">🤖</div>
+              <div class="nm">gen A</div>
+            </div>
+            <div class="stage-box g" style="border-color: var(--handoff);">
+              <div class="char handoff">🌀</div>
+              <div class="nm">gen B</div>
+              <div class="desc" style="color: var(--handoff); font-weight:600;">⚡ portal opened</div>
+            </div>
+          </div>
+
+          <!-- the portal -->
+          <div class="portal">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+              <span class="sticker handoff"><span class="em">🎯</span>Goal A′</span>
+              <span style="font-family:'Caveat',cursive; font-size:18px;">"diagnose flaky test_overflow"</span>
+              <span class="dot d-running" style="margin-left:auto;"></span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap: wrap; margin-bottom: 8px;">
+              <span class="sticker iter" style="font-size:13px; padding:3px 10px;"><span class="em">📐</span>Iter 1</span>
+              <span style="font-family:'Caveat',cursive; font-size: 18px;">→</span>
+              <span class="sticker attempt" style="font-size:13px; padding:3px 10px;"><span class="em">🎲</span>A 1.1</span>
+              <span class="dot d-running"></span>
+            </div>
+            <div class="pgrid">
+              <div class="stage-box p" style="padding: 6px;"><div class="char planner" style="width:36px; height:36px; font-size:18px;">📜</div><div class="nm" style="font-size:12px;">planner ✓</div></div>
+              <div class="arrow"><svg viewBox="0 0 40 40" preserveAspectRatio="none"><path d="M 2 20 L 38 20" stroke="#2a2438" stroke-width="2" fill="none"/><polygon points="32,15 40,20 32,25" fill="#2a2438"/></svg></div>
+              <div class="stage-box g" style="padding: 6px;"><div class="char generator" style="width:36px; height:36px; font-size:18px;">🤖</div><div class="nm" style="font-size:12px;">gen × 1</div><div class="desc" style="font-size:11px;">running pytest</div></div>
+              <div class="arrow"><svg viewBox="0 0 40 40" preserveAspectRatio="none"><path d="M 2 20 L 38 20" stroke="#2a2438" stroke-width="2" stroke-dasharray="3 3" fill="none"/><polygon points="32,15 40,20 32,25" fill="#2a2438"/></svg></div>
+              <div class="stage-box e" style="padding: 6px; opacity:0.55;"><div class="char evaluator" style="width:36px; height:36px; font-size:18px;">⚖️</div><div class="nm" style="font-size:12px;">pending</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="arrow"><svg viewBox="0 0 60 60" preserveAspectRatio="none"><path d="M 4 30 Q 30 46 56 30" stroke="#2a2438" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-dasharray="4 3"/><polygon points="50,22 60,30 50,38" fill="#2a2438"/></svg></div>
+        <div class="stage-box e" style="opacity:0.55;">
+          <div class="char evaluator">⚖️</div>
+          <div class="nm">Evaluator</div>
+          <div class="desc">waiting for gens<br>+ portal</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center; font-family:'Caveat',cursive; font-size:24px; margin-top: 16px; color: var(--ink-soft); transform: rotate(-0.5deg);">
+      ↳ The child goal recurses. Its planner / generators / evaluator live <b>inside</b> the parent generator's lifetime.
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- PANEL 5 : The story of A2.2 (timeline)     -->
+  <!-- ========================================== -->
+  <section class="panel tilt-l">
+    <div class="panel-title">The story of A 2.2 📖</div>
+    <div class="panel-sub">In order, what actually happened.</div>
+
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="ts">02:14:03</div>
+        <div class="char planner">📜</div>
+        <div class="what">
+          <div class="who">Planner</div>
+          <div>"narrow the spec — only touch <code>_buffer</code> path. 4 criteria emitted." <span class="att-chip done" style="margin-left:6px;">done</span></div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="ts">02:14:14</div>
+        <div class="char generator">🤖</div>
+        <div class="what">
+          <div class="who">Generator A</div>
+          <div>opens <code>recorder.py</code>, edits buffer field. Tools: <code>edit ×2</code>, <code>read ×1</code>.</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="ts">02:14:18</div>
+        <div class="char generator">🤖</div>
+        <div class="what">
+          <div class="who">Generator B</div>
+          <div>runs <code>.venv/bin/pytest</code> — overflow test flaky 😬</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="ts">02:14:24</div>
+        <div class="char handoff">🌀</div>
+        <div class="what">
+          <div class="who">Gen B → Handoff</div>
+          <div>calls <code>submit_execution_handoff("diagnose flaky test_overflow")</code> — spawns <b>Goal A′</b> 🎉</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="ts">02:14:26</div>
+        <div class="char planner" style="background: #d4e7ff;">📜</div>
+        <div class="what">
+          <div class="who">A′ Planner <span class="att-chip" style="background: var(--handoff); color:white; margin-left:4px;">nested · depth 2</span></div>
+          <div>emits 2 criteria for the flake hunt.</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="ts">02:14:50</div>
+        <div class="char evaluator" style="opacity:0.55;">⚖️</div>
+        <div class="what">
+          <div class="who">Evaluator</div>
+          <div>still waiting on generators + nested goal. <span style="color: var(--ink-soft); font-family:'Caveat',cursive; font-size:18px;">(twiddles thumbs)</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- PANEL 6 : Sandbox cameo                    -->
+  <!-- ========================================== -->
+  <section class="panel tilt-r">
+    <div class="panel-title">And the sandbox 📦</div>
+    <div class="panel-sub">Everyone's edits and commands happen inside a sandbox container. It's the stage; it never speaks but it remembers everything.</div>
+
+    <div style="display:flex; align-items:center; gap:18px; padding: 8px 4px;">
+      <div class="char sandbox" style="width:78px; height:78px; font-size:34px;">📦</div>
+      <div class="bubble" style="max-width: none; flex: 1;">
+        <b>provider:</b> docker &nbsp;·&nbsp;
+        <b>overlay:</b> 3 / 16 layers &nbsp;·&nbsp;
+        <b>cwd:</b> <code>/workspace/EphemeralOS</code> &nbsp;·&nbsp;
+        <b>staged edits:</b> 2 &nbsp;·&nbsp;
+        <b>last tool:</b> <code>svc.cmd pytest</code> (live)
+      </div>
+    </div>
+  </section>
+
+  <div class="doodle-note">that's the whole show — Goal · Iteration · Attempt · planner/gen/eval · maybe a 🌀</div>
+
+</div>
+
+</body>
+</html>

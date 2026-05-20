@@ -6,6 +6,7 @@ import json
 from collections.abc import Sequence
 from typing import Any
 
+from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH
 from task_center_runner.scenarios.base import ScenarioContext
 from task_center_runner.agent.mock.tool_scripts import (
     PreparedToolScript,
@@ -474,11 +475,12 @@ def overlay_edge_matrix_script(ctx: ScenarioContext) -> PreparedToolScript:
 def layerstack_squash_lease_script(ctx: ScenarioContext) -> PreparedToolScript:
     """Exercise layer-stack depth, readback, and squash observability."""
     root = f"{_ROOT}/layerstack"
+    depth_write_count = AUTO_SQUASH_MAX_DEPTH + 4
     artifact = _artifact(
         ctx,
         subsystem="layerstack",
         manifest_start=1,
-        manifest_end=17,
+        manifest_end=depth_write_count + 5,
         expected_tool_errors=0,
     )
     steps: list[ToolScriptStep] = [
@@ -514,13 +516,13 @@ def layerstack_squash_lease_script(ctx: ScenarioContext) -> PreparedToolScript:
             {"file_path": f"{root}/old-snapshot.txt", "content": "old-readable\n"},
         ),
     ]
-    for index in range(12):
+    for index in range(depth_write_count):
         steps.append(
             ToolScriptStep(
-                f"layer-depth-write-{index:02d}",
+                f"layer-depth-write-{index:03d}",
                 write_file_tool,
                 {
-                    "file_path": f"{root}/depth/layer-{index:02d}.txt",
+                    "file_path": f"{root}/depth/layer-{index:03d}.txt",
                     "content": f"layer={index}\n",
                 },
             )
@@ -553,7 +555,14 @@ def layerstack_squash_lease_script(ctx: ScenarioContext) -> PreparedToolScript:
             ),
         ]
     )
-    steps.extend(_metric_steps(ctx, "layerstack", manifest_before=1, manifest_after=17))
+    steps.extend(
+        _metric_steps(
+            ctx,
+            "layerstack",
+            manifest_before=1,
+            manifest_after=depth_write_count + 5,
+        )
+    )
     return PreparedToolScript(
         name="layerstack_squash_lease",
         summary="Layer-stack lease/squash matrix completed with merged readback.",

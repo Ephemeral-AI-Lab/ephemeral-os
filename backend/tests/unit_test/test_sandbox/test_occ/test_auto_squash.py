@@ -116,9 +116,9 @@ def test_auto_squash_preserves_active_lease_view(tmp_path) -> None:
 
 
 def test_auto_squash_uses_fixed_constant_depth(tmp_path) -> None:
-    max_depth = 6
+    configured_max_depth = 6
     stack = LayerStack(tmp_path / "stack")
-    service = _auto_squash_service(stack, max_depth=max_depth)
+    service = _auto_squash_service(stack, max_depth=configured_max_depth)
     observed_max_depths: list[float] = []
 
     for index in range(10):
@@ -133,13 +133,13 @@ def test_auto_squash_uses_fixed_constant_depth(tmp_path) -> None:
                 snapshot=stack.read_active_manifest(),
             )
         )
-        max_depth = result.timings.get(TimingKey.LAYER_AUTO_SQUASH_MAX_DEPTH)
-        if max_depth is not None:
-            observed_max_depths.append(max_depth)
+        observed_max_depth = result.timings.get(TimingKey.LAYER_AUTO_SQUASH_MAX_DEPTH)
+        if observed_max_depth is not None:
+            observed_max_depths.append(observed_max_depth)
 
     assert observed_max_depths
-    assert set(observed_max_depths) == {max_depth}
-    assert stack.read_active_manifest().depth <= max_depth
+    assert set(observed_max_depths) == {configured_max_depth}
+    assert stack.read_active_manifest().depth <= configured_max_depth
 
 
 def test_default_mode_skips_in_flight_squash_and_rechecks() -> None:

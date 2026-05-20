@@ -18,17 +18,46 @@ from sandbox.layer_stack.view import MergedView
 
 
 @dataclass(frozen=True)
-class SquashPlan:
-    active_version: int
-    suffix_to_checkpoint: tuple[LayerRef, ...]
+class CheckpointSegment:
+    layers: tuple[LayerRef, ...]
 
     def __post_init__(self) -> None:
-        if not self.suffix_to_checkpoint:
-            raise ValueError("suffix_to_checkpoint must not be empty")
+        if len(self.layers) <= 1:
+            raise ValueError("checkpoint segments must contain at least two layers")
+
+
+SquashPlanEntry = LayerRef | CheckpointSegment
+
+
+@dataclass(frozen=True)
+class SquashPlan:
+    active_version: int
+    active_layers: tuple[LayerRef, ...]
+    entries: tuple[SquashPlanEntry, ...]
+
+    def __post_init__(self) -> None:
+        if not self.active_layers:
+            raise ValueError("active_layers must not be empty")
+        if not self.entries:
+            raise ValueError("entries must not be empty")
+        if not self.checkpoint_segments:
+            raise ValueError("squash plans must include at least one checkpoint segment")
+
+    @property
+    def checkpoint_segments(self) -> tuple[CheckpointSegment, ...]:
+        return tuple(entry for entry in self.entries if isinstance(entry, CheckpointSegment))
+
+    @property
+    def squashed_layers(self) -> tuple[LayerRef, ...]:
+        return tuple(layer for segment in self.checkpoint_segments for layer in segment.layers)
+
+    @property
+    def resulting_depth(self) -> int:
+        return len(self.entries)
 
 
 class SquashService:
-    """Plans suffix squash and materializes checkpoint layers."""
+    """Plans non-leased layer squash and materializes checkpoint layers."""
 
     def __init__(
         self,
@@ -37,29 +66,41 @@ class SquashService:
         self._storage_root = Path(storage_root)
         self._view = MergedView(self._storage_root)
 
-    def plan(self, active_manifest: Manifest, *, max_depth: int) -> SquashPlan | None:
+    def plan(
+        self,
+        active_manifest: Manifest,
+        *,
+        max_depth: int,
+        pinned_layers: tuple[LayerRef, ...] = (),
+    ) -> SquashPlan | None:
         if max_depth <= 0:
             raise ValueError("max_depth must be positive")
         if active_manifest.depth <= max_depth:
             return None
 
-        suffix_depth = active_manifest.depth - max_depth + 1
-        if suffix_depth <= 1:
+        entries = _segment_unpinned_layers(active_manifest.layers, pinned_layers)
+        if len(entries) >= active_manifest.depth:
             return None
 
         return SquashPlan(
             active_version=active_manifest.version,
-            suffix_to_checkpoint=active_manifest.layers[-suffix_depth:],
+            active_layers=active_manifest.layers,
+            entries=entries,
         )
 
-    def build_checkpoint(self, plan: SquashPlan) -> LayerRef:
-        layer_id, staging_dir, layer_dir = self._allocate_checkpoint_paths(plan.active_version + 1)
-        suffix_manifest = Manifest(
-            version=plan.active_version,
-            layers=plan.suffix_to_checkpoint,
+    def build_checkpoint(
+        self,
+        segment: CheckpointSegment,
+        *,
+        active_version: int,
+    ) -> LayerRef:
+        layer_id, staging_dir, layer_dir = self._allocate_checkpoint_paths(active_version + 1)
+        segment_manifest = Manifest(
+            version=active_version,
+            layers=segment.layers,
         )
         try:
-            self._view.materialize(staging_dir, suffix_manifest)
+            self._view.materialize(staging_dir, segment_manifest)
             layer_dir.parent.mkdir(parents=True, exist_ok=True)
             os.replace(staging_dir, layer_dir)
         except Exception:
@@ -94,13 +135,36 @@ class SquashService:
         )
 
 
-def manifest_still_ends_with(
+def _segment_unpinned_layers(
+    layers: tuple[LayerRef, ...],
+    pinned_layers: tuple[LayerRef, ...],
+) -> tuple[SquashPlanEntry, ...]:
+    pinned = set(pinned_layers)
+    entries: list[SquashPlanEntry] = []
+    run: list[LayerRef] = []
+
+    def flush_run() -> None:
+        if len(run) > 1:
+            entries.append(CheckpointSegment(tuple(run)))
+        elif run:
+            entries.append(run[0])
+        run.clear()
+
+    for layer in layers:
+        if layer in pinned:
+            flush_run()
+            entries.append(layer)
+        else:
+            run.append(layer)
+    flush_run()
+    return tuple(entries)
+
+
+def manifest_still_matches_plan(
     manifest: Manifest,
-    suffix: tuple[LayerRef, ...],
+    plan: SquashPlan,
 ) -> bool:
-    if len(suffix) > len(manifest.layers):
-        return False
-    return manifest.layers[-len(suffix) :] == suffix
+    return manifest.version == plan.active_version and manifest.layers == plan.active_layers
 
 
 def _default_checkpoint_id(next_version: int) -> str:
@@ -108,7 +172,9 @@ def _default_checkpoint_id(next_version: int) -> str:
 
 
 __all__ = [
+    "CheckpointSegment",
     "SquashPlan",
+    "SquashPlanEntry",
     "SquashService",
-    "manifest_still_ends_with",
+    "manifest_still_matches_plan",
 ]

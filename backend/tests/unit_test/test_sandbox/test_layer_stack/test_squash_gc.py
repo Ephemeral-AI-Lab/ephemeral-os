@@ -8,7 +8,7 @@ import pytest
 
 from sandbox.layer_stack import WriteLayerChange, LayerStack
 from sandbox.layer_stack.manifest import LayerRef, Manifest, write_manifest_atomic
-from sandbox.layer_stack.squash import SquashPlan
+from sandbox.layer_stack.squash import CheckpointSegment
 
 
 def _source(tmp_path: Path, name: str, content: bytes) -> str:
@@ -53,20 +53,31 @@ def test_squash_gc_keeps_active_and_leased_layers_then_release_removes_only_old_
     leased_layers = lease.manifest.layers
 
     _publish(manager, tmp_path, "c.txt", b"c1")
+    _publish(manager, tmp_path, "d.txt", b"d1")
+    _publish(manager, tmp_path, "e.txt", b"e1")
     squashed = manager.squash(max_depth=2)
 
     assert squashed is not None
-    assert squashed.depth == 2
+    assert squashed.depth == 4
+    assert squashed.layers[0].layer_id.startswith("B")
+    assert squashed.layers[1:] == leased_layers
     assert manager.read_text("a.txt", manifest=lease.manifest) == ("a2", True)
     assert manager.read_text("b.txt", manifest=lease.manifest) == ("b1", True)
     assert all(_layer_path(manager, layer).is_dir() for layer in leased_layers)
 
     assert manager.release_lease(lease.lease_id) is True
 
+    assert all(_layer_path(manager, layer).is_dir() for layer in leased_layers)
+    final_squash = manager.squash(max_depth=2)
+
+    assert final_squash is not None
+    assert final_squash.depth == 1
     assert all(not _layer_path(manager, layer).exists() for layer in leased_layers)
     assert manager.read_text("a.txt") == ("a2", True)
     assert manager.read_text("b.txt") == ("b1", True)
     assert manager.read_text("c.txt") == ("c1", True)
+    assert manager.read_text("d.txt") == ("d1", True)
+    assert manager.read_text("e.txt") == ("e1", True)
 
 
 def test_squash_gc_removes_digest_metadata_for_deleted_suffix_layers(
@@ -81,16 +92,14 @@ def test_squash_gc_removes_digest_metadata_for_deleted_suffix_layers(
             f"value-{index:02d}\n".encode("utf-8"),
         )
     before = manager.read_active_manifest()
-    prefix_layer = before.layers[0]
-    suffix_layers = before.layers[1:]
     assert all(_digest_path(manager, layer).is_file() for layer in before.layers)
 
     squashed = manager.squash(max_depth=2)
 
     assert squashed is not None
-    assert _layer_path(manager, prefix_layer).is_dir()
-    assert _digest_path(manager, prefix_layer).is_file()
-    for layer in suffix_layers:
+    assert squashed.depth == 1
+    assert squashed.layers[0].layer_id.startswith("B")
+    for layer in before.layers:
         assert _layer_path(manager, layer).exists() is False
         assert _digest_path(manager, layer).exists() is False
 
@@ -122,7 +131,10 @@ def test_checkpoint_relabel_moves_prebuilt_checkpoint_to_publish_version(
         )
     plan = manager._squash.plan(manager.read_active_manifest(), max_depth=1)
     assert plan is not None
-    checkpoint = manager._squash.build_checkpoint(plan)
+    checkpoint = manager._squash.build_checkpoint(
+        plan.checkpoint_segments[0],
+        active_version=plan.active_version,
+    )
     original_path = _layer_path(manager, checkpoint)
 
     relabeled = manager._squash.relabel_checkpoint(
@@ -135,7 +147,7 @@ def test_checkpoint_relabel_moves_prebuilt_checkpoint_to_publish_version(
     assert _layer_path(manager, relabeled).is_dir()
 
 
-def test_suffix_cas_keeps_concurrent_prefix_append_and_versions_checkpoint(
+def test_squash_cas_rejects_concurrent_prefix_append_and_discards_checkpoint(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -150,8 +162,12 @@ def test_suffix_cas_keeps_concurrent_prefix_append_and_versions_checkpoint(
     real_build_checkpoint = manager._squash.build_checkpoint
     built: list[LayerRef] = []
 
-    def build_checkpoint_then_append(plan: SquashPlan) -> LayerRef:
-        checkpoint = real_build_checkpoint(plan)
+    def build_checkpoint_then_append(
+        segment: CheckpointSegment,
+        *,
+        active_version: int,
+    ) -> LayerRef:
+        checkpoint = real_build_checkpoint(segment, active_version=active_version)
         built.append(checkpoint)
         _publish(manager, tmp_path, "race/appended.txt", b"appended\n")
         return checkpoint
@@ -164,12 +180,10 @@ def test_suffix_cas_keeps_concurrent_prefix_append_and_versions_checkpoint(
 
     squashed = manager.squash(max_depth=2)
 
-    assert squashed is not None
-    assert squashed.layers[0].layer_id.startswith("L000006-")
-    assert squashed.layers[-1].layer_id.startswith(f"B{squashed.version:06d}-")
-    assert _layer_path(manager, squashed.layers[-1]).is_dir()
+    assert squashed is None
     assert built
     assert _layer_path(manager, built[0]).exists() is False
+    assert manager.read_active_manifest().depth == 6
     assert manager.read_text("race/appended.txt") == ("appended\n", True)
     for index in range(5):
         assert manager.read_text(f"base/{index:02d}.txt") == (
@@ -178,7 +192,7 @@ def test_suffix_cas_keeps_concurrent_prefix_append_and_versions_checkpoint(
         )
 
 
-def test_suffix_cas_mismatch_discards_unpublished_checkpoint(
+def test_squash_cas_mismatch_discards_unpublished_checkpoint(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -194,8 +208,12 @@ def test_suffix_cas_mismatch_discards_unpublished_checkpoint(
     real_build_checkpoint = manager._squash.build_checkpoint
     built: list[LayerRef] = []
 
-    def build_checkpoint_then_rewrite_suffix(plan: SquashPlan) -> LayerRef:
-        checkpoint = real_build_checkpoint(plan)
+    def build_checkpoint_then_rewrite_manifest(
+        segment: CheckpointSegment,
+        *,
+        active_version: int,
+    ) -> LayerRef:
+        checkpoint = real_build_checkpoint(segment, active_version=active_version)
         built.append(checkpoint)
         write_manifest_atomic(
             manager.storage_root / "manifest.json",
@@ -206,7 +224,7 @@ def test_suffix_cas_mismatch_discards_unpublished_checkpoint(
     monkeypatch.setattr(
         manager._squash,
         "build_checkpoint",
-        build_checkpoint_then_rewrite_suffix,
+        build_checkpoint_then_rewrite_manifest,
     )
 
     squashed = manager.squash(max_depth=2)
@@ -217,7 +235,7 @@ def test_suffix_cas_mismatch_discards_unpublished_checkpoint(
     assert manager.read_active_manifest().layers == before.layers[:2]
 
 
-def test_squash_pins_planned_suffix_during_checkpoint_build(
+def test_squash_pins_planned_layers_during_checkpoint_build(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -233,7 +251,11 @@ def test_squash_pins_planned_suffix_during_checkpoint_build(
     real_build_checkpoint = manager._squash.build_checkpoint
     triggered = False
 
-    def build_checkpoint_after_concurrent_squash(plan: SquashPlan) -> LayerRef:
+    def build_checkpoint_after_concurrent_squash(
+        segment: CheckpointSegment,
+        *,
+        active_version: int,
+    ) -> LayerRef:
         nonlocal triggered
         if not triggered:
             triggered = True
@@ -248,8 +270,8 @@ def test_squash_pins_planned_suffix_during_checkpoint_build(
                 "build_checkpoint",
                 build_checkpoint_after_concurrent_squash,
             )
-            assert concurrent is not None
-        return real_build_checkpoint(plan)
+            assert concurrent is None
+        return real_build_checkpoint(segment, active_version=active_version)
 
     monkeypatch.setattr(
         manager._squash,
@@ -260,10 +282,10 @@ def test_squash_pins_planned_suffix_during_checkpoint_build(
     squashed = manager.squash(max_depth=2)
 
     assert triggered is True
-    assert squashed is None
+    assert squashed is not None
     assert manager.active_lease_count() == 0
     active = manager.read_active_manifest()
-    assert active.depth == 2
+    assert active.depth == 1
     for index in range(5):
         assert manager.read_text(f"base/{index:02d}.txt") == (
             f"base-{index:02d}\n",

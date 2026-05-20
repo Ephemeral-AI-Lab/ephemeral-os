@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Task Center — UI Designs v3 (planner / generator / evaluator)</title>
+<style>
+  :root {
+    --bg: #0a0b0f;
+    --panel: #0f1117;
+    --panel-2: #14171f;
+    --panel-3: #1a1e28;
+    --border: #232734;
+    --border-soft: #1c2029;
+    --text: #e6e8ee;
+    --muted: #8a93a4;
+    --muted-2: #5b6273;
+    --accent: #7aa2f7;
+    --accent-dim: rgba(122,162,247,0.16);
+    --green: #9ece6a;
+    --yellow: #e0af68;
+    --red: #f7768e;
+    --purple: #bb9af7;
+    --cyan: #7dcfff;
+    --pink: #ff9e64;
+
+    /* role colors */
+    --planner: #7dcfff;
+    --generator: #bb9af7;
+    --evaluator: #e0af68;
+    --handoff:  #ff9e64;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  header.page {
+    padding: 22px 32px 18px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #0d0f15 0%, #0a0b0f 100%);
+  }
+  header.page h1 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  header.page .sub { color: var(--muted); font-size: 12.5px; max-width: 980px; }
+  .model-card {
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: ui-monospace, monospace;
+    font-size: 11.5px;
+    line-height: 1.8;
+    color: var(--muted);
+    max-width: 980px;
+  }
+  .model-card b { color: var(--text); font-weight: 600; }
+  .model-card .p { color: var(--planner); }
+  .model-card .g { color: var(--generator); }
+  .model-card .e { color: var(--evaluator); }
+  .model-card .h { color: var(--handoff); }
+
+  .design {
+    border-bottom: 1px solid var(--border);
+    padding: 30px 32px;
+  }
+  .design > h2 {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .design > h2 .num { color: var(--accent); margin-right: 8px; font-variant-numeric: tabular-nums; }
+  .design > .blurb { color: var(--muted); margin: 0 0 8px 0; font-size: 12.5px; max-width: 920px; }
+  .design > .blurb code { background: var(--panel-3); padding: 1px 5px; border-radius: 3px; font-size: 11.5px; color: var(--cyan); }
+  .design > .blurb i { color: var(--text); font-style: italic; }
+  .design > .inspo { margin: 0 0 18px 0; font-size: 11px; color: var(--muted-2); }
+  .inspo b { color: var(--muted); font-weight: 500; }
+
+  .mock {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.02) inset, 0 12px 32px rgba(0,0,0,0.35);
+  }
+  .topbar {
+    background: var(--panel-2);
+    border-bottom: 1px solid var(--border);
+    padding: 9px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+  }
+  .crumbs { display: flex; align-items: center; gap: 6px; color: var(--muted); font-family: ui-monospace, monospace; font-size: 11.5px; }
+  .crumbs .sep { color: var(--muted-2); }
+  .crumbs .cur { color: var(--text); font-weight: 500; }
+
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .d-running { background: var(--yellow); box-shadow: 0 0 0 3px rgba(224,175,104,0.15); }
+  .d-done { background: var(--green); }
+  .d-fail { background: var(--red); }
+  .d-pending { background: #3a4150; }
+  .d-queued { background: var(--cyan); opacity: 0.6; }
+
+  .role {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-family: ui-monospace, monospace;
+  }
+  .role::before { content: ""; width: 6px; height: 6px; border-radius: 50%; }
+  .role-planner   { background: rgba(125,207,255,0.14);  color: var(--planner);   }
+  .role-planner::before   { background: var(--planner);   }
+  .role-generator { background: rgba(187,154,247,0.14); color: var(--generator); }
+  .role-generator::before { background: var(--generator); }
+  .role-evaluator { background: rgba(224,175,104,0.14); color: var(--evaluator); }
+  .role-evaluator::before { background: var(--evaluator); }
+  .role-handoff   { background: rgba(255,158,100,0.16); color: var(--handoff);   }
+  .role-handoff::before   { background: var(--handoff);   }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10.5px;
+    background: var(--panel-3);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: ui-monospace, monospace;
+  }
+  .chip.ok   { color: var(--green); border-color: rgba(158,206,106,0.25); }
+  .chip.err  { color: var(--red); border-color: rgba(247,118,142,0.25); }
+  .chip.live { color: var(--yellow); border-color: rgba(224,175,104,0.4); }
+  .chip.live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--yellow); animation: pulse 1.4s infinite; margin-right: 2px; }
+  @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+  @keyframes flow  { to { stroke-dashoffset: -16; } }
+
+  /* =================================================== */
+  /* DESIGN A — PIPELINE  (planner ▸ generators ▸ eval)  */
+  /* =================================================== */
+  .pipe-wrap { display: grid; grid-template-columns: 260px 1fr; height: 640px; }
+  .navrail {
+    background: var(--panel-2);
+    border-right: 1px solid var(--border);
+    padding: 14px 12px;
+    overflow: auto;
+  }
+  .navrail .label { font-size: 10px; color: var(--muted-2); text-transform: uppercase; letter-spacing: 0.08em; padding: 0 6px 6px; font-weight: 600; }
+  .gnode {
+    padding: 6px 10px;
+    margin-bottom: 2px;
+    border-radius: 4px;
+    font-size: 11.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+  .gnode:hover { background: rgba(255,255,255,0.025); }
+  .gnode.active { background: var(--accent-dim); }
+  .gnode.depth-1 { padding-left: 22px; font-size: 11px; }
+  .gnode.depth-2 { padding-left: 38px; font-size: 11px; color: var(--muted); }
+  .gnode.depth-3 { padding-left: 54px; font-size: 10.5px; color: var(--muted); font-family: ui-monospace, monospace; }
+  .gnode .nested-mark { color: var(--handoff); font-size: 9px; margin-left: auto; font-family: ui-monospace, monospace; }
+
+  .pipe-main { overflow: auto; display: flex; flex-direction: column; }
+  .pipe-header {
+    padding: 14px 20px 12px;
+    background: var(--panel-2);
+    border-bottom: 1px solid var(--border);
+  }
+  .pipe-header h3 { margin: 0 0 6px 0; font-size: 14px; font-weight: 600; }
+  .pipe-header .row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .iter-band {
+    border-bottom: 1px solid var(--border);
+    padding: 14px 16px 18px;
+    background: var(--panel);
+  }
+  .iter-band .iter-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .iter-band .iter-head .ident {
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .iter-band .iter-head .ident b { color: var(--text); }
+  .att-strip {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .att-card {
+    flex-shrink: 0;
+    width: 660px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .att-card.active { border-color: rgba(122,162,247,0.5); box-shadow: 0 0 0 1px rgba(122,162,247,0.25); }
+  .att-card.failed { border-color: rgba(247,118,142,0.35); }
+  .att-card .ah {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .att-card .aid { font-family: ui-monospace, monospace; font-weight: 600; font-size: 12px; }
+  .att-card .stage { font-size: 11px; color: var(--muted); font-family: ui-monospace, monospace; }
+  .att-card .areason { color: var(--red); font-size: 10.5px; margin-left: auto; }
+
+  /* PIPELINE INSIDE ATTEMPT */
+  .pipeline {
+    display: grid;
+    grid-template-columns: 1fr 32px 1.6fr 32px 1fr;
+    align-items: stretch;
+    gap: 0;
+    position: relative;
+  }
+  .stage-box {
+    background: var(--panel);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .stage-box.p { border-left: 3px solid var(--planner); }
+  .stage-box.e { border-left: 3px solid var(--evaluator); }
+  .stage-box .sh { display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 500; }
+  .stage-box .sm { font-size: 10.5px; color: var(--muted); font-family: ui-monospace, monospace; }
+  .stage-box .ss { font-size: 11px; color: var(--muted); line-height: 1.45; }
+
+  .gen-grid {
+    background: var(--panel);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    padding: 8px;
+    border-left: 3px solid var(--generator);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .gen-grid .gh { display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 500; padding: 0 2px 2px; }
+  .gen-grid .gh .count { color: var(--muted); font-family: ui-monospace, monospace; font-size: 10.5px; }
+  .gen-list { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .gen-card {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 7px 9px;
+    font-size: 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    position: relative;
+  }
+  .gen-card.has-handoff { border-color: rgba(255,158,100,0.4); }
+  .gen-card .gn-name { font-weight: 500; display: flex; align-items: center; gap: 5px; }
+  .gen-card .gn-meta { color: var(--muted); font-size: 10px; font-family: ui-monospace, monospace; }
+  .gen-card .handoff-tag {
+    position: absolute;
+    top: -7px;
+    right: 6px;
+    background: var(--bg);
+    border: 1px solid rgba(255,158,100,0.5);
+    color: var(--handoff);
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 8px;
+    font-family: ui-monospace, monospace;
+    font-weight: 600;
+  }
+
+  /* connectors */
+  .connector {
+    position: relative;
+  }
+  .connector svg { width: 100%; height: 100%; }
+
+  /* nested goal embed */
+  .nested-goal {
+    margin-top: 10px;
+    border: 1px dashed rgba(255,158,100,0.4);
+    border-left: 3px solid var(--handoff);
+    border-radius: 5px;
+    padding: 8px 10px;
+    background: rgba(255,158,100,0.04);
+  }
+  .nested-goal .nh { display: flex; align-items: center; gap: 6px; font-size: 11px; margin-bottom: 6px; }
+  .nested-goal .nh .label { color: var(--handoff); font-family: ui-monospace, monospace; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+  .nested-goal .ng-pipeline {
+    display: grid;
+    grid-template-columns: 1fr 20px 1.4fr 20px 1fr;
+    gap: 0;
+    align-items: stretch;
+  }
+  .nested-goal .stage-mini {
+    background: var(--panel-2);
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    padding: 5px 7px;
+    font-size: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .nested-goal .stage-mini.p { border-left: 2px solid var(--planner); }
+  .nested-goal .stage-mini.g { border-left: 2px solid var(--generator); }
+  .nested-goal .stage-mini.e { border-left: 2px solid var(--evaluator); }
+
+  /* iteration chevron */
+  .iter-arrow {
+    text-align: center;
+    color: var(--muted-2);
+    font-family: ui-monospace, monospace;
+    font-size: 10px;
+    padding: 4px 0;
+    background: var(--panel);
+  }
+  .iter-arrow .continuation {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 10px;
+    background: var(--panel-2);
+    border: 1px dashed var(--border);
+    color: var(--muted);
+  }
+  .iter-arrow b { color: var(--text); font-weight: 500; }
+
+  /* =================================================== */
+  /* DESIGN B — RECURSIVE OUTLINE TREE                  */
+  /* =================================================== */
+  .tree-wrap { display: grid; grid-template-columns: 1fr 380px; height: 620px; }
+  .tree-body { overflow: auto; padding: 8px 0; background: var(--panel); }
+  .row {
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    align-items: center;
+    padding: 4px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    gap: 6px;
+    line-height: 1.4;
+  }
+  .row:hover { background: rgba(255,255,255,0.025); }
+  .row.active { background: var(--accent-dim); }
+  .row .gut { color: var(--muted-2); font-family: ui-monospace, monospace; font-size: 10.5px; text-align: center; }
+  .row .lbl { display: flex; align-items: center; gap: 6px; overflow: hidden; }
+  .row .lbl .nm { font-weight: 500; }
+  .row .lbl .sub { color: var(--muted); font-family: ui-monospace, monospace; font-size: 10.5px; }
+  .row .lat { color: var(--muted); font-family: ui-monospace, monospace; font-size: 10px; }
+  .row.goal-row    { background: rgba(122,162,247,0.06); }
+  .row.iter-row    { padding-left: 28px; }
+  .row.att-row     { padding-left: 48px; }
+  .row.phase-row   { padding-left: 72px; }
+  .row.task-row    { padding-left: 96px; }
+  .row.nested-row  { padding-left: 96px; background: rgba(255,158,100,0.05); border-top: 1px dashed rgba(255,158,100,0.25); border-bottom: 1px dashed rgba(255,158,100,0.25); }
+  .row.nested-iter { padding-left: 124px; }
+  .row.nested-att  { padding-left: 144px; }
+  .row.nested-phase{ padding-left: 168px; }
+  .row .handoff-badge { color: var(--handoff); font-family: ui-monospace, monospace; font-size: 9.5px; padding: 1px 6px; border: 1px solid rgba(255,158,100,0.35); border-radius: 8px; }
+
+  .tree-detail { border-left: 1px solid var(--border); overflow: auto; background: var(--panel-2); }
+  .td-block { padding: 14px 16px; border-bottom: 1px solid var(--border-soft); }
+  .td-block h5 { margin: 0 0 8px 0; font-size: 10px; color: var(--muted-2); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+  .td-block .kv { display: grid; grid-template-columns: 110px 1fr; font-size: 11.5px; gap: 5px 12px; }
+  .td-block .kv .k { color: var(--muted); }
+  .td-block .kv .v { font-family: ui-monospace, monospace; word-break: break-word; }
+  .td-block .crit { background: var(--panel); border: 1px solid var(--border-soft); border-radius: 4px; padding: 7px 10px; font-size: 11.5px; margin-bottom: 4px; display: flex; gap: 8px; align-items: center; }
+
+  /* =================================================== */
+  /* DESIGN C — MISSION CONTROL v2 (recommended)         */
+  /* =================================================== */
+  .mc-wrap { display: grid; grid-template-columns: 240px 1fr; grid-template-rows: auto 1fr; height: 660px; }
+  .mc-attstrip {
+    grid-column: 2;
+    background: var(--panel-2);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 14px;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .mc-attstrip .group { display: flex; gap: 4px; align-items: center; padding: 4px 10px; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; }
+  .mc-attstrip .group.cont { background: rgba(255,158,100,0.04); border-color: rgba(255,158,100,0.3); }
+  .mc-attstrip .label { font-size: 9.5px; color: var(--muted-2); text-transform: uppercase; letter-spacing: 0.08em; margin-right: 6px; }
+  .mc-attstrip .ac { display: flex; align-items: center; gap: 5px; padding: 3px 7px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 10.5px; color: var(--muted); cursor: pointer; }
+  .mc-attstrip .ac.active { background: var(--accent-dim); color: var(--text); }
+  .mc-attstrip .ac.fail { color: var(--red); }
+  .mc-attstrip .arrow { color: var(--muted-2); margin: 0 -2px; }
+  .mc-attstrip .iter-arrow-strip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--muted-2);
+    font-family: ui-monospace, monospace;
+    font-size: 10.5px;
+    padding: 0 4px;
+  }
+
+  .mc-body { grid-column: 2; display: grid; grid-template-columns: 1.4fr 1fr; min-height: 0; }
+  .mc-stage { border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; overflow: auto; }
+  .mc-stage .sh { padding: 12px 18px 10px; border-bottom: 1px solid var(--border-soft); background: var(--panel-2); }
+  .mc-stage .sh h4 { margin: 0 0 6px 0; font-size: 13px; font-weight: 600; }
+  .mc-stage .sh .meta { color: var(--muted); font-size: 11px; font-family: ui-monospace, monospace; }
+  .mc-pipeline { padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+  .pipe-row { display: grid; grid-template-columns: 70px 1fr; gap: 12px; align-items: stretch; }
+  .pipe-row .phase-label {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 6px 0;
+    border-right: 1px dashed var(--border-soft);
+    font-family: ui-monospace, monospace;
+    font-size: 10.5px;
+    color: var(--muted-2);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    gap: 4px;
+  }
+  .pipe-row .phase-body { display: flex; flex-direction: column; gap: 6px; }
+  .task-card {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+  }
+  .task-card.tk-p { border-left: 3px solid var(--planner); }
+  .task-card.tk-g { border-left: 3px solid var(--generator); }
+  .task-card.tk-e { border-left: 3px solid var(--evaluator); }
+  .task-card.active { box-shadow: 0 0 0 2px rgba(224,175,104,0.25); }
+  .task-card .th { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; }
+  .task-card .tm { color: var(--muted); font-size: 10.5px; font-family: ui-monospace, monospace; display: flex; gap: 10px; flex-wrap: wrap; }
+  .gen-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .mc-events { display: flex; flex-direction: column; min-height: 0; }
+  .mc-events .eh { padding: 10px 14px; border-bottom: 1px solid var(--border-soft); font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+  .mc-events .ebody { flex: 1; overflow: auto; padding: 8px 0; }
+  .ev {
+    display: grid;
+    grid-template-columns: 70px 18px 1fr;
+    padding: 6px 14px;
+    gap: 8px;
+    font-size: 11.5px;
+    align-items: start;
+  }
+  .ev:hover { background: rgba(255,255,255,0.025); }
+  .ev .ts { color: var(--muted-2); font-family: ui-monospace, monospace; font-size: 10px; padding-top: 2px; }
+  .ev .rail { display: flex; flex-direction: column; align-items: center; padding-top: 5px; }
+  .ev .rail .d { width: 6px; height: 6px; border-radius: 50%; }
+  .ev .rail .line { width: 1px; flex: 1; background: var(--border-soft); margin-top: 3px; min-height: 12px; }
+  .ev.p .rail .d { background: var(--planner); }
+  .ev.g .rail .d { background: var(--generator); }
+  .ev.e .rail .d { background: var(--evaluator); }
+  .ev.h .rail .d { background: var(--handoff); }
+  .ev .b .h { display: flex; gap: 6px; align-items: center; margin-bottom: 2px; font-size: 11px; color: var(--muted); }
+  .ev .b code { background: var(--panel-3); padding: 1px 5px; border-radius: 3px; color: var(--cyan); font-size: 11px; }
+  .ev .b .extra { color: var(--muted); font-size: 11px; }
+
+  .comparison { padding: 28px 32px 48px; background: var(--panel-2); }
+  .comparison h2 { font-size: 15px; margin: 0 0 16px 0; }
+  table.compare { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.compare th, table.compare td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+  table.compare th { color: var(--muted); font-weight: 500; }
+  table.compare tr:first-child th { color: var(--text); font-weight: 600; }
+  .reco { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header class="page">
+  <h1>Task Center — UI Designs v3</h1>
+  <div class="sub">
+    Corrected model from <code>db/models/{goal,iteration,attempt}.py</code> and
+    <code>submit_execution_handoff</code>: roles are <b>planner / generator(s) / evaluator</b>,
+    and any generator may spawn a <b>nested goal</b>.
+  </div>
+  <div class="model-card">
+    <b>Goal</b> (origin) ── owns ordered → <b>Iteration[]</b><br>
+    <b>Iteration</b> (vertical · continuation) ── owns ordered → <b>Attempt[]</b> (budget=N)<br>
+    <b>Attempt</b> (horizontal · retry) ── <span class="p">planner</span> → <span class="g">generator[]</span> (parallel DAG) → <span class="e">evaluator</span><br>
+    &nbsp;&nbsp;<span class="g">generator</span> may emit <span class="h">submit_execution_handoff(goal)</span> ⇒ child <b>Goal</b> recurses<br><br>
+    Iter N+1 fires when iter N's last attempt produced a <i>continuation_goal</i>. Attempt N+1 fires when attempt N failed within the iteration's attempt_budget.
+  </div>
+</header>
+
+<!-- ====================================================== -->
+<!-- DESIGN A — PIPELINE                                    -->
+<!-- ====================================================== -->
+<section class="design">
+  <h2><span class="num">A.</span> Pipeline view · planner ▸ generators ▸ evaluator, stacked by iteration</h2>
+  <p class="blurb">
+    The body is a vertical stack of <b>iteration bands</b>. Each iteration shows its <b>attempt strip</b> horizontally
+    (retry chain). The active attempt expands into its three-phase pipeline: <span style="color:var(--planner)">planner</span> →
+    <span style="color:var(--generator)">generators (parallel fan-out)</span> → <span style="color:var(--evaluator)">evaluator</span>.
+    Generators that called <code>submit_execution_handoff</code> embed their <b>nested goal</b> as a sub-pipeline inline.
+  </p>
+  <p class="inspo">Inspired by <b>GitHub Actions runs</b> + <b>Buildkite pipelines</b> + <b>LangSmith span detail</b>.</p>
+
+  <div class="mock">
+    <div class="topbar">
+      <div class="crumbs">
+        <span>tc_7f3a</span><span class="sep">·</span><span class="cur">Goal · audit recorder refactor</span>
+      </div>
+      <div style="flex:1"></div>
+      <span class="chip live">running</span>
+      <span class="chip">2 iter · 4 attempts · 1 nested goal</span>
+    </div>
+    <div class="pipe-wrap">
+      <!-- left rail: recursive goal/iter/attempt tree -->
+      <aside class="navrail">
+        <div class="label">Goal hierarchy</div>
+        <div class="gnode active"><span class="dot d-running"></span> <b>Goal A</b> audit refactor</div>
+        <div class="gnode depth-1">▾ Iter 1 <span style="color:var(--muted);margin-left:auto">closed · cont</span></div>
+        <div class="gnode depth-2"><span class="dot d-done"></span> A1.1</div>
+        <div class="gnode depth-2"><span class="dot d-done"></span> A1.2</div>
+        <div class="gnode depth-1">▾ Iter 2 <span style="color:var(--yellow);margin-left:auto">running</span></div>
+        <div class="gnode depth-2"><span class="dot d-fail"></span> A2.1</div>
+        <div class="gnode depth-2" style="background: var(--accent-dim);"><span class="dot d-running"></span> A2.2 ◀</div>
+        <div class="gnode depth-3">planner ✓ · gen×2 · eval pending</div>
+        <div class="gnode depth-3" style="color: var(--handoff);">↳ Goal A' (nested) <span class="nested-mark">handoff</span></div>
+        <div class="gnode depth-3" style="padding-left: 70px;">Iter 1 · A1.1 running</div>
+
+        <div class="label" style="margin-top: 16px">Other goals</div>
+        <div class="gnode"><span class="dot d-queued"></span> Goal B · docker e2e</div>
+        <div class="gnode"><span class="dot d-fail"></span> Goal C · overlay cap</div>
+      </aside>
+
+      <main class="pipe-main">
+        <div class="pipe-header">
+          <h3>Goal · "Refactor audit recorder to drop in-memory buffer"</h3>
+          <div class="row">
+            <span class="chip">requested_by: entry</span>
+            <span class="chip">budget: 3 iters × 3 atts</span>
+            <span class="chip live">iter 2 / 3</span>
+            <span class="chip">tokens 41.8k · $0.27</span>
+          </div>
+        </div>
+
+        <!-- ITER 1 (closed, continuation) -->
+        <div class="iter-band">
+          <div class="iter-head">
+            <span class="dot d-done"></span>
+            <span class="ident">Iter <b>1</b> · spec+plan-segment</span>
+            <span class="chip ok">closed</span>
+            <span class="chip" style="color:var(--handoff); border-color:rgba(255,158,100,0.3)">→ continuation</span>
+            <span style="margin-left:auto;color:var(--muted);font-size:11px">2 attempts · 3m41s</span>
+          </div>
+          <div class="att-strip">
+            <div class="att-card failed">
+              <div class="ah">
+                <span class="dot d-fail"></span>
+                <span class="aid">A1.1</span>
+                <span class="stage">stage: evaluator</span>
+                <span class="areason">eval criteria 2/3 unmet</span>
+              </div>
+              <div class="pipeline">
+                <div class="stage-box p">
+                  <div class="sh"><span class="role role-planner">planner</span> ✓</div>
+                  <div class="sm">opus · 1.4k tok · 0.9s</div>
+                  <div class="ss">3 criteria emitted</div>
+                </div>
+                <div class="connector"><svg><line x1="0" y1="50%" x2="100%" y2="50%" stroke="#3a4254" stroke-width="1"/></svg></div>
+                <div class="gen-grid">
+                  <div class="gh"><span class="role role-generator">generators</span> <span class="count">2 parallel</span></div>
+                  <div class="gen-list">
+                    <div class="gen-card">
+                      <div class="gn-name">gen_a · code edit</div>
+                      <div class="gn-meta">sonnet · ✓ · 2.1k</div>
+                    </div>
+                    <div class="gen-card">
+                      <div class="gn-name">gen_b · test write</div>
+                      <div class="gn-meta">sonnet · ✓ · 1.8k</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="connector"><svg><line x1="0" y1="50%" x2="100%" y2="50%" stroke="#3a4254" stroke-width="1"/></svg></div>
+                <div class="stage-box e">
+                  <div class="sh"><span class="role role-evaluator">evaluator</span> ✗</div>
+                  <div class="sm">opus · 0.7s</div>
+                  <div class="ss" style="color:var(--red)">2 / 3 criteria failed</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="att-card">
+              <div class="ah">
+                <span class="dot d-done"></span>
+                <span class="aid">A1.2</span>
+                <span class="stage">stage: closed</span>
+                <span class="chip ok" style="margin-left:auto">eval pass · cont issued</span>
+              </div>
+              <div class="pipeline">
+                <div class="stage-box p">
+                  <div class="sh"><span class="role role-planner">planner</span> ✓</div>
+                  <div class="sm">opus · 1.0s</div>
+                  <div class="ss">replan from A1.1 failure</div>
+                </div>
+                <div class="connector"><svg><line x1="0" y1="50%" x2="100%" y2="50%" stroke="#3a4254" stroke-width="1"/></svg></div>
+                <div class="gen-grid">
+                  <div class="gh"><span class="role role-generator">generators</span> <span class="count">2 parallel</span></div>
+                  <div class="gen-list">
+                    <div class="gen-card">
+                      <div class="gn-name">gen_a ✓</div>
+                      <div class="gn-meta">recorder.py · −18/+9</div>
+                    </div>
+                    <div class="gen-card">
+                      <div class="gn-name">gen_b ✓</div>
+                      <div class="gn-meta">tests added</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="connector"><svg><line x1="0" y1="50%" x2="100%" y2="50%" stroke="#3a4254" stroke-width="1"/></svg></div>
+                <div class="stage-box e">
+                  <div class="sh"><span class="role role-evaluator">evaluator</span> ✓</div>
+                  <div class="sm">opus · 0.6s</div>
+                  <div class="ss" style="color:var(--green)">3/3 · continuation needed</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="iter-arrow">
+          <span class="continuation">↓ <b>continuation_goal</b> · "remove buffer call-sites in stores.py"</span>
+        </div>
+
+        <!-- ITER 2 (running) -->
+        <div class="iter-band" style="background: rgba(122,162,247,0.02);">
+          <div class="iter-head">
+            <span class="dot d-running"></span>
+            <span class="ident">Iter <b>2</b> · continuation segment</span>
+            <span class="chip live">running</span>
+            <span style="margin-left:auto;color:var(--muted);font-size:11px">attempt 2 / 3 · 8m24s</span>
+          </div>
+          <div class="att-strip">
+            <div class="att-card failed">
+              <div class="ah">
+                <span class="dot d-fail"></span>
+                <span class="aid">A2.1</span>
+                <span class="stage">stage: evaluator</span>
+                <span class="areason">tests still failing</span>
+              </div>
+              <div class="pipeline">
+                <div class="stage-box p"><div class="sh"><span class="role role-planner">planner</span> ✓</div><div class="sm">1.1s</div></div>
+                <div class="connector"><svg><line x1="0" y1="50%" x2="100%" y2="50%" stroke="#3a4254"/></svg></div>
+                <div class="gen-grid">
+                  <div class="gh"><span class="role role-generator">generators</span> <span class="count">1</span></div>
+                  <div class="gen-list" style="grid-template-columns:1fr">
+                    <div class="gen-card">
+                      <div class="gn-name">gen_a · stores edits</div>
+                      <div class="gn-meta">3 tools · 12s · ✓</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="connector"><svg><line x1="0" y1="50%" x2="100%" y2="50%" stroke="#3a4254"/></svg></div>
+                <div class="stage-box e"><div class="sh"><span class="role role-evaluator">evaluator</span> ✗</div><div class="ss" style="color:var(--red)">3 tests fail</div></div>
+              </div>
+            </div>
+
+            <div class="att-card active">
+              <div class="ah">
+                <span class="dot d-running"></span>
+                <span class="aid">A2.2</span>
+                <span class="stage">stage: generator</span>
+                <span class="chip live" style="margin-left:auto">live</span>
+              </div>
+              <div class="pipeline">
+                <div class="stage-box p">
+                  <div class="sh"><span class="role role-planner">planner</span> ✓</div>
+                  <div class="sm">opus · 0.9s</div>
+                  <div class="ss">narrowed scope · 4 criteria</div>
+                </div>
+                <div class="connector"><svg><path d="M 0 50% L 100% 50%" stroke="#e0af68" stroke-width="1.5" stroke-dasharray="4 3" fill="none" style="animation: flow 1.2s linear infinite"/></svg></div>
+                <div class="gen-grid">
+                  <div class="gh"><span class="role role-generator">generators</span> <span class="count">2 · 1 spawned nested goal</span></div>
+                  <div class="gen-list">
+                    <div class="gen-card">
+                      <div class="gn-name"><span class="dot d-running"></span> gen_a · code-writer</div>
+                      <div class="gn-meta">sonnet · editing recorder.py</div>
+                    </div>
+                    <div class="gen-card has-handoff">
+                      <div class="handoff-tag">↳ handoff</div>
+                      <div class="gn-name"><span class="dot d-running"></span> gen_b · test-runner</div>
+                      <div class="gn-meta">spawned nested Goal A'</div>
+                    </div>
+                  </div>
+                  <!-- nested goal embed -->
+                  <div class="nested-goal">
+                    <div class="nh">
+                      <span class="label">nested goal A'</span>
+                      <span class="role role-handoff">handoff</span>
+                      <span style="color:var(--muted);font-size:10.5px;font-family:ui-monospace,monospace">"diagnose flaky test_recorder.py::test_overflow"</span>
+                      <span class="chip live" style="margin-left:auto">iter 1 / att 1</span>
+                    </div>
+                    <div class="ng-pipeline">
+                      <div class="stage-mini p"><span class="role role-planner">planner</span><span style="color:var(--muted)">✓</span></div>
+                      <div class="connector"><svg><line x1="0" y1="50%" x2="100%" y2="50%" stroke="#3a4254"/></svg></div>
+                      <div class="stage-mini g"><span class="role role-generator">gen × 1</span><span style="color:var(--yellow)">running</span></div>
+                      <div class="connector"><svg><line x1="0" y1="50%" x2="100%" y2="50%" stroke="#3a4254"/></svg></div>
+                      <div class="stage-mini e"><span class="role role-evaluator">evaluator</span><span style="color:var(--muted-2)">pending</span></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="connector"><svg><line x1="0" y1="50%" x2="100%" y2="50%" stroke="#3a4254" stroke-dasharray="3 3"/></svg></div>
+                <div class="stage-box e">
+                  <div class="sh"><span class="role role-evaluator">evaluator</span></div>
+                  <div class="sm" style="color:var(--muted-2)">pending</div>
+                  <div class="ss" style="color:var(--muted-2)">awaiting generators</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== -->
+<!-- DESIGN B — RECURSIVE OUTLINE TREE                       -->
+<!-- ====================================================== -->
+<section class="design">
+  <h2><span class="num">B.</span> Recursive outline · the data model, made readable</h2>
+  <p class="blurb">
+    A pure indented tree that mirrors the persisted shape one-to-one: <code>Goal → Iter → Att → {planner, generator[], evaluator} → (handoff → nested Goal → …)</code>.
+    Best when you want to see the <i>structure</i> of the run without any visual cleverness — like reading <code>jq</code> output, but live.
+  </p>
+  <p class="inspo">Inspired by <b>VS Code outline</b> + <b>OpenTelemetry waterfall</b> + <b>Linear subissues</b>.</p>
+
+  <div class="mock">
+    <div class="topbar">
+      <div class="crumbs"><span>tc_7f3a</span><span class="sep">·</span><span class="cur">Goal tree (recursive)</span></div>
+      <div style="flex:1"></div>
+      <span class="chip">expand all</span>
+      <span class="chip live">running</span>
+    </div>
+    <div class="tree-wrap">
+      <div class="tree-body">
+        <div class="row goal-row"><span class="gut">▾</span><span class="lbl"><span class="dot d-running"></span><span class="nm">Goal A</span><span class="sub">audit recorder refactor · 12m</span></span><span class="lat">tc_7f3a</span></div>
+
+        <div class="row iter-row"><span class="gut">▾</span><span class="lbl"><span class="dot d-done"></span><span class="nm">Iteration 1</span><span class="sub">closed · continuation_goal emitted</span></span><span class="lat">3m41s</span></div>
+
+        <div class="row att-row"><span class="gut">▾</span><span class="lbl"><span class="dot d-fail"></span><span class="nm">Attempt A1.1</span><span class="sub">stage=evaluator · fail_reason=criteria_unmet</span></span><span class="lat">1m32s</span></div>
+        <div class="row phase-row"><span class="gut">·</span><span class="lbl"><span class="role role-planner">planner</span><span class="nm">planner_task</span></span><span class="lat">0.9s</span></div>
+        <div class="row phase-row"><span class="gut">·</span><span class="lbl"><span class="role role-generator">generator × 2</span><span class="sub">parallel</span></span><span class="lat">52s</span></div>
+        <div class="row task-row"><span class="gut">·</span><span class="lbl"><span class="dot d-done"></span><span class="nm">gen_a code edit</span></span><span class="lat">2.1k tok</span></div>
+        <div class="row task-row"><span class="gut">·</span><span class="lbl"><span class="dot d-done"></span><span class="nm">gen_b tests</span></span><span class="lat">1.8k tok</span></div>
+        <div class="row phase-row"><span class="gut">·</span><span class="lbl"><span class="role role-evaluator">evaluator</span><span class="sub">2/3 criteria failed</span></span><span class="lat">0.7s</span></div>
+
+        <div class="row att-row active"><span class="gut">▾</span><span class="lbl"><span class="dot d-done"></span><span class="nm">Attempt A1.2 ◀</span><span class="sub">stage=closed · eval pass · continuation_goal=&quot;remove buffer call-sites…&quot;</span></span><span class="lat">2m09s</span></div>
+        <div class="row phase-row"><span class="gut">·</span><span class="lbl"><span class="role role-planner">planner</span><span class="nm">planner_task</span></span><span class="lat">1.0s</span></div>
+        <div class="row phase-row"><span class="gut">·</span><span class="lbl"><span class="role role-generator">generator × 2</span></span><span class="lat">1m54s</span></div>
+        <div class="row task-row"><span class="gut">·</span><span class="lbl"><span class="dot d-done"></span><span class="nm">gen_a recorder.py</span><span class="sub">−18/+9</span></span><span class="lat">ok</span></div>
+        <div class="row task-row"><span class="gut">·</span><span class="lbl"><span class="dot d-done"></span><span class="nm">gen_b test_recorder.py</span></span><span class="lat">ok</span></div>
+        <div class="row phase-row"><span class="gut">·</span><span class="lbl"><span class="role role-evaluator">evaluator</span><span class="sub">3/3 · cont needed</span></span><span class="lat">0.6s</span></div>
+
+        <div class="row iter-row"><span class="gut">▾</span><span class="lbl"><span class="dot d-running"></span><span class="nm">Iteration 2</span><span class="sub">continuation from iter 1</span></span><span class="lat">8m24s ⟳</span></div>
+
+        <div class="row att-row"><span class="gut">▾</span><span class="lbl"><span class="dot d-fail"></span><span class="nm">Attempt A2.1</span><span class="sub">stage=evaluator · fail_reason=tests_red</span></span><span class="lat">3m12s</span></div>
+        <div class="row phase-row"><span class="gut">·</span><span class="lbl"><span class="role role-planner">planner</span></span><span class="lat">1.1s</span></div>
+        <div class="row phase-row"><span class="gut">·</span><span class="lbl"><span class="role role-generator">generator × 1</span></span><span class="lat">2m</span></div>
+        <div class="row phase-row"><span class="gut">·</span><span class="lbl"><span class="role role-evaluator">evaluator</span><span class="sub">3 tests fail</span></span><span class="lat">0.7s</span></div>
+
+        <div class="row att-row"><span class="gut">▾</span><span class="lbl"><span class="dot d-running"></span><span class="nm">Attempt A2.2</span><span class="sub">stage=generator · running</span></span><span class="lat">47s ⟳</span></div>
+        <div class="row phase-row"><span class="gut">·</span><span class="lbl"><span class="role role-planner">planner</span><span class="sub">narrow scope · 4 criteria</span></span><span class="lat">0.9s</span></div>
+        <div class="row phase-row"><span class="gut">▾</span><span class="lbl"><span class="role role-generator">generator × 2</span><span class="sub">parallel · 1 spawned nested goal</span></span><span class="lat">running</span></div>
+        <div class="row task-row"><span class="gut">·</span><span class="lbl"><span class="dot d-running"></span><span class="nm">gen_a code-writer</span><span class="sub">editing recorder.py</span></span><span class="lat">live</span></div>
+        <div class="row task-row"><span class="gut">▾</span><span class="lbl"><span class="dot d-running"></span><span class="nm">gen_b test-runner</span><span class="sub">issued handoff</span></span><span class="handoff-badge">↳ submit_execution_handoff</span></div>
+
+        <!-- nested goal recursion -->
+        <div class="row nested-row"><span class="gut">▾</span><span class="lbl"><span class="dot d-running"></span><span class="nm" style="color: var(--handoff);">Goal A' (nested · depth 2)</span><span class="sub">"diagnose flaky test_recorder.py::test_overflow"</span></span><span class="lat">started 02:14:24</span></div>
+        <div class="row nested-iter"><span class="gut">▾</span><span class="lbl"><span class="dot d-running"></span><span class="nm">Iteration 1</span></span><span class="lat">23s</span></div>
+        <div class="row nested-att"><span class="gut">▾</span><span class="lbl"><span class="dot d-running"></span><span class="nm">Attempt 1.1</span><span class="sub">stage=generator</span></span><span class="lat">live</span></div>
+        <div class="row nested-phase"><span class="gut">·</span><span class="lbl"><span class="role role-planner">planner</span><span class="sub">✓</span></span><span class="lat">0.8s</span></div>
+        <div class="row nested-phase"><span class="gut">·</span><span class="lbl"><span class="role role-generator">generator × 1</span><span class="sub">running pytest</span></span><span class="lat">live</span></div>
+        <div class="row nested-phase"><span class="gut">·</span><span class="lbl"><span class="role role-evaluator">evaluator</span><span class="sub">pending</span></span><span class="lat">—</span></div>
+
+        <div class="row phase-row"><span class="gut">·</span><span class="lbl"><span class="role role-evaluator">evaluator</span><span class="sub">awaiting generators</span></span><span class="lat">—</span></div>
+      </div>
+
+      <div class="tree-detail">
+        <div class="td-block">
+          <h5>selected · Attempt A1.2</h5>
+          <div class="kv">
+            <div class="k">id</div><div class="v">att_8c4f1e</div>
+            <div class="k">iteration</div><div class="v">iter_2b9a · seq 2</div>
+            <div class="k">stage</div><div class="v">closed</div>
+            <div class="k">status</div><div class="v" style="color:var(--green)">success</div>
+            <div class="k">planner_task</div><div class="v">tsk_4d…</div>
+            <div class="k">generators</div><div class="v">tsk_5a…, tsk_5b…</div>
+            <div class="k">evaluator</div><div class="v">tsk_6c…</div>
+            <div class="k">continuation</div><div class="v" style="color:var(--handoff)">"remove buffer call-sites…"</div>
+          </div>
+        </div>
+        <div class="td-block">
+          <h5>task_specification (planner)</h5>
+          <div style="font-size:11.5px;color:var(--muted);line-height:1.6">
+            Remove <code>self._buffer</code> from AuditRecorder and stream events directly to the configured sink. Preserve atomic-flush semantics; update unit tests.
+          </div>
+        </div>
+        <div class="td-block">
+          <h5>evaluation_criteria</h5>
+          <div class="crit"><span class="dot d-done"></span> _buffer field is absent from recorder.py</div>
+          <div class="crit"><span class="dot d-done"></span> all existing tests pass</div>
+          <div class="crit"><span class="dot d-done"></span> events visible to sink without flush() call</div>
+        </div>
+        <div class="td-block">
+          <h5>nested goals from this attempt</h5>
+          <div style="font-size:11.5px;color:var(--muted)">none — handoff in successor A2.2</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== -->
+<!-- DESIGN C — MISSION CONTROL v2 (recommended)            -->
+<!-- ====================================================== -->
+<section class="design">
+  <h2><span class="num">C.</span> Mission Control · iteration timeline ⊕ attempt pipeline ⊕ event log <span class="reco">(recommended)</span></h2>
+  <p class="blurb">
+    Top strip shows the full <b>iteration chain</b> (with continuation arrows) and the <b>attempt retries</b> nested inside each iteration.
+    Click an attempt → body splits into the <b>pipeline</b> on the left (planner / generator-fan / evaluator with nested-goal embeds)
+    and a <b>linked event log</b> on the right. The log shows the recursion of nested goals at the same depth as the parent generator's row.
+  </p>
+  <p class="inspo">Inspired by <b>Datadog APM</b> + <b>Sentry trace</b> + <b>Linear's issue layout</b> + <b>Buildkite waterfall</b>.</p>
+
+  <div class="mock">
+    <div class="topbar">
+      <div class="crumbs">
+        <span>tc_7f3a</span><span class="sep">·</span>
+        <span style="color:var(--text);font-weight:500">Goal A</span> <span class="sep">·</span>
+        <span>iter 2</span> <span class="sep">·</span><span class="cur">A2.2 ◀</span>
+      </div>
+      <div style="flex:1"></div>
+      <span class="chip live">running</span>
+      <span class="chip">depth 2 with nested A'</span>
+      <span class="chip">tokens 41.8k · $0.27</span>
+    </div>
+
+    <div class="mc-wrap">
+      <aside class="navrail">
+        <div class="label">Goal A · audit refactor</div>
+        <div class="gnode active"><span class="dot d-running"></span> <b>Goal A</b></div>
+        <div class="gnode depth-1">↳ <span style="color:var(--handoff)">Goal A'</span> (nested)</div>
+        <div class="label" style="margin-top:14px">Other goals</div>
+        <div class="gnode"><span class="dot d-queued"></span> Goal B · docker e2e</div>
+        <div class="gnode"><span class="dot d-fail"></span> Goal C · overlay cap</div>
+        <div class="gnode"><span class="dot d-done"></span> Goal D · sweevo eval</div>
+
+        <div class="label" style="margin-top:18px">Filters</div>
+        <div class="gnode">▸ show only failed attempts</div>
+        <div class="gnode">▸ hide nested goals</div>
+      </aside>
+
+      <div class="mc-attstrip">
+        <div class="group">
+          <span class="label">iter 1</span>
+          <span class="ac"><span class="dot d-fail"></span>A1.1</span>
+          <span class="arrow">→</span>
+          <span class="ac"><span class="dot d-done"></span>A1.2</span>
+          <span class="chip ok" style="margin-left:6px">closed</span>
+        </div>
+        <div class="iter-arrow-strip">continuation ⟶</div>
+        <div class="group cont">
+          <span class="label">iter 2</span>
+          <span class="ac fail"><span class="dot d-fail"></span>A2.1</span>
+          <span class="arrow">→</span>
+          <span class="ac active"><span class="dot d-running"></span>A2.2 ◀</span>
+          <span class="chip live" style="margin-left:6px">live</span>
+        </div>
+        <div class="iter-arrow-strip" style="opacity:.5">iter 3 (if needed)</div>
+      </div>
+
+      <div class="mc-body">
+        <div class="mc-stage">
+          <div class="sh">
+            <h4>Attempt A2.2 · pipeline</h4>
+            <div class="meta">stage=generator · 47s · planner ✓ · 2 generators · evaluator pending</div>
+          </div>
+          <div class="mc-pipeline">
+            <div class="pipe-row">
+              <div class="phase-label">phase 1<br>planner</div>
+              <div class="phase-body">
+                <div class="task-card tk-p">
+                  <div class="th"><span class="role role-planner">planner</span> · narrow-scope retry <span class="chip ok" style="margin-left:auto">done</span></div>
+                  <div class="tm"><span>opus · 0.9s · 2.4k tok</span><span>4 evaluation_criteria emitted</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="pipe-row">
+              <div class="phase-label">phase 2<br>generators<br>(parallel)</div>
+              <div class="phase-body">
+                <div class="gen-pair">
+                  <div class="task-card tk-g">
+                    <div class="th"><span class="role role-generator">gen_a</span> code-writer <span class="chip live" style="margin-left:auto">live</span></div>
+                    <div class="tm"><span>sonnet · 18s</span><span>tools: edit ×2, read ×1</span></div>
+                  </div>
+                  <div class="task-card tk-g active" style="border-color:rgba(255,158,100,0.4)">
+                    <div class="th"><span class="role role-generator">gen_b</span> test-runner <span class="role role-handoff" style="margin-left:auto">handoff</span></div>
+                    <div class="tm"><span>sonnet · 23s</span><span>called submit_execution_handoff → Goal A'</span></div>
+                  </div>
+                </div>
+                <!-- nested goal embed under gen_b -->
+                <div class="task-card tk-g" style="border-left:3px dashed var(--handoff); background: rgba(255,158,100,0.04);">
+                  <div class="th"><span class="role role-handoff">nested Goal A'</span> "diagnose flaky test_overflow" <span class="chip live" style="margin-left:auto">iter 1 / A1.1 live</span></div>
+                  <div class="tm">
+                    <span><span class="role role-planner">planner</span> ✓ 0.8s</span>
+                    <span><span class="role role-generator">gen × 1</span> running</span>
+                    <span><span class="role role-evaluator">evaluator</span> pending</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="pipe-row">
+              <div class="phase-label">phase 3<br>evaluator</div>
+              <div class="phase-body">
+                <div class="task-card tk-e" style="opacity:0.55">
+                  <div class="th"><span class="role role-evaluator">evaluator</span> · pending <span class="chip" style="margin-left:auto">awaits gens</span></div>
+                  <div class="tm"><span>will score against 4 criteria</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mc-events">
+          <div class="eh"><span>Event log · A2.2 (incl. nested Goal A')</span><span style="color:var(--muted-2)">38 events</span></div>
+          <div class="ebody">
+            <div class="ev p">
+              <div class="ts">02:14:03</div>
+              <div class="rail"><div class="d"></div><div class="line"></div></div>
+              <div class="b">
+                <div class="h"><span class="role role-planner">planner</span> · attempt begin</div>
+                emitted 4 evaluation_criteria; spec narrowed to <code>_buffer</code> path
+              </div>
+            </div>
+            <div class="ev g">
+              <div class="ts">02:14:14</div>
+              <div class="rail"><div class="d"></div><div class="line"></div></div>
+              <div class="b">
+                <div class="h"><span class="role role-generator">gen_a</span> spawned · code-writer</div>
+                edit <code>recorder.py</code>; −18/+9 staged
+              </div>
+            </div>
+            <div class="ev g">
+              <div class="ts">02:14:18</div>
+              <div class="rail"><div class="d"></div><div class="line"></div></div>
+              <div class="b">
+                <div class="h"><span class="role role-generator">gen_b</span> spawned · test-runner</div>
+                begin <code>.venv/bin/pytest test_recorder.py</code>
+              </div>
+            </div>
+            <div class="ev h">
+              <div class="ts">02:14:24</div>
+              <div class="rail"><div class="d"></div><div class="line"></div></div>
+              <div class="b">
+                <div class="h"><span class="role role-handoff">handoff</span> · gen_b → child Goal A'</div>
+                <code>submit_execution_handoff("diagnose flaky test_overflow")</code>
+              </div>
+            </div>
+            <!-- nested events indented -->
+            <div class="ev p" style="padding-left:36px; background: rgba(255,158,100,0.04);">
+              <div class="ts">02:14:25</div>
+              <div class="rail"><div class="d"></div><div class="line"></div></div>
+              <div class="b">
+                <div class="h"><span class="role role-planner">A' planner</span></div>
+                emitted 2 criteria for flake diagnosis
+              </div>
+            </div>
+            <div class="ev g" style="padding-left:36px; background: rgba(255,158,100,0.04);">
+              <div class="ts">02:14:26</div>
+              <div class="rail"><div class="d"></div><div class="line"></div></div>
+              <div class="b">
+                <div class="h"><span class="role role-generator">A' gen × 1</span> · spawned</div>
+                running pytest in isolation · streaming
+              </div>
+            </div>
+            <div class="ev g">
+              <div class="ts">02:14:50</div>
+              <div class="rail"><div class="d"></div></div>
+              <div class="b">
+                <div class="h"><span class="role role-generator">gen_a</span> · awaiting</div>
+                paused for gen_b / Goal A' result before final edit
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================== -->
+<!-- COMPARISON                                                  -->
+<!-- =========================================================== -->
+<section class="comparison">
+  <h2>Trade-offs</h2>
+  <table class="compare">
+    <tr>
+      <th>Aspect</th>
+      <th>A · Pipeline (stacked iterations)</th>
+      <th>B · Recursive Outline</th>
+      <th>C · Mission Control</th>
+    </tr>
+    <tr>
+      <th>Strongest at</th>
+      <td>Seeing the planner→gen→eval shape and the iteration continuation chain visually</td>
+      <td>Inspecting the data model; reading recursion clearly</td>
+      <td>Daily driver — structure + causality in one view</td>
+    </tr>
+    <tr>
+      <th>Nested goals</th>
+      <td>Embedded as sub-pipeline inline under spawning generator</td>
+      <td>Indented as a child Goal block in the tree</td>
+      <td>Indented event-log subsection + sub-pipeline card</td>
+    </tr>
+    <tr>
+      <th>Iteration continuation</th>
+      <td>Explicit "↓ continuation_goal" arrow between bands</td>
+      <td>Just another iteration row</td>
+      <td>Continuation arrow between iter groups in strip</td>
+    </tr>
+    <tr>
+      <th>Attempt retries</th>
+      <td>Horizontal strip per iteration</td>
+      <td>Sibling nodes under iteration</td>
+      <td>Horizontal in strip, only one attempt expanded</td>
+    </tr>
+    <tr>
+      <th>Best for</th>
+      <td>Designers/PMs; explaining the model</td>
+      <td>Debugging; deep inspection; copy-paste-able state</td>
+      <td>Operators watching live runs</td>
+    </tr>
+    <tr>
+      <th>Live updates</th>
+      <td>Animated phase connectors; live chip on gen cards</td>
+      <td>Subtle row-level dot pulse</td>
+      <td>Pipeline cards pulse + event log auto-grows</td>
+    </tr>
+    <tr>
+      <td colspan="4" class="reco" style="padding-top:14px">
+        <b>Recommendation:</b> ship <b>C · Mission Control</b> as the default; offer <b>A</b> as a "model view" tab for explaining the run to a stakeholder, and <b>B</b> as the "inspector" panel for debugging. All three share the same backing data: Goal → Iter → Attempt → (planner, generators, evaluator) → (optional nested Goal).
+      </td>
+    </tr>
+  </table>
+</section>
+
+</body>
+</html>

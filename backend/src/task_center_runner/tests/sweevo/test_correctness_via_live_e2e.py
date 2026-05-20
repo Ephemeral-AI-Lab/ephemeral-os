@@ -13,10 +13,8 @@ Skipped when:
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import os
-import sys
 from pathlib import Path
 
 import pytest
@@ -27,35 +25,9 @@ from task_center_runner import run_scenario
 from task_center_runner.audit.events import EventType
 from task_center_runner.hooks.builtins import count_events
 from task_center_runner.scenarios.correctness_testing import CorrectnessTesting
-
-
-def _require_daytona_healthy() -> None:
-    """Tier-0 health gate. Skip cleanly if Daytona is unavailable."""
-    repo_root = Path(__file__).resolve().parents[5]
-    tier0_path = (
-        repo_root
-        / "backend"
-        / "tests"
-        / "live_e2e_test"
-        / "_tools"
-        / "tier0_health.py"
-    )
-    if not tier0_path.exists():
-        pytest.skip(f"tier0_health module not found at {tier0_path}")
-    spec = importlib.util.spec_from_file_location(
-        "_live_e2e_tier0_health", tier0_path
-    )
-    if spec is None or spec.loader is None:
-        pytest.skip(f"tier0_health module not loadable from {tier0_path}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules.setdefault(spec.name, module)
-    spec.loader.exec_module(module)
-    result = module.probe_tier0()
-    if not result.passed:
-        pytest.skip(
-            f"Tier-0 health gate failed: api_health={result.api_health!r} "
-            f"notes={result.notes!r}"
-        )
+from task_center_runner.tests.sweevo._sandbox_health import (
+    require_sandbox_provider_healthy,
+)
 
 
 @pytest.mark.asyncio
@@ -66,7 +38,7 @@ async def test_correctness_testing_via_live_e2e(
 ) -> None:
     if not os.environ.get("EPHEMERALOS_DATABASE_URL"):
         pytest.skip("EPHEMERALOS_DATABASE_URL not set — task_center_runner requires PostgreSQL")
-    _require_daytona_healthy()
+    require_sandbox_provider_healthy(sweevo_instance)
 
     scenario = CorrectnessTesting()
     extra_hooks = (
