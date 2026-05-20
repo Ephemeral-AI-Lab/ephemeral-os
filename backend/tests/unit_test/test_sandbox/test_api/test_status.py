@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import json
 import threading
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -395,34 +393,28 @@ def test_create_sandbox_explicit_image_overrides_configured_default_snapshot(
 
 
 def test_configured_default_snapshot_takes_precedence_over_default_image(
-    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    from config import CentralConfig, DaytonaConfig, SandboxConfig, override_central_config
     from sandbox.api import _sandbox_control as sb_lifecycle
     from sandbox.host import lifecycle as host_lifecycle
     from sandbox.provider.registry import set_default_provider
-
-    settings_path = tmp_path / "settings.json"
-    settings_path.write_text(
-        json.dumps(
-            {
-                "sandbox": {
-                    "default_snapshot": "sweevo-psf-requests-3738",
-                    "default_image": "ghcr.io/example/default:latest",
-                },
-            }
-        )
-    )
-    monkeypatch.setattr("config.paths.get_config_file_path", lambda: settings_path)
-    monkeypatch.setattr("config.settings._DOTENV_PATH", tmp_path / ".env")
-    monkeypatch.delenv("EPHEMERALOS_SANDBOX_DEFAULT_IMAGE", raising=False)
-    monkeypatch.delenv("EPHEMERALOS_SANDBOX_DEFAULT_SNAPSHOT", raising=False)
 
     provider = _stub_provider()
     set_default_provider(provider)
     monkeypatch.setattr(host_lifecycle, "setup_after_create", lambda sid, ws: None)
 
-    sb_lifecycle.create_sandbox(name="demo")
+    config = CentralConfig(
+        sandbox=SandboxConfig(
+            default_provider="daytona",
+            daytona=DaytonaConfig(
+                default_snapshot="sweevo-psf-requests-3738",
+                default_image="ghcr.io/example/default:latest",
+            ),
+        )
+    )
+    with override_central_config(config):
+        sb_lifecycle.create_sandbox(name="demo")
 
     provider.create.assert_called_once()
     assert (

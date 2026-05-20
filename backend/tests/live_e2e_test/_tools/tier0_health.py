@@ -313,13 +313,7 @@ def _docker_run_flags() -> list[str]:
 
 
 def _resolve_docker_probe_image(image: str | None) -> str:
-    explicit = (image or os.environ.get("EOS_LIVE_E2E_IMAGE") or "").strip()
-    if explicit:
-        return explicit
-
-    from config.settings import load_settings
-
-    return load_settings().sandbox.default_image.strip()
+    return (image or os.environ.get("EOS_LIVE_E2E_IMAGE") or "").strip()
 
 
 def probe_tier0_docker(

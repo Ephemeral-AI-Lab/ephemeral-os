@@ -31,6 +31,7 @@ from typing import Any
 
 import pytest
 
+from config import get_central_config
 from db.engine import get_engine, initialize_db
 from task_center_runner.core.stores import (
     TaskCenterStoreBundle,
@@ -49,10 +50,11 @@ def db_engine() -> object | None:
     is not set so unit-test collections that happen to import this fixture
     do not fail.
     """
-    if not os.environ.get("EPHEMERALOS_DATABASE_URL"):
+    database = get_central_config().database
+    if not database.url:
         return None
     if get_engine() is None:
-        initialize_db()
+        initialize_db(database)
     return get_engine()
 
 
@@ -85,7 +87,7 @@ def audit_dir(tmp_path: Path) -> Path:
     if os.getenv("EOS_SWEEVO_AUDIT_TMP") == "1":
         return tmp_path / "live_e2e_run"
     override = os.getenv("EOS_SWEEVO_AUDIT_DIR")
-    base = Path(override) if override else Path(".sweevo_runs")
+    base = Path(override) if override else get_central_config().runner.audit_dir
     return base.resolve()
 
 

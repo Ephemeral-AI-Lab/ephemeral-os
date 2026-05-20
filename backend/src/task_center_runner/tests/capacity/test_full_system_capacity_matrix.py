@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -20,6 +19,13 @@ from task_center_runner.hooks.builtins import (
 from task_center_runner.scenarios import SCENARIO_REGISTRY
 from task_center_runner.core.stores import TaskCenterStoreBundle
 from task_center_runner.benchmarks.sweevo.fixtures import run_sweevo_scenario
+from task_center_runner.tests._live_config import (
+    database_configured,
+    live_e2e_capacity_enabled,
+)
+from task_center_runner.tests.sweevo._sandbox_health import (
+    require_sandbox_provider_healthy,
+)
 from sandbox.api import ReadFileRequest, SandboxCaller
 
 pytestmark = [
@@ -38,11 +44,11 @@ _FORBIDDEN_RUN_SIGNATURES = (
 
 
 @pytest.mark.skipif(
-    os.environ.get("EPHEMERALOS_RUN_CAPACITY_LIVE_E2E") != "1",
-    reason="set EPHEMERALOS_RUN_CAPACITY_LIVE_E2E=1 to run capacity live e2e",
+    not live_e2e_capacity_enabled(),
+    reason="capacity live e2e disabled in runner.live_e2e.capacity_enabled",
 )
 @pytest.mark.skipif(
-    not os.environ.get("EPHEMERALOS_DATABASE_URL"),
+    not database_configured(),
     reason="EPHEMERALOS_DATABASE_URL not set - task_center_runner requires PostgreSQL",
 )
 async def test_full_system_capacity_matrix_records_artifacts_and_metrics(
@@ -51,7 +57,7 @@ async def test_full_system_capacity_matrix_records_artifacts_and_metrics(
     audit_dir: Path,
     stores: TaskCenterStoreBundle,
 ) -> None:
-    _require_daytona_healthy()
+    require_sandbox_provider_healthy(sweevo_instance)
 
     scenario = SCENARIO_REGISTRY["capacity.full_system_capacity_matrix"]()
     report = await run_sweevo_scenario(
@@ -86,36 +92,6 @@ async def test_full_system_capacity_matrix_records_artifacts_and_metrics(
         report.sandbox_id,
         report.task_center_run_id,
     )
-
-
-def _require_daytona_healthy() -> None:
-    import importlib.util
-    import sys
-
-    repo_root = Path(__file__).resolve().parents[5]
-    tier0_path = (
-        repo_root
-        / "backend"
-        / "tests"
-        / "live_e2e_test"
-        / "_tools"
-        / "tier0_health.py"
-    )
-    spec = importlib.util.spec_from_file_location(
-        "_capacity_tier0_health", tier0_path
-    )
-    if spec is None or spec.loader is None:
-        pytest.skip(f"tier0_health module not loadable from {tier0_path}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules.setdefault(spec.name, module)
-    spec.loader.exec_module(module)
-    result = module.probe_tier0()
-    if not result.passed:
-        pytest.skip(
-            f"Tier-0 health gate failed: api_health={result.api_health!r} "
-            f"notes={result.notes!r}"
-        )
-
 
 def _assert_graph_shape(graph_summary: dict[str, Any]) -> None:
     goals = graph_summary["goals"]

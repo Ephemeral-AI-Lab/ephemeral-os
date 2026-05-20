@@ -6,7 +6,6 @@ import importlib
 import subprocess
 import sys
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -27,10 +26,6 @@ def _completed(returncode: int, stdout: str = "", stderr: str = "") -> subproces
     return subprocess.CompletedProcess(args=[], returncode=returncode, stdout=stdout, stderr=stderr)
 
 
-def _settings_with_image(image: str) -> SimpleNamespace:
-    return SimpleNamespace(sandbox=SimpleNamespace(default_image=image))
-
-
 def test_docker_probe_happy_path(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("EOS_LIVE_E2E_IMAGE", "my-image:tag")
     monkeypatch.setenv("EOS_DOCKER_PRIVILEGED", "")
@@ -40,8 +35,10 @@ def test_docker_probe_happy_path(monkeypatch: pytest.MonkeyPatch) -> None:
         calls.append(argv)
         return _completed(0)
 
-    with patch.object(_tier0.shutil, "which", return_value="/usr/bin/docker"), \
-         patch.object(_tier0.subprocess, "run", side_effect=fake_run):
+    with (
+        patch.object(_tier0.shutil, "which", return_value="/usr/bin/docker"),
+        patch.object(_tier0.subprocess, "run", side_effect=fake_run),
+    ):
         result = _tier0.probe_tier0_docker()
 
     assert result.passed is True
@@ -54,7 +51,7 @@ def test_docker_probe_happy_path(monkeypatch: pytest.MonkeyPatch) -> None:
     assert calls[2][:3] == ["docker", "run", "--rm"]
 
 
-def test_docker_probe_falls_back_to_default_image(
+def test_docker_probe_requires_explicit_live_image(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.delenv("EOS_LIVE_E2E_IMAGE", raising=False)
@@ -65,21 +62,23 @@ def test_docker_probe_falls_back_to_default_image(
         calls.append(argv)
         return _completed(0)
 
-    with patch.object(_tier0.shutil, "which", return_value="/usr/bin/docker"), \
-         patch("config.settings.load_settings", return_value=_settings_with_image("default:tag")), \
-         patch.object(_tier0.subprocess, "run", side_effect=fake_run):
+    with (
+        patch.object(_tier0.shutil, "which", return_value="/usr/bin/docker"),
+        patch.object(_tier0.subprocess, "run", side_effect=fake_run),
+    ):
         result = _tier0.probe_tier0_docker()
 
-    assert result.passed is True
-    assert "image_inspect=ok image='default:tag'" in result.notes
-    assert calls[1] == ["docker", "image", "inspect", "default:tag"]
-    assert calls[2][-4:-1] == ["default:tag", "sh", "-c"]
+    assert result.passed is False
+    assert "missing_live_image_default" in result.notes
+    assert [call[0] for call in calls] == ["docker"]
 
 
 def test_docker_probe_daemon_down(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("EOS_LIVE_E2E_IMAGE", "my-image:tag")
-    with patch.object(_tier0.shutil, "which", return_value="/usr/bin/docker"), \
-         patch.object(_tier0.subprocess, "run", return_value=_completed(1)):
+    with (
+        patch.object(_tier0.shutil, "which", return_value="/usr/bin/docker"),
+        patch.object(_tier0.subprocess, "run", return_value=_completed(1)),
+    ):
         result = _tier0.probe_tier0_docker()
     assert result.passed is False
     assert "docker_info=fail" in result.notes
@@ -87,9 +86,10 @@ def test_docker_probe_daemon_down(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_docker_probe_missing_image_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("EOS_LIVE_E2E_IMAGE", raising=False)
-    with patch.object(_tier0.shutil, "which", return_value="/usr/bin/docker"), \
-         patch("config.settings.load_settings", return_value=_settings_with_image("")), \
-         patch.object(_tier0.subprocess, "run", return_value=_completed(0)):
+    with (
+        patch.object(_tier0.shutil, "which", return_value="/usr/bin/docker"),
+        patch.object(_tier0.subprocess, "run", return_value=_completed(0)),
+    ):
         result = _tier0.probe_tier0_docker()
     assert result.passed is False
     assert "missing_live_image_default" in result.notes
@@ -102,8 +102,10 @@ def test_docker_probe_image_inspect_fail(monkeypatch: pytest.MonkeyPatch) -> Non
     def fake_run(argv, **kwargs):
         return next(sequence)
 
-    with patch.object(_tier0.shutil, "which", return_value="/usr/bin/docker"), \
-         patch.object(_tier0.subprocess, "run", side_effect=fake_run):
+    with (
+        patch.object(_tier0.shutil, "which", return_value="/usr/bin/docker"),
+        patch.object(_tier0.subprocess, "run", side_effect=fake_run),
+    ):
         result = _tier0.probe_tier0_docker()
     assert result.passed is False
     assert "image_inspect=fail" in result.notes
@@ -112,17 +114,21 @@ def test_docker_probe_image_inspect_fail(monkeypatch: pytest.MonkeyPatch) -> Non
 
 def test_docker_probe_capability_fail(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("EOS_LIVE_E2E_IMAGE", "img:tag")
-    sequence = iter([
-        _completed(0),
-        _completed(0),
-        _completed(1, stderr="mount: permission denied"),
-    ])
+    sequence = iter(
+        [
+            _completed(0),
+            _completed(0),
+            _completed(1, stderr="mount: permission denied"),
+        ]
+    )
 
     def fake_run(argv, **kwargs):
         return next(sequence)
 
-    with patch.object(_tier0.shutil, "which", return_value="/usr/bin/docker"), \
-         patch.object(_tier0.subprocess, "run", side_effect=fake_run):
+    with (
+        patch.object(_tier0.shutil, "which", return_value="/usr/bin/docker"),
+        patch.object(_tier0.subprocess, "run", side_effect=fake_run),
+    ):
         result = _tier0.probe_tier0_docker()
     assert result.passed is False
     assert "capability_probe=fail" in result.notes
@@ -164,14 +170,19 @@ def test_probe_tier0_unknown_provider(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_probe_tier0_daytona_branch_calls_http(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("EOS_SANDBOX_PROVIDER", "daytona")
-    with patch.object(_tier0, "_check_api_health", return_value=("ok", "ok")) as health, \
-         patch.object(_tier0, "_detect_stuck_rows", return_value=(False, [], "")), \
-         patch.object(
-             _tier0, "_detect_runner_bootstrap_issue",
-             return_value=_tier0.RunnerBootstrapIssue(
-                 docker_available=False, runner_healthy=None, notes="skipped",
-             ),
-         ):
+    with (
+        patch.object(_tier0, "_check_api_health", return_value=("ok", "ok")) as health,
+        patch.object(_tier0, "_detect_stuck_rows", return_value=(False, [], "")),
+        patch.object(
+            _tier0,
+            "_detect_runner_bootstrap_issue",
+            return_value=_tier0.RunnerBootstrapIssue(
+                docker_available=False,
+                runner_healthy=None,
+                notes="skipped",
+            ),
+        ),
+    ):
         result = _tier0.probe_tier0(api_url="http://x/api")
     health.assert_called_once()
     assert result.passed is True

@@ -11,11 +11,10 @@ verifies that:
 
 from __future__ import annotations
 
-import os
-
 import pytest
 from sqlalchemy import text
 
+from task_center_runner.tests._live_config import database_configured
 from task_center_runner.core.stores import (
     TaskCenterStoreBundle,
     create_per_test_task_center_stores,
@@ -23,7 +22,7 @@ from task_center_runner.core.stores import (
 
 
 pytestmark = pytest.mark.skipif(
-    not os.environ.get("EPHEMERALOS_DATABASE_URL"),
+    not database_configured(),
     reason="EPHEMERALOS_DATABASE_URL not set — task_center_runner requires PostgreSQL",
 )
 

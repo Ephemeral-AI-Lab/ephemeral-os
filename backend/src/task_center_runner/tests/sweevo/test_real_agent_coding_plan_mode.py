@@ -6,7 +6,7 @@ with real sandboxes AND with our fully-customizable EphemeralOS tools.
 
 **Activation gates (all must pass for a given test to run):**
 
-1. ``EOS_SWEEVO_REAL_AGENT_TESTS=1`` (module-level — matches existing pattern).
+1. ``runner.live_e2e.real_agent_enabled`` (module-level).
 2. Provider-specific credentials present (per-test):
    * Anthropic test: macOS Keychain entry ``Claude Code-credentials``.
    * Codex test: ``~/.codex/auth.json``.
@@ -22,7 +22,6 @@ from __future__ import annotations
 import importlib
 import json
 import logging
-import os
 import subprocess
 import uuid
 from collections.abc import Iterator
@@ -34,12 +33,15 @@ import pytest
 from benchmarks.sweevo.models import SWEEvoInstance
 from task_center_runner.core.real_agent_run import run_sweevo_real_agent
 from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.tests._live_config import (
+    live_e2e_real_agent_enabled,
+    live_e2e_real_agent_max_duration_s,
+)
 from tools.sandbox._lib.registry import make_sandbox_tools
 
-# Module-level gate: mirrors test_real_agent.py.
 pytestmark = pytest.mark.skipif(
-    os.getenv("EOS_SWEEVO_REAL_AGENT_TESTS") != "1",
-    reason="Real-agent live e2e gated by EOS_SWEEVO_REAL_AGENT_TESTS=1",
+    not live_e2e_real_agent_enabled(),
+    reason="Real-agent live e2e disabled in runner.live_e2e.real_agent_enabled",
 )
 
 
@@ -50,6 +52,8 @@ pytestmark = pytest.mark.skipif(
 
 def _anthropic_keychain_present() -> bool:
     """Macos-only check for Claude Code OAuth credentials in Keychain."""
+    import os
+
     if os.uname().sysname != "Darwin":  # type: ignore[attr-defined]
         return False
     user = os.environ.get("USER")
@@ -246,7 +250,7 @@ def _assert_no_coding_plan_mode_error(caplog: pytest.LogCaptureFixture) -> None:
 
 
 def _max_duration_s() -> float:
-    return float(os.getenv("EOS_SWEEVO_REAL_AGENT_MAX_DURATION_S", "1800"))
+    return live_e2e_real_agent_max_duration_s()
 
 
 # ---------------------------------------------------------------------------

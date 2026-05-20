@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from config.paths import (
+    get_central_config_file_path,
     get_config_dir,
     get_config_file_path,
     get_data_dir,
@@ -33,6 +34,13 @@ def test_get_config_file_path(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
     path = get_config_file_path()
     assert path == tmp_path / ".ephemeralos" / "settings.json"
+
+
+def test_get_central_config_file_path(tmp_path: Path, monkeypatch):
+    monkeypatch.delenv("EPHEMERALOS_CONFIG_DIR", raising=False)
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    path = get_central_config_file_path()
+    assert path == tmp_path / ".ephemeralos" / "ephemeralos.yaml"
 
 
 def test_get_data_dir_default(tmp_path: Path, monkeypatch):

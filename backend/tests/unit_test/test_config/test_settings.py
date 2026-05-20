@@ -17,8 +17,9 @@ class TestSettings:
         assert s.theme == "default"
         assert s.verbose is False
         assert s.database.url == ""
-        assert s.sandbox.default_image == ""
-        assert s.sandbox.default_snapshot == ""
+        assert s.sandbox.daytona.default_image == ""
+        assert s.sandbox.daytona.default_snapshot == ""
+        assert s.sandbox.docker.default_snapshot == ""
 
     def test_merge_cli_overrides(self):
         s = Settings()
@@ -73,9 +74,7 @@ class TestLoadSaveSettings:
         assert s.verbose is True
         assert s.fast_mode is True
 
-    def test_load_existing_file_with_sandbox_defaults(
-        self, tmp_path: Path, monkeypatch
-    ):
+    def test_load_existing_file_with_sandbox_defaults(self, tmp_path: Path, monkeypatch):
         monkeypatch.delenv("EPHEMERALOS_DATABASE_URL", raising=False)
         monkeypatch.delenv("EPHEMERALOS_SANDBOX_DEFAULT_IMAGE", raising=False)
         monkeypatch.delenv("EPHEMERALOS_SANDBOX_DEFAULT_SNAPSHOT", raising=False)
@@ -85,15 +84,21 @@ class TestLoadSaveSettings:
             json.dumps(
                 {
                     "sandbox": {
-                        "default_image": "ghcr.io/example/default:latest",
-                        "default_snapshot": "sweevo-psf-requests-3738",
+                        "docker": {
+                            "default_snapshot": "docker-snapshot",
+                        },
+                        "daytona": {
+                            "default_image": "ghcr.io/example/default:latest",
+                            "default_snapshot": "daytona-snapshot",
+                        },
                     },
                 }
             )
         )
         s = load_settings(path)
-        assert s.sandbox.default_image == "ghcr.io/example/default:latest"
-        assert s.sandbox.default_snapshot == "sweevo-psf-requests-3738"
+        assert s.sandbox.docker.default_snapshot == "docker-snapshot"
+        assert s.sandbox.daytona.default_image == "ghcr.io/example/default:latest"
+        assert s.sandbox.daytona.default_snapshot == "daytona-snapshot"
 
     def test_save_and_load_roundtrip(self, tmp_path: Path, monkeypatch):
         monkeypatch.delenv("EPHEMERALOS_DATABASE_URL", raising=False)
@@ -127,7 +132,9 @@ class TestLoadSaveSettings:
             json.dumps(
                 {
                     "sandbox": {
-                        "default_image": "ghcr.io/example/file:latest",
+                        "daytona": {
+                            "default_image": "ghcr.io/example/file:latest",
+                        },
                     },
                 }
             )
@@ -137,7 +144,7 @@ class TestLoadSaveSettings:
             "ghcr.io/example/env:latest",
         )
         s = load_settings(path)
-        assert s.sandbox.default_image == "ghcr.io/example/env:latest"
+        assert s.sandbox.daytona.default_image == "ghcr.io/example/env:latest"
 
     def test_sandbox_default_snapshot_env_override(self, tmp_path: Path, monkeypatch):
         monkeypatch.setattr("config.settings._DOTENV_PATH", tmp_path / ".env")
@@ -146,7 +153,12 @@ class TestLoadSaveSettings:
             json.dumps(
                 {
                     "sandbox": {
-                        "default_snapshot": "file-snapshot",
+                        "docker": {
+                            "default_snapshot": "docker-file-snapshot",
+                        },
+                        "daytona": {
+                            "default_snapshot": "daytona-file-snapshot",
+                        },
                     },
                 }
             )
@@ -156,4 +168,5 @@ class TestLoadSaveSettings:
             "env-snapshot",
         )
         s = load_settings(path)
-        assert s.sandbox.default_snapshot == "env-snapshot"
+        assert s.sandbox.docker.default_snapshot == "env-snapshot"
+        assert s.sandbox.daytona.default_snapshot == "env-snapshot"

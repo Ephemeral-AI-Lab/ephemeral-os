@@ -154,7 +154,7 @@ available by env var; tests are provider-agnostic.
 | Env var                  | Required        | Purpose                                                                                  |
 |--------------------------|-----------------|------------------------------------------------------------------------------------------|
 | `EOS_SANDBOX_PROVIDER`   | no              | Optional override. Unset defaults to `docker`; set `daytona` only for legacy Daytona runs. |
-| `EOS_LIVE_E2E_IMAGE`     | no              | Optional override. If unset, Docker uses `settings.sandbox.default_image` / `EPHEMERALOS_SANDBOX_DEFAULT_IMAGE`. |
+| `EOS_LIVE_E2E_IMAGE`     | yes for Docker  | Docker live-e2e image. Daytona may also use `sandbox.daytona.default_image` / `EPHEMERALOS_SANDBOX_DEFAULT_IMAGE`. |
 | `EOS_DOCKER_PRIVILEGED`  | no              | `1` swaps `DEFAULT_RUN_FLAGS` (CAP_SYS_ADMIN + seccomp/apparmor unconfined) for `--privileged`. |
 
 On macOS, Docker Desktop may force some execs into copy-backed mode because its

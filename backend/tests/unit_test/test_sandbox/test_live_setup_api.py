@@ -27,7 +27,9 @@ pytestmark = [
 async def test_host_setup_prepares_benchmark_runtime() -> None:
     bootstrap_daytona_provider()
     settings = load_settings()
-    assert settings.sandbox.default_image, "live test requires sandbox.default_image"
+    assert settings.sandbox.daytona.default_image, (
+        "live test requires sandbox.daytona.default_image"
+    )
 
     name = f"eos-live-control-setup-{int(time.time())}"
     sandbox_id = ""
@@ -35,7 +37,7 @@ async def test_host_setup_prepares_benchmark_runtime() -> None:
         provider = get_default_provider()
         created = provider.create(
             name=name,
-            image=settings.sandbox.default_image,
+            image=settings.sandbox.daytona.default_image,
             language="python",
             labels={
                 "purpose": "live-sandbox-control-setup",
@@ -48,7 +50,7 @@ async def test_host_setup_prepares_benchmark_runtime() -> None:
 
         assert created["state"] == "started"
         assert created["project_dir"] == "/testbed"
-        assert created["image"] == settings.sandbox.default_image
+        assert created["image"] == settings.sandbox.daytona.default_image
 
         probe = await sandbox_api.raw_exec(
             sandbox_id,

@@ -9,11 +9,15 @@ from sandbox.provider.registry import get_adapter, get_default_provider
 
 
 def configured_sandbox_defaults() -> tuple[str | None, str | None]:
-    from config import load_settings
+    from config import get_central_config
 
-    sandbox = load_settings().sandbox
-    snapshot = sandbox.default_snapshot.strip()
-    image = sandbox.default_image.strip()
+    sandbox = get_central_config().sandbox
+    if sandbox.default_provider == "daytona":
+        snapshot = sandbox.daytona.default_snapshot.strip()
+        image = sandbox.daytona.default_image.strip()
+    else:
+        snapshot = sandbox.docker.default_snapshot.strip()
+        image = ""
     return snapshot or None, image or None
 
 
@@ -95,8 +99,7 @@ def context_preparer_for(sandbox_id: str) -> Any:
     factory = getattr(adapter, "context_preparer", None)
     if not callable(factory):
         raise RuntimeError(
-            f"Provider adapter for sandbox {sandbox_id!r} does not expose "
-            "context_preparer()."
+            f"Provider adapter for sandbox {sandbox_id!r} does not expose context_preparer()."
         )
     return factory(sandbox_id)
 

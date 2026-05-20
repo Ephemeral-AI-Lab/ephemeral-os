@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 
 from benchmarks.sweevo.models import SWEEvoInstance
+from config import get_central_config
 
 
 def require_sandbox_provider_healthy(instance: SWEEvoInstance) -> None:
@@ -21,7 +22,10 @@ def require_sandbox_provider_healthy(instance: SWEEvoInstance) -> None:
     Docker runs do not depend on the Daytona-local registry alias.
     """
     module = _load_tier0_health_module()
-    provider = (os.environ.get("EOS_SANDBOX_PROVIDER") or "").strip().lower()
+    provider = (
+        os.environ.get("EOS_SANDBOX_PROVIDER")
+        or get_central_config().sandbox.default_provider
+    ).strip().lower()
     if provider == "docker":
         result = module.probe_tier0_docker(image=instance.docker_image)
     else:

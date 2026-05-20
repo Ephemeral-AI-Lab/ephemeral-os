@@ -2,7 +2,7 @@
 
 Model/LLM configuration lives exclusively in the ``model_registrations``
 DB table — see :mod:`config.model_config`. This module owns only the
-provider-neutral non-model settings (system prompt, database, UI).
+provider-neutral legacy settings (system prompt, database, UI).
 """
 
 from __future__ import annotations
@@ -15,25 +15,16 @@ from typing import Any
 from dotenv import dotenv_values
 from pydantic import BaseModel, Field
 
+from config.central import CentralConfig, load_central_config
+from config.sections.database import DatabaseConfig
+from config.sections.sandbox import SandboxConfig
+
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 _DOTENV_PATH = _PROJECT_ROOT / ".env"
 
 
-class DatabaseSettings(BaseModel):
-    """PostgreSQL database configuration."""
-
-    url: str = ""
-    pool_pre_ping: bool = True
-    pool_size: int = 5
-    max_overflow: int = 10
-    echo: bool = False
-
-
-class SandboxSettings(BaseModel):
-    """Sandbox provider defaults."""
-
-    default_image: str = ""
-    default_snapshot: str = ""
+DatabaseSettings = DatabaseConfig
+SandboxSettings = SandboxConfig
 
 
 class Settings(BaseModel):
@@ -81,27 +72,61 @@ def _apply_env_overrides(settings: Settings) -> Settings:
     sandbox_default_image = _get_override("EPHEMERALOS_SANDBOX_DEFAULT_IMAGE")
     sandbox_default_snapshot = _get_override("EPHEMERALOS_SANDBOX_DEFAULT_SNAPSHOT")
     if sandbox_default_image:
-        sandbox = settings.sandbox.model_copy(
-            update={"default_image": sandbox_default_image}
+        sandbox = settings.sandbox
+        updates["sandbox"] = sandbox.model_copy(
+            update={
+                "daytona": sandbox.daytona.model_copy(
+                    update={"default_image": sandbox_default_image}
+                )
+            }
         )
-        updates["sandbox"] = sandbox
     if sandbox_default_snapshot:
-        sandbox = updates.get("sandbox", settings.sandbox).model_copy(
-            update={"default_snapshot": sandbox_default_snapshot}
+        sandbox = updates.get("sandbox", settings.sandbox)
+        updates["sandbox"] = sandbox.model_copy(
+            update={
+                "docker": sandbox.docker.model_copy(
+                    update={"default_snapshot": sandbox_default_snapshot}
+                ),
+                "daytona": sandbox.daytona.model_copy(
+                    update={"default_snapshot": sandbox_default_snapshot}
+                ),
+            }
         )
-        updates["sandbox"] = sandbox
+
+    daytona_updates = {
+        field: value
+        for field, value in {
+            "api_key": _get_override("DAYTONA_API_KEY"),
+            "api_url": _get_override("DAYTONA_API_URL"),
+            "target": _get_override("DAYTONA_TARGET"),
+        }.items()
+        if value
+    }
+    if daytona_updates:
+        sandbox = updates.get("sandbox", settings.sandbox)
+        updates["sandbox"] = sandbox.model_copy(
+            update={"daytona": sandbox.daytona.model_copy(update=daytona_updates)}
+        )
 
     if not updates:
         return settings
     return settings.model_copy(update=updates)
 
 
-def load_settings(config_path: Path | None = None) -> Settings:
-    """Load settings from config file, merging with defaults."""
-    if config_path is None:
-        from config.paths import get_config_file_path
+def _settings_from_central(config: CentralConfig) -> Settings:
+    return Settings(
+        database=config.database,
+        sandbox=config.sandbox,
+    )
 
-        config_path = get_config_file_path()
+
+def load_settings(config_path: Path | None = None) -> Settings:
+    """Load legacy settings, projected from central config by default."""
+    if config_path is None:
+        return _settings_from_central(load_central_config())
+
+    if config_path.suffix.lower() in {".yaml", ".yml"}:
+        return _settings_from_central(load_central_config(config_path))
 
     if config_path.exists():
         raw = json.loads(config_path.read_text(encoding="utf-8"))

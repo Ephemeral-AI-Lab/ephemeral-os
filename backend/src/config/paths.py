@@ -10,6 +10,7 @@ from pathlib import Path
 
 _DEFAULT_BASE_DIR = ".ephemeralos"
 _CONFIG_FILE_NAME = "settings.json"
+_CENTRAL_CONFIG_FILE_NAME = "ephemeralos.yaml"
 _REPO_CONFIG_DIR_NAME = "config"
 
 
@@ -67,6 +68,11 @@ def get_config_dir() -> Path:
 def get_config_file_path() -> Path:
     """Return the path to the main settings file (~/.ephemeralos/settings.json)."""
     return get_config_dir() / _CONFIG_FILE_NAME
+
+
+def get_central_config_file_path() -> Path:
+    """Return the path to the central YAML config file."""
+    return get_config_dir() / _CENTRAL_CONFIG_FILE_NAME
 
 
 def get_data_dir() -> Path:

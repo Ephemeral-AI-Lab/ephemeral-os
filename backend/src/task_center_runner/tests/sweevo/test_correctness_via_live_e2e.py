@@ -14,7 +14,6 @@ Skipped when:
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
 import pytest
@@ -28,6 +27,7 @@ from task_center_runner.scenarios.correctness_testing import CorrectnessTesting
 from task_center_runner.tests.sweevo._sandbox_health import (
     require_sandbox_provider_healthy,
 )
+from task_center_runner.tests._live_config import database_configured
 
 
 @pytest.mark.asyncio
@@ -36,7 +36,7 @@ async def test_correctness_testing_via_live_e2e(
     workspace: dict[str, object],
     audit_dir: Path,
 ) -> None:
-    if not os.environ.get("EPHEMERALOS_DATABASE_URL"):
+    if not database_configured():
         pytest.skip("EPHEMERALOS_DATABASE_URL not set — task_center_runner requires PostgreSQL")
     require_sandbox_provider_healthy(sweevo_instance)
 

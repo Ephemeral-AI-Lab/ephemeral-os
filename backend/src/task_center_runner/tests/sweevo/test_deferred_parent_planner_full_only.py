@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -14,13 +13,14 @@ from benchmarks.sweevo.models import SWEEvoInstance
 from task_center_runner.scenarios import SCENARIO_REGISTRY
 from task_center_runner.core.stores import TaskCenterStoreBundle
 from task_center_runner.benchmarks.sweevo.fixtures import run_sweevo_scenario
+from task_center_runner.tests._live_config import database_configured
 
 
 pytestmark = pytest.mark.asyncio
 
 
 @pytest.mark.skipif(
-    not os.environ.get("EPHEMERALOS_DATABASE_URL"),
+    not database_configured(),
     reason="EPHEMERALOS_DATABASE_URL not set - task_center_runner requires PostgreSQL",
 )
 async def test_partial_parent_routes_child_planner_to_full_only_agent_md(

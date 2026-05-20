@@ -100,9 +100,7 @@ class ToolBundle:
             self.sandbox_id,
             EditFileRequest(
                 path=path,
-                edits=tuple(
-                    SearchReplaceEdit(old_text=old, new_text=new) for old, new in edits
-                ),
+                edits=tuple(SearchReplaceEdit(old_text=old, new_text=new) for old, new in edits),
                 caller=self.caller,
                 description=description,
             ),
@@ -166,25 +164,27 @@ def _make_caller() -> SandboxCaller:
 def _resolve_live_image(provider_name: str) -> str:
     """Resolve the live-e2e image string, with provider-gated fallback.
 
-    EOS_LIVE_E2E_IMAGE always wins. Daytona and Docker both fall back to
-    settings.sandbox.default_image so scenario tests use the same default
-    prebaked image unless the operator overrides it.
+    EOS_LIVE_E2E_IMAGE always wins. Daytona falls back to
+    settings.sandbox.daytona.default_image so scenario tests use the same
+    default prebaked image unless the operator overrides it. Docker requires an
+    explicit image because the central Docker config only carries snapshots.
     """
     explicit = (os.environ.get("EOS_LIVE_E2E_IMAGE") or "").strip()
     if explicit:
         return explicit
-    if provider_name in {"daytona", "docker"}:
-        image = load_settings().sandbox.default_image.strip()
+    if provider_name == "daytona":
+        image = load_settings().sandbox.daytona.default_image.strip()
         if image:
             return image
         pytest.skip(
-            "live test requires EOS_LIVE_E2E_IMAGE or settings.sandbox.default_image "
-            "(set EPHEMERALOS_SANDBOX_DEFAULT_IMAGE in .env) — a prebaked image "
+            "live test requires EOS_LIVE_E2E_IMAGE or "
+            "settings.sandbox.daytona.default_image "
+            "(set EPHEMERALOS_SANDBOX_DEFAULT_IMAGE in .env) - a prebaked image "
             "with git, /testbed, and the runtime bundle marker"
         )
     pytest.skip(
         f"live test under EOS_SANDBOX_PROVIDER={provider_name} requires "
-        "EOS_LIVE_E2E_IMAGE or settings.sandbox.default_image to resolve "
+        "EOS_LIVE_E2E_IMAGE to resolve "
         "to a locally-available image tag with git, /testbed, and the "
         "runtime bundle marker."
     )

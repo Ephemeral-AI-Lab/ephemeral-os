@@ -27,7 +27,6 @@ should be extended to also collect ``advisor`` / ``resolver`` /
 from __future__ import annotations
 
 import json
-import os
 from collections import Counter
 from pathlib import Path
 
@@ -39,6 +38,7 @@ from task_center_runner.audit.events import EventType
 from task_center_runner.benchmarks.sweevo.fixtures import run_sweevo_scenario
 from task_center_runner.core.stores import TaskCenterStoreBundle
 from task_center_runner.scenarios import SCENARIO_REGISTRY
+from task_center_runner.tests._live_config import database_configured
 from tools._terminals.registry import render_terminal_catalog
 
 
@@ -49,7 +49,7 @@ _SCENARIO_NAME = "pipeline.initial_messages_capture"
 
 
 @pytest.mark.skipif(
-    not os.environ.get("EPHEMERALOS_DATABASE_URL"),
+    not database_configured(),
     reason="EPHEMERALOS_DATABASE_URL not set - task_center_runner requires PostgreSQL",
 )
 async def test_initial_messages_capture(

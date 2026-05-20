@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -16,6 +15,7 @@ from task_center_runner.core.runner import RunReport
 from task_center_runner.scenarios import SCENARIO_REGISTRY
 from task_center_runner.core.stores import TaskCenterStoreBundle
 from task_center_runner.benchmarks.sweevo.fixtures import run_sweevo_scenario
+from task_center_runner.tests._live_config import database_configured
 
 pytestmark = pytest.mark.asyncio
 
@@ -253,7 +253,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
 
 
 @pytest.mark.skipif(
-    not os.environ.get("EPHEMERALOS_DATABASE_URL"),
+    not database_configured(),
     reason="EPHEMERALOS_DATABASE_URL not set - task_center_runner requires PostgreSQL",
 )
 @pytest.mark.parametrize("case", _FOCUSED_CASES, ids=[case.name for case in _FOCUSED_CASES])

@@ -17,6 +17,7 @@ from typing import IO
 
 import pytest
 
+from config import get_central_config
 from benchmarks.sweevo.dataset import select_sweevo_instance
 from benchmarks.sweevo.models import SWEEvoInstance, _REPO_DIR
 from benchmarks.sweevo.prompt import build_sweevo_user_prompt
@@ -114,9 +115,10 @@ async def workspace(
 
 def _reuse_existing_auto_enabled() -> bool:
     """Return whether SWE-EVO tests may attach to an existing auto sandbox."""
-    if os.getenv("EOS_SWEEVO_FORCE_FRESH_SANDBOX") == "1":
+    reuse_mode = get_central_config().runner.sandbox_reuse_mode
+    if reuse_mode == "force_fresh":
         return False
-    return os.getenv("EOS_SWEEVO_REUSE_SANDBOX") == "1"
+    return reuse_mode == "reuse"
 
 
 def _acquire_sweevo_session_lock(instance_id: str) -> _SweevoSessionLock:

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
@@ -14,13 +13,14 @@ from task_center_runner.scenarios import SCENARIO_REGISTRY
 from task_center_runner.tests.sweevo._project_build_contracts import (
     assert_grep_glob_smoke_contract,
 )
+from task_center_runner.tests._live_config import database_configured
 
 
 pytestmark = pytest.mark.asyncio
 
 
 @pytest.mark.skipif(
-    not os.environ.get("EPHEMERALOS_DATABASE_URL"),
+    not database_configured(),
     reason="EPHEMERALOS_DATABASE_URL not set - task_center_runner requires PostgreSQL",
 )
 @pytest.mark.timeout(1200)
