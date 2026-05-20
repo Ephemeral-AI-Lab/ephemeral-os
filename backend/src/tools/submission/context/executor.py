@@ -22,7 +22,7 @@ class ExecutorSubmissionContext:
     """Unified context for executor-shaped terminal submissions.
 
     Tools call :meth:`submit_executor_success`,
-    :meth:`submit_executor_failure`, or :meth:`start_delegated_goal`
+    :meth:`submit_executor_blocker`, or :meth:`start_delegated_goal`
     without knowing whether the task is attempt-bound or entry-mode. The
     context dispatches to the right backend (orchestrator vs entry
     controller) internally.
@@ -64,9 +64,7 @@ class ExecutorSubmissionContext:
             summary=summary, artifacts=artifacts
         )
 
-    def submit_executor_failure(
-        self, *, summary: str, reason: str, details: list[str]
-    ) -> None:
+    def submit_executor_blocker(self, *, summary: str) -> None:
         if self.attempt_ctx is not None:
             from task_center import GeneratorSubmission
 
@@ -74,20 +72,16 @@ class ExecutorSubmissionContext:
                 GeneratorSubmission(
                     attempt_id=self.attempt_ctx.attempt.id,
                     task_id=self.task_center_task_id,
-                    outcome="failure",
+                    outcome="blocker",
                     summary=summary,
                     payload={
                         "generator_role": "executor",
-                        "reason": reason,
-                        "details": details,
                     },
                 )
             )
             return
         assert self.entry_controller is not None
-        self.entry_controller.apply_executor_failure(
-            summary=summary, reason=reason, details=details
-        )
+        self.entry_controller.apply_executor_blocker(summary=summary)
 
     def start_delegated_goal(
         self, *, goal: str

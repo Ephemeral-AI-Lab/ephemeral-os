@@ -18,7 +18,7 @@ from agents import (
     unregister_definition,
     validate_agent_definitions_resolved,
 )
-from task_center._core.agent_routing import (
+from task_center._core.terminal_tool_routing import (
     PredicateRegistry,
     ResolverContext,
     register_builtin_predicates,
@@ -119,48 +119,13 @@ def test_ac2_unknown_agent_name_is_rejected() -> None:
 
 
 # ---------------------------------------------------------------------------
-# AC7 — variant partition is mechanically total for the executor profile.
-# Every depth in {0,1,2,3,4} resolves to exactly one variant target.
+# AC7 — executor depth-gated variants were removed.
 # ---------------------------------------------------------------------------
 
 
-def test_ac7_executor_variant_disjunction_total_across_depths(monkeypatch) -> None:
-    """Every depth d in {0..4} satisfies EXACTLY ONE of the executor's two
-    variant predicates — within / above partition the depth axis."""
-    fake_depth = {"value": 0}
-
-    def _fake_nested_goal_depth(**_kwargs) -> int:
-        return fake_depth["value"]
-
-    monkeypatch.setattr(
-        "task_center._core.agent_routing.nested_goal_depth",
-        _fake_nested_goal_depth,
-    )
-
-    class _S:
-        def get(self, *_args, **_kwargs):
-            return None
-
-    deps = ContextEngineDeps(
-        goal_store=_S(),  # type: ignore[arg-type]
-        iteration_store=_S(),  # type: ignore[arg-type]
-        attempt_store=_S(),  # type: ignore[arg-type]
-        task_store=_S(),  # type: ignore[arg-type]
-    )
-    ctx = ResolverContext(scope=ContextScope(goal_id="m"), deps=deps)
-
-    within = PredicateRegistry.get(
-        "nested_goal_depth_within_handoff_range"
-    )
-    above = PredicateRegistry.get(
-        "nested_goal_depth_above_handoff_range"
-    )
-
-    for depth in range(5):
-        fake_depth["value"] = depth
-        assert within(ctx) ^ above(ctx), (
-            f"depth {depth} must satisfy exactly one of within/above"
-        )
+def test_ac7_executor_depth_handoff_predicates_are_removed() -> None:
+    assert not PredicateRegistry.has("nested_goal_depth_within_handoff_range")
+    assert not PredicateRegistry.has("nested_goal_depth_above_handoff_range")
 
 
 # ---------------------------------------------------------------------------
@@ -318,30 +283,15 @@ def test_ac9_thin_variants_only_with_non_always_final_rejected() -> None:
 
 
 def test_ac9_planner_md_shape_passes_validation() -> None:
-    """The planner.md shape — single variant + non-empty terminals — is the
-    paradigmatic passing case: terminals cover the no-match branch, no
-    ``always`` tail required."""
-    _stub_recipe("planner_closes_or_defers")
-    PredicateRegistry.register("nested_goal_depth_gt_1", lambda ctx: False)
-    full_only = AgentDefinition(
-        name="planner_closes_goal",
-        description="planner_closes_or_defers",
-        context_recipe="planner_closes_or_defers",
-        terminals=["submit_plan_closes_goal"],
-    )
+    """The planner.md shape has no profile variants; terminal routing is runtime policy."""
+    _stub_recipe("planner")
     planner = AgentDefinition(
-        name="planner_closes_or_defers",
-        description="planner_closes_or_defers",
-        context_recipe="planner_closes_or_defers",
+        name="planner",
+        description="planner",
+        context_recipe="planner",
         terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
-        variants=[
-            AgentVariant(
-                when="nested_goal_depth_gt_1", use="planner_closes_goal"
-            )
-        ],
     )
     register_definition(planner)
-    register_definition(full_only)
     # Must not raise.
     validate_agent_definitions_resolved()
 

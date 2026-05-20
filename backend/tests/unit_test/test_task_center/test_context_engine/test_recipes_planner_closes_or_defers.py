@@ -10,8 +10,8 @@ from task_center.context_engine.core import ContextEngineDeps, ContextEngineErro
 from task_center.context_engine.packet import (
     ContextPriority,
 )
-from task_center.context_engine.recipes.planner_closes_or_defers import (
-    _planner_closes_or_defers_build,
+from task_center.context_engine.recipes.planner import (
+    _planner_build,
 )
 from task_center.context_engine.renderer import XmlPromptRenderer
 from task_center.context_engine.scope import ContextScope
@@ -113,7 +113,7 @@ def test_iteration1_emits_goal_then_current_iteration_child(
     )
     g = _seed_running_attempt(attempt_store, iteration.id, sequence_no=1)
 
-    packet = _planner_closes_or_defers_build(
+    packet = _planner_build(
         ContextScope(
             goal_id=request.id, iteration_id=iteration.id, attempt_id=g.id
         ),
@@ -154,7 +154,7 @@ def test_iteration2_emits_goal_prior_results_and_current_iteration(
     )
     g = _seed_running_attempt(attempt_store, iteration2.id, sequence_no=1)
 
-    packet = _planner_closes_or_defers_build(
+    packet = _planner_build(
         ContextScope(
             goal_id=request.id, iteration_id=iteration2.id, attempt_id=g.id
         ),
@@ -199,7 +199,7 @@ def test_iteration3_emits_two_pairs_with_priority_split(
     )
     g = _seed_running_attempt(attempt_store, iteration3.id, sequence_no=1)
 
-    packet = _planner_closes_or_defers_build(
+    packet = _planner_build(
         ContextScope(
             goal_id=request.id, iteration_id=iteration3.id, attempt_id=g.id
         ),
@@ -236,7 +236,7 @@ def test_missing_prior_spec_raises_context_engine_error(
     g = _seed_running_attempt(attempt_store, iteration2.id, sequence_no=1)
 
     with pytest.raises(ContextEngineError):
-        _planner_closes_or_defers_build(
+        _planner_build(
             ContextScope(
                 goal_id=request.id, iteration_id=iteration2.id, attempt_id=g.id
             ),
@@ -261,7 +261,7 @@ def test_three_failed_attempts_emit_three_high_priority_blocks(
         _seed_failed_attempt(attempt_store, iteration.id, sequence_no=n)
     current_attempt = _seed_running_attempt(attempt_store, iteration.id, sequence_no=4)
 
-    packet = _planner_closes_or_defers_build(
+    packet = _planner_build(
         ContextScope(
             goal_id=request.id,
             iteration_id=iteration.id,
@@ -330,7 +330,7 @@ def test_failed_attempt_includes_plan_type_statuses_and_summaries(
     )
     current_attempt = _seed_running_attempt(attempt_store, iteration.id, sequence_no=2)
 
-    packet = _planner_closes_or_defers_build(
+    packet = _planner_build(
         ContextScope(
             goal_id=request.id,
             iteration_id=iteration.id,
@@ -379,7 +379,7 @@ def test_all_failed_attempts_render_as_high_priority_blocks(
         attempt_store, iteration.id, sequence_no=total + 1
     )
 
-    packet = _planner_closes_or_defers_build(
+    packet = _planner_build(
         ContextScope(
             goal_id=request.id,
             iteration_id=iteration.id,
@@ -433,7 +433,7 @@ def test_iteration_2_plus_reading_a_structure(
     )
     current_attempt = _seed_running_attempt(attempt_store, iteration3.id, sequence_no=1)
 
-    packet = _planner_closes_or_defers_build(
+    packet = _planner_build(
         ContextScope(
             goal_id=request.id,
             iteration_id=iteration3.id,

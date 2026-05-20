@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from tools._names import (
-    SUBMIT_EXECUTION_FAILURE_TOOL_NAME,
+    SUBMIT_EXECUTION_BLOCKER_TOOL_NAME,
     SUBMIT_EXECUTION_HANDOFF_TOOL_NAME,
 )
 
@@ -19,7 +19,7 @@ Call this when:
 - You can list the concrete artifacts you produced.
 
 Do NOT call this when:
-- Any acceptance criterion is unmet — use `{SUBMIT_EXECUTION_FAILURE_TOOL_NAME}`.
+- Any acceptance criterion is unmet — use `{SUBMIT_EXECUTION_BLOCKER_TOOL_NAME}`.
 - The task is beyond your scope or too complex to solve in one shot —
   use `{SUBMIT_EXECUTION_HANDOFF_TOOL_NAME}` to delegate to the planner.
 - You haven't actually performed the work yet — terminate only after

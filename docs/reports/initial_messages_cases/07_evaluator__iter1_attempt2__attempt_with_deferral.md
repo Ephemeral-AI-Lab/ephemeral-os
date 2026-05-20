@@ -1,4 +1,4 @@
-# evaluator — iteration 1, attempt 2 (evaluator_instruction branch: has_deferred_goal_for_next_iteration=True; attempt with a deferred goal)
+# evaluator — iteration 1, attempt 2 (evaluator task-guidance branch: has_deferred_goal_for_next_iteration=True; attempt with a deferred goal)
 - source: `goal_01_fd45befd-45f2-47b9-a6ba-0975c575c72d/iteration_01_d3bdafea-2967-4ba7-b7e6-d6e61eeed9e3/attempt_02_a106dcda-744a-4a6a-9261-98f98635138f/03_evaluator_a106dcda-744a-4a6a-9261-98f98635138f:evaluator/message.jsonl`
 
 ## system

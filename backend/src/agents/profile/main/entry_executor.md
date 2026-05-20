@@ -16,7 +16,7 @@ allowed_tools:
 terminals:
   - submit_execution_handoff
   - submit_execution_success
-  - submit_execution_failure
+  - submit_execution_blocker
 notification_triggers:
   - request_goal_after_edit
 context_recipe: entry_executor
@@ -30,7 +30,8 @@ spawns a complex-task request that goes through the full planner / generator /
 evaluator harness.
 
 Finish via `submit_execution_success` when the request is complete and verified,
-or `submit_execution_failure` when the request cannot be completed.
+or `submit_execution_blocker` when the request cannot proceed because of a
+concrete blocker.
 
 ## Submission discipline
 
@@ -40,11 +41,7 @@ or `submit_execution_failure` when the request cannot be completed.
 
 Submit exactly one terminal tool per run.
 
-**Why entry_executor keeps all three terminals.** Non-entry executors are
-depth-gated by the resolver: the `executor_success_handoff` variant exposes
-success + handoff, the `executor_success_failure` variant exposes success +
-failure. The entry executor is the documented carve-out — it sits outside the
+**Why entry_executor keeps all three terminals.** It sits outside the
 goal/iteration/attempt tree (no parent attempt to return to) and terminates
 the user-facing request directly, so it retains the full success / handoff /
-failure surface. See `docs/wiki/role-generator.md` for the depth-gating
-contract that governs non-entry executors.
+blocker surface.

@@ -1,4 +1,4 @@
-"""``planner_closes_or_defers`` recipe — context for one attempt planner spawn.
+"""``planner`` recipe — context for one attempt planner spawn.
 
 The recipe reads:
 
@@ -29,11 +29,11 @@ from task_center.context_engine.recipes.attempts import (
 from task_center.context_engine.recipes_registry import ContextRecipe
 from task_center.context_engine.scope import ContextScope
 
-PLANNER_CLOSES_OR_DEFERS_ID = "planner_closes_or_defers"
+PLANNER_ID = "planner"
 _REQUIRED_FIELDS = frozenset({"goal_id", "iteration_id", "attempt_id"})
 
 
-def _planner_closes_or_defers_build(
+def _planner_build(
     scope: ContextScope, deps: ContextEngineDeps
 ) -> ContextPacket:
     goal = deps.goal_store.get(scope.goal_id)
@@ -70,8 +70,8 @@ def _planner_closes_or_defers_build(
     )
 
 
-PLANNER_CLOSES_OR_DEFERS_RECIPE = ContextRecipe(
-    id=PLANNER_CLOSES_OR_DEFERS_ID,
+PLANNER_RECIPE = ContextRecipe(
+    id=PLANNER_ID,
     required_scope_fields=_REQUIRED_FIELDS,
-    build=_planner_closes_or_defers_build,
+    build=_planner_build,
 )

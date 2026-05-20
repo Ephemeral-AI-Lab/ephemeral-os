@@ -42,7 +42,7 @@ _SUBMISSION_TOOL_NAMES = {
     "submit_plan_closes_goal",
     "submit_plan_defers_goal",
     "submit_execution_success",
-    "submit_execution_failure",
+    "submit_execution_blocker",
     "submit_evaluation_success",
     "submit_evaluation_failure",
     "submit_verification_success",

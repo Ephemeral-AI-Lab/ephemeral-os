@@ -20,7 +20,7 @@ Implemented (reference scenarios):
 - :class:`InitialGoal`
 - :class:`NestedGoal`
 - :class:`NestedGoalFailure`
-- :class:`DeferredParentPlannerFullOnly`
+- :class:`DeferredParentPlannerTerminalRouting`
 """
 
 from __future__ import annotations
@@ -66,8 +66,8 @@ from task_center_runner.scenarios.pipeline.nested_goal import (
     NestedGoal,
     NestedGoalFailure,
 )
-from task_center_runner.scenarios.pipeline.deferred_parent_planner_closes_goal import (
-    DeferredParentPlannerFullOnly,
+from task_center_runner.scenarios.pipeline.deferred_parent_planner_terminal_routing import (
+    DeferredParentPlannerTerminalRouting,
 )
 
 __all__ = [
@@ -86,5 +86,5 @@ __all__ = [
     "InitialGoal",
     "NestedGoal",
     "NestedGoalFailure",
-    "DeferredParentPlannerFullOnly",
+    "DeferredParentPlannerTerminalRouting",
 ]

@@ -2,9 +2,9 @@
 the previously-flagged content gaps in the initial_messages_cases
 directory.
 
-* Case 12 — planner_closes_goal variant routed in a child-goal context
+* Case 12 — planner launch routed to close-only terminals in a child-goal context
   (no submit_plan_defers_goal terminal). Source:
-  pipeline.deferred_parent_planner_closes_goal.
+  pipeline.deferred_parent_planner_terminal_routing.
 
 * Case 13 — planner that sees a *rich* `<attempt status="failed">` body
   (real plan_spec, real `<generator_outcomes>`, real
@@ -100,15 +100,14 @@ def _write_case(
     case_path.write_text("\n".join(parts))
 
 
-def case_12_planner_closes_goal_child_goal() -> None:
-    """Capture case 12 from the deferred_parent_planner_closes_goal scenario.
+def case_12_planner_child_goal_close_only() -> None:
+    """Capture case 12 from the deferred_parent_planner_terminal_routing scenario.
 
     The scenario submits a partial plan in the parent goal, then delegates a
-    child goal. The child goal's planner is resolved via the
-    ``nested_goal_depth_gt_1`` variant to ``planner_closes_goal`` (no
-    ``submit_plan_defers_goal`` terminal).
+    child goal. The child goal's planner keeps the single ``planner`` profile,
+    but launch-time terminal routing removes ``submit_plan_defers_goal``.
     """
-    run = _latest_run("pipeline.deferred_parent_planner_closes_goal")
+    run = _latest_run("pipeline.deferred_parent_planner_terminal_routing")
     # The child goal directory is ``goal_02_*`` (root is goal_01).
     candidates = list(run.rglob("goal_02_*/iteration_01_*/attempt_01_*/01_planner_*:planner/message.jsonl"))
     assert len(candidates) == 1, candidates
@@ -116,26 +115,33 @@ def case_12_planner_closes_goal_child_goal() -> None:
     rel = jsonl.relative_to(run)
     system, um1, um2, um3 = _read_initial_rows(jsonl)
     _write_case(
-        case_path=CASES_DIR / "12_planner_closes_goal__child_goal__delegated_from_deferring_parent.md",
+        case_path=CASES_DIR
+        / "12_planner__child_goal__delegated_from_deferring_parent.md",
         title=(
-            "planner_closes_goal — child goal delegated from a partial-plan parent "
-            "(variant target: only `submit_plan_closes_goal` is available)"
+            "planner - child goal delegated from a partial-plan parent "
+            "(only `submit_plan_closes_goal` is available)"
         ),
-        source=f"pipeline.deferred_parent_planner_closes_goal/{run.name}/{rel}",
+        source=(
+            "pipeline.deferred_parent_planner_terminal_routing/"
+            f"{run.name}/{rel}"
+        ),
         notes=(
             "The parent attempt submitted a partial plan that delegated work to a "
-            "child goal. The child goal's planner is resolved through the "
-            "``nested_goal_depth_gt_1`` variant to ``planner_closes_goal`` — a leaf "
-            "planner profile whose ``terminals:`` frontmatter list omits "
-            "``submit_plan_defers_goal``. Row 4's ``<terminal_tool_selection>`` "
-            "block therefore lists only ``submit_plan_closes_goal``."
+            "child goal. The child goal still launches the ``planner`` profile, "
+            "but terminal routing uses ``nested_goal_depth_gt_1`` to expose only "
+            "``submit_plan_closes_goal``. Row 4's "
+            "``<terminal_tool_selection>`` block therefore lists only that "
+            "terminal."
         ),
         system=system,
         user_msg_1=um1,
         user_msg_2=um2,
         user_msg_3=um3,
     )
-    print(f"wrote {CASES_DIR}/12_planner_closes_goal__child_goal__delegated_from_deferring_parent.md")
+    print(
+        f"wrote {CASES_DIR}/"
+        "12_planner__child_goal__delegated_from_deferring_parent.md"
+    )
 
 
 def case_13_planner_after_evaluator_failure() -> None:
@@ -230,7 +236,7 @@ def case_15_evaluator_pre_failure_submission() -> None:
 
 def main() -> int:
     CASES_DIR.mkdir(parents=True, exist_ok=True)
-    case_12_planner_closes_goal_child_goal()
+    case_12_planner_child_goal_close_only()
     case_13_planner_after_evaluator_failure()
     case_14_executor_with_dependency_results()
     case_15_evaluator_pre_failure_submission()

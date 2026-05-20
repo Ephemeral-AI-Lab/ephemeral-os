@@ -51,7 +51,7 @@ accepted.
 | Hard gates and prompt policy are blurred | The e-commerce example shows rendered context but does not distinguish schema/lifecycle invariants from recipe ordering and omission policy. | Add a "Runtime Gates And Context Policies Represented By This Example" section to the example, with separate tables for enforceable gates and prompt-shaping policy. |
 | Summary provenance is implicit | Example summaries are realistic, but the doc does not state where each summary comes from. | Add a summary provenance table that traces planner contract, generator summaries, dependency summaries, evaluator results, failed-attempt outcomes, and continuation summaries. |
 | Retry failed-attempt framing is too raw | The older failed-attempt landscape used raw fields such as `plan_kind`, `generator_summaries`, and `fail_reason`. | Use the [[failed-attempt-context-framing-implementation-plan]] frame: `Accepted Plan`, `Generator Outcomes`, and `Evaluator Judgment` when an evaluator ran. |
-| Adjacent docs need the missing-dependency invariant | Current `generator_v1` raises context assembly failure when a dependency task row is missing, so `role-generator.md` and `context-engine-recipes.md` must not describe missing dependency rows as skipped. | Include those stale-doc fixes in the same documentation pass so the report does not create a new contradiction. |
+| Adjacent docs need the missing-dependency invariant | Current `generator` raises context assembly failure when a dependency task row is missing, so `role-generator.md` and `context-engine-recipes.md` must not describe missing dependency rows as skipped. | Include those stale-doc fixes in the same documentation pass so the report does not create a new contradiction. |
 
 ## Target Agent Picture
 
@@ -113,7 +113,7 @@ Final block sequence (planner_v1, packet order):
 Root generator packet:
 
 ```text
-Final block sequence (generator_v1, packet order):
+Final block sequence (generator, packet order):
   [0] task_specification                             HIGH      heading=# Attempt Plan
   [1] planned_task_spec        (gen-db-contracts)    REQUIRED  heading=# Assigned Task
 ```
@@ -121,7 +121,7 @@ Final block sequence (generator_v1, packet order):
 Dependent generator packet:
 
 ```text
-Final block sequence (generator_v1, packet order):
+Final block sequence (generator, packet order):
   [0] task_specification                             HIGH      heading=# Attempt Plan
   [1] dependency_summary       (gen-db-contracts)    MEDIUM    group=# Dependency Results
   [2] planned_task_spec        (gen-product-api)     REQUIRED  heading=# Assigned Task
@@ -157,7 +157,7 @@ flowchart TD
 Generator packet:
 
 ```text
-Final block sequence (generator_v1, packet order):
+Final block sequence (generator, packet order):
   [0] task_specification                             HIGH      heading=# Attempt Plan
   [1] dependency_summary       (direct dependency)   MEDIUM    group=# Dependency Results
   [2] planned_task_spec        (assigned task)       REQUIRED  heading=# Assigned Task
@@ -218,7 +218,7 @@ Final block sequence (planner_v1, packet order):
 Retry generator packet:
 
 ```text
-Final block sequence (generator_v1, packet order):
+Final block sequence (generator, packet order):
   [0] task_specification          (retry attempt)    HIGH      heading=# Attempt Plan
   [1] dependency_summary          (new dependency)   MEDIUM    group=# Dependency Results
   [2] planned_task_spec           (new task)         REQUIRED  heading=# Assigned Task
@@ -386,7 +386,7 @@ not persist resolved agent roles only to support evaluator summary selection.
    - Fix the retry-planner lesson row to describe accepted plan, generator
      outcomes, and evaluator judgment instead of raw failure fields.
    - Fix the missing-dependency prose in `role-generator.md` and
-     `context-engine-recipes.md` so both say current `generator_v1` raises a
+     `context-engine-recipes.md` so both say current `generator` raises a
      context assembly error instead of skipping missing dependency rows without
      an error.
 

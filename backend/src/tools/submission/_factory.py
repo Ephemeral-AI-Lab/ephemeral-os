@@ -11,7 +11,7 @@ from tools.submission.evaluator import (
 )
 from tools.submission.executor import submit_execution_handoff
 from tools.submission.executor import (
-    submit_execution_failure,
+    submit_execution_blocker,
     submit_execution_success,
 )
 from tools.submission.verifier import (
@@ -31,7 +31,7 @@ def make_submission_tools() -> list[BaseTool]:
         submit_plan_defers_goal,
         submit_execution_handoff,
         submit_execution_success,
-        submit_execution_failure,
+        submit_execution_blocker,
         submit_verification_success,
         submit_verification_failure,
         submit_evaluation_success,

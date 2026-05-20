@@ -116,7 +116,7 @@ def test_validate_skill_files_aggregates_violations(tmp_path: Path):
 
 
 def test_shipped_planner_skills_pass_lint():
-    """The two skill files that ship in backend/config/skills/ must be clean."""
+    """The skill files that ship in backend/config/skills/ must be clean."""
     from agents import load_agents_tree
 
     profiles = Path(__file__).resolve().parents[3] / "src" / "agents" / "profile"
@@ -125,8 +125,8 @@ def test_shipped_planner_skills_pass_lint():
         for d in load_agents_tree(profiles)
         if d.skill is not None
     ]
-    # Sanity: both planner variants exist and declare skills.
+    # Sanity: the planner profile exists and declares a skill.
     names = {d.name for d in defs}
-    assert {"planner_closes_or_defers", "planner_closes_goal"}.issubset(names)
+    assert "planner" in names
     # Must not raise.
     validate_skill_files(defs)

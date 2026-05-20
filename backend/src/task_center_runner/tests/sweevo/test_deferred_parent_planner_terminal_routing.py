@@ -1,4 +1,4 @@
-"""Live regression for partial-parent planner variant routing."""
+"""Live regression for partial-parent planner terminal routing."""
 
 from __future__ import annotations
 
@@ -23,13 +23,15 @@ pytestmark = pytest.mark.asyncio
     not database_configured(),
     reason="EPHEMERALOS_DATABASE_URL not set - task_center_runner requires PostgreSQL",
 )
-async def test_partial_parent_routes_child_planner_to_full_only_agent_md(
+async def test_partial_parent_filters_child_planner_to_close_terminal(
     sweevo_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
     stores: TaskCenterStoreBundle,
 ) -> None:
-    scenario = SCENARIO_REGISTRY["pipeline.deferred_parent_planner_closes_goal"]()
+    scenario = SCENARIO_REGISTRY[
+        "pipeline.deferred_parent_planner_terminal_routing"
+    ]()
     report = await run_sweevo_scenario(
         scenario,
         instance=sweevo_instance,
@@ -42,15 +44,11 @@ async def test_partial_parent_routes_child_planner_to_full_only_agent_md(
     planner_launches = [
         launch.agent_name for launch in report.launches if launch.role == "planner"
     ]
-    assert planner_launches == [
-        "planner_closes_or_defers",
-        "planner_closes_goal",
-        "planner_closes_or_defers",
-    ]
+    assert planner_launches == ["planner", "planner", "planner"]
     assert _tool_count(report.tool_calls, "submit_plan_defers_goal") == 1
     assert _tool_count(report.tool_calls, "submit_plan_closes_goal") == 2
     _assert_partial_parent_graph(report.graph_summary)
-    _assert_full_only_agent_md_was_recorded(report.run_dir)
+    _assert_restricted_planner_catalog_was_recorded(report.run_dir)
 
 
 def _tool_count(tool_calls: list[Any], tool_name: str) -> int:
@@ -76,22 +74,49 @@ def _assert_partial_parent_graph(graph_summary: dict[str, Any]) -> None:
     assert str(child["requested_by_task_id"]).endswith(":delegate_child")
 
 
-def _assert_full_only_agent_md_was_recorded(run_dir: Path) -> None:
-    prompts = list(_system_prompts_for(run_dir, "planner_closes_goal"))
-    assert prompts, f"no planner_closes_goal system prompt in {run_dir}"
-    assert any("Continuing the goal is disabled" in prompt for prompt in prompts)
-    assert all("submit_plan_defers_goal" not in prompt for prompt in prompts)
+def _assert_restricted_planner_catalog_was_recorded(run_dir: Path) -> None:
+    active_terminal_sets = list(_active_terminal_sets_for(run_dir, "planner"))
+    assert ("submit_plan_closes_goal",) in active_terminal_sets
+
+    catalogs = list(_terminal_catalog_rows_for(run_dir, "planner"))
+    assert catalogs, f"no planner terminal catalog row in {run_dir}"
+    assert any(
+        "submit_plan_closes_goal" in catalog
+        and "submit_plan_defers_goal" not in catalog
+        for catalog in catalogs
+    )
 
 
-def _system_prompts_for(run_dir: Path, agent_name: str) -> Iterator[str]:
+def _active_terminal_sets_for(
+    run_dir: Path,
+    agent_name: str,
+) -> Iterator[tuple[str, ...]]:
     for path in run_dir.rglob("message.jsonl"):
         for line in path.read_text(encoding="utf-8").splitlines():
             row = json.loads(line)
             metadata = row.get("metadata") or {}
-            if metadata.get("agent_name") != agent_name or row.get("role") != "system":
+            if metadata.get("agent_name") != agent_name:
                 continue
-            yield "\n".join(
+            active = metadata.get("active_terminals")
+            if isinstance(active, list):
+                yield tuple(str(name) for name in active)
+
+
+def _terminal_catalog_rows_for(run_dir: Path, agent_name: str) -> Iterator[str]:
+    for path in run_dir.rglob("message.jsonl"):
+        for line in path.read_text(encoding="utf-8").splitlines():
+            row = json.loads(line)
+            metadata = row.get("metadata") or {}
+            if metadata.get("agent_name") != agent_name or row.get("role") != "user":
+                continue
+            text = "\n".join(
                 str(block.get("text") or "")
                 for block in row.get("content", [])
                 if isinstance(block, dict)
             )
+            if "<terminal_tool_selection>" not in text:
+                continue
+            yield text.split("<terminal_tool_selection>\n", 1)[1].split(
+                "\n</terminal_tool_selection>",
+                1,
+            )[0]

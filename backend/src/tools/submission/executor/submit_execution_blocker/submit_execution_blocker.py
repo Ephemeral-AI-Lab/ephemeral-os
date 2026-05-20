@@ -1,4 +1,4 @@
-"""submit_execution_failure terminal tool."""
+"""submit_execution_blocker terminal tool."""
 
 from __future__ import annotations
 
@@ -13,42 +13,36 @@ from tools.submission.context import (
     resolve_executor_submission_context,
 )
 from .prompt import (
-    get_submit_execution_failure_description,
+    get_submit_execution_blocker_description,
 )
 
 
-class SubmitExecutionFailureInput(BaseModel):
+class SubmitExecutionBlockerInput(BaseModel):
     summary: str = Field(..., min_length=1)
-    reason: str = Field(..., min_length=1)
-    details: list[str] = Field(default_factory=list)
 
 
 @tool(
-    name="submit_execution_failure",
-    description=get_submit_execution_failure_description(),
-    input_model=SubmitExecutionFailureInput,
+    name="submit_execution_blocker",
+    description=get_submit_execution_blocker_description(),
+    input_model=SubmitExecutionBlockerInput,
     output_model=TextToolOutput,
     is_terminal_tool=True,
 )
-async def submit_execution_failure(
+async def submit_execution_blocker(
     summary: str,
-    reason: str,
-    details: list[str],
     *,
     context: ToolExecutionContextService,
 ) -> ToolResult:
     try:
         submission_context = resolve_executor_submission_context(context)
-        submission_context.submit_executor_failure(
-            summary=summary, reason=reason, details=details
-        )
+        submission_context.submit_executor_blocker(summary=summary)
     except (AttemptSubmissionContextError, TaskCenterInvariantViolation) as exc:
         return ToolResult(output=str(exc), is_error=True)
 
     return ToolResult(
-        output="Accepted execution failure.",
+        output="Accepted execution blocker.",
         metadata={
-            "submission_kind": "generator_executor_failure",
+            "submission_kind": "generator_executor_blocker",
             "task_center_task_id": submission_context.task_center_task_id,
             "attempt_id": submission_context.attempt_id,
         },

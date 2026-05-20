@@ -24,13 +24,9 @@ Combines three orthogonal composer branches into one live run so a single
    planner sees a ``<iteration iteration_no="1" status="prior">`` group
    with the accepted plan and summary.
 
-3. **Different agent routings** — both iterations include at least one
-   generator task per attempt, so the `RuleBasedAgentResolver` picks the
-   right executor variant for that depth (today: `executor_success_failure`
-   when the planner closes the goal at depth > MAX_HANDOFF_DEPTH,
-   `executor_success_handoff` when handoff is still in scope). The
-   single-task plans keep executor captures focused on the composer's
-   context shape rather than tool chatter.
+3. **Executor launch coverage** — both iterations include at least one
+   generator task per attempt. The single-task plans keep executor captures
+   focused on the composer's context shape rather than tool chatter.
 
 This scenario does NOT trigger advisor / resolver / subagent calls because
 the mock runner does not currently invoke them — those initial-message

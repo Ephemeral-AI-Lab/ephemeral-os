@@ -57,22 +57,18 @@ def test_apply_executor_success_marks_task_and_run_done(
     assert run["status"] == "done"
 
 
-def test_apply_executor_failure_marks_task_and_run_failed(
+def test_apply_executor_blocker_marks_task_blocked_and_run_failed(
     entry_setup, task_store, task_center_run_id
 ):
     controller = entry_setup
 
-    controller.apply_executor_failure(
-        summary="cannot proceed",
-        reason="missing input",
-        details=["no goal"],
-    )
+    controller.apply_executor_blocker(summary="cannot proceed")
 
     task = task_store.get_task(controller.task_id)
     run = task_store.get_run(task_center_run_id)
     assert task is not None
-    assert task["status"] == TaskCenterTaskStatus.FAILED.value
-    assert task["summaries"][-1]["payload"]["reason"] == "missing input"
+    assert task["status"] == TaskCenterTaskStatus.BLOCKED.value
+    assert task["summaries"][-1]["outcome"] == "blocker"
     assert run is not None
     assert run["status"] == "failed"
 

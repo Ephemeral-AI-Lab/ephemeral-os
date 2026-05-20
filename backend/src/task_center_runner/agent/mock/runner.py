@@ -48,7 +48,7 @@ from tools.submission.evaluator import (
     submit_evaluation_success,
 )
 from tools.submission.executor import (
-    submit_execution_failure,
+    submit_execution_blocker,
     submit_execution_success,
 )
 from tools.submission.executor.submit_execution_handoff import (
@@ -368,12 +368,8 @@ class MockSquadRunner:
                     else "Scenario-injected generator failure."
                 )
                 result = await self._call_tool(
-                    submit_execution_failure,
-                    {
-                        "summary": reason,
-                        "reason": reason,
-                        "details": [reason],
-                    },
+                    submit_execution_blocker,
+                    {"summary": reason},
                     metadata,
                     emit,
                 )
@@ -1246,6 +1242,7 @@ class MockSquadRunner:
         role = str(agent_def.agent_kind.value or "")
         checks: dict[str, bool]
         reason: str
+        active_terminals = set(metadata.get("active_terminals") or agent_def.terminals)
         if agent_def.name == "entry_executor":
             checks = {
                 "entry_request": "<entry_request>" in prompt,
@@ -1256,16 +1253,17 @@ class MockSquadRunner:
                 "Entry executor receives the exact SWE-EVO user request as a "
                 "required entry_request block before it delegates the goal."
             )
-        elif agent_def.name == "planner_closes_goal":
+        elif role == "planner" and "submit_plan_defers_goal" not in active_terminals:
             checks = {
                 "goal": "<goal>" in prompt,
-                "goal_only_context": "<iteration " not in prompt,
+                "current_iteration": (
+                    "<iteration " in prompt and 'status="current"' in prompt
+                ),
                 "closes_goal_terminal": "submit_plan_closes_goal" in prompt,
                 "no_defer_terminal": "submit_plan_defers_goal" not in prompt,
             }
             reason = (
-                "Full-only planner context is intentionally goal-only and exposes "
-                "only the closes-goal terminal."
+                "Depth-restricted planner exposes only the closes-goal terminal."
             )
         elif role == "planner":
             attempt, iteration = self._current_attempt_and_iteration(metadata)

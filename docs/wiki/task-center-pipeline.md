@@ -54,15 +54,15 @@ def start_task_center_entry_run(
 5. `EphemeralAttemptAgentLauncher.launch(AgentLaunch)` schedules an asyncio Task
 6. Returns `TaskCenterEntryHandle` (contains `launcher` for `wait_for_idle()`)
 
-`EntryTaskController` owns: `apply_executor_success`, `apply_executor_failure`, `apply_run_exhausted`, `apply_mission_close_report`, `mark_waiting_mission`, `restore_running_after_failed_mission_start` (`controller.py:29-182`).
+`EntryTaskController` owns: `apply_executor_success`, `apply_executor_blocker`, `apply_run_exhausted`, `apply_mission_close_report`, `mark_waiting_mission`, `restore_running_after_failed_mission_start` (`controller.py:29-182`).
 
 ## Roles
 
 | Role | Agent name | What it does | Terminal submission tool |
 |---|---|---|---|
-| `entry_executor` | `entry_executor` | Top-level user-request agent; either completes directly or delegates via `submit_execution_handoff`. Not a Mission. | `submit_execution_success` / `submit_execution_failure` |
+| `entry_executor` | `entry_executor` | Top-level user-request agent; either completes directly, blocks, or delegates via `submit_execution_handoff`. Not a Mission. | `submit_execution_success` / `submit_execution_blocker` / `submit_execution_handoff` |
 | `planner` | `planner` | Plans one Attempt: emits `PlannerSubmission` encoding generator DAG, `task_specification`, `evaluation_criteria`, optional `deferred_goal`. | `submit_full_plan` / `submit_partial_plan` |
-| `generator` (executor) | agent-specific | Executes one DAG leaf task. Optionally calls `submit_execution_handoff` to delegate to a child Mission. | `submit_execution_success` / `submit_execution_failure` / `submit_execution_handoff` |
+| `generator` (executor) | agent-specific | Executes one DAG leaf task. Optionally calls `submit_execution_handoff` to delegate to a child Mission. | `submit_execution_success` / `submit_execution_blocker` / `submit_execution_handoff` |
 | `generator` (verifier) | agent-specific | Verifies work produced by an executor. | `submit_verification_success` / `submit_verification_failure` |
 | `evaluator` | `evaluator` | Evaluates the full DAG outcome; pass closes the Attempt. | `submit_evaluation_success` / `submit_evaluation_failure` |
 
@@ -75,7 +75,7 @@ Each tool calls into `AttemptOrchestrator` (or `EntryTaskController` for entry-m
 | `submit_full_plan` | `apply_plan_submission(kind="full")` | Planner→DONE; stage→`generating`; generator rows PENDING; dispatcher launches ready |
 | `submit_partial_plan` | `apply_plan_submission(kind="partial", deferred_goal=…)` | Same + records `deferred_goal` |
 | `submit_execution_success` | `apply_generator_submission(outcome="success")` | Gen→DONE; dispatcher checks quiescence → spawns evaluator if all done |
-| `submit_execution_failure` | `apply_generator_submission(outcome="failure")` | Gen→FAILED; descendants BLOCKED → attempt closes FAILED/`generator_failed` |
+| `submit_execution_blocker` | `apply_generator_submission(outcome="blocker")` | Gen→BLOCKED; dependent PENDING tasks stay not-started → attempt closes FAILED/`generator_failed` after runnable siblings quiesce |
 | `submit_verification_*` | Same `apply_generator_submission` path | As executor success/failure |
 | `submit_evaluation_success` | `apply_evaluator_submission(outcome="success")` | Eval→DONE; attempt closes PASSED; `EpisodeManager.handle_attempt_closed` emits `TerminalSuccess` or `SuccessContinue` |
 | `submit_evaluation_failure` | `apply_evaluator_submission(outcome="failure")` | Eval→FAILED; attempt closes FAILED/`evaluator_failed` |
@@ -144,7 +144,7 @@ Child Mission close:
 - `dependency_task_ids(attempt_id, local_deps)` (`generator_dag.py:52`) — local→full task id.
 - `needs[]` column stores full task ids of upstream deps.
 - `ready_pending_generator_ids` (`generator_dag.py:72`) — DONE-deps filter; called by dispatcher.
-- `blocked_descendant_ids` (`generator_dag.py:90`) — BFS-marks downstream PENDING as BLOCKED on failure.
+- `summarize_generator_dag` — treats PENDING tasks whose dependency chain contains a FAILED/BLOCKED task as unreachable not-started work, allowing the attempt to close failed once runnable work is quiescent.
 
 `ContextScope` (`context_engine/scope.py`) carries `mission_id`, `episode_id`, `attempt_id`, `task_id` into `ContextComposer.compose` (`agent_launch/composer.py:43`): resolver → engine.build → optional extra blocks → persist packet → renderer → `LaunchBundle`.
 
@@ -217,7 +217,7 @@ After `start_task_center_entry_run` returns: `await handle.launcher.wait_for_idl
 - **Episodic continuation** — runner calls `submit_partial_plan(deferred_goal=…)`; assert second Episode with `creation_reason=PARTIAL_CONTINUATION`.
 - **Initial mission** — first Episode `creation_reason=INITIAL`, `sequence_no=1`, Mission `status=succeeded`.
 - **Nested mission** — runner calls `submit_execution_handoff`; assert child Mission with `requested_by_task_id=<gen_task_id>` and close report routed back.
-- **Dependency context** — multi-task plan with `deps`; assert PENDING tasks not launched until `needs[]` are DONE; assert blocked descendants on failure.
+- **Dependency context** — multi-task plan with `deps`; assert PENDING tasks are not launched until `needs[]` are DONE; assert descendants stay PENDING when an upstream task is blocked or failed.
 - **Planner validation** — invalid plan (duplicate local_id, unknown dep, partial without `deferred_goal`); assert orchestrator raises `TaskCenterInvariantViolation` and attempt closes `fail_reason=planner_failed`.
 
 ---

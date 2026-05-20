@@ -1,4 +1,4 @@
-"""Failed ancestor blocks downstream generator descendants."""
+"""Blocked ancestor leaves downstream generator descendants not started."""
 
 from __future__ import annotations
 
@@ -12,13 +12,13 @@ from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, ToolCallSpec
 
 
-def _blocked_descendants_plan() -> dict[str, Any]:
+def _unreachable_pending_plan() -> dict[str, Any]:
     return {
         "plan_spec": (
-            "Fail root task a and prove descendants b, c, and d never launch."
+            "Block root task a and prove descendants b, c, and d never launch."
         ),
         "evaluation_criteria": [
-            "Downstream descendants of failed task a were marked blocked.",
+            "Downstream descendants of blocked task a remained pending.",
             "No evaluator launched for the failed generator stage.",
         ],
         "tasks": [
@@ -28,16 +28,16 @@ def _blocked_descendants_plan() -> dict[str, Any]:
             {"id": "d", "agent_name": "executor", "deps": ["b", "c"]},
         ],
         "task_specs": {
-            "a": "ACTION fail_root reason=blocked_descendants",
-            "b": "This task must remain blocked by a.",
-            "c": "This task must remain blocked by a.",
-            "d": "This fan-in task must remain blocked by b and c.",
+            "a": "ACTION fail_root reason=unreachable_pending",
+            "b": "This task must remain pending behind a.",
+            "c": "This task must remain pending behind a.",
+            "d": "This fan-in task must remain pending behind b and c.",
         },
     }
 
 
 class DependencyBlockedDescendants(ScenarioBase):
-    """Failed root blocks descendants until the attempt fails."""
+    """Blocked root leaves descendants pending until the attempt fails."""
 
     name = "pipeline.dependency_blocked_descendants"
     expected_event_sequence: tuple[EventType, ...] = (
@@ -53,7 +53,7 @@ class DependencyBlockedDescendants(ScenarioBase):
     )
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
-        return ToolCallSpec(submit_plan_closes_goal, _blocked_descendants_plan())
+        return ToolCallSpec(submit_plan_closes_goal, _unreachable_pending_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
         if "ACTION fail_root" in (ctx.context_message or ""):
@@ -64,7 +64,7 @@ class DependencyBlockedDescendants(ScenarioBase):
         return ToolCallSpec(
             submit_evaluation_failure,
             {
-                "summary": "Unexpected evaluator invocation after blocked descendants.",
+                "summary": "Unexpected evaluator invocation after unreachable pending descendants.",
                 "failed_criteria": list(ctx.attempt.evaluation_criteria),
             },
         )

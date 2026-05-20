@@ -41,13 +41,10 @@ class TaskCenterLifecycleConfig:
     """Configurable knobs for the goal/iteration/attempt lifecycle.
 
     ``default_attempt_budget`` is applied to every Iteration created by
-    ``GoalHandler`` unless overridden per-call. ``max_handoff_depth``
-    is the maximum nested-goal depth at which an executor profile
-    still offers a handoff terminal.
+    ``GoalHandler`` unless overridden per-call.
     """
 
     default_attempt_budget: int = 2
-    max_handoff_depth: int = 3
 
 
 __all__ = [

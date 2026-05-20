@@ -25,7 +25,7 @@ def test_agent_system_prompt_includes_runtime_base_and_agent_body_only(monkeypat
     prompt = runtime_agent._build_agent_system_prompt(
         SimpleNamespace(cwd="/tmp"),
         AgentDefinition(
-            name="planner_closes_or_defers",
+            name="planner",
             description="d",
             agent_kind=AgentKind.PLANNER,
             system_prompt="base prompt",

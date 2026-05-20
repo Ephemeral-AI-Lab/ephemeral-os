@@ -143,6 +143,16 @@ def _generator_failure(attempt_id: str, local_id: str) -> GeneratorSubmission:
     )
 
 
+def _generator_blocker(attempt_id: str, local_id: str) -> GeneratorSubmission:
+    return GeneratorSubmission(
+        attempt_id=attempt_id,
+        task_id=generator_task_id(attempt_id, local_id),
+        outcome="blocker",
+        summary=f"{local_id} blocked",
+        payload={"role": "executor"},
+    )
+
+
 def _evaluator_submission(attempt_id: str, outcome: str) -> EvaluatorSubmission:
     return EvaluatorSubmission(
         attempt_id=attempt_id,
@@ -486,7 +496,7 @@ def test_goal_closure_report_success_resumes_waiting_generator(
     assert refreshed.stage == AttemptStage.EVALUATE
 
 
-def test_goal_closure_report_failure_blocks_dependents_and_closes_graph(
+def test_goal_closure_report_failure_leaves_dependents_pending_and_closes_graph(
     goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, _, _, closed = _build_orchestrator(
@@ -525,13 +535,13 @@ def test_goal_closure_report_failure_blocks_dependents_and_closes_graph(
     assert task is not None
     assert task["status"] == TaskCenterTaskStatus.FAILED.value
     assert dependent is not None
-    assert dependent["status"] == TaskCenterTaskStatus.BLOCKED.value
+    assert dependent["status"] == TaskCenterTaskStatus.PENDING.value
     assert refreshed is not None
     assert refreshed.status == AttemptStatus.FAILED
     assert closed == [attempt.id]
 
 
-def test_apply_generator_failure_blocks_pending_descendants(
+def test_apply_generator_blocker_leaves_pending_descendants_not_started(
     goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, _, _, _ = _build_orchestrator(
@@ -550,17 +560,19 @@ def test_apply_generator_failure_blocks_pending_descendants(
         )
     )
 
-    orchestrator.apply_generator_submission(_generator_failure(attempt.id, "a"))
+    orchestrator.apply_generator_submission(_generator_blocker(attempt.id, "a"))
 
+    task_a = task_store.get_task(generator_task_id(attempt.id, "a"))
     task_b = task_store.get_task(generator_task_id(attempt.id, "b"))
     task_c = task_store.get_task(generator_task_id(attempt.id, "c"))
     task_d = task_store.get_task(generator_task_id(attempt.id, "d"))
-    assert task_b is not None and task_b["status"] == "blocked"
-    assert task_c is not None and task_c["status"] == "blocked"
+    assert task_a is not None and task_a["status"] == "blocked"
+    assert task_b is not None and task_b["status"] == "pending"
+    assert task_c is not None and task_c["status"] == "pending"
     assert task_d is not None and task_d["status"] == "running"
 
 
-def test_generator_failure_waits_then_closes_after_quiescence(
+def test_generator_blocker_waits_then_closes_after_runnable_siblings_finish(
     goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, _, _, closed = _build_orchestrator(
@@ -577,7 +589,7 @@ def test_generator_failure_waits_then_closes_after_quiescence(
         )
     )
 
-    orchestrator.apply_generator_submission(_generator_failure(attempt.id, "a"))
+    orchestrator.apply_generator_submission(_generator_blocker(attempt.id, "a"))
     assert closed == []
 
     orchestrator.apply_generator_submission(_generator_success(attempt.id, "b"))

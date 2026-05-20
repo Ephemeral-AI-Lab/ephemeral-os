@@ -161,7 +161,7 @@ async def test_non_entry_falls_through_to_real_runner(
     result = await runner(
         config=config_obj,
         prompt="planner_prompt",
-        agent_def=_agent_def("planner_closes_or_defers"),
+        agent_def=_agent_def("planner"),
         sandbox_id="sbx-2",
         persist_agent_run=True,
         task_id="t-planner",
@@ -173,7 +173,7 @@ async def test_non_entry_falls_through_to_real_runner(
     assert captured["config"] is config_obj
     assert captured["prompt"] == "planner_prompt"
     forwarded = captured["kwargs"]
-    assert forwarded["agent_def"].name == "planner_closes_or_defers"
+    assert forwarded["agent_def"].name == "planner"
     assert forwarded["sandbox_id"] == "sbx-2"
     assert forwarded["persist_agent_run"] is True
     assert forwarded["task_id"] == "t-planner"
@@ -183,7 +183,7 @@ async def test_non_entry_falls_through_to_real_runner(
     assert forwarded_metadata.repo_root == "/r"
     assert forwarded_metadata.exec_cwd == "/r"
     assert forwarded_metadata.sandbox_id == "sbx-2"
-    assert forwarded_metadata.agent_name == "planner_closes_or_defers"
+    assert forwarded_metadata.agent_name == "planner"
     raising_execute_tool_once.assert_not_called()
 
 

@@ -49,17 +49,16 @@ TERMINAL_DESCRIPTORS: dict[str, TerminalToolDescriptor] = {
             "contract."
         ),
     ),
-    "submit_execution_failure": TerminalToolDescriptor(
-        name="submit_execution_failure",
+    "submit_execution_blocker": TerminalToolDescriptor(
+        name="submit_execution_blocker",
         selection_guidance=(
-            "Call when the task cannot be completed after exhausting the "
-            "obvious remediation paths. Name the failure mode concretely."
+            "Call when the `<assigned_task>` cannot proceed because of a "
+            "concrete blocker. Summarize the blocker and the evidence."
         ),
         advisor_review_focus=(
-            "Confirm the failure mode is real, not a misdiagnosis. Verify "
-            "the executor has tried the obvious remediation paths before "
-            "giving up. Flag premature failures and failures that hide a "
-            "fixable bug."
+            "Confirm the blocker is real and specific, not a premature "
+            "give-up. Verify the executor tried the obvious remediation "
+            "paths and did not hide solvable work behind a blocker."
         ),
     ),
     "submit_execution_handoff": TerminalToolDescriptor(

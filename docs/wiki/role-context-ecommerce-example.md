@@ -118,7 +118,7 @@ Final block sequence (planner_v1, packet order):
 Root generator packet:
 
 ```text
-Final block sequence (generator_v1, packet order):
+Final block sequence (generator, packet order):
   [0] task_specification                             HIGH      heading=# Attempt Plan
   [1] planned_task_spec        (gen-db-contracts)    REQUIRED  heading=# Assigned Task
 ```
@@ -126,7 +126,7 @@ Final block sequence (generator_v1, packet order):
 Dependent generator packet:
 
 ```text
-Final block sequence (generator_v1, packet order):
+Final block sequence (generator, packet order):
   [0] task_specification                             HIGH      heading=# Attempt Plan
   [1] dependency_summary       (gen-db-contracts)    MEDIUM    group=# Dependency Results
   [2] planned_task_spec        (gen-product-api)     REQUIRED  heading=# Assigned Task
@@ -162,7 +162,7 @@ flowchart TD
 Generator packet:
 
 ```text
-Final block sequence (generator_v1, packet order):
+Final block sequence (generator, packet order):
   [0] task_specification                             HIGH      heading=# Attempt Plan
   [1] dependency_summary       (direct dependency)   MEDIUM    group=# Dependency Results
   [2] planned_task_spec        (assigned task)       REQUIRED  heading=# Assigned Task
@@ -218,7 +218,7 @@ Final block sequence (planner_v1, packet order):
 Retry generator packet:
 
 ```text
-Final block sequence (generator_v1, packet order):
+Final block sequence (generator, packet order):
   [0] task_specification          (retry attempt)    HIGH      heading=# Attempt Plan
   [1] dependency_summary          (new dependency)   MEDIUM    group=# Dependency Results
   [2] planned_task_spec           (new task)         REQUIRED  heading=# Assigned Task
@@ -783,7 +783,7 @@ customer checkout APIs and UI created in the previous episode.
 ## Stage 3: Generator Context, Root Backend Task
 
 The dispatcher can launch `gen-db-contracts` immediately because it has no
-dependencies. `generator_v1` renders only the attempt plan and assigned task.
+dependencies. `generator` renders only the attempt plan and assigned task.
 It does not render the mission goal or evaluation criteria.
 
 Rendered `task_input` for `gen-db-contracts`:
@@ -1057,7 +1057,7 @@ Element dependency effect:
 
 ## Stage 6: Generator Context, Verifier Task
 
-Verifier tasks still use `generator_v1`. The difference is the agent profile:
+Verifier tasks still use `generator`. The difference is the agent profile:
 the verifier gets read-only tools plus `ask_resolver`, and success/failure
 verification terminals.
 

@@ -1,11 +1,10 @@
-"""Partial parent executor routes a child planner to ``planner_closes_goal``.
+"""Partial parent executor routes a child planner to a restricted terminal set.
 
 The root goal's first iteration submits a partial plan with
 ``deferred_goal_for_next_iteration``. Its executor then requests a child goal. Because the
 child goal's parent task belongs to that partial-planned attempt, the child
-planner must be selected through the planner variant routing and launch as
-``planner_closes_goal``. The root continuation iteration still launches the
-normal ``planner_closes_or_defers`` because it is not a child goal.
+planner must launch as ``planner`` without a defer terminal. The root
+continuation iteration still launches ``planner`` with both planner terminals.
 """
 
 from __future__ import annotations
@@ -87,10 +86,10 @@ def _child_full_plan() -> dict[str, Any]:
     )
 
 
-class DeferredParentPlannerFullOnly(ScenarioBase):
-    """Child goal from a partial parent gets the full-only planner profile."""
+class DeferredParentPlannerTerminalRouting(ScenarioBase):
+    """Child goal from a partial parent gets the restricted planner terminals."""
 
-    name = "pipeline.deferred_parent_planner_closes_goal"
+    name = "pipeline.deferred_parent_planner_terminal_routing"
     expected_event_sequence: tuple[EventType, ...] = (
         EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
@@ -158,4 +157,4 @@ class DeferredParentPlannerFullOnly(ScenarioBase):
         return _CHILD_GOAL
 
 
-__all__ = ["DeferredParentPlannerFullOnly"]
+__all__ = ["DeferredParentPlannerTerminalRouting"]

@@ -63,15 +63,18 @@ def _render_catalog_section(messages: HelperMessages) -> str:
     (parent agent_name missing or unregistered). The advisor still runs;
     selection auditability is the only thing degraded.
     """
+    terminals = list(messages.parent_active_terminals)
     parent_def = messages.parent_agent_def
-    if parent_def is None or not parent_def.terminals:
+    if not terminals and parent_def is not None:
+        terminals = list(parent_def.terminals)
+    if not terminals:
         return (
             "# Terminal tool catalog (advisor review focus)\n\n"
             "(parent terminals unavailable — review the pending submission "
             "against the parent's original task as best you can)"
         )
     catalog = render_terminal_catalog(
-        list(parent_def.terminals), focus="advisor_review_focus"
+        terminals, focus="advisor_review_focus"
     )
     return (
         "# Terminal tool catalog (advisor review focus)\n\n"

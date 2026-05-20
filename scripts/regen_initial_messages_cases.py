@@ -157,31 +157,31 @@ def regenerate_main_cases(run_dir: Path) -> None:
         elif "planner" in role_dir:
             if iteration.startswith("iteration_01") and attempt.startswith("attempt_01"):
                 fname = "02_planner__iter1_attempt1__fresh_no_failed_attempts.md"
-                title = "planner — iteration 1, attempt 1 (fresh; planner_instruction branch: iter==1, no failed attempts)"
+                title = "planner — iteration 1, attempt 1 (fresh; planner task-guidance branch: iter==1, no failed attempts)"
             elif iteration.startswith("iteration_01") and attempt.startswith("attempt_02"):
                 fname = "03_planner__iter1_attempt2__after_evaluator_failure.md"
-                title = "planner — iteration 1, attempt 2 (after evaluator failure; planner_instruction branch: iter==1, has failed attempts with rich `<attempt status=\"failed\">` body — real `<plan_spec>`, `<generator_outcomes>`, `<evaluator_judgment status=\"ran\" verdict=\"fail\">`)"
+                title = "planner — iteration 1, attempt 2 (after evaluator failure; planner task-guidance branch: iter==1, has failed attempts with rich `<attempt status=\"failed\">` body — real `<plan_spec>`, `<generator_outcomes>`, `<evaluator_judgment status=\"ran\" verdict=\"fail\">`)"
             elif iteration.startswith("iteration_02") and attempt.startswith("attempt_01"):
                 fname = "04_planner__iter2_attempt1__deferred_followup.md"
-                title = "planner — iteration 2, attempt 1 (deferred-goal follow-up; planner_instruction branch: iter>1, no failed attempts)"
+                title = "planner — iteration 2, attempt 1 (deferred-goal follow-up; planner task-guidance branch: iter>1, no failed attempts)"
             else:
                 continue
             case_specs.append((fname, title, rel, dict()))
         elif "executor" in role_dir:
             if iteration.startswith("iteration_01"):
-                fname = "05_executor__iter1_attempt2__deferred_variant.md"
-                title = "executor — iteration 1, attempt 2 (attempt with deferred goal; routed to executor_success_handoff variant; generator_instruction: has_deps=False)"
+                fname = "05_executor__iter1_attempt2__deferred_executor.md"
+                title = "executor — iteration 1, attempt 2 (attempt with deferred goal; single executor profile; generator task guidance: has_deps=False)"
             else:
-                fname = "06_executor__iter2_attempt1__deferred_followup_variant.md"
-                title = "executor — iteration 2, attempt 1 (deferred-goal follow-up; routed to executor_success_handoff variant; generator_instruction: has_deps=False)"
+                fname = "06_executor__iter2_attempt1__deferred_followup_executor.md"
+                title = "executor — iteration 2, attempt 1 (deferred-goal follow-up; single executor profile; generator task guidance: has_deps=False)"
             case_specs.append((fname, title, rel, dict()))
         elif "evaluator" in role_dir:
             if iteration.startswith("iteration_01"):
                 fname = "07_evaluator__iter1_attempt2__attempt_with_deferral.md"
-                title = "evaluator — iteration 1, attempt 2 (evaluator_instruction branch: has_deferred_goal_for_next_iteration=True; attempt with a deferred goal)"
+                title = "evaluator — iteration 1, attempt 2 (evaluator task-guidance branch: has_deferred_goal_for_next_iteration=True; attempt with a deferred goal)"
             else:
                 fname = "08_evaluator__iter2_attempt1__complete_attempt.md"
-                title = "evaluator — iteration 2, attempt 1 (evaluator_instruction branch: has_deferred_goal_for_next_iteration=False; complete plan attempt)"
+                title = "evaluator — iteration 2, attempt 1 (evaluator task-guidance branch: has_deferred_goal_for_next_iteration=False; complete plan attempt)"
             case_specs.append((fname, title, rel, dict()))
 
     for fname, title, rel, _extra in case_specs:
@@ -218,9 +218,7 @@ def regenerate_helpers(run_dir: Path) -> None:
     explorer_def = get_definition("explorer")
     if advisor_def is None or resolver_def is None or explorer_def is None:
         raise RuntimeError("Missing helper/explorer agent definitions.")
-    parent_def = get_definition("executor_success_handoff") or get_definition(
-        "executor_success_failure"
-    ) or get_definition("executor")
+    parent_def = get_definition("executor")
 
     _, parent_um1, parent_um2 = _harvest_executor_capture(run_dir)
     parent_transcript = (
@@ -231,6 +229,7 @@ def regenerate_helpers(run_dir: Path) -> None:
     advisor_messages = HelperMessages(
         helper_agent_def=advisor_def,
         parent_agent_def=parent_def,
+        parent_active_terminals=tuple(parent_def.terminals) if parent_def else (),
         parent_user_msg_1=parent_um1,
         parent_user_msg_2=parent_um2,
         parent_transcript=parent_transcript,
@@ -258,6 +257,7 @@ def regenerate_helpers(run_dir: Path) -> None:
     resolver_messages = HelperMessages(
         helper_agent_def=resolver_def,
         parent_agent_def=parent_def,
+        parent_active_terminals=tuple(parent_def.terminals) if parent_def else (),
         parent_user_msg_1=parent_um1,
         parent_user_msg_2=parent_um2,
         parent_transcript=parent_transcript,

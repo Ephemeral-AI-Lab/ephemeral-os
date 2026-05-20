@@ -3,14 +3,14 @@
 Sources:
 - main agents (entry_executor, planner, executor, evaluator) — initial
   message.jsonl rows from existing live-e2e runs under
-  ``.sweevo_runs/scenario_logs/<scenario>/<run>/...``. Round 3 planners
-  produce four rows (system + context + role_instruction + skill);
+  ``.sweevo_runs/scenario_logs/<scenario>/<run>/...``. Skill-equipped launches
+  produce four rows (system + context + task guidance + skill);
   executor / evaluator produce three; entry_executor produces two.
 - helpers (advisor, resolver) — programmatically constructed via the actual
   builder functions in ``tools/ask_helper/_lib/_compose.py`` against
   realistic parent context taken from a real planner/executor prompt.
 - subagent (explorer) — system prompt + (parent free-text prompt) user_msg_1
-  + (explorer_instruction) user_msg_2.
+  + explorer task guidance user_msg_2.
 
 Writes ``docs/reports/initial_messages_report.md``. Pure harvester — no
 sandbox, no DB, no agent execution. Only the existing on-disk artefacts and
@@ -42,12 +42,8 @@ from tools.ask_helper.ask_advisor import _build_advisor_user_msg_2  # noqa: E402
 from tools.ask_helper.ask_resolver import (  # noqa: E402
     _build_resolver_user_msg_2,
 )
-from task_center.context_engine.recipes.role_instruction import (  # noqa: E402
-    evaluator_instruction,
-    explorer_instruction,
-    generator_instruction,
-    planner_instruction,
-)
+from task_center.context_engine.role_directives import ROLE_DIRECTIVES  # noqa: E402
+from task_center.task_guidance.builders import build_explorer_task_guidance  # noqa: E402
 
 
 RUNS_DIR = REPO / ".sweevo_runs" / "scenario_logs"
@@ -72,7 +68,7 @@ class CapturedAgent:
     user_msg_1: str
     user_msg_2: str  # empty string when the launch shape only seeded one user message
     # Row 4 — the skill + terminal_tool_selection composite. Non-empty only for
-    # planner launches in v1 (Round 3 ships skills for planner variants only).
+    # skill-equipped launches.
     skill_row: str = ""
 
     @property
@@ -285,7 +281,7 @@ def _excerpt_for_helper_context(captures: list[CapturedAgent]) -> tuple[str, str
 
 
 def build_main_constructed() -> list[ConstructedAgent]:
-    """Build the full 3-message shape for every main-agent variant.
+    """Build the full 3-message shape for representative main-agent states.
 
     Uses the real role-instruction builders + the real renderer's terminal
     catalog appender so user_msg_2 is the exact text that
@@ -316,13 +312,15 @@ def build_main_constructed() -> list[ConstructedAgent]:
             "\"approve\"."
         )
 
-    planner_def = get_definition("planner_closes_or_defers") or get_definition("planner_closes_goal")
-    executor_sf = get_definition("executor_success_failure") or get_definition("executor")
-    executor_sh = get_definition("executor_success_handoff") or get_definition("executor")
+    def _directive(agent_name: str) -> str:
+        return "What to do:\n" f"- {ROLE_DIRECTIVES[agent_name]}"
+
+    planner_def = get_definition("planner")
+    executor_def = get_definition("executor")
     evaluator_def = get_definition("evaluator")
     entry_def = get_definition("entry_executor")
 
-    # --- Planner — 4 branches × routing ---
+    # --- Planner — 4 representative launch contexts ---
     planner_variants = [
         ("iter1 attempt1 (fresh)", 1, False,
          "# Goal\n\n<root goal>\n\n# Current Iteration\n\nIteration 1 (FIRST_ATTEMPT)."),
@@ -334,48 +332,43 @@ def build_main_constructed() -> list[ConstructedAgent]:
          "# Goal\n\n<root goal>\n\n# Current Iteration\n\nIteration 2 (DEFERRED_GOAL_CONTINUATION).\n\n# Previous Iteration Results\n\n## Iteration 1 accepted plan\n\n<partial plan>\n\n## Iteration 1 summary\n\nDone.\n\n# Prior Failed Attempts\n\nAttempt 1 in iteration 2: rejected by evaluator."),
     ]
     for label, iter_n, failed, um1 in planner_variants:
-        role_text = planner_instruction(
-            iteration_sequence_no=iter_n, has_failed_attempts=failed
-        ).text
+        del iter_n, failed
+        role_text = _directive("planner")
         um2 = _append_catalog(role_text, planner_def)
         out.append(ConstructedAgent(
             label=f"planner — {label}",
-            agent_name="planner_closes_or_defers",
+            agent_name="planner",
             system=planner_def.system_prompt or "" if planner_def else "",
             user_msg_1=um1,
             user_msg_2=um2,
         ))
 
-    # --- Executor — 2 dep branches × 2 terminal-routing variants ---
+    # --- Executor — dependency and no-dependency branches, one profile ---
     for has_deps, dep_label in ((True, "with deps"), (False, "no deps")):
-        for variant_def, variant_name in (
-            (executor_sf, "executor_success_failure"),
-            (executor_sh, "executor_success_handoff"),
-        ):
-            role_text = generator_instruction(has_deps=has_deps).text
-            um2 = _append_catalog(role_text, variant_def)
-            dep_block = (
-                "\n\n# Dependency Results\n\nupstream: success — artifacts=[...]"
-                if has_deps
-                else ""
-            )
-            um1 = (
-                "# Attempt Plan\n\n<plan_spec>\n\n"
-                "# Assigned Task\n\nid: preflight\nagent_name: executor\n"
-                f"deps: {'[upstream]' if has_deps else '[]'}\nspec: Run a "
-                "lightweight workspace preflight."
-            ) + dep_block
-            out.append(ConstructedAgent(
-                label=f"executor variant `{variant_name}` ({dep_label})",
-                agent_name=variant_name,
-                system=variant_def.system_prompt or "" if variant_def else "",
-                user_msg_1=um1,
-                user_msg_2=um2,
-            ))
+        role_text = _directive("executor")
+        um2 = _append_catalog(role_text, executor_def)
+        dep_block = (
+            "\n\n# Dependency Results\n\nupstream: success — artifacts=[...]"
+            if has_deps
+            else ""
+        )
+        um1 = (
+            "# Attempt Plan\n\n<plan_spec>\n\n"
+            "# Assigned Task\n\nid: preflight\nagent_name: executor\n"
+            f"deps: {'[upstream]' if has_deps else '[]'}\nspec: Run a "
+            "lightweight workspace preflight."
+        ) + dep_block
+        out.append(ConstructedAgent(
+            label=f"executor ({dep_label})",
+            agent_name="executor",
+            system=executor_def.system_prompt or "" if executor_def else "",
+            user_msg_1=um1,
+            user_msg_2=um2,
+        ))
 
     # --- Evaluator — 2 branches ---
     for has_deferred_goal_for_next_iteration, label in ((True, "partial attempt"), (False, "complete attempt")):
-        role_text = evaluator_instruction(has_deferred_goal_for_next_iteration=has_deferred_goal_for_next_iteration).text
+        role_text = _directive("evaluator")
         um2 = _append_catalog(role_text, evaluator_def)
         partial_block = (
             "\n\n# Partial Plan Boundary\n\nIntentionally partial; "
@@ -426,15 +419,13 @@ def build_helper_constructed(
     if advisor_def is None or resolver_def is None or explorer_def is None:
         raise RuntimeError("Missing helper/explorer agent definitions.")
 
-    # Parent agent definition for catalog rendering — use executor variant.
-    parent_def = (
-        get_definition("executor_success_failure")
-        or get_definition("executor")
-    )
+    # Parent agent definition for catalog rendering.
+    parent_def = get_definition("executor")
 
     advisor_messages = HelperMessages(
         helper_agent_def=advisor_def,
         parent_agent_def=parent_def,
+        parent_active_terminals=tuple(parent_def.terminals) if parent_def else (),
         parent_user_msg_1=parent_um1,
         parent_user_msg_2=parent_um2,
         parent_transcript=transcript,
@@ -452,6 +443,7 @@ def build_helper_constructed(
     resolver_messages = HelperMessages(
         helper_agent_def=resolver_def,
         parent_agent_def=parent_def,
+        parent_active_terminals=tuple(parent_def.terminals) if parent_def else (),
         parent_user_msg_1=parent_um1,
         parent_user_msg_2=parent_um2,
         parent_transcript=transcript,
@@ -469,7 +461,7 @@ def build_helper_constructed(
     )
 
     # Subagent: 2 messages total. user_msg_1 = parent's free-text prompt;
-    # user_msg_2 = explorer_instruction text (spawn prompt). System = explorer
+    # user_msg_2 = explorer task guidance (spawn prompt). System = explorer
     # agent.md system_prompt.
     parent_prompt = (
         "Inspect the repository layout under backend/src/task_center to "
@@ -477,7 +469,7 @@ def build_helper_constructed(
         "file paths plus line numbers."
     )
     explorer_um1 = parent_prompt
-    explorer_um2 = explorer_instruction().text
+    explorer_um2 = build_explorer_task_guidance()
 
     return [
         ConstructedAgent(
@@ -654,7 +646,7 @@ def coherence_verdict(
             checks["um2_generator_role_text"] = "generator task" in um2.lower()
             checks["um2_terminal_catalog"] = (
                 "submit_execution_success" in um2
-                or "submit_execution_failure" in um2
+                or "submit_execution_blocker" in um2
                 or "submit_execution_handoff" in um2
             )
             checks["um2_calls_advisor"] = "ask_advisor" in um2
@@ -744,11 +736,9 @@ def render_report(
         "user_msg_1 = the composer's context block (goal + iteration + "
         "dependency results + attempt plan + evaluation criteria, "
         "rendered by `MarkdownPromptRenderer.render_context`); "
-        "user_msg_2 = the spawn prompt (the role_instruction body for "
-        "the agent's iteration/attempt position from "
-        "`recipes/role_instruction.py` plus the terminal-tool catalog "
-        "appended by `_append_terminal_catalog`).\n\n"
-        "- **entry_executor** — two messages (no role_instruction recipe "
+        "user_msg_2 = task guidance plus the terminal-tool catalog appended "
+        "by the composer.\n\n"
+        "- **entry_executor** — two messages (no task-guidance recipe "
         "block); user_msg_2 is empty.\n\n"
         "- **Helpers (advisor, resolver)** — three messages: system + "
         "`assemble_user_msg_1(...)` (prompt-injection guard + parent's "
@@ -762,7 +752,7 @@ def render_report(
         "run_subagent.py:231-240`) the subagent also receives three "
         "messages: system + user_msg_1 (the parent's free-text prompt, "
         "passed via `initial_messages`) + user_msg_2 (the spawn prompt = "
-        "`explorer_instruction().text`). The goal text described this as "
+        "`build_explorer_task_guidance()`). The goal text described this as "
         "\"only 2\", presumably referring to the two distinct user "
         "messages (no role-instruction block separate from the spawn "
         "prompt). We render all three below for completeness.\n\n"
@@ -770,13 +760,13 @@ def render_report(
         "`.sweevo_runs/scenario_logs/`. Source for helper/subagent: "
         "programmatic construction via the production builder code in "
         "`tools/ask_helper/_lib/_compose.py` and "
-        "`task_center/context_engine/recipes/role_instruction.py` against "
+        "`task_center/task_guidance/builders.py` against "
         "realistic parent context lifted from a real executor capture.\n"
     )
 
     out.append("## Coverage matrix\n")
     out.append(
-        "| Agent role | Routing / variant | Iteration position | Attempt | Source |\n"
+        "| Agent role | Routing / profile | Iteration position | Attempt | Source |\n"
         "|---|---|---|---|---|"
     )
     for cap in main_captures:
@@ -794,11 +784,11 @@ def render_report(
     out.append(
         "Every main-agent row below is harvested verbatim from "
         "`message.jsonl` written by `AgentMessageJsonlRecorder."
-        "record_initial_messages`. Launch shapes (Round 3):\n\n"
-        "* planner — 4 rows (system + context + role_instruction + skill); "
+        "record_initial_messages`. Launch shapes:\n\n"
+        "* planner — 4 rows (system + context + task guidance + skill); "
         "row 4 is the row-4 composite from `build_skill_message`.\n"
-        "* executor / evaluator — 3 rows (system + context + role_instruction); "
-        "no skill in v1.\n"
+        "* executor / evaluator — 3 or 4 rows depending on whether a skill "
+        "row is present.\n"
         "* entry_executor — 2 rows (single-user-message launch).\n"
     )
     for cap in main_captures:
@@ -820,13 +810,13 @@ def render_report(
         if cap.user_msg_2:
             out.append(
                 "**user_msg_2** (verbatim, `message.jsonl` row 3 — "
-                "role_instruction + terminal catalog):\n"
+                "task guidance + terminal catalog):\n"
             )
             out.append(_fmt_message("user_msg_2", _truncate(cap.user_msg_2)))
         else:
             out.append(
                 "**user_msg_2** — *not emitted* (single-user-message "
-                "launch; recipe carries no role_instruction block).\n"
+                "launch; recipe carries no task-guidance block).\n"
             )
         if cap.skill_row:
             out.append(
@@ -859,12 +849,10 @@ def render_report(
             "the actual `agents/profile/main/<name>.md` body; user_msg_1 is "
             "a renderer-shaped context block (header names from "
             "`renderer._DEFAULT_HEADINGS`); user_msg_2 is the exact text "
-            "the composer would emit — the role_instruction text from "
-            "`recipes/role_instruction.py` plus the terminal catalog "
-            "appended by `_append_terminal_catalog` "
-            "(`context_engine/core.py:158-181`). Variants cover the full "
+            "the composer would emit — task guidance plus the terminal "
+            "catalog appended by the composer. The matrix covers the full "
             "matrix: 4 planner branches × iteration-position / failed-"
-            "attempts; 2 executor routing variants × dep presence; 2 "
+            "attempts; executor dependency/no-dependency branches; 2 "
             "evaluator branches; entry_executor's single-user-message "
             "fallback.\n"
         )
@@ -897,7 +885,7 @@ def render_report(
         if ca.agent_name == "explorer":
             out.append(
                 "**user_msg_2** (explorer subagent only has two messages — "
-                "`user_msg_2` is the spawn prompt = `explorer_instruction()`):\n"
+                "`user_msg_2` is the spawn prompt = `build_explorer_task_guidance()`):\n"
             )
         else:
             out.append("**user_msg_2** (programmatic, from builder code):\n")
@@ -922,14 +910,9 @@ def render_report(
         "parent context + parent task verbatim. Every helper's user_msg_2 "
         "ends with the bound terminal tool (`submit_advisor_feedback`, "
         "`submit_resolver_result`, `submit_exploration_result`).\n"
-        "- **Context quality:** planner prompts adapt to iteration position "
-        "and prior-attempt presence (4 branches in "
-        "`recipes/role_instruction.py:planner_instruction`); evaluator "
-        "prompts adapt to partial/complete attempt; executor prompts adapt "
-        "to dependency presence. Routing variants visible in `role_dir` "
-        "(`executor_success_failure` vs `executor_success_handoff`) inherit "
-        "the same context_message but expose different terminal catalogues "
-        "via the composer's `_append_terminal_catalog`.\n"
+        "- **Context quality:** role prompts now use recipe-shaped context "
+        "plus task guidance. The executor uses a single profile and one "
+        "terminal catalogue containing success, handoff, and blocker.\n"
         "- **Instruction quality:** main-agent system prompts (in "
         "`agents/profile/main/<name>.md`) embed selection criteria, hard "
         "validity rules, and design principles. Helper user_msg_2 enforces "

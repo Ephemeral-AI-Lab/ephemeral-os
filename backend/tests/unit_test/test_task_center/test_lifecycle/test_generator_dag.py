@@ -6,7 +6,6 @@ import pytest
 
 from task_center._core.primitives import TaskCenterInvariantViolation
 from task_center.attempt.generator_dag import (
-    blocked_descendant_ids,
     ordered_generator_tasks,
     ready_pending_generator_ids,
     summarize_generator_dag,
@@ -55,7 +54,7 @@ def test_ready_pending_generator_ids_requires_done_deps():
     assert ready_pending_generator_ids(records) == ("b",)
 
 
-def test_blocked_descendant_ids_blocks_pending_descendants():
+def test_pending_dependents_of_failed_task_are_quiescent_not_started():
     records = [
         _task("a", "failed"),
         _task("b", "pending", ("a",)),
@@ -63,19 +62,22 @@ def test_blocked_descendant_ids_blocks_pending_descendants():
         _task("d", "running"),
     ]
 
-    assert blocked_descendant_ids(
-        failed_task_id="a", task_records=records
-    ) == ("b", "c")
+    state = summarize_generator_dag(records)
+    assert not state.all_quiescent
 
 
-def test_running_dependent_of_failed_task_is_invariant_violation():
+def test_pending_dependents_of_failed_task_close_after_siblings_finish():
     records = [
         _task("a", "failed"),
-        _task("b", "running", ("a",)),
+        _task("b", "pending", ("a",)),
+        _task("c", "pending", ("b",)),
+        _task("d", "done"),
     ]
 
-    with pytest.raises(TaskCenterInvariantViolation):
-        blocked_descendant_ids(failed_task_id="a", task_records=records)
+    state = summarize_generator_dag(records)
+    assert state.all_quiescent
+    assert not state.all_done
+    assert state.any_failed_or_blocked
 
 
 def test_waiting_goal_is_not_quiescent_or_done():

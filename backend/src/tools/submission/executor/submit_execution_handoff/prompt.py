@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from tools._names import (
-    SUBMIT_EXECUTION_FAILURE_TOOL_NAME,
+    SUBMIT_EXECUTION_BLOCKER_TOOL_NAME,
     SUBMIT_EXECUTION_SUCCESS_TOOL_NAME,
 )
 
@@ -25,12 +25,12 @@ Call this when:
 
 You MUST call this BEFORE making edits. If you've already started
 editing, finish what you can and use `{SUBMIT_EXECUTION_SUCCESS_TOOL_NAME}` or
-`{SUBMIT_EXECUTION_FAILURE_TOOL_NAME}` instead.
+`{SUBMIT_EXECUTION_BLOCKER_TOOL_NAME}` instead.
 
 Do NOT call this when:
 - The task is bounded and doable — just do it.
 - You're stuck on an environment issue — that's
-  `{SUBMIT_EXECUTION_FAILURE_TOOL_NAME}`, not a handoff.
+  `{SUBMIT_EXECUTION_BLOCKER_TOOL_NAME}`, not a handoff.
 
 Inputs:
 - `goal`: the higher-level goal the planner should re-plan against. Be

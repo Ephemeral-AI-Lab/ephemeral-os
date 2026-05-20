@@ -501,9 +501,8 @@ Planner agent    AttemptOrchestrator    IterationManager   IterationClosureRoute
 
 <p>
 A <em>nested goal</em> is a Goal whose <code>requested_by_task_id</code> points at a Task that
-is itself running inside some other Goal&apos;s harness. The depth of nesting is what
-keeps recursive delegation bounded — see also the
-<code>nested_goal_depth_within_handoff_range</code> predicate in <code>_core/agent_routing.py</code>.
+is itself running inside some other Goal&apos;s harness. Executors now use one profile
+with the same success, handoff, and blocker terminals at every nesting depth.
 </p>
 
 <div class="diagram">
@@ -542,7 +541,7 @@ keeps recursive delegation bounded — see also the
 <h3>Step-by-step</h3>
 <ol>
   <li>A leaf executor task (running in some attempt&apos;s DAG, role
-    <code>executor_success_handoff</code>) submits a terminal tool that signals
+    <code>executor</code>) submits a terminal tool that signals
     &quot;hand off a sub-goal&quot;. The submission carries the proposed goal text.</li>
   <li><code>GoalStarter.start(parent_task_id, goal=…)</code>
     <ul>
@@ -561,15 +560,12 @@ keeps recursive delegation bounded — see also the
 
 <div class="invariant">A task has at most one open child Goal at any time. Tasks transition to <code>WAITING_GOAL</code> the moment their handoff is accepted, and back to <code>RUNNING</code> only when that child Goal closes.</div>
 
-<h3>Depth-bounded role routing</h3>
+<h3>Planner depth routing</h3>
 <p>
-Nested executors don&apos;t inherit infinite handoff capability. The agent routing layer
-checks <code>nested_goal_depth_within_handoff_range</code>; once the cumulative depth
-exceeds the configured maximum, the resolver picks the
-<code>executor_success_failure</code> variant instead of
-<code>executor_success_handoff</code>, removing the handoff terminal from the agent&apos;s
-tool surface. This is how the system enforces a finite recursion budget across the whole
-goal tree.
+Nested-goal depth is still available to planner routing where needed, but executor
+terminal selection is no longer depth-gated. The planner may choose to create a
+single executor task that calls <code>submit_execution_handoff</code> again, or it may keep
+the work direct; that policy is encoded in planning, not in executor profile variants.
 </p>
 
 <!-- ============================================================ -->
@@ -730,12 +726,14 @@ the planner&apos;s symbolic <code>local_id</code>s are not visible at runtime.
 <div class="caption">Generator-DAG dispatch. Every PENDING node whose entire <code>needs[]</code> is DONE fires in one wave; the dispatcher recurses on every submission to fire the next wave. After all generators reach DONE, the evaluator is spawned exactly once.</div>
 </div>
 
-<h4>Failure cascade</h4>
+<h4>Blocked / failed upstreams</h4>
 <p>
-On a generator failure submission, <code>block_failed_descendants(task_id)</code> walks the
-DAG via BFS and marks every pending descendant <code>BLOCKED</code>. On the next dispatcher
-call, <code>summarize_generator_dag</code> sees the quiescent failed-or-blocked state and
-closes the attempt with <code>GENERATOR_FAILED</code>. Evaluator is never spawned in this case.
+When a generator becomes <code>FAILED</code> or <code>BLOCKED</code>, downstream tasks remain
+persisted as <code>PENDING</code> not-started work. On the next dispatcher call,
+<code>summarize_generator_dag</code> treats pending tasks whose dependency chain contains
+a failed or blocked upstream as unreachable, then closes the attempt with
+<code>GENERATOR_FAILED</code> once runnable siblings are quiescent. The evaluator is never
+spawned in this case.
 </p>
 
 <h3>5.3 Evaluator stage and attempt closure</h3>
@@ -1035,8 +1033,8 @@ representations are derived from the same blocks and can never disagree.
 <pre><code>ROLE_DIRECTIVES: dict[str, str] = {
     "planner":                    "Plan for &lt;iteration_goal&gt;.",
     "planner_closes_goal":          "Plan for &lt;goal&gt; with a single non-deferring submission.",
-    "executor_success_handoff":   "Complete &lt;assigned_task&gt;.",
-    "executor_success_failure":   "Complete &lt;assigned_task&gt;.",
+    "executor":   "Complete &lt;assigned_task&gt;.",
+    "executor":   "Complete &lt;assigned_task&gt;.",
     "evaluator":                  "Verify the current attempt against &lt;evaluation_criteria&gt;.",
     ...
 }</code></pre>
@@ -1201,12 +1199,9 @@ its declared variants. Each variant carries a <code>when</code> field naming a p
 </code></pre>
 
 <p>
-This is how the executor splits into <code>executor_success_handoff</code> (allowed to
-delegate further) vs. <code>executor_success_failure</code> (terminal): the predicate
-<code>nested_goal_depth_within_handoff_range</code> looks at the goal-ancestry chain via
-<code>goal.ancestry</code> + stores, and flips role variants once depth crosses the
-threshold. Same base name in the planner&apos;s plan; different recipe and different
-terminal-tool surface at runtime.
+Planner routing can still use <code>nested_goal_depth_gt_1</code> for planner-specific
+policy. Executor routing no longer splits by depth: <code>executor</code> resolves to the
+same profile and the same terminal surface regardless of goal ancestry.
 </p>
 
 <h3>8.2 Row composition</h3>
@@ -1366,7 +1361,7 @@ Load skill: planner
 <div class="invariant">An Attempt&apos;s stage is monotonically increasing: <code>PLAN → GENERATE → EVALUATE → CLOSED</code>. There is no rewind.</div>
 <div class="invariant">A planner submission with <code>kind=&quot;completes&quot;</code> must have <code>deferred_goal_for_next_iteration is None</code>; one with <code>kind=&quot;defers&quot;</code> must have it set. The two are mutually exclusive.</div>
 <div class="invariant">The generator DAG is topologically valid before dispatch. <code>ordered_generator_tasks</code> rejects cycles, duplicate <code>local_id</code>s, and references to undefined <code>local_id</code>s.</div>
-<div class="invariant">A generator task launches only when every Task ID in its persisted <code>needs[]</code> is <code>DONE</code>. Failure of any task transitively <code>BLOCKED</code>s its descendants via BFS, and the attempt closes <code>GENERATOR_FAILED</code> without spawning the evaluator.</div>
+<div class="invariant">A generator task launches only when every Task ID in its persisted <code>needs[]</code> is <code>DONE</code>. Failed or blocked upstreams leave descendants <code>PENDING</code> as not-started unreachable work, and the attempt closes <code>GENERATOR_FAILED</code> without spawning the evaluator once runnable work is quiescent.</div>
 <div class="invariant">A Goal&apos;s parent task is always in <code>WAITING_GOAL</code> while the child Goal is OPEN, and transitions back to <code>RUNNING</code> when the child Goal closes.</div>
 <div class="invariant">Recipes are pure functions of <code>(scope, deps)</code>. They only read stores. This makes context build reproducible from persistent state at any time, which is what enables the auditor and replayer to reconstruct the exact prompt an agent saw at any past point.</div>
 <div class="invariant">The renderer never mutates block text. <code>ContextBlock.text</code> is byte-exact, so the auditor&apos;s view matches the agent&apos;s view exactly.</div>

@@ -20,8 +20,8 @@ A "generator" is any DAG leaf inside one Attempt. The harness recognizes one str
 | Concept | Type | Meaning |
 |---|---|---|
 | `HarnessTaskRole` | dispatcher enum | Lifecycle bucket the dispatcher routes on (`PLANNER`, `GENERATOR`, `EVALUATOR`). Internal to `task_center/agent_launch/launcher.py`; not user-facing. |
-| `AgentKind` | profile enum | Canonical category on `AgentDefinition.agent_kind` (`planner`, `executor`, `verifier`, `evaluator`, `advisor`, `explorer`, `resolver`). The four main kinds participate in depth-gated variant routing. |
-| agent profile | MD file | A loaded `AgentDefinition` (file name = profile id). Planners submit by profile id (e.g., `agent_name="executor"`); the resolver picks a variant target at launch. |
+| `AgentKind` | profile enum | Canonical category on `AgentDefinition.agent_kind` (`planner`, `executor`, `verifier`, `evaluator`, `advisor`, `explorer`, `resolver`). |
+| agent profile | MD file | A loaded `AgentDefinition` (file name = profile id). Planners submit by profile id (e.g., `agent_name="executor"`). |
 
 ## Identity in one sentence
 
@@ -42,21 +42,20 @@ The entry executor (the top-level agent that owns the user request) is _also_ a 
 
 ## Two profiles, one recipe
 
-| <br />                                | Executor (`agents/profile/main/executor.md` + variants)                                                                   | Verifier (`agents/profile/main/generator_verifier.md`)            |
+| <br />                                | Executor (`agents/profile/main/executor.md`)                                                                               | Verifier (`agents/profile/main/generator_verifier.md`)            |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | `agent_kind` (in profile frontmatter) | `executor`                                                                                                                | `verifier`                                                        |
-| `dispatchable_by_planner`             | `true` on the thin entry `executor.md`; variant targets default `false`                                                   | `true`                                                            |
-| `allowed_tools`                       | `read_file, write_file, edit_file, shell, run_subagent, ask_advisor` (set on each variant target)                         | `read_file, shell, ask_resolver`                                  |
-| Terminals (depth ≤ MAX_HANDOFF_DEPTH) | `submit_execution_success`, `submit_execution_handoff` (selected via `executor_success_handoff.md`)                       | n/a                                                               |
-| Terminals (depth > MAX_HANDOFF_DEPTH) | `submit_execution_success`, `submit_execution_failure` (selected via `executor_success_failure.md`)                       | n/a                                                               |
+| `dispatchable_by_planner`             | `true`                                                                                                                    | `true`                                                            |
+| `allowed_tools`                       | `read_file, write_file, edit_file, shell, glob, grep, lsp.*, run_subagent, ask_advisor`                                  | `read_file, shell, ask_resolver`                                  |
+| Terminals (executor)                  | `submit_execution_success`, `submit_execution_handoff`, `submit_execution_blocker`                                        | n/a                                                               |
 | Terminals (verifier)                  | n/a                                                                                                                       | `submit_verification_success`, `submit_verification_failure`      |
-| `context_recipe`                      | `generator_v1`                                                                                                            | `generator_v1` (same recipe)                                      |
-| Notification triggers                 | `request_mission_after_edit` (on the handoff variant)                                                                     | `resolver_limit`                                                  |
-| Editorial stance                      | Build the artifact; delegate via `submit_execution_handoff` if still allowed                                              | Inspect; if broken, delegate the fix via `ask_resolver`; re-check |
+| `context_recipe`                      | `generator`                                                                                                               | `generator` (same recipe)                                         |
+| Notification triggers                 | `request_goal_after_edit`                                                                                                 | `resolver_limit`                                                  |
+| Editorial stance                      | Build the artifact; delegate via `submit_execution_handoff` if the task needs planning; submit blocker for concrete blockers | Inspect; if broken, delegate the fix via `ask_resolver`; re-check |
 
-The `executor.md` entry-point declares no terminals or body of its own — it carries a depth-gated `variants:` list and the resolver picks one of two leaf profiles at launch. `executor_success_handoff.md` exposes success + handoff (depth ≤ `MAX_HANDOFF_DEPTH=3`); `executor_success_failure.md` exposes success + failure for leaf-depth runs (depth > 3) where further delegation is forbidden. The `entry_executor.md` profile is the documented carve-out: it retains all three terminals (success / failure / handoff) because it sits outside the mission tree and terminates the user-facing request directly.
+The `executor.md` profile is the concrete executor profile. It exposes success, delegated-goal handoff, and blocker terminals in one surface. The `entry_executor.md` profile uses the same terminal shape because it sits outside the mission tree and terminates the user-facing request directly.
 
-Profile-level separation is enforced by each `AgentDefinition.terminals` whitelist — the executor variants list only executor terminals, the verifier profile lists only verifier terminals — so a verifier-launched task cannot reach an executor terminal at all. There is no runtime role gate; the structural role on the task row is set by the dispatcher and consumed by `resolve_attempt_submission_context`.
+Profile-level separation is enforced by each `AgentDefinition.terminals` whitelist — the executor profile lists only executor terminals, the verifier profile lists only verifier terminals — so a verifier-launched task cannot reach an executor terminal at all. There is no runtime role gate; the structural role on the task row is set by the dispatcher and consumed by `resolve_attempt_submission_context`.
 
 The recipe is identical because the _information_ each profile needs is identical: the DAG framing, the dependency summaries, and the local task spec. The _operation_ differs because the tool palette and the success contract differ.
 
@@ -65,9 +64,10 @@ The recipe is identical because the _information_ each profile needs is identica
 | Event                                                                  | Effect                                                                                                                                                        |
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Planner submission                                                     | Dispatcher creates generator task rows `PENDING`.                                                                                                             |
-| Dependencies all `DONE`                                                | `_dispatch_generating` flips row to `RUNNING`, composes `generator_v1`, launches agent (`dispatcher.py:147`).                                                 |
+| Dependencies all `DONE`                                                | `_dispatch_generating` flips row to `RUNNING`, composes `generator`, launches agent (`dispatcher.py:147`).                                                    |
 | Agent calls `submit_execution_success` / `submit_verification_success` | `apply_generator_submission(outcome="success")` → task `DONE`; dispatcher checks quiescence and either launches more ready siblings or spawns the evaluator.  |
-| Agent calls `submit_execution_failure` / `submit_verification_failure` | Task `FAILED`; `block_failed_descendants` walks the DAG and marks every transitive PENDING descendant as `BLOCKED`. Attempt closes `FAILED/generator_failed`. |
+| Agent calls `submit_execution_blocker`                                 | Task `BLOCKED`; dependent PENDING tasks stay not-started and cannot become ready. Attempt closes `FAILED/generator_failed` after runnable siblings quiesce. |
+| Agent calls `submit_verification_failure`                              | Task `FAILED`; dependent PENDING tasks stay not-started and cannot become ready. Attempt closes `FAILED/generator_failed` after runnable siblings quiesce. |
 | Agent calls `submit_execution_handoff`                                 | Task parks in `WAITING_COMPLEX_TASK`; child Mission starts. Calling agent run ends here. Child Mission close-report drives task to `DONE`/`FAILED`.           |
 | Agent run ends without terminal                                        | Launcher synthesises `apply_generator_submission(outcome="failure")` with `fail_reason="generator_failed"`.                                                   |
 
@@ -78,7 +78,7 @@ What an executor MUST do:
 1. **Read the assigned task** — `planned_task_spec` block (REQUIRED, last position). This is the contract.
 2. **Use the attempt plan** (`task_specification` block, HIGH) only as framing. Don't re-implement other tasks; sibling DAG nodes are someone else's job.
 3. **Use dependency summaries** for inputs. The DAG's edges encode information flow.
-4. **Decide scope fit before editing.** If the task is too broad, call `submit_execution_handoff` _before_ any `write_file`/`edit_file`/`shell` use. Once edits begin, the `request_mission_after_edit` notification reminder fires to steer the agent toward finishing through its own success/failure terminal instead.
+4. **Decide scope fit before editing.** If the task is too broad, call `submit_execution_handoff` _before_ any `write_file`/`edit_file`/`shell` use. Once edits begin, the `request_goal_after_edit` notification reminder fires to steer the agent toward finishing through its own success/blocker terminal instead.
 5. **Write a self-contained summary on submission.** It is the only durable record of this task — siblings, the evaluator, and a future retry planner will read it without the conversation history.
 6. **Exit via exactly one terminal.**
 
@@ -95,7 +95,7 @@ What both MUST NOT do:
 - **Re-derive the episode goal.** The episode goal is not in the context. The task spec is the contract.
 - **Re-judge other tasks' work.** Dependency summaries are inputs, not litigation material.
 
-## Context recipe — `generator_v1`
+## Context recipe — `generator`
 
 Source: `task_center/context_engine/recipes/generator.py:32-89`. Required scope: `{mission_id, attempt_id, task_id}`.
 
@@ -127,17 +127,17 @@ Source: `task_center/context_engine/recipes/generator.py:32-89`. Required scope:
 
 #### `submit_execution_success(summary, artifacts)`
 
-`tools/submission/main_agent/generator/executor/submit_execution_success.py:18`. `summary` is non-blank prose; `artifacts: list[str]` is an open-ended list of identifiers the executor wants downstream readers to know about. Calls `submission_context.submit_executor_success` which routes through `apply_generator_submission(outcome="success", payload={"artifacts": ...})`.
+`tools/submission/executor/submit_execution_success/submit_execution_success.py`. `summary` is non-blank prose; `artifacts: list[str]` is an open-ended list of identifiers the executor wants downstream readers to know about. Calls `submission_context.submit_executor_success` which routes through `apply_generator_submission(outcome="success", payload={"artifacts": ...})`.
 
-#### `submit_execution_failure(summary, reason, details)`
+#### `submit_execution_blocker(summary)`
 
-Same flow with `outcome="failure"`. The `reason` field is a short cause-of-failure tag; `details` lists specifics. Failure cascades: the dispatcher's `block_failed_descendants` walks the DAG (`dispatcher.py:76`) and marks every transitive PENDING descendant as `BLOCKED`. The attempt closes `FAILED/generator_failed`.
+Same flow with `outcome="blocker"`. The summary must name the concrete blocker and supporting evidence. The task becomes `BLOCKED`; dependent tasks remain `PENDING` as not-started work and never become ready in this attempt. The attempt closes `FAILED/generator_failed` after all runnable siblings quiesce.
 
 #### `submit_execution_handoff(goal)`
 
-`tools/submission/main_agent/generator/submit_execution_handoff.py:41`. Spawns a child Mission. Gates:
+`tools/submission/executor/submit_execution_handoff/submit_execution_handoff.py`. Spawns a child Mission. Gates:
 
-`submit_execution_handoff` has no pre-hook. Verifier-vs-executor restriction is enforced by the profile's `terminals` whitelist (only the executor profile lists `submit_execution_handoff`). Structural role checks (caller is a live generator in an open attempt) happen inside `resolve_attempt_submission_context`, which raises `AttemptSubmissionContextError`. After the first edit, the `request_mission_after_edit` notification reminder nudges the agent toward its own success/failure terminal — the call itself is not blocked.
+`submit_execution_handoff` has no pre-hook. Verifier-vs-executor restriction is enforced by the profile's `terminals` whitelist (only the executor profile lists `submit_execution_handoff`). Structural role checks (caller is a live generator in an open attempt) happen inside `resolve_attempt_submission_context`, which raises `AttemptSubmissionContextError`. After the first edit, the `request_goal_after_edit` notification reminder nudges the agent toward its own success/blocker terminal — the call itself is not blocked.
 
 After acceptance, the parent task parks in `WAITING_COMPLEX_TASK` (`MissionStarter.start`, `mission/starter.py:53`); the agent run terminates. When the child Mission closes, `MissionCloseReportRouter.deliver` routes the close report back into the parent attempt's orchestrator, which transitions the parked task to `DONE` (mission succeeded) or `FAILED` (mission failed), and `dispatch_ready_work()` re-evaluates the DAG.
 
@@ -145,15 +145,15 @@ After acceptance, the parent task parks in `WAITING_COMPLEX_TASK` (`MissionStart
 
 #### `submit_verification_success(summary, checks)`
 
-`tools/submission/main_agent/generator/verifier/submit_verification_success.py:26`. Calls `apply_generator_submission(outcome="success", payload={"generator_role": "verifier", "checks": ...})`. There is no hook gate on this terminal; resolver-loop saturation is signalled by the `resolver_limit` notification reminder, not a blocking gate.
+`tools/submission/verifier/submit_verification_success/submit_verification_success.py`. Calls `apply_generator_submission(outcome="success", payload={"generator_role": "verifier", "checks": ...})`. There is no hook gate on this terminal; resolver-loop saturation is signalled by the `resolver_limit` notification reminder, not a blocking gate.
 
 #### `submit_verification_failure(summary, unresolved_issues)`
 
-Same routing with `outcome="failure"`. Failure cascades the same way as executor failure.
+Same routing with `outcome="failure"`. The verifier task becomes `FAILED`; dependent tasks remain `PENDING` as not-started work and never become ready in this attempt.
 
 ## Constraints in summary
 
-Submission terminals have no pre-hooks. Structural role and attempt-open checks are enforced by `resolve_attempt_submission_context`, which fails the tool with `AttemptSubmissionContextError`. Profile-vs-terminal separation (executor cannot call verifier terminals, and vice versa) is enforced by each profile's `AgentDefinition.terminals` whitelist. After-edit and resolver-loop pressure are delivered as notification reminders (`request_mission_after_edit`, `resolver_limit`), not blocking gates.
+Submission terminals have no pre-hooks. Structural role and attempt-open checks are enforced by `resolve_attempt_submission_context`, which fails the tool with `AttemptSubmissionContextError`. Profile-vs-terminal separation (executor cannot call verifier terminals, and vice versa) is enforced by each profile's `AgentDefinition.terminals` whitelist. After-edit and resolver-loop pressure are delivered as notification reminders (`request_goal_after_edit`, `resolver_limit`), not blocking gates.
 
 ## DAG behavior
 
@@ -161,22 +161,22 @@ Submission terminals have no pre-hooks. Structural role and attempt-open checks 
 
 **Concurrency:** All ready siblings launch in the same dispatcher tick. The launcher schedules asyncio tasks; concurrency is bounded by the launcher's semaphore, not the dispatcher.
 
-**Failure propagation:** `blocked_descendant_ids` (`generator_dag.py:90`) is BFS over the dependents graph. Any PENDING descendant of a FAILED task is marked `BLOCKED`. Non-pending descendants of a failed task are an _invariant violation_ — `generator_dag.py:124` raises `TaskCenterInvariantViolation` rather than tolerate it. The invariant is hard, not best-effort: a non-PENDING dependent of a failing task indicates a race or replan ordering bug, not transient state.
+**Blocked/failed dependency propagation:** `ready_pending_generator_ids` only launches tasks whose dependencies are all `DONE`. A task that submits `submit_execution_blocker` becomes `BLOCKED`; a verifier/runtime failure becomes `FAILED`. Downstream tasks remain persisted as `PENDING` not-started work, but `summarize_generator_dag` treats PENDING tasks whose dependency chain contains a `BLOCKED` or `FAILED` task as unreachable when deciding attempt quiescence.
 
-**Quiescence:** Once `all_generators_quiescent` is true (every task in a terminal status), the dispatcher either closes the attempt as `FAILED/generator_failed` (any FAILED/BLOCKED present) or spawns the evaluator (`all_generators_done`).
+**Quiescence:** Once `all_generators_quiescent` is true (every task is terminal or unreachable pending), the dispatcher either closes the attempt as `FAILED/generator_failed` (any FAILED/BLOCKED present) or spawns the evaluator (`all_generators_done`).
 
 **Retry granularity is the attempt, not the task.** A failed generator does not retry in place. The whole attempt closes; a new attempt spawns a new planner that re-derives the DAG, possibly differently. This is deliberate — single-task retry would leak fail-context across the attempt boundary and complicate the planner's failure-landscape projection.
 
 ## Key insights
 
-**1. Same context, different operations.** Executor and verifier both receive `generator_v1` because the _information_ they need is the same: framing, dependencies, local task spec. The _difference_ is tool palette and submission contract. This factoring means the recipe never has to model "what kind of generator am I" — the agent profile does.
+**1. Same context, different operations.** Executor and verifier both receive `generator` because the _information_ they need is the same: framing, dependencies, local task spec. The _difference_ is tool palette and submission contract. This factoring means the recipe never has to model "what kind of generator am I" — the agent profile does.
 
 **2. The generator is the most context-starved role.** No mission goal. No episode goal. No criteria. No retry history. The block ordering ends on `planned_task_spec` so the prompt closes on the concrete obligation. Anything broader is either framing (`task_specification`) or input (dependency summaries). This minimization is the design's defense against scope creep.
 
 **3. Summaries are the only durable handoff.** Three downstream consumers read a generator's task summary:
 
-- **Sibling/downstream generators** see it via `dependency_summary` blocks in their `generator_v1` packet (latest only).
-- **The evaluator** sees it via `completed_task_summary` blocks in `evaluator_v1` (latest only).
+- **Sibling/downstream generators** see it via `dependency_summary` blocks in their `generator` packet (latest only).
+- **The evaluator** sees it via `completed_task_summary` blocks in `evaluator` (latest only).
 - **A retry-attempt's planner** sees an aggregated `prior_episode_summary` if the episode closed and a continuation episode opened.
 
 None of these readers see the conversation, the diffs, the tool calls, or the artifacts directly. The summary _is_ the truth.
@@ -185,11 +185,11 @@ None of these readers see the conversation, the diffs, the tool calls, or the ar
 
 **5. Verifier ↔ resolver is read-modify-verify across agents.** The verifier owns inspection but not edits. When verification finds an issue, `ask_resolver` dispatches a helper agent (a `subagent` profile) to make the fix; the verifier then re-runs its checks. The `resolver_limit` notification reminder nudges the verifier toward `submit_verification_failure` once the loop has run several times without resolution — but the decision is the verifier's, not a hook's.
 
-**6. Failure cascades, retry doesn't.** A single FAILED generator cascades into BLOCKED descendants and closes the entire attempt. The next attempt (if budget remains) starts from scratch: new planner, fresh DAG, no in-flight state from the failed attempt. The only thing that crosses the attempt boundary is the _failure landscape projection_ in the next planner's prompt.
+**6. Failed or blocked upstreams close the attempt, retry doesn't happen in place.** A single `FAILED` or `BLOCKED` generator makes dependent PENDING tasks unreachable and closes the entire attempt once runnable siblings quiesce. The next attempt (if budget remains) starts from scratch: new planner, fresh DAG, no in-flight state from the failed attempt. The only thing that crosses the attempt boundary is the _failure landscape projection_ in the next planner's prompt.
 
-**7. The entry executor is structurally a generator.** It uses `entry_executor_v1` (a separate recipe with just an `entry_request` block) and has no attempt id, but its `HarnessTaskRole` is `GENERATOR`. It can `submit_execution_handoff` to delegate. Most user-facing interactions begin as one entry executor that either solves the request directly or dispatches a Mission.
+**7. The entry executor is structurally a generator.** It uses `entry_executor` (a separate recipe with just an `entry_request` block) and has no attempt id, but its `HarnessTaskRole` is `GENERATOR`. It can `submit_execution_handoff` to delegate. Most user-facing interactions begin as one entry executor that either solves the request directly or dispatches a Mission.
 
-**8. Two failure terminals exist because nuance matters downstream.** `execution_failure(reason, details)` and `verification_failure(unresolved_issues)` carry different shaped payloads. The executor's failure carries causation; the verifier's failure carries an issue list. Both flow into `apply_generator_submission(outcome="failure")` but the persisted payload differs — useful for log analysis and for retry planners reasoning about what kind of failure to address.
+**8. Executor blocker and verifier failure mean different things.** `submit_execution_blocker(summary)` records that an executor explicitly could not proceed and maps to `outcome="blocker"` / task `BLOCKED`. `submit_verification_failure(unresolved_issues)` records a failed verification and maps to `outcome="failure"` / task `FAILED`. Runtime-synthesized executor failures still use `outcome="failure"`; executor-authored inability-to-proceed uses blocker.
 
 ## Context building workflow
 
@@ -205,7 +205,7 @@ This section traces — end-to-end — how a generator's `task_input` string is 
 │      for task in ready:                                                 │
 │          task.status = RUNNING                                          │
 │          composer.compose(                                              │
-│              recipe_id="generator_v1",                                  │
+│              recipe_id="generator",                                     │
 │              scope=ContextScope(mission_id, attempt_id, task_id))       │
 └──────────────────────────────────┬──────────────────────────────────────┘
                                    │
@@ -218,13 +218,13 @@ This section traces — end-to-end — how a generator's `task_input` string is 
                                    ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  ContextEngine.build  (engine.py:60)                                    │
-│      recipe = RecipeRegistry.get("generator_v1")                        │
+│      recipe = RecipeRegistry.get("generator")                           │
 │      scope.assert_fields({mission_id, attempt_id, task_id})             │
 └──────────────────────────────────┬──────────────────────────────────────┘
                                    │
                                    ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  _generator_v1_build  (recipes/generator.py:32)                         │
+│  _generator_build  (recipes/generator.py:32)                            │
 │      attempt = attempt_store.get(attempt_id)                            │
 │      task    = task_store.get_task(task_id)                             │
 │                                                                         │
@@ -430,8 +430,8 @@ task_store    ──────────►─────────┤
                                   │                                  ► dependency_summary block
                                   │                                    (MEDIUM, group="# Dependency Results")
 
-mission_store  ──── (not read by generator_v1) ────
-episode_store  ──── (not read by generator_v1) ────
+mission_store  ──── (not read by generator) ────
+episode_store  ──── (not read by generator) ────
 ```
 
 Compared to the planner and evaluator provenance maps, the generator's surface is dramatically narrower:
@@ -462,7 +462,7 @@ Implications:
 
 ```
 ┌────────────────────────┬───────────────┬───────────────┬───────────────┐
-│ Block kind             │  planner_v1   │  evaluator_v1 │  generator_v1 │
+│ Block kind             │  planner   │  evaluator │  generator    │
 ├────────────────────────┼───────────────┼───────────────┼───────────────┤
 │ mission_goal           │   ✓ (seq>1)   │   ✓ (seq>1)   │       ✗       │
 │ episode_goal           │       ✓       │       ✓       │       ✗       │
@@ -484,9 +484,9 @@ Each recipe places its highest-priority _operational_ block last so the agent's 
 
 | Recipe         | Closes on                                                |
 | -------------- | -------------------------------------------------------- |
-| `planner_v1`   | `failed_attempt` (HIGH) — the retry evidence   |
-| `evaluator_v1` | `evaluation_criteria` (REQUIRED) — the verdict basis     |
-| `generator_v1` | `planned_task_spec` (REQUIRED) — the concrete obligation |
+| `planner`   | `failed_attempt` (HIGH) — the retry evidence   |
+| `evaluator` | `evaluation_criteria` (REQUIRED) — the verdict basis     |
+| `generator` | `planned_task_spec` (REQUIRED) — the concrete obligation |
 
 This ordering is not what `_compress` operates on — priority drives only compression, not order (`renderer.py` docstring: _"Priority is a compression policy only; it is not a presentation-order policy."_). The order is fixed by the recipe builder's `blocks.append(...)` sequence.
 
@@ -494,7 +494,7 @@ This ordering is not what `_compress` operates on — priority drives only compr
 
 | Where it fails                                        | Trigger                                           | Effect                                                                                                                                                                                                                                                                                              |
 | ----------------------------------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ContextEngine.build`                                 | scope missing `mission_id`/`attempt_id`/`task_id` | `AssertionError` from `scope.assert_fields` → launcher exception → task fails with `fail_reason="agent_launch_failed"`; cascade to descendants.                                                                                                                                                     |
+| `ContextEngine.build`                                 | scope missing `mission_id`/`attempt_id`/`task_id` | `AssertionError` from `scope.assert_fields` → launcher exception → task fails with `fail_reason="agent_launch_failed"`; dependents stay PENDING and unreachable.                                                                                                                                      |
 | `attempt_store.get` returns None                      | attempt row deleted/missing                       | `ContextEngineError("Attempt ... not found")` — same effect as above.                                                                                                                                                                                                                               |
 | `task_store.get_task` returns None for the scope task | task row deleted/missing                          | `ContextEngineError("TaskCenterTask ... not found")`.                                                                                                                                                                                                                                               |
 | `task_store.get_task` returns None for a dep id       | upstream task row gone                            | `ContextEngineError`; the dependent does not launch with a truncated dependency frame.                                                                                                                                                                                                              |
@@ -505,9 +505,9 @@ This ordering is not what `_compress` operates on — priority drives only compr
 | Mode                         | Cause                                                    | Effect                                                                                                                                               |
 | ---------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Profile mismatch             | Verifier agent calling executor terminal (or vice versa) | Each profile's `terminals` whitelist excludes the other side's terminals, so the call is never dispatched.                                           |
-| Edit-then-delegate           | Edit tool used before `submit_execution_handoff`         | `request_mission_after_edit` notification reminder fires; the generator is expected to finish through success/failure. The call is not hard-blocked. |
+| Edit-then-delegate           | Edit tool used before `submit_execution_handoff`         | `request_goal_after_edit` notification reminder fires; the generator is expected to finish through success/blocker. The call is not hard-blocked. |
 | Resolver saturation          | ≥4 unresolved resolver calls before verifier success     | `resolver_limit` notification reminder fires; verifier is expected to submit failure with remaining issues.                                          |
-| Submission failure           | Agent submits explicit failure                           | Cascade BLOCKED descendants; close attempt `FAILED/generator_failed`.                                                                                |
+| Submission blocker/failure   | Executor submits blocker or verifier/runtime fails        | Submitting task becomes `BLOCKED` or `FAILED`; dependents stay PENDING and unreachable; close attempt `FAILED/generator_failed`.                      |
 | Launcher exception           | Agent crash, sandbox error                               | `_launch_ready_generator` exception path marks task `FAILED` with `fail_reason="agent_launch_failed"`; cascade.                                      |
 | Unfinished agent run         | Run ends with no terminal                                | Launcher synthesises `apply_generator_submission(outcome="failure")`.                                                                                |
 | Submission to closed attempt | Race between submission and attempt close                | `resolve_attempt_submission_context` raises `AttemptSubmissionContextError` once the attempt is closed.                                              |
@@ -517,5 +517,5 @@ This ordering is not what `_compress` operates on — priority drives only compr
 - \[\[role-planner]] — produces the `task_specs[id]` each generator consumes.
 - \[\[role-evaluator]] — reads the summaries each generator writes.
 - \[\[task-center-pipeline]] — the dispatcher and DAG state machine.
-- \[\[context-engine-recipes]] — `generator_v1` block builders and renderer.
+- \[\[context-engine-recipes]] — `generator` block builders and renderer.
 - \[\[sandbox-subsystem]] — where executor edits actually land.

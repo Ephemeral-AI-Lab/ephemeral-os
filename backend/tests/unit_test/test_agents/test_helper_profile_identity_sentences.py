@@ -39,9 +39,7 @@ def test_resolver_profile_body_contains_identity_sentence():
 # agents. Each pin is the byte-identical identity sentence on disk today;
 # a single-word change in the .md fails the test on the same PR.
 #
-# executor.md is intentionally NOT pinned: it is a variant-only entry-point
-# with no body sentence (delegates to executor_success_failure /
-# executor_success_handoff). Pinning it would force adding a fake body.
+# executor.md is pinned because it is now the concrete generator executor.
 # ---------------------------------------------------------------------------
 
 _MAIN_AGENT_IDENTITY_PINS = {
@@ -50,19 +48,9 @@ _MAIN_AGENT_IDENTITY_PINS = {
         "the top-level user request."
     ),
     "main/evaluator.md": "You are the **main-agent evaluator**.",
-    "main/executor_success_failure.md": (
-        "You are the **main-agent generator executor** at a leaf depth "
-        "— no further delegation is allowed."
-    ),
-    "main/executor_success_handoff.md": (
-        "You are the **main-agent generator executor** at a depth where "
-        "handoff is still available."
-    ),
+    "main/executor.md": "You are the **main-agent generator executor**.",
     "main/generator_verifier.md": "You are the **main-agent generator verifier**.",
-    "main/planner_closes_or_defers.md": (
-        "You are the **planner** for one attempt in the TaskCenter harness."
-    ),
-    "main/planner_closes_goal.md": (
+    "main/planner.md": (
         "You are the **planner** for one attempt in the TaskCenter harness."
     ),
     "subagent/explorer.md": "You are the explorer subagent.",

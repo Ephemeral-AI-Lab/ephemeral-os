@@ -16,7 +16,7 @@ from agents.skills import SkillLintError
 from task_center.context_engine.core import (
     AgentDefinitionValidationError,
 )
-from task_center._core.agent_routing import PredicateRegistry
+from task_center._core.terminal_tool_routing import PredicateRegistry
 from task_center.context_engine.recipes_registry import (
     ContextRecipe,
     RecipeRegistry,
@@ -57,17 +57,17 @@ def _stub_recipe(recipe_id: str) -> None:
 
 
 def test_unknown_predicate_id_rejected():
-    _stub_recipe("planner_closes_or_defers")
+    _stub_recipe("planner")
     base = AgentDefinition(
-        name="planner_closes_or_defers",
-        description="planner_closes_or_defers",
-        context_recipe="planner_closes_or_defers",
-        variants=[AgentVariant(when="missing_predicate", use="planner_closes_goal")],
+        name="planner",
+        description="planner",
+        context_recipe="planner",
+        variants=[AgentVariant(when="missing_predicate", use="planner_full")],
     )
     full_only = AgentDefinition(
-        name="planner_closes_goal",
-        description="planner_closes_or_defers",
-        context_recipe="planner_closes_or_defers",
+        name="planner_full",
+        description="planner",
+        context_recipe="planner",
     )
     register_definition(base)
     register_definition(full_only)
@@ -77,12 +77,12 @@ def test_unknown_predicate_id_rejected():
 
 
 def test_dangling_variant_target_rejected():
-    _stub_recipe("planner_closes_or_defers")
+    _stub_recipe("planner")
     PredicateRegistry.register("p", lambda ctx: False)
     base = AgentDefinition(
-        name="planner_closes_or_defers",
-        description="planner_closes_or_defers",
-        context_recipe="planner_closes_or_defers",
+        name="planner",
+        description="planner",
+        context_recipe="planner",
         variants=[AgentVariant(when="p", use="missing_target")],
     )
     register_definition(base)
@@ -92,22 +92,22 @@ def test_dangling_variant_target_rejected():
 
 
 def test_nested_variant_target_rejected():
-    _stub_recipe("planner_closes_or_defers")
+    _stub_recipe("planner")
     PredicateRegistry.register("p", lambda ctx: False)
     base = AgentDefinition(
         name="base",
         description="base",
-        context_recipe="planner_closes_or_defers",
+        context_recipe="planner",
         variants=[AgentVariant(when="p", use="middle")],
     )
     middle = AgentDefinition(
         name="middle",
         description="middle",
-        context_recipe="planner_closes_or_defers",
+        context_recipe="planner",
         variants=[AgentVariant(when="p", use="leaf")],
     )
     leaf = AgentDefinition(
-        name="leaf", description="leaf", context_recipe="planner_closes_or_defers"
+        name="leaf", description="leaf", context_recipe="planner"
     )
     for d in (base, middle, leaf):
         register_definition(d)
@@ -119,8 +119,8 @@ def test_nested_variant_target_rejected():
 def test_unknown_context_recipe_rejected():
     PredicateRegistry.register("p", lambda ctx: False)
     base = AgentDefinition(
-        name="planner_closes_or_defers",
-        description="planner_closes_or_defers",
+        name="planner",
+        description="planner",
         context_recipe="not_registered_recipe",
     )
     register_definition(base)
@@ -130,31 +130,31 @@ def test_unknown_context_recipe_rejected():
 
 
 def test_clean_setup_passes_validation():
-    _stub_recipe("planner_closes_or_defers")
+    _stub_recipe("planner")
     _stub_recipe("generator")
     PredicateRegistry.register("nested_goal_depth_gt_1", lambda ctx: False)
     base = AgentDefinition(
-        name="planner_closes_or_defers",
-        description="planner_closes_or_defers",
-        context_recipe="planner_closes_or_defers",
+        name="planner",
+        description="planner",
+        context_recipe="planner",
         terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
         variants=[
             AgentVariant(
-                when="nested_goal_depth_gt_1", use="planner_closes_goal"
+                when="nested_goal_depth_gt_1", use="planner_full"
             )
         ],
     )
     full_only = AgentDefinition(
-        name="planner_closes_goal",
-        description="planner_closes_or_defers",
-        context_recipe="planner_closes_or_defers",
+        name="planner_full",
+        description="planner",
+        context_recipe="planner",
         terminals=["submit_plan_closes_goal"],
     )
     generator = AgentDefinition(
         name="generator",
         description="generator",
         context_recipe="generator",
-        terminals=["submit_execution_success", "submit_execution_failure"],
+        terminals=["submit_execution_success", "submit_execution_blocker"],
     )
     for d in (base, full_only, generator):
         register_definition(d)
@@ -171,17 +171,17 @@ def test_definitions_with_no_recipe_pass_validation():
 
 
 def test_skill_lint_runs_during_resolved_validation(tmp_path):
-    _stub_recipe("planner_closes_or_defers")
-    skill_file = tmp_path / "planner_closes_or_defers" / "SKILL.md"
+    _stub_recipe("planner")
+    skill_file = tmp_path / "planner" / "SKILL.md"
     skill_file.parent.mkdir()
     skill_file.write_text(
         "---\nname: planner\n---\n\nUse submit_plan_closes_goal here.",
         encoding="utf-8",
     )
     planner = AgentDefinition(
-        name="planner_closes_or_defers",
-        description="planner_closes_or_defers",
-        context_recipe="planner_closes_or_defers",
+        name="planner",
+        description="planner",
+        context_recipe="planner",
         skill=skill_file,
     )
     register_definition(planner)

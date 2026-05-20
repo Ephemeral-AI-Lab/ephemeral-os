@@ -1,4 +1,4 @@
-# planner — iteration 1, attempt 2 (after evaluator failure; planner_instruction branch: iter==1, has failed attempts with rich `<attempt status="failed">` body — real `<plan_spec>`, `<generator_outcomes>`, `<evaluator_judgment status="ran" verdict="fail">`)
+# planner — iteration 1, attempt 2 (after evaluator failure; planner task-guidance branch: iter==1, has failed attempts with rich `<attempt status="failed">` body — real `<plan_spec>`, `<generator_outcomes>`, `<evaluator_judgment status="ran" verdict="fail">`)
 - source: `goal_01_fd45befd-45f2-47b9-a6ba-0975c575c72d/iteration_01_d3bdafea-2967-4ba7-b7e6-d6e61eeed9e3/attempt_02_a106dcda-744a-4a6a-9261-98f98635138f/01_planner_a106dcda-744a-4a6a-9261-98f98635138f:planner/message.jsonl`
 
 ## system
@@ -95,7 +95,7 @@ A submission that violates any of these is rejected. Repair and resubmit.
 - **Continuation scope is not the original backlog.** On continuation iterations, the standalone `<goal>` text and prior accepted plans (inside `<iteration status="prior">`) are evidence, not scope. Plan only the current `<iteration_goal>` contract plus unresolved items explicitly named there.
 - **Bind the evaluator to what the DAG produces.** Write criteria you are confident the planned tasks can satisfy. If coverage is uncertain, prefer a continues-goal plan with a tighter contract here and an explicit `deferred_goal_for_next_iteration` for the rest.
 - **Generator independence.** A generator receives only its own assigned task, the attempt plan for framing, and dependency results. Write each `task_spec` so the executing agent can act without re-reading the attempt contract or re-deriving the iteration goal.
-- **Right-size the DAG.** Add a dependency only when one task's output is required by another. Independent items become parallel siblings. A wide flat DAG is normal; deep chains compound risk because failure of one task blocks all descendants.
+- **Right-size the DAG.** Add a dependency only when one task's output is required by another. Independent items become parallel siblings. A wide flat DAG is normal; deep chains compound risk because one failed or blocked upstream leaves all descendants pending and unreachable in that attempt.
 - **Use the failure landscape on retry.** Identify which prior tasks failed, which were blocked, and which already completed. Drop or rework the failing slice rather than re-running the same plan unchanged. If a prior evaluator failure points at a specific gap, narrow the next plan to address that gap directly.
 - **Reuse references, don't paste content.** Background blocks (parent task input, artifacts, prior summaries) are inputs. Do not inline them into `plan_spec` or `task_specs`. Reference dependency outputs by `id`; reference durable artifacts by their identifiers.
 - **No lifecycle decisions.** You do not close the iteration, decide the goal, or skip stages. The only state you mutate is this attempt's plan, through the terminal tool.
@@ -2082,7 +2082,7 @@ to:
 - If a prior evaluator failure pointed at a specific gap, narrow the
   next plan to address that gap directly rather than re-attempting the
   whole iteration.
-- Identify dependency chains that blocked descendants; consider whether
+- Identify dependency chains that left descendants pending and unreachable; consider whether
   those branches still belong in this attempt or can be dropped.
 
 ## Submission discipline

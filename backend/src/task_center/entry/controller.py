@@ -2,7 +2,7 @@
 
 The entry executor is the user-facing root agent. It is not modeled as a
 :class:`Goal` — it sits one level above and either completes directly via
-``submit_execution_success`` / ``submit_execution_failure`` or delegates to
+``submit_execution_success`` / ``submit_execution_blocker`` or delegates to
 the first goal via ``submit_execution_handoff``. :class:`EntryTaskController`
 owns every state transition for that root task row.
 """
@@ -46,19 +46,15 @@ class EntryTaskController:
             return
         self._finish_run(status="done")
 
-    def apply_executor_failure(
-        self, *, summary: str, reason: str, details: list[str]
-    ) -> None:
-        """Entry executor called ``submit_execution_failure``."""
+    def apply_executor_blocker(self, *, summary: str) -> None:
+        """Entry executor called ``submit_execution_blocker``."""
         if not self._mark_terminal(
-            status=TaskCenterTaskStatus.FAILED,
+            status=TaskCenterTaskStatus.BLOCKED,
             summary={
-                "outcome": "failure",
+                "outcome": "blocker",
                 "summary": summary,
                 "payload": {
                     "generator_role": "entry_executor",
-                    "reason": reason,
-                    "details": details,
                 },
             },
         ):

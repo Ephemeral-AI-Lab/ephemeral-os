@@ -150,8 +150,6 @@ class AttemptOrchestrator:
     ) -> None:
         self._assert_submission_attempt(submission.attempt_id)
         self._mark_generator(submission)
-        if submission.outcome == "failure":
-            self._dispatcher.block_failed_descendants(submission.task_id)
         self._dispatcher.dispatch_ready_work()
 
     def apply_evaluator_submission(
@@ -208,8 +206,6 @@ class AttemptOrchestrator:
         if updated is None:
             # Race: another delivery moved the parent first. Idempotent.
             return
-        if status == TaskCenterTaskStatus.FAILED:
-            self._dispatcher.block_failed_descendants(report.requested_by_task_id)
         self._dispatcher.dispatch_ready_work()
 
     def _validate_planner_submission(self, planner_task_id: str) -> Attempt:
@@ -309,11 +305,12 @@ class AttemptOrchestrator:
             raise TaskCenterInvariantViolation(
                 f"{role} task {task_id!r} is not running"
             )
-        status = (
-            TaskCenterTaskStatus.DONE
-            if outcome == "success"
-            else TaskCenterTaskStatus.FAILED
-        )
+        if outcome == "success":
+            status = TaskCenterTaskStatus.DONE
+        elif outcome == "blocker":
+            status = TaskCenterTaskStatus.BLOCKED
+        else:
+            status = TaskCenterTaskStatus.FAILED
         self._runtime.task_store.set_task_status(
             task_id,
             status=status.value,

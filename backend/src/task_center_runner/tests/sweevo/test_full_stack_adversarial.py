@@ -141,8 +141,7 @@ def _assert_message_logs(run_dir: Path) -> None:
     }
     assert {
         "entry_executor",
-        "planner_closes_or_defers",
-        "planner_closes_goal",
+        "planner",
         "verifier",
         "evaluator",
     } <= agents

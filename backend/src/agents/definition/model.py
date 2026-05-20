@@ -23,9 +23,9 @@ class AgentKind(StrEnum):
     Values mirror the previous free-form ``AgentDefinition.role`` strings
     byte-for-byte, so audit consumers reading the ``metadata["role"]`` key
     (emitted by ``factory.py`` and ``run_subagent.py``) continue to see the
-    same string set. The four main kinds (PLANNER / EXECUTOR / VERIFIER /
-    EVALUATOR) participate in depth-gated variant routing; ADVISOR / EXPLORER
-    / RESOLVER are helper / subagent kinds that never declare ``variants:``.
+    same string set. Planner and executor profiles can participate in
+    launch-time terminal-tool routing; ADVISOR / EXPLORER / RESOLVER are
+    helper / subagent kinds that never declare ``variants:``.
     """
 
     PLANNER = "planner"

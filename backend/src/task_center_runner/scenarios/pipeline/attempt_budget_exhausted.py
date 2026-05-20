@@ -2,7 +2,7 @@
 
 The default ``TaskCenterLifecycleConfig.default_attempt_budget`` is ``2``
 (``backend/src/task_center/config.py:16``). This scenario plans a single
-generator task that **always** calls ``submit_execution_failure``, so each
+generator task that **always** calls ``submit_execution_blocker``, so each
 attempt closes ``status=failed``, ``fail_reason="generator_failed"``. After
 attempt 2 fails, ``IterationManager.has_budget_remaining`` is False — iteration
 closes failed, goal handler closes the goal failed.

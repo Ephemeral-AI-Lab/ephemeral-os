@@ -84,7 +84,7 @@ class EphemeralAttemptAgentLauncher:
         self._pending: set[asyncio.Task[None]] = set()
 
     def launch(self, launch: AgentLaunch) -> None:
-        agent_def = get_definition(launch.agent_name)
+        agent_def = launch.agent_def or get_definition(launch.agent_name)
         if agent_def is None:
             raise TaskCenterInvariantViolation(
                 f"TaskCenter agent definition {launch.agent_name!r} is not registered."
@@ -133,6 +133,7 @@ class EphemeralAttemptAgentLauncher:
             attempt_runtime=runtime,
             composer=runtime.composer,
         )
+        metadata["active_terminals"] = list(agent_def.terminals)
         # Launch shape:
         #   - 4 rows when both task_guidance and skill are present
         #     (planner with a declared skill: system + <context> +
@@ -343,7 +344,7 @@ def _report_exhaustion(
 # ---- LaunchBuilder (role-parametrized AgentLaunch factory) -----------------
 
 
-PLANNER_AGENT_NAME = "planner_closes_or_defers"
+PLANNER_AGENT_NAME = "planner"
 EVALUATOR_AGENT_NAME = "evaluator"
 
 
@@ -451,6 +452,7 @@ class LaunchBuilder:
             attempt_id=attempt_id,
             role=role,
             agent_name=messages.agent_def.name,
+            agent_def=messages.agent_def,
             context=messages.context,
             task_guidance=messages.task_guidance,
             needs=needs,

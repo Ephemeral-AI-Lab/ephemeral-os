@@ -41,11 +41,15 @@ _ADVISOR_DEF = AgentDefinition(
 )
 
 _PARENT_EXECUTOR_DEF = AgentDefinition(
-    name="executor_success_failure",
+    name="executor",
     description="parent executor stub",
     agent_type="agent",
     agent_kind=AgentKind.EXECUTOR,
-    terminals=["submit_execution_success", "submit_execution_failure"],
+    terminals=[
+        "submit_execution_handoff",
+        "submit_execution_success",
+        "submit_execution_blocker",
+    ],
 )
 
 
@@ -53,6 +57,7 @@ _PARENT_EXECUTOR_DEF = AgentDefinition(
 class _HelperMessagesStub:
     helper_agent_def: AgentDefinition
     parent_agent_def: AgentDefinition | None
+    parent_active_terminals: tuple[str, ...]
     parent_user_msg_1: str
     parent_user_msg_2: str
     parent_transcript: str | None
@@ -62,7 +67,7 @@ def _make_context() -> ToolExecutionContextService:
     metadata = ExecutionMetadata()
     metadata.runtime_config = SimpleNamespace(cwd=Path("/tmp"))
     metadata.sandbox_id = ""
-    metadata.agent_name = "executor_success_failure"
+    metadata.agent_name = "executor"
     metadata.task_center_task_id = "parent-task"
     metadata.conversation_messages = [
         ConversationMessage(
@@ -86,6 +91,7 @@ def _install_build_stub(monkeypatch: pytest.MonkeyPatch) -> None:
         return _HelperMessagesStub(
             helper_agent_def=_ADVISOR_DEF,
             parent_agent_def=_PARENT_EXECUTOR_DEF,
+            parent_active_terminals=tuple(_PARENT_EXECUTOR_DEF.terminals),
             parent_user_msg_1="parent context here",
             parent_user_msg_2="parent task here",
             parent_transcript="## role:assistant\n\nparent did some work",
@@ -263,7 +269,7 @@ async def test_advisor_launches_with_two_user_messages(
     # Parent's terminals appear in the catalog with advisor_review_focus
     # text fragments.
     assert "submit_execution_success" in user_msg_2
-    assert "submit_execution_failure" in user_msg_2
+    assert "submit_execution_blocker" in user_msg_2
     assert "Verify the `<assigned_task>` deliverable" in user_msg_2
     assert "# Pending submission" in user_msg_2
     assert "submit_execution_success" in user_msg_2

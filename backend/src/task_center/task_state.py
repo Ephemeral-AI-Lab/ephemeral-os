@@ -81,7 +81,7 @@ class GeneratorSubmission:
 
     attempt_id: str
     task_id: str
-    outcome: Literal["success", "failure"]
+    outcome: Literal["success", "failure", "blocker"]
     summary: str
     payload: dict[str, Any]
 

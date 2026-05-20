@@ -35,7 +35,7 @@ writes to `message.jsonl`:
 | 08 | evaluator — iter2 attempt1 (complete attempt) | `pipeline.initial_messages_capture` | `<iteration status="prior">` + `<iteration status="current">` with the active `<attempt status="current">` inside |
 | 09 | advisor — invoked by executor pre-submission | programmatic via `tools/ask_helper/_lib/_compose.py` | mock runner does not invoke helpers today |
 | 10 | resolver — invoked by verifier/evaluator on issues | programmatic via `tools/ask_helper/_lib/_compose.py` + `ask_resolver._build_resolver_user_msg_2` | mock runner does not invoke helpers today |
-| 11 | explorer subagent — invoked via `run_subagent` | programmatic via `explorer_instruction().text` | mock runner does not invoke subagents today |
+| 11 | explorer subagent — invoked via `run_subagent` | programmatic via `build_explorer_task_guidance()` | mock runner does not invoke subagents today |
 | 12 | planner_closes_goal — child goal, delegated from deferring parent | `pipeline.deferred_parent_planner_closes_goal` | terminal catalog has `submit_plan_closes_goal` only |
 | 13 | planner — iter1 attempt2, after evaluator failure (cross-reference from focused-scenario suite) | `pipeline.attempt_retry_evaluator_failure` | Same shape as case 03; kept as a focused-reference example from a single-purpose scenario. Case 03 is the canonical reference. |
 | 14 | executor — `has_deps=True` branch with flat `<dependency>` siblings | `pipeline.dependency_dag_serial` | task `b` of serial chain `a → b → c`; deps: `[a]`. No `<dependency_results>` wrapper — each upstream task becomes a flat `<dependency id="...">` block between `<plan_spec>` and `<assigned_task>`. |
@@ -52,19 +52,15 @@ Closed:
 
 Open / documented as structural limits:
 
-* **Gap 4** — `executor_success_failure` routing variant. Requires
-  `nested_goal_depth > MAX_HANDOFF_DEPTH` (=3 in
-  `task_center/_core/agent_routing.py`). No scenario in the current suite
-  exercises depth > 3. Reaching it from a test is feasible (chain
-  `request_recursive_goal` 4+ levels deep) but invasive enough that no
-  case is captured here; the leaf-executor agent profile is in
-  `agents/profile/main/executor_success_failure.md` for direct review.
+* **Gap 4** — retired. Executor depth routing was removed; the single
+  `agents/profile/main/executor.md` profile now exposes success, handoff,
+  and blocker terminals.
 
 * **Gaps 6 + 7** — live helper / subagent captures. Cases 09–11 use the
   real builder code in `tools/ask_helper/_lib/_compose.py`,
   `ask_advisor._build_advisor_user_msg_2`,
   `ask_resolver._build_resolver_user_msg_2`, and
-  `explorer_instruction().text` — so the prompt shape is faithful.
+  `build_explorer_task_guidance()` — so the prompt shape is faithful.
   The only difference from a live capture is the parent transcript
   content. Extending `MockSquadRunner` to dispatch `ask_advisor` /
   `ask_resolver` / `run_subagent` inline (the scenario already exposes a

@@ -23,7 +23,7 @@ from tools.submission.evaluator import (
 )
 from tools.submission.executor import submit_execution_handoff
 from tools.submission.executor import (
-    submit_execution_failure,
+    submit_execution_blocker,
     submit_execution_success,
 )
 from tools.submission.verifier import (
@@ -71,7 +71,7 @@ async def test_submit_execution_success_calls_apply_generator_submission(
     assert task["summaries"][-1]["payload"]["generator_role"] == "executor"
 
 
-async def test_submit_execution_failure_calls_apply_generator_submission(
+async def test_submit_execution_blocker_calls_apply_generator_submission(
     goal_store, iteration_store, attempt_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
@@ -84,8 +84,8 @@ async def test_submit_execution_failure_calls_apply_generator_submission(
     generator_id = apply_single_generator_plan(fixture)
 
     result = await execute_tool_once(
-        submit_execution_failure,
-        {"summary": "failed", "reason": "blocked", "details": ["detail"]},
+        submit_execution_blocker,
+        {"summary": "blocked by missing dependency"},
         make_tool_context(fixture, generator_id),
         emit=_noop_emit,
     )
@@ -93,8 +93,8 @@ async def test_submit_execution_failure_calls_apply_generator_submission(
     task = task_store.get_task(generator_id)
     assert not result.is_error
     assert task is not None
-    assert task["status"] == TaskCenterTaskStatus.FAILED.value
-    assert task["summaries"][-1]["payload"]["reason"] == "blocked"
+    assert task["status"] == TaskCenterTaskStatus.BLOCKED.value
+    assert task["summaries"][-1]["outcome"] == "blocker"
 
 
 async def test_submit_verification_success_calls_apply_generator_submission(
@@ -285,6 +285,76 @@ async def test_submit_execution_handoff_entry_mode_uses_bound_controller(
     assert delegated_goal.requested_by_task_id == entry_task_id
 
 
+async def test_submit_execution_blocker_entry_mode_uses_bound_controller(
+    goal_store, iteration_store, attempt_store, task_store, composer
+) -> None:
+    from pathlib import Path
+
+    from task_center.attempt.orchestrator_registry import (
+        AttemptOrchestratorRegistry,
+    )
+    from task_center.attempt.runtime import AttemptDeps
+    from task_center.entry import EntryTaskController
+    from task_center.iteration import IterationManagerRegistry
+    from tools._framework.core.context import ToolExecutionContextService
+    from tools._framework.core.runtime import ExecutionMetadata
+
+    from .submission_test_utils import FakeLauncher
+
+    entry_task_id = "run1:entry"
+    task_store.upsert_task(
+        task_id=entry_task_id,
+        task_center_run_id="run1",
+        role=TaskCenterTaskRole.ENTRY_EXECUTOR.value,
+        agent_name="entry_executor",
+        context_message="top-level goal",
+        status=TaskCenterTaskStatus.RUNNING.value,
+        summaries=[],
+        needs=[],
+        task_center_attempt_id=None,
+        spawn_reason=SpawnReason.ENTRY_EXECUTOR.value,
+    )
+    controller = EntryTaskController(
+        task_id=entry_task_id,
+        task_center_run_id="run1",
+        task_store=task_store,
+    )
+    runtime = AttemptDeps(
+        goal_store=goal_store,
+        iteration_store=iteration_store,
+        attempt_store=attempt_store,
+        task_store=task_store,
+        agent_launcher=FakeLauncher(),
+        orchestrator_registry=AttemptOrchestratorRegistry(),
+        manager_registry=IterationManagerRegistry(),
+        composer=composer,
+        entry_task_controller=controller,
+    )
+    context = ToolExecutionContextService(
+        cwd=Path("/tmp"),
+        services=ExecutionMetadata(
+            task_center_task_id=entry_task_id,
+            task_center_attempt_id=None,
+            attempt_runtime=runtime,
+            conversation_messages=[],
+        ),
+    )
+
+    result = await execute_tool_once(
+        submit_execution_blocker,
+        {"summary": "missing required input"},
+        context,
+        emit=_noop_emit,
+    )
+
+    entry_task = task_store.get_task(entry_task_id)
+    assert not result.is_error
+    assert result.does_terminate
+    assert result.metadata["attempt_id"] is None
+    assert entry_task is not None
+    assert entry_task["status"] == TaskCenterTaskStatus.BLOCKED.value
+
+
 async def test_submit_execution_handoff_accepts_any_generator_agent_profile(
     goal_store, iteration_store, attempt_store, task_store, composer
 ) -> None:
@@ -300,7 +370,7 @@ async def test_submit_execution_handoff_accepts_any_generator_agent_profile(
             terminals=[
                 "submit_execution_handoff",
                 "submit_execution_success",
-                "submit_execution_failure",
+                "submit_execution_blocker",
             ],
         )
     )

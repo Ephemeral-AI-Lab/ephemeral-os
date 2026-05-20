@@ -1,7 +1,7 @@
 """Agent-entry composer (formerly ``ContextComposer``).
 
-Threads ``base_agent_name`` + :class:`ContextScope` through the resolver, the
-context engine, and the renderer to produce an
+Threads ``base_agent_name`` + :class:`ContextScope` through the terminal-tool
+router, the context engine, and the renderer to produce an
 :class:`AgentEntryMessages` — the four-row launch wire shape: system
 (elsewhere), ``<context>``, ``<Task Guidance>``, and ``Load skill:``. Recipe
 ids are looked up at call time; the task-guidance dispatch picks the builder
@@ -26,7 +26,7 @@ from task_center.context_engine.exceptions import ContextEngineError
 from task_center.context_engine.renderer import XmlPromptRenderer
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
-    from task_center._core.agent_routing import RuleBasedAgentResolver
+    from task_center._core.terminal_tool_routing import TerminalToolRouter
     from task_center.context_engine.scope import ContextScope
 
 
@@ -37,18 +37,18 @@ _CONTEXT_CLOSER = "</context>"
 class AgentEntryComposer:
     """Single launch entry point. Frozen so dependencies are explicit."""
 
-    resolver: RuleBasedAgentResolver
+    router: TerminalToolRouter
     engine: ContextEngine
     renderer: XmlPromptRenderer
 
     @classmethod
     def default(cls, engine: ContextEngine) -> AgentEntryComposer:
-        # Lazy import: _core.agent_routing imports ContextEngineDeps from
+        # Lazy import: _core.terminal_tool_routing imports ContextEngineDeps from
         # context_engine.core, which would round-trip through agent_launch.
-        from task_center._core.agent_routing import RuleBasedAgentResolver
+        from task_center._core.terminal_tool_routing import TerminalToolRouter
 
         return cls(
-            resolver=RuleBasedAgentResolver(),
+            router=TerminalToolRouter(),
             engine=engine,
             renderer=XmlPromptRenderer(),
         )
@@ -56,9 +56,9 @@ class AgentEntryComposer:
     def compose(
         self, *, base_agent_name: str, scope: ContextScope
     ) -> AgentEntryMessages:
-        # ``resolver.resolve`` enforces context_recipe presence and raises
-        # ``MissingContextRecipeError`` for both base and variant-target paths.
-        selection = self.resolver.resolve(
+        # ``router.resolve`` enforces context_recipe presence and returns an
+        # effective copy whose terminal list is launch-specific.
+        selection = self.router.resolve(
             base_agent_name=base_agent_name,
             scope=scope,
             deps=self.engine.deps,
@@ -78,7 +78,7 @@ class AgentEntryComposer:
             prose = None
         task_guidance = _wrap_task_guidance(prose, agent_def)
 
-        skill_message = build_skill_message(selection.skill_path, agent_def)
+        skill_message = build_skill_message(agent_def.skill, agent_def)
         return AgentEntryMessages(
             agent_def=agent_def,
             context=context_message,

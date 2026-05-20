@@ -115,12 +115,9 @@ async def test_initial_messages_capture(
         Path(__file__).resolve().parents[3] / "agents" / "profile" / "main"
     )
     profiles = {d.name: d for d in load_agents_dir(profile_dir)}
-    planner_def = profiles["planner_closes_or_defers"]
-    planner_full_def = profiles["planner_closes_goal"]
+    planner_def = profiles["planner"]
     assert planner_def.skill is not None
-    assert planner_full_def.skill is not None
     planner_terminals = list(planner_def.terminals)
-    full_only_terminals = list(planner_full_def.terminals)
 
     for rel, cap in captured.items():
         role_dir = str(cap["role_dir"])
@@ -185,11 +182,7 @@ async def test_initial_messages_capture(
 
             # AC #15 — row 4 <terminal_tool_selection> content matches the
             # row 3 block byte-for-byte (between the open/close tags).
-            terminals = (
-                full_only_terminals
-                if "planner_closes_goal" in role_dir
-                else planner_terminals
-            )
+            terminals = _active_terminals(rows, default=planner_terminals)
             expected_catalog = render_terminal_catalog(
                 terminals, focus="selection_guidance"
             )
@@ -272,6 +265,17 @@ def _text_of(row: dict) -> str:
         if isinstance(block, dict) and block.get("type") == "text":
             parts.append(block.get("text", ""))
     return "\n".join(parts)
+
+
+def _active_terminals(rows: list[dict[str, object]], *, default: list[str]) -> list[str]:
+    for row in rows:
+        metadata = row.get("metadata")
+        if not isinstance(metadata, dict):
+            continue
+        active = metadata.get("active_terminals")
+        if isinstance(active, list):
+            return [str(name) for name in active]
+    return default
 
 
 def _write_report(

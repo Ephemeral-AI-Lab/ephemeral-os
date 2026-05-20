@@ -28,7 +28,7 @@ from task_center_runner.scenarios.pipeline import (
     InitialGoal,
     NestedGoal,
     NestedGoalFailure,
-    DeferredParentPlannerFullOnly,
+    DeferredParentPlannerTerminalRouting,
 )
 from task_center_runner.scenarios.planner_validation import (
     PlannerCycleInDeps,
@@ -70,7 +70,9 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     "pipeline.attempt_budget_exhausted": AttemptBudgetExhausted,
     "pipeline.nested_goal": NestedGoal,
     "pipeline.nested_goal_failure": NestedGoalFailure,
-    "pipeline.deferred_parent_planner_closes_goal": DeferredParentPlannerFullOnly,
+    "pipeline.deferred_parent_planner_terminal_routing": (
+        DeferredParentPlannerTerminalRouting
+    ),
     # Composite capacity scenarios.
     "capacity.full_system_capacity_matrix": FullSystemCapacityMatrix,
     # Focused sandbox scenarios.

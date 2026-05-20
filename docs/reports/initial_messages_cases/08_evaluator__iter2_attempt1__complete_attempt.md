@@ -1,4 +1,4 @@
-# evaluator — iteration 2, attempt 1 (evaluator_instruction branch: has_deferred_goal_for_next_iteration=False; complete plan attempt)
+# evaluator — iteration 2, attempt 1 (evaluator task-guidance branch: has_deferred_goal_for_next_iteration=False; complete plan attempt)
 - source: `goal_01_fd45befd-45f2-47b9-a6ba-0975c575c72d/iteration_02_32f1cd57-8c49-48a0-a03d-18c31d5edea0/attempt_01_823930e8-7fe8-49ab-8d13-9c228de573d5/03_evaluator_823930e8-7fe8-49ab-8d13-9c228de573d5:evaluator/message.jsonl`
 
 ## system

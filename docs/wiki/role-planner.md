@@ -30,19 +30,19 @@ Mission → Episode → Attempt
 
 A planner task is created when an Attempt enters stage `planning` (`AttemptStage.PLANNING`, `task_center/attempt/state.py:11`). Exactly one planner per Attempt; deterministic id `{attempt_id}:planner` (`task_center/task/ids.py`).
 
-The planner is **not** a Mission. It is a single TaskCenter task with role `planner`. Its lifetime is one agent run that ends on a single terminal submission. If a partial plan is committed in any ancestor mission, the planner_closes_goal variant is selected for descendants (see _Variants_).
+The planner is **not** a Mission. It is a single TaskCenter task with role `planner`. Its lifetime is one agent run that ends on a single terminal submission. If the launch is nested beyond the deferral boundary, the same `planner` profile is launched with `submit_plan_defers_goal` filtered out (see _Terminal Routing_).
 
 ## Lifecycle
 
 | Event | Effect |
 |---|---|
-| `AttemptOrchestrator.start()` | Creates planner task row (status `RUNNING`), composes `planner_v1` context, launches agent. |
+| `AttemptOrchestrator.start()` | Creates planner task row (status `RUNNING`), composes `planner` context, launches agent. |
 | Planner agent emits `submit_full_plan` | Validates, calls `apply_plan_submission(kind="completes")` → planner task `DONE`, attempt stage→`generating`, generator rows inserted `PENDING`. |
 | Planner agent emits `submit_partial_plan` | Same as full + records `deferred_goal_for_next_iteration`; episode chain will branch on evaluator PASS. |
 | Agent run ends without terminal | `EphemeralAttemptAgentLauncher._report_unfinished_running_task` synthesizes `apply_planner_failure` → attempt closes `FAILED`/`planner_failed`. |
 | Validity error inside `apply_plan_submission` | `TaskCenterInvariantViolation` returned to tool result; agent may retry submission within the same turn. |
 
-The planner has **no read access to live attempt state during planning**. It reasons only from what `planner_v1` placed in its prompt.
+The planner has **no read access to live attempt state during planning**. It reasons only from what `planner` placed in its prompt.
 
 ## Responsibilities
 
@@ -65,7 +65,7 @@ What the planner MUST NOT do:
 - **Replan after submission.** The plan is frozen at `apply_plan_submission`. Replanning happens only through an attempt retry, which spawns a new planner task with the previous attempt added to the failed landscape.
 - **Re-derive the episode goal in task_specs.** Inlining the broader contract into each task's local instruction is the antipattern — generators receive the attempt's `task_specification` as a separate framing block.
 
-## Context recipe — `planner_v1`
+## Context recipe — `planner`
 
 Source: `task_center/context_engine/recipes/planner.py:37-77`. Required scope: `{mission_id, episode_id, attempt_id}`.
 
@@ -124,16 +124,16 @@ Built into `build_planner_submission` (`_schemas.py:86-152`):
 
 A rejection returns an error tool result; the agent can correct and call again within the same turn — but the agent run ends on the first accepted terminal.
 
-## Variants
+## Terminal Routing
 
-`agents/profile/main/` defines two planner variants:
+`agents/profile/main/planner.md` defines one registered planner profile. Launch-time terminal routing filters the terminal catalog without mutating that registered definition:
 
-| Variant | When selected | Difference |
-|---|---|---|
-| `planner` | default | Both `submit_full_plan` and `submit_partial_plan` are available. |
-| `planner_closes_goal` | when the mission ancestry is nested under another attempt (`when: nested_mission_depth_gt_1`) | Only `submit_full_plan` is exposed. System prompt explicitly forbids deferring remainder work. |
+| Launch condition | Exposed terminal tools |
+|---|---|
+| `nested_goal_depth <= 1` | `submit_plan_closes_goal`, `submit_plan_defers_goal` |
+| `nested_goal_depth > 1` | `submit_plan_closes_goal` |
 
-**Why `planner_closes_goal` exists.** Partial planning creates an episodic continuation _on top of_ the current episode. Allowing a descendant planner to _also_ partial-plan would make the continuation chain ambiguous: whose `deferred_goal_for_next_iteration` extends the parent's mission? The depth rule eliminates the question — any planner running inside a nested mission (`nested_mission_depth > 1`) must fully cover its scope. The depth helper lives at `task_center/mission/ancestry.py:nested_mission_depth`; the predicate is registered in `task_center/agent_launch/predicates.py`.
+**Why the defer terminal is filtered.** Partial planning creates an episodic continuation _on top of_ the current episode. Allowing a descendant planner to _also_ partial-plan would make the continuation chain ambiguous: whose `deferred_goal_for_next_iteration` extends the parent's mission? The depth rule eliminates the question: any planner running inside a nested mission (`nested_goal_depth > 1`) must fully cover its scope. The depth helper lives at `task_center/goal/ancestry.py:nested_goal_depth`; the router lives at `task_center/_core/terminal_tool_routing.py`.
 
 ## Constraints
 
@@ -153,20 +153,20 @@ Failures surface as `AttemptSubmissionContextError`, which the tool converts int
 
 | Field | Read by | Render context |
 |---|---|---|
-| `task_specification` | Evaluator (framing), Generator (framing) | `evaluator_v1` REQUIRED block; `generator_v1` HIGH block |
-| `evaluation_criteria[]` | Evaluator (verdict basis) | `evaluator_v1` REQUIRED block, bullet-formatted |
+| `task_specification` | Evaluator (framing), Generator (framing) | `evaluator` REQUIRED block; `generator` HIGH block |
+| `evaluation_criteria[]` | Evaluator (verdict basis) | `evaluator` REQUIRED block, bullet-formatted |
 | `tasks[]` | Dispatcher (not an LLM); next planner via `failed_attempt` | Persisted as DAG rows |
-| `task_specs[id]` | The single generator with that id | `generator_v1` REQUIRED `planned_task_spec` block (last position) |
+| `task_specs[id]` | The single generator with that id | `generator` REQUIRED `planned_task_spec` block (last position) |
 
 Leakage between audiences is a planning bug: criteria-language in a task_spec, task-level detail in the global task_specification, or rubric in the deferred_goal_for_next_iteration all confuse the wrong reader.
 
 **3. Criteria are the planner's auto-handcuffs.** The evaluator returns binary verdicts (`submit_evaluation_success`/`submit_evaluation_failure`). Over-broad criteria mean partial progress becomes total failure; over-narrow criteria let trivially-passing plans through. The planner's only defense against an unforgiving evaluator is to write criteria it is _confident_ the planned DAG will satisfy. If coverage is uncertain, a partial plan with a tighter criterion set and an explicit `deferred_goal_for_next_iteration` outperforms a brittle full plan.
 
-**4. The planner is the only role that sees retry history.** `failed_attempt_blocks` is unique to `planner_v1`. It carries the previous attempt's plan kind (`unsubmitted`, `full`, or `partial`), continuation goal, criteria, latest generator summaries, and fail reason. For evaluator failures, the fail reason includes the evaluator's latest summary when recorded. The evaluator and generators operate context-free with respect to retry — they judge and execute the present attempt. This places retrospection where it can act: the planner can drop a failing slice, narrow scope, preserve achieved work, or restructure dependencies. Neither the evaluator nor the generator has the authority to do any of those.
+**4. The planner is the only role that sees retry history.** `failed_attempt_blocks` is unique to `planner`. It carries the previous attempt's plan kind (`unsubmitted`, `full`, or `partial`), continuation goal, criteria, latest generator summaries, and fail reason. For evaluator failures, the fail reason includes the evaluator's latest summary when recorded. The evaluator and generators operate context-free with respect to retry — they judge and execute the present attempt. This places retrospection where it can act: the planner can drop a failing slice, narrow scope, preserve achieved work, or restructure dependencies. Neither the evaluator nor the generator has the authority to do any of those.
 
-**5. Wide-flat DAGs are normal; deep chains compound risk.** A generator failure blocks all transitive descendants (`blocked_descendant_ids`, `generator_dag.py:90`); the attempt then closes `FAILED/generator_failed`. A deep chain turns one stuck task into a whole-attempt loss. A wide flat DAG with independent siblings parallelizes throughput and isolates failures.
+**5. Wide-flat DAGs are normal; deep chains compound risk.** A generator `FAILED` or `BLOCKED` status leaves transitive descendants `PENDING` as not-started work that can never become ready in that attempt; the attempt then closes `FAILED/generator_failed` once runnable siblings quiesce. A deep chain turns one stuck task into a whole-attempt loss. A wide flat DAG with independent siblings parallelizes throughput and isolates failures.
 
-**6. Partial planning is mission-ancestral, irreversible.** Once a partial plan exists anywhere in the mission's calling lineage, the `planner_closes_goal` variant is selected for every descendant planner in that lineage. The decision to commit to incremental closure (vs. atomic closure) is a global property, not a local one.
+**6. Partial planning is mission-ancestral, irreversible.** Once the depth rule applies in the mission's calling lineage, descendant planner launches keep the same `planner` identity but expose only the close-goal terminal. The decision to commit to incremental closure (vs. atomic closure) is a global property, not a local one.
 
 **7. The planner cannot run code.** No `shell`, no `write_file`, no `edit_file`. This is a deliberate capability restriction, not an oversight. A planner that could test its plan would either (a) waste budget on speculative execution before committing, or (b) blur the planner/generator boundary by doing the work itself. The plan-vs-execute split is structural.
 
@@ -185,7 +185,7 @@ This section traces — end-to-end — how the planner's `task_input` string is 
 │      planner task row INSERT (status=RUNNING)                           │
 └──────────────────────────────────┬──────────────────────────────────────┘
                                    │  composer.compose(
-                                   │      recipe_id="planner_v1",
+                                   │      recipe_id="planner",
                                    │      scope=ContextScope(mission_id, episode_id, attempt_id))
                                    ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -197,14 +197,14 @@ This section traces — end-to-end — how the planner's `task_input` string is 
                                    ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  ContextEngine.build  (engine.py:60)                                    │
-│      recipe = RecipeRegistry.get("planner_v1")                          │
+│      recipe = RecipeRegistry.get("planner")                          │
 │      scope.assert_fields({mission_id, episode_id, attempt_id})          │
 │      return recipe.build(scope, self._deps)                             │
 └──────────────────────────────────┬──────────────────────────────────────┘
                                    │
                                    ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  _planner_v1_build  (recipes/planner.py:37)                             │
+│  _planner_build  (recipes/planner.py:37)                             │
 │      mission   = mission_store.get(mission_id)                          │
 │      episode   = episode_store.get(episode_id)                          │
 │      episodes  = episode_store.list_for_mission(mission_id)             │
@@ -233,7 +233,7 @@ This section traces — end-to-end — how the planner's `task_input` string is 
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-The recipe builder is a **pure function over stores**. It performs no mutations, no I/O outside the four stores in `ContextEngineDeps`, and emits an immutable `ContextPacket`. Everything that varies between the four planner cases below happens inside `_planner_v1_build`.
+The recipe builder is a **pure function over stores**. It performs no mutations, no I/O outside the four stores in `ContextEngineDeps`, and emits an immutable `ContextPacket`. Everything that varies between the four planner cases below happens inside `_planner_build`.
 
 ### The four cases the planner sees
 

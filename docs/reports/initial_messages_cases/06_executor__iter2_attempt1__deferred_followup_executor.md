@@ -1,5 +1,5 @@
-# executor — iteration 1, attempt 2 (attempt with deferred goal; routed to executor_success_handoff variant; generator_instruction: has_deps=False)
-- source: `goal_01_fd45befd-45f2-47b9-a6ba-0975c575c72d/iteration_01_d3bdafea-2967-4ba7-b7e6-d6e61eeed9e3/attempt_02_a106dcda-744a-4a6a-9261-98f98635138f/02_executor_a106dcda-744a-4a6a-9261-98f98635138f:gen:preflight/message.jsonl`
+# executor — iteration 2, attempt 1 (deferred-goal follow-up; generator task guidance: has_deps=False)
+- source: `goal_01_fd45befd-45f2-47b9-a6ba-0975c575c72d/iteration_02_32f1cd57-8c49-48a0-a03d-18c31d5edea0/attempt_01_823930e8-7fe8-49ab-8d13-9c228de573d5/02_executor_823930e8-7fe8-49ab-8d13-9c228de573d5:gen:preflight/message.jsonl`
 
 ## system
 
@@ -12,9 +12,9 @@ You commit your work through one terminal call from your declared terminal set. 
 
 Submission fields are read cold by downstream agents without your conversation. Each field must be concrete and non-blank, reference dependency outputs by `id` and artifacts by their identifiers (do not inline external content), and read so a fresh agent could act on the field without reconstructing your reasoning.
 
-You are the **main-agent generator executor** at a depth where handoff is still available.
+You are the **main-agent generator executor**.
 
-Complete the `<assigned_task>`. If the task is too broad or genuinely needs a delegated complex-task plan, call `submit_execution_handoff`
+Complete the `<assigned_task>`. If the task is too broad or genuinely needs a delegated complex-task plan, call `submit_execution_handoff`. If the task cannot proceed because of a concrete blocker, call `submit_execution_blocker`.
 
 ## Submission discipline
 
@@ -27,9 +27,8 @@ Submit exactly one terminal tool per run.
 ## Terminal tools
 
 - `submit_execution_success` — the assigned task is complete and verified. Closes this generator task with a passing outcome that the attempt's evaluator reads.
-- `submit_execution_handoff` — the task is too broad to complete here; spawns a delegated complex-task plan (nested goal) instead of finishing this task in place.
-
-This profile intentionally does not expose `submit_execution_failure`. Unfinished work is handled by the attempt's run-exhausted fallback: abandoning the task ends the run and is recorded as a launcher-synthesised failure rather than an explicit terminal call.
+- `submit_execution_handoff` — the task is too broad to complete here; spawns a delegated complex-task plan instead of finishing this task in place.
+- `submit_execution_blocker` — the task cannot proceed because of a concrete blocker. Marks this generator task blocked; dependent pending tasks remain not-started.
 ```
 
 ## user_msg_1
@@ -37,10 +36,10 @@ This profile intentionally does not expose `submit_execution_failure`. Unfinishe
 ```
 <context>
 <plan_spec>
-Run a workspace preflight probe and continue with the follow-up goal.
+Run a workspace preflight probe.
 </plan_spec>
 
-<assigned_task task_id="a106dcda-744a-4a6a-9261-98f98635138f:gen:preflight">
+<assigned_task task_id="823930e8-7fe8-49ab-8d13-9c228de573d5:gen:preflight">
 Run a lightweight workspace preflight and report the observed sandbox root.
 </assigned_task>
 </context>
@@ -61,6 +60,8 @@ What to do:
 - `submit_execution_handoff` — Call when bounded progress is made but further work is needed. Name the next bounded slice; do not kick the problem downstream without specifying what's needed.
 
 - `submit_execution_success` — Call when the `<assigned_task>` deliverable is complete, exists at the claimed location, satisfies the task specification, and any verification the criteria specify has been run and passed.
+
+- `submit_execution_blocker` — Call when the `<assigned_task>` cannot proceed because of a concrete blocker. Summarize the blocker and the evidence.
 </terminal_tool_selection>
 </Task Guidance>
 ```
@@ -112,12 +113,13 @@ Read that catalog and let the work decide:
   required verification is the success path. Pick it when the next task
   in the DAG (or the evaluator) could pick up your output cold and act
   on it without re-deriving anything.
-- Bounded progress that still needs work is the handoff path when your
-  role variant exposes it. Name the next bounded slice — what
-  specifically is needed, by whom — so the downstream agent inherits a
-  concrete handoff, not a vague kick. If your variant exposes only
-  success, do not partial-submit; finish or report failure on the
-  variant that allows it.
+- Bounded progress that still needs work is the handoff path. Name the
+  next bounded slice — what specifically is needed, by whom — so the
+  downstream agent inherits a concrete handoff, not a vague kick.
+- A concrete blocker is the blocker path. Use it when the task cannot
+  proceed after the obvious remediation paths, and summarize the blocker
+  with evidence. Downstream dependent tasks remain pending not-started
+  work in this attempt.
 
 ## Output discipline
 
@@ -133,5 +135,7 @@ Read that catalog and let the work decide:
 - `submit_execution_handoff` — Call when bounded progress is made but further work is needed. Name the next bounded slice; do not kick the problem downstream without specifying what's needed.
 
 - `submit_execution_success` — Call when the `<assigned_task>` deliverable is complete, exists at the claimed location, satisfies the task specification, and any verification the criteria specify has been run and passed.
+
+- `submit_execution_blocker` — Call when the `<assigned_task>` cannot proceed because of a concrete blocker. Summarize the blocker and the evidence.
 </terminal_tool_selection>
 ```

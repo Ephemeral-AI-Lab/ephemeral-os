@@ -558,8 +558,7 @@ def test_register_builtin_recipes_is_idempotent():
         second = set(RecipeRegistry.list_ids())
         assert first == second
         assert {
-            "planner_closes_or_defers",
-            "planner_closes_goal",
+            "planner",
             "generator",
             "evaluator",
             "entry_executor",

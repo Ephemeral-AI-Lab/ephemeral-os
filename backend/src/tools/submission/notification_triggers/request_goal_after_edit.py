@@ -31,7 +31,7 @@ def make_goal_request_after_edit_reminder() -> NotificationRule:
         return (
             "submit_execution_handoff is meant for delegating before edits begin. "
             "Once this generator has edited, prefer finishing through its own "
-            "success or failure terminal."
+            "success or blocker terminal."
         )
 
     return NotificationRule(

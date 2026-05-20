@@ -25,7 +25,6 @@ from task_center.attempt.runtime import (
 )
 from task_center.attempt.launch import LaunchBuilder
 from task_center.attempt.generator_dag import (
-    blocked_descendant_ids,
     ready_pending_generator_ids,
     summarize_generator_dag,
 )
@@ -70,24 +69,6 @@ class AttemptDispatcher:
             self._dispatch_generating(attempt)
         elif attempt.stage == AttemptStage.EVALUATE:
             self._dispatch_evaluating(attempt)
-
-    def block_failed_descendants(self, failed_task_id: str) -> None:
-        runtime = self._runtime
-        attempt = self._fresh_attempt()
-        task_records = runtime.task_store.list_generator_tasks_for_attempt(
-            attempt.id
-        )
-        for task_id in blocked_descendant_ids(
-            failed_task_id=failed_task_id,
-            task_records=task_records,
-        ):
-            runtime.task_store.set_task_status(
-                task_id,
-                status=TaskCenterTaskStatus.BLOCKED.value,
-                summary={"blocked_by": failed_task_id},
-            )
-
-    # ---- internal -------------------------------------------------------
 
     def _dispatch_generating(self, attempt: Attempt) -> None:
         runtime = self._runtime
@@ -205,7 +186,6 @@ class AttemptDispatcher:
             self._mark_launch_failed(
                 task_id=task_id, attempt_id=attempt.id, role="Generator"
             )
-            self.block_failed_descendants(task_id)
             return False
         return True
 

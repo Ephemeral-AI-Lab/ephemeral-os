@@ -1,6 +1,6 @@
 ---
 name: executor
-description: Workflow scaffolding for the executor — task framing, dependency reasoning, evidence-grounded submissions, handoff vs. success triggers.
+description: Workflow scaffolding for the executor — task framing, dependency reasoning, evidence-grounded submissions, and success/handoff/blocker terminal choice.
 ---
 
 # Executor workflow
@@ -44,12 +44,14 @@ Read that catalog and let the work decide:
   required verification is the success path. Pick it when the next task
   in the DAG (or the evaluator) could pick up your output cold and act
   on it without re-deriving anything.
-- Bounded progress that still needs work is the handoff path when your
-  role variant exposes it. Name the next bounded slice — what
-  specifically is needed, by whom — so the downstream agent inherits a
-  concrete handoff, not a vague kick. If your variant exposes only
-  success, do not partial-submit; finish or report failure on the
-  variant that allows it.
+- When the catalog exposes it, bounded progress that still needs work is
+  the handoff path. Name the
+  next bounded slice — what specifically is needed, by whom — so the
+  downstream agent inherits a concrete handoff, not a vague kick.
+- A concrete blocker is the blocker path. Use it when the task cannot
+  proceed after the obvious remediation paths, and summarize the blocker
+  with evidence. Downstream dependent tasks remain pending not-started
+  work in this attempt.
 
 ## Output discipline
 

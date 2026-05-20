@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from task_center._core.agent_routing import (
-    MAX_HANDOFF_DEPTH,
+from task_center._core.terminal_tool_routing import (
     PredicateRegistry,
     ResolverContext,
     register_builtin_predicates,
@@ -200,14 +199,14 @@ def test_grandchild_goal_returns_depth_3(
         attempt_store,
         task_store,
         task_center_run_id=task_center_run_id,
-        depth=MAX_HANDOFF_DEPTH + 1,
+        depth=4,
     )
     assert (
         nested_goal_depth(
             goal_id=goal_ids[-1],
             **_stores(goal_store, iteration_store, attempt_store, task_store),
         )
-        == MAX_HANDOFF_DEPTH + 1
+        == 4
     )
 
 
@@ -221,7 +220,7 @@ def test_unknown_goal_id_raises(
         )
 
 
-def test_registered_predicates_cover_top_level_and_depth_thresholds(
+def test_registered_predicates_cover_nested_depth_and_always(
     goal_store, iteration_store, attempt_store, task_store, task_center_run_id
 ):
     saved = dict(PredicateRegistry._registry)
@@ -237,18 +236,6 @@ def test_registered_predicates_cover_top_level_and_depth_thresholds(
 
         top_level_ctx = ResolverContext(scope=ContextScope(), deps=deps)
         assert (
-            PredicateRegistry.get("nested_goal_depth_within_handoff_range")(
-                top_level_ctx
-            )
-            is True
-        )
-        assert (
-            PredicateRegistry.get("nested_goal_depth_above_handoff_range")(
-                top_level_ctx
-            )
-            is False
-        )
-        assert (
             PredicateRegistry.get("nested_goal_depth_gt_1")(top_level_ctx)
             is False
         )
@@ -260,44 +247,14 @@ def test_registered_predicates_cover_top_level_and_depth_thresholds(
             attempt_store,
             task_store,
             task_center_run_id=task_center_run_id,
-            depth=MAX_HANDOFF_DEPTH + 1,
+            depth=3,
         )
-        within_ctx = ResolverContext(
-            scope=ContextScope(goal_id=goal_ids[MAX_HANDOFF_DEPTH - 1]),
-            deps=deps,
-        )
-        above_ctx = ResolverContext(
+        child_ctx = ResolverContext(
             scope=ContextScope(goal_id=goal_ids[-1]),
             deps=deps,
         )
 
-        assert (
-            PredicateRegistry.get("nested_goal_depth_within_handoff_range")(
-                within_ctx
-            )
-            is True
-        )
-        assert (
-            PredicateRegistry.get("nested_goal_depth_above_handoff_range")(
-                within_ctx
-            )
-            is False
-        )
-        assert PredicateRegistry.get("nested_goal_depth_gt_1")(within_ctx) is True
-
-        assert (
-            PredicateRegistry.get("nested_goal_depth_within_handoff_range")(
-                above_ctx
-            )
-            is False
-        )
-        assert (
-            PredicateRegistry.get("nested_goal_depth_above_handoff_range")(
-                above_ctx
-            )
-            is True
-        )
-        assert PredicateRegistry.get("nested_goal_depth_gt_1")(above_ctx) is True
+        assert PredicateRegistry.get("nested_goal_depth_gt_1")(child_ctx) is True
     finally:
         PredicateRegistry.clear()
         PredicateRegistry._registry.update(saved)

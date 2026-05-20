@@ -28,7 +28,7 @@ from task_center.context_engine.core import (
     ContextEngine,
     ContextEngineDeps,
 )
-from task_center._core.agent_routing import register_builtin_predicates
+from task_center._core.terminal_tool_routing import register_builtin_predicates
 from task_center.context_engine.recipes import register_builtin_recipes
 from task_center.entry.controller import EntryTaskController
 from task_center.entry.sandbox_bridge import (

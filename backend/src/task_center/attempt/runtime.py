@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     )
     from task_center.entry import EntryTaskController
     from task_center.goal.state import GoalClosureReport
+    from agents import AgentDefinition
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,6 +63,7 @@ class AgentLaunch:
     context: str
     task_guidance: str | None
     needs: tuple[str, ...]
+    agent_def: AgentDefinition | None = None
     context_packet_id: str | None = None
     goal_id: str | None = None
     skill: str | None = None

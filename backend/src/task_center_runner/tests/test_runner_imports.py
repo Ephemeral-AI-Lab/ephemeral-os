@@ -93,7 +93,7 @@ def test_prompt_inspector_accepts_current_failed_attempt_heading(
             ]
         ),
         agent_def=AgentDefinition(
-            name="planner_closes_or_defers",
+            name="planner",
             description="test planner",
             agent_kind=AgentKind.PLANNER,
         ),
@@ -136,7 +136,7 @@ def test_prompt_inspector_accepts_current_previous_iteration_sections(
             ]
         ),
         agent_def=AgentDefinition(
-            name="planner_closes_or_defers",
+            name="planner",
             description="test planner",
             agent_kind=AgentKind.PLANNER,
         ),
@@ -147,7 +147,7 @@ def test_prompt_inspector_accepts_current_previous_iteration_sections(
     assert inspection.passed
 
 
-def test_prompt_inspector_accepts_planner_closes_goal_goal_only_context() -> None:
+def test_prompt_inspector_accepts_planner_without_defer_terminal() -> None:
     runner = MockSquadRunner(
         repo_dir="/tmp/live_e2e_test_repo",
         bus=AuditEventBus(),
@@ -160,6 +160,9 @@ def test_prompt_inspector_accepts_planner_closes_goal_goal_only_context() -> Non
             [
                 "<context>",
                 "<goal>Close this delegated recursive goal.</goal>",
+                "<iteration status=\"current\">",
+                "<iteration_goal>Close this delegated recursive goal.</iteration_goal>",
+                "</iteration>",
                 "</context>",
                 "<Task Guidance>",
                 "Use submit_plan_closes_goal to close this goal in one attempt.",
@@ -167,16 +170,19 @@ def test_prompt_inspector_accepts_planner_closes_goal_goal_only_context() -> Non
             ]
         ),
         agent_def=AgentDefinition(
-            name="planner_closes_goal",
+            name="planner",
             description="test full-only planner",
             agent_kind=AgentKind.PLANNER,
         ),
-        metadata=ExecutionMetadata(task_center_task_id="recursive-1:planner"),
+        metadata=ExecutionMetadata(
+            task_center_task_id="recursive-1:planner",
+            extras={"active_terminals": ["submit_plan_closes_goal"]},
+        ),
     )
 
     assert inspection.checks == {
         "goal": True,
-        "goal_only_context": True,
+        "current_iteration": True,
         "closes_goal_terminal": True,
         "no_defer_terminal": True,
     }
@@ -189,11 +195,8 @@ def test_registered_mock_agents_install_and_restore() -> None:
         installed = {d.name for d in list_definitions()}
         assert installed == {
             "entry_executor",
-            "planner_closes_or_defers",
-            "planner_closes_goal",
+            "planner",
             "executor",
-            "executor_success_failure",
-            "executor_success_handoff",
             "verifier",
             "evaluator",
         }
@@ -225,18 +228,21 @@ def test_scenarios_register_hookset_cleanly(scenario_cls: type) -> None:
     assert hasattr(scenario, "expected_event_sequence")
 
 
-def test_full_stack_recursive_planner_closes_goal_closes_goal() -> None:
+def test_full_stack_recursive_planner_without_defer_closes_goal() -> None:
     scenario = FullStackAdversarial()
     ctx = ScenarioContext(
         attempt=SimpleNamespace(attempt_sequence_no=1, evaluation_criteria=()),
         iteration=SimpleNamespace(sequence_no=1, goal_id="recursive-goal"),
         goal=SimpleNamespace(requested_by_task_id="parent-task:executor"),
         prompt="Run delegated recursive matrix.",
-        metadata=ExecutionMetadata(agent_name="planner_closes_goal"),
+        metadata=ExecutionMetadata(
+            agent_name="planner",
+            extras={"active_terminals": ["submit_plan_closes_goal"]},
+        ),
         audit_recorder=None,
         mutable_state=None,
         task_id="recursive-goal:planner",
-        agent_name="planner_closes_goal",
+        agent_name="planner",
         context_message=None,
     )
 

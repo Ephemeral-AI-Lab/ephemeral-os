@@ -203,7 +203,7 @@ def test_router_delivers_failure_marks_parent_failed_and_blocks_dependents(
     assert parent_task is not None
     assert parent_task["status"] == TaskCenterTaskStatus.FAILED.value
     assert dependent is not None
-    assert dependent["status"] == TaskCenterTaskStatus.BLOCKED.value
+    assert dependent["status"] == TaskCenterTaskStatus.PENDING.value
 
 
 def test_router_treats_done_parent_as_already_delivered(

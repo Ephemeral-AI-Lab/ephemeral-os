@@ -72,7 +72,6 @@ Proposed location: `backend/src/task_center/context_engine/role_directives.py`.
 | `planner`                  | Plan for `<iteration_goal>`. |
 | `planner_closes_goal`        | Plan for `<iteration_goal>`. No defer option — must close in one attempt. |
 | `executor`                 | Complete `<assigned_task>`. |
-| `executor_success_failure` | Complete `<assigned_task>`. No handoff option. |
 | `evaluator`                | Verify the current attempt against `<evaluation_criteria>`. |
 | `advisor`                  | Review the parent's pending terminal call. |
 | `resolver`                 | Resolve the issues listed in `<issues>`. |

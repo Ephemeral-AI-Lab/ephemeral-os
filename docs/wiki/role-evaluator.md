@@ -38,7 +38,7 @@ If _any_ generator FAILED or BLOCKED, the evaluator is **not** spawned — the d
 
 | Event | Effect |
 |---|---|
-| Last generator becomes `DONE`, none failed | `_spawn_evaluator` upserts evaluator task row (status `RUNNING`), sets `attempt.evaluator_task_id`, transitions attempt stage to `EVALUATING`, composes `evaluator_v1`, launches agent. |
+| Last generator becomes `DONE`, none failed | `_spawn_evaluator` upserts evaluator task row (status `RUNNING`), sets `attempt.evaluator_task_id`, transitions attempt stage to `EVALUATING`, composes `evaluator`, launches agent. |
 | Agent calls `submit_evaluation_success` | `apply_evaluator_submission(outcome="success")` → evaluator task `DONE`; attempt closes `PASSED`; `EpisodeManager.handle_attempt_closed` runs. |
 | Agent calls `submit_evaluation_failure` | Same path with `outcome="failure"` → evaluator task `FAILED`; attempt closes `FAILED/evaluator_failed`. |
 | Agent run ends without terminal | Launcher synthesises `apply_evaluator_submission(outcome="failure")`. |
@@ -60,10 +60,10 @@ What the evaluator MUST NOT do:
 
 - **Rewrite the criteria.** They are inherited. The submission shape carries `passed_criteria[]` / `failed_criteria[]` for transparency, not for redefinition.
 - **Judge against the mission or episode goal.** Mission/Episode framing is in the prompt as REQUIRED context, but `attempt.task_specification` and `evaluation_criteria` are the verdict basis. Promoting the episode goal to a criterion is the planner's failure, not something the evaluator can correct.
-- **Look at retry history.** The failed-attempt landscape is _not_ in `evaluator_v1`. The evaluator judges only the present attempt; it has no memory of what prior attempts attempted.
+- **Look at retry history.** The failed-attempt landscape is _not_ in `evaluator`. The evaluator judges only the present attempt; it has no memory of what prior attempts attempted.
 - **Mutate the plan.** No tool exists to do so. The plan is the planner's frozen output.
 
-## Context recipe — `evaluator_v1`
+## Context recipe — `evaluator`
 
 Source: `task_center/context_engine/recipes/evaluator.py:30-106`. Required scope: `{mission_id, attempt_id}`. `episode_id` is optional — falls back to `attempt.episode_id`.
 
@@ -82,9 +82,9 @@ Source: `task_center/context_engine/recipes/evaluator.py:30-106`. Required scope
 
 **Why this order:** The prompt opens on contextual framing and closes on the verdict basis. The mission/episode framing is REQUIRED because it grounds the evaluator's reading, but the operative blocks — `task_specification` (REQUIRED), the partial-plan boundary when present, task summaries (HIGH), and `evaluation_criteria` (REQUIRED) — render in the bottom half.
 
-**Notable comparison to `planner_v1`:**
+**Notable comparison to `planner`:**
 
-| | `planner_v1` | `evaluator_v1` |
+| | `planner` | `evaluator` |
 |---|---|---|
 | Mission/episode framing | Yes (REQUIRED) | Yes (REQUIRED) |
 | Prior episode results | Yes | Yes |
@@ -96,9 +96,9 @@ Source: `task_center/context_engine/recipes/evaluator.py:30-106`. Required scope
 
 The planner writes; the evaluator reads. The planner sees the past; the evaluator sees the present.
 
-**Notable comparison to `generator_v1`:**
+**Notable comparison to `generator`:**
 
-| | `generator_v1` | `evaluator_v1` |
+| | `generator` | `evaluator` |
 |---|---|---|
 | Mission/episode framing | **No** | Yes |
 | `task_specification` | HIGH (framing) | REQUIRED (verdict basis context) |
@@ -108,7 +108,7 @@ The planner writes; the evaluator reads. The planner sees the past; the evaluato
 
 The generator is per-node; the evaluator is per-attempt. The generator's view is local; the evaluator's view is global.
 
-**Truncation:** `evaluator_v1` has no compression beyond the renderer's standard priority drop (low → medium under budget pressure). REQUIRED and HIGH blocks are never truncated (`renderer.py:215-235`).
+**Truncation:** `evaluator` has no compression beyond the renderer's standard priority drop (low → medium under budget pressure). REQUIRED and HIGH blocks are never truncated (`renderer.py:215-235`).
 
 ## Submission contract
 
@@ -165,7 +165,7 @@ The evaluator _can_ use `read_file`/`shell` to inspect the sandbox directly. But
 
 **7. The resolver-loop signal is asymmetric.** The `resolver_limit` notification reminder fires regardless of whether the evaluator intends to pass or fail. The intent is to keep the evaluator honest about unresolved fixes when considering success — submitting failure honestly is always allowed, but waving through a success when the resolver loop has not closed should be a deliberate decision the evaluator owns.
 
-**8. The episode-frame blocks in `evaluator_v1` are framing only.** Despite being REQUIRED priority, they are not verdict basis. The criteria block — REQUIRED, last — is what the evaluator judges against. The episode goal is in the prompt to help the evaluator interpret the criteria in context, not to provide an alternative rubric.
+**8. The episode-frame blocks in `evaluator` are framing only.** Despite being REQUIRED priority, they are not verdict basis. The criteria block — REQUIRED, last — is what the evaluator judges against. The episode goal is in the prompt to help the evaluator interpret the criteria in context, not to provide an alternative rubric.
 
 **9. The evaluator does not run if there's nothing to judge.** The dispatcher's quiescence check (`_dispatch_generating`, `dispatcher.py:117`) closes the attempt as `FAILED/generator_failed` if any generator FAILED or BLOCKED — the evaluator is never spawned. This means an evaluator is a positive signal in itself: someone thought there was a coherent DAG result worth judging.
 
@@ -184,7 +184,7 @@ This section traces — end-to-end — how the evaluator's `task_input` string i
 │      → attempt stage → EVALUATING                                       │
 └──────────────────────────────────┬──────────────────────────────────────┘
                                    │  composer.compose(
-                                   │      recipe_id="evaluator_v1",
+                                   │      recipe_id="evaluator",
                                    │      scope=ContextScope(mission_id, attempt_id))
                                    ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -195,14 +195,14 @@ This section traces — end-to-end — how the evaluator's `task_input` string i
                                    ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  ContextEngine.build  (engine.py:60)                                    │
-│      recipe = RecipeRegistry.get("evaluator_v1")                        │
+│      recipe = RecipeRegistry.get("evaluator")                        │
 │      scope.assert_fields({mission_id, attempt_id})                      │
 │      (episode_id is *not* required; the recipe derives it from attempt) │
 └──────────────────────────────────┬──────────────────────────────────────┘
                                    │
                                    ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  _evaluator_v1_build  (recipes/evaluator.py:30)                         │
+│  _evaluator_build  (recipes/evaluator.py:30)                         │
 │      attempt   = attempt_store.get(attempt_id)                          │
 │      mission   = mission_store.get(mission_id)                          │
 │      eid       = scope.episode_id or attempt.episode_id                 │
@@ -459,11 +459,11 @@ The implication for generator authors is in [[role-generator]] — the prose sum
 
 ### Truncation
 
-`evaluator_v1` has no recipe-level cap on summary count. If a DAG produced 50 generator tasks, all 50 `completed_task_summary` blocks render. Compression falls to the renderer:
+`evaluator` has no recipe-level cap on summary count. If a DAG produced 50 generator tasks, all 50 `completed_task_summary` blocks render. Compression falls to the renderer:
 
-- All `evaluator_v1` block kinds are REQUIRED or HIGH.
+- All `evaluator` block kinds are REQUIRED or HIGH.
 - `MarkdownPromptRenderer._compress` (`renderer.py:201-235`) only truncates LOW and MEDIUM.
-- **No block in `evaluator_v1` is currently truncatable.** Under budget pressure the prompt overruns; the renderer does not enforce a hard ceiling.
+- **No block in `evaluator` is currently truncatable.** Under budget pressure the prompt overruns; the renderer does not enforce a hard ceiling.
 
 This is intentional: every piece of context the evaluator has is judgment-load-bearing. If the DAG is wide enough to overflow, the planner is producing a plan the evaluator structurally cannot judge in one prompt — a planning-side problem, not a rendering-side one.
 
@@ -493,4 +493,4 @@ This is intentional: every piece of context the evaluator has is judgment-load-b
 - [[role-planner]] — writes the `evaluation_criteria` and `task_specification` the evaluator reads.
 - [[role-generator]] — writes the summaries the evaluator judges.
 - [[task-center-pipeline]] — Episode/Mission closure logic that consumes the evaluator's verdict.
-- [[context-engine-recipes]] — `evaluator_v1` block builders.
+- [[context-engine-recipes]] — `evaluator` block builders.

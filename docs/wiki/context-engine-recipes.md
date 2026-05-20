@@ -40,8 +40,8 @@ ContextScope
 | `episode_id` | planner (required); evaluator/generator fall back to `attempt.episode_id` |
 | `attempt_id` | planner, generator, evaluator |
 | `task_id` | generator, entry_executor, helpers |
-| `parent_packet_id` | advisor_v1 / resolver_v1 only |
-| `parent_task_id` | advisor_v1 / resolver_v1 only |
+| `parent_packet_id` | helper direct-launch messages only |
+| `parent_task_id` | helper direct-launch messages only |
 
 `scope.assert_fields(required)` raises `RecipeScopeError` (`errors.py:14`) on `None` required field; called by `engine.build` before recipe dispatch (`engine.py:62`).
 
@@ -72,10 +72,10 @@ Inherited blocks (`metadata["inherited_from_parent"] == "true"`) render under `"
 
 ## Recipe per role
 
-### entry_executor_v1
+### entry_executor
 **`recipes/entry_executor.py`** | Required scope: `{task_id}`. Reads `deps.task_store.get_task(task_id)`. Emits one `entry_request` block (`priority=required`, text = `task["task_input"]`). No mission/episode/attempt context.
 
-### planner_v1
+### planner
 **`recipes/planner.py`** | Required scope: `{mission_id, episode_id, attempt_id}`.
 
 Calls `mission_episode_blocks(...)` (`_mission_episode.py:20-40`) then `failed_attempt_blocks(...)` (`attempts.py:15-77`).
@@ -86,18 +86,18 @@ Calls `mission_episode_blocks(...)` (`_mission_episode.py:20-40`) then `failed_a
 
 **Retry branch** (`attempts.py`): failed attempts = `status==FAILED AND id != current_attempt_id`. Zero failed -> no blocks. Each failed attempt renders one `failed_attempt` block (`priority=HIGH`) under `"# Prior Failed Attempts"` with `Accepted Plan`, `Generator Outcomes`, and, only when all generators completed and an evaluator task exists, `Evaluator Judgment`. The generator section includes status for every planned generator task and detailed subsections only for useful stored summaries. The recipe does not render a separate failure-reason section.
 
-### generator_v1
+### generator
 **`recipes/generator.py`** | Required scope: `{mission_id, attempt_id, task_id}`.
 
 Block order: `task_specification` (attempt plan) → `dependency_summary` blocks → `planned_task_spec` (always last, `priority=REQUIRED`).
 
 **Plan presence** (`generator.py:50-59`): `attempt.task_specification` truthy → prepend `task_specification` block (`priority=HIGH`).
 
-**Partial-plan boundary is not rendered here.** Even when `attempt.deferred_goal` is set, `generator_v1` does not emit `partial_plan_boundary`; generators should execute only their local task and dependency summaries, not reason about deferred episode scope.
+**Partial-plan boundary is not rendered here.** Even when `attempt.deferred_goal` is set, `generator` does not emit `partial_plan_boundary`; generators should execute only their local task and dependency summaries, not reason about deferred episode scope.
 
 **Dependency presence** (`generator.py:61-65`, `_dependency_summary_blocks` at `91-115`): iterates `task["needs"]`. Each resolved dep → `dependency_summary` block (`priority=MEDIUM`) with `latest_summary_text(dep["summaries"])` (`_summaries.py:14-20`), grouped under `"# Dependency Results"`. Missing dep rows raise `ContextEngineError` because dependency edges are accepted planner DAG invariants.
 
-### evaluator_v1
+### evaluator
 **`recipes/evaluator.py`** | Required scope: `{mission_id, attempt_id}`.
 
 Block order: `mission_episode_blocks(...)` → `task_specification` → optional `partial_plan_boundary` → `completed_task_summary` per generator task → `evaluation_criteria`.
@@ -118,14 +118,14 @@ Note: evaluator does **not** call `failed_attempt_blocks`; prior failure history
 
 | Scenario | Recipe | What changes | Key conditional |
 |---|---|---|---|
-| Initial mission (ep 1, attempt 1) | planner_v1 | Single `episode_goal` block, combined heading; no failed-attempts | `_mission_episode.py:27-28` |
-| Attempt retry after failure (ep 1, attempt N>1) | planner_v1 | Adds N-1 `failed_attempt` under `"# Prior Failed Attempts"` with accepted plan, generator outcome statuses, useful generator summaries, and evaluator judgment when present | `attempts.py` |
-| Episodic continuation (ep 2+) | planner_v1, evaluator_v1 | Adds `mission_goal` + prior-episode pairs; immediate prior `HIGH`, older `MEDIUM` | `_mission_episode.py:30-40`, `84-87` |
-| Generator — with dependency outputs | generator_v1 | Adds `dependency_summary` blocks under `"# Dependency Results"` | `generator.py:61-65`, `91-115` |
-| Generator — no dependencies | generator_v1 | No `dependency_summary` blocks | `generator.py:62`: `needs` empty |
-| Attempt retry on generator failure | generator_v1 | New attempt = new `task_specification` from re-plan | `generator.py:50-59` |
-| Attempt retry on evaluator failure | evaluator_v1 | New attempt → new `task_specification` + revised `evaluation_criteria` | `evaluator.py:55-64`, `84-94` |
-| Nested mission (child helper) | advisor_v1 / resolver_v1 | Parent blocks copied with priority demoted + `inherited_from_parent=true`; rendered under `"# Parent context"` | `helper.py:35-40`, `66-92`; `renderer.py:131-133` |
+| Initial mission (ep 1, attempt 1) | planner | Single `episode_goal` block, combined heading; no failed-attempts | `_mission_episode.py:27-28` |
+| Attempt retry after failure (ep 1, attempt N>1) | planner | Adds N-1 `failed_attempt` under `"# Prior Failed Attempts"` with accepted plan, generator outcome statuses, useful generator summaries, and evaluator judgment when present | `attempts.py` |
+| Episodic continuation (ep 2+) | planner, evaluator | Adds `mission_goal` + prior-episode pairs; immediate prior `HIGH`, older `MEDIUM` | `_mission_episode.py:30-40`, `84-87` |
+| Generator — with dependency outputs | generator | Adds `dependency_summary` blocks under `"# Dependency Results"` | `generator.py:61-65`, `91-115` |
+| Generator — no dependencies | generator | No `dependency_summary` blocks | `generator.py:62`: `needs` empty |
+| Attempt retry on generator failure | generator | New attempt = new `task_specification` from re-plan | `generator.py:50-59` |
+| Attempt retry on evaluator failure | evaluator | New attempt → new `task_specification` + revised `evaluation_criteria` | `evaluator.py:55-64`, `84-94` |
+| Nested mission (child helper) | helper direct-launch messages | Parent blocks copied with priority demoted + `inherited_from_parent=true`; rendered under `"# Parent context"` | `helper.py:35-40`, `66-92`; `renderer.py:131-133` |
 
 ## What the live-e2e framework needs
 

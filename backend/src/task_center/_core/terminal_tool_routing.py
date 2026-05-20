@@ -1,8 +1,9 @@
-"""Agent-variant routing — predicates and resolver.
+"""Terminal-tool routing for TaskCenter agent launches.
 
-Selects which concrete agent definition (e.g. ``executor_success_handoff``
-vs ``executor_success_failure``) to spawn from a base agent name plus the
-caller's :class:`ContextScope`, based on registered predicates.
+The registered agent profile is stable; this module filters the profile's
+terminal tools for a specific launch context. The returned agent definition is
+an effective copy, so the registry remains unchanged while prompts and real
+tool registration see the same launch-specific terminal set.
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ from pathlib import Path
 from typing import ClassVar
 
 from agents import get_definition
-from agents import AgentDefinition, AgentVariant
+from agents import AgentDefinition, AgentKind
 from task_center.context_engine.core import (
     AgentDefinitionValidationError,
     ContextEngineDeps,
@@ -26,14 +27,6 @@ from task_center.goal.ancestry import nested_goal_depth
 # ---------------------------------------------------------------------------
 # Predicates
 # ---------------------------------------------------------------------------
-
-# Maximum nested-goal depth at which an executor profile still offers a
-# handoff terminal. Above this, the leaf executor profile is selected (success
-# + failure terminals only). Mirrors
-# :attr:`TaskCenterLifecycleConfig.max_handoff_depth`; kept as a module
-# constant so predicates do not need a runtime config lookup.
-MAX_HANDOFF_DEPTH: int = 3
-
 
 @dataclass(frozen=True, slots=True)
 class ResolverContext:
@@ -96,16 +89,6 @@ def _depth(ctx: ResolverContext) -> int:
     )
 
 
-def _nested_goal_depth_within_handoff_range(ctx: ResolverContext) -> bool:
-    """True when depth ≤ threshold (executor may still hand off)."""
-    return _depth(ctx) <= MAX_HANDOFF_DEPTH
-
-
-def _nested_goal_depth_above_handoff_range(ctx: ResolverContext) -> bool:
-    """True when depth > threshold (leaf executor, no further handoff)."""
-    return _depth(ctx) > MAX_HANDOFF_DEPTH
-
-
 def _nested_goal_depth_gt_1(ctx: ResolverContext) -> bool:
     """True when depth > 1 — caller attempt is itself inside another goal."""
     return _depth(ctx) > 1
@@ -119,14 +102,6 @@ def _always(ctx: ResolverContext) -> bool:
 def register_builtin_predicates() -> None:
     """Idempotent — safe to call from app startup."""
     PredicateRegistry.register(
-        "nested_goal_depth_within_handoff_range",
-        _nested_goal_depth_within_handoff_range,
-    )
-    PredicateRegistry.register(
-        "nested_goal_depth_above_handoff_range",
-        _nested_goal_depth_above_handoff_range,
-    )
-    PredicateRegistry.register(
         "nested_goal_depth_gt_1",
         _nested_goal_depth_gt_1,
     )
@@ -134,22 +109,21 @@ def register_builtin_predicates() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Resolver
+# Router
 # ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True, slots=True)
-class AgentSelection:
-    """Resolver output: the picked agent + its recipe + skill path."""
+class TerminalToolSelection:
+    """Router output: effective agent definition + context recipe."""
 
     agent_def: AgentDefinition
     context_recipe: str
-    reason: str | None = None
     skill_path: Path | None = None
 
 
-class RuleBasedAgentResolver:
-    """Variants-driven resolver. Frontmatter is the source of truth."""
+class TerminalToolRouter:
+    """Depth-aware terminal router. Frontmatter remains the source of truth."""
 
     def resolve(
         self,
@@ -157,29 +131,18 @@ class RuleBasedAgentResolver:
         base_agent_name: str,
         scope: ContextScope,
         deps: ContextEngineDeps,
-    ) -> AgentSelection:
+    ) -> TerminalToolSelection:
         base = self._load_definition(base_agent_name)
-
-        if not base.variants:
-            return AgentSelection(
-                agent_def=base,
-                context_recipe=self._require_recipe(base),
-                skill_path=base.skill,
-            )
-
+        recipe = self._require_recipe(base)
         ctx = ResolverContext(scope=scope, deps=deps)
-        for variant in base.variants:
-            predicate = PredicateRegistry.get(variant.when)
-            if predicate(ctx):
-                return self._select_variant_target(variant)
-
-        return AgentSelection(
-            agent_def=base,
-            context_recipe=self._require_recipe(base),
-            skill_path=base.skill,
+        effective = self._effective_definition(base, ctx)
+        return TerminalToolSelection(
+            agent_def=effective,
+            context_recipe=recipe,
+            skill_path=effective.skill,
         )
 
-    # ---- internals ------------------------------------------------------
+    # ---- internals ---------------------------------------------------------
 
     @staticmethod
     def _load_definition(name: str) -> AgentDefinition:
@@ -190,20 +153,6 @@ class RuleBasedAgentResolver:
             )
         return definition
 
-    def _select_variant_target(self, variant: AgentVariant) -> AgentSelection:
-        target = self._load_definition(variant.use)
-        if target.variants:
-            raise AgentDefinitionValidationError(
-                f"Variant target {target.name!r} declares its own variants — "
-                "chaining is forbidden."
-            )
-        return AgentSelection(
-            agent_def=target,
-            context_recipe=self._require_recipe(target),
-            reason=variant.note or None,
-            skill_path=target.skill,
-        )
-
     @staticmethod
     def _require_recipe(definition: AgentDefinition) -> str:
         if not definition.context_recipe:
@@ -212,3 +161,45 @@ class RuleBasedAgentResolver:
                 "frontmatter; it cannot be launched via AgentEntryComposer."
             )
         return definition.context_recipe
+
+    def _effective_definition(
+        self,
+        definition: AgentDefinition,
+        ctx: ResolverContext,
+    ) -> AgentDefinition:
+        allowed = self._allowed_terminals(definition, ctx)
+        if allowed is None:
+            return definition
+        terminals = [name for name in definition.terminals if name in allowed]
+        if terminals == definition.terminals:
+            return definition
+        return definition.model_copy(update={"terminals": terminals})
+
+    @staticmethod
+    def _allowed_terminals(
+        definition: AgentDefinition,
+        ctx: ResolverContext,
+    ) -> frozenset[str] | None:
+        if definition.agent_kind not in {AgentKind.PLANNER, AgentKind.EXECUTOR}:
+            return None
+        if definition.agent_kind == AgentKind.EXECUTOR and ctx.scope.goal_id is None:
+            return None
+
+        depth_restricted = _nested_goal_depth_gt_1(ctx)
+        if definition.agent_kind == AgentKind.PLANNER:
+            if depth_restricted:
+                return frozenset({"submit_plan_closes_goal"})
+            return frozenset(
+                {"submit_plan_closes_goal", "submit_plan_defers_goal"}
+            )
+        if depth_restricted:
+            return frozenset(
+                {"submit_execution_success", "submit_execution_blocker"}
+            )
+        return frozenset(
+            {
+                "submit_execution_handoff",
+                "submit_execution_success",
+                "submit_execution_blocker",
+            }
+        )

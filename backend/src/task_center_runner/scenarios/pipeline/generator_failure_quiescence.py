@@ -6,12 +6,12 @@ Plan shape per attempt::
         \\  |  /
             d           (depends on a, b, c)
 
-On attempt 1, task ``b`` calls ``submit_execution_failure``. The dispatcher
+On attempt 1, task ``b`` calls ``submit_execution_blocker``. The dispatcher
 **does not** abort the attempt immediately — quiescence semantics require it
 to wait for the still-running siblings ``a`` and ``c`` to finish before
-closing the attempt. Once all three reach a terminal state (``a`` DONE,
-``b`` FAILED, ``c`` DONE), ``d`` is marked BLOCKED (it depended on the
-failed task). Quiescence is reached → the attempt closes
+closing the attempt. Once all runnable roots reach a terminal state
+(``a`` DONE, ``b`` BLOCKED, ``c`` DONE), ``d`` remains PENDING as
+not-started work that depended on the blocked task. Quiescence is reached → the attempt closes
 ``status=failed``, ``fail_reason="generator_failed"``.
 
 Iteration budget permits a second attempt. Attempt 2 runs the same plan but

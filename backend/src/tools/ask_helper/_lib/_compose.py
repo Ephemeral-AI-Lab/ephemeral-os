@@ -52,6 +52,7 @@ class HelperMessages:
 
     helper_agent_def: AgentDefinition
     parent_agent_def: AgentDefinition | None
+    parent_active_terminals: tuple[str, ...]
     parent_user_msg_1: str
     parent_user_msg_2: str
     parent_transcript: str | None
@@ -108,12 +109,16 @@ def build_helper_messages(
     parent_agent_def = (
         get_definition(parent_agent_name) if parent_agent_name else None
     )
+    active_terminals = tuple(
+        str(name) for name in (context.get("active_terminals") or ())
+    )
 
     transcript = build_parent_transcript(parent_messages, mode=mode)
 
     return HelperMessages(
         helper_agent_def=helper_agent_def,
         parent_agent_def=parent_agent_def,
+        parent_active_terminals=active_terminals,
         parent_user_msg_1=parent_user_msg_1,
         parent_user_msg_2=parent_user_msg_2,
         parent_transcript=transcript,

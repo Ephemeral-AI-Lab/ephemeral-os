@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import inspect
 
-from task_center._core.agent_routing import PredicateRegistry
+from task_center._core.terminal_tool_routing import PredicateRegistry
 from task_center.context_engine.recipes_registry import (
     RecipeRegistry,
 )

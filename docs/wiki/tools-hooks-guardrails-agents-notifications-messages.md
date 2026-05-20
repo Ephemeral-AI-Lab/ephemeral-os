@@ -68,8 +68,8 @@ Terminal-tool family driving task_center lifecycle. All `is_terminal_tool=True`;
 - `submit_partial_plan` (`submit_partial_plan.py:34`)
 
 **main_agent/generator**
-- `submit_execution_handoff` (`submit_execution_handoff.py:42`) — generator pre-edit terminal; the `request_mission_after_edit` notification reminder nudges the generator to finish through its own success/failure once edits have begun
-- `submit_execution_success` / `submit_execution_failure` (`generator/executor/`)
+- `submit_execution_handoff` (`submit_execution_handoff.py:42`) — generator pre-edit terminal; the `request_goal_after_edit` notification reminder nudges the generator to finish through its own success/blocker once edits have begun
+- `submit_execution_success` / `submit_execution_blocker` (`generator/executor/`)
 - `submit_verification_success` / `submit_verification_failure` (`generator/verifier/`)
 
 **main_agent/evaluator**
@@ -95,14 +95,14 @@ Pre-hooks run sequentially before execution; `fail` short-circuits and returns h
 
 ### Submission gate hooks
 
-None. Submission tools no longer wire any pre-hooks. Caller-role, attempt-open, and profile-vs-terminal checks live elsewhere: structural role / open-attempt checks fail inside `resolve_attempt_submission_context` as `AttemptSubmissionContextError`; profile-vs-terminal separation is enforced by each `AgentDefinition.terminals` whitelist. Behavioral nudges (resolver-loop saturation, mission-after-edit) are delivered via notification triggers instead, so the agent retains the choice.
+None. Submission tools no longer wire any pre-hooks. Caller-role, attempt-open, and profile-vs-terminal checks live elsewhere: structural role / open-attempt checks fail inside `resolve_attempt_submission_context` as `AttemptSubmissionContextError`; profile-vs-terminal separation is enforced by each `AgentDefinition.terminals` whitelist. Behavioral nudges (resolver-loop saturation, goal-after-edit) are delivered via notification triggers instead, so the agent retains the choice.
 
 ## Notification triggers
 
 `NotificationRule` factories fired from inside tool execution (triggers run at top of each model turn via `dispatch_rules`).
 
 - **`make_resolver_limit_reminder`** (`resolver_limit.py:11`) — fires when `unresolved_resolver_call_count(messages) >= 4`; rule name `"resolver_limit"`, `fire_once=True`
-- **`make_mission_request_after_edit_reminder`** (`request_mission_after_edit.py`) — fires when the generator's transcript already contains a `write_file`/`edit_file`/`shell` tool use; rule name `"request_mission_after_edit"`, `fire_once=True`
+- **`make_goal_request_after_edit_reminder`** (`request_goal_after_edit.py`) — fires when the generator's transcript already contains a `write_file`/`edit_file`/`shell` tool use; rule name `"request_goal_after_edit"`, `fire_once=True`
 
 Both assembled into `AgentDefinition.notification_rules` at agent launch time.
 

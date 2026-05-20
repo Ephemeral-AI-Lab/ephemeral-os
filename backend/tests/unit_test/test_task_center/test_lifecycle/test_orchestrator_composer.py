@@ -2,7 +2,7 @@
 
 Confirms that when ``AttemptDeps.composer`` is set, the orchestrator
 asks the composer for the planner agent name and context_message, and that
-``planner_closes_goal`` is selected when ancestry has a partial-plan caller.
+planner terminals are restricted when ancestry is nested.
 """
 
 from __future__ import annotations
@@ -12,8 +12,7 @@ import pytest
 
 from agents import (
     AgentDefinition,
-    AgentVariant,
-    get_definition,
+    AgentKind,
     list_definitions,
     register_definition,
     unregister_definition,
@@ -21,7 +20,7 @@ from agents import (
 from task_center._core.primitives import TaskCenterLifecycleConfig
 from task_center.agent_launch.composer import AgentEntryComposer
 from task_center.context_engine.core import ContextEngine, ContextEngineDeps
-from task_center._core.agent_routing import (
+from task_center._core.terminal_tool_routing import (
     PredicateRegistry,
     register_builtin_predicates,
 )
@@ -100,28 +99,15 @@ def composer_runtime(
 
 
 def _register_planner_agents() -> None:
-    base = AgentDefinition(
-        name="planner_closes_or_defers",
-        description="planner_closes_or_defers",
-        context_recipe="planner_closes_or_defers",
+    planner = AgentDefinition(
+        name="planner",
+        description="planner",
+        agent_kind=AgentKind.PLANNER,
+        context_recipe="planner",
         terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
-        variants=[
-            AgentVariant(
-                when="nested_goal_depth_gt_1",
-                use="planner_closes_goal",
-            )
-        ],
         system_prompt="PLANNER",
     )
-    full_only = AgentDefinition(
-        name="planner_closes_goal",
-        description="planner_closes_or_defers",
-        context_recipe="planner_closes_or_defers",
-        terminals=["submit_plan_closes_goal"],
-        system_prompt="PLANNER FULL ONLY",
-    )
-    register_definition(base)
-    register_definition(full_only)
+    register_definition(planner)
 
 
 def _seed_request_segment_graph(
@@ -208,16 +194,19 @@ def test_planner_launched_via_composer_uses_base_when_no_ancestor(
     orchestrator.start()
     assert len(launcher.launches) == 1
     launched = launcher.launches[0]
-    assert launched.agent_name == "planner_closes_or_defers"
-    selected = get_definition(launched.agent_name)
-    assert selected is not None
-    assert selected.system_prompt == "PLANNER"
+    assert launched.agent_name == "planner"
+    assert launched.agent_def is not None
+    assert launched.agent_def.system_prompt == "PLANNER"
+    assert launched.agent_def.terminals == [
+        "submit_plan_closes_goal",
+        "submit_plan_defers_goal",
+    ]
     assert launched.context_packet_id is None  # no packet store wired
     assert '<iteration iteration_no="1" status="current">' in launched.context
     assert "<iteration_goal>" in launched.context
 
 
-def test_planner_forked_to_full_only_when_partial_plan_caller_present(
+def test_planner_terminals_restricted_when_partial_plan_caller_present(
     composer_runtime,
     goal_store,
     iteration_store,
@@ -258,7 +247,7 @@ def test_planner_forked_to_full_only_when_partial_plan_caller_present(
     orchestrator.start()
     assert len(launcher.launches) == 1
     launched = launcher.launches[0]
-    assert launched.agent_name == "planner_closes_goal"
-    selected = get_definition(launched.agent_name)
-    assert selected is not None
-    assert selected.system_prompt == "PLANNER FULL ONLY"
+    assert launched.agent_name == "planner"
+    assert launched.agent_def is not None
+    assert launched.agent_def.system_prompt == "PLANNER"
+    assert launched.agent_def.terminals == ["submit_plan_closes_goal"]

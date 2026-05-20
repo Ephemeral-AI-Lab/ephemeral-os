@@ -118,7 +118,7 @@ def _packet(blocks: list[ContextBlock]) -> ContextPacket:
 
 def test_planner_iter1_fresh_outline():
     prose = build_task_guidance(
-        agent_def=_agent_def("planner_closes_or_defers"),
+        agent_def=_agent_def("planner"),
         packet=_packet([_goal_block(), _iteration_goal_block(1)]),
         scope=None,  # type: ignore[arg-type]
     )
@@ -131,7 +131,7 @@ def test_planner_iter1_fresh_outline():
 
 def test_planner_iter1_after_failure_outline():
     prose = build_task_guidance(
-        agent_def=_agent_def("planner_closes_or_defers"),
+        agent_def=_agent_def("planner"),
         packet=_packet(
             [_goal_block(), _iteration_goal_block(1), _prior_attempt_block()]
         ),
@@ -144,7 +144,7 @@ def test_planner_iter1_after_failure_outline():
 
 def test_executor_outline_with_deps():
     prose = build_task_guidance(
-        agent_def=_agent_def("executor_success_handoff", AgentKind.EXECUTOR),
+        agent_def=_agent_def("executor", AgentKind.EXECUTOR),
         packet=_packet([_plan_spec_block(), _dep_block(), _assigned_task_block()]),
         scope=None,  # type: ignore[arg-type]
     )
@@ -154,27 +154,13 @@ def test_executor_outline_with_deps():
     assert "Complete <assigned_task>." in prose
 
 
-def test_executor_no_handoff_directive_for_failure_variant():
+def test_planner_directive_is_terminal_agnostic():
     prose = build_task_guidance(
-        agent_def=_agent_def("executor_success_failure", AgentKind.EXECUTOR),
-        packet=_packet([_plan_spec_block(), _assigned_task_block()]),
-        scope=None,  # type: ignore[arg-type]
-    )
-    assert (
-        "Complete <assigned_task>. No handoff option." in prose
-    )
-
-
-def test_planner_closes_goal_directive_marks_one_attempt():
-    prose = build_task_guidance(
-        agent_def=_agent_def("planner_closes_goal"),
+        agent_def=_agent_def("planner"),
         packet=_packet([_goal_block(), _iteration_goal_block(1)]),
         scope=None,  # type: ignore[arg-type]
     )
-    assert (
-        "Plan for <iteration_goal>. No defer option — must close in one attempt."
-        in prose
-    )
+    assert "What to do:\n- Plan for <iteration_goal>." in prose
 
 
 def test_evaluator_outline_with_prior_and_current_attempt():

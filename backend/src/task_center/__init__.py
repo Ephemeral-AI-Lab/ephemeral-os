@@ -29,7 +29,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from task_center.agent_launch.composer import AgentEntryComposer
     from task_center.agent_launch.entry_messages import AgentEntryMessages
-    from task_center._core.agent_routing import PredicateRegistry
+    from task_center._core.terminal_tool_routing import PredicateRegistry
     from task_center.attempt.generator_dag import ordered_generator_tasks
     from task_center.attempt.orchestrator import AttemptOrchestrator
     from task_center.attempt.runtime import AttemptDeps
@@ -107,7 +107,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "PlannedGeneratorTask": ("task_center.task_state", "PlannedGeneratorTask"),
     "PlannerSubmission": ("task_center.task_state", "PlannerSubmission"),
     "PredicateRegistry": (
-        "task_center._core.agent_routing",
+        "task_center._core.terminal_tool_routing",
         "PredicateRegistry",
     ),
     "RecipeRegistry": (

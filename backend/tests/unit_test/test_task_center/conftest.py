@@ -25,7 +25,7 @@ from db.stores.task_center_store import TaskCenterStore
 from db.stores.iteration_store import IterationStore
 from task_center.agent_launch.composer import AgentEntryComposer
 from task_center.context_engine.core import ContextEngine, ContextEngineDeps
-from task_center._core.agent_routing import (
+from task_center._core.terminal_tool_routing import (
     PredicateRegistry,
     register_builtin_predicates,
 )
@@ -154,10 +154,10 @@ def register_test_agents(request):
     request.getfixturevalue("isolated_agent_registries")
     register_definition(
         AgentDefinition(
-            name="planner_closes_or_defers",
+            name="planner",
             description="test planner",
             agent_kind=AgentKind.PLANNER,
-            context_recipe="planner_closes_or_defers",
+            context_recipe="planner",
             terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
         )
     )
@@ -171,7 +171,7 @@ def register_test_agents(request):
             terminals=[
                 "submit_execution_handoff",
                 "submit_execution_success",
-                "submit_execution_failure",
+                "submit_execution_blocker",
             ],
         )
     )
@@ -181,7 +181,7 @@ def register_test_agents(request):
             description="test generator",
             agent_kind=AgentKind.EXECUTOR,
             context_recipe="generator",
-            terminals=["submit_execution_success", "submit_execution_failure"],
+            terminals=["submit_execution_success", "submit_execution_blocker"],
         )
     )
     register_definition(
@@ -200,7 +200,7 @@ def register_test_agents(request):
             agent_kind=AgentKind.EXECUTOR,
             dispatchable_by_planner=True,
             context_recipe="generator",
-            terminals=["submit_execution_success", "submit_execution_failure"],
+            terminals=["submit_execution_success", "submit_execution_blocker"],
         )
     )
     yield

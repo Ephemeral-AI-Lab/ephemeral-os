@@ -16,7 +16,7 @@ PHASE03_TOOLS = (
     "submit_plan_defers_goal",
     "submit_execution_handoff",
     "submit_execution_success",
-    "submit_execution_failure",
+    "submit_execution_blocker",
     "submit_verification_success",
     "submit_verification_failure",
     "submit_evaluation_success",
@@ -38,6 +38,7 @@ def test_tool_registry_renamed() -> None:
     assert has_tool("submit_plan_defers_goal")
     assert has_tool("submit_plan_closes_goal")
     assert not has_tool("submit_plan_continues_goal")
+    assert not has_tool("submit_execution_failure")
 
 
 def test_submission_tools_are_terminal_except_helper_requests() -> None:

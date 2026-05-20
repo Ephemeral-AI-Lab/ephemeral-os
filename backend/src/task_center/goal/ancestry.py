@@ -1,8 +1,8 @@
 """Goal ancestry — nested-goal depth resolution.
 
 Walks the parent-task / parent-attempt / parent-iteration chain to count how
-many goals deep a given goal sits. Used by the agent-routing predicates to
-decide whether an executor profile may still offer a handoff terminal.
+many goals deep a given goal sits. Used by the agent-routing predicates that
+still need nested-goal awareness.
 """
 
 from __future__ import annotations

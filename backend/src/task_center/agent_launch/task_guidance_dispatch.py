@@ -15,14 +15,8 @@ read directly by ``tools/subagent/run_subagent.py``.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING
 
 from task_center.task_guidance.builders import build_task_guidance
-
-if TYPE_CHECKING:  # pragma: no cover - typing-only
-    from agents import AgentDefinition
-    from task_center.context_engine.packet import ContextPacket
-    from task_center.context_engine.scope import ContextScope
 
 
 TaskGuidanceBuilder = Callable[..., str]
@@ -30,10 +24,8 @@ TaskGuidanceBuilder = Callable[..., str]
 
 _AGENTS_WITH_TASK_GUIDANCE: frozenset[str] = frozenset(
     {
-        "planner_closes_or_defers",
-        "planner_closes_goal",
-        "executor_success_handoff",
-        "executor_success_failure",
+        "planner",
+        "executor",
         # ``generator_verifier.md`` registers as ``name: verifier`` in its
         # frontmatter; dispatch keys match the registered agent name, not the
         # source filename.

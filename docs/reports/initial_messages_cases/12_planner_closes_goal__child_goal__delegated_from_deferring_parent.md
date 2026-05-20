@@ -81,7 +81,7 @@ A submission that violates any of these is rejected. Repair and resubmit.
 - **Continuation scope is not the original backlog.** On continuation iterations, the standalone `<goal>` text and prior accepted plans (inside `<iteration status="prior">`) are evidence, not scope. Plan only the current `<iteration_goal>` contract plus unresolved items explicitly named there.
 - **Bind the evaluator to what the DAG produces.** Write criteria you are confident the planned tasks can satisfy. If coverage is uncertain, narrow the `plan_spec` and `evaluation_criteria` to a slice the DAG can deliver — do not write criteria the planned tasks cannot satisfy.
 - **Generator independence.** A generator receives only its own assigned task, the attempt plan for framing, and dependency results. Write each `task_spec` so the executing agent can act without re-reading the attempt contract or re-deriving the iteration goal.
-- **Right-size the DAG.** Add a dependency only when one task's output is required by another. Independent items become parallel siblings. A wide flat DAG is normal; deep chains compound risk because failure of one task blocks all descendants.
+- **Right-size the DAG.** Add a dependency only when one task's output is required by another. Independent items become parallel siblings. A wide flat DAG is normal; deep chains compound risk because one failed or blocked upstream leaves all descendants pending and unreachable in that attempt.
 - **Use the failure landscape on retry.** Identify which prior tasks failed, which were blocked, and which already completed. Drop or rework the failing slice rather than re-running the same plan unchanged. If a prior evaluator failure points at a specific gap, narrow the next plan to address that gap directly.
 - **Reuse references, don't paste content.** Background blocks (parent task input, artifacts, prior summaries) are inputs. Do not inline them into `plan_spec` or `task_specs`. Reference dependency outputs by `id`; reference durable artifacts by their identifiers.
 - **No lifecycle decisions.** You do not close the iteration, decide the goal, or skip stages. The only state you mutate is this attempt's plan, through the terminal tool.
@@ -189,7 +189,7 @@ attempt evidence to:
 - If a prior evaluator failure pointed at a specific gap, narrow the
   next plan to address that gap directly rather than re-attempting the
   whole iteration.
-- Identify dependency chains that blocked descendants; consider whether
+- Identify dependency chains that left descendants pending and unreachable; consider whether
   those branches still belong in this attempt or can be dropped.
 
 ## Submission discipline
