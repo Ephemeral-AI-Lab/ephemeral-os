@@ -90,6 +90,13 @@ class AgentDefinition(BaseModel):
     # caller's counter is untouched.
     tool_call_limit: int | None = None
 
+    # Grace allowance past ``tool_call_limit``. Hard ceiling is reached when
+    # ``overshoot_units = max(0, tool_calls_used - tool_call_limit) +
+    # text_only_no_terminal_turns`` exceeds this value. ``None`` disables
+    # tolerance — without it the hard cap is not enforced. Only meaningful
+    # when ``tool_call_limit`` is set.
+    max_tolerance_after_max_tool_call: int | None = 10
+
     # --- agent kind ---
     # Canonical category of this profile (planner / executor / verifier /
     # evaluator / advisor / explorer / resolver). Routing predicates and the
@@ -158,6 +165,17 @@ class AgentDefinition(BaseModel):
         try:
             n = int(v)
             return n if n > 0 else None
+        except (TypeError, ValueError):
+            return None
+
+    @field_validator("max_tolerance_after_max_tool_call", mode="before")
+    @classmethod
+    def _coerce_nonneg_int(cls, v: Any) -> Any:
+        if v is None or isinstance(v, int):
+            return v if (v is None or v >= 0) else None
+        try:
+            n = int(v)
+            return n if n >= 0 else None
         except (TypeError, ValueError):
             return None
 

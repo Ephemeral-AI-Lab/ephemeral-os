@@ -73,6 +73,40 @@ def test_agent_definition_rejects_removed_legacy_fields():
         )
 
 
+def test_agent_definition_default_tolerance_is_ten():
+    a = AgentDefinition(name="x", description="y")
+    assert a.max_tolerance_after_max_tool_call == 10
+
+
+def test_agent_definition_accepts_explicit_tolerance():
+    a = AgentDefinition(
+        name="x", description="y", max_tolerance_after_max_tool_call=3
+    )
+    assert a.max_tolerance_after_max_tool_call == 3
+
+
+def test_agent_definition_allows_zero_tolerance():
+    # 0 is meaningful — "no grace, hard cap at exactly tool_call_limit".
+    a = AgentDefinition(
+        name="x", description="y", max_tolerance_after_max_tool_call=0
+    )
+    assert a.max_tolerance_after_max_tool_call == 0
+
+
+def test_agent_definition_rejects_negative_tolerance():
+    a = AgentDefinition(
+        name="x", description="y", max_tolerance_after_max_tool_call=-1
+    )
+    assert a.max_tolerance_after_max_tool_call is None
+
+
+def test_agent_definition_coerces_tolerance_string():
+    a = AgentDefinition.model_validate(
+        {"name": "x", "description": "y", "max_tolerance_after_max_tool_call": "7"}
+    )
+    assert a.max_tolerance_after_max_tool_call == 7
+
+
 # ---------- execute_tool_call budget enforcement -----------------------------
 
 

@@ -19,6 +19,7 @@ from config.loader import (
 )
 from config.sections import (
     DatabaseConfig,
+    EngineConfig,
     ProvidersConfig,
     RunnerConfig,
     SandboxConfig,
@@ -32,6 +33,7 @@ class CentralConfig(BaseSettings):
     sandbox: SandboxConfig = Field(default_factory=SandboxConfig)
     providers: ProvidersConfig = Field(default_factory=ProvidersConfig)
     runner: RunnerConfig = Field(default_factory=RunnerConfig)
+    engine: EngineConfig = Field(default_factory=EngineConfig)
 
     model_config = SettingsConfigDict(
         extra="forbid",

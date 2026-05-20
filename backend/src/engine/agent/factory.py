@@ -274,6 +274,45 @@ def _tool_registry_context_requirements(tool_registry: ToolRegistry) -> set[str]
     return requirements
 
 
+def _attach_default_overshoot_rules(
+    notification_rules: list[Any],
+    *,
+    agent_def: AgentDefinition | None,
+    tool_registry: ToolRegistry,
+) -> None:
+    """Append the budget-overflow and missing-terminal reminder rules.
+
+    No-op unless the agent declares a ``tool_call_limit`` AND the tool
+    registry exposes at least one terminal-capable tool. Dedupes by
+    ``rule.name`` so profiles that customize either rule via
+    ``notification_rules`` win.
+    """
+    if agent_def is None or agent_def.tool_call_limit is None:
+        return
+    has_terminal_tools = any(
+        getattr(t, "is_terminal_tool", False) for t in tool_registry.list_tools()
+    )
+    if not has_terminal_tools:
+        return
+
+    from config import get_central_config
+    from notification import (
+        make_budget_overflow_reminder,
+        make_missing_terminal_reminder,
+    )
+
+    existing_names = {getattr(rule, "name", "") for rule in notification_rules}
+    engine_cfg = get_central_config().engine
+    if "budget_overflow_reminder" not in existing_names:
+        notification_rules.append(
+            make_budget_overflow_reminder(
+                every=engine_cfg.budget_overflow_reminder_every,
+            )
+        )
+    if "missing_terminal_reminder" not in existing_names:
+        notification_rules.append(make_missing_terminal_reminder())
+
+
 def _build_context_preparers(
     tool_registry: ToolRegistry,
     sandbox_id: str | None,
@@ -352,6 +391,9 @@ def spawn_agent(
     )
 
     tool_call_limit = agent_def.tool_call_limit if agent_def else None
+    max_tolerance = (
+        agent_def.max_tolerance_after_max_tool_call if agent_def else None
+    )
 
     # Plumb runtime_config through tool_metadata so tools (e.g. run_subagent)
     # that need to spawn nested agents can reach it without a Protocol layer.
@@ -370,6 +412,11 @@ def spawn_agent(
         notification_rules.extend(
             resolve_harness_notification_triggers(agent_def.notification_triggers)
         )
+    _attach_default_overshoot_rules(
+        notification_rules,
+        agent_def=agent_def,
+        tool_registry=tool_registry,
+    )
 
     query_context = QueryContext(
         api_client=api_client,
@@ -379,6 +426,7 @@ def spawn_agent(
         system_prompt=system_prompt,
         max_tokens=max_tokens,
         tool_call_limit=tool_call_limit,
+        max_tolerance_after_max_tool_call=max_tolerance,
         tool_metadata=initial_tool_metadata,
         enable_background_tasks=has_background_tools,
         agent_name=agent_name,
