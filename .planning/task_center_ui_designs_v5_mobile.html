@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Task Center — Mobile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0b0f;
+    --surface: #11131a;
+    --surface-2: #171a23;
+    --surface-3: #1e222c;
+    --border: #242935;
+    --border-soft: #1c2029;
+    --text: #e9ebf2;
+    --muted: #8a93a4;
+    --muted-2: #5b6273;
+    --accent: #7aa2f7;
+
+    --planner: #7dcfff;
+    --generator: #bb9af7;
+    --evaluator: #e0af68;
+    --handoff:  #ff9e64;
+    --green: #9ece6a;
+    --red: #f7768e;
+    --yellow: #e0af68;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+    background: #1c1f26;
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ============ DEMO SHELL — gallery of phones ============ */
+  .gallery {
+    padding: 24px clamp(16px, 4vw, 40px) 40px;
+    background:
+      radial-gradient(circle at 20% 10%, #2a2f3d 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, #1f2530 0%, transparent 50%),
+      #14171f;
+  }
+  .gallery h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+  .gallery .sub {
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 28px;
+    max-width: 720px;
+  }
+  .phones {
+    display: flex;
+    gap: 36px;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: flex-start;
+  }
+
+  /* ============ iPHONE FRAME ============ */
+  .phone {
+    position: relative;
+    width: 392px;
+    height: 808px;
+    background: #0a0b0f;
+    border-radius: 56px;
+    padding: 14px;
+    box-shadow:
+      0 0 0 12px #1c1e26,
+      0 0 0 13px #3a3d48,
+      0 30px 60px rgba(0,0,0,0.5);
+    flex-shrink: 0;
+  }
+  .phone-label {
+    position: absolute;
+    bottom: -28px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+  .phone-label b { color: var(--text); font-weight: 600; }
+  .screen {
+    width: 100%;
+    height: 100%;
+    background: var(--bg);
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  /* notch */
+  .screen .notch {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 110px;
+    height: 32px;
+    background: #000;
+    border-radius: 20px;
+    z-index: 50;
+  }
+  /* statusbar */
+  .statusbar {
+    height: 50px;
+    padding: 14px 22px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    z-index: 49;
+    position: relative;
+  }
+  .statusbar .icons { display: flex; gap: 5px; font-size: 12px; color: var(--text); }
+
+  /* nav header */
+  .nav {
+    padding: 6px 16px 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--border-soft);
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+  }
+  .nav .back {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--surface-2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    color: var(--text);
+    flex-shrink: 0;
+  }
+  .nav .title {
+    flex: 1;
+    min-width: 0;
+  }
+  .nav .title .t { font-size: 15px; font-weight: 600; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nav .title .s { font-size: 11.5px; color: var(--muted); font-family: ui-monospace, monospace; }
+  .nav .action {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--surface-2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    color: var(--text);
+  }
+
+  .scroll { flex: 1; overflow-y: auto; padding-bottom: 80px; }
+  .scroll::-webkit-scrollbar { width: 0; }
+
+  /* ============ COMMON BITS ============ */
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0;
+  }
+  .d-running { background: var(--yellow); box-shadow: 0 0 0 3px rgba(224,175,104,0.18); }
+  .d-done    { background: var(--green); }
+  .d-fail    { background: var(--red); }
+  .d-pending { background: #3a4150; }
+  .d-queued  { background: var(--planner); opacity: 0.6; }
+
+  .role {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-family: ui-monospace, monospace;
+  }
+  .role::before { content: ""; width: 6px; height: 6px; border-radius: 50%; }
+  .role-planner   { background: rgba(125,207,255,0.14);  color: var(--planner);   }
+  .role-planner::before   { background: var(--planner);   }
+  .role-generator { background: rgba(187,154,247,0.14); color: var(--generator); }
+  .role-generator::before { background: var(--generator); }
+  .role-evaluator { background: rgba(224,175,104,0.14); color: var(--evaluator); }
+  .role-evaluator::before { background: var(--evaluator); }
+  .role-handoff   { background: rgba(255,158,100,0.16); color: var(--handoff);   }
+  .role-handoff::before   { background: var(--handoff);   }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10.5px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: ui-monospace, monospace;
+  }
+  .chip.live { color: var(--yellow); border-color: rgba(224,175,104,0.45); }
+  .chip.live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--yellow); animation: pulse 1.3s infinite; margin-right: 2px; }
+  @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+  @keyframes flow { to { stroke-dashoffset: -16; } }
+
+  /* ============ SCREEN 1: GOAL LIST ============ */
+  .header-block {
+    padding: 8px 16px 16px;
+  }
+  .header-block h2 {
+    margin: 0;
+    font-size: 26px;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+  }
+  .header-block .meta {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 2px;
+  }
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    padding: 4px 16px 14px;
+    overflow-x: auto;
+  }
+  .filter-bar .f {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border-radius: 16px;
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid transparent;
+  }
+  .filter-bar .f.active {
+    background: rgba(122,162,247,0.14);
+    color: var(--accent);
+    border-color: rgba(122,162,247,0.3);
+  }
+
+  .goal-card {
+    margin: 0 12px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    position: relative;
+  }
+  .goal-card.live { border-color: rgba(224,175,104,0.3); background: linear-gradient(180deg, rgba(224,175,104,0.04) 0%, var(--surface) 60%); }
+  .goal-card .gc-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .goal-card .gc-id {
+    font-family: ui-monospace, monospace;
+    font-size: 10.5px;
+    color: var(--muted-2);
+  }
+  .goal-card .gc-title {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.35;
+    margin-bottom: 8px;
+  }
+  .goal-card .gc-progress {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 10px;
+  }
+  .goal-card .gc-progress .seg {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--surface-3);
+  }
+  .goal-card .gc-progress .seg.done { background: var(--green); }
+  .goal-card .gc-progress .seg.fail { background: var(--red); }
+  .goal-card .gc-progress .seg.live { background: var(--yellow); animation: pulse 1.4s infinite; }
+  .goal-card .gc-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .goal-card .gc-roles {
+    display: flex;
+    gap: 5px;
+  }
+  .goal-card .gc-stats {
+    color: var(--muted);
+    font-size: 11.5px;
+    font-family: ui-monospace, monospace;
+  }
+  .nested-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: var(--handoff);
+    color: #1a1010;
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  /* ============ SCREEN 2: GOAL DETAIL ============ */
+  .hero {
+    padding: 8px 16px 16px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .hero h2 {
+    margin: 0 0 8px 0;
+    font-size: 19px;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+  .hero .hero-meta {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-soft);
+    padding: 0 16px;
+  }
+  .tabs .tab {
+    padding: 10px 0;
+    margin-right: 18px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+  }
+  .tabs .tab.active {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+  }
+  .tabs .tab .ct {
+    margin-left: 4px;
+    font-size: 10px;
+    background: var(--surface-3);
+    padding: 1px 5px;
+    border-radius: 8px;
+    color: var(--muted);
+  }
+  .tabs .tab.active .ct { background: rgba(122,162,247,0.18); color: var(--accent); }
+
+  /* iter accordion */
+  .iter-block {
+    margin: 12px 12px 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .iter-head {
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(180deg, var(--surface-2) 0%, var(--surface) 100%);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .iter-head .lbl {
+    flex: 1;
+  }
+  .iter-head .lbl .t {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .iter-head .lbl .s {
+    font-size: 11.5px;
+    color: var(--muted);
+    font-family: ui-monospace, monospace;
+  }
+  .iter-head .arrow {
+    color: var(--muted-2);
+    font-size: 14px;
+  }
+  .att-list {
+    padding: 6px;
+  }
+  .att-row {
+    padding: 10px 12px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  .att-row.active { background: rgba(122,162,247,0.08); }
+  .att-row .id {
+    font-family: ui-monospace, monospace;
+    font-size: 13px;
+    font-weight: 600;
+    width: 46px;
+  }
+  .att-row .phases {
+    display: flex;
+    gap: 3px;
+    flex: 1;
+  }
+  .att-row .phases .ph {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--surface-3);
+  }
+  .att-row .phases .ph.p.done { background: var(--planner); }
+  .att-row .phases .ph.g.done { background: var(--generator); }
+  .att-row .phases .ph.e.done { background: var(--evaluator); }
+  .att-row .phases .ph.live { background: var(--yellow); animation: pulse 1.4s infinite; }
+  .att-row .phases .ph.fail { background: var(--red); }
+  .att-row .dur {
+    color: var(--muted);
+    font-size: 11px;
+    font-family: ui-monospace, monospace;
+    min-width: 50px;
+    text-align: right;
+  }
+  .iter-cont {
+    margin: 8px 18px 0;
+    padding: 8px 10px;
+    background: rgba(255,158,100,0.06);
+    border: 1px dashed rgba(255,158,100,0.3);
+    border-radius: 10px;
+    font-size: 11.5px;
+    color: var(--handoff);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .iter-cont::before { content: "↓"; font-size: 14px; }
+
+  /* ============ SCREEN 3: ATTEMPT DETAIL ============ */
+  .stage-card {
+    margin: 12px 12px 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 14px;
+    position: relative;
+  }
+  .stage-card.p { border-left: 3px solid var(--planner); }
+  .stage-card.g { border-left: 3px solid var(--generator); }
+  .stage-card.e { border-left: 3px solid var(--evaluator); }
+  .stage-card.active { box-shadow: 0 0 0 1px rgba(224,175,104,0.4) inset; }
+  .stage-card .sh { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .stage-card .sh .label { font-family: ui-monospace, monospace; font-size: 10px; color: var(--muted-2); text-transform: uppercase; letter-spacing: 0.08em; margin-left: auto; }
+  .stage-card .desc { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+  .stage-card .crit {
+    margin-top: 8px;
+    display: grid;
+    gap: 4px;
+  }
+  .stage-card .crit-item {
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .gen-sub {
+    margin-top: 8px;
+    background: var(--surface-2);
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .gen-sub .gh { display: flex; align-items: center; gap: 8px; }
+  .gen-sub .gh .nm { font-size: 12.5px; font-weight: 500; }
+  .gen-sub .gh .right { margin-left: auto; }
+  .gen-sub .info { font-size: 11.5px; color: var(--muted); font-family: ui-monospace, monospace; }
+
+  /* nested portal in mobile */
+  .nested-portal {
+    margin: 4px 0 0;
+    border-radius: 10px;
+    background: rgba(255,158,100,0.06);
+    border: 1.5px dashed rgba(255,158,100,0.45);
+    padding: 10px;
+  }
+  .nested-portal .np-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .nested-portal .np-head .label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--handoff);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .nested-portal .np-title {
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+  .nested-portal .np-pipeline {
+    display: grid;
+    grid-template-columns: 1fr 12px 1fr 12px 1fr;
+    gap: 0;
+    align-items: center;
+  }
+  .nested-portal .mini-stage {
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    padding: 6px;
+    font-size: 10.5px;
+    text-align: center;
+  }
+  .nested-portal .mini-stage.p { border-left: 2px solid var(--planner); }
+  .nested-portal .mini-stage.g { border-left: 2px solid var(--generator); }
+  .nested-portal .mini-stage.e { border-left: 2px solid var(--evaluator); }
+  .nested-portal .mini-stage .nm { font-weight: 600; font-size: 11px; }
+  .nested-portal .mini-stage .st { color: var(--muted); font-family: ui-monospace, monospace; font-size: 10px; margin-top: 2px; }
+  .nested-portal .arrow {
+    color: var(--muted-2);
+    text-align: center;
+    font-size: 10px;
+    font-family: ui-monospace, monospace;
+  }
+
+  /* event feed */
+  .events {
+    margin: 12px 12px 0;
+    padding: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+  }
+  .events h5 {
+    margin: 0 0 10px 0;
+    font-size: 11px;
+    color: var(--muted-2);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
+  .ev {
+    display: grid;
+    grid-template-columns: 16px 1fr;
+    gap: 10px;
+    padding-bottom: 12px;
+    position: relative;
+  }
+  .ev:last-child { padding-bottom: 0; }
+  .ev .rail { display: flex; flex-direction: column; align-items: center; padding-top: 4px; }
+  .ev .rail .d { width: 8px; height: 8px; border-radius: 50%; }
+  .ev .rail .line { width: 1px; flex: 1; background: var(--border-soft); margin-top: 4px; min-height: 12px; }
+  .ev.p .rail .d { background: var(--planner); }
+  .ev.g .rail .d { background: var(--generator); }
+  .ev.e .rail .d { background: var(--evaluator); }
+  .ev.h .rail .d { background: var(--handoff); }
+  .ev .body { font-size: 12.5px; line-height: 1.45; }
+  .ev .body .h { display: flex; gap: 6px; align-items: center; margin-bottom: 2px; font-size: 11px; color: var(--muted); }
+  .ev .body .ts { color: var(--muted-2); font-family: ui-monospace, monospace; }
+  .ev .body code { background: var(--surface-3); padding: 1px 5px; border-radius: 3px; color: var(--planner); font-size: 11.5px; }
+
+  /* ============ BOTTOM NAV ============ */
+  .bottom-nav {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    background: rgba(15,17,23,0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    padding: 10px 12px 26px;
+    display: flex;
+    justify-content: space-around;
+    z-index: 30;
+  }
+  .bottom-nav .nb {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--muted);
+    font-size: 10.5px;
+    font-weight: 500;
+    padding: 4px 12px;
+    flex: 1;
+  }
+  .bottom-nav .nb.active { color: var(--accent); }
+  .bottom-nav .nb .ic { font-size: 19px; line-height: 1; }
+  .bottom-nav .nb .badge {
+    position: relative;
+    display: inline-block;
+  }
+  .bottom-nav .nb .badge::after {
+    content: "";
+    position: absolute;
+    top: -1px;
+    right: -3px;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--yellow);
+    border: 1.5px solid var(--bg);
+  }
+  .home-indicator {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 140px; height: 5px;
+    background: var(--text);
+    border-radius: 3px;
+    opacity: 0.4;
+    z-index: 31;
+  }
+
+  /* ============ SCREEN 4: LIVE / TICKER ============ */
+  .live-hero {
+    margin: 12px 12px 16px;
+    padding: 16px;
+    background:
+      linear-gradient(135deg, rgba(224,175,104,0.16), rgba(247,118,142,0.08)),
+      var(--surface);
+    border: 1px solid rgba(224,175,104,0.3);
+    border-radius: 16px;
+  }
+  .live-hero .lh-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .live-hero h3 { margin: 0; font-size: 17px; font-weight: 600; }
+  .live-hero .lh-meta { font-size: 12px; color: var(--muted); font-family: ui-monospace, monospace; }
+  .live-hero .ring {
+    margin: 14px auto 6px;
+    width: 124px;
+    height: 124px;
+    position: relative;
+  }
+  .live-hero .ring svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+  .live-hero .ring .num {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+  .live-hero .ring .num b { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+  .live-hero .ring .num span { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .live-hero .role-strip { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+
+  .ticker-card {
+    margin: 0 12px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+  }
+  .ticker-card .tc-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .ticker-card .tc-head .tt { font-weight: 600; font-size: 13.5px; }
+  .ticker-card .tc-head .ts { font-size: 11px; color: var(--muted); font-family: ui-monospace, monospace; margin-left: auto; }
+  .ticker-card .tc-body { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+  .ticker-card .tc-body code { background: var(--surface-3); padding: 1px 5px; border-radius: 3px; color: var(--planner); }
+
+  /* swipe affordance */
+  .swipe-hint {
+    text-align: center;
+    color: var(--muted-2);
+    font-size: 11px;
+    padding: 8px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="gallery">
+  <h1>Task Center — mobile</h1>
+  <div class="sub">
+    Four screens of the mobile app: goal feed → goal detail → attempt detail (with nested-goal portal) → live ticker.
+    Each phone is interactive only visually; scroll to inspect.
+  </div>
+
+  <div class="phones">
+
+    <!-- ====================================================== -->
+    <!-- PHONE 1: GOAL LIST                                     -->
+    <!-- ====================================================== -->
+    <div class="phone">
+      <div class="screen">
+        <div class="notch"></div>
+        <div class="statusbar">
+          <span>9:41</span>
+          <span class="icons">●●● 􀙇 􀋨</span>
+        </div>
+
+        <div class="header-block">
+          <h2>Goals</h2>
+          <div class="meta">3 active · 1 nested</div>
+        </div>
+
+        <div class="filter-bar">
+          <div class="f active">All · 7</div>
+          <div class="f">Live · 2</div>
+          <div class="f">Failed · 1</div>
+          <div class="f">Done · 4</div>
+          <div class="f">Mine</div>
+        </div>
+
+        <div class="scroll">
+          <div class="goal-card live">
+            <div class="gc-top">
+              <span class="dot d-running"></span>
+              <span class="chip live">running 12m</span>
+              <span class="gc-id" style="margin-left:auto">tc_7f3a</span>
+            </div>
+            <div class="gc-title">Refactor audit recorder to drop in-memory buffer</div>
+            <div class="gc-progress">
+              <span class="seg done"></span>
+              <span class="seg done"></span>
+              <span class="seg fail"></span>
+              <span class="seg live"></span>
+              <span class="seg"></span>
+            </div>
+            <div class="gc-row">
+              <div class="gc-roles">
+                <span class="role role-planner">P</span>
+                <span class="role role-generator">G×2</span>
+                <span class="role role-evaluator">E</span>
+                <span class="role role-handoff">+nested</span>
+              </div>
+              <div class="gc-stats">2 iter · 4 att</div>
+            </div>
+          </div>
+
+          <div class="goal-card">
+            <div class="nested-badge">↳ nested</div>
+            <div class="gc-top">
+              <span class="dot d-running"></span>
+              <span class="chip live">23s</span>
+              <span class="gc-id" style="margin-left:auto">A′ · depth 2</span>
+            </div>
+            <div class="gc-title">Diagnose flaky test_recorder::test_overflow</div>
+            <div class="gc-progress">
+              <span class="seg done"></span>
+              <span class="seg live"></span>
+              <span class="seg"></span>
+            </div>
+            <div class="gc-row">
+              <div class="gc-roles">
+                <span class="role role-planner">P</span>
+                <span class="role role-generator">G</span>
+              </div>
+              <div class="gc-stats">spawned by gen_b</div>
+            </div>
+          </div>
+
+          <div class="goal-card">
+            <div class="gc-top">
+              <span class="dot d-queued"></span>
+              <span class="chip">queued</span>
+              <span class="gc-id" style="margin-left:auto">tc_7f3b</span>
+            </div>
+            <div class="gc-title">Add docker provider live-e2e test</div>
+            <div class="gc-progress">
+              <span class="seg"></span>
+              <span class="seg"></span>
+              <span class="seg"></span>
+            </div>
+            <div class="gc-row">
+              <div class="gc-roles">
+                <span class="role role-planner">P</span>
+              </div>
+              <div class="gc-stats">waiting for slot</div>
+            </div>
+          </div>
+
+          <div class="goal-card">
+            <div class="gc-top">
+              <span class="dot d-done"></span>
+              <span class="chip" style="color:var(--green); border-color:rgba(158,206,106,0.3)">done</span>
+              <span class="gc-id" style="margin-left:auto">tc_7f39</span>
+            </div>
+            <div class="gc-title">Sweevo eval fix</div>
+            <div class="gc-progress">
+              <span class="seg done"></span>
+              <span class="seg done"></span>
+            </div>
+            <div class="gc-row">
+              <div class="gc-roles">
+                <span class="role role-planner">P</span>
+                <span class="role role-generator">G</span>
+                <span class="role role-evaluator">E</span>
+              </div>
+              <div class="gc-stats">1 iter · 8m</div>
+            </div>
+          </div>
+
+          <div class="goal-card">
+            <div class="gc-top">
+              <span class="dot d-fail"></span>
+              <span class="chip" style="color:var(--red); border-color:rgba(247,118,142,0.3)">failed</span>
+              <span class="gc-id" style="margin-left:auto">tc_7f35</span>
+            </div>
+            <div class="gc-title">Investigate overlay 16-layer cap</div>
+            <div class="gc-progress">
+              <span class="seg done"></span>
+              <span class="seg fail"></span>
+              <span class="seg fail"></span>
+            </div>
+            <div class="gc-row">
+              <div class="gc-roles">
+                <span class="role role-planner">P</span>
+                <span class="role role-generator">G×3</span>
+              </div>
+              <div class="gc-stats">budget exceeded</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-nav">
+          <div class="nb active"><div class="ic">🎯</div>Goals</div>
+          <div class="nb"><div class="ic badge">⚡</div>Live</div>
+          <div class="nb"><div class="ic">🕘</div>Timeline</div>
+          <div class="nb"><div class="ic">⚙️</div>Settings</div>
+        </div>
+        <div class="home-indicator"></div>
+      </div>
+      <div class="phone-label"><b>1.</b> Goal feed</div>
+    </div>
+
+    <!-- ====================================================== -->
+    <!-- PHONE 2: GOAL DETAIL                                    -->
+    <!-- ====================================================== -->
+    <div class="phone">
+      <div class="screen">
+        <div class="notch"></div>
+        <div class="statusbar">
+          <span>9:42</span>
+          <span class="icons">●●● 􀙇 􀋨</span>
+        </div>
+
+        <div class="nav">
+          <div class="back">‹</div>
+          <div class="title">
+            <div class="t">Goal · audit recorder</div>
+            <div class="s">tc_7f3a · 12m</div>
+          </div>
+          <div class="action">⋯</div>
+        </div>
+
+        <div class="scroll">
+          <div class="hero">
+            <h2>Refactor audit recorder to drop in-memory buffer</h2>
+            <div class="hero-meta">
+              <span class="chip live">running</span>
+              <span class="chip">2/3 iter</span>
+              <span class="chip">41.8k tok</span>
+              <span class="chip">$0.27</span>
+            </div>
+          </div>
+
+          <div class="tabs">
+            <div class="tab active">Run<span class="ct">4</span></div>
+            <div class="tab">Spec</div>
+            <div class="tab">Logs</div>
+            <div class="tab">Sandbox</div>
+          </div>
+
+          <!-- iter 1 -->
+          <div class="iter-block">
+            <div class="iter-head">
+              <span class="dot d-done"></span>
+              <div class="lbl">
+                <div class="t">Iteration 1</div>
+                <div class="s">closed · 3m41s</div>
+              </div>
+              <div class="arrow">›</div>
+            </div>
+            <div class="att-list">
+              <div class="att-row">
+                <span class="dot d-fail"></span>
+                <span class="id">A1.1</span>
+                <div class="phases"><span class="ph p done"></span><span class="ph g done"></span><span class="ph e fail"></span></div>
+                <span class="dur">1m32s</span>
+              </div>
+              <div class="att-row">
+                <span class="dot d-done"></span>
+                <span class="id">A1.2</span>
+                <div class="phases"><span class="ph p done"></span><span class="ph g done"></span><span class="ph e done"></span></div>
+                <span class="dur">2m09s</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- continuation -->
+          <div style="margin: 8px 28px 0;" class="iter-cont">continuation_goal → "remove buffer call-sites in stores.py"</div>
+
+          <!-- iter 2 -->
+          <div class="iter-block" style="border-color: rgba(224,175,104,0.3);">
+            <div class="iter-head">
+              <span class="dot d-running"></span>
+              <div class="lbl">
+                <div class="t">Iteration 2</div>
+                <div class="s">running · att 2/3 · 8m24s</div>
+              </div>
+              <span class="chip live">live</span>
+            </div>
+            <div class="att-list">
+              <div class="att-row">
+                <span class="dot d-fail"></span>
+                <span class="id">A2.1</span>
+                <div class="phases"><span class="ph p done"></span><span class="ph g done"></span><span class="ph e fail"></span></div>
+                <span class="dur">3m12s</span>
+              </div>
+              <div class="att-row active">
+                <span class="dot d-running"></span>
+                <span class="id">A2.2</span>
+                <div class="phases"><span class="ph p done"></span><span class="ph live"></span><span class="ph"></span></div>
+                <span class="dur">47s ⟳</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="swipe-hint">▾ swipe to load older iterations</div>
+        </div>
+
+        <div class="bottom-nav">
+          <div class="nb active"><div class="ic">🎯</div>Goals</div>
+          <div class="nb"><div class="ic badge">⚡</div>Live</div>
+          <div class="nb"><div class="ic">🕘</div>Timeline</div>
+          <div class="nb"><div class="ic">⚙️</div>Settings</div>
+        </div>
+        <div class="home-indicator"></div>
+      </div>
+      <div class="phone-label"><b>2.</b> Goal detail · iterations &amp; attempts</div>
+    </div>
+
+    <!-- ====================================================== -->
+    <!-- PHONE 3: ATTEMPT DETAIL (with nested portal)            -->
+    <!-- ====================================================== -->
+    <div class="phone">
+      <div class="screen">
+        <div class="notch"></div>
+        <div class="statusbar">
+          <span>9:43</span>
+          <span class="icons">●●● 􀙇 􀋨</span>
+        </div>
+
+        <div class="nav">
+          <div class="back">‹</div>
+          <div class="title">
+            <div class="t">Attempt A2.2</div>
+            <div class="s">iter 2 · stage=generator</div>
+          </div>
+          <div class="action">⟳</div>
+        </div>
+
+        <div class="scroll">
+          <div style="padding: 12px 16px 6px;">
+            <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+              <span class="chip live">live · 47s</span>
+              <span class="chip">2 generators</span>
+              <span class="chip" style="color:var(--handoff); border-color:rgba(255,158,100,0.35)">+ nested goal</span>
+            </div>
+          </div>
+
+          <!-- Phase 1: planner -->
+          <div class="stage-card p">
+            <div class="sh">
+              <span class="role role-planner">planner</span>
+              <span class="dot d-done"></span>
+              <span style="font-size:13px; font-weight:500;">narrow scope</span>
+              <span class="label">phase 1</span>
+            </div>
+            <div class="desc">Restrict edits to <code style="background:var(--surface-3); padding:1px 5px; border-radius:3px; font-family:ui-monospace,monospace; font-size:11.5px; color:var(--planner)">_buffer</code> path only. 4 criteria.</div>
+            <div class="crit">
+              <div class="crit-item"><span class="dot d-done"></span>no _buffer field in recorder.py</div>
+              <div class="crit-item"><span class="dot d-done"></span>all unit tests pass</div>
+              <div class="crit-item"><span class="dot d-pending"></span>events visible without flush()</div>
+              <div class="crit-item"><span class="dot d-pending"></span>no orphan callers in stores.py</div>
+            </div>
+          </div>
+
+          <!-- Phase 2: generators -->
+          <div class="stage-card g active">
+            <div class="sh">
+              <span class="role role-generator">generators · 2</span>
+              <span class="chip live" style="margin-left:auto">live</span>
+              <span class="label">phase 2</span>
+            </div>
+
+            <div class="gen-sub">
+              <div class="gh">
+                <span class="dot d-running"></span>
+                <span class="nm">gen_a · code-writer</span>
+                <span class="right chip" style="font-size:10px">sonnet</span>
+              </div>
+              <div class="info">editing recorder.py · 3 tools · 18s</div>
+            </div>
+
+            <div class="gen-sub" style="border: 1px solid rgba(255,158,100,0.3);">
+              <div class="gh">
+                <span class="dot d-running"></span>
+                <span class="nm">gen_b · test-runner</span>
+                <span class="right role role-handoff">handoff</span>
+              </div>
+              <div class="info">called submit_execution_handoff → Goal A′</div>
+
+              <!-- nested portal -->
+              <div class="nested-portal">
+                <div class="np-head">
+                  <span class="label">⌁ nested Goal A′</span>
+                  <span class="chip live" style="margin-left:auto">depth 2</span>
+                </div>
+                <div class="np-title">"diagnose flaky test_overflow"</div>
+                <div class="np-pipeline">
+                  <div class="mini-stage p"><div class="nm">P</div><div class="st">✓ 0.8s</div></div>
+                  <div class="arrow">→</div>
+                  <div class="mini-stage g"><div class="nm">G×1</div><div class="st">running</div></div>
+                  <div class="arrow">→</div>
+                  <div class="mini-stage e" style="opacity:0.55"><div class="nm">E</div><div class="st">pending</div></div>
+                </div>
+                <div style="margin-top:8px; font-size:11.5px; color:var(--muted); text-align:center; font-family: ui-monospace, monospace;">
+                  iter 1 · attempt 1.1 · 23s
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Phase 3: evaluator (pending) -->
+          <div class="stage-card e" style="opacity:0.65;">
+            <div class="sh">
+              <span class="role role-evaluator">evaluator</span>
+              <span class="dot d-pending"></span>
+              <span style="font-size:13px; font-weight:500;">pending</span>
+              <span class="label">phase 3</span>
+            </div>
+            <div class="desc">Awaits all generators + nested goal A′ to settle, then scores 4 criteria.</div>
+          </div>
+
+          <!-- compact events -->
+          <div class="events">
+            <h5>recent events</h5>
+            <div class="ev p">
+              <div class="rail"><div class="d"></div><div class="line"></div></div>
+              <div class="body">
+                <div class="h"><span class="ts">02:14:03</span><span class="role role-planner">planner</span></div>
+                emitted 4 criteria; narrowed scope
+              </div>
+            </div>
+            <div class="ev g">
+              <div class="rail"><div class="d"></div><div class="line"></div></div>
+              <div class="body">
+                <div class="h"><span class="ts">02:14:14</span><span class="role role-generator">gen_a</span></div>
+                edit <code>recorder.py</code> · −18/+9
+              </div>
+            </div>
+            <div class="ev h">
+              <div class="rail"><div class="d"></div></div>
+              <div class="body">
+                <div class="h"><span class="ts">02:14:24</span><span class="role role-handoff">handoff</span></div>
+                gen_b spawned Goal A′
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-nav">
+          <div class="nb active"><div class="ic">🎯</div>Goals</div>
+          <div class="nb"><div class="ic badge">⚡</div>Live</div>
+          <div class="nb"><div class="ic">🕘</div>Timeline</div>
+          <div class="nb"><div class="ic">⚙️</div>Settings</div>
+        </div>
+        <div class="home-indicator"></div>
+      </div>
+      <div class="phone-label"><b>3.</b> Attempt detail · with nested-goal portal</div>
+    </div>
+
+    <!-- ====================================================== -->
+    <!-- PHONE 4: LIVE TICKER                                    -->
+    <!-- ====================================================== -->
+    <div class="phone">
+      <div class="screen">
+        <div class="notch"></div>
+        <div class="statusbar">
+          <span>9:44</span>
+          <span class="icons">●●● 􀙇 􀋨</span>
+        </div>
+
+        <div class="header-block" style="padding-bottom: 8px;">
+          <h2>Live</h2>
+          <div class="meta">across all active goals</div>
+        </div>
+
+        <div class="scroll">
+          <div class="live-hero">
+            <div class="lh-row">
+              <span class="dot d-running"></span>
+              <h3>2 goals running</h3>
+            </div>
+            <div class="lh-meta">5 agents active · 0 errors · 12 msg/min</div>
+
+            <div class="ring">
+              <svg viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" stroke="#1e222c" stroke-width="9" fill="none"/>
+                <circle cx="50" cy="50" r="42" stroke="url(#g1)" stroke-width="9" fill="none"
+                        stroke-dasharray="264" stroke-dashoffset="70" stroke-linecap="round"/>
+                <defs>
+                  <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#7dcfff"/>
+                    <stop offset="0.5" stop-color="#bb9af7"/>
+                    <stop offset="1" stop-color="#e0af68"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div class="num"><b>74%</b><span>budget used</span></div>
+            </div>
+
+            <div class="role-strip">
+              <span class="role role-planner">2 planner</span>
+              <span class="role role-generator">3 gen</span>
+              <span class="role role-evaluator">0 eval</span>
+              <span class="role role-handoff">1 portal</span>
+            </div>
+          </div>
+
+          <div class="ticker-card">
+            <div class="tc-head">
+              <span class="role role-generator">gen_b</span>
+              <span class="tt">test-runner</span>
+              <span class="ts">just now</span>
+            </div>
+            <div class="tc-body">streaming pytest output · 28/34 passing · <span class="chip live" style="margin-left:4px">live</span></div>
+          </div>
+
+          <div class="ticker-card">
+            <div class="tc-head">
+              <span class="role role-handoff">handoff</span>
+              <span class="tt">Goal A′ spawned</span>
+              <span class="ts">26s ago</span>
+            </div>
+            <div class="tc-body">gen_b → <code>submit_execution_handoff("diagnose flaky test_overflow")</code></div>
+          </div>
+
+          <div class="ticker-card">
+            <div class="tc-head">
+              <span class="role role-generator">gen_a</span>
+              <span class="tt">code-writer</span>
+              <span class="ts">36s ago</span>
+            </div>
+            <div class="tc-body">edit <code>recorder.py</code> · −18 / +9 · overlay layer 3 committed</div>
+          </div>
+
+          <div class="ticker-card">
+            <div class="tc-head">
+              <span class="role role-planner">planner</span>
+              <span class="tt">narrowed spec</span>
+              <span class="ts">47s ago</span>
+            </div>
+            <div class="tc-body">A2.2 begin · 4 criteria emitted; scope reduced to <code>_buffer</code> path</div>
+          </div>
+
+          <div class="ticker-card">
+            <div class="tc-head">
+              <span class="role role-evaluator">evaluator</span>
+              <span class="tt">A2.1 failed</span>
+              <span class="ts">2m ago</span>
+            </div>
+            <div class="tc-body" style="color: var(--red);">3 tests still red · retry within iter 2 budget</div>
+          </div>
+        </div>
+
+        <div class="bottom-nav">
+          <div class="nb"><div class="ic">🎯</div>Goals</div>
+          <div class="nb active"><div class="ic badge">⚡</div>Live</div>
+          <div class="nb"><div class="ic">🕘</div>Timeline</div>
+          <div class="nb"><div class="ic">⚙️</div>Settings</div>
+        </div>
+        <div class="home-indicator"></div>
+      </div>
+      <div class="phone-label"><b>4.</b> Live ticker · cross-goal</div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

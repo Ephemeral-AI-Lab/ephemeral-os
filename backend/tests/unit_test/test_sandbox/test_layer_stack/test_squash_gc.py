@@ -147,7 +147,7 @@ def test_checkpoint_relabel_moves_prebuilt_checkpoint_to_publish_version(
     assert _layer_path(manager, relabeled).is_dir()
 
 
-def test_squash_cas_rejects_concurrent_prefix_append_and_discards_checkpoint(
+def test_squash_cas_keeps_concurrent_prefix_append_and_versions_checkpoint(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -180,10 +180,13 @@ def test_squash_cas_rejects_concurrent_prefix_append_and_discards_checkpoint(
 
     squashed = manager.squash(max_depth=2)
 
-    assert squashed is None
+    assert squashed is not None
+    assert squashed.depth == 2
+    assert squashed.layers[0].layer_id.startswith("L000006-")
+    assert squashed.layers[1].layer_id.startswith(f"B{squashed.version:06d}-")
+    assert _layer_path(manager, squashed.layers[1]).is_dir()
     assert built
     assert _layer_path(manager, built[0]).exists() is False
-    assert manager.read_active_manifest().depth == 6
     assert manager.read_text("race/appended.txt") == ("appended\n", True)
     for index in range(5):
         assert manager.read_text(f"base/{index:02d}.txt") == (

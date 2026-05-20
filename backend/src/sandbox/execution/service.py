@@ -107,6 +107,7 @@ async def execute_command(
                 occ_client=occ_client,
                 snapshot=lease.manifest,
                 request=request,
+                run_maintenance=False,
             )
             timings["command_exec.occ_apply_s"] = monotonic_now() - occ_start
         else:
@@ -125,9 +126,17 @@ async def execute_command(
         timings["command_exec.release_snapshot_s"] = (
             monotonic_now() - release_start
         )
+        maintenance_timings = {}
+        if occ_apply:
+            assert occ_client is not None
+            maintenance_timings = await occ_client.run_maintenance_after_publish(
+                changeset,
+                workspace_ref=request.workspace_ref,
+            )
         timings = {
             **timings,
             **changeset.timings,
+            **maintenance_timings,
             **(timing_provider() if timing_provider is not None else {}),
         }
         timings["api.shell.overlay_s"] = (
@@ -181,6 +190,7 @@ async def _apply_workspace_capture(
     occ_client: OCCMutationClient,
     snapshot: SnapshotManifest,
     request: CommandExecRequest,
+    run_maintenance: bool = True,
 ) -> ChangesetResult:
     typed_changes = overlay_path_changes_to_occ_changes(path_changes)
     if not typed_changes:
@@ -200,6 +210,7 @@ async def _apply_workspace_capture(
         snapshot=snapshot,
         options=CommitOptions(atomic=is_atomic),
         workspace_ref=request.workspace_ref,
+        run_maintenance=run_maintenance,
     )
     return result
 

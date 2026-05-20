@@ -72,14 +72,26 @@ class SquashService:
         *,
         max_depth: int,
         pinned_layers: tuple[LayerRef, ...] = (),
+        min_reduction: int = 1,
     ) -> SquashPlan | None:
         if max_depth <= 0:
             raise ValueError("max_depth must be positive")
+        if min_reduction <= 0:
+            raise ValueError("min_reduction must be positive")
         if active_manifest.depth <= max_depth:
             return None
 
         entries = _segment_unpinned_layers(active_manifest.layers, pinned_layers)
         if len(entries) >= active_manifest.depth:
+            return None
+        if active_manifest.depth - len(entries) < min_reduction:
+            return None
+        checkpoint_segments = tuple(
+            entry for entry in entries if isinstance(entry, CheckpointSegment)
+        )
+        if len(entries) > max_depth and all(
+            len(segment.layers) <= max_depth for segment in checkpoint_segments
+        ):
             return None
 
         return SquashPlan(
@@ -160,11 +172,16 @@ def _segment_unpinned_layers(
     return tuple(entries)
 
 
-def manifest_still_matches_plan(
+def manifest_prefix_before_plan(
     manifest: Manifest,
     plan: SquashPlan,
-) -> bool:
-    return manifest.version == plan.active_version and manifest.layers == plan.active_layers
+) -> tuple[LayerRef, ...] | None:
+    planned_depth = len(plan.active_layers)
+    if planned_depth > manifest.depth:
+        return None
+    if manifest.layers[-planned_depth:] != plan.active_layers:
+        return None
+    return manifest.layers[:-planned_depth]
 
 
 def _default_checkpoint_id(next_version: int) -> str:
@@ -176,5 +193,5 @@ __all__ = [
     "SquashPlan",
     "SquashPlanEntry",
     "SquashService",
-    "manifest_still_matches_plan",
+    "manifest_prefix_before_plan",
 ]

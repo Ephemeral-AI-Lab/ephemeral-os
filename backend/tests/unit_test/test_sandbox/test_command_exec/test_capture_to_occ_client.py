@@ -55,8 +55,14 @@ class _LayerStackClient:
 
 
 class _Client:
-    def __init__(self, layer_stack: _LayerStackClient) -> None:
+    def __init__(
+        self,
+        layer_stack: _LayerStackClient,
+        *,
+        expect_release_before_maintenance: bool = False,
+    ) -> None:
         self.layer_stack = layer_stack
+        self.expect_release_before_maintenance = expect_release_before_maintenance
         self.paths: list[str] = []
         self.snapshot: object | None = None
         self.atomic: bool | None = None
@@ -68,8 +74,10 @@ class _Client:
         snapshot: object | None = None,
         options: object | None = None,
         workspace_ref: str | None = None,
+        run_maintenance: bool = True,
     ) -> ChangesetResult:
         del workspace_ref
+        assert run_maintenance is False
         assert self.layer_stack.released == []
         self.paths = [change.path for change in typed_changes]
         self.snapshot = snapshot
@@ -88,6 +96,17 @@ class _Client:
             },
             published_manifest_version=2,
         )
+
+    async def run_maintenance_after_publish(
+        self,
+        result: ChangesetResult,
+        *,
+        workspace_ref: str | None = None,
+    ) -> dict[str, float]:
+        del result, workspace_ref
+        if self.expect_release_before_maintenance:
+            assert self.layer_stack.released == ["lease-1"]
+        return {}
 
 
 class _Gitignore:
@@ -117,7 +136,7 @@ async def test_shell_capture_goes_through_occ_client_before_lease_release(
     lower = lower_parent / "lower"
     lower.mkdir(parents=True)
     layer_stack = _LayerStackClient(lower)
-    occ = _Client(layer_stack)
+    occ = _Client(layer_stack, expect_release_before_maintenance=True)
 
     def fake_run_workspace_replaced_command(*, spec, request, run_dir, timings):
         del request

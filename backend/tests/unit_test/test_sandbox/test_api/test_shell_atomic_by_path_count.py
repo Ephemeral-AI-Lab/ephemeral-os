@@ -42,8 +42,9 @@ class _StubOccClient:
         snapshot: Any = None,
         options: CommitOptions | None = None,
         workspace_ref: str | None = None,
+        run_maintenance: bool = True,
     ) -> ChangesetResult:
-        del typed_changes, snapshot, workspace_ref
+        del typed_changes, snapshot, workspace_ref, run_maintenance
         assert options is not None
         self.captured_options.append(options)
         return ChangesetResult(

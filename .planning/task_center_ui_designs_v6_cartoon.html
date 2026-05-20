@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Task Center — Cartoon v6 (on-disk truth)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Caveat:wght@400;700&family=Fredoka:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:    #fff8ec;
+    --paper-2:  #fff1d4;
+    --ink:      #2a2438;
+    --ink-soft: #5b5170;
+
+    --planner:   #6fb3ff;
+    --executor:  #b78cff;
+    --evaluator: #ffb35c;
+    --handoff:   #ff7e8a;
+    --entry:     #5fcca8;
+
+    --goal:      #88d96a;
+    --iter:      #ffd966;
+    --attempt:   #ffaf78;
+    --sandbox:   #6fd9c9;
+    --run:       #c9a3ff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Patrick Hand", "Comic Sans MS", cursive;
+    background:
+      radial-gradient(circle at 10% 10%, #fff5d8 0%, transparent 40%),
+      radial-gradient(circle at 90% 80%, #ffe6c2 0%, transparent 40%),
+      var(--paper);
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1.4;
+    min-height: 100vh;
+  }
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background-image: radial-gradient(circle at 1px 1px, rgba(42,36,56,0.06) 1px, transparent 0);
+    background-size: 20px 20px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  code, .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 13px; background: rgba(42,36,56,0.06); padding: 1px 6px; border-radius: 4px; }
+
+  header.page {
+    padding: 28px 36px 14px;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+  }
+  header.page h1 {
+    font-family: "Caveat", cursive;
+    font-weight: 700;
+    font-size: 46px;
+    margin: 0;
+    display: inline-block;
+    transform: rotate(-1.5deg);
+  }
+  header.page h1::after {
+    content: "";
+    display: block;
+    width: 86%;
+    height: 8px;
+    margin: -6px auto 0;
+    background: var(--evaluator);
+    border-radius: 50%;
+    transform: skew(-8deg);
+    opacity: 0.55;
+  }
+  header.page .sub {
+    font-size: 18px;
+    color: var(--ink-soft);
+    margin-top: 6px;
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  header.page .sub b { color: var(--ink); }
+
+  .stage {
+    position: relative;
+    z-index: 1;
+    padding: 18px 36px 40px;
+    max-width: 1300px;
+    margin: 0 auto;
+  }
+
+  .legend {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 8px 0 26px;
+  }
+  .legend .item {
+    background: white;
+    border: 3px solid var(--ink);
+    border-radius: 30px;
+    padding: 6px 14px 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: "Fredoka", sans-serif;
+    font-weight: 600;
+    font-size: 13.5px;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .legend .item:nth-child(odd) { transform: rotate(-1.2deg); }
+  .legend .item:nth-child(even) { transform: rotate(0.9deg); }
+  .legend .em { font-size: 22px; }
+  .legend .item small { color: var(--ink-soft); font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 500; }
+
+  .panel {
+    background: white;
+    border: 4px solid var(--ink);
+    border-radius: 22px;
+    box-shadow: 6px 6px 0 var(--ink);
+    padding: 22px 26px 26px;
+    margin-bottom: 26px;
+    position: relative;
+  }
+  .panel.tilt-l { transform: rotate(-0.5deg); }
+  .panel.tilt-r { transform: rotate(0.35deg); }
+  .panel .panel-title {
+    font-family: "Caveat", cursive;
+    font-size: 30px;
+    font-weight: 700;
+    margin: -8px 0 4px;
+    display: inline-block;
+    background: var(--iter);
+    padding: 2px 14px 0;
+    border-radius: 8px;
+    transform: rotate(-1deg);
+    border: 3px solid var(--ink);
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .panel .panel-sub {
+    color: var(--ink-soft);
+    margin: 4px 0 14px;
+    font-size: 16px;
+  }
+
+  .sticker {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 11px;
+    border: 3px solid var(--ink);
+    border-radius: 30px;
+    background: white;
+    font-family: "Fredoka", sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .sticker.run     { background: var(--run); color: white; }
+  .sticker.entry   { background: var(--entry); }
+  .sticker.goal    { background: var(--goal); }
+  .sticker.iter    { background: var(--iter); }
+  .sticker.attempt { background: var(--attempt); }
+  .sticker.sandbox { background: var(--sandbox); }
+  .sticker.handoff { background: var(--handoff); color: white; }
+  .sticker .em { font-size: 18px; line-height: 1; }
+  .sticker .num { font-family: "Caveat", cursive; font-size: 20px; padding: 0 3px; }
+
+  .dot {
+    width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid var(--ink);
+    display: inline-block; flex-shrink: 0;
+  }
+  .d-running { background: var(--evaluator); animation: bounce 0.9s ease-in-out infinite; }
+  .d-done    { background: var(--goal); }
+  .d-fail    { background: var(--handoff); }
+  .d-pending { background: #d9d2c0; }
+  @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
+
+  .char {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 3.5px solid var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    box-shadow: 3px 3px 0 var(--ink);
+    flex-shrink: 0;
+    position: relative;
+  }
+  .char.planner   { background: var(--planner); }
+  .char.executor  { background: var(--executor); }
+  .char.evaluator { background: var(--evaluator); }
+  .char.handoff   { background: var(--handoff); }
+  .char.entry     { background: var(--entry); }
+  .char.sandbox   { background: var(--sandbox); }
+  .char .badge {
+    position: absolute; bottom: -6px; right: -6px;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: white;
+    border: 2.5px solid var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+  }
+
+  .bubble {
+    position: relative;
+    background: white;
+    border: 3px solid var(--ink);
+    border-radius: 18px;
+    padding: 8px 14px;
+    box-shadow: 3px 3px 0 var(--ink);
+    font-size: 15px;
+    line-height: 1.4;
+    max-width: 420px;
+  }
+  .bubble::before { content:""; position:absolute; left:-14px; top:18px; border-top:9px solid transparent; border-bottom:9px solid transparent; border-right:14px solid var(--ink); }
+  .bubble::after  { content:""; position:absolute; left:-9px;  top:20px; border-top:7px solid transparent; border-bottom:7px solid transparent; border-right:10px solid white; }
+  .bubble.right::before { left:auto; right:-14px; border-right:0; border-left:14px solid var(--ink); }
+  .bubble.right::after  { left:auto; right:-9px;  border-right:0; border-left:10px solid white; }
+
+  /* ============================================== */
+  /* PANEL 1 — THE FILING CABINET (real on-disk!)   */
+  /* ============================================== */
+  .cabinet {
+    background: var(--paper-2);
+    border: 3px solid var(--ink);
+    border-radius: 18px;
+    padding: 18px 22px;
+    box-shadow: 4px 4px 0 var(--ink);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13.5px;
+    line-height: 1.85;
+    color: var(--ink);
+    position: relative;
+  }
+  .cabinet::before {
+    content: "📁 run_root/";
+    position: absolute;
+    top: -16px;
+    left: 18px;
+    background: var(--run);
+    color: white;
+    padding: 4px 14px 2px;
+    border: 3px solid var(--ink);
+    border-radius: 14px;
+    font-family: "Fredoka", sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    box-shadow: 2px 2px 0 var(--ink);
+    transform: rotate(-1.5deg);
+  }
+  .cabinet .lvl-0 { padding-left: 0; }
+  .cabinet .lvl-1 { padding-left: 22px; }
+  .cabinet .lvl-2 { padding-left: 44px; }
+  .cabinet .lvl-3 { padding-left: 66px; }
+  .cabinet .lvl-4 { padding-left: 88px; }
+  .cabinet .lvl-5 { padding-left: 110px; }
+  .cabinet .gutter { color: rgba(42,36,56,0.35); }
+  .cabinet .file   { color: var(--ink-soft); }
+  .cabinet .dir-run     { color: #6f4cc4; font-weight: 700; }
+  .cabinet .dir-entry   { color: #2a8c66; font-weight: 700; }
+  .cabinet .dir-goal    { color: #4a8c2a; font-weight: 700; }
+  .cabinet .dir-iter    { color: #c9931f; font-weight: 700; }
+  .cabinet .dir-att     { color: #c46a2a; font-weight: 700; }
+  .cabinet .dir-planner { color: #2a73c4; font-weight: 700; }
+  .cabinet .dir-exec    { color: #7c4cc4; font-weight: 700; }
+  .cabinet .dir-eval    { color: #c47b2a; font-weight: 700; }
+  .cabinet .note { color: var(--ink-soft); font-family: "Caveat", cursive; font-size: 17px; font-weight: 700; margin-left: 10px; }
+
+  /* ============================================== */
+  /* PANEL 2 — Stickers row matched to on-disk dirs */
+  /* ============================================== */
+  .anatomy-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+    margin-top: 16px;
+  }
+  .anat {
+    background: var(--paper-2);
+    border: 3px solid var(--ink);
+    border-radius: 14px;
+    padding: 12px;
+    box-shadow: 4px 4px 0 var(--ink);
+    position: relative;
+  }
+  .anat:nth-child(odd) { transform: rotate(-1deg); }
+  .anat:nth-child(even) { transform: rotate(0.8deg); }
+  .anat .top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .anat h5 { margin: 6px 0 4px; font-family: "Fredoka", sans-serif; font-weight: 700; font-size: 15px; }
+  .anat p { margin: 0; font-size: 13.5px; color: var(--ink-soft); line-height: 1.45; }
+  .anat .dir { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--ink); background: rgba(42,36,56,0.06); padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 6px; }
+
+  /* ============================================== */
+  /* PANEL 3 — Inside one attempt (with phases 01-03) */
+  /* ============================================== */
+  .comic-pipeline {
+    display: grid;
+    grid-template-columns: 1fr 60px 1.6fr 60px 1fr;
+    align-items: center;
+    margin: 16px 0 6px;
+  }
+  .phase-box {
+    background: white;
+    border: 3px solid var(--ink);
+    border-radius: 18px;
+    padding: 12px;
+    box-shadow: 4px 4px 0 var(--ink);
+    text-align: center;
+    position: relative;
+  }
+  .phase-box.p { background: #e7f2ff; transform: rotate(-1deg); }
+  .phase-box.x { background: #f1e8ff; }
+  .phase-box.e { background: #fff1dc; transform: rotate(1deg); }
+  .phase-box .seq-tag {
+    position: absolute;
+    top: -14px;
+    left: 14px;
+    background: var(--ink);
+    color: white;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 10px;
+    border: 2.5px solid var(--ink);
+  }
+  .phase-box .char { margin: 4px auto 8px; }
+  .phase-box .nm { font-family: "Fredoka", sans-serif; font-weight: 700; font-size: 17px; }
+  .phase-box .role-line { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+  .phase-box .desc { font-size: 13px; color: var(--ink-soft); margin-top: 6px; line-height: 1.35; }
+
+  .arrow {
+    display: flex; align-items: center; justify-content: center; position: relative;
+  }
+  .arrow svg { width: 100%; height: 60px; }
+
+  .exec-grid {
+    background: #f1e8ff;
+    border: 3px solid var(--ink);
+    border-radius: 18px;
+    padding: 12px;
+    box-shadow: 4px 4px 0 var(--ink);
+    position: relative;
+  }
+  .exec-grid .seq-tag {
+    position: absolute;
+    top: -14px;
+    left: 14px;
+    background: var(--ink);
+    color: white;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 10px;
+  }
+  .exec-grid .hdr {
+    font-family: "Fredoka", sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    text-align: center;
+    margin-bottom: 10px;
+    padding-top: 4px;
+  }
+  .exec-grid .hdr small { color: var(--ink-soft); font-family: "Caveat", cursive; font-size: 16px; font-weight: 400; display: block; margin-top: -2px; }
+  .gen-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .gen-pair .phase-box {
+    padding: 10px;
+    background: white;
+    transform: none;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .gen-pair .phase-box:first-child { transform: rotate(-1deg); }
+  .gen-pair .phase-box:last-child  { transform: rotate(1.2deg); }
+  .gen-pair .phase-box .char { width: 44px; height: 44px; font-size: 20px; box-shadow: 2px 2px 0 var(--ink); }
+  .gen-pair .phase-box .nm { font-size: 14px; }
+  .gen-pair .phase-box .role-line { font-size: 10px; }
+
+  /* ============================================== */
+  /* PANEL 4 — message.jsonl vs sandbox_events.jsonl */
+  /* ============================================== */
+  .stream-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-top: 12px;
+  }
+  .stream-card {
+    background: white;
+    border: 3px solid var(--ink);
+    border-radius: 16px;
+    padding: 14px 16px;
+    box-shadow: 4px 4px 0 var(--ink);
+  }
+  .stream-card.tilt-l { transform: rotate(-0.6deg); }
+  .stream-card.tilt-r { transform: rotate(0.6deg); }
+  .stream-card h4 {
+    margin: 0 0 4px 0;
+    font-family: "Fredoka", sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .stream-card .file-name { font-family: "JetBrains Mono", monospace; font-size: 12px; background: var(--paper-2); padding: 2px 8px; border-radius: 4px; color: var(--ink); }
+  .stream-card .where { font-size: 13px; color: var(--ink-soft); margin: 2px 0 12px; }
+  .stream-card .where b { color: var(--ink); }
+  .stream-card .lines { font-family: "JetBrains Mono", monospace; font-size: 12px; line-height: 1.7; }
+  .stream-card .lines .ln { display: grid; grid-template-columns: 68px 1fr; gap: 8px; padding: 2px 0; }
+  .stream-card .lines .ln .ts { color: var(--ink-soft); }
+  .stream-card .lines .ln .ev { color: var(--ink); }
+  .stream-card .lines .ln .ev .ek { font-weight: 700; }
+  .stream-card .lines .ln.evt-p .ek { color: #2a73c4; }
+  .stream-card .lines .ln.evt-x .ek { color: #7c4cc4; }
+  .stream-card .lines .ln.evt-e .ek { color: #c47b2a; }
+  .stream-card .lines .ln.evt-sb .ek { color: #2a8c66; }
+
+  /* ============================================== */
+  /* PANEL 5 — fix_target lineage                   */
+  /* ============================================== */
+  .lineage {
+    display: grid;
+    grid-template-columns: 1fr 90px 1fr;
+    align-items: center;
+    margin-top: 14px;
+  }
+  .lineage .att {
+    background: white;
+    border: 3px solid var(--ink);
+    border-radius: 16px;
+    padding: 12px 14px;
+    box-shadow: 4px 4px 0 var(--ink);
+  }
+  .lineage .att.tilt-l { transform: rotate(-1deg); }
+  .lineage .att.tilt-r { transform: rotate(0.8deg); }
+  .lineage .att h5 {
+    margin: 0 0 8px 0;
+    font-family: "Fredoka", sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .lineage .att .row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 4px; }
+  .lineage .att .crit-fail { background: rgba(255,126,138,0.12); border: 2px dashed var(--handoff); border-radius: 8px; padding: 6px 10px; font-size: 13px; }
+  .lineage .att .crit-fail b { color: #b03445; }
+  .lineage .fix-arrow {
+    text-align: center;
+    color: var(--handoff);
+    font-family: "Caveat", cursive;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .lineage .fix-arrow svg { width: 80px; height: 60px; }
+  .lineage .fix-arrow .lbl { display: block; margin-top: -6px; }
+
+  /* ============================================== */
+  /* PANEL 6 — Nested goals as run-root siblings    */
+  /* ============================================== */
+  .root-siblings {
+    background: var(--paper-2);
+    border: 3px solid var(--ink);
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: 4px 4px 0 var(--ink);
+    position: relative;
+  }
+  .root-siblings::before {
+    content: "🗂 run_root/  (flat on disk)";
+    position: absolute;
+    top: -16px;
+    left: 18px;
+    background: var(--run);
+    color: white;
+    padding: 4px 14px 2px;
+    border: 3px solid var(--ink);
+    border-radius: 14px;
+    font-family: "Fredoka", sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    box-shadow: 2px 2px 0 var(--ink);
+    transform: rotate(-1deg);
+  }
+  .root-siblings .goals-line {
+    display: flex;
+    gap: 14px;
+    align-items: stretch;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .goal-bubble {
+    background: white;
+    border: 3px solid var(--ink);
+    border-radius: 14px;
+    padding: 10px 14px;
+    box-shadow: 3px 3px 0 var(--ink);
+    flex: 1;
+    min-width: 220px;
+    position: relative;
+  }
+  .goal-bubble.tilt-l { transform: rotate(-1deg); }
+  .goal-bubble.tilt-r { transform: rotate(0.8deg); }
+  .goal-bubble h5 { margin: 0; font-family: "Fredoka", sans-serif; font-weight: 700; font-size: 15px; display: flex; gap: 6px; align-items: center; }
+  .goal-bubble .id { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--ink-soft); margin: 4px 0 6px; }
+  .goal-bubble .meta { font-size: 13px; color: var(--ink-soft); }
+  .ancestry-arrow {
+    position: absolute;
+    pointer-events: none;
+  }
+  .ancestry-note {
+    margin-top: 14px;
+    font-family: "Caveat", cursive;
+    font-size: 19px;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+  .ancestry-note b { color: var(--ink); }
+
+  /* timeline */
+  .timeline {
+    background: var(--paper-2);
+    border: 3px solid var(--ink);
+    border-radius: 18px;
+    padding: 14px 16px;
+    box-shadow: 4px 4px 0 var(--ink);
+    margin-top: 8px;
+  }
+  .tl-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 10px 0;
+    border-bottom: 2px dashed rgba(42,36,56,0.15);
+  }
+  .tl-item:last-child { border-bottom: 0; }
+  .tl-item .ts {
+    font-family: "JetBrains Mono", monospace;
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--ink-soft);
+    width: 76px;
+    flex-shrink: 0;
+    padding-top: 22px;
+  }
+  .tl-item .what { flex: 1; font-size: 15px; }
+  .tl-item .what .who { font-family: "Fredoka", sans-serif; font-weight: 700; }
+  .tl-item .what .src { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--ink-soft); margin-left: 4px; background: rgba(42,36,56,0.06); padding: 1px 5px; border-radius: 3px; }
+
+  .doodle-note {
+    text-align: center;
+    font-family: "Caveat", cursive;
+    font-size: 24px;
+    color: var(--ink-soft);
+    margin: 30px 0 10px;
+    transform: rotate(-0.5deg);
+  }
+  .doodle-note::before { content: "「 "; color: var(--handoff); }
+  .doodle-note::after  { content: " 」"; color: var(--handoff); }
+
+  /* small task.json field cards */
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .field {
+    background: var(--paper-2);
+    border: 2.5px solid var(--ink);
+    border-radius: 12px;
+    padding: 10px 12px;
+    box-shadow: 3px 3px 0 var(--ink);
+    transform: rotate(-0.3deg);
+  }
+  .field:nth-child(even) { transform: rotate(0.3deg); }
+  .field h6 { margin: 0 0 4px 0; font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--ink); }
+  .field p { margin: 0; font-size: 13.5px; color: var(--ink-soft); line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<header class="page">
+  <h1>Task Center, in cartoon (now disk-accurate 📁)</h1>
+  <div class="sub">
+    Same cast as before — but redrawn to match the actual on-disk audit layout from
+    <code>sandbox.complex_project_build_shell_edit_lsp/&lt;run&gt;/</code>.
+    The <b>executor</b> role on disk is what we call <b>Generator</b> in the UI.
+  </div>
+</header>
+
+<div class="stage">
+
+  <!-- ===== LEGEND ===== -->
+  <div class="legend">
+    <div class="item"><span class="em">🗂</span> Run root <small>run.json</small></div>
+    <div class="item"><span class="em">🚪</span> entry_executor <small>:entry</small></div>
+    <div class="item"><span class="em">🎯</span> Goal <small>goal_NN/</small></div>
+    <div class="item"><span class="em">📐</span> Iteration <small>iteration_NN/</small></div>
+    <div class="item"><span class="em">🎲</span> Attempt <small>attempt_NN/</small></div>
+    <div class="item"><span class="em">📜</span> Planner <small>01_planner:planner</small></div>
+    <div class="item"><span class="em">🤖</span> Executor <small>02_executor:gen:&lt;scenario&gt;</small></div>
+    <div class="item"><span class="em">⚖️</span> Evaluator <small>03_evaluator:evaluator</small></div>
+    <div class="item"><span class="em">🌀</span> Handoff <small>submit_execution_handoff</small></div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- PANEL 1 : THE FILING CABINET                  -->
+  <!-- ============================================ -->
+  <section class="panel tilt-l">
+    <div class="panel-title">The filing cabinet 🗂</div>
+    <div class="panel-sub">This is exactly what gets written to disk for one run. Every box in the comic maps to a folder here.</div>
+
+    <div class="cabinet">
+      <div class="lvl-0"><span class="dir-run">📁 20260516T042506Z_dc8f46c0fb12/</span><span class="note">← one run</span></div>
+      <div class="lvl-1"><span class="file">📄 run.json · metrics.json · performance_report.{json,md}</span></div>
+      <div class="lvl-1"><span class="file">📄 sandbox_events.jsonl</span><span class="note">← the silent stage's diary</span></div>
+      <div class="lvl-1"><span class="dir-entry">🚪 entry_executor_&lt;uuid&gt;:entry/</span><span class="note">← the very first character</span></div>
+      <div class="lvl-2"><span class="file">📄 task.json · message.jsonl</span></div>
+      <div class="lvl-1"><span class="dir-goal">🎯 goal_01_&lt;uuid&gt;/</span><span class="note">← what the user asked for</span></div>
+      <div class="lvl-2"><span class="file">📄 goal.json</span></div>
+      <div class="lvl-2"><span class="dir-iter">📐 iteration_01_&lt;uuid&gt;/</span></div>
+      <div class="lvl-3"><span class="file">📄 iteration.json</span></div>
+      <div class="lvl-3"><span class="dir-att">🎲 attempt_01_&lt;uuid&gt;/</span></div>
+      <div class="lvl-4"><span class="file">📄 attempt.json</span></div>
+      <div class="lvl-4"><span class="dir-planner">📜 01_planner_&lt;uuid&gt;:planner/</span></div>
+      <div class="lvl-5"><span class="file">📄 task.json · message.jsonl</span></div>
+      <div class="lvl-4"><span class="dir-exec">🤖 02_executor_&lt;uuid&gt;:gen:complex_project_build_shell_edit_lsp/</span></div>
+      <div class="lvl-5"><span class="file">📄 task.json · message.jsonl</span></div>
+      <div class="lvl-4"><span class="dir-eval">⚖️ 03_evaluator_&lt;uuid&gt;:evaluator/</span></div>
+      <div class="lvl-5"><span class="file">📄 task.json · message.jsonl</span></div>
+      <div class="lvl-2"><span class="gutter">… more iterations if needed (continuation)</span></div>
+      <div class="lvl-1"><span class="dir-goal">🎯 goal_02_&lt;uuid&gt;/</span><span class="note">← nested goal lives HERE, not inside its parent</span></div>
+      <div class="lvl-1"><span class="gutter">… and so on, flat at the root</span></div>
+    </div>
+
+    <div style="margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px;">
+      <div class="row" style="display:flex; gap:12px; align-items:flex-start;">
+        <div class="char entry">🚪</div>
+        <div>
+          <div style="font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 14px; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 4px;">entry_executor</div>
+          <div class="bubble">"I'm the bootstrap. I open Goal 1 by calling <code>submit_execution_handoff</code> for the user's request, then I bow out."</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:12px; align-items:flex-start; justify-content: flex-end;">
+        <div>
+          <div style="font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 14px; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 4px; text-align: right;">on-disk truth</div>
+          <div class="bubble right">"Every per-task folder has a <code>task.json</code> + <code>message.jsonl</code>. The run root also has its own <code>sandbox_events.jsonl</code>."</div>
+        </div>
+        <div class="char sandbox">📦</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- PANEL 2 : Anatomy row                          -->
+  <!-- ============================================ -->
+  <section class="panel tilt-r">
+    <div class="panel-title">Anatomy at a glance 🧩</div>
+    <div class="panel-sub">Five layers. Each maps to a folder. Each carries its own JSON.</div>
+
+    <div class="anatomy-row">
+      <div class="anat">
+        <div class="top"><span class="sticker run"><span class="em">🗂</span>Run</span></div>
+        <h5>The whole show</h5>
+        <p>One audit folder per run. Holds metrics + perf report + sandbox events.</p>
+        <div class="dir">run.json</div>
+      </div>
+      <div class="anat">
+        <div class="top"><span class="sticker goal"><span class="em">🎯</span>Goal</span></div>
+        <h5>What was asked for</h5>
+        <p>Owns ordered <code>iteration_ids</code>. Spawned by a task (entry, or a nested handoff).</p>
+        <div class="dir">goal_NN_&lt;uuid&gt;/</div>
+      </div>
+      <div class="anat">
+        <div class="top"><span class="sticker iter"><span class="em">📐</span>Iteration</span></div>
+        <h5>A segment of work</h5>
+        <p>One go at the goal. May close with a <code>continuation_goal</code> → next iteration.</p>
+        <div class="dir">iteration_NN_&lt;uuid&gt;/</div>
+      </div>
+      <div class="anat">
+        <div class="top"><span class="sticker attempt"><span class="em">🎲</span>Attempt</span></div>
+        <h5>One full try</h5>
+        <p>Planner ▸ Executor(s) ▸ Evaluator. If fail and budget left → next attempt.</p>
+        <div class="dir">attempt_NN_&lt;uuid&gt;/</div>
+      </div>
+      <div class="anat">
+        <div class="top"><span class="sticker"><span class="em">🧙</span>Task</span></div>
+        <h5>One agent's turn</h5>
+        <p>Three per attempt: planner, executor (=gen), evaluator. Carries spec + spawn_reason + summaries.</p>
+        <div class="dir">0N_role_&lt;uuid&gt;:role/</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- PANEL 3 : Inside one attempt (01/02/03)       -->
+  <!-- ============================================ -->
+  <section class="panel tilt-l">
+    <div class="panel-title">Inside one attempt 🎭</div>
+    <div class="panel-sub">Three folders, in order. Their <b>01/02/03 prefix</b> on disk encodes the phase ordering — no surprises.</div>
+
+    <div class="comic-pipeline">
+      <div class="phase-box p">
+        <div class="seq-tag">01_planner</div>
+        <div class="char planner">📜</div>
+        <div class="nm">Planner</div>
+        <div class="role-line">role: planner</div>
+        <div class="desc">writes <code>task_specification</code><br>+ <code>evaluation_criteria</code></div>
+      </div>
+      <div class="arrow"><svg viewBox="0 0 60 60"><path d="M 4 30 Q 30 10 56 30" stroke="#2a2438" stroke-width="2.5" fill="none" stroke-linecap="round"/><polygon points="50,22 60,30 50,38" fill="#2a2438"/></svg></div>
+
+      <div class="exec-grid">
+        <div class="seq-tag">02_executor</div>
+        <div class="hdr">Executor(s) — <span style="color: var(--executor);">"the Generator"</span><br><small>parallel · <code>generator_task_ids: [..]</code></small></div>
+        <div class="gen-pair">
+          <div class="phase-box">
+            <div class="char executor">🤖</div>
+            <div class="nm">exec A</div>
+            <div class="role-line">role: executor</div>
+          </div>
+          <div class="phase-box">
+            <div class="char executor">🤖<div class="badge" style="background: var(--handoff); color: white;">🌀</div></div>
+            <div class="nm">exec B</div>
+            <div class="role-line">may → handoff</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow"><svg viewBox="0 0 60 60"><path d="M 4 30 Q 30 50 56 30" stroke="#2a2438" stroke-width="2.5" fill="none" stroke-linecap="round"/><polygon points="50,22 60,30 50,38" fill="#2a2438"/></svg></div>
+
+      <div class="phase-box e">
+        <div class="seq-tag">03_evaluator</div>
+        <div class="char evaluator">⚖️</div>
+        <div class="nm">Evaluator</div>
+        <div class="role-line">role: evaluator</div>
+        <div class="desc">scores each criterion<br>pass · fail · continue</div>
+      </div>
+    </div>
+
+    <!-- task.json field cards -->
+    <div style="font-family: 'Caveat', cursive; font-size: 22px; color: var(--ink-soft); margin-top: 22px; transform: rotate(-0.5deg);">
+      ↪ each phase folder's <code>task.json</code> carries:
+    </div>
+    <div class="field-grid">
+      <div class="field"><h6>role</h6><p>planner · executor · evaluator · entry_executor</p></div>
+      <div class="field"><h6>agent_name</h6><p>the actual agent profile loaded</p></div>
+      <div class="field"><h6>spawn_reason</h6><p>what kicked this task off (e.g. entry_executor, retry, fix)</p></div>
+      <div class="field"><h6>fix_target_id</h6><p>retry attempts point back at the failing criterion they're trying to fix</p></div>
+      <div class="field"><h6>context_packet_id</h6><p>which context-engine packet the agent saw at start</p></div>
+      <div class="field"><h6>summaries / needs</h6><p>what the agent emitted at close · what it still requires</p></div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- PANEL 4 : two event streams                   -->
+  <!-- ============================================ -->
+  <section class="panel tilt-r">
+    <div class="panel-title">Two event streams 🎙</div>
+    <div class="panel-sub">Each task has its own <code>message.jsonl</code>. The run root has <code>sandbox_events.jsonl</code>. The UI's event log should merge them; the disk keeps them separate.</div>
+
+    <div class="stream-grid">
+      <div class="stream-card tilt-l">
+        <h4>📜 per-task <span class="file-name">message.jsonl</span></h4>
+        <div class="where">lives under <b>02_executor_…:gen:…/</b> (and every other task folder)</div>
+        <div class="lines">
+          <div class="ln evt-x"><span class="ts">02:14:14</span><span class="ev"><span class="ek">assistant</span> "editing recorder.py…"</span></div>
+          <div class="ln evt-x"><span class="ts">02:14:15</span><span class="ev"><span class="ek">tool_use</span> edit_file{path:…}</span></div>
+          <div class="ln evt-x"><span class="ts">02:14:16</span><span class="ev"><span class="ek">tool_result</span> {diff:-18/+9}</span></div>
+          <div class="ln evt-x"><span class="ts">02:14:18</span><span class="ev"><span class="ek">tool_use</span> submit_execution_handoff{…}</span></div>
+        </div>
+      </div>
+      <div class="stream-card tilt-r">
+        <h4>📦 run-wide <span class="file-name">sandbox_events.jsonl</span></h4>
+        <div class="where">lives at <b>run_root/</b> (not inside any task)</div>
+        <div class="lines">
+          <div class="ln evt-sb"><span class="ts">02:14:15</span><span class="ev"><span class="ek">overlay.commit</span> layer=3 sha=f9c2…</span></div>
+          <div class="ln evt-sb"><span class="ts">02:14:18</span><span class="ev"><span class="ek">svc.cmd.begin</span> pytest -x</span></div>
+          <div class="ln evt-sb"><span class="ts">02:14:26</span><span class="ev"><span class="ek">svc.cmd.stream</span> 28/34 passing</span></div>
+          <div class="ln evt-sb"><span class="ts">02:14:50</span><span class="ev"><span class="ek">svc.cmd.end</span> exit=1 fail=3</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="timeline" style="margin-top: 18px;">
+      <div style="font-family: 'Caveat', cursive; font-size: 22px; color: var(--ink-soft); margin-bottom: 10px;">merged for the UI ⤵</div>
+      <div class="tl-item">
+        <div class="ts">02:14:14</div>
+        <div class="char executor">🤖</div>
+        <div class="what"><div class="who">exec_a</div>edits <code>recorder.py</code> <span class="src">message.jsonl</span></div>
+      </div>
+      <div class="tl-item">
+        <div class="ts">02:14:15</div>
+        <div class="char sandbox">📦</div>
+        <div class="what"><div class="who">sandbox</div>overlay layer 3 committed <span class="src">sandbox_events.jsonl</span></div>
+      </div>
+      <div class="tl-item">
+        <div class="ts">02:14:24</div>
+        <div class="char handoff">🌀</div>
+        <div class="what"><div class="who">exec_b → handoff</div>spawned Goal 2 <span class="src">message.jsonl</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- PANEL 5 : fix_target lineage                  -->
+  <!-- ============================================ -->
+  <section class="panel tilt-l">
+    <div class="panel-title">Retries leave a trail 🧵</div>
+    <div class="panel-sub">When attempt N+1 fires, the planner's new tasks carry <code>fix_target_id</code> pointing back at the criterion in N that they're trying to fix. The UI should draw this string.</div>
+
+    <div class="lineage">
+      <div class="att tilt-l">
+        <h5><span class="sticker attempt"><span class="em">🎲</span>A 2.1</span> <span class="dot d-fail"></span></h5>
+        <div class="row"><span class="role planner" style="color: var(--planner); font-weight: 700;">📜 planner</span> ✓ <code>0.9s</code></div>
+        <div class="row"><span style="color: var(--executor); font-weight: 700;">🤖 executor × 1</span> ✓ <code>2m</code></div>
+        <div class="row"><span style="color: var(--evaluator); font-weight: 700;">⚖️ evaluator</span> ✗</div>
+        <div class="crit-fail" style="margin-top: 6px;">
+          <b>criterion crit_3</b> — "no orphan callers in stores.py" — <i>3 callers remain</i>
+        </div>
+      </div>
+
+      <div class="fix-arrow">
+        <svg viewBox="0 0 80 60">
+          <path d="M 6 30 C 30 -2, 50 62, 74 30" stroke="#ff7e8a" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="6 4"/>
+          <polygon points="64,22 76,30 64,38" fill="#ff7e8a"/>
+        </svg>
+        <span class="lbl">fix_target_id</span>
+      </div>
+
+      <div class="att tilt-r">
+        <h5><span class="sticker attempt"><span class="em">🎲</span>A 2.2</span> <span class="dot d-running"></span></h5>
+        <div class="row"><span style="color: var(--planner); font-weight: 700;">📜 planner</span> ✓ narrow-scope replan</div>
+        <div class="row" style="background: rgba(111,179,255,0.08); padding: 6px 10px; border-radius: 8px;">
+          <span class="mono" style="font-size: 11.5px;">spawn_reason:</span> <span style="font-family:'Caveat', cursive; font-size: 17px;">"fix crit_3 from A2.1"</span>
+        </div>
+        <div class="row"><span style="color: var(--executor); font-weight: 700;">🤖 executor × 2</span> · 1 issued handoff 🌀</div>
+        <div class="row"><span style="color: var(--evaluator); font-weight: 700;">⚖️ evaluator</span> pending</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- PANEL 6 : Nested goals are SIBLINGS on disk  -->
+  <!-- ============================================ -->
+  <section class="panel tilt-r">
+    <div class="panel-title">Nested goals: flat on disk, deep in spirit 🪆</div>
+    <div class="panel-sub">When an executor calls <code>submit_execution_handoff</code>, a new <code>goal_NN/</code> dir is created — <b>next to its parent</b>, not inside. The recursion is computed via <code>requested_by_task_id</code> walking, by <code>nested_goal_depth()</code>.</div>
+
+    <div class="root-siblings">
+      <div class="goals-line">
+        <div class="goal-bubble tilt-l">
+          <h5><span class="sticker goal"><span class="em">🎯</span>Goal 1</span> <span class="dot d-running"></span></h5>
+          <div class="id">goal_01_cd4c…</div>
+          <div class="meta">requested_by: <code>:entry</code></div>
+          <div class="meta" style="margin-top: 4px;">2 iter · 4 att · "audit recorder"</div>
+        </div>
+
+        <div class="goal-bubble tilt-r">
+          <h5><span class="sticker goal"><span class="em">🎯</span>Goal 2</span> <span class="dot d-running"></span> <span class="sticker handoff" style="font-size:11px; padding: 2px 8px;"><span class="em">🌀</span>nested</span></h5>
+          <div class="id">goal_02_a1b2…</div>
+          <div class="meta">requested_by: <code>02_executor (A2.2 / exec_b)</code></div>
+          <div class="meta" style="margin-top: 4px;">depth=2 · 1 iter · 1 att · "diagnose flake"</div>
+        </div>
+
+        <div class="goal-bubble tilt-l">
+          <h5><span class="sticker goal"><span class="em">🎯</span>Goal 3</span> <span class="dot d-queued" style="background:#d4cfff;"></span></h5>
+          <div class="id">goal_03_e9f0…</div>
+          <div class="meta">requested_by: <code>02_executor (Goal 2's exec)</code></div>
+          <div class="meta" style="margin-top: 4px;">depth=3 · queued · "minimal repro"</div>
+        </div>
+      </div>
+
+      <div class="ancestry-note">
+        ↪ <b>on disk:</b> three sibling folders. <b>in the UI:</b> Goal 2 nests under Goal 1, Goal 3 nests under Goal 2 — derived by walking <code>requested_by_task_id</code>.
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- PANEL 7 : What the run-root header shows     -->
+  <!-- ============================================ -->
+  <section class="panel tilt-l">
+    <div class="panel-title">Run-root header 🗂</div>
+    <div class="panel-sub">Above all the goal tabs, the UI should expose the run-level stuff: entry executor, run metrics, perf report, sandbox events.</div>
+
+    <div style="display: grid; grid-template-columns: 60px 1fr; gap: 14px; align-items: center; margin-top: 8px;">
+      <div class="char entry">🚪</div>
+      <div class="bubble" style="max-width: none;">
+        <b>entry_executor_e4eb7610</b> · created 02:00:11 · spawn_reason: <code>entry_executor</code>
+        — opens <span class="sticker goal" style="font-size:12px; padding: 2px 8px;"><span class="em">🎯</span>Goal 1</span>
+      </div>
+    </div>
+
+    <div class="field-grid" style="margin-top: 16px;">
+      <div class="field"><h6>run.json</h6><p>top-level run metadata, scenario, sandbox provider</p></div>
+      <div class="field"><h6>metrics.json</h6><p>aggregate token / latency / cost / retries</p></div>
+      <div class="field"><h6>performance_report.{json,md}</h6><p>human-readable + machine-readable run summary</p></div>
+      <div class="field"><h6>sandbox_events.jsonl</h6><p>overlay commits, svc.cmd lifecycle, file writes</p></div>
+      <div class="field"><h6>entry_executor:entry/</h6><p>the bootstrap task that owns the first handoff</p></div>
+      <div class="field"><h6>goal_NN_&lt;uuid&gt;/ × N</h6><p>flat list — root + nested goals as siblings</p></div>
+    </div>
+  </section>
+
+  <div class="doodle-note">storyboard locked to disk · planner/executor/evaluator/handoff/sandbox · goals are flat 🌀</div>
+
+</div>
+
+</body>
+</html>

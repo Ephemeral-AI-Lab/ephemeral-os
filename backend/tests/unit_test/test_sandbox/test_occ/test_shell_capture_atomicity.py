@@ -48,6 +48,7 @@ async def test_shell_uses_occ_client_apply_changeset(
         snapshot=None,
         options=None,
         workspace_ref=None,
+        run_maintenance=True,
     ):
         apply_calls.append(
             {
@@ -55,6 +56,7 @@ async def test_shell_uses_occ_client_apply_changeset(
                 "snapshot": snapshot,
                 "options": options,
                 "workspace_ref": workspace_ref,
+                "run_maintenance": run_maintenance,
             }
         )
         return await real_apply(
@@ -62,6 +64,7 @@ async def test_shell_uses_occ_client_apply_changeset(
             snapshot=snapshot,
             options=options,
             workspace_ref=workspace_ref,
+            run_maintenance=run_maintenance,
         )
 
     monkeypatch.setattr(occ_client, "apply_changeset", tracking_apply)

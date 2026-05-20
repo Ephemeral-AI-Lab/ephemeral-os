@@ -80,6 +80,34 @@ def test_squash_plan_collapses_each_unpinned_run_around_pinned_layers(
     assert plan.resulting_depth == 3
 
 
+def test_squash_plan_skips_tiny_runs_when_pinned_suffix_exceeds_threshold(
+    tmp_path: Path,
+) -> None:
+    layers = tuple(
+        LayerRef(layer_id=f"L{index:06d}", path=f"layers/L{index:06d}")
+        for index in range(8)
+    )
+
+    assert (
+        SquashService(tmp_path / "stack").plan(
+            Manifest(version=1, layers=layers[:6]),
+            max_depth=3,
+            pinned_layers=layers[2:6],
+            min_reduction=2,
+        )
+        is None
+    )
+
+    plan = SquashService(tmp_path / "stack").plan(
+        Manifest(version=2, layers=layers),
+        max_depth=3,
+        pinned_layers=layers[4:],
+    )
+
+    assert plan is not None
+    assert plan.entries == (CheckpointSegment(layers[:4]), *layers[4:])
+
+
 def test_squash_checkpoint_preserves_delete_semantics(tmp_path: Path) -> None:
     manager = LayerStack(tmp_path / "stack")
     _publish(manager, tmp_path, "deleted.txt", b"old")

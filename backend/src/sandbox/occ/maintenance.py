@@ -70,19 +70,26 @@ class AutoSquashMaintenancePolicy:
             if active.depth <= self._max_depth:
                 return timings
             recheck_timings = self._run_squash_for_active(active)
+            if not recheck_timings:
+                return timings
             recheck_timings[TimingKey.LAYER_AUTO_SQUASH_RECHECK_TRIGGERED] = 1.0
             merged = {**timings, **recheck_timings}
             merged[TimingKey.LAYER_AUTO_SQUASH_TOTAL] = timings.get(
                 TimingKey.LAYER_AUTO_SQUASH_TOTAL, 0.0
             ) + recheck_timings.get(TimingKey.LAYER_AUTO_SQUASH_TOTAL, 0.0)
-            merged[TimingKey.LAYER_AUTO_SQUASH_DEPTH_BEFORE] = timings[
-                TimingKey.LAYER_AUTO_SQUASH_DEPTH_BEFORE
-            ]
+            if TimingKey.LAYER_AUTO_SQUASH_DEPTH_BEFORE in timings:
+                merged[TimingKey.LAYER_AUTO_SQUASH_DEPTH_BEFORE] = timings[
+                    TimingKey.LAYER_AUTO_SQUASH_DEPTH_BEFORE
+                ]
             return merged
         finally:
             self._lock.release()
 
     def _run_squash_for_active(self, active: Manifest) -> dict[str, float]:
+        can_squash = getattr(self._squasher, "can_squash", None)
+        if callable(can_squash) and not can_squash(max_depth=self._max_depth):
+            return {}
+
         squash_start = monotonic_now()
         squashed = self._squasher.squash(max_depth=self._max_depth)
         elapsed = monotonic_now() - squash_start

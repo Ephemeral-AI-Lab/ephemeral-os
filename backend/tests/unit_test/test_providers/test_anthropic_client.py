@@ -499,6 +499,72 @@ class TestOutputSchemaStripped:
         assert sent_tools[0]["name"] == "get_weather"
 
 
+class TestSystemPrefix:
+    """Plan §A13 + §A2/§A9 regression. OAuth identity-block prepend logic."""
+
+    @staticmethod
+    async def _capture_system(
+        client: AnthropicClient, system_prompt: str
+    ) -> Any:
+        events, final = _make_single_text_stream("hi")
+        captured: dict[str, Any] = {}
+
+        def capture_stream(**kwargs: Any) -> MockStream:
+            captured.update(kwargs)
+            return MockStream(events, final)
+
+        client._client.messages.stream = MagicMock(side_effect=capture_stream)
+        request = ApiMessageRequest(
+            model="claude-sonnet-4-20250514",
+            messages=[ConversationMessage.from_user_text("hi")],
+            system_prompt=system_prompt,
+        )
+        await _collect_events(client, request)
+        return captured["system"]
+
+    @pytest.mark.asyncio
+    async def test_api_mode_system_field_remains_string(self) -> None:
+        """A9 regression: API mode (no system_prefix) sends `system` as a
+        plain string, exactly as before the refactor."""
+        client = _build_client()
+        system_field = await self._capture_system(client, "be helpful")
+        assert system_field == "be helpful"
+        assert isinstance(system_field, str)
+
+    @pytest.mark.asyncio
+    async def test_api_mode_empty_system_remains_string(self) -> None:
+        client = _build_client()
+        system_field = await self._capture_system(client, "")
+        assert system_field == ""
+        assert isinstance(system_field, str)
+
+    @pytest.mark.asyncio
+    async def test_oauth_mode_prepends_identity_block(self) -> None:
+        client = AnthropicClient(
+            api_key="sk-x",
+            system_prefix="You are Claude Code, Anthropic's official CLI for Claude.",
+        )
+        system_field = await self._capture_system(client, "be a python tutor")
+        assert system_field == [
+            {"type": "text", "text": "You are Claude Code, Anthropic's official CLI for Claude."},
+            {"type": "text", "text": "be a python tutor"},
+        ]
+
+    @pytest.mark.asyncio
+    async def test_oauth_mode_drops_empty_caller_block(self) -> None:
+        """Empty system_prompt → identity-only (avoid empty text block #1)."""
+        client = AnthropicClient(api_key="sk-x", system_prefix="IDENT")
+        system_field = await self._capture_system(client, "")
+        assert system_field == [{"type": "text", "text": "IDENT"}]
+
+    @pytest.mark.asyncio
+    async def test_oauth_mode_idempotent_when_prefix_already_present(self) -> None:
+        """If caller already prepended identity, don't duplicate."""
+        client = AnthropicClient(api_key="sk-x", system_prefix="IDENT")
+        system_field = await self._capture_system(client, "IDENT and then tutor")
+        assert system_field == [{"type": "text", "text": "IDENT and then tutor"}]
+
+
 class TestUsageSnapshot:
     @pytest.mark.asyncio
     async def test_usage_snapshot(self) -> None:

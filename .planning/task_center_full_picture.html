@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Task Center — The Full Picture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Caveat:wght@400;700&family=Fredoka:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:    #fff8ec;
+    --paper-2:  #fff1d4;
+    --paper-3:  #ffe8b8;
+    --ink:      #2a2438;
+    --ink-soft: #5b5170;
+
+    --planner:   #6fb3ff;
+    --executor:  #b78cff;
+    --evaluator: #ffb35c;
+    --handoff:   #ff7e8a;
+    --entry:     #5fcca8;
+
+    --goal:      #88d96a;
+    --iter:      #ffd966;
+    --attempt:   #ffaf78;
+    --sandbox:   #6fd9c9;
+    --run:       #c9a3ff;
+    --user:      #ff9eb1;
+    --store:     #8aa6ff;
+    --context:   #ffd54f;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Patrick Hand", "Comic Sans MS", cursive;
+    background:
+      radial-gradient(circle at 10% 10%, #fff5d8 0%, transparent 40%),
+      radial-gradient(circle at 90% 80%, #ffe6c2 0%, transparent 40%),
+      var(--paper);
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.4;
+  }
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background-image: radial-gradient(circle at 1px 1px, rgba(42,36,56,0.06) 1px, transparent 0);
+    background-size: 20px 20px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  code, .mono { font-family: "JetBrains Mono", monospace; font-size: 12.5px; background: rgba(42,36,56,0.06); padding: 1px 6px; border-radius: 4px; }
+
+  header.page {
+    padding: 26px 36px 10px;
+    text-align: center;
+    position: relative;
+    z-index: 2;
+  }
+  header.page h1 {
+    font-family: "Caveat", cursive;
+    font-weight: 700;
+    font-size: 50px;
+    margin: 0;
+    display: inline-block;
+    transform: rotate(-1.5deg);
+  }
+  header.page h1::after {
+    content: "";
+    display: block;
+    width: 88%;
+    height: 9px;
+    margin: -6px auto 0;
+    background: var(--evaluator);
+    border-radius: 50%;
+    transform: skew(-8deg);
+    opacity: 0.55;
+  }
+  header.page .sub {
+    font-size: 18px;
+    color: var(--ink-soft);
+    margin-top: 4px;
+    max-width: 820px;
+    margin-left: auto; margin-right: auto;
+  }
+  header.page .sub b { color: var(--ink); }
+
+  .canvas {
+    position: relative;
+    max-width: 1500px;
+    margin: 12px auto 32px;
+    padding: 24px 28px 40px;
+    z-index: 1;
+  }
+
+  /* ============== ROLE / STICKER STYLES ============== */
+  .dot {
+    width: 13px; height: 13px; border-radius: 50%; border: 2.5px solid var(--ink);
+    display: inline-block; flex-shrink: 0;
+  }
+  .d-running { background: var(--evaluator); animation: bounce 0.9s ease-in-out infinite; }
+  .d-done    { background: var(--goal); }
+  .d-fail    { background: var(--handoff); }
+  .d-pending { background: #d9d2c0; }
+  @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
+
+  .sticker {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px;
+    border: 3px solid var(--ink);
+    border-radius: 26px;
+    background: white;
+    font-family: "Fredoka", sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    box-shadow: 2px 2px 0 var(--ink);
+    line-height: 1.1;
+  }
+  .sticker.run     { background: var(--run); color: white; }
+  .sticker.entry   { background: var(--entry); }
+  .sticker.goal    { background: var(--goal); }
+  .sticker.iter    { background: var(--iter); }
+  .sticker.attempt { background: var(--attempt); }
+  .sticker.sandbox { background: var(--sandbox); }
+  .sticker.handoff { background: var(--handoff); color: white; }
+  .sticker.store   { background: var(--store); color: white; }
+  .sticker.context { background: var(--context); }
+  .sticker.user    { background: var(--user); color: white; }
+  .sticker .em { font-size: 16px; line-height: 1; }
+  .sticker .num { font-family: "Caveat", cursive; font-size: 17px; padding: 0 2px; }
+
+  .char {
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    border: 3px solid var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    box-shadow: 3px 3px 0 var(--ink);
+    flex-shrink: 0;
+    position: relative;
+  }
+  .char.user      { background: var(--user); }
+  .char.entry     { background: var(--entry); }
+  .char.planner   { background: var(--planner); }
+  .char.executor  { background: var(--executor); }
+  .char.evaluator { background: var(--evaluator); }
+  .char.handoff   { background: var(--handoff); }
+  .char.sandbox   { background: var(--sandbox); }
+  .char.context   { background: var(--context); }
+  .char.store     { background: var(--store); }
+  .char .badge {
+    position: absolute; bottom: -5px; right: -5px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+  }
+
+  /* ============== MAIN MAP CONTAINER ============== */
+  .run-frame {
+    position: relative;
+    border: 4px dashed var(--run);
+    border-radius: 26px;
+    padding: 60px 24px 28px;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(201,163,255,0.10), transparent 50%),
+      rgba(255,255,255,0.55);
+    box-shadow: 6px 6px 0 var(--ink);
+    margin-top: 30px;
+  }
+  .run-frame::before {
+    content: "🗂  run_root/  ·  audit folder for one task-center run";
+    position: absolute;
+    top: -20px;
+    left: 28px;
+    background: var(--run);
+    color: white;
+    padding: 6px 16px 4px;
+    border: 3px solid var(--ink);
+    border-radius: 16px;
+    font-family: "Fredoka", sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    box-shadow: 2px 2px 0 var(--ink);
+    transform: rotate(-1.2deg);
+  }
+  .run-frame .run-corner {
+    position: absolute;
+    top: 14px;
+    right: 18px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: 320px;
+  }
+  .run-frame .run-corner .filechip {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10.5px;
+    background: white;
+    border: 2px solid var(--ink);
+    padding: 1px 7px;
+    border-radius: 10px;
+    box-shadow: 1.5px 1.5px 0 var(--ink);
+  }
+
+  /* ============== TOP ROW: USER -> ENTRY ============== */
+  .top-row {
+    display: grid;
+    grid-template-columns: 200px 60px 280px 60px 1fr;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 22px;
+  }
+  .actor-card {
+    background: white;
+    border: 3px solid var(--ink);
+    border-radius: 14px;
+    padding: 10px 12px;
+    box-shadow: 3px 3px 0 var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .actor-card .col { display: flex; flex-direction: column; min-width: 0; }
+  .actor-card .ttl { font-family: "Fredoka", sans-serif; font-weight: 700; font-size: 14px; }
+  .actor-card .sub { font-size: 12px; color: var(--ink-soft); }
+  .actor-card .sub code { font-size: 10.5px; }
+  .actor-card.tilt-l { transform: rotate(-1.2deg); }
+  .actor-card.tilt-r { transform: rotate(0.8deg); }
+  .arrow {
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .arrow svg { width: 100%; height: 50px; }
+  .arrow .lbl {
+    position: absolute;
+    top: -10px;
+    font-family: "Caveat", cursive;
+    font-size: 15px;
+    color: var(--ink-soft);
+    transform: rotate(-3deg);
+    background: var(--paper);
+    padding: 0 6px;
+    white-space: nowrap;
+  }
+
+  /* ============== GOAL FRAME ============== */
+  .goal-frame {
+    position: relative;
+    border: 4px solid var(--ink);
+    border-left: 8px solid var(--goal);
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(136,217,106,0.08) 0%, white 50%);
+    padding: 36px 18px 20px;
+    box-shadow: 4px 4px 0 var(--ink);
+    margin-bottom: 16px;
+  }
+  .goal-frame .goal-badge {
+    position: absolute;
+    top: -16px;
+    left: 18px;
+    background: var(--goal);
+    border: 3px solid var(--ink);
+    padding: 4px 12px 2px;
+    border-radius: 14px;
+    font-family: "Fredoka", sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    box-shadow: 2px 2px 0 var(--ink);
+    transform: rotate(-1.4deg);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .goal-frame .goal-meta {
+    position: absolute;
+    top: -14px;
+    right: 18px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    background: white;
+    border: 2.5px solid var(--ink);
+    padding: 2px 9px;
+    border-radius: 11px;
+    box-shadow: 2px 2px 0 var(--ink);
+  }
+  .goal-frame.nested {
+    border-left-color: var(--handoff);
+    border-style: dashed;
+    background: linear-gradient(180deg, rgba(255,126,138,0.08) 0%, white 50%);
+  }
+  .goal-frame.nested .goal-badge { background: var(--handoff); color: white; }
+
+  /* ============== ITER ROW ============== */
+  .iter-row {
+    display: grid;
+    grid-template-columns: 1fr 70px 1fr;
+    gap: 4px;
+    align-items: stretch;
+    margin-bottom: 8px;
+  }
+  .iter-card {
+    background: white;
+    border: 3px solid var(--ink);
+    border-left: 5px solid var(--iter);
+    border-radius: 12px;
+    padding: 8px 10px;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .iter-card.tilt-l { transform: rotate(-0.4deg); }
+  .iter-card.tilt-r { transform: rotate(0.3deg); }
+  .iter-card .ih { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .iter-card .ih h4 { margin: 0; font-family: "Fredoka", sans-serif; font-weight: 700; font-size: 14px; }
+  .iter-card .ih .meta { color: var(--ink-soft); font-family: "JetBrains Mono", monospace; font-size: 11px; margin-left: auto; }
+
+  .att-row {
+    display: grid;
+    grid-template-columns: 1fr 30px 1fr;
+    gap: 4px;
+    align-items: stretch;
+  }
+  .att-card {
+    background: var(--paper-2);
+    border: 2.5px solid var(--ink);
+    border-left: 4px solid var(--attempt);
+    border-radius: 10px;
+    padding: 6px 9px;
+    box-shadow: 2px 2px 0 var(--ink);
+    font-size: 12.5px;
+  }
+  .att-card.active { background: white; box-shadow: 0 0 0 3px rgba(255,175,120,0.4), 2px 2px 0 var(--ink); }
+  .att-card.fail { background: #ffe5e7; }
+  .att-card .top {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 4px;
+    font-family: "Fredoka", sans-serif; font-weight: 700; font-size: 12.5px;
+  }
+  .att-card .phases {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 3px;
+  }
+  .att-card .phases .ph {
+    height: 4px;
+    border-radius: 2px;
+    background: #e0d6c0;
+  }
+  .ph.p.done { background: var(--planner); }
+  .ph.x.done { background: var(--executor); }
+  .ph.e.done { background: var(--evaluator); }
+  .ph.live   { background: var(--evaluator); animation: pulse 1.3s infinite; }
+  .ph.fail   { background: var(--handoff); }
+  @keyframes pulse { 0%,100%{opacity:.45} 50%{opacity:1} }
+  .att-card .extra { color: var(--ink-soft); font-size: 11px; margin-top: 3px; font-family: "JetBrains Mono", monospace; }
+
+  /* mini arrow inside attempt row */
+  .mini-arrow {
+    display: flex; align-items: center; justify-content: center; color: var(--handoff);
+    font-family: "Caveat", cursive; font-size: 15px; font-weight: 700;
+    position: relative;
+  }
+
+  .iter-cont {
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    font-family: "Caveat", cursive; font-size: 14px; color: var(--ink-soft);
+  }
+  .iter-cont svg { width: 60px; height: 50px; }
+
+  /* ============== ATTEMPT BLOWUP (the zoom) ============== */
+  .zoom-section {
+    margin-top: 18px;
+    position: relative;
+    border: 3px dashed var(--attempt);
+    border-radius: 18px;
+    padding: 26px 18px 18px;
+    background: rgba(255,175,120,0.06);
+  }
+  .zoom-section::before {
+    content: "🔍 zoom: inside one attempt";
+    position: absolute;
+    top: -14px;
+    left: 20px;
+    background: var(--attempt);
+    border: 3px solid var(--ink);
+    padding: 3px 14px 1px;
+    border-radius: 12px;
+    font-family: "Fredoka", sans-serif;
+    font-weight: 700;
+    font-size: 12.5px;
+    box-shadow: 2px 2px 0 var(--ink);
+    transform: rotate(-1deg);
+  }
+  .phase-pipe {
+    display: grid;
+    grid-template-columns: 1fr 50px 1.7fr 50px 1fr;
+    align-items: center;
+  }
+  .phase-card {
+    background: white;
+    border: 3px solid var(--ink);
+    border-radius: 16px;
+    padding: 10px;
+    box-shadow: 3px 3px 0 var(--ink);
+    text-align: center;
+    position: relative;
+  }
+  .phase-card.p { background: #e7f2ff; transform: rotate(-0.8deg); }
+  .phase-card.x { background: #f1e8ff; }
+  .phase-card.e { background: #fff1dc; transform: rotate(0.8deg); }
+  .phase-card .seq-tag {
+    position: absolute;
+    top: -12px; left: 12px;
+    background: var(--ink); color: white;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10.5px; font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 9px;
+  }
+  .phase-card .char { margin: 4px auto 6px; }
+  .phase-card .nm { font-family: "Fredoka", sans-serif; font-weight: 700; font-size: 14px; }
+  .phase-card .role-line { font-family: "JetBrains Mono", monospace; font-size: 10.5px; color: var(--ink-soft); }
+  .phase-card .desc { font-size: 12px; color: var(--ink-soft); line-height: 1.35; margin-top: 4px; }
+  .exec-grid {
+    background: #f1e8ff;
+    border: 3px solid var(--ink);
+    border-radius: 16px;
+    padding: 10px;
+    box-shadow: 3px 3px 0 var(--ink);
+    position: relative;
+  }
+  .exec-grid .seq-tag {
+    position: absolute;
+    top: -12px; left: 12px;
+    background: var(--ink); color: white;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10.5px; font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 9px;
+  }
+  .exec-grid .hdr {
+    font-family: "Fredoka", sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    text-align: center;
+    margin: 2px 0 8px;
+  }
+  .exec-grid .hdr small {
+    color: var(--ink-soft);
+    font-family: "Caveat", cursive;
+    font-weight: 400;
+    font-size: 14px;
+    display: block;
+    margin-top: -2px;
+  }
+  .gen-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .gen-pair .phase-card {
+    transform: none;
+    padding: 8px;
+  }
+  .gen-pair .phase-card:first-child { transform: rotate(-1deg); }
+  .gen-pair .phase-card:last-child  { transform: rotate(1deg); }
+  .gen-pair .phase-card .char { width: 38px; height: 38px; font-size: 18px; box-shadow: 2px 2px 0 var(--ink); }
+  .gen-pair .phase-card .nm { font-size: 12.5px; }
+  .gen-pair .phase-card .role-line { font-size: 10px; }
+
+  /* ============== SIDE PANELS ============== */
+  .side-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 18px;
+    margin-top: 24px;
+  }
+  .side-card {
+    background: white;
+    border: 3px solid var(--ink);
+    border-radius: 16px;
+    padding: 14px 16px;
+    box-shadow: 4px 4px 0 var(--ink);
+    position: relative;
+  }
+  .side-card.tilt-l { transform: rotate(-0.6deg); }
+  .side-card.tilt-r { transform: rotate(0.6deg); }
+  .side-card h3 {
+    margin: 0 0 8px 0;
+    font-family: "Fredoka", sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .side-card .topbadge {
+    position: absolute;
+    top: -14px; left: 18px;
+    padding: 3px 12px 1px;
+    border: 3px solid var(--ink);
+    border-radius: 12px;
+    font-family: "Fredoka", sans-serif;
+    font-weight: 700;
+    font-size: 11.5px;
+    box-shadow: 2px 2px 0 var(--ink);
+    transform: rotate(-1.5deg);
+  }
+  .side-card .topbadge.sb     { background: var(--sandbox); }
+  .side-card .topbadge.st     { background: var(--store); color: white; }
+  .side-card .topbadge.ctx    { background: var(--context); }
+  .side-card .topbadge.events { background: var(--executor); color: white; }
+  .side-card .topbadge.life   { background: var(--evaluator); }
+  .side-card .topbadge.stat   { background: var(--run); color: white; }
+
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; font-size: 13px; }
+  .kv .k { color: var(--ink-soft); font-family: "JetBrains Mono", monospace; font-size: 11px; }
+  .kv .v { font-family: "JetBrains Mono", monospace; font-size: 11.5px; }
+
+  .stream-line {
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    gap: 8px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    padding: 2px 0;
+  }
+  .stream-line .ts { color: var(--ink-soft); }
+  .stream-line.evp .ek { color: #2a73c4; font-weight: 700; }
+  .stream-line.evx .ek { color: #7c4cc4; font-weight: 700; }
+  .stream-line.eve .ek { color: #c47b2a; font-weight: 700; }
+  .stream-line.evsb .ek { color: #2a8c66; font-weight: 700; }
+  .stream-line.evh  .ek { color: #c44a5e; font-weight: 700; }
+
+  /* lifecycle node */
+  .lifecycle { display: grid; grid-template-columns: 1fr 30px 1fr 30px 1fr; gap: 4px; align-items: center; margin-top: 6px; }
+  .state-node {
+    background: var(--paper-2);
+    border: 2.5px solid var(--ink);
+    border-radius: 18px;
+    padding: 4px 10px;
+    text-align: center;
+    font-family: "Fredoka", sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .state-node.start { background: var(--planner); color: white; }
+  .state-node.live  { background: var(--evaluator); }
+  .state-node.ok    { background: var(--goal); }
+  .state-node.bad   { background: var(--handoff); color: white; }
+  .arrow-mini { text-align: center; color: var(--ink-soft); font-family: "Caveat", cursive; font-size: 14px; }
+
+  /* legend */
+  .legend {
+    margin-top: 26px;
+    background: var(--paper-2);
+    border: 3px solid var(--ink);
+    border-radius: 16px;
+    padding: 14px 18px;
+    box-shadow: 4px 4px 0 var(--ink);
+  }
+  .legend h3 { margin: 0 0 10px 0; font-family: "Fredoka", sans-serif; font-weight: 700; font-size: 15px; }
+  .legend-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px 18px;
+    font-size: 13px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; }
+  .legend-item small { color: var(--ink-soft); font-family: "JetBrains Mono", monospace; font-size: 10.5px; }
+
+  /* big crosscut arrows */
+  .crosscut {
+    text-align: center;
+    margin: 14px 0 0;
+    color: var(--ink-soft);
+    font-family: "Caveat", cursive;
+    font-size: 22px;
+  }
+  .crosscut::before { content: "⇣ "; color: var(--attempt); }
+  .crosscut::after  { content: " ⇣"; color: var(--attempt); }
+</style>
+</head>
+<body>
+
+<header class="page">
+  <h1>Task Center — The Full Picture</h1>
+  <div class="sub">
+    One diagram. One run. From <b>user request</b> through <b>goals → iterations → attempts → planner/executor/evaluator</b>,
+    nested goals via handoff, the sandbox underfoot, and the on-disk audit folder around everything.
+  </div>
+</header>
+
+<div class="canvas">
+
+  <!-- =========================================================== -->
+  <!-- TOP ROW: user request -> entry_executor -> first goal       -->
+  <!-- =========================================================== -->
+  <div class="top-row">
+    <div class="actor-card tilt-l">
+      <div class="char user">🙋</div>
+      <div class="col">
+        <div class="ttl">User</div>
+        <div class="sub">"refactor audit recorder"</div>
+      </div>
+    </div>
+    <div class="arrow">
+      <span class="lbl">request</span>
+      <svg viewBox="0 0 60 50"><path d="M 4 25 Q 30 8 56 25" stroke="#2a2438" stroke-width="2.5" fill="none" stroke-linecap="round"/><polygon points="50,18 60,25 50,32" fill="#2a2438"/></svg>
+    </div>
+    <div class="actor-card tilt-r">
+      <div class="char entry">🚪</div>
+      <div class="col">
+        <div class="ttl">entry_executor</div>
+        <div class="sub">bootstrap · <code>:entry</code></div>
+      </div>
+    </div>
+    <div class="arrow">
+      <span class="lbl">submit_execution_handoff</span>
+      <svg viewBox="0 0 60 50"><path d="M 4 25 Q 30 42 56 25" stroke="#2a2438" stroke-width="2.5" fill="none" stroke-linecap="round"/><polygon points="50,18 60,25 50,32" fill="#2a2438"/></svg>
+    </div>
+    <div class="actor-card tilt-l">
+      <div class="char" style="background: var(--goal);">🎯</div>
+      <div class="col">
+        <div class="ttl">Goal 1 opened</div>
+        <div class="sub">becomes <code>goal_01_&lt;uuid&gt;/</code></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================== -->
+  <!-- RUN FRAME : the audit folder boundary                       -->
+  <!-- =========================================================== -->
+  <div class="run-frame">
+    <div class="run-corner">
+      <span class="filechip">run.json</span>
+      <span class="filechip">metrics.json</span>
+      <span class="filechip">performance_report.{json,md}</span>
+      <span class="filechip">sandbox_events.jsonl</span>
+    </div>
+
+    <!-- =================== GOAL 1 =================== -->
+    <div class="goal-frame">
+      <div class="goal-badge"><span style="font-size:16px;">🎯</span> Goal 1 · "refactor audit recorder"</div>
+      <div class="goal-meta">requested_by: <span style="color:var(--entry);">:entry</span> · iter_ids=[1,2]</div>
+
+      <!-- ITERS in goal 1 -->
+      <div class="iter-row">
+        <div class="iter-card tilt-l">
+          <div class="ih">
+            <span class="dot d-done"></span>
+            <h4>Iteration 1</h4>
+            <span class="meta">closed · 3m41s</span>
+          </div>
+          <div class="att-row">
+            <div class="att-card fail">
+              <div class="top"><span class="dot d-fail"></span> A 1.1</div>
+              <div class="phases"><span class="ph p done"></span><span class="ph x done"></span><span class="ph e fail"></span></div>
+              <div class="extra">eval fail · 2/3 crit</div>
+            </div>
+            <div class="mini-arrow">retry →</div>
+            <div class="att-card">
+              <div class="top"><span class="dot d-done"></span> A 1.2</div>
+              <div class="phases"><span class="ph p done"></span><span class="ph x done"></span><span class="ph e done"></span></div>
+              <div class="extra">cont issued</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="iter-cont">
+          <svg viewBox="0 0 60 50"><path d="M 30 4 L 30 46" stroke="#ff7e8a" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="6 4"/><polygon points="22,40 30,50 38,40" fill="#ff7e8a"/></svg>
+          <div style="font-family:'Caveat',cursive; font-size:15px; color:var(--ink-soft); text-align:center;">continuation_goal</div>
+        </div>
+
+        <div class="iter-card tilt-r" style="border-left-color: var(--evaluator);">
+          <div class="ih">
+            <span class="dot d-running"></span>
+            <h4>Iteration 2</h4>
+            <span class="meta">running · att 2/3</span>
+          </div>
+          <div class="att-row">
+            <div class="att-card fail">
+              <div class="top"><span class="dot d-fail"></span> A 2.1</div>
+              <div class="phases"><span class="ph p done"></span><span class="ph x done"></span><span class="ph e fail"></span></div>
+              <div class="extra">tests red · 3 fail</div>
+            </div>
+            <div class="mini-arrow" title="fix_target_id">
+              <svg width="30" height="30" viewBox="0 0 30 30"><path d="M 2 20 C 8 4 22 4 28 20" stroke="#ff7e8a" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-dasharray="4 3"/><polygon points="24,15 30,20 24,25" fill="#ff7e8a"/></svg>
+              <div style="font-family:'Caveat',cursive; font-size:11px; margin-top:-4px;">fix_target_id</div>
+            </div>
+            <div class="att-card active">
+              <div class="top"><span class="dot d-running"></span> A 2.2 ◀</div>
+              <div class="phases"><span class="ph p done"></span><span class="ph live"></span><span class="ph"></span></div>
+              <div class="extra">stage=executor · live</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ZOOM INTO A 2.2 -->
+      <div class="crosscut">cross-cut: open up <b>Attempt 2.2</b></div>
+      <div class="zoom-section">
+        <div class="phase-pipe">
+          <div class="phase-card p">
+            <div class="seq-tag">01_planner</div>
+            <div class="char planner">📜</div>
+            <div class="nm">Planner</div>
+            <div class="role-line">role: planner</div>
+            <div class="desc">narrowed spec<br>4 criteria emitted</div>
+          </div>
+          <div class="arrow"><svg viewBox="0 0 50 50"><path d="M 4 25 Q 25 12 46 25" stroke="#2a2438" stroke-width="2.5" fill="none" stroke-linecap="round"/><polygon points="40,18 50,25 40,32" fill="#2a2438"/></svg></div>
+          <div class="exec-grid">
+            <div class="seq-tag">02_executor</div>
+            <div class="hdr">Executor(s) <small>parallel · the "Generators"</small></div>
+            <div class="gen-pair">
+              <div class="phase-card">
+                <div class="char executor">🤖</div>
+                <div class="nm">exec A</div>
+                <div class="role-line">code-writer</div>
+              </div>
+              <div class="phase-card" style="border-color: var(--handoff);">
+                <div class="char executor">🤖<div class="badge" style="background: var(--handoff); color: white;">🌀</div></div>
+                <div class="nm">exec B</div>
+                <div class="role-line" style="color: var(--handoff);">→ handoff</div>
+              </div>
+            </div>
+          </div>
+          <div class="arrow"><svg viewBox="0 0 50 50"><path d="M 4 25 Q 25 38 46 25" stroke="#2a2438" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-dasharray="4 3"/><polygon points="40,18 50,25 40,32" fill="#2a2438"/></svg></div>
+          <div class="phase-card e" style="opacity: 0.65;">
+            <div class="seq-tag">03_evaluator</div>
+            <div class="char evaluator">⚖️</div>
+            <div class="nm">Evaluator</div>
+            <div class="role-line">role: evaluator</div>
+            <div class="desc">pending<br>awaits gens + nested</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =================== GOAL 2 (nested) =================== -->
+    <div style="display: grid; grid-template-columns: 60px 1fr; align-items: center; gap: 8px; margin: -4px 0 8px;">
+      <div style="text-align: right;">
+        <svg width="50" height="40" viewBox="0 0 50 40"><path d="M 6 6 C 20 30 30 30 44 8" stroke="#ff7e8a" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="6 4"/><polygon points="38,3 48,8 38,13" fill="#ff7e8a"/></svg>
+      </div>
+      <div style="font-family:'Caveat',cursive; font-size:18px; color:var(--handoff);">
+        🌀 <b>exec B</b> inside A2.2 calls <code style="font-size: 11.5px;">submit_execution_handoff("diagnose flake")</code> → spawns Goal 2 (depth=2)
+      </div>
+    </div>
+
+    <div class="goal-frame nested">
+      <div class="goal-badge"><span style="font-size: 16px;">🎯</span> Goal 2 (nested · depth 2) · "diagnose flaky test_overflow"</div>
+      <div class="goal-meta">requested_by: <span style="color:var(--executor);">A2.2 / exec_b</span></div>
+
+      <div class="iter-row" style="grid-template-columns: 1fr;">
+        <div class="iter-card tilt-l">
+          <div class="ih">
+            <span class="dot d-running"></span>
+            <h4>Iteration 1</h4>
+            <span class="meta">running · 23s</span>
+          </div>
+          <div class="att-row" style="grid-template-columns: 1fr;">
+            <div class="att-card active">
+              <div class="top"><span class="dot d-running"></span> A 1.1</div>
+              <div class="phases"><span class="ph p done"></span><span class="ph live"></span><span class="ph"></span></div>
+              <div class="extra">planner ✓ · gen × 1 running · eval pending</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-family:'Caveat',cursive; font-size:15px; color:var(--ink-soft); text-align:center; margin-top: 6px;">
+        ↳ if exec_b in Goal 2 also issues a handoff → Goal 3 (depth 3) appears at run_root as another sibling
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================== -->
+  <!-- SIDE PANELS                                                  -->
+  <!-- =========================================================== -->
+  <div class="side-grid">
+
+    <!-- Sandbox -->
+    <div class="side-card tilt-l">
+      <div class="topbadge sb">📦 Sandbox</div>
+      <h3>The stage</h3>
+      <p style="margin: 0 0 8px 0; font-size: 13px; color: var(--ink-soft);">All file edits + shell commands flow through here. Layered overlays.</p>
+      <div class="kv">
+        <div class="k">provider</div><div class="v">docker</div>
+        <div class="k">overlay</div><div class="v">3 / 16 layers</div>
+        <div class="k">cwd</div><div class="v">/workspace</div>
+        <div class="k">last cmd</div><div class="v">svc.cmd pytest</div>
+        <div class="k">stream</div><div class="v">sandbox_events.jsonl</div>
+      </div>
+    </div>
+
+    <!-- DB stores -->
+    <div class="side-card tilt-r">
+      <div class="topbadge st">💾 Stores</div>
+      <h3>Persistence</h3>
+      <p style="margin: 0 0 8px 0; font-size: 13px; color: var(--ink-soft);">Each layer has its own DB row + JSON file on disk.</p>
+      <div class="kv">
+        <div class="k">GoalStore</div><div class="v">goals · iter_ids[]</div>
+        <div class="k">IterationStore</div><div class="v">iterations · attempt_ids[]</div>
+        <div class="k">AttemptStore</div><div class="v">attempts · phase task ids</div>
+        <div class="k">TaskStore</div><div class="v">tasks · spawn_reason / fix_target_id</div>
+      </div>
+    </div>
+
+    <!-- Context engine -->
+    <div class="side-card tilt-l">
+      <div class="topbadge ctx">🧠 Context</div>
+      <h3>What each agent sees</h3>
+      <p style="margin: 0 0 8px 0; font-size: 13px; color: var(--ink-soft);">Every task gets a <code>context_packet_id</code> built by the context engine before it starts.</p>
+      <div class="kv">
+        <div class="k">planner pkt</div><div class="v">goal + prior-iter summary</div>
+        <div class="k">executor pkt</div><div class="v">task_spec + tool surface</div>
+        <div class="k">evaluator pkt</div><div class="v">criteria + executor outputs</div>
+        <div class="k">retry pkt</div><div class="v">+ failing criterion evidence</div>
+      </div>
+    </div>
+
+    <!-- Two event streams -->
+    <div class="side-card tilt-r">
+      <div class="topbadge events">🎙 Streams</div>
+      <h3>What gets recorded</h3>
+      <p style="margin: 0 0 4px 0; font-size: 12.5px; color: var(--ink-soft);"><b>per-task</b> <code>message.jsonl</code>:</p>
+      <div class="stream-line evp"><span class="ts">02:14:03</span><span><span class="ek">planner.spec</span> "narrow scope"</span></div>
+      <div class="stream-line evx"><span class="ts">02:14:14</span><span><span class="ek">exec_a.tool</span> edit_file</span></div>
+      <div class="stream-line evh"><span class="ts">02:14:24</span><span><span class="ek">exec_b.handoff</span> Goal 2</span></div>
+      <p style="margin: 8px 0 4px 0; font-size: 12.5px; color: var(--ink-soft);"><b>run-wide</b> <code>sandbox_events.jsonl</code>:</p>
+      <div class="stream-line evsb"><span class="ts">02:14:15</span><span><span class="ek">overlay.commit</span> layer 3</span></div>
+      <div class="stream-line evsb"><span class="ts">02:14:18</span><span><span class="ek">svc.cmd</span> pytest</span></div>
+    </div>
+
+    <!-- Lifecycle -->
+    <div class="side-card tilt-l">
+      <div class="topbadge life">♻ Lifecycle</div>
+      <h3>State transitions</h3>
+      <p style="margin: 0 0 6px 0; font-size: 12.5px; color: var(--ink-soft);">Attempt:</p>
+      <div class="lifecycle">
+        <div class="state-node start">open</div>
+        <div class="arrow-mini">→</div>
+        <div class="state-node live">running</div>
+        <div class="arrow-mini">→</div>
+        <div class="state-node ok">passed</div>
+      </div>
+      <div style="font-size: 11.5px; color: var(--ink-soft); text-align: center; margin: 4px 0;">or → <span style="color: var(--handoff); font-weight: 700;">failed</span> → next attempt (if budget)</div>
+
+      <p style="margin: 8px 0 6px 0; font-size: 12.5px; color: var(--ink-soft);">Iteration:</p>
+      <div class="lifecycle">
+        <div class="state-node start">open</div>
+        <div class="arrow-mini">→</div>
+        <div class="state-node live">running</div>
+        <div class="arrow-mini">→</div>
+        <div class="state-node ok">closed</div>
+      </div>
+      <div style="font-size: 11.5px; color: var(--ink-soft); text-align: center; margin: 4px 0;">close emits <code>continuation_goal</code>? → iter+1</div>
+
+      <p style="margin: 8px 0 6px 0; font-size: 12.5px; color: var(--ink-soft);">Goal:</p>
+      <div class="lifecycle">
+        <div class="state-node start">open</div>
+        <div class="arrow-mini">→</div>
+        <div class="state-node ok">succeeded</div>
+        <div class="arrow-mini">∥</div>
+        <div class="state-node bad">failed</div>
+      </div>
+    </div>
+
+    <!-- task.json fields -->
+    <div class="side-card tilt-r">
+      <div class="topbadge stat">📋 task.json</div>
+      <h3>What each task carries</h3>
+      <div class="kv" style="font-size: 12.5px;">
+        <div class="k">id</div><div class="v">uuid</div>
+        <div class="k">role</div><div class="v">planner/executor/evaluator</div>
+        <div class="k">agent_name</div><div class="v">profile loaded</div>
+        <div class="k">status</div><div class="v">open · closed</div>
+        <div class="k">spawn_reason</div><div class="v">why it was created</div>
+        <div class="k">fix_target_id</div><div class="v">retry → failing thing</div>
+        <div class="k">context_packet_id</div><div class="v">context-engine ref</div>
+        <div class="k">summaries</div><div class="v">closing emission</div>
+        <div class="k">needs</div><div class="v">unmet requirements</div>
+        <div class="k">task_center_attempt_id</div><div class="v">parent attempt</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================== -->
+  <!-- LEGEND                                                       -->
+  <!-- =========================================================== -->
+  <div class="legend">
+    <h3>Cast & symbols</h3>
+    <div class="legend-grid">
+      <div class="legend-item"><span class="char user" style="width:30px; height:30px; font-size:14px;">🙋</span> User <small>request originator</small></div>
+      <div class="legend-item"><span class="char entry" style="width:30px; height:30px; font-size:14px;">🚪</span> entry_executor <small>:entry · bootstrap</small></div>
+      <div class="legend-item"><span class="char planner" style="width:30px; height:30px; font-size:14px;">📜</span> Planner <small>role: planner</small></div>
+      <div class="legend-item"><span class="char executor" style="width:30px; height:30px; font-size:14px;">🤖</span> Executor <small>role: executor (the "Generator")</small></div>
+      <div class="legend-item"><span class="char evaluator" style="width:30px; height:30px; font-size:14px;">⚖️</span> Evaluator <small>role: evaluator</small></div>
+      <div class="legend-item"><span class="char handoff" style="width:30px; height:30px; font-size:14px;">🌀</span> Handoff <small>submit_execution_handoff</small></div>
+      <div class="legend-item"><span class="char sandbox" style="width:30px; height:30px; font-size:14px;">📦</span> Sandbox <small>docker · overlay layers</small></div>
+      <div class="legend-item"><span class="char store" style="width:30px; height:30px; font-size:14px;">💾</span> Stores <small>goal · iter · attempt · task</small></div>
+      <div class="legend-item"><span class="sticker goal" style="font-size:11px;"><span class="em">🎯</span>Goal</span> <small>origin axis · goal_NN/</small></div>
+      <div class="legend-item"><span class="sticker iter" style="font-size:11px;"><span class="em">📐</span>Iter</span> <small>vertical · continuation</small></div>
+      <div class="legend-item"><span class="sticker attempt" style="font-size:11px;"><span class="em">🎲</span>Att</span> <small>horizontal · retry</small></div>
+      <div class="legend-item"><span class="sticker run" style="font-size:11px;"><span class="em">🗂</span>Run</span> <small>outer audit folder</small></div>
+    </div>
+  </div>
+
+  <div style="text-align: center; margin-top: 28px; font-family:'Caveat',cursive; font-size:24px; color: var(--ink-soft); transform: rotate(-0.5deg);">
+    「 user → entry → goal → iter → attempt → (planner ▸ executor ▸ evaluator) → maybe 🌀 → repeat 」
+  </div>
+</div>
+
+</body>
+</html>

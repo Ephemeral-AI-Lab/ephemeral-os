@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from uuid import uuid4
 
 from sandbox.layer_stack.workspace_binding import require_workspace_binding
@@ -79,6 +80,7 @@ async def _edit_in_workspace(
     lease_start = monotonic_now()
     lease = await run_sync_in_executor(services.manager.acquire_snapshot_lease, request_id)
     lease_acquired_s = monotonic_now() - lease_start
+    result = None
     try:
         read_start = monotonic_now()
         bytes_, exists = await run_sync_in_executor(
@@ -116,10 +118,21 @@ async def _edit_in_workspace(
         result = await services.occ_client.commit_prepared(
             prepared,
             workspace_ref=layer_stack_root,
+            run_maintenance=False,
         )
         apply_elapsed = monotonic_now() - apply_start
     finally:
         await run_sync_in_executor(services.manager.release_lease, lease.lease_id)
+
+    assert result is not None
+    maintenance_timings = await services.occ_client.run_maintenance_after_publish(
+        result,
+        workspace_ref=layer_stack_root,
+    )
+    result = replace(
+        result,
+        timings={**result.timings, **maintenance_timings},
+    )
 
     payload = project_changeset(
         result,

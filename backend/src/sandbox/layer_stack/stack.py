@@ -23,7 +23,7 @@ from sandbox.layer_stack.lease import LeaseRegistry, WorkspaceLease
 from sandbox.layer_stack.squash import (
     CheckpointSegment,
     SquashService,
-    manifest_still_matches_plan,
+    manifest_prefix_before_plan,
 )
 from sandbox.layer_stack.manifest import (
     FileManifestStore,
@@ -192,6 +192,19 @@ class LayerStack:
     def active_lease_count(self) -> int:
         return self._leases.active_count()
 
+    def can_squash(self, *, max_depth: int) -> bool:
+        with self._lock:
+            active = self._manifest_store.read()
+            return (
+                self._squash.plan(
+                    active,
+                    max_depth=max_depth,
+                    pinned_layers=self._leases.pinned_layers(),
+                    min_reduction=2,
+                )
+                is not None
+            )
+
     def read_bytes(
         self,
         path: str,
@@ -288,11 +301,12 @@ class LayerStack:
                 )
             with self._lock:
                 current = self._manifest_store.read()
-                if not manifest_still_matches_plan(current, plan):
+                live_prefix = manifest_prefix_before_plan(current, plan)
+                if live_prefix is None:
                     return None
                 next_version = current.version + 1
                 checkpoint_index = 0
-                new_layers: list[LayerRef] = []
+                new_layers = list(live_prefix)
                 for entry in plan.entries:
                     if isinstance(entry, CheckpointSegment):
                         checkpoint = checkpoints[checkpoint_index]

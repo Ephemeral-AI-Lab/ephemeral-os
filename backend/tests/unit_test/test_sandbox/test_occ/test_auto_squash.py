@@ -7,7 +7,9 @@ from tests.occ_change_helpers import write_change
 import asyncio
 import concurrent.futures
 import threading
+from pathlib import Path
 
+from sandbox.layer_stack import WriteLayerChange
 from sandbox.layer_stack.manifest import LayerRef, Manifest
 from sandbox.layer_stack.stack import LayerStack
 from sandbox.occ.changeset import ChangesetResult
@@ -37,6 +39,28 @@ def _auto_squash_service(
             squasher=stack,
             max_depth=max_depth,
         ),
+    )
+
+
+def _source(tmp_path: Path, name: str, content: bytes) -> str:
+    path = tmp_path / "sources" / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(content)
+    return str(path)
+
+
+def _publish_direct(stack: LayerStack, tmp_path: Path, index: int) -> None:
+    stack.publish_changes(
+        [
+            WriteLayerChange(
+                path=f"tracked/direct/{index:02d}.txt",
+                source_path=_source(
+                    tmp_path,
+                    f"direct-{index:02d}.txt",
+                    f"direct-{index:02d}\n".encode(),
+                ),
+            )
+        ]
     )
 
 
@@ -113,6 +137,44 @@ def test_auto_squash_preserves_active_lease_view(tmp_path) -> None:
         assert stack.release_lease(lease.lease_id) is True
 
     assert stack.active_lease_count() == 0
+
+
+def test_auto_squash_skips_when_only_tiny_unleased_run_is_reducible(
+    tmp_path: Path,
+) -> None:
+    stack = LayerStack(tmp_path / "stack")
+    for index in range(4):
+        _publish_direct(stack, tmp_path, index)
+    lease = stack.acquire_snapshot_lease("held-reader")
+    try:
+        _publish_direct(stack, tmp_path, 4)
+        _publish_direct(stack, tmp_path, 5)
+        policy = AutoSquashMaintenancePolicy(
+            snapshot_reader=stack,
+            squasher=stack,
+            max_depth=3,
+        )
+
+        timings = policy.after_publish_sync(
+            ChangesetResult(files=(), published_manifest_version=6)
+        )
+
+        assert timings == {}
+        assert stack.read_active_manifest().depth == 6
+    finally:
+        assert stack.release_lease(lease.lease_id) is True
+
+    policy = AutoSquashMaintenancePolicy(
+        snapshot_reader=stack,
+        squasher=stack,
+        max_depth=3,
+    )
+    timings = policy.after_publish_sync(
+        ChangesetResult(files=(), published_manifest_version=6)
+    )
+
+    assert timings[TimingKey.LAYER_AUTO_SQUASH_DEPTH_BEFORE] == 6.0
+    assert timings[TimingKey.LAYER_AUTO_SQUASH_DEPTH_AFTER] == 1.0
 
 
 def test_auto_squash_uses_fixed_constant_depth(tmp_path) -> None:

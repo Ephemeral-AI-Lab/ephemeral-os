@@ -79,6 +79,9 @@ class LayerStackClient:
     def release_lease(self, *, lease_id: str) -> bool:
         return self.manager.release_lease(lease_id)
 
+    def can_squash(self, *, max_depth: int) -> bool:
+        return self.manager.can_squash(max_depth=max_depth)
+
     def squash(self, *, max_depth: int) -> Manifest | None:
         return self.manager.squash(max_depth=max_depth)
 

@@ -55,6 +55,7 @@ class OccService:
         *,
         snapshot: Manifest | None = None,
         options: CommitOptions | None = None,
+        run_maintenance: bool = True,
     ) -> ChangesetResult:
         """Prepare a changeset and commit it through the layer stack."""
         total_start = monotonic_now()
@@ -63,13 +64,18 @@ class OccService:
             snapshot=snapshot,
             options=options,
         )
-        return await self.commit_prepared(prepared, _total_start=total_start)
+        return await self.commit_prepared(
+            prepared,
+            _total_start=total_start,
+            run_maintenance=run_maintenance,
+        )
 
     async def commit_prepared(
         self,
         prepared: PreparedChangeset,
         *,
         _total_start: float | None = None,
+        run_maintenance: bool = True,
     ) -> ChangesetResult:
         """Commit an already-prepared changeset through the commit queue.
 
@@ -84,7 +90,9 @@ class OccService:
         commit_start = monotonic_now()
         result = await self._commit_queue.apply(prepared)
         commit_elapsed = monotonic_now() - commit_start
-        maintenance_timings = await self._maintenance_after_publish(result)
+        maintenance_timings = (
+            await self._maintenance_after_publish(result) if run_maintenance else {}
+        )
         return self._wrap_commit_result(
             result,
             prepared=prepared,
@@ -100,6 +108,7 @@ class OccService:
         *,
         snapshot: Manifest | None = None,
         options: CommitOptions | None = None,
+        run_maintenance: bool = True,
     ) -> ChangesetResult:
         """Synchronous twin of :meth:`apply_changeset`."""
         total_start = monotonic_now()
@@ -108,20 +117,27 @@ class OccService:
             snapshot=snapshot,
             options=options,
         )
-        return self.commit_prepared_sync(prepared, _total_start=total_start)
+        return self.commit_prepared_sync(
+            prepared,
+            _total_start=total_start,
+            run_maintenance=run_maintenance,
+        )
 
     def commit_prepared_sync(
         self,
         prepared: PreparedChangeset,
         *,
         _total_start: float | None = None,
+        run_maintenance: bool = True,
     ) -> ChangesetResult:
         """Synchronous twin of :meth:`commit_prepared`."""
         total_start = _total_start if _total_start is not None else monotonic_now()
         commit_start = monotonic_now()
         result = self._commit_queue.apply_sync(prepared)
         commit_elapsed = monotonic_now() - commit_start
-        maintenance_timings = self._maintenance_after_publish_sync(result)
+        maintenance_timings = (
+            self._maintenance_after_publish_sync(result) if run_maintenance else {}
+        )
         return self._wrap_commit_result(
             result,
             prepared=prepared,
@@ -130,6 +146,18 @@ class OccService:
             sync_call=True,
             extra_timings=maintenance_timings,
         )
+
+    async def run_maintenance_after_publish(
+        self,
+        result: ChangesetResult,
+    ) -> dict[str, float]:
+        return await self._maintenance_after_publish(result)
+
+    def run_maintenance_after_publish_sync(
+        self,
+        result: ChangesetResult,
+    ) -> dict[str, float]:
+        return self._maintenance_after_publish_sync(result)
 
     async def _maintenance_after_publish(
         self,

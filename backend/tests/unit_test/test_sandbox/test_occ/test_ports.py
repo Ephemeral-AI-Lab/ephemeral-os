@@ -26,8 +26,9 @@ class _RecordingService:
         *,
         snapshot: object | None = None,
         options: CommitOptions | None = None,
+        run_maintenance: bool = True,
     ) -> ChangesetResult:
-        del changes, snapshot, options
+        del changes, snapshot, options, run_maintenance
         self.called = True
         raise AssertionError("binding check should run before OCC mutation")
 

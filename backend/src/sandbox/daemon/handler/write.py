@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import stat
+from dataclasses import replace
 from uuid import uuid4
 
 from sandbox.layer_stack.workspace_binding import require_workspace_binding
@@ -69,6 +70,7 @@ async def _write_in_workspace(
     snapshot_read_s = 0.0
     known_base_hash: str | None = None
     known_base_hash_ready = False
+    result = None
     try:
         if not overwrite:
             # create-only: reject if the path already exists in the leased
@@ -128,10 +130,21 @@ async def _write_in_workspace(
         result = await services.occ_client.commit_prepared(
             prepared,
             workspace_ref=layer_stack_root,
+            run_maintenance=False,
         )
         apply_elapsed = monotonic_now() - apply_start
     finally:
         await run_sync_in_executor(services.manager.release_lease, lease.lease_id)
+
+    assert result is not None
+    maintenance_timings = await services.occ_client.run_maintenance_after_publish(
+        result,
+        workspace_ref=layer_stack_root,
+    )
+    result = replace(
+        result,
+        timings={**result.timings, **maintenance_timings},
+    )
 
     return project_changeset(
         result,

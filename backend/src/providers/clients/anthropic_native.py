@@ -152,11 +152,21 @@ class AnthropicClient:
         if self._system_prefix is not None:
             # Plan §A13: OAuth requires identity block #0 to be the literal
             # "You are Claude Code, …"; caller's system becomes block #1.
-            # Idempotency guard: don't duplicate if caller already prepended.
-            system_field: Any = [
-                {"type": "text", "text": self._system_prefix},
-                {"type": "text", "text": system_prompt},
+            blocks: list[dict[str, str]] = [
+                {"type": "text", "text": self._system_prefix}
             ]
+            # Drop block #1 when caller's system is empty — empty text blocks
+            # are rejected by some Anthropic paths.
+            if system_prompt:
+                blocks.append({"type": "text", "text": system_prompt})
+            # Idempotency: if caller already prepended the identity literal,
+            # use their list unchanged rather than double-prepending.
+            if (
+                isinstance(system_prompt, str)
+                and system_prompt.startswith(self._system_prefix)
+            ):
+                blocks = [{"type": "text", "text": system_prompt}]
+            system_field: Any = blocks
         else:
             system_field = system_prompt
 

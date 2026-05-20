@@ -39,12 +39,14 @@ class OccClient:
         snapshot: Manifest | None = None,
         options: CommitOptions | None = None,
         workspace_ref: str | None = None,
+        run_maintenance: bool = True,
     ) -> ChangesetResult:
         self._require_binding(workspace_ref)
         return await self._service.apply_changeset(
             typed_changes,
             snapshot=snapshot,
             options=options,
+            run_maintenance=run_maintenance,
         )
 
     async def commit_prepared(
@@ -52,10 +54,23 @@ class OccClient:
         prepared: PreparedChangeset,
         *,
         workspace_ref: str | None = None,
+        run_maintenance: bool = True,
     ) -> ChangesetResult:
         """Commit a caller-prepared changeset after the standard binding check."""
         self._require_binding(workspace_ref)
-        return await self._service.commit_prepared(prepared)
+        return await self._service.commit_prepared(
+            prepared,
+            run_maintenance=run_maintenance,
+        )
+
+    async def run_maintenance_after_publish(
+        self,
+        result: ChangesetResult,
+        *,
+        workspace_ref: str | None = None,
+    ) -> dict[str, float]:
+        self._require_binding(workspace_ref)
+        return await self._service.run_maintenance_after_publish(result)
 
 
 __all__ = ["OccClient"]

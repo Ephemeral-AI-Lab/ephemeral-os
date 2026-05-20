@@ -236,7 +236,15 @@ class OCCMutationClient(Protocol):
         snapshot: SnapshotManifest | None = None,
         options: CommitOptions | None = None,
         workspace_ref: str | None = None,
+        run_maintenance: bool = True,
     ) -> ChangesetResult: ...
+
+    async def run_maintenance_after_publish(
+        self,
+        result: ChangesetResult,
+        *,
+        workspace_ref: str | None = None,
+    ) -> dict[str, float]: ...
 
 
 # OverlayLayout lives in sandbox.execution.overlay.layout; re-exported above
