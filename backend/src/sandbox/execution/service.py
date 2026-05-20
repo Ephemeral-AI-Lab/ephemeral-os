@@ -8,6 +8,7 @@ output and the service that reads it back. They are not URLs.
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
@@ -56,7 +57,8 @@ async def execute_command(
     if occ_apply and occ_client is None:
         raise ValueError("occ_client is required when occ_apply=True")
     total_start = monotonic_now()
-    run_dir = _run_dir(storage_root, request.request_id)
+    scratch_root = _command_exec_scratch_root(storage_root)
+    run_dir = _run_dir(scratch_root, request.request_id)
     keep_capture_artifacts = False
     timings: dict[str, float] = {}
     timings["command_exec.handler_sync_prelude_s"] = (
@@ -66,6 +68,7 @@ async def execute_command(
     lease_start = monotonic_now()
     lease = layer_stack.prepare_workspace_snapshot(
         request_id=request.request_id,
+        lowerdir_root=scratch_root / "runtime" / TRANSIENT_LOWERDIR_DIR,
     )
     timings.update(
         {
@@ -81,7 +84,7 @@ async def execute_command(
             base_repo=lease.lowerdir,
             writes=str(run_dir / "upper"),
             kernel_scratch=str(run_dir / "work"),
-            scratch_root=str(storage_root),
+            scratch_root=str(scratch_root),
         )
         runner_kwargs = {
             "spec": spec,
@@ -122,7 +125,11 @@ async def execute_command(
             lease_id=lease.lease_id,
         )
         released = True
-        _drop_transient_lowerdir(lease, storage_root=storage_root)
+        _drop_transient_lowerdir(
+            lease,
+            storage_root=storage_root,
+            scratch_root=scratch_root,
+        )
         timings["command_exec.release_snapshot_s"] = (
             monotonic_now() - release_start
         )
@@ -170,7 +177,11 @@ async def execute_command(
             layer_stack.release_lease(
                 lease_id=lease.lease_id,
             )
-            _drop_transient_lowerdir(lease, storage_root=storage_root)
+            _drop_transient_lowerdir(
+                lease,
+                storage_root=storage_root,
+                scratch_root=scratch_root,
+            )
             timings["command_exec.release_snapshot_s"] = (
                 monotonic_now() - release_start
             )
@@ -236,19 +247,39 @@ def _run_dir(storage_root: Path, request_id: str) -> Path:
     )
 
 
-def _drop_transient_lowerdir(lease: object, *, storage_root: Path) -> None:
+def _command_exec_scratch_root(storage_root: Path) -> Path:
+    raw = os.environ.get("EPHEMERALOS_COMMAND_EXEC_SCRATCH_ROOT", "").strip()
+    if raw:
+        return Path(raw)
+    mount_scratch = Path("/eos-mount-scratch")
+    if mount_scratch.is_dir() and os.access(mount_scratch, os.W_OK | os.X_OK):
+        return mount_scratch / "eos-sandbox-runtime"
+    return storage_root
+
+
+def _drop_transient_lowerdir(
+    lease: object,
+    *,
+    storage_root: Path,
+    scratch_root: Path | None = None,
+) -> None:
     raw = str(getattr(lease, "lowerdir", "")).strip()
     if not raw:
         return
     lowerdir = Path(raw)
     scratch_dir = lowerdir.parent
-    transient_root = storage_root / "runtime" / TRANSIENT_LOWERDIR_DIR
+    effective_scratch_root = scratch_root or storage_root
+    transient_roots = {
+        (storage_root / "runtime" / TRANSIENT_LOWERDIR_DIR).resolve(strict=False),
+        (effective_scratch_root / "runtime" / TRANSIENT_LOWERDIR_DIR).resolve(
+            strict=False
+        ),
+    }
+    scratch_parent = scratch_dir.parent.resolve(strict=False)
     if (
         lowerdir.name != "lower"
         or scratch_dir.parent.name != TRANSIENT_LOWERDIR_DIR
-        or not scratch_dir.resolve(strict=False).is_relative_to(
-            transient_root.resolve(strict=False)
-        )
+        or scratch_parent not in transient_roots
     ):
         logger.warning(
             "refusing to drop unexpected transient lowerdir path: %s",

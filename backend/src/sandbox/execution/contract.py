@@ -6,6 +6,7 @@ import os
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -221,6 +222,7 @@ class WorkspaceLeaseClient(Protocol):
         self,
         *,
         request_id: str,
+        lowerdir_root: str | Path | None = None,
     ) -> WorkspaceSnapshotLease: ...
 
     def release_lease(self, *, lease_id: str) -> bool: ...

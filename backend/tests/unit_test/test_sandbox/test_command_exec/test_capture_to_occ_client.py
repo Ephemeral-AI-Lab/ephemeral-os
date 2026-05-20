@@ -45,8 +45,9 @@ class _LayerStackClient:
         self,
         *,
         request_id: str,
+        lowerdir_root: str | Path | None = None,
     ) -> _Lease:
-        del request_id
+        del request_id, lowerdir_root
         return self.lease
 
     def release_lease(self, *, lease_id: str) -> bool:
@@ -200,14 +201,18 @@ async def test_shell_uses_transient_lowerdir_and_removes_it(
     workspace.mkdir()
     (workspace / "input.txt").write_text("base\n", encoding="utf-8")
     stack = tmp_path / "stack"
+    scratch = tmp_path / "exec-scratch"
+    monkeypatch.setenv("EPHEMERALOS_COMMAND_EXEC_SCRATCH_ROOT", scratch.as_posix())
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
     layer_stack = LayerStackClient(stack)
     captured_lowerdirs: list[Path] = []
+    captured_run_dirs: list[Path] = []
 
     def fake_run_workspace_replaced_command(*, spec, request, run_dir, timings):
         del request
         lowerdir = Path(spec.base_repo)
         captured_lowerdirs.append(lowerdir)
+        captured_run_dirs.append(Path(run_dir))
         assert lowerdir.is_dir()
         assert (lowerdir / "input.txt").read_text(encoding="utf-8") == "base\n"
         Path(spec.writes).mkdir(parents=True, exist_ok=True)
@@ -245,6 +250,10 @@ async def test_shell_uses_transient_lowerdir_and_removes_it(
 
     assert result.exit_code == 0
     assert captured_lowerdirs
+    assert captured_lowerdirs[0].is_relative_to(
+        scratch / "runtime" / TRANSIENT_LOWERDIR_DIR
+    )
+    assert captured_run_dirs[0].is_relative_to(scratch / "runtime" / "command_exec")
     assert captured_lowerdirs[0].exists() is False
 
 

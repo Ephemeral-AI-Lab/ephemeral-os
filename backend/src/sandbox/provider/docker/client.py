@@ -29,6 +29,9 @@ PRIVILEGED_RUN_FLAGS: tuple[str, ...] = ("--privileged",)
 # Capability-stripped escape hatch (forfeits overlay perf; COPY_BACKED only).
 NO_PRIVILEGE_RUN_FLAGS: tuple[str, ...] = ()
 
+SCRATCH_TMPFS_TARGET = "/eos-mount-scratch"
+DEFAULT_SCRATCH_TMPFS_OPTIONS = "rw,size=2g,mode=1777"
+
 
 def resolve_run_flags() -> tuple[str, ...]:
     """Pick the ``docker run`` flag set from env-var escape hatches.
@@ -39,10 +42,22 @@ def resolve_run_flags() -> tuple[str, ...]:
     3. otherwise → :data:`DEFAULT_RUN_FLAGS`
     """
     if os.environ.get("EOS_DOCKER_PRIVILEGED") == "1":
-        return PRIVILEGED_RUN_FLAGS
-    if os.environ.get("EOS_DOCKER_NO_PRIVILEGE") == "1":
-        return NO_PRIVILEGE_RUN_FLAGS
-    return DEFAULT_RUN_FLAGS
+        base = PRIVILEGED_RUN_FLAGS
+    elif os.environ.get("EOS_DOCKER_NO_PRIVILEGE") == "1":
+        base = NO_PRIVILEGE_RUN_FLAGS
+    else:
+        base = DEFAULT_RUN_FLAGS
+    return (*base, *_scratch_tmpfs_flags())
+
+
+def _scratch_tmpfs_flags() -> tuple[str, ...]:
+    if os.environ.get("EOS_DOCKER_DISABLE_SCRATCH_TMPFS") == "1":
+        return ()
+    options = (
+        os.environ.get("EOS_DOCKER_SCRATCH_TMPFS_OPTIONS", "").strip()
+        or DEFAULT_SCRATCH_TMPFS_OPTIONS
+    )
+    return ("--tmpfs", f"{SCRATCH_TMPFS_TARGET}:{options}")
 
 
 def host_config_kwargs() -> dict[str, Any]:
@@ -56,28 +71,35 @@ def host_config_kwargs() -> dict[str, Any]:
     flags = resolve_run_flags()
     kwargs: dict[str, Any] = {}
 
-    if "--privileged" in flags:
-        kwargs["privileged"] = True
-        return kwargs
-
     cap_add: list[str] = []
     security_opt: list[str] = []
+    tmpfs: dict[str, str] = {}
     i = 0
     while i < len(flags):
         token = flags[i]
-        if token.startswith("--cap-add="):
+        if token == "--privileged":
+            kwargs["privileged"] = True
+            i += 1
+        elif token.startswith("--cap-add="):
             cap_add.append(token.split("=", 1)[1])
             i += 1
         elif token == "--security-opt":
             security_opt.append(flags[i + 1])
             i += 2
+        elif token == "--tmpfs":
+            target, _, options = flags[i + 1].partition(":")
+            if target:
+                tmpfs[target] = options
+            i += 2
         else:
             i += 1
 
-    if cap_add:
+    if cap_add and not kwargs.get("privileged"):
         kwargs["cap_add"] = cap_add
-    if security_opt:
+    if security_opt and not kwargs.get("privileged"):
         kwargs["security_opt"] = security_opt
+    if tmpfs:
+        kwargs["tmpfs"] = tmpfs
     return kwargs
 
 
@@ -110,6 +132,8 @@ def get_async_docker_client() -> Any:
 
 __all__ = [
     "DEFAULT_RUN_FLAGS",
+    "DEFAULT_SCRATCH_TMPFS_OPTIONS",
+    "SCRATCH_TMPFS_TARGET",
     "get_async_docker_client",
     "get_docker_client",
     "host_config_kwargs",

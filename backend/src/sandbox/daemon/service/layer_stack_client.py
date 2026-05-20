@@ -73,8 +73,12 @@ class LayerStackClient:
         self,
         *,
         request_id: str,
+        lowerdir_root: str | Path | None = None,
     ) -> PrepareWorkspaceSnapshotResult:
-        return self.manager.prepare_workspace_snapshot(request_id)
+        return self.manager.prepare_workspace_snapshot(
+            request_id,
+            lowerdir_root=lowerdir_root,
+        )
 
     def release_lease(self, *, lease_id: str) -> bool:
         return self.manager.release_lease(lease_id)

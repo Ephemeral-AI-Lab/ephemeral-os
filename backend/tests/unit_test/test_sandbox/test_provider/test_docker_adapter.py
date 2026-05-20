@@ -98,6 +98,7 @@ def test_create_calls_containers_create_with_default_caps(
     monkeypatch.delenv("EOS_DOCKER_PRIVILEGED", raising=False)
     monkeypatch.delenv("EOS_DOCKER_NO_PRIVILEGE", raising=False)
     monkeypatch.delenv("EOS_DOCKER_DAEMON_TCP", raising=False)
+    monkeypatch.delenv("EOS_DOCKER_DISABLE_SCRATCH_TMPFS", raising=False)
 
     result = adapter.create(name="sb1", image="sweevo:abc", labels={"project_dir": "/repo"})
 
@@ -110,6 +111,9 @@ def test_create_calls_containers_create_with_default_caps(
     assert kwargs["cap_add"] == ["SYS_ADMIN"]
     assert "seccomp=unconfined" in kwargs["security_opt"]
     assert "apparmor=unconfined" in kwargs["security_opt"]
+    assert kwargs["tmpfs"] == {
+        "/eos-mount-scratch": "rw,size=2g,mode=1777"
+    }
     assert kwargs["labels"]["managed_by"] == "eos"
     assert kwargs["labels"]["project_dir"] == "/repo"
     assert kwargs["labels"][DAEMON_TCP_ENABLED_LABEL] == "1"
@@ -167,6 +171,9 @@ def test_create_privileged_escape_hatch(
     kwargs = fake_client.containers.create.call_args.kwargs
     assert kwargs["privileged"] is True
     assert "cap_add" not in kwargs
+    assert kwargs["tmpfs"] == {
+        "/eos-mount-scratch": "rw,size=2g,mode=1777"
+    }
 
 
 def test_create_no_privilege_escape_hatch(
@@ -180,6 +187,24 @@ def test_create_no_privilege_escape_hatch(
     kwargs = fake_client.containers.create.call_args.kwargs
     assert "privileged" not in kwargs
     assert "cap_add" not in kwargs
+    assert kwargs["tmpfs"] == {
+        "/eos-mount-scratch": "rw,size=2g,mode=1777"
+    }
+
+
+def test_create_can_disable_scratch_tmpfs(
+    adapter: DockerProviderAdapter,
+    fake_client: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("EOS_DOCKER_PRIVILEGED", raising=False)
+    monkeypatch.delenv("EOS_DOCKER_NO_PRIVILEGE", raising=False)
+    monkeypatch.setenv("EOS_DOCKER_DISABLE_SCRATCH_TMPFS", "1")
+
+    adapter.create(name="sb1", image="x:y")
+
+    kwargs = fake_client.containers.create.call_args.kwargs
+    assert "tmpfs" not in kwargs
 
 
 def test_create_requires_image_or_snapshot(adapter: DockerProviderAdapter) -> None:

@@ -23,6 +23,15 @@ Environment variables
     hostile-multi-tenant configurations where the layer-stack perf story is
     not required.
 
+``EOS_DOCKER_DISABLE_SCRATCH_TMPFS`` = ``1``
+    Do not mount the default command-exec scratch tmpfs. Useful only when a
+    runtime forbids tmpfs mounts; Docker Desktop hosts normally need the
+    tmpfs scratch path to keep ``PRIVATE_NAMESPACE`` viable.
+
+``EOS_DOCKER_SCRATCH_TMPFS_OPTIONS``
+    Override the default ``/eos-mount-scratch`` tmpfs options
+    (``rw,size=2g,mode=1777``).
+
 Env-var precedence
 ------------------
 
@@ -36,10 +45,13 @@ macOS caveat
 ------------
 
 Docker is the default sandbox provider, including on macOS. Docker Desktop's
-Linux VM UID-mapping and overlay-on-overlay2 storage driver may prevent the
-kernel overlay mount inside ``unshare -Urm`` from succeeding even with
-CAP_SYS_ADMIN + unconfined seccomp, so macOS runs should expect
-``mount_mode=COPY_BACKED`` for some execs.
+Linux VM UID-mapping and overlay-on-overlay2 storage driver may prevent a
+kernel overlay mount on the container root filesystem from succeeding even
+with CAP_SYS_ADMIN + unconfined seccomp. The Docker provider therefore mounts
+``/eos-mount-scratch`` as tmpfs by default and command exec uses that scratch
+path for transient lowerdirs, so normal Docker Desktop runs should report
+``mount_mode=PRIVATE_NAMESPACE``. Disabling the scratch tmpfs can make those
+runs fall back to ``COPY_BACKED``.
 """
 
 from __future__ import annotations

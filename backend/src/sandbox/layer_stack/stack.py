@@ -126,6 +126,8 @@ class LayerStack:
     def prepare_workspace_snapshot(
         self,
         owner_request_id: str,
+        *,
+        lowerdir_root: str | Path | None = None,
     ) -> PrepareWorkspaceSnapshotResult:
         total_start = monotonic_now()
         with self._lock:
@@ -133,10 +135,13 @@ class LayerStack:
             lease = self._leases.acquire(manifest, owner_request_id)
         lowerdir: Path | None = None
         try:
+            transient_root = (
+                Path(lowerdir_root)
+                if lowerdir_root is not None
+                else self.storage_root / "runtime" / TRANSIENT_LOWERDIR_DIR
+            )
             lowerdir = (
-                self.storage_root
-                / "runtime"
-                / TRANSIENT_LOWERDIR_DIR
+                transient_root
                 / f"{_safe_request_part(owner_request_id)}-{uuid4().hex[:8]}"
                 / "lower"
             )
