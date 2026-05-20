@@ -147,6 +147,7 @@ class OverlayCapture:
     stderr_ref: str
     snapshot_version: int
     changes: tuple[OverlayPathChange, ...]
+    mount_mode: MountMode = MountMode.COPY_BACKED
     snapshot_manifest: Manifest | None = None
     timings: Mapping[str, float] = field(default_factory=dict)
 
@@ -154,6 +155,7 @@ class OverlayCapture:
         self.exit_code = int(self.exit_code)
         self.snapshot_version = int(self.snapshot_version)
         self.changes = tuple(self.changes)
+        self.mount_mode = MountMode(self.mount_mode)
         self.timings = MappingProxyType(
             {str(key): float(value) for key, value in self.timings.items()}
         )
@@ -164,6 +166,7 @@ class OverlayCapture:
             "stdout_ref": self.stdout_ref,
             "stderr_ref": self.stderr_ref,
             "snapshot_version": self.snapshot_version,
+            "mount_mode": self.mount_mode.value,
             "changes": [change.to_dict() for change in self.changes],
             "snapshot_manifest": (
                 self.snapshot_manifest.to_dict()
@@ -223,6 +226,8 @@ class WorkspaceSnapshotLease(Protocol):
 
 class WorkspaceLeaseClient(Protocol):
     """Layer-stack lease/snapshot client used by command execution."""
+
+    storage_root: Path
 
     def prepare_workspace_snapshot(
         self,

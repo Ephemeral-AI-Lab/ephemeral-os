@@ -133,6 +133,7 @@ def prepare_workspace_snapshot(
     *,
     owner_request_id: str,
     lowerdir_root: str | Path | None = None,
+    materialize: bool = True,
 ) -> PrepareWorkspaceSnapshotResult:
     """Prepare a workspace snapshot lease for a bound, manifest-valid root."""
     require_workspace_binding(layer_stack_root)
@@ -140,6 +141,7 @@ def prepare_workspace_snapshot(
     return get_layer_stack_manager(layer_stack_root).prepare_workspace_snapshot(
         owner_request_id,
         lowerdir_root=lowerdir_root,
+        materialize=materialize,
     )
 
 

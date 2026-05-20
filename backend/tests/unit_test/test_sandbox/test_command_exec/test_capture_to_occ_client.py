@@ -23,12 +23,14 @@ class _Lease:
     lease_id: str
     manifest_version: int
     manifest: Manifest
-    lowerdir: str
+    lowerdir: str | None
     timings: dict[str, float]
+    layer_paths: tuple[str, ...] | None = None
 
 
 class _LayerStackClient:
     def __init__(self, lowerdir: Path) -> None:
+        self.storage_root = lowerdir.parent.parent.parent.parent  # stack root
         self.lease = _Lease(
             lease_id="lease-1",
             manifest_version=1,
@@ -46,8 +48,9 @@ class _LayerStackClient:
         *,
         request_id: str,
         lowerdir_root: str | Path | None = None,
+        materialize: bool = True,
     ) -> _Lease:
-        del request_id, lowerdir_root
+        del request_id, lowerdir_root, materialize
         return self.lease
 
     def release_lease(self, *, lease_id: str) -> bool:

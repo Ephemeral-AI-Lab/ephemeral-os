@@ -39,17 +39,16 @@ from sandbox.layer_stack.transaction import LayerStackTransaction
 from sandbox.layer_stack.view import MergedView, SymlinkLookup
 from sandbox._shared.clock import monotonic_now
 
-logger = logging.getLogger(__name__)
-
-# TODO(T2): import OVL_MAX_STACK_GUARD and LayerStackTooDeep from
-# sandbox.execution.overlay.new_mount_api once the circular-import boundary
-# between layer_stack and execution is resolved. Until then, the literal is
-# kept in sync manually (value = 110 = AUTO_SQUASH_MAX_DEPTH + 10).
+# Cannot import from sandbox.execution.overlay.new_mount_api — circular dep:
+# stack → execution.__init__ → execution.service → occ → layer_stack.stack
+# Keep in sync with OVL_MAX_STACK_GUARD in new_mount_api.py (value = 110).
 _OVL_MAX_STACK_GUARD: int = 110
 
 
 class LayerStackTooDeep(ValueError):
     """Raised when manifest depth exceeds the overlay stack guard."""
+
+logger = logging.getLogger(__name__)
 
 
 def _safe_request_part(value: str) -> str:

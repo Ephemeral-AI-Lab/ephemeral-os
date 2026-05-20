@@ -15,8 +15,10 @@ from pathlib import Path
 from uuid import uuid4
 
 from sandbox.execution.contract import (
+    AnyOverlayLayout,
     CommandExecRequest,
     CommandExecResult,
+    LayerPathsLayout,
     OCCMutationClient,
     OverlayLayout,
     MountMode,
@@ -25,6 +27,8 @@ from sandbox.execution.contract import (
     WorkspaceCapture,
     WorkspaceLeaseClient,
 )
+from sandbox.execution.overlay.capability import new_mount_api_supported
+from sandbox.execution.overlay.new_mount_api import LayerStackTooDeep
 from sandbox.execution.overlay.capture import walk_upperdir
 from sandbox.execution.resource_audit import command_exec_resource_timings
 from sandbox.execution.runner import run_workspace_replaced_command
@@ -66,10 +70,12 @@ async def execute_command(
         monotonic_now() - total_start
     )
 
+    use_namespace = new_mount_api_supported()
     lease_start = monotonic_now()
     lease = layer_stack.prepare_workspace_snapshot(
         request_id=request.request_id,
         lowerdir_root=scratch_root / "runtime" / TRANSIENT_LOWERDIR_DIR,
+        materialize=not use_namespace,
     )
     timings.update(
         {
@@ -80,13 +86,23 @@ async def execute_command(
 
     released = False
     try:
-        spec = OverlayLayout(
-            workspace_root=request.workspace_root,
-            base_repo=lease.lowerdir,
-            writes=str(run_dir / "upper"),
-            kernel_scratch=str(run_dir / "work"),
-            scratch_root=str(scratch_root),
-        )
+        if use_namespace and lease.layer_paths is not None:
+            spec: AnyOverlayLayout = LayerPathsLayout(
+                workspace_root=request.workspace_root,
+                layer_paths=lease.layer_paths,
+                layer_storage_root=str(layer_stack.storage_root),
+                writes=str(run_dir / "upper"),
+                kernel_scratch=str(run_dir / "work"),
+                scratch_root=str(scratch_root),
+            )
+        else:
+            spec = OverlayLayout(
+                workspace_root=request.workspace_root,
+                base_repo=lease.lowerdir,
+                writes=str(run_dir / "upper"),
+                kernel_scratch=str(run_dir / "work"),
+                scratch_root=str(scratch_root),
+            )
         runner_kwargs = {
             "spec": spec,
             "request": request,
@@ -95,7 +111,15 @@ async def execute_command(
         }
         if mount_mode is not None:
             runner_kwargs["mount_mode"] = mount_mode
-        process = await run_sync_in_executor(command_runner, **runner_kwargs)
+        try:
+            process = await run_sync_in_executor(command_runner, **runner_kwargs)
+        except LayerStackTooDeep:
+            logger.warning(
+                "command_exec.layer_depth_exceeded_total workspace_ref=%s layer_count=%s",
+                request.workspace_ref,
+                len(lease.layer_paths) if lease.layer_paths is not None else "?",
+            )
+            raise
 
         capture_start = monotonic_now()
         path_changes = walk_upperdir(spec.writes, timings=timings)
@@ -274,7 +298,10 @@ def _drop_transient_lowerdir(
     storage_root: Path,
     scratch_root: Path | None = None,
 ) -> None:
-    raw = str(getattr(lease, "lowerdir", "")).strip()
+    lowerdir_val = getattr(lease, "lowerdir", None)
+    if lowerdir_val is None:
+        return
+    raw = str(lowerdir_val).strip()
     if not raw:
         return
     lowerdir = Path(raw)

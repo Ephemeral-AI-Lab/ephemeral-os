@@ -65,6 +65,7 @@ async def _run_snapshot_overlay(args: dict[str, Any]) -> OverlayCapture:
         stderr_ref=result.stderr_ref,
         snapshot_version=result.workspace_capture.snapshot_version,
         changes=tuple(result.workspace_capture.changes),
+        mount_mode=result.workspace_capture.mount_mode,
         snapshot_manifest=cast(
             Manifest | None,
             result.workspace_capture.snapshot_manifest,
