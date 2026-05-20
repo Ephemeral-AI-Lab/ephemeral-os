@@ -5,6 +5,11 @@ Anthropic SDK call (`api_key` xor `auth_token`, plus optional default headers)
 and exposes a `refresh()` hook that returns True if it mutated state with a
 new credential. Today's behavior = `make_api_key_strategy`. Plan-mode =
 `make_claude_oauth_strategy` (reads macOS Keychain entry `Claude Code-credentials`).
+
+The ``llm_client_mode`` class attribute (plan §A17, user-revision v5)
+distinguishes ``api_mode`` from ``coding_plan_mode`` at call sites without
+isinstance checks on private strategy classes. Future Hermes patterns B / C
+extend the Literal union without changing call-site shape.
 """
 
 from __future__ import annotations
@@ -12,15 +17,25 @@ from __future__ import annotations
 import json
 import os
 import subprocess
-from typing import Protocol
+from typing import Literal, Protocol
+
+
+LLM_CLIENT_MODE_API: Literal["api_mode"] = "api_mode"
+LLM_CLIENT_MODE_CODING_PLAN: Literal["coding_plan_mode"] = "coding_plan_mode"
+
+LlmClientMode = Literal["api_mode", "coding_plan_mode"]
 
 
 class AuthStrategy(Protocol):
+    llm_client_mode: LlmClientMode
+
     def get_auth_kwargs(self) -> dict[str, object]: ...
     def refresh(self) -> bool: ...
 
 
 class _ApiKeyStrategy:
+    llm_client_mode: LlmClientMode = LLM_CLIENT_MODE_API
+
     def __init__(self, api_key: str, *, use_auth_token: bool = False) -> None:
         self._api_key = api_key
         self._use_auth_token = use_auth_token
@@ -56,6 +71,7 @@ class ClaudeCodeOAuthCredentialError(RuntimeError):
 class _ClaudeOAuthStrategy:
     """Reads `Claude Code-credentials` keychain entry, returns Bearer token."""
 
+    llm_client_mode: LlmClientMode = LLM_CLIENT_MODE_CODING_PLAN
     KEYCHAIN_SERVICE = "Claude Code-credentials"
 
     def __init__(self) -> None:

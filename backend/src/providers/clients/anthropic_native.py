@@ -19,6 +19,7 @@ import anthropic
 if TYPE_CHECKING:
     from providers.auth_strategy import AuthStrategy
 
+from providers.auth_strategy import LLM_CLIENT_MODE_CODING_PLAN
 from providers.types import (
     ApiMessageCompleteEvent,
     ApiMessageRequest,
@@ -37,6 +38,28 @@ from providers.errors import (
 from message import assistant_message_from_api
 
 log = logging.getLogger(__name__)
+
+
+def _categorize(exc: EphemeralOSApiError) -> str:
+    """Plan §A17 error categorisation, mirrored on the Codex side (S4).
+
+    Always categorises from the POST-translation typed exception so the
+    mapping is single-source.
+    """
+    if isinstance(exc, AuthenticationFailure):
+        if exc.status_code == 401:
+            return "auth_401"
+        if exc.status_code == 403:
+            return "auth_403"
+    if isinstance(exc, RateLimitFailure):
+        return "rate_limit_429"
+    if isinstance(exc, RequestFailure):
+        if exc.status_code in {500, 502, 503, 529}:
+            return "server_5xx"
+        msg = str(exc).lower()
+        if "content_filter" in msg or "policy" in msg:
+            return "content_filter_rejection"
+    return "unknown"
 
 MAX_RETRIES = 3
 BASE_DELAY = 1.0
@@ -117,11 +140,14 @@ class AnthropicClient:
                     emitted_any = True
                     yield event
                 return
-            except EphemeralOSApiError:
+            except EphemeralOSApiError as exc:
+                self._emit_plan_mode_error(exc)
                 raise
             except Exception as exc:
                 if emitted_any or attempt >= MAX_RETRIES or not self._is_retryable(exc):
-                    raise self._translate_error(exc) from exc
+                    translated = self._translate_error(exc)
+                    self._emit_plan_mode_error(translated)
+                    raise translated from exc
 
                 delay = min(BASE_DELAY * (2**attempt), MAX_DELAY)
                 log.warning(
@@ -261,9 +287,23 @@ class AnthropicClient:
     def _translate_error(exc: Exception) -> EphemeralOSApiError:
         """Map upstream exceptions to EphemeralOS error hierarchy."""
         status = getattr(exc, "status_code", None)
+        request_id = getattr(exc, "request_id", None)
         msg = str(exc)
         if status in {401, 403}:
-            return AuthenticationFailure(msg)
+            return AuthenticationFailure(msg, status_code=status, request_id=request_id)
         if status == 429:
-            return RateLimitFailure(msg)
-        return RequestFailure(msg)
+            return RateLimitFailure(msg, status_code=status, request_id=request_id)
+        return RequestFailure(msg, status_code=status, request_id=request_id)
+
+    def _emit_plan_mode_error(self, exc: EphemeralOSApiError) -> None:
+        """Plan §A17: structured error log line under coding-plan mode."""
+        if self._auth_strategy.llm_client_mode != LLM_CLIENT_MODE_CODING_PLAN:
+            return
+        log.error(
+            "plan_mode_error",
+            extra={
+                "provider": "anthropic",
+                "error_type": _categorize(exc),
+                "request_id": exc.request_id,
+            },
+        )
