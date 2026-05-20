@@ -188,6 +188,9 @@ async def test_shell_capture_goes_through_occ_client_before_lease_release(
     assert layer_stack.released == ["lease-1"]
     assert result.stdout == "done\n"
     assert result.workspace_capture.snapshot_version == 1
+    assert result.timings["resource.command_exec.changed_path_count"] == 1.0
+    assert result.timings["resource.command_exec.upperdir_tree_bytes"] > 0
+    assert result.timings["resource.layer_stack.storage_filesystem_total_bytes"] > 0
     # Unconditional cleanup deletes the lowerdir parent on release.
     assert lower_parent.exists() is False
     _assert_phase08_shell_timings(result.timings)
@@ -303,6 +306,13 @@ def _assert_phase08_shell_timings(timings: dict[str, float]) -> None:
         "occ.apply.total_s",
         "gitignore.cache_hits_total",
         "gitignore.cache_misses_total",
+        "resource.audit.collect_s",
+        "resource.command_exec.run_dir_tree_bytes",
+        "resource.command_exec.scratch_filesystem_total_bytes",
+        "resource.command_exec.upperdir_tree_bytes",
+        "resource.layer_stack.manifest_depth",
+        "resource.layer_stack.storage_filesystem_total_bytes",
+        "resource.process.max_rss_bytes",
     }
     assert required <= timings.keys()
     forbidden = {

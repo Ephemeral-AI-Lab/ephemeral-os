@@ -17,6 +17,8 @@ LAYER_STACK_LEASE_ACQUIRED = "sandbox.layer_stack.lease_acquired"
 LAYER_STACK_LAYER_PUBLISHED = "sandbox.layer_stack.layer_published"
 LAYER_STACK_AUTO_SQUASHED = "sandbox.layer_stack.auto_squashed"
 
+RESOURCE_SNAPSHOT = "sandbox.resource.snapshot"
+
 __all__ = [
     "LAYER_STACK_AUTO_SQUASHED",
     "LAYER_STACK_LAYER_PUBLISHED",
@@ -29,4 +31,5 @@ __all__ = [
     "OPERATION_FAILED",
     "OPERATION_STARTED",
     "OVERLAY_EXECUTED",
+    "RESOURCE_SNAPSHOT",
 ]

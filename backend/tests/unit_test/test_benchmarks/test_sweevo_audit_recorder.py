@@ -30,10 +30,10 @@ from db.stores.attempt_store import AttemptStore
 from db.stores.iteration_store import IterationStore
 from db.stores.goal_store import GoalStore
 from db.stores.task_center_store import TaskCenterStore
-from live_e2e.audit.bus import AuditEventBus
-from live_e2e.audit.events import Event, EventType
-from live_e2e.audit.node_id import NodeId
-from live_e2e.audit.recorder import AuditRecorder
+from task_center_runner.audit.bus import AuditEventBus
+from task_center_runner.audit.events import Event, EventType
+from task_center_runner.audit.node_id import NodeId
+from task_center_runner.audit.recorder import AuditRecorder
 from task_center import (
     IterationCreationReason,
     GoalStatus,
@@ -555,6 +555,22 @@ def test_write_performance_reports_produces_detailed_report(tmp_path: Path) -> N
                 },
             )
         )
+        bus.publish(
+            Event(
+                type=EventType.SANDBOX_RESOURCE_SNAPSHOT,
+                node=node,
+                payload={
+                    "tool_name": "shell",
+                    "tool_id": "toolu_4",
+                    "status": "ok",
+                    "changed_paths": [],
+                    "timings": {
+                        "resource.command_exec.upperdir_tree_bytes": 4096,
+                        "resource.cgroup.memory_current_bytes": 123456,
+                    },
+                },
+            )
+        )
         snapshot = recorder.metrics.performance_snapshot()
     finally:
         recorder.dispose()
@@ -580,10 +596,14 @@ def test_write_performance_reports_produces_detailed_report(tmp_path: Path) -> N
     assert report["sandbox"]["families"]["occ"]["event_count"] == 1
     assert report["sandbox"]["families"]["overlay"]["event_count"] == 1
     assert report["sandbox"]["families"]["layer_stack"]["event_count"] == 1
+    assert report["sandbox"]["families"]["resource"]["event_count"] == 1
     assert report["sandbox"]["timing_keys"]["api.shell.overlay_s"]["total"] == 0.12
     assert report["sandbox"]["non_duration_observations"][
         "layer_stack.auto_squash.depth_before"
     ]["max"] == 40.0
+    assert report["sandbox"]["resource_keys"][
+        "resource.command_exec.upperdir_tree_bytes"
+    ]["latest"] == 4096.0
     assert report["hotspots"]["slowest_tool_calls"][0]["tool_id"] == "toolu_1"
 
     markdown = (recorder.run_dir / "performance_report.md").read_text(
@@ -591,6 +611,7 @@ def test_write_performance_reports_produces_detailed_report(tmp_path: Path) -> N
     )
     assert "Tool Latency By Total Time" in markdown
     assert "Sandbox Subsystems" in markdown
+    assert "Sandbox Resource Keys" in markdown
     assert "write_file" in markdown
 
 

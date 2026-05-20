@@ -26,6 +26,7 @@ from sandbox.execution.contract import (
     WorkspaceLeaseClient,
 )
 from sandbox.execution.overlay.capture import walk_upperdir
+from sandbox.execution.resource_audit import command_exec_resource_timings
 from sandbox.execution.runner import run_workspace_replaced_command
 from sandbox.occ.changeset import ChangesetResult, CommitOptions
 from sandbox.occ.overlay_change_conversion import overlay_path_changes_to_occ_changes
@@ -146,6 +147,16 @@ async def execute_command(
             **maintenance_timings,
             **(timing_provider() if timing_provider is not None else {}),
         }
+        timings.update(
+            command_exec_resource_timings(
+                storage_root=storage_root,
+                scratch_root=scratch_root,
+                run_dir=run_dir,
+                upperdir=Path(spec.writes),
+                manifest=lease.manifest,
+                changed_path_count=len(path_changes),
+            )
+        )
         timings["api.shell.overlay_s"] = (
             timings.get("command_exec.mount_workspace_s", 0.0)
             + timings.get("command_exec.run_command_s", 0.0)

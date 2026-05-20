@@ -27,6 +27,7 @@ _SANDBOX_EVENT_MAP = {
     sandbox_events.LAYER_STACK_AUTO_SQUASHED: (
         EventType.SANDBOX_LAYER_STACK_LAYERS_SQUASHED
     ),
+    sandbox_events.RESOURCE_SNAPSHOT: EventType.SANDBOX_RESOURCE_SNAPSHOT,
 }
 
 

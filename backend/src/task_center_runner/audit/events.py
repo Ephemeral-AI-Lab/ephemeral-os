@@ -66,6 +66,7 @@ class EventType(StrEnum):
     SANDBOX_OVERLAY_EXECUTED = "sandbox_overlay_executed"
     SANDBOX_OCC_CHANGESET_RECEIVED = "sandbox_occ_changeset_received"
     SANDBOX_OCC_CHANGES_COMMITTED = "sandbox_occ_changes_committed"
+    SANDBOX_RESOURCE_SNAPSHOT = "sandbox_resource_snapshot"
 
     # hook synthetic
     HOOK_INJECTED_FAILURE = "hook_injected_failure"

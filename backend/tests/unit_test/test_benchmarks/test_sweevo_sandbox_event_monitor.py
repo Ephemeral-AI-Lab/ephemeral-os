@@ -4,12 +4,12 @@ import asyncio
 import json
 from pathlib import Path
 
-from live_e2e.audit.bus import AuditEventBus
-from live_e2e.audit.events import Event, EventType
-from live_e2e.audit.legacy import LegacySandboxAuditSink
-from live_e2e.audit.node_id import NodeId
-from live_e2e.audit.recorder import AuditRecorder
-from live_e2e.audit.stream_bridge import stream_bridge
+from task_center_runner.audit.bus import AuditEventBus
+from task_center_runner.audit.events import Event, EventType
+from task_center_runner.audit.legacy import LegacySandboxAuditSink
+from task_center_runner.audit.node_id import NodeId
+from task_center_runner.audit.recorder import AuditRecorder
+from task_center_runner.audit.stream_bridge import stream_bridge
 from audit.base import AuditEvent, AuditNode
 from sandbox.audit import events as sandbox_events
 from message.stream_events import ToolExecutionCompleted
@@ -44,6 +44,8 @@ def test_stream_bridge_derives_sandbox_subsystem_events() -> None:
                         "command_exec.occ_apply_s": 0.07,
                         "layer_stack.auto_squash.total_s": 0.08,
                         "layer_stack.auto_squash.depth_after": 32.0,
+                        "resource.command_exec.upperdir_tree_bytes": 4096.0,
+                        "resource.cgroup.memory_current_bytes": 123456.0,
                     },
                 },
             )
@@ -58,6 +60,7 @@ def test_stream_bridge_derives_sandbox_subsystem_events() -> None:
     assert EventType.SANDBOX_OCC_CHANGES_COMMITTED in event_types
     assert EventType.SANDBOX_LAYER_STACK_LAYER_CREATED in event_types
     assert EventType.SANDBOX_LAYER_STACK_LAYERS_SQUASHED in event_types
+    assert EventType.SANDBOX_RESOURCE_SNAPSHOT in event_types
 
 
 def test_stream_bridge_skips_metadata_derivation_when_sandbox_audit_emitted() -> None:
@@ -223,3 +226,47 @@ def test_legacy_sandbox_audit_sink_maps_namespaced_events_once(tmp_path: Path) -
     assert rows[0]["node"]["agent_run_id"] == "task-1"
     assert rows[0]["payload"]["tool_name"] == "write_file"
     assert rows[0]["payload"]["tool_id"] == "toolu_1"
+
+
+def test_legacy_sandbox_audit_sink_maps_resource_snapshot(tmp_path: Path) -> None:
+    bus = AuditEventBus()
+    recorder = AuditRecorder(tmp_path / "run", task_center_run_id="run-1", bus=bus)
+    sink = LegacySandboxAuditSink(bus)
+    recorder.start()
+    try:
+        sink.publish(
+            AuditEvent(
+                source="sandbox",
+                type=sandbox_events.RESOURCE_SNAPSHOT,
+                node=AuditNode(
+                    task_center_run_id="run-1",
+                    task_center_task_id="task-1",
+                    tool_name="shell",
+                    tool_id="toolu_1",
+                ),
+                payload={
+                    "operation": "shell",
+                    "status": "ok",
+                    "changed_paths": [],
+                    "timings": {
+                        "resource.command_exec.upperdir_tree_bytes": 4096.0,
+                        "resource.cgroup.memory_current_bytes": 123456.0,
+                    },
+                },
+            )
+        )
+    finally:
+        recorder.dispose()
+
+    rows = [
+        json.loads(line)
+        for line in (recorder.run_dir / "sandbox_events.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if line.strip()
+    ]
+    assert len(rows) == 1
+    assert rows[0]["event_type"] == "sandbox_resource_snapshot"
+    assert rows[0]["payload"]["timings"][
+        "resource.command_exec.upperdir_tree_bytes"
+    ] == 4096.0

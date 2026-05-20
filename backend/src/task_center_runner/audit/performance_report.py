@@ -37,6 +37,7 @@ _SANDBOX_FAMILY_BY_EVENT: Mapping[str, str] = {
     "sandbox_edit_committed": "sandbox_tool",
     "sandbox_shell_committed": "sandbox_tool",
     "sandbox_batch_edit_applied": "sandbox_tool",
+    "sandbox_resource_snapshot": "resource",
 }
 
 
@@ -91,6 +92,7 @@ def render_performance_report_markdown(report: Mapping[str, Any]) -> str:
     sandbox = _as_mapping(report.get("sandbox"))
     families = _as_mapping(sandbox.get("families"))
     timing_keys = _as_mapping(sandbox.get("timing_keys"))
+    resource_keys = _as_mapping(sandbox.get("resource_keys"))
     hotspots = _as_mapping(report.get("hotspots"))
 
     lines = [
@@ -190,6 +192,34 @@ def render_performance_report_markdown(report: Mapping[str, Any]) -> str:
             + " |"
         )
 
+    if resource_keys:
+        lines.extend(
+            [
+                "",
+                "## Sandbox Resource Keys",
+                "",
+                "| Resource Key | Count | Latest | Min | P50 | P95 | Max |",
+                "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+            ]
+        )
+        for key, item in _sorted_resource_rows(resource_keys)[:40]:
+            item_map = _as_mapping(item)
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        str(key),
+                        str(item_map.get("count", 0)),
+                        _fmt_number(item_map.get("latest")),
+                        _fmt_number(item_map.get("min")),
+                        _fmt_number(item_map.get("p50")),
+                        _fmt_number(item_map.get("p95")),
+                        _fmt_number(item_map.get("max")),
+                    ]
+                )
+                + " |"
+            )
+
     lines.extend(
         [
             "",
@@ -275,6 +305,9 @@ def _build_sandbox_report(rows: list[dict[str, Any]]) -> dict[str, Any]:
     family_events: dict[str, list[dict[str, Any]]] = {}
     timing_values: dict[str, list[float]] = {}
     non_duration_values: dict[str, list[float]] = {}
+    latest_non_duration_values: dict[str, float] = {}
+    resource_values: dict[str, list[float]] = {}
+    latest_resource_values: dict[str, float] = {}
     detailed_events: list[dict[str, Any]] = []
     event_type_counts: Counter[str] = Counter()
     tool_counts: Counter[str] = Counter()
@@ -293,20 +326,45 @@ def _build_sandbox_report(rows: list[dict[str, Any]]) -> dict[str, Any]:
         if event["conflict_reason"] or event["event_type"] == "sandbox_conflict_detected":
             conflict_events.append(event)
         for key, value in _as_mapping(event.get("timings")).items():
+            key_text = str(key)
+            if (
+                key_text.startswith("resource.")
+                and event["event_type"] != "sandbox_resource_snapshot"
+            ):
+                continue
             try:
                 number = float(value)
             except (TypeError, ValueError):
                 continue
-            if _looks_like_duration(key):
-                timing_values.setdefault(str(key), []).append(number)
+            if _looks_like_duration(key_text):
+                timing_values.setdefault(key_text, []).append(number)
             else:
-                non_duration_values.setdefault(str(key), []).append(number)
+                non_duration_values.setdefault(key_text, []).append(number)
+                latest_non_duration_values[key_text] = number
+                if (
+                    event["event_type"] == "sandbox_resource_snapshot"
+                    and key_text.startswith("resource.")
+                ):
+                    resource_values.setdefault(key_text, []).append(number)
+                    latest_resource_values[key_text] = number
 
     families = {
         family: _build_family_report(events)
         for family, events in sorted(family_events.items())
     }
     duration_total = sum(float(item["duration_s"]["total"]) for item in families.values())
+    non_duration_observations = {
+        key: _stats(values) for key, values in sorted(non_duration_values.items())
+    }
+    for key, latest in latest_non_duration_values.items():
+        if key in non_duration_observations:
+            non_duration_observations[key]["latest"] = latest
+    resource_keys = {
+        key: _stats(values) for key, values in sorted(resource_values.items())
+    }
+    for key, latest in latest_resource_values.items():
+        if key in resource_keys:
+            resource_keys[key]["latest"] = latest
     return {
         "event_count": len(rows),
         "duration_total_s": duration_total,
@@ -314,9 +372,8 @@ def _build_sandbox_report(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "timing_keys": {
             key: _stats(values) for key, values in sorted(timing_values.items())
         },
-        "non_duration_observations": {
-            key: _stats(values) for key, values in sorted(non_duration_values.items())
-        },
+        "non_duration_observations": non_duration_observations,
+        "resource_keys": resource_keys,
         "event_type_counts": dict(sorted(event_type_counts.items())),
         "tool_counts": dict(sorted(tool_counts.items())),
         "status_counts": dict(sorted(status_counts.items())),
@@ -331,8 +388,15 @@ def _normalize_sandbox_event(row: Mapping[str, Any]) -> dict[str, Any]:
     node = _as_mapping(row.get("node"))
     timings = _float_mapping(payload.get("timings"))
     event_type = str(row.get("event_type") or "sandbox_unknown")
+    event_type = str(row.get("event_type") or "sandbox_unknown")
     duration_total = sum(
-        value for key, value in timings.items() if _looks_like_duration(key)
+        value
+        for key, value in timings.items()
+        if _looks_like_duration(key)
+        and (
+            not str(key).startswith("resource.")
+            or event_type == "sandbox_resource_snapshot"
+        )
     )
     changed_paths = _string_list(payload.get("changed_paths"))
     return {
@@ -471,6 +535,13 @@ def _build_observations(report: Mapping[str, Any]) -> list[str]:
             "Largest sandbox timing key by total: "
             f"{first.get('timing_key')} at {_fmt_s(first.get('total'))}."
         )
+    resource_keys = _as_mapping(_as_mapping(report.get("sandbox")).get("resource_keys"))
+    memory = _as_mapping(resource_keys.get("resource.cgroup.memory_current_bytes"))
+    if memory:
+        observations.append(
+            "Latest sandbox cgroup memory sample: "
+            f"{_fmt_number(memory.get('latest'))} bytes."
+        )
     totals = _as_mapping(report.get("totals"))
     incomplete = int(totals.get("incomplete_tool_calls") or 0)
     if incomplete:
@@ -584,6 +655,16 @@ def _sorted_timing_rows(
     )
 
 
+def _sorted_resource_rows(
+    resource_keys: Mapping[str, Any],
+) -> list[tuple[str, Any]]:
+    return sorted(
+        resource_keys.items(),
+        key=lambda item: float(_as_mapping(item[1]).get("max") or 0.0),
+        reverse=True,
+    )
+
+
 def _looks_like_duration(key: object) -> bool:
     text = str(key)
     return text.endswith("_s") or text.endswith(".total_s") or text.endswith(".s")
@@ -629,6 +710,16 @@ def _fmt_s(value: object) -> str:
         return f"{float(value):.4f} s"
     except (TypeError, ValueError):
         return "0.0000 s"
+
+
+def _fmt_number(value: object) -> str:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return "0"
+    if number.is_integer():
+        return str(int(number))
+    return f"{number:.4f}"
 
 
 def _short(value: object, max_len: int = 24) -> str:

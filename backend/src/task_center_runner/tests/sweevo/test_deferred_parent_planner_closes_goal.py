@@ -43,9 +43,9 @@ async def test_partial_parent_routes_child_planner_to_full_only_agent_md(
         launch.agent_name for launch in report.launches if launch.role == "planner"
     ]
     assert planner_launches == [
-        "planner",
+        "planner_closes_or_defers",
         "planner_closes_goal",
-        "planner",
+        "planner_closes_or_defers",
     ]
     assert _tool_count(report.tool_calls, "submit_plan_defers_goal") == 1
     assert _tool_count(report.tool_calls, "submit_plan_closes_goal") == 2

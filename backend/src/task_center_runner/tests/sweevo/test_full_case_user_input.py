@@ -90,7 +90,8 @@ async def test_full_case_user_input_runs_dynamic_verifier_dag(
     assert _has_multi_dependency_verifier(report.graph_summary)
     assert any(event.type == EventType.VERIFIER_FAILURE for event in report.events)
     assert any(
-        item.agent_name == "planner" and item.checks.get("failed_attempts")
+        item.agent_name == "planner_closes_or_defers"
+        and item.checks.get("failed_attempts")
         for item in report.prompt_inspections
     )
 

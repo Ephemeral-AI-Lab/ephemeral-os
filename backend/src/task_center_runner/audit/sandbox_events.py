@@ -173,6 +173,18 @@ def sandbox_events_from_tool_completion(
             )
         )
 
+    if _has_prefix(timings, "resource."):
+        events.append(
+            Event(
+                type=EventType.SANDBOX_RESOURCE_SNAPSHOT,
+                node=node,
+                payload={
+                    **base_payload,
+                    "timings": _select(timings, "resource."),
+                },
+            )
+        )
+
     return tuple(events)
 
 

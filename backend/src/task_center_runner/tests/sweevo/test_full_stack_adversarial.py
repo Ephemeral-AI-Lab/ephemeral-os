@@ -139,7 +139,13 @@ def _assert_message_logs(run_dir: Path) -> None:
         for message in messages
         if isinstance(message.get("metadata"), dict)
     }
-    assert {"entry_executor", "planner", "verifier", "evaluator"} <= agents
+    assert {
+        "entry_executor",
+        "planner_closes_or_defers",
+        "planner_closes_goal",
+        "verifier",
+        "evaluator",
+    } <= agents
     assert any(_is_executor_agent_name(agent) for agent in agents)
     tool_uses = {
         str(block.get("name") or "")

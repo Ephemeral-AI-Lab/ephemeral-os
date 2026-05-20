@@ -201,6 +201,7 @@ _EVENT_BY_SIGNAL = {
     "layer_stack_lease_acquired": events.LAYER_STACK_LEASE_ACQUIRED,
     "layer_stack_layer_published": events.LAYER_STACK_LAYER_PUBLISHED,
     "layer_stack_auto_squashed": events.LAYER_STACK_AUTO_SQUASHED,
+    "resource_snapshot": events.RESOURCE_SNAPSHOT,
 }
 
 

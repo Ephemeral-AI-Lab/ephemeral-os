@@ -3,9 +3,9 @@
 The root goal's first iteration submits a partial plan with
 ``deferred_goal_for_next_iteration``. Its executor then requests a child goal. Because the
 child goal's parent task belongs to that partial-planned attempt, the child
-planner must be selected through the ``planner`` agent.md variant and launch as
-``planner_closes_goal``. The root continuation iteration still launches the normal
-``planner`` because it is not a child goal.
+planner must be selected through the planner variant routing and launch as
+``planner_closes_goal``. The root continuation iteration still launches the
+normal ``planner_closes_or_defers`` because it is not a child goal.
 """
 
 from __future__ import annotations

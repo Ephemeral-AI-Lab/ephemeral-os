@@ -19,6 +19,7 @@ TimingAuditSignal = Literal[
     "layer_stack_lease_acquired",
     "layer_stack_layer_published",
     "layer_stack_auto_squashed",
+    "resource_snapshot",
 ]
 
 
@@ -74,6 +75,8 @@ def timing_audit_signals(
         emitted.append("layer_stack_layer_published")
     if _has_auto_squash_fact(timings, payload or {}):
         emitted.append("layer_stack_auto_squashed")
+    if _has_timing(timings, "resource."):
+        emitted.append("resource_snapshot")
     return tuple(emitted)
 
 
