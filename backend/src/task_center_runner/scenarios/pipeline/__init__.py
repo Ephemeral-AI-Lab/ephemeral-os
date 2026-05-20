@@ -66,7 +66,7 @@ from task_center_runner.scenarios.pipeline.nested_goal import (
     NestedGoal,
     NestedGoalFailure,
 )
-from task_center_runner.scenarios.pipeline.deferred_parent_planner_full_only import (
+from task_center_runner.scenarios.pipeline.deferred_parent_planner_closes_goal import (
     DeferredParentPlannerFullOnly,
 )
 

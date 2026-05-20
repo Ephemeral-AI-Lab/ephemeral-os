@@ -102,8 +102,8 @@ def test_factory_omits_issue_pr_even_with_files_on_disk(tmp_path, monkeypatch):
 
     _stub_runtime_base(monkeypatch)
     defn = AgentDefinition(
-        name="planner",
-        description="planner",
+        name="planner_closes_or_defers",
+        description="planner_closes_or_defers",
         agent_kind=AgentKind.PLANNER,
         system_prompt="role body",
     )

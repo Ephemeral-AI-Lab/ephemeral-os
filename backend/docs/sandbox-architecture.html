@@ -1396,49 +1396,44 @@ Emits (in walk order):
 
 <h3>9.3 Run a shell command</h3>
 
-<div class="mermaid">
-sequenceDiagram
-  autonumber
-  participant Agent
-  participant API as api.shell
-  participant DC as host.daemon_client
-  participant Server as daemon RPC
-  participant H as daemon.handler.overlay
-  participant ES as execution.service.execute_command
-  participant LS as LayerStack
-  participant Strat as Strategy
-  participant Sub as subprocess
-  participant OCC
-  Agent->>API: shell(command, cwd, timeout)
-  API->>DC: call_daemon_api("api.v1.shell", args, timeout=cmd+30s)
-  DC->>Server: JSON envelope
-  Server->>H: run_snapshot_overlay(args)
-  H->>ES: execute_command(req, mount_mode=COPY_BACKED)
-  ES->>LS: prepare_workspace_snapshot
-  LS-->>ES: lease + lowerdir + manifest_v
-  ES->>Strat: run (PRIVATE_NAMESPACE if available, else COPY_BACKED)
-  Strat->>Sub: bash -lc 'cd … && (cmd)' with stdout/stderr to refs
-  Sub-->>Strat: exit_code
-  Strat-->>ES: ShellProcessResult
-  ES->>ES: walk_upperdir → tuple[OverlayPathChange, ...]
-  alt occ_apply=True (api.v1.shell semantics)
-    ES->>OCC: apply_changeset(typed_changes, snapshot=lease.manifest)
-    OCC-->>ES: ChangesetResult(published_v=N+1)
-  end
-  ES->>LS: release_lease(lease_id)
-  ES->>ES: rmtree(run_dir)
-  ES-->>H: CommandExecResult
-  H-->>Server: response
-  Server-->>DC: JSON
-  DC-->>API: parsed
-  API-->>Agent: ShellResult{exit_code, stdout, stderr, changed_paths, ...}
-</div>
+<div class="mermaid">Actors:  Agent → API (api.shell) → DC (host.daemon_client) → Server (daemon RPC) →
+         H (daemon.handler.overlay) → ES (execution.service) → LS → Strat → Sub → OCC
+
+ 1.  Agent  ──shell(command, cwd, timeout)──> API
+ 2.  API    ──call_daemon_api("api.v1.shell", args,
+                              timeout=cmd+30s)──> DC
+ 3.  DC     ──JSON envelope──> Server
+ 4.  Server ──run_snapshot_overlay(args)──> H
+ 5.  H      ──execute_command(req, mount_mode=COPY_BACKED)──> ES
+ 6.  ES     ──prepare_workspace_snapshot──> LS
+ 7.  LS     ──lease + lowerdir + manifest_v──> ES
+ 8.  ES     ──run (PRIVATE_NAMESPACE if available,
+                   else COPY_BACKED)──> Strat
+ 9.  Strat  ──bash -lc 'cd … &amp;&amp; (cmd)' with stdout/stderr
+              to refs──> Sub
+10.  Sub    ──exit_code──> Strat
+11.  Strat  ──ShellProcessResult──> ES
+12.  ES     ──walk_upperdir → tuple[OverlayPathChange, ...]
+
+13.  (if occ_apply=True — api.v1.shell semantics)
+     ES   ──apply_changeset(typed_changes,
+                            snapshot=lease.manifest)──> OCC
+     OCC  ──ChangesetResult(published_v=N+1)──> ES
+
+14.  ES   ──release_lease(lease_id)──> LS
+15.  ES   ──rmtree(run_dir)
+16.  ES   ──CommandExecResult──> H
+17.  H    ──response──> Server
+18.  Server ──JSON──> DC
+19.  DC   ──parsed──> API
+20.  API  ──ShellResult{exit_code, stdout, stderr,
+                        changed_paths, ...}──> Agent</div>
 
 <hr>
 
 <p style="color:var(--muted);font-size:13px;margin-top:40px;">
   Generated from <code>backend/src/sandbox/</code>. Last regenerated: 2026-05-21.
-  Diagrams render with Mermaid via CDN — open this file in a browser to view.
+  ASCII diagrams render in any browser, no CDN required.
 </p>
 
 </main>

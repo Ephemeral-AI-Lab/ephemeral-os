@@ -30,7 +30,7 @@ Mission → Episode → Attempt
 
 A planner task is created when an Attempt enters stage `planning` (`AttemptStage.PLANNING`, `task_center/attempt/state.py:11`). Exactly one planner per Attempt; deterministic id `{attempt_id}:planner` (`task_center/task/ids.py`).
 
-The planner is **not** a Mission. It is a single TaskCenter task with role `planner`. Its lifetime is one agent run that ends on a single terminal submission. If a partial plan is committed in any ancestor mission, the planner_full_only variant is selected for descendants (see _Variants_).
+The planner is **not** a Mission. It is a single TaskCenter task with role `planner`. Its lifetime is one agent run that ends on a single terminal submission. If a partial plan is committed in any ancestor mission, the planner_closes_goal variant is selected for descendants (see _Variants_).
 
 ## Lifecycle
 
@@ -131,9 +131,9 @@ A rejection returns an error tool result; the agent can correct and call again w
 | Variant | When selected | Difference |
 |---|---|---|
 | `planner` | default | Both `submit_full_plan` and `submit_partial_plan` are available. |
-| `planner_full_only` | when the mission ancestry is nested under another attempt (`when: nested_mission_depth_gt_1`) | Only `submit_full_plan` is exposed. System prompt explicitly forbids deferring remainder work. |
+| `planner_closes_goal` | when the mission ancestry is nested under another attempt (`when: nested_mission_depth_gt_1`) | Only `submit_full_plan` is exposed. System prompt explicitly forbids deferring remainder work. |
 
-**Why `planner_full_only` exists.** Partial planning creates an episodic continuation _on top of_ the current episode. Allowing a descendant planner to _also_ partial-plan would make the continuation chain ambiguous: whose `deferred_goal_for_next_iteration` extends the parent's mission? The depth rule eliminates the question — any planner running inside a nested mission (`nested_mission_depth > 1`) must fully cover its scope. The depth helper lives at `task_center/mission/ancestry.py:nested_mission_depth`; the predicate is registered in `task_center/agent_launch/predicates.py`.
+**Why `planner_closes_goal` exists.** Partial planning creates an episodic continuation _on top of_ the current episode. Allowing a descendant planner to _also_ partial-plan would make the continuation chain ambiguous: whose `deferred_goal_for_next_iteration` extends the parent's mission? The depth rule eliminates the question — any planner running inside a nested mission (`nested_mission_depth > 1`) must fully cover its scope. The depth helper lives at `task_center/mission/ancestry.py:nested_mission_depth`; the predicate is registered in `task_center/agent_launch/predicates.py`.
 
 ## Constraints
 
@@ -166,7 +166,7 @@ Leakage between audiences is a planning bug: criteria-language in a task_spec, t
 
 **5. Wide-flat DAGs are normal; deep chains compound risk.** A generator failure blocks all transitive descendants (`blocked_descendant_ids`, `generator_dag.py:90`); the attempt then closes `FAILED/generator_failed`. A deep chain turns one stuck task into a whole-attempt loss. A wide flat DAG with independent siblings parallelizes throughput and isolates failures.
 
-**6. Partial planning is mission-ancestral, irreversible.** Once a partial plan exists anywhere in the mission's calling lineage, the `planner_full_only` variant is selected for every descendant planner in that lineage. The decision to commit to incremental closure (vs. atomic closure) is a global property, not a local one.
+**6. Partial planning is mission-ancestral, irreversible.** Once a partial plan exists anywhere in the mission's calling lineage, the `planner_closes_goal` variant is selected for every descendant planner in that lineage. The decision to commit to incremental closure (vs. atomic closure) is a global property, not a local one.
 
 **7. The planner cannot run code.** No `shell`, no `write_file`, no `edit_file`. This is a deliberate capability restriction, not an oversight. A planner that could test its plan would either (a) waste budget on speculative execution before committing, or (b) blur the planner/generator boundary by doing the work itself. The plan-vs-execute split is structural.
 

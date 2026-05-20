@@ -9,21 +9,21 @@ from agents import AgentDefinition, AgentVariant
 
 def test_variant_round_trips_through_pydantic():
     defn = AgentDefinition(
-        name="planner",
-        description="planner",
-        context_recipe="planner",
+        name="planner_closes_or_defers",
+        description="planner_closes_or_defers",
+        context_recipe="planner_closes_or_defers",
         variants=[
             AgentVariant(
                 when="nested_goal_depth_gt_1",
-                use="planner_full_only",
+                use="planner_closes_goal",
                 note="depth >1 — nested planner inside another goal's attempt",
             )
         ],
     )
     payload = defn.model_dump()
     restored = AgentDefinition.model_validate(payload)
-    assert restored.context_recipe == "planner"
-    assert restored.variants[0].use == "planner_full_only"
+    assert restored.context_recipe == "planner_closes_or_defers"
+    assert restored.variants[0].use == "planner_closes_goal"
     assert restored.variants[0].when == "nested_goal_depth_gt_1"
 
 

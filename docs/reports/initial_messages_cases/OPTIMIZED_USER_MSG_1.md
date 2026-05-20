@@ -70,7 +70,7 @@ Proposed location: `backend/src/task_center/context_engine/role_directives.py`.
 | Agent | What to do |
 |-------|------------|
 | `planner`                  | Plan for `<iteration_goal>`. |
-| `planner_full_only`        | Plan for `<iteration_goal>`. No defer option — must close in one attempt. |
+| `planner_closes_goal`        | Plan for `<iteration_goal>`. No defer option — must close in one attempt. |
 | `executor`                 | Complete `<assigned_task>`. |
 | `executor_success_failure` | Complete `<assigned_task>`. No handoff option. |
 | `evaluator`                | Verify the current attempt against `<evaluation_criteria>`. |
@@ -522,7 +522,7 @@ Call `submit_exploration_result`.
 
 ---
 
-## Case 12 — planner_full_only, child goal (delegated from deferring parent)
+## Case 12 — planner_closes_goal, child goal (delegated from deferring parent)
 
 ### user_msg_1
 

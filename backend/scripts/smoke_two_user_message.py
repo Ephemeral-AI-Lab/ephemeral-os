@@ -85,10 +85,10 @@ def _make_planner_def():
     from agents import AgentDefinition, AgentKind
 
     return AgentDefinition(
-        name="planner",
-        description="planner",
+        name="planner_closes_or_defers",
+        description="planner_closes_or_defers",
         agent_kind=AgentKind.PLANNER,
-        context_recipe="planner",
+        context_recipe="planner_closes_or_defers",
         terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
     )
 

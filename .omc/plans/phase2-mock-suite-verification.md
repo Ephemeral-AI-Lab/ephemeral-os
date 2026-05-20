@@ -18,7 +18,7 @@ backend/src/task_center_runner/tests/sweevo/
 ├── test_focused_scenarios.py
 ├── test_full_case_user_input.py
 ├── test_full_stack_adversarial.py
-└── test_partial_parent_planner_full_only.py
+└── test_partial_parent_planner_closes_goal.py
 ```
 
 Plus the PG-only file-level tests:

@@ -20,7 +20,7 @@ PLANNER_DIR = BACKEND_ROOT / "src" / "agents" / "profile" / "main"
 
 def _load_planner_pair():
     by_name = {a.name: a for a in load_agents_dir(PLANNER_DIR)}
-    return by_name["planner"], by_name["planner_full_only"]
+    return by_name["planner_closes_or_defers"], by_name["planner_closes_goal"]
 
 
 def test_planner_profiles_expose_load_skill_reference():
@@ -51,7 +51,7 @@ def test_only_planner_variants_declare_load_skill_reference():
         content = path.read_text(encoding="utf-8")
         if "load_skill_reference" in content:
             declaring.append(path.name)
-    assert sorted(declaring) == ["planner.md", "planner_full_only.md"]
+    assert sorted(declaring) == ["planner_closes_goal.md", "planner_closes_or_defers.md"]
 
 
 def test_load_skill_reference_is_scoped_to_own_skill():
@@ -59,8 +59,8 @@ def test_load_skill_reference_is_scoped_to_own_skill():
     registry = SkillRegistry()
     registry.register(
         SkillDefinition(
-            name="planner",
-            description="planner",
+            name="planner_closes_or_defers",
+            description="planner_closes_or_defers",
             content="# x",
             source="test",
             references={"checklist": "checklist body"},
@@ -68,8 +68,8 @@ def test_load_skill_reference_is_scoped_to_own_skill():
     )
     registry.register(
         SkillDefinition(
-            name="planner_full_only",
-            description="planner_full_only",
+            name="planner_closes_goal",
+            description="planner_closes_goal",
             content="# y",
             source="test",
             references={"rubric": "rubric body"},
@@ -77,19 +77,19 @@ def test_load_skill_reference_is_scoped_to_own_skill():
     )
 
     tool = make_load_skill_reference_for_skill(
-        skill_slug="planner", skill_registry=registry
+        skill_slug="planner_closes_or_defers", skill_registry=registry
     )
 
     own = asyncio.run(
         tool.execute(
-            tool.input_model(skill_name="planner", reference_name="checklist"),
+            tool.input_model(skill_name="planner_closes_or_defers", reference_name="checklist"),
             ToolExecutionContextService(cwd=Path("/tmp")),
         )
     )
     foreign = asyncio.run(
         tool.execute(
             tool.input_model(
-                skill_name="planner_full_only", reference_name="rubric"
+                skill_name="planner_closes_goal", reference_name="rubric"
             ),
             ToolExecutionContextService(cwd=Path("/tmp")),
         )
@@ -104,7 +104,7 @@ def test_bundled_skill_registry_includes_planner_skill():
     """The shipped planner skill folder is picked up by bundled discovery."""
     _registry.cache_clear()
     registry = _registry()
-    planner = registry.get("planner")
-    full_only = registry.get("planner_full_only")
+    planner = registry.get("planner_closes_or_defers")
+    full_only = registry.get("planner_closes_goal")
     assert planner is not None
     assert full_only is not None

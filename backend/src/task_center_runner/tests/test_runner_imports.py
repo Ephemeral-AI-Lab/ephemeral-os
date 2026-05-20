@@ -93,7 +93,7 @@ def test_prompt_inspector_accepts_current_failed_attempt_heading(
             ]
         ),
         agent_def=AgentDefinition(
-            name="planner",
+            name="planner_closes_or_defers",
             description="test planner",
             agent_kind=AgentKind.PLANNER,
         ),
@@ -136,7 +136,7 @@ def test_prompt_inspector_accepts_current_previous_iteration_sections(
             ]
         ),
         agent_def=AgentDefinition(
-            name="planner",
+            name="planner_closes_or_defers",
             description="test planner",
             agent_kind=AgentKind.PLANNER,
         ),
@@ -147,7 +147,7 @@ def test_prompt_inspector_accepts_current_previous_iteration_sections(
     assert inspection.passed
 
 
-def test_prompt_inspector_accepts_planner_full_only_goal_only_context() -> None:
+def test_prompt_inspector_accepts_planner_closes_goal_goal_only_context() -> None:
     runner = MockSquadRunner(
         repo_dir="/tmp/live_e2e_test_repo",
         bus=AuditEventBus(),
@@ -167,7 +167,7 @@ def test_prompt_inspector_accepts_planner_full_only_goal_only_context() -> None:
             ]
         ),
         agent_def=AgentDefinition(
-            name="planner_full_only",
+            name="planner_closes_goal",
             description="test full-only planner",
             agent_kind=AgentKind.PLANNER,
         ),
@@ -189,8 +189,8 @@ def test_registered_mock_agents_install_and_restore() -> None:
         installed = {d.name for d in list_definitions()}
         assert installed == {
             "entry_executor",
-            "planner",
-            "planner_full_only",
+            "planner_closes_or_defers",
+            "planner_closes_goal",
             "executor",
             "executor_success_failure",
             "executor_success_handoff",
@@ -225,18 +225,18 @@ def test_scenarios_register_hookset_cleanly(scenario_cls: type) -> None:
     assert hasattr(scenario, "expected_event_sequence")
 
 
-def test_full_stack_recursive_planner_full_only_closes_goal() -> None:
+def test_full_stack_recursive_planner_closes_goal_closes_goal() -> None:
     scenario = FullStackAdversarial()
     ctx = ScenarioContext(
         attempt=SimpleNamespace(attempt_sequence_no=1, evaluation_criteria=()),
         iteration=SimpleNamespace(sequence_no=1, goal_id="recursive-goal"),
         goal=SimpleNamespace(requested_by_task_id="parent-task:executor"),
         prompt="Run delegated recursive matrix.",
-        metadata=ExecutionMetadata(agent_name="planner_full_only"),
+        metadata=ExecutionMetadata(agent_name="planner_closes_goal"),
         audit_recorder=None,
         mutable_state=None,
         task_id="recursive-goal:planner",
-        agent_name="planner_full_only",
+        agent_name="planner_closes_goal",
         context_message=None,
     )
 

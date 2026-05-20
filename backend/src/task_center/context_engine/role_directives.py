@@ -15,8 +15,8 @@ from __future__ import annotations
 
 
 ROLE_DIRECTIVES: dict[str, str] = {
-    "planner": "Plan for <iteration_goal>.",
-    "planner_full_only": (
+    "planner_closes_or_defers": "Plan for <iteration_goal>.",
+    "planner_closes_goal": (
         "Plan for <iteration_goal>. No defer option — must close in one attempt."
     ),
     "executor": "Complete <assigned_task>.",

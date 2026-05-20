@@ -3,9 +3,9 @@
 Builds a parent request whose harness attempt submitted a partial plan, spawns
 a child request, then asserts the planner spawned for the child:
 
-* is the ``planner_full_only`` agent (resolver swapped via the variant);
+* is the ``planner_closes_goal`` agent (resolver swapped via the variant);
 * selects the full-only agent definition;
-* the registered ``planner_full_only`` AgentDefinition has
+* the registered ``planner_closes_goal`` AgentDefinition has
   ``terminals`` without ``submit_plan_defers_goal`` (the gate is the agent.md
   ``terminals:`` filter — the model never sees the tool when the variant
   fires).
@@ -192,11 +192,11 @@ def test_partial_plan_caller_forks_child_planner_to_full_only(
     assert len(launcher.launches) == 1
     launched = launcher.launches[0]
 
-    # (a) selected agent is planner_full_only.
-    assert launched.agent_name == "planner_full_only"
-    # (b) the registered planner_full_only definition's terminals list does
+    # (a) selected agent is planner_closes_goal.
+    assert launched.agent_name == "planner_closes_goal"
+    # (b) the registered planner_closes_goal definition's terminals list does
     #     not include submit_plan_defers_goal (the gate is the agent.md filter).
-    full_only = get_definition("planner_full_only")
+    full_only = get_definition("planner_closes_goal")
     assert full_only is not None
     assert full_only.system_prompt is not None
     assert "Continuing the goal is disabled" in full_only.system_prompt

@@ -2,7 +2,7 @@
 
 Confirms that when ``AttemptDeps.composer`` is set, the orchestrator
 asks the composer for the planner agent name and context_message, and that
-``planner_full_only`` is selected when ancestry has a partial-plan caller.
+``planner_closes_goal`` is selected when ancestry has a partial-plan caller.
 """
 
 from __future__ import annotations
@@ -101,22 +101,22 @@ def composer_runtime(
 
 def _register_planner_agents() -> None:
     base = AgentDefinition(
-        name="planner",
-        description="planner",
-        context_recipe="planner",
+        name="planner_closes_or_defers",
+        description="planner_closes_or_defers",
+        context_recipe="planner_closes_or_defers",
         terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
         variants=[
             AgentVariant(
                 when="nested_goal_depth_gt_1",
-                use="planner_full_only",
+                use="planner_closes_goal",
             )
         ],
         system_prompt="PLANNER",
     )
     full_only = AgentDefinition(
-        name="planner_full_only",
-        description="planner",
-        context_recipe="planner",
+        name="planner_closes_goal",
+        description="planner_closes_or_defers",
+        context_recipe="planner_closes_or_defers",
         terminals=["submit_plan_closes_goal"],
         system_prompt="PLANNER FULL ONLY",
     )
@@ -208,7 +208,7 @@ def test_planner_launched_via_composer_uses_base_when_no_ancestor(
     orchestrator.start()
     assert len(launcher.launches) == 1
     launched = launcher.launches[0]
-    assert launched.agent_name == "planner"
+    assert launched.agent_name == "planner_closes_or_defers"
     selected = get_definition(launched.agent_name)
     assert selected is not None
     assert selected.system_prompt == "PLANNER"
@@ -258,7 +258,7 @@ def test_planner_forked_to_full_only_when_partial_plan_caller_present(
     orchestrator.start()
     assert len(launcher.launches) == 1
     launched = launcher.launches[0]
-    assert launched.agent_name == "planner_full_only"
+    assert launched.agent_name == "planner_closes_goal"
     selected = get_definition(launched.agent_name)
     assert selected is not None
     assert selected.system_prompt == "PLANNER FULL ONLY"

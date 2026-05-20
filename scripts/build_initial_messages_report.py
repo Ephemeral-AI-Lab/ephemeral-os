@@ -316,7 +316,7 @@ def build_main_constructed() -> list[ConstructedAgent]:
             "\"approve\"."
         )
 
-    planner_def = get_definition("planner") or get_definition("planner_full_only")
+    planner_def = get_definition("planner_closes_or_defers") or get_definition("planner_closes_goal")
     executor_sf = get_definition("executor_success_failure") or get_definition("executor")
     executor_sh = get_definition("executor_success_handoff") or get_definition("executor")
     evaluator_def = get_definition("evaluator")
@@ -340,7 +340,7 @@ def build_main_constructed() -> list[ConstructedAgent]:
         um2 = _append_catalog(role_text, planner_def)
         out.append(ConstructedAgent(
             label=f"planner — {label}",
-            agent_name="planner",
+            agent_name="planner_closes_or_defers",
             system=planner_def.system_prompt or "" if planner_def else "",
             user_msg_1=um1,
             user_msg_2=um2,

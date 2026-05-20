@@ -48,7 +48,7 @@ def _make_definition(
     name: str,
     skill: Path | None = None,
     variants: list[AgentVariant] | None = None,
-    recipe: str = "planner",
+    recipe: str = "planner_closes_or_defers",
 ) -> AgentDefinition:
     return AgentDefinition(
         name=name,

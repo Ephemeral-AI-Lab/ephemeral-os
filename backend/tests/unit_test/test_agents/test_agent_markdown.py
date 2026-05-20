@@ -20,13 +20,13 @@ def _load_named(directory: Path, name: str):
 
 
 def test_harness_agent_markdown_declares_notification_triggers() -> None:
-    planner = _load_named(MAIN_PROFILE_DIR, "planner")
+    planner = _load_named(MAIN_PROFILE_DIR, "planner_closes_or_defers")
     handoff_executor = _load_named(MAIN_PROFILE_DIR, "executor_success_handoff")
     verifier = _load_named(MAIN_PROFILE_DIR, "verifier")
     evaluator = _load_named(MAIN_PROFILE_DIR, "evaluator")
 
     # The planner's recursive_partial_plan notification trigger was retired
-    # in favour of the agent.md `terminals:` filter on planner_full_only —
+    # in favour of the agent.md `terminals:` filter on planner_closes_goal —
     # if the variant fires, submit_plan_defers_goal is never bound to the LLM
     # tool registry, so a soft reminder serves no purpose.
     assert planner.notification_triggers == []
@@ -40,7 +40,7 @@ def test_recursive_agent_loader_finds_harness_profiles() -> None:
     by_name = {agent.name: agent for agent in loaded}
 
     assert {
-        "planner",
+        "planner_closes_or_defers",
         "executor",
         "executor_success_handoff",
         "executor_success_failure",

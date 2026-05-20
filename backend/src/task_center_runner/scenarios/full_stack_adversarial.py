@@ -211,7 +211,7 @@ class FullStackAdversarial(ScenarioBase):
 
     def _recursive_planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         iteration = ctx.iteration
-        if ctx.agent_name == "planner_full_only":
+        if ctx.agent_name == "planner_closes_goal":
             return ToolCallSpec(submit_plan_closes_goal, _recursive_full_only_plan())
         if iteration.sequence_no == 1:
             return ToolCallSpec(
@@ -532,7 +532,7 @@ def _inventory_plan(
 
 
 def _recursive_full_only_plan() -> dict[str, Any]:
-    """Single-attempt recursive plan for goals routed to planner_full_only."""
+    """Single-attempt recursive plan for goals routed to planner_closes_goal."""
     return {
         "plan_spec": "Close delegated oversized full-stack matrix in one attempt.",
         "evaluation_criteria": [

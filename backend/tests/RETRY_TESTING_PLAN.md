@@ -131,8 +131,8 @@ auto-covered.
 
 ```python
 PROFILES_AND_TERMINALS = [
-    ("planner",              {"submit_plan_closes_goal", "submit_plan_defers_goal"}),
-    ("planner_full_only",    {"submit_plan_closes_goal"}),
+    ("planner_closes_or_defers", {"submit_plan_closes_goal", "submit_plan_defers_goal"}),
+    ("planner_closes_goal",    {"submit_plan_closes_goal"}),
     ("executor_success_failure",  {"submit_execution_success", "submit_execution_failure"}),
     ("executor_success_handoff",  {"submit_execution_success", "submit_execution_handoff"}),
     ("executor",             {...}),                # thin entry-point, terminals depend on routing
@@ -153,7 +153,7 @@ async def test_nudge_mentions_profile_terminal_tools(profile_name, expected_term
 | 1 | `test_nudge_mentions_profile_terminal_tools[<profile>×<exit_reason>]`      | Each profile's terminal tool name appears verbatim in the nudge |
 | 2 | `test_retry_uses_profile_tool_call_limit_unchanged_on_retry`               | Retry doesn't increase or decrease the limit; only `tool_calls_used` is reset |
 | 3 | `test_handoff_profile_with_only_success_or_handoff_terminals`              | `executor_success_handoff` has no `submit_execution_failure` — confirm the nudge lists exactly success + handoff |
-| 4 | `test_planner_full_only_nudges_single_terminal`                            | `planner_full_only` has only `submit_plan_closes_goal` — nudge contains exactly that name |
+| 4 | `test_planner_closes_goal_nudges_single_terminal`                            | `planner_closes_goal` has only `submit_plan_closes_goal` — nudge contains exactly that name |
 
 ### 1f. Tests to add — `test_retry_side_effects.py` (NEW, P1)
 

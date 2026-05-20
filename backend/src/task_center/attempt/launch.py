@@ -343,7 +343,7 @@ def _report_exhaustion(
 # ---- LaunchBuilder (role-parametrized AgentLaunch factory) -----------------
 
 
-PLANNER_AGENT_NAME = "planner"
+PLANNER_AGENT_NAME = "planner_closes_or_defers"
 EVALUATOR_AGENT_NAME = "evaluator"
 
 

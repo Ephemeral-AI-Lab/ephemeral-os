@@ -16,7 +16,7 @@
 - `factory.py` `config.*` access points (lines 174, 197, 284, 311, 323, 359) confirm all three
   fields {cwd, external_api_client, _initial_messages} + `resolve_settings()` are load-bearing.
 - `agents/profile/main/` ships planner.md, evaluator.md, entry_executor.md,
-  generator_executor.md (name=executor), generator_verifier.md (name=verifier), planner_full_only.md.
+  generator_executor.md (name=executor), generator_verifier.md (name=verifier), planner_closes_goal.md.
 - `models/registry.json` exists at repo root.
 - `launcher._pending: set[asyncio.Task[None]]` exists at agent_launch/launcher.py:61.
 
@@ -89,7 +89,7 @@
 - tools/submission/planner/__init__.py exports + tools/submission/_factory.py registrations swapped.
 - planner.md: added closes-vs-continues semantic sentence; updated frontmatter terminals + body.
   "Rules for partial plans:" -> "Rules for continues-goal plans:"; "partial only" -> "continues-goal only".
-- planner_full_only.md: frontmatter terminals shrunk to just submit_plan_closes_goal; body
+- planner_closes_goal.md: frontmatter terminals shrunk to just submit_plan_closes_goal; body
   rewritten ("Continuing the goal is disabled in this attempt.") with NO mention of the disallowed
   submit_plan_continues_goal tool name (to satisfy test_full_only_body_contains_no_partial_plan_prose).
 - Mass sed across 54 files (4 patterns: 2 snake_case + 2 CamelCase) handled all fixtures.
@@ -105,7 +105,7 @@
   task_state.py:61, ContextBlockKind.TASK_SPECIFICATION enum at packet.py:40, DB columns at
   db/models/attempt.py:32 + iteration.py:50, audit JSON keys at recorder.py:78,94 — these all keep
   the historical name to avoid Alembic migration + audit-contract breakage.
-- planner.md and planner_full_only.md bodies sed-replaced task_specification -> plan_spec.
+- planner.md and planner_closes_goal.md bodies sed-replaced task_specification -> plan_spec.
 - Two test sites that build tool-input payloads (not PlannerSubmission DTO) updated:
   test_submission_planner_tools.py:26 and test_phase03_submission_integration.py:106.
 - Other test sites that construct PlannerSubmission DTO keep task_specification (correct: internal name).
@@ -339,7 +339,7 @@ backend/tests/RETRY_TESTING_PLAN.md (P0+P1 matrix; §4 real-LLM + §5 mock-runne
 - R2: 8 e2e tests (R1 smoke + 7 plan §1b rows). RESOURCE_LIMIT trigger pattern documented in module docstring: pre-seed `tool_calls_used = tool_call_limit` because the reserved-slot rule blocks non-terminal calls from reaching limit when `terminal_tools` is non-empty.
 - R3: 8 plan §1c lifecycle bookkeeping tests.
 - R4: 5 plan §1d multi-attempt tests (including max_terminal_retries=100 boundary).
-- R5: 37 tests (33 parametrized matrix + 4 named) — loads live profile registry via `load_agents_tree`; covers all 10 profiles with non-empty terminals (advisor, resolver, entry_executor, evaluator, executor_success_failure, executor_success_handoff, verifier, planner, planner_full_only, explorer).
+- R5: 37 tests (33 parametrized matrix + 4 named) — loads live profile registry via `load_agents_tree`; covers all 10 profiles with non-empty terminals (advisor, resolver, entry_executor, evaluator, executor_success_failure, executor_success_handoff, verifier, planner, planner_closes_goal, explorer).
 - R6: 6 plan §1f side-effect tests. Row 1 reframed per advisor guidance: visible invariant is "retry boundary does not stomp user-owned tool_metadata" (cancel_all happens in loop's finally, not in the retry wrapper).
 - R7: 5 plan §2a subagent tests. Monkeypatches BOTH `engine.api.run_ephemeral_agent` and `engine.agent.lifecycle.run_ephemeral_agent` (engine.api uses lazy __getattr__ proxy).
 - R8: 8 plan §2b helper tool tests (4 advisor + 4 resolver). `compose_helper_bundle` stubbed via `sys.modules[...]` because the ask_helper `__init__` re-exports the FunctionTool under the submodule name (string-path monkeypatch collides).

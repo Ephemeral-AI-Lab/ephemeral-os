@@ -253,7 +253,7 @@ _BOOTSTRAPPED = False
 # Tree layout (load_agents_tree walks recursively, so one call picks all three):
 #   main/      — planner.md, evaluator.md, entry_executor.md,
 #                generator_executor.md (name=executor), generator_verifier.md (name=verifier),
-#                planner_full_only.md
+#                planner_closes_goal.md
 #   helper/    — helper agents (sub-planners, etc.)
 #   subagent/  — programmatic-only subagents (advisor, resolver, explorer)
 # CRITICAL: parents[1] (verified). __file__ = backend/src/live_e2e/real_agent_bootstrap.py,

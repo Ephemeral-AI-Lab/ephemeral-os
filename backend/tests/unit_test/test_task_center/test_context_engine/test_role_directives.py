@@ -20,8 +20,8 @@ def test_every_dispatched_agent_has_a_directive():
 
 def test_directives_match_spec_lines():
     expected = {
-        "planner": "Plan for <iteration_goal>.",
-        "planner_full_only": (
+        "planner_closes_or_defers": "Plan for <iteration_goal>.",
+        "planner_closes_goal": (
             "Plan for <iteration_goal>. No defer option — must close in one attempt."
         ),
         "executor_success_handoff": "Complete <assigned_task>.",

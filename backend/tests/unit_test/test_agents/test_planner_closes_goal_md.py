@@ -1,0 +1,85 @@
+"""US-015: planner_closes_goal agent.md drift + frontmatter assertions."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from agents import AgentKind, load_agents_dir
+
+BACKEND_ROOT = Path(__file__).resolve().parents[3]
+PLANNER_DIR = BACKEND_ROOT / "src" / "agents" / "profile" / "main"
+
+
+def _load_planner_pair():
+    loaded = load_agents_dir(PLANNER_DIR)
+    by_name = {agent.name: agent for agent in loaded}
+    assert "planner_closes_or_defers" in by_name
+    assert "planner_closes_goal" in by_name
+    return by_name["planner_closes_or_defers"], by_name["planner_closes_goal"]
+
+
+def test_both_planner_definitions_load():
+    planner, full_only = _load_planner_pair()
+    assert planner.agent_kind == AgentKind.PLANNER
+    assert full_only.agent_kind == AgentKind.PLANNER
+
+
+def test_full_only_terminals_exclude_partial_plan():
+    _, full_only = _load_planner_pair()
+    assert "submit_plan_closes_goal" in full_only.terminals
+    assert "submit_plan_defers_goal" not in full_only.terminals
+
+
+def test_full_only_body_contains_no_partial_plan_prose():
+    _, full_only = _load_planner_pair()
+    body = full_only.system_prompt or ""
+    assert "submit_plan_defers_goal" not in body
+    assert "deferred_goal_for_next_iteration" not in body
+
+
+def test_full_only_has_no_variants():
+    """Variant targets must not declare their own variants — chaining is forbidden."""
+    _, full_only = _load_planner_pair()
+    assert full_only.variants == []
+
+
+def test_each_planner_variant_uses_its_own_recipe():
+    planner, full_only = _load_planner_pair()
+    assert planner.context_recipe == "planner_closes_or_defers"
+    assert full_only.context_recipe == "planner_closes_goal"
+
+
+def test_planner_variants_declare_full_only_target():
+    planner, _ = _load_planner_pair()
+    assert len(planner.variants) == 1
+    variant = planner.variants[0]
+    assert variant.when == "nested_goal_depth_gt_1"
+    assert variant.use == "planner_closes_goal"
+
+
+def test_planner_no_longer_lists_recursive_partial_plan_trigger():
+    """The frontmatter terminals filter on planner_closes_goal is the gate now;
+    recursive_partial_plan notification is intentionally absent (US-016)."""
+    planner, _ = _load_planner_pair()
+    assert "recursive_partial_plan" not in planner.notification_triggers
+
+
+def test_planners_name_valid_graph_agents():
+    """Real planners need concrete agent_name values; repo-local guesses fail."""
+    planner, full_only = _load_planner_pair()
+    for profile in (planner, full_only):
+        body = profile.system_prompt or ""
+        assert "`executor` for implementation" in body
+        assert "`verifier` for independent verification" in body
+        assert "code_executor" in body
+        assert "python_executor" in body
+
+
+def test_planners_treat_release_notes_as_code_repair_targets():
+    """SWE-EVO-style release notes are behavior deltas, not doc-writing tasks."""
+    planner, full_only = _load_planner_pair()
+    for profile in (planner, full_only):
+        body = profile.system_prompt or ""
+        assert "Code-repair benchmark framing" in body
+        assert "treat that text as the behavior/code delta to implement" in body
+        assert "Do **not** plan to summarize, rewrite, or create a release-notes document" in body

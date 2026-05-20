@@ -30,8 +30,8 @@ TaskGuidanceBuilder = Callable[..., str]
 
 _AGENTS_WITH_TASK_GUIDANCE: frozenset[str] = frozenset(
     {
-        "planner",
-        "planner_full_only",
+        "planner_closes_or_defers",
+        "planner_closes_goal",
         "executor_success_handoff",
         "executor_success_failure",
         # ``generator_verifier.md`` registers as ``name: verifier`` in its

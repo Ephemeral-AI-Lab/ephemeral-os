@@ -115,8 +115,8 @@ async def test_initial_messages_capture(
         Path(__file__).resolve().parents[3] / "agents" / "profile" / "main"
     )
     profiles = {d.name: d for d in load_agents_dir(profile_dir)}
-    planner_def = profiles["planner"]
-    planner_full_def = profiles["planner_full_only"]
+    planner_def = profiles["planner_closes_or_defers"]
+    planner_full_def = profiles["planner_closes_goal"]
     assert planner_def.skill is not None
     assert planner_full_def.skill is not None
     planner_terminals = list(planner_def.terminals)
@@ -187,7 +187,7 @@ async def test_initial_messages_capture(
             # row 3 block byte-for-byte (between the open/close tags).
             terminals = (
                 full_only_terminals
-                if "planner_full_only" in role_dir
+                if "planner_closes_goal" in role_dir
                 else planner_terminals
             )
             expected_catalog = render_terminal_catalog(

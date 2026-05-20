@@ -1256,7 +1256,7 @@ class MockSquadRunner:
                 "Entry executor receives the exact SWE-EVO user request as a "
                 "required entry_request block before it delegates the goal."
             )
-        elif agent_def.name == "planner_full_only":
+        elif agent_def.name == "planner_closes_goal":
             checks = {
                 "goal": "<goal>" in prompt,
                 "goal_only_context": "<iteration " not in prompt,

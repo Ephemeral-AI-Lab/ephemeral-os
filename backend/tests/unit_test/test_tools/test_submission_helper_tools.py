@@ -154,7 +154,7 @@ async def test_ask_advisor_assembles_direct_launch(monkeypatch) -> None:
         )
     )
     parent_def = AgentDefinition(
-        name="planner",
+        name="planner_closes_or_defers",
         description="planner stub",
         agent_kind=AgentKind.PLANNER,
         terminals=["submit_plan_closes_goal"],
@@ -187,14 +187,14 @@ async def test_ask_advisor_assembles_direct_launch(monkeypatch) -> None:
             },
             _helper_context(
                 role="planner",
-                agent_name="planner",
+                agent_name="planner_closes_or_defers",
                 parent_messages=_two_msg_parent(),
             ),
             emit=_noop_emit,
         )
     finally:
         unregister_definition("advisor")
-        unregister_definition("planner")
+        unregister_definition("planner_closes_or_defers")
 
     assert not result.is_error
     assert result.output == "approved"
@@ -241,7 +241,7 @@ async def test_ask_advisor_errors_when_parent_messages_missing() -> None:
             },
             _helper_context(
                 role="planner",
-                agent_name="planner",
+                agent_name="planner_closes_or_defers",
                 parent_messages=[],
             ),
             emit=_noop_emit,

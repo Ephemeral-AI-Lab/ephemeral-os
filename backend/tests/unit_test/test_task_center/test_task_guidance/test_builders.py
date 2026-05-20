@@ -118,7 +118,7 @@ def _packet(blocks: list[ContextBlock]) -> ContextPacket:
 
 def test_planner_iter1_fresh_outline():
     prose = build_task_guidance(
-        agent_def=_agent_def("planner"),
+        agent_def=_agent_def("planner_closes_or_defers"),
         packet=_packet([_goal_block(), _iteration_goal_block(1)]),
         scope=None,  # type: ignore[arg-type]
     )
@@ -131,7 +131,7 @@ def test_planner_iter1_fresh_outline():
 
 def test_planner_iter1_after_failure_outline():
     prose = build_task_guidance(
-        agent_def=_agent_def("planner"),
+        agent_def=_agent_def("planner_closes_or_defers"),
         packet=_packet(
             [_goal_block(), _iteration_goal_block(1), _prior_attempt_block()]
         ),
@@ -165,9 +165,9 @@ def test_executor_no_handoff_directive_for_failure_variant():
     )
 
 
-def test_planner_full_only_directive_marks_one_attempt():
+def test_planner_closes_goal_directive_marks_one_attempt():
     prose = build_task_guidance(
-        agent_def=_agent_def("planner_full_only"),
+        agent_def=_agent_def("planner_closes_goal"),
         packet=_packet([_goal_block(), _iteration_goal_block(1)]),
         scope=None,  # type: ignore[arg-type]
     )

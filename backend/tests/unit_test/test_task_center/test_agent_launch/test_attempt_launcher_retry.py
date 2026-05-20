@@ -73,7 +73,7 @@ def _seed_planner_attempt(
         task_id=task_id,
         task_center_run_id=task_center_run_id,
         role=TaskCenterTaskRole.PLANNER.value,
-        agent_name="planner",
+        agent_name="planner_closes_or_defers",
         context_message="plan",
         status=TaskCenterTaskStatus.RUNNING.value,
         summaries=[],
@@ -90,7 +90,7 @@ def _build_launch(*, attempt: Any, goal: Any, task_id: str, task_center_run_id: 
         task_center_run_id=task_center_run_id,
         attempt_id=attempt.id,
         role=TaskCenterTaskRole.PLANNER,
-        agent_name="planner",
+        agent_name="planner_closes_or_defers",
         context="plan context",
         task_guidance="plan the work",
         needs=(),
@@ -160,7 +160,7 @@ async def test_main_planner_engine_retry_keeps_attempt_sequence_no_at_one(
             terminal_result=ToolResult(
                 output="full plan", is_error=False, does_terminate=True
             ),
-            agent_name="planner",
+            agent_name="planner_closes_or_defers",
             event_count=12,
         )
 
@@ -228,7 +228,7 @@ async def test_main_planner_engine_retry_exhausted_marks_attempt_failed(
             status="completed",
             error=None,
             terminal_result=None,
-            agent_name="planner",
+            agent_name="planner_closes_or_defers",
             event_count=8,
         )
 
@@ -297,7 +297,7 @@ async def test_attempt_harness_records_engine_retry_token_usage(
             terminal_result=ToolResult(
                 output="plan", is_error=False, does_terminate=True
             ),
-            agent_name="planner",
+            agent_name="planner_closes_or_defers",
             event_count=42,  # mimics aggregated cross-attempt count
         )
         captured_results.append(result)
@@ -370,7 +370,7 @@ async def test_continuation_planner_attempt_inherits_default_retry(
                 is_error=False,
                 does_terminate=True,
             ),
-            agent_name="planner",
+            agent_name="planner_closes_or_defers",
             event_count=1,
         )
 
@@ -451,7 +451,7 @@ async def test_main_agent_launches_with_two_user_messages(
             terminal_result=ToolResult(
                 output="plan", is_error=False, does_terminate=True
             ),
-            agent_name="planner",
+            agent_name="planner_closes_or_defers",
             event_count=1,
         )
 
@@ -508,7 +508,7 @@ async def test_entry_executor_falls_back_to_single_user_message(
         task_center_run_id=task_center_run_id,
         attempt_id=attempt.id,
         role=TaskCenterTaskRole.PLANNER,
-        agent_name="planner",
+        agent_name="planner_closes_or_defers",
         context="execute this task",
         task_guidance=None,  # no task-guidance prose
         needs=(),

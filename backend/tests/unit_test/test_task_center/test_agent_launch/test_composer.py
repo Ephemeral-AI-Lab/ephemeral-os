@@ -194,7 +194,7 @@ def test_compose_rejects_user_supplied_context_closer():
 def test_compose_wraps_task_guidance_when_builder_registered():
     """A registered agent name dispatches to the builder and wraps the prose."""
     _register_simple_recipe(
-        "planner",
+        "planner_closes_or_defers",
         blocks=[
             ContextBlock(
                 kind="iteration_statement",
@@ -208,13 +208,13 @@ def test_compose_wraps_task_guidance_when_builder_registered():
         ],
     )
     _register_agent(
-        name="planner",
-        recipe="planner",
+        name="planner_closes_or_defers",
+        recipe="planner_closes_or_defers",
         terminals=("submit_plan_closes_goal",),
     )
     composer = AgentEntryComposer.default(ContextEngine(_make_deps()))
     messages = composer.compose(
-        base_agent_name="planner",
+        base_agent_name="planner_closes_or_defers",
         scope=ContextScope(goal_id="g", iteration_id="i", attempt_id="a"),
     )
     # AC #2: task_guidance starts with "<Task Guidance>\n".

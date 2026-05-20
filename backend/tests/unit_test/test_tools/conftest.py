@@ -128,10 +128,10 @@ def register_test_agents(isolated_agent_registries):
     """Register the bare-minimum agents needed by tool/lifecycle tests."""
     register_definition(
         AgentDefinition(
-            name="planner",
+            name="planner_closes_or_defers",
             description="test planner",
             agent_kind=AgentKind.PLANNER,
-            context_recipe="planner",
+            context_recipe="planner_closes_or_defers",
             terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
         )
     )

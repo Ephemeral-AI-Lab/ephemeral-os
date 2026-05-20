@@ -124,10 +124,10 @@ def test_handoff_profile_with_only_success_or_handoff_terminals() -> None:
     assert "submit_execution_failure" not in nudge
 
 
-def test_planner_full_only_nudges_single_terminal() -> None:
-    """planner_full_only has only submit_plan_closes_goal."""
+def test_planner_closes_goal_nudges_single_terminal() -> None:
+    """planner_closes_goal has only submit_plan_closes_goal."""
     by_name = {d.name: d for d in PROFILES}
-    full_only = by_name["planner_full_only"]
+    full_only = by_name["planner_closes_goal"]
     assert set(full_only.terminals) == {"submit_plan_closes_goal"}
     nudge = _build_retry_nudge(
         QueryExitReason.TEXT_RESPONSE, set(full_only.terminals)

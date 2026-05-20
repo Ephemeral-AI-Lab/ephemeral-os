@@ -127,6 +127,6 @@ def test_shipped_planner_skills_pass_lint():
     ]
     # Sanity: both planner variants exist and declare skills.
     names = {d.name for d in defs}
-    assert {"planner", "planner_full_only"}.issubset(names)
+    assert {"planner_closes_or_defers", "planner_closes_goal"}.issubset(names)
     # Must not raise.
     validate_skill_files(defs)

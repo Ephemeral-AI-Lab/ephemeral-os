@@ -11,10 +11,10 @@ from tools._terminals.registry import render_terminal_catalog
 
 def _make_planner_def(terminals: list[str] | None = None) -> AgentDefinition:
     return AgentDefinition(
-        name="planner",
-        description="planner",
+        name="planner_closes_or_defers",
+        description="planner_closes_or_defers",
         agent_kind=AgentKind.PLANNER,
-        context_recipe="planner",
+        context_recipe="planner_closes_or_defers",
         terminals=terminals
         if terminals is not None
         else ["submit_plan_closes_goal", "submit_plan_defers_goal"],
@@ -29,7 +29,7 @@ def test_build_skill_message_returns_none_when_no_skill():
 def test_build_skill_message_has_load_header_skill_block_and_terminal_block(
     tmp_path: Path,
 ):
-    skill_file = tmp_path / "planner" / "SKILL.md"
+    skill_file = tmp_path / "planner_closes_or_defers" / "SKILL.md"
     skill_file.parent.mkdir()
     skill_file.write_text(
         "---\nname: planner\n---\n\n# Planner skill\n\nWorkflow text."
@@ -37,7 +37,7 @@ def test_build_skill_message_has_load_header_skill_block_and_terminal_block(
     msg = build_skill_message(skill_file, _make_planner_def())
     assert msg is not None
 
-    assert msg.startswith("Load skill: planner\n")
+    assert msg.startswith("Load skill: planner_closes_or_defers\n")
     assert "<skill>" in msg and "</skill>" in msg
     assert "<terminal_tool_selection>" in msg and "</terminal_tool_selection>" in msg
 
@@ -50,7 +50,7 @@ def test_build_skill_message_has_load_header_skill_block_and_terminal_block(
 
 def test_terminal_tool_selection_block_matches_registry_catalog(tmp_path: Path):
     """Row 4's <terminal_tool_selection> renders from the same registry call as row 3."""
-    skill_file = tmp_path / "planner" / "SKILL.md"
+    skill_file = tmp_path / "planner_closes_or_defers" / "SKILL.md"
     skill_file.parent.mkdir()
     skill_file.write_text("# body")
     planner_def = _make_planner_def(
@@ -72,7 +72,7 @@ def test_terminal_tool_selection_block_matches_registry_catalog(tmp_path: Path):
 
 
 def test_terminal_tool_selection_block_skipped_when_no_terminals(tmp_path: Path):
-    skill_file = tmp_path / "planner" / "SKILL.md"
+    skill_file = tmp_path / "planner_closes_or_defers" / "SKILL.md"
     skill_file.parent.mkdir()
     skill_file.write_text("# body")
     plain_def = AgentDefinition(
@@ -89,9 +89,9 @@ def test_terminal_tool_selection_block_skipped_when_no_terminals(tmp_path: Path)
 
 def test_skill_name_derives_from_parent_folder(tmp_path: Path):
     """Load skill: <name> uses skill_path.parent.name as the slug."""
-    skill_file = tmp_path / "planner_full_only" / "SKILL.md"
+    skill_file = tmp_path / "planner_closes_goal" / "SKILL.md"
     skill_file.parent.mkdir()
     skill_file.write_text("# body")
     msg = build_skill_message(skill_file, _make_planner_def())
     assert msg is not None
-    assert msg.startswith("Load skill: planner_full_only\n")
+    assert msg.startswith("Load skill: planner_closes_goal\n")

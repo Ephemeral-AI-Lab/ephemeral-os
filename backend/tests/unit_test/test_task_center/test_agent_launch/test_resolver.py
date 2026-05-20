@@ -59,22 +59,22 @@ def deps() -> ContextEngineDeps:
 @pytest.fixture
 def planner_with_variant():
     base = AgentDefinition(
-        name="planner",
-        description="planner",
-        context_recipe="planner",
+        name="planner_closes_or_defers",
+        description="planner_closes_or_defers",
+        context_recipe="planner_closes_or_defers",
         terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
         variants=[
             AgentVariant(
                 when="needs_full_only",
-                use="planner_full_only",
+                use="planner_closes_goal",
                 note="ancestry has partial-plan caller",
             )
         ],
     )
     full_only = AgentDefinition(
-        name="planner_full_only",
-        description="planner",
-        context_recipe="planner",
+        name="planner_closes_goal",
+        description="planner_closes_or_defers",
+        context_recipe="planner_closes_or_defers",
         terminals=["submit_plan_closes_goal"],
     )
     register_definition(base)
@@ -108,11 +108,11 @@ def test_empty_variants_returns_base_fast_path(deps):
 def test_variant_predicate_match_picks_target(deps):
     PredicateRegistry.register("needs_full_only", lambda ctx: True)
     sel = RuleBasedAgentResolver().resolve(
-        base_agent_name="planner",
+        base_agent_name="planner_closes_or_defers",
         scope=ContextScope(goal_id="r"),
         deps=deps,
     )
-    assert sel.agent_def.name == "planner_full_only"
+    assert sel.agent_def.name == "planner_closes_goal"
     assert "submit_plan_defers_goal" not in sel.agent_def.terminals
     assert sel.reason == "ancestry has partial-plan caller"
 
@@ -121,11 +121,11 @@ def test_variant_predicate_match_picks_target(deps):
 def test_predicate_no_match_falls_back_to_base(deps):
     PredicateRegistry.register("needs_full_only", lambda ctx: False)
     sel = RuleBasedAgentResolver().resolve(
-        base_agent_name="planner",
+        base_agent_name="planner_closes_or_defers",
         scope=ContextScope(goal_id="r"),
         deps=deps,
     )
-    assert sel.agent_def.name == "planner"
+    assert sel.agent_def.name == "planner_closes_or_defers"
 
 
 def test_declared_order_priority(deps):
@@ -186,7 +186,7 @@ def test_predicate_exception_propagates_no_fail_open(deps):
     PredicateRegistry.register("needs_full_only", _boom)
     with pytest.raises(RuntimeError):
         RuleBasedAgentResolver().resolve(
-            base_agent_name="planner",
+            base_agent_name="planner_closes_or_defers",
             scope=ContextScope(goal_id="r"),
             deps=deps,
         )

@@ -321,22 +321,22 @@ def test_ac9_planner_md_shape_passes_validation() -> None:
     """The planner.md shape — single variant + non-empty terminals — is the
     paradigmatic passing case: terminals cover the no-match branch, no
     ``always`` tail required."""
-    _stub_recipe("planner")
+    _stub_recipe("planner_closes_or_defers")
     PredicateRegistry.register("nested_goal_depth_gt_1", lambda ctx: False)
     full_only = AgentDefinition(
-        name="planner_full_only",
-        description="planner",
-        context_recipe="planner",
+        name="planner_closes_goal",
+        description="planner_closes_or_defers",
+        context_recipe="planner_closes_or_defers",
         terminals=["submit_plan_closes_goal"],
     )
     planner = AgentDefinition(
-        name="planner",
-        description="planner",
-        context_recipe="planner",
+        name="planner_closes_or_defers",
+        description="planner_closes_or_defers",
+        context_recipe="planner_closes_or_defers",
         terminals=["submit_plan_closes_goal", "submit_plan_defers_goal"],
         variants=[
             AgentVariant(
-                when="nested_goal_depth_gt_1", use="planner_full_only"
+                when="nested_goal_depth_gt_1", use="planner_closes_goal"
             )
         ],
     )

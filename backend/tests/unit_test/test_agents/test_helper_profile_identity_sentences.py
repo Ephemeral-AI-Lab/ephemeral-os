@@ -59,10 +59,10 @@ _MAIN_AGENT_IDENTITY_PINS = {
         "handoff is still available."
     ),
     "main/generator_verifier.md": "You are the **main-agent generator verifier**.",
-    "main/planner.md": (
+    "main/planner_closes_or_defers.md": (
         "You are the **planner** for one attempt in the TaskCenter harness."
     ),
-    "main/planner_full_only.md": (
+    "main/planner_closes_goal.md": (
         "You are the **planner** for one attempt in the TaskCenter harness."
     ),
     "subagent/explorer.md": "You are the explorer subagent.",

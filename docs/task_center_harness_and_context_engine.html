@@ -1034,7 +1034,7 @@ representations are derived from the same blocks and can never disagree.
 
 <pre><code>ROLE_DIRECTIVES: dict[str, str] = {
     "planner":                    "Plan for &lt;iteration_goal&gt;.",
-    "planner_full_only":          "Plan for &lt;goal&gt; with a single non-deferring submission.",
+    "planner_closes_goal":          "Plan for &lt;goal&gt; with a single non-deferring submission.",
     "executor_success_handoff":   "Complete &lt;assigned_task&gt;.",
     "executor_success_failure":   "Complete &lt;assigned_task&gt;.",
     "evaluator":                  "Verify the current attempt against &lt;evaluation_criteria&gt;.",
@@ -1066,7 +1066,7 @@ generators in different DAG positions get the same directive but distinct contex
     <td><code>&lt;goal&gt;</code>, prior <code>&lt;iteration&gt;</code> groups, current <code>&lt;iteration status=&quot;current&quot;&gt;</code> with <code>&lt;iteration_goal&gt;</code>, all failed <code>&lt;attempt&gt;</code> blocks for this iteration.</td>
   </tr>
   <tr>
-    <td><code>planner_full_only</code></td>
+    <td><code>planner_closes_goal</code></td>
     <td><span class="pill planner">planner</span></td>
     <td><code>goal_id</code></td>
     <td>Single <code>&lt;goal&gt;</code> block. Used for leaf-node planners (nested depth &gt; 1) where <code>defers</code> is forbidden; no iteration scaffolding.</td>
@@ -1225,7 +1225,7 @@ terminal-tool surface at runtime.
 <p>
 The terminal-tool selection block is the agent&apos;s list of allowed terminal submissions
 (e.g. <code>submit_plan_completes</code> + <code>submit_plan_defers</code> for a planner with
-defer enabled; just <code>submit_plan_completes</code> for <code>planner_full_only</code>). It
+defer enabled; just <code>submit_plan_completes</code> for <code>planner_closes_goal</code>). It
 is appended to both row 3 and row 4 so the agent sees consistent submission rules
 regardless of which row it reads first.
 </p>

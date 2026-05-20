@@ -70,7 +70,7 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     "pipeline.attempt_budget_exhausted": AttemptBudgetExhausted,
     "pipeline.nested_goal": NestedGoal,
     "pipeline.nested_goal_failure": NestedGoalFailure,
-    "pipeline.deferred_parent_planner_full_only": DeferredParentPlannerFullOnly,
+    "pipeline.deferred_parent_planner_closes_goal": DeferredParentPlannerFullOnly,
     # Composite capacity scenarios.
     "capacity.full_system_capacity_matrix": FullSystemCapacityMatrix,
     # Focused sandbox scenarios.
