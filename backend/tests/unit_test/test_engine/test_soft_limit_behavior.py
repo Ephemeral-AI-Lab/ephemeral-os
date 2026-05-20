@@ -71,7 +71,6 @@ async def _drive_dispatch_branch(
 
     state = MagicMock()
     state.final_message = final_message
-    state.streamed_rejections = []
     state.streamed_tool_use_ids = set()
 
     run_request = build_query_run_request(context, messages)
@@ -110,7 +109,7 @@ async def test_dispatch_continues_when_overshoot_at_tolerance_boundary(
     ]
     dispatched_results = [ToolResultBlock(tool_use_id="tu_1", content="ok", is_error=False)]
     # Simulate the per-tool counter bump that happens in
-    # ``_consume_tool_budget_or_reject`` before dispatch returns.
+    # ``_count_tool_dispatch`` before dispatch returns.
     context.tool_calls_used += 1
 
     await _drive_dispatch_branch(

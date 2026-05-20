@@ -14,7 +14,7 @@ from providers.types import (
     ApiToolUseDeltaEvent,
     UsageSnapshot,
 )
-from message.messages import ConversationMessage, ToolResultBlock
+from message.messages import ConversationMessage
 from message.stream_events import (
     AssistantMessageComplete,
     AssistantTextDelta,
@@ -41,7 +41,7 @@ from tools import (
     BaseTool,
     ExecutionMetadata,
     ToolExecutionContextService,
-    _consume_tool_budget_or_reject,
+    _count_tool_dispatch,
 )
 
 
@@ -79,7 +79,6 @@ class _StreamRunState:
 
     final_message: ConversationMessage | None = None
     usage: UsageSnapshot = field(default_factory=UsageSnapshot)
-    streamed_rejections: list[ToolResultBlock] = field(default_factory=list)
     streamed_tool_use_ids: set[str] = field(default_factory=set)
 
 
@@ -169,23 +168,7 @@ async def _consume_provider_stream(
 
             if isinstance(event, ApiToolUseDeltaEvent):
                 state.streamed_tool_use_ids.add(event.id)
-                budget_rejection = await _consume_tool_budget_or_reject(
-                    context,
-                    event.name,
-                    event.id,
-                )
-                if budget_rejection is not None:
-                    state.streamed_rejections.append(budget_rejection)
-                    yield (
-                        ToolExecutionCompleted(
-                            tool_name=event.name,
-                            output=budget_rejection.content,
-                            is_error=True,
-                            tool_id=event.id,
-                        ),
-                        None,
-                    )
-                    continue
+                _count_tool_dispatch(context)
                 executor.add_tool(event)
                 for emitted in executor.get_events():
                     yield emitted, None
@@ -236,7 +219,6 @@ async def _handle_tool_dispatch_branch(
         messages,
         final_message,
         executor,
-        streamed_rejections=state.streamed_rejections,
         streamed_tool_use_ids=state.streamed_tool_use_ids,
         background_manager=background_manager,
     )

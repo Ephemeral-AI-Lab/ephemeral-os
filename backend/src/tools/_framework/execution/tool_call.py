@@ -23,24 +23,15 @@ if TYPE_CHECKING:
 EmitStreamEvent = Callable[[StreamEvent], Awaitable[None]]
 
 
-async def _consume_tool_budget_or_reject(
-    context: QueryContext,
-    tool_name: str,
-    tool_use_id: str,
-) -> ToolResultBlock | None:
-    """Increment the per-run tool-call counter. Never rejects.
+def _count_tool_dispatch(context: QueryContext) -> None:
+    """Increment the per-run tool-call counter.
 
     Soft-limit signaling is delivered via the ``budget_overflow_reminder``
     notification rule; hard-failure is the loop's responsibility when
-    ``overshoot_units > max_tolerance_after_max_tool_call``. The return type
-    is preserved at ``ToolResultBlock | None`` for one PR boundary —
-    Phase 3 removes the ``Optional`` and the dead rejection-handling
-    branches in ``dispatch.py`` and ``loop.py:_consume_provider_stream``.
+    ``overshoot_units > max_tolerance_after_max_tool_call``.
     """
-    del tool_name, tool_use_id  # signature preserved for call-site stability
     if context.tool_call_limit is not None:
         context.tool_calls_used += 1
-    return None
 
 
 async def execute_tool_call(
@@ -80,9 +71,7 @@ async def execute_tool_call_streaming(
 ) -> ToolResultBlock:
     """Execute one tool call and emit lifecycle events for the active stream."""
     if consume_budget:
-        budget_rejection = await _consume_tool_budget_or_reject(context, tool_name, tool_use_id)
-        if budget_rejection is not None:
-            return budget_rejection
+        _count_tool_dispatch(context)
 
     tool = context.tool_registry.get(tool_name)
     if tool is None:

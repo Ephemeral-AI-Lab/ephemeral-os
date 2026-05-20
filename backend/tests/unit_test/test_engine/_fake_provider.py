@@ -9,7 +9,7 @@ Each :class:`ScriptedTurn` describes one ``stream_message`` invocation:
 
 - ``text_deltas`` are streamed as :class:`ApiTextDeltaEvent` events first.
 - ``tool_uses`` are streamed as :class:`ApiToolUseDeltaEvent` events (so the
-  loop calls ``_consume_tool_budget_or_reject`` for each before the message
+  loop calls ``_count_tool_dispatch`` for each before the message
   completes).
 - A trailing :class:`ApiMessageCompleteEvent` carries the assembled assistant
   message containing matching :class:`ToolUseBlock` and :class:`TextBlock`

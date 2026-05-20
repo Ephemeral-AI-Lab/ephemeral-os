@@ -87,7 +87,6 @@ async def test_resource_limit_exit_appends_tool_results_to_transcript(
 
     state = MagicMock()
     state.final_message = final_message
-    state.streamed_rejections = []
     state.streamed_tool_use_ids = set()
 
     run_request = build_query_run_request(context, messages)

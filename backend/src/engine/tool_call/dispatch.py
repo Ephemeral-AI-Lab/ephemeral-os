@@ -116,12 +116,11 @@ async def dispatch_assistant_tools(
     final_message: ConversationMessage,
     executor: StreamingToolExecutor,
     *,
-    streamed_rejections: list[ToolResultBlock],
     streamed_tool_use_ids: set[str],
     background_manager: BackgroundTaskManager | None,
 ) -> ToolDispatchResult:
     events: list[StreamEvent] = []
-    tool_results: list[ToolResultBlock] = list(streamed_rejections)
+    tool_results: list[ToolResultBlock] = []
 
     remaining_events = await executor.get_remaining()
     events.extend(executor.get_events())
