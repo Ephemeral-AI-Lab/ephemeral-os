@@ -1,10 +1,10 @@
 """``task_center_runner.core`` — engine seams and config contracts.
 
-Phase 2 of the restructure (.omc/plans/task_center_runner-restructure.md)
-introduces the Protocol/dataclass surface that the unified ``run_pipeline``
-will consume in Phase 4. None of these symbols are wired into the runtime
-yet; the existing ``run_scenario`` / ``run_sweevo_real_agent`` paths remain
-the in-use entrypoints until Phase 4 lands.
+Exposes the Protocol/dataclass surface consumed by the unified
+:func:`run_pipeline`: :class:`RunConfig`, :class:`RunContext`,
+:class:`PipelineReport`, :class:`SandboxProvisioner` /
+:class:`SandboxLease` / :class:`AttachExisting`, and the
+:class:`LifecycleHooks` / :class:`NoopLifecycle` pair.
 """
 
 from __future__ import annotations

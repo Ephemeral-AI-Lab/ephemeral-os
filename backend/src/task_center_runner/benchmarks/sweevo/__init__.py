@@ -1,18 +1,17 @@
 """SWE-EVO benchmark adapter for ``task_center_runner``.
 
-Phase 4b additive surface — Phase 4f wires ``run_sweevo_real_agent`` to
-use ``SWEEvoBenchmark`` + ``SweevoLifecycle`` via ``run_pipeline``. Until
-then, this package is import-safe but not wired into the runtime.
+Wires ``benchmarks.sweevo`` data into ``run_pipeline`` via:
 
-The underlying SWE-EVO data layer (``backend/src/benchmarks/sweevo/``) stays
-unchanged — this package only thins it into the ``BenchmarkAdapter`` and
-``SandboxProvisioner`` Protocols.
+- :class:`SweevoLifecycle` — the ``LifecycleHooks`` implementation that
+  invokes F2P/P2P evaluation in ``after_run`` and writes
+  ``sweevo_result.json``.
+- :class:`SweevoProvisioner` — the ``SandboxProvisioner`` that seeds an
+  externally-created Daytona sandbox at the SWE-EVO base commit.
 """
 
 from __future__ import annotations
 
-from task_center_runner.benchmarks.sweevo.adapter import SWEEvoBenchmark
 from task_center_runner.benchmarks.sweevo.lifecycle import SweevoLifecycle
 from task_center_runner.benchmarks.sweevo.provisioner import SweevoProvisioner
 
-__all__ = ["SWEEvoBenchmark", "SweevoLifecycle", "SweevoProvisioner"]
+__all__ = ["SweevoLifecycle", "SweevoProvisioner"]

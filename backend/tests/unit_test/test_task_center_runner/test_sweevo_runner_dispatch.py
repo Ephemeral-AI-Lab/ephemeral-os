@@ -22,7 +22,7 @@ from message.stream_events import (
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
-from task_center_runner.benchmarks.sweevo import csv_runner as csv_runner_mod
+from task_center_runner.benchmarks.sweevo import sweevo_runner as sweevo_runner_mod
 from tools._framework.core.results import ToolResult
 from tools._framework.core.runtime import ExecutionMetadata
 
@@ -42,7 +42,7 @@ def _fake_tool_result() -> ToolResult:
 
 @pytest.mark.asyncio
 async def test_factory_returns_callable_runner() -> None:
-    factory = csv_runner_mod.build_selective_entry_mock_runner_factory(
+    factory = sweevo_runner_mod.build_selective_entry_mock_runner_factory(
         goal="G", repo_dir="/r"
     )
     runner = factory(MagicMock())
@@ -61,9 +61,9 @@ async def test_entry_executor_calls_submit_handoff(
         captured["ctx"] = _ctx
         return _fake_tool_result()
 
-    monkeypatch.setattr(csv_runner_mod, "execute_tool_once", fake_execute_tool_once)
+    monkeypatch.setattr(sweevo_runner_mod, "execute_tool_once", fake_execute_tool_once)
 
-    factory = csv_runner_mod.build_selective_entry_mock_runner_factory(
+    factory = sweevo_runner_mod.build_selective_entry_mock_runner_factory(
         goal="MY_GOAL_STRING\nwith newlines", repo_dir="/repo"
     )
     runner = factory(MagicMock())
@@ -90,9 +90,9 @@ async def test_entry_executor_emits_tool_events(
     async def fake_execute_tool_once(_tool, _raw, _ctx, **_kw):
         return _fake_tool_result()
 
-    monkeypatch.setattr(csv_runner_mod, "execute_tool_once", fake_execute_tool_once)
+    monkeypatch.setattr(sweevo_runner_mod, "execute_tool_once", fake_execute_tool_once)
 
-    factory = csv_runner_mod.build_selective_entry_mock_runner_factory(
+    factory = sweevo_runner_mod.build_selective_entry_mock_runner_factory(
         goal="G", repo_dir="/r"
     )
     runner = factory(MagicMock())
@@ -149,9 +149,9 @@ async def test_non_entry_falls_through_to_real_runner(
     raising_execute_tool_once = MagicMock(
         side_effect=AssertionError("execute_tool_once must NOT be called for non-entry agents")
     )
-    monkeypatch.setattr(csv_runner_mod, "execute_tool_once", raising_execute_tool_once)
+    monkeypatch.setattr(sweevo_runner_mod, "execute_tool_once", raising_execute_tool_once)
 
-    factory = csv_runner_mod.build_selective_entry_mock_runner_factory(
+    factory = sweevo_runner_mod.build_selective_entry_mock_runner_factory(
         goal="G", repo_dir="/r"
     )
     runner = factory(MagicMock())
@@ -204,9 +204,9 @@ async def test_metadata_overrides_applied_to_tool_context(
         captured["cwd"] = ctx.cwd
         return _fake_tool_result()
 
-    monkeypatch.setattr(csv_runner_mod, "execute_tool_once", fake_execute_tool_once)
+    monkeypatch.setattr(sweevo_runner_mod, "execute_tool_once", fake_execute_tool_once)
 
-    factory = csv_runner_mod.build_selective_entry_mock_runner_factory(
+    factory = sweevo_runner_mod.build_selective_entry_mock_runner_factory(
         goal="G", repo_dir="/the/repo"
     )
     runner = factory(MagicMock())

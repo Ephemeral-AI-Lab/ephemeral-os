@@ -19,7 +19,7 @@ constructs `EphemeralRunResult` directly via `return EphemeralRunResult(...)`
 - **The engine retry only fires in three places**: (1) direct
   `run_ephemeral_agent` calls, (2) `task_center/attempt/launch.py:122` which
   is the production main-agent path, (3) `tools/subagent/`,
-  `tools/ask_helper/`, `task_center_runner/benchmarks/sweevo/csv_runner.py`
+  `tools/ask_helper/`, `task_center_runner/benchmarks/sweevo/sweevo_runner.py`
   which wrap `run_ephemeral_agent`.
 - **To exercise engine retry through the scenario suite would require**
   routing `MockSquadRunner` through `run_ephemeral_agent` with a scripted
@@ -249,7 +249,7 @@ Add to `CAPACITY_PACK_SPECS` with `registry_name=...` and an
 
 ## §4 — L4: Real-LLM e2e (gated, P3)
 
-Sweevo csv_runner goes through `run_ephemeral_agent` so it sees engine
+Sweevo sweevo_runner goes through `run_ephemeral_agent` so it sees engine
 retry naturally. Gate behind `EOS_E2E_RETRY=1` env flag.
 
 **File**: `backend/src/task_center_runner/tests/sweevo/test_retry_e2e_real_agent.py`

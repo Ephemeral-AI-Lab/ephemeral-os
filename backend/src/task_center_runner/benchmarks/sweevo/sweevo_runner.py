@@ -1,7 +1,6 @@
-"""Selective entry-mock runner factory for the SWE-EVO CSV benchmarker.
+"""Selective entry-mock runner factory for the SWE-EVO benchmarker.
 
-Per Option A in ``.omc/plans/sweevo-csv-real-agent-benchmarker-20260516.md``:
-the CSV benchmarker reuses the production task-center pipeline for every
+The benchmarker reuses the production task-center pipeline for every
 agent role EXCEPT ``entry_executor``. The entry agent is mocked so the
 CSV ``pr_description`` flows verbatim into ``submit_execution_handoff``'s
 ``goal`` arg — bypassing the LLM that would otherwise be free to reformat

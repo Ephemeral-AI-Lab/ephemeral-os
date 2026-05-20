@@ -171,7 +171,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Run a real-LLM SWE-EVO instance through the task_center pipeline.",
     )
     parser.add_argument(
-        "--csv-runner",
+        "--sweevo-runner",
         action="store_true",
         help=(
             "Run an SWE-EVO instance through the task-center pipeline with "
@@ -332,7 +332,7 @@ async def _cmd_real_agent(args: argparse.Namespace) -> int:
     return 0 if r.resolved else 1
 
 
-async def _cmd_csv_runner(args: argparse.Namespace) -> int:
+async def _cmd_sweevo_runner(args: argparse.Namespace) -> int:
     """Drive one SWE-EVO instance through the production pipeline with entry_executor mocked.
 
     R6: the ``try``/``finally`` opens immediately after
@@ -341,13 +341,13 @@ async def _cmd_csv_runner(args: argparse.Namespace) -> int:
     ``run_pipeline`` invokes); wrapping only ``run_pipeline`` would leak
     an orphan sandbox on LSP-install failure.
     """
-    _step(f"csv_runner: starting (instance_id={args.instance_id!r})")
+    _step(f"sweevo_runner: starting (instance_id={args.instance_id!r})")
     if not args.instance_id:
-        _step("csv_runner: missing --instance-id")
-        print("--csv-runner requires --instance-id=<id>", file=sys.stderr)
+        _step("sweevo_runner: missing --instance-id")
+        print("--sweevo-runner requires --instance-id=<id>", file=sys.stderr)
         return 2
 
-    _step("csv_runner: importing pipeline modules")
+    _step("sweevo_runner: importing pipeline modules")
     from runtime.app_factory import RuntimeConfig
 
     import sandbox.api as sandbox_api
@@ -359,7 +359,7 @@ async def _cmd_csv_runner(args: argparse.Namespace) -> int:
         verify_sweevo_snapshot_exists,
     )
     from benchmarks.sweevo.models import _has_explicit_sweevo_image_version
-    from task_center_runner.benchmarks.sweevo.csv_runner import (
+    from task_center_runner.benchmarks.sweevo.sweevo_runner import (
         build_selective_entry_mock_runner_factory,
     )
     from task_center_runner.benchmarks.sweevo.lifecycle import SweevoLifecycle
@@ -368,45 +368,45 @@ async def _cmd_csv_runner(args: argparse.Namespace) -> int:
     from task_center_runner.core.config import RunConfig
     from task_center_runner.core.engine import run_pipeline
 
-    _step(f"csv_runner: loading PR description (csv_path={args.csv_path!r})")
+    _step(f"sweevo_runner: loading PR description (csv_path={args.csv_path!r})")
     try:
         goal = load_pr_description(args.instance_id, csv_path=args.csv_path)
     except FileNotFoundError as exc:
-        _step(f"csv_runner: CSV not found: {exc}")
+        _step(f"sweevo_runner: CSV not found: {exc}")
         print(f"PR descriptions CSV not found: {exc}", file=sys.stderr)
         return 2
     except KeyError as exc:
-        _step(f"csv_runner: unknown instance: {exc}")
+        _step(f"sweevo_runner: unknown instance: {exc}")
         print(f"Unknown SWE-EVO instance: {exc}", file=sys.stderr)
         return 2
     except ValueError as exc:
-        _step(f"csv_runner: empty pr_description: {exc}")
+        _step(f"sweevo_runner: empty pr_description: {exc}")
         print(f"Empty pr_description: {exc}", file=sys.stderr)
         return 2
-    _step(f"csv_runner: PR description loaded ({len(goal)} chars)")
+    _step(f"sweevo_runner: PR description loaded ({len(goal)} chars)")
 
-    _step("csv_runner: loading sweevo instance metadata")
+    _step("sweevo_runner: loading sweevo instance metadata")
     instance = load_sweevo_instance(source=args.source, instance_id=args.instance_id)
-    _step(f"csv_runner: instance loaded — repo={instance.repo}")
+    _step(f"sweevo_runner: instance loaded — repo={instance.repo}")
     _bootstrap_sandbox_provider()
 
     snapshot_name = ""
     if _has_explicit_sweevo_image_version(instance.docker_image):
-        _step("csv_runner: verifying sweevo snapshot is registered")
+        _step("sweevo_runner: verifying sweevo snapshot is registered")
         try:
             snapshot_name = verify_sweevo_snapshot_exists(instance)
         except SnapshotNotRegisteredError as exc:
-            _step(f"csv_runner: snapshot missing: {exc}")
+            _step(f"sweevo_runner: snapshot missing: {exc}")
             print(str(exc), file=sys.stderr)
             return 2
-        _step(f"csv_runner: snapshot ok — snapshot_name={snapshot_name}")
+        _step(f"sweevo_runner: snapshot ok — snapshot_name={snapshot_name}")
     else:
         _step(
-            "csv_runner: snapshot preflight skipped — image has no explicit "
+            "sweevo_runner: snapshot preflight skipped — image has no explicit "
             "non-latest version; using image directly"
         )
 
-    _step("csv_runner: creating sweevo test sandbox")
+    _step("sweevo_runner: creating sweevo test sandbox")
     sandbox_result = await create_sweevo_test_sandbox(
         instance,
         sandbox_name="",
@@ -416,15 +416,15 @@ async def _cmd_csv_runner(args: argparse.Namespace) -> int:
         repo_dir=args.repo_dir,
     )
     sandbox_id = str(sandbox_result["sandbox_id"])
-    _step(f"csv_runner: sandbox ready — sandbox_id={sandbox_id}")
+    _step(f"sweevo_runner: sandbox ready — sandbox_id={sandbox_id}")
 
     try:
         audit_dir = (
             Path(args.audit_dir) if args.audit_dir
             else Path(os.getenv("EOS_SWEEVO_AUDIT_DIR", ".sweevo_runs")).resolve()
         )
-        _step(f"csv_runner: audit_dir={audit_dir} max_duration_s={args.max_duration_s}")
-        _step("csv_runner: building RunConfig (provisioner, runner_factory, lifecycle)")
+        _step(f"sweevo_runner: audit_dir={audit_dir} max_duration_s={args.max_duration_s}")
+        _step("sweevo_runner: building RunConfig (provisioner, runner_factory, lifecycle)")
         runtime_cfg = RuntimeConfig(cwd=str(Path.cwd()), external_api_client=None)
         config = RunConfig(
             entry_prompt=goal,
@@ -445,23 +445,23 @@ async def _cmd_csv_runner(args: argparse.Namespace) -> int:
             ),
             bootstrap=bootstrap_real_agent_runtime,
             audit_dir=audit_dir,
-            run_label=f"benchmark/sweevo_csv/{instance.instance_id}",
+            run_label=f"benchmark/sweevo/{instance.instance_id}",
             instance_id=instance.instance_id,
             max_duration_s=args.max_duration_s,
             extras={"runtime_config": runtime_cfg},
         )
-        _step("csv_runner: invoking run_pipeline (provision -> agent -> evaluate)")
+        _step("sweevo_runner: invoking run_pipeline (provision -> agent -> evaluate)")
         report = await run_pipeline(config)
         _step(
-            f"csv_runner: run_pipeline returned — task_center_status={report.task_center_status} "
+            f"sweevo_runner: run_pipeline returned — task_center_status={report.task_center_status} "
             f"task_center_run_id={report.task_center_run_id}"
         )
         sweevo_result = report.lifecycle_extras.get("sweevo_result")
         resolved = bool(getattr(sweevo_result, "resolved", False))
         fix_rate = float(getattr(sweevo_result, "fix_rate", 0.0))
-        _step(f"csv_runner: verdict — resolved={resolved} fix_rate={fix_rate:.2f}")
+        _step(f"sweevo_runner: verdict — resolved={resolved} fix_rate={fix_rate:.2f}")
         print(
-            f"csv_runner instance_id={instance.instance_id} "
+            f"sweevo_runner instance_id={instance.instance_id} "
             f"task_center_run_id={report.task_center_run_id} "
             f"status={report.task_center_status} "
             f"resolved={resolved} fix_rate={fix_rate:.2f} "
@@ -469,12 +469,12 @@ async def _cmd_csv_runner(args: argparse.Namespace) -> int:
         )
         return 0 if resolved else 1
     finally:
-        _step(f"csv_runner: cleanup — destroying sandbox {sandbox_id}")
+        _step(f"sweevo_runner: cleanup — destroying sandbox {sandbox_id}")
         try:
             sandbox_api.delete_sandbox(sandbox_id)
-            _step(f"csv_runner: sandbox {sandbox_id} destroyed")
+            _step(f"sweevo_runner: sandbox {sandbox_id} destroyed")
         except Exception as exc:
-            _step(f"csv_runner: failed to destroy sandbox {sandbox_id}: {exc}")
+            _step(f"sweevo_runner: failed to destroy sandbox {sandbox_id}: {exc}")
             print(
                 f"Warning: failed to destroy sandbox {sandbox_id}: {exc}",
                 file=sys.stderr,
@@ -497,13 +497,13 @@ def main(argv: list[str] | None = None) -> int:
             _step("main: KeyboardInterrupt in real_agent")
             print("\nInterrupted.", flush=True)
             return 130
-    if args.csv_runner:
+    if args.sweevo_runner:
         try:
-            rc = asyncio.run(_cmd_csv_runner(args))
-            _step(f"main: csv_runner exit rc={rc}")
+            rc = asyncio.run(_cmd_sweevo_runner(args))
+            _step(f"main: sweevo_runner exit rc={rc}")
             return rc
         except KeyboardInterrupt:
-            _step("main: KeyboardInterrupt in csv_runner")
+            _step("main: KeyboardInterrupt in sweevo_runner")
             print("\nInterrupted.", flush=True)
             return 130
     if args.scenario:
@@ -516,7 +516,7 @@ def main(argv: list[str] | None = None) -> int:
             print("\nInterrupted.", flush=True)
             return 130
     print(
-        "Specify --list, --scenario <name>, --real-agent, or --csv-runner.",
+        "Specify --list, --scenario <name>, --real-agent, or --sweevo-runner.",
         file=sys.stderr,
     )
     return 2

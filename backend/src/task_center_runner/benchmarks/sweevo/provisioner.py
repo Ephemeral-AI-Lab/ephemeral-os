@@ -1,14 +1,10 @@
 """``SweevoProvisioner`` — wraps :func:`benchmarks.sweevo.sandbox.setup_sweevo_sandbox`.
 
-The current SWE-EVO flow creates the Daytona sandbox externally (e.g. in
-``benchmarks.sweevo.__main__``) and passes its id into the run. This
-provisioner takes the externally-created ``sandbox_id``, runs
-``setup_sweevo_sandbox`` to seed the repo at the base commit, and leaves
-release as a no-op — the caller owns the lifecycle.
-
-Phase 4 of the plan plans for SWE-EVO sandbox creation to move here, but
-until then we attach to an existing sandbox without changing the data
-layer.
+Daytona sandbox creation happens externally (e.g. in
+``benchmarks.sweevo.__main__``); this provisioner takes the
+externally-created ``sandbox_id``, runs ``setup_sweevo_sandbox`` to seed
+the repo at the base commit, and leaves release as a no-op — the caller
+owns the sandbox lifecycle.
 """
 
 from __future__ import annotations

@@ -1,11 +1,9 @@
 """``SweevoLifecycle`` — evaluates F2P/P2P after the run drains.
 
-In Phase 4f the legacy ``run_sweevo_real_agent`` becomes a thin shim over
-``run_pipeline``: instead of in-lining the F2P/P2P evaluation as
-``run_sweevo_real_agent`` does today (lines ~195-202), the engine fires
-``LifecycleHooks.after_run`` and this implementation calls
-:func:`benchmarks.sweevo.evaluation.evaluate_sweevo_result` and writes the
-``sweevo_result.json`` artifact.
+Engine fires :meth:`LifecycleHooks.after_run`; this implementation calls
+:func:`benchmarks.sweevo.evaluation.evaluate_sweevo_result` and writes
+the ``sweevo_result.json`` artifact, plus optionally appends to an
+aggregate JSONL for batch runs.
 """
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""Real-agent live-e2e smoke test for the CSV-driven SWE-EVO benchmarker.
+"""Real-agent live-e2e smoke test for the SWE-EVO benchmarker.
 
 Gated off by default. Requires:
 
@@ -26,11 +26,11 @@ from benchmarks.sweevo.models import SWEEvoInstance
 from benchmarks.sweevo.prompt import load_pr_description
 from benchmarks.sweevo.sandbox import verify_sweevo_snapshot_exists
 from runtime.app_factory import RuntimeConfig
-from task_center_runner.benchmarks.sweevo.csv_runner import (
-    build_selective_entry_mock_runner_factory,
-)
 from task_center_runner.benchmarks.sweevo.lifecycle import SweevoLifecycle
 from task_center_runner.benchmarks.sweevo.provisioner import SweevoProvisioner
+from task_center_runner.benchmarks.sweevo.sweevo_runner import (
+    build_selective_entry_mock_runner_factory,
+)
 from task_center_runner.core.bootstrap import bootstrap_real_agent_runtime
 from task_center_runner.core.config import RunConfig
 from task_center_runner.core.engine import run_pipeline
@@ -43,20 +43,20 @@ pytestmark = pytest.mark.skipif(
         and os.getenv("EPHEMERALOS_DATABASE_URL")
     ),
     reason=(
-        "CSV real-agent live e2e gated by EOS_SWEEVO_REAL_AGENT_TESTS=1 + "
+        "SWE-EVO real-agent live e2e gated by EOS_SWEEVO_REAL_AGENT_TESTS=1 + "
         "EOS_LIVE_TESTS=1 + EPHEMERALOS_DATABASE_URL"
     ),
 )
 
 
 @pytest.mark.asyncio
-async def test_csv_runner_resolves_canonical_instance(
+async def test_sweevo_runner_resolves_canonical_instance(
     sweevo_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
     stores: TaskCenterStoreBundle,
 ) -> None:
-    """End-to-end run of the CSV benchmarker on a canonical instance.
+    """End-to-end run of the SWE-EVO benchmarker on a canonical instance.
 
     Asserts plan §6 acceptance criteria locally executable when the gate
     is set. When the gate is unset (typical CI/dev), the entire test is
@@ -88,7 +88,7 @@ async def test_csv_runner_resolves_canonical_instance(
         bootstrap=bootstrap_real_agent_runtime,
         stores=stores,
         audit_dir=audit_dir,
-        run_label=f"benchmark/sweevo_csv/{sweevo_instance.instance_id}",
+        run_label=f"benchmark/sweevo/{sweevo_instance.instance_id}",
         instance_id=sweevo_instance.instance_id,
         max_duration_s=float(
             os.getenv("EOS_SWEEVO_REAL_AGENT_MAX_DURATION_S", "1800")

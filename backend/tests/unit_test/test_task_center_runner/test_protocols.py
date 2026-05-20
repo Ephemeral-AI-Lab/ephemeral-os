@@ -1,7 +1,7 @@
-"""Phase 2 protocols/dataclasses surface — round-trip instantiation.
+"""Protocols/dataclasses surface — round-trip instantiation.
 
-These assertions exist so a future regression that removes a documented field
-fails at import/use time, not at Phase-4 wiring time.
+These assertions exist so a future regression that removes a documented
+field fails at import/use time.
 """
 
 from __future__ import annotations
@@ -11,7 +11,6 @@ from dataclasses import fields
 from pathlib import Path
 from typing import Any
 
-from task_center_runner.benchmarks.base import BenchmarkAdapter, BenchmarkInstance
 from task_center_runner.core import (
     AttachExisting,
     LifecycleHooks,
@@ -129,17 +128,7 @@ def test_run_context_carries_config_bundle_bus() -> None:
     assert field_names == {"config", "bundle", "bus"}
 
 
-def test_benchmark_protocols_define_documented_methods() -> None:
-    """Structural check: both Protocols expose the symbols ``run_pipeline`` consumes."""
-    for name in ("instance_id",):
-        assert hasattr(BenchmarkInstance, name) or name in BenchmarkInstance.__annotations__ or name in dir(BenchmarkInstance)
-    for name in ("build_prompt", "provisioner_for", "evaluate"):
-        assert name in dir(BenchmarkAdapter)
-
-
 def test_protocol_types_importable_for_static_typing() -> None:
-    """The Protocols import without runtime side effects; satisfies plan §6 Phase 2."""
+    """The Protocols import without runtime side effects."""
     assert LifecycleHooks is not None
     assert SandboxProvisioner is not None
-    assert BenchmarkInstance is not None
-    assert BenchmarkAdapter is not None

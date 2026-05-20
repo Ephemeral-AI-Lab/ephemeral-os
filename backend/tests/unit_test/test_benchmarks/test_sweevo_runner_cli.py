@@ -1,4 +1,4 @@
-"""Wiring tests for the ``--csv-runner`` CLI flag.
+"""Wiring tests for the ``--sweevo-runner`` CLI flag.
 
 We do NOT execute the full pipeline (that needs Daytona + real LLM
 creds). Instead we verify the CLI plumbing: argparse accepts the flag,
@@ -21,37 +21,37 @@ from benchmarks.sweevo.sandbox import SnapshotNotRegisteredError
 
 
 def _argv(*extra: str) -> list[str]:
-    return ["--csv-runner", "--instance-id", "dask__dask_2023.3.2_2023.4.0", *extra]
+    return ["--sweevo-runner", "--instance-id", "dask__dask_2023.3.2_2023.4.0", *extra]
 
 
-def test_parser_accepts_csv_runner_flag() -> None:
+def test_parser_accepts_sweevo_runner_flag() -> None:
     args = sweevo_main._build_parser().parse_args(
-        ["--csv-runner", "--instance-id", "x"]
+        ["--sweevo-runner", "--instance-id", "x"]
     )
-    assert args.csv_runner is True
+    assert args.sweevo_runner is True
     assert args.instance_id == "x"
 
 
 def test_parser_accepts_csv_path() -> None:
     args = sweevo_main._build_parser().parse_args(
-        ["--csv-runner", "--instance-id", "x", "--csv-path", "/tmp/y.csv"]
+        ["--sweevo-runner", "--instance-id", "x", "--csv-path", "/tmp/y.csv"]
     )
     assert args.csv_path == "/tmp/y.csv"
 
 
-def test_csv_runner_without_instance_id_returns_2(
+def test_sweevo_runner_without_instance_id_returns_2(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    args = sweevo_main._build_parser().parse_args(["--csv-runner"])
+    args = sweevo_main._build_parser().parse_args(["--sweevo-runner"])
 
-    rc = asyncio.run(sweevo_main._cmd_csv_runner(args))
+    rc = asyncio.run(sweevo_main._cmd_sweevo_runner(args))
 
     err = capsys.readouterr().err
     assert rc == 2
     assert "--instance-id" in err
 
 
-def test_csv_runner_missing_row_returns_2(
+def test_sweevo_runner_missing_row_returns_2(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     from benchmarks.sweevo import prompt as prompt_mod
@@ -62,14 +62,14 @@ def test_csv_runner_missing_row_returns_2(
     monkeypatch.setattr(prompt_mod, "load_pr_description", fake_load_pr_description)
 
     args = sweevo_main._build_parser().parse_args(_argv())
-    rc = asyncio.run(sweevo_main._cmd_csv_runner(args))
+    rc = asyncio.run(sweevo_main._cmd_sweevo_runner(args))
 
     err = capsys.readouterr().err
     assert rc == 2
     assert "dask__dask_2023.3.2_2023.4.0" in err
 
 
-def test_csv_runner_missing_file_returns_2(
+def test_sweevo_runner_missing_file_returns_2(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     from benchmarks.sweevo import prompt as prompt_mod
@@ -80,14 +80,14 @@ def test_csv_runner_missing_file_returns_2(
     monkeypatch.setattr(prompt_mod, "load_pr_description", fake_load_pr_description)
 
     args = sweevo_main._build_parser().parse_args(_argv())
-    rc = asyncio.run(sweevo_main._cmd_csv_runner(args))
+    rc = asyncio.run(sweevo_main._cmd_sweevo_runner(args))
 
     err = capsys.readouterr().err
     assert rc == 2
     assert "/no/such/file.csv" in err
 
 
-def test_csv_runner_empty_value_returns_2(
+def test_sweevo_runner_empty_value_returns_2(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     from benchmarks.sweevo import prompt as prompt_mod
@@ -98,14 +98,14 @@ def test_csv_runner_empty_value_returns_2(
     monkeypatch.setattr(prompt_mod, "load_pr_description", fake_load_pr_description)
 
     args = sweevo_main._build_parser().parse_args(_argv())
-    rc = asyncio.run(sweevo_main._cmd_csv_runner(args))
+    rc = asyncio.run(sweevo_main._cmd_sweevo_runner(args))
 
     err = capsys.readouterr().err
     assert rc == 2
     assert "empty pr_description" in err
 
 
-def test_csv_runner_missing_snapshot_returns_2(
+def test_sweevo_runner_missing_snapshot_returns_2(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     from benchmarks.sweevo import dataset as dataset_mod
@@ -154,7 +154,7 @@ def test_csv_runner_missing_snapshot_returns_2(
     monkeypatch.setattr(sandbox_mod, "create_sweevo_test_sandbox", fake_create)
 
     args = sweevo_main._build_parser().parse_args(_argv())
-    rc = asyncio.run(sweevo_main._cmd_csv_runner(args))
+    rc = asyncio.run(sweevo_main._cmd_sweevo_runner(args))
 
     err = capsys.readouterr().err
     assert rc == 2
@@ -162,7 +162,7 @@ def test_csv_runner_missing_snapshot_returns_2(
     assert "is not registered" in err
 
 
-def test_csv_runner_bare_image_skips_snapshot_preflight(
+def test_sweevo_runner_bare_image_skips_snapshot_preflight(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from benchmarks.sweevo import dataset as dataset_mod
@@ -220,7 +220,7 @@ def test_csv_runner_bare_image_skips_snapshot_preflight(
     monkeypatch.setattr(sandbox_api, "delete_sandbox", lambda _sandbox_id: None)
 
     args = sweevo_main._build_parser().parse_args(_argv())
-    rc = asyncio.run(sweevo_main._cmd_csv_runner(args))
+    rc = asyncio.run(sweevo_main._cmd_sweevo_runner(args))
 
     assert rc == 0
     assert captured["create_kwargs"]["snapshot_name"] == ""
@@ -229,20 +229,20 @@ def test_csv_runner_bare_image_skips_snapshot_preflight(
     assert captured["config"].extras["runtime_config"].cwd == str(Path.cwd())
 
 
-def test_help_message_lists_csv_runner(capsys: pytest.CaptureFixture[str]) -> None:
-    """The ``--csv-runner`` flag must surface in help output."""
+def test_help_message_lists_sweevo_runner(capsys: pytest.CaptureFixture[str]) -> None:
+    """The ``--sweevo-runner`` flag must surface in help output."""
     with pytest.raises(SystemExit):
         sweevo_main._build_parser().parse_args(["--help"])
     out = capsys.readouterr().out
-    assert "--csv-runner" in out
+    assert "--sweevo-runner" in out
 
 
-def test_main_no_args_lists_csv_runner(
+def test_main_no_args_lists_sweevo_runner(
     capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The default help line mentions ``--csv-runner``."""
+    """The default help line mentions ``--sweevo-runner``."""
     monkeypatch.setattr(sys, "argv", ["benchmarks.sweevo"])
     rc = sweevo_main.main([])
     err = capsys.readouterr().err
     assert rc == 2
-    assert "--csv-runner" in err
+    assert "--sweevo-runner" in err

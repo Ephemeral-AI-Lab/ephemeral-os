@@ -1,14 +1,9 @@
 """Real-agent SWE-EVO runner — thin shim around :func:`run_pipeline`.
 
-Phase 4f of the task_center_runner restructure
-(.omc/plans/task_center_runner-restructure.md §6 Phase 4). The legacy
-``run_sweevo_real_agent`` contract is preserved (same arguments, same
-:class:`RealAgentRunReport` shape including ``performance_report_task``
-from Phase 3), but the orchestration delegates to
-``task_center_runner.core.engine.run_pipeline`` with a
-:class:`SweevoLifecycle` that runs F2P/P2P evaluation in ``after_run``
-and a :class:`SweevoProvisioner` that runs ``setup_sweevo_sandbox``
-against the externally-created Daytona sandbox.
+Delegates orchestration to ``task_center_runner.core.engine.run_pipeline``
+with a :class:`SweevoLifecycle` that runs F2P/P2P evaluation in
+``after_run`` and a :class:`SweevoProvisioner` that runs
+``setup_sweevo_sandbox`` against the externally-created Daytona sandbox.
 """
 
 from __future__ import annotations
@@ -18,10 +13,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from benchmarks.sweevo.models import SWEEvoInstance, SWEEvoResult, _REPO_DIR
+from benchmarks.sweevo.prompt import build_sweevo_user_prompt
 from runtime.app_factory import RuntimeConfig
 from task_center_runner.agent.real import real_agent_runner_factory
 from task_center_runner.benchmarks.sweevo.lifecycle import SweevoLifecycle
-from task_center_runner.benchmarks.sweevo.prompt import build_sweevo_user_prompt
 from task_center_runner.benchmarks.sweevo.provisioner import SweevoProvisioner
 from task_center_runner.core.config import RunConfig
 from task_center_runner.core.engine import run_pipeline

@@ -1,9 +1,10 @@
 """R1 kwarg-drift guard for ``EphemeralAttemptAgentLauncher._run_launch``.
 
-The CSV-runner ``csv_runner.py`` delegates non-entry agent launches to
-``engine.api.run_ephemeral_agent`` with the exact frozen kwarg set the
-production launcher passes. If the launcher's kwarg set ever drifts,
-this test fails loudly so the delegate can be updated in lockstep.
+The SWE-EVO runner ``sweevo_runner.py`` delegates non-entry agent
+launches to ``engine.api.run_ephemeral_agent`` with the exact frozen
+kwarg set the production launcher passes. If the launcher's kwarg set
+ever drifts, this test fails loudly so the delegate can be updated in
+lockstep.
 
 Risk register R1 in
 ``.omc/plans/sweevo-csv-real-agent-benchmarker-20260516.md``.
@@ -32,8 +33,8 @@ _FROZEN_KWARG_SET: frozenset[str] = frozenset(
 def test_run_launch_calls_runner_with_frozen_kwarg_set() -> None:
     """Extract the runner(...) call inside ``_run_launch`` and assert kwargs match.
 
-    The frozen set is exactly what the CSV-runner delegate forwards in
-    ``task_center_runner.benchmarks.sweevo.csv_runner.``
+    The frozen set is exactly what the SWE-EVO runner delegate forwards
+    in ``task_center_runner.benchmarks.sweevo.sweevo_runner.``
     ``_delegate_to_real_runner``. ``config`` and ``prompt`` are
     positional, so they are intentionally NOT in the kwarg set.
     """
@@ -45,7 +46,7 @@ def test_run_launch_calls_runner_with_frozen_kwarg_set() -> None:
     match = re.search(r"await runner\((?P<body>.*?)\)\n", source, re.DOTALL)
     assert match is not None, (
         "Could not find ``await runner(...)`` in EphemeralAttemptAgentLauncher._run_launch — "
-        "the launcher may have been refactored. Update the CSV-runner delegate to match."
+        "the launcher may have been refactored. Update the SWE-EVO runner delegate to match."
     )
 
     body = match.group("body")
@@ -56,6 +57,6 @@ def test_run_launch_calls_runner_with_frozen_kwarg_set() -> None:
         f"  expected: {sorted(_FROZEN_KWARG_SET)}\n"
         f"  actual:   {sorted(kwargs)}\n"
         f"Update ``_delegate_to_real_runner`` in "
-        f"``task_center_runner/benchmarks/sweevo/csv_runner.py`` to forward the new "
+        f"``task_center_runner/benchmarks/sweevo/sweevo_runner.py`` to forward the new "
         f"kwargs in lockstep, then update _FROZEN_KWARG_SET here."
     )
