@@ -111,6 +111,25 @@ def test_agent_message_recorder_appends_conversation_messages(tmp_path) -> None:
     )
 
 
+def test_initial_messages_preserve_launch_metadata(tmp_path) -> None:
+    path = tmp_path / "message.jsonl"
+    recorder = AgentMessageJsonlRecorder(path)
+
+    recorder.record_initial_messages(
+        system_prompt="system",
+        user_prompt="user",
+        agent_name="planner",
+        run_id="run-1",
+        metadata={"active_terminals": ["submit_plan_closes_goal"]},
+    )
+
+    records = _read_jsonl(path)
+    assert [record["metadata"]["active_terminals"] for record in records] == [
+        ["submit_plan_closes_goal"],
+        ["submit_plan_closes_goal"],
+    ]
+
+
 def test_assistant_complete_with_full_blocks_does_not_duplicate(tmp_path) -> None:
     """Real-LLM path: AssistantMessageComplete carries the same thinking/text
     blocks that arrived as deltas. The buffer must be discarded, not flushed,

@@ -121,6 +121,7 @@ class AgentMessageJsonlRecorder:
         agent_name: str,
         run_id: str,
         seeded_initial_messages: list[ConversationMessage] | None = None,
+        metadata: Mapping[str, Any] | None = None,
     ) -> None:
         """Append the system and initial user messages once.
 
@@ -138,12 +139,14 @@ class AgentMessageJsonlRecorder:
         if self._initial_messages_recorded:
             return
         self._initial_messages_recorded = True
+        initial_metadata = dict(metadata or {})
         if system_prompt.strip():
             self._record_message(
                 agent_name=agent_name,
                 run_id=run_id,
                 role="system",
                 content=[{"type": "text", "text": system_prompt}],
+                **initial_metadata,
             )
         for seeded in seeded_initial_messages or []:
             self._record_message(
@@ -153,6 +156,7 @@ class AgentMessageJsonlRecorder:
                 content=[
                     block.model_dump(mode="json") for block in seeded.content
                 ],
+                **initial_metadata,
             )
         message = ConversationMessage.from_user_text(user_prompt)
         self._record_message(
@@ -162,6 +166,7 @@ class AgentMessageJsonlRecorder:
             content=[
                 block.model_dump(mode="json") for block in message.content
             ],
+            **initial_metadata,
         )
 
     def flush(self) -> None:

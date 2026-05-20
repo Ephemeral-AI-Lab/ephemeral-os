@@ -276,6 +276,18 @@ def test_bundle_extracted_daemon_modules_import_clean(tmp_path: Path) -> None:
     assert "ok: True unknown_op" in result.stdout
 
 
+def test_launch_daemon_does_not_leak_flock_fd_to_daemon(tmp_path: Path) -> None:
+    bundle = _runtime_bundle_bytes()
+    extract_dir = tmp_path / "extracted"
+    _extract_bundle(bundle, extract_dir)
+
+    script = (
+        extract_dir / "sandbox" / "daemon" / "scripts" / "launch_daemon.sh"
+    ).read_text(encoding="utf-8")
+    assert 'LOCK_FILE="${SOCK}.launch.v2.lock"' in script
+    assert '9>&- </dev/null >"$LOG" 2>&1 &' in script
+
+
 def test_bundle_hash_is_deterministic() -> None:
     a = bundle_hash()
     b = bundle_hash()

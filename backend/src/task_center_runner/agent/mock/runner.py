@@ -145,6 +145,13 @@ def _initial_message_text(message: Any) -> str:
     return "\n".join(parts)
 
 
+def _initial_message_metadata(metadata: ExecutionMetadata) -> dict[str, object]:
+    active_terminals = metadata.get("active_terminals")
+    if not isinstance(active_terminals, (list, tuple, set, frozenset)):
+        return {}
+    return {"active_terminals": [str(name) for name in active_terminals]}
+
+
 class MockSquadRunner:
     """Deterministic agent execution handlers that call real tools."""
 
@@ -1349,6 +1356,7 @@ class MockSquadRunner:
             agent_name=agent_def.name,
             run_id=self._stream_run_id(metadata),
             seeded_initial_messages=list(seeded_initial_messages or []),
+            metadata=_initial_message_metadata(metadata),
         )
 
     def _current_attempt_and_iteration(
