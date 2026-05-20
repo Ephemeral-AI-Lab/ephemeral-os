@@ -69,6 +69,24 @@ def test_enforce_global_sandbox_quota_keeps_newest_and_swallow_delete_failures(
     assert delete_calls == ["sbx-3", "sbx-4"]
 
 
+def test_materialize_layerstack_command_ends_with_heredoc_newline() -> None:
+    command = sweevo_sandbox._materialize_layerstack_command(
+        "/layers/current", "/testbed"
+    )
+
+    assert command.endswith("PY\n")
+
+
+def test_materialize_layerstack_command_includes_exdev_fallback() -> None:
+    command = sweevo_sandbox._materialize_layerstack_command(
+        "/layers/current", "/testbed"
+    )
+
+    assert "import errno" in command
+    assert "if exc.errno != errno.EXDEV:" in command
+    assert "shutil.move(str(child), str(dst / child.name))" in command
+
+
 @pytest.mark.asyncio
 async def test_ensure_sweevo_test_patch_uploads_bytes_before_path(
     monkeypatch: pytest.MonkeyPatch,
