@@ -1,18 +1,16 @@
 """Provider dispatcher — selects Docker or Daytona at startup.
 
 Picks the provider from ``EOS_SANDBOX_PROVIDER`` (case-insensitive) with
-per-platform defaults: Linux→docker, darwin→daytona. Sentinel-gated so a
-second call with the same env value is a silent no-op, and a second call
-with a *different* env value logs a warning and is also a no-op — see
-PLAN_v4 §6 Step 3 and §8 (rollback requires process restart due to the
-``_PROVIDER_BOOTSTRAPPED`` flag).
+Docker as the default when unset. Sentinel-gated so a second call with the
+same env value is a silent no-op, and a second call with a *different* env
+value logs a warning and is also a no-op — see PLAN_v4 §6 Step 3 and §8
+(rollback requires process restart due to the ``_PROVIDER_BOOTSTRAPPED`` flag).
 """
 
 from __future__ import annotations
 
 import logging
 import os
-import sys
 import threading
 
 logger = logging.getLogger(__name__)
@@ -28,13 +26,7 @@ def _resolve_provider_name() -> str:
     raw = os.environ.get("EOS_SANDBOX_PROVIDER")
     if raw is not None:
         return raw.strip().lower()
-    if sys.platform == "darwin":
-        return "daytona"
-    if sys.platform.startswith("linux"):
-        return "docker"
-    raise RuntimeError(
-        f"unsupported platform {sys.platform!r}; set EOS_SANDBOX_PROVIDER explicitly"
-    )
+    return "docker"
 
 
 def bootstrap_sandbox_provider() -> None:

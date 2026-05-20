@@ -65,28 +65,14 @@ def test_mixed_case(monkeypatch: pytest.MonkeyPatch, stub_provider_calls) -> Non
     assert stub_provider_calls["daytona"] == ["called"]
 
 
-def test_unset_on_linux_picks_docker(
+def test_unset_picks_docker_by_default(
     monkeypatch: pytest.MonkeyPatch, stub_provider_calls
 ) -> None:
-    monkeypatch.setattr(dispatcher_module.sys, "platform", "linux")
+    # The default is intentionally no longer platform-sensitive. Operators
+    # can still opt into Daytona with EOS_SANDBOX_PROVIDER=daytona.
     dispatcher_module.bootstrap_sandbox_provider()
     assert stub_provider_calls["docker"] == ["called"]
-
-
-def test_unset_on_darwin_picks_daytona(
-    monkeypatch: pytest.MonkeyPatch, stub_provider_calls
-) -> None:
-    monkeypatch.setattr(dispatcher_module.sys, "platform", "darwin")
-    dispatcher_module.bootstrap_sandbox_provider()
-    assert stub_provider_calls["daytona"] == ["called"]
-
-
-def test_unset_on_unsupported_platform_raises(
-    monkeypatch: pytest.MonkeyPatch, stub_provider_calls
-) -> None:
-    monkeypatch.setattr(dispatcher_module.sys, "platform", "win32")
-    with pytest.raises(RuntimeError, match="unsupported platform"):
-        dispatcher_module.bootstrap_sandbox_provider()
+    assert stub_provider_calls["daytona"] == []
 
 
 def test_unknown_provider_raises(

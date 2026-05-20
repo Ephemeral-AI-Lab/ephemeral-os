@@ -134,31 +134,31 @@ All tests carry the `live` marker, so `pytest -m "not live"` excludes them.
 
 ## Prerequisites
 
-The session fixture brings up a real Daytona sandbox via `setup_after_create`.
-Before running, configure Daytona credentials and set a prebaked sandbox image
-with Python 3.10+, `git`, `/testbed`, and the runtime bundle marker:
+The session fixture brings up a real provider-backed sandbox via
+`setup_after_create`. Before running, configure a prebaked Docker image with
+Python 3.10+, `git`, `/testbed`, and the runtime bundle marker:
 
 ```bash
 EPHEMERALOS_SANDBOX_DEFAULT_IMAGE=registry:6000/daytona/sweevo-psf-requests-3738:v1
 ```
 
-The session-scoped `live_sandbox` fixture starts one Daytona sandbox per run
+The session-scoped `live_sandbox` fixture starts one sandbox per run
 and resets `/testbed` before each test with `git reset --hard HEAD` plus
 `git clean -fdx`.
 
 ## Running on Docker
 
-The same suite runs under the Docker provider on a Linux host. Selection is by
-env var; tests are provider-agnostic.
+The same suite runs under the Docker provider by default. Selection is still
+available by env var; tests are provider-agnostic.
 
 | Env var                  | Required        | Purpose                                                                                  |
 |--------------------------|-----------------|------------------------------------------------------------------------------------------|
-| `EOS_SANDBOX_PROVIDER`   | yes             | Set to `docker` to route `live_sandbox` through `DockerProviderAdapter`.                 |
-| `EOS_LIVE_E2E_IMAGE`     | no              | Optional override. If unset, Docker uses `settings.sandbox.default_image` / `EPHEMERALOS_SANDBOX_DEFAULT_IMAGE`, matching Daytona. |
+| `EOS_SANDBOX_PROVIDER`   | no              | Optional override. Unset defaults to `docker`; set `daytona` only for legacy Daytona runs. |
+| `EOS_LIVE_E2E_IMAGE`     | no              | Optional override. If unset, Docker uses `settings.sandbox.default_image` / `EPHEMERALOS_SANDBOX_DEFAULT_IMAGE`. |
 | `EOS_DOCKER_PRIVILEGED`  | no              | `1` swaps `DEFAULT_RUN_FLAGS` (CAP_SYS_ADMIN + seccomp/apparmor unconfined) for `--privileged`. |
 
-**Linux-only.** The Docker provider is unsupported on darwin (Docker Desktop's
-VM does not surface the host namespaces the overlay slice relies on).
+On macOS, Docker Desktop may force some execs into copy-backed mode because its
+VM does not surface the host namespaces the overlay slice relies on.
 
 **Image-bake requirements** (operator responsibility):
 
@@ -171,6 +171,7 @@ VM does not surface the host namespaces the overlay slice relies on).
   fixture bring-up.
 
 ```bash
+# Optional; this is the default when unset.
 export EOS_SANDBOX_PROVIDER=docker
 # Optional when EPHEMERALOS_SANDBOX_DEFAULT_IMAGE already points at the image.
 export EOS_LIVE_E2E_IMAGE=my-registry/eos-live-e2e:latest

@@ -27,7 +27,6 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
-import sys
 import time
 import urllib.error
 import urllib.request
@@ -303,11 +302,7 @@ def _resolve_provider_for_probe() -> str:
     raw = os.environ.get("EOS_SANDBOX_PROVIDER")
     if raw is not None:
         return raw.strip().lower()
-    if sys.platform == "darwin":
-        return "daytona"
-    if sys.platform.startswith("linux"):
-        return "docker"
-    return "unknown"
+    return "docker"
 
 
 def _docker_run_flags() -> list[str]:
@@ -414,7 +409,8 @@ def probe_tier0(
 ) -> Tier0Result:
     """Run the tier-0 probe and return a structured result.
 
-    Dispatches on ``EOS_SANDBOX_PROVIDER``: daytona keeps the HTTP-health +
+    Dispatches on ``EOS_SANDBOX_PROVIDER``: Docker is the default when unset;
+    daytona keeps the HTTP-health +
     stuck-rows + runner-bootstrap probe stack; docker runs the four-sub-check
     capability probe in :func:`probe_tier0_docker`; unknown providers fail loud.
 

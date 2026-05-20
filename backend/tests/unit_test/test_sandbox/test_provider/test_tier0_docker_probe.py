@@ -146,6 +146,15 @@ def test_probe_tier0_dispatches_to_docker(monkeypatch: pytest.MonkeyPatch) -> No
     assert result is sentinel
 
 
+def test_probe_tier0_defaults_to_docker(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("EOS_SANDBOX_PROVIDER", raising=False)
+    sentinel = _tier0.Tier0Result(passed=True, api_health="ok", notes="docker-branch")
+    with patch.object(_tier0, "probe_tier0_docker", return_value=sentinel) as docker_branch:
+        result = _tier0.probe_tier0(api_url="http://unused/api")
+    docker_branch.assert_called_once()
+    assert result is sentinel
+
+
 def test_probe_tier0_unknown_provider(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("EOS_SANDBOX_PROVIDER", "nopesvc")
     result = _tier0.probe_tier0(api_url="http://unused/api")

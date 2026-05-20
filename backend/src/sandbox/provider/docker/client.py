@@ -1,8 +1,7 @@
 """Docker SDK client wrapper and tuned ``docker run`` flag constants.
 
 The SDK import is lazy: callers obtain a client via :func:`get_docker_client`
-so importing this module does not require ``docker`` to be installed (e.g. on
-darwin development hosts that default to Daytona).
+so importing this module does not require ``docker`` to be installed.
 """
 
 from __future__ import annotations

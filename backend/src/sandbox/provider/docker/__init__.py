@@ -10,8 +10,7 @@ Environment variables
 
 ``EOS_SANDBOX_PROVIDER`` (authoritative)
     ``docker`` | ``daytona``. When unset the dispatcher in
-    :mod:`sandbox.provider.bootstrap` picks per-platform defaults:
-    Linux→docker, darwin→daytona.
+    :mod:`sandbox.provider.bootstrap` defaults to Docker.
 
 ``EOS_DOCKER_PRIVILEGED`` = ``1``
     Run containers with ``--privileged`` instead of the minimum-cap default
@@ -36,12 +35,11 @@ ignoring DAYTONA_*``.
 macOS caveat
 ------------
 
-macOS Docker Desktop is **unsupported as the default** sandbox provider.
-The dispatcher defaults darwin to Daytona. Users who opt in via
-``EOS_SANDBOX_PROVIDER=docker`` on darwin should expect ``mount_mode=COPY_BACKED``
-for some execs — Docker Desktop's Linux VM UID-mapping and overlay-on-overlay2
-storage driver may prevent the kernel overlay mount inside ``unshare -Urm``
-from succeeding even with CAP_SYS_ADMIN + unconfined seccomp.
+Docker is the default sandbox provider, including on macOS. Docker Desktop's
+Linux VM UID-mapping and overlay-on-overlay2 storage driver may prevent the
+kernel overlay mount inside ``unshare -Urm`` from succeeding even with
+CAP_SYS_ADMIN + unconfined seccomp, so macOS runs should expect
+``mount_mode=COPY_BACKED`` for some execs.
 """
 
 from __future__ import annotations
