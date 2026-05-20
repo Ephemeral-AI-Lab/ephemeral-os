@@ -254,7 +254,7 @@ _FOCUSED_CASES: tuple[FocusedScenarioCase, ...] = (
 
 @pytest.mark.skipif(
     not database_configured(),
-    reason="EPHEMERALOS_DATABASE_URL not set - task_center_runner requires PostgreSQL",
+    reason="database URL not configured",
 )
 @pytest.mark.parametrize("case", _FOCUSED_CASES, ids=[case.name for case in _FOCUSED_CASES])
 async def test_focused_reference_scenario_runs(

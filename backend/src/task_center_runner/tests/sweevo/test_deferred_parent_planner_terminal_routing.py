@@ -21,7 +21,7 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.mark.skipif(
     not database_configured(),
-    reason="EPHEMERALOS_DATABASE_URL not set - task_center_runner requires PostgreSQL",
+    reason="database URL not configured",
 )
 async def test_partial_parent_filters_child_planner_to_close_terminal(
     sweevo_instance: SWEEvoInstance,

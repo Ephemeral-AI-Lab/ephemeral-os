@@ -7,7 +7,7 @@ same end-to-end behaviour post-migration.
 
 Skipped when:
 
-- ``EPHEMERALOS_DATABASE_URL`` is unset (PG required for stores).
+- no database URL is configured.
 - The Daytona tier-0 health probe fails (no live sandbox available).
 """
 
@@ -37,7 +37,7 @@ async def test_correctness_testing_via_live_e2e(
     audit_dir: Path,
 ) -> None:
     if not database_configured():
-        pytest.skip("EPHEMERALOS_DATABASE_URL not set — task_center_runner requires PostgreSQL")
+        pytest.skip("database URL not configured")
     require_sandbox_provider_healthy(sweevo_instance)
 
     scenario = CorrectnessTesting()

@@ -154,7 +154,7 @@ sandbox:
     assert cfg.sandbox.daytona.default_snapshot == "legacy-snapshot"
 
 
-def test_dotenv_legacy_secrets_are_loaded(
+def test_dotenv_file_is_not_loaded_by_central_config(
     tmp_path: Path,
     clean_config_env: None,
 ) -> None:
@@ -166,8 +166,8 @@ def test_dotenv_legacy_secrets_are_loaded(
 
     cfg = load_central_config(tmp_path / "missing.yaml", dotenv_path=dotenv_path)
 
-    assert cfg.database.url == "postgresql://dotenv/db"
-    assert cfg.sandbox.daytona.api_key == "daytona-dotenv-key"
+    assert cfg.database.url == "sqlite:///./.ephemeralos/ephemeralos.db"
+    assert cfg.sandbox.daytona.api_key == ""
 
 
 def test_override_central_config_scopes_active_config() -> None:

@@ -1,5 +1,5 @@
 database:
-  url: "sqlite:///./.ephemeralos/ephemeralos.db" # env: EPHEMERALOS_DATABASE_URL
+  url: "sqlite:///./.ephemeralos/ephemeralos.db" # process env override: EPHEMERALOS_DATABASE_URL
   pool_size: 5
   max_overflow: 10
   pool_pre_ping: true

@@ -50,7 +50,7 @@ _SCENARIO_NAME = "pipeline.initial_messages_capture"
 
 @pytest.mark.skipif(
     not database_configured(),
-    reason="EPHEMERALOS_DATABASE_URL not set - task_center_runner requires PostgreSQL",
+    reason="database URL not configured",
 )
 async def test_initial_messages_capture(
     sweevo_instance: SWEEvoInstance,

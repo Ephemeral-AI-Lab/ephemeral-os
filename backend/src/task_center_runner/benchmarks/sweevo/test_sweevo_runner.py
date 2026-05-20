@@ -4,7 +4,7 @@ Gated off by default. Requires:
 
 - ``EOS_SWEEVO_REAL_AGENT_TESTS=1`` (real LLM creds + real Daytona)
 - ``EOS_LIVE_TESTS=1`` (matches the canonical live-tier guard)
-- ``EPHEMERALOS_DATABASE_URL`` (real Postgres for the task-center stores)
+- configured database URL (the repository default is SQLite)
 
 The test stub demonstrates the end-to-end wiring; the assertions mirror
 plan §6 (aggregate.jsonl one line, sweevo_result.json present, per-task
@@ -40,11 +40,10 @@ pytestmark = pytest.mark.skipif(
     not (
         os.getenv("EOS_SWEEVO_REAL_AGENT_TESTS") == "1"
         and os.getenv("EOS_LIVE_TESTS") == "1"
-        and os.getenv("EPHEMERALOS_DATABASE_URL")
     ),
     reason=(
         "SWE-EVO real-agent live e2e gated by EOS_SWEEVO_REAL_AGENT_TESTS=1 + "
-        "EOS_LIVE_TESTS=1 + EPHEMERALOS_DATABASE_URL"
+        "EOS_LIVE_TESTS=1"
     ),
 )
 

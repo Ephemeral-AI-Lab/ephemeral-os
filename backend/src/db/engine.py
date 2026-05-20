@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Engine, create_engine, inspect, text
@@ -250,15 +251,20 @@ def initialize_db(
     """Create the engine, run DDL, and return a session factory.
 
     Args:
-        db_settings: A ``DatabaseSettings`` instance.  When ``None`` or when
-            ``db_settings.url`` is empty, falls back to the
-            ``EPHEMERALOS_DATABASE_URL`` environment variable.
+        db_settings: A ``DatabaseSettings`` instance. When ``None``, falls back
+            to the central config database section. The repository default is
+            SQLite; process environment overrides are applied by central config.
 
     Returns:
         A ``sessionmaker`` bound to the engine, or ``None`` when no URL is
         available.
     """
     global _engine, _session_factory
+
+    if db_settings is None:
+        from config import get_central_config
+
+        db_settings = get_central_config().database
 
     url = (db_settings.url if db_settings and db_settings.url else None) or os.environ.get(
         "EPHEMERALOS_DATABASE_URL"
@@ -274,7 +280,13 @@ def initialize_db(
 
     logger.info("Connecting to database …")
     engine_kwargs: dict[str, Any] = {"echo": echo}
-    is_sqlite = make_url(url).drivername.startswith("sqlite")
+    database_url = make_url(url)
+    is_sqlite = database_url.drivername.startswith("sqlite")
+    if is_sqlite and database_url.database and database_url.database != ":memory:":
+        Path(database_url.database).expanduser().parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
     if not is_sqlite:
         engine_kwargs.update(
             pool_pre_ping=pool_pre_ping,

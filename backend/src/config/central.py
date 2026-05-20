@@ -12,7 +12,6 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
 from config.loader import (
-    DotenvConfigSource,
     EnvConfigSource,
     YamlConfigSource,
     config_source_paths,
@@ -54,7 +53,6 @@ class CentralConfig(BaseSettings):
         return (
             init_settings,
             EnvConfigSource(settings_cls),
-            DotenvConfigSource(settings_cls),
             YamlConfigSource(settings_cls),
             file_secret_settings,
         )
@@ -77,7 +75,7 @@ def load_central_config(
     *,
     dotenv_path: Path | None = None,
 ) -> CentralConfig:
-    """Load central config with precedence: defaults < YAML < dotenv < env < init."""
+    """Load central config with precedence: defaults < YAML < env < init."""
     with config_source_paths(config_path=config_path, dotenv_path=dotenv_path):
         return CentralConfig()
 

@@ -152,7 +152,7 @@ def test_mount_overlay_propagates_fsopen_errno(
 # ---------------------------------------------------------------------------
 
 
-def test_validate_mount_inputs_returns_fd_paths_for_all_layers(
+def test_validate_mount_inputs_keeps_real_mountpoint_and_fd_backed_sources(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / "workspace"
@@ -169,7 +169,7 @@ def test_validate_mount_inputs_returns_fd_paths_for_all_layers(
         workdir=tmp_path / "work",
     )
     try:
-        assert inputs.workspace_root.as_posix().startswith("/proc/self/fd/")
+        assert inputs.workspace_root == workspace_root
         assert len(inputs.layer_paths) == 2
         assert all(p.as_posix().startswith("/proc/self/fd/") for p in inputs.layer_paths)
         assert inputs.upperdir.as_posix().startswith("/proc/self/fd/")

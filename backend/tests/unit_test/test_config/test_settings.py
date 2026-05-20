@@ -16,7 +16,7 @@ class TestSettings:
         assert s.effort == "medium"
         assert s.theme == "default"
         assert s.verbose is False
-        assert s.database.url == ""
+        assert s.database.url == "sqlite:///./.ephemeralos/ephemeralos.db"
         assert s.sandbox.daytona.default_image == ""
         assert s.sandbox.daytona.default_snapshot == ""
         assert s.sandbox.docker.default_snapshot == ""
@@ -58,7 +58,6 @@ class TestLoadSaveSettings:
         monkeypatch.delenv("EPHEMERALOS_DATABASE_URL", raising=False)
         monkeypatch.delenv("EPHEMERALOS_SANDBOX_DEFAULT_IMAGE", raising=False)
         monkeypatch.delenv("EPHEMERALOS_SANDBOX_DEFAULT_SNAPSHOT", raising=False)
-        monkeypatch.setattr("config.settings._DOTENV_PATH", tmp_path / ".env")
         path = tmp_path / "nonexistent.json"
         s = load_settings(path)
         assert s == Settings()
@@ -67,7 +66,6 @@ class TestLoadSaveSettings:
         monkeypatch.delenv("EPHEMERALOS_DATABASE_URL", raising=False)
         monkeypatch.delenv("EPHEMERALOS_SANDBOX_DEFAULT_IMAGE", raising=False)
         monkeypatch.delenv("EPHEMERALOS_SANDBOX_DEFAULT_SNAPSHOT", raising=False)
-        monkeypatch.setattr("config.settings._DOTENV_PATH", tmp_path / ".env")
         path = tmp_path / "settings.json"
         path.write_text(json.dumps({"verbose": True, "fast_mode": True}))
         s = load_settings(path)
@@ -78,7 +76,6 @@ class TestLoadSaveSettings:
         monkeypatch.delenv("EPHEMERALOS_DATABASE_URL", raising=False)
         monkeypatch.delenv("EPHEMERALOS_SANDBOX_DEFAULT_IMAGE", raising=False)
         monkeypatch.delenv("EPHEMERALOS_SANDBOX_DEFAULT_SNAPSHOT", raising=False)
-        monkeypatch.setattr("config.settings._DOTENV_PATH", tmp_path / ".env")
         path = tmp_path / "settings.json"
         path.write_text(
             json.dumps(
@@ -104,7 +101,6 @@ class TestLoadSaveSettings:
         monkeypatch.delenv("EPHEMERALOS_DATABASE_URL", raising=False)
         monkeypatch.delenv("EPHEMERALOS_SANDBOX_DEFAULT_IMAGE", raising=False)
         monkeypatch.delenv("EPHEMERALOS_SANDBOX_DEFAULT_SNAPSHOT", raising=False)
-        monkeypatch.setattr("config.settings._DOTENV_PATH", tmp_path / ".env")
         path = tmp_path / "settings.json"
         original = Settings(verbose=True, effort="high")
         save_settings(original, path)
@@ -118,7 +114,6 @@ class TestLoadSaveSettings:
         assert path.exists()
 
     def test_database_url_env_override(self, tmp_path: Path, monkeypatch):
-        monkeypatch.setattr("config.settings._DOTENV_PATH", tmp_path / ".env")
         path = tmp_path / "settings.json"
         path.write_text(json.dumps({}))
         monkeypatch.setenv("EPHEMERALOS_DATABASE_URL", "postgresql://env/override")
@@ -126,7 +121,6 @@ class TestLoadSaveSettings:
         assert s.database.url == "postgresql://env/override"
 
     def test_sandbox_default_image_env_override(self, tmp_path: Path, monkeypatch):
-        monkeypatch.setattr("config.settings._DOTENV_PATH", tmp_path / ".env")
         path = tmp_path / "settings.json"
         path.write_text(
             json.dumps(
@@ -147,7 +141,6 @@ class TestLoadSaveSettings:
         assert s.sandbox.daytona.default_image == "ghcr.io/example/env:latest"
 
     def test_sandbox_default_snapshot_env_override(self, tmp_path: Path, monkeypatch):
-        monkeypatch.setattr("config.settings._DOTENV_PATH", tmp_path / ".env")
         path = tmp_path / "settings.json"
         path.write_text(
             json.dumps(

@@ -9,10 +9,11 @@ path continues to resolve to this module.
 
 Fixtures:
 
-- ``db_engine``: session-scoped; bootstraps the project PG engine if
-  ``EPHEMERALOS_DATABASE_URL`` is configured, else returns ``None``.
-- ``stores``: per-test; yields a PG-schema-isolated
-  ``TaskCenterStoreBundle``. Skips if ``db_engine`` is ``None``.
+- ``db_engine``: session-scoped; bootstraps the configured database engine.
+  The repository default is SQLite.
+- ``stores``: per-test; yields an isolated ``TaskCenterStoreBundle`` for the
+  configured dialect. SQLite uses per-test database files; PostgreSQL uses
+  per-test schemas.
 - ``audit_dir``: per-test; resolves the audit base directory honoring
   ``EOS_SWEEVO_AUDIT_TMP`` / ``EOS_SWEEVO_AUDIT_DIR``.
 - ``pipeline_run``: yields a tracker callable; on teardown awaits each
@@ -46,9 +47,8 @@ _log = logging.getLogger(__name__)
 def db_engine() -> object | None:
     """Initialize the shared project engine once per pytest worker.
 
-    Returns ``None`` (rather than skipping) when ``EPHEMERALOS_DATABASE_URL``
-    is not set so unit-test collections that happen to import this fixture
-    do not fail.
+    Returns ``None`` (rather than skipping) when no database URL is configured
+    so unit-test collections that happen to import this fixture do not fail.
     """
     database = get_central_config().database
     if not database.url:
@@ -60,15 +60,13 @@ def db_engine() -> object | None:
 
 @pytest.fixture
 def stores(db_engine: object | None) -> Iterator[TaskCenterStoreBundle]:
-    """Per-test PG schema-isolated TaskCenter stores.
+    """Per-test isolated TaskCenter stores.
 
-    Skipped when ``EPHEMERALOS_DATABASE_URL`` is missing so unit-test
-    collections that import this fixture do not fail.
+    Skipped when no database URL is configured so unit-test collections that
+    import this fixture do not fail.
     """
     if db_engine is None:
-        pytest.skip(
-            "EPHEMERALOS_DATABASE_URL not set — task_center_runner requires PostgreSQL"
-        )
+        pytest.skip("database URL not configured")
     bundle = create_per_test_task_center_stores()
     try:
         yield bundle

@@ -24,7 +24,7 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.mark.skipif(
     not database_configured(),
-    reason="EPHEMERALOS_DATABASE_URL not set - task_center_runner requires PostgreSQL",
+    reason="database URL not configured",
 )
 @pytest.mark.skipif(
     not live_e2e_heavy_enabled(),

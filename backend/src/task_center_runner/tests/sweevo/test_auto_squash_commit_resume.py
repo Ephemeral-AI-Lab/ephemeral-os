@@ -53,7 +53,7 @@ _REQUIRED_SANDBOX_EVENTS = (
 
 @pytest.mark.skipif(
     not database_configured(),
-    reason="EPHEMERALOS_DATABASE_URL not set - task_center_runner requires PostgreSQL",
+    reason="database URL not configured",
 )
 async def test_auto_squash_commit_resume_crosses_depth_threshold(
     sweevo_instance: SWEEvoInstance,

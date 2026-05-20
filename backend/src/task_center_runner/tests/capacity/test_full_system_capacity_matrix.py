@@ -49,7 +49,7 @@ _FORBIDDEN_RUN_SIGNATURES = (
 )
 @pytest.mark.skipif(
     not database_configured(),
-    reason="EPHEMERALOS_DATABASE_URL not set - task_center_runner requires PostgreSQL",
+    reason="database URL not configured",
 )
 async def test_full_system_capacity_matrix_records_artifacts_and_metrics(
     sweevo_instance: SWEEvoInstance,

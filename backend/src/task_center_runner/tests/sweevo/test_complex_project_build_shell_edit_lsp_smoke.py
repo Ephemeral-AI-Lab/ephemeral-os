@@ -21,7 +21,7 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.mark.skipif(
     not database_configured(),
-    reason="EPHEMERALOS_DATABASE_URL not set - task_center_runner requires PostgreSQL",
+    reason="database URL not configured",
 )
 @pytest.mark.timeout(1200)
 async def test_complex_project_build_shell_edit_lsp_smoke(

@@ -311,7 +311,9 @@ def test_mount_spec_rejects_duplicate_mount_paths(tmp_path: Path) -> None:
         )
 
 
-def test_namespace_mount_validation_returns_fd_backed_paths(tmp_path: Path) -> None:
+def test_namespace_mount_validation_keeps_real_mountpoint_and_fd_backed_sources(
+    tmp_path: Path,
+) -> None:
     workspace_root = tmp_path / "workspace"
     layer1 = tmp_path / "layer1"
     layer2 = tmp_path / "layer2"
@@ -328,7 +330,7 @@ def test_namespace_mount_validation_returns_fd_backed_paths(tmp_path: Path) -> N
         workdir=workdir,
     )
     try:
-        assert inputs.workspace_root.as_posix().startswith("/proc/self/fd/")
+        assert inputs.workspace_root == workspace_root
         assert len(inputs.layer_paths) == 2
         assert all(p.as_posix().startswith("/proc/self/fd/") for p in inputs.layer_paths)
         assert inputs.upperdir.as_posix().startswith("/proc/self/fd/")

@@ -71,8 +71,9 @@ def _ensure_initialized() -> Engine:
         engine = get_engine()
     if engine is None:
         raise RuntimeError(
-            "EPHEMERALOS_DATABASE_URL not configured — set it to the project "
-            "database URL before running task_center_runner tests."
+            "database URL not configured — set database.url in ephemeralos.yaml "
+            "or export an explicit database override before running "
+            "task_center_runner tests."
         )
     return engine
 

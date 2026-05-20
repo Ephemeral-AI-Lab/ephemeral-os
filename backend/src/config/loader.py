@@ -10,20 +10,14 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from dotenv import dotenv_values
 from pydantic_settings import PydanticBaseSettingsSource
 
 from config.paths import get_central_config_file_path
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
-_DOTENV_PATH = _PROJECT_ROOT / ".env"
 
 _CONFIG_PATH_OVERRIDE: ContextVar[Path | None] = ContextVar(
     "ephemeralos_config_path_override",
-    default=None,
-)
-_DOTENV_PATH_OVERRIDE: ContextVar[Path | None] = ContextVar(
-    "ephemeralos_dotenv_path_override",
     default=None,
 )
 
@@ -163,35 +157,20 @@ class EnvConfigSource(PydanticBaseSettingsSource):
         return None, field_name, False
 
 
-class DotenvConfigSource(PydanticBaseSettingsSource):
-    """Dotenv source with the same mapping rules as the process environment."""
-
-    def __call__(self) -> dict[str, Any]:
-        path = _DOTENV_PATH_OVERRIDE.get() or _DOTENV_PATH
-        if not path.exists():
-            return {}
-        values = {
-            str(key): str(value)
-            for key, value in dotenv_values(path).items()
-            if key and value is not None
-        }
-        return _data_from_env(values)
-
-    def get_field_value(self, field: Any, field_name: str) -> tuple[Any, str, bool]:
-        return None, field_name, False
-
-
 @contextmanager
 def config_source_paths(
     *,
     config_path: Path | None = None,
     dotenv_path: Path | None = None,
 ):
-    """Temporarily override loader input paths."""
+    """Temporarily override loader input paths.
+
+    ``dotenv_path`` is retained for API compatibility. Central config no longer
+    reads ``.env``; callers that need overrides must export real process envs.
+    """
+    del dotenv_path
     config_token = _CONFIG_PATH_OVERRIDE.set(config_path)
-    dotenv_token = _DOTENV_PATH_OVERRIDE.set(dotenv_path)
     try:
         yield
     finally:
-        _DOTENV_PATH_OVERRIDE.reset(dotenv_token)
         _CONFIG_PATH_OVERRIDE.reset(config_token)

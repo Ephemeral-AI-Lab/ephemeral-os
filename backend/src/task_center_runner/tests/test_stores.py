@@ -1,7 +1,7 @@
 """Integration test for task_center_runner.core.stores isolation.
 
-Skipped when ``EPHEMERALOS_DATABASE_URL`` is not configured. When configured,
-verifies that:
+Skipped only when no database URL is configured. The repository default is
+SQLite, so local runs do not require Postgres. The test verifies that:
 
 1. A bundle creates a fresh per-test store.
 2. ORM writes via the routed session_factory land in that isolated store.
@@ -25,7 +25,7 @@ from task_center_runner.core.stores import (
 
 pytestmark = pytest.mark.skipif(
     not database_configured(),
-    reason="EPHEMERALOS_DATABASE_URL not set",
+    reason="database URL not configured",
 )
 
 

@@ -12,15 +12,11 @@ import os
 from pathlib import Path
 from typing import Any
 
-from dotenv import dotenv_values
 from pydantic import BaseModel, Field
 
 from config.central import CentralConfig, load_central_config
 from config.sections.database import DatabaseConfig
 from config.sections.sandbox import SandboxConfig
-
-_PROJECT_ROOT = Path(__file__).resolve().parents[3]
-_DOTENV_PATH = _PROJECT_ROOT / ".env"
 
 
 DatabaseSettings = DatabaseConfig
@@ -55,14 +51,9 @@ class Settings(BaseModel):
 def _apply_env_overrides(settings: Settings) -> Settings:
     """Apply supported environment variable overrides over loaded settings."""
     updates: dict[str, Any] = {}
-    dotenv_values_map = {
-        str(key): str(value).strip()
-        for key, value in dotenv_values(_DOTENV_PATH).items()
-        if key and value is not None and str(value).strip()
-    }
 
     def _get_override(name: str) -> str:
-        return os.environ.get(name, "").strip() or dotenv_values_map.get(name, "")
+        return os.environ.get(name, "").strip()
 
     database_url = _get_override("EPHEMERALOS_DATABASE_URL")
     if database_url:
