@@ -319,7 +319,7 @@ judgment unless the runtime separately validates the state.
 | Policy | Rendered effect | Why it reduces drift |
 |---|---|---|
 | Generator context recipe | Emits attempt spec, direct dependency summaries, and the assigned task spec only. | A generator is not invited to reason about sibling work unless the planner encoded it into local task or dependency summaries. |
-| Evaluator partial boundary | Emits `plan_kind: partial` and `continuation_goal` for partial attempts. | The evaluator is told not to fail intentionally deferred continuation work, but the judgment remains an agent decision. |
+| Evaluator partial boundary | Emits `plan_kind: partial` and `deferred_goal` for partial attempts. | The evaluator is told not to fail intentionally deferred continuation work, but the judgment remains an agent decision. |
 | Evaluator criteria last | Places criteria after dependency results. | The final prompt section anchors the evaluator on the planner's accepted rubric. |
 | Failed-attempt projection | Retry planner receives prior failed attempts framed as accepted plan, generator outcomes, and evaluator judgment when present. | The repair plan can be narrow without replaying raw work logs or raw failure fields. |
 | Continuation summary boundary | Next episode sees prior accepted plan and evaluator pass summary. | Cross-episode reuse depends on deliberate close summaries, not context sprawl. |
@@ -334,7 +334,7 @@ summaries.
 |---|---|---|---|---|
 | Planner `task_specification` | Planner terminal call, `submit_full_plan` or `submit_partial_plan`. | Attempt plan contract. | Planner output becomes generator/evaluator framing. | Frozen for the attempt once accepted. |
 | Planner `evaluation_criteria` | Planner terminal call. | Attempt plan contract. | Evaluator criteria block. | Rendered last for evaluator. |
-| Planner `continuation_goal` | Planner terminal call when using partial plan. | Attempt plan contract and later episode continuation goal. | Evaluator partial boundary, next episode goal after pass. | Present only for partial attempts; omitted from retry failed-attempt framing by default. |
+| Planner `deferred_goal` | Planner terminal call when using partial plan. | Attempt plan contract and later episode continuation goal. | Evaluator partial boundary, next episode goal after pass. | Present only for partial attempts; omitted from retry failed-attempt framing by default. |
 | Generator task summary | Generator terminal success/failure submission. | Task row `summaries[]`, appended as `{outcome, summary, payload}`. | Dependency summaries, evaluator dependency results, failed-attempt generator outcome details. | Latest summary entry only; `summary` is preferred over `outcome`. |
 | Generator dependency summary | Context-engine projection from direct `needs`. | Not separately stored. | Generator recipe. | One latest summary per direct dependency. |
 | Evaluator pass/fail summary | Evaluator terminal success/failure submission. | Evaluator task row `summaries[]`, appended as `{outcome, summary, payload}`. | Episode close summary, retry evaluator-judgment surface. | Latest evaluator summary for the attempt. |
@@ -768,7 +768,7 @@ Summary must list the final command set, integrated outcome, and any remaining
 risk.
 ```
 
-### `continuation_goal`
+### `deferred_goal`
 
 Because the first attempt deliberately excludes merchant operations, the
 planner should use `submit_partial_plan`:
@@ -1173,13 +1173,13 @@ email notifications, inventory replenishment, or real fulfillment.
 # Partial Plan Boundary
 
 plan_kind: partial
-continuation_goal: Add merchant/admin capabilities for the e-commerce system:
+deferred_goal: Add merchant/admin capabilities for the e-commerce system:
 product management, inventory adjustment, order status management,
 refund/return workflows, coupon codes, fulfillment status, and payment webhook
 processing. Preserve the customer checkout APIs and UI created in the previous
 episode.
 
-This attempt is intentionally partial. If it passes, the continuation_goal
+This attempt is intentionally partial. If it passes, the deferred_goal
 becomes the next episode. Do not treat continuation work as missing from the
 current attempt; judge this attempt against the Attempt Plan and Evaluation
 Criteria.

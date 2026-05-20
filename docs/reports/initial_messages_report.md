@@ -241,21 +241,21 @@ If the selected planner variant does not expose `submit_plan_continues_goal`, pa
 
 You commit your plan via **exactly one** call to one of these tools. There is no other path; plain text you emit is reasoning, not a plan.
 
-The pair encodes the goal lifecycle: `submit_plan_closes_goal` submits a plan that, on evaluator PASS, closes the goal terminally. `submit_plan_continues_goal` submits a plan that, on evaluator PASS, closes the current iteration and continues the goal in a new iteration spawned from your `continuation_goal`.
+The pair encodes the goal lifecycle: `submit_plan_closes_goal` submits a plan that, on evaluator PASS, closes the goal terminally. `submit_plan_continues_goal` submits a plan that, on evaluator PASS, closes the current iteration and continues the goal in a new iteration spawned from your `deferred_goal`.
 
 ### `submit_plan_closes_goal(plan_spec, evaluation_criteria, tasks, task_specs)`
 
 Use when this attempt's tasks fully cover `Current Iteration`. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 
-### `submit_plan_continues_goal(plan_spec, evaluation_criteria, tasks, task_specs, continuation_goal)`
+### `submit_plan_continues_goal(plan_spec, evaluation_criteria, tasks, task_specs, deferred_goal)`
 
-Use when this attempt delivers a **complete, coherent, bounded slice** of `Current Iteration` and a clear remainder exists. On evaluator PASS, a continuation iteration is created from your `continuation_goal`.
+Use when this attempt delivers a **complete, coherent, bounded slice** of `Current Iteration` and a clear remainder exists. On evaluator PASS, a continuation iteration is created from your `deferred_goal`.
 
 Rules for continues-goal plans:
 
 - A continues-goal plan must stand on its own. Its tasks and criteria deliver a finished slice that closes the current iteration. The continuation is for *additional* work, not for *unfinished* work in this graph.
-- The next iteration's planner does not see this attempt's task contents, only its summary. Write `continuation_goal` as a self-contained instruction the way you would want a fresh iteration goal, not as a diff against this attempt.
-- `continuation_goal` is the next iteration's whole scope, not a backlog dump. If the remainder contains many independent items, choose one coherent, bounded next slice and leave any later remainder for that future planner to size again.
+- The next iteration's planner does not see this attempt's task contents, only its summary. Write `deferred_goal` as a self-contained instruction the way you would want a fresh iteration goal, not as a diff against this attempt.
+- `deferred_goal` is the next iteration's whole scope, not a backlog dump. If the remainder contains many independent items, choose one coherent, bounded next slice and leave any later remainder for that future planner to size again.
 - If this agent's available terminal tools do not include `submit_plan_continues_goal`, only `submit_plan_closes_goal` is valid.
 - If `Failed Attempts` is present, you are retrying inside a fixed iteration goal. You may still choose closes-goal or continues-goal when both tools are available, but the iteration goal does not change.
 
@@ -393,7 +393,7 @@ What's Changed
 **user_msg_2** (verbatim, `message.jsonl` row 3 — the spawn prompt = role_instruction + terminal catalog):
 
 ```
-You are planning the first attempt for this iteration's goal. No prior attempts exist in this iteration. Propose a plan that decomposes the iteration goal into generator tasks with a clear evaluation contract. If you cannot solve the iteration in one attempt, submit a partial plan with a continuation_goal so the next iteration can pick up where this one ends. When the iteration goal is a list of independent items (for example a PR-description changelog of features and fixes), prefer a wide parallel DAG with one sibling generator task per item and one criterion per item; coalescing into a single 'all items done' criterion turns partial progress into total failure. If one attempt cannot fit every item, bind a tighter set of items here. If you defer work via continuation_goal, make that continuation_goal the next bounded slice only; do not dump the entire remaining backlog into it.
+You are planning the first attempt for this iteration's goal. No prior attempts exist in this iteration. Propose a plan that decomposes the iteration goal into generator tasks with a clear evaluation contract. If you cannot solve the iteration in one attempt, submit a partial plan with a deferred_goal so the next iteration can pick up where this one ends. When the iteration goal is a list of independent items (for example a PR-description changelog of features and fixes), prefer a wide parallel DAG with one sibling generator task per item and one criterion per item; coalescing into a single 'all items done' criterion turns partial progress into total failure. If one attempt cannot fit every item, bind a tighter set of items here. If you defer work via deferred_goal, make that deferred_goal the next bounded slice only; do not dump the entire remaining backlog into it.
 
 # Terminal tools you may call
 
@@ -401,7 +401,7 @@ Pick exactly one based on outcome:
 
 - `submit_plan_closes_goal` — Call when this attempt's tasks fully cover Current Iteration. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 
-- `submit_plan_continues_goal` — Call when this attempt delivers a complete, coherent, bounded slice of Current Iteration and a clear remainder exists. The continuation_goal is the next iteration's whole scope, not a backlog dump.
+- `submit_plan_continues_goal` — Call when this attempt delivers a complete, coherent, bounded slice of Current Iteration and a clear remainder exists. The deferred_goal is the next iteration's whole scope, not a backlog dump.
 
 # Your task
 
@@ -451,21 +451,21 @@ If the selected planner variant does not expose `submit_plan_continues_goal`, pa
 
 You commit your plan via **exactly one** call to one of these tools. There is no other path; plain text you emit is reasoning, not a plan.
 
-The pair encodes the goal lifecycle: `submit_plan_closes_goal` submits a plan that, on evaluator PASS, closes the goal terminally. `submit_plan_continues_goal` submits a plan that, on evaluator PASS, closes the current iteration and continues the goal in a new iteration spawned from your `continuation_goal`.
+The pair encodes the goal lifecycle: `submit_plan_closes_goal` submits a plan that, on evaluator PASS, closes the goal terminally. `submit_plan_continues_goal` submits a plan that, on evaluator PASS, closes the current iteration and continues the goal in a new iteration spawned from your `deferred_goal`.
 
 ### `submit_plan_closes_goal(plan_spec, evaluation_criteria, tasks, task_specs)`
 
 Use when this attempt's tasks fully cover `Current Iteration`. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 
-### `submit_plan_continues_goal(plan_spec, evaluation_criteria, tasks, task_specs, continuation_goal)`
+### `submit_plan_continues_goal(plan_spec, evaluation_criteria, tasks, task_specs, deferred_goal)`
 
-Use when this attempt delivers a **complete, coherent, bounded slice** of `Current Iteration` and a clear remainder exists. On evaluator PASS, a continuation iteration is created from your `continuation_goal`.
+Use when this attempt delivers a **complete, coherent, bounded slice** of `Current Iteration` and a clear remainder exists. On evaluator PASS, a continuation iteration is created from your `deferred_goal`.
 
 Rules for continues-goal plans:
 
 - A continues-goal plan must stand on its own. Its tasks and criteria deliver a finished slice that closes the current iteration. The continuation is for *additional* work, not for *unfinished* work in this graph.
-- The next iteration's planner does not see this attempt's task contents, only its summary. Write `continuation_goal` as a self-contained instruction the way you would want a fresh iteration goal, not as a diff against this attempt.
-- `continuation_goal` is the next iteration's whole scope, not a backlog dump. If the remainder contains many independent items, choose one coherent, bounded next slice and leave any later remainder for that future planner to size again.
+- The next iteration's planner does not see this attempt's task contents, only its summary. Write `deferred_goal` as a self-contained instruction the way you would want a fresh iteration goal, not as a diff against this attempt.
+- `deferred_goal` is the next iteration's whole scope, not a backlog dump. If the remainder contains many independent items, choose one coherent, bounded next slice and leave any later remainder for that future planner to size again.
 - If this agent's available terminal tools do not include `submit_plan_continues_goal`, only `submit_plan_closes_goal` is valid.
 - If `Failed Attempts` is present, you are retrying inside a fixed iteration goal. You may still choose closes-goal or continues-goal when both tools are available, but the iteration goal does not change.
 
@@ -611,7 +611,7 @@ Pick exactly one based on outcome:
 
 - `submit_plan_closes_goal` — Call when this attempt's tasks fully cover Current Iteration. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 
-- `submit_plan_continues_goal` — Call when this attempt delivers a complete, coherent, bounded slice of Current Iteration and a clear remainder exists. The continuation_goal is the next iteration's whole scope, not a backlog dump.
+- `submit_plan_continues_goal` — Call when this attempt delivers a complete, coherent, bounded slice of Current Iteration and a clear remainder exists. The deferred_goal is the next iteration's whole scope, not a backlog dump.
 
 # Your task
 
@@ -661,21 +661,21 @@ If the selected planner variant does not expose `submit_plan_continues_goal`, pa
 
 You commit your plan via **exactly one** call to one of these tools. There is no other path; plain text you emit is reasoning, not a plan.
 
-The pair encodes the goal lifecycle: `submit_plan_closes_goal` submits a plan that, on evaluator PASS, closes the goal terminally. `submit_plan_continues_goal` submits a plan that, on evaluator PASS, closes the current iteration and continues the goal in a new iteration spawned from your `continuation_goal`.
+The pair encodes the goal lifecycle: `submit_plan_closes_goal` submits a plan that, on evaluator PASS, closes the goal terminally. `submit_plan_continues_goal` submits a plan that, on evaluator PASS, closes the current iteration and continues the goal in a new iteration spawned from your `deferred_goal`.
 
 ### `submit_plan_closes_goal(plan_spec, evaluation_criteria, tasks, task_specs)`
 
 Use when this attempt's tasks fully cover `Current Iteration`. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 
-### `submit_plan_continues_goal(plan_spec, evaluation_criteria, tasks, task_specs, continuation_goal)`
+### `submit_plan_continues_goal(plan_spec, evaluation_criteria, tasks, task_specs, deferred_goal)`
 
-Use when this attempt delivers a **complete, coherent, bounded slice** of `Current Iteration` and a clear remainder exists. On evaluator PASS, a continuation iteration is created from your `continuation_goal`.
+Use when this attempt delivers a **complete, coherent, bounded slice** of `Current Iteration` and a clear remainder exists. On evaluator PASS, a continuation iteration is created from your `deferred_goal`.
 
 Rules for continues-goal plans:
 
 - A continues-goal plan must stand on its own. Its tasks and criteria deliver a finished slice that closes the current iteration. The continuation is for *additional* work, not for *unfinished* work in this graph.
-- The next iteration's planner does not see this attempt's task contents, only its summary. Write `continuation_goal` as a self-contained instruction the way you would want a fresh iteration goal, not as a diff against this attempt.
-- `continuation_goal` is the next iteration's whole scope, not a backlog dump. If the remainder contains many independent items, choose one coherent, bounded next slice and leave any later remainder for that future planner to size again.
+- The next iteration's planner does not see this attempt's task contents, only its summary. Write `deferred_goal` as a self-contained instruction the way you would want a fresh iteration goal, not as a diff against this attempt.
+- `deferred_goal` is the next iteration's whole scope, not a backlog dump. If the remainder contains many independent items, choose one coherent, bounded next slice and leave any later remainder for that future planner to size again.
 - If this agent's available terminal tools do not include `submit_plan_continues_goal`, only `submit_plan_closes_goal` is valid.
 - If `Failed Attempts` is present, you are retrying inside a fixed iteration goal. You may still choose closes-goal or continues-goal when both tools are available, but the iteration goal does not change.
 
@@ -823,7 +823,7 @@ Pick exactly one based on outcome:
 
 - `submit_plan_closes_goal` — Call when this attempt's tasks fully cover Current Iteration. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 
-- `submit_plan_continues_goal` — Call when this attempt delivers a complete, coherent, bounded slice of Current Iteration and a clear remainder exists. The continuation_goal is the next iteration's whole scope, not a backlog dump.
+- `submit_plan_continues_goal` — Call when this attempt delivers a complete, coherent, bounded slice of Current Iteration and a clear remainder exists. The deferred_goal is the next iteration's whole scope, not a backlog dump.
 
 # Your task
 
@@ -1104,7 +1104,7 @@ What's Changed
 **user_msg_2** (verbatim, `message.jsonl` row 3 — the spawn prompt = role_instruction + terminal catalog):
 
 ```
-You are evaluating an intentionally partial attempt (see Partial Plan Boundary). This attempt is not expected to solve the full iteration goal — it is expected to make progress and hand off remaining work via continuation_goal. Pass/fail against the Evaluation Criteria for what this attempt promised; do not penalize for incomplete work that was explicitly deferred.
+You are evaluating an intentionally partial attempt (see Partial Plan Boundary). This attempt is not expected to solve the full iteration goal — it is expected to make progress and hand off remaining work via deferred_goal. Pass/fail against the Evaluation Criteria for what this attempt promised; do not penalize for incomplete work that was explicitly deferred.
 
 # Terminal tools you may call
 
@@ -1325,21 +1325,21 @@ If the selected planner variant does not expose `submit_plan_continues_goal`, pa
 
 You commit your plan via **exactly one** call to one of these tools. There is no other path; plain text you emit is reasoning, not a plan.
 
-The pair encodes the goal lifecycle: `submit_plan_closes_goal` submits a plan that, on evaluator PASS, closes the goal terminally. `submit_plan_continues_goal` submits a plan that, on evaluator PASS, closes the current iteration and continues the goal in a new iteration spawned from your `continuation_goal`.
+The pair encodes the goal lifecycle: `submit_plan_closes_goal` submits a plan that, on evaluator PASS, closes the goal terminally. `submit_plan_continues_goal` submits a plan that, on evaluator PASS, closes the current iteration and continues the goal in a new iteration spawned from your `deferred_goal`.
 
 ### `submit_plan_closes_goal(plan_spec, evaluation_criteria, tasks, task_specs)`
 
 Use when this attempt's tasks fully cover `Current Iteration`. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 
-### `submit_plan_continues_goal(plan_spec, evaluation_criteria, tasks, task_specs, continuation_goal)`
+### `submit_plan_continues_goal(plan_spec, evaluation_criteria, tasks, task_specs, deferred_goal)`
 
-Use when this attempt delivers a **complete, coherent, bounded slice** of `Current Iteration` and a clear remainder exists. On evaluator PASS, a continuation iteration is created from your `continuation_goal`.
+Use when this attempt delivers a **complete, coherent, bounded slice** of `Current Iteration` and a clear remainder exists. On evaluator PASS, a continuation iteration is created from your `deferred_goal`.
 
 Rules for continues-goal plans:
 
 - A continues-goal plan must stand on its own. Its tasks and criteria deliver a finished slice that closes the current iteration. The continuation is for *additional* work, not for *unfinished* work in this graph.
-- The next iteration's planner does not see this attempt's task contents, only its summary. Write `continuation_goal` as a self-contained instruction the way you would want a fresh iteration goal, not as a diff against this attempt.
-- `continuation_goal` is the next iteration's whole scope, not a backlog dump. If the remainder contains many independent items, choose one coherent, bounded next slice and leave any later remainder for that future planner to size again.
+- The next iteration's planner does not see this attempt's task contents, only its summary. Write `deferred_goal` as a self-contained instruction the way you would want a fresh iteration goal, not as a diff against this attempt.
+- `deferred_goal` is the next iteration's whole scope, not a backlog dump. If the remainder contains many independent items, choose one coherent, bounded next slice and leave any later remainder for that future planner to size again.
 - If this agent's available terminal tools do not include `submit_plan_continues_goal`, only `submit_plan_closes_goal` is valid.
 - If `Failed Attempts` is present, you are retrying inside a fixed iteration goal. You may still choose closes-goal or continues-goal when both tools are available, but the iteration goal does not change.
 
@@ -1378,7 +1378,7 @@ Iteration 1 (FIRST_ATTEMPT).
 **user_msg_2** (constructed via real builders):
 
 ```
-You are planning the first attempt for this iteration's goal. No prior attempts exist in this iteration. Propose a plan that decomposes the iteration goal into generator tasks with a clear evaluation contract. If you cannot solve the iteration in one attempt, submit a partial plan with a continuation_goal so the next iteration can pick up where this one ends. When the iteration goal is a list of independent items (for example a PR-description changelog of features and fixes), prefer a wide parallel DAG with one sibling generator task per item and one criterion per item; coalescing into a single 'all items done' criterion turns partial progress into total failure. If one attempt cannot fit every item, bind a tighter set of items here. If you defer work via continuation_goal, make that continuation_goal the next bounded slice only; do not dump the entire remaining backlog into it.
+You are planning the first attempt for this iteration's goal. No prior attempts exist in this iteration. Propose a plan that decomposes the iteration goal into generator tasks with a clear evaluation contract. If you cannot solve the iteration in one attempt, submit a partial plan with a deferred_goal so the next iteration can pick up where this one ends. When the iteration goal is a list of independent items (for example a PR-description changelog of features and fixes), prefer a wide parallel DAG with one sibling generator task per item and one criterion per item; coalescing into a single 'all items done' criterion turns partial progress into total failure. If one attempt cannot fit every item, bind a tighter set of items here. If you defer work via deferred_goal, make that deferred_goal the next bounded slice only; do not dump the entire remaining backlog into it.
 
 # Terminal tools you may call
 
@@ -1386,7 +1386,7 @@ Pick exactly one based on outcome:
 
 - `submit_plan_closes_goal` — Call when this attempt's tasks fully cover Current Iteration. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 
-- `submit_plan_continues_goal` — Call when this attempt delivers a complete, coherent, bounded slice of Current Iteration and a clear remainder exists. The continuation_goal is the next iteration's whole scope, not a backlog dump.
+- `submit_plan_continues_goal` — Call when this attempt delivers a complete, coherent, bounded slice of Current Iteration and a clear remainder exists. The deferred_goal is the next iteration's whole scope, not a backlog dump.
 
 # Your task
 
@@ -1432,21 +1432,21 @@ If the selected planner variant does not expose `submit_plan_continues_goal`, pa
 
 You commit your plan via **exactly one** call to one of these tools. There is no other path; plain text you emit is reasoning, not a plan.
 
-The pair encodes the goal lifecycle: `submit_plan_closes_goal` submits a plan that, on evaluator PASS, closes the goal terminally. `submit_plan_continues_goal` submits a plan that, on evaluator PASS, closes the current iteration and continues the goal in a new iteration spawned from your `continuation_goal`.
+The pair encodes the goal lifecycle: `submit_plan_closes_goal` submits a plan that, on evaluator PASS, closes the goal terminally. `submit_plan_continues_goal` submits a plan that, on evaluator PASS, closes the current iteration and continues the goal in a new iteration spawned from your `deferred_goal`.
 
 ### `submit_plan_closes_goal(plan_spec, evaluation_criteria, tasks, task_specs)`
 
 Use when this attempt's tasks fully cover `Current Iteration`. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 
-### `submit_plan_continues_goal(plan_spec, evaluation_criteria, tasks, task_specs, continuation_goal)`
+### `submit_plan_continues_goal(plan_spec, evaluation_criteria, tasks, task_specs, deferred_goal)`
 
-Use when this attempt delivers a **complete, coherent, bounded slice** of `Current Iteration` and a clear remainder exists. On evaluator PASS, a continuation iteration is created from your `continuation_goal`.
+Use when this attempt delivers a **complete, coherent, bounded slice** of `Current Iteration` and a clear remainder exists. On evaluator PASS, a continuation iteration is created from your `deferred_goal`.
 
 Rules for continues-goal plans:
 
 - A continues-goal plan must stand on its own. Its tasks and criteria deliver a finished slice that closes the current iteration. The continuation is for *additional* work, not for *unfinished* work in this graph.
-- The next iteration's planner does not see this attempt's task contents, only its summary. Write `continuation_goal` as a self-contained instruction the way you would want a fresh iteration goal, not as a diff against this attempt.
-- `continuation_goal` is the next iteration's whole scope, not a backlog dump. If the remainder contains many independent items, choose one coherent, bounded next slice and leave any later remainder for that future planner to size again.
+- The next iteration's planner does not see this attempt's task contents, only its summary. Write `deferred_goal` as a self-contained instruction the way you would want a fresh iteration goal, not as a diff against this attempt.
+- `deferred_goal` is the next iteration's whole scope, not a backlog dump. If the remainder contains many independent items, choose one coherent, bounded next slice and leave any later remainder for that future planner to size again.
 - If this agent's available terminal tools do not include `submit_plan_continues_goal`, only `submit_plan_closes_goal` is valid.
 - If `Failed Attempts` is present, you are retrying inside a fixed iteration goal. You may still choose closes-goal or continues-goal when both tools are available, but the iteration goal does not change.
 
@@ -1497,7 +1497,7 @@ Pick exactly one based on outcome:
 
 - `submit_plan_closes_goal` — Call when this attempt's tasks fully cover Current Iteration. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 
-- `submit_plan_continues_goal` — Call when this attempt delivers a complete, coherent, bounded slice of Current Iteration and a clear remainder exists. The continuation_goal is the next iteration's whole scope, not a backlog dump.
+- `submit_plan_continues_goal` — Call when this attempt delivers a complete, coherent, bounded slice of Current Iteration and a clear remainder exists. The deferred_goal is the next iteration's whole scope, not a backlog dump.
 
 # Your task
 
@@ -1543,21 +1543,21 @@ If the selected planner variant does not expose `submit_plan_continues_goal`, pa
 
 You commit your plan via **exactly one** call to one of these tools. There is no other path; plain text you emit is reasoning, not a plan.
 
-The pair encodes the goal lifecycle: `submit_plan_closes_goal` submits a plan that, on evaluator PASS, closes the goal terminally. `submit_plan_continues_goal` submits a plan that, on evaluator PASS, closes the current iteration and continues the goal in a new iteration spawned from your `continuation_goal`.
+The pair encodes the goal lifecycle: `submit_plan_closes_goal` submits a plan that, on evaluator PASS, closes the goal terminally. `submit_plan_continues_goal` submits a plan that, on evaluator PASS, closes the current iteration and continues the goal in a new iteration spawned from your `deferred_goal`.
 
 ### `submit_plan_closes_goal(plan_spec, evaluation_criteria, tasks, task_specs)`
 
 Use when this attempt's tasks fully cover `Current Iteration`. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 
-### `submit_plan_continues_goal(plan_spec, evaluation_criteria, tasks, task_specs, continuation_goal)`
+### `submit_plan_continues_goal(plan_spec, evaluation_criteria, tasks, task_specs, deferred_goal)`
 
-Use when this attempt delivers a **complete, coherent, bounded slice** of `Current Iteration` and a clear remainder exists. On evaluator PASS, a continuation iteration is created from your `continuation_goal`.
+Use when this attempt delivers a **complete, coherent, bounded slice** of `Current Iteration` and a clear remainder exists. On evaluator PASS, a continuation iteration is created from your `deferred_goal`.
 
 Rules for continues-goal plans:
 
 - A continues-goal plan must stand on its own. Its tasks and criteria deliver a finished slice that closes the current iteration. The continuation is for *additional* work, not for *unfinished* work in this graph.
-- The next iteration's planner does not see this attempt's task contents, only its summary. Write `continuation_goal` as a self-contained instruction the way you would want a fresh iteration goal, not as a diff against this attempt.
-- `continuation_goal` is the next iteration's whole scope, not a backlog dump. If the remainder contains many independent items, choose one coherent, bounded next slice and leave any later remainder for that future planner to size again.
+- The next iteration's planner does not see this attempt's task contents, only its summary. Write `deferred_goal` as a self-contained instruction the way you would want a fresh iteration goal, not as a diff against this attempt.
+- `deferred_goal` is the next iteration's whole scope, not a backlog dump. If the remainder contains many independent items, choose one coherent, bounded next slice and leave any later remainder for that future planner to size again.
 - If this agent's available terminal tools do not include `submit_plan_continues_goal`, only `submit_plan_closes_goal` is valid.
 - If `Failed Attempts` is present, you are retrying inside a fixed iteration goal. You may still choose closes-goal or continues-goal when both tools are available, but the iteration goal does not change.
 
@@ -1590,7 +1590,7 @@ Both terminal tools share the same plan body.
 
 # Current Iteration
 
-Iteration 2 (PARTIAL_CONTINUATION) — continuation_goal from iteration 1.
+Iteration 2 (PARTIAL_CONTINUATION) — deferred_goal from iteration 1.
 
 # Previous Iteration Results
 
@@ -1614,7 +1614,7 @@ Pick exactly one based on outcome:
 
 - `submit_plan_closes_goal` — Call when this attempt's tasks fully cover Current Iteration. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 
-- `submit_plan_continues_goal` — Call when this attempt delivers a complete, coherent, bounded slice of Current Iteration and a clear remainder exists. The continuation_goal is the next iteration's whole scope, not a backlog dump.
+- `submit_plan_continues_goal` — Call when this attempt delivers a complete, coherent, bounded slice of Current Iteration and a clear remainder exists. The deferred_goal is the next iteration's whole scope, not a backlog dump.
 
 # Your task
 
@@ -1660,21 +1660,21 @@ If the selected planner variant does not expose `submit_plan_continues_goal`, pa
 
 You commit your plan via **exactly one** call to one of these tools. There is no other path; plain text you emit is reasoning, not a plan.
 
-The pair encodes the goal lifecycle: `submit_plan_closes_goal` submits a plan that, on evaluator PASS, closes the goal terminally. `submit_plan_continues_goal` submits a plan that, on evaluator PASS, closes the current iteration and continues the goal in a new iteration spawned from your `continuation_goal`.
+The pair encodes the goal lifecycle: `submit_plan_closes_goal` submits a plan that, on evaluator PASS, closes the goal terminally. `submit_plan_continues_goal` submits a plan that, on evaluator PASS, closes the current iteration and continues the goal in a new iteration spawned from your `deferred_goal`.
 
 ### `submit_plan_closes_goal(plan_spec, evaluation_criteria, tasks, task_specs)`
 
 Use when this attempt's tasks fully cover `Current Iteration`. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 
-### `submit_plan_continues_goal(plan_spec, evaluation_criteria, tasks, task_specs, continuation_goal)`
+### `submit_plan_continues_goal(plan_spec, evaluation_criteria, tasks, task_specs, deferred_goal)`
 
-Use when this attempt delivers a **complete, coherent, bounded slice** of `Current Iteration` and a clear remainder exists. On evaluator PASS, a continuation iteration is created from your `continuation_goal`.
+Use when this attempt delivers a **complete, coherent, bounded slice** of `Current Iteration` and a clear remainder exists. On evaluator PASS, a continuation iteration is created from your `deferred_goal`.
 
 Rules for continues-goal plans:
 
 - A continues-goal plan must stand on its own. Its tasks and criteria deliver a finished slice that closes the current iteration. The continuation is for *additional* work, not for *unfinished* work in this graph.
-- The next iteration's planner does not see this attempt's task contents, only its summary. Write `continuation_goal` as a self-contained instruction the way you would want a fresh iteration goal, not as a diff against this attempt.
-- `continuation_goal` is the next iteration's whole scope, not a backlog dump. If the remainder contains many independent items, choose one coherent, bounded next slice and leave any later remainder for that future planner to size again.
+- The next iteration's planner does not see this attempt's task contents, only its summary. Write `deferred_goal` as a self-contained instruction the way you would want a fresh iteration goal, not as a diff against this attempt.
+- `deferred_goal` is the next iteration's whole scope, not a backlog dump. If the remainder contains many independent items, choose one coherent, bounded next slice and leave any later remainder for that future planner to size again.
 - If this agent's available terminal tools do not include `submit_plan_continues_goal`, only `submit_plan_closes_goal` is valid.
 - If `Failed Attempts` is present, you are retrying inside a fixed iteration goal. You may still choose closes-goal or continues-goal when both tools are available, but the iteration goal does not change.
 
@@ -1735,7 +1735,7 @@ Pick exactly one based on outcome:
 
 - `submit_plan_closes_goal` — Call when this attempt's tasks fully cover Current Iteration. On evaluator PASS, the iteration closes terminally and the goal can succeed.
 
-- `submit_plan_continues_goal` — Call when this attempt delivers a complete, coherent, bounded slice of Current Iteration and a clear remainder exists. The continuation_goal is the next iteration's whole scope, not a backlog dump.
+- `submit_plan_continues_goal` — Call when this attempt delivers a complete, coherent, bounded slice of Current Iteration and a clear remainder exists. The deferred_goal is the next iteration's whole scope, not a backlog dump.
 
 # Your task
 
@@ -2043,13 +2043,13 @@ preflight: success — artifacts=[]
 
 # Partial Plan Boundary
 
-Intentionally partial; continuation_goal is set.
+Intentionally partial; deferred_goal is set.
 ```
 
 **user_msg_2** (constructed via real builders):
 
 ```
-You are evaluating an intentionally partial attempt (see Partial Plan Boundary). This attempt is not expected to solve the full iteration goal — it is expected to make progress and hand off remaining work via continuation_goal. Pass/fail against the Evaluation Criteria for what this attempt promised; do not penalize for incomplete work that was explicitly deferred.
+You are evaluating an intentionally partial attempt (see Partial Plan Boundary). This attempt is not expected to solve the full iteration goal — it is expected to make progress and hand off remaining work via deferred_goal. Pass/fail against the Evaluation Criteria for what this attempt promised; do not penalize for incomplete work that was explicitly deferred.
 
 # Terminal tools you may call
 
@@ -2442,5 +2442,5 @@ Checks: `{'system_nonempty': True, 'user_msg_1_nonempty': True, 'user_msg_2_none
 - **Instruction quality:** main-agent system prompts (in `agents/profile/main/<name>.md`) embed selection criteria, hard validity rules, and design principles. Helper user_msg_2 enforces tri-part summary structure (advisor) or per-issue resolution (resolver). Explorer user_msg_2 demands concrete findings (file paths, line numbers, symbols).
 - **Verdict — PASS for all sampled roles.** The presence contract is satisfied across the iteration / attempt / routing matrix.
 - **Gap closed:** `AgentMessageJsonlRecorder.record_initial_messages` was extended to accept `seeded_initial_messages` and write them between the system row and the spawn-prompt row. Both the live engine (`engine/query/request.py:_record_initial_messages_once`) and the mock runner (`task_center_runner/agent/mock/runner.py:_record_initial_messages`) now feed seeded messages through. Captured `message.jsonl` files for planner / executor / evaluator now hold three initial rows (system + user_msg_1 + user_msg_2); entry_executor stays at two by design (single-user-message recipe).
-- **Scope notes:** the new scenario file `backend/src/task_center_runner/scenarios/pipeline/initial_messages_capture.py` registers a complex run (2 iterations with continuation_goal + attempt retry + helper/subagent invocations). The matching pytest test `backend/src/task_center_runner/tests/sweevo/test_initial_messages_capture.py` was attempted live with the containerised postgres (`backend/docker-compose.postgres.yml`) providing `EPHEMERALOS_DATABASE_URL`. The live run reached the `sweevo_sandbox` session fixture and then **timed out in Daytona sandbox creation** after 300s (`DaytonaTimeoutError: Function 'create' exceeded timeout of 300.0 seconds`) — see the `Daytona pending_build hang root cause` memory entry. The composer / recorder / planner-validation pipeline this report audits is exercised identically by the most recent live runs of `pipeline.iterative_continuation` and `pipeline.attempt_retry_planner_failure`, which is why those are the captured-row source.
+- **Scope notes:** the new scenario file `backend/src/task_center_runner/scenarios/pipeline/initial_messages_capture.py` registers a complex run (2 iterations with deferred_goal + attempt retry + helper/subagent invocations). The matching pytest test `backend/src/task_center_runner/tests/sweevo/test_initial_messages_capture.py` was attempted live with the containerised postgres (`backend/docker-compose.postgres.yml`) providing `EPHEMERALOS_DATABASE_URL`. The live run reached the `sweevo_sandbox` session fixture and then **timed out in Daytona sandbox creation** after 300s (`DaytonaTimeoutError: Function 'create' exceeded timeout of 300.0 seconds`) — see the `Daytona pending_build hang root cause` memory entry. The composer / recorder / planner-validation pipeline this report audits is exercised identically by the most recent live runs of `pipeline.iterative_continuation` and `pipeline.attempt_retry_planner_failure`, which is why those are the captured-row source.
 

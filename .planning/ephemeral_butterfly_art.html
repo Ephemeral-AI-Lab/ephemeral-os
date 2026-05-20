@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>EphemeralOS — Butterfly Muse</title>
+<style>
+  :root {
+    --sky-top: #2a1a4a;
+    --sky-mid: #c97a8a;
+    --sky-low: #f6c89f;
+    --sun: #fff3d0;
+    --sea-deep: #5a3a6a;
+    --sea-shine: #ffd9b8;
+    --dress: #fdfcff;
+    --hair: #e8d9b8;
+    --accent: #8fe6d4;
+    --ink: #1a1228;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: #0a0716;
+    font-family: 'Cormorant Garamond', 'Georgia', serif;
+    color: #f4e9d8;
+    overflow: hidden;
+  }
+  .stage {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ===== SKY ===== */
+  .sky {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 72% 58%, rgba(255,243,208,0.85), transparent 60%),
+      linear-gradient(180deg,
+        var(--sky-top) 0%,
+        #533068 22%,
+        #a85e7c 45%,
+        var(--sky-mid) 60%,
+        var(--sky-low) 75%,
+        #f9d9b2 85%,
+        #e9b59a 100%);
+  }
+  .stars {
+    position: absolute; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 8%, #fff, transparent),
+      radial-gradient(1px 1px at 25% 14%, #ffe8c8, transparent),
+      radial-gradient(1.5px 1.5px at 42% 6%, #fff, transparent),
+      radial-gradient(1px 1px at 60% 12%, #d9c8ff, transparent),
+      radial-gradient(1px 1px at 78% 4%, #fff, transparent),
+      radial-gradient(1px 1px at 88% 16%, #ffe8c8, transparent),
+      radial-gradient(1px 1px at 15% 22%, #fff, transparent),
+      radial-gradient(1px 1px at 33% 28%, #d9c8ff, transparent);
+    opacity: 0.85;
+    animation: twinkle 4s ease-in-out infinite alternate;
+  }
+  @keyframes twinkle { from {opacity:.4;} to {opacity:.95;} }
+
+  .sun {
+    position: absolute;
+    left: 68%; top: 52%;
+    width: 220px; height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #fff8dd 0%, #ffd9a0 35%, rgba(255,180,140,0) 70%);
+    filter: blur(2px);
+    transform: translate(-50%,-50%);
+    box-shadow: 0 0 120px 40px rgba(255,220,170,0.45);
+  }
+
+  /* clouds */
+  .cloud {
+    position: absolute;
+    background: rgba(255,230,210,0.55);
+    border-radius: 50%;
+    filter: blur(18px);
+    animation: drift 40s linear infinite;
+  }
+  .c1 { width: 360px; height: 60px; left: 5%; top: 30%; opacity: .6; }
+  .c2 { width: 480px; height: 70px; left: 45%; top: 22%; opacity: .5; animation-duration: 55s; }
+  .c3 { width: 280px; height: 50px; left: 70%; top: 38%; opacity: .55; animation-duration: 35s; }
+  @keyframes drift {
+    from { transform: translateX(-40px); }
+    to   { transform: translateX(40px); }
+  }
+
+  /* ===== SEA ===== */
+  .sea {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 38%;
+    background:
+      linear-gradient(180deg,
+        #b87a8a 0%,
+        #8a5a78 25%,
+        #5a3a6a 60%,
+        #2e1f3c 100%);
+    overflow: hidden;
+  }
+  .sea::before {
+    content: "";
+    position: absolute;
+    left: 60%; top: -10%;
+    width: 30%; height: 90%;
+    background: linear-gradient(180deg, rgba(255,235,200,.9), rgba(255,200,160,.2) 60%, transparent);
+    transform: translateX(-50%);
+    filter: blur(6px);
+  }
+  .wave {
+    position: absolute;
+    left: 0; right: 0;
+    height: 14px;
+    background: linear-gradient(180deg, rgba(255,230,210,.7), transparent);
+    border-radius: 50%;
+    filter: blur(2px);
+    animation: ripple 6s ease-in-out infinite alternate;
+  }
+  .w1 { top: 22%;  animation-delay: -1s; opacity:.5; }
+  .w2 { top: 38%;  animation-delay: -3s; opacity:.4; }
+  .w3 { top: 58%;  animation-delay: -2s; opacity:.3; }
+  .w4 { top: 78%;  animation-delay: -4s; opacity:.25; }
+  @keyframes ripple {
+    from { transform: translateX(-20px) scaleY(1); }
+    to   { transform: translateX(20px) scaleY(1.2); }
+  }
+
+  /* ===== GIRL ===== */
+  .girl {
+    position: absolute;
+    left: 32%;
+    bottom: 6%;
+    width: 380px;
+    height: 70%;
+    transform: translateX(-50%);
+    filter: drop-shadow(0 20px 30px rgba(0,0,0,.35));
+  }
+
+  /* dress */
+  .dress {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    width: 320px;
+    height: 55%;
+    transform: translateX(-50%);
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(255,210,170,.6), transparent 60%),
+      linear-gradient(180deg, #fffaf2 0%, #fdeede 40%, #f0d4c2 75%, #d8a890 100%);
+    clip-path: polygon(
+      38% 0%, 62% 0%,
+      72% 12%, 80% 28%,
+      92% 55%, 100% 80%,
+      95% 95%, 75% 100%,
+      25% 100%, 5% 95%,
+      0% 80%, 8% 55%,
+      20% 28%, 28% 12%
+    );
+    box-shadow: inset 0 -30px 40px rgba(180,120,120,.25);
+  }
+  .dress::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-linear-gradient(85deg,
+        transparent 0 22px,
+        rgba(200,140,140,.08) 22px 24px);
+    clip-path: inherit;
+    opacity: .7;
+  }
+  .dress::after {
+    content: "";
+    position: absolute;
+    left: 50%; top: 8%;
+    width: 80%; height: 30%;
+    transform: translateX(-50%);
+    background: linear-gradient(180deg, rgba(255,255,255,.4), transparent);
+    border-radius: 50% 50% 30% 30%;
+    filter: blur(8px);
+  }
+
+  /* veil/wing layer behind */
+  .veil {
+    position: absolute;
+    left: 50%; bottom: 8%;
+    width: 480px; height: 60%;
+    transform: translateX(-58%);
+    background: radial-gradient(ellipse at 30% 50%,
+      rgba(255,255,255,.55) 0%,
+      rgba(255,230,220,.25) 40%,
+      transparent 70%);
+    filter: blur(3px);
+    z-index: -1;
+    animation: veilSway 6s ease-in-out infinite alternate;
+  }
+  @keyframes veilSway {
+    from { transform: translateX(-58%) rotate(-2deg); }
+    to   { transform: translateX(-54%) rotate(2deg); }
+  }
+
+  /* torso */
+  .torso {
+    position: absolute;
+    left: 50%; bottom: 50%;
+    width: 90px; height: 110px;
+    transform: translateX(-50%);
+    background: linear-gradient(180deg, #fffaf2 0%, #f5dccc 100%);
+    border-radius: 40px 40px 50% 50% / 30px 30px 40% 40%;
+    box-shadow: inset -8px 0 15px rgba(180,120,120,.2);
+  }
+
+  /* skin: neck + arm + shoulder */
+  .neck {
+    position: absolute;
+    left: 50%; bottom: 60%;
+    width: 28px; height: 36px;
+    transform: translateX(-50%);
+    background: linear-gradient(180deg, #fbe2cf, #f4cdb2);
+    border-radius: 14px;
+  }
+  .arm {
+    position: absolute;
+    left: 64%; bottom: 53%;
+    width: 18px; height: 140px;
+    background: linear-gradient(180deg, #fbe2cf, #f4cdb2);
+    border-radius: 10px;
+    transform: rotate(-38deg);
+    transform-origin: top left;
+    box-shadow: -2px 2px 4px rgba(0,0,0,.1);
+  }
+  .hand {
+    position: absolute;
+    left: 78%; top: 16%;
+    width: 26px; height: 32px;
+    background: linear-gradient(180deg, #fbe2cf, #f4cdb2);
+    border-radius: 12px 14px 16px 10px;
+    transform: rotate(-25deg);
+  }
+
+  /* head */
+  .head {
+    position: absolute;
+    left: 50%; bottom: 67%;
+    width: 78px; height: 90px;
+    transform: translateX(-52%);
+    background: linear-gradient(180deg, #fde6d3 0%, #f4cdb2 100%);
+    border-radius: 50% 50% 45% 45% / 55% 55% 45% 45%;
+    box-shadow: inset -6px -4px 12px rgba(180,120,120,.25);
+  }
+  .ear {
+    position: absolute;
+    left: 8%; top: 50%;
+    width: 10px; height: 14px;
+    background: #f4cdb2;
+    border-radius: 50%;
+    box-shadow: inset 1px 0 2px rgba(0,0,0,.15);
+  }
+
+  /* hair: back mass */
+  .hair-back {
+    position: absolute;
+    left: 50%; bottom: 12%;
+    width: 220px; height: 78%;
+    transform: translateX(-58%);
+    background:
+      linear-gradient(180deg,
+        #f1e2c2 0%,
+        #d9c290 35%,
+        #b89968 65%,
+        #6d5a3a 100%);
+    border-radius: 60% 40% 30% 50% / 30% 40% 60% 50%;
+    filter: blur(.4px);
+    box-shadow: inset -15px -10px 25px rgba(60,40,20,.35);
+    z-index: -1;
+  }
+  .hair-back::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-linear-gradient(95deg,
+        transparent 0 8px,
+        rgba(255,240,200,.12) 8px 10px,
+        transparent 10px 18px,
+        rgba(80,60,30,.18) 18px 19px);
+    border-radius: inherit;
+  }
+
+  /* hair: top crown */
+  .hair-top {
+    position: absolute;
+    left: 50%; bottom: 70%;
+    width: 96px; height: 38px;
+    transform: translateX(-52%);
+    background:
+      linear-gradient(180deg, #f5e6c4 0%, #d9c290 100%);
+    border-radius: 60% 60% 30% 30% / 70% 70% 30% 30%;
+    box-shadow: inset -4px -3px 8px rgba(80,60,30,.3);
+  }
+
+  /* hair: side strand whipping */
+  .hair-strand {
+    position: absolute;
+    left: 38%; bottom: 50%;
+    width: 90px; height: 6px;
+    background: linear-gradient(90deg, #d9c290, transparent);
+    border-radius: 50%;
+    transform: rotate(-12deg);
+    filter: blur(.5px);
+  }
+  .hair-strand.s2 { left: 18%; bottom: 38%; width: 130px; transform: rotate(-6deg); opacity: .85; }
+  .hair-strand.s3 { left: 12%; bottom: 25%; width: 160px; transform: rotate(2deg); opacity: .7; }
+
+  /* eye (visible side, looking forward-right) */
+  .eye {
+    position: absolute;
+    left: 70%; top: 48%;
+    width: 9px; height: 12px;
+    background: radial-gradient(circle at 40% 40%, #6fb8d8 0%, #2a5a7a 70%, #0e2840 100%);
+    border-radius: 50%;
+    box-shadow: 0 0 2px rgba(0,0,0,.5);
+  }
+  .eye::after {
+    content: "";
+    position: absolute;
+    left: 30%; top: 20%;
+    width: 3px; height: 3px;
+    background: #fff;
+    border-radius: 50%;
+  }
+  .brow {
+    position: absolute;
+    left: 68%; top: 38%;
+    width: 12px; height: 2px;
+    background: #8a6a4a;
+    border-radius: 2px;
+    transform: rotate(-8deg);
+  }
+  .lip {
+    position: absolute;
+    left: 75%; top: 70%;
+    width: 6px; height: 2px;
+    background: #c47878;
+    border-radius: 2px;
+  }
+
+  /* hair ribbon */
+  .ribbon {
+    position: absolute;
+    left: 50%; bottom: 78%;
+    width: 22px; height: 14px;
+    transform: translateX(-30%);
+    background: linear-gradient(135deg, #3a4a78, #1f2a4a);
+    clip-path: polygon(0% 50%, 30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%);
+  }
+
+  /* ===== BUTTERFLY on hand ===== */
+  .butterfly {
+    position: absolute;
+    left: 78%;
+    top: 8%;
+    width: 46px; height: 38px;
+    transform-origin: center;
+    animation: flutter 2.4s ease-in-out infinite;
+    filter: drop-shadow(0 0 6px rgba(140,240,220,.7));
+  }
+  .wing {
+    position: absolute;
+    top: 0;
+    width: 22px; height: 32px;
+    background: radial-gradient(ellipse at 30% 40%,
+      #b8fff0 0%, #6fe4d0 35%, #3aa898 75%, #1e6a64 100%);
+    border-radius: 60% 80% 60% 30% / 70% 80% 50% 40%;
+    box-shadow: inset 0 0 6px rgba(0,0,0,.2);
+  }
+  .wing.left  { left: 0; transform-origin: right center; animation: flapL 0.5s ease-in-out infinite alternate; }
+  .wing.right { right: 0; transform: scaleX(-1); transform-origin: left center; animation: flapR 0.5s ease-in-out infinite alternate; }
+  .wing::after {
+    content: "";
+    position: absolute;
+    left: 30%; top: 50%;
+    width: 8px; height: 8px;
+    background: radial-gradient(circle, #ffe8c8, transparent 70%);
+    border-radius: 50%;
+  }
+  .body {
+    position: absolute;
+    left: 50%; top: 6%;
+    width: 4px; height: 26px;
+    transform: translateX(-50%);
+    background: linear-gradient(180deg, #2a1f3a, #0a0716);
+    border-radius: 4px;
+  }
+  @keyframes flutter {
+    0%,100% { transform: translateY(0) rotate(-4deg); }
+    50%     { transform: translateY(-6px) rotate(4deg); }
+  }
+  @keyframes flapL {
+    from { transform: rotateY(0deg); }
+    to   { transform: rotateY(55deg); }
+  }
+  @keyframes flapR {
+    from { transform: scaleX(-1) rotateY(0deg); }
+    to   { transform: scaleX(-1) rotateY(55deg); }
+  }
+
+  /* drifting butterflies in distance */
+  .drift-fly {
+    position: absolute;
+    width: 18px; height: 14px;
+    opacity: .85;
+    filter: drop-shadow(0 0 4px rgba(180,255,240,.6));
+  }
+  .drift-fly .mini {
+    position: absolute;
+    width: 8px; height: 12px;
+    background: radial-gradient(ellipse, #c9fff0, #6fd4c0 70%);
+    border-radius: 60% 80% 60% 30% / 70% 80% 50% 40%;
+    top: 1px;
+  }
+  .drift-fly .mini.l { left: 0; }
+  .drift-fly .mini.r { right: 0; transform: scaleX(-1); }
+  .df1 { left: 60%; top: 30%; animation: drift1 8s ease-in-out infinite; }
+  .df2 { left: 72%; top: 22%; animation: drift1 10s ease-in-out infinite -3s; transform: scale(.7); }
+  .df3 { left: 84%; top: 42%; animation: drift1 12s ease-in-out infinite -6s; transform: scale(.85); }
+  .df4 { left: 50%; top: 18%; animation: drift1 9s ease-in-out infinite -2s; transform: scale(.6); }
+  @keyframes drift1 {
+    0%,100% { translate: 0 0; }
+    50%     { translate: 20px -15px; }
+  }
+
+  /* sparkle/particles */
+  .sparkles {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(1.5px 1.5px at 30% 70%, #fff, transparent),
+      radial-gradient(1px 1px at 38% 80%, #ffe8c8, transparent),
+      radial-gradient(2px 2px at 45% 65%, #fff, transparent),
+      radial-gradient(1px 1px at 52% 85%, #fff, transparent),
+      radial-gradient(1.5px 1.5px at 60% 75%, #ffd9a0, transparent),
+      radial-gradient(1px 1px at 70% 88%, #fff, transparent);
+    animation: shimmer 3s ease-in-out infinite alternate;
+  }
+  @keyframes shimmer { from {opacity:.4;} to {opacity:1;} }
+
+  /* ===== TITLE / UI ===== */
+  .title {
+    position: absolute;
+    left: 50%;
+    top: 7%;
+    transform: translateX(-50%);
+    text-align: center;
+    z-index: 10;
+    letter-spacing: .35em;
+    text-shadow: 0 2px 18px rgba(0,0,0,.55);
+  }
+  .title h1 {
+    font-size: 48px;
+    font-weight: 300;
+    color: #fff6e4;
+    margin-bottom: 6px;
+  }
+  .title h1 .accent {
+    background: linear-gradient(180deg, #fff 0%, #8fe6d4 70%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-style: italic;
+    font-weight: 400;
+  }
+  .title .tag {
+    font-size: 12px;
+    letter-spacing: .8em;
+    color: #f6d8c0;
+    opacity: .85;
+  }
+
+  .footer {
+    position: absolute;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    color: #fff5e4;
+    font-size: 11px;
+    letter-spacing: .6em;
+    opacity: .65;
+    z-index: 10;
+  }
+
+  /* vignette */
+  .vignette {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(10,7,22,.55) 100%);
+  }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="sky"></div>
+    <div class="stars"></div>
+    <div class="cloud c1"></div>
+    <div class="cloud c2"></div>
+    <div class="cloud c3"></div>
+    <div class="sun"></div>
+
+    <div class="sea">
+      <div class="wave w1"></div>
+      <div class="wave w2"></div>
+      <div class="wave w3"></div>
+      <div class="wave w4"></div>
+    </div>
+
+    <!-- distant butterflies -->
+    <div class="drift-fly df1"><div class="mini l"></div><div class="mini r"></div></div>
+    <div class="drift-fly df2"><div class="mini l"></div><div class="mini r"></div></div>
+    <div class="drift-fly df3"><div class="mini l"></div><div class="mini r"></div></div>
+    <div class="drift-fly df4"><div class="mini l"></div><div class="mini r"></div></div>
+
+    <!-- girl -->
+    <div class="girl">
+      <div class="veil"></div>
+      <div class="hair-back"></div>
+      <div class="hair-strand s3"></div>
+      <div class="hair-strand s2"></div>
+      <div class="hair-strand"></div>
+      <div class="dress"></div>
+      <div class="torso"></div>
+      <div class="neck"></div>
+      <div class="head">
+        <div class="ear"></div>
+        <div class="brow"></div>
+        <div class="eye"></div>
+        <div class="lip"></div>
+      </div>
+      <div class="hair-top"></div>
+      <div class="ribbon"></div>
+      <div class="arm">
+        <div class="hand">
+          <div class="butterfly">
+            <div class="wing left"></div>
+            <div class="wing right"></div>
+            <div class="body"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sparkles"></div>
+    <div class="vignette"></div>
+
+    <div class="title">
+      <h1>Ephemeral<span class="accent">OS</span></h1>
+      <div class="tag">— a moment that learns to fly —</div>
+    </div>
+
+    <div class="footer">EVERY SESSION · ONE BREATH · ONE FLIGHT</div>
+  </div>
+</body>
+</html>

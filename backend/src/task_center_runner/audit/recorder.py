@@ -69,11 +69,6 @@ def _serialize_goal(record: GoalRecord) -> dict[str, Any]:
 
 
 def _serialize_iteration(record: IterationRecord) -> dict[str, Any]:
-    # DB column name `continuation_goal` pinned to legacy persistence form;
-    # Python DTO field is `deferred_goal_for_next_iteration`.
-    # FU-2 (separate PR) renames the column.
-    # Audit dict keys stay stable for forensic compatibility — they will rename
-    # together with the DB column.
     return {
         "id": record.id,
         "goal_id": record.goal_id,
@@ -83,7 +78,7 @@ def _serialize_iteration(record: IterationRecord) -> dict[str, Any]:
         "attempt_budget": record.attempt_budget,
         "status": record.status,
         "attempt_ids": list(record.attempt_ids or []),
-        "continuation_goal": record.continuation_goal,
+        "deferred_goal": record.deferred_goal,
         "task_specification": record.task_specification,
         "task_summary": record.task_summary,
         "created_at": _isoformat(record.created_at),
@@ -93,11 +88,6 @@ def _serialize_iteration(record: IterationRecord) -> dict[str, Any]:
 
 
 def _serialize_attempt(record: AttemptRecord) -> dict[str, Any]:
-    # DB column name `continuation_goal` pinned to legacy persistence form;
-    # Python DTO field is `deferred_goal_for_next_iteration`.
-    # FU-2 (separate PR) renames the column.
-    # Audit dict keys stay stable for forensic compatibility — they will rename
-    # together with the DB column.
     return {
         "id": record.id,
         "iteration_id": record.iteration_id,
@@ -109,7 +99,7 @@ def _serialize_attempt(record: AttemptRecord) -> dict[str, Any]:
         "evaluation_criteria": list(record.evaluation_criteria or []),
         "generator_task_ids": list(record.generator_task_ids or []),
         "evaluator_task_id": record.evaluator_task_id,
-        "continuation_goal": record.continuation_goal,
+        "deferred_goal": record.deferred_goal,
         "fail_reason": record.fail_reason,
         "created_at": _isoformat(record.created_at),
         "updated_at": _isoformat(record.updated_at),

@@ -22,7 +22,7 @@ def _defers_without_goal() -> dict[str, Any]:
 
 
 class PlannerDefersWithoutDeferredGoal(ScenarioBase):
-    """submit_plan_defers_goal call omits required continuation_goal."""
+    """submit_plan_defers_goal call omits required deferred_goal."""
 
     name = "planner_validation.defers_without_deferred_goal"
     expected_event_sequence: tuple[EventType, ...] = (

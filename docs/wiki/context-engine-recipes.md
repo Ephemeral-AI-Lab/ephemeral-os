@@ -93,7 +93,7 @@ Block order: `task_specification` (attempt plan) → `dependency_summary` blocks
 
 **Plan presence** (`generator.py:50-59`): `attempt.task_specification` truthy → prepend `task_specification` block (`priority=HIGH`).
 
-**Partial-plan boundary is not rendered here.** Even when `attempt.continuation_goal` is set, `generator_v1` does not emit `partial_plan_boundary`; generators should execute only their local task and dependency summaries, not reason about deferred episode scope.
+**Partial-plan boundary is not rendered here.** Even when `attempt.deferred_goal` is set, `generator_v1` does not emit `partial_plan_boundary`; generators should execute only their local task and dependency summaries, not reason about deferred episode scope.
 
 **Dependency presence** (`generator.py:61-65`, `_dependency_summary_blocks` at `91-115`): iterates `task["needs"]`. Each resolved dep → `dependency_summary` block (`priority=MEDIUM`) with `latest_summary_text(dep["summaries"])` (`_summaries.py:14-20`), grouped under `"# Dependency Results"`. Missing dep rows raise `ContextEngineError` because dependency edges are accepted planner DAG invariants.
 
@@ -106,7 +106,7 @@ Block order: `mission_episode_blocks(...)` → `task_specification` → optional
 
 **Plan presence** (`evaluator.py:55-64`): `attempt.task_specification` truthy → `task_specification` block at `priority=REQUIRED` (stronger than generator's `HIGH`).
 
-**Partial-plan presence**: `attempt.continuation_goal` truthy → `partial_plan_boundary` block (`priority=REQUIRED`) with `plan_kind: partial` and the deferred `continuation_goal`, rendered before dependency results. This tells the evaluator not to fail the current attempt for intentionally deferred work.
+**Partial-plan presence**: `attempt.deferred_goal` truthy → `partial_plan_boundary` block (`priority=REQUIRED`) with `plan_kind: partial` and the deferred `deferred_goal`, rendered before dependency results. This tells the evaluator not to fail the current attempt for intentionally deferred work.
 
 **Generator task summaries** (`evaluator.py:66-83`): iterates `attempt.generator_task_ids`; each existing task → `completed_task_summary` block (`priority=HIGH`), grouped under `"# Dependency Results"`.
 

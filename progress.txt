@@ -152,7 +152,7 @@ from data each recipe already fetched.
 - planner: has_failed_attempts = any(b.kind == FAILED_ATTEMPT_LANDSCAPE for b in blocks).
   iteration_sequence_no = iteration.sequence_no.
 - generator: has_deps = bool(needs); needs = tuple(str(dep) for dep in task.get("needs") or ()).
-- evaluator: is_partial = bool(attempt.continuation_goal).
+- evaluator: is_partial = bool(attempt.deferred_goal).
 
 ### Implementation summary (2026-05-16)
 - packet.py: added ContextBlockKind.ROLE_INSTRUCTION = "role_instruction".
@@ -166,7 +166,7 @@ from data each recipe already fetched.
   the anchor).
 - recipes/generator.py: extracted `needs` to local, then generator_instruction(has_deps=bool(needs))
   inserted AFTER deps, BEFORE PLANNED_TASK_SPEC. PLANNED_TASK_SPEC remains last.
-- recipes/evaluator.py: evaluator_instruction(is_partial=bool(attempt.continuation_goal)) appended
+- recipes/evaluator.py: evaluator_instruction(is_partial=bool(attempt.deferred_goal)) appended
   BEFORE `if criteria:`. EVALUATION_CRITERIA remains last when present; hint lands last when criteria
   is empty (covered by new test).
 - tests/test_role_instruction.py (NEW): 8 branch tests + test_module_exposes_no_recipe_symbols guard
@@ -196,7 +196,7 @@ from data each recipe already fetched.
 - Branch-fact derivations live in the consuming recipes (single source of truth):
   - planner.py: has_failed_attempts derived from already-built blocks list.
   - generator.py: has_deps = bool(needs) where needs was already needed for _dependency_summary_blocks.
-  - evaluator.py: is_partial = bool(attempt.continuation_goal).
+  - evaluator.py: is_partial = bool(attempt.deferred_goal).
 - Hint is REQUIRED priority → never compressed under token budget (renderer.py:_compress only drops
   LOW/MEDIUM).
 

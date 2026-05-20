@@ -60,7 +60,7 @@ Evaluator summary:
 2. Rename each failed attempt body from raw field names to three framed sections:
    `Accepted Plan`, `Generator Outcomes`, and `Evaluator Judgment`.
 3. Render `Plan type` and `Specification` in `Accepted Plan`.
-4. Drop `continuation_goal` from the retry projection by default. Retry planning
+4. Drop `deferred_goal` from the retry projection by default. Retry planning
    should focus on accepted scope and failed outcomes, not deferred future work.
 5. Render every planned generator task in `Status summary`, including status and
    blocker information for blocked tasks.

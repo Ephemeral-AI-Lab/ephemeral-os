@@ -13,7 +13,7 @@ Three coupled changes, executed in one coherent migration:
 2. **Rewrite role instructions (`user_message2`)** to reference context sections by tag mention (e.g. `<evaluation_criteria>`) instead of heading text ("Evaluation Criteria").
 3. **Rename two fields end-to-end:**
    - `task_specification` → `plan_spec` (already partially done at the submission schema boundary; this plan completes the propagation through DTO / persistence / recipes / iteration state).
-   - `continuation_goal` → `next_iteration_handoff_goal` (full rename, no current alias).
+   - `deferred_goal` → `next_iteration_handoff_goal` (full rename, no current alias).
 
 Semantic note on the second rename: presence of `next_iteration_handoff_goal` means "the planner believes this iteration is too risky to complete in one shot and hands off a bounded slice to the next iteration." The new name encodes that signal in the field name itself.
 
@@ -42,7 +42,7 @@ End state: all recipes emit XML; both renames propagated through DTO / persisten
 - **Cons:** one large commit boundary; substantial test snapshot churn; needs care on persistence column rename (or column-name aliasing).
 
 ### Option B — XML at renderer only; keep field names
-End state: renderer emits XML by reading existing block metadata; `task_specification` / `continuation_goal` stay everywhere in code.
+End state: renderer emits XML by reading existing block metadata; `task_specification` / `deferred_goal` stay everywhere in code.
 
 - **Pros:** smallest diff; no persistence/DTO churn.
 - **Cons:** widens the divergence between submission surface (`plan_spec`) and persistence (`task_specification`); leaves the asymmetry the original schema comment already flagged as scope-limited; doesn't address the *meaning* the user wants from `handoff_goal`.
@@ -59,7 +59,7 @@ End state: renderer can emit either format; production agents read XML, legacy t
 
 | # | Failure scenario | Probability | Detection | Mitigation |
 |---|---|---|---|---|
-| 1 | Persistence column rename fails or partial-migrates → existing recorded iterations unreadable | medium | startup load of `.planning/` artifacts crashes; iteration restore tests fail | Keep persistence column name `task_specification` and `continuation_goal` unchanged; rename only at the DTO/dataclass layer using `dataclasses.field` mapping. Field rename is then pure Python; on-disk format is invariant. |
+| 1 | Persistence column rename fails or partial-migrates → existing recorded iterations unreadable | medium | startup load of `.planning/` artifacts crashes; iteration restore tests fail | Keep persistence column name `task_specification` and `deferred_goal` unchanged; rename only at the DTO/dataclass layer using `dataclasses.field` mapping. Field rename is then pure Python; on-disk format is invariant. |
 | 2 | Snapshot tests baked on markdown heading shape explode; lots of mechanical churn risks introducing bugs in the snap-update | medium | `make test` fails with widespread snapshot diffs; some assertions on substrings (`"# Goal"`) fail beyond simple snapshot regeneration | In-place class rename + snapshot regen on the same PR branch. If the snapshot churn is too noisy for one commit, split snapshot updates into a follow-up commit *on the same branch* — never on `main`. No co-existing `MarkdownPromptRenderer` / `XmlPromptRenderer` at any point: rename in place. |
 | 3 | Role-instruction wording references stale heading text ("Prior Failed Attempts", "Partial Plan Boundary") that no longer exist; planner sees tag mentions but instruction tells it to look at headings | high if not coordinated | manual transcript inspection; e2e scenario `attempt_retry_planner_failure` | Rewrite role_instruction.py text in the SAME commit as the renderer change; assertion test that every tag mentioned in role-instruction text appears in at least one recipe's rendered output. |
 | 4 | User-supplied content (PR description, error log, pasted diff) contains a literal `</goal>`, `</attempt_plan>`, or other reserved-tag-closer substring; rendered output has a prematurely closed wrapper that downstream LLMs misparse | low-medium | goals whose text includes such substrings; existing scenario fixtures don't include them so today's tests won't catch it | Renderer pre-validates `block.text` against the set of structural tag-closers derived from `_DEFAULT_TAGS`; raises `ContextEngineError` on hit. **Error contract:** message must contain (a) the offending closer string (`</goal>`), (b) the `block.source_id`, and (c) a one-line remediation hint: `"Rewrite the block body to avoid this structural closer, or use a different ContextBlockKind for this content."` No silent escaping. Document the constraint in `context_engine/__init__.py` docstring. Unit test: each `_DEFAULT_TAGS` value's closer substring (e.g. `</goal>`) embedded in a block body is rejected with an error whose `str(exc)` contains all three required parts. |
@@ -70,21 +70,21 @@ End state: renderer can emit either format; production agents read XML, legacy t
 
 | File | Symbol | Action |
 |---|---|---|
-| `backend/src/task_center/attempt/state.py:40,44` | `Attempt.task_specification`, `Attempt.continuation_goal` | Rename fields → `plan_spec`, `next_iteration_handoff_goal`; `has_partial_continuation` property → `has_iteration_handoff` |
-| `backend/src/task_center/iteration/state.py:37,43,72` | `Iteration.task_specification`, `Iteration.continuation_goal`, `IterationProjection.task_specification` | Same rename |
-| `backend/src/task_center/iteration/manager.py:189-201,314-321,347` | `set_continuation_goal()` callers, `SuccessContinue` payload | Rename method to `set_iteration_handoff_goal`; rename payload field |
-| `backend/src/task_center/_core/persistence.py:103-150` | `set_continuation_goal()`, attempt insert/update signatures | Rename method names + parameter names; **keep DB column names** `task_specification` / `continuation_goal` via `dataclasses.field(metadata={"db_column": ...})` or simple `__post_init__` translation in the row mapper |
-| `backend/src/task_center/_core/invariants.py:53-56` | continuation_goal invariant | Update field reference + error message |
+| `backend/src/task_center/attempt/state.py:40,44` | `Attempt.task_specification`, `Attempt.deferred_goal` | Rename fields → `plan_spec`, `next_iteration_handoff_goal`; `has_partial_continuation` property → `has_iteration_handoff` |
+| `backend/src/task_center/iteration/state.py:37,43,72` | `Iteration.task_specification`, `Iteration.deferred_goal`, `IterationProjection.task_specification` | Same rename |
+| `backend/src/task_center/iteration/manager.py:189-201,314-321,347` | `set_deferred_goal()` callers, `SuccessContinue` payload | Rename method to `set_iteration_handoff_goal`; rename payload field |
+| `backend/src/task_center/_core/persistence.py:103-150` | `set_deferred_goal()`, attempt insert/update signatures | Rename method names + parameter names; **keep DB column names** `task_specification` / `deferred_goal` via `dataclasses.field(metadata={"db_column": ...})` or simple `__post_init__` translation in the row mapper |
+| `backend/src/task_center/_core/invariants.py:53-56` | deferred_goal invariant | Update field reference + error message |
 | `backend/src/task_center/attempt/orchestrator.py:115-118,237-239` | submission validation + attempt creation | Rename references |
-| `backend/src/tools/submission/planner/_schemas.py:50-77` | `PlannerSubmissionBaseInput` | `plan_spec` already exists at boundary; `continuation_goal` arg in `build_planner_submission()` becomes `next_iteration_handoff_goal`; `PlannerSubmission` DTO field rename |
-| `backend/src/tools/submission/planner/submit_plan_continues_goal.py` | terminal tool | Param rename `continuation_goal` → `next_iteration_handoff_goal`; field on `SubmitPlanContinuesGoalInput` rename; tool description string rewrite |
-| `backend/src/tools/submission/planner/submit_plan_closes_goal.py:51` | terminal tool | Internal call `continuation_goal=None` rename |
+| `backend/src/tools/submission/planner/_schemas.py:50-77` | `PlannerSubmissionBaseInput` | `plan_spec` already exists at boundary; `deferred_goal` arg in `build_planner_submission()` becomes `next_iteration_handoff_goal`; `PlannerSubmission` DTO field rename |
+| `backend/src/tools/submission/planner/submit_plan_continues_goal.py` | terminal tool | Param rename `deferred_goal` → `next_iteration_handoff_goal`; field on `SubmitPlanContinuesGoalInput` rename; tool description string rewrite |
+| `backend/src/tools/submission/planner/submit_plan_closes_goal.py:51` | terminal tool | Internal call `deferred_goal=None` rename |
 | `backend/src/task_center/context_engine/recipes/{generator,evaluator,attempt_landscape,goal_iteration_frame,planner}.py` | recipes | Field reads updated to new names; metadata keys updated; `iteration_sequence_no` kwarg in `planner_instruction()` becomes `iteration_no` |
 | `backend/src/task_center/context_engine/recipes/role_instruction.py` | role instruction text | Full rewrite per §7.2 |
-| `backend/src/task_center_runner/agent/mock/runner.py:312` | mock planner-arg emission (boundary translator) | Today translates `spec.args.get("plan_spec", "")` → emits `"task_specification"` dict key. After Phase 1 the translation collapses (both sides become `plan_spec`). After Phase 2 also rename emission `"continuation_goal"` → `"next_iteration_handoff_goal"`. |
-| `backend/src/task_center_runner/audit/recorder.py:81-82,98,102` | audit recorder dict keys (ORM-column passthrough) | **Correction (per Architect re-review):** the recorder is NOT a DTO translator — it reads `record.task_specification` / `record.continuation_goal` directly off the SQLAlchemy mapped attribute (`db/models/{iteration,attempt}.py`). Per Pre-mortem #1, those ORM attribute names stay stable. **Policy: Option B — keep audit dict keys stable** (`"task_specification"`, `"continuation_goal"`) for this PR. Rationale: audit artifacts are forensic/archival; stability across versions is the feature. Bind audit-key rename to **FU-2** (same PR as the DB-column migration) so the rename is atomic with the change that breaks column-stability. Add a code comment at the read sites: `# DB column name pinned by ADR; intentional read of legacy name from stable ORM attribute.` |
+| `backend/src/task_center_runner/agent/mock/runner.py:312` | mock planner-arg emission (boundary translator) | Today translates `spec.args.get("plan_spec", "")` → emits `"task_specification"` dict key. After Phase 1 the translation collapses (both sides become `plan_spec`). After Phase 2 also rename emission `"deferred_goal"` → `"next_iteration_handoff_goal"`. |
+| `backend/src/task_center_runner/audit/recorder.py:81-82,98,102` | audit recorder dict keys (ORM-column passthrough) | **Correction (per Architect re-review):** the recorder is NOT a DTO translator — it reads `record.task_specification` / `record.deferred_goal` directly off the SQLAlchemy mapped attribute (`db/models/{iteration,attempt}.py`). Per Pre-mortem #1, those ORM attribute names stay stable. **Policy: Option B — keep audit dict keys stable** (`"task_specification"`, `"deferred_goal"`) for this PR. Rationale: audit artifacts are forensic/archival; stability across versions is the feature. Bind audit-key rename to **FU-2** (same PR as the DB-column migration) so the rename is atomic with the change that breaks column-stability. Add a code comment at the read sites: `# DB column name pinned by ADR; intentional read of legacy name from stable ORM attribute.` |
 | `backend/src/task_center_runner/core/runner.py:117,129` | runtime dict keys (ORM-column passthrough) | Same shape as audit-recorder. Apply Option B (keep-stable, bind rename to FU-2). |
-| `backend/src/task_center_runner/scenarios/_utils/plans.py:51,69` + `scenarios/full_case_user_input.py:166,203,234,334,409,431,432` + `scenarios/full_stack_adversarial.py:200,253,354,401,504,527,528` + `scenarios/correctness_testing.py` + `scenarios/__init__.py` + `tests/test_capacity_scenario_packs.py` + `tests/sweevo/*` | scenario fixture kwargs and dict keys | Pure rename after Phase 2 finalises the tool-schema break. Mechanical; 32 call sites total per `grep -rn "continuation_goal" backend/src/task_center_runner/`. |
+| `backend/src/task_center_runner/scenarios/_utils/plans.py:51,69` + `scenarios/full_case_user_input.py:166,203,234,334,409,431,432` + `scenarios/full_stack_adversarial.py:200,253,354,401,504,527,528` + `scenarios/correctness_testing.py` + `scenarios/__init__.py` + `tests/test_capacity_scenario_packs.py` + `tests/sweevo/*` | scenario fixture kwargs and dict keys | Pure rename after Phase 2 finalises the tool-schema break. Mechanical; 32 call sites total per `grep -rn "deferred_goal" backend/src/task_center_runner/`. |
 | `backend/src/task_center_runner/scenarios/**` and `task_center_runner/tests/**` (residual) | other scenario test fixtures + format snapshots | Mechanical rename + format-snapshot updates for anything not enumerated above. |
 
 ### Rendering-format surface
@@ -230,7 +230,7 @@ Replace every heading-text reference with the tag mention. Examples (full text i
 | "see Dependency Results" | "see `<dependency_results>`" |
 | "see Previous Iteration Results" | "see `<iteration status=\"prior\">` blocks" |
 | "see Partial Plan Boundary" | "see `<next_iteration_handoff_goal>` inside `<attempt_plan>`" |
-| "submit a partial plan with a continuation_goal" | "submit a continues-goal plan with a `next_iteration_handoff_goal`" |
+| "submit a partial plan with a deferred_goal" | "submit a continues-goal plan with a `next_iteration_handoff_goal`" |
 | "use the Attempt Plan and the Evaluation Criteria as your authority" | "use `<attempt_plan>` and `<evaluation_criteria>` as your authority" |
 
 **Test invariant (tightened per Architect review):** for each role-instruction branch B, the tags mentioned in B's text must be present in the rendered output **under B's matching context conditions**. Parameterize the test by the same branching axes as `role_instruction.py`:
@@ -263,18 +263,18 @@ DTO + persistence + recipes + tests in one commit:
 
 Acceptance: `grep -rn "task_specification" backend/src/` returns only DB-column references (in persistence row mappers).
 
-### Phase 2 — Rename `continuation_goal` → `next_iteration_handoff_goal` end-to-end
+### Phase 2 — Rename `deferred_goal` → `next_iteration_handoff_goal` end-to-end
 
 Same shape as Phase 1:
 
 1. Rename on `Attempt`, `Iteration`, `IterationProjection`, `PlannerSubmission`, `SuccessContinue` payload.
-2. Rename `set_continuation_goal` method on persistence + iteration manager.
-3. Rename `submit_plan_continues_goal` parameter and `SubmitPlanContinuesGoalInput` field; update tool description string to use the new name and the "risky to complete in one iteration" semantic. **Tool-schema break policy** (resolved per Architect review): the rename is a hard break — the new param is `next_iteration_handoff_goal`; the old `continuation_goal` is not accepted. Justification: no agent run spans the deploy boundary in this harness (each attempt is a fresh process spawn reading the current tool schema at startup), so there are no "in-flight agents" to worry about. If that assumption is later invalidated (e.g. persistent agent sessions), revisit by adding `Field(alias="continuation_goal")` for one release with a deprecation log.
+2. Rename `set_deferred_goal` method on persistence + iteration manager.
+3. Rename `submit_plan_continues_goal` parameter and `SubmitPlanContinuesGoalInput` field; update tool description string to use the new name and the "risky to complete in one iteration" semantic. **Tool-schema break policy** (resolved per Architect review): the rename is a hard break — the new param is `next_iteration_handoff_goal`; the old `deferred_goal` is not accepted. Justification: no agent run spans the deploy boundary in this harness (each attempt is a fresh process spawn reading the current tool schema at startup), so there are no "in-flight agents" to worry about. If that assumption is later invalidated (e.g. persistent agent sessions), revisit by adding `Field(alias="deferred_goal")` for one release with a deprecation log.
 4. Update all recipe reads.
 5. Update `planner_instruction` text in role_instruction.py to use new name (text-only edit, no logic).
 6. Run `make test`; mechanical pass.
 
-Acceptance: `grep -rn "continuation_goal" backend/src/` returns only DB-column references.
+Acceptance: `grep -rn "deferred_goal" backend/src/` returns only DB-column references.
 
 ### Phase 3 — Renderer: markdown → XML
 
@@ -309,7 +309,7 @@ Acceptance: `tests/` pass; manual transcript inspection of the 11 files in `docs
 
 ### Phase 4 — Role instructions: `<tag>` mention pattern
 
-1. Rewrite text in `role_instruction.py` per §7.2. **Preserve semantic content, not just headings.** The rewrite is a heading-to-tag *mention* swap; it must NOT lose substantive sentences. Specifically, the `evaluator_instruction(is_partial=True)` text at `role_instruction.py:138-145` becomes the *single source of truth* for partial-plan semantics after Phase 3 step 4 drops the `PARTIAL_PLAN_BOUNDARY` block. The sentence *"This attempt is not expected to solve the full iteration goal — it is expected to make progress and hand off remaining work via continuation_goal"* must survive (with `continuation_goal` renamed to `next_iteration_handoff_goal`); the sentence *"do not penalize for incomplete work that was explicitly deferred"* must survive verbatim. Add a regression test asserting both substrings appear in the partial branch's rendered text.
+1. Rewrite text in `role_instruction.py` per §7.2. **Preserve semantic content, not just headings.** The rewrite is a heading-to-tag *mention* swap; it must NOT lose substantive sentences. Specifically, the `evaluator_instruction(is_partial=True)` text at `role_instruction.py:138-145` becomes the *single source of truth* for partial-plan semantics after Phase 3 step 4 drops the `PARTIAL_PLAN_BOUNDARY` block. The sentence *"This attempt is not expected to solve the full iteration goal — it is expected to make progress and hand off remaining work via deferred_goal"* must survive (with `deferred_goal` renamed to `next_iteration_handoff_goal`); the sentence *"do not penalize for incomplete work that was explicitly deferred"* must survive verbatim. Add a regression test asserting both substrings appear in the partial branch's rendered text.
 2. Add `test_role_instruction_tag_consistency.py` (parameterized per §7.2):
    - For each role × each branch B, build a packet that triggers branch B's context conditions, render it, parse tag names from both the role-instruction text and the rendered context, and assert every tag mentioned in B's text appears in the render under B's conditions.
 3. Update `planner_instruction` kwarg from `iteration_sequence_no` → `iteration_no` for consistency with the rendered attribute name (and matching field rename, optional but recommended).
@@ -355,7 +355,7 @@ Acceptance: `make test` and `make lint` clean.
 
 ## 10. ADR
 
-**Decision.** Adopt XML-tagged context rendering across all recipe outputs; rename `task_specification` → `plan_spec` and `continuation_goal` → `next_iteration_handoff_goal` end-to-end (DTO, persistence DTO, recipe code, terminal tools); keep DB column names unchanged to avoid migration risk.
+**Decision.** Adopt XML-tagged context rendering across all recipe outputs; rename `task_specification` → `plan_spec` and `deferred_goal` → `next_iteration_handoff_goal` end-to-end (DTO, persistence DTO, recipe code, terminal tools); keep DB column names unchanged to avoid migration risk.
 
 **Decision drivers.**
 1. LLM legibility under long context (closure problems with markdown today).
@@ -373,14 +373,14 @@ Acceptance: `make test` and `make lint` clean.
 - Existing recorded `message.jsonl` artifacts (e.g. `docs/reports/initial_messages_cases/`) become historical; new captures supersede.
 - Planner system prompts and tool descriptions must use the new field names — agents in flight when this lands will see new params; no graceful degrade.
 - Any downstream consumer of `.planning/` artifacts that reads Python dataclasses (not raw DB rows) needs a one-line rename in their code.
-- **Rollback is a clean `git revert` of the merge commit.** The persistence layer is column-stable (keeps `task_specification` / `continuation_goal` DB column names), so reverting code does not corrupt any on-disk state. Audit / message.jsonl artifacts written *during* the new code's deployment carry the new key names; reverters of post-merge data can re-translate via the `_to_dto` mapper or accept the schema break point as a forensics boundary.
+- **Rollback is a clean `git revert` of the merge commit.** The persistence layer is column-stable (keeps `task_specification` / `deferred_goal` DB column names), so reverting code does not corrupt any on-disk state. Audit / message.jsonl artifacts written *during* the new code's deployment carry the new key names; reverters of post-merge data can re-translate via the `_to_dto` mapper or accept the schema break point as a forensics boundary.
 
 **Follow-ups (tracked, not in this plan).**
 
 | ID | Item | Trigger condition | Owner |
 |---|---|---|---|
 | FU-1 | Audit `docs/` for stale references to markdown headings; update `docs/reports/initial_messages_cases/` snapshots to reflect XML format | This PR merges to `main` | TBD |
-| FU-2 | Rename persistence DB columns `task_specification` → `plan_spec` and `continuation_goal` → `next_iteration_handoff_goal` via Alembic migration; remove the row-mapper translation seam in `_to_dto` | One release of stable XML rendering on `main` with no rollback signal (≥2 weeks production-equivalent runtime) | TBD |
+| FU-2 | Rename persistence DB columns `task_specification` → `plan_spec` and `deferred_goal` → `next_iteration_handoff_goal` via Alembic migration; remove the row-mapper translation seam in `_to_dto` | One release of stable XML rendering on `main` with no rollback signal (≥2 weeks production-equivalent runtime) | TBD |
 | FU-3 | Rename `iteration.sequence_no` Python field → `iteration_no` for symmetry with the rendered tag attribute name and `attempt_no` rename | Cosmetic; bundle with the next iteration-related refactor | TBD |
 
 ---

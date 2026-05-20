@@ -37,8 +37,7 @@ class IterationStore(SyncStoreMixin):
                 attempt_budget=attempt_budget,
                 status=IterationStatus.OPEN.value,
                 attempt_ids=[],
-                # DB column name `continuation_goal` pinned to legacy persistence form; Python DTO field is `deferred_goal_for_next_iteration`. FU-2 (separate PR) renames the column.
-                continuation_goal=None,
+                deferred_goal=None,
                 created_at=now,
                 updated_at=now,
             )
@@ -71,8 +70,7 @@ class IterationStore(SyncStoreMixin):
             record = db.get(IterationRecord, iteration_id)
             if record is None:
                 raise LookupError(f"Iteration {iteration_id!r} not found")
-            # DB column name `continuation_goal` pinned to legacy persistence form; Python DTO field is `deferred_goal_for_next_iteration`. FU-2 (separate PR) renames the column.
-            record.continuation_goal = deferred_goal_for_next_iteration
+            record.deferred_goal = deferred_goal_for_next_iteration
             db.commit()
             db.refresh(record)
             return self._to_dto(record)
@@ -164,8 +162,7 @@ class IterationStore(SyncStoreMixin):
             attempt_budget=record.attempt_budget,
             status=IterationStatus(record.status),
             attempt_ids=tuple(record.attempt_ids or ()),
-            # DB column name `continuation_goal` pinned to legacy persistence form; Python DTO field is `deferred_goal_for_next_iteration`. FU-2 (separate PR) renames the column.
-            deferred_goal_for_next_iteration=record.continuation_goal,
+            deferred_goal_for_next_iteration=record.deferred_goal,
             created_at=record.created_at,
             updated_at=record.updated_at,
             closed_at=record.closed_at,

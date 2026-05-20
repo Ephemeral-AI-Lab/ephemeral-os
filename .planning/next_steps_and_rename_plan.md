@@ -2,7 +2,7 @@
 
 **Owner:** Yifan
 **Date:** 2026-05-20
-**Status:** DRAFT v3 — Critic ITERATE (5 majors + missing items + ambiguity risks) addressed in this revision; awaiting Critic re-review.
+**Status:** **APPROVED v5** (2026-05-20) — Ralplan consensus through v4 (Planner v1 → Architect → v2 → Critic ITERATE → v3 → Architect re-review → v4 → Critic re-review APPROVE). v5 is a user-requested shape revision: `is_plan_mode: bool` → `llm_client_mode: Literal["api_mode", "coding_plan_mode"]` (class attribute on `AuthStrategy` Protocol; `LLM_CLIENT_MODE_API` / `LLM_CLIENT_MODE_CODING_PLAN` module constants in `providers/auth_strategy.py`). Same semantics, extensible to Hermes patterns B/C without future refactor. No re-review required — pure substitution at all call sites with no logical change.
 
 ---
 
@@ -108,7 +108,20 @@ Architect also surfaced **Option D** (do A7 first because it closes a live bug i
 
 **S1.4 — A17 Anthropic-side observability log line (per architect amendment #1; master plan §A17 requires this in Phase 1, not as a follow-up)**
 
-- In `AnthropicClient.stream_message`'s error path (`anthropic_native.py:122-127` — the `except Exception as exc:` clause where `_translate_error(exc)` is called), when running under an OAuth strategy AND an unrecoverable error fires, emit one structured log line via `log.error("plan_mode_error", extra={"provider": "anthropic", "error_type": <category>, "request_id": <request_id_or_none>})`. **Emit AFTER `translated = self._translate_error(exc)` but BEFORE `raise translated from exc`** (per Critic Major #3).
+- In `AnthropicClient.stream_message`'s error path (`anthropic_native.py:122-124`), when running under an OAuth strategy AND an unrecoverable error fires, emit one structured log line via `log.error("plan_mode_error", extra={"provider": "anthropic", "error_type": <category>, "request_id": <request_id_or_none>})`.
+- **Required local refactor (per Architect re-review blocker #1).** Today's code is a single-line `raise self._translate_error(exc) from exc` at line 122. S1.4 splits this into three lines so the log call has a typed translated exception in scope:
+  ```python
+  except Exception as exc:
+      if emitted_any or attempt >= MAX_RETRIES or not self._is_retryable(exc):
+          translated = self._translate_error(exc)
+          if self._auth_strategy.llm_client_mode == LLM_CLIENT_MODE_CODING_PLAN:
+              log.error("plan_mode_error", extra={"provider": "anthropic",
+                                                  "error_type": _categorize(translated),
+                                                  "request_id": getattr(exc, "request_id", None)})
+          raise translated from exc
+  ```
+  Approach 1 from architect re-review trade-off table (minimum diff, no new helper method, preserves Critic Major #3 typed-exception categorization).
+- **A17 ALSO fires on the `except EphemeralOSApiError` re-raise branch (per Architect re-review blocker #2).** `anthropic_native.py:120-121` re-raises `EphemeralOSApiError` directly without translation. Same emission pattern, except the exception is already typed: `log.error("plan_mode_error", extra={"provider": "anthropic", "error_type": _categorize(exc), "request_id": getattr(exc, "request_id", None)})` — fires before `raise`. Without this, a typed error that bypasses `_translate_error` silently skips A17 observability.
 - **Error categorization (per Critic Major #3): categorize from the POST-translation typed exception**, not from raw `exc.status_code`. Mapping (single source of truth, mirrored in S4 Codex side):
   - `AuthenticationFailure` with `.status_code == 401` → `"auth_401"`
   - `AuthenticationFailure` with `.status_code == 403` → `"auth_403"`
@@ -116,7 +129,13 @@ Architect also surfaced **Option D** (do A7 first because it closes a live bug i
   - `RequestFailure` with `.status_code in {500,502,503,529}` → `"server_5xx"`
   - `RequestFailure` whose message contains `content_filter` or `policy` (case-insensitive) → `"content_filter_rejection"`
   - otherwise → `"unknown"`
-- Detection of OAuth-vs-API-mode (per Critic Major #4): **add an `is_plan_mode: bool` property to the `AuthStrategy` Protocol** in `providers/auth_strategy.py` with default `False`; override to return `True` on `_ClaudeOAuthStrategy`. Detection: `if self._auth_strategy.is_plan_mode:`. This keeps the private class name (`_ClaudeOAuthStrategy`) inside its own module — no cross-module isinstance on a private name. Test fixtures construct mock strategies whose `is_plan_mode` is parameterized.
+- Detection of mode (per Critic Major #4, shape pinned per Architect re-review nit #3, **enum-shaped per user-requested v5 revision**): **add `llm_client_mode: Literal["api_mode", "coding_plan_mode"]` as a CLASS ATTRIBUTE (not `@property`) on the `AuthStrategy` Protocol** in `providers/auth_strategy.py`. Concrete classes set `llm_client_mode = "api_mode"` (default on `_ApiKeyStrategy`) or `llm_client_mode = "coding_plan_mode"` (on `_ClaudeOAuthStrategy`; same value will be set on Phase-2 Codex strategy in S4). Class-attribute + Literal shape was chosen over `@property`/`bool` because:
+  - (a) **extensibility**: Hermes patterns B (long-lived JSON-RPC subprocess) and C (per-turn ACP subprocess) are explicitly deferred per master plan §Phase 4. If/when they land, the union extends to `Literal["api_mode", "coding_plan_mode", "subprocess_mode_b", "subprocess_mode_c"]` without changing call-site shape. A bool would need a flip-day refactor.
+  - (b) it matches the rename theme — S2 renames `plan_mode_*` → `coding_plan_mode_*` everywhere; this attribute aligns with that vocabulary and with the explicit `api_mode` default name.
+  - (c) test fixtures parameterize trivially: `strat = MagicMock(spec=AuthStrategy, llm_client_mode="coding_plan_mode")`.
+  - (d) it avoids method/property collision in test doubles.
+- Detection at the call site: `if self._auth_strategy.llm_client_mode == "coding_plan_mode":`. This keeps the private class name (`_ClaudeOAuthStrategy`) inside its own module — no cross-module isinstance on a private name. The string-literal comparison is one extra `==` over `is_plan_mode` boolean, accepted cost.
+- **Module-level constants** (avoid string-literal typos at comparison sites): in `providers/auth_strategy.py`, add `LLM_CLIENT_MODE_API = "api_mode"` and `LLM_CLIENT_MODE_CODING_PLAN = "coding_plan_mode"`. Concrete strategies use these; call-site detection becomes `if self._auth_strategy.llm_client_mode == LLM_CLIENT_MODE_CODING_PLAN:`.
 - **Test:** `backend/tests/unit_test/test_providers/test_anthropic_plan_mode_error_log.py` — mock SDK to raise a 401; instantiate `AnthropicPlanClient` (mocked keychain); call `stream_message`; assert `caplog` captured one `ERROR` record with message `plan_mode_error` and `extra.provider == "anthropic"` and `extra.error_type == "auth_401"`. Symmetric test for 429 (`rate_limit_429`).
 - **NOT in scope for S1:** A17 Codex-side wiring (lives in S4 with the Codex client).
 
@@ -209,7 +228,7 @@ This gives the default a named identity without adding speculative machinery.
   - (Plus implicit `Content-Type: application/json` — not allowlist-checked but required.)
 - Translate Codex Responses SSE events → `ApiStreamEvent` union (per v9.2 mapping table in `.planning/codex_event_mapping.md`).
 - `CodexCredentialIncompleteError` per plan §A15.
-- **A17 Codex-side wiring (per architect amendment #1, mirrored to S1.4 per Critic Major #3):** in `CodexResponsesClient.stream_message`'s error path, mirror S1.4's Anthropic A17 log line emission point and categorization rules: `log.error("plan_mode_error" / "coding_plan_mode_error" per S2 rename, extra={"provider": "codex", "error_type": <category>, "request_id": <response.id_or_none>})`. **Categorize from the post-translation typed exception**, using the same mapping table as S1.4 plus Codex-specific additions:
+- **A17 Codex-side wiring (mirrored to S1.4 with the same translated-exception refactor; per Architect re-review blocker #1 applied symmetrically):** in `CodexResponsesClient.stream_message`'s error path, follow the same `translated = ...; log.error(...); raise translated from exc` shape as S1.4. Fires on BOTH the `_translate_error`-path and any `except EphemeralOSApiError` re-raise path (per Architect re-review blocker #2). `log.error("plan_mode_error" / "coding_plan_mode_error" per S2 rename, extra={"provider": "codex", "error_type": <category>, "request_id": <response.id_or_none>})`. **Categorize from the post-translation typed exception** (consistent with S1.4), using the same mapping table as S1.4 plus Codex-specific additions:
   - `AuthenticationFailure` 401 → `"auth_401"`, 403 → `"auth_403"`
   - `RateLimitFailure` → `"rate_limit_429"`
   - `RequestFailure` 5xx → `"server_5xx"`
@@ -240,7 +259,7 @@ Per plan §Phase 3 + §Verification Plan tolerance gate:
   - `api_mode` becomes a first-class name in docs + a single constant in code, but does NOT introduce an enum/registry — that would be speculative.
   - Phase 2 (S4) writes `CodexResponsesClient` with the renamed audit field + env var from day one.
 - **Follow-ups:**
-  - **v6 file reorg trigger (per Critic missing-item).** `providers/clients/anthropic_native.py` → `providers/clients/api/anthropic_native.py` per master plan §A2 v6 amendment. **Pinned trigger:** execute as a standalone sprint **immediately after S5 (Phase 3 capability parity)** lands. Rationale: by S5 completion, both `AnthropicClient` (API mode) and the `coding_plan/` siblings are stable; renaming files at that point is purely mechanical (4 import-redirect sites + 2 `patch(...)` mock string updates enumerated in master plan §A2 v6) and bumps the `API_MODE_CLASS_PATH` docstring constant. If S5 slips past 1-2 weeks, revisit — at that point the v6 reorg may not be worth doing at all (`anthropic_native.py` is already self-explanatory in its current location).
+  - **v6 file reorg trigger (per Critic missing-item, hard trigger per Architect re-review nit #4).** `providers/clients/anthropic_native.py` → `providers/clients/api/anthropic_native.py` per master plan §A2 v6 amendment. **Hard trigger:** execute as a standalone sprint **immediately after S5 (Phase 3 capability parity)** lands — no slip clause. Rationale: by S5 completion, both `AnthropicClient` (API mode) and the `coding_plan/` siblings are stable; renaming files at that point is purely mechanical (4 import-redirect sites + 2 `patch(...)` mock string updates enumerated in master plan §A2 v6) and bumps the `API_MODE_CLASS_PATH` docstring constant. If S5 itself never lands, this follow-up is moot.
   - **A6 per-agent override.** Out of scope today; revisit if multi-mode-per-run demand arises.
   - **Live operator dashboard coordination.** If anyone builds a log dashboard keyed on `plan_mode_error` between now and S2 landing, S2 must coordinate the rename with that owner (see S2.1 operator-contract acknowledgement).
   - **Rollback story (per Critic missing-item).** Each sprint produces an independently-revertable commit (or commit cluster on a feature branch). If S1 lands and a bug surfaces a week later: `git revert` the S1 commit cluster — leaves the codebase in Phase 1 MVP state (today). If S2 lands and the rename breaks something: `git revert` the S2 commit — pure mechanical undo, no behavior change to restore. If S4 (Codex client) lands and the production client misbehaves: `EOS_DISABLE_PLAN_MODE=1` (post-S2: `EOS_DISABLE_CODING_PLAN_MODE=1`) kills the plan-mode path at the dispatch layer without a code revert — runtime kill switch is the first line of defense. Code revert is the second.

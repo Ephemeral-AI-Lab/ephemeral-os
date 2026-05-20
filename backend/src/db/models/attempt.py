@@ -33,7 +33,7 @@ class AttemptRecord(Base):
     evaluation_criteria: Mapped[list[str]] = mapped_column(JSON, default=list)
     generator_task_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
     evaluator_task_id: Mapped[str | None] = mapped_column(String(96), nullable=True)
-    continuation_goal: Mapped[str | None] = mapped_column(Text, nullable=True)
+    deferred_goal: Mapped[str | None] = mapped_column(Text, nullable=True)
     fail_reason: Mapped[str | None] = mapped_column(String(48), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)

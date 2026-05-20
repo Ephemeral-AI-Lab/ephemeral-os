@@ -68,14 +68,12 @@ def test_append_attempt_id_preserves_order(
     assert s2.attempt_count == 2
 
 
-def test_deferred_goal_dto_field_maps_to_continuation_goal_db_column(
+def test_deferred_goal_dto_field_maps_to_deferred_goal_db_column(
     iteration_store, goal_store, task_center_run_id
 ):
-    """PR 1 carve-out gate: Python DTO field `deferred_goal_for_next_iteration`
-    translates at the store seam to legacy DB column `continuation_goal`.
-    FU-2 (separate PR) renames the column. Until then, this round-trip pins the
-    seam so a future raw-SQL query against `iteration.deferred_goal_for_next_iteration`
-    (which does NOT exist as a column) fails this test loudly.
+    """Store seam translates DTO field `deferred_goal_for_next_iteration`
+    to DB column `deferred_goal`. Raw-SQL queries must target the column name,
+    not the DTO name.
     """
     from db.models.iteration import IterationRecord
 
@@ -92,10 +90,7 @@ def test_deferred_goal_dto_field_maps_to_continuation_goal_db_column(
 
     with iteration_store._sf() as db:  # noqa: SLF001
         record = db.get(IterationRecord, seg.id)
-        # The DB column literal is still `continuation_goal` (FU-2 pin).
-        assert record.continuation_goal == "deferred-scope"
-        # The DTO field name `deferred_goal_for_next_iteration` is NOT an ORM
-        # column — accessing it on the raw record must fail.
+        assert record.deferred_goal == "deferred-scope"
         assert not hasattr(IterationRecord, "deferred_goal_for_next_iteration")
 
 

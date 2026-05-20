@@ -199,7 +199,7 @@ def test_apply_plan_submission_persists_contract_and_generator_ids(
     ]
 
 
-def test_apply_partial_plan_submission_stores_continuation_goal(
+def test_apply_partial_plan_submission_stores_deferred_goal(
     goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ):
     orchestrator, attempt, _, _, _ = _build_orchestrator(

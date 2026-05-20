@@ -79,7 +79,7 @@ def test_initial_iteration_has_sequence_one_and_initial_reason(handler, task_cen
     assert seg.attempt_budget == 2
 
 
-def test_continuation_segment_inherits_continuation_goal(
+def test_continuation_segment_inherits_deferred_goal(
     handler, iteration_store, task_center_run_id
 ):
     """Phase 01 exit: continuation creates iteration N+1 with goal from previous iteration's deferred_goal_for_next_iteration."""

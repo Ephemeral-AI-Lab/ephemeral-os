@@ -329,7 +329,7 @@ def build_main_constructed() -> list[ConstructedAgent]:
         ("iter1 attempt2 (after failed plan)", 1, True,
          "# Goal\n\n<root goal>\n\n# Current Iteration\n\nIteration 1 (retry).\n\n# Prior Failed Attempts\n\nAttempt 1: rejected — unknown dependency `missing`."),
         ("iter2 attempt1 (continuation, no prior failure)", 2, False,
-         "# Goal\n\n<root goal>\n\n# Current Iteration\n\nIteration 2 (DEFERRED_GOAL_CONTINUATION) — continuation_goal from iteration 1.\n\n# Previous Iteration Results\n\n## Iteration 1 accepted plan\n\n<partial plan_spec>\n\n## Iteration 1 summary\n\nWorkspace preflight completed."),
+         "# Goal\n\n<root goal>\n\n# Current Iteration\n\nIteration 2 (DEFERRED_GOAL_CONTINUATION) — deferred_goal from iteration 1.\n\n# Previous Iteration Results\n\n## Iteration 1 accepted plan\n\n<partial plan_spec>\n\n## Iteration 1 summary\n\nWorkspace preflight completed."),
         ("iter2 attempt2 (continuation + prior failure)", 2, True,
          "# Goal\n\n<root goal>\n\n# Current Iteration\n\nIteration 2 (DEFERRED_GOAL_CONTINUATION).\n\n# Previous Iteration Results\n\n## Iteration 1 accepted plan\n\n<partial plan>\n\n## Iteration 1 summary\n\nDone.\n\n# Prior Failed Attempts\n\nAttempt 1 in iteration 2: rejected by evaluator."),
     ]
@@ -379,7 +379,7 @@ def build_main_constructed() -> list[ConstructedAgent]:
         um2 = _append_catalog(role_text, evaluator_def)
         partial_block = (
             "\n\n# Partial Plan Boundary\n\nIntentionally partial; "
-            "continuation_goal is set."
+            "deferred_goal is set."
             if has_deferred_goal_for_next_iteration
             else ""
         )
@@ -548,12 +548,12 @@ def synthesise_main_user_msg_1(capture: CapturedAgent) -> str:
                 "# Goal\n\n<root goal text>\n\n"
                 "# Current Iteration\n\n"
                 "Iteration 2 (DEFERRED_GOAL_CONTINUATION) — continue from the "
-                "continuation_goal supplied by iteration 1's partial plan.\n\n"
+                "deferred_goal supplied by iteration 1's partial plan.\n\n"
                 "# Previous Iteration Results\n\n"
                 "## Iteration 1 accepted plan\n\n"
                 "<plan_spec from iteration 1, the partial preflight plan>\n\n"
                 "## Iteration 1 summary\n\nWorkspace preflight completed; "
-                "continuation_goal handed off."
+                "deferred_goal handed off."
             )
         return (
             "# Goal\n\n<root goal text>\n\n"
@@ -571,7 +571,7 @@ def synthesise_main_user_msg_1(capture: CapturedAgent) -> str:
         partial = capture.iteration.startswith("iteration_01")
         partial_block = (
             "\n\n# Partial Plan Boundary\n\nThe attempt is intentionally "
-            "partial; continuation_goal is set."
+            "partial; deferred_goal is set."
             if partial
             else ""
         )
@@ -951,7 +951,7 @@ def render_report(
         "- **Scope notes:** the new scenario file "
         "`backend/src/task_center_runner/scenarios/pipeline/"
         "initial_messages_capture.py` registers a complex run (2 "
-        "iterations with continuation_goal + attempt retry + helper/"
+        "iterations with deferred_goal + attempt retry + helper/"
         "subagent invocations). The matching pytest test "
         "`backend/src/task_center_runner/tests/sweevo/"
         "test_initial_messages_capture.py` was attempted live with the "

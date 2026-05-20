@@ -183,7 +183,7 @@ async def test_plan_validation_errors_do_not_mutate_graph(
     assert attempt.stage == AttemptStage.PLAN
 
 
-async def test_full_plan_rejects_continuation_goal(
+async def test_full_plan_rejects_deferred_goal(
     goal_store, iteration_store, attempt_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(
@@ -211,7 +211,7 @@ async def test_full_plan_rejects_continuation_goal(
     assert attempt.stage == AttemptStage.PLAN
 
 
-async def test_partial_plan_rejects_blank_continuation_goal(
+async def test_partial_plan_rejects_blank_deferred_goal(
     goal_store, iteration_store, attempt_store, task_store, composer
 ) -> None:
     fixture = build_harness_fixture(

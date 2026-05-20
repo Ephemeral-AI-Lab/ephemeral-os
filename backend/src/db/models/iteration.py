@@ -31,7 +31,7 @@ class IterationRecord(Base):
     attempt_budget: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(16))
     attempt_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
-    continuation_goal: Mapped[str | None] = mapped_column(Text, nullable=True)
+    deferred_goal: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )

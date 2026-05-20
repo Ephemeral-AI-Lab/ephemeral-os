@@ -19,8 +19,8 @@ _Source: explore agent draft, 2026-05-10. See `.omc/wiki-draft/task-center.md`._
 The pipeline is a four-level tree: Mission → Episode → Attempt → Tasks.
 
 - **Mission** (`task_center/mission/mission.py:19`) — a delegated goal. Holds an ordered Episode id list, `task_center_run_id`, and `requested_by_task_id` (the generator task that called `submit_execution_handoff`, or the entry task). Statuses: `open`, `succeeded`, `failed`, `cancelled`.
-- **Episode** (`task_center/episode/episode.py:22`) — one planning attempt window inside a Mission. Has `attempt_budget` (default `2` from `HarnessLifecycleConfig`, `task_center/config.py:9`), ordered Attempt id list, `creation_reason` (`initial` | `partial_continuation`), and `continuation_goal` (non-null when the passing attempt submitted a partial plan).
-- **Attempt** (`task_center/attempt/state.py:30`) — one planner→generator-DAG→evaluator execution. Tracks `stage` (`planning` → `generating` → `evaluating` → `closed`), `status` (`running` | `passed` | `failed`), `fail_reason`, `continuation_goal`.
+- **Episode** (`task_center/episode/episode.py:22`) — one planning attempt window inside a Mission. Has `attempt_budget` (default `2` from `HarnessLifecycleConfig`, `task_center/config.py:9`), ordered Attempt id list, `creation_reason` (`initial` | `partial_continuation`), and `deferred_goal` (non-null when the passing attempt submitted a partial plan).
+- **Attempt** (`task_center/attempt/state.py:30`) — one planner→generator-DAG→evaluator execution. Tracks `stage` (`planning` → `generating` → `evaluating` → `closed`), `status` (`running` | `passed` | `failed`), `fail_reason`, `deferred_goal`.
 - **Tasks** — per-role harness rows in `TaskCenterStore`. Roles: `planner`, `generator`, `evaluator` (`task_center/task/models.py:10`). Task ids deterministic: `{attempt_id}:planner`, `{attempt_id}:gen:{local_id}`, `{attempt_id}:evaluator` (`task_center/task/ids.py`).
 
 The entry executor is **not** a Mission. It is a top-level task with role `generator`, `task_center_attempt_id=None`, `agent_name="entry_executor"`.
@@ -61,7 +61,7 @@ def start_task_center_entry_run(
 | Role | Agent name | What it does | Terminal submission tool |
 |---|---|---|---|
 | `entry_executor` | `entry_executor` | Top-level user-request agent; either completes directly or delegates via `submit_execution_handoff`. Not a Mission. | `submit_execution_success` / `submit_execution_failure` |
-| `planner` | `planner` | Plans one Attempt: emits `PlannerSubmission` encoding generator DAG, `task_specification`, `evaluation_criteria`, optional `continuation_goal`. | `submit_full_plan` / `submit_partial_plan` |
+| `planner` | `planner` | Plans one Attempt: emits `PlannerSubmission` encoding generator DAG, `task_specification`, `evaluation_criteria`, optional `deferred_goal`. | `submit_full_plan` / `submit_partial_plan` |
 | `generator` (executor) | agent-specific | Executes one DAG leaf task. Optionally calls `submit_execution_handoff` to delegate to a child Mission. | `submit_execution_success` / `submit_execution_failure` / `submit_execution_handoff` |
 | `generator` (verifier) | agent-specific | Verifies work produced by an executor. | `submit_verification_success` / `submit_verification_failure` |
 | `evaluator` | `evaluator` | Evaluates the full DAG outcome; pass closes the Attempt. | `submit_evaluation_success` / `submit_evaluation_failure` |
@@ -73,7 +73,7 @@ Each tool calls into `AttemptOrchestrator` (or `EntryTaskController` for entry-m
 | Tool | Handler | State transition |
 |---|---|---|
 | `submit_full_plan` | `apply_plan_submission(kind="full")` | Planner→DONE; stage→`generating`; generator rows PENDING; dispatcher launches ready |
-| `submit_partial_plan` | `apply_plan_submission(kind="partial", continuation_goal=…)` | Same + records `continuation_goal` |
+| `submit_partial_plan` | `apply_plan_submission(kind="partial", deferred_goal=…)` | Same + records `deferred_goal` |
 | `submit_execution_success` | `apply_generator_submission(outcome="success")` | Gen→DONE; dispatcher checks quiescence → spawns evaluator if all done |
 | `submit_execution_failure` | `apply_generator_submission(outcome="failure")` | Gen→FAILED; descendants BLOCKED → attempt closes FAILED/`generator_failed` |
 | `submit_verification_*` | Same `apply_generator_submission` path | As executor success/failure |
@@ -107,15 +107,15 @@ The launcher synthesises exhaustion submissions when an agent run ends without t
 
 `EpisodeCreationReason` (`episode/episode.py:17`):
 - `INITIAL` — first Episode of a Mission.
-- `PARTIAL_CONTINUATION` — created when previous Episode's passing Attempt had `continuation_goal` set.
+- `PARTIAL_CONTINUATION` — created when previous Episode's passing Attempt had `deferred_goal` set.
 
 Flow on `submit_partial_plan`:
-1. `apply_plan_submission` records `continuation_goal` via `attempt_store.set_plan_contract` (`orchestrator.py:284`).
+1. `apply_plan_submission` records `deferred_goal` via `attempt_store.set_plan_contract` (`orchestrator.py:284`).
 2. Attempt stages through generating → evaluating → PASSED.
-3. `EpisodeManager._close_episode_passed` writes `continuation_goal` onto episode row (`manager.py:189`), emits `SuccessContinue(goal=attempt.continuation_goal)` (`manager.py:204`).
-4. `MissionHandler.handle_episode_closed` receives `EpisodeClosureReport(outcome=SuccessContinue)` (`mission/handler.py:163`): `create_continuation_episode_with_manager(previous_episode=…)` inserts new Episode with `creation_reason=PARTIAL_CONTINUATION` and `goal=previous_episode.continuation_goal`, starts initial Attempt.
+3. `EpisodeManager._close_episode_passed` writes `deferred_goal` onto episode row (`manager.py:189`), emits `SuccessContinue(goal=attempt.deferred_goal)` (`manager.py:204`).
+4. `MissionHandler.handle_episode_closed` receives `EpisodeClosureReport(outcome=SuccessContinue)` (`mission/handler.py:163`): `create_continuation_episode_with_manager(previous_episode=…)` inserts new Episode with `creation_reason=PARTIAL_CONTINUATION` and `goal=previous_episode.deferred_goal`, starts initial Attempt.
 
-Invariant: `assert_continuation_episode_predecessor` (`mission/validation.py:38`) requires predecessor Episode is `SUCCEEDED` with non-null `continuation_goal`.
+Invariant: `assert_continuation_episode_predecessor` (`mission/validation.py:38`) requires predecessor Episode is `SUCCEEDED` with non-null `deferred_goal`.
 
 ## Recursive (nested) missions
 
@@ -214,11 +214,11 @@ After `start_task_center_entry_run` returns: `await handle.launcher.wait_for_idl
 
 - **Real task_center pipeline workflow execution correctness** — full state machine runs with real stores.
 - **Attempt retry on failure** — supply runner that submits failure or returns without terminal; assert `attempt_sequence_no=2` after retry.
-- **Episodic continuation** — runner calls `submit_partial_plan(continuation_goal=…)`; assert second Episode with `creation_reason=PARTIAL_CONTINUATION`.
+- **Episodic continuation** — runner calls `submit_partial_plan(deferred_goal=…)`; assert second Episode with `creation_reason=PARTIAL_CONTINUATION`.
 - **Initial mission** — first Episode `creation_reason=INITIAL`, `sequence_no=1`, Mission `status=succeeded`.
 - **Nested mission** — runner calls `submit_execution_handoff`; assert child Mission with `requested_by_task_id=<gen_task_id>` and close report routed back.
 - **Dependency context** — multi-task plan with `deps`; assert PENDING tasks not launched until `needs[]` are DONE; assert blocked descendants on failure.
-- **Planner validation** — invalid plan (duplicate local_id, unknown dep, partial without `continuation_goal`); assert orchestrator raises `TaskCenterInvariantViolation` and attempt closes `fail_reason=planner_failed`.
+- **Planner validation** — invalid plan (duplicate local_id, unknown dep, partial without `deferred_goal`); assert orchestrator raises `TaskCenterInvariantViolation` and attempt closes `fail_reason=planner_failed`.
 
 ---
 
