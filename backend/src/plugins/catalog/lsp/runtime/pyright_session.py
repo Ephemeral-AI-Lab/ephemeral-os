@@ -40,6 +40,7 @@ _DEFAULT_REQUEST_TIMEOUT_S = 30.0
 _REFERENCES_TIMEOUT_S = 5.0
 _DIAGNOSTICS_WAIT_S = 5.0
 _DIAGNOSTICS_POLL_S = 0.05
+_RUNTIME_BUNDLE_ROOT = "/tmp/eos-sandbox-runtime"
 
 
 class PyrightSpawnError(RuntimeError):
@@ -504,7 +505,8 @@ class PyrightSession:
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.DEVNULL,
-                env=os.environ.copy(),
+                env=_runtime_subprocess_env(),
+                cwd=_runtime_subprocess_cwd(),
             )
         except FileNotFoundError as exc:
             raise PyrightSpawnError(
@@ -633,7 +635,8 @@ class PyrightSession:
             str(payload_ref),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            env=os.environ.copy(),
+            env=_runtime_subprocess_env(),
+            cwd=_runtime_subprocess_cwd(),
         )
         stdout, stderr = await asyncio.wait_for(helper.communicate(), timeout=10.0)
         if helper.returncode != 0:
@@ -855,6 +858,23 @@ class PyrightSession:
 
 def _text_hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _runtime_subprocess_env() -> dict[str, str]:
+    env = os.environ.copy()
+    existing = env.get("PYTHONPATH", "")
+    parts = [_RUNTIME_BUNDLE_ROOT]
+    parts.extend(
+        part
+        for part in existing.split(os.pathsep)
+        if part and part != _RUNTIME_BUNDLE_ROOT
+    )
+    env["PYTHONPATH"] = os.pathsep.join(parts)
+    return env
+
+
+def _runtime_subprocess_cwd() -> str | None:
+    return _RUNTIME_BUNDLE_ROOT if os.path.isdir(_RUNTIME_BUNDLE_ROOT) else None
 
 
 def _ast_document_symbols(
