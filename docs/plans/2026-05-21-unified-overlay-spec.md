@@ -1,7 +1,7 @@
 # Unified Overlay for command_exec and Plugins — Implementation Spec
 
 **Date:** 2026-05-21
-**Status:** Spec / pre-implementation
+**Status:** Implemented; live provider performance sweep still recommended
 **Scope:** Sandbox execution surface (`/testbed`), layer stack lifecycle, OCC integration, plugin runtime
 **Audience:** Anyone implementing or reviewing the unified-overlay refactor
 
@@ -18,7 +18,27 @@ This spec replaces both with a **single per-sandbox R/W overlay mount at `/testb
 
 This is a structural simplification, not a feature addition. The OCC and capture machinery already exists; the layer-stack storage model is unchanged. What changes is **mount lifetime** (per-command → per-sandbox), **plugin path semantics** (synthetic projection → live overlay), and **notification mechanism** (Pyright-specific refresh dance → generic event bus).
 
-### 1.1 Confirmation pass
+### 1.1 Current implementation status
+
+Landed:
+
+- `SandboxOverlay` is now the daemon-owned freshness/publish facade. It owns `start()`, `stop()`, `ensure_current(...)`, `publish_cycle(...)`, persistent-upperdir publishing, `flush_to_workspace()`, and workspace-change event emission.
+- The daemon owns a per-layer-stack/per-workspace overlay cache. When the new mount API is available, the overlay is mounted lazily and kept for the sandbox lifetime; command execution then runs directly against `/testbed` and publishes the shared upperdir.
+- `command_exec` enters OCC publication through `SandboxOverlay.publish_cycle(...)` or persistent `publish_pending_changes(...)`; command callers do not coordinate OCC directly.
+- The LSP runtime no longer uses `PathMapper`, `_stable_root`, or materialized projection paths. Pyright sessions are rooted directly at the bound workspace root, normally `/testbed`.
+- Every LSP tool call runs through `SandboxOverlay.ensure_current(...)` before talking to Pyright.
+- LSP write-capable operations now exist for `lsp.apply_workspace_edit`, `lsp.rename`, `lsp.format`, and `lsp.apply_code_action`; they publish through the daemon overlay facade.
+- WorkspaceEdit application supports text edits plus LSP create/delete/rename file operations.
+- Workspace change events are available through a bounded daemon-local event bus, emitted for command/plugin publishes and flushes, and consumed by LSP sessions through a daemon-local subscription pump.
+- A background foreign-publish watcher refreshes a mounted overlay when another daemon path advances the manifest.
+- `flush_to_workspace` collapses the current active manifest back into the workspace and rebuilds a fresh base layer.
+
+Remaining follow-up:
+
+- Run the full live Daytona/provider performance sweep. Unit and targeted daemon tests cover the persistent path and disk/resource timing fields; live numbers still need to be collected from a privileged sandbox.
+- Optimize `flush_to_workspace` from the functional full-materialize rebuild to the planned delta-apply/hardlink/incremental-hash path.
+
+### 1.2 Confirmation pass
 
 This is the confirmed design shape, with ownership boundaries made explicit:
 

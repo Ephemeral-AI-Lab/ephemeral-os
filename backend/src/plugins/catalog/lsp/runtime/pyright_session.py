@@ -8,14 +8,13 @@ import hashlib
 import logging
 import os
 import shutil
-from pathlib import Path
 from typing import Any
+from urllib.parse import quote, unquote, urlparse
 
 from plugins.catalog.lsp.runtime.lsp_jsonrpc import (
     JsonRpcError,
     LspJsonRpcClient,
 )
-from plugins.catalog.lsp.runtime.paths import PathMapper
 
 __all__ = [
     "PyrightSession",
@@ -37,22 +36,17 @@ class PyrightSpawnError(RuntimeError):
 
 
 class PyrightSession:
-    """Long-lived Pyright session rooted at a stable layer-stack projection."""
+    """Long-lived Pyright session rooted directly at the daemon overlay."""
 
     def __init__(
         self,
         *,
         manifest_key: str,
-        lowerdir: str,
         workspace_root: str,
-        projection_handle: Any,
-        stable_root: str | None = None,
     ) -> None:
         self.manifest_key = manifest_key
-        self.lowerdir = stable_root or lowerdir
-        self.workspace_root = workspace_root
-        self._stable_root = stable_root
-        self._projection_handle = projection_handle
+        self.workspace_root = str(workspace_root or "/testbed").rstrip("/") or "/"
+        self.lowerdir = self.workspace_root
         self._proc: asyncio.subprocess.Process | None = None
         self._client: LspJsonRpcClient | None = None
         self._opened: set[str] = set()
@@ -60,50 +54,18 @@ class PyrightSession:
         self._started = False
         self._document_versions: dict[str, int] = {}
         self._document_hashes: dict[str, str] = {}
-        if stable_root is not None:
-            self._retarget_workspace_root(lowerdir)
-        self._mapper = self._build_mapper()
 
     async def refresh_manifest(
         self,
         *,
         manifest_key: str,
-        lowerdir: str,
-        projection_handle: Any,
     ) -> None:
-        """Retarget the stable workspace root to a new projection.
-
-        The Pyright subprocess keeps the same ``rootUri``. We swap the stable
-        root to the latest layer-stack snapshot, then notify Pyright about any
-        already-open documents so semantic queries don't read stale content.
-        If notification fails the caller must evict this session and start a
-        clean one.
-        """
+        """Mark the daemon overlay as refreshed and resync open documents."""
         if manifest_key == self.manifest_key:
-            projection_handle.release()
             return
-        if self._stable_root is None:
-            projection_handle.release()
-            raise RuntimeError(
-                "cannot refresh a Pyright session without a stable root"
-            )
 
         async with self._lock:
-            old_handle = self._projection_handle
-            try:
-                self._retarget_workspace_root(lowerdir)
-            except Exception:
-                projection_handle.release()
-                raise
-
             self.manifest_key = manifest_key
-            self._projection_handle = projection_handle
-            self._mapper = self._build_mapper()
-            if old_handle is not None:
-                try:
-                    old_handle.release()
-                except Exception:
-                    logger.debug("old projection lease release error", exc_info=True)
             await self._notify_workspace_refreshed()
 
     async def start(self) -> None:
@@ -198,6 +160,64 @@ class PyrightSession:
             ]
         return {"symbols": symbols}
 
+    async def rename(self, args: dict[str, Any]) -> dict[str, Any]:
+        await self.start()
+        uri = await self._open_document(args["file_path"])
+        params = {
+            "textDocument": {"uri": uri},
+            "position": {
+                "line": int(args["line"]),
+                "character": int(args["character"]),
+            },
+            "newName": str(args["new_name"]),
+        }
+        raw = await self._send_request("textDocument/rename", params)
+        return raw if isinstance(raw, dict) else {}
+
+    async def format_document(self, args: dict[str, Any]) -> dict[str, Any]:
+        await self.start()
+        uri = await self._open_document(args["file_path"])
+        raw = await self._send_request(
+            "textDocument/formatting",
+            {
+                "textDocument": {"uri": uri},
+                "options": args.get("options") or {"tabSize": 4, "insertSpaces": True},
+            },
+        )
+        if not isinstance(raw, list):
+            return {"changes": {}}
+        return {"changes": {uri: raw}}
+
+    async def code_actions(self, args: dict[str, Any]) -> dict[str, Any]:
+        await self.start()
+        uri = await self._open_document(args["file_path"])
+        raw_range = args.get("range")
+        if isinstance(raw_range, dict):
+            range_obj = raw_range
+        else:
+            line = int(args.get("line", 0))
+            character = int(args.get("character", 0))
+            range_obj = {
+                "start": {"line": line, "character": character},
+                "end": {"line": line, "character": character},
+            }
+        raw = await self._send_request(
+            "textDocument/codeAction",
+            {
+                "textDocument": {"uri": uri},
+                "range": range_obj,
+                "context": {
+                    "diagnostics": args.get("diagnostics") or [],
+                    **(
+                        {"only": args["only"]}
+                        if isinstance(args.get("only"), list)
+                        else {}
+                    ),
+                },
+            },
+        )
+        return {"code_actions": raw if isinstance(raw, list) else []}
+
     async def evict(self) -> None:
         client = self._client
         proc = self._proc
@@ -215,13 +235,6 @@ class PyrightSession:
                 await asyncio.wait_for(proc.wait(), timeout=5.0)
             except Exception:
                 logger.debug("pyright proc terminate error", exc_info=True)
-        try:
-            self._projection_handle.release()
-        except Exception:
-            logger.debug("projection lease release error", exc_info=True)
-        if self._stable_root is not None:
-            with contextlib.suppress(OSError):
-                Path(self._stable_root).unlink()
 
     async def _cleanup_failed_start(self) -> None:
         proc = self._proc
@@ -259,7 +272,7 @@ class PyrightSession:
                 continue
             uri = entry.get("uri") or entry.get("targetUri") or ""
             try:
-                file_path = self._mapper.from_snapshot_uri(str(uri))
+                file_path = self._from_uri(str(uri))
             except Exception:
                 file_path = str(uri)
             range_obj = entry.get("range") or entry.get("targetRange")
@@ -267,7 +280,7 @@ class PyrightSession:
         return out
 
     async def _open_document(self, file_path: str) -> str:
-        uri = self._mapper.to_snapshot_uri(file_path)
+        uri = self._to_uri(file_path)
         notify = self._client
         if notify is None:
             return uri
@@ -296,15 +309,15 @@ class PyrightSession:
             return
         await client.notify(
             "workspace/didChangeWatchedFiles",
-            {"changes": [{"uri": f"file://{self.lowerdir}", "type": 2}]},
+            {"changes": [{"uri": self._workspace_uri(), "type": 2}]},
         )
         for uri in tuple(self._opened):
             try:
-                file_path = self._mapper.from_snapshot_uri(uri)
+                file_path = self._from_uri(uri)
             except Exception:
                 self._forget_document(uri)
                 continue
-            full_path = self._mapper.to_full_path(file_path)
+            full_path = self._to_full_path(file_path)
             if not os.path.exists(full_path):
                 await client.notify(
                     "textDocument/didClose",
@@ -442,9 +455,9 @@ class PyrightSession:
                 "initialize",
                 {
                     "processId": os.getpid(),
-                    "rootUri": f"file://{self.lowerdir}",
+                    "rootUri": self._workspace_uri(),
                     "workspaceFolders": [
-                        {"uri": f"file://{self.lowerdir}", "name": "layerstack"}
+                        {"uri": self._workspace_uri(), "name": "testbed"}
                     ],
                     "capabilities": {
                         "workspace": {
@@ -477,7 +490,7 @@ class PyrightSession:
             items = params.get("items") if isinstance(params, dict) else []
             return [{} for _ in items] if isinstance(items, list) else []
         if method == "workspace/workspaceFolders":
-            return [{"uri": f"file://{self.lowerdir}", "name": "layerstack"}]
+            return [{"uri": self._workspace_uri(), "name": "testbed"}]
         return None
 
     def _next_document_version(self, uri: str) -> int:
@@ -485,15 +498,9 @@ class PyrightSession:
         self._document_versions[uri] = version
         return version
 
-    def _build_mapper(self) -> PathMapper:
-        return PathMapper(
-            lowerdir=self.lowerdir,
-            workspace_root=self.workspace_root,
-        )
-
     def _read_document_text(self, file_path: str) -> str:
         try:
-            with open(self._mapper.to_full_path(file_path), encoding="utf-8") as fh:
+            with open(self._to_full_path(file_path), encoding="utf-8") as fh:
                 return fh.read()
         except OSError:
             return ""
@@ -503,24 +510,46 @@ class PyrightSession:
         self._document_hashes.pop(uri, None)
         self._document_versions.pop(uri, None)
 
-    def _retarget_workspace_root(self, lowerdir: str) -> None:
-        if self._stable_root is None:
-            return
-        target = Path(lowerdir)
-        if not target.is_dir():
-            raise RuntimeError(f"projection lowerdir does not exist: {lowerdir}")
-        root = Path(self._stable_root)
-        root.parent.mkdir(parents=True, exist_ok=True)
-        tmp = root.with_name(f".{root.name}.{os.getpid()}.{id(self)}.tmp")
-        with contextlib.suppress(OSError):
-            tmp.unlink()
-        try:
-            os.symlink(target, tmp)
-            os.replace(tmp, root)
-        except Exception:
-            with contextlib.suppress(OSError):
-                tmp.unlink()
-            raise
+    def _workspace_uri(self) -> str:
+        return self._path_uri(self.workspace_root)
+
+    def _to_uri(self, file_path: str) -> str:
+        return self._path_uri(self._to_full_path(file_path))
+
+    def _from_uri(self, uri: str) -> str:
+        parsed = urlparse(uri)
+        if parsed.scheme != "file":
+            raise ValueError(f"unsupported uri scheme: {uri}")
+        path = unquote(parsed.path)
+        return self._to_agent_path(path)
+
+    def _to_agent_path(self, path: str) -> str:
+        full = os.path.normpath(path)
+        root = self.workspace_root
+        if full == root:
+            return root
+        if full.startswith(f"{root}/"):
+            return full
+        return full
+
+    def _to_full_path(self, file_path: str) -> str:
+        raw = str(file_path or "").strip()
+        if raw.startswith("file://"):
+            return self._to_full_path(self._from_uri(raw))
+        if not raw:
+            return self.workspace_root
+        if os.path.isabs(raw):
+            normalized = os.path.normpath(raw)
+            if normalized == self.workspace_root or normalized.startswith(
+                f"{self.workspace_root}/"
+            ):
+                return normalized
+            return os.path.normpath(os.path.join(self.workspace_root, raw.lstrip("/")))
+        return os.path.normpath(os.path.join(self.workspace_root, raw))
+
+    def _path_uri(self, path: str) -> str:
+        normalized = os.path.normpath(path)
+        return "file://" + quote(normalized)
 
 
 def _text_hash(text: str) -> str:

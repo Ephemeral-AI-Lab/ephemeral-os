@@ -11,6 +11,7 @@ from sandbox.layer_stack.stack import (
     LayerStack,
     PrepareWorkspaceSnapshotResult,
 )
+from sandbox.layer_stack.lease import WorkspaceLease
 from sandbox.layer_stack.stack import CommitStagingArea
 from sandbox.occ.ports import LayerCommitTransaction
 from sandbox.daemon.workspace_server import get_layer_stack_manager
@@ -35,6 +36,9 @@ class LayerStackClient:
 
     def read_active_manifest(self) -> Manifest:
         return self.manager.read_active_manifest()
+
+    def acquire_snapshot_lease(self, owner_request_id: str) -> WorkspaceLease:
+        return self.manager.acquire_snapshot_lease(owner_request_id)
 
     def read_bytes(
         self,
@@ -84,6 +88,17 @@ class LayerStackClient:
 
     def release_lease(self, *, lease_id: str) -> bool:
         return self.manager.release_lease(lease_id)
+
+    def flush_to_workspace(
+        self,
+        *,
+        workspace_root: str | Path,
+        timings: dict[str, float] | None = None,
+    ) -> Manifest:
+        return self.manager.flush_to_workspace(
+            workspace_root=workspace_root,
+            timings=timings,
+        )
 
     def can_squash(self, *, max_depth: int) -> bool:
         return self.manager.can_squash(max_depth=max_depth)

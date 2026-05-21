@@ -24,6 +24,7 @@ from sandbox.layer_stack.workspace_binding import (
 )
 from sandbox.plugin import handler as handler_mod
 from sandbox.plugin import op_registry as registry_mod
+from sandbox.daemon.service.overlay_manager import clear_overlay_manager_for_tests
 from sandbox.plugin.runtime import register_plugin_op
 
 
@@ -31,6 +32,7 @@ from sandbox.plugin.runtime import register_plugin_op
 def _isolate_plugin_state() -> Iterator[None]:
     handler_mod._LOADED.clear()
     handler_mod._PROJECTIONS.clear()
+    clear_overlay_manager_for_tests()
     registry_mod._PENDING.clear()
     pre_existing = [
         name for name in sys.modules if name.startswith("plugins.catalog.")
@@ -38,6 +40,7 @@ def _isolate_plugin_state() -> Iterator[None]:
     yield
     handler_mod._LOADED.clear()
     handler_mod._PROJECTIONS.clear()
+    clear_overlay_manager_for_tests()
     registry_mod._PENDING.clear()
     for name in [
         n for n in sys.modules if n.startswith("plugins.catalog.")
@@ -172,6 +175,23 @@ def test_plugin_warm_requires_workspace_binding(tmp_path: Path) -> None:
                     "digest": "a",
                     "layer_stack_root": str(tmp_path / "missing-stack"),
                 }
+            )
+        )
+
+
+def test_plugin_context_rejects_workspace_root_mismatch(tmp_path: Path) -> None:
+    layer_stack_root = tmp_path / "layer-stack"
+    _write_binding(layer_stack_root)
+
+    with pytest.raises(handler_mod.PluginEnsureError, match="workspace_root"):
+        asyncio.run(
+            handler_mod._plugin_op_context_factory(
+                {
+                    "layer_stack_root": str(layer_stack_root),
+                    "workspace_root": "/other",
+                },
+                "demo",
+                "hover",
             )
         )
 

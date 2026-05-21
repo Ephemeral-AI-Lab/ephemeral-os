@@ -1,6 +1,6 @@
 ---
 name: lsp
-description: Pyright-backed LSP tools for Python - hover, find_definitions, find_references, diagnostics, query_symbols. Read-only in v1.
+description: Pyright-backed LSP tools for Python - hover, find_definitions, find_references, diagnostics, query_symbols, rename, format, code_actions, apply_code_action, apply_workspace_edit.
 tools:
   - name: lsp.hover
     module: tools/hover.py
@@ -12,6 +12,16 @@ tools:
     module: tools/diagnostics.py
   - name: lsp.query_symbols
     module: tools/query_symbols.py
+  - name: lsp.apply_workspace_edit
+    module: tools/apply_workspace_edit.py
+  - name: lsp.rename
+    module: tools/rename.py
+  - name: lsp.format
+    module: tools/format.py
+  - name: lsp.code_actions
+    module: tools/code_actions.py
+  - name: lsp.apply_code_action
+    module: tools/apply_code_action.py
 setup: setup.sh
 runtime: runtime/server.py
 ---
@@ -21,9 +31,10 @@ runtime: runtime/server.py
 Provides Python language-server tools backed by `pyright-langserver --stdio`.
 The plugin runs inside the sandbox; the host calls into it through
 `call_plugin`. The plugin keeps a long-lived Pyright child per layer-stack
-root, points it at a stable sandbox-local projection root, and retargets that
-root when the active manifest changes. If a refresh cannot be reconciled, the
-session is evicted and restarted rather than reading stale files.
+root, rooted directly at the daemon overlay workspace (`/testbed`). Each tool
+call enters through the daemon overlay freshness gate before talking to
+Pyright, so the session sees the latest workspace state without materialized
+projection paths.
 
 ## Tools
 
@@ -33,6 +44,11 @@ session is evicted and restarted rather than reading stale files.
 - `lsp.find_references` — references to the symbol at a cursor.
 - `lsp.diagnostics` — diagnostics for a file (errors, warnings, hints).
 - `lsp.query_symbols` — workspace symbol search by name fragment.
+- `lsp.apply_workspace_edit` — apply a provided LSP WorkspaceEdit and publish it.
+- `lsp.rename` — compute a Pyright rename edit, apply it, and publish it.
+- `lsp.format` — compute a formatting edit, apply it, and publish it.
+- `lsp.code_actions` — return Pyright code actions for a file range.
+- `lsp.apply_code_action` — apply and publish a WorkspaceEdit from a code action.
 
 ## Setup
 
@@ -43,7 +59,6 @@ Node archives or npm packages.
 
 ## Constraints
 
-- Read-only in v1. WorkspaceEdit-producing features (rename, code actions
-  that modify files) are deferred.
-- Document URIs are mapped onto a stable symlink to the active layer-stack
-  snapshot, so Pyright never sees the mutable provider workspace.
+- Plugin cache state must stay outside `/testbed`.
+- WorkspaceEdit application supports standard `changes`, text-document
+  `documentChanges`, and LSP create/delete/rename file operations.

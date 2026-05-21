@@ -45,11 +45,16 @@ def test_lsp_manifest_parses() -> None:
     assert manifest.name == "lsp"
     tool_names = sorted(t.name for t in manifest.tools)
     assert tool_names == [
+        "lsp.apply_code_action",
+        "lsp.apply_workspace_edit",
+        "lsp.code_actions",
         "lsp.diagnostics",
         "lsp.find_definitions",
         "lsp.find_references",
+        "lsp.format",
         "lsp.hover",
         "lsp.query_symbols",
+        "lsp.rename",
     ]
     assert manifest.setup is not None
     assert manifest.setup.name == "setup.sh"
@@ -63,16 +68,21 @@ def test_lsp_discovery_picks_up_the_plugin() -> None:
     assert any(m.name == "lsp" for m in plugins)
 
 
-def test_register_plugin_tools_yields_five_lsp_tools() -> None:
+def test_register_plugin_tools_yields_lsp_tools() -> None:
     catalog_dir = _LSP_DIR.parent
     tools = register_plugin_tools(catalog_dir)
     lsp_tools = sorted(t.name for t in tools if t.name.startswith("lsp."))
     assert lsp_tools == [
+        "lsp.apply_code_action",
+        "lsp.apply_workspace_edit",
+        "lsp.code_actions",
         "lsp.diagnostics",
         "lsp.find_definitions",
         "lsp.find_references",
+        "lsp.format",
         "lsp.hover",
         "lsp.query_symbols",
+        "lsp.rename",
     ]
 
 
@@ -90,11 +100,16 @@ def test_each_lsp_tool_creatable_via_factory() -> None:
     # registration when ``_ensure_builtins_registered`` runs (see factory.py
     # ``_register_many`` rejecting duplicates without ``override=True``).
     for name in (
+        "lsp.apply_code_action",
+        "lsp.apply_workspace_edit",
+        "lsp.code_actions",
         "lsp.hover",
         "lsp.find_definitions",
         "lsp.find_references",
         "lsp.diagnostics",
         "lsp.query_symbols",
+        "lsp.rename",
+        "lsp.format",
     ):
         instance = create_tool(name, ToolFactoryContext())
         assert instance.name == name

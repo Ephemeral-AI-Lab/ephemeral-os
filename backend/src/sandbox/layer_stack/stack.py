@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 import tempfile
 import threading
@@ -37,6 +38,7 @@ from sandbox.layer_stack.manifest import (
 )
 from sandbox.layer_stack.transaction import LayerStackTransaction
 from sandbox.layer_stack.view import MergedView, SymlinkLookup
+from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox._shared.clock import monotonic_now
 
 logger = logging.getLogger(__name__)
@@ -372,6 +374,67 @@ class LayerStack:
                     self._squash.discard_checkpoint(checkpoint)
             self.release_lease(squash_lease.lease_id)
 
+    def flush_to_workspace(
+        self,
+        *,
+        workspace_root: str | Path,
+        timings: dict[str, float] | None = None,
+    ) -> Manifest:
+        """Collapse the active manifest back into the bound workspace base.
+
+        The caller must ensure any live overlay mount is detached first. This
+        method rewrites the workspace to the active merged view, resets layer
+        storage, and rebuilds a fresh base layer from the workspace bytes.
+        """
+        total_start = monotonic_now()
+        workspace = Path(workspace_root)
+        if not workspace.is_dir():
+            raise ValueError(f"workspace_root does not exist: {workspace}")
+        with self._lock:
+            if self._leases.active_count() > 0:
+                raise RuntimeError("flush_to_workspace blocked by active leases")
+            active = self._manifest_store.read()
+
+        materialize_parent = self.storage_root / "runtime" / "flush"
+        materialize_parent.mkdir(parents=True, exist_ok=True)
+        materialized = Path(
+            tempfile.mkdtemp(prefix="merged-", dir=str(materialize_parent))
+        )
+        try:
+            materialize_start = monotonic_now()
+            self._view.materialize(materialized, active, share_inodes=False)
+            if timings is not None:
+                timings["layer_stack.flush.materialize_s"] = (
+                    monotonic_now() - materialize_start
+                )
+
+            replace_start = monotonic_now()
+            _replace_directory_contents(workspace, materialized)
+            if timings is not None:
+                timings["layer_stack.flush.replace_workspace_s"] = (
+                    monotonic_now() - replace_start
+                )
+
+            reset_start = monotonic_now()
+            with self._lock:
+                _clear_storage_root_for_flush(self.storage_root)
+                build_workspace_base(
+                    workspace_root=workspace,
+                    layer_stack_root=self.storage_root,
+                )
+                self._view = MergedView(self.storage_root)
+                self._publisher = LayerPublisher(self.storage_root)
+                self._squash = SquashService(self.storage_root)
+                new_manifest = self._manifest_store.read()
+            if timings is not None:
+                timings["layer_stack.flush.rebuild_base_s"] = (
+                    monotonic_now() - reset_start
+                )
+                timings["layer_stack.flush.total_s"] = monotonic_now() - total_start
+            return new_manifest
+        finally:
+            shutil.rmtree(materialized, ignore_errors=True)
+
     def _layer_path(self, layer: LayerRef) -> Path:
         return resolve_storage_path(self.storage_root, layer.path)
 
@@ -397,3 +460,19 @@ class LayerStack:
         if self._storage_writer_lock is not None:
             self._storage_writer_lock.close()
             self._storage_writer_lock = None
+
+
+def _replace_directory_contents(destination: Path, source: Path) -> None:
+    destination.mkdir(parents=True, exist_ok=True)
+    for child in destination.iterdir():
+        remove_path(child)
+    for child in source.iterdir():
+        os.replace(child, destination / child.name)
+
+
+def _clear_storage_root_for_flush(storage_root: Path) -> None:
+    storage_root.mkdir(parents=True, exist_ok=True)
+    for child in storage_root.iterdir():
+        if child.name == ".storage-writer.lock":
+            continue
+        remove_path(child)

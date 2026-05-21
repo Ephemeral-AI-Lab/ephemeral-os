@@ -22,7 +22,6 @@ from sandbox.execution.contract import (
     CommandExecRequest,
     EmptyChangesetResult,
     LayerPathsLayout,
-    OverlayLayout,
     WorkspaceCapturePublishResult,
 )
 from sandbox.execution.overlay.layout import MaterializeLayout
@@ -110,7 +109,7 @@ def layer_storage_root(tmp_path: Path) -> Path:
 
 
 def _run(coro: Any) -> Any:
-    return asyncio.get_event_loop().run_until_complete(coro)
+    return asyncio.run(coro)
 
 
 class TestCapabilityBranch:

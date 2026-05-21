@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from contextlib import asynccontextmanager
 
 import pytest
 
 from sandbox.execution.contract import ShellProcessResult
+from sandbox.execution.contract import WorkspaceCapturePublishResult
 from sandbox.execution.service import _drop_transient_lowerdir
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.layer_stack.paths import TRANSIENT_LOWERDIR_DIR
@@ -118,6 +120,46 @@ class _Gitignore:
     cache_misses = 0
 
 
+class _PersistentOverlay:
+    is_mounted = True
+
+    def __init__(self, workspace_root: str, manifest: Manifest) -> None:
+        self.workspace_root = workspace_root
+        self.upperdir = Path(workspace_root) / ".fake-upper"
+        self.upperdir.mkdir()
+        self.manifest = manifest
+        self.published = False
+
+    @asynccontextmanager
+    async def workspace_operation(self, *, reason: str = "operation"):
+        del reason
+        yield self.manifest
+
+    async def publish_pending_changes(
+        self,
+        *,
+        snapshot: Manifest,
+        reason: str = "publish",
+        run_maintenance: bool = True,
+    ) -> WorkspaceCapturePublishResult:
+        del snapshot, reason, run_maintenance
+        self.published = True
+        return WorkspaceCapturePublishResult(
+            path_changes=(),
+            changeset=ChangesetResult(files=()),
+            timings={"overlay.capture_upperdir_s": 0.0, "overlay.occ_apply_s": 0.0},
+        )
+
+    async def run_maintenance_after_publish(
+        self,
+        result: ChangesetResult,
+        *,
+        workspace_ref: str | None = None,
+    ) -> dict[str, float]:
+        del result, workspace_ref
+        return {}
+
+
 async def test_shell_capture_goes_through_occ_client_before_lease_release(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -199,6 +241,43 @@ async def test_shell_capture_goes_through_occ_client_before_lease_release(
     # Unconditional cleanup deletes the lowerdir parent on release.
     assert lower_parent.exists() is False
     _assert_phase08_shell_timings(result.timings)
+
+
+async def test_shell_uses_persistent_overlay_when_available(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    stack = tmp_path / "stack"
+    build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
+    manifest = Manifest(version=1, layers=())
+    overlay = _PersistentOverlay(workspace.as_posix(), manifest)
+
+    async def fake_get_overlay(*args, **kwargs):
+        del args, kwargs
+        return overlay
+
+    monkeypatch.setattr(shell_runner, "get_sandbox_overlay", fake_get_overlay)
+
+    result = await shell_runner._execute_shell(
+        {
+            "layer_stack_root": stack.as_posix(),
+            "command": "printf done > out.txt",
+            "cwd": ".",
+        },
+        layer_stack=LayerStackClient(stack),
+        occ_client=_Client(_LayerStackClient(tmp_path / "unused-lower")),
+        gitignore=_Gitignore(),
+        storage_root=stack,
+    )
+
+    assert overlay.published is True
+    assert result.exit_code == 0
+    assert result.stdout == ""
+    assert (workspace / "out.txt").read_text(encoding="utf-8") == "done"
+    assert result.timings["command_exec.mount_workspace_s"] == 0.0
+    assert result.timings["resource.command_exec.changed_path_count"] == 0.0
 
 
 async def test_shell_uses_transient_lowerdir_and_removes_it(

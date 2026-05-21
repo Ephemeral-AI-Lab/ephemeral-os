@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from contextlib import AbstractAsyncContextManager
 from typing import Any, Protocol
 
 from sandbox._shared.models import SandboxCaller
 
 __all__ = [
     "PluginOpContext",
+    "SandboxOverlayLike",
     "ProjectionHandleLike",
     "WorkspaceProjectionLike",
 ]
@@ -35,6 +37,33 @@ class WorkspaceProjectionLike(Protocol):
     def active_manifest_key(self) -> str: ...
 
 
+class SandboxOverlayLike(Protocol):
+    """Minimal daemon overlay surface exposed to plugin tool calls."""
+
+    @property
+    def workspace_root(self) -> str: ...
+
+    def active_manifest_key(self) -> str: ...
+
+    async def ensure_current(self, *, reason: str = "ensure_current") -> str: ...
+
+    def current_manifest(self) -> Any: ...
+
+    def workspace_operation(
+        self,
+        *,
+        reason: str = "operation",
+    ) -> AbstractAsyncContextManager[Any]: ...
+
+    async def publish_workspace_paths(
+        self,
+        *,
+        paths: list[str] | tuple[str, ...],
+        actor_id: str = "",
+        description: str = "plugin workspace edit",
+    ) -> object: ...
+
+
 @dataclass(frozen=True)
 class PluginOpContext:
     """Concrete context surface a plugin op handler may rely on.
@@ -48,4 +77,5 @@ class PluginOpContext:
     layer_stack_root: str
     caller: SandboxCaller
     projection: WorkspaceProjectionLike
+    overlay: SandboxOverlayLike
     metadata: dict[str, Any] = field(default_factory=dict)

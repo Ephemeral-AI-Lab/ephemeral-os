@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from sandbox.daemon.workspace_server import get_layer_stack_manager
+from sandbox.daemon.service.overlay_manager import get_sandbox_overlay
 from sandbox.layer_stack.workspace_binding import (
     WorkspaceBindingError,
     require_workspace_binding,
@@ -285,10 +286,15 @@ async def _plugin_op_context_factory(
     else:
         caller = SandboxCaller(agent_id="", run_id="", agent_run_id="", task_id="")
     projection = _projection_for_root(layer_stack_root)
+    overlay = await _overlay_for_root(
+        layer_stack_root,
+        workspace_root=str(args.get("workspace_root", "")),
+    )
     return PluginOpContext(
         layer_stack_root=layer_stack_root,
         caller=caller,
         projection=projection,
+        overlay=overlay,
         metadata={
             "op_name": op_name,
             "workspace_root": str(args.get("workspace_root", "")),
@@ -312,6 +318,17 @@ def _projection_for_root(layer_stack_root: str) -> WorkspaceProjection:
     else:
         _PROJECTIONS.move_to_end(key)
     return projection
+
+
+async def _overlay_for_root(layer_stack_root: str, *, workspace_root: str) -> Any:
+    key = _validate_projection_root(layer_stack_root)
+    try:
+        return await get_sandbox_overlay(
+            key,
+            workspace_root=str(workspace_root or "").strip() or None,
+        )
+    except WorkspaceBindingError as exc:
+        raise PluginEnsureError(str(exc)) from exc
 
 
 def _validate_projection_root(layer_stack_root: str) -> str:
