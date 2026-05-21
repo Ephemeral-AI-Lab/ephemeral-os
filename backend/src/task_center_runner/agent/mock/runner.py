@@ -15,6 +15,7 @@ from typing import Any
 from uuid import uuid4
 
 import sandbox.api as sandbox_api
+from sandbox._shared.clock import monotonic_now
 from agents import AgentDefinition
 from engine.api import EphemeralRunResult
 from message.messages import ConversationMessage, ToolUseBlock
@@ -1233,6 +1234,15 @@ class MockSquadRunner:
                 run_id=run_id,
             )
         )
+        # Capture client-side wallclock around the tool dispatch boundary so a
+        # stall that does not show up in the sandbox-side ``api.*.total_s``
+        # timings can be localized. ``emit_started_usec`` covers the audit emit
+        # path (bus + recorder file IO); ``execute_tool_once_usec`` covers the
+        # whole tool body including pre-hooks, parse, and the sandbox RPC.
+        # Keys end in ``_usec`` not ``_s`` so they do not get picked up by the
+        # ``_looks_like_duration`` heuristic that already over-counts nested
+        # timings in the sandbox-event duration aggregate.
+        client_t0 = monotonic_now()
         await emit(
             ToolExecutionStarted(
                 tool_name=tool_obj.name,
@@ -1242,6 +1252,7 @@ class MockSquadRunner:
                 run_id=run_id,
             )
         )
+        client_t1 = monotonic_now()
         tool_metadata = metadata.with_overrides(
             tool_id=tool_id,
             sandbox_audit_sink=self._sandbox_audit_sink,
@@ -1253,6 +1264,18 @@ class MockSquadRunner:
             emit=_noop_emit,
             emit_started=False,
         )
+        client_t2 = monotonic_now()
+        result_metadata = dict(result.metadata or {})
+        client_timings = dict(result_metadata.get("timings") or {})
+        client_timings["mock.client.emit_started_usec"] = (client_t1 - client_t0) * 1_000_000
+        client_timings["mock.client.execute_tool_once_usec"] = (
+            client_t2 - client_t1
+        ) * 1_000_000
+        client_timings["mock.client.dispatch_wallclock_usec"] = (
+            client_t2 - client_t0
+        ) * 1_000_000
+        result_metadata["timings"] = client_timings
+        result = dataclasses.replace(result, metadata=result_metadata)
         await emit(
             ToolExecutionCompleted(
                 tool_name=tool_obj.name,
