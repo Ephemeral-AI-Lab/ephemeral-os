@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import os
 from typing import Any
 
 from sandbox.plugin.runtime import register_plugin_op
@@ -14,11 +16,30 @@ async def warm_plugin_runtime(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     """Start the Pyright sidecar during plugin ensure so first tool calls are warm."""
     del args
     session = await get_session(ctx)
-    await session.start()
+    timeout_s = _warm_start_timeout_s()
+    try:
+        await asyncio.wait_for(session.start(), timeout=timeout_s)
+    except TimeoutError:
+        return {
+            "success": True,
+            "manifest_key": session.manifest_key,
+            "runtime_start_timeout_s": timeout_s,
+            "runtime_start_deferred": True,
+        }
     return {
         "success": True,
         "manifest_key": session.manifest_key,
     }
+
+
+def _warm_start_timeout_s() -> float:
+    raw = os.environ.get("EOS_LSP_WARM_START_TIMEOUT_S", "").strip()
+    if not raw:
+        return 8.0
+    try:
+        return max(0.1, float(raw))
+    except ValueError:
+        return 8.0
 
 
 @register_plugin_op("lsp", "hover")

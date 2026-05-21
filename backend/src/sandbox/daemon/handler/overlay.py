@@ -8,7 +8,10 @@ from typing import Any
 from typing import cast
 
 from sandbox.daemon.service.layer_stack_client import LayerStackClient
-from sandbox.daemon.service.overlay_manager import get_sandbox_overlay
+from sandbox.daemon.service.overlay_manager import (
+    get_sandbox_overlay,
+    stop_sandbox_overlay,
+)
 from sandbox.execution.contract import (
     CommandExecRequest,
     MountMode,
@@ -53,6 +56,19 @@ async def flush_workspace_overlay(args: dict[str, Any]) -> dict[str, object]:
         start=False,
     )
     return await overlay.flush_to_workspace()
+
+
+async def stop_workspace_overlay(args: dict[str, Any]) -> dict[str, object]:
+    if "layer_stack_root" not in args:
+        raise ValueError("overlay.stop requires layer_stack_root")
+    result = await stop_sandbox_overlay(
+        str(args["layer_stack_root"]),
+        workspace_root=args.get("workspace_root"),
+    )
+    workspace_roots = result.get("workspace_roots")
+    if isinstance(workspace_roots, list) and workspace_roots:
+        result["workspace_root"] = workspace_roots[0]
+    return result
 
 
 async def _run_snapshot_overlay(args: dict[str, Any]) -> OverlayCapture:
@@ -137,4 +153,8 @@ def _snapshot_request_payload(args: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-__all__ = ["flush_workspace_overlay", "run_snapshot_overlay"]
+__all__ = [
+    "flush_workspace_overlay",
+    "run_snapshot_overlay",
+    "stop_workspace_overlay",
+]

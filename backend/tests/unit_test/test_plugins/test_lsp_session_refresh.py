@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -95,6 +96,12 @@ class _StartableFakeSession(_FakeSession):
         self.start_count += 1
 
 
+class _SlowStartFakeSession(_StartableFakeSession):
+    async def start(self) -> None:
+        self.start_count += 1
+        await asyncio.sleep(3600)
+
+
 @pytest.mark.asyncio
 async def test_session_manager_ensures_overlay_current_on_every_tool_call(
     monkeypatch: pytest.MonkeyPatch,
@@ -163,12 +170,53 @@ async def test_lsp_runtime_warm_hook_starts_cached_session(
     assert session.start_count == 1
 
 
+@pytest.mark.asyncio
+async def test_lsp_runtime_warm_hook_defers_slow_start(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(session_manager, "PyrightSession", _SlowStartFakeSession)
+    monkeypatch.setenv("EOS_LSP_WARM_START_TIMEOUT_S", "0.1")
+
+    overlay = _Overlay(workspace_root="/testbed", manifest_key="hash-a@1")
+    ctx = _Ctx(
+        layer_stack_root=str(tmp_path / "layer-stack"),
+        overlay=overlay,
+        metadata={"op_name": "__warm__"},
+    )
+
+    result = await lsp_server.warm_plugin_runtime({}, ctx)
+    session = await session_manager.get_session(ctx)
+
+    assert result == {
+        "success": True,
+        "manifest_key": "hash-a@1",
+        "runtime_start_timeout_s": 0.1,
+        "runtime_start_deferred": True,
+    }
+    assert isinstance(session, _SlowStartFakeSession)
+    assert session.start_count == 1
+
+
 class _Client:
     def __init__(self) -> None:
         self.notifications: list[tuple[str, dict[str, Any]]] = []
 
     async def notify(self, method: str, params: dict[str, Any]) -> None:
         self.notifications.append((method, params))
+
+
+class _HangingClient(_Client):
+    def __init__(self) -> None:
+        super().__init__()
+        self.closed = False
+
+    async def request(self, method: str, params: dict[str, Any]) -> Any:
+        del method, params
+        await asyncio.sleep(3600)
+
+    async def close(self) -> None:
+        self.closed = True
 
 
 @pytest.mark.asyncio
@@ -241,3 +289,36 @@ async def test_pyright_session_diagnostics_pulls_current_report(
         "result_id": "1",
     }
     assert session._to_uri("pkg/mod.py") in session._opened
+
+
+@pytest.mark.asyncio
+async def test_pyright_find_references_timeout_returns_empty_list(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "testbed"
+    (workspace / "pkg").mkdir(parents=True)
+    (workspace / "pkg" / "mod.py").write_text("value = 1\n", encoding="utf-8")
+    session = PyrightSession(
+        manifest_key="hash-a@1",
+        workspace_root=str(workspace),
+    )
+    client = _HangingClient()
+    session._client = client  # type: ignore[assignment]
+    session._started = True
+    monkeypatch.setattr(
+        "plugins.catalog.lsp.runtime.pyright_session._REFERENCES_TIMEOUT_S",
+        0.1,
+    )
+
+    result = await session.find_references(
+        {
+            "file_path": "pkg/mod.py",
+            "line": 0,
+            "character": 0,
+            "include_declaration": True,
+        }
+    )
+
+    assert result == {"references": [], "timeout": True}
+    assert client.closed is True

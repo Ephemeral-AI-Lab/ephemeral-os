@@ -8,7 +8,6 @@ output and the service that reads it back. They are not URLs.
 from __future__ import annotations
 
 import logging
-import os
 import shutil
 from collections.abc import Callable, Mapping
 from pathlib import Path
@@ -31,6 +30,7 @@ from sandbox.execution.overlay.capability import new_mount_api_supported
 from sandbox.execution.overlay.capture import walk_upperdir
 from sandbox.execution.resource_audit import command_exec_resource_timings
 from sandbox.execution.runner import run_workspace_replaced_command
+from sandbox.execution.scratch import command_exec_scratch_root
 from sandbox.daemon.async_bridge import run_sync_in_executor
 from sandbox.layer_stack.paths import TRANSIENT_LOWERDIR_DIR
 from sandbox._shared.clock import monotonic_now
@@ -235,13 +235,7 @@ def _run_dir(storage_root: Path, request_id: str) -> Path:
 
 
 def _command_exec_scratch_root(storage_root: Path) -> Path:
-    raw = os.environ.get("EPHEMERALOS_COMMAND_EXEC_SCRATCH_ROOT", "").strip()
-    if raw:
-        return Path(raw)
-    mount_scratch = Path("/eos-mount-scratch")
-    if mount_scratch.is_dir() and os.access(mount_scratch, os.W_OK | os.X_OK):
-        return mount_scratch / "eos-sandbox-runtime"
-    return storage_root
+    return command_exec_scratch_root(storage_root)
 
 
 def _drop_transient_lowerdir(

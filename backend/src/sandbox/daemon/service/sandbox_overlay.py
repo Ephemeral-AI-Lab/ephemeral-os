@@ -6,9 +6,10 @@ import asyncio
 from contextlib import asynccontextmanager, suppress
 from collections.abc import Sequence
 from dataclasses import dataclass
+import hashlib
+import os
 from pathlib import Path
 import shutil
-import os
 from typing import AsyncIterator, Protocol
 
 from sandbox.execution.contract import (
@@ -24,6 +25,7 @@ from sandbox.execution.overlay.kernel_mount import (
     umount,
     validate_mount_inputs,
 )
+from sandbox.execution.scratch import command_exec_scratch_root
 from sandbox.execution.path_change import OverlayPathChange
 from sandbox.layer_stack.manifest import manifest_root_hash
 from sandbox.occ.changeset import (
@@ -101,6 +103,16 @@ class SandboxOverlay:
         self._active_lease_id = ""
         self._operation_lock = asyncio.Lock()
         self._foreign_watch_task: asyncio.Task[None] | None = None
+        storage_root = (
+            layer_stack.storage_root if layer_stack is not None else Path("/var/run/eos")
+        )
+        self._scratch_root = command_exec_scratch_root(Path(storage_root))
+        self._runtime_dir_path = (
+            self._scratch_root
+            / "runtime"
+            / "sandbox-overlay"
+            / self._runtime_key(workspace_ref, self._workspace_root)
+        )
         self._upperdir = self._runtime_dir / "upper"
         self._workdir = self._runtime_dir / "work"
         if layer_stack is not None and hasattr(layer_stack, "read_active_manifest"):
@@ -117,6 +129,14 @@ class SandboxOverlay:
     @property
     def upperdir(self) -> Path:
         return self._upperdir
+
+    @property
+    def scratch_root(self) -> Path:
+        return self._scratch_root
+
+    @property
+    def runtime_dir(self) -> Path:
+        return self._runtime_dir
 
     @asynccontextmanager
     async def workspace_operation(
@@ -148,24 +168,14 @@ class SandboxOverlay:
             raise RuntimeError("SandboxOverlay.start requires layer_stack")
         if self._mounted:
             return
-        snapshot = self._prepare_overlay_snapshot("sandbox-overlay-start")
-        self._prepare_mount_dirs()
-        try:
-            self._mount_layer_paths(snapshot.layer_paths)
-        except Exception:
-            self._release_lease(snapshot.lease_id)
-            raise
-        self._active_lease_id = snapshot.lease_id
-        self._mounted = True
-        self._mark_active(snapshot.manifest)
+        self._mount_active(reason="start")
         self._start_foreign_publish_watcher()
 
     async def stop(self) -> None:
         """Detach the daemon-owned overlay and remove scratch dirs."""
         await self._stop_foreign_publish_watcher()
-        if self._mounted:
-            umount(Path(self.workspace_root))
-            self._mounted = False
+        umount(Path(self.workspace_root))
+        self._mounted = False
         self._release_lease(self._active_lease_id)
         self._active_lease_id = ""
         shutil.rmtree(self._runtime_dir, ignore_errors=True)
@@ -294,11 +304,17 @@ class SandboxOverlay:
             path_changes,
             snapshot=snapshot,
             workspace_ref=workspace_ref,
-            run_maintenance=run_maintenance,
+            run_maintenance=False,
         )
         timings[f"{timing_prefix}.occ_apply_s"] = monotonic_now() - occ_start
+        maintenance_timings: dict[str, float] = {}
         old_version = getattr(snapshot, "version", self._active_manifest_version)
-        if changeset.published_manifest_version is not None and self._mounted:
+        if changeset.published_manifest_version is not None and run_maintenance:
+            maintenance_timings = await self.run_maintenance_after_publish(
+                changeset,
+                workspace_ref=workspace_ref,
+            )
+        elif changeset.published_manifest_version is not None and self._mounted:
             self._remount_active(reason=reason)
         elif (
             changeset.published_manifest_version is not None
@@ -322,7 +338,7 @@ class SandboxOverlay:
         return WorkspaceCapturePublishResult(
             path_changes=path_changes,
             changeset=changeset,
-            timings=timings,
+            timings={**timings, **maintenance_timings},
         )
 
     async def publish_workspace_paths(
@@ -399,10 +415,25 @@ class SandboxOverlay:
         *,
         workspace_ref: str | None = None,
     ) -> dict[str, float]:
-        return await self._occ_client.run_maintenance_after_publish(
-            result,
-            workspace_ref=workspace_ref or self._workspace_ref,
-        )
+        published = getattr(result, "published_manifest_version", None)
+        if published is None:
+            return await self._occ_client.run_maintenance_after_publish(
+                result,
+                workspace_ref=workspace_ref or self._workspace_ref,
+            )
+        was_mounted = self._mounted
+        if was_mounted:
+            self._detach_active_mount()
+        try:
+            return await self._occ_client.run_maintenance_after_publish(
+                result,
+                workspace_ref=workspace_ref or self._workspace_ref,
+            )
+        finally:
+            if was_mounted:
+                self._mount_active(reason="maintenance")
+            elif self._layer_stack is not None:
+                self._mark_active(self._layer_stack.read_active_manifest())
 
     async def _apply_workspace_capture(
         self,
@@ -446,28 +477,40 @@ class SandboxOverlay:
 
     @property
     def _runtime_dir(self) -> Path:
-        if self._layer_stack is None:
-            return Path("/var/run/eos/overlay")
-        return self._layer_stack.storage_root / "runtime" / "sandbox-overlay"
+        return self._runtime_dir_path
+
+    def _runtime_key(self, workspace_ref: str, workspace_root: str) -> str:
+        raw = f"{workspace_ref}\0{workspace_root}".encode("utf-8", "surrogateescape")
+        return hashlib.sha256(raw).hexdigest()[:16]
 
     def _prepare_mount_dirs(self) -> None:
         self._upperdir.mkdir(parents=True, exist_ok=True)
         self._workdir.mkdir(parents=True, exist_ok=True)
 
     def _remount_active(self, *, reason: str) -> SnapshotManifest:
+        self._detach_active_mount()
+        return self._mount_active(reason=reason)
+
+    def _detach_active_mount(self) -> None:
+        if not self._mounted:
+            return
+        umount(Path(self.workspace_root))
+        self._mounted = False
+        self._release_lease(self._active_lease_id)
+        self._active_lease_id = ""
+        shutil.rmtree(self._upperdir, ignore_errors=True)
+        shutil.rmtree(self._workdir, ignore_errors=True)
+
+    def _mount_active(self, *, reason: str) -> SnapshotManifest:
         snapshot = self._prepare_overlay_snapshot(f"sandbox-overlay-{reason}")
-        old_lease_id = self._active_lease_id
+        self._prepare_mount_dirs()
         try:
-            umount(Path(self.workspace_root))
-            shutil.rmtree(self._upperdir, ignore_errors=True)
-            shutil.rmtree(self._workdir, ignore_errors=True)
-            self._prepare_mount_dirs()
             self._mount_layer_paths(snapshot.layer_paths)
         except Exception:
             self._release_lease(snapshot.lease_id)
             raise
         self._active_lease_id = snapshot.lease_id
-        self._release_lease(old_lease_id)
+        self._mounted = True
         self._mark_active(snapshot.manifest)
         return snapshot.manifest
 

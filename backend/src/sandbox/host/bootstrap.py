@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from sandbox.daemon.async_bridge import run_sync
-from sandbox.host.daemon_client import call_daemon_api
+from sandbox.host.daemon_client import _DaemonDispatchError, call_daemon_api
 from sandbox.host.runtime_bundle import ensure_runtime_uploaded
 from sandbox.provider.registry import get_adapter
 
@@ -79,14 +79,31 @@ def ensure_workspace_base(
         )
         return
 
-    run_sync(
-        call_daemon_api(
-            sandbox_id,
-            "api.ensure_workspace_base",
-            {"workspace_root": workspace},
-            timeout=180,
+    try:
+        run_sync(
+            call_daemon_api(
+                sandbox_id,
+                "api.ensure_workspace_base",
+                {"workspace_root": workspace},
+                timeout=180,
+            )
         )
-    )
+    except _DaemonDispatchError as exc:
+        if not _is_workspace_binding_mismatch(exc):
+            raise
+        logger.info(
+            "rebuilding sandbox workspace base for %s after binding mismatch: %s",
+            sandbox_id,
+            exc.message,
+        )
+        run_sync(
+            call_daemon_api(
+                sandbox_id,
+                "api.build_workspace_base",
+                {"workspace_root": workspace, "reset": True},
+                timeout=180,
+            )
+        )
     readiness = run_sync(
         call_daemon_api(
             sandbox_id,
@@ -187,6 +204,10 @@ def _require_workspace_base_ready(readiness: dict[str, object]) -> None:
         or manifest_version < 1
     ):
         raise RuntimeError(f"sandbox runtime not ready after workspace base: {readiness}")
+
+
+def _is_workspace_binding_mismatch(exc: _DaemonDispatchError) -> bool:
+    return "workspace binding points at a different workspace" in exc.message
 
 
 def _runtime_probe(

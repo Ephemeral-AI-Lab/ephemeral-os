@@ -214,6 +214,7 @@ def _load_peer_bootstraps() -> None:
         "api.write_file": write.write_file,
         "api.v1.write_file": write.write_file,
         "api.overlay.flush": overlay.flush_workspace_overlay,
+        "api.overlay.stop": overlay.stop_workspace_overlay,
         "overlay.run": overlay.run_snapshot_overlay,
     }
     for op, handler in bootstrap.items():

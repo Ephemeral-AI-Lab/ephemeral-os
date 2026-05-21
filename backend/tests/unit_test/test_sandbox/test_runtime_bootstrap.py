@@ -169,6 +169,72 @@ def test_ensure_workspace_base_invokes_runtime_op() -> None:
     ]
 
 
+def test_ensure_workspace_base_rebuilds_on_binding_mismatch() -> None:
+    from sandbox.host.bootstrap import ensure_workspace_base
+    from sandbox.host.daemon_client import _DaemonDispatchError
+
+    calls: list[dict[str, Any]] = []
+
+    async def fake_call_daemon_api(
+        sandbox_id: str,
+        op: str,
+        args: dict[str, Any],
+        *,
+        timeout: int,
+    ) -> dict[str, Any]:
+        calls.append(
+            {
+                "sandbox_id": sandbox_id,
+                "op": op,
+                "args": args,
+                "timeout": timeout,
+            }
+        )
+        if op == "api.ensure_workspace_base":
+            raise _DaemonDispatchError(
+                "internal_error",
+                "workspace binding points at a different workspace: "
+                "/ephemeral-os != /testbed",
+            )
+        if op == "api.runtime.ready":
+            return {
+                "success": True,
+                "ready": True,
+                "probes": [
+                    {
+                        "name": "control_plane",
+                        "status": "ok",
+                        "details": {"manifest_version": 1},
+                    }
+                ],
+            }
+        return {"success": True}
+
+    with patch("sandbox.host.bootstrap.call_daemon_api", new=fake_call_daemon_api):
+        ensure_workspace_base("sb-1", "/testbed")
+
+    assert calls == [
+        {
+            "sandbox_id": "sb-1",
+            "op": "api.ensure_workspace_base",
+            "args": {"workspace_root": "/testbed"},
+            "timeout": 180,
+        },
+        {
+            "sandbox_id": "sb-1",
+            "op": "api.build_workspace_base",
+            "args": {"workspace_root": "/testbed", "reset": True},
+            "timeout": 180,
+        },
+        {
+            "sandbox_id": "sb-1",
+            "op": "api.runtime.ready",
+            "args": {},
+            "timeout": 60,
+        },
+    ]
+
+
 def test_start_upload_returns_none_when_workspace_missing() -> None:
     from sandbox.host.bootstrap import start_runtime_bundle_upload
 

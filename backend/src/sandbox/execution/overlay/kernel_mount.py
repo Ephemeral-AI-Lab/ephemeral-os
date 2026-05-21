@@ -151,12 +151,37 @@ def _mount_overlay_legacy_mount8(
 
 
 def umount(workspace_root: Path) -> None:
-    subprocess.run(
-        ["umount", str(workspace_root)],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
+    """Unmount all mounts stacked at ``workspace_root``.
+
+    Persistent daemon overlays may be remounted across runtime-bundle upgrades
+    or interrupted tests. A single ``umount`` only peels the top mount; loop
+    until the path is no longer a mountpoint so the backing checkout is visible
+    to raw provider setup commands again.
+    """
+    for _ in range(64):
+        if not _is_mountpoint(workspace_root):
+            return
+        result = subprocess.run(
+            ["umount", str(workspace_root)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        if result.returncode != 0:
+            return
+
+
+def _is_mountpoint(path: Path) -> bool:
+    try:
+        result = subprocess.run(
+            ["mountpoint", "-q", str(path)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    except OSError:
+        return True
+    return result.returncode == 0
 
 
 def validate_mount_inputs(

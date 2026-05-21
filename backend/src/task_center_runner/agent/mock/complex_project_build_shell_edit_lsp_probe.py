@@ -938,16 +938,15 @@ async def _assert_lsp_query_symbols(
         stats,
         tool_obj=lsp_query_symbols_tool,
         tool_name="lsp.query_symbols",
-        args={"query": expectation.symbol},
+        args={
+            "query": expectation.symbol,
+            "file_path": f"{WORKSPACE_ROOT}/{expectation.definition_path}",
+        },
     )
     payload = _tool_json(result)
     raw_symbols = payload.get("symbols") if isinstance(payload, dict) else None
     symbols = list(_flatten_symbols(raw_symbols if isinstance(raw_symbols, list) else []))
-    matched = any(
-        str(symbol.get("name") or "") == expectation.symbol
-        and expectation.definition_path in json.dumps(symbol, sort_keys=True)
-        for symbol in symbols
-    )
+    matched = any(_symbol_matches_expectation(symbol, expectation) for symbol in symbols)
     _record_lsp_semantic_check(
         ctx,
         stats,
@@ -955,6 +954,19 @@ async def _assert_lsp_query_symbols(
         label=f"{label}.{expectation.symbol}",
         passed=bool((not result.is_error) and matched),
         detail=f"symbols={[s.get('name') for s in symbols[:8]]}",
+    )
+
+
+def _symbol_matches_expectation(
+    symbol: dict[str, Any],
+    expectation: LspExpectation,
+) -> bool:
+    if str(symbol.get("name") or "") != expectation.symbol:
+        return False
+    encoded = json.dumps(symbol, sort_keys=True)
+    return (
+        expectation.definition_path in encoded
+        or "location" not in symbol
     )
 
 

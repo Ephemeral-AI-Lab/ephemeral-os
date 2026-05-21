@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 import shutil
+import threading
+import uuid
 from collections.abc import Callable
 from pathlib import Path, PurePosixPath
 
@@ -70,10 +72,15 @@ def write_bytes_fsynced(path: Path, data: bytes) -> None:
 def replace_via_tmp_fsynced(target: Path, data: bytes) -> None:
     """Atomically install *data* at *target* with a tmp+rename+fsync dance."""
     target.parent.mkdir(parents=True, exist_ok=True)
-    tmp = target.with_name(f".{target.name}.tmp")
-    write_bytes_fsynced(tmp, data)
-    os.replace(tmp, target)
-    fsync_path(target.parent)
+    tmp = target.with_name(
+        f".{target.name}.{os.getpid()}.{threading.get_ident()}.{uuid.uuid4().hex}.tmp"
+    )
+    try:
+        write_bytes_fsynced(tmp, data)
+        os.replace(tmp, target)
+        fsync_path(target.parent)
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 def relative_symlink_target_escapes(target: str) -> bool:

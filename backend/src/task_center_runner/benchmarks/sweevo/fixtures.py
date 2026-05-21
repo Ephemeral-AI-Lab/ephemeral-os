@@ -94,6 +94,7 @@ async def sweevo_sandbox(
             sweevo_instance,
             register_snapshot=True,
             reuse_existing_auto=_reuse_existing_auto_enabled(),
+            install_lsp=True,
         )
     finally:
         _release_sweevo_session_lock(lock)
@@ -112,7 +113,7 @@ async def workspace(
     if should_reset:
         from benchmarks.sweevo.sandbox import reset_sweevo_workspace
 
-        await reset_sweevo_workspace(sandbox_id)
+        await reset_sweevo_workspace(sandbox_id, install_lsp=True)
     used_sandboxes.add(sandbox_id)
     return sweevo_sandbox
 

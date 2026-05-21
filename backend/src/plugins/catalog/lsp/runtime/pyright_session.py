@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 _CONDA_HOOK = "/opt/miniconda3/etc/profile.d/conda.sh"
 _DEFAULT_INIT_TIMEOUT_S = 30.0
 _DEFAULT_REQUEST_TIMEOUT_S = 30.0
+_REFERENCES_TIMEOUT_S = 5.0
 _DIAGNOSTICS_WAIT_S = 5.0
 _DIAGNOSTICS_POLL_S = 0.05
 
@@ -77,7 +78,7 @@ class PyrightSession:
             try:
                 await self._spawn()
                 await self._initialize()
-            except Exception:
+            except BaseException:
                 await self._cleanup_failed_start()
                 raise
             self._started = True
@@ -116,7 +117,18 @@ class PyrightSession:
                 "includeDeclaration": bool(args.get("include_declaration", True))
             },
         }
-        raw = await self._send_request("textDocument/references", params)
+        timeout_s = _optional_positive_float(
+            args.get("timeout_s"),
+            default=_REFERENCES_TIMEOUT_S,
+        )
+        try:
+            raw = await asyncio.wait_for(
+                self._send_request("textDocument/references", params),
+                timeout=timeout_s,
+            )
+        except TimeoutError:
+            await self.evict()
+            return {"references": [], "timeout": True}
         return {"references": self._normalize_locations(raw)}
 
     async def diagnostics(self, args: dict[str, Any]) -> dict[str, Any]:
@@ -554,3 +566,11 @@ class PyrightSession:
 
 def _text_hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _optional_positive_float(value: object, *, default: float) -> float:
+    try:
+        parsed = float(value) if value is not None else default
+    except (TypeError, ValueError):
+        return default
+    return parsed if parsed > 0 else default

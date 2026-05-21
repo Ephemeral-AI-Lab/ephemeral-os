@@ -218,7 +218,11 @@ def _disjoint_batches(items: list[_WorkItem]) -> list[list[_WorkItem]]:
         rest: list[_WorkItem] = []
         for item in pending:
             paths = _path_set(item.prepared)
-            if item.prepared.atomic or used_paths.intersection(paths):
+            if (
+                item.prepared.atomic
+                or _contains_overlay_capture(item.prepared)
+                or used_paths.intersection(paths)
+            ):
                 rest.append(item)
                 continue
             batch.append(item)
@@ -245,6 +249,14 @@ def _combine_prepared(items: list[PreparedChangeset]) -> PreparedChangeset:
 
 def _path_set(prepared: PreparedChangeset) -> set[str]:
     return {group.path for group in prepared.path_groups}
+
+
+def _contains_overlay_capture(prepared: PreparedChangeset) -> bool:
+    return any(
+        change.source == "overlay_capture"
+        for group in prepared.path_groups
+        for change in group.changes
+    )
 
 
 def _cas_exhaustion_result(

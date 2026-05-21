@@ -20,13 +20,17 @@ async def build_workspace_base(args: dict[str, object]) -> dict[str, object]:
     """
     total_start = monotonic_now()
     layer_stack_root = require_layer_stack_root(args)
+    workspace_root = require_arg(args, "workspace_root")
     reset = bool(args.get("reset", False))
     if reset:
-        await _drop_peer_runtime_caches(layer_stack_root)
+        await _drop_peer_runtime_caches(
+            layer_stack_root,
+            workspace_root=workspace_root,
+        )
     timings: dict[str, float] = {}
     binding = workspace_server.build_workspace_base(
         layer_stack_root,
-        workspace_root=require_arg(args, "workspace_root"),
+        workspace_root=workspace_root,
         reset=reset,
         timings=timings,
     )
@@ -100,9 +104,15 @@ async def fence_stale_staging(args: dict[str, object]) -> dict[str, object]:
     return workspace_server.fence_stale_staging(require_layer_stack_root(args))
 
 
-async def _drop_peer_runtime_caches(layer_stack_root: str) -> None:
+async def _drop_peer_runtime_caches(
+    layer_stack_root: str,
+    *,
+    workspace_root: str,
+) -> None:
     from sandbox.daemon import occ_backend
+    from sandbox.daemon.service.overlay_manager import stop_sandbox_overlay
 
+    await stop_sandbox_overlay(layer_stack_root, workspace_root=workspace_root)
     occ_backend.drop_backend_cache(layer_stack_root)
 
 

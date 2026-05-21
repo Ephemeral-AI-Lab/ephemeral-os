@@ -46,9 +46,35 @@ def _install_common_stubs(monkeypatch: pytest.MonkeyPatch) -> None:
     ) -> None:
         return None
 
+    async def fake_call_daemon_api(
+        _sandbox_id: str,
+        _op: str,
+        _args: dict[str, object],
+        **_kwargs: object,
+    ) -> dict[str, object]:
+        return {"success": True}
+
+    async def fake_ensure_runtime_uploaded(_sandbox_id: str) -> str:
+        return "sha"
+
+    async def fake_ensure_daemon_current(_sandbox_id: str) -> None:
+        return None
+
     monkeypatch.setattr(sweevo_sandbox, "_wait_for_sandbox_exec_ready", fake_wait)
     monkeypatch.setattr(sweevo_sandbox, "_exec", fake_exec)
     monkeypatch.setattr(sweevo_sandbox, "_rebuild_sweevo_workspace_base", fake_rebuild)
+    monkeypatch.setattr(
+        "sandbox.host.daemon_client.call_daemon_api",
+        fake_call_daemon_api,
+    )
+    monkeypatch.setattr(
+        "sandbox.host.daemon_client.ensure_daemon_current",
+        fake_ensure_daemon_current,
+    )
+    monkeypatch.setattr(
+        "sandbox.host.runtime_bundle.ensure_runtime_uploaded",
+        fake_ensure_runtime_uploaded,
+    )
     monkeypatch.setattr(
         sweevo_sandbox.sandbox_api,
         "get_sandbox",
@@ -83,13 +109,27 @@ async def test_setup_sandbox_install_lsp_invokes_ensure_installed(
     _install_common_stubs(monkeypatch)
 
     captured: dict[str, Any] = {}
+    daemon_calls: list[tuple[str, dict[str, object]]] = []
 
     async def fake_ensure(sandbox_id: str, manifest: Any) -> str:
         captured["sandbox_id"] = sandbox_id
         captured["manifest"] = manifest
         return "digest123"
 
+    async def fake_call_daemon_api(
+        _sandbox_id: str,
+        op: str,
+        args: dict[str, object],
+        **_kwargs: object,
+    ) -> dict[str, object]:
+        daemon_calls.append((op, args))
+        return {"success": True}
+
     monkeypatch.setattr("sandbox.plugin.install.ensure_installed", fake_ensure)
+    monkeypatch.setattr(
+        "sandbox.host.daemon_client.call_daemon_api",
+        fake_call_daemon_api,
+    )
 
     await sweevo_sandbox.setup_sweevo_sandbox(
         _instance(), "sbx-1", install_lsp=True
@@ -99,6 +139,14 @@ async def test_setup_sandbox_install_lsp_invokes_ensure_installed(
     # ``parse_plugin_manifest(DEFAULT_CATALOG_DIR / "lsp")`` returns a real
     # PluginManifest dataclass; verify the resolved plugin name is ``"lsp"``.
     assert captured["manifest"].name == "lsp"
+    assert (
+        "api.plugin.ensure",
+        {
+            "plugin": "lsp",
+            "digest": "digest123",
+            "workspace_root": "/testbed",
+        },
+    ) in daemon_calls
 
 
 @pytest.mark.asyncio
@@ -123,6 +171,16 @@ async def test_setup_sandbox_install_lsp_runs_after_workspace_rebuild(
         order.append("ensure_installed")
         return "digest"
 
+    async def fake_call_daemon_api(
+        _sandbox_id: str,
+        op: str,
+        _args: dict[str, object],
+        **_kwargs: object,
+    ) -> dict[str, object]:
+        if op == "api.plugin.ensure":
+            order.append("plugin_ensure")
+        return {"success": True}
+
     monkeypatch.setattr(sweevo_sandbox, "_wait_for_sandbox_exec_ready", fake_wait)
     monkeypatch.setattr(sweevo_sandbox, "_exec", fake_exec)
     monkeypatch.setattr(sweevo_sandbox, "_rebuild_sweevo_workspace_base", fake_rebuild)
@@ -137,12 +195,17 @@ async def test_setup_sandbox_install_lsp_runs_after_workspace_rebuild(
         lambda _sandbox_id, _labels: None,
     )
     monkeypatch.setattr("sandbox.plugin.install.ensure_installed", fake_ensure)
+    monkeypatch.setattr(
+        "sandbox.host.daemon_client.call_daemon_api",
+        fake_call_daemon_api,
+    )
 
     await sweevo_sandbox.setup_sweevo_sandbox(
         _instance(), "sbx-1", install_lsp=True
     )
 
     assert order.index("rebuild") < order.index("ensure_installed")
+    assert order.index("ensure_installed") < order.index("plugin_ensure")
 
 
 @pytest.mark.asyncio

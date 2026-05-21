@@ -96,7 +96,7 @@ async def _execute_persistent_shell(
     storage_root: Path,
 ) -> CommandExecResult:
     total_start = monotonic_now()
-    run_dir = _persistent_run_dir(storage_root, request.request_id)
+    run_dir = _persistent_run_dir(overlay.scratch_root, request.request_id)
     stdout_ref = run_dir / "stdout.bin"
     stderr_ref = run_dir / "stderr.bin"
     timings: dict[str, float] = {
@@ -122,7 +122,7 @@ async def _execute_persistent_shell(
             publish = await overlay.publish_pending_changes(
                 snapshot=snapshot,
                 reason="publish",
-                run_maintenance=False,
+                run_maintenance=True,
             )
             timings.update(publish.timings)
             if "overlay.capture_upperdir_s" in publish.timings:
@@ -133,19 +133,14 @@ async def _execute_persistent_shell(
                 timings["command_exec.occ_apply_s"] = publish.timings[
                     "overlay.occ_apply_s"
                 ]
-            maintenance_timings = await overlay.run_maintenance_after_publish(
-                publish.changeset,
-                workspace_ref=request.workspace_ref,
-            )
         changeset = publish.changeset
         timings = {
             **timings,
             **changeset.timings,
-            **maintenance_timings,
             **gitignore_cache_timings(gitignore),
             **command_exec_resource_timings(
                 storage_root=storage_root,
-                scratch_root=storage_root,
+                scratch_root=overlay.scratch_root,
                 run_dir=run_dir,
                 upperdir=overlay.upperdir,
                 manifest=snapshot,

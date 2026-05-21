@@ -208,6 +208,9 @@ async def test_setup_sweevo_sandbox_rebuilds_workspace_base_after_raw_setup(
     assert daemon_calls == [
         ("runtime_uploaded", {}),
         ("daemon_current", {}),
+        ("api.overlay.stop", {"workspace_root": "/testbed"}),
+        ("runtime_uploaded", {}),
+        ("daemon_current", {}),
         ("api.build_workspace_base", {"workspace_root": "/testbed", "reset": True}),
         ("api.runtime.ready", {}),
     ]
@@ -370,6 +373,7 @@ async def test_auto_sweevo_sandbox_reuses_started_matching_fixture(
         "/testbed",
         on_progress=None,
         exec_ready_attempts=1,
+        install_lsp=False,
     )
 
 

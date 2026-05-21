@@ -7,6 +7,7 @@ import os
 import shutil
 import tempfile
 import threading
+from contextlib import AbstractContextManager, nullcontext
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -215,17 +216,18 @@ class LayerStack:
             raise
 
     def release_lease(self, lease_id: str) -> bool:
-        with self._lock:
-            lease = self._leases.release(lease_id)
-            if lease is None:
-                return False
-            active_manifest = self._manifest_store.read()
-            removable = self._unreferenced_layers(
-                lease.manifest.layers,
-                current_manifest=active_manifest,
-            )
-        self._remove_layers(removable)
-        return True
+        with self._storage_write_guard():
+            with self._lock:
+                lease = self._leases.release(lease_id)
+                if lease is None:
+                    return False
+                active_manifest = self._manifest_store.read()
+                removable = self._unreferenced_layers(
+                    lease.manifest.layers,
+                    current_manifest=active_manifest,
+                )
+            self._remove_layers(removable)
+            return True
 
     def pinned_layers(self) -> tuple[LayerRef, ...]:
         return self._leases.pinned_layers()
@@ -285,6 +287,7 @@ class LayerStack:
             lock=self._lock,
             manifest_store=self._manifest_store,
             publisher=self._publisher,
+            storage_writer_lock=self._storage_writer_lock,
         )
 
     def allocate_commit_staging(self, request_id: str) -> CommitStagingArea:
@@ -315,64 +318,65 @@ class LayerStack:
             return transaction.publish_layer(changes)
 
     def squash(self, *, max_depth: int) -> Manifest | None:
-        with self._lock:
-            active = self._manifest_store.read()
-            pinned_layers = self._leases.pinned_layers()
-            plan = self._squash.plan(
-                active,
-                max_depth=max_depth,
-                pinned_layers=pinned_layers,
-            )
-            if plan is None:
-                return None
-            squash_lease = self._leases.acquire(
-                active,
-                f"squash-{uuid4().hex}",
-            )
-
-        checkpoints: list[LayerRef] = []
-        checkpoint_committed = False
-        try:
-            for segment in plan.checkpoint_segments:
-                checkpoints.append(
-                    self._squash.build_checkpoint(
-                        segment,
-                        active_version=plan.active_version,
-                    )
-                )
+        with self._storage_write_guard():
             with self._lock:
-                current = self._manifest_store.read()
-                live_prefix = manifest_prefix_before_plan(current, plan)
-                if live_prefix is None:
-                    return None
-                next_version = current.version + 1
-                checkpoint_index = 0
-                new_layers = list(live_prefix)
-                for entry in plan.entries:
-                    if isinstance(entry, CheckpointSegment):
-                        checkpoint = checkpoints[checkpoint_index]
-                        if not checkpoint.layer_id.startswith(f"B{next_version:06d}-"):
-                            checkpoint = self._squash.relabel_checkpoint(
-                                checkpoint,
-                                manifest_version=next_version,
-                            )
-                            checkpoints[checkpoint_index] = checkpoint
-                        new_layers.append(checkpoint)
-                        checkpoint_index += 1
-                    else:
-                        new_layers.append(entry)
-                new_manifest = Manifest(
-                    version=next_version,
-                    layers=tuple(new_layers),
+                active = self._manifest_store.read()
+                pinned_layers = self._leases.pinned_layers()
+                plan = self._squash.plan(
+                    active,
+                    max_depth=max_depth,
+                    pinned_layers=pinned_layers,
                 )
-                self._manifest_store.write(new_manifest)
-                checkpoint_committed = True
-            return new_manifest
-        finally:
-            if not checkpoint_committed:
-                for checkpoint in checkpoints:
-                    self._squash.discard_checkpoint(checkpoint)
-            self.release_lease(squash_lease.lease_id)
+                if plan is None:
+                    return None
+                squash_lease = self._leases.acquire(
+                    active,
+                    f"squash-{uuid4().hex}",
+                )
+
+            checkpoints: list[LayerRef] = []
+            checkpoint_committed = False
+            try:
+                for segment in plan.checkpoint_segments:
+                    checkpoints.append(
+                        self._squash.build_checkpoint(
+                            segment,
+                            active_version=plan.active_version,
+                        )
+                    )
+                with self._lock:
+                    current = self._manifest_store.read()
+                    live_prefix = manifest_prefix_before_plan(current, plan)
+                    if live_prefix is None:
+                        return None
+                    next_version = current.version + 1
+                    checkpoint_index = 0
+                    new_layers = list(live_prefix)
+                    for entry in plan.entries:
+                        if isinstance(entry, CheckpointSegment):
+                            checkpoint = checkpoints[checkpoint_index]
+                            if not checkpoint.layer_id.startswith(f"B{next_version:06d}-"):
+                                checkpoint = self._squash.relabel_checkpoint(
+                                    checkpoint,
+                                    manifest_version=next_version,
+                                )
+                                checkpoints[checkpoint_index] = checkpoint
+                            new_layers.append(checkpoint)
+                            checkpoint_index += 1
+                        else:
+                            new_layers.append(entry)
+                    new_manifest = Manifest(
+                        version=next_version,
+                        layers=tuple(new_layers),
+                    )
+                    self._manifest_store.write(new_manifest)
+                    checkpoint_committed = True
+                return new_manifest
+            finally:
+                if not checkpoint_committed:
+                    for checkpoint in checkpoints:
+                        self._squash.discard_checkpoint(checkpoint)
+                self.release_lease(squash_lease.lease_id)
 
     def flush_to_workspace(
         self,
@@ -386,54 +390,60 @@ class LayerStack:
         method rewrites the workspace to the active merged view, resets layer
         storage, and rebuilds a fresh base layer from the workspace bytes.
         """
-        total_start = monotonic_now()
-        workspace = Path(workspace_root)
-        if not workspace.is_dir():
-            raise ValueError(f"workspace_root does not exist: {workspace}")
-        with self._lock:
-            if self._leases.active_count() > 0:
-                raise RuntimeError("flush_to_workspace blocked by active leases")
-            active = self._manifest_store.read()
-
-        materialize_parent = self.storage_root / "runtime" / "flush"
-        materialize_parent.mkdir(parents=True, exist_ok=True)
-        materialized = Path(
-            tempfile.mkdtemp(prefix="merged-", dir=str(materialize_parent))
-        )
-        try:
-            materialize_start = monotonic_now()
-            self._view.materialize(materialized, active, share_inodes=False)
-            if timings is not None:
-                timings["layer_stack.flush.materialize_s"] = (
-                    monotonic_now() - materialize_start
-                )
-
-            replace_start = monotonic_now()
-            _replace_directory_contents(workspace, materialized)
-            if timings is not None:
-                timings["layer_stack.flush.replace_workspace_s"] = (
-                    monotonic_now() - replace_start
-                )
-
-            reset_start = monotonic_now()
+        with self._storage_write_guard():
+            total_start = monotonic_now()
+            workspace = Path(workspace_root)
+            if not workspace.is_dir():
+                raise ValueError(f"workspace_root does not exist: {workspace}")
             with self._lock:
-                _clear_storage_root_for_flush(self.storage_root)
-                build_workspace_base(
-                    workspace_root=workspace,
-                    layer_stack_root=self.storage_root,
-                )
-                self._view = MergedView(self.storage_root)
-                self._publisher = LayerPublisher(self.storage_root)
-                self._squash = SquashService(self.storage_root)
-                new_manifest = self._manifest_store.read()
-            if timings is not None:
-                timings["layer_stack.flush.rebuild_base_s"] = (
-                    monotonic_now() - reset_start
-                )
-                timings["layer_stack.flush.total_s"] = monotonic_now() - total_start
-            return new_manifest
-        finally:
-            shutil.rmtree(materialized, ignore_errors=True)
+                if self._leases.active_count() > 0:
+                    raise RuntimeError("flush_to_workspace blocked by active leases")
+                active = self._manifest_store.read()
+
+            materialize_parent = self.storage_root / "runtime" / "flush"
+            materialize_parent.mkdir(parents=True, exist_ok=True)
+            materialized = Path(
+                tempfile.mkdtemp(prefix="merged-", dir=str(materialize_parent))
+            )
+            try:
+                materialize_start = monotonic_now()
+                self._view.materialize(materialized, active, share_inodes=False)
+                if timings is not None:
+                    timings["layer_stack.flush.materialize_s"] = (
+                        monotonic_now() - materialize_start
+                    )
+
+                replace_start = monotonic_now()
+                _replace_directory_contents(workspace, materialized)
+                if timings is not None:
+                    timings["layer_stack.flush.replace_workspace_s"] = (
+                        monotonic_now() - replace_start
+                    )
+
+                reset_start = monotonic_now()
+                with self._lock:
+                    _clear_storage_root_for_flush(self.storage_root)
+                    build_workspace_base(
+                        workspace_root=workspace,
+                        layer_stack_root=self.storage_root,
+                    )
+                    self._view = MergedView(self.storage_root)
+                    self._publisher = LayerPublisher(self.storage_root)
+                    self._squash = SquashService(self.storage_root)
+                    new_manifest = self._manifest_store.read()
+                if timings is not None:
+                    timings["layer_stack.flush.rebuild_base_s"] = (
+                        monotonic_now() - reset_start
+                    )
+                    timings["layer_stack.flush.total_s"] = monotonic_now() - total_start
+                return new_manifest
+            finally:
+                shutil.rmtree(materialized, ignore_errors=True)
+
+    def _storage_write_guard(self) -> AbstractContextManager[object]:
+        if self._storage_writer_lock is None:
+            return nullcontext()
+        return self._storage_writer_lock.exclusive()
 
     def _layer_path(self, layer: LayerRef) -> Path:
         return resolve_storage_path(self.storage_root, layer.path)

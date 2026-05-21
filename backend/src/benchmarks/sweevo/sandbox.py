@@ -671,6 +671,7 @@ async def setup_sweevo_sandbox(
     _progress(on_progress, f"[setup] waiting for sandbox exec readiness sandbox_id={sandbox_id}")
     await _wait_for_sandbox_exec_ready(sandbox_id, attempts=exec_ready_attempts)
     _progress(on_progress, f"[setup] checking repository at {repo_dir}")
+    await _stop_public_workspace_overlay(sandbox_id, repo_dir)
     await _exec(sandbox_id, f"test -d {repo_dir} && test -d {repo_dir}/.git")
     await _exec(sandbox_id, f"{_CONDA_ACTIVATE} && python --version")
     # Retry runs may reuse the same named sandbox. Always restore the repo to
@@ -708,13 +709,25 @@ async def setup_sweevo_sandbox(
         logger.warning("Could not set project_dir label: %s", exc)
 
     if install_lsp:
+        from sandbox.host.daemon_client import call_daemon_api
         from plugins.core.discovery import DEFAULT_CATALOG_DIR
         from plugins.core.manifest import parse_plugin_manifest
         from sandbox.plugin.install import ensure_installed
 
         _progress(on_progress, "[setup] installing LSP plugin")
         manifest = parse_plugin_manifest(DEFAULT_CATALOG_DIR / "lsp")
-        await ensure_installed(sandbox_id, manifest)
+        digest = await ensure_installed(sandbox_id, manifest)
+        _progress(on_progress, "[setup] warming LSP plugin runtime")
+        await call_daemon_api(
+            sandbox_id,
+            "api.plugin.ensure",
+            {
+                "plugin": "lsp",
+                "digest": digest,
+                "workspace_root": repo_dir,
+            },
+            timeout=120,
+        )
 
     logger.info(
         "SWE-EVO sandbox %s ready: %s @ %s",
@@ -730,7 +743,32 @@ async def setup_sweevo_sandbox(
     return repo_dir
 
 
-async def reset_sweevo_workspace(sandbox_id: str) -> str:
+async def _stop_public_workspace_overlay(sandbox_id: str, repo_dir: str) -> None:
+    """Detach any persistent public-tool overlay before raw checkout reset."""
+    from sandbox.host.daemon_client import call_daemon_api, ensure_daemon_current
+    from sandbox.host.runtime_bundle import ensure_runtime_uploaded
+
+    try:
+        await ensure_runtime_uploaded(sandbox_id)
+        await ensure_daemon_current(sandbox_id)
+        await call_daemon_api(
+            sandbox_id,
+            "api.overlay.stop",
+            {"workspace_root": repo_dir},
+            timeout=60,
+        )
+    except Exception:
+        logger.warning(
+            "Failed to stop public workspace overlay before SWE-EVO reset",
+            exc_info=True,
+        )
+
+
+async def reset_sweevo_workspace(
+    sandbox_id: str,
+    *,
+    install_lsp: bool = False,
+) -> str:
     """Restore a reused SWE-EVO sandbox and rebuild the public-tool base."""
     service = _service()
     sandbox_info = service.get_sandbox(sandbox_id)
@@ -743,7 +781,12 @@ async def reset_sweevo_workspace(sandbox_id: str) -> str:
     instance_id = label_map.get("sweevo_instance") or _DEFAULT_SWEEVO_INSTANCE_ID
     repo_dir = label_map.get("project_dir") or _REPO_DIR
     instance = select_sweevo_instance(instance_id=instance_id)
-    return await setup_sweevo_sandbox(instance, sandbox_id, repo_dir)
+    return await setup_sweevo_sandbox(
+        instance,
+        sandbox_id,
+        repo_dir,
+        install_lsp=install_lsp,
+    )
 
 
 async def apply_layerstack_to_repo(
@@ -951,6 +994,7 @@ async def create_sweevo_test_sandbox(
     disk: int = 10,
     repo_dir: str = _REPO_DIR,
     on_progress: ProgressCallback | None = None,
+    install_lsp: bool = False,
 ) -> dict[str, Any]:
     """Create and prepare a Daytona sandbox for direct SWE-EVO test execution."""
     service = _service()
@@ -1001,6 +1045,7 @@ async def create_sweevo_test_sandbox(
                 repo_dir,
                 on_progress=on_progress,
                 exec_ready_attempts=1 if existing_state == "started" else 6,
+                install_lsp=install_lsp,
             )
             return {
                 "sandbox_id": existing["id"],
@@ -1046,6 +1091,7 @@ async def create_sweevo_test_sandbox(
                         exec_ready_attempts=1
                         if existing_state == "started"
                         else 6,
+                        install_lsp=install_lsp,
                     )
                     return {
                         "sandbox_id": existing["id"],
@@ -1158,6 +1204,7 @@ async def create_sweevo_test_sandbox(
                 fresh["id"],
                 repo_dir,
                 on_progress=on_progress,
+                install_lsp=install_lsp,
             )
             recover_reason = "fresh_create_recovered_started_sandbox"
             if fallback_reason:
@@ -1174,7 +1221,13 @@ async def create_sweevo_test_sandbox(
         raise
     sandbox_id = result["id"]
     _progress(on_progress, f"[setup] created sandbox sandbox_id={sandbox_id}")
-    await setup_sweevo_sandbox(instance, sandbox_id, repo_dir, on_progress=on_progress)
+    await setup_sweevo_sandbox(
+        instance,
+        sandbox_id,
+        repo_dir,
+        on_progress=on_progress,
+        install_lsp=install_lsp,
+    )
     sandbox_info = service.get_sandbox(sandbox_id)
     return {
         "sandbox_id": sandbox_id,

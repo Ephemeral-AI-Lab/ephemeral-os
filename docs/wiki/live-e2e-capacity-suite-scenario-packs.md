@@ -36,6 +36,8 @@ below is checked by `backend/src/live_e2e/tests/test_capacity_scenario_packs.py`
 
 ### `sandbox.layerstack_lease_protection`
 
+### `sandbox.layerstack_overlay_occ_high_concurrency`
+
 ### `sandbox.command_exec_routing`
 
 ## Pack C - Plugin And LSP Runtime

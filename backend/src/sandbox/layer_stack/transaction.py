@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Sequence
+from contextlib import AbstractContextManager
 from pathlib import Path
 from types import TracebackType
 from typing import TYPE_CHECKING
@@ -15,6 +16,7 @@ from sandbox._shared.clock import monotonic_now
 if TYPE_CHECKING:
     from sandbox.layer_stack.publisher import LayerPublisher
     from sandbox.layer_stack.manifest import FileManifestStore
+    from sandbox.layer_stack.storage_lock import StorageWriterLockLease
 
 
 class LayerStackTransaction:
@@ -26,10 +28,13 @@ class LayerStackTransaction:
         lock: threading.RLock,
         manifest_store: FileManifestStore,
         publisher: LayerPublisher,
+        storage_writer_lock: StorageWriterLockLease | None = None,
     ) -> None:
         self._lock = lock
         self._manifest_store = manifest_store
         self._publisher = publisher
+        self._storage_writer_lock = storage_writer_lock
+        self._storage_guard: AbstractContextManager[object] | None = None
         self._manifest: Manifest | None = None
         self._entered = False
         self._lock_acquired_at: float | None = None
@@ -38,7 +43,19 @@ class LayerStackTransaction:
 
     def __enter__(self) -> LayerStackTransaction:
         wait_start = monotonic_now()
-        self._lock.acquire()
+        storage_guard = (
+            self._storage_writer_lock.exclusive()
+            if self._storage_writer_lock is not None
+            else None
+        )
+        if storage_guard is not None:
+            storage_guard.__enter__()
+            self._storage_guard = storage_guard
+        try:
+            self._lock.acquire()
+        except BaseException:
+            self._release_storage_guard(None, None, None)
+            raise
         acquired_at = monotonic_now()
         self._lock_wait_s = acquired_at - wait_start
         self._lock_acquired_at = acquired_at
@@ -52,13 +69,13 @@ class LayerStackTransaction:
         exc: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
-        del exc_type, exc, traceback
         self._entered = False
         self._manifest = None
         if self._lock_acquired_at is not None:
             self._lock_held_s = monotonic_now() - self._lock_acquired_at
             self._lock_acquired_at = None
         self._lock.release()
+        self._release_storage_guard(exc_type, exc, traceback)
 
     def snapshot(self) -> Manifest:
         return self._require_manifest()
@@ -94,6 +111,17 @@ class LayerStackTransaction:
         if not self._entered or self._manifest is None:
             raise RuntimeError("layer-stack transaction is not active")
         return self._manifest
+
+    def _release_storage_guard(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        guard = self._storage_guard
+        self._storage_guard = None
+        if guard is not None:
+            guard.__exit__(exc_type, exc, traceback)
 
 
 __all__ = ["LayerStackTransaction"]
