@@ -21,6 +21,9 @@ from task_center_runner.scenarios.pipeline.nested_goal import (
     NestedGoal,
     NestedGoalFailure,
 )
+from task_center_runner.scenarios.sandbox.high_concurrency_layerstack_overlay_occ import (
+    HighConcurrencyLayerstackOverlayOcc,
+)
 
 
 def _ctx(
@@ -107,3 +110,17 @@ def test_generator_failure_quiescence_uses_context_message_on_attempt_one() -> N
     assert scenario.executor_actions(ctx) == (
         "fail:Intentional generator failure on attempt 1 (quiescence_b).",
     )
+
+
+def test_high_concurrency_dispatch_uses_context_message_index() -> None:
+    scenario = HighConcurrencyLayerstackOverlayOcc()
+
+    assert scenario.executor_actions(
+        _ctx(context_message="ACTION high_concurrency_seed")
+    ) == ("high_concurrency_seed",)
+    assert scenario.executor_actions(
+        _ctx(context_message="ACTION high_concurrency_worker index=07")
+    ) == ("high_concurrency_worker:7",)
+    assert scenario.executor_actions(
+        _ctx(context_message="ACTION high_concurrency_reconcile")
+    ) == ("high_concurrency_reconcile",)

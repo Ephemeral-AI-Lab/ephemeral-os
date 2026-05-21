@@ -82,7 +82,7 @@ async def test_orchestrator_overlay_executes_against_leased_manifest_without_pub
     result = await execute_command(
         request,
         layer_stack=LayerStackClient(manager),
-        occ_client=None,
+        capture_publisher=None,
         storage_root=manager.storage_root,
         occ_apply=False,
         mount_mode=MountMode.COPY_BACKED,
@@ -136,7 +136,7 @@ async def test_orchestrator_overlay_releases_lease_when_runtime_fails(
         await execute_command(
             _request(manager, command=("bash", "-lc", "true")),
             layer_stack=LayerStackClient(manager),
-            occ_client=None,
+            capture_publisher=None,
             storage_root=manager.storage_root,
             occ_apply=False,
             mount_mode=MountMode.COPY_BACKED,

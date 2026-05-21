@@ -12,6 +12,7 @@ Implemented (reference scenarios):
 - :class:`ComplexProjectBuildShellEditLsp`
 - :class:`ComplexProjectBuildShellEditLspSmoke`
 - :class:`ComplexProjectBuildSmoke`
+- :class:`HighConcurrencyLayerstackOverlayOcc`
 - :class:`OccConcurrentConflicts`
 """
 
@@ -32,6 +33,9 @@ from task_center_runner.scenarios.sandbox.complex_project_build_shell_edit_lsp i
     ComplexProjectBuildShellEditLsp,
     ComplexProjectBuildShellEditLspSmoke,
 )
+from task_center_runner.scenarios.sandbox.high_concurrency_layerstack_overlay_occ import (
+    HighConcurrencyLayerstackOverlayOcc,
+)
 from task_center_runner.scenarios.sandbox.occ_concurrent_conflicts import (
     OccConcurrentConflicts,
 )
@@ -44,5 +48,6 @@ __all__ = [
     "ComplexProjectBuildShellEditLsp",
     "ComplexProjectBuildShellEditLspSmoke",
     "ComplexProjectBuildSmoke",
+    "HighConcurrencyLayerstackOverlayOcc",
     "OccConcurrentConflicts",
 ]

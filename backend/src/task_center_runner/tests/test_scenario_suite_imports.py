@@ -117,7 +117,7 @@ def test_subpackage_imports_are_clean() -> None:
         "InitialGoal",
         "NestedGoal",
         "NestedGoalFailure",
-        "DeferredParentPlannerFullOnly",
+        "DeferredParentPlannerTerminalRouting",
     ]
     assert sandbox.__all__ == [
         "AutoSquashCommitResume",
@@ -127,6 +127,7 @@ def test_subpackage_imports_are_clean() -> None:
         "ComplexProjectBuildShellEditLsp",
         "ComplexProjectBuildShellEditLspSmoke",
         "ComplexProjectBuildSmoke",
+        "HighConcurrencyLayerstackOverlayOcc",
         "OccConcurrentConflicts",
     ]
     assert planner_validation.__all__ == [

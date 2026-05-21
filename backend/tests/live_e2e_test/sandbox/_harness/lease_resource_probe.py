@@ -168,7 +168,7 @@ async def run_shell_batch(
         result = await execute_command(
             request,
             layer_stack=layer_client,
-            occ_client=None,
+            capture_publisher=None,
             storage_root=stack.storage_root,
             occ_apply=False,
             mount_mode=expected_mode,

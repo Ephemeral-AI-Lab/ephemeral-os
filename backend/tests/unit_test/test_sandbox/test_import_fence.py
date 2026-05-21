@@ -8,6 +8,7 @@ from pathlib import Path
 
 
 SRC_ROOT = Path(__file__).resolve().parents[2] / "src"
+BACKEND_SRC_ROOT = Path(__file__).resolve().parents[3] / "src"
 _TOOL_ALLOWED = {
     "sandbox.api",
 }
@@ -286,6 +287,35 @@ def test_command_exec_imports_only_client_protocol_boundaries() -> None:
                 offenders.append(f"{module.relative_to(SRC_ROOT)} imports {imported}")
 
     assert offenders == []
+
+
+def test_execution_service_delegates_occ_publish_to_daemon_overlay() -> None:
+    service_module = BACKEND_SRC_ROOT / "sandbox" / "execution" / "service.py"
+    imports = _imports(service_module)
+    forbidden = {
+        "sandbox.occ.changeset",
+        "sandbox.occ.overlay_change_conversion",
+        "sandbox.occ.commit_transaction",
+        "sandbox.occ.service",
+    }
+    offenders = sorted(
+        imported
+        for imported in imports
+        if imported in forbidden
+        or any(imported.startswith(f"{prefix}.") for prefix in forbidden)
+    )
+
+    assert offenders == []
+
+
+def test_daemon_sandbox_overlay_owns_occ_publish_internals() -> None:
+    overlay_module = (
+        BACKEND_SRC_ROOT / "sandbox" / "daemon" / "service" / "sandbox_overlay.py"
+    )
+    imports = _imports(overlay_module)
+
+    assert "sandbox.occ.changeset" in imports
+    assert "sandbox.occ.overlay_change_conversion" in imports
 
 
 def test_internal_sandbox_layers_do_not_import_public_api() -> None:

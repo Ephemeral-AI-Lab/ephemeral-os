@@ -46,6 +46,7 @@ from task_center_runner.scenarios.sandbox import (
     ComplexProjectBuildShellEditLsp,
     ComplexProjectBuildShellEditLspSmoke,
     ComplexProjectBuildSmoke,
+    HighConcurrencyLayerstackOverlayOcc,
     OccConcurrentConflicts,
 )
 
@@ -85,6 +86,9 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
         ComplexProjectBuildShellEditLspSmoke
     ),
     "sandbox.complex_project_build_smoke": ComplexProjectBuildSmoke,
+    "sandbox.high_concurrency_layerstack_overlay_occ": (
+        HighConcurrencyLayerstackOverlayOcc
+    ),
     "sandbox.occ_concurrent_conflicts": OccConcurrentConflicts,
     # Focused planner-validation scenarios.
     "planner_validation.cycle_in_deps": PlannerCycleInDeps,
@@ -122,9 +126,10 @@ __all__ = [
     "FullStackAdversarial",
     "GeneratorFailureQuiescence",
     "InitialGoal",
+    "HighConcurrencyLayerstackOverlayOcc",
     "NestedGoal",
     "NestedGoalFailure",
-    "DeferredParentPlannerFullOnly",
+    "DeferredParentPlannerTerminalRouting",
     "OccConcurrentConflicts",
     "PlannerCycleInDeps",
     "PlannerDuplicateLocalId",

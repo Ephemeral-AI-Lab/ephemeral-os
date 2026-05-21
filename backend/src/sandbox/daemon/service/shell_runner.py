@@ -24,6 +24,7 @@ from sandbox.daemon.result_projection import (
     gitignore_cache_timings,
     published_paths,
 )
+from sandbox.daemon.service.sandbox_overlay import SandboxOverlay
 
 
 async def execute_shell_api(args: dict[str, object]) -> dict[str, object]:
@@ -48,10 +49,14 @@ async def _execute_shell(
     storage_root: Path,
 ) -> CommandExecResult:
     request = _command_request(args)
+    overlay = SandboxOverlay(
+        occ_client=occ_client,
+        workspace_ref=request.workspace_ref,
+    )
     return await execute_command(
         request,
         layer_stack=layer_stack,
-        occ_client=occ_client,
+        capture_publisher=overlay,
         storage_root=storage_root,
         timing_provider=lambda: gitignore_cache_timings(gitignore),
         command_runner=run_workspace_replaced_command,

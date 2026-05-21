@@ -18,10 +18,13 @@ from typing import Any
 
 import pytest
 
+from sandbox.daemon.service import sandbox_overlay
+from sandbox.daemon.service.sandbox_overlay import SandboxOverlay
 from sandbox.execution.contract import CommandExecRequest
-from sandbox.execution import service as command_executor
 from sandbox.occ.changeset import CommitOptions
 from sandbox.occ.changeset import ChangesetResult, WriteChange
+
+_CAPTURED_PATHS: list[str] = []
 
 
 @dataclass
@@ -69,6 +72,10 @@ def _request() -> CommandExecRequest:
 def _patch_workspace_to_occ(monkeypatch: pytest.MonkeyPatch) -> None:
     """Bypass on-disk content readers; emit one ``WriteChange`` per path."""
 
+    def fake_walk_upperdir(*args: Any, **kwargs: Any) -> list[str]:
+        del args, kwargs
+        return list(_CAPTURED_PATHS)
+
     def fake(path_changes: Any) -> tuple[WriteChange, ...]:
         return tuple(
             write_change(
@@ -79,20 +86,21 @@ def _patch_workspace_to_occ(monkeypatch: pytest.MonkeyPatch) -> None:
             for path in path_changes
         )
 
-    monkeypatch.setattr(
-        command_executor,
-        "overlay_path_changes_to_occ_changes",
-        fake,
-    )
+    monkeypatch.setattr(sandbox_overlay, "walk_upperdir", fake_walk_upperdir)
+    monkeypatch.setattr(sandbox_overlay, "overlay_path_changes_to_occ_changes", fake)
 
 
 def _apply(client: _StubOccClient, paths: list[str]) -> None:
+    _CAPTURED_PATHS[:] = paths
+    overlay = SandboxOverlay(
+        occ_client=client,  # type: ignore[arg-type]
+        workspace_ref=_request().workspace_ref,
+    )
     asyncio.run(
-        command_executor._apply_workspace_capture(
-            paths,  # type: ignore[arg-type]
-            occ_client=client,  # type: ignore[arg-type]
-            snapshot=_Manifest(),
+        overlay.publish_cycle(
             request=_request(),
+            upperdir="/tmp/unused-upperdir",
+            snapshot=_Manifest(),
         )
     )
 

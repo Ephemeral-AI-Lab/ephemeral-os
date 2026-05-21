@@ -20,8 +20,10 @@ import pytest
 
 from sandbox.execution.contract import (
     CommandExecRequest,
+    EmptyChangesetResult,
     LayerPathsLayout,
     OverlayLayout,
+    WorkspaceCapturePublishResult,
 )
 from sandbox.execution.overlay.layout import MaterializeLayout
 from sandbox.execution.service import execute_command, _drop_transient_lowerdir
@@ -60,15 +62,20 @@ def _make_layer_stack(lease: MagicMock, storage_root: Path) -> MagicMock:
     return ls
 
 
-def _make_occ_client() -> AsyncMock:
-    occ = AsyncMock()
-    changeset = MagicMock()
-    changeset.files = ()
-    changeset.timings = {}
-    changeset.published_manifest_version = None
-    occ.apply_changeset = AsyncMock(return_value=changeset)
-    occ.run_maintenance_after_publish = AsyncMock(return_value={})
-    return occ
+def _make_capture_publisher() -> AsyncMock:
+    publisher = AsyncMock()
+    publisher.publish_cycle = AsyncMock(
+        return_value=WorkspaceCapturePublishResult(
+            path_changes=(),
+            changeset=EmptyChangesetResult(),
+            timings={
+                "command_exec.capture_upperdir_s": 0.0,
+                "command_exec.occ_apply_s": 0.0,
+            },
+        )
+    )
+    publisher.run_maintenance_after_publish = AsyncMock(return_value={})
+    return publisher
 
 
 def _make_process_result(spec_holder: list[Any]) -> Any:
@@ -114,7 +121,7 @@ class TestCapabilityBranch:
         layer_path.mkdir()
         lease = _make_lease(lowerdir=None, layer_paths=(str(layer_path),))
         ls = _make_layer_stack(lease, layer_storage_root)
-        occ = _make_occ_client()
+        publisher = _make_capture_publisher()
         spec_holder: list[Any] = []
 
         with patch(
@@ -126,7 +133,7 @@ class TestCapabilityBranch:
                 execute_command(
                     _make_request(),
                     layer_stack=ls,
-                    occ_client=occ,
+                    capture_publisher=publisher,
                     storage_root=storage_root,
                     command_runner=_make_process_result(spec_holder),
                 )
@@ -145,7 +152,7 @@ class TestCapabilityBranch:
         scratch.mkdir(parents=True)
         lease = _make_lease(lowerdir=str(scratch), layer_paths=None)
         ls = _make_layer_stack(lease, layer_storage_root)
-        occ = _make_occ_client()
+        publisher = _make_capture_publisher()
         spec_holder: list[Any] = []
 
         with patch(
@@ -157,7 +164,7 @@ class TestCapabilityBranch:
                 execute_command(
                     _make_request(),
                     layer_stack=ls,
-                    occ_client=occ,
+                    capture_publisher=publisher,
                     storage_root=storage_root,
                     command_runner=_make_process_result(spec_holder),
                 )
@@ -176,7 +183,7 @@ class TestCapabilityBranch:
         scratch.mkdir(parents=True)
         lease = _make_lease(lowerdir=str(scratch), layer_paths=None)
         ls = _make_layer_stack(lease, layer_storage_root)
-        occ = _make_occ_client()
+        publisher = _make_capture_publisher()
         spec_holder: list[Any] = []
 
         with patch(
@@ -188,7 +195,7 @@ class TestCapabilityBranch:
                 execute_command(
                     _make_request(),
                     layer_stack=ls,
-                    occ_client=occ,
+                    capture_publisher=publisher,
                     storage_root=storage_root,
                     command_runner=_make_process_result(spec_holder),
                 )

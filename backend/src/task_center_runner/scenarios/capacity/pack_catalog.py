@@ -143,6 +143,13 @@ CAPACITY_PACK_SPECS: tuple[CapacityPackSpec, ...] = (
         registry_name="sandbox.auto_squash_commit_resume",
     ),
     CapacityPackSpec(
+        "sandbox.layerstack_overlay_occ_high_concurrency",
+        "B",
+        "sandbox",
+        "T2",
+        registry_name="sandbox.high_concurrency_layerstack_overlay_occ",
+    ),
+    CapacityPackSpec(
         "sandbox.command_exec_routing",
         "B",
         "sandbox",

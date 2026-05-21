@@ -53,7 +53,7 @@ async def _run_snapshot_overlay(args: dict[str, Any]) -> OverlayCapture:
             workspace_root=str(args.get("workspace_root") or "/workspace"),
         ),
         layer_stack=layer_stack,
-        occ_client=None,
+        capture_publisher=None,
         storage_root=layer_stack.storage_root,
         occ_apply=False,
         mount_mode=MountMode.COPY_BACKED,

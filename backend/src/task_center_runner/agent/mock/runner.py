@@ -553,6 +553,29 @@ class MockSquadRunner:
                 )
                 summary = "Auto-squash commit-resume probe passed."
                 artifacts = [summary_path]
+            elif action == "high_concurrency_seed":
+                summary_path = await self._run_high_concurrency_seed_probe(
+                    metadata, emit
+                )
+                summary = "High-concurrency sandbox seed passed."
+                artifacts = [summary_path]
+            elif isinstance(action, str) and action.startswith(
+                "high_concurrency_worker:"
+            ):
+                worker_index = int(action.split(":", 1)[1])
+                summary_path = await self._run_high_concurrency_worker_probe(
+                    metadata,
+                    emit,
+                    index=worker_index,
+                )
+                summary = f"High-concurrency worker {worker_index:02d} passed."
+                artifacts = [summary_path]
+            elif action == "high_concurrency_reconcile":
+                summary_path = await self._run_high_concurrency_reconcile_probe(
+                    metadata, emit
+                )
+                summary = "High-concurrency sandbox reconciliation passed."
+                artifacts = [summary_path]
             elif action == "complex_project_build":
                 summary_path = await self._run_complex_project_build_probe(
                     metadata, emit, smoke=False
@@ -1048,6 +1071,59 @@ class MockSquadRunner:
             caller=self._caller(metadata),
             sandbox_id=sandbox_id,
             smoke=smoke,
+        )
+
+    async def _run_high_concurrency_seed_probe(
+        self,
+        metadata: ExecutionMetadata,
+        emit: EmitStreamEvent,
+    ) -> str:
+        from task_center_runner.agent.mock.high_concurrency_probe import (
+            run_high_concurrency_seed_probe,
+        )
+
+        return await run_high_concurrency_seed_probe(
+            metadata=metadata,
+            emit=emit,
+            call_tool=self._call_tool,
+            record_tool_check=self._record_tool_check,
+        )
+
+    async def _run_high_concurrency_worker_probe(
+        self,
+        metadata: ExecutionMetadata,
+        emit: EmitStreamEvent,
+        *,
+        index: int,
+    ) -> str:
+        from task_center_runner.agent.mock.high_concurrency_probe import (
+            run_high_concurrency_worker_probe,
+        )
+
+        return await run_high_concurrency_worker_probe(
+            index=index,
+            metadata=metadata,
+            emit=emit,
+            call_tool=self._call_tool,
+            publish=self._publish,
+            publish_mock_record=self._publish_mock_record,
+            record_tool_check=self._record_tool_check,
+        )
+
+    async def _run_high_concurrency_reconcile_probe(
+        self,
+        metadata: ExecutionMetadata,
+        emit: EmitStreamEvent,
+    ) -> str:
+        from task_center_runner.agent.mock.high_concurrency_probe import (
+            run_high_concurrency_reconcile_probe,
+        )
+
+        return await run_high_concurrency_reconcile_probe(
+            metadata=metadata,
+            emit=emit,
+            call_tool=self._call_tool,
+            record_tool_check=self._record_tool_check,
         )
 
     async def _run_complex_project_build_shell_edit_lsp_probe(

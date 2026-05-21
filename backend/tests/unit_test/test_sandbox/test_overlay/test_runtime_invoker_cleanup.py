@@ -57,7 +57,7 @@ async def test_no_occ_orchestrator_removes_intermediate_dirs_but_keeps_outputs(
     result = await execute_command(
         request,
         layer_stack=LayerStackClient(manager),
-        occ_client=None,
+        capture_publisher=None,
         storage_root=manager.storage_root,
         occ_apply=False,
         mount_mode=MountMode.COPY_BACKED,
@@ -110,7 +110,7 @@ async def test_no_occ_orchestrator_cleans_intermediate_dirs_even_on_nonzero_exit
     result = await execute_command(
         request,
         layer_stack=LayerStackClient(manager),
-        occ_client=None,
+        capture_publisher=None,
         storage_root=manager.storage_root,
         occ_apply=False,
         mount_mode=MountMode.COPY_BACKED,

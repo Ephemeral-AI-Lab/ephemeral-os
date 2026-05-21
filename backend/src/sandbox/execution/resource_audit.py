@@ -6,6 +6,7 @@ import os
 import resource
 import sys
 from collections import deque
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -171,19 +172,88 @@ def _add_memory_stats(timings: dict[str, float]) -> None:
         value = _read_cgroup_number(Path("/sys/fs/cgroup") / name)
         if value is not None:
             timings[key] = value
+    _add_process_cpu_stats(timings)
+    _add_cgroup_cpu_stats(timings)
+    _add_cgroup_io_stats(timings)
+
+
+def _add_process_cpu_stats(timings: dict[str, float]) -> None:
+    self_usage = resource.getrusage(resource.RUSAGE_SELF)
+    child_usage = resource.getrusage(resource.RUSAGE_CHILDREN)
+    timings["resource.process.user_cpu_usec"] = float(self_usage.ru_utime * 1_000_000)
+    timings["resource.process.system_cpu_usec"] = float(
+        self_usage.ru_stime * 1_000_000
+    )
+    timings["resource.process.children_user_cpu_usec"] = float(
+        child_usage.ru_utime * 1_000_000
+    )
+    timings["resource.process.children_system_cpu_usec"] = float(
+        child_usage.ru_stime * 1_000_000
+    )
+
+
+def _add_cgroup_cpu_stats(timings: dict[str, float]) -> None:
+    for name, value in _parse_cgroup_key_values(
+        _read_text(Path("/sys/fs/cgroup") / "cpu.stat") or ""
+    ).items():
+        timings[f"resource.cgroup.cpu_{name}"] = value
+
+
+def _add_cgroup_io_stats(timings: dict[str, float]) -> None:
+    for name, value in _parse_cgroup_io_stat(
+        _read_text(Path("/sys/fs/cgroup") / "io.stat") or ""
+    ).items():
+        timings[f"resource.cgroup.io_{name}"] = value
 
 
 def _read_cgroup_number(path: Path) -> float | None:
-    try:
-        raw = path.read_text(encoding="utf-8").strip()
-    except OSError:
+    raw = _read_text(path)
+    if raw is None:
         return None
+    raw = raw.strip()
     if raw == "max":
         return 0.0
     try:
         return float(raw)
     except ValueError:
         return None
+
+
+def _read_text(path: Path) -> str | None:
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+
+def _parse_cgroup_key_values(raw: str) -> dict[str, float]:
+    values: dict[str, float] = {}
+    for line in raw.splitlines():
+        fields = line.split()
+        if len(fields) != 2:
+            continue
+        key, value = fields
+        try:
+            values[key] = float(value)
+        except ValueError:
+            continue
+    return values
+
+
+def _parse_cgroup_io_stat(raw: str) -> dict[str, float]:
+    totals: defaultdict[str, float] = defaultdict(float)
+    for line in raw.splitlines():
+        fields = line.split()
+        for field in fields[1:]:
+            key, sep, value = field.partition("=")
+            if not sep or not key:
+                continue
+            try:
+                number = float(value)
+            except ValueError:
+                continue
+            totals[key] += number
+    return dict(totals)
 
 
 def _current_rss_bytes() -> float | None:

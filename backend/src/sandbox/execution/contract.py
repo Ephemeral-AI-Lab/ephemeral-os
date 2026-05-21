@@ -20,7 +20,7 @@ from sandbox.execution.overlay.layout import (
 if TYPE_CHECKING:
     from sandbox.layer_stack.manifest import Manifest
     from sandbox.execution.path_change import OverlayPathChange
-    from sandbox.occ.changeset import Change, ChangesetResult, CommitOptions
+    from sandbox.occ.changeset import Change, CommitOptions, FileResult
 
 
 # ---- request ---------------------------------------------------------------
@@ -187,7 +187,7 @@ class CommandExecResult:
     stdout_ref: str
     stderr_ref: str
     workspace_capture: WorkspaceCapture
-    occ_result: ChangesetResult
+    occ_result: ChangesetResultLike
     timings: dict[str, float] = field(default_factory=dict)
 
 
@@ -251,11 +251,64 @@ class OCCMutationClient(Protocol):
         options: CommitOptions | None = None,
         workspace_ref: str | None = None,
         run_maintenance: bool = True,
-    ) -> ChangesetResult: ...
+    ) -> ChangesetResultLike: ...
 
     async def run_maintenance_after_publish(
         self,
-        result: ChangesetResult,
+        result: ChangesetResultLike,
+        *,
+        workspace_ref: str | None = None,
+    ) -> dict[str, float]: ...
+
+
+class ChangesetResultLike(Protocol):
+    """Minimal committed changeset result shape consumed by command execution."""
+
+    files: Sequence[FileResult]
+    timings: Mapping[str, float]
+    published_manifest_version: int | None
+
+    @property
+    def success(self) -> bool: ...
+
+
+@dataclass(frozen=True)
+class EmptyChangesetResult:
+    """No-op result for capture-only command execution paths."""
+
+    files: tuple[object, ...] = ()
+    timings: dict[str, float] = field(default_factory=dict)
+    published_manifest_version: int | None = None
+
+    @property
+    def success(self) -> bool:
+        return True
+
+
+@dataclass(frozen=True)
+class WorkspaceCapturePublishResult:
+    """Result returned by the daemon-owned overlay publish facade."""
+
+    path_changes: Sequence[OverlayPathChange]
+    changeset: ChangesetResultLike
+    timings: Mapping[str, float] = field(default_factory=dict)
+
+
+class WorkspaceCapturePublisher(Protocol):
+    """Daemon-owned publish boundary for command upperdir captures."""
+
+    async def publish_cycle(
+        self,
+        *,
+        request: CommandExecRequest,
+        upperdir: str | Path,
+        snapshot: SnapshotManifest,
+        run_maintenance: bool = True,
+    ) -> WorkspaceCapturePublishResult: ...
+
+    async def run_maintenance_after_publish(
+        self,
+        result: ChangesetResultLike,
         *,
         workspace_ref: str | None = None,
     ) -> dict[str, float]: ...
@@ -267,8 +320,10 @@ class OCCMutationClient(Protocol):
 
 __all__ = [
     "AnyOverlayLayout",
+    "ChangesetResultLike",
     "CommandExecRequest",
     "CommandExecResult",
+    "EmptyChangesetResult",
     "LayerPathsLayout",
     "MaterializeLayout",
     "MountMode",
@@ -279,6 +334,8 @@ __all__ = [
     "ShellProcessResult",
     "SnapshotManifest",
     "WorkspaceCapture",
+    "WorkspaceCapturePublisher",
+    "WorkspaceCapturePublishResult",
     "WorkspaceLeaseClient",
     "WorkspaceSnapshotLease",
 ]
