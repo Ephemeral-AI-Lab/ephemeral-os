@@ -1,5 +1,5 @@
 # executor — has_deps branch (generator task `b`, deps: [`a`]); user_msg_1 carries flat `<dependency>` siblings
-- source: `pipeline.dependency_dag_serial/20260519T152241Z_d88c83980f87/goal_01_5afa90cc-b74f-49b3-b490-5bc73d2680ff/iteration_01_2eabad13-67a4-441e-b799-77b8cf03ca3f/attempt_01_dd69fbe6-2bb4-40a0-8a25-d8bda9fc87ea/03_executor_dd69fbe6-2bb4-40a0-8a25-d8bda9fc87ea:gen:b/message.jsonl`
+- source: `pipeline.dependency_dag_serial/20260522T045726Z_2720728833f6/goal_01_34a295aa-473b-45de-a759-674dc29c8d8f/iteration_01_c347b979-297c-4724-ad31-08d148a5e0fa/attempt_01_887b6c78-1fbf-4f22-9965-5168d169ddd6/03_executor_887b6c78-1fbf-4f22-9965-5168d169ddd6:gen:b/message.jsonl`
 - notes: Closes Gap 3 in the original gap report. The scenario submits a serial DAG `a → b → c`; task `b` runs with `deps=["a"]`, so its composer renders one flat `<dependency id=...>` block per upstream task between `<plan_spec>` and `<assigned_task>` (no wrapping group). Row 3's `<Task Guidance>` follows the registry-driven shape: a deterministic outline (`<plan_spec>`, `<dependency>`, `<assigned_task>`) plus the executor's role directive. This is the variant the existing initial_messages scenario could not exercise because its plans only have single-task DAGs.
 
 ## system
@@ -16,6 +16,8 @@ Submission fields are read cold by downstream agents without your conversation. 
 You are the **main-agent generator executor**.
 
 Complete the `<assigned_task>`. If the task is too broad or genuinely needs a delegated complex-task plan, call `submit_execution_handoff`. If the task cannot proceed because of a concrete blocker, call `submit_execution_blocker`.
+
+Only terminal tools exposed in this launch are valid. If this launch does not expose `submit_execution_handoff`, handoff is unavailable; use success or blocker according to the work's actual state.
 
 ## Submission discipline
 
@@ -40,11 +42,11 @@ Submit exactly one terminal tool per run.
 Run a serial preflight chain a → b → c.
 </plan_spec>
 
-<dependency id="dd69fbe6-2bb4-40a0-8a25-d8bda9fc87ea:gen:a">
+<dependency id="887b6c78-1fbf-4f22-9965-5168d169ddd6:gen:a">
 Workspace preflight completed.
 </dependency>
 
-<assigned_task task_id="dd69fbe6-2bb4-40a0-8a25-d8bda9fc87ea:gen:b">
+<assigned_task task_id="887b6c78-1fbf-4f22-9965-5168d169ddd6:gen:b">
 Run a lightweight workspace preflight and report the observed sandbox root.
 </assigned_task>
 </context>
@@ -119,7 +121,8 @@ Read that catalog and let the work decide:
   required verification is the success path. Pick it when the next task
   in the DAG (or the evaluator) could pick up your output cold and act
   on it without re-deriving anything.
-- Bounded progress that still needs work is the handoff path. Name the
+- When the catalog exposes it, bounded progress that still needs work is
+  the handoff path. Name the
   next bounded slice — what specifically is needed, by whom — so the
   downstream agent inherits a concrete handoff, not a vague kick.
 - A concrete blocker is the blocker path. Use it when the task cannot

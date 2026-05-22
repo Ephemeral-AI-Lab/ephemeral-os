@@ -1,5 +1,5 @@
 # entry_executor — root delegation (single-user-message launch)
-- source: `entry_executor_a32369ff-8c31-41f1-be5a-a173df6966cf:entry/message.jsonl`
+- source: `entry_executor_0a7fd172-f639-4b00-baa1-7cc8319a70c4:entry/message.jsonl`
 
 ## system
 

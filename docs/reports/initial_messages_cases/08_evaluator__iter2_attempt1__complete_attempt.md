@@ -1,5 +1,5 @@
 # evaluator — iteration 2, attempt 1 (evaluator task-guidance branch: has_deferred_goal_for_next_iteration=False; complete plan attempt)
-- source: `goal_01_fd45befd-45f2-47b9-a6ba-0975c575c72d/iteration_02_32f1cd57-8c49-48a0-a03d-18c31d5edea0/attempt_01_823930e8-7fe8-49ab-8d13-9c228de573d5/03_evaluator_823930e8-7fe8-49ab-8d13-9c228de573d5:evaluator/message.jsonl`
+- source: `goal_01_a51b9052-a7db-4fa5-a309-8ecf58a763a8/iteration_02_2b065703-e070-44cb-8719-51f088912c60/attempt_01_a565312c-4786-4d0e-bedc-9422e3d4183d/03_evaluator_a565312c-4786-4d0e-bedc-9422e3d4183d:evaluator/message.jsonl`
 
 ## system
 
@@ -1886,7 +1886,7 @@ Continue the initial-messages capture by running one more preflight in iteration
 <plan_spec>
 Run a workspace preflight probe.
 </plan_spec>
-<task id="823930e8-7fe8-49ab-8d13-9c228de573d5:gen:preflight" status="done">
+<task id="a565312c-4786-4d0e-bedc-9422e3d4183d:gen:preflight" status="done">
 Workspace preflight completed.
 </task>
 <evaluation_criteria>

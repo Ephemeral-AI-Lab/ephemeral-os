@@ -29,7 +29,7 @@ The following is the parent agent's user_msg_1 verbatim — the engineered conte
 Run a workspace preflight probe.
 </plan_spec>
 
-<assigned_task task_id="f8d7f40f-2bb8-4147-8291-4e0d7d2719b9:gen:preflight">
+<assigned_task task_id="cf65d3dd-b2f9-4d65-a6fc-b06982d110db:gen:preflight">
 Run a lightweight workspace preflight and report the observed sandbox root.
 </assigned_task>
 </context>
@@ -53,6 +53,8 @@ What to do:
 - `submit_execution_handoff` — Call when bounded progress is made but further work is needed. Name the next bounded slice; do not kick the problem downstream without specifying what's needed.
 
 - `submit_execution_success` — Call when the `<assigned_task>` deliverable is complete, exists at the claimed location, satisfies the task specification, and any verification the criteria specify has been run and passed.
+
+- `submit_execution_blocker` — Call when the `<assigned_task>` cannot proceed because of a concrete blocker. Summarize the blocker and the evidence.
 </terminal_tool_selection>
 </Task Guidance>
 
@@ -73,6 +75,8 @@ The parent could submit any of the following terminals. Review focus for each:
 - `submit_execution_handoff` — Verify the handoff scope is specific and actionable. Flag vague handoffs that just kick the problem downstream without naming what's needed.
 
 - `submit_execution_success` — Verify the `<assigned_task>` deliverable actually exists at the claimed location, satisfies the task specification, and is consistent with the `<dependency>` outputs. Flag stub deliverables, TODO markers, and any divergence from the task contract.
+
+- `submit_execution_blocker` — Confirm the blocker is real and specific, not a premature give-up. Verify the executor tried the obvious remediation paths and did not hide solvable work behind a blocker.
 
 These entries pair with the parent-facing selection criteria the parent saw in its original task; both views come from the same terminal-tool registry.
 

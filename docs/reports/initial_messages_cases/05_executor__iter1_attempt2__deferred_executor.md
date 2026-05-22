@@ -1,5 +1,5 @@
-# executor — iteration 1, attempt 2 (attempt with deferred goal; generator task guidance: has_deps=False)
-- source: `goal_01_fd45befd-45f2-47b9-a6ba-0975c575c72d/iteration_01_d3bdafea-2967-4ba7-b7e6-d6e61eeed9e3/attempt_02_a106dcda-744a-4a6a-9261-98f98635138f/02_executor_a106dcda-744a-4a6a-9261-98f98635138f:gen:preflight/message.jsonl`
+# executor — iteration 1, attempt 2 (attempt with deferred goal; single executor profile; generator task guidance: has_deps=False)
+- source: `goal_01_a51b9052-a7db-4fa5-a309-8ecf58a763a8/iteration_01_36910e81-69a7-44ea-848e-5754afaf20bd/attempt_02_dee9cb9c-08e4-45d2-a2db-b2dd5912a4ff/02_executor_dee9cb9c-08e4-45d2-a2db-b2dd5912a4ff:gen:preflight/message.jsonl`
 
 ## system
 
@@ -15,6 +15,8 @@ Submission fields are read cold by downstream agents without your conversation. 
 You are the **main-agent generator executor**.
 
 Complete the `<assigned_task>`. If the task is too broad or genuinely needs a delegated complex-task plan, call `submit_execution_handoff`. If the task cannot proceed because of a concrete blocker, call `submit_execution_blocker`.
+
+Only terminal tools exposed in this launch are valid. If this launch does not expose `submit_execution_handoff`, handoff is unavailable; use success or blocker according to the work's actual state.
 
 ## Submission discipline
 
@@ -39,7 +41,7 @@ Submit exactly one terminal tool per run.
 Run a workspace preflight probe and continue with the follow-up goal.
 </plan_spec>
 
-<assigned_task task_id="a106dcda-744a-4a6a-9261-98f98635138f:gen:preflight">
+<assigned_task task_id="dee9cb9c-08e4-45d2-a2db-b2dd5912a4ff:gen:preflight">
 Run a lightweight workspace preflight and report the observed sandbox root.
 </assigned_task>
 </context>
@@ -113,7 +115,8 @@ Read that catalog and let the work decide:
   required verification is the success path. Pick it when the next task
   in the DAG (or the evaluator) could pick up your output cold and act
   on it without re-deriving anything.
-- Bounded progress that still needs work is the handoff path. Name the
+- When the catalog exposes it, bounded progress that still needs work is
+  the handoff path. Name the
   next bounded slice — what specifically is needed, by whom — so the
   downstream agent inherits a concrete handoff, not a vague kick.
 - A concrete blocker is the blocker path. Use it when the task cannot

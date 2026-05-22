@@ -1,5 +1,5 @@
 # evaluator — iteration 1, attempt 2 (evaluator task-guidance branch: has_deferred_goal_for_next_iteration=True; attempt with a deferred goal)
-- source: `goal_01_fd45befd-45f2-47b9-a6ba-0975c575c72d/iteration_01_d3bdafea-2967-4ba7-b7e6-d6e61eeed9e3/attempt_02_a106dcda-744a-4a6a-9261-98f98635138f/03_evaluator_a106dcda-744a-4a6a-9261-98f98635138f:evaluator/message.jsonl`
+- source: `goal_01_a51b9052-a7db-4fa5-a309-8ecf58a763a8/iteration_01_36910e81-69a7-44ea-848e-5754afaf20bd/attempt_02_dee9cb9c-08e4-45d2-a2db-b2dd5912a4ff/03_evaluator_dee9cb9c-08e4-45d2-a2db-b2dd5912a4ff:evaluator/message.jsonl`
 
 ## system
 
@@ -1878,9 +1878,9 @@ Your task is to make the minimal changes to non-tests files in the /testbed dire
 Run a workspace preflight probe.
 </plan_spec>
 <status_summary>
-f8d7f40f-2bb8-4147-8291-4e0d7d2719b9:gen:preflight: done
+cf65d3dd-b2f9-4d65-a6fc-b06982d110db:gen:preflight: done
 </status_summary>
-<task id="f8d7f40f-2bb8-4147-8291-4e0d7d2719b9:gen:preflight" status="done">
+<task id="cf65d3dd-b2f9-4d65-a6fc-b06982d110db:gen:preflight" status="done">
 Workspace preflight completed.
 </task>
 <evaluation_criteria>
@@ -1900,7 +1900,7 @@ Run a workspace preflight probe and continue with the follow-up goal.
 <deferred_goal_for_next_iteration>
 Continue the initial-messages capture by running one more preflight in iteration 2 so the continuation planner sees prior iteration results.
 </deferred_goal_for_next_iteration>
-<task id="a106dcda-744a-4a6a-9261-98f98635138f:gen:preflight" status="done">
+<task id="dee9cb9c-08e4-45d2-a2db-b2dd5912a4ff:gen:preflight" status="done">
 Workspace preflight completed.
 </task>
 <evaluation_criteria>
