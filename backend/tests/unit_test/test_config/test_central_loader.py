@@ -140,17 +140,70 @@ sandbox:
     monkeypatch.setenv("EOS__DATABASE__POOL_SIZE", "12")
     monkeypatch.setenv("EPHEMERALOS_DATABASE_URL", "postgresql://env/db")
     monkeypatch.setenv("DAYTONA_API_KEY", "daytona-env-key")
-    monkeypatch.setenv("EPHEMERALOS_RUN_CAPACITY_LIVE_E2E", "1")
     monkeypatch.setenv("EPHEMERALOS_SANDBOX_DEFAULT_SNAPSHOT", "legacy-snapshot")
 
     cfg = load_central_config(path, dotenv_path=tmp_path / ".env")
 
     assert cfg.database.pool_size == 12
     assert cfg.database.url == "postgresql://env/db"
-    assert cfg.runner.live_e2e.capacity_enabled is True
     assert cfg.sandbox.daytona.api_key == "daytona-env-key"
     assert cfg.sandbox.docker.default_snapshot == "legacy-snapshot"
     assert cfg.sandbox.daytona.default_snapshot == "legacy-snapshot"
+
+
+def test_live_e2e_gates_and_sandbox_reuse_mode_are_yaml_only(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    clean_config_env: None,
+) -> None:
+    path = tmp_path / "ephemeralos.yaml"
+    path.write_text(
+        """
+runner:
+  sandbox_reuse_mode: fresh
+  live_e2e:
+    heavy_enabled: false
+    capacity_enabled: false
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("EPHEMERALOS_RUN_HEAVY_LIVE_E2E", "1")
+    monkeypatch.setenv("EPHEMERALOS_RUN_CAPACITY_LIVE_E2E", "1")
+    monkeypatch.setenv("EOS_SWEEVO_REUSE_SANDBOX", "1")
+    monkeypatch.setenv("EOS_SWEEVO_FORCE_FRESH_SANDBOX", "1")
+    monkeypatch.setenv("EOS__RUNNER__LIVE_E2E__HEAVY_ENABLED", "true")
+    monkeypatch.setenv("EOS__RUNNER__LIVE_E2E__CAPACITY_ENABLED", "true")
+    monkeypatch.setenv("EOS__RUNNER__SANDBOX_REUSE_MODE", "force_fresh")
+
+    cfg = load_central_config(path, dotenv_path=tmp_path / ".env")
+
+    assert cfg.runner.live_e2e.heavy_enabled is False
+    assert cfg.runner.live_e2e.capacity_enabled is False
+    assert cfg.runner.sandbox_reuse_mode == "fresh"
+
+
+def test_live_e2e_gates_and_sandbox_reuse_mode_ignore_env_without_yaml_values(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    clean_config_env: None,
+) -> None:
+    path = tmp_path / "ephemeralos.yaml"
+    path.write_text("runner:\n  sandbox_quota: 7\n", encoding="utf-8")
+    monkeypatch.setenv("EPHEMERALOS_RUN_HEAVY_LIVE_E2E", "1")
+    monkeypatch.setenv("EPHEMERALOS_RUN_CAPACITY_LIVE_E2E", "1")
+    monkeypatch.setenv("EOS_SWEEVO_REUSE_SANDBOX", "1")
+    monkeypatch.setenv("EOS_SWEEVO_FORCE_FRESH_SANDBOX", "1")
+    monkeypatch.setenv("EOS__RUNNER__LIVE_E2E__HEAVY_ENABLED", "true")
+    monkeypatch.setenv("EOS__RUNNER__LIVE_E2E__CAPACITY_ENABLED", "true")
+    monkeypatch.setenv("EOS__RUNNER__SANDBOX_REUSE_MODE", "force_fresh")
+    monkeypatch.setenv("EOS_SWEEVO_SANDBOX_QUOTA", "9")
+
+    cfg = load_central_config(path, dotenv_path=tmp_path / ".env")
+
+    assert cfg.runner.live_e2e.heavy_enabled is False
+    assert cfg.runner.live_e2e.capacity_enabled is False
+    assert cfg.runner.sandbox_reuse_mode == "fresh"
+    assert cfg.runner.sandbox_quota == 9
 
 
 def test_dotenv_file_is_not_loaded_by_central_config(

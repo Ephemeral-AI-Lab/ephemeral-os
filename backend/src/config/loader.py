@@ -25,9 +25,11 @@ _EOS_PREFIX = "EOS__"
 
 LegacyProcessor = tuple[tuple[str, ...], Any]
 
-
-def _truthy(value: str) -> bool:
-    return value.strip().lower() in {"1", "true", "yes", "on"}
+_YAML_ONLY_ENV_PATHS: tuple[tuple[str, ...], ...] = (
+    ("runner", "live_e2e", "heavy_enabled"),
+    ("runner", "live_e2e", "capacity_enabled"),
+    ("runner", "sandbox_reuse_mode"),
+)
 
 
 _LEGACY_ENV_MAP: dict[str, LegacyProcessor] = {
@@ -55,14 +57,6 @@ _LEGACY_ENV_MAP: dict[str, LegacyProcessor] = {
     "DAYTONA_TARGET": (("sandbox", "daytona", "target"), str.strip),
     "MINIMAX_BASE_URL": (("providers", "minimax", "base_url"), str.strip),
     "MINIMAX_MODEL": (("providers", "minimax", "model"), str.strip),
-    "EPHEMERALOS_RUN_HEAVY_LIVE_E2E": (
-        ("runner", "live_e2e", "heavy_enabled"),
-        str.strip,
-    ),
-    "EPHEMERALOS_RUN_CAPACITY_LIVE_E2E": (
-        ("runner", "live_e2e", "capacity_enabled"),
-        str.strip,
-    ),
     "EOS_SWEEVO_REAL_AGENT_MAX_DURATION_S": (
         ("runner", "live_e2e", "real_agent_max_duration_s"),
         str.strip,
@@ -80,6 +74,16 @@ def _set_nested(target: dict[str, Any], path: tuple[str, ...], value: Any) -> No
             cursor[key] = child
         cursor = child
     cursor[path[-1]] = value
+
+
+def _drop_nested(target: dict[str, Any], path: tuple[str, ...]) -> None:
+    cursor = target
+    for key in path[:-1]:
+        child = cursor.get(key)
+        if not isinstance(child, dict):
+            return
+        cursor = child
+    cursor.pop(path[-1], None)
 
 
 def _parse_complex_env_value(value: str) -> Any:
@@ -117,10 +121,8 @@ def _data_from_env(mapping: Mapping[str, str]) -> dict[str, Any]:
     if isinstance(sandbox, dict) and "provider" in sandbox:
         sandbox.setdefault("default_provider", sandbox.pop("provider"))
 
-    if _truthy(mapping.get("EOS_SWEEVO_FORCE_FRESH_SANDBOX", "")):
-        _set_nested(data, ("runner", "sandbox_reuse_mode"), "force_fresh")
-    elif _truthy(mapping.get("EOS_SWEEVO_REUSE_SANDBOX", "")):
-        _set_nested(data, ("runner", "sandbox_reuse_mode"), "reuse")
+    for path in _YAML_ONLY_ENV_PATHS:
+        _drop_nested(data, path)
 
     return data
 

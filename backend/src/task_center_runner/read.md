@@ -42,7 +42,10 @@ uv run pytest -q \
 ```
 
 Capacity and heavy sandbox tests are gated by `runner.live_e2e.capacity_enabled`
-and `runner.live_e2e.heavy_enabled` in `ephemeralos.yaml`.
+and `runner.live_e2e.heavy_enabled` in `ephemeralos.yaml`. Sandbox reuse is
+controlled by `runner.sandbox_reuse_mode` in the same file; use `reuse` for the
+normal shared-sandbox capacity workflow and `force_fresh` when debugging
+provisioning.
 
 ## TaskCenter Mock Tests
 
