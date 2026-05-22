@@ -1,10 +1,10 @@
 """Phase 4c+f smoke — exercise ``run_pipeline`` against a fully-stubbed TaskCenter.
 
-The mock-scenario suite under ``task_center_runner/tests/sweevo/`` is the
+The mock-scenario suite under ``task_center_runner/tests/mock/`` is the
 canonical end-to-end coverage for the shim → run_pipeline path, but it
 requires PG. This smoke test stubs every dependency so the unit-test gate
 catches contract drift in ``run_pipeline`` itself (e.g. the
-``start_task_center_entry_run(config=...)`` argument needing ``.cwd``, a
+``start_task_center_run(config=...)`` argument needing ``.cwd``, a
 mistake the unit suite missed before Phase 4f).
 
 What is verified:
@@ -87,13 +87,13 @@ class _StubStores:
 
 @pytest.fixture
 def stubbed_engine(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Patch ``start_task_center_entry_run`` + the AuditRecorder to be no-ops."""
+    """Patch ``start_task_center_run`` + the AuditRecorder to be no-ops."""
     from task_center_runner.core import engine as engine_module
 
     def _stub_start(**_kwargs: Any) -> _StubHandle:  # noqa: ANN001
         return _StubHandle()
 
-    monkeypatch.setattr(engine_module, "start_task_center_entry_run", _stub_start)
+    monkeypatch.setattr(engine_module, "start_task_center_run", _stub_start)
 
     class _StubRecorder:
         def __init__(self, *_args: Any, **_kwargs: Any) -> None:

@@ -196,7 +196,6 @@ def test_registered_mock_agents_install_and_restore() -> None:
     with registered_mock_agents():
         installed = {d.name for d in list_definitions()}
         assert installed == {
-            "entry_executor",
             "planner",
             "executor",
             "verifier",
@@ -262,8 +261,8 @@ def test_full_stack_recursive_planner_without_defer_closes_goal() -> None:
     } <= task_ids
 
 
-def test_sweevo_adapter_keeps_dataset_entrypoint_separate() -> None:
-    """SWE-EVO-specific prompt wiring lives outside the generic runner."""
+def test_sweevo_image_environment_keeps_dataset_entrypoint_separate() -> None:
+    """SWE-EVO image prompt wiring lives outside the generic runner."""
     from task_center_runner.environments.sweevo_image.fixtures import (
         run_scenario_on_sweevo_image,
     )

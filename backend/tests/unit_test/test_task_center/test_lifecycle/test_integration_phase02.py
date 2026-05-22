@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from task_center._core.primitives import TaskCenterLifecycleConfig
 from task_center.goal.handler import GoalHandler
-from task_center.goal.state import GoalStatus
+from task_center.goal.state import GoalOrigin, GoalStatus
 from task_center.attempt import AttemptStatus
 from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
@@ -120,7 +120,7 @@ def test_full_plan_execution_success_closes_request_success(
     )
     request = handler.create_goal(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="executor-1",
+        origin=GoalOrigin.task(task_id="executor-1"),
         goal="g",
     )
     iteration, _ = handler.create_initial_iteration_with_manager(goal_id=request.id)
@@ -157,7 +157,7 @@ def test_generator_failure_retry_then_evaluator_success(
     )
     request = handler.create_goal(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="executor-1",
+        origin=GoalOrigin.task(task_id="executor-1"),
         goal="g",
     )
     iteration, _ = handler.create_initial_iteration_with_manager(goal_id=request.id)

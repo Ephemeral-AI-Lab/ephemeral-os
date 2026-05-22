@@ -29,7 +29,7 @@ def deps(
 def _seed_goal(goal_store, task_center_run_id):
     return goal_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t-entry",
+        requested_by_task_id="parent-task",
         goal="overall",
     )
 

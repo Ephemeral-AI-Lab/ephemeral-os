@@ -45,7 +45,6 @@ def test_agent_system_prompt_includes_runtime_base_and_agent_body_only(monkeypat
 @pytest.mark.parametrize(
     ("name", "kind"),
     [
-        ("entry_executor", AgentKind.EXECUTOR),
         ("advisor", AgentKind.ADVISOR),
         ("resolver", AgentKind.RESOLVER),
         ("explorer", AgentKind.EXPLORER),

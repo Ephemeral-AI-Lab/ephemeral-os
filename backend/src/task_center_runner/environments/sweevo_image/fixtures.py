@@ -1,8 +1,8 @@
-"""SWE-EVO adapter for the project-wide live e2e framework.
+"""SWE-EVO image-backed fixtures for task-center-runner suites.
 
-The framework itself is dataset-agnostic. This module keeps the SWE-EVO entry
-prompt, sandbox provisioning, and pytest fixtures in one explicit adapter while
-the dataset glue remains under ``benchmarks.sweevo``.
+Mocked-agent and real-agent tests both use the SWE-EVO Docker image as an
+environment. Full benchmark orchestration remains under
+``task_center_runner.benchmarks.sweevo``.
 """
 
 from __future__ import annotations
@@ -17,15 +17,15 @@ from typing import IO
 
 import pytest
 
-from config import get_central_config
 from benchmarks.sweevo.dataset import select_sweevo_instance
 from benchmarks.sweevo.models import SWEEvoInstance, _REPO_DIR
 from benchmarks.sweevo.prompt import build_sweevo_user_prompt
-from task_center_runner.hooks.registry import Hook
+from config import get_central_config
 from task_center_runner.core.runner import RunReport
 from task_center_runner.core.runner import run_scenario as _generic_run_scenario
-from task_center_runner.scenarios.base import Scenario
 from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.hooks.registry import Hook
+from task_center_runner.scenarios.base import Scenario
 
 _DEFAULT_INSTANCE_ID = "dask__dask_2023.3.2_2023.4.0"
 _SESSION_WORKSPACE_USED_ATTR = "_ephemeralos_sweevo_workspace_used_sandboxes"
@@ -50,7 +50,7 @@ async def run_scenario_on_sweevo_image(
     extra_hooks: Sequence[Hook] = (),
     user_prompt: str | None = None,
 ) -> RunReport:
-    """Run a live e2e scenario with SWE-EVO prompt semantics."""
+    """Run a mocked-agent scenario inside a SWE-EVO image workspace."""
     entry_prompt = (
         user_prompt
         if user_prompt is not None

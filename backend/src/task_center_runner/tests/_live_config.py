@@ -1,4 +1,4 @@
-"""Central-config gates for task-center-runner live tests."""
+"""Central-config helpers for task-center-runner live tests."""
 
 from __future__ import annotations
 
@@ -17,9 +17,5 @@ def live_e2e_capacity_enabled() -> bool:
     return get_central_config().runner.live_e2e.capacity_enabled
 
 
-def live_e2e_real_agent_enabled() -> bool:
-    return get_central_config().runner.live_e2e.real_agent_enabled
-
-
-def live_e2e_real_agent_max_duration_s() -> float:
+def real_agent_max_duration_s() -> float:
     return get_central_config().runner.live_e2e.real_agent_max_duration_s

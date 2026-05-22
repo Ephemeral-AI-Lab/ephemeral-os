@@ -74,7 +74,7 @@ def _seed_outer_running_generator(
     """Seed an outer parent attempt + a single running generator task on it."""
     outer_request = goal_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="root",
+        requested_by_task_id="parent-task",
         goal="outer goal",
     )
     outer_segment = iteration_store.insert(

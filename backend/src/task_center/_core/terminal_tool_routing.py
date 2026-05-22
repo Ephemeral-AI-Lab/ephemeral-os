@@ -33,8 +33,8 @@ class ResolverContext:
 def _depth(ctx: ResolverContext) -> int:
     """Return the nested-goal depth for ``ctx``.
 
-    Scopes without a goal (e.g. the top-level entry executor) have no
-    caller-attempt ancestry by construction, so depth is zero.
+    Scopes without a goal have no caller-attempt ancestry by construction,
+    so depth is zero.
     """
     goal_id = ctx.scope.goal_id
     if goal_id is None:

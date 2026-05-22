@@ -483,11 +483,6 @@ task_center.run.started
 task_center.run.completed
 task_center.run.failed
 
-task_center.entry_task.created
-task_center.entry_task.launched
-task_center.entry_task.completed
-task_center.entry_task.failed
-
 task_center.mission.requested
 task_center.mission.started
 task_center.mission.completed

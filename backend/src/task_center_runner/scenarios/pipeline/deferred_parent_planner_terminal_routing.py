@@ -1,9 +1,9 @@
 """Partial parent executor routes a child planner to a restricted terminal set.
 
-The root goal's first iteration submits a partial plan with
+The entry-origin goal's first iteration submits a partial plan with
 ``deferred_goal_for_next_iteration``. Its executor then requests a child goal. Because the
 child goal's parent task belongs to that partial-planned attempt, the child
-planner must launch as ``planner`` without a defer terminal. The root
+planner must launch as ``planner`` without a defer terminal. The entry-origin
 continuation iteration still launches ``planner`` with both planner terminals.
 """
 
@@ -36,16 +36,16 @@ _CHILD_GOAL = (
     "attempt submitted a partial plan."
 )
 _CONTINUATION_GOAL = (
-    "Run the root follow-up iteration after the delegated child goal has "
+    "Run the entry-origin follow-up iteration after the delegated child goal has "
     "returned its close report."
 )
 
 
-def _root_defers_plan() -> dict[str, Any]:
+def _entry_origin_defers_plan() -> dict[str, Any]:
     return {
         "plan_spec": (
-            "Execute the first root slice by delegating one oversized branch to "
-            "a child goal, then continue the root goal afterward."
+            "Execute the first entry-origin slice by delegating one oversized branch to "
+            "a child goal, then continue the entry-origin goal afterward."
         ),
         "evaluation_criteria": [
             "The child goal is requested from the parent executor task.",
@@ -113,15 +113,15 @@ class DeferredParentPlannerTerminalRouting(ScenarioBase):
         if is_recursive_goal(ctx):
             return ToolCallSpec(submit_plan_closes_goal, _child_full_plan())
         if ctx.iteration.sequence_no == 1:
-            return ToolCallSpec(submit_plan_defers_goal, _root_defers_plan())
+            return ToolCallSpec(submit_plan_defers_goal, _entry_origin_defers_plan())
         return ToolCallSpec(
             submit_plan_closes_goal,
             preflight_full_plan(
                 plan_spec=(
-                    "Run the root continuation follow-up as a normal full plan."
+                    "Run the entry-origin continuation follow-up as a normal full plan."
                 ),
                 evaluation_criteria=(
-                    "The root continuation iteration completed as a full plan.",
+                    "The entry-origin continuation iteration completed as a full plan.",
                 ),
             ),
         )

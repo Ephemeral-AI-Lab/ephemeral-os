@@ -40,7 +40,7 @@ def deps_with_stores(
 def _seed_goal(goal_store, task_center_run_id, goal="goal"):
     return goal_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t-entry",
+        requested_by_task_id="parent-task",
         goal=goal,
     )
 

@@ -27,15 +27,15 @@ REPO = Path("/Users/yifanxu/machine_learning/LoVC/EphemeralOS")
 SRC = REPO / "backend" / "src"
 sys.path.insert(0, str(SRC))
 
-from agents import get_definition, load_agents_tree, register_definition
+from agents import get_definition, load_agents_tree, register_definition  # noqa: E402
 
 for _ad in load_agents_tree(SRC / "agents" / "profile"):
     register_definition(_ad)
 
-from task_center.task_guidance.builders import build_explorer_task_guidance
-from tools.ask_helper._lib._compose import HelperMessages, assemble_user_msg_1
-from tools.ask_helper.ask_advisor import _build_advisor_user_msg_2
-from tools.ask_helper.ask_resolver import _build_resolver_user_msg_2
+from task_center.task_guidance.builders import build_explorer_task_guidance  # noqa: E402
+from tools.ask_helper._lib._compose import HelperMessages, assemble_user_msg_1  # noqa: E402
+from tools.ask_helper.ask_advisor import _build_advisor_user_msg_2  # noqa: E402
+from tools.ask_helper.ask_resolver import _build_resolver_user_msg_2  # noqa: E402
 
 CASES_DIR = REPO / "docs" / "reports" / "initial_messages_cases"
 
@@ -75,7 +75,6 @@ def _agents_under(run_dir: Path) -> dict[str, tuple[str, str, Path]]:
         rel = jsonl.relative_to(run_dir).parts
         iteration = next((p for p in rel if p.startswith("iteration_")), "")
         attempt = next((p for p in rel if p.startswith("attempt_")), "")
-        role_dir = rel[-2]
         out[str(jsonl.relative_to(run_dir))] = (iteration, attempt, jsonl)
     return out
 
@@ -147,14 +146,7 @@ def regenerate_main_cases(run_dir: Path) -> None:
 
     for rel, (iteration, attempt, jsonl) in agents.items():
         role_dir = rel.split("/")[-2]
-        if role_dir.startswith("entry_executor"):
-            case_specs.append((
-                "01_entry_executor__root_delegation.md",
-                "entry_executor — root delegation (single-user-message launch)",
-                rel,
-                dict(),
-            ))
-        elif "planner" in role_dir:
+        if "planner" in role_dir:
             if iteration.startswith("iteration_01") and attempt.startswith("attempt_01"):
                 fname = "02_planner__iter1_attempt1__fresh_no_failed_attempts.md"
                 title = "planner — iteration 1, attempt 1 (fresh; planner task-guidance branch: iter==1, no failed attempts)"
@@ -206,7 +198,7 @@ def _harvest_executor_capture(run_dir: Path) -> tuple[str, str, str]:
     agents = _agents_under(run_dir)
     for rel, (it, att, jsonl) in agents.items():
         role_dir = rel.split("/")[-2]
-        if "executor" in role_dir and "entry_executor" not in role_dir:
+        if "executor" in role_dir:
             system, um1, um2, _ = _read_initial_rows(jsonl)
             return system, um1, um2
     raise RuntimeError("no executor capture found")

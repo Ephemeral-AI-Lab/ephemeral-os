@@ -15,7 +15,6 @@ class LiveE2EConfig(ModuleConfigBase):
 
     heavy_enabled: bool = False
     capacity_enabled: bool = False
-    real_agent_enabled: bool = False
     real_agent_max_duration_s: float = Field(default=1800.0, gt=0)
 
 

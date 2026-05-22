@@ -1,4 +1,4 @@
-"""Provider-aware health gate for SWE-EVO live scenario tests."""
+"""Provider-aware health gate for SWE-EVO image-backed tests."""
 
 from __future__ import annotations
 

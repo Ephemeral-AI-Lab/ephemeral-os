@@ -63,10 +63,6 @@ _LEGACY_ENV_MAP: dict[str, LegacyProcessor] = {
         ("runner", "live_e2e", "capacity_enabled"),
         str.strip,
     ),
-    "EOS_SWEEVO_REAL_AGENT_TESTS": (
-        ("runner", "live_e2e", "real_agent_enabled"),
-        str.strip,
-    ),
     "EOS_SWEEVO_REAL_AGENT_MAX_DURATION_S": (
         ("runner", "live_e2e", "real_agent_max_duration_s"),
         str.strip,

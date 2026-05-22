@@ -88,7 +88,7 @@ plan):
 | `"attempt_generator"` | `"trial_generator"` |
 | `"attempt_evaluator"` | `"trial_evaluator"` |
 
-`"entry_executor"` is unchanged.
+No separate top-level executor spawn reason is retained in the current architecture.
 
 ## Recorder filesystem layout
 

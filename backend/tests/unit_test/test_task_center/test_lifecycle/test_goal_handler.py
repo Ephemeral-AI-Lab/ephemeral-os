@@ -7,7 +7,7 @@ import pytest
 from task_center._core.primitives import TaskCenterLifecycleConfig
 from task_center.goal.handler import GoalHandler
 from task_center.iteration import IterationManagerRegistry
-from task_center.goal.state import GoalStatus
+from task_center.goal.state import GoalOrigin, GoalStatus
 from task_center.iteration.state import (
     AttemptPlanFailed,
     SuccessDeferred,
@@ -38,7 +38,7 @@ def test_create_goal_links_executor(
     """Phase 01 exit: submit_execution_handoff -> request linked to requested_by_task_id."""
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="executor-1",
+        origin=GoalOrigin.task(task_id="executor-1"),
         goal="solve X",
     )
     assert req.requested_by_task_id == "executor-1"
@@ -56,7 +56,7 @@ def test_request_records_segments_in_iteration_ids(
     """Phase 01 exit: each request records created iterations in iteration_ids."""
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t1",
+        origin=GoalOrigin.task(task_id="t1"),
         goal="g",
     )
     seg, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
@@ -68,7 +68,7 @@ def test_request_records_segments_in_iteration_ids(
 def test_initial_iteration_has_sequence_one_and_initial_reason(handler, task_center_run_id):
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t1",
+        origin=GoalOrigin.task(task_id="t1"),
         goal="g",
     )
     seg, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
@@ -85,7 +85,7 @@ def test_continuation_segment_inherits_deferred_goal(
     """Phase 01 exit: continuation creates iteration N+1 with goal from previous iteration's deferred_goal_for_next_iteration."""
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t1",
+        origin=GoalOrigin.task(task_id="t1"),
         goal="initial-goal",
     )
     seg1, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
@@ -109,7 +109,7 @@ def test_iteration_ids_holds_multiple_segments(
     """Phase 01 exit: iteration_ids can hold multiple Iteration ids for one request."""
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t1",
+        origin=GoalOrigin.task(task_id="t1"),
         goal="g1",
     )
     seg1, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
@@ -130,7 +130,7 @@ def test_handle_iteration_closed_terminal_success_closes_request_succeeded(
 ):
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t1",
+        origin=GoalOrigin.task(task_id="t1"),
         goal="g",
     )
     seg, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
@@ -156,7 +156,7 @@ def test_handle_iteration_closed_attempt_plan_failed_closes_request_failed(
 ):
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t1",
+        origin=GoalOrigin.task(task_id="t1"),
         goal="g",
     )
     seg, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
@@ -179,7 +179,7 @@ def test_handle_iteration_closed_success_continue_creates_continuation(
 ):
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t1",
+        origin=GoalOrigin.task(task_id="t1"),
         goal="g",
     )
     seg1, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
@@ -207,7 +207,7 @@ def test_handle_iteration_closed_deregisters_manager(
 ):
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t1",
+        origin=GoalOrigin.task(task_id="t1"),
         goal="g",
     )
     seg, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
@@ -229,7 +229,7 @@ def test_continuation_segment_only_from_succeeded_predecessor_with_goal(
 ):
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t1",
+        origin=GoalOrigin.task(task_id="t1"),
         goal="g",
     )
     seg1, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
@@ -252,7 +252,7 @@ def test_iteration_manager_registry_enforces_unique_per_segment(
     """Phase 01 spec: exactly one IterationManager active per open iteration."""
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t1",
+        origin=GoalOrigin.task(task_id="t1"),
         goal="g",
     )
     handler.create_initial_iteration_with_manager(goal_id=req.id)
@@ -280,7 +280,7 @@ def test_close_goal_delivers_closure_report_when_callback_set(
     )
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="executor-1",
+        origin=GoalOrigin.task(task_id="executor-1"),
         goal="g",
     )
     handler.create_initial_iteration_with_manager(goal_id=req.id)
@@ -322,7 +322,7 @@ def test_handler_passes_orchestrator_factory_to_spawned_manager(
     )
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="executor-1",
+        origin=GoalOrigin.task(task_id="executor-1"),
         goal="g",
     )
     iteration, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
@@ -334,13 +334,14 @@ def test_handler_passes_orchestrator_factory_to_spawned_manager(
     assert started == [attempt.id]
 
 
-def test_no_root_creation_reason_in_lifecycle(handler, task_center_run_id):
-    """Phase 01 spec: 'root' creation reason is not allowed."""
+def test_no_legacy_entry_creation_reason_in_lifecycle(handler, task_center_run_id):
+    """Phase 01 spec: no special entry creation reason is allowed."""
     # Indirect: handler-driven iteration creation only ever uses INITIAL or
-    # DEFERRED_GOAL_CONTINUATION. There is no public path that produces 'root'.
+    # DEFERRED_GOAL_CONTINUATION. There is no public path that produces a
+    # special entry-only iteration reason.
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t1",
+        origin=GoalOrigin.task(task_id="t1"),
         goal="g",
     )
     seg, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)

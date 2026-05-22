@@ -108,7 +108,7 @@ def _seed_partial_plan_caller(
 ):
     parent_req = goal_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t-entry",
+        requested_by_task_id="parent-task",
         goal="parent",
     )
     parent_seg = iteration_store.insert(

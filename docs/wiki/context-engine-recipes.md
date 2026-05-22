@@ -36,10 +36,10 @@ ContextScope
 
 | Field | Required by |
 |---|---|
-| `mission_id` | planner, generator, evaluator, helpers |
-| `episode_id` | planner (required); evaluator/generator fall back to `attempt.episode_id` |
+| `goal_id` | planner, generator, evaluator |
+| `iteration_id` | planner |
 | `attempt_id` | planner, generator, evaluator |
-| `task_id` | generator, entry_executor, helpers |
+| `task_id` | generator, helpers |
 | `parent_packet_id` | helper direct-launch messages only |
 | `parent_task_id` | helper direct-launch messages only |
 
@@ -71,9 +71,6 @@ ContextPacket
 Inherited blocks (`metadata["inherited_from_parent"] == "true"`) render under `"# Parent context"` heading (`renderer.py:131-133`).
 
 ## Recipe per role
-
-### entry_executor
-**`recipes/entry_executor.py`** | Required scope: `{task_id}`. Reads `deps.task_store.get_task(task_id)`. Emits one `entry_request` block (`priority=required`, text = `task["task_input"]`). No mission/episode/attempt context.
 
 ### planner
 **`recipes/planner.py`** | Required scope: `{mission_id, episode_id, attempt_id}`.
@@ -172,8 +169,6 @@ Wrap or subclass `ContextComposer.compose`, capture, assert, forward to launcher
 - **Generator — no dependencies**: no `"# Dependency Results"`.
 - **Evaluator — criteria present**: `"# Evaluation Criteria"` with bulleted items matching `attempt.evaluation_criteria`.
 - **Nested mission (helper)**: `"# Parent context"` heading; parent blocks demoted; `packet.metadata["inherits_from"]` matches parent packet id.
-- **Entry executor**: `task_input` contains only `entry_request` content.
-
 ### Error surface
 
 - `RecipeScopeError` (`errors.py:14`) — scope missing required field.

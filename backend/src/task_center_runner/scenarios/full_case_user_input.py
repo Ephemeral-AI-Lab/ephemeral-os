@@ -48,7 +48,7 @@ class FullCaseUserInput(ScenarioBase):
 
     def __init__(self) -> None:
         self._user_input_plan: UserInputPlan | None = None
-        self._root_prompt: str = ""
+        self._entry_prompt: str = ""
         self._recursive_package_id: str | None = None
 
     @property
@@ -68,7 +68,7 @@ class FullCaseUserInput(ScenarioBase):
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         if _is_recursive_goal(ctx):
             return self._recursive_planner_response(ctx)
-        return self._root_planner_response(ctx)
+        return self._entry_origin_planner_response(ctx)
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:
         context_message = ctx.context_message or ctx.prompt or ""
@@ -151,7 +151,7 @@ class FullCaseUserInput(ScenarioBase):
     def hooks(self) -> Sequence[Hook]:
         return ()
 
-    def _root_planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
+    def _entry_origin_planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         iteration = ctx.iteration
         attempt = ctx.attempt
         self._ensure_user_input_plan(ctx)
@@ -374,11 +374,11 @@ class FullCaseUserInput(ScenarioBase):
         if self._user_input_plan is not None:
             return self._user_input_plan
         prompt = ""
-        if ctx.goal is not None and _is_root_goal(ctx):
+        if ctx.goal is not None and _is_entry_origin_goal(ctx):
             prompt = str(ctx.goal.goal or "")
         if not prompt:
             prompt = ctx.prompt or ctx.context_message or ""
-        self._root_prompt = prompt
+        self._entry_prompt = prompt
         self._user_input_plan = build_user_input_plan(prompt)
         return self._user_input_plan
 
@@ -387,7 +387,7 @@ class FullCaseUserInput(ScenarioBase):
         ctx: ScenarioContext,
         checkpoint: str,
     ) -> bool:
-        if not _is_root_goal(ctx):
+        if not _is_entry_origin_goal(ctx):
             return False
         iteration = ctx.iteration
         attempt = ctx.attempt
@@ -458,16 +458,19 @@ def _field(text: str, name: str) -> str | None:
     return None
 
 
-def _is_root_goal(ctx: ScenarioContext) -> bool:
+def _is_entry_origin_goal(ctx: ScenarioContext) -> bool:
     goal = ctx.goal
     if goal is None:
         return True
+    origin_kind = getattr(goal, "origin_kind", None)
+    if str(getattr(origin_kind, "value", origin_kind) or "") == "entry":
+        return True
     requested_by = str(goal.requested_by_task_id or "")
-    return requested_by.endswith(":entry")
+    return not requested_by
 
 
 def _is_recursive_goal(ctx: ScenarioContext) -> bool:
-    return not _is_root_goal(ctx)
+    return not _is_entry_origin_goal(ctx)
 
 
 __all__ = ["FullCaseUserInput"]

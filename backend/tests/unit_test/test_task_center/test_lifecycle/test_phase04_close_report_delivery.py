@@ -41,7 +41,7 @@ def _build_runtime_with_open_graph(
 ):
     request = goal_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="root",
+        requested_by_task_id="parent-task",
         goal="outer",
     )
     iteration = iteration_store.insert(
@@ -152,7 +152,7 @@ def test_router_delivers_failure_marks_parent_failed_and_blocks_dependents(
 ) -> None:
     request = goal_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="root",
+        requested_by_task_id="parent-task",
         goal="outer",
     )
     iteration = iteration_store.insert(

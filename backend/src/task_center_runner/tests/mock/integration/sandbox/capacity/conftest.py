@@ -1,4 +1,4 @@
-"""pytest conftest for capacity live e2e tests."""
+"""pytest conftest for mocked-agent capacity tests."""
 
 from __future__ import annotations
 

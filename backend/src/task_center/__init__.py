@@ -46,9 +46,7 @@ if TYPE_CHECKING:
     from task_center.context_engine.scope import ContextScope
     from task_center.entry.coordinator import (
         TaskCenterEntry,
-        TaskCenterEntryHandle,
         TaskCenterRunHandle,
-        start_task_center_entry_run,
         start_task_center_run,
     )
     from task_center.entry import TaskCenterSandboxBridge
@@ -122,10 +120,6 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "TaskCenterSandboxBridge",
     ),
     "TaskCenterEntry": ("task_center.entry.coordinator", "TaskCenterEntry"),
-    "TaskCenterEntryHandle": (
-        "task_center.entry.coordinator",
-        "TaskCenterEntryHandle",
-    ),
     "TaskCenterRunHandle": (
         "task_center.entry.coordinator",
         "TaskCenterRunHandle",
@@ -133,10 +127,6 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "ordered_generator_tasks": (
         "task_center.attempt.generator_dag",
         "ordered_generator_tasks",
-    ),
-    "start_task_center_entry_run": (
-        "task_center.entry.coordinator",
-        "start_task_center_entry_run",
     ),
     "start_task_center_run": (
         "task_center.entry.coordinator",

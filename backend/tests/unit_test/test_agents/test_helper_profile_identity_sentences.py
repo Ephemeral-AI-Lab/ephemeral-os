@@ -43,10 +43,6 @@ def test_resolver_profile_body_contains_identity_sentence():
 # ---------------------------------------------------------------------------
 
 _MAIN_AGENT_IDENTITY_PINS = {
-    "main/entry_executor.md": (
-        "You are the **entry executor** — the agent that receives "
-        "the top-level user request."
-    ),
     "main/evaluator.md": "You are the **main-agent evaluator**.",
     "main/executor.md": "You are the **main-agent generator executor**.",
     "main/generator_verifier.md": "You are the **main-agent generator verifier**.",

@@ -1,11 +1,11 @@
 """Harvest initial-messages for every agent role and write a report.
 
 Sources:
-- main agents (entry_executor, planner, executor, evaluator) — initial
+- main agents (planner, executor, evaluator) — initial
   message.jsonl rows from existing live-e2e runs under
   ``.sweevo_runs/scenario_logs/<scenario>/<run>/...``. Skill-equipped launches
   produce four rows (system + context + task guidance + skill);
-  executor / evaluator produce three; entry_executor produces two.
+  executor / evaluator produce three.
 - helpers (advisor, resolver) — programmatically constructed via the actual
   builder functions in ``tools/ask_helper/_lib/_compose.py`` against
   realistic parent context taken from a real planner/executor prompt.
@@ -90,8 +90,6 @@ def _read_initial_rows(message_path: Path) -> tuple[str, str, str, str]:
     The recorder writes system + every seeded initial user + the spawn
     prompt. For Round 3 launch shapes:
 
-    * 2 rows = entry_executor (system + combined user); both user fields
-      after the first are empty.
     * 3 rows = executor / evaluator (system + context + task guidance);
       ``skill_row`` is empty.
     * 4 rows = skill-equipped planner (system + context + task guidance +
@@ -145,7 +143,6 @@ def harvest_main_agents() -> list[CapturedAgent]:
     """Pick representative main-agent first messages from existing runs.
 
     Selects:
-    - entry_executor from pipeline.iterative_deferral (deepest live coverage)
     - planner iter 1 attempt 1 (continuation: partial plan path)
     - planner iter 2 attempt 1 (continuation: full plan after partial)
     - planner iter 1 attempt 2 from attempt_retry_planner_failure (failed-attempts path)
@@ -159,7 +156,6 @@ def harvest_main_agents() -> list[CapturedAgent]:
     primary_run = _latest_run(primary)
     if primary_run is not None:
         sources = [
-            ("entry_executor (root delegation)", primary, lambda r: _select_role(r, "entry_executor_")),
             ("planner — iter1 attempt1 (invalid plan)", primary, lambda r: _select_role(r, "planner_", iteration="iteration_01", attempt="attempt_01")),
             ("planner — iter1 attempt2 (after planner failure)", primary, lambda r: _select_role(r, "planner_", iteration="iteration_01", attempt="attempt_02")),
             ("planner — iter2 attempt1 (continuation, full plan)", primary, lambda r: _select_role(r, "planner_", iteration="iteration_02", attempt="attempt_01")),
@@ -170,7 +166,6 @@ def harvest_main_agents() -> list[CapturedAgent]:
         ]
     else:
         sources = [
-            ("entry_executor (root delegation)", "pipeline.iterative_deferral", lambda r: _select_role(r, "entry_executor_")),
             ("planner — iter1 attempt1 (continuation partial)", "pipeline.iterative_deferral", lambda r: _select_role(r, "planner_", iteration="iteration_01", attempt="attempt_01")),
             ("planner — iter2 attempt1 (continuation full)", "pipeline.iterative_deferral", lambda r: _select_role(r, "planner_", iteration="iteration_02", attempt="attempt_01")),
             ("planner — iter1 attempt2 (after planner failure)", "pipeline.attempt_retry_planner_failure", lambda r: _select_role(r, "planner_", iteration="iteration_01", attempt="attempt_02")),
@@ -190,9 +185,7 @@ def harvest_main_agents() -> list[CapturedAgent]:
             continue
         iteration, attempt, role_dir, jsonl = picked
         system, user_msg_1, user_msg_2, skill_row = _read_initial_rows(jsonl)
-        if role_dir.startswith("entry_executor_") or "entry_executor" in role_dir:
-            agent_name = "entry_executor"
-        elif "planner" in role_dir:
+        if "planner" in role_dir:
             agent_name = "planner"
         elif "executor" in role_dir:
             agent_name = "executor"
@@ -226,8 +219,7 @@ def _select_role(
     attempt: str | None = None,
 ):
     for it, att, role_dir, jsonl in agents:
-        # role_dir looks like "01_planner_<uuid>:planner" or
-        # "entry_executor_<uuid>:entry"; match prefix substring.
+        # role_dir looks like "01_planner_<uuid>:planner"; match prefix substring.
         if prefix not in role_dir:
             continue
         if iteration is not None and not it.startswith(iteration):
@@ -318,18 +310,17 @@ def build_main_constructed() -> list[ConstructedAgent]:
     planner_def = get_definition("planner")
     executor_def = get_definition("executor")
     evaluator_def = get_definition("evaluator")
-    entry_def = get_definition("entry_executor")
 
     # --- Planner — 4 representative launch contexts ---
     planner_contexts = [
         ("iter1 attempt1 (fresh)", 1, False,
-         "# Goal\n\n<root goal>\n\n# Current Iteration\n\nIteration 1 (FIRST_ATTEMPT)."),
+         "# Goal\n\n<goal text>\n\n# Current Iteration\n\nIteration 1 (FIRST_ATTEMPT)."),
         ("iter1 attempt2 (after failed plan)", 1, True,
-         "# Goal\n\n<root goal>\n\n# Current Iteration\n\nIteration 1 (retry).\n\n# Prior Failed Attempts\n\nAttempt 1: rejected — unknown dependency `missing`."),
+         "# Goal\n\n<goal text>\n\n# Current Iteration\n\nIteration 1 (retry).\n\n# Prior Failed Attempts\n\nAttempt 1: rejected — unknown dependency `missing`."),
         ("iter2 attempt1 (continuation, no prior failure)", 2, False,
-         "# Goal\n\n<root goal>\n\n# Current Iteration\n\nIteration 2 (DEFERRED_GOAL_CONTINUATION) — deferred_goal from iteration 1.\n\n# Previous Iteration Results\n\n## Iteration 1 accepted plan\n\n<partial plan_spec>\n\n## Iteration 1 summary\n\nWorkspace preflight completed."),
+         "# Goal\n\n<goal text>\n\n# Current Iteration\n\nIteration 2 (DEFERRED_GOAL_CONTINUATION) — deferred_goal from iteration 1.\n\n# Previous Iteration Results\n\n## Iteration 1 accepted plan\n\n<partial plan_spec>\n\n## Iteration 1 summary\n\nWorkspace preflight completed."),
         ("iter2 attempt2 (continuation + prior failure)", 2, True,
-         "# Goal\n\n<root goal>\n\n# Current Iteration\n\nIteration 2 (DEFERRED_GOAL_CONTINUATION).\n\n# Previous Iteration Results\n\n## Iteration 1 accepted plan\n\n<partial plan>\n\n## Iteration 1 summary\n\nDone.\n\n# Prior Failed Attempts\n\nAttempt 1 in iteration 2: rejected by evaluator."),
+         "# Goal\n\n<goal text>\n\n# Current Iteration\n\nIteration 2 (DEFERRED_GOAL_CONTINUATION).\n\n# Previous Iteration Results\n\n## Iteration 1 accepted plan\n\n<partial plan>\n\n## Iteration 1 summary\n\nDone.\n\n# Prior Failed Attempts\n\nAttempt 1 in iteration 2: rejected by evaluator."),
     ]
     for label, iter_n, failed, um1 in planner_contexts:
         del iter_n, failed
@@ -388,21 +379,6 @@ def build_main_constructed() -> list[ConstructedAgent]:
             system=evaluator_def.system_prompt or "" if evaluator_def else "",
             user_msg_1=um1,
             user_msg_2=um2,
-        ))
-
-    # --- Entry executor — single-user-message launch (no separate task guidance) ---
-    if entry_def is not None:
-        out.append(ConstructedAgent(
-            label="entry_executor (single-user-message launch)",
-            agent_name="entry_executor",
-            system=entry_def.system_prompt or "",
-            user_msg_1=(
-                "# Entry request\n\n<pr_description>\n"
-                "(SWE-EVO entry prompt — workspace root + PR description, "
-                "verbatim from build_sweevo_user_prompt)\n</pr_description>\n\n"
-                "Workspace root: /testbed"
-            ),
-            user_msg_2="(entry_executor recipe emits no separate task guidance — single-user-message launch)",
         ))
 
     return out
@@ -516,15 +492,6 @@ def synthesise_main_user_msg_1(capture: CapturedAgent) -> str:
     """
     role = capture.agent_name
     iteration_n = 1 if capture.iteration.startswith("iteration_01") else 2
-    if role == "entry_executor":
-        return (
-            "# Entry request\n\n"
-            "<pr_description>\n"
-            "(SWE-EVO instance entry request — the same text the entry "
-            "executor receives verbatim as its sole context block.)\n"
-            "</pr_description>\n\n"
-            "Workspace root: /workspace/repo\n"
-        )
     if role == "planner":
         if iteration_n == 1 and capture.attempt.startswith("attempt_02"):
             return (
@@ -537,7 +504,7 @@ def synthesise_main_user_msg_1(capture: CapturedAgent) -> str:
             )
         if iteration_n == 2:
             return (
-                "# Goal\n\n<root goal text>\n\n"
+                "# Goal\n\n<goal text>\n\n"
                 "# Current Iteration\n\n"
                 "Iteration 2 (DEFERRED_GOAL_CONTINUATION) — continue from the "
                 "deferred_goal supplied by iteration 1's partial plan.\n\n"
@@ -548,7 +515,7 @@ def synthesise_main_user_msg_1(capture: CapturedAgent) -> str:
                 "deferred_goal handed off."
             )
         return (
-            "# Goal\n\n<root goal text>\n\n"
+            "# Goal\n\n<goal text>\n\n"
             "# Current Iteration\n\nIteration 1 — first attempt."
         )
     if role == "executor":
@@ -609,12 +576,7 @@ def coherence_verdict(
     if not is_main:
         checks["user_msg_2_nonempty"] = bool(um2.strip())
 
-    if label.startswith("entry_executor"):
-        checks["um1_has_entry_request_heading"] = "# Entry request" in um1 or "entry_request" in um1.lower()
-        checks["system_mentions_handoff_or_finish"] = (
-            "submit_execution_handoff" in system or "submit_execution_success" in system
-        )
-    elif label.startswith("planner"):
+    if label.startswith("planner"):
         checks["um1_has_goal"] = "# Goal" in um1
         checks["um1_has_iteration"] = ("# Current Iteration" in um1) or ("Goal / Current Iteration" in um1)
         if (
@@ -709,20 +671,6 @@ _LEGACY_REPORT_REPLACEMENTS = (
         "concrete blocker. Marks this generator task blocked; dependent pending "
         "tasks remain not-started.",
     ),
-    (
-        "**Why entry_executor keeps all three terminals.** Non-entry executors are\n"
-        "depth-gated by the resolver: the `executor_success_handoff` variant exposes\n"
-        "success + handoff, the `executor_success_failure` variant exposes success +\n"
-        "failure. The entry executor is the documented carve-out — it sits outside the\n"
-        "goal/iteration/attempt tree (no parent attempt to return to) and terminates\n"
-        "the user-facing request directly, so it retains the full success / handoff /\n"
-        "failure surface. See `docs/wiki/role-generator.md` for the depth-gating\n"
-        "contract that governs non-entry executors.",
-        "**Why entry_executor keeps all three terminals.** It sits outside the\n"
-        "goal/iteration/attempt tree (no parent attempt to return to) and terminates\n"
-        "the user-facing request directly, so it retains the full success / handoff /\n"
-        "blocker surface.",
-    ),
     ("submit_execution_failure", "submit_execution_blocker"),
     ("executor_success_handoff", "executor"),
     ("executor_success_failure", "executor"),
@@ -778,8 +726,6 @@ def render_report(
         "rendered by `MarkdownPromptRenderer.render_context`); "
         "user_msg_2 = task guidance plus the terminal-tool catalog appended "
         "by the composer.\n\n"
-        "- **entry_executor** — two messages (no task-guidance recipe "
-        "block); user_msg_2 is empty.\n\n"
         "- **Helpers (advisor, resolver)** — three messages: system + "
         "`assemble_user_msg_1(...)` (prompt-injection guard + parent's "
         "original context + parent's original task + filtered parent "
@@ -829,7 +775,6 @@ def render_report(
         "row 4 is the row-4 composite from `build_skill_message`.\n"
         "* executor / evaluator — 3 or 4 rows depending on whether a skill "
         "row is present.\n"
-        "* entry_executor — 2 rows (single-user-message launch).\n"
         "\n"
         "Archived captured rows that predate the single executor profile are "
         "normalized to the current terminal names and profile labels while "
@@ -859,8 +804,7 @@ def render_report(
             out.append(_fmt_message("user_msg_2", _truncate(cap.user_msg_2)))
         else:
             out.append(
-                "**user_msg_2** — *not emitted* (single-user-message "
-                "launch; recipe carries no task-guidance block).\n"
+                "**user_msg_2** — *not emitted*.\n"
             )
         if cap.skill_row:
             out.append(
@@ -896,9 +840,8 @@ def render_report(
             "the composer would emit — task guidance plus the terminal "
             "catalog appended by the composer. The matrix covers the full "
             "matrix: 4 planner branches × iteration-position / failed-"
-            "attempts; executor dependency/no-dependency branches; 2 "
-            "evaluator branches; entry_executor's single-user-message "
-            "fallback.\n"
+            "attempts; executor dependency/no-dependency branches; and 2 "
+            "evaluator branches.\n"
         )
         for ca in main_constructed:
             out.append(f"### {ca.label}\n")
@@ -973,14 +916,13 @@ def render_report(
         "mock runner (`task_center_runner/agent/mock/runner.py:"
         "_record_initial_messages`) now feed seeded messages through. "
         "Captured `message.jsonl` files for planner / executor / evaluator "
-        "now hold three initial rows (system + user_msg_1 + user_msg_2); "
-        "entry_executor stays at two by design (single-user-message recipe).\n"
+        "now hold three initial rows (system + user_msg_1 + user_msg_2).\n"
         "- **Scope notes:** the new scenario file "
         "`backend/src/task_center_runner/scenarios/pipeline/"
         "initial_messages_capture.py` registers a complex run (2 "
         "iterations with deferred_goal + attempt retry + helper/"
         "subagent invocations). The matching pytest test "
-        "`backend/src/task_center_runner/tests/sweevo/"
+        "`backend/src/task_center_runner/tests/mock/integration/task_center/"
         "test_initial_messages_capture.py` was attempted live with the "
         "containerised postgres (`backend/docker-compose.postgres.yml`) "
         "providing `EPHEMERALOS_DATABASE_URL`. The live run reached the "

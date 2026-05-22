@@ -138,6 +138,7 @@ def _graph_summary(
             {
                 "id": goal.id,
                 "status": goal.status.value,
+                "origin_kind": goal.origin_kind.value,
                 "requested_by_task_id": goal.requested_by_task_id,
                 "final_outcome": goal.final_outcome,
                 "iterations": iterations,

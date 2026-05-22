@@ -18,11 +18,7 @@ def test_configure_logging_suppresses_warning_and_below() -> None:
         logging.disable(previous_disable_level)
 
 
-def test_sweevo_cli_exposes_scenario_and_real_agent_flags() -> None:
+def test_sweevo_cli_requires_instance_id() -> None:
     parser = _build_parser()
-    list_args = parser.parse_args(["--list"])
-    assert list_args.list is True
-    real_args = parser.parse_args(["--real-agent"])
-    assert real_args.real_agent is True
-    scen_args = parser.parse_args(["--scenario", "correctness_testing"])
-    assert scen_args.scenario == "correctness_testing"
+    args = parser.parse_args(["--instance-id", "dask__dask_2023.3.2_2023.4.0"])
+    assert args.instance_id == "dask__dask_2023.3.2_2023.4.0"

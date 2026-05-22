@@ -29,10 +29,13 @@ conventions, and per-subpackage coverage matrix.
    - Sandbox event assertion → `sandbox/occ_concurrent_conflicts.py`
    - Planner rejection assertion → `planner_validation/duplicate_local_id.py`
 3. Update `SCENARIO_REGISTRY` in `__init__.py`.
-4. Add paired smoke/full tests under
-   `backend/src/task_center_runner/tests/<package>/test_<scenario>_{smoke,full}.py`
-   when the scenario has both profiles. Keep shared assertions in a private
-   helper such as `_project_build_contracts.py` instead of using a `smoke`
-   boolean in the test entrypoint.
-5. Run `uv run pytest backend/src/task_center_runner/tests/test_scenario_suite_imports.py -q`
+4. Add paired smoke/full tests under the matching mock integration category,
+   usually `backend/src/task_center_runner/tests/mock/integration/sandbox/` for
+   sandbox-heavy scenarios or
+   `backend/src/task_center_runner/tests/mock/integration/task_center/` for
+   TaskCenter workflow correctness. Use `test_<scenario>_{smoke,full}.py` when
+   the scenario has both profiles. Keep shared assertions in a private helper
+   such as `_project_build_contracts.py` instead of using a `smoke` boolean in
+   the test entrypoint.
+5. Run `uv run pytest backend/src/task_center_runner/tests/mock/contracts/test_scenario_suite_imports.py -q`
    to verify protocol conformance and registry membership.

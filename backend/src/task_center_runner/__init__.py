@@ -1,9 +1,12 @@
-"""Live E2E testing framework — generic scenario harness.
+"""Task-center-runner scenario and benchmark harness.
 
-Lifted from the former SWE-EVO live-test harness per
-``docs/wiki/live-e2e-testing-framework-design.md``. Dataset-agnostic; SWE-EVO
-consumers wire through ``task_center_runner.benchmarks.sweevo.fixtures``, which provides the SWE-EVO
-sandbox provisioner and entry prompt builder.
+The generic scenario harness is dataset-agnostic. Mocked-agent scenario tests
+live under ``task_center_runner.tests.mock``. Real-agent tests live under
+``task_center_runner.tests.real_agent``. SWE-EVO Docker-image setup shared by
+both suites lives under ``task_center_runner.environments.sweevo_image``. The
+full SWE-EVO benchmark lifecycle lives under
+``task_center_runner.benchmarks.sweevo`` and is invoked through
+``python -m benchmarks.sweevo --instance-id <id>``.
 
 Subpackages:
 
@@ -11,14 +14,14 @@ Subpackages:
 - ``hooks``     — Hook protocol + registry + built-in hooks
 - ``scenarios`` — Scenario protocol + concrete scenarios
 - ``squad``     — mock-agent squad runner, prompt inspector, sandbox probe
-- ``tests``     — pytest live e2e tests (PG-backed integration + Daytona-gated)
+- ``tests``     — pytest suites split by mock, real-agent, and capacity boundaries
 
 Top-level modules:
 
 - ``stores``    — :class:`TaskCenterStoreBundle` + ``create_per_test_task_center_stores``
 - ``runner``    — ``run_scenario`` orchestration entry point (added in S-3)
 - ``fixtures``  — pytest fixtures (audit_dir, stores) (added in S-3)
-- ``sweevo_adapter`` — SWE-EVO prompt, sandbox, and pytest fixture adapter
+- ``environments`` — external environment fixtures such as the SWE-EVO image
 """
 
 from __future__ import annotations

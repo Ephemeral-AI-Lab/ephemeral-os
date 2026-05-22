@@ -5,17 +5,16 @@ Plan v3.3 stripped ``build_runtime_context_message`` from
 system prompts deterministic across re-spawns. As a side effect, the
 content of ``.ephemeralos/issue.md`` and ``.ephemeralos/pr-comments.md``
 no longer reaches any agent's system prompt — those evidence files are
-now orphan content awaiting follow-up #4
-(``entry_executor_issue_pr_via_recipe``).
+now orphan content awaiting a context-engine recipe follow-up.
 
 This tripwire test pins that regression so it can't drift back in
 silently. The test is intentionally narrowly-scoped: any agent profile
 loaded from disk, fed through the production system-prompt builder,
 must NOT contain either heading.
 
-**Deletion criterion.** When follow-up #4 lands and the entry_executor
-recipe begins wiring issue/PR evidence into its packet (NOT the system
-prompt), delete this file. Until then, the test is the only surfaced
+**Deletion criterion.** When a main-agent recipe begins wiring issue/PR
+evidence into its packet (NOT the system prompt), delete this file. Until
+then, the test is the only surfaced
 signal that issue/PR content has temporarily fallen off the wire.
 """
 

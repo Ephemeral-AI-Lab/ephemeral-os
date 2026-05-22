@@ -151,25 +151,6 @@ Rationale: contracts and heuristics are different artifacts. Skills support per-
 
 ---
 
-## Case 01 — entry_executor (root delegation)
-
-### user_msg_1
-
-```xml
-<context>
-  <entry_request>
-    <workspace_root>/testbed</workspace_root>
-    <pr_description>...</pr_description>
-  </entry_request>
-</context>
-```
-
-### user_msg_2
-
-Entry executor has no `<Task Guidance>` and no `<terminal_tool_selection>` block — single-user-message launch.
-
----
-
 ## Case 02 — planner, iter1 attempt1 (fresh, no failed attempts)
 
 ### user_msg_1

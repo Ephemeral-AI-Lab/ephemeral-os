@@ -197,12 +197,12 @@ its allowlist, the error rate spike surfaces here.
 ## Live e2e tests
 
 Coding-plan-mode end-to-end tests live in
-`backend/src/task_center_runner/tests/sweevo/test_real_agent_coding_plan_mode.py`
-and follow the existing `EOS_SWEEVO_REAL_AGENT_TESTS=1` pattern:
+`backend/src/task_center_runner/tests/real_agent/test_real_agent_coding_plan_mode.py`.
+Run the real-agent suite explicitly:
 
 ```bash
-EOS_SWEEVO_REAL_AGENT_TESTS=1 .venv/bin/pytest \
-    backend/src/task_center_runner/tests/sweevo/test_real_agent_coding_plan_mode.py \
+uv run pytest \
+    backend/src/task_center_runner/tests/real_agent/test_real_agent_coding_plan_mode.py \
     -v
 ```
 

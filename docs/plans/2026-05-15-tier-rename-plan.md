@@ -179,8 +179,8 @@
 | `AttemptStage`/`TrialStage` | `"plan"`, `"generate"`, `"evaluate"`, `"closed"` | **unchanged** | Pipeline-stage verbs, not tier |
 | `AttemptStatus`/`TrialStatus` | `"running"`, `"passed"`, `"failed"` | **unchanged** | Tier-agnostic |
 | `AttemptFailReason`/`TrialFailReason` | `"planner_failed"`, `"generator_failed"`, `"evaluator_failed"`, `"startup_failed"` | **unchanged** | Refers to inner-pipeline roles, not "attempt" |
-| `TaskCenterTaskRole` | `"planner"`, `"generator"`, `"evaluator"`, `"entry_executor"` | **unchanged** | Role names, not tier |
-| `SpawnReason` | `"attempt_planner"`, `"attempt_generator"`, `"attempt_evaluator"`, `"entry_executor"` | `"trial_planner"`, `"trial_generator"`, `"trial_evaluator"`, `"entry_executor"` | These textually embed the renamed tier noun — see §2.5.1 carve-out |
+| `TaskCenterTaskRole` | `"planner"`, `"generator"`, `"evaluator"` | **unchanged** | Role names, not tier |
+| `SpawnReason` | `"attempt_planner"`, `"attempt_generator"`, `"attempt_evaluator"` | `"trial_planner"`, `"trial_generator"`, `"trial_evaluator"` | These textually embed the renamed tier noun — see §2.5.1 carve-out |
 
 ### 2.5.1 Principle-2 carve-out: `SpawnReason` values (deliberate)
 
@@ -304,7 +304,6 @@ The iteration-1 path emits a single `ITERATION_STATEMENT` block with `metadata["
 | `for_planner(mission_id, episode_id, attempt_id)` | `for_planner(goal_id, iteration_id, trial_id)` |
 | `for_generator(mission_id, episode_id, attempt_id, task_id)` | `for_generator(goal_id, iteration_id, trial_id, task_id)` |
 | `for_evaluator(mission_id, episode_id, attempt_id)` | `for_evaluator(goal_id, iteration_id, trial_id)` |
-| `for_entry_executor(task_id)` | **unchanged** |
 | Recipe `_REQUIRED_FIELDS = frozenset({"mission_id", "episode_id", "attempt_id"})` | `frozenset({"goal_id", "iteration_id", "trial_id"})` |
 
 ### 2.10 `task_center/__init__.py` public surface
@@ -326,7 +325,7 @@ The iteration-1 path emits a single `ITERATION_STATEMENT` block with `metadata["
 | `"AttemptOrchestrator"` | `"TrialOrchestrator"` |
 | `"AttemptDeps"` | `"TrialDeps"` |
 | `"ordered_generator_tasks"` → `("task_center.attempt.generator_dag", …)` | retarget to `task_center.trial.generator_dag` |
-| `"PlannerSubmission"`, `"GeneratorSubmission"`, `"EvaluatorSubmission"`, `"PlannedGeneratorTask"`, `"ContextComposer"`, `"ContextPacket"`, `"ContextScope"`, `"RecipeRegistry"`, `"LaunchBundle"`, `"PredicateRegistry"`, `"AgentDefinitionValidationError"`, `"TaskCenterInvariantViolation"`, `"TaskCenterSandboxBridge"`, `"EntryTaskController"`, `"start_task_center_entry_run"` | **unchanged** |
+| `"PlannerSubmission"`, `"GeneratorSubmission"`, `"EvaluatorSubmission"`, `"PlannedGeneratorTask"`, `"ContextComposer"`, `"ContextPacket"`, `"ContextScope"`, `"RecipeRegistry"`, `"LaunchBundle"`, `"PredicateRegistry"`, `"AgentDefinitionValidationError"`, `"TaskCenterInvariantViolation"`, `"TaskCenterSandboxBridge"` | **unchanged** |
 
 ### 2.11 Agent-prompt prose mapping + `TaskCenterInvariantViolation` message strings
 
@@ -356,7 +355,6 @@ These are the *exact* prose substitutions in `backend/src/agents/profile/main/*.
 - `agents/profile/main/executor.md`
 - `agents/profile/main/executor_success_handoff.md`
 - `agents/profile/main/executor_success_failure.md`
-- `agents/profile/main/entry_executor.md`
 
 #### 2.11.b `TaskCenterInvariantViolation` message strings (in `task_center/_core/infra.py`)
 
@@ -421,7 +419,7 @@ Predicates whose names embed the tier-noun (verified hits): `nested_mission_dept
 | `nested_mission_depth_above_handoff_range` | `nested_goal_depth_above_handoff_range` |
 | `request_mission_after_edit` | `request_goal_after_edit` |
 
-These appear in **both** locations: agent-prompt front-matter `when:` clauses (in `planner.md`, `executor.md`, `executor_success_handoff.md`, `entry_executor.md`) **and** Python source under `task_center/_core/` (registry registration + any internal callers). Phase 7 covers the front-matter; Phase 4/3 covers the Python; **acceptance criterion §4.5 #3 verifies both surfaces in one grep**.
+These appear in **both** locations: agent-prompt front-matter `when:` clauses (in `planner.md`, `executor.md`, `executor_success_handoff.md`) **and** Python source under `task_center/_core/` (registry registration + any internal callers). Phase 7 covers the front-matter; Phase 4/3 covers the Python; **acceptance criterion §4.5 #3 verifies both surfaces in one grep**.
 
 ### 2.14 Audit / event payload field names
 
@@ -473,7 +471,7 @@ To prevent the Executor from over-renaming:
 
 - File names: `submit_full_plan.py`, `submit_partial_plan.py`, `submit_evaluation_success.py`, `submit_evaluation_failure.py` — verb actions, not tier nouns.
 - Symbol `planner_task_id`, `evaluator_task_id`, `generator_task_ids` (DB columns, DTO fields) — refer to inner-pipeline role IDs, not the renamed tier.
-- Class/module `TaskCenterRunRecord`, `TaskCenterTaskRole`, `TaskCenterSandboxBridge`, `TaskCenterInvariantViolation`, `task_center_run_id`, `start_task_center_entry_run`, the package name `task_center` itself — these reference the harness wrapper, not the renamed tier.
+- Class/module `TaskCenterRunRecord`, `TaskCenterTaskRole`, `TaskCenterSandboxBridge`, `TaskCenterInvariantViolation`, `task_center_run_id`, the package name `task_center` itself — these reference the harness wrapper, not the renamed tier.
 - `EvaluatorSubmission`, `GeneratorSubmission`, `PlannerSubmission`, `PlannerFailureSubmission`, `PlannedGeneratorTask` — pipeline-role DTOs, not tier DTOs.
 - `task_state.py` filename — the file itself is not tier-specific.
 - All `goal` field names on `Mission`/`Goal` and `Episode`/`Iteration` (these *are* the goal-text fields; not tier-renames).
@@ -568,8 +566,8 @@ Update internal imports inside the renamed modules (e.g. `task_center/iteration/
 - `rg -n "from db\.(models|stores)\.(mission|episode|attempt)" backend/src/tools/` returns empty.
 - `pytest backend/tests/unit_test/test_tools/test_submission_planner_tools.py -x` is green (deferred to Phase 9 if needed).
 
-### Phase 7 — Agent prompts (LLM-facing, 8 files coordinated edit)
-**Files:** `backend/src/agents/profile/main/{planner,planner_full_only,evaluator,generator_verifier,executor,executor_success_handoff,executor_success_failure,entry_executor}.md`.
+### Phase 7 — Agent prompts (LLM-facing, 7 files coordinated edit)
+**Files:** `backend/src/agents/profile/main/{planner,planner_full_only,evaluator,generator_verifier,executor,executor_success_handoff,executor_success_failure}.md`.
 
 **Changes:** Apply the prose noun substitutions from §2.11.a *case-sensitively* (initial-capital only). Update the planner.md `when:` predicate names per §2.13. Update the description in the front-matter of `planner_full_only.md` (line 3: "TaskCenter attempts" — rename to "TaskCenter trials" because here it's used as the *noun* for the tier instance, not a verb).
 
@@ -585,7 +583,6 @@ Update internal imports inside the renamed modules (e.g. `task_center/iteration/
 **Update `executor*.md`** for `Attempt Plan` → `Trial Plan`.
 **Update `evaluator.md`** for `Mission`, `Previous Episode Results`, `Current Episode`, `Attempt Plan`.
 **Update `generator_verifier.md`** for `Attempt Plan`.
-**Update `entry_executor.md`** for `mission/episode/attempt tree` → `goal/iteration/trial tree`, "delegate the work as a mission" → "delegate the work as a goal", front-matter predicate names.
 **Update `executor_success_handoff.md`** front-matter predicate `request_mission_after_edit` → `request_goal_after_edit`.
 
 **Verify:**
@@ -594,7 +591,7 @@ Update internal imports inside the renamed modules (e.g. `task_center/iteration/
 - Cross-check (combined with Phase 3/4): `rg -n 'nested_mission_depth|request_mission_after' backend/src/ backend/tests/ backend/src/agents/` returns empty.
 
 ### Phase 8 — task_center_runner consumers (~250 LoC, ~20 files)
-**Files:** `task_center_runner/scenarios/pipeline/*.py` (rename per §2.3), `task_center_runner/scenarios/_utils/mission_helpers.py` → `goal_helpers.py`, `task_center_runner/scenarios/sandbox/*.py`, `task_center_runner/scenarios/planner_validation/*.py`, `task_center_runner/scenarios/base.py`, `task_center_runner/scenarios/full_case_user_input.py`, `task_center_runner/scenarios/full_stack_adversarial.py`, `task_center_runner/agent/mock/runner.py`, `task_center_runner/agent/mock/prompt_inspector.py`, `task_center_runner/audit/recorder.py`, `task_center_runner/audit/legacy.py`, `task_center_runner/audit/node_id.py`, `task_center_runner/hooks/builtins.py`, `task_center_runner/hooks/registry.py`, `task_center_runner/tests/test_runner_imports.py`, `task_center_runner/tests/test_capacity_scenario_packs.py`, `task_center_runner/tests/sweevo/test_full_case_user_input.py`.
+**Files:** `task_center_runner/scenarios/pipeline/*.py` (rename per §2.3), `task_center_runner/scenarios/_utils/mission_helpers.py` → `goal_helpers.py`, `task_center_runner/scenarios/sandbox/*.py`, `task_center_runner/scenarios/planner_validation/*.py`, `task_center_runner/scenarios/base.py`, `task_center_runner/scenarios/full_case_user_input.py`, `task_center_runner/scenarios/full_stack_adversarial.py`, `task_center_runner/agent/mock/runner.py`, `task_center_runner/agent/mock/prompt_inspector.py`, `task_center_runner/audit/recorder.py`, `task_center_runner/audit/legacy.py`, `task_center_runner/audit/node_id.py`, `task_center_runner/hooks/builtins.py`, `task_center_runner/hooks/registry.py`, `task_center_runner/tests/mock/contracts/test_runner_imports.py`, `task_center_runner/tests/mock/capacity/test_capacity_scenario_packs.py`, `task_center_runner/tests/mock/test_full_case_user_input.py`.
 
 **Changes:** Symbol renames, scenario filename renames (§2.3), audit JSON keys (§2.14), `SpawnReason` value renames (§2.5.1) in `spawn_reason` payload field, helper function renames (`make_mission_*` → `make_goal_*` in `goal_helpers.py`), `prompt_inspector.py` heading-detection regexes updated to new headings (must match `# Goal`, `# Goal / Current Iteration`, `# Current Iteration`, `## Iteration N accepted plan`, `## Iteration N summary`).
 
@@ -707,8 +704,8 @@ This survives Reading B without rewrite because it asserts *kinds and structural
 
 ### 4.3 E2E / runner scenarios
 - `backend/src/task_center_runner/scenarios/pipeline/iterative_continuation.py` (renamed from `episodic_continuation.py`) loads + runs to completion under the runner harness. This scenario exercises partial-trial → continuation iteration and is the natural smoke test for the Reading-A reframing.
-- `task_center_runner/tests/test_runner_imports.py` confirms all renamed scenarios import successfully.
-- `task_center_runner/tests/test_capacity_scenario_packs.py` confirms scenario manifests still resolve.
+- `task_center_runner/tests/mock/contracts/test_runner_imports.py` confirms all renamed scenarios import successfully.
+- `task_center_runner/tests/mock/capacity/test_capacity_scenario_packs.py` confirms scenario manifests still resolve.
 
 ### 4.4 Observability
 - `test_emission_shape.py` updated audit payload keys (§2.14) and `spawn_reason` values (§2.5.1).

@@ -152,7 +152,7 @@ def _recursive_goal_count(graph_summary: dict[str, Any]) -> int:
     return sum(
         1
         for goal in graph_summary["goals"]
-        if not str(goal["requested_by_task_id"]).endswith(":entry")
+        if goal.get("origin_kind") == "task"
     )
 
 
@@ -194,7 +194,6 @@ def _event_index(
 
 def _assert_audit_tree_roles(run_dir: Path) -> None:
     assert (run_dir / "run.json").exists()
-    assert list(run_dir.glob("entry_executor_*"))
     role_segments: set[str] = set()
     for role_dir in run_dir.rglob("[0-9][0-9]_*_*"):
         role_segments.add(role_dir.name.split("_", 2)[1])
@@ -206,8 +205,8 @@ def _assert_audit_tree_roles(run_dir: Path) -> None:
     assert list(run_dir.glob("goal_*_*/iteration_*_*/attempt_*_*"))
     first_goal = goal_dirs[0]
     goal = _json_file(first_goal / "goal.json")
-    requested_by = goal["requested_by_task_id"]
-    assert str(requested_by).endswith(":entry")
+    assert goal["origin_kind"] == "entry"
+    assert goal["requested_by_task_id"] is None
     iteration_files = sorted(first_goal.glob("iteration_*_*/iteration.json"))
     assert iteration_files
     first_iteration = _json_file(iteration_files[0])

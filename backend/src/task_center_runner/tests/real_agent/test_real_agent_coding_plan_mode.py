@@ -4,13 +4,16 @@ Sibling of ``test_real_agent.py``. Covers the v9 A18 acceptance criterion:
 prove that coding-plan-mode (Anthropic OAuth + Codex OAuth) composes end-to-end
 with real sandboxes AND with our fully-customizable EphemeralOS tools.
 
-**Activation gates (all must pass for a given test to run):**
+Run explicitly through the ``tests/real_agent`` suite. Per-test skip gates still
+protect provider-specific credentials and optional coding-plan-mode
+infrastructure.
 
-1. ``runner.live_e2e.real_agent_enabled`` (module-level).
-2. Provider-specific credentials present (per-test):
+**Activation gates (per-test):**
+
+1. Provider-specific credentials present:
    * Anthropic test: macOS Keychain entry ``Claude Code-credentials``.
    * Codex test: ``~/.codex/auth.json``.
-3. Coding-plan-mode infrastructure exists (per-test): the
+2. Coding-plan-mode infrastructure exists: the
    ``providers.clients.coding_plan`` package importable.
 
 Plan reference: ``.planning/final_phase_live_e2e_plan.md`` S7 (mirrors
@@ -33,16 +36,10 @@ import pytest
 from benchmarks.sweevo.models import SWEEvoInstance
 from task_center_runner.core.real_agent_run import run_sweevo_real_agent
 from task_center_runner.core.stores import TaskCenterStoreBundle
-from task_center_runner.tests._live_config import (
-    live_e2e_real_agent_enabled,
-    live_e2e_real_agent_max_duration_s,
-)
+from task_center_runner.tests._live_config import real_agent_max_duration_s
 from tools.sandbox._lib.registry import make_sandbox_tools
 
-pytestmark = pytest.mark.skipif(
-    not live_e2e_real_agent_enabled(),
-    reason="Real-agent live e2e disabled in runner.live_e2e.real_agent_enabled",
-)
+pytestmark = pytest.mark.real_agent
 
 
 # ---------------------------------------------------------------------------
@@ -250,7 +247,7 @@ def _assert_no_coding_plan_mode_error(caplog: pytest.LogCaptureFixture) -> None:
 
 
 def _max_duration_s() -> float:
-    return live_e2e_real_agent_max_duration_s()
+    return real_agent_max_duration_s()
 
 
 # ---------------------------------------------------------------------------

@@ -57,9 +57,6 @@ class TaskCenterRunHandle:
         return self.binding.sandbox_id
 
 
-TaskCenterEntryHandle = TaskCenterRunHandle
-
-
 def start_task_center_run(
     *,
     config: RuntimeConfig,
@@ -88,11 +85,6 @@ def start_task_center_run(
         context_packet_store=context_packet_store,
         sandbox_bridge=sandbox_bridge,
     ).start()
-
-
-def start_task_center_entry_run(**kwargs) -> TaskCenterRunHandle:  # type: ignore[no-untyped-def]
-    """Compatibility alias for callers not yet renamed."""
-    return start_task_center_run(**kwargs)
 
 
 class TaskCenterEntry:

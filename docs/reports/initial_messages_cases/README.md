@@ -5,8 +5,7 @@ Each file shows the initial rows `AgentMessageJsonlRecorder.record_initial_messa
 writes to `message.jsonl`:
 
 * **system** — agent profile body, prepended with
-  `agents/profile/main/_main_role_contract.md` for the seven main-role
-  profiles (excludes `entry_executor`).
+  `agents/profile/main/_main_role_contract.md` for main-agent profiles.
 * **user_msg_1** — `<context>...</context>` envelope around the rendered
   packet (`XmlPromptRenderer`).
 * **user_msg_2** — `<Task Guidance>...</Task Guidance>` envelope around a
@@ -14,7 +13,7 @@ writes to `message.jsonl`:
   `task_center/context_engine/what_in_context.py:render_what_in_context`)
   plus a single role directive (`What to do:` from
   `task_center/context_engine/role_directives.py:ROLE_DIRECTIVES`) and a
-  single `<terminal_tool_selection>` block. Omitted for `entry_executor`.
+  single `<terminal_tool_selection>` block.
 * **user_msg_3 — row 4** (planner, executor, evaluator) — `Load skill:
   <role>` header + `<skill>` body + a byte-equal
   `<terminal_tool_selection>` block (AC #15). Operational heuristics
@@ -25,7 +24,6 @@ writes to `message.jsonl`:
 
 | # | Case | Source | Notes |
 |---|---|---|---|
-| 01 | `entry_executor` — root delegation | `pipeline.initial_messages_capture` | single-user-message launch |
 | 02 | planner — iter1 attempt1, fresh | `pipeline.initial_messages_capture` | iter1, no failed attempts — minimal frame |
 | 03 | planner — iter1 attempt2, after evaluator failure | `pipeline.initial_messages_capture` | `<attempt status="prior" verdict="fail">` body is **fully populated** — real `<plan_spec>`, `<status_summary>`, per-task `<task>` summaries, `<evaluation_criteria>`, `<evaluator_summary>`, and `<failed_criteria>` (all flat children — no wrappers); scenario submits a valid plan that the evaluator rejects, so all downstream stages produce real evidence |
 | 04 | planner — iter2 attempt1, deferred-goal follow-up | `pipeline.initial_messages_capture` | `<iteration status="prior">` + `<iteration status="current">` group |
@@ -75,15 +73,15 @@ re-emit the case files:
 
 ```sh
 # Captures cases 01..11 from pipeline.initial_messages_capture
-.venv/bin/pytest backend/src/task_center_runner/tests/sweevo/test_initial_messages_capture.py
+uv run pytest backend/src/task_center_runner/tests/mock/integration/task_center/test_initial_messages_capture.py
 .venv/bin/python scripts/regen_initial_messages_cases.py
 
 # Captures case 12 from pipeline.deferred_parent_planner_terminal_routing
-.venv/bin/pytest backend/src/task_center_runner/tests/sweevo/test_deferred_parent_planner_terminal_routing.py
+uv run pytest backend/src/task_center_runner/tests/mock/integration/task_center/test_deferred_parent_planner_terminal_routing.py
 
 # Captures cases 13..15 from the focused-reference scenarios
-.venv/bin/pytest 'backend/src/task_center_runner/tests/sweevo/test_focused_scenarios.py::test_focused_reference_scenario_runs[pipeline.attempt_retry_evaluator_failure]' \
-                 'backend/src/task_center_runner/tests/sweevo/test_focused_scenarios.py::test_focused_reference_scenario_runs[pipeline.dependency_dag_serial]'
+uv run pytest 'backend/src/task_center_runner/tests/mock/integration/task_center/test_focused_scenarios.py::test_focused_reference_scenario_runs[pipeline.attempt_retry_evaluator_failure]' \
+              'backend/src/task_center_runner/tests/mock/integration/task_center/test_focused_scenarios.py::test_focused_reference_scenario_runs[pipeline.dependency_dag_serial]'
 .venv/bin/python scripts/regen_initial_messages_cases_gaps.py
 ```
 

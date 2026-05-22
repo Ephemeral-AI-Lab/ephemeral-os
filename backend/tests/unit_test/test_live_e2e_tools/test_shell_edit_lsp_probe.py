@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from live_e2e.squad.complex_project_build_shell_edit_lsp_probe import (
+from task_center_runner.agent.mock.complex_project_build_shell_edit_lsp_probe import (
     _hover_expectations,
     _symbol_cursor_offset,
 )
-from live_e2e.scenarios.sandbox._fixtures.lsp_expectations import LspExpectation
+from task_center_runner.scenarios.sandbox._fixtures.lsp_expectations import (
+    LspExpectation,
+)
 
 
 def test_symbol_cursor_offset_targets_symbol_interior() -> None:

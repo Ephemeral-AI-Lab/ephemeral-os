@@ -46,8 +46,6 @@ Wire shape (see ``docs/reports/initial_messages_cases/README.md``):
   row for planner / executor / evaluator launches (4 rows each — skills
   carry operational heuristics; ``<Task Guidance>`` carries the
   deterministic outline + role directive).
-* system + entry-shape user message for entry_executor (2 rows; no
-  ``<Task Guidance>`` and no skill).
 """
 
 from __future__ import annotations

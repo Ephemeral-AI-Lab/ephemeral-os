@@ -664,9 +664,8 @@ async def setup_sweevo_sandbox(
 
     When *install_lsp* is true, the LSP catalog plugin is installed via
     :func:`sandbox.plugin.install.ensure_installed` after the workspace
-    is rebuilt. Defaults to False so existing callers (live tiers, mock
-    e2e tests, ``_cmd_real_agent``, ``_cmd_scenario``) keep their
-    pre-install-lsp behavior.
+    is rebuilt. Defaults to False so existing live tiers and mock tests keep
+    their pre-install-lsp behavior.
     """
     _progress(on_progress, f"[setup] waiting for sandbox exec readiness sandbox_id={sandbox_id}")
     await _wait_for_sandbox_exec_ready(sandbox_id, attempts=exec_ready_attempts)

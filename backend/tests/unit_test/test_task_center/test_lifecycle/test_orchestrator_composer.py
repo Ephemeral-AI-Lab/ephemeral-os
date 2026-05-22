@@ -106,7 +106,7 @@ def _seed_request_segment_graph(
 ):
     request = goal_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t-entry",
+        requested_by_task_id="parent-task",
         goal="overall",
     )
     iteration = iteration_store.insert(
@@ -132,7 +132,7 @@ def _setup_partial_plan_ancestor(
     """Ancestor caller submitted a partial plan → child planner should fork."""
     parent_req = goal_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t-entry",
+        requested_by_task_id="parent-task",
         goal="parent",
     )
     parent_seg = iteration_store.insert(

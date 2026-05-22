@@ -1,15 +1,15 @@
-"""Wiring tests for the ``--sweevo-runner`` CLI flag.
+"""Wiring tests for the ``benchmark_sweevo`` CLI entrypoint.
 
 We do NOT execute the full pipeline (that needs Daytona + real LLM
-creds). Instead we verify the CLI plumbing: argparse accepts the flag,
-each fail-fast branch returns exit 2 with a useful stderr message, and
-the snapshot-missing path does not create a sandbox.
+creds). Instead we verify the CLI plumbing: argparse accepts ``--instance-id``
+as the canonical benchmark selector, each fail-fast branch returns exit 2 with
+a useful stderr message, and the snapshot-missing path does not create a
+sandbox.
 """
 
 from __future__ import annotations
 
 import asyncio
-import sys
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -21,37 +21,33 @@ from benchmarks.sweevo.sandbox import SnapshotNotRegisteredError
 
 
 def _argv(*extra: str) -> list[str]:
-    return ["--sweevo-runner", "--instance-id", "dask__dask_2023.3.2_2023.4.0", *extra]
+    return ["--instance-id", "dask__dask_2023.3.2_2023.4.0", *extra]
 
 
-def test_parser_accepts_sweevo_runner_flag() -> None:
-    args = sweevo_main._build_parser().parse_args(
-        ["--sweevo-runner", "--instance-id", "x"]
-    )
-    assert args.sweevo_runner is True
+def test_parser_accepts_instance_id_without_runner_flag() -> None:
+    args = sweevo_main._build_parser().parse_args(["--instance-id", "x"])
     assert args.instance_id == "x"
 
 
 def test_parser_accepts_csv_path() -> None:
     args = sweevo_main._build_parser().parse_args(
-        ["--sweevo-runner", "--instance-id", "x", "--csv-path", "/tmp/y.csv"]
+        ["--instance-id", "x", "--csv-path", "/tmp/y.csv"]
     )
     assert args.csv_path == "/tmp/y.csv"
 
 
-def test_sweevo_runner_without_instance_id_returns_2(
+def test_parser_requires_instance_id(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    args = sweevo_main._build_parser().parse_args(["--sweevo-runner"])
-
-    rc = asyncio.run(sweevo_main._cmd_sweevo_runner(args))
+    with pytest.raises(SystemExit) as exc_info:
+        sweevo_main._build_parser().parse_args([])
 
     err = capsys.readouterr().err
-    assert rc == 2
+    assert exc_info.value.code == 2
     assert "--instance-id" in err
 
 
-def test_sweevo_runner_missing_row_returns_2(
+def test_benchmark_sweevo_missing_row_returns_2(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     from benchmarks.sweevo import prompt as prompt_mod
@@ -62,14 +58,14 @@ def test_sweevo_runner_missing_row_returns_2(
     monkeypatch.setattr(prompt_mod, "load_pr_description", fake_load_pr_description)
 
     args = sweevo_main._build_parser().parse_args(_argv())
-    rc = asyncio.run(sweevo_main._cmd_sweevo_runner(args))
+    rc = asyncio.run(sweevo_main._cmd_benchmark_sweevo(args))
 
     err = capsys.readouterr().err
     assert rc == 2
     assert "dask__dask_2023.3.2_2023.4.0" in err
 
 
-def test_sweevo_runner_missing_file_returns_2(
+def test_benchmark_sweevo_missing_file_returns_2(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     from benchmarks.sweevo import prompt as prompt_mod
@@ -80,14 +76,14 @@ def test_sweevo_runner_missing_file_returns_2(
     monkeypatch.setattr(prompt_mod, "load_pr_description", fake_load_pr_description)
 
     args = sweevo_main._build_parser().parse_args(_argv())
-    rc = asyncio.run(sweevo_main._cmd_sweevo_runner(args))
+    rc = asyncio.run(sweevo_main._cmd_benchmark_sweevo(args))
 
     err = capsys.readouterr().err
     assert rc == 2
     assert "/no/such/file.csv" in err
 
 
-def test_sweevo_runner_empty_value_returns_2(
+def test_benchmark_sweevo_empty_value_returns_2(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     from benchmarks.sweevo import prompt as prompt_mod
@@ -98,14 +94,14 @@ def test_sweevo_runner_empty_value_returns_2(
     monkeypatch.setattr(prompt_mod, "load_pr_description", fake_load_pr_description)
 
     args = sweevo_main._build_parser().parse_args(_argv())
-    rc = asyncio.run(sweevo_main._cmd_sweevo_runner(args))
+    rc = asyncio.run(sweevo_main._cmd_benchmark_sweevo(args))
 
     err = capsys.readouterr().err
     assert rc == 2
     assert "empty pr_description" in err
 
 
-def test_sweevo_runner_missing_snapshot_returns_2(
+def test_benchmark_sweevo_missing_snapshot_returns_2(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     from benchmarks.sweevo import dataset as dataset_mod
@@ -154,7 +150,7 @@ def test_sweevo_runner_missing_snapshot_returns_2(
     monkeypatch.setattr(sandbox_mod, "create_sweevo_test_sandbox", fake_create)
 
     args = sweevo_main._build_parser().parse_args(_argv())
-    rc = asyncio.run(sweevo_main._cmd_sweevo_runner(args))
+    rc = asyncio.run(sweevo_main._cmd_benchmark_sweevo(args))
 
     err = capsys.readouterr().err
     assert rc == 2
@@ -162,7 +158,7 @@ def test_sweevo_runner_missing_snapshot_returns_2(
     assert "is not registered" in err
 
 
-def test_sweevo_runner_bare_image_skips_snapshot_preflight(
+def test_benchmark_sweevo_bare_image_skips_snapshot_preflight(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from benchmarks.sweevo import dataset as dataset_mod
@@ -220,7 +216,7 @@ def test_sweevo_runner_bare_image_skips_snapshot_preflight(
     monkeypatch.setattr(sandbox_api, "delete_sandbox", lambda _sandbox_id: None)
 
     args = sweevo_main._build_parser().parse_args(_argv())
-    rc = asyncio.run(sweevo_main._cmd_sweevo_runner(args))
+    rc = asyncio.run(sweevo_main._cmd_benchmark_sweevo(args))
 
     assert rc == 0
     assert captured["create_kwargs"]["snapshot_name"] == ""
@@ -229,20 +225,38 @@ def test_sweevo_runner_bare_image_skips_snapshot_preflight(
     assert captured["config"].extras["runtime_config"].cwd == str(Path.cwd())
 
 
-def test_help_message_lists_sweevo_runner(capsys: pytest.CaptureFixture[str]) -> None:
-    """The ``--sweevo-runner`` flag must surface in help output."""
+def test_help_message_lists_instance_id(capsys: pytest.CaptureFixture[str]) -> None:
+    """The help output exposes the canonical benchmark selector."""
     with pytest.raises(SystemExit):
         sweevo_main._build_parser().parse_args(["--help"])
     out = capsys.readouterr().out
-    assert "--sweevo-runner" in out
+    assert "--instance-id" in out
 
 
-def test_main_no_args_lists_sweevo_runner(
-    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+def test_main_no_args_lists_instance_id(
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """The default help line mentions ``--sweevo-runner``."""
-    monkeypatch.setattr(sys, "argv", ["benchmarks.sweevo"])
-    rc = sweevo_main.main([])
+    """The default help line mentions the canonical benchmark selector."""
+    with pytest.raises(SystemExit) as exc_info:
+        sweevo_main.main([])
     err = capsys.readouterr().err
-    assert rc == 2
-    assert "--sweevo-runner" in err
+    assert exc_info.value.code == 2
+    assert "--instance-id" in err
+
+
+def test_main_dispatches_instance_id_to_benchmark_sweevo(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    async def fake_cmd(args: Any) -> int:
+        captured["instance_id"] = args.instance_id
+        return 0
+
+    monkeypatch.setattr(sweevo_main, "_kill_other_sweevo_processes", lambda: None)
+    monkeypatch.setattr(sweevo_main, "_cmd_benchmark_sweevo", fake_cmd)
+
+    rc = sweevo_main.main(["--instance-id", "dask__dask_2023.3.2_2023.4.0"])
+
+    assert rc == 0
+    assert captured["instance_id"] == "dask__dask_2023.3.2_2023.4.0"

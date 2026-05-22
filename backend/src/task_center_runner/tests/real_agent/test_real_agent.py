@@ -1,9 +1,9 @@
 """Real-agent live-e2e smoke test for a canonical SWE-EVO instance.
 
-Gated off by default through ``runner.live_e2e.real_agent_enabled``. The test depends on the
-function-scoped ``workspace`` fixture (per-test reset) rather than
-session-scoped ``sweevo_image_sandbox`` to avoid cross-instance state leakage when
-the test grows to a parameterized matrix.
+Run explicitly through the ``tests/real_agent`` suite. The test depends on the
+function-scoped ``workspace`` fixture (per-test reset) rather than the
+session-scoped ``sweevo_image_sandbox`` fixture to avoid cross-instance state
+leakage when the test grows to a parameterized matrix.
 """
 
 from __future__ import annotations
@@ -15,15 +15,9 @@ import pytest
 from benchmarks.sweevo.models import SWEEvoInstance
 from task_center_runner.core.real_agent_run import run_sweevo_real_agent
 from task_center_runner.core.stores import TaskCenterStoreBundle
-from task_center_runner.tests._live_config import (
-    live_e2e_real_agent_enabled,
-    live_e2e_real_agent_max_duration_s,
-)
+from task_center_runner.tests._live_config import real_agent_max_duration_s
 
-pytestmark = pytest.mark.skipif(
-    not live_e2e_real_agent_enabled(),
-    reason="Real-agent live e2e disabled in runner.live_e2e.real_agent_enabled",
-)
+pytestmark = pytest.mark.real_agent
 
 
 @pytest.mark.asyncio
@@ -38,7 +32,7 @@ async def test_real_agent_resolves_canonical_instance(
         sandbox_id=str(workspace["sandbox_id"]),
         audit_dir=audit_dir,
         stores=stores,
-        max_duration_s=live_e2e_real_agent_max_duration_s(),
+        max_duration_s=real_agent_max_duration_s(),
     )
     assert report.task_center_run_id
     assert report.run_dir.is_dir()

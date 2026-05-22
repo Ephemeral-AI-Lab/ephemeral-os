@@ -52,8 +52,7 @@ def _stub_recipe(recipe_id: str) -> None:
 
 # ---------------------------------------------------------------------------
 # AC2 — planner submission gate: dispatchable_by_planner is required and
-# applies even to agents whose agent_kind is executor (closes the entry_
-# executor hole the literal-name fast-path used to mask).
+# applies even to agents whose agent_kind is executor.
 # ---------------------------------------------------------------------------
 
 
@@ -81,24 +80,17 @@ def test_ac2_non_dispatchable_executor_is_rejected() -> None:
     assert _is_generator_capable_agent("executor_alt") is False
 
 
-def test_ac2_entry_executor_is_rejected() -> None:
-    """Regression for the advisor-caught bug.
-
-    Before Stage 6 the literal-name fast-path (``agent_name in {"executor",
-    "verifier"}``) plus entry_executor's ``agent_kind: executor`` would have
-    let a planner submit ``agent_name="entry_executor"``. After Stage 6 the
-    gate requires explicit ``dispatchable_by_planner=True``, which
-    entry_executor.md does not set.
-    """
+def test_ac2_non_dispatchable_named_executor_is_rejected() -> None:
+    """Regression for the old literal-name fast-path."""
     register_definition(
         AgentDefinition(
-            name="entry_executor",
-            description="entry executor",
+            name="executor_shadow",
+            description="shadow executor",
             agent_kind=AgentKind.EXECUTOR,
             # dispatchable_by_planner defaults to False — that is the contract.
         )
     )
-    assert _is_generator_capable_agent("entry_executor") is False
+    assert _is_generator_capable_agent("executor_shadow") is False
 
 
 def test_ac2_unknown_agent_name_is_rejected() -> None:

@@ -1,7 +1,8 @@
-"""Runner factory for the SWE-EVO benchmarker.
+"""Agent runner factory for the ``benchmark_sweevo`` lifecycle.
 
 TaskCenter entry bootstrap now converts ``entry_prompt`` into the initial
-Goal directly, so the benchmark runner delegates every agent launch.
+Goal directly, so the benchmark delegates every agent launch to the real
+agent runner.
 """
 
 from __future__ import annotations
@@ -16,7 +17,7 @@ if TYPE_CHECKING:
     from task_center_runner.core.config import RunContext
 
 
-def build_sweevo_runner_factory(
+def build_benchmark_sweevo_delegate_factory(
     *,
     repo_dir: str,
 ) -> Callable[["RunContext"], "AttemptAgentRunner"]:
@@ -90,4 +91,4 @@ def build_sweevo_runner_factory(
     return _factory
 
 
-__all__ = ["build_sweevo_runner_factory"]
+__all__ = ["build_benchmark_sweevo_delegate_factory"]

@@ -11,7 +11,15 @@ from task_center_runner.scenarios import SCENARIO_REGISTRY
 from task_center_runner.scenarios.base import ScenarioContext
 from task_center_runner.scenarios.capacity.pack_catalog import CAPACITY_PACK_SPECS, names
 
-_REPO_ROOT = Path(__file__).resolve().parents[4]
+
+def _repo_root() -> Path:
+    for parent in Path(__file__).resolve().parents:
+        if (parent / "pyproject.toml").exists():
+            return parent
+    raise AssertionError("could not locate repository root")
+
+
+_REPO_ROOT = _repo_root()
 _SCENARIO_PACK_DOC = (
     _REPO_ROOT / "docs" / "wiki" / "live-e2e-capacity-suite-scenario-packs.md"
 )
@@ -122,7 +130,8 @@ def _deps_by_id(plan: dict[str, Any]) -> dict[str, tuple[str, ...]]:
 
 
 def _ctx(*, attempt_no: int = 1, iteration_no: int = 1, recursive: bool = False) -> ScenarioContext:
-    requested_by = "parent-task-id" if recursive else "task-center-run:entry"
+    requested_by = "parent-task-id" if recursive else None
+    origin_kind = "task" if recursive else "entry"
     return ScenarioContext(
         attempt=SimpleNamespace(
             attempt_sequence_no=attempt_no,
@@ -130,7 +139,10 @@ def _ctx(*, attempt_no: int = 1, iteration_no: int = 1, recursive: bool = False)
             id=f"attempt-{attempt_no}",
         ),
         iteration=SimpleNamespace(sequence_no=iteration_no, goal_id="goal-id"),
-        goal=SimpleNamespace(requested_by_task_id=requested_by),
+        goal=SimpleNamespace(
+            origin_kind=origin_kind,
+            requested_by_task_id=requested_by,
+        ),
         prompt="capacity scenario pack offline test",
         metadata={},
         audit_recorder=None,

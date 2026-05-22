@@ -99,12 +99,12 @@ def _assert_graph_shape(graph_summary: dict[str, Any]) -> None:
     root = next(
         goal
         for goal in goals
-        if str(goal["requested_by_task_id"]).endswith(":entry")
+        if goal.get("origin_kind") == "entry"
     )
     recursive = [
         goal
         for goal in goals
-        if not str(goal["requested_by_task_id"]).endswith(":entry")
+        if goal.get("origin_kind") == "task"
     ]
     assert recursive, graph_summary
     assert root["status"] == "succeeded"

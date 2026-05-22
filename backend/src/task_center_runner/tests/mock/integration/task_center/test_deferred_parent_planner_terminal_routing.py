@@ -61,12 +61,12 @@ def _assert_partial_parent_graph(graph_summary: dict[str, Any]) -> None:
     root = next(
         goal
         for goal in goals
-        if str(goal["requested_by_task_id"]).endswith(":entry")
+        if goal.get("origin_kind") == "entry"
     )
     child = next(
         goal
         for goal in goals
-        if not str(goal["requested_by_task_id"]).endswith(":entry")
+        if goal.get("origin_kind") == "task"
     )
 
     assert len(root["iterations"]) == 2

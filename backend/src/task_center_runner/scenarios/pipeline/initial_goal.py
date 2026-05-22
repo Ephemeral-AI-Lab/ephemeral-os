@@ -1,7 +1,7 @@
 """Initial goal, single attempt, single success.
 
-Reference scenario for the simplest task_center happy path: entry executor
-delegates → planner emits one full plan → executor runs ``preflight`` →
+Reference scenario for the simplest task_center happy path: TaskCenter entry
+creates the initial goal → planner emits one full plan → executor runs ``preflight`` →
 evaluator passes → goal closes succeeded. One goal, one iteration
 (``creation_reason=INITIAL``), one attempt (``attempt_sequence_no=1``).
 

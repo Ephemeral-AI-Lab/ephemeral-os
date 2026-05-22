@@ -164,6 +164,6 @@ Verification:
   - 3 new skill files (executor, evaluator + planner sanity-check).
   - `Role:` line disappears from all user_msg_2 outputs.
 - **Follow-ups**:
-  1. After PR-3, audit non-captured recipes (`entry_executor.py`, `planner.py`) for the same tag shapes.
+  1. After PR-3, audit the planner recipe for the same tag shapes.
   2. After PR-5, evaluate whether to merge `TAG_DICTIONARY` and the `TerminalToolDescriptor` registry into a single `prompt_artifacts/` module.
   3. Consider auto-generating `OPTIMIZED_USER_MSG_1.md` from the registries + a fixture set, making it derived rather than canonical.

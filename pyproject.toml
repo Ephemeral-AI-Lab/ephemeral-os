@@ -64,6 +64,10 @@ markers = [
     "live_e2e_daytona: live-e2e tests that require a Daytona sandbox",
     "live_e2e_capacity: opt-in composite live-e2e capacity tests",
     "live_e2e_soak: opt-in long-running live-e2e soak/performance tests",
+    "mock: deterministic mocked-agent task-center-runner tests",
+    "sandbox_integration: mocked-agent sandbox connection, stability, and load tests",
+    "task_center_integration: mocked-agent TaskCenter workflow correctness tests",
+    "real_agent: tests that run real LLM agents",
     "timeout(seconds): per-test timeout budget when pytest-timeout is available",
 ]
 

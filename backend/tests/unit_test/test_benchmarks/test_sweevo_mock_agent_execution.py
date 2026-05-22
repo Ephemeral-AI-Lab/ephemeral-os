@@ -6,19 +6,8 @@ from typing import Any
 
 import pytest
 
-pytestmark = pytest.mark.skipif(
-    not os.environ.get("EPHEMERALOS_DATABASE_URL"),
-    reason=(
-        "EPHEMERALOS_DATABASE_URL not configured — create_per_test_task_center_stores "
-        "requires PostgreSQL"
-    ),
-)
-
 from benchmarks.sweevo.models import SWEEvoInstance
 from benchmarks.sweevo.prompt import build_sweevo_user_prompt
-from live_e2e.scenarios.correctness_testing import CorrectnessTesting
-from live_e2e.stores import create_per_test_task_center_stores
-from live_e2e.sweevo_adapter import run_sweevo_scenario
 import sandbox.api as sandbox_api
 from sandbox.api import (
     ConflictInfo,
@@ -30,6 +19,19 @@ from sandbox.api import (
     ShellResult,
     WriteFileRequest,
     WriteFileResult,
+)
+from task_center_runner.core.stores import create_per_test_task_center_stores
+from task_center_runner.environments.sweevo_image.fixtures import (
+    run_scenario_on_sweevo_image,
+)
+from task_center_runner.scenarios.correctness_testing import CorrectnessTesting
+
+pytestmark = pytest.mark.skipif(
+    not os.environ.get("EPHEMERALOS_DATABASE_URL"),
+    reason=(
+        "EPHEMERALOS_DATABASE_URL not configured — create_per_test_task_center_stores "
+        "requires PostgreSQL"
+    ),
 )
 
 
@@ -199,7 +201,7 @@ async def test_run_scenario_correctness_testing_with_fake_sandbox(
 
     bundle = create_per_test_task_center_stores()
     try:
-        report = await run_sweevo_scenario(
+        report = await run_scenario_on_sweevo_image(
             CorrectnessTesting(),
             instance=instance,
             sandbox_id="sbx-1",
@@ -304,8 +306,3 @@ async def test_run_scenario_correctness_testing_with_fake_sandbox(
                         "generator",
                     }
     assert found_attempt_with_role_dir, "no attempt_NN_<id> dir found anywhere"
-
-    # entry_executor sibling directory exists and carries task.json.
-    entry_dirs = list(run_dir.glob("entry_executor_*"))
-    assert entry_dirs, "missing entry_executor sibling dir"
-    assert (entry_dirs[0] / "task.json").exists()

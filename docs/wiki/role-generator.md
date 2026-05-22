@@ -38,8 +38,6 @@ Attempt
 
 Each generator task carries deterministic id `{attempt_id}:gen:{local_id}` (`task_center/task/ids.py`). Dispatched by `AttemptDispatcher._dispatch_generating` (`task_center/attempt/dispatcher.py:94`) when all of its `needs[]` are `DONE`.
 
-The entry executor (the top-level agent that owns the user request) is _also_ a generator role, but with `task_center_attempt_id=None`. It is not part of an Attempt DAG — it lives outside the Mission/Episode/Attempt tree and dispatches missions via `submit_execution_handoff`.
-
 ## Two profiles, one recipe
 
 | <br />                                | Executor (`agents/profile/main/executor.md`)                                                                               | Verifier (`agents/profile/main/generator_verifier.md`)            |
@@ -53,7 +51,7 @@ The entry executor (the top-level agent that owns the user request) is _also_ a 
 | Notification triggers                 | `request_goal_after_edit`                                                                                                 | `resolver_limit`                                                  |
 | Editorial stance                      | Build the artifact; delegate via `submit_execution_handoff` if the task needs planning; submit blocker for concrete blockers | Inspect; if broken, delegate the fix via `ask_resolver`; re-check |
 
-The `executor.md` profile is the concrete executor profile. It exposes success, delegated-goal handoff, and blocker terminals in one surface. The `entry_executor.md` profile uses the same terminal shape because it sits outside the mission tree and terminates the user-facing request directly.
+The `executor.md` profile is the concrete executor profile. It exposes success, delegated-goal handoff, and blocker terminals in one surface.
 
 Profile-level separation is enforced by each `AgentDefinition.terminals` whitelist — the executor profile lists only executor terminals, the verifier profile lists only verifier terminals — so a verifier-launched task cannot reach an executor terminal at all. There is no runtime role gate; the structural role on the task row is set by the dispatcher and consumed by `resolve_attempt_submission_context`.
 
@@ -187,7 +185,7 @@ None of these readers see the conversation, the diffs, the tool calls, or the ar
 
 **6. Failed or blocked upstreams close the attempt, retry doesn't happen in place.** A single `FAILED` or `BLOCKED` generator makes dependent PENDING tasks unreachable and closes the entire attempt once runnable siblings quiesce. The next attempt (if budget remains) starts from scratch: new planner, fresh DAG, no in-flight state from the failed attempt. The only thing that crosses the attempt boundary is the _failure landscape projection_ in the next planner's prompt.
 
-**7. The entry executor is structurally a generator.** It uses `entry_executor` (a separate recipe with just an `entry_request` block) and has no attempt id, but its `HarnessTaskRole` is `GENERATOR`. It can `submit_execution_handoff` to delegate. Most user-facing interactions begin as one entry executor that either solves the request directly or dispatches a Mission.
+**7. Entry is a service boundary, not a generator.** Top-level user input is converted into a normal Goal before planner launch. Recursive delegation still happens through generator `submit_execution_handoff`, which creates child Goals and parks the parent generator task until the child closes.
 
 **8. Executor blocker and verifier failure mean different things.** `submit_execution_blocker(summary)` records that an executor explicitly could not proceed and maps to `outcome="blocker"` / task `BLOCKED`. `submit_verification_failure(unresolved_issues)` records a failed verification and maps to `outcome="failure"` / task `FAILED`. Runtime-synthesized executor failures still use `outcome="failure"`; executor-authored inability-to-proceed uses blocker.
 

@@ -57,6 +57,7 @@ def _serialize_goal(record: GoalRecord) -> dict[str, Any]:
     return {
         "id": record.id,
         "task_center_run_id": record.task_center_run_id,
+        "origin_kind": record.origin_kind,
         "requested_by_task_id": record.requested_by_task_id,
         "goal": record.goal,
         "status": record.status,

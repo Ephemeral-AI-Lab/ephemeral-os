@@ -145,7 +145,7 @@ def test_goal_insert_writes_latest_snapshot(
     try:
         goal = stores.goal_store.insert(
             task_center_run_id=_RUN_ID,
-            requested_by_task_id="entry_task_1",
+            requested_by_task_id="parent_task_1",
             goal="solve the problem",
         )
     finally:
@@ -171,7 +171,7 @@ def test_goal_update_overwrites_latest_snapshot(
     try:
         goal = stores.goal_store.insert(
             task_center_run_id=_RUN_ID,
-            requested_by_task_id="entry_task_1",
+            requested_by_task_id="parent_task_1",
             goal="solve the problem",
         )
         stores.goal_store.set_status(
@@ -198,7 +198,7 @@ def test_iteration_and_attempt_listeners(
     try:
         goal = stores.goal_store.insert(
             task_center_run_id=_RUN_ID,
-            requested_by_task_id="entry_task_1",
+            requested_by_task_id="parent_task_1",
             goal="solve the problem",
         )
         iteration = stores.iteration_store.insert(
@@ -270,7 +270,6 @@ def test_task_dir_placement_per_role(
     try:
         goal = stores.goal_store.insert(
             task_center_run_id=_RUN_ID,
-            requested_by_task_id="entry_task_1",
             goal="goal",
         )
         iteration = stores.iteration_store.insert(
@@ -285,7 +284,6 @@ def test_task_dir_placement_per_role(
             attempt_sequence_no=1,
         )
 
-        _insert_task(stores, task_id="entry_task_1", role="entry_executor")
         _insert_task(
             stores,
             task_id="task_planner",
@@ -306,11 +304,6 @@ def test_task_dir_placement_per_role(
         )
     finally:
         recorder.dispose()
-
-    entry_dir = recorder.run_dir / "entry_executor_entry_task_1"
-    entry_task = _read_json(entry_dir / "task.json")
-    assert "system_prompt" not in entry_task
-    assert "user_prompt" not in entry_task
 
     attempt_dir = (
         recorder.run_dir
@@ -347,7 +340,7 @@ def test_generator_verifier_task_uses_verifier_dir_and_message_recorder(
     try:
         goal = stores.goal_store.insert(
             task_center_run_id=_RUN_ID,
-            requested_by_task_id="entry_task_1",
+            requested_by_task_id="parent_task_1",
             goal="goal",
         )
         iteration = stores.iteration_store.insert(
@@ -426,7 +419,7 @@ def test_dispose_unregisters_listeners(
     try:
         m1 = stores.goal_store.insert(
             task_center_run_id=_RUN_ID,
-            requested_by_task_id="entry_task_1",
+            requested_by_task_id="parent_task_1",
             goal="g1",
         )
     finally:
@@ -434,7 +427,7 @@ def test_dispose_unregisters_listeners(
 
     m2 = stores.goal_store.insert(
         task_center_run_id=_RUN_ID,
-        requested_by_task_id="entry_task_2",
+        requested_by_task_id="parent_task_2",
         goal="g2",
     )
 
@@ -623,11 +616,27 @@ def test_agent_run_id_to_task_id_mapping(
     recorder = _make_recorder(tmp_path)
     recorder.start()
     try:
+        goal = stores.goal_store.insert(
+            task_center_run_id=_RUN_ID,
+            goal="goal",
+        )
+        iteration = stores.iteration_store.insert(
+            goal_id=goal.id,
+            sequence_no=1,
+            creation_reason=IterationCreationReason.INITIAL,
+            goal="ep",
+            attempt_budget=3,
+        )
+        attempt = stores.attempt_store.insert(
+            iteration_id=iteration.id,
+            attempt_sequence_no=1,
+        )
         _insert_task(
             stores,
-            task_id="entry_task_1",
-            role="entry_executor",
-            agent_name="entry_executor",
+            task_id="task_planner",
+            role="planner",
+            agent_name="planner",
+            task_center_attempt_id=attempt.id,
         )
         agent_run_id = str(uuid.uuid4())
         sf = stores.session_factory
@@ -635,8 +644,8 @@ def test_agent_run_id_to_task_id_mapping(
             db.add(
                 AgentRunRecord(
                     id=agent_run_id,
-                    task_id="entry_task_1",
-                    agent_name="entry_executor",
+                    task_id="task_planner",
+                    agent_name="planner",
                     message_history=None,
                     terminal_tool_result=None,
                     token_count=0,
@@ -648,6 +657,6 @@ def test_agent_run_id_to_task_id_mapping(
 
         rec = recorder.message_recorder_for_agent_run(agent_run_id)
         assert rec is not None
-        assert recorder.message_recorder_for_task("entry_task_1") is rec
+        assert recorder.message_recorder_for_task("task_planner") is rec
     finally:
         recorder.dispose()

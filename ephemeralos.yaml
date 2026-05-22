@@ -46,7 +46,6 @@ runner:
   live_e2e:
     heavy_enabled: true
     capacity_enabled: true
-    real_agent_enabled: false
     real_agent_max_duration_s: 1800
 
 engine:

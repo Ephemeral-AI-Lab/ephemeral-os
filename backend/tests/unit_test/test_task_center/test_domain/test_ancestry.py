@@ -29,7 +29,7 @@ def _seed_goal(
     goal_store,
     *,
     task_center_run_id: str,
-    requested_by_task_id: str = "t-entry",
+    requested_by_task_id: str = "parent-task",
     goal: str = "g",
 ):
     return goal_store.insert(
@@ -101,7 +101,7 @@ def _seed_nested_goal_chain(
 ) -> list[str]:
     assert depth >= 1
     goal_ids: list[str] = []
-    requested_by_task_id = "t-entry"
+    requested_by_task_id = "parent-task"
     for idx in range(depth):
         goal = _seed_goal(
             goal_store,
@@ -145,11 +145,11 @@ def test_parent_task_with_no_attempt_returns_depth_1(
     goal = _seed_goal(
         goal_store,
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t-entry",
+        requested_by_task_id="parent-task",
     )
     _seed_task(
         task_store,
-        task_id="t-entry",
+        task_id="parent-task",
         task_center_run_id=task_center_run_id,
         attempt_id=None,
     )

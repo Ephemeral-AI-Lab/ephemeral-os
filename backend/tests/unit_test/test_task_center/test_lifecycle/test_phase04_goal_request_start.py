@@ -72,7 +72,7 @@ def _seed_outer_generator_task(
     """Seed an outer generator task whose attempt is currently RUNNING."""
     outer_request = goal_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="root",
+        requested_by_task_id="parent-task",
         goal="outer goal",
     )
     outer_segment = iteration_store.insert(

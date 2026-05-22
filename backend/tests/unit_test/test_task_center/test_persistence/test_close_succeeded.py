@@ -15,7 +15,7 @@ from task_center.iteration.state import (
 def _seed_segment(goal_store, iteration_store, task_center_run_id):
     req = goal_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="t-entry",
+        requested_by_task_id="parent-task",
         goal="g",
     )
     return iteration_store.insert(

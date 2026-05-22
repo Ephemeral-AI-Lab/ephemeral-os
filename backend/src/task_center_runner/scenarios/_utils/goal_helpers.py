@@ -5,18 +5,21 @@ from __future__ import annotations
 from task_center_runner.scenarios.base import ScenarioContext
 
 
-def is_root_goal(ctx: ScenarioContext) -> bool:
-    """True when the scenario context is in the entry-spawned root goal."""
+def is_entry_origin_goal(ctx: ScenarioContext) -> bool:
+    """True when the scenario context is in the entry-origin goal."""
     goal = ctx.goal
     if goal is None:
         return True
+    origin_kind = getattr(goal, "origin_kind", None)
+    if str(getattr(origin_kind, "value", origin_kind) or "") == "entry":
+        return True
     requested_by = str(goal.requested_by_task_id or "")
-    return requested_by.endswith(":entry")
+    return not requested_by
 
 
 def is_recursive_goal(ctx: ScenarioContext) -> bool:
     """True when the scenario context is inside a child Goal."""
-    return not is_root_goal(ctx)
+    return not is_entry_origin_goal(ctx)
 
 
-__all__ = ["is_recursive_goal", "is_root_goal"]
+__all__ = ["is_recursive_goal", "is_entry_origin_goal"]

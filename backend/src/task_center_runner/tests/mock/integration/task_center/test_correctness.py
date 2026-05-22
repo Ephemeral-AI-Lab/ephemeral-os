@@ -107,9 +107,6 @@ async def test_correctness_testing_scenario_runs_end_to_end(
                     }, role_segment
     assert found_attempt_with_role_dir, "no attempt_NN_<id> dir"
 
-    entry_dirs = list(run_dir.glob("entry_executor_*"))
-    assert entry_dirs, "missing entry_executor sibling dir"
-    assert (entry_dirs[0] / "task.json").exists()
     _assert_message_jsonl_contains_sandbox_tools(run_dir)
 
     # --- Helper agents are filtered out -------------------------------

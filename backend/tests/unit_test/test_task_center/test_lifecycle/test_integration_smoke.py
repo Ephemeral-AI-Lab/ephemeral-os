@@ -8,7 +8,7 @@ from db.stores.attempt_store import AttemptStore
 from task_center._core.primitives import TaskCenterLifecycleConfig
 from task_center.goal.handler import GoalHandler
 from task_center.iteration import IterationManager, IterationManagerRegistry
-from task_center.goal.state import GoalStatus
+from task_center.goal.state import GoalOrigin, GoalStatus
 from task_center.attempt import (
     Attempt,
     AttemptFailReason,
@@ -90,7 +90,7 @@ def test_smoke_terminal_success(
     handler = _build_handler(goal_store, iteration_store, attempt_store)
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="exec-1",
+        origin=GoalOrigin.task(task_id="exec-1"),
         goal="solve X",
     )
     seg, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
@@ -113,7 +113,7 @@ def test_smoke_attempt_plan_failed(
     handler = _build_handler(goal_store, iteration_store, attempt_store)
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="exec-1",
+        origin=GoalOrigin.task(task_id="exec-1"),
         goal="solve X",
     )
     seg, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
@@ -157,7 +157,7 @@ def test_smoke_success_continue_then_terminal(
     handler = _build_handler(goal_store, iteration_store, attempt_store)
     req = handler.create_goal(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="exec-1",
+        origin=GoalOrigin.task(task_id="exec-1"),
         goal="initial-goal",
     )
     seg1, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)

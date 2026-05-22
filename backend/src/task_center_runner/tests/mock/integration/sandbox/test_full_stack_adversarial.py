@@ -127,7 +127,7 @@ def _recursive_goal_count(graph_summary: dict[str, Any]) -> int:
     return sum(
         1
         for goal in graph_summary["goals"]
-        if not str(goal["requested_by_task_id"]).endswith(":entry")
+        if goal.get("origin_kind") == "task"
     )
 
 
@@ -140,7 +140,6 @@ def _assert_message_logs(run_dir: Path) -> None:
         if isinstance(message.get("metadata"), dict)
     }
     assert {
-        "entry_executor",
         "planner",
         "verifier",
         "evaluator",

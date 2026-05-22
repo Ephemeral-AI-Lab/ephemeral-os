@@ -11,8 +11,6 @@ trees carry the right shape for every iteration position and attempt:
   ``render_terminal_catalog(focus="selection_guidance", ...)`` (AC #15).
 * executor / evaluator launches — 3 rows (system + ``<context>`` +
   ``<Task Guidance>``); no skill is declared in v1.
-* entry_executor — 2 rows (system + entry-shape user message; no
-  ``<Task Guidance>`` and no skill).
 
 For helper (advisor / resolver) and subagent (explorer) initial-message
 construction, see ``scripts/build_initial_messages_report.py`` — the
@@ -46,6 +44,14 @@ pytestmark = pytest.mark.asyncio
 
 
 _SCENARIO_NAME = "pipeline.initial_messages_capture"
+
+
+def _main_agent_profile_dir() -> Path:
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / "agents" / "profile" / "main"
+        if candidate.exists():
+            return candidate
+    raise AssertionError("could not locate backend/src/agents/profile/main")
 
 
 @pytest.mark.skipif(
@@ -111,9 +117,7 @@ async def test_initial_messages_capture(
     # The harness fixture (``registered_mock_agents()``) unregisters all
     # agent definitions on teardown, so re-load the production profiles
     # directly to ground the row-4 catalog character-for-character check.
-    profile_dir = (
-        Path(__file__).resolve().parents[3] / "agents" / "profile" / "main"
-    )
+    profile_dir = _main_agent_profile_dir()
     profiles = {d.name: d for d in load_agents_dir(profile_dir)}
     planner_def = profiles["planner"]
     assert planner_def.skill is not None
@@ -134,15 +138,13 @@ async def test_initial_messages_capture(
         # appended during execution; assertions below pin only the first
         # N rows (the launch-time initial messages recorded by
         # ``AgentMessageJsonlRecorder.record_initial_messages``).
-        # Every non-entry main agent's context row 2 must wrap in
-        # <context>...</context> (AC #1).
-        if not role_dir.startswith("entry_executor"):
-            assert user_msg_1.startswith("<context>\n"), (
-                f"{rel}: row 2 does not start with '<context>\\n'"
-            )
-            assert user_msg_1.rstrip().endswith("</context>"), (
-                f"{rel}: row 2 does not end with '</context>'"
-            )
+        # Every main agent's context row 2 must wrap in <context>...</context>.
+        assert user_msg_1.startswith("<context>\n"), (
+            f"{rel}: row 2 does not start with '<context>\\n'"
+        )
+        assert user_msg_1.rstrip().endswith("</context>"), (
+            f"{rel}: row 2 does not end with '</context>'"
+        )
 
         if "planner" in role_dir:
             # Planner — 4 initial rows: system + <context> + <Task Guidance>
@@ -199,12 +201,6 @@ async def test_initial_messages_capture(
             assert expected_catalog in row3_block, (
                 f"{rel}: row 3 catalog does not match registry render"
             )
-        elif role_dir.startswith("entry_executor"):
-            # Entry executor: 2 initial rows (system + entry-shape user
-            # message). The recipe carries no role/task_guidance, so the
-            # composer collapses to the 2-row launch shape.
-            assert rows[0].get("role") == "system"
-            assert rows[1].get("role") == "user"
         elif "executor" in role_dir:
             # Executor: 4 initial rows (system + <context> + <Task Guidance>
             # + skill). Skills carry operational heuristics (treat

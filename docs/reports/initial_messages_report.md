@@ -6,8 +6,6 @@ Initial messages observed at agent launch (system + user_msg_1 + user_msg_2), pe
 
 - **Main agents (planner, executor, evaluator)** — three messages: system from `agents/profile/main/<name>.md`; user_msg_1 = the composer's context block (goal + iteration + dependency results + attempt plan + evaluation criteria, rendered by `MarkdownPromptRenderer.render_context`); user_msg_2 = task guidance plus the terminal-tool catalog appended by the composer.
 
-- **entry_executor** — two messages (no task-guidance recipe block); user_msg_2 is empty.
-
 - **Helpers (advisor, resolver)** — three messages: system + `assemble_user_msg_1(...)` (prompt-injection guard + parent's original context + parent's original task + filtered parent transcript) + helper-specific user_msg_2 (advisor: catalog + pending submission + task + calibration + how-to-submit; resolver: issues + task). Built by `tools/ask_helper/_lib/_compose.py` and consumed by `tools/ask_helper/ask_advisor.py` / `ask_resolver.py`.
 
 - **Subagent (explorer)** — by code (`tools/subagent/run_subagent.py:231-240`) the subagent also receives three messages: system + user_msg_1 (the parent's free-text prompt, passed via `initial_messages`) + user_msg_2 (the spawn prompt = `build_explorer_task_guidance()`). The goal text described this as "only 2", presumably referring to the two distinct user messages (no role-instruction block separate from the spawn prompt). We render all three below for completeness.
@@ -18,7 +16,6 @@ Source for main-agent rows: existing live-e2e runs under `.sweevo_runs/scenario_
 
 | Agent role | Routing / profile | Iteration position | Attempt | Source |
 |---|---|---|---|---|
-| entry_executor | executor_c705a309-a15f-4d1f-8c53-969fb883b968:entry | — | — | pipeline.initial_messages_capture/20260520T203220Z_bdf4e3c99646 |
 | planner | planner_cdb2b05b-103a-4b4d-856a-93e7de6469c9:planner | iteration_01_34e61c53-bffc-4631-b743-fce0860eb4f8 | attempt_01_cdb2b05b-103a-4b4d-856a-93e7de6469c9 | pipeline.initial_messages_capture/20260520T203220Z_bdf4e3c99646 |
 | planner | planner_0641b2ea-28f0-4ea0-a96d-a3d707b06a67:planner | iteration_01_34e61c53-bffc-4631-b743-fce0860eb4f8 | attempt_02_0641b2ea-28f0-4ea0-a96d-a3d707b06a67 | pipeline.initial_messages_capture/20260520T203220Z_bdf4e3c99646 |
 | planner | planner_bfce4081-afba-42d4-bb87-36ee8caaa7a8:planner | iteration_02_5dd7c63a-a96f-4c25-8a23-3cf6a354fd8a | attempt_01_bfce4081-afba-42d4-bb87-36ee8caaa7a8 | pipeline.initial_messages_capture/20260520T203220Z_bdf4e3c99646 |
@@ -36,161 +33,8 @@ Every main-agent row below is harvested verbatim from `message.jsonl` written by
 
 * planner — 4 rows (system + context + task guidance + skill); row 4 is the row-4 composite from `build_skill_message`.
 * executor / evaluator — 3 or 4 rows depending on whether a skill row is present.
-* entry_executor — 2 rows (single-user-message launch).
 
 Archived captured rows that predate the single executor profile are normalized to the current terminal names and profile labels while preserving the surrounding launch shape.
-
-### entry_executor (root delegation)
-
-- `agent_name`: `entry_executor`
-- `scenario`: `pipeline.initial_messages_capture`
-- `run_id`: `20260520T203220Z_bdf4e3c99646`
-- `role_dir`: `entry_executor_c705a309-a15f-4d1f-8c53-969fb883b968:entry`
-- source file: `pipeline.initial_messages_capture/20260520T203220Z_bdf4e3c99646/entry_executor_c705a309-a15f-4d1f-8c53-969fb883b968:entry/message.jsonl`
-
-**system** (`message.jsonl` row 1):
-
-```
-You are the **entry executor** — the agent that receives the top-level user request.
-
-Decide whether to act directly or delegate the work as a goal. Small,
-self-contained requests can be handled here with the editor and shell tools.
-Larger requests should be planned via `submit_execution_handoff`, which
-spawns a complex-task request that goes through the full planner / generator /
-evaluator harness.
-
-Finish via `submit_execution_success` when the request is complete and verified,
-or `submit_execution_blocker` when the request cannot be completed.
-
-## Submission discipline
-
-- Before any terminal submission, call `ask_advisor` with the terminal tool you intend to call and the payload you intend to send.
-- If the advisor returns verdict `"approve"`, submit immediately.
-- If the advisor returns verdict `"reject"`, address the issues in the advisor's summary — do additional work, fix the payload, or switch to a different terminal — then re-call `ask_advisor` with the revised tool and payload. Do not submit a terminal until you have received an `"approve"`. On approve, still read the summary's residual-risks bullet (if any).
-
-Submit exactly one terminal tool per run.
-
-**Why entry_executor keeps all three terminals.** It sits outside the
-goal/iteration/attempt tree (no parent attempt to return to) and terminates
-the user-facing request directly, so it retains the full success / handoff /
-blocker surface.
-```
-
-**user_msg_1** (`message.jsonl` row 2 — the composer's context block):
-
-```
-<context>
-<entry_request>
-<Workspace Root>
-/testbed
-<Workspace Root>
-
-I've uploaded a python code repository in the directory /testbed. Consider the following PR description:
-<pr_description>
-2023.4.0
---------
-
-Released on April 14, 2023
-
-Enhancements
-^^^^^^^^^^^^
-- Override old default values in ``update_defaults`` (:pr:`10159`) `Gabe Joseph`_
-- Add a CLI command to ``list`` and ``get`` a value from dask config (:pr:`9936`) `Irina Truong`_
-- Handle string-based engine argument to ``read_json`` (:pr:`9947`) `Richard (Rick) Zamora`_
-- Avoid deprecated ``GroupBy.dtypes`` (:pr:`10111`) `Irina Truong`_
-
-Bug Fixes
-^^^^^^^^^
-- Revert ``grouper``-related changes (:pr:`10182`) `Irina Truong`_
-- ``GroupBy.cov`` raising for non-numeric grouping column (:pr:`10171`) `Patrick Hoefler`_
-- Updates for ``Index`` supporting ``numpy`` numeric dtypes (:pr:`10154`) `Irina Truong`_
-- Preserve ``dtype`` for partitioning columns when read with ``pyarrow`` (:pr:`10115`) `Patrick Hoefler`_
-- Fix annotations for ``to_hdf`` (:pr:`10123`) `Hendrik Makait`_
-- Handle ``None`` column name when checking if columns are all numeric (:pr:`10128`) `Lawrence Mitchell`_
-- Fix ``valid_divisions`` when passed a ``tuple`` (:pr:`10126`) `Brian Phillips`_
-- Maintain annotations in ``DataFrame.categorize`` (:pr:`10120`) `Hendrik Makait`_
-- Fix handling of missing min/max parquet statistics during filtering (:pr:`10042`) `Richard (Rick) Zamora`_
-
-Deprecations
-^^^^^^^^^^^^
-- Deprecate ``use_nullable_dtypes=`` and add ``dtype_backend=`` (:pr:`10076`) `Irina Truong`_
-- Deprecate ``convert_dtype`` in ``Series.apply`` (:pr:`10133`) `Irina Truong`_
-
-Documentation
-^^^^^^^^^^^^^
-- Document ``Generator`` based random number generation (:pr:`10134`) `Eray Aslan`_
-
-Maintenance
-^^^^^^^^^^^
-- Update ``dataframe.convert_string`` to ``dataframe.convert-string`` (:pr:`10191`) `Irina Truong`_
-- Add ``python-cityhash`` to CI environments (:pr:`10190`) `Charles Blackmon-Luca`_
-- Temporarily pin ``scikit-image`` to fix Windows CI (:pr:`10186`) `Patrick Hoefler`_
-- Handle pandas deprecation warnings for ``to_pydatetime`` and ``apply`` (:pr:`10168`) `Patrick Hoefler`_
-- Drop ``bokeh<3`` restriction (:pr:`10177`) `James Bourbeau`_
-- Fix failing tests under copy-on-write (:pr:`10173`) `Patrick Hoefler`_
-- Allow ``pyarrow`` CI to fail (:pr:`10176`) `James Bourbeau`_
-- Switch to ``Generator`` for random number generation in ``dask.array`` (:pr:`10003`) `Eray Aslan`_
-- Bump ``peter-evans/create-pull-request`` from 4 to 5 (:pr:`10166`)
-- Fix flaky ``modf`` operation in ``test_arithmetic`` (:pr:`10162`) `Irina Truong`_
-- Temporarily remove ``xarray`` from CI with ``pandas`` 2.0 (:pr:`10153`) `James Bourbeau`_
-- Fix ``update_graph`` counting logic in ``test_default_scheduler_on_worker`` (:pr:`10145`) `James Bourbeau`_
-- Fix documentation build with ``pandas`` 2.0 (:pr:`10138`) `James Bourbeau`_
-- Remove ``dask/gpu`` from gpuCI update reviewers (:pr:`10135`) `Charles Blackmon-Luca`_
-- Update gpuCI ``RAPIDS_VER`` to ``23.06`` (:pr:`10129`)
-- Bump ``actions/stale`` from 6 to 8 (:pr:`10121`)
-- Use declarative ``setuptools`` (:pr:`10102`) `Thomas Grainger`_
-- Relax ``assert_eq`` checks on ``Scalar``-like objects (:pr:`10125`) `Matthew Rocklin`_
-- Upgrade readthedocs config to ubuntu 22.04 and Python 3.11 (:pr:`10124`) `Thomas Grainger`_
-- Bump ``actions/checkout`` from 3.4.0 to 3.5.0 (:pr:`10122`)
-- Fix ``test_null_partition_pyarrow`` in ``pyarrow`` CI build (:pr:`10116`) `Irina Truong`_
-- Drop distributed pack (:pr:`9988`) `Florian Jetter`_
-- Make ``dask.compatibility`` private (:pr:`10114`) `Jacob Tomlinson`_
-
-### PR 10166:
-Bumps (peter-evans/create-pull-request)  from 4 to 5.
-
-Release notes
-Sourced from (peter-evans/create-pull-request's releases) https://api.github.com/repos/peter-evans/create-pull-request/releases.
-
-Create Pull Request v5.0.0
-Behaviour changes
-
-- The action will no longer leave the local repository checked out on the pull request branch. Instead, it will leave the repository checked out on the branch or commit that it was when the action started.
-
-- When using add-paths, uncommitted changes will no longer be destroyed. They will be stashed and restored at the end of the action run.
-
-What's new
-
-- Adds input body-path, the path to a file containing the pull request body.
-
-- At the end of the action run the local repository is now checked out on the branch or commit that it was when the action started.
-
-- Any uncommitted tracked or untracked changes are now stashed and restored at the end of the action run. Currently, this can only occur when using the add-paths input, which allows for changes to not be committed. Previously, any uncommitted changes would be destroyed.
-
-- The proxy implementation has been revised but is not expected to have any change in behaviour. It continues to support the standard environment variables http_proxy, https_proxy and no_proxy.
-
-- Now sets the git safe.directory configuration for the local repository path. The configuration is removed when the action completes. Fixes issue (peter-evans/create-pull-request#1170) https://redirect.github.com/peter-evans/create-pull-request/issues/1170.
-
-- Now determines the git directory path using the git rev-parse --git-dir command. This allows users with custom repository configurations to use the action.
-
-- Improved handling of the team-reviewers input and associated errors.
-
-News
-🏆  create-pull-request won https://twitter.com/peterevans0/status/1638463617686470657?s=20an award for "awesome action" at the Open Source Awards at GitHub Universe. Thank you for your support and for making create-pull-request one of the top used actions. Please give it a ⭐, or even (buy me a coffee) https://api.github.com/repos/sponsors/peter-evans.
-
-What's Changed
-
-- v5 by (@​peter-evans) https://api.github.com/repos/peter-evans in (peter-evans/create-pull-request#1792) https://redirect.github.com/peter-evans/create-pull-request/pull/1792
-
-- 15 dependency updates by (@​dependabot) https://api.githu
-
-…(truncated 87840 chars)
-```
-
-**user_msg_2** — *not emitted* (single-user-message launch; recipe carries no task-guidance block).
-
-**Verdict:** PASS
-Checks: `{'system_nonempty': True, 'user_msg_1_nonempty': True, 'um1_has_entry_request_heading': True, 'system_mentions_handoff_or_finish': True}`
 
 ### planner — iter1 attempt1 (invalid plan)
 
@@ -1934,7 +1778,7 @@ Notes: um1_has_attempt_plan; um1_has_criteria; um1_has_dependency_results; um2_e
 
 ## Main agents — full 3-message shape (constructed from real builder code)
 
-These rows show the **three** messages each main-agent role would receive if the launcher took the 2-user-message split path (`task_center/attempt/launch.py:141-145`). system text is the actual `agents/profile/main/<name>.md` body; user_msg_1 is a renderer-shaped context block (header names from `renderer._DEFAULT_HEADINGS`); user_msg_2 is the exact text the composer would emit — task guidance plus the terminal catalog appended by the composer. The matrix covers the full matrix: 4 planner branches × iteration-position / failed-attempts; executor dependency/no-dependency branches; 2 evaluator branches; entry_executor's single-user-message fallback.
+These rows show the **three** messages each main-agent role would receive if the launcher took the 2-user-message split path (`task_center/attempt/launch.py:141-145`). system text is the actual `agents/profile/main/<name>.md` body; user_msg_1 is a renderer-shaped context block (header names from `renderer._DEFAULT_HEADINGS`); user_msg_2 is the exact text the composer would emit — task guidance plus the terminal catalog appended by the composer. The matrix covers the full matrix: 4 planner branches × iteration-position / failed-attempts; executor dependency/no-dependency branches; 2 evaluator branches.
 
 ### planner — iter1 attempt1 (fresh)
 
@@ -2005,7 +1849,7 @@ Rules for continues-goal plans:
 ```
 # Goal
 
-<root goal>
+<goal text>
 
 # Current Iteration
 
@@ -2103,7 +1947,7 @@ Rules for continues-goal plans:
 ```
 # Goal
 
-<root goal>
+<goal text>
 
 # Current Iteration
 
@@ -2205,7 +2049,7 @@ Rules for continues-goal plans:
 ```
 # Goal
 
-<root goal>
+<goal text>
 
 # Current Iteration
 
@@ -2313,7 +2157,7 @@ Rules for continues-goal plans:
 ```
 # Goal
 
-<root goal>
+<goal text>
 
 # Current Iteration
 
@@ -2660,60 +2504,6 @@ Execute the role described above. Before any terminal submission, call ask_advis
 Checks: `{'system_nonempty': True, 'user_msg_1_nonempty': True, 'user_msg_2_nonempty': True, 'um1_has_attempt_plan': True, 'um1_has_criteria': True, 'um1_has_dependency_results': True, 'system_evaluator_role': True, 'um2_evaluator_role_text': False, 'um2_terminal_catalog': True}`
 Notes: um2_evaluator_role_text
 
-### entry_executor (single-user-message launch)
-
-- `agent_name`: `entry_executor`
-
-**system** (verbatim, from `agent.md`):
-
-```
-You are the **entry executor** — the agent that receives the top-level user request.
-
-Decide whether to act directly or delegate the work as a goal. Small,
-self-contained requests can be handled here with the editor and shell tools.
-Larger requests should be planned via `submit_execution_handoff`, which
-spawns a complex-task request that goes through the full planner / generator /
-evaluator harness.
-
-Finish via `submit_execution_success` when the request is complete and verified,
-or `submit_execution_blocker` when the request cannot proceed because of a
-concrete blocker.
-
-## Submission discipline
-
-- Before any terminal submission, call `ask_advisor` with the terminal tool you intend to call and the payload you intend to send.
-- If the advisor returns verdict `"approve"`, submit immediately.
-- If the advisor returns verdict `"reject"`, address the issues in the advisor's summary — do additional work, fix the payload, or switch to a different terminal — then re-call `ask_advisor` with the revised tool and payload. Do not submit a terminal until you have received an `"approve"`. On approve, still read the summary's residual-risks bullet (if any).
-
-Submit exactly one terminal tool per run.
-
-**Why entry_executor keeps all three terminals.** It sits outside the
-goal/iteration/attempt tree (no parent attempt to return to) and terminates
-the user-facing request directly, so it retains the full success / handoff /
-blocker surface.
-```
-
-**user_msg_1** (constructed; renderer-shaped):
-
-```
-# Entry request
-
-<pr_description>
-(SWE-EVO entry prompt — workspace root + PR description, verbatim from build_sweevo_user_prompt)
-</pr_description>
-
-Workspace root: /testbed
-```
-
-**user_msg_2** (constructed via real builders):
-
-```
-(entry_executor recipe emits no separate task guidance — single-user-message launch)
-```
-
-**Verdict:** PASS
-Checks: `{'system_nonempty': True, 'user_msg_1_nonempty': True, 'user_msg_2_nonempty': True, 'um1_has_entry_request_heading': True, 'system_mentions_handoff_or_finish': True}`
-
 ## Helpers and subagent
 
 ### advisor (called from executor pre-submission)
@@ -2986,6 +2776,5 @@ Notes: um2_has_explorer_identity
 - **Context quality:** role prompts now use recipe-shaped context plus task guidance. The executor uses a single profile and one terminal catalogue containing success, handoff, and blocker.
 - **Instruction quality:** main-agent system prompts (in `agents/profile/main/<name>.md`) embed selection criteria, hard validity rules, and design principles. Helper user_msg_2 enforces tri-part summary structure (advisor) or per-issue resolution (resolver). Explorer user_msg_2 demands concrete findings (file paths, line numbers, symbols).
 - **Verdict — PASS for all sampled roles.** The presence contract is satisfied across the iteration / attempt / routing matrix.
-- **Gap closed:** `AgentMessageJsonlRecorder.record_initial_messages` was extended to accept `seeded_initial_messages` and write them between the system row and the spawn-prompt row. Both the live engine (`engine/query/request.py:_record_initial_messages_once`) and the mock runner (`task_center_runner/agent/mock/runner.py:_record_initial_messages`) now feed seeded messages through. Captured `message.jsonl` files for planner / executor / evaluator now hold three initial rows (system + user_msg_1 + user_msg_2); entry_executor stays at two by design (single-user-message recipe).
-- **Scope notes:** the new scenario file `backend/src/task_center_runner/scenarios/pipeline/initial_messages_capture.py` registers a complex run (2 iterations with deferred_goal + attempt retry + helper/subagent invocations). The matching pytest test `backend/src/task_center_runner/tests/sweevo/test_initial_messages_capture.py` was attempted live with the containerised postgres (`backend/docker-compose.postgres.yml`) providing `EPHEMERALOS_DATABASE_URL`. The live run reached the `sweevo_sandbox` session fixture and then **timed out in Daytona sandbox creation** after 300s (`DaytonaTimeoutError: Function 'create' exceeded timeout of 300.0 seconds`) — see the `Daytona pending_build hang root cause` memory entry. The composer / recorder / planner-validation pipeline this report audits is exercised identically by the most recent live runs of `pipeline.iterative_deferral` and `pipeline.attempt_retry_planner_failure`, which is why those are the captured-row source.
-
+- **Gap closed:** `AgentMessageJsonlRecorder.record_initial_messages` was extended to accept `seeded_initial_messages` and write them between the system row and the spawn-prompt row. Both the live engine (`engine/query/request.py:_record_initial_messages_once`) and the mock runner (`task_center_runner/agent/mock/runner.py:_record_initial_messages`) now feed seeded messages through. Captured `message.jsonl` files for planner / executor / evaluator now hold three initial rows (system + user_msg_1 + user_msg_2).
+- **Scope notes:** the new scenario file `backend/src/task_center_runner/scenarios/pipeline/initial_messages_capture.py` registers a complex run (2 iterations with deferred_goal + attempt retry + helper/subagent invocations). The matching pytest test `backend/src/task_center_runner/tests/mock/test_initial_messages_capture.py` was attempted live with the containerised postgres (`backend/docker-compose.postgres.yml`) providing `EPHEMERALOS_DATABASE_URL`. The live run reached the `sweevo_image_sandbox` session fixture and then **timed out in Daytona sandbox creation** after 300s (`DaytonaTimeoutError: Function 'create' exceeded timeout of 300.0 seconds`) — see the `Daytona pending_build hang root cause` memory entry. The composer / recorder / planner-validation pipeline this report audits is exercised identically by the most recent live runs of `pipeline.iterative_deferral` and `pipeline.attempt_retry_planner_failure`, which is why those are the captured-row source.
