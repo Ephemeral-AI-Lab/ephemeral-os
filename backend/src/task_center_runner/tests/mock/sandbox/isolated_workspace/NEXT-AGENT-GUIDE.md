@@ -138,52 +138,246 @@ to call a common cleanup function across iws and OCC, the answer is
 
 ---
 
-## 4. Deferred items, ordered by which PR unblocks which
+## 4. Phased plan — implement in this order
 
-### 4.1 Linux-only verification of what's already in tree
+Each phase has a single, narrow goal. Do not start phase N+1 until phase N's
+done-criteria are met. The dependency between phases is real: skipping ahead
+means debugging compound failures (one bug across three layers) instead of
+isolated ones.
 
-| Item | Why deferred | What unblocks it |
-|---|---|---|
-| Tier 1 (4 happy-path tests) verification | Tests are written but skipped without a configured sweevo Docker host | Set `runner.live_e2e.heavy_enabled = true` + `EOS_SANDBOX_PROVIDER=docker` + database URL, run on a Linux CI runner |
-| `_LinuxRuntime.mount_overlay` correctness | Calls `kernel_mount.mount_overlay` through the setns helper. Cannot verify the mount(2) syscall path from macOS | First Tier 1 test run on Linux CI is the verification |
-| `_LinuxRuntime.signal_net_ready` handshake | The `net-ready` write + `ready` read between manager and `ns_holder.py`. Was a latent bug before — could not run before the helper write paths landed | Same as above |
+---
 
-**Action:** the FIRST thing the next-Linux-session agent does is run
-`pytest .../isolated_workspace/happy_path/ -v` on a Linux CI host. Iterate
-on any failures before adding Tier 2+ tests.
+### Phase 0 (done) — Tier 0 + scaffolding + PR 0 + PR 1
 
-### 4.2 PR 0 follow-ups (already in IMPLEMENTATION-REPORT §7)
+What landed in prior sessions. Verifies: structure, audit-payload shape,
+manager state machine, `_PhaseTimer` invariants, helper-script R10
+discipline. Static-only. **Do not redo.**
 
-| § | Item |
+---
+
+### Phase 1 — unblock Tier 1 execution (no new tests)
+
+**Goal:** get the existing 4 Tier 1 happy-path tests to *attempt* a real
+`enter()` end-to-end. Currently they fail before they start because the
+daemon comes up with `_ManagerConfig.enabled = False`.
+
+**Steps:**
+
+1. Plumb `EOS_ISOLATED_WORKSPACE_ENABLED=true` into the sweevo daemon
+   startup. Inspect `task_center_runner/environments/sweevo_image/fixtures.py`
+   + `benchmarks/sweevo/sandbox.py` to find where the container env is
+   set; add the flag there. Probably one of:
+   - `/etc/environment` write in the container bootstrap
+   - Direct env arg to the daemon launcher (`launch_daemon.sh`)
+   - A new bootstrap step in `create_sweevo_test_sandbox`
+2. Add the **PR 0 acceptance backstop** (PLAN §16 PR 0 Critic follow-up #6):
+   a Tier 1 test that calls `_LinuxRuntime.mount_overlay` directly (NOT
+   through the manager), reads `/proc/<helper_pid>/mountinfo`, and asserts
+   the overlay line appears. Goes in `happy_path/test_mount_overlay_backstop.py`.
+3. Confirm `runner.live_e2e.heavy_enabled = true` and database URL are
+   reachable from the dev environment so `database_configured()` returns
+   True. Otherwise Tier 1 still skips.
+
+**Done criteria:**
+- `pytest .../isolated_workspace/happy_path/ -v` no longer reports SKIP for
+  config reasons.
+- Tests either pass or report a concrete kernel/wiring error — NOT
+  `feature_disabled` or `database not configured`.
+
+**Out of scope for phase 1:** writing new Tier 1 tests. The 4 that exist
+are enough surface to find the wiring bugs.
+
+---
+
+### Phase 2 — make Tier 1 green
+
+**Goal:** the 4 existing happy-path tests pass against a real sweevo
+container.
+
+**Steps:**
+
+1. Run `pytest .../happy_path/ -v`. Expect failures in this priority order
+   (they are listed by likelihood of breakage, derived from
+   §5.4 lesson):
+   - **The `net-ready` / `ready` pipe handshake.** This codepath never
+     executed before — `ns_holder` waiting for `net-ready` and the parent's
+     `signal_net_ready` write must agree on pipe lifetime + ordering.
+   - **`open_ns_fds.update()` merge.** Confirm `spawn_ns_holder` stashes
+     `readiness_fd` + `control_fd` on the handle before `open_ns_fds`
+     populates `ns_fds`. Bug masked all session; now reachable.
+   - **`mount_overlay` lowerdir-paths-in-mntns visibility.** The unshare's
+     mount-copy semantics MUST make the layer-stack lowerdirs visible
+     inside the workspace mntns. Verify via host-side
+     `nsenter -t <pid> -m ls <lowerdir_path>`.
+   - **`configure_dns_in_ns` symlink-following.** Per PLAN §19.3, when
+     `/etc/resolv.conf` is a symlink to `/run/systemd/resolve/...`, the
+     detection must resolve INSIDE the workspace mntns. Check what the
+     sweevo image's `/etc/resolv.conf` actually looks like first.
+2. Fix one bug, re-run, repeat. Atomic commits per fix.
+3. Add `_iws_invariants.assert_audit_sequence` calls to the 4 tests once
+   the basic flow works — currently they only assert RPC responses
+   (NEXT-AGENT-GUIDE §4.2/7.8 was the prior placeholder for this).
+
+**Done criteria:**
+- 4 Tier 1 tests pass, including the new mount_overlay backstop from
+  phase 1.
+- Each test asserts both the RPC response AND the expected
+  `sandbox_isolated_workspace_{enter,tool_call,exit}` audit sequence.
+- `phases_ms` is non-empty in the captured enter event (proves PR 1's
+  instrumentation fires end-to-end).
+
+**Out of scope:** Tier 2 tests. Resist the urge — verifying Tier 1 first
+isolates the kernel-wiring bugs from the design-of-tests bugs.
+
+---
+
+### Phase 3 — Tier 2 (isolation, 5 tests)
+
+**Goal:** the security argument. Prove iws upperdir is discarded on exit,
+peer-publishes don't bleed into open workspaces, and cross-agent
+networking is unreachable.
+
+**Why next** (per PLAN §7): "Land before production rollout." These tests
+make the case that the structural separation actually holds at runtime.
+
+**Tests** (PLAN §5 catalogue):
+
+| Test | Property |
 |---|---|
-| 7.2 | PR 0 acceptance backstop — call `_LinuxRuntime.mount_overlay` directly (not through manager) and assert `/proc/<pid>/mountinfo` reflects the mount. Add as a Tier 1 test once the kernel path is wired. |
-| 7.7 | `mount_overlay` + `configure_dns` use synchronous `subprocess.run` from `async def _wire_handle`. This serializes Tier 6 concurrent-enter tests. Switch to `asyncio.create_subprocess_exec` in a follow-up PR; protocol method becomes `async def`. |
-| 7.8 | Tier 1 tests do not yet assert audit events. Helpers exist (`_iws_invariants.assert_audit_sequence`, `assert_event_payload`, `assert_handle_ids_unique_per_enter`). Thread the audit log path through Tier 1 test bodies. |
+| `test_full_cycle_never_calls_occ` | OCC commit primitives never reached during full enter→tool_call→exit (R1 behavioral counterpart to the C2 source-scan fence) |
+| `test_upperdir_discarded_on_exit` | Re-enter after writing `scratch.txt` returns no-such-file; host-side scratch_root has no leftover upper/ |
+| `test_lowerdir_pinned_against_peer_publish` | Agent-A's view sees the snapshot-at-enter content even after agent-B publishes a contradictory layer (A1 design property) |
+| `test_default_mode_unaffected_during_pinned` | Same agent's default `api.write_file` still works concurrently with their isolated ws; layerstack tip advances; iws view unchanged |
+| `test_cross_agent_unreachable` | ws-A pings/curls ws-B's bridge IP → fail. Mechanism is bridge port-isolation flag, NOT an nft rule (so dropping `bridge-nf-call-iptables` doesn't accidentally open it) |
 
-### 4.3 Tier 2–9 implementation (the bulk of remaining work)
+**Done criteria:** all 5 pass, all 5 assert the expected audit sequence,
+`assert_no_event(jsonl, "sandbox_occ_changeset_received")` holds for the
+isolated cycle in `test_full_cycle_never_calls_occ`.
 
-Follow PLAN §7 ordering verbatim:
+**Out of scope:** Tier 3 (network) tests. The isolation argument needs
+to be locked down before adding nftables/inbound-rejection surface.
 
-1. **Tier 0** (done) — structural fences
-2. **Tier 1** (skeleton landed) — happy path
-3. **Tier 2** — isolation (5 tests): peer-publish pinning, upperdir discard, cross-agent unreachable
-4. **Tier 7** — GC + persistence (10 tests, possibly +4 from v2 §19.5)
-5. **Tier 3** — network (11 tests, +4 inbound-rejection from v2 §19.3)
-6. **Tier 4** — failure modes (8 tests)
-7. **Tier 5 + 6** — resource controls + concurrency (14 tests, +4 N=5 from v2 §19.4)
-8. **Tier 8** — stress (4 tests, +1 disk-at-rest from v2 §19.6)
-9. **Tier 9** — performance (7 tests, all capability-gated per §18) + `latency_budget.json` refresh
+---
 
-Each tier's test catalogue is in PLAN §5 (Tiers 1–8) and §19 (v2 additions).
+### Phase 4 — Tier 7 (GC + persistence, 10 tests)
 
-### 4.4 Open infrastructure work
+**Why next over Tier 3** (per PLAN §7): GC is "the largest design surface
+that can silently break." Land before a second daemon restart in
+production.
 
-| Item | Where described | Notes |
-|---|---|---|
-| `EOS_ISOLATED_WORKSPACE_ENABLED` plumbing into sweevo daemon `/etc/environment` | IMPLEMENTATION-REPORT §7.5 | Until this is wired, the daemon comes up with `_ManagerConfig.enabled=False` and every `enter()` returns `feature_disabled` |
-| `api.test_only.iws_reset` RPC | IMPLEMENTATION-REPORT §7.6, PLAN §9.1 | Gated by `EOS_ENABLE_TEST_RPCS=true`; adds a forced-reset RPC the conftest can call before each test |
-| 4-phase `tool_call` widening | PLAN §15.2, IMPLEMENTATION-REPORT §7.4 | Sunset trigger: `tool_call.exec` P95 > 500 ms on reference CI over a rolling 7-day window |
-| `latency_budget.json` (PR 7) | PLAN §15.1, §17 | Lands after PR 6 (Tier 9 fixtures). Reference-CI runs 100 iterations and dumps medians |
+**Tests** (PLAN §5 catalogue + v2 §19.5 additions): `manager.json`
+roundtrip + schema-mismatch handling; daemon-restart reaps orphan veth /
+cgroup / scratch / netns + releases orphan lease + reconciles IP pool;
+GC ordering (unfreeze before kill); v1 nft-table migration sweep; new v2
+tests for `lowerdir_layer_paths_shared`, `lowerdir_disk_usage_is_o1`,
+`upperdir_fully_discarded_on_normal_exit`,
+`upperdir_discarded_on_abnormal_exit_daemon_kill`.
+
+**Reuse opportunity** for `upperdir_*` tests: use
+`sandbox.execution.overlay.capture.walk_upperdir` instead of
+`os.walk` if you need anything beyond byte counting (NEXT-AGENT-GUIDE
+§2).
+
+**Done criteria:** 10 base + up to 4 v2 = up to 14 tests pass; daemon
+SIGKILL → restart leaves zero `eos-iws-*` veth, zero `eos-iws-*`
+cgroups, zero scratch dirs, the IP pool reconciles correctly, the
+`gc_orphan` audit event carries `phases_ms.{discover, reap}` per-orphan.
+
+---
+
+### Phase 5 — Tier 3 (network, 11 + 4 = 15 tests)
+
+**Why this position** (per PLAN §7): can land incrementally per nft rule;
+needs a stable iws lifecycle (phases 2–4) underneath.
+
+**Tests:**
+- MASQUERADE egress + IMDS drop + RFC1918 deny opt-in + IPv6 default-route
+  purge (11 tests per PLAN §5)
+- Inbound-rejection via `unshare -n` host-netns probe (4 tests per v2 §19.3)
+
+**Helpers to add this phase** (deferred from prior sessions, NEXT-AGENT-GUIDE
+§5.3): re-add `unshare_netns_probe`, `tiny_http_server`, `find_free_port`
+in `_iws_fixtures.py` ONLY when the tests that need them land — do not
+pre-scaffold.
+
+**Done criteria:** all 15 tests pass; idempotent rule reinstall verified
+across daemon restart; conntrack RELATED/ESTABLISHED holds for return
+traffic on 10 MB downloads.
+
+---
+
+### Phase 6 — Tier 4 (failure modes, 8 tests)
+
+Adversarial / partial-rollback coverage. Setup timeout wedge, ns_holder
+crash before ready, overlay mount EBUSY, veth install EEXIST, DNS helper
+failure, SIGKILL fallback, freezer stall → SIGSTOP fallback (this is when
+`freezer_degraded=True` finally fires — wire it up in `_LinuxRuntime.freeze`),
+argv E2BIG via in_ns_write.
+
+**Cross-ref this phase** to project memory entry
+`'checked batch apply failed' = argv E2BIG` — same bug class, same fix
+(stream payload via stdin).
+
+---
+
+### Phase 7 — Tier 5 + Tier 6 (resource controls + concurrency, 14 + 4 = 18 tests)
+
+**Before starting this phase:** address NEXT-AGENT-GUIDE §4.2/7.7 — the
+synchronous `subprocess.run` in `_LinuxRuntime.mount_overlay` and
+`configure_dns` will make Tier 6's `test_5_concurrent_isolated_workspaces`
+contention-bound flake. Switch those to
+`asyncio.create_subprocess_exec`; the `_Runtime` Protocol methods become
+`async def`. Update FakeRuntime accordingly.
+
+**Tier 5:** quota-per-agent, total cap=5, host-RAM gate, TTL evict + audit,
+TTL doesn't evict active, ENOSPC backpressure, freeze/thaw idempotent.
+
+**Tier 6:** two agents same port, concurrent enter no IP double-alloc,
+concurrent default+isolated, handle-lock serializes tool calls,
+map-lock serializes enter/exit only, init_complete blocks during startup
+GC, re-enter after exit gets fresh handle; plus 4 N=5 noisy-neighbor
+tests from v2 §19.4.
+
+---
+
+### Phase 8 — Tier 8 (stress, 4 + 1 = 5 tests, marked slow)
+
+5-concurrent-workspaces, rapid create/destroy cycle, long-running idle
+freeze-at-rest, pip-install-then-run e2e, disk-at-rest bounded (v2).
+
+Gate behind `--run-slow` per PLAN §9.5.
+
+---
+
+### Phase 9 — Tier 9 (performance, 7 tests, capability-gated)
+
+**Prerequisites:** every prior phase landed; `latency_budget.json` does
+NOT yet exist.
+
+**Steps:**
+1. Add the `performance/` directory + 7 tests per PLAN §19.7.
+2. Add the `latency_baseline` session fixture (3 warm-up cycles, computes
+   median per-phase ms from audit events) + `LatencyBudget` helper class.
+3. Make all 7 tests capability-gated via `iws_capability_probe` (already in
+   conftest); add the reference-CI fail-loud policy from PLAN §18.
+4. After (1)-(3) land and pass, do the **first `latency_budget.json` refresh**
+   (PR 7 per PLAN §16): 100-iteration distribution dump on the reference
+   CI host into `_data/latency_budget.json`.
+
+**Done criteria for the entire iws feature:** all 9 tiers + v2 additions
+green; first `latency_budget.json` committed; PLAN §10 done-definition
+satisfied for every tier.
+
+---
+
+### Open infrastructure (touch when relevant phase needs it)
+
+| Item | When to land |
+|---|---|
+| `EOS_ISOLATED_WORKSPACE_ENABLED` daemon plumbing | Phase 1 — blocks everything else |
+| `api.test_only.iws_reset` RPC (PLAN §9.1) | If/when the per-agent exit() loop in `iws_clean_sandbox` becomes inadequate. Could happen at phase 6 (concurrency) if tests start leaking handles to unexpected agent ids. |
+| 4-phase `tool_call` widening (PLAN §15.2) | Sunset trigger only: when `tool_call.exec` P95 > 500 ms on reference CI over a rolling 7-day window of budget refreshes. Until then, 3-phase is the v1 contract. |
+| Async `subprocess` migration for `_LinuxRuntime` (§4.2/7.7) | Phase 7 prerequisite |
 
 ---
 
