@@ -34,7 +34,7 @@ from sandbox.api.transport import (
 )
 from sandbox.audit import events as sandbox_audit_events
 from sandbox._shared.clock import monotonic_now
-from sandbox._shared.models import ShellRequest, ShellResult
+from sandbox._shared.models import SandboxCaller, ShellRequest, ShellResult
 
 logger = logging.getLogger(__name__)
 
@@ -155,11 +155,7 @@ async def _shell_background_dispatch(
         sandbox_audit_events.SHELL_LAUNCHED,
         sandbox_id=sandbox_id,
         caller=request.caller,
-        payload={
-            "job_id": job_id,
-            "lease_id": lease_id,
-            "request_id": request.caller.agent_id,
-        },
+        payload={"job_id": job_id, "lease_id": lease_id},
     )
 
     reap_timeout = max(60, int(request.timeout) if request.timeout else 600)
@@ -178,7 +174,6 @@ async def _shell_background_dispatch(
             sandbox_id=sandbox_id,
             job_id=job_id,
             audit_sink=audit_sink,
-            caller_sandbox_id=sandbox_id,
             caller=request.caller,
         )
         raise
@@ -204,17 +199,21 @@ async def _send_cancel_then_reap(
     sandbox_id: str,
     job_id: str,
     audit_sink: AuditSink | None,
-    caller_sandbox_id: str,
-    caller: object,
+    caller: SandboxCaller,
 ) -> None:
     """Best-effort cancel + reap on CancelledError. Errors are swallowed."""
     _emit_shell_audit(
         audit_sink,
         sandbox_audit_events.SHELL_CANCELLED,
-        sandbox_id=caller_sandbox_id,
+        sandbox_id=sandbox_id,
         caller=caller,
         payload={"job_id": job_id, "reason": "engine_cancel"},
     )
+    reap_payload: dict[str, object] = {
+        "job_id": job_id,
+        "status": "cancel_reap_failed",
+        "changed_paths_count": 0,
+    }
     try:
         await transport.call(
             sandbox_id,
@@ -222,21 +221,6 @@ async def _send_cancel_then_reap(
             {"job_id": job_id, "reason": "engine_cancel"},
             timeout=_BACKGROUND_CANCEL_TIMEOUT_S,
         )
-    except Exception:
-        logger.debug("shell.cancel best-effort dispatch failed", exc_info=True)
-        _emit_shell_audit(
-            audit_sink,
-            sandbox_audit_events.SHELL_REAPED,
-            sandbox_id=caller_sandbox_id,
-            caller=caller,
-            payload={
-                "job_id": job_id,
-                "status": "cancel_reap_failed",
-                "changed_paths_count": 0,
-            },
-        )
-        return
-    try:
         reap_response = await transport.call(
             sandbox_id,
             DAEMON_OP_SHELL_REAP,
@@ -246,29 +230,18 @@ async def _send_cancel_then_reap(
     except Exception:
         # Daemon TTL reaper will catch any residual lease; nothing we can do
         # synchronously without blocking the engine cancel path.
-        logger.debug("shell.reap after cancel best-effort dispatch failed", exc_info=True)
-        _emit_shell_audit(
-            audit_sink,
-            sandbox_audit_events.SHELL_REAPED,
-            sandbox_id=caller_sandbox_id,
-            caller=caller,
-            payload={
-                "job_id": job_id,
-                "status": "cancel_reap_failed",
-                "changed_paths_count": 0,
-            },
+        logger.debug("shell.cancel/reap best-effort dispatch failed", exc_info=True)
+    else:
+        reap_payload["status"] = str(reap_response.get("status") or "cancelled")
+        reap_payload["changed_paths_count"] = len(
+            reap_response.get("changed_paths") or ()
         )
-        return
     _emit_shell_audit(
         audit_sink,
         sandbox_audit_events.SHELL_REAPED,
-        sandbox_id=caller_sandbox_id,
+        sandbox_id=sandbox_id,
         caller=caller,
-        payload={
-            "job_id": job_id,
-            "status": str(reap_response.get("status") or "cancelled"),
-            "changed_paths_count": len(reap_response.get("changed_paths") or ()),
-        },
+        payload=reap_payload,
     )
 
 
@@ -277,7 +250,7 @@ def _emit_shell_audit(
     event_type: str,
     *,
     sandbox_id: str,
-    caller: object,
+    caller: SandboxCaller,
     payload: dict[str, object],
 ) -> None:
     """Publish a SHELL_* lifecycle event to the engine's audit bus.
@@ -289,13 +262,15 @@ def _emit_shell_audit(
     """
     if audit_sink is None:
         return
-    agent_id = getattr(caller, "agent_id", None)
     try:
         audit_sink.publish(
             AuditEvent(
                 source="sandbox",
                 type=event_type,
-                node=AuditNode(sandbox_id=sandbox_id, agent_run_id=agent_id),
+                node=AuditNode(
+                    sandbox_id=sandbox_id,
+                    agent_run_id=caller.agent_id,
+                ),
                 payload=dict(payload),
             )
         )

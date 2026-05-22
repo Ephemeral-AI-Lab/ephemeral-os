@@ -1,6 +1,11 @@
 # Shell `background=True` — Phase 2 validation + audit wiring
 
-Status: refined draft (round 2). Successor to `2026-05-22-shell-background-mode.md`.
+Status: **implemented (code + unit + collect-only)** (2026-05-23). Successor to
+`2026-05-22-shell-background-mode.md`. Live verification (T1, T2, T3, T5,
+T6, T7, T8) deferred to a follow-up operator round — those tests require
+`LIVE_E2E_HEAVY=1` + `DATABASE_URL` + a SWE-EVO image, none of which are
+available in the ralph build session. T4 is descoped to a unit-test
+variant (`test_background_shell_engine_kill.py`) per Risk register R2.
 
 ## What changed vs the round-1 draft of this file
 

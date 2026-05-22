@@ -374,3 +374,59 @@ This is a test-only PR. No production code touched.
 - RESOURCE_LIMIT post-dispatch with `terminal_tools` non-empty requires pre-seeding `tool_calls_used = tool_call_limit`. The reserved-slot rule (`_consume_tool_budget_or_reject` in `tools/_framework/execution/tool_call.py`) blocks non-terminal calls at `tool_calls_used == limit - 1`, so non-terminals alone can never push the counter to limit. This is the structural quirk that any future real-loop RESOURCE_LIMIT test must work around.
 - For helper tools (`ask_advisor`, `ask_resolver`, `run_subagent`), monkeypatching must hit BOTH `engine.api.run_ephemeral_agent` and `engine.agent.lifecycle.run_ephemeral_agent` because `engine.api` is a lazy proxy that may or may not have cached the canonical reference yet at call time.
 - The `tools.ask_helper.{ask_advisor,ask_resolver}` import path is ambiguous: the submodule and the FunctionTool share the name. Use `sys.modules["tools.ask_helper.ask_advisor"]` for module-level monkeypatching of compose_helper_bundle.
+
+---
+
+## Round 2026-05-23 — Phase 2 shell `background=True` validation + host-side audit derivation
+
+### Plan executed
+`docs/plans/2026-05-23-shell-background-validation.md` (refined draft round 2, then implemented).
+
+### Stories completed (PRD US-001 through US-009)
+- **US-001** Host-side `SHELL_*` audit derivation in `_shell_background_dispatch`. Daemon-side `audit_callback` design from round-1 draft was wrong (daemon runs inside the sandbox container, no path to host's `sandbox_events.jsonl`). Correct pattern mirrors `sandbox_events_from_tool_completion`: host derives at the call boundary, `LegacySandboxAuditSink` translates. Net change: ~30 LOC in `backend/src/sandbox/api/tool/shell.py`, 3 new `EventType` constants, 3 entries in `_SANDBOX_EVENT_MAP`. 8/8 unit tests in `test_shell_background_dispatch.py` pass.
+- **US-002** Env-var config knobs (`EOS_SHELL_JOB_TTL_S`, `EOS_SHELL_JOB_REAPER_INTERVAL_S`) for `get_shell_job_registry()`. Required because default 300 s TTL is unusable in CI for T4 verification. Defaults preserved when env unset. Malformed and negative values fall back to defaults. 5 new tests in `test_shell_job_registry_env_overrides.py`.
+- **US-003** New daemon RPC `api.shell.metrics` exposing `{active_jobs, ttl_reaped_total}`. Counter increments inside `_reap_stale_jobs` under the registry lock. AC-13 verification path: when the engine dies post-SIGKILL, its `sandbox_events.jsonl` writer goes with it, so T4 cannot observe a `SHELL_REAPED status=ttl_expired` audit event; it polls `api.shell.metrics.ttl_reaped_total` instead. New transport constant `DAEMON_OP_SHELL_METRICS`. 1 new test added to `test_shell_job_registry.py`.
+- **US-004** Direct-RPC probe `backend/src/task_center_runner/agent/mock/background_shell_probe.py` with three modes (golden / cancel / interleave). NOT a mock-agent scenario probe — it issues `sandbox_api.shell` calls directly with a pre-built `SandboxCaller`. Sidesteps the scenario/runner-dispatch plumbing that would otherwise be needed to route `tools.background.*` through the mock-agent harness (out of scope for this phase).
+- **US-005** T1-T3 live integration tests (golden / cancel / interleave) + shared `_background_shell_invariants.py` helper. All gated by `database_configured() AND live_e2e_heavy_enabled()`. Collect cleanly; skip without `LIVE_E2E_HEAVY=1 + DATABASE_URL`.
+- **US-006** T4 engine-kill **descoped** to unit-test variant `test_background_shell_engine_kill.py` per Risk register R2. Engine-in-subprocess fixture has no precedent in the live test suite; budget was 80 LOC, the rig wouldn't fit. The architectural property ("daemon process owns lease cleanup independently of host engine") is proved by Phase 1's daemon/engine process separation plus the TTL-reaper code path this unit test exercises. Test passes in 0.25 s.
+- **US-007** T5 executor-exhaustion live test (80 background launches, all cancelled, foreground `read_file` must complete in < 1 s). 80 chosen because it saturates `DEFAULT_EXECUTOR_WORKERS = 64` with queue overflow without saturating SWE-EVO Docker quotas. Round-2 plan's 210 was infeasible for shared CI.
+- **US-008** T6 (partial-write cancel), T7 (cancel-during-maintenance), T8 (late-cancel race) live tests. All three collect cleanly.
+- **US-009** Full sandbox regression: 779 passed / 7 failed / 3 skipped. The 7 failures are all pre-existing (verified by `git stash` round-trip on Round 0): 3 in `test_shell_atomic_by_path_count.py` (missing `_StubOccClient.run_maintenance_after_publish`), 2 in `test_overlay/`, 2 in `test_provider/`. None are in test files I modified.
+
+### Files added
+- `backend/src/task_center_runner/agent/mock/background_shell_probe.py`
+- `backend/src/task_center_runner/tests/mock/sandbox/_background_shell_invariants.py`
+- `backend/src/task_center_runner/tests/mock/sandbox/test_background_shell_golden.py`
+- `backend/src/task_center_runner/tests/mock/sandbox/test_background_shell_cancel.py`
+- `backend/src/task_center_runner/tests/mock/sandbox/test_background_shell_interleave.py`
+- `backend/src/task_center_runner/tests/mock/sandbox/test_background_shell_engine_kill.py` (descoped unit test)
+- `backend/src/task_center_runner/tests/mock/sandbox/test_background_shell_executor_exhaustion.py`
+- `backend/src/task_center_runner/tests/mock/sandbox/test_background_shell_partial_write_cancel.py`
+- `backend/src/task_center_runner/tests/mock/sandbox/test_background_shell_cancel_during_maintenance.py`
+- `backend/src/task_center_runner/tests/mock/sandbox/test_background_shell_late_cancel_race.py`
+- `backend/tests/unit_test/test_sandbox/test_shell_job_registry_env_overrides.py`
+
+### Files modified
+- `backend/src/sandbox/api/tool/shell.py` (host-side audit emit + `_emit_shell_audit` helper)
+- `backend/src/sandbox/api/transport.py` (`DAEMON_OP_SHELL_METRICS`)
+- `backend/src/sandbox/daemon/service/shell_job.py` (env-var knobs, `metrics()`, `ttl_reaped_total`)
+- `backend/src/sandbox/daemon/service/shell_job_handler.py` (`shell_metrics` handler)
+- `backend/src/sandbox/daemon/rpc/dispatcher.py` (register new metrics op)
+- `backend/src/task_center_runner/audit/events.py` (3 new `EventType` constants)
+- `backend/src/task_center_runner/audit/legacy.py` (3 new `_SANDBOX_EVENT_MAP` entries)
+- `backend/tests/unit_test/test_sandbox/test_api/test_shell_background_dispatch.py` (3 new tests)
+- `backend/tests/unit_test/test_sandbox/test_shell_job_registry.py` (1 new test)
+- `backend/tests/unit_test/test_sandbox/test_api/test_contract.py` (add `sandbox.audit*` to `tool/shell.py` allowlist)
+- `backend/tests/unit_test/test_sandbox/test_daemon/test_routing_invariants.py` (add `api.shell.metrics` to expected OP_TABLE)
+- `docs/plans/2026-05-23-shell-background-validation.md` (status → implemented)
+
+### Deferred / out of scope
+- Live execution of T1, T2, T3, T5, T6, T7, T8: require `LIVE_E2E_HEAVY=1` + `DATABASE_URL` + a running SWE-EVO image. Cannot run in this ralph session — env not set. The test files exist, collect, and skip cleanly.
+- T4 engine-in-subprocess fixture: descoped to unit-test variant. The full integration test is a follow-up phase candidate.
+- Full sandbox_events.jsonl invariant scan integration into T1-T8: requires the tests to be wrapped in `run_scenario_on_sweevo_image` (audit recorder bound to a run_dir). The `_background_shell_invariants.py` helper is built and works on any jsonl path; integration with the SWE-EVO scenario runner is a follow-up.
+
+### Learnings (carry forward)
+- **Host-side audit emit > daemon-side callback.** When a sandbox subsystem's events need to land in `sandbox_events.jsonl`, derive them host-side from RPC response data. The daemon is inside the sandbox container; it has no path to the host's audit run_dir. Pattern reference: `sandbox_events_from_tool_completion()` at `backend/src/task_center_runner/audit/sandbox_events.py:32`.
+- **Probe = test helper, not scenario.** When testing a daemon RPC surface (not an agent's reasoning), the probe issues `sandbox_api.*` calls directly with a synthesized `SandboxCaller`. Skips the mock-agent + scenario + runner-dispatch machinery entirely. The cost is that `sandbox_events.jsonl` invariant scanning requires a separately-wired audit recorder.
+- **Backend `tests/` isn't on the test-collection import path** of `task_center_runner/tests/`. Inline helpers rather than `from tests.unit_test...` imports.
+- **CLAUDE.md §3 "surgical changes"**: when the regression run lights up failures in test files you never touched, verify they're pre-existing (stash round-trip) before "fixing" them. Three failures in `test_shell_atomic_by_path_count.py` predate my work; left them alone.

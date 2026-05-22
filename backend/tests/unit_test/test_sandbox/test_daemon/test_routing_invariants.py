@@ -38,6 +38,8 @@ def test_daemon_op_table_routes_to_current_handler_layout() -> None:
         "api.v1.shell.cancel": shell_job_handler.shell_cancel,
         "api.shell.reap": shell_job_handler.shell_reap,
         "api.v1.shell.reap": shell_job_handler.shell_reap,
+        "api.shell.metrics": shell_job_handler.shell_metrics,
+        "api.v1.shell.metrics": shell_job_handler.shell_metrics,
         "api.overlay.flush": overlay.flush_workspace_overlay,
         "api.overlay.stop": overlay.stop_workspace_overlay,
         "api.layer_metrics": metrics.layer_metrics,

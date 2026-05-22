@@ -40,6 +40,9 @@ from task_center_runner.scenarios.planner_validation import (
 )
 from task_center_runner.scenarios.sandbox import (
     AutoSquashCommitResume,
+    BackgroundShellCancel,
+    BackgroundShellGolden,
+    BackgroundShellInterleave,
     ComplexProjectBuild,
     ComplexProjectBuildGrepGlob,
     ComplexProjectBuildGrepGlobSmoke,
@@ -79,6 +82,9 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     "capacity.full_system_capacity_matrix": FullSystemCapacityMatrix,
     # Focused sandbox scenarios.
     "sandbox.auto_squash_commit_resume": AutoSquashCommitResume,
+    "sandbox.background_shell_cancel": BackgroundShellCancel,
+    "sandbox.background_shell_golden": BackgroundShellGolden,
+    "sandbox.background_shell_interleave": BackgroundShellInterleave,
     "sandbox.complex_project_build": ComplexProjectBuild,
     "sandbox.complex_project_build_grep_glob": ComplexProjectBuildGrepGlob,
     "sandbox.complex_project_build_grep_glob_smoke": ComplexProjectBuildGrepGlobSmoke,
@@ -109,6 +115,9 @@ __all__ = [
     "AttemptRetryGeneratorFailure",
     "AttemptRetryPlannerFailure",
     "AutoSquashCommitResume",
+    "BackgroundShellCancel",
+    "BackgroundShellGolden",
+    "BackgroundShellInterleave",
     "ComplexProjectBuild",
     "ComplexProjectBuildGrepGlob",
     "ComplexProjectBuildGrepGlobSmoke",

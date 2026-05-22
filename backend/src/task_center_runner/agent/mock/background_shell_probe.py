@@ -23,7 +23,6 @@ Three modes share the seed + reconcile shape used by
 from __future__ import annotations
 
 import asyncio
-import json
 import time
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -34,12 +33,6 @@ from sandbox._shared.models import (
     ShellRequest,
     ShellResult,
 )
-
-
-WORKSPACE_ROOT = "/testbed"
-ROOT = f"{WORKSPACE_ROOT}/.ephemeralos/sweevo-mock/background_shell"
-SUMMARY_PATH = f"{ROOT}/summary.json"
-SUMMARY_SCHEMA = "task_center_runner.background_shell.v1"
 
 
 # Long-running sleep used by all three modes. The cancel/interleave modes
@@ -67,36 +60,13 @@ class _LaunchRecord:
 
 @dataclass
 class BackgroundShellSummary:
-    """Aggregated result the probe writes to ``summary.json``."""
+    """Aggregated result of one probe run; consumed directly by the live tests."""
 
-    schema: str = SUMMARY_SCHEMA
     mode: str = ""
     launches: list[_LaunchRecord] = field(default_factory=list)
     foreground_mount_s: list[float] = field(default_factory=list)
     total_duration_s: float = 0.0
     foreground_p95_mount_s: float = 0.0
-
-    def to_payload(self) -> dict[str, object]:
-        return {
-            "schema": self.schema,
-            "mode": self.mode,
-            "launches": [
-                {
-                    "index": record.index,
-                    "started_at": record.started_at,
-                    "completed_at": record.completed_at,
-                    "status": record.status,
-                    "exit_code": record.exit_code,
-                    "changed_paths_count": record.changed_paths_count,
-                    "cancelled": record.cancelled,
-                    "error": record.error,
-                }
-                for record in self.launches
-            ],
-            "foreground_mount_s": list(self.foreground_mount_s),
-            "total_duration_s": self.total_duration_s,
-            "foreground_p95_mount_s": self.foreground_p95_mount_s,
-        }
 
 
 def _percentile(values: Iterable[float], pct: float) -> float:
@@ -118,9 +88,13 @@ def _caller(agent_id: str = "background-shell-probe") -> SandboxCaller:
 
 
 async def seed_workspace(sandbox_id: str) -> None:
-    """Pre-create ``ROOT`` so subsequent writes don't race on ``mkdir``."""
+    """Warm-up call that confirms the sandbox responds to a foreground shell.
+
+    Used by the live tests as a connectivity probe before issuing background
+    launches; no on-disk side-effect required.
+    """
     request = ShellRequest(
-        command=f"mkdir -p {ROOT}",
+        command="true",
         cwd=".",
         timeout=DEFAULT_TIMEOUT_S,
         background=False,
@@ -273,31 +247,6 @@ async def run_background_shell_interleave_probe(
     return summary
 
 
-async def write_summary(sandbox_id: str, summary: BackgroundShellSummary) -> str:
-    """Persist the summary to ``SUMMARY_PATH`` via the sandbox write API.
-
-    Using shell + heredoc keeps the contract identical to the heavy_io
-    probe (no host-side filesystem assumptions). The summary path is what
-    the live tests read back via ``sandbox_api.read_file``.
-    """
-    payload = json.dumps(summary.to_payload(), indent=2, sort_keys=True) + "\n"
-    encoded = payload.replace("'", "'\\''")
-    command = (
-        f"mkdir -p {ROOT} && "
-        f"printf '%s' '{encoded}' > {SUMMARY_PATH}"
-    )
-    request = ShellRequest(
-        command=command,
-        cwd=".",
-        timeout=DEFAULT_TIMEOUT_S,
-        background=False,
-        caller=_caller("background-shell-probe.write_summary"),
-        description="background_shell.write_summary",
-    )
-    await sandbox_api.shell(sandbox_id, request)
-    return SUMMARY_PATH
-
-
 def _record_from_result(record: _LaunchRecord, result: ShellResult) -> None:
     record.completed_at = time.monotonic()
     record.status = str(getattr(result, "status", "") or "")
@@ -327,16 +276,8 @@ def _mount_s_from_result(result: ShellResult) -> float | None:
 
 __all__ = [
     "BackgroundShellSummary",
-    "DEFAULT_BACKGROUND_SLEEP_S",
-    "DEFAULT_CANCEL_AFTER_S",
-    "DEFAULT_INTERLEAVE_COUNT",
-    "DEFAULT_TIMEOUT_S",
-    "ROOT",
-    "SUMMARY_PATH",
-    "SUMMARY_SCHEMA",
     "run_background_shell_cancel_probe",
     "run_background_shell_golden_probe",
     "run_background_shell_interleave_probe",
     "seed_workspace",
-    "write_summary",
 ]

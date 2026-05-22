@@ -121,12 +121,16 @@ def test_subpackage_imports_are_clean() -> None:
     ]
     assert sandbox.__all__ == [
         "AutoSquashCommitResume",
+        "BackgroundShellCancel",
+        "BackgroundShellGolden",
+        "BackgroundShellInterleave",
         "ComplexProjectBuild",
         "ComplexProjectBuildGrepGlob",
         "ComplexProjectBuildGrepGlobSmoke",
         "ComplexProjectBuildShellEditLsp",
         "ComplexProjectBuildShellEditLspSmoke",
         "ComplexProjectBuildSmoke",
+        "HeavyIoZonedConcurrent",
         "HighConcurrencyLayerstackOverlayOcc",
         "OccConcurrentConflicts",
     ]
