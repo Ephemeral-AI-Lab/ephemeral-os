@@ -20,7 +20,10 @@ from task_center_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
 )
-from task_center_runner.tests.mock.sandbox.isolated_workspace import _iws_rpc
+from task_center_runner.tests.mock.sandbox.isolated_workspace import (
+    _iws_invariants,
+    _iws_rpc,
+)
 
 
 pytestmark = pytest.mark.asyncio
@@ -35,7 +38,7 @@ pytestmark = pytest.mark.asyncio
     reason="heavy live e2e disabled in runner.live_e2e.heavy_enabled",
 )
 @pytest.mark.timeout(180)
-async def test_enter_then_shell_then_exit(iws_clean_sandbox) -> None:
+async def test_enter_then_shell_then_exit(iws_clean_sandbox, iws_audit_jsonl) -> None:
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
     agent_id = "agent-A"
     enter_response = await _iws_rpc.enter(
@@ -55,3 +58,22 @@ async def test_enter_then_shell_then_exit(iws_clean_sandbox) -> None:
     status_response = await _iws_rpc.status(sandbox_id, agent_id)
     assert status_response.get("success") is True
     assert status_response.get("open") is False, status_response
+
+    # PR 1 contract: enter and exit events expose ``total_ms`` and
+    # ``phases_ms`` (PLAN §14). Verify the sequence reached the audit sink.
+    jsonl_path = await iws_audit_jsonl()
+    _iws_invariants.assert_audit_sequence(
+        jsonl_path,
+        [
+            "sandbox_isolated_workspace_enter",
+            "sandbox_isolated_workspace_tool_call",
+            "sandbox_isolated_workspace_exit",
+        ],
+    )
+    enters = _iws_invariants.events_of_type(
+        jsonl_path, "sandbox_isolated_workspace_enter"
+    )
+    assert enters, enters
+    enter_payload = enters[-1].get("payload", {})
+    assert enter_payload.get("phases_ms"), enter_payload
+    assert float(enter_payload.get("total_ms", 0.0)) > 0.0, enter_payload

@@ -61,17 +61,49 @@ def iws_capability_probe() -> dict[str, bool]:
 
 
 @pytest.fixture(scope="session")
-def iws_sandbox(
+async def iws_sandbox(
     sweevo_image_sandbox: dict[str, Any],  # noqa: F811 (fixture from sweevo)
 ) -> dict[str, Any]:
     """Yield a sweevo sandbox configured for isolated workspaces.
 
-    The daemon must boot with ``EOS_ISOLATED_WORKSPACE_ENABLED=true``. The
-    bootstrap can either write that to ``/etc/environment`` and restart the
-    daemon, or set it directly on the daemon process — both are
-    sweevo-fixture concerns. For now we surface the underlying sandbox dict
-    and let the daemon's existing env-var plumbing carry the flag.
+    The daemon must boot with ``EOS_ISOLATED_WORKSPACE_ENABLED=true``.
+    Approach (session-scoped, idempotent):
+
+      1. ``raw_exec`` an append to ``/etc/environment`` (idempotent grep-guard).
+      2. ``pkill -f sandbox.daemon`` so the next host RPC re-runs
+         ``launch_daemon.sh``. Because the launcher uses ``bash -lc`` and the
+         daemon module reads ``os.environ`` once at startup via
+         ``_ManagerConfig.from_env()``, sourcing ``/etc/environment`` is
+         sufficient to carry the flag.
+
+    Modifying the underlying sweevo sandbox would change behavior for
+    unrelated test surfaces, so this wrapper does the env-flip locally and
+    returns the same dict.
     """
+    from sandbox.api import raw_exec
+
+    sandbox_id = str(
+        sweevo_image_sandbox.get("sandbox_id")
+        or sweevo_image_sandbox.get("id")
+        or ""
+    )
+    if sandbox_id:
+        await raw_exec(
+            sandbox_id,
+            "grep -q '^EOS_ISOLATED_WORKSPACE_ENABLED=' /etc/environment "
+            "2>/dev/null || "
+            "echo 'EOS_ISOLATED_WORKSPACE_ENABLED=true' >> /etc/environment",
+            cwd="/",
+            timeout=10,
+        )
+        # Force daemon respawn so it inherits the new env on the next RPC.
+        # pkill returns 1 if no process matches; that's fine.
+        await raw_exec(
+            sandbox_id,
+            "pkill -f '^.*python.*-m sandbox\\.daemon' || true",
+            cwd="/",
+            timeout=10,
+        )
     return sweevo_image_sandbox
 
 
@@ -90,6 +122,48 @@ async def iws_clean_sandbox(iws_sandbox: dict[str, Any]) -> dict[str, Any]:
         except Exception:  # pragma: no cover — best-effort reset
             pass
     return iws_sandbox
+
+
+# ---------------------------------------------------------------------------
+# Audit JSONL snapshot (PLAN §2)
+# ---------------------------------------------------------------------------
+
+
+_IN_CONTAINER_AUDIT_PATH = "/tmp/sandbox_isolated_workspace_events.jsonl"
+
+
+@pytest.fixture
+async def iws_audit_jsonl(iws_clean_sandbox: dict[str, Any], tmp_path):
+    """Provide a callable that snapshots the daemon-side iws audit JSONL.
+
+    The daemon writes lifecycle events to ``_IN_CONTAINER_AUDIT_PATH`` inside
+    the sandbox (wired by ``sandbox.isolated_workspace.handlers._JsonlAuditSink``).
+    The file is truncated at fixture entry so each test sees only its own
+    events; ``await snapshot()`` returns a ``pathlib.Path`` on the host with
+    the bytes read at that moment.
+    """
+    from sandbox.api import raw_exec
+
+    sandbox_id = str(iws_clean_sandbox["sandbox_id"])
+    # Truncate the daemon-side log so we don't leak events from a previous
+    # test into the assertion window. ``: > path`` is idempotent and creates
+    # the file if missing.
+    await raw_exec(
+        sandbox_id, f": > {_IN_CONTAINER_AUDIT_PATH}", cwd="/", timeout=10,
+    )
+
+    async def snapshot():
+        result = await raw_exec(
+            sandbox_id,
+            f"cat {_IN_CONTAINER_AUDIT_PATH} 2>/dev/null || true",
+            cwd="/",
+            timeout=10,
+        )
+        out_path = tmp_path / "iws_events.jsonl"
+        out_path.write_text(getattr(result, "stdout", "") or "")
+        return out_path
+
+    return snapshot
 
 
 # ---------------------------------------------------------------------------

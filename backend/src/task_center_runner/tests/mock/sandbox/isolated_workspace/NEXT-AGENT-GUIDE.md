@@ -155,79 +155,101 @@ discipline. Static-only. **Do not redo.**
 
 ---
 
-### Phase 1 — unblock Tier 1 execution (no new tests)
+### Phase 1 (done, 2026-05-23 session 2) — unblock Tier 1 execution
 
-**Goal:** get the existing 4 Tier 1 happy-path tests to *attempt* a real
-`enter()` end-to-end. Currently they fail before they start because the
-daemon comes up with `_ManagerConfig.enabled = False`.
+**Goal landed:** the 4 existing happy-path tests (+ a new mount_overlay
+backstop) no longer fail at the daemon-config / cap-set / fixture-wiring
+layers. Three blockers fixed:
 
-**Steps:**
+1. **`CAP_NET_ADMIN` on Docker run flags** —
+   `backend/src/sandbox/provider/docker/client.py:DEFAULT_RUN_FLAGS` now
+   includes `--cap-add=NET_ADMIN` alongside the existing `SYS_ADMIN`.
+   Comment block above the constant explains both surfaces (overlay mount
+   + iws bridge/nft/veth) instead of the previous overlay-only rationale.
+2. **`EOS_ISOLATED_WORKSPACE_ENABLED=true` plumbed via the iws-scoped
+   fixture** — `conftest.py::iws_sandbox` is now `async def`; it appends
+   the flag to `/etc/environment` (idempotent grep-guard) and SIGTERMs
+   `python -m sandbox.daemon` so the next host RPC respawns the daemon
+   with the new env. The `bash -lc` login shell that
+   `launch_daemon.sh` runs under sources `/etc/environment` via PAM, so
+   `os.environ` carries the flag to `_ManagerConfig.from_env()`.
+3. **Preflight CI probes for iws caps** —
+   `backend/scripts/preflight_docker_a2_caps.sh` grew two new probes
+   (bridge add+del + nft table add+del) and runs them with the updated
+   default cap set.
 
-1. Plumb `EOS_ISOLATED_WORKSPACE_ENABLED=true` into the sweevo daemon
-   startup. Inspect `task_center_runner/environments/sweevo_image/fixtures.py`
-   + `benchmarks/sweevo/sandbox.py` to find where the container env is
-   set; add the flag there. Probably one of:
-   - `/etc/environment` write in the container bootstrap
-   - Direct env arg to the daemon launcher (`launch_daemon.sh`)
-   - A new bootstrap step in `create_sweevo_test_sandbox`
-2. Add the **PR 0 acceptance backstop** (PLAN §16 PR 0 Critic follow-up #6):
-   a Tier 1 test that calls `_LinuxRuntime.mount_overlay` directly (NOT
-   through the manager), reads `/proc/<helper_pid>/mountinfo`, and asserts
-   the overlay line appears. Goes in `happy_path/test_mount_overlay_backstop.py`.
-3. Confirm `runner.live_e2e.heavy_enabled = true` and database URL are
-   reachable from the dev environment so `database_configured()` returns
-   True. Otherwise Tier 1 still skips.
+Plus the **PR 0 acceptance backstop test** (Critic follow-up #6) landed
+as `happy_path/test_mount_overlay_backstop.py`. It bypasses the manager's
+`enter()` entirely, calls `_LinuxRuntime.mount_overlay` directly via a
+`raw_exec` script inside the sweevo container, and asserts the overlay
+line appears in `/proc/<root_pid>/mountinfo`. This isolates "did the
+syscall fire" from "is something around the mount broken" (veth, cgroup,
+dns, handshake) for fast triage on Linux CI.
 
-**Done criteria:**
-- `pytest .../isolated_workspace/happy_path/ -v` no longer reports SKIP for
-  config reasons.
-- Tests either pass or report a concrete kernel/wiring error — NOT
-  `feature_disabled` or `database not configured`.
-
-**Out of scope for phase 1:** writing new Tier 1 tests. The 4 that exist
-are enough surface to find the wiring bugs.
+**Deployment precondition (not code):** `runner.live_e2e.heavy_enabled =
+true` + a configured database URL must be set on the CI host for Tier 1
+to attempt anything. This is config rollout, not a code change.
 
 ---
 
-### Phase 2 — make Tier 1 green
+### Phase 2 (partially done, 2026-05-23 session 2) — make Tier 1 green
 
-**Goal:** the 4 existing happy-path tests pass against a real sweevo
-container.
+**Goal:** the 4 existing happy-path tests + new backstop pass against a
+real sweevo container.
 
-**Steps:**
+**What this session landed (static):**
 
-1. Run `pytest .../happy_path/ -v`. Expect failures in this priority order
-   (they are listed by likelihood of breakage, derived from
-   §5.4 lesson):
-   - **The `net-ready` / `ready` pipe handshake.** This codepath never
-     executed before — `ns_holder` waiting for `net-ready` and the parent's
-     `signal_net_ready` write must agree on pipe lifetime + ordering.
-   - **`open_ns_fds.update()` merge.** Confirm `spawn_ns_holder` stashes
+- **Daemon-side audit sink wired**. The manager already accepted an
+  `AuditSink` port; `handlers.py` now passes a `_JsonlAuditSink` that
+  appends to `/tmp/sandbox_isolated_workspace_events.jsonl`
+  (env-overrideable via `EOS_ISOLATED_WORKSPACE_AUDIT_PATH`). Previously
+  the 5 lifecycle events fell on the floor because `audit=None`.
+- **`iws_audit_jsonl` fixture** in `conftest.py`: truncates the
+  daemon-side log at fixture entry so each test sees only its own events;
+  exposes `await snapshot()` → `pathlib.Path` on the host containing the
+  bytes captured at that moment.
+- **`assert_audit_sequence` calls** added to the 4 happy-path tests. Each
+  test asserts the expected `enter → tool_call(*) → exit` audit sequence
+  in addition to the existing RPC-response assertions.
+- **`iws_sandbox` fixture refactor**: dropped the brittle
+  `asyncio.get_event_loop().run_until_complete` + `RuntimeError` fallback
+  pattern; the fixture is now `async def` and matches the existing
+  `sweevo_image_sandbox` async-session-scoped style.
+
+**Deferred (needs Linux CI to land):**
+
+1. **Live execution of the 5 happy-path tests** — the bug-fix loop from
+   the original §2 plan (`net-ready` handshake, `open_ns_fds.update()`
+   merge, `mount_overlay` lowerdir visibility, `configure_dns_in_ns`
+   symlink-following) is unrunnable from a macOS dev host. When Linux CI
+   picks this up, run `pytest .../happy_path/ -v` and expect failures in
+   the priority order from the previous version of this section
+   (preserved below for context).
+
+   **Expected failure priority (from prior NEXT-AGENT-GUIDE §2):**
+   - The `net-ready` / `ready` pipe handshake (`ns_holder` ↔
+     `signal_net_ready` pipe-lifetime + ordering).
+   - `open_ns_fds.update()` merge (confirm `spawn_ns_holder` stashes
      `readiness_fd` + `control_fd` on the handle before `open_ns_fds`
-     populates `ns_fds`. Bug masked all session; now reachable.
-   - **`mount_overlay` lowerdir-paths-in-mntns visibility.** The unshare's
-     mount-copy semantics MUST make the layer-stack lowerdirs visible
-     inside the workspace mntns. Verify via host-side
-     `nsenter -t <pid> -m ls <lowerdir_path>`.
-   - **`configure_dns_in_ns` symlink-following.** Per PLAN §19.3, when
-     `/etc/resolv.conf` is a symlink to `/run/systemd/resolve/...`, the
-     detection must resolve INSIDE the workspace mntns. Check what the
-     sweevo image's `/etc/resolv.conf` actually looks like first.
-2. Fix one bug, re-run, repeat. Atomic commits per fix.
-3. Add `_iws_invariants.assert_audit_sequence` calls to the 4 tests once
-   the basic flow works — currently they only assert RPC responses
-   (NEXT-AGENT-GUIDE §4.2/7.8 was the prior placeholder for this).
+     populates `ns_fds`).
+   - `mount_overlay` lowerdir-paths-in-mntns visibility — verify via
+     host-side `nsenter -t <pid> -m ls <lowerdir_path>`.
+   - `configure_dns_in_ns` symlink-following — when `/etc/resolv.conf` is
+     a symlink to `/run/systemd/resolve/...`, detection must resolve
+     INSIDE the workspace mntns.
 
-**Done criteria:**
-- 4 Tier 1 tests pass, including the new mount_overlay backstop from
-  phase 1.
-- Each test asserts both the RPC response AND the expected
-  `sandbox_isolated_workspace_{enter,tool_call,exit}` audit sequence.
-- `phases_ms` is non-empty in the captured enter event (proves PR 1's
-  instrumentation fires end-to-end).
+   Fix one bug, re-run, repeat. Atomic commits per fix.
 
-**Out of scope:** Tier 2 tests. Resist the urge — verifying Tier 1 first
-isolates the kernel-wiring bugs from the design-of-tests bugs.
+**Done criteria (when the live-execution loop closes):**
+
+- 5 Tier 1 tests pass (4 lifecycle + mount_overlay backstop).
+- Each lifecycle test asserts both the RPC response AND the
+  `sandbox_isolated_workspace_{enter,tool_call,exit}` audit sequence
+  (already wired statically).
+- `phases_ms` is non-empty in the captured enter event (already asserted
+  in `test_enter_then_shell_then_exit`).
+
+**Out of scope:** Tier 2 tests.
 
 ---
 
@@ -374,7 +396,8 @@ satisfied for every tier.
 
 | Item | When to land |
 |---|---|
-| `EOS_ISOLATED_WORKSPACE_ENABLED` daemon plumbing | Phase 1 — blocks everything else |
+| ~~`EOS_ISOLATED_WORKSPACE_ENABLED` daemon plumbing~~ | **DONE** (2026-05-23 session 2 — see `iws_sandbox` fixture in `conftest.py`). |
+| ~~Daemon-side iws audit-event JSONL sink~~ | **DONE** (2026-05-23 session 2 — `_JsonlAuditSink` in `handlers.py`, `iws_audit_jsonl` fixture). |
 | `api.test_only.iws_reset` RPC (PLAN §9.1) | If/when the per-agent exit() loop in `iws_clean_sandbox` becomes inadequate. Could happen at phase 6 (concurrency) if tests start leaking handles to unexpected agent ids. |
 | 4-phase `tool_call` widening (PLAN §15.2) | Sunset trigger only: when `tool_call.exec` P95 > 500 ms on reference CI over a rolling 7-day window of budget refreshes. Until then, 3-phase is the v1 contract. |
 | Async `subprocess` migration for `_LinuxRuntime` (§4.2/7.7) | Phase 7 prerequisite |

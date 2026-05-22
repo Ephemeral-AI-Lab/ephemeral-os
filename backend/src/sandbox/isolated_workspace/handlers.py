@@ -10,14 +10,22 @@ at startup (each handler call brings its own), so the manager is constructed
 lazily on the first ``enter()`` call using ``args["layer_stack_root"]``. The
 construction also runs ``initialize() + startup_gc()`` exactly once. After
 that, subsequent calls reuse the singleton via ``require_manager()``.
+
+Audit sink: the manager emits five ``sandbox_isolated_workspace_*`` event
+types via its ``AuditSink`` port. Here we wire a JSONL writer that appends
+into the in-container path (env-overrideable; default
+``/tmp/sandbox_isolated_workspace_events.jsonl``). Live tests read this file
+via ``raw_exec`` to verify audit sequences (PLAN §2).
 """
 
 from __future__ import annotations
 
 import asyncio
+import os
 from pathlib import Path
 from typing import Any
 
+from audit.jsonl import append_jsonl_event
 from sandbox.daemon import workspace_server
 from sandbox.execution.scratch import command_exec_scratch_root
 from sandbox.isolated_workspace.manager import (
@@ -30,6 +38,8 @@ from sandbox.isolated_workspace.manager import (
 
 
 _bootstrap_lock = asyncio.Lock()
+
+DEFAULT_AUDIT_JSONL_PATH = "/tmp/sandbox_isolated_workspace_events.jsonl"
 
 
 class _LayerStackAdapter:
@@ -52,6 +62,31 @@ class _LayerStackAdapter:
         )
 
 
+class _JsonlAuditSink:
+    """Append-only JSON-line audit sink for iws events.
+
+    Each ``emit`` writes one object shaped
+    ``{"ts": <float>, "type": <event_type>, "payload": <payload>}`` to the
+    configured path. Live tests read this file via ``raw_exec`` to verify
+    audit sequences; in production the file is the daemon-side mirror of
+    the lifecycle events the host recorder would otherwise miss (the iws
+    handlers run RPC-direct without going through ``run_scenario``).
+    """
+
+    def __init__(self, path: str) -> None:
+        self._path = path
+
+    def emit(self, event_type: str, payload: dict[str, Any]) -> None:
+        append_jsonl_event(
+            self._path, {"type": event_type, "payload": dict(payload)}
+        )
+
+
+def _resolve_audit_path() -> str:
+    raw = os.environ.get("EOS_ISOLATED_WORKSPACE_AUDIT_PATH", "").strip()
+    return raw or DEFAULT_AUDIT_JSONL_PATH
+
+
 async def _ensure_manager(args: dict[str, Any]) -> IsolatedWorkspaceManager:
     try:
         return require_manager()
@@ -68,6 +103,7 @@ async def _ensure_manager(args: dict[str, Any]) -> IsolatedWorkspaceManager:
             scratch_root=scratch,
             layer_stack_root=layer_stack_root,
             layer_stack=_LayerStackAdapter(),  # type: ignore[arg-type]
+            audit=_JsonlAuditSink(_resolve_audit_path()),
         )
         set_manager(manager)
         await manager.initialize()

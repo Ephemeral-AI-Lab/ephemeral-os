@@ -6,6 +6,110 @@
 
 ---
 
+## Session 2 — 2026-05-23 (Phase 1 + Phase 2 follow-up)
+
+This section documents the second pass on the iws milestone. It executes
+the "Phase 1 — unblock Tier 1 execution" and "Phase 2 — make Tier 1 green"
+steps from `NEXT-AGENT-GUIDE.md`.
+
+### What landed
+
+| Slice | File(s) | Status |
+|---|---|---|
+| Phase 1.1 — `CAP_NET_ADMIN` on Docker run flags | `backend/src/sandbox/provider/docker/client.py` | landed |
+| Phase 1.2 — daemon env-flip via fixture | `.../tests/mock/sandbox/isolated_workspace/conftest.py` (`iws_sandbox` now async, writes `/etc/environment` + `pkill -f sandbox.daemon`) | landed |
+| Phase 1.3 — preflight script probes `ip link` + `nft` | `backend/scripts/preflight_docker_a2_caps.sh` (2 new probes; `--cap-add=NET_ADMIN`) | landed |
+| Phase 1.4 — mount_overlay backstop test | `happy_path/test_mount_overlay_backstop.py` (new; bypasses `enter()`, calls `_LinuxRuntime.mount_overlay` directly, asserts `/proc/<root_pid>/mountinfo`) | landed (code) |
+| Phase 2.1 — daemon-side JSONL audit sink + fixture + assertions in 4 happy-path tests | `sandbox/isolated_workspace/handlers.py` (`_JsonlAuditSink` wired into manager) · `conftest.py` (`iws_audit_jsonl` snapshot fixture) · 4 happy_path tests gain `assert_audit_sequence` calls | landed |
+| Phase 3 refactor — `iws_sandbox` converted from sync (brittle `asyncio.get_event_loop` try/except) to `async def` | `conftest.py` | landed |
+
+### Why each change
+
+1. **`--cap-add=NET_ADMIN`** — `IsolatedNetwork.initialize()` calls `ip link
+   add`, `nft add table`, and rtnetlink operations in the daemon's netns.
+   These require `CAP_NET_ADMIN`; `CAP_SYS_ADMIN` (already present for
+   overlay + setns) is NOT a superset. Without this flag, every Tier 1
+   `enter()` would EPERM at the bridge-install step.
+
+2. **Env-flip + daemon respawn** — the daemon reads
+   `EOS_ISOLATED_WORKSPACE_ENABLED` once at startup via
+   `_ManagerConfig.from_env()`. The sweevo sandbox is created by an
+   unrelated test fixture, so we cannot pass `env_vars=` at create-time.
+   Instead, the iws-scoped wrapper writes `/etc/environment` (sourced by
+   `bash -lc` in `launch_daemon.sh` via PAM) and SIGTERMs the daemon. The
+   next host RPC respawns it with the new env. Idempotent: a grep-guard
+   prevents double-appends.
+
+3. **Preflight probes** — extended `preflight_docker_a2_caps.sh` to verify
+   the cap actually grants what iws needs: a bridge add+del cycle and a
+   `nft` table add+del cycle. Bails out cleanly if `nft` is not installed in
+   the runtime image (the iws path requires it; this surfaces that gap).
+
+4. **`mount_overlay` backstop** — a Tier 1 test that bypasses the manager's
+   `enter()` and exercises `_LinuxRuntime.mount_overlay` directly through a
+   `raw_exec` Python script. Asserts the overlay line appears in
+   `/proc/<root_pid>/mountinfo` inside the workspace mntns. This
+   structurally separates "mount itself is broken" from "something around
+   the mount is broken" (veth, cgroup, dns, handshake) for fast triage on
+   Linux CI.
+
+5. **Audit-sink wiring** — the manager already accepted an `AuditSink` port
+   but `handlers.py` passed `None`, so the 5 lifecycle events fell on the
+   floor. Wired a `_JsonlAuditSink` that appends to
+   `/tmp/sandbox_isolated_workspace_events.jsonl` (env-overrideable via
+   `EOS_ISOLATED_WORKSPACE_AUDIT_PATH`). Live tests pull the file with
+   `raw_exec(cat …)` into a host `tmp_path` and feed it to the existing
+   `_iws_invariants.assert_audit_sequence` helper.
+
+### Verification (static surface, runnable on macOS)
+
+```text
+$ .venv/bin/python -m pytest \
+    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/pre_flight/ \
+    backend/tests/unit_test/test_sandbox/test_daemon/ \
+    backend/tests/unit_test/test_sandbox/test_import_fence.py \
+    backend/tests/unit_test/test_audit/ \
+    backend/tests/unit_test/test_task_center/test_audit/
+152 passed in 1.29s
+
+$ .venv/bin/ruff check \
+    backend/src/sandbox/isolated_workspace/ \
+    backend/src/sandbox/provider/docker/client.py \
+    backend/src/task_center_runner/audit/events.py \
+    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/
+All checks passed!
+```
+
+### Deferred — what this session could NOT do
+
+| Item | Why | Owner / next trigger |
+|---|---|---|
+| **Live Tier 1 execution** (4 happy-path + 1 backstop) | Requires Linux host + sweevo Docker image + `runner.live_e2e.heavy_enabled = true` + database URL — none reachable from a macOS dev host. Code is in place; bug-fix loop (PLAN §4 phase 2 step 2) is deferred-pending-live-execution. | Linux CI runner |
+| **`runner.live_e2e.heavy_enabled = true` config** | Deployment precondition, not a code change. The skipif decorators already gate cleanly. | central config rollout |
+| **Tiers 2–9 (66 tests)** | Sequenced after Tier 1 is green per PLAN §7. | next session |
+| **Async-blocking subprocess refactor** (`_LinuxRuntime.{mount_overlay, configure_dns, spawn_ns_holder}`) | Becomes a flake source under Tier 6 concurrent N=5 enters. Not on the critical path for Tier 1/2 green. | Phase 7 prerequisite (see NEXT-AGENT-GUIDE §4.2/7.7) |
+| **`api.test_only.iws_reset` RPC** | Per-agent `exit()` loop in `iws_clean_sandbox` is adequate while only 5 known agent ids exist. | When concurrency tests (phase 7) reveal handle leaks |
+| **Backstop test `PYTHONPATH` risk** | `test_mount_overlay_backstop.py` runs `python3 - <<PY` via `raw_exec`. That requires `sandbox.isolated_workspace.manager` to be importable from a bare `python3` invocation — i.e. the daemon's runtime bundle path must be on `sys.path` for that shell's environment. If live CI surfaces `ModuleNotFoundError: sandbox.isolated_workspace`, the fix is either `PYTHONPATH=<bundle_dir> python3 -` or wrapping via the existing thin-client mechanism. | First Linux-CI run of the backstop |
+
+### How to verify on Linux CI
+
+```bash
+# 1. Daemon-cap preflight (verifies CAP_NET_ADMIN actually grants what we need)
+bash backend/scripts/preflight_docker_a2_caps.sh
+
+# 2. Tier 1 happy-path against a live sweevo sandbox
+EOS_SANDBOX_PROVIDER=docker \
+EOS_ISOLATED_WORKSPACE_ENABLED=true \
+    .venv/bin/python -m pytest \
+        backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/happy_path/ -v
+```
+
+Tier 1 expectations: 5 tests pass (4 lifecycle + 1 mount_overlay backstop).
+Each lifecycle test asserts both the RPC response AND the expected
+`sandbox_isolated_workspace_{enter,tool_call,exit}` audit sequence.
+
+---
+
 ## 1. Scope landed this session
 
 | Slice | Status | Verified on macOS |

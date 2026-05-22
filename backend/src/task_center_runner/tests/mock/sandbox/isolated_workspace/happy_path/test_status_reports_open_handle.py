@@ -19,7 +19,10 @@ from task_center_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
 )
-from task_center_runner.tests.mock.sandbox.isolated_workspace import _iws_rpc
+from task_center_runner.tests.mock.sandbox.isolated_workspace import (
+    _iws_invariants,
+    _iws_rpc,
+)
 
 
 pytestmark = pytest.mark.asyncio
@@ -34,7 +37,7 @@ pytestmark = pytest.mark.asyncio
     reason="heavy live e2e disabled in runner.live_e2e.heavy_enabled",
 )
 @pytest.mark.timeout(180)
-async def test_status_reports_open_handle(iws_clean_sandbox) -> None:
+async def test_status_reports_open_handle(iws_clean_sandbox, iws_audit_jsonl) -> None:
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
     agent_id = "agent-A"
     enter_response = await _iws_rpc.enter(
@@ -61,3 +64,15 @@ async def test_status_reports_open_handle(iws_clean_sandbox) -> None:
         assert second_activity > first_activity, (first, second)
     finally:
         await _iws_rpc.exit_(sandbox_id, agent_id)
+
+    # ``status`` does NOT emit an audit event (read-only). Verify enter →
+    # one tool_call → exit shows up in the JSONL.
+    jsonl_path = await iws_audit_jsonl()
+    _iws_invariants.assert_audit_sequence(
+        jsonl_path,
+        [
+            "sandbox_isolated_workspace_enter",
+            "sandbox_isolated_workspace_tool_call",
+            "sandbox_isolated_workspace_exit",
+        ],
+    )

@@ -11,12 +11,20 @@ from typing import Any
 
 # Default capability set for the Docker run invocation.
 #
-# Sized to unblock ``unshare -Urm`` + the single-lowerdir overlay mount the
-# EphemeralOS runtime constructs (``execution/overlay/kernel_mount.py``).
+# Sized to unblock two daemon-internal kernel surfaces:
+#   * ``CAP_SYS_ADMIN`` — ``unshare -Urm`` + the single-lowerdir overlay mount
+#     the EphemeralOS runtime constructs (``execution/overlay/kernel_mount.py``)
+#     plus the isolated-workspace ``setns(CLONE_NEWUSER|CLONE_NEWNS)`` flow.
+#   * ``CAP_NET_ADMIN`` — the isolated-workspace network module (``eos-shared0``
+#     bridge, MASQUERADE/IMDS nftables rules, per-workspace veth wiring) makes
+#     ``ip link`` / ``nft`` / rtnetlink calls in the daemon's own netns.
+#     ``CAP_SYS_ADMIN`` is NOT a superset of ``CAP_NET_ADMIN`` for these
+#     operations, so the cap must be granted explicitly.
 # Sufficiency is verified by ``backend/scripts/preflight_docker_a2_caps.sh``
 # on a Linux CI host.
 DEFAULT_RUN_FLAGS: tuple[str, ...] = (
     "--cap-add=SYS_ADMIN",
+    "--cap-add=NET_ADMIN",
     "--security-opt",
     "seccomp=unconfined",
     "--security-opt",
