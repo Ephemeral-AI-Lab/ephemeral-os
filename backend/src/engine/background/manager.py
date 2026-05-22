@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import threading
 import time
 from collections.abc import Callable, Coroutine, Iterator
 from dataclasses import dataclass, field
@@ -20,6 +21,21 @@ from tools import ToolResult
 from message.stream_events import BackgroundTaskStarted
 
 logger = logging.getLogger(__name__)
+
+
+# Terminal status precedence used by :meth:`BackgroundTaskManager._set_terminal_status`.
+# A status with a *higher* precedence overwrites a lower one; otherwise the
+# attempt is dropped. This is the single-terminal-status latch the plan
+# requires (Pre-mortem #6): cancel + natural-completion races resolve to
+# COMPLETED so a long-running shell that finishes between cancel and reap
+# returns its real result, not the "cancelled" overlay.
+_TERMINAL_PRECEDENCE: dict[str, int] = {
+    "running": 0,
+    "cancelled": 1,
+    "failed": 2,
+    "completed": 3,
+    "delivered": 4,
+}
 
 
 class TaskStatus(StrEnum):
@@ -77,6 +93,10 @@ class TrackedBackgroundTask:
     # Used by tools (e.g. run_subagent) that have structured progress state
     # which is more meaningful than a flat line buffer.
     progress_provider: Callable[[int], str] | None = None
+    # Single-writer latch around the status/result mutation. The cancel path
+    # and the asyncio done-callback can both race to set a terminal status;
+    # the lock + ``_TERMINAL_PRECEDENCE`` table make that race deterministic.
+    _terminal_lock: threading.Lock = field(default_factory=threading.Lock)
 
 
 class BackgroundTaskManager:
@@ -123,40 +143,41 @@ class BackgroundTaskManager:
         self._tasks[task_id] = tracked
 
         def _done_callback(task: asyncio.Task[ToolResult]) -> None:
-            # If cancel() already marked this task, don't overwrite its
-            # status/result — the SDK may complete normally with exit_code -1
-            # after we logically cancelled it.
-            if tracked.status in (TaskStatus.CANCELLED, TaskStatus.DELIVERED):
-                if task.cancelled():
-                    logger.debug(
-                        "Background task %s observed asyncio cancellation after cancel",
-                        tracked.task_id,
-                    )
-                elif task.exception() is not None:
-                    logger.debug(
-                        "Background task %s raised after cancel: %s",
-                        tracked.task_id,
-                        task.exception(),
-                    )
-                return
             try:
                 if task.cancelled():
-                    tracked.status = TaskStatus.CANCELLED
-                    tracked.result = ToolResult(output="Cancelled", is_error=True)
+                    self._set_terminal_status(
+                        tracked,
+                        new_status=TaskStatus.CANCELLED,
+                        new_result=ToolResult(output="Cancelled", is_error=True),
+                    )
                 elif task.exception() is not None:
                     exc = task.exception()
-                    tracked.status = TaskStatus.FAILED
-                    tracked.result = ToolResult(output=str(exc), is_error=True)
+                    self._set_terminal_status(
+                        tracked,
+                        new_status=TaskStatus.FAILED,
+                        new_result=ToolResult(output=str(exc), is_error=True),
+                    )
                 else:
-                    tracked.status = TaskStatus.COMPLETED
-                    mark_completion_mode_if_stopped(tracked)
-                    tracked.result = task.result()
+                    real_result = task.result()
+                    applied = self._set_terminal_status(
+                        tracked,
+                        new_status=TaskStatus.COMPLETED,
+                        new_result=real_result,
+                    )
+                    if applied:
+                        mark_completion_mode_if_stopped(tracked)
             except Exception as exc:
                 logger.debug("done_callback failed for %s: %s", tracked.task_id, exc)
-                tracked.status = TaskStatus.FAILED
-                tracked.result = ToolResult(output="Unknown error in done callback", is_error=True)
+                self._set_terminal_status(
+                    tracked,
+                    new_status=TaskStatus.FAILED,
+                    new_result=ToolResult(
+                        output="Unknown error in done callback",
+                        is_error=True,
+                    ),
+                )
 
-            # Populate progress_lines from the final result.
+            # Populate progress_lines from whichever result the latch settled on.
             if tracked.result is not None and tracked.result.output:
                 tracked.progress_lines = tracked.result.output.splitlines()
 
@@ -235,6 +256,10 @@ class BackgroundTaskManager:
         Subagents receive a cooperative early-stop cancellation so they can
         salvage a partial result. Ordinary background tools are pure-Python
         jobs and are cancelled through their asyncio task.
+
+        Race-safe via the terminal-status latch: if the task already
+        completed (e.g. a 1 s shell that exited just before the user clicked
+        cancel), the COMPLETED result is preserved.
         """
         tracked = self._tasks.get(task_id)
         if tracked is None:
@@ -244,10 +269,14 @@ class BackgroundTaskManager:
             await request_subagent_early_stop(tracked, reason=reason)
             return True
         tracked.stop_mode = "cancel"
-        tracked.status = TaskStatus.CANCELLED
         msg = f"Cancelled: {reason}" if reason else "Cancelled"
-        tracked.result = ToolResult(output=msg, is_error=True)
-        tracked.progress_lines = [msg]
+        applied = self._set_terminal_status(
+            tracked,
+            new_status=TaskStatus.CANCELLED,
+            new_result=ToolResult(output=msg, is_error=True),
+        )
+        if applied:
+            tracked.progress_lines = [msg]
         tracked.asyncio_task.cancel()
         return True
 
@@ -259,13 +288,43 @@ class BackgroundTaskManager:
         """Cancel all running tasks. Called on query loop exit."""
         cancelled_tasks: list[asyncio.Task[ToolResult]] = []
         for tracked in self._tasks.values():
-            if tracked.status == TaskStatus.RUNNING:
-                tracked.stop_mode = "cancel"
-                tracked.status = TaskStatus.CANCELLED
-                tracked.result = ToolResult(output="Cancelled", is_error=True)
+            if tracked.status != TaskStatus.RUNNING:
+                continue
+            tracked.stop_mode = "cancel"
+            applied = self._set_terminal_status(
+                tracked,
+                new_status=TaskStatus.CANCELLED,
+                new_result=ToolResult(output="Cancelled", is_error=True),
+            )
+            if applied:
                 tracked.progress_lines = ["Cancelled"]
-                if should_cancel_asyncio_task(tracked):
-                    tracked.asyncio_task.cancel()
-                    cancelled_tasks.append(tracked.asyncio_task)
+            if should_cancel_asyncio_task(tracked):
+                tracked.asyncio_task.cancel()
+                cancelled_tasks.append(tracked.asyncio_task)
         if cancelled_tasks:
             await asyncio.gather(*cancelled_tasks, return_exceptions=True)
+
+    def _set_terminal_status(
+        self,
+        tracked: TrackedBackgroundTask,
+        *,
+        new_status: TaskStatus,
+        new_result: ToolResult | None,
+    ) -> bool:
+        """CAS one terminal-status transition. Returns ``True`` if applied.
+
+        Precedence: ``completed > failed > cancelled > running``. ``delivered``
+        is the post-terminal sink; nothing overwrites it. The lock here is
+        cheap (per-task, never contended outside of cancel races) and makes
+        the precedence rule deterministic even if event-loop ordering
+        re-shuffles cancel + done_callback.
+        """
+        new_rank = _TERMINAL_PRECEDENCE.get(new_status.value, 0)
+        with tracked._terminal_lock:
+            current_rank = _TERMINAL_PRECEDENCE.get(tracked.status.value, 0)
+            if new_rank <= current_rank:
+                return False
+            tracked.status = new_status
+            if new_result is not None:
+                tracked.result = new_result
+            return True

@@ -7,6 +7,8 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
+from collections.abc import Callable
 from pathlib import Path
 
 from sandbox.execution.contract import (
@@ -20,6 +22,7 @@ from sandbox.execution.env_policy import (
     CommandExecPolicy,
 )
 from sandbox.execution.strategies.base import ExecutionStrategy
+from sandbox.execution.subprocess_runner import wait_for_process_with_cancel
 
 NAMESPACE_INFRA_EXIT_CODE = 125
 NAMESPACE_CONTROL_REF = "namespace-control.json"
@@ -50,6 +53,8 @@ class PrivateNamespaceStrategy(ExecutionStrategy):
         request: CommandExecRequest,
         run_dir: Path,
         timings: dict[str, float],
+        cancel_event: threading.Event | None = None,
+        pid_recorder: Callable[[int], None] | None = None,
     ) -> ShellProcessResult:
         stdout_ref = run_dir / "stdout.bin"
         stderr_ref = run_dir / "stderr.bin"
@@ -91,24 +96,17 @@ class PrivateNamespaceStrategy(ExecutionStrategy):
         )
         stdout_ref.parent.mkdir(parents=True, exist_ok=True)
         stderr_ref.parent.mkdir(parents=True, exist_ok=True)
-        with stdout_ref.open("wb") as stdout_file, stderr_ref.open("wb") as stderr_file:
-            completed = subprocess.run(
-                [
-                    _unshare_path(),
-                    "-Urm",
-                    sys.executable,
-                    "-m",
-                    "sandbox.execution.strategies.namespace_child",
-                    str(payload_ref),
-                ],
-                stdout=stdout_file,
-                stderr=stderr_file,
-                timeout=timeout,
-                check=False,
-            )
+        exit_code = _run_namespace_child(
+            payload_ref=payload_ref,
+            stdout_ref=stdout_ref,
+            stderr_ref=stderr_ref,
+            timeout=timeout,
+            cancel_event=cancel_event,
+            pid_recorder=pid_recorder,
+        )
         _merge_namespace_timings(timings_ref, timings)
         return ShellProcessResult(
-            exit_code=int(completed.returncode),
+            exit_code=exit_code,
             stdout_ref=str(stdout_ref),
             stderr_ref=str(stderr_ref),
             mounted_workspace_root=spec.workspace_root,
@@ -137,6 +135,68 @@ class PrivateNamespaceStrategy(ExecutionStrategy):
             and payload.get("error_kind") == "mount_failed"
             and payload.get("fallback") == NAMESPACE_FALLBACK_STRATEGY
         )
+
+
+def _run_namespace_child(
+    *,
+    payload_ref: Path,
+    stdout_ref: Path,
+    stderr_ref: Path,
+    timeout: float | None,
+    cancel_event: threading.Event | None,
+    pid_recorder: Callable[[int], None] | None,
+) -> int:
+    """Spawn ``unshare -Urm python -m namespace_child`` with cancel support.
+
+    The outer ``unshare`` process IS the mount-namespace holder; killing it
+    from outside collapses the namespace and reaps the bash inside via the
+    kernel's mount-namespace cleanup. We use ``start_new_session=True`` so the
+    daemon (or this strategy's own SIGKILL escalation) can ``killpg`` the
+    entire process group rather than just the parent.
+    """
+    cmd = [
+        _unshare_path(),
+        "-Urm",
+        sys.executable,
+        "-m",
+        "sandbox.execution.strategies.namespace_child",
+        str(payload_ref),
+    ]
+    with stdout_ref.open("wb") as stdout_file, stderr_ref.open("wb") as stderr_file:
+        proc = subprocess.Popen(
+            cmd,
+            stdout=stdout_file,
+            stderr=stderr_file,
+            start_new_session=True,
+        )
+        if pid_recorder is not None:
+            try:
+                pid_recorder(proc.pid)
+            except Exception:
+                pass
+        try:
+            try:
+                return wait_for_process_with_cancel(
+                    proc,
+                    timeout_seconds=timeout,
+                    cancel_event=cancel_event,
+                )
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(proc.pid, 9)
+                except (ProcessLookupError, PermissionError):
+                    pass
+                try:
+                    proc.wait(timeout=2.0)
+                except subprocess.TimeoutExpired:
+                    pass
+                raise
+        finally:
+            if proc.poll() is None:
+                try:
+                    os.killpg(proc.pid, 9)
+                except (ProcessLookupError, PermissionError):
+                    pass
 
 
 def detect_private_mount_namespace() -> bool:

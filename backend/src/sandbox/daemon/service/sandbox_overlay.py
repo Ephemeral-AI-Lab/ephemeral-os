@@ -134,6 +134,9 @@ class SandboxOverlay:
         self._active_lease_id = ""
         self._operation_lock = asyncio.Lock()
         self._foreign_watch_task: asyncio.Task[None] | None = None
+        # Lease IDs that have already been released via this overlay. Lets
+        # cancel + reap fan-in on background shell jobs (cf. shell_job.py).
+        self._released_lease_ids: set[str] = set()
         storage_root = (
             layer_stack.storage_root if layer_stack is not None else Path("/var/run/eos")
         )
@@ -645,8 +648,16 @@ class SandboxOverlay:
         )
 
     def _release_lease(self, lease_id: str) -> None:
-        if lease_id and self._layer_stack is not None:
-            self._layer_stack.release_lease(lease_id=lease_id)
+        if not lease_id or self._layer_stack is None:
+            return
+        # Idempotency guard: shell background jobs route cancel + reap through
+        # `_release_lease` from independent threads. A second release on the
+        # same lease must silently no-op so we keep the daemon's
+        # ``lease_acquire_count == lease_release_count`` AC-5 invariant.
+        if lease_id in self._released_lease_ids:
+            return
+        self._released_lease_ids.add(lease_id)
+        self._layer_stack.release_lease(lease_id=lease_id)
 
     def _relative_workspace_path(self, path: str) -> str:
         raw = str(path or "").strip()

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import shutil
+import threading
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
@@ -52,6 +54,8 @@ class CopyBackedStrategy(ExecutionStrategy):
         request: CommandExecRequest,
         run_dir: Path,
         timings: dict[str, float],
+        cancel_event: threading.Event | None = None,
+        pid_recorder: Callable[[int], None] | None = None,
     ) -> ShellProcessResult:
         base_repo = Path(spec.base_repo)
         writes = Path(spec.writes)
@@ -96,6 +100,8 @@ class CopyBackedStrategy(ExecutionStrategy):
             stdout_ref=stdout_ref,
             stderr_ref=stderr_ref,
             policy=self._policy,
+            cancel_event=cancel_event,
+            pid_recorder=pid_recorder,
         )
         timings["command_exec.run_command_s"] = monotonic_now() - run_start
         record_child_cpu_delta(timings, cpu_start)

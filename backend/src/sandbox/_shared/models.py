@@ -145,6 +145,10 @@ class ShellRequest(SandboxRequestBase):
     cwd: str | None = None
     timeout: int | None = None
     stdin: str | None = None
+    # ``True`` routes the request through the daemon's background-shell
+    # control plane (shell.launch/poll/cancel/reap). False keeps the
+    # synchronous single-RPC path used by foreground shells.
+    background: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)

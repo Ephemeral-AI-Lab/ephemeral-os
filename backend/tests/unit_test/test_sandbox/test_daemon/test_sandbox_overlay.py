@@ -24,6 +24,7 @@ class _LayerStack:
         self.storage_root = storage_root
         self.manifest = manifest
         self.released: list[str] = []
+        self._lease_counter: int = 0
 
     def read_active_manifest(self) -> Manifest:
         return self.manifest
@@ -36,8 +37,12 @@ class _LayerStack:
         materialize: bool = True,
     ) -> object:
         del request_id, lowerdir_root, materialize
+        # Unique lease per snapshot: matches the real layer_stack which mints
+        # a fresh UUID per call. Tests asserting on lease release count rely
+        # on uniqueness now that ``_release_lease`` is idempotent (plan §4).
+        self._lease_counter += 1
         return SimpleNamespace(
-            lease_id=f"lease-{self.manifest.version}",
+            lease_id=f"lease-{self.manifest.version}-{self._lease_counter}",
             manifest=self.manifest,
             manifest_version=self.manifest.version,
             root_hash=f"root-{self.manifest.version}",
@@ -136,7 +141,7 @@ async def test_start_mounts_active_manifest_and_stop_unmounts(
     assert mounts[0][2].as_posix().startswith("/proc/self/fd/")
     assert mounts[0][3].as_posix().startswith("/proc/self/fd/")
     assert unmounts == [workspace]
-    assert layer_stack.released == ["lease-1"]
+    assert layer_stack.released == ["lease-1-1"]
 
 
 def test_overlay_runtime_uses_command_exec_scratch_root(
@@ -197,7 +202,7 @@ def test_operation_overlay_uses_shared_snapshot_layers_and_private_upperdir(
     first.release()
     second.release()
 
-    assert layer_stack.released == ["lease-1", "lease-1"]
+    assert layer_stack.released == ["lease-1-1", "lease-1-2"]
     assert not Path(first.run_dir).exists()
     assert not Path(second.run_dir).exists()
 
@@ -307,7 +312,7 @@ async def test_ensure_current_remounts_and_emits_foreign_publish(
     assert len(mounts[-1]) == 1
     assert mounts[-1][0].as_posix().startswith("/proc/self/fd/")
     assert unmounts == [workspace]
-    assert layer_stack.released == ["lease-1"]
+    assert layer_stack.released == ["lease-1-1"]
     event = queue.get_nowait()
     assert event.reason == "foreign_publish"
     assert event.from_version == 1
@@ -354,7 +359,7 @@ async def test_publish_releases_mounted_lease_before_maintenance_and_remounts_la
 
     assert occ_client.apply_run_maintenance == [False]
     assert occ_client.maintenance_release_order == [["lease-1"]]
-    assert layer_stack.released == ["lease-1"]
+    assert layer_stack.released == ["lease-1-1"]
     assert unmounts == [workspace]
     assert len(mounts) == 2
     assert len(mounts[-1]) == 1

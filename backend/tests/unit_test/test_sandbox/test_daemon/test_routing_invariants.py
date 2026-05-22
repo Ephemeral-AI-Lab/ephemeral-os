@@ -11,7 +11,7 @@ from sandbox.daemon.handler import (
 from sandbox.plugin import handler as plugin_handler
 from sandbox.daemon.handler import edit, read, search, write
 from sandbox.daemon.rpc import dispatcher as server
-from sandbox.daemon.service import shell_runner
+from sandbox.daemon.service import shell_runner, shell_job_handler
 
 
 def test_daemon_op_table_routes_to_current_handler_layout() -> None:
@@ -30,6 +30,16 @@ def test_daemon_op_table_routes_to_current_handler_layout() -> None:
         "api.v1.search_content": search.search_content,
         "api.shell": shell_runner.execute_shell_api,
         "api.v1.shell": shell_runner.execute_shell_api,
+        "api.shell.launch": shell_job_handler.shell_launch,
+        "api.v1.shell.launch": shell_job_handler.shell_launch,
+        "api.shell.poll": shell_job_handler.shell_poll,
+        "api.v1.shell.poll": shell_job_handler.shell_poll,
+        "api.shell.cancel": shell_job_handler.shell_cancel,
+        "api.v1.shell.cancel": shell_job_handler.shell_cancel,
+        "api.shell.reap": shell_job_handler.shell_reap,
+        "api.v1.shell.reap": shell_job_handler.shell_reap,
+        "api.overlay.flush": overlay.flush_workspace_overlay,
+        "api.overlay.stop": overlay.stop_workspace_overlay,
         "api.layer_metrics": metrics.layer_metrics,
         "api.ensure_workspace_base": workspace.ensure_workspace_base,
         "api.build_workspace_base": workspace.build_workspace_base,

@@ -6,13 +6,22 @@ import os
 import resource
 import signal
 import subprocess
-from collections.abc import Mapping, Sequence
+import threading
+import time
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 
 from sandbox.execution.env_policy import (
     DEFAULT_COMMAND_EXEC_POLICY,
     CommandExecPolicy,
 )
+
+# Polling step for cancel-aware subprocess wait. Small enough to keep
+# cancel-to-SIGTERM latency low (AC-3: ≤100 ms next mount), large enough to
+# keep CPU overhead negligible for long-running shells.
+_CANCEL_POLL_INTERVAL_S = 0.1
+# Grace window between SIGTERM (cancel observed) and SIGKILL escalation.
+_CANCEL_SIGKILL_GRACE_S = 2.0
 
 
 def resolve_workspace_cwd(
@@ -63,6 +72,8 @@ def subprocess_to_refs(
     stdout_ref: str | Path,
     stderr_ref: str | Path,
     timeout_exit_code: int | None = None,
+    cancel_event: threading.Event | None = None,
+    pid_recorder: Callable[[int], None] | None = None,
 ) -> int:
     """Run a subprocess with stdout/stderr captured to ref files.
 
@@ -70,6 +81,12 @@ def subprocess_to_refs(
     ``subprocess.TimeoutExpired`` propagates; otherwise that exit code is
     returned so callers can distinguish a user-command timeout from a real
     exit (e.g. GNU `timeout(1)` uses 124).
+
+    Optional background-shell plumbing: when ``cancel_event`` is provided the
+    wait loop polls it on a 100 ms tick and escalates SIGTERM → SIGKILL on
+    set. ``pid_recorder`` is invoked once with the child's PGID (== PID because
+    ``start_new_session``) so the daemon can ``killpg`` from outside this
+    blocking call.
     """
     stdout_path = Path(stdout_ref)
     stderr_path = Path(stderr_ref)
@@ -87,9 +104,20 @@ def subprocess_to_refs(
             stderr=stderr_file,
             start_new_session=True,
         )
+        if pid_recorder is not None:
+            try:
+                pid_recorder(proc.pid)
+            except Exception:
+                # Recorder failures must not break the wait loop; the daemon
+                # will fall back to its own TTL reaper to clean up.
+                pass
         try:
             try:
-                return int(proc.wait(timeout=timeout_seconds))
+                return _wait_with_cancel(
+                    proc,
+                    timeout_seconds=timeout_seconds,
+                    cancel_event=cancel_event,
+                )
             except subprocess.TimeoutExpired:
                 try:
                     os.killpg(proc.pid, signal.SIGKILL)
@@ -110,6 +138,56 @@ def subprocess_to_refs(
                     pass
 
 
+def wait_for_process_with_cancel(
+    proc: subprocess.Popen,
+    *,
+    timeout_seconds: float | None,
+    cancel_event: threading.Event | None,
+) -> int:
+    """Wait for ``proc``, honoring ``cancel_event`` if provided.
+
+    Without ``cancel_event``, falls through to plain ``proc.wait`` so the
+    foreground path keeps its single ``proc.wait(timeout=...)`` syscall — no
+    100 ms polling tax on synchronous shells.
+
+    Public because :class:`PrivateNamespaceStrategy` reuses this for its outer
+    unshare process (the kernel-mount holder); we want the same SIGTERM+grace
+    semantics there as the inner bash.
+    """
+    if cancel_event is None:
+        return int(proc.wait(timeout=timeout_seconds))
+
+    deadline = (
+        None if timeout_seconds is None else time.monotonic() + float(timeout_seconds)
+    )
+    while True:
+        if cancel_event.is_set():
+            try:
+                os.killpg(proc.pid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                pass
+            try:
+                return int(proc.wait(timeout=_CANCEL_SIGKILL_GRACE_S))
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except (ProcessLookupError, PermissionError):
+                    pass
+                try:
+                    return int(proc.wait(timeout=2.0))
+                except subprocess.TimeoutExpired:
+                    return -int(signal.SIGKILL)
+        rc = proc.poll()
+        if rc is not None:
+            return int(rc)
+        if deadline is not None and time.monotonic() > deadline:
+            raise subprocess.TimeoutExpired(proc.args, timeout_seconds)
+        cancel_event.wait(timeout=_CANCEL_POLL_INTERVAL_S)
+
+
+_wait_with_cancel = wait_for_process_with_cancel
+
+
 def run_command_to_refs(
     *,
     command: Sequence[str],
@@ -121,6 +199,8 @@ def run_command_to_refs(
     stdout_ref: str | Path,
     stderr_ref: str | Path,
     policy: CommandExecPolicy = DEFAULT_COMMAND_EXEC_POLICY,
+    cancel_event: threading.Event | None = None,
+    pid_recorder: Callable[[int], None] | None = None,
 ) -> int:
     """Run a guarded command and write stdout/stderr to reference files."""
     resolved_cwd = resolve_workspace_cwd(
@@ -135,6 +215,8 @@ def run_command_to_refs(
         timeout_seconds=timeout_seconds,
         stdout_ref=stdout_ref,
         stderr_ref=stderr_ref,
+        cancel_event=cancel_event,
+        pid_recorder=pid_recorder,
     )
 
 
@@ -169,4 +251,5 @@ __all__ = [
     "resolve_workspace_cwd",
     "run_command_to_refs",
     "subprocess_to_refs",
+    "wait_for_process_with_cancel",
 ]

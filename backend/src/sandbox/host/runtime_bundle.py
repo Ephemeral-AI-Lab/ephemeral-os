@@ -151,6 +151,16 @@ def _runtime_bundle_bytes() -> bytes:
             sandbox_dir=sandbox_dir,
         )
 
+        # sandbox/audit/ is imported by the daemon-side shell_job module
+        # (background shell audit event constants). Bundle it so the
+        # extracted daemon process can ``import sandbox.audit.events``.
+        audit_dir = sandbox_dir / "audit"
+        _add_python_tree(
+            tar,
+            audit_dir,
+            sandbox_dir=sandbox_dir,
+        )
+
         daemon_dir = sandbox_dir / "daemon"
         _add_python_tree(
             tar,

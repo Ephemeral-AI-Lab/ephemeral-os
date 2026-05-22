@@ -188,7 +188,7 @@ def _load_peer_bootstraps() -> None:
         workspace,
         write,
     )
-    from sandbox.daemon.service import shell_runner
+    from sandbox.daemon.service import shell_runner, shell_job_handler
 
     bootstrap: dict[str, Handler] = {
         "api.ensure_workspace_base": workspace.ensure_workspace_base,
@@ -210,6 +210,14 @@ def _load_peer_bootstraps() -> None:
         "api.v1.search_content": search.search_content,
         "api.shell": shell_runner.execute_shell_api,
         "api.v1.shell": shell_runner.execute_shell_api,
+        "api.shell.launch": shell_job_handler.shell_launch,
+        "api.v1.shell.launch": shell_job_handler.shell_launch,
+        "api.shell.poll": shell_job_handler.shell_poll,
+        "api.v1.shell.poll": shell_job_handler.shell_poll,
+        "api.shell.cancel": shell_job_handler.shell_cancel,
+        "api.v1.shell.cancel": shell_job_handler.shell_cancel,
+        "api.shell.reap": shell_job_handler.shell_reap,
+        "api.v1.shell.reap": shell_job_handler.shell_reap,
         "api.workspace_binding": workspace.workspace_binding,
         "api.write_file": write.write_file,
         "api.v1.write_file": write.write_file,

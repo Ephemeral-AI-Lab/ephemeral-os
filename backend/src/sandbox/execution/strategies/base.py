@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import threading
+from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol
 
@@ -26,6 +28,8 @@ class ExecutionStrategy(Protocol):
         request: CommandExecRequest,
         run_dir: Path,
         timings: dict[str, float],
+        cancel_event: threading.Event | None = None,
+        pid_recorder: Callable[[int], None] | None = None,
     ) -> ShellProcessResult: ...
 
     def should_fall_back(

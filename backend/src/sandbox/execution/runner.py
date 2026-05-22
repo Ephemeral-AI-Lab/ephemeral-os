@@ -8,7 +8,8 @@ returns a non-fallback result.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import threading
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 from sandbox.execution.contract import (
@@ -38,8 +39,16 @@ def run_workspace_replaced_command(
     strategies: Sequence[ExecutionStrategy] | None = None,
     mount_mode: MountMode | None = None,
     policy: CommandExecPolicy = DEFAULT_COMMAND_EXEC_POLICY,
+    cancel_event: threading.Event | None = None,
+    pid_recorder: Callable[[int], None] | None = None,
 ) -> ShellProcessResult:
-    """Run a command with the assigned workspace replaced by the leased view."""
+    """Run a command with the assigned workspace replaced by the leased view.
+
+    ``cancel_event`` and ``pid_recorder`` are background-shell plumbing: the
+    daemon's :class:`ShellJobRegistry` uses them to terminate the child group
+    from outside the strategy's blocking ``wait``. Foreground callers leave
+    them ``None`` and pay no cancel-polling cost.
+    """
     run_root = Path(run_dir)
     run_root.mkdir(parents=True, exist_ok=True)
     strategy_list: tuple[ExecutionStrategy, ...] = (
@@ -55,6 +64,8 @@ def run_workspace_replaced_command(
             request=request,
             run_dir=run_root,
             timings=timings,
+            cancel_event=cancel_event,
+            pid_recorder=pid_recorder,
         )
         if not strategy.should_fall_back(process, run_dir=run_root):
             return process

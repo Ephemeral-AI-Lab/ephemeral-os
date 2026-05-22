@@ -41,10 +41,14 @@ def _run_and_capture_payload(
     strategy = _make_namespace_strategy()
     request = _make_request(tmp_path)
 
-    fake_result = MagicMock()
-    fake_result.returncode = 0
+    # The strategy now uses subprocess.Popen + cancel-aware wait
+    # (background-shell plumbing). Stub Popen so the test runs offline.
+    fake_proc = MagicMock()
+    fake_proc.pid = 999
+    fake_proc.poll.return_value = 0
+    fake_proc.wait.return_value = 0
 
-    with unittest.mock.patch("subprocess.run", return_value=fake_result):
+    with unittest.mock.patch("subprocess.Popen", return_value=fake_proc):
         strategy.run(spec=spec, request=request, run_dir=run_dir, timings={})
 
     return json.loads((run_dir / "namespace-request.json").read_text(encoding="utf-8"))

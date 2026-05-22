@@ -396,8 +396,11 @@ def test_namespace_helper_module_path_in_strategy_argv_is_importable() -> None:
 
     from sandbox.execution.strategies import namespace as namespace_strategy
 
-    source = inspect.getsource(namespace_strategy.PrivateNamespaceStrategy.run)
-    assert '"sandbox.execution.strategies.namespace_child"' in source
+    # The literal moved from ``.run`` into the ``_run_namespace_child`` helper
+    # when background-shell cancel support was added; check the module source
+    # so a rename of the child file still fails this pin.
+    module_source = inspect.getsource(namespace_strategy)
+    assert '"sandbox.execution.strategies.namespace_child"' in module_source
     assert (
         importlib.util.find_spec("sandbox.execution.strategies.namespace_child")
         is not None
