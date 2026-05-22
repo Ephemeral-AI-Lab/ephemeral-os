@@ -279,6 +279,11 @@ class ShellJobRegistry:
             )
             job.timings.update(maintenance_timings)
 
+        # Read stdout/stderr BEFORE releasing the handle and rmtree'ing
+        # ``run_dir`` — the stdout/stderr files live inside ``run_dir``.
+        stdout = _read_full(job.stdout_ref)
+        stderr = _read_full(job.stderr_ref)
+
         # Idempotent release via OperationOverlayHandle._released.
         job.handle.release()
         job.released = True
@@ -290,12 +295,13 @@ class ShellJobRegistry:
             "job_id": job_id,
             "status": job.status,
             "exit_code": job.exit_code if job.exit_code is not None else -1,
-            "stdout": _read_full(job.stdout_ref),
-            "stderr": _read_full(job.stderr_ref),
+            "stdout": stdout,
+            "stderr": stderr,
             "changed_paths": [_change_path(c) for c in path_changes],
             "timings": dict(job.timings),
-            "error": job.error,
         }
+        if job.error is not None:
+            payload["shell_error"] = job.error
         self._emit_audit(
             audit_events.SHELL_REAPED,
             {
@@ -375,7 +381,7 @@ class ShellJobRegistry:
                 layer_storage_root = str(stack.storage_root)
             return LayerPathsLayout(
                 workspace_root=job.request.workspace_root,
-                layer_paths=tuple(Path(p) for p in handle.layer_paths),
+                layer_paths=tuple(str(p) for p in handle.layer_paths),
                 layer_storage_root=layer_storage_root,
                 writes=handle.upperdir,
                 kernel_scratch=handle.workdir,

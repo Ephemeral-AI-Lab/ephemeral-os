@@ -41,8 +41,12 @@ from task_center_runner.scenarios.planner_validation import (
 from task_center_runner.scenarios.sandbox import (
     AutoSquashCommitResume,
     BackgroundShellCancel,
+    BackgroundShellCancelDuringMaintenance,
+    BackgroundShellExhaustion,
     BackgroundShellGolden,
     BackgroundShellInterleave,
+    BackgroundShellLateCancelRace,
+    BackgroundShellPartialWriteCancel,
     ComplexProjectBuild,
     ComplexProjectBuildGrepGlob,
     ComplexProjectBuildGrepGlobSmoke,
@@ -83,8 +87,16 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     # Focused sandbox scenarios.
     "sandbox.auto_squash_commit_resume": AutoSquashCommitResume,
     "sandbox.background_shell_cancel": BackgroundShellCancel,
+    "sandbox.background_shell_cancel_during_maintenance": (
+        BackgroundShellCancelDuringMaintenance
+    ),
+    "sandbox.background_shell_exhaustion": BackgroundShellExhaustion,
     "sandbox.background_shell_golden": BackgroundShellGolden,
     "sandbox.background_shell_interleave": BackgroundShellInterleave,
+    "sandbox.background_shell_late_cancel_race": BackgroundShellLateCancelRace,
+    "sandbox.background_shell_partial_write_cancel": (
+        BackgroundShellPartialWriteCancel
+    ),
     "sandbox.complex_project_build": ComplexProjectBuild,
     "sandbox.complex_project_build_grep_glob": ComplexProjectBuildGrepGlob,
     "sandbox.complex_project_build_grep_glob_smoke": ComplexProjectBuildGrepGlobSmoke,
@@ -116,8 +128,12 @@ __all__ = [
     "AttemptRetryPlannerFailure",
     "AutoSquashCommitResume",
     "BackgroundShellCancel",
+    "BackgroundShellCancelDuringMaintenance",
+    "BackgroundShellExhaustion",
     "BackgroundShellGolden",
     "BackgroundShellInterleave",
+    "BackgroundShellLateCancelRace",
+    "BackgroundShellPartialWriteCancel",
     "ComplexProjectBuild",
     "ComplexProjectBuildGrepGlob",
     "ComplexProjectBuildGrepGlobSmoke",

@@ -1,20 +1,21 @@
-"""T3 — Interleave live regression for ``shell(background=True)``.
-
-One long-running background shell + 5 interleaved foreground shells.
-Records foreground p95 mount latency to characterize the background
-lease's effect on foreground p95. AC-3 expects foreground mount latency
-to stay essentially unchanged from the no-background baseline.
-"""
+"""T3 — Interleave live regression via the scenario harness."""
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
+import sandbox.api as sandbox_api
 from benchmarks.sweevo.models import SWEEvoInstance
-from task_center_runner.agent.mock.background_shell_probe import (
-    run_background_shell_interleave_probe,
-    seed_workspace,
+from sandbox._shared.models import ReadFileRequest, SandboxCaller
+from task_center_runner.agent.mock.background_shell_probe import INTERLEAVE_SUMMARY
+from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.environments.sweevo_image.fixtures import (
+    run_scenario_on_sweevo_image,
 )
+from task_center_runner.scenarios import SCENARIO_REGISTRY
 from task_center_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
@@ -32,32 +33,44 @@ pytestmark = pytest.mark.asyncio
     not live_e2e_heavy_enabled(),
     reason="heavy live e2e disabled in runner.live_e2e.heavy_enabled",
 )
-@pytest.mark.timeout(420)
+@pytest.mark.timeout(540)
 async def test_background_shell_interleave(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
+    audit_dir: Path,
+    stores: TaskCenterStoreBundle,
 ) -> None:
+    scenario_cls = SCENARIO_REGISTRY["sandbox.background_shell_interleave"]
     sandbox_id = str(workspace["sandbox_id"])
-    await seed_workspace(sandbox_id)
-    summary = await run_background_shell_interleave_probe(
+    report = await run_scenario_on_sweevo_image(
+        scenario_cls(),
+        instance=sweevo_image_instance,
         sandbox_id=sandbox_id,
-        foreground_count=5,
-        background_sleep_s=30,
+        audit_dir=audit_dir,
+        stores=stores,
     )
-    assert summary.mode == "interleave"
-    assert len(summary.foreground_mount_s) == 5
+    assert report.task_center_status == "done", report
 
-    # AC-3: foreground p95 mount latency stays under 5 s even while a
-    # background lease is held. The threshold is conservative to absorb
-    # SWE-EVO warm-cache jitter; tighten once a per-instance baseline is
-    # recorded in .sweevo_runs/scenario_logs.
-    assert summary.foreground_p95_mount_s < 5.0, (
-        f"AC-3 violation: foreground p95 mount_s "
-        f"{summary.foreground_p95_mount_s:.3f}s exceeds 5 s budget"
+    read = await sandbox_api.read_file(
+        sandbox_id,
+        ReadFileRequest(
+            path=INTERLEAVE_SUMMARY,
+            caller=SandboxCaller(
+                agent_id="test.background_shell_interleave.read"
+            ),
+        ),
+    )
+    assert read.success and read.exists, read
+    summary = json.loads(read.content or "{}")
+    assert summary["mode"] == "interleave", summary
+    assert len(summary["foreground"]) == summary["foreground_count"], summary
+
+    # AC-3: foreground p95 mount latency stays under 5 s even with the
+    # background lease held. Threshold absorbs SWE-EVO warm-cache jitter.
+    p95 = float(summary["foreground_p95_mount_s"])
+    assert p95 < 5.0, (
+        f"AC-3 violation: foreground p95 mount_s {p95:.3f}s exceeds 5 s budget"
     )
 
-    # The background launch must complete (or be cancelled cleanly on
-    # teardown) — never error out.
-    assert len(summary.launches) == 1
-    record = summary.launches[0]
-    assert record.error is None, record
+    bg = summary["background"]
+    assert not bg["is_error"], bg

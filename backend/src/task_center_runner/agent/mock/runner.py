@@ -617,6 +617,50 @@ class MockSquadRunner:
                 )
                 summary = "Complex project-build grep/glob smoke probe passed."
                 artifacts = [summary_path]
+            elif action == "background_shell_golden":
+                summary_path = await self._run_background_shell_probe(
+                    metadata, emit, mode="golden"
+                )
+                summary = "Background-shell golden probe passed."
+                artifacts = [summary_path]
+            elif action == "background_shell_cancel":
+                summary_path = await self._run_background_shell_probe(
+                    metadata, emit, mode="cancel"
+                )
+                summary = "Background-shell cancel probe passed."
+                artifacts = [summary_path]
+            elif action == "background_shell_interleave":
+                summary_path = await self._run_background_shell_probe(
+                    metadata, emit, mode="interleave"
+                )
+                summary = "Background-shell interleave probe passed."
+                artifacts = [summary_path]
+            elif action == "background_shell_exhaustion":
+                summary_path = await self._run_background_shell_probe(
+                    metadata, emit, mode="exhaustion"
+                )
+                summary = "Background-shell exhaustion probe passed."
+                artifacts = [summary_path]
+            elif action == "background_shell_partial_write_cancel":
+                summary_path = await self._run_background_shell_probe(
+                    metadata, emit, mode="partial_write_cancel"
+                )
+                summary = "Background-shell partial-write-cancel probe passed."
+                artifacts = [summary_path]
+            elif action == "background_shell_cancel_during_maintenance":
+                summary_path = await self._run_background_shell_probe(
+                    metadata, emit, mode="cancel_during_maintenance"
+                )
+                summary = (
+                    "Background-shell cancel-during-maintenance probe passed."
+                )
+                artifacts = [summary_path]
+            elif action == "background_shell_late_cancel_race":
+                summary_path = await self._run_background_shell_probe(
+                    metadata, emit, mode="late_cancel_race"
+                )
+                summary = "Background-shell late-cancel-race probe passed."
+                artifacts = [summary_path]
             else:
                 raise RuntimeError(f"Unknown executor action: {action!r}")
         result = await self._call_tool(
@@ -1184,6 +1228,40 @@ class MockSquadRunner:
             record_tool_check=self._record_tool_check,
         )
 
+    async def _run_background_shell_probe(
+        self,
+        metadata: ExecutionMetadata,
+        emit: EmitStreamEvent,
+        *,
+        mode: str,
+    ) -> str:
+        from task_center_runner.agent.mock import background_shell_probe
+
+        dispatch = {
+            "golden": background_shell_probe.run_background_shell_golden_probe,
+            "cancel": background_shell_probe.run_background_shell_cancel_probe,
+            "interleave": background_shell_probe.run_background_shell_interleave_probe,
+            "exhaustion": background_shell_probe.run_background_shell_exhaustion_probe,
+            "partial_write_cancel": (
+                background_shell_probe.run_background_shell_partial_write_cancel_probe
+            ),
+            "cancel_during_maintenance": (
+                background_shell_probe.run_background_shell_maintenance_probe
+            ),
+            "late_cancel_race": (
+                background_shell_probe.run_background_shell_late_cancel_probe
+            ),
+        }
+        probe = dispatch.get(mode)
+        if probe is None:
+            raise RuntimeError(f"unknown background_shell probe mode: {mode!r}")
+        return await probe(
+            metadata=metadata,
+            emit=emit,
+            call_tool=self._call_tool,
+            record_tool_check=self._record_tool_check,
+        )
+
     async def _run_complex_project_build_shell_edit_lsp_probe(
         self,
         metadata: ExecutionMetadata,
@@ -1263,6 +1341,7 @@ class MockSquadRunner:
         emit: EmitStreamEvent,
         *,
         allow_error: bool = False,
+        background_task_id: str | None = None,
     ) -> ToolResult:
         tool_id = f"toolu_{uuid4().hex}"
         agent_name = str(metadata.agent_name or "")
@@ -1310,10 +1389,13 @@ class MockSquadRunner:
             )
         )
         client_t1 = monotonic_now()
-        tool_metadata = metadata.with_overrides(
-            tool_id=tool_id,
-            sandbox_audit_sink=self._sandbox_audit_sink,
-        )
+        override_kwargs: dict[str, Any] = {
+            "tool_id": tool_id,
+            "sandbox_audit_sink": self._sandbox_audit_sink,
+        }
+        if background_task_id is not None:
+            override_kwargs["background_task_id"] = background_task_id
+        tool_metadata = metadata.with_overrides(**override_kwargs)
         result = await execute_tool_once(
             tool_obj,
             raw_input,

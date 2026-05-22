@@ -319,7 +319,7 @@ def _shell_result_from_reap(
             "changed_paths": payload.get("changed_paths", []),
             "status": derived_status,
             "conflict": None,
-            "conflict_reason": payload.get("error"),
+            "conflict_reason": payload.get("shell_error"),
             "warnings": [],
         },
         timings=timings,

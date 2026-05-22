@@ -1,27 +1,24 @@
-"""T5 — Executor exhaustion live regression for ``shell(background=True)``.
-
-Phase 2 plan §Step 6. Launch 80 background shells (above the
-``DEFAULT_EXECUTOR_WORKERS = 64`` pool size; 80 saturates the queue
-without saturating SWE-EVO quotas). Cancel all in parallel. Issue a
-single foreground ``read_file`` and assert it completes in < 1 s (AC-14:
-``ShellExecutor`` is distinct from the daemon's RPC dispatcher executor).
-"""
+"""T5 — Executor exhaustion live regression via the scenario harness."""
 
 from __future__ import annotations
 
-import asyncio
-import time
+import json
+from pathlib import Path
 
 import pytest
 
 import sandbox.api as sandbox_api
 from benchmarks.sweevo.models import SWEEvoInstance
-from sandbox._shared.models import (
-    ReadFileRequest,
-    SandboxCaller,
-    ShellRequest,
+from sandbox._shared.models import ReadFileRequest, SandboxCaller
+from task_center_runner.agent.mock.background_shell_probe import (
+    EXHAUSTION_LAUNCH_COUNT,
+    EXHAUSTION_SUMMARY,
 )
-from task_center_runner.agent.mock.background_shell_probe import seed_workspace
+from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.environments.sweevo_image.fixtures import (
+    run_scenario_on_sweevo_image,
+)
+from task_center_runner.scenarios import SCENARIO_REGISTRY
 from task_center_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
@@ -29,42 +26,6 @@ from task_center_runner.tests._live_config import (
 
 
 pytestmark = pytest.mark.asyncio
-
-# Sized so we exceed DEFAULT_EXECUTOR_WORKERS (64) without saturating the
-# SWE-EVO Docker quota. The plan §Step 6 picked 80 after the round-2
-# 210-launch number proved infeasible for shared CI.
-_LAUNCH_COUNT = 80
-_BACKGROUND_SLEEP_S = 60
-_CANCEL_DEADLINE_S = 2.0
-
-
-async def _launch_then_cancel(sandbox_id: str, index: int) -> str:
-    """Launch one background shell, immediately let asyncio.wait_for cancel.
-
-    Wrapping ``sandbox_api.shell(... background=True)`` in
-    ``asyncio.wait_for(..., timeout=_CANCEL_DEADLINE_S)`` is enough to
-    drive the host-side cancel path because the underlying RPC awaits the
-    daemon's reap. The host-side dispatcher catches the CancelledError
-    and routes through ``_send_cancel_then_reap``.
-    """
-    request = ShellRequest(
-        command=f"sleep {_BACKGROUND_SLEEP_S}; echo done-{index}",
-        cwd=".",
-        timeout=_BACKGROUND_SLEEP_S + 30,
-        background=True,
-        caller=SandboxCaller(agent_id=f"background-shell-exhaustion.{index}"),
-        description=f"background_shell.exhaustion.{index}",
-    )
-    try:
-        await asyncio.wait_for(
-            sandbox_api.shell(sandbox_id, request),
-            timeout=_CANCEL_DEADLINE_S,
-        )
-        return "ok"
-    except asyncio.TimeoutError:
-        return "cancelled"
-    except Exception as exc:  # noqa: BLE001 — capture any failure mode
-        return f"error:{type(exc).__name__}"
 
 
 @pytest.mark.skipif(
@@ -75,38 +36,45 @@ async def _launch_then_cancel(sandbox_id: str, index: int) -> str:
     not live_e2e_heavy_enabled(),
     reason="heavy live e2e disabled in runner.live_e2e.heavy_enabled",
 )
-@pytest.mark.timeout(600)
+@pytest.mark.timeout(720)
 async def test_background_shell_executor_exhaustion(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
+    audit_dir: Path,
+    stores: TaskCenterStoreBundle,
 ) -> None:
+    scenario_cls = SCENARIO_REGISTRY["sandbox.background_shell_exhaustion"]
     sandbox_id = str(workspace["sandbox_id"])
-    await seed_workspace(sandbox_id)
-
-    # Fire 80 launches in parallel; each cancels itself after 2 s.
-    outcomes = await asyncio.gather(
-        *(_launch_then_cancel(sandbox_id, i) for i in range(_LAUNCH_COUNT)),
-        return_exceptions=False,
+    report = await run_scenario_on_sweevo_image(
+        scenario_cls(),
+        instance=sweevo_image_instance,
+        sandbox_id=sandbox_id,
+        audit_dir=audit_dir,
+        stores=stores,
     )
-    cancelled = sum(1 for o in outcomes if o == "cancelled")
-    errored = sum(1 for o in outcomes if o.startswith("error:"))
-    # Allow up to 5 % outright errors (SWE-EVO Docker quota or transient
-    # RPC noise); the rest must be cancellations.
-    assert errored <= max(1, _LAUNCH_COUNT // 20), outcomes
-    assert cancelled >= _LAUNCH_COUNT - errored - 4, outcomes
+    assert report.task_center_status == "done", report
 
-    # AC-14: a follow-up foreground read_file must complete in < 1 s,
-    # proving the daemon's RPC dispatcher executor is NOT the
-    # ``ShellExecutor`` (Pre-mortem #3 invariant).
-    read_request = ReadFileRequest(
-        path="/testbed",
-        caller=SandboxCaller(agent_id="background-shell-exhaustion.fg-probe"),
+    read = await sandbox_api.read_file(
+        sandbox_id,
+        ReadFileRequest(
+            path=EXHAUSTION_SUMMARY,
+            caller=SandboxCaller(
+                agent_id="test.background_shell_exhaustion.read"
+            ),
+        ),
     )
-    t0 = time.monotonic()
-    read_result = await sandbox_api.read_file(sandbox_id, read_request)
-    elapsed = time.monotonic() - t0
-    assert read_result.success, read_result
-    assert elapsed < 1.0, (
-        f"AC-14 violation: post-exhaustion read_file took {elapsed:.3f}s; "
-        f"expected < 1 s. Daemon RPC executor may be sharing the ShellExecutor."
+    assert read.success and read.exists, read
+    summary = json.loads(read.content or "{}")
+    assert summary["mode"] == "exhaustion", summary
+    # Allow up to 5 % outright errors; the rest must be cancellations.
+    errored = int(summary["error_count"])
+    cancelled = int(summary["cancelled_count"])
+    assert errored <= max(1, EXHAUSTION_LAUNCH_COUNT // 20), summary
+    assert cancelled >= EXHAUSTION_LAUNCH_COUNT - errored - 4, summary
+
+    # AC-14: post-exhaustion read_file must complete in < 1 s.
+    assert not summary["post_exhaustion_read_error"], summary
+    assert summary["post_exhaustion_read_s"] < 1.0, (
+        f"AC-14 violation: post-exhaustion read_file took "
+        f"{summary['post_exhaustion_read_s']:.3f}s (expected < 1 s)"
     )

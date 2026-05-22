@@ -1,28 +1,23 @@
-"""T8 — Late-cancel race for ``shell(background=True)``.
-
-Plan §Step 7. Launch a 1 s shell, await it (returns ``finished``), then
-attempt a daemon-side cancel via the direct RPC path. The
-``ShellJobRegistry.cancel`` check-and-set at ``shell_job.py:213-250``
-must report ``already_done=True`` and NOT mutate the result.
-
-This is the live counterpart to
-``test_late_cancel_after_completion_preserves_status`` in
-``backend/tests/unit_test/test_sandbox/test_shell_job_registry.py`` —
-the unit test exercises the registry directly; this test goes through
-the engine's audit-sink-wired path.
-
-After the live cancel, the original ``ShellResult`` from ``await
-sandbox_api.shell`` must still carry exit_code=0 + the real stdout.
-"""
+"""T8 — Late-cancel race via the scenario harness."""
 
 from __future__ import annotations
+
+import json
+from pathlib import Path
 
 import pytest
 
 import sandbox.api as sandbox_api
 from benchmarks.sweevo.models import SWEEvoInstance
-from sandbox._shared.models import SandboxCaller, ShellRequest
-from task_center_runner.agent.mock.background_shell_probe import seed_workspace
+from sandbox._shared.models import ReadFileRequest, SandboxCaller
+from task_center_runner.agent.mock.background_shell_probe import (
+    LATE_CANCEL_SUMMARY,
+)
+from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.environments.sweevo_image.fixtures import (
+    run_scenario_on_sweevo_image,
+)
+from task_center_runner.scenarios import SCENARIO_REGISTRY
 from task_center_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
@@ -40,29 +35,39 @@ pytestmark = pytest.mark.asyncio
     not live_e2e_heavy_enabled(),
     reason="heavy live e2e disabled in runner.live_e2e.heavy_enabled",
 )
-@pytest.mark.timeout(180)
+@pytest.mark.timeout(300)
 async def test_background_shell_late_cancel_race(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
+    audit_dir: Path,
+    stores: TaskCenterStoreBundle,
 ) -> None:
+    scenario_cls = SCENARIO_REGISTRY[
+        "sandbox.background_shell_late_cancel_race"
+    ]
     sandbox_id = str(workspace["sandbox_id"])
-    await seed_workspace(sandbox_id)
-
-    request = ShellRequest(
-        command="sleep 1; echo done-late-cancel",
-        cwd=".",
-        timeout=60,
-        background=True,
-        caller=SandboxCaller(agent_id="background-shell-late-cancel.short"),
-        description="background_shell.late_cancel_race.short",
+    report = await run_scenario_on_sweevo_image(
+        scenario_cls(),
+        instance=sweevo_image_instance,
+        sandbox_id=sandbox_id,
+        audit_dir=audit_dir,
+        stores=stores,
     )
-    # Await full completion; the host dispatcher returns the post-reap
-    # ShellResult with the real stdout.
-    result = await sandbox_api.shell(sandbox_id, request)
+    assert report.task_center_status == "done", report
 
-    # AC-10: exactly one terminal status, completed > failed > cancelled
-    # precedence holds — the shell exited cleanly so status must be ``ok``.
-    assert result.success is True, result
-    assert result.exit_code == 0, result
-    assert result.status == "ok", result
-    assert "done-late-cancel" in (result.stdout or ""), result
+    read = await sandbox_api.read_file(
+        sandbox_id,
+        ReadFileRequest(
+            path=LATE_CANCEL_SUMMARY,
+            caller=SandboxCaller(
+                agent_id="test.background_shell_late_cancel_race.read"
+            ),
+        ),
+    )
+    assert read.success and read.exists, read
+    summary = json.loads(read.content or "{}")
+    assert summary["mode"] == "late_cancel_race", summary
+    assert not summary["shell_is_error"], summary
+    assert summary["exit_code"] == 0, summary
+    assert summary["status"] == "ok", summary
+    assert summary["stdout_contains_marker"], summary

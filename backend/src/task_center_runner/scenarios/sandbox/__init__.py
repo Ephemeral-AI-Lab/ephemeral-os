@@ -23,8 +23,12 @@ from task_center_runner.scenarios.sandbox.auto_squash_commit_resume import (
 )
 from task_center_runner.scenarios.sandbox.background_shell import (
     BackgroundShellCancel,
+    BackgroundShellCancelDuringMaintenance,
+    BackgroundShellExhaustion,
     BackgroundShellGolden,
     BackgroundShellInterleave,
+    BackgroundShellLateCancelRace,
+    BackgroundShellPartialWriteCancel,
 )
 from task_center_runner.scenarios.sandbox.complex_project_build import (
     ComplexProjectBuild,
@@ -51,8 +55,12 @@ from task_center_runner.scenarios.sandbox.occ_concurrent_conflicts import (
 __all__ = [
     "AutoSquashCommitResume",
     "BackgroundShellCancel",
+    "BackgroundShellCancelDuringMaintenance",
+    "BackgroundShellExhaustion",
     "BackgroundShellGolden",
     "BackgroundShellInterleave",
+    "BackgroundShellLateCancelRace",
+    "BackgroundShellPartialWriteCancel",
     "ComplexProjectBuild",
     "ComplexProjectBuildGrepGlob",
     "ComplexProjectBuildGrepGlobSmoke",

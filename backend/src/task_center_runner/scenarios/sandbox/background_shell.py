@@ -1,24 +1,23 @@
-"""Background-shell scenarios for ``shell(background=True)`` validation.
+"""Background-shell scenarios that drive ``shell(background=True)``
+through the mock-agent harness.
 
-Three minimal scenarios registered in
-``task_center_runner.scenarios.SCENARIO_REGISTRY``:
+Seven scenarios (T1-T3, T5-T8 from the Phase 2 plan; T4 is an in-process
+unit test for ``ShellJobRegistry`` and has no scenario equivalent):
 
-- ``sandbox.background_shell_golden``
-- ``sandbox.background_shell_cancel``
-- ``sandbox.background_shell_interleave``
+- ``sandbox.background_shell_golden`` (T1)
+- ``sandbox.background_shell_cancel`` (T2)
+- ``sandbox.background_shell_interleave`` (T3)
+- ``sandbox.background_shell_exhaustion`` (T5)
+- ``sandbox.background_shell_partial_write_cancel`` (T6)
+- ``sandbox.background_shell_cancel_during_maintenance`` (T7)
+- ``sandbox.background_shell_late_cancel_race`` (T8)
 
-**Design note.** The Phase 2 live integration tests (T1, T2, T3) drive
-the daemon's job-control surface directly via
-:mod:`task_center_runner.agent.mock.background_shell_probe`, NOT via the
-mock-agent + scenario machinery (see the probe docstring for the design
-rationale). These scenario classes exist primarily to satisfy the PRD
-US-005 acceptance criterion that names them in ``SCENARIO_REGISTRY`` —
-they are valid ``ScenarioBase`` subclasses but the live tests don't go
-through them.
-
-A future phase could wire ``tools.background.*`` through the mock-agent
-harness; at that point these scenarios become first-class entry points
-for an agent-driven background-shell e2e.
+Each scenario uses a single executor action that drives the matching
+probe in :mod:`task_center_runner.agent.mock.background_shell_probe`.
+The probes call the shell tool with ``background_task_id`` set so the
+tool framework routes through the daemon's launch/poll/cancel/reap
+surface; the harness records full ``sandbox_events.jsonl`` plus
+``performance_report.json`` artifacts.
 """
 
 from __future__ import annotations
@@ -37,15 +36,17 @@ from task_center_runner.scenarios.base import (
 )
 
 
-def _plan(action_id: str, action_spec: str) -> dict[str, Any]:
+def _plan(action_id: str, action_spec: str, summary_hint: str) -> dict[str, Any]:
     return {
         "plan_spec": (
-            f"Single-task plan for the {action_id} background-shell scenario."
+            f"Single-task plan that drives the {action_id} background-shell "
+            "probe through the mock-agent harness."
         ),
         "evaluation_criteria": [
-            "Probe completed its background-shell workload.",
+            f"Background-shell probe '{action_id}' wrote its summary to "
+            f"{summary_hint}.",
             "Daemon's job-control RPCs (launch / poll / cancel / reap) "
-            "produced consistent audit events.",
+            "produced consistent audit events for every launch.",
         ],
         "tasks": [
             {"id": action_id, "agent_name": "executor", "deps": []},
@@ -55,7 +56,7 @@ def _plan(action_id: str, action_spec: str) -> dict[str, Any]:
 
 
 class _BackgroundShellScenarioBase(ScenarioBase):
-    """Shared planner/executor/evaluator shape for the 3 background-shell scenarios."""
+    """Shared planner/executor/evaluator shape across the 7 scenarios."""
 
     expected_event_sequence: tuple[EventType, ...] = (
         EventType.PLANNER_INVOKED,
@@ -68,11 +69,12 @@ class _BackgroundShellScenarioBase(ScenarioBase):
 
     action_id: str = ""
     action_spec: str = ""
+    summary_path_hint: str = ""
 
     def planner_response(self, ctx: ScenarioContext) -> ToolCallSpec:  # noqa: ARG002
         return ToolCallSpec(
             submit_plan_closes_goal,
-            _plan(self.action_id, self.action_spec),
+            _plan(self.action_id, self.action_spec, self.summary_path_hint),
         )
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[Any]:
@@ -94,43 +96,118 @@ class _BackgroundShellScenarioBase(ScenarioBase):
 
 
 class BackgroundShellGolden(_BackgroundShellScenarioBase):
-    """N concurrent ``shell(background=True)`` launches, all reach ``finished``."""
+    """T1: N concurrent background launches reach ``finished`` cleanly."""
 
     name = "sandbox.background_shell_golden"
     action_id = "background_shell_golden"
     action_spec = (
-        "ACTION background_shell_golden. Launch N concurrent background "
-        "shells via tools.sandbox.shell with background=true, wait for "
-        "natural exit, and report the per-launch summary."
+        "ACTION background_shell_golden. Launch 3 concurrent background "
+        "shells (each sleeps 5 s, echoes 'done'); wait for natural exit; "
+        "write the per-launch summary."
+    )
+    summary_path_hint = (
+        "/testbed/.ephemeralos/sweevo-mock/background_shell/golden/summary.json"
     )
 
 
 class BackgroundShellCancel(_BackgroundShellScenarioBase):
-    """Launch background shells; cancel mid-flight; assert no leftover state."""
+    """T2: launch background shells; cancel mid-flight; no leftover state."""
 
     name = "sandbox.background_shell_cancel"
     action_id = "background_shell_cancel"
     action_spec = (
-        "ACTION background_shell_cancel. Launch N long-running background "
-        "shells, cancel each mid-flight via tools.background.cancel_background_task, "
-        "and verify the workspace OCC is unchanged."
+        "ACTION background_shell_cancel. Launch 3 long-running background "
+        "shells, cancel each via asyncio.wait_for after 1 s, then issue a "
+        "follow-up foreground shell to confirm post-cancel mount latency "
+        "stays under budget."
+    )
+    summary_path_hint = (
+        "/testbed/.ephemeralos/sweevo-mock/background_shell/cancel/summary.json"
     )
 
 
 class BackgroundShellInterleave(_BackgroundShellScenarioBase):
-    """1 background + M interleaved foreground shells; foreground p95 mount unchanged."""
+    """T3: 1 long background + M foreground shells, record fg p95 mount."""
 
     name = "sandbox.background_shell_interleave"
     action_id = "background_shell_interleave"
     action_spec = (
         "ACTION background_shell_interleave. Launch 1 long-running "
-        "background shell, run M interleaved foreground shells, and "
-        "record foreground mount-latency timings for AC-3."
+        "background shell (sleep 30 s) and 5 foreground shells interleaved; "
+        "record per-foreground mount-latency timings."
+    )
+    summary_path_hint = (
+        "/testbed/.ephemeralos/sweevo-mock/background_shell/interleave/summary.json"
+    )
+
+
+class BackgroundShellExhaustion(_BackgroundShellScenarioBase):
+    """T5: 80 launches cancelled in unison; AC-14 post-exhaustion read budget."""
+
+    name = "sandbox.background_shell_exhaustion"
+    action_id = "background_shell_exhaustion"
+    action_spec = (
+        "ACTION background_shell_exhaustion. Fire 80 background shell "
+        "launches in parallel, each cancelled after 2 s; issue a follow-up "
+        "foreground read_file to validate the daemon RPC dispatcher is not "
+        "blocked by the shell executor (Pre-mortem #3 / AC-14)."
+    )
+    summary_path_hint = (
+        "/testbed/.ephemeralos/sweevo-mock/background_shell/exhaustion/summary.json"
+    )
+
+
+class BackgroundShellPartialWriteCancel(_BackgroundShellScenarioBase):
+    """T6: cancel a long ``dd`` mid-write; assert no leaked OCC publish."""
+
+    name = "sandbox.background_shell_partial_write_cancel"
+    action_id = "background_shell_partial_write_cancel"
+    action_spec = (
+        "ACTION background_shell_partial_write_cancel. Run an 800 MB dd "
+        "into a tracked path as a background shell, cancel at 2 s, then "
+        "read the target back to confirm the upperdir was discarded."
+    )
+    summary_path_hint = (
+        "/testbed/.ephemeralos/sweevo-mock/background_shell/partial_write/summary.json"
+    )
+
+
+class BackgroundShellCancelDuringMaintenance(_BackgroundShellScenarioBase):
+    """T7: short shell + maintenance; verify OCC consistency afterwards."""
+
+    name = "sandbox.background_shell_cancel_during_maintenance"
+    action_id = "background_shell_cancel_during_maintenance"
+    action_spec = (
+        "ACTION background_shell_cancel_during_maintenance. Run a short "
+        "background shell that writes one file and then sleeps; confirm "
+        "the publish + maintenance sequence leaves a consistent OCC state."
+    )
+    summary_path_hint = (
+        "/testbed/.ephemeralos/sweevo-mock/background_shell/maintenance/summary.json"
+    )
+
+
+class BackgroundShellLateCancelRace(_BackgroundShellScenarioBase):
+    """T8: await full completion; late cancel must not mutate the result."""
+
+    name = "sandbox.background_shell_late_cancel_race"
+    action_id = "background_shell_late_cancel_race"
+    action_spec = (
+        "ACTION background_shell_late_cancel_race. Await a short background "
+        "shell to completion (1 s sleep + echo); assert exit_code 0 and "
+        "stdout preserved."
+    )
+    summary_path_hint = (
+        "/testbed/.ephemeralos/sweevo-mock/background_shell/late_cancel/summary.json"
     )
 
 
 __all__ = [
     "BackgroundShellCancel",
+    "BackgroundShellCancelDuringMaintenance",
+    "BackgroundShellExhaustion",
     "BackgroundShellGolden",
     "BackgroundShellInterleave",
+    "BackgroundShellLateCancelRace",
+    "BackgroundShellPartialWriteCancel",
 ]

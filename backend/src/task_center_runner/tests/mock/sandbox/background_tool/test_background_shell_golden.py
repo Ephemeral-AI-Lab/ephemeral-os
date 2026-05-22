@@ -1,23 +1,28 @@
 """T1 — Golden path live regression for ``shell(background=True)``.
 
-Launches 3 concurrent background shells, waits for natural exit, asserts
-all return ``finished`` with non-empty stdout. AC-2 (``wait_completed`` /
-full stdout) is exercised implicitly because :func:`sandbox_api.shell`
-returns the post-reap result on the background path.
-
-Gated by ``database_configured()`` + ``live_e2e_heavy_enabled()`` to keep
-CI cheap; runs against a real SWE-EVO sandbox.
+Drives ``BackgroundShellGolden`` through the mock-agent scenario harness so
+the run produces full ``.sweevo_runs/scenario_logs/.../sandbox_events.jsonl``
+plus ``performance_report.json`` artifacts. The probe launches 3 concurrent
+background shells (sleep 5 s, echo done), waits for natural exit, and writes
+a JSON summary the test reads back via ``sandbox_api.read_file``.
 """
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
+import sandbox.api as sandbox_api
 from benchmarks.sweevo.models import SWEEvoInstance
-from task_center_runner.agent.mock.background_shell_probe import (
-    run_background_shell_golden_probe,
-    seed_workspace,
+from sandbox._shared.models import ReadFileRequest, SandboxCaller
+from task_center_runner.agent.mock.background_shell_probe import GOLDEN_SUMMARY
+from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.environments.sweevo_image.fixtures import (
+    run_scenario_on_sweevo_image,
 )
+from task_center_runner.scenarios import SCENARIO_REGISTRY
 from task_center_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
@@ -35,21 +40,37 @@ pytestmark = pytest.mark.asyncio
     not live_e2e_heavy_enabled(),
     reason="heavy live e2e disabled in runner.live_e2e.heavy_enabled",
 )
-@pytest.mark.timeout(300)
+@pytest.mark.timeout(420)
 async def test_background_shell_golden(
     sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
+    audit_dir: Path,
+    stores: TaskCenterStoreBundle,
 ) -> None:
+    scenario_cls = SCENARIO_REGISTRY["sandbox.background_shell_golden"]
+    scenario = scenario_cls()
     sandbox_id = str(workspace["sandbox_id"])
-    await seed_workspace(sandbox_id)
-    summary = await run_background_shell_golden_probe(
+    report = await run_scenario_on_sweevo_image(
+        scenario,
+        instance=sweevo_image_instance,
         sandbox_id=sandbox_id,
-        launch_count=3,
-        sleep_s=5,
+        audit_dir=audit_dir,
+        stores=stores,
     )
-    assert summary.mode == "golden"
-    assert len(summary.launches) == 3
-    for record in summary.launches:
-        assert record.status == "ok", record
-        assert record.exit_code == 0, record
-        assert record.error is None, record
+    assert report.task_center_status == "done", report
+
+    read = await sandbox_api.read_file(
+        sandbox_id,
+        ReadFileRequest(
+            path=GOLDEN_SUMMARY,
+            caller=SandboxCaller(agent_id="test.background_shell_golden.read"),
+        ),
+    )
+    assert read.success and read.exists, read
+    summary = json.loads(read.content or "{}")
+    assert summary["mode"] == "golden", summary
+    launches = summary["launches"]
+    assert len(launches) == summary["launch_count"], summary
+    for record in launches:
+        assert record["exit_code"] == 0, record
+        assert not record["is_error"], record
