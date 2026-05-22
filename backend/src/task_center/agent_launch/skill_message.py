@@ -2,8 +2,7 @@
 
 * :func:`_wrap_task_guidance` wraps role prose in ``<Task Guidance>`` and
   appends one ``<terminal_tool_selection>`` block rendered from the shared
-  terminal registry. ``None`` prose is preserved as ``None`` so the launcher
-  collapses to the 2-row entry shape for entry_executor.
+  terminal registry. ``None`` prose is preserved as ``None``.
 * :func:`build_skill_message` reads the agent's skill markdown body and
   appends an identical ``<terminal_tool_selection>`` block — byte-equal to
   the row-3 block (AC #15) because both derive from the same
@@ -46,8 +45,7 @@ def _wrap_task_guidance(
 ) -> str | None:
     """Wrap role prose in ``<Task Guidance>`` plus terminal selection.
 
-    Returns ``None`` when *prose* is ``None`` — this preserves
-    entry_executor's 2-row launch shape (no row 3).
+    Returns ``None`` when *prose* is ``None``.
     """
     if prose is None:
         return None

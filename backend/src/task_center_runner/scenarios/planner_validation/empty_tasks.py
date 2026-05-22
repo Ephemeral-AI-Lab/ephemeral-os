@@ -26,7 +26,6 @@ class PlannerEmptyTasks(ScenarioBase):
 
     name = "planner_validation.empty_tasks"
     expected_event_sequence: tuple[EventType, ...] = (
-        EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
         EventType.PLANNER_INVOKED,
     )

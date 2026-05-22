@@ -47,7 +47,6 @@ class PlannerDuplicateLocalId(ScenarioBase):
 
     name = "planner_validation.duplicate_local_id"
     expected_event_sequence: tuple[EventType, ...] = (
-        EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
         EventType.PLANNER_INVOKED,
     )

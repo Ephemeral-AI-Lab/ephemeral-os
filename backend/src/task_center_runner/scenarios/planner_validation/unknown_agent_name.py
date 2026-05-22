@@ -28,7 +28,6 @@ class PlannerUnknownAgentName(ScenarioBase):
 
     name = "planner_validation.unknown_agent_name"
     expected_event_sequence: tuple[EventType, ...] = (
-        EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
         EventType.PLANNER_INVOKED,
     )

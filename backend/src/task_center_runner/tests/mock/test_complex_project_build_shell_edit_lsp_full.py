@@ -1,4 +1,4 @@
-"""Full live regression for the complex project-build scenario."""
+"""Full live regression for the mixed shell-edit + LSP project-build scenario."""
 
 from __future__ import annotations
 
@@ -7,11 +7,11 @@ from pathlib import Path
 import pytest
 
 from benchmarks.sweevo.models import SWEEvoInstance
-from task_center_runner.benchmarks.sweevo.fixtures import run_sweevo_scenario
+from task_center_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
 from task_center_runner.core.stores import TaskCenterStoreBundle
 from task_center_runner.scenarios import SCENARIO_REGISTRY
-from task_center_runner.tests.sweevo._project_build_contracts import (
-    assert_complex_build_full_contract,
+from task_center_runner.tests.mock._project_build_contracts import (
+    assert_shell_edit_lsp_full_contract,
 )
 from task_center_runner.tests._live_config import (
     database_configured,
@@ -30,24 +30,24 @@ pytestmark = pytest.mark.asyncio
     not live_e2e_heavy_enabled(),
     reason="heavy live e2e disabled in runner.live_e2e.heavy_enabled",
 )
-@pytest.mark.timeout(2400)
-async def test_complex_project_build_full(
-    sweevo_instance: SWEEvoInstance,
+@pytest.mark.timeout(3600)
+async def test_complex_project_build_shell_edit_lsp_full(
+    sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
     stores: TaskCenterStoreBundle,
 ) -> None:
-    scenario_cls = SCENARIO_REGISTRY["sandbox.complex_project_build"]
+    scenario_cls = SCENARIO_REGISTRY["sandbox.complex_project_build_shell_edit_lsp"]
     scenario = scenario_cls()
     sandbox_id = str(workspace["sandbox_id"])
-    report = await run_sweevo_scenario(
+    report = await run_scenario_on_sweevo_image(
         scenario,
-        instance=sweevo_instance,
+        instance=sweevo_image_instance,
         sandbox_id=sandbox_id,
         audit_dir=audit_dir,
         stores=stores,
     )
-    await assert_complex_build_full_contract(
+    await assert_shell_edit_lsp_full_contract(
         report=report,
         sandbox_id=sandbox_id,
     )

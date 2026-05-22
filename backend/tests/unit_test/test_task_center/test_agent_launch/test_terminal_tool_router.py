@@ -173,12 +173,12 @@ def test_executor_depth_zero_or_one_keeps_handoff(deps, monkeypatch):
     ]
 
 
-def test_entry_executor_without_goal_keeps_registered_terminals(deps, monkeypatch):
+def test_executor_without_goal_keeps_registered_terminals(deps, monkeypatch):
     _register(
-        name="entry_executor",
+        name="standalone_executor",
         kind=AgentKind.EXECUTOR,
-        terminals=["submit_entry_result"],
-        recipe="entry",
+        terminals=["submit_execution_success"],
+        recipe="generator",
     )
     monkeypatch.setattr(
         "task_center._core.terminal_tool_routing._nested_goal_depth_gt_1",
@@ -186,12 +186,12 @@ def test_entry_executor_without_goal_keeps_registered_terminals(deps, monkeypatc
     )
 
     selection = TerminalToolRouter().resolve(
-        base_agent_name="entry_executor",
+        base_agent_name="standalone_executor",
         scope=ContextScope(goal_id=None),
         deps=deps,
     )
 
-    assert selection.agent_def.terminals == ["submit_entry_result"]
+    assert selection.agent_def.terminals == ["submit_execution_success"]
 
 
 def test_missing_context_recipe_raises(deps):

@@ -24,21 +24,21 @@ from task_center_runner import run_scenario
 from task_center_runner.audit.events import EventType
 from task_center_runner.hooks.builtins import count_events
 from task_center_runner.scenarios.correctness_testing import CorrectnessTesting
-from task_center_runner.tests.sweevo._sandbox_health import (
-    require_sandbox_provider_healthy,
+from task_center_runner.environments.sweevo_image.health import (
+    require_sweevo_image_provider_healthy,
 )
 from task_center_runner.tests._live_config import database_configured
 
 
 @pytest.mark.asyncio
 async def test_correctness_testing_via_live_e2e(
-    sweevo_instance: SWEEvoInstance,
+    sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
 ) -> None:
     if not database_configured():
         pytest.skip("database URL not configured")
-    require_sandbox_provider_healthy(sweevo_instance)
+    require_sweevo_image_provider_healthy(sweevo_image_instance)
 
     scenario = CorrectnessTesting()
     extra_hooks = (
@@ -50,9 +50,9 @@ async def test_correctness_testing_via_live_e2e(
         sandbox_id=str(workspace["sandbox_id"]),
         audit_dir=audit_dir,
         repo_dir=_REPO_DIR,
-        entry_prompt=build_sweevo_user_prompt(sweevo_instance, repo_dir=_REPO_DIR),
+        entry_prompt=build_sweevo_user_prompt(sweevo_image_instance, repo_dir=_REPO_DIR),
         extra_hooks=extra_hooks,
-        instance_id=sweevo_instance.instance_id,
+        instance_id=sweevo_image_instance.instance_id,
     )
 
     assert report.task_center_status == "done", (

@@ -2,7 +2,7 @@
 
 Gated off by default through ``runner.live_e2e.real_agent_enabled``. The test depends on the
 function-scoped ``workspace`` fixture (per-test reset) rather than
-session-scoped ``sweevo_sandbox`` to avoid cross-instance state leakage when
+session-scoped ``sweevo_image_sandbox`` to avoid cross-instance state leakage when
 the test grows to a parameterized matrix.
 """
 
@@ -28,13 +28,13 @@ pytestmark = pytest.mark.skipif(
 
 @pytest.mark.asyncio
 async def test_real_agent_resolves_canonical_instance(
-    sweevo_instance: SWEEvoInstance,
+    sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
     stores: TaskCenterStoreBundle,
 ) -> None:
     report = await run_sweevo_real_agent(
-        instance=sweevo_instance,
+        instance=sweevo_image_instance,
         sandbox_id=str(workspace["sandbox_id"]),
         audit_dir=audit_dir,
         stores=stores,

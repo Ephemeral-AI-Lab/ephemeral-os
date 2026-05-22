@@ -65,7 +65,7 @@ async def submit_execution_handoff(
         ),
         metadata={
             "submission_kind": "goal_start",
-            "task_center_task_id": started_goal.parent_task_id,
+            "task_center_task_id": started_goal.origin.task_id,
             "attempt_id": started_goal.parent_attempt_id,
             "goal_id": started_goal.goal_id,
             "initial_iteration_id": started_goal.initial_iteration_id,

@@ -26,7 +26,6 @@ class PlannerDefersWithoutDeferredGoal(ScenarioBase):
 
     name = "planner_validation.defers_without_deferred_goal"
     expected_event_sequence: tuple[EventType, ...] = (
-        EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
         EventType.PLANNER_INVOKED,
     )

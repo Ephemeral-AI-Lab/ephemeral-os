@@ -6,7 +6,7 @@ funnel through this one coroutine; the only mode-specific seams are the
 five fields documented in the plan's §4 mode-delta table:
 
 - ``config.runner_factory`` — mock returns a ``MockSquadRunner``; real-LLM
-  and benchmark return ``None`` so ``start_task_center_entry_run`` falls
+  and benchmark return ``None`` so ``start_task_center_run`` falls
   back to its real-agent runner.
 - ``config.bootstrap`` — only real-agent paths set this (it seeds the
   agent registry / runtime stores).
@@ -37,7 +37,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
-from task_center import TaskCenterSandboxBridge, start_task_center_entry_run
+from task_center import TaskCenterSandboxBridge, start_task_center_run
 
 from config.model_config import try_get_active_model_kwargs
 from task_center_runner.audit.bus import AuditEventBus
@@ -86,7 +86,7 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
       5. Resolve ``run_dir``; start the ``AuditRecorder``.
       6. Build the runner via ``config.runner_factory(ctx)``; ``None``
          signals the real-agent path.
-      7. ``start_task_center_entry_run(...)`` + ``wait_for_idle``
+      7. ``start_task_center_run(...)`` + ``wait_for_idle``
          (optionally bounded by ``config.max_duration_s``).
       8. Capture the perf-report snapshot pre-dispose; release the
          sandbox + dispose the recorder + close owned stores in
@@ -154,14 +154,14 @@ async def run_pipeline(config: RunConfig) -> PipelineReport:
     aborted_by_timeout = False
     handle = None
     try:
-        # ``start_task_center_entry_run`` reads only ``config.cwd`` off this
+        # ``start_task_center_run`` reads only ``config.cwd`` off this
         # object; real-LLM callers may pre-build a full
         # ``runtime.app_factory.RuntimeConfig`` and pass it via
         # ``config.extras["runtime_config"]`` if extra attributes are needed.
         runtime_cfg = config.extras.get(
             "runtime_config", SimpleNamespace(cwd=config.repo_dir)
         )
-        handle = start_task_center_entry_run(
+        handle = start_task_center_run(
             config=runtime_cfg,
             prompt=config.entry_prompt,
             sandbox_id=lease.sandbox_id,

@@ -77,7 +77,6 @@ class HighConcurrencyLayerstackOverlayOcc(ScenarioBase):
 
     name = "sandbox.high_concurrency_layerstack_overlay_occ"
     expected_event_sequence: tuple[EventType, ...] = (
-        EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
         EventType.PLANNER_COMPLETES_GOAL_PLAN,
         EventType.EXECUTOR_INVOKED,

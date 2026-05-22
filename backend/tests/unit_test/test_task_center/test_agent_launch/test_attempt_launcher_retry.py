@@ -474,7 +474,7 @@ async def test_main_agent_launches_with_two_user_messages(
 
 
 @pytest.mark.asyncio
-async def test_entry_executor_falls_back_to_single_user_message(
+async def test_launch_without_task_guidance_falls_back_to_single_user_message(
     goal_store,
     iteration_store,
     attempt_store,
@@ -529,7 +529,7 @@ async def test_entry_executor_falls_back_to_single_user_message(
             terminal_result=ToolResult(
                 output="ok", is_error=False, does_terminate=True
             ),
-            agent_name="entry_executor",
+            agent_name="planner",
             event_count=1,
         )
 

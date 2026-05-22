@@ -249,7 +249,7 @@ CAPACITY_PACK_SPECS: tuple[CapacityPackSpec, ...] = (
         ),
     ),
     CapacityPackSpec(
-        "context.entry_executor_minimal",
+        "context.goal_entry_minimal",
         "E",
         "context",
         "T0",

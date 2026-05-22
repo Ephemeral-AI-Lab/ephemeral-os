@@ -40,6 +40,8 @@ def nested_goal_depth(
             raise TaskCenterInvariantViolation(
                 f"Goal {current_goal_id!r} was not found."
             )
+        if current_goal.requested_by_task_id is None:
+            return depth
         parent_task = task_store.get_task(current_goal.requested_by_task_id)
         if parent_task is None:
             return depth

@@ -1,9 +1,8 @@
 """Goal persistence model — origin axis of harness work.
 
-A Goal is created when a generator task calls
-``submit_execution_handoff(goal)``. It owns an ordered list of
-``Iteration`` ids representing the vertical (continuation) progression of
-work toward the request's goal.
+A Goal is created from prompt text at TaskCenter entry or from a generator's
+``submit_execution_handoff(goal)``. It owns an ordered list of ``Iteration`` ids
+representing the vertical continuation progression of work toward the goal.
 """
 
 from __future__ import annotations
@@ -27,7 +26,10 @@ class GoalRecord(Base):
         ForeignKey("task_center_runs.id", ondelete="CASCADE"),
         index=True,
     )
-    requested_by_task_id: Mapped[str] = mapped_column(String(96), index=True)
+    origin_kind: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    requested_by_task_id: Mapped[str | None] = mapped_column(
+        String(96), nullable=True, index=True
+    )
     goal: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(16))
     iteration_ids: Mapped[list[str]] = mapped_column(JSON, default=list)

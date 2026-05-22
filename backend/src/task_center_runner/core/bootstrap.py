@@ -2,7 +2,7 @@
 
 Ensures the Daytona provider, the production runtime store singletons, and
 the markdown-defined agent registry are all populated before
-``start_task_center_entry_run`` runs with ``runner=None`` (real LLM). The
+``start_task_center_run`` runs with ``runner=None`` (real LLM). The
 scenario / mock path never invokes this — mocks register their own agents
 via ``task_center_runner.agent.mock.definitions.registered_mock_agents``.
 
@@ -23,18 +23,16 @@ _PROFILE_ROOT = Path(__file__).resolve().parents[2] / "agents" / "profile"
 # Names the launcher resolves via
 # ``EphemeralAttemptAgentLauncher._resolve_agent_definition``. Markdown
 # frontmatter ``name:`` fields under ``_PROFILE_ROOT/main/`` register these:
-# planner.md, evaluator.md, entry_executor.md, generator_executor.md
-# (name=executor), generator_verifier.md (name=verifier).
-_REQUIRED_AGENT_NAMES = frozenset(
-    {"planner", "executor", "verifier", "evaluator", "entry_executor"}
-)
+# planner.md, evaluator.md, executor.md (name=executor), and
+# generator_verifier.md (name=verifier).
+_REQUIRED_AGENT_NAMES = frozenset({"planner", "executor", "verifier", "evaluator"})
 
 
 def bootstrap_real_agent_runtime() -> None:
     """Populate sandbox provider, runtime stores, and agent registry.
 
     Idempotent via a module-level sentinel. Safe to call from any entrypoint
-    that drives :func:`task_center.start_task_center_entry_run` with
+    that drives :func:`task_center.start_task_center_run` with
     ``runner=None`` (real LLM path).
     """
     global _BOOTSTRAPPED

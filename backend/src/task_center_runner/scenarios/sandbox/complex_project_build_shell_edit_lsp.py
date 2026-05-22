@@ -69,7 +69,6 @@ _SMOKE_PLAN = {
 
 
 _EXPECTED_EVENT_SEQUENCE: tuple[EventType, ...] = (
-    EventType.ENTRY_EXECUTOR_INVOKED,
     EventType.PLANNER_INVOKED,
     EventType.PLANNER_COMPLETES_GOAL_PLAN,
     EventType.EXECUTOR_INVOKED,

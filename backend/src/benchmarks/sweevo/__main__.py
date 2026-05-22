@@ -174,8 +174,8 @@ def _build_parser() -> argparse.ArgumentParser:
         "--sweevo-runner",
         action="store_true",
         help=(
-            "Run an SWE-EVO instance through the task-center pipeline with "
-            "entry_executor mocked; the goal is the raw CSV pr_description."
+            "Run an SWE-EVO instance through the task-center pipeline; the "
+            "goal is the raw CSV pr_description."
         ),
     )
     parser.add_argument(
@@ -333,7 +333,7 @@ async def _cmd_real_agent(args: argparse.Namespace) -> int:
 
 
 async def _cmd_sweevo_runner(args: argparse.Namespace) -> int:
-    """Drive one SWE-EVO instance through the production pipeline with entry_executor mocked.
+    """Drive one SWE-EVO instance through the production pipeline.
 
     R6: the ``try``/``finally`` opens immediately after
     ``create_sweevo_test_sandbox`` returns, NOT around ``run_pipeline``.
@@ -360,7 +360,7 @@ async def _cmd_sweevo_runner(args: argparse.Namespace) -> int:
     )
     from benchmarks.sweevo.models import _has_explicit_sweevo_image_version
     from task_center_runner.benchmarks.sweevo.sweevo_runner import (
-        build_selective_entry_mock_runner_factory,
+        build_sweevo_runner_factory,
     )
     from task_center_runner.benchmarks.sweevo.lifecycle import SweevoLifecycle
     from task_center_runner.benchmarks.sweevo.provisioner import SweevoProvisioner
@@ -435,9 +435,7 @@ async def _cmd_sweevo_runner(args: argparse.Namespace) -> int:
                 repo_dir=args.repo_dir,
                 install_lsp=True,
             ),
-            runner_factory=build_selective_entry_mock_runner_factory(
-                goal=goal, repo_dir=args.repo_dir
-            ),
+            runner_factory=build_sweevo_runner_factory(repo_dir=args.repo_dir),
             lifecycle=SweevoLifecycle(
                 instance,
                 repo_dir=args.repo_dir,

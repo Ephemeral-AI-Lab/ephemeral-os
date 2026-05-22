@@ -9,7 +9,7 @@ delegated goal closes terminally.
 from __future__ import annotations
 
 from task_center.goal.starter import GoalStarter
-from task_center.goal.state import GoalStatus
+from task_center.goal.state import GoalOrigin, GoalStatus
 from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
@@ -239,8 +239,8 @@ def test_delegated_continuation_waits_until_final_segment(
     )
     coordinator = GoalStarter(runtime=runtime)
     goal_start = coordinator.start(
-        parent_task_id=parent_task_id,
-        goal="delegated continuation",
+        prompt="delegated continuation",
+        origin=GoalOrigin.task(task_id=parent_task_id),
     )
 
     segment1_initial_attempt_id = goal_start.initial_attempt_id
@@ -310,8 +310,8 @@ def test_continuation_startup_failure_reports_continuation_graph(
     )
     coordinator = GoalStarter(runtime=runtime)
     goal_start = coordinator.start(
-        parent_task_id=parent_task_id,
-        goal="delegated continuation",
+        prompt="delegated continuation",
+        origin=GoalOrigin.task(task_id=parent_task_id),
     )
 
     _drive_delegated_attempt_to_pass(
@@ -356,8 +356,8 @@ def test_delegated_retry_waits_until_final_graph(
     )
     coordinator = GoalStarter(runtime=runtime)
     goal_start = coordinator.start(
-        parent_task_id=parent_task_id,
-        goal="delegated retry",
+        prompt="delegated retry",
+        origin=GoalOrigin.task(task_id=parent_task_id),
     )
 
     # Graph 1 fails — manager should retry inside same iteration, parent waits.

@@ -91,7 +91,6 @@ class DeferredParentPlannerTerminalRouting(ScenarioBase):
 
     name = "pipeline.deferred_parent_planner_terminal_routing"
     expected_event_sequence: tuple[EventType, ...] = (
-        EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
         EventType.PLANNER_DEFERS_GOAL_PLAN,
         EventType.EXECUTOR_INVOKED,

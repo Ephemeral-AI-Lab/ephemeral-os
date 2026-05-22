@@ -37,7 +37,7 @@ from task_center_runner.audit.events import EventType
 from task_center_runner.scenarios import SCENARIO_REGISTRY
 from task_center_runner.agent.mock.prompt_inspector import ToolCallRecord
 from task_center_runner.core.stores import TaskCenterStoreBundle
-from task_center_runner.benchmarks.sweevo.fixtures import run_sweevo_scenario
+from task_center_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
 from task_center_runner.tests._live_config import database_configured
 
 
@@ -56,7 +56,7 @@ _REQUIRED_SANDBOX_EVENTS = (
     reason="database URL not configured",
 )
 async def test_auto_squash_commit_resume_crosses_depth_threshold(
-    sweevo_instance: SWEEvoInstance,
+    sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
     stores: TaskCenterStoreBundle,
@@ -64,9 +64,9 @@ async def test_auto_squash_commit_resume_crosses_depth_threshold(
     scenario_cls = SCENARIO_REGISTRY["sandbox.auto_squash_commit_resume"]
     scenario = scenario_cls()
     sandbox_id = str(workspace["sandbox_id"])
-    report = await run_sweevo_scenario(
+    report = await run_scenario_on_sweevo_image(
         scenario,
-        instance=sweevo_instance,
+        instance=sweevo_image_instance,
         sandbox_id=sandbox_id,
         audit_dir=audit_dir,
         stores=stores,

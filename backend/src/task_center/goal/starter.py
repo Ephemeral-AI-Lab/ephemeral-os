@@ -1,7 +1,7 @@
-"""GoalStarter — single safe path for executor → delegated goal start.
+"""GoalStarter — single safe path from prompt text to Goal execution.
 
-Owns parent-task CAS, deferred orchestrator startup, and compensation on
-failure for ``submit_execution_handoff``.
+Owns origin validation, optional parent-task CAS, initial iteration/attempt
+startup, and compensation on failure.
 """
 
 from __future__ import annotations
@@ -17,6 +17,8 @@ from task_center.goal.close_report_router import (
 from task_center.goal.handler import GoalHandler
 from task_center.goal.state import (
     GoalClosureReport,
+    GoalOrigin,
+    GoalOriginKind,
     Goal,
     GoalStatus,
 )
@@ -33,16 +35,20 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True, slots=True)
 class StartedGoal:
-    parent_task_id: str
-    parent_attempt_id: str | None  # None when caller is the top-level executor
+    origin: GoalOrigin
+    parent_attempt_id: str | None
     goal_id: str
     initial_iteration_id: str
     initial_attempt_id: str
     goal: str
 
+    @property
+    def parent_task_id(self) -> str | None:
+        return self.origin.task_id
+
 
 class GoalStarter:
-    """Single orchestration entry point for executor → delegated goal start."""
+    """Single orchestration entry point for prompt → goal start."""
 
     def __init__(
         self,
@@ -59,20 +65,17 @@ class GoalStarter:
             )
         )
 
-    def start(self, *, parent_task_id: str, goal: str) -> StartedGoal:
-        parent_task = self._assert_parent_running_and_no_open_child(parent_task_id)
-        task_center_run_id = str(parent_task.get("task_center_run_id") or "")
-        if not task_center_run_id.strip():
-            raise TaskCenterInvariantViolation(
-                f"TaskCenter task {parent_task_id!r} has no run id."
-            )
-        parent_attempt_id = _parent_attempt_id(parent_task)
+    def start(self, *, prompt: str, origin: GoalOrigin) -> StartedGoal:
+        prompt = prompt.strip()
+        if not prompt:
+            raise TaskCenterInvariantViolation("Goal prompt must be nonblank.")
+        prepared = self._prepare_origin(origin)
 
         handler = self._build_handler()
         created_goal = handler.create_goal(
-            task_center_run_id=task_center_run_id,
-            requested_by_task_id=parent_task_id,
-            goal=goal,
+            task_center_run_id=prepared.task_center_run_id,
+            origin=origin,
+            goal=prompt,
         )
         iteration, iteration_manager = handler.create_initial_iteration_with_manager(
             goal_id=created_goal.id,
@@ -81,31 +84,64 @@ class GoalStarter:
         initial_attempt = None
         try:
             initial_attempt = iteration_manager.create_unstarted_initial_attempt()
-            self._mark_parent_waiting(
-                parent_task_id=parent_task_id,
-                parent_attempt_id=parent_attempt_id,
-                goal=created_goal,
-                iteration=iteration,
-                attempt_id=initial_attempt.id,
-                goal_str=goal,
-            )
+            if origin.kind == GoalOriginKind.TASK:
+                self._mark_parent_waiting(
+                    origin=origin,
+                    parent_attempt_id=prepared.parent_attempt_id,
+                    goal=created_goal,
+                    iteration=iteration,
+                    attempt_id=initial_attempt.id,
+                    goal_str=prompt,
+                )
             iteration_manager.start_attempt(initial_attempt)
         except Exception:
             self._compensate_failed_start(
                 goal=created_goal,
                 iteration=iteration,
                 initial_attempt_id=initial_attempt.id if initial_attempt else None,
-                parent_task_id=parent_task_id,
+                origin=origin,
             )
             raise
 
         return StartedGoal(
-            parent_task_id=parent_task_id,
-            parent_attempt_id=parent_attempt_id,
+            origin=origin,
+            parent_attempt_id=prepared.parent_attempt_id,
             goal_id=created_goal.id,
             initial_iteration_id=iteration.id,
             initial_attempt_id=initial_attempt.id,
-            goal=goal,
+            goal=prompt,
+        )
+
+    def _prepare_origin(self, origin: GoalOrigin) -> "_PreparedOrigin":
+        if origin.kind == GoalOriginKind.ENTRY:
+            if origin.task_center_run_id is None:
+                raise TaskCenterInvariantViolation(
+                    "Entry-origin goal requires task_center_run_id."
+                )
+            return _PreparedOrigin(
+                task_center_run_id=origin.task_center_run_id,
+                parent_attempt_id=None,
+            )
+
+        if origin.task_id is None:
+            raise TaskCenterInvariantViolation(
+                "Task-origin goal requires parent task_id."
+            )
+        parent_task = self._assert_parent_running_and_no_open_child(origin.task_id)
+        task_center_run_id = str(parent_task.get("task_center_run_id") or "")
+        if not task_center_run_id.strip():
+            raise TaskCenterInvariantViolation(
+                f"TaskCenter task {origin.task_id!r} has no run id."
+            )
+        parent_attempt_id = _parent_attempt_id(parent_task)
+        if parent_attempt_id is None:
+            raise TaskCenterInvariantViolation(
+                f"TaskCenter task {origin.task_id!r} is not attempt-bound; "
+                "task-origin goal starts require a generator task."
+            )
+        return _PreparedOrigin(
+            task_center_run_id=task_center_run_id,
+            parent_attempt_id=parent_attempt_id,
         )
 
     def _build_handler(self) -> GoalHandler:
@@ -153,20 +189,24 @@ class GoalStarter:
     def _mark_parent_waiting(
         self,
         *,
-        parent_task_id: str,
-        parent_attempt_id: str | None,
+        origin: GoalOrigin,
+        parent_attempt_id: str,
         goal: Goal,
         iteration: Iteration,
         attempt_id: str,
         goal_str: str,
     ) -> None:
+        if origin.task_id is None:
+            raise TaskCenterInvariantViolation(
+                "Task-origin goal start is missing parent task_id."
+            )
         target = self._runtime.lifecycle_target_for(
-            task_id=parent_task_id, attempt_id=parent_attempt_id
+            task_id=origin.task_id, attempt_id=parent_attempt_id
         )
         if target is None:
             raise TaskCenterInvariantViolation(
                 f"No lifecycle target registered for TaskCenter task "
-                f"{parent_task_id!r}; goal start cannot proceed."
+                f"{origin.task_id!r}; goal start cannot proceed."
             )
         target.mark_waiting_goal(
             delegated_goal_id=goal.id,
@@ -181,7 +221,7 @@ class GoalStarter:
         goal: Goal,
         iteration: Iteration,
         initial_attempt_id: str | None,
-        parent_task_id: str,
+        origin: GoalOrigin,
     ) -> None:
         """Best-effort rollback: attempt -> iteration -> goal -> parent.
 
@@ -213,12 +253,20 @@ class GoalStarter:
             goal.id, status=GoalStatus.CANCELLED,
             final_outcome=None, closed_at=now,
         ))
-        if not _do("restore_parent", lambda: self._restore_parent(parent_task_id)):
+        if origin.kind != GoalOriginKind.TASK:
+            if runtime.manager_registry is not None:
+                runtime.manager_registry.deregister(iteration.id)
+            return
+        if origin.task_id is None:
+            return
+        if not _do("restore_parent", lambda: self._restore_parent(origin.task_id)):
             _do("synthetic_close_report", lambda: GoalClosureReportRouter(
                 runtime=runtime
             ).deliver(GoalClosureReport(
                 goal_id=goal.id,
-                requested_by_task_id=parent_task_id,
+                task_center_run_id=goal.task_center_run_id,
+                origin_kind=goal.origin_kind,
+                requested_by_task_id=origin.task_id,
                 outcome="failed",
                 final_iteration_id=iteration.id,
                 final_attempt_id=initial_attempt_id,
@@ -260,3 +308,9 @@ class GoalStarter:
 def _parent_attempt_id(task: dict[str, Any]) -> str | None:
     raw = str(task.get("task_center_attempt_id") or "")
     return raw if raw else None
+
+
+@dataclass(frozen=True, slots=True)
+class _PreparedOrigin:
+    task_center_run_id: str
+    parent_attempt_id: str | None

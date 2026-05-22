@@ -38,7 +38,6 @@ class IterativeDeferral(ScenarioBase):
 
     name = "pipeline.iterative_deferral"
     expected_event_sequence: tuple[EventType, ...] = (
-        EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
         EventType.PLANNER_DEFERS_GOAL_PLAN,
         EventType.EXECUTOR_INVOKED,

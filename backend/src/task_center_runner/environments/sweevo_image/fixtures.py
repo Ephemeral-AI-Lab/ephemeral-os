@@ -39,7 +39,7 @@ class _SweevoSessionLock:
     path: Path
 
 
-async def run_sweevo_scenario(
+async def run_scenario_on_sweevo_image(
     scenario: Scenario,
     *,
     instance: SWEEvoInstance,
@@ -69,29 +69,29 @@ async def run_sweevo_scenario(
 
 
 @pytest.fixture(scope="session")
-def sweevo_instance() -> SWEEvoInstance:
+def sweevo_image_instance() -> SWEEvoInstance:
     instance_id = os.getenv("EOS_SWEEVO_INSTANCE", _DEFAULT_INSTANCE_ID)
     return select_sweevo_instance(instance_id=instance_id)
 
 
 @pytest.fixture(scope="session")
-async def sweevo_sandbox(
-    sweevo_instance: SWEEvoInstance,
+async def sweevo_image_sandbox(
+    sweevo_image_instance: SWEEvoInstance,
 ) -> AsyncIterator[dict[str, object]]:
     """Provision a real Daytona sandbox for the configured SWE-EVO instance."""
     from sandbox.provider.bootstrap import bootstrap_sandbox_provider
 
     from benchmarks.sweevo.sandbox import create_sweevo_test_sandbox
-    from task_center_runner.tests.sweevo._sandbox_health import (
-        require_sandbox_provider_healthy,
+    from task_center_runner.environments.sweevo_image.health import (
+        require_sweevo_image_provider_healthy,
     )
 
-    lock = _acquire_sweevo_session_lock(sweevo_instance.instance_id)
+    lock = _acquire_sweevo_session_lock(sweevo_image_instance.instance_id)
     try:
         bootstrap_sandbox_provider()
-        require_sandbox_provider_healthy(sweevo_instance)
+        require_sweevo_image_provider_healthy(sweevo_image_instance)
         yield await create_sweevo_test_sandbox(
-            sweevo_instance,
+            sweevo_image_instance,
             register_snapshot=True,
             reuse_existing_auto=_reuse_existing_auto_enabled(),
             install_lsp=True,
@@ -102,20 +102,20 @@ async def sweevo_sandbox(
 
 @pytest.fixture
 async def workspace(
-    sweevo_sandbox: dict[str, object],
+    sweevo_image_sandbox: dict[str, object],
     request: pytest.FixtureRequest,
 ) -> dict[str, object]:
     """Return a SWE-EVO workspace with per-test reset isolation."""
-    sandbox_id = str(sweevo_sandbox["sandbox_id"])
+    sandbox_id = str(sweevo_image_sandbox["sandbox_id"])
     used_sandboxes = _session_workspace_used_sandboxes(request.session)
     first_use = sandbox_id not in used_sandboxes
-    should_reset = (not first_use) or bool(sweevo_sandbox.get("reused_existing"))
+    should_reset = (not first_use) or bool(sweevo_image_sandbox.get("reused_existing"))
     if should_reset:
         from benchmarks.sweevo.sandbox import reset_sweevo_workspace
 
         await reset_sweevo_workspace(sandbox_id, install_lsp=True)
     used_sandboxes.add(sandbox_id)
-    return sweevo_sandbox
+    return sweevo_image_sandbox
 
 
 def _reuse_existing_auto_enabled() -> bool:
@@ -189,8 +189,8 @@ def _session_workspace_used_sandboxes(session: object) -> set[str]:
 
 __all__ = [
     "RunReport",
-    "run_sweevo_scenario",
-    "sweevo_instance",
-    "sweevo_sandbox",
+    "run_scenario_on_sweevo_image",
+    "sweevo_image_instance",
+    "sweevo_image_sandbox",
     "workspace",
 ]

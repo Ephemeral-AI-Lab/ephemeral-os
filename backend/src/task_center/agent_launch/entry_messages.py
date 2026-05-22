@@ -1,8 +1,7 @@
 """Composer output bundle (formerly ``LaunchBundle``).
 
-The composer's output: agent definition, rendered context envelope (or empty
-string for entry-shape recipes), optional task-guidance and skill rows, and
-the packet itself for downstream persistence.
+The composer's output: agent definition, rendered context envelope, optional
+task-guidance and skill rows, and the packet itself for downstream persistence.
 """
 
 from __future__ import annotations
@@ -23,10 +22,10 @@ class AgentEntryMessages:
     Field shapes:
 
     * ``context`` — ``<context>...</context>\n`` envelope around rendered
-      blocks, or ``""`` for an empty packet (entry-shape recipes).
+      blocks, or ``""`` for an empty packet.
     * ``task_guidance`` — ``<Task Guidance>...</Task Guidance>`` envelope
       around role prose; ``None`` for agents with no task-guidance builder
-      (entry_executor, helpers/subagents).
+      (helpers/subagents).
     * ``skill`` — row-4 skill + ``<terminal_tool_selection>`` body; ``None``
       when the agent declares no skill.
     """

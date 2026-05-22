@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from task_center.goal.state import GoalClosureReport
+from task_center.goal.state import GoalClosureReport, GoalOriginKind
 from task_center._core.primitives import TaskCenterInvariantViolation
 from task_center.attempt import (
     AttemptFailReason,
@@ -478,6 +478,8 @@ def test_goal_closure_report_success_resumes_waiting_generator(
     orchestrator.apply_goal_closure_report(
         GoalClosureReport(
             goal_id="delegated-1",
+            task_center_run_id=task_center_run_id,
+            origin_kind=GoalOriginKind.TASK,
             requested_by_task_id=task_id,
             outcome="success",
             final_iteration_id="iteration-1",
@@ -522,6 +524,8 @@ def test_goal_closure_report_failure_leaves_dependents_pending_and_closes_graph(
     orchestrator.apply_goal_closure_report(
         GoalClosureReport(
             goal_id="delegated-1",
+            task_center_run_id=task_center_run_id,
+            origin_kind=GoalOriginKind.TASK,
             requested_by_task_id=task_id,
             outcome="failed",
             final_iteration_id="iteration-1",

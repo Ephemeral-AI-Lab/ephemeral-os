@@ -117,10 +117,10 @@ def test_compose_returns_agent_entry_messages():
             )
         ],
     )
-    _register_agent(name="entry_executor", recipe="test_recipe")
+    _register_agent(name="context_only_executor", recipe="test_recipe")
     composer = AgentEntryComposer.default(ContextEngine(_make_deps()))
     messages = composer.compose(
-        base_agent_name="entry_executor",
+        base_agent_name="context_only_executor",
         scope=ContextScope(),
     )
     assert isinstance(messages, AgentEntryMessages)
@@ -128,7 +128,7 @@ def test_compose_returns_agent_entry_messages():
     assert messages.context.startswith("<context>\n")
     assert messages.context.endswith("</context>\n")
     assert "goal text" in messages.context
-    # No builder is registered for "entry_executor" → no row 3.
+    # No builder is registered for this helper agent -> no row 3.
     assert messages.task_guidance is None
     # No skill declared → no row 4.
     assert messages.skill is None
@@ -137,10 +137,10 @@ def test_compose_returns_agent_entry_messages():
 def test_compose_empty_packet_returns_empty_context():
     """AC #11 — empty packet → messages.context == "" (no envelope)."""
     _register_simple_recipe("empty", blocks=[])
-    _register_agent(name="entry_executor", recipe="empty")
+    _register_agent(name="context_only_executor", recipe="empty")
     composer = AgentEntryComposer.default(ContextEngine(_make_deps()))
     messages = composer.compose(
-        base_agent_name="entry_executor",
+        base_agent_name="context_only_executor",
         scope=ContextScope(),
     )
     assert messages.context == ""
@@ -158,13 +158,13 @@ def test_compose_persists_packet_when_store_provided():
             )
         ],
     )
-    _register_agent(name="entry_executor", recipe="p")
+    _register_agent(name="context_only_executor", recipe="p")
     store = _StubPacketStore(inserted=[])
     composer = AgentEntryComposer.default(
         ContextEngine(_make_deps(packet_store=store))
     )
     messages = composer.compose(
-        base_agent_name="entry_executor",
+        base_agent_name="context_only_executor",
         scope=ContextScope(),
     )
     assert messages.context_packet_id == "packet-1"
@@ -184,10 +184,10 @@ def test_compose_rejects_user_supplied_context_closer():
             )
         ],
     )
-    _register_agent(name="entry_executor", recipe="hostile")
+    _register_agent(name="context_only_executor", recipe="hostile")
     composer = AgentEntryComposer.default(ContextEngine(_make_deps()))
     with pytest.raises(ContextEngineError) as exc:
-        composer.compose(base_agent_name="entry_executor", scope=ContextScope())
+        composer.compose(base_agent_name="context_only_executor", scope=ContextScope())
     assert "</context>" in str(exc.value)
 
 

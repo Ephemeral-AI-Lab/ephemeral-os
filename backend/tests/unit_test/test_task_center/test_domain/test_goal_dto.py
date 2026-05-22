@@ -10,6 +10,7 @@ import pytest
 from task_center.goal.state import (
     GoalClosureReport,
     Goal,
+    GoalOriginKind,
     GoalStatus,
 )
 
@@ -47,6 +48,8 @@ def test_request_dto_is_frozen():
 def test_closure_report_constructs():
     rep = GoalClosureReport(
         goal_id="r1",
+        task_center_run_id="run1",
+        origin_kind=GoalOriginKind.TASK,
         requested_by_task_id="t1",
         outcome="success",
         final_iteration_id="s1",

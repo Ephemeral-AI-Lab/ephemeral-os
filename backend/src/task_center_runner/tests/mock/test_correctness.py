@@ -18,8 +18,8 @@ from pathlib import Path
 
 import pytest
 
-from task_center_runner.tests.sweevo._sandbox_health import (
-    require_sandbox_provider_healthy,
+from task_center_runner.environments.sweevo_image.health import (
+    require_sweevo_image_provider_healthy,
 )
 from task_center_runner.audit.events import EventType
 from task_center_runner.hooks.builtins import count_events
@@ -27,27 +27,27 @@ from task_center_runner.scenarios.correctness_testing import (
     CorrectnessTesting,
 )
 from task_center_runner.core.stores import TaskCenterStoreBundle
-from task_center_runner.benchmarks.sweevo.fixtures import run_sweevo_scenario
+from task_center_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
 from benchmarks.sweevo.models import SWEEvoInstance
 
 
 @pytest.mark.asyncio
 async def test_correctness_testing_scenario_runs_end_to_end(
-    sweevo_instance: SWEEvoInstance,
+    sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
     stores: TaskCenterStoreBundle,
 ) -> None:
-    require_sandbox_provider_healthy(sweevo_instance)
+    require_sweevo_image_provider_healthy(sweevo_image_instance)
 
     scenario = CorrectnessTesting()
     extra_hooks = (
         count_events(EventType.PLANNER_INVOKED, name="planner_invocations"),
         count_events(EventType.EVALUATOR_INVOKED, name="evaluator_invocations"),
     )
-    report = await run_sweevo_scenario(
+    report = await run_scenario_on_sweevo_image(
         scenario,
-        instance=sweevo_instance,
+        instance=sweevo_image_instance,
         sandbox_id=str(workspace["sandbox_id"]),
         audit_dir=audit_dir,
         stores=stores,

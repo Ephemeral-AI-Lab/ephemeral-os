@@ -91,8 +91,3 @@ class ContextScope:
             iteration_id=iteration_id,
             attempt_id=attempt_id,
         )
-
-    @classmethod
-    def for_entry_executor(cls, *, task_id: str) -> ContextScope:
-        """Scope shape required by the entry-executor recipe."""
-        return cls(task_id=task_id)

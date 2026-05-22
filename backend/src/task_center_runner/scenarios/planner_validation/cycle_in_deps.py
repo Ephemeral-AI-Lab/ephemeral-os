@@ -32,7 +32,6 @@ class PlannerCycleInDeps(ScenarioBase):
 
     name = "planner_validation.cycle_in_deps"
     expected_event_sequence: tuple[EventType, ...] = (
-        EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
         EventType.PLANNER_INVOKED,
     )

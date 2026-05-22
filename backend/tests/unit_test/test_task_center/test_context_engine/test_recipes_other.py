@@ -1,4 +1,4 @@
-"""US-010: generator, evaluator, entry_executor happy-path."""
+"""US-010: generator and evaluator recipe happy paths."""
 
 from __future__ import annotations
 
@@ -8,7 +8,6 @@ import pytest
 
 from task_center.context_engine.core import ContextEngineDeps, ContextEngineError
 from task_center.context_engine.packet import ContextPriority
-from task_center.context_engine.recipes.entry_executor import _entry_executor_build
 from task_center.context_engine.recipes.evaluator import _evaluator_build
 from task_center.context_engine.recipes.generator import _generator_build
 from task_center.context_engine.scope import ContextScope
@@ -507,40 +506,6 @@ def test_evaluator_with_empty_criteria_omits_criteria_block(
 
 
 # ---------------------------------------------------------------------------
-# entry_executor
-# ---------------------------------------------------------------------------
-
-
-def test_entry_executor_emits_one_required_entry_request_block(
-    deps, task_store, task_center_run_id
-):
-    task_store.upsert_task(
-        task_id="entry",
-        task_center_run_id=task_center_run_id,
-        role="generator",
-        agent_name="entry_executor",
-        context_message="user prompt",
-        status="running",
-        summaries=[],
-        needs=[],
-        task_center_attempt_id=None,
-        spawn_reason="entry_executor",
-    )
-    packet = _entry_executor_build(
-        ContextScope(task_id="entry"),
-        deps,
-    )
-    assert packet.canonical_refs.goal_id is None
-    assert packet.canonical_refs.task_id == "entry"
-    assert len(packet.blocks) == 1
-    block = packet.blocks[0]
-    assert block.kind == "entry_request"
-    assert block.metadata["tag"] == "entry_request"
-    assert block.priority == ContextPriority.REQUIRED
-    assert block.text == "user prompt"
-
-
-# ---------------------------------------------------------------------------
 # register_builtin_recipes
 # ---------------------------------------------------------------------------
 
@@ -561,7 +526,6 @@ def test_register_builtin_recipes_is_idempotent():
             "planner",
             "generator",
             "evaluator",
-            "entry_executor",
         }.issubset(first)
     finally:
         RecipeRegistry.clear()

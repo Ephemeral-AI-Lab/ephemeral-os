@@ -262,7 +262,7 @@ def _max_duration_s() -> float:
 @_SKIP_NO_PLAN_INFRA
 @pytest.mark.asyncio
 async def test_anthropic_coding_plan_mode_e2e(
-    sweevo_instance: SWEEvoInstance,
+    sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
     stores: TaskCenterStoreBundle,
@@ -282,7 +282,7 @@ async def test_anthropic_coding_plan_mode_e2e(
     )
 
     report = await run_sweevo_real_agent(
-        instance=sweevo_instance,
+        instance=sweevo_image_instance,
         sandbox_id=str(workspace["sandbox_id"]),
         audit_dir=audit_dir,
         stores=stores,
@@ -299,7 +299,7 @@ async def test_anthropic_coding_plan_mode_e2e(
 @_SKIP_NO_PLAN_INFRA
 @pytest.mark.asyncio
 async def test_codex_coding_plan_mode_e2e(
-    sweevo_instance: SWEEvoInstance,
+    sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
     stores: TaskCenterStoreBundle,
@@ -323,7 +323,7 @@ async def test_codex_coding_plan_mode_e2e(
     )
 
     report = await run_sweevo_real_agent(
-        instance=sweevo_instance,
+        instance=sweevo_image_instance,
         sandbox_id=str(workspace["sandbox_id"]),
         audit_dir=audit_dir,
         stores=stores,
@@ -338,7 +338,7 @@ async def test_codex_coding_plan_mode_e2e(
 
 @pytest.mark.asyncio
 async def test_api_mode_regression(
-    sweevo_instance: SWEEvoInstance,
+    sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
     stores: TaskCenterStoreBundle,
@@ -354,7 +354,7 @@ async def test_api_mode_regression(
     _setup_caplog(caplog)
 
     report = await run_sweevo_real_agent(
-        instance=sweevo_instance,
+        instance=sweevo_image_instance,
         sandbox_id=str(workspace["sandbox_id"]),
         audit_dir=audit_dir,
         stores=stores,

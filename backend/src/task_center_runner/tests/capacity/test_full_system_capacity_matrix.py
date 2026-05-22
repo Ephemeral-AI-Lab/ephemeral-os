@@ -18,13 +18,13 @@ from task_center_runner.hooks.builtins import (
 )
 from task_center_runner.scenarios import SCENARIO_REGISTRY
 from task_center_runner.core.stores import TaskCenterStoreBundle
-from task_center_runner.benchmarks.sweevo.fixtures import run_sweevo_scenario
+from task_center_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
 from task_center_runner.tests._live_config import (
     database_configured,
     live_e2e_capacity_enabled,
 )
-from task_center_runner.tests.sweevo._sandbox_health import (
-    require_sandbox_provider_healthy,
+from task_center_runner.environments.sweevo_image.health import (
+    require_sweevo_image_provider_healthy,
 )
 from sandbox.api import ReadFileRequest, SandboxCaller
 
@@ -52,17 +52,17 @@ _FORBIDDEN_RUN_SIGNATURES = (
     reason="database URL not configured",
 )
 async def test_full_system_capacity_matrix_records_artifacts_and_metrics(
-    sweevo_instance: SWEEvoInstance,
+    sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
     stores: TaskCenterStoreBundle,
 ) -> None:
-    require_sandbox_provider_healthy(sweevo_instance)
+    require_sweevo_image_provider_healthy(sweevo_image_instance)
 
     scenario = SCENARIO_REGISTRY["capacity.full_system_capacity_matrix"]()
-    report = await run_sweevo_scenario(
+    report = await run_scenario_on_sweevo_image(
         scenario,
-        instance=sweevo_instance,
+        instance=sweevo_image_instance,
         sandbox_id=str(workspace["sandbox_id"]),
         audit_dir=audit_dir,
         stores=stores,

@@ -1,11 +1,8 @@
-"""TaskCenter entrypoint for top-level user requests.
+"""TaskCenter entry bootstrap for top-level user requests.
 
-The entry executor is not a Goal. It is the top-level user-request agent
-that can either complete directly or call ``submit_execution_handoff`` to start
-the first delegated Goal. Lifecycle events flow through
-:class:`EntryTaskController`, which is attached to
-:class:`AttemptDeps.entry_task_controller` so the launcher, close-report
-router, and submission tools can dispatch entry-mode events consistently.
+The entry layer is a service boundary, not an agent role. It creates the
+request/run/sandbox/runtime shell, converts the prompt into a normal Goal, and
+lets the Goal -> Iteration -> Attempt lifecycle launch the planner.
 """
 
 from __future__ import annotations
@@ -14,55 +11,45 @@ import uuid
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from db.stores import (
-    GoalStore,
-    ContextPacketStore,
-    AttemptStore,
-    TaskCenterStore,
-    IterationStore,
-)
 from agents import validate_agent_definitions_resolved
+from db.stores import (
+    AttemptStore,
+    ContextPacketStore,
+    GoalStore,
+    IterationStore,
+    TaskCenterStore,
+)
 from task_center._core.primitives import TaskCenterLifecycleConfig
 from task_center.agent_launch.composer import AgentEntryComposer
-from task_center.context_engine.core import (
-    ContextEngine,
-    ContextEngineDeps,
-)
-from task_center.context_engine.recipes import register_builtin_recipes
-from task_center.entry.controller import EntryTaskController
-from task_center.entry.sandbox_bridge import (
-    TaskCenterSandboxBinding,
-    TaskCenterSandboxBridge,
-)
 from task_center.attempt.launch import (
     AgentStreamEmitter,
     AttemptAgentRunner,
     EphemeralAttemptAgentLauncher,
 )
-from task_center.attempt.orchestrator_registry import (
-    AttemptOrchestratorRegistry,
+from task_center.attempt.orchestrator_registry import AttemptOrchestratorRegistry
+from task_center.attempt.runtime import AttemptDeps
+from task_center.context_engine.core import ContextEngine, ContextEngineDeps
+from task_center.context_engine.recipes import register_builtin_recipes
+from task_center.entry.sandbox_bridge import (
+    TaskCenterSandboxBinding,
+    TaskCenterSandboxBridge,
 )
-from task_center.attempt.runtime import AgentLaunch, AttemptDeps
+from task_center.goal.starter import GoalStarter
+from task_center.goal.state import GoalOrigin
 from task_center.iteration import IterationManagerRegistry
-from task_center.task_state import (
-    SpawnReason,
-    TaskCenterTaskRole,
-    TaskCenterTaskStatus,
-)
 
 if TYPE_CHECKING:
     from runtime.app_factory import RuntimeConfig
 
 
-ENTRY_AGENT_NAME = "entry_executor"
-
-
 @dataclass(frozen=True, slots=True)
-class TaskCenterEntryHandle:
+class TaskCenterRunHandle:
     request_id: str
     task_center_run_id: str
     binding: TaskCenterSandboxBinding
-    entry_task_id: str
+    goal_id: str
+    initial_iteration_id: str
+    initial_attempt_id: str
     launcher: EphemeralAttemptAgentLauncher
 
     @property
@@ -70,7 +57,10 @@ class TaskCenterEntryHandle:
         return self.binding.sandbox_id
 
 
-def start_task_center_entry_run(
+TaskCenterEntryHandle = TaskCenterRunHandle
+
+
+def start_task_center_run(
     *,
     config: RuntimeConfig,
     prompt: str,
@@ -83,9 +73,9 @@ def start_task_center_entry_run(
     runner: AttemptAgentRunner | None = None,
     context_packet_store: ContextPacketStore | None = None,
     sandbox_bridge: TaskCenterSandboxBridge | None = None,
-) -> TaskCenterEntryHandle:
-    """Create the entry executor task for a user request."""
-    return TaskCenterEntryCoordinator(
+) -> TaskCenterRunHandle:
+    """Start a TaskCenter run by converting *prompt* into the first Goal."""
+    return TaskCenterEntry(
         config=config,
         prompt=prompt,
         sandbox_id=sandbox_id,
@@ -100,8 +90,13 @@ def start_task_center_entry_run(
     ).start()
 
 
-class TaskCenterEntryCoordinator:
-    """Coordinates top-level request startup into the TaskCenter runtime."""
+def start_task_center_entry_run(**kwargs) -> TaskCenterRunHandle:  # type: ignore[no-untyped-def]
+    """Compatibility alias for callers not yet renamed."""
+    return start_task_center_run(**kwargs)
+
+
+class TaskCenterEntry:
+    """Bootstraps a top-level prompt into the normal Goal lifecycle."""
 
     def __init__(
         self,
@@ -130,51 +125,39 @@ class TaskCenterEntryCoordinator:
         self._context_packet_store = context_packet_store
         self._sandbox_bridge = sandbox_bridge or TaskCenterSandboxBridge()
 
-    def start(self) -> TaskCenterEntryHandle:
-        """Create and launch the entry executor."""
+    def start(self) -> TaskCenterRunHandle:
         _assert_stores_ready(
             task_store=self._task_store,
             goal_store=self._goal_store,
             iteration_store=self._iteration_store,
             attempt_store=self._attempt_store,
         )
-        request_id, run_id, entry_task_id, binding = self._create_top_level_run()
+        request_id, run_id, binding = self._create_top_level_run()
         manager_registry = IterationManagerRegistry()
+        runtime, launcher = self._create_runtime(manager_registry=manager_registry)
 
-        self._write_entry_task_row(
-            entry_task_id=entry_task_id,
-            task_center_run_id=run_id,
-        )
-        controller = EntryTaskController(
-            task_id=entry_task_id,
-            task_center_run_id=run_id,
-            task_store=self._task_store,
-        )
-        runtime, launcher = self._create_runtime(
-            manager_registry=manager_registry,
-            entry_task_controller=controller,
-        )
-        self._launch_entry_executor(
-            runtime=runtime,
-            controller=controller,
-            task_center_run_id=run_id,
-        )
-        return TaskCenterEntryHandle(
+        try:
+            started = GoalStarter(runtime=runtime).start(
+                prompt=self._prompt,
+                origin=GoalOrigin.entry(task_center_run_id=run_id),
+            )
+        except Exception:
+            self._finish_run_if_open(run_id, status="failed")
+            raise
+
+        return TaskCenterRunHandle(
             request_id=request_id,
             task_center_run_id=run_id,
             binding=binding,
-            entry_task_id=entry_task_id,
+            goal_id=started.goal_id,
+            initial_iteration_id=started.initial_iteration_id,
+            initial_attempt_id=started.initial_attempt_id,
             launcher=launcher,
         )
 
-    # ---- internal: setup ---------------------------------------------------
-
-    def _create_top_level_run(
-        self,
-    ) -> tuple[str, str, str, TaskCenterSandboxBinding]:
+    def _create_top_level_run(self) -> tuple[str, str, TaskCenterSandboxBinding]:
         request_id = str(uuid.uuid4())
         run_id = str(uuid.uuid4())
-        entry_task_id = f"{run_id}:entry"
         binding = self._sandbox_bridge.prepare_for_run(
             task_center_run_id=run_id,
             sandbox_id=self._sandbox_id,
@@ -190,13 +173,10 @@ class TaskCenterEntryCoordinator:
             task_center_run_id=run_id,
             request_id=request_id,
         )
-        return request_id, run_id, entry_task_id, binding
+        return request_id, run_id, binding
 
     def _create_runtime(
-        self,
-        *,
-        manager_registry: IterationManagerRegistry,
-        entry_task_controller: EntryTaskController,
+        self, *, manager_registry: IterationManagerRegistry
     ) -> tuple[AttemptDeps, EphemeralAttemptAgentLauncher]:
         runtime_ref: AttemptDeps | None = None
         launcher = EphemeralAttemptAgentLauncher(
@@ -206,7 +186,6 @@ class TaskCenterEntryCoordinator:
             on_event=self._on_agent_event,
             runner=self._runner,
         )
-        composer = self._build_composer()
         runtime = AttemptDeps(
             goal_store=self._goal_store,
             iteration_store=self._iteration_store,
@@ -216,24 +195,12 @@ class TaskCenterEntryCoordinator:
             orchestrator_registry=AttemptOrchestratorRegistry(),
             manager_registry=manager_registry,
             lifecycle_config=TaskCenterLifecycleConfig(),
-            composer=composer,
-            entry_task_controller=entry_task_controller,
+            composer=self._build_composer(),
         )
         runtime_ref = runtime
         return runtime, launcher
 
     def _build_composer(self) -> AgentEntryComposer:
-        """Construct the composer and register built-in recipes.
-
-        Recipe registration is idempotent — re-registration is the intended
-        steady-state behaviour: each entry-coordinator startup re-asserts the
-        builtin set and cross-validates every loaded :class:`AgentDefinition`
-        so an unknown ``context_recipe`` fails the spawn here rather than
-        during the first model turn. Tests that intentionally mutate the
-        process-global :class:`RecipeRegistry` between coordinator builds
-        should reset it to a known state in their own teardown — this method
-        is not a sandbox.
-        """
         register_builtin_recipes()
         validate_agent_definitions_resolved()
         deps = ContextEngineDeps(
@@ -245,78 +212,10 @@ class TaskCenterEntryCoordinator:
         )
         return AgentEntryComposer.default(ContextEngine(deps))
 
-    def _write_entry_task_row(
-        self,
-        *,
-        entry_task_id: str,
-        task_center_run_id: str,
-    ) -> None:
-        """Write the entry task row with ``task_center_attempt_id=None``."""
-        self._task_store.upsert_task(
-            task_id=entry_task_id,
-            task_center_run_id=task_center_run_id,
-            role=TaskCenterTaskRole.ENTRY_EXECUTOR.value,
-            agent_name=ENTRY_AGENT_NAME,
-            context_message=self._prompt,
-            status=TaskCenterTaskStatus.RUNNING.value,
-            summaries=[],
-            needs=[],
-            task_center_attempt_id=None,
-            spawn_reason=SpawnReason.ENTRY_EXECUTOR.value,
-        )
-
-    # ---- internal: launch + cleanup ---------------------------------------
-
-    def _launch_entry_executor(
-        self,
-        *,
-        runtime: AttemptDeps,
-        controller: EntryTaskController,
-        task_center_run_id: str,
-    ) -> None:
-        try:
-            launch = self._build_entry_launch(
-                runtime=runtime,
-                controller=controller,
-                task_center_run_id=task_center_run_id,
-            )
-            if launch.context_packet_id is not None:
-                self._task_store.set_task_context_packet_id(
-                    controller.task_id,
-                    context_packet_id=launch.context_packet_id,
-                )
-            runtime.agent_launcher.launch(launch)
-        except Exception:
-            self._compensate_startup_failure(controller=controller)
-            raise
-
-    def _build_entry_launch(
-        self,
-        *,
-        runtime: AttemptDeps,
-        controller: EntryTaskController,
-        task_center_run_id: str,
-    ) -> AgentLaunch:
-        from task_center.attempt.launch import LaunchBuilder
-
-        return LaunchBuilder(runtime=runtime).for_entry(
-            task_id=controller.task_id,
-            task_center_run_id=task_center_run_id,
-            base_agent_name=ENTRY_AGENT_NAME,
-        )
-
-    def _compensate_startup_failure(
-        self,
-        *,
-        controller: EntryTaskController,
-    ) -> None:
-        """Drive the entry stack to FAILED after a launch-time exception."""
-        controller.apply_run_exhausted(summary="Entry executor launch failed.")
-        run = self._task_store.get_run(controller.task_center_run_id)
+    def _finish_run_if_open(self, run_id: str, *, status: str) -> None:
+        run = self._task_store.get_run(run_id)
         if run is not None and run.get("status") not in ("done", "failed"):
-            self._task_store.finish_run(
-                controller.task_center_run_id, status="failed"
-            )
+            self._task_store.finish_run(run_id, status=status)
 
 
 def _assert_stores_ready(

@@ -6,7 +6,7 @@ sandbox helpers from this package root::
     from task_center import (
         AttemptOrchestrator,
         ContextScope,
-        start_task_center_entry_run,
+        start_task_center_run,
     )
 
 Internal modules import from the canonical submodule path (e.g.
@@ -44,8 +44,13 @@ if TYPE_CHECKING:
     from task_center.context_engine.packet import ContextPacket
     from task_center.context_engine.recipes_registry import RecipeRegistry
     from task_center.context_engine.scope import ContextScope
-    from task_center.entry import EntryTaskController
-    from task_center.entry.coordinator import start_task_center_entry_run
+    from task_center.entry.coordinator import (
+        TaskCenterEntry,
+        TaskCenterEntryHandle,
+        TaskCenterRunHandle,
+        start_task_center_entry_run,
+        start_task_center_run,
+    )
     from task_center.entry import TaskCenterSandboxBridge
     from task_center.iteration.state import (
         Iteration,
@@ -54,7 +59,7 @@ if TYPE_CHECKING:
     )
     from task_center._core.primitives import TaskCenterInvariantViolation
     from task_center.goal.starter import GoalStarter, StartedGoal
-    from task_center.goal.state import Goal, GoalStatus
+    from task_center.goal.state import Goal, GoalOrigin, GoalOriginKind, GoalStatus
     from task_center.task_state import (
         EvaluatorSubmission,
         GeneratorSubmission,
@@ -88,10 +93,6 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     ),
     "ContextPacket": ("task_center.context_engine.packet", "ContextPacket"),
     "ContextScope": ("task_center.context_engine.scope", "ContextScope"),
-    "EntryTaskController": (
-        "task_center.entry",
-        "EntryTaskController",
-    ),
     "Iteration": ("task_center.iteration.state", "Iteration"),
     "IterationCreationReason": (
         "task_center.iteration.state",
@@ -101,6 +102,8 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "EvaluatorSubmission": ("task_center.task_state", "EvaluatorSubmission"),
     "GeneratorSubmission": ("task_center.task_state", "GeneratorSubmission"),
     "Goal": ("task_center.goal.state", "Goal"),
+    "GoalOrigin": ("task_center.goal.state", "GoalOrigin"),
+    "GoalOriginKind": ("task_center.goal.state", "GoalOriginKind"),
     "GoalStarter": ("task_center.goal.starter", "GoalStarter"),
     "GoalStatus": ("task_center.goal.state", "GoalStatus"),
     "PlannedGeneratorTask": ("task_center.task_state", "PlannedGeneratorTask"),
@@ -118,6 +121,15 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "task_center.entry",
         "TaskCenterSandboxBridge",
     ),
+    "TaskCenterEntry": ("task_center.entry.coordinator", "TaskCenterEntry"),
+    "TaskCenterEntryHandle": (
+        "task_center.entry.coordinator",
+        "TaskCenterEntryHandle",
+    ),
+    "TaskCenterRunHandle": (
+        "task_center.entry.coordinator",
+        "TaskCenterRunHandle",
+    ),
     "ordered_generator_tasks": (
         "task_center.attempt.generator_dag",
         "ordered_generator_tasks",
@@ -125,6 +137,10 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "start_task_center_entry_run": (
         "task_center.entry.coordinator",
         "start_task_center_entry_run",
+    ),
+    "start_task_center_run": (
+        "task_center.entry.coordinator",
+        "start_task_center_run",
     ),
 }
 

@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 import pytest
 
 from task_center.goal.close_report_router import (
     GoalClosureReportRouter,
 )
-from task_center.goal.state import GoalClosureReport
+from task_center.goal.state import GoalClosureReport, GoalOriginKind
 from task_center._core.primitives import TaskCenterInvariantViolation
 from task_center.attempt.orchestrator import AttemptOrchestrator
 from task_center.attempt.orchestrator_registry import (
@@ -100,6 +102,23 @@ def _set_parent_waiting(task_store, parent_task_id: str) -> None:
     )
 
 
+def _task_report(
+    *,
+    task_center_run_id: str,
+    requested_by_task_id: str,
+    outcome: Literal["success", "failed"] = "success",
+) -> GoalClosureReport:
+    return GoalClosureReport(
+        goal_id="delegated-1",
+        task_center_run_id=task_center_run_id,
+        origin_kind=GoalOriginKind.TASK,
+        requested_by_task_id=requested_by_task_id,
+        outcome=outcome,
+        final_iteration_id="seg-1",
+        final_attempt_id="attempt-1",
+    )
+
+
 def test_router_delivers_success_to_waiting_parent(
     goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
@@ -115,12 +134,9 @@ def test_router_delivers_success_to_waiting_parent(
     router = GoalClosureReportRouter(runtime=runtime)
 
     result = router.deliver(
-        GoalClosureReport(
-            goal_id="delegated-1",
+        _task_report(
+            task_center_run_id=task_center_run_id,
             requested_by_task_id=parent_task_id,
-            outcome="success",
-            final_iteration_id="seg-1",
-            final_attempt_id="attempt-1",
         )
     )
 
@@ -188,12 +204,10 @@ def test_router_delivers_failure_marks_parent_failed_and_blocks_dependents(
     router = GoalClosureReportRouter(runtime=runtime)
 
     result = router.deliver(
-        GoalClosureReport(
-            goal_id="delegated-1",
+        _task_report(
+            task_center_run_id=task_center_run_id,
             requested_by_task_id=parent_task_id,
             outcome="failed",
-            final_iteration_id="seg-1",
-            final_attempt_id="attempt-1",
         )
     )
 
@@ -223,12 +237,9 @@ def test_router_treats_done_parent_as_already_delivered(
     router = GoalClosureReportRouter(runtime=runtime)
 
     result = router.deliver(
-        GoalClosureReport(
-            goal_id="delegated-1",
+        _task_report(
+            task_center_run_id=task_center_run_id,
             requested_by_task_id=parent_task_id,
-            outcome="success",
-            final_iteration_id="seg-1",
-            final_attempt_id="attempt-1",
         )
     )
 
@@ -255,12 +266,9 @@ def test_router_raises_when_parent_orchestrator_missing(
 
     with pytest.raises(TaskCenterInvariantViolation):
         router.deliver(
-            GoalClosureReport(
-                goal_id="delegated-1",
+            _task_report(
+                task_center_run_id=task_center_run_id,
                 requested_by_task_id=parent_task_id,
-                outcome="success",
-                final_iteration_id="seg-1",
-                final_attempt_id="attempt-1",
             )
         )
 
@@ -285,12 +293,9 @@ def test_router_rejects_running_parent(
 
     with pytest.raises(TaskCenterInvariantViolation):
         router.deliver(
-            GoalClosureReport(
-                goal_id="delegated-1",
+            _task_report(
+                task_center_run_id=task_center_run_id,
                 requested_by_task_id=parent_task_id,
-                outcome="success",
-                final_iteration_id="seg-1",
-                final_attempt_id="attempt-1",
             )
         )
 
@@ -311,12 +316,9 @@ def test_apply_closure_report_is_idempotent_on_second_delivery(
     assert parent_task_before is not None
     summary_count_before = len(parent_task_before["summaries"])
 
-    report = GoalClosureReport(
-        goal_id="delegated-1",
+    report = _task_report(
+        task_center_run_id=task_center_run_id,
         requested_by_task_id=parent_task_id,
-        outcome="success",
-        final_iteration_id="seg-1",
-        final_attempt_id="attempt-1",
     )
     # Find the orchestrator and apply the close report twice. Second call
     # must be silently idempotent (CAS miss).
@@ -332,38 +334,9 @@ def test_apply_closure_report_is_idempotent_on_second_delivery(
     assert len(parent_task["summaries"]) == summary_count_before + 1
 
 
-def test_router_routes_entry_mode_closure_report_through_controller(
+def test_router_finishes_entry_origin_goal_run(
     goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
-    """Entry-mode close-report dispatch.
-
-    When the parent task has ``task_center_attempt_id=None``, the
-    router must look up :attr:`AttemptDeps.entry_task_controller`
-    instead of the orchestrator registry, and route the close report into
-    the controller's ``apply_goal_closure_report``.
-    """
-    from task_center.entry import EntryTaskController
-    from task_center.task_state import TaskCenterTaskRole
-
-    # Seed entry-mode caller in WAITING_GOAL.
-    entry_task_id = "entry-task"
-    task_store.upsert_task(
-        task_id=entry_task_id,
-        task_center_run_id=task_center_run_id,
-        role=TaskCenterTaskRole.GENERATOR.value,
-        agent_name="entry_executor",
-        context_message="entry goal",
-        status=TaskCenterTaskStatus.WAITING_GOAL.value,
-        summaries=[],
-        needs=[],
-        task_center_attempt_id=None,
-        spawn_reason="entry_executor",
-    )
-    controller = EntryTaskController(
-        task_id=entry_task_id,
-        task_center_run_id=task_center_run_id,
-        task_store=task_store,
-    )
     runtime = AttemptDeps(
         goal_store=goal_store,
         iteration_store=iteration_store,
@@ -373,14 +346,15 @@ def test_router_routes_entry_mode_closure_report_through_controller(
         orchestrator_registry=AttemptOrchestratorRegistry(),
         manager_registry=IterationManagerRegistry(),
         composer=composer,
-        entry_task_controller=controller,
     )
 
     router = GoalClosureReportRouter(runtime=runtime)
     result = router.deliver(
         GoalClosureReport(
             goal_id="delegated-x",
-            requested_by_task_id=entry_task_id,
+            task_center_run_id=task_center_run_id,
+            origin_kind=GoalOriginKind.ENTRY,
+            requested_by_task_id=None,
             outcome="success",
             final_iteration_id="delegated-seg",
             final_attempt_id="delegated-attempt",
@@ -389,9 +363,6 @@ def test_router_routes_entry_mode_closure_report_through_controller(
 
     assert result.status == "delivered"
     assert result.parent_attempt_id is None
-    entry_task = task_store.get_task(entry_task_id)
     run = task_store.get_run(task_center_run_id)
-    assert entry_task is not None
-    assert entry_task["status"] == TaskCenterTaskStatus.DONE.value
     assert run is not None
     assert run["status"] == "done"

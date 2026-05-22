@@ -53,7 +53,6 @@ class AttemptBudgetExhausted(ScenarioBase):
 
     name = "pipeline.attempt_budget_exhausted"
     expected_event_sequence: tuple[EventType, ...] = (
-        EventType.ENTRY_EXECUTOR_INVOKED,
         # Attempt 1 — planner ok, executor fails, no evaluator.
         EventType.PLANNER_INVOKED,
         EventType.PLANNER_COMPLETES_GOAL_PLAN,

@@ -8,6 +8,8 @@ from datetime import UTC, datetime
 from db.models.goal import GoalRecord
 from db.stores.base import SyncStoreMixin
 from task_center.goal.state import (
+    GoalOrigin,
+    GoalOriginKind,
     Goal,
     GoalStatus,
 )
@@ -20,15 +22,22 @@ class GoalStore(SyncStoreMixin):
         self,
         *,
         task_center_run_id: str,
-        requested_by_task_id: str,
+        origin: GoalOrigin | None = None,
+        requested_by_task_id: str | None = None,
         goal: str,
     ) -> Goal:
+        origin = _resolve_origin(
+            task_center_run_id=task_center_run_id,
+            origin=origin,
+            requested_by_task_id=requested_by_task_id,
+        )
         with self._sf() as db:
             now = datetime.now(UTC)
             record = GoalRecord(
                 id=str(uuid.uuid4()),
                 task_center_run_id=task_center_run_id,
-                requested_by_task_id=requested_by_task_id,
+                origin_kind=origin.kind.value,
+                requested_by_task_id=origin.task_id,
                 goal=goal,
                 status=GoalStatus.OPEN.value,
                 iteration_ids=[],
@@ -112,6 +121,7 @@ class GoalStore(SyncStoreMixin):
         return Goal(
             id=record.id,
             task_center_run_id=record.task_center_run_id,
+            origin_kind=GoalOriginKind(record.origin_kind or GoalOriginKind.TASK.value),
             requested_by_task_id=record.requested_by_task_id,
             goal=record.goal,
             status=GoalStatus(record.status),
@@ -121,3 +131,16 @@ class GoalStore(SyncStoreMixin):
             updated_at=record.updated_at,
             closed_at=record.closed_at,
         )
+
+
+def _resolve_origin(
+    *,
+    task_center_run_id: str,
+    origin: GoalOrigin | None,
+    requested_by_task_id: str | None,
+) -> GoalOrigin:
+    if origin is not None:
+        return origin
+    if requested_by_task_id is not None:
+        return GoalOrigin.task(task_id=requested_by_task_id)
+    return GoalOrigin.entry(task_center_run_id=task_center_run_id)

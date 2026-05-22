@@ -94,9 +94,8 @@ class AgentDefinition(BaseModel):
     # through the loader gate.
     agent_kind: AgentKind = AgentKind.EXECUTOR
     # Planner-submission gate. Only profiles explicitly flagged True may be
-    # named as ``agent_name`` in a planner submission. Defaults False so that
-    # entry_executor and helper/subagent profiles are never planner-submittable
-    # by accident.
+    # named as ``agent_name`` in a planner submission. Defaults False so helper
+    # and subagent profiles are never planner-submittable by accident.
     dispatchable_by_planner: bool = False
 
     # --- agent type: regular agent or subagent (worker) ---

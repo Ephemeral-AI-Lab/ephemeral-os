@@ -122,8 +122,8 @@ class EphemeralAttemptAgentLauncher:
 
             runner = run_ephemeral_agent
 
-        # Runtime is always attached: attempt-mode tools resolve via the
-        # attempt id, entry-mode tools branch on ``runtime.entry_task_controller``.
+        # Runtime is always attached: submission tools resolve through the
+        # attempt id carried on normal planner/generator/evaluator launches.
         metadata = ExecutionMetadata(
             task_center_run_id=launch.task_center_run_id,
             task_center_task_id=launch.task_id,
@@ -142,7 +142,6 @@ class EphemeralAttemptAgentLauncher:
         #     plus an identical (byte-equal) <terminal_tool_selection> block.
         #   - 3 rows when task_guidance is present without a skill (today's
         #     main-agent default).
-        #   - 2 rows for entry_executor (no task_guidance).
         task_guidance = launch.task_guidance
         skill_message = launch.skill
         if task_guidance and skill_message:
@@ -217,9 +216,7 @@ class EphemeralAttemptAgentLauncher:
             return
         task = runtime.task_store.get_task(launch.task_id)
         if task is None or task.get("status") != TaskCenterTaskStatus.RUNNING.value:
-            # Entry-mode tasks may already be in WAITING_GOAL after a
-            # delegated goal start; or DONE/FAILED via a terminal. Either way,
-            # the lifecycle owner has already moved the task off RUNNING.
+            # The lifecycle owner has already moved the task off RUNNING.
             return
 
         _report_exhaustion(self, runtime, launch, summary=summary)
@@ -293,14 +290,6 @@ def _report_exhaustion(
     summary: str,
 ) -> None:
     """Single role-parameterized exhaustion reporter."""
-    if launch.role == TaskCenterTaskRole.ENTRY_EXECUTOR:
-        controller = runtime.entry_task_controller
-        if controller is None:
-            _fail_unowned_attempt(runtime, launch, summary=summary)
-            return
-        controller.apply_run_exhausted(summary=summary)
-        return
-
     orchestrator = _require_attempt_orchestrator(launcher, runtime, launch, summary=summary)
     if orchestrator is None:
         return
@@ -411,24 +400,6 @@ class LaunchBuilder:
             attempt_id=attempt.id,
             needs=tuple(attempt.generator_task_ids),
             goal_id=iteration.goal_id,
-        )
-
-    def for_entry(
-        self,
-        *,
-        task_id: str,
-        task_center_run_id: str,
-        base_agent_name: str,
-    ) -> AgentLaunch:
-        return self._build(
-            role=TaskCenterTaskRole.ENTRY_EXECUTOR,
-            base_agent_name=base_agent_name,
-            scope=ContextScope.for_entry_executor(task_id=task_id),
-            task_id=task_id,
-            task_center_run_id=task_center_run_id,
-            attempt_id=None,
-            needs=(),
-            goal_id=None,
         )
 
     def _build(

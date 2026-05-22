@@ -44,7 +44,6 @@ class EventType(StrEnum):
     EVALUATOR_INVOKED = "evaluator_invoked"
     EVALUATOR_SUCCESS = "evaluator_success"
     EVALUATOR_FAILURE = "evaluator_failure"
-    ENTRY_EXECUTOR_INVOKED = "entry_executor_invoked"
     RECURSIVE_GOAL_REQUESTED = "recursive_goal_requested"
     RECURSIVE_GOAL_COMPLETED = "recursive_goal_completed"
     FULL_STACK_SCRIPT_COMPLETED = "full_stack_script_completed"

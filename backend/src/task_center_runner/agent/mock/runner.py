@@ -1,8 +1,7 @@
 """MockSquadRunner — deterministic mock agent execution for live e2e scenarios.
 
-The runner dispatches on ``agent_def.agent_kind`` (planner/executor/verifier/evaluator)
-plus ``agent_def.name == "entry_executor"`` and calls **real** submission tools
-through ``execute_tool_once``.
+The runner dispatches on ``agent_def.agent_kind`` and calls real submission
+tools through ``execute_tool_once``.
 """
 
 from __future__ import annotations
@@ -245,9 +244,7 @@ class MockSquadRunner:
         )
 
         # Publish invocation event.
-        if agent_def.name == "entry_executor":
-            invocation_type = EventType.ENTRY_EXECUTOR_INVOKED
-        elif agent_def.agent_kind.value == "planner":
+        if agent_def.agent_kind.value == "planner":
             invocation_type = EventType.PLANNER_INVOKED
         elif agent_def.agent_kind.value == "executor":
             invocation_type = EventType.EXECUTOR_INVOKED
@@ -267,9 +264,7 @@ class MockSquadRunner:
                 payload=payload,
             )
 
-        if agent_def.name == "entry_executor":
-            terminal = await self._run_entry_executor(prompt, metadata, emit)
-        elif agent_def.agent_kind.value == "planner":
+        if agent_def.agent_kind.value == "planner":
             terminal = await self._run_planner(metadata, emit)
         elif agent_def.agent_kind.value == "executor":
             terminal = await self._run_executor(prompt, metadata, emit)
@@ -312,20 +307,6 @@ class MockSquadRunner:
         metadata["run_id"] = str(metadata.task_center_run_id or "")
         metadata["task_id"] = str(metadata.task_center_task_id or "")
         return metadata
-
-    async def _run_entry_executor(
-        self,
-        prompt: str,
-        metadata: ExecutionMetadata,
-        emit: EmitStreamEvent,
-    ) -> ToolResult:
-        goal = self._entry_user_prompt(metadata, fallback=prompt)
-        return await self._call_tool(
-            submit_execution_handoff,
-            {"goal": goal},
-            metadata,
-            emit,
-        )
 
     async def _run_planner(
         self,
@@ -1349,17 +1330,7 @@ class MockSquadRunner:
         checks: dict[str, bool]
         reason: str
         active_terminals = set(metadata.get("active_terminals") or agent_def.terminals)
-        if agent_def.name == "entry_executor":
-            checks = {
-                "entry_request": "<entry_request>" in prompt,
-                "workspace_root": self._repo_dir in prompt,
-                "pr_description": "<pr_description>" in prompt,
-            }
-            reason = (
-                "Entry executor receives the exact SWE-EVO user request as a "
-                "required entry_request block before it delegates the goal."
-            )
-        elif role == "planner" and "submit_plan_defers_goal" not in active_terminals:
+        if role == "planner" and "submit_plan_defers_goal" not in active_terminals:
             checks = {
                 "goal": "<goal>" in prompt,
                 "current_iteration": (
@@ -1511,22 +1482,6 @@ class MockSquadRunner:
             or metadata.get("run_id")
             or ""
         )
-
-    def _entry_user_prompt(
-        self,
-        metadata: ExecutionMetadata,
-        *,
-        fallback: str,
-    ) -> str:
-        runtime = metadata.get("attempt_runtime")
-        task_id = str(metadata.get("task_center_task_id") or "")
-        if runtime is not None and task_id:
-            task = runtime.task_store.get_task(task_id)
-            if task is not None:
-                context_message = str(task.get("context_message") or "")
-                if context_message:
-                    return context_message
-        return fallback
 
     def _invocation_payload(
         self,

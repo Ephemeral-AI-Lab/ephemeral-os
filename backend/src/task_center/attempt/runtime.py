@@ -2,9 +2,8 @@
 
 Includes :class:`AttemptDeps` (the launcher/orchestrator/store seam threaded
 into every spawn) plus :class:`LifecycleTarget` and
-:class:`GeneratorTaskLifecycle`, which expose a uniform parent-task waiter
-surface for both entry-mode (``EntryTaskController``) and attempt-mode
-(generator inside an :class:`AttemptOrchestrator`).
+:class:`GeneratorTaskLifecycle`, which expose the parent-task waiter surface
+for generator tasks inside an :class:`AttemptOrchestrator`.
 """
 
 from __future__ import annotations
@@ -34,7 +33,6 @@ if TYPE_CHECKING:
         AttemptOrchestratorRegistry,
         RegisteredAttemptOrchestrator,
     )
-    from task_center.entry import EntryTaskController
     from task_center.goal.state import GoalClosureReport
     from agents import AgentDefinition
 
@@ -49,8 +47,7 @@ class AgentLaunch:
     * ``context`` — ``<context>...</context>`` envelope around rendered
       packet blocks. Persisted into the task row for traceability.
     * ``task_guidance`` — ``<Task Guidance>...</Task Guidance>`` envelope
-      around the per-agent role prose; ``None`` for entry_executor (2-row
-      launch shape).
+      around the per-agent role prose.
     * ``skill`` — row-4 ``Load skill:`` + ``<terminal_tool_selection>``
       body; ``None`` when the agent declares no skill.
     """
@@ -83,11 +80,6 @@ class AttemptDeps:
     # to obtain a rendered context envelope + selected agent definition.
     # Optional so existing tests can continue without composer wiring.
     composer: AgentEntryComposer | None = None
-    # Lifecycle controller for the top-level entry executor. ``None`` for
-    # delegated-only runtimes.
-    # The close-report router and launcher use this to dispatch lifecycle
-    # events for entry tasks whose ``task_center_attempt_id`` is None.
-    entry_task_controller: EntryTaskController | None = None
     audit_sink: AuditSink = field(default_factory=NoopAuditSink)
 
     def run_id_for_attempt(self, attempt: Attempt) -> str:
@@ -116,19 +108,9 @@ class AttemptDeps:
     def lifecycle_target_for(
         self, *, task_id: str, attempt_id: str | None
     ) -> LifecycleTarget | None:
-        """Return the :class:`LifecycleTarget` for one parent task.
-
-        For entry-mode (``attempt_id is None``), returns the
-        :class:`EntryTaskController` bound to *task_id* if any. For
-        attempt-mode, wraps the active orchestrator in a
-        :class:`GeneratorTaskLifecycle`. Returns ``None`` when no target is
-        registered — callers decide whether that's a hard error.
-        """
+        """Return the :class:`LifecycleTarget` for one parent generator task."""
         if attempt_id is None:
-            controller = self.entry_task_controller
-            if controller is None or controller.task_id != task_id:
-                return None
-            return controller
+            return None
         return GeneratorTaskLifecycle(
             task_id=task_id,
             attempt_id=attempt_id,
@@ -143,8 +125,7 @@ class AttemptDeps:
 class LifecycleTarget(Protocol):
     """Lifecycle owner for one parent task waiting on a delegated goal.
 
-    Implementations: :class:`EntryTaskController` (entry mode), and
-    :class:`GeneratorTaskLifecycle` (attempt mode).
+    Implemented by :class:`GeneratorTaskLifecycle`.
     """
 
     task_id: str

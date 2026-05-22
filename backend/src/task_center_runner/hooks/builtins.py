@@ -25,7 +25,6 @@ from task_center_runner.hooks.registry import (
 
 
 _ROLE_TO_INVOKED: dict[str, EventType] = {
-    "entry_executor": EventType.ENTRY_EXECUTOR_INVOKED,
     "planner": EventType.PLANNER_INVOKED,
     "executor": EventType.EXECUTOR_INVOKED,
     "verifier": EventType.VERIFIER_INVOKED,

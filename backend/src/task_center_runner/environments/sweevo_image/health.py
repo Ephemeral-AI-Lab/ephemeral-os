@@ -14,7 +14,7 @@ from benchmarks.sweevo.models import SWEEvoInstance
 from config import get_central_config
 
 
-def require_sandbox_provider_healthy(instance: SWEEvoInstance) -> None:
+def require_sweevo_image_provider_healthy(instance: SWEEvoInstance) -> None:
     """Skip cleanly when the selected live sandbox provider is unavailable.
 
     Daytona uses the existing Daytona tier-0 probe. Docker uses the same

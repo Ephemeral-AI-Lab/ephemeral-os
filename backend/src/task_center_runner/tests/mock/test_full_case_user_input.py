@@ -21,9 +21,9 @@ from task_center_runner.scenarios.full_case_user_input import (
     FullCaseUserInput,
 )
 from task_center_runner.core.stores import TaskCenterStoreBundle
-from task_center_runner.benchmarks.sweevo.fixtures import run_sweevo_scenario
-from task_center_runner.tests.sweevo._sandbox_health import (
-    require_sandbox_provider_healthy,
+from task_center_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
+from task_center_runner.environments.sweevo_image.health import (
+    require_sweevo_image_provider_healthy,
 )
 from benchmarks.sweevo.models import SWEEvoInstance
 
@@ -41,17 +41,17 @@ def test_sweevo_instance_fixture_default_contract(monkeypatch: pytest.MonkeyPatc
 
 @pytest.mark.asyncio
 async def test_full_case_user_input_runs_dynamic_verifier_dag(
-    sweevo_instance: SWEEvoInstance,
+    sweevo_image_instance: SWEEvoInstance,
     workspace: dict[str, object],
     audit_dir: Path,
     stores: TaskCenterStoreBundle,
 ) -> None:
-    require_sandbox_provider_healthy(sweevo_instance)
+    require_sweevo_image_provider_healthy(sweevo_image_instance)
 
     scenario = FullCaseUserInput()
-    report = await run_sweevo_scenario(
+    report = await run_scenario_on_sweevo_image(
         scenario,
-        instance=sweevo_instance,
+        instance=sweevo_image_instance,
         sandbox_id=str(workspace["sandbox_id"]),
         audit_dir=audit_dir,
         stores=stores,
@@ -62,10 +62,10 @@ async def test_full_case_user_input_runs_dynamic_verifier_dag(
     )
 
     assert report.task_center_status == "done", report.metrics
-    assert report.instance_id == sweevo_instance.instance_id
+    assert report.instance_id == sweevo_image_instance.instance_id
     assert report.instance_id == _DEFAULT_INSTANCE_ID
 
-    expected_prompt = build_sweevo_user_prompt(sweevo_instance)
+    expected_prompt = build_sweevo_user_prompt(sweevo_image_instance)
     assert report.entry_prompt_length == len(expected_prompt)
     assert report.entry_prompt_sha256 == hashlib.sha256(
         expected_prompt.encode("utf-8")

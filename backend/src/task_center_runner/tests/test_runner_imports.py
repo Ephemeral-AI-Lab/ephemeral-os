@@ -264,9 +264,9 @@ def test_full_stack_recursive_planner_without_defer_closes_goal() -> None:
 
 def test_sweevo_adapter_keeps_dataset_entrypoint_separate() -> None:
     """SWE-EVO-specific prompt wiring lives outside the generic runner."""
-    from task_center_runner.benchmarks.sweevo.fixtures import (
-        run_sweevo_scenario,
+    from task_center_runner.environments.sweevo_image.fixtures import (
+        run_scenario_on_sweevo_image,
     )
 
-    assert callable(run_sweevo_scenario)
-    assert inspect.signature(run_sweevo_scenario).parameters["instance"]
+    assert callable(run_scenario_on_sweevo_image)
+    assert inspect.signature(run_scenario_on_sweevo_image).parameters["instance"]

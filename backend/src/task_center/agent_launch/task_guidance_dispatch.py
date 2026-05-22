@@ -3,7 +3,7 @@
 Every agent name whose launch produces a ``<Task Guidance>`` envelope routes
 through the same :func:`build_task_guidance` — there's no per-role builder.
 The presence of a row here means "emit row 3 for this agent name"; absence
-means "no row 3" (entry_executor is the only main-role case).
+means "no row 3".
 
 Helpers and subagents (``advisor``, ``resolver``, ``explorer``) bypass the
 composer entirely — they live in ``tools/ask_helper/`` and

@@ -11,7 +11,6 @@ class TaskCenterTaskRole(StrEnum):
     PLANNER = "planner"
     GENERATOR = "generator"
     EVALUATOR = "evaluator"
-    ENTRY_EXECUTOR = "entry_executor"
 
 
 class SpawnReason(StrEnum):
@@ -20,7 +19,6 @@ class SpawnReason(StrEnum):
     ATTEMPT_PLANNER = "attempt_planner"
     ATTEMPT_GENERATOR = "attempt_generator"
     ATTEMPT_EVALUATOR = "attempt_evaluator"
-    ENTRY_EXECUTOR = "entry_executor"
 
 
 class TaskCenterTaskStatus(StrEnum):

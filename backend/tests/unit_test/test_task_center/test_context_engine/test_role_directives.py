@@ -34,7 +34,5 @@ def test_directives_match_spec_lines():
         assert ROLE_DIRECTIVES[name] == line
 
 
-def test_no_task_guidance_for_entry_executor():
-    """``entry_executor`` is the only main-role launch with no row 3."""
-    assert "entry_executor" not in _AGENTS_WITH_TASK_GUIDANCE
-    assert task_guidance_builder_for("entry_executor") is None
+def test_unknown_agent_has_no_task_guidance_builder():
+    assert task_guidance_builder_for("unknown-agent") is None

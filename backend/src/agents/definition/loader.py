@@ -17,24 +17,18 @@ logger = logging.getLogger(__name__)
 
 # Profiles whose ``system_prompt`` is prepended with
 # ``_main_role_contract.md``. Path-based: every ``.md`` directly under
-# ``agents/profile/main/`` that is not ``entry_executor.md`` (the top-level
-# carve-out that lives outside the goal/iteration/attempt tree) and is not a
-# ``_*.md`` private include.
+# ``agents/profile/main/`` that is not a ``_*.md`` private include.
 _MAIN_PROFILE_DIRNAME = "main"
 _MAIN_ROLE_CONTRACT_NAME = "_main_role_contract.md"
-_ENTRY_EXECUTOR_NAME = "entry_executor"
 
 
 def _main_role_contract_text(profile_path: Path) -> str | None:
     """Return the contract markdown body for an in-harness main profile.
 
     Returns ``None`` when the profile is not in scope (not under ``main/``,
-    is ``entry_executor.md``, is itself a ``_*.md`` private include, or the
-    contract file is missing).
+    is itself a ``_*.md`` private include, or the contract file is missing).
     """
     if profile_path.parent.name != _MAIN_PROFILE_DIRNAME:
-        return None
-    if profile_path.stem == _ENTRY_EXECUTOR_NAME:
         return None
     if profile_path.name.startswith("_"):
         return None

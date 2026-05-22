@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from typing import Literal
 
 PrimaryRole = Literal[
-    "entry_executor",
     "planner",
     "executor",
     "verifier",

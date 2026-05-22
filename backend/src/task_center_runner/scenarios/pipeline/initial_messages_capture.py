@@ -104,7 +104,6 @@ class InitialMessagesCapture(ScenarioBase):
     call_helpers_in_executor: bool = False
 
     expected_event_sequence: tuple[EventType, ...] = (
-        EventType.ENTRY_EXECUTOR_INVOKED,
         # Iteration 1 attempt 1 — full submission then evaluator failure.
         EventType.PLANNER_INVOKED,
         EventType.PLANNER_COMPLETES_GOAL_PLAN,

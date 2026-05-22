@@ -86,7 +86,6 @@ class NestedGoal(ScenarioBase):
 
     name = "pipeline.nested_goal"
     expected_event_sequence: tuple[EventType, ...] = (
-        EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
         EventType.PLANNER_COMPLETES_GOAL_PLAN,
         EventType.RECURSIVE_GOAL_REQUESTED,
@@ -134,7 +133,6 @@ class NestedGoalFailure(ScenarioBase):
 
     name = "pipeline.nested_goal_failure"
     expected_event_sequence: tuple[EventType, ...] = (
-        EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
         EventType.PLANNER_COMPLETES_GOAL_PLAN,
         EventType.RECURSIVE_GOAL_REQUESTED,

@@ -11,7 +11,7 @@ from task_center.goal.starter import (
     GoalStarter,
     StartedGoal,
 )
-from task_center.goal.state import GoalStatus
+from task_center.goal.state import GoalOrigin, GoalOriginKind, GoalStatus
 from task_center._core.primitives import TaskCenterInvariantViolation
 from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
@@ -25,7 +25,7 @@ from task_center.iteration import IterationManagerRegistry
 from task_center.iteration.state import (
     IterationCreationReason,
     IterationStatus,
-    )
+)
 from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
 from task_center._core.primitives import planner_task_id
 
@@ -120,8 +120,8 @@ def test_goal_start_creates_request_segment_graph_and_marks_parent_waiting(
     coordinator = GoalStarter(runtime=runtime)
 
     result: StartedGoal = coordinator.start(
-        parent_task_id=parent_task_id,
-        goal="solve delegated task",
+        prompt="solve delegated task",
+        origin=GoalOrigin.task(task_id=parent_task_id),
     )
 
     delegated_request = goal_store.get(result.goal_id)
@@ -131,6 +131,7 @@ def test_goal_start_creates_request_segment_graph_and_marks_parent_waiting(
 
     assert delegated_request is not None
     assert delegated_request.status == GoalStatus.OPEN
+    assert delegated_request.origin_kind == GoalOriginKind.TASK
     assert delegated_request.requested_by_task_id == parent_task_id
     assert delegated_request.goal == "solve delegated task"
     assert initial_iteration is not None
@@ -174,8 +175,8 @@ def test_goal_start_startup_failure_leaves_parent_running(
     try:
         with pytest.raises(RuntimeError):
             coordinator.start(
-                parent_task_id=parent_task_id,
-                goal="delegated",
+                prompt="delegated",
+                origin=GoalOrigin.task(task_id=parent_task_id),
             )
     finally:
         GoalStarter._build_handler = original  # type: ignore[assignment]
@@ -226,8 +227,8 @@ def test_goal_start_startup_failure_closes_started_graph_and_deregisters_orchest
 
     with pytest.raises(RuntimeError):
         coordinator.start(
-            parent_task_id=parent_task_id,
-            goal="delegated",
+            prompt="delegated",
+            origin=GoalOrigin.task(task_id=parent_task_id),
         )
 
     [cancelled_request] = [
@@ -262,8 +263,8 @@ def test_goal_start_rejects_second_open_child_request_for_same_executor(
     )
     coordinator = GoalStarter(runtime=runtime)
     coordinator.start(
-        parent_task_id=parent_task_id,
-        goal="first delegation",
+        prompt="first delegation",
+        origin=GoalOrigin.task(task_id=parent_task_id),
     )
 
     # Restore the parent to running so the second call passes the running gate
@@ -275,8 +276,8 @@ def test_goal_start_rejects_second_open_child_request_for_same_executor(
 
     with pytest.raises(TaskCenterInvariantViolation) as exc:
         coordinator.start(
-            parent_task_id=parent_task_id,
-            goal="second delegation",
+            prompt="second delegation",
+            origin=GoalOrigin.task(task_id=parent_task_id),
         )
     assert "open delegated goal" in str(exc.value)
 
@@ -301,43 +302,16 @@ def test_goal_start_rejects_non_running_parent(
     coordinator = GoalStarter(runtime=runtime)
     with pytest.raises(TaskCenterInvariantViolation) as exc:
         coordinator.start(
-            parent_task_id=parent_task_id,
-            goal="delegated",
+            prompt="delegated",
+            origin=GoalOrigin.task(task_id=parent_task_id),
         )
     assert "not running" in str(exc.value)
 
 
-def test_goal_start_accepts_entry_mode_caller_with_no_parent_attempt(
+def test_goal_start_accepts_entry_origin_without_parent_task(
     goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
-    """Entry-mode caller has ``parent_attempt_id=None``.
-
-    The goal starter must accept that and route the parent-waiting
-    transition through the runtime's :class:`EntryTaskController` so the
-    controller stays the single owner of entry-task state transitions.
-    """
-    from task_center.entry import EntryTaskController
-
-    # Seed the entry-mode caller: an entry task with task_center_attempt_id=None.
-    entry_task_id = "entry-task-id"
     manager_registry = IterationManagerRegistry()
-    task_store.upsert_task(
-        task_id=entry_task_id,
-        task_center_run_id=task_center_run_id,
-        role=TaskCenterTaskRole.GENERATOR.value,
-        agent_name="entry_executor",
-        context_message="entry goal",
-        status=TaskCenterTaskStatus.RUNNING.value,
-        summaries=[],
-        needs=[],
-        task_center_attempt_id=None,
-        spawn_reason="entry_executor",
-    )
-    controller = EntryTaskController(
-        task_id=entry_task_id,
-        task_center_run_id=task_center_run_id,
-        task_store=task_store,
-    )
     runtime = AttemptDeps(
         goal_store=goal_store,
         iteration_store=iteration_store,
@@ -347,26 +321,24 @@ def test_goal_start_accepts_entry_mode_caller_with_no_parent_attempt(
         orchestrator_registry=AttemptOrchestratorRegistry(),
         manager_registry=manager_registry,
         composer=composer,
-        entry_task_controller=controller,
     )
 
     coordinator = GoalStarter(runtime=runtime)
     result: StartedGoal = coordinator.start(
-        parent_task_id=entry_task_id,
-        goal="solve delegated work",
+        prompt="solve entry prompt",
+        origin=GoalOrigin.entry(task_center_run_id=task_center_run_id),
     )
 
-    # Entry task is now WAITING_GOAL via the controller.
-    entry_task = task_store.get_task(entry_task_id)
-    assert entry_task is not None
-    assert entry_task["status"] == TaskCenterTaskStatus.WAITING_GOAL.value
-    # Result carries None for parent_attempt_id (entry mode).
+    assert result.origin.kind == GoalOriginKind.ENTRY
+    assert result.parent_task_id is None
     assert result.parent_attempt_id is None
-    # Delegated request + iteration + attempt were all created and started.
     delegated_request = goal_store.get(result.goal_id)
     delegated_segment = iteration_store.get(result.initial_iteration_id)
     delegated_attempt = attempt_store.get(result.initial_attempt_id)
     assert delegated_request is not None
+    assert delegated_request.origin_kind == GoalOriginKind.ENTRY
+    assert delegated_request.requested_by_task_id is None
+    assert delegated_request.goal == "solve entry prompt"
     assert delegated_request.status == GoalStatus.OPEN
     assert delegated_segment is not None
     assert delegated_attempt is not None

@@ -78,7 +78,6 @@ class GeneratorFailureQuiescence(ScenarioBase):
     # Sibling order within an attempt is non-deterministic; the test asserts
     # on event-type multisets rather than positional equality.
     expected_event_sequence: tuple[EventType, ...] = (
-        EventType.ENTRY_EXECUTOR_INVOKED,
         EventType.PLANNER_INVOKED,
         EventType.PLANNER_COMPLETES_GOAL_PLAN,
         # Attempt 1 sibling executor events interleave. The stable signal is

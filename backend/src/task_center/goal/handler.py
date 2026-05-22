@@ -23,7 +23,7 @@ from task_center.goal.collaborators import (
     IterationClosureRouter,
     IterationFactory,
 )
-from task_center.goal.state import Goal, GoalClosureReport
+from task_center.goal.state import Goal, GoalClosureReport, GoalOrigin
 from task_center.iteration import IterationManager, IterationManagerRegistry, OrchestratorFactory
 from task_center.iteration.state import Iteration, IterationClosureReport
 
@@ -70,11 +70,13 @@ class GoalHandler:
         self,
         *,
         task_center_run_id: str,
-        requested_by_task_id: str,
+        origin: GoalOrigin | None = None,
+        requested_by_task_id: str | None = None,
         goal: str,
     ) -> Goal:
         return self._repository.create(
             task_center_run_id=task_center_run_id,
+            origin=origin,
             requested_by_task_id=requested_by_task_id,
             goal=goal,
         )

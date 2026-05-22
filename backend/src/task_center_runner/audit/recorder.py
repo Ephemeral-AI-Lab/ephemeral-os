@@ -38,7 +38,7 @@ from message.agent_message_recorder import (
 
 
 PRIMARY_ROLES: frozenset[str] = frozenset(
-    {"entry_executor", "planner", "executor", "verifier", "evaluator"}
+    {"planner", "executor", "verifier", "evaluator"}
 )
 
 # Roles which earn an ``NN_<role>_<task_id>`` directory under the parent
@@ -375,10 +375,7 @@ class AuditRecorder:
             self._task_dir[target.id] = task_dir
             task_dir.mkdir(parents=True, exist_ok=True)
             display_role = self._display_role(target)
-            primary = (
-                display_role in self._primary_roles
-                or self._is_entry_executor(target)
-            )
+            primary = display_role in self._primary_roles
             if primary:
                 recorder = AgentMessageJsonlRecorder(
                     task_dir / "message.jsonl",
@@ -458,8 +455,6 @@ class AuditRecorder:
         self, target: TaskCenterTaskRecord
     ) -> Path | None:
         role = self._display_role(target)
-        if self._is_entry_executor(target):
-            return self._run_dir / f"entry_executor_{target.id}"
         attempt_id = target.task_center_attempt_id
         if (
             role in _ATTEMPT_CHILD_ROLES
@@ -480,15 +475,6 @@ class AuditRecorder:
         }:
             return str(target.agent_name)
         return str(target.role)
-
-    @staticmethod
-    def _is_entry_executor(target: TaskCenterTaskRecord) -> bool:
-        """Entry-executor row markers per task_center.entry.coordinator."""
-        return (
-            target.role == "entry_executor"
-            or target.agent_name == "entry_executor"
-            or target.spawn_reason == "entry_executor"
-        )
 
     # ------------------------------------------------------------------
     # run.json

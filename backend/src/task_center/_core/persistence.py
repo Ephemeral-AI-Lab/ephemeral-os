@@ -31,7 +31,7 @@ from task_center.iteration.state import (
     IterationCreationReason,
     IterationStatus,
 )
-from task_center.goal.state import Goal, GoalStatus
+from task_center.goal.state import Goal, GoalOrigin, GoalStatus
 
 # Row dicts returned by the task store. Always a serialized snapshot, never
 # a live ORM row.
@@ -47,7 +47,8 @@ class GoalStoreProtocol(Protocol):
         self,
         *,
         task_center_run_id: str,
-        requested_by_task_id: str,
+        origin: GoalOrigin | None = ...,
+        requested_by_task_id: str | None = ...,
         goal: str,
     ) -> Goal: ...
 

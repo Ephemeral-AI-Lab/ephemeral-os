@@ -31,7 +31,7 @@ from task_center._core.primitives import (
     TaskCenterInvariantViolation,
     TaskCenterLifecycleConfig,
 )
-from task_center.goal.state import Goal, GoalClosureReport, GoalStatus
+from task_center.goal.state import Goal, GoalClosureReport, GoalOrigin, GoalStatus
 from task_center.iteration import (
     IterationManager,
     IterationManagerRegistry,
@@ -63,11 +63,13 @@ class GoalRepository:
         self,
         *,
         task_center_run_id: str,
-        requested_by_task_id: str,
+        origin: GoalOrigin | None = None,
+        requested_by_task_id: str | None = None,
         goal: str,
     ) -> Goal:
         return self._goal_store.insert(
             task_center_run_id=task_center_run_id,
+            origin=origin,
             requested_by_task_id=requested_by_task_id,
             goal=goal,
         )
@@ -95,6 +97,8 @@ class GoalRepository:
         assert_goal_open(goal)
         report = GoalClosureReport(
             goal_id=goal_id,
+            task_center_run_id=goal.task_center_run_id,
+            origin_kind=goal.origin_kind,
             requested_by_task_id=goal.requested_by_task_id,
             outcome="success" if succeeded else "failed",
             final_iteration_id=final_iteration_id,
