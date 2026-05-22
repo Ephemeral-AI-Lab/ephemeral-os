@@ -558,6 +558,29 @@ class MockSquadRunner:
                 )
                 summary = "High-concurrency sandbox reconciliation passed."
                 artifacts = [summary_path]
+            elif action == "heavy_io_zoned_seed":
+                summary_path = await self._run_heavy_io_zoned_seed_probe(
+                    metadata, emit
+                )
+                summary = "Heavy-IO zoned seed passed."
+                artifacts = [summary_path]
+            elif isinstance(action, str) and action.startswith(
+                "heavy_io_zoned_worker:"
+            ):
+                worker_index = int(action.split(":", 1)[1])
+                summary_path = await self._run_heavy_io_zoned_worker_probe(
+                    metadata,
+                    emit,
+                    index=worker_index,
+                )
+                summary = f"Heavy-IO zoned worker {worker_index:02d} passed."
+                artifacts = [summary_path]
+            elif action == "heavy_io_zoned_reconcile":
+                summary_path = await self._run_heavy_io_zoned_reconcile_probe(
+                    metadata, emit
+                )
+                summary = "Heavy-IO zoned reconciliation passed."
+                artifacts = [summary_path]
             elif action == "complex_project_build":
                 summary_path = await self._run_complex_project_build_probe(
                     metadata, emit, smoke=False
@@ -1102,6 +1125,59 @@ class MockSquadRunner:
         )
 
         return await run_high_concurrency_reconcile_probe(
+            metadata=metadata,
+            emit=emit,
+            call_tool=self._call_tool,
+            record_tool_check=self._record_tool_check,
+        )
+
+    async def _run_heavy_io_zoned_seed_probe(
+        self,
+        metadata: ExecutionMetadata,
+        emit: EmitStreamEvent,
+    ) -> str:
+        from task_center_runner.agent.mock.heavy_io_zoned_probe import (
+            run_heavy_io_zoned_seed_probe,
+        )
+
+        return await run_heavy_io_zoned_seed_probe(
+            metadata=metadata,
+            emit=emit,
+            call_tool=self._call_tool,
+            record_tool_check=self._record_tool_check,
+        )
+
+    async def _run_heavy_io_zoned_worker_probe(
+        self,
+        metadata: ExecutionMetadata,
+        emit: EmitStreamEvent,
+        *,
+        index: int,
+    ) -> str:
+        from task_center_runner.agent.mock.heavy_io_zoned_probe import (
+            run_heavy_io_zoned_worker_probe,
+        )
+
+        return await run_heavy_io_zoned_worker_probe(
+            index=index,
+            metadata=metadata,
+            emit=emit,
+            call_tool=self._call_tool,
+            publish=self._publish,
+            publish_mock_record=self._publish_mock_record,
+            record_tool_check=self._record_tool_check,
+        )
+
+    async def _run_heavy_io_zoned_reconcile_probe(
+        self,
+        metadata: ExecutionMetadata,
+        emit: EmitStreamEvent,
+    ) -> str:
+        from task_center_runner.agent.mock.heavy_io_zoned_probe import (
+            run_heavy_io_zoned_reconcile_probe,
+        )
+
+        return await run_heavy_io_zoned_reconcile_probe(
             metadata=metadata,
             emit=emit,
             call_tool=self._call_tool,

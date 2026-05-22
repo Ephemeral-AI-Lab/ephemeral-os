@@ -46,6 +46,7 @@ from task_center_runner.scenarios.sandbox import (
     ComplexProjectBuildShellEditLsp,
     ComplexProjectBuildShellEditLspSmoke,
     ComplexProjectBuildSmoke,
+    HeavyIoZonedConcurrent,
     HighConcurrencyLayerstackOverlayOcc,
     OccConcurrentConflicts,
 )
@@ -86,6 +87,7 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
         ComplexProjectBuildShellEditLspSmoke
     ),
     "sandbox.complex_project_build_smoke": ComplexProjectBuildSmoke,
+    "sandbox.heavy_io_zoned_concurrent": HeavyIoZonedConcurrent,
     "sandbox.high_concurrency_layerstack_overlay_occ": (
         HighConcurrencyLayerstackOverlayOcc
     ),
@@ -125,6 +127,7 @@ __all__ = [
     "FullSystemCapacityMatrix",
     "FullStackAdversarial",
     "GeneratorFailureQuiescence",
+    "HeavyIoZonedConcurrent",
     "InitialGoal",
     "HighConcurrencyLayerstackOverlayOcc",
     "NestedGoal",
