@@ -64,6 +64,45 @@ _PHASE_TIMER_OVERHEAD_BUDGET_MS = 2.0
 HandleStatus = Literal["active", "exiting", "stopped", "reaping"]
 
 
+# Test-only failure-injection knobs (PLAN §9.3). The env vars are read at the
+# phase boundary every time so tests can change them between enter() calls
+# without restarting the daemon. Production keeps these unset; the branches
+# are dead code at runtime.
+_TEST_HANG_AT_ENV = "EOS_ISOLATED_WORKSPACE_TEST_HANG_AT"
+_TEST_FAIL_AT_ENV = "EOS_ISOLATED_WORKSPACE_TEST_FAIL_AT"
+_TEST_HOLDER_CRASH_ENV = "EOS_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH"
+
+
+def _maybe_inject_failure(phase: str) -> None:
+    """Raise the configured test failure for ``phase`` if any knob points here.
+
+    Two knobs are supported:
+
+    * ``EOS_ISOLATED_WORKSPACE_TEST_HANG_AT=<phase>`` — surface as a
+      ``setup_timeout`` error so the rollback path runs (matches what a real
+      hung kernel call would look like once the timeout fired).
+    * ``EOS_ISOLATED_WORKSPACE_TEST_FAIL_AT=<phase>`` — surface as a
+      generic ``setup_failed`` error.
+
+    Both branches share the same rollback contract (lease released, partial
+    state torn down) so a single helper keeps the call sites a one-liner.
+    """
+    hang_at = os.environ.get(_TEST_HANG_AT_ENV, "").strip()
+    if hang_at == phase:
+        raise IsolatedWorkspaceError(
+            "setup_timeout",
+            f"test-only setup_timeout injected at {phase}",
+            failed_step=phase,
+        )
+    fail_at = os.environ.get(_TEST_FAIL_AT_ENV, "").strip()
+    if fail_at == phase:
+        raise IsolatedWorkspaceError(
+            "setup_failed",
+            f"test-only setup_failed injected at {phase}",
+            failed_step=phase,
+        )
+
+
 class IsolatedWorkspaceError(Exception):
     """Base class for isolated-workspace lifecycle errors.
 
@@ -329,16 +368,36 @@ class IsolatedWorkspaceManager:
             self._init_complete.set()
 
     async def startup_gc(self) -> None:
-        """Reap orphan resources by naming convention; reconcile IP pool."""
+        """Reap orphan resources after daemon restart; reconcile IP pool.
+
+        After a fresh daemon start the in-memory ``_handles`` is empty: every
+        row in persisted ``manager.json`` is by definition a zombie whose
+        kernel resources (veth, cgroup, holder process, lease) outlived the
+        last daemon. We:
+
+        1. Reserve each persisted handle's IP so a concurrent ``enter`` cannot
+           re-allocate one that an in-flight orphan may still be using.
+        2. Release each persisted handle's lease so the OCC layer-stack can
+           advance again.
+        3. For each persisted handle, unfreeze the cgroup BEFORE rmdir so any
+           lingering PID can be killed (R5 ordering — pinned by
+           ``test_daemon_restart_gc_order_unfreeze_before_kill``).
+        4. Sweep any remaining ``eos-iws-*`` veth / scratch / cgroup by
+           naming convention.
+        """
         persisted = self._read_manager_json()
-        live_set = {row["handle_id"] for row in persisted.get("handles", [])}
-        for row in persisted.get("handles", []):
+        persisted_handles = list(persisted.get("handles", []))
+        for row in persisted_handles:
             ns_ip = row.get("ns_ip")
             if ns_ip:
                 with contextlib.suppress(ValueError):
                     self._network.pool.reserve(ipaddress.IPv4Address(ns_ip))
-        # Reap orphans by naming convention. Daemon runs only on Linux.
-        self._reap_orphans(live_set)
+        for row in persisted_handles:
+            self._release_orphan_lease(row)
+            self._reap_orphan_cgroup(row)
+        # in-memory is empty on a fresh daemon — every named iws resource is
+        # an orphan candidate.
+        self._reap_orphans(live_set=set())
 
     def _reap_orphans(self, live_set: set[str]) -> None:
         # Per-orphan gc_orphan timing (PLAN §15.3): each event carries its own
@@ -378,28 +437,138 @@ class IsolatedWorkspaceManager:
             )
 
         scratch = self.scratch_root
-        if not scratch.is_dir():
+        if scratch.is_dir():
+            t0 = self._clock()
+            scratch_children = [c for c in scratch.iterdir() if c.name != "manager.json"]
+            scratch_discover_ms = (self._clock() - t0) * 1000.0
+            scratch_orphans = [c for c in scratch_children if c.name not in live_set]
+            scratch_share_ms = (
+                scratch_discover_ms / len(scratch_orphans) if scratch_orphans else 0.0
+            )
+            for child in scratch_orphans:
+                t_reap = self._clock()
+                shutil.rmtree(child, ignore_errors=True)
+                reap_ms = (self._clock() - t_reap) * 1000.0
+                self._emit(
+                    "sandbox_isolated_workspace_gc_orphan",
+                    {
+                        "kind": "scratch",
+                        "identifier": child.name,
+                        "total_ms": scratch_share_ms + reap_ms,
+                        "phases_ms": {"discover": scratch_share_ms, "reap": reap_ms},
+                    },
+                )
+
+        # Cgroup naming-convention sweep — anything left after the per-handle
+        # release in startup_gc (e.g. created by a different daemon version
+        # that crashed before persisting manager.json) gets unfrozen + rmdir'd
+        # here.
+        if CGROUP_ROOT.is_dir():
+            t0 = self._clock()
+            cgroup_children = [
+                c for c in CGROUP_ROOT.iterdir()
+                if c.is_dir() and c.name.startswith(HANDLE_PREFIX)
+            ]
+            cgroup_discover_ms = (self._clock() - t0) * 1000.0
+            cgroup_orphans = [
+                c for c in cgroup_children
+                if c.name[len(HANDLE_PREFIX):] not in live_set
+            ]
+            cgroup_share_ms = (
+                cgroup_discover_ms / len(cgroup_orphans) if cgroup_orphans else 0.0
+            )
+            for child in cgroup_orphans:
+                t_reap = self._clock()
+                self._unfreeze_and_kill(child)
+                with contextlib.suppress(OSError):
+                    child.rmdir()
+                reap_ms = (self._clock() - t_reap) * 1000.0
+                self._emit(
+                    "sandbox_isolated_workspace_gc_orphan",
+                    {
+                        "kind": "cgroup",
+                        "identifier": child.name,
+                        "total_ms": cgroup_share_ms + reap_ms,
+                        "phases_ms": {"discover": cgroup_share_ms, "reap": reap_ms},
+                    },
+                )
+
+    def _release_orphan_lease(self, persisted_row: dict[str, Any]) -> None:
+        """Release a lease that survived the daemon process."""
+        lease_id = persisted_row.get("lease_id")
+        if not lease_id:
             return
         t0 = self._clock()
-        scratch_children = [c for c in scratch.iterdir() if c.name != "manager.json"]
-        scratch_discover_ms = (self._clock() - t0) * 1000.0
-        scratch_orphans = [c for c in scratch_children if c.name not in live_set]
-        scratch_share_ms = (
-            scratch_discover_ms / len(scratch_orphans) if scratch_orphans else 0.0
-        )
-        for child in scratch_orphans:
-            t_reap = self._clock()
-            shutil.rmtree(child, ignore_errors=True)
-            reap_ms = (self._clock() - t_reap) * 1000.0
-            self._emit(
-                "sandbox_isolated_workspace_gc_orphan",
-                {
-                    "kind": "scratch",
-                    "identifier": child.name,
-                    "total_ms": scratch_share_ms + reap_ms,
-                    "phases_ms": {"discover": scratch_share_ms, "reap": reap_ms},
-                },
+        released = False
+        with contextlib.suppress(Exception):
+            released = bool(
+                self._layer_stack.release_workspace_snapshot(
+                    self._layer_stack_root, lease_id=lease_id,
+                )
             )
+        reap_ms = (self._clock() - t0) * 1000.0
+        self._emit(
+            "sandbox_isolated_workspace_gc_orphan",
+            {
+                "kind": "lease",
+                "identifier": lease_id,
+                "released": released,
+                "total_ms": reap_ms,
+                "phases_ms": {"reap": reap_ms},
+            },
+        )
+
+    def _reap_orphan_cgroup(self, persisted_row: dict[str, Any]) -> None:
+        """Unfreeze (R5) and remove a persisted handle's cgroup directory."""
+        cg_path = persisted_row.get("cgroup_path")
+        if not cg_path:
+            return
+        cgroup = Path(cg_path)
+        if not cgroup.exists():
+            return
+        t0 = self._clock()
+        self._unfreeze_and_kill(cgroup)
+        with contextlib.suppress(OSError):
+            cgroup.rmdir()
+        reap_ms = (self._clock() - t0) * 1000.0
+        self._emit(
+            "sandbox_isolated_workspace_gc_orphan",
+            {
+                "kind": "cgroup",
+                "identifier": cgroup.name,
+                "total_ms": reap_ms,
+                "phases_ms": {"reap": reap_ms},
+            },
+        )
+
+    def _unfreeze_and_kill(self, cgroup: Path) -> None:
+        """Unfreeze a cgroup THEN kill its remaining PIDs (R5 ordering).
+
+        Logs both steps so the order survives test inspection
+        (``test_daemon_restart_gc_order_unfreeze_before_kill``).
+        """
+        freeze_file = cgroup / "cgroup.freeze"
+        if freeze_file.exists():
+            logger.info("isolated_workspace_gc_unfreeze cgroup=%s", cgroup.name)
+            with contextlib.suppress(OSError):
+                freeze_file.write_text("0\n")
+        kill_file = cgroup / "cgroup.kill"
+        if kill_file.exists():
+            logger.info("isolated_workspace_gc_kill cgroup=%s", cgroup.name)
+            with contextlib.suppress(OSError):
+                kill_file.write_text("1\n")
+            return
+        procs_file = cgroup / "cgroup.procs"
+        if procs_file.exists():
+            logger.info("isolated_workspace_gc_kill cgroup=%s", cgroup.name)
+            with contextlib.suppress(OSError):
+                pids = [
+                    int(line) for line in procs_file.read_text().splitlines()
+                    if line.strip().isdigit()
+                ]
+                for pid in pids:
+                    with contextlib.suppress(ProcessLookupError, PermissionError):
+                        os.kill(pid, signal.SIGKILL)
 
     # ------------------------------------------------------------------
     # Lifecycle: enter / exit / run_in_handle
@@ -498,6 +667,7 @@ class IsolatedWorkspaceManager:
         # absent in phases_ms (P5: absence != zero).
         t = timer or _PhaseTimer(self._clock)
         with t.measure("spawn_ns_holder"):
+            _maybe_inject_failure("ns_holder_ready")
             handle.root_pid = self._runtime.spawn_ns_holder(
                 handle, setup_timeout_s=self._config.setup_timeout_s,
             )
@@ -506,12 +676,15 @@ class IsolatedWorkspaceManager:
             # FDs on the handle before this method runs without losing them.
             handle.ns_fds.update(self._runtime.open_ns_fds(handle.root_pid))
         with t.measure("install_veth"):
+            _maybe_inject_failure("install_veth")
             handle.veth = self._network.install_veth(
                 handle_id=handle.handle_id, root_pid=handle.root_pid,
             )
         with t.measure("mount_overlay"):
+            _maybe_inject_failure("overlay_mount")
             self._runtime.mount_overlay(handle, layer_paths=layer_paths)
         with t.measure("configure_dns"):
+            _maybe_inject_failure("configure_dns")
             self._runtime.configure_dns(handle, fallback_dns=self._config.fallback_dns)
         # Signal ns_holder that the network + overlay are wired; ns_holder
         # brings ``lo`` up and acks via the readiness pipe. Wrapped in a
@@ -897,12 +1070,39 @@ class _LinuxRuntime:
         return path
 
     def freeze(self, handle: IsolatedWorkspaceHandle, *, freeze: bool) -> None:
+        """Freeze/thaw via cgroup.freeze with R11 SIGSTOP fallback.
+
+        If the cgroup.freeze write fails (EPERM/EACCES from a missing or
+        permissions-stripped controller), walk ``cgroup.procs`` and send
+        SIGSTOP/SIGCONT to each PID. Sets ``handle.freezer_degraded=True``
+        so the audit + status fields surface the fallback.
+        """
         if handle.cgroup_path is None:
             return
         freeze_file = handle.cgroup_path / "cgroup.freeze"
         if freeze_file.exists():
-            with contextlib.suppress(OSError):
+            try:
                 freeze_file.write_text("1\n" if freeze else "0\n")
+                return
+            except OSError:
+                handle.freezer_degraded = True
+        else:
+            handle.freezer_degraded = True
+        procs_file = handle.cgroup_path / "cgroup.procs"
+        if not procs_file.exists():
+            return
+        sig = signal.SIGSTOP if freeze else signal.SIGCONT
+        try:
+            pids = [
+                int(line)
+                for line in procs_file.read_text().splitlines()
+                if line.strip().isdigit()
+            ]
+        except OSError:
+            pids = []
+        for pid in pids:
+            with contextlib.suppress(ProcessLookupError, PermissionError):
+                os.kill(pid, sig)
 
     def kill_holder(self, root_pid: int, *, grace_s: float) -> None:
         with contextlib.suppress(ProcessLookupError, PermissionError):

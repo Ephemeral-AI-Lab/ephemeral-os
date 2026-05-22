@@ -108,11 +108,22 @@ class IsolatedNetwork:
         return self._initialized
 
     def initialize(self) -> None:
-        """Install bridge + MASQUERADE + IMDS drop. Idempotent."""
+        """Install bridge + MASQUERADE + IMDS drop. Idempotent.
+
+        Before installing the v2 tables, sweep any v1-named leftovers
+        (``eos_pinws_*``) so renaming PRs don't leave stranded rules holding
+        a netfilter slot. Pinned by ``test_v1_nft_table_migration_sweep``.
+        """
         self._require_tools()
+        self._sweep_v1_nft_tables()
         self._ensure_bridge()
         self._install_static_rules()
         self._initialized = True
+
+    def _sweep_v1_nft_tables(self) -> None:
+        """Delete any pre-v2 (``eos_pinws_*``) nft tables left over from a renaming PR."""
+        for legacy in ("eos_pinws_nat", "eos_pinws_filter"):
+            _nft_quiet("delete", "table", "inet", legacy)
 
     def install_veth(self, *, handle_id: str, root_pid: int) -> VethPair:
         """Create veth pair, attach host end to bridge with port isolation."""
@@ -214,6 +225,13 @@ def _nft(*args: str) -> None:
         return
     raise subprocess.CalledProcessError(
         result.returncode, result.args, output=result.stdout, stderr=result.stderr,
+    )
+
+
+def _nft_quiet(*args: str) -> None:
+    """Run ``nft`` ignoring all errors (used by the v1 migration sweep)."""
+    subprocess.run(
+        ["nft", *args], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False,
     )
 
 

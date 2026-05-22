@@ -6,6 +6,129 @@
 
 ---
 
+## Session 3 — 2026-05-23 (Phases 3-6)
+
+This session lands all four NEXT-AGENT-GUIDE phases the prior session
+deferred — 42 tests across four new tier directories plus the production
+code each tier depends on.
+
+### What landed
+
+| Slice | File(s) | Status |
+|---|---|---|
+| Phase 3 — Tier 2 isolation (5 tests) | `isolation/` | landed |
+| Phase 4 — Tier 7 GC + persistence (14 tests = 10 base + 4 v2) | `gc_and_persistence/` | landed |
+| Phase 5 — Tier 3 network (15 tests = 11 base + 4 inbound REJECT) | `network/` | landed |
+| Phase 6 — Tier 4 failure modes (8 tests) | `failure_modes/` | landed |
+| GC reaping for cgroup + lease + netns (R5 ordering) | `sandbox/isolated_workspace/manager.py` | landed |
+| v1 nft-table migration sweep | `sandbox/isolated_workspace/network.py` | landed |
+| IPv6 default-route purge after `net-ready` | `sandbox/isolated_workspace/scripts/ns_holder.py` | landed |
+| Test-only failure-injection env knobs (HANG_AT / FAIL_AT / HOLDER_CRASH) | `manager.py` + `ns_holder.py` | landed |
+| R11 SIGSTOP/SIGCONT fallback when `cgroup.freeze` write fails | `_LinuxRuntime.freeze` in `manager.py` | landed |
+| Host-side helpers: scratch_root discovery, daemon restart, env-knob wiring, manager.json IO, host resource snapshot | `_iws_fixtures.py` | landed |
+
+### Production-code summary
+
+**`sandbox/isolated_workspace/manager.py`:**
+
+- `startup_gc` rewritten to treat persisted handles as zombies on a
+  fresh daemon (the in-memory `_handles` map is always empty post-restart).
+  For every persisted row: reserve the IP, release the lease, unfreeze
+  the cgroup, then rmdir it. After the per-row sweep, `_reap_orphans`
+  runs a broader naming-convention pass for any stranded `eos-iws-*`
+  veth / scratch / cgroup that lacks a persisted row.
+- `_release_orphan_lease(row)` releases the lease and emits a `gc_orphan`
+  event with `kind=lease`. `_reap_orphan_cgroup(row)` rmdirs the
+  persisted cgroup_path after unfreezing via `_unfreeze_and_kill`.
+- `_unfreeze_and_kill(cgroup)` logs `isolated_workspace_gc_unfreeze` then
+  `isolated_workspace_gc_kill` (R5 ordering pin — visible to the daemon log
+  scan in `test_daemon_restart_gc_order_unfreeze_before_kill`).
+- `_reap_orphans` extended with a cgroup naming-convention sweep alongside
+  the pre-existing veth + scratch sweeps.
+- New module-level `_maybe_inject_failure(phase)` raises `setup_timeout`
+  or `setup_failed` at each `_wire_handle` phase boundary when the
+  matching env knob (`EOS_ISOLATED_WORKSPACE_TEST_HANG_AT` /
+  `EOS_ISOLATED_WORKSPACE_TEST_FAIL_AT`) is set. Branches are dead code
+  in production (env vars unset).
+- `_LinuxRuntime.freeze` now catches `OSError` on the `cgroup.freeze`
+  write and falls back to walking `cgroup.procs` + sending SIGSTOP/SIGCONT
+  per PID. Sets `handle.freezer_degraded=True` on the fallback path.
+
+**`sandbox/isolated_workspace/network.py`:**
+
+- `IsolatedNetwork.initialize` now calls `_sweep_v1_nft_tables()` before
+  installing current tables — deletes `eos_pinws_nat` and
+  `eos_pinws_filter` if present.
+- New module-level `_nft_quiet(...)` ignores errors (used by the sweep).
+
+**`sandbox/isolated_workspace/scripts/ns_holder.py`:**
+
+- `_purge_ipv6_default_routes()` disables `accept_ra` on `eth0`/`lo`/
+  `all`/`default` and flushes the v6 default route. Runs immediately
+  after `lo` comes up, before the parent sees `ready\n`.
+- Test-only knob `EOS_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH=true` makes
+  the holder `sys.exit(7)` right after writing `ns-up\n` (drives the
+  ns_holder-dies-before-ready scenario in failure_modes).
+
+### Fixture/helper additions (`_iws_fixtures.py`)
+
+| Helper | Purpose |
+|---|---|
+| `iws_scratch_root(sandbox_id)` | Discover the daemon's scratch root path on the live container. |
+| `daemon_kill_and_respawn(sandbox_id, *, layer_stack_root, ...)` | SIGKILL the daemon then issue a bootstrap enter to trigger `startup_gc`. |
+| `list_host_eos_iws_resources(sandbox_id)` | Snapshot host-side veth/cgroup/netns named `eos-iws-*`. |
+| `read_manager_json` / `write_manager_json` | Read or overwrite the persisted manager.json (Tier 7 roundtrip + schema-mismatch tests). |
+| `set_daemon_env` / `clear_daemon_env` | Set/unset env knobs via `/etc/environment` + daemon respawn. |
+
+### Verification
+
+```text
+$ .venv/bin/python -m pytest \
+    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/pre_flight/ \
+    backend/tests/unit_test/test_sandbox/test_daemon/ \
+    backend/tests/unit_test/test_sandbox/test_import_fence.py \
+    backend/tests/unit_test/test_audit/ \
+    backend/tests/unit_test/test_task_center/test_audit/
+152 passed in 1.30s
+
+$ .venv/bin/python -m pytest \
+    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/ --collect-only
+64 tests collected
+
+$ .venv/bin/ruff check \
+    backend/src/sandbox/isolated_workspace/ \
+    backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/ \
+    backend/src/sandbox/provider/docker/client.py
+All checks passed!
+```
+
+### Test counts (cumulative across all sessions)
+
+| Tier | Files | Status |
+|---|---|---|
+| Tier 0 (pre_flight/) | 5 (17 cases) | green on macOS |
+| Tier 1 (happy_path/) | 5 | live-CI (skip on macOS when heavy_enabled=False) |
+| Tier 2 (isolation/) | 5 | live-CI |
+| Tier 3 (network/) | 15 | live-CI |
+| Tier 4 (failure_modes/) | 8 | live-CI |
+| Tier 7 (gc_and_persistence/) | 14 | live-CI |
+| **Total** | **52 files** | **17 cases run + 47 live-gated** |
+
+Remaining tiers per PLAN §5/§19: Tier 5 (resource controls, 7 tests),
+Tier 6 (concurrency, 7+4 tests), Tier 8 (stress, 4+1 tests), Tier 9
+(performance, 7 tests). All deferred to subsequent sessions per
+NEXT-AGENT-GUIDE phases 7-9.
+
+### Deferred — what this session could NOT do
+
+| Item | Why | Owner / next trigger |
+|---|---|---|
+| **Live execution of Phase 3-6 tests** | Requires Linux host + sweevo Docker image + `runner.live_e2e.heavy_enabled=true` + database URL. macOS dev box's sweevo container fails its daemon bind in 10 s (pre-existing env limitation, affects all live iws tests including the previously-landed happy_path suite). | Linux CI runner with functional sweevo image. |
+| **Tiers 5/6/8/9** (~26 tests + Tier 9 perf infra) | Sequenced after Tier 4 per NEXT-AGENT-GUIDE phases 7-9. | Future sessions. |
+| **Async-blocking subprocess refactor** (`_LinuxRuntime.{mount_overlay, configure_dns, spawn_ns_holder, freeze}`) | Becomes a flake source under N=5 concurrent enters (Tier 6) but not on the critical path for Tier 4. | Phase 7 prerequisite (NEXT-AGENT-GUIDE §4.2/7.7). |
+
+---
+
 ## Session 2 — 2026-05-23 (Phase 1 + Phase 2 follow-up)
 
 This section documents the second pass on the iws milestone. It executes

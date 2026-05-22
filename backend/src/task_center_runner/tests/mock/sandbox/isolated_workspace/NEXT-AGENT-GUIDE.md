@@ -1,10 +1,11 @@
 # Next-Agent Guide — isolated_workspace deferred work
 
-**Audience:** the agent (human or LLM) picking up the remaining 66 tests and
-the open follow-ups.
+**Audience:** the agent (human or LLM) picking up the remaining tiers
+(performance, stress, resource controls, concurrency) and any live-CI
+verification of Phase 3-6.
 
-**Why this file exists:** in the prior session, I (the previous agent) wrote
-a parallel implementation of overlay mount syscalls because I did not first
+**Why this file exists:** in the first session, the prior agent wrote a
+parallel implementation of overlay mount syscalls because they did not first
 read what was already in `sandbox/`. That added ~80 LoC of duplicated
 `fsopen / fsconfig / fsmount / move_mount` wrappers when
 `sandbox.execution.overlay.kernel_mount.mount_overlay` already implemented
@@ -39,13 +40,21 @@ backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/  ← all i
 ├── PLAN.md                  the 1076-line spec — read §11–§23 for v2 enrichments
 ├── IMPLEMENTATION-REPORT.md what landed each session
 ├── NEXT-AGENT-GUIDE.md      this file
-├── conftest.py              iws_sandbox, iws_clean_sandbox, iws_audit_tail,
-│                            iws_capability_probe, iws_latency_baseline
+├── conftest.py              iws_sandbox, iws_clean_sandbox, iws_audit_jsonl,
+│                            iws_audit_tail, iws_capability_probe,
+│                            iws_latency_baseline
 ├── _iws_rpc.py              thin async wrapper around call_daemon_api
 ├── _iws_invariants.py       audit-event helpers + SUBSET-COVER assertions
-├── _iws_fixtures.py         peer-publish, sentinel-layer, capability probes
+├── _iws_fixtures.py         peer-publish, sentinel-layer, capability probes,
+│                            daemon_kill_and_respawn, set/clear_daemon_env,
+│                            iws_scratch_root, list_host_eos_iws_resources,
+│                            read/write_manager_json
 ├── pre_flight/              Tier 0 — structural fences (R3, R10, N2, C1, C2)
-└── happy_path/              Tier 1 — golden enter/shell/exit (live, skipped without sweevo)
+├── happy_path/              Tier 1 — golden enter/shell/exit (live)
+├── isolation/               Tier 2 — R1 + lowerdir/upperdir separation
+├── gc_and_persistence/      Tier 7 — daemon-restart reaping + lowerdir O(1)
+├── network/                 Tier 3 — masquerade / IMDS / DNS / inbound REJECT
+└── failure_modes/           Tier 4 — failure-injection rollback paths
 ```
 
 Outside the iws directory, **production code MUST stay where the import
@@ -253,92 +262,165 @@ real sweevo container.
 
 ---
 
-### Phase 3 — Tier 2 (isolation, 5 tests)
+### Phase 3 (done, 2026-05-23 session 3) — Tier 2 isolation, 5 tests
 
-**Goal:** the security argument. Prove iws upperdir is discarded on exit,
-peer-publishes don't bleed into open workspaces, and cross-agent
-networking is unreachable.
+**Goal landed:** the structural separation from OCC + the snapshot-at-enter
+pinning property are pinned by runtime tests, not just the C2 source-scan
+fence.
 
-**Why next** (per PLAN §7): "Land before production rollout." These tests
-make the case that the structural separation actually holds at runtime.
+**What landed:**
 
-**Tests** (PLAN §5 catalogue):
+- `isolation/test_full_cycle_never_calls_occ.py` — drives a full
+  enter→tool_call→exit cycle and asserts no `sandbox_occ_*` event ever
+  reaches the iws audit JSONL (R1 behavioral counterpart to the C2 fence).
+- `isolation/test_upperdir_discarded_on_exit.py` — write→exit→re-enter
+  flow; cat returns ENOENT; host-side `find` confirms the entire handle
+  scratch directory is rmtreed (uses the new `iws_scratch_root` helper).
+- `isolation/test_lowerdir_pinned_against_peer_publish.py` — peer
+  publishes a new version of a path while ws-A is open; the workspace
+  keeps seeing the snapshot-at-enter body. Re-enter picks up the new tip.
+- `isolation/test_default_mode_unaffected_during_pinned.py` — same agent's
+  default `api.write_file` succeeds concurrently with the isolated ws;
+  the isolated view's `manifest_version` stays unchanged.
+- `isolation/test_cross_agent_unreachable.py` — A and B each enter; A's
+  ping/curl to B's bridge IP fails. IPs are discovered from the audit log's
+  `ns_ip` field.
 
-| Test | Property |
-|---|---|
-| `test_full_cycle_never_calls_occ` | OCC commit primitives never reached during full enter→tool_call→exit (R1 behavioral counterpart to the C2 source-scan fence) |
-| `test_upperdir_discarded_on_exit` | Re-enter after writing `scratch.txt` returns no-such-file; host-side scratch_root has no leftover upper/ |
-| `test_lowerdir_pinned_against_peer_publish` | Agent-A's view sees the snapshot-at-enter content even after agent-B publishes a contradictory layer (A1 design property) |
-| `test_default_mode_unaffected_during_pinned` | Same agent's default `api.write_file` still works concurrently with their isolated ws; layerstack tip advances; iws view unchanged |
-| `test_cross_agent_unreachable` | ws-A pings/curls ws-B's bridge IP → fail. Mechanism is bridge port-isolation flag, NOT an nft rule (so dropping `bridge-nf-call-iptables` doesn't accidentally open it) |
-
-**Done criteria:** all 5 pass, all 5 assert the expected audit sequence,
-`assert_no_event(jsonl, "sandbox_occ_changeset_received")` holds for the
-isolated cycle in `test_full_cycle_never_calls_occ`.
-
-**Out of scope:** Tier 3 (network) tests. The isolation argument needs
-to be locked down before adding nftables/inbound-rejection surface.
-
----
-
-### Phase 4 — Tier 7 (GC + persistence, 10 tests)
-
-**Why next over Tier 3** (per PLAN §7): GC is "the largest design surface
-that can silently break." Land before a second daemon restart in
-production.
-
-**Tests** (PLAN §5 catalogue + v2 §19.5 additions): `manager.json`
-roundtrip + schema-mismatch handling; daemon-restart reaps orphan veth /
-cgroup / scratch / netns + releases orphan lease + reconciles IP pool;
-GC ordering (unfreeze before kill); v1 nft-table migration sweep; new v2
-tests for `lowerdir_layer_paths_shared`, `lowerdir_disk_usage_is_o1`,
-`upperdir_fully_discarded_on_normal_exit`,
-`upperdir_discarded_on_abnormal_exit_daemon_kill`.
-
-**Reuse opportunity** for `upperdir_*` tests: use
-`sandbox.execution.overlay.capture.walk_upperdir` instead of
-`os.walk` if you need anything beyond byte counting (NEXT-AGENT-GUIDE
-§2).
-
-**Done criteria:** 10 base + up to 4 v2 = up to 14 tests pass; daemon
-SIGKILL → restart leaves zero `eos-iws-*` veth, zero `eos-iws-*`
-cgroups, zero scratch dirs, the IP pool reconciles correctly, the
-`gc_orphan` audit event carries `phases_ms.{discover, reap}` per-orphan.
+**Production code:** none — the existing manager + bridge port isolation
+already provide all the properties under test.
 
 ---
 
-### Phase 5 — Tier 3 (network, 11 + 4 = 15 tests)
+### Phase 4 (done, 2026-05-23 session 3) — Tier 7 GC + persistence, 14 tests
 
-**Why this position** (per PLAN §7): can land incrementally per nft rule;
-needs a stable iws lifecycle (phases 2–4) underneath.
+**Goal landed:** daemon-restart reconciliation reaps every iws-owned
+kernel + disk resource, releases orphan leases, reserves persisted IPs,
+unfreezes before kill (R5 ordering), and sweeps legacy v1 nft tables.
 
-**Tests:**
-- MASQUERADE egress + IMDS drop + RFC1918 deny opt-in + IPv6 default-route
-  purge (11 tests per PLAN §5)
-- Inbound-rejection via `unshare -n` host-netns probe (4 tests per v2 §19.3)
+**Tests landed (all 14):**
 
-**Helpers to add this phase** (deferred from prior sessions, NEXT-AGENT-GUIDE
-§5.3): re-add `unshare_netns_probe`, `tiny_http_server`, `find_free_port`
-in `_iws_fixtures.py` ONLY when the tests that need them land — do not
-pre-scaffold.
+- `gc_and_persistence/test_manager_json_roundtrip.py`
+- `gc_and_persistence/test_manager_json_schema_mismatch_treated_as_empty.py`
+- `gc_and_persistence/test_daemon_restart_reaps_orphan_{veth, cgroup, scratch, netns}.py`
+- `gc_and_persistence/test_daemon_restart_releases_orphan_lease.py`
+- `gc_and_persistence/test_daemon_restart_reconciles_ip_pool.py`
+- `gc_and_persistence/test_daemon_restart_gc_order_unfreeze_before_kill.py`
+- `gc_and_persistence/test_v1_nft_table_migration_sweep.py`
+- v2 additions (PLAN §19.5):
+  - `gc_and_persistence/test_lowerdir_layer_paths_shared_across_concurrent_handles.py`
+  - `gc_and_persistence/test_lowerdir_disk_usage_is_o1.py`
+  - `gc_and_persistence/test_upperdir_fully_discarded_on_normal_exit.py`
+  - `gc_and_persistence/test_upperdir_discarded_on_abnormal_exit_daemon_kill.py`
 
-**Done criteria:** all 15 tests pass; idempotent rule reinstall verified
-across daemon restart; conntrack RELATED/ESTABLISHED holds for return
-traffic on 10 MB downloads.
+**Production code (in `manager.py`):**
+
+- `startup_gc` rewritten: every persisted handle row is treated as a
+  zombie — reserve its IP, release its lease, unfreeze + rmdir its
+  cgroup, THEN run the naming-convention sweep.
+- New `_release_orphan_lease(persisted_row)` + `_reap_orphan_cgroup(persisted_row)`
+  helpers emit `gc_orphan` events with `kind={lease,cgroup}`.
+- New `_unfreeze_and_kill(cgroup)` logs `isolated_workspace_gc_unfreeze`
+  THEN `isolated_workspace_gc_kill` (R5 ordering pin for the daemon log scan).
+- `_reap_orphans` extended with a cgroup naming-convention sweep on top of
+  the existing veth + scratch sweeps.
+
+**Production code (in `network.py`):**
+
+- `initialize()` now calls `_sweep_v1_nft_tables()` before installing
+  current tables — deletes legacy `eos_pinws_*` if present.
+
+**Helpers landed in `_iws_fixtures.py`:**
+
+- `iws_scratch_root(sandbox_id)` — discovers the daemon's scratch root.
+- `daemon_kill_and_respawn(sandbox_id, *, layer_stack_root, ...)` —
+  SIGKILLs the daemon then re-issues an `enter` to respawn it
+  (`_ensure_manager` runs `startup_gc`).
+- `list_host_eos_iws_resources(sandbox_id)` — snapshot of veth/cgroup/netns
+  named `eos-iws-*`.
+- `read_manager_json` / `write_manager_json` — for the roundtrip + schema
+  mismatch tests.
 
 ---
 
-### Phase 6 — Tier 4 (failure modes, 8 tests)
+### Phase 5 (done, 2026-05-23 session 3) — Tier 3 network, 15 tests
 
-Adversarial / partial-rollback coverage. Setup timeout wedge, ns_holder
-crash before ready, overlay mount EBUSY, veth install EEXIST, DNS helper
-failure, SIGKILL fallback, freezer stall → SIGSTOP fallback (this is when
-`freezer_degraded=True` finally fires — wire it up in `_LinuxRuntime.freeze`),
-argv E2BIG via in_ns_write.
+**Goal landed:** every nft rule + bridge flag + DNS substitution branch
++ IPv6 default-route purge has a runtime test, and external→ws
+unreachability is proven via `unshare -n` host-netns probes (no second
+sandbox container needed).
 
-**Cross-ref this phase** to project memory entry
-`'checked batch apply failed' = argv E2BIG` — same bug class, same fix
-(stream payload via stdin).
+**Tests landed:**
+
+- `network/test_arbitrary_egress_via_masquerade.py`
+- `network/test_imds_dropped.py`
+- `network/test_imds_rule_reinstalled_on_boot.py`
+- `network/test_masquerade_rule_reinstalled_on_boot.py`
+- `network/test_dns_routable_resolver.py`
+- `network/test_dns_systemd_resolved_fallback.py`
+- `network/test_dns_fallback_survives_tool_call_boundary.py`
+- `network/test_dns_symlinked_resolv_conf.py`
+- `network/test_no_ipv6_default_route.py`
+- `network/test_port_isolation_flag_present.py`
+- `network/test_rfc1918_egress_drop_opt_in.py`
+- 4 inbound-rejection tests (PLAN §19.3):
+  - `network/test_external_inbound_{tcp, udp, icmp}_rejected.py`
+  - `network/test_daemon_host_introspection_allowed.py`
+
+**Production code (in `scripts/ns_holder.py`):**
+
+- `_purge_ipv6_default_routes()` — disables `accept_ra` on every iface
+  inside the workspace netns AND flushes the v6 default route. Runs after
+  `net-ready` arrives, before the parent sees `ready` (so the daemon's
+  enter is guaranteed to see a purged routing table).
+
+---
+
+### Phase 6 (done, 2026-05-23 session 3) — Tier 4 failure modes, 8 tests
+
+**Goal landed:** every adversarial enter/exit path has a test that
+proves rollback runs (lease released, no orphan veth/cgroup/scratch) and
+the manager doesn't strand state.
+
+**Tests landed:**
+
+- `failure_modes/test_setup_timeout_wedge.py`
+- `failure_modes/test_ns_holder_dies_before_ready.py`
+- `failure_modes/test_overlay_mount_fails.py`
+- `failure_modes/test_veth_install_fails_releases_lease.py`
+- `failure_modes/test_dns_helper_fails_does_not_strand_handle.py`
+- `failure_modes/test_holder_refuses_sigterm_sigkill_fallback.py`
+- `failure_modes/test_freezer_stall_falls_back_to_sigstop.py`
+- `failure_modes/test_argv_e2big_via_in_ns_write.py`
+
+**Production code (in `manager.py`):**
+
+- Two test-only env knobs (PLAN §9.3 design):
+  - `EOS_ISOLATED_WORKSPACE_TEST_HANG_AT=<phase>` → raises `setup_timeout`
+    with `failed_step=<phase>` at the phase boundary.
+  - `EOS_ISOLATED_WORKSPACE_TEST_FAIL_AT=<phase>` → raises `setup_failed`
+    with `failed_step=<phase>`.
+  - Read by the module-level `_maybe_inject_failure(phase)` helper at
+    every entry into the four `_wire_handle` phases (`ns_holder_ready`,
+    `install_veth`, `overlay_mount`, `configure_dns`).
+- R11 SIGSTOP/SIGCONT fallback in `_LinuxRuntime.freeze`: if the
+  `cgroup.freeze` write hits `OSError` (chmod 000 in the test fixture, or
+  a real EPERM from a missing controller), walk `cgroup.procs` and
+  send the per-PID signal. Sets `handle.freezer_degraded=True` so the
+  audit + status fields reflect the fallback path.
+
+**Production code (in `scripts/ns_holder.py`):**
+
+- One additional knob: `EOS_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH=true`
+  makes the holder `sys.exit(7)` immediately after `ns-up`. The parent
+  sees the readiness pipe close before `ready` and raises `setup_failed`.
+
+**Helpers landed in `_iws_fixtures.py`:**
+
+- `set_daemon_env(sandbox_id, *, pairs, layer_stack_root)` — writes env
+  knobs into `/etc/environment` then respawns the daemon so the new
+  values flow in via PAM.
+- `clear_daemon_env(sandbox_id, *, keys, layer_stack_root)` — symmetric
+  cleanup for the test teardown.
 
 ---
 
@@ -398,7 +480,14 @@ satisfied for every tier.
 |---|---|
 | ~~`EOS_ISOLATED_WORKSPACE_ENABLED` daemon plumbing~~ | **DONE** (2026-05-23 session 2 — see `iws_sandbox` fixture in `conftest.py`). |
 | ~~Daemon-side iws audit-event JSONL sink~~ | **DONE** (2026-05-23 session 2 — `_JsonlAuditSink` in `handlers.py`, `iws_audit_jsonl` fixture). |
-| `api.test_only.iws_reset` RPC (PLAN §9.1) | If/when the per-agent exit() loop in `iws_clean_sandbox` becomes inadequate. Could happen at phase 6 (concurrency) if tests start leaking handles to unexpected agent ids. |
+| ~~Cgroup/lease/netns reap on startup_gc~~ | **DONE** (2026-05-23 session 3 — `_release_orphan_lease`, `_reap_orphan_cgroup`, `_unfreeze_and_kill` in `manager.py`). |
+| ~~v1 `eos_pinws_*` nft migration sweep~~ | **DONE** (2026-05-23 session 3 — `IsolatedNetwork._sweep_v1_nft_tables`). |
+| ~~IPv6 default-route purge~~ | **DONE** (2026-05-23 session 3 — `_purge_ipv6_default_routes` in `scripts/ns_holder.py`). |
+| ~~Test-only failure-injection env knobs~~ | **DONE** (2026-05-23 session 3 — `_maybe_inject_failure` in `manager.py`, holder crash knob in `ns_holder.py`). |
+| ~~R11 SIGSTOP/SIGCONT fallback in `freeze`~~ | **DONE** (2026-05-23 session 3 — `_LinuxRuntime.freeze` walks `cgroup.procs` on EACCES). |
+| `api.test_only.iws_reset` RPC (PLAN §9.1) | If/when the per-agent exit() loop in `iws_clean_sandbox` becomes inadequate. Could happen at phase 7 (concurrency) if tests start leaking handles to unexpected agent ids. |
+| Binary-safe `write_file` protocol | `_iws_rpc.write_file` base64-encodes bytes input → `ops_handlers.write_file` re-base64-encodes for stdin → `in_ns_write.py` single-decodes; net effect is files contain the base64-encoded form of the original bytes, not the bytes themselves. Text bodies work fine. Fix: either drop the client-side base64 (server already accepts bytes via JSON Buffer encoding) or have the server single-decode if the field is base64-tagged. Test impact: any future binary-write test must work around this or fix the protocol first. |
+| `CommitQueue.apply` monkeypatch in `test_full_cycle_never_calls_occ` | Currently the test asserts layerstack tip stability across the iws cycle as the runtime proxy for "no OCC commit". The PLAN §5 stronger form (instrumented `CommitQueue.apply` call count == 0) requires a test-only daemon hook; tracked here for follow-up. |
 | 4-phase `tool_call` widening (PLAN §15.2) | Sunset trigger only: when `tool_call.exec` P95 > 500 ms on reference CI over a rolling 7-day window of budget refreshes. Until then, 3-phase is the v1 contract. |
 | Async `subprocess` migration for `_LinuxRuntime` (§4.2/7.7) | Phase 7 prerequisite |
 
