@@ -36,6 +36,11 @@ def test_stream_bridge_derives_sandbox_subsystem_events() -> None:
                     "conflict_reason": None,
                     "timings": {
                         "command_exec.prepare_snapshot_s": 0.01,
+                        "command_exec.mount_workspace_s": 0.011,
+                        "command_exec.run_command_s": 0.012,
+                        "command_exec.capture_upperdir_s": 0.013,
+                        "command_exec.total_s": 0.09,
+                        "api.shell.total_s": 0.09,
                         "overlay.total_s": 0.02,
                         "occ.prepare.total_s": 0.03,
                         "occ.commit.publish_layer_s": 0.04,
@@ -61,6 +66,17 @@ def test_stream_bridge_derives_sandbox_subsystem_events() -> None:
     assert EventType.SANDBOX_LAYER_STACK_LAYER_CREATED in event_types
     assert EventType.SANDBOX_LAYER_STACK_LAYERS_SQUASHED in event_types
     assert EventType.SANDBOX_RESOURCE_SNAPSHOT in event_types
+    overlay_event = next(
+        event for event in events if event.type is EventType.SANDBOX_OVERLAY_EXECUTED
+    )
+    assert overlay_event.payload["timings"] == {
+        "command_exec.mount_workspace_s": 0.011,
+        "command_exec.run_command_s": 0.012,
+        "command_exec.capture_upperdir_s": 0.013,
+        "command_exec.total_s": 0.09,
+        "api.shell.total_s": 0.09,
+        "overlay.total_s": 0.02,
+    }
 
 
 def test_stream_bridge_skips_metadata_derivation_when_sandbox_audit_emitted() -> None:

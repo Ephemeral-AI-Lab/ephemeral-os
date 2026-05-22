@@ -388,7 +388,6 @@ def _normalize_sandbox_event(row: Mapping[str, Any]) -> dict[str, Any]:
     node = _as_mapping(row.get("node"))
     timings = _float_mapping(payload.get("timings"))
     event_type = str(row.get("event_type") or "sandbox_unknown")
-    event_type = str(row.get("event_type") or "sandbox_unknown")
     duration_total = sum(
         value
         for key, value in timings.items()

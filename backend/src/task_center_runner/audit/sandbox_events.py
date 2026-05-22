@@ -8,6 +8,14 @@ from message.stream_events import ToolExecutionCompleted
 
 
 _SANDBOX_TOOLS = frozenset({"read_file", "write_file", "edit_file", "shell"})
+_COMMAND_EXEC_OVERLAY_TIMINGS = (
+    "command_exec.mount_workspace_s",
+    "command_exec.run_command_s",
+    "command_exec.capture_upperdir_s",
+    "command_exec.total_s",
+    "api.shell.overlay_s",
+    "api.shell.total_s",
+)
 _CONFLICT_STATUSES = frozenset(
     {
         "aborted_lock",
@@ -91,14 +99,21 @@ def sandbox_events_from_tool_completion(
             )
         )
 
-    if _has_prefix(timings, "overlay.") or "api.shell.overlay_s" in timings:
+    if _has_prefix(timings, "overlay.") or _has_any(
+        timings,
+        *_COMMAND_EXEC_OVERLAY_TIMINGS,
+    ):
         events.append(
             Event(
                 type=EventType.SANDBOX_OVERLAY_EXECUTED,
                 node=node,
                 payload={
                     **base_payload,
-                    "timings": _select(timings, "overlay.", "api.shell.overlay_s"),
+                    "timings": _select(
+                        timings,
+                        "overlay.",
+                        *_COMMAND_EXEC_OVERLAY_TIMINGS,
+                    ),
                 },
             )
         )

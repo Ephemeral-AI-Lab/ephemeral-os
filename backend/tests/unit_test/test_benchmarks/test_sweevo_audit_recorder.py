@@ -528,7 +528,14 @@ def test_write_performance_reports_produces_detailed_report(tmp_path: Path) -> N
                     "tool_id": "toolu_2",
                     "status": "ok",
                     "changed_paths": ["b.py"],
-                    "timings": {"api.shell.overlay_s": 0.12},
+                    "timings": {
+                        "command_exec.mount_workspace_s": 0.02,
+                        "command_exec.run_command_s": 0.07,
+                        "command_exec.capture_upperdir_s": 0.03,
+                        "command_exec.total_s": 0.18,
+                        "api.shell.overlay_s": 0.12,
+                        "api.shell.total_s": 0.18,
+                    },
                 },
             )
         )
@@ -591,6 +598,17 @@ def test_write_performance_reports_produces_detailed_report(tmp_path: Path) -> N
     assert report["sandbox"]["families"]["layer_stack"]["event_count"] == 1
     assert report["sandbox"]["families"]["resource"]["event_count"] == 1
     assert report["sandbox"]["timing_keys"]["api.shell.overlay_s"]["total"] == 0.12
+    assert report["sandbox"]["timing_keys"]["command_exec.mount_workspace_s"][
+        "total"
+    ] == 0.02
+    assert report["sandbox"]["timing_keys"]["command_exec.run_command_s"][
+        "total"
+    ] == 0.07
+    assert report["sandbox"]["timing_keys"]["command_exec.capture_upperdir_s"][
+        "total"
+    ] == 0.03
+    assert report["sandbox"]["timing_keys"]["command_exec.total_s"]["total"] == 0.18
+    assert report["sandbox"]["timing_keys"]["api.shell.total_s"]["total"] == 0.18
     assert report["sandbox"]["non_duration_observations"][
         "layer_stack.auto_squash.depth_before"
     ]["max"] == 40.0
