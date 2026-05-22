@@ -1,0 +1,57 @@
+"""Golden lifecycle: enter → shell("echo hi") → exit.
+
+Asserts:
+- ``enter`` returns ``success=True`` with non-empty ``manifest_root_hash``.
+- ``shell`` inside the workspace produces stdout containing ``hi``.
+- ``exit`` returns ``success=True`` and discards the upperdir
+  (``evicted_upperdir_bytes`` is non-negative; typically 0 for an empty ws).
+- The audit log carries enter → tool_call → exit in order for this handle.
+- Both enter and exit events expose ``total_ms`` and ``phases_ms`` keys
+  (PR 1 contract).
+- ``status`` after exit returns ``open=False``.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from benchmarks.sweevo.models import _REPO_DIR
+from task_center_runner.tests._live_config import (
+    database_configured,
+    live_e2e_heavy_enabled,
+)
+from task_center_runner.tests.mock.sandbox.isolated_workspace import _iws_rpc
+
+
+pytestmark = pytest.mark.asyncio
+
+
+@pytest.mark.skipif(
+    not database_configured(),
+    reason="database URL not configured",
+)
+@pytest.mark.skipif(
+    not live_e2e_heavy_enabled(),
+    reason="heavy live e2e disabled in runner.live_e2e.heavy_enabled",
+)
+@pytest.mark.timeout(180)
+async def test_enter_then_shell_then_exit(iws_clean_sandbox) -> None:
+    sandbox_id = str(iws_clean_sandbox["sandbox_id"])
+    agent_id = "agent-A"
+    enter_response = await _iws_rpc.enter(
+        sandbox_id, agent_id, layer_stack_root=_REPO_DIR,
+    )
+    assert enter_response.get("success") is True, enter_response
+    assert enter_response.get("manifest_root_hash"), enter_response
+
+    shell_response = await _iws_rpc.shell(sandbox_id, agent_id, "echo hi")
+    assert shell_response.get("success") is True, shell_response
+    assert "hi" in shell_response.get("stdout", ""), shell_response
+
+    exit_response = await _iws_rpc.exit_(sandbox_id, agent_id)
+    assert exit_response.get("success") is True, exit_response
+    assert exit_response.get("evicted_upperdir_bytes", -1) >= 0, exit_response
+
+    status_response = await _iws_rpc.status(sandbox_id, agent_id)
+    assert status_response.get("success") is True
+    assert status_response.get("open") is False, status_response

@@ -2,6 +2,33 @@
 
 Events live in-memory only — they drive hook dispatch and metrics aggregation.
 There is no persisted ``events.jsonl``.
+
+Phase-timing contract (PLAN §14, isolated_workspace tier)
+---------------------------------------------------------
+
+The five ``sandbox_isolated_workspace_*`` events carry two additive payload
+fields used for per-operation latency analysis:
+
+- ``total_ms`` (float): wall-clock cost of the operation.
+- ``phases_ms`` (dict[str, float]): per-phase breakdown.
+
+Two rules every future emitter MUST respect:
+
+1. **Conditional-key emission.** A phase appears in ``phases_ms`` only when
+   that codepath actually ran to completion. Emitting ``"<phase>": 0.0`` for
+   a stubbed or skipped branch is FORBIDDEN — absence and zero have distinct
+   semantics.
+2. **SUBSET-COVER invariant.** For every emitted event,
+   ``sum(phases_ms.values()) <= total_ms + max(2.0, 0.05 * total_ms)``. The
+   inequality is one-sided because conditional-key emission means
+   ``sum(phases_ms.values())`` is strictly ``<= total_ms`` (plus a small
+   bookkeeping ε to absorb the timer's own overhead).
+
+These rules are pinned by the live tests under
+``task_center_runner/tests/mock/sandbox/isolated_workspace/performance/``.
+Aggregators (``performance_report.py``) consume ``total_ms`` and the
+``phases_ms`` dict opaquely — they should never assume any specific phase
+key is present.
 """
 
 from __future__ import annotations
@@ -69,6 +96,11 @@ class EventType(StrEnum):
     SANDBOX_SHELL_LAUNCHED = "sandbox_shell_launched"
     SANDBOX_SHELL_CANCELLED = "sandbox_shell_cancelled"
     SANDBOX_SHELL_REAPED = "sandbox_shell_reaped"
+    SANDBOX_ISOLATED_WORKSPACE_ENTER = "sandbox_isolated_workspace_enter"
+    SANDBOX_ISOLATED_WORKSPACE_EXIT = "sandbox_isolated_workspace_exit"
+    SANDBOX_ISOLATED_WORKSPACE_TOOL_CALL = "sandbox_isolated_workspace_tool_call"
+    SANDBOX_ISOLATED_WORKSPACE_EVICTED = "sandbox_isolated_workspace_evicted"
+    SANDBOX_ISOLATED_WORKSPACE_GC_ORPHAN = "sandbox_isolated_workspace_gc_orphan"
 
     # hook synthetic
     HOOK_INJECTED_FAILURE = "hook_injected_failure"

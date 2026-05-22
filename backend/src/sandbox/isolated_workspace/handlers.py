@@ -1,0 +1,122 @@
+"""RPC handlers for ``api.isolated_workspace.{enter, exit, status}``.
+
+This top-level handler manages lifecycle: it does NOT participate in R3 import
+discipline (the bounded module is :mod:`.ops_handlers`). Singleton and
+arg validation live in :mod:`.manager` so that the bounded ops module can
+reuse them without pulling in ``request_context``'s OCC imports.
+
+Manager bootstrap: the daemon doesn't ship with a singleton layer_stack_root
+at startup (each handler call brings its own), so the manager is constructed
+lazily on the first ``enter()`` call using ``args["layer_stack_root"]``. The
+construction also runs ``initialize() + startup_gc()`` exactly once. After
+that, subsequent calls reuse the singleton via ``require_manager()``.
+"""
+
+from __future__ import annotations
+
+import asyncio
+from pathlib import Path
+from typing import Any
+
+from sandbox.daemon import workspace_server
+from sandbox.execution.scratch import command_exec_scratch_root
+from sandbox.isolated_workspace.manager import (
+    IsolatedWorkspaceError,
+    IsolatedWorkspaceManager,
+    require_arg,
+    require_manager,
+    set_manager,
+)
+
+
+_bootstrap_lock = asyncio.Lock()
+
+
+class _LayerStackAdapter:
+    """Adapter from ``workspace_server`` to the manager's ``LayerStackPort``."""
+
+    @staticmethod
+    def prepare_workspace_snapshot(
+        layer_stack_root: str, *, owner_request_id: str, materialize: bool
+    ) -> Any:
+        return workspace_server.prepare_workspace_snapshot(
+            layer_stack_root,
+            owner_request_id=owner_request_id,
+            materialize=materialize,
+        )
+
+    @staticmethod
+    def release_workspace_snapshot(layer_stack_root: str, *, lease_id: str) -> bool:
+        return workspace_server.release_workspace_snapshot(
+            layer_stack_root, lease_id=lease_id,
+        )
+
+
+async def _ensure_manager(args: dict[str, Any]) -> IsolatedWorkspaceManager:
+    try:
+        return require_manager()
+    except IsolatedWorkspaceError:
+        pass
+    async with _bootstrap_lock:
+        try:
+            return require_manager()  # racing caller may have constructed it
+        except IsolatedWorkspaceError:
+            pass
+        layer_stack_root = require_arg(args, "layer_stack_root")
+        scratch = command_exec_scratch_root(Path(layer_stack_root))
+        manager = IsolatedWorkspaceManager(
+            scratch_root=scratch,
+            layer_stack_root=layer_stack_root,
+            layer_stack=_LayerStackAdapter(),  # type: ignore[arg-type]
+        )
+        set_manager(manager)
+        await manager.initialize()
+        return manager
+
+
+def _error(exc: IsolatedWorkspaceError) -> dict[str, Any]:
+    return {
+        "success": False,
+        "error": {"kind": exc.kind, "message": str(exc), "details": exc.details},
+    }
+
+
+async def enter(args: dict[str, Any]) -> dict[str, Any]:
+    try:
+        manager = await _ensure_manager(args)
+        handle = await manager.enter(require_arg(args, "agent_id"))
+    except IsolatedWorkspaceError as exc:
+        return _error(exc)
+    return {
+        "success": True,
+        "manifest_version": handle.manifest_version,
+        "manifest_root_hash": handle.manifest_root_hash,
+    }
+
+
+async def exit_(args: dict[str, Any]) -> dict[str, Any]:
+    try:
+        return await require_manager().exit(require_arg(args, "agent_id"))
+    except IsolatedWorkspaceError as exc:
+        return _error(exc)
+
+
+async def status(args: dict[str, Any]) -> dict[str, Any]:
+    try:
+        manager = require_manager()
+    except IsolatedWorkspaceError as exc:
+        return _error(exc)
+    handle = manager.get_handle(require_arg(args, "agent_id"))
+    if handle is None:
+        return {"success": True, "open": False}
+    return {
+        "success": True,
+        "open": True,
+        "manifest_version": handle.manifest_version,
+        "created_at": handle.created_at,
+        "last_activity": handle.last_activity,
+        "freezer_degraded": handle.freezer_degraded,
+    }
+
+
+__all__ = ["enter", "exit_", "status"]

@@ -189,6 +189,17 @@ def _runtime_bundle_bytes() -> bytes:
             sandbox_dir=sandbox_dir,
         )
 
+        # sandbox/isolated_workspace/ — daemon-native per-agent isolation
+        # feature. Its handlers are registered by
+        # ``sandbox.daemon.rpc.dispatcher._load_peer_bootstraps``, so the
+        # extracted daemon must be able to import the package on startup.
+        iws_dir = sandbox_dir / "isolated_workspace"
+        _add_python_tree(
+            tar,
+            iws_dir,
+            sandbox_dir=sandbox_dir,
+        )
+
         # Bundle only the in-sandbox parts of sandbox/plugin/ — install.py
         # and session.py are host-only (they import from sandbox.host and
         # sandbox.provider). The daemon imports sandbox.plugin.runtime,

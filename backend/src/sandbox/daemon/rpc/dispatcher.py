@@ -189,8 +189,18 @@ def _load_peer_bootstraps() -> None:
         write,
     )
     from sandbox.daemon.service import shell_runner, shell_job_handler
+    from sandbox.isolated_workspace import handlers as iws_handlers
+    from sandbox.isolated_workspace import ops_handlers as iws_ops_handlers
 
     bootstrap: dict[str, Handler] = {
+        "api.isolated_workspace.enter": iws_handlers.enter,
+        "api.isolated_workspace.exit": iws_handlers.exit_,
+        "api.isolated_workspace.status": iws_handlers.status,
+        "api.isolated_workspace.shell": iws_ops_handlers.shell,
+        "api.isolated_workspace.read_file": iws_ops_handlers.read_file,
+        "api.isolated_workspace.write_file": iws_ops_handlers.write_file,
+        "api.isolated_workspace.edit_file": iws_ops_handlers.edit_file,
+        "api.isolated_workspace.search_content": iws_ops_handlers.search_content,
         "api.ensure_workspace_base": workspace.ensure_workspace_base,
         "api.build_workspace_base": workspace.build_workspace_base,
         "api.prepare_workspace_snapshot": workspace.prepare_workspace_snapshot,

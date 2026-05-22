@@ -12,6 +12,8 @@ from sandbox.plugin import handler as plugin_handler
 from sandbox.daemon.handler import edit, read, search, write
 from sandbox.daemon.rpc import dispatcher as server
 from sandbox.daemon.service import shell_runner, shell_job_handler
+from sandbox.isolated_workspace import handlers as iws_handlers
+from sandbox.isolated_workspace import ops_handlers as iws_ops_handlers
 
 
 def test_daemon_op_table_routes_to_current_handler_layout() -> None:
@@ -59,6 +61,14 @@ def test_daemon_op_table_routes_to_current_handler_layout() -> None:
         ),
         "api.plugin.ensure": plugin_handler.plugin_ensure,
         "api.plugin.status": plugin_handler.plugin_status,
+        "api.isolated_workspace.enter": iws_handlers.enter,
+        "api.isolated_workspace.exit": iws_handlers.exit_,
+        "api.isolated_workspace.status": iws_handlers.status,
+        "api.isolated_workspace.shell": iws_ops_handlers.shell,
+        "api.isolated_workspace.read_file": iws_ops_handlers.read_file,
+        "api.isolated_workspace.write_file": iws_ops_handlers.write_file,
+        "api.isolated_workspace.edit_file": iws_ops_handlers.edit_file,
+        "api.isolated_workspace.search_content": iws_ops_handlers.search_content,
     }
     # Plugin-specific ops (plugin.<name>.<op>) appear when api.plugin.ensure
     # flushes pending registrations; only the static OP_TABLE entries are
