@@ -13,9 +13,18 @@ from task_center_runner.environments.sweevo_image.fixtures import (  # noqa: F40
 )
 
 _THIS_SUITE = Path(__file__).resolve().parent
+_CATEGORY_MARKER_BY_DIR = {
+    _THIS_SUITE / "sandbox": pytest.mark.sandbox_integration,
+    _THIS_SUITE / "task_center": pytest.mark.task_center_integration,
+}
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
     for item in items:
-        if Path(str(item.fspath)).resolve().is_relative_to(_THIS_SUITE):
+        path = Path(str(item.fspath)).resolve()
+        if path.is_relative_to(_THIS_SUITE):
             item.add_marker(pytest.mark.mock)
+        for suite_dir, marker in _CATEGORY_MARKER_BY_DIR.items():
+            if path.is_relative_to(suite_dir):
+                item.add_marker(marker)
+                break

@@ -73,15 +73,15 @@ re-emit the case files:
 
 ```sh
 # Captures cases 01..11 from pipeline.initial_messages_capture
-uv run pytest backend/src/task_center_runner/tests/mock/integration/task_center/test_initial_messages_capture.py
+uv run pytest backend/src/task_center_runner/tests/mock/task_center/test_initial_messages_capture.py
 .venv/bin/python scripts/regen_initial_messages_cases.py
 
 # Captures case 12 from pipeline.deferred_parent_planner_terminal_routing
-uv run pytest backend/src/task_center_runner/tests/mock/integration/task_center/test_deferred_parent_planner_terminal_routing.py
+uv run pytest backend/src/task_center_runner/tests/mock/task_center/test_deferred_parent_planner_terminal_routing.py
 
 # Captures cases 13..15 from the focused-reference scenarios
-uv run pytest 'backend/src/task_center_runner/tests/mock/integration/task_center/test_focused_scenarios.py::test_focused_reference_scenario_runs[pipeline.attempt_retry_evaluator_failure]' \
-              'backend/src/task_center_runner/tests/mock/integration/task_center/test_focused_scenarios.py::test_focused_reference_scenario_runs[pipeline.dependency_dag_serial]'
+uv run pytest 'backend/src/task_center_runner/tests/mock/task_center/test_focused_scenarios.py::test_focused_reference_scenario_runs[pipeline.attempt_retry_evaluator_failure]' \
+              'backend/src/task_center_runner/tests/mock/task_center/test_focused_scenarios.py::test_focused_reference_scenario_runs[pipeline.dependency_dag_serial]'
 .venv/bin/python scripts/regen_initial_messages_cases_gaps.py
 ```
 

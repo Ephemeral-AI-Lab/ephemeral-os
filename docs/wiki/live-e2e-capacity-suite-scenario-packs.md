@@ -3,7 +3,7 @@
 This document is the human-readable counterpart of
 `backend/src/task_center_runner/scenarios/capacity/pack_catalog.py`. Each
 `###` heading below is checked by
-`backend/src/task_center_runner/tests/mock/integration/sandbox/capacity/test_capacity_scenario_packs.py`.
+`backend/src/task_center_runner/tests/mock/sandbox/capacity/test_capacity_scenario_packs.py`.
 
 ## Pack A - TaskCenter Pipeline
 
