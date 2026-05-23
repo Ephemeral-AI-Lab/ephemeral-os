@@ -1016,6 +1016,79 @@ class IsolatedWorkspaceManager:
 # ----------------------------------------------------------------------
 
 
+_PR_SET_CHILD_SUBREAPER = 36  # linux/prctl.h
+
+
+def _read_unshare_grandchild_pid(unshare_pid: int) -> int | None:
+    """Return the outer-PID of the ns_holder.py grandchild, if discoverable.
+
+    ``unshare --fork`` execs us-the-grandchild after creating namespaces.
+    The kernel exposes the forked child in
+    ``/proc/<unshare>/task/<unshare>/children`` (one PID per token). We need
+    this so ``kill_holder`` can ``waitpid`` the grandchild after PDEATHSIG
+    kills it — the WNOHANG drain alone races against zombie transition.
+
+    Best-effort: returns None on EOSError, malformed content, or
+    CONFIG_PROC_CHILDREN-disabled kernels. The caller falls back to the
+    blind drain loop.
+    """
+    try:
+        text = Path(
+            f"/proc/{unshare_pid}/task/{unshare_pid}/children"
+        ).read_text(encoding="utf-8")
+    except OSError:
+        return None
+    tokens = text.split()
+    if not tokens:
+        return None
+    try:
+        return int(tokens[0])
+    except ValueError:
+        return None
+
+
+def _wait_pid_with_timeout(pid: int, *, timeout_s: float) -> bool:
+    """Poll ``waitpid(WNOHANG)`` until ``pid`` is reaped or ``timeout_s`` lapses.
+
+    Used by ``kill_holder`` to drain the ns_holder.py grandchild after
+    PR_SET_PDEATHSIG fires from --kill-child. The grandchild becomes a
+    zombie only after PDEATHSIG delivery + signal handling completes, which
+    races against the bare WNOHANG drain. Returns True if reaped, False if
+    the timeout expired (caller treats either as best-effort).
+    """
+    deadline = time.monotonic() + timeout_s
+    while True:
+        reaped, _status = os.waitpid(pid, os.WNOHANG)
+        if reaped == pid:
+            return True
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.02)
+
+
+def _enable_child_subreaper() -> bool:
+    """Mark the calling process as the subreaper for orphan descendants.
+
+    The iws ns_holder is a GRANDCHILD of the daemon (daemon → unshare(--fork)
+    → python3 ns_holder.py). When we kill ``unshare``, the kernel reparents
+    ns_holder.py to the nearest subreaper or init. Container init is usually
+    ``sleep infinity`` which never reaps zombies, so without subreaper we
+    accumulate one [python3] <defunct> per enter that we cannot drain. With
+    PR_SET_CHILD_SUBREAPER, orphans land on US and ``waitpid(-1, WNOHANG)``
+    in ``kill_holder`` reaps them.
+
+    Best-effort: returns False on non-Linux or when prctl is unavailable.
+    """
+    try:
+        import ctypes
+        libc = ctypes.CDLL("libc.so.6", use_errno=True)
+    except OSError:
+        return False
+    if libc.prctl(_PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) != 0:
+        return False
+    return True
+
+
 class _LinuxRuntime:
     """Default runtime — calls real Linux syscalls / utilities."""
 
@@ -1028,6 +1101,15 @@ class _LinuxRuntime:
         # until the daemon exited. Across hundreds of test entries this
         # exhausts PIDs and the daemon eventually stops accepting connections.
         self._holders: dict[int, subprocess.Popen[bytes]] = {}
+        # Map unshare PID -> ns_holder.py outer PID so we can waitpid the
+        # actual grandchild after --kill-child fires PDEATHSIG. Without an
+        # explicit waitpid the grandchild lingers as a zombie for the
+        # entire daemon lifetime.
+        self._grandchildren: dict[int, int] = {}
+        # Become subreaper so the ns_holder.py grandchild (whose unshare
+        # parent we kill) reparents to US instead of container init — that
+        # makes its zombie reapable via ``waitpid``.
+        _enable_child_subreaper()
 
     def spawn_ns_holder(self, handle: IsolatedWorkspaceHandle, *, setup_timeout_s: float) -> int:
         # os.pipe() returns (read_fd, write_fd). The holder process WRITES
@@ -1054,7 +1136,16 @@ class _LinuxRuntime:
                 # uses its OWN ``/proc``, not the child's).
                 "unshare", "--user", "--map-root-user",
                 "--net", "--pid", "--mount",
-                "--fork", "--propagation", "private",
+                "--fork",
+                # ``--kill-child`` (default SIGKILL): when this unshare
+                # process exits, the kernel fires PR_SET_PDEATHSIG on the
+                # forked child so the ns_holder.py grandchild dies too.
+                # Without this, ``kill_holder`` kills only the outer
+                # unshare process and leaves ns_holder.py running as an
+                # orphan, blocking pid-ns + mnt-ns cleanup and leaking a
+                # process per enter.
+                "--kill-child",
+                "--propagation", "private",
                 sys.executable, "-m", "sandbox.isolated_workspace.scripts.ns_holder",
                 str(r_holder), str(c_holder),
             ],
@@ -1071,6 +1162,14 @@ class _LinuxRuntime:
             os.close(r_parent)
             os.close(c_parent)
             raise
+        # Capture the ns_holder.py grandchild's outer PID via
+        # /proc/<unshare>/task/<unshare>/children. Needed so kill_holder can
+        # explicitly waitpid it after --kill-child fires PDEATHSIG — the
+        # WNOHANG drain alone races against PDEATHSIG delivery + zombie
+        # transition and reliably misses the reap window.
+        grandchild_pid = _read_unshare_grandchild_pid(proc.pid)
+        if grandchild_pid is not None:
+            self._grandchildren[proc.pid] = grandchild_pid
         # Keep r_parent open until ``signal_net_ready`` reads the ``ready``
         # ack; closing it eagerly causes the ns_holder's later write to fail
         # with EPIPE and the namespace tears down.
@@ -1264,6 +1363,25 @@ class _LinuxRuntime:
         else:
             with contextlib.suppress(ChildProcessError, OSError):
                 os.waitpid(root_pid, os.WNOHANG)
+        # ``--kill-child`` makes the ns_holder.py grandchild die when its
+        # unshare parent exits (PR_SET_PDEATHSIG=SIGKILL). PR_SET_CHILD_
+        # SUBREAPER reparents that orphan onto US (the daemon), so a
+        # ``waitpid`` here drains its zombie. The non-blocking WNOHANG drain
+        # alone races against PDEATHSIG delivery + zombie transition and
+        # reliably misses; calling waitpid on the SPECIFIC grandchild PID
+        # we captured at spawn time blocks until it's reapable. Cap the
+        # wait at 2 s so a runaway grandchild can't hang exit().
+        grandchild = self._grandchildren.pop(root_pid, None)
+        if grandchild is not None:
+            with contextlib.suppress(ChildProcessError, OSError):
+                _wait_pid_with_timeout(grandchild, timeout_s=2.0)
+        # Drain anything else: orphan grandchildren we didn't capture, or
+        # carryover from a prior daemon. Keeps the process table clean.
+        with contextlib.suppress(ChildProcessError, OSError):
+            while True:
+                reaped_pid, _status = os.waitpid(-1, os.WNOHANG)
+                if reaped_pid == 0:
+                    break
 
     def run_in_handle(
         self,
