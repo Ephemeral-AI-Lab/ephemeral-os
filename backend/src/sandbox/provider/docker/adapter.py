@@ -352,7 +352,11 @@ class DockerProviderAdapter:
             container = client.containers.get(sandbox_id)
             wrapped = command
             if cwd:
-                wrapped = f"cd {shlex.quote(cwd)} && ({command})"
+                # Use newlines around the subshell parens so multi-line
+                # commands (e.g. heredocs) keep their terminator on its own
+                # line. `(cmd)` on one line glues `)` to the last cmd line,
+                # which breaks bash `<<'EOF'` heredoc terminators.
+                wrapped = f"cd {shlex.quote(cwd)} && (\n{command}\n)"
             exit_code, output = container.exec_run(
                 cmd=["/bin/bash", "-lc", wrapped],
                 demux=True,
