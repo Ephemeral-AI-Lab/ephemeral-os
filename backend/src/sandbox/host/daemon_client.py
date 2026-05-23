@@ -551,8 +551,15 @@ def _daemon_spawn_command(
     tcp_endpoint: _DaemonTcpEndpoint | None = None,
 ) -> str:
     """Launch the bundled daemon supervisor. Idempotent: returns 0 when
-    an existing daemon's socket is bound and its PID is alive."""
-    return " ".join(
+    an existing daemon's socket is bound and its PID is alive.
+
+    Sources ``/etc/environment`` so feature-flag env vars written there by
+    the test fixture (e.g. ``EOS_ISOLATED_WORKSPACE_ENABLED=true``)
+    propagate to the spawned daemon. ``docker exec`` uses a bare ``sh -c``
+    by default which does NOT auto-source it; ``set -a`` exports every
+    sourced variable so the daemon inherits them.
+    """
+    inner = " ".join(
         shlex.quote(part)
         for part in (
             "sh",
@@ -565,6 +572,10 @@ def _daemon_spawn_command(
             _daemon_env_signature(tcp_endpoint=tcp_endpoint),
             "sandbox.daemon",
         )
+    )
+    return (
+        "if [ -r /etc/environment ]; then set -a; . /etc/environment; set +a; fi; "
+        + inner
     )
 
 

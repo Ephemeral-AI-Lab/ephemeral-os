@@ -127,6 +127,29 @@ def _vendor_pathspec(tar: tarfile.TarFile) -> None:
         )
 
 
+def _add_top_level_audit(tar: tarfile.TarFile, *, src: Path) -> None:
+    """Add the top-level ``audit/`` package to the bundle.
+
+    The daemon's `_load_peer_bootstraps` evaluates
+    ``sandbox.isolated_workspace.handlers`` at startup, which imports
+    ``audit.jsonl.append_jsonl_event`` (top-level, not ``sandbox.audit``).
+    Several existing ``sandbox/audit/*.py`` modules also ``from audit.base
+    import ...``. Bundle the top-level package so those imports resolve.
+    """
+    audit_root = src / "audit"
+    if not audit_root.exists():
+        return
+    for path in sorted(audit_root.rglob("*.py")):
+        if _is_excluded(path):
+            continue
+        rel = path.relative_to(audit_root)
+        tar.add(
+            path,
+            arcname=f"audit/{rel.as_posix()}",
+            filter=_normalize_tarinfo,
+        )
+
+
 _BUNDLE_CACHE: bytes | None = None
 
 
@@ -228,6 +251,8 @@ def _runtime_bundle_bytes() -> bytes:
 
         _add_peer_setup_scripts(tar, sandbox_dir=sandbox_dir)
         _add_runtime_scripts(tar, sandbox_dir=sandbox_dir)
+
+        _add_top_level_audit(tar, src=src)
 
         _vendor_pathspec(tar)
 
