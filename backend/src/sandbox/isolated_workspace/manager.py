@@ -1353,9 +1353,32 @@ class _LinuxRuntime:
         On any of those, walk ``cgroup.procs`` and send SIGSTOP/SIGCONT to
         each PID. Sets ``handle.freezer_degraded=True`` so the audit + status
         fields surface the fallback.
+
+        Before transitioning into the frozen state, evict any leftover
+        processes (``run_in_handle``'s background launches that outlived
+        their parent shell) back to the root cgroup. Memory pages stay
+        charged to the iws cgroup so ``memory.current`` accounting tests
+        still observe the right deltas, but the processes themselves keep
+        running between tool_calls — that matches the operator-debug
+        contract where an iws-internal HTTP server is reachable from the
+        host's bridge gateway after the launching shell call returns.
         """
         if handle.cgroup_path is None:
             return
+        procs_file = handle.cgroup_path / "cgroup.procs"
+        if freeze and procs_file.exists():
+            try:
+                pids = [
+                    int(line)
+                    for line in procs_file.read_text().splitlines()
+                    if line.strip().isdigit()
+                ]
+            except OSError:
+                pids = []
+            root_procs = CGROUP_ROOT / "cgroup.procs"
+            for pid in pids:
+                with contextlib.suppress(OSError):
+                    root_procs.write_text(f"{pid}\n")
         freeze_file = handle.cgroup_path / "cgroup.freeze"
         expected = "1" if freeze else "0"
         if freeze_file.exists():
@@ -1369,7 +1392,6 @@ class _LinuxRuntime:
             handle.freezer_degraded = True
         else:
             handle.freezer_degraded = True
-        procs_file = handle.cgroup_path / "cgroup.procs"
         if not procs_file.exists():
             return
         sig = signal.SIGSTOP if freeze else signal.SIGCONT
