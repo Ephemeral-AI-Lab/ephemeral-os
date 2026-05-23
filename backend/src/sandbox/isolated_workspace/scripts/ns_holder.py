@@ -45,10 +45,36 @@ def _purge_ipv6_default_routes() -> None:
     )
 
 
+def _rbind_proc_into_new_mntns() -> None:
+    """Replace the inherited /proc with a recursive bind of the parent's /proc.
+
+    Docker Desktop's LinuxKit kernel rejects ``mount -t proc proc /proc`` from
+    inside a non-init user namespace (EPERM, even with --map-root-user, full
+    CapEff inside the new user_ns, and every util-linux variant). The fresh
+    /proc is what ``unshare --mount-proc`` would have produced; without it the
+    spawning daemon couldn't expose a per-pid-ns /proc to setns helpers.
+    rbind is allowed in the user ns and gives the holder a workable /proc
+    view — the only consumers inside the new mntns are setns-exec'd shells
+    that read ``/proc/self`` (uid/cwd/fd), and those work fine on a bound
+    /proc since `/proc/self` follows the reading thread.
+
+    Best-effort: failure does not abort the holder. Without the bind, the
+    holder still pauses correctly and the parent can still read ns symlinks
+    from ITS OWN /proc (which is what setns parents use).
+    """
+    subprocess.run(
+        ["mount", "--rbind", "/proc", "/proc"],
+        check=False,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+
 def main(argv: list[str]) -> int:
     readiness_fd = int(argv[1])
     control_fd = int(argv[2])
 
+    _rbind_proc_into_new_mntns()
     os.write(readiness_fd, b"ns-up\n")
 
     # Test-only failure injection: exit before the parent sees ``ready``.
