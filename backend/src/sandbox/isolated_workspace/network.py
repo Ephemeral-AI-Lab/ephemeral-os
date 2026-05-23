@@ -224,7 +224,17 @@ class IsolatedNetwork:
 
 
 def _ip(*args: str) -> None:
-    subprocess.run(["ip", *args], check=True, capture_output=True, text=True)
+    result = subprocess.run(
+        ["ip", *args], capture_output=True, text=True, check=False,
+    )
+    if result.returncode != 0:
+        # Surface stderr in the exception so debugging cascading network
+        # failures doesn't require re-running with a custom logger. The
+        # default ``check=True`` swallows it and only shows the cmd + rc.
+        raise RuntimeError(
+            f"ip {' '.join(args)} failed rc={result.returncode}: "
+            f"stderr={result.stderr.strip()!r}"
+        )
 
 
 def _ip_quiet(*args: str) -> None:

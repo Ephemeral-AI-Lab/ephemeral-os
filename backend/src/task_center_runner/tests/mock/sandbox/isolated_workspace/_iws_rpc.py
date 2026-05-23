@@ -19,7 +19,7 @@ from __future__ import annotations
 import base64
 from typing import Any
 
-from sandbox.host.daemon_client import call_daemon_api
+from sandbox.host.daemon_client import _DaemonDispatchError, call_daemon_api
 
 
 DEFAULT_TIMEOUT_S = 30
@@ -31,6 +31,37 @@ DEFAULT_TIMEOUT_S = 30
 IWS_LAYER_STACK_ROOT = "/tmp/eos-sandbox-runtime/layer-stack"
 
 
+async def _call_lifecycle(
+    sandbox_id: str,
+    op: str,
+    args: dict[str, Any],
+    *,
+    timeout: int,
+) -> dict[str, Any]:
+    """Call a lifecycle op and surface domain errors as response dicts.
+
+    The module's docstring promises: "lifecycle errors are surfaced inside
+    the response envelope so test assertions stay explicit." The underlying
+    ``call_daemon_api`` raises ``_DaemonDispatchError`` for any response
+    with an ``error`` key — both system-level dispatch errors AND domain
+    errors the iws handlers return as ``{"success": False, "error": ...}``.
+    Tests in the failure_modes tier assert on the dict form (e.g. checking
+    ``resp.get("error", {}).get("kind")``); catch the exception here and
+    rebuild the envelope so they see the dict path.
+    """
+    try:
+        return await call_daemon_api(sandbox_id, op, args, timeout=timeout)
+    except _DaemonDispatchError as exc:
+        return {
+            "success": False,
+            "error": {
+                "kind": exc.kind,
+                "message": exc.message,
+                "details": exc.details or {},
+            },
+        }
+
+
 async def enter(
     sandbox_id: str,
     agent_id: str,
@@ -38,7 +69,7 @@ async def enter(
     layer_stack_root: str,
     timeout: int = DEFAULT_TIMEOUT_S,
 ) -> dict[str, Any]:
-    return await call_daemon_api(
+    return await _call_lifecycle(
         sandbox_id,
         "api.isolated_workspace.enter",
         {"agent_id": agent_id, "layer_stack_root": layer_stack_root},

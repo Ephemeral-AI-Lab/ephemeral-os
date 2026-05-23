@@ -338,12 +338,39 @@ async def iws_clean_sandbox(iws_sandbox: dict[str, Any]) -> dict[str, Any]:
 
     Idempotent. Falls back to a single ``list_open`` probe if ``test_reset``
     is unavailable (older daemon bundles), and finally to a per-agent loop.
+
+    Also purges any test-only injection env vars that a prior test may have
+    leaked into ``/etc/environment`` (if e.g. its ``set_daemon_env`` call
+    raised before the ``try/finally`` cleanup could run). Without this,
+    a single failing failure_modes test poisons every subsequent test in
+    the session with the same setup_failed inject. Cheap idempotent grep.
     """
+    from sandbox.api import raw_exec
     from . import _iws_rpc
 
     sandbox_id = str(iws_sandbox.get("sandbox_id") or iws_sandbox.get("id") or "")
     if not sandbox_id:
         return iws_sandbox
+    # Purge any leaked test-injection vars. If grep finds none, this is a
+    # ~1ms no-op. If grep finds something, the sed strips it and we force a
+    # daemon respawn so the next RPC sees a clean env.
+    purge = await raw_exec(
+        sandbox_id,
+        "grep -qE '^(EOS_ISOLATED_WORKSPACE_TEST_FAIL_AT|"
+        "EOS_ISOLATED_WORKSPACE_TEST_HANG_AT|"
+        "EOS_ISOLATED_WORKSPACE_TEST_PHASE_DELAY|"
+        "EOS_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH)=' /etc/environment "
+        "&& { sed -i '/^EOS_ISOLATED_WORKSPACE_TEST_FAIL_AT=/d;"
+        "/^EOS_ISOLATED_WORKSPACE_TEST_HANG_AT=/d;"
+        "/^EOS_ISOLATED_WORKSPACE_TEST_PHASE_DELAY=/d;"
+        "/^EOS_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH=/d' /etc/environment; "
+        "pkill -9 -f '^.*python.*-m sandbox\\.daemon' || true; echo PURGED; }"
+        " || echo OK",
+        cwd="/",
+        timeout=10,
+    )
+    # Stdout includes PURGED only when we had to clean — fine either way.
+    _ = purge
     try:
         response = await _iws_rpc.test_reset(sandbox_id, timeout=15)
         if response.get("success"):

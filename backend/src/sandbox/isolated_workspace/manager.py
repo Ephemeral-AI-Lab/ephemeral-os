@@ -25,6 +25,7 @@ implementation; tests substitute fakes through the same hook seam.
 from __future__ import annotations
 
 import asyncio
+import base64
 import contextlib
 import ipaddress
 import json
@@ -1392,10 +1393,19 @@ class _LinuxRuntime:
         timeout_s: float | None = None,
     ) -> tuple[int, bytes, bytes]:
         ns_fds = {k: handle.ns_fds[k] for k in ("user", "mnt", "pid", "net") if k in handle.ns_fds}
-        payload = json.dumps({"ns_fds": ns_fds, "argv": argv}).encode("utf-8")
+        # The setns_exec helper expects a single JSON object on stdin with
+        # the raw stdin (if any) base64-encoded inside as ``stdin_b64``. The
+        # previous implementation sent ``<json>\\n<raw>`` and crashed the
+        # helper with JSONDecodeError on the trailing raw bytes whenever
+        # stdin was non-empty (e.g. the 5 MB body in
+        # ``test_argv_e2big_via_in_ns_write``).
+        payload_dict: dict[str, Any] = {"ns_fds": ns_fds, "argv": argv}
+        if stdin:
+            payload_dict["stdin_b64"] = base64.b64encode(stdin).decode("ascii")
+        payload = json.dumps(payload_dict).encode("utf-8")
         proc = subprocess.run(
             [sys.executable, "-m", "sandbox.isolated_workspace.scripts.setns_exec"],
-            input=payload + b"\n" + (stdin or b""),
+            input=payload,
             capture_output=True,
             timeout=timeout_s,
             pass_fds=tuple(ns_fds.values()),

@@ -169,12 +169,32 @@ async def daemon_kill_and_respawn(
 
     # The first daemon RPC after kill respawns the process via launch_daemon.sh.
     # Use ``enter`` so ``_ensure_manager`` fires (status/exit don't bootstrap).
-    response = await call_daemon_api(
-        sandbox_id,
-        "api.isolated_workspace.enter",
-        {"agent_id": bootstrap_agent_id, "layer_stack_root": layer_stack_root},
-        timeout=int(timeout_s),
-    )
+    # The bootstrap enter is allowed to "fail" — tests that set
+    # ``EOS_ISOLATED_WORKSPACE_TEST_FAIL_AT=<phase>`` before respawning expect
+    # subsequent enter() calls to fail at that phase, including this probe.
+    # The manager IS bootstrapped (initialize/startup_gc run before _wire_handle)
+    # regardless of whether _wire_handle errors out — that's what we need.
+    from sandbox.host.daemon_client import _DaemonDispatchError
+
+    try:
+        response = await call_daemon_api(
+            sandbox_id,
+            "api.isolated_workspace.enter",
+            {"agent_id": bootstrap_agent_id, "layer_stack_root": layer_stack_root},
+            timeout=int(timeout_s),
+        )
+    except _DaemonDispatchError as exc:
+        # Any domain error from the bootstrap enter is acceptable — the
+        # manager IS bootstrapped (initialize/startup_gc run before
+        # _wire_handle), which is all daemon_kill_and_respawn needs. Tests
+        # that set inject env vars (TEST_FAIL_AT, TEST_HOLDER_CRASH, …)
+        # before respawning expect the FIRST enter to fail; the actual test
+        # then runs its own enter to observe the inject behavior.
+        # ``internal_error`` is included because the holder-crash inject
+        # surfaces as ``ip link set ... netns <pid>: No such process``
+        # (the unshare exits early when ns_holder.py exits SystemExit(7)),
+        # which the daemon dispatcher reports as internal_error.
+        response = {"success": False, "error": {"kind": exc.kind, "details": exc.details or {}}}
     # Best-effort cleanup of the bootstrap handle.
     if response.get("success"):
         await call_daemon_api(
