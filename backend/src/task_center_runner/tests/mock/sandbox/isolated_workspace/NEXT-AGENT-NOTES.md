@@ -21,6 +21,12 @@ pass on any OS.
 | 9 — performance | 7/7 PASS | green | ~115 s | capability probe trusts docker provider |
 
 Combined tier 4-9 in a single pytest invocation: **47 passed in 12 m 35 s**.
+Full live suite (tiers 1-7 + 9, soak deselected) in a single pytest
+invocation: **89 passed in 16 m 26 s**. The combined-run isolation
+bug flagged in the prior session is closed — the launch_daemon.sh
+zombie-detection fix and the conftest UPPERDIR_BYTES restoration
+together remove the failure modes that previously surfaced only when
+all tiers ran end-to-end.
 
 ## Commits this session (newest first)
 
@@ -176,13 +182,11 @@ the prior implementation never had to face, not a regression.
    the 100-cycle create/destroy loop's reap timing — re-validate
    before declaring soak green.
 
-4. **The full combined `pytest -m "not live_e2e_soak"` run** wasn't
-   exercised end-to-end this session (tier 4-9 was run in one
-   invocation; tier 1-3 separately). The known prior issue around
-   zombie ns_holder accumulation in a SINGLE-process pytest run is
-   likely closed by the launch_daemon.sh zombie-detection fix from
-   the previous session, but the eight-tier consolidated run hasn't
-   been validated yet.
+4. **R8 freezer audit phase semantics** — the freeze/unfreeze ms
+   timings still emit but represent the cgroup write + read-back
+   overhead, not the wall time pauses the prior design assumed. If
+   the latency budgets need to distinguish "real freeze cost" from
+   "evict-then-flag overhead," that's a separate measurement pass.
 
 ## Cross-references
 
