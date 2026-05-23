@@ -439,12 +439,22 @@ class IsolatedWorkspaceManager:
         veth_discover_ms = (self._clock() - t0) * 1000.0
         veth_orphans: list[str] = []
         for line in result.stdout.splitlines():
+            # ``ip -o link show`` formats lines as
+            #     "<idx>: <ifname>[@<peer>]: <flags> ..."
+            # — the trailing colon sticks to the ifname token. The earlier
+            # ``":" not in token`` filter skipped every veth (each one has
+            # ``@if<n>:``), so no orphan veth was ever discovered. Strip
+            # the trailing colon then drop the ``@<peer>`` suffix so the
+            # remaining string is exactly what ``ip link del`` expects.
             for token in line.split():
-                if token.startswith(HANDLE_PREFIX) and ":" not in token:
-                    name = token.rstrip("@:")
-                    short = name[len(HANDLE_PREFIX):].rstrip("hn")
+                cleaned = token.rstrip(":").split("@", 1)[0]
+                if cleaned.startswith(HANDLE_PREFIX):
+                    short = cleaned[len(HANDLE_PREFIX):].rstrip("hn")
                     if not any(hid.startswith(short) for hid in live_set):
-                        veth_orphans.append(name)
+                        veth_orphans.append(cleaned)
+                    # The ifname is always the second whitespace token on
+                    # the line; no need to keep scanning flag tokens.
+                    break
         veth_share_ms = (
             veth_discover_ms / len(veth_orphans) if veth_orphans else 0.0
         )

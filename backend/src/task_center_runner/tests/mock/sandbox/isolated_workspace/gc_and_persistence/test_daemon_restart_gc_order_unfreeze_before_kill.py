@@ -55,9 +55,9 @@ async def test_daemon_restart_gc_order_unfreeze_before_kill(
     )
 
     # Tee the daemon's stderr for the lifetime of the restart so we can
-    # inspect the log ordering. ``launch_daemon.sh`` redirects to
-    # /tmp/sandbox_daemon.log on this image.
-    daemon_log_path = "/tmp/sandbox_daemon.log"
+    # inspect the log ordering. ``launch_daemon.sh`` redirects the daemon's
+    # stdout+stderr to ``_DAEMON_LOG`` which lives under the bundle dir.
+    daemon_log_path = "/tmp/eos-sandbox-runtime/runtime.log"
     # Truncate the existing log so only the post-restart lines are scanned.
     await raw_exec(sandbox_id, f": > {daemon_log_path}", cwd="/", timeout=10)
 
