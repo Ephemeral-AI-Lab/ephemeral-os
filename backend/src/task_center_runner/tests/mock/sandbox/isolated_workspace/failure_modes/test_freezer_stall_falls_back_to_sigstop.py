@@ -38,11 +38,17 @@ async def test_freezer_stall_falls_back_to_sigstop(iws_clean_sandbox) -> None:
     )
     assert enter.get("success") is True, enter
     try:
-        # Take away write permission on the freeze knob across all iws cgroups.
+        # Shadow cgroup.freeze with /dev/null so writes silently succeed
+        # but read-back returns "" (≠ "1"). chmod 000 doesn't work for the
+        # daemon: it runs as root with CAP_DAC_OVERRIDE which bypasses DAC
+        # checks, so the chmod is invisible and the freezer actually does
+        # transition. Bind-mounting /dev/null over the file is the
+        # production-shaped scenario the R11 read-back check is designed
+        # to detect.
         await raw_exec(
             sandbox_id,
             "for f in /sys/fs/cgroup/eos-iws-*/cgroup.freeze; do "
-            "chmod 000 \"$f\" 2>/dev/null || true; done",
+            "mount --bind /dev/null \"$f\" 2>/dev/null || true; done",
             cwd="/", timeout=10,
         )
 
@@ -55,11 +61,14 @@ async def test_freezer_stall_falls_back_to_sigstop(iws_clean_sandbox) -> None:
             "R11: freezer_degraded must be set after SIGSTOP fallback", status,
         )
     finally:
-        # Restore permissions so cleanup paths can rmdir the cgroup.
+        # Unmount the bind so cleanup paths can rmdir the cgroup. Iterate
+        # umount in case mount --bind layered multiple times across a
+        # retried test.
         await raw_exec(
             sandbox_id,
             "for f in /sys/fs/cgroup/eos-iws-*/cgroup.freeze; do "
-            "chmod 644 \"$f\" 2>/dev/null || true; done",
+            "while mountpoint -q \"$f\" 2>/dev/null; do "
+            "umount \"$f\" 2>/dev/null || break; done; done",
             cwd="/", timeout=10,
         )
         await _iws_rpc.exit_(sandbox_id, "agent-A")

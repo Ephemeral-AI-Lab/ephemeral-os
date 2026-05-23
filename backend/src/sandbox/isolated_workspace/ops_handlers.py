@@ -17,6 +17,7 @@ import here, which fails CI by tripping the import-fence test.
 from __future__ import annotations
 
 import base64
+import os
 import sys
 from typing import Any
 
@@ -24,6 +25,18 @@ from sandbox.isolated_workspace.manager import (
     IsolatedWorkspaceError,
     require_arg,
     require_manager,
+)
+
+# Absolute path to the in-ns write helper. We invoke by file path (not
+# ``python -m sandbox.isolated_workspace.scripts.in_ns_write``) because after
+# setns into the iws's mount namespace, the bundle's import path is no
+# longer reliably on sys.path: ``python -m`` then fails with
+# ``ModuleNotFoundError: No module named 'sandbox'``. Resolving the script
+# via ``__file__`` keeps the helper bundle-local and namespace-portable.
+_IN_NS_WRITE_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "scripts",
+    "in_ns_write.py",
 )
 
 
@@ -62,7 +75,7 @@ async def write_file(args: dict[str, Any]) -> dict[str, Any]:
     content = raw.encode("utf-8") if isinstance(raw, str) else bytes(raw)
     return await _run(
         agent_id,
-        [sys.executable, "-m", "sandbox.isolated_workspace.scripts.in_ns_write", path],
+        [sys.executable, _IN_NS_WRITE_PATH, path],
         stdin=base64.b64encode(content),
     )
 

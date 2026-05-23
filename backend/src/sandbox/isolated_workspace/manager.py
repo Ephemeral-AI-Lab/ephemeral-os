@@ -179,11 +179,11 @@ class IsolatedWorkspaceHandle:
     control_fd: int = -1
     veth: VethPair | None = None
     cgroup_path: Path | None = None
-    # Set to True when R11's SIGSTOP fallback fires because cgroup.freeze
-    # didn't settle inside the 2 s deadline. Surfaced in audit + status.
-    # PR 0 wires the path but R11's fallback itself is deferred — the field
-    # stays False on healthy hosts and is forward-compatible with the
-    # eventual implementation.
+    # Set to True when R11's SIGSTOP fallback fires because cgroup.freeze is
+    # missing, write_text raises EACCES/EPERM, or the read-back doesn't
+    # match what we wrote (file shadowed, kernel ignored the write).
+    # Surfaced in audit + status. Stays False on healthy hosts where the
+    # cgroup v2 freezer accepts writes normally.
     freezer_degraded: bool = False
     created_at: float = 0.0
     last_activity: float = 0.0
@@ -706,9 +706,24 @@ class IsolatedWorkspaceManager:
             handle.ns_fds.update(self._runtime.open_ns_fds(handle.root_pid))
         with t.measure("install_veth"):
             _maybe_inject_failure("install_veth")
-            handle.veth = self._network.install_veth(
-                handle_id=handle.handle_id, root_pid=handle.root_pid,
-            )
+            try:
+                handle.veth = self._network.install_veth(
+                    handle_id=handle.handle_id, root_pid=handle.root_pid,
+                )
+            except RuntimeError as exc:
+                # When the ns_holder dies between spawn_ns_holder and
+                # install_veth (e.g., HOLDER_CRASH inject, real-world race),
+                # ``ip link set ... netns <root_pid>`` fails with
+                # "RTNETLINK answers: No such process". Translate to
+                # setup_failed so the dispatcher surfaces a coherent error
+                # instead of the dispatcher's catch-all ``internal_error``.
+                if "No such process" in str(exc):
+                    raise IsolatedWorkspaceError(
+                        "setup_failed",
+                        f"ns_holder died before install_veth completed: {exc}",
+                        failed_step="install_veth",
+                    ) from exc
+                raise
         with t.measure("mount_overlay"):
             _maybe_inject_failure("overlay_mount")
             await self._runtime.mount_overlay(handle, layer_paths=layer_paths)
@@ -1304,20 +1319,32 @@ class _LinuxRuntime:
     def freeze(self, handle: IsolatedWorkspaceHandle, *, freeze: bool) -> None:
         """Freeze/thaw via cgroup.freeze with R11 SIGSTOP fallback.
 
-        If the cgroup.freeze write fails (EPERM/EACCES from a missing or
-        permissions-stripped controller), walk ``cgroup.procs`` and send
-        SIGSTOP/SIGCONT to each PID. Sets ``handle.freezer_degraded=True``
-        so the audit + status fields surface the fallback.
+        Three failure modes are detected:
+          * ``cgroup.freeze`` missing entirely (older kernel, no v2 freezer).
+          * ``write_text`` raises EPERM/EACCES (caller dropped caps).
+          * write succeeds but read-back doesn't match — the file is shadowed
+            (bind-mount over the cgroup file) or the kernel silently ignored
+            the request. Without this check, root processes with
+            ``CAP_DAC_OVERRIDE`` would never trigger fallback even when the
+            freezer is effectively broken.
+
+        On any of those, walk ``cgroup.procs`` and send SIGSTOP/SIGCONT to
+        each PID. Sets ``handle.freezer_degraded=True`` so the audit + status
+        fields surface the fallback.
         """
         if handle.cgroup_path is None:
             return
         freeze_file = handle.cgroup_path / "cgroup.freeze"
+        expected = "1" if freeze else "0"
         if freeze_file.exists():
             try:
-                freeze_file.write_text("1\n" if freeze else "0\n")
-                return
+                freeze_file.write_text(f"{expected}\n")
+                actual = freeze_file.read_text().strip()
+                if actual == expected:
+                    return
             except OSError:
-                handle.freezer_degraded = True
+                pass
+            handle.freezer_degraded = True
         else:
             handle.freezer_degraded = True
         procs_file = handle.cgroup_path / "cgroup.procs"

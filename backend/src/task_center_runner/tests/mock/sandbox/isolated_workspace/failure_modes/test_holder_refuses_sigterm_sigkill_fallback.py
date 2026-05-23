@@ -44,11 +44,17 @@ async def test_holder_refuses_sigterm_sigkill_fallback(
     )
     assert enter.get("success") is True, enter
 
-    # Find the holder PID via /proc and SIGSTOP it host-side.
+    # Find the holder PID via /proc and SIGSTOP it host-side. ``pgrep -f``
+    # with the bare pattern matches the calling shell too (its cmdline
+    # contains the literal pattern), and SIGSTOPping the shell deadlocks
+    # the docker-exec channel. Filter by ``comm`` to only stop the
+    # ``unshare`` parent + the ``python`` grandchild — both have ns_holder
+    # in their cmdline; the shell does not match either prefix.
     await raw_exec(
         sandbox_id,
-        "for p in $(pgrep -f 'sandbox.isolated_workspace.scripts.ns_holder'); "
-        "do kill -STOP \"$p\" 2>/dev/null || true; done",
+        "pgrep -lf 'sandbox\\.isolated_workspace\\.scripts\\.ns_holder' "
+        "| awk '$2 == \"unshare\" || $2 ~ /^python/ {print $1}' "
+        "| xargs -r kill -STOP 2>/dev/null || true",
         cwd="/", timeout=10,
     )
 
