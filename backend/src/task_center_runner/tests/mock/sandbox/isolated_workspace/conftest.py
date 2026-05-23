@@ -52,11 +52,26 @@ def iws_capability_probe() -> dict[str, bool]:
     """Empirical detection of kernel-touching surfaces.
 
     Probes run once at session setup. Tier 9 tests inspect this fixture to
-    decide skip-vs-fail per the reference-CI policy. The Linux-vs-other
-    branch is intentionally absent: the daemon only runs inside the Linux
-    sweevo container, and every probe degrades cleanly when its kernel
-    surface is missing.
+    decide skip-vs-fail per the reference-CI policy.
+
+    When the live tests run via the docker provider, the actual kernel
+    work happens inside the sweevo container — a Linux VM/cgroup-v2 host
+    that always has the overlay, freezer, and unshare surfaces present
+    (the daemon refuses to come up without them). Probing the pytest host
+    (often macOS) for those surfaces is the wrong observable; report
+    True under the docker provider so Tier 9 tests can actually run
+    against the daemon's container-side measurements.
     """
+    import os as _os
+
+    if _os.environ.get("EOS_SANDBOX_PROVIDER", "").lower() == "docker":
+        return {
+            "has_mount_overlay": True,
+            "has_cgroup_freezer": True,
+            "has_unshare_netns": True,
+            "has_docker": shutil.which("docker") is not None,
+        }
+
     from . import _iws_fixtures
 
     return {
