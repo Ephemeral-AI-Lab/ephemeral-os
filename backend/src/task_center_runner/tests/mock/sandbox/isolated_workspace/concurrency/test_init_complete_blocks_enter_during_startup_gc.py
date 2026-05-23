@@ -42,7 +42,7 @@ async def test_init_complete_blocks_enter_during_startup_gc(
 
     # First, create a handle to leave persisted state for startup_gc to reap.
     seeded = await _iws_rpc.enter(
-        sandbox_id, "agent-A", layer_stack_root=_REPO_DIR,
+        sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     assert seeded.get("success") is True, seeded
 
@@ -50,13 +50,13 @@ async def test_init_complete_blocks_enter_during_startup_gc(
     # gc_orphan events for the seeded handle. The bootstrap enter issued by
     # daemon_kill_and_respawn proves the wait-for-init_complete behaviour
     # because that enter MUST queue behind startup_gc.
-    await daemon_kill_and_respawn(sandbox_id, layer_stack_root=_REPO_DIR)
+    await daemon_kill_and_respawn(sandbox_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
 
     # Now fire a fresh enter and observe ordering in the audit log: any
     # gc_orphan events from the post-respawn GC must precede this enter's
     # audit entry.
     fresh = await _iws_rpc.enter(
-        sandbox_id, "agent-B", layer_stack_root=_REPO_DIR,
+        sandbox_id, "agent-B", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     assert fresh.get("success") is True, fresh
     try:

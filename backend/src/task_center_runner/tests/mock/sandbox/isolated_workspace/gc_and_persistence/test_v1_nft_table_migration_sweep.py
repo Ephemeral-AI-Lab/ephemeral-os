@@ -46,10 +46,10 @@ async def test_v1_nft_table_migration_sweep(iws_clean_sandbox) -> None:
 
     # SIGKILL + respawn so initialize() (and therefore the migration sweep)
     # fires deterministically before the next enter.
-    await daemon_kill_and_respawn(sandbox_id, layer_stack_root=_REPO_DIR)
+    await daemon_kill_and_respawn(sandbox_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
 
     # Bootstrap enter so initialize ran for sure.
-    await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_REPO_DIR)
+    await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
     try:
         listing = await raw_exec(
             sandbox_id, "nft list tables 2>/dev/null || true",

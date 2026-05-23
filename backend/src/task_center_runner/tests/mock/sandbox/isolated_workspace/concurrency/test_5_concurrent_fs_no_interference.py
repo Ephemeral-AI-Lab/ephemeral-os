@@ -37,7 +37,7 @@ async def test_5_concurrent_fs_no_interference(iws_clean_sandbox) -> None:
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
     enters = await asyncio.gather(
         *(
-            _iws_rpc.enter(sandbox_id, agent, layer_stack_root=_REPO_DIR)
+            _iws_rpc.enter(sandbox_id, agent, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
             for agent in _AGENTS
         )
     )

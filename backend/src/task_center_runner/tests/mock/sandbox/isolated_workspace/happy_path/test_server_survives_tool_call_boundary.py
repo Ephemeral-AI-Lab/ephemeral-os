@@ -37,7 +37,7 @@ async def test_server_survives_tool_call_boundary(
 ) -> None:
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
     agent_id = "agent-A"
-    await _iws_rpc.enter(sandbox_id, agent_id, layer_stack_root=_REPO_DIR)
+    await _iws_rpc.enter(sandbox_id, agent_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
     try:
         # Tool call A: launch the server in the background.
         launch = await _iws_rpc.shell(

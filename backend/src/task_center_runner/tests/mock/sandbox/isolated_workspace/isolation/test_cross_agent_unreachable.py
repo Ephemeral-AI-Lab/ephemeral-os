@@ -40,9 +40,9 @@ pytestmark = pytest.mark.asyncio
 async def test_cross_agent_unreachable(iws_clean_sandbox, iws_audit_jsonl) -> None:
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
 
-    a_enter = await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_REPO_DIR)
+    a_enter = await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
     assert a_enter.get("success") is True, a_enter
-    b_enter = await _iws_rpc.enter(sandbox_id, "agent-B", layer_stack_root=_REPO_DIR)
+    b_enter = await _iws_rpc.enter(sandbox_id, "agent-B", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
     assert b_enter.get("success") is True, b_enter
 
     try:

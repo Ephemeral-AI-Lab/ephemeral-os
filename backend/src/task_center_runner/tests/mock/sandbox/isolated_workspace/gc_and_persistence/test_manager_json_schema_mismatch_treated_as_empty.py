@@ -43,7 +43,7 @@ async def test_manager_json_schema_mismatch_treated_as_empty(
 ) -> None:
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
     # Bootstrap the daemon so the scratch_root exists.
-    await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_REPO_DIR)
+    await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
     await _iws_rpc.exit_(sandbox_id, "agent-A")
 
     scratch = await iws_scratch_root(sandbox_id)
@@ -52,13 +52,13 @@ async def test_manager_json_schema_mismatch_treated_as_empty(
     bogus = json.dumps({"schema_version": 999, "handles": [{"handle_id": "ghost"}]})
     await write_manager_json(sandbox_id, scratch_root=scratch, payload=bogus)
 
-    await daemon_kill_and_respawn(sandbox_id, layer_stack_root=_REPO_DIR)
+    await daemon_kill_and_respawn(sandbox_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
 
     # After restart + GC, the persisted file is empty (or rewritten with
     # schema_version=1 + empty handles). Either is acceptable per the
     # plan — what matters is that no ghost handle survives.
     enter_resp = await _iws_rpc.enter(
-        sandbox_id, "agent-B", layer_stack_root=_REPO_DIR,
+        sandbox_id, "agent-B", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     assert enter_resp.get("success") is True, enter_resp
     try:

@@ -24,6 +24,12 @@ from sandbox.host.daemon_client import call_daemon_api
 
 DEFAULT_TIMEOUT_S = 30
 
+# Per-iws layer-stack metadata path. The iws workspace_root is fixed
+# (/testbed via DEFAULT_WORKSPACE_ROOT) but the binding metadata must live
+# at a DIFFERENT path per the workspace-binding constraint (layer_stack_root
+# cannot equal or be inside workspace_root). Tests use this constant.
+IWS_LAYER_STACK_ROOT = "/tmp/eos-sandbox-runtime/layer-stack"
+
 
 async def enter(
     sandbox_id: str,

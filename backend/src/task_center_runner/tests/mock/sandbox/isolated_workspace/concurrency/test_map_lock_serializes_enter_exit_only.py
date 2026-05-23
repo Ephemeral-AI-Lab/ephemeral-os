@@ -38,8 +38,8 @@ async def test_map_lock_serializes_enter_exit_only(
 ) -> None:
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
     a, b = await asyncio.gather(
-        _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_REPO_DIR),
-        _iws_rpc.enter(sandbox_id, "agent-B", layer_stack_root=_REPO_DIR),
+        _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT),
+        _iws_rpc.enter(sandbox_id, "agent-B", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT),
     )
     assert a.get("success") and b.get("success"), (a, b)
     try:

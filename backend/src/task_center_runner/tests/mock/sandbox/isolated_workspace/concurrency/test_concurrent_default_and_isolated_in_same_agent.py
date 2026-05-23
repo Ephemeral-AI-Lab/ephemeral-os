@@ -38,7 +38,7 @@ async def test_concurrent_default_and_isolated_in_same_agent(
 ) -> None:
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
     opened = await _iws_rpc.enter(
-        sandbox_id, "agent-A", layer_stack_root=_REPO_DIR,
+        sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     assert opened.get("success") is True, opened
     initial_manifest = opened["manifest_version"]

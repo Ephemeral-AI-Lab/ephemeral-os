@@ -55,11 +55,11 @@ async def test_latency_regression_band(
     await set_daemon_env(
         sandbox_id,
         pairs={"EOS_ISOLATED_WORKSPACE_TEST_PHASE_DELAY": "mount_overlay:100"},
-        layer_stack_root=_REPO_DIR,
+        layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     try:
         await _iws_rpc.enter(
-            sandbox_id, "agent-A", layer_stack_root=_REPO_DIR,
+            sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
         )
         await _iws_rpc.exit_(sandbox_id, "agent-A")
         jsonl = await iws_audit_jsonl()
@@ -80,5 +80,5 @@ async def test_latency_regression_band(
         await clear_daemon_env(
             sandbox_id,
             keys=["EOS_ISOLATED_WORKSPACE_TEST_PHASE_DELAY"],
-            layer_stack_root=_REPO_DIR,
+            layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
         )

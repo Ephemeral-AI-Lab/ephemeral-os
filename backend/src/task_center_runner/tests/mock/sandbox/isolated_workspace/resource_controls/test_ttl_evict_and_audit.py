@@ -43,11 +43,11 @@ async def test_ttl_evict_and_audit(iws_clean_sandbox, iws_audit_jsonl) -> None:
     await set_daemon_env(
         sandbox_id,
         pairs={"EOS_ISOLATED_WORKSPACE_TTL_S": "1"},
-        layer_stack_root=_REPO_DIR,
+        layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     try:
         opened = await _iws_rpc.enter(
-            sandbox_id, "agent-A", layer_stack_root=_REPO_DIR,
+            sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
         )
         assert opened.get("success") is True, opened
         # TTL=1s, tick=0.5s; 6s wait is comfortably > 2 sweeps past expiry.
@@ -68,7 +68,7 @@ async def test_ttl_evict_and_audit(iws_clean_sandbox, iws_audit_jsonl) -> None:
 
         # Slot released — re-enter as the same agent id succeeds.
         reopen = await _iws_rpc.enter(
-            sandbox_id, "agent-A", layer_stack_root=_REPO_DIR,
+            sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
         )
         assert reopen.get("success") is True, reopen
     finally:
@@ -76,5 +76,5 @@ async def test_ttl_evict_and_audit(iws_clean_sandbox, iws_audit_jsonl) -> None:
         await clear_daemon_env(
             sandbox_id,
             keys=["EOS_ISOLATED_WORKSPACE_TTL_S"],
-            layer_stack_root=_REPO_DIR,
+            layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
         )

@@ -39,7 +39,7 @@ async def test_dns_fallback_survives_tool_call_boundary(iws_clean_sandbox) -> No
         cwd="/", timeout=10,
     )
     try:
-        await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_REPO_DIR)
+        await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
         try:
             first = await _iws_rpc.shell(
                 sandbox_id, "agent-A", "cat /etc/resolv.conf",

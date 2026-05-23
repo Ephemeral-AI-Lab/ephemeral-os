@@ -44,11 +44,11 @@ async def test_ttl_does_not_evict_active(
     await set_daemon_env(
         sandbox_id,
         pairs={"EOS_ISOLATED_WORKSPACE_TTL_S": "2"},
-        layer_stack_root=_REPO_DIR,
+        layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     try:
         opened = await _iws_rpc.enter(
-            sandbox_id, "agent-A", layer_stack_root=_REPO_DIR,
+            sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
         )
         assert opened.get("success") is True, opened
         # 5 short calls spaced 0.8 s — each refreshes last_activity. Session
@@ -69,5 +69,5 @@ async def test_ttl_does_not_evict_active(
         await clear_daemon_env(
             sandbox_id,
             keys=["EOS_ISOLATED_WORKSPACE_TTL_S"],
-            layer_stack_root=_REPO_DIR,
+            layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
         )

@@ -31,13 +31,13 @@ pytestmark = pytest.mark.asyncio
 async def test_daemon_restart_reaps_orphan_cgroup(iws_clean_sandbox) -> None:
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
     enter = await _iws_rpc.enter(
-        sandbox_id, "agent-A", layer_stack_root=_REPO_DIR,
+        sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     assert enter.get("success") is True, enter
     before = await list_host_eos_iws_resources(sandbox_id)
     assert before["cgroup"], ("expected eos-iws-* cgroup before kill", before)
 
-    await daemon_kill_and_respawn(sandbox_id, layer_stack_root=_REPO_DIR)
+    await daemon_kill_and_respawn(sandbox_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
 
     after = await list_host_eos_iws_resources(sandbox_id)
     assert after["cgroup"] == [], (

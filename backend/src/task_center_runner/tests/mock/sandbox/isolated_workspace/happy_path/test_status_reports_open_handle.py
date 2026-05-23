@@ -41,7 +41,7 @@ async def test_status_reports_open_handle(iws_clean_sandbox, iws_audit_jsonl) ->
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
     agent_id = "agent-A"
     enter_response = await _iws_rpc.enter(
-        sandbox_id, agent_id, layer_stack_root=_REPO_DIR,
+        sandbox_id, agent_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     assert enter_response.get("success") is True, enter_response
     try:

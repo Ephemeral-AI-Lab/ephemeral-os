@@ -43,7 +43,7 @@ async def test_upperdir_discarded_on_exit(iws_clean_sandbox) -> None:
     agent_id = "agent-A"
 
     # Cycle 1: write a scratch file, capture its content, exit.
-    first = await _iws_rpc.enter(sandbox_id, agent_id, layer_stack_root=_REPO_DIR)
+    first = await _iws_rpc.enter(sandbox_id, agent_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
     assert first.get("success") is True, first
     try:
         write = await _iws_rpc.shell(
@@ -75,7 +75,7 @@ async def test_upperdir_discarded_on_exit(iws_clean_sandbox) -> None:
     )
 
     # Cycle 2: re-enter, the scratch file is gone (fresh upperdir).
-    second = await _iws_rpc.enter(sandbox_id, agent_id, layer_stack_root=_REPO_DIR)
+    second = await _iws_rpc.enter(sandbox_id, agent_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
     assert second.get("success") is True, second
     try:
         miss = await _iws_rpc.read_file(

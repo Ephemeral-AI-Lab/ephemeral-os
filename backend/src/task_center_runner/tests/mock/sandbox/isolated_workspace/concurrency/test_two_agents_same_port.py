@@ -33,8 +33,8 @@ pytestmark = pytest.mark.asyncio
 @pytest.mark.timeout(300)
 async def test_two_agents_same_port(iws_clean_sandbox, iws_audit_jsonl) -> None:
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
-    a = await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_REPO_DIR)
-    b = await _iws_rpc.enter(sandbox_id, "agent-B", layer_stack_root=_REPO_DIR)
+    a = await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
+    b = await _iws_rpc.enter(sandbox_id, "agent-B", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
     assert a.get("success") is True and b.get("success") is True, (a, b)
     try:
         # Start an http server in each workspace on the same port. The

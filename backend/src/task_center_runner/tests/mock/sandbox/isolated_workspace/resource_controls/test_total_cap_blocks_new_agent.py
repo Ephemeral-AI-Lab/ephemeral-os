@@ -36,14 +36,14 @@ async def test_total_cap_blocks_new_agent(iws_clean_sandbox) -> None:
     await set_daemon_env(
         sandbox_id,
         pairs={"EOS_ISOLATED_WORKSPACE_TOTAL_CAP": "2"},
-        layer_stack_root=_REPO_DIR,
+        layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     try:
-        a = await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_REPO_DIR)
+        a = await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
         assert a.get("success") is True, a
-        b = await _iws_rpc.enter(sandbox_id, "agent-B", layer_stack_root=_REPO_DIR)
+        b = await _iws_rpc.enter(sandbox_id, "agent-B", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
         assert b.get("success") is True, b
-        c = await _iws_rpc.enter(sandbox_id, "agent-C", layer_stack_root=_REPO_DIR)
+        c = await _iws_rpc.enter(sandbox_id, "agent-C", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
         assert c.get("success") is False, c
         err = c.get("error", {})
         assert err.get("kind") == "quota_exceeded", err
@@ -55,5 +55,5 @@ async def test_total_cap_blocks_new_agent(iws_clean_sandbox) -> None:
         await clear_daemon_env(
             sandbox_id,
             keys=["EOS_ISOLATED_WORKSPACE_TOTAL_CAP"],
-            layer_stack_root=_REPO_DIR,
+            layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
         )

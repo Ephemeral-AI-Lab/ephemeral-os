@@ -48,7 +48,7 @@ async def test_rapid_create_destroy_cycle(iws_clean_sandbox) -> None:
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
     # Warm the daemon — one enter so subsequent cycles share a singleton.
     warm = await _iws_rpc.enter(
-        sandbox_id, "agent-warm", layer_stack_root=_REPO_DIR,
+        sandbox_id, "agent-warm", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     assert warm.get("success") is True, warm
     await _iws_rpc.exit_(sandbox_id, "agent-warm")
@@ -57,7 +57,7 @@ async def test_rapid_create_destroy_cycle(iws_clean_sandbox) -> None:
 
     for _ in range(_CYCLES):
         opened = await _iws_rpc.enter(
-            sandbox_id, "agent-cycler", layer_stack_root=_REPO_DIR,
+            sandbox_id, "agent-cycler", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
         )
         assert opened.get("success") is True, opened
         await _iws_rpc.exit_(sandbox_id, "agent-cycler")

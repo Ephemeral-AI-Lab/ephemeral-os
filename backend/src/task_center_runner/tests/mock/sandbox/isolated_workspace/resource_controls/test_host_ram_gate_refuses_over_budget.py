@@ -40,11 +40,11 @@ async def test_host_ram_gate_refuses_over_budget(iws_clean_sandbox) -> None:
     await set_daemon_env(
         sandbox_id,
         pairs={"EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES": _FOUR_TB},
-        layer_stack_root=_REPO_DIR,
+        layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     try:
         rejected = await _iws_rpc.enter(
-            sandbox_id, "agent-A", layer_stack_root=_REPO_DIR,
+            sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
         )
         assert rejected.get("success") is False, rejected
         err = rejected.get("error", {})
@@ -57,5 +57,5 @@ async def test_host_ram_gate_refuses_over_budget(iws_clean_sandbox) -> None:
         await clear_daemon_env(
             sandbox_id,
             keys=["EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES"],
-            layer_stack_root=_REPO_DIR,
+            layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
         )

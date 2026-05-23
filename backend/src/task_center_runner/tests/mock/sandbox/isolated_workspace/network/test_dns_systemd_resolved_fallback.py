@@ -42,7 +42,7 @@ async def test_dns_systemd_resolved_fallback(iws_clean_sandbox) -> None:
     )
     try:
         enter = await _iws_rpc.enter(
-            sandbox_id, "agent-A", layer_stack_root=_REPO_DIR,
+            sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
         )
         assert enter.get("success") is True, enter
         try:

@@ -29,11 +29,11 @@ pytestmark = pytest.mark.asyncio
 @pytest.mark.timeout(180)
 async def test_quota_one_per_agent(iws_clean_sandbox) -> None:
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
-    first = await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_REPO_DIR)
+    first = await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
     assert first.get("success") is True, first
     try:
         second = await _iws_rpc.enter(
-            sandbox_id, "agent-A", layer_stack_root=_REPO_DIR,
+            sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
         )
         assert second.get("success") is False, second
         err = second.get("error", {})

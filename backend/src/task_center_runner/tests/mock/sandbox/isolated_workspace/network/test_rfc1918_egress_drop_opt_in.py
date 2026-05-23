@@ -43,10 +43,10 @@ async def test_rfc1918_egress_drop_opt_in(iws_clean_sandbox) -> None:
         cwd="/", timeout=10,
     )
     try:
-        await daemon_kill_and_respawn(sandbox_id, layer_stack_root=_REPO_DIR)
+        await daemon_kill_and_respawn(sandbox_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
 
         enter = await _iws_rpc.enter(
-            sandbox_id, "agent-A", layer_stack_root=_REPO_DIR,
+            sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
         )
         assert enter.get("success") is True, enter
         try:
@@ -67,4 +67,4 @@ async def test_rfc1918_egress_drop_opt_in(iws_clean_sandbox) -> None:
             "sed -i '/^EOS_ISOLATED_WORKSPACE_RFC1918_EGRESS=/d' /etc/environment",
             cwd="/", timeout=10,
         )
-        await daemon_kill_and_respawn(sandbox_id, layer_stack_root=_REPO_DIR)
+        await daemon_kill_and_respawn(sandbox_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)

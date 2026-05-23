@@ -44,7 +44,7 @@ async def test_lowerdir_visible_inside_mntns(
     sentinel = await publish_sentinel(sandbox_id)
     agent_id = "agent-A"
     enter_response = await _iws_rpc.enter(
-        sandbox_id, agent_id, layer_stack_root=_REPO_DIR,
+        sandbox_id, agent_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     assert enter_response.get("success") is True, enter_response
     try:

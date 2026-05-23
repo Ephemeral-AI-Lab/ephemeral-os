@@ -42,11 +42,11 @@ async def test_setup_timeout_wedge(iws_clean_sandbox) -> None:
     await set_daemon_env(
         sandbox_id,
         pairs={"EOS_ISOLATED_WORKSPACE_TEST_HANG_AT": "overlay_mount"},
-        layer_stack_root=_REPO_DIR,
+        layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     try:
         wedged = await _iws_rpc.enter(
-            sandbox_id, "agent-A", layer_stack_root=_REPO_DIR,
+            sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
         )
         assert wedged.get("success") is False, wedged
         err = wedged.get("error", {})
@@ -61,12 +61,12 @@ async def test_setup_timeout_wedge(iws_clean_sandbox) -> None:
         await clear_daemon_env(
             sandbox_id,
             keys=["EOS_ISOLATED_WORKSPACE_TEST_HANG_AT"],
-            layer_stack_root=_REPO_DIR,
+            layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
         )
 
     # With the knob cleared, enter succeeds.
     recover = await _iws_rpc.enter(
-        sandbox_id, "agent-A", layer_stack_root=_REPO_DIR,
+        sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     assert recover.get("success") is True, recover
     await _iws_rpc.exit_(sandbox_id, "agent-A")

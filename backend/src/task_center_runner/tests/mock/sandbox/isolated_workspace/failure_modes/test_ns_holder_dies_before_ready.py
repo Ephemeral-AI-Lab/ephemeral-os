@@ -40,11 +40,11 @@ async def test_ns_holder_dies_before_ready(iws_clean_sandbox) -> None:
     await set_daemon_env(
         sandbox_id,
         pairs={"EOS_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH": "true"},
-        layer_stack_root=_REPO_DIR,
+        layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     try:
         resp = await _iws_rpc.enter(
-            sandbox_id, "agent-A", layer_stack_root=_REPO_DIR,
+            sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
         )
         assert resp.get("success") is False, resp
         err = resp.get("error", {})
@@ -57,5 +57,5 @@ async def test_ns_holder_dies_before_ready(iws_clean_sandbox) -> None:
         await clear_daemon_env(
             sandbox_id,
             keys=["EOS_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH"],
-            layer_stack_root=_REPO_DIR,
+            layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
         )

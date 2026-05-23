@@ -40,7 +40,7 @@ async def test_5_concurrent_isolated_workspaces(
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
     results = await asyncio.gather(
         *(
-            _iws_rpc.enter(sandbox_id, agent, layer_stack_root=_REPO_DIR)
+            _iws_rpc.enter(sandbox_id, agent, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
             for agent in _AGENTS
         )
     )
@@ -48,7 +48,7 @@ async def test_5_concurrent_isolated_workspaces(
         assert all(r.get("success") for r in results), results
 
         sixth = await _iws_rpc.enter(
-            sandbox_id, "agent-F", layer_stack_root=_REPO_DIR,
+            sandbox_id, "agent-F", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
         )
         assert sixth.get("success") is False, sixth
         assert sixth.get("error", {}).get("kind") == "quota_exceeded", sixth

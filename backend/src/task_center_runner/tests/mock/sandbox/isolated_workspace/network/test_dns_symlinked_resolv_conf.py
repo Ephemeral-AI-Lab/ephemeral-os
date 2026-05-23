@@ -44,7 +44,7 @@ async def test_dns_symlinked_resolv_conf(iws_clean_sandbox) -> None:
         cwd="/", timeout=15,
     )
     try:
-        await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_REPO_DIR)
+        await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
         try:
             shown = await _iws_rpc.shell(
                 sandbox_id, "agent-A", "cat /etc/resolv.conf",

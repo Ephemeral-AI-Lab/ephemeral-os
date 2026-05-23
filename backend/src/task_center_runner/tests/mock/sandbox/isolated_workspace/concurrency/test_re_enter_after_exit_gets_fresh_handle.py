@@ -40,7 +40,7 @@ async def test_re_enter_after_exit_gets_fresh_handle(
     scratch = f"/testbed/scratch-{token}.txt"
 
     first = await _iws_rpc.enter(
-        sandbox_id, "agent-A", layer_stack_root=_REPO_DIR,
+        sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     assert first.get("success") is True, first
     write = await _iws_rpc.shell(
@@ -50,7 +50,7 @@ async def test_re_enter_after_exit_gets_fresh_handle(
     await _iws_rpc.exit_(sandbox_id, "agent-A")
 
     second = await _iws_rpc.enter(
-        sandbox_id, "agent-A", layer_stack_root=_REPO_DIR,
+        sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     assert second.get("success") is True, second
     try:

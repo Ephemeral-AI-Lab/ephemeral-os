@@ -57,7 +57,7 @@ async def test_lowerdir_disk_usage_is_o1(iws_clean_sandbox) -> None:
 
     enters = await asyncio.gather(
         *(
-            _iws_rpc.enter(sandbox_id, agent, layer_stack_root=_REPO_DIR)
+            _iws_rpc.enter(sandbox_id, agent, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
             for agent in _AGENTS
         )
     )

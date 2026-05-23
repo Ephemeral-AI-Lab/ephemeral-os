@@ -41,7 +41,7 @@ async def test_manager_json_roundtrip(iws_clean_sandbox) -> None:
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
     agent_id = "agent-A"
     enter_resp = await _iws_rpc.enter(
-        sandbox_id, agent_id, layer_stack_root=_REPO_DIR,
+        sandbox_id, agent_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     assert enter_resp.get("success") is True, enter_resp
     try:

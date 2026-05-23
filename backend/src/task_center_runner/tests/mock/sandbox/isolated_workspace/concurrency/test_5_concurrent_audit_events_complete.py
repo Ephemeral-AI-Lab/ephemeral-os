@@ -41,7 +41,7 @@ async def test_5_concurrent_audit_events_complete(
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
     results = await asyncio.gather(
         *(
-            _iws_rpc.enter(sandbox_id, agent, layer_stack_root=_REPO_DIR)
+            _iws_rpc.enter(sandbox_id, agent, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
             for agent in _AGENTS
         )
     )

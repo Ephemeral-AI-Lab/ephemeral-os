@@ -48,7 +48,7 @@ async def test_daemon_restart_reconciles_ip_pool(
 ) -> None:
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
     enter_a = await _iws_rpc.enter(
-        sandbox_id, "agent-A", layer_stack_root=_REPO_DIR,
+        sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     assert enter_a.get("success") is True, enter_a
 
@@ -68,7 +68,7 @@ async def test_daemon_restart_reconciles_ip_pool(
     scratch = await iws_scratch_root(sandbox_id)
     persisted = json.loads(await read_manager_json(sandbox_id, scratch_root=scratch))
 
-    await daemon_kill_and_respawn(sandbox_id, layer_stack_root=_REPO_DIR)
+    await daemon_kill_and_respawn(sandbox_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
 
     # Restore the manager.json the bootstrap re-persisted — the bootstrap
     # call_daemon_api enters + exits a throwaway agent, which clears
@@ -77,10 +77,10 @@ async def test_daemon_restart_reconciles_ip_pool(
         sandbox_id, scratch_root=scratch, payload=json.dumps(persisted),
     )
     # Bounce the daemon again so startup_gc sees the re-injected record.
-    await daemon_kill_and_respawn(sandbox_id, layer_stack_root=_REPO_DIR)
+    await daemon_kill_and_respawn(sandbox_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
 
     enter_b = await _iws_rpc.enter(
-        sandbox_id, "agent-B", layer_stack_root=_REPO_DIR,
+        sandbox_id, "agent-B", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     assert enter_b.get("success") is True, enter_b
     try:

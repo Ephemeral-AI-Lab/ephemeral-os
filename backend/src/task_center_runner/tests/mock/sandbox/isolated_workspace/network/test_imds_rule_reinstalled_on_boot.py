@@ -35,7 +35,7 @@ pytestmark = pytest.mark.asyncio
 async def test_imds_rule_reinstalled_on_boot(iws_clean_sandbox) -> None:
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
     # Bootstrap so initial rules are installed.
-    await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_REPO_DIR)
+    await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
     await _iws_rpc.exit_(sandbox_id, "agent-A")
     await raw_exec(
         sandbox_id,
@@ -43,10 +43,10 @@ async def test_imds_rule_reinstalled_on_boot(iws_clean_sandbox) -> None:
         cwd="/", timeout=10,
     )
 
-    await daemon_kill_and_respawn(sandbox_id, layer_stack_root=_REPO_DIR)
+    await daemon_kill_and_respawn(sandbox_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
 
     enter = await _iws_rpc.enter(
-        sandbox_id, "agent-A", layer_stack_root=_REPO_DIR,
+        sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     assert enter.get("success") is True, enter
     try:

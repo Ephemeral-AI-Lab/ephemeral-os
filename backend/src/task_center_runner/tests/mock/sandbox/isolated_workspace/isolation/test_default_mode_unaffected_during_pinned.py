@@ -45,7 +45,7 @@ async def test_default_mode_unaffected_during_pinned(iws_clean_sandbox) -> None:
     default_path = f"/testbed/default-write-{token}.txt"
 
     enter_resp = await _iws_rpc.enter(
-        sandbox_id, agent_id, layer_stack_root=_REPO_DIR,
+        sandbox_id, agent_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
     assert enter_resp.get("success") is True, enter_resp
     pinned_manifest = enter_resp.get("manifest_version")

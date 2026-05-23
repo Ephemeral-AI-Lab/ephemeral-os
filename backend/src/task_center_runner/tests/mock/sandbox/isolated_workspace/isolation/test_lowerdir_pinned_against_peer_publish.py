@@ -46,7 +46,7 @@ async def test_lowerdir_pinned_against_peer_publish(iws_clean_sandbox) -> None:
     await peer_publish_file(sandbox_id, path=path, body=f"version-A-{token}")
 
     agent_id = "agent-A"
-    first = await _iws_rpc.enter(sandbox_id, agent_id, layer_stack_root=_REPO_DIR)
+    first = await _iws_rpc.enter(sandbox_id, agent_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
     assert first.get("success") is True, first
     try:
         # While agent-A's workspace is open, the peer publishes a fresh
@@ -65,7 +65,7 @@ async def test_lowerdir_pinned_against_peer_publish(iws_clean_sandbox) -> None:
         await _iws_rpc.exit_(sandbox_id, agent_id)
 
     # Re-enter: the new snapshot picks up the latest tip (version-B).
-    second = await _iws_rpc.enter(sandbox_id, agent_id, layer_stack_root=_REPO_DIR)
+    second = await _iws_rpc.enter(sandbox_id, agent_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
     assert second.get("success") is True, second
     try:
         readback = await _iws_rpc.read_file(sandbox_id, agent_id, path)

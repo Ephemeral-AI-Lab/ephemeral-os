@@ -40,7 +40,7 @@ async def test_upperdir_discarded_on_abnormal_exit_daemon_kill(
     iws_clean_sandbox,
 ) -> None:
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
-    enter = await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_REPO_DIR)
+    enter = await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
     assert enter.get("success") is True, enter
     # Write 5 MB to upperdir before the crash.
     write = await _iws_rpc.shell(
@@ -60,7 +60,7 @@ async def test_upperdir_discarded_on_abnormal_exit_daemon_kill(
     assert before_bytes > 5 * 1024 * 1024, (before_bytes, before)
 
     # Abnormal exit + restart triggers startup_gc.
-    await daemon_kill_and_respawn(sandbox_id, layer_stack_root=_REPO_DIR)
+    await daemon_kill_and_respawn(sandbox_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
 
     after_state = await list_host_eos_iws_resources(sandbox_id)
     assert after_state["veth"] == [], after_state
