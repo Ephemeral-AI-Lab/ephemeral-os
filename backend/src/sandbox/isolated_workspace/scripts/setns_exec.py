@@ -13,6 +13,7 @@ stdin payload (one JSON object per invocation):
         "ns_fds": {"user": int, "mnt": int, "pid": int, "net": int},
         "argv": [str, ...],
         "stdin_b64": str (optional, base64),
+        "cgroup_path": str (optional, absolute path to iws cgroup),
     }
 
 The parent process passes ns FDs via inheritable FDs (the JSON carries their
@@ -34,6 +35,22 @@ def main() -> int:
     ns_fds = payload["ns_fds"]
     argv = list(payload["argv"])
     stdin_b64 = payload.get("stdin_b64") or ""
+    cgroup_path = payload.get("cgroup_path") or ""
+
+    # Move this process into the iws cgroup BEFORE fork so the child
+    # inherits cgroup membership. Without this, all in-iws shells are
+    # accounted in the daemon's parent cgroup (e.g. /docker/<id>) and
+    # ``memory.current``/``cpu.stat`` of the iws's own cgroup stays
+    # empty — cgroup-isolation tests then read the shared parent value
+    # and see all agents' memory move together. Best-effort: an absent
+    # cgroup file (older kernels, manual cleanup) degrades to "no
+    # isolation" rather than aborting the exec.
+    if cgroup_path:
+        try:
+            with open(f"{cgroup_path}/cgroup.procs", "w") as fh:
+                fh.write(f"{os.getpid()}\n")
+        except OSError:
+            pass
 
     # Order matters: user, mnt, pid, net. PID setns affects only descendants;
     # call before fork().

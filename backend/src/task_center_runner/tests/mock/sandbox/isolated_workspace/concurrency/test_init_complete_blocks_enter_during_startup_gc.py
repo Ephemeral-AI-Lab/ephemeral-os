@@ -75,9 +75,25 @@ async def test_init_complete_blocks_enter_during_startup_gc(
         # Either gc_orphan ran (preferred — there were orphans) or it
         # didn't (the daemon-restart bootstrap exit cleaned up first). Both
         # are consistent with init_complete behaviour. We require: no
-        # SECOND enter event was admitted before any GC settled.
-        enters_before = [t for t in prior_types if t == "sandbox_isolated_workspace_enter"]
+        # SECOND enter event was admitted between GC settling and agent-B.
+        #
+        # The seeded enter from BEFORE the daemon kill is in the log too —
+        # the audit JSONL persists across the SIGKILL+respawn cycle. That
+        # pre-restart enter has nothing to do with the post-restart
+        # init_complete invariant, so we only count enters that appear
+        # AFTER the last gc_orphan (the post-restart watermark). When no
+        # gc_orphan was emitted the bootstrap is the only post-restart
+        # enter and the unfiltered count still satisfies <= 1.
+        gc_idxs = [
+            i for i, t in enumerate(prior_types)
+            if t == "sandbox_isolated_workspace_gc_orphan"
+        ]
+        cutoff = max(gc_idxs) + 1 if gc_idxs else 0
+        post_restart_enters = [
+            t for t in prior_types[cutoff:]
+            if t == "sandbox_isolated_workspace_enter"
+        ]
         # At most one prior enter (the bootstrap) is allowed before agent-B.
-        assert len(enters_before) <= 1, prior_types
+        assert len(post_restart_enters) <= 1, prior_types
     finally:
         await _iws_rpc.exit_(sandbox_id, "agent-B")

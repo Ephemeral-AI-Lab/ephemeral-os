@@ -854,8 +854,20 @@ class IsolatedWorkspaceManager:
             try:
                 start = self._clock()
                 with timer.measure("exec"):
-                    exit_code, out, err = self._runtime.run_in_handle(
-                        handle, argv=argv, stdin=stdin, timeout_s=timeout_s,
+                    # ``_runtime.run_in_handle`` shells out to setns_exec via
+                    # the synchronous ``subprocess.run``. Calling it directly
+                    # blocks the event loop and serialises tool_calls across
+                    # ALL handles — defeating the per-handle ``handle.lock``
+                    # design. Run in the default thread pool so other agents'
+                    # coroutines (incl. their own tool_calls under different
+                    # handle locks) can progress while one helper is in
+                    # subprocess.run's wait path.
+                    loop = asyncio.get_running_loop()
+                    exit_code, out, err = await loop.run_in_executor(
+                        None,
+                        lambda: self._runtime.run_in_handle(
+                            handle, argv=argv, stdin=stdin, timeout_s=timeout_s,
+                        ),
                     )
                 duration = self._clock() - start
             finally:
@@ -1426,9 +1438,16 @@ class _LinuxRuntime:
         # helper with JSONDecodeError on the trailing raw bytes whenever
         # stdin was non-empty (e.g. the 5 MB body in
         # ``test_argv_e2big_via_in_ns_write``).
+        #
+        # ``cgroup_path`` is supplied so setns_exec can move itself into the
+        # iws cgroup before fork — that way the spawned shell is accounted
+        # in the iws's ``memory.current`` rather than the daemon's parent
+        # cgroup, giving the cgroup-isolation tests something to observe.
         payload_dict: dict[str, Any] = {"ns_fds": ns_fds, "argv": argv}
         if stdin:
             payload_dict["stdin_b64"] = base64.b64encode(stdin).decode("ascii")
+        if handle.cgroup_path is not None:
+            payload_dict["cgroup_path"] = str(handle.cgroup_path)
         payload = json.dumps(payload_dict).encode("utf-8")
         proc = subprocess.run(
             [sys.executable, "-m", "sandbox.isolated_workspace.scripts.setns_exec"],
