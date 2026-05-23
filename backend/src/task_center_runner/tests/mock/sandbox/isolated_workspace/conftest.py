@@ -24,6 +24,7 @@ Capability gating:
 
 from __future__ import annotations
 
+import asyncio
 import shutil
 from typing import Any
 
@@ -88,6 +89,23 @@ async def iws_sandbox(
         or ""
     )
     if sandbox_id:
+        # Install iproute2 + nftables if missing. SWE-EVO base images (incl.
+        # the dask test fixture) don't ship them, but iws bridge/veth/MASQUERADE
+        # need `ip` and `nft`. apt-get is idempotent; the test fence at
+        # `pre_flight/test_phase_timer_invariants.py` doesn't exercise this.
+        # We tolerate failure quietly here so non-Debian images still set the
+        # env flag; the iws tests themselves will fail loud if `ip` is absent.
+        await raw_exec(
+            sandbox_id,
+            (
+                "command -v ip >/dev/null 2>&1 && command -v nft >/dev/null 2>&1 "
+                "|| (apt-get update -qq && "
+                "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "
+                "iproute2 nftables) >/dev/null 2>&1 || true"
+            ),
+            cwd="/",
+            timeout=120,
+        )
         await raw_exec(
             sandbox_id,
             "grep -q '^EOS_ISOLATED_WORKSPACE_ENABLED=' /etc/environment "
@@ -97,13 +115,44 @@ async def iws_sandbox(
             timeout=10,
         )
         # Force daemon respawn so it inherits the new env on the next RPC.
-        # pkill returns 1 if no process matches; that's fine.
+        # pkill returns 1 if no process matches; that's fine. The respawned
+        # daemon sources /etc/environment via the spawn-command wrapper in
+        # sandbox.host.daemon_client._daemon_spawn_command.
         await raw_exec(
             sandbox_id,
             "pkill -f '^.*python.*-m sandbox\\.daemon' || true",
             cwd="/",
             timeout=10,
         )
+        # Idempotently ensure /testbed/workspace.json exists. iws.enter()
+        # passes layer_stack_root=/testbed and the daemon's
+        # prepare_workspace_snapshot calls require_workspace_binding(/testbed),
+        # which raises if missing. Reused sandboxes from earlier sessions may
+        # have skipped this (e.g. if the daemon crashed during initial
+        # provisioning), so re-establish the binding directly via
+        # call_daemon_api with the iws layer_stack_root.
+        from benchmarks.sweevo.models import _REPO_DIR
+        from sandbox.host.daemon_client import call_daemon_api
+
+        from . import _iws_rpc as _iws_rpc_mod
+
+        try:
+            await call_daemon_api(
+                sandbox_id,
+                "api.ensure_workspace_base",
+                {"workspace_root": _REPO_DIR},
+                layer_stack_root=_iws_rpc_mod.IWS_LAYER_STACK_ROOT,
+                timeout=180,
+            )
+        except Exception as exc:  # noqa: BLE001 — surface in test, don't crash setup
+            import warnings
+
+            warnings.warn(
+                f"iws_sandbox: ensure_workspace_base({_REPO_DIR}) failed: "
+                f"{type(exc).__name__}: {exc}; iws tests may fail with "
+                "workspace_binding errors",
+                stacklevel=2,
+            )
     return sweevo_image_sandbox
 
 
@@ -262,7 +311,7 @@ async def iws_latency_baseline(iws_sandbox) -> dict[str, float]:
     )
 
     for _ in range(runs):
-        await _iws_rpc.enter(sandbox_id, agent_id, layer_stack_root=_REPO_DIR)
+        await _iws_rpc.enter(sandbox_id, agent_id, layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
         await _iws_rpc.shell(sandbox_id, agent_id, "true")
         await _iws_rpc.exit_(sandbox_id, agent_id)
         await asyncio.sleep(0.05)
