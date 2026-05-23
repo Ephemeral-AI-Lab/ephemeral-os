@@ -188,7 +188,13 @@ def test_daemon_commands_do_not_forward_host_env(
     daemon_spawn = command._daemon_spawn_command()
 
     assert thin_client.startswith("sh -c ")
-    assert daemon_spawn.startswith("sh ")
+    # _daemon_spawn_command now prefixes a guarded `/etc/environment` source so
+    # the spawned daemon inherits feature flags written there by tests. The
+    # `sh <launcher>` invocation still runs after the conditional.
+    assert daemon_spawn.startswith(
+        "if [ -r /etc/environment ]; then set -a; . /etc/environment; set +a; fi;"
+    )
+    assert "; sh " in daemon_spawn
     assert "UNSUPPORTED_RUNTIME_ENV" not in thin_client
     assert "UNSUPPORTED_RUNTIME_ENV" not in daemon_spawn
     assert "EOS_OCC_SQUASH_MODE" not in daemon_spawn

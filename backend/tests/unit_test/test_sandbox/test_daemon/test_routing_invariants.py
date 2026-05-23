@@ -64,6 +64,8 @@ def test_daemon_op_table_routes_to_current_handler_layout() -> None:
         "api.isolated_workspace.enter": iws_handlers.enter,
         "api.isolated_workspace.exit": iws_handlers.exit_,
         "api.isolated_workspace.status": iws_handlers.status,
+        "api.isolated_workspace.list_open": iws_handlers.list_open,
+        "api.isolated_workspace.test_reset": iws_handlers.test_reset,
         "api.isolated_workspace.shell": iws_ops_handlers.shell,
         "api.isolated_workspace.read_file": iws_ops_handlers.read_file,
         "api.isolated_workspace.write_file": iws_ops_handlers.write_file,
