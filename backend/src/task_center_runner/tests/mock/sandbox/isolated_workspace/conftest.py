@@ -114,6 +114,30 @@ async def iws_sandbox(
             cwd="/",
             timeout=10,
         )
+        # Authorize the test_reset janitor RPC. Production deployments never
+        # see this image, so leaving the flag in /etc/environment is scoped to
+        # the test fixture. The handler returns ``forbidden`` without it.
+        await raw_exec(
+            sandbox_id,
+            "grep -q '^EOS_ISOLATED_WORKSPACE_TEST_HARNESS=' /etc/environment "
+            "2>/dev/null || "
+            "echo 'EOS_ISOLATED_WORKSPACE_TEST_HARNESS=true' >> /etc/environment",
+            cwd="/",
+            timeout=10,
+        )
+        # Docker Desktop's default cgroupns=private mounts /sys/fs/cgroup
+        # read-only; the iws daemon's ``create_cgroup`` requires write access
+        # to ``mkdir /sys/fs/cgroup/eos-iws-<handle>``. Remount rw inside the
+        # container — idempotent (no-op if already rw), and the container's
+        # CAP_SYS_ADMIN is enough to perform it. Production deployments using
+        # ``--privileged`` or ``--cgroupns=host`` don't hit this; the remount
+        # is silently a no-op for them too.
+        await raw_exec(
+            sandbox_id,
+            "mount -o remount,rw /sys/fs/cgroup 2>/dev/null || true",
+            cwd="/",
+            timeout=10,
+        )
         # Force daemon respawn so it inherits the new env on the next RPC.
         # pkill returns 1 if no process matches; that's fine. The respawned
         # daemon sources /etc/environment via the spawn-command wrapper in
@@ -158,14 +182,40 @@ async def iws_sandbox(
 
 @pytest.fixture
 async def iws_clean_sandbox(iws_sandbox: dict[str, Any]) -> dict[str, Any]:
-    """Drive ``api.isolated_workspace.exit`` for known test agents, then yield.
+    """Drive the daemon's janitor RPC, then yield.
 
-    Idempotent: a "no workspace open" response is fine.
+    The previous implementation hardcoded ``agent-A..E`` and called
+    ``exit`` for each at a 10 s timeout — a fixture that ran 5 RPCs even when
+    nothing was open, and that silently leaked any handle owned by an agent
+    outside the canonical list (``agent-latency-baseline``,
+    ``agent-restart-bootstrap``, …). The new ``test_reset`` RPC enumerates
+    open handles inside the daemon and exits them all in one round trip;
+    on the cheap path (nothing open) it returns immediately.
+
+    Idempotent. Falls back to a single ``list_open`` probe if ``test_reset``
+    is unavailable (older daemon bundles), and finally to a per-agent loop.
     """
     from . import _iws_rpc
 
     sandbox_id = str(iws_sandbox.get("sandbox_id") or iws_sandbox.get("id") or "")
-    for agent_id in ("agent-A", "agent-B", "agent-C", "agent-D", "agent-E"):
+    if not sandbox_id:
+        return iws_sandbox
+    try:
+        response = await _iws_rpc.test_reset(sandbox_id, timeout=15)
+        if response.get("success"):
+            return iws_sandbox
+    except Exception:
+        pass
+    # Fallback path: if the daemon predates the janitor RPC, drive exits by
+    # whatever ``list_open`` reports and finish with the canonical fixture
+    # agents so a half-rolled-back enter still gets cleaned up.
+    open_ids: list[str] = []
+    try:
+        listed = await _iws_rpc.list_open(sandbox_id, timeout=10)
+        open_ids = list(listed.get("open_agent_ids") or [])
+    except Exception:
+        pass
+    for agent_id in (*open_ids, "agent-A", "agent-B", "agent-C", "agent-D", "agent-E"):
         try:
             await _iws_rpc.exit_(sandbox_id, agent_id, timeout=10)
         except Exception:  # pragma: no cover — best-effort reset
