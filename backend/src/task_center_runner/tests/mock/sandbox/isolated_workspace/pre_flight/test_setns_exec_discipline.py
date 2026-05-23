@@ -67,6 +67,21 @@ def test_setns_overlay_mount_helper_imports_are_minimal() -> None:
     _assert_helper_discipline(_SETNS_OVERLAY_MOUNT_PATH, _SETNS_HELPER_ALLOWED)
 
 
+def test_setns_overlay_mount_reuses_shared_mount_validation() -> None:
+    source = _SETNS_OVERLAY_MOUNT_PATH.read_text(encoding="utf-8")
+    tree = ast.parse(source, filename=str(_SETNS_OVERLAY_MOUNT_PATH))
+    kernel_mount_imports: set[str] = set()
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.ImportFrom)
+            and node.module == "sandbox.execution.overlay.kernel_mount"
+        ):
+            kernel_mount_imports.update(alias.name for alias in node.names)
+    assert {"mount_overlay", "validate_mount_inputs"} <= kernel_mount_imports
+    assert "pass_fds=mount_inputs.fds" in source
+    assert "mount_inputs.close()" in source
+
+
 def test_configure_dns_in_ns_helper_imports_are_minimal() -> None:
     _assert_helper_discipline(_CONFIGURE_DNS_PATH, _SETNS_HELPER_ALLOWED)
 

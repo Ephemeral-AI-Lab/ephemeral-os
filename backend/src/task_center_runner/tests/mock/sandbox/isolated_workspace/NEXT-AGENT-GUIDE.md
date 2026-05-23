@@ -73,16 +73,16 @@ Before writing new code, check whether one of these already does the job.
 
 | Need | Use | Already used by iws? |
 |---|---|---|
-| Mount an overlay filesystem | `sandbox.execution.overlay.kernel_mount.mount_overlay` — modern `fsopen/fsconfig/fsmount/move_mount`, FD-pinned paths via `validate_mount_inputs` | yes (`scripts/setns_overlay_mount.py`, deferred import after `setns`) |
+| Mount an overlay filesystem | `sandbox.execution.overlay.kernel_mount.mount_overlay` — modern `fsopen/fsconfig/fsmount/move_mount`, FD-pinned paths via `validate_mount_inputs` | yes (`scripts/setns_overlay_mount.py`, deferred import after `setns`, uses `validate_mount_inputs`) |
 | Probe kernel overlay support | `sandbox.execution.overlay.capability.new_mount_api_supported` — picks up `EOS_OVERLAY_FORCE_MATERIALIZE` kill-switch | yes (`_iws_fixtures.can_mount_overlay_natively`) |
 | Walk upperdir for change capture | `sandbox.execution.overlay.capture.walk_upperdir` — handles whiteouts, opaque dirs, sparse files | **not yet** — `manager._du_bytes` is a hand-rolled walk. If you need anything beyond byte counting (e.g., for the Tier 7 `test_upperdir_fully_discarded_on_normal_exit`), use `walk_upperdir` instead of reinventing |
-| New mount API syscall constants | `sandbox.execution.overlay.new_mount_api` (`SYS_fsopen`, `SYS_fsconfig`, `SYS_fsmount`, `SYS_move_mount`, etc.) | partially — the syscall numbers are inlined in `scripts/setns_overlay_mount.py` *only* because the helper imports `kernel_mount.mount_overlay` after setns. If you ever need the raw syscalls outside a setns helper, import from `new_mount_api`, do not reinline |
+| New mount API syscall constants | `sandbox.execution.overlay.new_mount_api` (`SYS_fsopen`, `SYS_fsconfig`, `SYS_fsmount`, `SYS_move_mount`, etc.) | yes, through deferred reuse of `kernel_mount.mount_overlay`; do not inline raw syscall constants in iws helpers |
 | Lease + snapshot lifecycle | `sandbox.daemon.workspace_server.{prepare,release}_workspace_snapshot` | yes (`handlers._LayerStackAdapter`) |
 | Scratch root resolution | `sandbox.execution.scratch.command_exec_scratch_root` | yes (`handlers._ensure_manager`) |
 | Daemon RPC client | `sandbox.host.daemon_client.call_daemon_api` | yes (`_iws_rpc`) |
 | Audit event types | `task_center_runner.audit.events.EventType` — the 5 `SANDBOX_ISOLATED_WORKSPACE_*` enum members are already defined | yes (events emitted via `_emit` in `manager`) |
-| Overlay path validation | `sandbox.execution.env_policy.validate_overlay_path_text` + the `MountInputs` returned by `validate_mount_inputs` | **not yet** — `setns_overlay_mount.py` passes raw paths. When Tier 4 fault-injection tests for symlink-escape land, switch to FD-pinned paths via `validate_mount_inputs` |
-| Path-policy enforcement | `sandbox.execution.env_policy.DEFAULT_COMMAND_EXEC_POLICY` | **not yet** — Tier 2 chmod-escape test (`test_chmod_uid_in_userns_does_not_escape`) may benefit |
+| Overlay path validation | `sandbox.execution.env_policy.validate_overlay_path_text` + the `MountInputs` returned by `validate_mount_inputs` | yes (`scripts/setns_overlay_mount.py` validates and FD-pins paths before calling `mount_overlay`) |
+| Path-policy enforcement | `sandbox.execution.env_policy.DEFAULT_COMMAND_EXEC_POLICY` | yes for overlay mount paths through `validate_mount_inputs`; command/path policy for iws tool args remains separate |
 
 **Anti-pattern:** writing a new helper file under `sandbox/isolated_workspace/`
 that duplicates one of the modules above. Always grep before writing.

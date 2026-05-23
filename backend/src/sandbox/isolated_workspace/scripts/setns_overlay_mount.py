@@ -8,12 +8,12 @@ thread's mount table.
 Code reuse
 ----------
 Once both ``setns`` calls have completed, the single-thread requirement for
-``setns(CLONE_NEWUSER)`` no longer applies. The mount sequence itself is
-delegated to :func:`sandbox.execution.overlay.kernel_mount.mount_overlay` —
-the same modern ``fsopen / fsconfig / fsmount / move_mount`` implementation
-the daemon's OCC overlay uses. Importing it is *deferred* until after setns
-so module-level R10 discipline is preserved (``kernel_mount`` transitively
-pulls ``subprocess``, which is forbidden pre-setns).
+``setns(CLONE_NEWUSER)`` no longer applies. Path validation / FD pinning and
+the mount sequence are delegated to
+:mod:`sandbox.execution.overlay.kernel_mount` — the same implementation the
+daemon's OCC overlay uses. Importing it is *deferred* until after setns so
+module-level R10 discipline is preserved (``kernel_mount`` transitively pulls
+``subprocess``, which is forbidden pre-setns).
 
 R10 imports
 -----------
@@ -62,14 +62,27 @@ def main() -> int:
     # requirement no longer applies post-setns.
     from pathlib import Path
 
-    from sandbox.execution.overlay.kernel_mount import mount_overlay
+    from sandbox.execution.overlay.kernel_mount import (
+        mount_overlay,
+        validate_mount_inputs,
+    )
 
-    mount_overlay(
+    mount_inputs = validate_mount_inputs(
         workspace_root=Path(target),
         layer_paths=tuple(Path(p) for p in lowerdirs),
         upperdir=Path(upperdir),
         workdir=Path(workdir),
     )
+    try:
+        mount_overlay(
+            workspace_root=mount_inputs.workspace_root,
+            layer_paths=mount_inputs.layer_paths,
+            upperdir=mount_inputs.upperdir,
+            workdir=mount_inputs.workdir,
+            pass_fds=mount_inputs.fds,
+        )
+    finally:
+        mount_inputs.close()
     return 0
 
 
