@@ -59,10 +59,12 @@ async def test_default_mode_unaffected_during_pinned(iws_clean_sandbox) -> None:
             timeout=30,
         )
         assert write_resp.get("success") is True, write_resp
-        flush_resp = await call_daemon_api(
-            sandbox_id, "api.overlay.flush", {}, timeout=30,
-        )
-        assert flush_resp.get("success") is True, flush_resp
+        # ``api.write_file`` already commits via OCC and advances the
+        # layer-stack tip — that IS the publish for the assertion below.
+        # ``api.overlay.flush`` would collapse layer storage and is blocked
+        # by the active iws lease (correctly: flush rewrites the storage
+        # the iws is pinned to). It isn't needed to prove the "tip advances
+        # while iws stays pinned" invariant.
 
         # Inside the isolated ws, the default write is INVISIBLE
         # (lowerdir was pinned at enter; the new commit lives on the tip).

@@ -26,9 +26,20 @@ from __future__ import annotations
 
 import asyncio
 import shutil
+import subprocess
+from pathlib import Path
 from typing import Any
 
 import pytest
+
+
+_IWS_APT_CACHE_DIR = (
+    Path(__file__).resolve().parents[6]
+    / "tests"
+    / "_assets"
+    / "iws_apt_cache"
+    / "jammy-amd64"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -61,6 +72,102 @@ def iws_capability_probe() -> dict[str, bool]:
 # ---------------------------------------------------------------------------
 
 
+async def _try_install_from_cache(sandbox_id: str) -> bool:
+    """Install iproute2+nftables from the committed offline cache.
+
+    Returns ``True`` if both binaries are present on the container at exit
+    (whether already-installed or installed-from-cache). Returns ``False`` if
+    no cache exists, or if the install completed but ``ip``/``nft`` still
+    aren't on PATH — the caller then falls back to the live apt path.
+
+    Why this design:
+      - The cache directory is populated by ``backend/scripts/cache_iws_apt_debs.sh``.
+        Hosts that haven't run it (or new clones before the cache is committed)
+        skip cleanly through ``cache_dir.is_dir()``.
+      - ``docker cp`` is used directly (not the provider adapter) because the
+        provider's interface is sandbox-id-keyed exec, not file copy. The
+        docker daemon accepts the sandbox_id as the container reference, so we
+        don't need to convert to a container name.
+      - ``dpkg -i /tmp/iws-debs/*.deb`` is used (not ``apt-get install --no-download``)
+        because the base sweevo image's ``/var/lib/apt/lists/`` has no entries
+        for iproute2/nftables, and apt would need an ``apt-get update`` (network)
+        to discover them. With all 17 deps in the closure passed at once, dpkg
+        topologically sorts them and the install completes with no apt index.
+    """
+    from sandbox.api import raw_exec
+
+    if not _IWS_APT_CACHE_DIR.is_dir():
+        return False
+    debs = sorted(_IWS_APT_CACHE_DIR.glob("*.deb"))
+    if not debs:
+        return False
+
+    # Stage cache into /tmp/iws-debs/ inside the container. Reset the dir
+    # first so a stale stash from a prior session doesn't interfere.
+    try:
+        await raw_exec(
+            sandbox_id,
+            "rm -rf /tmp/iws-debs && mkdir -p /tmp/iws-debs",
+            cwd="/",
+            timeout=10,
+        )
+    except (TimeoutError, asyncio.TimeoutError):
+        return False
+
+    # ``docker cp`` is a host-side shell-out. ``subprocess.run`` is fine here;
+    # the sweevo provider is docker-only for this test surface, and a host
+    # without docker would already have failed at the sweevo fixture layer.
+    cp_cmd = [
+        "docker", "cp",
+        f"{_IWS_APT_CACHE_DIR}/.",
+        f"{sandbox_id}:/tmp/iws-debs/",
+    ]
+    try:
+        result = subprocess.run(
+            cp_cmd, check=False, capture_output=True, timeout=60,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return False
+    if result.returncode != 0:
+        return False
+
+    # dpkg -i with the staged cache. Passing all 17 .debs at once lets dpkg
+    # topologically sort them itself (libmnl0 → libnftnl11 → nftables, etc.) —
+    # an iterative one-by-one install would fail on missing deps. The
+    # ``command -v`` short-circuit makes the warm-container path a fast no-op.
+    try:
+        await raw_exec(
+            sandbox_id,
+            (
+                "command -v ip >/dev/null 2>&1 && "
+                "command -v nft >/dev/null 2>&1 && "
+                "command -v ping >/dev/null 2>&1 && "
+                "command -v host >/dev/null 2>&1 "
+                "|| DEBIAN_FRONTEND=noninteractive "
+                "dpkg -i /tmp/iws-debs/*.deb 2>&1 | tail -3"
+            ),
+            cwd="/",
+            timeout=60,
+        )
+    except (TimeoutError, asyncio.TimeoutError):
+        return False
+
+    # Verify both binaries are on PATH after install. apt may have refused the
+    # cache (deb-version mismatch between cache's ubuntu:22.04 and the sweevo
+    # base) — in that case ``ip``/``nft`` still won't exist and we want the
+    # fallback path to try.
+    try:
+        verify = await raw_exec(
+            sandbox_id,
+            "command -v ip >/dev/null 2>&1 && command -v nft >/dev/null 2>&1",
+            cwd="/",
+            timeout=10,
+        )
+    except (TimeoutError, asyncio.TimeoutError):
+        return False
+    return getattr(verify, "returncode", 1) == 0
+
+
 @pytest.fixture(scope="session")
 async def iws_sandbox(
     sweevo_image_sandbox: dict[str, Any],  # noqa: F811 (fixture from sweevo)
@@ -91,34 +198,41 @@ async def iws_sandbox(
     if sandbox_id:
         # Install iproute2 + nftables if missing. SWE-EVO base images (incl.
         # the dask test fixture) don't ship them, but iws bridge/veth/MASQUERADE
-        # need ``ip`` and ``nft``. apt-get is idempotent; the test fence at
-        # ``pre_flight/test_phase_timer_invariants.py`` doesn't exercise this.
-        # The whole step is best-effort: a slow apt mirror or 502 from
-        # ubuntu's repo (common on Docker Desktop NAT) shouldn't fail every
-        # downstream test before the daemon even sees a single RPC. The
-        # individual iws tests that genuinely need ip/nft will surface the
-        # missing binary clearly via the network module's preflight.
-        try:
-            await raw_exec(
-                sandbox_id,
-                (
-                    "command -v ip >/dev/null 2>&1 && "
-                    "command -v nft >/dev/null 2>&1 "
-                    "|| (apt-get update -qq && "
-                    "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "
-                    "iproute2 nftables) >/dev/null 2>&1 || true"
-                ),
-                cwd="/",
-                timeout=300,
-            )
-        except (TimeoutError, asyncio.TimeoutError):
-            import warnings
-            warnings.warn(
-                "iws_sandbox: iproute2+nftables install timed out; tests "
-                "exercising bridge/veth/MASQUERADE will fail with missing "
-                "ip/nft binaries.",
-                stacklevel=2,
-            )
+        # need ``ip`` and ``nft``. There are two install paths:
+        #
+        #   1. Offline-cache fast-path (preferred): if the host has prebuilt
+        #      ``backend/tests/_assets/iws_apt_cache/jammy-amd64/*.deb`` (run
+        #      ``backend/scripts/cache_iws_apt_debs.sh`` once), ``docker cp``
+        #      the 17-deb closure into the container and ``dpkg -i`` the lot.
+        #      Zero network dependency, survives apt-mirror outages.
+        #   2. Live apt-get fallback: best-effort ``apt-get update +
+        #      install``. Wrapped in a 300 s timeout because Ubuntu's mirror
+        #      regularly 502s through Docker Desktop's NAT. The individual
+        #      iws tests that genuinely need ip/nft will surface the missing
+        #      binary clearly via the network module's preflight.
+        installed_via_cache = await _try_install_from_cache(sandbox_id)
+        if not installed_via_cache:
+            try:
+                await raw_exec(
+                    sandbox_id,
+                    (
+                        "command -v ip >/dev/null 2>&1 && "
+                        "command -v nft >/dev/null 2>&1 "
+                        "|| (apt-get update -qq && "
+                        "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "
+                        "iproute2 nftables) >/dev/null 2>&1 || true"
+                    ),
+                    cwd="/",
+                    timeout=300,
+                )
+            except (TimeoutError, asyncio.TimeoutError):
+                import warnings
+                warnings.warn(
+                    "iws_sandbox: iproute2+nftables install timed out; tests "
+                    "exercising bridge/veth/MASQUERADE will fail with missing "
+                    "ip/nft binaries.",
+                    stacklevel=2,
+                )
         await raw_exec(
             sandbox_id,
             "grep -q '^EOS_ISOLATED_WORKSPACE_ENABLED=' /etc/environment "
@@ -135,6 +249,23 @@ async def iws_sandbox(
             "grep -q '^EOS_ISOLATED_WORKSPACE_TEST_HARNESS=' /etc/environment "
             "2>/dev/null || "
             "echo 'EOS_ISOLATED_WORKSPACE_TEST_HARNESS=true' >> /etc/environment",
+            cwd="/",
+            timeout=10,
+        )
+        # Shrink the per-handle upperdir reservation so the host RAM gate
+        # admits the 2-5 concurrent handles the isolation/network/concurrency
+        # tiers require. Default production value is 1 GiB × handle; with the
+        # default memavail_fraction=0.5 and a ~3 GiB sweevo container budget,
+        # two handles would be refused (2 GiB > 1.5 GiB). 256 MiB × 5 fits.
+        # The cap is a reservation accounting unit (not an enforced quota), so
+        # shrinking only widens what tests can probe — never relaxes real
+        # backpressure.
+        await raw_exec(
+            sandbox_id,
+            "grep -q '^EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES=' /etc/environment "
+            "2>/dev/null || "
+            "echo 'EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES=268435456' "
+            ">> /etc/environment",
             cwd="/",
             timeout=10,
         )

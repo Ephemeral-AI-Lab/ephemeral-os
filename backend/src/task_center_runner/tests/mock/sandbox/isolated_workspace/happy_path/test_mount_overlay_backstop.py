@@ -35,15 +35,25 @@ import os
 import shutil
 import sys
 import tempfile
+import uuid
 from pathlib import Path
 
+from sandbox.execution.scratch import command_exec_scratch_root
 from sandbox.isolated_workspace.manager import (
     IsolatedWorkspaceHandle,
     _LinuxRuntime,
 )
 
 runtime = _LinuxRuntime()
-scratch = Path(tempfile.mkdtemp(prefix="iws-backstop-"))
+# Scratch MUST live on a non-overlayfs filesystem. The container's "/" is
+# overlayfs (Docker rootfs), and overlayfs refuses to be used as an upperdir
+# for another overlay mount — fsconfig returns EINVAL on the upperdir step.
+# The daemon path resolves this via ``command_exec_scratch_root`` which
+# selects ``/eos-mount-scratch`` (tmpfs, provisioned by the runtime bootstrap).
+# Use the same helper so the backstop matches production placement.
+scratch_root = command_exec_scratch_root(Path("/testbed"))
+scratch_root.mkdir(parents=True, exist_ok=True)
+scratch = Path(tempfile.mkdtemp(prefix="iws-backstop-", dir=str(scratch_root)))
 lower = scratch / "lower"
 upper = scratch / "upper"
 work = scratch / "work"
@@ -67,13 +77,33 @@ exit_code = 0
 try:
     handle.root_pid = runtime.spawn_ns_holder(handle, setup_timeout_s=30.0)
     handle.ns_fds.update(runtime.open_ns_fds(handle.root_pid))
-    asyncio.run(runtime.mount_overlay(handle, layer_paths=(str(lower),)))
+    try:
+        asyncio.run(runtime.mount_overlay(handle, layer_paths=(str(lower),)))
+    except Exception as exc:
+        # IsolatedWorkspaceError stashes details in ``exc.details`` dict, not
+        # as attrs. Dump so the host-side test sees what the setns helper said.
+        details = getattr(exc, "details", {}) or {}
+        sys.stderr.write(
+            "BACKSTOP_HELPER_FAIL %s: %s\n  return_code=%s\n"
+            "  helper_stderr=%r\n" % (
+                type(exc).__name__,
+                exc,
+                details.get("return_code", "?"),
+                details.get("helper_stderr", ""),
+            )
+        )
+        raise
 
     mi_path = "/proc/%d/mountinfo" % handle.root_pid
     with open(mi_path, "r", encoding="utf-8") as fh:
         mi = fh.read()
+    # mountinfo format: ... - <fstype> <source> <opts>. The fsopen/fsmount
+    # mount API (used by kernel_mount.mount_overlay) creates a mount whose
+    # "source" field is "none"; the legacy mount(8) path would render
+    # "overlay overlay". Accept either so the backstop tracks both APIs.
     found = any(
-        " - overlay overlay " in line and " /testbed " in line
+        (" - overlay overlay " in line or " - overlay none " in line)
+        and " /testbed " in line
         for line in mi.splitlines()
     )
     if not found:
@@ -110,16 +140,6 @@ sys.exit(exit_code)
     reason="heavy live e2e disabled in runner.live_e2e.heavy_enabled",
 )
 @pytest.mark.timeout(180)
-@pytest.mark.xfail(
-    strict=False,
-    reason=(
-        "Diagnostic-only backstop: the helper path that bypasses the daemon "
-        "fails when invoked from a raw_exec heredoc context (PYTHONPATH/cap "
-        "inheritance details still under investigation — see DEFERRED-WORK.md). "
-        "The 4 daemon-path tests in this directory already cover that "
-        "_LinuxRuntime.mount_overlay works end-to-end."
-    ),
-)
 async def test_mount_overlay_backstop(iws_clean_sandbox) -> None:
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
     # PYTHONPATH=/tmp/eos-sandbox-runtime lets the in-container python3 see
