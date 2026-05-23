@@ -126,7 +126,17 @@ class IsolatedNetwork:
             _nft_quiet("delete", "table", "inet", legacy)
 
     def install_veth(self, *, handle_id: str, root_pid: int) -> VethPair:
-        """Create veth pair, attach host end to bridge with port isolation."""
+        """Create veth pair, attach host end to bridge with port isolation.
+
+        Also configures the ns-side end inside the iws's net namespace:
+        brings it up, assigns ``ns_ip`` with the /24 prefix, and adds a
+        default route via the bridge gateway. Without this the iws's veth
+        is a bare interface — no IP, no link up, no route — and outbound
+        traffic (ping/curl/DNS) fails with "Network unreachable". The
+        ns-side config is intentionally minimal (single /32 in the bridge
+        /24, default via gateway) so the design's MASQUERADE postrouting
+        rule is the sole egress path.
+        """
         if not self._initialized:
             raise IsolatedNetworkUnavailable("isolated_network_not_initialized")
         # Linux IFNAMSIZ caps interface names at 15 chars.
@@ -142,6 +152,14 @@ class IsolatedNetwork:
             _ip("link", "set", host, "type", "bridge_slave", "isolated", "on",
                 "mcast_flood", "off")
             _ip("link", "set", host, "up")
+            # Configure the ns-side inside the iws net namespace via nsenter.
+            # The iws-side ns_holder.py is the holder of the new net ns but it
+            # only brings up ``lo`` and purges IPv6; veth-side IP+route are
+            # left to the daemon (this code) so the ns_holder stays minimal.
+            prefix = BRIDGE_CIDR.prefixlen
+            _ip_ns(root_pid, "link", "set", ns, "up")
+            _ip_ns(root_pid, "addr", "add", f"{ns_ip}/{prefix}", "dev", ns)
+            _ip_ns(root_pid, "route", "add", "default", "via", str(GATEWAY))
         except Exception:
             self.pool.free(ns_ip)
             _ip_quiet("link", "del", host)
@@ -212,6 +230,21 @@ def _ip(*args: str) -> None:
 def _ip_quiet(*args: str) -> None:
     subprocess.run(
         ["ip", *args], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+
+
+def _ip_ns(root_pid: int, *args: str) -> None:
+    """Run ``ip <args>`` inside the net namespace owned by ``root_pid``.
+
+    Uses nsenter against ``/proc/<pid>/ns/net`` rather than ``setns(2)`` from
+    Python so the call stays single-step and inherits the daemon's existing
+    capabilities. The iws ns_holder's user_ns is the parent's (mapped via
+    --map-root-user), so root in the daemon's user_ns is root inside the
+    iws net_ns — no extra capability dance needed for ip address/route ops.
+    """
+    subprocess.run(
+        ["nsenter", "-t", str(root_pid), "-n", "--", "ip", *args],
+        check=True, capture_output=True, text=True,
     )
 
 

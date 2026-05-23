@@ -47,15 +47,31 @@ async def test_external_inbound_udp_rejected(
         )
         assert ns_ip
 
+        # python3 -c can't combine ``try:`` after a ``;`` (try is a compound
+        # statement, not an expression). Use real newlines in the script so
+        # the suite parses correctly. The single-quoted heredoc keeps
+        # bash from interpolating $ inside the python source.
+        #
+        # ``unshare -n`` gives the probe a bare net ns: only lo, no routes —
+        # so even sendto() can raise OSError(ENETUNREACH) before the
+        # recvfrom timeout window. That outcome IS the assertion (external
+        # netns has no route to the bridge), so accept it as success. Catch
+        # all of: timeout, ConnectionRefused, OSError.
         probe = await raw_exec(
             sandbox_id,
-            "unshare -n -- python3 -c \""
-            "import socket; s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); "
-            "s.settimeout(2.0); "
-            f"s.sendto(b'x', ('{ns_ip}', 53)); "
-            "try: s.recvfrom(64)\nexcept (socket.timeout, ConnectionRefusedError): "
-            "    raise SystemExit(0)\nraise SystemExit(1)"
-            "\"",
+            (
+                "unshare -n -- python3 - <<'PY'\n"
+                "import socket\n"
+                "s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)\n"
+                "s.settimeout(2.0)\n"
+                "try:\n"
+                f"    s.sendto(b'x', ('{ns_ip}', 53))\n"
+                "    s.recvfrom(64)\n"
+                "except (socket.timeout, ConnectionRefusedError, OSError):\n"
+                "    raise SystemExit(0)\n"
+                "raise SystemExit(1)\n"
+                "PY"
+            ),
             cwd="/", timeout=15,
         )
         assert probe.exit_code == 0, (

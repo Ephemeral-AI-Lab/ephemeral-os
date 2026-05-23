@@ -15,7 +15,7 @@ stdout: ``{"applied_fallback": bool, "previous_first_nameserver": str|null}``
 
 from __future__ import annotations
 
-import ctypes  # noqa: F401  -- R10 discipline parity with sibling helpers
+import ctypes
 import json
 import os
 import sys
@@ -41,21 +41,47 @@ def _needs_fallback(addr: str | None) -> bool:
 
 
 def _write_resolv(fallback: str) -> None:
-    # Unlink first so we replace any symlink chain. Files are namespaced via
-    # the private mntns, so the host's resolv.conf stays put.
-    try:
-        os.unlink(_RESOLV_CONF)
-    except FileNotFoundError:
-        pass
-    fd = os.open(
-        _RESOLV_CONF,
-        os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
-        0o644,
+    """Replace ``/etc/resolv.conf`` with a single-nameserver fallback.
+
+    Docker bind-mounts ``/etc/resolv.conf`` from the container runtime into
+    every container. A plain ``unlink`` on a bind-mount target returns
+    EBUSY (kernel refuses to delete a mounted-over inode), so the previous
+    ``unlink + create`` approach failed inside sweevo containers.
+
+    Workaround: write the new content to a private file in /tmp, then
+    ``mount --bind`` it OVER the existing ``/etc/resolv.conf``. The iws's
+    mountns has private propagation, so this shadowing is invisible
+    outside the iws. CAP_SYS_ADMIN inside the new user_ns is enough for
+    the bind. The original host bind-mount stays put underneath.
+    """
+    # tempfile + uuid imports stay inside the function so the module-level
+    # R10 allowlist (test_setns_exec_discipline) stays tight. Function-body
+    # imports are permitted post-setns.
+    import tempfile
+    import uuid
+
+    new_path = os.path.join(
+        tempfile.gettempdir(), f".iws-resolv-{uuid.uuid4().hex[:12]}.conf"
     )
+    fd = os.open(new_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
     try:
         os.write(fd, f"nameserver {fallback}\n".encode("utf-8"))
     finally:
         os.close(fd)
+
+    # ``mount --bind`` shadows the bind-mounted resolv.conf in the iws's
+    # mountns only. The kernel rejects this if we mount on a path whose
+    # parent dir we don't own; /etc/resolv.conf is on the container rootfs
+    # which the new user_ns inherits ownership of via --map-root-user, so
+    # the bind is permitted.
+    libc = ctypes.CDLL("libc.so.6", use_errno=True)
+    src = new_path.encode("utf-8")
+    tgt = _RESOLV_CONF.encode("utf-8")
+    MS_BIND = 4096
+    rc = libc.mount(src, tgt, b"none", MS_BIND, None)
+    if rc != 0:
+        err = ctypes.get_errno()
+        raise OSError(err, os.strerror(err), f"mount --bind {new_path} {_RESOLV_CONF}")
 
 
 def main() -> int:
