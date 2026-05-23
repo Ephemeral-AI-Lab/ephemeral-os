@@ -354,18 +354,31 @@ async def iws_clean_sandbox(iws_sandbox: dict[str, Any]) -> dict[str, Any]:
     # Purge any leaked test-injection vars. If grep finds none, this is a
     # ~1ms no-op. If grep finds something, the sed strips it and we force a
     # daemon respawn so the next RPC sees a clean env.
+    #
+    # Also re-add UPPERDIR_BYTES=256MiB if missing. Some failure_modes /
+    # resource_controls tests set their own UPPERDIR_BYTES via
+    # ``set_daemon_env`` and ``clear_daemon_env`` the line in their
+    # finally block, which removes the conftest-session default. Without
+    # this idempotent restore the next test that opens N=2+ concurrent
+    # handles trips the 1 GiB-default RAM gate (production fallback).
     purge = await raw_exec(
         sandbox_id,
-        "grep -qE '^(EOS_ISOLATED_WORKSPACE_TEST_FAIL_AT|"
+        "changed=0; "
+        "if grep -qE '^(EOS_ISOLATED_WORKSPACE_TEST_FAIL_AT|"
         "EOS_ISOLATED_WORKSPACE_TEST_HANG_AT|"
         "EOS_ISOLATED_WORKSPACE_TEST_PHASE_DELAY|"
-        "EOS_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH)=' /etc/environment "
-        "&& { sed -i '/^EOS_ISOLATED_WORKSPACE_TEST_FAIL_AT=/d;"
+        "EOS_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH)=' /etc/environment; "
+        "then sed -i '/^EOS_ISOLATED_WORKSPACE_TEST_FAIL_AT=/d;"
         "/^EOS_ISOLATED_WORKSPACE_TEST_HANG_AT=/d;"
         "/^EOS_ISOLATED_WORKSPACE_TEST_PHASE_DELAY=/d;"
         "/^EOS_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH=/d' /etc/environment; "
-        "pkill -9 -f '^.*python.*-m sandbox\\.daemon' || true; echo PURGED; }"
-        " || echo OK",
+        "changed=1; fi; "
+        "if ! grep -q '^EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES=' /etc/environment; "
+        "then echo 'EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES=268435456' "
+        ">> /etc/environment; changed=1; fi; "
+        "if [ \"$changed\" = 1 ]; "
+        "then pkill -9 -f '^.*python.*-m sandbox\\.daemon' || true; "
+        "echo PURGED; else echo OK; fi",
         cwd="/",
         timeout=10,
     )
