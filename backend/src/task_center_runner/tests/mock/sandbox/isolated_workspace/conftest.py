@@ -91,21 +91,34 @@ async def iws_sandbox(
     if sandbox_id:
         # Install iproute2 + nftables if missing. SWE-EVO base images (incl.
         # the dask test fixture) don't ship them, but iws bridge/veth/MASQUERADE
-        # need `ip` and `nft`. apt-get is idempotent; the test fence at
-        # `pre_flight/test_phase_timer_invariants.py` doesn't exercise this.
-        # We tolerate failure quietly here so non-Debian images still set the
-        # env flag; the iws tests themselves will fail loud if `ip` is absent.
-        await raw_exec(
-            sandbox_id,
-            (
-                "command -v ip >/dev/null 2>&1 && command -v nft >/dev/null 2>&1 "
-                "|| (apt-get update -qq && "
-                "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "
-                "iproute2 nftables) >/dev/null 2>&1 || true"
-            ),
-            cwd="/",
-            timeout=120,
-        )
+        # need ``ip`` and ``nft``. apt-get is idempotent; the test fence at
+        # ``pre_flight/test_phase_timer_invariants.py`` doesn't exercise this.
+        # The whole step is best-effort: a slow apt mirror or 502 from
+        # ubuntu's repo (common on Docker Desktop NAT) shouldn't fail every
+        # downstream test before the daemon even sees a single RPC. The
+        # individual iws tests that genuinely need ip/nft will surface the
+        # missing binary clearly via the network module's preflight.
+        try:
+            await raw_exec(
+                sandbox_id,
+                (
+                    "command -v ip >/dev/null 2>&1 && "
+                    "command -v nft >/dev/null 2>&1 "
+                    "|| (apt-get update -qq && "
+                    "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "
+                    "iproute2 nftables) >/dev/null 2>&1 || true"
+                ),
+                cwd="/",
+                timeout=300,
+            )
+        except (TimeoutError, asyncio.TimeoutError):
+            import warnings
+            warnings.warn(
+                "iws_sandbox: iproute2+nftables install timed out; tests "
+                "exercising bridge/veth/MASQUERADE will fail with missing "
+                "ip/nft binaries.",
+                stacklevel=2,
+            )
         await raw_exec(
             sandbox_id,
             "grep -q '^EOS_ISOLATED_WORKSPACE_ENABLED=' /etc/environment "
