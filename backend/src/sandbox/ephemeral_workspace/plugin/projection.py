@@ -5,9 +5,9 @@ truth is the active layer-stack manifest, not the mutable provider workspace
 directory. This module exposes a ``manifest_key`` so plugin sessions can detect
 when the manifest changes and refresh their state against the latest snapshot.
 
-Lives under ``sandbox/plugin/`` rather than the LSP catalog so future stateful
-plugins reuse it. It MUST stay plugin-agnostic — no plugin-name string
-switches, no LSP-specific code paths.
+Lives under ``sandbox.ephemeral_workspace.plugin`` rather than the LSP catalog
+so future stateful plugins reuse it. It MUST stay plugin-agnostic — no
+plugin-name string switches, no LSP-specific code paths.
 """
 
 from __future__ import annotations

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import pytest
 
-from sandbox.isolated_workspace.manager import (
+from sandbox.isolated_workspace import (
     _PHASE_TIMER_OVERHEAD_BUDGET_MS,
     _PhaseTimer,
 )

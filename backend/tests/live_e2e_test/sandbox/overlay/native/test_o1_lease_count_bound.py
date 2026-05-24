@@ -9,9 +9,8 @@ from pathlib import Path
 import pytest
 
 from ..._harness.lease_resource_probe import (
-    LEGACY_MATERIALIZE,
     NEW_MOUNT_API,
-    assert_bound_a_negative_control,
+    assert_new_api_o1_bounds,
     build_layer_stack,
     has_cap_sys_admin,
     run_shell_batch,
@@ -29,7 +28,7 @@ _COMMAND = "test -f known_file.bin"
 
 
 def test_bound_a_lease_count_sweep(tmp_path: Path) -> None:
-    """Compare new API and legacy materialization for N active shell leases."""
+    """Assert O(1) lower-side disk for N active shell leases."""
     asyncio.run(_run_bound_a(tmp_path))
 
 
@@ -51,13 +50,4 @@ async def _run_bound_a(tmp_path: Path) -> None:
             commands=commands,
             request_prefix=f"new-api-N{n}",
         )
-        legacy = await run_shell_batch(
-            stack=stack,
-            workspace_root=case_root / "workspace-root",
-            scratch_root=case_root / "scratch-legacy",
-            requested_path=LEGACY_MATERIALIZE,
-            commands=commands,
-            request_prefix=f"legacy-N{n}",
-        )
-
-        assert_bound_a_negative_control(new_api=new_api, legacy=legacy)
+        assert_new_api_o1_bounds(new_api)

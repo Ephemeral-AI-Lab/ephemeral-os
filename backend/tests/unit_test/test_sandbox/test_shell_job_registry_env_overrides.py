@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from sandbox.daemon.service import shell_job as shell_job_module
+import sandbox.ephemeral_workspace.shell_job as shell_job_module
 from sandbox.ephemeral_workspace.shell_job import (
     DEFAULT_REAPER_INTERVAL_S,
     DEFAULT_TTL_SECONDS,

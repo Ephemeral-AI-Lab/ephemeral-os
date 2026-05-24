@@ -7,7 +7,7 @@ import os
 import time
 from typing import Any
 
-from sandbox.ephemeral_workspace.plugin.runtime import register_plugin_op
+from sandbox.ephemeral_workspace.plugin.op_registry import register_plugin_op
 
 from plugins.catalog.lsp.runtime.apply import apply_workspace_edit
 from plugins.catalog.lsp.runtime.session_manager import get_session

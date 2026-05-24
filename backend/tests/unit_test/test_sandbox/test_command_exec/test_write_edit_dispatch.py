@@ -21,7 +21,7 @@ from sandbox.daemon.request_context import (
 from sandbox.daemon.handler import edit, read, write
 from sandbox.daemon.rpc import dispatcher as server
 from sandbox.daemon import occ_backend
-from sandbox.daemon.service import shell_runner
+from sandbox.ephemeral_workspace import pipeline as pipeline_mod
 from sandbox.daemon.workspace_server import get_layer_stack_manager
 
 
@@ -120,8 +120,8 @@ def test_op_table_dispatches_data_ops_to_runtime_handlers() -> None:
     assert server.OP_TABLE["api.v1.edit_file"] is edit.edit_file
     assert server.OP_TABLE["api.read_file"] is read.read_file
     assert server.OP_TABLE["api.v1.read_file"] is read.read_file
-    assert server.OP_TABLE["api.shell"] is shell_runner.execute_shell_api
-    assert server.OP_TABLE["api.v1.shell"] is shell_runner.execute_shell_api
+    assert server.OP_TABLE["api.shell"] is pipeline_mod.execute_shell_api
+    assert server.OP_TABLE["api.v1.shell"] is pipeline_mod.execute_shell_api
     assert server.OP_TABLE["api.layer_metrics"] is metrics.layer_metrics
 
 
@@ -284,7 +284,7 @@ async def test_layer_metrics_reports_no_cache_storage_fields(tmp_path: Path) -> 
         "lowerdir_cache_hits",
         "lowerdir_cache_misses",
         "lowerdir_cache_entries",
-        "materialized_lowerdirs",
+        "tree_copy_lowerdirs",
     }
     assert payload.keys().isdisjoint(forbidden)
 

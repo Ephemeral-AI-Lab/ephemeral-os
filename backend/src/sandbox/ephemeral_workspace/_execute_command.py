@@ -17,13 +17,13 @@ from sandbox.ephemeral_workspace.shell_contract import (
     CommandExecRequest,
     CommandExecResult,
     EmptyChangesetResult,
-    LayerPathsLayout,
     ShellProcessResult,
     WorkspaceCapture,
     WorkspaceCapturePublisher,
     WorkspaceLeaseClient,
 )
 from sandbox.overlay.capture import walk_upperdir
+from sandbox.overlay.layout import LayerPathsLayout
 from sandbox.overlay.namespace import run_in_namespace
 from sandbox._shared.resource_audit import command_exec_resource_timings
 from sandbox.overlay.scratch import command_exec_scratch_root

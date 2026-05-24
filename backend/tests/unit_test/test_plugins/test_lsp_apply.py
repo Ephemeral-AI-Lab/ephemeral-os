@@ -51,9 +51,8 @@ class _OperationOverlay(_Overlay):
         *,
         request_id: str,
         workspace_root: str | None = None,
-        materialize: bool = False,
     ) -> SimpleNamespace:
-        del request_id, workspace_root, materialize
+        del request_id, workspace_root
         run_dir = self.scratch_root / "run"
         upperdir = run_dir / "upper"
         workdir = run_dir / "work"

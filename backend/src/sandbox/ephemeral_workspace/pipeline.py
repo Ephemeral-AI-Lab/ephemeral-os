@@ -11,7 +11,7 @@ import hashlib
 import os
 from pathlib import Path
 import shutil
-from typing import AsyncIterator, Protocol
+from typing import Any, AsyncIterator, Protocol
 from uuid import uuid4
 
 from sandbox.ephemeral_workspace.shell_contract import (
@@ -26,6 +26,7 @@ from sandbox.ephemeral_workspace.shell_contract import (
 from sandbox.ephemeral_workspace._execute_command import execute_command
 from sandbox.overlay.capability import new_mount_api_supported
 from sandbox.overlay.capture import walk_upperdir
+from sandbox.overlay.namespace import run_in_namespace
 from sandbox.overlay.kernel_mount import (
     mount_overlay,
     umount,
@@ -788,6 +789,7 @@ async def _execute_shell(
     occ_client: OCCMutationClient,
     gitignore: SnapshotGitignoreOracle,
     storage_root: Path,
+    command_runner: Any | None = None,
 ) -> CommandExecResult:
     request = _shell_command_request(args)
     pipeline = EphemeralPipeline(
@@ -802,6 +804,7 @@ async def _execute_shell(
         capture_publisher=pipeline,
         storage_root=storage_root,
         timing_provider=lambda: gitignore_cache_timings(gitignore),
+        command_runner=command_runner or run_in_namespace,
     )
 
 

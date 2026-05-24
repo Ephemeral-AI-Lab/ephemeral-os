@@ -32,9 +32,8 @@ class _FakeOverlay:
         *,
         request_id: str,
         workspace_root: str | None = None,
-        materialize: bool = False,
     ) -> Any:
-        del request_id, materialize
+        del request_id
         self.acquired_workspace_root = str(workspace_root or "")
         run_dir = self.scratch_root / "run"
         upperdir = run_dir / "upper"

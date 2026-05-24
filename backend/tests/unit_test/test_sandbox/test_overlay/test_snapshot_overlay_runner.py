@@ -11,12 +11,12 @@ from sandbox.layer_stack import WriteLayerChange, LayerStack
 from sandbox.daemon.service.layer_stack_client import LayerStackClient
 from sandbox.ephemeral_workspace.shell_contract import (
     CommandExecRequest,
-    MountMode,
     OverlayCapture,
-    OverlayLayout,
+    ShellProcessResult,
 )
 from sandbox.ephemeral_workspace._execute_command import execute_command
 from sandbox.daemon.rpc.dispatcher import dispatch_envelope_async
+from sandbox.overlay.layout import LayerPathsLayout
 
 
 def _source(tmp_path: Path, name: str, content: bytes) -> str:
@@ -85,7 +85,7 @@ async def test_orchestrator_overlay_executes_against_leased_manifest_without_pub
         capture_publisher=None,
         storage_root=manager.storage_root,
         occ_apply=False,
-        mount_mode=MountMode.COPY_BACKED,
+        command_runner=_write_value_runner,
     )
 
     assert result.exit_code == 0
@@ -123,13 +123,12 @@ async def test_orchestrator_overlay_releases_lease_when_runtime_fails(
 
     def failing_runner(
         *,
-        spec: OverlayLayout,
+        spec: LayerPathsLayout,
         request: CommandExecRequest,
         run_dir: str | Path,
         timings: dict[str, float],
-        mount_mode: MountMode | None = None,
     ) -> object:
-        del spec, request, run_dir, timings, mount_mode
+        del spec, request, run_dir, timings
         raise RuntimeError("runtime failed")
 
     with pytest.raises(RuntimeError, match="runtime failed"):
@@ -139,7 +138,6 @@ async def test_orchestrator_overlay_releases_lease_when_runtime_fails(
             capture_publisher=None,
             storage_root=manager.storage_root,
             occ_apply=False,
-            mount_mode=MountMode.COPY_BACKED,
             command_runner=failing_runner,
         )
 
@@ -149,6 +147,7 @@ async def test_orchestrator_overlay_releases_lease_when_runtime_fails(
 @pytest.mark.asyncio
 async def test_overlay_run_handler_supports_layer_stack_snapshot_requests(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     manager = LayerStack(tmp_path / "stack")
     manager.publish_changes(
@@ -158,6 +157,11 @@ async def test_overlay_run_handler_supports_layer_stack_snapshot_requests(
                 source_path=_source(tmp_path, "value.txt", b"old\n"),
             )
         ]
+    )
+
+    monkeypatch.setattr(
+        "sandbox.daemon.handler.overlay._run_overlay_command",
+        _write_value_runner,
     )
 
     result = await dispatch_envelope_async(
@@ -183,3 +187,33 @@ async def test_overlay_run_handler_supports_layer_stack_snapshot_requests(
     assert changes[0]["kind"] == "write"
     assert Path(changes[0]["content_path"]).read_bytes() == b"new"
     assert changes[0]["final_hash"] == hashlib.sha256(b"new").hexdigest()
+
+
+def _write_value_runner(
+    *,
+    spec: LayerPathsLayout,
+    request: CommandExecRequest,
+    run_dir: str | Path,
+    timings: dict[str, float],
+) -> ShellProcessResult:
+    run_path = Path(run_dir)
+    upper = Path(spec.writes)
+    command_text = " ".join(request.command)
+    rel = "pkg/value.txt" if "pkg/value.txt" in command_text else "value.txt"
+    content = b"new\n" if rel.startswith("pkg/") else b"new"
+    target = upper / rel
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(content)
+    stdout_ref = run_path / "stdout.bin"
+    stderr_ref = run_path / "stderr.bin"
+    stdout_ref.parent.mkdir(parents=True, exist_ok=True)
+    stdout_ref.write_text("out", encoding="utf-8")
+    stderr_ref.write_text("err", encoding="utf-8")
+    timings["command_exec.run_command_s"] = 0.0
+    return ShellProcessResult(
+        exit_code=0,
+        stdout_ref=str(stdout_ref),
+        stderr_ref=str(stderr_ref),
+        mounted_workspace_root=spec.workspace_root,
+        mount_mode="private_namespace",
+    )

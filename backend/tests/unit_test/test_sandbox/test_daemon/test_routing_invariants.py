@@ -9,9 +9,10 @@ from sandbox.daemon.handler import (
     workspace,
 )
 from sandbox.ephemeral_workspace.plugin import handler as plugin_handler
+from sandbox.ephemeral_workspace import pipeline as pipeline_mod
+from sandbox.ephemeral_workspace import shell_job as shell_job_handler
 from sandbox.daemon.handler import edit, glob, grep, read, write
 from sandbox.daemon.rpc import dispatcher as server
-from sandbox.daemon.service import shell_runner, shell_job_handler
 from sandbox.isolated_workspace import handlers as iws_handlers
 from sandbox.isolated_workspace import ops_handlers as iws_ops_handlers
 
@@ -30,8 +31,8 @@ def test_daemon_op_table_routes_to_current_handler_layout() -> None:
         "api.v1.glob": glob.glob,
         "api.grep": grep.grep,
         "api.v1.grep": grep.grep,
-        "api.shell": shell_runner.execute_shell_api,
-        "api.v1.shell": shell_runner.execute_shell_api,
+        "api.shell": pipeline_mod.execute_shell_api,
+        "api.v1.shell": pipeline_mod.execute_shell_api,
         "api.shell.launch": shell_job_handler.shell_launch,
         "api.v1.shell.launch": shell_job_handler.shell_launch,
         "api.shell.poll": shell_job_handler.shell_poll,

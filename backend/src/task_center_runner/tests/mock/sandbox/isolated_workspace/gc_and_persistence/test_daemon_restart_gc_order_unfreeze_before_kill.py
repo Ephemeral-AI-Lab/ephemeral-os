@@ -73,7 +73,7 @@ async def test_daemon_restart_gc_order_unfreeze_before_kill(
     if unfreeze_pos < 0 and kill_pos < 0:
         pytest.skip(
             "daemon log not captured on this image; ordering is enforced "
-            "structurally by _unfreeze_and_kill — see manager.py."
+            "structurally by _unfreeze_and_kill — see _gc.py."
         )
     assert unfreeze_pos >= 0, ("missing unfreeze log line", text)
     assert kill_pos >= 0, ("missing kill log line", text)

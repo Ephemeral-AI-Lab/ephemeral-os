@@ -24,7 +24,7 @@ about to write. If something close exists, reuse it (deferred import after
 ```
 backend/src/sandbox/isolated_workspace/          ← all iws production code
 ├── __init__.py            feature overview + cross-package reuse contract
-├── manager.py             state machine, _PhaseTimer, _LinuxRuntime, _Runtime Protocol
+├── pipeline.py / extracted modules             state machine, _PhaseTimer, _LinuxRuntime, _Runtime Protocol
 ├── network.py             bridge + nftables + veth + IP pool
 ├── handlers.py            api.isolated_workspace.{enter, exit, status}
 ├── ops_handlers.py        api.isolated_workspace.{shell, read_file, write_file, edit_file, grep}
@@ -74,7 +74,7 @@ Before writing new code, check whether one of these already does the job.
 | Need | Use | Already used by iws? |
 |---|---|---|
 | Mount an overlay filesystem | `sandbox.overlay.kernel_mount.mount_overlay` — modern `fsopen/fsconfig/fsmount/move_mount`, FD-pinned paths via `validate_mount_inputs` | yes (`scripts/setns_overlay_mount.py`, deferred import after `setns`, uses `validate_mount_inputs`) |
-| Probe kernel overlay support | `sandbox.overlay.capability.new_mount_api_supported` — picks up `EOS_OVERLAY_FORCE_MATERIALIZE` kill-switch | yes (`_iws_fixtures.can_mount_overlay_natively`) |
+| Probe kernel overlay support | `sandbox.overlay.capability.new_mount_api_supported` — picks up `EOS_REQUIRE_NEW_MOUNT_API` kill-switch | yes (`_iws_fixtures.can_mount_overlay_natively`) |
 | Walk upperdir for change capture | `sandbox.overlay.capture.walk_upperdir` — handles whiteouts, opaque dirs, sparse files | **not yet** — `manager._du_bytes` is a hand-rolled walk. If you need anything beyond byte counting (e.g., for the Tier 7 `test_upperdir_fully_discarded_on_normal_exit`), use `walk_upperdir` instead of reinventing |
 | New mount API syscall constants | `sandbox.overlay.new_mount_api` (`SYS_fsopen`, `SYS_fsconfig`, `SYS_fsmount`, `SYS_move_mount`, etc.) | yes, through deferred reuse of `kernel_mount.mount_overlay`; do not inline raw syscall constants in iws helpers |
 | Lease + snapshot lifecycle | `sandbox.daemon.workspace_server.{prepare,release}_workspace_snapshot` | yes (`handlers._LayerStackAdapter`) |
@@ -141,7 +141,7 @@ Pinned by `pre_flight/test_handle_shape_no_publish.py`.
 
 The strings `apply_changeset`, `commit_prepared`, `commit_transaction`,
 `CommitQueue`, `apply_sync` MUST NOT appear in the textual bodies of
-`IsolatedWorkspaceManager.exit`, `_teardown`, or `_rollback_partial`.
+`IsolatedPipeline.exit`, `_teardown`, or `_rollback_partial`.
 Pinned by `pre_flight/test_exit_path_no_occ.py`.
 
 This is a textual scan because the bug it prevents is "a shared cleanup
@@ -316,7 +316,7 @@ unfreezes before kill (R5 ordering), and sweeps legacy v1 nft tables.
   - `gc_and_persistence/test_upperdir_fully_discarded_on_normal_exit.py`
   - `gc_and_persistence/test_upperdir_discarded_on_abnormal_exit_daemon_kill.py`
 
-**Production code (in `manager.py`):**
+**Production code (in `pipeline.py` / extracted modules):**
 
 - `startup_gc` rewritten: every persisted handle row is treated as a
   zombie — reserve its IP, release its lease, unfreeze + rmdir its
@@ -396,7 +396,7 @@ the manager doesn't strand state.
 - `failure_modes/test_freezer_stall_falls_back_to_sigstop.py`
 - `failure_modes/test_argv_e2big_via_in_ns_write.py`
 
-**Production code (in `manager.py`):**
+**Production code (in `pipeline.py` / extracted modules):**
 
 - Two test-only env knobs (PLAN §9.3 design):
   - `EOS_ISOLATED_WORKSPACE_TEST_HANG_AT=<phase>` → raises `setup_timeout`
@@ -458,7 +458,7 @@ runtime test; the async refactor that unblocks N=5 fan-out lands first.
   - `concurrency/test_5_concurrent_cgroup_memory_isolated.py`
   - `concurrency/test_5_concurrent_audit_events_complete.py`
 
-**Production code (in `manager.py`):**
+**Production code (in `pipeline.py` / extracted modules):**
 
 - `_Runtime` Protocol: `mount_overlay` + `configure_dns` are now
   `async def`. The other Protocol methods stay sync — they're fast
@@ -468,7 +468,7 @@ runtime test; the async refactor that unblocks N=5 fan-out lands first.
   module-level `_run_helper_subprocess` coroutine
   (`asyncio.create_subprocess_exec` + `asyncio.wait_for`) so 5 enters
   no longer queue on a single `subprocess.run`.
-- **Production gap closed:** `IsolatedWorkspaceManager.initialize()` now
+- **Production gap closed:** `IsolatedPipeline.initialize()` now
   starts a background `_ttl_loop` task. Previously `_ttl_task` was
   declared but never assigned — Tier 5's `test_ttl_evict_and_audit`
   would have hung. Sweep cadence is
@@ -515,7 +515,7 @@ PLAN §18.
 - `performance/test_baseline_collection_invariant.py`
 - `performance/test_phases_ms_subset_cover_invariant.py`
 
-**Production code (in `manager.py`):**
+**Production code (in `pipeline.py` / extracted modules):**
 
 - Test-only knob `EOS_ISOLATED_WORKSPACE_TEST_PHASE_DELAY=<phase>:<ms>`
   (comma-separated for multiple phases). Sleeps inside
@@ -562,10 +562,10 @@ in `IMPLEMENTATION-REPORT.md` Session 4 deferred items.
 |---|---|
 | ~~`EOS_ISOLATED_WORKSPACE_ENABLED` daemon plumbing~~ | **DONE** (2026-05-23 session 2 — see `iws_sandbox` fixture in `conftest.py`). |
 | ~~Daemon-side iws audit-event JSONL sink~~ | **DONE** (2026-05-23 session 2 — `_JsonlAuditSink` in `handlers.py`, `iws_audit_jsonl` fixture). |
-| ~~Cgroup/lease/netns reap on startup_gc~~ | **DONE** (2026-05-23 session 3 — `_release_orphan_lease`, `_reap_orphan_cgroup`, `_unfreeze_and_kill` in `manager.py`). |
+| ~~Cgroup/lease/netns reap on startup_gc~~ | **DONE** (2026-05-23 session 3 — `_release_orphan_lease`, `_reap_orphan_cgroup`, `_unfreeze_and_kill` in `pipeline.py` / extracted modules). |
 | ~~v1 `eos_pinws_*` nft migration sweep~~ | **DONE** (2026-05-23 session 3 — `IsolatedNetwork._sweep_v1_nft_tables`). |
 | ~~IPv6 default-route purge~~ | **DONE** (2026-05-23 session 3 — `_purge_ipv6_default_routes` in `scripts/ns_holder.py`). |
-| ~~Test-only failure-injection env knobs~~ | **DONE** (2026-05-23 session 3 — `_maybe_inject_failure` in `manager.py`, holder crash knob in `ns_holder.py`). |
+| ~~Test-only failure-injection env knobs~~ | **DONE** (2026-05-23 session 3 — `_maybe_inject_failure` in `pipeline.py` / extracted modules, holder crash knob in `ns_holder.py`). |
 | ~~R11 SIGSTOP/SIGCONT fallback in `freeze`~~ | **DONE** (2026-05-23 session 3 — `_LinuxRuntime.freeze` walks `cgroup.procs` on EACCES). |
 | ~~Async `subprocess` migration for `_LinuxRuntime` (§4.2/7.7)~~ | **DONE** (2026-05-23 session 4 — `mount_overlay` + `configure_dns` are `async def`; shared `_run_helper_subprocess` coroutine). |
 | ~~`_ttl_loop` background task wired by `initialize()`~~ | **DONE** (2026-05-23 session 4 — Tier 5 prerequisite; adaptive cadence `max(0.5 s, min(ttl_s / 2, 30 s))`). |
@@ -597,13 +597,13 @@ deferred import inside `main()` (after the `setns` calls) is fine.
 to check only `tree.body` so deferred imports stay outside the fence.
 
 **Lesson for you:** before writing any low-level syscall code, search
-`sandbox/execution/` for an existing implementation. The codebase has
+`sandbox/overlay/` and `sandbox/_shared/tool_primitives/` for existing implementations. The codebase has
 been around long enough that most kernel-touching primitives already
 exist somewhere.
 
 ### 5.2 I added `sys.platform != "linux"` branches everywhere
 
-**What I did:** Defensive macOS-degradation branches in `manager.py` and
+**What I did:** Defensive macOS-degradation branches in `pipeline.py` / extracted modules and
 `network.py` (e.g., `if sys.platform != "linux": return`). Around 8
 branches plus a `_require_linux()` helper.
 

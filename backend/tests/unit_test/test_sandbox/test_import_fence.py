@@ -231,7 +231,7 @@ def test_layer_stack_package_has_no_occ_command_exec_or_git_policy_imports() -> 
     forbidden = (
         "sandbox.occ",
         "sandbox.command_exec",
-        "sandbox.daemon.service.workspace_binding",
+        "sandbox.main_workspace.workspace_binding",
         "pathspec",
     )
     for module in _python_files(SRC_ROOT / "sandbox" / "layer_stack"):
@@ -289,9 +289,11 @@ def test_command_exec_imports_only_client_protocol_boundaries() -> None:
     assert offenders == []
 
 
-def test_execution_service_delegates_occ_publish_to_daemon_overlay() -> None:
-    service_module = BACKEND_SRC_ROOT / "sandbox" / "execution" / "service.py"
-    imports = _imports(service_module)
+def test_execute_command_delegates_occ_publish_to_ephemeral_pipeline() -> None:
+    command_module = (
+        BACKEND_SRC_ROOT / "sandbox" / "ephemeral_workspace" / "_execute_command.py"
+    )
+    imports = _imports(command_module)
     forbidden = {
         "sandbox.occ.changeset",
         "sandbox.occ.overlay_change_conversion",
@@ -308,9 +310,9 @@ def test_execution_service_delegates_occ_publish_to_daemon_overlay() -> None:
     assert offenders == []
 
 
-def test_daemon_pipeline_owns_occ_publish_internals() -> None:
+def test_ephemeral_pipeline_owns_occ_publish_internals() -> None:
     overlay_module = (
-        BACKEND_SRC_ROOT / "sandbox" / "daemon" / "service" / "pipeline.py"
+        BACKEND_SRC_ROOT / "sandbox" / "ephemeral_workspace" / "pipeline.py"
     )
     imports = _imports(overlay_module)
 

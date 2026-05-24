@@ -34,12 +34,11 @@ from uuid import uuid4
 
 import pytest
 
-from sandbox.daemon.service import shell_job as shell_job_module
+import sandbox.ephemeral_workspace.shell_job as shell_job_module
 from sandbox.ephemeral_workspace.pipeline import OperationOverlayHandle
 from sandbox.ephemeral_workspace.shell_job import ShellJobRegistry
 from sandbox.ephemeral_workspace.shell_contract import (
     CommandExecRequest,
-    MountMode,
     ShellProcessResult,
 )
 
@@ -57,20 +56,20 @@ class _FakeEphemeralPipeline:
     def __init__(self, tmp_path: Path) -> None:
         self._scratch = tmp_path
         self.released_leases: list[str] = []
+        self._layer_stack = MagicMock(storage_root=tmp_path / "layers")
+        self._layer_stack.storage_root.mkdir(parents=True, exist_ok=True)
 
     def acquire_operation_overlay(
         self,
         *,
         request_id: str,
-        materialize: bool = False,
     ) -> OperationOverlayHandle:
-        del materialize
         rid = uuid4().hex[:8]
         run_dir = self._scratch / f"run-{request_id}-{rid}"
         upperdir = run_dir / "upper"
         workdir = run_dir / "work"
-        lowerdir = run_dir / "lower"
-        for d in (upperdir, workdir, lowerdir):
+        layer = self._layer_stack.storage_root / f"L{rid}"
+        for d in (upperdir, workdir, layer):
             d.mkdir(parents=True, exist_ok=True)
         owner = self
 
@@ -88,8 +87,8 @@ class _FakeEphemeralPipeline:
             run_dir=str(run_dir),
             upperdir=str(upperdir),
             workdir=str(workdir),
-            lowerdir=str(lowerdir),
-            layer_paths=None,
+            lowerdir=None,
+            layer_paths=(str(layer),),
             _overlay=_ReleaseShim(),  # type: ignore[arg-type]
         )
 
@@ -109,7 +108,7 @@ def _make_request(command: str, timeout_seconds: float) -> CommandExecRequest:
 
 
 def _stub_strategy_runner(duration_s: float) -> Callable[..., ShellProcessResult]:
-    """Returns a stub ``run_workspace_replaced_command`` that exec's sleep.
+    """Returns a stub namespace runner that execs sleep.
 
     The cancel pipeline runs ``wait_for_process_with_cancel`` so SIGKILL
     propagates through the strategy thread cleanly.
@@ -149,7 +148,7 @@ def _stub_strategy_runner(duration_s: float) -> Callable[..., ShellProcessResult
             stdout_ref=str(stdout_ref),
             stderr_ref=str(stderr_ref),
             mounted_workspace_root=spec.workspace_root,
-            mount_mode=MountMode.COPY_BACKED,
+            mount_mode="private_namespace",
         )
 
     return _stub
@@ -159,7 +158,7 @@ def _stub_strategy_runner(duration_s: float) -> Callable[..., ShellProcessResult
 def _patch_runner(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         shell_job_module,
-        "run_workspace_replaced_command",
+        "run_in_namespace",
         _stub_strategy_runner(duration_s=30.0),
     )
 

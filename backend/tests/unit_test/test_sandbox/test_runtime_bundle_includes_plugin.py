@@ -1,5 +1,4 @@
-"""Verify the runtime bundle contains sandbox/plugin/* so the daemon can
-import sandbox.ephemeral_workspace.plugin.runtime in-sandbox."""
+"""Verify the runtime bundle contains ephemeral plugin modules and compatibility shims."""
 
 from __future__ import annotations
 
@@ -18,14 +17,14 @@ def test_bundle_contains_sandbox_plugin_runtime() -> None:
     with tarfile.open(fileobj=io.BytesIO(raw), mode="r") as tar:
         names = set(tar.getnames())
     assert any(
-        name.startswith("sandbox/plugin/") and name.endswith(".py")
+        name.startswith("sandbox/ephemeral_workspace/plugin/") and name.endswith(".py")
         for name in names
-    ), f"runtime bundle missing sandbox/plugin/*: {sorted(names)[:20]}"
-    assert "sandbox/plugin/op_context.py" in names
-    assert "sandbox/plugin/op_registry.py" in names
-    assert "sandbox/plugin/overlay_child.py" in names
-    assert "sandbox/plugin/overlay_dispatch.py" in names
-    assert "sandbox/plugin/runtime/__init__.py" in names
-    assert "sandbox/plugin/runtime/registry.py" not in names
-    assert "sandbox/plugin/runtime/context.py" not in names
-    assert "sandbox/plugin/handler.py" in names
+    ), f"runtime bundle missing ephemeral plugin modules: {sorted(names)[:20]}"
+    assert "sandbox/ephemeral_workspace/plugin/op_context.py" in names
+    assert "sandbox/ephemeral_workspace/plugin/op_registry.py" in names
+    assert "sandbox/ephemeral_workspace/plugin/overlay_child.py" in names
+    assert "sandbox/ephemeral_workspace/plugin/overlay_dispatch.py" in names
+    assert "sandbox/ephemeral_workspace/plugin/runtime/__init__.py" in names
+    assert "sandbox/ephemeral_workspace/plugin/runtime/registry.py" not in names
+    assert "sandbox/ephemeral_workspace/plugin/runtime/context.py" not in names
+    assert "sandbox/ephemeral_workspace/plugin/handler.py" in names

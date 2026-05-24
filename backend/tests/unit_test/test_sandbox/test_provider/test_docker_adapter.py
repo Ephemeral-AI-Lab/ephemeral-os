@@ -108,7 +108,7 @@ def test_create_calls_containers_create_with_default_caps(
     assert kwargs["name"] == "sb1"
     assert kwargs["command"] == ["sleep", "infinity"]
     assert kwargs["detach"] is True
-    assert kwargs["cap_add"] == ["SYS_ADMIN"]
+    assert kwargs["cap_add"] == ["SYS_ADMIN", "NET_ADMIN"]
     assert "seccomp=unconfined" in kwargs["security_opt"]
     assert "apparmor=unconfined" in kwargs["security_opt"]
     assert kwargs["tmpfs"] == {
@@ -320,7 +320,7 @@ def test_exec_with_cwd_wraps_command(adapter: DockerProviderAdapter, fake_client
 
     cmd = container.exec_run.call_args.kwargs["cmd"]
     assert cmd[2].startswith("cd /repo && ")
-    assert "(ls)" in cmd[2]
+    assert "(\nls\n)" in cmd[2]
 
 
 def test_exec_nonzero_exit_propagates(adapter: DockerProviderAdapter, fake_client: MagicMock) -> None:

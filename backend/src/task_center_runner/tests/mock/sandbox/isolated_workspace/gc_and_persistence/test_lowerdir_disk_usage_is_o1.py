@@ -5,7 +5,7 @@ Behavioural backstop for ``test_lowerdir_layer_paths_shared_*``. ``du
 must grow by at most ``5 × upperdir_overhead_max`` (10 MB each by
 convention) — significantly less than 5 × the layer-stack size.
 
-If somebody flips ``prepare_workspace_snapshot(materialize=True)``, the
+If somebody flips ``prepare_workspace_snapshot(...) with a per-call tree copy``, the
 delta balloons to O(N × layer-stack size) and this test fails loudly.
 """
 
@@ -67,7 +67,7 @@ async def test_lowerdir_disk_usage_is_o1(iws_clean_sandbox) -> None:
         ceiling = before + len(_AGENTS) * _UPPERDIR_OVERHEAD_MAX_BYTES
         assert after <= ceiling, (
             f"layer_stack du grew O(N): before={before} after={after} "
-            f"ceiling={ceiling} (5x materialize regression suspected)"
+            f"ceiling={ceiling} (5x tree-copy regression suspected)"
         )
     finally:
         for agent in _AGENTS:

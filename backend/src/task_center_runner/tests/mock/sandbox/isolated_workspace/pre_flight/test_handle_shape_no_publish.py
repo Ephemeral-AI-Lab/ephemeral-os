@@ -11,7 +11,7 @@ shaped attribute.
 
 from __future__ import annotations
 
-from sandbox.isolated_workspace.manager import IsolatedWorkspaceHandle
+from sandbox.isolated_workspace import IsolatedWorkspaceHandle
 
 
 def test_handle_is_not_a_subclass_of_operation_overlay_handle() -> None:

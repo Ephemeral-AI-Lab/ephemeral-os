@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 
 import pytest
@@ -131,7 +130,7 @@ def test_release_lease_removes_unreferenced_layers_outside_manager_lock(
     assert observed_unlocked is True
 
 
-def test_prepare_workspace_snapshot_returns_distinct_transient_lowerdirs_per_lease(
+def test_prepare_workspace_snapshot_returns_shared_layer_paths_per_lease(
     tmp_path: Path,
 ) -> None:
     manager = LayerStack(tmp_path / "stack")
@@ -149,25 +148,23 @@ def test_prepare_workspace_snapshot_returns_distinct_transient_lowerdirs_per_lea
 
     assert first.manifest_version == second.manifest_version
     assert first.root_hash == second.root_hash
-    assert first.lowerdir != second.lowerdir
-    assert Path(first.lowerdir).is_dir()
-    assert Path(second.lowerdir).is_dir()
-    assert (Path(first.lowerdir) / "src" / "app.py").read_text(
-        encoding="utf-8",
-    ) == "print('hi')\n"
+    assert first.lowerdir is None
+    assert second.lowerdir is None
+    assert first.layer_paths == second.layer_paths
+    assert first.layer_paths
+    assert all(Path(path).is_dir() for path in first.layer_paths)
+    assert any(
+        (Path(path) / "src" / "app.py").read_text(encoding="utf-8")
+        == "print('hi')\n"
+        for path in first.layer_paths
+        if (Path(path) / "src" / "app.py").exists()
+    )
 
-    # release_lease drops bookkeeping; the transient lowerdir is the caller's
-    # responsibility. Simulate the caller cleanup that shell_runner does.
     assert manager.release_lease(first.lease_id) is True
-    shutil.rmtree(Path(first.lowerdir).parent, ignore_errors=True)
-    assert Path(first.lowerdir).exists() is False
-
     assert manager.release_lease(second.lease_id) is True
-    shutil.rmtree(Path(second.lowerdir).parent, ignore_errors=True)
-    assert Path(second.lowerdir).exists() is False
 
 
-def test_prepare_workspace_snapshot_failure_releases_lease_and_drops_partial_lowerdir(
+def test_prepare_workspace_snapshot_does_not_materialize_lowerdir(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -180,30 +177,18 @@ def test_prepare_workspace_snapshot_failure_releases_lease_and_drops_partial_low
             )
         ]
     )
-    partial_lowerdirs: list[Path] = []
+    def fail_if_materialized(*_args: object, **_kwargs: object) -> None:
+        pytest.fail("prepare_workspace_snapshot must expose layer_paths directly")
 
-    def fail_materialize(
-        destination: str | Path,
-        manifest: object,
-        *,
-        share_inodes: bool = False,
-    ) -> None:
-        del manifest, share_inodes
-        lowerdir = Path(destination)
-        lowerdir.mkdir(parents=True)
-        (lowerdir / "partial.txt").write_text("partial\n", encoding="utf-8")
-        partial_lowerdirs.append(lowerdir)
-        raise RuntimeError("materialize failed")
+    monkeypatch.setattr(manager._view, "materialize", fail_if_materialized)
 
-    monkeypatch.setattr(manager._view, "materialize", fail_materialize)
+    snapshot = manager.prepare_workspace_snapshot("request-direct")
 
-    with pytest.raises(RuntimeError, match="materialize failed"):
-        manager.prepare_workspace_snapshot("request-fails")
-
+    assert snapshot.lowerdir is None
+    assert snapshot.layer_paths
+    assert manager.active_lease_count() == 1
+    assert manager.release_lease(snapshot.lease_id) is True
     assert manager.active_lease_count() == 0
-    assert manager.pinned_layers() == ()
-    assert partial_lowerdirs
-    assert partial_lowerdirs[0].parent.exists() is False
 
 
 def test_layer_stack_manager_preserves_existing_materialized_dir_on_init(

@@ -33,8 +33,13 @@ _resolve_live_image = _sandbox_fixture._resolve_live_image
 
 
 @dataclass
-class _FakeSandboxSettings:
+class _FakeProviderSettings:
     default_image: str
+
+
+@dataclass
+class _FakeSandboxSettings:
+    daytona: _FakeProviderSettings
 
 
 @dataclass
@@ -46,7 +51,11 @@ def _patch_settings(image: str):
     return patch.object(
         _sandbox_fixture,
         "load_settings",
-        return_value=_FakeSettings(sandbox=_FakeSandboxSettings(default_image=image)),
+        return_value=_FakeSettings(
+            sandbox=_FakeSandboxSettings(
+                daytona=_FakeProviderSettings(default_image=image),
+            ),
+        ),
     )
 
 
@@ -70,12 +79,13 @@ def test_env_unset_daytona_falls_back_to_settings(
         assert _resolve_live_image("daytona") == "registry/daytona-image:v1"
 
 
-def test_env_unset_docker_falls_back_to_settings(
+def test_env_unset_docker_skips_without_explicit_image(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.delenv("EOS_LIVE_E2E_IMAGE", raising=False)
     with _patch_settings("registry/daytona-image:v1"):
-        assert _resolve_live_image("docker") == "registry/daytona-image:v1"
+        with pytest.raises(pytest.skip.Exception):
+            _resolve_live_image("docker")
 
 
 def test_env_unset_daytona_empty_settings_skips(

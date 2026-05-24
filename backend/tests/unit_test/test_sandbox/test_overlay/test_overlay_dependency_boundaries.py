@@ -6,13 +6,13 @@ from pathlib import Path
 import tarfile
 import io
 
-import sandbox.execution
+import sandbox.overlay
 from sandbox.host.runtime_bundle import _runtime_bundle_bytes
 
 
 def _overlay_modules() -> list[Path]:
-    execution_root = Path(sandbox.execution.__file__).resolve().parent
-    return sorted(execution_root.glob("overlay_*.py"))
+    overlay_root = Path(sandbox.overlay.__file__).resolve().parent
+    return sorted(overlay_root.glob("*.py"))
 
 
 def test_phase02_overlay_modules_do_not_import_occ_or_git_policy() -> None:
@@ -34,13 +34,13 @@ def test_phase02_overlay_modules_do_not_import_occ_or_git_policy() -> None:
 
 
 def test_phase02_forbidden_overlay_modules_do_not_exist() -> None:
-    execution_root = Path(sandbox.execution.__file__).resolve().parent
+    overlay_root = Path(sandbox.overlay.__file__).resolve().parent
     for rel in (
         "overlay_layer_manager.py",
         "overlay_client.py",
         "overlay_occ.py",
     ):
-        assert not (execution_root / rel).exists()
+        assert not (overlay_root / rel).exists()
 
 
 def test_runtime_bundle_contains_unified_snapshot_runtime_without_ndjson() -> None:
@@ -49,21 +49,21 @@ def test_runtime_bundle_contains_unified_snapshot_runtime_without_ndjson() -> No
     with tarfile.open(fileobj=io.BytesIO(raw), mode="r:gz") as tar:
         names = set(tar.getnames())
 
-    assert "sandbox/execution/overlay/capture.py" in names
-    assert "sandbox/execution/overlay/change_synthesis.py" in names
-    assert "sandbox/execution/path_change.py" in names
-    assert "sandbox/execution/contract.py" in names
-    assert "sandbox/execution/service.py" in names
-    assert "sandbox/execution/runner.py" in names
+    assert "sandbox/overlay/capture.py" in names
+    assert "sandbox/overlay/change_synthesis.py" in names
+    assert "sandbox/overlay/path_change.py" in names
+    assert "sandbox/ephemeral_workspace/shell_contract.py" in names
+    assert "sandbox/ephemeral_workspace/_execute_command.py" in names
+    assert "sandbox/overlay/namespace.py" in names
     assert "sandbox/daemon/handler/overlay.py" in names
-    assert "sandbox/execution/overlay_request.py" not in names
-    assert "sandbox/execution/overlay_result.py" not in names
-    assert "sandbox/execution/workspace_capture.py" not in names
-    assert "sandbox/execution/workspace_mount.py" not in names
-    assert "sandbox/execution/overlay_worker.py" not in names
-    assert "sandbox/execution/overlay_mounts.py" not in names
-    assert "sandbox/execution/overlay_runner.py" not in names
-    assert "sandbox/execution/overlay_pipeline.py" not in names
+    assert "sandbox/overlay_request.py" not in names
+    assert "sandbox/overlay_result.py" not in names
+    assert "sandbox/workspace_capture.py" not in names
+    assert "sandbox/workspace_mount.py" not in names
+    assert "sandbox/overlay_worker.py" not in names
+    assert "sandbox/overlay_mounts.py" not in names
+    assert "sandbox/overlay_runner.py" not in names
+    assert "sandbox/overlay_pipeline.py" not in names
     assert "sandbox/layer_stack/manifest.py" in names
     assert "sandbox/overlay/cli.py" not in names
     assert "sandbox/overlay/invoker.py" not in names

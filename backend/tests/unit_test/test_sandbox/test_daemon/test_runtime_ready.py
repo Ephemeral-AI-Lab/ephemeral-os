@@ -185,5 +185,5 @@ def test_daemon_ready_reports_explicit_workspace_mount_mode(tmp_path: Path) -> N
     assert isinstance(details, dict)
     assert details["workspace_mount_mode"] in {
         "private_namespace",
-        "copy_backed",
+        "unavailable",
     }

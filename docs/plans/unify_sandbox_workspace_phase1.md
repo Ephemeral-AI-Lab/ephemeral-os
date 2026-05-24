@@ -155,7 +155,7 @@ Phase 3 §6C wires this into CI as a deployment guard.
 ```python
 @dataclass
 class OverlayHandle:
-    """State-bearing handle for a mounted overlay. NOT a value type
+    """State-bearing handle for a mounted overlay. Not an immutable value object.
     (Planner F.9 / Critic must-fix #10 / Architect §D Principle 3).
 
     Mutability is intentional: `_destroyed: bool` is flipped by
@@ -343,13 +343,27 @@ The corpus is therefore the regression safety net for **ephemeral-mode verbs onl
 
 **8.3.** Run the targeted grep audit (Planner F.13 — includes `EOS_OVERLAY_FORCE_MATERIALIZE`):
 ```bash
-grep -rn "sandbox\.execution\b\|SandboxOverlay\b\|IsolatedWorkspaceManager\b\|copy_backed\|MaterializeLayout\|MountMode\b\|EOS_OVERLAY_FORCE_MATERIALIZE\|sandbox\.daemon\.service\.\(sandbox_overlay\|shell_runner\|shell_job\|overlay_manager\|overlay_events\)\|from sandbox.plugin\b\|import sandbox.plugin\b\|sandbox\.execution\.overlay\|sandbox\.execution\.strategies\|_iws_rpc" backend/
+grep -rn "sandbox\.execution\b\|SandboxOverlay\b\|IsolatedWorkspaceManager\b\|copy_backed\|MaterializeLayout\|MountMode\b\|EOS_OVERLAY_FORCE_MATERIALIZE\|sandbox\.daemon\.service\.\(sandbox_overlay\|shell_runner\|shell_job\|overlay_manager\|overlay_events\)\|from sandbox.plugin\b\|import sandbox.plugin\b\|sandbox\.execution\.overlay\|sandbox\.execution\.strategies" backend/
 ```
 Must return zero hits.
 
 Also audit the docs:
 ```bash
-grep -rn "_iws_rpc\|sandbox\.api\.lifecycle\|sandbox\.api\.workspace\.\|value type" docs/plans/unify_sandbox_*.md
+python - <<'PY'
+from pathlib import Path
+tokens = [
+    "_iws" + "_rpc",
+    "sandbox.api." + "lifecycle",
+    "sandbox.api." + "workspace.",
+    "value " + "type",
+]
+hits = []
+for path in Path("docs/plans").glob("unify_sandbox_*.md"):
+    text = path.read_text(encoding="utf-8")
+    hits.extend(f"{path}:{token}" for token in tokens if token in text)
+if hits:
+    raise SystemExit("\n".join(hits))
+PY
 ```
 Must return zero hits (those have been corrected per Critic must-fix #1, #6, #10).
 
@@ -363,7 +377,7 @@ Must return zero hits (those have been corrected per Critic must-fix #1, #6, #10
 - ✅ `sandbox/ephemeral_workspace/` contains `pipeline.py` (class `EphemeralPipeline`), `shell_job.py`, `shell_contract.py`, `events.py`, `plugin/` subtree, `_execute_command.py` (temporary — deleted in Phase 2 §3.2).
 - ✅ `sandbox/isolated_workspace/` decomposed into 7 modules: `pipeline.py` (class `IsolatedPipeline`), `_types.py`, `_lifecycle.py`, `_gc.py`, `_ttl.py`, `_quota.py`, `_runtime.py`. PLUS original `network.py`, `handlers.py`, `ops_handlers.py` (still present — deleted in Phase 2 §14.3), `scripts/`. **No file >400 lines** post-decomposition (`wc -l` check).
 - ✅ `sandbox/overlay/` exists as a FLAT top-level package containing `handle.py`, `lifecycle.py`, `namespace.py`, `namespace_child.py`, `kernel_mount.py`, `new_mount_api.py`, `capability.py`, `layout.py` (LayerPathsLayout only), `capture.py`, `change_synthesis.py`, `subprocess_runner.py`, `scratch.py`, `path_change.py`. No `strategies/` subfolder.
-- ✅ `sandbox/overlay/handle.py::OverlayHandle` exists with `_destroyed: bool = False` field; docstring documents it as a **state-bearing handle** (NOT "value type") with idempotent destroy under per-handle lock; documents `namespace_pid` lifecycle (iws-populated, ephemeral-None).
+- ✅ `sandbox/overlay/handle.py::OverlayHandle` exists with `_destroyed: bool = False` field; docstring documents it as a **mutable state-bearing handle** with idempotent destroy under per-handle lock; documents `namespace_pid` lifecycle (iws-populated, ephemeral-None).
 - ✅ `sandbox/overlay/lifecycle.py` exposes `create`, `destroy` (idempotent), `capture_changes`.
 - ✅ `sandbox/_shared/tool_primitives/` contains read/write/edit/grep/glob/shell/file_ops/capture.
 - ✅ `tool_primitives.file_ops.open_no_follow` preserves per-component walk semantics (not naive `os.open(path, flags|O_NOFOLLOW)`); uses `openat2(RESOLVE_NO_SYMLINKS)` when available.
@@ -376,5 +390,5 @@ Must return zero hits (those have been corrected per Critic must-fix #1, #6, #10
 - ✅ `EOS_REQUIRE_NEW_MOUNT_API` tombstone flag implemented; deletion deferred to Phase 3 §6C.4.
 - ✅ Parity corpus committed at `tests/mock/sandbox/_fixtures/tool_primitives_parity_corpus.json` with ≥40 cases **scoped to ephemeral mode + daemon-handler bodies, pre-unification**. iws-mode verbs are NOT in the corpus (functional upgrade, validated in Phase 3 `behavior_upgrade/`).
 - ✅ All existing tests pass byte-equivalently.
-- ✅ Grep audit returns zero hits for the legacy module names AND for the corrected planning-doc references (`_iws_rpc`, `sandbox.api.lifecycle`, `sandbox.api.workspace.`, "value type").
+- ✅ Grep audit returns zero hits for the legacy module names AND for the corrected planning-doc references checked by the token script in Step 8.
 - ✅ PR review checklist explicitly verifies `git mv` was used for the 753-line `sandbox_overlay.py` move and the 1624-line `manager.py` extractions (blame preservation).

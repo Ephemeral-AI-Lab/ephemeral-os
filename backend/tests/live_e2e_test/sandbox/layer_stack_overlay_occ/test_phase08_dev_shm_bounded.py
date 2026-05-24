@@ -1,7 +1,7 @@
 """Phase 08 — /dev/shm bounded regression test (Verification E).
 
 Improvement #1 added ``shutil.rmtree(run_dir, ignore_errors=True)`` to
-the daemon's outer ``finally`` in ``shell_runner._execute_shell``. This
+the daemon's outer ``finally`` in ``pipeline._execute_shell``. This
 test asserts the cleanup actually keeps ``/dev/shm/eos-command-exec/``
 bounded across long-running daemon sessions — the prerequisite for
 every concurrency / soak test downstream.

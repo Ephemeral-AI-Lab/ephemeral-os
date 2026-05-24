@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "description": "Ephemeral-mode daemon-handler parity corpus for Phase 1 structural moves. Test replay serializes normalized handler output with sorted JSON keys and compares exact bytes.",
+  "normalization": {
+    "timings": "Timing values are volatile and normalized to __timings__ while preserving the timing key container.",
+    "tmp_paths": "Per-test temporary absolute paths are normalized to <tmp>."
+  },
+  "cases": [
+    {"id": "read.in_workspace_utf8", "mode": "ephemeral", "verb": "read"},
+    {"id": "read.in_workspace_missing", "mode": "ephemeral", "verb": "read"},
+    {"id": "read.out_of_workspace_utf8", "mode": "ephemeral", "verb": "read"},
+    {"id": "read.out_of_workspace_missing", "mode": "ephemeral", "verb": "read"},
+    {"id": "read.large_out_of_workspace_rejected", "mode": "ephemeral", "verb": "read"},
+    {"id": "read.empty_path_rejected", "mode": "ephemeral", "verb": "read"},
+    {"id": "read.dotdot_escape_rejected", "mode": "ephemeral", "verb": "read"},
+
+    {"id": "write.in_workspace_create", "mode": "ephemeral", "verb": "write"},
+    {"id": "write.in_workspace_overwrite", "mode": "ephemeral", "verb": "write"},
+    {"id": "write.in_workspace_create_only", "mode": "ephemeral", "verb": "write"},
+    {"id": "write.in_workspace_create_only_existing_conflict", "mode": "ephemeral", "verb": "write"},
+    {"id": "write.out_of_workspace_create", "mode": "ephemeral", "verb": "write"},
+    {"id": "write.out_of_workspace_create_only_existing_conflict", "mode": "ephemeral", "verb": "write"},
+    {"id": "write.empty_path_rejected", "mode": "ephemeral", "verb": "write"},
+
+    {"id": "edit.in_workspace_single_replace", "mode": "ephemeral", "verb": "edit"},
+    {"id": "edit.in_workspace_multiple_replace", "mode": "ephemeral", "verb": "edit"},
+    {"id": "edit.in_workspace_count_mismatch", "mode": "ephemeral", "verb": "edit"},
+    {"id": "edit.out_of_workspace_single_replace", "mode": "ephemeral", "verb": "edit"},
+    {"id": "edit.out_of_workspace_missing_anchor_conflict", "mode": "ephemeral", "verb": "edit"},
+    {"id": "edit.non_utf8_rejected", "mode": "ephemeral", "verb": "edit"},
+    {"id": "edit.empty_anchor_rejected", "mode": "ephemeral", "verb": "edit"},
+
+    {"id": "grep.files_with_matches", "mode": "ephemeral", "verb": "grep"},
+    {"id": "grep.count", "mode": "ephemeral", "verb": "grep"},
+    {"id": "grep.content_line_numbers", "mode": "ephemeral", "verb": "grep"},
+    {"id": "grep.case_insensitive", "mode": "ephemeral", "verb": "grep"},
+    {"id": "grep.glob_filter", "mode": "ephemeral", "verb": "grep"},
+    {"id": "grep.multiline", "mode": "ephemeral", "verb": "grep"},
+    {"id": "grep.out_of_workspace_path_rejected", "mode": "ephemeral", "verb": "grep"},
+
+    {"id": "glob.basic_pattern", "mode": "ephemeral", "verb": "glob"},
+    {"id": "glob.subpath_filter", "mode": "ephemeral", "verb": "glob"},
+    {"id": "glob.excludes_vcs", "mode": "ephemeral", "verb": "glob"},
+    {"id": "glob.truncates_limit", "mode": "ephemeral", "verb": "glob"},
+    {"id": "glob.missing_pattern_rejected", "mode": "ephemeral", "verb": "glob"},
+    {"id": "glob.nested_pattern", "mode": "ephemeral", "verb": "glob"},
+    {"id": "glob.no_matches", "mode": "ephemeral", "verb": "glob"},
+
+    {"id": "shell.string_command_success", "mode": "ephemeral", "verb": "shell"},
+    {"id": "shell.argv_command_success", "mode": "ephemeral", "verb": "shell"},
+    {"id": "shell.env_projection", "mode": "ephemeral", "verb": "shell"},
+    {"id": "shell.cwd_projection", "mode": "ephemeral", "verb": "shell"},
+    {"id": "shell.nonzero_exit", "mode": "ephemeral", "verb": "shell"},
+    {"id": "shell.stderr_projection", "mode": "ephemeral", "verb": "shell"},
+    {"id": "shell.timeout_projection", "mode": "ephemeral", "verb": "shell"}
+  ]
+}

@@ -5,8 +5,8 @@ R3 import discipline: this module's transitive imports MUST NOT include
 ``test_isolated_workspace_ops_import_fence``.
 
 Allowed transitive imports:
-    - :mod:`sandbox.isolated_workspace.manager` (state machine + bounded
-      ``require_manager`` / ``require_arg`` accessors).
+    - :mod:`sandbox.isolated_workspace.pipeline` (state machine + bounded
+      ``require_pipeline`` / ``require_arg`` accessors).
     - :mod:`sandbox.isolated_workspace.network` (pure-Python pool + Linux
       ip/nft shell-outs, no OCC).
 
@@ -21,10 +21,10 @@ import os
 import sys
 from typing import Any
 
-from sandbox.isolated_workspace.manager import (
+from sandbox.isolated_workspace.pipeline import (
     IsolatedWorkspaceError,
     require_arg,
-    require_manager,
+    require_pipeline,
 )
 
 # Absolute path to the in-ns write helper. We invoke by file path (not
@@ -49,7 +49,7 @@ def _error(exc: IsolatedWorkspaceError) -> dict[str, Any]:
 
 async def _run(agent_id: str, argv: list[str], *, stdin: bytes | None = None) -> dict[str, Any]:
     try:
-        return await require_manager().run_in_handle(agent_id, argv=argv, stdin=stdin)
+        return await require_pipeline().run_in_handle(agent_id, argv=argv, stdin=stdin)
     except IsolatedWorkspaceError as exc:
         return _error(exc)
 

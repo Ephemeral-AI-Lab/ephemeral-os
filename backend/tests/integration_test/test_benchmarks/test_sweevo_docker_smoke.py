@@ -62,17 +62,17 @@ async def test_sweevo_docker_smoke_mount_ratio_and_perf() -> None:
     instance_id = os.environ.get("EOS_SWEEVO_INSTANCE")
     assert instance_id, "set EOS_SWEEVO_INSTANCE before running this test"
 
-    from sandbox._shared.models import MountMode, ShellProcessResult  # type: ignore
+    from typing import Any
     from sandbox.provider.bootstrap import bootstrap_sandbox_provider
     from benchmarks.sweevo.run import run_sweevo_instance  # type: ignore
 
     bootstrap_sandbox_provider()
-    run_results: list[ShellProcessResult] = await run_sweevo_instance(instance_id)
+    run_results: list[Any] = await run_sweevo_instance(instance_id)
 
-    # (a) ≥95% PRIVATE_NAMESPACE among NAMESPACE-strategy execs
+    # (a) >=95% private namespace among namespace-strategy execs
     namespace_execs = [r for r in run_results if getattr(r, "strategy", None) and r.strategy.name == "NAMESPACE"]
     assert namespace_execs, "no NAMESPACE-strategy execs observed; smoke run invalid"
-    private = [r for r in namespace_execs if r.mount_mode == MountMode.PRIVATE_NAMESPACE]
+    private = [r for r in namespace_execs if r.mount_mode == "private_namespace"]
     ratio = len(private) / len(namespace_execs)
     assert ratio >= 0.95, (
         f"PRIVATE_NAMESPACE ratio {ratio:.2%} below 95% threshold "
@@ -94,11 +94,10 @@ async def test_sweevo_docker_smoke_mount_ratio_and_perf() -> None:
             f"{daytona_p95:.0f}ms"
         )
 
-    # (c) post-squash execs still PRIVATE_NAMESPACE after auto-squash
+    # (c) post-squash execs still use the private namespace after auto-squash
     post_squash = [r for r in namespace_execs if getattr(r, "post_squash", False)]
     if post_squash:
-        bad = [r for r in post_squash if r.mount_mode != MountMode.PRIVATE_NAMESPACE]
+        bad = [r for r in post_squash if r.mount_mode != "private_namespace"]
         assert not bad, (
-            f"{len(bad)} post-squash execs lost PRIVATE_NAMESPACE; "
-            "materialize()-then-mount design regressed."
+            f"{len(bad)} post-squash execs lost private namespace execution."
         )

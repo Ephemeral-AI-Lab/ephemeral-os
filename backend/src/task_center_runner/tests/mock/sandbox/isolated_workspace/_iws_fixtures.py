@@ -71,8 +71,8 @@ def can_mount_overlay_natively() -> bool:
     """Probe whether the kernel supports the modern overlay mount API.
 
     Delegates to :func:`sandbox.overlay.capability.new_mount_api_supported`
-    so the iws path shares the same probe (and ``EOS_OVERLAY_FORCE_MATERIALIZE``
-    kill-switch) as the daemon's OCC overlay. Cached at the underlying layer.
+    so the iws path shares the same namespace-only overlay probe as the
+    daemon's OCC overlay. Cached at the underlying layer.
     """
     from sandbox.overlay.capability import new_mount_api_supported
 
@@ -143,7 +143,7 @@ async def daemon_kill_and_respawn(
     2. Wait briefly for the process to vanish.
     3. Issue an ``api.isolated_workspace.enter`` RPC for a throwaway agent —
        this triggers ``_ensure_manager`` which calls
-       ``IsolatedWorkspaceManager.initialize() → startup_gc()``.
+       ``IsolatedPipeline.initialize() → startup_gc()``.
     4. ``exit_`` the throwaway agent so the post-test cleanup stays sane.
     """
     from sandbox.api import raw_exec

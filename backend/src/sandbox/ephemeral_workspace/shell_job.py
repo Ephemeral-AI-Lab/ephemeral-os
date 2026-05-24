@@ -26,8 +26,8 @@ from uuid import uuid4
 from sandbox.audit import events as audit_events
 from sandbox.ephemeral_workspace.shell_contract import (
     CommandExecRequest,
-    LayerPathsLayout,
 )
+from sandbox.overlay.layout import LayerPathsLayout
 from sandbox.overlay.namespace import run_in_namespace
 from sandbox.overlay.path_change import OverlayPathChange
 from sandbox.overlay.scratch import command_exec_scratch_root

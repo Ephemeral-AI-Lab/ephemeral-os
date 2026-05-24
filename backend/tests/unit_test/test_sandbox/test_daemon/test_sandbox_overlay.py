@@ -8,8 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from sandbox.daemon.service import overlay_manager
-from sandbox.daemon.service import pipeline as overlay_mod
+import sandbox.ephemeral_workspace.pipeline as overlay_mod
 from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
 from sandbox.layer_stack.manifest import LayerRef, Manifest
 from sandbox.occ.changeset import ChangesetResult
@@ -33,10 +32,8 @@ class _LayerStack:
         self,
         *,
         request_id: str,
-        lowerdir_root: str | Path | None = None,
-        materialize: bool = True,
     ) -> object:
-        del request_id, lowerdir_root, materialize
+        del request_id
         # Unique lease per snapshot: matches the real layer_stack which mints
         # a fresh UUID per call. Tests asserting on lease release count rely
         # on uniqueness now that ``_release_lease`` is idempotent (plan §4).
@@ -185,12 +182,10 @@ def test_operation_overlay_uses_shared_snapshot_layers_and_private_upperdir(
     first = overlay.acquire_operation_overlay(
         request_id="lsp-hover",
         workspace_root="/testbed",
-        materialize=False,
     )
     second = overlay.acquire_operation_overlay(
         request_id="lsp-rename",
         workspace_root="/testbed",
-        materialize=False,
     )
 
     assert first.layer_paths == second.layer_paths
@@ -259,12 +254,12 @@ async def test_manager_stop_unmounts_requested_and_bound_workspace_roots(
         async def stop(self) -> None:
             stopped.append("cached")
 
-    overlay_manager.clear_overlay_manager_for_tests()
+    overlay_mod.clear_overlay_manager_for_tests()
     key = f"{stack_root.resolve(strict=False).as_posix()}\0{bound_workspace.as_posix()}"
-    overlay_manager._OVERLAYS[key] = _CachedOverlay()  # type: ignore[assignment]  # noqa: SLF001
-    monkeypatch.setattr(overlay_manager, "umount", lambda path: unmounts.append(path))
+    overlay_mod._OVERLAYS[key] = _CachedOverlay()  # type: ignore[assignment]  # noqa: SLF001
+    monkeypatch.setattr(overlay_mod, "umount", lambda path: unmounts.append(path))
 
-    result = await overlay_manager.stop_pipeline(
+    result = await overlay_mod.stop_sandbox_overlay(
         stack_root,
         workspace_root=requested_workspace,
     )
@@ -272,7 +267,7 @@ async def test_manager_stop_unmounts_requested_and_bound_workspace_roots(
     assert result["success"] is True
     assert stopped == ["cached"]
     assert unmounts == [requested_workspace, bound_workspace]
-    assert not overlay_manager._OVERLAYS  # noqa: SLF001
+    assert not overlay_mod._OVERLAYS  # noqa: SLF001
 
 
 @pytest.mark.asyncio

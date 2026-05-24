@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import resource
-import sys
-from unittest.mock import call, patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 
@@ -46,7 +44,10 @@ def test_bump_nofile_caps_at_hard_limit() -> None:
     new_limits: list[tuple[int, int]] = []
 
     with patch("resource.getrlimit", return_value=(soft, hard)), \
-         patch("resource.setrlimit", side_effect=lambda r, l: new_limits.append(l)):
+         patch(
+             "resource.setrlimit",
+             side_effect=lambda _resource, limits: new_limits.append(limits),
+         ):
         _bump_nofile(target=8192)
 
     assert new_limits[0][0] == 4096
@@ -63,6 +64,7 @@ def test_bump_nofile_does_not_raise_on_oserror() -> None:
 
 
 def test_log_mount_api_capability_calls_probe_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("EOS_REQUIRE_NEW_MOUNT_API", "0")
     call_count = 0
 
     def counting_probe() -> bool:
@@ -92,13 +94,26 @@ def test_log_mount_api_capability_calls_probe_once(monkeypatch: pytest.MonkeyPat
     assert call_count >= 0  # weak: we mainly test it doesn't raise
 
 
-def test_log_mount_api_capability_does_not_raise() -> None:
-    """_log_mount_api_capability must not raise regardless of probe result."""
+def test_log_mount_api_capability_accepts_supported_kernel() -> None:
     with patch("sandbox.overlay.capability.new_mount_api_supported", return_value=True):
         _log_mount_api_capability()
 
+
+def test_log_mount_api_capability_allows_explicit_legacy_escape_hatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("EOS_REQUIRE_NEW_MOUNT_API", "0")
     with patch("sandbox.overlay.capability.new_mount_api_supported", return_value=False):
         _log_mount_api_capability()
+
+
+def test_log_mount_api_capability_requires_new_mount_api_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("EOS_REQUIRE_NEW_MOUNT_API", raising=False)
+    with patch("sandbox.overlay.capability.new_mount_api_supported", return_value=False):
+        with pytest.raises(RuntimeError, match="new mount API"):
+            _log_mount_api_capability()
 
 
 # ---------------------------------------------------------------------------
@@ -110,10 +125,14 @@ def test_daemon_main_calls_bump_and_probe_before_serve() -> None:
     """Assert _bump_nofile and _log_mount_api_capability are called at daemon startup."""
     call_order: list[str] = []
 
+    def stop_without_serving(coro):
+        coro.close()
+        raise KeyboardInterrupt
+
     with patch("sandbox.daemon.__main__._bump_nofile", side_effect=lambda *a, **k: call_order.append("bump")), \
          patch("sandbox.daemon.__main__._log_mount_api_capability", side_effect=lambda: call_order.append("probe")), \
          patch("sandbox.daemon.__main__._acquire_pid_lock", return_value=3), \
-         patch("sandbox.daemon.__main__.asyncio.run", side_effect=KeyboardInterrupt()), \
+         patch("sandbox.daemon.__main__.asyncio.run", side_effect=stop_without_serving), \
          patch("os.close"):
         from sandbox.daemon.__main__ import main
         main(["--socket", "/tmp/test.sock", "--pid-file", "/tmp/test.pid"])

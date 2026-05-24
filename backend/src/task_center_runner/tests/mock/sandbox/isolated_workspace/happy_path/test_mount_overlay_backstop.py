@@ -1,6 +1,6 @@
 """PR 0 acceptance backstop: ``_LinuxRuntime.mount_overlay`` actually fires.
 
-This test bypasses ``IsolatedWorkspaceManager.enter()`` entirely. It spawns
+This test bypasses ``IsolatedPipeline.enter()`` entirely. It spawns
 the ns_holder + opens ns FDs + invokes ``_LinuxRuntime.mount_overlay``
 directly, then asserts the overlay line appears in
 ``/proc/<root_pid>/mountinfo`` inside the workspace mntns.
@@ -39,7 +39,7 @@ import uuid
 from pathlib import Path
 
 from sandbox.overlay.scratch import command_exec_scratch_root
-from sandbox.isolated_workspace.manager import (
+from sandbox.isolated_workspace import (
     IsolatedWorkspaceHandle,
     _LinuxRuntime,
 )
@@ -143,7 +143,7 @@ sys.exit(exit_code)
 async def test_mount_overlay_backstop(iws_clean_sandbox) -> None:
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
     # PYTHONPATH=/tmp/eos-sandbox-runtime lets the in-container python3 see
-    # the daemon's runtime bundle (sandbox.isolated_workspace.manager etc.).
+    # the daemon's runtime bundle (sandbox.isolated_workspace package etc.).
     result = await raw_exec(
         sandbox_id,
         (

@@ -18,7 +18,7 @@ from sandbox.occ.changeset import CommitOptions
 from sandbox.occ.changeset import FileStatus
 from sandbox.ephemeral_workspace.shell_contract import ShellProcessResult
 from sandbox.daemon import occ_backend
-from sandbox.daemon.service import shell_runner
+import sandbox.ephemeral_workspace.pipeline as pipeline_mod
 
 
 class _BlockingCommandRunner:
@@ -45,7 +45,7 @@ class _BlockingCommandRunner:
         upper.mkdir(parents=True, exist_ok=True)
         output = upper / "generated" / "output.json"
         output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_bytes((Path(spec.base_repo) / "config.yaml").read_bytes())
+        output.write_bytes((Path(spec.layer_paths[0]) / "config.yaml").read_bytes())
         stdout_ref = Path(run_dir) / "stdout.bin"
         stderr_ref = Path(run_dir) / "stderr.bin"
         stdout_ref.write_text("done\n", encoding="utf-8")
@@ -128,13 +128,13 @@ async def _run_occ_clean_stale_shell(
     manager = LayerStack(stack)
     runner = _BlockingCommandRunner(manager.read_active_manifest().version)
     monkeypatch.setattr(
-        shell_runner,
-        "run_workspace_replaced_command",
+        pipeline_mod,
+        "run_in_namespace",
         runner,
     )
 
     task = asyncio.create_task(
-        shell_runner.execute_shell_api(
+        pipeline_mod.execute_shell_api(
             {
                 "layer_stack_root": str(manager.storage_root),
                 "command": (

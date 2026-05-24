@@ -60,13 +60,11 @@ class _OperationOverlay(_Overlay):
         *,
         request_id: str,
         workspace_root: str | None = None,
-        materialize: bool = False,
     ) -> "_OverlayHandle":
         handle = _OverlayHandle(
             request_id=request_id,
             workspace_root=workspace_root or self.workspace_root,
             manifest_key=self.manifest_key,
-            materialize=materialize,
         )
         self.handles.append(handle)
         return handle
@@ -79,16 +77,14 @@ class _OverlayHandle:
         request_id: str,
         workspace_root: str,
         manifest_key: str,
-        materialize: bool,
     ) -> None:
         self.request_id = request_id
         self.workspace_root = workspace_root
         self.manifest_key = manifest_key
-        self.materialize = materialize
         self.manifest_version = int(manifest_key.rsplit("@", 1)[-1])
         self.root_hash = manifest_key.rsplit("@", 1)[0]
-        self.lowerdir = None if not materialize else f"/tmp/{self.root_hash}/lower"
-        self.layer_paths = None if materialize else ("/layers/L1",)
+        self.lowerdir = None
+        self.layer_paths = ("/layers/L1",)
         self.run_dir = "/tmp/run"
         self.upperdir = "/tmp/run/upper"
         self.workdir = "/tmp/run/work"
@@ -244,7 +240,7 @@ async def test_session_manager_uses_daemon_operation_overlay_for_lsp_session(
 
     assert session.workspace_root == "/testbed"
     assert session.overlay_handle is overlay.handles[0]
-    assert overlay.handles[0].materialize is False
+    assert overlay.handles[0].layer_paths == ("/layers/L1",)
     assert overlay.handles[0].layer_paths == ("/layers/L1",)
 
 
@@ -424,14 +420,12 @@ async def test_pyright_session_refresh_remounts_private_namespace(
         request_id="lsp-session:hover",
         workspace_root="/testbed",
         manifest_key="hash-a@1",
-        materialize=False,
     )
     old_handle.layer_paths = (old_layer.as_posix(),)
     new_handle = _OverlayHandle(
         request_id="lsp-session:hover",
         workspace_root="/testbed",
         manifest_key="hash-b@2",
-        materialize=False,
     )
     new_handle.layer_paths = (new_layer.as_posix(),)
     new_handle.run_dir = (tmp_path / "run").as_posix()

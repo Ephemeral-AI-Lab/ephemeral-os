@@ -9,9 +9,7 @@ from pathlib import Path
 import pytest
 
 from ..._harness.lease_resource_probe import (
-    LEGACY_MATERIALIZE,
     NEW_MOUNT_API,
-    as_requested_path,
     assert_new_api_o1_bounds,
     build_layer_stack,
     has_cap_sys_admin,
@@ -35,10 +33,10 @@ _UPPER_WRITE = (
 )
 
 
-def test_adversarial_harness_names_upper_and_materialize_regressions(
+def test_adversarial_harness_names_upper_regression(
     tmp_path: Path,
 ) -> None:
-    """The self-test injects both planned regressions and requires both names."""
+    """The self-test injects an upper-write regression and requires its name."""
     asyncio.run(_run_adversarial_self_test(tmp_path))
 
 
@@ -65,24 +63,10 @@ async def _run_adversarial_self_test(tmp_path: Path) -> None:
         commands=[_UPPER_WRITE],
         request_prefix="upper_write_BAD",
     )
-    materialized = await run_shell_batch(
-        stack=stack,
-        workspace_root=tmp_path / "workspace-root",
-        scratch_root=tmp_path / "scratch-materialized",
-        requested_path=LEGACY_MATERIALIZE,
-        commands=[_NO_WRITE],
-        request_prefix="forced_materialize_BAD",
-    )
-
     rows = [
         *normal[:25],
         upper[0],
         *normal[25:],
-        as_requested_path(
-            materialized[0],
-            NEW_MOUNT_API,
-            request_id="forced_materialize_BAD-0000",
-        ),
     ]
 
     with pytest.raises(AssertionError) as exc_info:
@@ -91,5 +75,3 @@ async def _run_adversarial_self_test(tmp_path: Path) -> None:
     message = str(exc_info.value)
     assert "upper_write_BAD" in message
     assert "upper write" in message
-    assert "forced_materialize_BAD" in message
-    assert "forced materialize" in message

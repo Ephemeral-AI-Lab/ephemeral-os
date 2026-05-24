@@ -2,7 +2,7 @@
 
 ``api.plugin.ensure {"plugin": "<name>"}`` imports the plugin's
 ``runtime/server.py`` (which decorates handlers with
-:func:`sandbox.ephemeral_workspace.plugin.runtime.register_plugin_op`) and flushes the pending
+:func:`sandbox.ephemeral_workspace.plugin.op_registry.register_plugin_op`) and flushes the pending
 registrations into the daemon dispatcher under the public op name
 ``plugin.<name>.<op>``. Idempotent — re-calling for an already-loaded plugin
 is a no-op.

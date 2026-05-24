@@ -571,7 +571,7 @@ are added** — enrichment is additive on the existing 5 sandbox events
   // v2 additive — top-level
   "total_ms":           <float>,          // wall-clock total for the operation
   "lowerdir_layer_count": <int>,          // enter only — len(snapshot.layer_paths)
-  "materialize":        false,            // enter only — must always be false; tripwire
+  "tree-copy":        false,            // enter only — must always be false; tripwire
 
   // v2 additive — nested phases (keys conditional on emission, P5)
   "phases_ms": {
@@ -626,7 +626,7 @@ Absence ≠ zero (P5).
 
 | Phase | File:line | Notes |
 |---|---|---|
-| `prepare_snapshot` | `service/isolated_workspace.py:348-352` | Calls `LayerStackPort.prepare_workspace_snapshot(..., materialize=False)`. Test 14.1 below asserts the kwarg via interception. |
+| `prepare_snapshot` | `service/isolated_workspace.py:348-352` | Calls `LayerStackPort.prepare_workspace_snapshot(...)`. Test 14.1 below asserts the kwarg via interception. |
 | `spawn_ns_holder` | `service/isolated_workspace.py:401-403` | Covers `unshare` exec + `ns-up` handshake read. |
 | `open_ns_fds` | `service/isolated_workspace.py:404` | 4 × `os.open` on `/proc/{pid}/ns/{user,mnt,pid,net}`. |
 | `install_veth` | `service/isolated_workspace.py:405-407` | IP pool allocate + 5 × `ip link` calls. |
@@ -752,7 +752,7 @@ per-pass.
 |----|-------|---------------|-------|
 | **PR 0** | `_LinuxRuntime.mount_overlay` + `configure_dns` live wiring | `service/isolated_workspace.py:642`, new `scripts/setns_overlay_mount.py`, FakeRuntime | Replaces `NotImplementedError` with setns helper subproc that calls `mount_overlay`; `configure_dns` writes `/etc/resolv.conf` inside ws mntns; FakeRuntime updates. **Sub-decomposition required in the PR description** (Critic follow-up #1): three sub-surfaces — (a) `setns_overlay_mount.py` helper subprocess + signal handling, (b) `_LinuxRuntime.mount_overlay` wiring, (c) `_LinuxRuntime.configure_dns` + matching FakeRuntime update. If review feedback requests a split, accept it without re-ralplan. **PR 0 acceptance criterion** (Critic follow-up #6): a backstop test that calls `_LinuxRuntime.mount_overlay` directly (not through the manager) and asserts `/proc/<pid>/mountinfo` reflects the mount — guards against future regressions that re-stub the method. |
 | **PR 1** | Audit-event enrichment (§14 contract) + `_PhaseTimer` | `service/isolated_workspace.py` (5 `_emit` call sites, `_PhaseTimer` class) | Conditional-key emission; SUBSET-COVER invariant test fixture; back-compat consumer tests against `performance_report.py:289-295`. Existing 49 macOS unit tests must still pass. |
-| **PR 2** | Tier 1 + Tier 2 FS coverage (3 tests + enrichment) | `happy_path/`, `isolation/` | `test_lowerdir_symlink_traversal`, `test_whiteout_on_upperdir_delete`, `test_chmod_uid_in_userns_does_not_escape`; `test_workspace_create_passes_materialize_false` interception. |
+| **PR 2** | Tier 1 + Tier 2 FS coverage (3 tests + enrichment) | `happy_path/`, `isolation/` | `test_lowerdir_symlink_traversal`, `test_whiteout_on_upperdir_delete`, `test_chmod_uid_in_userns_does_not_escape`; `test_workspace_create_passes_tree-copy_false` interception. |
 | **PR 3** | Tier 3 inbound-rejection (4 tests via `unshare -n`) | `network/` | `test_external_inbound_impossible` etc. Uses `unshare -n` host-netns probe, NOT a second sandbox container (avoids sweevo session-lock collision; rationale is provider-agnostic — applies to Docker default and Daytona fallback alike). |
 | **PR 4** | Tier 6 + Tier 8 noisy-neighbor at N=5 (4 tests + enrichment) | `concurrency/`, `stress/` | Cross-interference proofs; existing Tier 8 `test_5_concurrent_isolated_workspaces` enriched with `phases_ms.install_veth ≤ 5× in-test median` contention bound. |
 | **PR 5** | Tier 7 + Tier 8 lowerdir O(1) + GC (5 tests + enrichment) | `gc_and_persistence/`, `stress/` | Layer-paths sharing structural check; `du --bytes` behavioral backstop; upperdir discard normal + abnormal. |
@@ -816,12 +816,12 @@ Other hosts default to local-dev semantics.
 | File | Asserts | Innocent-refactor failure mode |
 |---|---|---|
 | `happy_path/test_lowerdir_symlink_traversal.py` | Lowerdir ships `/testbed/dir/symlink → ../target.txt`; inside ws, `cat /testbed/dir/symlink` returns target body. | "Optimize" overlay to pass absolute lowerdir paths — breaks relative-symlink resolution after `setns(CLONE_NEWNS)`. |
-| `happy_path/test_workspace_create_passes_materialize_false.py` | Intercepts `LayerStackPort.prepare_workspace_snapshot` via a recording adapter; asserts the call kwargs include `materialize=False`. | Future `mount_overlay` PR flips materialize=True "to fix a path-not-found error" — disk inflates to O(N) silently. Cheap structural backstop. |
+| `happy_path/test_workspace_create_uses_layer_paths.py` | Intercepts `LayerStackPort.prepare_workspace_snapshot` via a recording adapter; asserts the call kwargs include `shared_layer_snapshot=True`. | Future `mount_overlay` PR flips per_call_tree_copy=True "to fix a path-not-found error" — disk inflates to O(N) silently. Cheap structural backstop. |
 
 Enrichment: `test_lowerdir_visible_inside_mntns` (existing) gains: assert
 `layer_paths` returned from `prepare_workspace_snapshot` is a non-empty
 tuple; assert audit `enter` event carries `lowerdir_layer_count` and
-`materialize=false`.
+`shared_layer_snapshot=true`.
 
 ### 19.2 Tier 2 (isolation) — 2 new tests
 
@@ -877,7 +877,7 @@ N=21 warmup-then-sample iterations within the same test, 11th sorted value**
 
 | File | Asserts | Innocent-refactor failure mode |
 |---|---|---|
-| `gc_and_persistence/test_lowerdir_layer_paths_shared_across_concurrent_handles.py` | 5 concurrent enters; read each handle's persisted `manifest_root_hash` + lease record. All 5 reference the same `layer_paths` tuple (structural equality). Lease registry shows 5 active leases on one snapshot. | "Optimize" by giving each handle its own lease copy — flips `materialize=False → True`. |
+| `gc_and_persistence/test_lowerdir_layer_paths_shared_across_concurrent_handles.py` | 5 concurrent enters; read each handle's persisted `manifest_root_hash` + lease record. All 5 reference the same `layer_paths` tuple (structural equality). Lease registry shows 5 active leases on one snapshot. | "Optimize" by giving each handle its own lease copy — flips `shared-layer snapshot -> per-call tree copy`. |
 | `gc_and_persistence/test_lowerdir_disk_usage_is_o1.py` | Pre-enter: `du --bytes` of layer_stack root = B. After 5 concurrent enters: `du` ≤ B + 5 × `upperdir_overhead_max` (10 MB per empty upperdir). Lowerdir didn't grow N×. | Same. Behavioral backstop to the structural check above. |
 | `gc_and_persistence/test_upperdir_fully_discarded_on_normal_exit.py` | After exit: `find {scratch_root}/runtime/isolated-workspace/{handle_id}/ -type f` empty; entire dir gone (not just upper/); `manager.json` has no row; lease released. | Exit's `shutil.rmtree` catches an exception silently — strays survive. |
 | `gc_and_persistence/test_upperdir_discarded_on_abnormal_exit_daemon_kill.py` | Enter; write 50 MB to `/testbed/scratch.bin`; SIGKILL daemon (not graceful); restart → triggers `startup_gc`. Assert: no scratch dir for the dead handle_id; no veth; no cgroup; no leaked IP allocation. `_reap_orphans` MUST recurse into scratch_root for handles missing from manager.json. | Startup GC walks live_set but doesn't recurse into scratch_root cleanup — leftover upperdir survives crash. |
@@ -1062,7 +1062,7 @@ No outstanding questions.
   Total goes from 50 → 72 tests across 10 tiers (was 9).
 - **New helpers:** 10 (in `_iws_invariants.py` + `conftest.py`).
 - **Audit changes:** 5 events enriched with `phases_ms` + `total_ms`; 2
-  new top-level fields on enter (`lowerdir_layer_count`, `materialize`).
+  new top-level fields on enter (`lowerdir_layer_count`, `tree-copy`).
   **NO new `EventType` enum values.**
 - **Source code changes:** 1 file (`service/isolated_workspace.py`) —
   `_PhaseTimer` (~15 LoC), instrument 4 methods, expand 5 `_emit` sites.

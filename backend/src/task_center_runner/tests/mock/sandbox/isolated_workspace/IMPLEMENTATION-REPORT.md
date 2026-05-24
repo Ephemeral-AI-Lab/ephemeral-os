@@ -18,9 +18,9 @@ prerequisite (`_LinuxRuntime.mount_overlay` / `configure_dns` async refactor
 
 | Slice | File(s) | Status |
 |---|---|---|
-| Phase 7 prerequisite — async `mount_overlay` + `configure_dns` (NEXT-AGENT-GUIDE §4.2/7.7) | `sandbox/isolated_workspace/manager.py` (`_Runtime` protocol, `_LinuxRuntime`, shared `_run_helper_subprocess` helper) | landed |
-| Production gap — `_ttl_loop` background task wired by `initialize()` | `sandbox/isolated_workspace/manager.py` | landed |
-| Test-only `EOS_ISOLATED_WORKSPACE_TEST_PHASE_DELAY` knob for Tier 9 regression-band test | `sandbox/isolated_workspace/manager.py:_maybe_inject_failure` | landed |
+| Phase 7 prerequisite — async `mount_overlay` + `configure_dns` (NEXT-AGENT-GUIDE §4.2/7.7) | `sandbox/isolated_workspace/pipeline.py + extracted modules` (`_Runtime` protocol, `_LinuxRuntime`, shared `_run_helper_subprocess` helper) | landed |
+| Production gap — `_ttl_loop` background task wired by `initialize()` | `sandbox/isolated_workspace/pipeline.py + extracted modules` | landed |
+| Test-only `EOS_ISOLATED_WORKSPACE_TEST_PHASE_DELAY` knob for Tier 9 regression-band test | `sandbox/isolated_workspace/pipeline.py + extracted modules:_maybe_inject_failure` | landed |
 | Phase 7 — Tier 5 resource controls (7 tests) | `resource_controls/` | landed |
 | Phase 7 — Tier 6 concurrency (7 base + 4 N=5 noisy-neighbor = 11 tests) | `concurrency/` | landed |
 | Phase 8 — Tier 8 stress (4 base + 1 v2 = 5 tests, marked `live_e2e_soak`) | `stress/` | landed |
@@ -33,7 +33,7 @@ prerequisite (`_LinuxRuntime.mount_overlay` / `configure_dns` async refactor
 
 ### Production-code summary
 
-**`sandbox/isolated_workspace/manager.py`:**
+**`sandbox/isolated_workspace/pipeline.py + extracted modules`:**
 
 - `_Runtime` Protocol: `mount_overlay` and `configure_dns` are now
   `async def`. The two helpers had the longest subprocess timeouts (30 s
@@ -47,7 +47,7 @@ prerequisite (`_LinuxRuntime.mount_overlay` / `configure_dns` async refactor
   uses `asyncio.create_subprocess_exec` + `asyncio.wait_for`. Timeouts
   raise `IsolatedWorkspaceError(setup_timeout, failed_step=...)` so the
   rollback path still triggers correctly.
-- `IsolatedWorkspaceManager.initialize()` now starts a background
+- `IsolatedPipeline.initialize()` now starts a background
   `_ttl_loop` task (after `startup_gc` settles + `_init_complete` is
   set). Previously the `_ttl_task` slot was declared but never assigned
   — Tier 5's `test_ttl_evict_and_audit` would have hung indefinitely.
@@ -143,16 +143,16 @@ code each tier depends on.
 | Phase 4 — Tier 7 GC + persistence (14 tests = 10 base + 4 v2) | `gc_and_persistence/` | landed |
 | Phase 5 — Tier 3 network (15 tests = 11 base + 4 inbound REJECT) | `network/` | landed |
 | Phase 6 — Tier 4 failure modes (8 tests) | `failure_modes/` | landed |
-| GC reaping for cgroup + lease + netns (R5 ordering) | `sandbox/isolated_workspace/manager.py` | landed |
+| GC reaping for cgroup + lease + netns (R5 ordering) | `sandbox/isolated_workspace/pipeline.py + extracted modules` | landed |
 | v1 nft-table migration sweep | `sandbox/isolated_workspace/network.py` | landed |
 | IPv6 default-route purge after `net-ready` | `sandbox/isolated_workspace/scripts/ns_holder.py` | landed |
-| Test-only failure-injection env knobs (HANG_AT / FAIL_AT / HOLDER_CRASH) | `manager.py` + `ns_holder.py` | landed |
-| R11 SIGSTOP/SIGCONT fallback when `cgroup.freeze` write fails | `_LinuxRuntime.freeze` in `manager.py` | landed |
+| Test-only failure-injection env knobs (HANG_AT / FAIL_AT / HOLDER_CRASH) | `pipeline.py` / extracted modules + `ns_holder.py` | landed |
+| R11 SIGSTOP/SIGCONT fallback when `cgroup.freeze` write fails | `_LinuxRuntime.freeze` in `pipeline.py` / extracted modules | landed |
 | Host-side helpers: scratch_root discovery, daemon restart, env-knob wiring, manager.json IO, host resource snapshot | `_iws_fixtures.py` | landed |
 
 ### Production-code summary
 
-**`sandbox/isolated_workspace/manager.py`:**
+**`sandbox/isolated_workspace/pipeline.py + extracted modules`:**
 
 - `startup_gc` rewritten to treat persisted handles as zombies on a
   fresh daemon (the in-memory `_handles` map is always empty post-restart).
@@ -335,7 +335,7 @@ All checks passed!
 | **Tiers 2–9 (66 tests)** | Sequenced after Tier 1 is green per PLAN §7. | next session |
 | **Async-blocking subprocess refactor** (`_LinuxRuntime.{mount_overlay, configure_dns, spawn_ns_holder}`) | Becomes a flake source under Tier 6 concurrent N=5 enters. Not on the critical path for Tier 1/2 green. | Phase 7 prerequisite (see NEXT-AGENT-GUIDE §4.2/7.7) |
 | **`api.test_only.iws_reset` RPC** | Per-agent `exit()` loop in `iws_clean_sandbox` is adequate while only 5 known agent ids exist. | When concurrency tests (phase 7) reveal handle leaks |
-| **Backstop test `PYTHONPATH` risk** | `test_mount_overlay_backstop.py` runs `python3 - <<PY` via `raw_exec`. That requires `sandbox.isolated_workspace.manager` to be importable from a bare `python3` invocation — i.e. the daemon's runtime bundle path must be on `sys.path` for that shell's environment. If live CI surfaces `ModuleNotFoundError: sandbox.isolated_workspace`, the fix is either `PYTHONPATH=<bundle_dir> python3 -` or wrapping via the existing thin-client mechanism. | First Linux-CI run of the backstop |
+| **Backstop test `PYTHONPATH` risk** | `test_mount_overlay_backstop.py` runs `python3 - <<PY` via `raw_exec`. That requires `sandbox.isolated_workspace` to be importable from a bare `python3` invocation — i.e. the daemon's runtime bundle path must be on `sys.path` for that shell's environment. If live CI surfaces `ModuleNotFoundError: sandbox.isolated_workspace`, the fix is either `PYTHONPATH=<bundle_dir> python3 -` or wrapping via the existing thin-client mechanism. | First Linux-CI run of the backstop |
 
 ### How to verify on Linux CI
 
@@ -388,7 +388,7 @@ unit:
 ```
 backend/src/sandbox/isolated_workspace/
 ├── __init__.py
-├── manager.py          (was daemon/service/isolated_workspace.py)
+├── pipeline.py / extracted modules          (was daemon/service/isolated_workspace.py)
 ├── network.py          (was daemon/service/isolated_network.py)
 ├── handlers.py         (was daemon/handler/isolated_workspace.py)
 ├── ops_handlers.py     (was daemon/handler/isolated_workspace_ops.py)
@@ -410,7 +410,7 @@ The previous scattered locations (``daemon/service/``, ``daemon/handler/``,
 | Reused module | Where iws calls it | Saves |
 |---|---|---|
 | ``sandbox.overlay.kernel_mount.mount_overlay`` | ``scripts/setns_overlay_mount.py`` — deferred-import *after* setns so R10 single-thread discipline is preserved at module-load time | ~80 LoC of duplicated ``fsopen / fsconfig / fsmount / move_mount`` syscall wrappers. One source of truth for overlay mount mechanics across the daemon. |
-| ``sandbox.overlay.capability.new_mount_api_supported`` | ``_iws_fixtures.can_mount_overlay_natively`` | A bespoke ``/proc/filesystems`` scan. Picks up the existing ``EOS_OVERLAY_FORCE_MATERIALIZE`` kill-switch for free. |
+| ``sandbox.overlay.capability.new_mount_api_supported`` | ``_iws_fixtures.can_mount_overlay_natively`` | A bespoke ``/proc/filesystems`` scan. Picks up the existing ``EOS_REQUIRE_NEW_MOUNT_API`` kill-switch for free. |
 | ``sandbox.daemon.workspace_server.{prepare,release}_workspace_snapshot`` | ``handlers._LayerStackAdapter`` | Existing lease/snapshot lifecycle — no parallel implementation. |
 | ``sandbox.host.daemon_client.call_daemon_api`` | ``_iws_rpc`` | Existing daemon RPC client. |
 | ``sandbox.overlay.scratch.command_exec_scratch_root`` | ``handlers._ensure_manager`` | Existing scratch-root resolution. |
@@ -448,7 +448,7 @@ backend/src/sandbox/isolated_workspace/scripts/
 
 | File | Change |
 |---|---|
-| ``backend/src/sandbox/isolated_workspace/manager.py`` | PR 1: ``_PhaseTimer`` class + ``_PHASE_TIMER_OVERHEAD_BUDGET_MS``. Instrumented ``enter``, ``_wire_handle``, ``exit``, ``_teardown``, ``run_in_handle``, ``_reap_orphans``, ``ttl_sweep``. Enriched 5 emit sites with ``total_ms`` + ``phases_ms`` (conditional-key per P5) + ``lowerdir_layer_count`` + ``materialize=False`` on enter. PR 0: live ``mount_overlay`` + ``configure_dns`` + new ``signal_net_ready`` Protocol method. Bug fixes: ``IsolatedWorkspaceHandle.readiness_fd`` + ``control_fd`` fields; ``open_ns_fds`` now merges via ``update`` instead of replacing; ``r_parent`` no longer closed eagerly. |
+| ``backend/src/sandbox/isolated_workspace/pipeline.py + extracted modules`` | PR 1: ``_PhaseTimer`` class + ``_PHASE_TIMER_OVERHEAD_BUDGET_MS``. Instrumented ``enter``, ``_wire_handle``, ``exit``, ``_teardown``, ``run_in_handle``, ``_reap_orphans``, ``ttl_sweep``. Enriched 5 emit sites with ``total_ms`` + ``phases_ms`` (conditional-key per P5) + ``lowerdir_layer_count`` + ``shared_layer_snapshot=True`` on enter. PR 0: live ``mount_overlay`` + ``configure_dns`` + new ``signal_net_ready`` Protocol method. Bug fixes: ``IsolatedWorkspaceHandle.readiness_fd`` + ``control_fd`` fields; ``open_ns_fds`` now merges via ``update`` instead of replacing; ``r_parent`` no longer closed eagerly. |
 | ``backend/src/task_center_runner/audit/events.py`` | Module docstring documenting the SUBSET-COVER invariant + conditional-key emission rule (PLAN §21 Follow-up #6). No ``EventType`` enum changes. |
 | ``backend/src/sandbox/daemon/rpc/dispatcher.py`` | OP_TABLE registration switched from ``sandbox.daemon.handler.isolated_workspace{,_ops}`` to ``sandbox.isolated_workspace.{handlers,ops_handlers}``. |
 | ``backend/src/sandbox/host/runtime_bundle.py`` | Added ``sandbox/isolated_workspace/`` to the daemon runtime bundle so the in-sandbox daemon can import the package on startup. |
@@ -479,8 +479,8 @@ Phase key sets per event:
 | `sandbox_isolated_workspace_gc_orphan` | `discover`, `reap` (per-orphan; discover cost is amortized across the pass) |
 
 `enter` additionally carries top-level `lowerdir_layer_count` (int) and
-`materialize` (always `false` — tripwire if anyone flips
-`prepare_workspace_snapshot(materialize=True)` for the isolated path).
+`tree-copy` (always `false` — tripwire if anyone flips
+`prepare_workspace_snapshot(...) with a per-call tree copy` for the isolated path).
 
 ---
 
@@ -705,7 +705,7 @@ Verified at `performance_report.py:284-301` and `:386-417`:
 - `_normalize_sandbox_event` (line 386) reads only known payload keys
   (`tool_name`, `tool_id`, `status`, `conflict_reason`, `changed_paths`)
   plus `timings`. My new keys (`total_ms`, `phases_ms`,
-  `lowerdir_layer_count`, `materialize`) are not touched.
+  `lowerdir_layer_count`, `tree-copy`) are not touched.
 - `_build_sandbox_report` (line 304) iterates `event.get("timings")` —
   separate field from payload. The enriched payload is not inspected.
 

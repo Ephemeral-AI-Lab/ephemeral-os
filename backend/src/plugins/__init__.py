@@ -7,7 +7,8 @@ runtime under ``runtime/``. See ``docs/architecture/plugins-refactor.md``.
 
 This package MUST NOT import ``sandbox.*`` except through the public plugin
 adapter surface (``sandbox.ephemeral_workspace.plugin.call_plugin`` host-side,
-``sandbox.ephemeral_workspace.plugin.runtime.{register_plugin_op, PluginOpContext}`` in-sandbox).
+``sandbox.ephemeral_workspace.plugin.op_registry.register_plugin_op`` and
+``sandbox.ephemeral_workspace.plugin.op_context.PluginOpContext`` in-sandbox).
 """
 
 from __future__ import annotations

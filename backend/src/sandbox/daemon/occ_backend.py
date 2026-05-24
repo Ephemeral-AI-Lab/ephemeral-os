@@ -2,7 +2,7 @@
 
 This module owns the single OCC backend tuple consumed by every daemon peer
 that needs layer-stack/OCC/gitignore state: ``handler/{edit,read,write}.py``
-(api.write/edit/read), ``service/shell_runner.py`` (api.shell), and
+(api.write/edit/read), ``ephemeral_workspace/pipeline.py`` (api.shell), and
 ``handler/metrics.py`` (api.layer_metrics).
 The factory uses a canonical ``workspace_ref=layer_stack_root`` only; this
 module owns no path classification (single source of truth lives in
@@ -22,7 +22,7 @@ from sandbox.occ.gitignore import SnapshotGitignoreOracle
 from sandbox.occ.maintenance import AutoSquashMaintenancePolicy
 from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH, OccService
 from sandbox.daemon.service.layer_stack_client import LayerStackClient
-from sandbox.daemon.service.workspace_binding import RuntimeWorkspaceBindingReader
+from sandbox.main_workspace.workspace_binding import RuntimeWorkspaceBindingReader
 from sandbox.daemon.workspace_server import get_layer_stack_manager
 
 
@@ -31,7 +31,7 @@ class OccBackend:
     """The OCC backend tuple shared by every runtime peer.
 
     Field names are the structural contract: ``handler.request_context``,
-    ``service.shell_runner``, and ``handler.metrics`` all read these
+    ``ephemeral_workspace.pipeline``, and ``handler.metrics`` all read these
     attributes. A typo here silently breaks every consumer.
     """
 

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import shutil
 from collections.abc import Sequence
-from pathlib import Path
 from uuid import uuid4
 
 from sandbox.ephemeral_workspace.shell_contract import WorkspaceLeaseClient
@@ -53,12 +52,13 @@ async def capture_changes(handle: OverlayHandle) -> Sequence[OverlayPathChange]:
 
 async def destroy(handle: OverlayHandle) -> None:
     """Idempotently mark an overlay handle destroyed and clean scratch dirs."""
-    if handle._destroyed:
-        return
-    handle._destroyed = True
-    if handle._release is not None:
-        handle._release()
-    shutil.rmtree(handle.upperdir.parent, ignore_errors=True)
+    with handle._destroy_lock:
+        if handle._destroyed:
+            return
+        handle._destroyed = True
+        if handle._release is not None:
+            handle._release()
+        shutil.rmtree(handle.upperdir.parent, ignore_errors=True)
 
 
 __all__ = ["capture_changes", "create", "destroy"]

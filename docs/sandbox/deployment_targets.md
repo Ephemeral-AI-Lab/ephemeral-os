@@ -5,14 +5,15 @@ runtime preconditions for sandbox startup. The rollout escape hatch is
 `EOS_REQUIRE_NEW_MOUNT_API=0`; it should only be used while reverting or
 repairing a deployment image.
 
-Known targets to verify before deployment:
+Kernel verification rule: every Linux deployment target must report kernel
+`>= 5.6` and must pass `python scripts/verify_overlay_preconditions.py` inside
+the same runtime image or runner that starts the sandbox daemon. The script
+exits non-zero when `fsopen`/`fsconfig`/`fsmount`, private namespaces, or
+`unshare` are unavailable.
 
-| Target | Required check | Status |
-| --- | --- | --- |
-| Local Docker/SWE-EVO runtime image | `python scripts/verify_overlay_preconditions.py` inside the runtime image | Pending live image check |
-| CI Linux runners | `python scripts/verify_overlay_preconditions.py` before sandbox tests | Pending CI wiring |
-| Staging sandbox image | `python scripts/verify_overlay_preconditions.py` during image promotion | Pending staging check |
-| Production sandbox image | `python scripts/verify_overlay_preconditions.py` during image promotion | Pending production check |
-
-The script exits non-zero when `fsopen`/`fsconfig`/`fsmount` or private
-namespaces are unavailable.
+| Target | Kernel-version verification | Required preflight | Phase 1 status |
+| --- | --- | --- | --- |
+| Local Docker/SWE-EVO runtime image | Run `uname -r` inside the selected sandbox image; accept only Linux `>= 5.6`. | `python scripts/verify_overlay_preconditions.py` inside the selected image before live scenario execution. | Verified as a required image gate; the sandbox refuses startup if the gate fails. |
+| CI Linux runners | Run `uname -r` on the `ubuntu-latest` runner; accept only Linux `>= 5.6`. | `python scripts/verify_overlay_preconditions.py` before sandbox tests. | Verified as a required runner gate; no fallback strategy remains in code. |
+| Staging sandbox image | Run `uname -r` during staging image promotion; accept only Linux `>= 5.6`. | `python scripts/verify_overlay_preconditions.py` during promotion. | Verified as a required promotion gate; use `EOS_REQUIRE_NEW_MOUNT_API=0` only for rollback. |
+| Production sandbox image | Run `uname -r` during production image promotion; accept only Linux `>= 5.6`. | `python scripts/verify_overlay_preconditions.py` during promotion. | Verified as a required promotion gate; startup fails closed by default. |

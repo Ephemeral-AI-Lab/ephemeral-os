@@ -47,7 +47,7 @@ Summary:
 | A | 81 | 0 | `backend/scripts/cache_iws_apt_debs.sh` | Helper to cache apt dependency `.deb` files needed by isolated-workspace live fixtures. |
 | A | 30 | 0 | `backend/src/sandbox/isolated_workspace/__init__.py` | Declares the isolated-workspace package contract and import-boundary expectations. |
 | A | 200 | 0 | `backend/src/sandbox/isolated_workspace/handlers.py` | Daemon RPC handlers for enter, exit, status, list, reset, and audit JSONL emission. |
-| A | 1,624 | 0 | `backend/src/sandbox/isolated_workspace/manager.py` | Core manager for handle lifecycle, namespace setup, layer-stack snapshot pinning, cgroup/freezer handling, TTL, GC, and tool-call execution. |
+| A | 1,624 | 0 | `backend/src/sandbox/isolated_workspace/pipeline.py + extracted modules` | Core manager for handle lifecycle, namespace setup, layer-stack snapshot pinning, cgroup/freezer handling, TTL, GC, and tool-call execution. |
 | A | 296 | 0 | `backend/src/sandbox/isolated_workspace/network.py` | Network isolation support: bridge, veth, IP pool, nftables, DNS, IMDS/RFC1918 policy. |
 | A | 98 | 0 | `backend/src/sandbox/isolated_workspace/ops_handlers.py` | Bounded file/shell/search operation handlers for open isolated-workspace handles. |
 | A | 12 | 0 | `backend/src/sandbox/isolated_workspace/scripts/__init__.py` | Package marker for subprocess helper scripts. |

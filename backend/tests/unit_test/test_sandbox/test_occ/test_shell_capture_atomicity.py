@@ -16,7 +16,7 @@ from sandbox.ephemeral_workspace.shell_contract import ShellProcessResult
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.occ.client import OccClient
 from sandbox.daemon import occ_backend
-from sandbox.daemon.service import shell_runner
+import sandbox.ephemeral_workspace.pipeline as pipeline_mod
 
 
 @pytest.mark.asyncio
@@ -89,9 +89,9 @@ async def test_shell_uses_occ_client_apply_changeset(
             mount_mode="private_namespace",
         )
 
-    monkeypatch.setattr(shell_runner, "run_workspace_replaced_command", fake_run)
+    monkeypatch.setattr(pipeline_mod, "run_in_namespace", fake_run)
 
-    result = await shell_runner.execute_shell_api(
+    result = await pipeline_mod.execute_shell_api(
         {
             "layer_stack_root": stack.as_posix(),
             "command": "true",

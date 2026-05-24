@@ -31,6 +31,15 @@ from sandbox.layer_stack.workspace_binding import (
     require_workspace_binding,
 )
 
+
+def prepare_workspace_snapshot(
+    layer_stack: LayerStack,
+    owner_request_id: str,
+) -> PrepareWorkspaceSnapshotResult:
+    """Prepare a namespace-ready snapshot from a LayerStack instance."""
+    return layer_stack.prepare_workspace_snapshot(owner_request_id)
+
+
 __all__ = [
     "CommitStagingArea",
     "DeleteLayerChange",
@@ -50,6 +59,7 @@ __all__ = [
     "WriteLayerChange",
     "aggregate_layer_changes",
     "normalize_layer_path",
+    "prepare_workspace_snapshot",
     "read_workspace_binding",
     "require_workspace_binding",
 ]

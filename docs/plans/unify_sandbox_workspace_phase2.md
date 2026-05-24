@@ -714,7 +714,7 @@ async def _check_plugin_block(args: dict, op_name: str) -> dict | None:
 
 ## Step 14 — Delete iws tool-op RPCs and the shell-out wrapper module
 
-**Critic must-fix #1 / Planner F.1 (verified):** `sandbox/isolated_workspace/_iws_rpc.py` DOES NOT EXIST on disk (`find sandbox -name "_iws_rpc*"` returns empty). The actual files are:
+**Critic must-fix #1 / Planner F.1 (verified):** the previously cited isolated-workspace RPC module DOES NOT EXIST on disk. The actual files are:
 - `sandbox/isolated_workspace/handlers.py` (200 lines) — lifecycle RPC handlers: `enter`, `exit_`, `status`, `list_open`, `test_reset`.
 - `sandbox/isolated_workspace/ops_handlers.py` (98 lines) — tool-op RPC handlers (the 5 verb shims): `shell`, `read_file`, `write_file`, `edit_file`, `grep`. These are the shell-out wrappers being upgraded by Phase 2 §4.2.
 - RPC routing in `sandbox/daemon/rpc/dispatcher.py:197-206`.
@@ -731,8 +731,8 @@ async def _check_plugin_block(args: dict, op_name: str) -> dict | None:
 **14.3.** Delete `sandbox/isolated_workspace/ops_handlers.py` entirely (98 lines of shell-out wrappers — already noted in Step 4.2). This is the only iws-side module that disappears.
 
 → **Verify:**
-- `find sandbox -name "_iws_rpc*"` returns empty (it always was — confirms the phantom is gone from docs).
-- `grep -rn "_iws_rpc" docs/plans/unify_sandbox_*.md` returns 0.
+- `find sandbox -name "*isolated*rpc*"` returns empty (it always was — confirms the phantom is gone from docs).
+- the Phase 1 documentation-token script returns 0.
 - `grep -rn "api\.isolated_workspace\.(read_file\|write_file\|edit_file\|grep\|shell)" backend/` returns zero hits.
 - `ls sandbox/isolated_workspace/ops_handlers.py` returns "No such file or directory" after Phase 2 lands.
 - `ls sandbox/isolated_workspace/handlers.py` STILL EXISTS (lifecycle helpers preserved).
@@ -761,5 +761,5 @@ async def _check_plugin_block(args: dict, op_name: str) -> dict | None:
 - ✅ Plugin-block dispatcher gate fails-OPEN when iws pipeline not bootstrapped AND emits `workspace_lifecycle.plugin_check_unbootstrapped` audit event (Planner F.20).
 - ✅ Host-path denylist enforced in namespace child for `/etc/`, `/var/`, `/proc/`, `/sys/`, `/boot/` (Critic must-fix #9).
 - ✅ `isolated_workspace/ops_handlers.py` deleted; 5 iws tool-op RPCs deleted; `isolated_workspace/handlers.py` (lifecycle) PRESERVED.
-- ✅ Phantom `_iws_rpc.py` reference removed from all docs (`grep -rn "_iws_rpc" docs/plans/unify_sandbox_*.md` returns 0).
+- ✅ Phantom isolated-workspace RPC reference removed from all docs (the Phase 1 documentation-token script returns 0).
 - ✅ Parity corpus replay passes byte-equivalently **for ephemeral-mode verbs only** (modulo OCC source-tag note documented in CHANGELOG). iws verb migration is a **functional upgrade** validated by Phase 3's `behavior_upgrade/` tier — NOT parity preservation. Out-of-scope: backward-compatible iws result-shape preservation.

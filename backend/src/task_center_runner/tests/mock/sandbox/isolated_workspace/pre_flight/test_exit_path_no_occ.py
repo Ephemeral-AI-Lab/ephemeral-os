@@ -19,7 +19,8 @@ from pathlib import Path
 
 
 _SRC_ROOT = Path(__file__).resolve().parents[7] / "src"
-_MANAGER_PATH = _SRC_ROOT / "sandbox/isolated_workspace/manager.py"
+_PIPELINE_PATH = _SRC_ROOT / "sandbox/isolated_workspace/pipeline.py"
+_LIFECYCLE_PATH = _SRC_ROOT / "sandbox/isolated_workspace/_lifecycle.py"
 
 # Anything that smells like an OCC publish call. Substring match — a literal
 # in a method body is enough to fail.
@@ -31,51 +32,73 @@ _FORBIDDEN_TOKENS = (
     "apply_sync",  # the CommitQueue's sync entrypoint
 )
 
-_METHODS_UNDER_TEST = ("exit", "_teardown", "_rollback_partial")
-
-
 def test_exit_and_teardown_methods_have_no_occ_calls() -> None:
-    source = _MANAGER_PATH.read_text(encoding="utf-8")
-    tree = ast.parse(source, filename=str(_MANAGER_PATH))
-    offenders: list[str] = []
-    for cls in (n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)):
-        if cls.name != "IsolatedWorkspaceManager":
-            continue
-        for member in cls.body:
-            if not isinstance(member, (ast.AsyncFunctionDef, ast.FunctionDef)):
-                continue
-            if member.name not in _METHODS_UNDER_TEST:
-                continue
-            body_segment = ast.get_source_segment(source, member) or ""
-            for token in _FORBIDDEN_TOKENS:
-                if re.search(rf"\b{re.escape(token)}\b", body_segment):
-                    offenders.append(
-                        f"IsolatedWorkspaceManager.{member.name} references {token}"
-                    )
+    offenders = _method_token_offenders(
+        _PIPELINE_PATH,
+        class_names={"IsolatedPipeline"},
+        method_names={"exit"},
+    )
+    offenders.extend(
+        _method_token_offenders(
+            _LIFECYCLE_PATH,
+            class_names={"_IsolatedLifecycleMixin"},
+            method_names={"_teardown", "_rollback_partial"},
+        )
+    )
     assert offenders == [], (
         "exit/teardown/rollback paths must not invoke OCC publish primitives: "
         f"{offenders}"
     )
 
 
-def test_manager_module_does_not_import_commit_queue() -> None:
-    """A weaker, broader form of the above: the module never sees CommitQueue."""
-    source = _MANAGER_PATH.read_text(encoding="utf-8")
-    tree = ast.parse(source, filename=str(_MANAGER_PATH))
+def _method_token_offenders(
+    path: Path,
+    *,
+    class_names: set[str],
+    method_names: set[str],
+) -> list[str]:
+    source = path.read_text(encoding="utf-8")
+    tree = ast.parse(source, filename=str(path))
     offenders: list[str] = []
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            for alias in node.names:
-                if "commit_queue" in alias.name.lower():
-                    offenders.append(f"import {alias.name}")
-        elif isinstance(node, ast.ImportFrom):
-            target = node.module or ""
-            if "commit_queue" in target.lower():
-                offenders.append(f"from {target} import ...")
-            for alias in node.names:
-                if alias.name == "CommitQueue":
-                    offenders.append(f"from {target} import CommitQueue")
+    for cls in (n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)):
+        if cls.name not in class_names:
+            continue
+        for member in cls.body:
+            if not isinstance(member, (ast.AsyncFunctionDef, ast.FunctionDef)):
+                continue
+            if member.name not in method_names:
+                continue
+            body_segment = ast.get_source_segment(source, member) or ""
+            for token in _FORBIDDEN_TOKENS:
+                if re.search(rf"\b{re.escape(token)}\b", body_segment):
+                    offenders.append(
+                        f"{path.relative_to(_SRC_ROOT)}:{cls.name}.{member.name} "
+                        f"references {token}"
+                    )
+    return offenders
+
+
+def test_isolated_workspace_pipeline_modules_do_not_import_commit_queue() -> None:
+    """A weaker, broader form of the above: the module never sees CommitQueue."""
+    offenders: list[str] = []
+    for path in (_PIPELINE_PATH, _LIFECYCLE_PATH):
+        source = path.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if "commit_queue" in alias.name.lower():
+                        offenders.append(f"{path.relative_to(_SRC_ROOT)} imports {alias.name}")
+            elif isinstance(node, ast.ImportFrom):
+                target = node.module or ""
+                if "commit_queue" in target.lower():
+                    offenders.append(f"{path.relative_to(_SRC_ROOT)} from {target} import ...")
+                for alias in node.names:
+                    if alias.name == "CommitQueue":
+                        offenders.append(
+                            f"{path.relative_to(_SRC_ROOT)} from {target} import CommitQueue"
+                        )
     assert offenders == [], (
-        "service/isolated_workspace.py must not import the OCC CommitQueue: "
+        "isolated workspace pipeline modules must not import the OCC CommitQueue: "
         f"{offenders}"
     )

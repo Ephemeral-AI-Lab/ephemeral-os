@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -12,7 +13,8 @@ class OverlayHandle:
     """State-bearing handle for a mounted overlay.
 
     This is not a value type. ``_destroyed`` is flipped by
-    ``sandbox.overlay.lifecycle.destroy`` so cleanup is idempotent.
+    ``sandbox.overlay.lifecycle.destroy`` under the per-handle ``_destroy_lock``
+    so cleanup is idempotent for concurrent destroy callers.
 
     ``namespace_pid`` lifecycle:
     - isolated workspace handles populate it with the long-lived namespace
@@ -29,6 +31,11 @@ class OverlayHandle:
     lease_id: str
     namespace_pid: int | None
     _destroyed: bool = False
+    _destroy_lock: threading.Lock = field(
+        default_factory=threading.Lock,
+        repr=False,
+        compare=False,
+    )
     _release: Callable[[], bool] | None = field(
         default=None,
         repr=False,

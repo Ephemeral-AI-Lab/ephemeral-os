@@ -16,8 +16,9 @@ import pytest
 
 from sandbox.layer_stack import WriteLayerChange, LayerStack
 from sandbox.daemon.service.layer_stack_client import LayerStackClient
-from sandbox.ephemeral_workspace.shell_contract import CommandExecRequest, MountMode
+from sandbox.ephemeral_workspace.shell_contract import CommandExecRequest, ShellProcessResult
 from sandbox.ephemeral_workspace._execute_command import execute_command
+from sandbox.overlay.layout import LayerPathsLayout
 
 
 def _source(tmp_path: Path, name: str, content: bytes) -> str:
@@ -60,7 +61,7 @@ async def test_no_occ_orchestrator_removes_intermediate_dirs_but_keeps_outputs(
         capture_publisher=None,
         storage_root=manager.storage_root,
         occ_apply=False,
-        mount_mode=MountMode.COPY_BACKED,
+        command_runner=_write_cleanup_runner,
     )
 
     runtime_root = manager.storage_root / "runtime" / "command_exec"
@@ -113,7 +114,7 @@ async def test_no_occ_orchestrator_cleans_intermediate_dirs_even_on_nonzero_exit
         capture_publisher=None,
         storage_root=manager.storage_root,
         occ_apply=False,
-        mount_mode=MountMode.COPY_BACKED,
+        command_runner=_nonzero_runner,
     )
 
     runtime_root = manager.storage_root / "runtime" / "command_exec"
@@ -121,3 +122,54 @@ async def test_no_occ_orchestrator_cleans_intermediate_dirs_even_on_nonzero_exit
     assert not (run_dir / "workspace").exists()
     assert not (run_dir / "work").exists()
     assert result.exit_code == 3
+
+
+def _write_cleanup_runner(
+    *,
+    spec: LayerPathsLayout,
+    request: CommandExecRequest,
+    run_dir: str | Path,
+    timings: dict[str, float],
+) -> ShellProcessResult:
+    del request
+    run_path = Path(run_dir)
+    target = Path(spec.writes) / "pkg" / "value.txt"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(b"new")
+    stdout_ref = run_path / "stdout.bin"
+    stderr_ref = run_path / "stderr.bin"
+    stdout_ref.parent.mkdir(parents=True, exist_ok=True)
+    stdout_ref.write_text("out", encoding="utf-8")
+    stderr_ref.write_text("err", encoding="utf-8")
+    timings["command_exec.run_command_s"] = 0.0
+    return ShellProcessResult(
+        exit_code=0,
+        stdout_ref=str(stdout_ref),
+        stderr_ref=str(stderr_ref),
+        mounted_workspace_root=spec.workspace_root,
+        mount_mode="private_namespace",
+    )
+
+
+def _nonzero_runner(
+    *,
+    spec: LayerPathsLayout,
+    request: CommandExecRequest,
+    run_dir: str | Path,
+    timings: dict[str, float],
+) -> ShellProcessResult:
+    del request
+    run_path = Path(run_dir)
+    stdout_ref = run_path / "stdout.bin"
+    stderr_ref = run_path / "stderr.bin"
+    stdout_ref.parent.mkdir(parents=True, exist_ok=True)
+    stdout_ref.write_text("", encoding="utf-8")
+    stderr_ref.write_text("", encoding="utf-8")
+    timings["command_exec.run_command_s"] = 0.0
+    return ShellProcessResult(
+        exit_code=3,
+        stdout_ref=str(stdout_ref),
+        stderr_ref=str(stderr_ref),
+        mounted_workspace_root=spec.workspace_root,
+        mount_mode="private_namespace",
+    )

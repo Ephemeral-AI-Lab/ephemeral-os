@@ -14,7 +14,7 @@ from typing import Any, Literal, Protocol
 
 from sandbox.isolated_workspace.network import VethPair
 
-logger = logging.getLogger("sandbox.isolated_workspace.manager")
+logger = logging.getLogger("sandbox.isolated_workspace.pipeline")
 
 SCHEMA_VERSION = 1
 HANDLE_PREFIX = "eos-iws-"

@@ -14,7 +14,7 @@ from sandbox.overlay.capture import walk_upperdir
 from sandbox.overlay.change_synthesis import synthesize_writes
 
 
-def _capture_copy_backed(*, base_repo: Path, merged: Path, upper: Path):
+def _capture_synthetic_merged_tree(*, base_repo: Path, merged: Path, upper: Path):
     synthesize_writes(merged=merged, base_repo=base_repo, into=upper)
     return walk_upperdir(upper)
 
@@ -42,7 +42,7 @@ def test_upperdir_capture_emits_raw_runtime_changes(tmp_path: Path) -> None:
     assert not hasattr(by_path["app.py"], "gitignore")
 
 
-def test_copy_backed_capture_detects_writes_and_deletes(tmp_path: Path) -> None:
+def test_synthetic_merged_tree_capture_detects_writes_and_deletes(tmp_path: Path) -> None:
     lower = tmp_path / "lower"
     merged = tmp_path / "merged"
     upper = tmp_path / "upper"
@@ -52,7 +52,7 @@ def test_copy_backed_capture_detects_writes_and_deletes(tmp_path: Path) -> None:
     (lower / "pkg" / "gone.txt").write_text("gone\n", encoding="utf-8")
     (merged / "pkg" / "value.txt").write_text("new\n", encoding="utf-8")
 
-    changes = _capture_copy_backed(base_repo=lower, merged=merged, upper=upper)
+    changes = _capture_synthetic_merged_tree(base_repo=lower, merged=merged, upper=upper)
 
     by_path = {change.path: change for change in changes}
     assert by_path["pkg/value.txt"].kind == "write"
@@ -80,21 +80,21 @@ def test_opaque_dir_marker_and_xattr_emit_once(
     ]
 
 
-def test_copy_backed_capture_preserves_new_empty_dir(tmp_path: Path) -> None:
+def test_synthetic_merged_tree_capture_preserves_new_empty_dir(tmp_path: Path) -> None:
     lower = tmp_path / "lower"
     merged = tmp_path / "merged"
     upper = tmp_path / "upper"
     lower.mkdir()
     (merged / "empty").mkdir(parents=True)
 
-    changes = _capture_copy_backed(base_repo=lower, merged=merged, upper=upper)
+    changes = _capture_synthetic_merged_tree(base_repo=lower, merged=merged, upper=upper)
 
     assert [(change.path, change.kind) for change in changes] == [
         ("empty", "opaque_dir")
     ]
 
 
-def test_copy_backed_capture_detects_file_mode_changes(tmp_path: Path) -> None:
+def test_synthetic_merged_tree_capture_detects_file_mode_changes(tmp_path: Path) -> None:
     lower = tmp_path / "lower"
     merged = tmp_path / "merged"
     upper = tmp_path / "upper"
@@ -105,14 +105,14 @@ def test_copy_backed_capture_detects_file_mode_changes(tmp_path: Path) -> None:
     (lower / "script.sh").chmod(0o644)
     (merged / "script.sh").chmod(0o755)
 
-    changes = _capture_copy_backed(base_repo=lower, merged=merged, upper=upper)
+    changes = _capture_synthetic_merged_tree(base_repo=lower, merged=merged, upper=upper)
 
     assert [(change.path, change.kind) for change in changes] == [
         ("script.sh", "write")
     ]
 
 
-def test_copy_backed_capture_rejects_escaping_symlink(tmp_path: Path) -> None:
+def test_synthetic_merged_tree_capture_rejects_escaping_symlink(tmp_path: Path) -> None:
     lower = tmp_path / "lower"
     merged = tmp_path / "merged"
     upper = tmp_path / "upper"
@@ -121,4 +121,4 @@ def test_copy_backed_capture_rejects_escaping_symlink(tmp_path: Path) -> None:
     os.symlink("../escape", merged / "link")
 
     with pytest.raises(ValueError, match="escaping symlink"):
-        _capture_copy_backed(base_repo=lower, merged=merged, upper=upper)
+        _capture_synthetic_merged_tree(base_repo=lower, merged=merged, upper=upper)

@@ -275,18 +275,10 @@ def require_arg(args: dict[str, Any], key: str) -> str:
     return value
 
 
-IsolatedWorkspaceManager = IsolatedPipeline
-set_manager = set_pipeline
-require_manager = require_pipeline
-
-
 __all__ = [
     "IsolatedPipeline",
-    "IsolatedWorkspaceManager",
     "get_active_pipeline",
     "require_arg",
-    "require_manager",
     "require_pipeline",
-    "set_manager",
     "set_pipeline",
 ]

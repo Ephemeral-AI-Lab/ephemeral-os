@@ -1,31 +1,20 @@
-"""Unit tests for execute_command capability branching (T5).
-
-Verifies that:
-- new_mount_api_supported()=True  → prepare_workspace_snapshot(materialize=False)
-                                    → LayerPathsLayout spec built
-- new_mount_api_supported()=False → prepare_workspace_snapshot(materialize=True)
-                                    → MaterializeLayout (OverlayLayout) spec built
-- kill switch EOS_OVERLAY_FORCE_MATERIALIZE=1 forces materialize path
-- _drop_transient_lowerdir is a no-op when lowerdir=None
-"""
+"""Unit tests for namespace-only command execution."""
 
 from __future__ import annotations
 
 import asyncio
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
+from sandbox.ephemeral_workspace._execute_command import execute_command
 from sandbox.ephemeral_workspace.shell_contract import (
     CommandExecRequest,
     EmptyChangesetResult,
-    LayerPathsLayout,
+    ShellProcessResult,
     WorkspaceCapturePublishResult,
 )
-from sandbox.overlay.layout import MaterializeLayout
-from sandbox.ephemeral_workspace._execute_command import execute_command, _drop_transient_lowerdir
+from sandbox.overlay.layout import LayerPathsLayout
 
 
 def _make_request(request_id: str = "req-001") -> CommandExecRequest:
@@ -37,28 +26,24 @@ def _make_request(request_id: str = "req-001") -> CommandExecRequest:
     )
 
 
-def _make_lease(
-    *,
-    lowerdir: str | None = "/tmp/lower",
-    layer_paths: tuple[str, ...] | None = None,
-) -> MagicMock:
+def _make_lease(*, layer_paths: tuple[str, ...]) -> MagicMock:
     lease = MagicMock()
     lease.lease_id = "lease-001"
     lease.manifest_version = 1
     lease.manifest = MagicMock()
     lease.manifest.version = 1
-    lease.lowerdir = lowerdir
+    lease.lowerdir = None
     lease.layer_paths = layer_paths
     lease.timings = {}
     return lease
 
 
 def _make_layer_stack(lease: MagicMock, storage_root: Path) -> MagicMock:
-    ls = MagicMock()
-    ls.storage_root = storage_root
-    ls.prepare_workspace_snapshot.return_value = lease
-    ls.release_lease.return_value = True
-    return ls
+    layer_stack = MagicMock()
+    layer_stack.storage_root = storage_root
+    layer_stack.prepare_workspace_snapshot.return_value = lease
+    layer_stack.release_lease.return_value = True
+    return layer_stack
 
 
 def _make_capture_publisher() -> AsyncMock:
@@ -78,149 +63,74 @@ def _make_capture_publisher() -> AsyncMock:
 
 
 def _make_process_result(spec_holder: list[Any]) -> Any:
-    """Returns a sync callable that captures the spec and returns a fake process."""
     def runner(*, spec: Any, request: Any, run_dir: Any, timings: Any, **kwargs: Any):
+        del request, timings, kwargs
         spec_holder.append(spec)
-        result = MagicMock()
-        result.exit_code = 0
-        result.stdout_ref = str(run_dir / "stdout")
-        result.stderr_ref = str(run_dir / "stderr")
-        result.mount_mode = "private_namespace"
-        Path(result.stdout_ref).parent.mkdir(parents=True, exist_ok=True)
-        Path(result.stdout_ref).write_bytes(b"")
-        Path(result.stderr_ref).write_bytes(b"")
-        return result
+        stdout_ref = run_dir / "stdout"
+        stderr_ref = run_dir / "stderr"
+        stdout_ref.parent.mkdir(parents=True, exist_ok=True)
+        stdout_ref.write_bytes(b"")
+        stderr_ref.write_bytes(b"")
+        return ShellProcessResult(
+            exit_code=0,
+            stdout_ref=str(stdout_ref),
+            stderr_ref=str(stderr_ref),
+            mounted_workspace_root=spec.workspace_root,
+            mount_mode="private_namespace",
+        )
+
     return runner
-
-
-@pytest.fixture()
-def storage_root(tmp_path: Path) -> Path:
-    root = tmp_path / "storage"
-    root.mkdir()
-    return root
-
-
-@pytest.fixture()
-def layer_storage_root(tmp_path: Path) -> Path:
-    # Layer paths must be under this root
-    ls_root = tmp_path / "layers"
-    ls_root.mkdir()
-    return ls_root
 
 
 def _run(coro: Any) -> Any:
     return asyncio.run(coro)
 
 
-class TestCapabilityBranch:
-    def test_namespace_path_when_supported(
-        self, storage_root: Path, layer_storage_root: Path, tmp_path: Path
-    ) -> None:
-        layer_path = layer_storage_root / "L0001"
-        layer_path.mkdir()
-        lease = _make_lease(lowerdir=None, layer_paths=(str(layer_path),))
-        ls = _make_layer_stack(lease, layer_storage_root)
-        publisher = _make_capture_publisher()
-        spec_holder: list[Any] = []
+def test_execute_command_prepares_layer_paths_snapshot(
+    tmp_path: Path,
+) -> None:
+    layer_storage_root = tmp_path / "layers"
+    layer_path = layer_storage_root / "L0001"
+    layer_path.mkdir(parents=True)
+    lease = _make_lease(layer_paths=(str(layer_path),))
+    layer_stack = _make_layer_stack(lease, layer_storage_root)
+    publisher = _make_capture_publisher()
+    spec_holder: list[Any] = []
 
-        with patch(
-            "sandbox.ephemeral_workspace._execute_command.new_mount_api_supported", return_value=True
-        ), patch(
-            "sandbox.ephemeral_workspace._execute_command.walk_upperdir", return_value=[]
-        ):
-            _run(
-                execute_command(
-                    _make_request(),
-                    layer_stack=ls,
-                    capture_publisher=publisher,
-                    storage_root=storage_root,
-                    command_runner=_make_process_result(spec_holder),
-                )
+    _run(
+        execute_command(
+            _make_request(),
+            layer_stack=layer_stack,
+            capture_publisher=publisher,
+            storage_root=tmp_path / "storage",
+            command_runner=_make_process_result(spec_holder),
+        )
+    )
+
+    layer_stack.prepare_workspace_snapshot.assert_called_once_with(
+        request_id="req-001",
+    )
+    assert len(spec_holder) == 1
+    assert isinstance(spec_holder[0], LayerPathsLayout)
+    assert spec_holder[0].layer_paths == (str(layer_path),)
+
+
+def test_execute_command_rejects_snapshot_without_layer_paths(tmp_path: Path) -> None:
+    lease = _make_lease(layer_paths=())
+    lease.layer_paths = None
+    layer_stack = _make_layer_stack(lease, tmp_path / "layers")
+
+    try:
+        _run(
+            execute_command(
+                _make_request(),
+                layer_stack=layer_stack,
+                capture_publisher=_make_capture_publisher(),
+                storage_root=tmp_path / "storage",
+                command_runner=_make_process_result([]),
             )
-
-        ls.prepare_workspace_snapshot.assert_called_once()
-        call_kwargs = ls.prepare_workspace_snapshot.call_args.kwargs
-        assert call_kwargs["materialize"] is False
-        assert len(spec_holder) == 1
-        assert isinstance(spec_holder[0], LayerPathsLayout)
-
-    def test_materialize_path_when_not_supported(
-        self, storage_root: Path, layer_storage_root: Path, tmp_path: Path
-    ) -> None:
-        scratch = storage_root / "runtime" / "transient_lowerdir" / "req-001" / "lower"
-        scratch.mkdir(parents=True)
-        lease = _make_lease(lowerdir=str(scratch), layer_paths=None)
-        ls = _make_layer_stack(lease, layer_storage_root)
-        publisher = _make_capture_publisher()
-        spec_holder: list[Any] = []
-
-        with patch(
-            "sandbox.ephemeral_workspace._execute_command.new_mount_api_supported", return_value=False
-        ), patch(
-            "sandbox.ephemeral_workspace._execute_command.walk_upperdir", return_value=[]
-        ):
-            _run(
-                execute_command(
-                    _make_request(),
-                    layer_stack=ls,
-                    capture_publisher=publisher,
-                    storage_root=storage_root,
-                    command_runner=_make_process_result(spec_holder),
-                )
-            )
-
-        call_kwargs = ls.prepare_workspace_snapshot.call_args.kwargs
-        assert call_kwargs["materialize"] is True
-        assert len(spec_holder) == 1
-        assert isinstance(spec_holder[0], MaterializeLayout)
-
-    def test_materialize_path_when_layer_paths_none_despite_flag(
-        self, storage_root: Path, layer_storage_root: Path
-    ) -> None:
-        """If use_namespace=True but lease.layer_paths is None, fall back to materialize."""
-        scratch = storage_root / "runtime" / "transient_lowerdir" / "req-001" / "lower"
-        scratch.mkdir(parents=True)
-        lease = _make_lease(lowerdir=str(scratch), layer_paths=None)
-        ls = _make_layer_stack(lease, layer_storage_root)
-        publisher = _make_capture_publisher()
-        spec_holder: list[Any] = []
-
-        with patch(
-            "sandbox.ephemeral_workspace._execute_command.new_mount_api_supported", return_value=True
-        ), patch(
-            "sandbox.ephemeral_workspace._execute_command.walk_upperdir", return_value=[]
-        ):
-            _run(
-                execute_command(
-                    _make_request(),
-                    layer_stack=ls,
-                    capture_publisher=publisher,
-                    storage_root=storage_root,
-                    command_runner=_make_process_result(spec_holder),
-                )
-            )
-
-        assert isinstance(spec_holder[0], MaterializeLayout)
-
-
-class TestDropTransientLowerdirNoneGuard:
-    def test_no_op_when_lowerdir_is_none(self, storage_root: Path) -> None:
-        lease = MagicMock()
-        lease.lowerdir = None
-        # Should not raise or log warning
-        _drop_transient_lowerdir(lease, storage_root=storage_root)
-
-    def test_no_op_when_lowerdir_missing(self, storage_root: Path) -> None:
-        lease = MagicMock(spec=[])  # no lowerdir attribute
-        _drop_transient_lowerdir(lease, storage_root=storage_root)
-
-
-class TestKillSwitch:
-    def test_kill_switch_disables_namespace(
-        self, storage_root: Path, layer_storage_root: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setenv("EOS_OVERLAY_FORCE_MATERIALIZE", "1")
-        # Re-import so the env var is picked up (probe_supported is cached, but
-        # new_mount_api_supported reads the env var on each call)
-        from sandbox.overlay.capability import new_mount_api_supported
-        assert new_mount_api_supported() is False
+        )
+    except RuntimeError as exc:
+        assert "layer paths" in str(exc)
+    else:  # pragma: no cover - assertion clarity
+        raise AssertionError("execute_command accepted a snapshot without layer paths")

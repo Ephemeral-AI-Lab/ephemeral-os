@@ -18,22 +18,19 @@ from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Literal, Protocol
-from unittest.mock import patch
 
 from sandbox.daemon.service.layer_stack_client import LayerStackClient
-from sandbox.ephemeral_workspace.shell_contract import CommandExecRequest, MountMode
+from sandbox.ephemeral_workspace.shell_contract import CommandExecRequest
 from sandbox.overlay.capability import new_mount_api_supported
 from sandbox.ephemeral_workspace._execute_command import execute_command
 from sandbox.overlay.namespace import detect_private_mount_namespace
 
-OverlayPath = Literal["new_mount_api", "legacy_materialize"]
+OverlayPath = Literal["new_mount_api"]
 
 NEW_MOUNT_API: OverlayPath = "new_mount_api"
-LEGACY_MATERIALIZE: OverlayPath = "legacy_materialize"
 
 LOWER_SIDE_LIMIT_BYTES = 4 * 1024
 UPPERDIR_NO_WRITE_LIMIT_BYTES = 64 * 1024
-LEGACY_NEGATIVE_CONTROL_RATIO = 100.0
 MOUNT_SLOPE_LIMIT_S_PER_LAYER = 0.005
 READ_CPU_SLOPE_LIMIT_S_PER_LAYER = 50.0 / 1_000_000.0
 RSS_LIMIT_BYTES_PER_LEASE = 2 * 1024 * 1024
@@ -147,14 +144,11 @@ async def run_shell_batch(
     request_prefix: str,
     timeout_seconds: float = 60.0,
 ) -> list[ShellTelemetry]:
-    """Run commands through command-exec with the requested overlay path forced."""
+    """Run commands through command-exec using the namespace-only overlay path."""
     workspace_root.mkdir(parents=True, exist_ok=True)
     scratch_root.mkdir(parents=True, exist_ok=True)
     layer_client = LayerStackClient(stack)
-    use_new_api = requested_path == NEW_MOUNT_API
-    expected_mode = (
-        MountMode.PRIVATE_NAMESPACE if use_new_api else MountMode.COPY_BACKED
-    )
+    expected_mode = "private_namespace"
 
     async def _run_one(index: int, command: str) -> ShellTelemetry:
         request = CommandExecRequest(
@@ -171,13 +165,12 @@ async def run_shell_batch(
             capture_publisher=None,
             storage_root=stack.storage_root,
             occ_apply=False,
-            mount_mode=expected_mode,
         )
         actual_mode = result.workspace_capture.mount_mode
         if actual_mode != expected_mode:
             raise AssertionError(
-                f"{request.request_id} ran {actual_mode.value}; expected "
-                f"{expected_mode.value} for {requested_path}"
+                f"{request.request_id} ran {actual_mode}; expected "
+                f"{expected_mode} for {requested_path}"
             )
         if result.exit_code != 0:
             raise AssertionError(
@@ -186,37 +179,14 @@ async def run_shell_batch(
         return ShellTelemetry(
             request_id=request.request_id,
             requested_path=requested_path,
-            mount_mode=actual_mode.value,
+            mount_mode=actual_mode,
             timings=dict(result.timings),
             stdout=result.stdout,
             stderr=result.stderr,
         )
 
-    with _command_exec_scratch_root(scratch_root), patch(
-        "sandbox.ephemeral_workspace._execute_command.new_mount_api_supported",
-        return_value=use_new_api,
-    ):
+    with _command_exec_scratch_root(scratch_root):
         return list(await asyncio.gather(*(_run_one(i, cmd) for i, cmd in enumerate(commands))))
-
-
-def assert_bound_a_negative_control(
-    *,
-    new_api: Sequence[ShellTelemetry],
-    legacy: Sequence[ShellTelemetry],
-) -> None:
-    """Assert Bound A with the legacy materialization negative control."""
-    assert_new_api_o1_bounds(new_api)
-    max_new_lower = max((row.lower_side_bytes for row in new_api), default=0)
-    min_legacy_lower = min((row.lower_side_bytes for row in legacy), default=0)
-    denominator = max(1, max_new_lower)
-    ratio = min_legacy_lower / denominator
-    if ratio < LEGACY_NEGATIVE_CONTROL_RATIO:
-        raise AssertionError(
-            "Bound A negative control FAIL: "
-            f"min legacy lower-side bytes={min_legacy_lower}, "
-            f"max new-api lower-side bytes={max_new_lower}, ratio={ratio:.1f}x "
-            f"< {LEGACY_NEGATIVE_CONTROL_RATIO:.0f}x"
-        )
 
 
 def assert_new_api_o1_bounds(rows: Sequence[ShellTelemetry]) -> None:
@@ -229,7 +199,7 @@ def assert_new_api_o1_bounds(rows: Sequence[ShellTelemetry]) -> None:
     for row in rows:
         if row.lower_side_bytes > LOWER_SIDE_LIMIT_BYTES:
             failures.append(
-                f"{row.request_id}: forced materialize/lower-side bytes "
+                f"{row.request_id}: lower-side bytes "
                 f"{row.lower_side_bytes} > {LOWER_SIDE_LIMIT_BYTES}"
             )
         if row.upperdir_bytes > UPPERDIR_NO_WRITE_LIMIT_BYTES:

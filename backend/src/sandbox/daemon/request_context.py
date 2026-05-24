@@ -22,12 +22,16 @@ validation and timing helpers.
 
 from __future__ import annotations
 
-import errno
 import os
 from collections.abc import Mapping
-from pathlib import Path
 from typing import Literal, NamedTuple
 
+from sandbox._shared.tool_primitives.file_ops import (
+    read_bytes_no_follow as _read_bytes_no_follow,
+)
+from sandbox._shared.tool_primitives.file_ops import (
+    write_text_no_follow as _write_text_no_follow,
+)
 from sandbox.occ.changeset import ChangesetResult
 from sandbox.occ.gitignore import SnapshotGitignoreOracle
 from sandbox.daemon.result_projection import (
@@ -132,9 +136,7 @@ def required_single_path(args: Mapping[str, object]) -> str:
 
 
 def read_bytes_no_follow(abs_path: str) -> bytes:
-    fd = _open_no_follow(abs_path, os.O_RDONLY)
-    with os.fdopen(fd, "rb") as file:
-        return file.read()
+    return _read_bytes_no_follow(abs_path)
 
 
 def write_text_no_follow(
@@ -143,47 +145,7 @@ def write_text_no_follow(
     *,
     create_only: bool = False,
 ) -> None:
-    target = Path(abs_path)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    flags = os.O_WRONLY | os.O_CREAT | _o_no_follow()
-    flags |= os.O_EXCL if create_only else os.O_TRUNC
-    fd = _open_no_follow(abs_path, flags, mode=0o666)
-    with os.fdopen(fd, "wb") as file:
-        file.write(content.encode("utf-8"))
-
-
-def _open_no_follow(abs_path: str, flags: int, mode: int = 0o666) -> int:
-    path = Path(abs_path)
-    if not path.is_absolute():
-        raise ValueError(f"path must be absolute: {abs_path!r}")
-    parts = path.parts
-    if len(parts) < 2:
-        raise ValueError(f"path must name a file: {abs_path!r}")
-
-    dir_fd = os.open(parts[0], os.O_RDONLY | os.O_DIRECTORY)
-    try:
-        for part in parts[1:-1]:
-            next_fd = os.open(
-                part,
-                os.O_RDONLY | os.O_DIRECTORY | _o_no_follow(),
-                dir_fd=dir_fd,
-            )
-            os.close(dir_fd)
-            dir_fd = next_fd
-        return os.open(parts[-1], flags | _o_no_follow(), mode, dir_fd=dir_fd)
-    except OSError as exc:
-        if exc.errno == errno.ELOOP:
-            raise ValueError(f"refusing to follow symlink: {abs_path}") from exc
-        raise
-    finally:
-        os.close(dir_fd)
-
-
-def _o_no_follow() -> int:
-    value = getattr(os, "O_NOFOLLOW", None)
-    if value is None:
-        raise RuntimeError("O_NOFOLLOW is unavailable on this platform")
-    return int(value)
+    _write_text_no_follow(abs_path, content, create_only=create_only)
 
 
 # -- result projection ------------------------------------------------------

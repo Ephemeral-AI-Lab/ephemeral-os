@@ -69,7 +69,7 @@ See Phase 2.5 §1 for the 5 NEW principles; §3 for the RALPLAN-DR option matrix
 
 2. **Shared overlay substrate, optional capture, mode-defined cadence.** `sandbox/overlay/{create, destroy, run_in_namespace}` are always called by both pipelines. `capture_changes` is OPTIONAL — `EphemeralPipeline` always invokes it for `WRITE_ALLOWED` verbs (for OCC commit); `IsolatedPipeline` invokes it ONLY for `changed_paths` observability (no OCC commit follows, upperdir discarded at exit). `overlay.create` accepts an iws-only `network: NetworkConfig | None` parameter (ephemeral always passes `None`). The substrate is shared; the call pattern is mode-defined. (Architect §D Principle 2 reworded — earlier "same interface" wording was leaky.)
 
-3. **`OverlayHandle` is a state-bearing handle with idempotent destroy.** NOT a value type (Critic must-fix #10 / Planner F.9 / Architect §D Principle 3 — the earlier "value type" wording contradicted the mutable `_destroyed` field). Mutability of `_destroyed: bool` is intentional and documented; thread/asyncio safety relies on the owning pipeline's `_handle_locks: dict[str, asyncio.Lock]` AND single-bit-write semantics for `_destroyed` (no torn-reads). Concurrent `destroy(handle)` calls (e.g., from shell-job reaper or interleaved asyncio tasks) must be safe — see Phase 2 §3.1's `_destroy_with_lease_guard` per-handle-lock TOCTOU fix.
+3. **`OverlayHandle` is a state-bearing handle with idempotent destroy.** It is not an immutable value object (Critic must-fix #10 / Planner F.9 / Architect §D Principle 3 — the earlier immutable-object wording contradicted the mutable `_destroyed` field). Mutability of `_destroyed: bool` is intentional and documented; thread/asyncio safety relies on the owning pipeline's `_handle_locks: dict[str, asyncio.Lock]` AND single-bit-write semantics for `_destroyed` (no torn-reads). Concurrent `destroy(handle)` calls (e.g., from shell-job reaper or interleaved asyncio tasks) must be safe — see Phase 2 §3.1's `_destroy_with_lease_guard` per-handle-lock TOCTOU fix.
 
 4. **`WorkspacePipeline` protocol has ONE method.** `async def run_tool_call(req: ToolCallRequest) -> ToolCallResult`. Each pipeline implements its own internals. Lifecycle methods (`enter`/`exit`) live only on `IsolatedPipeline` — called by `sandbox/lifecycle/` host-side coroutines, not through the protocol. The protocol provides type-safe dispatch in `daemon/dispatch.py::resolve_pipeline(agent_id) -> WorkspacePipeline`; the lifecycle plumbing is intentionally NOT on the protocol because ephemeral has nothing analogous.
 
@@ -159,7 +159,7 @@ Materializes the three workspace packages (`main_workspace/` as a **thin re-expo
 - `sandbox/ephemeral_workspace/plugin/` (moved from `sandbox/plugin/`)
 - `sandbox/isolated_workspace/{pipeline,_types,_lifecycle,_gc,_ttl,_quota,_runtime}.py` (`manager.py` mechanical decomposition; no file >400 lines)
 - `sandbox/overlay/` (FLAT — absorbs `execution/overlay/` + `execution/strategies/namespace*`; deletes `copy_backed.py`, `base.py`, `_workspace_rewrite.py`)
-- `sandbox/overlay/handle.py` (NEW — `OverlayHandle` dataclass with `_destroyed` field; documented as state-bearing handle, NOT value type; `namespace_pid` lifecycle documented)
+- `sandbox/overlay/handle.py` (NEW — `OverlayHandle` dataclass with `_destroyed` field; documented as a mutable state-bearing handle; `namespace_pid` lifecycle documented)
 - `sandbox/overlay/lifecycle.py` (NEW — `create`, `destroy`, `capture_changes`)
 - `sandbox/_shared/tool_primitives/` (NEW — verb compute impls; `file_ops.open_no_follow` chokepoint with per-component walk OR `openat2(RESOLVE_NO_SYMLINKS)`)
 - Relocate non-overlay `execution/*` files into `ephemeral_workspace/` and `_shared/`
@@ -195,7 +195,7 @@ Implements the per-call ephemeral pipeline and persistent isolated pipeline. Add
 - Plugin-block gate emits `workspace_lifecycle.plugin_check_unbootstrapped` audit event on fail-OPEN
 - `backend/src/tools/isolated_workspace/{enter,exit}_isolated_workspace/` (imports from `sandbox.lifecycle.*`)
 - **`WorkspaceSession` DEFERRED to `tests/mock/sandbox/_fixtures/workspace_session.py`** test utility — NOT shipped as public API until a production caller materializes (Critic must-fix #11)
-- DELETE `isolated_workspace/ops_handlers.py` (98 lines of shell-out wrappers — verified) + 5 iws tool-op RPCs. **`isolated_workspace/handlers.py` (lifecycle helpers) PRESERVED.** No `_iws_rpc.py` file exists or has ever existed (phantom reference removed from docs per Critic must-fix #1).
+- DELETE `isolated_workspace/ops_handlers.py` (98 lines of shell-out wrappers — verified) + 5 iws tool-op RPCs. **`isolated_workspace/handlers.py` (lifecycle helpers) PRESERVED.** No separate isolated-workspace RPC module exists or has ever existed (phantom reference removed from docs per Critic must-fix #1).
 
 **Cost:** substantive — bounded by Phase 1's parity corpus (ephemeral-only) and Phase 3's `behavior_upgrade/` tier (iws). ≤8 logical atomic commits.
 
@@ -234,7 +234,7 @@ Reshapes the iws test suite around the new tool surface. Adds new test tiers for
 - Daemon wire-protocol versioning. `api.v1.<verb>` survives; no `api.v2.*`.
 - OCC writeback for iws (intentional design feature; rationale documented in §1 isolated_workspace row).
 - Network-policy API for iws (separate plan).
-- iws lifecycle RPC handlers survive UNCHANGED in `sandbox/isolated_workspace/handlers.py` (no `_iws_rpc.py` file exists — phantom reference removed per Critic must-fix #1). Lifecycle RPC namespace `api.isolated_workspace.{enter,exit,status,list_open,test_reset}` preserved.
+- iws lifecycle RPC handlers survive UNCHANGED in `sandbox/isolated_workspace/handlers.py` (no separate isolated-workspace RPC module exists — phantom reference removed per Critic must-fix #1). Lifecycle RPC namespace `api.isolated_workspace.{enter,exit,status,list_open,test_reset}` preserved.
 - Mypy-level Union narrowing on `ToolCallResult` types.
 - Moving `layer_stack/` or `occ/` into `main_workspace/` (500+ external imports; sidestepped via thin re-export facade in `main_workspace/__init__.py`).
 - `WorkspaceSession` as public API — deferred to `tests/mock/sandbox/_fixtures/workspace_session.py` test utility until a production caller materializes (Critic must-fix #11).

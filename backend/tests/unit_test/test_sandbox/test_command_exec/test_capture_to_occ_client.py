@@ -14,7 +14,7 @@ from sandbox.layer_stack.paths import TRANSIENT_LOWERDIR_DIR
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.layer_stack.workspace_binding import WorkspaceBinding, write_workspace_binding_atomic
 from sandbox.occ.changeset import ChangesetResult, FileResult, FileStatus
-from sandbox.daemon.service import shell_runner
+import sandbox.ephemeral_workspace.pipeline as pipeline_mod
 from sandbox.daemon.service.layer_stack_client import LayerStackClient
 
 
@@ -36,8 +36,8 @@ class _LayerStackClient:
             manifest_version=1,
             manifest=Manifest(version=1, layers=()),
             lowerdir=str(lowerdir),
+            layer_paths=(str(lowerdir),),
             timings={
-                "layer_stack.materialize_s": 0.003,
                 "layer_stack.prepare_workspace_snapshot.total_s": 0.004,
             },
         )
@@ -47,10 +47,8 @@ class _LayerStackClient:
         self,
         *,
         request_id: str,
-        lowerdir_root: str | Path | None = None,
-        materialize: bool = True,
     ) -> _Lease:
-        del request_id, lowerdir_root, materialize
+        del request_id
         return self.lease
 
     def release_lease(self, *, lease_id: str) -> bool:
@@ -145,7 +143,7 @@ async def test_shell_capture_goes_through_occ_client_before_lease_release(
     layer_stack = _LayerStackClient(lower)
     occ = _Client(layer_stack, expect_release_before_maintenance=True)
 
-    def fake_run_workspace_replaced_command(*, spec, request, run_dir, timings):
+    def fake_command_runner(*, spec, request, run_dir, timings):
         del request
         upper = Path(spec.writes)
         upper.mkdir(parents=True)
@@ -168,13 +166,7 @@ async def test_shell_capture_goes_through_occ_client_before_lease_release(
             mount_mode="private_namespace",
         )
 
-    monkeypatch.setattr(
-        shell_runner,
-        "run_workspace_replaced_command",
-        fake_run_workspace_replaced_command,
-    )
-
-    result = await shell_runner._execute_shell(
+    result = await pipeline_mod._execute_shell(
         {
             "layer_stack_root": stack.as_posix(),
             "command": "true",
@@ -186,6 +178,7 @@ async def test_shell_capture_goes_through_occ_client_before_lease_release(
         occ_client=occ,
         gitignore=_Gitignore(),
         storage_root=stack,
+        command_runner=fake_command_runner,
     )
 
     assert occ.paths == ["generated/output.txt"]
@@ -216,7 +209,7 @@ async def test_shell_uses_per_command_upperdir_for_workspace_writes(
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
     upperdirs: list[Path] = []
 
-    def fake_run_workspace_replaced_command(*, spec, request, run_dir, timings):
+    def fake_command_runner(*, spec, request, run_dir, timings):
         del request
         upperdir = Path(spec.writes)
         upperdirs.append(upperdir)
@@ -239,14 +232,9 @@ async def test_shell_uses_per_command_upperdir_for_workspace_writes(
             mount_mode="private_namespace",
         )
 
-    monkeypatch.setattr(
-        shell_runner,
-        "run_workspace_replaced_command",
-        fake_run_workspace_replaced_command,
-    )
     occ = _Client(_LayerStackClient(tmp_path / "unused-lower"))
 
-    result = await shell_runner._execute_shell(
+    result = await pipeline_mod._execute_shell(
         {
             "layer_stack_root": stack.as_posix(),
             "command": "printf done > out.txt",
@@ -256,6 +244,7 @@ async def test_shell_uses_per_command_upperdir_for_workspace_writes(
         occ_client=occ,
         gitignore=_Gitignore(),
         storage_root=stack,
+        command_runner=fake_command_runner,
     )
 
     assert upperdirs
@@ -268,7 +257,7 @@ async def test_shell_uses_per_command_upperdir_for_workspace_writes(
     assert result.timings["resource.command_exec.changed_path_count"] == 1.0
 
 
-async def test_shell_uses_transient_lowerdir_and_removes_it(
+async def test_shell_uses_layer_paths_snapshot_and_run_scratch(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -280,16 +269,21 @@ async def test_shell_uses_transient_lowerdir_and_removes_it(
     monkeypatch.setenv("EPHEMERALOS_COMMAND_EXEC_SCRATCH_ROOT", scratch.as_posix())
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
     layer_stack = LayerStackClient(stack)
-    captured_lowerdirs: list[Path] = []
+    captured_layer_paths: list[tuple[Path, ...]] = []
     captured_run_dirs: list[Path] = []
 
-    def fake_run_workspace_replaced_command(*, spec, request, run_dir, timings):
+    def fake_command_runner(*, spec, request, run_dir, timings):
         del request
-        lowerdir = Path(spec.base_repo)
-        captured_lowerdirs.append(lowerdir)
+        layer_paths = tuple(Path(path) for path in spec.layer_paths)
+        captured_layer_paths.append(layer_paths)
         captured_run_dirs.append(Path(run_dir))
-        assert lowerdir.is_dir()
-        assert (lowerdir / "input.txt").read_text(encoding="utf-8") == "base\n"
+        assert layer_paths
+        assert all(path.is_dir() for path in layer_paths)
+        assert any(
+            (path / "input.txt").read_text(encoding="utf-8") == "base\n"
+            for path in layer_paths
+            if (path / "input.txt").exists()
+        )
         Path(spec.writes).mkdir(parents=True, exist_ok=True)
         stdout_ref = Path(run_dir) / "stdout.bin"
         stderr_ref = Path(run_dir) / "stderr.bin"
@@ -307,13 +301,7 @@ async def test_shell_uses_transient_lowerdir_and_removes_it(
             mount_mode="private_namespace",
         )
 
-    monkeypatch.setattr(
-        shell_runner,
-        "run_workspace_replaced_command",
-        fake_run_workspace_replaced_command,
-    )
-
-    result = await shell_runner._execute_shell(
+    result = await pipeline_mod._execute_shell(
         {
             "layer_stack_root": stack.as_posix(),
             "command": "true",
@@ -323,15 +311,13 @@ async def test_shell_uses_transient_lowerdir_and_removes_it(
         occ_client=_Client(_LayerStackClient(tmp_path / "unused-lower")),
         gitignore=_Gitignore(),
         storage_root=stack,
+        command_runner=fake_command_runner,
     )
 
     assert result.exit_code == 0
-    assert captured_lowerdirs
-    assert captured_lowerdirs[0].is_relative_to(
-        scratch / "runtime" / TRANSIENT_LOWERDIR_DIR
-    )
+    assert captured_layer_paths
+    assert all(path.is_relative_to(stack) for path in captured_layer_paths[0])
     assert captured_run_dirs[0].is_relative_to(scratch / "runtime" / "command_exec")
-    assert captured_lowerdirs[0].exists() is False
 
 
 def test_drop_transient_lowerdir_refuses_matching_path_outside_storage_root(
@@ -358,7 +344,6 @@ def test_drop_transient_lowerdir_refuses_matching_path_outside_storage_root(
 
 def _assert_phase08_shell_timings(timings: dict[str, float]) -> None:
     required = {
-        "layer_stack.materialize_s",
         "layer_stack.prepare_workspace_snapshot.total_s",
         "command_exec.prepare_snapshot_s",
         "command_exec.mount_workspace_s",
@@ -399,6 +384,5 @@ def _assert_phase08_shell_timings(timings: dict[str, float]) -> None:
         "lowerdir_cache_hit",
         "lowerdir_cache_hits",
         "lowerdir_cache_misses",
-        "materialized_byte_count",
     }
     assert timings.keys().isdisjoint(forbidden)

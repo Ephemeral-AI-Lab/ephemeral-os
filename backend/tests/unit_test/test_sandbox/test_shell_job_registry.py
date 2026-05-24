@@ -3,7 +3,7 @@
 These exercise launch / poll / cancel / reap lifecycle without a real
 overlay or daemon, using a fake :class:`EphemeralPipeline` whose
 ``acquire_operation_overlay`` returns a handle backed by tmp dirs. The
-``run_workspace_replaced_command`` boundary is monkeypatched so the tests
+namespace-runner boundary is monkeypatched so the tests
 run on macOS without namespace or overlay support.
 """
 
@@ -24,7 +24,7 @@ from uuid import uuid4
 
 import pytest
 
-from sandbox.daemon.service import shell_job as shell_job_module
+import sandbox.ephemeral_workspace.shell_job as shell_job_module
 from sandbox.ephemeral_workspace.shell_job import (
     ShellJob,
     ShellJobNotFound,
@@ -33,7 +33,6 @@ from sandbox.ephemeral_workspace.shell_job import (
 from sandbox.ephemeral_workspace.pipeline import OperationOverlayHandle
 from sandbox.ephemeral_workspace.shell_contract import (
     CommandExecRequest,
-    MountMode,
     ShellProcessResult,
 )
 
@@ -60,22 +59,22 @@ class _FakeEphemeralPipeline:
         self.publish_calls = 0
         self.released_leases: list[str] = []
         self.maintenance_calls = 0
+        self._layer_stack = MagicMock(storage_root=tmp_path / "layers")
+        self._layer_stack.storage_root.mkdir(parents=True, exist_ok=True)
 
     def acquire_operation_overlay(
         self,
         *,
         request_id: str,
-        materialize: bool = False,
     ) -> OperationOverlayHandle:
-        del materialize
         rid = uuid4().hex[:8]
         run_dir = self._scratch / f"run-{request_id}-{rid}"
         upperdir = run_dir / "upper"
         workdir = run_dir / "work"
-        lowerdir = run_dir / "lower"
+        layer = self._layer_stack.storage_root / f"L{rid}"
         upperdir.mkdir(parents=True, exist_ok=True)
         workdir.mkdir(parents=True, exist_ok=True)
-        lowerdir.mkdir(parents=True, exist_ok=True)
+        layer.mkdir(parents=True, exist_ok=True)
         owner = self
 
         class _ReleaseShim:
@@ -94,8 +93,8 @@ class _FakeEphemeralPipeline:
             run_dir=str(run_dir),
             upperdir=str(upperdir),
             workdir=str(workdir),
-            lowerdir=str(lowerdir),
-            layer_paths=None,
+            lowerdir=None,
+            layer_paths=(str(layer),),
             _overlay=_ReleaseShim(),  # type: ignore[arg-type]
         )
 
@@ -155,7 +154,7 @@ def _stub_strategy_runner_factory(
     exit_code: int = 0,
     audit_events: list[tuple[str, dict[str, Any]]] | None = None,
 ) -> Callable[..., ShellProcessResult]:
-    """Returns a stub ``run_workspace_replaced_command`` that exec's `sleep`.
+    """Returns a stub namespace runner that execs `sleep`.
 
     The stub spawns a real ``python -c "time.sleep(X)"`` subprocess so the
     cancel + killpg pipeline is exercised end-to-end. ``cancel_event`` is
@@ -201,7 +200,7 @@ def _stub_strategy_runner_factory(
             stdout_ref=str(stdout_ref),
             stderr_ref=str(stderr_ref),
             mounted_workspace_root=spec.workspace_root,
-            mount_mode=MountMode.COPY_BACKED,
+            mount_mode="private_namespace",
         )
 
     return _stub
@@ -234,7 +233,7 @@ async def _run_shell_job(
 def _patch_runner(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         shell_job_module,
-        "run_workspace_replaced_command",
+        "run_in_namespace",
         _stub_strategy_runner_factory(duration_s=0.05),
     )
 
@@ -281,7 +280,7 @@ async def test_cancel_skips_publish_and_releases_lease(
     # Use a longer-running stub so cancel can race.
     monkeypatch.setattr(
         shell_job_module,
-        "run_workspace_replaced_command",
+        "run_in_namespace",
         _stub_strategy_runner_factory(duration_s=10.0),
     )
     audit: list[tuple[str, dict[str, Any]]] = []
@@ -320,7 +319,7 @@ async def test_poll_returns_snapshot_with_status(
 ) -> None:
     monkeypatch.setattr(
         shell_job_module,
-        "run_workspace_replaced_command",
+        "run_in_namespace",
         _stub_strategy_runner_factory(duration_s=2.0),
     )
     request = _make_request(command="sleep 2", timeout_seconds=10.0)
@@ -348,7 +347,7 @@ async def test_double_cancel_is_idempotent(
 ) -> None:
     monkeypatch.setattr(
         shell_job_module,
-        "run_workspace_replaced_command",
+        "run_in_namespace",
         _stub_strategy_runner_factory(duration_s=5.0),
     )
     request = _make_request(command="sleep 5", timeout_seconds=10.0)

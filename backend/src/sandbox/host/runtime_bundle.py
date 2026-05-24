@@ -248,7 +248,7 @@ def _runtime_bundle_bytes() -> bytes:
         # Bundle only the in-sandbox parts of sandbox/ephemeral_workspace/plugin/ — install.py
         # and session.py are host-only (they import from sandbox.host and
         # sandbox.provider). The daemon imports
-        # sandbox.ephemeral_workspace.plugin.runtime,
+        # sandbox.ephemeral_workspace.plugin.op_registry,
         # sandbox.ephemeral_workspace.plugin.handler, and
         # sandbox.ephemeral_workspace.plugin.projection.
         plugin_dir = ephemeral_dir / "plugin"

@@ -18,7 +18,7 @@ from typing import Any
 
 import pytest
 
-from sandbox.daemon.service import pipeline
+import sandbox.ephemeral_workspace.pipeline as pipeline
 from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
 from sandbox.ephemeral_workspace.shell_contract import CommandExecRequest
 from sandbox.occ.changeset import CommitOptions
@@ -55,6 +55,15 @@ class _StubOccClient:
             timings={},
             published_manifest_version=1,
         )
+
+    async def run_maintenance_after_publish(
+        self,
+        result: ChangesetResult,
+        *,
+        workspace_ref: str | None = None,
+    ) -> dict[str, float]:
+        del result, workspace_ref
+        return {}
 
 
 def _request() -> CommandExecRequest:

@@ -2,14 +2,14 @@
 
 This top-level handler manages lifecycle: it does NOT participate in R3 import
 discipline (the bounded module is :mod:`.ops_handlers`). Singleton and
-arg validation live in :mod:`.manager` so that the bounded ops module can
+arg validation live in :mod:`.pipeline` so that the bounded ops module can
 reuse them without pulling in ``request_context``'s OCC imports.
 
-Manager bootstrap: the daemon doesn't ship with a singleton layer_stack_root
+Pipeline bootstrap: the daemon doesn't ship with a singleton layer_stack_root
 at startup (each handler call brings its own), so the manager is constructed
 lazily on the first ``enter()`` call using ``args["layer_stack_root"]``. The
 construction also runs ``initialize() + startup_gc()`` exactly once. After
-that, subsequent calls reuse the singleton via ``require_manager()``.
+that, subsequent calls reuse the singleton via ``require_pipeline()``.
 
 Audit sink: the manager emits five ``sandbox_isolated_workspace_*`` event
 types via its ``AuditSink`` port. Here we wire a JSONL writer that appends
@@ -28,12 +28,12 @@ from typing import Any
 from audit.jsonl import append_jsonl_event
 from sandbox.daemon import workspace_server
 from sandbox.overlay.scratch import command_exec_scratch_root
-from sandbox.isolated_workspace.manager import (
+from sandbox.isolated_workspace.pipeline import (
+    IsolatedPipeline,
     IsolatedWorkspaceError,
-    IsolatedWorkspaceManager,
     require_arg,
-    require_manager,
-    set_manager,
+    require_pipeline,
+    set_pipeline,
 )
 
 
@@ -43,7 +43,7 @@ DEFAULT_AUDIT_JSONL_PATH = "/tmp/sandbox_isolated_workspace_events.jsonl"
 
 
 class _LayerStackAdapter:
-    """Adapter from ``workspace_server`` to the manager's ``LayerStackPort``."""
+    """Adapter from ``workspace_server`` to the pipeline's ``LayerStackPort``."""
 
     @staticmethod
     def prepare_workspace_snapshot(
@@ -86,25 +86,25 @@ def _resolve_audit_path() -> str:
     return raw or DEFAULT_AUDIT_JSONL_PATH
 
 
-async def _ensure_manager(args: dict[str, Any]) -> IsolatedWorkspaceManager:
+async def _ensure_manager(args: dict[str, Any]) -> IsolatedPipeline:
     try:
-        return require_manager()
+        return require_pipeline()
     except IsolatedWorkspaceError:
         pass
     async with _bootstrap_lock:
         try:
-            return require_manager()  # racing caller may have constructed it
+            return require_pipeline()  # racing caller may have constructed it
         except IsolatedWorkspaceError:
             pass
         layer_stack_root = require_arg(args, "layer_stack_root")
         scratch = command_exec_scratch_root(Path(layer_stack_root))
-        manager = IsolatedWorkspaceManager(
+        manager = IsolatedPipeline(
             scratch_root=scratch,
             layer_stack_root=layer_stack_root,
             layer_stack=_LayerStackAdapter(),  # type: ignore[arg-type]
             audit=_JsonlAuditSink(_resolve_audit_path()),
         )
-        set_manager(manager)
+        set_pipeline(manager)
         await manager.initialize()
         return manager
 
@@ -131,14 +131,14 @@ async def enter(args: dict[str, Any]) -> dict[str, Any]:
 
 async def exit_(args: dict[str, Any]) -> dict[str, Any]:
     try:
-        return await require_manager().exit(require_arg(args, "agent_id"))
+        return await require_pipeline().exit(require_arg(args, "agent_id"))
     except IsolatedWorkspaceError as exc:
         return _error(exc)
 
 
 async def status(args: dict[str, Any]) -> dict[str, Any]:
     try:
-        manager = require_manager()
+        manager = require_pipeline()
     except IsolatedWorkspaceError as exc:
         return _error(exc)
     handle = manager.get_handle(require_arg(args, "agent_id"))
@@ -161,7 +161,7 @@ async def list_open(args: dict[str, Any]) -> dict[str, Any]:
     fixture to know which agents need exiting without hardcoding the list.
     """
     try:
-        manager = require_manager()
+        manager = require_pipeline()
     except IsolatedWorkspaceError:
         return {"success": True, "open_agent_ids": []}
     return {"success": True, "open_agent_ids": manager.list_open_agents()}
@@ -189,7 +189,7 @@ async def test_reset(args: dict[str, Any]) -> dict[str, Any]:
             },
         }
     try:
-        manager = require_manager()
+        manager = require_pipeline()
     except IsolatedWorkspaceError:
         return {"success": True, "exited_agents": []}
     result = await manager.test_reset()
