@@ -8,8 +8,8 @@ summary to a known workspace path that the matching test reads back via
 ``sandbox_api.read_file`` after the scenario report returns.
 
 Background mode is enabled by passing ``background_task_id`` through
-``call_tool``. The shell tool still uses one ``api.v1.shell`` request; cancel
-propagation is request-keyed through the daemon in-flight registry.
+``call_tool``. The shell tool still uses one ``api.v1.shell`` invocation; cancel
+propagation is invocation-keyed through the daemon in-flight registry.
 """
 
 from __future__ import annotations

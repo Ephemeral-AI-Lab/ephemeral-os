@@ -137,7 +137,7 @@ async def _run_occ_clean_stale_shell(
     task = asyncio.create_task(
         pipeline.run_tool_call(
             ToolCallRequest(
-                request_id="staleness-shell",
+                invocation_id="staleness-shell",
                 agent_id="agent-staleness",
                 verb="shell",
                 intent=Intent.WRITE_ALLOWED,

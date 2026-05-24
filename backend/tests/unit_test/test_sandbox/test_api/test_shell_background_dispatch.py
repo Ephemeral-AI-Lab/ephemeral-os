@@ -42,7 +42,7 @@ class _StubTransport:
 
 def _request(*, background: bool) -> ShellRequest:
     return ShellRequest(
-        request_id="req-shell-test",
+        invocation_id="shell-invocation-test",
         command="echo hi",
         cwd=".",
         timeout=60,
@@ -66,7 +66,7 @@ async def test_background_shell_uses_single_rpc_with_background_metadata() -> No
     assert result.changed_paths == ("modified.py",)
     assert [op for op, _ in transport.calls] == [DAEMON_OP_SHELL]
     payload = transport.calls[0][1]
-    assert payload["request_id"] == "req-shell-test"
+    assert payload["invocation_id"] == "shell-invocation-test"
     assert payload["background"] is True
 
 
@@ -80,4 +80,4 @@ async def test_foreground_shell_uses_same_single_rpc() -> None:
 
     assert result.success is True
     assert [op for op, _ in transport.calls] == [DAEMON_OP_SHELL]
-    assert transport.calls[0][1]["background"] is False
+    assert "background" not in transport.calls[0][1]

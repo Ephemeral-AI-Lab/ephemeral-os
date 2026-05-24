@@ -6,16 +6,16 @@ import asyncio
 
 import pytest
 
-from sandbox.daemon.rpc.in_flight import InFlightRequestRegistry
+from sandbox.daemon.rpc.in_flight import InFlightInvocationRegistry
 
 
 pytestmark = pytest.mark.asyncio
 
 
-async def test_inflight_count_ignores_foreground_maintenance_request() -> None:
+async def test_inflight_count_ignores_foreground_maintenance_invocation() -> None:
     foreground = asyncio.create_task(asyncio.sleep(60))
     background = asyncio.create_task(asyncio.sleep(60))
-    registry = InFlightRequestRegistry(ttl_seconds=60, reaper_interval_s=60)
+    registry = InFlightInvocationRegistry(ttl_seconds=60, reaper_interval_s=60)
     registry.register(
         "foreground-maintenance",
         foreground,

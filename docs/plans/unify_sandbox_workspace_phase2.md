@@ -27,7 +27,7 @@ After Phase 2 lands:
 - Plugin access blocked when an iws handle is open (with audit event emitted on fail-open path).
 - `WorkspaceSession` async-CM deferred to `tests/mock/sandbox/_fixtures/workspace_session.py` test-utility until a production caller materializes (Critic must-fix #11). NOT shipped as public API.
 - Host-path denylist (`/etc/`, `/var/`, `/proc/`, `/sys/`, `/boot/`) enforced inside the namespace child BEFORE the kernel call (Critic must-fix #9).
-- Background tool lifecycle is **out of scope for Phase 2**. See [`unify_sandbox_workspace_phase2_5.md`](unify_sandbox_workspace_phase2_5.md) for the canonical design (engine-owned asyncio.Task lifecycle wrapper; coroutine-bound overlay lease; generic `api.v1.cancel(request_id)` wire RPC). Phase 2.5 removes existing background-shell code (`shell_job.py`, `shell_job_handler.py`, `is_background` branch in `tools/sandbox/shell/shell.py`, sandbox-api client launch/reap/poll/cancel paths) from the repo and ships the new design.
+- Background tool lifecycle is **out of scope for Phase 2**. See [`unify_sandbox_workspace_phase2_5.md`](unify_sandbox_workspace_phase2_5.md) for the canonical design (engine-owned asyncio.Task lifecycle wrapper; coroutine-bound overlay lease; generic `api.v1.cancel(invocation_id)` wire RPC). Phase 2.5 removes existing background-shell code (`shell_job.py`, `shell_job_handler.py`, `is_background` branch in `tools/sandbox/shell/shell.py`, sandbox-api client launch/reap/poll/cancel paths) from the repo and ships the new design.
 - OCC disjoint-batch coalescing preserved for single-path typed writes via `source="api_write"` — threaded through all 4 helper sites (`overlay_path_changes_to_occ_changes`, `build_overlay_write_change`, `build_overlay_delete_change`, inline `SymlinkChange`/`OpaqueDirChange`).
 - `OverlayHandle` idempotency wired (`_destroyed` field + per-pipeline `_handle_locks: dict[str, asyncio.Lock]` for the `_destroy_with_lease_guard` TOCTOU fix).
 - `O_NOFOLLOW` enforced unconditionally via `tool_primitives.file_ops.open_no_follow` chokepoint (per-component walk, not naive last-component-only).
@@ -47,12 +47,11 @@ class Intent(str, Enum):
 
 @dataclass(frozen=True, kw_only=True)
 class ToolCallRequest:
-    request_id: str
+    invocation_id: str
     agent_id: str
     verb: str                # "read_file", "write_file", "edit_file", "grep", "glob", "shell"
     intent: Intent
     args: Mapping[str, object]
-    actor_id: str = ""
 
 @dataclass(frozen=True, kw_only=True)
 class SandboxResultBase:
@@ -454,7 +453,7 @@ def resolve_pipeline(agent_id: str) -> WorkspacePipeline:
 async def read_file(args: dict[str, object]) -> dict[str, object]:
     agent_id = require_arg(args, "agent_id")
     req = ToolCallRequest(
-        request_id=args.get("request_id") or uuid4().hex,
+        invocation_id=args.get("invocation_id") or uuid4().hex,
         agent_id=agent_id,
         verb="read_file",
         intent=Intent.READ_ONLY,
@@ -467,7 +466,7 @@ async def read_file(args: dict[str, object]) -> dict[str, object]:
 
 Identical shape for write/edit/grep/glob with `intent=Intent.READ_ONLY` or `WRITE_ALLOWED`. Shell uses `WRITE_ALLOWED`.
 
-Background tool lifecycle (engine wraps `pipeline.run_tool_call` as asyncio.Task; generic `api.v1.cancel(request_id)` wire RPC; `InFlightRequestRegistry`) is owned by Phase 2.5.
+Background tool lifecycle (engine wraps `pipeline.run_tool_call` as asyncio.Task; generic `api.v1.cancel(invocation_id)` wire RPC; `InFlightInvocationRegistry`) is owned by Phase 2.5.
 
 **7.3.** Delete the per-handler helpers that no longer exist:
 - `daemon/handler/read.py::_read_in_workspace`, `_read_out_of_workspace`
@@ -582,7 +581,7 @@ async def enter_isolated_workspace(
     async with lifecycle_operation(
         event_class=WorkspaceLifecycle,
         kind="enter_isolated_workspace",
-        actor_id=req.actor_id,
+        agent_id=req.agent_id,
     ):
         pipeline = isolated_workspace.require_pipeline()
         handle = await pipeline.enter(req.agent_id, _config_from_req(req))
@@ -605,7 +604,7 @@ class WorkspaceLifecycle:
     timings: Mapping[str, float]
 
 @asynccontextmanager
-async def lifecycle_operation(*, event_class, kind, actor_id):
+async def lifecycle_operation(*, event_class, kind, agent_id):
     """Publishes workspace_lifecycle_started / workspace_lifecycle_completed events.
 
     Different from audit.operation.audited_operation (which publishes

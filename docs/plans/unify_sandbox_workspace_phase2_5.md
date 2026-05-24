@@ -4,7 +4,7 @@
 **Scope:** Background execution is generalized to "any tool call can carry `background=true`; the engine's `BackgroundTaskManager` is the lifecycle wrapper; the pipeline's `run_tool_call` coroutine body is unchanged between foreground and background." Overlay lease lifetime tracks the coroutine — and therefore the asyncio.Task — naturally via the existing try/finally. **All existing background-shell code (`shell_job.py`, `shell_job_handler.py`, `is_background` branch, sandbox-api launch/reap/poll/cancel client paths, four `api.v1.shell.*` wire RPCs) is deleted from the repo in this phase.** The implementer is free to delete that code earlier (during Phase 2 implementation) if it blocks foundation work — that code is dead-end and gets fully replaced here.
 **Depends on:** Phase 2 §1–§14 (foundation pipelines + overlay primitives + OCC source-tag + tool_primitives + lifecycle host API; all foreground-only).
 **Blocks:** nothing — Phase 3 background tests (§6.6 placeholder) live inside this phase's §11.
-**Atomic commit plan:** ≤6 logical commits. Suggested split: (1) wire-level `request_id` + `api.v1.cancel(request_id)` RPC + `InFlightRequestRegistry` daemon-side; (2) cancellation-aware `overlay.run_in_namespace` via verb-supplied `VerbCancellation` (extract `cancel_event` + `pgrp` plumbing from existing `shell_job.py`); (3) `ToolCallRequest.background` flag (pipeline body unchanged); engine wraps `pipeline.run_tool_call` in `BackgroundTaskManager.launch`; (4) engine-layer Q4 + iws-exit drain (`BackgroundTaskManager.count_by_agent` + `cancel_by_agent`) + `api.v1.heartbeat` + `api.v1.inflight_count(agent_id)`; (5) **delete dead code from repo**: `sandbox/daemon/service/shell_job.py` (609 lines), `shell_job_handler.py` (174 lines), four `api.v1.shell.{launch,reap,poll,cancel}` RPCs from dispatcher + transport, `is_background` branch in `tools/sandbox/shell/shell.py`, sandbox-api client multi-RPC orchestration in `sandbox/api/tool/shell.py`; (6) Phase 3 test tier rewrites + CHANGELOG.
+**Atomic commit plan:** ≤6 logical commits. Suggested split: (1) wire-level `invocation_id` + `api.v1.cancel(invocation_id)` RPC + `InFlightInvocationRegistry` daemon-side; (2) cancellation-aware `overlay.run_in_namespace` via verb-supplied `VerbCancellation` (extract `cancel_event` + `pgrp` plumbing from existing `shell_job.py`); (3) `ToolCallRequest.background` flag (pipeline body unchanged); engine wraps `pipeline.run_tool_call` in `BackgroundTaskManager.launch`; (4) engine-layer Q4 + iws-exit drain (`BackgroundTaskManager.count_by_agent` + `cancel_by_agent`) + `api.v1.heartbeat` + `api.v1.inflight_count(agent_id)`; (5) **delete dead code from repo**: `sandbox/daemon/service/shell_job.py` (609 lines), `shell_job_handler.py` (174 lines), four `api.v1.shell.{launch,reap,poll,cancel}` RPCs from dispatcher + transport, `is_background` branch in `tools/sandbox/shell/shell.py`, sandbox-api client multi-RPC orchestration in `sandbox/api/tool/shell.py`; (6) Phase 3 test tier rewrites + CHANGELOG.
 
 See [`unify_sandbox_workspace.md`](unify_sandbox_workspace.md) for the trichotomy overview.
 
@@ -30,7 +30,7 @@ This applies uniformly to every background-capable tool (shell today; potentiall
 
 **P2 (NEW).** Background is a **request flag**, not a verb. `ToolCallRequest.background: bool` is set by the engine when (and only when) the agent passed `background=true` on a `background="optional"`-declared tool. Pipeline code never branches on `background` — it's metadata for audit and for the engine's wrapper, not a control-flow input to the substrate.
 
-**P3 (NEW).** Cancellation propagates via `asyncio.CancelledError`. Local `asyncio.Task.cancel()` (engine) + `api.v1.cancel(request_id)` (wire) + cancellation-aware `overlay.run_in_namespace` and `tool_primitives.shell.run` (kill namespace-child PG / shell-child PG on cancel) compose to a single contract: **a cancelled task runs its `finally` exactly once, destroys the overlay, and does NOT commit to OCC** (because the commit branch is on the post-`run_in_namespace` happy path).
+**P3 (NEW).** Cancellation propagates via `asyncio.CancelledError`. Local `asyncio.Task.cancel()` (engine) + `api.v1.cancel(invocation_id)` (wire) + cancellation-aware `overlay.run_in_namespace` and `tool_primitives.shell.run` (kill namespace-child PG / shell-child PG on cancel) compose to a single contract: **a cancelled task runs its `finally` exactly once, destroys the overlay, and does NOT commit to OCC** (because the commit branch is on the post-`run_in_namespace` happy path).
 
 **P4 (NEW).** Cross-mode rejection (Q4) and iws-exit drain are **engine-layer** concerns. The pipeline has no background registry to consult. `sandbox.isolated_workspace.lifecycle.enter_isolated_workspace` asks `BackgroundTaskManager.count_by_agent(agent_id)` before calling `pipeline.enter`; `sandbox.isolated_workspace.lifecycle.exit_isolated_workspace` asks `cancel_by_agent(agent_id, grace_s=...)` before calling `pipeline.exit`. The pipeline knows nothing about agent-scoped background populations.
 
@@ -115,9 +115,9 @@ agent: cancel_background_task(bg_X)
 BackgroundTaskManager.cancel(task_id, reason):
   tracked.asyncio_task.cancel()
    |
-   v (local cancel propagates; wire layer also sends api.v1.cancel(request_id))
-daemon RPC api.v1.cancel(request_id):
-  task = self._in_flight[request_id]
+   v (local cancel propagates; wire layer also sends api.v1.cancel(invocation_id))
+daemon RPC api.v1.cancel(invocation_id):
+  task = self._in_flight[invocation_id]
   task.cancel()       # raises CancelledError inside run_tool_call
    |
    v
@@ -147,17 +147,17 @@ Rename `ShellJob` → `ToolJob`; `_background_jobs` keys any background verb, no
 
 #### Option β — Engine cancels local Task only; daemon discovers via connection-close (REJECTED)
 
-No `api.v1.cancel(request_id)` RPC. Engine cancels its local asyncio.Task; the wire-level transport notices the dropped response future and signals the daemon via connection-state; daemon-side dispatcher detects "request abandoned" and cancels the in-flight asyncio.Task it spawned.
+No `api.v1.cancel(invocation_id)` RPC. Engine cancels its local asyncio.Task; the wire-level transport notices the dropped response future and signals the daemon via connection-state; daemon-side dispatcher detects "request abandoned" and cancels the in-flight asyncio.Task it spawned.
 
 - **Pro:** Cleanest wire (no new verb).
-- **Con:** Today's transport doesn't carry per-request lifecycle signals (`grep request_id sandbox/api/protocol.py sandbox/daemon/rpc/{server,dispatcher}.py` → zero hits). Implementing connection-close-as-cancel requires either HTTP/2 streams or a custom keepalive-with-cancel-frame protocol — neither of which is in scope here. **Premature transport investment.**
+- **Con:** Today's transport doesn't carry per-invocation lifecycle signals (`grep invocation_id sandbox/api/protocol.py sandbox/daemon/rpc/{server,dispatcher}.py` → zero hits). Implementing connection-close-as-cancel requires either HTTP/2 streams or a custom keepalive-with-cancel-frame protocol — neither of which is in scope here. **Premature transport investment.**
 
-#### Option γ (CHOSEN) — Engine asyncio.Task as wrapper; generic `api.v1.cancel(request_id)` RPC; pipeline body unchanged
+#### Option γ (CHOSEN) — Engine asyncio.Task as wrapper; generic `api.v1.cancel(invocation_id)` RPC; pipeline body unchanged
 
 Detailed in §2 above and §5–§8 below.
 
 - **Pro:** Matches user directive verbatim. Pipeline body shrinks (no `_dispatch_background_verb`, no `_background_jobs`). Single lifecycle wrapper (engine-side). Wire-cancel is a generic RPC reusable by every verb. Cancellation contract is uniform (CancelledError + finally).
-- **Con:** Wire layer gains `request_id` correlation it doesn't have today — has to be added to every RPC envelope. Daemon gains an in-flight task registry (request-keyed, not job-keyed; smaller and tool-generic). Existing ShellJobRegistry's TTL reaper (release lease when engine dies mid-call) needs an analog at the new request-keyed registry — see §6.
+- **Con:** Wire layer gains `invocation_id` correlation it doesn't have today — has to be added to every RPC envelope. Daemon gains an in-flight task registry (invocation-keyed, not job-keyed; smaller and tool-generic). Existing ShellJobRegistry's TTL reaper (release lease when engine dies mid-call) needs an analog at the new invocation-keyed registry — see §6.
 
 ### Invalidation rationale for α / β
 
@@ -171,19 +171,19 @@ This phase removes the existing background-shell abstraction from the repo. The 
 
 ### 4.A. Existing code to remove from `sandbox/daemon/service/`
 
-- **`sandbox/daemon/service/shell_job.py`** (609 lines, verified) — `ShellJob` dataclass + `ShellJobRegistry` class + module-level singleton (`_REGISTRY` / `get_shell_job_registry()` / `reset_shell_job_registry()`) + env-var knobs (`EOS_SHELL_JOB_TTL_S`, `EOS_SHELL_JOB_REAPER_INTERVAL_S`) + helper functions (`_signal_pgrp`, `_escalate_kill`, `_pgrp_alive`, `_read_tail`, `_read_full`, `_change_path`). The TTL reaper logic is replaced by the request-keyed `InFlightRequestRegistry` in §5.3; the `cancel_event` + `pgrp` plumbing is extracted into `tool_primitives` per §5.5.
+- **`sandbox/daemon/service/shell_job.py`** (609 lines, verified) — `ShellJob` dataclass + `ShellJobRegistry` class + module-level singleton (`_REGISTRY` / `get_shell_job_registry()` / `reset_shell_job_registry()`) + env-var knobs (`EOS_SHELL_JOB_TTL_S`, `EOS_SHELL_JOB_REAPER_INTERVAL_S`) + helper functions (`_signal_pgrp`, `_escalate_kill`, `_pgrp_alive`, `_read_tail`, `_read_full`, `_change_path`). The TTL reaper logic is replaced by the invocation-keyed `InFlightInvocationRegistry` in §5.3; the `cancel_event` + `pgrp` plumbing is extracted into `tool_primitives` per §5.5.
 - **`sandbox/daemon/service/shell_job_handler.py`** (174 lines, verified) — RPC dispatchers for `api.v1.shell.{launch,reap,poll,cancel}`. The cancel-by-job-id case becomes generic cancel-by-request-id in §5.4.
 
 ### 4.B. Existing wire-protocol surface to remove
 
 - **`sandbox/api/transport.py:19::DAEMON_OP_SHELL_CANCEL`** constant — replaced by a generic `DAEMON_OP_CANCEL = "api.v1.cancel"`.
-- **`sandbox/daemon/rpc/dispatcher.py` shell route entries** for `api.v1.shell.launch`, `api.v1.shell.reap`, `api.v1.shell.poll`, `api.v1.shell.cancel` — gone. Only `api.v1.shell` remains (foreground; long-running RPC; daemon-side coroutine wrapped by `InFlightRequestRegistry` so `api.v1.cancel(request_id)` can stop it).
+- **`sandbox/daemon/rpc/dispatcher.py` shell route entries** for `api.v1.shell.launch`, `api.v1.shell.reap`, `api.v1.shell.poll`, `api.v1.shell.cancel` — gone. Only `api.v1.shell` remains (foreground; long-running RPC; daemon-side coroutine wrapped by `InFlightInvocationRegistry` so `api.v1.cancel(invocation_id)` can stop it).
 
 ### 4.C. Existing engine-side / tool-side background paths to remove
 
 - **`tools/sandbox/shell/shell.py:149–166`** — the `is_background = bool(getattr(context, "background_task_id", None))` branch and the `background=is_background` argument passed to `sandbox_api.shell(...)`. The shell tool stops being background-aware; the engine wrapper (`engine/background/dispatch.py::launch_background_tool`) does all background wrapping uniformly.
 - **`sandbox/api/tool/shell.py`** — any multi-RPC orchestration that dispatches to `api.v1.shell.launch/reap/poll/cancel` based on a `background` arg. After Phase 2.5, `sandbox_api.shell(...)` is a single-RPC call to `api.v1.shell` regardless of background-ness. Verify with `grep -n "background\|launch\|reap\|poll\|cancel" sandbox/api/tool/shell.py` during Step 5; expect zero hits post-Phase-2.5.
-- **`sandbox/api/_raw_exec.py` shell-cancel client function** (if it exists as a named helper) — replaced by the generic `api.v1.cancel(request_id)` client call (§5.4).
+- **`sandbox/api/_raw_exec.py` shell-cancel client function** (if it exists as a named helper) — replaced by the generic `api.v1.cancel(invocation_id)` client call (§5.4).
 
 ### 4.D. Phase 2 NEVER ships these (already stripped from Phase 2 docs)
 
@@ -207,46 +207,46 @@ Add to `sandbox/_shared/models.py::ToolCallRequest` (defined in Phase 2 §1.1). 
 
 **Pipeline contract:** the body of `run_tool_call` MUST NOT branch on `req.background`. The flag is metadata for audit (`audit.tool_op_started.background=true`) and for the engine's wrapper. If a future implementer adds a `if req.background:` somewhere in pipeline code, the static lint (§9) fails the build.
 
-### 5.2. Wire-level `request_id` correlation
+### 5.2. Wire-level `invocation_id` correlation
 
-`sandbox/api/protocol.py` envelope gains a `request_id: str` field (today: zero hits per `grep -c request_id`). Every outgoing RPC from `sandbox/api/_raw_exec.py` populates a fresh `uuid4().hex` (or pulls from `ExecutionMetadata.background_task_id` when present, so audit can cross-link). Daemon-side `daemon/rpc/server.py` reads it and stamps every spawned asyncio.Task with it before inserting into the in-flight registry (§6).
+`sandbox/api/protocol.py` envelope gains a `invocation_id: str` field (today: zero hits per `grep -c invocation_id`). Every outgoing RPC from `sandbox/api/_raw_exec.py` populates a fresh `uuid4().hex` (or pulls from `ExecutionMetadata.background_task_id` when present, so audit can cross-link). Daemon-side `daemon/rpc/server.py` reads it and stamps every spawned asyncio.Task with it before inserting into the in-flight registry (§6).
 
 ### 5.3. Daemon-side in-flight request registry (`sandbox/daemon/rpc/in_flight.py` — NEW)
 
 ```python
-class InFlightRequestRegistry:
-    """Tracks daemon-side asyncio.Tasks by request_id for generic cancellation.
+class InFlightInvocationRegistry:
+    """Tracks daemon-side asyncio.Tasks by invocation_id for generic cancellation.
 
     Replaces the shell-specific ShellJobRegistry (deleted in §4). Does NOT
     hold overlay handles, ShellJobs, or lease accounting — the pipeline's
-    own try/finally owns those. This registry only maps request_id → Task
-    so api.v1.cancel(request_id) can cancel the Task and let the
+    own try/finally owns those. This registry only maps invocation_id → Task
+    so api.v1.cancel(invocation_id) can cancel the Task and let the
     pipeline's existing destroy chokepoint do the cleanup.
     """
-    _by_request: dict[str, asyncio.Task]
+    _by_invocation: dict[str, asyncio.Task]
     _ttl_seconds: float                  # default 300s; env override EOS_INFLIGHT_TTL_S
     _last_seen: dict[str, float]         # monotonic time of last "alive" signal
 
-    def register(self, request_id: str, task: asyncio.Task) -> None: ...
-    def cancel(self, request_id: str) -> bool: ...           # api.v1.cancel impl
-    def deregister(self, request_id: str) -> None: ...       # called by run_tool_call's finally
+    def register(self, invocation_id: str, task: asyncio.Task) -> None: ...
+    def cancel(self, invocation_id: str) -> bool: ...           # api.v1.cancel impl
+    def deregister(self, invocation_id: str) -> None: ...       # called by run_tool_call's finally
     async def ttl_reaper_loop(self) -> None: ...             # cancels Tasks whose engine has gone silent
 ```
 
 **TTL reaper preserves the existing safety net** (orphan cleanup when engine dies mid-shell). It's smaller than `ShellJobRegistry` because it has no overlay/lease accounting — just task tracking. When a TTL fires, the registry cancels the asyncio.Task; the pipeline's `try/finally` runs and cleans up the overlay.
 
-### 5.4. `api.v1.cancel(request_id)` daemon RPC
+### 5.4. `api.v1.cancel(invocation_id)` daemon RPC
 
 `sandbox/daemon/handler/cancel.py` (NEW — ~15 lines):
 
 ```python
 async def cancel(args: dict[str, object]) -> dict[str, object]:
-    request_id = require_arg(args, "request_id")
-    cancelled = in_flight.cancel(request_id)
+    invocation_id = require_arg(args, "invocation_id")
+    cancelled = in_flight.cancel(invocation_id)
     return {"success": True, "cancelled": cancelled}
 ```
 
-`sandbox/api/_raw_exec.py` exposes a client-side `cancel(request_id)`. Engine's `BackgroundTaskManager.cancel(task_id, reason)` gains a hook: for sandbox-bound tasks (detected by tool name in `_sandbox_tool_names` or by tracked metadata), it sends `api.v1.cancel(request_id)` over the wire BEFORE calling `tracked.asyncio_task.cancel()`. The ordering matters: sending the wire cancel first means the daemon's `run_tool_call` raises CancelledError and runs its `finally` while the engine's local Task is still alive to await the cleanup response.
+`sandbox/api/_raw_exec.py` exposes a client-side `cancel(invocation_id)`. Engine's `BackgroundTaskManager.cancel(task_id, reason)` gains a hook: for sandbox-bound tasks (detected by tool name in `_sandbox_tool_names` or by tracked metadata), it sends `api.v1.cancel(invocation_id)` over the wire BEFORE calling `tracked.asyncio_task.cancel()`. The ordering matters: sending the wire cancel first means the daemon's `run_tool_call` raises CancelledError and runs its `finally` while the engine's local Task is still alive to await the cleanup response.
 
 ### 5.5. Cancellation-aware `overlay.run_in_namespace` (verb-supplied cleanup, P5 preserved)
 
@@ -380,22 +380,22 @@ async def cancel(self, task_id: str, reason: str = "") -> bool:
     applied = self._set_terminal_status(...)
     try:
         if getattr(tracked, "uses_sandbox", False):
-            request_id = getattr(tracked, "sandbox_request_id", None)
-            if request_id:
+            invocation_id = getattr(tracked, "sandbox_invocation_id", None)
+            if invocation_id:
                 try:
-                    await sandbox_api.cancel(tracked.sandbox_id, request_id)
+                    await sandbox_api.cancel(tracked.sandbox_id, invocation_id)
                 except Exception as exc:
                     logger.warning(
-                        "wire-cancel failed for task_id=%s request_id=%s: %s "
+                        "wire-cancel failed for task_id=%s invocation_id=%s: %s "
                         "(local cancel still firing; daemon TTL reaper will clean up)",
-                        task_id, request_id, exc,
+                        task_id, invocation_id, exc,
                     )
     finally:
         tracked.asyncio_task.cancel()
     return True
 ```
 
-`TrackedBackgroundTask.sandbox_request_id` and `.sandbox_id` are stamped by the engine wrapper at launch time (from the same `request_id` the wire envelope carries).
+`TrackedBackgroundTask.sandbox_invocation_id` and `.sandbox_id` are stamped by the engine wrapper at launch time (from the same `invocation_id` the wire envelope carries).
 
 **Contract:** wire-cancel is best-effort (a failed wire-cancel logs WARN and falls through to the daemon-side TTL reaper for eventual cleanup); local-cancel ALWAYS fires (engine's `asyncio.Task` is unblocked regardless). This ordering prevents the latent deadlock the Architect flagged in §13 pre-mortem.
 
@@ -405,20 +405,20 @@ async def cancel(self, task_id: str, reason: str = "") -> bool:
 
 **The risk Phase 2.5 must NOT silently regress:** today's `ShellJobRegistry.ttl_reaper` (lines 415–470 of `shell_job.py`) releases leases when the engine dies mid-shell. Without an analog, an engine crash mid-background-shell would leak overlay leases until daemon restart.
 
-**Analog in Phase 2.5:** `InFlightRequestRegistry.ttl_reaper_loop`. Heuristic for "engine has gone silent":
+**Analog in Phase 2.5:** `InFlightInvocationRegistry.ttl_reaper_loop`. Heuristic for "engine has gone silent":
 
-| Signal | Today (ShellJobRegistry) | After Phase 2.5 (InFlightRequestRegistry) |
+| Signal | Today (ShellJobRegistry) | After Phase 2.5 (InFlightInvocationRegistry) |
 |---|---|---|
-| Liveness ping | `last_poll_at` updated by every `shell.poll` RPC | `last_seen` updated by either (a) `api.v1.heartbeat(request_id)` (NEW lightweight ping the engine sends every N seconds for live background tasks) OR (b) wire-level keepalive frame the transport already supports (verify in §10) |
+| Liveness ping | `last_poll_at` updated by every `shell.poll` RPC | `last_seen` updated by either (a) `api.v1.heartbeat(invocation_id)` (NEW lightweight ping the engine sends every N seconds for live background tasks) OR (b) wire-level keepalive frame the transport already supports (verify in §10) |
 | TTL | 300s (`DEFAULT_TTL_SECONDS`, env `EOS_SHELL_JOB_TTL_S`) | 300s, env `EOS_INFLIGHT_TTL_S` |
 | On expiry | SIGKILL pgrp, release lease, no commit | `asyncio.Task.cancel()` on the in-flight task; pipeline's existing finally releases lease + destroys overlay; no commit (CancelledError) |
 | Counter | `_ttl_reaped_total`, exposed via `api.v1.shell.metrics` | `_ttl_reaped_total`, exposed via `api.v1.cancel.metrics` (or absorbed into daemon healthcheck) |
 
 **Heartbeat choice — RESOLVED to 6.A (explicit `api.v1.heartbeat`).**
 
-The transport layer (`sandbox/api/transport.py`) does not today carry per-request keepalive signals; adopting 6.B would couple Phase 2.5 to a transport refactor that is out of scope. 6.A is therefore the path:
+The transport layer (`sandbox/api/transport.py`) does not today carry per-invocation keepalive signals; adopting 6.B would couple Phase 2.5 to a transport refactor that is out of scope. 6.A is therefore the path:
 
-- Engine emits one `api.v1.heartbeat(request_ids: list[str])` RPC every 60s carrying the IDs of all in-flight sandbox-bound background tasks owned by that engine. Daemon updates `_last_seen[request_id] = monotonic_now()` for each.
+- Engine emits one `api.v1.heartbeat(invocation_ids: list[str])` RPC every 60s carrying the IDs of all in-flight sandbox-bound background tasks owned by that engine. Daemon updates `_last_seen[invocation_id] = monotonic_now()` for each.
 - TTL default `EOS_INFLIGHT_TTL_S = 300s` (5×heartbeat interval — survives 4 missed pings before reaping).
 - **False-positive guard (Architect B2):** the interval is sized for normal jitter:
   - p99 LLM streaming pause: typically <30s (observed empirically in Tier 8 soak).
@@ -428,7 +428,7 @@ The transport layer (`sandbox/api/transport.py`) does not today carry per-reques
 - **Batched ping (not per-task ping)** keeps cost flat at one RPC per engine per 60s regardless of N in-flight tasks. At 1000 concurrent agents this is 1000 pings/min daemon-side — bounded and visible in metrics. (The N=64 worst case the Architect cited assumed per-task pings; the batched form trades a slightly larger payload for O(1) RPC count.)
 - **Engine-restart detection (Architect B4 split-brain):** the daemon records the engine's `process_id` + `started_at` in the heartbeat payload. When a new engine connects with a fresh `process_id`, the daemon assumes the old engine's in-flight tasks are orphaned and triggers TTL reap immediately for them (no need to wait for 5×60s). This shortcuts orphan cleanup on the common case (engine crash + restart).
 
-Heartbeat is implemented in commit (1) alongside the envelope `request_id` change so the wire surface lands as a single atomic edit.
+Heartbeat is implemented in commit (1) alongside the envelope `invocation_id` change so the wire surface lands as a single atomic edit.
 
 ---
 
@@ -438,9 +438,9 @@ Phase 2.5 preserves the existing `_TERMINAL_PRECEDENCE` table (`engine/backgroun
 
 1. Background shell `bg_5` is 990ms into a `sleep 1` (will exit naturally at 1000ms).
 2. Agent calls `cancel_background_task(bg_5)` at 995ms.
-3. Engine's `BackgroundTaskManager.cancel` sends `api.v1.cancel(request_id)` over the wire.
+3. Engine's `BackgroundTaskManager.cancel` sends `api.v1.cancel(invocation_id)` over the wire.
 4. At 1000ms the shell exits naturally; pipeline's `run_tool_call` reaches the post-`run_in_namespace` happy path, commits, runs `finally`, returns COMPLETED result.
-5. The wire `api.v1.cancel` RPC arrives at the daemon at 1005ms — the in-flight registry's `deregister(request_id)` has already fired in the `finally`; the cancel is a no-op (returns `cancelled=False, already_done=True`).
+5. The wire `api.v1.cancel` RPC arrives at the daemon at 1005ms — the in-flight registry's `deregister(invocation_id)` has already fired in the `finally`; the cancel is a no-op (returns `cancelled=False, already_done=True`).
 6. The engine's local `asyncio.Task.cancel()` fires after the await returns; since the Task already produced its result, `cancel()` is a no-op on a completed task.
 7. `_set_terminal_status` sees COMPLETED already latched (rank 3); the CANCELLED attempt (rank 1) is dropped. Agent sees COMPLETED with the real shell output.
 
@@ -477,7 +477,7 @@ Lints in (1)–(3) catch regressions where a future implementer re-introduces ve
 
 Before commit (1) lands, the implementer MUST:
 
-- **A1.** Run `grep -rn "request_id" sandbox/api/ sandbox/daemon/rpc/` and confirm the count is still ~0 (matches my pre-plan check). If a recent commit added `request_id` to the protocol, fold into the audit and skip §5.2's "NEW" framing.
+- **A1.** Run `grep -rn "invocation_id" sandbox/api/ sandbox/daemon/rpc/` and confirm the count is still ~0 (matches my pre-plan check). If a recent commit added `invocation_id` to the protocol, fold into the audit and skip §5.2's "NEW" framing.
 - **A2.** Run `grep -rn "api.v1.shell.cancel\|api.v1.shell.launch\|api.v1.shell.reap\|api.v1.shell.poll" backend/` and inventory every caller. Each one must be migrated in commits (3) or (5).
 - **A3.** Read `sandbox/api/transport.py` end-to-end and decide between heartbeat options 6.A and 6.B. Document the decision in the ADR.
 - **A4.** Read `tools/sandbox/shell/_lib/` (if it exists) and confirm there's no client-side "launch then reap" orchestration that needs to collapse to a single RPC.
@@ -505,11 +505,11 @@ Phase 3's `tests/mock/sandbox/concurrency/test_background_shell_lifetime.py` (cu
 | G. Q4 mode-mix rejection | `enter_isolated_workspace` queries `BackgroundTaskManager.count_by_agent(agent_id)`; non-zero → `LifecycleError(kind="ephemeral_jobs_in_flight", details={"count": "N"})`; pipeline.enter unchanged |
 | H. unified-protocol assertion (no public launch_bg_job etc) | UNCHANGED — actually stronger now since the methods don't exist at all (not even private) |
 | **I (NEW)** | Daemon-side timeout: shell timed_out_after=Ns returns COMPLETED with `timed_out=True`; status latches to COMPLETED not CANCELLED |
-| **J (NEW)** | Engine death TTL reap: simulate engine crash mid-bg-shell; daemon's `InFlightRequestRegistry.ttl_reaper_loop` cancels the in-flight Task after `EOS_INFLIGHT_TTL_S`; lease released; metric `_ttl_reaped_total` incremented |
+| **J (NEW)** | Engine death TTL reap: simulate engine crash mid-bg-shell; daemon's `InFlightInvocationRegistry.ttl_reaper_loop` cancels the in-flight Task after `EOS_INFLIGHT_TTL_S`; lease released; metric `_ttl_reaped_total` incremented |
 | **K (NEW)** | Cancel-during-completion race (§7 scenario): cancel landing AFTER natural completion is a no-op; agent sees COMPLETED with real result |
 | **L (NEW)** | Cancel ordering invariant: on `asyncio.CancelledError` inside `run_in_namespace`, the namespace-child PG fully exits (`waitpid` returns) BEFORE `pipeline.run_tool_call`'s `finally` calls `_destroy_with_lease_guard`. No orphan `eos-ns-child` processes observable in `ps` post-soak; no `release_lease` event precedes `namespace_child.exited` for the same `lease_id`. |
 | **M (NEW)** | Wire-cancel failure tolerance: simulate `sandbox_api.cancel(...)` raising (mock-injected `ConnectionError`). Assert `BackgroundTaskManager.cancel(task_id)` STILL completes — local `asyncio.Task.cancel()` fires; agent does NOT hang; WARN log emitted; daemon TTL reaper eventually cleans up (§6 path). |
-| **N (NEW)** | Multi-engine / engine-restart split-brain (§13 scenario 3). Start engine A; launch bg sandbox task for `agent_X`; kill engine A WITHOUT graceful shutdown. Start engine A'; call `enter_isolated_workspace(agent_X)`. Assert engine A' calls `api.v1.inflight_count(agent_X)` against the daemon; the daemon-side count reflects engine A's surviving task (still in `InFlightRequestRegistry` pre-TTL); Q4 rejects with `LifecycleError(kind="ephemeral_jobs_in_flight")`. Wait for TTL or trigger immediate orphan reap (heartbeat with new `engine_process_id`); re-attempt enter; assert success. |
+| **N (NEW)** | Multi-engine / engine-restart split-brain (§13 scenario 3). Start engine A; launch bg sandbox task for `agent_X`; kill engine A WITHOUT graceful shutdown. Start engine A'; call `enter_isolated_workspace(agent_X)`. Assert engine A' calls `api.v1.inflight_count(agent_X)` against the daemon; the daemon-side count reflects engine A's surviving task (still in `InFlightInvocationRegistry` pre-TTL); Q4 rejects with `LifecycleError(kind="ephemeral_jobs_in_flight")`. Wait for TTL or trigger immediate orphan reap (heartbeat with new `engine_process_id`); re-attempt enter; assert success. |
 
 ---
 
@@ -521,28 +521,28 @@ Phase 3's `tests/mock/sandbox/concurrency/test_background_shell_lifetime.py` (cu
 - ✅ `grep -rn "api.v1.shell.launch\|api.v1.shell.reap\|api.v1.shell.poll\|api.v1.shell.cancel" backend/` returns ZERO hits (also excluding historical CHANGELOG entries).
 - ✅ `EphemeralPipeline.run_tool_call` body fits in ≤30 lines and contains no `if req.background:` branch (static lint enforces).
 - ✅ `IsolatedPipeline.run_tool_call` body fits in ≤30 lines and contains no `if req.background:` branch.
-- ✅ `sandbox/api/protocol.py` envelope carries `request_id: str` on every RPC (`grep -c request_id sandbox/api/protocol.py` ≥ 1).
-- ✅ `sandbox/daemon/rpc/in_flight.py::InFlightRequestRegistry` exists and is request-keyed; has `cancel(request_id)`, `register`, `deregister`, TTL reaper.
+- ✅ `sandbox/api/protocol.py` envelope carries `invocation_id: str` on every RPC (`grep -c invocation_id sandbox/api/protocol.py` ≥ 1).
+- ✅ `sandbox/daemon/rpc/in_flight.py::InFlightInvocationRegistry` exists and is invocation-keyed; has `cancel(invocation_id)`, `register`, `deregister`, TTL reaper.
 - ✅ `sandbox/daemon/handler/cancel.py::cancel` handler exists; wire-level `api.v1.cancel` RPC works (round-trip test).
-- ✅ `engine/background/manager.py::BackgroundTaskManager` gains `count_by_agent`, `cancel_by_agent`; `TrackedBackgroundTask` gains `agent_id`, `uses_sandbox`, `sandbox_id`, `sandbox_request_id`.
+- ✅ `engine/background/manager.py::BackgroundTaskManager` gains `count_by_agent`, `cancel_by_agent`; `TrackedBackgroundTask` gains `agent_id`, `uses_sandbox`, `sandbox_id`, `sandbox_invocation_id`.
 - ✅ `sandbox.isolated_workspace.lifecycle.enter_isolated_workspace` rejects with `LifecycleError(kind="ephemeral_jobs_in_flight")` when `BackgroundTaskManager.count_by_agent(agent_id) > 0`. The check is BEFORE `pipeline.enter`.
 - ✅ `sandbox.isolated_workspace.lifecycle.exit_isolated_workspace` calls `BackgroundTaskManager.cancel_by_agent(agent_id, grace_s)` BEFORE `pipeline.exit`; reports `evicted_background_tasks` (survivor count) in `phases_ms`.
 - ✅ `overlay.run_in_namespace` is cancellation-aware: on `asyncio.CancelledError`, sets `cancel_event` and SIGTERMs the namespace-child pgrp; 2s SIGKILL escalation; re-raises CancelledError.
 - ✅ `tool_primitives.shell.run` accepts `cancel_event` and `pid_recorder` from `overlay.run_in_namespace`; existing `cancel_event` plumbing extracted from `shell_job.py` survives unchanged in semantics.
-- ✅ `BackgroundTaskManager.cancel(task_id)` for sandbox-bound tasks sends `api.v1.cancel(request_id)` over the wire BEFORE `tracked.asyncio_task.cancel()`. Order preserves cleanup semantics.
+- ✅ `BackgroundTaskManager.cancel(task_id)` for sandbox-bound tasks sends `api.v1.cancel(invocation_id)` over the wire BEFORE `tracked.asyncio_task.cancel()`. Order preserves cleanup semantics.
 - ✅ Terminal-status precedence (`completed > failed > cancelled`) preserved — sub-test K (race scenario §7) passes.
 - ✅ Engine-death TTL reap analog preserved — sub-test J passes; metric `_ttl_reaped_total` accessible.
 - ✅ Daemon-side timeout enforcement preserved — sub-test I passes; status latches to COMPLETED not CANCELLED.
 - ✅ Phase 3 background-shell tier (`test_background_shell_lifetime.py`) rewritten per §11 redistribution; all sub-tests A–N green (A–H redistributed; I/J/K/L/M/N new).
 - ✅ **Overview doc redactions land in commit (5):** `unify_sandbox_workspace.md` §2 Principle 1 narrative ("ShellJob owns the handle from `shell.launch` through `shell.reap`") is rewritten to coroutine-bound lifetime; `unify_sandbox_workspace.md` §1 background-shell policy table (lines 43–60) is replaced with a reference to Phase 2.5 §2 architecture diagram + §1 principles; `unify_sandbox_workspace_phase2.md` §3.1, §3.3, §4.1, §7.2 background-specific sub-sections are struck-through with redaction lines pointing to Phase 2.5. **Grep audit must pass:** `grep -rn "ShellJob\|shell_launch\|shell_reap\|_background_jobs\|_session_jobs" docs/plans/unify_sandbox_workspace*.md` returns zero hits OUTSIDE of explicit "DELETED in Phase 2.5" redaction lines.
-- ✅ Wire envelope `request_id` migration: rollout-window compatibility — daemon's envelope parser accepts missing `request_id` with WARN log during the documented rollout window (one release cycle); engine-side `_raw_exec.py` ALWAYS populates `request_id` post-Phase-2.5; follow-up plan removes the legacy-tolerance path after the rollout window closes.
+- ✅ Wire envelope `invocation_id` migration: rollout-window compatibility — daemon's envelope parser accepts missing `invocation_id` with WARN log during the documented rollout window (one release cycle); engine-side `_raw_exec.py` ALWAYS populates `invocation_id` post-Phase-2.5; follow-up plan removes the legacy-tolerance path after the rollout window closes.
 - ✅ Soak baseline: median bg-task launch-to-RUNNING latency ≤ Phase 2 baseline (the path is shorter — one RPC vs three).
 
 ---
 
 ## 13. ADR (delta)
 
-**Decision (Phase 2.5):** Reverse the Phase 2 decision to model background shell as a daemon-side `ShellJob` with four `api.v1.shell.{launch,reap,poll,cancel}` verbs. Instead: background is a `ToolCallRequest` flag; the engine's existing `BackgroundTaskManager` (one source of truth) wraps `pipeline.run_tool_call` as `asyncio.Task` when an agent passes `background=true`. Overlay lease lifetime tracks the coroutine via the existing `try/finally`. Cancellation flows: `asyncio.Task.cancel()` (engine) + `api.v1.cancel(request_id)` (wire, generic over all verbs) + `CancelledError`-aware `overlay.run_in_namespace` and `tool_primitives.shell.run` (kill PG on cancel).
+**Decision (Phase 2.5):** Reverse the Phase 2 decision to model background shell as a daemon-side `ShellJob` with four `api.v1.shell.{launch,reap,poll,cancel}` verbs. Instead: background is a `ToolCallRequest` flag; the engine's existing `BackgroundTaskManager` (one source of truth) wraps `pipeline.run_tool_call` as `asyncio.Task` when an agent passes `background=true`. Overlay lease lifetime tracks the coroutine via the existing `try/finally`. Cancellation flows: `asyncio.Task.cancel()` (engine) + `api.v1.cancel(invocation_id)` (wire, generic over all verbs) + `CancelledError`-aware `overlay.run_in_namespace` and `tool_primitives.shell.run` (kill PG on cancel).
 
 **Drivers:**
 1. Two registries (engine + daemon ShellJob) for the same lifecycle is a smell; pick one. Engine wins because it's tool-agnostic and already drives the agent-facing background tools.
@@ -553,34 +553,34 @@ Phase 3's `tests/mock/sandbox/concurrency/test_background_shell_lifetime.py` (cu
 
 **Consequences:**
 - DELETE: `shell_job.py` (609 lines), `shell_job_handler.py` (174 lines), 4 wire RPCs (`api.v1.shell.launch/reap/poll/cancel`), Phase 2 §3.1 + §3.3 + §4.1 + §7.2 background-specific sub-sections, `is_background` branch in `tools/sandbox/shell/shell.py`.
-- ADD: `request_id` wire correlation (envelope field on every RPC), `api.v1.cancel(request_id)` RPC, `InFlightRequestRegistry` (request-keyed, lighter than ShellJobRegistry — no overlay/lease accounting), cancellation-aware `overlay.run_in_namespace`, engine-layer Q4 + iws-exit drain (`BackgroundTaskManager.count_by_agent` + `cancel_by_agent`), engine-side wire-cancel hook in `BackgroundTaskManager.cancel`, heartbeat for orphan TTL detection (6.A explicit).
+- ADD: `invocation_id` wire correlation (envelope field on every RPC), `api.v1.cancel(invocation_id)` RPC, `InFlightInvocationRegistry` (invocation-keyed, lighter than ShellJobRegistry — no overlay/lease accounting), cancellation-aware `overlay.run_in_namespace`, engine-layer Q4 + iws-exit drain (`BackgroundTaskManager.count_by_agent` + `cancel_by_agent`), engine-side wire-cancel hook in `BackgroundTaskManager.cancel`, heartbeat for orphan TTL detection (6.A explicit).
 - Pipeline body shrinks (no `_dispatch_background_verb` branch; no `_background_jobs` field; no `_session_jobs` field).
-- Wire-cancel becomes a generic primitive (`api.v1.cancel(request_id)`), reusable for any future tool that supports cancellation — including foreground (an agent could in theory cancel a slow read_file, though no UX surface exposes that today).
+- Wire-cancel becomes a generic primitive (`api.v1.cancel(invocation_id)`), reusable for any future tool that supports cancellation — including foreground (an agent could in theory cancel a slow read_file, though no UX surface exposes that today).
 - Terminal-status precedence (`completed > failed > cancelled > running`) preserved unchanged at the engine layer.
 - Daemon timeout enforcement preserved (no engine-side `asyncio.wait_for`).
 - Phase 3 test tier `test_background_shell_lifetime.py` REWRITTEN (sub-tests A–H redistributed per §11; sub-tests I, J, K added).
 
-**Reversibility:** Each commit (1)–(5) is independently revert-safe via `git revert <sha>`. The wire-`request_id` addition (commit 1) is the riskiest — if it interacts badly with existing engines that don't populate it, the daemon's envelope parser must tolerate missing `request_id` (use empty string + log a warning) during the rollout window.
+**Reversibility:** Each commit (1)–(5) is independently revert-safe via `git revert <sha>`. The wire-`invocation_id` addition (commit 1) is the riskiest — if it interacts badly with existing engines that don't populate it, the daemon's envelope parser must tolerate missing `invocation_id` (use empty string + log a warning) during the rollout window.
 
 **Follow-ups (out of this phase):**
-- Expose `api.v1.cancel(request_id)` to foreground tool calls (e.g., user-cancellable long greps) once a UX surface materializes.
-- Consider merging `InFlightRequestRegistry`'s TTL reaper with the heartbeat path so a single deadline drives both. Premature optimization for now.
-- If transport gains stream-level cancellation primitives (HTTP/2-style), revisit whether `api.v1.cancel(request_id)` becomes redundant.
+- Expose `api.v1.cancel(invocation_id)` to foreground tool calls (e.g., user-cancellable long greps) once a UX surface materializes.
+- Consider merging `InFlightInvocationRegistry`'s TTL reaper with the heartbeat path so a single deadline drives both. Premature optimization for now.
+- If transport gains stream-level cancellation primitives (HTTP/2-style), revisit whether `api.v1.cancel(invocation_id)` becomes redundant.
 
 **Pre-mortem (3 scenarios with leading indicators):**
 
-1. **Wire `request_id` is dropped by an old client AND the daemon's tolerance behavior silently accepts; cancel becomes a no-op for that client.**
-   - **Leading indicator:** daemon log `request envelope missing request_id from agent=<id>` fires at INFO level; `_ttl_reaped_total` counter climbs (eventual cleanup via TTL); `api.v1.cancel` return value `cancelled=False` correlates with the same agent_id.
-   - **Mitigation:** envelope parser logs WARN (not INFO) on missing request_id during the rollout window; CHANGELOG entry calls out the compat requirement; client-side `_raw_exec.py` always populates request_id (tested by unit `test_raw_exec_populates_request_id.py`).
+1. **Wire `invocation_id` is dropped by an old client AND the daemon's tolerance behavior silently accepts; cancel becomes a no-op for that client.**
+   - **Leading indicator:** daemon log `request envelope missing invocation_id from agent=<id>` fires at INFO level; `_ttl_reaped_total` counter climbs (eventual cleanup via TTL); `api.v1.cancel` return value `cancelled=False` correlates with the same agent_id.
+   - **Mitigation:** envelope parser logs WARN (not INFO) on missing invocation_id during the rollout window; CHANGELOG entry calls out the compat requirement; client-side `_raw_exec.py` always populates invocation_id (tested by unit `test_raw_exec_populates_invocation_id.py`).
 
 2. **Cancellation race between `BackgroundTaskManager.cancel`'s wire-cancel + local `asyncio.Task.cancel()` produces a destroy-before-namespace-child-exits ordering, leaking the namespace child as an orphan PG.**
    - **Leading indicator:** Tier 8 soak audit JSONL shows `overlay.destroyed` event with a `pid_holder_alive=true` annotation; `ps` post-soak shows orphan processes with `eos-ns-child` cmdline; `release_lease` event fires before the matching `namespace_child.exited` event.
    - **Mitigation:** `overlay.run_in_namespace`'s `except asyncio.CancelledError` block awaits the namespace-child exit (via the same wait mechanism today's ShellJobRegistry uses — `_await_process_done` lines 398–414 of `shell_job.py`); pipeline's `finally` runs AFTER `run_in_namespace` returns (CancelledError unwind path completes); so destroy happens only after child has exited. Phase 3 sub-test L (NEW — add to §11) pins this ordering.
 
 3. **Multi-engine / engine-restart Q4 split-brain.** Engine-layer `BackgroundTaskManager.count_by_agent` is engine-local in-process state; it cannot see another engine's in-flight tasks. Two concrete failure modes:
-   - **Engine crash + restart mid-iws-session:** engine A launches a sandbox-bound bg task for `agent_X`. Engine A crashes. Engine A' (restart) attaches to the daemon; its `BackgroundTaskManager` is empty. `agent_X` re-establishes its session and calls `enter_isolated_workspace`. Engine A' sees `count_by_agent(agent_X) == 0` and proceeds; meanwhile the daemon-side `InFlightRequestRegistry` still has engine A's task (until TTL reaps it). Result: iws session opens while a ghost ephemeral task races to write OCC, violating Q4's invariant.
+   - **Engine crash + restart mid-iws-session:** engine A launches a sandbox-bound bg task for `agent_X`. Engine A crashes. Engine A' (restart) attaches to the daemon; its `BackgroundTaskManager` is empty. `agent_X` re-establishes its session and calls `enter_isolated_workspace`. Engine A' sees `count_by_agent(agent_X) == 0` and proceeds; meanwhile the daemon-side `InFlightInvocationRegistry` still has engine A's task (until TTL reaps it). Result: iws session opens while a ghost ephemeral task races to write OCC, violating Q4's invariant.
    - **Multi-engine-per-sandbox:** if a sandbox is ever shared between two engines (today not supported, but the architecture doesn't reject it), engine B's `BackgroundTaskManager` is blind to engine A's bg tasks. Same Q4 violation.
-   - **Leading indicator:** Tier 8 soak audit JSONL shows `workspace_lifecycle.enter` succeed for an `agent_id` while the daemon's `InFlightRequestRegistry._by_request` still has at least one live entry whose `agent_id` matches. Concretely: a `workspace_lifecycle.enter.success` event with no preceding `inflight_request.deregistered` event for the same `agent_id` within the last 5 minutes (TTL window). Sub-test N (NEW — added to §11) pins this.
+   - **Leading indicator:** Tier 8 soak audit JSONL shows `workspace_lifecycle.enter` succeed for an `agent_id` while the daemon's `InFlightInvocationRegistry._by_invocation` still has at least one live entry whose `agent_id` matches. Concretely: a `workspace_lifecycle.enter.success` event with no preceding `inflight_invocation.deregistered` event for the same `agent_id` within the last 5 minutes (TTL window). Sub-test N (NEW — added to §11) pins this.
    - **Mitigation enacted:** the §6 heartbeat carries `engine_process_id`; the daemon triggers immediate orphan-TTL-reap when a new engine connects with a fresh `process_id` (closes the engine-restart variant). For multi-engine-per-sandbox, `enter_isolated_workspace` ADDITIONALLY consults the daemon via a lightweight `api.v1.inflight_count(agent_id)` RPC and merges its count with the engine-local count before deciding Q4 rejection. Both are implemented in commit (1) alongside the envelope change so wire-protocol changes land atomically. Pre-Phase-2.5 deployment precondition: "one engine per sandbox" is documented in §14 as a current limitation; the cross-engine RPC defends against forward incompatibility, not today's deployment.
 
 ---

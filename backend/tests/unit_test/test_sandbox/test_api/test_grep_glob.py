@@ -51,7 +51,7 @@ async def test_glob_dispatches_to_sandbox_daemon(
         (
             "sb-1",
             "api.v1.glob",
-            {"pattern": "*.py", "caller": _CALLER_FIELDS},
+            {"agent_id": "a", "pattern": "*.py", "caller": _CALLER_FIELDS},
             60,
         ),
     ]
@@ -149,6 +149,7 @@ async def test_grep_dispatches_to_sandbox_daemon(
     sandbox_id, op, payload, timeout = transport.calls[0]
     assert sandbox_id == "sb-1"
     assert op == "api.v1.grep"
+    assert payload["agent_id"] == "a"
     assert payload["pattern"] == "hello"
     assert payload["output_mode"] == "files_with_matches"
     assert payload["caller"] == _CALLER_FIELDS
@@ -194,6 +195,7 @@ async def test_grep_passes_optional_filters(
     )
 
     payload = transport.calls[0][2]
+    assert payload["agent_id"] == "a"
     assert payload["path"] == "pkg"
     assert payload["glob_filter"] == "*.py"
     assert payload["output_mode"] == "content"

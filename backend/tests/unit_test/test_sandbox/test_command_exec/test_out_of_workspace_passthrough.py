@@ -15,7 +15,7 @@ def test_absolute_non_denylisted_path_can_be_written_by_primitive(
     workspace.mkdir()
     target = tmp_path / "outside" / "foo.txt"
     req = ToolCallRequest(
-        request_id="r1",
+        invocation_id="r1",
         agent_id="agent",
         verb="write_file",
         intent=Intent.WRITE_ALLOWED,
@@ -39,7 +39,7 @@ def test_system_host_path_is_denied_before_write(tmp_path: Path) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     req = ToolCallRequest(
-        request_id="r1",
+        invocation_id="r1",
         agent_id="agent",
         verb="write_file",
         intent=Intent.WRITE_ALLOWED,

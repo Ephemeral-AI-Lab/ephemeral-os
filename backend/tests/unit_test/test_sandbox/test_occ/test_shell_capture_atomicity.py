@@ -112,7 +112,7 @@ async def test_shell_uses_occ_client_apply_changeset(
 
     result = await pipeline.run_tool_call(
         ToolCallRequest(
-            request_id="shell-capture",
+            invocation_id="shell-capture",
             agent_id="agent-1",
             verb="shell",
             intent=Intent.WRITE_ALLOWED,

@@ -14,7 +14,7 @@ from sandbox.overlay.namespace import run_in_namespace
 
 def _make_request(tmp_path: Path) -> CommandExecRequest:
     return CommandExecRequest(
-        request_id="req-test",
+        invocation_id="req-test",
         workspace_ref=str(tmp_path / "stack"),
         workspace_root="/testbed",
         command=("echo", "hi"),

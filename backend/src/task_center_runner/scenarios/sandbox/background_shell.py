@@ -2,7 +2,7 @@
 engine-owned background task harness.
 
 Seven scenarios (T1-T3, T5-T8 from the Phase 2 plan; T4 is covered by the
-request-keyed daemon in-flight TTL tests):
+invocation-keyed daemon in-flight TTL tests):
 
 - ``sandbox.background_shell_golden`` (T1)
 - ``sandbox.background_shell_stop`` (T2)

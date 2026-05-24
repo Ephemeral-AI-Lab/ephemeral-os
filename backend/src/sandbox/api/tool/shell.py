@@ -40,19 +40,22 @@ async def shell(
                 message="snapshot overlay shell does not accept stdin",
                 timings={"api.shell.total_s": monotonic_now() - total_start},
             )
+        payload: dict[str, object] = {
+            "agent_id": request.caller.agent_id,
+            "command": request.command,
+            "cwd": cwd,
+            "timeout_seconds": request.timeout,
+            "caller": request.caller.audit_fields(),
+            "description": request.default_description("shell"),
+        }
+        if request.background:
+            payload["background"] = True
+        if request.invocation_id:
+            payload["invocation_id"] = request.invocation_id
         raw = await selected_transport.call(
             sandbox_id,
             DAEMON_OP_SHELL,
-            {
-                "request_id": request.request_id,
-                "command": request.command,
-                "cwd": cwd,
-                "timeout_seconds": request.timeout,
-                "background": request.background,
-                "actor_id": request.caller.agent_id,
-                "caller": request.caller.audit_fields(),
-                "description": request.default_description("shell"),
-            },
+            payload,
             timeout=shell_dispatch_timeout(request.timeout),
         )
         timings = timings_from_daemon_response(raw.get("timings"))

@@ -175,8 +175,8 @@ async def test_cancel_sandbox_task_sends_wire_cancel_before_local_cancel(
             events.append("local_cancel")
             raise
 
-    async def _wire_cancel(sandbox_id: str, request_id: str) -> dict[str, object]:
-        events.append(f"wire:{sandbox_id}:{request_id}")
+    async def _wire_cancel(sandbox_id: str, invocation_id: str) -> dict[str, object]:
+        events.append(f"wire:{sandbox_id}:{invocation_id}")
         return {"success": True, "cancelled": True}
 
     monkeypatch.setattr("sandbox.api.cancel", _wire_cancel)
@@ -188,14 +188,14 @@ async def test_cancel_sandbox_task_sends_wire_cancel_before_local_cancel(
         agent_id="agent-a",
         uses_sandbox=True,
         sandbox_id="sandbox-1",
-        sandbox_request_id="request-1",
+        sandbox_invocation_id="invocation-1",
     )
 
     await asyncio.sleep(0)
     assert await mgr.cancel("t1", "test") is True
     await asyncio.sleep(0)
 
-    assert events == ["wire:sandbox-1:request-1", "local_cancel"]
+    assert events == ["wire:sandbox-1:invocation-1", "local_cancel"]
     with suppress(asyncio.CancelledError):
         await mgr._tasks["t1"].asyncio_task
 
@@ -203,7 +203,7 @@ async def test_cancel_sandbox_task_sends_wire_cancel_before_local_cancel(
 async def test_cancel_by_agent_only_targets_running_sandbox_tasks(monkeypatch) -> None:
     mgr = BackgroundTaskManager()
 
-    async def _wire_cancel(sandbox_id: str, request_id: str) -> dict[str, object]:
+    async def _wire_cancel(sandbox_id: str, invocation_id: str) -> dict[str, object]:
         return {"success": True, "cancelled": True}
 
     monkeypatch.setattr("sandbox.api.cancel", _wire_cancel)
@@ -215,7 +215,7 @@ async def test_cancel_by_agent_only_targets_running_sandbox_tasks(monkeypatch) -
         agent_id="agent-a",
         uses_sandbox=True,
         sandbox_id="sandbox-1",
-        sandbox_request_id="request-1",
+        sandbox_invocation_id="invocation-1",
     )
     mgr.launch(
         task_id="plain-task",

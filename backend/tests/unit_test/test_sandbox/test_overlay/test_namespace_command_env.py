@@ -30,7 +30,7 @@ def _run(
         {
             "workspace_root": workspace.as_posix(),
             "tool_call": ToolCallRequest(
-                request_id="env-test",
+                invocation_id="env-test",
                 agent_id="agent",
                 verb="shell",
                 intent=Intent.WRITE_ALLOWED,

@@ -23,7 +23,7 @@ async def grep(
 
     async def _call() -> GrepResult:
         payload: dict[str, object] = {
-            "request_id": request.request_id,
+            "agent_id": request.caller.agent_id,
             "pattern": request.pattern,
             "output_mode": request.output_mode,
             "offset": request.offset,
@@ -32,6 +32,8 @@ async def grep(
             "multiline": request.multiline,
             "caller": request.caller.audit_fields(),
         }
+        if request.invocation_id:
+            payload["invocation_id"] = request.invocation_id
         if request.path is not None:
             payload["path"] = request.path
         if request.glob_filter is not None:

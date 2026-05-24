@@ -129,7 +129,7 @@ class ToolBundle:
         return await daemon_client_mod.call_daemon_api(
             self.sandbox_id,
             "api.layer_metrics",
-            {"actor_id": self.caller.agent_id},
+            {"agent_id": self.caller.agent_id},
             timeout=60,
         )
 
@@ -137,7 +137,7 @@ class ToolBundle:
         return await daemon_client_mod.call_daemon_api(
             self.sandbox_id,
             "api.workspace_binding",
-            {"actor_id": self.caller.agent_id},
+            {"agent_id": self.caller.agent_id},
             timeout=30,
         )
 

@@ -163,7 +163,7 @@ async def test_same_root_concurrent_builds_fail_closed_without_partial_base(
     binding_result = await runtime_call(
         handle,
         "api.workspace_binding",
-        {"actor_id": handle.caller.agent_id},
+        {"agent_id": handle.caller.agent_id},
         layer_stack_root=root,
         timeout=60,
     )
@@ -172,7 +172,7 @@ async def test_same_root_concurrent_builds_fail_closed_without_partial_base(
     metrics = await runtime_call(
         handle,
         "api.layer_metrics",
-        {"actor_id": handle.caller.agent_id},
+        {"agent_id": handle.caller.agent_id},
         layer_stack_root=root,
         timeout=60,
     )

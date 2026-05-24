@@ -146,7 +146,7 @@ def as_requested_path(
     return replace(
         telemetry,
         requested_path=requested_path,
-        request_id=request_id or telemetry.request_id,
+        invocation_id=request_id or telemetry.request_id,
     )
 
 
@@ -173,7 +173,7 @@ async def run_shell_batch(
 
     async def _run_one(index: int, command: str) -> ShellTelemetry:
         req = ToolCallRequest(
-            request_id=f"{request_prefix}-{index:04d}",
+            invocation_id=f"{request_prefix}-{index:04d}",
             agent_id="lease-resource-probe",
             verb="shell",
             intent=Intent.WRITE_ALLOWED,
@@ -188,17 +188,17 @@ async def run_shell_batch(
         actual_mode = expected_mode
         if actual_mode != expected_mode:
             raise AssertionError(
-                f"{req.request_id} ran {actual_mode}; expected "
+                f"{req.invocation_id} ran {actual_mode}; expected "
                 f"{expected_mode} for {requested_path}"
             )
         exit_code = int(result.get("exit_code", 1))
         stderr = str(result.get("stderr") or "")
         if exit_code != 0:
             raise AssertionError(
-                f"{req.request_id} exited {exit_code}: {stderr}"
+                f"{req.invocation_id} exited {exit_code}: {stderr}"
             )
         return ShellTelemetry(
-            request_id=req.request_id,
+            invocation_id=req.invocation_id,
             requested_path=requested_path,
             mount_mode=actual_mode,
             timings=dict(result.get("timings") or {}),

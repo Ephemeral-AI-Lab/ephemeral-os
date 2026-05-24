@@ -22,18 +22,20 @@ async def write_file(
     selected_transport = transport or DaemonSandboxTransport()
 
     async def _call() -> WriteFileResult:
+        payload: dict[str, object] = {
+            "agent_id": request.caller.agent_id,
+            "path": request.path,
+            "content": request.content,
+            "caller": request.caller.audit_fields(),
+            "description": request.default_description(f"write {request.path}"),
+            "overwrite": request.overwrite,
+        }
+        if request.invocation_id:
+            payload["invocation_id"] = request.invocation_id
         raw = await selected_transport.call(
             sandbox_id,
             DAEMON_OP_WRITE_FILE,
-            {
-                "request_id": request.request_id,
-                "path": request.path,
-                "content": request.content,
-                "actor_id": request.caller.agent_id,
-                "caller": request.caller.audit_fields(),
-                "description": request.default_description(f"write {request.path}"),
-                "overwrite": request.overwrite,
-            },
+            payload,
             timeout=WRITE_FILE_TIMEOUT_S,
         )
         return guarded_result_from_daemon_response(WriteFileResult, raw)

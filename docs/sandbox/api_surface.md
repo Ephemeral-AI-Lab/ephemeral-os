@@ -104,10 +104,10 @@ generic `ToolCallRequest.background` flag wrapped by the engine's
 `BackgroundTaskManager`; the pipeline body is the same coroutine used by
 foreground calls.
 
-Sandbox RPC envelopes carry `request_id`. Generic request lifecycle RPCs are:
-`api.v1.cancel(request_id)`, `api.v1.heartbeat(request_ids=[...])`, and
+Sandbox RPC envelopes carry `invocation_id`. Generic invocation lifecycle RPCs are:
+`api.v1.cancel(invocation_id)`, `api.v1.heartbeat(invocation_ids=[...])`, and
 `api.v1.inflight_count(agent_id)`. The daemon tracks those requests in
-`InFlightRequestRegistry`; no pipeline-owned background-job registry or
+`InFlightInvocationRegistry`; no pipeline-owned background-job registry or
 shell-specific launch/reap/poll/cancel surface is part of the public API.
 
 Deployment preconditions for native overlay execution remain private mount

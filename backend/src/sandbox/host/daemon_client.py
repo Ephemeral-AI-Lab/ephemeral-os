@@ -106,12 +106,12 @@ async def _call_daemon(
     """Dispatch one JSON envelope to the resident in-sandbox daemon."""
     clean_args = _without_none(args)
     if op == "api.v1.cancel":
-        request_id = uuid4().hex
+        invocation_id = uuid4().hex
     else:
-        request_id = str(clean_args.get("request_id") or uuid4().hex)
-        clean_args["request_id"] = request_id
+        invocation_id = str(clean_args.get("invocation_id") or uuid4().hex)
+        clean_args["invocation_id"] = invocation_id
     raw_payload = json.dumps(
-        {"op": op, "request_id": request_id, "args": clean_args},
+        {"op": op, "invocation_id": invocation_id, "args": clean_args},
         separators=(",", ":"),
     )
     result = await _dispatch_once_with_retry(
@@ -304,7 +304,7 @@ async def _dispatch_once_with_retry(
     readiness_payload = json.dumps(
         {
             "op": "api.runtime.ready",
-            "request_id": uuid4().hex,
+            "invocation_id": uuid4().hex,
             "args": {"layer_stack_root": str(layer_stack_root)},
         },
         separators=(",", ":"),

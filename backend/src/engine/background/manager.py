@@ -81,7 +81,7 @@ class TrackedBackgroundTask:
     agent_id: str | None = None
     uses_sandbox: bool = False
     sandbox_id: str | None = None
-    sandbox_request_id: str | None = None
+    sandbox_invocation_id: str | None = None
     status: TaskStatus = TaskStatus.RUNNING
     # Reason captured by cancel(); kept on the tracked task so callers (and
     # the subagent finaliser) can persist it to the audit record.
@@ -139,7 +139,7 @@ class BackgroundTaskManager:
         agent_id: str | None = None,
         uses_sandbox: bool = False,
         sandbox_id: str | None = None,
-        sandbox_request_id: str | None = None,
+        sandbox_invocation_id: str | None = None,
     ) -> BackgroundTaskStarted:
         """Launch *coro* as a background task and return a started event."""
         asyncio_task = asyncio.create_task(coro)
@@ -153,7 +153,7 @@ class BackgroundTaskManager:
             agent_id=agent_id,
             uses_sandbox=uses_sandbox,
             sandbox_id=sandbox_id,
-            sandbox_request_id=sandbox_request_id,
+            sandbox_invocation_id=sandbox_invocation_id,
         )
         start_line = f"[started: {tool_name}]"
         tracked.progress_lines.append(start_line)
@@ -200,7 +200,7 @@ class BackgroundTaskManager:
             self._stop_heartbeat_if_idle()
 
         asyncio_task.add_done_callback(_done_callback)
-        if tracked.uses_sandbox and tracked.sandbox_request_id and tracked.sandbox_id:
+        if tracked.uses_sandbox and tracked.sandbox_invocation_id and tracked.sandbox_id:
             self._ensure_heartbeat_task()
 
         return BackgroundTaskStarted(
@@ -390,17 +390,17 @@ class BackgroundTaskManager:
             return True
 
     async def _wire_cancel_if_sandbox_bound(self, tracked: TrackedBackgroundTask) -> None:
-        if not tracked.uses_sandbox or not tracked.sandbox_id or not tracked.sandbox_request_id:
+        if not tracked.uses_sandbox or not tracked.sandbox_id or not tracked.sandbox_invocation_id:
             return
         try:
             import sandbox.api as sandbox_api
 
-            await sandbox_api.cancel(tracked.sandbox_id, tracked.sandbox_request_id)
+            await sandbox_api.cancel(tracked.sandbox_id, tracked.sandbox_invocation_id)
         except Exception as exc:
             logger.warning(
-                "wire-cancel failed for task_id=%s request_id=%s: %s",
+                "wire-cancel failed for task_id=%s invocation_id=%s: %s",
                 tracked.task_id,
-                tracked.sandbox_request_id,
+                tracked.sandbox_invocation_id,
                 exc,
             )
 
@@ -410,7 +410,7 @@ class BackgroundTaskManager:
         self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
 
     def _stop_heartbeat_if_idle(self) -> None:
-        if self._running_sandbox_request_ids():
+        if self._running_sandbox_invocation_ids():
             return
         if self._heartbeat_task is not None and not self._heartbeat_task.done():
             self._heartbeat_task.cancel()
@@ -419,7 +419,7 @@ class BackgroundTaskManager:
     async def _heartbeat_loop(self) -> None:
         while True:
             await asyncio.sleep(_HEARTBEAT_INTERVAL_S)
-            by_sandbox = self._running_sandbox_request_ids()
+            by_sandbox = self._running_sandbox_invocation_ids()
             if not by_sandbox:
                 self._heartbeat_task = None
                 return
@@ -430,11 +430,11 @@ class BackgroundTaskManager:
                     *(
                         sandbox_api.heartbeat(
                             sandbox_id,
-                            request_ids,
+                            invocation_ids,
                             engine_process_id=self._engine_process_id,
                             engine_started_at=self._engine_started_at,
                         )
-                        for sandbox_id, request_ids in by_sandbox.items()
+                        for sandbox_id, invocation_ids in by_sandbox.items()
                     ),
                     return_exceptions=True,
                 )
@@ -443,16 +443,16 @@ class BackgroundTaskManager:
             except Exception:
                 logger.debug("background heartbeat iteration failed", exc_info=True)
 
-    def _running_sandbox_request_ids(self) -> dict[str, list[str]]:
+    def _running_sandbox_invocation_ids(self) -> dict[str, list[str]]:
         by_sandbox: dict[str, list[str]] = {}
         for tracked in self._tasks.values():
             if (
                 tracked.status == TaskStatus.RUNNING
                 and tracked.uses_sandbox
                 and tracked.sandbox_id
-                and tracked.sandbox_request_id
+                and tracked.sandbox_invocation_id
             ):
                 by_sandbox.setdefault(tracked.sandbox_id, []).append(
-                    tracked.sandbox_request_id
+                    tracked.sandbox_invocation_id
                 )
         return by_sandbox

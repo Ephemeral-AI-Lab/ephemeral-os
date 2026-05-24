@@ -33,12 +33,11 @@ async def run_tool_handler(
         required_single_path(args)
     agent_id = _agent_id(args)
     req = ToolCallRequest(
-        request_id=str(args.get("request_id") or uuid4().hex),
+        invocation_id=str(args.get("invocation_id") or uuid4().hex),
         agent_id=agent_id,
         verb=verb,
         intent=intent,
         args=args,
-        actor_id=str(args.get("actor_id") or ""),
         background=bool(args.get("background", False)),
     )
     pipeline = await resolve_pipeline(req)
@@ -46,7 +45,13 @@ async def run_tool_handler(
 
 
 def _agent_id(args: dict[str, Any]) -> str:
-    raw = str(args.get("agent_id") or args.get("actor_id") or "default").strip()
+    caller = args.get("caller")
+    raw = ""
+    if isinstance(caller, dict):
+        raw = str(caller.get("agent_id") or caller.get("agent_run_id") or "")
+    if not raw:
+        raw = str(args.get("agent_id") or "default")
+    raw = raw.strip()
     return raw or "default"
 
 

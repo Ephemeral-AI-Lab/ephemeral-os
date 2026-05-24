@@ -10,7 +10,7 @@ to avoid a per-tool ``docker exec`` hop.
 
 Wire format (newline-delimited JSON):
 
-  request:  {"op": "...", "request_id": "...", "args": {...}}\\n
+  request:  {"op": "...", "invocation_id": "...", "args": {...}}\\n
   response: {"success": true, ...}\\n
 
 The daemon imports :mod:`sandbox.daemon.rpc.dispatcher` so the ``OP_TABLE`` is

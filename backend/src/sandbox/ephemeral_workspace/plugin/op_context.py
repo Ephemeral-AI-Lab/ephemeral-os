@@ -60,7 +60,7 @@ class EphemeralPipelineLike(Protocol):
     def acquire_operation_overlay(
         self,
         *,
-        request_id: str,
+        invocation_id: str,
         workspace_root: str | None = None,
     ) -> Any: ...
 
@@ -76,7 +76,7 @@ class EphemeralPipelineLike(Protocol):
         self,
         *,
         paths: list[str] | tuple[str, ...],
-        actor_id: str = "",
+        agent_id: str = "",
         description: str = "plugin workspace edit",
     ) -> object: ...
 

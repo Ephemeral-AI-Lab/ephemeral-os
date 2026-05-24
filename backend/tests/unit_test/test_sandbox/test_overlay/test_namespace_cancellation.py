@@ -57,7 +57,7 @@ async def test_run_in_namespace_signals_shell_cancellation(
     handle.upperdir.mkdir(parents=True)
     handle.workdir.mkdir(parents=True)
     req = ToolCallRequest(
-        request_id="req-1",
+        invocation_id="req-1",
         agent_id="agent-a",
         verb="shell",
         intent=Intent.WRITE_ALLOWED,

@@ -115,7 +115,7 @@ async def test_base_import_cost_metrics(
         metrics = await runtime_call(
             handle,
             "api.layer_metrics",
-            {"actor_id": handle.caller.agent_id},
+            {"agent_id": handle.caller.agent_id},
             layer_stack_root=root,
             timeout=60,
         )

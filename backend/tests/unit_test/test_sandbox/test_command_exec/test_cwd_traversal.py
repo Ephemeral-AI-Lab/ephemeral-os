@@ -59,7 +59,7 @@ def test_resolve_workspace_cwd_does_not_create_dirs_outside_mounted_root(
 def test_command_exec_request_rejects_dotdot_cwd() -> None:
     with pytest.raises(ValueError, match="cwd"):
         CommandExecRequest(
-            request_id="req-1",
+            invocation_id="req-1",
             workspace_ref="ref",
             workspace_root="/testbed",
             command=("true",),
@@ -70,7 +70,7 @@ def test_command_exec_request_rejects_dotdot_cwd() -> None:
 def test_command_exec_request_rejects_embedded_dotdot_cwd() -> None:
     with pytest.raises(ValueError, match="cwd"):
         CommandExecRequest(
-            request_id="req-1",
+            invocation_id="req-1",
             workspace_ref="ref",
             workspace_root="/testbed",
             command=("true",),
@@ -80,7 +80,7 @@ def test_command_exec_request_rejects_embedded_dotdot_cwd() -> None:
 
 def test_command_exec_request_accepts_clean_relative_cwd() -> None:
     request = CommandExecRequest(
-        request_id="req-1",
+        invocation_id="req-1",
         workspace_ref="ref",
         workspace_root="/testbed",
         command=("true",),

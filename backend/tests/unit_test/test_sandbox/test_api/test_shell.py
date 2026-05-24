@@ -56,7 +56,7 @@ async def test_shell_dispatches_to_sandbox_daemon(
                 "command": "printf 'new\\n'",
                 "cwd": ".",
                 "timeout_seconds": 12,
-                "actor_id": "agent-1",
+                "agent_id": "agent-1",
                 "caller": {
                     "agent_id": "agent-1",
                     "run_id": "",

@@ -54,7 +54,7 @@ class SandboxRequestBase:
 
     caller: SandboxCaller
     description: str = ""
-    request_id: str = ""
+    invocation_id: str = ""
 
     def default_description(self, fallback: str) -> str:
         return self.description or fallback
@@ -80,22 +80,20 @@ ToolCallResult: TypeAlias = dict[str, object]
 class ToolCallRequest:
     """One tool invocation routed through a workspace pipeline."""
 
-    request_id: str
+    invocation_id: str
     agent_id: str
     verb: str
     intent: Intent
     args: Mapping[str, object]
-    actor_id: str = ""
     background: bool = False
 
     def to_payload(self) -> dict[str, object]:
         return {
-            "request_id": self.request_id,
+            "invocation_id": self.invocation_id,
             "agent_id": self.agent_id,
             "verb": self.verb,
             "intent": self.intent.value,
             "args": dict(self.args),
-            "actor_id": self.actor_id,
             "background": self.background,
         }
 
@@ -105,12 +103,11 @@ class ToolCallRequest:
         if not isinstance(args_raw, Mapping):
             raise ValueError("tool-call payload args must be an object")
         return cls(
-            request_id=str(payload.get("request_id") or ""),
+            invocation_id=str(payload.get("invocation_id") or ""),
             agent_id=str(payload.get("agent_id") or ""),
             verb=str(payload.get("verb") or ""),
             intent=Intent(str(payload.get("intent") or Intent.READ_ONLY.value)),
             args={str(key): value for key, value in args_raw.items()},
-            actor_id=str(payload.get("actor_id") or ""),
             background=bool(payload.get("background", False)),
         )
 

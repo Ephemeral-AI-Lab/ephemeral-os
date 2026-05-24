@@ -373,7 +373,7 @@ def test_read_refuses_symlink_to_host(workspace_session):
 - §7 O_NOFOLLOW security model — explain that `open_no_follow` does a per-component walk (defense against intermediate symlinks), not a single-call `O_NOFOLLOW` flag.
 - §8 New mount API requirement; Docker-only deployment; reference `scripts/verify_overlay_preconditions.py`.
 - §9 NEW — Pass-through write semantics (Architect F.5 / Critic must-fix #9): 2×3 table for {/testbed/*, /etc/*, /tmp/*} × {ephemeral, isolated} listing read+write disposition. Document the denylist (`/etc/`, `/var/`, `/proc/`, `/sys/`, `/boot/` rejected before kernel call).
-- §10 — Background tool policy: see Phase 2.5 §1 + §2 (coroutine-bound overlay; engine asyncio.Task wrapper; `ToolCallRequest.background` flag; `api.v1.cancel(request_id)` wire RPC; `api.v1.heartbeat`; engine-layer Q4 + iws-exit drain). The api_surface.md doc references Phase 2.5 for the canonical design and does not describe the old shell-job model as active architecture.
+- §10 — Background tool policy: see Phase 2.5 §1 + §2 (coroutine-bound overlay; engine asyncio.Task wrapper; `ToolCallRequest.background` flag; `api.v1.cancel(invocation_id)` wire RPC; `api.v1.heartbeat`; engine-layer Q4 + iws-exit drain). The api_surface.md doc references Phase 2.5 for the canonical design and does not describe the old shell-job model as active architecture.
 - §11 NEW — `WorkspaceSession` status: deferred to `tests/mock/sandbox/_fixtures/` until a production caller materializes (Critic must-fix #11). NOT part of the public API surface in Phase 2.
 
 **8.2.** Update `docs/isolated_workspace_runtime_source_blast_radius.md`:

@@ -1395,10 +1395,10 @@ class MockSquadRunner:
             "tool_id": tool_id,
             "sandbox_audit_sink": self._sandbox_audit_sink,
         }
-        sandbox_request_id = uuid4().hex if background_task_id is not None else ""
+        sandbox_invocation_id = uuid4().hex if background_task_id is not None else ""
         if background_task_id is not None:
             override_kwargs["background_task_id"] = background_task_id
-            override_kwargs["sandbox_request_id"] = sandbox_request_id
+            override_kwargs["sandbox_invocation_id"] = sandbox_invocation_id
         tool_metadata = metadata.with_overrides(**override_kwargs)
         try:
             result = await execute_tool_once(
@@ -1409,12 +1409,12 @@ class MockSquadRunner:
                 emit_started=False,
             )
         except asyncio.CancelledError:
-            if sandbox_request_id and metadata.sandbox_id:
+            if sandbox_invocation_id and metadata.sandbox_id:
                 current_task = asyncio.current_task()
                 if current_task is not None:
                     current_task.uncancel()
                 with contextlib.suppress(Exception):
-                    await sandbox_api.cancel(metadata.sandbox_id, sandbox_request_id)
+                    await sandbox_api.cancel(metadata.sandbox_id, sandbox_invocation_id)
             raise
         client_t2 = monotonic_now()
         result_metadata = dict(result.metadata or {})

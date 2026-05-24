@@ -27,10 +27,10 @@ class _Overlay:
         self,
         *,
         paths: tuple[str, ...],
-        actor_id: str = "",
+        agent_id: str = "",
         description: str = "plugin workspace edit",
     ) -> object:
-        del actor_id, description
+        del agent_id, description
         self.published_paths = paths
         return SimpleNamespace(
             success=True,

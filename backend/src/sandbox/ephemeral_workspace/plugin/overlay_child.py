@@ -200,10 +200,10 @@ class _ChildOverlay:
         self,
         *,
         paths: list[str] | tuple[str, ...],
-        actor_id: str = "",
+        agent_id: str = "",
         description: str = "plugin workspace edit",
     ) -> Any:
-        del paths, actor_id, description
+        del paths, agent_id, description
         return SimpleNamespace(
             success=True,
             published_manifest_version=None,

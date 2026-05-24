@@ -19,8 +19,8 @@ class SandboxTransport(Protocol):
     ) -> dict[str, Any]:
         """Call one sandbox RPC.
 
-        Implementations put a wire-level ``request_id`` on the daemon envelope.
-        If ``payload`` already has ``request_id``, the same id is used for
+        Implementations put a wire-level ``invocation_id`` on the daemon envelope.
+        If ``payload`` already has ``invocation_id``, the same id is used for
         correlation between engine background tasks and daemon in-flight state.
         """
         ...

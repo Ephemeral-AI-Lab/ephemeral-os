@@ -49,7 +49,7 @@ async def test_write_file_dispatches_to_sandbox_daemon(
             {
                 "path": "a.py",
                 "content": "x",
-                "actor_id": "agent-1",
+                "agent_id": "agent-1",
                 "caller": {
                     "agent_id": "agent-1",
                     "run_id": "",

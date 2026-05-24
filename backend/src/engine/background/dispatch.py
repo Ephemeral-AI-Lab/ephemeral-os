@@ -105,7 +105,7 @@ def launch_background_tool(
         (),
     )
     sandbox_id = str(getattr(tool_metadata, "sandbox_id", "") or "")
-    sandbox_request_id = uuid4().hex if uses_sandbox and sandbox_id else ""
+    sandbox_invocation_id = uuid4().hex if uses_sandbox and sandbox_id else ""
     agent_id = str(getattr(tool_metadata, "agent_run_id", "") or "")
     if not agent_id:
         agent_id = str(getattr(tool_metadata, "agent_name", "") or "")
@@ -114,7 +114,7 @@ def launch_background_tool(
         bg_overrides = ExecutionMetadata(
             on_progress_line=background_manager.make_progress_callback(alias),
             background_task_id=alias,
-            sandbox_request_id=sandbox_request_id or None,
+            sandbox_invocation_id=sandbox_invocation_id or None,
         )
         block = await execute_tool_call(
             tool_use.name,
@@ -137,7 +137,7 @@ def launch_background_tool(
         agent_id=agent_id or None,
         uses_sandbox=uses_sandbox,
         sandbox_id=sandbox_id or None,
-        sandbox_request_id=sandbox_request_id or None,
+        sandbox_invocation_id=sandbox_invocation_id or None,
     )
     record_tool_trace(tool_metadata, tool_use.name, clean_input)
     tool_result = ToolResultBlock(

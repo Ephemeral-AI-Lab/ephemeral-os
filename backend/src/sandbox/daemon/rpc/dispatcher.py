@@ -66,7 +66,7 @@ async def dispatch_envelope_async(
     Phase 3 pass bar (``runtime.boot_to_dispatch_s ≤ 2 ms``).
     """
     dispatch_entered_at = monotonic_now()
-    validation_error, op, args_raw, request_id = _validate_envelope(envelope)
+    validation_error, op, args_raw, invocation_id = _validate_envelope(envelope)
     if validation_error is not None:
         return validation_error
 
@@ -78,7 +78,7 @@ async def dispatch_envelope_async(
     task = asyncio.current_task()
     if task is not None:
         registry.register(
-            request_id,
+            invocation_id,
             task,
             agent_id=_agent_id(args_raw),
             op=op,
@@ -112,7 +112,7 @@ async def dispatch_envelope_async(
             {"op": op, "error_id": error_id},
         )
     finally:
-        registry.deregister(request_id)
+        registry.deregister(invocation_id)
 
 
 def _validate_envelope(
@@ -129,10 +129,10 @@ def _validate_envelope(
             {},
             "",
         )
-    request_id = str(envelope.get("request_id") or "").strip()
-    if not request_id:
-        request_id = uuid4().hex
-        logger.warning("daemon envelope missing request_id for op=%s", op)
+    invocation_id = str(envelope.get("invocation_id") or "").strip()
+    if not invocation_id:
+        invocation_id = uuid4().hex
+        logger.warning("daemon envelope missing invocation_id for op=%s", op)
     args_raw = envelope.get("args", {})
     if args_raw is None:
         args_raw = {}
@@ -145,10 +145,10 @@ def _validate_envelope(
             ),
             op,
             {},
-            request_id,
+            invocation_id,
         )
-    args_raw.setdefault("request_id", request_id)
-    return None, op, args_raw, request_id
+    args_raw.setdefault("invocation_id", invocation_id)
+    return None, op, args_raw, invocation_id
 
 
 def _agent_id(args: Mapping[str, Any]) -> str:
@@ -157,7 +157,7 @@ def _agent_id(args: Mapping[str, Any]) -> str:
         raw = caller.get("agent_id") or caller.get("agent_run_id")
         if raw:
             return str(raw)
-    raw = args.get("agent_id") or args.get("actor_id")
+    raw = args.get("agent_id")
     return str(raw or "").strip()
 
 
@@ -229,7 +229,7 @@ def _check_plugin_block(args: Mapping[str, Any], op_name: str) -> dict[str, Any]
     if not (op_name.startswith("api.plugin.") or op_name.startswith("plugin.")):
         return None
     iws = get_active_pipeline()
-    agent_id = str(args.get("agent_id") or args.get("actor_id") or "").strip()
+    agent_id = str(args.get("agent_id") or "").strip()
     if iws is None:
         _emit_plugin_gate_audit(op_name, agent_id)
         return None

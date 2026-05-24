@@ -154,7 +154,7 @@ async def shell(
         result = await sandbox_api.shell(
             sandbox_id,
             ShellRequest(
-                request_id=str(context.get("sandbox_request_id") or ""),
+                invocation_id=str(context.get("sandbox_invocation_id") or ""),
                 command=command,
                 cwd=get_repo_root(context) or None,
                 timeout=timeout,

@@ -68,11 +68,11 @@ class _StubOccClient:
 
 def _request() -> CommandExecRequest:
     return CommandExecRequest(
-        request_id="atomic-by-path-test",
+        invocation_id="atomic-by-path-test",
         workspace_ref="/tmp/eos-test-atomic",
         workspace_root="/testbed",
         command=("true",),
-        actor_id="t",
+        agent_id="t",
         description="atomic-by-path",
     )
 

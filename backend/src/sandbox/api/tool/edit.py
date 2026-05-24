@@ -30,20 +30,22 @@ async def edit_file(
     selected_transport = transport or DaemonSandboxTransport()
 
     async def _call() -> EditFileResult:
+        payload: dict[str, object] = {
+            "agent_id": request.caller.agent_id,
+            "path": request.path,
+            "edits": [
+                {"old_text": edit.old_text, "new_text": edit.new_text}
+                for edit in request.edits
+            ],
+            "caller": request.caller.audit_fields(),
+            "description": request.default_description(f"edit {request.path}"),
+        }
+        if request.invocation_id:
+            payload["invocation_id"] = request.invocation_id
         raw = await selected_transport.call(
             sandbox_id,
             DAEMON_OP_EDIT_FILE,
-            {
-                "request_id": request.request_id,
-                "path": request.path,
-                "edits": [
-                    {"old_text": edit.old_text, "new_text": edit.new_text}
-                    for edit in request.edits
-                ],
-                "actor_id": request.caller.agent_id,
-                "caller": request.caller.audit_fields(),
-                "description": request.default_description(f"edit {request.path}"),
-            },
+            payload,
             timeout=EDIT_FILE_TIMEOUT_S,
         )
         return guarded_result_from_daemon_response(

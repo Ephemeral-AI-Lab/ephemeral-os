@@ -319,7 +319,7 @@ async def _assert_daytona_workspace_tool_state(sandbox_id: str) -> None:
     binding_payload = await call_daemon_api(
         sandbox_id,
         "api.workspace_binding",
-        {"actor_id": caller.agent_id},
+        {"agent_id": caller.agent_id},
         timeout=30,
     )
     binding = binding_payload.get("binding")

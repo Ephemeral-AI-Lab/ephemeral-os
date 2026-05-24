@@ -22,14 +22,17 @@ async def read_file(
     selected_transport = transport or DaemonSandboxTransport()
 
     async def _call() -> ReadFileResult:
+        payload: dict[str, object] = {
+            "agent_id": request.caller.agent_id,
+            "path": request.path,
+            "caller": request.caller.audit_fields(),
+        }
+        if request.invocation_id:
+            payload["invocation_id"] = request.invocation_id
         raw = await selected_transport.call(
             sandbox_id,
             DAEMON_OP_READ_FILE,
-            {
-                "request_id": request.request_id,
-                "path": request.path,
-                "caller": request.caller.audit_fields(),
-            },
+            payload,
             timeout=READ_FILE_TIMEOUT_S,
         )
         return read_result_from_daemon_response(raw)

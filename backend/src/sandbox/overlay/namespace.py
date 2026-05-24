@@ -210,8 +210,12 @@ async def _run_tool_call_in_existing_namespace(
         {
             "workspace_root": handle.workspace_root,
             "tool_call": req.to_payload(),
-            "stdout_ref": (handle.upperdir.parent / f"{req.request_id}.stdout").as_posix(),
-            "stderr_ref": (handle.upperdir.parent / f"{req.request_id}.stderr").as_posix(),
+            "stdout_ref": (
+                handle.upperdir.parent / f"{req.invocation_id}.stdout"
+            ).as_posix(),
+            "stderr_ref": (
+                handle.upperdir.parent / f"{req.invocation_id}.stderr"
+            ).as_posix(),
             "policy": TOOL_CALL_COMMAND_POLICY.to_payload(),
             "mount_overlay": False,
         },

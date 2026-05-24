@@ -23,10 +23,12 @@ async def glob(
 
     async def _call() -> GlobResult:
         payload: dict[str, object] = {
-            "request_id": request.request_id,
+            "agent_id": request.caller.agent_id,
             "pattern": request.pattern,
             "caller": request.caller.audit_fields(),
         }
+        if request.invocation_id:
+            payload["invocation_id"] = request.invocation_id
         if request.path is not None:
             payload["path"] = request.path
         raw = await selected_transport.call(

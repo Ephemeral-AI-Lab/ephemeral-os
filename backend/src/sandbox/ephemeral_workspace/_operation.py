@@ -69,7 +69,7 @@ class EphemeralOperationMixin:
     def acquire_operation_overlay(
         self,
         *,
-        request_id: str,
+        invocation_id: str,
         workspace_root: str | None = None,
     ) -> OperationOverlayHandle:
         """Lease the latest snapshot and allocate a private overlay upperdir."""
@@ -80,12 +80,12 @@ class EphemeralOperationMixin:
             / "runtime"
             / "sandbox-overlay-ops"
             / self._runtime_key(self._workspace_ref, self._workspace_root)
-            / f"{safe_request_part(request_id)}-{uuid4().hex[:8]}"
+            / f"{safe_request_part(invocation_id)}-{uuid4().hex[:8]}"
         )
         upperdir = run_dir / "upper"
         workdir = run_dir / "work"
         snapshot = self._layer_stack.prepare_workspace_snapshot(
-            request_id=request_id,
+            request_id=invocation_id,
         )
         lease_id = str(getattr(snapshot, "lease_id"))
         try:

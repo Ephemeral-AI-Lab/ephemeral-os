@@ -14,8 +14,8 @@ DAEMON_OP_READ_FILE = "api.v1.read_file"
 DAEMON_OP_WRITE_FILE = "api.v1.write_file"
 DAEMON_OP_EDIT_FILE = "api.v1.edit_file"
 DAEMON_OP_SHELL = "api.v1.shell"
-DAEMON_OP_CANCEL = "api.v1.cancel"
-DAEMON_OP_HEARTBEAT = "api.v1.heartbeat"
+DAEMON_OP_INVOCATION_CANCEL = "api.v1.cancel"
+DAEMON_OP_INVOCATION_HEARTBEAT = "api.v1.heartbeat"
 DAEMON_OP_INFLIGHT_COUNT = "api.v1.inflight_count"
 DAEMON_OP_GLOB = "api.v1.glob"
 DAEMON_OP_GREP = "api.v1.grep"
@@ -41,12 +41,12 @@ class DaemonSandboxTransport:
 
 
 __all__ = [
-    "DAEMON_OP_CANCEL",
     "DAEMON_OP_EDIT_FILE",
     "DAEMON_OP_GLOB",
     "DAEMON_OP_GREP",
-    "DAEMON_OP_HEARTBEAT",
     "DAEMON_OP_INFLIGHT_COUNT",
+    "DAEMON_OP_INVOCATION_CANCEL",
+    "DAEMON_OP_INVOCATION_HEARTBEAT",
     "DAEMON_OP_READ_FILE",
     "DAEMON_OP_SHELL",
     "DAEMON_OP_WRITE_FILE",

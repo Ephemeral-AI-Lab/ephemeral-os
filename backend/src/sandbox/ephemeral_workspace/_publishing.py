@@ -206,11 +206,11 @@ class EphemeralPublishMixin:
         self,
         *,
         paths: Sequence[str],
-        actor_id: str = "",
+        agent_id: str = "",
         description: str = "plugin workspace edit",
     ) -> ChangesetResult:
         """Publish direct writes made under the daemon overlay workspace root."""
-        del actor_id, description
+        del agent_id, description
         if self._mounted:
             snapshot = self.current_manifest()
             publish = await self.publish_pending_changes(

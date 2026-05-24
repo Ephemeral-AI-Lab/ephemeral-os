@@ -53,7 +53,7 @@ def test_namespace_control_constants_remain_stable() -> None:
 
 def test_command_request_is_namespace_only() -> None:
     request = CommandExecRequest(
-        request_id="req-1",
+        invocation_id="req-1",
         workspace_ref="/tmp/stack",
         workspace_root="/testbed",
         command=("bash", "-lc", "printf ok"),

@@ -22,20 +22,20 @@ PRIVATE_NAMESPACE_MOUNT = "private_namespace"
 class CommandExecRequest:
     """One shell command against a workspace replacement mount."""
 
-    request_id: str
+    invocation_id: str
     workspace_ref: str
     workspace_root: str
     command: tuple[str, ...]
     cwd: str = "."
     env: Mapping[str, str] = field(default_factory=dict)
     timeout_seconds: float | None = None
-    actor_id: str = ""
+    agent_id: str = ""
     description: str = "shell"
 
     def __post_init__(self) -> None:
-        request_id = str(self.request_id).strip()
-        if not request_id:
-            raise ValueError("request_id must not be empty")
+        invocation_id = str(self.invocation_id).strip()
+        if not invocation_id:
+            raise ValueError("invocation_id must not be empty")
         workspace_ref = str(self.workspace_ref).strip()
         if not workspace_ref:
             raise ValueError("workspace_ref must not be empty")
@@ -55,13 +55,13 @@ class CommandExecRequest:
         if not cwd_normalized.startswith("/") and ".." in cwd_normalized.split("/"):
             raise ValueError(f"cwd must not contain '..' segments: {cwd_raw!r}")
 
-        self.request_id = request_id
+        self.invocation_id = invocation_id
         self.workspace_ref = workspace_ref
         self.workspace_root = workspace_root.rstrip("/") or "/"
         self.command = command
         self.cwd = cwd_normalized
         self.env = {str(key): str(value) for key, value in self.env.items()}
-        self.actor_id = str(self.actor_id)
+        self.agent_id = str(self.agent_id)
         self.description = str(self.description or "shell")
 
 

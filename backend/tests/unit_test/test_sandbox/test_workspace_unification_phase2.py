@@ -45,7 +45,7 @@ def test_namespace_child_uses_verb_table_for_uniform_verbs(tmp_path: Path) -> No
     workspace.mkdir()
     (workspace / "hello.txt").write_text("hi\n", encoding="utf-8")
     req = ToolCallRequest(
-        request_id="r1",
+        invocation_id="r1",
         agent_id="agent",
         verb="read_file",
         intent=Intent.READ_ONLY,
@@ -67,7 +67,7 @@ def test_namespace_child_uses_verb_table_for_uniform_verbs(tmp_path: Path) -> No
 
 def test_namespace_child_blocks_write_to_host_denylist(tmp_path: Path) -> None:
     req = ToolCallRequest(
-        request_id="r1",
+        invocation_id="r1",
         agent_id="agent",
         verb="write_file",
         intent=Intent.WRITE_ALLOWED,
@@ -238,7 +238,7 @@ def test_ephemeral_run_tool_call_uses_api_write_for_single_path(
     result = asyncio.run(
         pipeline.run_tool_call(
             ToolCallRequest(
-                request_id="r1",
+                invocation_id="r1",
                 agent_id="agent",
                 verb="write_file",
                 intent=Intent.WRITE_ALLOWED,
@@ -315,7 +315,7 @@ def test_isolated_run_tool_call_uses_existing_handle_overlay(
     result = asyncio.run(
         pipeline.run_tool_call(
             ToolCallRequest(
-                request_id="r1",
+                invocation_id="r1",
                 agent_id="agent",
                 verb="write_file",
                 intent=Intent.WRITE_ALLOWED,

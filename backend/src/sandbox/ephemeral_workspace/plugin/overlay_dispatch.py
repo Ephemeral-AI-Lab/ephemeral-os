@@ -51,9 +51,9 @@ async def run_plugin_op_with_workspace_overlay(
         raise RuntimeError("plugin overlay dispatch requires daemon EphemeralPipeline")
 
     workspace_root = _bound_workspace_root(ctx)
-    request_id = f"plugin:{plugin_name}:{op_name}:{uuid4().hex[:8]}"
+    invocation_id = f"plugin:{plugin_name}:{op_name}:{uuid4().hex[:8]}"
     handle = acquire_overlay(
-        request_id=request_id,
+        invocation_id=invocation_id,
         workspace_root=workspace_root,
     )
     try:
@@ -69,14 +69,14 @@ async def run_plugin_op_with_workspace_overlay(
         )
         publish = await publish_cycle(
             request=CommandExecRequest(
-                request_id=f"{request_id}:publish",
+                invocation_id=f"{invocation_id}:publish",
                 workspace_ref=ctx.layer_stack_root,
                 workspace_root=workspace_root,
                 command=(f"plugin.{plugin_name}.{op_name}",),
                 cwd=".",
                 env={},
                 timeout_seconds=None,
-                actor_id=getattr(ctx.caller, "agent_id", ""),
+                agent_id=getattr(ctx.caller, "agent_id", ""),
                 description=f"plugin.{plugin_name}.{op_name}",
             ),
             upperdir=str(handle.upperdir),

@@ -23,7 +23,7 @@ async def exit_isolated_workspace(
     try:
         async with lifecycle_operation(
             kind="exit_isolated_workspace",
-            actor_id=agent_id,
+            agent_id=agent_id,
             audit_path=os.environ.get("EOS_WORKSPACE_LIFECYCLE_AUDIT_PATH"),
         ) as timings:
             evicted_background_tasks = await _cancel_by_agent(

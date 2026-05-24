@@ -41,6 +41,7 @@ async def test_read_file_dispatches_to_sandbox_daemon(
             "sb-1",
             "api.v1.read_file",
             {
+                "agent_id": "a",
                 "path": "/workspace/a.txt",
                 "caller": {
                     "agent_id": "a",

@@ -83,7 +83,7 @@ async def _apply_with_operation_overlay(
     metadata = getattr(ctx, "metadata", None) or {}
     op_name = str(metadata.get("op_name", "apply_workspace_edit"))
     handle = acquire_overlay(
-        request_id=f"lsp-apply:{op_name}:{uuid4().hex[:8]}",
+        invocation_id=f"lsp-apply:{op_name}:{uuid4().hex[:8]}",
         workspace_root=workspace_root,
     )
     try:
@@ -99,14 +99,14 @@ async def _apply_with_operation_overlay(
             handle=handle,
         )
         request = CommandExecRequest(
-            request_id=f"lsp-apply-{uuid4().hex[:8]}",
+            invocation_id=f"lsp-apply-{uuid4().hex[:8]}",
             workspace_ref=str(getattr(ctx, "layer_stack_root", "")),
             workspace_root=workspace_root,
             command=("lsp.apply_workspace_edit",),
             cwd=".",
             env={},
             timeout_seconds=None,
-            actor_id=getattr(ctx.caller, "agent_id", ""),
+            agent_id=getattr(ctx.caller, "agent_id", ""),
             description="lsp.apply_workspace_edit",
         )
         publish = await publish_cycle(
@@ -205,7 +205,7 @@ def _format_apply_result(
 async def _publish_changed_paths(changed_paths: list[str], ctx: Any) -> Any:
     return await ctx.overlay.publish_workspace_paths(
         paths=tuple(changed_paths),
-        actor_id=getattr(ctx.caller, "agent_id", ""),
+        agent_id=getattr(ctx.caller, "agent_id", ""),
         description="lsp.apply_workspace_edit",
     )
 

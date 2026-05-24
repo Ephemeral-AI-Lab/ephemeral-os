@@ -36,7 +36,7 @@ async def enter_isolated_workspace(
             )
         async with lifecycle_operation(
             kind="enter_isolated_workspace",
-            actor_id=agent_id,
+            agent_id=agent_id,
             audit_path=os.environ.get("EOS_WORKSPACE_LIFECYCLE_AUDIT_PATH"),
         ) as timings:
             manager = await handlers._ensure_manager(  # noqa: SLF001

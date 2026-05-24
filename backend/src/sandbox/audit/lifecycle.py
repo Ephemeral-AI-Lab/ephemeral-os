@@ -22,7 +22,7 @@ class WorkspaceLifecycle:
 async def lifecycle_operation(
     *,
     kind: str,
-    actor_id: str,
+    agent_id: str,
     audit_path: str | None = None,
 ) -> AsyncIterator[dict[str, float]]:
     timings: dict[str, float] = {}
@@ -30,7 +30,7 @@ async def lifecycle_operation(
     _emit(
         audit_path,
         events.WORKSPACE_LIFECYCLE_STARTED,
-        {"kind": kind, "agent_id": actor_id},
+        {"kind": kind, "agent_id": agent_id},
     )
     try:
         yield timings
@@ -41,7 +41,7 @@ async def lifecycle_operation(
             events.WORKSPACE_LIFECYCLE_FAILED,
             {
                 "kind": kind,
-                "agent_id": actor_id,
+                "agent_id": agent_id,
                 "error": type(exc).__name__,
                 "message": str(exc),
                 "timings": dict(timings),
@@ -53,7 +53,7 @@ async def lifecycle_operation(
         _emit(
             audit_path,
             events.WORKSPACE_LIFECYCLE_COMPLETED,
-            {"kind": kind, "agent_id": actor_id, "timings": dict(timings)},
+            {"kind": kind, "agent_id": agent_id, "timings": dict(timings)},
         )
 
 

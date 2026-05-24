@@ -275,11 +275,11 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
         finally:
             mount_inputs.close()
 
-    def _prepare_overlay_snapshot(self, request_id: str) -> _OverlaySnapshot:
+    def _prepare_overlay_snapshot(self, invocation_id: str) -> _OverlaySnapshot:
         if self._layer_stack is None:
             raise RuntimeError("snapshot requires layer_stack")
         snapshot = self._layer_stack.prepare_workspace_snapshot(
-            request_id=request_id,
+            request_id=invocation_id,
         )
         raw_paths = getattr(snapshot, "layer_paths", None)
         lease_id = str(getattr(snapshot, "lease_id", ""))
