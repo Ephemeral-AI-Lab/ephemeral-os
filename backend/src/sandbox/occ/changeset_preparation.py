@@ -71,47 +71,6 @@ class ChangesetPreparer:
             },
         )
 
-    def prepare_single_path_sync(
-        self,
-        change: Change,
-        *,
-        snapshot: Manifest,
-        base_hash_reader: BaseHashLookup | None = None,
-        atomic: bool = False,
-    ) -> PreparedChangeset:
-        """Prepare one path through the same routing rules as batch prepare."""
-        total_start = monotonic_now()
-        route_start = monotonic_now()
-        route, path, message, gitignore_s = self._route_change_timed(
-            change,
-            snapshot=snapshot,
-        )
-        prepared_change = change
-        timings: dict[str, float] = {TimingKey.PREPARE_GITIGNORE: gitignore_s}
-        if route is RouteDecision.GATED and _requires_base_hash(change):
-            base_hash_start = monotonic_now()
-            base_hash = base_hash_reader(path) if base_hash_reader is not None else None
-            timings[TimingKey.PREPARE_SINGLE_PATH_BASE_HASH] = monotonic_now() - base_hash_start
-            prepared_change = _attach_base_hash(change, base_hash)
-        else:
-            timings[TimingKey.PREPARE_SINGLE_PATH_BASE_HASH] = 0.0
-
-        group = PreparedPathGroup(
-            path=path,
-            route=route,
-            changes=(prepared_change,),
-            message=message,
-        )
-        timings[TimingKey.PREPARE_ROUTE_AND_BASE_HASH] = monotonic_now() - route_start
-        timings[TimingKey.PREPARE_SINGLE_PATH_FAST] = timings[TimingKey.PREPARE_ROUTE_AND_BASE_HASH]
-        timings[TimingKey.PREPARE_TOTAL] = monotonic_now() - total_start
-        return PreparedChangeset(
-            snapshot=snapshot,
-            path_groups=(group,),
-            atomic=atomic,
-            timings=timings,
-        )
-
     def _group_by_route(
         self,
         changes: Sequence[Change],
@@ -216,27 +175,7 @@ def _attach_base_hash(change: Change, base_hash: str | None) -> Change:
     if isinstance(change, DeleteChange):
         return change.with_base_hash(base_hash)
     return change
-
-
-def prepare_single_path_changeset(
-    change: Change,
-    *,
-    snapshot: Manifest,
-    gitignore: SnapshotGitignoreMatcher,
-    base_hash_reader: BaseHashLookup | None = None,
-    atomic: bool = False,
-) -> PreparedChangeset:
-    """Prepare one path through the shared router fast branch."""
-    return ChangesetPreparer(gitignore).prepare_single_path_sync(
-        change,
-        snapshot=snapshot,
-        base_hash_reader=base_hash_reader,
-        atomic=atomic,
-    )
-
-
 __all__ = [
     "BaseHashLookup",
     "ChangesetPreparer",
-    "prepare_single_path_changeset",
 ]

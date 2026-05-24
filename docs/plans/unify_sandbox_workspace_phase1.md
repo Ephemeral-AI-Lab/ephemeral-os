@@ -119,7 +119,7 @@ Rationale: 5 lines costs nothing and makes the trichotomy real for any new code 
 
 **4.3.** Move `sandbox/execution/overlay/capture.py` → `sandbox/overlay/capture.py`. `walk_upperdir` lives here.
 
-**4.4.** Move `sandbox/execution/overlay/layout.py` → `sandbox/overlay/layout.py`. **Keep only `LayerPathsLayout`.** DELETE `MaterializeLayout`, the `OverlayLayout` alias, and the `AnyOverlayLayout` union.
+**4.4.** Delete the old overlay layout abstraction. Mount-input validation now lives at the kernel boundary in `sandbox/overlay/kernel_mount.py`; `MaterializeLayout`, `LayerPathsLayout`, the `OverlayLayout` alias, and the `AnyOverlayLayout` union are gone.
 
 **4.5.** Move `sandbox/execution/overlay/capability.py` → `sandbox/overlay/capability.py`. Update `new_mount_api_supported()` from a runtime gate to a **hard startup precondition**: sandbox refuses to boot if new mount API unavailable. Also delete the `EOS_OVERLAY_FORCE_MATERIALIZE=1` kill switch (no longer meaningful).
 
@@ -131,9 +131,9 @@ Phase 3 §6C wires this into CI as a deployment guard.
 
 **4.5.2.** Pre-rollout audit — enumerate ALL known deployment targets (CI runners, staging, production Docker images) and verify kernel versions support the new mount API BEFORE Phase 1 lands. Document audit results in `docs/sandbox/deployment_targets.md`. No surprises post-merge.
 
-**4.5.3.** Add a tombstone-style feature flag `EOS_REQUIRE_NEW_MOUNT_API=1` (default `1`). Flip to `0` during the rollout window to permit fallback (sandbox starts but logs a loud warning). Delete the flag in Phase 3 (Phase 3 §6C.4 asserts deletion). Without this flag, the only rollback path is a `git revert`.
+**4.5.3.** No mount-precondition runtime bypass remains. If a deployment target lacks the new mount API or private namespaces, startup fails closed and rollback is a normal `git revert`.
 
-**4.6.** Move `sandbox/execution/overlay/change_synthesis.py` → `sandbox/overlay/change_synthesis.py`. Keep the raw `OverlayPathChange` logic. **Edit the existing `sandbox/occ/overlay_change_conversion.py`** (Planner F.7 — the file already exists, do NOT "move into"; this is an in-place edit) to add a `source: str = "overlay_capture"` keyword-only parameter so callers can override it (used by Phase 2 §6.1 EphemeralPipeline for typed-write coalescing). Default preserves today's behavior.
+**4.6.** Keep the raw `OverlayPathChange` logic and delete copy-backed change synthesis. **Edit the existing `sandbox/occ/overlay_change_conversion.py`** (Planner F.7 — the file already exists, do NOT "move into"; this is an in-place edit) to add a `source: str = "overlay_capture"` keyword-only parameter so callers can override it (used by Phase 2 §6.1 EphemeralPipeline for typed-write coalescing). Default preserves today's behavior.
 
 **Important — Phase 2 §6.1 enumerates the 4-helper chain.** Threading `source` through `overlay_path_changes_to_occ_changes` requires synchronous edits at 4 sites (see Phase 2 §6.1–§6.4): the function itself, plus `build_overlay_write_change` and `build_overlay_delete_change` in `occ/changeset.py`, plus inline `SymlinkChange`/`OpaqueDirChange` constructors. Phase 1 only stages the parameter on the top-level function with the default; the helper-site edits land in Phase 2 as one atomic commit.
 
@@ -374,7 +374,7 @@ Must return zero hits (those have been corrected per Critic must-fix #1, #6, #10
 - ✅ `sandbox/main_workspace/` exists as a **thin re-export facade** (5-line `__init__.py` re-exporting `LayerStack`, `prepare_workspace_snapshot`, `CommitQueue`, `Change`, `WriteChange`, `DeleteChange`).
 - ✅ `sandbox/ephemeral_workspace/` contains `pipeline.py` (class `EphemeralPipeline`), `shell_job.py`, `shell_contract.py`, `events.py`, `plugin/` subtree, `_execute_command.py` (temporary — deleted in Phase 2 §3.2).
 - ✅ `sandbox/isolated_workspace/` decomposed into 7 modules: `pipeline.py` (class `IsolatedPipeline`), `_types.py`, `_lifecycle.py`, `_gc.py`, `_ttl.py`, `_quota.py`, `_runtime.py`. PLUS original `network.py`, `handlers.py`, `ops_handlers.py` (still present — deleted in Phase 2 §14.3), `scripts/`. **No file >400 lines** post-decomposition (`wc -l` check).
-- ✅ `sandbox/overlay/` exists as a FLAT top-level package containing `handle.py`, `lifecycle.py`, `namespace.py`, `namespace_child.py`, `kernel_mount.py`, `new_mount_api.py`, `capability.py`, `layout.py` (LayerPathsLayout only), `capture.py`, `change_synthesis.py`, `subprocess_runner.py`, `scratch.py`, `path_change.py`. No `strategies/` subfolder.
+- ✅ `sandbox/overlay/` exists as a FLAT top-level package containing `handle.py`, `lifecycle.py`, `namespace.py`, `namespace_child.py`, `kernel_mount.py`, `new_mount_api.py`, `capability.py`, `capture.py`, `subprocess_runner.py`, `scratch.py`, `path_change.py`. No `strategies/` subfolder.
 - ✅ `sandbox/overlay/handle.py::OverlayHandle` exists with `_destroyed: bool = False` field; docstring documents it as a **mutable state-bearing handle** with idempotent destroy under per-handle lock; documents `namespace_pid` lifecycle (iws-populated, ephemeral-None).
 - ✅ `sandbox/overlay/lifecycle.py` exposes `create`, `destroy` (idempotent), `capture_changes`.
 - ✅ `sandbox/_shared/tool_primitives/` contains read/write/edit/grep/glob/shell/file_ops/capture.
@@ -382,10 +382,10 @@ Must return zero hits (those have been corrected per Critic must-fix #1, #6, #10
 - ✅ `sandbox/execution/` directory does not exist.
 - ✅ `sandbox/plugin/` directory does not exist (moved under `ephemeral_workspace/plugin/`).
 - ✅ `copy_backed`, `_workspace_rewrite`, `ExecutionStrategy`, `MountMode`, `MaterializeLayout`, `should_fall_back`, `EOS_OVERLAY_FORCE_MATERIALIZE` all deleted from the codebase.
-- ✅ `new_mount_api_supported()` is a hard startup precondition — sandbox refuses to boot without it (unless `EOS_REQUIRE_NEW_MOUNT_API=0` rollout flag is set).
+- ✅ `new_mount_api_supported()` is a hard startup precondition — sandbox refuses to boot without it.
 - ✅ `scripts/verify_overlay_preconditions.py` exists and exits non-zero on degraded kernels (Phase 3 §6C wires into CI).
 - ✅ Pre-rollout audit `docs/sandbox/deployment_targets.md` exists with kernel-version verification for every deployment target.
-- ✅ `EOS_REQUIRE_NEW_MOUNT_API` tombstone flag implemented; deletion deferred to Phase 3 §6C.4.
+- ✅ The old mount-precondition tombstone flag has been deleted; rollback is a code revert.
 - ✅ Parity corpus committed at `tests/mock/sandbox/_fixtures/tool_primitives_parity_corpus.json` with ≥40 cases **scoped to ephemeral mode + daemon-handler bodies, pre-unification**. iws-mode verbs are NOT in the corpus (functional upgrade, validated in Phase 3 `behavior_upgrade/`).
 - ✅ All existing tests pass byte-equivalently.
 - ✅ Grep audit returns zero hits for the legacy module names AND for the corrected planning-doc references checked by the token script in Step 8.

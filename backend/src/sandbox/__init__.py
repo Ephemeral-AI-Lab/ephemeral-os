@@ -1,4 +1,4 @@
-"""Sandbox package — public API, host, daemon, provider, and workspaces.
+"""Sandbox package - public API, host, daemon, provider, and workspaces.
 
 Sub-packages:
 - ``sandbox.api``      — public verbs (lifecycle, read/write/edit/shell, raw_exec)
@@ -12,6 +12,16 @@ Sub-packages:
 The public API surface is documented in ``docs/sandbox/api_surface.md``.
 """
 
-from sandbox import ephemeral_workspace, isolated_workspace, main_workspace
+from __future__ import annotations
 
 __all__ = ["main_workspace", "ephemeral_workspace", "isolated_workspace"]
+
+
+def __getattr__(name: str) -> object:
+    if name not in __all__:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    from importlib import import_module
+
+    module = import_module(f"{__name__}.{name}")
+    globals()[name] = module
+    return module

@@ -50,7 +50,6 @@ def test_runtime_bundle_contains_unified_snapshot_runtime_without_ndjson() -> No
         names = set(tar.getnames())
 
     assert "sandbox/overlay/capture.py" in names
-    assert "sandbox/overlay/change_synthesis.py" in names
     assert "sandbox/overlay/path_change.py" in names
     assert "sandbox/ephemeral_workspace/shell_contract.py" in names
     assert "sandbox/ephemeral_workspace/_execute_command.py" not in names
@@ -69,6 +68,8 @@ def test_runtime_bundle_contains_unified_snapshot_runtime_without_ndjson() -> No
     assert "sandbox/overlay/invoker.py" not in names
     assert "sandbox/overlay/factory.py" not in names
     assert "sandbox/overlay/command.py" not in names
+    assert "sandbox/overlay/change_synthesis.py" not in names
+    assert "sandbox/overlay/layout.py" not in names
     assert all(not name.startswith("sandbox/host/") for name in names)
     assert all(not name.startswith("sandbox/provider/") for name in names)
     assert all(not name.startswith("sandbox/testing/") for name in names)

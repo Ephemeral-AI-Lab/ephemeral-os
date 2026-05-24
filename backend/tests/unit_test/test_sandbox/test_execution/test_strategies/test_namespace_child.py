@@ -18,7 +18,6 @@ def _base_payload(tmp_path: Path, **overrides: object) -> dict:
         "stdout_ref": str(tmp_path / "stdout.bin"),
         "stderr_ref": str(tmp_path / "stderr.bin"),
         "timings_ref": str(tmp_path / "timings.json"),
-        "control_ref": str(tmp_path / "control.json"),
     }
     base.update(overrides)
     return base
@@ -36,14 +35,6 @@ def test_payload_request_workspace_root_is_path(tmp_path: Path) -> None:
     request = _payload_request(payload)
 
     assert request.workspace_root == Path("/testbed")
-
-
-def test_payload_request_optional_control_ref_none(tmp_path: Path) -> None:
-    payload = _base_payload(tmp_path)
-    payload.pop("control_ref")
-    request = _payload_request(payload)
-
-    assert request.control_ref is None
 
 
 def test_payload_request_raises_on_missing_layer_paths(tmp_path: Path) -> None:

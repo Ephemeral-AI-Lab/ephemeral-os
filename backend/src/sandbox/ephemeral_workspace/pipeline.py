@@ -270,7 +270,6 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
                 layer_paths=mount_inputs.layer_paths,
                 upperdir=mount_inputs.upperdir,
                 workdir=mount_inputs.workdir,
-                pass_fds=mount_inputs.fds,
             )
         finally:
             mount_inputs.close()

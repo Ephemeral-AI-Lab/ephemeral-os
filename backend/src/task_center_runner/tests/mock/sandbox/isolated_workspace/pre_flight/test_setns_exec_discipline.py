@@ -78,7 +78,6 @@ def test_setns_overlay_mount_reuses_shared_mount_validation() -> None:
         ):
             kernel_mount_imports.update(alias.name for alias in node.names)
     assert {"mount_overlay", "validate_mount_inputs"} <= kernel_mount_imports
-    assert "pass_fds=mount_inputs.fds" in source
     assert "mount_inputs.close()" in source
 
 

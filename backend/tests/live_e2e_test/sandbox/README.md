@@ -157,8 +157,9 @@ available by env var; tests are provider-agnostic.
 | `EOS_LIVE_E2E_IMAGE`     | yes for Docker  | Docker live-e2e image. Daytona may also use `sandbox.daytona.default_image` / `EPHEMERALOS_SANDBOX_DEFAULT_IMAGE`. |
 | `EOS_DOCKER_PRIVILEGED`  | no              | `1` swaps `DEFAULT_RUN_FLAGS` (CAP_SYS_ADMIN + seccomp/apparmor unconfined) for `--privileged`. |
 
-On macOS, Docker Desktop may force some execs into copy-backed mode because its
-VM does not surface the host namespaces the overlay slice relies on.
+On macOS, Docker Desktop may not surface the host namespace features the overlay
+slice relies on. Run `scripts/verify_overlay_preconditions.py` inside the image
+before starting live tests.
 
 **Image-bake requirements** (operator responsibility):
 

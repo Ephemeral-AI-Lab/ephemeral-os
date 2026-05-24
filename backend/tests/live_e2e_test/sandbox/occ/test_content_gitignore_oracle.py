@@ -48,8 +48,7 @@ assert ignored == {
     "logs/Error.LOG": True,
     "src/app.py": False,
 }
-filtered = oracle.filter_ignored(paths)
-assert filtered == {path for path, is_ignored in ignored.items() if is_ignored}
+filtered = {path for path, is_ignored in ignored.items() if is_ignored}
 
 _emit(label, started, before, {
     "ignored": ignored,

@@ -3,11 +3,9 @@
 12 cells: ``file_size_bytes ∈ {64, 4096, 65536} × c ∈ {1, 5, 10, 20}``.
 Each cell launches ``c`` concurrent shell calls (gather_with_barrier).
 Each call writes a calibrated ``K`` files of the chosen size into its own
-subdirectory under ``tracked/load/phase09_szc/`` so calls don't collide
-on path. 64 KiB cells use ``K=32`` because the live command view is
-copy-backed in a 64 MiB ``/dev/shm`` environment; ``20 * 64 * 64 KiB``
-overcommits that ceiling before command-exec can capture and release the
-per-call upperdirs.
+subdirectory under ``tracked/load/phase09_szc/`` so calls don't collide on path.
+64 KiB cells use ``K=32`` because constrained live runners can exhaust the
+scratch budget before command-exec captures and releases the per-call upperdirs.
 
 The test follows the per-cell streaming + resume contract from
 ``progressive-live-test-tiers-design-20260508.md`` §§4-5: each cell's

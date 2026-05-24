@@ -18,7 +18,7 @@ from sandbox.occ.content_hashing import infer_snapshot_base_hash
 from sandbox.occ.gitignore import GitignoreMatcher
 from sandbox.occ.maintenance import MaintenancePolicy
 from sandbox.occ.ports import OccLayerStackPort
-from sandbox.daemon.async_bridge import run_sync_in_executor
+from sandbox._shared.async_bridge import run_sync_in_executor
 
 AUTO_SQUASH_MAX_DEPTH = 100
 
@@ -38,13 +38,13 @@ class OccService:
     ) -> None:
         self._snapshot_reader = layer_stack
         self._preparer = preparer or ChangesetPreparer(gitignore)
-        self._transaction = transaction or CommitTransaction(
+        transaction = transaction or CommitTransaction(
             snapshot_reader=layer_stack,
             staging=layer_stack,
             publisher=layer_stack,
         )
         self._owns_commit_queue = commit_queue is None
-        self._commit_queue = commit_queue or CommitQueue(self._transaction)
+        self._commit_queue = commit_queue or CommitQueue(transaction)
         if self._owns_commit_queue:
             self._commit_queue.start()
         self._maintenance: MaintenancePolicy | None = maintenance

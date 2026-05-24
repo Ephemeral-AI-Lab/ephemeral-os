@@ -6,7 +6,6 @@ import os
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
-from sandbox.layer_stack.changes import normalize_layer_path
 from sandbox.occ.changeset import (
     build_overlay_delete_change,
     build_overlay_write_change,
@@ -63,29 +62,14 @@ def overlay_path_changes_to_occ_changes(
             changes.append(
                 OpaqueDirChange(
                     path=path_change.path,
-                    kept_children=frozenset(_kept_children_for(path_change.path, path_changes)),
                     source=source,
                 )
             )
             continue
+        raise ValueError(
+            f"unsupported overlay path change kind for {path_change.path}: {path_change.kind!r}"
+        )
     return tuple(changes)
-
-
-def _kept_children_for(
-    rel: str,
-    path_changes: Sequence[OverlayPathChange],
-) -> set[str]:
-    rel_norm = normalize_layer_path(rel, allow_root=True)
-    prefix = f"{rel_norm}/" if rel_norm else ""
-    kept: set[str] = set()
-    for item in path_changes:
-        item_path = normalize_layer_path(item.path, allow_root=True)
-        if item_path == rel_norm or not item_path.startswith(prefix):
-            continue
-        rest = item_path[len(prefix) :]
-        if rest:
-            kept.add(rest.split("/", 1)[0])
-    return kept
 
 
 __all__ = [

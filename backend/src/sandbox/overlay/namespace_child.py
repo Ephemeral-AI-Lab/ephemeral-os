@@ -1,28 +1,18 @@
-"""Helper executed inside a private mount namespace.
-
-This is command-exec's workspace replacement helper. The older
-``sandbox.overlay.namespace`` path is for snapshot-overlay requests and stays
-separate because command-exec must capture an upperdir for OCC submission.
-
-Mount mechanics live in ``sandbox.overlay.kernel_mount``; this
-module owns payload parsing, error reporting, and the sequencing around
-``run_command_to_refs``.
-"""
+"""Helper executed inside a private mount namespace."""
 
 from __future__ import annotations
 
 import json
 import os
-import subprocess
 import sys
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import asdict, dataclass, is_dataclass
 from pathlib import Path
 from typing import Any
 
+from sandbox._shared.clock import monotonic_now
+from sandbox._shared.env_policy import CommandExecPolicy
 from sandbox._shared.models import Intent, ToolCallRequest
-from sandbox._shared.env_policy import (
-    CommandExecPolicy,
-)
 from sandbox._shared.tool_primitives import VERB_TABLE, shell
 from sandbox.overlay.kernel_mount import (
     MountInputs,
@@ -30,15 +20,6 @@ from sandbox.overlay.kernel_mount import (
     umount,
     validate_mount_inputs,
 )
-from sandbox.overlay.namespace import (
-    NAMESPACE_INFRA_EXIT_CODE,
-)
-from sandbox.overlay.subprocess_runner import (
-    child_cpu_times,
-    record_child_cpu_delta,
-    run_command_to_refs,
-)
-from sandbox._shared.clock import monotonic_now
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -54,91 +35,18 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def execute(payload: dict[str, Any]) -> int:
-    if "tool_call" in payload:
-        return _execute_tool_call_payload(payload)
-
-    timings: dict[str, float] = {}
-    try:
-        request = _payload_request(payload)
-        request.stdout_ref.parent.mkdir(parents=True, exist_ok=True)
-        request.stderr_ref.parent.mkdir(parents=True, exist_ok=True)
-    except KeyError as exc:
-        return _fail_bad_payload(
-            payload,
-            timings,
-            f"missing payload key: {exc.args[0]}",
-        )
-    except Exception as exc:
-        return _fail_bad_payload(payload, timings, str(exc))
-
-    mount_inputs: MountInputs | None = None
-    try:
-        mount_inputs = validate_mount_inputs(
-            workspace_root=request.workspace_root,
-            layer_paths=request.layer_paths,
-            upperdir=request.upperdir,
-            workdir=request.workdir,
-            policy=request.policy,
-        )
-        mount_start = monotonic_now()
-        mount_overlay(
-            workspace_root=mount_inputs.workspace_root,
-            layer_paths=mount_inputs.layer_paths,
-            upperdir=mount_inputs.upperdir,
-            workdir=mount_inputs.workdir,
-            pass_fds=mount_inputs.fds,
-        )
-        timings["command_exec.mount_workspace_s"] = monotonic_now() - mount_start
-    except subprocess.CalledProcessError as exc:
-        stderr = str(exc.stderr or "").strip()
-        stdout = str(exc.stdout or "").strip()
-        detail = stderr or stdout
-        message = f"{exc}; {detail}" if detail else str(exc)
-        return _fail(request, timings, "mount_failed", message, recoverable=True)
-    except ValueError as exc:
-        return _fail(request, timings, "validation_failed", str(exc))
-    except OSError as exc:
-        return _fail(request, timings, "setup_failed", str(exc))
-    except Exception as exc:
-        return _fail(request, timings, "unexpected_setup_failed", str(exc))
-    finally:
-        if mount_inputs is not None:
-            mount_inputs.close()
-
-    try:
-        run_start = monotonic_now()
-        cpu_start = child_cpu_times()
-        env_raw = payload.get("env") or {}
-        env = (
-            {str(key): str(value) for key, value in env_raw.items()}
-            if isinstance(env_raw, dict)
-            else {}
-        )
-        timeout_raw = payload.get("timeout_seconds")
-        timeout = float(timeout_raw) if timeout_raw is not None else None
-        exit_code = run_command_to_refs(
-            command=[str(part) for part in payload["command"]],
-            declared_workspace_root=request.workspace_root,
-            mounted_workspace_root=request.workspace_root,
-            cwd=str(payload.get("cwd") or "."),
-            env=env,
-            timeout_seconds=timeout,
-            stdout_ref=request.stdout_ref,
-            stderr_ref=request.stderr_ref,
-            policy=request.policy,
-        )
-        timings["command_exec.run_command_s"] = monotonic_now() - run_start
-        record_child_cpu_delta(timings, cpu_start)
-        return exit_code
-    except Exception as exc:
-        with request.stderr_ref.open("ab") as stderr_file:
-            stderr_file.write(
-                _json_error_line("command_failed", str(exc)).encode()
-            )
-        return 126
-    finally:
-        umount(request.workspace_root)
-        _write_timings(request.timings_ref, timings)
+    result_ref_raw = payload.get("result_ref")
+    if not result_ref_raw:
+        sys.stderr.write("namespace helper payload is missing result_ref\n")
+        return 2
+    result_ref = Path(str(result_ref_raw))
+    result = execute_tool_payload_safely(payload)
+    result_ref.parent.mkdir(parents=True, exist_ok=True)
+    result_ref.write_text(
+        json.dumps(result, separators=(",", ":"), sort_keys=True),
+        encoding="utf-8",
+    )
+    return 0
 
 
 @dataclass(frozen=True)
@@ -150,7 +58,6 @@ class _NamespaceRequest:
     stdout_ref: Path
     stderr_ref: Path
     timings_ref: Path
-    control_ref: Path | None
     policy: CommandExecPolicy
 
 
@@ -169,100 +76,24 @@ def _payload_request(payload: dict[str, Any]) -> _NamespaceRequest:
         stdout_ref=Path(str(payload["stdout_ref"])),
         stderr_ref=Path(str(payload["stderr_ref"])),
         timings_ref=Path(str(payload["timings_ref"])),
-        control_ref=(
-            Path(str(payload["control_ref"]))
-            if payload.get("control_ref")
-            else None
-        ),
         policy=CommandExecPolicy.from_payload(
             payload["policy"] if isinstance(payload.get("policy"), dict) else {}
         ),
     )
 
 
-def _write_error(path: Path, error_kind: str, detail: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(_json_error_line(error_kind, detail), encoding="utf-8")
-
-
-def _json_error_line(error_kind: str, detail: str) -> str:
-    return json.dumps(
-        {"error_kind": error_kind, "detail": detail},
-        separators=(",", ":"),
-        sort_keys=True,
-    ) + "\n"
-
-
-def _write_timings(path: Path, timings: dict[str, float]) -> None:
-    path.write_text(
-        json.dumps(timings, separators=(",", ":"), sort_keys=True),
-        encoding="utf-8",
-    )
-
-
-def _fail_bad_payload(
+def execute_tool_payload_safely(
     payload: dict[str, Any],
-    timings: dict[str, float],
-    detail: str,
-) -> int:
-    try:
-        stderr_ref = _resolve_fallback_ref(payload, "stderr_ref")
-        timings_ref = _resolve_fallback_ref(payload, "timings_ref")
-    except ValueError as exc:
-        sys.stderr.write(f"bad namespace helper payload: {detail}; {exc}\n")
-        return 2
-    _write_error(stderr_ref, "bad_payload", detail)
-    _write_timings(timings_ref, timings)
-    return 126
-
-
-def _resolve_fallback_ref(payload: dict[str, Any], key: str) -> Path:
-    raw = payload.get(key)
-    if not raw:
-        raise ValueError(f"payload is missing {key}; no fallback ref available")
-    path = Path(str(raw))
-    path.parent.mkdir(parents=True, exist_ok=True)
-    return path
-
-
-def _fail(
-    request: _NamespaceRequest,
-    timings: dict[str, float],
-    error_kind: str,
-    detail: str,
     *,
-    recoverable: bool = False,
-) -> int:
-    _write_error(request.stderr_ref, error_kind, detail)
-    if recoverable and request.control_ref is not None:
-        request.control_ref.parent.mkdir(parents=True, exist_ok=True)
-        request.control_ref.write_text(
-            json.dumps(
-                {
-                    "detail": detail,
-                    "error_kind": error_kind,
-                },
-                separators=(",", ":"),
-                sort_keys=True,
-            )
-            + "\n",
-            encoding="utf-8",
-        )
-    _write_timings(request.timings_ref, timings)
-    return NAMESPACE_INFRA_EXIT_CODE if recoverable else 126
-
-
-_HOST_DENYLIST_PREFIXES = ("/etc/", "/var/", "/proc/", "/sys/", "/boot/")
-
-
-def _execute_tool_call_payload(payload: dict[str, Any]) -> int:
-    timings: dict[str, float] = {}
-    result_ref = Path(str(payload["result_ref"]))
+    timings: dict[str, float] | None = None,
+) -> dict[str, Any]:
+    local_timings = timings if timings is not None else {}
     mount_inputs: MountInputs | None = None
     request: _NamespaceRequest | None = None
+    mount_overlay_requested = payload.get("mount_overlay", True)
     try:
-        request = _payload_request(payload)
-        if payload.get("mount_overlay", True):
+        if mount_overlay_requested:
+            request = _payload_request(payload)
             mount_inputs = validate_mount_inputs(
                 workspace_root=request.workspace_root,
                 layer_paths=request.layer_paths,
@@ -276,41 +107,25 @@ def _execute_tool_call_payload(payload: dict[str, Any]) -> int:
                 layer_paths=mount_inputs.layer_paths,
                 upperdir=mount_inputs.upperdir,
                 workdir=mount_inputs.workdir,
-                pass_fds=mount_inputs.fds,
             )
-            timings["workspace.mount_s"] = monotonic_now() - mount_start
-        result = execute_tool_payload(payload, timings=timings)
-        result_ref.parent.mkdir(parents=True, exist_ok=True)
-        result_ref.write_text(
-            json.dumps(result, separators=(",", ":"), sort_keys=True),
-            encoding="utf-8",
-        )
-        return 0
+            local_timings["workspace.mount_s"] = monotonic_now() - mount_start
+        return execute_tool_payload(payload, timings=local_timings)
     except Exception as exc:
-        result_ref.parent.mkdir(parents=True, exist_ok=True)
-        result_ref.write_text(
-            json.dumps(
-                {
-                    "success": False,
-                    "status": "error",
-                    "error": {
-                        "kind": type(exc).__name__,
-                        "message": str(exc),
-                    },
-                    "timings": timings,
-                },
-                separators=(",", ":"),
-                sort_keys=True,
-            ),
-            encoding="utf-8",
-        )
-        return 0
+        return {
+            "success": False,
+            "status": "error",
+            "error": {
+                "kind": type(exc).__name__,
+                "message": str(exc),
+            },
+            "timings": local_timings,
+        }
     finally:
         if mount_inputs is not None:
             mount_inputs.close()
-        if request is not None and payload.get("mount_overlay", True):
+        if request is not None and mount_overlay_requested:
             umount(request.workspace_root)
-            _write_timings(request.timings_ref, timings)
+            _write_timings(request.timings_ref, local_timings)
 
 
 def execute_tool_payload(
@@ -319,9 +134,10 @@ def execute_tool_payload(
     timings: dict[str, float] | None = None,
 ) -> dict[str, Any]:
     req = ToolCallRequest.from_payload(payload["tool_call"])
+    workspace_root = str(payload.get("workspace_root") or "/testbed")
     old_cwd = os.getcwd()
     try:
-        os.chdir(str(payload.get("workspace_root") or "/testbed"))
+        os.chdir(workspace_root)
         denied = _check_host_denylist(req)
         if denied is not None:
             return denied
@@ -329,7 +145,7 @@ def execute_tool_payload(
         if req.verb == "shell":
             result = shell.run(
                 _shell_argv(req.args),
-                workspace_root=str(payload.get("workspace_root") or "/testbed"),
+                workspace_root=workspace_root,
                 cwd=str(req.args.get("cwd") or "."),
                 env=_string_mapping(req.args.get("env")),
                 timeout_seconds=_optional_float(
@@ -357,6 +173,9 @@ def execute_tool_payload(
         if timings:
             result_payload["timings"].update(timings)
     return result_payload
+
+
+_HOST_DENYLIST_PREFIXES = ("/etc/", "/var/", "/proc/", "/sys/", "/boot/")
 
 
 def _check_host_denylist(req: ToolCallRequest) -> dict[str, Any] | None:
@@ -408,14 +227,34 @@ def _optional_float(raw: object) -> float | None:
 
 
 def _jsonable_result(value: Any) -> dict[str, Any]:
-    from sandbox.overlay.namespace import jsonable_result
+    if is_dataclass(value) and not isinstance(value, type):
+        return {str(k): _jsonable(v) for k, v in asdict(value).items()}
+    if isinstance(value, Mapping):
+        return {str(k): _jsonable(v) for k, v in value.items()}
+    raise TypeError(f"tool primitive returned non-object result: {type(value).__name__}")
 
-    return jsonable_result(value)
+
+def _jsonable(value: Any) -> Any:
+    if is_dataclass(value) and not isinstance(value, type):
+        return {str(k): _jsonable(v) for k, v in asdict(value).items()}
+    if isinstance(value, Mapping):
+        return {str(k): _jsonable(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_jsonable(v) for v in value]
+    return value
+
+
+def _write_timings(path: Path, timings: dict[str, float]) -> None:
+    path.write_text(
+        json.dumps(timings, separators=(",", ":"), sort_keys=True),
+        encoding="utf-8",
+    )
 
 
 __all__ = [
     "execute",
     "execute_tool_payload",
+    "execute_tool_payload_safely",
     "main",
 ]
 

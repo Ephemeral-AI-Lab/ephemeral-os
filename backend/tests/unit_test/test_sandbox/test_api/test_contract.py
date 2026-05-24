@@ -28,6 +28,7 @@ _EXPECTED_API_ROOT_ENTRIES = {
     "_raw_exec.py",
     "tool",
     "protocol.py",
+    "request_lifecycle.py",
     "timeouts.py",
     "transport.py",
 }

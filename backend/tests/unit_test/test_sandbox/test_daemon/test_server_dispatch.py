@@ -46,4 +46,7 @@ async def test_registered_handler_dispatches_through_op_table() -> None:
     timings = response.get("timings", {})
     assert "runtime.boot_to_dispatch_s" in timings
     assert "runtime.dispatch_s" in timings
+    assert len(calls) == 1
+    invocation_id = calls[0].pop("invocation_id")
+    assert invocation_id
     assert calls == [{"value": 3}]

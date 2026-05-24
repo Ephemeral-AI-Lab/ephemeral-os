@@ -99,6 +99,28 @@ async def test_ttl_reaper_ignores_foreground_invocation() -> None:
     await asyncio.gather(task, return_exceptions=True)
 
 
+async def test_env_overrides_use_positive_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("EOS_INFLIGHT_TTL_S", "10")
+    monkeypatch.setenv("EOS_INFLIGHT_REAPER_INTERVAL_S", "2")
+
+    registry = InFlightInvocationRegistry()
+
+    assert registry._ttl_seconds == 10.0  # noqa: SLF001
+    assert registry._reaper_interval_s == 2.0  # noqa: SLF001
+
+
+async def test_bad_env_overrides_fall_back_to_defaults(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("EOS_INFLIGHT_TTL_S", "-1")
+    monkeypatch.setenv("EOS_INFLIGHT_REAPER_INTERVAL_S", "not-a-number")
+
+    registry = InFlightInvocationRegistry()
+
+    assert registry._ttl_seconds == 300.0  # noqa: SLF001
+    assert registry._reaper_interval_s == 30.0  # noqa: SLF001
+
+
 async def test_cancel_handler_targets_payload_invocation_id(monkeypatch: pytest.MonkeyPatch) -> None:
     task = asyncio.create_task(asyncio.sleep(60))
     registry = InFlightInvocationRegistry(ttl_seconds=60, reaper_interval_s=60)

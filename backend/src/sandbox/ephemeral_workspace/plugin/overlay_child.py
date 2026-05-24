@@ -58,7 +58,6 @@ async def _run(payload: dict[str, Any]) -> int:
             layer_paths=mount_inputs.layer_paths,
             upperdir=mount_inputs.upperdir,
             workdir=mount_inputs.workdir,
-            pass_fds=mount_inputs.fds,
         )
         result = await _invoke_plugin_handler(request)
         request.output_ref.write_text(

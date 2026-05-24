@@ -63,35 +63,18 @@ def test_bump_nofile_does_not_raise_on_oserror() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_log_mount_api_capability_calls_probe_once(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("EOS_REQUIRE_NEW_MOUNT_API", "0")
+def test_log_mount_api_capability_checks_mount_api() -> None:
     call_count = 0
 
-    def counting_probe() -> bool:
+    def supported_probe() -> bool:
         nonlocal call_count
         call_count += 1
-        return False
+        return True
 
-    with patch(
-        "sandbox.overlay.capability.probe_supported",
-        side_effect=counting_probe,
-    ):
-        import sandbox.overlay.capability as cap_mod
-        cap_mod.probe_supported.cache_clear() if hasattr(cap_mod.probe_supported, "cache_clear") else None
+    with patch("sandbox.overlay.capability.new_mount_api_supported", side_effect=supported_probe):
+        _log_mount_api_capability()
 
-    import sandbox.overlay.new_mount_api as api_mod
-    api_mod.probe_supported.cache_clear()
-
-    with patch(
-        "sandbox.overlay.new_mount_api.probe_supported",
-        side_effect=counting_probe,
-    ):
-        # _log_mount_api_capability calls new_mount_api_supported which calls probe_supported
-        with patch("sandbox.overlay.capability.probe_supported", side_effect=counting_probe):
-            _log_mount_api_capability()
-
-    # probe_supported was called (at least once — may be cached from module import)
-    assert call_count >= 0  # weak: we mainly test it doesn't raise
+    assert call_count == 2
 
 
 def test_log_mount_api_capability_accepts_supported_kernel() -> None:
@@ -99,18 +82,7 @@ def test_log_mount_api_capability_accepts_supported_kernel() -> None:
         _log_mount_api_capability()
 
 
-def test_log_mount_api_capability_allows_explicit_legacy_escape_hatch(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("EOS_REQUIRE_NEW_MOUNT_API", "0")
-    with patch("sandbox.overlay.capability.new_mount_api_supported", return_value=False):
-        _log_mount_api_capability()
-
-
-def test_log_mount_api_capability_requires_new_mount_api_by_default(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.delenv("EOS_REQUIRE_NEW_MOUNT_API", raising=False)
+def test_log_mount_api_capability_requires_new_mount_api() -> None:
     with patch("sandbox.overlay.capability.new_mount_api_supported", return_value=False):
         with pytest.raises(RuntimeError, match="new mount API"):
             _log_mount_api_capability()

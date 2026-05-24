@@ -44,7 +44,6 @@ def main(argv: list[str] | None = None) -> int:
             layer_paths=mount_inputs.layer_paths,
             upperdir=mount_inputs.upperdir,
             workdir=mount_inputs.workdir,
-            pass_fds=mount_inputs.fds,
         )
         return 0
     except Exception as exc:

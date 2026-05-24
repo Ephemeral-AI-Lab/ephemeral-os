@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from sandbox.ephemeral_workspace._utils import _drop_transient_lowerdir
-from sandbox.layer_stack.paths import TRANSIENT_LOWERDIR_DIR
+from sandbox.ephemeral_workspace.transient import TRANSIENT_LOWERDIR_DIR
 
 
 def test_drop_transient_lowerdir_removes_matching_path_under_storage_root(

@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-import logging
-import os
-import shutil
-import tempfile
 import threading
 from contextlib import AbstractContextManager, nullcontext
 from collections.abc import Iterator, Sequence
@@ -16,6 +12,11 @@ from uuid import uuid4
 from sandbox.layer_stack.paths import remove_path, resolve_storage_path
 from sandbox.layer_stack.storage_lock import acquire_storage_writer_lock
 from sandbox.layer_stack.changes import LayerChange
+from sandbox.layer_stack.commit_staging import (
+    CommitStagingArea,
+    allocate_commit_staging,
+    drop_commit_staging,
+)
 from sandbox.layer_stack.publisher import LayerPublisher
 from sandbox.layer_stack.lease import LeaseRegistry, WorkspaceLease
 from sandbox.layer_stack.squash import (
@@ -35,21 +36,8 @@ from sandbox.layer_stack.manifest import (
 )
 from sandbox.layer_stack.transaction import LayerStackTransaction
 from sandbox.layer_stack.view import MergedView, SymlinkLookup
-from sandbox.layer_stack.workspace_base import build_workspace_base
+from sandbox.layer_stack.workspace_flush import flush_to_workspace
 from sandbox._shared.clock import monotonic_now
-
-logger = logging.getLogger(__name__)
-
-
-def _safe_request_part(value: str) -> str:
-    safe = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in value)
-    return safe[:48] or "request"
-
-
-@dataclass(frozen=True)
-class CommitStagingArea:
-    staging_id: str
-    path: Path
 
 
 @dataclass(frozen=True)
@@ -223,20 +211,10 @@ class LayerStack:
         )
 
     def allocate_commit_staging(self, request_id: str) -> CommitStagingArea:
-        parent = self.storage_root / STAGING_DIR
-        parent.mkdir(parents=True, exist_ok=True)
-        path = Path(
-            tempfile.mkdtemp(
-                prefix=f"occ-commit-{_safe_request_part(request_id)}-",
-                dir=str(parent),
-            )
-        )
-        return CommitStagingArea(staging_id=path.name, path=path)
+        return allocate_commit_staging(self.storage_root, request_id)
 
     def drop_commit_staging(self, staging_id: str) -> None:
-        if not staging_id:
-            return
-        shutil.rmtree(self.storage_root / STAGING_DIR / staging_id, ignore_errors=True)
+        drop_commit_staging(self.storage_root, staging_id)
 
     def publish_changes(self, changes: Sequence[LayerChange]) -> Manifest:
         """Publish trusted/test-origin layer changes.
@@ -322,54 +300,19 @@ class LayerStack:
         storage, and rebuilds a fresh base layer from the workspace bytes.
         """
         with self._storage_write_guard():
-            total_start = monotonic_now()
-            workspace = Path(workspace_root)
-            if not workspace.is_dir():
-                raise ValueError(f"workspace_root does not exist: {workspace}")
-            with self._lock:
-                if self._leases.active_count() > 0:
-                    raise RuntimeError("flush_to_workspace blocked by active leases")
-                active = self._manifest_store.read()
-
-            materialize_parent = self.storage_root / "runtime" / "flush"
-            materialize_parent.mkdir(parents=True, exist_ok=True)
-            materialized = Path(
-                tempfile.mkdtemp(prefix="merged-", dir=str(materialize_parent))
+            result = flush_to_workspace(
+                storage_root=self.storage_root,
+                workspace_root=workspace_root,
+                manifest_store=self._manifest_store,
+                view=self._view,
+                leases=self._leases,
+                lock=self._lock,
+                timings=timings,
             )
-            try:
-                materialize_start = monotonic_now()
-                self._view.materialize(materialized, active, share_inodes=False)
-                if timings is not None:
-                    timings["layer_stack.flush.materialize_s"] = (
-                        monotonic_now() - materialize_start
-                    )
-
-                replace_start = monotonic_now()
-                _replace_directory_contents(workspace, materialized)
-                if timings is not None:
-                    timings["layer_stack.flush.replace_workspace_s"] = (
-                        monotonic_now() - replace_start
-                    )
-
-                reset_start = monotonic_now()
-                with self._lock:
-                    _clear_storage_root_for_flush(self.storage_root)
-                    build_workspace_base(
-                        workspace_root=workspace,
-                        layer_stack_root=self.storage_root,
-                    )
-                    self._view = MergedView(self.storage_root)
-                    self._publisher = LayerPublisher(self.storage_root)
-                    self._squash = SquashService(self.storage_root)
-                    new_manifest = self._manifest_store.read()
-                if timings is not None:
-                    timings["layer_stack.flush.rebuild_base_s"] = (
-                        monotonic_now() - reset_start
-                    )
-                    timings["layer_stack.flush.total_s"] = monotonic_now() - total_start
-                return new_manifest
-            finally:
-                shutil.rmtree(materialized, ignore_errors=True)
+            self._view = result.view
+            self._publisher = result.publisher
+            self._squash = result.squash
+            return result.manifest
 
     def _storage_write_guard(self) -> AbstractContextManager[object]:
         if self._storage_writer_lock is None:
@@ -401,19 +344,3 @@ class LayerStack:
         if self._storage_writer_lock is not None:
             self._storage_writer_lock.close()
             self._storage_writer_lock = None
-
-
-def _replace_directory_contents(destination: Path, source: Path) -> None:
-    destination.mkdir(parents=True, exist_ok=True)
-    for child in destination.iterdir():
-        remove_path(child)
-    for child in source.iterdir():
-        os.replace(child, destination / child.name)
-
-
-def _clear_storage_root_for_flush(storage_root: Path) -> None:
-    storage_root.mkdir(parents=True, exist_ok=True)
-    for child in storage_root.iterdir():
-        if child.name == ".storage-writer.lock":
-            continue
-        remove_path(child)

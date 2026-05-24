@@ -44,7 +44,6 @@ def main(argv: list[str] | None = None) -> int:
             layer_paths=mount_inputs.layer_paths,
             upperdir=mount_inputs.upperdir,
             workdir=mount_inputs.workdir,
-            pass_fds=mount_inputs.fds,
         )
         changed_paths = _apply_edit_payload(
             request.edit,

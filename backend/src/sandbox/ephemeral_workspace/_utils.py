@@ -8,7 +8,7 @@ from pathlib import Path
 import shutil
 
 from sandbox.ephemeral_workspace.events import PathChange
-from sandbox.layer_stack.paths import TRANSIENT_LOWERDIR_DIR
+from sandbox.ephemeral_workspace.transient import TRANSIENT_LOWERDIR_DIR
 
 
 def foreign_watch_interval_s() -> float:

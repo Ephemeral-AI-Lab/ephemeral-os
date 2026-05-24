@@ -1,11 +1,8 @@
-"""Unit tests for kernel_mount.py with the new mount API."""
+"""Unit tests for kernel_mount.py with the new mount API wrappers."""
 
 from __future__ import annotations
 
-import errno
-import sys
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -14,38 +11,15 @@ from sandbox.overlay.kernel_mount import (
     mount_overlay,
     validate_mount_inputs,
 )
-from sandbox.overlay.new_mount_api import (
-    SYS_fsconfig,
-    SYS_fsmount,
-    SYS_fsopen,
-    SYS_move_mount,
-)
-
-_IS_LINUX = sys.platform == "linux"
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _make_libc_mock(return_value: int = 0, errno_val: int = 0) -> MagicMock:
-    import ctypes
-
-    mock = MagicMock()
-
-    def fake_syscall(*args, **kwargs):
-        ctypes.set_errno(errno_val)
-        return return_value
-
-    mock.syscall.side_effect = fake_syscall
-    return mock
 
 
 def test_mount_overlay_raises_on_missing_libc(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(km, "_get_libc", lambda: None)
+    def missing_libc(_fsname: bytes) -> int:
+        raise OSError("libc not found")
+
+    monkeypatch.setattr(km, "fsopen", missing_libc)
     with pytest.raises(OSError, match="libc not found"):
         mount_overlay(
             workspace_root=Path("/workspace"),
@@ -62,16 +36,21 @@ def test_mount_overlay_calls_fsopen_then_fsconfig_per_layer(
     → fsconfig(CMD_CREATE) → fsmount → move_mount sequence."""
     calls: list[tuple[object, ...]] = []
 
-    def fake_syscall(*args: object) -> int:
-        calls.append(args)
-        return 3  # fd value
-
-    mock = MagicMock()
-    mock.syscall.side_effect = fake_syscall
-    monkeypatch.setattr(km, "_get_libc", lambda: mock)
-
     closed: list[int] = []
     monkeypatch.setattr(km.os, "close", lambda fd: closed.append(fd))
+    monkeypatch.setattr(km, "fsopen", lambda fsname: calls.append(("fsopen", fsname)) or 3)
+    monkeypatch.setattr(
+        km,
+        "fsconfig_string",
+        lambda fd, key, value: calls.append(("fsconfig_string", fd, key, value)),
+    )
+    monkeypatch.setattr(km, "fsconfig_create", lambda fd: calls.append(("fsconfig_create", fd)))
+    monkeypatch.setattr(km, "fsmount", lambda fd: calls.append(("fsmount", fd)) or 4)
+    monkeypatch.setattr(
+        km,
+        "move_mount",
+        lambda fd, target: calls.append(("move_mount", fd, target)),
+    )
 
     mount_overlay(
         workspace_root=Path("/workspace"),
@@ -80,20 +59,17 @@ def test_mount_overlay_calls_fsopen_then_fsconfig_per_layer(
         workdir=Path("/scratch/work"),
     )
 
-    syscall_numbers = [c[0] for c in calls]
-    # First call: fsopen
-    assert syscall_numbers[0] == SYS_fsopen
-    # lowerdir+ calls for each layer
-    lowerdir_calls = [c for c in calls if c[0] == SYS_fsconfig and len(c) > 3 and c[3] == b"lowerdir+"]
-    assert len(lowerdir_calls) == 2
-    # upperdir and workdir calls
-    upperdir_calls = [c for c in calls if c[0] == SYS_fsconfig and len(c) > 3 and c[3] == b"upperdir"]
-    assert len(upperdir_calls) == 1
-    workdir_calls = [c for c in calls if c[0] == SYS_fsconfig and len(c) > 3 and c[3] == b"workdir"]
-    assert len(workdir_calls) == 1
-    # fsmount and move_mount present
-    assert SYS_fsmount in syscall_numbers
-    assert SYS_move_mount in syscall_numbers
+    assert calls == [
+        ("fsopen", b"overlay"),
+        ("fsconfig_string", 3, b"lowerdir+", b"/storage/L1"),
+        ("fsconfig_string", 3, b"lowerdir+", b"/storage/L2"),
+        ("fsconfig_string", 3, b"upperdir", b"/scratch/upper"),
+        ("fsconfig_string", 3, b"workdir", b"/scratch/work"),
+        ("fsconfig_create", 3),
+        ("fsmount", 3),
+        ("move_mount", 4, b"/workspace"),
+    ]
+    assert closed == [4, 3]
 
 
 def test_mount_overlay_iterates_layers_in_natural_order(
@@ -102,14 +78,15 @@ def test_mount_overlay_iterates_layers_in_natural_order(
     """First element of layer_paths must be the first lowerdir+ call (top priority)."""
     lowerdir_values: list[bytes] = []
 
-    def fake_syscall(*args: object) -> int:
-        if args[0] == SYS_fsconfig and len(args) > 3 and args[3] == b"lowerdir+":
-            lowerdir_values.append(args[4])  # type: ignore[arg-type]
-        return 3
+    def record_fsconfig(_fd: int, key: bytes, value: bytes) -> None:
+        if key == b"lowerdir+":
+            lowerdir_values.append(value)
 
-    mock = MagicMock()
-    mock.syscall.side_effect = fake_syscall
-    monkeypatch.setattr(km, "_get_libc", lambda: mock)
+    monkeypatch.setattr(km, "fsopen", lambda _fsname: 3)
+    monkeypatch.setattr(km, "fsconfig_string", record_fsconfig)
+    monkeypatch.setattr(km, "fsconfig_create", lambda _fd: None)
+    monkeypatch.setattr(km, "fsmount", lambda _fd: 4)
+    monkeypatch.setattr(km, "move_mount", lambda _fd, _target: None)
     monkeypatch.setattr(km.os, "close", lambda fd: None)
 
     layer_paths = (
@@ -124,18 +101,18 @@ def test_mount_overlay_iterates_layers_in_natural_order(
         workdir=Path("/scratch/work"),
     )
 
-    import os
-
-    assert lowerdir_values[0] == os.fsencode("/storage/newest")
-    assert lowerdir_values[1] == os.fsencode("/storage/middle")
-    assert lowerdir_values[2] == os.fsencode("/storage/oldest")
+    assert lowerdir_values == [
+        km.os.fsencode("/storage/newest"),
+        km.os.fsencode("/storage/middle"),
+        km.os.fsencode("/storage/oldest"),
+    ]
 
 
 def test_mount_overlay_propagates_fsopen_errno(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    libc_mock = _make_libc_mock(-1, errno.EPERM)
-    monkeypatch.setattr(km, "_get_libc", lambda: libc_mock)
+    expected = OSError(1, "operation not permitted")
+    monkeypatch.setattr(km, "fsopen", lambda _fsname: (_ for _ in ()).throw(expected))
 
     with pytest.raises(OSError) as exc_info:
         mount_overlay(
@@ -144,7 +121,7 @@ def test_mount_overlay_propagates_fsopen_errno(
             upperdir=Path("/scratch/upper"),
             workdir=Path("/scratch/work"),
         )
-    assert exc_info.value.errno == errno.EPERM
+    assert exc_info.value is expected
 
 
 # ---------------------------------------------------------------------------

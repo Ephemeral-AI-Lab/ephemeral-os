@@ -280,7 +280,7 @@
 <ol>
 <li><strong>LayerStack</strong> — an append-only, content-addressed log of immutable filesystem deltas. State versions are integers; layers never mutate after publication.</li>
 <li><strong>OCC</strong> — Optimistic Concurrency Control. Agents prepare changes lock-free, then collide-or-commit at apply time against the live manifest.</li>
-<li><strong>Command Execution</strong> — leases a snapshot from LayerStack, mounts it via overlayfs (or copy-backed emulation), runs a shell command, captures changes, submits them through OCC.</li>
+<li><strong>Command Execution</strong> — leases a snapshot from LayerStack, mounts it via overlayfs, runs a shell command, captures changes, submits them through OCC.</li>
 <li><strong>Provider / Daemon / API</strong> — the runtime fabric: provider (Docker / Daytona) creates the sandbox, daemon runs inside it, API is the orchestrator-side facade.</li>
 </ol>
 
@@ -902,7 +902,7 @@ def _hash_mismatch(self, state: _PathStageState, base_hash: str | None) -&gt; Fi
 
 <p><code>OverlayPathChange</code> <span class="file-ref">path_change.py:16-43</span> is the result-side dataclass for a single mutation: <code>kind</code> in <code>write|delete|symlink|opaque_dir</code>, <code>path</code> (workspace-relative), optional <code>content_path</code> (file backing the new content), optional <code>final_hash</code> (precomputed SHA-256).</p>
 
-<p>Two detection strategies share output but differ wildly in mechanism:</p>
+<p>One detection path remains:</p>
 
 <h4>4.4a Kernel path — <code>walk_upperdir()</code></h4>
 <p><span class="file-ref">overlay/capture.py:19-145</span>. <code>os.walk(topdown=True)</code> over <code>upperdir</code>; emits opaque-dir markers before children. Detects:</p>
@@ -913,14 +913,11 @@ def _hash_mismatch(self, state: _PathStageState, base_hash: str | None) -&gt; Fi
 <li>regular file → <code>write</code></li>
 </ul>
 
-<h4>4.4b Copy path — <code>synthesize_writes()</code></h4>
-<p><span class="file-ref">overlay/change_synthesis.py:25-96</span>. Diff lowerdir vs merged tree post-run, then emit pseudo-upperdir entries (whiteouts for missing-in-merged, real files for new/changed), then run <code>walk_upperdir()</code> on the synthesized upperdir. Same output type either way.</p>
-
 <h3 id="ce-runner">4.5 Runner / Service / Subprocess <a class="anchor" href="#ce-runner">§</a></h3>
 
 <ul>
 <li><strong><code>execution.service.execute_command()</code></strong> <span class="file-ref">service.py:44-185</span> — the top-level async orchestrator. Owns the lease, the run dir, the capture call, the OCC commit, the lease release, and the cleanup. Tracks ~15 timing keys including <code>command_exec.mount_workspace_s</code>, <code>command_exec.run_command_s</code>, <code>command_exec.capture_upperdir_s</code>, <code>command_exec.occ_apply_s</code>, <code>command_exec.release_snapshot_s</code>.</li>
-<li><strong><code>runner.run_workspace_replaced_command()</code></strong> <span class="file-ref">runner.py:32-67</span> — strategy dispatcher. Probes <code>PRIVATE_NAMESPACE</code> availability via <code>detect_private_mount_namespace()</code>; falls through to <code>COPY_BACKED</code> on failure or sentinel exit 125 (mount_failed).</li>
+<li><strong><code>overlay.namespace.run_in_namespace()</code></strong> — namespace-only tool-call runner. Probes private namespace availability at startup and fails closed when overlay mount preconditions are missing.</li>
 <li><strong><code>subprocess_runner.subprocess_to_refs()</code></strong> <span class="file-ref">subprocess_runner.py:56-109</span> — the lowest level. <code>start_new_session=True</code> so a single SIGKILL takes down the whole process tree; on timeout sends SIGKILL to the group and either raises <code>TimeoutExpired</code> or returns the provided <code>timeout_exit_code</code>.</li>
 </ul>
 
@@ -932,8 +929,7 @@ def _hash_mismatch(self, state: _PathStageState, base_hash: str | None) -&gt; Fi
  1.  Agent ──shell(command, cwd, timeout)──> API
  2.  API   ──DAEMON_OP_SHELL──> DC
  3.  DC    ──dispatch──> HOV
- 4.  HOV   ──execute_command(req, occ_apply=…,
-                              mount_mode=COPY_BACKED for snapshot op)──> ES
+ 4.  HOV   ──execute_command(req, occ_apply=…)──> ES
  5.  ES    ──prepare_workspace_snapshot(request_id)──> LS
  6.  LS    ──lease(lease_id, lowerdir, manifest_v)──> ES
  7.  ES    ──build OverlayLayout{workspace_root, base=lower,
@@ -942,28 +938,23 @@ def _hash_mismatch(self, state: _PathStageState, base_hash: str | None) -&gt; Fi
  8.  ES    ──run_sync_in_executor(run_workspace_replaced_command)──> Run
  9.  Run   ──detect + select strategy──> Strat
 
- Branch A — PRIVATE_NAMESPACE
-   10a. Strat ──write JSON payload to disk
-   11a. Strat ──spawn `unshare -Urm python -m
+ Namespace path
+   10. Strat ──write JSON payload to disk
+   11. Strat ──spawn `unshare -Urm python -m
                        sandbox.overlay.namespace_child`
         ─ validate mount inputs (O_NOFOLLOW fd handles)
         ─ mount -t overlay overlay -o lower,upper,work workspace_root
         ─ run cmd, umount
 
- Branch B — COPY_BACKED (fallback or explicit)
-   10b. Strat ──shutil.copytree(lower → merged, symlinks=True)
-   11b. Strat ──rewrite argv/env paths /workspace → /tmp/.../workspace
-
 12.  Strat ──subprocess.Popen([bash, -lc, ...])
-              start_new_session=True──> Sub
+             start_new_session=True──> Sub
 13.  Sub   ──exit_code, stdout/stderr piped to ref files──> Strat
-14.  (if COPY_BACKED) Strat ──synthesize_writes(merged, base, into=writes)
-15.  Strat ──ShellProcessResult──> Run
-16.  Run   ──return──> ES
-17.  ES    ──walk_upperdir(spec.writes)──> Cap
-18.  Cap   ──tuple[OverlayPathChange, ...]──> ES
+14.  Strat ──ShellProcessResult──> Run
+15.  Run   ──return──> ES
+16.  ES    ──walk_upperdir(spec.writes)──> Cap
+17.  Cap   ──tuple[OverlayPathChange, ...]──> ES
 
-19.  (if occ_apply=True)
+18.  (if occ_apply=True)
      ES  ──overlay_path_changes_to_occ_changes
             → apply_changeset(snapshot=lease.manifest)──> OCC
      OCC ──ChangesetResult(published_v=N+1)──> ES
@@ -1086,52 +1077,40 @@ def _hash_mismatch(self, state: _PathStageState, base_hash: str | None) -&gt; Fi
   └────────────┬────────────────────────────────────────────────────┘
                v
   ┌─────────────────────────────────────────────────────────────────┐
-  │ exit with command exit_code,                                    │
-  │   or NAMESPACE_INFRA_EXIT_CODE = 125 on recoverable mount fail  │
+  │ exit with command exit_code or structured namespace error       │
   └─────────────────────────────────────────────────────────────────┘</div>
 
-<p>Falling back: on exit 125 with <code>error_kind=mount_failed</code> sentinel, <code>runner.py</code> retries with <code>CopyBackedStrategy</code> <span class="file-ref">runner.py:59-66</span>.</p>
+<p>There is no copy-backed fallback. Mount setup failures return structured errors and sandbox startup fails closed when mount preconditions are missing.</p>
 
-<h3 id="ov-copy">5.3 COPY_BACKED flow <a class="anchor" href="#ov-copy">§</a></h3>
+<h3 id="ov-capture-flow">5.3 Upperdir capture flow <a class="anchor" href="#ov-capture-flow">§</a></h3>
 
 <div class="mermaid">  ┌─────────────────────────────────────────────────────────┐
-  │ Strategy.run                                            │
+  │ namespace_child                                         │
   └────────────┬────────────────────────────────────────────┘
                v
   ┌─────────────────────────────────────────────────────────┐
-  │ mkdir writes/  work/  merged/                           │
+  │ mount overlay workspace_root                            │
   └────────────┬────────────────────────────────────────────┘
                v
   ┌─────────────────────────────────────────────────────────┐
-  │ shutil.copytree(lowerdir → merged, symlinks=True)       │
+  │ subprocess_to_refs cwd=mounted workspace                │
+  │   writes land in overlay upperdir                       │
   └────────────┬────────────────────────────────────────────┘
                v
   ┌─────────────────────────────────────────────────────────┐
-  │ Rewrite argv + env:                                     │
-  │   /workspace → /tmp/&lt;run&gt;/workspace                     │
-  │   PWD / OLDPWD / WORKSPACE_DIR                          │
-  └────────────┬────────────────────────────────────────────┘
-               v
-  ┌─────────────────────────────────────────────────────────┐
-  │ subprocess_to_refs cwd=merged                           │
-  │   writes mutate merged tree in-place                    │
-  └────────────┬────────────────────────────────────────────┘
-               v
-  ┌─────────────────────────────────────────────────────────┐
-  │ synthesize_writes:                                      │
-  │   diff merged vs lowerdir                               │
-  │   emit whiteouts + real files into writes/              │
+  │ walk_upperdir:                                          │
+  │   read kernel overlay markers from writes/              │
   └────────────┬────────────────────────────────────────────┘
                v
   ┌─────────────────────────────────────────────────────────┐
   │ return ShellProcessResult                               │
   └─────────────────────────────────────────────────────────┘</div>
 
-<p>The path rewrite step is what lets caller-provided code that references <code>/workspace</code> still work even though the actual mount point is <code>/tmp/&lt;run&gt;/workspace</code> — <code>strategies/_workspace_rewrite.py</code> swaps in both argv and PWD/OLDPWD env keys.</p>
+<p>Workspace commands run against the mounted workspace root, and captured changes come directly from the overlay upperdir.</p>
 
 <h3 id="ov-capture">5.4 Capture walk <a class="anchor" href="#ov-capture">§</a></h3>
 
-<p>Both flows funnel into <code>walk_upperdir()</code>, which is a depth-first os.walk over the upperdir (real overlay upperdir, or copy-synthesized one). The invariant is &ldquo;opaque-dir marker before children&rdquo; — so consumers can safely apply opaque first, knowing whiteouts inside the dir become redundant.</p>
+<p>The namespace flow funnels into <code>walk_upperdir()</code>, which is a depth-first os.walk over the real overlay upperdir. The invariant is &ldquo;opaque-dir marker before children&rdquo; — so consumers can safely apply opaque first, knowing whiteouts inside the dir become redundant.</p>
 
 <div class="box-diagram"><pre>
 upperdir/

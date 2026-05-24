@@ -103,13 +103,17 @@ async def test_daemon_uses_tcp_endpoint_before_thin_client(
     )
 
     assert response == {"success": True, "timings": {}}
-    assert seen_tcp == [
-        (
-            endpoint,
-            '{"op":"api.read_file","args":{"path":"a"}}',
-            15,
-        )
-    ]
+    assert len(seen_tcp) == 1
+    seen_endpoint, payload, seen_timeout = seen_tcp[0]
+    assert seen_endpoint == endpoint
+    assert seen_timeout == 15
+    envelope = json.loads(payload)
+    invocation_id = envelope.pop("invocation_id")
+    assert invocation_id
+    assert envelope == {
+        "op": "api.read_file",
+        "args": {"path": "a", "invocation_id": invocation_id},
+    }
 
 
 async def test_daemon_tcp_endpoint_falls_back_to_thin_client_on_connect_failure(

@@ -119,20 +119,9 @@ class SymlinkChange(Change):
 
 @dataclass(frozen=True)
 class OpaqueDirChange(Change):
-    """Prune children of path not in ``kept_children``."""
+    """Prune lower-layer children of a directory."""
 
     source: ChangeSource = "overlay_capture"
-    kept_children: frozenset[str] = field(default_factory=frozenset)
-
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        normalized: set[str] = set()
-        for value in self.kept_children:
-            child = str(value).strip("/")
-            if not child or "/" in child or child in {".", ".."}:
-                raise ValueError(f"opaque dir kept child must be direct: {value!r}")
-            normalized.add(child)
-        object.__setattr__(self, "kept_children", frozenset(normalized))
 
 
 class FileStatus(str, Enum):

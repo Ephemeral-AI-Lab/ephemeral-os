@@ -4,51 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from sandbox.ephemeral_workspace.shell_contract import CommandExecRequest
 from sandbox.overlay import kernel_mount
-from sandbox.overlay.layout import LayerPathsLayout
-from sandbox.overlay.namespace import NAMESPACE_CONTROL_REF, NAMESPACE_INFRA_EXIT_CODE
-
-
-def test_layer_paths_mount_spec_rejects_paths_outside_scratch_root(
-    tmp_path: Path,
-) -> None:
-    layer_root = tmp_path / "layers"
-    layer = layer_root / "L1"
-    layer.mkdir(parents=True)
-    with pytest.raises(
-        ValueError,
-        match="writes must be strictly under scratch_root",
-    ):
-        LayerPathsLayout(
-            workspace_root="/testbed",
-            layer_paths=(str(layer),),
-            layer_storage_root=str(layer_root),
-            writes="/tmp/not-owned",
-            kernel_scratch=str(tmp_path / "work"),
-            scratch_root=str(tmp_path),
-        )
-
-
-def test_layer_paths_mount_spec_rejects_layer_outside_storage_root(
-    tmp_path: Path,
-) -> None:
-    with pytest.raises(ValueError, match="must be under layer_storage_root"):
-        LayerPathsLayout(
-            workspace_root="/testbed",
-            layer_paths=("/etc/passwd",),
-            layer_storage_root=str(tmp_path / "layers"),
-            writes=str(tmp_path / "upper"),
-            kernel_scratch=str(tmp_path / "work"),
-            scratch_root=str(tmp_path),
-        )
-
-
-def test_namespace_control_constants_remain_stable() -> None:
-    assert NAMESPACE_CONTROL_REF == "namespace-control.json"
-    assert NAMESPACE_INFRA_EXIT_CODE == 125
 
 
 def test_command_request_is_namespace_only() -> None:

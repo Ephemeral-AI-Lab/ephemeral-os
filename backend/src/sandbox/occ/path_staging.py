@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Literal
 
 from sandbox.layer_stack.changes import (
@@ -116,7 +117,7 @@ _GATED_PROFILE = _StagingRouteProfile(
 
 @dataclass
 class _PathStageState:
-    content: bytes
+    content: bytes | None
     initial_exists: bool
     final_kind: FinalLayerChangeKind
     symlink_target: str | None = None
@@ -126,6 +127,13 @@ class _PathStageState:
     @property
     def exists(self) -> bool:
         return self.final_kind != "delete"
+
+    def materialize_content(self) -> bytes:
+        if self.content is None:
+            if self.final_content_path is None:
+                raise ValueError("write content is not materialized")
+            self.content = Path(self.final_content_path).read_bytes()
+        return self.content
 
 
 class _PathGroupStager:
@@ -215,7 +223,10 @@ class _PathGroupStager:
             mismatch = self._hash_mismatch(state, change.base_hash)
             if mismatch is not None:
                 return FileResult(path=path, status=mismatch, message="content changed")
-            state.content = bytes(change.final_content)
+            if change.content_path is not None and change.precomputed_hash is not None:
+                state.content = None
+            else:
+                state.content = bytes(change.final_content)
             state.final_kind = "write"
             state.symlink_target = None
             state.final_content_path = change.content_path
@@ -244,7 +255,7 @@ class _PathGroupStager:
                     status=self._profile.missing_file_status,
                     message="file does not exist",
                 )
-            edit_result = apply_edit_content(path, state.content, change)
+            edit_result = apply_edit_content(path, state.materialize_content(), change)
             if isinstance(edit_result, FileResult):
                 return edit_result
             state.content = edit_result
@@ -283,7 +294,17 @@ class _PathGroupStager:
         if not self._profile.check_hash or self._hasher is None:
             return None
         expected = base_hash or None
-        current = self._hasher.hash_current(state.content, exists=state.exists)
+        if (
+            state.final_kind == "write"
+            and state.content is None
+            and state.final_precomputed_hash is not None
+        ):
+            current = state.final_precomputed_hash
+        else:
+            current = self._hasher.hash_current(
+                state.materialize_content() if state.exists else None,
+                exists=state.exists,
+            )
         if current != expected:
             return FileStatus.ABORTED_VERSION
         return None
@@ -305,8 +326,6 @@ class _PathGroupStager:
                 and state.final_content_path is not None
                 and state.final_precomputed_hash is not None
             ):
-                # Pass the in-memory bytes so the stager's small-file path
-                # skips re-reading content_path from disk.
                 return (
                     stage_write_from_path(
                         path,
@@ -315,7 +334,7 @@ class _PathGroupStager:
                         state.content,
                     ),
                 )
-            return (stage_write(path, state.content),)
+            return (stage_write(path, state.materialize_content()),)
         if state.final_kind == "delete" and state.initial_exists:
             return (DeleteLayerChange(path=path),)
         return None

@@ -6,6 +6,5 @@ when to publish captured changes.
 """
 
 from sandbox.overlay.capture import walk_upperdir
-from sandbox.overlay.layout import LayerPathsLayout
 
-__all__ = ["LayerPathsLayout", "walk_upperdir"]
+__all__ = ["walk_upperdir"]

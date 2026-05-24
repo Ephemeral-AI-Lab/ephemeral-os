@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import asyncio
 
-from sandbox.daemon.async_bridge import (
+from sandbox._shared.async_bridge import (
     DEFAULT_RUN_SYNC_TIMEOUT_SECONDS,
     run_sync,
 )

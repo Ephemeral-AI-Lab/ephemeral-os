@@ -50,8 +50,6 @@ class TimingKey(str, Enum):
     PREPARE_GROUP_BY_ROUTE = "occ.prepare.group_by_route_s"
     PREPARE_GROUPS = "occ.prepare.prepare_groups_s"
     PREPARE_ROUTE_AND_BASE_HASH = "occ.prepare.route_and_base_hash_s"
-    PREPARE_SINGLE_PATH_BASE_HASH = "occ.prepare.single_path_base_hash_s"
-    PREPARE_SINGLE_PATH_FAST = "occ.prepare.single_path_fast_s"
     PREPARE_TOTAL = "occ.prepare.total_s"
     SERIAL_BATCH_SIZE = "occ.serial.batch_size"
     SERIAL_CAS_ATTEMPTS = "occ.serial.cas_attempts"

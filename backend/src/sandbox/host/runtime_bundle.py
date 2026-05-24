@@ -215,7 +215,7 @@ def _runtime_bundle_bytes() -> bytes:
             "events.py",
             "pipeline.py",
             "shell_contract.py",
-            "shell_job.py",
+            "transient.py",
         ):
             _add_if_exists(
                 tar,

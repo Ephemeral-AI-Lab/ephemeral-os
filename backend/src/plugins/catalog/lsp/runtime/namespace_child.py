@@ -70,7 +70,6 @@ def _mount_and_exec(request: _Request, mount_inputs: MountInputs) -> None:
             layer_paths=mount_inputs.layer_paths,
             upperdir=mount_inputs.upperdir,
             workdir=mount_inputs.workdir,
-            pass_fds=mount_inputs.fds,
         )
     finally:
         mount_inputs.close()

@@ -131,7 +131,7 @@ def test_tracked_opaque_dir_overlay_change_stages_storage_change(
     opaque_group = PreparedPathGroup(
         path=".omc/results",
         route=RouteDecision.GATED,
-        changes=(OpaqueDirChange(path=".omc/results", kept_children=frozenset()),),
+        changes=(OpaqueDirChange(path=".omc/results"),),
     )
 
     opaque_result, opaque_delta = merge.stage_group(

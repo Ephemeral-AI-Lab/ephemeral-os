@@ -59,8 +59,8 @@ def test_special_change_kinds_consult_gitignore_before_routing() -> None:
         [
             SymlinkChange(path="bin/data.dat", target="/tmp/data"),
             SymlinkChange(path="ignored-link", target="/tmp/data"),
-            OpaqueDirChange(path="cache", kept_children=frozenset({"keep"})),
-            OpaqueDirChange(path="pkg", kept_children=frozenset({"keep"})),
+            OpaqueDirChange(path="cache"),
+            OpaqueDirChange(path="pkg"),
         ],
         snapshot=None,
         options=CommitOptions(),

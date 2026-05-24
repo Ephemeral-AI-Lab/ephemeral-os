@@ -63,4 +63,3 @@ def test_overlay_path_changes_to_occ_changes_converts_changes(tmp_path) -> None:
     assert isinstance(changes[2], SymlinkChange)
     assert changes[2].target == "/target"
     assert isinstance(changes[3], OpaqueDirChange)
-    assert changes[3].kept_children == frozenset({"keep.py"})

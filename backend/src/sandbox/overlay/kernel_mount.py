@@ -20,15 +20,11 @@ from sandbox._shared.env_policy import (
     CommandExecPolicy,
 )
 from sandbox.overlay.new_mount_api import (
-    AT_FDCWD,
-    FSCONFIG_CMD_CREATE,
-    FSCONFIG_SET_STRING,
-    MOVE_MOUNT_F_EMPTY_PATH,
-    SYS_fsconfig,
-    SYS_fsmount,
-    SYS_fsopen,
-    SYS_move_mount,
-    _get_libc,
+    fsconfig_create,
+    fsconfig_string,
+    fsmount,
+    fsopen,
+    move_mount,
 )
 
 
@@ -52,73 +48,22 @@ def mount_overlay(
     layer_paths: tuple[Path, ...],
     upperdir: Path,
     workdir: Path,
-    pass_fds: tuple[int, ...] = (),
 ) -> None:
     """Mount an overlay filesystem using the new mount API (fsopen/fsconfig/fsmount).
 
     layer_paths must be ordered newest-first (first element = highest priority lower).
     """
-    libc = _get_libc()
-    if libc is None:
-        raise OSError("libc not found; cannot call fsopen")
-
-    import ctypes
-
     fsfd: int = -1
     mfd: int = -1
     try:
-        fsfd = libc.syscall(SYS_fsopen, b"overlay", 0)
-        if fsfd < 0:
-            err = ctypes.get_errno()
-            raise OSError(err, os.strerror(err), "fsopen(overlay)")
-
+        fsfd = fsopen(b"overlay")
         for layer in layer_paths:
-            layer_bytes = os.fsencode(str(layer))
-            ret = libc.syscall(
-                SYS_fsconfig, fsfd, FSCONFIG_SET_STRING, b"lowerdir+", layer_bytes, 0
-            )
-            if ret < 0:
-                err = ctypes.get_errno()
-                raise OSError(err, os.strerror(err), f"fsconfig lowerdir+={layer}")
-
-        upper_bytes = os.fsencode(str(upperdir))
-        ret = libc.syscall(
-            SYS_fsconfig, fsfd, FSCONFIG_SET_STRING, b"upperdir", upper_bytes, 0
-        )
-        if ret < 0:
-            err = ctypes.get_errno()
-            raise OSError(err, os.strerror(err), "fsconfig upperdir")
-
-        work_bytes = os.fsencode(str(workdir))
-        ret = libc.syscall(
-            SYS_fsconfig, fsfd, FSCONFIG_SET_STRING, b"workdir", work_bytes, 0
-        )
-        if ret < 0:
-            err = ctypes.get_errno()
-            raise OSError(err, os.strerror(err), "fsconfig workdir")
-
-        ret = libc.syscall(SYS_fsconfig, fsfd, FSCONFIG_CMD_CREATE, None, None, 0)
-        if ret < 0:
-            err = ctypes.get_errno()
-            raise OSError(err, os.strerror(err), "fsconfig CMD_CREATE")
-
-        mfd = libc.syscall(SYS_fsmount, fsfd, 0, 0)
-        if mfd < 0:
-            err = ctypes.get_errno()
-            raise OSError(err, os.strerror(err), "fsmount")
-
-        target_bytes = os.fsencode(str(workspace_root))
-        ret = libc.syscall(
-            SYS_move_mount,
-            mfd,
-            b"",
-            AT_FDCWD,
-            target_bytes,
-            MOVE_MOUNT_F_EMPTY_PATH,
-        )
-        if ret < 0:
-            err = ctypes.get_errno()
-            raise OSError(err, os.strerror(err), f"move_mount -> {workspace_root}")
+            fsconfig_string(fsfd, b"lowerdir+", os.fsencode(str(layer)))
+        fsconfig_string(fsfd, b"upperdir", os.fsencode(str(upperdir)))
+        fsconfig_string(fsfd, b"workdir", os.fsencode(str(workdir)))
+        fsconfig_create(fsfd)
+        mfd = fsmount(fsfd)
+        move_mount(mfd, os.fsencode(str(workspace_root)))
     finally:
         if mfd >= 0:
             with suppress(OSError):

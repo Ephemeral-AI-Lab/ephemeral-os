@@ -162,6 +162,13 @@ def test_plugin_gate_blocks_open_isolated_workspace(monkeypatch) -> None:
     assert blocked is not None
     assert blocked["error"]["kind"] == "forbidden_in_isolated_workspace"
 
+    blocked = dispatcher._check_plugin_block(
+        {"caller": {"agent_id": "agent"}},
+        "plugin.demo.run",
+    )
+    assert blocked is not None
+    assert blocked["error"]["kind"] == "forbidden_in_isolated_workspace"
+
 
 def test_ephemeral_run_tool_call_uses_api_write_for_single_path(
     tmp_path: Path,

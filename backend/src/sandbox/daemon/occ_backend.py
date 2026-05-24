@@ -21,7 +21,7 @@ from sandbox.occ.client import OccClient
 from sandbox.occ.gitignore import SnapshotGitignoreOracle
 from sandbox.occ.maintenance import AutoSquashMaintenancePolicy
 from sandbox.occ.service import AUTO_SQUASH_MAX_DEPTH, OccService
-from sandbox.daemon.service.layer_stack_client import LayerStackClient
+from sandbox.occ.layer_stack_client import LayerStackClient
 from sandbox.main_workspace.workspace_binding import RuntimeWorkspaceBindingReader
 from sandbox.daemon.workspace_server import get_layer_stack_manager
 
@@ -79,13 +79,21 @@ def build_occ_backend(layer_stack_root: str) -> OccBackend:
         gitignore=gitignore,
         manager=manager,
     )
+    close_backend: OccBackend | None = None
+    evicted: tuple[OccBackend, ...] = ()
     with _BACKEND_CACHE_LOCK:
         existing = _BACKEND_CACHE.get(cache_key)
         if existing is not None:
             _BACKEND_CACHE.move_to_end(cache_key)
-            return existing
-        _BACKEND_CACHE[cache_key] = backend
-        _evict_oldest_backends()
+            close_backend = backend
+            backend = existing
+        else:
+            _BACKEND_CACHE[cache_key] = backend
+            evicted = _pop_oldest_backends_locked()
+    if close_backend is not None:
+        _close_backend(close_backend)
+    for evicted_backend in evicted:
+        _close_backend(evicted_backend)
     return backend
 
 
@@ -95,13 +103,18 @@ def drop_backend_cache(layer_stack_root: str) -> None:
     if not root:
         return
     with _BACKEND_CACHE_LOCK:
-        _BACKEND_CACHE.pop(str(Path(root).resolve(strict=False)), None)
+        backend = _BACKEND_CACHE.pop(str(Path(root).resolve(strict=False)), None)
+    if backend is not None:
+        _close_backend(backend)
 
 
 def clear_backend_cache() -> None:
     """Drop every cached OCC backend. Test helper."""
     with _BACKEND_CACHE_LOCK:
+        backends = tuple(_BACKEND_CACHE.values())
         _BACKEND_CACHE.clear()
+    for backend in backends:
+        _close_backend(backend)
 
 
 def _backend_cache_key(layer_stack_root: str | Path) -> str:
@@ -111,10 +124,19 @@ def _backend_cache_key(layer_stack_root: str | Path) -> str:
     return str(Path(raw).resolve(strict=False))
 
 
-def _evict_oldest_backends() -> None:
+def _pop_oldest_backends_locked() -> tuple[OccBackend, ...]:
     """Caller must hold ``_BACKEND_CACHE_LOCK``."""
+    evicted: list[OccBackend] = []
     while len(_BACKEND_CACHE) > _MAX_BACKEND_CACHE_ENTRIES:
-        _BACKEND_CACHE.popitem(last=False)
+        _, backend = _BACKEND_CACHE.popitem(last=False)
+        evicted.append(backend)
+    return tuple(evicted)
+
+
+def _close_backend(backend: OccBackend) -> None:
+    close = getattr(backend.occ_service, "close", None)
+    if callable(close):
+        close()
 
 
 __all__ = [

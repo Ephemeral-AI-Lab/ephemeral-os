@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
+import pytest
+
 from tests.occ_change_helpers import write_change
 
 from sandbox.layer_stack.changes import WriteLayerChange
@@ -43,6 +45,32 @@ def _publish(stack: LayerStack, tmp_path: Path, rel: str, content: bytes) -> Non
             )
         ]
     )
+
+
+def test_commit_queue_rejects_submit_after_close(tmp_path: Path) -> None:
+    stack = LayerStack(tmp_path / "stack")
+    transaction = CommitTransaction(
+        snapshot_reader=stack,
+        staging=stack,
+        publisher=stack,
+    )
+    queue = CommitQueue(transaction, batch_window_s=0.0)
+    queue.start()
+    queue.close()
+
+    prepared = OccService(
+        gitignore=_Gitignore(),
+        layer_stack=stack,
+        transaction=transaction,
+        commit_queue=queue,
+    ).prepare_changeset_sync(
+        [write_change(path="src/app.py", final_content=b"x")],
+        snapshot=stack.read_active_manifest(),
+        options=CommitOptions(atomic=False),
+    )
+
+    with pytest.raises(RuntimeError, match="closed"):
+        queue.submit(prepared)
 
 
 def test_overlay_capture_conflict_does_not_drop_batched_api_write(

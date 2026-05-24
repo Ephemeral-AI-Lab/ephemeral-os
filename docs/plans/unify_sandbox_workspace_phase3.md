@@ -310,7 +310,7 @@ def test_read_refuses_symlink_to_host(workspace_session):
 **6C.3.** `tests/sandbox/unit/test_verify_overlay_preconditions_script.py`:
 - Mock kernel probes; assert script exits 0 when both present; exits 1 with diagnostic when either missing.
 
-**6C.4.** Document the tombstone flag `EOS_REQUIRE_NEW_MOUNT_API=1` (Phase 1 §4.5.3): tests must assert that setting `EOS_REQUIRE_NEW_MOUNT_API=0` permits sandbox boot on environments lacking the new mount API ONLY during the documented rollout window, and that Phase 3's final CHANGELOG entry deletes the flag.
+**6C.4.** Delete the mount-precondition tombstone flag. Tests must assert daemon startup fails closed when the new mount API is unavailable; rollback is a normal code revert, not a runtime bypass.
 
 → **Verify:** CI step passes on prod-shaped runners; fails (correctly) when run on an artificially-degraded kernel.
 
@@ -418,7 +418,7 @@ def test_read_refuses_symlink_to_host(workspace_session):
 - ✅ `behavior_upgrade/` tier (NEW) covers the iws verb upgrade: typed-shape `ReadResult`/`WriteResult`/`EditResult` (real search/replace)/`GrepResult` (modes + options honored)/`GlobResult`/shell `changed_paths`. These tests do NOT preserve byte-equivalence with today's iws `ops_handlers.py` — they assert the upgraded behavior.
 - ✅ `unit/` tier (NEW) covers per-module surface: `OverlayHandle`, `lifecycle`, `namespace`, `namespace_child`, `tool_primitives.file_ops` (per-component walk), `overlay_change_conversion` (all 4 helpers), pipeline lease accounting, lifecycle error enumeration (`already_open`, `not_open`, `quota_exceeded`, `host_ram_pressure`), `resolve_pipeline`.
 - ✅ `observability/` tier (NEW) asserts `timings["mount_ms"]` populated, mid-session upperdir gauge advances monotonically, audit-event payload shapes are stable.
-- ✅ Deployment pre-flight CI step `verify-overlay-preconditions` runs `scripts/verify_overlay_preconditions.py` and fails the build on kernel-degraded runners. `EOS_REQUIRE_NEW_MOUNT_API` flag tested.
+- ✅ Deployment pre-flight CI step `verify-overlay-preconditions` runs `scripts/verify_overlay_preconditions.py` and fails the build on kernel-degraded runners.
 - ✅ Tier 8 soak re-baselined to `baseline_post_unify.json`; ≤10% median drift assertion enforced; perf escalation threshold (read p50 > 200ms or p99 > 500ms) auto-files follow-up issue.
 - ✅ `docs/sandbox/api_surface.md` exists with the 11 sections (pass-through table, `WorkspaceSession` deferral note, etc.). The §10 background tool policy section defers to Phase 2.5 for the canonical design.
 - ✅ Blast-radius doc reflects new module set including extracted `manager.py` modules + `sandbox/isolated_workspace/lifecycle/`.

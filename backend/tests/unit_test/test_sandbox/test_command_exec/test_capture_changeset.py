@@ -82,32 +82,6 @@ def test_overlay_path_changes_to_occ_changes_converts_all_supported_kinds(
     assert isinstance(changes[2], SymlinkChange)
     assert changes[2].target == "/target"
     assert isinstance(changes[3], OpaqueDirChange)
-    assert changes[3].kept_children == frozenset({"keep.py", "nested"})
-
-
-def test_opaque_dir_kept_children_normalizes_paths(tmp_path: Path) -> None:
-    write_path = tmp_path / "keep.py"
-    write_path.write_bytes(b"keep")
-    opaque = object.__new__(OverlayPathChange)
-    object.__setattr__(opaque, "path", "dir/")
-    object.__setattr__(opaque, "kind", "opaque_dir")
-    object.__setattr__(opaque, "content_path", None)
-    object.__setattr__(opaque, "final_hash", None)
-
-    changes = overlay_path_changes_to_occ_changes(
-        [
-            opaque,
-            OverlayPathChange(
-                path="dir/keep.py",
-                kind="write",
-                content_path=str(write_path),
-                final_hash=content_hash(write_path),
-            ),
-        ]
-    )
-
-    assert isinstance(changes[0], OpaqueDirChange)
-    assert changes[0].kept_children == frozenset({"keep.py"})
 
 
 def test_overlay_path_changes_to_occ_changes_rejects_missing_content_path() -> None:
@@ -140,4 +114,15 @@ def test_overlay_path_changes_to_occ_changes_rejects_missing_final_hash(
     object.__setattr__(invalid, "final_hash", None)
 
     with pytest.raises(ValueError, match="lacks final_hash"):
+        overlay_path_changes_to_occ_changes([invalid])
+
+
+def test_overlay_path_changes_to_occ_changes_rejects_unknown_kind() -> None:
+    invalid = object.__new__(OverlayPathChange)
+    object.__setattr__(invalid, "path", "src/x.txt")
+    object.__setattr__(invalid, "kind", "rename")
+    object.__setattr__(invalid, "content_path", None)
+    object.__setattr__(invalid, "final_hash", None)
+
+    with pytest.raises(ValueError, match="unsupported overlay path change kind"):
         overlay_path_changes_to_occ_changes([invalid])

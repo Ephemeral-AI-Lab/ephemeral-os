@@ -81,7 +81,7 @@ See Phase 2.5 §1 for the 5 NEW principles; §3 for the RALPLAN-DR option matrix
 
 8. **Mandatory `O_NOFOLLOW` via `tool_primitives.file_ops.open_no_follow` chokepoint.** Namespace runs as root; symlink-following inside the overlay would resolve through the host pass-through. **The chokepoint preserves the per-component walk** (root with `O_DIRECTORY` → each intermediate segment with `O_DIRECTORY|O_NOFOLLOW|dir_fd` → final open with `flags|O_NOFOLLOW`), or uses `openat2(RESOLVE_NO_SYMLINKS)` when available. Naive last-component-only `os.open(path, flags|O_NOFOLLOW)` is FORBIDDEN by static lint (Phase 3 §4.4). This defends against intermediate-component symlink attacks (`/testbed/dir → /etc`, `read("/testbed/dir/passwd")`), not just trailing-symlink attacks. (Critic must-fix #15 / Architect F.6.)
 
-9. **Single namespace strategy.** `copy_backed` strategy removed entirely. New mount API (fsopen/fsconfig/fsmount + private mount namespaces) is a hard precondition at sandbox startup; `scripts/verify_overlay_preconditions.py` is a deployment guard and the tombstone flag `EOS_REQUIRE_NEW_MOUNT_API=1` permits rollback during the deploy window (deleted in Phase 3). `MountMode` enum, `MaterializeLayout`, `_workspace_rewrite.py`, `ExecutionStrategy` ABC, `EOS_OVERLAY_FORCE_MATERIALIZE` env-var all deleted.
+9. **Single namespace strategy.** `copy_backed` strategy removed entirely. New mount API (fsopen/fsconfig/fsmount + private mount namespaces) is a hard precondition at sandbox startup; `scripts/verify_overlay_preconditions.py` is the deployment guard. `MountMode` enum, `MaterializeLayout`, `_workspace_rewrite.py`, `ExecutionStrategy` ABC, and fallback env-vars are all deleted.
 
 10. **`isolated_workspace` blocks plugin access.** Dispatcher-entry gate: any `api.plugin.*` or `plugin.<name>.<op>` invoked by an agent with an open iws handle returns `forbidden_in_isolated_workspace`. Fail-OPEN when pipeline not bootstrapped — accepted because the alternative (fail-CLOSED) would break every test fixture that doesn't init iws. **Fail-OPEN emits a loud audit event** (`workspace_lifecycle.plugin_check_unbootstrapped`) so the bypass is visible (Planner F.20). Threat-model: an attacker who DoSes iws bootstrap bypasses the policy; risk accepted, mitigated by audit visibility + follow-up plan for fail-CLOSED-with-explicit-bypass.
 
@@ -137,8 +137,8 @@ Layer 1 — Primitives
     lifecycle.py      create / destroy / capture_changes
     namespace.py      host-side fork+unshare+wait coordinator
     namespace_child.py child entry: mount + chdir + verb dispatch
-    kernel_mount.py, new_mount_api.py, capability.py, layout.py, capture.py,
-    change_synthesis.py (with source parameter)
+    kernel_mount.py, new_mount_api.py, capability.py, capture.py, path_change.py,
+    scratch.py, subprocess_runner.py
 
   sandbox/_shared/tool_primitives/:
     read.py, write.py, edit.py, grep.py, glob.py, shell.py, file_ops.py
@@ -165,7 +165,7 @@ Materializes the three workspace packages (`main_workspace/` as a **thin re-expo
 - Relocate non-overlay `execution/*` files into `ephemeral_workspace/` and `_shared/`
 - `scripts/verify_overlay_preconditions.py` (deployment guard)
 - `docs/sandbox/deployment_targets.md` (pre-rollout audit)
-- `EOS_REQUIRE_NEW_MOUNT_API=1` tombstone flag (deleted in Phase 3 §6C.4)
+- No namespace fallback env-var remains; deployment rollback is a normal revert.
 - Parity corpus at `tests/mock/sandbox/_fixtures/tool_primitives_parity_corpus.json` — **EPHEMERAL MODE ONLY** (iws is functional-upgrade per Phase 3 `behavior_upgrade/` tier)
 
 **Cost:** ~300 atomic import updates across `backend/`. No production behavior change. ≤10 logical atomic commits with `git revert <sha>` rollback per commit.
@@ -217,7 +217,7 @@ Reshapes the iws test suite around the new tool surface. Adds new test tiers for
 - **`behavior_upgrade/` tier** (NEW — iws verb migration validation: typed-shape `ReadResult`/`WriteResult`/`EditResult` (real search/replace)/`GrepResult` (modes+options honored)/`GlobResult`/shell `changed_paths`)
 - **`unit/` tier** (NEW — per-module coverage for `OverlayHandle`, `overlay/lifecycle`, `overlay/namespace`, `namespace_child`, `tool_primitives/file_ops`, `overlay_change_conversion`, pipeline lease accounting, `LifecycleError` enumeration, `resolve_pipeline`)
 - **`observability/` tier** (NEW — `timings["mount_ms"]` populated, iws upperdir mid-session gauge, audit-event payload shape stability)
-- **Deployment pre-flight CI** running `scripts/verify_overlay_preconditions.py` (`EOS_REQUIRE_NEW_MOUNT_API` tested + deleted at the end of Phase 3)
+- **Deployment pre-flight CI** running `scripts/verify_overlay_preconditions.py`
 - Tier 8 soak baseline reshape (per-call mount cost in baseline) **+ perf escalation threshold** (read p50 > 200ms or p99 > 500ms auto-files follow-up issue)
 - `docs/sandbox/api_surface.md` — 11 sections including pass-through table, background tool policy, `WorkspaceSession` deferral note, namespace-child-boundary diagram, `open_no_follow` per-component-walk explanation, deployment-precondition reference
 - Updated blast-radius doc (reflects `sandbox/isolated_workspace/lifecycle/` + extracted `manager.py` modules), PLAN.md (9 tiers), CHANGELOG
@@ -286,7 +286,7 @@ Reshapes the iws test suite around the new tool surface. Adds new test tiers for
 - **Concurrency:** OCC disjoint-batch coalescing preserved via `source="api_write"` for single-path typed writes (`len({c.path for c in changes}) == 1`); per-handle `asyncio.Lock` prevents `_destroy_with_lease_guard` TOCTOU race.
 - **Security:** `tool_primitives.file_ops.open_no_follow` chokepoint with per-component walk (or `openat2(RESOLVE_NO_SYMLINKS)`) defends against trailing AND intermediate symlink escape inside the root-namespace child. Host-path denylist (`/etc/`, `/var/`, `/proc/`, `/sys/`, `/boot/`) rejects writes BEFORE the kernel call — closes the root-in-namespace privilege gap that pre-unification accidentally relied on unprivileged-daemon EACCES.
 - **Observability:** plugin-block fail-OPEN emits `workspace_lifecycle.plugin_check_unbootstrapped` audit event; per-call `timings["mount_ms"]` populated; iws upperdir mid-session gauge available.
-- **Portability:** new mount API + private user namespaces required; Docker-only. `scripts/verify_overlay_preconditions.py` is a deployment guard run by CI. `EOS_REQUIRE_NEW_MOUNT_API=0` permits fallback during the rollout window; flag deleted in Phase 3.
+- **Portability:** new mount API + private user namespaces required; Docker-only. `scripts/verify_overlay_preconditions.py` is a deployment guard run by CI; no copy-backed fallback or runtime bypass remains.
 - **Reversibility:** each phase delivered as ≤10/≤8/≤5 atomic commits with `git revert <sha>` rollback per commit. Tests run on parent SHA before each commit lands.
 
 **Follow-ups (out of this plan):**
@@ -316,4 +316,4 @@ Each scenario lists the failure, what users see, **the specific signal we'd obse
    - **Fails when:** Phase 1 lands and `new_mount_api_supported()` becomes a hard precondition. Operator deploys to an environment whose kernel doesn't support the new mount API. Sandbox refuses to boot.
    - **User-visible:** service refuses to start in some environments; rollback requires reverting Phase 1's PR (large blast radius).
    - **Leading indicator (specific signal):** `scripts/verify_overlay_preconditions.py` exits non-zero on the target kernel. **The signal fires BEFORE deployment if the script is wired into the CI deploy pipeline** (Phase 3 §6C.2) — operator sees the build fail at the verify step, not at boot time.
-   - **Mitigation enacted:** Phase 1 §4.5.1 ships the script; Phase 1 §4.5.2 demands a pre-rollout audit of every deployment target; Phase 1 §4.5.3 ships the `EOS_REQUIRE_NEW_MOUNT_API=0` tombstone flag as a 30-day rollback escape; Phase 3 §6C wires the verify script into CI; flag deleted at the end of Phase 3.
+   - **Mitigation enacted:** Phase 1 §4.5.1 ships the script; Phase 1 §4.5.2 demands a pre-rollout audit of every deployment target; Phase 3 §6C wires the verify script into CI; the old rollout escape hatch has been deleted.

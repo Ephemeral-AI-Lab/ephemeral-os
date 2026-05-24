@@ -242,14 +242,11 @@ async def _reset_workload_dirs(handle: SandboxHandle) -> None:
     await _shell_ok(handle, cmd, description="phase07 reset")
 
 
-# Note: per-cell cleanup is intentionally NOT done. Each shell call on
-# this sandbox runs in copy-backed mode (the daytona image has no unshare
-# privileges) so the daemon copies the entire workspace lower into
-# /dev/shm (64 MiB tmpfs) on every invocation. The matrices below are
-# sized so the cumulative committed bytes fit inside that budget; an
-# extra rm-shell cell would also have to copy the same lower (and then
-# write 500+ whiteout entries) which on this daytona instance hits a
-# transient EIO inside the rm command itself. Skipping the cleanup
+# Note: per-cell cleanup is intentionally NOT done. Each shell call records
+# overlay upperdir deltas, so the matrices below are sized to keep cumulative
+# committed bytes inside the small live-test scratch budget. An extra rm-shell
+# cell would write 500+ whiteout entries and has historically hit transient
+# filesystem errors on constrained live runners. Skipping the cleanup
 # trades workload accumulation for stability.
 
 

@@ -50,7 +50,7 @@ prepared = router.prepare_sync(
         write_change(path=".git/config", final_content=b"x"),
         write_change(path="../escape", final_content=b"x"),
         SymlinkChange(path="ignored-link", target="/tmp/data"),
-        OpaqueDirChange(path="cache", kept_children=frozenset({"keep"})),
+        OpaqueDirChange(path="cache"),
     ],
     snapshot=None,
     options=CommitOptions(),

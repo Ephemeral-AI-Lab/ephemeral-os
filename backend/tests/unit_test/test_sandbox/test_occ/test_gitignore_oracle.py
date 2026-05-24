@@ -34,20 +34,6 @@ def test_is_ignored_caches_result_second_call_reader_free(tmp_path: Path) -> Non
     assert calls == [""]
 
 
-def test_filter_ignored_returns_subset_of_inputs(tmp_path: Path) -> None:
-    workspace = _make_workspace(
-        tmp_path,
-        {".gitignore": "*.log\n", "pkg/.gitignore": "*.tmp\n"},
-    )
-    oracle = PathspecGitignoreOracle(str(workspace))
-
-    result = oracle.filter_ignored(
-        ["src/main.py", "debug.log", "pkg/cache.tmp", "src/lib.py"],
-    )
-
-    assert result == {"debug.log", "pkg/cache.tmp"}
-
-
 def test_negated_pattern_marks_path_not_ignored(tmp_path: Path) -> None:
     workspace = _make_workspace(
         tmp_path,

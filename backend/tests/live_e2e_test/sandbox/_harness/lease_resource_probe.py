@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Literal, Protocol
 
 from sandbox._shared.models import Intent, ToolCallRequest
-from sandbox.daemon.service.layer_stack_client import LayerStackClient
+from sandbox.occ.layer_stack_client import LayerStackClient
 from sandbox.overlay.capability import new_mount_api_supported
 from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
 from sandbox.occ.changeset import ChangesetResult

@@ -8,7 +8,7 @@ does not shell out to ``git check-ignore``.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
@@ -31,14 +31,6 @@ class SnapshotGitignoreMatcher(GitignoreMatcher, Protocol):
     """Gitignore contract for routing against a known layer-stack snapshot."""
 
     def is_ignored_in_snapshot(self, path: str, snapshot: Manifest) -> bool: ...
-
-
-@runtime_checkable
-class GitignoreCacheStats(Protocol):
-    """Optional gitignore cache counters used by result formatting."""
-
-    cache_hits: int
-    cache_misses: int
 
 
 class PathspecGitignoreOracle:
@@ -77,9 +69,6 @@ class PathspecGitignoreOracle:
         result = self._evaluate_file(path)
         self._path_cache[path] = result
         return result
-
-    def filter_ignored(self, paths: Iterable[str]) -> set[str]:
-        return {p for p in paths if self.is_ignored(p)}
 
     def _evaluate_file(self, path: str) -> bool:
         rel = path.lstrip("/")
@@ -178,10 +167,6 @@ class SnapshotGitignoreOracle:
             self._snapshot_reader.read_active_manifest(),
         )
 
-    def filter_ignored(self, paths: Iterable[str]) -> set[str]:
-        snapshot = self._snapshot_reader.read_active_manifest()
-        return {path for path in paths if self.is_ignored_in_snapshot(path, snapshot)}
-
     def is_ignored_in_snapshot(self, path: str, snapshot: Manifest) -> bool:
         return self._oracle_for_snapshot(snapshot).is_ignored(path)
 
@@ -211,7 +196,6 @@ class SnapshotGitignoreOracle:
 
 __all__ = [
     "GitignoreMatcher",
-    "GitignoreCacheStats",
     "PathspecGitignoreOracle",
     "ReadGitignoreFn",
     "SnapshotGitignoreMatcher",

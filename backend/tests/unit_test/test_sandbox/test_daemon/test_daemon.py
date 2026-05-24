@@ -318,6 +318,46 @@ def test_drop_backend_cache_removes_only_requested_root(
     assert occ_backend.build_occ_backend("/tmp/b") is b
 
 
+def test_backend_cache_close_paths_close_owned_occ_services(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    occ_backend.clear_backend_cache()
+    closed: list[int] = []
+    next_service_id = 0
+
+    class _Service:
+        def __init__(self) -> None:
+            nonlocal next_service_id
+            self.service_id = next_service_id
+            next_service_id += 1
+
+        def close(self) -> None:
+            closed.append(self.service_id)
+
+    monkeypatch.setattr(occ_backend, "get_layer_stack_manager", lambda _root: object())
+    monkeypatch.setattr(occ_backend, "LayerStackClient", lambda _manager: object())
+    monkeypatch.setattr(occ_backend, "SnapshotGitignoreOracle", lambda _layer_stack: object())
+    monkeypatch.setattr(
+        occ_backend,
+        "OccService",
+        lambda *, gitignore, layer_stack, maintenance=None: _Service(),
+    )
+    monkeypatch.setattr(
+        occ_backend,
+        "OccClient",
+        lambda service, *, binding_reader, workspace_ref: object(),
+    )
+
+    a = occ_backend.build_occ_backend("/tmp/a")
+    b = occ_backend.build_occ_backend("/tmp/b")
+
+    occ_backend.drop_backend_cache("/tmp/a")
+    assert closed == [a.occ_service.service_id]
+
+    occ_backend.clear_backend_cache()
+    assert closed == [a.occ_service.service_id, b.occ_service.service_id]
+
+
 async def test_build_workspace_base_reset_drops_cache_without_drain(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

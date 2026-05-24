@@ -71,48 +71,52 @@ class CommitQueue:
         self._max_cas_retries = int(max_cas_retries)
         self._queue: queue.Queue[_QueueItem] = queue.Queue()
         self._thread: threading.Thread | None = None
+        self._state_lock = threading.Lock()
         self._closed = False
 
     def start(self) -> None:
         """Start the background commit worker."""
-        if self._closed:
-            raise RuntimeError("OCC commit queue is closed")
-        if self._thread is not None and self._thread.is_alive():
-            return
-        self._thread = threading.Thread(
-            target=self._run,
-            name="occ-commit-queue",
-            daemon=True,
-        )
-        self._thread.start()
+        with self._state_lock:
+            if self._closed:
+                raise RuntimeError("OCC commit queue is closed")
+            if self._thread is not None and self._thread.is_alive():
+                return
+            self._thread = threading.Thread(
+                target=self._run,
+                name="occ-commit-queue",
+                daemon=True,
+            )
+            self._thread.start()
 
     def close(self, *, timeout: float | None = 5.0) -> None:
         """Stop the background commit worker after pending queued work drains."""
-        if self._closed:
-            return
-        self._closed = True
-        thread = self._thread
-        if thread is None:
-            return
-        self._queue.put(_STOP)
+        with self._state_lock:
+            if self._closed:
+                return
+            self._closed = True
+            thread = self._thread
+            if thread is None:
+                return
+            self._queue.put(_STOP)
         thread.join(timeout=timeout)
 
     def submit(
         self,
         prepared: PreparedChangeset,
     ) -> concurrent.futures.Future[ChangesetResult]:
-        if self._closed:
-            raise RuntimeError("OCC commit queue is closed")
-        if self._thread is None or not self._thread.is_alive():
-            raise RuntimeError("OCC commit queue has not been started")
         future: concurrent.futures.Future[ChangesetResult] = concurrent.futures.Future()
-        self._queue.put(
-            _WorkItem(
-                prepared=prepared,
-                future=future,
-                enqueued_at=monotonic_now(),
+        with self._state_lock:
+            if self._closed:
+                raise RuntimeError("OCC commit queue is closed")
+            if self._thread is None or not self._thread.is_alive():
+                raise RuntimeError("OCC commit queue has not been started")
+            self._queue.put(
+                _WorkItem(
+                    prepared=prepared,
+                    future=future,
+                    enqueued_at=monotonic_now(),
+                )
             )
-        )
         return future
 
     async def apply(self, prepared: PreparedChangeset) -> ChangesetResult:

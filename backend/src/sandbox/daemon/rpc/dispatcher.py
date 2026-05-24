@@ -218,7 +218,7 @@ def _check_plugin_block(args: Mapping[str, Any], op_name: str) -> dict[str, Any]
     if not (op_name.startswith("api.plugin.") or op_name.startswith("plugin.")):
         return None
     iws = get_active_pipeline()
-    agent_id = str(args.get("agent_id") or "").strip()
+    agent_id = _agent_id(args)
     if iws is None:
         _emit_plugin_gate_audit(op_name, agent_id)
         return None

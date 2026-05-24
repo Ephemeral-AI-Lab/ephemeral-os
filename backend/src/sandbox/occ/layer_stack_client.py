@@ -1,4 +1,4 @@
-"""In-process layer-stack client implementing narrow runtime/OCC ports."""
+"""In-process LayerStack adapter implementing narrow OCC ports."""
 
 from __future__ import annotations
 
@@ -6,15 +6,14 @@ from collections.abc import Iterator
 from contextlib import AbstractContextManager
 from pathlib import Path
 
+from sandbox.layer_stack.commit_staging import CommitStagingArea
+from sandbox.layer_stack.lease import WorkspaceLease
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.layer_stack.stack import (
     LayerStack,
     PrepareWorkspaceSnapshotResult,
 )
-from sandbox.layer_stack.lease import WorkspaceLease
-from sandbox.layer_stack.stack import CommitStagingArea
 from sandbox.occ.ports import LayerCommitTransaction
-from sandbox.daemon.workspace_server import get_layer_stack_manager
 
 
 class LayerStackClient:
@@ -24,11 +23,8 @@ class LayerStackClient:
     lease API onto the manager's positional signature.
     """
 
-    def __init__(self, layer_stack_root: str | Path | LayerStack) -> None:
-        if isinstance(layer_stack_root, (str, Path)):
-            self.manager = get_layer_stack_manager(layer_stack_root)
-        else:
-            self.manager = layer_stack_root
+    def __init__(self, manager: LayerStack) -> None:
+        self.manager = manager
 
     @property
     def storage_root(self) -> Path:

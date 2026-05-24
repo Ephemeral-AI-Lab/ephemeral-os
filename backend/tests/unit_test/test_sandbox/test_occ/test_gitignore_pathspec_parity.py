@@ -115,17 +115,6 @@ def test_pathspec_matches_git_check_ignore(
         )
 
 
-def test_pathspec_filter_ignored_is_subset_of_inputs(tmp_path: Path) -> None:
-    workspace = _make_workspace(
-        tmp_path,
-        {".gitignore": "*.log\n", "pkg/.gitignore": "*.tmp\n"},
-    )
-    oracle = PathspecGitignoreOracle(str(workspace))
-    paths = ["a.log", "pkg/x.tmp", "src/keep.py"]
-    ignored = oracle.filter_ignored(paths)
-    assert ignored == {"a.log", "pkg/x.tmp"}
-
-
 def test_pathspec_caches_per_path_lookup(tmp_path: Path) -> None:
     workspace = _make_workspace(
         tmp_path,

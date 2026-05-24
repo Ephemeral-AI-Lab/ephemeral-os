@@ -34,8 +34,8 @@ def resolve_workspace_cwd(
 
     Absolute paths must stay under the declared workspace root. Relative paths
     resolve inside the mounted workspace. The returned path is inside
-    ``mounted_workspace_root`` so copy-backed test mounts and real namespace
-    mounts share the same policy.
+    ``mounted_workspace_root`` so namespace callers and direct unit-test mounts
+    share the same policy.
     """
     declared_root = Path(declared_workspace_root)
     mounted_root = Path(mounted_workspace_root)

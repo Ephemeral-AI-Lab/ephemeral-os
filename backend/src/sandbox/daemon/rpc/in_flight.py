@@ -41,12 +41,12 @@ class InFlightInvocationRegistry:
         self._ttl_seconds = (
             _env_float(_ENV_TTL_S, _DEFAULT_TTL_SECONDS)
             if ttl_seconds is None
-            else float(ttl_seconds)
+            else _positive_float(ttl_seconds, _DEFAULT_TTL_SECONDS)
         )
         self._reaper_interval_s = (
             _env_float(_ENV_REAPER_INTERVAL_S, _DEFAULT_REAPER_INTERVAL_S)
             if reaper_interval_s is None
-            else float(reaper_interval_s)
+            else _positive_float(reaper_interval_s, _DEFAULT_REAPER_INTERVAL_S)
         )
         self._by_invocation: dict[str, InFlightInvocation] = {}
         self._ttl_reaped_total = 0
@@ -158,10 +158,15 @@ def _env_float(name: str, default: float) -> float:
     raw = os.environ.get(name)
     if raw is None or raw.strip() == "":
         return default
+    return _positive_float(raw, default)
+
+
+def _positive_float(raw: object, default: float) -> float:
     try:
-        return float(raw)
-    except ValueError:
+        value = float(raw)
+    except (TypeError, ValueError):
         return default
+    return value if value > 0 else default
 
 
 _REGISTRY: InFlightInvocationRegistry | None = None
