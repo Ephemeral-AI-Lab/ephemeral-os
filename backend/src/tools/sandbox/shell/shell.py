@@ -9,6 +9,7 @@ from typing import cast
 from pydantic import BaseModel, Field
 
 import sandbox.api as sandbox_api
+from sandbox._shared.models import Intent
 from sandbox.api import ShellRequest
 from sandbox._shared.clock import normalize_timing_map
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
@@ -133,6 +134,7 @@ def _build_tool_output(
     short_description="Run a shell command from the repo root.",
     input_model=ShellInput,
     output_model=ShellOutput,
+    intent=Intent.WRITE_ALLOWED,
     pre_hooks=(DestructiveGitShellPreHook(), DestructiveShellPreHook()),
     background="optional",
 )

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sandbox.api as sandbox_api
+from sandbox._shared.models import Intent
 from sandbox.api import WriteFileRequest
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
@@ -28,6 +29,7 @@ from .prompt import get_write_file_description
     short_description="Create or overwrite a file.",
     input_model=WriteFileInput,
     output_model=WriteFileOutput,
+    intent=Intent.WRITE_ALLOWED,
 )
 async def write_file(
     file_path: str,

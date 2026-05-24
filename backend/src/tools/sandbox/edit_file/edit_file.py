@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from sandbox._shared.models import Intent
+
 from pydantic import BaseModel, ConfigDict, Field
 
 import sandbox.api as sandbox_api
@@ -67,6 +69,7 @@ def _normalize_edits(
     short_description="Apply atomic file edits.",
     input_model=EditFileInput,
     output_model=EditFileOutput,
+    intent=Intent.WRITE_ALLOWED,
 )
 async def edit_file(
     file_path: str,

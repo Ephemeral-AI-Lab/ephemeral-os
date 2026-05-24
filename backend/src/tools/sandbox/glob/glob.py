@@ -7,6 +7,7 @@ import json
 from pydantic import BaseModel, ConfigDict, Field
 
 import sandbox.api as sandbox_api
+from sandbox._shared.models import Intent
 from sandbox.api import GlobRequest
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
@@ -65,6 +66,7 @@ class GlobOutput(BaseModel):
     short_description="Find workspace files by glob pattern.",
     input_model=GlobInput,
     output_model=GlobOutput,
+    intent=Intent.READ_ONLY,
 )
 async def glob(
     pattern: str,

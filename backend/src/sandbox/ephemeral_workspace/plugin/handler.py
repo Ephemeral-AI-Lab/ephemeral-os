@@ -29,14 +29,13 @@ from sandbox.layer_stack.workspace_binding import (
     WorkspaceBindingError,
     require_workspace_binding,
 )
-from sandbox._shared.models import SandboxCaller
+from sandbox._shared.models import Intent, SandboxCaller
 from sandbox.ephemeral_workspace.plugin.op_context import PluginOpContext
 from sandbox.ephemeral_workspace.plugin.op_registry import (
     clear_plugin_registrations,
     flush_plugin_registrations,
     pending_plugin_registrations,
 )
-from sandbox.ephemeral_workspace.plugin.overlay_dispatch import run_plugin_op_with_workspace_overlay
 from sandbox.ephemeral_workspace.plugin.projection import WorkspaceProjection
 
 __all__ = [
@@ -124,7 +123,6 @@ async def _plugin_ensure_locked(
         plugin_name,
         register_op,
         context_factory=_plugin_op_context_factory,
-        dispatch_runner=run_plugin_op_with_workspace_overlay,
         trusted_caller=True,
     )
     # Warm BEFORE writing _LOADED so a failed warm doesn't wedge the registry
@@ -292,11 +290,17 @@ async def _plugin_op_context_factory(
         layer_stack_root,
         workspace_root=str(args.get("workspace_root", "")),
     )
+    raw_intent = args.get("intent")
+    try:
+        intent = Intent(str(raw_intent)) if raw_intent else Intent.READ_ONLY
+    except ValueError:
+        intent = Intent.READ_ONLY
     return PluginOpContext(
         layer_stack_root=layer_stack_root,
         caller=caller,
         projection=projection,
         overlay=overlay,
+        intent=intent,
         metadata={
             "op_name": op_name,
             "workspace_root": str(args.get("workspace_root", "")),

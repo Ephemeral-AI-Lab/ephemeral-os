@@ -5,6 +5,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from tools._framework.core.context import ToolExecutionContextService
+from sandbox._shared.models import Intent
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput, ToolResult
 from .prompt import (
@@ -24,6 +25,7 @@ class SubmitResolverResultInput(BaseModel):
     description=get_submit_resolver_result_description(),
     input_model=SubmitResolverResultInput,
     output_model=TextToolOutput,
+    intent=Intent.READ_ONLY,
     is_terminal_tool=True,
 )
 async def submit_resolver_result(

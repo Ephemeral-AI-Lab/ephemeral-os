@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from contextlib import AbstractAsyncContextManager
 from typing import Any, Protocol
 
-from sandbox._shared.models import SandboxCaller
+from sandbox._shared.models import Intent, SandboxCaller
 from sandbox.ephemeral_workspace.events import WorkspaceChangeEvent
 from sandbox.overlay.handle import OverlayHandle
 
@@ -113,10 +113,16 @@ class PluginOpContext:
     they need through this dataclass. The host wires up ``projection`` using
     the real :mod:`sandbox.ephemeral_workspace.plugin.projection`; tests inject a stub
     duck-typed object.
+
+    Handlers invoked with ``intent=Intent.READ_ONLY`` MUST NOT perform direct
+    filesystem I/O. All reads MUST go through a ``PluginService`` (today the
+    only implementation is :class:`PyrightSession` via
+    :func:`session_manager.get_session`).
     """
 
     layer_stack_root: str
     caller: SandboxCaller
     projection: WorkspaceProjectionLike
     overlay: EphemeralPipelineLike
+    intent: Intent = Intent.READ_ONLY
     metadata: dict[str, Any] = field(default_factory=dict)

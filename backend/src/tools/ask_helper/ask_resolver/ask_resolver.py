@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from sandbox._shared.models import Intent
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput, ToolResult
@@ -52,6 +53,7 @@ def _build_resolver_user_msg_2(
     description=get_ask_resolver_description(),
     input_model=AskResolverInput,
     output_model=TextToolOutput,
+    intent=Intent.WRITE_ALLOWED,
 )
 async def ask_resolver(
     issues_to_resolve: list[str],

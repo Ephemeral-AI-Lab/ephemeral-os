@@ -9,6 +9,7 @@ from task_center import (
     TaskCenterInvariantViolation,
 )
 from tools._framework.core.context import ToolExecutionContextService
+from sandbox._shared.models import Intent
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput, ToolResult
 from tools.submission.context import (
@@ -30,6 +31,7 @@ class SubmitVerificationSuccessInput(BaseModel):
     description=get_submit_verification_success_description(),
     input_model=SubmitVerificationSuccessInput,
     output_model=TextToolOutput,
+    intent=Intent.READ_ONLY,
     is_terminal_tool=True,
 )
 async def submit_verification_success(

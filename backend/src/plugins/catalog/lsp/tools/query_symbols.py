@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from sandbox._shared.models import Intent
 from sandbox.ephemeral_workspace.plugin import call_plugin
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
@@ -25,6 +26,7 @@ class QuerySymbolsInput(BaseModel):
     short_description="LSP query symbols.",
     input_model=QuerySymbolsInput,
     output_model=TextToolOutput,
+    intent=Intent.READ_ONLY,
 )
 async def query_symbols(
     query: str,

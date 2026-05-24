@@ -6,6 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from sandbox._shared.models import Intent
 from sandbox.ephemeral_workspace.plugin import call_plugin
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
@@ -22,6 +23,7 @@ class ApplyCodeActionInput(BaseModel):
     short_description="Apply code action.",
     input_model=ApplyCodeActionInput,
     output_model=TextToolOutput,
+    intent=Intent.WRITE_ALLOWED,
 )
 async def apply_code_action(
     action: dict[str, Any],

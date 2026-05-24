@@ -24,6 +24,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from sandbox._shared.models import Intent
 from engine.background.subagent_policy import SUBAGENT_TASK_TYPE
 from message.messages import (
     ConversationMessage,
@@ -164,6 +165,7 @@ def _validate_run_subagent_request(
     short_description="Spawn a subagent in the background.",
     input_model=RunSubagentInput,
     output_model=TextToolOutput,
+    intent=Intent.WRITE_ALLOWED,
     background="always",
     task_type=SUBAGENT_TASK_TYPE,
 )

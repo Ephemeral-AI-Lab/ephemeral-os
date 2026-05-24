@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from task_center import TaskCenterInvariantViolation
 from tools._framework.core.context import ToolExecutionContextService
+from sandbox._shared.models import Intent
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput, ToolResult
 from tools.submission.context import (
@@ -26,6 +27,7 @@ class SubmitExecutionBlockerInput(BaseModel):
     description=get_submit_execution_blocker_description(),
     input_model=SubmitExecutionBlockerInput,
     output_model=TextToolOutput,
+    intent=Intent.READ_ONLY,
     is_terminal_tool=True,
 )
 async def submit_execution_blocker(

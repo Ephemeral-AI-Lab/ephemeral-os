@@ -6,6 +6,7 @@ import json
 
 from pydantic import BaseModel, Field
 
+from sandbox._shared.models import Intent
 from skills.core.registry import SkillRegistry
 from tools._framework.core.base import BaseTool, TextToolOutput, ToolResult
 from tools._framework.core.decorator import tool
@@ -41,6 +42,7 @@ def make_load_skill_reference(
         short_description="Load a skill reference.",
         input_model=LoadSkillReferenceInput,
         output_model=TextToolOutput,
+        intent=Intent.READ_ONLY,
     )
     async def load_skill_reference(
         skill_name: str,

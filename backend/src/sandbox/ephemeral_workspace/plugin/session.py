@@ -24,6 +24,7 @@ from typing import Any
 
 from plugins.core.discovery import discover_plugins
 from plugins.core.manifest import PluginManifest
+from sandbox._shared.models import Intent
 from sandbox.host.daemon_client import (
     DEFAULT_LAYER_STACK_ROOT,
     call_daemon_api,
@@ -131,6 +132,12 @@ async def call_plugin(
             _runtime_loaded[(sandbox_id, plugin)] = digest
 
     caller = caller_from_context(context)
+    raw_intent = context.get("__intent")
+    intent_value = (
+        raw_intent.value
+        if isinstance(raw_intent, Intent)
+        else Intent.READ_ONLY.value
+    )
     payload_with_meta = {
         **dict(payload),
         "caller": {
@@ -140,6 +147,7 @@ async def call_plugin(
             "task_id": caller.task_id,
         },
         "workspace_root": str(context.get("repo_root") or "").strip(),
+        "intent": intent_value,
     }
     try:
         response = await dispatch_fn(

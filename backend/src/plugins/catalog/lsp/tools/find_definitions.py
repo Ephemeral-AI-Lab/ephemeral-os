@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from sandbox._shared.models import Intent
 from sandbox.ephemeral_workspace.plugin import call_plugin
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
@@ -23,6 +24,7 @@ class FindDefinitionsInput(BaseModel):
     short_description="LSP find definitions.",
     input_model=FindDefinitionsInput,
     output_model=TextToolOutput,
+    intent=Intent.READ_ONLY,
 )
 async def find_definitions(
     file_path: str,

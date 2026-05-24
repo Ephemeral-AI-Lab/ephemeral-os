@@ -1,16 +1,27 @@
 """In-sandbox plugin op registry.
 
 The :func:`register_plugin_op` decorator records ``(plugin_name, op_name,
-handler)`` triples at module import time. :func:`flush_plugin_registrations`
-hands them off to the daemon dispatcher under the public op name
-``plugin.<plugin>.<op>``.
+handler, intent)`` triples at module import time.
+:func:`flush_plugin_registrations` hands them off to the daemon dispatcher
+under the public op name ``plugin.<plugin>.<op>``.
 
 The decorator enforces the namespace rule from
 ``docs/architecture/plugins-refactor.md`` §2: a module that calls
-``register_plugin_op('lsp', 'hover')`` MUST be importable as
-``plugins.catalog.lsp.runtime.<something>``. The check walks live frames
-directly so wrapper functions cannot hide a caller outside the plugin
-namespace.
+``register_plugin_op('lsp', 'hover', intent=Intent.READ_ONLY)`` MUST be
+importable as ``plugins.catalog.lsp.runtime.<something>``. The check walks
+live frames directly so wrapper functions cannot hide a caller outside the
+plugin namespace.
+
+Dispatch runner is picked from ``intent`` at flush time:
+
+* ``Intent.READ_ONLY`` → in-process: handler is invoked in the daemon process
+  with no per-call overlay, no namespace child, no publish_cycle. Read-only
+  handlers MUST query a long-lived ``PluginService`` (e.g.
+  :class:`PyrightSession`) rather than touch the filesystem directly.
+* ``Intent.WRITE_ALLOWED`` → existing overlay+OCC publish path via
+  :func:`run_plugin_op_with_workspace_overlay`.
+* ``Intent.LIFECYCLE`` → rejected at registration; LIFECYCLE is reserved for
+  sandbox lifecycle ops, not plugin tool dispatch.
 """
 
 from __future__ import annotations
@@ -21,6 +32,7 @@ from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
 from typing import Any
 
+from sandbox._shared.models import Intent
 from sandbox.ephemeral_workspace.plugin.op_context import PluginOpContext
 
 __all__ = [
@@ -61,6 +73,7 @@ class _PendingRegistration:
     plugin_name: str
     op_name: str
     handler: PluginOpHandler
+    intent: Intent
     auto_workspace_overlay: bool = True
 
 
@@ -73,21 +86,41 @@ def register_plugin_op(
     plugin_name: str,
     op_name: str,
     *,
+    intent: Intent,
     auto_workspace_overlay: bool = True,
 ) -> Callable[[PluginOpHandler], PluginOpHandler]:
     """Decorator that records a plugin op handler.
 
     Identical re-registration (same plugin/op/handler) is a no-op. Conflicting
     registration with a different handler raises ``PluginOpConflictError``.
-    By default, daemon dispatch runs handlers inside an automatic per-operation
-    workspace overlay. Stateful runtimes that already manage their own overlay
-    lifecycle can pass ``auto_workspace_overlay=False``.
+
+    ``intent`` must be supplied explicitly: ``Intent.READ_ONLY`` for handlers
+    that only query a ``PluginService``; ``Intent.WRITE_ALLOWED`` for handlers
+    that mutate workspace state through the per-op overlay + OCC publish path.
+    ``Intent.LIFECYCLE`` is reserved for sandbox lifecycle ops and is rejected
+    here.
+
+    ``auto_workspace_overlay`` defaults to ``True`` so WRITE_ALLOWED handlers
+    are wrapped by ``run_plugin_op_with_workspace_overlay`` (the canonical
+    overlay+OCC publish path). Plugins that already manage their own overlay
+    (e.g. the LSP ``apply.py`` runtime) opt out with
+    ``auto_workspace_overlay=False`` to keep the existing OCC publish path
+    UNCHANGED; the intent label still flows through so observability and
+    auditing remain accurate.
     """
     plugin_name = (plugin_name or "").strip()
     op_name = (op_name or "").strip()
     if _PLUGIN_NAME_RE.fullmatch(plugin_name) is None or not op_name:
         raise PluginOpRegistrationError(
             "register_plugin_op requires a valid plugin_name and non-empty op_name"
+        )
+    if not isinstance(intent, Intent):
+        raise PluginOpRegistrationError(
+            "register_plugin_op requires intent=Intent.READ_ONLY|WRITE_ALLOWED"
+        )
+    if intent is Intent.LIFECYCLE:
+        raise PluginOpRegistrationError(
+            "Intent.LIFECYCLE is reserved for sandbox lifecycle ops, not plugin tools"
         )
     _validate_plugin_caller(plugin_name, "register_plugin_op")
 
@@ -105,6 +138,7 @@ def register_plugin_op(
             plugin_name=plugin_name,
             op_name=op_name,
             handler=handler,
+            intent=intent,
             auto_workspace_overlay=bool(auto_workspace_overlay),
         )
         return handler
@@ -140,7 +174,6 @@ def flush_plugin_registrations(
     dispatcher_register_op: Callable[[str, DispatcherHandler], None],
     *,
     context_factory: ContextFactory | None = None,
-    dispatch_runner: DispatchRunner | None = None,
     trusted_caller: bool = False,
 ) -> list[str]:
     """Flush pending registrations for *plugin_name* into the dispatcher.
@@ -148,8 +181,15 @@ def flush_plugin_registrations(
     When ``context_factory`` is provided, each plugin handler is wrapped so
     the dispatcher receives a 1-argument coroutine (``args -> response``)
     while the underlying plugin handler is invoked as
-    ``await handler(args, ctx)``. Without a factory, raw handlers are
-    registered (used by tests that call handlers directly with mocked args).
+    ``await handler(args, ctx)``. The dispatch runner is selected from the
+    pending registration's ``intent``:
+
+    * ``Intent.READ_ONLY`` → handler runs in-process directly.
+    * ``Intent.WRITE_ALLOWED`` → handler runs through the per-op overlay +
+      OCC publish path (see ``overlay_dispatch.run_plugin_op_with_workspace_overlay``).
+
+    Without a factory, raw handlers are registered (used by tests that call
+    handlers directly with mocked args).
     """
     plugin_name = (plugin_name or "").strip()
     if not plugin_name:
@@ -168,17 +208,34 @@ def flush_plugin_registrations(
         if context_factory is None:
             handler: DispatcherHandler = entry.handler
         else:
+            dispatch_runner = _dispatch_runner_for_entry(entry)
             handler = _wrap_with_context(
                 entry.handler,
                 context_factory=context_factory,
                 plugin_name=entry.plugin_name,
                 op_name=entry.op_name,
-                dispatch_runner=dispatch_runner if entry.auto_workspace_overlay else None,
+                dispatch_runner=dispatch_runner,
             )
         dispatcher_register_op(public_op, handler)
         registered.append(public_op)
         _PENDING.pop((entry.plugin_name, entry.op_name), None)
     return registered
+
+
+def _dispatch_runner_for_entry(entry: _PendingRegistration) -> DispatchRunner | None:
+    """Pick the dispatch runner for one plugin op based on intent + opt-out."""
+    if not entry.auto_workspace_overlay:
+        # Plugin manages its own overlay + OCC (e.g. LSP apply.py); skip
+        # the standard wrapper to keep the existing publish path UNCHANGED.
+        return None
+    if entry.intent is Intent.WRITE_ALLOWED:
+        from sandbox.ephemeral_workspace.plugin.overlay_dispatch import (
+            run_plugin_op_with_workspace_overlay,
+        )
+
+        return run_plugin_op_with_workspace_overlay
+    # READ_ONLY runs in-process: no overlay, no namespace child, no publish.
+    return None
 
 
 def _wrap_with_context(

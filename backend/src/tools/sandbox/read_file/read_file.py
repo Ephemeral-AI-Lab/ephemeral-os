@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sandbox.api as sandbox_api
+from sandbox._shared.models import Intent
 from sandbox.api import ReadFileRequest
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
@@ -29,6 +30,7 @@ from .prompt import get_read_file_description
     short_description="Read a file from the sandbox.",
     input_model=ReadFileInput,
     output_model=ReadFileOutput,
+    intent=Intent.READ_ONLY,
 )
 async def read_file(
     file_path: str,

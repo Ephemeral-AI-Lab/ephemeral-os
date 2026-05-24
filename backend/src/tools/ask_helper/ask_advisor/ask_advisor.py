@@ -12,6 +12,7 @@ import json
 
 from pydantic import BaseModel, Field
 
+from sandbox._shared.models import Intent
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput, ToolResult
@@ -158,6 +159,7 @@ def _build_advisor_user_msg_2(
     description=get_ask_advisor_description(),
     input_model=AskAdvisorInput,
     output_model=TextToolOutput,
+    intent=Intent.READ_ONLY,
 )
 async def ask_advisor(
     tool_name: str,

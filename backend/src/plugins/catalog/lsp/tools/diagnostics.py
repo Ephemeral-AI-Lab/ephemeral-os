@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from sandbox._shared.models import Intent
 from sandbox.ephemeral_workspace.plugin import call_plugin
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
@@ -28,6 +29,7 @@ class DiagnosticsInput(BaseModel):
     short_description="LSP diagnostics.",
     input_model=DiagnosticsInput,
     output_model=TextToolOutput,
+    intent=Intent.READ_ONLY,
 )
 async def diagnostics(
     file_path: str,

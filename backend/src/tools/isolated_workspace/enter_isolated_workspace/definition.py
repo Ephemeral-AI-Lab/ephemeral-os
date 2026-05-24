@@ -6,7 +6,7 @@ import json
 
 from pydantic import BaseModel
 
-from sandbox._shared.models import EnterIsolatedWorkspaceRequest
+from sandbox._shared.models import EnterIsolatedWorkspaceRequest, Intent
 from sandbox.host.iws_lifecycle import enter_isolated_workspace as lifecycle_enter
 from tools._framework.core.base import (
     TextToolOutput,
@@ -27,6 +27,7 @@ class EnterIsolatedWorkspaceInput(BaseModel):
     short_description="Enter isolated workspace.",
     input_model=EnterIsolatedWorkspaceInput,
     output_model=TextToolOutput,
+    intent=Intent.LIFECYCLE,
 )
 async def enter_isolated_workspace(
     layer_stack_root: str = "",

@@ -5,6 +5,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from tools._framework.core.context import ToolExecutionContextService
+from sandbox._shared.models import Intent
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput, ToolResult
 from .prompt import (
@@ -23,6 +24,7 @@ class SubmitExplorationResultInput(BaseModel):
     description=get_submit_exploration_result_description(),
     input_model=SubmitExplorationResultInput,
     output_model=TextToolOutput,
+    intent=Intent.READ_ONLY,
     is_terminal_tool=True,
 )
 async def submit_exploration_result(

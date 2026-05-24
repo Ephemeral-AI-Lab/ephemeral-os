@@ -8,6 +8,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 import sandbox.api as sandbox_api
+from sandbox._shared.models import Intent
 from sandbox.api import GrepRequest
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
@@ -121,6 +122,7 @@ class GrepOutput(BaseModel):
     short_description="Regex-search workspace file contents.",
     input_model=GrepInput,
     output_model=GrepOutput,
+    intent=Intent.READ_ONLY,
 )
 async def grep(
     pattern: str,
