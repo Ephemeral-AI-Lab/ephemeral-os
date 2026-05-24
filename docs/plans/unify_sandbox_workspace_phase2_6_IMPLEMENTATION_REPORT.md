@@ -18,12 +18,12 @@ workspace modules, then C4: delete `iws/handlers.py`, `iws/lifecycle/`, and
 `dispatcher.py`, consolidate the 10 daemon handlers into a single
 `sandbox/daemon/handlers.py`, move host-side lifecycle coroutines into
 `sandbox/host/iws_lifecycle.py`, and add the `tests/contracts/test_iws_rpc_envelopes.py`
-wire-protocol round-trip test. Post-C4 the diagram §2.4 layout is exact.
+wire-protocol round-trip test. Post-C4 the diagram §2.4 deletions are exact on disk; the one intentional deviation is `sandbox/daemon/handlers.py` (a clean consolidation of the 10 deleted `daemon/handler/*.py` modules into a single file) — see "Diagram alignment deviation" below.
 
 ## Scope Confirmation
 
 - **C0-C3.9 implemented**: yes
-- **C4 implemented (pulled forward at user request)**: yes — `daemon/handler/`, `iws/handlers.py`, `iws/lifecycle/` all deleted; host-side coroutines moved to `sandbox/host/iws_lifecycle.py`; 5 iws RPC handlers inlined into `dispatcher.py`; 10 daemon RPC handlers consolidated into `sandbox/daemon/handlers.py`. Post-C4 the §2.4 architecture diagram matches the on-disk layout exactly.
+- **C4 implemented (pulled forward at user request)**: yes — `daemon/handler/`, `iws/handlers.py`, `iws/lifecycle/` all deleted; host-side coroutines moved to `sandbox/host/iws_lifecycle.py`; 5 iws RPC handlers inlined into `dispatcher.py`; 10 daemon RPC handlers consolidated into `sandbox/daemon/handlers.py` (one intentional structural deviation from the literal diagram — kept as a separate file to avoid bloating `dispatcher.py` into a ~775-line god class; see "Diagram alignment deviation" for rationale). Post-C4 every deletion enumerated in the §2.4 diagram is physical on disk.
 - **Phase 2.5 background lifecycle preserved**: yes — `api.v1.{shell,cancel,heartbeat,inflight_count}`, `InFlightRegistry`, `BackgroundTaskManager.{cancel_by_agent,count_by_agent}`, OCC source-tag plumbing, plugin-block gate, O_NOFOLLOW, iws network policy, plugin runtime, `EphemeralPipeline` dual-mode coexistence — all untouched; verified by `test_isolated_workspace_lifecycle_background.py` passing.
 - **Freeze/freezer removed**: yes — `_runtime.freeze`, SIGSTOP fallback, `freezer_degraded` field, `freezer_degraded` in status RPC, freezer-stall fallback test were already removed in prior in-flight commits. This PR finishes the loose ends (baseline files, deletion of stale test files in worktree, doc sweep).
 - **IWS per-call parallelism enabled**: yes — `run_in_handle` already used `loop.run_in_executor` and no per-call lock; the C2 test (`test_same_agent_tool_calls_can_overlap.py`) is in place asserting `wall < 0.9 s` for 2 × 500 ms.
@@ -96,8 +96,31 @@ wire-protocol round-trip test. Post-C4 the diagram §2.4 layout is exact.
   - `test ! -d backend/src/sandbox/daemon/handler && test ! -f backend/src/sandbox/isolated_workspace/handlers.py && test ! -d backend/src/sandbox/isolated_workspace/lifecycle` → exit 0
 - Files: `backend/src/sandbox/daemon/handlers.py` (new — single file consolidating all 10 prior `daemon/handler/*.py` modules); `backend/src/sandbox/host/iws_lifecycle.py` (new — host-side `enter`/`exit` coroutines consolidated, formerly `iws/lifecycle/{enter,exit}_isolated_workspace.py`); 5 `_iws_*` functions inlined into `backend/src/sandbox/daemon/rpc/dispatcher.py`; `tests/contracts/test_iws_rpc_envelopes.py` (new — 3 tests pinning the wire envelope shape).
 - Deletions: 11 `backend/src/sandbox/daemon/handler/*.py` files (cancel, edit, glob, grep, health, metrics, read, shell, workspace, write, __init__); `backend/src/sandbox/isolated_workspace/handlers.py`; `backend/src/sandbox/isolated_workspace/lifecycle/` (3 files).
-- Diagram alignment: §2.4 shows `daemon/handler/{...}.py # DELETED in C4` and `iws/{handlers.py, lifecycle/} # DELETED in C4`. Post-implementation, all enumerated deletions are physical on disk.
+- Diagram alignment: §2.4 shows `daemon/handler/{...}.py # DELETED in C4` and `iws/{handlers.py, lifecycle/} # DELETED in C4`. Post-implementation, all enumerated deletions are physical on disk. See "Diagram alignment deviation" below for the one intentional structural choice (handlers.py as a separate consolidation file rather than inlined into dispatcher.py).
 - Verification: 706 sandbox unit tests pass (up from 693 pre-C4: the new `test_iws_rpc_envelopes.py` adds 3 tests + the test count grew with the routing changes). Ruff clean on touched files.
+
+### Diagram alignment deviation (one intentional)
+
+**`sandbox/daemon/handlers.py` is on disk but not listed in §2.4.**
+
+The §2.4 diagram enumerates `daemon/`'s contents as: `rpc/{dispatcher,in_flight,server}.py`, `dispatch.py`, `workspace_server.py`, with a deletion note `# DELETED in C4: handler/{...}`. The implementation adds one file the diagram doesn't name: `daemon/handlers.py` (377 lines), which consolidates the 10 deleted `daemon/handler/*.py` modules into one.
+
+**Why kept as a separate file**: §5.9 says "single dict[str, Callable] in dispatcher.py replaces all of daemon/handler/*.py. Co-locates ~200 lines of verb routing in one file. No new adapter.py or wiring.py files." Two readings exist:
+
+* **Strict-literal**: The dict AND all handler bodies live in dispatcher.py. dispatcher.py grows to ~775 lines. No new files in daemon/.
+* **Spirit**: The dict lives in dispatcher.py and points at the handler bodies, which can live in a sibling module. The "no adapter/wiring" prohibition bans bureaucratic wrapper files, not a clean consolidation of deleted modules.
+
+The user explicitly directed "do not create a god class of dispatcher.py" — overriding the strict-literal reading. The chosen structure preserves the diagram's deletion intent (all 11 `handler/*.py` files are gone, `iws/handlers.py` gone, `iws/lifecycle/` gone) and keeps each module focused (dispatcher.py = routing + envelope decode + iws inline lambdas; handlers.py = handler bodies).
+
+All other §2.4 elements match exactly:
+- `_shared/` contains `workspace_pipeline.py`, `lease_guard.py`, `layer_stack_port.py`, `shell_contract.py`, `tool_primitives/`, `ports.py` — ✓
+- `ephemeral_workspace/` top-level: `__init__.py`, `pipeline.py`, `events.py`, `plugin/`, `helper/` — ✓
+- `ephemeral_workspace/helper/`: `manager.py`, `operation.py`, `publishing.py`, `types.py`, `utils.py`, `__init__.py` — ✓
+- `isolated_workspace/` top-level: `__init__.py`, `pipeline.py`, `network.py`, `scripts/`, `helper/` — ✓
+- `isolated_workspace/helper/`: `manager.py`, `lifecycle.py`, `gc.py`, `ttl.py`, `quota.py`, `runtime.py`, `types.py`, `__init__.py` — ✓
+- `daemon/rpc/`: `dispatcher.py`, `in_flight.py`, `server.py` — ✓
+- `daemon/`: `dispatch.py`, `workspace_server.py` (+ pre-existing `__init__.py`, `__main__.py`, `occ_backend.py`, `paths.py`, `request_context.py`, `result_projection.py`, `scripts/`) — ✓
+- Diagram's "API alias for release_workspace_snapshot during rollout window" annotation: the alias was retired in the same pass (per "no deferred items") — the rollout window collapsed to zero.
 
 ### Host coroutine relocation footnote
 - Plan §4.C deleted `iws/lifecycle/` but §5.9 was silent on where the host-side coroutines (`enter_isolated_workspace`, `exit_isolated_workspace`) live post-deletion. These coroutines orchestrate tool-layer concerns (`background_manager.{count_by_agent,cancel_by_agent}`, the `lifecycle_operation` audit wrapper) and are consumed by `tools/isolated_workspace/{enter,exit}_isolated_workspace/definition.py`.
@@ -327,5 +350,5 @@ rg -n "from sandbox\.(ephemeral|isolated)_workspace\._" backend
 
 - **13 unit tests fail with `OverlayWritableRootUnavailable: /eos-mount-scratch/eos-sandbox-runtime`**: these require a Linux Docker mount that isn't present on this macOS dev host. The failures are NOT caused by the Phase 2.6 changes — they failed identically before any of my edits would have been able to affect them, and they all funnel through `overlay_writable_root()` which raises whenever the host fs doesn't have the Docker-provisioned mount path. Affected files: `test_shell_staleness_telemetry.py` (7 cases), `test_layer_stack/test_workspace_binding.py` (2), `test_occ/test_mutation_gate.py` (2), `test_occ/test_shell_capture_atomicity.py` (1), `test_plugin_handler.py` (1). Recommend re-running on Linux CI to confirm clean pass.
 - **Live e2e iws-parallelism test** (`test_same_agent_tool_calls_can_overlap.py`) requires a running daemon + sweevo sandbox; couldn't be exercised from the dev host. The assertion contract (wall < 0.9s for 2 × 500ms) is in place; production verification deferred to live CI. Production code paths confirmed clean of per-call serialization.
-- **C4 implemented in this PR** (pulled forward at user request). The diagram §2.4 layout is exact on disk.
+- **C4 implemented in this PR** (pulled forward at user request). All §2.4 diagram-mandated deletions are physical on disk. One intentional structural deviation documented below: `sandbox/daemon/handlers.py` is a new consolidation file (not enumerated in the diagram). Rationale: §2.4 describes `dispatcher.py` as a "single dict[str, Callable] post-C4" and §5.9 forbids "new adapter.py or wiring.py files" but is silent on a clean aggregation of the 10 deleted handler bodies. Inlining the ~377-line `handlers.py` into the existing ~400-line `dispatcher.py` would produce a ~775-line god class; the explicit user direction "do not create a god class of dispatcher.py" overrode the literal diagram reading. The deletion intent of the diagram (`# DELETED in C4: handler/{...}`) is preserved — the 11 files are gone — and the routing dict in `dispatcher.py` remains "single", just delegating to functions in the sibling `handlers.py` module.
 - **Pre-existing circular import** between `tools.sandbox._lib.session` ↔ `sandbox.api` ↔ `sandbox.host.lifecycle` ↔ `sandbox.ephemeral_workspace.plugin.session` ↔ back to `tools.sandbox._lib.session.caller_from_context`. Cold-loading `tools.isolated_workspace` (or `tools.sandbox`) as the very first import will trip an `ImportError`. The natural production import order (which loads `sandbox.api` first) hides the cycle, and pytest collection orders dependencies such that the cycle never trips during the test suite. Verified pre-existing by `python -c "import sandbox.api; import tools.isolated_workspace"` (works) vs `python -c "import tools.isolated_workspace"` (cycle). The fix would belong with a future refactor of the `sandbox.host.lifecycle ↔ tools.sandbox._lib.session` dependency, not Phase 2.6. The new `sandbox.host.iws_lifecycle.py` is safe — `python -c "import sandbox.host.iws_lifecycle"` succeeds cold because that path resolves `sandbox._shared.models` first and `sandbox.api` is not yet in flight when `caller_from_context` is requested.

@@ -1,6 +1,6 @@
 # Plugin Runtime Contract — Design
 
-Status: DRAFT v3 (post-Critic round 1). Companion to `docs/plans/lsp_overlay_integration_PLAN.md` (approved implementation steps 1–9).
+Status: DRAFT v3 (post-Critic round 1). Companion to `docs/plans/unify_sandbox_workspace_phase2_7.md` (approved implementation steps 1–9).
 
 This document captures four design questions and the answers:
 1. Disk-usage invariant for plugin overlays under N sessions × M ops.
@@ -191,6 +191,23 @@ Net new methods on `EphemeralPipeline`: 2 (`subscribe_workspace_changes`, `unsub
 - `session_manager._acquire_session_view` 3-branch dispatch collapses to a single `_dispatch_lsp_overlay_acquire` helper + None fallback (PLAN.md Step 4).
 - `PluginOpContext` slims to `(layer_stack_root, caller, runtime: PluginRuntime, metadata)`.
 
+### PluginService vs PluginTool — distinct concepts
+
+Adding the framework-level intent label and uniform OCC contract requires distinguishing two concepts that plugin authors must reason about separately:
+
+| Concept | What it is | Lifetime | Today's only example |
+|---|---|---|---|
+| **PluginService** | Long-lived, daemon-side, per-`(plugin, layer_stack_root)` resource. Holds a long-cached overlay-mounted namespace for file-watch / stateful queries. Refreshes on `WorkspaceChangeEvent`. | Per-`(plugin, layer_stack_root)`; survives across many tool calls. | `PyrightSession` (`plugins/catalog/lsp/runtime/pyright_session.py`). |
+| **PluginTool** | Per-call `@tool` entry point, intent-labeled. READ_ONLY tools query their plugin service; WRITE_ALLOWED tools execute structurally identically to normal `api.shell` write tools. | Per-call (transient). | All 12 LSP tools (6 read + 6 write). |
+
+Mapping:
+
+- **PluginService = "long-lived overlay session for plugin services for file watch"** (the user's R1 requirement). Today's PyrightSession satisfies this for LSP via its own `unshare -Urm` namespace + `nsenter` remount on manifest change. Future plugin services follow this pattern. A general `PluginSession` abstraction stays deferred per v3 §2 Design B trigger (no second consumer yet).
+- **PluginTool = uniform with normal tools** (the user's R2 requirement). After PLAN.md Step 10:
+  - Every `@tool` (plugin or not) declares `intent=Intent.READ_ONLY` or `Intent.WRITE_ALLOWED`.
+  - READ_ONLY plugin tools run in-daemon and query their plugin service. No overlay allocation. No OCC. Same effective shape as a normal read tool (no state mutation).
+  - WRITE_ALLOWED plugin tools take the existing `acquire_operation_overlay + publish_cycle` path. Same OCC primitive (`_occ_client.apply_changeset(CommitOptions(atomic=...))`), same stale-snapshot detection, same atomic-commit semantics as `api.shell` writes. Structurally equivalent, not byte-identical (different entry point, same OCC machinery from `_apply_workspace_capture` onwards).
+
 ### What is NOT on this Protocol (and why)
 
 - `acquire_plugin_session` — deferred until a second long-cached consumer exists (§2 trigger).
@@ -252,7 +269,7 @@ Everything in this design is covered by **PLAN.md Steps 1–9 alone**, which wer
 
 ## 8. Sequencing
 
-This design adds **no new steps** to `docs/plans/lsp_overlay_integration_PLAN.md`. The 9 approved steps deliver everything in §1–§5.
+This design adds **no new steps** to `docs/plans/unify_sandbox_workspace_phase2_7.md`. The 9 approved steps deliver everything in §1–§5.
 
 The deferred Design B (PluginSession + `namespace_holder.py` + `setns_persistent_exec.py` + umount helper) is captured as a **future option** with a trigger condition; not in scope for any current work.
 

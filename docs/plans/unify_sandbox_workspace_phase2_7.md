@@ -171,6 +171,105 @@ Delegations:
 
 **Ordering rule**: Step 9 runs LAST. Run `mypy backend/tests/unit_test/test_sandbox/` after each prior step; migrate `SimpleNamespace` stubs to typed fakes incrementally.
 
+### Plugin tool / service alignment (Steps 10–10g, approved consensus round 3)
+
+Steps 1–9 deliver the overlay primitives + Protocol collapse. Steps 10a–10g align plugin tools with normal tools at the framework level (intent labeling) and document the plugin-service vs plugin-tool distinction.
+
+#### Step 10a — `intent: Intent` required on `@tool`
+
+`backend/src/tools/_framework/core/decorator.py`
+- Add `intent: Intent` as REQUIRED kwarg on `@tool` (kw-only, no default).
+- Decorator raises `TypeError("@tool requires intent=Intent...")` at import time if missing.
+- Expose `BaseTool.intent` property.
+
+Verify: `python -c "import tools; import plugins"` succeeds iff every `@tool` site is annotated (mechanical fail-fast).
+
+#### Step 10b — Annotate all existing `@tool` callsites
+
+- Write tools → `intent=Intent.WRITE_ALLOWED`:
+  - `tools/sandbox/write_file/write_file.py:26`
+  - `tools/sandbox/edit_file/edit_file.py:65`
+  - `plugins/catalog/lsp/tools/rename.py:22`
+  - `plugins/catalog/lsp/tools/format.py:25`
+  - `plugins/catalog/lsp/tools/apply_code_action.py:20`
+  - `plugins/catalog/lsp/tools/apply_workspace_edit.py:20`
+- Read tools → `intent=Intent.READ_ONLY`:
+  - All 6 LSP read tools: `hover`, `find_definitions`, `find_references`, `diagnostics`, `query_symbols`, `code_actions`
+  - All non-plugin read tools (`read_file`, `list_dir`, etc.)
+
+Verify: grep contract — no `@tool(` without `intent=` in the same expression.
+
+#### Step 10c — Auto-injection through `BaseTool.execute → context → call_plugin`
+
+`backend/src/tools/_framework/core/base.py`
+- `BaseTool.execute` writes `context["__intent"] = self.intent` before invoking the wrapped function.
+
+`backend/src/sandbox/ephemeral_workspace/plugin/session.py`
+- `call_plugin` reads `context["__intent"]` and embeds in `payload_with_meta["intent"]`.
+
+`backend/src/sandbox/ephemeral_workspace/plugin/handler.py`
+- `_plugin_op_context_factory` reads `args["intent"]` and writes `PluginOpContext.intent: Intent`.
+
+Tool authors NEVER manually pass intent.
+
+Verify: trace test — `@tool(intent=READ_ONLY)` → handler receives `ctx.intent == Intent.READ_ONLY`.
+
+#### Step 10d — Dispatch-runner selection at registration
+
+`backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py`
+- Registration tuple becomes `(plugin_name, op_name, handler, intent)`.
+
+`backend/src/sandbox/ephemeral_workspace/plugin/handler.py:flush_plugin_registrations`
+- Per-op dispatch_runner selection:
+  - `intent == Intent.READ_ONLY` → in-process dispatch runner (handler invoked in daemon process; no `acquire_operation_overlay`, no namespace child, no `publish_cycle`).
+  - `intent == Intent.WRITE_ALLOWED` → existing `run_plugin_op_with_workspace_overlay` (overlay + OCC publish path, UNCHANGED).
+  - `intent == Intent.LIFECYCLE` → reject at registration time (TypeError); LIFECYCLE is for sandbox lifecycle ops, not plugin tools.
+
+`backend/src/sandbox/ephemeral_workspace/plugin/op_context.py`
+- `PluginOpContext` docstring contract: "Handlers invoked with `intent=Intent.READ_ONLY` MUST NOT perform direct filesystem I/O. All reads MUST go through a `PluginService` (today: `PyrightSession` via `session_manager.get_session`)."
+
+Verify:
+- READ_ONLY plugin op: assert `LeaseRegistry.active_count()` unchanged across the op.
+- READ_ONLY plugin op: assert `active_manifest_version` unchanged across the op.
+- WRITE_ALLOWED plugin op: assert OCC `apply_changeset` audit entry present, structurally equivalent to `api.shell` write OCC audit.
+
+#### Step 10e — Document `PluginService` concept
+
+`docs/design/plugin_runtime_contract.md` §3
+- Add subsection: `PluginService` vs `PluginTool` distinction.
+  - `PluginService` = long-lived, daemon-side, per-`(plugin, layer_stack_root)` resource. Holds long-cached overlay-mounted namespace for file-watch / stateful queries. Today's only implementation = `PyrightSession`. Future plugin services follow this pattern until the v3 §2 Design B trigger fires.
+  - `PluginTool` = per-call, intent-labeled `@tool` entry point. READ_ONLY tools query their plugin service. WRITE_ALLOWED tools execute structurally identically to normal `api.shell` write tools (same OCC `apply_changeset` primitive, same `CommitOptions(atomic=...)`, same stale-snapshot detection).
+
+#### Step 10f — DEFERRED
+
+`call_plugin_write` belt-and-suspenders API (mislabeling impossible at API boundary). Ship 10a–10e first and measure whether mislabeling occurs in practice. Adopt 10f only if empirically warranted.
+
+#### Step 10g — Drift contract test
+
+`backend/tests/contracts/test_tool_intent_drift.py` (new)
+- For every `BaseTool` registered in `tool_registry.list_tools()` whose name has a sibling in the daemon's handlers-table (`daemon/handlers.py` verbs: `shell`, `read_file`, `write_file`, `edit_file`, etc.), assert `tool.intent == handlers_table[verb].intent`.
+- Asserts every `@tool` decoration has an `intent` attribute set (positive complement to Step 10a's import-time TypeError).
+
+Verify: test fails if `daemon/handlers.py` declares `Intent.WRITE_ALLOWED` for a verb while the `@tool` declares `Intent.READ_ONLY` (or vice versa).
+
+#### Step 10 acceptance (full block)
+
+- `@tool` requires explicit `intent=`; missing intent raises `TypeError` at import.
+- All write tools annotated `Intent.WRITE_ALLOWED`; all read tools annotated `Intent.READ_ONLY`.
+- `intent` auto-injected end-to-end with no tool-author manual passing.
+- Plugin dispatch_runner chosen at registration time, not inside `overlay_dispatch`.
+- READ_ONLY plugin op: no overlay allocation, no namespace child, no publish; LSP integration test confirms.
+- WRITE_ALLOWED plugin op: existing overlay+OCC path UNCHANGED.
+- 10g drift test green; daemon-handlers-table and `@tool.intent` agree everywhere.
+- `PluginService` documented in v3 design doc as the long-lived overlay session for file-watch.
+
+#### Step 10 sequencing
+
+- 10a → 10b → 10c → 10d → 10g land atomically in one block (partial state breaks dispatch).
+- 10e is doc-only; lands in parallel.
+- 10f is deferred.
+- Step 10 lands AFTER Steps 1–9 because (a) `PluginOpContext` slimming happens in Step 9, (b) the unified `OverlayHandle` from Step 6 is required for the in-process read dispatcher's return type alignment.
+
 ## REJECTED (deferred or wrong shape)
 
 - **S3** — Collapse 3 unshare child entrypoints (`overlay_child.py`, `lsp/apply_child.py`, `namespace_remount.py`). Cross-process boundary; separate work item.
