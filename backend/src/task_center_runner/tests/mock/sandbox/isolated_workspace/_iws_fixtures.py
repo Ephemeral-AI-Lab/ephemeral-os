@@ -75,14 +75,6 @@ def can_mount_overlay_natively() -> bool:
     return mount_syscalls_supported()
 
 
-def has_cgroup_freezer() -> bool:
-    try:
-        with open("/sys/fs/cgroup/cgroup.controllers", "r", encoding="utf-8") as fh:
-            return "freezer" in fh.read()
-    except OSError:
-        return False
-
-
 def has_unshare_netns() -> bool:
     try:
         result = subprocess.run(
@@ -307,7 +299,6 @@ __all__ = [
     "can_mount_overlay_natively",
     "clear_daemon_env",
     "daemon_kill_and_respawn",
-    "has_cgroup_freezer",
     "has_unshare_netns",
     "iws_scratch_root",
     "list_host_eos_iws_resources",

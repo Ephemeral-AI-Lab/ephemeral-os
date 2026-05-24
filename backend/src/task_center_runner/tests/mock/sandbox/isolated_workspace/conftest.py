@@ -56,7 +56,7 @@ def iws_capability_probe() -> dict[str, bool]:
 
     When the live tests run via the docker provider, the actual kernel
     work happens inside the sweevo container — a Linux VM/cgroup-v2 host
-    that always has the overlay, freezer, and unshare surfaces present
+    that always has the overlay and unshare surfaces present
     (the daemon refuses to come up without them). Probing the pytest host
     (often macOS) for those surfaces is the wrong observable; report
     True under the docker provider so Tier 9 tests can actually run
@@ -67,7 +67,6 @@ def iws_capability_probe() -> dict[str, bool]:
     if _os.environ.get("EOS_SANDBOX_PROVIDER", "").lower() == "docker":
         return {
             "has_mount_overlay": True,
-            "has_cgroup_freezer": True,
             "has_unshare_netns": True,
             "has_docker": shutil.which("docker") is not None,
         }
@@ -76,7 +75,6 @@ def iws_capability_probe() -> dict[str, bool]:
 
     return {
         "has_mount_overlay": _iws_fixtures.can_mount_overlay_natively(),
-        "has_cgroup_freezer": _iws_fixtures.has_cgroup_freezer(),
         "has_unshare_netns": _iws_fixtures.has_unshare_netns(),
         "has_docker": shutil.which("docker") is not None,
     }

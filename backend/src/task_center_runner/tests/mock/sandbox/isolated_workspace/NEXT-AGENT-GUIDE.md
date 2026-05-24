@@ -53,8 +53,8 @@ backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/  ← all i
 ├── isolation/               Tier 2 — R1 + lowerdir/upperdir separation
 ├── network/                 Tier 3 — masquerade / IMDS / DNS / inbound REJECT
 ├── failure_modes/           Tier 4 — failure-injection rollback paths
-├── resource_controls/       Tier 5 — quota / cap / TTL / RAM / ENOSPC / freeze
-├── concurrency/             Tier 6 — handle-lock, map-lock, N=5 noisy neighbour
+├── resource_controls/       Tier 5 — quota / cap / TTL / RAM / ENOSPC
+├── concurrency/             Tier 6 — same-agent overlap, map-lock, N=5 noisy neighbour
 ├── gc_and_persistence/      Tier 7 — daemon-restart reaping + lowerdir O(1)
 ├── stress/                  Tier 8 — soak (live_e2e_soak gate, N=5 maximum-load)
 └── performance/             Tier 9 — capability-gated phase budgets + baseline
@@ -282,20 +282,19 @@ already provide all the properties under test.
 
 ---
 
-### Phase 4 (done, 2026-05-23 session 3) — Tier 7 GC + persistence, 14 tests
+### Phase 4 (done, 2026-05-23 session 3) — Tier 7 GC + persistence, 13 tests
 
 **Goal landed:** daemon-restart reconciliation reaps every iws-owned
 kernel + disk resource, releases orphan leases, reserves persisted IPs,
-unfreezes before kill (R5 ordering), and sweeps legacy v1 nft tables.
+and sweeps legacy v1 nft tables.
 
-**Tests landed (all 14):**
+**Tests landed (all 13):**
 
 - `gc_and_persistence/test_manager_json_roundtrip.py`
 - `gc_and_persistence/test_manager_json_schema_mismatch_treated_as_empty.py`
 - `gc_and_persistence/test_daemon_restart_reaps_orphan_{veth, cgroup, scratch, netns}.py`
 - `gc_and_persistence/test_daemon_restart_releases_orphan_lease.py`
 - `gc_and_persistence/test_daemon_restart_reconciles_ip_pool.py`
-- `gc_and_persistence/test_daemon_restart_gc_order_unfreeze_before_kill.py`
 - `gc_and_persistence/test_v1_nft_table_migration_sweep.py`
 - v2 additions (PLAN §19.5):
   - `gc_and_persistence/test_lowerdir_layer_paths_shared_across_concurrent_handles.py`
@@ -306,12 +305,10 @@ unfreezes before kill (R5 ordering), and sweeps legacy v1 nft tables.
 **Production code (in `pipeline.py` / extracted modules):**
 
 - `startup_gc` rewritten: every persisted handle row is treated as a
-  zombie — reserve its IP, release its lease, unfreeze + rmdir its
-  cgroup, THEN run the naming-convention sweep.
+  zombie — reserve its IP, release its lease, reap its cgroup, THEN run
+  the naming-convention sweep.
 - New `_release_orphan_lease(persisted_row)` + `_reap_orphan_cgroup(persisted_row)`
   helpers emit `gc_orphan` events with `kind={lease,cgroup}`.
-- New `_unfreeze_and_kill(cgroup)` logs `isolated_workspace_gc_unfreeze`
-  THEN `isolated_workspace_gc_kill` (R5 ordering pin for the daemon log scan).
 - `_reap_orphans` extended with a cgroup naming-convention sweep on top of
   the existing veth + scratch sweeps.
 
@@ -366,7 +363,7 @@ sandbox container needed).
 
 ---
 
-### Phase 6 (done, 2026-05-23 session 3) — Tier 4 failure modes, 8 tests
+### Phase 6 (done, 2026-05-23 session 3) — Tier 4 failure modes, 7 tests
 
 **Goal landed:** every adversarial enter/exit path has a test that
 proves rollback runs (lease released, no orphan veth/cgroup/scratch) and
@@ -380,7 +377,6 @@ the manager doesn't strand state.
 - `failure_modes/test_veth_install_fails_releases_lease.py`
 - `failure_modes/test_dns_helper_fails_does_not_strand_handle.py`
 - `failure_modes/test_holder_refuses_sigterm_sigkill_fallback.py`
-- `failure_modes/test_freezer_stall_falls_back_to_sigstop.py`
 - `failure_modes/test_argv_e2big_via_in_ns_write.py`
 
 **Production code (in `pipeline.py` / extracted modules):**
@@ -393,12 +389,6 @@ the manager doesn't strand state.
   - Read by the module-level `_maybe_inject_failure(phase)` helper at
     every entry into the four `_wire_handle` phases (`ns_holder_ready`,
     `install_veth`, `overlay_mount`, `configure_dns`).
-- R11 SIGSTOP/SIGCONT fallback in `_LinuxRuntime.freeze`: if the
-  `cgroup.freeze` write hits `OSError` (chmod 000 in the test fixture, or
-  a real EPERM from a missing controller), walk `cgroup.procs` and
-  send the per-PID signal. Sets `handle.freezer_degraded=True` so the
-  audit + status fields reflect the fallback path.
-
 **Production code (in `scripts/ns_holder.py`):**
 
 - One additional knob: `EOS_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH=true`
@@ -415,12 +405,12 @@ the manager doesn't strand state.
 
 ---
 
-### Phase 7 (done, 2026-05-23 session 4) — Tier 5 + Tier 6, 18 tests
+### Phase 7 (done, 2026-05-23 session 4) — Tier 5 + Tier 6, 17 tests
 
 **Goal landed:** every resource-control + concurrency property has a
 runtime test; the async refactor that unblocks N=5 fan-out lands first.
 
-**Tests landed (Tier 5, 7 tests):**
+**Tests landed (Tier 5, 6 tests):**
 
 - `resource_controls/test_quota_one_per_agent.py`
 - `resource_controls/test_total_cap_blocks_new_agent.py`
@@ -428,14 +418,13 @@ runtime test; the async refactor that unblocks N=5 fan-out lands first.
 - `resource_controls/test_ttl_evict_and_audit.py`
 - `resource_controls/test_ttl_does_not_evict_active.py`
 - `resource_controls/test_upperdir_tmpfs_enospc_natural_backpressure.py`
-- `resource_controls/test_freeze_thaw_idempotent_across_tool_calls.py`
 
 **Tests landed (Tier 6, 7 base + 4 N=5 noisy-neighbor = 11):**
 
 - `concurrency/test_two_agents_same_port.py`
 - `concurrency/test_concurrent_enter_no_ip_double_allocation.py`
 - `concurrency/test_concurrent_default_and_isolated_in_same_agent.py`
-- `concurrency/test_handle_lock_serializes_tool_calls.py`
+- `concurrency/test_same_agent_tool_calls_can_overlap.py`
 - `concurrency/test_map_lock_serializes_enter_exit_only.py`
 - `concurrency/test_init_complete_blocks_enter_during_startup_gc.py`
 - `concurrency/test_re_enter_after_exit_gets_fresh_handle.py`
@@ -464,11 +453,11 @@ runtime test; the async refactor that unblocks N=5 fan-out lands first.
 
 ---
 
-### Phase 8 (done, 2026-05-23 session 4) — Tier 8 stress, 5 tests
+### Phase 8 (done, 2026-05-23 session 4) — Tier 8 stress, 4 tests
 
-**Goal landed:** N=5 maximum-load + create/destroy soak + idle CPU
-freeze-at-rest + full network e2e + at-rest disk bound all have a test.
-All 5 are gated on `pytest.mark.live_e2e_soak` (PLAN §9.5 — soak marker
+**Goal landed:** N=5 maximum-load + create/destroy soak + full network e2e
+and at-rest disk bound all have a test.
+All 4 are gated on `pytest.mark.live_e2e_soak` (PLAN §9.5 — soak marker
 already exists in `pyproject.toml`, no `--run-slow` plumbing was needed).
 
 **Tests landed:**
@@ -477,8 +466,6 @@ already exists in `pyproject.toml`, no `--run-slow` plumbing was needed).
   v2 §19.4 contention bound (`max install_veth ≤ 5 × median`).
 - `stress/test_rapid_create_destroy_cycle.py` — 100 enter/exit cycles
   with FD-count drift bound (≤ 50 over the run).
-- `stress/test_long_running_idle_freeze_at_rest.py` — 30 s idle window;
-  cgroup `cpu.stat.usage_usec` growth ≤ 200 ms-equivalent.
 - `stress/test_pip_install_then_run_e2e.py` — full DNS + MASQUERADE +
   bridge + HTTPS chain via `httpbin.org`.
 - `stress/test_disk_at_rest_bounded.py` — at-rest scratch ≤ 10 MiB
@@ -549,11 +536,10 @@ in `IMPLEMENTATION-REPORT.md` Session 4 deferred items.
 |---|---|
 | ~~`EOS_ISOLATED_WORKSPACE_ENABLED` daemon plumbing~~ | **DONE** (2026-05-23 session 2 — see `iws_sandbox` fixture in `conftest.py`). |
 | ~~Daemon-side iws audit-event JSONL sink~~ | **DONE** (2026-05-23 session 2 — `_JsonlAuditSink` in `handlers.py`, `iws_audit_jsonl` fixture). |
-| ~~Cgroup/lease/netns reap on startup_gc~~ | **DONE** (2026-05-23 session 3 — `_release_orphan_lease`, `_reap_orphan_cgroup`, `_unfreeze_and_kill` in `pipeline.py` / extracted modules). |
+| ~~Cgroup/lease/netns reap on startup_gc~~ | **DONE** (2026-05-23 session 3 — `_release_orphan_lease`, `_reap_orphan_cgroup`, and cgroup naming sweeps in `pipeline.py` / extracted modules). |
 | ~~v1 `eos_pinws_*` nft migration sweep~~ | **DONE** (2026-05-23 session 3 — `IsolatedNetwork._sweep_v1_nft_tables`). |
 | ~~IPv6 default-route purge~~ | **DONE** (2026-05-23 session 3 — `_purge_ipv6_default_routes` in `scripts/ns_holder.py`). |
 | ~~Test-only failure-injection env knobs~~ | **DONE** (2026-05-23 session 3 — `_maybe_inject_failure` in `pipeline.py` / extracted modules, holder crash knob in `ns_holder.py`). |
-| ~~R11 SIGSTOP/SIGCONT fallback in `freeze`~~ | **DONE** (2026-05-23 session 3 — `_LinuxRuntime.freeze` walks `cgroup.procs` on EACCES). |
 | ~~Async `subprocess` migration for `_LinuxRuntime` (§4.2/7.7)~~ | **DONE** (2026-05-23 session 4 — `mount_overlay` + `configure_dns` are `async def`; shared `_run_helper_subprocess` coroutine). |
 | ~~`_ttl_loop` background task wired by `initialize()`~~ | **DONE** (2026-05-23 session 4 — Tier 5 prerequisite; adaptive cadence `max(0.5 s, min(ttl_s / 2, 30 s))`). |
 | ~~`EOS_ISOLATED_WORKSPACE_TEST_PHASE_DELAY` test-only knob~~ | **DONE** (2026-05-23 session 4 — drives Tier 9's `test_latency_regression_band`). |

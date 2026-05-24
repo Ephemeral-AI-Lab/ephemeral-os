@@ -1,8 +1,7 @@
-"""``tool_call`` ``phases_ms`` covers the v1 3-phase key set.
+"""``tool_call`` ``phases_ms`` covers the current single-phase key set.
 
-Per PLAN §15.2, v1 ships 3 phases: ``{unfreeze, exec, freeze}``. ``argv0``
-and ``exit_code`` are populated. Widening to 4 phases is the deferral
-ticket; sunset trigger ``exec`` P95 > 500 ms.
+The runtime no longer freezes between tool calls. ``exec`` is therefore the
+only tool-call phase; ``argv0`` and ``exit_code`` are still populated.
 """
 
 from __future__ import annotations
@@ -24,7 +23,7 @@ from task_center_runner.tests.mock.sandbox.isolated_workspace.performance._helpe
 
 
 pytestmark = pytest.mark.asyncio
-_ALLOWED = {"unfreeze", "exec", "freeze"}
+_ALLOWED = {"exec"}
 
 
 @pytest.mark.skipif(

@@ -43,7 +43,7 @@ async def test_map_lock_serializes_enter_exit_only(
     assert a.get("success") and b.get("success"), (a, b)
     try:
         # Long-ish sleeps so the overlap window is large compared to RPC
-        # round-trip jitter. With independent handle.locks, total wall ≈
+        # round-trip jitter. With no per-handle execution lock, total wall ≈
         # max(0.7s, 0.7s) ≈ 0.7s, NOT 1.4s.
         loop = asyncio.get_running_loop()
         t0 = loop.time()

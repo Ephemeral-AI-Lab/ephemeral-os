@@ -1,7 +1,7 @@
 # Running the isolated_workspace live e2e suite
 
-**Audience:** anyone running the 77 live-gated iws tests (Tiers 1-9). All
-kernel-touching work (overlay mount, cgroup v2 freezer, netns, setns)
+**Audience:** anyone running the live-gated iws tests (Tiers 1-9). All
+kernel-touching work (overlay mount, cgroup v2, netns, setns)
 happens **inside a SWE-EVO docker container** spawned by the test
 fixture — the host just runs pytest and `docker run`. The 17 Tier 0
 static fences pass on any OS.
@@ -49,7 +49,7 @@ native Linux (mostly socket/tmpfs behavior in §7 troubleshooting).
 | Item | Why | How to verify |
 |---|---|---|
 | Docker daemon reachable on `unix:///var/run/docker.sock` (or Docker Desktop) | the `docker` provider spawns the sweevo container | `docker info` succeeds |
-| Container kernel ≥ 5.11 (for required mount syscalls) | overlay `fsmount`, `setns(CLONE_NEWUSER)`, cgroup v2 freezer all need it. Docker Desktop's VM and any modern Linux host already satisfy this. | `docker run --rm ubuntu:22.04 uname -r` |
+| Container kernel ≥ 5.11 (for required mount syscalls) | overlay `fsmount`, `setns(CLONE_NEWUSER)`, and cgroup v2 all need it. Docker Desktop's VM and any modern Linux host already satisfy this. | `docker run --rm ubuntu:22.04 uname -r` |
 | `uv` installed + repo synced | project standard wrapper for the venv — `uv run` is how `task_center_runner/read.md` documents every command | `uv --version`; `uv sync --extra dev` |
 | `nft` + `ip` binaries available inside the sweevo image | iws bridge/MASQUERADE + veth wiring | `bash backend/scripts/preflight_docker_a2_caps.sh` (skips on macOS — see §3) |
 | A valid SWE-EVO instance id baked into your local image cache | every test fixture boots a sweevo container by instance id | `docker images` lists `sweevo-test-<instance>-*`, or first-run pulls it |
@@ -206,14 +206,14 @@ on, expect:
 - **Tier 3 network** (15 tests) — masquerade, IMDS drop, DNS branches,
   IPv6 default route, bridge port-isolation, RFC1918 opt-in, 4 inbound
   rejection via `unshare -n`.
-- **Tier 4 failure_modes** (8 tests) — every adversarial setup path
+- **Tier 4 failure_modes** (7 tests) — every adversarial setup path
   rolls back; uses `EOS_ISOLATED_WORKSPACE_TEST_HANG_AT` / `_FAIL_AT` /
   `_HOLDER_CRASH` env knobs the manager honours.
-- **Tier 5 resource_controls** (7 tests) — quota, TOTAL_CAP, host-RAM
-  gate, TTL evict + non-evict, ENOSPC, freeze/thaw idempotency.
-- **Tier 6 concurrency** (11 tests) — handle-lock, map-lock,
+- **Tier 5 resource_controls** (6 tests) — quota, TOTAL_CAP, host-RAM
+  gate, TTL evict + non-evict, ENOSPC.
+- **Tier 6 concurrency** (11 tests) — same-agent overlap, map-lock,
   init_complete, fresh-handle on re-enter, 4 N=5 noisy-neighbor proofs.
-- **Tier 7 gc_and_persistence** (14 tests) — daemon-restart reaping of
+- **Tier 7 gc_and_persistence** (13 tests) — daemon-restart reaping of
   veth/cgroup/scratch/netns/lease, IP-pool reconciliation, v1 nft sweep,
   v2 lowerdir O(1) checks, upperdir discard on abnormal exit.
 - **Tier 9 performance** (7 tests) — capability-gated; if the kernel
@@ -228,9 +228,9 @@ is committed (§6 below).
 
 ### 5b. Tier 8 — soak / stress (opt-in)
 
-The 5 stress tests are marked `pytest.mark.live_e2e_soak`. They include
-a 100-cycle create/destroy loop, a 30 s idle freeze-at-rest check, a
-60 s at-rest disk probe, an N=5 max-load fan-out, and a full
+The 4 stress tests are marked `pytest.mark.live_e2e_soak`. They include
+a 100-cycle create/destroy loop, a 60 s at-rest disk probe, an N=5
+max-load fan-out, and a full
 pip-install + httpx network e2e. Budget: 30-90 min total depending on
 package cache state.
 

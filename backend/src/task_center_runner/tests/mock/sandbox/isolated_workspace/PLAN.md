@@ -11,7 +11,7 @@
 ## 0. Why this tier
 
 Every load-bearing property of `enter_isolated_workspace` lives in the Linux
-kernel: `unshare`, `setns`, `fsmount`, cgroup v2 freezer, bridge port
+kernel: `unshare`, `setns`, `fsmount`, cgroup v2 quotas, bridge port
 isolation, nftables MASQUERADE, IPv6 default-route purge. A unit-test tier
 with a `FakeRuntime` can only catch lifecycle-order bugs; it cannot catch the
 bugs the design is actually trying to prevent. Therefore the entire test
@@ -78,7 +78,6 @@ isolated_workspace/
 │   ├── test_veth_install_fails_releases_lease.py
 │   ├── test_dns_helper_fails_does_not_strand_handle.py
 │   ├── test_holder_refuses_sigterm_sigkill_fallback.py
-│   ├── test_freezer_stall_falls_back_to_sigstop.py
 │   └── test_argv_e2big_via_in_ns_write.py     # cross-ref: known_issue
 │
 ├── resource_controls/                   # Tier 5: quota / TTL / RAM
@@ -87,14 +86,13 @@ isolated_workspace/
 │   ├── test_host_ram_gate_refuses_over_budget.py
 │   ├── test_ttl_evict_and_audit.py
 │   ├── test_ttl_does_not_evict_active.py
-│   ├── test_upperdir_tmpfs_enospc_natural_backpressure.py
-│   └── test_freeze_thaw_idempotent_across_tool_calls.py
+│   └── test_upperdir_tmpfs_enospc_natural_backpressure.py
 │
 ├── concurrency/                         # Tier 6: races
 │   ├── test_two_agents_same_port.py
 │   ├── test_concurrent_enter_no_ip_double_allocation.py
 │   ├── test_concurrent_default_and_isolated_in_same_agent.py
-│   ├── test_handle_lock_serializes_tool_calls.py
+│   ├── test_same_agent_tool_calls_can_overlap.py
 │   ├── test_map_lock_serializes_enter_exit_only.py
 │   ├── test_init_complete_blocks_enter_during_startup_gc.py
 │   └── test_re_enter_after_exit_gets_fresh_handle.py
@@ -108,17 +106,16 @@ isolated_workspace/
 │   ├── test_daemon_restart_reaps_orphan_netns.py
 │   ├── test_daemon_restart_releases_orphan_lease.py
 │   ├── test_daemon_restart_reconciles_ip_pool.py
-│   ├── test_daemon_restart_gc_order_unfreeze_before_kill.py
 │   └── test_v1_nft_table_migration_sweep.py
 │
 └── stress/                              # Tier 8: scale / soak
     ├── test_5_concurrent_isolated_workspaces.py   # TOTAL_CAP probe (cap=5)
     ├── test_rapid_create_destroy_cycle.py         # daemon crash-loop GC
-    ├── test_long_running_idle_freeze_at_rest.py
+    ├── test_disk_at_rest_bounded.py
     └── test_pip_install_then_run_e2e.py           # full network stack
 ```
 
-**Total: 50 test files, organized into 9 tiers.** The directory structure is
+**Total: 78 test files, organized into 9 tiers.** The directory structure is
 the documentation: each tier-named folder answers one design question.
 
 ---
@@ -187,14 +184,6 @@ the `http_fixture_on_host` port — lets tests prove the IMDS DROP rule is
 active by attempting a connection that WOULD succeed if the rule were
 missing. Removed in teardown.
 
-### `freezer_killswitch` (function-scoped, opt-in)
-
-Injects a kernel-level fault that wedges `cgroup.freeze=1` past the 2 s
-deadline (via `chmod 000 cgroup.freeze` after creation, then restoring).
-Drives `test_freezer_stall_falls_back_to_sigstop`.
-
----
-
 ## 3. RPC helper (`_iws_rpc.py`)
 
 Thin client wrapping `call_daemon_api`. Exposes:
@@ -232,7 +221,6 @@ def assert_no_orphan_resources(sandbox_id, *, name_prefix="eos-iws-")
 def assert_lease_acquired_released_balanced(jsonl_path)
 def assert_reachability(sandbox_id, agent_id, dst_ip, port, *, expect: bool)
 def assert_no_ipv6_default_route(sandbox_id, agent_id)
-def assert_freezer_state(sandbox_id, handle_id, *, expect: Literal["frozen", "thawed"])
 def assert_event_payload(jsonl_path, event_type, key, value)
 def assert_no_event(jsonl_path, event_type)  # negative assertion
 ```
@@ -305,10 +293,9 @@ real Docker boot.
 | `test_veth_install_fails_releases_lease` | Test knob makes `ip link add` return EEXIST conflict. Lease released; IP pool's `_allocated_ips` cardinality decreases by 1 (no IP leak). |
 | `test_dns_helper_fails_does_not_strand_handle` | DNS detection raises. Manager rolls back: kills holder, deletes veth, releases lease. State machine ends at `stopped`, not stuck in `exiting`. |
 | `test_holder_refuses_sigterm_sigkill_fallback` | After enter, host-side `kill -STOP {holder_pid}` to make it ignore SIGTERM. exit() takes ~5 s (grace), then SIGKILL fires; netns/mntns/pidns reaped. |
-| `test_freezer_stall_falls_back_to_sigstop` | Uses `freezer_killswitch`. cgroup.freeze write hangs. 2 s timeout fires. Per-pid SIGSTOP fallback succeeds. Handle's `freezer_degraded=true` in audit + status. R11. |
 | `test_argv_e2big_via_in_ns_write` | write_file with a 5 MB body. The base64-via-stdin path must not trigger argv-E2BIG. **Cross-references** the project memory entry `'checked batch apply failed' = argv E2BIG` — same class of bug, same fix (stream via stdin). |
 
-### Tier 5: Resource controls (7 tests)
+### Tier 5: Resource controls (6 tests)
 
 | Test | Asserts |
 |---|---|
@@ -318,7 +305,6 @@ real Docker boot.
 | `test_ttl_evict_and_audit` | `EOS_ISOLATED_WORKSPACE_TTL_S=1`. Enter; wait 3 s; TTL sweep evicts; audit shows `evicted, reason=ttl`. Idempotent re-enter succeeds. |
 | `test_ttl_does_not_evict_active` | Tool calls keep `last_activity` fresh; TTL sweep does not evict. |
 | `test_upperdir_tmpfs_enospc_natural_backpressure` | `EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES=10MB`. Write a 12 MB file → tool call returns `exit_code != 0` with `No space left on device`. Subsequent reads inside the same ws still work. ENOSPC is natural backpressure, not a daemon crash. |
-| `test_freeze_thaw_idempotent_across_tool_calls` | Three back-to-back tool calls. Between each, host-side reads `cgroup.freeze` → 1. During each, reads → 0. The sequence `0→1→0→1→0→1` is observed across calls. |
 
 ### Tier 6: Concurrency (7 tests)
 
@@ -327,12 +313,12 @@ real Docker boot.
 | `test_two_agents_same_port` | agent-A and agent-B each start `python -m http.server 8080` inside their own ws. Neither sees EADDRINUSE. From agent-A's tool calls, curl localhost:8080 succeeds; reaching agent-B's IP:8080 fails (cross-agent isolation). |
 | `test_concurrent_enter_no_ip_double_allocation` | Trio of `enter` calls fired concurrently from 3 different agents. After all settle, 3 distinct IPs allocated. Audit log: 3 `enter` events; 3 unique `ns_ip` values. |
 | `test_concurrent_default_and_isolated_in_same_agent` | Historical Phase 1 case. Phase 2 routes foreground `api.v1.<verb>` calls through the active isolated workspace when a handle is open; default-mode coexistence for the same agent is no longer a separate tool-op RPC path. |
-| `test_handle_lock_serializes_tool_calls` | Two `shell` calls for the same agent fired concurrently. Manager serializes via `handle.lock`. Audit: tool_call events have non-overlapping `duration_s` ranges (B starts after A ends). |
-| `test_map_lock_serializes_enter_exit_only` | Two different agents' tool calls fired concurrently. Their `handle.lock`s are independent — tool calls overlap in wall time. Audit assertion: `[A.tool_call_started, B.tool_call_started, A.tool_call_completed, B.tool_call_completed]` (interleaved). |
+| `test_same_agent_tool_calls_can_overlap` | Two `shell` calls for the same agent fired concurrently. The manager does not impose a per-handle execution lock, so both calls overlap in wall time. |
+| `test_map_lock_serializes_enter_exit_only` | Two different agents' tool calls fired concurrently. The map lock protects enter/exit map mutations only; tool calls overlap in wall time. |
 | `test_init_complete_blocks_enter_during_startup_gc` | Restart daemon. From the moment the daemon process is up, fire `enter()`. Concurrently `manager_json` reconciliation is running. Assert enter does NOT return until GC settled (audit shows the gc_orphan events arrive before the enter event). |
 | `test_re_enter_after_exit_gets_fresh_handle` | enter; write_file `/testbed/scratch.txt`; exit; enter again. New `handle_id`; `read_file /testbed/scratch.txt` returns no-such-file. Fresh ephemeral upperdir guaranteed. |
 
-### Tier 7: GC and persistence (10 tests)
+### Tier 7: GC and persistence (13 tests)
 
 | Test | Asserts |
 |---|---|
@@ -344,7 +330,6 @@ real Docker boot.
 | `test_daemon_restart_reaps_orphan_netns` | `ip netns list \| grep eos-iws-` returns nothing (whether or not we adopt named netns; this test gates on the naming convention). |
 | `test_daemon_restart_releases_orphan_lease` | Before kill: `LeaseRegistry.active_count() == 1`. After restart + GC: 0. New `enter()` succeeds (lease wouldn't get an empty layer path if the old one were still pinned). |
 | `test_daemon_restart_reconciles_ip_pool` | Enter agent-A (gets .2). SIGKILL daemon; modify `manager.json` to say `.2` is allocated. Restart. Concurrent fresh enter: gets .3 (NOT .2). |
-| `test_daemon_restart_gc_order_unfreeze_before_kill` | Test-only: leave the cgroup in `cgroup.freeze=1` state before SIGKILL. After restart, the daemon log must show "unfreeze" before "kill" for the orphan. Plan §5 R5 ordering. |
 | `test_v1_nft_table_migration_sweep` | Synthetic: pre-create `nft table inet eos_pinws_filter` (v1 naming). Restart daemon. Verify table is gone. Initialize() migration sweep. |
 
 ### Tier 8: Stress / scale / soak (4 tests, marked `slow`)
@@ -353,7 +338,7 @@ real Docker boot.
 |---|---|
 | `test_5_concurrent_isolated_workspaces` | Create 5 different agent IDs. Concurrent enter() for all (asyncio.gather). All 5 succeed. 6th agent's enter() returns `quota_exceeded`. All 5 teardown cleanly in parallel. Maximum-load proof of the v2 `TOTAL_CAP=5` default. Also asserts: 5 distinct `ns_ip` allocations from `10.244.0.2 – 10.244.0.6`; 5 distinct cgroup dirs; daemon CPU stays bounded during concurrent spin-up. |
 | `test_rapid_create_destroy_cycle` | 100 enter/exit cycles for the same agent in a tight loop. No FD leak (host-side `lsof -p {daemon_pid} \| wc -l` stays bounded). No veth leak. No IP-pool drift. |
-| `test_long_running_idle_freeze_at_rest` | Enter; tool call; wait 60 s; tool call. Between calls: host-side `cat /sys/fs/cgroup/eos-iws-*/cpu.stat` shows zero CPU usage. Validates the "resource-lite at rest" property. |
+| `test_disk_at_rest_bounded` | Enter; wait 60 s; check the open workspace's writable dirs stay bounded at rest. |
 | `test_pip_install_then_run_e2e` | Marked `@pytest.mark.requires_internet`. Enter ws. `pip install --target /tmp/pkg httpx`. `PYTHONPATH=/tmp/pkg python -c "import httpx; print(httpx.get('https://httpbin.org/get').status_code)"` → 200. Whole stack: DNS + MASQUERADE + bridge + outbound HTTPS + cross-tool-call package availability. |
 
 ---
@@ -591,10 +576,8 @@ are added** — enrichment is additive on the existing 5 sandbox events
     "cgroup_rmdir":      <float>,
     "rmtree_scratch":    <float>,
 
-    // tool_call (3 phases for v1; see §15.2 deferral):
-    "unfreeze":          <float>,
+    // tool_call:
     "exec":              <float>,   // coarse: setns + spawn + exec + wait
-    "freeze":            <float>,
 
     // gc_orphan (per-orphan; see §15.3):
     "discover":          <float>,
@@ -615,8 +598,8 @@ are added** — enrichment is additive on the existing 5 sandbox events
 `phases_ms` — the sum is strictly less than `total_ms`. The `+ ε` slack
 covers `_PhaseTimer` bookkeeping plus the inter-phase gaps. The generalized
 `max(2.0 ms, 5% × total_ms)` form (per Critic follow-up #5) keeps the
-invariant non-degenerate for sub-5 ms operations (e.g., `freeze` typically
-2-5 ms): at `total_ms = 3.0`, `ε = max(2.0, 0.15) = 2.0`; at
+invariant non-degenerate for sub-5 ms operations: at
+`total_ms = 3.0`, `ε = max(2.0, 0.15) = 2.0`; at
 `total_ms = 200`, `ε = max(2.0, 10.0) = 10.0`.
 
 **Forbidden:** emitting `"<phase>_ms": 0.0` for a branch that did not run.
@@ -638,9 +621,7 @@ Absence ≠ zero (P5).
 | `release_snapshot` | `service/isolated_workspace.py:458-461` | |
 | `cgroup_rmdir` | `service/isolated_workspace.py:462-464` | Ordered AFTER `release_snapshot` in source. |
 | `rmtree_scratch` | `service/isolated_workspace.py:465-466` | |
-| `unfreeze` | `service/isolated_workspace.py:482` | |
-| `exec` | `service/isolated_workspace.py:485-487` + `_LinuxRuntime.run_in_handle:679-697` | Coarse for v1 (see §15.2). |
-| `freeze` | `service/isolated_workspace.py:491` | |
+| `exec` | `isolated_workspace/pipeline.py:190-200` + `_LinuxRuntime.run_in_handle` | Coarse for v1 (see §15.2). |
 | `discover` (gc_orphan) | `service/isolated_workspace.py:289-291` (veth); `:307-308` (scratch) | Per-resource share of the walk. |
 | `reap` (gc_orphan) | `service/isolated_workspace.py:298-301` (veth); `:312` (scratch) | |
 
@@ -710,18 +691,16 @@ Three options considered:
 }
 ```
 
-### 15.2 `tool_call` phase count = 3 for v1
+### 15.2 `tool_call` phase count = 1
 
-**Decision: ship 3 phases (`unfreeze`, `exec`, `freeze`), defer 4-phase
-decomposition to a separate ticket.**
+**Decision: ship one phase (`exec`) and do not reintroduce hidden per-call
+freeze/thaw work.**
 
 Rationale: `_Runtime.run_in_handle` Protocol at
 `service/isolated_workspace.py:178-185` returns
-`tuple[int, bytes, bytes]` — no sub-phase timing exposed. Widening to
-surface `setns_spawn` vs. `exec` separately requires a Protocol contract
-change that bleeds into FakeRuntime and every test in the existing 49-test
-macOS unit tier. The cost exceeds the diagnostic value at current
-latencies.
+`tuple[int, bytes, bytes]` — no sub-phase timing exposed. The runtime no
+longer freezes between calls, so the only honest timing boundary is the
+actual setns/exec helper call.
 
 **Deferral ticket** (file alongside PR 1):
 `[isolated-workspace] Widen _Runtime.run_in_handle to expose
@@ -791,7 +770,6 @@ surface is live or stubbed.
 |---|---|---|
 | `has_mount_overlay()` | `_LinuxRuntime.mount_overlay` no longer raises `NotImplementedError` | Calls on a throwaway 1-layer handle; treats `NotImplementedError` as "unwired" and any other exception as "wired but failing" (loud skip). |
 | `has_configure_dns()` | Returns `True` (not the `:646-648` stub `False`) | Direct call. |
-| `has_cgroup_freezer()` | `CGROUP_ROOT / "cgroup.controllers"` contains `freezer` | File read. |
 | `has_run_in_handle()` | `_LinuxRuntime.run_in_handle` executes `["true"]` and returns exit code 0 | E2E call. |
 
 **Failure-mode policy:**
@@ -915,7 +893,7 @@ performance/
 | `performance/test_per_op_latency_within_baseline.py` | For each of `{enter, exit, shell, read_file, write_file, edit_file, grep}`: median `duration_s` across N=21 in-test samples is within `[0.3×, 3×]` of the session baseline median AND p95 ≤ budget × 1.5. | Add synchronous network roundtrip to a single op — baseline doubles; ratio + absolute checks both flag. | `has_run_in_handle()` |
 | `performance/test_enter_phase_breakdown_complete.py` | `sandbox_isolated_workspace_enter` payload has `phases_ms` dict whose key set is a subset of `{prepare_snapshot, spawn_ns_holder, open_ns_fds, install_veth, mount_overlay, configure_dns, create_cgroup}`. All values float, all ≥ 0. SUBSET-COVER invariant holds. | Drop a phase boundary `with timer.measure(...)` — key disappears. | `has_mount_overlay()` |
 | `performance/test_exit_phase_breakdown_complete.py` | Same shape for exit: keys subset of `{kill_holder, teardown_veth, release_snapshot, rmtree_scratch, cgroup_rmdir}`; SUBSET-COVER holds. Existing `lifetime_s`, `upperdir_bytes_discarded` still present (back-compat). | Combine two teardown phases — key vanishes. | `has_run_in_handle()` |
-| `performance/test_tool_call_phase_breakdown_complete.py` | `phases_ms` keys are subset of `{unfreeze, exec, freeze}` for v1 (per §15.2). `argv0`, `exit_code` populated. SUBSET-COVER holds. | Skip unfreeze step — `unfreeze` key disappears. | `has_run_in_handle()` |
+| `performance/test_tool_call_phase_breakdown_complete.py` | `phases_ms` keys are subset of `{exec}` (per §15.2). `argv0`, `exit_code` populated. SUBSET-COVER holds. | Drop the exec phase boundary — key disappears. | `has_run_in_handle()` |
 | `performance/test_latency_regression_band.py` | Run `enter+shell+exit` cycle 10× in single test. Median per-phase ms is within `[0.5×, 2×]` of session baseline. Synthetic regression via `EOS_ISOLATED_WORKSPACE_TEST_PHASE_DELAY=mount_overlay:100ms` knob (test-only env) trips the band. | Add `time.sleep(0.1)` to debug `mount_overlay` — caught. | `has_mount_overlay()` |
 | `performance/test_baseline_collection_invariant.py` | The session-collected `latency_baseline` fixture has all expected phase keys for `enter`; each phase's baseline > 0; baseline run count = configurable (default 3 warm-up cycles via `EOS_ISOLATED_WORKSPACE_BASELINE_RUNS`). | Drop the baseline fixture — every Tier 9 ratio test can't compute. | `has_mount_overlay()` |
 | `performance/test_phases_ms_subset_cover_invariant.py` | For every audit event with `phases_ms` emitted in the session, `sum(phases_ms.values()) ≤ total_ms + max(2.0, 0.05 × total_ms)`. | Add untimed call between two phases — sum drifts below total_ms by more than slack. | None (pure audit-bus assertion). |

@@ -132,7 +132,7 @@ per file.
 ## Session 3 — 2026-05-23 (Phases 3-6)
 
 This session lands all four NEXT-AGENT-GUIDE phases the prior session
-deferred — 42 tests across four new tier directories plus the production
+deferred — 41 tests across four new tier directories plus the production
 code each tier depends on.
 
 ### What landed
@@ -142,12 +142,11 @@ code each tier depends on.
 | Phase 3 — Tier 2 isolation (5 tests) | `isolation/` | landed |
 | Phase 4 — Tier 7 GC + persistence (14 tests = 10 base + 4 v2) | `gc_and_persistence/` | landed |
 | Phase 5 — Tier 3 network (15 tests = 11 base + 4 inbound REJECT) | `network/` | landed |
-| Phase 6 — Tier 4 failure modes (8 tests) | `failure_modes/` | landed |
+| Phase 6 — Tier 4 failure modes (7 tests) | `failure_modes/` | landed |
 | GC reaping for cgroup + lease + netns (R5 ordering) | `sandbox/isolated_workspace/pipeline.py + extracted modules` | landed |
 | v1 nft-table migration sweep | `sandbox/isolated_workspace/network.py` | landed |
 | IPv6 default-route purge after `net-ready` | `sandbox/isolated_workspace/scripts/ns_holder.py` | landed |
 | Test-only failure-injection env knobs (HANG_AT / FAIL_AT / HOLDER_CRASH) | `pipeline.py` / extracted modules + `ns_holder.py` | landed |
-| R11 SIGSTOP/SIGCONT fallback when `cgroup.freeze` write fails | `_LinuxRuntime.freeze` in `pipeline.py` / extracted modules | landed |
 | Host-side helpers: scratch_root discovery, daemon restart, env-knob wiring, manager.json IO, host resource snapshot | `_iws_fixtures.py` | landed |
 
 ### Production-code summary
@@ -156,16 +155,13 @@ code each tier depends on.
 
 - `startup_gc` rewritten to treat persisted handles as zombies on a
   fresh daemon (the in-memory `_handles` map is always empty post-restart).
-  For every persisted row: reserve the IP, release the lease, unfreeze
+  For every persisted row: reserve the IP, release the lease, reap
   the cgroup, then rmdir it. After the per-row sweep, `_reap_orphans`
   runs a broader naming-convention pass for any stranded `eos-iws-*`
   veth / scratch / cgroup that lacks a persisted row.
 - `_release_orphan_lease(row)` releases the lease and emits a `gc_orphan`
-  event with `kind=lease`. `_reap_orphan_cgroup(row)` rmdirs the
-  persisted cgroup_path after unfreezing via `_unfreeze_and_kill`.
-- `_unfreeze_and_kill(cgroup)` logs `isolated_workspace_gc_unfreeze` then
-  `isolated_workspace_gc_kill` (R5 ordering pin — visible to the daemon log
-  scan in `test_daemon_restart_gc_order_unfreeze_before_kill`).
+  event with `kind=lease`. `_reap_orphan_cgroup(row)` kills remaining PIDs
+  and rmdirs the persisted cgroup_path.
 - `_reap_orphans` extended with a cgroup naming-convention sweep alongside
   the pre-existing veth + scratch sweeps.
 - New module-level `_maybe_inject_failure(phase)` raises `setup_timeout`
@@ -173,10 +169,6 @@ code each tier depends on.
   matching env knob (`EOS_ISOLATED_WORKSPACE_TEST_HANG_AT` /
   `EOS_ISOLATED_WORKSPACE_TEST_FAIL_AT`) is set. Branches are dead code
   in production (env vars unset).
-- `_LinuxRuntime.freeze` now catches `OSError` on the `cgroup.freeze`
-  write and falls back to walking `cgroup.procs` + sending SIGSTOP/SIGCONT
-  per PID. Sets `handle.freezer_degraded=True` on the fallback path.
-
 **`sandbox/isolated_workspace/network.py`:**
 
 - `IsolatedNetwork.initialize` now calls `_sweep_v1_nft_tables()` before
@@ -248,7 +240,7 @@ NEXT-AGENT-GUIDE phases 7-9.
 |---|---|---|
 | **Live execution of Phase 3-6 tests** | Requires Linux host + sweevo Docker image + `runner.live_e2e.heavy_enabled=true` + database URL. macOS dev box's sweevo container fails its daemon bind in 10 s (pre-existing env limitation, affects all live iws tests including the previously-landed happy_path suite). | Linux CI runner with functional sweevo image. |
 | **Tiers 5/6/8/9** (~26 tests + Tier 9 perf infra) | Sequenced after Tier 4 per NEXT-AGENT-GUIDE phases 7-9. | Future sessions. |
-| **Async-blocking subprocess refactor** (`_LinuxRuntime.{mount_overlay, configure_dns, spawn_ns_holder, freeze}`) | Becomes a flake source under N=5 concurrent enters (Tier 6) but not on the critical path for Tier 4. | Phase 7 prerequisite (NEXT-AGENT-GUIDE §4.2/7.7). |
+| **Async-blocking subprocess refactor** (`_LinuxRuntime.{mount_overlay, configure_dns, spawn_ns_holder}`) | Becomes a flake source under N=5 concurrent enters (Tier 6) but not on the critical path for Tier 4. | Phase 7 prerequisite (NEXT-AGENT-GUIDE §4.2/7.7). |
 
 ---
 
@@ -476,7 +468,7 @@ Phase key sets per event:
 | `sandbox_isolated_workspace_enter` | `prepare_snapshot`, `spawn_ns_holder`, `open_ns_fds`, `install_veth`, `mount_overlay`, `configure_dns`, `create_cgroup` |
 | `sandbox_isolated_workspace_exit` | `kill_holder`, `teardown_veth`, `release_snapshot`, `cgroup_rmdir`, `rmtree_scratch` |
 | `sandbox_isolated_workspace_evicted` | same as `exit` (inherited via `ttl_sweep`) |
-| `sandbox_isolated_workspace_tool_call` | `unfreeze`, `exec`, `freeze` (3-phase v1 per PLAN §15.2 — `tool_call.exec` is coarse) |
+| `sandbox_isolated_workspace_tool_call` | `exec` (per PLAN §15.2 — coarse setns + spawn + wait) |
 | `sandbox_isolated_workspace_gc_orphan` | `discover`, `reap` (per-orphan; discover cost is amortized across the pass) |
 
 `enter` additionally carries top-level `lowerdir_layer_count` (int) and

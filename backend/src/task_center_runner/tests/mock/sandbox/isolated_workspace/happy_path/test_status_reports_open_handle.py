@@ -5,7 +5,6 @@ After ``enter``:
 - ``status.manifest_version`` matches the enter response.
 - ``status.created_at`` and ``status.last_activity`` are non-zero floats.
 - ``last_activity`` advances after every tool call.
-- ``freezer_degraded`` is False on a healthy host (cgroup v2 + freezer).
 """
 
 from __future__ import annotations
@@ -51,9 +50,6 @@ async def test_status_reports_open_handle(iws_clean_sandbox, iws_audit_jsonl) ->
         first_created = float(first.get("created_at") or 0.0)
         assert first_activity > 0.0, first
         assert first_created > 0.0, first
-        # freezer_degraded would only be True if R11's SIGSTOP fallback
-        # tripped; on a healthy host the field stays False.
-        assert first.get("freezer_degraded") is False, first
 
         # Activity timestamp must advance after a tool call.
         await asyncio.sleep(0.05)

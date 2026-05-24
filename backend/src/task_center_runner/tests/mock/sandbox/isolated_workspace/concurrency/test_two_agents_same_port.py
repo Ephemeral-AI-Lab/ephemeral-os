@@ -37,8 +37,8 @@ async def test_two_agents_same_port(iws_clean_sandbox, iws_audit_jsonl) -> None:
     assert a.get("success") is True and b.get("success") is True, (a, b)
     try:
         # Start an http server in each workspace on the same port. The
-        # tool_call is detached (&) so the python process survives the
-        # tool_call freezer cycle as long as it pre-forks.
+        # tool_call is detached (&) so the python process survives after
+        # the command returns.
         for agent in ("agent-A", "agent-B"):
             launched = await _iws_rpc.shell(
                 sandbox_id, agent,

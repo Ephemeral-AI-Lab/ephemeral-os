@@ -27,9 +27,8 @@ class _IsolatedGcMixin:
                re-allocate one that an in-flight orphan may still be using.
             2. Release each persisted handle's lease so the OCC layer-stack can
                advance again.
-            3. For each persisted handle, unfreeze the cgroup BEFORE rmdir so any
-               lingering PID can be killed (R5 ordering — pinned by
-               ``test_daemon_restart_gc_order_unfreeze_before_kill``).
+            3. For each persisted handle, kill any remaining cgroup PIDs before
+               rmdir.
             4. Sweep any remaining ``eos-iws-*`` veth / scratch / cgroup by
                naming convention.
             """
@@ -118,9 +117,7 @@ class _IsolatedGcMixin:
                     )
 
             # Cgroup naming-convention sweep — anything left after the per-handle
-            # release in startup_gc (e.g. created by a different daemon version
-            # that crashed before persisting manager.json) gets unfrozen + rmdir'd
-            # here.
+            # release in startup_gc gets killed and rmdir'd here.
             if CGROUP_ROOT.is_dir():
                 t0 = self._clock()
                 cgroup_children = [
@@ -137,7 +134,7 @@ class _IsolatedGcMixin:
                 )
                 for child in cgroup_orphans:
                     t_reap = self._clock()
-                    self._unfreeze_and_kill(child)
+                    self._kill_remaining_pids(child)
                     with contextlib.suppress(OSError):
                         child.rmdir()
                     reap_ms = (self._clock() - t_reap) * 1000.0
@@ -177,7 +174,7 @@ class _IsolatedGcMixin:
             )
 
         def _reap_orphan_cgroup(self, persisted_row: dict[str, Any]) -> None:
-            """Unfreeze (R5) and remove a persisted handle's cgroup directory."""
+            """Kill remaining PIDs and remove a persisted handle's cgroup directory."""
             cg_path = persisted_row.get("cgroup_path")
             if not cg_path:
                 return
@@ -185,7 +182,7 @@ class _IsolatedGcMixin:
             if not cgroup.exists():
                 return
             t0 = self._clock()
-            self._unfreeze_and_kill(cgroup)
+            self._kill_remaining_pids(cgroup)
             with contextlib.suppress(OSError):
                 cgroup.rmdir()
             reap_ms = (self._clock() - t0) * 1000.0
@@ -199,17 +196,8 @@ class _IsolatedGcMixin:
                 },
             )
 
-        def _unfreeze_and_kill(self, cgroup: Path) -> None:
-            """Unfreeze a cgroup THEN kill its remaining PIDs (R5 ordering).
-
-            Logs both steps so the order survives test inspection
-            (``test_daemon_restart_gc_order_unfreeze_before_kill``).
-            """
-            freeze_file = cgroup / "cgroup.freeze"
-            if freeze_file.exists():
-                logger.info("isolated_workspace_gc_unfreeze cgroup=%s", cgroup.name)
-                with contextlib.suppress(OSError):
-                    freeze_file.write_text("0\n")
+        def _kill_remaining_pids(self, cgroup: Path) -> None:
+            """Kill any PIDs still attached to an orphan cgroup."""
             kill_file = cgroup / "cgroup.kill"
             if kill_file.exists():
                 logger.info("isolated_workspace_gc_kill cgroup=%s", cgroup.name)

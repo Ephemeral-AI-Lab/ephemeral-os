@@ -1,7 +1,8 @@
-"""``handle.lock`` serialises tool_calls for the same agent.
+"""Tool calls for the same isolated workspace can overlap.
 
-Two concurrent ``shell`` calls on the same handle MUST be serialised: the
-audit log timestamps + durations show non-overlapping wall-clock windows.
+The old per-handle lock serialized calls for the same agent. Isolated
+workspaces now rely on quotas and cgroups for resource control, so concurrent
+calls against the same open workspace should overlap.
 """
 
 from __future__ import annotations
@@ -31,7 +32,7 @@ pytestmark = pytest.mark.asyncio
     reason="heavy live e2e disabled in runner.live_e2e.heavy_enabled",
 )
 @pytest.mark.timeout(180)
-async def test_handle_lock_serializes_tool_calls(
+async def test_same_agent_tool_calls_can_overlap(
     iws_clean_sandbox, iws_audit_jsonl,
 ) -> None:
     sandbox_id = str(iws_clean_sandbox["sandbox_id"])
@@ -40,21 +41,22 @@ async def test_handle_lock_serializes_tool_calls(
     )
     assert opened.get("success") is True, opened
     try:
-        # Two sleeps fired concurrently — if the lock holds, total wall ≈ 2 s
-        # not 1 s; we don't probe wall-clock directly (CI noise) but instead
-        # confirm via audit envelopes that durations don't overlap.
-        await asyncio.gather(
+        loop = asyncio.get_running_loop()
+        t0 = loop.time()
+        results = await asyncio.gather(
             _iws_rpc.shell(sandbox_id, "agent-A", "sleep 0.5"),
             _iws_rpc.shell(sandbox_id, "agent-A", "sleep 0.5"),
+        )
+        wall = loop.time() - t0
+        assert all(result.get("success") for result in results), results
+        assert wall < 0.9, (
+            f"same-agent isolated calls should overlap; wall={wall:.2f}s",
         )
         jsonl = await iws_audit_jsonl()
         tool_calls = _iws_invariants.events_of_type(
             jsonl, "sandbox_isolated_workspace_tool_call",
         )
         assert len(tool_calls) >= 2, tool_calls
-        # Sum of durations should approximate wall-clock total (serialised),
-        # not be roughly equal to a single duration (which would imply true
-        # overlap).
         durations = [
             float((row.get("payload") or {}).get("duration_s", 0.0))
             for row in tool_calls[:2]
