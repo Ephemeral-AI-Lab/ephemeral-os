@@ -250,6 +250,7 @@ def build_overlay_write_change(
     final_content: bytes | None = None,
     content_path: str | None = None,
     precomputed_hash: str | None = None,
+    source: ChangeSource = "overlay_capture",
 ) -> WriteChange:
     """Build an overlay-captured full-file write without a caller base hash.
 
@@ -269,7 +270,7 @@ def build_overlay_write_change(
         raise ValueError("build_overlay_write_change needs final_content or content_path")
     return WriteChange(
         path=path,
-        source="overlay_capture",
+        source=source,
         payload=payload,
         base_hash=None,
     )
@@ -279,9 +280,10 @@ def build_overlay_delete_change(
     *,
     path: str,
     base_hash: str | None = None,
+    source: ChangeSource = "overlay_capture",
 ) -> DeleteChange:
     """Build an overlay-captured delete whose base hash can be inferred later."""
-    return DeleteChange(path=path, source="overlay_capture", base_hash=base_hash)
+    return DeleteChange(path=path, source=source, base_hash=base_hash)
 
 
 __all__ = [

@@ -1,4 +1,4 @@
-"""Thin async client for ``api.isolated_workspace.*`` daemon RPCs.
+"""Thin async client for isolated workspace daemon RPCs.
 
 Wraps :func:`sandbox.host.daemon_client.call_daemon_api` so individual tests
 read as intent (``enter()``, ``shell()``, ``exit()``) instead of envelope
@@ -9,14 +9,12 @@ on ``response["success"]`` / ``response["error"]["kind"]``. Transport errors
 propagate; lifecycle errors are surfaced inside the response envelope so test
 assertions stay explicit.
 
-This module is intentionally narrow: it does NOT wrap audit-bus reads (use
-:mod:`_iws_invariants`), and it does NOT cover daemon-host shell-out
-(``adapter.exec`` lives in :mod:`_iws_fixtures` as ``daemon_exec``).
+Lifecycle calls use ``api.isolated_workspace.*``. Tool calls use
+``api.v1.<verb>`` and rely on daemon pipeline resolution.
 """
 
 from __future__ import annotations
 
-import base64
 from typing import Any
 
 from sandbox.host.daemon_client import _DaemonDispatchError, call_daemon_api
@@ -140,7 +138,7 @@ async def shell(
 ) -> dict[str, Any]:
     return await call_daemon_api(
         sandbox_id,
-        "api.isolated_workspace.shell",
+        "api.v1.shell",
         {"agent_id": agent_id, "command": command},
         timeout=timeout,
     )
@@ -155,7 +153,7 @@ async def read_file(
 ) -> dict[str, Any]:
     return await call_daemon_api(
         sandbox_id,
-        "api.isolated_workspace.read_file",
+        "api.v1.read_file",
         {"agent_id": agent_id, "path": path},
         timeout=timeout,
     )
@@ -169,12 +167,10 @@ async def write_file(
     *,
     timeout: int = DEFAULT_TIMEOUT_S,
 ) -> dict[str, Any]:
-    # The on-the-wire payload is a regular string — encoding is binary-safe
-    # only via base64. The daemon handler decodes the same way.
-    body = content if isinstance(content, str) else base64.b64encode(content).decode("ascii")
+    body = content.decode("utf-8", errors="replace") if isinstance(content, bytes) else content
     return await call_daemon_api(
         sandbox_id,
-        "api.isolated_workspace.write_file",
+        "api.v1.write_file",
         {"agent_id": agent_id, "path": path, "content": body},
         timeout=timeout,
     )
@@ -184,15 +180,14 @@ async def edit_file(
     sandbox_id: str,
     agent_id: str,
     path: str,
-    content: bytes | str,
+    edits: list[dict[str, Any]],
     *,
     timeout: int = DEFAULT_TIMEOUT_S,
 ) -> dict[str, Any]:
-    body = content if isinstance(content, str) else base64.b64encode(content).decode("ascii")
     return await call_daemon_api(
         sandbox_id,
-        "api.isolated_workspace.edit_file",
-        {"agent_id": agent_id, "path": path, "content": body},
+        "api.v1.edit_file",
+        {"agent_id": agent_id, "path": path, "edits": edits},
         timeout=timeout,
     )
 
@@ -207,7 +202,7 @@ async def grep(
 ) -> dict[str, Any]:
     return await call_daemon_api(
         sandbox_id,
-        "api.isolated_workspace.grep",
+        "api.v1.grep",
         {"agent_id": agent_id, "pattern": pattern, "path": path},
         timeout=timeout,
     )

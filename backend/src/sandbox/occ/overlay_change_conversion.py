@@ -41,11 +41,12 @@ def overlay_path_changes_to_occ_changes(
                     path=path_change.path,
                     content_path=path_change.content_path,
                     precomputed_hash=path_change.final_hash,
+                    source=source,
                 )
             )
             continue
         if path_change.kind == "delete":
-            changes.append(build_overlay_delete_change(path=path_change.path))
+            changes.append(build_overlay_delete_change(path=path_change.path, source=source))
             continue
         if path_change.kind == "symlink":
             if path_change.content_path is None:

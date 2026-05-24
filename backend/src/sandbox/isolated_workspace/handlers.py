@@ -1,9 +1,7 @@
 """RPC handlers for ``api.isolated_workspace.{enter, exit, status}``.
 
-This top-level handler manages lifecycle: it does NOT participate in R3 import
-discipline (the bounded module is :mod:`.ops_handlers`). Singleton and
-arg validation live in :mod:`.pipeline` so that the bounded ops module can
-reuse them without pulling in ``request_context``'s OCC imports.
+This top-level handler manages lifecycle only. Foreground tool operations use
+``api.v1.<verb>`` and route through ``sandbox.daemon.dispatch``.
 
 Pipeline bootstrap: the daemon doesn't ship with a singleton layer_stack_root
 at startup (each handler call brings its own), so the manager is constructed

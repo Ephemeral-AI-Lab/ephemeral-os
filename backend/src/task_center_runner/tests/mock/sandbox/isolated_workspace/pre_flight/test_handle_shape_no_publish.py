@@ -19,10 +19,9 @@ def test_handle_is_not_a_subclass_of_operation_overlay_handle() -> None:
 
     We inspect class names rather than importing
     ``OperationOverlayHandle`` directly — importing OCC from a pre-flight test
-    would defeat the import-graph fence (Tier 0
-    ``test_isolated_workspace_ops_transitive_imports_exclude_occ``). Name-based
-    checks are sufficient because the property under test is the *shape*, not
-    a specific class identity.
+    would defeat the import-graph fence. Name-based checks are sufficient
+    because the property under test is the *shape*, not a specific class
+    identity.
     """
     forbidden_mro_names = {"OperationOverlayHandle", "OverlayHandle"}
     mro_names = {cls.__name__ for cls in IsolatedWorkspaceHandle.__mro__}

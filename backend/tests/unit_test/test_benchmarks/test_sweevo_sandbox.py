@@ -208,7 +208,6 @@ async def test_setup_sweevo_sandbox_rebuilds_workspace_base_after_raw_setup(
     assert daemon_calls == [
         ("runtime_uploaded", {}),
         ("daemon_current", {}),
-        ("api.overlay.stop", {"workspace_root": "/testbed"}),
         ("runtime_uploaded", {}),
         ("daemon_current", {}),
         ("api.build_workspace_base", {"workspace_root": "/testbed", "reset": True}),

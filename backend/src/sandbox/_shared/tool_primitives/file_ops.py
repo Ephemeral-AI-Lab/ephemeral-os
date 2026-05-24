@@ -8,6 +8,7 @@ import os
 from collections.abc import Iterator
 from pathlib import Path
 import platform
+import stat
 
 _AT_FDCWD = -100
 _RESOLVE_NO_SYMLINKS = 0x04
@@ -105,6 +106,15 @@ def read_bytes_no_follow(path: str | Path) -> bytes:
         return handle.read()
 
 
+def is_regular_file_no_follow(path: str | Path) -> bool:
+    try:
+        fd = open_no_follow(path, os.O_RDONLY)
+    except (OSError, ValueError):
+        return False
+    with os.fdopen(fd, "rb") as handle:
+        return stat.S_ISREG(os.fstat(handle.fileno()).st_mode)
+
+
 def write_bytes_no_follow(
     path: str | Path,
     data: bytes,
@@ -161,6 +171,7 @@ def _absolute_parts(path: str | Path) -> tuple[str, ...]:
 
 __all__ = [
     "open_no_follow",
+    "is_regular_file_no_follow",
     "read_bytes_no_follow",
     "walk_dirs_no_follow",
     "write_bytes_no_follow",

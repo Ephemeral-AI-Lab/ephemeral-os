@@ -1,8 +1,7 @@
 """Daemon-native isolated workspace feature.
 
 A self-contained directory for the per-agent ``{user, mnt, pid, net}`` sandbox
-that the daemon offers via ``api.isolated_workspace.{enter, exit, status,
-shell, read_file, write_file, edit_file, grep}``.
+that the daemon offers via ``api.isolated_workspace.{enter, exit, status}``.
 
 Submodules
 ----------
@@ -11,11 +10,6 @@ Submodules
 - :mod:`.network` — bridge + nftables + per-workspace veth + IP pool.
 - :mod:`.handlers` — RPC handlers for the lifecycle ops
   (``enter``, ``exit_``, ``status``).
-- :mod:`.ops_handlers` — RPC handlers for the per-tool ops
-  (``shell``, ``read_file``, ``write_file``, ``edit_file``,
-  ``grep``). Subject to the R3 import-graph fence:
-  transitive imports MUST NOT include ``sandbox.occ.*`` or
-  ``sandbox.ephemeral_workspace.pipeline``.
 - :mod:`.scripts` — single-threaded subprocess helpers that perform setns
   syscalls. R10 import discipline applies: their module-level import sets
   are pinned by ``test_setns_exec_discipline``.

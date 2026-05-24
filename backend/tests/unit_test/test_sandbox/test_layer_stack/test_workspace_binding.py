@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from sandbox.layer_stack.workspace_base import build_workspace_base
+from sandbox.daemon.workspace_server import get_layer_stack_manager
 from sandbox.layer_stack.workspace_binding import (
     WorkspaceBinding,
     WorkspaceBindingError,
@@ -71,6 +72,7 @@ async def test_read_file_fails_closed_without_workspace_binding(tmp_path: Path) 
 @pytest.mark.asyncio
 async def test_read_file_uses_workspace_base_not_real_workspace(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     occ_backend.clear_backend_cache()
     workspace = tmp_path / "workspace"
@@ -81,10 +83,26 @@ async def test_read_file_uses_workspace_base_not_real_workspace(
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
     file_path.write_text("real workspace changed\n", encoding="utf-8")
 
+    async def fake_run_in_namespace(_handle, req):
+        manager = get_layer_stack_manager(str(stack))
+        content, exists = manager.read_text(str(req.args["path"]))
+        return {
+            "success": True,
+            "exists": exists,
+            "content": content if exists else "",
+            "encoding": "utf-8",
+            "timings": {},
+        }
+
+    monkeypatch.setattr(
+        "sandbox.ephemeral_workspace.pipeline.run_in_namespace",
+        fake_run_in_namespace,
+    )
+
     result = await read.read_file(
         {
             "layer_stack_root": str(stack),
-            "path": file_path.as_posix(),
+            "path": "a.txt",
         }
     )
 
@@ -96,6 +114,7 @@ async def test_read_file_uses_workspace_base_not_real_workspace(
 @pytest.mark.asyncio
 async def test_read_file_returns_exists_false_for_empty_manifest(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Phase 05.5 gap (d): a bound but uninitialized layer stack (manifest
     version 0, no published layers) reads as ``exists=False`` rather than
@@ -118,6 +137,22 @@ async def test_read_file_returns_exists_false_for_empty_manifest(
             base_manifest_version=0,
             base_root_hash="0" * 64,
         )
+    )
+
+    async def fake_run_in_namespace(_handle, req):
+        manager = get_layer_stack_manager(str(stack))
+        content, exists = manager.read_text(str(req.args["path"]))
+        return {
+            "success": True,
+            "exists": exists,
+            "content": content if exists else "",
+            "encoding": "utf-8",
+            "timings": {},
+        }
+
+    monkeypatch.setattr(
+        "sandbox.ephemeral_workspace.pipeline.run_in_namespace",
+        fake_run_in_namespace,
     )
 
     result = await read.read_file(

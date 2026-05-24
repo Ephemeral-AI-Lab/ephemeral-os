@@ -5,9 +5,9 @@ registry, not the iws manager). After SIGKILL + restart the daemon must
 release every persisted lease — otherwise default-mode flushes
 would block forever.
 
-Verification: emit a ``gc_orphan`` event with ``kind=lease`` AND drive a
-default-mode ``api.overlay.flush`` after GC; if a stale lease still
-pinned an outdated tip, the flush would error.
+Verification: emit a ``gc_orphan`` event with ``kind=lease`` AND drive an
+unrelated layer-stack read after GC; if a stale lease still pinned an
+outdated tip, the read would fail.
 """
 
 from __future__ import annotations
@@ -64,8 +64,8 @@ async def test_daemon_restart_releases_orphan_lease(
         gc_events,
     )
 
-    # The OCC default path must still work — proves no stale lease is pinned.
-    flush_resp = await call_daemon_api(
-        sandbox_id, "api.overlay.flush", {}, timeout=30,
+    # The layer-stack default path must still work — proves no stale lease is pinned.
+    metrics_resp = await call_daemon_api(
+        sandbox_id, "api.layer_metrics", {}, timeout=30,
     )
-    assert flush_resp.get("success") is not False, flush_resp
+    assert metrics_resp.get("success") is not False, metrics_resp

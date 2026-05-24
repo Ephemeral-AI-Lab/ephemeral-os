@@ -6,7 +6,18 @@ runtime, OCC, or overlay internals.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field, fields
+from enum import Enum
+from typing import Literal, TypeAlias
+
+
+class Intent(str, Enum):
+    """High-level execution intent for a foreground sandbox tool call."""
+
+    READ_ONLY = "read_only"
+    WRITE_ALLOWED = "write_allowed"
+    LIFECYCLE = "lifecycle"
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -53,7 +64,51 @@ class SandboxResultBase:
     """Base result shape for public sandbox operations."""
 
     success: bool = True
+    workspace: Literal["ephemeral", "isolated"] = "ephemeral"
     timings: dict[str, float] = field(default_factory=dict)
+    conflict: "ConflictInfo | None" = None
+    conflict_reason: str | None = None
+    changed_paths: list[str] = field(default_factory=list)
+    error: dict[str, object] | None = None
+
+
+ToolCallResult: TypeAlias = dict[str, object]
+
+
+@dataclass(frozen=True, kw_only=True)
+class ToolCallRequest:
+    """One foreground tool invocation routed through a workspace pipeline."""
+
+    request_id: str
+    agent_id: str
+    verb: str
+    intent: Intent
+    args: Mapping[str, object]
+    actor_id: str = ""
+
+    def to_payload(self) -> dict[str, object]:
+        return {
+            "request_id": self.request_id,
+            "agent_id": self.agent_id,
+            "verb": self.verb,
+            "intent": self.intent.value,
+            "args": dict(self.args),
+            "actor_id": self.actor_id,
+        }
+
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, object]) -> "ToolCallRequest":
+        args_raw = payload.get("args") or {}
+        if not isinstance(args_raw, Mapping):
+            raise ValueError("tool-call payload args must be an object")
+        return cls(
+            request_id=str(payload.get("request_id") or ""),
+            agent_id=str(payload.get("agent_id") or ""),
+            verb=str(payload.get("verb") or ""),
+            intent=Intent(str(payload.get("intent") or Intent.READ_ONLY.value)),
+            args={str(key): value for key, value in args_raw.items()},
+            actor_id=str(payload.get("actor_id") or ""),
+        )
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -198,15 +253,63 @@ class GrepResult(SandboxResultBase):
     truncated: bool = False
 
 
+@dataclass(frozen=True, kw_only=True)
+class LifecycleError:
+    """Categorical isolated-workspace lifecycle error."""
+
+    kind: str
+    message: str = ""
+    details: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, kw_only=True)
+class LifecycleResultBase:
+    """Base result for lifecycle operations, separate from OCC conflicts."""
+
+    success: bool = True
+    timings: dict[str, float] = field(default_factory=dict)
+    error: LifecycleError | None = None
+
+
+@dataclass(frozen=True, kw_only=True)
+class EnterIsolatedWorkspaceRequest(SandboxRequestBase):
+    layer_stack_root: str
+
+
+@dataclass(frozen=True, kw_only=True)
+class EnterIsolatedWorkspaceResult(LifecycleResultBase):
+    manifest_version: str = ""
+    manifest_root_hash: str = ""
+
+
+@dataclass(frozen=True, kw_only=True)
+class ExitIsolatedWorkspaceRequest(SandboxRequestBase):
+    grace_s: float = 5.0
+
+
+@dataclass(frozen=True, kw_only=True)
+class ExitIsolatedWorkspaceResult(LifecycleResultBase):
+    evicted_upperdir_bytes: int = 0
+    lifetime_s: float = 0.0
+    phases_ms: dict[str, float] = field(default_factory=dict)
+
+
 __all__ = [
     "ConflictInfo",
     "EditFileRequest",
     "EditFileResult",
+    "EnterIsolatedWorkspaceRequest",
+    "EnterIsolatedWorkspaceResult",
+    "ExitIsolatedWorkspaceRequest",
+    "ExitIsolatedWorkspaceResult",
     "GlobRequest",
     "GlobResult",
     "GrepRequest",
     "GrepResult",
     "GuardedResultBase",
+    "Intent",
+    "LifecycleError",
+    "LifecycleResultBase",
     "RawExecResult",
     "ReadFileRequest",
     "ReadFileResult",
@@ -216,6 +319,8 @@ __all__ = [
     "SearchReplaceEdit",
     "ShellRequest",
     "ShellResult",
+    "ToolCallRequest",
+    "ToolCallResult",
     "WriteFileRequest",
     "WriteFileResult",
 ]

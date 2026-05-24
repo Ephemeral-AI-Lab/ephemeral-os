@@ -743,22 +743,21 @@ async def setup_sweevo_sandbox(
 
 
 async def _stop_public_workspace_overlay(sandbox_id: str, repo_dir: str) -> None:
-    """Detach any persistent public-tool overlay before raw checkout reset."""
-    from sandbox.host.daemon_client import call_daemon_api, ensure_daemon_current
+    """Refresh the daemon before raw checkout reset.
+
+    Phase 2 removed the legacy public overlay-stop RPC. Foreground tools now
+    use per-call overlays, so there is no public-tool overlay to detach here.
+    """
+    del repo_dir
+    from sandbox.host.daemon_client import ensure_daemon_current
     from sandbox.host.runtime_bundle import ensure_runtime_uploaded
 
     try:
         await ensure_runtime_uploaded(sandbox_id)
         await ensure_daemon_current(sandbox_id)
-        await call_daemon_api(
-            sandbox_id,
-            "api.overlay.stop",
-            {"workspace_root": repo_dir},
-            timeout=60,
-        )
     except Exception:
         logger.warning(
-            "Failed to stop public workspace overlay before SWE-EVO reset",
+            "Failed to refresh sandbox daemon before SWE-EVO reset",
             exc_info=True,
         )
 

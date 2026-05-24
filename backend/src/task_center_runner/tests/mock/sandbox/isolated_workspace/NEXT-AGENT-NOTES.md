@@ -43,7 +43,7 @@ Seven real product bugs surfaced once tier-4 unblocked the rest of the
 suite. Every one of them is a long-standing race or contract violation
 the prior implementation never had to face, not a regression.
 
-1. **`ops_handlers.write_file` invoked `in_ns_write` via `python -m`**
+1. **The legacy isolated write wrapper invoked `in_ns_write` via `python -m`**
    (commit `e0bf03069`). After setns into the iws's mntns, the bundle's
    import path is no longer reliably on sys.path; `-m` then crashed with
    `ModuleNotFoundError: No module named 'sandbox'`. Switched to absolute

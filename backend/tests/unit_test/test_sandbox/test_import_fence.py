@@ -289,25 +289,11 @@ def test_command_exec_imports_only_client_protocol_boundaries() -> None:
     assert offenders == []
 
 
-def test_execute_command_delegates_occ_publish_to_ephemeral_pipeline() -> None:
+def test_temporary_execute_command_module_is_deleted() -> None:
     command_module = (
         BACKEND_SRC_ROOT / "sandbox" / "ephemeral_workspace" / "_execute_command.py"
     )
-    imports = _imports(command_module)
-    forbidden = {
-        "sandbox.occ.changeset",
-        "sandbox.occ.overlay_change_conversion",
-        "sandbox.occ.commit_transaction",
-        "sandbox.occ.service",
-    }
-    offenders = sorted(
-        imported
-        for imported in imports
-        if imported in forbidden
-        or any(imported.startswith(f"{prefix}.") for prefix in forbidden)
-    )
-
-    assert offenders == []
+    assert not command_module.exists()
 
 
 def test_ephemeral_pipeline_owns_occ_publish_internals() -> None:

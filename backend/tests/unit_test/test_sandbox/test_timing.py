@@ -45,7 +45,7 @@ def test_timing_audit_signals_preserve_subsystem_event_order() -> None:
         {
             "occ.prepare.total_s": 0.01,
             "occ.apply.total_s": 0.02,
-            "command_exec.total_s": 0.03,
+            "workspace.tool_s": 0.03,
             "layer_stack.lease_acquire_s": 0.04,
             "layer_stack.publish.total_s": 0.05,
             "layer_stack.auto_squash.total_s": 0.06,

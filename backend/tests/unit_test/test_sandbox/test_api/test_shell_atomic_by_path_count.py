@@ -85,7 +85,7 @@ def _patch_workspace_to_occ(monkeypatch: pytest.MonkeyPatch) -> None:
         del args, kwargs
         return list(_CAPTURED_PATHS)
 
-    def fake(path_changes: Any) -> tuple[WriteChange, ...]:
+    def fake(path_changes: Any, **_: Any) -> tuple[WriteChange, ...]:
         return tuple(
             write_change(
                 path=path,

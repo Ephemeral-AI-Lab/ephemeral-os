@@ -1,0 +1,56 @@
+"""Agent-facing isolated workspace enter tool."""
+
+from __future__ import annotations
+
+import json
+
+from pydantic import BaseModel
+
+from sandbox._shared.models import EnterIsolatedWorkspaceRequest
+from sandbox.lifecycle import enter_isolated_workspace as lifecycle_enter
+from tools._framework.core.base import ToolExecutionContextService, ToolResult
+from tools._framework.core.decorator import tool
+from tools.sandbox._lib.session import caller_from_context
+
+
+class EnterIsolatedWorkspaceInput(BaseModel):
+    layer_stack_root: str = ""
+
+
+@tool(
+    name="enter_isolated_workspace",
+    description="Open a private isolated workspace for this agent.",
+    short_description="Enter isolated workspace.",
+    input_model=EnterIsolatedWorkspaceInput,
+)
+async def enter_isolated_workspace(
+    layer_stack_root: str = "",
+    *,
+    context: ToolExecutionContextService,
+) -> ToolResult:
+    root = layer_stack_root or str(context.get("layer_stack_root") or "")
+    result = await lifecycle_enter(
+        EnterIsolatedWorkspaceRequest(
+            caller=caller_from_context(context),
+            layer_stack_root=root,
+            description="enter isolated workspace",
+        )
+    )
+    return ToolResult(output=json.dumps(_payload(result), indent=2), is_error=not result.success)
+
+
+def _payload(result: object) -> dict[str, object]:
+    error = getattr(result, "error", None)
+    return {
+        "success": bool(getattr(result, "success", False)),
+        "manifest_version": getattr(result, "manifest_version", ""),
+        "manifest_root_hash": getattr(result, "manifest_root_hash", ""),
+        "error": None if error is None else {
+            "kind": error.kind,
+            "message": error.message,
+            "details": error.details,
+        },
+    }
+
+
+__all__ = ["EnterIsolatedWorkspaceInput", "enter_isolated_workspace"]

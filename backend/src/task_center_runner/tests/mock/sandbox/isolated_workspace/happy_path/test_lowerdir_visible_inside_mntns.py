@@ -1,7 +1,7 @@
 """Lowerdir visibility: the workspace mntns sees the pre-enter file view.
 
-Publishes a sentinel file via the DEFAULT flow (api.write_file +
-api.overlay.flush) BEFORE entering the isolated workspace, then asserts the
+Publishes a sentinel file via the DEFAULT flow (api.write_file) BEFORE entering
+the isolated workspace, then asserts the
 file is readable inside the new mntns. Guards against setns(CLONE_NEWNS) +
 fsmount propagation mistakes — if the workspace mntns is privately
 propagated and lowerdir paths are inaccessible, the cat would fail.

@@ -4,8 +4,7 @@ import os
 
 import pytest
 
-from sandbox.daemon.handler.write import _write_out_of_workspace
-from sandbox._shared.clock import monotonic_now
+from sandbox._shared.tool_primitives.write import compute as write_compute
 
 
 def test_write_out_of_workspace_refuses_terminal_symlink(tmp_path) -> None:
@@ -15,11 +14,6 @@ def test_write_out_of_workspace_refuses_terminal_symlink(tmp_path) -> None:
     os.symlink(target, link)
 
     with pytest.raises(ValueError, match="refusing to follow symlink"):
-        _write_out_of_workspace(
-            str(link),
-            "replacement\n",
-            overwrite=True,
-            total_start=monotonic_now(),
-        )
+        write_compute(str(link), "replacement\n", overwrite=True)
 
     assert target.read_text(encoding="utf-8") == "existing\n"

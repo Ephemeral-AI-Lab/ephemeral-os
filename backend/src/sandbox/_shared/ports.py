@@ -2,10 +2,8 @@
 
 from sandbox.ephemeral_workspace.shell_contract import (
     ChangesetResultLike,
-    EmptyChangesetResult,
     OCCMutationClient,
     SnapshotManifest,
-    WorkspaceCapturePublisher,
     WorkspaceCapturePublishResult,
     WorkspaceLeaseClient,
     WorkspaceSnapshotLease,
@@ -13,10 +11,8 @@ from sandbox.ephemeral_workspace.shell_contract import (
 
 __all__ = [
     "ChangesetResultLike",
-    "EmptyChangesetResult",
     "OCCMutationClient",
     "SnapshotManifest",
-    "WorkspaceCapturePublisher",
     "WorkspaceCapturePublishResult",
     "WorkspaceLeaseClient",
     "WorkspaceSnapshotLease",

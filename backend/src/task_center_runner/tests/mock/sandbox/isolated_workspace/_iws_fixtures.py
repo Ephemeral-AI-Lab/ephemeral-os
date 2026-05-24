@@ -32,14 +32,10 @@ async def peer_publish_file(
 ) -> None:
     """Publish a file through the default flow (``api.write_file``).
 
-    ``api.write_file`` commits via OCC and advances the layer-stack tip —
-    that's the publish. The previous fixture additionally called
-    ``api.overlay.flush`` to collapse the tip back into the workspace base,
-    but flush refuses to run while any iws snapshot lease is active (it
-    resets layer storage, invalidating the pinned refs). The flush wasn't
-    needed for the tests' purposes — both the pre-enter and post-enter
-    callers just need the layer on the tip — and removing it lets the
-    ``isolation/`` tier exercise peer publishes during an open iws.
+    ``api.write_file`` commits via OCC and advances the layer-stack tip.
+    Both pre-enter and post-enter callers just need that layer on the tip,
+    which lets the ``isolation/`` tier exercise peer publishes during an
+    open iws.
     """
     from sandbox.host.daemon_client import call_daemon_api
 

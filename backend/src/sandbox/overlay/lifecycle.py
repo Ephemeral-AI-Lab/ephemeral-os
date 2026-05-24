@@ -42,6 +42,7 @@ async def create(
         snapshot_version=lease.manifest_version,
         lease_id=lease.lease_id,
         namespace_pid=None,
+        snapshot_manifest=getattr(lease, "manifest", None),
         _release=lambda: layer_stack.release_lease(lease_id=lease.lease_id),
     )
 

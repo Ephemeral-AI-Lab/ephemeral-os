@@ -19,22 +19,21 @@ about to write. If something close exists, reuse it (deferred import after
 
 ---
 
-## 1. Where things live (current layout, 2026-05-23)
+## 1. Where things live (current layout, Phase 2 unification)
 
 ```
 backend/src/sandbox/isolated_workspace/          ← all iws production code
 ├── __init__.py            feature overview + cross-package reuse contract
 ├── pipeline.py / extracted modules             state machine, _PhaseTimer, _LinuxRuntime, _Runtime Protocol
 ├── network.py             bridge + nftables + veth + IP pool
-├── handlers.py            api.isolated_workspace.{enter, exit, status}
-├── ops_handlers.py        api.isolated_workspace.{shell, read_file, write_file, edit_file, grep}
+├── handlers.py            lifecycle-only api.isolated_workspace.{enter, exit, status}
 └── scripts/               single-threaded subprocess helpers (R10)
     ├── _setns_libc.py     libc setns(2) ctypes wrapper
     ├── ns_holder.py       PID 1 of the workspace namespace stack
-    ├── setns_exec.py      generic "setns then fork/exec" for ops_handlers
+    ├── setns_exec.py      generic "setns then fork/exec" helper
     ├── setns_overlay_mount.py  setns then call kernel_mount.mount_overlay
     ├── configure_dns_in_ns.py  setns then rewrite /etc/resolv.conf
-    └── in_ns_write.py     write_file body via stdin (avoids argv E2BIG)
+    └── in_ns_write.py     legacy helper retained for old runtime probes
 
 backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/  ← all iws tests
 ├── PLAN.md                  the 1076-line spec — read §11–§23 for v2 enrichments
@@ -49,7 +48,7 @@ backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/  ← all i
 │                            daemon_kill_and_respawn, set/clear_daemon_env,
 │                            iws_scratch_root, list_host_eos_iws_resources,
 │                            read/write_manager_json
-├── pre_flight/              Tier 0 — structural fences (R3, R10, N2, C1, C2)
+├── pre_flight/              Tier 0 — structural fences (routing, R10, C1, C2)
 ├── happy_path/              Tier 1 — golden enter/shell/exit (live)
 ├── isolation/               Tier 2 — R1 + lowerdir/upperdir separation
 ├── network/                 Tier 3 — masquerade / IMDS / DNS / inbound REJECT
@@ -94,17 +93,11 @@ that duplicates one of the modules above. Always grep before writing.
 These are pinned by Tier 0 tests. Do NOT relax them without re-reading
 PLAN §0 and §5.
 
-### R3 — `ops_handlers.py` transitive imports must not include OCC
+### R3 — iws tool-op RPCs stay deleted
 
-The bounded module is `sandbox.isolated_workspace.ops_handlers`. Its
-transitive import closure MUST NOT contain `sandbox.occ.*` or
-`sandbox.ephemeral_workspace.pipeline`. Pinned by
+The isolated workspace package owns lifecycle. Foreground tool operations use
+`api.v1.<verb>` and daemon pipeline resolution. Pinned by
 `pre_flight/test_import_graph_fence.py`.
-
-If you need OCC-shaped behavior (e.g., to commit upperdir changes back to
-the layer stack), DO NOT add an import here. The whole point of the
-isolated workspace is that its exit path is structurally distinct from OCC
-commit. The upperdir is *discarded*, not committed.
 
 ### R10 — setns helpers must be single-threaded at setns-call time
 
@@ -124,12 +117,6 @@ Allowlist for module-level imports under `scripts/`:
  sandbox.isolated_workspace.scripts._setns_libc,
  sandbox.isolated_workspace.scripts}
 ```
-
-### N2 — no dynamic imports in the ops_handlers closure
-
-`importlib.import_module` and `__import__` calls are forbidden inside any
-module transitively reachable from `ops_handlers`. Pinned by
-`pre_flight/test_import_graph_fence.py::test_isolated_workspace_ops_closure_has_no_dynamic_imports`.
 
 ### C1 — handle shape is distinct from OCC
 
@@ -572,7 +559,7 @@ in `IMPLEMENTATION-REPORT.md` Session 4 deferred items.
 | ~~`EOS_ISOLATED_WORKSPACE_TEST_PHASE_DELAY` test-only knob~~ | **DONE** (2026-05-23 session 4 — drives Tier 9's `test_latency_regression_band`). |
 | ~~`LatencyBudget` helper + `latency_baseline` fixture (PR 6)~~ | **DONE** (2026-05-23 session 4 — `_iws_invariants.LatencyBudget`, `conftest.iws_latency_baseline`). |
 | `api.test_only.iws_reset` RPC (PLAN §9.1) | If/when the per-agent exit() loop in `iws_clean_sandbox` becomes inadequate. Phase 7 concurrency tests landed without needing it; revisit only if a future test leaks handles to unexpected agent ids. |
-| Binary-safe `write_file` protocol | `_iws_rpc.write_file` base64-encodes bytes input → `ops_handlers.write_file` re-base64-encodes for stdin → `in_ns_write.py` single-decodes; net effect is files contain the base64-encoded form of the original bytes, not the bytes themselves. Text bodies work fine. Fix: either drop the client-side base64 (server already accepts bytes via JSON Buffer encoding) or have the server single-decode if the field is base64-tagged. Test impact: any future binary-write test must work around this or fix the protocol first. |
+| Binary-safe `write_file` protocol | Phase 2 routes iws writes through the typed `api.v1.write_file` path. Text writes are the supported contract; future binary-write coverage should introduce an explicit binary payload shape instead of reviving the deleted iws tool-op shim. |
 | `CommitQueue.apply` monkeypatch in `test_full_cycle_never_calls_occ` | Currently the test asserts layerstack tip stability across the iws cycle as the runtime proxy for "no OCC commit". The PLAN §5 stronger form (instrumented `CommitQueue.apply` call count == 0) requires a test-only daemon hook; tracked here for follow-up. |
 | 4-phase `tool_call` widening (PLAN §15.2) | Sunset trigger only: when `tool_call.exec` P95 > 500 ms on reference CI over a rolling 7-day window of budget refreshes. Until then, 3-phase is the v1 contract. |
 | First `_data/latency_budget.json` (PR 7 per PLAN §17) | Owner: workspace-platform on-call. Must come from a 100-iteration distribution dump on the reference CI host; synthesising from local dev would defeat the §17 governance design. Until it lands, the absolute-p95 half of every Tier 9 latency test silently passes; the ratio-to-baseline half still runs. |

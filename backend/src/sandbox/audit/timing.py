@@ -50,7 +50,7 @@ def timing_audit_signals(
     ) and status == "ok":
         emitted.append("occ_committed")
 
-    if _has_any_timing(timings, ("overlay.", "command_exec.")):
+    if _has_any_timing(timings, ("workspace.", "overlay.", "command_exec.")):
         emitted.append("overlay_executed")
 
     if _has_any_timing(

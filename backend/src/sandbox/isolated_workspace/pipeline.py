@@ -12,6 +12,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from sandbox._shared.models import Intent, ToolCallRequest, ToolCallResult
 from sandbox.isolated_workspace._gc import _IsolatedGcMixin
 from sandbox.isolated_workspace._lifecycle import _IsolatedLifecycleMixin
 from sandbox.isolated_workspace._quota import _IsolatedQuotaMixin
@@ -29,6 +30,9 @@ from sandbox.isolated_workspace._types import (
     logger,
 )
 from sandbox.isolated_workspace.network import IsolatedNetwork, IsolatedNetworkUnavailable
+from sandbox.overlay import lifecycle as overlay_lifecycle
+from sandbox.overlay.handle import OverlayHandle
+from sandbox.overlay.namespace import run_in_namespace
 
 
 class IsolatedPipeline(
@@ -66,6 +70,8 @@ class IsolatedPipeline(
         self._handles: dict[str, IsolatedWorkspaceHandle] = {}
         self._by_agent: dict[str, str] = {}
         self._map_lock = asyncio.Lock()
+        self._released_lease_ids: set[str] = set()
+        self._handle_locks: dict[str, asyncio.Lock] = {}
         # Default-set: a freshly constructed manager (without ``initialize``)
         # is usable. ``initialize`` clears the event around ``startup_gc`` so
         # concurrent ``enter`` calls block until IP-pool reconciliation
@@ -92,6 +98,74 @@ class IsolatedPipeline(
     def get_handle(self, agent_id: str) -> IsolatedWorkspaceHandle | None:
         handle_id = self._by_agent.get(agent_id)
         return self._handles.get(handle_id) if handle_id else None
+
+    async def run_tool_call(self, req: ToolCallRequest) -> ToolCallResult:
+        """Run one foreground tool call inside an already-open isolated workspace."""
+        handle = self.get_handle(req.agent_id)
+        if handle is None:
+            raise IsolatedWorkspaceError(
+                "no_isolated_workspace",
+                "no open isolated workspace for agent",
+            )
+        overlay_handle = self._overlay_handle(handle)
+
+        async def _runner(
+            argv: list[str],
+            stdin: bytes | None,
+            timeout_s: float | None,
+        ) -> dict[str, Any]:
+            return await self.run_in_handle(
+                req.agent_id,
+                argv=argv,
+                stdin=stdin,
+                timeout_s=timeout_s,
+            )
+
+        result = await run_in_namespace(
+            overlay_handle,
+            req,
+            isolated_runner=_runner,
+        )
+        result["workspace"] = "isolated"
+        if req.intent == Intent.WRITE_ALLOWED:
+            changes = await overlay_lifecycle.capture_changes(overlay_handle)
+            result["changed_paths"] = [change.path for change in changes]
+        return result
+
+    def _overlay_handle(self, handle: IsolatedWorkspaceHandle) -> OverlayHandle:
+        return OverlayHandle(
+            workspace_root=handle.workspace_root,
+            layer_paths=(),
+            upperdir=handle.upperdir,
+            workdir=handle.workdir,
+            snapshot_version=handle.manifest_version,
+            lease_id=handle.lease_id,
+            namespace_pid=handle.root_pid or None,
+            snapshot_manifest=None,
+            _release=None,
+        )
+
+    def _lock_for(self, handle: OverlayHandle) -> asyncio.Lock:
+        lock = self._handle_locks.get(handle.lease_id)
+        if lock is None:
+            lock = self._handle_locks[handle.lease_id] = asyncio.Lock()
+        return lock
+
+    async def _destroy_with_lease_guard(self, handle: OverlayHandle) -> None:
+        async with self._lock_for(handle):
+            if handle._destroyed:
+                self._handle_locks.pop(handle.lease_id, None)
+                return
+            if handle.lease_id and handle.lease_id in self._released_lease_ids:
+                handle._destroyed = True
+                self._handle_locks.pop(handle.lease_id, None)
+                return
+            if handle.lease_id:
+                self._released_lease_ids.add(handle.lease_id)
+            try:
+                await overlay_lifecycle.destroy(handle)
+            finally:
+                self._handle_locks.pop(handle.lease_id, None)
 
     # ------------------------------------------------------------------
     # Initialization + GC

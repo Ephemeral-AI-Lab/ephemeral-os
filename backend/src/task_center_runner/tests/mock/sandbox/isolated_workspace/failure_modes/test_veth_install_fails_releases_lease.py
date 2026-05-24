@@ -50,11 +50,11 @@ async def test_veth_install_fails_releases_lease(iws_clean_sandbox) -> None:
         assert err.get("kind") == "setup_failed", err
         assert (err.get("details") or {}).get("failed_step") == "install_veth", err
 
-        # Lease was released → an unrelated OCC flush still works.
-        flush = await call_daemon_api(
-            sandbox_id, "api.overlay.flush", {}, timeout=30,
+        # Lease was released → an unrelated layer-stack read still works.
+        metrics = await call_daemon_api(
+            sandbox_id, "api.layer_metrics", {}, timeout=30,
         )
-        assert flush.get("success") is not False, flush
+        assert metrics.get("success") is not False, metrics
     finally:
         await clear_daemon_env(
             sandbox_id,

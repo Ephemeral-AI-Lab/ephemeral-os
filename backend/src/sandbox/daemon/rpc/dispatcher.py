@@ -1,7 +1,7 @@
 """Generic in-sandbox daemon dispatcher.
 
 Host-to-guest contract: the resident AF_UNIX daemon decodes one JSON object
-such as ``{"op": "overlay.run", "args": {...}}`` and dispatches the decoded
+such as ``{"op": "api.v1.shell", "args": {...}}`` and dispatches the decoded
 envelope here. Handlers return JSON-safe values or dataclasses matching the
 public sandbox API result types.
 """
@@ -11,12 +11,15 @@ from __future__ import annotations
 import dataclasses
 import inspect
 import logging
+import os
 from collections.abc import Callable, Mapping
 from types import SimpleNamespace
 from typing import Any
 from uuid import uuid4
 
+from audit.jsonl import append_jsonl_event
 from sandbox._shared.clock import monotonic_now
+from sandbox.isolated_workspace import get_active_pipeline
 
 logger = logging.getLogger("sandbox.daemon.rpc.dispatcher")
 
@@ -25,6 +28,7 @@ _BOOT_T0 = monotonic_now()
 Handler = Callable[[dict[str, Any]], Any]
 
 OP_TABLE: dict[str, Handler] = {}
+PLUGIN_GATE_AUDIT_EVENTS: list[dict[str, Any]] = []
 
 
 def register_op(op: str, handler: Handler) -> None:
@@ -69,6 +73,9 @@ async def dispatch_envelope_async(
         return _error("unknown_op", f"unknown op: {op}", {"op": op})
 
     try:
+        plugin_block = _check_plugin_block(args_raw, op)
+        if plugin_block is not None:
+            return plugin_block
         result = handler(dict(args_raw))
         if inspect.isawaitable(result):
             result = await result
@@ -176,6 +183,37 @@ def _to_response_dict(result: Any) -> dict[str, Any]:
     return jsonable
 
 
+def _check_plugin_block(args: Mapping[str, Any], op_name: str) -> dict[str, Any] | None:
+    if not (op_name.startswith("api.plugin.") or op_name.startswith("plugin.")):
+        return None
+    iws = get_active_pipeline()
+    agent_id = str(args.get("agent_id") or args.get("actor_id") or "").strip()
+    if iws is None:
+        _emit_plugin_gate_audit(op_name, agent_id)
+        return None
+    if agent_id and iws.get_handle(agent_id) is not None:
+        return {
+            "success": False,
+            "warnings": [],
+            "timings": {},
+            "error": {
+                "kind": "forbidden_in_isolated_workspace",
+                "message": "plugin access is blocked while isolated_workspace is open",
+                "details": {"op": op_name, "agent_id": agent_id},
+            },
+        }
+    return None
+
+
+def _emit_plugin_gate_audit(op_name: str, agent_id: str) -> None:
+    event = {
+        "type": "workspace_lifecycle.plugin_check_unbootstrapped",
+        "payload": {"op": op_name, "agent_id": agent_id},
+    }
+    PLUGIN_GATE_AUDIT_EVENTS.append(event)
+    append_jsonl_event(os.environ.get("EOS_WORKSPACE_LIFECYCLE_AUDIT_PATH"), event)
+
+
 def _load_peer_bootstraps() -> None:
     from sandbox.ephemeral_workspace.plugin import handler as plugin_handler
     from sandbox.daemon.handler import (
@@ -184,15 +222,13 @@ def _load_peer_bootstraps() -> None:
         grep,
         health,
         metrics,
-        overlay,
         read,
+        shell,
         workspace,
         write,
     )
-    from sandbox.ephemeral_workspace import pipeline
     from sandbox.ephemeral_workspace import shell_job
     from sandbox.isolated_workspace import handlers as iws_handlers
-    from sandbox.isolated_workspace import ops_handlers as iws_ops_handlers
 
     bootstrap: dict[str, Handler] = {
         "api.isolated_workspace.enter": iws_handlers.enter,
@@ -200,11 +236,6 @@ def _load_peer_bootstraps() -> None:
         "api.isolated_workspace.status": iws_handlers.status,
         "api.isolated_workspace.list_open": iws_handlers.list_open,
         "api.isolated_workspace.test_reset": iws_handlers.test_reset,
-        "api.isolated_workspace.shell": iws_ops_handlers.shell,
-        "api.isolated_workspace.read_file": iws_ops_handlers.read_file,
-        "api.isolated_workspace.write_file": iws_ops_handlers.write_file,
-        "api.isolated_workspace.edit_file": iws_ops_handlers.edit_file,
-        "api.isolated_workspace.grep": iws_ops_handlers.grep,
         "api.ensure_workspace_base": workspace.ensure_workspace_base,
         "api.build_workspace_base": workspace.build_workspace_base,
         "api.prepare_workspace_snapshot": workspace.prepare_workspace_snapshot,
@@ -222,8 +253,8 @@ def _load_peer_bootstraps() -> None:
         "api.read_file": read.read_file,
         "api.v1.read_file": read.read_file,
         "api.runtime.ready": health.runtime_ready,
-        "api.shell": pipeline.execute_shell_api,
-        "api.v1.shell": pipeline.execute_shell_api,
+        "api.shell": shell.shell,
+        "api.v1.shell": shell.shell,
         "api.shell.launch": shell_job.shell_launch,
         "api.v1.shell.launch": shell_job.shell_launch,
         "api.shell.poll": shell_job.shell_poll,
@@ -237,9 +268,6 @@ def _load_peer_bootstraps() -> None:
         "api.workspace_binding": workspace.workspace_binding,
         "api.write_file": write.write_file,
         "api.v1.write_file": write.write_file,
-        "api.overlay.flush": overlay.flush_workspace_overlay,
-        "api.overlay.stop": overlay.stop_workspace_overlay,
-        "overlay.run": overlay.run_snapshot_overlay,
     }
     for op, handler in bootstrap.items():
         register_op(op, handler)

@@ -19,6 +19,10 @@ LAYER_STACK_AUTO_SQUASHED = "sandbox.layer_stack.auto_squashed"
 
 RESOURCE_SNAPSHOT = "sandbox.resource.snapshot"
 
+WORKSPACE_LIFECYCLE_STARTED = "workspace_lifecycle_started"
+WORKSPACE_LIFECYCLE_COMPLETED = "workspace_lifecycle_completed"
+WORKSPACE_LIFECYCLE_FAILED = "workspace_lifecycle_failed"
+
 # Background shell job lifecycle (plan §Audit events).
 # Emitted by :class:`sandbox.ephemeral_workspace.shell_job.ShellJobRegistry` via
 # the optional ``audit_callback`` constructor argument. AC-5 requires exactly
@@ -41,6 +45,9 @@ __all__ = [
     "OPERATION_STARTED",
     "OVERLAY_EXECUTED",
     "RESOURCE_SNAPSHOT",
+    "WORKSPACE_LIFECYCLE_COMPLETED",
+    "WORKSPACE_LIFECYCLE_FAILED",
+    "WORKSPACE_LIFECYCLE_STARTED",
     "SHELL_CANCELLED",
     "SHELL_LAUNCHED",
     "SHELL_POLLED",

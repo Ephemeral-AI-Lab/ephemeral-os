@@ -5,27 +5,28 @@ from __future__ import annotations
 import asyncio
 from collections import OrderedDict
 from contextlib import asynccontextmanager, suppress
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 import hashlib
 import os
 from pathlib import Path
 import shutil
-from typing import Any, AsyncIterator, Protocol
+from typing import AsyncIterator, Protocol
 from uuid import uuid4
 
 from sandbox.ephemeral_workspace.shell_contract import (
     ChangesetResultLike,
     CommandExecRequest,
-    CommandExecResult,
     OCCMutationClient,
     SnapshotManifest,
     WorkspaceCapturePublishResult,
-    WorkspaceLeaseClient,
 )
-from sandbox.ephemeral_workspace._execute_command import execute_command
+from sandbox._shared.models import Intent, ToolCallRequest, ToolCallResult
+from sandbox._shared.resource_audit import command_exec_resource_timings
+from sandbox.overlay import lifecycle as overlay_lifecycle
 from sandbox.overlay.capability import new_mount_api_supported
 from sandbox.overlay.capture import walk_upperdir
+from sandbox.overlay.handle import OverlayHandle
 from sandbox.overlay.namespace import run_in_namespace
 from sandbox.overlay.kernel_mount import (
     mount_overlay,
@@ -45,13 +46,10 @@ from sandbox.occ.changeset import (
 )
 from sandbox.occ.overlay_change_conversion import overlay_path_changes_to_occ_changes
 from sandbox._shared.clock import monotonic_now
-from sandbox.occ.gitignore import SnapshotGitignoreOracle
 from sandbox.daemon.occ_backend import build_occ_backend
-from sandbox.daemon.request_context import require_layer_stack_root
 from sandbox.daemon.result_projection import (
     conflict_and_status,
     conflict_to_dict,
-    gitignore_cache_timings,
     published_paths,
 )
 from sandbox.ephemeral_workspace.events import (
@@ -152,9 +150,10 @@ class EphemeralPipeline:
         self._active_lease_id = ""
         self._operation_lock = asyncio.Lock()
         self._foreign_watch_task: asyncio.Task[None] | None = None
-        # Lease IDs that have already been released via this overlay. Lets
-        # cancel + reap fan-in on background shell jobs (cf. shell_job.py).
+        # Lease IDs that have already been released via this overlay.
+        # Multiple cleanup paths can converge on the same lease.
         self._released_lease_ids: set[str] = set()
+        self._handle_locks: dict[str, asyncio.Lock] = {}
         storage_root = (
             layer_stack.storage_root if layer_stack is not None else Path("/var/run/eos")
         )
@@ -199,6 +198,120 @@ class EphemeralPipeline:
         async with self._operation_lock:
             await self.ensure_current(reason=reason)
             yield self.current_manifest()
+
+    async def run_tool_call(self, req: ToolCallRequest) -> ToolCallResult:
+        """Run one foreground tool call through a fresh overlay lifecycle."""
+        if self._layer_stack is None:
+            raise RuntimeError("EphemeralPipeline.run_tool_call requires layer_stack")
+        handle = await overlay_lifecycle.create(
+            self._layer_stack,
+            agent_id=req.agent_id,
+            workspace_root=self._workspace_root,
+        )
+        try:
+            path_changes: Sequence[OverlayPathChange] = ()
+            result = await run_in_namespace(handle, req)
+            if req.intent == Intent.WRITE_ALLOWED:
+                path_changes = await overlay_lifecycle.capture_changes(handle)
+                paths = {change.path for change in path_changes}
+                source = (
+                    "api_write"
+                    if req.verb in {"write_file", "edit_file"} and len(paths) == 1
+                    else "overlay_capture"
+                )
+                result = await self._commit_and_attach(
+                    result,
+                    path_changes=path_changes,
+                    snapshot=handle.snapshot_manifest,
+                    source=source,
+                )
+            return self._attach_resource_timings(
+                result,
+                handle=handle,
+                changed_path_count=len(path_changes),
+            )
+        finally:
+            await self._destroy_with_lease_guard(handle)
+
+    def _attach_resource_timings(
+        self,
+        result: ToolCallResult,
+        *,
+        handle: OverlayHandle,
+        changed_path_count: int,
+    ) -> ToolCallResult:
+        if self._layer_stack is None:
+            return result
+        payload = dict(result)
+        timings = dict(
+            payload.get("timings") if isinstance(payload.get("timings"), dict) else {}
+        )
+        timings.update(
+            command_exec_resource_timings(
+                storage_root=self._layer_stack.storage_root,
+                scratch_root=self._scratch_root,
+                run_dir=handle.upperdir.parent,
+                upperdir=handle.upperdir,
+                manifest=handle.snapshot_manifest,
+                changed_path_count=changed_path_count,
+            )
+        )
+        payload["timings"] = timings
+        return payload
+
+    async def _commit_and_attach(
+        self,
+        result: ToolCallResult,
+        *,
+        path_changes: Sequence[OverlayPathChange],
+        snapshot: SnapshotManifest | None,
+        source: str,
+    ) -> ToolCallResult:
+        changeset = await self._apply_workspace_capture(
+            path_changes,
+            snapshot=snapshot,
+            workspace_ref=self._workspace_ref,
+            source=source,
+            run_maintenance=False,
+        )
+        maintenance_timings = await self.run_maintenance_after_publish(
+            changeset,
+            workspace_ref=self._workspace_ref,
+        )
+        conflict, status = conflict_and_status(getattr(changeset, "files", ()))
+        payload = dict(result)
+        timings = dict(payload.get("timings") if isinstance(payload.get("timings"), dict) else {})
+        timings.update(getattr(changeset, "timings", {}) or {})
+        timings.update(maintenance_timings)
+        payload["timings"] = timings
+        payload["changed_paths"] = list(published_paths(getattr(changeset, "files", ())))
+        payload["conflict"] = conflict_to_dict(conflict)
+        payload["conflict_reason"] = conflict.message if conflict is not None else None
+        payload["status"] = "ok" if conflict is None else status
+        payload["success"] = bool(payload.get("success", True)) and conflict is None
+        return payload
+
+    def _lock_for(self, handle: OverlayHandle) -> asyncio.Lock:
+        lock = self._handle_locks.get(handle.lease_id)
+        if lock is None:
+            lock = self._handle_locks[handle.lease_id] = asyncio.Lock()
+        return lock
+
+    async def _destroy_with_lease_guard(self, handle: OverlayHandle) -> None:
+        async with self._lock_for(handle):
+            if handle._destroyed:
+                self._handle_locks.pop(handle.lease_id, None)
+                return
+            if handle.lease_id and handle.lease_id in self._released_lease_ids:
+                handle._destroyed = True
+                self._handle_locks.pop(handle.lease_id, None)
+                return
+            if handle.lease_id:
+                self._released_lease_ids.add(handle.lease_id)
+            try:
+                await overlay_lifecycle.destroy(handle)
+            finally:
+                self._handle_locks.pop(handle.lease_id, None)
 
     def active_manifest_key(self) -> str:
         if self._layer_stack is None:
@@ -549,11 +662,12 @@ class EphemeralPipeline:
         self,
         path_changes: Sequence[OverlayPathChange],
         *,
-        snapshot: SnapshotManifest,
+        snapshot: SnapshotManifest | None,
         workspace_ref: str,
+        source: str = "overlay_capture",
         run_maintenance: bool = True,
     ) -> ChangesetResult:
-        typed_changes = overlay_path_changes_to_occ_changes(path_changes)
+        typed_changes = overlay_path_changes_to_occ_changes(path_changes, source=source)
         if not typed_changes:
             return ChangesetResult(
                 files=(),
@@ -664,10 +778,8 @@ class EphemeralPipeline:
     def _release_lease(self, lease_id: str) -> None:
         if not lease_id or self._layer_stack is None:
             return
-        # Idempotency guard: shell background jobs route cancel + reap through
-        # `_release_lease` from independent threads. A second release on the
-        # same lease must silently no-op so we keep the daemon's
-        # ``lease_acquire_count == lease_release_count`` AC-5 invariant.
+        # Idempotency guard: a second release on the same lease must silently
+        # no-op so we keep the daemon's lease-acquire/release invariant.
         if lease_id in self._released_lease_ids:
             return
         self._released_lease_ids.add(lease_id)
@@ -767,135 +879,6 @@ def _safe_request_part(value: str) -> str:
 _MAX_OVERLAYS = 256
 _OVERLAYS: OrderedDict[str, EphemeralPipeline] = OrderedDict()
 _LOCKS: dict[str, asyncio.Lock] = {}
-
-
-async def execute_shell_api(args: dict[str, object]) -> dict[str, object]:
-    """Public ``api.shell`` execution entrypoint used by the handler layer."""
-    backend = build_occ_backend(require_layer_stack_root(args))
-    result = await _execute_shell(
-        args,
-        layer_stack=backend.layer_stack,
-        occ_client=backend.occ_client,
-        gitignore=backend.gitignore,
-        storage_root=backend.layer_stack.storage_root,
-    )
-    return _payload_from_result(result)
-
-
-async def _execute_shell(
-    args: Mapping[str, object],
-    *,
-    layer_stack: WorkspaceLeaseClient,
-    occ_client: OCCMutationClient,
-    gitignore: SnapshotGitignoreOracle,
-    storage_root: Path,
-    command_runner: Any | None = None,
-) -> CommandExecResult:
-    request = _shell_command_request(args)
-    pipeline = EphemeralPipeline(
-        occ_client=occ_client,
-        workspace_ref=request.workspace_ref,
-        layer_stack=layer_stack,
-        workspace_root=request.workspace_root,
-    )
-    return await execute_command(
-        request,
-        layer_stack=layer_stack,
-        capture_publisher=pipeline,
-        storage_root=storage_root,
-        timing_provider=lambda: gitignore_cache_timings(gitignore),
-        command_runner=command_runner or run_in_namespace,
-    )
-
-
-def _payload_from_result(result: CommandExecResult) -> dict[str, object]:
-    changeset = result.occ_result
-    files = getattr(changeset, "files", ())
-    conflict, conflict_status = conflict_and_status(files)
-    command_failed = result.exit_code != 0
-    success = not command_failed and bool(getattr(changeset, "success", False))
-    status = "ok" if success else conflict_status if conflict is not None else "error"
-    return {
-        "success": success,
-        "exit_code": result.exit_code,
-        "stdout": result.stdout,
-        "stderr": result.stderr,
-        "changed_paths": list(published_paths(files)),
-        "status": status,
-        "conflict": conflict_to_dict(conflict),
-        "conflict_reason": conflict.message if conflict is not None else None,
-        "workspace_capture": {
-            "snapshot_version": result.workspace_capture.snapshot_version,
-            "mount_mode": result.workspace_capture.mount_mode,
-            "changes": [
-                change.to_dict() if hasattr(change, "to_dict") else str(change)
-                for change in result.workspace_capture.changes
-            ],
-        },
-        "warnings": [],
-        "timings": result.timings,
-    }
-
-
-_MAX_ARGV_BYTES = 128 * 1024
-
-
-def _shell_command_request(args: Mapping[str, object]) -> CommandExecRequest:
-    command = args.get("command")
-    if isinstance(command, str):
-        argv: tuple[str, ...] = ("bash", "-lc", command)
-    elif isinstance(command, list):
-        argv = tuple(str(part) for part in command)
-    else:
-        raise ValueError("command must be a string or argv list")
-    argv_bytes = sum(len(part.encode("utf-8")) for part in argv) + len(argv)
-    if argv_bytes > _MAX_ARGV_BYTES:
-        raise ValueError(
-            f"argv exceeds {_MAX_ARGV_BYTES} bytes ({argv_bytes}); "
-            "stream large blobs via stdin instead"
-        )
-    timeout = args.get("timeout_seconds", args.get("timeout"))
-    workspace_ref = require_layer_stack_root(args)
-    binding = require_workspace_binding(workspace_ref)
-    env = _safe_env(_mapping(args.get("env")))
-    return CommandExecRequest(
-        request_id=str(args.get("request_id") or uuid4().hex),
-        workspace_ref=workspace_ref,
-        workspace_root=binding.workspace_root,
-        command=argv,
-        cwd=str(args.get("cwd") or "."),
-        env=env,
-        timeout_seconds=_optional_float(timeout),
-        actor_id=str(args.get("actor_id") or ""),
-        description=str(args.get("description") or "shell"),
-    )
-
-
-def _safe_env(raw: Mapping[object, object]) -> dict[str, str]:
-    result: dict[str, str] = {}
-    for key_raw, value_raw in raw.items():
-        key = str(key_raw)
-        value = str(value_raw)
-        if not key:
-            raise ValueError("env entry has empty key")
-        if "\0" in key or "\0" in value:
-            raise ValueError(f"env entry contains NUL byte: {key!r}")
-        if "=" in key:
-            raise ValueError(f"env key cannot contain '=': {key!r}")
-        result[key] = value
-    return result
-
-
-def _mapping(value: object) -> Mapping[str, object]:
-    return value if isinstance(value, Mapping) else {}
-
-
-def _optional_float(value: object) -> float | None:
-    if value is None:
-        return None
-    if isinstance(value, (str, int, float)):
-        return float(value)
-    raise TypeError(f"expected numeric value, got {type(value).__name__}")
 
 
 async def get_sandbox_overlay(
@@ -1022,7 +1005,6 @@ __all__ = [
     "EphemeralPipeline",
     "OverlayLayerStackClient",
     "clear_overlay_manager_for_tests",
-    "execute_shell_api",
     "get_sandbox_overlay",
     "stop_all_overlays",
     "stop_sandbox_overlay",

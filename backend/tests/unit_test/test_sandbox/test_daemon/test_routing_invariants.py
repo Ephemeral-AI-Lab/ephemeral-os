@@ -5,16 +5,13 @@ from __future__ import annotations
 from sandbox.daemon.handler import (
     health,
     metrics,
-    overlay,
     workspace,
 )
 from sandbox.ephemeral_workspace.plugin import handler as plugin_handler
-from sandbox.ephemeral_workspace import pipeline as pipeline_mod
 from sandbox.ephemeral_workspace import shell_job as shell_job_handler
-from sandbox.daemon.handler import edit, glob, grep, read, write
+from sandbox.daemon.handler import edit, glob, grep, read, shell, write
 from sandbox.daemon.rpc import dispatcher as server
 from sandbox.isolated_workspace import handlers as iws_handlers
-from sandbox.isolated_workspace import ops_handlers as iws_ops_handlers
 
 
 def test_daemon_op_table_routes_to_current_handler_layout() -> None:
@@ -31,8 +28,8 @@ def test_daemon_op_table_routes_to_current_handler_layout() -> None:
         "api.v1.glob": glob.glob,
         "api.grep": grep.grep,
         "api.v1.grep": grep.grep,
-        "api.shell": pipeline_mod.execute_shell_api,
-        "api.v1.shell": pipeline_mod.execute_shell_api,
+        "api.shell": shell.shell,
+        "api.v1.shell": shell.shell,
         "api.shell.launch": shell_job_handler.shell_launch,
         "api.v1.shell.launch": shell_job_handler.shell_launch,
         "api.shell.poll": shell_job_handler.shell_poll,
@@ -43,8 +40,6 @@ def test_daemon_op_table_routes_to_current_handler_layout() -> None:
         "api.v1.shell.reap": shell_job_handler.shell_reap,
         "api.shell.metrics": shell_job_handler.shell_metrics,
         "api.v1.shell.metrics": shell_job_handler.shell_metrics,
-        "api.overlay.flush": overlay.flush_workspace_overlay,
-        "api.overlay.stop": overlay.stop_workspace_overlay,
         "api.layer_metrics": metrics.layer_metrics,
         "api.ensure_workspace_base": workspace.ensure_workspace_base,
         "api.build_workspace_base": workspace.build_workspace_base,
@@ -55,7 +50,6 @@ def test_daemon_op_table_routes_to_current_handler_layout() -> None:
             workspace.release_workspace_snapshot
         ),
         "api.workspace_binding": workspace.workspace_binding,
-        "overlay.run": overlay.run_snapshot_overlay,
         "api.runtime.ready": health.runtime_ready,
         "api.layer_stack.fence_stale_staging": (
             workspace.fence_stale_staging
@@ -67,11 +61,6 @@ def test_daemon_op_table_routes_to_current_handler_layout() -> None:
         "api.isolated_workspace.status": iws_handlers.status,
         "api.isolated_workspace.list_open": iws_handlers.list_open,
         "api.isolated_workspace.test_reset": iws_handlers.test_reset,
-        "api.isolated_workspace.shell": iws_ops_handlers.shell,
-        "api.isolated_workspace.read_file": iws_ops_handlers.read_file,
-        "api.isolated_workspace.write_file": iws_ops_handlers.write_file,
-        "api.isolated_workspace.edit_file": iws_ops_handlers.edit_file,
-        "api.isolated_workspace.grep": iws_ops_handlers.grep,
     }
     # Plugin-specific ops (plugin.<name>.<op>) appear when api.plugin.ensure
     # flushes pending registrations; only the static OP_TABLE entries are

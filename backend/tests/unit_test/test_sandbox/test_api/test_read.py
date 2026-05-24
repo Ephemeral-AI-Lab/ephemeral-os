@@ -35,7 +35,7 @@ async def test_read_file_dispatches_to_sandbox_daemon(
     assert result.success is True
     assert result.exists is True
     assert result.content == "hello"
-    assert not hasattr(result, "conflict")
+    assert result.conflict is None
     assert transport.calls == [
         (
             "sb-1",

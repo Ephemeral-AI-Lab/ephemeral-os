@@ -157,8 +157,8 @@ test to assert audit-bus correctness without timing flake.
 ### `peer_publish` (function-scoped)
 
 Helper to publish a layer through the existing default flow (`api.write_file`
-+ `api.overlay.flush` via `call_daemon_api`). Returns the new manifest
-version. Used by `test_lowerdir_pinned_against_peer_publish`.
+via `call_daemon_api`). Returns the new manifest version. Used by
+`test_lowerdir_pinned_against_peer_publish`.
 
 ### `sentinel_layer` (function-scoped, depends on `peer_publish`)
 
@@ -326,7 +326,7 @@ real Docker boot.
 |---|---|
 | `test_two_agents_same_port` | agent-A and agent-B each start `python -m http.server 8080` inside their own ws. Neither sees EADDRINUSE. From agent-A's tool calls, curl localhost:8080 succeeds; reaching agent-B's IP:8080 fails (cross-agent isolation). |
 | `test_concurrent_enter_no_ip_double_allocation` | Trio of `enter` calls fired concurrently from 3 different agents. After all settle, 3 distinct IPs allocated. Audit log: 3 `enter` events; 3 unique `ns_ip` values. |
-| `test_concurrent_default_and_isolated_in_same_agent` | Agent has open isolated ws. Same agent issues default `api.write_file` AND `api.isolated_workspace.shell` concurrently. Both complete. Isolated upperdir contains the isolated write; layerstack contains the default write. No cross-contamination. |
+| `test_concurrent_default_and_isolated_in_same_agent` | Historical Phase 1 case. Phase 2 routes foreground `api.v1.<verb>` calls through the active isolated workspace when a handle is open; default-mode coexistence for the same agent is no longer a separate tool-op RPC path. |
 | `test_handle_lock_serializes_tool_calls` | Two `shell` calls for the same agent fired concurrently. Manager serializes via `handle.lock`. Audit: tool_call events have non-overlapping `duration_s` ranges (B starts after A ends). |
 | `test_map_lock_serializes_enter_exit_only` | Two different agents' tool calls fired concurrently. Their `handle.lock`s are independent — tool calls overlap in wall time. Audit assertion: `[A.tool_call_started, B.tool_call_started, A.tool_call_completed, B.tool_call_completed]` (interleaved). |
 | `test_init_complete_blocks_enter_during_startup_gc` | Restart daemon. From the moment the daemon process is up, fire `enter()`. Concurrently `manager_json` reconciliation is running. Assert enter does NOT return until GC settled (audit shows the gc_orphan events arrive before the enter event). |

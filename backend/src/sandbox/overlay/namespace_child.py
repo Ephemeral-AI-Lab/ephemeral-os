@@ -12,15 +12,18 @@ module owns payload parsing, error reporting, and the sequencing around
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from sandbox._shared.models import Intent, ToolCallRequest
 from sandbox._shared.env_policy import (
     CommandExecPolicy,
 )
+from sandbox._shared.tool_primitives import VERB_TABLE, shell
 from sandbox.overlay.kernel_mount import (
     MountInputs,
     mount_overlay,
@@ -51,6 +54,9 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def execute(payload: dict[str, Any]) -> int:
+    if "tool_call" in payload:
+        return _execute_tool_call_payload(payload)
+
     timings: dict[str, float] = {}
     try:
         request = _payload_request(payload)
@@ -246,8 +252,170 @@ def _fail(
     return NAMESPACE_INFRA_EXIT_CODE if recoverable else 126
 
 
+_HOST_DENYLIST_PREFIXES = ("/etc/", "/var/", "/proc/", "/sys/", "/boot/")
+
+
+def _execute_tool_call_payload(payload: dict[str, Any]) -> int:
+    timings: dict[str, float] = {}
+    result_ref = Path(str(payload["result_ref"]))
+    mount_inputs: MountInputs | None = None
+    request: _NamespaceRequest | None = None
+    try:
+        request = _payload_request(payload)
+        if payload.get("mount_overlay", True):
+            mount_inputs = validate_mount_inputs(
+                workspace_root=request.workspace_root,
+                layer_paths=request.layer_paths,
+                upperdir=request.upperdir,
+                workdir=request.workdir,
+                policy=request.policy,
+            )
+            mount_start = monotonic_now()
+            mount_overlay(
+                workspace_root=mount_inputs.workspace_root,
+                layer_paths=mount_inputs.layer_paths,
+                upperdir=mount_inputs.upperdir,
+                workdir=mount_inputs.workdir,
+                pass_fds=mount_inputs.fds,
+            )
+            timings["workspace.mount_s"] = monotonic_now() - mount_start
+        result = execute_tool_payload(payload, timings=timings)
+        result_ref.parent.mkdir(parents=True, exist_ok=True)
+        result_ref.write_text(
+            json.dumps(result, separators=(",", ":"), sort_keys=True),
+            encoding="utf-8",
+        )
+        return 0
+    except Exception as exc:
+        result_ref.parent.mkdir(parents=True, exist_ok=True)
+        result_ref.write_text(
+            json.dumps(
+                {
+                    "success": False,
+                    "status": "error",
+                    "error": {
+                        "kind": type(exc).__name__,
+                        "message": str(exc),
+                    },
+                    "timings": timings,
+                },
+                separators=(",", ":"),
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
+        return 0
+    finally:
+        if mount_inputs is not None:
+            mount_inputs.close()
+        if request is not None and payload.get("mount_overlay", True):
+            umount(request.workspace_root)
+            _write_timings(request.timings_ref, timings)
+
+
+def execute_tool_payload(
+    payload: dict[str, Any],
+    *,
+    timings: dict[str, float] | None = None,
+) -> dict[str, Any]:
+    req = ToolCallRequest.from_payload(payload["tool_call"])
+    old_cwd = os.getcwd()
+    try:
+        os.chdir(str(payload.get("workspace_root") or "/testbed"))
+        denied = _check_host_denylist(req)
+        if denied is not None:
+            return denied
+        run_start = monotonic_now()
+        if req.verb == "shell":
+            result = shell.run(
+                _shell_argv(req.args),
+                workspace_root=str(payload.get("workspace_root") or "/testbed"),
+                cwd=str(req.args.get("cwd") or "."),
+                env=_string_mapping(req.args.get("env")),
+                timeout_seconds=_optional_float(
+                    req.args.get("timeout_seconds", req.args.get("timeout"))
+                ),
+                stdout_ref=Path(str(payload["stdout_ref"])),
+                stderr_ref=Path(str(payload["stderr_ref"])),
+                policy=CommandExecPolicy.from_payload(
+                    payload["policy"] if isinstance(payload.get("policy"), dict) else {}
+                ),
+            )
+            result_payload = _jsonable_result(result)
+        else:
+            compute = VERB_TABLE[req.verb]
+            result_payload = _jsonable_result(compute(req.args))
+    finally:
+        os.chdir(old_cwd)
+    elapsed = monotonic_now() - run_start
+    result_payload.setdefault("success", True)
+    result_payload.setdefault("status", "ok" if result_payload.get("success") else "error")
+    result_payload.setdefault("workspace", "ephemeral")
+    result_payload.setdefault("timings", {})
+    if isinstance(result_payload["timings"], dict):
+        result_payload["timings"]["workspace.tool_s"] = elapsed
+        if timings:
+            result_payload["timings"].update(timings)
+    return result_payload
+
+
+def _check_host_denylist(req: ToolCallRequest) -> dict[str, Any] | None:
+    if req.intent != Intent.WRITE_ALLOWED and req.verb not in {
+        "write_file",
+        "edit_file",
+        "shell",
+    }:
+        return None
+    target = str(req.args.get("path") or req.args.get("cwd") or "")
+    if not target:
+        return None
+    if any(target == prefix.rstrip("/") or target.startswith(prefix) for prefix in _HOST_DENYLIST_PREFIXES):
+        return {
+            "success": False,
+            "status": "error",
+            "error": {
+                "kind": "forbidden_host_path",
+                "path": target,
+                "message": "writes to system paths are denied inside the namespace child",
+            },
+            "changed_paths": [],
+            "timings": {},
+        }
+    return None
+
+
+def _shell_argv(args: Any) -> list[str]:
+    if not isinstance(args, dict):
+        raise ValueError("shell args must be an object")
+    command = args.get("command")
+    if isinstance(command, list):
+        return [str(part) for part in command]
+    if isinstance(command, str):
+        return ["bash", "-lc", command]
+    raise ValueError("command must be a string or argv list")
+
+
+def _string_mapping(raw: object) -> dict[str, str]:
+    if not isinstance(raw, dict):
+        return {}
+    return {str(key): str(value) for key, value in raw.items()}
+
+
+def _optional_float(raw: object) -> float | None:
+    if raw is None:
+        return None
+    return float(raw)
+
+
+def _jsonable_result(value: Any) -> dict[str, Any]:
+    from sandbox.overlay.namespace import jsonable_result
+
+    return jsonable_result(value)
+
+
 __all__ = [
     "execute",
+    "execute_tool_payload",
     "main",
 ]
 

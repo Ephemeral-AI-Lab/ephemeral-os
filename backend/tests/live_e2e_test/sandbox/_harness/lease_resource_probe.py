@@ -19,10 +19,11 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Literal, Protocol
 
+from sandbox._shared.models import Intent, ToolCallRequest
 from sandbox.daemon.service.layer_stack_client import LayerStackClient
-from sandbox.ephemeral_workspace.shell_contract import CommandExecRequest
 from sandbox.overlay.capability import new_mount_api_supported
-from sandbox.ephemeral_workspace._execute_command import execute_command
+from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
+from sandbox.occ.changeset import ChangesetResult
 from sandbox.overlay.namespace import detect_private_mount_namespace
 
 OverlayPath = Literal["new_mount_api"]
@@ -40,6 +41,21 @@ class LayerStackLike(Protocol):
     storage_root: Path
 
     def publish_changes(self, changes: Sequence[object]) -> object: ...
+
+
+class _NoopOccClient:
+    async def apply_changeset(self, *args: object, **kwargs: object) -> ChangesetResult:
+        del args, kwargs
+        return ChangesetResult(files=(), timings={}, published_manifest_version=None)
+
+    async def run_maintenance_after_publish(
+        self,
+        result: ChangesetResult,
+        *,
+        workspace_ref: str | None = None,
+    ) -> dict[str, float]:
+        del result, workspace_ref
+        return {}
 
 
 @dataclass(frozen=True)
@@ -147,42 +163,47 @@ async def run_shell_batch(
     """Run commands through command-exec using the namespace-only overlay path."""
     workspace_root.mkdir(parents=True, exist_ok=True)
     scratch_root.mkdir(parents=True, exist_ok=True)
-    layer_client = LayerStackClient(stack)
+    pipeline = EphemeralPipeline(
+        occ_client=_NoopOccClient(),
+        workspace_ref=str(stack.storage_root),
+        layer_stack=LayerStackClient(stack),
+        workspace_root=workspace_root.as_posix(),
+    )
     expected_mode = "private_namespace"
 
     async def _run_one(index: int, command: str) -> ShellTelemetry:
-        request = CommandExecRequest(
+        req = ToolCallRequest(
             request_id=f"{request_prefix}-{index:04d}",
-            workspace_ref=str(stack.storage_root),
-            workspace_root=workspace_root.as_posix(),
-            command=("bash", "-lc", command),
-            timeout_seconds=timeout_seconds,
-            description=f"o1 {requested_path}",
+            agent_id="lease-resource-probe",
+            verb="shell",
+            intent=Intent.WRITE_ALLOWED,
+            args={
+                "command": command,
+                "cwd": ".",
+                "timeout_seconds": timeout_seconds,
+                "description": f"o1 {requested_path}",
+            },
         )
-        result = await execute_command(
-            request,
-            layer_stack=layer_client,
-            capture_publisher=None,
-            storage_root=stack.storage_root,
-            occ_apply=False,
-        )
-        actual_mode = result.workspace_capture.mount_mode
+        result = await pipeline.run_tool_call(req)
+        actual_mode = expected_mode
         if actual_mode != expected_mode:
             raise AssertionError(
-                f"{request.request_id} ran {actual_mode}; expected "
+                f"{req.request_id} ran {actual_mode}; expected "
                 f"{expected_mode} for {requested_path}"
             )
-        if result.exit_code != 0:
+        exit_code = int(result.get("exit_code", 1))
+        stderr = str(result.get("stderr") or "")
+        if exit_code != 0:
             raise AssertionError(
-                f"{request.request_id} exited {result.exit_code}: {result.stderr}"
+                f"{req.request_id} exited {exit_code}: {stderr}"
             )
         return ShellTelemetry(
-            request_id=request.request_id,
+            request_id=req.request_id,
             requested_path=requested_path,
             mount_mode=actual_mode,
-            timings=dict(result.timings),
-            stdout=result.stdout,
-            stderr=result.stderr,
+            timings=dict(result.get("timings") or {}),
+            stdout=str(result.get("stdout") or ""),
+            stderr=stderr,
         )
 
     with _command_exec_scratch_root(scratch_root):

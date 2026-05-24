@@ -30,6 +30,7 @@ class OverlayHandle:
     snapshot_version: int
     lease_id: str
     namespace_pid: int | None
+    snapshot_manifest: object | None = None
     _destroyed: bool = False
     _destroy_lock: threading.Lock = field(
         default_factory=threading.Lock,

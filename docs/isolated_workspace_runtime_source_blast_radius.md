@@ -49,7 +49,7 @@ Summary:
 | A | 200 | 0 | `backend/src/sandbox/isolated_workspace/handlers.py` | Daemon RPC handlers for enter, exit, status, list, reset, and audit JSONL emission. |
 | A | 1,624 | 0 | `backend/src/sandbox/isolated_workspace/pipeline.py + extracted modules` | Core manager for handle lifecycle, namespace setup, layer-stack snapshot pinning, cgroup/freezer handling, TTL, GC, and tool-call execution. |
 | A | 296 | 0 | `backend/src/sandbox/isolated_workspace/network.py` | Network isolation support: bridge, veth, IP pool, nftables, DNS, IMDS/RFC1918 policy. |
-| A | 98 | 0 | `backend/src/sandbox/isolated_workspace/ops_handlers.py` | Bounded file/shell/search operation handlers for open isolated-workspace handles. |
+| D | 0 | 98 | `backend/src/sandbox/isolated_workspace/ops_handlers.py` | Removed by Phase 2 unification; foreground tool operations now use unified `api.v1.<verb>` dispatch. |
 | A | 12 | 0 | `backend/src/sandbox/isolated_workspace/scripts/__init__.py` | Package marker for subprocess helper scripts. |
 | A | 35 | 0 | `backend/src/sandbox/isolated_workspace/scripts/_setns_libc.py` | Low-level libc/setns helper bindings. |
 | A | 120 | 0 | `backend/src/sandbox/isolated_workspace/scripts/configure_dns_in_ns.py` | Helper for DNS setup inside an isolated namespace. |

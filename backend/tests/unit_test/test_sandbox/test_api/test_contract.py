@@ -172,9 +172,9 @@ def test_request_models_share_audit_request_base() -> None:
     assert described.default_description("shell") == "custom shell"
 
 
-def test_result_hierarchy_exposes_conflict_only_on_guarded_results() -> None:
-    assert not hasattr(ReadFileResult(content="x"), "conflict")
-    assert not hasattr(RawExecResult(exit_code=0, stdout="x"), "conflict")
+def test_result_hierarchy_exposes_conflict_fields_on_sandbox_results() -> None:
+    assert ReadFileResult(content="x").conflict is None
+    assert RawExecResult(exit_code=0, stdout="x").conflict is None
 
     conflict = ConflictInfo(reason="base_mismatch", conflict_file="/repo/a.py")
     for result in (

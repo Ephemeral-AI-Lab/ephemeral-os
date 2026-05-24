@@ -12,10 +12,12 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.ephemeral_workspace.shell_contract import ShellProcessResult
+from sandbox._shared.models import Intent, ToolCallRequest
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.occ.client import OccClient
+from sandbox.overlay.path_change import OverlayPathChange, content_hash
 from sandbox.daemon import occ_backend
+from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
 import sandbox.ephemeral_workspace.pipeline as pipeline_mod
 
 
@@ -69,36 +71,53 @@ async def test_shell_uses_occ_client_apply_changeset(
 
     monkeypatch.setattr(occ_client, "apply_changeset", tracking_apply)
 
-    def fake_run(*, spec, request, run_dir, timings):
-        del request
-        upper = Path(spec.writes)
-        upper.mkdir(parents=True, exist_ok=True)
-        out = upper / "out.txt"
-        out.write_text("shell wrote me\n", encoding="utf-8")
-        stdout_ref = Path(run_dir) / "stdout.bin"
-        stderr_ref = Path(run_dir) / "stderr.bin"
-        stdout_ref.write_text("ok\n", encoding="utf-8")
-        stderr_ref.write_text("", encoding="utf-8")
-        timings["command_exec.mount_workspace_s"] = 0.0
-        timings["command_exec.run_command_s"] = 0.0
-        return ShellProcessResult(
-            exit_code=0,
-            stdout_ref=str(stdout_ref),
-            stderr_ref=str(stderr_ref),
-            mounted_workspace_root=spec.workspace_root,
-            mount_mode="private_namespace",
-        )
+    captured = tmp_path / "capture" / "out.txt"
+    captured.parent.mkdir()
+    captured.write_text("shell wrote me\n", encoding="utf-8")
+
+    async def fake_run(handle, req):
+        del handle, req
+        return {
+            "success": True,
+            "status": "ok",
+            "exit_code": 0,
+            "stdout": "ok\n",
+            "stderr": "",
+            "timings": {},
+        }
+
+    async def fake_capture(handle):
+        del handle
+        return [
+            OverlayPathChange(
+                path="out.txt",
+                kind="write",
+                content_path=captured.as_posix(),
+                final_hash=content_hash(captured),
+            )
+        ]
 
     monkeypatch.setattr(pipeline_mod, "run_in_namespace", fake_run)
+    monkeypatch.setattr(
+        pipeline_mod.overlay_lifecycle,
+        "capture_changes",
+        fake_capture,
+    )
+    pipeline = EphemeralPipeline(
+        occ_client=occ_client,
+        workspace_ref=stack.as_posix(),
+        layer_stack=backend.layer_stack,
+        workspace_root=workspace.as_posix(),
+    )
 
-    result = await pipeline_mod.execute_shell_api(
-        {
-            "layer_stack_root": stack.as_posix(),
-            "command": "true",
-            "cwd": ".",
-            "actor_id": "agent-1",
-            "description": "shell-capture",
-        }
+    result = await pipeline.run_tool_call(
+        ToolCallRequest(
+            request_id="shell-capture",
+            agent_id="agent-1",
+            verb="shell",
+            intent=Intent.WRITE_ALLOWED,
+            args={"command": "true", "cwd": "."},
+        )
     )
 
     assert result["success"] is True

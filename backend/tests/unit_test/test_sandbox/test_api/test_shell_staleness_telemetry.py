@@ -16,8 +16,9 @@ from sandbox.occ.content_hashing import ContentHasher
 from sandbox.occ.changeset import build_api_write_change
 from sandbox.occ.changeset import CommitOptions
 from sandbox.occ.changeset import FileStatus
-from sandbox.ephemeral_workspace.shell_contract import ShellProcessResult
+from sandbox._shared.models import Intent, ToolCallRequest
 from sandbox.daemon import occ_backend
+from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
 import sandbox.ephemeral_workspace.pipeline as pipeline_mod
 
 
@@ -29,36 +30,29 @@ class _BlockingCommandRunner:
         self.released = threading.Event()
         self.snapshot_version = snapshot_version
 
-    def __call__(
+    async def __call__(
         self,
-        *,
-        spec,
-        request,
-        run_dir,
-        timings,
-    ) -> ShellProcessResult:
-        del request
+        handle,
+        req,
+    ) -> dict[str, object]:
+        del req
         self.started.set()
-        if not self.released.wait(timeout=10):
+        released = await asyncio.to_thread(self.released.wait, 10)
+        if not released:
             raise TimeoutError("blocking command runner timed out")
-        upper = Path(spec.writes)
+        upper = Path(handle.upperdir)
         upper.mkdir(parents=True, exist_ok=True)
         output = upper / "generated" / "output.json"
         output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_bytes((Path(spec.layer_paths[0]) / "config.yaml").read_bytes())
-        stdout_ref = Path(run_dir) / "stdout.bin"
-        stderr_ref = Path(run_dir) / "stderr.bin"
-        stdout_ref.write_text("done\n", encoding="utf-8")
-        stderr_ref.write_text("", encoding="utf-8")
-        timings["command_exec.mount_workspace_s"] = 0.001
-        timings["command_exec.run_command_s"] = 0.001
-        return ShellProcessResult(
-            exit_code=0,
-            stdout_ref=str(stdout_ref),
-            stderr_ref=str(stderr_ref),
-            mounted_workspace_root=spec.workspace_root,
-            mount_mode="private_namespace",
-        )
+        output.write_bytes((Path(handle.layer_paths[0]) / "config.yaml").read_bytes())
+        return {
+            "success": True,
+            "status": "ok",
+            "exit_code": 0,
+            "stdout": "done\n",
+            "stderr": "",
+            "timings": {},
+        }
 
     def release(self) -> None:
         self.released.set()
@@ -132,21 +126,31 @@ async def _run_occ_clean_stale_shell(
         "run_in_namespace",
         runner,
     )
+    services = occ_backend.build_occ_backend(str(manager.storage_root))
+    pipeline = EphemeralPipeline(
+        occ_client=services.occ_client,
+        workspace_ref=str(manager.storage_root),
+        layer_stack=services.layer_stack,
+        workspace_root=workspace.as_posix(),
+    )
 
     task = asyncio.create_task(
-        pipeline_mod.execute_shell_api(
-            {
-                "layer_stack_root": str(manager.storage_root),
-                "command": (
-                    "mkdir -p generated; "
-                    "cp config.yaml generated/output.json; "
-                    "printf 'done\\n'"
-                ),
-                "cwd": ".",
-                "timeout_seconds": 10,
-                "actor_id": "agent-staleness",
-                "description": "staleness clean write",
-            }
+        pipeline.run_tool_call(
+            ToolCallRequest(
+                request_id="staleness-shell",
+                agent_id="agent-staleness",
+                verb="shell",
+                intent=Intent.WRITE_ALLOWED,
+                args={
+                    "command": (
+                        "mkdir -p generated; "
+                        "cp config.yaml generated/output.json; "
+                        "printf 'done\\n'"
+                    ),
+                    "cwd": ".",
+                    "timeout_seconds": 10,
+                },
+            )
         )
     )
     try:

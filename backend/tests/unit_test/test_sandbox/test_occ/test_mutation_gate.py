@@ -55,20 +55,34 @@ def test_max_occ_cas_retries_is_named_constant_with_positive_default() -> None:
 
 
 @pytest.mark.asyncio
-async def test_cas_retry_loop_bounded_under_no_contention(tmp_path: Path) -> None:
+async def test_cas_retry_loop_bounded_under_no_contention(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """A no-contention write completes promptly — regression guard against the
     retry loop turning into a busy spin."""
     import asyncio
 
-    from sandbox.layer_stack.workspace_base import build_workspace_base
     from sandbox.daemon import occ_backend
     from sandbox.daemon.handler import write
+    from sandbox.layer_stack.workspace_base import build_workspace_base
 
     occ_backend.clear_backend_cache()
     workspace = tmp_path / "ws"
     workspace.mkdir()
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
+
+    async def fake_run_in_namespace(handle, req):
+        target = handle.upperdir / str(req.args["path"])
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(str(req.args["content"]), encoding="utf-8")
+        return {"success": True, "status": "ok", "timings": {}}
+
+    monkeypatch.setattr(
+        "sandbox.ephemeral_workspace.pipeline.run_in_namespace",
+        fake_run_in_namespace,
+    )
 
     result = await asyncio.wait_for(
         write.write_file(
@@ -84,7 +98,10 @@ async def test_cas_retry_loop_bounded_under_no_contention(tmp_path: Path) -> Non
 
 
 @pytest.mark.asyncio
-async def test_cas_retry_exhaustion_returns_conflict_result(tmp_path: Path) -> None:
+async def test_cas_retry_exhaustion_returns_conflict_result(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Persistent CAS mismatch surfaces a per-path conflict result and does
     NOT loop indefinitely. We monkey-patch the layer-stack publisher to
     always raise :class:`ManifestConflictError` so every retry attempt fails."""
@@ -101,6 +118,17 @@ async def test_cas_retry_exhaustion_returns_conflict_result(tmp_path: Path) -> N
     workspace.mkdir()
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
+
+    async def fake_run_in_namespace(handle, req):
+        target = handle.upperdir / str(req.args["path"])
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(str(req.args["content"]), encoding="utf-8")
+        return {"success": True, "status": "ok", "timings": {}}
+
+    monkeypatch.setattr(
+        "sandbox.ephemeral_workspace.pipeline.run_in_namespace",
+        fake_run_in_namespace,
+    )
 
     services = occ_backend.build_occ_backend(stack.as_posix())
     publisher = services.manager._publisher  # type: ignore[attr-defined]

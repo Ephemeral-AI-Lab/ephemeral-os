@@ -10,7 +10,7 @@ in the daemon process which is out of scope for this PR. The form we
 ship here is the closest live-observable proxy:
 
 - The iws audit log contains the full enter→tool_call→exit sequence.
-- The default-mode ``api.overlay.flush`` BEFORE and AFTER the isolated
+- The default-mode ``api.layer_metrics`` BEFORE and AFTER the isolated
   cycle returns the SAME ``manifest_version`` — proving no isolated
   write reached the layerstack.
 
@@ -52,7 +52,7 @@ async def test_full_cycle_never_calls_occ(
 
     # Snapshot the layerstack tip BEFORE the isolated cycle.
     pre = await call_daemon_api(
-        sandbox_id, "api.overlay.flush", {}, timeout=30,
+        sandbox_id, "api.layer_metrics", {}, timeout=30,
     )
     pre_version = (pre or {}).get("manifest_version")
 
@@ -75,7 +75,7 @@ async def test_full_cycle_never_calls_occ(
     # advanced it — that is the runtime evidence that no OCC commit
     # primitive was reached.
     post = await call_daemon_api(
-        sandbox_id, "api.overlay.flush", {}, timeout=30,
+        sandbox_id, "api.layer_metrics", {}, timeout=30,
     )
     post_version = (post or {}).get("manifest_version")
     assert pre_version == post_version, (
@@ -92,4 +92,3 @@ async def test_full_cycle_never_calls_occ(
             "sandbox_isolated_workspace_exit",
         ],
     )
-

@@ -45,7 +45,7 @@ def test_events_from_result_emits_one_terminal_operation_event_plus_subsystems()
         timings={
             "occ.prepare.total_s": 0.01,
             "occ.apply.total_s": 0.02,
-            "overlay.run.total_s": 0.03,
+            "workspace.tool_s": 0.03,
             "layer_stack.lease_acquire_s": 0.04,
             "layer_stack.publish_s": 0.05,
             "layer_stack.auto_squash.total_s": 0.06,
