@@ -1,7 +1,7 @@
 # Phase 2 — Unification
 
-**Type:** Substantive — per-call ephemeral pipeline, persistent isolated pipeline, unified tool-op dispatch, lifecycle host API, agent-callable tools, plugin block, iws tool-op deletion, `manager.py` decomposition (1624 lines → 6 modules), host-path denylist, background-shell pipeline ownership (background permitted in BOTH modes; per-pipeline `_background_jobs` registry).
-**Scope:** The single behavior-changing PR. Everything required to land the new agent-callable surface ships here.
+**Type:** Substantive — per-call ephemeral pipeline, persistent isolated pipeline, unified tool-op dispatch, lifecycle host API, agent-callable tools, plugin block, iws tool-op deletion, `manager.py` decomposition (1624 lines → 6 modules), host-path denylist. **Foreground-only.** Background tool lifecycle is owned by Phase 2.5 — see [`unify_sandbox_workspace_phase2_5.md`](unify_sandbox_workspace_phase2_5.md).
+**Scope:** The single behavior-changing PR for foreground. Background-shell plumbing is NOT in scope; Phase 2.5 removes the existing background-shell code from the repo and ships the new design.
 **Depends on:** Phase 1 (folder reorg, overlay extraction, `OverlayHandle` + lifecycle primitives, `tool_primitives` package, parity corpus, `manager.py` extraction skeleton).
 **Blocks:** Phase 3.
 **Safety net:**
@@ -27,7 +27,7 @@ After Phase 2 lands:
 - Plugin access blocked when an iws handle is open (with audit event emitted on fail-open path).
 - `WorkspaceSession` async-CM deferred to `tests/mock/sandbox/_fixtures/workspace_session.py` test-utility until a production caller materializes (Critic must-fix #11). NOT shipped as public API.
 - Host-path denylist (`/etc/`, `/var/`, `/proc/`, `/sys/`, `/boot/`) enforced inside the namespace child BEFORE the kernel call (Critic must-fix #9).
-- Background shells: PERMITTED in both modes (revised after user directive; supersedes earlier Critic must-fix #4 framing). Ephemeral: `shell.launch` creates an overlay owned by a `ShellJob` in `EphemeralPipeline._background_jobs`; `shell.reap` waits for child exit, captures upperdir, OCC-commits (source=`"overlay_capture"`), destroys overlay; `shell.cancel` SIGTERM/SIGKILLs and destroys without commit. Isolated: jobs share the session overlay; `exit` drains in-flight jobs up to `grace_s` and reports `evicted_background_jobs`. Cross-mode: `enter_isolated_workspace` rejects with `ephemeral_jobs_in_flight` if the agent has live ephemeral background jobs (Q4).
+- Background tool lifecycle is **out of scope for Phase 2**. See [`unify_sandbox_workspace_phase2_5.md`](unify_sandbox_workspace_phase2_5.md) for the canonical design (engine-owned asyncio.Task lifecycle wrapper; coroutine-bound overlay lease; generic `api.v1.cancel(request_id)` wire RPC). Phase 2.5 removes existing background-shell code (`shell_job.py`, `shell_job_handler.py`, `is_background` branch in `tools/sandbox/shell/shell.py`, sandbox-api client launch/reap/poll/cancel paths) from the repo and ships the new design.
 - OCC disjoint-batch coalescing preserved for single-path typed writes via `source="api_write"` — threaded through all 4 helper sites (`overlay_path_changes_to_occ_changes`, `build_overlay_write_change`, `build_overlay_delete_change`, inline `SymlinkChange`/`OpaqueDirChange`).
 - `OverlayHandle` idempotency wired (`_destroyed` field + per-pipeline `_handle_locks: dict[str, asyncio.Lock]` for the `_destroy_with_lease_guard` TOCTOU fix).
 - `O_NOFOLLOW` enforced unconditionally via `tool_primitives.file_ops.open_no_follow` chokepoint (per-component walk, not naive last-component-only).
@@ -126,68 +126,25 @@ class WorkspacePipeline(Protocol):
 **3.1.** Rewrite `sandbox/ephemeral_workspace/pipeline.py::EphemeralPipeline` to implement `WorkspacePipeline`:
 
 ```python
-# Verbs that route through the background-shell lifecycle (overlay outlives
-# the run_tool_call invocation; owned by ShellJob in _background_jobs).
-# All other verbs follow the per-call foreground lifecycle.
-_BACKGROUND_SHELL_VERBS: frozenset[str] = frozenset({
-    "shell_launch", "shell_reap", "shell_poll", "shell_cancel",
-})
-
-
 class EphemeralPipeline:
     def __init__(self, *, layer_stack, occ_client, workspace_root="/testbed"):
         self._layer_stack = layer_stack
         self._occ = occ_client
         self._workspace_root = workspace_root
         # Per-pipeline guard against double-release. Used together with
-        # _handle_locks below to prevent the asyncio TOCTOU race where two
-        # coroutines (main call's finally + shell-job reaper) both pass
-        # _destroyed=False before either awaits overlay.destroy.
+        # _handle_locks below to prevent concurrent-destroy races when the
+        # coroutine's finally interleaves with cancellation cleanup paths.
         self._released_lease_ids: set[str] = set()
         # Per-handle asyncio.Lock keyed by lease_id. Created lazily on first
         # destroy attempt; popped after destroy completes so the dict doesn't
         # grow unbounded across the pipeline lifetime.
         self._handle_locks: dict[str, asyncio.Lock] = {}
-        # Background-shell registry (Q2: pipeline-owned). Keys: job_id from
-        # _launch_bg_job (e.g. "shell-<uuid12>"). Each ShellJob owns one
-        # OverlayHandle for the duration shell_launch → shell_reap/shell_cancel;
-        # the overlay is destroyed in _reap_bg_job / _cancel_bg_job, NOT in the
-        # foreground _run_foreground path. Unbounded (Q3) — agent self-regulates;
-        # gauge exported for observability.
-        self._background_jobs: dict[str, ShellJob] = {}
-        # Per-agent index for the "ephemeral_jobs_in_flight" Q4 check that
-        # IsolatedPipeline.enter consults via the pipeline's introspection API.
-        self._jobs_by_agent: dict[str, set[str]] = {}
 
     async def run_tool_call(self, req: ToolCallRequest) -> ToolCallResult:
-        # Unified entry: foreground AND background-shell verbs route through
-        # this single method (Principle 4 — protocol has ONE method). The
-        # request's verb selects the lifecycle; the substrate (overlay.create
-        # / capture / destroy) is the same. Foreground = per-call lifecycle.
-        # Background = per-ShellJob lifecycle (overlay outlives this call).
-        if req.verb in _BACKGROUND_SHELL_VERBS:
-            return await self._dispatch_background_verb(req)
-        return await self._run_foreground(req)
-
-    async def _dispatch_background_verb(self, req: ToolCallRequest) -> ToolCallResult:
-        # All four background verbs share the same substrate (overlay primitives,
-        # ShellJob registry, _destroy_with_lease_guard) but differ in lifecycle:
-        #   shell_launch  → create overlay + register ShellJob (overlay survives call)
-        #   shell_reap    → look up handle by job_id, wait + capture + commit + destroy
-        #   shell_poll    → look up handle, non-blocking status (no destroy, no commit)
-        #   shell_cancel  → look up handle, kill PG, destroy overlay (no commit)
-        if req.verb == "shell_launch":
-            return await self._launch_bg_job(req)
-        if req.verb == "shell_reap":
-            return await self._reap_bg_job(req)
-        if req.verb == "shell_poll":
-            return await self._poll_bg_job(req)
-        if req.verb == "shell_cancel":
-            return await self._cancel_bg_job(req)
-        raise AssertionError(f"unreachable: {req.verb}")  # pragma: no cover
-
-    async def _run_foreground(self, req: ToolCallRequest) -> ToolCallResult:
-        # Per-call overlay lifecycle: create → run → (capture+commit if write) → destroy.
+        # Per-call overlay lifecycle: create → run → (capture+commit if write)
+        # → destroy. Body is the same whether the caller awaits this directly
+        # (foreground) or wraps it in asyncio.Task (background — Phase 2.5);
+        # the pipeline never inspects req.background.
         handle = await overlay.create(
             self._layer_stack,
             agent_id=req.agent_id,
@@ -216,122 +173,12 @@ class EphemeralPipeline:
         finally:
             await self._destroy_with_lease_guard(handle)
 
-    # ---- Background-shell internal helpers (Q1–Q5 decisions; Overview §1 table) ----
-    # These are PRIVATE — dispatched via run_tool_call by verb name. The
-    # WorkspacePipeline protocol surface stays at ONE method.
-
-    async def _launch_bg_job(self, req: ToolCallRequest) -> ToolCallResult:
-        """Create overlay, fork child PG, register ShellJob, return job_id.
-        Overlay survives until reap_background_job or cancel_background_job."""
-        handle = await overlay.create(
-            self._layer_stack,
-            agent_id=req.agent_id,
-            workspace_root=self._workspace_root,
-        )
-        try:
-            # tool_primitives.shell.run with background=True returns a PG
-            # handle without waiting for child exit; ShellJob stores it.
-            child = await overlay.spawn_background_in_namespace(handle, req)
-            job_id = f"shell-{uuid4().hex[:12]}"
-            job = ShellJob(
-                job_id=job_id,
-                agent_id=req.agent_id,
-                handle=handle,
-                child_pg=child.pgrp,
-                stdout_ref=child.stdout_ref,
-                stderr_ref=child.stderr_ref,
-                base_version=handle.snapshot_version,
-                started_at=monotonic_now(),
-            )
-            self._background_jobs[job_id] = job
-            self._jobs_by_agent.setdefault(req.agent_id, set()).add(job_id)
-            return ToolCallResult(
-                success=True,
-                workspace="ephemeral",
-                job_id=job_id,
-                lease_id=handle.lease_id,
-            )
-        except BaseException:
-            # If anything between overlay.create and registry insert fails,
-            # tear down the orphan handle before propagating.
-            await self._destroy_with_lease_guard(handle)
-            raise
-
-    async def _reap_bg_job(self, req: ToolCallRequest) -> ToolCallResult:
-        """Wait for child exit, capture upperdir, OCC-commit (source=overlay_capture
-        per Q5), destroy overlay. Best-effort OCC (Q1) — conflict surfaced to agent."""
-        job_id = str(req.args["job_id"])
-        timeout_s = float(req.args.get("timeout_s", 600.0))
-        job = self._background_jobs.get(job_id)
-        if job is None or job.agent_id != req.agent_id:
-            return shell_error_result(kind="shell_job_not_found", job_id=job_id)
-        try:
-            status = await wait_for_child(job.child_pg, timeout=timeout_s)
-            changes = await overlay.capture_changes(job.handle)
-            # Q5: always overlay_capture for background-shell commits.
-            # Q1: best-effort — OCC raises ConflictError if stale-snapshot
-            # changes overlap with committed-in-meantime changes; agent
-            # receives conflict result and decides whether to retry.
-            try:
-                commit_result = await self._commit_and_attach(
-                    changes,
-                    base_version=job.base_version,
-                    source="overlay_capture",
-                    result=ShellResult(success=True, status=status, ...),
-                )
-            except OCCConflictError as e:
-                commit_result = shell_conflict_result(e, job_id=job_id)
-            return commit_result
-        finally:
-            self._background_jobs.pop(job_id, None)
-            self._jobs_by_agent.get(job.agent_id, set()).discard(job_id)
-            await self._destroy_with_lease_guard(job.handle)
-
-    async def _poll_bg_job(self, req: ToolCallRequest) -> ToolCallResult:
-        """Non-blocking status check. Does NOT destroy overlay or commit."""
-        job_id = str(req.args["job_id"])
-        job = self._background_jobs.get(job_id)
-        if job is None or job.agent_id != req.agent_id:
-            return shell_error_result(kind="shell_job_not_found", job_id=job_id)
-        return shell_poll_result(job_id=job_id, status=peek_status(job.child_pg))
-
-    async def _cancel_bg_job(self, req: ToolCallRequest) -> ToolCallResult:
-        """SIGTERM → grace → SIGKILL the child PG; destroy overlay; NO commit."""
-        job_id = str(req.args["job_id"])
-        reason = str(req.args.get("reason", ""))
-        job = self._background_jobs.get(job_id)
-        if job is None or job.agent_id != req.agent_id:
-            return shell_error_result(kind="shell_job_not_found", job_id=job_id)
-        try:
-            await terminate_pg(job.child_pg, reason=reason)
-        finally:
-            self._background_jobs.pop(job_id, None)
-            self._jobs_by_agent.get(job.agent_id, set()).discard(job_id)
-            await self._destroy_with_lease_guard(job.handle)
-        return shell_cancel_result(job_id=job_id, reason=reason)
-
-    def get_agent_background_jobs(self, agent_id: str) -> set[str]:
-        """Used by IsolatedPipeline.enter for Q4 ephemeral_jobs_in_flight check.
-        Lock-free read; the empty case is the common case. NOT a tool-call;
-        this is pipeline-internal introspection (similar to IsolatedPipeline.
-        get_handle)."""
-        return set(self._jobs_by_agent.get(agent_id, ()))
-
-    async def startup_gc(self) -> None:
-        """Q2: per-pipeline orphan sweep on init. Replaces global
-        daemon/service/shell_job.py::startup_gc. Scans run_dir for orphan
-        leases (no live ShellJob owns them), releases leases, removes dirs.
-        Idempotent; safe to call once at pipeline __init__. NOT a tool-call;
-        invoked by the daemon bootstrap, not via run_tool_call."""
-        ...  # implementation in pipeline.py; calls overlay/scratch.py helpers
-
-    # ---- destroy chokepoint (TOCTOU fix; unchanged from prior iteration) ----
+    # ---- destroy chokepoint (TOCTOU fix) ----
 
     def _lock_for(self, handle: OverlayHandle) -> asyncio.Lock:
         """Lazy per-handle lock. Pipeline-owned dict (not handle field) because
-        the handle is shared by reference across the shell-job reaper and the
-        main call; a dict-owned lock survives even if a frozen handle is later
-        adopted (per principle 3 wording in Overview §2)."""
+        the handle may be shared by reference across the main call's finally
+        and a cancellation-driven cleanup path (Phase 2.5 §5.5)."""
         lock = self._handle_locks.get(handle.lease_id)
         if lock is None:
             lock = self._handle_locks[handle.lease_id] = asyncio.Lock()
@@ -340,8 +187,7 @@ class EphemeralPipeline:
     async def _destroy_with_lease_guard(self, handle: OverlayHandle) -> None:
         """Idempotent destroy. Safe across concurrent asyncio tasks.
 
-        Fixes the TOCTOU race (Planner F.5 / Architect F.5 / Critic must-fix #5):
-        without the lock, two coroutines can both read _destroyed=False before
+        Without the lock, two coroutines can both read _destroyed=False before
         either awaits overlay.destroy → double umount → EBUSY/EINVAL.
         """
         async with self._lock_for(handle):
@@ -362,9 +208,7 @@ class EphemeralPipeline:
 
 **3.2.** Delete the temporary `sandbox/ephemeral_workspace/_execute_command.py` (introduced in Phase 1 §5.2). Its logic is now subsumed by `run_tool_call`.
 
-**3.3.** Restructure `sandbox/ephemeral_workspace/shell_job.py` (Phase 1 §2.3 moved it from `daemon/service/`). The global `ShellJobRegistry` singleton (`get_shell_job_registry()`) is removed; `ShellJob` dataclass becomes a per-pipeline value held in `EphemeralPipeline._background_jobs`. iws session-scoped jobs are held in the `OverlayHandle`'s per-session state (added to `isolated_workspace/_types.py::IsolatedWorkspaceHandle._background_jobs: dict[str, ShellJob]`). `shell_job_handler.py` becomes a thin RPC adapter that resolves the pipeline via `resolve_pipeline(agent_id)` and dispatches to `pipeline.{launch,reap,poll,cancel}_background_job` — see §7.5.
-
-→ **Verify:** parity corpus replay passes byte-equivalently for **ephemeral-mode foreground verbs only** (modulo OCC source-tag note). iws verbs follow the typed-verb spec; iws is NOT covered by the parity corpus and is validated by Phase 3's `behavior_upgrade/` tier. Background-shell lifecycle (launch/reap/cancel/poll) is NOT covered by the parity corpus (today's `ShellJobRegistry` global state has no comparable per-pipeline analog) and is validated by Phase 3 §6.6 sub-tests A–D + the new pipeline_lifecycle test `test_ephemeral_background_job_lease_lifetime.py`.
+→ **Verify:** parity corpus replay passes byte-equivalently for **ephemeral-mode foreground verbs only** (modulo OCC source-tag note). iws verbs follow the typed-verb spec; iws is NOT covered by the parity corpus and is validated by Phase 3's `behavior_upgrade/` tier. Background tool lifecycle is Phase 2.5's scope and lands separately.
 
 ---
 
@@ -391,33 +235,21 @@ Acceptance check: post-Phase-2, `find sandbox/isolated_workspace -name "*.py" -e
 
 ```python
 class IsolatedPipeline:
-    def __init__(self, *, layer_stack, ephemeral_pipeline, workspace_root="/testbed"):
+    def __init__(self, *, layer_stack, workspace_root="/testbed"):
         self._layer_stack = layer_stack
-        # Reference to the EphemeralPipeline so enter() can check Q4
-        # (ephemeral_jobs_in_flight) before opening a session.
-        self._ephemeral = ephemeral_pipeline
         self._workspace_root = workspace_root
         self._sessions: dict[str, OverlayHandle] = {}
-        # Per-session background jobs — keyed by agent_id then job_id.
-        # Jobs share the session's overlay; no separate per-job overlay.
-        self._session_jobs: dict[str, dict[str, ShellJob]] = {}
         self._released_lease_ids: set[str] = set()
         self._handle_locks: dict[str, asyncio.Lock] = {}  # same TOCTOU fix as ephemeral
         self._lock = asyncio.Lock()  # serializes enter/exit per agent
 
     async def enter(self, agent_id: str, config: IsolatedConfig) -> OverlayHandle:
+        # Q4 (cross-mode rejection on live background tasks) is owned by the
+        # engine-layer pre-check in sandbox.lifecycle.enter_isolated_workspace
+        # (see Phase 2.5 §5.6). The pipeline.enter body is pure session-open.
         async with self._lock:
             if agent_id in self._sessions:
                 raise LifecycleError(kind="already_open", ...)
-            # Q4: reject if agent has live ephemeral background jobs.
-            # The two registries are mutually exclusive: an agent is in one
-            # mode at a time. Caller must reap/cancel ephemeral jobs first.
-            stragglers = self._ephemeral.get_agent_background_jobs(agent_id)
-            if stragglers:
-                raise LifecycleError(
-                    kind="ephemeral_jobs_in_flight",
-                    details={"job_ids": sorted(stragglers)},
-                )
             handle = await overlay.create(
                 self._layer_stack,
                 agent_id=agent_id,
@@ -427,77 +259,28 @@ class IsolatedPipeline:
             # _wire_handle BEFORE insert (preserves manager.py:671,679 invariant
             # extracted to _lifecycle.py per §4.0)
             self._sessions[agent_id] = handle
-            self._session_jobs[agent_id] = {}
             return handle
 
     async def run_tool_call(self, req: ToolCallRequest) -> ToolCallResult:
-        # Unified entry: same protocol as EphemeralPipeline. Foreground verbs
-        # run against the session overlay; background-shell verbs operate on
-        # session-scoped ShellJobs that share that same overlay (no per-job
-        # mount). Protocol stays at ONE method (Principle 4).
-        handle = self._sessions.get(req.agent_id)
-        if handle is None:
-            raise RuntimeError(f"no isolated session for agent {req.agent_id}")
-        if req.verb in _BACKGROUND_SHELL_VERBS:
-            return await self._dispatch_background_verb_iws(req, handle)
-        return await self._run_foreground_iws(req, handle)
-
-    async def _run_foreground_iws(
-        self, req: ToolCallRequest, handle: OverlayHandle,
-    ) -> ToolCallResult:
         # NO OCC commit — upperdir accumulates across calls and is discarded
         # at exit. capture_changes IS called (for changed_paths observability
         # per Phase 3 §6A.6 behavior_upgrade tier) but its output is NOT
-        # passed to OCC.
+        # passed to OCC. Body is the same whether the caller awaits this
+        # directly (foreground) or wraps it in asyncio.Task (background —
+        # Phase 2.5); the pipeline never inspects req.background.
+        handle = self._sessions.get(req.agent_id)
+        if handle is None:
+            raise RuntimeError(f"no isolated session for agent {req.agent_id}")
         result = await overlay.run_in_namespace(handle, req)
         if req.intent == Intent.WRITE_ALLOWED:
             changes = await overlay.capture_changes(handle)
             result = result.with_changed_paths([c.path for c in changes])
         return result
 
-    async def _dispatch_background_verb_iws(
-        self, req: ToolCallRequest, handle: OverlayHandle,
-    ) -> ToolCallResult:
-        # Same verb table as EphemeralPipeline._dispatch_background_verb, but
-        # backed by session-scoped ShellJob storage and the SHARED session
-        # overlay. No per-job mount; no per-job destroy. Reap does NOT commit
-        # (iws never commits). Cancel kills the PG but leaves the overlay
-        # alone for other jobs / future tool calls in the same session.
-        jobs = self._session_jobs[req.agent_id]
-        if req.verb == "shell_launch":
-            child = await overlay.spawn_background_in_namespace(handle, req)
-            job_id = f"shell-{uuid4().hex[:12]}"
-            jobs[job_id] = ShellJob(
-                job_id=job_id, agent_id=req.agent_id, handle=handle,
-                child_pg=child.pgrp, stdout_ref=child.stdout_ref,
-                stderr_ref=child.stderr_ref, base_version=None,  # iws no-commit
-                started_at=monotonic_now(),
-            )
-            return ToolCallResult(success=True, workspace="isolated", job_id=job_id)
-        # reap / poll / cancel: look up the session-scoped job; NO destroy
-        # of the shared overlay; NO commit on reap.
-        job_id = str(req.args["job_id"])
-        job = jobs.get(job_id)
-        if job is None:
-            return shell_error_result(kind="shell_job_not_found", job_id=job_id)
-        if req.verb == "shell_reap":
-            status = await wait_for_child(job.child_pg, timeout=float(req.args.get("timeout_s", 600.0)))
-            changes = await overlay.capture_changes(handle)
-            jobs.pop(job_id, None)
-            return ShellResult(
-                success=True, status=status, workspace="isolated",
-                changed_paths=[c.path for c in changes],  # observability only
-            )
-        if req.verb == "shell_poll":
-            return shell_poll_result(job_id=job_id, status=peek_status(job.child_pg))
-        # shell_cancel
-        try:
-            await terminate_pg(job.child_pg, reason=str(req.args.get("reason", "")))
-        finally:
-            jobs.pop(job_id, None)
-        return shell_cancel_result(job_id=job_id, reason=str(req.args.get("reason", "")))
-
     async def exit(self, agent_id: str, grace_s: float = 5.0) -> ExitIsolatedWorkspaceResult:
+        # Background-task drain (when applicable) is owned by the engine-layer
+        # sandbox.lifecycle.exit_isolated_workspace (Phase 2.5 §5.6) and runs
+        # BEFORE this method is called. pipeline.exit is pure session teardown.
         async with self._lock:
             handle = self._sessions.get(agent_id)
             if handle is None:
@@ -509,17 +292,10 @@ class IsolatedPipeline:
             # extracted to _lifecycle.py per §4.0)
             del self._sessions[agent_id]
             evicted_bytes = await overlay.upperdir_size(handle)
-            # Background-shell drain: wait up to grace_s for jobs to complete,
-            # then force-kill via _gc.py::_unfreeze_and_kill. Count survivors
-            # for observability. Jobs are session-scoped — `_session_jobs.pop`
-            # is the registry hand-over to the drainer.
-            jobs = self._session_jobs.pop(agent_id, {})
-            evicted_jobs = await self._drain_background_jobs(jobs, grace_s)
             await self._destroy_with_lease_guard(handle)
             return ExitIsolatedWorkspaceResult(
                 success=True,
                 evicted_upperdir_bytes=evicted_bytes,
-                phases_ms={"drain_background_jobs": ..., "evicted_background_jobs": evicted_jobs},
                 ...
             )
 
@@ -527,17 +303,8 @@ class IsolatedPipeline:
         """Lock-free dict read — used by daemon/dispatch.py::resolve_pipeline."""
         return self._sessions.get(agent_id)
 
-    async def _drain_background_jobs(
-        self, jobs: dict[str, ShellJob], grace_s: float,
-    ) -> int:
-        """Wait up to grace_s for jobs to finish; SIGTERM/SIGKILL survivors.
-        Returns number of jobs that had to be force-killed. Called only from
-        exit() with the popped-out session-jobs dict (registry has already
-        been removed from _session_jobs to prevent concurrent launches)."""
-        ...  # implementation in pipeline.py; delegates PG signaling to _gc.py
-
     async def _destroy_with_lease_guard(self, handle: OverlayHandle) -> None:
-        """Same per-handle-lock TOCTOU fix as EphemeralPipeline (Critic must-fix #5)."""
+        """Same per-handle-lock TOCTOU fix as EphemeralPipeline."""
         # Same body as EphemeralPipeline._destroy_with_lease_guard (Step 3.1).
         ...
 ```
@@ -700,33 +467,7 @@ async def read_file(args: dict[str, object]) -> dict[str, object]:
 
 Identical shape for write/edit/grep/glob with `intent=Intent.READ_ONLY` or `WRITE_ALLOWED`. Shell uses `WRITE_ALLOWED`.
 
-**Background-shell handlers** (replaces `daemon/service/shell_job_handler.py` direct dispatch). The wire RPC names stay `api.shell.launch` / `api.shell.reap` / `api.shell.poll` / `api.shell.cancel` (backward compat with existing engine clients). The handler maps RPC name → in-memory verb name and routes through the pipeline:
-
-```python
-# sandbox/daemon/handler/shell.py
-_SHELL_RPC_TO_VERB = {
-    "api.v1.shell":     ("shell",         Intent.WRITE_ALLOWED),  # foreground (unchanged)
-    "api.shell.launch": ("shell_launch",  Intent.WRITE_ALLOWED),  # creates overlay + ShellJob
-    "api.shell.reap":   ("shell_reap",    Intent.WRITE_ALLOWED),  # waits + commits (ephemeral)
-    "api.shell.poll":   ("shell_poll",    Intent.READ_ONLY),      # status only
-    "api.shell.cancel": ("shell_cancel",  Intent.WRITE_ALLOWED),  # side effect (kills PG)
-}
-
-async def shell(rpc_name: str, args: dict[str, object]) -> dict[str, object]:
-    agent_id = require_arg(args, "agent_id")
-    verb, intent = _SHELL_RPC_TO_VERB[rpc_name]
-    req = ToolCallRequest(
-        request_id=args.get("request_id") or uuid4().hex,
-        agent_id=agent_id,
-        verb=verb,
-        intent=intent,
-        args=args,
-    )
-    pipeline = resolve_pipeline(agent_id)
-    return (await pipeline.run_tool_call(req)).to_dict()
-```
-
-`resolve_pipeline(agent_id)` chooses between `IsolatedPipeline` (if agent has open iws session) and `EphemeralPipeline`. The pipeline then internally dispatches by verb. This collapses today's three-stop wiring (`api/tool/shell.py` → `shell_job_handler.py` → `ShellJobRegistry`) to one stop (handler → pipeline) with no global registry. **Critic punchlist P1 closes naturally** — the rejection-vs-route-vs-refactor question disappears because there is no special-case route; background and foreground both flow through the same dispatcher.
+Background tool lifecycle (engine wraps `pipeline.run_tool_call` as asyncio.Task; generic `api.v1.cancel(request_id)` wire RPC; `InFlightRequestRegistry`) is owned by Phase 2.5.
 
 **7.3.** Delete the per-handler helpers that no longer exist:
 - `daemon/handler/read.py::_read_in_workspace`, `_read_out_of_workspace`
@@ -735,9 +476,6 @@ async def shell(rpc_name: str, args: dict[str, object]) -> dict[str, object]:
 - `daemon/handler/grep.py::_grep_sync` body (lives in `tool_primitives/grep.py` now)
 - `daemon/handler/glob.py::_glob_sync` body (lives in `tool_primitives/glob.py` now)
 - `daemon/handler/overlay.py` entirely (replaced by `daemon/handler/shell.py`)
-- `daemon/service/shell_job_handler.py::{launch_handler, reap_handler, poll_handler, cancel_handler}` — replaced by `daemon/handler/shell.py` per-RPC routing above.
-- `daemon/service/shell_job.py::ShellJobRegistry` global singleton + `get_shell_job_registry()` — replaced by per-pipeline `_background_jobs` / `_session_jobs` (Phase 2 §3.3). `ShellJob` dataclass remains (now imported from `sandbox.ephemeral_workspace.shell_job`); the registry surface is gone.
-- `sandbox/api/tool/shell.py::_shell_background_dispatch` — engine-side two-RPC orchestration moves into the engine's own tool wiring (no daemon code change; the wire still sees `api.shell.launch` + `api.shell.reap`, just dispatched through `pipeline.run_tool_call` on the daemon side). If the engine wants to keep its convenience wrapper that does launch+reap in one client-side call, that's an engine concern.
 
 **7.4.** Delete `daemon/request_context.py::classify_path`, `ClassifiedPath`, `read_bytes_no_follow`, `write_text_no_follow`, `_open_no_follow`, `_o_no_follow`.
 - **`_open_no_follow` MOVES to `tool_primitives/file_ops.py::open_no_follow`** (per Phase 1 §6.8), preserving the per-component walk semantics. Naive last-component-only `os.open(path, flags|O_NOFOLLOW)` is FORBIDDEN by the lint (Step 9.2). See Architect F.6 / Critic must-fix #15.
@@ -1004,15 +742,8 @@ async def _check_plugin_block(args: dict, op_name: str) -> dict | None:
 ## Acceptance criteria
 
 - ✅ `WorkspacePipeline` protocol has exactly one method (`run_tool_call`).
-- ✅ `EphemeralPipeline.run_tool_call` is the SINGLE public method. It dispatches by verb: foreground verbs follow per-call lifecycle (create → run → capture+commit if write → destroy); background-shell verbs (`shell_launch` / `shell_reap` / `shell_poll` / `shell_cancel`) route through private `_dispatch_background_verb` and use the `_background_jobs` registry. Module-level `_BACKGROUND_SHELL_VERBS` frozenset enumerates the four.
-- ✅ Background-shell methods are PRIVATE (`_launch_bg_job`, `_reap_bg_job`, `_poll_bg_job`, `_cancel_bg_job`); `WorkspacePipeline` protocol surface stays at one method (Principle 4). Pipeline-introspection helpers (`get_agent_background_jobs`, `startup_gc`) are not tool-calls and live outside the protocol.
-- ✅ `EphemeralPipeline.startup_gc()` runs at pipeline init; replaces global `daemon/service/shell_job.py::startup_gc`. Reaps orphan run-dirs / leases from a previous daemon process.
-- ✅ `IsolatedPipeline` has `enter`/`run_tool_call`/`exit`/`get_handle` methods; overlay lifecycle spans enter→exit; background-shell verbs route through `_dispatch_background_verb_iws` using session-scoped `_session_jobs[agent_id]` storage (jobs share the session overlay; no per-job mount).
-- ✅ `IsolatedPipeline.enter` checks `EphemeralPipeline.get_agent_background_jobs(agent_id)` and raises `LifecycleError(kind="ephemeral_jobs_in_flight", details={"job_ids": [...]})` if non-empty (Q4 mode-mix policy).
-- ✅ `IsolatedPipeline.exit` drains in-flight session background shell jobs up to `grace_s`, force-kills survivors via `_gc.py::_unfreeze_and_kill`, reports `evicted_background_jobs` count in `phases_ms`.
-- ✅ Background-shell OCC commits in ephemeral mode use `source="overlay_capture"` (Q5 — no coalescing; cross-path atomicity). Best-effort on stale-snapshot (Q1) — `OCCConflictError` is surfaced to the agent as `shell_conflict_result`, not silently rebased.
-- ✅ Background-shell registry is pipeline-owned (Q2): `EphemeralPipeline._background_jobs: dict[str, ShellJob]` + `_jobs_by_agent: dict[str, set[str]]`; `IsolatedPipeline._session_jobs: dict[str, dict[str, ShellJob]]`. Global `daemon/service/shell_job.py::ShellJobRegistry` and `get_shell_job_registry()` are DELETED.
-- ✅ Background-shell concurrency is unbounded per agent in ephemeral mode (Q3); gauge `EphemeralPipeline._background_jobs` length exposed via observability for alerting on runaway.
+- ✅ `EphemeralPipeline.run_tool_call` is the SINGLE public method; body is foreground-only per-call lifecycle (create → run → capture+commit if write → destroy). The body does NOT branch on `req.background` (Phase 2.5 wires the engine-side asyncio.Task wrapper around the same body).
+- ✅ `IsolatedPipeline` has `enter`/`run_tool_call`/`exit`/`get_handle` methods; overlay lifecycle spans enter→exit; `run_tool_call` body does NOT branch on `req.background`. No `_session_jobs`, no `_drain_background_jobs`, no `_dispatch_background_verb_iws` — Phase 2.5 owns background task tracking at the engine layer.
 - ✅ `manager.py` (1624 lines verified) decomposed into 7 modules: `pipeline.py`, `_types.py`, `_lifecycle.py`, `_gc.py`, `_ttl.py`, `_quota.py`, `_runtime.py`. None exceeds 400 lines (`wc -l` check).
 - ✅ `overlay.run_in_namespace` is the single execution path for both modes.
 - ✅ `namespace_child.py` two-tier dispatcher: VERB_TABLE for read/write/edit/grep/glob; `shell.run` for shell; pre-dispatch host-path denylist for write-allowed verbs (`/etc/`, `/var/`, `/proc/`, `/sys/`, `/boot/`).
