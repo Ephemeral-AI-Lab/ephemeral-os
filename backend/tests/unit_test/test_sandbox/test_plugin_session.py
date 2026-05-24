@@ -1,4 +1,4 @@
-"""Unit tests for sandbox.plugin.session.call_plugin."""
+"""Unit tests for sandbox.ephemeral_workspace.plugin.session.call_plugin."""
 
 from __future__ import annotations
 
@@ -11,8 +11,8 @@ from typing import Any
 import pytest
 
 from plugins.core.manifest import PluginManifest, parse_plugin_manifest
-from sandbox.plugin import session as session_mod
-from sandbox.plugin.session import call_plugin
+from sandbox.ephemeral_workspace.plugin import session as session_mod
+from sandbox.ephemeral_workspace.plugin.session import call_plugin
 from tools._framework.core.context import ToolExecutionContextService
 
 

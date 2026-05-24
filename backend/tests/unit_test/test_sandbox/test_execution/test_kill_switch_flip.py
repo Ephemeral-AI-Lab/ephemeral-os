@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-import sandbox.execution.overlay.capability as cap_mod
+import sandbox.overlay.capability as cap_mod
 
 
 def test_kill_switch_off_by_default(monkeypatch: pytest.MonkeyPatch) -> None:

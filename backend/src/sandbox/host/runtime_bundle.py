@@ -191,12 +191,34 @@ def _runtime_bundle_bytes() -> bytes:
             sandbox_dir=sandbox_dir,
         )
 
-        execution_dir = sandbox_dir / "execution"
+        overlay_dir = sandbox_dir / "overlay"
         _add_python_tree(
             tar,
-            execution_dir,
+            overlay_dir,
             sandbox_dir=sandbox_dir,
         )
+
+        main_workspace_dir = sandbox_dir / "main_workspace"
+        _add_python_tree(
+            tar,
+            main_workspace_dir,
+            sandbox_dir=sandbox_dir,
+        )
+
+        ephemeral_dir = sandbox_dir / "ephemeral_workspace"
+        for name in (
+            "__init__.py",
+            "_execute_command.py",
+            "events.py",
+            "pipeline.py",
+            "shell_contract.py",
+            "shell_job.py",
+        ):
+            _add_if_exists(
+                tar,
+                ephemeral_dir / name,
+                arcname=f"sandbox/ephemeral_workspace/{name}",
+            )
 
         layer_stack_dir = sandbox_dir / "layer_stack"
         _add_python_tree(
@@ -223,11 +245,13 @@ def _runtime_bundle_bytes() -> bytes:
             sandbox_dir=sandbox_dir,
         )
 
-        # Bundle only the in-sandbox parts of sandbox/plugin/ — install.py
+        # Bundle only the in-sandbox parts of sandbox/ephemeral_workspace/plugin/ — install.py
         # and session.py are host-only (they import from sandbox.host and
-        # sandbox.provider). The daemon imports sandbox.plugin.runtime,
-        # sandbox.plugin.handler, and sandbox.plugin.projection.
-        plugin_dir = sandbox_dir / "plugin"
+        # sandbox.provider). The daemon imports
+        # sandbox.ephemeral_workspace.plugin.runtime,
+        # sandbox.ephemeral_workspace.plugin.handler, and
+        # sandbox.ephemeral_workspace.plugin.projection.
+        plugin_dir = ephemeral_dir / "plugin"
         for name in (
             "__init__.py",
             "handler.py",
@@ -240,7 +264,7 @@ def _runtime_bundle_bytes() -> bytes:
             _add_if_exists(
                 tar,
                 plugin_dir / name,
-                arcname=f"sandbox/plugin/{name}",
+                arcname=f"sandbox/ephemeral_workspace/plugin/{name}",
             )
         plugin_runtime_dir = plugin_dir / "runtime"
         _add_python_tree(

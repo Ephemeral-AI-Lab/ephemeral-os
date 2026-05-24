@@ -18,10 +18,9 @@ Environment variables
     every cap and all device access, oversized blast radius.
 
 ``EOS_DOCKER_NO_PRIVILEGE`` = ``1``
-    Run containers with zero added caps. Forfeits overlay-mount performance
-    (every exec falls through to ``COPY_BACKED``); intended for
-    hostile-multi-tenant configurations where the layer-stack perf story is
-    not required.
+    Run containers with zero added caps. This is expected to fail the sandbox
+    startup precondition for normal command execution; keep it only for
+    explicit capability-negative tests.
 
 ``EOS_DOCKER_DISABLE_SCRATCH_TMPFS`` = ``1``
     Do not mount the default command-exec scratch tmpfs. Useful only when a
@@ -50,8 +49,8 @@ kernel overlay mount on the container root filesystem from succeeding even
 with CAP_SYS_ADMIN + unconfined seccomp. The Docker provider therefore mounts
 ``/eos-mount-scratch`` as tmpfs by default and command exec uses that scratch
 path for transient lowerdirs, so normal Docker Desktop runs should report
-``mount_mode=PRIVATE_NAMESPACE``. Disabling the scratch tmpfs can make those
-runs fall back to ``COPY_BACKED``.
+``mount_mode=private_namespace``. Disabling the scratch tmpfs can make those
+runs fail the hard overlay precondition.
 """
 
 from __future__ import annotations

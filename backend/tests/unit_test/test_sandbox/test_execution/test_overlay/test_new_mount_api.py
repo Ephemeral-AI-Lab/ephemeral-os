@@ -13,8 +13,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-import sandbox.execution.overlay.new_mount_api as api
-from sandbox.execution.overlay.new_mount_api import (
+import sandbox.overlay.new_mount_api as api
+from sandbox.overlay.new_mount_api import (
     AT_FDCWD,
     FSCONFIG_CMD_CREATE,
     FSCONFIG_SET_STRING,

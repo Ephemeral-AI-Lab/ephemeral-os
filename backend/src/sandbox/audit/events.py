@@ -20,7 +20,7 @@ LAYER_STACK_AUTO_SQUASHED = "sandbox.layer_stack.auto_squashed"
 RESOURCE_SNAPSHOT = "sandbox.resource.snapshot"
 
 # Background shell job lifecycle (plan §Audit events).
-# Emitted by :class:`sandbox.daemon.service.shell_job.ShellJobRegistry` via
+# Emitted by :class:`sandbox.ephemeral_workspace.shell_job.ShellJobRegistry` via
 # the optional ``audit_callback`` constructor argument. AC-5 requires exactly
 # one ``shell_reaped`` per ``shell_launched`` with matching ``job_id``.
 SHELL_LAUNCHED = "sandbox.shell.launched"

@@ -71,21 +71,21 @@ def test_log_mount_api_capability_calls_probe_once(monkeypatch: pytest.MonkeyPat
         return False
 
     with patch(
-        "sandbox.execution.overlay.capability.probe_supported",
+        "sandbox.overlay.capability.probe_supported",
         side_effect=counting_probe,
     ):
-        import sandbox.execution.overlay.capability as cap_mod
+        import sandbox.overlay.capability as cap_mod
         cap_mod.probe_supported.cache_clear() if hasattr(cap_mod.probe_supported, "cache_clear") else None
 
-    import sandbox.execution.overlay.new_mount_api as api_mod
+    import sandbox.overlay.new_mount_api as api_mod
     api_mod.probe_supported.cache_clear()
 
     with patch(
-        "sandbox.execution.overlay.new_mount_api.probe_supported",
+        "sandbox.overlay.new_mount_api.probe_supported",
         side_effect=counting_probe,
     ):
         # _log_mount_api_capability calls new_mount_api_supported which calls probe_supported
-        with patch("sandbox.execution.overlay.capability.probe_supported", side_effect=counting_probe):
+        with patch("sandbox.overlay.capability.probe_supported", side_effect=counting_probe):
             _log_mount_api_capability()
 
     # probe_supported was called (at least once — may be cached from module import)
@@ -94,10 +94,10 @@ def test_log_mount_api_capability_calls_probe_once(monkeypatch: pytest.MonkeyPat
 
 def test_log_mount_api_capability_does_not_raise() -> None:
     """_log_mount_api_capability must not raise regardless of probe result."""
-    with patch("sandbox.execution.overlay.capability.new_mount_api_supported", return_value=True):
+    with patch("sandbox.overlay.capability.new_mount_api_supported", return_value=True):
         _log_mount_api_capability()
 
-    with patch("sandbox.execution.overlay.capability.new_mount_api_supported", return_value=False):
+    with patch("sandbox.overlay.capability.new_mount_api_supported", return_value=False):
         _log_mount_api_capability()
 
 

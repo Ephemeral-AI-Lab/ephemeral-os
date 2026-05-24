@@ -14,8 +14,8 @@ from sandbox.layer_stack.workspace_binding import (
     WorkspaceBindingError,
     write_workspace_binding_atomic,
 )
-from sandbox.plugin import overlay_dispatch
-from sandbox.plugin.op_context import PluginOpContext
+from sandbox.ephemeral_workspace.plugin import overlay_dispatch
+from sandbox.ephemeral_workspace.plugin.op_context import PluginOpContext
 
 
 class _FakeOverlay:

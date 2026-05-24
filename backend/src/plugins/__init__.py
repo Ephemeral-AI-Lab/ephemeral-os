@@ -6,8 +6,8 @@ file per agent-visible tool under ``tools/``, and an optional in-sandbox
 runtime under ``runtime/``. See ``docs/architecture/plugins-refactor.md``.
 
 This package MUST NOT import ``sandbox.*`` except through the public plugin
-adapter surface (``sandbox.plugin.call_plugin`` host-side,
-``sandbox.plugin.runtime.{register_plugin_op, PluginOpContext}`` in-sandbox).
+adapter surface (``sandbox.ephemeral_workspace.plugin.call_plugin`` host-side,
+``sandbox.ephemeral_workspace.plugin.runtime.{register_plugin_op, PluginOpContext}`` in-sandbox).
 """
 
 from __future__ import annotations

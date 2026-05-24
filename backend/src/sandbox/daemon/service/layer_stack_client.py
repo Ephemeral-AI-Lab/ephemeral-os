@@ -77,13 +77,9 @@ class LayerStackClient:
         self,
         *,
         request_id: str,
-        lowerdir_root: str | Path | None = None,
-        materialize: bool = True,
     ) -> PrepareWorkspaceSnapshotResult:
         return self.manager.prepare_workspace_snapshot(
             request_id,
-            lowerdir_root=lowerdir_root,
-            materialize=materialize,
         )
 
     def release_lease(self, *, lease_id: str) -> bool:

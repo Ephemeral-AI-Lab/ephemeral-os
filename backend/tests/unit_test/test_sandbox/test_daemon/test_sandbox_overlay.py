@@ -1,4 +1,4 @@
-"""Unit tests for daemon-owned SandboxOverlay lifecycle."""
+"""Unit tests for daemon-owned EphemeralPipeline lifecycle."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ from types import SimpleNamespace
 import pytest
 
 from sandbox.daemon.service import overlay_manager
-from sandbox.daemon.service import sandbox_overlay as overlay_mod
-from sandbox.daemon.service.sandbox_overlay import SandboxOverlay
+from sandbox.daemon.service import pipeline as overlay_mod
+from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
 from sandbox.layer_stack.manifest import LayerRef, Manifest
 from sandbox.occ.changeset import ChangesetResult
 from sandbox.layer_stack.workspace_binding import (
@@ -125,7 +125,7 @@ async def test_start_mounts_active_manifest_and_stop_unmounts(
     monkeypatch.setattr(overlay_mod, "mount_overlay", fake_mount_overlay)
     monkeypatch.setattr(overlay_mod, "umount", lambda path: unmounts.append(path))
 
-    overlay = SandboxOverlay(
+    overlay = EphemeralPipeline(
         occ_client=_OccClient(),  # type: ignore[arg-type]
         workspace_ref=layer_stack.storage_root.as_posix(),
         layer_stack=layer_stack,
@@ -153,7 +153,7 @@ def test_overlay_runtime_uses_command_exec_scratch_root(
     manifest = Manifest(version=1, layers=(LayerRef(layer_id="L1", path="L1"),))
     layer_stack = _LayerStack(tmp_path / "stack", manifest)
 
-    overlay = SandboxOverlay(
+    overlay = EphemeralPipeline(
         occ_client=_OccClient(),  # type: ignore[arg-type]
         workspace_ref=layer_stack.storage_root.as_posix(),
         layer_stack=layer_stack,
@@ -175,7 +175,7 @@ def test_operation_overlay_uses_shared_snapshot_layers_and_private_upperdir(
     layer_stack = _LayerStack(tmp_path / "stack", manifest)
     (layer_stack.storage_root / "layers" / "L1").mkdir(parents=True)
 
-    overlay = SandboxOverlay(
+    overlay = EphemeralPipeline(
         occ_client=_OccClient(),  # type: ignore[arg-type]
         workspace_ref=layer_stack.storage_root.as_posix(),
         layer_stack=layer_stack,
@@ -219,7 +219,7 @@ async def test_stop_unmounts_stale_workspace_mount_even_when_manager_is_cold(
     unmounts: list[Path] = []
     monkeypatch.setattr(overlay_mod, "umount", lambda path: unmounts.append(path))
 
-    overlay = SandboxOverlay(
+    overlay = EphemeralPipeline(
         occ_client=_OccClient(),  # type: ignore[arg-type]
         workspace_ref=layer_stack.storage_root.as_posix(),
         layer_stack=layer_stack,
@@ -264,7 +264,7 @@ async def test_manager_stop_unmounts_requested_and_bound_workspace_roots(
     overlay_manager._OVERLAYS[key] = _CachedOverlay()  # type: ignore[assignment]  # noqa: SLF001
     monkeypatch.setattr(overlay_manager, "umount", lambda path: unmounts.append(path))
 
-    result = await overlay_manager.stop_sandbox_overlay(
+    result = await overlay_manager.stop_pipeline(
         stack_root,
         workspace_root=requested_workspace,
     )
@@ -297,7 +297,7 @@ async def test_ensure_current_remounts_and_emits_foreign_publish(
     )
     monkeypatch.setattr(overlay_mod, "umount", lambda path: unmounts.append(path))
 
-    overlay = SandboxOverlay(
+    overlay = EphemeralPipeline(
         occ_client=_OccClient(),  # type: ignore[arg-type]
         workspace_ref=layer_stack.storage_root.as_posix(),
         layer_stack=layer_stack,
@@ -342,7 +342,7 @@ async def test_publish_releases_mounted_lease_before_maintenance_and_remounts_la
     monkeypatch.setattr(overlay_mod, "umount", lambda path: unmounts.append(path))
 
     occ_client = _PublishingOccClient(layer_stack)
-    overlay = SandboxOverlay(
+    overlay = EphemeralPipeline(
         occ_client=occ_client,  # type: ignore[arg-type]
         workspace_ref=layer_stack.storage_root.as_posix(),
         layer_stack=layer_stack,

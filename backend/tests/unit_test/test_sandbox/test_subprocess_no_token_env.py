@@ -1,7 +1,7 @@
 """Plan §A8 Part 3 — subprocess env token-leak regression.
 
 Under a plan-mode-active recorder, any subprocess spawned through
-``sandbox.execution.subprocess_runner`` must NOT carry vendor OAuth
+``sandbox.overlay.subprocess_runner`` must NOT carry vendor OAuth
 tokens in its env. Intercept ``subprocess.Popen`` at the import site,
 capture the env kwarg, assert the forbidden keys + token-shaped values
 are absent.
@@ -79,12 +79,12 @@ def _scrub_token_env(monkeypatch: pytest.MonkeyPatch) -> None:
 def _install_popen_spy(monkeypatch: pytest.MonkeyPatch) -> None:
     _PopenSpy.captured_envs.clear()
     monkeypatch.setattr(
-        "sandbox.execution.subprocess_runner.subprocess.Popen", _PopenSpy
+        "sandbox.overlay.subprocess_runner.subprocess.Popen", _PopenSpy
     )
 
 
 def _run_one_subprocess(tmp_path: Path) -> None:
-    from sandbox.execution.subprocess_runner import run_command_to_refs
+    from sandbox.overlay.subprocess_runner import run_command_to_refs
 
     workspace = tmp_path / "workspace"
     workspace.mkdir(exist_ok=True)

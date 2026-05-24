@@ -29,7 +29,7 @@ _SANDBOX_FAMILY_BY_EVENT: Mapping[str, str] = {
     "sandbox_conflict_detected": "occ",
     "sandbox_occ_changeset_received": "occ",
     "sandbox_occ_changes_committed": "occ",
-    "sandbox_overlay_executed": "overlay",
+    "pipeline_executed": "overlay",
     "sandbox_layer_stack_lease_acquired": "layer_stack",
     "sandbox_layer_stack_layer_created": "layer_stack",
     "sandbox_layer_stack_layers_squashed": "layer_stack",

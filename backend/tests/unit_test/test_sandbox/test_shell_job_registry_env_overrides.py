@@ -11,7 +11,7 @@ from __future__ import annotations
 import pytest
 
 from sandbox.daemon.service import shell_job as shell_job_module
-from sandbox.daemon.service.shell_job import (
+from sandbox.ephemeral_workspace.shell_job import (
     DEFAULT_REAPER_INTERVAL_S,
     DEFAULT_TTL_SECONDS,
     get_shell_job_registry,

@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.execution.contract import ShellProcessResult
-from sandbox.execution.service import _drop_transient_lowerdir
+from sandbox.ephemeral_workspace.shell_contract import ShellProcessResult
+from sandbox.ephemeral_workspace._execute_command import _drop_transient_lowerdir
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.layer_stack.paths import TRANSIENT_LOWERDIR_DIR
 from sandbox.layer_stack.workspace_base import build_workspace_base

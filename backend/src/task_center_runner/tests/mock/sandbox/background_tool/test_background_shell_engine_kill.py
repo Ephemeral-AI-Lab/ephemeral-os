@@ -5,7 +5,7 @@ engine-in-subprocess fixture (SIGKILL the engine subprocess, observe the
 daemon's TTL reaper release the lease). That rig has no precedent in the
 live test suite and was timeboxed to 80 LOC; it blew through the budget,
 so this test is **descoped** to a unit-test variant against
-:class:`sandbox.daemon.service.shell_job.ShellJobRegistry` with a fake
+:class:`sandbox.ephemeral_workspace.shell_job.ShellJobRegistry` with a fake
 overlay.
 
 The architectural property — "the daemon process owns lease cleanup
@@ -35,9 +35,9 @@ from uuid import uuid4
 import pytest
 
 from sandbox.daemon.service import shell_job as shell_job_module
-from sandbox.daemon.service.sandbox_overlay import OperationOverlayHandle
-from sandbox.daemon.service.shell_job import ShellJobRegistry
-from sandbox.execution.contract import (
+from sandbox.ephemeral_workspace.pipeline import OperationOverlayHandle
+from sandbox.ephemeral_workspace.shell_job import ShellJobRegistry
+from sandbox.ephemeral_workspace.shell_contract import (
     CommandExecRequest,
     MountMode,
     ShellProcessResult,
@@ -47,7 +47,7 @@ from sandbox.execution.contract import (
 pytestmark = pytest.mark.asyncio
 
 
-class _FakeSandboxOverlay:
+class _FakeEphemeralPipeline:
     """Stand-in mirroring the one in test_shell_job_registry.py.
 
     Inlined here because ``backend/tests/`` is not on the import path
@@ -114,7 +114,7 @@ def _stub_strategy_runner(duration_s: float) -> Callable[..., ShellProcessResult
     The cancel pipeline runs ``wait_for_process_with_cancel`` so SIGKILL
     propagates through the strategy thread cleanly.
     """
-    from sandbox.execution.subprocess_runner import wait_for_process_with_cancel
+    from sandbox.overlay.subprocess_runner import wait_for_process_with_cancel
 
     def _stub(
         *,
@@ -165,8 +165,8 @@ def _patch_runner(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def overlay(tmp_path: Path) -> _FakeSandboxOverlay:
-    return _FakeSandboxOverlay(tmp_path)
+def overlay(tmp_path: Path) -> _FakeEphemeralPipeline:
+    return _FakeEphemeralPipeline(tmp_path)
 
 
 @pytest.fixture
@@ -180,7 +180,7 @@ def registry() -> ShellJobRegistry:
 async def test_ttl_reaper_releases_lease_on_engine_abandon(
     _patch_runner: None,
     registry: ShellJobRegistry,
-    overlay: _FakeSandboxOverlay,
+    overlay: _FakeEphemeralPipeline,
     tmp_path: Path,
 ) -> None:
     """Simulate engine SIGKILL by abandoning a launched job mid-flight.

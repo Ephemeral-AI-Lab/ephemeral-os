@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from sandbox.execution.overlay.kernel_mount import (
+from sandbox.overlay.kernel_mount import (
     MountInputs,
     mount_overlay,
     validate_mount_inputs,

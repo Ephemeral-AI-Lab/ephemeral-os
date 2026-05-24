@@ -63,18 +63,18 @@ async def publish_sentinel(sandbox_id: str) -> SentinelFile:
 
 # ---------------------------------------------------------------------------
 # Capability probes (v2 §18). Each delegates to the canonical implementation
-# in ``sandbox.execution.overlay.capability`` where one exists.
+# in ``sandbox.overlay.capability`` where one exists.
 # ---------------------------------------------------------------------------
 
 
 def can_mount_overlay_natively() -> bool:
     """Probe whether the kernel supports the modern overlay mount API.
 
-    Delegates to :func:`sandbox.execution.overlay.capability.new_mount_api_supported`
+    Delegates to :func:`sandbox.overlay.capability.new_mount_api_supported`
     so the iws path shares the same probe (and ``EOS_OVERLAY_FORCE_MATERIALIZE``
     kill-switch) as the daemon's OCC overlay. Cached at the underlying layer.
     """
-    from sandbox.execution.overlay.capability import new_mount_api_supported
+    from sandbox.overlay.capability import new_mount_api_supported
 
     return new_mount_api_supported()
 

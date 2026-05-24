@@ -1,4 +1,4 @@
-"""Unit tests for sandbox.plugin.projection."""
+"""Unit tests for sandbox.ephemeral_workspace.plugin.projection."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from sandbox.layer_stack import WriteLayerChange
-from sandbox.plugin.projection import (
+from sandbox.ephemeral_workspace.plugin.projection import (
     WorkspaceProjection,
     build_manifest_key,
 )

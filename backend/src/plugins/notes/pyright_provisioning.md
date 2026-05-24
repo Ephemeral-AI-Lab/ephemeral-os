@@ -5,7 +5,7 @@ the sandbox. There is no alternate language-server fallback.
 
 ## Setup Path
 
-`sandbox.plugin.install` uploads only the LSP plugin bundle. It does not upload
+`sandbox.ephemeral_workspace.plugin.install` uploads only the LSP plugin bundle. It does not upload
 Node archives, npm packages, or language-server bundles.
 
 `setup.sh` installs Node into `/tmp/eos-node22` only when `node`/`npm` are not

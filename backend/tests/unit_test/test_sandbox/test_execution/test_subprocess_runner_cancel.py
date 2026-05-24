@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.execution.subprocess_runner import (
+from sandbox.overlay.subprocess_runner import (
     subprocess_to_refs,
     wait_for_process_with_cancel,
 )

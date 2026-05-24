@@ -13,7 +13,7 @@ from typing import Any
 #
 # Sized to unblock two daemon-internal kernel surfaces:
 #   * ``CAP_SYS_ADMIN`` — ``unshare -Urm`` + the single-lowerdir overlay mount
-#     the EphemeralOS runtime constructs (``execution/overlay/kernel_mount.py``)
+#     the EphemeralOS runtime constructs (``overlay/kernel_mount.py``)
 #     plus the isolated-workspace ``setns(CLONE_NEWUSER|CLONE_NEWNS)`` flow.
 #   * ``CAP_NET_ADMIN`` — the isolated-workspace network module (``eos-shared0``
 #     bridge, MASQUERADE/IMDS nftables rules, per-workspace veth wiring) makes
@@ -34,7 +34,7 @@ DEFAULT_RUN_FLAGS: tuple[str, ...] = (
 # Privileged escape hatch (oversized blast radius — escape only).
 PRIVILEGED_RUN_FLAGS: tuple[str, ...] = ("--privileged",)
 
-# Capability-stripped escape hatch (forfeits overlay perf; COPY_BACKED only).
+# Capability-stripped escape hatch for negative precondition tests.
 NO_PRIVILEGE_RUN_FLAGS: tuple[str, ...] = ()
 
 SCRATCH_TMPFS_TARGET = "/eos-mount-scratch"

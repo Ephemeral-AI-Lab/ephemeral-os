@@ -663,7 +663,7 @@ async def setup_sweevo_sandbox(
     """Prepare the sandbox by checking out the repo at the base commit.
 
     When *install_lsp* is true, the LSP catalog plugin is installed via
-    :func:`sandbox.plugin.install.ensure_installed` after the workspace
+    :func:`sandbox.ephemeral_workspace.plugin.install.ensure_installed` after the workspace
     is rebuilt. Defaults to False so existing live tiers and mock tests keep
     their pre-install-lsp behavior.
     """
@@ -711,7 +711,7 @@ async def setup_sweevo_sandbox(
         from sandbox.host.daemon_client import call_daemon_api
         from plugins.core.discovery import DEFAULT_CATALOG_DIR
         from plugins.core.manifest import parse_plugin_manifest
-        from sandbox.plugin.install import ensure_installed
+        from sandbox.ephemeral_workspace.plugin.install import ensure_installed
 
         _progress(on_progress, "[setup] installing LSP plugin")
         manifest = parse_plugin_manifest(DEFAULT_CATALOG_DIR / "lsp")

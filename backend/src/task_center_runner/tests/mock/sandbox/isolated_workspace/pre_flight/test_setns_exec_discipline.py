@@ -74,7 +74,7 @@ def test_setns_overlay_mount_reuses_shared_mount_validation() -> None:
     for node in ast.walk(tree):
         if (
             isinstance(node, ast.ImportFrom)
-            and node.module == "sandbox.execution.overlay.kernel_mount"
+            and node.module == "sandbox.overlay.kernel_mount"
         ):
             kernel_mount_imports.update(alias.name for alias in node.names)
     assert {"mount_overlay", "validate_mount_inputs"} <= kernel_mount_imports

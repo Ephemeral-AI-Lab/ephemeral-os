@@ -11,14 +11,16 @@ from sandbox.occ.changeset import (
     build_overlay_delete_change,
     build_overlay_write_change,
 )
-from sandbox.occ.changeset import Change, OpaqueDirChange, SymlinkChange
+from sandbox.occ.changeset import Change, ChangeSource, OpaqueDirChange, SymlinkChange
 
 if TYPE_CHECKING:
-    from sandbox.execution.path_change import OverlayPathChange
+    from sandbox.overlay.path_change import OverlayPathChange
 
 
 def overlay_path_changes_to_occ_changes(
     path_changes: Sequence[OverlayPathChange],
+    *,
+    source: ChangeSource = "overlay_capture",
 ) -> tuple[Change, ...]:
     """Convert policy-blind path changes into typed OCC mutations.
 
@@ -52,7 +54,7 @@ def overlay_path_changes_to_occ_changes(
                 SymlinkChange(
                     path=path_change.path,
                     target=os.readlink(path_change.content_path),
-                    source="overlay_capture",
+                    source=source,
                 )
             )
             continue
@@ -61,7 +63,7 @@ def overlay_path_changes_to_occ_changes(
                 OpaqueDirChange(
                     path=path_change.path,
                     kept_children=frozenset(_kept_children_for(path_change.path, path_changes)),
-                    source="overlay_capture",
+                    source=source,
                 )
             )
             continue

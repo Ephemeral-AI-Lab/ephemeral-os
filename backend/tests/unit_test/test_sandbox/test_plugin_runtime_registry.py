@@ -1,4 +1,4 @@
-"""Unit tests for sandbox.plugin.op_registry."""
+"""Unit tests for sandbox.ephemeral_workspace.plugin.op_registry."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from sandbox.plugin import op_registry as registry_mod
-from sandbox.plugin.op_registry import (
+from sandbox.ephemeral_workspace.plugin import op_registry as registry_mod
+from sandbox.ephemeral_workspace.plugin.op_registry import (
     PluginOpConflictError,
     PluginOpRegistrationError,
     flush_plugin_registrations,

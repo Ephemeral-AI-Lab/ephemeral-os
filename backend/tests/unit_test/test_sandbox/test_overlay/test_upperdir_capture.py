@@ -8,10 +8,10 @@ from pathlib import Path
 
 import pytest
 
-import sandbox.execution.overlay.capture as upperdir_mod
+import sandbox.overlay.capture as upperdir_mod
 from sandbox.layer_stack.layer_index import OPAQUE_MARKER, WHITEOUT_PREFIX
-from sandbox.execution.overlay.capture import walk_upperdir
-from sandbox.execution.overlay.change_synthesis import synthesize_writes
+from sandbox.overlay.capture import walk_upperdir
+from sandbox.overlay.change_synthesis import synthesize_writes
 
 
 def _capture_copy_backed(*, base_repo: Path, merged: Path, upper: Path):

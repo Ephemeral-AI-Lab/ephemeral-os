@@ -1,7 +1,7 @@
-"""Unit tests for :class:`sandbox.daemon.service.shell_job.ShellJobRegistry`.
+"""Unit tests for :class:`sandbox.ephemeral_workspace.shell_job.ShellJobRegistry`.
 
 These exercise launch / poll / cancel / reap lifecycle without a real
-overlay or daemon, using a fake :class:`SandboxOverlay` whose
+overlay or daemon, using a fake :class:`EphemeralPipeline` whose
 ``acquire_operation_overlay`` returns a handle backed by tmp dirs. The
 ``run_workspace_replaced_command`` boundary is monkeypatched so the tests
 run on macOS without namespace or overlay support.
@@ -25,13 +25,13 @@ from uuid import uuid4
 import pytest
 
 from sandbox.daemon.service import shell_job as shell_job_module
-from sandbox.daemon.service.shell_job import (
+from sandbox.ephemeral_workspace.shell_job import (
     ShellJob,
     ShellJobNotFound,
     ShellJobRegistry,
 )
-from sandbox.daemon.service.sandbox_overlay import OperationOverlayHandle
-from sandbox.execution.contract import (
+from sandbox.ephemeral_workspace.pipeline import OperationOverlayHandle
+from sandbox.ephemeral_workspace.shell_contract import (
     CommandExecRequest,
     MountMode,
     ShellProcessResult,
@@ -52,7 +52,7 @@ class _FakePublishResult:
             self.timings = {}
 
 
-class _FakeSandboxOverlay:
+class _FakeEphemeralPipeline:
     """Stand-in that exposes only the surface ShellJobRegistry calls."""
 
     def __init__(self, tmp_path: Path) -> None:
@@ -79,7 +79,7 @@ class _FakeSandboxOverlay:
         owner = self
 
         class _ReleaseShim:
-            """Captures release calls without needing the full SandboxOverlay."""
+            """Captures release calls without needing the full EphemeralPipeline."""
 
             def release_operation_overlay(_inner_self, handle: OperationOverlayHandle) -> None:
                 owner.released_leases.append(handle.lease_id)
@@ -110,7 +110,7 @@ class _FakeSandboxOverlay:
         self.publish_calls += 1
         # Synthesize a delete change so we don't need to materialize a real
         # content_path / final_hash; the registry only walks .path.
-        from sandbox.execution.path_change import OverlayPathChange
+        from sandbox.overlay.path_change import OverlayPathChange
 
         return _FakePublishResult(
             path_changes=(
@@ -161,7 +161,7 @@ def _stub_strategy_runner_factory(
     cancel + killpg pipeline is exercised end-to-end. ``cancel_event`` is
     respected via :func:`wait_for_process_with_cancel`.
     """
-    from sandbox.execution.subprocess_runner import wait_for_process_with_cancel
+    from sandbox.overlay.subprocess_runner import wait_for_process_with_cancel
 
     def _stub(
         *,
@@ -209,7 +209,7 @@ def _stub_strategy_runner_factory(
 
 async def _run_shell_job(
     registry: ShellJobRegistry,
-    overlay: _FakeSandboxOverlay,
+    overlay: _FakeEphemeralPipeline,
     storage_root: Path,
     *,
     command: str = "true",
@@ -240,8 +240,8 @@ def _patch_runner(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def overlay(tmp_path: Path) -> _FakeSandboxOverlay:
-    return _FakeSandboxOverlay(tmp_path)
+def overlay(tmp_path: Path) -> _FakeEphemeralPipeline:
+    return _FakeEphemeralPipeline(tmp_path)
 
 
 @pytest.fixture
@@ -253,7 +253,7 @@ def registry() -> ShellJobRegistry:
 
 async def test_golden_path_launch_then_reap(
     registry: ShellJobRegistry,
-    overlay: _FakeSandboxOverlay,
+    overlay: _FakeEphemeralPipeline,
     tmp_path: Path,
 ) -> None:
     audit: list[tuple[str, dict[str, Any]]] = []
@@ -275,7 +275,7 @@ async def test_golden_path_launch_then_reap(
 async def test_cancel_skips_publish_and_releases_lease(
     monkeypatch: pytest.MonkeyPatch,
     registry: ShellJobRegistry,
-    overlay: _FakeSandboxOverlay,
+    overlay: _FakeEphemeralPipeline,
     tmp_path: Path,
 ) -> None:
     # Use a longer-running stub so cancel can race.
@@ -315,7 +315,7 @@ async def test_cancel_unknown_job_raises_not_found(
 async def test_poll_returns_snapshot_with_status(
     monkeypatch: pytest.MonkeyPatch,
     registry: ShellJobRegistry,
-    overlay: _FakeSandboxOverlay,
+    overlay: _FakeEphemeralPipeline,
     tmp_path: Path,
 ) -> None:
     monkeypatch.setattr(
@@ -343,7 +343,7 @@ async def test_poll_returns_snapshot_with_status(
 async def test_double_cancel_is_idempotent(
     monkeypatch: pytest.MonkeyPatch,
     registry: ShellJobRegistry,
-    overlay: _FakeSandboxOverlay,
+    overlay: _FakeEphemeralPipeline,
     tmp_path: Path,
 ) -> None:
     monkeypatch.setattr(
@@ -368,7 +368,7 @@ async def test_double_cancel_is_idempotent(
 
 async def test_reap_removes_job_from_registry(
     registry: ShellJobRegistry,
-    overlay: _FakeSandboxOverlay,
+    overlay: _FakeEphemeralPipeline,
     tmp_path: Path,
 ) -> None:
     request = _make_request(command="echo hi")
@@ -385,7 +385,7 @@ async def test_reap_removes_job_from_registry(
 
 async def test_late_cancel_after_completion_preserves_status(
     registry: ShellJobRegistry,
-    overlay: _FakeSandboxOverlay,
+    overlay: _FakeEphemeralPipeline,
     tmp_path: Path,
 ) -> None:
     """T8 cousin: cancel arrives after the job already exited."""
@@ -410,7 +410,7 @@ async def test_late_cancel_after_completion_preserves_status(
 
 async def test_metrics_reports_active_and_ttl_reaped(
     registry: ShellJobRegistry,
-    overlay: _FakeSandboxOverlay,
+    overlay: _FakeEphemeralPipeline,
     tmp_path: Path,
 ) -> None:
     """``metrics()`` surfaces active_jobs + ttl_reaped_total for the

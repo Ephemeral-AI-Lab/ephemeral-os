@@ -6,8 +6,8 @@ import asyncio
 import logging
 from typing import Any
 
-from sandbox.execution.overlay.capability import new_mount_api_supported
-from sandbox.execution.strategies.namespace import detect_private_mount_namespace
+from sandbox.overlay.capability import new_mount_api_supported
+from sandbox.overlay.namespace import detect_private_mount_namespace
 
 from plugins.catalog.lsp.runtime.pyright_session import (
     PyrightOverlayRefreshError,
@@ -149,13 +149,11 @@ def _acquire_session_view(ctx: Any, *, active_key: str) -> _SessionView:
     if callable(acquire_operation_overlay):
         metadata = getattr(ctx, "metadata", None) or {}
         op_name = str(metadata.get("op_name", "lsp"))
-        use_namespace = _overlay_namespace_available()
         handle = acquire_operation_overlay(
             request_id=f"lsp-session:{op_name}",
             workspace_root=declared_workspace_root,
-            materialize=not use_namespace,
         )
-        if use_namespace and getattr(handle, "layer_paths", None):
+        if getattr(handle, "layer_paths", None):
             return _SessionView(
                 manifest_key=handle.manifest_key,
                 workspace_root=declared_workspace_root,
@@ -177,13 +175,11 @@ def _acquire_session_view(ctx: Any, *, active_key: str) -> _SessionView:
     if callable(acquire_overlay):
         metadata = getattr(ctx, "metadata", None) or {}
         op_name = str(metadata.get("op_name", "lsp"))
-        use_namespace = _overlay_namespace_available()
         handle = acquire_overlay(
             f"lsp-session:{op_name}",
             workspace_root=declared_workspace_root,
-            materialize=not use_namespace,
         )
-        if use_namespace and getattr(handle, "layer_paths", None):
+        if getattr(handle, "layer_paths", None):
             return _SessionView(
                 manifest_key=handle.manifest_key,
                 workspace_root=declared_workspace_root,
@@ -202,7 +198,7 @@ def _acquire_session_view(ctx: Any, *, active_key: str) -> _SessionView:
 
     acquire = getattr(projection, "acquire", None)
     if callable(acquire):
-        handle = acquire("lsp-session", materialize=True)
+        handle = acquire("lsp-session")
         lowerdir = getattr(handle, "lowerdir", None)
         if lowerdir:
             return _SessionView(
@@ -340,13 +336,11 @@ def _acquire_session_view_from_overlay(
 ) -> _SessionView:
     acquire_operation_overlay = getattr(overlay, "acquire_operation_overlay", None)
     if callable(acquire_operation_overlay):
-        use_namespace = _overlay_namespace_available()
         handle = acquire_operation_overlay(
             request_id=f"lsp-session:{op_name}",
             workspace_root=workspace_root,
-            materialize=not use_namespace,
         )
-        if use_namespace and getattr(handle, "layer_paths", None):
+        if getattr(handle, "layer_paths", None):
             return _SessionView(
                 manifest_key=handle.manifest_key,
                 workspace_root=workspace_root,

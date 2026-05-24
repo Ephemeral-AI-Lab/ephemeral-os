@@ -16,8 +16,8 @@ import pytest
 
 from sandbox.layer_stack import WriteLayerChange, LayerStack
 from sandbox.daemon.service.layer_stack_client import LayerStackClient
-from sandbox.execution.contract import CommandExecRequest, MountMode
-from sandbox.execution.service import execute_command
+from sandbox.ephemeral_workspace.shell_contract import CommandExecRequest, MountMode
+from sandbox.ephemeral_workspace._execute_command import execute_command
 
 
 def _source(tmp_path: Path, name: str, content: bytes) -> str:

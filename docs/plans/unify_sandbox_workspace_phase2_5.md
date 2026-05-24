@@ -1,22 +1,26 @@
-# Phase 2.5 — Background Tool Lifecycle (delta to Phase 2)
+# Phase 2.5 — Background Tool Lifecycle
 
-**Type:** Substantive correction to Phase 2's background-shell design. Eliminates the daemon-side ShellJob registry and the four `shell_launch/reap/poll/cancel` verbs; folds background semantics into the engine-owned asyncio.Task lifecycle that already wraps every other background-capable tool.
-**Scope:** Generalize background execution from "shell-specific verbs + daemon-side ShellJob" to "any tool call can carry `background=true`; the engine's existing `BackgroundTaskManager` is the lifecycle wrapper; the pipeline's `run_tool_call` coroutine body is unchanged between foreground and background." Overlay lease lifetime tracks the coroutine — and therefore the asyncio.Task — naturally via the existing try/finally.
-**Depends on:** Phase 2 §1–§14 (foundation pipelines + overlay primitives + OCC source-tag + tool_primitives + lifecycle host API). Phase 2.5 REPLACES Phase 2 §3.1's background-shell sub-section, §3.3's `ShellJobRegistry` restructure, §4.1's `_session_jobs` / `_dispatch_background_verb_iws`, §7.2's `_SHELL_RPC_TO_VERB` table.
-**Blocks:** Phase 3 background-shell test tier (§6.6 sub-tests A–H must be rewritten against the new generic model).
-**Atomic commit plan:** ≤5 logical commits. Suggested split: (1) wire-level `request_id` + `api.v1.cancel(request_id)` RPC + daemon in-flight request registry; (2) cancellation-aware `overlay.run_in_namespace` + `tool_primitives.shell.run` (extract `cancel_event` from `shell_job.py`); (3) `ToolCallRequest.background` flag + pipeline body remains unchanged; engine wraps `pipeline.run_tool_call` in `BackgroundTaskManager.launch`; (4) engine-layer Q4 + iws-exit drain (`BackgroundTaskManager.count_by_agent` + `cancel_by_agent`); (5) delete `sandbox/daemon/service/shell_job.py` + `shell_job_handler.py` + the four `api.v1.shell.{launch,reap,poll,cancel}` RPCs + `is_background` branch in `tools/sandbox/shell/shell.py` + Phase 2 docs revised.
+**Type:** Canonical background-tool design. Foreground-only Phase 2 lands first (deletes ops_handlers.py, ships unified pipelines); Phase 2.5 then deletes the existing background-shell code from the repo and ships the new design.
+**Scope:** Background execution is generalized to "any tool call can carry `background=true`; the engine's `BackgroundTaskManager` is the lifecycle wrapper; the pipeline's `run_tool_call` coroutine body is unchanged between foreground and background." Overlay lease lifetime tracks the coroutine — and therefore the asyncio.Task — naturally via the existing try/finally. **All existing background-shell code (`shell_job.py`, `shell_job_handler.py`, `is_background` branch, sandbox-api launch/reap/poll/cancel client paths, four `api.v1.shell.*` wire RPCs) is deleted from the repo in this phase.** The implementer is free to delete that code earlier (during Phase 2 implementation) if it blocks foundation work — that code is dead-end and gets fully replaced here.
+**Depends on:** Phase 2 §1–§14 (foundation pipelines + overlay primitives + OCC source-tag + tool_primitives + lifecycle host API; all foreground-only).
+**Blocks:** nothing — Phase 3 background tests (§6.6 placeholder) live inside this phase's §11.
+**Atomic commit plan:** ≤6 logical commits. Suggested split: (1) wire-level `request_id` + `api.v1.cancel(request_id)` RPC + `InFlightRequestRegistry` daemon-side; (2) cancellation-aware `overlay.run_in_namespace` via verb-supplied `VerbCancellation` (extract `cancel_event` + `pgrp` plumbing from existing `shell_job.py`); (3) `ToolCallRequest.background` flag (pipeline body unchanged); engine wraps `pipeline.run_tool_call` in `BackgroundTaskManager.launch`; (4) engine-layer Q4 + iws-exit drain (`BackgroundTaskManager.count_by_agent` + `cancel_by_agent`) + `api.v1.heartbeat` + `api.v1.inflight_count(agent_id)`; (5) **delete dead code from repo**: `sandbox/daemon/service/shell_job.py` (609 lines), `shell_job_handler.py` (174 lines), four `api.v1.shell.{launch,reap,poll,cancel}` RPCs from dispatcher + transport, `is_background` branch in `tools/sandbox/shell/shell.py`, sandbox-api client multi-RPC orchestration in `sandbox/api/tool/shell.py`; (6) Phase 3 test tier rewrites + CHANGELOG.
 
-See [`unify_sandbox_workspace.md`](unify_sandbox_workspace.md) for the trichotomy overview. This document is a delta on [`unify_sandbox_workspace_phase2.md`](unify_sandbox_workspace_phase2.md) — sections it does NOT touch (overlay primitives, OCC source-tag plumbing, tool_primitives, lifecycle host API, host-path denylist, plugin-block gate, O_NOFOLLOW chokepoint, manager.py decomposition) stand unchanged.
+See [`unify_sandbox_workspace.md`](unify_sandbox_workspace.md) for the trichotomy overview.
 
 ---
 
 ## 0. Why this is its own phase
 
-Phase 2 modeled background shell as a **shell-specific** lifecycle: `shell.launch` creates an overlay owned by a `ShellJob`; `shell.reap` waits + commits + destroys; `shell.cancel` kills + discards; `shell.poll` peeks. Two parallel registries existed (one in `EphemeralPipeline._background_jobs`, one in `IsolatedPipeline._session_jobs`). Q4 cross-mode rejection consulted the pipeline registries; iws-exit drained them.
+The repo today carries a daemon-side background abstraction (`sandbox/daemon/service/shell_job.py`, 609 lines, with `ShellJobRegistry` + four `api.v1.shell.{launch,reap,poll,cancel}` wire RPCs) that's **shell-specific** and duplicates the engine's tool-agnostic `BackgroundTaskManager` (at `backend/src/engine/background/manager.py`). Two registries for the same lifecycle is the root smell; the agent-facing surface already treats background as a generic tool-call concept (`tools/background/{cancel,check,wait}_background_task` accept any tool's `task_id`).
 
-The user directive: **background is a tool-call concept, not a shell concept.** The agent-facing surface already says so — `tools/background/{cancel,check,wait}_background_task` are tool-agnostic and work via the engine's `BackgroundTaskManager` (`backend/src/engine/background/manager.py`). Phase 2 left a parallel sandbox-side background abstraction that duplicates the engine's abstraction, restricts it to shell, and forces the pipeline to carry a verb-table-keyed branch (`_dispatch_background_verb` / `_dispatch_background_verb_iws`) that is exactly the kind of branching Principle 4 ("ONE method") wanted gone.
+Phase 2.5 deletes the daemon-side duplicate and ships the canonical design:
 
-Phase 2.5 deletes the duplicate. The pipeline's protocol stays at one method whose body is identical for foreground and background; the engine's BackgroundTaskManager is the lifecycle wrapper for every background-capable tool (shell, read_file, write_file, edit_file, grep, glob, run_subagent, and any future tool that opts in via `background="optional"`).
+- **Background is a request flag, not a shell verb.** `ToolCallRequest.background: bool` is set when (and only when) the agent passed `background=true` on a `background="optional"`-declared tool.
+- **The engine's existing `BackgroundTaskManager` is the lifecycle wrapper.** It wraps `pipeline.run_tool_call(req)` as an `asyncio.Task` for background calls; foreground calls await the coroutine directly. The pipeline's body is identical in both cases.
+- **Overlay lease lifetime is coroutine-bound** via the existing `try/finally`. For background, that means lease lifetime equals the asyncio.Task wall-time — naturally released on completion, cancel, or timeout.
+
+This applies uniformly to every background-capable tool (shell today; potentially any future tool that opts in). The pipeline's protocol stays at one method (Principle 4); no verb-table branch on `background`. Phase 2's foreground pipelines need zero changes — Phase 2.5 wires the asyncio.Task wrapper at the engine layer and the wire-cancel primitive at the daemon layer.
 
 ---
 
@@ -163,28 +167,35 @@ Detailed in §2 above and §5–§8 below.
 
 ## 4. Module changes — DELETES
 
-These are absolute deletes (no shim, no compat alias):
+This phase removes the existing background-shell abstraction from the repo. The deletes are absolute (no shim, no compat alias). Implementer may delete this code earlier during Phase 2 implementation if it blocks foundation work — it has no live consumers after Phase 2.5 lands.
 
-- **`sandbox/daemon/service/shell_job.py`** (609 lines verified) — `ShellJob` dataclass + `ShellJobRegistry` class + module-level singleton (`_REGISTRY` / `get_shell_job_registry()` / `reset_shell_job_registry()`) + helper functions (`_signal_pgrp`, `_escalate_kill`, `_pgrp_alive`, `_read_tail`, `_read_full`, `_change_path`). The TTL reaper logic moves to the new request-keyed registry in §6.
-- **`sandbox/daemon/service/shell_job_handler.py`** (174 lines verified) — RPC dispatchers for `api.v1.shell.launch / reap / poll / cancel`. The cancel-by-job-id case becomes cancel-by-request-id in §6.
+### 4.A. Existing code to remove from `sandbox/daemon/service/`
+
+- **`sandbox/daemon/service/shell_job.py`** (609 lines, verified) — `ShellJob` dataclass + `ShellJobRegistry` class + module-level singleton (`_REGISTRY` / `get_shell_job_registry()` / `reset_shell_job_registry()`) + env-var knobs (`EOS_SHELL_JOB_TTL_S`, `EOS_SHELL_JOB_REAPER_INTERVAL_S`) + helper functions (`_signal_pgrp`, `_escalate_kill`, `_pgrp_alive`, `_read_tail`, `_read_full`, `_change_path`). The TTL reaper logic is replaced by the request-keyed `InFlightRequestRegistry` in §5.3; the `cancel_event` + `pgrp` plumbing is extracted into `tool_primitives` per §5.5.
+- **`sandbox/daemon/service/shell_job_handler.py`** (174 lines, verified) — RPC dispatchers for `api.v1.shell.{launch,reap,poll,cancel}`. The cancel-by-job-id case becomes generic cancel-by-request-id in §5.4.
+
+### 4.B. Existing wire-protocol surface to remove
+
 - **`sandbox/api/transport.py:19::DAEMON_OP_SHELL_CANCEL`** constant — replaced by a generic `DAEMON_OP_CANCEL = "api.v1.cancel"`.
-- **`tools/sandbox/shell/shell.py:149–166`** — the `is_background = bool(getattr(context, "background_task_id", None))` branch and the `background=is_background` argument passed to `sandbox_api.shell(...)`. The shell tool stops being background-aware; the engine wrapper does the wrapping.
-- **`tools/sandbox/shell/_sandbox_api_background_pathway`** (if such a branch exists in `sandbox/api/tool/shell.py`) — collapsed to the single-RPC foreground pathway. Verify with `grep -n "background" sandbox/api/tool/shell.py` during Step 5.
-- **Phase 2 §3.1 deletions** in `EphemeralPipeline`:
-  - `_BACKGROUND_SHELL_VERBS` frozenset
-  - `_background_jobs: dict[str, ShellJob]`
-  - `_jobs_by_agent: dict[str, set[str]]`
-  - `_dispatch_background_verb`
-  - `_launch_bg_job`, `_reap_bg_job`, `_poll_bg_job`, `_cancel_bg_job`
-  - `get_agent_background_jobs(agent_id)`
-  - `startup_gc()` (replaced by request-keyed registry's TTL reaper)
-- **Phase 2 §4.1 deletions** in `IsolatedPipeline`:
-  - `_session_jobs: dict[str, dict[str, ShellJob]]`
-  - `_dispatch_background_verb_iws`
-  - `_drain_background_jobs` (drain logic moves to engine — `BackgroundTaskManager.cancel_by_agent(agent_id, grace_s)`; pipeline.exit no longer drains)
-  - The `ephemeral_jobs_in_flight` check inside `enter` (moves to engine — `sandbox.lifecycle.enter_isolated_workspace` checks `BackgroundTaskManager.count_by_agent`)
-- **Phase 2 §7.2** `_SHELL_RPC_TO_VERB` table — gone entirely. `daemon/handler/shell.py` becomes the same shape as `daemon/handler/read.py` (one verb, one intent, one `pipeline.run_tool_call`).
-- **Phase 3 §6.6 sub-test H** ("static check that no public `^(launch|reap|poll|cancel)_background_job$` method exists on EphemeralPipeline") is preserved AS-IS — the assertion's value strengthens after this phase since the methods don't exist at all.
+- **`sandbox/daemon/rpc/dispatcher.py` shell route entries** for `api.v1.shell.launch`, `api.v1.shell.reap`, `api.v1.shell.poll`, `api.v1.shell.cancel` — gone. Only `api.v1.shell` remains (foreground; long-running RPC; daemon-side coroutine wrapped by `InFlightRequestRegistry` so `api.v1.cancel(request_id)` can stop it).
+
+### 4.C. Existing engine-side / tool-side background paths to remove
+
+- **`tools/sandbox/shell/shell.py:149–166`** — the `is_background = bool(getattr(context, "background_task_id", None))` branch and the `background=is_background` argument passed to `sandbox_api.shell(...)`. The shell tool stops being background-aware; the engine wrapper (`engine/background/dispatch.py::launch_background_tool`) does all background wrapping uniformly.
+- **`sandbox/api/tool/shell.py`** — any multi-RPC orchestration that dispatches to `api.v1.shell.launch/reap/poll/cancel` based on a `background` arg. After Phase 2.5, `sandbox_api.shell(...)` is a single-RPC call to `api.v1.shell` regardless of background-ness. Verify with `grep -n "background\|launch\|reap\|poll\|cancel" sandbox/api/tool/shell.py` during Step 5; expect zero hits post-Phase-2.5.
+- **`sandbox/api/_raw_exec.py` shell-cancel client function** (if it exists as a named helper) — replaced by the generic `api.v1.cancel(request_id)` client call (§5.4).
+
+### 4.D. Phase 2 NEVER ships these (already stripped from Phase 2 docs)
+
+The following items were earlier drafted in Phase 2's plan but are explicitly REMOVED from Phase 2's scope (see [`unify_sandbox_workspace_phase2.md`](unify_sandbox_workspace_phase2.md) §3.1, §4.1, §7.2 — the background sub-sections are deleted from that doc). They are NOT implemented anywhere; they are listed here for completeness so a reader of an older review can confirm none of these names appears in the shipped codebase:
+
+- `_BACKGROUND_SHELL_VERBS` frozenset
+- `EphemeralPipeline._background_jobs`, `_jobs_by_agent`, `_dispatch_background_verb`, `_launch_bg_job`, `_reap_bg_job`, `_poll_bg_job`, `_cancel_bg_job`, `get_agent_background_jobs`, `startup_gc`
+- `IsolatedPipeline._session_jobs`, `_dispatch_background_verb_iws`, `_drain_background_jobs`
+- The `ephemeral_jobs_in_flight` pipeline-internal check in `IsolatedPipeline.enter`
+- `_SHELL_RPC_TO_VERB` table in `daemon/handler/shell.py`
+
+Phase 2.5 §11 sub-test H (static-check that none of these names appear) protects against accidental reintroduction.
 
 ---
 

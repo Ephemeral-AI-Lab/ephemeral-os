@@ -21,10 +21,10 @@ from typing import Literal, Protocol
 from unittest.mock import patch
 
 from sandbox.daemon.service.layer_stack_client import LayerStackClient
-from sandbox.execution.contract import CommandExecRequest, MountMode
-from sandbox.execution.overlay.capability import new_mount_api_supported
-from sandbox.execution.service import execute_command
-from sandbox.execution.strategies.namespace import detect_private_mount_namespace
+from sandbox.ephemeral_workspace.shell_contract import CommandExecRequest, MountMode
+from sandbox.overlay.capability import new_mount_api_supported
+from sandbox.ephemeral_workspace._execute_command import execute_command
+from sandbox.overlay.namespace import detect_private_mount_namespace
 
 OverlayPath = Literal["new_mount_api", "legacy_materialize"]
 
@@ -193,7 +193,7 @@ async def run_shell_batch(
         )
 
     with _command_exec_scratch_root(scratch_root), patch(
-        "sandbox.execution.service.new_mount_api_supported",
+        "sandbox.ephemeral_workspace._execute_command.new_mount_api_supported",
         return_value=use_new_api,
     ):
         return list(await asyncio.gather(*(_run_one(i, cmd) for i, cmd in enumerate(commands))))

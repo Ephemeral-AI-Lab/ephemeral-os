@@ -10,9 +10,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from sandbox.execution.contract import CommandExecRequest
-from sandbox.execution.overlay.layout import LayerPathsLayout, MaterializeLayout
-from sandbox.execution.strategies.namespace import PrivateNamespaceStrategy
+from sandbox.ephemeral_workspace.shell_contract import CommandExecRequest
+from sandbox.overlay.layout import LayerPathsLayout, MaterializeLayout
+from sandbox.overlay.namespace import PrivateNamespaceStrategy
 
 
 def _make_request(tmp_path: Path) -> CommandExecRequest:

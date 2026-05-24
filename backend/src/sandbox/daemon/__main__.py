@@ -85,7 +85,8 @@ def _bump_nofile(target: int = 8192) -> None:
 
 
 def _log_mount_api_capability() -> None:
-    from sandbox.execution.overlay.capability import new_mount_api_supported
+    from sandbox.overlay.capability import new_mount_api_supported, require_new_mount_api
+    require_new_mount_api()
     supported = new_mount_api_supported()
     logging.getLogger(__name__).info(
         "daemon.overlay_mount_api supported=%s", supported

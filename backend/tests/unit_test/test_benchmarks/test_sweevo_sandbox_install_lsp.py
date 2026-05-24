@@ -2,7 +2,7 @@
 
 The kwarg is additive (default False) — existing callers must see
 byte-identical behavior. Only when ``install_lsp=True`` does the
-function reach into :func:`sandbox.plugin.install.ensure_installed`.
+function reach into :func:`sandbox.ephemeral_workspace.plugin.install.ensure_installed`.
 """
 
 from __future__ import annotations
@@ -95,7 +95,7 @@ async def test_setup_sandbox_default_skips_lsp_install(
     _install_common_stubs(monkeypatch)
 
     raising_ensure = AsyncMock(side_effect=AssertionError("must not be called"))
-    monkeypatch.setattr("sandbox.plugin.install.ensure_installed", raising_ensure)
+    monkeypatch.setattr("sandbox.ephemeral_workspace.plugin.install.ensure_installed", raising_ensure)
 
     await sweevo_sandbox.setup_sweevo_sandbox(_instance(), "sbx-1")
 
@@ -125,7 +125,7 @@ async def test_setup_sandbox_install_lsp_invokes_ensure_installed(
         daemon_calls.append((op, args))
         return {"success": True}
 
-    monkeypatch.setattr("sandbox.plugin.install.ensure_installed", fake_ensure)
+    monkeypatch.setattr("sandbox.ephemeral_workspace.plugin.install.ensure_installed", fake_ensure)
     monkeypatch.setattr(
         "sandbox.host.daemon_client.call_daemon_api",
         fake_call_daemon_api,
@@ -194,7 +194,7 @@ async def test_setup_sandbox_install_lsp_runs_after_workspace_rebuild(
         "set_sandbox_labels",
         lambda _sandbox_id, _labels: None,
     )
-    monkeypatch.setattr("sandbox.plugin.install.ensure_installed", fake_ensure)
+    monkeypatch.setattr("sandbox.ephemeral_workspace.plugin.install.ensure_installed", fake_ensure)
     monkeypatch.setattr(
         "sandbox.host.daemon_client.call_daemon_api",
         fake_call_daemon_api,

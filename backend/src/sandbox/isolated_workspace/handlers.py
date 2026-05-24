@@ -27,7 +27,7 @@ from typing import Any
 
 from audit.jsonl import append_jsonl_event
 from sandbox.daemon import workspace_server
-from sandbox.execution.scratch import command_exec_scratch_root
+from sandbox.overlay.scratch import command_exec_scratch_root
 from sandbox.isolated_workspace.manager import (
     IsolatedWorkspaceError,
     IsolatedWorkspaceManager,
@@ -47,12 +47,11 @@ class _LayerStackAdapter:
 
     @staticmethod
     def prepare_workspace_snapshot(
-        layer_stack_root: str, *, owner_request_id: str, materialize: bool
+        layer_stack_root: str, *, owner_request_id: str
     ) -> Any:
         return workspace_server.prepare_workspace_snapshot(
             layer_stack_root,
             owner_request_id=owner_request_id,
-            materialize=materialize,
         )
 
     @staticmethod

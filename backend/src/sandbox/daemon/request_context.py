@@ -16,7 +16,7 @@ The OCC backend tuple is owned by :mod:`sandbox.daemon.occ_backend`; handlers
 call :func:`sandbox.daemon.occ_backend.build_occ_backend` directly.
 
 ``shell`` does NOT use this module — the dispatcher routes it directly to
-:mod:`sandbox.daemon.service.shell_runner`, which owns its own argv/env
+:mod:`sandbox.ephemeral_workspace.pipeline`, which owns its own argv/env
 validation and timing helpers.
 """
 

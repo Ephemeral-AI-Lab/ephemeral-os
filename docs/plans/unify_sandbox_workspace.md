@@ -6,8 +6,8 @@
 This document is the **overview**. The detailed plan lives in four phase documents:
 
 1. [`unify_sandbox_workspace_phase1.md`](unify_sandbox_workspace_phase1.md) — **Foundation** (folder reorg + overlay extraction + shared primitives; mechanical, no behavior change)
-2. [`unify_sandbox_workspace_phase2.md`](unify_sandbox_workspace_phase2.md) — **Unification** (per-call ephemeral pipeline, persistent isolated pipeline, lifecycle host API, agent tools; substantive). **Background-shell sections REDACTED — see Phase 2.5.**
-3. [`unify_sandbox_workspace_phase2_5.md`](unify_sandbox_workspace_phase2_5.md) — **Background Tool Lifecycle (delta)** — reverses Phase 2's `ShellJob` + four `api.v1.shell.{launch,reap,poll,cancel}` verbs. Background is a generic `ToolCallRequest.background` flag; engine's `BackgroundTaskManager` is the lifecycle wrapper; overlay lease lifetime is coroutine-bound; generic `api.v1.cancel(request_id)` wire RPC; verb-supplied cancellation cleanup in `overlay.run_in_namespace`.
+2. [`unify_sandbox_workspace_phase2.md`](unify_sandbox_workspace_phase2.md) — **Unification (foreground-only)** — per-call ephemeral pipeline, persistent isolated pipeline, lifecycle host API, agent tools. Background lifecycle is out of scope here; Phase 2.5 owns it.
+3. [`unify_sandbox_workspace_phase2_5.md`](unify_sandbox_workspace_phase2_5.md) — **Background Tool Lifecycle** — canonical background design. Background is a generic `ToolCallRequest.background` flag; engine's `BackgroundTaskManager` is the lifecycle wrapper; overlay lease lifetime is coroutine-bound; generic `api.v1.cancel(request_id)` wire RPC; verb-supplied cancellation cleanup in `overlay.run_in_namespace`. Removes existing `shell_job.py` (609 lines), `shell_job_handler.py` (174 lines), four `api.v1.shell.*` wire RPCs, and the `is_background` shell-tool branch from the repo.
 4. [`unify_sandbox_workspace_phase3.md`](unify_sandbox_workspace_phase3.md) — **Test migration & documentation**
 
 Verb renames (`search_content` → `grep`, `glob_files` → `glob`) shipped previously and are not part of this plan. Daytona provider support is out of scope (Docker-only deployment).

@@ -1,5 +1,5 @@
 """Verify the runtime bundle contains sandbox/plugin/* so the daemon can
-import sandbox.plugin.runtime in-sandbox."""
+import sandbox.ephemeral_workspace.plugin.runtime in-sandbox."""
 
 from __future__ import annotations
 

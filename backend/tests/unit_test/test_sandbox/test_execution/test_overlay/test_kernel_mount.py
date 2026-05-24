@@ -9,12 +9,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-import sandbox.execution.overlay.kernel_mount as km
-from sandbox.execution.overlay.kernel_mount import (
+import sandbox.overlay.kernel_mount as km
+from sandbox.overlay.kernel_mount import (
     mount_overlay,
     validate_mount_inputs,
 )
-from sandbox.execution.overlay.new_mount_api import (
+from sandbox.overlay.new_mount_api import (
     SYS_fsconfig,
     SYS_fsmount,
     SYS_fsopen,

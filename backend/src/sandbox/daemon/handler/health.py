@@ -7,7 +7,7 @@ import time
 from collections.abc import Callable
 from dataclasses import fields
 
-from sandbox.execution.strategies.namespace import detect_private_mount_namespace
+from sandbox.overlay.namespace import detect_private_mount_namespace
 from sandbox.layer_stack.manifest import (
     manifest_path,
     read_manifest,
@@ -83,11 +83,7 @@ def _probe_data_plane(layer_stack_root: str) -> dict[str, object]:
             "handler services returned "
             f"{type(handlers_backend).__name__}; expected OccBackend"
         )
-    mount_mode = (
-        "private_namespace"
-        if detect_private_mount_namespace()
-        else "copy_backed"
-    )
+    mount_mode = "private_namespace" if detect_private_mount_namespace() else "unavailable"
     return {
         "handlers_services_ready": True,
         "shell_services_ready": True,

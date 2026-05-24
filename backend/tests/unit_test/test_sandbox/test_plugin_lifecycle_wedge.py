@@ -20,9 +20,9 @@ from collections.abc import Iterator
 
 import pytest
 
-from sandbox.plugin import handler as handler_mod
-from sandbox.plugin import op_registry as registry_mod
-from sandbox.plugin.runtime import register_plugin_op
+from sandbox.ephemeral_workspace.plugin import handler as handler_mod
+from sandbox.ephemeral_workspace.plugin import op_registry as registry_mod
+from sandbox.ephemeral_workspace.plugin.runtime import register_plugin_op
 
 
 @pytest.fixture(autouse=True)

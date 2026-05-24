@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from sandbox.execution.overlay.layout import (
+from sandbox.overlay.layout import (
     LayerPathsLayout,
     MaterializeLayout,
     OverlayLayout,

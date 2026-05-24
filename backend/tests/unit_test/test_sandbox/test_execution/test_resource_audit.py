@@ -1,4 +1,4 @@
-from sandbox.execution.resource_audit import (
+from sandbox._shared.resource_audit import (
     _parse_cgroup_io_stat,
     _parse_cgroup_key_values,
 )

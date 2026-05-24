@@ -18,9 +18,9 @@ from typing import Any
 
 import pytest
 
-from sandbox.daemon.service import sandbox_overlay
-from sandbox.daemon.service.sandbox_overlay import SandboxOverlay
-from sandbox.execution.contract import CommandExecRequest
+from sandbox.daemon.service import pipeline
+from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
+from sandbox.ephemeral_workspace.shell_contract import CommandExecRequest
 from sandbox.occ.changeset import CommitOptions
 from sandbox.occ.changeset import ChangesetResult, WriteChange
 
@@ -86,13 +86,13 @@ def _patch_workspace_to_occ(monkeypatch: pytest.MonkeyPatch) -> None:
             for path in path_changes
         )
 
-    monkeypatch.setattr(sandbox_overlay, "walk_upperdir", fake_walk_upperdir)
-    monkeypatch.setattr(sandbox_overlay, "overlay_path_changes_to_occ_changes", fake)
+    monkeypatch.setattr(pipeline, "walk_upperdir", fake_walk_upperdir)
+    monkeypatch.setattr(pipeline, "overlay_path_changes_to_occ_changes", fake)
 
 
 def _apply(client: _StubOccClient, paths: list[str]) -> None:
     _CAPTURED_PATHS[:] = paths
-    overlay = SandboxOverlay(
+    overlay = EphemeralPipeline(
         occ_client=client,  # type: ignore[arg-type]
         workspace_ref=_request().workspace_ref,
     )

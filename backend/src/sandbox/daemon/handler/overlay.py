@@ -8,22 +8,21 @@ from typing import Any
 from typing import cast
 
 from sandbox.daemon.service.layer_stack_client import LayerStackClient
-from sandbox.daemon.service.overlay_manager import (
+from sandbox.ephemeral_workspace.pipeline import (
     get_sandbox_overlay,
     stop_sandbox_overlay,
 )
-from sandbox.execution.contract import (
+from sandbox.ephemeral_workspace.shell_contract import (
     CommandExecRequest,
-    MountMode,
     OverlayCapture,
-    OverlayLayout,
     OverlayShellRequest,
     ShellProcessResult,
 )
-from sandbox.execution.runner import run_workspace_replaced_command
-from sandbox.execution.service import execute_command
-from sandbox.execution.env_policy import CommandExecPolicy
+from sandbox.ephemeral_workspace._execute_command import execute_command
+from sandbox._shared.env_policy import CommandExecPolicy
 from sandbox.layer_stack.manifest import Manifest
+from sandbox.overlay.layout import LayerPathsLayout
+from sandbox.overlay.namespace import run_in_namespace
 
 _OVERLAY_COMMAND_POLICY = CommandExecPolicy(
     host_env_keys=frozenset(
@@ -84,7 +83,6 @@ async def _run_snapshot_overlay(args: dict[str, Any]) -> OverlayCapture:
         capture_publisher=None,
         storage_root=layer_stack.storage_root,
         occ_apply=False,
-        mount_mode=MountMode.COPY_BACKED,
         command_runner=_run_overlay_command,
     )
     return OverlayCapture(
@@ -121,18 +119,16 @@ def _command_request(
 
 def _run_overlay_command(
     *,
-    spec: OverlayLayout,
+    spec: LayerPathsLayout,
     request: CommandExecRequest,
     run_dir: str | Path,
     timings: dict[str, float],
-    mount_mode: MountMode | None = None,
 ) -> ShellProcessResult:
-    return run_workspace_replaced_command(
+    return run_in_namespace(
         spec=spec,
         request=request,
-        run_dir=run_dir,
+        run_dir=Path(run_dir),
         timings=timings,
-        mount_mode=mount_mode,
         policy=_OVERLAY_COMMAND_POLICY,
     )
 

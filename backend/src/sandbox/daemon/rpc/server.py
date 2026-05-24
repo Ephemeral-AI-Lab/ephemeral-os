@@ -257,7 +257,7 @@ async def serve(
                 if exc is not None and not isinstance(exc, asyncio.CancelledError):
                     raise exc
     finally:
-        from sandbox.daemon.service.overlay_manager import stop_all_overlays
+        from sandbox.ephemeral_workspace.pipeline import stop_all_overlays
 
         await stop_all_overlays()
         _remove_pid(pid_path)

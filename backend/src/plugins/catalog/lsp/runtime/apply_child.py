@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from plugins.catalog.lsp.runtime.apply import _apply_edit_payload
-from sandbox.execution.overlay.kernel_mount import (
+from sandbox.overlay.kernel_mount import (
     MountInputs,
     mount_overlay,
     umount,

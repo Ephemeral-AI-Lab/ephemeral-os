@@ -1,4 +1,4 @@
-"""Unit tests for sandbox.plugin.install."""
+"""Unit tests for sandbox.ephemeral_workspace.plugin.install."""
 
 from __future__ import annotations
 
@@ -11,8 +11,8 @@ from pathlib import Path
 import pytest
 
 from plugins.core.manifest import parse_plugin_manifest
-from sandbox.plugin import install as install_mod
-from sandbox.plugin.install import (
+from sandbox.ephemeral_workspace.plugin import install as install_mod
+from sandbox.ephemeral_workspace.plugin.install import (
     PluginInstallError,
     ensure_installed,
     plugin_install_dir,

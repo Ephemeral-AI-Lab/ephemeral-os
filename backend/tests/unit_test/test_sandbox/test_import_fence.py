@@ -308,9 +308,9 @@ def test_execution_service_delegates_occ_publish_to_daemon_overlay() -> None:
     assert offenders == []
 
 
-def test_daemon_sandbox_overlay_owns_occ_publish_internals() -> None:
+def test_daemon_pipeline_owns_occ_publish_internals() -> None:
     overlay_module = (
-        BACKEND_SRC_ROOT / "sandbox" / "daemon" / "service" / "sandbox_overlay.py"
+        BACKEND_SRC_ROOT / "sandbox" / "daemon" / "service" / "pipeline.py"
     )
     imports = _imports(overlay_module)
 

@@ -116,7 +116,7 @@ def test_each_lsp_tool_creatable_via_factory() -> None:
 
 
 def test_lsp_tool_modules_do_not_import_sandbox_internals() -> None:
-    """Plugin tools must only import sandbox.* through sandbox.plugin."""
+    """Plugin tools must only import sandbox.* through sandbox.ephemeral_workspace.plugin."""
     forbidden_prefixes = (
         "sandbox.runtime",
         "sandbox.layer_stack",

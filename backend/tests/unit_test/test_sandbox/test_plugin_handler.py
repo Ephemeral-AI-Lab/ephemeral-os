@@ -1,4 +1,4 @@
-"""Unit tests for sandbox.plugin.handler (api.plugin.ensure / api.plugin.status).
+"""Unit tests for sandbox.ephemeral_workspace.plugin.handler (api.plugin.ensure / api.plugin.status).
 
 Synthetic plugin runtime modules are injected via ``sys.modules`` (and
 created with ``exec()`` so the ``register_plugin_op`` namespace check passes)
@@ -22,10 +22,10 @@ from sandbox.layer_stack.workspace_binding import (
     WorkspaceBinding,
     write_workspace_binding_atomic,
 )
-from sandbox.plugin import handler as handler_mod
-from sandbox.plugin import op_registry as registry_mod
-from sandbox.daemon.service.overlay_manager import clear_overlay_manager_for_tests
-from sandbox.plugin.runtime import register_plugin_op
+from sandbox.ephemeral_workspace.plugin import handler as handler_mod
+from sandbox.ephemeral_workspace.plugin import op_registry as registry_mod
+from sandbox.ephemeral_workspace.pipeline import clear_overlay_manager_for_tests
+from sandbox.ephemeral_workspace.plugin.runtime import register_plugin_op
 
 
 @pytest.fixture(autouse=True)
@@ -204,7 +204,7 @@ def test_plugin_context_does_not_start_persistent_overlay_mount(
     _write_binding(layer_stack_root)
     calls: list[dict[str, object]] = []
 
-    async def fake_get_sandbox_overlay(
+    async def fake_get_pipeline(
         layer_stack_root_arg: str,
         *,
         workspace_root: str | None = None,
@@ -221,8 +221,8 @@ def test_plugin_context_does_not_start_persistent_overlay_mount(
 
     monkeypatch.setattr(
         handler_mod,
-        "get_sandbox_overlay",
-        fake_get_sandbox_overlay,
+        "get_pipeline",
+        fake_get_pipeline,
     )
 
     overlay = asyncio.run(

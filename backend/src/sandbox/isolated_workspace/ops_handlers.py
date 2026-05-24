@@ -1,7 +1,7 @@
 """Bounded RPC handlers for ``api.isolated_workspace.{shell, read_file, ...}``.
 
 R3 import discipline: this module's transitive imports MUST NOT include
-``sandbox.occ.*`` or ``sandbox.daemon.service.sandbox_overlay``. Verified by
+``sandbox.occ.*`` or ``sandbox.ephemeral_workspace.pipeline``. Verified by
 ``test_isolated_workspace_ops_import_fence``.
 
 Allowed transitive imports:

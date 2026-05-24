@@ -16,7 +16,7 @@ from sandbox.occ.content_hashing import ContentHasher
 from sandbox.occ.changeset import build_api_write_change
 from sandbox.occ.changeset import CommitOptions
 from sandbox.occ.changeset import FileStatus
-from sandbox.execution.contract import ShellProcessResult
+from sandbox.ephemeral_workspace.shell_contract import ShellProcessResult
 from sandbox.daemon import occ_backend
 from sandbox.daemon.service import shell_runner
 

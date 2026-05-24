@@ -18,14 +18,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from sandbox.execution.contract import (
+from sandbox.ephemeral_workspace.shell_contract import (
     CommandExecRequest,
     EmptyChangesetResult,
     LayerPathsLayout,
     WorkspaceCapturePublishResult,
 )
-from sandbox.execution.overlay.layout import MaterializeLayout
-from sandbox.execution.service import execute_command, _drop_transient_lowerdir
+from sandbox.overlay.layout import MaterializeLayout
+from sandbox.ephemeral_workspace._execute_command import execute_command, _drop_transient_lowerdir
 
 
 def _make_request(request_id: str = "req-001") -> CommandExecRequest:
@@ -124,9 +124,9 @@ class TestCapabilityBranch:
         spec_holder: list[Any] = []
 
         with patch(
-            "sandbox.execution.service.new_mount_api_supported", return_value=True
+            "sandbox.ephemeral_workspace._execute_command.new_mount_api_supported", return_value=True
         ), patch(
-            "sandbox.execution.service.walk_upperdir", return_value=[]
+            "sandbox.ephemeral_workspace._execute_command.walk_upperdir", return_value=[]
         ):
             _run(
                 execute_command(
@@ -155,9 +155,9 @@ class TestCapabilityBranch:
         spec_holder: list[Any] = []
 
         with patch(
-            "sandbox.execution.service.new_mount_api_supported", return_value=False
+            "sandbox.ephemeral_workspace._execute_command.new_mount_api_supported", return_value=False
         ), patch(
-            "sandbox.execution.service.walk_upperdir", return_value=[]
+            "sandbox.ephemeral_workspace._execute_command.walk_upperdir", return_value=[]
         ):
             _run(
                 execute_command(
@@ -186,9 +186,9 @@ class TestCapabilityBranch:
         spec_holder: list[Any] = []
 
         with patch(
-            "sandbox.execution.service.new_mount_api_supported", return_value=True
+            "sandbox.ephemeral_workspace._execute_command.new_mount_api_supported", return_value=True
         ), patch(
-            "sandbox.execution.service.walk_upperdir", return_value=[]
+            "sandbox.ephemeral_workspace._execute_command.walk_upperdir", return_value=[]
         ):
             _run(
                 execute_command(
@@ -222,5 +222,5 @@ class TestKillSwitch:
         monkeypatch.setenv("EOS_OVERLAY_FORCE_MATERIALIZE", "1")
         # Re-import so the env var is picked up (probe_supported is cached, but
         # new_mount_api_supported reads the env var on each call)
-        from sandbox.execution.overlay.capability import new_mount_api_supported
+        from sandbox.overlay.capability import new_mount_api_supported
         assert new_mount_api_supported() is False

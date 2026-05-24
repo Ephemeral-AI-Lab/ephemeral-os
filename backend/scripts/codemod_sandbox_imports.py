@@ -7,7 +7,7 @@ sites across backend/. Strict invariants:
 - ``cst.SimpleString``, ``cst.FormattedString``, ``cst.Name``,
   ``cst.Attribute`` outside an Import context are left untouched.
 - The rewrite map is a prefix map: longest matching prefix wins so that
-  ``sandbox.overlay`` -> ``sandbox.execution.overlay`` works even when
+  ``sandbox.overlay`` -> ``sandbox.overlay`` works even when
   ``sandbox`` -> ``sandbox`` is a no-op rewrite. A prefix only matches a
   whole dotted-segment boundary (so ``sandbox.overlayer`` does NOT match
   the prefix ``sandbox.overlay``).
@@ -172,7 +172,7 @@ def f():
 
 def _self_test() -> int:
     rewrites = {
-        "sandbox.overlay": "sandbox.execution.overlay",
+        "sandbox.overlay": "sandbox.overlay",
         "sandbox.command_exec": "sandbox.execution",
     }
     with tempfile.TemporaryDirectory() as td:
@@ -183,9 +183,9 @@ def _self_test() -> int:
     expected_changed = [
         "from sandbox.execution import foo",
         "from sandbox.execution.entrypoints import namespace_helper",
-        "from sandbox.execution.overlay.factory import build",
+        "from sandbox.overlay.factory import build",
         "import sandbox.execution.policy",
-        "from sandbox.execution.overlay import cli",
+        "from sandbox.overlay import cli",
     ]
     # Strings/comments/docstrings MUST be preserved verbatim.
     expected_unchanged = [

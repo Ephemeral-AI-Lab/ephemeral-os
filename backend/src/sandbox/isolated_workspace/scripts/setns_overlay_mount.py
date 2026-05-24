@@ -10,7 +10,7 @@ Code reuse
 Once both ``setns`` calls have completed, the single-thread requirement for
 ``setns(CLONE_NEWUSER)`` no longer applies. Path validation / FD pinning and
 the mount sequence are delegated to
-:mod:`sandbox.execution.overlay.kernel_mount` — the same implementation the
+:mod:`sandbox.overlay.kernel_mount` — the same implementation the
 daemon's OCC overlay uses. Importing it is *deferred* until after setns so
 module-level R10 discipline is preserved (``kernel_mount`` transitively pulls
 ``subprocess``, which is forbidden pre-setns).
@@ -62,7 +62,7 @@ def main() -> int:
     # requirement no longer applies post-setns.
     from pathlib import Path
 
-    from sandbox.execution.overlay.kernel_mount import (
+    from sandbox.overlay.kernel_mount import (
         mount_overlay,
         validate_mount_inputs,
     )

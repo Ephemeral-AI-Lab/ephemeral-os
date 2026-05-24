@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.execution.contract import ShellProcessResult
+from sandbox.ephemeral_workspace.shell_contract import ShellProcessResult
 from sandbox.layer_stack.workspace_base import build_workspace_base
 from sandbox.occ.client import OccClient
 from sandbox.daemon import occ_backend

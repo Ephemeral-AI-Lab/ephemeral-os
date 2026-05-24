@@ -6,8 +6,8 @@ from typing import Any
 
 from sandbox.host.bootstrap import ensure_running as _ensure_running
 from sandbox.host.bootstrap import setup_after_create, setup_after_start
-from sandbox.plugin import install as plugin_install
-from sandbox.plugin import session as plugin_session
+from sandbox.ephemeral_workspace.plugin import install as plugin_install
+from sandbox.ephemeral_workspace.plugin import session as plugin_session
 from sandbox.provider.registry import (
     dispose_adapter,
     get_adapter,

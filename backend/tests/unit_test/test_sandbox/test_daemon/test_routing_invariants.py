@@ -8,7 +8,7 @@ from sandbox.daemon.handler import (
     overlay,
     workspace,
 )
-from sandbox.plugin import handler as plugin_handler
+from sandbox.ephemeral_workspace.plugin import handler as plugin_handler
 from sandbox.daemon.handler import edit, glob, grep, read, write
 from sandbox.daemon.rpc import dispatcher as server
 from sandbox.daemon.service import shell_runner, shell_job_handler

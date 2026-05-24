@@ -2,7 +2,7 @@
 
 R3: the transitive imports of ``sandbox.daemon.handler.isolated_workspace_ops``
 MUST NOT include ``sandbox.occ.*`` or
-``sandbox.daemon.service.sandbox_overlay``. The bounded ops module is the
+``sandbox.ephemeral_workspace.pipeline``. The bounded ops module is the
 single seam between agent RPCs and the daemon-native workspace — any future
 "let me reuse the existing overlay helper" refactor must add an import that
 trips this test.
@@ -23,7 +23,7 @@ from pathlib import Path
 _SRC_ROOT = Path(__file__).resolve().parents[7] / "src"
 _FORBIDDEN_PREFIXES = (
     "sandbox.occ",
-    "sandbox.daemon.service.sandbox_overlay",
+    "sandbox.ephemeral_workspace.pipeline",
 )
 _ENTRY_MODULE = "sandbox.isolated_workspace.ops_handlers"
 
@@ -41,7 +41,7 @@ def test_isolated_workspace_ops_transitive_imports_exclude_occ() -> None:
     )
     assert offenders == [], (
         "isolated_workspace_ops transitive imports must not include OCC or "
-        f"sandbox_overlay: {offenders}"
+        f"pipeline: {offenders}"
     )
 
 

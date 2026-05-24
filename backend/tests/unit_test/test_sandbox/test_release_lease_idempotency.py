@@ -1,4 +1,4 @@
-"""Unit tests for ``SandboxOverlay._release_lease`` idempotency.
+"""Unit tests for ``EphemeralPipeline._release_lease`` idempotency.
 
 Pre-mortem #5 requires that a double release on the same lease silently
 no-ops — otherwise the daemon's
@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 
-from sandbox.daemon.service.sandbox_overlay import SandboxOverlay
+from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
 
 
 class _FakeLayerStack:
@@ -36,9 +36,9 @@ class _NoopOccClient:
     pass
 
 
-def _make_overlay() -> tuple[SandboxOverlay, _FakeLayerStack]:
+def _make_overlay() -> tuple[EphemeralPipeline, _FakeLayerStack]:
     fake = _FakeLayerStack()
-    overlay = SandboxOverlay.__new__(SandboxOverlay)
+    overlay = EphemeralPipeline.__new__(EphemeralPipeline)
     # Bypass __init__ because the real one wants a usable layer_stack manifest.
     overlay._occ_client = _NoopOccClient()  # type: ignore[attr-defined]
     overlay._workspace_ref = "test"  # type: ignore[attr-defined]
@@ -75,7 +75,7 @@ def test_empty_lease_id_is_noop() -> None:
 
 
 def test_release_without_layer_stack_is_noop() -> None:
-    overlay = SandboxOverlay.__new__(SandboxOverlay)
+    overlay = EphemeralPipeline.__new__(EphemeralPipeline)
     overlay._occ_client = _NoopOccClient()  # type: ignore[attr-defined]
     overlay._workspace_ref = "test"  # type: ignore[attr-defined]
     overlay._layer_stack = None  # type: ignore[attr-defined]

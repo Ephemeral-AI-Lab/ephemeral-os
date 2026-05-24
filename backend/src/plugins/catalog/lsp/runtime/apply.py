@@ -12,9 +12,9 @@ from typing import Any
 from urllib.parse import unquote, urlparse
 from uuid import uuid4
 
-from sandbox.execution.contract import CommandExecRequest
-from sandbox.execution.overlay.capability import new_mount_api_supported
-from sandbox.execution.strategies.namespace import detect_private_mount_namespace
+from sandbox.ephemeral_workspace.shell_contract import CommandExecRequest
+from sandbox.overlay.capability import new_mount_api_supported
+from sandbox.overlay.namespace import detect_private_mount_namespace
 
 
 async def apply_workspace_edit(
@@ -85,7 +85,6 @@ async def _apply_with_operation_overlay(
     handle = acquire_overlay(
         request_id=f"lsp-apply:{op_name}:{uuid4().hex[:8]}",
         workspace_root=workspace_root,
-        materialize=False,
     )
     try:
         if not getattr(handle, "layer_paths", None):

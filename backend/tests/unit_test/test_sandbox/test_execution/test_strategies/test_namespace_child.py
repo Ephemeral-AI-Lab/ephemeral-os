@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.execution.strategies.namespace_child import _payload_request
+from sandbox.overlay.namespace_child import _payload_request
 
 
 def _base_payload(tmp_path: Path, **overrides: object) -> dict:

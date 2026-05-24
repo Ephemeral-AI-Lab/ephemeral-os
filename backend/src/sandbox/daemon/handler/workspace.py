@@ -110,7 +110,7 @@ async def _drop_peer_runtime_caches(
     workspace_root: str,
 ) -> None:
     from sandbox.daemon import occ_backend
-    from sandbox.daemon.service.overlay_manager import stop_sandbox_overlay
+    from sandbox.ephemeral_workspace.pipeline import stop_sandbox_overlay
 
     await stop_sandbox_overlay(layer_stack_root, workspace_root=workspace_root)
     occ_backend.drop_backend_cache(layer_stack_root)

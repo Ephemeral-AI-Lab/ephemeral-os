@@ -38,7 +38,7 @@ import tempfile
 import uuid
 from pathlib import Path
 
-from sandbox.execution.scratch import command_exec_scratch_root
+from sandbox.overlay.scratch import command_exec_scratch_root
 from sandbox.isolated_workspace.manager import (
     IsolatedWorkspaceHandle,
     _LinuxRuntime,

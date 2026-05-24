@@ -7,18 +7,18 @@ from pathlib import Path
 import pytest
 
 import sandbox.execution.runner as command_runner
-from sandbox.execution.contract import CommandExecRequest
-from sandbox.execution.contract import MountMode
-from sandbox.execution.contract import ShellProcessResult
-from sandbox.execution.contract import OverlayLayout
-from sandbox.execution.overlay import kernel_mount
-from sandbox.execution.overlay.capture import walk_upperdir
-from sandbox.execution.overlay.change_synthesis import synthesize_writes
+from sandbox.ephemeral_workspace.shell_contract import CommandExecRequest
+from sandbox.ephemeral_workspace.shell_contract import MountMode
+from sandbox.ephemeral_workspace.shell_contract import ShellProcessResult
+from sandbox.ephemeral_workspace.shell_contract import OverlayLayout
+from sandbox.overlay import kernel_mount
+from sandbox.overlay.capture import walk_upperdir
+from sandbox.overlay.change_synthesis import synthesize_writes
 from sandbox.execution.strategies.copy_backed import (
     CopyBackedStrategy,
     rewrite_declared_workspace_refs,
 )
-from sandbox.execution.strategies.namespace import (
+from sandbox.overlay.namespace import (
     NAMESPACE_CONTROL_REF,
     NAMESPACE_FALLBACK_STRATEGY,
     NAMESPACE_INFRA_EXIT_CODE,
@@ -378,7 +378,7 @@ def test_namespace_mount_passes_fd_paths_to_new_mount_api(
         inputs.close()
 
     syscall_numbers = [call[0] for call in syscalls]
-    from sandbox.execution.overlay.new_mount_api import SYS_fsconfig, SYS_fsopen
+    from sandbox.overlay.new_mount_api import SYS_fsconfig, SYS_fsopen
     assert SYS_fsopen in syscall_numbers
     assert SYS_fsconfig in syscall_numbers
 
@@ -400,8 +400,8 @@ def test_namespace_helper_module_path_in_strategy_argv_is_importable() -> None:
     # when background-shell cancel support was added; check the module source
     # so a rename of the child file still fails this pin.
     module_source = inspect.getsource(namespace_strategy)
-    assert '"sandbox.execution.strategies.namespace_child"' in module_source
+    assert '"sandbox.overlay.namespace_child"' in module_source
     assert (
-        importlib.util.find_spec("sandbox.execution.strategies.namespace_child")
+        importlib.util.find_spec("sandbox.overlay.namespace_child")
         is not None
     )

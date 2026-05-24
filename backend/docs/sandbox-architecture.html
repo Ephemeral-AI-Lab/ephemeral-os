@@ -945,7 +945,7 @@ def _hash_mismatch(self, state: _PathStageState, base_hash: str | None) -&gt; Fi
  Branch A — PRIVATE_NAMESPACE
    10a. Strat ──write JSON payload to disk
    11a. Strat ──spawn `unshare -Urm python -m
-                       sandbox.execution.strategies.namespace_child`
+                       sandbox.overlay.namespace_child`
         ─ validate mount inputs (O_NOFOLLOW fd handles)
         ─ mount -t overlay overlay -o lower,upper,work workspace_root
         ─ run cmd, umount
@@ -1057,7 +1057,7 @@ def _hash_mismatch(self, state: _PathStageState, base_hash: str | None) -&gt; Fi
                v
   ┌─────────────────────────────────────────────────────────────────┐
   │ unshare -Urm python -m                                          │
-  │   sandbox.execution.strategies.namespace_child &lt;payload_ref&gt;    │
+  │   sandbox.overlay.namespace_child &lt;payload_ref&gt;    │
   └────────────┬────────────────────────────────────────────────────┘
                v
   ┌─────────────────────────────────────────────────────────────────┐

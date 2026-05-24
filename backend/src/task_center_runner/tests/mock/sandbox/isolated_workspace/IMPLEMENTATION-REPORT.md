@@ -409,11 +409,11 @@ The previous scattered locations (``daemon/service/``, ``daemon/handler/``,
 
 | Reused module | Where iws calls it | Saves |
 |---|---|---|
-| ``sandbox.execution.overlay.kernel_mount.mount_overlay`` | ``scripts/setns_overlay_mount.py`` — deferred-import *after* setns so R10 single-thread discipline is preserved at module-load time | ~80 LoC of duplicated ``fsopen / fsconfig / fsmount / move_mount`` syscall wrappers. One source of truth for overlay mount mechanics across the daemon. |
-| ``sandbox.execution.overlay.capability.new_mount_api_supported`` | ``_iws_fixtures.can_mount_overlay_natively`` | A bespoke ``/proc/filesystems`` scan. Picks up the existing ``EOS_OVERLAY_FORCE_MATERIALIZE`` kill-switch for free. |
+| ``sandbox.overlay.kernel_mount.mount_overlay`` | ``scripts/setns_overlay_mount.py`` — deferred-import *after* setns so R10 single-thread discipline is preserved at module-load time | ~80 LoC of duplicated ``fsopen / fsconfig / fsmount / move_mount`` syscall wrappers. One source of truth for overlay mount mechanics across the daemon. |
+| ``sandbox.overlay.capability.new_mount_api_supported`` | ``_iws_fixtures.can_mount_overlay_natively`` | A bespoke ``/proc/filesystems`` scan. Picks up the existing ``EOS_OVERLAY_FORCE_MATERIALIZE`` kill-switch for free. |
 | ``sandbox.daemon.workspace_server.{prepare,release}_workspace_snapshot`` | ``handlers._LayerStackAdapter`` | Existing lease/snapshot lifecycle — no parallel implementation. |
 | ``sandbox.host.daemon_client.call_daemon_api`` | ``_iws_rpc`` | Existing daemon RPC client. |
-| ``sandbox.execution.scratch.command_exec_scratch_root`` | ``handlers._ensure_manager`` | Existing scratch-root resolution. |
+| ``sandbox.overlay.scratch.command_exec_scratch_root`` | ``handlers._ensure_manager`` | Existing scratch-root resolution. |
 
 ## 3. Files added (new this session)
 

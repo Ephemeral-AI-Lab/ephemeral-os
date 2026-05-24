@@ -13,11 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
 
-from sandbox.layer_stack.paths import (
-    TRANSIENT_LOWERDIR_DIR,
-    remove_path,
-    resolve_storage_path,
-)
+from sandbox.layer_stack.paths import remove_path, resolve_storage_path
 from sandbox.layer_stack.storage_lock import acquire_storage_writer_lock
 from sandbox.layer_stack.changes import LayerChange
 from sandbox.layer_stack.publisher import LayerPublisher
@@ -48,16 +44,6 @@ logger = logging.getLogger(__name__)
 def _safe_request_part(value: str) -> str:
     safe = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in value)
     return safe[:48] or "request"
-
-
-def _log_rmtree_failure(func: object, path: object, exc_info: object) -> None:
-    """``shutil.rmtree`` onerror callback: surface cleanup leaks via logs."""
-    logger.warning(
-        "layer-stack cleanup failed: %s(%r) -> %r",
-        getattr(func, "__name__", repr(func)),
-        path,
-        exc_info,
-    )
 
 
 @dataclass(frozen=True)
@@ -133,84 +119,30 @@ class LayerStack:
     def prepare_workspace_snapshot(
         self,
         owner_request_id: str,
-        *,
-        lowerdir_root: str | Path | None = None,
-        materialize: bool = True,
     ) -> PrepareWorkspaceSnapshotResult:
         total_start = monotonic_now()
         with self._lock:
             manifest = self._manifest_store.read()
-            # Pinning invariant: LeaseRegistry.acquire remains the sole pinning
-            # entry for layer dirs against squash GC. materialize=False does NOT
-            # bypass this registration — manifest.layers flows through
-            # _refcounts.update identically in both branches.
             lease = self._leases.acquire(manifest, owner_request_id)
-
-        if not materialize:
-            try:
-                layer_paths = tuple(
-                    self._layer_path(layer).as_posix() for layer in manifest.layers
-                )
-                return PrepareWorkspaceSnapshotResult(
-                    lease_id=lease.lease_id,
-                    manifest_version=manifest.version,
-                    root_hash=manifest_root_hash(manifest),
-                    manifest=manifest,
-                    lowerdir=None,
-                    layer_paths=layer_paths,
-                    timings={
-                        "layer_stack.materialize_s": 0.0,
-                        "layer_stack.prepare_workspace_snapshot.total_s": (
-                            monotonic_now() - total_start
-                        ),
-                    },
-                )
-            except Exception:
-                with self._lock:
-                    self._leases.release(lease.lease_id)
-                raise
-
-        lowerdir: Path | None = None
         try:
-            transient_root = (
-                Path(lowerdir_root)
-                if lowerdir_root is not None
-                else self.storage_root / "runtime" / TRANSIENT_LOWERDIR_DIR
+            layer_paths = tuple(
+                self._layer_path(layer).as_posix() for layer in manifest.layers
             )
-            lowerdir = (
-                transient_root
-                / f"{_safe_request_part(owner_request_id)}-{uuid4().hex[:8]}"
-                / "lower"
-            )
-            materialize_start = monotonic_now()
-            # share_inodes=True: the lowerdir feeds an overlay read-only mount
-            # (or is copy-tree'd into a separate merged dir in copy-backed
-            # mode). Sharing inodes with source layers avoids byte copies
-            # under concurrent prepare_workspace_snapshot.
-            self._view.materialize(lowerdir, manifest, share_inodes=True)
-            materialize_elapsed = monotonic_now() - materialize_start
             return PrepareWorkspaceSnapshotResult(
                 lease_id=lease.lease_id,
                 manifest_version=manifest.version,
                 root_hash=manifest_root_hash(manifest),
                 manifest=manifest,
-                lowerdir=lowerdir.as_posix(),
+                lowerdir=None,
+                layer_paths=layer_paths,
                 timings={
-                    "layer_stack.materialize_s": materialize_elapsed,
+                    "layer_stack.materialize_s": 0.0,
                     "layer_stack.prepare_workspace_snapshot.total_s": (
                         monotonic_now() - total_start
                     ),
                 },
             )
         except Exception:
-            if lowerdir is not None:
-                # Log cleanup errors instead of swallowing them with
-                # ignore_errors=True. A leaked transient lowerdir on every
-                # failed snapshot is a slow disk-fill bug; logging surfaces
-                # the leak in operator dashboards.
-                shutil.rmtree(
-                    lowerdir.parent, onerror=_log_rmtree_failure
-                )
             with self._lock:
                 self._leases.release(lease.lease_id)
             raise

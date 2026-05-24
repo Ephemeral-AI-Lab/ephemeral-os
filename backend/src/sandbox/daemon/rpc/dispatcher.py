@@ -177,7 +177,7 @@ def _to_response_dict(result: Any) -> dict[str, Any]:
 
 
 def _load_peer_bootstraps() -> None:
-    from sandbox.plugin import handler as plugin_handler
+    from sandbox.ephemeral_workspace.plugin import handler as plugin_handler
     from sandbox.daemon.handler import (
         edit,
         glob,
@@ -189,7 +189,8 @@ def _load_peer_bootstraps() -> None:
         workspace,
         write,
     )
-    from sandbox.daemon.service import shell_runner, shell_job_handler
+    from sandbox.ephemeral_workspace import pipeline
+    from sandbox.ephemeral_workspace import shell_job
     from sandbox.isolated_workspace import handlers as iws_handlers
     from sandbox.isolated_workspace import ops_handlers as iws_ops_handlers
 
@@ -221,18 +222,18 @@ def _load_peer_bootstraps() -> None:
         "api.read_file": read.read_file,
         "api.v1.read_file": read.read_file,
         "api.runtime.ready": health.runtime_ready,
-        "api.shell": shell_runner.execute_shell_api,
-        "api.v1.shell": shell_runner.execute_shell_api,
-        "api.shell.launch": shell_job_handler.shell_launch,
-        "api.v1.shell.launch": shell_job_handler.shell_launch,
-        "api.shell.poll": shell_job_handler.shell_poll,
-        "api.v1.shell.poll": shell_job_handler.shell_poll,
-        "api.shell.cancel": shell_job_handler.shell_cancel,
-        "api.v1.shell.cancel": shell_job_handler.shell_cancel,
-        "api.shell.reap": shell_job_handler.shell_reap,
-        "api.v1.shell.reap": shell_job_handler.shell_reap,
-        "api.shell.metrics": shell_job_handler.shell_metrics,
-        "api.v1.shell.metrics": shell_job_handler.shell_metrics,
+        "api.shell": pipeline.execute_shell_api,
+        "api.v1.shell": pipeline.execute_shell_api,
+        "api.shell.launch": shell_job.shell_launch,
+        "api.v1.shell.launch": shell_job.shell_launch,
+        "api.shell.poll": shell_job.shell_poll,
+        "api.v1.shell.poll": shell_job.shell_poll,
+        "api.shell.cancel": shell_job.shell_cancel,
+        "api.v1.shell.cancel": shell_job.shell_cancel,
+        "api.shell.reap": shell_job.shell_reap,
+        "api.v1.shell.reap": shell_job.shell_reap,
+        "api.shell.metrics": shell_job.shell_metrics,
+        "api.v1.shell.metrics": shell_job.shell_metrics,
         "api.workspace_binding": workspace.workspace_binding,
         "api.write_file": write.write_file,
         "api.v1.write_file": write.write_file,

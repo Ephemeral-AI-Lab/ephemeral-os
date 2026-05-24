@@ -155,7 +155,7 @@ surface here first instead of in the noisier daemon path.
 
 2. The failure message will include `helper_stderr` from the `mount_overlay`
    subprocess. Likely candidates:
-   - `setns_overlay_mount.py` runs `python3 -m sandbox.execution.overlay.kernel_mount`
+   - `setns_overlay_mount.py` runs `python3 -m sandbox.overlay.kernel_mount`
      but the heredoc script's `sys.executable` is `python3.10` (system) while
      the daemon's is `python3.10` (also system). Should match — eliminate this
      possibility first by printing `sys.executable` from inside the script.
