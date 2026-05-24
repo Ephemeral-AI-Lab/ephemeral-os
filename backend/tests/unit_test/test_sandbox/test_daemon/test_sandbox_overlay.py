@@ -8,6 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
+import sandbox.ephemeral_workspace._manager as overlay_manager
 import sandbox.ephemeral_workspace.pipeline as overlay_mod
 from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
 from sandbox.layer_stack.manifest import LayerRef, Manifest
@@ -257,7 +258,7 @@ async def test_manager_stop_unmounts_requested_and_bound_workspace_roots(
     overlay_mod.clear_overlay_manager_for_tests()
     key = f"{stack_root.resolve(strict=False).as_posix()}\0{bound_workspace.as_posix()}"
     overlay_mod._OVERLAYS[key] = _CachedOverlay()  # type: ignore[assignment]  # noqa: SLF001
-    monkeypatch.setattr(overlay_mod, "umount", lambda path: unmounts.append(path))
+    monkeypatch.setattr(overlay_manager, "umount", lambda path: unmounts.append(path))
 
     result = await overlay_mod.stop_sandbox_overlay(
         stack_root,

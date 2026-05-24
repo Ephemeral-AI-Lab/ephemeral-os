@@ -296,11 +296,11 @@ def test_temporary_execute_command_module_is_deleted() -> None:
     assert not command_module.exists()
 
 
-def test_ephemeral_pipeline_owns_occ_publish_internals() -> None:
-    overlay_module = (
-        BACKEND_SRC_ROOT / "sandbox" / "ephemeral_workspace" / "pipeline.py"
+def test_ephemeral_publish_mixin_owns_occ_publish_internals() -> None:
+    publish_module = (
+        BACKEND_SRC_ROOT / "sandbox" / "ephemeral_workspace" / "_publishing.py"
     )
-    imports = _imports(overlay_module)
+    imports = _imports(publish_module)
 
     assert "sandbox.occ.changeset" in imports
     assert "sandbox.occ.overlay_change_conversion" in imports

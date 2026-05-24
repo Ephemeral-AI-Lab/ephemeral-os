@@ -18,7 +18,7 @@ from typing import Any
 
 import pytest
 
-import sandbox.ephemeral_workspace.pipeline as pipeline
+import sandbox.ephemeral_workspace._publishing as publishing
 from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
 from sandbox.ephemeral_workspace.shell_contract import CommandExecRequest
 from sandbox.occ.changeset import CommitOptions
@@ -95,8 +95,8 @@ def _patch_workspace_to_occ(monkeypatch: pytest.MonkeyPatch) -> None:
             for path in path_changes
         )
 
-    monkeypatch.setattr(pipeline, "walk_upperdir", fake_walk_upperdir)
-    monkeypatch.setattr(pipeline, "overlay_path_changes_to_occ_changes", fake)
+    monkeypatch.setattr(publishing, "walk_upperdir", fake_walk_upperdir)
+    monkeypatch.setattr(publishing, "overlay_path_changes_to_occ_changes", fake)
 
 
 def _apply(client: _StubOccClient, paths: list[str]) -> None:

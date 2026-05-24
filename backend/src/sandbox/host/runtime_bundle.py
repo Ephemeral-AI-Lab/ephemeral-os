@@ -208,6 +208,11 @@ def _runtime_bundle_bytes() -> bytes:
         ephemeral_dir = sandbox_dir / "ephemeral_workspace"
         for name in (
             "__init__.py",
+            "_manager.py",
+            "_operation.py",
+            "_publishing.py",
+            "_types.py",
+            "_utils.py",
             "events.py",
             "pipeline.py",
             "shell_contract.py",
