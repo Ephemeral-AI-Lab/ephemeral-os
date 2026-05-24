@@ -116,8 +116,6 @@ class BackgroundTaskManager:
         self._tasks: dict[str, TrackedBackgroundTask] = {}
         self._alias_counter: int = 0
         self._heartbeat_task: asyncio.Task[None] | None = None
-        self._engine_process_id = str(os.getpid())
-        self._engine_started_at = time.time()
 
     def next_alias(self) -> str:
         """Return a short mnemonic task_id like 'bg_1', 'bg_2', ...
@@ -431,8 +429,6 @@ class BackgroundTaskManager:
                         sandbox_api.heartbeat(
                             sandbox_id,
                             invocation_ids,
-                            engine_process_id=self._engine_process_id,
-                            engine_started_at=self._engine_started_at,
                         )
                         for sandbox_id, invocation_ids in by_sandbox.items()
                     ),

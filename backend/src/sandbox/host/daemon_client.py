@@ -130,8 +130,14 @@ async def _call_daemon(
         if _exit_code(result) != 0:
             _raise_exec_failed(result)
         raise
-    if "error" in response:
-        error = response.get("error") or {}
+    error = response.get("error")
+    if error is not None:
+        if not isinstance(error, dict):
+            raise _DaemonDispatchError(
+                kind="RuntimeError",
+                message=str(error),
+                details={},
+            )
         raise _DaemonDispatchError(
             kind=str(error.get("kind") or "RuntimeError"),
             message=str(error.get("message") or ""),
@@ -334,19 +340,21 @@ async def _dispatch_once_with_retry(
             message=exc.message,
             details={**exc.details, "original_op": op},
         ) from exc
-    if "error" in response:
-        error = response.get("error") or {}
+    error = response.get("error")
+    if error is not None:
+        if not isinstance(error, dict):
+            raise _DaemonReadinessError(
+                kind="RuntimeReadinessFailed",
+                message=str(error),
+                details={"original_op": op},
+            )
+        details_raw = error.get("details")
+        details = dict(details_raw) if isinstance(details_raw, dict) else {}
+        details["original_op"] = op
         raise _DaemonReadinessError(
             kind=str(error.get("kind") or "RuntimeReadinessFailed"),
             message=str(error.get("message") or ""),
-            details={
-                **(
-                    error.get("details")
-                    if isinstance(error.get("details"), dict)
-                    else {}
-                ),
-                "original_op": op,
-            },
+            details=details,
         )
     if response.get("ready") is not True:
         if _is_bootstrap_ready_response(op, response):

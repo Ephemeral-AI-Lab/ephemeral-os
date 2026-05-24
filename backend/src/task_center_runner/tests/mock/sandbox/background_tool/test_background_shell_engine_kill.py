@@ -27,7 +27,11 @@ async def test_ttl_reaper_cancels_abandoned_background_invocation() -> None:
     registry._by_invocation["bg-invocation"].last_seen -= 1.0  # noqa: SLF001
 
     registry.reap_stale()
+    assert registry.count_by_agent("agent-a") == 1
+
     await asyncio.gather(task, return_exceptions=True)
 
     assert task.cancelled()
     assert registry.metrics()["ttl_reaped_total"] == 1
+    registry.deregister("bg-invocation")
+    assert registry.metrics()["active_invocations"] == 0

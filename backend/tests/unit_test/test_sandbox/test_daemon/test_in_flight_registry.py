@@ -69,9 +69,13 @@ async def test_ttl_reaper_cancels_stale_invocation() -> None:
     registry._by_invocation["invocation-1"].last_seen -= 1.0  # noqa: SLF001
 
     registry.reap_stale()
+    assert registry.metrics() == {"active_invocations": 1, "ttl_reaped_total": 1}
+    assert registry.count_by_agent("agent-a") == 1
+
     await asyncio.gather(task, return_exceptions=True)
 
     assert task.cancelled()
+    registry.deregister("invocation-1")
     assert registry.metrics() == {"active_invocations": 0, "ttl_reaped_total": 1}
 
 

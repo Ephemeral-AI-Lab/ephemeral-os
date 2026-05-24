@@ -181,11 +181,11 @@ def test_operation_overlay_uses_shared_snapshot_layers_and_private_upperdir(
     )
 
     first = overlay.acquire_operation_overlay(
-        request_id="lsp-hover",
+        invocation_id="lsp-hover",
         workspace_root="/testbed",
     )
     second = overlay.acquire_operation_overlay(
-        request_id="lsp-rename",
+        invocation_id="lsp-rename",
         workspace_root="/testbed",
     )
 

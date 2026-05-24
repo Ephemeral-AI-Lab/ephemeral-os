@@ -26,8 +26,7 @@ class InFlightInvocation:
     started_at: float
     last_seen: float
     background: bool = False
-    engine_process_id: str = ""
-    engine_started_at: float | None = None
+    ttl_reaped: bool = False
 
 
 class InFlightInvocationRegistry:
@@ -61,8 +60,6 @@ class InFlightInvocationRegistry:
         agent_id: str = "",
         op: str = "",
         background: bool = False,
-        engine_process_id: str = "",
-        engine_started_at: float | None = None,
     ) -> None:
         if not invocation_id:
             return
@@ -75,8 +72,6 @@ class InFlightInvocationRegistry:
             started_at=now,
             last_seen=now,
             background=background,
-            engine_process_id=engine_process_id,
-            engine_started_at=engine_started_at,
         )
         self._ensure_reaper_started()
 
@@ -94,13 +89,7 @@ class InFlightInvocationRegistry:
         entry.task.cancel()
         return entry.task
 
-    def heartbeat(
-        self,
-        invocation_ids: list[str],
-        *,
-        engine_process_id: str = "",
-        engine_started_at: float | None = None,
-    ) -> int:
+    def heartbeat(self, invocation_ids: list[str]) -> int:
         now = monotonic_now()
         touched = 0
         for invocation_id in invocation_ids:
@@ -108,10 +97,6 @@ class InFlightInvocationRegistry:
             if entry is None:
                 continue
             entry.last_seen = now
-            if engine_process_id:
-                entry.engine_process_id = engine_process_id
-            if engine_started_at is not None:
-                entry.engine_started_at = engine_started_at
             touched += 1
         return touched
 
@@ -138,7 +123,9 @@ class InFlightInvocationRegistry:
         stale = [
             entry
             for entry in self._by_invocation.values()
-            if entry.background and now - entry.last_seen >= self._ttl_seconds
+            if entry.background
+            and not entry.ttl_reaped
+            and now - entry.last_seen >= self._ttl_seconds
         ]
         for entry in stale:
             logger.warning(
@@ -149,7 +136,7 @@ class InFlightInvocationRegistry:
                 now - entry.last_seen,
             )
             entry.task.cancel()
-            self._by_invocation.pop(entry.invocation_id, None)
+            entry.ttl_reaped = True
             self._ttl_reaped_total += 1
 
     def shutdown(self) -> None:

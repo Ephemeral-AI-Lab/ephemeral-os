@@ -22,14 +22,14 @@ async def create(
 ) -> OverlayHandle:
     """Lease a snapshot and allocate upper/work dirs for a workspace overlay."""
     del network
-    request_id = f"overlay:{agent_id}:{uuid4().hex[:8]}"
+    invocation_id = f"overlay:{agent_id}:{uuid4().hex[:8]}"
     scratch_root = command_exec_scratch_root(layer_stack.storage_root)
-    run_dir = scratch_root / "runtime" / "overlay" / request_id.replace(":", "-")
+    run_dir = scratch_root / "runtime" / "overlay" / invocation_id.replace(":", "-")
     upperdir = run_dir / "upper"
     workdir = run_dir / "work"
     upperdir.mkdir(parents=True, exist_ok=True)
     workdir.mkdir(parents=True, exist_ok=True)
-    lease = layer_stack.prepare_workspace_snapshot(request_id=request_id)
+    lease = layer_stack.prepare_workspace_snapshot(request_id=invocation_id)
     if lease.layer_paths is None:
         layer_stack.release_lease(lease_id=lease.lease_id)
         shutil.rmtree(run_dir, ignore_errors=True)

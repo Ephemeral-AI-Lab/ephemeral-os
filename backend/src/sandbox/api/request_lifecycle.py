@@ -35,24 +35,15 @@ async def heartbeat(
     sandbox_id: str,
     invocation_ids: Iterable[str],
     *,
-    engine_process_id: str = "",
-    engine_started_at: float | None = None,
     transport: SandboxTransport | None = None,
 ) -> dict[str, object]:
     """Refresh liveness for a batch of in-flight daemon invocation ids."""
     selected_transport = transport or DaemonSandboxTransport()
     ids = [str(invocation_id) for invocation_id in invocation_ids if str(invocation_id)]
-    payload: dict[str, object] = {
-        "invocation_ids": ids,
-    }
-    if engine_process_id:
-        payload["engine_process_id"] = engine_process_id
-    if engine_started_at is not None:
-        payload["engine_started_at"] = float(engine_started_at)
     return await selected_transport.call(
         sandbox_id,
         DAEMON_OP_INVOCATION_HEARTBEAT,
-        payload,
+        {"invocation_ids": ids},
         timeout=_CONTROL_TIMEOUT_S,
     )
 

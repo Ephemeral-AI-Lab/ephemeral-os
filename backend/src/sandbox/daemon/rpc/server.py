@@ -236,7 +236,7 @@ async def serve(
             loop.add_signal_handler(sig, _signal_stop)
 
     try:
-        servers = [unix_server]
+        servers: list[asyncio.AbstractServer] = [unix_server]
         if tcp_server is not None:
             servers.append(tcp_server)
         async with contextlib.AsyncExitStack() as stack:

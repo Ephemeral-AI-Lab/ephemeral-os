@@ -83,8 +83,6 @@ async def dispatch_envelope_async(
             agent_id=_agent_id(args_raw),
             op=op,
             background=bool(args_raw.get("background", False)),
-            engine_process_id=str(args_raw.get("engine_process_id") or ""),
-            engine_started_at=_optional_float(args_raw.get("engine_started_at")),
         )
     try:
         plugin_block = _check_plugin_block(args_raw, op)
@@ -159,15 +157,6 @@ def _agent_id(args: Mapping[str, Any]) -> str:
             return str(raw)
     raw = args.get("agent_id")
     return str(raw or "").strip()
-
-
-def _optional_float(raw: Any) -> float | None:
-    if raw is None:
-        return None
-    try:
-        return float(raw)
-    except (TypeError, ValueError):
-        return None
 
 
 def _attach_runtime_boot_timings(

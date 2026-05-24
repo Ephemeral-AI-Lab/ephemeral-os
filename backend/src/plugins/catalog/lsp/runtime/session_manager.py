@@ -117,12 +117,12 @@ async def evict_all() -> None:
 async def _active_manifest_key(ctx: Any) -> str:
     projection = getattr(ctx, "projection", None)
     if projection is not None and hasattr(projection, "active_manifest_key"):
-        return projection.active_manifest_key()
+        return str(projection.active_manifest_key())
     overlay = getattr(ctx, "overlay", None)
     if overlay is not None and hasattr(overlay, "ensure_current"):
         metadata = getattr(ctx, "metadata", None) or {}
         op_name = str(metadata.get("op_name", "tool"))
-        return await overlay.ensure_current(reason=f"lsp:{op_name}:enter")
+        return str(await overlay.ensure_current(reason=f"lsp:{op_name}:enter"))
     return "workspace@0"
 
 
@@ -150,7 +150,7 @@ def _acquire_session_view(ctx: Any, *, active_key: str) -> _SessionView:
         metadata = getattr(ctx, "metadata", None) or {}
         op_name = str(metadata.get("op_name", "lsp"))
         handle = acquire_operation_overlay(
-            request_id=f"lsp-session:{op_name}",
+            invocation_id=f"lsp-session:{op_name}",
             workspace_root=declared_workspace_root,
         )
         if getattr(handle, "layer_paths", None):
@@ -337,7 +337,7 @@ def _acquire_session_view_from_overlay(
     acquire_operation_overlay = getattr(overlay, "acquire_operation_overlay", None)
     if callable(acquire_operation_overlay):
         handle = acquire_operation_overlay(
-            request_id=f"lsp-session:{op_name}",
+            invocation_id=f"lsp-session:{op_name}",
             workspace_root=workspace_root,
         )
         if getattr(handle, "layer_paths", None):

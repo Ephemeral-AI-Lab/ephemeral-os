@@ -30,10 +30,10 @@ class _FakeOverlay:
     def acquire_operation_overlay(
         self,
         *,
-        request_id: str,
+        invocation_id: str,
         workspace_root: str | None = None,
     ) -> Any:
-        del request_id
+        del invocation_id
         self.acquired_workspace_root = str(workspace_root or "")
         run_dir = self.scratch_root / "run"
         upperdir = run_dir / "upper"

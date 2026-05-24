@@ -58,11 +58,11 @@ class _OperationOverlay(_Overlay):
     def acquire_operation_overlay(
         self,
         *,
-        request_id: str,
+        invocation_id: str,
         workspace_root: str | None = None,
     ) -> "_OverlayHandle":
         handle = _OverlayHandle(
-            request_id=request_id,
+            invocation_id=invocation_id,
             workspace_root=workspace_root or self.workspace_root,
             manifest_key=self.manifest_key,
         )
@@ -74,11 +74,11 @@ class _OverlayHandle:
     def __init__(
         self,
         *,
-        request_id: str,
+        invocation_id: str,
         workspace_root: str,
         manifest_key: str,
     ) -> None:
-        self.request_id = request_id
+        self.invocation_id = invocation_id
         self.workspace_root = workspace_root
         self.manifest_key = manifest_key
         self.manifest_version = int(manifest_key.rsplit("@", 1)[-1])
@@ -417,13 +417,13 @@ async def test_pyright_session_refresh_remounts_private_namespace(
     old_module.write_text("value = 1\n", encoding="utf-8")
     new_module.write_text("value = 2\n", encoding="utf-8")
     old_handle = _OverlayHandle(
-        request_id="lsp-session:hover",
+        invocation_id="lsp-session:hover",
         workspace_root="/testbed",
         manifest_key="hash-a@1",
     )
     old_handle.layer_paths = (old_layer.as_posix(),)
     new_handle = _OverlayHandle(
-        request_id="lsp-session:hover",
+        invocation_id="lsp-session:hover",
         workspace_root="/testbed",
         manifest_key="hash-b@2",
     )

@@ -49,10 +49,10 @@ class _OperationOverlay(_Overlay):
     def acquire_operation_overlay(
         self,
         *,
-        request_id: str,
+        invocation_id: str,
         workspace_root: str | None = None,
     ) -> SimpleNamespace:
-        del request_id, workspace_root
+        del invocation_id, workspace_root
         run_dir = self.scratch_root / "run"
         upperdir = run_dir / "upper"
         workdir = run_dir / "work"

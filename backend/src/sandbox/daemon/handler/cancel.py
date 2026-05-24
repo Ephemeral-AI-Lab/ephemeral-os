@@ -33,11 +33,7 @@ async def cancel(args: dict[str, Any]) -> dict[str, object]:
 async def heartbeat(args: dict[str, Any]) -> dict[str, object]:
     raw_ids = args.get("invocation_ids") or []
     invocation_ids = [str(value) for value in raw_ids] if isinstance(raw_ids, list) else []
-    touched = get_in_flight_registry().heartbeat(
-        invocation_ids,
-        engine_process_id=str(args.get("engine_process_id") or ""),
-        engine_started_at=_optional_float(args.get("engine_started_at")),
-    )
+    touched = get_in_flight_registry().heartbeat(invocation_ids)
     return {"success": True, "touched": touched}
 
 
@@ -45,15 +41,6 @@ async def inflight_count(args: dict[str, Any]) -> dict[str, object]:
     agent_id = str(args.get("agent_id") or "").strip()
     count = get_in_flight_registry().count_by_agent(agent_id)
     return {"success": True, "agent_id": agent_id, "count": count}
-
-
-def _optional_float(raw: object) -> float | None:
-    if raw is None:
-        return None
-    try:
-        return float(str(raw))
-    except (TypeError, ValueError):
-        return None
 
 
 __all__ = ["cancel", "heartbeat", "inflight_count"]

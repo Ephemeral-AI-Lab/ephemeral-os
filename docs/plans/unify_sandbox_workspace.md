@@ -49,7 +49,7 @@ Every tool call in both modes flows through the same kernel-overlay path. There 
 - **Isolated background** runs against the session overlay; no per-job overlay, no commit. Coroutine completion does not destroy the session overlay (only `exit` does).
 - **Cross-mode rejection (Q4) and iws-exit drain** move to the engine layer — `BackgroundTaskManager.count_by_agent` and `cancel_by_agent`. The pipeline has no agent-scoped registry to consult; the engine is the single source of truth.
 - **Terminal-status precedence (`completed > failed > cancelled > running`)** preserved at the engine layer (`engine/background/manager.py:32-38`); a shell that exits between cancel-signal and cancel-landing returns COMPLETED with the real result, not CANCELLED.
-- **Orphan cleanup on engine death** preserved via `InFlightInvocationRegistry`'s TTL reaper + engine-heartbeat (`api.v1.heartbeat` carrying `engine_process_id` for immediate orphan reap on engine restart).
+- **Orphan cleanup on engine death** preserved via `InFlightInvocationRegistry`'s TTL reaper plus batched `api.v1.heartbeat(invocation_ids=[...])` liveness refresh. New engines also consult daemon `api.v1.inflight_count(agent_id)` during Q4 checks, so stale daemon-visible work blocks isolated-workspace entry until it finishes or the TTL reaper cancels it.
 
 See Phase 2.5 §1 for the 5 NEW principles; §3 for the RALPLAN-DR option matrix; §5 for the module-level changes; §13 for the pre-mortem (envelope migration / cancel-ordering / multi-engine split-brain).
 

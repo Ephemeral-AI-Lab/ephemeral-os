@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -66,6 +68,40 @@ async def test_call_daemon_api_dispatches_without_bundle_probe(
             20,
         ),
     ]
+
+
+@pytest.mark.asyncio
+async def test_call_daemon_accepts_success_response_with_null_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_dispatch_once_with_retry(**_kwargs: object) -> Any:
+        return SimpleNamespace(
+            exit_code=0,
+            stdout=json.dumps(
+                {
+                    "success": True,
+                    "error": None,
+                    "timings": {},
+                }
+            ),
+            stderr="",
+        )
+
+    monkeypatch.setattr(
+        daemon_client_mod,
+        "_dispatch_once_with_retry",
+        fake_dispatch_once_with_retry,
+    )
+
+    response = await daemon_client_mod._call_daemon(
+        exec_fn=_Adapter().exec,
+        sandbox_id="sb-1",
+        op="api.v1.shell",
+        args={"invocation_id": "invocation-1"},
+        timeout=10,
+    )
+
+    assert response == {"success": True, "error": None, "timings": {}}
 
 
 @pytest.mark.asyncio
