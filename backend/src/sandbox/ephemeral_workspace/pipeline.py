@@ -11,7 +11,6 @@ from typing import AsyncIterator
 
 from sandbox._shared.models import Intent, ToolCallRequest, ToolCallResult
 from sandbox.ephemeral_workspace._manager import (
-    _OVERLAYS,
     clear_overlay_manager_for_tests,
     get_sandbox_overlay,
     stop_all_overlays,
@@ -25,7 +24,6 @@ from sandbox.ephemeral_workspace._types import (
     _OverlaySnapshot,
 )
 from sandbox.ephemeral_workspace._utils import (
-    _drop_transient_lowerdir,
     foreign_watch_interval_s,
     runtime_key,
 )
@@ -347,8 +345,6 @@ __all__ = [
     "OperationOverlayHandle",
     "EphemeralPipeline",
     "OverlayLayerStackClient",
-    "_OVERLAYS",
-    "_drop_transient_lowerdir",
     "clear_overlay_manager_for_tests",
     "get_sandbox_overlay",
     "stop_all_overlays",

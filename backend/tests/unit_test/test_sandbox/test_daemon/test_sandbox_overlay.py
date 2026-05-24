@@ -257,7 +257,7 @@ async def test_manager_stop_unmounts_requested_and_bound_workspace_roots(
 
     overlay_mod.clear_overlay_manager_for_tests()
     key = f"{stack_root.resolve(strict=False).as_posix()}\0{bound_workspace.as_posix()}"
-    overlay_mod._OVERLAYS[key] = _CachedOverlay()  # type: ignore[assignment]  # noqa: SLF001
+    overlay_manager._OVERLAYS[key] = _CachedOverlay()  # type: ignore[assignment]  # noqa: SLF001
     monkeypatch.setattr(overlay_manager, "umount", lambda path: unmounts.append(path))
 
     result = await overlay_mod.stop_sandbox_overlay(
@@ -268,7 +268,7 @@ async def test_manager_stop_unmounts_requested_and_bound_workspace_roots(
     assert result["success"] is True
     assert stopped == ["cached"]
     assert unmounts == [requested_workspace, bound_workspace]
-    assert not overlay_mod._OVERLAYS  # noqa: SLF001
+    assert not overlay_manager._OVERLAYS  # noqa: SLF001
 
 
 @pytest.mark.asyncio

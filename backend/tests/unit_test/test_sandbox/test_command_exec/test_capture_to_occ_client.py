@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sandbox.ephemeral_workspace.pipeline import _drop_transient_lowerdir
+from sandbox.ephemeral_workspace._utils import _drop_transient_lowerdir
 from sandbox.layer_stack.paths import TRANSIENT_LOWERDIR_DIR
 
 

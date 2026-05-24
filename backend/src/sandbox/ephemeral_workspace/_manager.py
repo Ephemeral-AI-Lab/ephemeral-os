@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections import OrderedDict
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
 
 from sandbox.daemon.occ_backend import build_occ_backend
 from sandbox.layer_stack.workspace_binding import (
@@ -16,8 +16,11 @@ from sandbox.layer_stack.workspace_binding import (
 from sandbox.overlay.capability import new_mount_api_supported
 from sandbox.overlay.kernel_mount import umount
 
+if TYPE_CHECKING:
+    from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
+
 _MAX_OVERLAYS = 256
-_OVERLAYS: OrderedDict[str, Any] = OrderedDict()
+_OVERLAYS: OrderedDict[str, EphemeralPipeline] = OrderedDict()
 _LOCKS: dict[str, asyncio.Lock] = {}
 
 
@@ -26,7 +29,7 @@ async def get_sandbox_overlay(
     *,
     workspace_root: str | Path | None = None,
     start: bool = True,
-) -> Any:
+) -> EphemeralPipeline:
     """Return the daemon-owned pipeline for a bound workspace."""
     key_root = Path(layer_stack_root).resolve(strict=False)
     binding = require_workspace_binding(key_root)
@@ -143,7 +146,6 @@ def clear_overlay_manager_for_tests() -> None:
 
 
 __all__ = [
-    "_OVERLAYS",
     "clear_overlay_manager_for_tests",
     "get_sandbox_overlay",
     "stop_all_overlays",
