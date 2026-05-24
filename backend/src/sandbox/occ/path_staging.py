@@ -51,7 +51,7 @@ def _with_timings(result: FileResult, timings: dict[str, float]) -> FileResult:
     )
 
 
-def apply_edit_content(
+def _apply_edit_content(
     path: str,
     content: bytes,
     change: EditChange,
@@ -255,7 +255,7 @@ class _PathGroupStager:
                     status=self._profile.missing_file_status,
                     message="file does not exist",
                 )
-            edit_result = apply_edit_content(path, state.materialize_content(), change)
+            edit_result = _apply_edit_content(path, state.materialize_content(), change)
             if isinstance(edit_result, FileResult):
                 return edit_result
             state.content = edit_result

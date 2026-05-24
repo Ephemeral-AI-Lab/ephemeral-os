@@ -1,7 +1,7 @@
 """Post-publish OCC maintenance policies."""
 
 from __future__ import annotations
-from typing import Protocol, runtime_checkable
+from typing import Protocol
 
 from sandbox.layer_stack.manifest import Manifest
 from sandbox.occ.changeset import ChangesetResult
@@ -16,7 +16,6 @@ class MaintenancePolicy(Protocol):
     def after_publish_sync(self, result: ChangesetResult) -> dict[str, float]: ...
 
 
-@runtime_checkable
 class SquashPort(Protocol):
     """Layer-stack maintenance capability consumed by auto-squash."""
 

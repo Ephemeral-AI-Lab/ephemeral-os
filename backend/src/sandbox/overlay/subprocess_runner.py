@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import resource
 import signal
 import subprocess
 import threading
@@ -113,7 +112,7 @@ def subprocess_to_refs(
                 pass
         try:
             try:
-                return _wait_with_cancel(
+                return wait_for_process_with_cancel(
                     proc,
                     timeout_seconds=timeout_seconds,
                     cancel_event=cancel_event,
@@ -185,9 +184,6 @@ def wait_for_process_with_cancel(
         cancel_event.wait(timeout=_CANCEL_POLL_INTERVAL_S)
 
 
-_wait_with_cancel = wait_for_process_with_cancel
-
-
 def run_command_to_refs(
     *,
     command: Sequence[str],
@@ -220,23 +216,6 @@ def run_command_to_refs(
     )
 
 
-def child_cpu_times() -> tuple[float, float]:
-    """Return cumulative user/system CPU seconds for waited child processes."""
-    usage = resource.getrusage(resource.RUSAGE_CHILDREN)
-    return (float(usage.ru_utime), float(usage.ru_stime))
-
-
-def record_child_cpu_delta(
-    timings: dict[str, float],
-    start: tuple[float, float],
-) -> None:
-    """Record child process CPU consumed since *start* into shell timing keys."""
-    end_user, end_system = child_cpu_times()
-    start_user, start_system = start
-    timings["cmd.exec.user_s"] = max(0.0, end_user - start_user)
-    timings["cmd.exec.system_s"] = max(0.0, end_system - start_system)
-
-
 def _relative_to_declared_workspace(candidate: Path, declared_root: Path) -> Path:
     candidate_text = os.path.normpath(candidate.as_posix())
     root_text = os.path.normpath(declared_root.as_posix())
@@ -246,8 +225,6 @@ def _relative_to_declared_workspace(candidate: Path, declared_root: Path) -> Pat
 
 
 __all__ = [
-    "child_cpu_times",
-    "record_child_cpu_delta",
     "resolve_workspace_cwd",
     "run_command_to_refs",
     "subprocess_to_refs",

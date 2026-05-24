@@ -18,10 +18,8 @@ async def create(
     *,
     agent_id: str,
     workspace_root: str = "/testbed",
-    network: object | None = None,
 ) -> OverlayHandle:
     """Lease a snapshot and allocate upper/work dirs for a workspace overlay."""
-    del network
     invocation_id = f"overlay:{agent_id}:{uuid4().hex[:8]}"
     scratch_root = command_exec_scratch_root(layer_stack.storage_root)
     run_dir = scratch_root / "runtime" / "overlay" / invocation_id.replace(":", "-")

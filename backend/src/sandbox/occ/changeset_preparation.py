@@ -81,7 +81,7 @@ class ChangesetPreparer:
             OrderedDict()
         )
         for change in changes:
-            route, path, message, _ = self._route_change_timed(change, snapshot=snapshot)
+            route, path, message = self._route_change(change, snapshot=snapshot)
             key = (route, path)
             if key not in grouped:
                 grouped[key] = ([], message)
@@ -91,34 +91,31 @@ class ChangesetPreparer:
             for (route, path), (path_changes, message) in grouped.items()
         ]
 
-    def _route_change_timed(
+    def _route_change(
         self,
         change: Change,
         *,
         snapshot: Manifest | None,
-    ) -> tuple[RouteDecision, str, str | None, float]:
+    ) -> tuple[RouteDecision, str, str | None]:
         try:
             path = normalize_layer_path(change.path)
         except ValueError as exc:
-            return RouteDecision.REJECT, str(change.path), str(exc), 0.0
+            return RouteDecision.REJECT, str(change.path), str(exc)
 
         if path == ".git" or path.startswith(".git/"):
             return (
                 RouteDecision.DROP,
                 path,
                 ".git paths are not mutable through OCC",
-                0.0,
             )
 
-        gitignore_start = monotonic_now()
         if self._is_gitignored(path, snapshot):
             return (
                 RouteDecision.DIRECT,
                 path,
                 None,
-                monotonic_now() - gitignore_start,
             )
-        return RouteDecision.GATED, path, None, monotonic_now() - gitignore_start
+        return RouteDecision.GATED, path, None
 
     def _is_gitignored(self, path: str, snapshot: Manifest | None) -> bool:
         if snapshot is None:
