@@ -10,7 +10,9 @@ from typing import Callable
 import pytest
 
 from sandbox._shared.models import Intent, ToolCallRequest
+from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
 from sandbox.overlay import namespace_runner as namespace_mod
+from sandbox.occ.changeset import ChangesetResult
 from sandbox.overlay.handle import OverlayHandle
 
 
@@ -72,3 +74,100 @@ async def test_run_in_namespace_signals_shell_cancellation(
         await task
 
     assert saw_cancel.is_set()
+
+
+async def test_namespace_runner_cancel_kills_child_and_discards_upperdir(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    started = threading.Event()
+    saw_cancel = threading.Event()
+    releases: list[str] = []
+
+    class _Manifest:
+        version = 1
+        layers = ()
+
+    class _Snapshot:
+        lease_id = "lease-1"
+        manifest_version = 1
+        root_hash = "root"
+        manifest = _Manifest()
+        layer_paths = ((tmp_path / "lower").as_posix(),)
+
+    class _LayerStack:
+        def prepare_workspace_snapshot(self, *, request_id: str) -> _Snapshot:
+            assert request_id.startswith("overlay:agent-a:")
+            return _Snapshot()
+
+        def release_lease(self, *, lease_id: str) -> bool:
+            releases.append(lease_id)
+            return True
+
+        def read_active_manifest(self) -> _Manifest:
+            return _Manifest()
+
+    class _Occ:
+        async def apply_changeset(self, *args, **kwargs):
+            raise AssertionError("cancelled namespace run must not publish")
+
+        async def run_maintenance_after_publish(self, *args, **kwargs):
+            return {}
+
+    def fake_child(
+        *,
+        payload_ref: Path,
+        stdout_ref: Path,
+        stderr_ref: Path,
+        timeout: float | None,
+        cancel_event: threading.Event | None,
+        pid_recorder: Callable[[int], None] | None,
+    ) -> int:
+        del payload_ref, stdout_ref, stderr_ref, timeout
+        assert cancel_event is not None
+        if pid_recorder is not None:
+            pid_recorder(99999999)
+        started.set()
+        if cancel_event.wait(timeout=2):
+            saw_cancel.set()
+        return -15
+
+    async def fail_capture(*_args, **_kwargs) -> ChangesetResult:
+        raise AssertionError("cancelled namespace run must not capture upperdir")
+
+    monkeypatch.setattr(namespace_mod, "_run_namespace_entrypoint", fake_child)
+    monkeypatch.setattr(
+        "sandbox.overlay.lifecycle.overlay_writable_root",
+        lambda: tmp_path / "writable",
+    )
+    monkeypatch.setattr(
+        "sandbox.ephemeral_workspace.pipeline.overlay_writable_root",
+        lambda: tmp_path / "writable",
+    )
+    monkeypatch.setattr(
+        "sandbox.ephemeral_workspace.pipeline.overlay_lifecycle.capture_changes",
+        fail_capture,
+    )
+    pipeline = EphemeralPipeline(
+        occ_client=_Occ(),
+        workspace_ref=tmp_path.as_posix(),
+        layer_stack=_LayerStack(),
+    )
+    req = ToolCallRequest(
+        invocation_id="req-1",
+        agent_id="agent-a",
+        verb="shell",
+        intent=Intent.WRITE_ALLOWED,
+        args={"command": "sleep 60", "cwd": ".", "timeout_seconds": 60},
+    )
+
+    task = asyncio.create_task(pipeline.run_tool_call(req))
+    await asyncio.to_thread(started.wait, 2)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    assert saw_cancel.is_set()
+    assert releases == ["lease-1"]
+    overlay_root = tmp_path / "writable" / "runtime" / "overlay"
+    assert not overlay_root.exists() or list(overlay_root.iterdir()) == []

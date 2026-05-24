@@ -10,6 +10,7 @@ import pytest
 
 import sandbox.overlay.capture as upperdir_mod
 from sandbox.layer_stack.layer_index import OPAQUE_MARKER, WHITEOUT_PREFIX
+from sandbox.occ.overlay_change_conversion import overlay_path_changes_to_occ_changes
 from sandbox.overlay.capture import walk_upperdir
 
 
@@ -54,3 +55,28 @@ def test_opaque_dir_marker_and_xattr_emit_once(
     assert [(change.path, change.kind) for change in changes] == [
         ("pkg", "opaque_dir")
     ]
+
+
+def test_capture_changes_preserves_source_tags(tmp_path: Path) -> None:
+    upper = tmp_path / "upper"
+    upper.mkdir()
+    (upper / "app.py").write_text("new\n", encoding="utf-8")
+    (upper / f"{WHITEOUT_PREFIX}old.py").write_text("", encoding="utf-8")
+    (upper / "pkg").mkdir()
+    (upper / "pkg" / OPAQUE_MARKER).write_text("", encoding="utf-8")
+    os.symlink("app.py", upper / "current")
+
+    path_changes = walk_upperdir(upper)
+
+    for source in ("api_write", "overlay_capture"):
+        occ_changes = overlay_path_changes_to_occ_changes(
+            path_changes,
+            source=source,
+        )
+        assert {change.source for change in occ_changes} == {source}
+        assert {change.path for change in occ_changes} == {
+            "app.py",
+            "old.py",
+            "pkg",
+            "current",
+        }

@@ -35,6 +35,23 @@ def test_pipeline_run_tool_call_has_no_background_registry_or_branch() -> None:
             assert name not in method_source
 
 
+def test_pipeline_body_has_no_background_branch() -> None:
+    for relpath, class_name in (
+        ("sandbox/ephemeral_workspace/pipeline.py", "EphemeralPipeline"),
+        ("sandbox/isolated_workspace/pipeline.py", "IsolatedPipeline"),
+    ):
+        source = (SRC_ROOT / relpath).read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        method_source = ast.get_source_segment(
+            source,
+            _method(tree, class_name, "run_tool_call"),
+        ) or ""
+
+        assert "background" not in method_source
+        assert "ShellJob" not in method_source
+        assert "_background_jobs" not in method_source
+
+
 def _method(tree: ast.Module, class_name: str, method_name: str) -> ast.AST:
     for node in tree.body:
         if isinstance(node, ast.ClassDef) and node.name == class_name:

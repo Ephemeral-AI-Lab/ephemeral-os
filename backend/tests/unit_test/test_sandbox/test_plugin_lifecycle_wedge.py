@@ -49,14 +49,17 @@ def _inject_runtime(plugin: str, op: str) -> types.ModuleType:
     controlled by monkeypatching ``handler_mod._warm_plugin_runtime`` in the
     test so we can deterministically fail-then-succeed.
     """
+    from sandbox._shared.models import Intent
+
     module_name = f"plugins.catalog.{plugin}.runtime.server"
     namespace: dict[str, object] = {
         "__name__": module_name,
         "register_plugin_op": register_plugin_op,
+        "Intent": Intent,
     }
     body = textwrap.dedent(
         f"""
-        @register_plugin_op({plugin!r}, {op!r})
+        @register_plugin_op({plugin!r}, {op!r}, intent=Intent.READ_ONLY)
         async def {op}(args):
             return {{"echo": args}}
         """

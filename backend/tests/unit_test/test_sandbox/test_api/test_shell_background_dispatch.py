@@ -70,6 +70,20 @@ async def test_background_shell_uses_single_rpc_with_background_metadata() -> No
     assert payload["background"] is True
 
 
+async def test_shell_background_uses_single_rpc_envelope() -> None:
+    transport = _StubTransport()
+
+    await shell_api(
+        "sandbox-1",
+        _request(background=True),
+        transport=transport,
+    )
+
+    assert [op for op, _ in transport.calls] == [DAEMON_OP_SHELL]
+    assert transport.calls[0][1]["invocation_id"] == "shell-invocation-test"
+    assert transport.calls[0][1]["background"] is True
+
+
 async def test_foreground_shell_uses_same_single_rpc() -> None:
     transport = _StubTransport()
     result = await shell_api(

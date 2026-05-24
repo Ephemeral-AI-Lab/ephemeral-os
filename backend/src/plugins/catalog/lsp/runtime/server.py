@@ -7,6 +7,7 @@ import os
 import time
 from typing import Any
 
+from sandbox._shared.models import Intent
 from sandbox.ephemeral_workspace.plugin.op_registry import register_plugin_op
 
 from plugins.catalog.lsp.runtime.apply import apply_workspace_edit
@@ -43,12 +44,12 @@ def _warm_start_timeout_s() -> float:
         return 8.0
 
 
-@register_plugin_op("lsp", "hover", auto_workspace_overlay=False)
+@register_plugin_op("lsp", "hover", intent=Intent.READ_ONLY, auto_workspace_overlay=False)
 async def hover(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     return await _run_timed_lsp_op("hover", ctx, lambda session: session.hover(args))
 
 
-@register_plugin_op("lsp", "find_definitions", auto_workspace_overlay=False)
+@register_plugin_op("lsp", "find_definitions", intent=Intent.READ_ONLY, auto_workspace_overlay=False)
 async def find_definitions(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     return await _run_timed_lsp_op(
         "find_definitions",
@@ -57,7 +58,7 @@ async def find_definitions(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     )
 
 
-@register_plugin_op("lsp", "find_references", auto_workspace_overlay=False)
+@register_plugin_op("lsp", "find_references", intent=Intent.READ_ONLY, auto_workspace_overlay=False)
 async def find_references(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     return await _run_timed_lsp_op(
         "find_references",
@@ -66,7 +67,7 @@ async def find_references(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     )
 
 
-@register_plugin_op("lsp", "diagnostics", auto_workspace_overlay=False)
+@register_plugin_op("lsp", "diagnostics", intent=Intent.READ_ONLY, auto_workspace_overlay=False)
 async def diagnostics(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     return await _run_timed_lsp_op(
         "diagnostics",
@@ -75,7 +76,7 @@ async def diagnostics(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     )
 
 
-@register_plugin_op("lsp", "query_symbols", auto_workspace_overlay=False)
+@register_plugin_op("lsp", "query_symbols", intent=Intent.READ_ONLY, auto_workspace_overlay=False)
 async def query_symbols(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     return await _run_timed_lsp_op(
         "query_symbols",
@@ -84,13 +85,13 @@ async def query_symbols(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     )
 
 
-@register_plugin_op("lsp", "apply_workspace_edit", auto_workspace_overlay=False)
+@register_plugin_op("lsp", "apply_workspace_edit", intent=Intent.WRITE_ALLOWED, auto_workspace_overlay=False)
 async def apply_workspace_edit_op(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     edit = args.get("edit") if isinstance(args.get("edit"), dict) else args
     return await apply_workspace_edit(edit, ctx)
 
 
-@register_plugin_op("lsp", "rename", auto_workspace_overlay=False)
+@register_plugin_op("lsp", "rename", intent=Intent.WRITE_ALLOWED, auto_workspace_overlay=False)
 async def rename(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     session = await get_session(ctx)
     edit = await session.rename(args)
@@ -103,7 +104,7 @@ async def rename(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     return {"edit": edit, "apply": result}
 
 
-@register_plugin_op("lsp", "format", auto_workspace_overlay=False)
+@register_plugin_op("lsp", "format", intent=Intent.WRITE_ALLOWED, auto_workspace_overlay=False)
 async def format_document(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     session = await get_session(ctx)
     edit = await session.format_document(args)
@@ -116,13 +117,13 @@ async def format_document(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     return {"edit": edit, "apply": result}
 
 
-@register_plugin_op("lsp", "code_actions", auto_workspace_overlay=False)
+@register_plugin_op("lsp", "code_actions", intent=Intent.READ_ONLY, auto_workspace_overlay=False)
 async def code_actions(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     session = await get_session(ctx)
     return await session.code_actions(args)
 
 
-@register_plugin_op("lsp", "apply_code_action", auto_workspace_overlay=False)
+@register_plugin_op("lsp", "apply_code_action", intent=Intent.WRITE_ALLOWED, auto_workspace_overlay=False)
 async def apply_code_action(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     action = args.get("action") if isinstance(args.get("action"), dict) else args
     edit = action.get("edit") if isinstance(action.get("edit"), dict) else {}

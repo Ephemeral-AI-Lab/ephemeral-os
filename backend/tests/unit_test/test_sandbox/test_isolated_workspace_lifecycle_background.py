@@ -104,6 +104,45 @@ async def test_exit_drains_background_tasks_before_pipeline_exit(
     assert result.phases_ms["evicted_background_tasks"] == 2.0
 
 
+async def test_exit_drains_agent_background_tasks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    order: list[str] = []
+    bg = _BackgroundManager()
+
+    async def _cancel_by_agent(agent_id: str, *, grace_s: float) -> int:
+        order.append(f"cancel:{agent_id}:{grace_s}")
+        return 1
+
+    async def _exit(agent_id: str, *, grace_s: float) -> dict[str, object]:
+        order.append(f"exit:{agent_id}:{grace_s}")
+        return {
+            "success": True,
+            "evicted_upperdir_bytes": 0,
+            "lifetime_s": 1.0,
+            "phases_ms": {},
+        }
+
+    bg.cancel_by_agent = _cancel_by_agent  # type: ignore[method-assign]
+    monkeypatch.setattr(
+        exit_module.iws_manager,
+        "require_pipeline",
+        lambda: SimpleNamespace(exit=_exit),
+    )
+
+    result = await exit_isolated_workspace(
+        ExitIsolatedWorkspaceRequest(
+            caller=SandboxCaller(agent_id="agent-a"),
+            grace_s=2.0,
+        ),
+        background_manager=bg,
+    )
+
+    assert result.success is True
+    assert order == ["cancel:agent-a:2.0", "exit:agent-a:0.0"]
+    assert result.phases_ms["evicted_background_tasks"] == 1.0
+
+
 async def test_enter_fails_closed_when_daemon_count_unavailable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

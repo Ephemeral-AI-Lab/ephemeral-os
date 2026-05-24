@@ -33,7 +33,7 @@ class _IsolatedLifecycleMixin:
                 if agent_id in self._by_agent:
                     existing = self._handles[self._by_agent[agent_id]]
                     raise IsolatedWorkspaceError(
-                        "isolated_workspace_already_open",
+                        "already_open",
                         "agent already has an open isolated workspace",
                         created_at=existing.created_at,
                         last_activity=existing.last_activity,
@@ -175,7 +175,11 @@ class _IsolatedLifecycleMixin:
             async with self._map_lock:
                 handle_id = self._by_agent.get(agent_id)
                 if handle_id is None:
-                    return {"success": True, "evicted_upperdir_bytes": 0}
+                    raise IsolatedWorkspaceError(
+                        "not_open",
+                        "agent has no open isolated workspace",
+                        agent_id=agent_id,
+                    )
                 handle = self._handles[handle_id]
                 handle.status = "exiting"
                 del self._by_agent[agent_id]

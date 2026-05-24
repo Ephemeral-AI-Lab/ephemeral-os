@@ -9,6 +9,7 @@ import pytest
 import sandbox.overlay.kernel_mount as km
 from sandbox.overlay.kernel_mount import (
     mount_overlay,
+    umount,
     validate_mount_inputs,
 )
 
@@ -122,6 +123,53 @@ def test_mount_overlay_propagates_fsopen_errno(
             workdir=Path("/scratch/work"),
         )
     assert exc_info.value is expected
+
+
+@pytest.mark.parametrize(
+    ("lazy", "raise_on_failure", "returncodes", "raises", "expected_calls"),
+    [
+        (False, False, [1], False, [("umount", "/workspace")]),
+        (True, False, [1, 0], False, [("umount", "/workspace"), ("umount", "-l", "/workspace")]),
+        (False, True, [1], True, [("umount", "/workspace")]),
+        (True, True, [1, 1], True, [("umount", "/workspace"), ("umount", "-l", "/workspace")]),
+    ],
+)
+def test_kernel_umount_lazy_raise_modes(
+    monkeypatch: pytest.MonkeyPatch,
+    lazy: bool,
+    raise_on_failure: bool,
+    returncodes: list[int],
+    raises: bool,
+    expected_calls: list[tuple[str, ...]],
+) -> None:
+    calls: list[tuple[str, ...]] = []
+
+    class _Result:
+        def __init__(self, returncode: int) -> None:
+            self.returncode = returncode
+
+    def fake_run(argv, **_kwargs):
+        calls.append(tuple(str(part) for part in argv))
+        return _Result(returncodes.pop(0))
+
+    monkeypatch.setattr(km, "_is_mountpoint", lambda path: True)
+    monkeypatch.setattr(km.subprocess, "run", fake_run)
+
+    if raises:
+        with pytest.raises(RuntimeError, match="failed to detach existing mount"):
+            umount(
+                Path("/workspace"),
+                lazy=lazy,
+                raise_on_failure=raise_on_failure,
+            )
+    else:
+        umount(
+            Path("/workspace"),
+            lazy=lazy,
+            raise_on_failure=raise_on_failure,
+        )
+
+    assert calls == expected_calls
 
 
 # ---------------------------------------------------------------------------

@@ -18,7 +18,7 @@ class _IsolatedQuotaMixin:
             required = (len(self._handles) + 1) * self._config.upperdir_bytes
             if required > budget:
                 raise IsolatedWorkspaceError(
-                    "host_capacity_exceeded",
+                    "host_ram_pressure",
                     "host RAM gate refuses new isolated workspace",
                     required_bytes=required, budget_bytes=budget,
                 )
