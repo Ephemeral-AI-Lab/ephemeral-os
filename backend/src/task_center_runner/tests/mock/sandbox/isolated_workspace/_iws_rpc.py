@@ -198,11 +198,50 @@ async def grep(
     pattern: str,
     *,
     path: str = "/testbed",
+    glob_filter: str | None = None,
+    include_pattern: str | None = None,
+    output_mode: str | None = None,
+    case_insensitive: bool | None = None,
+    line_numbers: bool | None = None,
+    multiline: bool | None = None,
+    timeout: int = DEFAULT_TIMEOUT_S,
+) -> dict[str, Any]:
+    args: dict[str, Any] = {
+        "agent_id": agent_id,
+        "pattern": pattern,
+        "path": path,
+    }
+    if glob_filter is not None:
+        args["glob_filter"] = glob_filter
+    if include_pattern is not None:
+        args["include_pattern"] = include_pattern
+    if output_mode is not None:
+        args["output_mode"] = output_mode
+    if case_insensitive is not None:
+        args["case_insensitive"] = case_insensitive
+    if line_numbers is not None:
+        args["line_numbers"] = line_numbers
+    if multiline is not None:
+        args["multiline"] = multiline
+    return await call_daemon_api(
+        sandbox_id,
+        "api.v1.grep",
+        args,
+        timeout=timeout,
+    )
+
+
+async def glob(
+    sandbox_id: str,
+    agent_id: str,
+    pattern: str,
+    *,
+    path: str = "/testbed",
     timeout: int = DEFAULT_TIMEOUT_S,
 ) -> dict[str, Any]:
     return await call_daemon_api(
         sandbox_id,
-        "api.v1.grep",
+        "api.v1.glob",
         {"agent_id": agent_id, "pattern": pattern, "path": path},
         timeout=timeout,
     )
@@ -214,6 +253,7 @@ __all__ = [
     "edit_file",
     "enter",
     "exit_",
+    "glob",
     "grep",
     "list_open",
     "read_file",

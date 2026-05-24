@@ -70,10 +70,6 @@ async def dispatch_envelope_async(
     if validation_error is not None:
         return validation_error
 
-    handler = OP_TABLE.get(op)
-    if handler is None:
-        return _error("unknown_op", f"unknown op: {op}", {"op": op})
-
     registry = get_in_flight_registry()
     task = asyncio.current_task()
     if task is not None:
@@ -88,6 +84,9 @@ async def dispatch_envelope_async(
         plugin_block = _check_plugin_block(args_raw, op)
         if plugin_block is not None:
             return plugin_block
+        handler = OP_TABLE.get(op)
+        if handler is None:
+            return _error("unknown_op", f"unknown op: {op}", {"op": op})
         result = handler(dict(args_raw))
         if inspect.isawaitable(result):
             result = await result

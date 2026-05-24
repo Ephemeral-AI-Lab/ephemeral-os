@@ -158,7 +158,7 @@ async def test_daemon_tcp_endpoint_falls_back_to_thin_client_on_connect_failure(
     assert "thin_client.py" in seen_exec[0]
 
 
-async def test_daemon_tcp_empty_response_is_connect_failure(
+async def test_daemon_tcp_empty_response_is_io_failure(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     async def fake_inner(
@@ -177,8 +177,65 @@ async def test_daemon_tcp_empty_response_is_connect_failure(
 
     result = await command._call_tcp_daemon(endpoint, "{}", timeout=1)
 
-    assert result.exit_code == command._THIN_CLIENT_CONNECT_FAILED
-    assert result.stderr == "EOS_DAEMON_CONNECT_FAILED:empty_response"
+    assert result.exit_code == command._THIN_CLIENT_IO_FAILED
+    assert result.stderr == "EOS_DAEMON_IO_FAILED:empty_response"
+
+
+async def test_daemon_empty_response_retries_lifecycle_op() -> None:
+    seen: list[str] = []
+    responses: list[Any] = [
+        SimpleNamespace(
+            stdout="",
+            stderr="EOS_DAEMON_IO_FAILED:empty_response",
+            exit_code=command._THIN_CLIENT_IO_FAILED,
+        ),
+        SimpleNamespace(stdout="", stderr="", exit_code=0),
+        SimpleNamespace(stdout=_ready_response(), stderr="", exit_code=0),
+        SimpleNamespace(stdout=_ok_response(), stderr="", exit_code=0),
+    ]
+
+    async def fake_exec(_sandbox_id: str, command_str: str, **_: Any) -> Any:
+        seen.append(command_str)
+        return responses.pop(0)
+
+    response = await command._call_daemon(
+        exec_fn=fake_exec,
+        sandbox_id="sb-1",
+        op="api.isolated_workspace.enter",
+        args={"layer_stack_root": "/tmp/layers", "agent_id": "agent"},
+    )
+
+    assert response == {"success": True, "timings": {}}
+    assert len(seen) == 4
+    assert "sandbox.daemon" in seen[1]
+    assert "api.runtime.ready" in seen[2]
+
+
+async def test_daemon_empty_response_does_not_replay_shell() -> None:
+    seen: list[str] = []
+
+    async def fake_exec(_sandbox_id: str, command_str: str, **_: Any) -> Any:
+        seen.append(command_str)
+        return SimpleNamespace(
+            stdout="",
+            stderr="EOS_DAEMON_IO_FAILED:empty_response",
+            exit_code=command._THIN_CLIENT_IO_FAILED,
+        )
+
+    with pytest.raises(command._DaemonDispatchError) as raised:
+        await command._call_daemon(
+            exec_fn=fake_exec,
+            sandbox_id="sb-1",
+            op="api.v1.shell",
+            args={
+                "layer_stack_root": "/tmp/layers",
+                "agent_id": "agent",
+                "command": "echo unsafe",
+            },
+        )
+
+    assert raised.value.kind == "RuntimeExecFailed"
+    assert len(seen) == 1
 
 
 def test_daemon_commands_do_not_forward_host_env(

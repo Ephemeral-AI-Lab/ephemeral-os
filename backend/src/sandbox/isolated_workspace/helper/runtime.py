@@ -197,28 +197,30 @@ class _LinuxRuntime:
         path.mkdir(parents=True, exist_ok=True)
         return path
     def kill_holder(self, root_pid: int, *, grace_s: float) -> None:
+        proc = self._holders.pop(root_pid, None)
+        grandchild = self._grandchildren.pop(root_pid, None)
+        graceful_pid = grandchild if grandchild is not None else root_pid
         with contextlib.suppress(ProcessLookupError, PermissionError):
-            os.kill(root_pid, signal.SIGTERM)
-        died = False
-        deadline = time.monotonic() + grace_s
-        while time.monotonic() < deadline:
-            try:
-                os.kill(root_pid, 0)
-            except ProcessLookupError:
-                died = True
-                break
-            time.sleep(0.05)
+            os.kill(graceful_pid, signal.SIGTERM)
+        if proc is not None:
+            died = self._wait_tracked_holder(proc, timeout_s=grace_s)
+        else:
+            died = self._wait_untracked_holder(root_pid, timeout_s=grace_s)
         if not died:
+            if grandchild is not None:
+                with contextlib.suppress(ProcessLookupError, PermissionError):
+                    os.kill(grandchild, signal.SIGKILL)
             with contextlib.suppress(ProcessLookupError, PermissionError):
                 os.kill(root_pid, signal.SIGKILL)
-        proc = self._holders.pop(root_pid, None)
-        if proc is not None:
-            with contextlib.suppress(subprocess.TimeoutExpired, OSError):
-                proc.wait(timeout=2.0)
-        else:
+            if proc is not None:
+                with contextlib.suppress(subprocess.TimeoutExpired, OSError):
+                    proc.wait(timeout=2.0)
+            else:
+                with contextlib.suppress(ChildProcessError, OSError):
+                    os.waitpid(root_pid, os.WNOHANG)
+        elif proc is None:
             with contextlib.suppress(ChildProcessError, OSError):
                 os.waitpid(root_pid, os.WNOHANG)
-        grandchild = self._grandchildren.pop(root_pid, None)
         if grandchild is not None:
             with contextlib.suppress(ChildProcessError, OSError):
                 _wait_pid_with_timeout(grandchild, timeout_s=2.0)
@@ -227,6 +229,28 @@ class _LinuxRuntime:
                 reaped_pid, _status = os.waitpid(-1, os.WNOHANG)
                 if reaped_pid == 0:
                     break
+    def _wait_tracked_holder(
+        self,
+        proc: subprocess.Popen[bytes],
+        *,
+        timeout_s: float,
+    ) -> bool:
+        try:
+            proc.wait(timeout=max(0.0, timeout_s))
+            return True
+        except subprocess.TimeoutExpired:
+            return False
+        except OSError:
+            return True
+    def _wait_untracked_holder(self, root_pid: int, *, timeout_s: float) -> bool:
+        deadline = time.monotonic() + timeout_s
+        while time.monotonic() < deadline:
+            try:
+                os.kill(root_pid, 0)
+            except ProcessLookupError:
+                return True
+            time.sleep(0.05)
+        return False
     def run_in_handle(
         self,
         handle: IsolatedWorkspaceHandle,

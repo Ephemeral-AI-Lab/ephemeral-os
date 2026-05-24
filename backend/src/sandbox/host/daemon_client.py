@@ -36,6 +36,7 @@ _DAEMON_ENV = DAEMON_ENV_SIGNATURE_PATH
 _PYTHON_CANDIDATES = ("python3.13", "python3.12", "python3.11", "python3.10", "python3")
 _THIN_CLIENT_CONNECT_FAILED = 97
 _THIN_CLIENT_IO_FAILED = 98
+_EMPTY_RESPONSE_MESSAGE = "EOS_DAEMON_IO_FAILED:empty_response"
 _DAEMON_SPAWN_TIMEOUT = 20
 # Bounded retry on CONNECT_FAILED: under parallel agent load the daemon's
 # accept queue can transiently refuse new connections immediately after spawn.
@@ -296,7 +297,9 @@ async def _dispatch_once_with_retry(
         timeout=timeout,
         tcp_endpoint=tcp_endpoint,
     )
-    if _exit_code(result) != _THIN_CLIENT_CONNECT_FAILED:
+    if _exit_code(result) != _THIN_CLIENT_CONNECT_FAILED and not (
+        _is_empty_response(result) and _can_retry_empty_response(op)
+    ):
         return result
 
     spawn_result = await exec_fn(
@@ -469,9 +472,9 @@ async def _call_tcp_daemon(
         if not stdout.strip():
             return RawExecResult(
                 success=False,
-                exit_code=_THIN_CLIENT_CONNECT_FAILED,
+                exit_code=_THIN_CLIENT_IO_FAILED,
                 stdout="",
-                stderr="EOS_DAEMON_CONNECT_FAILED:empty_response",
+                stderr=_EMPTY_RESPONSE_MESSAGE,
             )
     except _TcpConnectFailed as exc:
         cause = exc.__cause__ or exc
@@ -559,6 +562,31 @@ def _is_bootstrap_ready_response(
         for name, probe in by_name.items()
         if name != "control_plane"
     )
+
+
+def _is_empty_response(result: Any) -> bool:
+    return (
+        _exit_code(result) == _THIN_CLIENT_IO_FAILED
+        and str(getattr(result, "stderr", "")) == _EMPTY_RESPONSE_MESSAGE
+    )
+
+
+def _can_retry_empty_response(op: str) -> bool:
+    """Retry only operations that cannot publish or mutate workspace content.
+
+    Empty TCP output means the request reached a daemon process and then the
+    process died or closed before returning a response. Replaying shell/write
+    payloads after a daemon respawn can convert an isolated in-flight call into
+    a default-mode publish, so mutation tools must fail closed. Lifecycle and
+    control-plane calls still need retry to recover a stale daemon during setup.
+    """
+    return op not in {
+        "api.edit_file",
+        "api.v1.edit_file",
+        "api.write_file",
+        "api.v1.write_file",
+        "api.v1.shell",
+    } and not op.startswith("plugin.")
 
 
 def _daemon_thin_client_command(raw_payload: str) -> str:
