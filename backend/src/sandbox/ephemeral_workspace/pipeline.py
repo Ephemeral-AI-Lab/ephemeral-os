@@ -9,22 +9,22 @@ from pathlib import Path
 import shutil
 from typing import AsyncIterator
 
+from sandbox._shared.layer_stack_port import LayerStackPort
 from sandbox._shared.lease_guard import LeaseGuard
 from sandbox._shared.models import Intent, ToolCallRequest, ToolCallResult
-from sandbox.ephemeral_workspace._manager import (
+from sandbox.ephemeral_workspace.helper.manager import (
     clear_overlay_manager_for_tests,
     get_sandbox_overlay,
     stop_all_overlays,
     stop_sandbox_overlay,
 )
-from sandbox.ephemeral_workspace._operation import EphemeralOperationMixin
-from sandbox.ephemeral_workspace._publishing import EphemeralPublishMixin
-from sandbox.ephemeral_workspace._types import (
+from sandbox.ephemeral_workspace.helper.operation import EphemeralOperationMixin
+from sandbox.ephemeral_workspace.helper.publishing import EphemeralPublishMixin
+from sandbox.ephemeral_workspace.helper.types import (
     OperationOverlayHandle,
-    OverlayLayerStackClient,
     _OverlaySnapshot,
 )
-from sandbox.ephemeral_workspace._utils import (
+from sandbox.ephemeral_workspace.helper.utils import (
     foreign_watch_interval_s,
     runtime_key,
 )
@@ -64,7 +64,7 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
         *,
         occ_client: OCCMutationClient,
         workspace_ref: str,
-        layer_stack: OverlayLayerStackClient | None = None,
+        layer_stack: LayerStackPort | None = None,
         workspace_root: str = "/testbed",
         event_bus: EphemeralPipelineEventBus | None = None,
     ) -> None:
@@ -347,7 +347,7 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
 __all__ = [
     "OperationOverlayHandle",
     "EphemeralPipeline",
-    "OverlayLayerStackClient",
+    "LayerStackPort",
     "clear_overlay_manager_for_tests",
     "get_sandbox_overlay",
     "stop_all_overlays",

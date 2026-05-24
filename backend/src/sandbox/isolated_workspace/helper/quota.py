@@ -5,7 +5,11 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from sandbox.isolated_workspace._types import SCHEMA_VERSION, IsolatedWorkspaceError, logger
+from sandbox.isolated_workspace.helper.types import (
+    SCHEMA_VERSION,
+    IsolatedWorkspaceError,
+    logger,
+)
 
 
 class _IsolatedQuotaMixin:

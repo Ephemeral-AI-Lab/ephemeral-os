@@ -21,10 +21,18 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _IWS_ROOT = _PROJECT_ROOT / "backend" / "src" / "sandbox" / "isolated_workspace"
 
 
+# Forbidden symbols + modules that would re-open the OCC publish path.
+# ``sandbox.occ.layer_stack_client`` is intentionally allowed — it is a pure
+# layer-stack adapter (no mutation surface) that iws binds at bootstrap to
+# satisfy the unified ``LayerStackPort`` contract. The mutation modules
+# below ARE the publish surface and are what we want to keep out.
 _FORBIDDEN_TOKENS = (
     "OCCMutationClient",
-    "from sandbox.occ",
-    "import sandbox.occ",
+    "apply_changeset",
+    "sandbox.occ.changeset",
+    "sandbox.occ.maintenance",
+    "sandbox.occ.publish",
+    "sandbox.occ.ports",
 )
 
 

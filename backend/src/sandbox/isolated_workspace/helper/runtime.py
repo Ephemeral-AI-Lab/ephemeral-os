@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from sandbox.isolated_workspace._types import (
+from sandbox.isolated_workspace.helper.types import (
     CGROUP_ROOT,
     HANDLE_PREFIX,
     IsolatedWorkspaceError,

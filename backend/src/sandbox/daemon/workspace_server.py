@@ -141,7 +141,7 @@ def prepare_workspace_snapshot(
     )
 
 
-def release_workspace_snapshot(
+def release_lease(
     layer_stack_root: str | Path,
     *,
     lease_id: str,
@@ -171,5 +171,5 @@ __all__ = [
     "fence_stale_staging",
     "get_layer_stack_manager",
     "prepare_workspace_snapshot",
-    "release_workspace_snapshot",
+    "release_lease",
 ]

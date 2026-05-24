@@ -17,10 +17,11 @@ from typing import TYPE_CHECKING, Any
 
 from audit.jsonl import append_jsonl_event
 from sandbox.daemon import workspace_server
-from sandbox.isolated_workspace._types import (
+from sandbox.isolated_workspace.helper.types import (
     AuditSink,
     IsolatedWorkspaceError,
 )
+from sandbox.occ.layer_stack_client import LayerStackClient
 from sandbox.overlay.writable_dirs import overlay_writable_root
 
 if TYPE_CHECKING:
@@ -55,30 +56,6 @@ def require_arg(args: dict[str, Any], key: str) -> str:
     if not value:
         raise IsolatedWorkspaceError("invalid_argument", f"{key} is required", key=key)
     return value
-
-
-class _LayerStackAdapter:
-    """Adapter from ``workspace_server`` to the pipeline's ``LayerStackPort``.
-
-    Carries per-call ``layer_stack_root`` because the legacy
-    ``workspace_server`` functions take it positionally; the iws pipeline
-    binds ``layer_stack_root`` at construction and forwards it on each call.
-    """
-
-    @staticmethod
-    def prepare_workspace_snapshot(
-        layer_stack_root: str, *, owner_request_id: str,
-    ) -> Any:
-        return workspace_server.prepare_workspace_snapshot(
-            layer_stack_root,
-            owner_request_id=owner_request_id,
-        )
-
-    @staticmethod
-    def release_workspace_snapshot(layer_stack_root: str, *, lease_id: str) -> bool:
-        return workspace_server.release_workspace_snapshot(
-            layer_stack_root, lease_id=lease_id,
-        )
 
 
 class _JsonlAuditSink:
@@ -129,10 +106,16 @@ async def _ensure_manager(args: dict[str, Any]) -> "IsolatedPipeline":
         from sandbox.isolated_workspace.pipeline import IsolatedPipeline
 
         layer_stack_root = require_arg(args, "layer_stack_root")
+        # Phase 2.6 C3.5b: bind a LayerStackClient ONCE at construction so
+        # the iws pipeline speaks the same kwarg-only LayerStackPort
+        # contract as eph (no per-call ``layer_stack_root`` arg threaded
+        # through the lease/release call sites).
+        layer_stack = LayerStackClient(
+            workspace_server.get_layer_stack_manager(layer_stack_root),
+        )
         manager = IsolatedPipeline(
             scratch_root=overlay_writable_root(),
-            layer_stack_root=layer_stack_root,
-            layer_stack=_LayerStackAdapter(),  # type: ignore[arg-type]
+            layer_stack=layer_stack,
             audit=_JsonlAuditSink(_resolve_audit_path()),
         )
         set_pipeline(manager)
@@ -144,7 +127,6 @@ __all__ = [
     "AuditSink",
     "DEFAULT_AUDIT_JSONL_PATH",
     "_JsonlAuditSink",
-    "_LayerStackAdapter",
     "_ensure_manager",
     "_resolve_audit_path",
     "get_active_pipeline",

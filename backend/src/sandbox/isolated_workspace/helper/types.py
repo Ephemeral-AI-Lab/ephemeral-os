@@ -100,25 +100,6 @@ class IsolatedWorkspaceError(Exception):
         self.details = details
 
 
-class LayerSnapshotLike(Protocol):
-    lease_id: str
-    manifest_version: int
-    root_hash: str
-    layer_paths: tuple[str, ...] | None
-
-
-class LayerStackPort(Protocol):
-    """The subset of ``workspace_server`` calls the manager needs."""
-
-    def prepare_workspace_snapshot(
-        self, layer_stack_root: str, *, owner_request_id: str
-    ) -> LayerSnapshotLike: ...
-
-    def release_workspace_snapshot(
-        self, layer_stack_root: str, *, lease_id: str
-    ) -> bool: ...
-
-
 class AuditSink(Protocol):
     def emit(self, event_type: str, payload: dict[str, Any]) -> None: ...
 
@@ -272,8 +253,6 @@ __all__ = [
     "HandleStatus",
     "IsolatedWorkspaceError",
     "IsolatedWorkspaceHandle",
-    "LayerSnapshotLike",
-    "LayerStackPort",
     "SCHEMA_VERSION",
     "_ManagerConfig",
     "_PHASE_TIMER_OVERHEAD_BUDGET_MS",

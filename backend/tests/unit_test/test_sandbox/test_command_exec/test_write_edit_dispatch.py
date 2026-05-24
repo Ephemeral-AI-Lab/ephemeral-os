@@ -7,7 +7,11 @@ from pathlib import Path
 import pytest
 
 from sandbox.daemon import occ_backend, request_context
-from sandbox.daemon.handler import edit, metrics, read, shell, write
+from sandbox.daemon import handlers as edit
+from sandbox.daemon import handlers as metrics
+from sandbox.daemon import handlers as read
+from sandbox.daemon import handlers as shell
+from sandbox.daemon import handlers as write
 from sandbox.daemon.rpc import dispatcher as server
 from sandbox.daemon.workspace_server import get_layer_stack_manager
 from sandbox.layer_stack.workspace_base import build_workspace_base

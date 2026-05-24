@@ -6,7 +6,7 @@ import shutil
 from collections.abc import Sequence
 from uuid import uuid4
 
-from sandbox._shared.shell_contract import WorkspaceLeaseClient
+from sandbox._shared.layer_stack_port import LayerStackPort
 from sandbox.overlay.capture import walk_upperdir
 from sandbox.overlay.handle import OverlayHandle
 from sandbox.overlay.path_change import OverlayPathChange
@@ -17,7 +17,7 @@ from sandbox.overlay.writable_dirs import (
 
 
 async def create(
-    layer_stack: WorkspaceLeaseClient,
+    layer_stack: LayerStackPort,
     *,
     agent_id: str,
     workspace_root: str = "/testbed",

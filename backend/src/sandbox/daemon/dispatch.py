@@ -9,7 +9,7 @@ from sandbox._shared.models import Intent, ToolCallRequest, ToolCallResult
 from sandbox._shared.workspace_pipeline import WorkspacePipeline
 from sandbox.daemon.request_context import require_layer_stack_root, required_single_path
 from sandbox.ephemeral_workspace.pipeline import get_sandbox_overlay
-from sandbox.isolated_workspace import get_active_pipeline
+from sandbox.isolated_workspace.helper.manager import get_active_pipeline
 
 
 async def resolve_pipeline(req: ToolCallRequest) -> WorkspacePipeline:

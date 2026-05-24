@@ -6,7 +6,7 @@ import asyncio
 
 import pytest
 
-from sandbox.daemon.handler import cancel as cancel_handler
+from sandbox.daemon import handlers as cancel_handler
 from sandbox.daemon.rpc.in_flight import InFlightInvocationRegistry
 
 
@@ -35,7 +35,7 @@ async def test_background_invocation_cancel_waits_for_cleanup(
         background=True,
     )
     monkeypatch.setattr(
-        "sandbox.daemon.handler.cancel.get_in_flight_registry",
+        "sandbox.daemon.handlers.get_in_flight_registry",
         lambda: registry,
     )
 

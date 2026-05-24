@@ -39,10 +39,8 @@ import uuid
 from pathlib import Path
 
 from sandbox.overlay.writable_dirs import overlay_writable_root
-from sandbox.isolated_workspace import (
-    IsolatedWorkspaceHandle,
-    _LinuxRuntime,
-)
+from sandbox.isolated_workspace import IsolatedWorkspaceHandle
+from sandbox.isolated_workspace.helper.runtime import _LinuxRuntime
 
 runtime = _LinuxRuntime()
 # Scratch MUST live on a non-overlayfs filesystem. The container's "/" is

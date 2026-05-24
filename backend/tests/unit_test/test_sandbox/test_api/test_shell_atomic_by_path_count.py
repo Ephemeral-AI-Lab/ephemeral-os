@@ -18,7 +18,7 @@ from typing import Any
 
 import pytest
 
-import sandbox.ephemeral_workspace._publishing as publishing
+import sandbox.ephemeral_workspace.helper.publishing as publishing
 import sandbox.ephemeral_workspace.pipeline as pipeline_mod
 from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
 from sandbox._shared.shell_contract import CommandExecRequest

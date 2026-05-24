@@ -18,7 +18,7 @@ from sandbox.overlay.lifecycle import destroy
 from sandbox.overlay.namespace_entrypoint import execute_tool_payload
 from sandbox.overlay.path_change import OverlayPathChange, content_hash
 import sandbox.overlay.writable_dirs as writable_dirs_mod
-from sandbox.isolated_workspace._types import IsolatedWorkspaceHandle
+from sandbox.isolated_workspace.helper.types import IsolatedWorkspaceHandle
 from sandbox.isolated_workspace.pipeline import IsolatedPipeline
 
 
@@ -305,7 +305,6 @@ def test_isolated_run_tool_call_uses_existing_handle_overlay(
 
     pipeline = IsolatedPipeline(
         scratch_root=tmp_path,
-        layer_stack_root=tmp_path.as_posix(),
         layer_stack=_LayerStack(),
     )
     handle = IsolatedWorkspaceHandle(

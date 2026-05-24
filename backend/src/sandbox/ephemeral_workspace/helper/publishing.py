@@ -12,7 +12,7 @@ from sandbox.daemon.result_projection import (
     conflict_to_dict,
     published_paths,
 )
-from sandbox.ephemeral_workspace._utils import event_path_change
+from sandbox.ephemeral_workspace.helper.utils import event_path_change
 from sandbox.ephemeral_workspace.events import (
     PathChange,
     WorkspaceChangeEvent,

@@ -7,8 +7,8 @@ from uuid import uuid4
 
 from sandbox._shared.models import ToolCallResult
 from sandbox._shared.resource_audit import command_exec_resource_timings
-from sandbox.ephemeral_workspace._types import OperationOverlayHandle
-from sandbox.ephemeral_workspace._utils import safe_request_part
+from sandbox.ephemeral_workspace.helper.types import OperationOverlayHandle
+from sandbox.ephemeral_workspace.helper.utils import safe_request_part
 from sandbox.overlay.handle import OverlayHandle
 from sandbox.overlay.writable_dirs import allocate_overlay_writable_dirs
 

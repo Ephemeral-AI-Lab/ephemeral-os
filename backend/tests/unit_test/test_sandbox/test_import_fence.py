@@ -298,7 +298,11 @@ def test_temporary_execute_command_module_is_deleted() -> None:
 
 def test_ephemeral_publish_mixin_owns_occ_publish_internals() -> None:
     publish_module = (
-        BACKEND_SRC_ROOT / "sandbox" / "ephemeral_workspace" / "_publishing.py"
+        BACKEND_SRC_ROOT
+        / "sandbox"
+        / "ephemeral_workspace"
+        / "helper"
+        / "publishing.py"
     )
     imports = _imports(publish_module)
 

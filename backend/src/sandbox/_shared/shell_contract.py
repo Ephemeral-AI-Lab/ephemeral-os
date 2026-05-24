@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
@@ -100,20 +99,6 @@ class WorkspaceSnapshotLease(Protocol):
     timings: Mapping[str, float]
 
 
-class WorkspaceLeaseClient(Protocol):
-    """Layer-stack lease/snapshot client used by command execution."""
-
-    storage_root: Path
-
-    def prepare_workspace_snapshot(
-        self,
-        *,
-        request_id: str,
-    ) -> WorkspaceSnapshotLease: ...
-
-    def release_lease(self, *, lease_id: str) -> bool: ...
-
-
 class OCCMutationClient(Protocol):
     """OCC mutation client used for shell-capture submission."""
 
@@ -162,6 +147,5 @@ __all__ = [
     "ShellProcessResult",
     "SnapshotManifest",
     "WorkspaceCapturePublishResult",
-    "WorkspaceLeaseClient",
     "WorkspaceSnapshotLease",
 ]

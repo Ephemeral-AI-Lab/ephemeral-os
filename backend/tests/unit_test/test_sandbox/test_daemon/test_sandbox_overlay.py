@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
-import sandbox.ephemeral_workspace._manager as overlay_manager
+import sandbox.ephemeral_workspace.helper.manager as overlay_manager
 import sandbox.ephemeral_workspace.pipeline as overlay_mod
 import sandbox.overlay.writable_dirs as writable_dirs_mod
 from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline

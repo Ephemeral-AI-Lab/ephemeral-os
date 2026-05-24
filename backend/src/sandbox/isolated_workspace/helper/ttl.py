@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 
-from sandbox.isolated_workspace._types import logger
+from sandbox.isolated_workspace.helper.types import logger
 
 
 class _IsolatedTtlMixin:

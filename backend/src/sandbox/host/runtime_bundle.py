@@ -207,11 +207,6 @@ def _runtime_bundle_bytes() -> bytes:
         ephemeral_dir = sandbox_dir / "ephemeral_workspace"
         for name in (
             "__init__.py",
-            "_manager.py",
-            "_operation.py",
-            "_publishing.py",
-            "_types.py",
-            "_utils.py",
             "events.py",
             "pipeline.py",
         ):
@@ -220,6 +215,12 @@ def _runtime_bundle_bytes() -> bytes:
                 ephemeral_dir / name,
                 arcname=f"sandbox/ephemeral_workspace/{name}",
             )
+        # Phase 2.6 C3.9: private internals live under ``helper/``.
+        _add_python_tree(
+            tar,
+            ephemeral_dir / "helper",
+            sandbox_dir=sandbox_dir,
+        )
 
         layer_stack_dir = sandbox_dir / "layer_stack"
         _add_python_tree(

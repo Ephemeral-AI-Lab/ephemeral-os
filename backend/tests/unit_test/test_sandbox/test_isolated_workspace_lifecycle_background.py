@@ -12,7 +12,7 @@ from sandbox._shared.models import (
     ExitIsolatedWorkspaceRequest,
     SandboxCaller,
 )
-from sandbox.isolated_workspace.lifecycle import (
+from sandbox.host.iws_lifecycle import (
     enter_isolated_workspace,
     exit_isolated_workspace,
 )
@@ -20,12 +20,8 @@ from sandbox.isolated_workspace.lifecycle import (
 
 pytestmark = pytest.mark.asyncio
 
-enter_module = importlib.import_module(
-    "sandbox.isolated_workspace.lifecycle.enter_isolated_workspace"
-)
-exit_module = importlib.import_module(
-    "sandbox.isolated_workspace.lifecycle.exit_isolated_workspace"
-)
+enter_module = importlib.import_module("sandbox.host.iws_lifecycle")
+exit_module = enter_module  # consolidated; both live in sandbox.host.iws_lifecycle
 
 
 class _BackgroundManager:
@@ -52,7 +48,7 @@ async def test_enter_rejects_before_pipeline_when_background_tasks_exist(
         called = True
         return object()
 
-    monkeypatch.setattr(enter_module.handlers, "_ensure_manager", _ensure_manager)
+    monkeypatch.setattr(enter_module.iws_manager, "_ensure_manager", _ensure_manager)
 
     result = await enter_isolated_workspace(
         EnterIsolatedWorkspaceRequest(
@@ -90,7 +86,7 @@ async def test_exit_drains_background_tasks_before_pipeline_exit(
 
     bg.cancel_by_agent = _cancel_by_agent  # type: ignore[method-assign]
     monkeypatch.setattr(
-        exit_module,
+        exit_module.iws_manager,
         "require_pipeline",
         lambda: SimpleNamespace(exit=_exit),
     )

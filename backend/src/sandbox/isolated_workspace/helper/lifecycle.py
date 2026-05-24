@@ -7,8 +7,8 @@ import os
 import shutil
 from typing import Any
 
-from sandbox.isolated_workspace._runtime import _du_bytes
-from sandbox.isolated_workspace._types import (
+from sandbox.isolated_workspace.helper.runtime import _du_bytes
+from sandbox.isolated_workspace.helper.types import (
     DEFAULT_WORKSPACE_ROOT,
     IsolatedWorkspaceError,
     IsolatedWorkspaceHandle,
@@ -47,8 +47,7 @@ class _IsolatedLifecycleMixin:
             timer = _PhaseTimer(self._clock)
             with timer.measure("prepare_snapshot"):
                 snapshot = self._layer_stack.prepare_workspace_snapshot(
-                    self._layer_stack_root,
-                    owner_request_id=f"isolated-{self._id_factory()}",
+                    request_id=f"isolated-{self._id_factory()}",
                 )
             handle_id = self._id_factory()
             scratch = self.scratch_root / handle_id
@@ -76,8 +75,8 @@ class _IsolatedLifecycleMixin:
             except Exception:
                 self._rollback_partial(handle)
                 with contextlib.suppress(Exception):
-                    self._layer_stack.release_workspace_snapshot(
-                        self._layer_stack_root, lease_id=snapshot.lease_id,
+                    self._layer_stack.release_lease(
+                        lease_id=snapshot.lease_id,
                     )
                 raise
             async with self._map_lock:
@@ -233,8 +232,8 @@ class _IsolatedLifecycleMixin:
             handle.control_fd = -1
             with contextlib.suppress(Exception):
                 with t.measure("release_snapshot"):
-                    self._layer_stack.release_workspace_snapshot(
-                        self._layer_stack_root, lease_id=handle.lease_id,
+                    self._layer_stack.release_lease(
+                        lease_id=handle.lease_id,
                     )
             if handle.cgroup_path and handle.cgroup_path.exists():
                 with contextlib.suppress(OSError):

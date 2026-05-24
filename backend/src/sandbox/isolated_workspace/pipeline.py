@@ -12,17 +12,20 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from sandbox._shared.layer_stack_port import LayerStackPort
 from sandbox._shared.models import Intent, ToolCallRequest, ToolCallResult
-from sandbox.isolated_workspace._gc import _IsolatedGcMixin
-from sandbox.isolated_workspace._lifecycle import _IsolatedLifecycleMixin
-from sandbox.isolated_workspace._quota import _IsolatedQuotaMixin
-from sandbox.isolated_workspace._runtime import _LinuxRuntime, _read_memavailable_kb
-from sandbox.isolated_workspace._ttl import _IsolatedTtlMixin
-from sandbox.isolated_workspace._types import (
+from sandbox.isolated_workspace.helper.gc import _IsolatedGcMixin
+from sandbox.isolated_workspace.helper.lifecycle import _IsolatedLifecycleMixin
+from sandbox.isolated_workspace.helper.quota import _IsolatedQuotaMixin
+from sandbox.isolated_workspace.helper.runtime import (
+    _LinuxRuntime,
+    _read_memavailable_kb,
+)
+from sandbox.isolated_workspace.helper.ttl import _IsolatedTtlMixin
+from sandbox.isolated_workspace.helper.types import (
     AuditSink,
     IsolatedWorkspaceError,
     IsolatedWorkspaceHandle,
-    LayerStackPort,
     SCHEMA_VERSION,
     _ManagerConfig,
     _Runtime,
@@ -62,7 +65,6 @@ class IsolatedPipeline(
         self,
         *,
         scratch_root: Path,
-        layer_stack_root: str,
         layer_stack: LayerStackPort,
         audit: AuditSink | None = None,
         config: _ManagerConfig | None = None,
@@ -73,7 +75,6 @@ class IsolatedPipeline(
         meminfo_reader: Callable[[], int] | None = None,
     ) -> None:
         self._scratch_root = Path(scratch_root)
-        self._layer_stack_root = layer_stack_root
         self._layer_stack = layer_stack
         self._audit = audit
         self._config = config or _ManagerConfig.from_env()
@@ -306,23 +307,4 @@ class IsolatedPipeline(
 
 
 
-# Singleton accessors (``set_pipeline`` / ``get_active_pipeline`` /
-# ``require_pipeline`` / ``require_arg``) live in :mod:`._manager` post-C3.
-# Re-export here so callers that still import them from ``pipeline`` keep
-# working through the rollout window; new code should import from
-# ``sandbox.isolated_workspace._manager`` directly.
-from sandbox.isolated_workspace._manager import (  # noqa: E402
-    get_active_pipeline,
-    require_arg,
-    require_pipeline,
-    set_pipeline,
-)
-
-
-__all__ = [
-    "IsolatedPipeline",
-    "get_active_pipeline",
-    "require_arg",
-    "require_pipeline",
-    "set_pipeline",
-]
+__all__ = ["IsolatedPipeline"]

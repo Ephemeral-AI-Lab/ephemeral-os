@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.daemon.handler import workspace as workspace_handler
+from sandbox.daemon import handlers as workspace_handler
 from sandbox.daemon.rpc import dispatcher as server
 from sandbox.daemon.rpc import server as daemon
 from sandbox.daemon import occ_backend, workspace_server

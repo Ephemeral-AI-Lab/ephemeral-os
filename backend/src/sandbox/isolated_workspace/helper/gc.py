@@ -11,7 +11,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from sandbox.isolated_workspace._types import CGROUP_ROOT, HANDLE_PREFIX, logger
+from sandbox.isolated_workspace.helper.types import CGROUP_ROOT, HANDLE_PREFIX, logger
 
 
 class _IsolatedGcMixin:
@@ -157,8 +157,8 @@ class _IsolatedGcMixin:
             released = False
             with contextlib.suppress(Exception):
                 released = bool(
-                    self._layer_stack.release_workspace_snapshot(
-                        self._layer_stack_root, lease_id=lease_id,
+                    self._layer_stack.release_lease(
+                        lease_id=lease_id,
                     )
                 )
             reap_ms = (self._clock() - t0) * 1000.0

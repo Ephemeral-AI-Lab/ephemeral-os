@@ -52,7 +52,7 @@ only-include = ["backend/src", "backend/config"]
 sources = ["backend/src"]
 
 [tool.pytest.ini_options]
-testpaths = ["backend/tests"]
+testpaths = ["backend/tests", "tests"]
 # live_e2e_test/ requires a real Daytona sandbox; it is opt-in by directory.
 # Default `pytest backend/tests` skips it; opt in with
 # `pytest backend/tests/live_e2e_test`.
