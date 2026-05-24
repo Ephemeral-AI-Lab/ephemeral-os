@@ -404,7 +404,7 @@ tools now flow through ``api.v1.<verb>`` and daemon pipeline resolution.
 |---|---|---|
 | ``sandbox.overlay.kernel_mount.mount_overlay`` | ``scripts/setns_overlay_mount.py`` — deferred-import *after* setns so R10 single-thread discipline is preserved at module-load time | ~80 LoC of duplicated ``fsopen / fsconfig / fsmount / move_mount`` syscall wrappers. One source of truth for overlay mount mechanics across the daemon. |
 | ``sandbox.overlay.capability.mount_syscalls_supported`` | ``_iws_fixtures.can_mount_overlay_natively`` | A bespoke ``/proc/filesystems`` scan. Uses the same hard precondition as daemon startup. |
-| ``sandbox.daemon.workspace_server.{prepare,release}_workspace_snapshot`` | ``handlers._LayerStackAdapter`` | Existing lease/snapshot lifecycle — no parallel implementation. |
+| ``sandbox.daemon.workspace_server.prepare_workspace_snapshot`` / ``release_lease`` | ``LayerStackClient`` bound during ``helper.manager`` bootstrap | Existing lease/snapshot lifecycle — no parallel implementation. |
 | ``sandbox.host.daemon_client.call_daemon_api`` | ``_iws_rpc`` | Existing daemon RPC client. |
 | ``sandbox.overlay.writable_dirs.overlay_writable_root`` | ``handlers._ensure_manager`` | Canonical overlay writable-root resolution. |
 
@@ -443,7 +443,7 @@ backend/src/sandbox/isolated_workspace/scripts/
 |---|---|
 | ``backend/src/sandbox/isolated_workspace/pipeline.py + extracted modules`` | PR 1: ``_PhaseTimer`` class + ``_PHASE_TIMER_OVERHEAD_BUDGET_MS``. Instrumented ``enter``, ``_wire_handle``, ``exit``, ``_teardown``, ``run_in_handle``, ``_reap_orphans``, ``ttl_sweep``. Enriched 5 emit sites with ``total_ms`` + ``phases_ms`` (conditional-key per P5) + ``lowerdir_layer_count`` + ``shared_layer_snapshot=True`` on enter. PR 0: live ``mount_overlay`` + ``configure_dns`` + new ``signal_net_ready`` Protocol method. Bug fixes: ``IsolatedWorkspaceHandle.readiness_fd`` + ``control_fd`` fields; ``open_ns_fds`` now merges via ``update`` instead of replacing; ``r_parent`` no longer closed eagerly. |
 | ``backend/src/task_center_runner/audit/events.py`` | Module docstring documenting the SUBSET-COVER invariant + conditional-key emission rule (PLAN §21 Follow-up #6). No ``EventType`` enum changes. |
-| ``backend/src/sandbox/daemon/rpc/dispatcher.py`` | Lifecycle routes stay on ``sandbox.isolated_workspace.handlers``; foreground tool routes use ``sandbox.daemon.dispatch`` and the unified ``api.v1.<verb>`` handlers. |
+| ``backend/src/sandbox/daemon/rpc/dispatcher.py`` | Lifecycle routes are inline ``_iws_*`` handlers; foreground tool routes use ``sandbox.daemon.dispatch`` and the unified ``api.v1.<verb>`` handlers. |
 | ``backend/src/sandbox/host/runtime_bundle.py`` | Added ``sandbox/isolated_workspace/`` to the daemon runtime bundle so the in-sandbox daemon can import the package on startup. |
 | ``backend/tests/unit_test/test_sandbox/test_daemon/test_routing_invariants.py`` | Updated imports + OP_TABLE references to the new module paths. |
 

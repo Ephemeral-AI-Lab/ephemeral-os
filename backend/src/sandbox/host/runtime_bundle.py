@@ -130,8 +130,8 @@ def _vendor_pathspec(tar: tarfile.TarFile) -> None:
 def _add_top_level_audit(tar: tarfile.TarFile, *, src: Path) -> None:
     """Add the top-level ``audit/`` package to the bundle.
 
-    The daemon's `_load_peer_bootstraps` evaluates
-    ``sandbox.isolated_workspace.handlers`` at startup, which imports
+    Isolated-workspace bootstrap imports
+    ``sandbox.isolated_workspace.helper.manager._JsonlAuditSink``, which uses
     ``audit.jsonl.append_jsonl_event`` (top-level, not ``sandbox.audit``).
     Several existing ``sandbox/audit/*.py`` modules also ``from audit.base
     import ...``. Bundle the top-level package so those imports resolve.

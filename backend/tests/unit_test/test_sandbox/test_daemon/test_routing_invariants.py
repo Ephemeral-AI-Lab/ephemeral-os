@@ -30,7 +30,6 @@ def test_daemon_op_table_routes_to_current_handler_layout() -> None:
         "api.build_workspace_base": handlers.build_workspace_base,
         "api.prepare_workspace_snapshot": handlers.prepare_workspace_snapshot,
         "api.release_lease": handlers.release_lease,
-        "api.release_workspace_snapshot": handlers.release_workspace_snapshot,
         "api.workspace_binding": handlers.workspace_binding,
         "api.runtime.ready": handlers.runtime_ready,
         "api.layer_stack.fence_stale_staging": handlers.fence_stale_staging,

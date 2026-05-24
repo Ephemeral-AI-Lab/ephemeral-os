@@ -824,7 +824,7 @@ async def apply_layerstack_to_repo(
         try:
             await call_daemon_api(
                 sandbox_id,
-                "api.release_workspace_snapshot",
+                "api.release_lease",
                 {"lease_id": lease_id},
                 timeout=60,
             )

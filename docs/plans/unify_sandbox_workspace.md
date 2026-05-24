@@ -85,7 +85,7 @@ See Phase 2.5 §1 for the 5 NEW principles; §3 for the RALPLAN-DR option matrix
 
 10. **`isolated_workspace` blocks plugin access.** Dispatcher-entry gate: any `api.plugin.*` or `plugin.<name>.<op>` invoked by an agent with an open iws handle returns `forbidden_in_isolated_workspace`. Fail-OPEN when pipeline not bootstrapped — accepted because the alternative (fail-CLOSED) would break every test fixture that doesn't init iws. **Fail-OPEN emits a loud audit event** (`workspace_lifecycle.plugin_check_unbootstrapped`) so the bypass is visible (Planner F.20). Threat-model: an attacker who DoSes iws bootstrap bypasses the policy; risk accepted, mitigated by audit visibility + follow-up plan for fail-CLOSED-with-explicit-bypass.
 
-11. **O(1) lowerdir disk; upperdir is owner-defined.** Overlayfs natural sharing — lowerdir is the layer stack, shared across calls/sessions, no copy. Upperdir is transient and its lifetime tracks the owning entity: **O(parallel calls + in-flight background tasks) in ephemeral mode** (foreground calls create and destroy an upperdir at call boundaries; background calls hold the same per-call upperdir until the engine-owned asyncio task completes or is cancelled through `api.v1.cancel(invocation_id)`), **O(mutations-per-session) in isolated mode** (upperdir grows until exit, then discarded; background tasks share the session upperdir and are drained by `sandbox.isolated_workspace.lifecycle.exit_isolated_workspace`). Planner B.5 caught the earlier wording that conflated lowerdir/upperdir.
+11. **O(1) lowerdir disk; upperdir is owner-defined.** Overlayfs natural sharing — lowerdir is the layer stack, shared across calls/sessions, no copy. Upperdir is transient and its lifetime tracks the owning entity: **O(parallel calls + in-flight background tasks) in ephemeral mode** (foreground calls create and destroy an upperdir at call boundaries; background calls hold the same per-call upperdir until the engine-owned asyncio task completes or is cancelled through `api.v1.cancel(invocation_id)`), **O(mutations-per-session) in isolated mode** (upperdir grows until exit, then discarded; background tasks share the session upperdir and are drained by `sandbox.host.iws_lifecycle.exit_isolated_workspace`). Planner B.5 caught the earlier wording that conflated lowerdir/upperdir.
 
 ---
 
@@ -190,10 +190,10 @@ Implements the per-call ephemeral pipeline and persistent isolated pipeline. Add
 - Thin daemon handlers (~15 lines each)
 - `sandbox/daemon/dispatch.py::resolve_pipeline(agent_id)`
 - DELETE `daemon/request_context.py::classify_path` + `_xxx_in_workspace`/`_xxx_out_of_workspace` helpers
-- **`sandbox/isolated_workspace/lifecycle/` host-side coroutines** (isolated-workspace-owned package — replaces the rejected `sandbox/api/lifecycle/` naming per Critic must-fix #6; `sandbox/api/` stays client-side only)
+- **`sandbox/host/iws_lifecycle.py` host-side coroutines** (`sandbox/api/` stays client-side only)
 - `sandbox/audit/lifecycle.py` + `WorkspaceLifecycle` event class
 - Plugin-block gate emits `workspace_lifecycle.plugin_check_unbootstrapped` audit event on fail-OPEN
-- `backend/src/tools/isolated_workspace/{enter,exit}_isolated_workspace/` (imports from `sandbox.isolated_workspace.lifecycle.*`)
+- `backend/src/tools/isolated_workspace/{enter,exit}_isolated_workspace/` (imports from `sandbox.host.iws_lifecycle`)
 - **`WorkspaceSession` DEFERRED to `tests/mock/sandbox/_fixtures/workspace_session.py`** test utility — NOT shipped as public API until a production caller materializes (Critic must-fix #11)
 - DELETE `isolated_workspace/ops_handlers.py` (98 lines of shell-out wrappers — verified) + 5 iws tool-op RPCs. **`isolated_workspace/handlers.py` (lifecycle helpers) PRESERVED.** No separate isolated-workspace RPC module exists or has ever existed (phantom reference removed from docs per Critic must-fix #1).
 
@@ -208,7 +208,7 @@ Implements the per-call ephemeral pipeline and persistent isolated pipeline. Add
 Reshapes the iws test suite around the new tool surface. Adds new test tiers for unified per-call lifecycle, OCC coalescing preservation, O_NOFOLLOW security (per-component walk + intermediate-symlink), plugin policy + fail-OPEN audit event, host-path denylist, iws behavior upgrade, unit-level coverage, deployment pre-flight CI, observability assertions. Validates Tier 8 soak with perf escalation threshold.
 
 **Ships:**
-- Updated happy_path tests using agent-level lifecycle tools (imports `sandbox.isolated_workspace.lifecycle.*`, NOT `sandbox.api.*`)
+- Updated happy_path tests using agent-level lifecycle tools (imports `sandbox.host.iws_lifecycle`, NOT `sandbox.api.*`)
 - `tool_wrappers/` tier (tool dispatch + lifecycle round-trip)
 - `policy/` tier (destructive pre-hook, plugin-block, plugin fail-OPEN audit event, host-path denylist for `/etc/`/`/var/`/`/proc/`/`/sys/`/`/boot/`)
 - `security/` tier (O_NOFOLLOW symlink-escape — trailing-component AND intermediate-component; static AST lint enforces chokepoint)

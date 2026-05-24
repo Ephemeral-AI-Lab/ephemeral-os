@@ -18,7 +18,7 @@ populated by the standard peer bootstrap, then dispatches via
 :func:`dispatcher.dispatch_envelope_async`. State that is expensive to
 construct — ``LayerStack``, ``Service``,
 ``SnapshotGitignoreOracle`` — is cached across calls by
-``daemon.services.occ_backend`` and thus amortizes naturally because the daemon
+``sandbox.daemon.occ_backend`` and thus amortizes naturally because the daemon
 is one Python process.
 
 Lifecycle:

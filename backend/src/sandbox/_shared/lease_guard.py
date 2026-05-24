@@ -3,9 +3,7 @@
 Owns the lease-keyed lock dict and the released-lease-id set. Both
 ``EphemeralPipeline`` and any future pipeline that needs idempotent lease
 release compose one instance — single source of truth for the destroy/release
-race semantics. Replaces the byte-identical ``_lock_for`` +
-``_destroy_with_lease_guard`` machinery that lived in
-``ephemeral_workspace/_operation.py`` pre-Phase-2.6.
+race semantics.
 
 Iws does not compose this class today: its per-call execution path leases
 nothing (the lease lives on the persistent ``IsolatedWorkspaceHandle`` and is

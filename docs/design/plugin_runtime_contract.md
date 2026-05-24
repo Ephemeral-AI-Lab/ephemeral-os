@@ -1,15 +1,16 @@
 # Plugin Runtime Contract — Design
 
-Status: DRAFT (pre-consensus). Companion to `docs/plans/lsp_overlay_integration_PLAN.md` (approved implementation steps 1–9).
+Status: DRAFT v3 (post-Critic round 1). Companion to `docs/plans/lsp_overlay_integration_PLAN.md` (approved implementation steps 1–9).
 
-This document fixes:
-1. The disk-usage invariant for plugin overlays (O(1) lowerdir under N sessions × M ops).
-2. The long-cached session pattern abstracted from `PyrightSession` and `IsolatedPipeline`.
-3. The unified `PluginRuntime` Protocol that future plugins consume.
+This document captures four design questions and the answers:
+1. Disk-usage invariant for plugin overlays under N sessions × M ops.
+2. Long-cached session pattern.
+3. Unified `PluginRuntime` Protocol for future plugin extension.
+4. Reuse of existing infrastructure.
 
-It does NOT introduce new infrastructure where existing primitives suffice. The dominant move is **reuse, not invention**.
+**Critic round-1 caught that the v2 draft over-built.** v2 proposed a `PluginSession` abstraction with new helper scripts (`setns_persistent_exec.py`), a new `namespace_holder.py` module, and a migration of `PyrightSession` — ~210–240 new lines for ONE current consumer. CLAUDE.md §2 ("Simplicity First — no abstractions for single-use code") rejects this. v3 demotes that abstraction to a deferred option and lands on a minimal alternative.
 
-## 1. Disk-usage invariant
+## 1. Disk-usage invariant — VERIFIED
 
 ### Formal statement
 
@@ -27,157 +28,100 @@ The on-disk lowerdir cost is:
 
     disk_lowerdir(steady-state) = |L_active|
 
-The N,M-dependence collapses because:
+### Why it holds
 
-- `LayerStack` storage is content-addressed: `layer_path = storage_root / "layers" / layer_id`. One directory per `LayerRef`, shared across all leases (`stack.py:114, 319`).
-- `LeaseRegistry._refcounts: Counter[LayerRef]` refcounts layer pinning across leases (`lease.py:36, 53, 61`).
+- `LayerStack` storage is content-addressed: `layer_path = storage_root / "layers" / layer_id` (`stack.py:319`). One directory per `LayerRef`, shared across all leases.
+- `LeaseRegistry._refcounts: Counter[LayerRef]` refcounts pinning across leases (`lease.py:36, 53, 61`).
 - `LayerStack._unreferenced_layers` GCs only when `layer ∉ current_manifest.layers ∪ pinned_layers` (`stack.py:322–329`).
-- Multiple leases that pin the same manifest → same layer set → same paths → no copy.
-- `prepare_workspace_snapshot` returns those shared paths as strings (`stack.py:114–116`); the overlay mount uses them as `lowerdir+` lines (`kernel_mount.py:60`).
+- `prepare_workspace_snapshot` returns paths into shared storage (`stack.py:114–116`); overlay mounts use them as `lowerdir+` lines (`kernel_mount.py:60`).
+- Per-session upperdir/workdir under `OVERLAY_WRITABLE_ROOT` (`writable_dirs.py:13`) is small, write-only state. For read-mostly sessions (LSP-style), upperdir stays near-empty.
 
-Per-session upperdir/workdir lives under `OVERLAY_WRITABLE_ROOT` (`writable_dirs.py:13`) — small, contains only writes; mostly empty for read-mostly sessions (LSP-style).
+### Conditions (all currently enforced in code)
 
-Per-op upperdir/workdir is released at op end via `OverlayHandle._release` closure.
-
-### Conditions under which the bound holds
-
-The bound is **conditional on three invariants**:
-
-| # | Invariant | Currently enforced? |
+| # | Invariant | Enforced at |
 |---|---|---|
-| I1 | Every long-cached session releases its OLD lease promptly after a foreign-publish refresh swap completes. | YES — `PyrightSession.refresh_manifest` at `pyright_session.py:115` releases `old_handle` after install. |
-| I2 | Refresh error paths still release the lease (no orphan). | YES — `_refresh_owned_session` at `session_manager.py:233` releases on `PyrightOverlayRefreshError`/`OSError`/`TimeoutError`. |
-| I3 | Per-op overlays acquired by `acquire_operation_overlay` are released when the op returns or raises. | YES — `EphemeralPipeline.acquire_operation_overlay` catches post-snapshot exceptions and releases (`helper/operation.py:82–85`). |
+| I1 | Long-cached session releases OLD lease after refresh-swap completes. | `pyright_session.py:115` — `_release_handle(old_handle)` after `_install_overlay_handle(new)`. |
+| I2 | Refresh error paths release the new lease (no orphan). | `session_manager.py:233` — `_release_handle(session_view.handle)` on `PyrightOverlayRefreshError`/`OSError`/`TimeoutError`. |
+| I3 | Per-op overlays release on op return/raise. | `helper/operation.py:82–85` — try/except releases on post-snapshot exception. After PLAN.md Step 7 this becomes a single primitive `overlay.lifecycle.acquire(release_hook=...)` with hard acceptance: "on any exception after `prepare_workspace_snapshot`, release lease AND `rmtree(run_dir)`". |
 
-Transient bound during concurrent foreign publishes:
+### Transient bound during concurrent foreign publishes
 
-    disk_lowerdir(transient)  ≤  |L_active| + N × (max concurrent old-version leases)
+    disk_lowerdir(transient)  ≤  |L_active|  +  N × (concurrent foreign publishes during refresh window)
 
-In practice this is bounded by the foreign-publish watcher poll interval × publish rate; the LSP path already releases within one publish cycle.
+Bounded by the foreign-publish poll interval + refresh latency. The LSP path releases within one refresh cycle (~hundreds of ms). For N=8 sessions and a 5s poll interval, the transient bound is small in practice.
 
-### Design choices that preserve O(1)
+### What "future plugin extension" requires for O(1)
 
-- A plugin session MUST NOT keep a lease "warm" across manifest changes; it must swap on `WorkspaceChangeEvent`.
-- A plugin op MUST NOT hold its overlay handle past op completion.
-- The plugin runtime MUST expose a typed subscription so plugins don't build their own polling; this is `subscribe_workspace_changes` from PLAN.md Step 2.
+Any future plugin that holds a long-cached overlay session MUST:
+- Release its OLD lease promptly after each manifest-change refresh.
+- Release the lease on error paths.
+- Not hold per-op leases past op completion.
 
-## 2. The long-cached session pattern
+These are *contracts on the plugin*, not infrastructure provided by EphemeralOS. They are enforceable by integration test (see §7).
 
-### What's needed
+## 2. Long-cached session pattern
 
-A plugin session that:
-- Holds a private mount namespace where `/testbed` is overlay-mounted against the latest manifest's `layer_paths`.
-- Lives across many tool calls (e.g., Pyright daemon).
-- Sees the latest snapshot via remount-on-event, not poll.
-- Releases its lease (and namespace) on evict.
+### What "long-cached session" means here
 
-### Two existing implementations to reuse from
+A plugin holds a private mount-namespace where `/testbed` is overlay-mounted against the **latest** manifest's `layer_paths`. The session survives across many tool calls. On manifest change, the session remounts to the new layer set. **PyrightSession is the only current consumer.**
 
-| Implementation | Namespace ownership | Refresh mechanism | Lease lifetime |
-|---|---|---|---|
-| `PyrightSession` (`plugins/catalog/lsp/runtime/pyright_session.py`) | Process is itself spawned under `unshare -Urm`; namespace is the pyright child's own | `nsenter -t <pyright_pid>` + remount helper (`namespace_remount.py`) | Lease lives with the session; refresh swaps old→new |
-| `IsolatedPipeline` ns_holder (`isolated_workspace/helper/runtime.py:_LinuxRuntime`) | A dedicated `ns_holder` subprocess holds `{user,mnt,pid,net}` open with `unshare --fork --kill-child`; other procs `setns()` in | `setns_overlay_mount` script: setns + umount + mount_overlay | Lease lives with the handle; teardown releases |
+### Two viable designs
 
-**Both patterns exist. `IsolatedPipeline`'s is more general** because the namespace is decoupled from the workload process — any process can `setns` in, the namespace holder is just a long-lived sleep. That decoupling matters for plugins where the workload is a server (LSP) AND for plugins where the workload is a script.
+#### Design A — Minimal alternative (RECOMMENDED, lands today)
 
-### Unified abstraction: `PluginSession`
+- Keep `PyrightSession`'s existing model: spawn workload under its own `unshare -Urm` (`pyright_session.py:_build_overlay_argv`).
+- Keep `plugins/catalog/lsp/runtime/namespace_remount.py` (`nsenter -t <pyright_pid>` cross-namespace remount). This is the load-bearing boundary identified in PLAN.md Step 1's load-bearing-header annotation.
+- Add typed `subscribe_workspace_changes` to `EphemeralPipelineLike` (PLAN.md Step 2). This is the only new abstraction needed for "always-latest snapshot."
+- Plugin runtime code (e.g., `session_manager.py`) consumes the typed subscribe API; the existing pump-task drains the queue and calls `session.refresh_manifest`.
 
-Promote a single `sandbox.overlay.PluginSession` (or `sandbox.overlay.long_lived_overlay` — naming TBD) primitive built on the `ns_holder` pattern:
+**Net new code for this design**: 0 lines beyond PLAN.md Steps 1–9. The 9-step plan already covers it.
 
-```python
-@dataclass
-class PluginSession:
-    """Long-lived overlay-mounted namespace + a leased snapshot.
+#### Design B — `PluginSession` abstraction (DEFERRED)
 
-    Reuses _LinuxRuntime.spawn_ns_holder + setns_overlay_mount unchanged.
-    The plugin's workload (server process, daemon, etc.) is spawned via
-    setns_exec into this namespace.
-    """
-    session_id: str
-    holder_pid: int                  # _LinuxRuntime.spawn_ns_holder result
-    ns_fds: dict[str, int]           # _LinuxRuntime.open_ns_fds result
-    overlay: OverlayHandle           # current manifest's lease + upper/work + layer_paths
-    workspace_root: str
+A unified primitive built on `isolated_workspace`'s `_LinuxRuntime.spawn_ns_holder` pattern: dedicated ns_holder subprocess holds `{user, mount}` namespaces open; workload spawns via `setns_persistent_exec` (new helper); refresh swaps lease and remounts via `setns_overlay_mount` (extended with umount-first).
 
-    async def refresh(self, layer_stack) -> None:
-        """Foreign-publish swap. Acquires new snapshot, setns+umount+mount_overlay,
-        releases OLD lease. Preserves I1+I2."""
+**Net new code for this design**: ~210–240 lines (`plugin_session.py`, `setns_persistent_exec.py`, umount helper or extension, `namespace_holder.py` extracted from `_LinuxRuntime` with `namespaces=` parameter).
 
-    async def exec(self, argv, *, stdin=None, timeout_s=None) -> tuple[int, bytes, bytes]:
-        """Run a command inside this session's namespace via setns_exec.
-        Reuses _LinuxRuntime.run_in_handle."""
+### Steelman of Design A (the minimal alternative)
 
-    async def release(self) -> None:
-        """SIGTERM ns_holder, close FDs, release lease, rmtree upperdir."""
-```
+The strongest case for stopping at Design A:
 
-**Code reuse and three required additions** (Architect round-3 findings folded in):
+> *PyrightSession already works. It has been in production. Invariants I1, I2, I3 are verified in code today. The "always-latest snapshot" goal is fully satisfied by adding `subscribe_workspace_changes` to `EphemeralPipelineLike` (PLAN.md Step 2) — that's ~10 lines of Protocol delegation. The "unified plugin interface" goal is satisfied by the `PluginRuntime` Protocol collapse in PLAN.md Step 9 — also no new infrastructure. The "reuse existing code" goal is maximally satisfied because we touch nothing. The only thing Design A doesn't deliver is a hypothetical `PluginSession` that no current consumer needs. CLAUDE.md §2 says don't build that.*
 
-| Field/method | Status | Detail |
+### Why Design A wins today
+
+| Criterion | Design A | Design B |
 |---|---|---|
-| `spawn_ns_holder` | **MODIFIED** | Add `namespaces: tuple[str, ...] = ("user","mount")` parameter (today hardcodes `--user --net --pid --mount`). Default for `IsolatedPipeline` stays the full four-namespace surface; `PluginSession` opts into the smaller `user+mount` set. |
-| `open_ns_fds` | **MODIFIED** | Same `namespaces` parameter so we don't open fds for namespaces we didn't ask for. |
-| Initial mount | Unchanged | `isolated_workspace/scripts/setns_overlay_mount.py` already calls `overlay.kernel_mount.mount_overlay` after setns. |
-| **Refresh remount** | **NEW CODE** (~30 lines) | `setns_overlay_mount.py` only mounts; refresh needs umount-first. Either extend `setns_overlay_mount.py` to umount-when-mountpoint, or add sibling `setns_umount.py`. The umount-first logic from today's `namespace_remount._detach_mount` moves into the setns-side helper. |
-| **`exec` for persistent-stdio workloads (LSP)** | **NEW HELPER** (~50 lines) — `sandbox/overlay/scripts/setns_persistent_exec.py`. setns into target namespaces + `os.execvpe` the workload directly (no fork/waitpid). `PluginSession.spawn_persistent_proc` drives it via `asyncio.create_subprocess_exec` with `stdin/stdout=PIPE` so `LspJsonRpcClient` sees a normal persistent process. | `_LinuxRuntime.run_in_handle` uses `fork+waitpid+subprocess.run(capture_output=True)` and returns `(rc, bytes, bytes)` — **incompatible** with `LspJsonRpcClient`'s persistent `proc.stdin`/`proc.stdout` requirement. A new exec mode is unavoidable. |
-| `exec` for one-shot scripts | Unchanged | `_LinuxRuntime.run_in_handle` stays for plugins that don't need persistent stdio. |
-| Lease lifecycle | Unchanged | `LayerStack.prepare_workspace_snapshot` + `release_lease`. |
-| Teardown | Unchanged | `_LinuxRuntime.kill_holder` + `release_lease` + `rmtree`. |
+| Current consumers | 1 (PyrightSession, working) | 1 (PyrightSession, would migrate) |
+| Lines added | 0 (PLAN.md Step 2 already adds the subscribe API) | ~210–240 |
+| Lines deleted | 0 | ~155 (`helper/types.py` + `namespace_remount.py`) |
+| Migration risk | None — keeps a working code path | LSP daemon stdin/stdout streaming must survive the new `setns + execvpe` helper; process-reaping invariants must survive a shared `kill_holder` |
+| CLAUDE.md §2 compliance | Yes (no abstraction built) | No — single-consumer abstraction unless Step 11 (IsolatedPipeline migration) lands |
+| Drift risk | `namespace_remount.py` stays as a one-consumer helper | `setns_overlay_mount` becomes shared; one code path for both isolated and plugin uses |
+| Reaper-ownership risk | None | `_LinuxRuntime.kill_holder` (`runtime.py:226–229`) does process-global `os.waitpid(-1, ...)`; two instances in one daemon race for SIGCHLD |
 
-**Revised net new code** (corrected from earlier overclaim):
+CLAUDE.md §2 is the deciding constraint: **don't build an abstraction with one consumer**.
 
-- `sandbox/overlay/plugin_session.py` — `PluginSession` dataclass + refresh + release + `spawn_persistent_proc` (~150 lines).
-- `sandbox/overlay/scripts/setns_persistent_exec.py` — persistent-stdio setns + execvpe helper (~50 lines).
-- Either extension of `setns_overlay_mount.py` (~30 lines) or new `setns_umount.py` (~25 lines) — pick one.
-- `namespaces=` parameter diffs on `spawn_ns_holder`/`open_ns_fds` (~10 lines).
+### Trigger for revisiting Design B
 
-**Total new code**: ~210–240 lines. (Earlier draft claimed ~120; that was wrong — see Architect round-3 finding 5.)
+Promote Design A → B when **any** of the following is true:
+- A second plugin needs the long-cached session pattern (i.e., spawning a persistent workload + manifest-change remount), in any concrete proposal — not "future authors might."
+- `namespace_remount.py` accumulates a second use case or grows past ~150 lines.
+- The `--user --net --pid --mount` namespace surface in `_LinuxRuntime.spawn_ns_holder` needs to be parametrized for any other reason.
 
-**Migration of `PyrightSession`**:
-```python
-# Today: pyright_session.py:_build_overlay_argv constructs
-#   [unshare, "-Urm", sys.executable, "-m", "namespace_entrypoint", payload]
-# and asyncio.create_subprocess_exec runs that argv with stdin/stdout PIPE.
-
-# After: PluginSession holds the namespace; pyright spawns into it.
-session = await runtime.acquire_plugin_session(
-    session_id="lsp-session",
-    namespaces=("user", "mount"),
-)
-proc = await session.spawn_persistent_proc(
-    ["pyright-langserver", "--stdio"],
-    env=_runtime_subprocess_env(),
-    cwd=_runtime_subprocess_cwd(),
-)
-# proc.stdin / proc.stdout are normal asyncio pipes; LspJsonRpcClient unchanged.
-
-# Refresh (foreign-publish event):
-await session.refresh(layer_stack)
-# Internally: lease new snapshot, run setns_umount + setns_overlay_mount via
-# pass_fds(user_fd, mnt_fd), release old lease.
-```
-
-`plugins/catalog/lsp/runtime/namespace_remount.py` deletes — its umount+mount sequence moves into the setns-side helper.
-
-### Asymmetry note (incorporates Architect's prior round 2 finding)
-
-Round 2 Architect rejected deleting `namespace_remount.py` on the grounds that it's the cross-namespace `nsenter` boundary that the LSP child uses. **This design supersedes that** because:
-
-- The LSP child no longer needs its OWN namespace. The session's `ns_holder` owns the namespace; the LSP child runs INSIDE via `setns_exec`.
-- Cross-namespace remount goes through `setns_overlay_mount` (which is already cross-namespace via `pass_fds=(user_fd, mnt_fd)` + setns), not via `nsenter -t <child_pid>`.
-
-The Architect was right under the OLD design where each long-lived consumer owned its own namespace. Under the unified design, namespaces are first-class objects (the `ns_holder`) and `namespace_remount.py` becomes redundant with `setns_overlay_mount.py`. This is a **scope expansion** of the previously-approved plan, not a contradiction.
+Until one of those triggers, keep PyrightSession as-is. The `namespace_remount.py` header annotation (PLAN.md Step 1) already records its load-bearing role.
 
 ## 3. Unified `PluginRuntime` Protocol
 
-The shape future plugin authors consume. Replaces today's `PluginOpContext` triangle (`projection: WorkspaceProjectionLike + overlay: EphemeralPipelineLike + ProjectionHandleLike` — three Protocols, partial overlap, triple-fallback dispatch in `session_manager._acquire_session_view`).
+The shape future plugin authors consume. This is the **deliverable for "unified interface for plugin extension"** and lands inside PLAN.md Step 9 (S5 — slimming `PluginOpContext`).
 
 ```python
 class PluginRuntime(Protocol):
     """The single typed surface every plugin op handler consumes.
 
-    Implemented by EphemeralPipeline (wrapping itself + injected layer_stack).
-    Test stubs implement the same Protocol with in-memory fakes.
+    Implemented by EphemeralPipeline. Test stubs implement the same Protocol
+    with in-memory fakes. Replaces today's three-Protocol triangle
+    (ProjectionHandleLike + WorkspaceProjectionLike + EphemeralPipelineLike).
     """
 
     @property
@@ -195,23 +139,14 @@ class PluginRuntime(Protocol):
 
     def unsubscribe_workspace_changes(self, subscriber_id: str) -> None: ...
 
-    # ---- Per-op overlay (the common case) ----
+    # ---- Per-op overlay ----
     async def acquire_operation_overlay(
         self,
         *,
         invocation_id: str,
         workspace_root: str | None = None,
     ) -> OverlayHandle: ...
-    # Release via OverlayHandle._release closure on its destruction.
-
-    # ---- Long-cached session (LSP-style) ----
-    async def acquire_plugin_session(
-        self,
-        *,
-        session_id: str,
-        workspace_root: str | None = None,
-    ) -> PluginSession: ...
-    # Release via PluginSession.release().
+    # Release via OverlayHandle._release closure.
 
     # ---- Publish ----
     async def publish_cycle(
@@ -232,108 +167,112 @@ class PluginRuntime(Protocol):
     ) -> ChangesetResult: ...
 ```
 
-### What collapses
+### Survey: does `EphemeralPipeline` already implement this?
 
-- `WorkspaceProjectionLike` deleted — `PluginRuntime` is the single surface.
-- `ProjectionHandleLike` deleted — `OverlayHandle` is the single handle type (PLAN.md Step 6).
-- `OperationOverlayHandle` deleted (PLAN.md Step 6) — `OverlayHandle` is it.
-- `OverlayProjectionHandle` deleted (PLAN.md Step 6) — same.
-- `session_manager._acquire_session_view` 3-branch dispatch collapses to:
-  ```python
-  async def _acquire_session_view(ctx, *, active_key):
-      session = await ctx.runtime.acquire_plugin_session(session_id="lsp-session")
-      return _SessionView(manifest_key=session.overlay.snapshot_manifest_key, ...)
-  ```
-- `_dispatch_lsp_overlay_acquire` helper (planned in PLAN.md Step 4) deleted — direct call.
+| Method | Implemented today? | Source |
+|---|---|---|
+| `workspace_root` | YES | `pipeline.py:84` property |
+| `layer_stack_root` | NO — exposed implicitly as `_workspace_ref` | needs property alias (PLAN.md Step 9) |
+| `current_manifest_key` | YES (named `active_manifest_key`) | `pipeline.py:152` — rename or alias (PLAN.md Step 9) |
+| `subscribe_workspace_changes` | NO — `event_bus` exposed via `getattr` | PLAN.md Step 2 adds it |
+| `unsubscribe_workspace_changes` | NO | PLAN.md Step 2 adds it |
+| `acquire_operation_overlay` | YES | `helper/operation.py:43` |
+| `publish_cycle` | YES | `helper/publishing.py:73` |
+| `publish_workspace_paths` | YES | `helper/publishing.py:205` |
+
+Net new methods on `EphemeralPipeline`: 2 (`subscribe_workspace_changes`, `unsubscribe_workspace_changes`) + 1 rename/alias (`current_manifest_key`) + 1 property alias (`layer_stack_root`). All four land within PLAN.md Steps 2 + 9.
+
+### What collapses into this single Protocol
+
+- `WorkspaceProjectionLike` deleted (PLAN.md Step 9).
+- `ProjectionHandleLike` deleted (PLAN.md Step 9 — `OverlayHandle` is the single handle type from Step 6).
+- `EphemeralPipelineLike` renamed to `PluginRuntime` (PLAN.md Step 9).
+- `OperationOverlayHandle` and `OverlayProjectionHandle` deleted (PLAN.md Step 6).
+- `session_manager._acquire_session_view` 3-branch dispatch collapses to a single `_dispatch_lsp_overlay_acquire` helper + None fallback (PLAN.md Step 4).
 - `PluginOpContext` slims to `(layer_stack_root, caller, runtime: PluginRuntime, metadata)`.
 
-### What `PluginRuntime` is implemented by
+### What is NOT on this Protocol (and why)
 
-- **`EphemeralPipeline`** for daemon-mode plugins (today's path). All methods delegate to existing pipeline machinery.
-- **In-memory fakes** in tests, satisfying the Protocol with `SimpleNamespace`-typed equivalents.
-- Optionally **`IsolatedPipeline`** — but for plugins running under isolated workspaces, the runtime surface is `IsolatedPipeline` exposing the same Protocol. (Verify: today `IsolatedPipeline` does not implement `acquire_operation_overlay` / publish surface; if not, plugins-in-isolated stay scoped to read-only ops by raising `NotImplementedError`. Defer the full IsolatedPipeline Protocol parity.)
+- `acquire_plugin_session` — deferred until a second long-cached consumer exists (§2 trigger).
+- `acquire_long_lived_overlay` — same.
+- Direct `event_bus` exposure — replaced by typed subscribe API.
+- `projection.acquire_overlay` / `projection.acquire` — collapsed into `acquire_operation_overlay`.
 
-## 4. Verification of "always latest snapshot"
+## 4. Always-latest-snapshot — verification
 
-The combination is:
+1. **Daemon-side foreign-publish watcher** (`pipeline.py:337` — `_watch_foreign_publishes`) polls every `foreign_watch_interval_s`. On manifest change, emits `WorkspaceChangeEvent` on `event_bus`.
+2. **First-party publishes** emit synchronously on commit (`helper/publishing.py:190`) — event-emit latency is sub-millisecond.
+3. **Plugin session** subscribes via `subscribe_workspace_changes(session_id)`. Consumer task drains the queue and calls `session.refresh_manifest`.
+4. **Refresh** acquires new snapshot, `nsenter`-remounts (PyrightSession's existing path), releases old lease.
 
-1. **Daemon-side foreign-publish watcher** (already exists, `EphemeralPipeline._watch_foreign_publishes` at `pipeline.py:337`) polls `layer_stack.read_active_manifest()` every `foreign_watch_interval_s`. On change, emits `WorkspaceChangeEvent` on `event_bus`.
-2. **Plugin session** subscribes via `subscribe_workspace_changes(session_id)`. Consumer task drains the queue and calls `session.refresh(layer_stack)`.
-3. **Refresh** acquires new snapshot, setns + umount + remount with new `layer_paths`, releases old lease.
-
-Worst-case staleness = poll interval + remount latency. Mitigation: the daemon's own publish path emits the event synchronously on commit (see `helper/publishing.py:_publish_upperdir` line 190 — `event_bus.emit(WorkspaceChangeEvent(...))`), so first-party publishes are sub-millisecond visibility.
-
-**Per-op overlays don't need refresh** — they lease the latest manifest at acquire time. The op runs against that snapshot, publishes via OCC (which detects stale-snapshot conflicts at apply time), and releases. If the manifest moved between acquire and publish, OCC reports a conflict — that's the OCC invariant, not a freshness gap.
-
-## 5. What this design REUSES (claims by file)
-
-| Reused from | What we reuse | What it costs |
+| Metric | Bound | Note |
 |---|---|---|
-| `sandbox/overlay/handle.py` | `OverlayHandle` dataclass extended with `manifest_key`, `manifest_version`, `root_hash`, `run_dir` | +4 fields, deletes 2 sibling types |
-| `sandbox/overlay/kernel_mount.py` | `mount_overlay`, `umount` (extended), `validate_mount_inputs` | umount gets `(lazy, raise_on_failure)` two-axis (PLAN.md Step 1) |
-| `sandbox/overlay/lifecycle.py` | `create`, `destroy` | Add `acquire(layer_stack, *, invocation_id, workspace_root, release_hook=None)` (PLAN.md Step 7) |
-| `sandbox/overlay/writable_dirs.py` | `allocate_overlay_writable_dirs`, `overlay_writable_root` | Unchanged |
+| Event-emit latency (first-party publish) | sub-ms | synchronous on commit |
+| Event-emit latency (foreign publish) | ≤ poll interval | observation, not SLO |
+| Refresh-completion latency (mount swap) | ~hundreds of ms | helper subprocess + setns + mount syscalls |
+
+Per-op overlays don't refresh — they lease at acquire time and let OCC handle stale-snapshot conflicts at publish time.
+
+## 5. What this design reuses — and what (little) is new
+
+Everything in this design is covered by **PLAN.md Steps 1–9 alone**, which were previously approved across two consensus rounds. The new contribution of THIS document is:
+
+1. Naming/typing: rename `EphemeralPipelineLike` → `PluginRuntime`, add `layer_stack_root` property alias, add `current_manifest_key` alias.
+2. Documenting the O(1) invariant and its conditions.
+3. Recording the rejection rationale for Design B (PluginSession abstraction).
+4. Defining the trigger for revisiting Design B.
+
+| Reused from | What we reuse | Status |
+|---|---|---|
+| `sandbox/overlay/handle.py` | `OverlayHandle` (after PLAN.md Step 6 extension) | Unchanged beyond Step 6 |
+| `sandbox/overlay/kernel_mount.py` | `mount_overlay`, extended `umount`, `validate_mount_inputs` | Unchanged beyond PLAN.md Step 1 |
+| `sandbox/overlay/lifecycle.py` | `create`, `destroy`, new `acquire(release_hook=...)` | Unchanged beyond PLAN.md Step 7 |
+| `sandbox/overlay/writable_dirs.py` | `allocate_overlay_writable_dirs` | Unchanged |
 | `sandbox/layer_stack/stack.py` | `prepare_workspace_snapshot`, `release_lease`, `read_active_manifest` | Unchanged |
-| `sandbox/layer_stack/lease.py` | `LeaseRegistry` (refcounts) | Unchanged |
-| `sandbox/isolated_workspace/helper/runtime.py` | `_LinuxRuntime.spawn_ns_holder`, `open_ns_fds`, `run_in_handle`, `kill_holder` | Promote into `sandbox/overlay/namespace_holder.py` AND add `namespaces=` parameter (today hardcodes user/mnt/pid/net at runtime.py:69-73 and opens all four at 95-104). Network/cgroup helpers stay in isolated_workspace. |
-| `sandbox/isolated_workspace/scripts/setns_overlay_mount.py` | The setns-+-overlay-mount helper | Extend with umount-when-mountpoint behavior (refresh requires umount-first), OR introduce sibling `setns_umount.py`. Move to `sandbox/overlay/scripts/`. |
-| `sandbox/isolated_workspace/scripts/setns_exec.py` | One-shot cross-namespace exec helper (fork+waitpid+capture_output) | Move to `sandbox/overlay/scripts/`. Kept for one-shot scripts. NOT used for LSP — see new helper below. |
-| **NEW**: `sandbox/overlay/scripts/setns_persistent_exec.py` | — | setns into target namespaces + `os.execvpe` (no fork/wait). LSP daemon spawn path; preserves `proc.stdin`/`proc.stdout` for `LspJsonRpcClient`. |
-| `sandbox/ephemeral_workspace/pipeline.py` | `EphemeralPipeline` becomes the `PluginRuntime` implementation | Implements new Protocol methods; existing methods unchanged. |
-| `sandbox/ephemeral_workspace/events.py` | `WorkspaceChangeEvent`, `EphemeralPipelineEventBus` | Subscribe API typed (PLAN.md Step 2). |
+| `sandbox/layer_stack/lease.py` | `LeaseRegistry` refcounting (the engine of the O(1) invariant) | Unchanged |
+| `sandbox/ephemeral_workspace/pipeline.py` | `EphemeralPipeline` (becomes `PluginRuntime` implementer) | Unchanged beyond PLAN.md Steps 2 + 9 |
+| `sandbox/ephemeral_workspace/events.py` | `WorkspaceChangeEvent`, `EphemeralPipelineEventBus` | Unchanged; consumed via typed Protocol after Step 2 |
+| `plugins/catalog/lsp/runtime/pyright_session.py` | PyrightSession's existing namespace + remount model | Unchanged |
+| `plugins/catalog/lsp/runtime/namespace_remount.py` | The `nsenter -t <child_pid>` cross-namespace remount (102 lines) | Unchanged — load-bearing header annotation per PLAN.md Step 1 |
 
-**Net new files** (revised):
-- `sandbox/overlay/plugin_session.py` — `PluginSession` dataclass + refresh + release + `spawn_persistent_proc` (~150 lines).
-- `sandbox/overlay/scripts/setns_persistent_exec.py` — persistent-stdio setns + execvpe helper (~50 lines).
-- Either `setns_overlay_mount.py` extension (~30 lines) or new `sandbox/overlay/scripts/setns_umount.py` (~25 lines).
-- `sandbox/overlay/namespace_holder.py` — extracted from `_LinuxRuntime` with parametrized `namespaces=` (~100 lines).
+**Net new code attributable to this design (beyond PLAN.md Steps 1–9)**: 0 lines.
 
-**Net deleted files**:
-- `backend/src/sandbox/ephemeral_workspace/helper/types.py` (53 lines, deleted via PLAN.md Step 6).
-- `backend/src/plugins/catalog/lsp/runtime/namespace_remount.py` (99 lines, umount-first logic moved into setns-side helper).
-- Optionally `backend/src/sandbox/ephemeral_workspace/plugin/projection.py` (230 lines), if `WorkspaceProjection` absorbs into `EphemeralPipeline` per Step 9 (S4b).
+## 6. Resolved questions
 
-**Estimated net delta**: ~230 new lines + ~382 deleted = ~152 net deletion. (Earlier draft claimed 380+ net deletion; corrected after Architect round-3 found the LSP migration needs a new persistent-exec helper.)
+1. **`_LinuxRuntime` split into a shared `namespace_holder.py`?** Deferred until a second consumer (per §2 trigger).
+2. **`PluginSession` namespace surface?** Moot (deferred).
+3. **`PluginSession` eviction policy?** Moot (deferred).
+4. **Does `EphemeralPipeline` already implement enough of `PluginRuntime`?** Yes; survey in §3. Two new methods + two aliases, all within PLAN.md Steps 2 + 9.
 
-## 6. Resolved design decisions (Architect round-3 fixes)
+## 7. Verification
 
-1. **`_LinuxRuntime` split: RESOLVED.** Promote `spawn_ns_holder`, `open_ns_fds`, `run_in_handle`, `kill_holder` into `sandbox/overlay/namespace_holder.py`. Add `namespaces: tuple[str, ...]` parameter to both `spawn_ns_holder` and `open_ns_fds` (today the function body hardcodes `--user --net --pid --mount` at `runtime.py:69-73` and `open_ns_fds` opens all four at lines 95-104; both must accept the namespace set as input). Network and cgroup helpers stay in `isolated_workspace`. Estimated module size: ~100 lines.
-2. **`PluginSession` namespace surface: RESOLVED.** `PluginSession` uses `namespaces=("user","mount")`. LSP does not need PID or network isolation; it needs the leased overlay view, which only requires user+mount. `IsolatedPipeline` keeps the full `("user","mount","pid","net")` set via its own default. The `namespaces=` parameter on `spawn_ns_holder` (resolved in §6.1) is what enables this.
-3. **`PluginSession` eviction policy: RESOLVED.** Explicit release only, no LRU. Plugins call `session.release()` on (a) `api.plugin.ensure` with a different digest (today's `_evict_plugin_sessions` callsite already fires), (b) daemon shutdown, (c) test teardown. Per-`(plugin, layer_stack_root)` cache held in plugin runtime code (LSP's `_sessions: dict[str, PyrightSession]` model extends naturally).
-4. **Does `EphemeralPipeline` already implement enough of `PluginRuntime` to make the Protocol cheap?** Survey:
-   - `workspace_root` ✅ (property)
-   - `current_manifest_key` ≈ (today: `active_manifest_key`; rename or alias)
-   - `subscribe_workspace_changes` ❌ (Step 2)
-   - `acquire_operation_overlay` ✅
-   - `acquire_plugin_session` ❌ (new — Steps 6–9 of PLAN, plus this design)
-   - `publish_cycle`, `publish_workspace_paths` ✅
+- **O(1) invariant**: integration test asserting `LeaseRegistry._refcounts[layer]` drops to zero after `session.refresh_manifest()` completes; `_unreferenced_layers()` returns the expected superseded layers; `os.path.isdir(storage_root/layers/<old_layer_id>)` is False post-GC. Test parametrized at N=8 sessions × K=4 publishes. GC trigger = `LayerStack.release_lease(lease_id)` invocation inside the session's refresh path.
+- **PluginRuntime Protocol surface**: `mypy --strict` over `EphemeralPipeline` confirms it satisfies the Protocol. Test stubs in `backend/tests/unit_test/test_sandbox/` migrate from `SimpleNamespace` to typed fakes (PLAN.md Step 9 ordering rule).
+- **Always-latest**: existing LSP integration test (hover → publish → refresh → hover-sees-new-state) continues to pass.
 
-   So the Protocol is 4 existing methods + 2 new ones (subscribe + acquire_plugin_session). Cheap.
+## 8. Sequencing
 
-## 7. Acceptance for THIS design
+This design adds **no new steps** to `docs/plans/lsp_overlay_integration_PLAN.md`. The 9 approved steps deliver everything in §1–§5.
 
-- Document reviewed and approved by Architect + Critic.
-- New code is bounded to: `plugin_session.py`, `namespace_holder.py`, `setns_persistent_exec.py`, and either an extension to `setns_overlay_mount.py` or sibling `setns_umount.py`. Total ~210–240 lines.
-- `_LinuxRuntime`'s ns_holder primitives parametrized with `namespaces=` and extracted to `namespace_holder.py`.
-- A persistent-stdio exec helper exists (cannot reuse `_LinuxRuntime.run_in_handle` because it fork+waitpid+`capture_output=True`-buffers, killing `LspJsonRpcClient`'s persistent pipes).
-- O(1) disk-usage invariant stated with conditions; lease-release paths in `PyrightSession` verified across success/error/evict.
-- `PluginRuntime` Protocol surface frozen — implementation detail (Step 9 of PLAN) refines once approved.
+The deferred Design B (PluginSession + `namespace_holder.py` + `setns_persistent_exec.py` + umount helper) is captured as a **future option** with a trigger condition; not in scope for any current work.
 
-## 8. Sequencing relative to existing PLAN.md
+## 9. Updated ADR (delta from PLAN.md ADR)
 
-The 9 steps in `docs/plans/lsp_overlay_integration_PLAN.md` remain valid. **This design adds a Step 10** (and possibly a Step 11):
+**Decision (added)**: Adopt Design A (minimal alternative): the typed `subscribe_workspace_changes` Protocol method from PLAN.md Step 2 + the `PluginRuntime` Protocol naming from PLAN.md Step 9 deliver everything required for "unified plugin interface, always-latest snapshot, O(1) disk usage." Reject Design B (`PluginSession` abstraction) on CLAUDE.md §2 grounds.
 
-> **Step 10 (S6)** — Promote `_LinuxRuntime.spawn_ns_holder` + `open_ns_fds` + `run_in_handle` + `kill_holder` into `sandbox/overlay/namespace_holder.py` with `namespaces=` parameter. Move `setns_overlay_mount.py` + `setns_exec.py` from `isolated_workspace/scripts/` to `sandbox/overlay/scripts/`. Add `setns_persistent_exec.py` (setns + execvpe, no fork/wait). Extend `setns_overlay_mount.py` to umount-when-mountpoint OR add `setns_umount.py`. Add `sandbox/overlay/plugin_session.py` exposing the `PluginSession` dataclass + refresh + release + `spawn_persistent_proc`. Migrate `PyrightSession` to drive `PluginSession.spawn_persistent_proc(["pyright-langserver","--stdio"])`. Delete `plugins/catalog/lsp/runtime/namespace_remount.py`.
+**Drivers (added)**:
+- O(1) lowerdir invariant is a property of `LeaseRegistry` refcounting; no new infrastructure is required to deliver it.
+- Future plugin authors consuming the `PluginRuntime` Protocol see one typed surface (post-Step-9 collapse).
+- LSP's existing long-cached pattern works and has been verified across happy/error/evict paths.
 
-> **Step 11 (S7) — optional** — Migrate `IsolatedPipeline` to consume the same `namespace_holder.py` (with its default `namespaces=("user","mount","pid","net")`). Today's `_LinuxRuntime` is then trimmed to just the network/cgroup pieces.
+**Alternatives considered (added)**:
+1. **Design B — `PluginSession` abstraction** — deferred. Verdict: single-consumer; CLAUDE.md §2 rejects abstractions built for one consumer absent a named second consumer. Re-evaluate when the trigger fires.
+2. **Promote Step 11 (IsolatedPipeline migration) to make Design B two-consumer** — rejected. `IsolatedPipeline`'s `_LinuxRuntime` is a 320-line module deeply entangled with network/cgroup/veth code; the split benefits no current consumer and adds reaper-ownership complexity (process-global `os.waitpid(-1, ...)`).
 
-Step 10 lands **after** Steps 1–9 because (a) it depends on the unified `OverlayHandle` from Step 6, (b) it depends on `subscribe_workspace_changes` from Step 2, (c) `PluginRuntime` Protocol from Step 9 is the consumer surface.
+**Consequences (added)**: PLAN.md's 9 steps fully cover the design ask. No additional steps. Design B captured as a future-option entry. PyrightSession and `namespace_remount.py` remain in place.
 
-Acceptance for Step 10:
-- `namespace_holder.py` exists; `namespaces=` parameter on `spawn_ns_holder` and `open_ns_fds`; `isolated_workspace` consumes the same module with its default four-namespace surface.
-- `setns_persistent_exec.py` exists; LSP daemon's `proc.stdin`/`proc.stdout` pipes work end-to-end after spawn.
-- `setns_overlay_mount.py` (or `setns_umount.py`) handles umount-first; remount-on-refresh integration test passes.
-- `PyrightSession` no longer spawns its own `unshare -Urm`; it spawns `pyright-langserver` via `PluginSession.spawn_persistent_proc`.
-- `plugins/catalog/lsp/runtime/namespace_remount.py` deleted.
-- LSP integration tests green; foreign-publish refresh measured under <1s under unit-test loads.
-- Disk-usage invariant verified by an integration test: spawn N=8 sessions, publish K=4 layers, assert layers GC'd within publish_cycle + foreign_watch interval (invariant I1 verified empirically).
+**Follow-ups (added)** — only if §2 trigger fires:
+- `_LinuxRuntime.spawn_ns_holder` / `open_ns_fds` need `namespaces=` parameter (today hardcodes `--user --net --pid --mount`).
+- LSP daemon needs `setns_persistent_exec.py` (setns + execvpe, no fork/wait) — `_LinuxRuntime.run_in_handle`'s fork+waitpid+`capture_output=True` model is incompatible with `LspJsonRpcClient`'s persistent pipes.
+- `setns_overlay_mount.py` needs umount-first (today only mounts); pick "extend existing" vs "new sibling `setns_umount.py`." If pursued, the sibling-file path is preferred — keeps the `mount` script single-responsibility per the existing `R10 single-thread discipline` docstring.
+- Reaper ownership: single instance contract OR scope `kill_holder` to known PIDs in `self._holders`/`self._grandchildren` only.

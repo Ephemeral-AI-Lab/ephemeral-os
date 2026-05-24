@@ -1,4 +1,4 @@
-"""Isolated workspace pipeline and singleton accessors."""
+"""Isolated workspace pipeline."""
 
 from __future__ import annotations
 

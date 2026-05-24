@@ -366,10 +366,6 @@ def _load_peer_bootstraps() -> None:
         "api.build_workspace_base": handlers.build_workspace_base,
         "api.prepare_workspace_snapshot": handlers.prepare_workspace_snapshot,
         "api.release_lease": handlers.release_lease,
-        # Rollout-window alias for ``api.release_lease`` (Phase 2.6 C3.5a).
-        # Handler logs a WARN with ``deprecated_alias=api.release_workspace_snapshot``
-        # on use; schedule removal per follow-up §11 item 12.
-        "api.release_workspace_snapshot": handlers.release_workspace_snapshot,
         "api.layer_stack.fence_stale_staging": handlers.fence_stale_staging,
         "api.edit_file": handlers.edit_file,
         "api.v1.edit_file": handlers.edit_file,

@@ -33,8 +33,8 @@ Phase 2 API.
 
 ## 4. Host Lifecycle API
 
-Host-side lifecycle callers use `sandbox.isolated_workspace.lifecycle.enter_isolated_workspace`
-and `sandbox.isolated_workspace.lifecycle.exit_isolated_workspace`. These functions live outside
+Host-side lifecycle callers use `sandbox.host.iws_lifecycle.enter_isolated_workspace`
+and `sandbox.host.iws_lifecycle.exit_isolated_workspace`. These functions live outside
 `sandbox.api` because they are host coroutines, not client-side wire artifacts.
 
 Agent tools expose the same lifecycle as `enter_isolated_workspace` and

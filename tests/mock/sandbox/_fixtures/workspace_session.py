@@ -1,8 +1,8 @@
 """Test-only workspace session helper.
 
 This module is not part of the production sandbox API. Production callers use
-the explicit ``sandbox.isolated_workspace.lifecycle.enter_isolated_workspace`` /
-``exit_isolated_workspace`` pair.
+the explicit ``sandbox.host.iws_lifecycle.enter_isolated_workspace`` /
+``sandbox.host.iws_lifecycle.exit_isolated_workspace`` pair.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from sandbox._shared.models import (
     ExitIsolatedWorkspaceRequest,
     SandboxCaller,
 )
-from sandbox.isolated_workspace.lifecycle import (
+from sandbox.host.iws_lifecycle import (
     enter_isolated_workspace,
     exit_isolated_workspace,
 )

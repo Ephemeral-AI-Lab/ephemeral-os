@@ -1,8 +1,9 @@
 """Process-local IsolatedPipeline singleton, bootstrap, and audit-sink wiring.
 
-Mirrors :mod:`sandbox.ephemeral_workspace._manager` — both modules carry the
-private state RPC handlers reach via ``require_pipeline`` / ``set_pipeline``,
-plus the one-shot construction the daemon's first ``enter()`` triggers.
+Mirrors :mod:`sandbox.ephemeral_workspace.helper.manager` — both modules carry
+the private state RPC handlers reach via ``require_pipeline`` /
+``set_pipeline``, plus the one-shot construction the daemon's first
+``enter()`` triggers.
 
 iws bootstrap is lazier than eph's because the daemon doesn't know which
 ``layer_stack_root`` an agent will target at startup — the first

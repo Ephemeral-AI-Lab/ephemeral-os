@@ -14,7 +14,6 @@ Module layout:
 * Layer-stack diagnostic surface — ``layer_metrics``, ``runtime_ready``.
 * Layer-stack control surface — ``build_workspace_base``, ``ensure_workspace_base``,
   ``workspace_binding``, ``prepare_workspace_snapshot``, ``release_lease``,
-  ``release_workspace_snapshot`` (legacy alias, see §11 follow-up 12),
   ``fence_stale_staging``.
 """
 
@@ -22,7 +21,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import logging
 import os
 import time
 from collections.abc import Callable
@@ -50,7 +48,6 @@ from sandbox.layer_stack.workspace_binding import (
 from sandbox.overlay.namespace_runner import detect_private_mount_namespace
 
 
-_logger = logging.getLogger("sandbox.daemon.handlers")
 _CANCEL_CLEANUP_WAIT_S = 5.0
 _STARTED_AT_MONO = time.monotonic()
 
@@ -251,7 +248,7 @@ def _run_probe(
 # ---------------------------------------------------------------------------
 # Layer-stack control surface (api.{ensure,build}_workspace_base,
 # api.workspace_binding, api.prepare_workspace_snapshot, api.release_lease,
-# api.release_workspace_snapshot legacy alias, api.layer_stack.fence_stale_staging)
+# api.layer_stack.fence_stale_staging)
 # ---------------------------------------------------------------------------
 
 
@@ -344,20 +341,6 @@ async def release_lease(args: dict[str, object]) -> dict[str, object]:
     }
 
 
-async def release_workspace_snapshot(args: dict[str, object]) -> dict[str, object]:
-    """Deprecated alias kept for one release cycle.
-
-    Plan §5.5 (C3.5a) rolls ``api.release_workspace_snapshot`` over to
-    ``api.release_lease``. The alias delegates to the new handler and
-    emits a WARN with ``deprecated_alias`` so callers see exactly which
-    verb to migrate. Remove with follow-up §11 item 12.
-    """
-    _logger.warning(
-        "deprecated_alias=api.release_workspace_snapshot use=api.release_lease",
-    )
-    return await release_lease(args)
-
-
 async def fence_stale_staging(args: dict[str, object]) -> dict[str, object]:
     return workspace_server.fence_stale_staging(require_layer_stack_root(args))
 
@@ -387,7 +370,6 @@ __all__ = [
     "prepare_workspace_snapshot",
     "read_file",
     "release_lease",
-    "release_workspace_snapshot",
     "runtime_ready",
     "shell",
     "workspace_binding",

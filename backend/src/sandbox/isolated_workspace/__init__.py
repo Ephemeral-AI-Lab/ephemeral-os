@@ -8,8 +8,8 @@ Submodules
 - :mod:`.pipeline` — lifecycle state machine, quota / TTL / host-RAM gate,
   ``manager.json`` persistence, GC pass, ``_PhaseTimer``, ``_LinuxRuntime``.
 - :mod:`.network` — bridge + nftables + per-workspace veth + IP pool.
-- :mod:`.handlers` — RPC handlers for the lifecycle ops
-  (``enter``, ``exit_``, ``status``).
+- :mod:`sandbox.daemon.rpc.dispatcher` — inline lifecycle RPC handlers
+  (``api.isolated_workspace.{enter,exit,status,list_open,test_reset}``).
 - :mod:`.scripts` — single-threaded subprocess helpers that perform setns
   syscalls. R10 import discipline applies: their module-level import sets
   are pinned by ``test_setns_exec_discipline``.

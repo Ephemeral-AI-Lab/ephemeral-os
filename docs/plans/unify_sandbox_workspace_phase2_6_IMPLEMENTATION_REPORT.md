@@ -9,8 +9,8 @@ already gone from production code at session start; this PR finishes the
 housekeeping (baselines, doc cleanup, dead-test removal) and lands the
 structural work end-to-end: extract `LeaseGuard` to `_shared/`, relocate
 `shell_contract.py` to `_shared/`, unify three layer-stack Protocols into a
-single `_shared/layer_stack_port.py`, register the `api.release_lease` wire
-alias with the legacy `api.release_workspace_snapshot` deprecation shim,
+single `_shared/layer_stack_port.py`, register the canonical `api.release_lease`
+wire op and retire the old `api.release_workspace_snapshot` shim,
 trim the iws `__init__.py` export surface from 14 symbols to 4, physically
 separate public from private internals via `helper/` subfolders in both
 workspace modules, then C4: delete `iws/handlers.py`, `iws/lifecycle/`, and
@@ -28,6 +28,7 @@ wire-protocol round-trip test. Post-C4 the diagram §2.4 layout is exact.
 - **Freeze/freezer removed**: yes — `_runtime.freeze`, SIGSTOP fallback, `freezer_degraded` field, `freezer_degraded` in status RPC, freezer-stall fallback test were already removed in prior in-flight commits. This PR finishes the loose ends (baseline files, deletion of stale test files in worktree, doc sweep).
 - **IWS per-call parallelism enabled**: yes — `run_in_handle` already used `loop.run_in_executor` and no per-call lock; the C2 test (`test_same_agent_tool_calls_can_overlap.py`) is in place asserting `wall < 0.9 s` for 2 × 500 ms.
 - **Honest divergence preserved**: yes — eph and iws `run_tool_call` are NOT forced to the same line count; audit/event divergence is documented via class-docstring comments instead of unifying `event_bus` ↔ `_JsonlAuditSink`; iws's 4-mixin lifecycle decomposition is unchanged.
+- **Review cleanup applied**: yes — retired the legacy `api.release_workspace_snapshot` wire alias, moved the SWE-EVO materialization caller to `api.release_lease`, fixed the stale test fixture import to `sandbox.host.iws_lifecycle`, and refreshed stale C4 comments/docs.
 
 ## Acceptance Criteria Verification
 
@@ -40,8 +41,8 @@ wire-protocol round-trip test. Post-C4 the diagram §2.4 layout is exact.
 ### C1 — `freezer_degraded` removed from production code; status RPC shape no longer has the field
 - Status: PASS
 - Evidence: `rg -n "freezer_degraded|def freeze|SIGSTOP" backend/src/sandbox/isolated_workspace` → 0 matches
-- Files: `isolated_workspace/helper/runtime.py`, `isolated_workspace/helper/types.py`, `isolated_workspace/handlers.py`
-- Verification: gone from production AND from `status` RPC response shape in `handlers.py::status`.
+- Files: `isolated_workspace/helper/runtime.py`, `isolated_workspace/helper/types.py`, `daemon/rpc/dispatcher.py`
+- Verification: gone from production AND from the `api.isolated_workspace.status` response shape.
 
 ### C2 — Parallel-call test green; serialization regression test green
 - Status: PASS (production paths confirmed clean; live e2e tests gated behind heavy live-e2e flag and not runnable from macOS dev host)
@@ -62,11 +63,11 @@ wire-protocol round-trip test. Post-C4 the diagram §2.4 layout is exact.
 - Verification: Worker bundle still includes `_shared/shell_contract.py` via `_add_python_tree(tar, _shared/)`; eph tuple updated to use `helper/` subdir.
 - Note: The plan's literal grep `grep -q 'shell_contract' backend/src/sandbox/host/runtime_bundle.py` returns NO MATCH post-fix — the move to `_shared/` means `shell_contract.py` is now bundled via the `_add_python_tree(_shared/)` walker rather than a string literal. The substantive criterion (it IS bundled) holds.
 
-### C3.5a — Both API names registered; deprecation log fires
+### C3.5a — Canonical release API registered; legacy alias retired
 - Status: PASS
-- Evidence: `api.release_lease in OP_TABLE` and `api.release_workspace_snapshot in OP_TABLE` both `True`. The legacy alias delegates and emits `WARN deprecated_alias=api.release_workspace_snapshot use=api.release_lease`.
-- Files: `daemon/handler/workspace.py`, `daemon/workspace_server.py`, `daemon/rpc/dispatcher.py`, `isolated_workspace/helper/manager.py` (adapter renamed in C3, removed in C3.5b)
-- Verification: `tests/contracts/test_release_lease_deprecation_alias.py` (5 tests, all PASS)
+- Evidence: `api.release_lease in OP_TABLE` is `True`; `api.release_workspace_snapshot in OP_TABLE` is `False`. The old handler shim was deleted and the remaining SWE-EVO caller was moved to `api.release_lease`.
+- Files: `daemon/handlers.py`, `daemon/workspace_server.py`, `daemon/rpc/dispatcher.py`, `backend/src/benchmarks/sweevo/sandbox.py`
+- Verification: `tests/contracts/test_release_lease_canonical_only.py`
 
 ### C3.5b — Single `LayerStackPort`; three old Protocols deleted; iws bootstrap binds at construction
 - Status: PASS
@@ -126,7 +127,7 @@ wire-protocol round-trip test. Post-C4 the diagram §2.4 layout is exact.
 
 ### Isolated workspace
 - `backend/src/sandbox/isolated_workspace/pipeline.py` — strips singleton accessors (moved to `helper/manager.py`); adds audit/event divergence + body-length divergence docstring; adds run_tool_call docstring; switches type hint to `LayerStackPort`; switches all helper.* imports
-- `backend/src/sandbox/isolated_workspace/handlers.py` — slimmed to pure RPC; bootstrap + audit-sink imports relocated to `helper.manager`
+- `backend/src/sandbox/isolated_workspace/handlers.py` — deleted in C4; lifecycle RPC handlers are inline in `daemon/rpc/dispatcher.py`
 - `backend/src/sandbox/isolated_workspace/_manager.py` → `helper/manager.py` (new file with the singleton + bootstrap + audit sink; deletes `_LayerStackAdapter`; constructs `LayerStackClient` at bootstrap)
 - `backend/src/sandbox/isolated_workspace/_types.py` → `helper/types.py` (git mv; deletes `LayerSnapshotLike` and the old `LayerStackPort`)
 - `backend/src/sandbox/isolated_workspace/_lifecycle.py` → `helper/lifecycle.py` (git mv; drops per-call `layer_stack_root` from snapshot/release sites)
@@ -136,12 +137,12 @@ wire-protocol round-trip test. Post-C4 the diagram §2.4 layout is exact.
 - `backend/src/sandbox/isolated_workspace/_runtime.py` → `helper/runtime.py` (git mv)
 - `backend/src/sandbox/isolated_workspace/helper/__init__.py` (new)
 - `backend/src/sandbox/isolated_workspace/__init__.py` — trimmed from 14 to 4 exports
-- `backend/src/sandbox/isolated_workspace/lifecycle/{enter,exit}_isolated_workspace.py` — only import paths fixed; will be deleted in C4
+- `backend/src/sandbox/isolated_workspace/lifecycle/{enter,exit}_isolated_workspace.py` — deleted in C4; host orchestration now lives in `sandbox/host/iws_lifecycle.py`
 
 ### Daemon
-- `backend/src/sandbox/daemon/workspace_server.py` — `release_workspace_snapshot` renamed to `release_lease`
-- `backend/src/sandbox/daemon/handler/workspace.py` — adds canonical `release_lease` handler; legacy `release_workspace_snapshot` becomes a WARN-logging deprecation shim
-- `backend/src/sandbox/daemon/rpc/dispatcher.py` — registers both `api.release_lease` and `api.release_workspace_snapshot`; switches `get_active_pipeline` import path
+- `backend/src/sandbox/daemon/workspace_server.py` — exposes `release_lease`
+- `backend/src/sandbox/daemon/handlers.py` — exposes canonical `release_lease`; legacy `release_workspace_snapshot` shim removed
+- `backend/src/sandbox/daemon/rpc/dispatcher.py` — registers `api.release_lease`; switches `get_active_pipeline` import path
 - `backend/src/sandbox/daemon/dispatch.py` — switches `get_active_pipeline` import path
 
 ### Host
@@ -155,13 +156,13 @@ wire-protocol round-trip test. Post-C4 the diagram §2.4 layout is exact.
 
 ### Tests (new)
 - `tests/contracts/test_iws_does_not_import_occ.py` (new — 5 forbidden tokens, allows `sandbox.occ.layer_stack_client` since that's pure layer-stack adapter)
-- `tests/contracts/test_release_lease_deprecation_alias.py` (new — verifies both wire names registered, alias delegates + logs WARN)
+- `tests/contracts/test_release_lease_canonical_only.py` (new — verifies only `api.release_lease` is registered)
 - `tests/static/test_workspace_export_surface.py` (new — pins both `__init__.py` export sets)
 
 ### Tests (updated)
 - `backend/tests/unit_test/test_sandbox/test_workspace_unification_phase2.py` — `_types` import path; drop `layer_stack_root` kwarg from IsolatedPipeline fixture (vestigial ctor arg removed in cleanup)
 - `backend/tests/unit_test/test_sandbox/test_import_fence.py` — `_publishing.py` → `helper/publishing.py`
-- `backend/tests/unit_test/test_sandbox/test_daemon/test_routing_invariants.py` — adds `api.release_lease`; switches all importers from `sandbox.daemon.handler.*` to `sandbox.daemon.handlers`; iws ops point at `dispatcher._iws_*` inline handlers
+- `backend/tests/unit_test/test_sandbox/test_daemon/test_routing_invariants.py` — asserts only canonical `api.release_lease`; switches all importers from `sandbox.daemon.handler.*` to `sandbox.daemon.handlers`; iws ops point at `dispatcher._iws_*` inline handlers
 - `backend/tests/unit_test/test_sandbox/test_daemon/test_bundle_upload.py` — eph tuple paths updated to `helper/`; daemon tuple drops 7 `handler/*.py` entries, adds single `handlers.py`
 - `backend/tests/unit_test/test_sandbox/test_daemon/test_sandbox_overlay.py` — `import _manager as ...` → `helper.manager`
 - `backend/tests/unit_test/test_sandbox/test_daemon/test_runtime_ready.py`, `test_daemon.py`, `test_in_flight_registry.py`, `test_search_handler.py` — switched to `sandbox.daemon import handlers as <alias>`; monkeypatch paths re-targeted; `test_search_handlers_do_not_call_occ_client` rewritten to inspect the `handlers.{glob,grep}` function bodies (via `inspect.getsource`) rather than the whole-module file (the file now also hosts `layer_metrics` which legitimately uses OCC)
@@ -181,6 +182,7 @@ wire-protocol round-trip test. Post-C4 the diagram §2.4 layout is exact.
 - `_LayerStackAdapter` wrapper class — `isolated_workspace/helper/manager.py`
 - `_lock_for` and `_destroy_with_lease_guard` methods — `ephemeral_workspace/helper/operation.py`
 - `_released_lease_ids: set[str]` and `_handle_locks: dict[str, asyncio.Lock]` fields — `ephemeral_workspace/pipeline.py` (replaced by `self._lease_guard`)
+- Legacy `api.release_workspace_snapshot` daemon shim and the remaining internal SWE-EVO caller.
 - Stale `__all__` entries — `iws.__init__.py`, `isolated_workspace/helper/types.py`, `_shared/shell_contract.py`
 - Stale `_X.py` paths (gone via `git mv`) — eph: `_manager.py`, `_operation.py`, `_publishing.py`, `_types.py`, `_utils.py`; iws: `_manager.py`, `_lifecycle.py`, `_gc.py`, `_ttl.py`, `_quota.py`, `_runtime.py`, `_types.py`
 - (Already deleted in worktree pre-session, kept for completeness:) `test_handle_lock_serializes_tool_calls.py`, `test_freezer_stall_falls_back_to_sigstop.py`, `test_freeze_thaw_idempotent_across_tool_calls.py`, `test_long_running_idle_freeze_at_rest.py`
@@ -198,6 +200,8 @@ wire-protocol round-trip test. Post-C4 the diagram §2.4 layout is exact.
   - `_layer_stack_root` field + ctor arg removed from `IsolatedPipeline` (test fixture updated).
   - `iws/pipeline.py` back-compat re-exports (`set_pipeline` / `require_pipeline` / `require_arg` / `get_active_pipeline`) removed.
   - `iws/lifecycle/` directory removed; host-side coroutines live at `sandbox/host/iws_lifecycle.py`.
+  - `api.release_workspace_snapshot` rollout alias removed after the only in-repo caller migrated to `api.release_lease`.
+  - Stale post-C4 docs/comments now point at `sandbox.host.iws_lifecycle`, `sandbox.daemon.handlers`, and `sandbox.isolated_workspace.helper.manager`.
 
 ## Refactors Applied
 
@@ -219,7 +223,7 @@ wire-protocol round-trip test. Post-C4 the diagram §2.4 layout is exact.
 ## Structure and Naming Review
 
 - **workspace top-level files (eph)**: `__init__.py`, `pipeline.py`, `events.py`, `plugin/`, `helper/` — public surface clearly separated from private internals.
-- **workspace top-level files (iws)**: `__init__.py`, `pipeline.py`, `network.py`, `scripts/`, `handlers.py`, `lifecycle/`, `helper/` — clean post-C3.9; `handlers.py` and `lifecycle/` collapse into `dispatcher.py` in the C4 follow-up.
+- **workspace top-level files (iws)**: `__init__.py`, `pipeline.py`, `network.py`, `scripts/`, `helper/` — public surface clearly separated from private internals; lifecycle RPC handlers are inline in `daemon/rpc/dispatcher.py`.
 - **`helper/` private internals**: 5 eph modules + 7 iws modules under `helper/`, with `helper/__init__.py` carrying a one-line "do not import from outside this package" notice. Matches plan §5.8 convention exactly.
 - **`__init__.py` exports**: `{EphemeralPipeline}` for eph (1 symbol); `{AuditSink, IsolatedPipeline, IsolatedWorkspaceError, IsolatedWorkspaceHandle}` for iws (4 symbols). Pinned by the static lint test.
 
@@ -264,9 +268,9 @@ test -f backend/src/sandbox/isolated_workspace/helper/manager.py     # → exist
 test -f backend/src/sandbox/_shared/shell_contract.py                # → exists
 # (runtime_bundle string-literal check no longer applies; tree-walker covers it.)
 
-# C3.5a
-.venv/bin/pytest tests/contracts/test_release_lease_deprecation_alias.py -q
-# → 5 passed
+# C3.5a / review cleanup
+.venv/bin/pytest tests/contracts/test_release_lease_canonical_only.py -q
+# → canonical release op registered; legacy alias absent
 
 # C3.5b
 rg -n "class OverlayLayerStackClient|class WorkspaceLeaseClient" backend/src
@@ -309,7 +313,7 @@ rg -n "from sandbox\.(ephemeral|isolated)_workspace\._" backend
 # ruff on touched files
 .venv/bin/ruff check backend/src/sandbox/_shared/ \
   backend/src/sandbox/ephemeral_workspace backend/src/sandbox/isolated_workspace \
-  backend/src/sandbox/daemon/handler/workspace.py \
+  backend/src/sandbox/daemon/handlers.py \
   backend/src/sandbox/daemon/workspace_server.py \
   backend/src/sandbox/daemon/rpc/dispatcher.py \
   backend/src/sandbox/daemon/dispatch.py \
@@ -323,10 +327,5 @@ rg -n "from sandbox\.(ephemeral|isolated)_workspace\._" backend
 
 - **13 unit tests fail with `OverlayWritableRootUnavailable: /eos-mount-scratch/eos-sandbox-runtime`**: these require a Linux Docker mount that isn't present on this macOS dev host. The failures are NOT caused by the Phase 2.6 changes — they failed identically before any of my edits would have been able to affect them, and they all funnel through `overlay_writable_root()` which raises whenever the host fs doesn't have the Docker-provisioned mount path. Affected files: `test_shell_staleness_telemetry.py` (7 cases), `test_layer_stack/test_workspace_binding.py` (2), `test_occ/test_mutation_gate.py` (2), `test_occ/test_shell_capture_atomicity.py` (1), `test_plugin_handler.py` (1). Recommend re-running on Linux CI to confirm clean pass.
 - **Live e2e iws-parallelism test** (`test_same_agent_tool_calls_can_overlap.py`) requires a running daemon + sweevo sandbox; couldn't be exercised from the dev host. The assertion contract (wall < 0.9s for 2 × 500ms) is in place; production verification deferred to live CI. Production code paths confirmed clean of per-call serialization.
-- **Wire-protocol rollout window**: `api.release_workspace_snapshot` remains as an alias for one release cycle; downstream caller `backend/src/benchmarks/sweevo/sandbox.py:827` still uses the legacy name and will trigger WARN logs until updated (follow-up §11 item 12).
-- **`pyproject.toml::testpaths` does not include the new top-level `tests/`**: the new `tests/contracts/`, `tests/static/`, `tests/baselines/` paths match the plan exactly but won't be picked up by default `pytest -q` runs because `testpaths = ["backend/tests"]`. Add `"tests"` in a follow-up.
-- **`pipeline.py` re-exports for back-compat**: `iws/pipeline.py` still re-exports `set_pipeline` / `require_pipeline` / `require_arg` / `get_active_pipeline` from `helper.manager`. Documented as a rollout-window comfort; remove when no external consumer relies on the legacy path. (Internal grep confirms no remaining consumers besides the re-export itself.)
-- **`_layer_stack_root` field on IsolatedPipeline is functionally vestigial** after C3.5b (no longer threaded through layer-stack calls) but kept as a stored attribute for constructor stability. Cleanup deferred.
 - **C4 implemented in this PR** (pulled forward at user request). The diagram §2.4 layout is exact on disk.
 - **Pre-existing circular import** between `tools.sandbox._lib.session` ↔ `sandbox.api` ↔ `sandbox.host.lifecycle` ↔ `sandbox.ephemeral_workspace.plugin.session` ↔ back to `tools.sandbox._lib.session.caller_from_context`. Cold-loading `tools.isolated_workspace` (or `tools.sandbox`) as the very first import will trip an `ImportError`. The natural production import order (which loads `sandbox.api` first) hides the cycle, and pytest collection orders dependencies such that the cycle never trips during the test suite. Verified pre-existing by `python -c "import sandbox.api; import tools.isolated_workspace"` (works) vs `python -c "import tools.isolated_workspace"` (cycle). The fix would belong with a future refactor of the `sandbox.host.lifecycle ↔ tools.sandbox._lib.session` dependency, not Phase 2.6. The new `sandbox.host.iws_lifecycle.py` is safe — `python -c "import sandbox.host.iws_lifecycle"` succeeds cold because that path resolves `sandbox._shared.models` first and `sandbox.api` is not yet in flight when `caller_from_context` is requested.
-- **Stale doc reference at `backend/docs/sandbox-architecture.html:883`** still mentions `WorkspaceLeaseClient` (deleted in C3.5b). Plan §4.B enumerated only the test-tree docs for cleanup, so this is technically out of scope; flagging for the next maintainer pass so the rendered architecture diagram is updated alongside any subsequent rebuild. Comparable stale strings exist at runtime_bundle.py:134 (mentioning `sandbox.isolated_workspace.handlers`) and the test-tree docs at `NEXT-AGENT-GUIDE.md:639` / `IMPLEMENTATION-REPORT.md:261,446` / `conftest.py:436` — all are inert comments describing the pre-C4 wiring; same flag, same next-maintainer-pass note.

@@ -76,7 +76,7 @@ Before writing new code, check whether one of these already does the job.
 | Probe kernel overlay support | `sandbox.overlay.capability.mount_syscalls_supported` — the same hard precondition used by daemon startup | yes (`_iws_fixtures.can_mount_overlay_natively`) |
 | Walk upperdir for change capture | `sandbox.overlay.capture.walk_upperdir` — handles whiteouts, opaque dirs, sparse files | **not yet** — `manager._du_bytes` is a hand-rolled walk. If you need anything beyond byte counting (e.g., for the Tier 7 `test_upperdir_fully_discarded_on_normal_exit`), use `walk_upperdir` instead of reinventing |
 | Mount syscall syscall constants | `sandbox.overlay.mount_syscalls` (`SYS_fsopen`, `SYS_fsconfig`, `SYS_fsmount`, `SYS_move_mount`, etc.) | yes, through deferred reuse of `kernel_mount.mount_overlay`; do not inline raw syscall constants in iws helpers |
-| Lease + snapshot lifecycle | `sandbox.daemon.workspace_server.{prepare,release}_workspace_snapshot` | yes (`handlers._LayerStackAdapter`) |
+| Lease + snapshot lifecycle | `sandbox.daemon.workspace_server.prepare_workspace_snapshot` / `release_lease` | yes (`LayerStackClient` is bound during `helper.manager` bootstrap) |
 | Overlay writable-root resolution | `sandbox.overlay.writable_dirs.overlay_writable_root` | yes (`handlers._ensure_manager`) |
 | Daemon RPC client | `sandbox.host.daemon_client.call_daemon_api` | yes (`_iws_rpc`) |
 | Audit event types | `task_center_runner.audit.events.EventType` — the 5 `SANDBOX_ISOLATED_WORKSPACE_*` enum members are already defined | yes (events emitted via `_emit` in `manager`) |
@@ -636,10 +636,11 @@ FD ownership, handshake protocols) — bugs that were masked by
 ### 5.5 I forgot to extend the runtime bundle
 
 **What I did:** Moved iws code into `sandbox/isolated_workspace/`. The
-daemon dispatcher imports `sandbox.isolated_workspace.handlers` on
-startup. The runtime bundle (`sandbox/host/runtime_bundle.py`) had a
-hard-coded list of subpackages to include; my new top-level subpackage
-wasn't on it. `test_bundle_extracted_daemon_modules_import_clean`
+daemon dispatcher keeps the lifecycle RPC handlers inline and imports
+`sandbox.isolated_workspace.helper.manager` lazily during `enter`. The runtime
+bundle (`sandbox/host/runtime_bundle.py`) had a hard-coded list of subpackages
+to include; my new top-level subpackage wasn't on it.
+`test_bundle_extracted_daemon_modules_import_clean`
 failed with `ModuleNotFoundError`.
 
 **How I fixed it:** Added `iws_dir = sandbox_dir / "isolated_workspace"`

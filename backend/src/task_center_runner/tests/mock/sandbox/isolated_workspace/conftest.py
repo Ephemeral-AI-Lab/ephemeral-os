@@ -433,7 +433,8 @@ async def iws_audit_jsonl(iws_clean_sandbox: dict[str, Any], tmp_path):
     """Provide a callable that snapshots the daemon-side iws audit JSONL.
 
     The daemon writes lifecycle events to ``_IN_CONTAINER_AUDIT_PATH`` inside
-    the sandbox (wired by ``sandbox.isolated_workspace.handlers._JsonlAuditSink``).
+    the sandbox (wired by
+    ``sandbox.isolated_workspace.helper.manager._JsonlAuditSink``).
     The file is truncated at fixture entry so each test sees only its own
     events; ``await snapshot()`` returns a ``pathlib.Path`` on the host with
     the bytes read at that moment.

@@ -1,7 +1,7 @@
 """Phase 2.6 C3.8 invariant: pin the public ``__init__.py`` export surface.
 
 Prevents accidental re-leak of private internals (e.g. ``_LinuxRuntime``,
-``_PhaseTimer``, ``_ManagerConfig``, ``LayerSnapshotLike``, bootstrap
+``_PhaseTimer``, ``_ManagerConfig``, ``_JsonlAuditSink``, bootstrap
 helpers) that pre-Phase-2.6 leaked from the iws ``__init__``. The eph
 package has always exposed a single ``EphemeralPipeline`` symbol; iws
 mirrors that minimalism with a tight 4-symbol surface.

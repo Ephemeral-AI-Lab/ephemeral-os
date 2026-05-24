@@ -248,7 +248,7 @@ async def test_apply_layerstack_to_repo_materializes_snapshot_and_releases(
     assert daemon_calls[0][0] == "api.prepare_workspace_snapshot"
     assert str(daemon_calls[0][1]["request_id"]).startswith("sweevo-eval-materialize-")
     assert daemon_calls[1] == (
-        "api.release_workspace_snapshot",
+        "api.release_lease",
         {"lease_id": "lease-1"},
     )
     assert len(commands) == 1
