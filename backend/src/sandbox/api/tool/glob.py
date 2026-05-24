@@ -23,6 +23,7 @@ async def glob(
 
     async def _call() -> GlobResult:
         payload: dict[str, object] = {
+            "request_id": request.request_id,
             "pattern": request.pattern,
             "caller": request.caller.audit_fields(),
         }

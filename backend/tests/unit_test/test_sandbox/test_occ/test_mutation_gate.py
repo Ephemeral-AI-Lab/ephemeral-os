@@ -34,7 +34,7 @@ def test_data_api_ops_do_not_dispatch_to_occ_server() -> None:
     from sandbox.daemon.rpc import dispatcher as server
 
     server._load_peer_bootstraps()
-    for op in ("api.write_file", "api.edit_file", "api.read_file", "api.shell"):
+    for op in ("api.write_file", "api.edit_file", "api.read_file", "api.v1.shell"):
         handler = server.OP_TABLE[op]
         assert handler.__module__ != "sandbox.daemon.occ_backend"
 

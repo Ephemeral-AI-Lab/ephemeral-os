@@ -33,8 +33,8 @@ Phase 2 API.
 
 ## 4. Host Lifecycle API
 
-Host-side lifecycle callers use `sandbox.lifecycle.enter_isolated_workspace`
-and `sandbox.lifecycle.exit_isolated_workspace`. These functions live outside
+Host-side lifecycle callers use `sandbox.isolated_workspace.lifecycle.enter_isolated_workspace`
+and `sandbox.isolated_workspace.lifecycle.exit_isolated_workspace`. These functions live outside
 `sandbox.api` because they are host coroutines, not client-side wire artifacts.
 
 Agent tools expose the same lifecycle as `enter_isolated_workspace` and
@@ -98,10 +98,17 @@ the explicit lifecycle pair.
 
 ## 11. Background Policy
 
-Background tool lifecycle is out of scope for Phase 2 and is documented in
-`docs/plans/unify_sandbox_workspace_phase2_5.md`. Phase 2 foreground code does
-not add `_session_jobs`, `_drain_background_jobs`, request cancellation RPCs, or
-engine-owned background task tracking.
+Background tool lifecycle is owned by Phase 2.5 and documented in
+`docs/plans/unify_sandbox_workspace_phase2_5.md`. Background execution is a
+generic `ToolCallRequest.background` flag wrapped by the engine's
+`BackgroundTaskManager`; the pipeline body is the same coroutine used by
+foreground calls.
+
+Sandbox RPC envelopes carry `request_id`. Generic request lifecycle RPCs are:
+`api.v1.cancel(request_id)`, `api.v1.heartbeat(request_ids=[...])`, and
+`api.v1.inflight_count(agent_id)`. The daemon tracks those requests in
+`InFlightRequestRegistry`; no pipeline-owned background-job registry or
+shell-specific launch/reap/poll/cancel surface is part of the public API.
 
 Deployment preconditions for native overlay execution remain private mount
 namespace support plus the overlay new mount API. Environments that lack those

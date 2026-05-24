@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import json
 import os
 import shutil
@@ -16,6 +18,11 @@ from typing import Any
 from sandbox._shared.env_policy import (
     DEFAULT_COMMAND_EXEC_POLICY,
     CommandExecPolicy,
+)
+from sandbox._shared.tool_primitives.cancellation import (
+    NO_OP_CANCELLATION,
+    ShellPgrpCancellation,
+    VerbCancellation,
 )
 from sandbox.ephemeral_workspace.shell_contract import (
     CommandExecRequest,
@@ -47,7 +54,15 @@ TOOL_CALL_COMMAND_POLICY = CommandExecPolicy(
 def run_in_namespace(*args: Any, **kwargs: Any) -> Any:
     """Run either the legacy command path or a unified tool call in namespace."""
     if args and isinstance(args[0], OverlayHandle):
-        return _run_tool_call_in_namespace(*args, **kwargs)
+        handle = args[0]
+        req = args[1]
+        return _run_tool_call_in_namespace(
+            handle,
+            req,
+            *args[2:],
+            cancellation=_build_verb_cancellation(req),
+            **kwargs,
+        )
     return _run_command_in_namespace(**kwargs)
 
 
@@ -115,12 +130,14 @@ async def _run_tool_call_in_namespace(
     req: ToolCallRequest,
     *,
     isolated_runner: Callable[[list[str], bytes | None, float | None], Awaitable[Mapping[str, Any]]] | None = None,
+    cancellation: VerbCancellation = NO_OP_CANCELLATION,
 ) -> ToolCallResult:
     if isolated_runner is not None:
         return await _run_tool_call_in_existing_namespace(
             handle,
             req,
             isolated_runner=isolated_runner,
+            cancellation=cancellation,
         )
     run_dir = handle.upperdir.parent
     stdout_ref = run_dir / "stdout.bin"
@@ -149,14 +166,24 @@ async def _run_tool_call_in_namespace(
     )
     stdout_ref.parent.mkdir(parents=True, exist_ok=True)
     stderr_ref.parent.mkdir(parents=True, exist_ok=True)
-    exit_code = _run_namespace_child(
-        payload_ref=payload_ref,
-        stdout_ref=stdout_ref,
-        stderr_ref=stderr_ref,
-        timeout=_tool_timeout(req),
-        cancel_event=None,
-        pid_recorder=None,
+    child_task = asyncio.create_task(
+        asyncio.to_thread(
+            _run_namespace_child,
+            payload_ref=payload_ref,
+            stdout_ref=stdout_ref,
+            stderr_ref=stderr_ref,
+            timeout=_tool_timeout(req),
+            cancel_event=cancellation.cancel_event,
+            pid_recorder=cancellation.record_pid,
+        )
     )
+    try:
+        exit_code = await asyncio.shield(child_task)
+    except asyncio.CancelledError:
+        cancellation.on_cancel()
+        with contextlib.suppress(Exception):
+            await asyncio.shield(child_task)
+        raise
     if result_ref.exists():
         return _read_tool_result(result_ref)
     stderr = stderr_ref.read_text(encoding="utf-8", errors="replace") if stderr_ref.exists() else ""
@@ -177,6 +204,7 @@ async def _run_tool_call_in_existing_namespace(
     req: ToolCallRequest,
     *,
     isolated_runner: Callable[[list[str], bytes | None, float | None], Awaitable[Mapping[str, Any]]],
+    cancellation: VerbCancellation = NO_OP_CANCELLATION,
 ) -> ToolCallResult:
     payload = json.dumps(
         {
@@ -198,11 +226,15 @@ async def _run_tool_call_in_existing_namespace(
         "payload=json.loads(sys.stdin.buffer.read());"
         "print(json.dumps(execute_tool_payload(payload),separators=(',',':'),sort_keys=True))"
     )
-    response = await isolated_runner(
-        [sys.executable, "-c", script],
-        payload,
-        _tool_timeout(req),
-    )
+    try:
+        response = await isolated_runner(
+            [sys.executable, "-c", script],
+            payload,
+            _tool_timeout(req),
+        )
+    except asyncio.CancelledError:
+        cancellation.on_cancel()
+        raise
     if not response.get("success"):
         return dict(response)
     stdout = str(response.get("stdout") or "")
@@ -243,9 +275,15 @@ def _tool_timeout(req: ToolCallRequest) -> float | None:
     if raw is None:
         return None
     try:
-        return float(raw) + 10.0
+        return float(str(raw)) + 10.0
     except (TypeError, ValueError):
         return None
+
+
+def _build_verb_cancellation(req: ToolCallRequest) -> VerbCancellation:
+    if req.verb == "shell":
+        return ShellPgrpCancellation()
+    return NO_OP_CANCELLATION
 
 
 def jsonable_result(value: Any) -> dict[str, Any]:

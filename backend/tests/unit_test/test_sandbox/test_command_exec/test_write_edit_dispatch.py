@@ -26,7 +26,6 @@ def test_op_table_dispatches_data_ops_to_unified_handlers() -> None:
     assert server.OP_TABLE["api.v1.edit_file"] is edit.edit_file
     assert server.OP_TABLE["api.read_file"] is read.read_file
     assert server.OP_TABLE["api.v1.read_file"] is read.read_file
-    assert server.OP_TABLE["api.shell"] is shell.shell
     assert server.OP_TABLE["api.v1.shell"] is shell.shell
     assert server.OP_TABLE["api.layer_metrics"] is metrics.layer_metrics
 

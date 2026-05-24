@@ -23,6 +23,7 @@ async def grep(
 
     async def _call() -> GrepResult:
         payload: dict[str, object] = {
+            "request_id": request.request_id,
             "pattern": request.pattern,
             "output_mode": request.output_mode,
             "offset": request.offset,

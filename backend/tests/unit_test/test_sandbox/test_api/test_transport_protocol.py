@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from sandbox.api.protocol import SandboxTransport
 from sandbox.api.transport import (
+    DAEMON_OP_CANCEL,
     DAEMON_OP_EDIT_FILE,
+    DAEMON_OP_HEARTBEAT,
+    DAEMON_OP_INFLIGHT_COUNT,
     DAEMON_OP_READ_FILE,
     DAEMON_OP_SHELL,
     DAEMON_OP_WRITE_FILE,
@@ -34,3 +37,6 @@ def test_public_daemon_ops_use_api_v1_names() -> None:
     assert DAEMON_OP_WRITE_FILE == "api.v1.write_file"
     assert DAEMON_OP_EDIT_FILE == "api.v1.edit_file"
     assert DAEMON_OP_SHELL == "api.v1.shell"
+    assert DAEMON_OP_CANCEL == "api.v1.cancel"
+    assert DAEMON_OP_HEARTBEAT == "api.v1.heartbeat"
+    assert DAEMON_OP_INFLIGHT_COUNT == "api.v1.inflight_count"

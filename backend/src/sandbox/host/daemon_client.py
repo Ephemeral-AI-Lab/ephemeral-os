@@ -9,6 +9,7 @@ import shlex
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol
+from uuid import uuid4
 
 from sandbox._shared.models import RawExecResult
 from sandbox.daemon.paths import (
@@ -103,15 +104,21 @@ async def _call_daemon(
     tcp_endpoint: _DaemonTcpEndpoint | None = None,
 ) -> dict[str, Any]:
     """Dispatch one JSON envelope to the resident in-sandbox daemon."""
+    clean_args = _without_none(args)
+    if op == "api.v1.cancel":
+        request_id = uuid4().hex
+    else:
+        request_id = str(clean_args.get("request_id") or uuid4().hex)
+        clean_args["request_id"] = request_id
     raw_payload = json.dumps(
-        {"op": op, "args": _without_none(args)},
+        {"op": op, "request_id": request_id, "args": clean_args},
         separators=(",", ":"),
     )
     result = await _dispatch_once_with_retry(
         exec_fn=exec_fn,
         sandbox_id=sandbox_id,
         op=op,
-        args=_without_none(args),
+        args=clean_args,
         raw_payload=raw_payload,
         cwd=cwd,
         timeout=timeout,
@@ -297,6 +304,7 @@ async def _dispatch_once_with_retry(
     readiness_payload = json.dumps(
         {
             "op": "api.runtime.ready",
+            "request_id": uuid4().hex,
             "args": {"layer_stack_root": str(layer_stack_root)},
         },
         separators=(",", ":"),

@@ -32,7 +32,7 @@ This applies uniformly to every background-capable tool (shell today; potentiall
 
 **P3 (NEW).** Cancellation propagates via `asyncio.CancelledError`. Local `asyncio.Task.cancel()` (engine) + `api.v1.cancel(request_id)` (wire) + cancellation-aware `overlay.run_in_namespace` and `tool_primitives.shell.run` (kill namespace-child PG / shell-child PG on cancel) compose to a single contract: **a cancelled task runs its `finally` exactly once, destroys the overlay, and does NOT commit to OCC** (because the commit branch is on the post-`run_in_namespace` happy path).
 
-**P4 (NEW).** Cross-mode rejection (Q4) and iws-exit drain are **engine-layer** concerns. The pipeline has no background registry to consult. `sandbox.lifecycle.enter_isolated_workspace` asks `BackgroundTaskManager.count_by_agent(agent_id)` before calling `pipeline.enter`; `sandbox.lifecycle.exit_isolated_workspace` asks `cancel_by_agent(agent_id, grace_s=...)` before calling `pipeline.exit`. The pipeline knows nothing about agent-scoped background populations.
+**P4 (NEW).** Cross-mode rejection (Q4) and iws-exit drain are **engine-layer** concerns. The pipeline has no background registry to consult. `sandbox.isolated_workspace.lifecycle.enter_isolated_workspace` asks `BackgroundTaskManager.count_by_agent(agent_id)` before calling `pipeline.enter`; `sandbox.isolated_workspace.lifecycle.exit_isolated_workspace` asks `cancel_by_agent(agent_id, grace_s=...)` before calling `pipeline.exit`. The pipeline knows nothing about agent-scoped background populations.
 
 **P5 (preserved — Phase 2 manager.py:32-38).** Terminal-status precedence on race: `completed > failed > cancelled > running`. A 1s shell that exits between cancel-signal and cancel-landing returns COMPLETED with its real result, not "Cancelled". This is already enforced by `BackgroundTaskManager._set_terminal_status` and the `_TERMINAL_PRECEDENCE` table. Phase 2.5 must not regress it.
 
@@ -324,7 +324,7 @@ async def cancel_by_agent(self, agent_id: str, *, grace_s: float) -> int:
 
 `TrackedBackgroundTask` gains two fields: `agent_id: str | None = None` and `uses_sandbox: bool = False`. The engine's `launch_background_tool` (`backend/src/engine/background/dispatch.py`) populates them from `ExecutionMetadata` / tool registry (`tool_def.uses_sandbox` becomes a `@tool` declaration on every sandbox-touching tool).
 
-`sandbox.lifecycle.enter_isolated_workspace` (Phase 2 §10.2) gains a pre-check:
+`sandbox.isolated_workspace.lifecycle.enter_isolated_workspace` (Phase 2 §10.2) gains a pre-check:
 
 ```python
 async def enter_isolated_workspace(req, *, background_manager):
@@ -343,7 +343,7 @@ async def enter_isolated_workspace(req, *, background_manager):
         return EnterIsolatedWorkspaceResult(success=True, ...)
 ```
 
-`sandbox.lifecycle.exit_isolated_workspace` (Phase 2 §10.3) drains before exit:
+`sandbox.isolated_workspace.lifecycle.exit_isolated_workspace` (Phase 2 §10.3) drains before exit:
 
 ```python
 async def exit_isolated_workspace(req, *, background_manager):
@@ -351,7 +351,7 @@ async def exit_isolated_workspace(req, *, background_manager):
         survivors = await background_manager.cancel_by_agent(req.agent_id, grace_s=req.grace_s)
         result = await isolated_workspace.require_pipeline().exit(req.agent_id, grace_s=0.0)
         # grace_s already consumed by the drain; pipeline.exit becomes synchronous teardown.
-        return result.with_phases(evicted_background_jobs=survivors)
+        return result.with_phases(evicted_background_tasks=survivors)
 ```
 
 The host-side coroutine is the integration point. The pipeline neither sees nor cares about agent-scoped task populations.
@@ -525,8 +525,8 @@ Phase 3's `tests/mock/sandbox/concurrency/test_background_shell_lifetime.py` (cu
 - ✅ `sandbox/daemon/rpc/in_flight.py::InFlightRequestRegistry` exists and is request-keyed; has `cancel(request_id)`, `register`, `deregister`, TTL reaper.
 - ✅ `sandbox/daemon/handler/cancel.py::cancel` handler exists; wire-level `api.v1.cancel` RPC works (round-trip test).
 - ✅ `engine/background/manager.py::BackgroundTaskManager` gains `count_by_agent`, `cancel_by_agent`; `TrackedBackgroundTask` gains `agent_id`, `uses_sandbox`, `sandbox_id`, `sandbox_request_id`.
-- ✅ `sandbox.lifecycle.enter_isolated_workspace` rejects with `LifecycleError(kind="ephemeral_jobs_in_flight")` when `BackgroundTaskManager.count_by_agent(agent_id) > 0`. The check is BEFORE `pipeline.enter`.
-- ✅ `sandbox.lifecycle.exit_isolated_workspace` calls `BackgroundTaskManager.cancel_by_agent(agent_id, grace_s)` BEFORE `pipeline.exit`; reports `evicted_background_jobs` (survivor count) in `phases_ms`.
+- ✅ `sandbox.isolated_workspace.lifecycle.enter_isolated_workspace` rejects with `LifecycleError(kind="ephemeral_jobs_in_flight")` when `BackgroundTaskManager.count_by_agent(agent_id) > 0`. The check is BEFORE `pipeline.enter`.
+- ✅ `sandbox.isolated_workspace.lifecycle.exit_isolated_workspace` calls `BackgroundTaskManager.cancel_by_agent(agent_id, grace_s)` BEFORE `pipeline.exit`; reports `evicted_background_tasks` (survivor count) in `phases_ms`.
 - ✅ `overlay.run_in_namespace` is cancellation-aware: on `asyncio.CancelledError`, sets `cancel_event` and SIGTERMs the namespace-child pgrp; 2s SIGKILL escalation; re-raises CancelledError.
 - ✅ `tool_primitives.shell.run` accepts `cancel_event` and `pid_recorder` from `overlay.run_in_namespace`; existing `cancel_event` plumbing extracted from `shell_job.py` survives unchanged in semantics.
 - ✅ `BackgroundTaskManager.cancel(task_id)` for sandbox-bound tasks sends `api.v1.cancel(request_id)` over the wire BEFORE `tracked.asyncio_task.cancel()`. Order preserves cleanup semantics.
@@ -594,7 +594,7 @@ Phase 3's `tests/mock/sandbox/concurrency/test_background_shell_lifetime.py` (cu
 - Overlay primitives (`sandbox/overlay/{handle,lifecycle,namespace,namespace_child,kernel_mount,...}.py`) — unchanged except `namespace.py::run_in_namespace` gains cancellation forwarding (§5.5; the cleanup itself is verb-supplied, NOT a primitive-layer concern).
 - OCC source-tag plumbing (Phase 2 §6.1–§6.5) — unchanged.
 - `tool_primitives/{read,write,edit,grep,glob,file_ops,capture}.py` — unchanged.
-- Lifecycle host API (`sandbox/lifecycle/{enter,exit}_isolated_workspace.py`) — gains pre-check + drain wiring (§5.6); the audit-event scaffold is unchanged.
+- Lifecycle host API (`sandbox/isolated_workspace/lifecycle/{enter,exit}_isolated_workspace.py`) — gains pre-check + drain wiring (§5.6); the audit-event scaffold is unchanged.
 - Host-path denylist (Phase 2 §7.5) — unchanged.
 - Plugin-block gate (Phase 2 §13) — unchanged.
 - `O_NOFOLLOW` chokepoint (Phase 1 §6.8) — unchanged.

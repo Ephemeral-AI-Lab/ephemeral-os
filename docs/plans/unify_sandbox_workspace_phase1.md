@@ -67,9 +67,7 @@ Rationale: 5 lines costs nothing and makes the trichotomy real for any new code 
 
 **2.2.** Move `sandbox/daemon/service/shell_runner.py` content into `sandbox/ephemeral_workspace/pipeline.py` (absorbed — shell becomes one of six verbs in Phase 2).
 
-**2.3.** Move `sandbox/daemon/service/shell_job_handler.py` + `shell_job.py` → `sandbox/ephemeral_workspace/shell_job.py`. Background shell job tracking is pipeline state.
-- The `ShellJob` dataclass + `ShellJobRegistry` move as-is in Phase 1 (no behavior change); Phase 2 §3.1 restructures the registry from the global singleton (`get_shell_job_registry()`) into pipeline-owned dicts (`EphemeralPipeline._background_jobs`, iws session-scoped jobs on the handle). Phase 1 preserves the singleton for compatibility; tests still use it directly.
-- `shell_job_handler.py` RPC entry points (`api.shell.{launch,reap,poll,cancel}`) keep the same wire signatures; Phase 2 rewires the handlers to dispatch through `resolve_pipeline(agent_id)`. Phase 1 leaves the RPC routing untouched.
+**2.3.** Historical Phase 1 draft moved the old shell-specific background files mechanically, but Phase 2.5 superseded that path. The shipped design deletes the old shell job files and uses engine-owned background tasks plus generic request lifecycle RPCs (`api.v1.cancel`, `api.v1.heartbeat`, `api.v1.inflight_count`).
 
 **2.4.** Move `sandbox/daemon/service/overlay_manager.py` content into `sandbox/ephemeral_workspace/pipeline.py` (overlay lifecycle is pipeline-owned).
 
@@ -323,7 +321,7 @@ The corpus is therefore the regression safety net for **ephemeral-mode verbs onl
 - `edit_file` anchor-match + anchor-miss + count-mismatch.
 - `grep` content + files_with_matches + count modes.
 - `glob` pattern matches.
-- `shell` simple cmd + env + cwd + timeout (foreground). Background-shell parity is NOT in the corpus — Phase 2 §3.1 restructures background-shell ownership (pipeline-owned `_background_jobs` registry, `launch`/`reap`/`poll`/`cancel` methods) and Phase 3 §6.6 sub-tests A–D pin the new behavior directly. Phase 1 leaves today's `ShellJobRegistry` singleton untouched so background-shell behavior in Phase 1 is byte-identical to head.
+- `shell` simple cmd + env + cwd + timeout (foreground). Background-shell parity is NOT in the corpus. Phase 2.5 owns the canonical background behavior: the engine wraps the same `pipeline.run_tool_call(req)` coroutine, cancellation uses generic request-level RPCs, and the daemon request registry handles TTL orphan cleanup.
 - Non-workspace paths: `/etc/hosts`, `/tmp/scratch_test` (Planner F.23 — read/write today goes through the `_out_of_workspace` branch; Phase 2's overlay pass-through must replicate the same behavior modulo the new host-path denylist in Phase 2 §7.5).
 - Edge cases: empty path, `..` escape, symlink-to-host, large file (>16 MiB).
 

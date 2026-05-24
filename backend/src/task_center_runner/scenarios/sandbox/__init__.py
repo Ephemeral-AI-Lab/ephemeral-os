@@ -22,8 +22,8 @@ from task_center_runner.scenarios.sandbox.auto_squash_commit_resume import (
     AutoSquashCommitResume,
 )
 from task_center_runner.scenarios.sandbox.background_shell import (
-    BackgroundShellCancel,
-    BackgroundShellCancelDuringMaintenance,
+    BackgroundShellStop,
+    BackgroundShellStopDuringMaintenance,
     BackgroundShellExhaustion,
     BackgroundShellGolden,
     BackgroundShellInterleave,
@@ -54,8 +54,8 @@ from task_center_runner.scenarios.sandbox.occ_concurrent_conflicts import (
 
 __all__ = [
     "AutoSquashCommitResume",
-    "BackgroundShellCancel",
-    "BackgroundShellCancelDuringMaintenance",
+    "BackgroundShellStop",
+    "BackgroundShellStopDuringMaintenance",
     "BackgroundShellExhaustion",
     "BackgroundShellGolden",
     "BackgroundShellInterleave",

@@ -65,6 +65,7 @@ from sandbox.api.tool.read import read_file
 from sandbox.api.tool.shell import shell
 from sandbox.api.tool.write import write_file
 from sandbox.api._raw_exec import raw_exec
+from sandbox.api.request_lifecycle import cancel, heartbeat, inflight_count
 
 __all__ = [
     "ConflictInfo",
@@ -97,6 +98,7 @@ __all__ = [
     "WriteFileResult",
     "configured_sandbox_defaults",
     "context_preparer_for",
+    "cancel",
     "create_sandbox",
     "delete_sandbox",
     "edit_file",
@@ -105,8 +107,10 @@ __all__ = [
     "get_health",
     "get_sandbox",
     "get_signed_preview_url",
+    "heartbeat",
     "glob",
     "grep",
+    "inflight_count",
     "list_sandboxes",
     "list_snapshots",
     "raw_exec",

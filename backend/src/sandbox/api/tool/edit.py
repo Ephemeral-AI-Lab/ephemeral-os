@@ -34,6 +34,7 @@ async def edit_file(
             sandbox_id,
             DAEMON_OP_EDIT_FILE,
             {
+                "request_id": request.request_id,
                 "path": request.path,
                 "edits": [
                     {"old_text": edit.old_text, "new_text": edit.new_text}

@@ -1,22 +1,22 @@
-"""Background-shell scenarios that drive ``shell(background=True)``
-through the mock-agent harness.
+"""Background-shell scenarios that drive ``shell(background=True)`` through the
+engine-owned background task harness.
 
-Seven scenarios (T1-T3, T5-T8 from the Phase 2 plan; T4 is an in-process
-unit test for ``ShellJobRegistry`` and has no scenario equivalent):
+Seven scenarios (T1-T3, T5-T8 from the Phase 2 plan; T4 is covered by the
+request-keyed daemon in-flight TTL tests):
 
 - ``sandbox.background_shell_golden`` (T1)
-- ``sandbox.background_shell_cancel`` (T2)
+- ``sandbox.background_shell_stop`` (T2)
 - ``sandbox.background_shell_interleave`` (T3)
 - ``sandbox.background_shell_exhaustion`` (T5)
 - ``sandbox.background_shell_partial_write_cancel`` (T6)
-- ``sandbox.background_shell_cancel_during_maintenance`` (T7)
+- ``sandbox.background_shell_stop_during_maintenance`` (T7)
 - ``sandbox.background_shell_late_cancel_race`` (T8)
 
 Each scenario uses a single executor action that drives the matching
 probe in :mod:`task_center_runner.agent.mock.background_shell_probe`.
 The probes call the shell tool with ``background_task_id`` set so the
-tool framework routes through the daemon's launch/poll/cancel/reap
-surface; the harness records full ``sandbox_events.jsonl`` plus
+tool framework keeps the request correlated with the engine background task;
+the harness records full ``sandbox_events.jsonl`` plus
 ``performance_report.json`` artifacts.
 """
 
@@ -45,8 +45,8 @@ def _plan(action_id: str, action_spec: str, summary_hint: str) -> dict[str, Any]
         "evaluation_criteria": [
             f"Background-shell probe '{action_id}' wrote its summary to "
             f"{summary_hint}.",
-            "Daemon's job-control RPCs (launch / poll / cancel / reap) "
-            "produced consistent audit events for every launch.",
+            "Daemon request cancellation and engine background status "
+            "produced consistent results for every launch.",
         ],
         "tasks": [
             {"id": action_id, "agent_name": "executor", "deps": []},
@@ -110,19 +110,19 @@ class BackgroundShellGolden(_BackgroundShellScenarioBase):
     )
 
 
-class BackgroundShellCancel(_BackgroundShellScenarioBase):
+class BackgroundShellStop(_BackgroundShellScenarioBase):
     """T2: launch background shells; cancel mid-flight; no leftover state."""
 
-    name = "sandbox.background_shell_cancel"
-    action_id = "background_shell_cancel"
+    name = "sandbox.background_shell_stop"
+    action_id = "background_shell_stop"
     action_spec = (
-        "ACTION background_shell_cancel. Launch 3 long-running background "
+        "ACTION background_shell_stop. Launch 3 long-running background "
         "shells, cancel each via asyncio.wait_for after 1 s, then issue a "
         "follow-up foreground shell to confirm post-cancel mount latency "
         "stays under budget."
     )
     summary_path_hint = (
-        "/testbed/.ephemeralos/sweevo-mock/background_shell/cancel/summary.json"
+        "/testbed/.ephemeralos/sweevo-mock/background_shell/stop/summary.json"
     )
 
 
@@ -172,13 +172,13 @@ class BackgroundShellPartialWriteCancel(_BackgroundShellScenarioBase):
     )
 
 
-class BackgroundShellCancelDuringMaintenance(_BackgroundShellScenarioBase):
+class BackgroundShellStopDuringMaintenance(_BackgroundShellScenarioBase):
     """T7: short shell + maintenance; verify OCC consistency afterwards."""
 
-    name = "sandbox.background_shell_cancel_during_maintenance"
-    action_id = "background_shell_cancel_during_maintenance"
+    name = "sandbox.background_shell_stop_during_maintenance"
+    action_id = "background_shell_stop_during_maintenance"
     action_spec = (
-        "ACTION background_shell_cancel_during_maintenance. Run a short "
+        "ACTION background_shell_stop_during_maintenance. Run a short "
         "background shell that writes one file and then sleeps; confirm "
         "the publish + maintenance sequence leaves a consistent OCC state."
     )
@@ -203,8 +203,8 @@ class BackgroundShellLateCancelRace(_BackgroundShellScenarioBase):
 
 
 __all__ = [
-    "BackgroundShellCancel",
-    "BackgroundShellCancelDuringMaintenance",
+    "BackgroundShellStop",
+    "BackgroundShellStopDuringMaintenance",
     "BackgroundShellExhaustion",
     "BackgroundShellGolden",
     "BackgroundShellInterleave",

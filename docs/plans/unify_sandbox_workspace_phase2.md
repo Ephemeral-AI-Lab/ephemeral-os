@@ -7,7 +7,7 @@
 **Safety net:**
 - **Ephemeral verbs:** Phase 1's parity corpus replays against the new pipeline; byte-equivalent against today's `daemon/handler/{read,write,edit,grep,glob,shell}.py` bodies (modulo documented OCC source-tag note).
 - **Isolated verbs:** NOT covered by parity corpus. `sandbox/isolated_workspace/ops_handlers.py` is 98 lines of shell-out wrappers (`/bin/cat`, `/usr/bin/grep`, `in_ns_write.py`) returning `subprocess.run` shape — there is no byte-equivalent "before" output to compare against. iws verb migration is a **functional upgrade** to the typed-verb spec (`tool_primitives.<verb>.compute`), validated by Phase 3's `behavior_upgrade/` test tier (NOT parity).
-**Atomic commit plan:** ≤8 logical commits. Suggested split: (1) `models.py` types + `WorkspacePipeline` protocol; (2) `EphemeralPipeline.run_tool_call` + per-handle lock; (3) `IsolatedPipeline` skeleton + `ops_handlers.py` deletion; (4) `run_in_namespace` + `namespace_child` two-tier dispatch; (5) OCC source-tag threading (4 helpers); (6) thin daemon handlers + `dispatch.py`; (7) `sandbox/lifecycle/` package + `sandbox/audit/lifecycle.py` + agent tools; (8) plugin-block gate + host-path denylist + RPC table deletions. Each commit runs full mock suite + parity corpus on parent SHA; rollback is `git revert <sha>` per commit.
+**Atomic commit plan:** ≤8 logical commits. Suggested split: (1) `models.py` types + `WorkspacePipeline` protocol; (2) `EphemeralPipeline.run_tool_call` + per-handle lock; (3) `IsolatedPipeline` skeleton + `ops_handlers.py` deletion; (4) `run_in_namespace` + `namespace_child` two-tier dispatch; (5) OCC source-tag threading (4 helpers); (6) thin daemon handlers + `dispatch.py`; (7) `sandbox/isolated_workspace/lifecycle/` package + `sandbox/audit/lifecycle.py` + agent tools; (8) plugin-block gate + host-path denylist + RPC table deletions. Each commit runs full mock suite + parity corpus on parent SHA; rollback is `git revert <sha>` per commit.
 
 See [`unify_sandbox_workspace.md`](unify_sandbox_workspace.md) for the overview and ADR.
 
@@ -20,7 +20,7 @@ After Phase 2 lands:
 - `EphemeralPipeline.run_tool_call` mounts a fresh overlay per call, runs the verb in the namespace child, captures+commits the upperdir for write-allowed verbs, then destroys the overlay.
 - `IsolatedPipeline.enter` mounts an overlay once; `IsolatedPipeline.run_tool_call` runs verbs against it; `IsolatedPipeline.exit` destroys it (no commit).
 - `WorkspacePipeline` protocol has one method (`run_tool_call`).
-- `sandbox.lifecycle.enter_isolated_workspace` / `exit_isolated_workspace` exist as host-side coroutines using `LifecycleResultBase`. (Lives in the new `sandbox/lifecycle/` package, NOT `sandbox/api/` — `sandbox/api/` continues to house client-side wire artifacts only.)
+- `sandbox.isolated_workspace.lifecycle.enter_isolated_workspace` / `exit_isolated_workspace` exist as host-side coroutines using `LifecycleResultBase`. (Lives in the new `sandbox/isolated_workspace/lifecycle/` package, NOT `sandbox/api/` — `sandbox/api/` continues to house client-side wire artifacts only.)
 - Agent-level `tools/isolated_workspace/{enter,exit}_isolated_workspace/` wrappers exist.
 - iws `edit_file` performs real search/replace; iws `grep`/`glob` honor all options. **This is a functional upgrade, not a refactor** — today's `ops_handlers.py` shells out to `/bin/cat`/`/usr/bin/grep`/`in_ns_write.py` with `subprocess.run` shape; after Phase 2, iws verbs return the typed shape (`ReadResult`/`WriteResult`/etc.) validated by Phase 3's `behavior_upgrade/` tier.
 - All 6 tool ops live on the single `api.v1.<verb>` RPC namespace. 5 iws tool-op RPCs deleted atomically.
@@ -245,7 +245,7 @@ class IsolatedPipeline:
 
     async def enter(self, agent_id: str, config: IsolatedConfig) -> OverlayHandle:
         # Q4 (cross-mode rejection on live background tasks) is owned by the
-        # engine-layer pre-check in sandbox.lifecycle.enter_isolated_workspace
+        # engine-layer pre-check in sandbox.isolated_workspace.lifecycle.enter_isolated_workspace
         # (see Phase 2.5 §5.6). The pipeline.enter body is pure session-open.
         async with self._lock:
             if agent_id in self._sessions:
@@ -279,7 +279,7 @@ class IsolatedPipeline:
 
     async def exit(self, agent_id: str, grace_s: float = 5.0) -> ExitIsolatedWorkspaceResult:
         # Background-task drain (when applicable) is owned by the engine-layer
-        # sandbox.lifecycle.exit_isolated_workspace (Phase 2.5 §5.6) and runs
+        # sandbox.isolated_workspace.lifecycle.exit_isolated_workspace (Phase 2.5 §5.6) and runs
         # BEFORE this method is called. pipeline.exit is pure session teardown.
         async with self._lock:
             handle = self._sessions.get(agent_id)
@@ -566,13 +566,13 @@ Similar for `write.py` (always `O_WRONLY | O_CREAT | O_NOFOLLOW`) and `edit.py` 
 
 ---
 
-## Step 10 — Lifecycle host API (lives in `sandbox/lifecycle/`, NOT `sandbox/api/`)
+## Step 10 — Lifecycle host API (lives in `sandbox/isolated_workspace/lifecycle/`, NOT `sandbox/api/`)
 
-**Critic must-fix #6 / Planner F.4 / Architect F.4 (verified):** `sandbox/api/` already contains client-side artifacts (`_raw_exec.py`, `_sandbox_control.py`, `protocol.py`, `timeouts.py`, `tool/`, `transport.py`). Inserting host-side coroutines into the same package creates a same-name-opposite-side-of-wire confusion. The host-side lifecycle coroutines + (deferred) `WorkspaceSession` move to a new top-level `sandbox/lifecycle/` package.
+**Critic must-fix #6 / Planner F.4 / Architect F.4 (verified):** `sandbox/api/` already contains client-side artifacts (`_raw_exec.py`, `_sandbox_control.py`, `protocol.py`, `timeouts.py`, `tool/`, `transport.py`). Inserting host-side coroutines into the same package creates a same-name-opposite-side-of-wire confusion. The host-side lifecycle coroutines + (deferred) `WorkspaceSession` move to the isolated-workspace-owned `sandbox/isolated_workspace/lifecycle/` package.
 
-**10.1.** Create `sandbox/lifecycle/__init__.py` (package). Exports `enter_isolated_workspace`, `exit_isolated_workspace`. Does NOT export `WorkspaceSession` (deferred — see §12).
+**10.1.** Create `sandbox/isolated_workspace/lifecycle/__init__.py` (package). Exports `enter_isolated_workspace`, `exit_isolated_workspace`. Does NOT export `WorkspaceSession` (deferred — see §12).
 
-**10.2.** Create `sandbox/lifecycle/enter_isolated_workspace.py`:
+**10.2.** Create `sandbox/isolated_workspace/lifecycle/enter_isolated_workspace.py`:
 
 ```python
 async def enter_isolated_workspace(
@@ -593,7 +593,7 @@ async def enter_isolated_workspace(
         )
 ```
 
-**10.3.** Create `sandbox/lifecycle/exit_isolated_workspace.py` (symmetric).
+**10.3.** Create `sandbox/isolated_workspace/lifecycle/exit_isolated_workspace.py` (symmetric).
 
 **10.4.** Create `sandbox/audit/lifecycle.py`:
 
@@ -624,20 +624,20 @@ async def lifecycle_operation(*, event_class, kind, actor_id):
 
 **11.1.** Create `backend/src/tools/isolated_workspace/enter_isolated_workspace/`:
 - `__init__.py`
-- `definition.py` — Pydantic Input → `sandbox.lifecycle.enter_isolated_workspace` → ToolResult JSON projection.
+- `definition.py` — Pydantic Input → `sandbox.isolated_workspace.lifecycle.enter_isolated_workspace` → ToolResult JSON projection.
 - `tests/test_enter_isolated_workspace_tool.py` (basic round-trip).
 
-**11.2.** Create `backend/src/tools/isolated_workspace/exit_isolated_workspace/` (symmetric — imports from `sandbox.lifecycle`).
+**11.2.** Create `backend/src/tools/isolated_workspace/exit_isolated_workspace/` (symmetric — imports from `sandbox.isolated_workspace.lifecycle`).
 
 **11.3.** Tool naming rationale (Planner F.11): the tool names `enter_isolated_workspace` / `exit_isolated_workspace` are intentionally verbose. Agent-facing surfaces avoid internal jargon (`iws`); the verbosity cost is paid in model-generated tool calls, not human code. Don't relitigate per-PR.
 
-→ **Verify:** both tools discoverable through the tool registry; basic round-trip passes; tool definition imports `sandbox.lifecycle.*` (not `sandbox.api.*`).
+→ **Verify:** both tools discoverable through the tool registry; basic round-trip passes; tool definition imports `sandbox.isolated_workspace.lifecycle.*` (not `sandbox.api.*`).
 
 ---
 
 ## Step 12 — `WorkspaceSession` async-CM (DEFERRED)
 
-**Critic must-fix #11 / Architect F.8:** no production caller for `WorkspaceSession` is documented. Phase 3 §1.2 says tests use `sandbox.lifecycle.enter_isolated_workspace` / `exit_isolated_workspace` directly. Shipping a public API with no production user creates maintenance burden and a documentation gap (Architect §C Synthesis).
+**Critic must-fix #11 / Architect F.8:** no production caller for `WorkspaceSession` is documented. Phase 3 §1.2 says tests use `sandbox.isolated_workspace.lifecycle.enter_isolated_workspace` / `exit_isolated_workspace` directly. Shipping a public API with no production user creates maintenance burden and a documentation gap (Architect §C Synthesis).
 
 **Decision:** defer `WorkspaceSession` from the public API surface. If/when a production caller materializes, promote from the test-fixture location.
 
@@ -648,18 +648,18 @@ async def lifecycle_operation(*, event_class, kind, actor_id):
 class WorkspaceSession:
     """TEST FIXTURE — convenience async-CM wrapping the lifecycle pair.
 
-    NOT part of sandbox/lifecycle/ public surface. Promoted to public API
+    NOT part of sandbox/isolated_workspace/lifecycle/ public surface. Promoted to public API
     only when a production caller materializes (Critic must-fix #11).
     """
 
     @classmethod
     @asynccontextmanager
     async def enter_isolated(cls, agent_id, layer_stack_root):
-        await sandbox.lifecycle.enter_isolated_workspace(...)
+        await sandbox.isolated_workspace.lifecycle.enter_isolated_workspace(...)
         try:
             yield cls(agent_id=agent_id, mode="isolated")
         finally:
-            await sandbox.lifecycle.exit_isolated_workspace(...)
+            await sandbox.isolated_workspace.lifecycle.exit_isolated_workspace(...)
 
     @classmethod
     def ephemeral(cls, agent_id):
@@ -668,7 +668,7 @@ class WorkspaceSession:
 
 **12.2.** Document the deferral in `docs/sandbox/api_surface.md` §11 (per Phase 3 §8.1): "`WorkspaceSession` is a test-only convenience; production code uses the explicit `enter_isolated_workspace` / `exit_isolated_workspace` pair."
 
-→ **Verify:** `grep -rn "from sandbox.lifecycle.* import WorkspaceSession" backend/src/` returns 0 hits; `grep -rn "WorkspaceSession" tests/` finds the fixture; no production import path exists.
+→ **Verify:** `grep -rn "from sandbox.isolated_workspace.lifecycle.* import WorkspaceSession" backend/src/` returns 0 hits; `grep -rn "WorkspaceSession" tests/` finds the fixture; no production import path exists.
 
 ---
 
@@ -743,7 +743,7 @@ async def _check_plugin_block(args: dict, op_name: str) -> dict | None:
 
 - ✅ `WorkspacePipeline` protocol has exactly one method (`run_tool_call`).
 - ✅ `EphemeralPipeline.run_tool_call` is the SINGLE public method; body is foreground-only per-call lifecycle (create → run → capture+commit if write → destroy). The body does NOT branch on `req.background` (Phase 2.5 wires the engine-side asyncio.Task wrapper around the same body).
-- ✅ `IsolatedPipeline` has `enter`/`run_tool_call`/`exit`/`get_handle` methods; overlay lifecycle spans enter→exit; `run_tool_call` body does NOT branch on `req.background`. No `_session_jobs`, no `_drain_background_jobs`, no `_dispatch_background_verb_iws` — Phase 2.5 owns background task tracking at the engine layer.
+- ✅ `IsolatedPipeline` has `enter`/`run_tool_call`/`exit`/`get_handle` methods; overlay lifecycle spans enter→exit; `run_tool_call` body does NOT branch on `req.background`. There is no pipeline-owned background registry — Phase 2.5 owns background task tracking at the engine layer.
 - ✅ `manager.py` (1624 lines verified) decomposed into 7 modules: `pipeline.py`, `_types.py`, `_lifecycle.py`, `_gc.py`, `_ttl.py`, `_quota.py`, `_runtime.py`. None exceeds 400 lines (`wc -l` check).
 - ✅ `overlay.run_in_namespace` is the single execution path for both modes.
 - ✅ `namespace_child.py` two-tier dispatcher: VERB_TABLE for read/write/edit/grep/glob; `shell.run` for shell; pre-dispatch host-path denylist for write-allowed verbs (`/etc/`, `/var/`, `/proc/`, `/sys/`, `/boot/`).
@@ -754,9 +754,9 @@ async def _check_plugin_block(args: dict, op_name: str) -> dict | None:
 - ✅ `lifecycle.destroy(handle)` is idempotent; concurrent destroy from two asyncio tasks results in exactly ONE cleanup; `release_lease` called exactly ONCE (Phase 3 §6.5 test).
 - ✅ `tool_primitives.{read,write,edit,grep,glob}` use the `file_ops.open_no_follow` chokepoint (per-component walk preserves defense against intermediate symlinks); static lint enforces no naive `os.open(path, flags|O_NOFOLLOW)` bypass.
 - ✅ Every daemon handler is ≤25 lines; `classify_path` and in/out-of-workspace helpers deleted.
-- ✅ `sandbox.lifecycle.enter_isolated_workspace` / `exit_isolated_workspace` exist with `LifecycleResultBase` (in new `sandbox/lifecycle/` package — NOT `sandbox/api/`).
+- ✅ `sandbox.isolated_workspace.lifecycle.enter_isolated_workspace` / `exit_isolated_workspace` exist with `LifecycleResultBase` (in new `sandbox/isolated_workspace/lifecycle/` package — NOT `sandbox/api/`).
 - ✅ `sandbox/audit/lifecycle.py` + `WorkspaceLifecycle` event class exist; lifecycle_operation publishes 2-event pair.
-- ✅ Agent-level `tools/isolated_workspace/{enter,exit}_isolated_workspace/` exist + discoverable; import from `sandbox.lifecycle.*`.
+- ✅ Agent-level `tools/isolated_workspace/{enter,exit}_isolated_workspace/` exist + discoverable; import from `sandbox.isolated_workspace.lifecycle.*`.
 - ✅ `WorkspaceSession` DEFERRED to `tests/mock/sandbox/_fixtures/workspace_session.py` (NOT shipped as public API per Critic must-fix #11).
 - ✅ Plugin-block dispatcher gate fails-OPEN when iws pipeline not bootstrapped AND emits `workspace_lifecycle.plugin_check_unbootstrapped` audit event (Planner F.20).
 - ✅ Host-path denylist enforced in namespace child for `/etc/`, `/var/`, `/proc/`, `/sys/`, `/boot/` (Critic must-fix #9).

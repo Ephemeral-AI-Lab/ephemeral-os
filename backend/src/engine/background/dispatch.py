@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
+from uuid import uuid4
 
 from pydantic import ValidationError
 
@@ -20,6 +21,8 @@ from tools._framework.execution.trace import record_tool_trace
 
 if TYPE_CHECKING:
     from engine.query.context import QueryContext
+
+_SANDBOX_CONTEXT_REQUIREMENT = "sandbox"
 
 ToolCallExecutor = Callable[
     [str, str, dict[str, object], ExecutionMetadata | dict[str, Any] | None],
@@ -96,11 +99,22 @@ def launch_background_tool(
         )
 
     bg_alias = background_manager.next_alias()
+    uses_sandbox = _SANDBOX_CONTEXT_REQUIREMENT in getattr(
+        tool_def,
+        "context_requirements",
+        (),
+    )
+    sandbox_id = str(getattr(tool_metadata, "sandbox_id", "") or "")
+    sandbox_request_id = uuid4().hex if uses_sandbox and sandbox_id else ""
+    agent_id = str(getattr(tool_metadata, "agent_run_id", "") or "")
+    if not agent_id:
+        agent_id = str(getattr(tool_metadata, "agent_name", "") or "")
 
     async def _bg_wrapper(alias: str = bg_alias) -> ToolResult:
         bg_overrides = ExecutionMetadata(
             on_progress_line=background_manager.make_progress_callback(alias),
             background_task_id=alias,
+            sandbox_request_id=sandbox_request_id or None,
         )
         block = await execute_tool_call(
             tool_use.name,
@@ -120,6 +134,10 @@ def launch_background_tool(
         clean_input,
         _bg_wrapper(),
         task_type=getattr(tool_def, "task_type", "agent"),
+        agent_id=agent_id or None,
+        uses_sandbox=uses_sandbox,
+        sandbox_id=sandbox_id or None,
+        sandbox_request_id=sandbox_request_id or None,
     )
     record_tool_trace(tool_metadata, tool_use.name, clean_input)
     tool_result = ToolResultBlock(
@@ -165,14 +183,17 @@ def launch_and_collect_bg_events(
             if callback is not None:
                 callback(event.text)
 
-        return await execute_tool_call_streaming(
-            context,
-            tool_name,
-            tool_use_id,
-            tool_input,
-            emit=emit,
-            extra_metadata=extra_metadata,
-            conversation_messages=conversation_messages,
+        return cast(
+            ToolResultBlock,
+            await execute_tool_call_streaming(
+                context,
+                tool_name,
+                tool_use_id,
+                tool_input,
+                emit=emit,
+                extra_metadata=extra_metadata,
+                conversation_messages=conversation_messages,
+            ),
         )
 
     tool_result, bg_event, reject_event = launch_background_tool(

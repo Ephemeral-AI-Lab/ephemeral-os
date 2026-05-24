@@ -162,6 +162,79 @@ async def test_cancel_running_task() -> None:
     assert tracked.result.is_error is True
 
 
+async def test_cancel_sandbox_task_sends_wire_cancel_before_local_cancel(
+    monkeypatch,
+) -> None:
+    mgr = BackgroundTaskManager()
+    events: list[str] = []
+
+    async def _never() -> ToolResult:
+        try:
+            await asyncio.sleep(60)
+        except asyncio.CancelledError:
+            events.append("local_cancel")
+            raise
+
+    async def _wire_cancel(sandbox_id: str, request_id: str) -> dict[str, object]:
+        events.append(f"wire:{sandbox_id}:{request_id}")
+        return {"success": True, "cancelled": True}
+
+    monkeypatch.setattr("sandbox.api.cancel", _wire_cancel)
+    mgr.launch(
+        task_id="t1",
+        tool_name="shell",
+        tool_input={},
+        coro=_never(),
+        agent_id="agent-a",
+        uses_sandbox=True,
+        sandbox_id="sandbox-1",
+        sandbox_request_id="request-1",
+    )
+
+    await asyncio.sleep(0)
+    assert await mgr.cancel("t1", "test") is True
+    await asyncio.sleep(0)
+
+    assert events == ["wire:sandbox-1:request-1", "local_cancel"]
+    with suppress(asyncio.CancelledError):
+        await mgr._tasks["t1"].asyncio_task
+
+
+async def test_cancel_by_agent_only_targets_running_sandbox_tasks(monkeypatch) -> None:
+    mgr = BackgroundTaskManager()
+
+    async def _wire_cancel(sandbox_id: str, request_id: str) -> dict[str, object]:
+        return {"success": True, "cancelled": True}
+
+    monkeypatch.setattr("sandbox.api.cancel", _wire_cancel)
+    mgr.launch(
+        task_id="sandbox-task",
+        tool_name="shell",
+        tool_input={},
+        coro=_make_tool_coro(delay=60),
+        agent_id="agent-a",
+        uses_sandbox=True,
+        sandbox_id="sandbox-1",
+        sandbox_request_id="request-1",
+    )
+    mgr.launch(
+        task_id="plain-task",
+        tool_name="plain",
+        tool_input={},
+        coro=_make_tool_coro(delay=60),
+        agent_id="agent-a",
+        uses_sandbox=False,
+    )
+
+    assert mgr.count_by_agent("agent-a") == 1
+    survivors = await mgr.cancel_by_agent("agent-a", grace_s=0.01)
+
+    assert survivors == 0
+    assert mgr._tasks["sandbox-task"].status == "cancelled"
+    assert mgr._tasks["plain-task"].status == "running"
+    await mgr.cancel_all()
+
+
 # ---------------------------------------------------------------------------
 # 9. cancel nonexistent task
 # ---------------------------------------------------------------------------

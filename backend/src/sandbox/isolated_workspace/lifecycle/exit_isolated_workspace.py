@@ -10,11 +10,14 @@ from sandbox._shared.models import (
     LifecycleError,
 )
 from sandbox.audit.lifecycle import lifecycle_operation
-from sandbox.isolated_workspace.pipeline import IsolatedWorkspaceError, require_pipeline
+from sandbox.isolated_workspace._types import IsolatedWorkspaceError
+from sandbox.isolated_workspace.pipeline import require_pipeline
 
 
 async def exit_isolated_workspace(
     req: ExitIsolatedWorkspaceRequest,
+    *,
+    background_manager: object | None = None,
 ) -> ExitIsolatedWorkspaceResult:
     agent_id = req.caller.agent_id
     try:
@@ -23,13 +26,20 @@ async def exit_isolated_workspace(
             actor_id=agent_id,
             audit_path=os.environ.get("EOS_WORKSPACE_LIFECYCLE_AUDIT_PATH"),
         ) as timings:
-            result = await require_pipeline().exit(agent_id, grace_s=req.grace_s)
+            evicted_background_tasks = await _cancel_by_agent(
+                background_manager,
+                agent_id,
+                grace_s=req.grace_s,
+            )
+            result = await require_pipeline().exit(agent_id, grace_s=0.0)
+            phases = dict(result.get("phases_ms", {}))
+            phases["evicted_background_tasks"] = float(evicted_background_tasks)
             timings.update(result.get("phases_ms", {}))
             return ExitIsolatedWorkspaceResult(
                 success=bool(result.get("success", True)),
                 evicted_upperdir_bytes=int(result.get("evicted_upperdir_bytes", 0)),
                 lifetime_s=float(result.get("lifetime_s", 0.0)),
-                phases_ms=dict(result.get("phases_ms", {})),
+                phases_ms=phases,
                 timings=dict(timings),
             )
     except IsolatedWorkspaceError as exc:
@@ -41,6 +51,20 @@ async def exit_isolated_workspace(
                 details={str(k): str(v) for k, v in exc.details.items()},
             ),
         )
+
+
+async def _cancel_by_agent(
+    background_manager: object | None,
+    agent_id: str,
+    *,
+    grace_s: float,
+) -> int:
+    if background_manager is None:
+        return 0
+    canceller = getattr(background_manager, "cancel_by_agent", None)
+    if not callable(canceller):
+        return 0
+    return int(await canceller(agent_id, grace_s=grace_s))
 
 
 __all__ = ["exit_isolated_workspace"]

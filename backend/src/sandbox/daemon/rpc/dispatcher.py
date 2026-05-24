@@ -9,6 +9,7 @@ public sandbox API result types.
 from __future__ import annotations
 
 import dataclasses
+import asyncio
 import inspect
 import logging
 import os
@@ -19,6 +20,7 @@ from uuid import uuid4
 
 from audit.jsonl import append_jsonl_event
 from sandbox._shared.clock import monotonic_now
+from sandbox.daemon.rpc.in_flight import get_in_flight_registry
 from sandbox.isolated_workspace import get_active_pipeline
 
 logger = logging.getLogger("sandbox.daemon.rpc.dispatcher")
@@ -64,7 +66,7 @@ async def dispatch_envelope_async(
     Phase 3 pass bar (``runtime.boot_to_dispatch_s ≤ 2 ms``).
     """
     dispatch_entered_at = monotonic_now()
-    validation_error, op, args_raw = _validate_envelope(envelope)
+    validation_error, op, args_raw, request_id = _validate_envelope(envelope)
     if validation_error is not None:
         return validation_error
 
@@ -72,6 +74,18 @@ async def dispatch_envelope_async(
     if handler is None:
         return _error("unknown_op", f"unknown op: {op}", {"op": op})
 
+    registry = get_in_flight_registry()
+    task = asyncio.current_task()
+    if task is not None:
+        registry.register(
+            request_id,
+            task,
+            agent_id=_agent_id(args_raw),
+            op=op,
+            background=bool(args_raw.get("background", False)),
+            engine_process_id=str(args_raw.get("engine_process_id") or ""),
+            engine_started_at=_optional_float(args_raw.get("engine_started_at")),
+        )
     try:
         plugin_block = _check_plugin_block(args_raw, op)
         if plugin_block is not None:
@@ -97,11 +111,13 @@ async def dispatch_envelope_async(
             str(exc),
             {"op": op, "error_id": error_id},
         )
+    finally:
+        registry.deregister(request_id)
 
 
 def _validate_envelope(
     envelope: Mapping[str, Any],
-) -> tuple[dict[str, Any] | None, str, dict[str, Any]]:
+) -> tuple[dict[str, Any] | None, str, dict[str, Any], str]:
     op = envelope.get("op")
     if not isinstance(op, str) or not op:
         return (
@@ -111,7 +127,12 @@ def _validate_envelope(
             ),
             "",
             {},
+            "",
         )
+    request_id = str(envelope.get("request_id") or "").strip()
+    if not request_id:
+        request_id = uuid4().hex
+        logger.warning("daemon envelope missing request_id for op=%s", op)
     args_raw = envelope.get("args", {})
     if args_raw is None:
         args_raw = {}
@@ -124,8 +145,29 @@ def _validate_envelope(
             ),
             op,
             {},
+            request_id,
         )
-    return None, op, args_raw
+    args_raw.setdefault("request_id", request_id)
+    return None, op, args_raw, request_id
+
+
+def _agent_id(args: Mapping[str, Any]) -> str:
+    caller = args.get("caller")
+    if isinstance(caller, Mapping):
+        raw = caller.get("agent_id") or caller.get("agent_run_id")
+        if raw:
+            return str(raw)
+    raw = args.get("agent_id") or args.get("actor_id")
+    return str(raw or "").strip()
+
+
+def _optional_float(raw: Any) -> float | None:
+    if raw is None:
+        return None
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
 
 
 def _attach_runtime_boot_timings(
@@ -217,6 +259,7 @@ def _emit_plugin_gate_audit(op_name: str, agent_id: str) -> None:
 def _load_peer_bootstraps() -> None:
     from sandbox.ephemeral_workspace.plugin import handler as plugin_handler
     from sandbox.daemon.handler import (
+        cancel,
         edit,
         glob,
         grep,
@@ -227,7 +270,6 @@ def _load_peer_bootstraps() -> None:
         workspace,
         write,
     )
-    from sandbox.ephemeral_workspace import shell_job
     from sandbox.isolated_workspace import handlers as iws_handlers
 
     bootstrap: dict[str, Handler] = {
@@ -253,18 +295,10 @@ def _load_peer_bootstraps() -> None:
         "api.read_file": read.read_file,
         "api.v1.read_file": read.read_file,
         "api.runtime.ready": health.runtime_ready,
-        "api.shell": shell.shell,
         "api.v1.shell": shell.shell,
-        "api.shell.launch": shell_job.shell_launch,
-        "api.v1.shell.launch": shell_job.shell_launch,
-        "api.shell.poll": shell_job.shell_poll,
-        "api.v1.shell.poll": shell_job.shell_poll,
-        "api.shell.cancel": shell_job.shell_cancel,
-        "api.v1.shell.cancel": shell_job.shell_cancel,
-        "api.shell.reap": shell_job.shell_reap,
-        "api.v1.shell.reap": shell_job.shell_reap,
-        "api.shell.metrics": shell_job.shell_metrics,
-        "api.v1.shell.metrics": shell_job.shell_metrics,
+        "api.v1.cancel": cancel.cancel,
+        "api.v1.heartbeat": cancel.heartbeat,
+        "api.v1.inflight_count": cancel.inflight_count,
         "api.workspace_binding": workspace.workspace_binding,
         "api.write_file": write.write_file,
         "api.v1.write_file": write.write_file,

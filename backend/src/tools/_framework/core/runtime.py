@@ -58,6 +58,7 @@ class ExecutionMetadata:
     # output back into the manager.
     background_task_manager: Any | None = None
     background_task_id: str | None = None
+    sandbox_request_id: str | None = None
     on_progress_line: Callable[[str], None] | None = None
 
     # Per-call tool id (set by the streaming executor so progress events
@@ -94,6 +95,7 @@ class ExecutionMetadata:
             "context_preparers",
             "background_task_manager",
             "background_task_id",
+            "sandbox_request_id",
             "on_progress_line",
             "tool_id",
             "system_notification_service",

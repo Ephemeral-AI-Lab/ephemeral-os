@@ -26,6 +26,7 @@ async def write_file(
             sandbox_id,
             DAEMON_OP_WRITE_FILE,
             {
+                "request_id": request.request_id,
                 "path": request.path,
                 "content": request.content,
                 "actor_id": request.caller.agent_id,

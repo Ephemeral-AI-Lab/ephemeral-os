@@ -89,14 +89,7 @@ def test_shell_schema_describes_command():
 
 
 def test_shell_exposes_optional_background_execution():
-    """``shell`` is the only sandbox tool that supports daemon-native background.
-
-    The daemon's ``shell.launch / poll / cancel / reap`` ops (plan
-    ``docs/plans/2026-05-22-shell-background-mode.md``) let the agent fire
-    long-running shells without blocking the conversation. The engine's
-    background dispatcher injects ``background_task_id`` on opt-in calls,
-    and the tool branches into the daemon's job-control surface when set.
-    """
+    """``shell`` is the only sandbox tool that supports background execution."""
     tools = {tool.name: tool for tool in make_sandbox_tools()}
     tool = tools.get("shell")
     assert tool is not None

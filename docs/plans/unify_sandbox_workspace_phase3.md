@@ -2,7 +2,7 @@
 
 **Type:** Test reshape + docs. No production behavior change.
 **Scope:** Update the iws test suite to exercise the unified per-call lifecycle. Add new test tiers for tool wrappers, plugin policy, O_NOFOLLOW security (per-component walk against intermediate symlinks), pipeline lifecycle, OCC concurrency, **iws behavior upgrade** (new typed-shape verbs), **unit-level** coverage (per-module surface), and a **deployment pre-flight** CI step (`scripts/verify_overlay_preconditions.py`). Validate Tier 8 soak against a re-baselined baseline. Ship the new API surface doc + CHANGELOG.
-**Depends on:** Phase 2 (per-call ephemeral pipeline, persistent isolated pipeline, lifecycle host API, agent-level tools, plugin block, iws-op deletion, host-side `sandbox/lifecycle/` package, OCC source-tag plumbing, OverlayHandle idempotency, O_NOFOLLOW per-component walk enforcement).
+**Depends on:** Phase 2 (per-call ephemeral pipeline, persistent isolated pipeline, lifecycle host API, agent-level tools, plugin block, iws-op deletion, host-side `sandbox/isolated_workspace/lifecycle/` package, OCC source-tag plumbing, OverlayHandle idempotency, O_NOFOLLOW per-component walk enforcement).
 **Blocks:** nothing — this is the closing phase.
 **Atomic commit plan:** ≤5 logical commits. Suggested split: (a) happy_path + tool_wrappers reshape; (b) policy + security tiers; (c) pipeline_lifecycle + concurrency tiers; (d) behavior_upgrade + unit tiers + observability assertions; (e) Tier 8 soak re-baseline + docs/CHANGELOG. Each commit runs full mock suite on parent SHA before landing; rollback is `git revert <sha>` per commit.
 
@@ -36,7 +36,7 @@ workspace_lifecycle_completed(exit_isolated_workspace)
 ```
 The daemon-side JSONL mirror (`EOS_ISOLATED_WORKSPACE_AUDIT_PATH`) continues to receive `sandbox_isolated_workspace_{enter,exit,tool_call,evicted,gc_orphan}` events for backstop diagnostics — unchanged.
 
-**1.2.** Update other happy-path tests that today call `isolated_workspace.handlers.enter()` / `exit_()` directly — migrate to the host-side coroutines in the new `sandbox/lifecycle/` package: `sandbox.lifecycle.enter_isolated_workspace` / `exit_isolated_workspace`. Tool-op calls migrate to `sandbox.api.<verb>` (daemon resolves workspace via `resolve_pipeline`). The `WorkspaceSession` async-CM is deferred to a test-fixture (`tests/mock/sandbox/_fixtures/workspace_session.py`) per Phase 2 §12 scope reduction; tests use the explicit pair, not the CM, unless a production caller materializes.
+**1.2.** Update other happy-path tests that today call `isolated_workspace.handlers.enter()` / `exit_()` directly — migrate to the host-side coroutines in the new `sandbox/isolated_workspace/lifecycle/` package: `sandbox.isolated_workspace.lifecycle.enter_isolated_workspace` / `exit_isolated_workspace`. Tool-op calls migrate to `sandbox.api.<verb>` (daemon resolves workspace via `resolve_pipeline`). The `WorkspaceSession` async-CM is deferred to a test-fixture (`tests/mock/sandbox/_fixtures/workspace_session.py`) per Phase 2 §12 scope reduction; tests use the explicit pair, not the CM, unless a production caller materializes.
 
 → **Verify:** existing happy-path tests pass with the new sequences.
 
@@ -45,7 +45,7 @@ The daemon-side JSONL mirror (`EOS_ISOLATED_WORKSPACE_AUDIT_PATH`) continues to 
 ## Step 2 — New `tool_wrappers/` tier
 
 **2.1.** `tests/mock/sandbox/isolated_workspace/tool_wrappers/test_enter_isolated_workspace_tool.py`:
-- Drives the full path: Pydantic Input → `sandbox.lifecycle.enter_isolated_workspace` → ToolResult JSON.
+- Drives the full path: Pydantic Input → `sandbox.isolated_workspace.lifecycle.enter_isolated_workspace` → ToolResult JSON.
 - Asserts: `manifest_version` populated; `manifest_root_hash` populated; lifecycle audit pair emitted; NO tool-op `SandboxOperation` events.
 
 **2.2.** `tests/mock/sandbox/isolated_workspace/tool_wrappers/test_exit_isolated_workspace_tool.py`:
@@ -373,13 +373,13 @@ def test_read_refuses_symlink_to_host(workspace_session):
 - §7 O_NOFOLLOW security model — explain that `open_no_follow` does a per-component walk (defense against intermediate symlinks), not a single-call `O_NOFOLLOW` flag.
 - §8 New mount API requirement; Docker-only deployment; reference `scripts/verify_overlay_preconditions.py`.
 - §9 NEW — Pass-through write semantics (Architect F.5 / Critic must-fix #9): 2×3 table for {/testbed/*, /etc/*, /tmp/*} × {ephemeral, isolated} listing read+write disposition. Document the denylist (`/etc/`, `/var/`, `/proc/`, `/sys/`, `/boot/` rejected before kernel call).
-- §10 — Background tool policy: see Phase 2.5 §1 + §2 (coroutine-bound overlay; engine asyncio.Task wrapper; `ToolCallRequest.background` flag; `api.v1.cancel(request_id)` wire RPC; `api.v1.heartbeat`; engine-layer Q4 + iws-exit drain). The api_surface.md doc references Phase 2.5 for the canonical design; nothing about ShellJob / shell_launch / shell_reap appears in the new doc.
+- §10 — Background tool policy: see Phase 2.5 §1 + §2 (coroutine-bound overlay; engine asyncio.Task wrapper; `ToolCallRequest.background` flag; `api.v1.cancel(request_id)` wire RPC; `api.v1.heartbeat`; engine-layer Q4 + iws-exit drain). The api_surface.md doc references Phase 2.5 for the canonical design and does not describe the old shell-job model as active architecture.
 - §11 NEW — `WorkspaceSession` status: deferred to `tests/mock/sandbox/_fixtures/` until a production caller materializes (Critic must-fix #11). NOT part of the public API surface in Phase 2.
 
 **8.2.** Update `docs/isolated_workspace_runtime_source_blast_radius.md`:
-- New module set: `sandbox/overlay/*`, `sandbox/_shared/tool_primitives/*`, `sandbox/ephemeral_workspace/pipeline.py` (+ extracted helper modules per Phase 1 §3.1), `sandbox/isolated_workspace/pipeline.py` + `_lifecycle.py` + `_gc.py` + `_ttl.py` + `_quota.py` + `_runtime.py` + `_types.py`, `sandbox/lifecycle/*` (host-side coroutines + WorkspaceSession test-fixture pointer).
+- New module set: `sandbox/overlay/*`, `sandbox/_shared/tool_primitives/*`, `sandbox/ephemeral_workspace/pipeline.py` (+ extracted helper modules per Phase 1 §3.1), `sandbox/isolated_workspace/pipeline.py` + `_lifecycle.py` + `_gc.py` + `_ttl.py` + `_quota.py` + `_runtime.py` + `_types.py`, `sandbox/isolated_workspace/lifecycle/*` (host-side coroutines + WorkspaceSession test-fixture pointer).
 - Removed modules: `sandbox/execution/`, `sandbox/plugin/` (relocated), `sandbox/daemon/service/{sandbox_overlay,shell_*,overlay_*}.py`, `sandbox/daemon/handler/overlay.py`, `sandbox/isolated_workspace/ops_handlers.py`.
-- Note: `sandbox/api/` continues to house CLIENT-side artifacts only (`_raw_exec.py`, `_sandbox_control.py`, `protocol.py`, `transport.py`, `tool/`). Host-side lifecycle coroutines moved to `sandbox/lifecycle/` (Critic must-fix #6).
+- Note: `sandbox/api/` continues to house CLIENT-side artifacts only (`_raw_exec.py`, `_sandbox_control.py`, `protocol.py`, `transport.py`, `tool/`). Host-side lifecycle coroutines moved to `sandbox/isolated_workspace/lifecycle/` (Critic must-fix #6).
 
 **8.3.** Create / update `tests/mock/sandbox/isolated_workspace/PLAN.md`:
 - New test layout: `happy_path/`, `tool_wrappers/`, `policy/`, `pipeline_lifecycle/`, `concurrency/`, `security/`, `behavior_upgrade/`, `unit/`, `observability/`.
@@ -399,7 +399,7 @@ def test_read_refuses_symlink_to_host(workspace_session):
 - Preserved OCC disjoint-batch coalescing for single-path typed writes via source="api_write" tag.
 - Added O_NOFOLLOW enforcement in tool_primitives.{read,write,edit} (security: namespace runs as root).
 - New agent-level tools: tools/isolated_workspace/{enter,exit}_isolated_workspace.
-- New host-side lifecycle coroutines at sandbox.lifecycle.{enter,exit}_isolated_workspace; WorkspaceSession DEFERRED to test fixture (no public API).
+- New host-side lifecycle coroutines at sandbox.isolated_workspace.lifecycle.{enter,exit}_isolated_workspace; WorkspaceSession DEFERRED to test fixture (no public API).
 - Latency change: typed verbs (read/write/edit/grep/glob) gain ~50–200ms per-call namespace+mount cost.
 ```
 
@@ -421,6 +421,6 @@ def test_read_refuses_symlink_to_host(workspace_session):
 - ✅ Deployment pre-flight CI step `verify-overlay-preconditions` runs `scripts/verify_overlay_preconditions.py` and fails the build on kernel-degraded runners. `EOS_REQUIRE_NEW_MOUNT_API` flag tested.
 - ✅ Tier 8 soak re-baselined to `baseline_post_unify.json`; ≤10% median drift assertion enforced; perf escalation threshold (read p50 > 200ms or p99 > 500ms) auto-files follow-up issue.
 - ✅ `docs/sandbox/api_surface.md` exists with the 11 sections (pass-through table, `WorkspaceSession` deferral note, etc.). The §10 background tool policy section defers to Phase 2.5 for the canonical design.
-- ✅ Blast-radius doc reflects new module set including extracted `manager.py` modules + `sandbox/lifecycle/`.
+- ✅ Blast-radius doc reflects new module set including extracted `manager.py` modules + `sandbox/isolated_workspace/lifecycle/`.
 - ✅ `tests/mock/sandbox/isolated_workspace/PLAN.md` updated (9 tiers).
 - ✅ CHANGELOG entry merged.

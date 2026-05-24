@@ -54,6 +54,7 @@ class SandboxRequestBase:
 
     caller: SandboxCaller
     description: str = ""
+    request_id: str = ""
 
     def default_description(self, fallback: str) -> str:
         return self.description or fallback
@@ -68,7 +69,7 @@ class SandboxResultBase:
     timings: dict[str, float] = field(default_factory=dict)
     conflict: "ConflictInfo | None" = None
     conflict_reason: str | None = None
-    changed_paths: list[str] = field(default_factory=list)
+    changed_paths: list[str] | tuple[str, ...] = field(default_factory=list)
     error: dict[str, object] | None = None
 
 
@@ -77,7 +78,7 @@ ToolCallResult: TypeAlias = dict[str, object]
 
 @dataclass(frozen=True, kw_only=True)
 class ToolCallRequest:
-    """One foreground tool invocation routed through a workspace pipeline."""
+    """One tool invocation routed through a workspace pipeline."""
 
     request_id: str
     agent_id: str
@@ -85,6 +86,7 @@ class ToolCallRequest:
     intent: Intent
     args: Mapping[str, object]
     actor_id: str = ""
+    background: bool = False
 
     def to_payload(self) -> dict[str, object]:
         return {
@@ -94,6 +96,7 @@ class ToolCallRequest:
             "intent": self.intent.value,
             "args": dict(self.args),
             "actor_id": self.actor_id,
+            "background": self.background,
         }
 
     @classmethod
@@ -108,6 +111,7 @@ class ToolCallRequest:
             intent=Intent(str(payload.get("intent") or Intent.READ_ONLY.value)),
             args={str(key): value for key, value in args_raw.items()},
             actor_id=str(payload.get("actor_id") or ""),
+            background=bool(payload.get("background", False)),
         )
 
 
@@ -200,9 +204,8 @@ class ShellRequest(SandboxRequestBase):
     cwd: str | None = None
     timeout: int | None = None
     stdin: str | None = None
-    # ``True`` routes the request through the daemon's background-shell
-    # control plane (shell.launch/poll/cancel/reap). False keeps the
-    # synchronous single-RPC path used by foreground shells.
+    # Metadata only: the engine owns background lifecycle and still dispatches
+    # one api.v1.shell request for both foreground and background calls.
     background: bool = False
 
 

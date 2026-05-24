@@ -25,7 +25,11 @@ async def read_file(
         raw = await selected_transport.call(
             sandbox_id,
             DAEMON_OP_READ_FILE,
-            {"path": request.path, "caller": request.caller.audit_fields()},
+            {
+                "request_id": request.request_id,
+                "path": request.path,
+                "caller": request.caller.audit_fields(),
+            },
             timeout=READ_FILE_TIMEOUT_S,
         )
         return read_result_from_daemon_response(raw)

@@ -6,6 +6,8 @@ tools through ``execute_tool_once``.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import dataclasses
 import json
 from collections.abc import Awaitable, Callable
@@ -623,7 +625,7 @@ class MockSquadRunner:
                 )
                 summary = "Background-shell golden probe passed."
                 artifacts = [summary_path]
-            elif action == "background_shell_cancel":
+            elif action == "background_shell_stop":
                 summary_path = await self._run_background_shell_probe(
                     metadata, emit, mode="cancel"
                 )
@@ -647,7 +649,7 @@ class MockSquadRunner:
                 )
                 summary = "Background-shell partial-write-cancel probe passed."
                 artifacts = [summary_path]
-            elif action == "background_shell_cancel_during_maintenance":
+            elif action == "background_shell_stop_during_maintenance":
                 summary_path = await self._run_background_shell_probe(
                     metadata, emit, mode="cancel_during_maintenance"
                 )
@@ -1239,7 +1241,7 @@ class MockSquadRunner:
 
         dispatch = {
             "golden": background_shell_probe.run_background_shell_golden_probe,
-            "cancel": background_shell_probe.run_background_shell_cancel_probe,
+            "cancel": background_shell_probe.run_background_shell_stop_probe,
             "interleave": background_shell_probe.run_background_shell_interleave_probe,
             "exhaustion": background_shell_probe.run_background_shell_exhaustion_probe,
             "partial_write_cancel": (
@@ -1393,16 +1395,27 @@ class MockSquadRunner:
             "tool_id": tool_id,
             "sandbox_audit_sink": self._sandbox_audit_sink,
         }
+        sandbox_request_id = uuid4().hex if background_task_id is not None else ""
         if background_task_id is not None:
             override_kwargs["background_task_id"] = background_task_id
+            override_kwargs["sandbox_request_id"] = sandbox_request_id
         tool_metadata = metadata.with_overrides(**override_kwargs)
-        result = await execute_tool_once(
-            tool_obj,
-            raw_input,
-            ToolExecutionContextService(cwd=Path(self._repo_dir), services=tool_metadata),
-            emit=_noop_emit,
-            emit_started=False,
-        )
+        try:
+            result = await execute_tool_once(
+                tool_obj,
+                raw_input,
+                ToolExecutionContextService(cwd=Path(self._repo_dir), services=tool_metadata),
+                emit=_noop_emit,
+                emit_started=False,
+            )
+        except asyncio.CancelledError:
+            if sandbox_request_id and metadata.sandbox_id:
+                current_task = asyncio.current_task()
+                if current_task is not None:
+                    current_task.uncancel()
+                with contextlib.suppress(Exception):
+                    await sandbox_api.cancel(metadata.sandbox_id, sandbox_request_id)
+            raise
         client_t2 = monotonic_now()
         result_metadata = dict(result.metadata or {})
         client_timings = dict(result_metadata.get("timings") or {})

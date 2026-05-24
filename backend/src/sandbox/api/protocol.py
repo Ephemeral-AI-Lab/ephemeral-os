@@ -16,7 +16,14 @@ class SandboxTransport(Protocol):
         payload: Mapping[str, object],
         *,
         timeout: int,
-    ) -> dict[str, Any]: ...
+    ) -> dict[str, Any]:
+        """Call one sandbox RPC.
+
+        Implementations put a wire-level ``request_id`` on the daemon envelope.
+        If ``payload`` already has ``request_id``, the same id is used for
+        correlation between engine background tasks and daemon in-flight state.
+        """
+        ...
 
 
 __all__ = ["SandboxTransport"]

@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from sandbox.daemon.handler import (
+    cancel,
     health,
     metrics,
     workspace,
 )
 from sandbox.ephemeral_workspace.plugin import handler as plugin_handler
-from sandbox.ephemeral_workspace import shell_job as shell_job_handler
 from sandbox.daemon.handler import edit, glob, grep, read, shell, write
 from sandbox.daemon.rpc import dispatcher as server
 from sandbox.isolated_workspace import handlers as iws_handlers
@@ -28,18 +28,10 @@ def test_daemon_op_table_routes_to_current_handler_layout() -> None:
         "api.v1.glob": glob.glob,
         "api.grep": grep.grep,
         "api.v1.grep": grep.grep,
-        "api.shell": shell.shell,
         "api.v1.shell": shell.shell,
-        "api.shell.launch": shell_job_handler.shell_launch,
-        "api.v1.shell.launch": shell_job_handler.shell_launch,
-        "api.shell.poll": shell_job_handler.shell_poll,
-        "api.v1.shell.poll": shell_job_handler.shell_poll,
-        "api.shell.cancel": shell_job_handler.shell_cancel,
-        "api.v1.shell.cancel": shell_job_handler.shell_cancel,
-        "api.shell.reap": shell_job_handler.shell_reap,
-        "api.v1.shell.reap": shell_job_handler.shell_reap,
-        "api.shell.metrics": shell_job_handler.shell_metrics,
-        "api.v1.shell.metrics": shell_job_handler.shell_metrics,
+        "api.v1.cancel": cancel.cancel,
+        "api.v1.heartbeat": cancel.heartbeat,
+        "api.v1.inflight_count": cancel.inflight_count,
         "api.layer_metrics": metrics.layer_metrics,
         "api.ensure_workspace_base": workspace.ensure_workspace_base,
         "api.build_workspace_base": workspace.build_workspace_base,

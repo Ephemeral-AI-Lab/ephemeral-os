@@ -7,8 +7,14 @@ import json
 from pydantic import BaseModel
 
 from sandbox._shared.models import EnterIsolatedWorkspaceRequest
-from sandbox.lifecycle import enter_isolated_workspace as lifecycle_enter
-from tools._framework.core.base import ToolExecutionContextService, ToolResult
+from sandbox.isolated_workspace.lifecycle import (
+    enter_isolated_workspace as lifecycle_enter,
+)
+from tools._framework.core.base import (
+    TextToolOutput,
+    ToolExecutionContextService,
+    ToolResult,
+)
 from tools._framework.core.decorator import tool
 from tools.sandbox._lib.session import caller_from_context
 
@@ -22,6 +28,7 @@ class EnterIsolatedWorkspaceInput(BaseModel):
     description="Open a private isolated workspace for this agent.",
     short_description="Enter isolated workspace.",
     input_model=EnterIsolatedWorkspaceInput,
+    output_model=TextToolOutput,
 )
 async def enter_isolated_workspace(
     layer_stack_root: str = "",
@@ -34,7 +41,9 @@ async def enter_isolated_workspace(
             caller=caller_from_context(context),
             layer_stack_root=root,
             description="enter isolated workspace",
-        )
+        ),
+        background_manager=context.get("background_task_manager"),
+        sandbox_id=str(context.get("sandbox_id") or ""),
     )
     return ToolResult(output=json.dumps(_payload(result), indent=2), is_error=not result.success)
 

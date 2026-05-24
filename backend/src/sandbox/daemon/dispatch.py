@@ -39,6 +39,7 @@ async def run_tool_handler(
         intent=intent,
         args=args,
         actor_id=str(args.get("actor_id") or ""),
+        background=bool(args.get("background", False)),
     )
     pipeline = await resolve_pipeline(req)
     return await pipeline.run_tool_call(req)

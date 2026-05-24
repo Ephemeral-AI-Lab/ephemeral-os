@@ -8,11 +8,8 @@ summary to a known workspace path that the matching test reads back via
 ``sandbox_api.read_file`` after the scenario report returns.
 
 Background mode is enabled by passing ``background_task_id`` through
-``call_tool`` — the shell tool reads ``context.background_task_id`` at
-``backend/src/tools/sandbox/shell/shell.py:154`` and routes through the
-daemon's launch/poll/cancel/reap surface. Cancel propagation matches the
-production engine path: ``asyncio.wait_for`` raises ``CancelledError``
-into ``_shell_background_dispatch._send_cancel_then_reap``.
+``call_tool``. The shell tool still uses one ``api.v1.shell`` request; cancel
+propagation is request-keyed through the daemon in-flight registry.
 """
 
 from __future__ import annotations
@@ -24,6 +21,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 from uuid import uuid4
 
+import sandbox.api as sandbox_api
 from message.stream_events import StreamEvent
 from tools._framework.core.results import ToolResult
 from tools._framework.core.runtime import ExecutionMetadata
@@ -34,7 +32,7 @@ from tools.sandbox.shell import shell as shell_tool
 WORKSPACE_ROOT = "/testbed"
 ROOT = f"{WORKSPACE_ROOT}/.ephemeralos/sweevo-mock/background_shell"
 GOLDEN_SUMMARY = f"{ROOT}/golden/summary.json"
-CANCEL_SUMMARY = f"{ROOT}/cancel/summary.json"
+STOP_SUMMARY = f"{ROOT}/stop/summary.json"
 INTERLEAVE_SUMMARY = f"{ROOT}/interleave/summary.json"
 EXHAUSTION_SUMMARY = f"{ROOT}/exhaustion/summary.json"
 PARTIAL_WRITE_SUMMARY = f"{ROOT}/partial_write/summary.json"
@@ -48,6 +46,7 @@ EmitStreamEvent = Callable[[StreamEvent], Awaitable[None]]
 # through ``runner.py:_call_tool``.
 CallTool = Callable[..., Awaitable[ToolResult]]
 RecordToolCheck = Callable[[str, ToolResult], None]
+_BACKGROUND_DRAIN_TIMEOUT_S = 10.0
 
 
 # ---- shared helpers --------------------------------------------------------
@@ -55,6 +54,26 @@ RecordToolCheck = Callable[[str, ToolResult], None]
 
 def _bg_id(label: str) -> str:
     return f"bg-{label}-{uuid4().hex[:8]}"
+
+
+def _agent_id(metadata: ExecutionMetadata) -> str:
+    return str(metadata.agent_run_id or metadata.agent_name or "").strip()
+
+
+async def _wait_for_background_drain(metadata: ExecutionMetadata) -> None:
+    sandbox_id = str(metadata.sandbox_id or "").strip()
+    agent_id = _agent_id(metadata)
+    if not sandbox_id or not agent_id:
+        return
+    deadline = time.perf_counter() + _BACKGROUND_DRAIN_TIMEOUT_S
+    while time.perf_counter() < deadline:
+        try:
+            count = await sandbox_api.inflight_count(sandbox_id, agent_id)
+        except Exception:
+            return
+        if count <= 0:
+            return
+        await asyncio.sleep(0.1)
 
 
 def _shell_payload(result: ToolResult) -> dict[str, Any]:
@@ -191,7 +210,7 @@ CANCEL_AFTER_S = 1.0
 CANCEL_SLEEP_S = 30
 
 
-async def run_background_shell_cancel_probe(
+async def run_background_shell_stop_probe(
     *,
     metadata: ExecutionMetadata,
     emit: EmitStreamEvent,
@@ -200,6 +219,7 @@ async def run_background_shell_cancel_probe(
 ) -> str:
     """T2: launch + cancel mid-flight via asyncio.wait_for."""
     started = time.perf_counter()
+    await _wait_for_background_drain(metadata)
 
     async def _one(index: int) -> dict[str, Any]:
         t0 = time.perf_counter()
@@ -247,6 +267,7 @@ async def run_background_shell_cancel_probe(
         *(_one(i) for i in range(CANCEL_LAUNCH_COUNT)),
         return_exceptions=False,
     )
+    await _wait_for_background_drain(metadata)
 
     # AC-3: post-cancel foreground shell mount latency budget.
     fg_t0 = time.perf_counter()
@@ -274,7 +295,7 @@ async def run_background_shell_cancel_probe(
         "post_cancel_foreground": post_fg,
     }
     return await _write_summary(
-        path=CANCEL_SUMMARY,
+        path=STOP_SUMMARY,
         payload=summary,
         metadata=metadata,
         emit=emit,
@@ -597,6 +618,7 @@ async def run_background_shell_maintenance_probe(
 ) -> str:
     """T7: short shell + maintenance; verify OCC consistency after."""
     started = time.perf_counter()
+    await _wait_for_background_drain(metadata)
     target = f"{ROOT}/maintenance/maint_test.txt"
     target_relative = target.removeprefix(f"{WORKSPACE_ROOT}/")
     result = await call_tool(
@@ -699,7 +721,7 @@ async def run_background_shell_late_cancel_probe(
 
 __all__ = [
     "GOLDEN_SUMMARY",
-    "CANCEL_SUMMARY",
+    "STOP_SUMMARY",
     "INTERLEAVE_SUMMARY",
     "EXHAUSTION_SUMMARY",
     "PARTIAL_WRITE_SUMMARY",
@@ -707,7 +729,7 @@ __all__ = [
     "LATE_CANCEL_SUMMARY",
     "SUMMARY_SCHEMA",
     "run_background_shell_golden_probe",
-    "run_background_shell_cancel_probe",
+    "run_background_shell_stop_probe",
     "run_background_shell_interleave_probe",
     "run_background_shell_exhaustion_probe",
     "run_background_shell_partial_write_cancel_probe",

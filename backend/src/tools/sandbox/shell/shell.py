@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
+from typing import cast
 
 from pydantic import BaseModel, Field
 
@@ -102,7 +104,9 @@ def _build_tool_output(
         "conflict_reason": conflict_reason,
     }
     if timings:
-        metadata["timings"] = normalize_timing_map(timings)
+        metadata["timings"] = normalize_timing_map(
+            cast(Mapping[object, object], timings)
+        )
     metadata = merge_tool_metadata(metadata, sandbox_audit_metadata(context))
     return ToolResult(
         output=json.dumps(
@@ -146,23 +150,17 @@ async def shell(
     if sandbox_id_error is not None:
         return sandbox_id_error
 
-    # The engine wraps the call in BackgroundTaskManager.launch when the LLM
-    # opts in via ``background=true``; the wrapper stamps
-    # ``context.background_task_id``. That signal is how we know to route
-    # through the daemon's launch/poll/cancel/reap surface rather than the
-    # single-RPC synchronous path.
-    is_background = bool(getattr(context, "background_task_id", None))
-
     try:
         result = await sandbox_api.shell(
             sandbox_id,
             ShellRequest(
+                request_id=str(context.get("sandbox_request_id") or ""),
                 command=command,
                 cwd=get_repo_root(context) or None,
                 timeout=timeout,
                 caller=caller_from_context(context),
                 description="shell",
-                background=is_background,
+                background=bool(context.get("background_task_id")),
             ),
             **audit_kwargs_from_context(context),
         )

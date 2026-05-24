@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import threading
 import time
 from collections.abc import Callable, Coroutine, Iterator
@@ -21,6 +22,7 @@ from tools import ToolResult
 from message.stream_events import BackgroundTaskStarted
 
 logger = logging.getLogger(__name__)
+_HEARTBEAT_INTERVAL_S = float(os.environ.get("EOS_BACKGROUND_HEARTBEAT_INTERVAL_S", "60"))
 
 
 # Terminal status precedence used by :meth:`BackgroundTaskManager._set_terminal_status`.
@@ -76,6 +78,10 @@ class TrackedBackgroundTask:
     # Optional back-reference to a persisted AgentRunRecord (set by run_subagent
     # so the audit row and the in-memory bg task can be cross-resolved).
     agent_run_id: str | None = None
+    agent_id: str | None = None
+    uses_sandbox: bool = False
+    sandbox_id: str | None = None
+    sandbox_request_id: str | None = None
     status: TaskStatus = TaskStatus.RUNNING
     # Reason captured by cancel(); kept on the tracked task so callers (and
     # the subagent finaliser) can persist it to the audit record.
@@ -109,6 +115,9 @@ class BackgroundTaskManager:
     def __init__(self) -> None:
         self._tasks: dict[str, TrackedBackgroundTask] = {}
         self._alias_counter: int = 0
+        self._heartbeat_task: asyncio.Task[None] | None = None
+        self._engine_process_id = str(os.getpid())
+        self._engine_started_at = time.time()
 
     def next_alias(self) -> str:
         """Return a short mnemonic task_id like 'bg_1', 'bg_2', ...
@@ -127,6 +136,10 @@ class BackgroundTaskManager:
         coro: Coroutine[Any, Any, ToolResult],
         task_type: str = DEFAULT_BACKGROUND_TASK_TYPE,
         agent_run_id: str | None = None,
+        agent_id: str | None = None,
+        uses_sandbox: bool = False,
+        sandbox_id: str | None = None,
+        sandbox_request_id: str | None = None,
     ) -> BackgroundTaskStarted:
         """Launch *coro* as a background task and return a started event."""
         asyncio_task = asyncio.create_task(coro)
@@ -137,6 +150,10 @@ class BackgroundTaskManager:
             asyncio_task=asyncio_task,
             task_type=task_type,
             agent_run_id=agent_run_id,
+            agent_id=agent_id,
+            uses_sandbox=uses_sandbox,
+            sandbox_id=sandbox_id,
+            sandbox_request_id=sandbox_request_id,
         )
         start_line = f"[started: {tool_name}]"
         tracked.progress_lines.append(start_line)
@@ -180,8 +197,11 @@ class BackgroundTaskManager:
             # Populate progress_lines from whichever result the latch settled on.
             if tracked.result is not None and tracked.result.output:
                 tracked.progress_lines = tracked.result.output.splitlines()
+            self._stop_heartbeat_if_idle()
 
         asyncio_task.add_done_callback(_done_callback)
+        if tracked.uses_sandbox and tracked.sandbox_request_id and tracked.sandbox_id:
+            self._ensure_heartbeat_task()
 
         return BackgroundTaskStarted(
             task_id=task_id,
@@ -214,6 +234,16 @@ class BackgroundTaskManager:
     def has_pending(self) -> bool:
         """Return True if any task is still running."""
         return any(t.status == TaskStatus.RUNNING for t in self._tasks.values())
+
+    def count_by_agent(self, agent_id: str) -> int:
+        """Return running sandbox-bound background task count for one agent."""
+        return sum(
+            1
+            for tracked in self._tasks.values()
+            if tracked.status == TaskStatus.RUNNING
+            and tracked.uses_sandbox
+            and tracked.agent_id == agent_id
+        )
 
     def append_progress(self, task_id: str, line: str) -> None:
         """Append a live progress line for *task_id*.
@@ -265,6 +295,7 @@ class BackgroundTaskManager:
         if tracked is None:
             return False
         tracked.cancel_reason = reason or None
+        await self._wire_cancel_if_sandbox_bound(tracked)
         if not should_cancel_asyncio_task(tracked):
             await request_subagent_early_stop(tracked, reason=reason)
             return True
@@ -278,7 +309,34 @@ class BackgroundTaskManager:
         if applied:
             tracked.progress_lines = [msg]
         tracked.asyncio_task.cancel()
+        self._stop_heartbeat_if_idle()
         return True
+
+    async def cancel_by_agent(self, agent_id: str, *, grace_s: float) -> int:
+        """Cancel running sandbox-bound background tasks for one agent.
+
+        Returns the number of asyncio tasks still not done after ``grace_s``.
+        """
+        targets = [
+            tracked
+            for tracked in self._tasks.values()
+            if tracked.status == TaskStatus.RUNNING
+            and tracked.uses_sandbox
+            and tracked.agent_id == agent_id
+        ]
+        if not targets:
+            return 0
+        await asyncio.gather(
+            *(self.cancel(tracked.task_id, reason="isolated_workspace_exit") for tracked in targets),
+            return_exceptions=True,
+        )
+        pending = [tracked.asyncio_task for tracked in targets if not tracked.asyncio_task.done()]
+        if pending and grace_s > 0:
+            _, still_pending = await asyncio.wait(pending, timeout=grace_s)
+            pending = list(still_pending)
+        for task in pending:
+            task.cancel()
+        return len([task for task in pending if not task.done()])
 
     def get_task(self, task_id: str) -> TrackedBackgroundTask | None:
         """Return the tracked task for *task_id* (or None)."""
@@ -298,11 +356,13 @@ class BackgroundTaskManager:
             )
             if applied:
                 tracked.progress_lines = ["Cancelled"]
+            await self._wire_cancel_if_sandbox_bound(tracked)
             if should_cancel_asyncio_task(tracked):
                 tracked.asyncio_task.cancel()
                 cancelled_tasks.append(tracked.asyncio_task)
         if cancelled_tasks:
             await asyncio.gather(*cancelled_tasks, return_exceptions=True)
+        self._stop_heartbeat_if_idle()
 
     def _set_terminal_status(
         self,
@@ -328,3 +388,71 @@ class BackgroundTaskManager:
             if new_result is not None:
                 tracked.result = new_result
             return True
+
+    async def _wire_cancel_if_sandbox_bound(self, tracked: TrackedBackgroundTask) -> None:
+        if not tracked.uses_sandbox or not tracked.sandbox_id or not tracked.sandbox_request_id:
+            return
+        try:
+            import sandbox.api as sandbox_api
+
+            await sandbox_api.cancel(tracked.sandbox_id, tracked.sandbox_request_id)
+        except Exception as exc:
+            logger.warning(
+                "wire-cancel failed for task_id=%s request_id=%s: %s",
+                tracked.task_id,
+                tracked.sandbox_request_id,
+                exc,
+            )
+
+    def _ensure_heartbeat_task(self) -> None:
+        if self._heartbeat_task is not None and not self._heartbeat_task.done():
+            return
+        self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
+
+    def _stop_heartbeat_if_idle(self) -> None:
+        if self._running_sandbox_request_ids():
+            return
+        if self._heartbeat_task is not None and not self._heartbeat_task.done():
+            self._heartbeat_task.cancel()
+        self._heartbeat_task = None
+
+    async def _heartbeat_loop(self) -> None:
+        while True:
+            await asyncio.sleep(_HEARTBEAT_INTERVAL_S)
+            by_sandbox = self._running_sandbox_request_ids()
+            if not by_sandbox:
+                self._heartbeat_task = None
+                return
+            try:
+                import sandbox.api as sandbox_api
+
+                await asyncio.gather(
+                    *(
+                        sandbox_api.heartbeat(
+                            sandbox_id,
+                            request_ids,
+                            engine_process_id=self._engine_process_id,
+                            engine_started_at=self._engine_started_at,
+                        )
+                        for sandbox_id, request_ids in by_sandbox.items()
+                    ),
+                    return_exceptions=True,
+                )
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.debug("background heartbeat iteration failed", exc_info=True)
+
+    def _running_sandbox_request_ids(self) -> dict[str, list[str]]:
+        by_sandbox: dict[str, list[str]] = {}
+        for tracked in self._tasks.values():
+            if (
+                tracked.status == TaskStatus.RUNNING
+                and tracked.uses_sandbox
+                and tracked.sandbox_id
+                and tracked.sandbox_request_id
+            ):
+                by_sandbox.setdefault(tracked.sandbox_id, []).append(
+                    tracked.sandbox_request_id
+                )
+        return by_sandbox

@@ -40,8 +40,8 @@ from task_center_runner.scenarios.planner_validation import (
 )
 from task_center_runner.scenarios.sandbox import (
     AutoSquashCommitResume,
-    BackgroundShellCancel,
-    BackgroundShellCancelDuringMaintenance,
+    BackgroundShellStop,
+    BackgroundShellStopDuringMaintenance,
     BackgroundShellExhaustion,
     BackgroundShellGolden,
     BackgroundShellInterleave,
@@ -86,9 +86,9 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     "capacity.full_system_capacity_matrix": FullSystemCapacityMatrix,
     # Focused sandbox scenarios.
     "sandbox.auto_squash_commit_resume": AutoSquashCommitResume,
-    "sandbox.background_shell_cancel": BackgroundShellCancel,
-    "sandbox.background_shell_cancel_during_maintenance": (
-        BackgroundShellCancelDuringMaintenance
+    "sandbox.background_shell_stop": BackgroundShellStop,
+    "sandbox.background_shell_stop_during_maintenance": (
+        BackgroundShellStopDuringMaintenance
     ),
     "sandbox.background_shell_exhaustion": BackgroundShellExhaustion,
     "sandbox.background_shell_golden": BackgroundShellGolden,
@@ -127,8 +127,8 @@ __all__ = [
     "AttemptRetryGeneratorFailure",
     "AttemptRetryPlannerFailure",
     "AutoSquashCommitResume",
-    "BackgroundShellCancel",
-    "BackgroundShellCancelDuringMaintenance",
+    "BackgroundShellStop",
+    "BackgroundShellStopDuringMaintenance",
     "BackgroundShellExhaustion",
     "BackgroundShellGolden",
     "BackgroundShellInterleave",

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import TypeVar
+from typing import Any, TypeVar, cast
 
 from sandbox.api.tool.core.daemon_response import (
     conflict_from_daemon_response,
@@ -91,7 +91,7 @@ def guarded_result_from_daemon_response(
             if timings is not None
             else timings_from_daemon_response(raw.get("timings"))
         ),
-        **extra,
+        **cast(Any, extra),
     )
 
 

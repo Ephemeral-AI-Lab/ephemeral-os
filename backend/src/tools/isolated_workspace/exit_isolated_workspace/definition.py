@@ -7,8 +7,14 @@ import json
 from pydantic import BaseModel
 
 from sandbox._shared.models import ExitIsolatedWorkspaceRequest
-from sandbox.lifecycle import exit_isolated_workspace as lifecycle_exit
-from tools._framework.core.base import ToolExecutionContextService, ToolResult
+from sandbox.isolated_workspace.lifecycle import (
+    exit_isolated_workspace as lifecycle_exit,
+)
+from tools._framework.core.base import (
+    TextToolOutput,
+    ToolExecutionContextService,
+    ToolResult,
+)
 from tools._framework.core.decorator import tool
 from tools.sandbox._lib.session import caller_from_context
 
@@ -22,6 +28,7 @@ class ExitIsolatedWorkspaceInput(BaseModel):
     description="Close and discard this agent's isolated workspace.",
     short_description="Exit isolated workspace.",
     input_model=ExitIsolatedWorkspaceInput,
+    output_model=TextToolOutput,
 )
 async def exit_isolated_workspace(
     grace_s: float = 5.0,
@@ -33,7 +40,8 @@ async def exit_isolated_workspace(
             caller=caller_from_context(context),
             grace_s=grace_s,
             description="exit isolated workspace",
-        )
+        ),
+        background_manager=context.get("background_task_manager"),
     )
     return ToolResult(output=json.dumps(_payload(result), indent=2), is_error=not result.success)
 
