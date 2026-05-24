@@ -17,7 +17,10 @@ from sandbox.daemon.request_context import (
 )
 from sandbox.ephemeral_workspace.pipeline import get_sandbox_overlay
 from sandbox.isolated_workspace.helper.manager import get_active_pipeline
-from sandbox.layer_stack.workspace_binding import require_workspace_binding
+from sandbox.layer_stack.workspace_binding import (
+    WorkspaceBindingError,
+    require_workspace_binding,
+)
 from sandbox.occ.changeset import EditChange, build_api_write_change, is_published_status
 
 
@@ -52,11 +55,14 @@ async def run_tool_handler(
     iws = get_active_pipeline()
     if iws is None or iws.get_handle(agent_id) is None:
         if verb == "read_file":
-            return _run_ephemeral_read_file(req)
+            if _can_use_direct_file_path(req):
+                return _run_ephemeral_read_file(req)
         if verb == "write_file":
-            return await _run_ephemeral_write_file(req)
+            if _can_use_direct_file_path(req):
+                return await _run_ephemeral_write_file(req)
         if verb == "edit_file":
-            return await _run_ephemeral_edit_file(req)
+            if _can_use_direct_file_path(req):
+                return await _run_ephemeral_edit_file(req)
     pipeline = await resolve_pipeline(req)
     return await pipeline.run_tool_call(req)
 
@@ -111,7 +117,6 @@ async def _run_ephemeral_write_file(req: ToolCallRequest) -> ToolCallResult:
     )
     payload = project_changeset(
         result,
-        fallback_path=path,
         verb="write",
         total_start=total_start,
         gitignore=backend.gitignore,
@@ -133,7 +138,6 @@ async def _run_ephemeral_edit_file(req: ToolCallRequest) -> ToolCallResult:
     result = await backend.occ_service.apply_changeset(changes)
     payload = project_changeset(
         result,
-        fallback_path=path,
         verb="edit",
         total_start=total_start,
         gitignore=backend.gitignore,
@@ -175,6 +179,15 @@ def _edit_changes(args: dict[str, Any], path: str) -> list[EditChange]:
             )
         )
     return changes
+
+
+def _can_use_direct_file_path(req: ToolCallRequest) -> bool:
+    try:
+        root = require_layer_stack_root(req.args)
+        _layer_path(root, required_single_path(req.args))
+    except WorkspaceBindingError:
+        return False
+    return True
 
 
 def _layer_path(layer_stack_root: str, raw_path: str) -> str:

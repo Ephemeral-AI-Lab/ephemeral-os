@@ -74,7 +74,13 @@ class WriteFileOutput(BaseModel):
     file_path: str = Field(..., description="Resolved file path that was written.")
     status: str = Field(..., description="Write result: written, aborted_version, or failed.")
     changed_paths: list[str] = Field(default_factory=list, description="Files changed by the write.")
+    changed_path_kinds: dict[str, str] = Field(
+        default_factory=dict,
+        description="Changed paths keyed to write/delete/symlink/opaque_dir.",
+    )
+    mutation_source: str = Field(default="", description="Mutation source tag.")
     conflict_reason: str | None = Field(default=None, description="Conflict reason when write failed.")
+    error: dict[str, object] = Field(default_factory=dict, description="Typed error payload.")
     bytes_written: int = Field(..., description="Number of UTF-8 bytes written.")
 
 

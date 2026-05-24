@@ -21,7 +21,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 
 WORKER_COUNT = 20
-MAX_CONCURRENT_WORKERS = 5
+MAX_CONCURRENT_WORKERS = 20
 
 
 def _plan() -> dict[str, Any]:
@@ -60,13 +60,13 @@ def _plan() -> dict[str, Any]:
         )
     return {
         "plan_spec": (
-            "Seed one shared OCC target, launch 20 executor workers in five "
-            "bounded lanes that pressure layer-stack commits and overlay "
+            "Seed one shared OCC target, launch 20 executor workers in one "
+            "bounded wave that pressures layer-stack commits and overlay "
             "capture, then reconcile all fragments into a capacity summary."
         ),
         "evaluation_criteria": [
             "All 20 workers complete and write fragments.",
-            "The concurrent workload never fans out beyond 5 active sandbox "
+            "The concurrent workload never fans out beyond 20 active sandbox "
             "tool calls.",
             "Shell setup and reconciliation remain bounded while worker "
             "concurrency pressures direct file/OCC paths.",

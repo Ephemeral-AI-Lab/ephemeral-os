@@ -42,6 +42,14 @@ from task_center_runner.scenarios.sandbox.complex_project_build_shell_edit_lsp i
     ComplexProjectBuildShellEditLsp,
     ComplexProjectBuildShellEditLspSmoke,
 )
+from task_center_runner.scenarios.sandbox.ephemeral_workspace import (
+    EphemeralWorkspaceAllVerbs,
+    EphemeralWorkspaceCancellation,
+    EphemeralWorkspaceConcurrentWrites,
+    EphemeralWorkspaceO1Disk,
+    EphemeralWorkspacePolicy,
+    EphemeralWorkspaceSamePathConflict,
+)
 from task_center_runner.scenarios.sandbox.heavy_io_zoned_concurrent import (
     HeavyIoZonedConcurrent,
 )
@@ -67,6 +75,12 @@ __all__ = [
     "ComplexProjectBuildShellEditLsp",
     "ComplexProjectBuildShellEditLspSmoke",
     "ComplexProjectBuildSmoke",
+    "EphemeralWorkspaceAllVerbs",
+    "EphemeralWorkspaceCancellation",
+    "EphemeralWorkspaceConcurrentWrites",
+    "EphemeralWorkspaceO1Disk",
+    "EphemeralWorkspacePolicy",
+    "EphemeralWorkspaceSamePathConflict",
     "HeavyIoZonedConcurrent",
     "HighConcurrencyLayerstackOverlayOcc",
     "OccConcurrentConflicts",

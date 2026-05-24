@@ -138,6 +138,8 @@ class GuardedResultBase(SandboxResultBase):
     """Base result for OCC/overlay-guarded operations."""
 
     changed_paths: tuple[str, ...] = ()
+    changed_path_kinds: dict[str, str] = field(default_factory=dict)
+    mutation_source: str = ""
     status: str = ""
     conflict: ConflictInfo | None = None
     conflict_reason: str | None = None

@@ -7,10 +7,10 @@ from collections.abc import Mapping
 from sandbox.occ.changeset import ChangesetResult
 from sandbox.occ.gitignore import SnapshotGitignoreOracle
 from sandbox.daemon.result_projection import (
-    committed_paths,
     conflict_and_status,
     conflict_to_dict,
     gitignore_cache_timings,
+    published_paths,
 )
 from sandbox._shared.clock import monotonic_now
 
@@ -47,16 +47,19 @@ def required_single_path(args: Mapping[str, object]) -> str:
 def project_changeset(
     result: ChangesetResult,
     *,
-    fallback_path: str,
     verb: str,
     total_start: float,
     gitignore: SnapshotGitignoreOracle,
     timings_extra: dict[str, float],
 ) -> dict[str, object]:
     conflict, status = conflict_and_status(result.files)
+    changed_paths = list(published_paths(result.files))
+    mutation_source = _mutation_source_for_verb(verb)
     return {
         "success": result.success,
-        "changed_paths": list(committed_paths(result.files, fallback_path=fallback_path)),
+        "changed_paths": changed_paths,
+        "changed_path_kinds": _changed_path_kinds(changed_paths),
+        "mutation_source": mutation_source,
         "status": status,
         "conflict": conflict_to_dict(conflict),
         "conflict_reason": conflict.message if conflict is not None else None,
@@ -94,6 +97,8 @@ def project_conflict(
     payload: dict[str, object] = {
         "success": False,
         "changed_paths": list(changed_paths or []),
+        "changed_path_kinds": _changed_path_kinds(changed_paths or []),
+        "mutation_source": _mutation_source_for_verb(verb),
         "status": status,
         "conflict": {
             "reason": reason,
@@ -108,6 +113,17 @@ def project_conflict(
     }
     payload.update(extras)
     return payload
+
+
+def _mutation_source_for_verb(verb: str) -> str:
+    return {
+        "write": "api_write",
+        "edit": "api_edit",
+    }.get(verb, "")
+
+
+def _changed_path_kinds(paths: list[str]) -> dict[str, str]:
+    return {path: "write" for path in paths if str(path or "").strip()}
 
 
 __all__ = [

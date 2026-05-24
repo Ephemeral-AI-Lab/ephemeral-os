@@ -7,14 +7,21 @@ from task_center_runner.audit.node_id import NodeId
 from message.stream_events import ToolExecutionCompleted
 
 
-_SANDBOX_TOOLS = frozenset({"read_file", "write_file", "edit_file", "shell"})
+_SANDBOX_TOOLS = frozenset(
+    {"read_file", "write_file", "edit_file", "shell", "grep", "glob"}
+)
 _COMMAND_EXEC_OVERLAY_TIMINGS = (
     "command_exec.mount_workspace_s",
     "command_exec.run_command_s",
     "command_exec.capture_upperdir_s",
     "command_exec.total_s",
+    "api.read.total_s",
+    "api.write.total_s",
+    "api.edit.total_s",
     "api.shell.overlay_s",
     "api.shell.total_s",
+    "api.grep.total_s",
+    "api.glob.total_s",
 )
 _CONFLICT_STATUSES = frozenset(
     {
@@ -42,8 +49,11 @@ def sandbox_events_from_tool_completion(
     metadata = dict(stream_event.metadata or {})
     timings = _timings(metadata.get("timings"))
     changed_paths = _string_list(metadata.get("changed_paths"))
+    changed_path_kinds = _string_mapping(metadata.get("changed_path_kinds"))
     status = str(metadata.get("status") or "")
     conflict_reason = str(metadata.get("conflict_reason") or "")
+    mutation_source = str(metadata.get("mutation_source") or "")
+    error_kind = str(metadata.get("error_kind") or "")
     node = NodeId(
         task_center_run_id=task_center_run_id,
         agent_name=stream_event.agent_name or None,
@@ -55,7 +65,10 @@ def sandbox_events_from_tool_completion(
         "tool_id": stream_event.tool_id,
         "status": status,
         "changed_paths": changed_paths,
+        "changed_path_kinds": changed_path_kinds,
+        "mutation_source": mutation_source or None,
         "conflict_reason": conflict_reason or None,
+        "error_kind": error_kind or None,
     }
     events: list[Event] = []
 
@@ -232,6 +245,16 @@ def _string_list(value: object) -> list[str]:
     if not isinstance(value, (list, tuple, set)):
         return []
     return [str(item) for item in value if str(item or "").strip()]
+
+
+def _string_mapping(value: object) -> dict[str, str]:
+    if not isinstance(value, dict):
+        return {}
+    return {
+        str(key): str(item)
+        for key, item in value.items()
+        if str(key or "").strip() and str(item or "").strip()
+    }
 
 
 def _has_prefix(timings: dict[str, float], prefix: str) -> bool:

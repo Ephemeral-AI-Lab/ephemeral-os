@@ -47,12 +47,23 @@ Use this table to align the workflow. The plan's own `Verification Command` over
 | --- | --- | --- | --- |
 | `3.0` unit | `backend/tests/unit_test/test_sandbox`, `backend/tests/unit_test/test_plugins` | pytest output and contract greps | No live sandbox claim unless a live command is explicitly added. |
 | `3.1` layer/OCC/overlay | `backend/src/task_center_runner/tests/mock/sandbox/layer_stack_occ_overlay/` | `.sweevo_runs/scenario_logs/...` | O(1) lowerdir and latency attribution are the central assertions. |
-| `3.2` ephemeral | `backend/src/task_center_runner/tests/mock/sandbox/ephemeral_workspace/` | `.sweevo_runs/scenario_logs/...` | All verbs, cancellation, conflict/retry, outside-workspace policy, and 100-call O(1) checks. |
-| `3.3` background | `backend/src/task_center_runner/tests/mock/sandbox/background_tool/` | `.sweevo_runs/scenario_logs/...` plus probe summary JSON | Engine-owned background wrapper; never revive shell-job RPC compatibility. |
-| `3.4` isolated | `backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/` | daemon/container audit JSONL unless routed through scenario harness | Pinned lowerdir, discard-on-exit, same-session parallelism, no OCC publish. |
-| `3.5` plugin | `backend/src/task_center_runner/tests/mock/sandbox/plugin/` | `.sweevo_runs/scenario_logs/...` plus plugin probe summaries | Separate READ_ONLY service latency from WRITE_ALLOWED overlay/OCC latency. |
-| `3.6` project build | `backend/src/task_center_runner/tests/mock/sandbox/project_build/` | `.sweevo_runs/scenario_logs/...` | Multi-file mixed tools, LSP/search latency after accumulated edits. |
-| `3.7` full stack | `backend/src/task_center_runner/tests/mock/sandbox/full_stack/` | `.sweevo_runs/scenario_logs/...` | Whole TaskCenter workflow; synthetic verifier failures can be expected, sandbox internal errors cannot. |
+| `3.2` ephemeral | `backend/src/task_center_runner/tests/mock/sandbox/ephemeral_workspace/` | `.sweevo_runs/scenario_logs/...` | Hybrid routing: default in-workspace file verbs use the direct fast path; shell/search and outside-workspace paths use the overlay pipeline. Cover cancellation, conflict/retry, outside-workspace policy, and 100-call O(1) checks. |
+| `3.3` background | `backend/src/task_center_runner/tests/mock/sandbox/background_tool/` | `.sweevo_runs/scenario_logs/...` plus probe summary JSON | Engine-owned background wrapper; never revive shell-job RPC compatibility. Foreground file verbs stay direct unless the plan explicitly invokes a background or shell path. |
+| `3.4` isolated | `backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/` | daemon/container audit JSONL unless routed through scenario harness | Active isolated-workspace file verbs route through the isolated pipeline with pinned lowerdir, discard-on-exit, same-session parallelism, and no OCC publish. |
+| `3.5` plugin | `backend/src/task_center_runner/tests/mock/sandbox/plugin/` | `.sweevo_runs/scenario_logs/...` plus plugin probe summaries | Separate READ_ONLY service latency, WRITE_ALLOWED plugin overlay/OCC latency, and normal direct file-verb latency. |
+| `3.6` project build | `backend/src/task_center_runner/tests/mock/sandbox/project_build/` | `.sweevo_runs/scenario_logs/...` | Multi-file mixed tools, LSP/search latency after accumulated edits; classify direct file, shell/search overlay, plugin, and isolated samples separately. |
+| `3.7` full stack | `backend/src/task_center_runner/tests/mock/sandbox/full_stack/` | `.sweevo_runs/scenario_logs/...` | Whole TaskCenter workflow with the same hybrid routing attribution; synthetic verifier failures can be expected, sandbox internal errors cannot. |
+
+## Current workspace routing contract
+
+For current 3.x plans, do not assume all sandbox tools are wrapped in the ephemeral overlay pipeline.
+
+- Default in-workspace `read_file`, `write_file`, and `edit_file` use the direct layer-stack/OCC fast path. They should be evaluated with per-tool API totals, layer-stack read/write timings, OCC apply timings when present, and zero overlay command resource fields.
+- `shell`, search-style tools such as `grep`/`glob`, and file operations outside the workspace root use the ephemeral workspace pipeline and should expose command execution, mount, capture, upperdir, and cleanup timings when the harness records them.
+- Active `isolated_workspace` sessions route file verbs through `IsolatedPipeline.run_tool_call`, keep changes in the isolated workspace, avoid OCC publish, and discard on exit.
+- Plugin `WRITE_ALLOWED` operations are plugin-owned overlay operations. Do not compare their overlay timings directly against normal `write_file` or `edit_file` direct-path timings.
+
+When a plan mixes these paths, report correctness, O(1) resource behavior, and latency by route as well as by tool family.
 
 ## Iteration report
 
@@ -140,8 +151,8 @@ Stop the run and fix immediately when a concrete issue appears:
 - traceback, terminal failure, internal sandbox error, daemon disconnect, mount failure, missing layer, or stale lowerdir;
 - no progress in `message.jsonl` while sandbox events show a blocked phase;
 - per-tool p95/max exceeds the plan budget;
-- `workspace_tree_exists != 0` or `workspace_tree_bytes != 0` for private namespace lowerdir samples;
-- upperdir/run-dir bytes scale with workspace size or operation count instead of changed bytes;
+- `workspace_tree_exists != 0` or `workspace_tree_bytes != 0` for private namespace lowerdir samples or direct file-operation samples that should not create an overlay workspace tree;
+- upperdir/run-dir bytes scale with workspace size or operation count instead of changed bytes, or direct file-operation samples unexpectedly create overlay upperdir/run-dir bytes;
 - LSP restarts on normal writes when the plan expects warm refresh/remount;
 - background cancellation publishes partial changes;
 - isolated workspace publishes through OCC or fails to discard on exit.
@@ -154,7 +165,8 @@ O(1) resource checks:
 
 - private namespace lowerdir workspace tree remains O(1): max `resource.command_exec.workspace_tree_exists == 0` and max `resource.command_exec.workspace_tree_bytes == 0`;
 - lowerdir disk does not grow with operation count, worker count, or workspace size;
-- upperdir bytes scale with changed bytes only;
+- direct file verbs do not create overlay run dirs or nonzero command-resource workspace tree fields;
+- upperdir bytes scale with changed bytes only for overlay-backed operations;
 - run directories and temporary mounts are cleaned up after publish/cancel/exit;
 - repeated create/destroy or repeated tool-call plans do not show monotonic memory or FD growth.
 
@@ -163,10 +175,17 @@ Latency attribution:
 - separate tool body time from sandbox plumbing time;
 - report p50/p95/max per tool family when samples exist;
 - attribute slow calls to named layers when artifacts expose them:
-  `command_exec.mount_workspace_s`, `run_command_s`, `capture_upperdir_s`,
+  direct file totals such as `api.read.total_s`, `api.write.total_s`, and
+  `api.edit.total_s`; direct layer-stack/OCC timings such as
+  `api.read.layer_stack_read_s`, `api.write.layer_stack_write_s`,
+  `api.edit.layer_stack_read_s`, `api.edit.layer_stack_write_s`, and OCC
+  apply phases; overlay timings such as `command_exec.mount_workspace_s`,
+  `run_command_s`, `capture_upperdir_s`,
   `layer_stack.prepare_workspace_snapshot.total_s`, OCC queue/apply phases,
   overlay acquire/mount/release, plugin service dispatch, LSP refresh/remount,
   and `ephemeral_workspace`, `isolated_workspace`, or `main_workspace` lifecycle phases.
+
+Do not require overlay mount/capture timings for normal direct `read_file`, `write_file`, or `edit_file` calls. Missing overlay timings are expected on that fast path.
 
 If the artifacts cannot answer a required timing or resource question, add narrow structured audit fields/logs. Prefer stable JSON-compatible names such as `operation_id`, `agent_id`, `workspace_mode`, `tool_name`, `phase_ms`, `upperdir_bytes`, `workspace_tree_bytes`, `manifest_version`, `changed_paths_count`, and `run_dir_removed`.
 
@@ -177,7 +196,7 @@ For each failure or regression:
 1. Record the first concrete signal in the iteration report.
 2. Read the exact error and artifact lines around it.
 3. Reproduce with the smallest command or probe.
-4. Trace backward across the failing boundary: test/probe -> tool wrapper -> workspace dispatch -> overlay/layerstack/OCC -> daemon/provider.
+4. Trace backward across the failing boundary: test/probe -> tool wrapper -> workspace dispatch -> direct file fast path, isolated pipeline, plugin service, or overlay/layerstack/OCC -> daemon/provider.
 5. Add temporary or permanent audit only when it answers a boundary question.
 6. State one root-cause hypothesis.
 7. Make one targeted fix.

@@ -83,10 +83,18 @@ def _make_libc_mock(syscall_return: int, errno_val: int) -> MagicMock:
 
 @pytest.fixture(autouse=True)
 def _reset_probe_cache():
-    """Clear the @cache on probe_supported before each test."""
+    """Clear cached syscall probes and libc handles before each test."""
+    _clear_get_libc_cache()
     api.probe_supported.cache_clear()
     yield
+    _clear_get_libc_cache()
     api.probe_supported.cache_clear()
+
+
+def _clear_get_libc_cache() -> None:
+    cache_clear = getattr(api._get_libc, "cache_clear", None)
+    if cache_clear is not None:
+        cache_clear()
 
 
 def test_probe_supported_returns_false_on_enosys(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -169,6 +177,38 @@ def test_probe_supported_caches_result(monkeypatch: pytest.MonkeyPatch) -> None:
     api.probe_supported()
 
     assert call_count == 1
+
+
+def test_libc_lookup_is_cached_across_syscall_wrappers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    find_library_calls = 0
+    cdll_calls = 0
+    libc_mock = MagicMock()
+    libc_mock.syscall.return_value = 0
+
+    def fake_find_library(name: str) -> str:
+        nonlocal find_library_calls
+        find_library_calls += 1
+        assert name == "c"
+        return "libc.so.6"
+
+    def fake_cdll(name: str, *, use_errno: bool) -> MagicMock:
+        nonlocal cdll_calls
+        cdll_calls += 1
+        assert name == "libc.so.6"
+        assert use_errno is True
+        return libc_mock
+
+    monkeypatch.setattr(api.ctypes.util, "find_library", fake_find_library)
+    monkeypatch.setattr(api.ctypes, "CDLL", fake_cdll)
+
+    for _ in range(5):
+        api.fsconfig_string(3, b"lowerdir+", b"/layer")
+
+    assert find_library_calls == 1
+    assert cdll_calls == 1
+    assert libc_mock.syscall.call_count == 5
 
 
 @pytest.mark.skipif(not _IS_LINUX, reason="Linux only: live syscall probe")

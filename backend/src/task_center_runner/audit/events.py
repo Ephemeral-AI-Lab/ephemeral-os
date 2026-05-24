@@ -93,6 +93,7 @@ class EventType(StrEnum):
     SANDBOX_OCC_CHANGESET_RECEIVED = "sandbox_occ_changeset_received"
     SANDBOX_OCC_CHANGES_COMMITTED = "sandbox_occ_changes_committed"
     SANDBOX_RESOURCE_SNAPSHOT = "sandbox_resource_snapshot"
+    SANDBOX_TOOL_CANCELLED = "sandbox_tool_cancelled"
     SANDBOX_ISOLATED_WORKSPACE_ENTER = "sandbox_isolated_workspace_enter"
     SANDBOX_ISOLATED_WORKSPACE_EXIT = "sandbox_isolated_workspace_exit"
     SANDBOX_ISOLATED_WORKSPACE_TOOL_CALL = "sandbox_isolated_workspace_tool_call"

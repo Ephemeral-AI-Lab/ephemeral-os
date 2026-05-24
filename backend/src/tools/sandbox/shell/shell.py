@@ -49,6 +49,11 @@ class ShellOutput(BaseModel):
     cwd: str = Field(..., description="Current sandbox working directory.")
     status: str = Field(..., description="Execution status: ok or error.")
     changed_paths: list[str] = Field(default_factory=list, description="Files changed by the command.")
+    changed_path_kinds: dict[str, str] = Field(
+        default_factory=dict,
+        description="Captured changed paths keyed to write/delete/symlink/opaque_dir.",
+    )
+    mutation_source: str = Field(default="", description="Mutation source tag.")
     conflict_reason: str | None = Field(default=None, description="Conflict reason when auditing failed.")
     command: str = Field(..., description="Shell command that was run.")
     exit_code: int | str = Field(..., description="Command exit code.")
@@ -95,15 +100,22 @@ def _build_tool_output(
     stdout: str,
     stderr: str,
     changed_paths: list[str],
+    changed_path_kinds: dict[str, str] | None,
+    mutation_source: str,
     conflict_reason: str | None,
     error: str = "",
+    error_kind: str = "",
     timings: dict[str, float] | None = None,
 ) -> ToolResult:
     metadata: dict[str, object] = {
         "status": status,
         "changed_paths": changed_paths,
+        "changed_path_kinds": dict(changed_path_kinds or {}),
+        "mutation_source": mutation_source,
         "conflict_reason": conflict_reason,
     }
+    if error_kind:
+        metadata["error_kind"] = error_kind
     if timings:
         metadata["timings"] = normalize_timing_map(
             cast(Mapping[object, object], timings)
@@ -115,6 +127,8 @@ def _build_tool_output(
                 "cwd": get_repo_root(context),
                 "status": status,
                 "changed_paths": changed_paths,
+                "changed_path_kinds": dict(changed_path_kinds or {}),
+                "mutation_source": mutation_source,
                 "conflict_reason": conflict_reason,
                 "command": command,
                 "exit_code": exit_code,
@@ -180,11 +194,15 @@ async def shell(
     changed_paths = sorted(
         {str(path) for path in result.changed_paths if str(path or "").strip()}
     )
+    changed_path_kinds = dict(result.changed_path_kinds)
+    error_payload = dict(result.error or {})
     is_error = result.exit_code != 0 or not result.success
     if not result.success and result.exit_code == 0:
         error_detail = (
             f"sandbox commit aborted: {result.conflict_reason or 'unknown reason'}"
         )
+    elif error_payload:
+        error_detail = str(error_payload.get("message") or error_payload.get("kind") or "")
     elif result.exit_code != 0:
         error_detail = result.stderr or result.stdout or ""
     else:
@@ -197,8 +215,11 @@ async def shell(
         stdout=result.stdout,
         stderr=result.stderr,
         changed_paths=changed_paths,
+        changed_path_kinds=changed_path_kinds,
+        mutation_source=result.mutation_source,
         conflict_reason=result.conflict_reason,
         error=error_detail,
+        error_kind=str(error_payload.get("kind") or ""),
         timings=result.timings,
     )
 

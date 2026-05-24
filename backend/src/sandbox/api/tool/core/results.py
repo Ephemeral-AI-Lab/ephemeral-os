@@ -79,11 +79,20 @@ def guarded_result_from_daemon_response(
     return result_cls(
         success=bool(raw.get("success", False)),
         changed_paths=paths_from_daemon_response(raw.get("changed_paths")),
+        changed_path_kinds=_changed_path_kinds_from_daemon_response(
+            raw.get("changed_path_kinds")
+        ),
+        mutation_source=str(raw.get("mutation_source") or ""),
         status=str(raw.get("status", "")),
         conflict=conflict,
         conflict_reason=(
             str(raw.get("conflict_reason"))
             if raw.get("conflict_reason") is not None
+            else None
+        ),
+        error=(
+            dict(raw["error"])
+            if isinstance(raw.get("error"), dict)
             else None
         ),
         timings=(
@@ -93,6 +102,16 @@ def guarded_result_from_daemon_response(
         ),
         **cast(Any, extra),
     )
+
+
+def _changed_path_kinds_from_daemon_response(raw: object) -> dict[str, str]:
+    if not isinstance(raw, Mapping):
+        return {}
+    return {
+        str(path): str(kind)
+        for path, kind in raw.items()
+        if str(path or "").strip() and str(kind or "").strip()
+    }
 
 
 def shell_result_from_daemon_response(

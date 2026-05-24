@@ -136,13 +136,13 @@ def execute_tool_payload(
     req = ToolCallRequest.from_payload(payload["tool_call"])
     workspace_root = str(payload.get("workspace_root") or "/testbed")
     old_cwd = os.getcwd()
+    run_start = monotonic_now()
     try:
         os.chdir(workspace_root)
         denied = _check_host_denylist(req)
         if denied is not None:
-            return denied
-        run_start = monotonic_now()
-        if req.verb == "shell":
+            result_payload = denied
+        elif req.verb == "shell":
             result = shell.run(
                 _shell_argv(req.args),
                 workspace_root=workspace_root,

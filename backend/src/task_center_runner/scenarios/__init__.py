@@ -53,6 +53,12 @@ from task_center_runner.scenarios.sandbox import (
     ComplexProjectBuildShellEditLsp,
     ComplexProjectBuildShellEditLspSmoke,
     ComplexProjectBuildSmoke,
+    EphemeralWorkspaceAllVerbs,
+    EphemeralWorkspaceCancellation,
+    EphemeralWorkspaceConcurrentWrites,
+    EphemeralWorkspaceO1Disk,
+    EphemeralWorkspacePolicy,
+    EphemeralWorkspaceSamePathConflict,
     HeavyIoZonedConcurrent,
     HighConcurrencyLayerstackOverlayOcc,
     OccConcurrentConflicts,
@@ -105,6 +111,16 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
         ComplexProjectBuildShellEditLspSmoke
     ),
     "sandbox.complex_project_build_smoke": ComplexProjectBuildSmoke,
+    "sandbox.ephemeral_workspace_all_verbs": EphemeralWorkspaceAllVerbs,
+    "sandbox.ephemeral_workspace_concurrent_writes": (
+        EphemeralWorkspaceConcurrentWrites
+    ),
+    "sandbox.ephemeral_workspace_same_path_conflict": (
+        EphemeralWorkspaceSamePathConflict
+    ),
+    "sandbox.ephemeral_workspace_policy": EphemeralWorkspacePolicy,
+    "sandbox.ephemeral_workspace_cancellation": EphemeralWorkspaceCancellation,
+    "sandbox.ephemeral_workspace_o1_disk": EphemeralWorkspaceO1Disk,
     "sandbox.heavy_io_zoned_concurrent": HeavyIoZonedConcurrent,
     "sandbox.high_concurrency_layerstack_overlay_occ": (
         HighConcurrencyLayerstackOverlayOcc
@@ -140,6 +156,12 @@ __all__ = [
     "ComplexProjectBuildShellEditLsp",
     "ComplexProjectBuildShellEditLspSmoke",
     "ComplexProjectBuildSmoke",
+    "EphemeralWorkspaceAllVerbs",
+    "EphemeralWorkspaceCancellation",
+    "EphemeralWorkspaceConcurrentWrites",
+    "EphemeralWorkspaceO1Disk",
+    "EphemeralWorkspacePolicy",
+    "EphemeralWorkspaceSamePathConflict",
     "CorrectnessTesting",
     "DependencyBlockedDescendants",
     "DependencyDagDiamond",

@@ -105,6 +105,47 @@ async def test_call_daemon_accepts_success_response_with_null_error(
 
 
 @pytest.mark.asyncio
+async def test_call_daemon_returns_guarded_error_response_with_status(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_dispatch_once_with_retry(**_kwargs: object) -> Any:
+        return SimpleNamespace(
+            exit_code=0,
+            stdout=json.dumps(
+                {
+                    "success": False,
+                    "status": "error",
+                    "changed_paths": [],
+                    "error": {
+                        "kind": "forbidden_host_path",
+                        "message": "writes to system paths are denied",
+                    },
+                    "timings": {},
+                }
+            ),
+            stderr="",
+        )
+
+    monkeypatch.setattr(
+        daemon_client_mod,
+        "_dispatch_once_with_retry",
+        fake_dispatch_once_with_retry,
+    )
+
+    response = await daemon_client_mod._call_daemon(
+        exec_fn=_Adapter().exec,
+        sandbox_id="sb-1",
+        op="api.v1.write_file",
+        args={"invocation_id": "invocation-1"},
+        timeout=10,
+    )
+
+    assert response["success"] is False
+    assert response["status"] == "error"
+    assert response["error"]["kind"] == "forbidden_host_path"
+
+
+@pytest.mark.asyncio
 async def test_resolve_daemon_tcp_endpoint_caches_per_sandbox(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

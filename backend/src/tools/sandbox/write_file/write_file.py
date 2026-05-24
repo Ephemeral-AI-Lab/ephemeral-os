@@ -56,7 +56,7 @@ async def write_file(
         **audit_kwargs_from_context(context),
     )
 
-    paths = list(result.changed_paths or (file_path,))
+    paths = list(result.changed_paths)
     if result.success:
         return mutation_tool_result(
             success=True,
@@ -68,6 +68,8 @@ async def write_file(
                 "bytes_written": len(content.encode("utf-8")),
             },
             timings=result.timings,
+            mutation_source=result.mutation_source,
+            changed_path_kinds=dict(result.changed_path_kinds),
             metadata_extra=sandbox_audit_metadata(context),
         )
 
@@ -77,6 +79,9 @@ async def write_file(
         paths=paths,
         failure_status=result.status or None,
         conflict_reason=result.conflict_reason,
+        error=result.error,
+        mutation_source=result.mutation_source,
+        changed_path_kinds=dict(result.changed_path_kinds),
         timings=result.timings,
         metadata_extra=sandbox_audit_metadata(context),
     )

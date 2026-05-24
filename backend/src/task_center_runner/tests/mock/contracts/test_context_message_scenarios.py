@@ -128,7 +128,7 @@ def test_high_concurrency_dispatch_uses_context_message_index() -> None:
     ) == ("high_concurrency_reconcile",)
 
 
-def test_high_concurrency_plan_is_bounded_to_five_worker_lanes() -> None:
+def test_high_concurrency_plan_honors_configured_worker_overlap() -> None:
     scenario = HighConcurrencyLayerstackOverlayOcc()
 
     plan = scenario.planner_response(_ctx(context_message="")).args
@@ -136,7 +136,6 @@ def test_high_concurrency_plan_is_bounded_to_five_worker_lanes() -> None:
         str(task["id"]): tuple(task.get("deps") or ()) for task in plan["tasks"]
     }
 
-    assert WORKER_COUNT > MAX_CONCURRENT_WORKERS
     for index in range(WORKER_COUNT):
         worker_id = f"concurrent_worker_{index:02d}"
         if index < MAX_CONCURRENT_WORKERS:
@@ -148,4 +147,7 @@ def test_high_concurrency_plan_is_bounded_to_five_worker_lanes() -> None:
     assert deps_by_id["concurrency_reconcile"] == tuple(
         f"concurrent_worker_{index:02d}" for index in range(WORKER_COUNT)
     )
-    assert any("5 active sandbox tool calls" in item for item in plan["evaluation_criteria"])
+    assert any(
+        f"{MAX_CONCURRENT_WORKERS} active sandbox tool calls" in item
+        for item in plan["evaluation_criteria"]
+    )

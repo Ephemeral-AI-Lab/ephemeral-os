@@ -134,9 +134,12 @@ def operation_payload(
         "operation": operation,
         "status": status,
         "changed_paths": list(getattr(result, "changed_paths", ()) or ()),
+        "changed_path_kinds": dict(getattr(result, "changed_path_kinds", {}) or {}),
+        "mutation_source": str(getattr(result, "mutation_source", "") or ""),
         "conflict_reason": getattr(result, "conflict_reason", None),
         "warnings": list(getattr(result, "warnings", ()) or ()),
         "timings": normalize_timing_map(result.timings),
+        "error": dict(getattr(result, "error", {}) or {}),
     }
 
 
@@ -201,7 +204,17 @@ def _timings_for_signal(
     if signal == "overlay_executed":
         return _select_timings(
             timings,
-            ("workspace.", "overlay.", "command_exec.", "api.shell."),
+            (
+                "workspace.",
+                "overlay.",
+                "command_exec.",
+                "api.read.",
+                "api.write.",
+                "api.edit.",
+                "api.shell.",
+                "api.grep.",
+                "api.glob.",
+            ),
         )
     if signal == "layer_stack_lease_acquired":
         return _select_timings(

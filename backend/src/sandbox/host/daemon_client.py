@@ -131,7 +131,7 @@ async def _call_daemon(
             _raise_exec_failed(result)
         raise
     error = response.get("error")
-    if error is not None:
+    if error is not None and not _is_guarded_result_error(response):
         if not isinstance(error, dict):
             raise _DaemonDispatchError(
                 kind="RuntimeError",
@@ -146,6 +146,15 @@ async def _call_daemon(
     if _exit_code(result) != 0:
         _raise_exec_failed(result)
     return response
+
+
+def _is_guarded_result_error(response: Mapping[str, Any]) -> bool:
+    """Return true for handler-level policy results, not daemon transport errors."""
+    return (
+        response.get("success") is False
+        and isinstance(response.get("status"), str)
+        and bool(str(response.get("status")).strip())
+    )
 
 
 async def call_daemon_api(

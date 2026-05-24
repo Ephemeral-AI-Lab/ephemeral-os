@@ -74,6 +74,7 @@ class MountSyscallsUnavailable(OSError):
 # ---------------------------------------------------------------------------
 
 
+@cache
 def _get_libc() -> ctypes.CDLL | None:
     name = ctypes.util.find_library("c")
     if name is None:

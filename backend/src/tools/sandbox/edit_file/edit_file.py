@@ -45,7 +45,13 @@ class EditFileOutput(BaseModel):
     file_path: str = Field(..., description="Resolved file path that was edited.")
     status: str = Field(..., description="Edit result: edited, aborted_version, or failed.")
     changed_paths: list[str] = Field(default_factory=list, description="Files changed by the edit.")
+    changed_path_kinds: dict[str, str] = Field(
+        default_factory=dict,
+        description="Changed paths keyed to write/delete/symlink/opaque_dir.",
+    )
+    mutation_source: str = Field(default="", description="Mutation source tag.")
     conflict_reason: str | None = Field(default=None, description="Conflict reason when edit failed.")
+    error: dict[str, object] = Field(default_factory=dict, description="Typed error payload.")
     applied_edits: int = Field(
         default=0,
         description="Number of replacements applied.",
@@ -104,7 +110,7 @@ async def edit_file(
         **audit_kwargs_from_context(context),
     )
 
-    paths = list(result.changed_paths or (file_path,))
+    paths = list(result.changed_paths)
     if result.success:
         return mutation_tool_result(
             success=True,
@@ -116,6 +122,8 @@ async def edit_file(
                 "applied_edits": result.applied_edits,
             },
             timings=result.timings,
+            mutation_source=result.mutation_source,
+            changed_path_kinds=dict(result.changed_path_kinds),
             metadata_extra=sandbox_audit_metadata(context),
         )
 
@@ -125,6 +133,9 @@ async def edit_file(
         paths=paths,
         failure_status=result.status or None,
         conflict_reason=result.conflict_reason,
+        error=result.error,
+        mutation_source=result.mutation_source,
+        changed_path_kinds=dict(result.changed_path_kinds),
         timings=result.timings,
         metadata_extra=sandbox_audit_metadata(context),
     )

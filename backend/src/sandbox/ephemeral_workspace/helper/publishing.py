@@ -64,9 +64,20 @@ class EphemeralPublishMixin:
         timings.update(maintenance_timings)
         payload["timings"] = timings
         payload["changed_paths"] = list(published_paths(getattr(changeset, "files", ())))
-        payload["conflict"] = conflict_to_dict(conflict)
-        payload["conflict_reason"] = conflict.message if conflict is not None else None
-        payload["status"] = "ok" if conflict is None else status
+        payload["changed_path_kinds"] = {
+            change.path: change.kind for change in path_changes
+        }
+        payload["mutation_source"] = source
+        existing_conflict = payload.get("conflict")
+        existing_conflict_reason = payload.get("conflict_reason")
+        existing_status = payload.get("status")
+        payload["conflict"] = (
+            conflict_to_dict(conflict) if conflict is not None else existing_conflict
+        )
+        payload["conflict_reason"] = (
+            conflict.message if conflict is not None else existing_conflict_reason
+        )
+        payload["status"] = status if conflict is not None else existing_status or "ok"
         payload["success"] = bool(payload.get("success", True)) and conflict is None
         return payload
 

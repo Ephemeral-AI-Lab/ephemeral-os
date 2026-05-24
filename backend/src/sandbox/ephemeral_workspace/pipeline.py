@@ -212,8 +212,9 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
                 float(timings["occ.apply.total_s"]),
             )
         timings.setdefault("command_exec.total_s", monotonic_now() - total_start)
-        if req.verb == "shell":
-            timings.setdefault("api.shell.total_s", timings["command_exec.total_s"])
+        api_total_key = _api_total_timing_key(req.verb)
+        if api_total_key:
+            timings.setdefault(api_total_key, timings["command_exec.total_s"])
         payload["timings"] = timings
         return payload
 
@@ -466,3 +467,15 @@ def _shell_mount_squash_max_depth() -> int:
 
 def _manifest_depth(manifest: object) -> int:
     return len(tuple(getattr(manifest, "layers", ()) or ()))
+
+
+def _api_total_timing_key(verb: str) -> str:
+    suffix = {
+        "read_file": "read",
+        "write_file": "write",
+        "edit_file": "edit",
+        "shell": "shell",
+        "grep": "grep",
+        "glob": "glob",
+    }.get(verb)
+    return f"api.{suffix}.total_s" if suffix else ""

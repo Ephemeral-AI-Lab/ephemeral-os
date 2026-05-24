@@ -619,6 +619,42 @@ class MockSquadRunner:
                 )
                 summary = "Complex project-build grep/glob smoke probe passed."
                 artifacts = [summary_path]
+            elif action == "ephemeral_workspace_all_verbs":
+                summary_path = await self._run_ephemeral_workspace_probe(
+                    metadata, emit, mode="all_verbs"
+                )
+                summary = "Ephemeral-workspace all-verbs probe passed."
+                artifacts = [summary_path]
+            elif action == "ephemeral_workspace_concurrent_writes":
+                summary_path = await self._run_ephemeral_workspace_probe(
+                    metadata, emit, mode="concurrent_writes"
+                )
+                summary = "Ephemeral-workspace concurrent-writes probe passed."
+                artifacts = [summary_path]
+            elif action == "ephemeral_workspace_same_path_conflict":
+                summary_path = await self._run_ephemeral_workspace_probe(
+                    metadata, emit, mode="same_path_conflict"
+                )
+                summary = "Ephemeral-workspace same-path conflict probe passed."
+                artifacts = [summary_path]
+            elif action == "ephemeral_workspace_policy":
+                summary_path = await self._run_ephemeral_workspace_probe(
+                    metadata, emit, mode="policy"
+                )
+                summary = "Ephemeral-workspace policy probe passed."
+                artifacts = [summary_path]
+            elif action == "ephemeral_workspace_cancellation":
+                summary_path = await self._run_ephemeral_workspace_probe(
+                    metadata, emit, mode="cancellation"
+                )
+                summary = "Ephemeral-workspace cancellation probe passed."
+                artifacts = [summary_path]
+            elif action == "ephemeral_workspace_o1_disk":
+                summary_path = await self._run_ephemeral_workspace_probe(
+                    metadata, emit, mode="o1_disk"
+                )
+                summary = "Ephemeral-workspace O(1) disk probe passed."
+                artifacts = [summary_path]
             elif action == "background_shell_golden":
                 summary_path = await self._run_background_shell_probe(
                     metadata, emit, mode="golden"
@@ -1264,6 +1300,41 @@ class MockSquadRunner:
             record_tool_check=self._record_tool_check,
         )
 
+    async def _run_ephemeral_workspace_probe(
+        self,
+        metadata: ExecutionMetadata,
+        emit: EmitStreamEvent,
+        *,
+        mode: str,
+    ) -> str:
+        from task_center_runner.agent.mock import ephemeral_workspace_probe
+
+        sandbox_id = self._require_sandbox_id(metadata)
+        dispatch = {
+            "all_verbs": ephemeral_workspace_probe.run_ephemeral_all_verbs_probe,
+            "concurrent_writes": (
+                ephemeral_workspace_probe.run_ephemeral_concurrent_writes_probe
+            ),
+            "same_path_conflict": (
+                ephemeral_workspace_probe.run_ephemeral_same_path_conflict_probe
+            ),
+            "policy": ephemeral_workspace_probe.run_ephemeral_policy_probe,
+            "cancellation": ephemeral_workspace_probe.run_ephemeral_cancellation_probe,
+            "o1_disk": ephemeral_workspace_probe.run_ephemeral_o1_disk_probe,
+        }
+        probe = dispatch.get(mode)
+        if probe is None:
+            raise RuntimeError(f"unknown ephemeral_workspace probe mode: {mode!r}")
+        kwargs: dict[str, Any] = {
+            "metadata": metadata,
+            "emit": emit,
+            "call_tool": self._call_tool,
+            "record_tool_check": self._record_tool_check,
+        }
+        if mode != "same_path_conflict":
+            kwargs["sandbox_id"] = sandbox_id
+        return await probe(**kwargs)
+
     async def _run_complex_project_build_shell_edit_lsp_probe(
         self,
         metadata: ExecutionMetadata,
@@ -1415,6 +1486,17 @@ class MockSquadRunner:
                     current_task.uncancel()
                 with contextlib.suppress(Exception):
                     await sandbox_api.cancel(metadata.sandbox_id, sandbox_invocation_id)
+                self._publish(
+                    EventType.SANDBOX_TOOL_CANCELLED,
+                    metadata=metadata,
+                    tool_name=tool_obj.name,
+                    payload={
+                        "tool_name": tool_obj.name,
+                        "tool_id": tool_id,
+                        "invocation_id": sandbox_invocation_id,
+                        "background_task_id": background_task_id,
+                    },
+                )
             raise
         client_t2 = monotonic_now()
         result_metadata = dict(result.metadata or {})
