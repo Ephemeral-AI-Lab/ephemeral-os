@@ -34,6 +34,8 @@ def overlay_writable_root() -> Path:
     sandboxes provide that filesystem at ``/eos-mount-scratch``.
     """
     root = OVERLAY_WRITABLE_ROOT
+    if not root.exists() and root.parent.is_dir():
+        root.mkdir()
     if not root.is_dir():
         raise OverlayWritableRootUnavailable(
             f"overlay writable root is missing: {root}"

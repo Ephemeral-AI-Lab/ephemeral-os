@@ -40,6 +40,7 @@ _IWS_APT_CACHE_DIR = (
     / "iws_apt_cache"
     / "jammy-amd64"
 )
+_IWS_TEST_UPPERDIR_BYTES = 67_108_864
 
 
 # ---------------------------------------------------------------------------
@@ -267,17 +268,15 @@ async def iws_sandbox(
         )
         # Shrink the per-handle upperdir reservation so the host RAM gate
         # admits the 2-5 concurrent handles the isolation/network/concurrency
-        # tiers require. Default production value is 1 GiB × handle; with the
-        # default memavail_fraction=0.5 and a ~3 GiB sweevo container budget,
-        # two handles would be refused (2 GiB > 1.5 GiB). 256 MiB × 5 fits.
+        # tiers require even when Docker Desktop reports <1 GiB MemAvailable.
         # The cap is a reservation accounting unit (not an enforced quota), so
         # shrinking only widens what tests can probe — never relaxes real
         # backpressure.
         await raw_exec(
             sandbox_id,
-            "grep -q '^EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES=' /etc/environment "
-            "2>/dev/null || "
-            "echo 'EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES=268435456' "
+            "sed -i '/^EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES=/d' "
+            "/etc/environment 2>/dev/null || true; "
+            f"echo 'EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES={_IWS_TEST_UPPERDIR_BYTES}' "
             ">> /etc/environment",
             cwd="/",
             timeout=10,
@@ -368,7 +367,7 @@ async def iws_clean_sandbox(iws_sandbox: dict[str, Any]) -> dict[str, Any]:
     # ~1ms no-op. If grep finds something, the sed strips it and we force a
     # daemon respawn so the next RPC sees a clean env.
     #
-    # Also re-add UPPERDIR_BYTES=256MiB if missing. Some failure_modes /
+    # Also restore the test upperdir reservation if missing or stale. Some failure_modes /
     # resource_controls tests set their own UPPERDIR_BYTES via
     # ``set_daemon_env`` and ``clear_daemon_env`` the line in their
     # finally block, which removes the conftest-session default. Without
@@ -387,7 +386,12 @@ async def iws_clean_sandbox(iws_sandbox: dict[str, Any]) -> dict[str, Any]:
         "/^EOS_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH=/d' /etc/environment; "
         "changed=1; fi; "
         "if ! grep -q '^EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES=' /etc/environment; "
-        "then echo 'EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES=268435456' "
+        f"then echo 'EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES={_IWS_TEST_UPPERDIR_BYTES}' "
+        ">> /etc/environment; changed=1; "
+        f"elif ! grep -q '^EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES={_IWS_TEST_UPPERDIR_BYTES}$' "
+        "/etc/environment; "
+        "then sed -i '/^EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES=/d' /etc/environment; "
+        f"echo 'EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES={_IWS_TEST_UPPERDIR_BYTES}' "
         ">> /etc/environment; changed=1; fi; "
         "if [ \"$changed\" = 1 ]; "
         "then pkill -9 -f '^.*python.*-m sandbox\\.daemon' || true; "
