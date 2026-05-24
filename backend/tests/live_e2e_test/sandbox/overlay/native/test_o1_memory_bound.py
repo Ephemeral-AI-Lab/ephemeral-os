@@ -1,4 +1,4 @@
-"""Memory bound for concurrent command-exec leases on the new mount API."""
+"""Memory bound for concurrent command-exec leases on mount-syscall overlays."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from ..._harness.lease_resource_probe import (
-    NEW_MOUNT_API,
+    MOUNT_SYSCALLS,
     assert_memory_bound,
     build_layer_stack,
     has_cap_sys_admin,
@@ -36,16 +36,16 @@ async def _run_memory_bound(tmp_path: Path) -> None:
     n1 = await run_shell_batch(
         stack=stack,
         workspace_root=tmp_path / "workspace-root",
-        scratch_root=tmp_path / "scratch-N1",
-        requested_path=NEW_MOUNT_API,
+        writable_root=tmp_path / "overlay-writable-root-N1",
+        requested_path=MOUNT_SYSCALLS,
         commands=[_COMMAND],
         request_prefix="memory-N1",
     )
     n200 = await run_shell_batch(
         stack=stack,
         workspace_root=tmp_path / "workspace-root",
-        scratch_root=tmp_path / "scratch-N200",
-        requested_path=NEW_MOUNT_API,
+        writable_root=tmp_path / "overlay-writable-root-N200",
+        requested_path=MOUNT_SYSCALLS,
         commands=[_COMMAND] * 200,
         request_prefix="memory-N200",
     )

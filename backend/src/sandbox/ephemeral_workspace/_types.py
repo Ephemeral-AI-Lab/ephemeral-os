@@ -53,7 +53,6 @@ class OperationOverlayHandle:
     run_dir: str
     upperdir: str
     workdir: str
-    lowerdir: str | None
     layer_paths: tuple[str, ...] | None
     _overlay: EphemeralPipeline
     _released: bool = False

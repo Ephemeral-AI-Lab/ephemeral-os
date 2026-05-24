@@ -941,7 +941,7 @@ def _hash_mismatch(self, state: _PathStageState, base_hash: str | None) -&gt; Fi
  Namespace path
    10. Strat ──write JSON payload to disk
    11. Strat ──spawn `unshare -Urm python -m
-                       sandbox.overlay.namespace_child`
+                       sandbox.overlay.namespace_entrypoint`
         ─ validate mount inputs (O_NOFOLLOW fd handles)
         ─ mount -t overlay overlay -o lower,upper,work workspace_root
         ─ run cmd, umount
@@ -1048,7 +1048,7 @@ def _hash_mismatch(self, state: _PathStageState, base_hash: str | None) -&gt; Fi
                v
   ┌─────────────────────────────────────────────────────────────────┐
   │ unshare -Urm python -m                                          │
-  │   sandbox.overlay.namespace_child &lt;payload_ref&gt;    │
+  │   sandbox.overlay.namespace_entrypoint &lt;payload_ref&gt;    │
   └────────────┬────────────────────────────────────────────────────┘
                v
   ┌─────────────────────────────────────────────────────────────────┐
@@ -1085,7 +1085,7 @@ def _hash_mismatch(self, state: _PathStageState, base_hash: str | None) -&gt; Fi
 <h3 id="ov-capture-flow">5.3 Upperdir capture flow <a class="anchor" href="#ov-capture-flow">§</a></h3>
 
 <div class="mermaid">  ┌─────────────────────────────────────────────────────────┐
-  │ namespace_child                                         │
+  │ namespace_entrypoint                                         │
   └────────────┬────────────────────────────────────────────┘
                v
   ┌─────────────────────────────────────────────────────────┐

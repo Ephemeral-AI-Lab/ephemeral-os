@@ -111,6 +111,6 @@ Sandbox RPC envelopes carry `invocation_id`. Generic invocation lifecycle RPCs a
 shell-specific launch/reap/poll/cancel surface is part of the public API.
 
 Deployment preconditions for native overlay execution remain private mount
-namespace support plus the overlay new mount API. Environments that lack those
+namespace support plus the overlay required mount syscalls. Environments that lack those
 capabilities must skip the native overlay paths rather than falling back to
 isolated-workspace tool-operation RPCs.

@@ -10,7 +10,10 @@ from sandbox.ephemeral_workspace.shell_contract import WorkspaceLeaseClient
 from sandbox.overlay.capture import walk_upperdir
 from sandbox.overlay.handle import OverlayHandle
 from sandbox.overlay.path_change import OverlayPathChange
-from sandbox.overlay.scratch import command_exec_scratch_root
+from sandbox.overlay.writable_dirs import (
+    allocate_overlay_writable_dirs,
+    overlay_writable_root,
+)
 
 
 async def create(
@@ -21,12 +24,13 @@ async def create(
 ) -> OverlayHandle:
     """Lease a snapshot and allocate upper/work dirs for a workspace overlay."""
     invocation_id = f"overlay:{agent_id}:{uuid4().hex[:8]}"
-    scratch_root = command_exec_scratch_root(layer_stack.storage_root)
-    run_dir = scratch_root / "runtime" / "overlay" / invocation_id.replace(":", "-")
-    upperdir = run_dir / "upper"
-    workdir = run_dir / "work"
-    upperdir.mkdir(parents=True, exist_ok=True)
-    workdir.mkdir(parents=True, exist_ok=True)
+    run_dir = (
+        overlay_writable_root()
+        / "runtime"
+        / "overlay"
+        / invocation_id.replace(":", "-")
+    )
+    writable_dirs = allocate_overlay_writable_dirs(run_dir)
     lease = layer_stack.prepare_workspace_snapshot(request_id=invocation_id)
     if lease.layer_paths is None:
         layer_stack.release_lease(lease_id=lease.lease_id)
@@ -35,8 +39,8 @@ async def create(
     return OverlayHandle(
         workspace_root=workspace_root,
         layer_paths=tuple(lease.layer_paths),
-        upperdir=upperdir,
-        workdir=workdir,
+        upperdir=writable_dirs.upperdir,
+        workdir=writable_dirs.workdir,
         snapshot_version=lease.manifest_version,
         lease_id=lease.lease_id,
         namespace_pid=None,
@@ -50,7 +54,7 @@ async def capture_changes(handle: OverlayHandle) -> Sequence[OverlayPathChange]:
 
 
 async def destroy(handle: OverlayHandle) -> None:
-    """Idempotently mark an overlay handle destroyed and clean scratch dirs."""
+    """Idempotently mark an overlay handle destroyed and clean upper/work dirs."""
     with handle._destroy_lock:
         if handle._destroyed:
             return

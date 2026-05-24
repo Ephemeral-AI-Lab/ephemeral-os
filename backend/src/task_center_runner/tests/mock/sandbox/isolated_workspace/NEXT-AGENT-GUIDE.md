@@ -73,11 +73,11 @@ Before writing new code, check whether one of these already does the job.
 | Need | Use | Already used by iws? |
 |---|---|---|
 | Mount an overlay filesystem | `sandbox.overlay.kernel_mount.mount_overlay` — modern `fsopen/fsconfig/fsmount/move_mount`, FD-pinned paths via `validate_mount_inputs` | yes (`scripts/setns_overlay_mount.py`, deferred import after `setns`, uses `validate_mount_inputs`) |
-| Probe kernel overlay support | `sandbox.overlay.capability.new_mount_api_supported` — the same hard precondition used by daemon startup | yes (`_iws_fixtures.can_mount_overlay_natively`) |
+| Probe kernel overlay support | `sandbox.overlay.capability.mount_syscalls_supported` — the same hard precondition used by daemon startup | yes (`_iws_fixtures.can_mount_overlay_natively`) |
 | Walk upperdir for change capture | `sandbox.overlay.capture.walk_upperdir` — handles whiteouts, opaque dirs, sparse files | **not yet** — `manager._du_bytes` is a hand-rolled walk. If you need anything beyond byte counting (e.g., for the Tier 7 `test_upperdir_fully_discarded_on_normal_exit`), use `walk_upperdir` instead of reinventing |
-| New mount API syscall constants | `sandbox.overlay.new_mount_api` (`SYS_fsopen`, `SYS_fsconfig`, `SYS_fsmount`, `SYS_move_mount`, etc.) | yes, through deferred reuse of `kernel_mount.mount_overlay`; do not inline raw syscall constants in iws helpers |
+| Mount syscall syscall constants | `sandbox.overlay.mount_syscalls` (`SYS_fsopen`, `SYS_fsconfig`, `SYS_fsmount`, `SYS_move_mount`, etc.) | yes, through deferred reuse of `kernel_mount.mount_overlay`; do not inline raw syscall constants in iws helpers |
 | Lease + snapshot lifecycle | `sandbox.daemon.workspace_server.{prepare,release}_workspace_snapshot` | yes (`handlers._LayerStackAdapter`) |
-| Scratch root resolution | `sandbox.overlay.scratch.command_exec_scratch_root` | yes (`handlers._ensure_manager`) |
+| Overlay writable-root resolution | `sandbox.overlay.writable_dirs.overlay_writable_root` | yes (`handlers._ensure_manager`) |
 | Daemon RPC client | `sandbox.host.daemon_client.call_daemon_api` | yes (`_iws_rpc`) |
 | Audit event types | `task_center_runner.audit.events.EventType` — the 5 `SANDBOX_ISOLATED_WORKSPACE_*` enum members are already defined | yes (events emitted via `_emit` in `manager`) |
 | Overlay path validation | `sandbox._shared.env_policy.validate_overlay_path_text` + the `MountInputs` returned by `validate_mount_inputs` | yes (`scripts/setns_overlay_mount.py` validates and FD-pins paths before calling `mount_overlay`) |

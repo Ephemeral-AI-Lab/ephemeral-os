@@ -32,7 +32,7 @@ from sandbox.isolated_workspace._types import (
 from sandbox.isolated_workspace.network import IsolatedNetwork, IsolatedNetworkUnavailable
 from sandbox.overlay import lifecycle as overlay_lifecycle
 from sandbox.overlay.handle import OverlayHandle
-from sandbox.overlay.namespace import run_in_namespace
+from sandbox.overlay.namespace_runner import run_in_namespace
 
 
 class IsolatedPipeline(
@@ -70,8 +70,6 @@ class IsolatedPipeline(
         self._handles: dict[str, IsolatedWorkspaceHandle] = {}
         self._by_agent: dict[str, str] = {}
         self._map_lock = asyncio.Lock()
-        self._released_lease_ids: set[str] = set()
-        self._handle_locks: dict[str, asyncio.Lock] = {}
         # Default-set: a freshly constructed manager (without ``initialize``)
         # is usable. ``initialize`` clears the event around ``startup_gc`` so
         # concurrent ``enter`` calls block until IP-pool reconciliation
@@ -145,28 +143,6 @@ class IsolatedPipeline(
             _release=None,
         )
 
-    def _lock_for(self, handle: OverlayHandle) -> asyncio.Lock:
-        lock = self._handle_locks.get(handle.lease_id)
-        if lock is None:
-            lock = self._handle_locks[handle.lease_id] = asyncio.Lock()
-        return lock
-
-    async def _destroy_with_lease_guard(self, handle: OverlayHandle) -> None:
-        async with self._lock_for(handle):
-            if handle._destroyed:
-                self._handle_locks.pop(handle.lease_id, None)
-                return
-            if handle.lease_id and handle.lease_id in self._released_lease_ids:
-                handle._destroyed = True
-                self._handle_locks.pop(handle.lease_id, None)
-                return
-            if handle.lease_id:
-                self._released_lease_ids.add(handle.lease_id)
-            try:
-                await overlay_lifecycle.destroy(handle)
-            finally:
-                self._handle_locks.pop(handle.lease_id, None)
-
     # ------------------------------------------------------------------
     # Initialization + GC
     # ------------------------------------------------------------------
@@ -210,33 +186,20 @@ class IsolatedPipeline(
                 "no_isolated_workspace", "no open isolated workspace for agent",
             )
         timer = _PhaseTimer(self._clock)
-        async with handle.lock:
-            with timer.measure("unfreeze"):
-                self._runtime.freeze(handle, freeze=False)
-            try:
-                start = self._clock()
-                with timer.measure("exec"):
-                    # ``_runtime.run_in_handle`` shells out to setns_exec via
-                    # the synchronous ``subprocess.run``. Calling it directly
-                    # blocks the event loop and serialises tool_calls across
-                    # ALL handles — defeating the per-handle ``handle.lock``
-                    # design. Run in the default thread pool so other agents'
-                    # coroutines (incl. their own tool_calls under different
-                    # handle locks) can progress while one helper is in
-                    # subprocess.run's wait path.
-                    loop = asyncio.get_running_loop()
-                    exit_code, out, err = await loop.run_in_executor(
-                        None,
-                        lambda: self._runtime.run_in_handle(
-                            handle, argv=argv, stdin=stdin, timeout_s=timeout_s,
-                        ),
-                    )
-                duration = self._clock() - start
-            finally:
-                with contextlib.suppress(Exception):
-                    with timer.measure("freeze"):
-                        self._runtime.freeze(handle, freeze=True)
-            handle.last_activity = self._clock()
+        start = self._clock()
+        with timer.measure("exec"):
+            # ``_runtime.run_in_handle`` shells out to setns_exec via
+            # synchronous ``subprocess.run``. Run it in the default thread pool
+            # so concurrent isolated-workspace tool calls can overlap.
+            loop = asyncio.get_running_loop()
+            exit_code, out, err = await loop.run_in_executor(
+                None,
+                lambda: self._runtime.run_in_handle(
+                    handle, argv=argv, stdin=stdin, timeout_s=timeout_s,
+                ),
+            )
+        duration = self._clock() - start
+        handle.last_activity = self._clock()
         self._emit("sandbox_isolated_workspace_tool_call", {
             "handle_id": handle.handle_id,
             "argv0": argv[0] if argv else "",

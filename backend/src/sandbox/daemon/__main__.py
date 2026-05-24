@@ -31,7 +31,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     _bump_nofile()
-    _log_mount_api_capability()
+    _log_mount_syscall_capability()
     pid_lock_fd: int | None = None
     try:
         pid_lock_fd = _acquire_pid_lock(Path(args.pid_file))
@@ -84,12 +84,12 @@ def _bump_nofile(target: int = 8192) -> None:
         )
 
 
-def _log_mount_api_capability() -> None:
-    from sandbox.overlay.capability import new_mount_api_supported, require_new_mount_api
-    require_new_mount_api()
-    supported = new_mount_api_supported()
+def _log_mount_syscall_capability() -> None:
+    from sandbox.overlay.capability import mount_syscalls_supported, require_mount_syscalls
+    require_mount_syscalls()
+    supported = mount_syscalls_supported()
     logging.getLogger(__name__).info(
-        "daemon.overlay_mount_api supported=%s", supported
+        "daemon.overlay_mount_syscalls supported=%s", supported
     )
 
 

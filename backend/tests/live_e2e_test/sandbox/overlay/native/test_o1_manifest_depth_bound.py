@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from ..._harness.lease_resource_probe import (
-    NEW_MOUNT_API,
+    MOUNT_SYSCALLS,
     ShellTelemetry,
     assert_mount_slope_by_depth,
     build_layer_stack,
@@ -45,10 +45,10 @@ async def _run_bound_b(tmp_path: Path) -> None:
             rows_by_depth[depth] = await run_shell_batch(
                 stack=stack,
                 workspace_root=case_root / "workspace-root",
-                scratch_root=case_root / "scratch-new-api",
-                requested_path=NEW_MOUNT_API,
+                writable_root=case_root / "overlay-writable-root",
+                requested_path=MOUNT_SYSCALLS,
                 commands=[_COMMAND] * _FIXED_N,
-                request_prefix=f"new-api-M{depth}",
+                request_prefix=f"mount-syscalls-M{depth}",
             )
         except BaseException as exc:
             errors[depth] = exc

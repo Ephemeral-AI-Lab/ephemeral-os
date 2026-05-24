@@ -18,7 +18,7 @@ _DEFAULT_TREE_ENTRY_LIMIT = 2_000
 def command_exec_resource_timings(
     *,
     storage_root: Path,
-    scratch_root: Path,
+    writable_root: Path,
     run_dir: Path,
     upperdir: Path,
     manifest: Any | None,
@@ -42,8 +42,8 @@ def command_exec_resource_timings(
     )
     _add_filesystem_stats(
         timings,
-        "resource.command_exec.scratch_filesystem",
-        scratch_root,
+        "resource.command_exec.writable_filesystem",
+        writable_root,
     )
     _add_tree_stats(timings, "resource.command_exec.run_dir", run_dir)
     _add_tree_stats(timings, "resource.command_exec.workspace", run_dir / "workspace")

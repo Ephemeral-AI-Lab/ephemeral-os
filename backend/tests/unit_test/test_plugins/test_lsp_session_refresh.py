@@ -83,7 +83,6 @@ class _OverlayHandle:
         self.manifest_key = manifest_key
         self.manifest_version = int(manifest_key.rsplit("@", 1)[-1])
         self.root_hash = manifest_key.rsplit("@", 1)[0]
-        self.lowerdir = None
         self.layer_paths = ("/layers/L1",)
         self.run_dir = "/tmp/run"
         self.upperdir = "/tmp/run/upper"
@@ -227,7 +226,6 @@ async def test_session_manager_uses_daemon_operation_overlay_for_lsp_session(
     tmp_path: Path,
 ) -> None:
     monkeypatch.setattr(session_manager, "PyrightSession", _FakeSession)
-    monkeypatch.setattr(session_manager, "_overlay_namespace_available", lambda: True)
 
     overlay = _OperationOverlay(workspace_root="/testbed", manifest_key="hash-a@1")
     session = await session_manager.get_session(
@@ -250,7 +248,6 @@ async def test_session_manager_refreshes_owned_overlay_without_restart(
     tmp_path: Path,
 ) -> None:
     monkeypatch.setattr(session_manager, "PyrightSession", _FakeSession)
-    monkeypatch.setattr(session_manager, "_overlay_namespace_available", lambda: True)
 
     overlay = _OperationOverlay(workspace_root="/testbed", manifest_key="hash-a@1")
     ctx = _Ctx(
@@ -355,7 +352,7 @@ async def test_pyright_session_overlay_namespace_reads_open_text_from_layers(
     session = PyrightSession(
         manifest_key="hash-a@1",
         workspace_root="/testbed",
-        overlay_handle=SimpleNamespace(layer_paths=(layer.as_posix(),), lowerdir=None),
+        overlay_handle=SimpleNamespace(layer_paths=(layer.as_posix(),)),
     )
     client = _Client()
     session._client = client  # type: ignore[assignment]

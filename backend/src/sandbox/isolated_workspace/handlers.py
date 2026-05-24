@@ -20,12 +20,11 @@ from __future__ import annotations
 
 import asyncio
 import os
-from pathlib import Path
 from typing import Any
 
 from audit.jsonl import append_jsonl_event
 from sandbox.daemon import workspace_server
-from sandbox.overlay.scratch import command_exec_scratch_root
+from sandbox.overlay.writable_dirs import overlay_writable_root
 from sandbox.isolated_workspace.pipeline import (
     IsolatedPipeline,
     IsolatedWorkspaceError,
@@ -95,9 +94,8 @@ async def _ensure_manager(args: dict[str, Any]) -> IsolatedPipeline:
         except IsolatedWorkspaceError:
             pass
         layer_stack_root = require_arg(args, "layer_stack_root")
-        scratch = command_exec_scratch_root(Path(layer_stack_root))
         manager = IsolatedPipeline(
-            scratch_root=scratch,
+            scratch_root=overlay_writable_root(),
             layer_stack_root=layer_stack_root,
             layer_stack=_LayerStackAdapter(),  # type: ignore[arg-type]
             audit=_JsonlAuditSink(_resolve_audit_path()),
@@ -148,7 +146,6 @@ async def status(args: dict[str, Any]) -> dict[str, Any]:
         "manifest_version": handle.manifest_version,
         "created_at": handle.created_at,
         "last_activity": handle.last_activity,
-        "freezer_degraded": handle.freezer_degraded,
     }
 
 

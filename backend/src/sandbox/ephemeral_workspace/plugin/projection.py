@@ -15,13 +15,16 @@ from __future__ import annotations
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from uuid import uuid4
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
-from sandbox.layer_stack.stack import LayerStack, PrepareWorkspaceSnapshotResult
 from sandbox.layer_stack.manifest import manifest_root_hash
+from sandbox.layer_stack.stack import LayerStack, PrepareWorkspaceSnapshotResult
 from sandbox.layer_stack.view import LayerStackStorageError
-from sandbox.overlay.scratch import command_exec_scratch_root
+from sandbox.overlay.writable_dirs import (
+    allocate_overlay_writable_dirs,
+    overlay_writable_root,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     pass
@@ -45,7 +48,6 @@ class ProjectionHandle:
 
     lease_id: str
     manifest_key: str
-    lowerdir: str | None
     manifest_version: int
     root_hash: str
     manifest: object | None
@@ -94,10 +96,6 @@ class OverlayProjectionHandle:
     @property
     def manifest(self) -> object | None:
         return self.lease.manifest
-
-    @property
-    def lowerdir(self) -> str | None:
-        return self.lease.lowerdir
 
     @property
     def layer_paths(self) -> tuple[str, ...] | None:
@@ -150,7 +148,6 @@ class WorkspaceProjection:
             manifest_key=build_manifest_key(
                 result.root_hash, result.manifest_version
             ),
-            lowerdir=result.lowerdir,
             manifest_version=result.manifest_version,
             root_hash=result.root_hash,
             manifest=getattr(result, "manifest", None),
@@ -164,9 +161,8 @@ class WorkspaceProjection:
         *,
         workspace_root: str,
     ) -> OverlayProjectionHandle:
-        scratch_root = command_exec_scratch_root(self._manager.storage_root)
         run_dir = (
-            scratch_root
+            overlay_writable_root()
             / "runtime"
             / "plugin_overlay"
             / f"{_safe_request_part(owner_request_id)}-{uuid4().hex[:8]}"
@@ -174,16 +170,13 @@ class WorkspaceProjection:
         lease = self.acquire(
             owner_request_id,
         )
-        upperdir = run_dir / "upper"
-        workdir = run_dir / "work"
-        upperdir.mkdir(parents=True, exist_ok=True)
-        workdir.mkdir(parents=True, exist_ok=True)
+        writable_dirs = allocate_overlay_writable_dirs(run_dir)
         return OverlayProjectionHandle(
             lease=lease,
             workspace_root=str(workspace_root).rstrip("/") or "/",
             run_dir=run_dir.as_posix(),
-            upperdir=upperdir.as_posix(),
-            workdir=workdir.as_posix(),
+            upperdir=writable_dirs.upperdir.as_posix(),
+            workdir=writable_dirs.workdir.as_posix(),
         )
 
     def _prepare_snapshot_with_retry(

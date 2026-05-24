@@ -34,7 +34,7 @@ Every tool call in both modes flows through the same kernel-overlay path. There 
 |---|---|---|---|---|
 | `/testbed/*` (workspace) | overlay merge (upperdir+lowerdir) | overlay upperdir + OCC commit | overlay merge | overlay upperdir, no commit, discarded at exit |
 | `/tmp/*` (non-workspace tmp) | host pass-through | overlay upperdir, filtered out at OCC capture (Phase 2 §7.5 conv filter) | host pass-through inside ns | overlay upperdir, discarded at exit |
-| `/etc/`, `/var/`, `/proc/`, `/sys/`, `/boot/` (system paths) | host pass-through | **REFUSED** by namespace-child denylist (Phase 2 §7.5) — `forbidden_host_path` error before kernel call | host pass-through inside ns | **REFUSED** by denylist |
+| `/etc/`, `/var/`, `/proc/`, `/sys/`, `/boot/` (system paths) | host pass-through | **REFUSED** by namespace-entrypoint denylist (Phase 2 §7.5) — `forbidden_host_path` error before kernel call | host pass-through inside ns | **REFUSED** by denylist |
 
 **Why the denylist is required:** today's `_write_out_of_workspace` runs as the unprivileged daemon user → kernel returns EACCES for `/etc/hosts` writes. After unification, the namespace child runs as root inside the user namespace → root-in-namespace CAN write `/etc/hosts` unless explicitly denied. The denylist closes this gap.
 
@@ -73,7 +73,7 @@ See Phase 2.5 §1 for the 5 NEW principles; §3 for the RALPLAN-DR option matrix
 
 4. **`WorkspacePipeline` protocol has ONE method.** `async def run_tool_call(req: ToolCallRequest) -> ToolCallResult`. Each pipeline implements its own internals. Lifecycle methods (`enter`/`exit`) live only on `IsolatedPipeline` — called by `sandbox/isolated_workspace/lifecycle/` host-side coroutines, not through the protocol. The protocol provides type-safe dispatch in `daemon/dispatch.py::resolve_pipeline(agent_id) -> WorkspacePipeline`; the lifecycle plumbing is intentionally NOT on the protocol because ephemeral has nothing analogous.
 
-5. **Unified execution per tool call. No in/out-of-workspace branching.** All 6 verbs route through the overlay. No `classify_path`, no `_xxx_in_workspace`/`_xxx_out_of_workspace` helpers. The overlay's pass-through layer handles non-workspace paths (see the §1 pass-through table). Read-only verbs skip the capture+commit phase but still mount. **System-path writes (`/etc/`, `/var/`, `/proc/`, `/sys/`, `/boot/`) are REJECTED by a namespace-child denylist** (Phase 2 §7.5) BEFORE the kernel call — closes the root-in-namespace security gap that today's `_write_out_of_workspace` accidentally relied on (unprivileged daemon couldn't write `/etc/*` → EACCES; root-in-namespace can unless denied).
+5. **Unified execution per tool call. No in/out-of-workspace branching.** All 6 verbs route through the overlay. No `classify_path`, no `_xxx_in_workspace`/`_xxx_out_of_workspace` helpers. The overlay's pass-through layer handles non-workspace paths (see the §1 pass-through table). Read-only verbs skip the capture+commit phase but still mount. **System-path writes (`/etc/`, `/var/`, `/proc/`, `/sys/`, `/boot/`) are REJECTED by a namespace-entrypoint denylist** (Phase 2 §7.5) BEFORE the kernel call — closes the root-in-namespace security gap that today's `_write_out_of_workspace` accidentally relied on (unprivileged daemon couldn't write `/etc/*` → EACCES; root-in-namespace can unless denied).
 
 6. **Two-tier verb dispatch inside the namespace child.** Tier 1 (uniform): `read/write/edit/grep/glob` use `tool_primitives.<verb>.compute(args) -> ToolCallResult`. Tier 2 (shell-specific): `shell` uses `tool_primitives.shell.run(args, cancel_event, stdout_ref, stderr_ref) -> ShellResult`. Shell's surface is honestly different — pretending otherwise was the failure mode. **Background shells are supported in BOTH modes** with different overlay-lifetime ownership (see Principle 1 and §1 background-shell policy table).
 
@@ -135,10 +135,10 @@ Layer 1 — Primitives
   sandbox/overlay/:
     handle.py         OverlayHandle dataclass (+ _destroyed guard)
     lifecycle.py      create / destroy / capture_changes
-    namespace.py      host-side fork+unshare+wait coordinator
-    namespace_child.py child entry: mount + chdir + verb dispatch
-    kernel_mount.py, new_mount_api.py, capability.py, capture.py, path_change.py,
-    scratch.py, subprocess_runner.py
+    namespace_runner.py      host-side fork+unshare+wait coordinator
+    namespace_entrypoint.py child entry: mount + chdir + verb dispatch
+    kernel_mount.py, mount_syscalls.py, capability.py, capture.py, path_change.py,
+    writable_dirs.py, subprocess_runner.py
 
   sandbox/_shared/tool_primitives/:
     read.py, write.py, edit.py, grep.py, glob.py, shell.py, file_ops.py
@@ -183,7 +183,7 @@ Implements the per-call ephemeral pipeline and persistent isolated pipeline. Add
 - ~~`EphemeralPipeline.{launch,reap,poll,cancel}_background_job`~~ **REMOVED in Phase 2.5.** Background lifecycle moved to engine's `BackgroundTaskManager`; pipeline body has no background-specific methods or registry.
 - ~~`EphemeralPipeline.startup_gc()`~~ **REMOVED in Phase 2.5.** Replaced by daemon-side `InFlightInvocationRegistry`'s TTL reaper + `api.v1.heartbeat` engine-process-id liveness signal.
 - `IsolatedPipeline.run_tool_call` + `enter` + `exit`. In Phase 2.5: the `ephemeral_jobs_in_flight` Q4 check and `exit` drain move to engine layer (`BackgroundTaskManager.count_by_agent` / `cancel_by_agent`); pipeline.enter / pipeline.exit are pure teardown.
-- `overlay.run_in_namespace` (host) + `namespace_child.py` two-tier dispatcher; **host-path denylist** (`/etc/`, `/var/`, `/proc/`, `/sys/`, `/boot/` rejected for WRITE-allowed verbs)
+- `overlay.run_in_namespace` (host) + `namespace_entrypoint.py` two-tier dispatcher; **host-path denylist** (`/etc/`, `/var/`, `/proc/`, `/sys/`, `/boot/` rejected for WRITE-allowed verbs)
 - **OCC source-tag threaded through 4 helper sites** (`overlay_path_changes_to_occ_changes`, `build_overlay_write_change`, `build_overlay_delete_change`, inline `SymlinkChange`/`OpaqueDirChange` constructors); single-path determination uses `len({c.path for c in changes}) == 1`
 - `OverlayHandle._destroyed` guard + per-pipeline `_handle_locks: dict[str, asyncio.Lock]`
 - `tool_primitives.file_ops.open_no_follow` chokepoint enforced by static lint (no naive `os.open(path, flags|O_NOFOLLOW)` bypass)
@@ -215,11 +215,11 @@ Reshapes the iws test suite around the new tool surface. Adds new test tiers for
 - `pipeline_lifecycle/` tier (ephemeral upperdir GC after each call; isolated upperdir persists across calls; **iws upperdir scales with mutations**; lowerdir O(1))
 - `concurrency/` tier (OCC source-tag coalescing on all 4 helper sites; `_wire_handle` ordering invariant; **destroy-under-asyncio-interleaving**; **background tool lifetime — engine launches return `bg_*` task ids, the same `run_tool_call` coroutine survives as an asyncio task, completion commits, cancellation discards, iws drains at exit, and enter rejects when sandbox-bound background tasks are in flight**; **10-step interleaved E2E**)
 - **`behavior_upgrade/` tier** (NEW — iws verb migration validation: typed-shape `ReadResult`/`WriteResult`/`EditResult` (real search/replace)/`GrepResult` (modes+options honored)/`GlobResult`/shell `changed_paths`)
-- **`unit/` tier** (NEW — per-module coverage for `OverlayHandle`, `overlay/lifecycle`, `overlay/namespace`, `namespace_child`, `tool_primitives/file_ops`, `overlay_change_conversion`, pipeline lease accounting, `LifecycleError` enumeration, `resolve_pipeline`)
+- **`unit/` tier** (NEW — per-module coverage for `OverlayHandle`, `overlay/lifecycle`, `overlay/namespace_runner`, `namespace_entrypoint`, `tool_primitives/file_ops`, `overlay_change_conversion`, pipeline lease accounting, `LifecycleError` enumeration, `resolve_pipeline`)
 - **`observability/` tier** (NEW — `timings["mount_ms"]` populated, iws upperdir mid-session gauge, audit-event payload shape stability)
 - **Deployment pre-flight CI** running `scripts/verify_overlay_preconditions.py`
 - Tier 8 soak baseline reshape (per-call mount cost in baseline) **+ perf escalation threshold** (read p50 > 200ms or p99 > 500ms auto-files follow-up issue)
-- `docs/sandbox/api_surface.md` — 11 sections including pass-through table, background tool policy, `WorkspaceSession` deferral note, namespace-child-boundary diagram, `open_no_follow` per-component-walk explanation, deployment-precondition reference
+- `docs/sandbox/api_surface.md` — 11 sections including pass-through table, background tool policy, `WorkspaceSession` deferral note, namespace-entrypoint-boundary diagram, `open_no_follow` per-component-walk explanation, deployment-precondition reference
 - Updated blast-radius doc (reflects `sandbox/isolated_workspace/lifecycle/` + extracted `manager.py` modules), PLAN.md (9 tiers), CHANGELOG
 
 **Atomic commit plan:** ≤5 logical atomic commits.
@@ -286,7 +286,7 @@ Reshapes the iws test suite around the new tool surface. Adds new test tiers for
 - **Concurrency:** OCC disjoint-batch coalescing preserved via `source="api_write"` for single-path typed writes (`len({c.path for c in changes}) == 1`); per-handle `asyncio.Lock` prevents `_destroy_with_lease_guard` TOCTOU race.
 - **Security:** `tool_primitives.file_ops.open_no_follow` chokepoint with per-component walk (or `openat2(RESOLVE_NO_SYMLINKS)`) defends against trailing AND intermediate symlink escape inside the root-namespace child. Host-path denylist (`/etc/`, `/var/`, `/proc/`, `/sys/`, `/boot/`) rejects writes BEFORE the kernel call — closes the root-in-namespace privilege gap that pre-unification accidentally relied on unprivileged-daemon EACCES.
 - **Observability:** plugin-block fail-OPEN emits `workspace_lifecycle.plugin_check_unbootstrapped` audit event; per-call `timings["mount_ms"]` populated; iws upperdir mid-session gauge available.
-- **Portability:** new mount API + private user namespaces required; Docker-only. `scripts/verify_overlay_preconditions.py` is a deployment guard run by CI; no copy-backed fallback or runtime bypass remains.
+- **Portability:** mount syscalls + private user namespaces required; Docker-only. `scripts/verify_overlay_preconditions.py` is a deployment guard run by CI; no copy-backed fallback or runtime bypass remains.
 - **Reversibility:** each phase delivered as ≤10/≤8/≤5 atomic commits with `git revert <sha>` rollback per commit. Tests run on parent SHA before each commit lands.
 
 **Follow-ups (out of this plan):**
@@ -304,7 +304,7 @@ Reshapes the iws test suite around the new tool surface. Adds new test tiers for
 
 Each scenario lists the failure, what users see, **the specific signal we'd observe FIRST** (Critic must-fix #14), and the mitigation already enacted in the plan.
 
-1. **Background tool lifecycle failure modes** — see Phase 2.5 §13 pre-mortem for the three scenarios that supersede the original Phase 2 background-shell scenario: envelope `invocation_id` migration regressions; cancel-ordering invariant (namespace-child exits BEFORE overlay destroy); multi-engine / engine-restart Q4 split-brain. Phase 2.5's pre-mortem is more specific because the new design has fewer race surfaces — coroutine-bound lease lifetime removes the old registration window, shell-specific reap/cancel races, and double-destroy from a job reaper coroutine racing a foreground finally. The remaining racy surface is the engine ↔ daemon wire-cancel handshake (Phase 2.5 §5.7 try/finally + §11 sub-test M).
+1. **Background tool lifecycle failure modes** — see Phase 2.5 §13 pre-mortem for the three scenarios that supersede the original Phase 2 background-shell scenario: envelope `invocation_id` migration regressions; cancel-ordering invariant (namespace-entrypoint exits BEFORE overlay destroy); multi-engine / engine-restart Q4 split-brain. Phase 2.5's pre-mortem is more specific because the new design has fewer race surfaces — coroutine-bound lease lifetime removes the old registration window, shell-specific reap/cancel races, and double-destroy from a job reaper coroutine racing a foreground finally. The remaining racy surface is the engine ↔ daemon wire-cancel handshake (Phase 2.5 §5.7 try/finally + §11 sub-test M).
 
 2. **Concurrent destroy TOCTOU race in `_destroy_with_lease_guard`** (Phase 2 §3.1 / Planner D.2):
    - **Fails when:** shell-job reaper coroutine and the main `finally` block both reach `_destroy_with_lease_guard` for the same handle. Without the lock, both pass `_destroyed=False` before either awaits `overlay.destroy` → double umount → EBUSY/EINVAL from kernel; lease released twice.
@@ -313,7 +313,7 @@ Each scenario lists the failure, what users see, **the specific signal we'd obse
    - **Mitigation enacted:** per-pipeline `_handle_locks: dict[str, asyncio.Lock]` keyed by `lease_id`; lock entry popped after destroy. Phase 3 §6.5 `test_destroy_under_asyncio_interleaving.py` would FAIL without this fix.
 
 3. **Migration ordering trap — sandbox refuses to boot on degraded kernel** (Phase 1 §4.5 / Planner D.3):
-   - **Fails when:** Phase 1 lands and `new_mount_api_supported()` becomes a hard precondition. Operator deploys to an environment whose kernel doesn't support the new mount API. Sandbox refuses to boot.
+   - **Fails when:** Phase 1 lands and `mount_syscalls_supported()` becomes a hard precondition. Operator deploys to an environment whose kernel doesn't support the mount syscalls. Sandbox refuses to boot.
    - **User-visible:** service refuses to start in some environments; rollback requires reverting Phase 1's PR (large blast radius).
    - **Leading indicator (specific signal):** `scripts/verify_overlay_preconditions.py` exits non-zero on the target kernel. **The signal fires BEFORE deployment if the script is wired into the CI deploy pipeline** (Phase 3 §6C.2) — operator sees the build fail at the verify step, not at boot time.
    - **Mitigation enacted:** Phase 1 §4.5.1 ships the script; Phase 1 §4.5.2 demands a pre-rollout audit of every deployment target; Phase 3 §6C wires the verify script into CI; the old rollout escape hatch has been deleted.

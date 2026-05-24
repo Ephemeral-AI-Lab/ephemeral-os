@@ -230,7 +230,7 @@ async def test_apply_layerstack_to_repo_materializes_snapshot_and_releases(
     ) -> dict[str, object]:
         daemon_calls.append((op, args))
         if op == "api.prepare_workspace_snapshot":
-            return {"lease_id": "lease-1", "lowerdir": "/layers/current"}
+            return {"lease_id": "lease-1", "layer_paths": ["/layers/current"]}
         return {"success": True}
 
     async def fake_exec(_sandbox_id: str, command: str, **_kwargs: object) -> str:
@@ -252,7 +252,7 @@ async def test_apply_layerstack_to_repo_materializes_snapshot_and_releases(
         {"lease_id": "lease-1"},
     )
     assert len(commands) == 1
-    assert "Path('/layers/current')" in commands[0]
+    assert "layer_paths = tuple(Path(path) for path in ('/layers/current',))" in commands[0]
     assert "Path('/testbed')" in commands[0]
     assert "MATERIALIZED_LAYERSTACK" in commands[0]
 

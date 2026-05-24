@@ -104,7 +104,7 @@ isolated_workspace/
 │   ├── test_manager_json_schema_mismatch_treated_as_empty.py
 │   ├── test_daemon_restart_reaps_orphan_veth.py
 │   ├── test_daemon_restart_reaps_orphan_cgroup.py
-│   ├── test_daemon_restart_reaps_orphan_scratch.py
+│   ├── test_daemon_restart_reaps_orphan_writable_dirs.py
 │   ├── test_daemon_restart_reaps_orphan_netns.py
 │   ├── test_daemon_restart_releases_orphan_lease.py
 │   ├── test_daemon_restart_reconciles_ip_pool.py

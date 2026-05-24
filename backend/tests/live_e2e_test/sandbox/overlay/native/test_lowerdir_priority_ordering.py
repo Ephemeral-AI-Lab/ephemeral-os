@@ -1,4 +1,4 @@
-"""Pin the lowerdir+= priority ordering contract for the new mount API.
+"""Pin the lowerdir+= priority ordering contract for mount-syscall overlays.
 
 Kernel guarantee (overlayfs.rst, "Multiple lower layers"):
     "The specified lower directories will be stacked beginning from the
@@ -142,7 +142,7 @@ def test_lowerdir_plus_first_call_is_top_priority(tmp_path: Path) -> None:
     assert result == "A", (
         f"lowerdir+ ordering contract violated: expected first-call layer 'A' "
         f"to win, got '{result}'. "
-        f"The new-mount-API lowerdir+ iteration order in kernel_mount.py must "
+        f"The mount-syscall lowerdir+ iteration order in kernel_mount.py must "
         f"be updated to match the new kernel semantics."
     )
 

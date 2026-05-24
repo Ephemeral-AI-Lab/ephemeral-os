@@ -49,7 +49,7 @@ native Linux (mostly socket/tmpfs behavior in §7 troubleshooting).
 | Item | Why | How to verify |
 |---|---|---|
 | Docker daemon reachable on `unix:///var/run/docker.sock` (or Docker Desktop) | the `docker` provider spawns the sweevo container | `docker info` succeeds |
-| Container kernel ≥ 5.11 (for new mount API) | overlay `fsmount`, `setns(CLONE_NEWUSER)`, cgroup v2 freezer all need it. Docker Desktop's VM and any modern Linux host already satisfy this. | `docker run --rm ubuntu:22.04 uname -r` |
+| Container kernel ≥ 5.11 (for required mount syscalls) | overlay `fsmount`, `setns(CLONE_NEWUSER)`, cgroup v2 freezer all need it. Docker Desktop's VM and any modern Linux host already satisfy this. | `docker run --rm ubuntu:22.04 uname -r` |
 | `uv` installed + repo synced | project standard wrapper for the venv — `uv run` is how `task_center_runner/read.md` documents every command | `uv --version`; `uv sync --extra dev` |
 | `nft` + `ip` binaries available inside the sweevo image | iws bridge/MASQUERADE + veth wiring | `bash backend/scripts/preflight_docker_a2_caps.sh` (skips on macOS — see §3) |
 | A valid SWE-EVO instance id baked into your local image cache | every test fixture boots a sweevo container by instance id | `docker images` lists `sweevo-test-<instance>-*`, or first-run pulls it |
@@ -324,7 +324,7 @@ on Linux, double-check:
   `docker inspect <container>` to confirm).
 - `apparmor=unconfined` is set if AppArmor is active on the host.
 - `/eos-mount-scratch` is a writable tmpfs in the container
-  (`EOS_DOCKER_DISABLE_SCRATCH_TMPFS` must NOT be `1`).
+  (`EOS_DOCKER_DISABLE_OVERLAY_WRITABLE_TMPFS` must NOT be `1`).
 
 ### Test passes Tier 5/6 but Tier 9 phase-breakdown tests fail "mount_overlay key missing"
 

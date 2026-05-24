@@ -71,9 +71,6 @@ class PyrightSession:
             str(path) for path in getattr(overlay_handle, "layer_paths", ()) or ()
         )
         self._layer_index_cache: dict[str, Any] = {}
-        self.lowerdir = str(
-            getattr(overlay_handle, "lowerdir", None) or self.workspace_root
-        )
         self._proc: asyncio.subprocess.Process | None = None
         self._client: LspJsonRpcClient | None = None
         self._opened: set[str] = set()
@@ -565,7 +562,7 @@ class PyrightSession:
             "-Urm",
             sys.executable,
             "-m",
-            "plugins.catalog.lsp.runtime.namespace_child",
+            "plugins.catalog.lsp.runtime.namespace_entrypoint",
             str(payload_ref),
         ]
 
@@ -581,9 +578,6 @@ class PyrightSession:
         )
         self._overlay_layer_paths = tuple(
             str(path) for path in getattr(overlay_handle, "layer_paths", ()) or ()
-        )
-        self.lowerdir = str(
-            getattr(overlay_handle, "lowerdir", None) or self.workspace_root
         )
 
     async def _remount_private_overlay(self, overlay_handle: Any) -> None:

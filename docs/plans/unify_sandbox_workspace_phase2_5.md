@@ -30,7 +30,7 @@ This applies uniformly to every background-capable tool (shell today; potentiall
 
 **P2 (NEW).** Background is a **request flag**, not a verb. `ToolCallRequest.background: bool` is set by the engine when (and only when) the agent passed `background=true` on a `background="optional"`-declared tool. Pipeline code never branches on `background` — it's metadata for audit and for the engine's wrapper, not a control-flow input to the substrate.
 
-**P3 (NEW).** Cancellation propagates via `asyncio.CancelledError`. Local `asyncio.Task.cancel()` (engine) + `api.v1.cancel(invocation_id)` (wire) + cancellation-aware `overlay.run_in_namespace` and `tool_primitives.shell.run` (kill namespace-child PG / shell-child PG on cancel) compose to a single contract: **a cancelled task runs its `finally` exactly once, destroys the overlay, and does NOT commit to OCC** (because the commit branch is on the post-`run_in_namespace` happy path).
+**P3 (NEW).** Cancellation propagates via `asyncio.CancelledError`. Local `asyncio.Task.cancel()` (engine) + `api.v1.cancel(invocation_id)` (wire) + cancellation-aware `overlay.run_in_namespace` and `tool_primitives.shell.run` (kill namespace-entrypoint PG / shell-child PG on cancel) compose to a single contract: **a cancelled task runs its `finally` exactly once, destroys the overlay, and does NOT commit to OCC** (because the commit branch is on the post-`run_in_namespace` happy path).
 
 **P4 (NEW).** Cross-mode rejection (Q4) and iws-exit drain are **engine-layer** concerns. The pipeline has no background registry to consult. `sandbox.isolated_workspace.lifecycle.enter_isolated_workspace` asks `BackgroundTaskManager.count_by_agent(agent_id)` before calling `pipeline.enter`; `sandbox.isolated_workspace.lifecycle.exit_isolated_workspace` asks `cancel_by_agent(agent_id, grace_s=...)` before calling `pipeline.exit`. The pipeline knows nothing about agent-scoped background populations.
 
@@ -271,7 +271,7 @@ class ShellPgrpCancellation:
     def on_cancel(self) -> None: ...
 ```
 
-`overlay/namespace.py::run_in_namespace` stays verb-shape-clean:
+`overlay/namespace_runner.py::run_in_namespace` stays verb-shape-clean:
 
 ```python
 async def run_in_namespace(handle: OverlayHandle, req: ToolCallRequest) -> ToolCallResult:
@@ -507,7 +507,7 @@ Phase 3's `tests/mock/sandbox/concurrency/test_background_shell_lifetime.py` (cu
 | **I (NEW)** | Daemon-side timeout: shell timed_out_after=Ns returns COMPLETED with `timed_out=True`; status latches to COMPLETED not CANCELLED |
 | **J (NEW)** | Engine death TTL reap: simulate engine crash mid-bg-shell; daemon's `InFlightInvocationRegistry.ttl_reaper_loop` cancels the in-flight Task after `EOS_INFLIGHT_TTL_S`; lease released; metric `_ttl_reaped_total` incremented |
 | **K (NEW)** | Cancel-during-completion race (§7 scenario): cancel landing AFTER natural completion is a no-op; agent sees COMPLETED with real result |
-| **L (NEW)** | Cancel ordering invariant: on `asyncio.CancelledError` inside `run_in_namespace`, the namespace-child PG fully exits (`waitpid` returns) BEFORE `pipeline.run_tool_call`'s `finally` calls `_destroy_with_lease_guard`. No orphan `eos-ns-child` processes observable in `ps` post-soak; no `release_lease` event precedes `namespace_child.exited` for the same `lease_id`. |
+| **L (NEW)** | Cancel ordering invariant: on `asyncio.CancelledError` inside `run_in_namespace`, the namespace-entrypoint PG fully exits (`waitpid` returns) BEFORE `pipeline.run_tool_call`'s `finally` calls `_destroy_with_lease_guard`. No orphan `eos-ns-child` processes observable in `ps` post-soak; no `release_lease` event precedes `namespace_entrypoint.exited` for the same `lease_id`. |
 | **M (NEW)** | Wire-cancel failure tolerance: simulate `sandbox_api.cancel(...)` raising (mock-injected `ConnectionError`). Assert `BackgroundTaskManager.cancel(task_id)` STILL completes — local `asyncio.Task.cancel()` fires; agent does NOT hang; WARN log emitted; daemon TTL reaper eventually cleans up (§6 path). |
 | **N (NEW)** | Multi-engine / engine-restart split-brain (§13 scenario 3). Start engine A; launch bg sandbox task for `agent_X`; kill engine A WITHOUT graceful shutdown. Start engine A'; call `enter_isolated_workspace(agent_X)`. Assert engine A' calls `api.v1.inflight_count(agent_X)` against the daemon; the daemon-side count reflects engine A's surviving task (still in `InFlightInvocationRegistry` pre-TTL); Q4 rejects with `LifecycleError(kind="ephemeral_jobs_in_flight")`. Wait for the task to finish or for TTL cancellation plus coroutine cleanup/deregister; re-attempt enter; assert success. |
 
@@ -527,7 +527,7 @@ Phase 3's `tests/mock/sandbox/concurrency/test_background_shell_lifetime.py` (cu
 - ✅ `engine/background/manager.py::BackgroundTaskManager` gains `count_by_agent`, `cancel_by_agent`; `TrackedBackgroundTask` gains `agent_id`, `uses_sandbox`, `sandbox_id`, `sandbox_invocation_id`.
 - ✅ `sandbox.isolated_workspace.lifecycle.enter_isolated_workspace` rejects with `LifecycleError(kind="ephemeral_jobs_in_flight")` when `BackgroundTaskManager.count_by_agent(agent_id) > 0`. The check is BEFORE `pipeline.enter`.
 - ✅ `sandbox.isolated_workspace.lifecycle.exit_isolated_workspace` calls `BackgroundTaskManager.cancel_by_agent(agent_id, grace_s)` BEFORE `pipeline.exit`; reports `evicted_background_tasks` (survivor count) in `phases_ms`.
-- ✅ `overlay.run_in_namespace` is cancellation-aware: on `asyncio.CancelledError`, sets `cancel_event` and SIGTERMs the namespace-child pgrp; 2s SIGKILL escalation; re-raises CancelledError.
+- ✅ `overlay.run_in_namespace` is cancellation-aware: on `asyncio.CancelledError`, sets `cancel_event` and SIGTERMs the namespace-entrypoint pgrp; 2s SIGKILL escalation; re-raises CancelledError.
 - ✅ `tool_primitives.shell.run` accepts `cancel_event` and `pid_recorder` from `overlay.run_in_namespace`; existing `cancel_event` plumbing extracted from `shell_job.py` survives unchanged in semantics.
 - ✅ `BackgroundTaskManager.cancel(task_id)` for sandbox-bound tasks sends `api.v1.cancel(invocation_id)` over the wire BEFORE `tracked.asyncio_task.cancel()`. Order preserves cleanup semantics.
 - ✅ Terminal-status precedence (`completed > failed > cancelled`) preserved — sub-test K (race scenario §7) passes.
@@ -573,9 +573,9 @@ Phase 3's `tests/mock/sandbox/concurrency/test_background_shell_lifetime.py` (cu
    - **Leading indicator:** daemon log `request envelope missing invocation_id from agent=<id>` fires at INFO level; `_ttl_reaped_total` counter climbs (eventual cleanup via TTL); `api.v1.cancel` return value `cancelled=False` correlates with the same agent_id.
    - **Mitigation:** envelope parser logs WARN (not INFO) on missing invocation_id during the rollout window; CHANGELOG entry calls out the compat requirement; client-side `_raw_exec.py` always populates invocation_id (tested by unit `test_raw_exec_populates_invocation_id.py`).
 
-2. **Cancellation race between `BackgroundTaskManager.cancel`'s wire-cancel + local `asyncio.Task.cancel()` produces a destroy-before-namespace-child-exits ordering, leaking the namespace child as an orphan PG.**
-   - **Leading indicator:** Tier 8 soak audit JSONL shows `overlay.destroyed` event with a `pid_holder_alive=true` annotation; `ps` post-soak shows orphan processes with `eos-ns-child` cmdline; `release_lease` event fires before the matching `namespace_child.exited` event.
-   - **Mitigation:** `overlay.run_in_namespace`'s `except asyncio.CancelledError` block awaits the namespace-child exit (via the same wait mechanism today's ShellJobRegistry uses — `_await_process_done` lines 398–414 of `shell_job.py`); pipeline's `finally` runs AFTER `run_in_namespace` returns (CancelledError unwind path completes); so destroy happens only after child has exited. Phase 3 sub-test L (NEW — add to §11) pins this ordering.
+2. **Cancellation race between `BackgroundTaskManager.cancel`'s wire-cancel + local `asyncio.Task.cancel()` produces a destroy-before-namespace-entrypoint-exits ordering, leaking the namespace child as an orphan PG.**
+   - **Leading indicator:** Tier 8 soak audit JSONL shows `overlay.destroyed` event with a `pid_holder_alive=true` annotation; `ps` post-soak shows orphan processes with `eos-ns-child` cmdline; `release_lease` event fires before the matching `namespace_entrypoint.exited` event.
+   - **Mitigation:** `overlay.run_in_namespace`'s `except asyncio.CancelledError` block awaits the namespace-entrypoint exit (via the same wait mechanism today's ShellJobRegistry uses — `_await_process_done` lines 398–414 of `shell_job.py`); pipeline's `finally` runs AFTER `run_in_namespace` returns (CancelledError unwind path completes); so destroy happens only after child has exited. Phase 3 sub-test L (NEW — add to §11) pins this ordering.
 
 3. **Multi-engine / engine-restart Q4 split-brain.** Engine-layer `BackgroundTaskManager.count_by_agent` is engine-local in-process state; it cannot see another engine's in-flight tasks. Two concrete failure modes:
    - **Engine crash + restart mid-iws-session:** engine A launches a sandbox-bound bg task for `agent_X`. Engine A crashes. Engine A' (restart) attaches to the daemon; its `BackgroundTaskManager` is empty. `agent_X` re-establishes its session and calls `enter_isolated_workspace`. Engine A' sees `count_by_agent(agent_X) == 0` and proceeds; meanwhile the daemon-side `InFlightInvocationRegistry` still has engine A's task (until TTL reaps it). Result: iws session opens while a ghost ephemeral task races to write OCC, violating Q4's invariant.
@@ -591,7 +591,7 @@ Phase 3's `tests/mock/sandbox/concurrency/test_background_shell_lifetime.py` (cu
 
 ### Out of scope
 
-- Overlay primitives (`sandbox/overlay/{handle,lifecycle,namespace,namespace_child,kernel_mount,...}.py`) — unchanged except `namespace.py::run_in_namespace` gains cancellation forwarding (§5.5; the cleanup itself is verb-supplied, NOT a primitive-layer concern).
+- Overlay primitives (`sandbox/overlay/{handle,lifecycle,namespace_runner,namespace_entrypoint,kernel_mount,...}.py`) — unchanged except `namespace_runner.py::run_in_namespace` gains cancellation forwarding (§5.5; the cleanup itself is verb-supplied, NOT a primitive-layer concern).
 - OCC source-tag plumbing (Phase 2 §6.1–§6.5) — unchanged.
 - `tool_primitives/{read,write,edit,grep,glob,file_ops,capture}.py` — unchanged.
 - Lifecycle host API (`sandbox/isolated_workspace/lifecycle/{enter,exit}_isolated_workspace.py`) — gains pre-check + drain wiring (§5.6); the audit-event scaffold is unchanged.

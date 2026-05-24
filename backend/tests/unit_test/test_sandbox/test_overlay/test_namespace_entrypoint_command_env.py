@@ -12,8 +12,8 @@ from pathlib import Path
 import pytest
 
 from sandbox._shared.models import Intent, ToolCallRequest
-from sandbox.overlay.namespace import TOOL_CALL_COMMAND_POLICY
-from sandbox.overlay.namespace_child import execute_tool_payload
+from sandbox.overlay.namespace_runner import TOOL_CALL_COMMAND_POLICY
+from sandbox.overlay.namespace_entrypoint import execute_tool_payload
 
 
 def _run(

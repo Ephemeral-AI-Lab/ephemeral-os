@@ -166,7 +166,6 @@ class _ChildProjection:
         return SimpleNamespace(
             lease_id="plugin-overlay-child",
             manifest_key=self._request.manifest_key,
-            lowerdir=self._request.workspace_root.as_posix(),
             manifest_version=self._request.manifest_version,
             root_hash=self._request.root_hash,
             manifest=SimpleNamespace(version=self._request.manifest_version),

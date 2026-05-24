@@ -1,4 +1,4 @@
-"""Unit tests for new_mount_api.py ctypes wrappers.
+"""Unit tests for mount_syscalls.py ctypes wrappers.
 
 Tests that require actual Linux kernel syscalls are xfail on macOS/non-Linux.
 Probe-errno tests use monkeypatching to simulate libc responses.
@@ -13,8 +13,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-import sandbox.overlay.new_mount_api as api
-from sandbox.overlay.new_mount_api import (
+import sandbox.overlay.mount_syscalls as api
+from sandbox.overlay.mount_syscalls import (
     AT_FDCWD,
     FSCONFIG_CMD_CREATE,
     FSCONFIG_SET_STRING,
@@ -24,7 +24,7 @@ from sandbox.overlay.new_mount_api import (
     SYS_fsmount,
     SYS_fsopen,
     SYS_move_mount,
-    MountAPIUnavailable,
+    MountSyscallsUnavailable,
 )
 
 _IS_LINUX = sys.platform == "linux"
@@ -252,7 +252,7 @@ def test_move_mount_propagates_errno(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_libc_or_raise_raises_when_no_libc(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(api, "_get_libc", lambda: None)
 
-    with pytest.raises(MountAPIUnavailable):
+    with pytest.raises(MountSyscallsUnavailable):
         api.fsopen(b"overlay")
 
 
@@ -261,6 +261,6 @@ def test_libc_or_raise_raises_when_no_libc(monkeypatch: pytest.MonkeyPatch) -> N
 # ---------------------------------------------------------------------------
 
 
-def test_mount_api_unavailable_is_oserror() -> None:
-    exc = MountAPIUnavailable("no libc")
+def test_mount_syscalls_unavailable_is_oserror() -> None:
+    exc = MountSyscallsUnavailable("no libc")
     assert isinstance(exc, OSError)

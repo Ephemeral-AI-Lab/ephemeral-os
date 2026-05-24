@@ -808,15 +808,16 @@ async def apply_layerstack_to_repo(
         {"request_id": request_id},
         timeout=240,
     )
-    lowerdir = str(snapshot.get("lowerdir") or "").strip()
+    raw_layer_paths = snapshot.get("layer_paths")
     lease_id = str(snapshot.get("lease_id") or "").strip()
-    if not lowerdir or not lease_id:
+    if not isinstance(raw_layer_paths, list) or not raw_layer_paths or not lease_id:
         raise RuntimeError(f"invalid layerstack snapshot response: {snapshot!r}")
+    layer_paths = tuple(str(path) for path in raw_layer_paths)
 
     try:
         await _exec(
             sandbox_id,
-            _materialize_layerstack_command(lowerdir, repo_dir),
+            _materialize_layerstack_command(layer_paths, repo_dir),
             timeout=_DEFAULT_SANDBOX_SETUP_TIMEOUT,
         )
     finally:
@@ -834,24 +835,84 @@ async def apply_layerstack_to_repo(
             )
 
 
-def _materialize_layerstack_command(lowerdir: str, repo_dir: str) -> str:
+def _materialize_layerstack_command(layer_paths: tuple[str, ...], repo_dir: str) -> str:
     script = f"""
 import errno
+import os
 import shutil
 import uuid
 from pathlib import Path
 
-src = Path({lowerdir!r})
+layer_paths = tuple(Path(path) for path in {layer_paths!r})
 dst = Path({repo_dir!r})
-if not src.is_dir():
-    raise RuntimeError(f"materialized layerstack view is missing: {{src}}")
-if not (src / ".git").exists():
-    raise RuntimeError(f"materialized layerstack view lacks .git: {{src}}")
+for layer in layer_paths:
+    if not layer.is_dir():
+        raise RuntimeError(f"layerstack layer is missing: {{layer}}")
+
+WHITEOUT_PREFIX = ".wh."
+OPAQUE_MARKER = ".wh..wh..opq"
+
+
+def remove_path(path):
+    if path.is_symlink() or path.is_file():
+        path.unlink(missing_ok=True)
+    elif path.is_dir():
+        shutil.rmtree(path)
+
+
+def clear_directory(path):
+    if not path.exists():
+        return
+    if not path.is_dir() or path.is_symlink():
+        remove_path(path)
+        path.mkdir(parents=True, exist_ok=True)
+        return
+    for child in list(path.iterdir()):
+        remove_path(child)
+
+
+def replace_symlink(path, target):
+    remove_path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    os.symlink(target, path)
+
+
+def apply_layer(layer, dest):
+    opaques = []
+    whiteouts = []
+    regulars = []
+    for entry in sorted(layer.rglob("*"), key=lambda item: item.as_posix()):
+        if entry.name == OPAQUE_MARKER:
+            opaques.append(entry)
+        elif entry.name.startswith(WHITEOUT_PREFIX):
+            whiteouts.append(entry)
+        else:
+            regulars.append(entry)
+    for marker in opaques:
+        clear_directory(dest / marker.parent.relative_to(layer))
+    for whiteout in whiteouts:
+        rel = whiteout.relative_to(layer)
+        remove_path(dest / rel.parent / whiteout.name[len(WHITEOUT_PREFIX):])
+    for entry in regulars:
+        target = dest / entry.relative_to(layer)
+        if entry.is_symlink():
+            replace_symlink(target, os.readlink(entry))
+        elif entry.is_dir():
+            target.mkdir(parents=True, exist_ok=True)
+        elif entry.is_file():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            remove_path(target)
+            shutil.copy2(entry, target)
+
 
 parent = dst.parent
 tmp = parent / f".{{dst.name}}.layerstack-materialized-{{uuid.uuid4().hex}}"
 backup = parent / f".{{dst.name}}.pre-layerstack-{{uuid.uuid4().hex}}"
-shutil.copytree(src, tmp, symlinks=True)
+tmp.mkdir(parents=True)
+for layer in reversed(layer_paths):
+    apply_layer(layer, tmp)
+if not (tmp / ".git").exists():
+    raise RuntimeError("materialized layerstack view lacks .git")
 
 try:
     if dst.exists():
@@ -881,7 +942,7 @@ except OSError as exc:
     if backup.exists():
         shutil.rmtree(backup, ignore_errors=True)
 
-print(f"MATERIALIZED_LAYERSTACK {{src}} -> {{dst}}")
+print(f"MATERIALIZED_LAYERSTACK {{len(layer_paths)}} layers -> {{dst}}")
 """
     # Trailing newline after ``PY`` is required because callers (docker
     # provider's ``cd … && (cmd)`` subshell wrap) append a closing ``)``

@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from ..._harness.lease_resource_probe import (
-    NEW_MOUNT_API,
+    MOUNT_SYSCALLS,
     ShellTelemetry,
     assert_read_cpu_slope_by_depth,
     build_layer_stack,
@@ -49,8 +49,8 @@ async def _run_bound_c(tmp_path: Path) -> None:
             rows_by_depth[depth] = await run_shell_batch(
                 stack=stack,
                 workspace_root=case_root / "workspace-root",
-                scratch_root=case_root / "scratch-new-api",
-                requested_path=NEW_MOUNT_API,
+                writable_root=case_root / "overlay-writable-root",
+                requested_path=MOUNT_SYSCALLS,
                 commands=[_COMMAND] * _READ_REPEATS,
                 request_prefix=f"read-M{depth}",
             )

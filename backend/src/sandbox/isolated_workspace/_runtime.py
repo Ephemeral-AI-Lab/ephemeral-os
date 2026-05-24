@@ -196,50 +196,6 @@ class _LinuxRuntime:
         path = CGROUP_ROOT / f"{HANDLE_PREFIX}{handle.handle_id}"
         path.mkdir(parents=True, exist_ok=True)
         return path
-    def freeze(self, handle: IsolatedWorkspaceHandle, *, freeze: bool) -> None:
-        if handle.cgroup_path is None:
-            return
-        procs_file = handle.cgroup_path / "cgroup.procs"
-        if freeze and procs_file.exists():
-            try:
-                pids = [
-                    int(line)
-                    for line in procs_file.read_text().splitlines()
-                    if line.strip().isdigit()
-                ]
-            except OSError:
-                pids = []
-            root_procs = CGROUP_ROOT / "cgroup.procs"
-            for pid in pids:
-                with contextlib.suppress(OSError):
-                    root_procs.write_text(f"{pid}\n")
-        freeze_file = handle.cgroup_path / "cgroup.freeze"
-        expected = "1" if freeze else "0"
-        if freeze_file.exists():
-            try:
-                freeze_file.write_text(f"{expected}\n")
-                actual = freeze_file.read_text().strip()
-                if actual == expected:
-                    return
-            except OSError:
-                pass
-            handle.freezer_degraded = True
-        else:
-            handle.freezer_degraded = True
-        if not procs_file.exists():
-            return
-        sig = signal.SIGSTOP if freeze else signal.SIGCONT
-        try:
-            pids = [
-                int(line)
-                for line in procs_file.read_text().splitlines()
-                if line.strip().isdigit()
-            ]
-        except OSError:
-            pids = []
-        for pid in pids:
-            with contextlib.suppress(ProcessLookupError, PermissionError):
-                os.kill(pid, sig)
     def kill_holder(self, root_pid: int, *, grace_s: float) -> None:
         with contextlib.suppress(ProcessLookupError, PermissionError):
             os.kill(root_pid, signal.SIGTERM)

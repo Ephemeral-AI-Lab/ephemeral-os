@@ -98,7 +98,7 @@ def test_create_calls_containers_create_with_default_caps(
     monkeypatch.delenv("EOS_DOCKER_PRIVILEGED", raising=False)
     monkeypatch.delenv("EOS_DOCKER_NO_PRIVILEGE", raising=False)
     monkeypatch.delenv("EOS_DOCKER_DAEMON_TCP", raising=False)
-    monkeypatch.delenv("EOS_DOCKER_DISABLE_SCRATCH_TMPFS", raising=False)
+    monkeypatch.delenv("EOS_DOCKER_DISABLE_OVERLAY_WRITABLE_TMPFS", raising=False)
 
     result = adapter.create(name="sb1", image="sweevo:abc", labels={"project_dir": "/repo"})
 
@@ -192,14 +192,14 @@ def test_create_no_privilege_escape_hatch(
     }
 
 
-def test_create_can_disable_scratch_tmpfs(
+def test_create_can_disable_overlay_writable_tmpfs(
     adapter: DockerProviderAdapter,
     fake_client: MagicMock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.delenv("EOS_DOCKER_PRIVILEGED", raising=False)
     monkeypatch.delenv("EOS_DOCKER_NO_PRIVILEGE", raising=False)
-    monkeypatch.setenv("EOS_DOCKER_DISABLE_SCRATCH_TMPFS", "1")
+    monkeypatch.setenv("EOS_DOCKER_DISABLE_OVERLAY_WRITABLE_TMPFS", "1")
 
     adapter.create(name="sb1", image="x:y")
 

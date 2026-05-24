@@ -96,7 +96,6 @@ class WorkspaceSnapshotLease(Protocol):
     lease_id: str
     manifest_version: int
     manifest: SnapshotManifest
-    lowerdir: str | None
     layer_paths: tuple[str, ...] | None
     timings: Mapping[str, float]
 

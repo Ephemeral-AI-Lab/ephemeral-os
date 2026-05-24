@@ -1,4 +1,4 @@
-"""Linux new mount API ctypes wrappers for overlayfs.
+"""Linux mount syscall ctypes wrappers for overlayfs.
 
 Syscall numbers (x86_64 and aarch64 share the same generic ABI values):
   Source: arch/x86/entry/syscalls/syscall_64.tbl (kernel v5.2+)
@@ -65,8 +65,8 @@ OVL_MAX_STACK: int = 500
 # ---------------------------------------------------------------------------
 
 
-class MountAPIUnavailable(OSError):
-    """Raised when the new mount API syscalls are not accessible."""
+class MountSyscallsUnavailable(OSError):
+    """Raised when required mount syscalls are not accessible."""
 
 
 # ---------------------------------------------------------------------------
@@ -100,12 +100,12 @@ def probe_supported() -> bool:
     All three return False with a distinct structured log line.
     """
     if sys.platform != "linux":
-        logger.debug("overlay.new_mount_api.unavailable platform=%s", sys.platform)
+        logger.debug("overlay.mount_syscalls.unavailable platform=%s", sys.platform)
         return False
 
     libc = _get_libc()
     if libc is None:
-        logger.warning("overlay.new_mount_api.unavailable reason=libc_not_found")
+        logger.warning("overlay.mount_syscalls.unavailable reason=libc_not_found")
         return False
 
     # Try fsopen("overlay", 0). On success we get a fd >= 0 that we close.
@@ -122,19 +122,19 @@ def probe_supported() -> bool:
     err = ctypes.get_errno()
     if err == errno.ENOSYS:
         logger.warning(
-            "overlay.new_mount_api.unavailable errno=ENOSYS reason=kernel_too_old"
+            "overlay.mount_syscalls.unavailable errno=ENOSYS reason=kernel_too_old"
         )
     elif err == errno.EPERM:
         logger.warning(
-            "overlay.new_mount_api.unavailable errno=EPERM reason=capability_or_seccomp_denial"
+            "overlay.mount_syscalls.unavailable errno=EPERM reason=capability_or_seccomp_denial"
         )
     elif err == errno.EBADF:
         logger.warning(
-            "overlay.new_mount_api.unavailable errno=EBADF reason=caller_context_misconfig"
+            "overlay.mount_syscalls.unavailable errno=EBADF reason=caller_context_misconfig"
         )
     else:
         logger.warning(
-            "overlay.new_mount_api.unavailable errno=%d reason=unknown", err
+            "overlay.mount_syscalls.unavailable errno=%d reason=unknown", err
         )
     return False
 
@@ -147,7 +147,7 @@ def probe_supported() -> bool:
 def _libc_or_raise() -> ctypes.CDLL:
     libc = _get_libc()
     if libc is None:
-        raise MountAPIUnavailable("libc not found") from None
+        raise MountSyscallsUnavailable("libc not found") from None
     return libc
 
 
@@ -215,7 +215,7 @@ __all__ = [
     "MOVE_MOUNT_F_EMPTY_PATH",
     "AT_FDCWD",
     "OVL_MAX_STACK",
-    "MountAPIUnavailable",
+    "MountSyscallsUnavailable",
     "probe_supported",
     "fsopen",
     "fsconfig_string",

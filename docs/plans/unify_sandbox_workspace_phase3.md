@@ -95,7 +95,7 @@ The daemon-side JSONL mirror (`EOS_ISOLATED_WORKSPACE_AUDIT_PATH`) continues to 
 
 **3.7.** `tests/mock/sandbox/security/test_namespace_denylist_protects_host_etc.py` (NEW — Phase 2 §7.5 / Architect F.5 SECURITY question):
 - Enter iws (root-in-namespace can otherwise write `/etc/hosts`).
-- Call `sandbox.api.write_file` with `path="/etc/hosts"` → assert refused with `forbidden_host_path` error BEFORE the kernel call (namespace-child denylist check).
+- Call `sandbox.api.write_file` with `path="/etc/hosts"` → assert refused with `forbidden_host_path` error BEFORE the kernel call (namespace-entrypoint denylist check).
 - Repeat for `/var/foo`, `/proc/sysrq-trigger`, `/sys/kernel/printk`, `/boot/grub.cfg` → assert all refused.
 - Positive control: write to `/tmp/scratch_iws` succeeds (overlay upperdir capture; not on the denylist).
 
@@ -272,9 +272,9 @@ def test_read_refuses_symlink_to_host(workspace_session):
 
 **6B.2.** `tests/sandbox/unit/test_overlay_lifecycle.py` — `create` failure rollback (mount fails → no lease leaked); `capture_changes` empty-upperdir returns empty sequence; `destroy` idempotency.
 
-**6B.3.** `tests/sandbox/unit/test_overlay_namespace.py` — `run_in_namespace` host-side error propagation; child-crash handling (SIGKILL'd child → host raises specific error, doesn't deadlock).
+**6B.3.** `tests/sandbox/unit/test_overlay_namespace_runner.py` — `run_in_namespace` host-side error propagation; child-crash handling (SIGKILL'd child → host raises specific error, doesn't deadlock).
 
-**6B.4.** `tests/sandbox/unit/test_overlay_namespace_child.py` — Two-tier dispatcher: VERB_TABLE lookup for `read/write/edit/grep/glob`; `if verb == "shell"` branch for shell; unknown verb raises.
+**6B.4.** `tests/sandbox/unit/test_overlay_namespace_entrypoint.py` — Two-tier dispatcher: VERB_TABLE lookup for `read/write/edit/grep/glob`; `if verb == "shell"` branch for shell; unknown verb raises.
 
 **6B.5.** `tests/sandbox/unit/test_tool_primitives_file_ops.py` — `open_no_follow` per-component walk: each segment opened with `O_DIRECTORY|O_NOFOLLOW|dir_fd`; ELOOP raised on intermediate symlink; final open with caller-supplied flags.
 
@@ -296,10 +296,10 @@ def test_read_refuses_symlink_to_host(workspace_session):
 
 ## Step 6C — Deployment pre-flight CI
 
-**Planner F.10 / Critic must-fix #8 — Phase 1 §4.5 makes new mount API a hard precondition. Without a CI guard, services refuse to boot in untested environments.**
+**Planner F.10 / Critic must-fix #8 — Phase 1 §4.5 makes mount syscalls a hard precondition. Without a CI guard, services refuse to boot in untested environments.**
 
 **6C.1.** `scripts/verify_overlay_preconditions.py` (NEW — landed in Phase 1 §4.5.1; tested here):
-- Probes kernel for `fsopen`/`fsconfig`/`fsmount` availability (new mount API).
+- Probes kernel for `fsopen`/`fsconfig`/`fsmount` availability (mount syscalls).
 - Probes for private user namespace support.
 - Exits non-zero with a diagnostic message if any precondition is missing.
 
@@ -310,7 +310,7 @@ def test_read_refuses_symlink_to_host(workspace_session):
 **6C.3.** `tests/sandbox/unit/test_verify_overlay_preconditions_script.py`:
 - Mock kernel probes; assert script exits 0 when both present; exits 1 with diagnostic when either missing.
 
-**6C.4.** Delete the mount-precondition tombstone flag. Tests must assert daemon startup fails closed when the new mount API is unavailable; rollback is a normal code revert, not a runtime bypass.
+**6C.4.** Delete the mount-precondition tombstone flag. Tests must assert daemon startup fails closed when the mount syscalls is unavailable; rollback is a normal code revert, not a runtime bypass.
 
 → **Verify:** CI step passes on prod-shaped runners; fails (correctly) when run on an artificially-degraded kernel.
 
@@ -393,7 +393,7 @@ def test_read_refuses_symlink_to_host(workspace_session):
 - Unified tool execution: all 6 verbs (read/write/edit/grep/glob/shell) flow through a kernel-overlay path in both modes.
   - Ephemeral mode mounts a fresh overlay per tool call; OCC-merges the upperdir.
   - Isolated mode mounts one overlay at enter; upperdir discarded at exit.
-- Dropped copy_backed execution strategy entirely; new mount API + private mount namespaces are now hard preconditions (Docker-only).
+- Dropped copy_backed execution strategy entirely; mount syscalls + private mount namespaces are now hard preconditions (Docker-only).
 - Deleted in-workspace / out-of-workspace branching from daemon handlers; overlay's natural pass-through handles non-workspace paths.
 - Added Intent enum (READ_ONLY, WRITE_ALLOWED, LIFECYCLE) as static per-verb metadata.
 - Preserved OCC disjoint-batch coalescing for single-path typed writes via source="api_write" tag.
@@ -416,7 +416,7 @@ def test_read_refuses_symlink_to_host(workspace_session):
 - ✅ `pipeline_lifecycle/` tier covers ephemeral per-call upperdir GC, isolated per-session persistence, OverlayHandle idempotency, O(1) lowerdir disk, AND isolated upperdir scaling-with-mutations (Planner F.16).
 - ✅ `concurrency/` tier covers OCC source-tag coalescing on all 4 helper sites (api_write batches, overlay_capture doesn't), `_wire_handle` ordering invariant, concurrent disjoint-path writes, same-path conflict resolution, destroy-under-asyncio-interleaving (D.2), AND a 10-step interleaved E2E sequence. Background tool lifetime tests are owned by Phase 2.5 §11.
 - ✅ `behavior_upgrade/` tier (NEW) covers the iws verb upgrade: typed-shape `ReadResult`/`WriteResult`/`EditResult` (real search/replace)/`GrepResult` (modes + options honored)/`GlobResult`/shell `changed_paths`. These tests do NOT preserve byte-equivalence with today's iws `ops_handlers.py` — they assert the upgraded behavior.
-- ✅ `unit/` tier (NEW) covers per-module surface: `OverlayHandle`, `lifecycle`, `namespace`, `namespace_child`, `tool_primitives.file_ops` (per-component walk), `overlay_change_conversion` (all 4 helpers), pipeline lease accounting, lifecycle error enumeration (`already_open`, `not_open`, `quota_exceeded`, `host_ram_pressure`), `resolve_pipeline`.
+- ✅ `unit/` tier (NEW) covers per-module surface: `OverlayHandle`, `lifecycle`, `namespace`, `namespace_entrypoint`, `tool_primitives.file_ops` (per-component walk), `overlay_change_conversion` (all 4 helpers), pipeline lease accounting, lifecycle error enumeration (`already_open`, `not_open`, `quota_exceeded`, `host_ram_pressure`), `resolve_pipeline`.
 - ✅ `observability/` tier (NEW) asserts `timings["mount_ms"]` populated, mid-session upperdir gauge advances monotonically, audit-event payload shapes are stable.
 - ✅ Deployment pre-flight CI step `verify-overlay-preconditions` runs `scripts/verify_overlay_preconditions.py` and fails the build on kernel-degraded runners.
 - ✅ Tier 8 soak re-baselined to `baseline_post_unify.json`; ≤10% median drift assertion enforced; perf escalation threshold (read p50 > 200ms or p99 > 500ms) auto-files follow-up issue.

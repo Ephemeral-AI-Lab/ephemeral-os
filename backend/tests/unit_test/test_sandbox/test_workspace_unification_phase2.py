@@ -15,8 +15,9 @@ from sandbox.occ.changeset import ChangesetResult, FileResult, FileStatus
 from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
 from sandbox.overlay.handle import OverlayHandle
 from sandbox.overlay.lifecycle import destroy
-from sandbox.overlay.namespace_child import execute_tool_payload
+from sandbox.overlay.namespace_entrypoint import execute_tool_payload
 from sandbox.overlay.path_change import OverlayPathChange, content_hash
+import sandbox.overlay.writable_dirs as writable_dirs_mod
 from sandbox.isolated_workspace._types import IsolatedWorkspaceHandle
 from sandbox.isolated_workspace.pipeline import IsolatedPipeline
 
@@ -40,7 +41,7 @@ def test_verb_table_excludes_shell() -> None:
     ]
 
 
-def test_namespace_child_uses_verb_table_for_uniform_verbs(tmp_path: Path) -> None:
+def test_namespace_entrypoint_uses_verb_table_for_uniform_verbs(tmp_path: Path) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     (workspace / "hello.txt").write_text("hi\n", encoding="utf-8")
@@ -65,7 +66,7 @@ def test_namespace_child_uses_verb_table_for_uniform_verbs(tmp_path: Path) -> No
     assert result["content"] == "hi\n"
 
 
-def test_namespace_child_blocks_write_to_host_denylist(tmp_path: Path) -> None:
+def test_namespace_entrypoint_blocks_write_to_host_denylist(tmp_path: Path) -> None:
     req = ToolCallRequest(
         invocation_id="r1",
         agent_id="agent",
@@ -236,6 +237,9 @@ def test_ephemeral_run_tool_call_uses_api_write_for_single_path(
         "sandbox.ephemeral_workspace.pipeline.overlay_lifecycle.capture_changes",
         _fake_capture,
     )
+    writable_root = tmp_path / "overlay-writable-root"
+    writable_root.mkdir()
+    monkeypatch.setattr(writable_dirs_mod, "OVERLAY_WRITABLE_ROOT", writable_root)
     pipeline = EphemeralPipeline(
         occ_client=_Occ(),
         workspace_ref=tmp_path.as_posix(),

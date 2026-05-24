@@ -1,7 +1,7 @@
 """Kernel-boundary overlay mount mechanics.
 
 Parameter names use overlayfs vocabulary (lowerdir/upperdir/workdir) because
-this is the file that calls the kernel mount API or mount(8) directly.
+this is the file that calls the Linux mount syscalls directly.
 
 Ordering invariant (from Step 2a): first fsconfig(SET_STRING, "lowerdir+", path)
 call = top priority. manifest.layers is newest-first, so iterate in natural order.
@@ -19,7 +19,7 @@ from sandbox._shared.env_policy import (
     DEFAULT_COMMAND_EXEC_POLICY,
     CommandExecPolicy,
 )
-from sandbox.overlay.new_mount_api import (
+from sandbox.overlay.mount_syscalls import (
     fsconfig_create,
     fsconfig_string,
     fsmount,
@@ -49,7 +49,7 @@ def mount_overlay(
     upperdir: Path,
     workdir: Path,
 ) -> None:
-    """Mount an overlay filesystem using the new mount API (fsopen/fsconfig/fsmount).
+    """Mount an overlay filesystem using fsopen/fsconfig/fsmount.
 
     layer_paths must be ordered newest-first (first element = highest priority lower).
     """
@@ -143,9 +143,11 @@ def validate_mount_inputs(
 
         for path in (upperdir, workdir):
             if path.is_symlink():
-                raise ValueError(f"mount scratch dir must not be a symlink: {path}")
+                raise ValueError(f"overlay upper/work dir must not be a symlink: {path}")
             if path.exists() and not path.is_dir():
-                raise ValueError(f"mount scratch path is not a directory: {path}")
+                raise ValueError(
+                    f"overlay upper/work path is not a directory: {path}"
+                )
             path.mkdir(parents=True, exist_ok=True)
             fds.append(_open_dir_no_follow(path))
 

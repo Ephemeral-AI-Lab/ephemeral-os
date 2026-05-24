@@ -1,4 +1,4 @@
-"""Bound A: lower-side disk is O(1) per lease under the new mount API."""
+"""Bound A: lower-side disk is O(1) per lease under mount-syscall overlays."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ from pathlib import Path
 import pytest
 
 from ..._harness.lease_resource_probe import (
-    NEW_MOUNT_API,
-    assert_new_api_o1_bounds,
+    MOUNT_SYSCALLS,
+    assert_mount_syscalls_o1_bounds,
     build_layer_stack,
     has_cap_sys_admin,
     run_shell_batch,
@@ -45,9 +45,9 @@ async def _run_bound_a(tmp_path: Path) -> None:
         new_api = await run_shell_batch(
             stack=stack,
             workspace_root=case_root / "workspace-root",
-            scratch_root=case_root / "scratch-new-api",
-            requested_path=NEW_MOUNT_API,
+            writable_root=case_root / "overlay-writable-root",
+            requested_path=MOUNT_SYSCALLS,
             commands=commands,
-            request_prefix=f"new-api-N{n}",
+            request_prefix=f"mount-syscalls-N{n}",
         )
-        assert_new_api_o1_bounds(new_api)
+        assert_mount_syscalls_o1_bounds(new_api)

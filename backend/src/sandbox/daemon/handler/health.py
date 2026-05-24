@@ -7,7 +7,7 @@ import time
 from collections.abc import Callable
 from dataclasses import fields
 
-from sandbox.overlay.namespace import detect_private_mount_namespace
+from sandbox.overlay.namespace_runner import detect_private_mount_namespace
 from sandbox.layer_stack.manifest import (
     manifest_path,
     read_manifest,

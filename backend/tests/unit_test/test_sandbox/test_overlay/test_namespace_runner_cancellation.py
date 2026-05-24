@@ -10,8 +10,8 @@ from typing import Callable
 import pytest
 
 from sandbox._shared.models import Intent, ToolCallRequest
+from sandbox.overlay import namespace_runner as namespace_mod
 from sandbox.overlay.handle import OverlayHandle
-from sandbox.overlay import namespace as namespace_mod
 
 
 pytestmark = pytest.mark.asyncio
@@ -42,7 +42,7 @@ async def test_run_in_namespace_signals_shell_cancellation(
             saw_cancel.set()
         return -15
 
-    monkeypatch.setattr(namespace_mod, "_run_namespace_child", _fake_child)
+    monkeypatch.setattr(namespace_mod, "_run_namespace_entrypoint", _fake_child)
     handle = OverlayHandle(
         workspace_root="/testbed",
         layer_paths=((tmp_path / "lower").as_posix(),),

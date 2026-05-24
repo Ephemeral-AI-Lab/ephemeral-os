@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -10,6 +9,7 @@ import pytest
 
 import sandbox.ephemeral_workspace._manager as overlay_manager
 import sandbox.ephemeral_workspace.pipeline as overlay_mod
+import sandbox.overlay.writable_dirs as writable_dirs_mod
 from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
 from sandbox.layer_stack.manifest import LayerRef, Manifest
 from sandbox.occ.changeset import ChangesetResult
@@ -44,7 +44,6 @@ class _LayerStack:
             manifest=self.manifest,
             manifest_version=self.manifest.version,
             root_hash=f"root-{self.manifest.version}",
-            lowerdir=None,
             layer_paths=tuple(
                 (self.storage_root / "layers" / layer.path).as_posix()
                 for layer in self.manifest.layers
@@ -92,6 +91,17 @@ class _PublishingOccClient:
             "layer_stack.auto_squash.depth_before": 2.0,
             "layer_stack.auto_squash.depth_after": 1.0,
         }
+
+
+@pytest.fixture(autouse=True)
+def overlay_writable_root_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Path:
+    root = tmp_path / "overlay-writable-root"
+    root.mkdir()
+    monkeypatch.setattr(writable_dirs_mod, "OVERLAY_WRITABLE_ROOT", root)
+    return root
 
 
 @pytest.mark.asyncio
@@ -142,12 +152,10 @@ async def test_start_mounts_active_manifest_and_stop_unmounts(
     assert layer_stack.released == ["lease-1-1"]
 
 
-def test_overlay_runtime_uses_command_exec_scratch_root(
+def test_overlay_runtime_uses_writable_root(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    overlay_writable_root_path: Path,
 ) -> None:
-    scratch_root = tmp_path / "scratch"
-    monkeypatch.setenv("EPHEMERALOS_COMMAND_EXEC_SCRATCH_ROOT", scratch_root.as_posix())
     manifest = Manifest(version=1, layers=(LayerRef(layer_id="L1", path="L1"),))
     layer_stack = _LayerStack(tmp_path / "stack", manifest)
 
@@ -158,17 +166,15 @@ def test_overlay_runtime_uses_command_exec_scratch_root(
         workspace_root=(tmp_path / "testbed").as_posix(),
     )
 
-    assert overlay.scratch_root == scratch_root
-    assert os.fspath(overlay.runtime_dir).startswith(os.fspath(scratch_root))
-    assert os.fspath(overlay.upperdir).startswith(os.fspath(scratch_root))
+    assert overlay.writable_root == overlay_writable_root_path
+    assert overlay.runtime_dir.is_relative_to(overlay_writable_root_path)
+    assert overlay.upperdir.is_relative_to(overlay_writable_root_path)
 
 
 def test_operation_overlay_uses_shared_snapshot_layers_and_private_upperdir(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    overlay_writable_root_path: Path,
 ) -> None:
-    scratch_root = tmp_path / "scratch"
-    monkeypatch.setenv("EPHEMERALOS_COMMAND_EXEC_SCRATCH_ROOT", scratch_root.as_posix())
     manifest = Manifest(version=1, layers=(LayerRef(layer_id="L1", path="L1"),))
     layer_stack = _LayerStack(tmp_path / "stack", manifest)
     (layer_stack.storage_root / "layers" / "L1").mkdir(parents=True)
@@ -192,8 +198,8 @@ def test_operation_overlay_uses_shared_snapshot_layers_and_private_upperdir(
     assert first.layer_paths == second.layer_paths
     assert first.upperdir != second.upperdir
     assert first.workdir != second.workdir
-    assert Path(first.upperdir).is_relative_to(scratch_root)
-    assert Path(second.upperdir).is_relative_to(scratch_root)
+    assert Path(first.upperdir).is_relative_to(overlay_writable_root_path)
+    assert Path(second.upperdir).is_relative_to(overlay_writable_root_path)
 
     first.release()
     second.release()

@@ -13,8 +13,8 @@ from urllib.parse import unquote, urlparse
 from uuid import uuid4
 
 from sandbox.ephemeral_workspace.shell_contract import CommandExecRequest
-from sandbox.overlay.capability import new_mount_api_supported
-from sandbox.overlay.namespace import detect_private_mount_namespace
+from sandbox.overlay.capability import mount_syscalls_supported
+from sandbox.overlay.namespace_runner import detect_private_mount_namespace
 
 
 async def apply_workspace_edit(
@@ -175,7 +175,7 @@ async def _run_apply_child(
 
 
 def _overlay_namespace_available() -> bool:
-    return new_mount_api_supported() and detect_private_mount_namespace()
+    return mount_syscalls_supported() and detect_private_mount_namespace()
 
 
 def _format_apply_result(

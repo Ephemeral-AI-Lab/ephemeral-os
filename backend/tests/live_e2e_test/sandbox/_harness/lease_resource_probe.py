@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import asyncio
 import importlib
-import os
 import sys
 import statistics
 from collections.abc import Iterator, Sequence
@@ -21,14 +20,15 @@ from typing import Literal, Protocol
 
 from sandbox._shared.models import Intent, ToolCallRequest
 from sandbox.occ.layer_stack_client import LayerStackClient
-from sandbox.overlay.capability import new_mount_api_supported
+from sandbox.overlay.capability import mount_syscalls_supported
 from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
 from sandbox.occ.changeset import ChangesetResult
-from sandbox.overlay.namespace import detect_private_mount_namespace
+from sandbox.overlay.namespace_runner import detect_private_mount_namespace
+import sandbox.overlay.writable_dirs as writable_dirs_mod
 
-OverlayPath = Literal["new_mount_api"]
+OverlayPath = Literal["mount_syscalls"]
 
-NEW_MOUNT_API: OverlayPath = "new_mount_api"
+MOUNT_SYSCALLS: OverlayPath = "mount_syscalls"
 
 LOWER_SIDE_LIMIT_BYTES = 4 * 1024
 UPPERDIR_NO_WRITE_LIMIT_BYTES = 64 * 1024
@@ -94,10 +94,10 @@ class ShellTelemetry:
 
 
 def has_cap_sys_admin() -> bool:
-    """Return whether the native O(1) harness can exercise the new mount path."""
+    """Return whether the native O(1) harness can exercise mount syscalls."""
     if sys.platform != "linux":
         return False
-    return detect_private_mount_namespace() and new_mount_api_supported()
+    return detect_private_mount_namespace() and mount_syscalls_supported()
 
 
 def build_layer_stack(
@@ -146,7 +146,7 @@ def as_requested_path(
     return replace(
         telemetry,
         requested_path=requested_path,
-        invocation_id=request_id or telemetry.request_id,
+        request_id=request_id or telemetry.request_id,
     )
 
 
@@ -154,7 +154,7 @@ async def run_shell_batch(
     *,
     stack: LayerStackLike,
     workspace_root: Path,
-    scratch_root: Path,
+    writable_root: Path,
     requested_path: OverlayPath,
     commands: Sequence[str],
     request_prefix: str,
@@ -162,7 +162,7 @@ async def run_shell_batch(
 ) -> list[ShellTelemetry]:
     """Run commands through command-exec using the namespace-only overlay path."""
     workspace_root.mkdir(parents=True, exist_ok=True)
-    scratch_root.mkdir(parents=True, exist_ok=True)
+    writable_root.mkdir(parents=True, exist_ok=True)
     pipeline = EphemeralPipeline(
         occ_client=_NoopOccClient(),
         workspace_ref=str(stack.storage_root),
@@ -198,7 +198,7 @@ async def run_shell_batch(
                 f"{req.invocation_id} exited {exit_code}: {stderr}"
             )
         return ShellTelemetry(
-            invocation_id=req.invocation_id,
+            request_id=req.invocation_id,
             requested_path=requested_path,
             mount_mode=actual_mode,
             timings=dict(result.get("timings") or {}),
@@ -206,12 +206,12 @@ async def run_shell_batch(
             stderr=stderr,
         )
 
-    with _command_exec_scratch_root(scratch_root):
+    with _overlay_writable_root(writable_root):
         return list(await asyncio.gather(*(_run_one(i, cmd) for i, cmd in enumerate(commands))))
 
 
-def assert_new_api_o1_bounds(rows: Sequence[ShellTelemetry]) -> None:
-    """Assert new API lower-side O(1) and no unexpected upper writes.
+def assert_mount_syscalls_o1_bounds(rows: Sequence[ShellTelemetry]) -> None:
+    """Assert mount-syscall lower-side O(1) and no unexpected upper writes.
 
     Collect every offending lease before raising so adversarial self-tests can
     prove multiple regressions are named in one failure message.
@@ -322,13 +322,11 @@ def _assert_slope(
 
 
 @contextmanager
-def _command_exec_scratch_root(path: Path) -> Iterator[None]:
-    previous = os.environ.get("EPHEMERALOS_COMMAND_EXEC_SCRATCH_ROOT")
-    os.environ["EPHEMERALOS_COMMAND_EXEC_SCRATCH_ROOT"] = path.as_posix()
+def _overlay_writable_root(path: Path) -> Iterator[None]:
+    previous = writable_dirs_mod.OVERLAY_WRITABLE_ROOT
+    path.mkdir(parents=True, exist_ok=True)
+    writable_dirs_mod.OVERLAY_WRITABLE_ROOT = path
     try:
         yield
     finally:
-        if previous is None:
-            os.environ.pop("EPHEMERALOS_COMMAND_EXEC_SCRATCH_ROOT", None)
-        else:
-            os.environ["EPHEMERALOS_COMMAND_EXEC_SCRATCH_ROOT"] = previous
+        writable_dirs_mod.OVERLAY_WRITABLE_ROOT = previous

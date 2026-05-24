@@ -7,7 +7,7 @@
 **Safety net:**
 - **Ephemeral verbs:** Phase 1's parity corpus replays against the new pipeline; byte-equivalent against today's `daemon/handler/{read,write,edit,grep,glob,shell}.py` bodies (modulo documented OCC source-tag note).
 - **Isolated verbs:** NOT covered by parity corpus. `sandbox/isolated_workspace/ops_handlers.py` is 98 lines of shell-out wrappers (`/bin/cat`, `/usr/bin/grep`, `in_ns_write.py`) returning `subprocess.run` shape — there is no byte-equivalent "before" output to compare against. iws verb migration is a **functional upgrade** to the typed-verb spec (`tool_primitives.<verb>.compute`), validated by Phase 3's `behavior_upgrade/` test tier (NOT parity).
-**Atomic commit plan:** ≤8 logical commits. Suggested split: (1) `models.py` types + `WorkspacePipeline` protocol; (2) `EphemeralPipeline.run_tool_call` + per-handle lock; (3) `IsolatedPipeline` skeleton + `ops_handlers.py` deletion; (4) `run_in_namespace` + `namespace_child` two-tier dispatch; (5) OCC source-tag threading (4 helpers); (6) thin daemon handlers + `dispatch.py`; (7) `sandbox/isolated_workspace/lifecycle/` package + `sandbox/audit/lifecycle.py` + agent tools; (8) plugin-block gate + host-path denylist + RPC table deletions. Each commit runs full mock suite + parity corpus on parent SHA; rollback is `git revert <sha>` per commit.
+**Atomic commit plan:** ≤8 logical commits. Suggested split: (1) `models.py` types + `WorkspacePipeline` protocol; (2) `EphemeralPipeline.run_tool_call` + per-handle lock; (3) `IsolatedPipeline` skeleton + `ops_handlers.py` deletion; (4) `run_in_namespace` + `namespace_entrypoint` two-tier dispatch; (5) OCC source-tag threading (4 helpers); (6) thin daemon handlers + `dispatch.py`; (7) `sandbox/isolated_workspace/lifecycle/` package + `sandbox/audit/lifecycle.py` + agent tools; (8) plugin-block gate + host-path denylist + RPC table deletions. Each commit runs full mock suite + parity corpus on parent SHA; rollback is `git revert <sha>` per commit.
 
 See [`unify_sandbox_workspace.md`](unify_sandbox_workspace.md) for the overview and ADR.
 
@@ -316,7 +316,7 @@ class IsolatedPipeline:
 
 ## Step 5 — `overlay.run_in_namespace` + two-tier verb dispatch
 
-**5.1.** Add `sandbox/overlay/namespace.py::run_in_namespace`:
+**5.1.** Add `sandbox/overlay/namespace_runner.py::run_in_namespace`:
 
 ```python
 async def run_in_namespace(handle: OverlayHandle, req: ToolCallRequest) -> ToolCallResult:
@@ -325,7 +325,7 @@ async def run_in_namespace(handle: OverlayHandle, req: ToolCallRequest) -> ToolC
     ...
 ```
 
-**5.2.** Extend `sandbox/overlay/namespace_child.py` with two-tier verb dispatcher:
+**5.2.** Extend `sandbox/overlay/namespace_entrypoint.py` with two-tier verb dispatcher:
 
 ```python
 def main():
@@ -482,7 +482,7 @@ Background tool lifecycle (engine wraps `pipeline.run_tool_call` as asyncio.Task
 
 **7.5.** Host-path denylist (Critic must-fix #9 / Architect F.5 SECURITY question). Today's `_write_out_of_workspace` runs as the unprivileged daemon user → kernel returns EACCES for `/etc/hosts` writes. **After unification, the namespace child runs as root** (per existing iws design) → root-in-namespace CAN write `/etc/hosts` unless we reject the call first.
 
-Inside `sandbox/overlay/namespace_child.py`, add a pre-verb-dispatch denylist check (only for WRITE-allowed verbs; reads pass through):
+Inside `sandbox/overlay/namespace_entrypoint.py`, add a pre-verb-dispatch denylist check (only for WRITE-allowed verbs; reads pass through):
 ```python
 _HOST_DENYLIST_PREFIXES = ("/etc/", "/var/", "/proc/", "/sys/", "/boot/")
 
@@ -745,7 +745,7 @@ async def _check_plugin_block(args: dict, op_name: str) -> dict | None:
 - ✅ `IsolatedPipeline` has `enter`/`run_tool_call`/`exit`/`get_handle` methods; overlay lifecycle spans enter→exit; `run_tool_call` body does NOT branch on `req.background`. There is no pipeline-owned background registry — Phase 2.5 owns background task tracking at the engine layer.
 - ✅ `manager.py` (1624 lines verified) decomposed into 7 modules: `pipeline.py`, `_types.py`, `_lifecycle.py`, `_gc.py`, `_ttl.py`, `_quota.py`, `_runtime.py`. None exceeds 400 lines (`wc -l` check).
 - ✅ `overlay.run_in_namespace` is the single execution path for both modes.
-- ✅ `namespace_child.py` two-tier dispatcher: VERB_TABLE for read/write/edit/grep/glob; `shell.run` for shell; pre-dispatch host-path denylist for write-allowed verbs (`/etc/`, `/var/`, `/proc/`, `/sys/`, `/boot/`).
+- ✅ `namespace_entrypoint.py` two-tier dispatcher: VERB_TABLE for read/write/edit/grep/glob; `shell.run` for shell; pre-dispatch host-path denylist for write-allowed verbs (`/etc/`, `/var/`, `/proc/`, `/sys/`, `/boot/`).
 - ✅ OCC source-tag threading covers all 4 helper sites: `overlay_path_changes_to_occ_changes`, `build_overlay_write_change`, `build_overlay_delete_change`, inline `SymlinkChange`/`OpaqueDirChange` constructors. Default preserves `"overlay_capture"`.
 - ✅ OCC disjoint-batch coalescing test passes: two concurrent typed writes batch into one commit; field-level assertion confirms `c.source == "api_write"`.
 - ✅ Single-path determination uses `len({c.path for c in changes}) == 1` (not verb-name alone — guards against pathological symlink-to-directory cases).

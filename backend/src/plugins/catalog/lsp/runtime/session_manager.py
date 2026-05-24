@@ -6,9 +6,6 @@ import asyncio
 import logging
 from typing import Any
 
-from sandbox.overlay.capability import new_mount_api_supported
-from sandbox.overlay.namespace import detect_private_mount_namespace
-
 from plugins.catalog.lsp.runtime.pyright_session import (
     PyrightOverlayRefreshError,
     PyrightSession,
@@ -159,13 +156,6 @@ def _acquire_session_view(ctx: Any, *, active_key: str) -> _SessionView:
                 workspace_root=declared_workspace_root,
                 handle=handle,
             )
-        lowerdir = getattr(handle, "lowerdir", None)
-        if lowerdir:
-            return _SessionView(
-                manifest_key=handle.manifest_key,
-                workspace_root=str(lowerdir),
-                handle=handle,
-            )
         release = getattr(handle, "release", None)
         if callable(release):
             release()
@@ -185,13 +175,6 @@ def _acquire_session_view(ctx: Any, *, active_key: str) -> _SessionView:
                 workspace_root=declared_workspace_root,
                 handle=handle,
             )
-        lowerdir = getattr(handle, "lowerdir", None)
-        if lowerdir:
-            return _SessionView(
-                manifest_key=handle.manifest_key,
-                workspace_root=str(lowerdir),
-                handle=handle,
-            )
         release = getattr(handle, "release", None)
         if callable(release):
             release()
@@ -199,11 +182,10 @@ def _acquire_session_view(ctx: Any, *, active_key: str) -> _SessionView:
     acquire = getattr(projection, "acquire", None)
     if callable(acquire):
         handle = acquire("lsp-session")
-        lowerdir = getattr(handle, "lowerdir", None)
-        if lowerdir:
+        if getattr(handle, "layer_paths", None):
             return _SessionView(
                 manifest_key=handle.manifest_key,
-                workspace_root=str(lowerdir),
+                workspace_root=declared_workspace_root,
                 handle=handle,
             )
         release = getattr(handle, "release", None)
@@ -225,10 +207,6 @@ def _declared_workspace_root(ctx: Any) -> str:
         or getattr(overlay, "workspace_root", "")
         or "/testbed"
     )
-
-
-def _overlay_namespace_available() -> bool:
-    return new_mount_api_supported() and detect_private_mount_namespace()
 
 
 def _session_owns_overlay_handle(session: Any) -> bool:
@@ -344,13 +322,6 @@ def _acquire_session_view_from_overlay(
             return _SessionView(
                 manifest_key=handle.manifest_key,
                 workspace_root=workspace_root,
-                handle=handle,
-            )
-        lowerdir = getattr(handle, "lowerdir", None)
-        if lowerdir:
-            return _SessionView(
-                manifest_key=handle.manifest_key,
-                workspace_root=str(lowerdir),
                 handle=handle,
             )
         _release_handle(handle)

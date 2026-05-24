@@ -12,7 +12,7 @@ from typing import Any
 # Default capability set for the Docker run invocation.
 #
 # Sized to unblock two daemon-internal kernel surfaces:
-#   * ``CAP_SYS_ADMIN`` — ``unshare -Urm`` + the single-lowerdir overlay mount
+#   * ``CAP_SYS_ADMIN`` — ``unshare -Urm`` + the mount-syscall overlay mount
 #     the EphemeralOS runtime constructs (``overlay/kernel_mount.py``)
 #     plus the isolated-workspace ``setns(CLONE_NEWUSER|CLONE_NEWNS)`` flow.
 #   * ``CAP_NET_ADMIN`` — the isolated-workspace network module (``eos-shared0``
@@ -37,8 +37,8 @@ PRIVILEGED_RUN_FLAGS: tuple[str, ...] = ("--privileged",)
 # Capability-stripped escape hatch for negative precondition tests.
 NO_PRIVILEGE_RUN_FLAGS: tuple[str, ...] = ()
 
-SCRATCH_TMPFS_TARGET = "/eos-mount-scratch"
-DEFAULT_SCRATCH_TMPFS_OPTIONS = "rw,size=2g,mode=1777"
+OVERLAY_WRITABLE_TMPFS_TARGET = "/eos-mount-scratch"
+DEFAULT_OVERLAY_WRITABLE_TMPFS_OPTIONS = "rw,size=2g,mode=1777"
 
 
 def resolve_run_flags() -> tuple[str, ...]:
@@ -55,17 +55,17 @@ def resolve_run_flags() -> tuple[str, ...]:
         base = NO_PRIVILEGE_RUN_FLAGS
     else:
         base = DEFAULT_RUN_FLAGS
-    return (*base, *_scratch_tmpfs_flags())
+    return (*base, *_overlay_writable_tmpfs_flags())
 
 
-def _scratch_tmpfs_flags() -> tuple[str, ...]:
-    if os.environ.get("EOS_DOCKER_DISABLE_SCRATCH_TMPFS") == "1":
+def _overlay_writable_tmpfs_flags() -> tuple[str, ...]:
+    if os.environ.get("EOS_DOCKER_DISABLE_OVERLAY_WRITABLE_TMPFS") == "1":
         return ()
     options = (
-        os.environ.get("EOS_DOCKER_SCRATCH_TMPFS_OPTIONS", "").strip()
-        or DEFAULT_SCRATCH_TMPFS_OPTIONS
+        os.environ.get("EOS_DOCKER_OVERLAY_WRITABLE_TMPFS_OPTIONS", "").strip()
+        or DEFAULT_OVERLAY_WRITABLE_TMPFS_OPTIONS
     )
-    return ("--tmpfs", f"{SCRATCH_TMPFS_TARGET}:{options}")
+    return ("--tmpfs", f"{OVERLAY_WRITABLE_TMPFS_TARGET}:{options}")
 
 
 def host_config_kwargs() -> dict[str, Any]:
@@ -140,8 +140,8 @@ def get_async_docker_client() -> Any:
 
 __all__ = [
     "DEFAULT_RUN_FLAGS",
-    "DEFAULT_SCRATCH_TMPFS_OPTIONS",
-    "SCRATCH_TMPFS_TARGET",
+    "DEFAULT_OVERLAY_WRITABLE_TMPFS_OPTIONS",
+    "OVERLAY_WRITABLE_TMPFS_TARGET",
     "get_async_docker_client",
     "get_docker_client",
     "host_config_kwargs",

@@ -202,8 +202,8 @@ class MergedView:
         """Materialise *manifest* into *destination*.
 
         ``share_inodes=True`` hardlinks regular files from source layers. Only safe
-        when the caller treats *destination* as read-only (e.g. the overlay
-        lowerdir from :meth:`LayerStack.prepare_workspace_snapshot`);
+        when the caller treats *destination* as read-only (e.g. a layer-stack
+        projection);
         a writer would corrupt the source layer through the shared inode.
         """
         dest = Path(destination)

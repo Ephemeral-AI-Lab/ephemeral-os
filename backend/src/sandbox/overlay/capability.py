@@ -1,26 +1,26 @@
-"""Cached capability probe for the overlay new mount API."""
+"""Cached capability probe for required Linux overlay mount syscalls."""
 
 from __future__ import annotations
 
-from sandbox.overlay.new_mount_api import probe_supported
+from sandbox.overlay.mount_syscalls import probe_supported
 
 
-def new_mount_api_supported() -> bool:
-    """Return True if the new mount API is available."""
+def mount_syscalls_supported() -> bool:
+    """Return True if fsopen/fsconfig/fsmount/move_mount are available."""
     return probe_supported()
 
 
-def require_new_mount_api() -> None:
+def require_mount_syscalls() -> None:
     """Enforce the namespace-only startup precondition."""
-    if new_mount_api_supported():
+    if mount_syscalls_supported():
         return
     raise RuntimeError(
-        "overlay new mount API is unavailable; sandbox startup requires "
+        "overlay mount syscalls are unavailable; sandbox startup requires "
         "fsopen/fsconfig/fsmount and private mount namespaces"
     )
 
 
 __all__ = [
-    "new_mount_api_supported",
-    "require_new_mount_api",
+    "mount_syscalls_supported",
+    "require_mount_syscalls",
 ]

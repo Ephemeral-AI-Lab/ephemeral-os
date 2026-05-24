@@ -42,9 +42,9 @@ from sandbox.overlay.kernel_mount import (
     umount,
     validate_mount_inputs,
 )
-from sandbox.overlay.namespace import run_in_namespace
+from sandbox.overlay.namespace_runner import run_in_namespace
 from sandbox.overlay.path_change import OverlayPathChange
-from sandbox.overlay.scratch import command_exec_scratch_root
+from sandbox.overlay.writable_dirs import overlay_writable_root
 
 
 class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
@@ -72,12 +72,9 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
         self._foreign_watch_task: asyncio.Task[None] | None = None
         self._released_lease_ids: set[str] = set()
         self._handle_locks: dict[str, asyncio.Lock] = {}
-        storage_root = (
-            layer_stack.storage_root if layer_stack is not None else Path("/var/run/eos")
-        )
-        self._scratch_root = command_exec_scratch_root(Path(storage_root))
+        self._writable_root = overlay_writable_root()
         self._runtime_dir_path = (
-            self._scratch_root
+            self._writable_root
             / "runtime"
             / "sandbox-overlay"
             / self._runtime_key(workspace_ref, self._workspace_root)
@@ -100,8 +97,8 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
         return self._upperdir
 
     @property
-    def scratch_root(self) -> Path:
-        return self._scratch_root
+    def writable_root(self) -> Path:
+        return self._writable_root
 
     @property
     def runtime_dir(self) -> Path:
@@ -179,7 +176,7 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
         self._start_foreign_publish_watcher()
 
     async def stop(self) -> None:
-        """Detach the daemon-owned overlay and remove scratch dirs."""
+        """Detach the daemon-owned overlay and remove upper/work dirs."""
         await self._stop_foreign_publish_watcher()
         umount(Path(self.workspace_root))
         self._mounted = False

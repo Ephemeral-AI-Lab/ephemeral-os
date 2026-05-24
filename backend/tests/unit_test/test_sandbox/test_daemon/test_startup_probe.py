@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from sandbox.daemon.__main__ import _bump_nofile, _log_mount_api_capability
+from sandbox.daemon.__main__ import _bump_nofile, _log_mount_syscall_capability
 
 
 # ---------------------------------------------------------------------------
@@ -59,11 +59,11 @@ def test_bump_nofile_does_not_raise_on_oserror() -> None:
 
 
 # ---------------------------------------------------------------------------
-# _log_mount_api_capability — probe called once at startup
+# _log_mount_syscall_capability — probe called once at startup
 # ---------------------------------------------------------------------------
 
 
-def test_log_mount_api_capability_checks_mount_api() -> None:
+def test_log_mount_syscall_capability_checks_mount_syscalls() -> None:
     call_count = 0
 
     def supported_probe() -> bool:
@@ -71,21 +71,21 @@ def test_log_mount_api_capability_checks_mount_api() -> None:
         call_count += 1
         return True
 
-    with patch("sandbox.overlay.capability.new_mount_api_supported", side_effect=supported_probe):
-        _log_mount_api_capability()
+    with patch("sandbox.overlay.capability.mount_syscalls_supported", side_effect=supported_probe):
+        _log_mount_syscall_capability()
 
     assert call_count == 2
 
 
-def test_log_mount_api_capability_accepts_supported_kernel() -> None:
-    with patch("sandbox.overlay.capability.new_mount_api_supported", return_value=True):
-        _log_mount_api_capability()
+def test_log_mount_capability_accepts_supported_kernel() -> None:
+    with patch("sandbox.overlay.capability.mount_syscalls_supported", return_value=True):
+        _log_mount_syscall_capability()
 
 
-def test_log_mount_api_capability_requires_new_mount_api() -> None:
-    with patch("sandbox.overlay.capability.new_mount_api_supported", return_value=False):
-        with pytest.raises(RuntimeError, match="new mount API"):
-            _log_mount_api_capability()
+def test_log_mount_capability_requires_mount_syscalls() -> None:
+    with patch("sandbox.overlay.capability.mount_syscalls_supported", return_value=False):
+        with pytest.raises(RuntimeError, match="mount syscalls"):
+            _log_mount_syscall_capability()
 
 
 # ---------------------------------------------------------------------------
@@ -94,7 +94,7 @@ def test_log_mount_api_capability_requires_new_mount_api() -> None:
 
 
 def test_daemon_main_calls_bump_and_probe_before_serve() -> None:
-    """Assert _bump_nofile and _log_mount_api_capability are called at daemon startup."""
+    """Assert _bump_nofile and mount syscall probe are called at daemon startup."""
     call_order: list[str] = []
 
     def stop_without_serving(coro):
@@ -102,7 +102,7 @@ def test_daemon_main_calls_bump_and_probe_before_serve() -> None:
         raise KeyboardInterrupt
 
     with patch("sandbox.daemon.__main__._bump_nofile", side_effect=lambda *a, **k: call_order.append("bump")), \
-         patch("sandbox.daemon.__main__._log_mount_api_capability", side_effect=lambda: call_order.append("probe")), \
+         patch("sandbox.daemon.__main__._log_mount_syscall_capability", side_effect=lambda: call_order.append("probe")), \
          patch("sandbox.daemon.__main__._acquire_pid_lock", return_value=3), \
          patch("sandbox.daemon.__main__.asyncio.run", side_effect=stop_without_serving), \
          patch("os.close"):

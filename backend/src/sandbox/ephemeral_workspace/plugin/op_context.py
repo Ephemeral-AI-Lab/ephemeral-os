@@ -20,7 +20,6 @@ class ProjectionHandleLike(Protocol):
     """Minimal protocol every projection handle satisfies."""
 
     manifest_key: str
-    lowerdir: str | None
     lease_id: str
     layer_paths: tuple[str, ...] | None
 

@@ -44,7 +44,6 @@ def test_acquire_returns_handle_with_manifest_key(tmp_path: Path) -> None:
     assert handle.manifest_key == build_manifest_key(
         handle.root_hash, handle.manifest_version
     )
-    assert handle.lowerdir is None
     assert handle.layer_paths
     assert all(Path(path).is_dir() for path in handle.layer_paths)
     assert projection.active_lease_count() == 1
@@ -125,14 +124,13 @@ def test_acquire_retries_transient_missing_layer_file(tmp_path: Path) -> None:
             self.calls += 1
             if self.calls == 1:
                 raise FileNotFoundError("layer file disappeared during materialize")
-            lowerdir = tmp_path / "lower"
-            lowerdir.mkdir()
+            layer_path = tmp_path / "layer"
+            layer_path.mkdir()
             return SimpleNamespace(
                 lease_id=f"lease-{owner_request_id}",
                 manifest_version=3,
                 root_hash="abc123",
-                lowerdir=None,
-                layer_paths=(lowerdir.as_posix(),),
+                layer_paths=(layer_path.as_posix(),),
             )
 
         def release_lease(self, lease_id: str) -> None:

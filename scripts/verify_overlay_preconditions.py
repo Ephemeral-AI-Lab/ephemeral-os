@@ -6,14 +6,14 @@ from __future__ import annotations
 import shutil
 import sys
 
-from sandbox.overlay.capability import new_mount_api_supported
-from sandbox.overlay.namespace import detect_private_mount_namespace
+from sandbox.overlay.capability import mount_syscalls_supported
+from sandbox.overlay.namespace_runner import detect_private_mount_namespace
 
 
 def main() -> int:
     failures: list[str] = []
-    if not new_mount_api_supported():
-        failures.append("new mount API probe failed (fsopen/fsconfig/fsmount)")
+    if not mount_syscalls_supported():
+        failures.append("mount syscall probe failed (fsopen/fsconfig/fsmount)")
     if not detect_private_mount_namespace():
         failures.append("private user/mount namespace probe failed")
     if shutil.which("unshare") is None:

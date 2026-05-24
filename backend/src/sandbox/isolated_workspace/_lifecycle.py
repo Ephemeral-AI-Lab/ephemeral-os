@@ -147,8 +147,6 @@ class _IsolatedLifecycleMixin:
                 )
             # Signal ns_holder that the network + overlay are wired; ns_holder
             # brings ``lo`` up and acks via the readiness pipe. Wrapped in a
-            # suppress so a degraded handshake degrades the freezer state rather
-            # than failing enter() outright — the workspace is still functional.
             self._runtime.signal_net_ready(
                 handle, setup_timeout_s=self._config.setup_timeout_s,
             )
@@ -185,8 +183,7 @@ class _IsolatedLifecycleMixin:
                 del self._handles[handle_id]
             upperdir_bytes = _du_bytes(handle.upperdir)
             timer = _PhaseTimer(self._clock)
-            async with handle.lock:
-                await self._teardown(handle, grace_s=grace_s, timer=timer)
+            await self._teardown(handle, grace_s=grace_s, timer=timer)
             handle.status = "stopped"
             self._persist()
             lifetime_s = self._clock() - handle.created_at

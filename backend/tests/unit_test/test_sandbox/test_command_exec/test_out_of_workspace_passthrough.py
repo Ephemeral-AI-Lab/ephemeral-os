@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from sandbox._shared.models import Intent, ToolCallRequest
-from sandbox.overlay.namespace_child import execute_tool_payload
+from sandbox.overlay.namespace_entrypoint import execute_tool_payload
 
 
 def test_absolute_non_denylisted_path_can_be_written_by_primitive(

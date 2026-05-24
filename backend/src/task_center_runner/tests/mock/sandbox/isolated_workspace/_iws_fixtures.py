@@ -66,13 +66,13 @@ async def publish_sentinel(sandbox_id: str) -> SentinelFile:
 def can_mount_overlay_natively() -> bool:
     """Probe whether the kernel supports the modern overlay mount API.
 
-    Delegates to :func:`sandbox.overlay.capability.new_mount_api_supported`
+    Delegates to :func:`sandbox.overlay.capability.mount_syscalls_supported`
     so the iws path shares the same namespace-only overlay probe as the
     daemon's OCC overlay. Cached at the underlying layer.
     """
-    from sandbox.overlay.capability import new_mount_api_supported
+    from sandbox.overlay.capability import mount_syscalls_supported
 
-    return new_mount_api_supported()
+    return mount_syscalls_supported()
 
 
 def has_cgroup_freezer() -> bool:

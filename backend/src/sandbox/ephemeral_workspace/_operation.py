@@ -9,12 +9,10 @@ from uuid import uuid4
 from sandbox._shared.models import ToolCallResult
 from sandbox._shared.resource_audit import command_exec_resource_timings
 from sandbox.ephemeral_workspace._types import OperationOverlayHandle
-from sandbox.ephemeral_workspace._utils import (
-    _drop_transient_lowerdir,
-    safe_request_part,
-)
+from sandbox.ephemeral_workspace._utils import safe_request_part
 from sandbox.overlay import lifecycle as overlay_lifecycle
 from sandbox.overlay.handle import OverlayHandle
+from sandbox.overlay.writable_dirs import allocate_overlay_writable_dirs
 
 
 class EphemeralOperationMixin:
@@ -34,7 +32,7 @@ class EphemeralOperationMixin:
         timings.update(
             command_exec_resource_timings(
                 storage_root=self._layer_stack.storage_root,
-                scratch_root=self._scratch_root,
+                writable_root=self._writable_root,
                 run_dir=handle.upperdir.parent,
                 upperdir=handle.upperdir,
                 manifest=handle.snapshot_manifest,
@@ -76,21 +74,18 @@ class EphemeralOperationMixin:
         if self._layer_stack is None:
             raise RuntimeError("acquire_operation_overlay requires layer_stack")
         run_dir = (
-            self._scratch_root
+            self._writable_root
             / "runtime"
             / "sandbox-overlay-ops"
             / self._runtime_key(self._workspace_ref, self._workspace_root)
             / f"{safe_request_part(invocation_id)}-{uuid4().hex[:8]}"
         )
-        upperdir = run_dir / "upper"
-        workdir = run_dir / "work"
         snapshot = self._layer_stack.prepare_workspace_snapshot(
             request_id=invocation_id,
         )
         lease_id = str(getattr(snapshot, "lease_id"))
         try:
-            upperdir.mkdir(parents=True, exist_ok=True)
-            workdir.mkdir(parents=True, exist_ok=True)
+            writable_dirs = allocate_overlay_writable_dirs(run_dir)
             manifest = getattr(snapshot, "manifest")
             manifest_version = int(getattr(snapshot, "manifest_version"))
             root_hash = str(getattr(snapshot, "root_hash"))
@@ -103,9 +98,8 @@ class EphemeralOperationMixin:
                 workspace_root=str(workspace_root or self.workspace_root).rstrip("/")
                 or "/",
                 run_dir=run_dir.as_posix(),
-                upperdir=upperdir.as_posix(),
-                workdir=workdir.as_posix(),
-                lowerdir=getattr(snapshot, "lowerdir", None),
+                upperdir=writable_dirs.upperdir.as_posix(),
+                workdir=writable_dirs.workdir.as_posix(),
                 layer_paths=getattr(snapshot, "layer_paths", None),
                 _overlay=self,
             )
@@ -115,13 +109,8 @@ class EphemeralOperationMixin:
             raise
 
     def release_operation_overlay(self, handle: OperationOverlayHandle) -> None:
-        """Release a per-operation overlay lease and remove operation scratch."""
+        """Release a per-operation overlay lease and remove upper/work dirs."""
         self._release_lease(handle.lease_id)
-        _drop_transient_lowerdir(
-            handle.lowerdir,
-            storage_root=self._layer_stack.storage_root if self._layer_stack else None,
-            scratch_root=self._scratch_root,
-        )
         shutil.rmtree(handle.run_dir, ignore_errors=True)
 
 

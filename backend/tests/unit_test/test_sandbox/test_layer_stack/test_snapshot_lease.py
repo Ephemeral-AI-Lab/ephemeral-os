@@ -148,8 +148,6 @@ def test_prepare_workspace_snapshot_returns_shared_layer_paths_per_lease(
 
     assert first.manifest_version == second.manifest_version
     assert first.root_hash == second.root_hash
-    assert first.lowerdir is None
-    assert second.lowerdir is None
     assert first.layer_paths == second.layer_paths
     assert first.layer_paths
     assert all(Path(path).is_dir() for path in first.layer_paths)
@@ -164,7 +162,7 @@ def test_prepare_workspace_snapshot_returns_shared_layer_paths_per_lease(
     assert manager.release_lease(second.lease_id) is True
 
 
-def test_prepare_workspace_snapshot_does_not_materialize_lowerdir(
+def test_prepare_workspace_snapshot_does_not_materialize_projection(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -184,7 +182,6 @@ def test_prepare_workspace_snapshot_does_not_materialize_lowerdir(
 
     snapshot = manager.prepare_workspace_snapshot("request-direct")
 
-    assert snapshot.lowerdir is None
     assert snapshot.layer_paths
     assert manager.active_lease_count() == 1
     assert manager.release_lease(snapshot.lease_id) is True

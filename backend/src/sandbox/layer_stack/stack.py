@@ -46,7 +46,6 @@ class PrepareWorkspaceSnapshotResult:
     manifest_version: int
     root_hash: str
     manifest: Manifest
-    lowerdir: str | None
     timings: dict[str, float]
     layer_paths: tuple[str, ...] | None = None
 
@@ -56,7 +55,6 @@ class PrepareWorkspaceSnapshotResult:
             "manifest_version": self.manifest_version,
             "root_hash": self.root_hash,
             "manifest": self.manifest.to_dict(),
-            "lowerdir": self.lowerdir,
             "timings": dict(self.timings),
         }
         if self.layer_paths is not None:
@@ -121,7 +119,6 @@ class LayerStack:
                 manifest_version=manifest.version,
                 root_hash=manifest_root_hash(manifest),
                 manifest=manifest,
-                lowerdir=None,
                 layer_paths=layer_paths,
                 timings={
                     "layer_stack.materialize_s": 0.0,

@@ -97,7 +97,7 @@ async def _run_tool_call_in_fresh_namespace(
     stderr_ref.parent.mkdir(parents=True, exist_ok=True)
     child_task = asyncio.create_task(
         asyncio.to_thread(
-            _run_namespace_child,
+            _run_namespace_entrypoint,
             payload_ref=payload_ref,
             stdout_ref=stdout_ref,
             stderr_ref=stderr_ref,
@@ -121,8 +121,8 @@ async def _run_tool_call_in_fresh_namespace(
         "workspace": "ephemeral",
         "status": "error",
         "error": {
-            "kind": "namespace_child_failed",
-            "message": stderr.strip() or f"namespace child exited {exit_code}",
+            "kind": "namespace_entrypoint_failed",
+            "message": stderr.strip() or f"namespace entrypoint exited {exit_code}",
         },
         "timings": {},
     }
@@ -155,7 +155,7 @@ async def _run_tool_call_in_existing_namespace(
     script = (
         "import json,sys;"
         f"sys.path.insert(0,{src_root!r});"
-        "from sandbox.overlay.namespace_child import execute_tool_payload_safely;"
+        "from sandbox.overlay.namespace_entrypoint import execute_tool_payload_safely;"
         "payload=json.loads(sys.stdin.buffer.read());"
         "print(json.dumps(execute_tool_payload_safely(payload),separators=(',',':'),sort_keys=True))"
     )
@@ -179,7 +179,7 @@ async def _run_tool_call_in_existing_namespace(
             "workspace": "isolated",
             "status": "error",
             "error": {
-                "kind": "namespace_child_bad_json",
+                "kind": "namespace_entrypoint_bad_json",
                 "message": stdout or str(response.get("stderr") or ""),
             },
             "timings": {},
@@ -191,7 +191,7 @@ async def _run_tool_call_in_existing_namespace(
         "success": False,
         "workspace": "isolated",
         "status": "error",
-        "error": {"kind": "namespace_child_bad_result", "message": repr(result)},
+        "error": {"kind": "namespace_entrypoint_bad_result", "message": repr(result)},
         "timings": {},
     }
 
@@ -219,7 +219,7 @@ def _build_verb_cancellation(req: ToolCallRequest) -> VerbCancellation:
     return NO_OP_CANCELLATION
 
 
-def _run_namespace_child(
+def _run_namespace_entrypoint(
     *,
     payload_ref: Path,
     stdout_ref: Path,
@@ -228,13 +228,13 @@ def _run_namespace_child(
     cancel_event: threading.Event | None,
     pid_recorder: Callable[[int], None] | None,
 ) -> int:
-    """Spawn ``unshare -Urm python -m namespace_child`` with cancel support."""
+    """Spawn the namespace entrypoint process with cancel support."""
     cmd = [
         _unshare_path(),
         "-Urm",
         sys.executable,
         "-m",
-        "sandbox.overlay.namespace_child",
+        "sandbox.overlay.namespace_entrypoint",
         str(payload_ref),
     ]
     with stdout_ref.open("wb") as stdout_file, stderr_ref.open("wb") as stderr_file:

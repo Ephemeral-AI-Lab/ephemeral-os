@@ -13,7 +13,7 @@ from sandbox.layer_stack.workspace_binding import (
     read_workspace_binding,
     require_workspace_binding,
 )
-from sandbox.overlay.capability import new_mount_api_supported
+from sandbox.overlay.capability import mount_syscalls_supported
 from sandbox.overlay.kernel_mount import umount
 
 if TYPE_CHECKING:
@@ -58,7 +58,7 @@ async def get_sandbox_overlay(
                 _OVERLAYS.popitem(last=False)
         else:
             _OVERLAYS.move_to_end(key)
-        if start and not pipeline.is_mounted and new_mount_api_supported():
+        if start and not pipeline.is_mounted and mount_syscalls_supported():
             await pipeline.start()
         return pipeline
 

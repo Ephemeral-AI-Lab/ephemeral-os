@@ -1,4 +1,4 @@
-"""Unit tests for kernel_mount.py with the new mount API wrappers."""
+"""Unit tests for kernel_mount.py with the required mount syscalls wrappers."""
 
 from __future__ import annotations
 

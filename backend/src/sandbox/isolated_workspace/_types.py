@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import logging
 import os
@@ -145,16 +144,9 @@ class IsolatedWorkspaceHandle:
     control_fd: int = -1
     veth: VethPair | None = None
     cgroup_path: Path | None = None
-    # Set to True when R11's SIGSTOP fallback fires because cgroup.freeze is
-    # missing, write_text raises EACCES/EPERM, or the read-back doesn't
-    # match what we wrote (file shadowed, kernel ignored the write).
-    # Surfaced in audit + status. Stays False on healthy hosts where the
-    # cgroup v2 freezer accepts writes normally.
-    freezer_degraded: bool = False
     created_at: float = 0.0
     last_activity: float = 0.0
     status: HandleStatus = "active"
-    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
     def to_persisted(self) -> dict[str, Any]:
         return {
@@ -168,7 +160,6 @@ class IsolatedWorkspaceHandle:
             "cgroup_path": self.cgroup_path.as_posix() if self.cgroup_path else None,
             "scratch_dir_path": self.scratch_dir.as_posix(),
             "root_pid": self.root_pid,
-            "freezer_degraded": self.freezer_degraded,
             "created_at": self.created_at,
         }
 
@@ -261,7 +252,6 @@ class _Runtime(Protocol):
         self, handle: IsolatedWorkspaceHandle, *, setup_timeout_s: float
     ) -> None: ...
     def create_cgroup(self, handle: IsolatedWorkspaceHandle) -> Path: ...
-    def freeze(self, handle: IsolatedWorkspaceHandle, *, freeze: bool) -> None: ...
     def kill_holder(self, root_pid: int, *, grace_s: float) -> None: ...
     def run_in_handle(
         self,

@@ -115,38 +115,38 @@ Rationale: 5 lines costs nothing and makes the trichotomy real for any new code 
 
 **4.1.** Move `sandbox/execution/overlay/kernel_mount.py` → `sandbox/overlay/kernel_mount.py`. Keep all function signatures (`mount_overlay(workspace_root, layer_paths, upperdir, workdir, ...)` — `workspace_root` parameter name preserved).
 
-**4.2.** Move `sandbox/execution/overlay/new_mount_api.py` → `sandbox/overlay/new_mount_api.py`.
+**4.2.** Move `sandbox/execution/overlay/mount_syscalls.py` → `sandbox/overlay/mount_syscalls.py`.
 
 **4.3.** Move `sandbox/execution/overlay/capture.py` → `sandbox/overlay/capture.py`. `walk_upperdir` lives here.
 
 **4.4.** Delete the old overlay layout abstraction. Mount-input validation now lives at the kernel boundary in `sandbox/overlay/kernel_mount.py`; `MaterializeLayout`, `LayerPathsLayout`, the `OverlayLayout` alias, and the `AnyOverlayLayout` union are gone.
 
-**4.5.** Move `sandbox/execution/overlay/capability.py` → `sandbox/overlay/capability.py`. Update `new_mount_api_supported()` from a runtime gate to a **hard startup precondition**: sandbox refuses to boot if new mount API unavailable. Also delete the `EOS_OVERLAY_FORCE_MATERIALIZE=1` kill switch (no longer meaningful).
+**4.5.** Move `sandbox/execution/overlay/capability.py` → `sandbox/overlay/capability.py`. Update `mount_syscalls_supported()` from a runtime gate to a **hard startup precondition**: sandbox refuses to boot if mount syscalls unavailable. Also delete the `EOS_OVERLAY_FORCE_MATERIALIZE=1` kill switch (no longer meaningful).
 
 **4.5.1.** Create `scripts/verify_overlay_preconditions.py` (Planner F.10 / Critic must-fix #8 / Scenario D.3). The script:
-- Probes for `fsopen`/`fsconfig`/`fsmount` (new mount API).
+- Probes for `fsopen`/`fsconfig`/`fsmount` (mount syscalls).
 - Probes for private user namespace support.
 - Exits non-zero with a diagnostic if either is missing.
 Phase 3 §6C wires this into CI as a deployment guard.
 
-**4.5.2.** Pre-rollout audit — enumerate ALL known deployment targets (CI runners, staging, production Docker images) and verify kernel versions support the new mount API BEFORE Phase 1 lands. Document audit results in `docs/sandbox/deployment_targets.md`. No surprises post-merge.
+**4.5.2.** Pre-rollout audit — enumerate ALL known deployment targets (CI runners, staging, production Docker images) and verify kernel versions support the mount syscalls BEFORE Phase 1 lands. Document audit results in `docs/sandbox/deployment_targets.md`. No surprises post-merge.
 
-**4.5.3.** No mount-precondition runtime bypass remains. If a deployment target lacks the new mount API or private namespaces, startup fails closed and rollback is a normal `git revert`.
+**4.5.3.** No mount-precondition runtime bypass remains. If a deployment target lacks the mount syscalls or private namespaces, startup fails closed and rollback is a normal `git revert`.
 
 **4.6.** Keep the raw `OverlayPathChange` logic and delete copy-backed change synthesis. **Edit the existing `sandbox/occ/overlay_change_conversion.py`** (Planner F.7 — the file already exists, do NOT "move into"; this is an in-place edit) to add a `source: str = "overlay_capture"` keyword-only parameter so callers can override it (used by Phase 2 §6.1 EphemeralPipeline for typed-write coalescing). Default preserves today's behavior.
 
 **Important — Phase 2 §6.1 enumerates the 4-helper chain.** Threading `source` through `overlay_path_changes_to_occ_changes` requires synchronous edits at 4 sites (see Phase 2 §6.1–§6.4): the function itself, plus `build_overlay_write_change` and `build_overlay_delete_change` in `occ/changeset.py`, plus inline `SymlinkChange`/`OpaqueDirChange` constructors. Phase 1 only stages the parameter on the top-level function with the default; the helper-site edits land in Phase 2 as one atomic commit.
 
-**4.7.** Move `sandbox/execution/strategies/namespace.py` → `sandbox/overlay/namespace.py` (host-side fork+unshare+wait coordinator).
+**4.7.** Move `sandbox/execution/strategies/namespace_runner.py` → `sandbox/overlay/namespace_runner.py` (host-side fork+unshare+wait coordinator).
 
-**4.8.** Move `sandbox/execution/strategies/namespace_child.py` → `sandbox/overlay/namespace_child.py` (child entry point — Phase 2 extends this with the two-tier verb dispatch).
+**4.8.** Move `sandbox/execution/strategies/namespace_entrypoint.py` → `sandbox/overlay/namespace_entrypoint.py` (child entry point — Phase 2 extends this with the two-tier verb dispatch).
 
 **4.9.** **DELETE entirely:**
 - `sandbox/execution/strategies/base.py` (`ExecutionStrategy` ABC)
 - `sandbox/execution/strategies/copy_backed.py`
 - `sandbox/execution/strategies/_workspace_rewrite.py`
 - `sandbox/execution/contract.py::MountMode` enum (single value isn't an enum)
-- `sandbox/execution/runner.py::_strategies_for_mount_mode`, `_build_strategy`, `should_fall_back` — replace `run_workspace_replaced_command` with a direct call into `sandbox/overlay/namespace.py`
+- `sandbox/execution/runner.py::_strategies_for_mount_mode`, `_build_strategy`, `should_fall_back` — replace `run_workspace_replaced_command` with a direct call into `sandbox/overlay/namespace_runner.py`
 - `materialize: bool` parameter on `prepare_workspace_snapshot()` (always False now)
 
 **4.10.** Create `sandbox/overlay/handle.py` (NEW):
@@ -214,7 +214,7 @@ async def destroy(handle: OverlayHandle) -> None:
 **4.13.** Update all importers across `backend/`:
 - `from sandbox.execution.overlay.kernel_mount import ...` → `from sandbox.overlay.kernel_mount import ...`
 - `from sandbox.execution.overlay.capture import walk_upperdir` → `from sandbox.overlay.capture import walk_upperdir`
-- `from sandbox.execution.strategies.namespace import detect_private_mount_namespace` → `from sandbox.overlay.namespace import detect_private_mount_namespace`
+- `from sandbox.execution.strategies.namespace import detect_private_mount_namespace` → `from sandbox.overlay.namespace_runner import detect_private_mount_namespace`
 - (etc. across `sandbox/plugin/`, `backend/src/plugins/catalog/lsp/runtime/`, tests)
 
 → **Verify:** `make test` green; `grep -rn "sandbox\.execution\." backend/` returns zero hits; `grep -rn "copy_backed\|MaterializeLayout\|MountMode" backend/` returns zero hits.
@@ -232,15 +232,15 @@ The remaining `sandbox/execution/` files are shell-pipeline/runtime machinery th
 
 **5.2.** Move `sandbox/execution/service.py::execute_command` → absorbed into `sandbox/ephemeral_workspace/pipeline.py::EphemeralPipeline.run_tool_call` in Phase 2. For Phase 1, keep as a free function under `sandbox/ephemeral_workspace/_execute_command.py` (temporary; deleted in Phase 2).
 
-**5.3.** Move `sandbox/execution/runner.py::run_workspace_replaced_command` → simplified inline call to `sandbox/overlay/namespace.py::run_in_namespace`. The file deletes (single-strategy makes the runner trivial).
+**5.3.** Move `sandbox/execution/runner.py::run_workspace_replaced_command` → simplified inline call to `sandbox/overlay/namespace_runner.py::run_in_namespace`. The file deletes (single-strategy makes the runner trivial).
 
 **5.4.** Move `sandbox/execution/env_policy.py` → `sandbox/_shared/env_policy.py` (mode-agnostic; covers both shell and tool primitives).
 
 **5.5.** Move `sandbox/execution/resource_audit.py` → `sandbox/_shared/resource_audit.py` (mode-agnostic; covers timing/audit).
 
-**5.6.** Move `sandbox/execution/subprocess_runner.py` → `sandbox/overlay/subprocess_runner.py` (used by `namespace.py` to spawn child).
+**5.6.** Move `sandbox/execution/subprocess_runner.py` → `sandbox/overlay/subprocess_runner.py` (used by `namespace_runner.py` to spawn child).
 
-**5.7.** Move `sandbox/execution/scratch.py` → `sandbox/overlay/scratch.py` (`command_exec_scratch_root` used by overlay lifecycle).
+**5.7.** Move `sandbox/execution/writable_dirs.py` → `sandbox/overlay/writable_dirs.py` (`overlay_writable_root` used by overlay lifecycle).
 
 **5.8.** Move `sandbox/execution/path_change.py` → `sandbox/overlay/path_change.py` (`OverlayPathChange` dataclass is overlay-shaped).
 
@@ -374,7 +374,7 @@ Must return zero hits (those have been corrected per Critic must-fix #1, #6, #10
 - ✅ `sandbox/main_workspace/` exists as a **thin re-export facade** (5-line `__init__.py` re-exporting `LayerStack`, `prepare_workspace_snapshot`, `CommitQueue`, `Change`, `WriteChange`, `DeleteChange`).
 - ✅ `sandbox/ephemeral_workspace/` contains `pipeline.py` (class `EphemeralPipeline`), `shell_job.py`, `shell_contract.py`, `events.py`, `plugin/` subtree, `_execute_command.py` (temporary — deleted in Phase 2 §3.2).
 - ✅ `sandbox/isolated_workspace/` decomposed into 7 modules: `pipeline.py` (class `IsolatedPipeline`), `_types.py`, `_lifecycle.py`, `_gc.py`, `_ttl.py`, `_quota.py`, `_runtime.py`. PLUS original `network.py`, `handlers.py`, `ops_handlers.py` (still present — deleted in Phase 2 §14.3), `scripts/`. **No file >400 lines** post-decomposition (`wc -l` check).
-- ✅ `sandbox/overlay/` exists as a FLAT top-level package containing `handle.py`, `lifecycle.py`, `namespace.py`, `namespace_child.py`, `kernel_mount.py`, `new_mount_api.py`, `capability.py`, `capture.py`, `subprocess_runner.py`, `scratch.py`, `path_change.py`. No `strategies/` subfolder.
+- ✅ `sandbox/overlay/` exists as a FLAT top-level package containing `handle.py`, `lifecycle.py`, `namespace_runner.py`, `namespace_entrypoint.py`, `kernel_mount.py`, `mount_syscalls.py`, `capability.py`, `capture.py`, `subprocess_runner.py`, `writable_dirs.py`, `path_change.py`. No `strategies/` subfolder.
 - ✅ `sandbox/overlay/handle.py::OverlayHandle` exists with `_destroyed: bool = False` field; docstring documents it as a **mutable state-bearing handle** with idempotent destroy under per-handle lock; documents `namespace_pid` lifecycle (iws-populated, ephemeral-None).
 - ✅ `sandbox/overlay/lifecycle.py` exposes `create`, `destroy` (idempotent), `capture_changes`.
 - ✅ `sandbox/_shared/tool_primitives/` contains read/write/edit/grep/glob/shell/file_ops/capture.
@@ -382,7 +382,7 @@ Must return zero hits (those have been corrected per Critic must-fix #1, #6, #10
 - ✅ `sandbox/execution/` directory does not exist.
 - ✅ `sandbox/plugin/` directory does not exist (moved under `ephemeral_workspace/plugin/`).
 - ✅ `copy_backed`, `_workspace_rewrite`, `ExecutionStrategy`, `MountMode`, `MaterializeLayout`, `should_fall_back`, `EOS_OVERLAY_FORCE_MATERIALIZE` all deleted from the codebase.
-- ✅ `new_mount_api_supported()` is a hard startup precondition — sandbox refuses to boot without it.
+- ✅ `mount_syscalls_supported()` is a hard startup precondition — sandbox refuses to boot without it.
 - ✅ `scripts/verify_overlay_preconditions.py` exists and exits non-zero on degraded kernels (Phase 3 §6C wires into CI).
 - ✅ Pre-rollout audit `docs/sandbox/deployment_targets.md` exists with kernel-version verification for every deployment target.
 - ✅ The old mount-precondition tombstone flag has been deleted; rollback is a code revert.

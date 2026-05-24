@@ -12,8 +12,8 @@ from typing import Any
 from uuid import uuid4
 
 from sandbox.ephemeral_workspace.shell_contract import CommandExecRequest
-from sandbox.overlay.capability import new_mount_api_supported
-from sandbox.overlay.namespace import detect_private_mount_namespace
+from sandbox.overlay.capability import mount_syscalls_supported
+from sandbox.overlay.namespace_runner import detect_private_mount_namespace
 from sandbox.layer_stack.workspace_binding import (
     WorkspaceBindingError,
     require_workspace_binding,
@@ -41,7 +41,7 @@ async def run_plugin_op_with_workspace_overlay(
     if not _overlay_namespace_available():
         raise RuntimeError(
             "automatic plugin workspace overlay requires private mount namespace "
-            "and the overlay new mount API"
+            "and the overlay required mount syscalls"
         )
 
     overlay = ctx.overlay
@@ -104,7 +104,7 @@ def _bound_workspace_root(ctx: PluginOpContext) -> str:
 
 
 def _overlay_namespace_available() -> bool:
-    return new_mount_api_supported() and detect_private_mount_namespace()
+    return mount_syscalls_supported() and detect_private_mount_namespace()
 
 
 async def _run_child_plugin_op(

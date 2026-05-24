@@ -1,6 +1,6 @@
 # Sandbox Overlay Deployment Targets
 
-The new mount API and private user/mount namespaces are runtime preconditions
+The required mount syscalls and private user/mount namespaces are runtime preconditions
 for sandbox startup. No copy-backed fallback or rollout escape hatch remains.
 
 Kernel verification rule: every Linux deployment target must report kernel

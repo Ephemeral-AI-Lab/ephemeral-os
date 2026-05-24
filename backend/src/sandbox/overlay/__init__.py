@@ -1,7 +1,7 @@
 """OCC-unaware filesystem overlay substrate.
 
 This package owns namespace-only overlay mount mechanics, upperdir capture,
-scratch layout, and subprocess execution helpers. Pipeline packages decide
+upper/work directory allocation, and subprocess execution helpers. Pipeline packages decide
 when to publish captured changes.
 """
 

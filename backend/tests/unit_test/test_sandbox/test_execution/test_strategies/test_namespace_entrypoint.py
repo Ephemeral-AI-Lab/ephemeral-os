@@ -1,4 +1,4 @@
-"""Unit tests for namespace_child payload parsing."""
+"""Unit tests for namespace_entrypoint payload parsing."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from sandbox.overlay.namespace_child import _payload_request
+from sandbox.overlay.namespace_entrypoint import _payload_request
 
 
 def _base_payload(tmp_path: Path, **overrides: object) -> dict:

@@ -53,7 +53,10 @@ def test_runtime_bundle_contains_unified_snapshot_runtime_without_ndjson() -> No
     assert "sandbox/overlay/path_change.py" in names
     assert "sandbox/ephemeral_workspace/shell_contract.py" in names
     assert "sandbox/ephemeral_workspace/_execute_command.py" not in names
-    assert "sandbox/overlay/namespace.py" in names
+    assert "sandbox/overlay/namespace_runner.py" in names
+    assert "sandbox/overlay/namespace_entrypoint.py" in names
+    assert "sandbox/overlay/mount_syscalls.py" in names
+    assert "sandbox/overlay/writable_dirs.py" in names
     assert "sandbox/daemon/handler/overlay.py" not in names
     assert "sandbox/overlay_request.py" not in names
     assert "sandbox/overlay_result.py" not in names

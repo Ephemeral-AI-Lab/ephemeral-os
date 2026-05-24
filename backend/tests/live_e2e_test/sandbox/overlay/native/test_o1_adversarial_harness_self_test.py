@@ -9,8 +9,8 @@ from pathlib import Path
 import pytest
 
 from ..._harness.lease_resource_probe import (
-    NEW_MOUNT_API,
-    assert_new_api_o1_bounds,
+    MOUNT_SYSCALLS,
+    assert_mount_syscalls_o1_bounds,
     build_layer_stack,
     has_cap_sys_admin,
     run_shell_batch,
@@ -50,16 +50,16 @@ async def _run_adversarial_self_test(tmp_path: Path) -> None:
     normal = await run_shell_batch(
         stack=stack,
         workspace_root=tmp_path / "workspace-root",
-        scratch_root=tmp_path / "scratch-normal",
-        requested_path=NEW_MOUNT_API,
+        writable_root=tmp_path / "overlay-writable-root-normal",
+        requested_path=MOUNT_SYSCALLS,
         commands=[_NO_WRITE] * normal_count,
         request_prefix="normal",
     )
     upper = await run_shell_batch(
         stack=stack,
         workspace_root=tmp_path / "workspace-root",
-        scratch_root=tmp_path / "scratch-upper",
-        requested_path=NEW_MOUNT_API,
+        writable_root=tmp_path / "overlay-writable-root-upper",
+        requested_path=MOUNT_SYSCALLS,
         commands=[_UPPER_WRITE],
         request_prefix="upper_write_BAD",
     )
@@ -70,7 +70,7 @@ async def _run_adversarial_self_test(tmp_path: Path) -> None:
     ]
 
     with pytest.raises(AssertionError) as exc_info:
-        assert_new_api_o1_bounds(rows)
+        assert_mount_syscalls_o1_bounds(rows)
 
     message = str(exc_info.value)
     assert "upper_write_BAD" in message

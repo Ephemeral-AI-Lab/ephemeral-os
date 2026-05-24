@@ -38,7 +38,7 @@ import tempfile
 import uuid
 from pathlib import Path
 
-from sandbox.overlay.scratch import command_exec_scratch_root
+from sandbox.overlay.writable_dirs import overlay_writable_root
 from sandbox.isolated_workspace import (
     IsolatedWorkspaceHandle,
     _LinuxRuntime,
@@ -48,11 +48,10 @@ runtime = _LinuxRuntime()
 # Scratch MUST live on a non-overlayfs filesystem. The container's "/" is
 # overlayfs (Docker rootfs), and overlayfs refuses to be used as an upperdir
 # for another overlay mount — fsconfig returns EINVAL on the upperdir step.
-# The daemon path resolves this via ``command_exec_scratch_root`` which
-# selects ``/eos-mount-scratch`` (tmpfs, provisioned by the runtime bootstrap).
-# Use the same helper so the backstop matches production placement.
-scratch_root = command_exec_scratch_root(Path("/testbed"))
-scratch_root.mkdir(parents=True, exist_ok=True)
+# The daemon path resolves this through the canonical overlay writable root
+# (tmpfs, provisioned by the runtime bootstrap). Use the same helper so the
+# backstop matches production placement.
+scratch_root = overlay_writable_root()
 scratch = Path(tempfile.mkdtemp(prefix="iws-backstop-", dir=str(scratch_root)))
 lower = scratch / "lower"
 upper = scratch / "upper"
