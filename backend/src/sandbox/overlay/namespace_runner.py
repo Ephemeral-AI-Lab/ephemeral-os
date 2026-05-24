@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import json
 import os
+import signal
 import shutil
 import subprocess
 import sys
@@ -96,8 +97,7 @@ async def _run_tool_call_in_fresh_namespace(
     stdout_ref.parent.mkdir(parents=True, exist_ok=True)
     stderr_ref.parent.mkdir(parents=True, exist_ok=True)
     child_task = asyncio.create_task(
-        asyncio.to_thread(
-            _run_namespace_entrypoint,
+        _run_namespace_entrypoint_async(
             payload_ref=payload_ref,
             stdout_ref=stdout_ref,
             stderr_ref=stderr_ref,
@@ -272,6 +272,94 @@ def _run_namespace_entrypoint(
                     os.killpg(proc.pid, 9)
                 except (ProcessLookupError, PermissionError):
                     pass
+
+
+async def _run_namespace_entrypoint_async(
+    *,
+    payload_ref: Path,
+    stdout_ref: Path,
+    stderr_ref: Path,
+    timeout: float | None,
+    cancel_event: threading.Event | None,
+    pid_recorder: Callable[[int], None] | None,
+) -> int:
+    """Spawn the namespace entrypoint without consuming the default executor."""
+    cmd = [
+        _unshare_path(),
+        "-Urm",
+        sys.executable,
+        "-m",
+        "sandbox.overlay.namespace_entrypoint",
+        str(payload_ref),
+    ]
+    with stdout_ref.open("wb") as stdout_file, stderr_ref.open("wb") as stderr_file:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=stdout_file,
+            stderr=stderr_file,
+            start_new_session=True,
+        )
+        if pid_recorder is not None:
+            try:
+                pid_recorder(proc.pid)
+            except Exception:
+                pass
+        try:
+            return await _wait_for_process_with_cancel_async(
+                proc,
+                command=cmd,
+                timeout_seconds=timeout,
+                cancel_event=cancel_event,
+            )
+        except subprocess.TimeoutExpired:
+            _kill_process_group(proc.pid, signal.SIGKILL)
+            with contextlib.suppress(asyncio.TimeoutError):
+                await asyncio.wait_for(proc.wait(), timeout=2.0)
+            raise
+        finally:
+            if proc.returncode is None:
+                _kill_process_group(proc.pid, signal.SIGKILL)
+
+
+async def _wait_for_process_with_cancel_async(
+    proc: asyncio.subprocess.Process,
+    *,
+    command: list[str],
+    timeout_seconds: float | None,
+    cancel_event: threading.Event | None,
+) -> int:
+    if cancel_event is None:
+        try:
+            return int(await asyncio.wait_for(proc.wait(), timeout=timeout_seconds))
+        except asyncio.TimeoutError as exc:
+            raise subprocess.TimeoutExpired(command, timeout_seconds) from exc
+
+    loop = asyncio.get_running_loop()
+    deadline = (
+        None if timeout_seconds is None else loop.time() + float(timeout_seconds)
+    )
+    while True:
+        if cancel_event.is_set():
+            _kill_process_group(proc.pid, signal.SIGTERM)
+            try:
+                return int(await asyncio.wait_for(proc.wait(), timeout=2.0))
+            except asyncio.TimeoutError:
+                _kill_process_group(proc.pid, signal.SIGKILL)
+                with contextlib.suppress(asyncio.TimeoutError):
+                    return int(await asyncio.wait_for(proc.wait(), timeout=2.0))
+                return -int(signal.SIGKILL)
+        if proc.returncode is not None:
+            return int(proc.returncode)
+        if deadline is not None and loop.time() > deadline:
+            raise subprocess.TimeoutExpired(command, timeout_seconds)
+        await asyncio.sleep(0.1)
+
+
+def _kill_process_group(pid: int, sig: int) -> None:
+    try:
+        os.killpg(pid, sig)
+    except (ProcessLookupError, PermissionError):
+        pass
 
 
 def detect_private_mount_namespace() -> bool:

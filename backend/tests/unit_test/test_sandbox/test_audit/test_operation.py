@@ -73,6 +73,12 @@ def test_events_from_result_emits_one_terminal_operation_event_plus_subsystems()
     assert terminal.payload["status"] == "ok"
     assert terminal.payload["changed_paths"] == ["a.py"]
     assert terminal.payload["timings"] == result.timings
+    assert emitted[1].payload["timings"] == {"occ.prepare.total_s": 0.01}
+    assert emitted[2].payload["timings"] == {"occ.apply.total_s": 0.02}
+    assert emitted[3].payload["timings"] == {"workspace.tool_s": 0.03}
+    assert emitted[4].payload["timings"] == {"layer_stack.lease_acquire_s": 0.04}
+    assert emitted[5].payload["timings"] == {"layer_stack.publish_s": 0.05}
+    assert emitted[6].payload["timings"] == {"layer_stack.auto_squash.total_s": 0.06}
 
 
 def test_events_from_conflict_result_emits_conflict_operation_and_occ_conflict() -> None:

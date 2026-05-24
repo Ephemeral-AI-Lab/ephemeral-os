@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import threading
 from pathlib import Path
 from typing import Callable
@@ -26,7 +27,7 @@ async def test_run_in_namespace_signals_shell_cancellation(
     started = threading.Event()
     saw_cancel = threading.Event()
 
-    def _fake_child(
+    async def _fake_child(
         *,
         payload_ref: Path,
         stdout_ref: Path,
@@ -40,11 +41,11 @@ async def test_run_in_namespace_signals_shell_cancellation(
         if pid_recorder is not None:
             pid_recorder(99999999)
         started.set()
-        if cancel_event.wait(timeout=2):
+        if await asyncio.to_thread(cancel_event.wait, 2):
             saw_cancel.set()
         return -15
 
-    monkeypatch.setattr(namespace_mod, "_run_namespace_entrypoint", _fake_child)
+    monkeypatch.setattr(namespace_mod, "_run_namespace_entrypoint_async", _fake_child)
     handle = OverlayHandle(
         workspace_root="/testbed",
         layer_paths=((tmp_path / "lower").as_posix(),),
@@ -114,7 +115,7 @@ async def test_namespace_runner_cancel_kills_child_and_discards_upperdir(
         async def run_maintenance_after_publish(self, *args, **kwargs):
             return {}
 
-    def fake_child(
+    async def fake_child(
         *,
         payload_ref: Path,
         stdout_ref: Path,
@@ -128,14 +129,14 @@ async def test_namespace_runner_cancel_kills_child_and_discards_upperdir(
         if pid_recorder is not None:
             pid_recorder(99999999)
         started.set()
-        if cancel_event.wait(timeout=2):
+        if await asyncio.to_thread(cancel_event.wait, 2):
             saw_cancel.set()
         return -15
 
     async def fail_capture(*_args, **_kwargs) -> ChangesetResult:
         raise AssertionError("cancelled namespace run must not capture upperdir")
 
-    monkeypatch.setattr(namespace_mod, "_run_namespace_entrypoint", fake_child)
+    monkeypatch.setattr(namespace_mod, "_run_namespace_entrypoint_async", fake_child)
     monkeypatch.setattr(
         "sandbox.overlay.lifecycle.overlay_writable_root",
         lambda: tmp_path / "writable",
@@ -171,3 +172,64 @@ async def test_namespace_runner_cancel_kills_child_and_discards_upperdir(
     assert releases == ["lease-1"]
     overlay_root = tmp_path / "writable" / "runtime" / "overlay"
     assert not overlay_root.exists() or list(overlay_root.iterdir()) == []
+
+
+async def test_run_in_namespace_does_not_use_default_threadpool(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_child(
+        *,
+        payload_ref: Path,
+        stdout_ref: Path,
+        stderr_ref: Path,
+        timeout: float | None,
+        cancel_event: threading.Event | None,
+        pid_recorder: Callable[[int], None] | None,
+    ) -> int:
+        del stdout_ref, stderr_ref, timeout, cancel_event, pid_recorder
+        payload = json.loads(payload_ref.read_text(encoding="utf-8"))
+        Path(str(payload["result_ref"])).write_text(
+            json.dumps(
+                {
+                    "success": True,
+                    "status": "ok",
+                    "workspace": "ephemeral",
+                    "timings": {"workspace.tool_s": 0.001},
+                }
+            ),
+            encoding="utf-8",
+        )
+        return 0
+
+    async def fail_to_thread(*_args, **_kwargs):
+        raise AssertionError("fresh namespace runner should not use to_thread")
+
+    monkeypatch.setattr(namespace_mod, "_run_namespace_entrypoint_async", fake_child)
+    monkeypatch.setattr(namespace_mod.asyncio, "to_thread", fail_to_thread)
+    handle = OverlayHandle(
+        workspace_root="/testbed",
+        layer_paths=((tmp_path / "lower").as_posix(),),
+        upperdir=tmp_path / "upper",
+        workdir=tmp_path / "work",
+        snapshot_version=1,
+        lease_id="lease-1",
+        namespace_pid=None,
+        run_dir=tmp_path,
+        snapshot_manifest=None,
+        _release=None,
+    )
+    handle.upperdir.mkdir(parents=True)
+    handle.workdir.mkdir(parents=True)
+    req = ToolCallRequest(
+        invocation_id="req-1",
+        agent_id="agent-a",
+        verb="shell",
+        intent=Intent.WRITE_ALLOWED,
+        args={"command": "true", "cwd": "."},
+    )
+
+    result = await namespace_mod.run_in_namespace(handle, req)
+
+    assert result["success"] is True
+    assert result["timings"]["workspace.tool_s"] == 0.001

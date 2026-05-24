@@ -51,6 +51,54 @@ class _LayerStack:
         return _Manifest()
 
 
+class _DeepManifest:
+    version = 1
+
+    def __init__(self, depth: int) -> None:
+        self.layers = tuple(f"layer-{index}" for index in range(depth))
+
+
+class _DeepSnapshot:
+    lease_id = "lease-1"
+    manifest_version = 1
+    root_hash = "root"
+
+    def __init__(self, tmp_path: Path, depth: int) -> None:
+        self.manifest = _DeepManifest(depth)
+        self.layer_paths = tuple((tmp_path / f"lower-{index}").as_posix() for index in range(depth))
+
+
+class _DeepLayerStack:
+    storage_root: Path
+
+    def __init__(self, tmp_path: Path, order: list[str], depth: int) -> None:
+        self.storage_root = tmp_path
+        self._tmp_path = tmp_path
+        self._order = order
+        self.depth = depth
+        self.squash_depths: list[int] = []
+        for index in range(depth):
+            (tmp_path / f"lower-{index}").mkdir(exist_ok=True)
+
+    def prepare_workspace_snapshot(self, *, request_id: str) -> _DeepSnapshot:
+        assert request_id.startswith("overlay:")
+        self._order.append("acquire")
+        return _DeepSnapshot(self._tmp_path, self.depth)
+
+    def release_lease(self, *, lease_id: str) -> bool:
+        self._order.append(f"release:{lease_id}")
+        return True
+
+    def read_active_manifest(self) -> _DeepManifest:
+        return _DeepManifest(self.depth)
+
+    def squash(self, *, max_depth: int) -> _DeepManifest:
+        self.squash_depths.append(max_depth)
+        self.depth = 2
+        self._order.append(f"squash:{max_depth}")
+        return _DeepManifest(self.depth)
+
+
 class _Occ:
     def __init__(self, order: list[str]) -> None:
         self.order = order
@@ -249,6 +297,55 @@ async def test_ephemeral_read_skips_commit_but_still_destroys(
     assert result["success"] is True
     assert result["content"] == "ok\n"
     assert order == ["acquire", "run", "release:lease-1"]
+
+
+@pytest.mark.asyncio
+async def test_shell_pre_mount_squashes_deep_manifest(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    order: list[str] = []
+
+    async def fake_run(_handle, req):
+        assert req.verb == "shell"
+        order.append("run")
+        return {"success": True, "status": "ok", "timings": {}}
+
+    monkeypatch.setenv("EOS_SHELL_MOUNT_SQUASH_MAX_DEPTH", "4")
+    monkeypatch.setattr(
+        "sandbox.overlay.lifecycle.overlay_writable_root",
+        lambda: tmp_path / "writable",
+    )
+    monkeypatch.setattr(
+        "sandbox.ephemeral_workspace.pipeline.overlay_writable_root",
+        lambda: tmp_path / "writable",
+    )
+    monkeypatch.setattr("sandbox.ephemeral_workspace.pipeline.run_in_namespace", fake_run)
+    stack = _DeepLayerStack(tmp_path, order, depth=8)
+    pipeline = EphemeralPipeline(
+        occ_client=_Occ(order),
+        workspace_ref=tmp_path.as_posix(),
+        layer_stack=stack,
+    )
+
+    result = await pipeline.run_tool_call(
+        ToolCallRequest(
+            invocation_id="req-shell",
+            agent_id="agent-a",
+            verb="shell",
+            intent=Intent.READ_ONLY,
+            args={"command": "true"},
+        )
+    )
+
+    assert result["success"] is True
+    assert stack.squash_depths == [4]
+    assert order == ["squash:4", "acquire", "run", "release:lease-1"]
+    timings = result["timings"]
+    assert timings["layer_stack.shell_pre_mount_squash.max_depth"] == 4.0
+    assert timings["layer_stack.shell_pre_mount_squash.depth_before"] == 8.0
+    assert timings["layer_stack.shell_pre_mount_squash.depth_after"] == 2.0
+    assert timings["layer_stack.shell_pre_mount_squash.total_s"] >= 0.0
 
 
 @pytest.mark.asyncio

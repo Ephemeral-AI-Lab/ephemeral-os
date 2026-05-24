@@ -23,6 +23,8 @@ from task_center_runner.scenarios.pipeline.nested_goal import (
 )
 from task_center_runner.scenarios.sandbox.high_concurrency_layerstack_overlay_occ import (
     HighConcurrencyLayerstackOverlayOcc,
+    MAX_CONCURRENT_WORKERS,
+    WORKER_COUNT,
 )
 
 
@@ -124,3 +126,26 @@ def test_high_concurrency_dispatch_uses_context_message_index() -> None:
     assert scenario.executor_actions(
         _ctx(context_message="ACTION high_concurrency_reconcile")
     ) == ("high_concurrency_reconcile",)
+
+
+def test_high_concurrency_plan_is_bounded_to_five_worker_lanes() -> None:
+    scenario = HighConcurrencyLayerstackOverlayOcc()
+
+    plan = scenario.planner_response(_ctx(context_message="")).args
+    deps_by_id = {
+        str(task["id"]): tuple(task.get("deps") or ()) for task in plan["tasks"]
+    }
+
+    assert WORKER_COUNT > MAX_CONCURRENT_WORKERS
+    for index in range(WORKER_COUNT):
+        worker_id = f"concurrent_worker_{index:02d}"
+        if index < MAX_CONCURRENT_WORKERS:
+            assert deps_by_id[worker_id] == ("concurrency_seed",)
+        else:
+            assert deps_by_id[worker_id] == (
+                f"concurrent_worker_{index - MAX_CONCURRENT_WORKERS:02d}",
+            )
+    assert deps_by_id["concurrency_reconcile"] == tuple(
+        f"concurrent_worker_{index:02d}" for index in range(WORKER_COUNT)
+    )
+    assert any("5 active sandbox tool calls" in item for item in plan["evaluation_criteria"])

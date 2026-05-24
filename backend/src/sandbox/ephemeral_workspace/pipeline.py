@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from collections.abc import Sequence
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 import shutil
 from typing import AsyncIterator
 
+from sandbox._shared.async_bridge import run_sync_in_executor
 from sandbox._shared.clock import monotonic_now
 from sandbox._shared.layer_stack_port import LayerStackPort
 from sandbox._shared.lease_guard import LeaseGuard
@@ -79,6 +81,7 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
         self._mounted = False
         self._active_lease_id = ""
         self._operation_lock = asyncio.Lock()
+        self._shell_mount_maintenance_lock = asyncio.Lock()
         self._foreign_watch_task: asyncio.Task[None] | None = None
         self._lease_guard = LeaseGuard()
         self._writable_root = overlay_writable_root()
@@ -132,6 +135,9 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
         if self._layer_stack is None:
             raise RuntimeError("EphemeralPipeline.run_tool_call requires layer_stack")
         total_start = monotonic_now()
+        pre_mount_timings: dict[str, float] = {}
+        if req.verb == "shell":
+            pre_mount_timings = await self._run_shell_pre_mount_maintenance()
         handle = await overlay_lifecycle.create(
             self._layer_stack,
             agent_id=req.agent_id,
@@ -162,6 +168,7 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
                 req=req,
                 handle=handle,
                 capture_upperdir_s=capture_upperdir_s,
+                extra_timings=pre_mount_timings,
                 total_start=total_start,
             )
             return self._attach_resource_timings(
@@ -179,12 +186,14 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
         req: ToolCallRequest,
         handle: OverlayHandle,
         capture_upperdir_s: float,
+        extra_timings: dict[str, float],
         total_start: float,
     ) -> ToolCallResult:
         payload = dict(result)
         timings = dict(
             payload.get("timings") if isinstance(payload.get("timings"), dict) else {}
         )
+        timings.update(extra_timings)
         timings.update(handle.snapshot_timings)
         if "workspace.mount_s" in timings:
             timings.setdefault(
@@ -207,6 +216,39 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
             timings.setdefault("api.shell.total_s", timings["command_exec.total_s"])
         payload["timings"] = timings
         return payload
+
+    async def _run_shell_pre_mount_maintenance(self) -> dict[str, float]:
+        """Collapse deep manifests before shell enters the kernel mount path."""
+        if self._layer_stack is None:
+            return {}
+        max_depth = _shell_mount_squash_max_depth()
+        if max_depth <= 0:
+            return {}
+        async with self._shell_mount_maintenance_lock:
+            active = self._layer_stack.read_active_manifest()
+            depth_before = _manifest_depth(active)
+            if depth_before <= max_depth:
+                return {}
+            squash_start = monotonic_now()
+            squashed = await run_sync_in_executor(
+                self._layer_stack.squash,
+                max_depth=max_depth,
+            )
+            elapsed = monotonic_now() - squash_start
+            depth_after = (
+                _manifest_depth(squashed)
+                if squashed is not None
+                else _manifest_depth(self._layer_stack.read_active_manifest())
+            )
+            timings = {
+                "layer_stack.shell_pre_mount_squash.total_s": elapsed,
+                "layer_stack.shell_pre_mount_squash.max_depth": float(max_depth),
+                "layer_stack.shell_pre_mount_squash.depth_before": float(depth_before),
+                "layer_stack.shell_pre_mount_squash.depth_after": float(depth_after),
+            }
+            if squashed is None:
+                timings["layer_stack.shell_pre_mount_squash.raced"] = 1.0
+            return timings
 
     def active_manifest_key(self) -> str:
         if self._layer_stack is None:
@@ -410,3 +452,17 @@ __all__ = [
     "stop_all_overlays",
     "stop_sandbox_overlay",
 ]
+
+
+def _shell_mount_squash_max_depth() -> int:
+    raw = os.environ.get("EOS_SHELL_MOUNT_SQUASH_MAX_DEPTH")
+    if raw is None:
+        return 64
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return 64
+
+
+def _manifest_depth(manifest: object) -> int:
+    return len(tuple(getattr(manifest, "layers", ()) or ()))

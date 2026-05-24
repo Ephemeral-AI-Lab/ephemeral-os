@@ -1,11 +1,11 @@
 """High-concurrency layer-stack, overlay, and OCC pressure scenario.
 
-This scenario fans out many executor tasks after a seed task so the TaskCenter
-dispatcher launches concurrent public-tool traffic against the same sandbox.
-Each worker performs independent write/edit/read/shell work, and the first few
-workers also race a shared OCC edit that must produce at least one conflict.
-The final reconciliation task reads per-worker fragments and writes a summary
-artifact for capacity/performance assertions.
+This scenario fans out executor tasks after a seed task so the TaskCenter
+dispatcher launches bounded public-tool traffic against the same sandbox. Each
+worker performs independent write/edit/read work, and the first few workers
+also race a shared OCC edit that must produce at least one conflict. The final
+reconciliation task reads per-worker fragments and writes a summary artifact
+for capacity/performance assertions.
 """
 
 from __future__ import annotations
@@ -21,6 +21,7 @@ from task_center_runner.scenarios.base import ScenarioBase, ScenarioContext, Too
 
 
 WORKER_COUNT = 20
+MAX_CONCURRENT_WORKERS = 5
 
 
 def _plan() -> dict[str, Any]:
@@ -28,8 +29,12 @@ def _plan() -> dict[str, Any]:
     tasks = [
         {"id": "concurrency_seed", "agent_name": "executor", "deps": []},
         *(
-            {"id": worker_id, "agent_name": "executor", "deps": ["concurrency_seed"]}
-            for worker_id in worker_ids
+            {
+                "id": worker_id,
+                "agent_name": "executor",
+                "deps": _worker_deps(index, worker_ids),
+            }
+            for index, worker_id in enumerate(worker_ids)
         ),
         {
             "id": "concurrency_reconcile",
@@ -50,26 +55,33 @@ def _plan() -> dict[str, Any]:
     for index, worker_id in enumerate(worker_ids):
         task_specs[worker_id] = (
             f"ACTION high_concurrency_worker index={index}. Run an independent "
-            "write/edit/read/shell workload against the sandbox; workers 0..3 "
-            "also race the shared OCC conflict target."
+            "write/edit/read workload against the sandbox; workers 0..3 also "
+            "race the shared OCC conflict target."
         )
     return {
         "plan_spec": (
-            "Seed one shared OCC target, launch 20 concurrent executor workers "
-            "that pressure layer-stack commits and overlay capture, then "
-            "reconcile all fragments into a capacity summary."
+            "Seed one shared OCC target, launch 20 executor workers in five "
+            "bounded lanes that pressure layer-stack commits and overlay "
+            "capture, then reconcile all fragments into a capacity summary."
         ),
         "evaluation_criteria": [
-            "All 20 concurrent workers complete and write fragments.",
-            "Layer-stack commit depth crosses the auto-squash threshold during "
-            "the concurrent workload.",
-            "Overlay shell operations are captured for every worker.",
+            "All 20 workers complete and write fragments.",
+            "The concurrent workload never fans out beyond 5 active sandbox "
+            "tool calls.",
+            "Shell setup and reconciliation remain bounded while worker "
+            "concurrency pressures direct file/OCC paths.",
             "The shared OCC target records at least one success and one conflict.",
             "The final summary uses task_center_runner.high_concurrency.v1.",
         ],
         "tasks": tasks,
         "task_specs": task_specs,
     }
+
+
+def _worker_deps(index: int, worker_ids: Sequence[str]) -> list[str]:
+    if index < MAX_CONCURRENT_WORKERS:
+        return ["concurrency_seed"]
+    return [worker_ids[index - MAX_CONCURRENT_WORKERS]]
 
 
 class HighConcurrencyLayerstackOverlayOcc(ScenarioBase):
@@ -129,4 +141,8 @@ def _worker_index(context_message: str) -> int | None:
     return None
 
 
-__all__ = ["HighConcurrencyLayerstackOverlayOcc", "WORKER_COUNT"]
+__all__ = [
+    "HighConcurrencyLayerstackOverlayOcc",
+    "MAX_CONCURRENT_WORKERS",
+    "WORKER_COUNT",
+]

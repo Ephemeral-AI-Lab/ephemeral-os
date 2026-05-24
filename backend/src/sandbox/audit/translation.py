@@ -168,7 +168,10 @@ def _subsystem_events(
             source="sandbox",
             type=_EVENT_BY_SIGNAL[signal],
             node=node,
-            payload=dict(payload),
+            payload={
+                **dict(payload),
+                "timings": _timings_for_signal(signal, timings),
+            },
         )
         for signal in timing_audit_signals(
             timings,
@@ -176,6 +179,66 @@ def _subsystem_events(
             payload=payload,
         )
     ]
+
+
+def _timings_for_signal(
+    signal: str,
+    timings: Mapping[str, Any],
+) -> dict[str, Any]:
+    if signal == "occ_prepared":
+        return _select_timings(timings, ("occ.prepare.",))
+    if signal in {"occ_committed", "occ_conflicted"}:
+        return _select_timings(
+            timings,
+            (
+                "occ.commit.",
+                "occ.apply.",
+                "api.write.occ_apply_s",
+                "api.edit.occ_apply_s",
+                "command_exec.occ_apply_s",
+            ),
+        )
+    if signal == "overlay_executed":
+        return _select_timings(
+            timings,
+            ("workspace.", "overlay.", "command_exec.", "api.shell."),
+        )
+    if signal == "layer_stack_lease_acquired":
+        return _select_timings(
+            timings,
+            (
+                "layer_stack.lease_",
+                "layer_stack.transaction_lock_wait",
+                "layer_stack.transaction_lock_held",
+                "layer_stack.transaction.",
+                "layer_stack.prepare_workspace_snapshot.",
+            ),
+        )
+    if signal == "layer_stack_layer_published":
+        return _select_timings(
+            timings,
+            ("layer_stack.publish", "layer_stack.layer_", "occ.commit.publish_layer"),
+        )
+    if signal == "layer_stack_auto_squashed":
+        return {
+            str(key): value
+            for key, value in timings.items()
+            if "auto_squash" in str(key).lower()
+        }
+    if signal == "resource_snapshot":
+        return _select_timings(timings, ("resource.",))
+    return {}
+
+
+def _select_timings(
+    timings: Mapping[str, Any],
+    prefixes: tuple[str, ...],
+) -> dict[str, Any]:
+    return {
+        str(key): value
+        for key, value in timings.items()
+        if any(str(key).startswith(prefix) for prefix in prefixes)
+    }
 
 
 def _none_if_empty(value: str | None) -> str | None:

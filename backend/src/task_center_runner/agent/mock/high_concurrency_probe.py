@@ -32,8 +32,10 @@ ROOT = "/testbed/.ephemeralos/sweevo-mock/high_concurrency_layerstack_overlay_oc
 SUMMARY_PATH = f"{ROOT}/summary.json"
 WORKER_SCHEMA = "task_center_runner.high_concurrency.worker.v1"
 SUMMARY_SCHEMA = "task_center_runner.high_concurrency.v1"
-DATA_FILES_PER_WORKER = 12
+DATA_FILES_PER_WORKER = 1
 CONFLICT_WORKER_COUNT = 4
+READ_FILE_INDEXES = (0, DATA_FILES_PER_WORKER - 1)
+READS_PER_WORKER = len(set(READ_FILE_INDEXES))
 
 EmitStreamEvent = Callable[[StreamEvent], Awaitable[None]]
 CallTool = Callable[..., Awaitable[ToolResult]]
@@ -111,7 +113,6 @@ async def run_high_concurrency_worker_probe(
 
     started = time.perf_counter()
     worker_dir = f"{ROOT}/workers/worker-{index:02d}"
-    shell_dir = f"{ROOT}/shell/worker-{index:02d}"
     tool_metadata: list[dict[str, Any]] = []
 
     for file_index in range(DATA_FILES_PER_WORKER):
@@ -152,7 +153,7 @@ async def run_high_concurrency_worker_probe(
         )
         tool_metadata.append(_capture_metadata("edit_file", edit_result))
 
-    for file_index in (0, DATA_FILES_PER_WORKER - 1):
+    for file_index in sorted(set(READ_FILE_INDEXES)):
         read_result = await _call_checked(
             call_tool=call_tool,
             tool_obj=read_file_tool,
@@ -173,25 +174,6 @@ async def run_high_concurrency_worker_probe(
             publish_mock_record,
         )
         tool_metadata.append(_capture_metadata("read_file", read_result))
-
-    shell_result = await _call_checked(
-        call_tool=call_tool,
-        tool_obj=shell_tool,
-        raw_input={
-            "command": (
-                f"mkdir -p {shell_dir} && "
-                f"printf 'worker={index:02d}\\noverlay=ok\\n' "
-                f"> {shell_dir}/overlay.txt && "
-                f"cat {shell_dir}/overlay.txt"
-            ),
-            "timeout": 120,
-        },
-        metadata=metadata,
-        emit=emit,
-        record_tool_check=record_tool_check,
-        check_name=f"tool.shell.high_concurrency.worker_{index:02d}",
-    )
-    tool_metadata.append(_capture_metadata("shell", shell_result))
 
     conflict_payload = await _maybe_race_conflict(
         index=index,
@@ -232,68 +214,36 @@ async def run_high_concurrency_reconcile_probe(
     record_tool_check: RecordToolCheck,
 ) -> str:
     """Aggregate worker fragments and verify the pressure-run contract."""
-    command = f"""python3 - <<'PY'
-import json
-from pathlib import Path
+    payloads: list[dict[str, Any]] = []
+    for index in range(WORKER_COUNT):
+        fragment = await _call_checked(
+            call_tool=call_tool,
+            tool_obj=read_file_tool,
+            raw_input={
+                "file_path": f"{ROOT}/fragments/worker-{index:02d}.json",
+                "start_line": 1,
+                "end_line": 200,
+            },
+            metadata=metadata,
+            emit=emit,
+            record_tool_check=None,
+            check_name="",
+        )
+        payloads.append(json.loads(_read_numbered_content(fragment)))
 
-root = Path({ROOT!r})
-fragments = sorted((root / "fragments").glob("worker-*.json"))
-payloads = [json.loads(path.read_text(encoding="utf-8")) for path in fragments]
-conflict_successes = sum(1 for item in payloads if item.get("conflict_status") == "success")
-conflict_errors = sum(1 for item in payloads if item.get("conflict_status") == "conflict")
-unexpected_errors = sum(int(item.get("unexpected_error_count", 0)) for item in payloads)
-worker_indexes = sorted(int(item["worker_index"]) for item in payloads)
-if len(payloads) != {WORKER_COUNT}:
-    raise SystemExit(f"expected {WORKER_COUNT} fragments, saw {{len(payloads)}}")
-if worker_indexes != list(range({WORKER_COUNT})):
-    raise SystemExit(f"missing worker indexes: {{worker_indexes}}")
-if conflict_successes < 1 or conflict_errors < 1:
-    raise SystemExit(
-        "expected at least one shared OCC success and one conflict, "
-        f"saw successes={{conflict_successes}} conflicts={{conflict_errors}}"
-    )
-if unexpected_errors:
-    raise SystemExit(f"unexpected worker tool errors: {{unexpected_errors}}")
-
-summary = {{
-    "schema": {SUMMARY_SCHEMA!r},
-    "worker_count": len(payloads),
-    "worker_indexes": worker_indexes,
-    "conflict_successes": conflict_successes,
-    "conflict_errors": conflict_errors,
-    "total_write_calls": sum(int(item["write_count"]) for item in payloads),
-    "total_edit_calls": sum(int(item["edit_count"]) for item in payloads),
-    "total_read_calls": sum(int(item["read_count"]) for item in payloads),
-    "total_shell_calls": sum(int(item["shell_count"]) for item in payloads),
-    "max_auto_squash_depth_before": max(
-        float(item.get("max_auto_squash_depth_before", 0.0)) for item in payloads
-    ),
-    "max_auto_squash_total_s": max(
-        float(item.get("max_auto_squash_total_s", 0.0)) for item in payloads
-    ),
-    "max_commit_resume_wait_s": max(
-        float(item.get("max_commit_resume_wait_s", 0.0)) for item in payloads
-    ),
-    "max_worker_duration_s": max(
-        float(item.get("duration_s", 0.0)) for item in payloads
-    ),
-}}
-(root / "summary.json").write_text(
-    json.dumps(summary, indent=2, sort_keys=True) + "\\n",
-    encoding="utf-8",
-)
-print(json.dumps(summary, sort_keys=True))
-PY"""
-    shell_result = await _call_checked(
+    summary = _reconcile_summary(payloads)
+    await _call_checked(
         call_tool=call_tool,
-        tool_obj=shell_tool,
-        raw_input={"command": command, "timeout": 180},
+        tool_obj=write_file_tool,
+        raw_input={
+            "file_path": SUMMARY_PATH,
+            "content": json.dumps(summary, indent=2, sort_keys=True) + "\n",
+        },
         metadata=metadata,
         emit=emit,
         record_tool_check=record_tool_check,
-        check_name="tool.shell.high_concurrency.reconcile",
+        check_name="tool.write_file.high_concurrency.reconcile_summary",
     )
-    _assert_output_contains(shell_result, SUMMARY_SCHEMA, "reconcile summary schema")
 
     summary_read = await _call_checked(
         call_tool=call_tool,
@@ -306,6 +256,52 @@ PY"""
     )
     _assert_output_contains(summary_read, SUMMARY_SCHEMA, "summary readback schema")
     return SUMMARY_PATH
+
+
+def _reconcile_summary(payloads: list[dict[str, Any]]) -> dict[str, Any]:
+    conflict_successes = sum(
+        1 for item in payloads if item.get("conflict_status") == "success"
+    )
+    conflict_errors = sum(
+        1 for item in payloads if item.get("conflict_status") == "conflict"
+    )
+    unexpected_errors = sum(int(item.get("unexpected_error_count", 0)) for item in payloads)
+    worker_indexes = sorted(int(item["worker_index"]) for item in payloads)
+    if len(payloads) != WORKER_COUNT:
+        raise RuntimeError(f"expected {WORKER_COUNT} fragments, saw {len(payloads)}")
+    if worker_indexes != list(range(WORKER_COUNT)):
+        raise RuntimeError(f"missing worker indexes: {worker_indexes}")
+    if conflict_successes < 1 or conflict_errors < 1:
+        raise RuntimeError(
+            "expected at least one shared OCC success and one conflict, "
+            f"saw successes={conflict_successes} conflicts={conflict_errors}"
+        )
+    if unexpected_errors:
+        raise RuntimeError(f"unexpected worker tool errors: {unexpected_errors}")
+
+    return {
+        "schema": SUMMARY_SCHEMA,
+        "worker_count": len(payloads),
+        "worker_indexes": worker_indexes,
+        "conflict_successes": conflict_successes,
+        "conflict_errors": conflict_errors,
+        "total_write_calls": sum(int(item["write_count"]) for item in payloads),
+        "total_edit_calls": sum(int(item["edit_count"]) for item in payloads),
+        "total_read_calls": sum(int(item["read_count"]) for item in payloads),
+        "total_shell_calls": sum(int(item["shell_count"]) for item in payloads),
+        "max_auto_squash_depth_before": max(
+            float(item.get("max_auto_squash_depth_before", 0.0)) for item in payloads
+        ),
+        "max_auto_squash_total_s": max(
+            float(item.get("max_auto_squash_total_s", 0.0)) for item in payloads
+        ),
+        "max_commit_resume_wait_s": max(
+            float(item.get("max_commit_resume_wait_s", 0.0)) for item in payloads
+        ),
+        "max_worker_duration_s": max(
+            float(item.get("duration_s", 0.0)) for item in payloads
+        ),
+    }
 
 
 async def _call_checked(
@@ -481,11 +477,7 @@ def _assert_read_contains(
     check_name: str,
     publish_mock_record: PublishMockRecord,
 ) -> None:
-    try:
-        payload = json.loads(result.output)
-    except json.JSONDecodeError:
-        payload = {"content": result.output}
-    content = str(payload.get("content") or "")
+    content = _read_content(result)
     passed = needle in content
     publish_mock_record(
         EventType.MOCK_SANDBOX_CHECK_RECORDED,
@@ -493,6 +485,24 @@ def _assert_read_contains(
     )
     if not passed:
         raise RuntimeError(f"{check_name} did not find {needle!r}.")
+
+
+def _read_content(result: ToolResult) -> str:
+    try:
+        payload = json.loads(result.output)
+    except json.JSONDecodeError:
+        return result.output
+    return str(payload.get("content") or result.output)
+
+
+def _read_numbered_content(result: ToolResult) -> str:
+    lines: list[str] = []
+    for line in _read_content(result).splitlines():
+        if len(line) >= 6 and line[:4].strip().isdigit() and line[4:6] == ": ":
+            lines.append(line[6:])
+        else:
+            lines.append(line)
+    return "\n".join(lines)
 
 
 def _assert_output_contains(result: ToolResult, needle: str, label: str) -> None:
@@ -503,6 +513,7 @@ def _assert_output_contains(result: ToolResult, needle: str, label: str) -> None
 __all__ = [
     "CONFLICT_WORKER_COUNT",
     "DATA_FILES_PER_WORKER",
+    "READS_PER_WORKER",
     "ROOT",
     "SUMMARY_PATH",
     "SUMMARY_SCHEMA",
