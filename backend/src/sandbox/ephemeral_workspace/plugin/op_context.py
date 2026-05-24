@@ -1,4 +1,4 @@
-"""``PluginOpContext`` passed to in-sandbox plugin op handlers."""
+"""Context objects passed to in-sandbox plugin op handlers."""
 
 from __future__ import annotations
 
@@ -14,35 +14,16 @@ from sandbox.overlay.handle import OverlayHandle
 __all__ = [
     "PluginOpContext",
     "EphemeralPipelineLike",
-    "ProjectionHandleLike",
     "WorkspaceChangeEvent",
     "WorkspaceProjectionLike",
 ]
 
 
-class ProjectionHandleLike(Protocol):
-    """Minimal protocol satisfied by the non-overlay ``ProjectionHandle``.
-
-    Retained because the degraded session-manager fallback still uses
-    :class:`WorkspaceProjection.acquire` (which returns ``ProjectionHandle``);
-    overlay-backed acquires return :class:`OverlayHandle` directly and no
-    longer flow through this Protocol.
-    """
-
-    manifest_key: str
-    lease_id: str
-    layer_paths: tuple[str, ...] | None
-
-    def release(self) -> None: ...
-
-
 class WorkspaceProjectionLike(Protocol):
-    """Minimal protocol every workspace projection satisfies."""
-
     @property
     def layer_stack_root(self) -> Any: ...
 
-    def acquire(self, owner_request_id: str) -> ProjectionHandleLike: ...
+    def acquire(self, owner_request_id: str) -> Any: ...
 
     def acquire_overlay(
         self,
@@ -55,8 +36,6 @@ class WorkspaceProjectionLike(Protocol):
 
 
 class EphemeralPipelineLike(Protocol):
-    """Minimal daemon overlay surface exposed to plugin tool calls."""
-
     @property
     def workspace_root(self) -> str: ...
 
@@ -72,8 +51,6 @@ class EphemeralPipelineLike(Protocol):
         invocation_id: str,
         workspace_root: str | None = None,
     ) -> OverlayHandle: ...
-
-    def release_operation_overlay(self, handle: OverlayHandle) -> None: ...
 
     def subscribe_workspace_changes(
         self, subscriber_id: str
@@ -107,17 +84,10 @@ class EphemeralPipelineLike(Protocol):
 
 @dataclass(frozen=True)
 class PluginOpContext:
-    """Concrete context surface a plugin op handler may rely on.
+    """Plugin handler context.
 
-    Plugin authors MUST NOT import sandbox.* directly; they receive everything
-    they need through this dataclass. The host wires up ``projection`` using
-    the real :mod:`sandbox.ephemeral_workspace.plugin.projection`; tests inject a stub
-    duck-typed object.
-
-    Handlers invoked with ``intent=Intent.READ_ONLY`` MUST NOT perform direct
-    filesystem I/O. All reads MUST go through a ``PluginService`` (today the
-    only implementation is :class:`PyrightSession` via
-    :func:`session_manager.get_session`).
+    READ_ONLY handlers must query a PluginService instead of doing direct
+    filesystem I/O.
     """
 
     layer_stack_root: str

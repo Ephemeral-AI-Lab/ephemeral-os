@@ -34,7 +34,7 @@ def acquire(
       callers that do not need ``LeaseGuard``/audit routing.
     * Daemon callers pass their own ``self._release_lease`` so the released
       handle still emits ``LeaseGuard``/audit entries identical to direct
-      ``release_operation_overlay`` callers today.
+      operation-overlay release callers today.
 
     On any exception after ``prepare_workspace_snapshot`` succeeds, this
     function releases the lease AND ``rmtree(run_dir)`` before re-raising so

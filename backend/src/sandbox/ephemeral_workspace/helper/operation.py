@@ -51,9 +51,4 @@ class EphemeralOperationMixin:
             release_hook=self._release_lease,
         )
 
-    def release_operation_overlay(self, handle: OverlayHandle) -> None:
-        """Release a per-operation overlay handle. Delegates to ``handle.release()``."""
-        handle.release()
-
-
 __all__ = ["EphemeralOperationMixin"]

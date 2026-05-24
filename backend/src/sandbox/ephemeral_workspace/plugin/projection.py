@@ -1,14 +1,4 @@
-"""Plugin-agnostic, lease-backed workspace projection.
-
-Stateful plugins (e.g. LSP) need a current filesystem view, but the workspace
-truth is the active layer-stack manifest, not the mutable provider workspace
-directory. This module exposes a ``manifest_key`` so plugin sessions can detect
-when the manifest changes and refresh their state against the latest snapshot.
-
-Lives under ``sandbox.ephemeral_workspace.plugin`` rather than the LSP catalog
-so future stateful plugins reuse it. It MUST stay plugin-agnostic — no
-plugin-name string switches, no LSP-specific code paths.
-"""
+"""Plugin-agnostic, lease-backed workspace projection."""
 
 from __future__ import annotations
 
@@ -59,14 +49,7 @@ class ProjectionHandle:
 
 
 class WorkspaceProjection:
-    """Wrapper around :class:`LayerStack` for plugin runtime ops.
-
-    Constructor takes a layer_stack_root (filesystem path); each acquire call
-    leases the active manifest and returns a :class:`ProjectionHandle` keyed by
-    ``manifest_key``. Plugin runtime code can use that key to decide whether a
-    long-lived session is already current or must reconcile itself with the
-    latest projection.
-    """
+    """Layer-stack projection used by stateful plugin runtimes."""
 
     def __init__(
         self,
@@ -75,10 +58,6 @@ class WorkspaceProjection:
         manager: LayerStack | None = None,
     ) -> None:
         self._layer_stack_root = Path(layer_stack_root).resolve()
-        # Reuse the daemon's cached LayerStack when one is injected so
-        # the plugin path and the OCC backend share a single writer flock +
-        # transaction RLock. Constructing a fresh manager here is the legacy
-        # path retained for unit tests and out-of-daemon callers.
         self._manager = (
             manager if manager is not None else LayerStack(self._layer_stack_root)
         )

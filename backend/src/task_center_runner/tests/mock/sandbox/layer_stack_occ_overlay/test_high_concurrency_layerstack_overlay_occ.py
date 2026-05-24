@@ -31,9 +31,29 @@ from task_center_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
 )
+from task_center_runner.tests.mock._layer_stack_occ_overlay_assertions import (
+    assert_o1_workspace_resource_snapshots,
+    assert_resource_key_max,
+    assert_timing_keys_present,
+    jsonl_rows,
+    load_performance_report,
+    mapping,
+)
 
 
 pytestmark = pytest.mark.asyncio
+
+_WRITE_EDIT_P95_BUDGET_MS = 1_000.0
+_REQUIRED_LATENCY_KEYS = (
+    "command_exec.mount_workspace_s",
+    "command_exec.run_command_s",
+    "command_exec.capture_upperdir_s",
+    "layer_stack.prepare_workspace_snapshot.total_s",
+    "occ.apply.commit_queue_wait_s",
+    "occ.apply.commit_resume_wait_s",
+    "occ.apply.total_s",
+    "api.shell.total_s",
+)
 
 
 @pytest.mark.skipif(
@@ -114,6 +134,10 @@ def _assert_report_shape(report: RunReport, summary: Mapping[str, Any]) -> None:
     error_calls = [call for call in report.tool_calls if call.is_error]
     assert len(error_calls) == int(summary["conflict_errors"])
     assert {call.tool_name for call in error_calls} == {"edit_file"}
+    for call in error_calls:
+        status = str(call.metadata.get("status") or "")
+        assert status != "internal_error", call.metadata
+        assert str(call.metadata.get("conflict_reason") or ""), call.metadata
 
     tool_counts = Counter(call.tool_name for call in report.tool_calls)
     assert tool_counts["write_file"] >= (
@@ -128,7 +152,7 @@ def _assert_report_shape(report: RunReport, summary: Mapping[str, Any]) -> None:
 
 def _assert_sandbox_events(path: Path, summary: Mapping[str, Any]) -> None:
     assert path.exists()
-    rows = _jsonl_rows(path)
+    rows = jsonl_rows(path)
     counts = Counter(row.get("event_type") for row in rows)
     assert counts[EventType.SANDBOX_OVERLAY_EXECUTED.value] >= WORKER_COUNT + 2
     assert counts[EventType.SANDBOX_OCC_CHANGESET_RECEIVED.value] >= (
@@ -141,6 +165,7 @@ def _assert_sandbox_events(path: Path, summary: Mapping[str, Any]) -> None:
     assert counts[EventType.SANDBOX_CONFLICT_DETECTED.value] >= int(
         summary["conflict_errors"]
     )
+    assert_o1_workspace_resource_snapshots(path)
 
 
 async def _assert_performance_report(
@@ -150,44 +175,52 @@ async def _assert_performance_report(
     assert report.performance_report_task is not None
     perf_path = await report.performance_report_task
     assert perf_path == report.run_dir / "performance_report.json"
-    perf = json.loads(perf_path.read_text(encoding="utf-8"))
-    assert perf["schema"] == "task_center_runner.performance_report.v2"
+    perf = load_performance_report(report.run_dir)
+    assert_timing_keys_present(perf, _REQUIRED_LATENCY_KEYS)
 
-    totals = _mapping(perf["totals"])
+    totals = mapping(perf["totals"])
     assert int(totals["tool_errors_total"]) == int(summary["conflict_errors"])
     assert int(totals["tool_calls_total"]) >= (
         WORKER_COUNT * (DATA_FILES_PER_WORKER * 2 + 3)
     )
 
-    per_tool = _mapping(_mapping(perf["tools"])["per_tool"])
-    assert int(_mapping(per_tool["write_file"])["count"]) >= (
+    per_tool = mapping(mapping(perf["tools"])["per_tool"])
+    write_stats = mapping(per_tool["write_file"])
+    edit_stats = mapping(per_tool["edit_file"])
+    assert int(write_stats["count"]) >= (
         WORKER_COUNT * DATA_FILES_PER_WORKER + WORKER_COUNT + 2
     )
-    assert int(_mapping(per_tool["edit_file"])["errors"]) == int(
-        summary["conflict_errors"]
-    )
-    assert int(_mapping(per_tool["shell"])["count"]) >= WORKER_COUNT + 2
+    assert int(edit_stats["errors"]) == int(summary["conflict_errors"])
+    assert int(mapping(per_tool["shell"])["count"]) >= WORKER_COUNT + 2
+    for tool_name, stats in (("write_file", write_stats), ("edit_file", edit_stats)):
+        p95_ms = float(stats["p95_ms"])
+        assert p95_ms <= _WRITE_EDIT_P95_BUDGET_MS, (
+            f"{tool_name} p95 {p95_ms:.3f}ms exceeds "
+            f"{_WRITE_EDIT_P95_BUDGET_MS:.0f}ms budget"
+        )
 
-    sandbox = _mapping(perf["sandbox"])
-    event_counts = _mapping(sandbox["event_type_counts"])
+    sandbox = mapping(perf["sandbox"])
+    event_counts = mapping(sandbox["event_type_counts"])
     assert int(event_counts[EventType.SANDBOX_LAYER_STACK_LAYERS_SQUASHED.value]) >= 1
     assert int(event_counts[EventType.SANDBOX_RESOURCE_SNAPSHOT.value]) >= 1
 
-    families = _mapping(sandbox["families"])
-    assert int(_mapping(families["occ"])["conflict_count"]) >= int(
+    families = mapping(sandbox["families"])
+    assert int(mapping(families["occ"])["conflict_count"]) >= int(
         summary["conflict_errors"]
     )
-    assert int(_mapping(families["overlay"])["event_count"]) >= WORKER_COUNT + 2
-    assert int(_mapping(families["layer_stack"])["event_count"]) >= 1
+    assert int(mapping(families["overlay"])["event_count"]) >= WORKER_COUNT + 2
+    assert int(mapping(families["layer_stack"])["event_count"]) >= 1
 
-    resource_keys = _mapping(sandbox["resource_keys"])
+    resource_keys = mapping(sandbox["resource_keys"])
     assert "resource.command_exec.changed_path_count" in resource_keys
+    assert_resource_key_max(perf, "resource.command_exec.workspace_tree_bytes", 0.0)
+    assert_resource_key_max(perf, "resource.command_exec.workspace_tree_exists", 0.0)
     for key in (
         "resource.command_exec.run_dir_tree_truncated",
         "resource.command_exec.upperdir_tree_truncated",
         "resource.command_exec.workspace_tree_truncated",
     ):
-        assert float(_mapping(resource_keys[key])["max"]) == 0.0
+        assert float(mapping(resource_keys[key])["max"]) == 0.0
 
 
 async def _read_summary(sandbox_id: str) -> dict[str, Any]:
@@ -199,16 +232,3 @@ async def _read_summary(sandbox_id: str) -> dict[str, Any]:
     assert result.success
     assert result.exists
     return json.loads(result.content)
-
-
-def _jsonl_rows(path: Path) -> list[dict[str, Any]]:
-    return [
-        json.loads(line)
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    ]
-
-
-def _mapping(value: object) -> Mapping[str, Any]:
-    assert isinstance(value, dict), value
-    return value

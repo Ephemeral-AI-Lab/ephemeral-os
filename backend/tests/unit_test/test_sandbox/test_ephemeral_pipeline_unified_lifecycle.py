@@ -115,6 +115,42 @@ def _request(
     )
 
 
+def test_operation_overlay_release_uses_daemon_lease_guard(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    order: list[str] = []
+    writable_root = tmp_path / "writable"
+    monkeypatch.setattr(
+        "sandbox.overlay.lifecycle.overlay_writable_root",
+        lambda: writable_root,
+    )
+    monkeypatch.setattr(
+        "sandbox.ephemeral_workspace.pipeline.overlay_writable_root",
+        lambda: writable_root,
+    )
+    pipeline = EphemeralPipeline(
+        occ_client=_Occ(order),
+        workspace_ref=tmp_path.as_posix(),
+        layer_stack=_LayerStack(tmp_path, order),
+    )
+
+    handle = pipeline.acquire_operation_overlay(
+        invocation_id="overlay:plugin-write",
+        workspace_root="/testbed",
+    )
+
+    assert "lease-1" not in pipeline._lease_guard._released_lease_ids
+    assert handle.run_dir.exists()
+
+    handle.release()
+    handle.release()
+
+    assert order == ["acquire", "release:lease-1"]
+    assert pipeline._lease_guard._released_lease_ids == {"lease-1"}
+    assert not handle.run_dir.exists()
+
+
 @pytest.mark.asyncio
 async def test_ephemeral_write_acquire_run_capture_commit_destroy_order(
     tmp_path: Path,

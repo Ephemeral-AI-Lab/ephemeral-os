@@ -10,7 +10,7 @@ import pytest
 from pydantic import BaseModel
 
 from sandbox._shared.models import Intent, SandboxCaller
-from sandbox.ephemeral_workspace.plugin import op_registry, overlay_dispatch
+from sandbox.ephemeral_workspace.plugin import op_registry, overlay_child, overlay_dispatch
 from sandbox.ephemeral_workspace.plugin.op_context import PluginOpContext
 from sandbox.ephemeral_workspace.plugin.op_registry import (
     PluginOpRegistrationError,
@@ -138,6 +138,33 @@ async def test_write_allowed_plugin_uses_overlay_and_occ(
 def test_lifecycle_intent_rejected_for_plugin_tools() -> None:
     with pytest.raises(PluginOpRegistrationError, match="LIFECYCLE"):
         register_plugin_op("demo", "enter", intent=Intent.LIFECYCLE)
+
+
+@pytest.mark.asyncio
+async def test_overlay_child_preserves_write_intent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def handler(args: dict[str, Any], ctx: PluginOpContext) -> dict[str, Any]:
+        assert args == {"value": 1}
+        assert ctx.intent is Intent.WRITE_ALLOWED
+        return {"success": True}
+
+    monkeypatch.setattr(overlay_child, "_load_handler", lambda *_args: handler)
+    request = SimpleNamespace(
+        plugin_name="demo",
+        op_name="write",
+        args={"value": 1},
+        layer_stack_root="/tmp/layer-stack",
+        workspace_root=Path("/testbed"),
+        manifest_key="root@1",
+        manifest_version=1,
+        root_hash="root",
+        caller={},
+        metadata={},
+        intent=Intent.WRITE_ALLOWED,
+    )
+
+    assert await overlay_child._invoke_plugin_handler(request) == {"success": True}
 
 
 def _context(

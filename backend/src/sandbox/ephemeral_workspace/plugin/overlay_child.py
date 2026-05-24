@@ -12,7 +12,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from sandbox._shared.models import SandboxCaller
+from sandbox._shared.models import Intent, SandboxCaller
 from sandbox.overlay.kernel_mount import (
     MountInputs,
     mount_overlay,
@@ -89,6 +89,11 @@ class _Request:
         self.manifest_key = str(payload.get("manifest_key") or "")
         self.manifest_version = int(payload.get("manifest_version") or 0)
         self.root_hash = str(payload.get("root_hash") or "")
+        raw_intent = str(payload.get("intent") or "")
+        try:
+            self.intent = Intent(raw_intent) if raw_intent else Intent.READ_ONLY
+        except ValueError:
+            self.intent = Intent.READ_ONLY
         raw_caller = payload.get("caller")
         self.caller = raw_caller if isinstance(raw_caller, dict) else {}
         raw_metadata = payload.get("metadata")
@@ -129,6 +134,7 @@ async def _invoke_plugin_handler(request: _Request) -> Any:
         ),
         projection=_ChildProjection(request),
         overlay=_ChildOverlay(request),
+        intent=request.intent,
         metadata=dict(request.metadata),
     )
     result = handler(request.args, ctx)

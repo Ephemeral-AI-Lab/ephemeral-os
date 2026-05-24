@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from sandbox._shared.models import Intent
 from sandbox._shared.shell_contract import CommandExecRequest
 from sandbox.overlay.capability import mount_syscalls_supported
 from sandbox.overlay.namespace_runner import detect_private_mount_namespace
@@ -128,6 +129,10 @@ async def _run_child_plugin_op(
         if caller is not None and hasattr(caller, "audit_fields")
         else {}
     )
+    raw_intent = getattr(ctx, "intent", "")
+    intent_value = (
+        raw_intent.value if isinstance(raw_intent, Intent) else str(raw_intent)
+    )
     payload_ref.write_text(
         json.dumps(
             {
@@ -144,6 +149,7 @@ async def _run_child_plugin_op(
                 "workdir": str(handle.workdir),
                 "output_ref": output_ref.as_posix(),
                 "caller": caller_payload,
+                "intent": intent_value,
                 "metadata": dict(getattr(ctx, "metadata", {}) or {}),
             },
             separators=(",", ":"),

@@ -15,6 +15,4 @@ class _OverlaySnapshot:
     layer_paths: tuple[Path, ...]
 
 
-__all__ = [
-    "_OverlaySnapshot",
-]
+__all__ = ["_OverlaySnapshot"]

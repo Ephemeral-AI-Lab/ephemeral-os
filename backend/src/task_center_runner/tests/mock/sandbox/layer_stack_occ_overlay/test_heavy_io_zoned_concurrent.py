@@ -31,9 +31,17 @@ from task_center_runner.tests._live_config import (
     database_configured,
     live_e2e_heavy_enabled,
 )
+from task_center_runner.tests.mock._layer_stack_occ_overlay_assertions import (
+    assert_o1_workspace_resource_snapshots,
+    assert_resource_key_max,
+    load_performance_report,
+    mapping,
+)
 
 
 pytestmark = pytest.mark.asyncio
+
+_UPPERDIR_PAYLOAD_OVERHEAD_BYTES = 4 * 1024 * 1024
 
 
 @pytest.mark.skipif(
@@ -74,6 +82,7 @@ async def test_heavy_io_zoned_concurrent(
     _assert_summary(summary)
     _assert_zone_isolation(report, summary)
     _assert_o1_overlay(report)
+    await _assert_upperdir_scales_with_payload(report, summary)
 
 
 def _assert_summary(summary: Mapping[str, Any]) -> None:
@@ -113,6 +122,15 @@ def _assert_zone_isolation(report: RunReport, summary: Mapping[str, Any]) -> Non
         f"count={outside_bucket['workspace_changed_paths']}"
     )
 
+    tracked_bucket = summary["per_zone"]["gitincluded"]
+    assert int(tracked_bucket["workspace_changed_paths"]) == WORKER_COUNT * CHUNK_COUNT
+
+    gitignored_bucket = summary["per_zone"]["gitignored"]
+    assert int(gitignored_bucket["workspace_changed_paths"]) == 0, (
+        "gitignored zone leaked into OCC changed_paths: "
+        f"count={gitignored_bucket['workspace_changed_paths']}"
+    )
+
     for call in report.tool_calls:
         changed = list((call.metadata or {}).get("changed_paths") or ())
         leaked = [
@@ -122,12 +140,20 @@ def _assert_zone_isolation(report: RunReport, summary: Mapping[str, Any]) -> Non
             f"tool call leaked /tmp paths into workspace OCC: "
             f"tool={call.tool_name} leaked={leaked}"
         )
+        ignored_leaks = [
+            path for path in changed if str(path).startswith("build/perf_load_")
+        ]
+        assert not ignored_leaks, (
+            f"tool call leaked gitignored build/ paths into OCC: "
+            f"tool={call.tool_name} leaked={ignored_leaks}"
+        )
 
 
 def _assert_o1_overlay(report: RunReport) -> None:
     """workspace_tree_bytes must stay 0 across the run (O(1) overlay disk)."""
     events_path = report.run_dir / "sandbox_events.jsonl"
     assert events_path.exists()
+    assert_o1_workspace_resource_snapshots(events_path)
     max_workspace_bytes = 0.0
     max_workspace_exists = 0.0
     for line in events_path.read_text(encoding="utf-8").splitlines():
@@ -154,6 +180,37 @@ def _assert_o1_overlay(report: RunReport) -> None:
     assert max_workspace_exists == 0.0, (
         f"O(1) overlay regression: workspace_tree_exists max={max_workspace_exists}"
     )
+
+
+async def _assert_upperdir_scales_with_payload(
+    report: RunReport,
+    summary: Mapping[str, Any],
+) -> None:
+    assert report.performance_report_task is not None
+    perf_path = await report.performance_report_task
+    assert perf_path == report.run_dir / "performance_report.json"
+    perf = load_performance_report(report.run_dir)
+    assert_resource_key_max(perf, "resource.command_exec.workspace_tree_bytes", 0.0)
+    assert_resource_key_max(perf, "resource.command_exec.workspace_tree_exists", 0.0)
+
+    expected_payload_bytes = (
+        int(summary["expected_kib_per_zone_per_worker"]) * 1024
+    )
+    resources = mapping(mapping(perf["sandbox"])["resource_keys"])
+    upperdir_stats = mapping(resources["resource.command_exec.upperdir_tree_bytes"])
+    changed_path_stats = mapping(resources["resource.command_exec.changed_path_count"])
+    upperdir_max = float(upperdir_stats["max"])
+    assert upperdir_max >= expected_payload_bytes * 0.95, (
+        f"upperdir max {upperdir_max} did not capture tracked payload "
+        f"{expected_payload_bytes}"
+    )
+    assert upperdir_max <= (
+        expected_payload_bytes + _UPPERDIR_PAYLOAD_OVERHEAD_BYTES
+    ), (
+        f"upperdir max {upperdir_max} exceeds payload-proportional budget "
+        f"{expected_payload_bytes + _UPPERDIR_PAYLOAD_OVERHEAD_BYTES}"
+    )
+    assert float(changed_path_stats["max"]) == float(CHUNK_COUNT)
 
 
 async def _read_summary(sandbox_id: str) -> dict[str, Any]:

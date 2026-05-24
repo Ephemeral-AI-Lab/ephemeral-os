@@ -44,12 +44,12 @@ def _warm_start_timeout_s() -> float:
         return 8.0
 
 
-@register_plugin_op("lsp", "hover", intent=Intent.READ_ONLY, auto_workspace_overlay=False)
+@register_plugin_op("lsp", "hover", intent=Intent.READ_ONLY)
 async def hover(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     return await _run_timed_lsp_op("hover", ctx, lambda session: session.hover(args))
 
 
-@register_plugin_op("lsp", "find_definitions", intent=Intent.READ_ONLY, auto_workspace_overlay=False)
+@register_plugin_op("lsp", "find_definitions", intent=Intent.READ_ONLY)
 async def find_definitions(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     return await _run_timed_lsp_op(
         "find_definitions",
@@ -58,7 +58,7 @@ async def find_definitions(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     )
 
 
-@register_plugin_op("lsp", "find_references", intent=Intent.READ_ONLY, auto_workspace_overlay=False)
+@register_plugin_op("lsp", "find_references", intent=Intent.READ_ONLY)
 async def find_references(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     return await _run_timed_lsp_op(
         "find_references",
@@ -67,7 +67,7 @@ async def find_references(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     )
 
 
-@register_plugin_op("lsp", "diagnostics", intent=Intent.READ_ONLY, auto_workspace_overlay=False)
+@register_plugin_op("lsp", "diagnostics", intent=Intent.READ_ONLY)
 async def diagnostics(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     return await _run_timed_lsp_op(
         "diagnostics",
@@ -76,7 +76,7 @@ async def diagnostics(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     )
 
 
-@register_plugin_op("lsp", "query_symbols", intent=Intent.READ_ONLY, auto_workspace_overlay=False)
+@register_plugin_op("lsp", "query_symbols", intent=Intent.READ_ONLY)
 async def query_symbols(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     return await _run_timed_lsp_op(
         "query_symbols",
@@ -117,7 +117,7 @@ async def format_document(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     return {"edit": edit, "apply": result}
 
 
-@register_plugin_op("lsp", "code_actions", intent=Intent.READ_ONLY, auto_workspace_overlay=False)
+@register_plugin_op("lsp", "code_actions", intent=Intent.READ_ONLY)
 async def code_actions(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
     session = await get_session(ctx)
     return await session.code_actions(args)

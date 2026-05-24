@@ -12,7 +12,8 @@ import pytest
 
 from plugins.core.manifest import PluginManifest, parse_plugin_manifest
 from sandbox.ephemeral_workspace.plugin import session as session_mod
-from sandbox.ephemeral_workspace.plugin.session import call_plugin
+from sandbox._shared.models import Intent
+from sandbox.ephemeral_workspace.plugin.session import call_plugin, call_plugin_write
 from tools._framework.core.context import ToolExecutionContextService
 
 
@@ -90,6 +91,83 @@ def test_call_plugin_happy_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
         "digest": "abc123",
         "workspace_root": "/testbed",
     }
+    assert dispatch_calls[1][2]["intent"] == Intent.READ_ONLY.value
+
+
+def test_call_plugin_write_requires_write_intent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest = _seed_demo_manifest(tmp_path)
+    monkeypatch.setattr(
+        session_mod, "_manifest_cache", {"demo": manifest}, raising=False
+    )
+
+    async def never_called(*args: Any, **kwargs: Any) -> Any:
+        raise AssertionError("write plugin dispatch should be blocked")
+
+    result = asyncio.run(
+        call_plugin_write(
+            _make_context(),
+            plugin="demo",
+            op="run",
+            payload={},
+            install_runner=never_called,
+            daemon_dispatcher=never_called,
+        )
+    )
+
+    assert result.is_error
+    assert result.metadata["step"] == "intent"
+
+
+def test_call_plugin_write_forwards_write_intent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest = _seed_demo_manifest(tmp_path)
+    monkeypatch.setattr(
+        session_mod, "_manifest_cache", {"demo": manifest}, raising=False
+    )
+    ctx = _make_context()
+    ctx["__intent"] = Intent.WRITE_ALLOWED
+    dispatch_payloads: list[dict[str, Any]] = []
+
+    async def fake_install(sandbox_id: str, m: PluginManifest) -> str:
+        del sandbox_id, m
+        return "abc123"
+
+    async def fake_dispatch(
+        sandbox_id: str, op: str, args: dict[str, Any], **kwargs: Any
+    ) -> dict[str, Any]:
+        del sandbox_id, kwargs
+        if op != "api.plugin.ensure":
+            dispatch_payloads.append(dict(args))
+        return {"success": True}
+
+    result = asyncio.run(
+        call_plugin_write(
+            ctx,
+            plugin="demo",
+            op="run",
+            payload={"x": 1},
+            install_runner=fake_install,
+            daemon_dispatcher=fake_dispatch,
+        )
+    )
+
+    assert not result.is_error
+    assert dispatch_payloads == [
+        {
+            "x": 1,
+            "caller": {
+                "agent_id": "",
+                "run_id": "",
+                "agent_run_id": "",
+                "task_id": "",
+            },
+            "workspace_root": "/testbed",
+            "intent": Intent.WRITE_ALLOWED.value,
+        }
+    ]
 
 
 def test_call_plugin_install_failure_surfaces_error(

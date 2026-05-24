@@ -39,6 +39,13 @@ from task_center_runner.agent.mock.prompt_inspector import ToolCallRecord
 from task_center_runner.core.stores import TaskCenterStoreBundle
 from task_center_runner.environments.sweevo_image.fixtures import run_scenario_on_sweevo_image
 from task_center_runner.tests._live_config import database_configured
+from task_center_runner.tests.mock._layer_stack_occ_overlay_assertions import (
+    assert_o1_workspace_resource_snapshots,
+    assert_resource_key_max,
+    assert_timing_keys_present,
+    jsonl_rows,
+    load_performance_report,
+)
 
 
 pytestmark = pytest.mark.asyncio
@@ -48,6 +55,13 @@ _REQUIRED_SANDBOX_EVENTS = (
     EventType.SANDBOX_LAYER_STACK_LAYERS_SQUASHED,
     EventType.SANDBOX_OCC_CHANGESET_RECEIVED,
     EventType.SANDBOX_OCC_CHANGES_COMMITTED,
+)
+_REQUIRED_PERF_TIMING_KEYS = (
+    "layer_stack.auto_squash.total_s",
+    "layer_stack.auto_squash.depth_before",
+    "occ.apply.commit_resume_wait_s",
+    "occ.apply.total_s",
+    "layer_stack.prepare_workspace_snapshot.total_s",
 )
 
 
@@ -90,7 +104,7 @@ async def test_auto_squash_commit_resume_crosses_depth_threshold(
     assert sandbox_log.exists()
     logged_events = {
         EventType(row["event_type"])
-        for row in _jsonl_rows(sandbox_log)
+        for row in jsonl_rows(sandbox_log)
     }
     missing_logged = sorted(
         event.value
@@ -98,6 +112,7 @@ async def test_auto_squash_commit_resume_crosses_depth_threshold(
         if event not in logged_events
     )
     assert not missing_logged, f"missing persisted events: {missing_logged}"
+    assert_o1_workspace_resource_snapshots(sandbox_log)
 
     timings_records = list(_iter_tool_timings(report.tool_calls))
     assert any(
@@ -139,6 +154,7 @@ async def test_auto_squash_commit_resume_crosses_depth_threshold(
         conflict_status=str(conflict_metadata.get("status") or ""),
         conflict_reason=str(conflict_metadata.get("conflict_reason") or ""),
     )
+    await _assert_performance_report(report)
 
 
 def _iter_tool_timings(
@@ -162,12 +178,15 @@ def _find_intentional_conflict(
     return None
 
 
-def _jsonl_rows(path: Path) -> list[dict[str, Any]]:
-    return [
-        json.loads(line)
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    ]
+async def _assert_performance_report(report: Any) -> None:
+    performance_report_task = getattr(report, "performance_report_task", None)
+    assert performance_report_task is not None
+    perf_path = await performance_report_task
+    assert perf_path == report.run_dir / "performance_report.json"
+    perf = load_performance_report(report.run_dir)
+    assert_timing_keys_present(perf, _REQUIRED_PERF_TIMING_KEYS)
+    assert_resource_key_max(perf, "resource.command_exec.workspace_tree_bytes", 0.0)
+    assert_resource_key_max(perf, "resource.command_exec.workspace_tree_exists", 0.0)
 
 
 async def _assert_final_workspace_state(

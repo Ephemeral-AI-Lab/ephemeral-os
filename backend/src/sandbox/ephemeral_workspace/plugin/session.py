@@ -39,6 +39,7 @@ from tools.sandbox._lib.session import (
 
 __all__ = [
     "call_plugin",
+    "call_plugin_write",
     "forget",
     "manifest_for",
 ]
@@ -168,6 +169,35 @@ async def call_plugin(
         return _error_result("dispatch", plugin, op, _exception_message(exc))
 
     return _wrap_response(response, plugin=plugin, op=op)
+
+
+async def call_plugin_write(
+    context: ToolExecutionContextService,
+    *,
+    plugin: str,
+    op: str,
+    payload: Mapping[str, Any],
+    timeout: int = 60,
+    daemon_dispatcher: Callable[..., Any] | None = None,
+    install_runner: Callable[..., Any] | None = None,
+) -> ToolResult:
+    """Dispatch a mutating plugin op only from a WRITE_ALLOWED tool."""
+    if context.get("__intent") is not Intent.WRITE_ALLOWED:
+        return _error_result(
+            "intent",
+            plugin,
+            op,
+            "call_plugin_write requires @tool(intent=Intent.WRITE_ALLOWED)",
+        )
+    return await call_plugin(
+        context,
+        plugin=plugin,
+        op=op,
+        payload=payload,
+        timeout=timeout,
+        daemon_dispatcher=daemon_dispatcher,
+        install_runner=install_runner,
+    )
 
 
 def _wrap_response(

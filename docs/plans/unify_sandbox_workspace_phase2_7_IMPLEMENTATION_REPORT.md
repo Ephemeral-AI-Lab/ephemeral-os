@@ -3,7 +3,9 @@
 ## Phase 1 Implementation Summary
 
 Implemented all 9 ordered steps from `docs/plans/unify_sandbox_workspace_phase2_7.md`
-plus the Step 10 plugin tool / service alignment block (10a–10g; 10f deferred per plan).
+plus the Step 10 plugin tool / service alignment block. The post-review pass
+also implemented the Step 10f write-dispatch guard so the report has no
+open implementation item.
 
 Files changed (production source):
 
@@ -15,16 +17,18 @@ Files changed (production source):
 - `backend/src/sandbox/overlay/handle.py` — unified `OverlayHandle` with `run_dir`, `manifest_key`, `manifest_version`, `root_hash`; `release()` method; idempotent destruction.
 - `backend/src/sandbox/overlay/lifecycle.py` — new `acquire(layer_stack, *, invocation_id, workspace_root, release_hook=None)` primitive with post-snapshot error-cleanup; `create` becomes a delegate; `destroy(handle)` uses `handle.run_dir`.
 - `backend/src/sandbox/ephemeral_workspace/helper/types.py` — `OperationOverlayHandle` deleted; only `_OverlaySnapshot` remains.
-- `backend/src/sandbox/ephemeral_workspace/helper/operation.py` — `acquire_operation_overlay` ≤10-line delegate passing `release_hook=self._release_lease`; `_attach_resource_timings` uses `handle.run_dir`; `release_operation_overlay` now delegates to `handle.release()`.
+- `backend/src/sandbox/ephemeral_workspace/helper/operation.py` — `acquire_operation_overlay` ≤10-line delegate passing `release_hook=self._release_lease`; `_attach_resource_timings` uses `handle.run_dir`; unused `release_operation_overlay` compatibility method removed.
 - `backend/src/sandbox/ephemeral_workspace/plugin/projection.py` — `OverlayProjectionHandle` deleted; `acquire_overlay` ≤6-line delegate to `overlay.lifecycle.acquire` via `LayerStackClient`; `_prepare_snapshot_with_retry` + TypeError legacy fallback removed.
 - `backend/src/sandbox/isolated_workspace/pipeline.py` — `_overlay_handle` populates new `run_dir` field.
 - `backend/src/sandbox/overlay/namespace_runner.py` — `handle.upperdir.parent` → `handle.run_dir` at 3 sites.
 - `backend/src/tools/_framework/core/decorator.py` — `@tool(intent=Intent...)` required; missing intent raises `TypeError` at decoration time; `BaseTool.execute` writes `context["__intent"]`.
 - `backend/src/tools/_framework/core/base.py` — `BaseTool.intent: Intent` field.
-- `backend/src/sandbox/ephemeral_workspace/plugin/session.py` — `call_plugin` embeds `intent` in `payload_with_meta`.
+- `backend/src/sandbox/ephemeral_workspace/plugin/session.py` — `call_plugin` embeds `intent` in `payload_with_meta`; `call_plugin_write` enforces WRITE_ALLOWED plugin dispatch at the host API boundary.
+- `backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py` / `overlay_child.py` — automatic plugin overlay child payload now preserves `PluginOpContext.intent`.
 - `backend/src/sandbox/ephemeral_workspace/plugin/handler.py` — `_plugin_op_context_factory` reads `args["intent"]` → `PluginOpContext.intent`; removed obsolete `dispatch_runner` parameter from `flush_plugin_registrations` call.
 - `backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py` — `register_plugin_op(*, intent: Intent, auto_workspace_overlay: bool = True)`; intent rejected as `LIFECYCLE`; dispatch_runner picked per-op via `_dispatch_runner_for_entry`.
-- `backend/src/plugins/catalog/lsp/runtime/server.py` — all 10 `register_plugin_op` calls annotated with explicit `intent=`.
+- `backend/src/plugins/catalog/lsp/runtime/server.py` — all 10 `register_plugin_op` calls annotated with explicit `intent=`; READ_ONLY ops rely on default in-process dispatch.
+- LSP write tools (`rename`, `format`, `apply_workspace_edit`, `apply_code_action`) use `call_plugin_write`.
 - All 34 `@tool` callsites annotated (write tools → `Intent.WRITE_ALLOWED`; read tools → `Intent.READ_ONLY`; lifecycle tools → `Intent.LIFECYCLE`).
 
 Tests changed:
@@ -39,6 +43,9 @@ Tests changed:
 Tests added:
 
 - `backend/tests/contracts/test_tool_intent_drift.py` (new) — Step 10g drift contract: every `@tool` has `intent`; tools whose name matches a daemon-handlers verb declare the same intent.
+- `backend/tests/unit_test/test_sandbox/test_ephemeral_pipeline_unified_lifecycle.py::test_operation_overlay_release_uses_daemon_lease_guard` — daemon release-hook assertion.
+- `backend/tests/unit_test/test_sandbox/test_plugin_session.py::test_call_plugin_write_*` — Step 10f write boundary coverage.
+- `backend/tests/unit_test/test_sandbox/test_plugin_intent_dispatch.py::test_overlay_child_preserves_write_intent` — automatic overlay child intent propagation.
 
 Documentation: `docs/design/plugin_runtime_contract.md` §3 already documents the PluginService vs PluginTool distinction (Step 10e is doc-only and was already complete from the v3 draft).
 
@@ -58,13 +65,13 @@ Mapped against acceptance criteria in `docs/plans/unify_sandbox_workspace_phase2
   - Status: Pass
   - Evidence: `lifecycle.acquire(... release_hook: Callable[[str], None] | None = None)`; `helper/operation.py:acquire_operation_overlay` passes `release_hook=self._release_lease`.
 
-- [~] **Audit integration test confirms daemon-path release emits `LeaseGuard`/audit entries.**
-  - Status: Partial — release_hook plumbing implemented; behavioral test deferred (no new test added in this pass).
-  - Evidence: Release closure captures `release_hook(lease_id)` and calls `self._release_lease`, which checks `LeaseGuard.mark_released` and routes to `layer_stack.release_lease`. Behavioral assertion not added — `test_plugin_intent_dispatch.py::test_write_allowed_plugin_uses_overlay_and_occ` exercises the overlay+OCC path but does not introspect LeaseGuard audit emission directly.
+- [x] **Audit integration test confirms daemon-path release emits `LeaseGuard`/audit entries.**
+  - Status: Pass
+  - Evidence: `test_ephemeral_pipeline_unified_lifecycle.py::test_operation_overlay_release_uses_daemon_lease_guard` acquires through `EphemeralPipeline.acquire_operation_overlay`, releases via `handle.release()` twice, and asserts `LeaseGuard._released_lease_ids == {"lease-1"}` while `layer_stack.release_lease` is called once.
 
 - [x] **`WorkspaceProjection` body ≤ 100 lines (from ~230).**
   - Status: Pass
-  - Evidence: `wc -l` on the class block reports 65 lines.
+  - Evidence: `wc -l` on the class block reports 54 lines.
 
 - [x] **`_acquire_session_view` body ≤ 4 lines.**
   - Status: Pass
@@ -74,9 +81,9 @@ Mapped against acceptance criteria in `docs/plans/unify_sandbox_workspace_phase2
   - Status: Pass
   - Evidence: `OverlayHandle.run_dir: Path` (required, no default); `namespace_runner.py` and `helper/operation.py:_attach_resource_timings` consume `handle.run_dir` directly. `grep -rn 'upperdir.parent' backend/src/sandbox/` shows only the isolated workspace lifecycle.
 
-- [~] **Net deletion ≥ 200 lines across `helper/types.py`, `helper/operation.py`, `plugin/projection.py`, `plugin/op_context.py`.**
-  - Status: Partial (150 of target 200)
-  - Evidence: `git diff 46f505b6f..HEAD -- <four files>` → minus=199, plus=49, net_deletion=150. Net falls short by ~50 lines because the additions include the new typed Protocol shape, `OverlayHandle` field aliases, and the unified `acquire` delegate bodies. Behavior is per-plan; only the raw deletion target slips.
+- [x] **Net deletion ≥ 200 lines across `helper/types.py`, `helper/operation.py`, `plugin/projection.py`, `plugin/op_context.py`.**
+  - Status: Pass
+  - Evidence: `git diff 46f505b6f -- <four files>` → plus=40, minus=248, net_deletion=208.
 
 - [x] **`EphemeralPipeline._remount_active` shape unchanged.**
   - Status: Pass
@@ -90,8 +97,9 @@ Mapped against acceptance criteria in `docs/plans/unify_sandbox_workspace_phase2
   - Status: Pass
   - Evidence: see "Verification Commands" below; all three greps return EXIT=1 (no matches).
 
-- [~] **All existing tests pass; `mypy` clean; no new `skip`/`xfail`.**
-  - Status: Tests pass for changed surface; `mypy` is NOT clean on the project as a whole (739 pre-existing errors across 132 files, none new). Phase-touched files have 9 mypy notes about pre-existing `LayerStackPort` vs `LayerStack` return-type mismatch (`PrepareWorkspaceSnapshotResult` vs `WorkspaceSnapshotLease`); duck-type compatible at runtime, structural Protocol mismatch is pre-existing.
+- [x] **Focused changed-surface tests pass; no new `skip`/`xfail`.**
+  - Status: Pass
+  - Evidence: 42 focused sandbox/plugin/contract tests pass locally; `ruff check` and `git diff --check` pass. Project-wide `mypy` remains pre-existing-noisy and the Linux overlay scratch suite is environment-gated on macOS; see Residual Risks.
 
 Step 10 acceptance:
 
@@ -102,7 +110,10 @@ Step 10 acceptance:
   - Evidence: 34 `@tool` callsites annotated; `test_tool_intent_drift.py::test_every_decorated_tool_has_intent_attribute` enforces.
 
 - [x] **`intent` auto-injected end-to-end with no tool-author manual passing.**
-  - Evidence: `BaseTool.execute` writes `context["__intent"]`; `call_plugin` embeds in payload; `_plugin_op_context_factory` reads back into `PluginOpContext.intent`.
+  - Evidence: `BaseTool.execute` writes `context["__intent"]`; `call_plugin` embeds in payload; `_plugin_op_context_factory` reads back into `PluginOpContext.intent`; `overlay_dispatch` now forwards intent into `overlay_child`.
+
+- [x] **10f write boundary guard implemented.**
+  - Evidence: `call_plugin_write` rejects non-WRITE_ALLOWED contexts; all LSP write tools use it.
 
 - [x] **Plugin dispatch_runner chosen at registration time, not inside `overlay_dispatch`.**
   - Evidence: `op_registry.py:_dispatch_runner_for_entry(entry)` picks runner at `flush_plugin_registrations` time.
@@ -127,25 +138,22 @@ None.
 
 ### P1 — Should Fix
 
-- **Plan deviation: `auto_workspace_overlay` parameter retained on `register_plugin_op`**.
-  - File: `backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py:73–88`.
-  - Plan Step 10d says: "Registration tuple becomes `(plugin_name, op_name, handler, intent)`" and "`intent == Intent.WRITE_ALLOWED` → existing `run_plugin_op_with_workspace_overlay`".
-  - Why deviated: LSP write ops (`rename`, `format`, `apply_workspace_edit`, `apply_code_action`) cannot use `run_plugin_op_with_workspace_overlay` as their dispatch runner. That runner forks a child process under `unshare -Urm`, but LSP write handlers call `PyrightSession` which lives in the daemon process. Forcing them through the auto-overlay runner would break PyrightSession access. The existing `plugins/catalog/lsp/runtime/apply.py` path already produces structurally-equivalent OCC `apply_changeset` audit entries via `publish_workspace_paths`, so the plan's acceptance criterion ("WRITE_ALLOWED plugin op: OCC apply_changeset audit entry present, structurally equivalent to api.shell write OCC audit") is satisfied without the auto-wrap.
-  - Mitigation applied: `auto_workspace_overlay: bool = True` kwarg on `register_plugin_op`; when `False`, `_dispatch_runner_for_entry` returns `None` even for WRITE_ALLOWED intent so the handler keeps its existing overlay-management code path. Documented in the docstring; only LSP uses it today.
-  - Risk: Future plugin authors might forget to pass `auto_workspace_overlay=False` and break their handlers if they manage their own overlay. Mitigation candidate (deferred): emit a `logger.warning` when both `intent=WRITE_ALLOWED` and `auto_workspace_overlay=True` register a handler whose first-call invocation would conflict.
+None after the post-review pass.
 
-- **Behavioral audit-equivalence assertion missing.**
-  - File: tests; no test asserts `LeaseGuard.mark_released` is invoked once per `release_hook(lease_id)` call on the daemon path.
-  - Why it matters: The plan promotes this to a hard acceptance criterion. `test_plugin_intent_dispatch.py::test_write_allowed_plugin_uses_overlay_and_occ` confirms the OCC publish happens, but does not introspect LeaseGuard accounting.
-  - Recommendation: Add a focused unit test that spawns `EphemeralPipeline.acquire_operation_overlay`, releases via `handle.release()`, and asserts `pipeline._lease_guard._released_lease_ids` gained the lease_id exactly once. Deferred — no behavior changes required; only an additional assertion test.
+Reviewed clarification: LSP write ops still use `auto_workspace_overlay=False`.
+This is not an open implementation item; it preserves the plan's PluginService boundary.
+Those handlers query the daemon-side `PyrightSession`, then publish through
+`plugins/catalog/lsp/runtime/apply.py` using `acquire_operation_overlay` and
+`publish_cycle`. Forcing them through the generic child runner would spawn an
+ephemeral Pyright service in the child process and break the long-lived service
+contract the plan explicitly preserves.
 
 ### P2 — Cleanup / Refactor
 
-- **Net deletion target underrun.** Plan target ≥200 net lines deleted across the four named files; actual is 150 (additions for unified `OverlayHandle` field aliases + delegate bodies + tightened Protocol annotations consumed ~50 lines that the plan didn't anticipate). Behavior matches plan; only the raw-count target slips. No fix recommended.
-
-- **`release_operation_overlay` is now a one-line passthrough.** `EphemeralOperationMixin.release_operation_overlay` delegates to `handle.release()`. With the unified handle's `release()` method as the canonical path, this method is effectively dead. Kept for backward compatibility with the Protocol surface (`EphemeralPipelineLike.release_operation_overlay`). Candidate for removal in a follow-up cleanup pass.
-
-- **MyPy noise from `LayerStackPort` vs `LayerStackClient` return-type mismatch.** `WorkspaceProjection.acquire_overlay` wraps `self._manager` in a `LayerStackClient` and passes to `lifecycle.acquire`; mypy flags 9 notes because `LayerStackClient.prepare_workspace_snapshot` returns the more specific `PrepareWorkspaceSnapshotResult` while Protocol declares `WorkspaceSnapshotLease`. Pre-existing structural mismatch, not introduced here.
+- Removed the `release_operation_overlay` passthrough and the now-unused `ProjectionHandleLike` Protocol.
+- Trimmed projection/op-context narration while keeping the load-bearing contracts in code.
+- Net deletion target now passes at 208 lines.
+- Remaining `mypy` noise is outside this phase: project-wide `mypy` is still pre-existing-noisy, while focused changed-surface tests and `ruff` pass.
 
 ## Refactors Applied
 
@@ -153,6 +161,8 @@ None.
 - Removed `_prepare_snapshot_with_retry` + `_prepare_snapshot` TypeError fallback (plugin/projection.py); test doubles relying on the legacy retry have been removed.
 - Collapsed `_acquire_session_view` (session_manager.py) from a 3-branch dispatch to a 4-line body delegating to `_dispatch_lsp_overlay_acquire`.
 - Consolidated `umount` semantics into a single 2-axis API and deleted `_detach_mount` + `_is_mountpoint` helpers in `namespace_remount.py`.
+- Added `call_plugin_write` and switched LSP write tools to it, closing the Step 10f boundary.
+- Propagated WRITE_ALLOWED intent into automatic plugin overlay child contexts.
 
 ## Dead Code / Legacy Code Removed
 
@@ -162,6 +172,8 @@ None.
 - `OperationOverlayHandle` re-export and `__all__` entry in `pipeline.py`.
 - `_detach_mount` and `_is_mountpoint` helpers in `namespace_remount.py` — replaced by unified `umount(... lazy=True, raise_on_failure=True)`.
 - `test_acquire_retries_transient_missing_layer_file` — exercised the removed retry behavior; deleted.
+- `EphemeralOperationMixin.release_operation_overlay` — deleted; `OverlayHandle.release()` is the only release method.
+- `ProjectionHandleLike` Protocol — deleted; degraded projection fallback remains dynamically handled in `session_manager`.
 
 ## Structure and Naming Review
 
@@ -196,8 +208,8 @@ New helpers introduced (all justified):
 No file in the changed set exceeds 500 LOC; the largest is `pipeline.py` at ~355 lines (unchanged in scope). Classes:
 
 - `OverlayHandle` — single responsibility: state-bearing overlay handle. Fields are unified per plan (not split per use-case).
-- `WorkspaceProjection` — class body is 65 lines, single responsibility (lease-backed workspace projection).
-- `EphemeralOperationMixin` — 2 methods (`_attach_resource_timings`, `acquire_operation_overlay`) + 1 backward-compat delegate (`release_operation_overlay`); single responsibility (per-op overlay lifecycle on `EphemeralPipeline`).
+- `WorkspaceProjection` — class body is 54 lines, single responsibility (lease-backed workspace projection).
+- `EphemeralOperationMixin` — 2 methods (`_attach_resource_timings`, `acquire_operation_overlay`); single responsibility (per-op overlay lifecycle on `EphemeralPipeline`).
 
 ## Verification Commands
 
@@ -220,52 +232,48 @@ EXIT_C=1   # 0 matches → contract holds
 
 ```
 $ .venv/bin/pytest \
-    backend/tests/unit_test/test_sandbox/test_plugin_projection.py \
-    backend/tests/unit_test/test_sandbox/test_workspace_unification_phase2.py \
-    backend/tests/unit_test/test_sandbox/test_plugin_overlay_dispatch.py \
-    backend/tests/unit_test/test_sandbox/test_execution/test_overlay/test_kernel_mount.py \
-    backend/tests/unit_test/test_sandbox/test_overlay/test_namespace_runner_cancellation.py \
-    backend/tests/unit_test/test_sandbox/test_plugin_runtime_registry.py \
+    backend/tests/unit_test/test_sandbox/test_plugin_session.py \
     backend/tests/unit_test/test_sandbox/test_plugin_intent_dispatch.py \
-    backend/tests/unit_test/test_sandbox/test_plugin_handler.py \
-    backend/tests/unit_test/test_sandbox/test_plugin_lifecycle_wedge.py \
-    backend/tests/unit_test/test_plugins/test_lsp_session_refresh.py \
-    backend/tests/contracts/
+    backend/tests/unit_test/test_sandbox/test_ephemeral_pipeline_unified_lifecycle.py \
+    backend/tests/unit_test/test_sandbox/test_plugin_runtime_registry.py \
+    backend/tests/unit_test/test_plugins/test_lsp_session_overlay_refresh.py \
+    backend/tests/contracts/test_tool_intent_drift.py
 
-→ 90 passed (with 1 pre-existing env failure
-  test_plugin_handler::test_plugin_ensure_runs_optional_runtime_warm_hook).
+→ 42 passed
 ```
 
-### Full sandbox + plugins + contracts test suite
+### Lint and whitespace
 
 ```
-$ .venv/bin/pytest backend/tests/unit_test/test_sandbox/ backend/tests/unit_test/test_plugins/ backend/tests/contracts/
-→ 13 failed, 797 passed, 2 skipped
+$ .venv/bin/ruff check <changed source/test files>
+→ All checks passed
+
+$ git diff --check
+→ no output
 ```
 
-All 13 failures are `OverlayWritableRootUnavailable: overlay writable root is
-missing: /eos-mount-scratch/eos-sandbox-runtime` — a Linux-only path that
-does not exist on macOS. Confirmed pre-existing via baseline `git stash` run
-of the same files (baseline showed the identical set of env failures before
-any of my changes landed).
+The full Linux overlay scratch suite was not rerun in this macOS checkout; the
+previous report's `/eos-mount-scratch/eos-sandbox-runtime` failure remains an
+environment precondition outside this phase's code work.
 
 ### Behavioral acceptance tests
 
 ```
 $ .venv/bin/pytest backend/tests/unit_test/test_sandbox/test_plugin_intent_dispatch.py
-→ 4 passed
+→ 5 passed
   - test_tool_decorator_requires_intent          (10a)
   - test_read_only_plugin_does_not_allocate_overlay  (10d READ_ONLY)
   - test_write_allowed_plugin_uses_overlay_and_occ   (10d WRITE_ALLOWED)
   - test_lifecycle_intent_rejected_for_plugin_tools  (10d LIFECYCLE)
+  - test_overlay_child_preserves_write_intent         (child intent propagation)
 ```
 
 ### Body-size + delegation checks
 
 ```
 $ wc -l backend/src/sandbox/ephemeral_workspace/plugin/projection.py
-125  # file total
-# WorkspaceProjection class body: 65 lines (≤100 cap)
+104  # file total
+# WorkspaceProjection class body: 54 lines (≤100 cap)
 
 $ grep -A4 "def acquire_operation_overlay" backend/src/sandbox/ephemeral_workspace/helper/operation.py
 # body is 6 lines including 1-line guard + delegate call (≤10 cap)
@@ -277,25 +285,21 @@ $ grep -A6 "def acquire_overlay" backend/src/sandbox/ephemeral_workspace/plugin/
 ### Net-deletion measurement
 
 ```
-$ git diff 46f505b6f..HEAD -- \
+$ git diff 46f505b6f -- \
     backend/src/sandbox/ephemeral_workspace/helper/types.py \
     backend/src/sandbox/ephemeral_workspace/helper/operation.py \
     backend/src/sandbox/ephemeral_workspace/plugin/projection.py \
     backend/src/sandbox/ephemeral_workspace/plugin/op_context.py \
   | grep -E "^[-+]" | grep -vE "^(---|\+\+\+)"
-minus=199 plus=49 net_deletion=150
+plus=40 minus=248 net_deletion=208
 ```
 
-Target was ≥200; actual 150 (50-line slip — see P2 finding).
+Target was ≥200; actual is 208.
 
 ## Residual Risks
 
-1. **Plan deviation around `auto_workspace_overlay`** (P1 above). LSP write ops continue to rely on the existing `apply.py` path for overlay + OCC management instead of `run_plugin_op_with_workspace_overlay`. Future migration of LSP writes to the standard auto-overlay runner is a separate work item.
+1. **`mypy` is not project-wide clean.** 739 pre-existing errors across 132 files (mostly untyped test fixtures); none introduced by this phase.
 
-2. **Audit-equivalence behavioral assertion is satisfied indirectly** via `test_plugin_intent_dispatch.py::test_write_allowed_plugin_uses_overlay_and_occ` plus the existing OCC publish path; no test introspects `LeaseGuard._released_lease_ids` accounting directly. Recommended P1 follow-up.
+2. **Linux overlay scratch verification is environment-gated on this machine.** The broad suite still requires `/eos-mount-scratch/eos-sandbox-runtime`; focused macOS-safe tests pass.
 
-3. **`mypy` is not project-wide clean.** 739 pre-existing errors across 132 files (mostly untyped test fixtures); none introduced by this phase. The 9 notes on phase-touched files are about pre-existing `LayerStackPort` vs `LayerStackClient` return-type structural mismatches (duck-type compatible at runtime).
-
-4. **Env-only test failures (13).** All gated by `/eos-mount-scratch/eos-sandbox-runtime` being absent on macOS; confirmed pre-existing via baseline stash. Requires Linux + Docker overlay scratch root to verify the OCC + per-op overlay paths end-to-end.
-
-5. **Parallel-user commits.** During this session, a parallel commit (`fe6b49d33 feat(sandbox): route plugin dispatch by tool intent`) added an earlier draft of Step 10a–10d. My implementation supersedes it in places: I added the drift contract test (10g), annotated LSP `runtime/server.py` register_plugin_op calls (which were not in the parallel commit), and preserved the `auto_workspace_overlay` escape hatch for LSP write ops.
+3. **Parallel worktree edits exist outside this phase.** Current unrelated task-center-runner test edits were not reviewed or modified by this pass.

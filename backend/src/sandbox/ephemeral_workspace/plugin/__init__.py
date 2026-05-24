@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Any
 
-__all__ = ["call_plugin"]
+__all__ = ["call_plugin", "call_plugin_write"]
 
 
 def __getattr__(name: str) -> Any:
@@ -22,4 +22,8 @@ def __getattr__(name: str) -> Any:
         from sandbox.ephemeral_workspace.plugin.session import call_plugin
 
         return call_plugin
+    if name == "call_plugin_write":
+        from sandbox.ephemeral_workspace.plugin.session import call_plugin_write
+
+        return call_plugin_write
     raise AttributeError(name)
