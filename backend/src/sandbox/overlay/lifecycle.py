@@ -61,6 +61,7 @@ def acquire(
             namespace_pid=None,
             run_dir=run_dir,
             snapshot_manifest=manifest,
+            snapshot_timings=dict(getattr(snapshot, "timings", {}) or {}),
             manifest_key=f"{root_hash}@{manifest_version}",
             manifest_version=manifest_version,
             root_hash=root_hash,

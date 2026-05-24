@@ -37,6 +37,7 @@ class OverlayHandle:
     namespace_pid: int | None
     run_dir: Path
     snapshot_manifest: object | None = None
+    snapshot_timings: dict[str, float] = field(default_factory=dict)
     manifest_key: str = ""
     manifest_version: int = 0
     root_hash: str = ""

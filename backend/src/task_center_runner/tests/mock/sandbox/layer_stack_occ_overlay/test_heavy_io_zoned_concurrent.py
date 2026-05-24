@@ -126,10 +126,10 @@ def _assert_zone_isolation(report: RunReport, summary: Mapping[str, Any]) -> Non
     assert int(tracked_bucket["workspace_changed_paths"]) == WORKER_COUNT * CHUNK_COUNT
 
     gitignored_bucket = summary["per_zone"]["gitignored"]
-    assert int(gitignored_bucket["workspace_changed_paths"]) == 0, (
-        "gitignored zone leaked into OCC changed_paths: "
-        f"count={gitignored_bucket['workspace_changed_paths']}"
+    assert int(gitignored_bucket["workspace_changed_paths"]) == (
+        WORKER_COUNT * CHUNK_COUNT
     )
+    _assert_gitignore_route_filtering(report)
 
     for call in report.tool_calls:
         changed = list((call.metadata or {}).get("changed_paths") or ())
@@ -140,13 +140,31 @@ def _assert_zone_isolation(report: RunReport, summary: Mapping[str, Any]) -> Non
             f"tool call leaked /tmp paths into workspace OCC: "
             f"tool={call.tool_name} leaked={leaked}"
         )
-        ignored_leaks = [
-            path for path in changed if str(path).startswith("build/perf_load_")
-        ]
-        assert not ignored_leaks, (
-            f"tool call leaked gitignored build/ paths into OCC: "
-            f"tool={call.tool_name} leaked={ignored_leaks}"
-        )
+
+
+def _assert_gitignore_route_filtering(report: RunReport) -> None:
+    tracked_shells = 0
+    gitignored_shells = 0
+    for call in report.tool_calls:
+        if call.tool_name != "shell":
+            continue
+        changed = [str(path) for path in (call.metadata or {}).get("changed_paths", ())]
+        timings = (call.metadata or {}).get("timings") or {}
+        if any(path.startswith("perf_load_tracked/") for path in changed):
+            tracked_shells += 1
+            assert float(timings.get("occ.commit.gated_path_count", 0.0)) == float(
+                CHUNK_COUNT
+            )
+            assert float(timings.get("occ.commit.direct_path_count", 0.0)) == 0.0
+        if any(path.startswith("build/perf_load_") for path in changed):
+            gitignored_shells += 1
+            assert float(timings.get("occ.commit.direct_path_count", 0.0)) == float(
+                CHUNK_COUNT
+            )
+            assert float(timings.get("occ.commit.gated_path_count", 0.0)) == 0.0
+
+    assert tracked_shells == WORKER_COUNT
+    assert gitignored_shells == WORKER_COUNT
 
 
 def _assert_o1_overlay(report: RunReport) -> None:

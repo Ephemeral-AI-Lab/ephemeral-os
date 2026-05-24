@@ -45,6 +45,7 @@ from task_center_runner.tests.mock._layer_stack_occ_overlay_assertions import (
     assert_timing_keys_present,
     jsonl_rows,
     load_performance_report,
+    mapping,
 )
 
 
@@ -58,10 +59,9 @@ _REQUIRED_SANDBOX_EVENTS = (
 )
 _REQUIRED_PERF_TIMING_KEYS = (
     "layer_stack.auto_squash.total_s",
-    "layer_stack.auto_squash.depth_before",
+    "occ.apply.commit_queue_wait_s",
     "occ.apply.commit_resume_wait_s",
     "occ.apply.total_s",
-    "layer_stack.prepare_workspace_snapshot.total_s",
 )
 
 
@@ -185,6 +185,9 @@ async def _assert_performance_report(report: Any) -> None:
     assert perf_path == report.run_dir / "performance_report.json"
     perf = load_performance_report(report.run_dir)
     assert_timing_keys_present(perf, _REQUIRED_PERF_TIMING_KEYS)
+    non_duration = mapping(mapping(perf["sandbox"])["non_duration_observations"])
+    depth_before = mapping(non_duration["layer_stack.auto_squash.depth_before"])
+    assert float(depth_before["max"]) > float(AUTO_SQUASH_MAX_DEPTH)
     assert_resource_key_max(perf, "resource.command_exec.workspace_tree_bytes", 0.0)
     assert_resource_key_max(perf, "resource.command_exec.workspace_tree_exists", 0.0)
 

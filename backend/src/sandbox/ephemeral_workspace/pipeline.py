@@ -9,6 +9,7 @@ from pathlib import Path
 import shutil
 from typing import AsyncIterator
 
+from sandbox._shared.clock import monotonic_now
 from sandbox._shared.layer_stack_port import LayerStackPort
 from sandbox._shared.lease_guard import LeaseGuard
 from sandbox._shared.models import Intent, ToolCallRequest, ToolCallResult
@@ -37,6 +38,7 @@ from sandbox._shared.shell_contract import (
 )
 from sandbox.layer_stack.manifest import manifest_root_hash
 from sandbox.overlay import lifecycle as overlay_lifecycle
+from sandbox.overlay.handle import OverlayHandle
 from sandbox.overlay.kernel_mount import (
     mount_overlay,
     umount,
@@ -129,6 +131,7 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
         """Run one foreground tool call through a fresh overlay lifecycle."""
         if self._layer_stack is None:
             raise RuntimeError("EphemeralPipeline.run_tool_call requires layer_stack")
+        total_start = monotonic_now()
         handle = await overlay_lifecycle.create(
             self._layer_stack,
             agent_id=req.agent_id,
@@ -136,9 +139,12 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
         )
         try:
             path_changes: Sequence[OverlayPathChange] = ()
+            capture_upperdir_s = 0.0
             result = await run_in_namespace(handle, req)
             if req.intent == Intent.WRITE_ALLOWED:
+                capture_start = monotonic_now()
                 path_changes = await overlay_lifecycle.capture_changes(handle)
+                capture_upperdir_s = monotonic_now() - capture_start
                 paths = {change.path for change in path_changes}
                 source = (
                     "api_write"
@@ -151,6 +157,13 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
                     snapshot=handle.snapshot_manifest,
                     source=source,
                 )
+            result = self._attach_operation_timing_aliases(
+                result,
+                req=req,
+                handle=handle,
+                capture_upperdir_s=capture_upperdir_s,
+                total_start=total_start,
+            )
             return self._attach_resource_timings(
                 result,
                 handle=handle,
@@ -158,6 +171,42 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
             )
         finally:
             await self._lease_guard.destroy(handle, overlay_lifecycle.destroy)
+
+    def _attach_operation_timing_aliases(
+        self,
+        result: ToolCallResult,
+        *,
+        req: ToolCallRequest,
+        handle: OverlayHandle,
+        capture_upperdir_s: float,
+        total_start: float,
+    ) -> ToolCallResult:
+        payload = dict(result)
+        timings = dict(
+            payload.get("timings") if isinstance(payload.get("timings"), dict) else {}
+        )
+        timings.update(handle.snapshot_timings)
+        if "workspace.mount_s" in timings:
+            timings.setdefault(
+                "command_exec.mount_workspace_s",
+                float(timings["workspace.mount_s"]),
+            )
+        if "workspace.tool_s" in timings:
+            timings.setdefault(
+                "command_exec.run_command_s",
+                float(timings["workspace.tool_s"]),
+            )
+        timings.setdefault("command_exec.capture_upperdir_s", capture_upperdir_s)
+        if "occ.apply.total_s" in timings:
+            timings.setdefault(
+                "command_exec.occ_apply_s",
+                float(timings["occ.apply.total_s"]),
+            )
+        timings.setdefault("command_exec.total_s", monotonic_now() - total_start)
+        if req.verb == "shell":
+            timings.setdefault("api.shell.total_s", timings["command_exec.total_s"])
+        payload["timings"] = timings
+        return payload
 
     def active_manifest_key(self) -> str:
         if self._layer_stack is None:
