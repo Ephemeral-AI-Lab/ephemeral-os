@@ -1,14 +1,16 @@
 # Unify Sandbox Workspace API — Overview
 
-**Status:** Canonical 3-phase plan. Each phase has its own document.
+**Status:** Canonical 3-phase plan with three Phase 2 follow-ups (2.5, 2.6, 2.7). Each phase has its own document.
 **Date:** 2026-05-24
 
-This document is the **overview**. The detailed plan lives in four phase documents:
+This document is the **overview**. The detailed plan lives in six phase documents:
 
 1. [`unify_sandbox_workspace_phase1.md`](unify_sandbox_workspace_phase1.md) — **Foundation** (folder reorg + overlay extraction + shared primitives; mechanical, no behavior change)
 2. [`unify_sandbox_workspace_phase2.md`](unify_sandbox_workspace_phase2.md) — **Unification (foreground-only)** — per-call ephemeral pipeline, persistent isolated pipeline, lifecycle host API, agent tools. Background lifecycle is out of scope here; Phase 2.5 owns it.
 3. [`unify_sandbox_workspace_phase2_5.md`](unify_sandbox_workspace_phase2_5.md) — **Background Tool Lifecycle** — canonical background design. Background is a generic `ToolCallRequest.background` flag; engine's `BackgroundTaskManager` is the lifecycle wrapper; overlay lease lifetime is coroutine-bound; generic `api.v1.cancel(invocation_id)` wire RPC; verb-supplied cancellation cleanup in `overlay.run_in_namespace`. Removes existing `shell_job.py` (609 lines), `shell_job_handler.py` (174 lines), four `api.v1.shell.*` wire RPCs, and the `is_background` shell-tool branch from the repo.
-4. [`unify_sandbox_workspace_phase3.md`](unify_sandbox_workspace_phase3.md) — **Test migration & documentation**
+4. [`unify_sandbox_workspace_phase2_6.md`](unify_sandbox_workspace_phase2_6.md) — **Isolated Workspace Cleanup + Symmetry** — removes per-call serialization in `isolated_workspace`, removes dead defense (`freeze` + `freezer_degraded`), removes duplicated lease-guard logic, unifies the three parallel layer-stack Protocols, and aligns `__init__.py` export surfaces between `ephemeral_workspace/` and `isolated_workspace/`.
+5. [`unify_sandbox_workspace_phase2_7.md`](unify_sandbox_workspace_phase2_7.md) — **LSP Overlay Integration + Plugin Module Simplification + Plugin Tool/Service Alignment** — two-axis `kernel_mount.umount`, typed `subscribe_workspace_changes` Protocol API, collapse 3 overlay-handle types into a single `OverlayHandle`, single `overlay.lifecycle.acquire(release_hook=…)` primitive, slim `PluginOpContext` Protocol triangle into one `PluginRuntime` Protocol, add required `intent: Intent` kwarg to `@tool` decorator, READ_ONLY plugin ops dispatch in-process while WRITE_ALLOWED ops keep the existing OCC publish path, document the `PluginService` vs `PluginTool` distinction (long-lived overlay for file-watch services vs per-call intent-labeled tools). Companion design contract: [`../design/plugin_runtime_contract.md`](../design/plugin_runtime_contract.md).
+6. [`unify_sandbox_workspace_phase3.md`](unify_sandbox_workspace_phase3.md) — **Test migration & documentation**
 
 Verb renames (`search_content` → `grep`, `glob_files` → `glob`) shipped previously and are not part of this plan. Daytona provider support is out of scope (Docker-only deployment).
 

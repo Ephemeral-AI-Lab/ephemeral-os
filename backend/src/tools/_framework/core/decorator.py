@@ -15,6 +15,7 @@ Usage::
         description="Does something useful.",
         input_model=MyToolInput,
         output_model=MyToolOutput,
+        intent=Intent.READ_ONLY,
     )
     async def my_tool(
         query: str,
@@ -25,7 +26,9 @@ Usage::
         ...
 
 Every decorated tool supplies explicit Pydantic ``input_model`` and
-``output_model`` definitions. Field descriptions live on those models.
+``output_model`` definitions plus the foreground ``intent`` (see
+:class:`sandbox._shared.models.Intent`). Field descriptions live on those
+models.
 """
 
 from __future__ import annotations
@@ -36,6 +39,7 @@ from typing import Any, Literal, cast
 
 from pydantic import BaseModel
 
+from sandbox._shared.models import Intent
 from tools._framework.core.base import BaseTool
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.hooks import validate_hook_targets
@@ -49,6 +53,7 @@ def tool(
     *,
     input_model: type[BaseModel],
     output_model: type[BaseModel],
+    intent: Intent | None = None,
     background: Literal["forbidden", "optional", "always"] = "forbidden",
     task_type: str = "agent",
     is_terminal_tool: bool = False,
@@ -57,6 +62,12 @@ def tool(
     post_hooks: list[object] | tuple[object, ...] = (),
 ) -> Callable[[Callable[..., Any]], BaseTool]:
     """Decorator that converts a function into a ``BaseTool`` instance."""
+
+    if intent is None:
+        raise TypeError(
+            "@tool requires intent=Intent.READ_ONLY|WRITE_ALLOWED|LIFECYCLE; "
+            f"missing on {name or '<anonymous>'}"
+        )
 
     def decorator(func: Callable[..., Any]) -> BaseTool:
         tool_name = name or func.__name__
@@ -95,6 +106,7 @@ def tool(
             ) -> ToolResult:
                 kwargs = arguments.model_dump()
                 if accepts_context:
+                    context["__intent"] = self.intent
                     kwargs["context"] = context
                 if is_async:
                     result = await func(**kwargs)
@@ -108,6 +120,7 @@ def tool(
         instance.short_description = short_description
         instance.input_model = input_model
         instance.output_model = output_model
+        instance.intent = intent
         instance.background = background
         instance.task_type = task_type
         instance.is_terminal_tool = is_terminal_tool

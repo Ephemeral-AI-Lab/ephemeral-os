@@ -21,7 +21,6 @@ from sandbox.ephemeral_workspace.helper.manager import (
 from sandbox.ephemeral_workspace.helper.operation import EphemeralOperationMixin
 from sandbox.ephemeral_workspace.helper.publishing import EphemeralPublishMixin
 from sandbox.ephemeral_workspace.helper.types import (
-    OperationOverlayHandle,
     _OverlaySnapshot,
 )
 from sandbox.ephemeral_workspace.helper.utils import (
@@ -192,6 +191,16 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
         self._active_lease_id = ""
         shutil.rmtree(self._runtime_dir, ignore_errors=True)
 
+    def subscribe_workspace_changes(
+        self, subscriber_id: str
+    ) -> asyncio.Queue[WorkspaceChangeEvent]:
+        """Subscribe to daemon-local workspace change events."""
+        return self.event_bus.subscribe(subscriber_id)
+
+    def unsubscribe_workspace_changes(self, subscriber_id: str) -> None:
+        """Stop receiving daemon-local workspace change events."""
+        self.event_bus.unsubscribe(subscriber_id)
+
     async def ensure_current(self, *, reason: str = "ensure_current") -> str:
         """Refresh daemon-owned overlay state to the latest manifest if needed."""
         if self._layer_stack is None:
@@ -345,7 +354,6 @@ class EphemeralPipeline(EphemeralOperationMixin, EphemeralPublishMixin):
 
 
 __all__ = [
-    "OperationOverlayHandle",
     "EphemeralPipeline",
     "LayerStackPort",
     "clear_overlay_manager_for_tests",

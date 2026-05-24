@@ -73,13 +73,24 @@ def mount_overlay(
                 os.close(fsfd)
 
 
-def umount(workspace_root: Path) -> None:
+def umount(
+    workspace_root: Path,
+    *,
+    lazy: bool = False,
+    raise_on_failure: bool = False,
+) -> None:
     """Unmount all mounts stacked at ``workspace_root``.
 
     Persistent daemon overlays may be remounted across runtime-bundle upgrades
     or interrupted tests. A single ``umount`` only peels the top mount; loop
     until the path is no longer a mountpoint so the backing checkout is visible
     to raw provider setup commands again.
+
+    ``lazy`` falls back to ``umount -l`` when a normal umount returns non-zero,
+    matching the LSP namespace-remount detach contract. ``raise_on_failure``
+    raises ``RuntimeError`` instead of silently returning when the path remains
+    a mountpoint after exhausting available strategies; default
+    ``(False, False)`` preserves the legacy silent-return behavior.
     """
     for _ in range(64):
         if not _is_mountpoint(workspace_root):
@@ -90,8 +101,26 @@ def umount(workspace_root: Path) -> None:
             stderr=subprocess.DEVNULL,
             check=False,
         )
-        if result.returncode != 0:
-            return
+        if result.returncode == 0:
+            continue
+        if lazy:
+            lazy_result = subprocess.run(
+                ["umount", "-l", str(workspace_root)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+            if lazy_result.returncode == 0:
+                return
+        if raise_on_failure:
+            raise RuntimeError(
+                f"failed to detach existing mount: {workspace_root}"
+            )
+        return
+    if raise_on_failure and _is_mountpoint(workspace_root):
+        raise RuntimeError(
+            f"failed to detach existing mount: {workspace_root}"
+        )
 
 
 def _is_mountpoint(path: Path) -> bool:

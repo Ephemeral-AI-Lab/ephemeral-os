@@ -51,6 +51,7 @@ async def test_run_in_namespace_signals_shell_cancellation(
         snapshot_version=1,
         lease_id="lease-1",
         namespace_pid=None,
+        run_dir=tmp_path,
         snapshot_manifest=None,
         _release=None,
     )

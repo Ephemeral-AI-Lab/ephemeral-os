@@ -68,7 +68,7 @@ async def _run_tool_call_in_fresh_namespace(
     *,
     cancellation: VerbCancellation,
 ) -> ToolCallResult:
-    run_dir = handle.upperdir.parent
+    run_dir = handle.run_dir
     stdout_ref = run_dir / "stdout.bin"
     stderr_ref = run_dir / "stderr.bin"
     timings_ref = run_dir / "namespace-tool-timings.json"
@@ -140,10 +140,10 @@ async def _run_tool_call_in_existing_namespace(
             "workspace_root": handle.workspace_root,
             "tool_call": req.to_payload(),
             "stdout_ref": (
-                handle.upperdir.parent / f"{req.invocation_id}.stdout"
+                handle.run_dir / f"{req.invocation_id}.stdout"
             ).as_posix(),
             "stderr_ref": (
-                handle.upperdir.parent / f"{req.invocation_id}.stderr"
+                handle.run_dir / f"{req.invocation_id}.stderr"
             ).as_posix(),
             "policy": TOOL_CALL_COMMAND_POLICY.to_payload(),
             "mount_overlay": False,

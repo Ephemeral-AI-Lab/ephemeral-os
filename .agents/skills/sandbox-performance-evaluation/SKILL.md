@@ -169,26 +169,26 @@ tests:
 
 ```bash
 uv run pytest -q -x --tb=short --durations=20 \
-  backend/src/task_center_runner/tests/mock/sandbox/test_complex_project_build_smoke.py
+  backend/src/task_center_runner/tests/mock/sandbox/project_build/test_complex_project_build_smoke.py
 
 uv run pytest -q -x --tb=short --durations=20 \
-  backend/src/task_center_runner/tests/mock/sandbox/test_complex_project_build_shell_edit_lsp_smoke.py
+  backend/src/task_center_runner/tests/mock/sandbox/project_build/test_complex_project_build_shell_edit_lsp_smoke.py
 ```
 
 Then run the full targeted scenarios:
 
 ```bash
 uv run pytest -q -x --tb=short --durations=20 \
-  backend/src/task_center_runner/tests/mock/sandbox/test_complex_project_build_full.py
+  backend/src/task_center_runner/tests/mock/sandbox/project_build/test_complex_project_build_full.py
 
 uv run pytest -q -x --tb=short --durations=20 \
-  backend/src/task_center_runner/tests/mock/sandbox/test_complex_project_build_shell_edit_lsp_full.py
+  backend/src/task_center_runner/tests/mock/sandbox/project_build/test_complex_project_build_shell_edit_lsp_full.py
 
 uv run pytest -q -x --tb=short --durations=20 \
-  backend/src/task_center_runner/tests/mock/sandbox/test_high_concurrency_layerstack_overlay_occ.py
+  backend/src/task_center_runner/tests/mock/sandbox/layer_stack_occ_overlay/test_high_concurrency_layerstack_overlay_occ.py
 
 uv run pytest -q -x --tb=short --durations=20 \
-  backend/src/task_center_runner/tests/mock/sandbox/test_heavy_io_zoned_concurrent.py
+  backend/src/task_center_runner/tests/mock/sandbox/layer_stack_occ_overlay/test_heavy_io_zoned_concurrent.py
 
 uv run pytest -q -x --tb=short --durations=20 \
   backend/src/task_center_runner/tests/mock/sandbox/capacity/test_full_system_capacity_matrix.py

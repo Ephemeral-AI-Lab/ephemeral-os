@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from typing import Any
 
 from plugins.catalog.lsp.runtime.pyright_session import (
@@ -21,6 +22,12 @@ _sessions: dict[str, PyrightSession] = {}
 _locks: dict[str, asyncio.Lock] = {}
 _event_tasks: dict[str, asyncio.Task[None]] = {}
 _event_subscriptions: dict[str, tuple[Any, str]] = {}
+
+# Token-bucket-ish: emit at most one degraded-dispatch warning per
+# layer_stack_root per window so production callers still see signal without
+# flooding logs when a misconfigured pipeline keeps falling back.
+_DEGRADED_WARN_INTERVAL_S = 60.0
+_degraded_warn_last: dict[str, float] = {}
 
 
 async def get_session(ctx: Any) -> PyrightSession:
@@ -97,8 +104,7 @@ async def evict_for_root(layer_stack_root: str) -> None:
     subscription = _event_subscriptions.pop(layer_stack_root, None)
     if subscription is not None:
         overlay, subscriber_id = subscription
-        event_bus = getattr(overlay, "event_bus", None)
-        unsubscribe = getattr(event_bus, "unsubscribe", None)
+        unsubscribe = getattr(overlay, "unsubscribe_workspace_changes", None)
         if callable(unsubscribe):
             unsubscribe(subscriber_id)
     cached = _sessions.pop(layer_stack_root, None)
@@ -137,65 +143,100 @@ class _SessionView:
 
 
 def _acquire_session_view(ctx: Any, *, active_key: str) -> _SessionView:
-    declared_workspace_root = _declared_workspace_root(ctx)
-    acquire_operation_overlay = getattr(
-        getattr(ctx, "overlay", None),
-        "acquire_operation_overlay",
-        None,
+    workspace_root = _declared_workspace_root(ctx)
+    view = _dispatch_lsp_overlay_acquire(
+        ctx, invocation_id=_invocation_id_for_ctx(ctx), workspace_root=workspace_root
     )
+    if view is None:
+        _warn_degraded_lsp_dispatch(ctx)
+    return view or _SessionView(
+        manifest_key=active_key, workspace_root=workspace_root, handle=None
+    )
+
+
+def _invocation_id_for_ctx(ctx: Any) -> str:
+    metadata = getattr(ctx, "metadata", None) or {}
+    op_name = str(metadata.get("op_name", "lsp"))
+    return f"lsp-session:{op_name}"
+
+
+def _dispatch_lsp_overlay_acquire(
+    ctx: Any,
+    *,
+    invocation_id: str,
+    workspace_root: str,
+) -> _SessionView | None:
+    """Acquire an LSP-session overlay handle across all pipeline shapes.
+
+    Three shapes:
+    * ``EphemeralPipeline`` daemon ctx → ``ctx.overlay.acquire_operation_overlay``.
+    * ``IsolatedPipeline`` projection ctx → ``ctx.projection.acquire_overlay``.
+    * Degraded ctx (legacy projection stubs) → ``ctx.projection.acquire``.
+    """
+    overlay = getattr(ctx, "overlay", None)
+    acquire_operation_overlay = getattr(overlay, "acquire_operation_overlay", None)
     if callable(acquire_operation_overlay):
-        metadata = getattr(ctx, "metadata", None) or {}
-        op_name = str(metadata.get("op_name", "lsp"))
-        handle = acquire_operation_overlay(
-            invocation_id=f"lsp-session:{op_name}",
-            workspace_root=declared_workspace_root,
+        view = _session_view_from(
+            acquire_operation_overlay(
+                invocation_id=invocation_id,
+                workspace_root=workspace_root,
+            ),
+            workspace_root=workspace_root,
         )
-        if getattr(handle, "layer_paths", None):
-            return _SessionView(
-                manifest_key=handle.manifest_key,
-                workspace_root=declared_workspace_root,
-                handle=handle,
-            )
-        release = getattr(handle, "release", None)
-        if callable(release):
-            release()
+        if view is not None:
+            return view
 
     projection = getattr(ctx, "projection", None)
     acquire_overlay = getattr(projection, "acquire_overlay", None)
     if callable(acquire_overlay):
-        metadata = getattr(ctx, "metadata", None) or {}
-        op_name = str(metadata.get("op_name", "lsp"))
-        handle = acquire_overlay(
-            f"lsp-session:{op_name}",
-            workspace_root=declared_workspace_root,
+        view = _session_view_from(
+            acquire_overlay(invocation_id, workspace_root=workspace_root),
+            workspace_root=workspace_root,
         )
-        if getattr(handle, "layer_paths", None):
-            return _SessionView(
-                manifest_key=handle.manifest_key,
-                workspace_root=declared_workspace_root,
-                handle=handle,
-            )
-        release = getattr(handle, "release", None)
-        if callable(release):
-            release()
+        if view is not None:
+            return view
 
     acquire = getattr(projection, "acquire", None)
     if callable(acquire):
-        handle = acquire("lsp-session")
-        if getattr(handle, "layer_paths", None):
-            return _SessionView(
-                manifest_key=handle.manifest_key,
-                workspace_root=declared_workspace_root,
-                handle=handle,
-            )
-        release = getattr(handle, "release", None)
-        if callable(release):
-            release()
+        view = _session_view_from(
+            acquire("lsp-session"),
+            workspace_root=workspace_root,
+        )
+        if view is not None:
+            return view
 
-    return _SessionView(
-        manifest_key=active_key,
-        workspace_root=declared_workspace_root,
-        handle=None,
+    return None
+
+
+def _session_view_from(handle: Any, *, workspace_root: str) -> _SessionView | None:
+    if getattr(handle, "layer_paths", None):
+        return _SessionView(
+            manifest_key=handle.manifest_key,
+            workspace_root=workspace_root,
+            handle=handle,
+        )
+    _release_handle(handle)
+    return None
+
+
+def _warn_degraded_lsp_dispatch(ctx: Any) -> None:
+    """Rate-limited warning: no pipeline shape produced an overlay handle."""
+    layer_stack_root = str(getattr(ctx, "layer_stack_root", "") or "unknown")
+    now = time.monotonic()
+    last = _degraded_warn_last.get(layer_stack_root, 0.0)
+    if now - last < _DEGRADED_WARN_INTERVAL_S:
+        return
+    _degraded_warn_last[layer_stack_root] = now
+    overlay = getattr(ctx, "overlay", None)
+    projection = getattr(ctx, "projection", None)
+    logger.warning(
+        "lsp overlay dispatch degraded: pyright session running without a leased "
+        "overlay snapshot; check pipeline wiring",
+        extra={
+            "layer_stack_root": layer_stack_root,
+            "overlay_kind": type(overlay).__name__ if overlay is not None else "",
+            "projection_kind": type(projection).__name__ if projection is not None else "",
+        },
     )
 
 
@@ -242,18 +283,18 @@ def _ensure_event_subscription(
     overlay: Any,
     session: PyrightSession,
 ) -> None:
-    event_bus = getattr(overlay, "event_bus", None)
-    subscribe = getattr(event_bus, "subscribe", None)
+    subscribe = getattr(overlay, "subscribe_workspace_changes", None)
     if not callable(subscribe):
         return
     existing = _event_subscriptions.get(layer_stack_root)
     if existing is not None and existing[0] is overlay:
         return
     if existing is not None:
-        existing_bus = getattr(existing[0], "event_bus", None)
-        unsubscribe = getattr(existing_bus, "unsubscribe", None)
-        if callable(unsubscribe):
-            unsubscribe(existing[1])
+        existing_unsubscribe = getattr(
+            existing[0], "unsubscribe_workspace_changes", None
+        )
+        if callable(existing_unsubscribe):
+            existing_unsubscribe(existing[1])
     task = _event_tasks.pop(layer_stack_root, None)
     if task is not None:
         task.cancel()

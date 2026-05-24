@@ -30,7 +30,8 @@ Run one sandbox test file:
 
 ```bash
 EOS_SWEEVO_INSTANCE=dask__dask_2023.3.2_2023.4.0 \
-uv run pytest -q backend/src/task_center_runner/tests/mock/sandbox/test_complex_project_build_smoke.py
+uv run pytest -q \
+  backend/src/task_center_runner/tests/mock/sandbox/project_build/test_complex_project_build_smoke.py
 ```
 
 Run one sandbox test function:
@@ -38,7 +39,7 @@ Run one sandbox test function:
 ```bash
 EOS_SWEEVO_INSTANCE=dask__dask_2023.3.2_2023.4.0 \
 uv run pytest -q \
-  backend/src/task_center_runner/tests/mock/sandbox/test_complex_project_build_smoke.py::test_complex_project_build_smoke
+  backend/src/task_center_runner/tests/mock/sandbox/project_build/test_complex_project_build_smoke.py::test_complex_project_build_smoke
 ```
 
 Capacity and heavy sandbox tests are gated by `runner.live_e2e.capacity_enabled`

@@ -140,6 +140,7 @@ def test_overlay_destroy_is_idempotent_under_concurrent_calls(tmp_path: Path) ->
         snapshot_version=1,
         lease_id="lease-1",
         namespace_pid=None,
+        run_dir=run_dir,
         _release=release,
     )
 

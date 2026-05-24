@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import shutil
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from pathlib import Path
 from uuid import uuid4
 
 from sandbox._shared.layer_stack_port import LayerStackPort
@@ -16,36 +17,77 @@ from sandbox.overlay.writable_dirs import (
 )
 
 
+def acquire(
+    layer_stack: LayerStackPort,
+    *,
+    invocation_id: str,
+    workspace_root: str = "/testbed",
+    release_hook: Callable[[str], None] | None = None,
+) -> OverlayHandle:
+    """Lease a snapshot, allocate upper/work dirs, and assemble an ``OverlayHandle``.
+
+    The sole "lease + writable_dirs + error-cleanup" primitive. Callers pick
+    the release strategy via ``release_hook``:
+
+    * ``release_hook=None`` (default) binds the handle's release to
+      ``layer_stack.release_lease(lease_id=...)``. Suitable for projection
+      callers that do not need ``LeaseGuard``/audit routing.
+    * Daemon callers pass their own ``self._release_lease`` so the released
+      handle still emits ``LeaseGuard``/audit entries identical to direct
+      ``release_operation_overlay`` callers today.
+
+    On any exception after ``prepare_workspace_snapshot`` succeeds, this
+    function releases the lease AND ``rmtree(run_dir)`` before re-raising so
+    no lease or scratch directory leaks past the error boundary.
+    """
+    run_dir = _allocate_run_dir(invocation_id)
+    snapshot = layer_stack.prepare_workspace_snapshot(request_id=invocation_id)
+    lease_id = str(getattr(snapshot, "lease_id"))
+    try:
+        layer_paths = getattr(snapshot, "layer_paths", None)
+        if layer_paths is None:
+            raise RuntimeError("overlay snapshot did not provide layer paths")
+        writable_dirs = allocate_overlay_writable_dirs(run_dir)
+        manifest = getattr(snapshot, "manifest", None)
+        manifest_version = int(getattr(snapshot, "manifest_version", 0))
+        root_hash = str(getattr(snapshot, "root_hash", "") or "")
+        return OverlayHandle(
+            workspace_root=str(workspace_root).rstrip("/") or "/",
+            layer_paths=tuple(str(path) for path in layer_paths),
+            upperdir=writable_dirs.upperdir,
+            workdir=writable_dirs.workdir,
+            snapshot_version=manifest_version,
+            lease_id=lease_id,
+            namespace_pid=None,
+            run_dir=run_dir,
+            snapshot_manifest=manifest,
+            manifest_key=f"{root_hash}@{manifest_version}",
+            manifest_version=manifest_version,
+            root_hash=root_hash,
+            _release=_build_release_closure(
+                layer_stack=layer_stack,
+                lease_id=lease_id,
+                run_dir=run_dir,
+                release_hook=release_hook,
+            ),
+        )
+    except Exception:
+        _release_lease_silently(layer_stack, lease_id, release_hook=release_hook)
+        shutil.rmtree(run_dir, ignore_errors=True)
+        raise
+
+
 async def create(
     layer_stack: LayerStackPort,
     *,
     agent_id: str,
     workspace_root: str = "/testbed",
 ) -> OverlayHandle:
-    """Lease a snapshot and allocate upper/work dirs for a workspace overlay."""
-    invocation_id = f"overlay:{agent_id}:{uuid4().hex[:8]}"
-    run_dir = (
-        overlay_writable_root()
-        / "runtime"
-        / "overlay"
-        / invocation_id.replace(":", "-")
-    )
-    writable_dirs = allocate_overlay_writable_dirs(run_dir)
-    lease = layer_stack.prepare_workspace_snapshot(request_id=invocation_id)
-    if lease.layer_paths is None:
-        layer_stack.release_lease(lease_id=lease.lease_id)
-        shutil.rmtree(run_dir, ignore_errors=True)
-        raise RuntimeError("overlay lifecycle requires namespace layer paths")
-    return OverlayHandle(
+    """Per-call api.shell overlay handle (legacy entry point, delegates to ``acquire``)."""
+    return acquire(
+        layer_stack,
+        invocation_id=f"overlay:{agent_id}:{uuid4().hex[:8]}",
         workspace_root=workspace_root,
-        layer_paths=tuple(lease.layer_paths),
-        upperdir=writable_dirs.upperdir,
-        workdir=writable_dirs.workdir,
-        snapshot_version=lease.manifest_version,
-        lease_id=lease.lease_id,
-        namespace_pid=None,
-        snapshot_manifest=getattr(lease, "manifest", None),
-        _release=lambda: layer_stack.release_lease(lease_id=lease.lease_id),
     )
 
 
@@ -61,7 +103,61 @@ async def destroy(handle: OverlayHandle) -> None:
         handle._destroyed = True
         if handle._release is not None:
             handle._release()
-        shutil.rmtree(handle.upperdir.parent, ignore_errors=True)
+        shutil.rmtree(handle.run_dir, ignore_errors=True)
 
 
-__all__ = ["capture_changes", "create", "destroy"]
+def _allocate_run_dir(invocation_id: str) -> Path:
+    safe = _safe_invocation_part(invocation_id)
+    return (
+        overlay_writable_root()
+        / "runtime"
+        / "overlay"
+        / f"{safe}-{uuid4().hex[:8]}"
+    )
+
+
+def _safe_invocation_part(value: str) -> str:
+    safe = "".join(
+        char if char.isalnum() or char in ("-", "_") else "-"
+        for char in str(value)
+    ).strip("-")
+    return safe or "overlay"
+
+
+def _build_release_closure(
+    *,
+    layer_stack: LayerStackPort,
+    lease_id: str,
+    run_dir: Path,
+    release_hook: Callable[[str], None] | None,
+) -> Callable[[], None]:
+    def _release() -> None:
+        try:
+            if release_hook is not None:
+                release_hook(lease_id)
+            else:
+                layer_stack.release_lease(lease_id=lease_id)
+        finally:
+            shutil.rmtree(run_dir, ignore_errors=True)
+
+    return _release
+
+
+def _release_lease_silently(
+    layer_stack: LayerStackPort,
+    lease_id: str,
+    *,
+    release_hook: Callable[[str], None] | None,
+) -> None:
+    if not lease_id:
+        return
+    try:
+        if release_hook is not None:
+            release_hook(lease_id)
+        else:
+            layer_stack.release_lease(lease_id=lease_id)
+    except Exception:
+        pass
+
+
+__all__ = ["acquire", "capture_changes", "create", "destroy"]

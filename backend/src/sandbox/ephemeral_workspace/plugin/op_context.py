@@ -2,22 +2,32 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 from contextlib import AbstractAsyncContextManager
 from typing import Any, Protocol
 
 from sandbox._shared.models import SandboxCaller
+from sandbox.ephemeral_workspace.events import WorkspaceChangeEvent
+from sandbox.overlay.handle import OverlayHandle
 
 __all__ = [
     "PluginOpContext",
     "EphemeralPipelineLike",
     "ProjectionHandleLike",
+    "WorkspaceChangeEvent",
     "WorkspaceProjectionLike",
 ]
 
 
 class ProjectionHandleLike(Protocol):
-    """Minimal protocol every projection handle satisfies."""
+    """Minimal protocol satisfied by the non-overlay ``ProjectionHandle``.
+
+    Retained because the degraded session-manager fallback still uses
+    :class:`WorkspaceProjection.acquire` (which returns ``ProjectionHandle``);
+    overlay-backed acquires return :class:`OverlayHandle` directly and no
+    longer flow through this Protocol.
+    """
 
     manifest_key: str
     lease_id: str
@@ -39,7 +49,7 @@ class WorkspaceProjectionLike(Protocol):
         owner_request_id: str,
         *,
         workspace_root: str,
-    ) -> ProjectionHandleLike: ...
+    ) -> OverlayHandle: ...
 
     def active_manifest_key(self) -> str: ...
 
@@ -61,9 +71,15 @@ class EphemeralPipelineLike(Protocol):
         *,
         invocation_id: str,
         workspace_root: str | None = None,
-    ) -> Any: ...
+    ) -> OverlayHandle: ...
 
-    def release_operation_overlay(self, handle: Any) -> None: ...
+    def release_operation_overlay(self, handle: OverlayHandle) -> None: ...
+
+    def subscribe_workspace_changes(
+        self, subscriber_id: str
+    ) -> asyncio.Queue[WorkspaceChangeEvent]: ...
+
+    def unsubscribe_workspace_changes(self, subscriber_id: str) -> None: ...
 
     def workspace_operation(
         self,

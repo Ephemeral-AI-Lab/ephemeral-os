@@ -1,9 +1,13 @@
-"""Refresh a Pyright private mount namespace with a new workspace overlay."""
+"""Refresh a Pyright private mount namespace with a new workspace overlay.
+
+Load-bearing: ``nsenter -t <child_pid>`` entrypoint for LSP private-namespace
+overlay remount. DO NOT DELETE — cross-namespace boundary the LSP session
+runtime relies on to swap leased lowers without restarting Pyright.
+"""
 
 from __future__ import annotations
 
 import json
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -11,6 +15,7 @@ from typing import Any
 from sandbox.overlay.kernel_mount import (
     MountInputs,
     mount_overlay,
+    umount,
     validate_mount_inputs,
 )
 
@@ -32,7 +37,7 @@ def main(argv: list[str] | None = None) -> int:
 
     mount_inputs: MountInputs | None = None
     try:
-        _detach_mount(request.workspace_root)
+        umount(request.workspace_root, lazy=True, raise_on_failure=True)
         mount_inputs = validate_mount_inputs(
             workspace_root=request.workspace_root,
             layer_paths=request.layer_paths,
@@ -63,39 +68,6 @@ class _Request:
         self.layer_paths = tuple(Path(str(path)) for path in raw_layers)
         self.upperdir = Path(str(payload["upperdir"]))
         self.workdir = Path(str(payload["workdir"]))
-
-
-def _detach_mount(workspace_root: Path) -> None:
-    for _ in range(64):
-        if not _is_mountpoint(workspace_root):
-            return
-        result = subprocess.run(
-            ["umount", str(workspace_root)],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-        )
-        if result.returncode == 0:
-            continue
-        lazy = subprocess.run(
-            ["umount", "-l", str(workspace_root)],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-        )
-        if lazy.returncode != 0:
-            raise RuntimeError(f"failed to detach existing mount: {workspace_root}")
-        return
-
-
-def _is_mountpoint(path: Path) -> bool:
-    result = subprocess.run(
-        ["mountpoint", "-q", str(path)],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
-    return result.returncode == 0
 
 
 if __name__ == "__main__":  # pragma: no cover

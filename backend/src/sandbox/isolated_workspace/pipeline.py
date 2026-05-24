@@ -161,6 +161,7 @@ class IsolatedPipeline(
             snapshot_version=handle.manifest_version,
             lease_id=handle.lease_id,
             namespace_pid=handle.root_pid or None,
+            run_dir=handle.upperdir.parent,
             snapshot_manifest=None,
             _release=None,
         )

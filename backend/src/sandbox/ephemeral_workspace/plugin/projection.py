@@ -12,25 +12,16 @@ plugin-name string switches, no LSP-specific code paths.
 
 from __future__ import annotations
 
-import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
-from uuid import uuid4
 
 from sandbox.layer_stack.manifest import manifest_root_hash
-from sandbox.layer_stack.stack import LayerStack, PrepareWorkspaceSnapshotResult
-from sandbox.layer_stack.view import LayerStackStorageError
-from sandbox.overlay.writable_dirs import (
-    allocate_overlay_writable_dirs,
-    overlay_writable_root,
-)
-
-if TYPE_CHECKING:  # pragma: no cover
-    pass
+from sandbox.layer_stack.stack import LayerStack
+from sandbox.occ.layer_stack_client import LayerStackClient
+from sandbox.overlay import lifecycle as overlay_lifecycle
+from sandbox.overlay.handle import OverlayHandle
 
 __all__ = [
-    "OverlayProjectionHandle",
     "ProjectionHandle",
     "WorkspaceProjection",
     "build_manifest_key",
@@ -67,49 +58,6 @@ class ProjectionHandle:
         return self._released
 
 
-@dataclass
-class OverlayProjectionHandle:
-    """Lease plus private upper/work dirs for one overlay-backed operation."""
-
-    lease: ProjectionHandle
-    workspace_root: str
-    run_dir: str
-    upperdir: str
-    workdir: str
-
-    @property
-    def lease_id(self) -> str:
-        return self.lease.lease_id
-
-    @property
-    def manifest_key(self) -> str:
-        return self.lease.manifest_key
-
-    @property
-    def manifest_version(self) -> int:
-        return self.lease.manifest_version
-
-    @property
-    def root_hash(self) -> str:
-        return self.lease.root_hash
-
-    @property
-    def manifest(self) -> object | None:
-        return self.lease.manifest
-
-    @property
-    def layer_paths(self) -> tuple[str, ...] | None:
-        return self.lease.layer_paths
-
-    def release(self) -> None:
-        self.lease.release()
-        shutil.rmtree(self.run_dir, ignore_errors=True)
-
-    @property
-    def released(self) -> bool:
-        return self.lease.released
-
-
 class WorkspaceProjection:
     """Wrapper around :class:`LayerStack` for plugin runtime ops.
 
@@ -140,8 +88,8 @@ class WorkspaceProjection:
         return self._layer_stack_root
 
     def acquire(self, owner_request_id: str) -> ProjectionHandle:
-        result = self._prepare_snapshot_with_retry(
-            owner_request_id,
+        result = self._manager.prepare_workspace_snapshot(
+            owner_request_id=owner_request_id,
         )
         return ProjectionHandle(
             lease_id=result.lease_id,
@@ -160,39 +108,12 @@ class WorkspaceProjection:
         owner_request_id: str,
         *,
         workspace_root: str,
-    ) -> OverlayProjectionHandle:
-        run_dir = (
-            overlay_writable_root()
-            / "runtime"
-            / "plugin_overlay"
-            / f"{_safe_request_part(owner_request_id)}-{uuid4().hex[:8]}"
+    ) -> OverlayHandle:
+        return overlay_lifecycle.acquire(
+            LayerStackClient(self._manager),
+            invocation_id=owner_request_id,
+            workspace_root=workspace_root,
         )
-        lease = self.acquire(
-            owner_request_id,
-        )
-        writable_dirs = allocate_overlay_writable_dirs(run_dir)
-        return OverlayProjectionHandle(
-            lease=lease,
-            workspace_root=str(workspace_root).rstrip("/") or "/",
-            run_dir=run_dir.as_posix(),
-            upperdir=writable_dirs.upperdir.as_posix(),
-            workdir=writable_dirs.workdir.as_posix(),
-        )
-
-    def _prepare_snapshot_with_retry(
-        self,
-        owner_request_id: str,
-    ) -> PrepareWorkspaceSnapshotResult:
-        try:
-            return _prepare_snapshot(
-                self._manager,
-                owner_request_id=owner_request_id,
-            )
-        except (FileNotFoundError, LayerStackStorageError):
-            return _prepare_snapshot(
-                self._manager,
-                owner_request_id=owner_request_id,
-            )
 
     def active_manifest_key(self) -> str:
         manifest = self._manager.read_active_manifest()
@@ -202,29 +123,3 @@ class WorkspaceProjection:
 
     def active_lease_count(self) -> int:
         return self._manager.active_lease_count()
-
-
-def _prepare_snapshot(
-    manager: LayerStack,
-    *,
-    owner_request_id: str,
-) -> PrepareWorkspaceSnapshotResult:
-    try:
-        return manager.prepare_workspace_snapshot(
-            owner_request_id=owner_request_id,
-        )
-    except TypeError:
-        # Older test doubles only accepted owner_request_id. Keep the
-        # projection contract duck-typed without forcing every focused test to
-        # emulate layer-stack snapshot options.
-        return manager.prepare_workspace_snapshot(
-            owner_request_id=owner_request_id,
-        )
-
-
-def _safe_request_part(value: str) -> str:
-    safe = "".join(
-        char if char.isalnum() or char in ("-", "_") else "-"
-        for char in str(value)
-    ).strip("-")
-    return safe or "plugin"

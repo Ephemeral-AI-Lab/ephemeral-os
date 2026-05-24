@@ -7,6 +7,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
+from sandbox._shared.models import Intent
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.results import TextToolOutput, ToolResult
 from tools._framework.core.runtime import ExecutionMetadata
@@ -31,6 +32,12 @@ class BaseTool(ABC):
     short_description: str | None = None
     input_model: type[BaseModel]
     output_model: type[BaseModel] = TextToolOutput
+    # Foreground execution intent — propagated through context["__intent"]
+    # to plugin handlers and the daemon dispatcher so READ_ONLY plugin ops
+    # skip overlay allocation while WRITE_ALLOWED ops keep the OCC publish
+    # path. Required on every @tool callsite; missing intent raises at
+    # import time (see tools._framework.core.decorator).
+    intent: Intent
     # Background dispatch policy:
     #   "forbidden" — tool cannot run in background (default)
     #   "optional"  — LLM may opt in by passing background=true

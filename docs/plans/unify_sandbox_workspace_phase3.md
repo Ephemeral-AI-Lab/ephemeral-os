@@ -1,12 +1,33 @@
 # Phase 3 — Test migration & documentation
 
 **Type:** Test reshape + docs. No production behavior change.
-**Scope:** Update the iws test suite to exercise the unified per-call lifecycle. Add new test tiers for tool wrappers, plugin policy, O_NOFOLLOW security (per-component walk against intermediate symlinks), pipeline lifecycle, OCC concurrency, **iws behavior upgrade** (new typed-shape verbs), **unit-level** coverage (per-module surface), and a **deployment pre-flight** CI step (`scripts/verify_overlay_preconditions.py`). Validate Tier 8 soak against a re-baselined baseline. Ship the new API surface doc + CHANGELOG.
-**Depends on:** Phase 2 (per-call ephemeral pipeline, persistent isolated pipeline, lifecycle host API, agent-level tools, plugin block, iws-op deletion, host-side `sandbox/isolated_workspace/lifecycle/` package, OCC source-tag plumbing, OverlayHandle idempotency, O_NOFOLLOW per-component walk enforcement).
+**Scope:** Update the iws test suite to exercise the unified lifecycle after the prerequisite implementation split. Add new test tiers for tool wrappers, plugin policy, O_NOFOLLOW security (per-component walk against intermediate symlinks), pipeline lifecycle, OCC concurrency, **iws behavior upgrade** (new typed-shape verbs), **unit-level** coverage (per-module surface), **Phase 2.5/2.6/2.7 prerequisite regression coverage**, and a **deployment pre-flight** CI step (`scripts/verify_overlay_preconditions.py`). Validate Tier 8 soak against a re-baselined baseline. Ship the new API surface doc + CHANGELOG.
+**Depends on:**
+- Phase 2 core: per-call ephemeral pipeline, persistent isolated pipeline, lifecycle host API, agent-level tools, plugin block, iws-op deletion, host-side `sandbox/isolated_workspace/lifecycle/` package, OCC source-tag plumbing, OverlayHandle idempotency, O_NOFOLLOW per-component walk enforcement.
+- Phase 2.5: generic background lifecycle (`ToolCallRequest.background`, `InFlightRegistry`, `BackgroundTaskManager.cancel_by_agent`, `api.v1.{cancel,heartbeat,inflight_count}`), with no daemon-side `ShellJob` model.
+- Phase 2.6: iws per-session parallelism, `freeze` / `freezer_degraded` removal, shared lease-guard/layer-stack protocol cleanup, and symmetric workspace package exports.
+- Phase 2.7: LSP overlay integration + plugin module simplification + plugin tool/service alignment (`kernel_mount.umount(lazy, raise_on_failure)`, load-bearing `namespace_remount.py`, typed workspace-change subscription API, unified `OverlayHandle`, `overlay.lifecycle.acquire(release_hook=...)`, plugin `intent` metadata).
 **Blocks:** nothing — this is the closing phase.
-**Atomic commit plan:** ≤5 logical commits. Suggested split: (a) happy_path + tool_wrappers reshape; (b) policy + security tiers; (c) pipeline_lifecycle + concurrency tiers; (d) behavior_upgrade + unit tiers + observability assertions; (e) Tier 8 soak re-baseline + docs/CHANGELOG. Each commit runs full mock suite on parent SHA before landing; rollback is `git revert <sha>` per commit.
+**Atomic commit plan:** ≤6 logical commits. Suggested split: (a) happy_path + tool_wrappers reshape; (b) policy + security tiers; (c) pipeline_lifecycle + concurrency tiers; (d) behavior_upgrade + unit tiers + observability assertions; (e) prerequisite regression tier for Phase 2.5/2.6/2.7 surfaces; (f) Tier 8 soak re-baseline + docs/CHANGELOG. Each commit runs full mock suite on parent SHA before landing; rollback is `git revert <sha>` per commit.
 
 See [`unify_sandbox_workspace.md`](unify_sandbox_workspace.md) for the overview and ADR.
+
+---
+
+## Dependency-ordered test plans
+
+The detailed `3.*` test plans live at the root of `docs/plans/` and are ordered by dependency, from pure unit contract coverage through full-stack live E2E:
+
+1. [`3.0-sandbox-unit-test-plan.md`](3.0-sandbox-unit-test-plan.md) — unit contracts and static regressions.
+2. [`3.1-layer-stack-occ-overlay-live-e2e-plan.md`](3.1-layer-stack-occ-overlay-live-e2e-plan.md) — shared overlay/OCC lowerdir O(1) and latency baseline.
+3. [`3.2-ephemeral-workspace-live-e2e-plan.md`](3.2-ephemeral-workspace-live-e2e-plan.md) — per-call ephemeral workspace publish and cleanup.
+4. [`3.3-background-tool-live-e2e-plan.md`](3.3-background-tool-live-e2e-plan.md) — generic background wrapper on top of the ephemeral pipeline.
+5. [`3.4-isolated-workspace-live-e2e-plan.md`](3.4-isolated-workspace-live-e2e-plan.md) — pinned isolated workspace lifecycle and same-session parallelism.
+6. [`3.5-plugin-live-e2e-plan.md`](3.5-plugin-live-e2e-plan.md) — plugin service/tool intent dispatch and LSP overlay refresh.
+7. [`3.6-project-build-live-e2e-plan.md`](3.6-project-build-live-e2e-plan.md) — composed shell/edit/search/LSP project-build workflows.
+8. [`3.7-full-stack-live-e2e-plan.md`](3.7-full-stack-live-e2e-plan.md) — adversarial end-to-end workflow across all prior layers.
+
+Each live E2E plan must preserve the sandbox-performance contract: lowerdir workspace-tree disk remains O(1) for N operations, mutation disk is bounded to upperdir/run artifacts, and `performance_report.json` attributes p50/p95/max latency by tool family.
 
 ---
 
@@ -15,11 +36,26 @@ See [`unify_sandbox_workspace.md`](unify_sandbox_workspace.md) for the overview 
 After Phase 3 lands:
 - The iws test suite drives lifecycle through the agent-level tools (`tools/isolated_workspace/{enter,exit}_isolated_workspace`) instead of raw `isolated_workspace/handlers.py` RPC calls.
 - New test tiers cover the unified per-call pipeline, OCC source-tag coalescing, OverlayHandle idempotency, O_NOFOLLOW symlink-escape security, plugin-block policy, and the daemon-side workspace-dispatch concurrency invariant.
+- New prerequisite-regression tests pin the post-Phase-2.5/2.6/2.7 contracts: branch-free background execution, iws same-session parallel tool calls, no freeze/freezer-degraded artifacts, LSP remount/subscription behavior, unified overlay-handle release semantics, and plugin intent dispatch.
 - Tier 8 soak passes against a re-baselined baseline (per-call mount cost factored in; ≤10% per-phase median drift from the new baseline).
-- `docs/sandbox/api_surface.md` documents the trichotomy + tool surface + R3 fence + Intent classification + two-tier verb dispatch.
+- `docs/sandbox/api_surface.md` documents the trichotomy + tool surface + R3 fence + Intent classification + two-tier verb dispatch + background wrapper + LSP/plugin runtime contract.
 - `docs/isolated_workspace_runtime_source_blast_radius.md` reflects the new module set.
 - `tests/mock/sandbox/isolated_workspace/PLAN.md` describes the new test layout.
-- CHANGELOG entry records the changes from Phases 1 + 2.
+- CHANGELOG entry records the changes from Phases 1 + 2.x.
+
+---
+
+## Prerequisite implementation deltas to absorb
+
+Phase 3 is not testing the earlier draft shape anymore. The prerequisite implementations changed in three concrete ways, and Phase 3 must lock those contracts down.
+
+**Phase 2.5 background lifecycle.** Background execution is a generic engine wrapper around the same daemon RPC, not a shell-specific daemon job registry. Tests must assert the pipeline bodies do not branch on `req.background`, that cancellation reaches the daemon through `api.v1.cancel(invocation_id)`, that heartbeats protect daemon-side in-flight work, and that no `ShellJob` / `shell.launch` / `shell.reap` / `_background_jobs` names reappear outside explicit deleted-design docs.
+
+**Phase 2.6 isolated-workspace cleanup.** Iws tool calls inside one session now run concurrently. The old per-call `handle.lock`, cgroup `freeze` / `unfreeze`, and `freezer_degraded` contract are gone. Phase 3 tests should prove the positive behavior (same-session concurrent calls overlap and still report isolated `changed_paths`) and the negative cleanup (no production consumers or telemetry fields for removed freeze artifacts).
+
+**Phase 2.7 LSP/plugin overlay integration.** LSP keeps its long-lived private namespace. `namespace_remount.py` is load-bearing and now delegates detach behavior to `sandbox.overlay.kernel_mount.umount(lazy=True, raise_on_failure=True)`. Plugins and LSP consume typed workspace-change subscription methods on the pipeline instead of reaching through `event_bus`. Overlay handles collapse toward one public `OverlayHandle` shape with explicit `run_dir`, `manifest*` fields, `release()`, and idempotent `_release` closure semantics. Plugin tools gain required `Intent` metadata; READ_ONLY plugin tools query their service in-process, while WRITE_ALLOWED plugin tools keep the overlay + OCC publish path.
+
+These deltas mean Phase 3 should not preserve old names such as `OperationOverlayHandle`, `OverlayProjectionHandle`, direct `event_bus` access from plugins, or shell-specific background RPCs.
 
 ---
 
@@ -208,7 +244,12 @@ def test_read_refuses_symlink_to_host(workspace_session):
 - Assert `release_lease` is called exactly ONCE (no double-release).
 - Asserts the Phase 2 §3.1 per-handle `asyncio.Lock` fix landed correctly.
 
-**6.6.** Background tool lifecycle test tier is owned by **Phase 2.5 §11** (sub-tests A–N covering engine-wrapped asyncio.Task lifecycle, wire-cancel propagation, terminal-status precedence, engine-death TTL reap, timeout enforcement, cancel-ordering invariant, wire-cancel failure tolerance, and multi-engine split-brain). See [`unify_sandbox_workspace_phase2_5.md`](unify_sandbox_workspace_phase2_5.md) §11. Phase 3 ships nothing under this number.
+**6.6.** Background tool lifecycle tier is owned by **Phase 2.5 §11** (sub-tests A–N covering engine-wrapped asyncio.Task lifecycle, wire-cancel propagation, terminal-status precedence, engine-death TTL reap, timeout enforcement, cancel-ordering invariant, wire-cancel failure tolerance, and multi-engine split-brain). See [`unify_sandbox_workspace_phase2_5.md`](unify_sandbox_workspace_phase2_5.md) §11.
+
+Phase 3 does not add a shell-job compatibility tier. It carries the generic-background regression checks forward:
+- static lint: no `if req.background:` branch inside `EphemeralPipeline.run_tool_call` or `IsolatedPipeline.run_tool_call`;
+- static lint: no `ShellJob`, `ShellJobRegistry`, `shell_launch`, `shell_reap`, `shell_poll`, `shell_cancel`, `_background_jobs`, `_session_jobs`, or `_dispatch_background_verb` symbols under production `backend/src/`;
+- integration: background `shell` uses the same `api.v1.shell` envelope as foreground plus `invocation_id`/heartbeat/cancel metadata.
 
 **6.7.** `tests/mock/sandbox/concurrency/test_e2e_10_step_interleaved.py` (NEW — Planner E.3 gap):
 - Drives a 10-step sequence interleaving lifecycle + tool ops + workspace transitions:
@@ -224,7 +265,18 @@ def test_read_refuses_symlink_to_host(workspace_session):
   10. ephemeral `read_file` `/testbed/iws_only.txt` (should fail — never committed)
 - Asserts the isolation boundary at exit and the lowerdir-merge visibility at enter.
 
-→ **Verify:** all `concurrency/` tests pass; specifically `test_destroy_under_asyncio_interleaving.py` fails BEFORE Phase 2 §3.1's lock lands.
+**6.8.** `tests/mock/sandbox/concurrency/test_iws_same_session_calls_run_in_parallel.py` (NEW — Phase 2.6 prerequisite):
+- Enter iws.
+- Launch two tool calls in the same iws session (`shell "sleep 1; touch /testbed/a"` and `shell "sleep 1; touch /testbed/b"`) concurrently.
+- Assert wall time is closer to one sleep than two sleeps, both calls return `workspace == "isolated"`, and both changed paths are visible while the session remains open.
+- Exit iws → confirm both writes are discarded from the main workspace.
+- This fails against the old per-handle serialized `handle.lock` execution path.
+
+**6.9.** `tests/static/test_no_iws_freeze_artifacts.py` (NEW — Phase 2.6 prerequisite):
+- Production source grep/AST check: no `freezer_degraded`, no idle `freeze`/`unfreeze` control path, no iws telemetry contract that reports a freezer degradation state.
+- Tests may mention these strings only in explicit deletion assertions.
+
+→ **Verify:** all `concurrency/` tests pass; specifically `test_destroy_under_asyncio_interleaving.py` fails BEFORE Phase 2 §3.1's lock lands, and `test_iws_same_session_calls_run_in_parallel.py` fails BEFORE Phase 2.6's serialization removal lands.
 
 ---
 
@@ -244,7 +296,7 @@ def test_read_refuses_symlink_to_host(workspace_session):
 - Assert atomic-overwrite-via-temp-file semantics (write to existing path doesn't leave partial state on failure).
 
 **6A.3.** `tests/mock/sandbox/isolated_workspace/behavior_upgrade/test_edit_file_typed_shape.py`:
-- Critical: iws `edit_file` historically dispatched to the same body as `write_file` (full body overwrite). After Phase 2, it must perform real search/replace.
+- Critical: iws `edit_file` historically dispatched to the same body as `write_file` (full body overwrite). After the Phase 2 typed-verb migration, it must perform real search/replace.
 - Assert `EditResult` shape; assert anchor-match success, anchor-miss loud `ValueError`, count-mismatch loud `ValueError`.
 - This test explicitly captures the iws behavior upgrade.
 
@@ -257,7 +309,7 @@ def test_read_refuses_symlink_to_host(workspace_session):
 - Assert `GlobResult` shape; assert pattern matching honors gitignore filtering and the same option set as ephemeral `glob`.
 
 **6A.6.** `tests/mock/sandbox/isolated_workspace/behavior_upgrade/test_shell_changed_paths.py`:
-- iws `shell` historically returned only `subprocess.run` shape with no `changed_paths`. After Phase 2 (which routes through `overlay.capture_changes` on the iws side too — even though no commit happens, the field gets populated for observability), `changed_paths` is populated.
+- iws `shell` historically returned only `subprocess.run` shape with no `changed_paths`. After the Phase 2 typed-verb migration (which routes through `overlay.capture_changes` on the iws side too — even though no commit happens, the field gets populated for observability), `changed_paths` is populated.
 - Assert `changed_paths == ["/testbed/foo"]` after `touch /testbed/foo` inside iws.
 
 → **Verify:** all `behavior_upgrade/` tests pass. These tests would FAIL against today's `ops_handlers.py` — they are NOT parity assertions.
@@ -290,7 +342,32 @@ def test_read_refuses_symlink_to_host(workspace_session):
 
 **6B.11.** `tests/sandbox/unit/test_lifecycle_error_kind_enumeration.py` — Asserts all 4 `LifecycleError.kind` values are exercised by at least one production code path (`already_open`, `not_open`, `quota_exceeded`, `host_ram_pressure`).
 
-→ **Verify:** all `unit/` tier tests pass. Coverage report shows ≥90% line coverage on the new modules (`overlay/`, `_shared/tool_primitives/`, both pipelines, `dispatch.py`).
+**6B.12.** `tests/sandbox/unit/test_kernel_mount_umount.py` (NEW — Phase 2.7 prerequisite):
+- Covers all four combinations of `umount(path, lazy=..., raise_on_failure=...)`.
+- Default `(False, False)` preserves silent-return behavior.
+- `lazy=True` falls back to `umount -l`.
+- `raise_on_failure=True` raises when the path remains mounted after detach attempts.
+
+**6B.13.** `tests/sandbox/unit/test_lsp_namespace_remount.py` (NEW — Phase 2.7 prerequisite):
+- Asserts `namespace_remount.py` calls `kernel_mount.umount(workspace_root, lazy=True, raise_on_failure=True)` before mounting the refreshed lowers.
+- Asserts the module's load-bearing header remains present so future cleanup does not delete the `nsenter -t <child_pid>` boundary by mistake.
+
+**6B.14.** `tests/sandbox/unit/test_workspace_change_subscription_api.py` (NEW — Phase 2.7 prerequisite):
+- `EphemeralPipeline.subscribe_workspace_changes` delegates to `event_bus.subscribe`.
+- `EphemeralPipeline.unsubscribe_workspace_changes` delegates to `event_bus.unsubscribe`.
+- Contract grep: plugin/LSP runtime code uses `subscribe_workspace_changes` / `unsubscribe_workspace_changes`; direct `getattr(..., "event_bus", ...)` access from plugin code is gone.
+
+**6B.15.** `tests/sandbox/unit/test_lsp_session_overlay_dispatch.py` (NEW — Phase 2.7 prerequisite):
+- `_dispatch_lsp_overlay_acquire` covers all three shapes: `ctx.overlay.acquire_operation_overlay`, `ctx.projection.acquire_overlay`, and degraded `ctx.projection.acquire("lsp-session")`.
+- Invalid handles without `layer_paths` are released.
+- Degraded no-handle path emits a rate-limited warning and returns the active manifest key fallback.
+
+**6B.16.** `tests/sandbox/unit/test_overlay_handle_unified_contract.py` (NEW — Phase 2.7 prerequisite):
+- `OverlayHandle` has explicit `run_dir`, `manifest_key`, `manifest_version`, `root_hash`, `manifest` alias, `release()`, and `released`.
+- `release()` is idempotent and invokes the captured `_release` closure exactly once.
+- Contract grep: no production `class OperationOverlayHandle` or `class OverlayProjectionHandle` remains after the handle unification commit lands.
+
+→ **Verify:** all `unit/` tier tests pass. Coverage report shows ≥90% line coverage on the new modules (`overlay/`, `_shared/tool_primitives/`, both pipelines, `dispatch.py`, LSP overlay refresh helpers, plugin runtime contracts).
 
 ---
 
@@ -339,10 +416,43 @@ def test_read_refuses_symlink_to_host(workspace_session):
 
 ---
 
+## Step 6E — Prerequisite integration regression tier
+
+This tier is the explicit bridge from the implementation follow-ups into the final Phase 3 gate. It is separate from pure unit coverage because it verifies the cross-module contracts that changed after the original Phase 3 draft.
+
+**6E.1.** `tests/mock/sandbox/lsp/test_pyright_refresh_uses_typed_subscription.py`:
+- Start a Pyright session.
+- Publish a workspace change through the pipeline subscription API.
+- Assert the session pump receives the `WorkspaceChangeEvent` and refreshes/remounts through the private namespace path.
+- Assert no plugin/LSP caller reaches into `overlay.event_bus` directly.
+
+**6E.2.** `tests/mock/sandbox/lsp/test_namespace_remount_failure_is_loud.py`:
+- Force `kernel_mount.umount(..., raise_on_failure=True)` to fail.
+- Assert `namespace_remount.py` surfaces a hard error instead of silently running Pyright against a stale mount.
+
+**6E.3.** `tests/mock/sandbox/plugin/test_plugin_intent_dispatch.py`:
+- READ_ONLY plugin tool: no operation overlay allocation, no namespace child, no OCC publish, and the plugin reads through its `PluginService` (`PyrightSession` today).
+- WRITE_ALLOWED plugin tool: existing overlay + OCC publish path remains structurally equivalent to normal write tools.
+- `Intent.LIFECYCLE` plugin registration is rejected.
+
+**6E.4.** `tests/contracts/test_tool_intent_drift.py`:
+- Every `@tool` has explicit `intent=`.
+- Every tool wrapper intent matches the daemon handler-table intent for the corresponding verb.
+- Missing intent raises at import time.
+
+**6E.5.** `tests/mock/sandbox/plugin/test_overlay_handle_release_contract.py`:
+- Plugin/LSP/projection paths all receive the unified `OverlayHandle` shape.
+- Daemon-routed release still emits audit/lease-guard evidence through the captured release hook.
+- Projection-direct release still releases the lease and removes `run_dir` without daemon audit.
+
+→ **Verify:** LSP/plugin regression tier passes; contract greps prove no old handle classes, direct event-bus access, or shell-job background symbols remain in production code.
+
+---
+
 ## Step 7 — Tier 8 soak baseline reshape
 
 **7.1.** Re-baseline Tier 8 soak (`tests/live_e2e/tier_8_soak/`) against the new per-call mount cost.
-- Run baseline against Phase 2 head with the new fixtures.
+- Run baseline against the prerequisite head (Phase 2 + 2.5 + 2.6 + 2.7) with the new fixtures.
 - Capture p50/p99 latencies for read/write/edit/grep/glob/shell + lifecycle enter/exit.
 - Commit baseline as `tests/live_e2e/tier_8_soak/baseline_post_unify.json`.
 
@@ -356,6 +466,11 @@ def test_read_refuses_symlink_to_host(workspace_session):
 **7.4.** Per-call latency escalation threshold (Critic D.10 — perf budget must be falsifiable):
 - If `read_file` p50 in `baseline_post_unify.json` exceeds **200ms**, OR `read_file` p99 exceeds **500ms**, the Tier 8 soak job fails AND a follow-up issue is auto-filed: "Revisit Option Z vs Option Y verb-level asymmetry — read latency exceeded escalation threshold."
 - This converts "accepted per user judgment" into an enforceable budget. Without this threshold the ADR's perf claim is unfalsifiable.
+
+**7.5.** Add prerequisite-baseline markers:
+- Iws same-session parallelism: concurrent two-sleep probe should run in <1.5× one call's duration, not ~2×.
+- LSP refresh: Pyright hover/diagnostics after a workspace change should remount without a process restart in the normal path.
+- READ_ONLY plugin dispatch: no per-call overlay allocation median should appear in the plugin read-only timing bucket.
 
 → **Verify:** Tier 8 soak passes with new baseline; escalation guard exercised by an intentionally-slow CI smoke run.
 
@@ -374,15 +489,18 @@ def test_read_refuses_symlink_to_host(workspace_session):
 - §8 New mount API requirement; Docker-only deployment; reference `scripts/verify_overlay_preconditions.py`.
 - §9 NEW — Pass-through write semantics (Architect F.5 / Critic must-fix #9): 2×3 table for {/testbed/*, /etc/*, /tmp/*} × {ephemeral, isolated} listing read+write disposition. Document the denylist (`/etc/`, `/var/`, `/proc/`, `/sys/`, `/boot/` rejected before kernel call).
 - §10 — Background tool policy: see Phase 2.5 §1 + §2 (coroutine-bound overlay; engine asyncio.Task wrapper; `ToolCallRequest.background` flag; `api.v1.cancel(invocation_id)` wire RPC; `api.v1.heartbeat`; engine-layer Q4 + iws-exit drain). The api_surface.md doc references Phase 2.5 for the canonical design and does not describe the old shell-job model as active architecture.
-- §11 NEW — `WorkspaceSession` status: deferred to `tests/mock/sandbox/_fixtures/` until a production caller materializes (Critic must-fix #11). NOT part of the public API surface in Phase 2.
+- §11 NEW — Plugin runtime contract: `PluginService` vs `PluginTool`, required `Intent` metadata, READ_ONLY in-process service query, WRITE_ALLOWED overlay+OCC publish path, `Intent.LIFECYCLE` rejected for plugin tools. Reference [`docs/design/plugin_runtime_contract.md`](../design/plugin_runtime_contract.md).
+- §12 NEW — LSP overlay service: `PyrightSession` is the long-lived overlay consumer; `namespace_remount.py` is the load-bearing `nsenter -t <child_pid>` remount entrypoint; workspace-change observation uses `subscribe_workspace_changes` / `unsubscribe_workspace_changes`; degraded no-handle dispatch emits a rate-limited warning.
+- §13 NEW — `WorkspaceSession` status: deferred to `tests/mock/sandbox/_fixtures/` until a production caller materializes (Critic must-fix #11). NOT part of the public API surface in this plan.
 
 **8.2.** Update `docs/isolated_workspace_runtime_source_blast_radius.md`:
 - New module set: `sandbox/overlay/*`, `sandbox/_shared/tool_primitives/*`, `sandbox/ephemeral_workspace/pipeline.py` (+ extracted helper modules per Phase 1 §3.1), `sandbox/isolated_workspace/pipeline.py` + `_lifecycle.py` + `_gc.py` + `_ttl.py` + `_quota.py` + `_runtime.py` + `_types.py`, `sandbox/isolated_workspace/lifecycle/*` (host-side coroutines + WorkspaceSession test-fixture pointer).
-- Removed modules: `sandbox/execution/`, `sandbox/plugin/` (relocated), `sandbox/daemon/service/{sandbox_overlay,shell_*,overlay_*}.py`, `sandbox/daemon/handler/overlay.py`, `sandbox/isolated_workspace/ops_handlers.py`.
+- Add Phase 2.7 surface: `sandbox/overlay/kernel_mount.py` (`umount(lazy, raise_on_failure)`), `sandbox/overlay/handle.py` (single overlay handle), `sandbox/overlay/lifecycle.py` (`acquire(..., release_hook=...)`), `sandbox/ephemeral_workspace/plugin/op_context.py` (typed subscription and intent context), `plugins/catalog/lsp/runtime/session_manager.py`, and `plugins/catalog/lsp/runtime/namespace_remount.py`.
+- Removed modules/classes: `sandbox/execution/`, `sandbox/plugin/` (relocated), `sandbox/daemon/service/{sandbox_overlay,shell_*,overlay_*}.py`, `sandbox/daemon/handler/overlay.py`, `sandbox/isolated_workspace/ops_handlers.py`, `OperationOverlayHandle`, `OverlayProjectionHandle`, daemon-side `ShellJob` / `ShellJobRegistry`.
 - Note: `sandbox/api/` continues to house CLIENT-side artifacts only (`_raw_exec.py`, `_sandbox_control.py`, `protocol.py`, `transport.py`, `tool/`). Host-side lifecycle coroutines moved to `sandbox/isolated_workspace/lifecycle/` (Critic must-fix #6).
 
 **8.3.** Create / update `tests/mock/sandbox/isolated_workspace/PLAN.md`:
-- New test layout: `happy_path/`, `tool_wrappers/`, `policy/`, `pipeline_lifecycle/`, `concurrency/`, `security/`, `behavior_upgrade/`, `unit/`, `observability/`.
+- New test layout: `happy_path/`, `tool_wrappers/`, `policy/`, `pipeline_lifecycle/`, `concurrency/`, `security/`, `behavior_upgrade/`, `unit/`, `observability/`, `lsp_plugin_integration/`.
 - Migration notes from old `handlers.py`/`ops_handlers.py`-driven tests (the latter is being deleted).
 
 **8.4.** Append CHANGELOG entry under `CHANGELOG.md` (or equivalent):
@@ -401,6 +519,10 @@ def test_read_refuses_symlink_to_host(workspace_session):
 - New agent-level tools: tools/isolated_workspace/{enter,exit}_isolated_workspace.
 - New host-side lifecycle coroutines at sandbox.isolated_workspace.lifecycle.{enter,exit}_isolated_workspace; WorkspaceSession DEFERRED to test fixture (no public API).
 - Latency change: typed verbs (read/write/edit/grep/glob) gain ~50–200ms per-call namespace+mount cost.
+- Background execution is generic engine-owned task lifecycle, not daemon-side ShellJob lifecycle.
+- Iws same-session tool calls are concurrent; old freeze/freezer_degraded behavior is removed.
+- LSP refresh uses a load-bearing namespace_remount.py boundary plus typed workspace-change subscription.
+- Plugin tools require Intent; READ_ONLY plugin tools query services in-process, WRITE_ALLOWED plugin tools retain overlay+OCC publish.
 ```
 
 → **Verify:** docs render; CHANGELOG entry merged.
@@ -414,13 +536,14 @@ def test_read_refuses_symlink_to_host(workspace_session):
 - ✅ `policy/` tier covers destructive pre-hook (mode-agnostic), plugin-block (in iws + allowed when no iws + fail-open when pipeline not bootstrapped + audit event emitted on fail-open), network policy, and **host-path denylist** for `/etc/*`, `/var/*`, `/proc/*`, `/sys/*`, `/boot/*` (Critic must-fix #9).
 - ✅ `security/` tier covers O_NOFOLLOW symlink-escape for read/write/edit (last-component AND intermediate-component); static AST lint enforces the chokepoint pattern (no naive `os.open(path, flags|O_NOFOLLOW)` bypassing `file_ops.open_no_follow`).
 - ✅ `pipeline_lifecycle/` tier covers ephemeral per-call upperdir GC, isolated per-session persistence, OverlayHandle idempotency, O(1) lowerdir disk, AND isolated upperdir scaling-with-mutations (Planner F.16).
-- ✅ `concurrency/` tier covers OCC source-tag coalescing on all 4 helper sites (api_write batches, overlay_capture doesn't), `_wire_handle` ordering invariant, concurrent disjoint-path writes, same-path conflict resolution, destroy-under-asyncio-interleaving (D.2), AND a 10-step interleaved E2E sequence. Background tool lifetime tests are owned by Phase 2.5 §11.
+- ✅ `concurrency/` tier covers OCC source-tag coalescing on all 4 helper sites (api_write batches, overlay_capture doesn't), `_wire_handle` ordering invariant, concurrent disjoint-path writes, same-path conflict resolution, destroy-under-asyncio-interleaving (D.2), a 10-step interleaved E2E sequence, iws same-session parallel tool calls, and no freeze/freezer-degraded production artifacts. Background tool lifetime tests are owned by Phase 2.5 §11, with Phase 3 static regressions preventing shell-job reintroduction.
 - ✅ `behavior_upgrade/` tier (NEW) covers the iws verb upgrade: typed-shape `ReadResult`/`WriteResult`/`EditResult` (real search/replace)/`GrepResult` (modes + options honored)/`GlobResult`/shell `changed_paths`. These tests do NOT preserve byte-equivalence with today's iws `ops_handlers.py` — they assert the upgraded behavior.
-- ✅ `unit/` tier (NEW) covers per-module surface: `OverlayHandle`, `lifecycle`, `namespace`, `namespace_entrypoint`, `tool_primitives.file_ops` (per-component walk), `overlay_change_conversion` (all 4 helpers), pipeline lease accounting, lifecycle error enumeration (`already_open`, `not_open`, `quota_exceeded`, `host_ram_pressure`), `resolve_pipeline`.
+- ✅ `unit/` tier (NEW) covers per-module surface: `OverlayHandle`, `lifecycle`, `namespace`, `namespace_entrypoint`, `tool_primitives.file_ops` (per-component walk), `overlay_change_conversion` (all 4 helpers), pipeline lease accounting, lifecycle error enumeration (`already_open`, `not_open`, `quota_exceeded`, `host_ram_pressure`), `resolve_pipeline`, `kernel_mount.umount(lazy, raise_on_failure)`, `namespace_remount.py`, typed workspace-change subscription, and LSP session overlay dispatch.
 - ✅ `observability/` tier (NEW) asserts `timings["mount_ms"]` populated, mid-session upperdir gauge advances monotonically, audit-event payload shapes are stable.
+- ✅ `prerequisite integration` tier (NEW) covers Phase 2.7 LSP/plugin contracts: Pyright refresh through typed subscription + namespace remount, loud remount failures, plugin intent dispatch, tool-intent drift checks, unified overlay-handle release semantics, and contract greps for removed handle/event-bus/shell-job surfaces.
 - ✅ Deployment pre-flight CI step `verify-overlay-preconditions` runs `scripts/verify_overlay_preconditions.py` and fails the build on kernel-degraded runners.
-- ✅ Tier 8 soak re-baselined to `baseline_post_unify.json`; ≤10% median drift assertion enforced; perf escalation threshold (read p50 > 200ms or p99 > 500ms) auto-files follow-up issue.
-- ✅ `docs/sandbox/api_surface.md` exists with the 11 sections (pass-through table, `WorkspaceSession` deferral note, etc.). The §10 background tool policy section defers to Phase 2.5 for the canonical design.
-- ✅ Blast-radius doc reflects new module set including extracted `manager.py` modules + `sandbox/isolated_workspace/lifecycle/`.
-- ✅ `tests/mock/sandbox/isolated_workspace/PLAN.md` updated (9 tiers).
+- ✅ Tier 8 soak re-baselined to `baseline_post_unify.json`; ≤10% median drift assertion enforced; perf escalation threshold (read p50 > 200ms or p99 > 500ms) auto-files follow-up issue; prerequisite markers cover iws parallelism, LSP refresh-without-restart, and READ_ONLY plugin no-overlay dispatch.
+- ✅ `docs/sandbox/api_surface.md` exists with the 13 sections (pass-through table, background policy, plugin runtime contract, LSP overlay service, `WorkspaceSession` deferral note, etc.). The §10 background tool policy section defers to Phase 2.5 for the canonical design.
+- ✅ Blast-radius doc reflects new module set including extracted `manager.py` modules + `sandbox/isolated_workspace/lifecycle/` + Phase 2.7 LSP/plugin/overlay integration surfaces.
+- ✅ `tests/mock/sandbox/isolated_workspace/PLAN.md` updated (10 tiers).
 - ✅ CHANGELOG entry merged.
