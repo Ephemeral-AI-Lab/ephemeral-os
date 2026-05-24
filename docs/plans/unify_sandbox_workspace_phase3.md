@@ -21,8 +21,8 @@ The detailed `3.*` test plans live at the root of `docs/plans/` and are ordered 
 1. [`3.0-sandbox-unit-test-plan.md`](3.0-sandbox-unit-test-plan.md) — unit contracts and static regressions.
 2. [`3.1-layer-stack-occ-overlay-live-e2e-plan.md`](3.1-layer-stack-occ-overlay-live-e2e-plan.md) — shared overlay/OCC lowerdir O(1) and latency baseline.
 3. [`3.2-ephemeral-workspace-live-e2e-plan.md`](3.2-ephemeral-workspace-live-e2e-plan.md) — per-call ephemeral workspace publish and cleanup.
-4. [`3.3-background-tool-live-e2e-plan.md`](3.3-background-tool-live-e2e-plan.md) — generic background wrapper on top of the ephemeral pipeline.
-5. [`3.4-isolated-workspace-live-e2e-plan.md`](3.4-isolated-workspace-live-e2e-plan.md) — pinned isolated workspace lifecycle and same-session parallelism.
+4. [`3.3-isolated-workspace-live-e2e-plan.md`](3.3-isolated-workspace-live-e2e-plan.md) — pinned isolated workspace lifecycle and same-session parallelism.
+5. [`3.4-background-tool-live-e2e-plan.md`](3.4-background-tool-live-e2e-plan.md) — generic background wrapper on top of the ephemeral pipeline.
 6. [`3.5-plugin-live-e2e-plan.md`](3.5-plugin-live-e2e-plan.md) — plugin service/tool intent dispatch and LSP overlay refresh.
 7. [`3.6-project-build-live-e2e-plan.md`](3.6-project-build-live-e2e-plan.md) — composed shell/edit/search/LSP project-build workflows.
 8. [`3.7-full-stack-live-e2e-plan.md`](3.7-full-stack-live-e2e-plan.md) — adversarial end-to-end workflow across all prior layers.

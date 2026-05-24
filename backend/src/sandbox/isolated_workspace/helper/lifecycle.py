@@ -91,6 +91,7 @@ class _IsolatedLifecycleMixin:
                 "ns_ip": str(handle.veth.ns_ip) if handle.veth else None,
                 "rfc1918_egress_mode": self._config.rfc1918_egress,
                 "lowerdir_layer_count": len(layer_paths),
+                "tree-copy": False,
                 "total_ms": timer.total_ms(),
                 "phases_ms": timer.phases_ms,
             })

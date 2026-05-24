@@ -1,4 +1,4 @@
-"""R6: per-handle upperdir budget exceeding host MemAvailable → host_capacity_exceeded.
+"""R6: per-handle upperdir budget exceeding host MemAvailable -> host_ram_pressure.
 
 Set ``UPPERDIR_BYTES`` larger than any reasonable host's free RAM (4 TB);
 enter() must short-circuit at the budget gate with ``required_bytes`` and
@@ -47,12 +47,11 @@ async def test_host_ram_gate_refuses_over_budget(iws_clean_sandbox) -> None:
         )
         assert rejected.get("success") is False, rejected
         err = rejected.get("error", {})
-        assert err.get("kind") == "host_capacity_exceeded", err
+        assert err.get("kind") == "host_ram_pressure", err
         details = err.get("details") or {}
         assert "required_bytes" in details and "budget_bytes" in details, details
         assert details["required_bytes"] >= int(_FOUR_TB), details
     finally:
-        await _iws_rpc.exit_(sandbox_id, "agent-A")
         await clear_daemon_env(
             sandbox_id,
             keys=["EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES"],

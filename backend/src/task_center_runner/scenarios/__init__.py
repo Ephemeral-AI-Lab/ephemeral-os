@@ -40,6 +40,11 @@ from task_center_runner.scenarios.planner_validation import (
 )
 from task_center_runner.scenarios.sandbox import (
     AutoSquashCommitResume,
+    BackgroundEngineRestartNoLeaseLeak,
+    BackgroundExitIwsDrainsAgentTasks,
+    BackgroundHeartbeatLossReapsOnlyStaleBg,
+    BackgroundManySmallWritesDoNotStarveDispatcher,
+    BackgroundMixedFgBgSamePathConflict,
     BackgroundShellStop,
     BackgroundShellStopDuringMaintenance,
     BackgroundShellExhaustion,
@@ -103,6 +108,21 @@ SCENARIO_REGISTRY: dict[str, type[Scenario]] = {
     "sandbox.background_shell_partial_write_cancel": (
         BackgroundShellPartialWriteCancel
     ),
+    "sandbox.background_mixed_fg_bg_same_path_conflict": (
+        BackgroundMixedFgBgSamePathConflict
+    ),
+    "sandbox.background_heartbeat_loss_reaps_only_stale_bg": (
+        BackgroundHeartbeatLossReapsOnlyStaleBg
+    ),
+    "sandbox.background_exit_iws_drains_agent_tasks": (
+        BackgroundExitIwsDrainsAgentTasks
+    ),
+    "sandbox.background_engine_restart_no_lease_leak": (
+        BackgroundEngineRestartNoLeaseLeak
+    ),
+    "sandbox.background_many_small_writes_do_not_starve_dispatcher": (
+        BackgroundManySmallWritesDoNotStarveDispatcher
+    ),
     "sandbox.complex_project_build": ComplexProjectBuild,
     "sandbox.complex_project_build_grep_glob": ComplexProjectBuildGrepGlob,
     "sandbox.complex_project_build_grep_glob_smoke": ComplexProjectBuildGrepGlobSmoke,
@@ -143,6 +163,11 @@ __all__ = [
     "AttemptRetryGeneratorFailure",
     "AttemptRetryPlannerFailure",
     "AutoSquashCommitResume",
+    "BackgroundEngineRestartNoLeaseLeak",
+    "BackgroundExitIwsDrainsAgentTasks",
+    "BackgroundHeartbeatLossReapsOnlyStaleBg",
+    "BackgroundManySmallWritesDoNotStarveDispatcher",
+    "BackgroundMixedFgBgSamePathConflict",
     "BackgroundShellStop",
     "BackgroundShellStopDuringMaintenance",
     "BackgroundShellExhaustion",

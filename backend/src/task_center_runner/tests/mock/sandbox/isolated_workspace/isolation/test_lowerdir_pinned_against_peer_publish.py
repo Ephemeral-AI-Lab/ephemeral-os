@@ -54,7 +54,7 @@ async def test_lowerdir_pinned_against_peer_publish(iws_clean_sandbox) -> None:
 
         readback = await _iws_rpc.read_file(sandbox_id, agent_id, path)
         assert readback.get("success") is True, readback
-        body = readback.get("stdout", "")
+        body = readback.get("content") or ""
         assert f"version-A-{token}" in body, (
             "ws-A must see the snapshot-at-enter view, not the post-publish version-B",
             readback,
@@ -69,7 +69,7 @@ async def test_lowerdir_pinned_against_peer_publish(iws_clean_sandbox) -> None:
     try:
         readback = await _iws_rpc.read_file(sandbox_id, agent_id, path)
         assert readback.get("success") is True, readback
-        body = readback.get("stdout", "")
+        body = readback.get("content") or ""
         assert f"version-B-{token}" in body, (
             "re-enter must pick up the post-publish state; lease lifetime extended past exit?",
             readback,

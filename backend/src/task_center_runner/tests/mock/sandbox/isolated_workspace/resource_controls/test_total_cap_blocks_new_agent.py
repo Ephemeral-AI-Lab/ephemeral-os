@@ -37,11 +37,14 @@ async def test_total_cap_blocks_new_agent(iws_clean_sandbox) -> None:
         pairs={"EOS_ISOLATED_WORKSPACE_TOTAL_CAP": "2"},
         layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT,
     )
+    opened: list[str] = []
     try:
         a = await _iws_rpc.enter(sandbox_id, "agent-A", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
         assert a.get("success") is True, a
+        opened.append("agent-A")
         b = await _iws_rpc.enter(sandbox_id, "agent-B", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
         assert b.get("success") is True, b
+        opened.append("agent-B")
         c = await _iws_rpc.enter(sandbox_id, "agent-C", layer_stack_root=_iws_rpc.IWS_LAYER_STACK_ROOT)
         assert c.get("success") is False, c
         err = c.get("error", {})
@@ -49,7 +52,7 @@ async def test_total_cap_blocks_new_agent(iws_clean_sandbox) -> None:
         details = err.get("details") or {}
         assert details.get("total_cap") == 2, details
     finally:
-        for agent in ("agent-A", "agent-B", "agent-C"):
+        for agent in opened:
             await _iws_rpc.exit_(sandbox_id, agent)
         await clear_daemon_env(
             sandbox_id,

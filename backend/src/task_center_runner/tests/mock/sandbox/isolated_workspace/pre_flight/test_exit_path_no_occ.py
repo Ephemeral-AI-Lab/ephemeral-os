@@ -20,7 +20,7 @@ from pathlib import Path
 
 _SRC_ROOT = Path(__file__).resolve().parents[7] / "src"
 _PIPELINE_PATH = _SRC_ROOT / "sandbox/isolated_workspace/pipeline.py"
-_LIFECYCLE_PATH = _SRC_ROOT / "sandbox/isolated_workspace/_lifecycle.py"
+_LIFECYCLE_PATH = _SRC_ROOT / "sandbox/isolated_workspace/helper/lifecycle.py"
 
 # Anything that smells like an OCC publish call. Substring match — a literal
 # in a method body is enough to fail.

@@ -36,7 +36,7 @@ async def test_quota_one_per_agent(iws_clean_sandbox) -> None:
         )
         assert second.get("success") is False, second
         err = second.get("error", {})
-        assert err.get("kind") == "isolated_workspace_already_open", err
+        assert err.get("kind") == "already_open", err
         details = err.get("details") or {}
         # Diagnostic surface from PLAN §5: created_at and last_activity must
         # be present so operators can answer "since when?" without RPC ping.

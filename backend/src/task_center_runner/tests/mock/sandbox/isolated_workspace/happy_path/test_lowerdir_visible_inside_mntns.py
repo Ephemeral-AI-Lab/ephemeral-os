@@ -49,7 +49,7 @@ async def test_lowerdir_visible_inside_mntns(
     try:
         read = await _iws_rpc.read_file(sandbox_id, agent_id, sentinel.path)
         assert read.get("success") is True, read
-        assert sentinel.body in read.get("stdout", ""), (sentinel, read)
+        assert sentinel.body in (read.get("content") or ""), (sentinel, read)
     finally:
         await _iws_rpc.exit_(sandbox_id, agent_id)
 

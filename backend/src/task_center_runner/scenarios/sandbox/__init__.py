@@ -22,6 +22,11 @@ from task_center_runner.scenarios.sandbox.auto_squash_commit_resume import (
     AutoSquashCommitResume,
 )
 from task_center_runner.scenarios.sandbox.background_shell import (
+    BackgroundEngineRestartNoLeaseLeak,
+    BackgroundExitIwsDrainsAgentTasks,
+    BackgroundHeartbeatLossReapsOnlyStaleBg,
+    BackgroundManySmallWritesDoNotStarveDispatcher,
+    BackgroundMixedFgBgSamePathConflict,
     BackgroundShellStop,
     BackgroundShellStopDuringMaintenance,
     BackgroundShellExhaustion,
@@ -62,6 +67,11 @@ from task_center_runner.scenarios.sandbox.occ_concurrent_conflicts import (
 
 __all__ = [
     "AutoSquashCommitResume",
+    "BackgroundEngineRestartNoLeaseLeak",
+    "BackgroundExitIwsDrainsAgentTasks",
+    "BackgroundHeartbeatLossReapsOnlyStaleBg",
+    "BackgroundManySmallWritesDoNotStarveDispatcher",
+    "BackgroundMixedFgBgSamePathConflict",
     "BackgroundShellStop",
     "BackgroundShellStopDuringMaintenance",
     "BackgroundShellExhaustion",

@@ -127,6 +127,7 @@ class IsolatedWorkspaceHandle:
     cgroup_path: Path | None = None
     created_at: float = 0.0
     last_activity: float = 0.0
+    active_calls: int = 0
     status: HandleStatus = "active"
 
     def to_persisted(self) -> dict[str, Any]:

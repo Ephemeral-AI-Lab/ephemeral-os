@@ -22,11 +22,20 @@ from typing import Any
 from uuid import uuid4
 
 import sandbox.api as sandbox_api
+from engine.background.manager import BackgroundTaskManager
 from message.stream_events import StreamEvent
+from tools._framework.core.base import BaseTool
 from tools._framework.core.results import ToolResult
 from tools._framework.core.runtime import ExecutionMetadata
+from tools.isolated_workspace.enter_isolated_workspace import (
+    enter_isolated_workspace as enter_isolated_workspace_tool,
+)
+from tools.isolated_workspace.exit_isolated_workspace import (
+    exit_isolated_workspace as exit_isolated_workspace_tool,
+)
 from tools.sandbox.read_file import read_file as read_file_tool
 from tools.sandbox.shell import shell as shell_tool
+from tools.sandbox.write_file import write_file as write_file_tool
 
 
 WORKSPACE_ROOT = "/testbed"
@@ -38,6 +47,11 @@ EXHAUSTION_SUMMARY = f"{ROOT}/exhaustion/summary.json"
 PARTIAL_WRITE_SUMMARY = f"{ROOT}/partial_write/summary.json"
 MAINTENANCE_SUMMARY = f"{ROOT}/maintenance/summary.json"
 LATE_CANCEL_SUMMARY = f"{ROOT}/late_cancel/summary.json"
+MIXED_CONFLICT_SUMMARY = f"{ROOT}/mixed_fg_bg_same_path_conflict/summary.json"
+HEARTBEAT_LOSS_SUMMARY = f"{ROOT}/heartbeat_loss/summary.json"
+EXIT_IWS_DRAIN_SUMMARY = f"{ROOT}/exit_iws_drain/summary.json"
+ENGINE_RESTART_SUMMARY = f"{ROOT}/engine_restart/summary.json"
+MANY_SMALL_WRITES_SUMMARY = f"{ROOT}/many_small_writes/summary.json"
 
 SUMMARY_SCHEMA = "task_center_runner.background_shell.v1"
 
@@ -91,6 +105,138 @@ def _shell_metadata(result: ToolResult) -> dict[str, Any]:
         "changed_paths": list(meta.get("changed_paths") or ()),
         "status": meta.get("status"),
         "conflict_reason": meta.get("conflict_reason"),
+    }
+
+
+def _json_payload(result: ToolResult) -> dict[str, Any]:
+    try:
+        payload = json.loads(result.output or "{}")
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _tool_metadata(result: ToolResult) -> dict[str, Any]:
+    meta = dict(result.metadata or {})
+    return {
+        "timings": dict(meta.get("timings") or {}),
+        "changed_paths": list(meta.get("changed_paths") or ()),
+        "status": meta.get("status"),
+        "conflict_reason": meta.get("conflict_reason"),
+        "error_kind": meta.get("error_kind"),
+        "mutation_source": meta.get("mutation_source"),
+    }
+
+
+def _tool_record(result: ToolResult) -> dict[str, Any]:
+    payload = _json_payload(result)
+    return {
+        "is_error": bool(result.is_error),
+        "status": payload.get("status") or result.metadata.get("status"),
+        "conflict_reason": (
+            payload.get("conflict_reason")
+            or result.metadata.get("conflict_reason")
+        ),
+        "changed_paths": list(
+            payload.get("changed_paths")
+            or result.metadata.get("changed_paths")
+            or ()
+        ),
+        "error": payload.get("error") or result.metadata.get("error"),
+        "metadata": _tool_metadata(result),
+    }
+
+
+def _read_content(result: ToolResult) -> str:
+    payload = _json_payload(result)
+    return str(payload.get("content") or result.output or "")
+
+
+async def _call_probe_tool(
+    *,
+    label: str,
+    tool_obj: BaseTool,
+    raw_input: dict[str, Any],
+    metadata: ExecutionMetadata,
+    emit: EmitStreamEvent,
+    call_tool: CallTool,
+    record_tool_check: RecordToolCheck | None,
+    allow_error: bool = False,
+    background_task_id: str | None = None,
+    sandbox_invocation_id: str | None = None,
+) -> ToolResult:
+    result = await call_tool(
+        tool_obj,
+        raw_input,
+        metadata,
+        emit,
+        allow_error=allow_error,
+        background_task_id=background_task_id,
+        sandbox_invocation_id=sandbox_invocation_id,
+    )
+    if record_tool_check is not None:
+        record_tool_check(f"tool.{tool_obj.name}.background_shell.{label}", result)
+    return result
+
+
+async def _wait_for_inflight_count(
+    *,
+    sandbox_id: str,
+    agent_id: str,
+    minimum: int,
+    timeout_s: float = 8.0,
+) -> int:
+    deadline = time.perf_counter() + timeout_s
+    last_count = 0
+    while time.perf_counter() < deadline:
+        last_count = await sandbox_api.inflight_count(sandbox_id, agent_id)
+        if last_count >= minimum:
+            return last_count
+        await asyncio.sleep(0.1)
+    return last_count
+
+
+async def _heartbeat_until(
+    *,
+    sandbox_id: str,
+    invocation_id: str,
+    stop: asyncio.Event,
+    interval_s: float = 0.2,
+) -> list[dict[str, object]]:
+    responses: list[dict[str, object]] = []
+    while not stop.is_set():
+        try:
+            response = await sandbox_api.heartbeat(sandbox_id, [invocation_id])
+            responses.append(dict(response))
+        except Exception as exc:  # noqa: BLE001 - telemetry only
+            responses.append({"success": False, "error": type(exc).__name__})
+        await asyncio.sleep(interval_s)
+    return responses
+
+
+async def _await_task_record(
+    task: asyncio.Task[ToolResult],
+) -> dict[str, Any]:
+    try:
+        result = await task
+    except asyncio.CancelledError:
+        return {"cancelled": True, "is_error": True, "exception": "CancelledError"}
+    except Exception as exc:  # noqa: BLE001 - scenario summary should survive
+        return {
+            "cancelled": False,
+            "is_error": True,
+            "exception": type(exc).__name__,
+            "message": str(exc)[:300],
+        }
+    payload = _shell_payload(result)
+    return {
+        "cancelled": False,
+        "is_error": bool(result.is_error),
+        "exit_code": payload.get("exit_code"),
+        "status": payload.get("status"),
+        "stdout_excerpt": str(payload.get("stdout") or "")[:300],
+        "stderr_excerpt": str(payload.get("stderr") or "")[:300],
+        "shell_metadata": _shell_metadata(result),
     }
 
 
@@ -719,6 +865,683 @@ async def run_background_shell_late_cancel_probe(
     )
 
 
+# ---- 3.3.1 mixed foreground/background conflict ---------------------------
+
+
+MIXED_CONFLICT_BG_SLEEP_S = 1.5
+
+
+async def run_background_mixed_fg_bg_same_path_conflict_probe(
+    *,
+    metadata: ExecutionMetadata,
+    emit: EmitStreamEvent,
+    call_tool: CallTool,
+    record_tool_check: RecordToolCheck,
+) -> str:
+    """3.3.1: foreground direct write races a background shell on one path."""
+    started = time.perf_counter()
+    target = f"{ROOT}/mixed_fg_bg_same_path_conflict/bg-shared.txt"
+
+    bg_task = asyncio.create_task(
+        _call_probe_tool(
+            label="mixed_conflict.background",
+            tool_obj=shell_tool,
+            raw_input={
+                "command": (
+                    f"mkdir -p $(dirname {target}) && "
+                    f"sleep {MIXED_CONFLICT_BG_SLEEP_S} && "
+                    f"printf 'background-win\\n' > {target}"
+                ),
+                "timeout": 60,
+            },
+            metadata=metadata,
+            emit=emit,
+            call_tool=call_tool,
+            record_tool_check=None,
+            allow_error=True,
+            background_task_id=_bg_id("mixed-conflict"),
+        )
+    )
+    await asyncio.sleep(0.35)
+
+    fg_t0 = time.perf_counter()
+    fg_result = await _call_probe_tool(
+        label="mixed_conflict.foreground_write",
+        tool_obj=write_file_tool,
+        raw_input={"file_path": target, "content": "foreground-win\n"},
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+        allow_error=True,
+    )
+    foreground = {
+        **_tool_record(fg_result),
+        "duration_s": time.perf_counter() - fg_t0,
+    }
+    background = await _await_task_record(bg_task)
+    final_read = await _call_probe_tool(
+        label="mixed_conflict.final_read",
+        tool_obj=read_file_tool,
+        raw_input={"file_path": target},
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+        allow_error=True,
+    )
+    final_content = _read_content(final_read)
+
+    summary = {
+        "schema": SUMMARY_SCHEMA,
+        "mode": "mixed_fg_bg_same_path_conflict",
+        "target": target,
+        "duration_s": time.perf_counter() - started,
+        "foreground": foreground,
+        "background": background,
+        "final_read_is_error": bool(final_read.is_error),
+        "final_content": final_content,
+        "foreground_won": "foreground-win" in final_content,
+        "background_won": "background-win" in final_content,
+    }
+    return await _write_summary(
+        path=MIXED_CONFLICT_SUMMARY,
+        payload=summary,
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+    )
+
+
+# ---- 3.3.2 heartbeat loss --------------------------------------------------
+
+
+HEARTBEAT_PROTECTED_SLEEP_S = 4
+HEARTBEAT_STALE_SLEEP_S = 20
+HEARTBEAT_STALE_WAIT_S = 2.6
+
+
+async def run_background_heartbeat_loss_probe(
+    *,
+    metadata: ExecutionMetadata,
+    emit: EmitStreamEvent,
+    call_tool: CallTool,
+    record_tool_check: RecordToolCheck,
+) -> str:
+    """3.3.2: keep one invocation alive and let another go stale."""
+    started = time.perf_counter()
+    sandbox_id = str(metadata.sandbox_id or "")
+    agent_id = _agent_id(metadata)
+    protected_invocation_id = f"hb-protected-{uuid4().hex}"
+    stale_invocation_id = f"hb-stale-{uuid4().hex}"
+    protected_target = f"{ROOT}/heartbeat_loss/protected.txt"
+    stale_target = f"{ROOT}/heartbeat_loss/stale.txt"
+
+    protected_task = asyncio.create_task(
+        _call_probe_tool(
+            label="heartbeat_loss.protected",
+            tool_obj=shell_tool,
+            raw_input={
+                "command": (
+                    f"mkdir -p $(dirname {protected_target}) && "
+                    f"sleep {HEARTBEAT_PROTECTED_SLEEP_S} && "
+                    f"echo protected-ok > {protected_target}"
+                ),
+                "timeout": 60,
+            },
+            metadata=metadata,
+            emit=emit,
+            call_tool=call_tool,
+            record_tool_check=None,
+            allow_error=True,
+            background_task_id=_bg_id("heartbeat-protected"),
+            sandbox_invocation_id=protected_invocation_id,
+        )
+    )
+    stale_task = asyncio.create_task(
+        _call_probe_tool(
+            label="heartbeat_loss.stale",
+            tool_obj=shell_tool,
+            raw_input={
+                "command": (
+                    f"mkdir -p $(dirname {stale_target}) && "
+                    f"sleep {HEARTBEAT_STALE_SLEEP_S} && "
+                    f"echo stale-published > {stale_target}"
+                ),
+                "timeout": 60,
+            },
+            metadata=metadata,
+            emit=emit,
+            call_tool=call_tool,
+            record_tool_check=None,
+            allow_error=True,
+            background_task_id=_bg_id("heartbeat-stale"),
+            sandbox_invocation_id=stale_invocation_id,
+        )
+    )
+
+    inflight_during_launch = await _wait_for_inflight_count(
+        sandbox_id=sandbox_id,
+        agent_id=agent_id,
+        minimum=2,
+    )
+    stop_heartbeat = asyncio.Event()
+    heartbeat_task = asyncio.create_task(
+        _heartbeat_until(
+            sandbox_id=sandbox_id,
+            invocation_id=protected_invocation_id,
+            stop=stop_heartbeat,
+        )
+    )
+    await asyncio.sleep(HEARTBEAT_STALE_WAIT_S)
+
+    fg_t0 = time.perf_counter()
+    foreground = await _call_probe_tool(
+        label="heartbeat_loss.foreground",
+        tool_obj=shell_tool,
+        raw_input={"command": "echo heartbeat-foreground-ok", "timeout": 30},
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+        allow_error=True,
+    )
+    foreground_record = {
+        **_tool_record(foreground),
+        "duration_s": time.perf_counter() - fg_t0,
+        "payload": _shell_payload(foreground),
+    }
+
+    protected_record = await _await_task_record(protected_task)
+    stop_heartbeat.set()
+    heartbeat_responses = await heartbeat_task
+    try:
+        stale_record = await asyncio.wait_for(
+            _await_task_record(stale_task),
+            timeout=6,
+        )
+    except asyncio.TimeoutError:
+        stale_task.cancel()
+        stale_record = await _await_task_record(stale_task)
+
+    protected_read = await _call_probe_tool(
+        label="heartbeat_loss.protected_read",
+        tool_obj=read_file_tool,
+        raw_input={"file_path": protected_target},
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+        allow_error=True,
+    )
+    stale_read = await _call_probe_tool(
+        label="heartbeat_loss.stale_read",
+        tool_obj=read_file_tool,
+        raw_input={"file_path": stale_target},
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=None,
+        allow_error=True,
+    )
+    inflight_after = await sandbox_api.inflight_count(sandbox_id, agent_id)
+
+    summary = {
+        "schema": SUMMARY_SCHEMA,
+        "mode": "heartbeat_loss",
+        "duration_s": time.perf_counter() - started,
+        "protected_invocation_id": protected_invocation_id,
+        "stale_invocation_id": stale_invocation_id,
+        "inflight_during_launch": inflight_during_launch,
+        "inflight_after": inflight_after,
+        "heartbeat_response_count": len(heartbeat_responses),
+        "heartbeat_touched_total": sum(
+            int(item.get("touched") or 0) for item in heartbeat_responses
+        ),
+        "foreground": foreground_record,
+        "protected": protected_record,
+        "stale": stale_record,
+        "protected_published": "protected-ok" in _read_content(protected_read),
+        "stale_published": "stale-published" in _read_content(stale_read),
+    }
+    return await _write_summary(
+        path=HEARTBEAT_LOSS_SUMMARY,
+        payload=summary,
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+    )
+
+
+# ---- 3.3.3 isolated-workspace drain ---------------------------------------
+
+
+async def run_background_exit_iws_drains_agent_tasks_probe(
+    *,
+    metadata: ExecutionMetadata,
+    emit: EmitStreamEvent,
+    call_tool: CallTool,
+    record_tool_check: RecordToolCheck,
+) -> str:
+    """3.3.3: iws enter rejects in-flight default bg and exit drains iws bg."""
+    started = time.perf_counter()
+    sandbox_id = str(metadata.sandbox_id or "")
+    agent_id = _agent_id(metadata)
+    default_target = f"{ROOT}/exit_iws_drain/default-should-not-publish.txt"
+    iws_target = f"{ROOT}/exit_iws_drain/iws-should-not-publish.txt"
+
+    default_task = asyncio.create_task(
+        _call_probe_tool(
+            label="exit_iws.default_background",
+            tool_obj=shell_tool,
+            raw_input={
+                "command": (
+                    f"sleep 20 && mkdir -p $(dirname {default_target}) && "
+                    f"echo default-leak > {default_target}"
+                ),
+                "timeout": 60,
+            },
+            metadata=metadata,
+            emit=emit,
+            call_tool=call_tool,
+            record_tool_check=None,
+            allow_error=True,
+            background_task_id=_bg_id("iws-default-blocker"),
+        )
+    )
+    default_inflight = await _wait_for_inflight_count(
+        sandbox_id=sandbox_id,
+        agent_id=agent_id,
+        minimum=1,
+    )
+    blocked_enter = await _call_probe_tool(
+        label="exit_iws.blocked_enter",
+        tool_obj=enter_isolated_workspace_tool,
+        raw_input={},
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=None,
+        allow_error=True,
+    )
+    default_task.cancel()
+    default_record = await _await_task_record(default_task)
+
+    iws_metadata = metadata.copy()
+    iws_metadata.agent_name = "iws-exit-agent"
+    iws_metadata.agent_run_id = f"{agent_id}:iws-exit"
+    manager = BackgroundTaskManager()
+    iws_metadata.background_task_manager = manager
+
+    iws_enter = await _call_probe_tool(
+        label="exit_iws.enter_other_agent",
+        tool_obj=enter_isolated_workspace_tool,
+        raw_input={},
+        metadata=iws_metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+        allow_error=True,
+    )
+    iws_command = (
+        f"sleep 20 && mkdir -p $(dirname {iws_target}) && "
+        f"echo iws-leak > {iws_target}"
+    )
+    task_id = manager.next_alias()
+    manager.launch(
+        task_id,
+        "shell",
+        {"command": iws_command, "timeout": 60},
+        _call_probe_tool(
+            label="exit_iws.iws_background",
+            tool_obj=shell_tool,
+            raw_input={"command": iws_command, "timeout": 60},
+            metadata=iws_metadata,
+            emit=emit,
+            call_tool=call_tool,
+            record_tool_check=None,
+            allow_error=True,
+            background_task_id=task_id,
+        ),
+        agent_id=_agent_id(iws_metadata),
+        uses_sandbox=True,
+        sandbox_id=sandbox_id,
+        sandbox_invocation_id=f"iws-manager-{uuid4().hex}",
+    )
+    await asyncio.sleep(0.5)
+    iws_exit = await _call_probe_tool(
+        label="exit_iws.exit_drains",
+        tool_obj=exit_isolated_workspace_tool,
+        raw_input={"grace_s": 1.0},
+        metadata=iws_metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+        allow_error=True,
+    )
+    await asyncio.sleep(0.2)
+    tracked = manager.get_task(task_id)
+
+    default_read = await _call_probe_tool(
+        label="exit_iws.default_read",
+        tool_obj=read_file_tool,
+        raw_input={"file_path": default_target},
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=None,
+        allow_error=True,
+    )
+    iws_read = await _call_probe_tool(
+        label="exit_iws.iws_read",
+        tool_obj=read_file_tool,
+        raw_input={"file_path": iws_target},
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=None,
+        allow_error=True,
+    )
+
+    summary = {
+        "schema": SUMMARY_SCHEMA,
+        "mode": "exit_iws_drain",
+        "duration_s": time.perf_counter() - started,
+        "default_inflight": default_inflight,
+        "blocked_enter": _tool_record(blocked_enter),
+        "blocked_enter_payload": _json_payload(blocked_enter),
+        "default_background": default_record,
+        "iws_enter": _tool_record(iws_enter),
+        "iws_enter_payload": _json_payload(iws_enter),
+        "iws_exit": _tool_record(iws_exit),
+        "iws_exit_payload": _json_payload(iws_exit),
+        "tracked_status_after_exit": (
+            str(tracked.status.value) if tracked is not None else "missing"
+        ),
+        "default_published": "default-leak" in _read_content(default_read),
+        "iws_published": "iws-leak" in _read_content(iws_read),
+    }
+    return await _write_summary(
+        path=EXIT_IWS_DRAIN_SUMMARY,
+        payload=summary,
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+    )
+
+
+# ---- 3.3.4 engine restart / abandon ---------------------------------------
+
+
+ENGINE_RESTART_STALE_WAIT_S = 2.6
+
+
+async def run_background_engine_restart_no_lease_leak_probe(
+    *,
+    metadata: ExecutionMetadata,
+    emit: EmitStreamEvent,
+    call_tool: CallTool,
+    record_tool_check: RecordToolCheck,
+) -> str:
+    """3.3.4: abandon a background invocation, then prove foreground recovery."""
+    started = time.perf_counter()
+    sandbox_id = str(metadata.sandbox_id or "")
+    agent_id = _agent_id(metadata)
+    invocation_id = f"engine-abandon-{uuid4().hex}"
+    abandoned_target = f"{ROOT}/engine_restart/abandoned.txt"
+    recovery_target = f"{ROOT}/engine_restart/recovery.txt"
+
+    abandoned_task = asyncio.create_task(
+        _call_probe_tool(
+            label="engine_restart.abandoned",
+            tool_obj=shell_tool,
+            raw_input={
+                "command": (
+                    f"mkdir -p $(dirname {abandoned_target}) && "
+                    "for i in 1 2 3 4 5; do "
+                    f"echo chunk-$i >> {abandoned_target}; sleep 1; "
+                    "done"
+                ),
+                "timeout": 60,
+            },
+            metadata=metadata,
+            emit=emit,
+            call_tool=call_tool,
+            record_tool_check=None,
+            allow_error=True,
+            background_task_id=_bg_id("engine-abandon"),
+            sandbox_invocation_id=invocation_id,
+        )
+    )
+    inflight_during_launch = await _wait_for_inflight_count(
+        sandbox_id=sandbox_id,
+        agent_id=agent_id,
+        minimum=1,
+    )
+    await asyncio.sleep(ENGINE_RESTART_STALE_WAIT_S)
+    try:
+        abandoned_record = await asyncio.wait_for(
+            _await_task_record(abandoned_task),
+            timeout=6,
+        )
+    except asyncio.TimeoutError:
+        abandoned_task.cancel()
+        abandoned_record = await _await_task_record(abandoned_task)
+
+    partial_read = await _call_probe_tool(
+        label="engine_restart.abandoned_read",
+        tool_obj=read_file_tool,
+        raw_input={"file_path": abandoned_target},
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=None,
+        allow_error=True,
+    )
+    fg_shell = await _call_probe_tool(
+        label="engine_restart.foreground_shell",
+        tool_obj=shell_tool,
+        raw_input={"command": "echo engine-restart-foreground-ok", "timeout": 30},
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+        allow_error=True,
+    )
+    recovery_write = await _call_probe_tool(
+        label="engine_restart.recovery_write",
+        tool_obj=write_file_tool,
+        raw_input={"file_path": recovery_target, "content": "recovery-ok\n"},
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+        allow_error=True,
+    )
+    recovery_read = await _call_probe_tool(
+        label="engine_restart.recovery_read",
+        tool_obj=read_file_tool,
+        raw_input={"file_path": recovery_target},
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+        allow_error=True,
+    )
+    inflight_after = await sandbox_api.inflight_count(sandbox_id, agent_id)
+
+    summary = {
+        "schema": SUMMARY_SCHEMA,
+        "mode": "engine_restart_no_lease_leak",
+        "duration_s": time.perf_counter() - started,
+        "invocation_id": invocation_id,
+        "inflight_during_launch": inflight_during_launch,
+        "inflight_after": inflight_after,
+        "abandoned": abandoned_record,
+        "abandoned_published": "chunk-" in _read_content(partial_read),
+        "foreground_shell": {
+            **_tool_record(fg_shell),
+            "payload": _shell_payload(fg_shell),
+        },
+        "recovery_write": _tool_record(recovery_write),
+        "recovery_read_content": _read_content(recovery_read),
+    }
+    return await _write_summary(
+        path=ENGINE_RESTART_SUMMARY,
+        payload=summary,
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+    )
+
+
+# ---- 3.3.5 dispatcher under many small writes -----------------------------
+
+
+MANY_SMALL_WRITES_BACKGROUND_COUNT = 16
+MANY_SMALL_WRITES_FOREGROUND_COUNT = 8
+
+
+async def run_background_many_small_writes_probe(
+    *,
+    metadata: ExecutionMetadata,
+    emit: EmitStreamEvent,
+    call_tool: CallTool,
+    record_tool_check: RecordToolCheck,
+) -> str:
+    """3.3.5: many small background shell writes with foreground file calls."""
+    started = time.perf_counter()
+    sandbox_id = str(metadata.sandbox_id or "")
+    agent_id = _agent_id(metadata)
+    root = f"{ROOT}/many_small_writes"
+    seed_path = f"{root}/foreground-seed.txt"
+    await _call_probe_tool(
+        label="many_small_writes.seed",
+        tool_obj=write_file_tool,
+        raw_input={"file_path": seed_path, "content": "seed\n"},
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+    )
+
+    async def _background_one(index: int) -> dict[str, Any]:
+        path = f"{root}/bg-{index}.txt"
+        task = asyncio.create_task(
+            _call_probe_tool(
+                label=f"many_small_writes.bg.{index}",
+                tool_obj=shell_tool,
+                raw_input={
+                    "command": (
+                        f"mkdir -p {root} && echo bg-{index} > {path} && "
+                        "sleep 0.2"
+                    ),
+                    "timeout": 30,
+                },
+                metadata=metadata,
+                emit=emit,
+                call_tool=call_tool,
+                record_tool_check=record_tool_check,
+                allow_error=True,
+                background_task_id=_bg_id(f"many-{index}"),
+            )
+        )
+        record = await _await_task_record(task)
+        record["path"] = path
+        return record
+
+    bg_tasks = [
+        asyncio.create_task(_background_one(index))
+        for index in range(MANY_SMALL_WRITES_BACKGROUND_COUNT)
+    ]
+    foreground_records: list[dict[str, Any]] = []
+    for index in range(MANY_SMALL_WRITES_FOREGROUND_COUNT):
+        write_path = f"{root}/fg-{index}.txt"
+        t0 = time.perf_counter()
+        write = await _call_probe_tool(
+            label=f"many_small_writes.fg_write.{index}",
+            tool_obj=write_file_tool,
+            raw_input={"file_path": write_path, "content": f"fg-{index}\n"},
+            metadata=metadata,
+            emit=emit,
+            call_tool=call_tool,
+            record_tool_check=record_tool_check,
+            allow_error=True,
+        )
+        read = await _call_probe_tool(
+            label=f"many_small_writes.fg_read.{index}",
+            tool_obj=read_file_tool,
+            raw_input={"file_path": seed_path},
+            metadata=metadata,
+            emit=emit,
+            call_tool=call_tool,
+            record_tool_check=record_tool_check,
+            allow_error=True,
+        )
+        foreground_records.append(
+            {
+                "index": index,
+                "duration_s": time.perf_counter() - t0,
+                "write": _tool_record(write),
+                "read_is_error": bool(read.is_error),
+            }
+        )
+
+    background_records = await asyncio.gather(*bg_tasks)
+    verify_records: list[dict[str, Any]] = []
+    for record in background_records:
+        if record.get("is_error"):
+            continue
+        path = str(record["path"])
+        read = await _call_probe_tool(
+            label=f"many_small_writes.verify.{path.rsplit('/', 1)[-1]}",
+            tool_obj=read_file_tool,
+            raw_input={"file_path": path},
+            metadata=metadata,
+            emit=emit,
+            call_tool=call_tool,
+            record_tool_check=record_tool_check,
+            allow_error=True,
+        )
+        verify_records.append(
+            {
+                "path": path,
+                "is_error": bool(read.is_error),
+                "content": _read_content(read),
+            }
+        )
+    inflight_after = await sandbox_api.inflight_count(sandbox_id, agent_id)
+    fg_durations = [float(item["duration_s"]) for item in foreground_records]
+
+    summary = {
+        "schema": SUMMARY_SCHEMA,
+        "mode": "many_small_writes",
+        "duration_s": time.perf_counter() - started,
+        "background_count": MANY_SMALL_WRITES_BACKGROUND_COUNT,
+        "foreground_count": MANY_SMALL_WRITES_FOREGROUND_COUNT,
+        "foreground_p95_s": _percentile(fg_durations, 95.0),
+        "background": background_records,
+        "foreground": foreground_records,
+        "verified_background_files": verify_records,
+        "inflight_after": inflight_after,
+        "background_success_count": sum(
+            1 for item in background_records if not item.get("is_error")
+        ),
+    }
+    return await _write_summary(
+        path=MANY_SMALL_WRITES_SUMMARY,
+        payload=summary,
+        metadata=metadata,
+        emit=emit,
+        call_tool=call_tool,
+        record_tool_check=record_tool_check,
+    )
+
+
 __all__ = [
     "GOLDEN_SUMMARY",
     "STOP_SUMMARY",
@@ -727,6 +1550,11 @@ __all__ = [
     "PARTIAL_WRITE_SUMMARY",
     "MAINTENANCE_SUMMARY",
     "LATE_CANCEL_SUMMARY",
+    "MIXED_CONFLICT_SUMMARY",
+    "HEARTBEAT_LOSS_SUMMARY",
+    "EXIT_IWS_DRAIN_SUMMARY",
+    "ENGINE_RESTART_SUMMARY",
+    "MANY_SMALL_WRITES_SUMMARY",
     "SUMMARY_SCHEMA",
     "run_background_shell_golden_probe",
     "run_background_shell_stop_probe",
@@ -735,4 +1563,9 @@ __all__ = [
     "run_background_shell_partial_write_cancel_probe",
     "run_background_shell_maintenance_probe",
     "run_background_shell_late_cancel_probe",
+    "run_background_mixed_fg_bg_same_path_conflict_probe",
+    "run_background_heartbeat_loss_probe",
+    "run_background_exit_iws_drains_agent_tasks_probe",
+    "run_background_engine_restart_no_lease_leak_probe",
+    "run_background_many_small_writes_probe",
 ]

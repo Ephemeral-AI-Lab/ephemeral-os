@@ -210,19 +210,24 @@ class IsolatedPipeline(
             )
         timer = _PhaseTimer(self._clock)
         start = self._clock()
-        with timer.measure("exec"):
-            # ``_runtime.run_in_handle`` shells out to setns_exec via
-            # synchronous ``subprocess.run``. Run it in the default thread pool
-            # so concurrent isolated-workspace tool calls can overlap.
-            loop = asyncio.get_running_loop()
-            exit_code, out, err = await loop.run_in_executor(
-                None,
-                lambda: self._runtime.run_in_handle(
-                    handle, argv=argv, stdin=stdin, timeout_s=timeout_s,
-                ),
-            )
-        duration = self._clock() - start
+        handle.active_calls += 1
         handle.last_activity = self._clock()
+        try:
+            with timer.measure("exec"):
+                # ``_runtime.run_in_handle`` shells out to setns_exec via
+                # synchronous ``subprocess.run``. Run it in the default thread pool
+                # so concurrent isolated-workspace tool calls can overlap.
+                loop = asyncio.get_running_loop()
+                exit_code, out, err = await loop.run_in_executor(
+                    None,
+                    lambda: self._runtime.run_in_handle(
+                        handle, argv=argv, stdin=stdin, timeout_s=timeout_s,
+                    ),
+                )
+        finally:
+            handle.active_calls = max(0, handle.active_calls - 1)
+            handle.last_activity = self._clock()
+        duration = self._clock() - start
         self._emit("sandbox_isolated_workspace_tool_call", {
             "handle_id": handle.handle_id,
             "argv0": argv[0] if argv else "",

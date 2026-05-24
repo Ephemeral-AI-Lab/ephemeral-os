@@ -31,8 +31,8 @@ If the plan is part of a dependency chain, respect the order:
 1. `3.0` unit/static contracts.
 2. `3.1` layer stack, OCC, and overlay.
 3. `3.2` ephemeral workspace.
-4. `3.3` background tool.
-5. `3.4` isolated workspace.
+4. `3.3` isolated workspace.
+5. `3.4` background tool.
 6. `3.5` plugin and LSP.
 7. `3.6` project build.
 8. `3.7` full-stack adversarial.
@@ -48,8 +48,8 @@ Use this table to align the workflow. The plan's own `Verification Command` over
 | `3.0` unit | `backend/tests/unit_test/test_sandbox`, `backend/tests/unit_test/test_plugins` | pytest output and contract greps | No live sandbox claim unless a live command is explicitly added. |
 | `3.1` layer/OCC/overlay | `backend/src/task_center_runner/tests/mock/sandbox/layer_stack_occ_overlay/` | `.sweevo_runs/scenario_logs/...` | O(1) lowerdir and latency attribution are the central assertions. |
 | `3.2` ephemeral | `backend/src/task_center_runner/tests/mock/sandbox/ephemeral_workspace/` | `.sweevo_runs/scenario_logs/...` | Hybrid routing: default in-workspace file verbs use the direct fast path; shell/search and outside-workspace paths use the overlay pipeline. Cover cancellation, conflict/retry, outside-workspace policy, and 100-call O(1) checks. |
-| `3.3` background | `backend/src/task_center_runner/tests/mock/sandbox/background_tool/` | `.sweevo_runs/scenario_logs/...` plus probe summary JSON | Engine-owned background wrapper; never revive shell-job RPC compatibility. Foreground file verbs stay direct unless the plan explicitly invokes a background or shell path. |
-| `3.4` isolated | `backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/` | daemon/container audit JSONL unless routed through scenario harness | Active isolated-workspace file verbs route through the isolated pipeline with pinned lowerdir, discard-on-exit, same-session parallelism, and no OCC publish. |
+| `3.3` isolated | `backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/` | daemon/container audit JSONL unless routed through scenario harness | Active isolated-workspace file verbs route through the isolated pipeline with pinned lowerdir, discard-on-exit, same-session parallelism, and no OCC publish. |
+| `3.4` background | `backend/src/task_center_runner/tests/mock/sandbox/background_tool/` | `.sweevo_runs/scenario_logs/...` plus probe summary JSON | Engine-owned background wrapper; never revive shell-job RPC compatibility. Foreground file verbs stay direct unless the plan explicitly invokes a background or shell path. |
 | `3.5` plugin | `backend/src/task_center_runner/tests/mock/sandbox/plugin/` | `.sweevo_runs/scenario_logs/...` plus plugin probe summaries | Separate READ_ONLY service latency, WRITE_ALLOWED plugin overlay/OCC latency, and normal direct file-verb latency. |
 | `3.6` project build | `backend/src/task_center_runner/tests/mock/sandbox/project_build/` | `.sweevo_runs/scenario_logs/...` | Multi-file mixed tools, LSP/search latency after accumulated edits; classify direct file, shell/search overlay, plugin, and isolated samples separately. |
 | `3.7` full stack | `backend/src/task_center_runner/tests/mock/sandbox/full_stack/` | `.sweevo_runs/scenario_logs/...` | Whole TaskCenter workflow with the same hybrid routing attribution; synthetic verifier failures can be expected, sandbox internal errors cannot. |
@@ -76,7 +76,7 @@ Create or update an append-only report next to the plan:
 Example:
 
 ```text
-docs/plans/3.3-background-tool-live-e2e-plan-iteration-report.md
+docs/plans/3.4-background-tool-live-e2e-plan-iteration-report.md
 ```
 
 Before every new iteration, read the existing report first. If it exists and was not read, stop and read it before changing tests, code, commands, or audit logs.

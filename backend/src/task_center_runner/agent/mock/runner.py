@@ -699,6 +699,38 @@ class MockSquadRunner:
                 )
                 summary = "Background-shell late-cancel-race probe passed."
                 artifacts = [summary_path]
+            elif action == "background_mixed_fg_bg_same_path_conflict":
+                summary_path = await self._run_background_shell_probe(
+                    metadata,
+                    emit,
+                    mode="mixed_fg_bg_same_path_conflict",
+                )
+                summary = "Background-shell mixed foreground/background conflict probe passed."
+                artifacts = [summary_path]
+            elif action == "background_heartbeat_loss_reaps_only_stale_bg":
+                summary_path = await self._run_background_shell_probe(
+                    metadata, emit, mode="heartbeat_loss"
+                )
+                summary = "Background-shell heartbeat-loss probe passed."
+                artifacts = [summary_path]
+            elif action == "background_exit_iws_drains_agent_tasks":
+                summary_path = await self._run_background_shell_probe(
+                    metadata, emit, mode="exit_iws_drain"
+                )
+                summary = "Background-shell isolated-workspace drain probe passed."
+                artifacts = [summary_path]
+            elif action == "background_engine_restart_no_lease_leak":
+                summary_path = await self._run_background_shell_probe(
+                    metadata, emit, mode="engine_restart_no_lease_leak"
+                )
+                summary = "Background-shell engine-restart cleanup probe passed."
+                artifacts = [summary_path]
+            elif action == "background_many_small_writes_do_not_starve_dispatcher":
+                summary_path = await self._run_background_shell_probe(
+                    metadata, emit, mode="many_small_writes"
+                )
+                summary = "Background-shell many-small-writes probe passed."
+                artifacts = [summary_path]
             else:
                 raise RuntimeError(f"Unknown executor action: {action!r}")
         result = await self._call_tool(
@@ -1289,6 +1321,21 @@ class MockSquadRunner:
             "late_cancel_race": (
                 background_shell_probe.run_background_shell_late_cancel_probe
             ),
+            "mixed_fg_bg_same_path_conflict": (
+                background_shell_probe.run_background_mixed_fg_bg_same_path_conflict_probe
+            ),
+            "heartbeat_loss": (
+                background_shell_probe.run_background_heartbeat_loss_probe
+            ),
+            "exit_iws_drain": (
+                background_shell_probe.run_background_exit_iws_drains_agent_tasks_probe
+            ),
+            "engine_restart_no_lease_leak": (
+                background_shell_probe.run_background_engine_restart_no_lease_leak_probe
+            ),
+            "many_small_writes": (
+                background_shell_probe.run_background_many_small_writes_probe
+            ),
         }
         probe = dispatch.get(mode)
         if probe is None:
@@ -1415,6 +1462,7 @@ class MockSquadRunner:
         *,
         allow_error: bool = False,
         background_task_id: str | None = None,
+        sandbox_invocation_id: str | None = None,
     ) -> ToolResult:
         tool_id = f"toolu_{uuid4().hex}"
         agent_name = str(metadata.agent_name or "")
@@ -1466,10 +1514,12 @@ class MockSquadRunner:
             "tool_id": tool_id,
             "sandbox_audit_sink": self._sandbox_audit_sink,
         }
-        sandbox_invocation_id = uuid4().hex if background_task_id is not None else ""
+        resolved_sandbox_invocation_id = ""
+        if background_task_id is not None:
+            resolved_sandbox_invocation_id = sandbox_invocation_id or uuid4().hex
         if background_task_id is not None:
             override_kwargs["background_task_id"] = background_task_id
-            override_kwargs["sandbox_invocation_id"] = sandbox_invocation_id
+            override_kwargs["sandbox_invocation_id"] = resolved_sandbox_invocation_id
         tool_metadata = metadata.with_overrides(**override_kwargs)
         try:
             result = await execute_tool_once(
@@ -1480,12 +1530,15 @@ class MockSquadRunner:
                 emit_started=False,
             )
         except asyncio.CancelledError:
-            if sandbox_invocation_id and metadata.sandbox_id:
+            if resolved_sandbox_invocation_id and metadata.sandbox_id:
                 current_task = asyncio.current_task()
                 if current_task is not None:
                     current_task.uncancel()
                 with contextlib.suppress(Exception):
-                    await sandbox_api.cancel(metadata.sandbox_id, sandbox_invocation_id)
+                    await sandbox_api.cancel(
+                        metadata.sandbox_id,
+                        resolved_sandbox_invocation_id,
+                    )
                 self._publish(
                     EventType.SANDBOX_TOOL_CANCELLED,
                     metadata=metadata,
@@ -1493,7 +1546,7 @@ class MockSquadRunner:
                     payload={
                         "tool_name": tool_obj.name,
                         "tool_id": tool_id,
-                        "invocation_id": sandbox_invocation_id,
+                        "invocation_id": resolved_sandbox_invocation_id,
                         "background_task_id": background_task_id,
                     },
                 )

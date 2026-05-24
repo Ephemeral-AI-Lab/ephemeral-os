@@ -53,7 +53,7 @@ async def test_upperdir_discarded_on_exit(iws_clean_sandbox) -> None:
             sandbox_id, agent_id, "/testbed/scratch.txt",
         )
         assert readback.get("success") is True, readback
-        assert "cycle-1" in readback.get("stdout", ""), readback
+        assert "cycle-1" in (readback.get("content") or ""), readback
     finally:
         await _iws_rpc.exit_(sandbox_id, agent_id)
 
@@ -80,9 +80,8 @@ async def test_upperdir_discarded_on_exit(iws_clean_sandbox) -> None:
         miss = await _iws_rpc.read_file(
             sandbox_id, agent_id, "/testbed/scratch.txt",
         )
-        # File doesn't exist; cat exits non-zero. The success flag and
-        # stderr together are enough to prove the upperdir was discarded.
-        assert miss.get("success") is False, miss
-        assert "No such file" in miss.get("stderr", "") or miss.get("exit_code", 0) != 0, miss
+        assert miss.get("success") is True, miss
+        assert miss.get("exists") is False, miss
+        assert (miss.get("content") or "") == "", miss
     finally:
         await _iws_rpc.exit_(sandbox_id, agent_id)

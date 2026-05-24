@@ -53,22 +53,39 @@ async def test_map_lock_serializes_enter_exit_only(
         )
         wall = loop.time() - t0
         assert all(r.get("success") for r in res), res
-        # Allow a fat tolerance (CI shared host); ~1.3 s would prove
-        # SERIAL execution; we require wall to be SUBSTANTIALLY less than
-        # 1.4 s (i.e. < 1.1 s) — leaves headroom for daemon RPC overhead.
-        assert wall < 1.1, (
-            f"two agents' tool_calls should overlap; wall={wall:.2f}s",
-        )
         jsonl = await iws_audit_jsonl()
         tool_calls = _iws_invariants.events_of_type(
             jsonl, "sandbox_isolated_workspace_tool_call",
         )
+        recent_tool_calls = tool_calls[-2:]
+        durations = [
+            float((row.get("payload") or {}).get("duration_s", 0.0))
+            for row in recent_tool_calls
+        ]
+        # Compare against observed daemon durations instead of a fixed wall
+        # threshold. Docker Desktop can add hundreds of ms of setns/exec
+        # overhead per call; serialization still shows up as wall ~= sum.
+        assert len(recent_tool_calls) == 2, tool_calls
+        assert all(d >= 0.6 for d in durations), durations
+        assert wall < sum(durations) * 0.75, (
+            "two agents' tool_calls should overlap materially; "
+            f"wall={wall:.2f}s durations={durations!r}",
+        )
+        intervals = []
+        for row, duration in zip(recent_tool_calls, durations, strict=True):
+            completed_at = float(row.get("ts") or 0.0)
+            intervals.append((completed_at - duration, completed_at))
+        overlap_s = min(end for _, end in intervals) - max(start for start, _ in intervals)
+        assert overlap_s >= 0.4, (
+            "audit intervals should overlap at sleep-scale duration",
+            intervals,
+        )
         handle_ids = {
             (row.get("payload") or {}).get("handle_id")
-            for row in tool_calls
+            for row in recent_tool_calls
         }
         # Both handles emitted a tool_call event.
-        assert len(handle_ids) >= 2, tool_calls
+        assert len(handle_ids) == 2, recent_tool_calls
     finally:
         await _iws_rpc.exit_(sandbox_id, "agent-A")
         await _iws_rpc.exit_(sandbox_id, "agent-B")

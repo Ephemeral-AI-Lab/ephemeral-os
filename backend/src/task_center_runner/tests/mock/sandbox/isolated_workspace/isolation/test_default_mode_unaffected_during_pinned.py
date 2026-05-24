@@ -64,7 +64,8 @@ async def test_default_mode_unaffected_during_pinned(iws_clean_sandbox) -> None:
         # Inside the isolated ws, the default write is INVISIBLE
         # (lowerdir was pinned at enter; the new commit lives on the tip).
         inside = await _iws_rpc.read_file(sandbox_id, agent_id, default_path)
-        assert inside.get("success") is False, (
+        assert inside.get("success") is True, inside
+        assert inside.get("exists") is False, (
             "isolated ws must not see committed writes that landed after enter",
             inside,
         )

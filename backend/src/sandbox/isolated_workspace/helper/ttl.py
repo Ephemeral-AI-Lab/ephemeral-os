@@ -33,6 +33,7 @@ class _IsolatedTtlMixin:
                 stale = [
                     h for h in self._handles.values()
                     if now - h.last_activity > self._config.ttl_s
+                    and h.active_calls == 0
                 ]
             for handle in stale:
                 try:
