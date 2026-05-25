@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from pydantic import ValidationError
 
-from engine.background.manager import BackgroundTaskManager
+from engine.background.task_supervisor import BackgroundTaskSupervisor
 from message.messages import ConversationMessage, ToolResultBlock, ToolUseBlock
 from message.stream_events import (
     BackgroundTaskStarted,
@@ -60,7 +60,7 @@ def launch_background_tool(
     *,
     tool_registry: ToolRegistry,
     tool_metadata: ExecutionMetadata | None,
-    background_manager: BackgroundTaskManager,
+    background_tasks: BackgroundTaskSupervisor,
     tool_use: ToolUseBlock,
     execute_tool_call: ToolCallExecutor,
 ) -> tuple[ToolResultBlock, BackgroundTaskStarted | None, ToolExecutionCompleted | None]:
@@ -98,7 +98,7 @@ def launch_background_tool(
             ),
         )
 
-    bg_alias = background_manager.next_alias()
+    task_alias = background_tasks.next_alias()
     uses_sandbox = _SANDBOX_CONTEXT_REQUIREMENT in getattr(
         tool_def,
         "context_requirements",
@@ -110,9 +110,9 @@ def launch_background_tool(
     if not agent_id:
         agent_id = str(getattr(tool_metadata, "agent_name", "") or "")
 
-    async def _bg_wrapper(alias: str = bg_alias) -> ToolResult:
-        bg_overrides = ExecutionMetadata(
-            on_progress_line=background_manager.make_progress_callback(alias),
+    async def _run_background_tool(alias: str = task_alias) -> ToolResult:
+        background_metadata = ExecutionMetadata(
+            on_progress_line=background_tasks.make_progress_callback(alias),
             background_task_id=alias,
             sandbox_invocation_id=sandbox_invocation_id or None,
         )
@@ -120,7 +120,7 @@ def launch_background_tool(
             tool_use.name,
             tool_use.id,
             clean_input,
-            bg_overrides,
+            background_metadata,
         )
         return ToolResult(
             output=block.content,
@@ -128,11 +128,11 @@ def launch_background_tool(
             metadata=dict(block.metadata or {}),
         )
 
-    bg_event = background_manager.launch(
-        bg_alias,
+    started_event = background_tasks.launch(
+        task_alias,
         tool_use.name,
         clean_input,
-        _bg_wrapper(),
+        _run_background_tool(),
         task_type=getattr(tool_def, "task_type", "agent"),
         agent_id=agent_id or None,
         uses_sandbox=uses_sandbox,
@@ -143,24 +143,24 @@ def launch_background_tool(
     tool_result = ToolResultBlock(
         tool_use_id=tool_use.id,
         content=(
-            f'[BACKGROUND LAUNCHED] task_id="{bg_alias}" tool={tool_use.name}\n'
+            f'[BACKGROUND LAUNCHED] task_id="{task_alias}" tool={tool_use.name}\n'
             f"Use this task_id with "
-            f'check_background_task_result(task_id="{bg_alias}"), '
+            f'check_background_task_result(task_id="{task_alias}"), '
             f"wait_background_tasks() to block until all tasks settle, or "
-            f'cancel_background_task(task_id="{bg_alias}"). '
+            f'cancel_background_task(task_id="{task_alias}"). '
             f"Keep using the current response on other ready work first; do not "
             f"wait immediately unless this task is the only blocker left."
         ),
         is_error=False,
     )
-    return tool_result, bg_event, None
+    return tool_result, started_event, None
 
 
-def launch_and_collect_bg_events(
+def launch_and_collect_background_events(
     context: QueryContext,
     conversation_messages: list[ConversationMessage],
-    background_manager: BackgroundTaskManager,
-    tc: ToolUseBlock,
+    background_tasks: BackgroundTaskSupervisor,
+    tool_call: ToolUseBlock,
     tool_results: list[ToolResultBlock],
 ) -> list[StreamEvent]:
     async def _execute_in_context(
@@ -196,17 +196,17 @@ def launch_and_collect_bg_events(
             ),
         )
 
-    tool_result, bg_event, reject_event = launch_background_tool(
+    tool_result, started_event, rejection_event = launch_background_tool(
         tool_registry=context.tool_registry,
         tool_metadata=context.tool_metadata,
-        background_manager=background_manager,
-        tool_use=tc,
+        background_tasks=background_tasks,
+        tool_use=tool_call,
         execute_tool_call=_execute_in_context,
     )
     tool_results.append(tool_result)
     events: list[StreamEvent] = []
-    if bg_event is not None:
-        events.append(bg_event)
-    if reject_event is not None:
-        events.append(reject_event)
+    if started_event is not None:
+        events.append(started_event)
+    if rejection_event is not None:
+        events.append(rejection_event)
     return events

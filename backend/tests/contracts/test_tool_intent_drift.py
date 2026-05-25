@@ -1,7 +1,7 @@
 """Contract test: tool intent labels stay in sync with daemon operation routes.
 
 For every BaseTool whose ``name`` matches a verb served by
-``sandbox.daemon.operation_handlers``, the tool's declared ``intent`` MUST equal the
+``sandbox.daemon.builtin_operations``, the tool's declared ``intent`` MUST equal the
 intent the daemon dispatches that verb with. This catches drift where
 ``@tool(intent=READ_ONLY)`` for a verb the daemon routes as
 ``WRITE_ALLOWED`` (or vice versa).
@@ -20,20 +20,12 @@ from collections.abc import Iterator
 import pytest
 
 from sandbox._shared.models import Intent
+from sandbox.daemon.builtin_operations import WORKSPACE_TOOL_ROUTES
 from tools._framework.core.base import BaseTool
 
 
-# Canonical source: backend/src/sandbox/daemon/operation_handlers.py — the lines that
-# call route_workspace_tool_call(args, verb=..., intent=...). Tests pin this table so
-# any silent edit there must come paired with an update here.
-DAEMON_TOOL_ROUTE_INTENTS: dict[str, Intent] = {
-    "edit_file": Intent.WRITE_ALLOWED,
-    "glob": Intent.READ_ONLY,
-    "grep": Intent.READ_ONLY,
-    "read_file": Intent.READ_ONLY,
-    "shell": Intent.WRITE_ALLOWED,
-    "write_file": Intent.WRITE_ALLOWED,
-}
+# Canonical source: backend/src/sandbox/daemon/builtin_operations.py.
+DAEMON_TOOL_ROUTE_INTENTS: dict[str, Intent] = dict(WORKSPACE_TOOL_ROUTES)
 
 
 _TOOL_MODULES = (
@@ -102,6 +94,6 @@ def test_tool_intent_matches_daemon_handlers_table(verb: str, daemon_intent: Int
     tool = matching[0]
     assert tool.intent == daemon_intent, (
         f"@tool {verb!r} declares intent={tool.intent.value} but daemon "
-        f"operation_handlers.py dispatches verb={verb!r} with intent={daemon_intent.value}; "
+        f"builtin_operations.py dispatches verb={verb!r} with intent={daemon_intent.value}; "
         "edit both or neither"
     )

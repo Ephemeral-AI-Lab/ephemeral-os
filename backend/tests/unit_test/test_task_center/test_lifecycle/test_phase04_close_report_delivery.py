@@ -16,9 +16,9 @@ from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
 from task_center.attempt.runtime import AgentLaunch, AttemptDeps
-from task_center.iteration import IterationManagerRegistry
+from task_center.iteration import OpenIterationCoordinatorRegistry
 from task_center.iteration.state import IterationCreationReason
-from task_center.task_state import TaskCenterTaskStatus, PlannedGeneratorTask, PlannerSubmission
+from task_center.task_state import TaskCenterBackgroundTaskStatus, PlannedGeneratorTask, PlannerSubmission
 from task_center._core.primitives import generator_task_id
 
 
@@ -62,7 +62,7 @@ def _build_runtime_with_open_graph(
         task_store=task_store,
         agent_launcher=_FakeLauncher(),
         orchestrator_registry=registry,
-        manager_registry=IterationManagerRegistry(),
+        iteration_coordinators=OpenIterationCoordinatorRegistry(),
         composer=composer,
     )
     orchestrator = AttemptOrchestrator(
@@ -98,7 +98,7 @@ def _build_runtime_with_open_graph(
 def _set_parent_waiting(task_store, parent_task_id: str) -> None:
     task_store.set_task_status(
         parent_task_id,
-        status=TaskCenterTaskStatus.WAITING_GOAL.value,
+        status=TaskCenterBackgroundTaskStatus.WAITING_GOAL.value,
     )
 
 
@@ -144,7 +144,7 @@ def test_router_delivers_success_to_waiting_parent(
     assert result.parent_attempt_id == parent_attempt_id
     parent_task = task_store.get_task(parent_task_id)
     assert parent_task is not None
-    assert parent_task["status"] == TaskCenterTaskStatus.DONE.value
+    assert parent_task["status"] == TaskCenterBackgroundTaskStatus.DONE.value
 
 
 def test_router_delivers_failure_marks_parent_failed_and_blocks_dependents(
@@ -173,7 +173,7 @@ def test_router_delivers_failure_marks_parent_failed_and_blocks_dependents(
         task_store=task_store,
         agent_launcher=_FakeLauncher(),
         orchestrator_registry=registry,
-        manager_registry=IterationManagerRegistry(),
+        iteration_coordinators=OpenIterationCoordinatorRegistry(),
         composer=composer,
     )
     orchestrator = AttemptOrchestrator(
@@ -215,9 +215,9 @@ def test_router_delivers_failure_marks_parent_failed_and_blocks_dependents(
     parent_task = task_store.get_task(parent_task_id)
     dependent = task_store.get_task(dependent_id)
     assert parent_task is not None
-    assert parent_task["status"] == TaskCenterTaskStatus.FAILED.value
+    assert parent_task["status"] == TaskCenterBackgroundTaskStatus.FAILED.value
     assert dependent is not None
-    assert dependent["status"] == TaskCenterTaskStatus.PENDING.value
+    assert dependent["status"] == TaskCenterBackgroundTaskStatus.PENDING.value
 
 
 def test_router_treats_done_parent_as_already_delivered(
@@ -232,7 +232,7 @@ def test_router_treats_done_parent_as_already_delivered(
         composer=composer,
     )
     task_store.set_task_status(
-        parent_task_id, status=TaskCenterTaskStatus.DONE.value
+        parent_task_id, status=TaskCenterBackgroundTaskStatus.DONE.value
     )
     router = GoalClosureReportRouter(runtime=runtime)
 
@@ -274,7 +274,7 @@ def test_router_raises_when_parent_orchestrator_missing(
 
     parent_task = task_store.get_task(parent_task_id)
     assert parent_task is not None
-    assert parent_task["status"] == TaskCenterTaskStatus.WAITING_GOAL.value
+    assert parent_task["status"] == TaskCenterBackgroundTaskStatus.WAITING_GOAL.value
 
 
 def test_router_rejects_running_parent(
@@ -329,7 +329,7 @@ def test_apply_closure_report_is_idempotent_on_second_delivery(
 
     parent_task = task_store.get_task(parent_task_id)
     assert parent_task is not None
-    assert parent_task["status"] == TaskCenterTaskStatus.DONE.value
+    assert parent_task["status"] == TaskCenterBackgroundTaskStatus.DONE.value
     # Exactly one new summary appended.
     assert len(parent_task["summaries"]) == summary_count_before + 1
 
@@ -344,7 +344,7 @@ def test_router_finishes_entry_origin_goal_run(
         task_store=task_store,
         agent_launcher=_FakeLauncher(),
         orchestrator_registry=AttemptOrchestratorRegistry(),
-        manager_registry=IterationManagerRegistry(),
+        iteration_coordinators=OpenIterationCoordinatorRegistry(),
         composer=composer,
     )
 

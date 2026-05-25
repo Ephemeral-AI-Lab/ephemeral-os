@@ -1,6 +1,6 @@
 """Phase 04 end-to-end continuation and retry tests.
 
-Drives the full coordinator → handler → manager → orchestrator pipeline so
+Drives the full starter → goal lifecycle → iteration coordinator → orchestrator pipeline so
 that retry, continuation, and final close-report routing are exercised
 together. The parent task must remain in ``waiting_goal`` until the
 delegated goal closes terminally.
@@ -19,12 +19,12 @@ from task_center.attempt import (
     AttemptStatus,
 )
 from task_center.attempt.runtime import AgentLaunch, AttemptDeps
-from task_center.iteration import IterationManagerRegistry
+from task_center.iteration import OpenIterationCoordinatorRegistry
 from task_center.iteration.state import (
     IterationCreationReason,
     IterationStatus,
 )
-from task_center.task_state import EvaluatorSubmission, GeneratorSubmission, TaskCenterTaskStatus, PlannedGeneratorTask, PlannerSubmission
+from task_center.task_state import EvaluatorSubmission, GeneratorSubmission, TaskCenterBackgroundTaskStatus, PlannedGeneratorTask, PlannerSubmission
 from task_center._core.primitives import evaluator_task_id, generator_task_id, planner_task_id
 
 
@@ -57,7 +57,7 @@ def _build_runtime(
         task_store=task_store,
         agent_launcher=launcher or _FakeLauncher(),
         orchestrator_registry=AttemptOrchestratorRegistry(),
-        manager_registry=IterationManagerRegistry(),
+        iteration_coordinators=OpenIterationCoordinatorRegistry(),
         composer=composer,
     )
 
@@ -255,7 +255,7 @@ def test_delegated_continuation_waits_until_final_segment(
     assert parent_after_segment1 is not None
     assert (
         parent_after_segment1["status"]
-        == TaskCenterTaskStatus.WAITING_GOAL.value
+        == TaskCenterBackgroundTaskStatus.WAITING_GOAL.value
     )
     delegated_request_after_segment1 = goal_store.get(
         goal_start.goal_id
@@ -264,7 +264,7 @@ def test_delegated_continuation_waits_until_final_segment(
     assert delegated_request_after_segment1.status == GoalStatus.OPEN
     assert len(delegated_request_after_segment1.iteration_ids) == 2
 
-    # Segment 2 starts from the new continuation attempt the handler created.
+    # Segment 2 starts from the new continuation attempt the goal lifecycle created.
     segment2_id = delegated_request_after_segment1.iteration_ids[1]
     segment2 = iteration_store.get(segment2_id)
     assert segment2 is not None
@@ -281,7 +281,7 @@ def test_delegated_continuation_waits_until_final_segment(
     delegated_final = goal_store.get(goal_start.goal_id)
     segment2_final = iteration_store.get(segment2_id)
     assert parent_final is not None
-    assert parent_final["status"] == TaskCenterTaskStatus.DONE.value
+    assert parent_final["status"] == TaskCenterBackgroundTaskStatus.DONE.value
     assert delegated_final is not None
     assert delegated_final.status == GoalStatus.SUCCEEDED
     assert segment2_final is not None
@@ -337,7 +337,7 @@ def test_continuation_startup_failure_reports_continuation_graph(
 
     parent_final = task_store.get_task(parent_task_id)
     assert parent_final is not None
-    assert parent_final["status"] == TaskCenterTaskStatus.FAILED.value
+    assert parent_final["status"] == TaskCenterBackgroundTaskStatus.FAILED.value
 
 
 def test_delegated_retry_waits_until_final_graph(
@@ -360,7 +360,7 @@ def test_delegated_retry_waits_until_final_graph(
         origin=GoalOrigin.task(task_id=parent_task_id),
     )
 
-    # Graph 1 fails — manager should retry inside same iteration, parent waits.
+    # Graph 1 fails — coordinator should retry inside same iteration, parent waits.
     _drive_delegated_attempt_to_fail(
         runtime=runtime, delegated_attempt_id=goal_start.initial_attempt_id
     )
@@ -369,7 +369,7 @@ def test_delegated_retry_waits_until_final_graph(
     assert len(segment1.attempt_ids) == 2
     parent_mid = task_store.get_task(parent_task_id)
     assert parent_mid is not None
-    assert parent_mid["status"] == TaskCenterTaskStatus.WAITING_GOAL.value
+    assert parent_mid["status"] == TaskCenterBackgroundTaskStatus.WAITING_GOAL.value
     delegated_mid = goal_store.get(goal_start.goal_id)
     assert delegated_mid is not None
     assert delegated_mid.status == GoalStatus.OPEN
@@ -386,7 +386,7 @@ def test_delegated_retry_waits_until_final_graph(
     delegated_final = goal_store.get(goal_start.goal_id)
     refreshed_segment = iteration_store.get(goal_start.initial_iteration_id)
     assert parent_final is not None
-    assert parent_final["status"] == TaskCenterTaskStatus.DONE.value
+    assert parent_final["status"] == TaskCenterBackgroundTaskStatus.DONE.value
     assert delegated_final is not None
     assert delegated_final.status == GoalStatus.SUCCEEDED
     assert refreshed_segment is not None

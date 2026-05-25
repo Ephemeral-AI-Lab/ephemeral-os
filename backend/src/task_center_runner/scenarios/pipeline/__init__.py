@@ -1,6 +1,6 @@
 """Task-center pipeline state-machine scenarios.
 
-Drive the orchestrator/dispatcher/iteration-manager/goal-handler control
+Drive the orchestrator/task-dispatcher/iteration-coordinator/goal-lifecycle control
 flow with the lightest possible executor action (`preflight` or `fail`).
 Failures here mean a regression in `task_center/` proper. See
 ``docs/wiki/live-e2e-scenario-suite-design.md`` for the full coverage matrix.

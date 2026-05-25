@@ -1,4 +1,4 @@
-"""Generator failure → dispatcher waits for in-flight siblings → retry attempt.
+"""Generator failure → task dispatcher waits for in-flight siblings → retry attempt.
 
 Plan shape per attempt::
 
@@ -6,7 +6,7 @@ Plan shape per attempt::
         \\  |  /
             d           (depends on a, b, c)
 
-On attempt 1, task ``b`` calls ``submit_execution_blocker``. The dispatcher
+On attempt 1, task ``b`` calls ``submit_execution_blocker``. The task dispatcher
 **does not** abort the attempt immediately — quiescence semantics require it
 to wait for the still-running siblings ``a`` and ``c`` to finish before
 closing the attempt. Once all runnable roots reach a terminal state

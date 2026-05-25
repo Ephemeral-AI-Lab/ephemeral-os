@@ -92,7 +92,7 @@ def _runtime_with_composer(
         task_store=task_store,
         agent_launcher=launcher,
         orchestrator_registry=AttemptOrchestratorRegistry(),
-        manager_registry=None,
+        iteration_coordinators=None,
         lifecycle_config=TaskCenterLifecycleConfig(),
         composer=composer,
     )

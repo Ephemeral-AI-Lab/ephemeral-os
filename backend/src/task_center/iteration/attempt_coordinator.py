@@ -1,9 +1,9 @@
-"""Iteration lifecycle manager and process-local registry.
+"""Iteration attempt coordination and process-local registry.
 
-``IterationManager`` is the sole creator of Attempt records inside its owned
-iteration and the only emitter of ``IterationClosureReport``.
-``IterationManagerRegistry`` is the process-local one-manager-per-open-iteration
-registry.
+``IterationAttemptCoordinator`` is the sole creator of attempt records inside
+its owned iteration and the only emitter of ``IterationClosureReport``.
+``OpenIterationCoordinatorRegistry`` is the process-local one-coordinator-per-
+open-iteration registry.
 """
 
 from __future__ import annotations
@@ -44,15 +44,15 @@ from task_center.iteration.state import (
 logger = logging.getLogger(__name__)
 
 
-ClosureReportSink = Callable[[IterationClosureReport], None]
+IterationClosureSink = Callable[[IterationClosureReport], None]
 AttemptClosedCallback = Callable[[str], None]
 OrchestratorFactory = Callable[
     [Attempt, AttemptClosedCallback], RegisteredAttemptOrchestrator
 ]
 
 
-class IterationManager:
-    """Manages one open Iteration's lifecycle."""
+class IterationAttemptCoordinator:
+    """Coordinates attempts for one open Iteration."""
 
     def __init__(
         self,
@@ -60,7 +60,7 @@ class IterationManager:
         iteration_id: str,
         iteration_store: IterationStoreProtocol,
         attempt_store: AttemptStoreProtocol,
-        on_iteration_closed: ClosureReportSink,
+        on_iteration_closed: IterationClosureSink,
         orchestrator_factory: OrchestratorFactory | None = None,
         task_store: TaskStoreProtocol | None = None,
     ) -> None:
@@ -69,7 +69,7 @@ class IterationManager:
         self._attempt_store = attempt_store
         self._on_iteration_closed = on_iteration_closed
         self._orchestrator_factory = orchestrator_factory
-        # Optional — when present, the manager denormalizes the evaluator's
+        # Optional: when present, the coordinator denormalizes the evaluator's
         # pass-summary text onto the iteration row at successful close so the
         # context engine's planner recipe can read it on retry / chain.
         self._task_store = task_store
@@ -94,7 +94,7 @@ class IterationManager:
         return self._insert_attempt(iteration, attempt_sequence_no=1)
 
     def start_attempt(self, attempt: Attempt) -> None:
-        """Start a attempt that belongs to this manager's open iteration."""
+        """Start an attempt that belongs to this coordinator's open iteration."""
         iteration = self._current_iteration_snapshot()
         assert_iteration_open(iteration)
         assert_attempt_belongs_to_iteration(attempt, iteration)
@@ -182,7 +182,7 @@ class IterationManager:
             )
         except Exception:
             logger.exception(
-                "IterationManager: startup attempt cleanup failed",
+                "IterationAttemptCoordinator: startup attempt cleanup failed",
             )
 
     def _close_iteration_passed(self, attempt: Attempt) -> None:
@@ -206,7 +206,7 @@ class IterationManager:
     def _evaluator_pass_summary_for(self, attempt: Attempt) -> str:
         """Resolve the evaluator's success-summary text for *attempt*.
 
-        Empty string when the manager is configured without a ``task_store``
+        Empty string when the coordinator is configured without a ``task_store``
         (test seams) or when the evaluator never recorded a summary.
 
         When the evaluator submission carried a ``passed_criteria`` payload,
@@ -273,7 +273,7 @@ class IterationManager:
                 if retry_attempt is None:
                     raise
                 logger.warning(
-                    "IterationManager: retry start failure for iteration %r; "
+                    "IterationAttemptCoordinator: retry start failure for iteration %r; "
                     "treating new attempt %r as a failed attempt",
                     self.iteration_id,
                     retry_attempt.id,
@@ -354,21 +354,21 @@ class IterationManager:
         )
 
 
-class IterationManagerRegistry:
-    """In-memory registry enforcing one-manager-per-open-iteration."""
+class OpenIterationCoordinatorRegistry:
+    """In-memory registry enforcing one coordinator per open iteration."""
 
     def __init__(self) -> None:
-        self._by_iteration_id: dict[str, IterationManager] = {}
+        self._by_iteration_id: dict[str, IterationAttemptCoordinator] = {}
 
-    def register(self, manager: IterationManager) -> None:
-        iteration_id = manager.iteration_id
+    def register(self, coordinator: IterationAttemptCoordinator) -> None:
+        iteration_id = coordinator.iteration_id
         if iteration_id in self._by_iteration_id:
             raise TaskCenterInvariantViolation(
-                f"IterationManager already registered for iteration {iteration_id!r}"
+                f"IterationAttemptCoordinator already registered for iteration {iteration_id!r}"
             )
-        self._by_iteration_id[iteration_id] = manager
+        self._by_iteration_id[iteration_id] = coordinator
 
-    def get(self, iteration_id: str) -> IterationManager | None:
+    def get(self, iteration_id: str) -> IterationAttemptCoordinator | None:
         return self._by_iteration_id.get(iteration_id)
 
     def deregister(self, iteration_id: str) -> None:
@@ -377,8 +377,8 @@ class IterationManagerRegistry:
 
 __all__ = [
     "AttemptClosedCallback",
-    "ClosureReportSink",
-    "IterationManager",
-    "IterationManagerRegistry",
+    "IterationClosureSink",
+    "IterationAttemptCoordinator",
+    "OpenIterationCoordinatorRegistry",
     "OrchestratorFactory",
 ]

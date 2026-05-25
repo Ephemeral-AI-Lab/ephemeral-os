@@ -1,9 +1,9 @@
-"""AttemptDispatcher — DAG dispatch helper for AttemptOrchestrator.
+"""Attempt task dispatch for AttemptOrchestrator.
 
 Owns the launch/quiescence state machine for one attempt's generators and
 evaluator. Calls back into the orchestrator's ``_close_attempt`` for the actual
 attempt-closing transition; the orchestrator remains the only owner of
-close-attempt state and the on_attempt_closed signal to ``IterationManager``.
+close-attempt state and the on_attempt_closed signal to ``IterationAttemptCoordinator``.
 """
 
 from __future__ import annotations
@@ -32,18 +32,18 @@ from task_center._core.primitives import evaluator_task_id
 from task_center.task_state import (
     SpawnReason,
     TaskCenterTaskRole,
-    TaskCenterTaskStatus,
+    TaskCenterBackgroundTaskStatus,
 )
 
 logger = logging.getLogger(__name__)
 
 
-CloseGraphCallback = Callable[
+CloseAttemptCallback = Callable[
     [AttemptStatus, AttemptFailReason | None], None
 ]
 
 
-class AttemptDispatcher:
+class AttemptTaskDispatcher:
     """Drives the generator-DAG and evaluator launch/quiescence machine."""
 
     def __init__(
@@ -51,7 +51,7 @@ class AttemptDispatcher:
         *,
         attempt_id: str,
         runtime: AttemptDeps,
-        close_attempt: CloseGraphCallback,
+        close_attempt: CloseAttemptCallback,
     ) -> None:
         self._attempt_id = attempt_id
         self._runtime = runtime
@@ -60,17 +60,17 @@ class AttemptDispatcher:
 
     # ---- public API -----------------------------------------------------
 
-    def dispatch_ready_work(self) -> None:
+    def advance_ready_tasks(self) -> None:
         attempt = self._fresh_attempt()
         if attempt.is_closed:
             return
         # PLAN and CLOSED stages are no-ops.
         if attempt.stage == AttemptStage.GENERATE:
-            self._dispatch_generating(attempt)
+            self._advance_generator_stage(attempt)
         elif attempt.stage == AttemptStage.EVALUATE:
-            self._dispatch_evaluating(attempt)
+            self._advance_evaluator_stage(attempt)
 
-    def _dispatch_generating(self, attempt: Attempt) -> None:
+    def _advance_generator_stage(self, attempt: Attempt) -> None:
         runtime = self._runtime
         task_records = runtime.task_store.list_generator_tasks_for_attempt(
             attempt.id
@@ -85,7 +85,7 @@ class AttemptDispatcher:
                 ):
                     launch_failed = True
             if launch_failed:
-                self.dispatch_ready_work()
+                self.advance_ready_tasks()
             return
 
         state = summarize_generator_dag(task_records)
@@ -100,9 +100,9 @@ class AttemptDispatcher:
             return
 
         if state.all_done:
-            self._spawn_evaluator(attempt)
+            self._start_evaluator_stage(attempt)
 
-    def _dispatch_evaluating(self, attempt: Attempt) -> None:
+    def _advance_evaluator_stage(self, attempt: Attempt) -> None:
         if attempt.evaluator_task_id is None:
             raise TaskCenterInvariantViolation(
                 f"Attempt {attempt.id!r} is evaluating with no evaluator task"
@@ -113,10 +113,10 @@ class AttemptDispatcher:
             raise TaskCenterInvariantViolation(
                 f"Evaluator task {attempt.evaluator_task_id!r} not found"
             )
-        status = TaskCenterTaskStatus(evaluator_task["status"])
-        if status == TaskCenterTaskStatus.DONE:
+        status = TaskCenterBackgroundTaskStatus(evaluator_task["status"])
+        if status == TaskCenterBackgroundTaskStatus.DONE:
             self._close_attempt(AttemptStatus.PASSED, None)
-        elif status == TaskCenterTaskStatus.FAILED:
+        elif status == TaskCenterBackgroundTaskStatus.FAILED:
             self._close_attempt(
                 AttemptStatus.FAILED,
                 AttemptFailReason.EVALUATOR_FAILED,
@@ -130,8 +130,8 @@ class AttemptDispatcher:
         runtime = self._runtime
         runtime.task_store.set_task_status_if_current(
             task_id,
-            expected_status=TaskCenterTaskStatus.RUNNING.value,
-            status=TaskCenterTaskStatus.FAILED.value,
+            expected_status=TaskCenterBackgroundTaskStatus.RUNNING.value,
+            status=TaskCenterBackgroundTaskStatus.FAILED.value,
             summary={"fail_reason": "agent_launch_failed", "summary": summary},
         )
         failed_task = runtime.task_store.get_task(task_id)
@@ -163,7 +163,7 @@ class AttemptDispatcher:
             ),
         )
         task = runtime.task_store.set_task_status(
-            task_id, status=TaskCenterTaskStatus.RUNNING.value
+            task_id, status=TaskCenterBackgroundTaskStatus.RUNNING.value
         )
         self._audit.task_launched(task, attempt_id=attempt.id)
         try:
@@ -180,7 +180,7 @@ class AttemptDispatcher:
             runtime.agent_launcher.launch(launch)
         except Exception:
             logger.exception(
-                "AttemptDispatcher: generator launch failed",
+                "AttemptTaskDispatcher: generator launch failed",
                 extra={"task_id": task_id, "attempt_id": attempt.id},
             )
             self._mark_launch_failed(
@@ -194,7 +194,7 @@ class AttemptDispatcher:
             self._runtime.agent_launcher.launch(launch)
         except Exception:
             logger.exception(
-                "AttemptDispatcher: evaluator launch failed",
+                "AttemptTaskDispatcher: evaluator launch failed",
                 extra={
                     "task_id": launch.task_id,
                     "attempt_id": launch.attempt_id,
@@ -209,7 +209,7 @@ class AttemptDispatcher:
                 AttemptStatus.FAILED, AttemptFailReason.EVALUATOR_FAILED
             )
 
-    def _spawn_evaluator(self, attempt: Attempt) -> None:
+    def _start_evaluator_stage(self, attempt: Attempt) -> None:
         if attempt.evaluator_task_id is not None:
             return
         runtime = self._runtime
@@ -223,7 +223,7 @@ class AttemptDispatcher:
                 "task_center_run_id": launch.task_center_run_id,
                 "role": TaskCenterTaskRole.EVALUATOR.value,
                 "agent_name": launch.agent_name,
-                "status": TaskCenterTaskStatus.PENDING.value,
+                "status": TaskCenterBackgroundTaskStatus.PENDING.value,
                 "needs": list(attempt.generator_task_ids),
                 "task_center_attempt_id": attempt.id,
                 "context_packet_id": launch.context_packet_id,
@@ -239,7 +239,7 @@ class AttemptDispatcher:
                 role=TaskCenterTaskRole.EVALUATOR.value,
                 agent_name=launch.agent_name,
                 context_message=launch.context,
-                status=TaskCenterTaskStatus.RUNNING.value,
+                status=TaskCenterBackgroundTaskStatus.RUNNING.value,
                 summaries=[],
                 needs=list(attempt.generator_task_ids),
                 task_center_attempt_id=attempt.id,
@@ -254,14 +254,14 @@ class AttemptDispatcher:
             self._launch_evaluator(launch)
         except Exception:
             logger.exception(
-                "AttemptDispatcher: evaluator spawn failed",
+                "AttemptTaskDispatcher: evaluator spawn failed",
                 extra={"task_id": task_id, "attempt_id": attempt.id},
             )
             try:
                 runtime.task_store.set_task_status_if_current(
                     task_id,
-                    expected_status=TaskCenterTaskStatus.RUNNING.value,
-                    status=TaskCenterTaskStatus.FAILED.value,
+                    expected_status=TaskCenterBackgroundTaskStatus.RUNNING.value,
+                    status=TaskCenterBackgroundTaskStatus.FAILED.value,
                     summary={
                         "fail_reason": "agent_launch_failed",
                         "summary": "Evaluator agent startup failed.",

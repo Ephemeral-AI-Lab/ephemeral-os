@@ -10,8 +10,8 @@ sandbox helpers from this package root::
     )
 
 Internal modules import from the canonical submodule path (e.g.
-``task_center.goal.state`` for ``Goal``). The submodule paths are
-stable; this package root is the convenience facade for outside-the-package
+``task_center.goal.state`` for ``Goal``). The package root is the stable
+convenience facade for outside-the-package
 callers.
 
 Public names are exposed via ``__getattr__`` so that importing a submodule
@@ -44,9 +44,9 @@ if TYPE_CHECKING:
     from task_center.context_engine.packet import ContextPacket
     from task_center.context_engine.recipes_registry import RecipeRegistry
     from task_center.context_engine.scope import ContextScope
-    from task_center.entry.coordinator import (
+    from task_center.entry.bootstrap import (
         TaskCenterEntry,
-        TaskCenterRunHandle,
+        TaskCenterEntryHandle,
         start_task_center_run,
     )
     from task_center.entry import TaskCenterSandboxBridge
@@ -119,17 +119,17 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "task_center.entry",
         "TaskCenterSandboxBridge",
     ),
-    "TaskCenterEntry": ("task_center.entry.coordinator", "TaskCenterEntry"),
-    "TaskCenterRunHandle": (
-        "task_center.entry.coordinator",
-        "TaskCenterRunHandle",
+    "TaskCenterEntry": ("task_center.entry.bootstrap", "TaskCenterEntry"),
+    "TaskCenterEntryHandle": (
+        "task_center.entry.bootstrap",
+        "TaskCenterEntryHandle",
     ),
     "ordered_generator_tasks": (
         "task_center.attempt.generator_dag",
         "ordered_generator_tasks",
     ),
     "start_task_center_run": (
-        "task_center.entry.coordinator",
+        "task_center.entry.bootstrap",
         "start_task_center_run",
     ),
 }

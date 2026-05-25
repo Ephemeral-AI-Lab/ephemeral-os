@@ -3,18 +3,18 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
-from sandbox.daemon import occ_runtime_services, operation_payloads
-from sandbox.daemon import operation_handlers as edit
-from sandbox.daemon import operation_handlers as metrics
-from sandbox.daemon import operation_handlers as read
-from sandbox.daemon import operation_handlers as shell
-from sandbox.daemon import operation_handlers as write
+from sandbox.daemon import builtin_operations, occ_runtime_services, operation_payloads
 from sandbox.daemon.rpc import dispatcher as server
 from sandbox.daemon.layer_stack_runtime import get_layer_stack_manager
 from sandbox.layer_stack.workspace_base import build_workspace_base
+
+
+def _tool_handler(verb: str) -> Any:
+    return builtin_operations.WORKSPACE_TOOL_HANDLERS[verb]
 
 
 def test_operation_payload_classifier_helpers_removed() -> None:
@@ -24,21 +24,21 @@ def test_operation_payload_classifier_helpers_removed() -> None:
 
 def test_op_table_dispatches_data_ops_to_unified_handlers() -> None:
     server._register_builtin_operations()
-    assert server.OP_TABLE["api.write_file"] is write.write_file
-    assert server.OP_TABLE["api.v1.write_file"] is write.write_file
-    assert server.OP_TABLE["api.edit_file"] is edit.edit_file
-    assert server.OP_TABLE["api.v1.edit_file"] is edit.edit_file
-    assert server.OP_TABLE["api.read_file"] is read.read_file
-    assert server.OP_TABLE["api.v1.read_file"] is read.read_file
-    assert server.OP_TABLE["api.v1.shell"] is shell.shell
-    assert server.OP_TABLE["api.layer_metrics"] is metrics.layer_metrics
+    assert server.OP_TABLE["api.write_file"] is _tool_handler("write_file")
+    assert server.OP_TABLE["api.v1.write_file"] is _tool_handler("write_file")
+    assert server.OP_TABLE["api.edit_file"] is _tool_handler("edit_file")
+    assert server.OP_TABLE["api.v1.edit_file"] is _tool_handler("edit_file")
+    assert server.OP_TABLE["api.read_file"] is _tool_handler("read_file")
+    assert server.OP_TABLE["api.v1.read_file"] is _tool_handler("read_file")
+    assert server.OP_TABLE["api.v1.shell"] is _tool_handler("shell")
+    assert server.OP_TABLE["api.layer_metrics"] is builtin_operations.layer_metrics
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("bad_path", [["a", "b"], ("a", "b"), {"path": "a"}, 123, b"a"])
 async def test_write_file_rejects_non_string_path_argument(bad_path: object) -> None:
     with pytest.raises(ValueError, match="single-path contract"):
-        await write.write_file(
+        await _tool_handler("write_file")(
             {
                 "layer_stack_root": "/tmp/unused-layer-stack",
                 "path": bad_path,
@@ -50,7 +50,7 @@ async def test_write_file_rejects_non_string_path_argument(bad_path: object) -> 
 @pytest.mark.asyncio
 async def test_edit_file_rejects_list_path_argument() -> None:
     with pytest.raises(ValueError, match="single-path contract"):
-        await edit.edit_file(
+        await _tool_handler("edit_file")(
             {
                 "layer_stack_root": "/tmp/unused-layer-stack",
                 "path": ["a", "b"],
@@ -62,7 +62,7 @@ async def test_edit_file_rejects_list_path_argument() -> None:
 @pytest.mark.asyncio
 async def test_read_file_rejects_list_path_argument() -> None:
     with pytest.raises(ValueError, match="single-path contract"):
-        await read.read_file(
+        await _tool_handler("read_file")(
             {
                 "layer_stack_root": "/tmp/unused-layer-stack",
                 "path": ["a", "b"],
@@ -107,7 +107,7 @@ async def test_layer_metrics_reports_no_cache_storage_fields(tmp_path: Path) -> 
     stack = tmp_path / "stack"
     build_workspace_base(workspace_root=workspace, layer_stack_root=stack)
 
-    payload = await metrics.layer_metrics({"layer_stack_root": stack.as_posix()})
+    payload = await builtin_operations.layer_metrics({"layer_stack_root": stack.as_posix()})
 
     assert {
         "manifest_version",
@@ -143,7 +143,7 @@ async def test_layer_metrics_reports_active_lease_pins(tmp_path: Path) -> None:
     manager = get_layer_stack_manager(stack.as_posix())
     lease = manager.acquire_snapshot_lease("metrics-reader")
     try:
-        payload = await metrics.layer_metrics({"layer_stack_root": stack.as_posix()})
+        payload = await builtin_operations.layer_metrics({"layer_stack_root": stack.as_posix()})
     finally:
         manager.release_lease(lease.lease_id)
 

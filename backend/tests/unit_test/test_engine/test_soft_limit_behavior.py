@@ -83,7 +83,7 @@ async def _drive_dispatch_branch(
         executor,
         run_request,
         state,
-        background_manager=None,
+        background_tasks=None,
         notification_service=notification_service,
     )
     async for _ in branch:

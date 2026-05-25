@@ -1,4 +1,4 @@
-"""US-014: orchestrator + dispatcher composer wiring.
+"""US-014: orchestrator + task dispatcher composer wiring.
 
 Confirms that when ``AttemptDeps.composer`` is set, the orchestrator
 asks the composer for the planner agent name and context_message, and that
@@ -82,7 +82,7 @@ def composer_runtime(
         task_store=task_store,
         agent_launcher=launcher,
         orchestrator_registry=AttemptOrchestratorRegistry(),
-        manager_registry=None,
+        iteration_coordinators=None,
         lifecycle_config=TaskCenterLifecycleConfig(),
         composer=composer,
     )

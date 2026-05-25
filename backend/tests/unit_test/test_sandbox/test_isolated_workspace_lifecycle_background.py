@@ -12,7 +12,7 @@ from sandbox._shared.models import (
     ExitIsolatedWorkspaceRequest,
     SandboxCaller,
 )
-from sandbox.host.iws_lifecycle import (
+from sandbox.host.isolated_workspace_lifecycle import (
     enter_isolated_workspace,
     exit_isolated_workspace,
 )
@@ -20,8 +20,8 @@ from sandbox.host.iws_lifecycle import (
 
 pytestmark = pytest.mark.asyncio
 
-enter_module = importlib.import_module("sandbox.host.iws_lifecycle")
-exit_module = enter_module  # consolidated; both live in sandbox.host.iws_lifecycle
+enter_module = importlib.import_module("sandbox.host.isolated_workspace_lifecycle")
+exit_module = enter_module  # consolidated; both live in sandbox.host.isolated_workspace_lifecycle
 
 
 class _BackgroundManager:
@@ -49,7 +49,7 @@ async def test_enter_rejects_before_pipeline_when_background_tasks_exist(
         return object()
 
     monkeypatch.setattr(
-        enter_module.iws_pipeline_registry,
+        enter_module.isolated_pipeline_registry,
         "ensure_pipeline",
         ensure_pipeline,
     )
@@ -90,7 +90,7 @@ async def test_exit_drains_background_tasks_before_pipeline_exit(
 
     bg.cancel_by_agent = _cancel_by_agent  # type: ignore[method-assign]
     monkeypatch.setattr(
-        exit_module.iws_pipeline_registry,
+        exit_module.isolated_pipeline_registry,
         "require_pipeline",
         lambda: SimpleNamespace(exit=_exit),
     )
@@ -129,7 +129,7 @@ async def test_exit_drains_agent_background_tasks(
 
     bg.cancel_by_agent = _cancel_by_agent  # type: ignore[method-assign]
     monkeypatch.setattr(
-        exit_module.iws_pipeline_registry,
+        exit_module.isolated_pipeline_registry,
         "require_pipeline",
         lambda: SimpleNamespace(exit=_exit),
     )

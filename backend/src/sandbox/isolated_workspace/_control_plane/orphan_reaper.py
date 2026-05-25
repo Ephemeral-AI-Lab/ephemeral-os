@@ -13,10 +13,10 @@ import time
 from pathlib import Path
 from typing import Any
 
+from sandbox.audit.events import IsolatedWorkspaceAuditEvent
 from sandbox.isolated_workspace._control_plane.pipeline_state import (
     CGROUP_ROOT,
     HANDLE_PREFIX,
-    IsolatedWorkspaceAuditEvent,
     logger,
 )
 

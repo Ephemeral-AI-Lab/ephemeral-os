@@ -386,6 +386,28 @@ nav.toc a.active {
   font-weight: 650;
 }
 .page-footer-nav a:hover { text-decoration: underline; }
+.wiki-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 22px;
+}
+.wiki-links a,
+.wiki-link {
+  display: inline-block;
+  color: var(--accent);
+  text-decoration: none;
+  font-family: "JetBrains Mono", Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  background: var(--accent-soft);
+  border: 1px solid #bfdbfe;
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+.wiki-links a:hover,
+.wiki-link:hover {
+  text-decoration: underline;
+}
 @media (max-width: 980px) {
   body { grid-template-columns: 1fr; }
   .section-card-grid { grid-template-columns: 1fr; }

@@ -1,4 +1,4 @@
-"""Manager/handler closure smoke with a synchronous attempt closer."""
+"""Goal lifecycle closure smoke with a synchronous attempt closer."""
 
 from __future__ import annotations
 
@@ -6,8 +6,11 @@ from collections.abc import Callable
 
 from db.stores.attempt_store import AttemptStore
 from task_center._core.primitives import TaskCenterLifecycleConfig
-from task_center.goal.handler import GoalHandler
-from task_center.iteration import IterationManager, IterationManagerRegistry
+from task_center.goal.lifecycle import GoalLifecycle
+from task_center.iteration import (
+    IterationAttemptCoordinator,
+    OpenIterationCoordinatorRegistry,
+)
 from task_center.goal.state import GoalOrigin, GoalStatus
 from task_center.attempt import (
     Attempt,
@@ -51,34 +54,37 @@ class _StubOrchestrator:
         self._cb(self._g.id)
 
 
-def _build_handler(goal_store, iteration_store, attempt_store):
-    return GoalHandler(
+def _build_goal_lifecycle(goal_store, iteration_store, attempt_store):
+    iteration_coordinators = OpenIterationCoordinatorRegistry()
+    goal_lifecycle = GoalLifecycle(
         goal_store=goal_store,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
-        manager_registry=IterationManagerRegistry(),
+        iteration_coordinators=iteration_coordinators,
         config=TaskCenterLifecycleConfig(default_attempt_budget=2),
     )
+    return goal_lifecycle, iteration_coordinators
 
 
 def _drive_segment(
     *,
-    handler,
+    iteration_coordinators: OpenIterationCoordinatorRegistry,
     iteration_id: str,
     attempt_store: AttemptStore,
     verdict: tuple[
         AttemptStatus, AttemptFailReason | None, str | None
     ],
 ) -> None:
-    """Run a stub orchestrator against the manager-owned iteration."""
-    registry = handler._manager_registry  # type: ignore[attr-defined]
-    mgr: IterationManager | None = registry.get(iteration_id)
-    assert mgr is not None
-    g = mgr.create_initial_attempt()
+    """Run a stub orchestrator against the coordinator-owned iteration."""
+    coordinator: IterationAttemptCoordinator | None = iteration_coordinators.get(
+        iteration_id
+    )
+    assert coordinator is not None
+    g = coordinator.create_initial_attempt()
     stub = _StubOrchestrator(
         attempt=g,
         attempt_store=attempt_store,
-        on_attempt_closed=mgr.handle_attempt_closed,
+        on_attempt_closed=coordinator.handle_attempt_closed,
         verdict=verdict,
     )
     stub.start()
@@ -87,15 +93,17 @@ def _drive_segment(
 def test_smoke_terminal_success(
     goal_store, iteration_store, attempt_store, task_center_run_id
 ):
-    handler = _build_handler(goal_store, iteration_store, attempt_store)
-    req = handler.create_goal(
+    goal_lifecycle, iteration_coordinators = _build_goal_lifecycle(
+        goal_store, iteration_store, attempt_store
+    )
+    req = goal_lifecycle.create_goal(
         task_center_run_id=task_center_run_id,
         origin=GoalOrigin.task(task_id="exec-1"),
         goal="solve X",
     )
-    seg, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
+    seg, _ = goal_lifecycle.create_initial_iteration_with_coordinator(goal_id=req.id)
     _drive_segment(
-        handler=handler,
+        iteration_coordinators=iteration_coordinators,
         iteration_id=seg.id,
         attempt_store=attempt_store,
         verdict=(AttemptStatus.PASSED, None, None),
@@ -110,18 +118,19 @@ def test_smoke_terminal_success(
 def test_smoke_attempt_plan_failed(
     goal_store, iteration_store, attempt_store, task_center_run_id
 ):
-    handler = _build_handler(goal_store, iteration_store, attempt_store)
-    req = handler.create_goal(
+    goal_lifecycle, iteration_coordinators = _build_goal_lifecycle(
+        goal_store, iteration_store, attempt_store
+    )
+    req = goal_lifecycle.create_goal(
         task_center_run_id=task_center_run_id,
         origin=GoalOrigin.task(task_id="exec-1"),
         goal="solve X",
     )
-    seg, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
+    seg, _ = goal_lifecycle.create_initial_iteration_with_coordinator(goal_id=req.id)
     # First attempt: fail with a generator error.
-    registry = handler._manager_registry  # type: ignore[attr-defined]
-    mgr = registry.get(seg.id)
-    assert mgr is not None
-    g1 = mgr.create_initial_attempt()
+    coordinator = iteration_coordinators.get(seg.id)
+    assert coordinator is not None
+    g1 = coordinator.create_initial_attempt()
     attempt_store.set_plan_contract(
         g1.id, plan_spec="spec1", evaluation_criteria=["a"], deferred_goal_for_next_iteration=None
     )
@@ -129,7 +138,7 @@ def test_smoke_attempt_plan_failed(
         g1.id, status=AttemptStatus.FAILED,
         fail_reason=AttemptFailReason.GENERATOR_FAILED,
     )
-    mgr.handle_attempt_closed(g1.id)
+    coordinator.handle_attempt_closed(g1.id)
     # Second (and budget-final) attempt: also fail.
     seg_after = iteration_store.get(seg.id)
     assert seg_after is not None
@@ -141,7 +150,7 @@ def test_smoke_attempt_plan_failed(
         g2_id, status=AttemptStatus.FAILED,
         fail_reason=AttemptFailReason.EVALUATOR_FAILED,
     )
-    mgr.handle_attempt_closed(g2_id)
+    coordinator.handle_attempt_closed(g2_id)
     final_request = goal_store.get(req.id)
     final_segment = iteration_store.get(seg.id)
     assert final_request is not None and final_segment is not None
@@ -154,15 +163,17 @@ def test_smoke_attempt_plan_failed(
 def test_smoke_success_continue_then_terminal(
     goal_store, iteration_store, attempt_store, task_center_run_id
 ):
-    handler = _build_handler(goal_store, iteration_store, attempt_store)
-    req = handler.create_goal(
+    goal_lifecycle, iteration_coordinators = _build_goal_lifecycle(
+        goal_store, iteration_store, attempt_store
+    )
+    req = goal_lifecycle.create_goal(
         task_center_run_id=task_center_run_id,
         origin=GoalOrigin.task(task_id="exec-1"),
         goal="initial-goal",
     )
-    seg1, _ = handler.create_initial_iteration_with_manager(goal_id=req.id)
+    seg1, _ = goal_lifecycle.create_initial_iteration_with_coordinator(goal_id=req.id)
     _drive_segment(
-        handler=handler,
+        iteration_coordinators=iteration_coordinators,
         iteration_id=seg1.id,
         attempt_store=attempt_store,
         verdict=(AttemptStatus.PASSED, None, "next-goal"),
@@ -177,7 +188,7 @@ def test_smoke_success_continue_then_terminal(
     assert seg2.goal == "next-goal"
     # Drive iteration 2 to terminal success.
     _drive_segment(
-        handler=handler,
+        iteration_coordinators=iteration_coordinators,
         iteration_id=seg2_id,
         attempt_store=attempt_store,
         verdict=(AttemptStatus.PASSED, None, None),

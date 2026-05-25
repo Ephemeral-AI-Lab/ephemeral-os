@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from task_center.entry.coordinator import (
+from task_center.entry.bootstrap import (
     TaskCenterEntry,
-    TaskCenterRunHandle,
+    TaskCenterEntryHandle,
     start_task_center_run,
 )
 from task_center.entry.sandbox_bridge import (
@@ -14,7 +14,7 @@ from task_center.entry.sandbox_bridge import (
 
 __all__ = [
     "TaskCenterEntry",
-    "TaskCenterRunHandle",
+    "TaskCenterEntryHandle",
     "TaskCenterSandboxBinding",
     "TaskCenterSandboxBridge",
     "start_task_center_run",

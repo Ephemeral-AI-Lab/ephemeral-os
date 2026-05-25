@@ -220,18 +220,18 @@ def test_grep_case_insensitive_and_glob_filter(
 def test_search_handlers_do_not_call_occ_client() -> None:
     """Read-only by construction: ``grep`` and ``glob`` must not touch OCC.
 
-    Post-Phase-2.6 C4 both operation_handlers live in ``sandbox.daemon.operation_handlers`` as
-    1-line wrappers around ``route_workspace_tool_call``; check the function source
-    rather than the module file (the module also hosts OCC-touching control
-    operation_handlers like ``layer_metrics``).
+    Search operations are registered through ``WORKSPACE_TOOL_HANDLERS``;
+    check the shared handler source rather than the module file (the module
+    also hosts OCC-touching built-ins like ``layer_metrics``).
     """
     import inspect
 
-    from sandbox.daemon import operation_handlers
+    from sandbox.daemon import builtin_operations
 
-    for fn in (operation_handlers.grep, operation_handlers.glob):
+    for verb in ("grep", "glob"):
+        fn = builtin_operations.WORKSPACE_TOOL_HANDLERS[verb]
         code = inspect.getsource(fn)
-        name = f"operation_handlers.{fn.__name__}"
+        name = f"builtin_operations.WORKSPACE_TOOL_HANDLERS[{verb!r}]"
         assert "occ_client." not in code, f"{name} must not access occ_client"
         assert "OccClient" not in code, f"{name} must not reference OccClient"
         assert ".commit_" not in code, f"{name} must not call commit_* methods"

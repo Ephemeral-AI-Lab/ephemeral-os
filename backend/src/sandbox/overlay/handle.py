@@ -53,11 +53,6 @@ class OverlayHandle:
         compare=False,
     )
 
-    @property
-    def manifest(self) -> object | None:
-        """Alias retained for plugin handlers that read ``handle.manifest``."""
-        return self.snapshot_manifest
-
     def release(self) -> None:
         """Idempotently release the captured lease and run-dir cleanup."""
         with self._destroy_lock:

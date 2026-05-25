@@ -32,17 +32,19 @@ from sandbox._shared.models import (
 )
 from sandbox.audit.lifecycle import lifecycle_operation
 from sandbox.host.daemon_client import _DaemonDispatchError, call_daemon_api
-from sandbox.isolated_workspace._control_plane import pipeline_registry as iws_pipeline_registry
+from sandbox.isolated_workspace._control_plane import (
+    pipeline_registry as isolated_pipeline_registry,
+)
 from sandbox.isolated_workspace._control_plane.pipeline_state import IsolatedWorkspaceError
 
 
 async def enter_isolated_workspace(
-    req: EnterIsolatedWorkspaceRequest,
+    request: EnterIsolatedWorkspaceRequest,
     *,
     background_manager: object | None = None,
     sandbox_id: str = "",
 ) -> EnterIsolatedWorkspaceResult:
-    agent_id = req.caller.agent_id
+    agent_id = request.caller.agent_id
     try:
         local_count = _count_by_agent(background_manager, agent_id)
         daemon_count = await _daemon_inflight_count(sandbox_id, agent_id)
@@ -62,9 +64,9 @@ async def enter_isolated_workspace(
             audit_path=os.environ.get("EOS_WORKSPACE_LIFECYCLE_AUDIT_PATH"),
         ) as timings:
             if sandbox_id:
-                return await _daemon_enter(sandbox_id, req, timings=dict(timings))
-            pipeline = await iws_pipeline_registry.ensure_pipeline(
-                {"layer_stack_root": req.layer_stack_root}
+                return await _daemon_enter(sandbox_id, request, timings=dict(timings))
+            pipeline = await isolated_pipeline_registry.ensure_pipeline(
+                {"layer_stack_root": request.layer_stack_root}
             )
             handle = await pipeline.enter(agent_id)
             return EnterIsolatedWorkspaceResult(
@@ -94,12 +96,12 @@ async def enter_isolated_workspace(
 
 
 async def exit_isolated_workspace(
-    req: ExitIsolatedWorkspaceRequest,
+    request: ExitIsolatedWorkspaceRequest,
     *,
     background_manager: object | None = None,
     sandbox_id: str = "",
 ) -> ExitIsolatedWorkspaceResult:
-    agent_id = req.caller.agent_id
+    agent_id = request.caller.agent_id
     try:
         async with lifecycle_operation(
             kind="exit_isolated_workspace",
@@ -109,16 +111,16 @@ async def exit_isolated_workspace(
             evicted_background_tasks = await _cancel_by_agent(
                 background_manager,
                 agent_id,
-                grace_s=req.grace_s,
+                grace_s=request.grace_s,
             )
             if sandbox_id:
                 return await _daemon_exit(
                     sandbox_id,
-                    req,
+                    request,
                     evicted_background_tasks=evicted_background_tasks,
                     timings=dict(timings),
                 )
-            result = await iws_pipeline_registry.require_pipeline().exit(
+            result = await isolated_pipeline_registry.require_pipeline().exit(
                 agent_id,
                 grace_s=0.0,
             )
@@ -145,7 +147,7 @@ async def exit_isolated_workspace(
 
 async def _daemon_enter(
     sandbox_id: str,
-    req: EnterIsolatedWorkspaceRequest,
+    request: EnterIsolatedWorkspaceRequest,
     *,
     timings: dict[str, float],
 ) -> EnterIsolatedWorkspaceResult:
@@ -154,10 +156,10 @@ async def _daemon_enter(
             sandbox_id,
             "api.isolated_workspace.enter",
             {
-                "agent_id": req.caller.agent_id,
-                "layer_stack_root": req.layer_stack_root,
+                "agent_id": request.caller.agent_id,
+                "layer_stack_root": request.layer_stack_root,
             },
-            layer_stack_root=req.layer_stack_root,
+            layer_stack_root=request.layer_stack_root,
             timeout=180,
         )
     except _DaemonDispatchError as exc:
@@ -183,7 +185,7 @@ async def _daemon_enter(
 
 async def _daemon_exit(
     sandbox_id: str,
-    req: ExitIsolatedWorkspaceRequest,
+    request: ExitIsolatedWorkspaceRequest,
     *,
     evicted_background_tasks: int,
     timings: dict[str, float],
@@ -192,7 +194,7 @@ async def _daemon_exit(
         response = await call_daemon_api(
             sandbox_id,
             "api.isolated_workspace.exit",
-            {"agent_id": req.caller.agent_id},
+            {"agent_id": request.caller.agent_id},
             timeout=180,
         )
     except _DaemonDispatchError as exc:

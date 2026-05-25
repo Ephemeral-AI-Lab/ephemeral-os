@@ -1,6 +1,6 @@
 """GoalClosureReport delivery router.
 
-Owns the delivery path from ``GoalHandler.close_goal`` to either the run
+Owns the delivery path from ``GoalLifecycle.close_goal`` to either the run
 itself (entry-origin goals) or the parent
 ``AttemptOrchestrator.apply_goal_closure_report`` (task-origin goals). The
 runtime assumes no process restart: while a parent generator task is in
@@ -18,7 +18,7 @@ from task_center.goal.state import (
     GoalClosureReport,
     GoalOriginKind,
 )
-from task_center.task_state import TaskCenterTaskStatus
+from task_center.task_state import TaskCenterBackgroundTaskStatus
 
 
 class GoalClosureReportRouter:
@@ -44,15 +44,15 @@ class GoalClosureReportRouter:
         attempt_id = task.get("task_center_attempt_id") or None
         status = task.get("status") or ""
         if status in (
-            TaskCenterTaskStatus.DONE.value,
-            TaskCenterTaskStatus.FAILED.value,
+            TaskCenterBackgroundTaskStatus.DONE.value,
+            TaskCenterBackgroundTaskStatus.FAILED.value,
         ):
             return CloseReportDeliveryResult(
                 status="already_delivered",
                 requested_by_task_id=report.requested_by_task_id,
                 parent_attempt_id=attempt_id,
             )
-        if status != TaskCenterTaskStatus.WAITING_GOAL.value:
+        if status != TaskCenterBackgroundTaskStatus.WAITING_GOAL.value:
             raise TaskCenterInvariantViolation(
                 f"TaskCenter task {report.requested_by_task_id!r} is not waiting "
                 "on a goal."

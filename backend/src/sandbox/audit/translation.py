@@ -23,6 +23,30 @@ SandboxOperation = Literal[
     "glob",
     "grep",
 ]
+SUPPORTED_OPERATIONS: tuple[SandboxOperation, ...] = (
+    "read_file",
+    "write_file",
+    "edit_file",
+    "shell",
+    "raw_exec",
+    "plugin",
+    "glob",
+    "grep",
+)
+OPERATION_PAYLOAD_FIELDS = (
+    "operation",
+    "status",
+    "changed_paths",
+    "changed_path_kinds",
+    "mutation_source",
+    "conflict_reason",
+    "warnings",
+    "timings",
+    "error",
+)
+FAILED_OPERATION_PAYLOAD_FIELDS = OPERATION_PAYLOAD_FIELDS + (
+    "error_kind",
+)
 
 
 def started_event(
@@ -169,7 +193,7 @@ def _subsystem_events(
     return [
         AuditEvent(
             source="sandbox",
-            type=_EVENT_BY_SIGNAL[signal],
+            type=events.TIMING_SIGNAL_EVENTS[signal],
             node=node,
             payload={
                 **dict(payload),
@@ -269,20 +293,11 @@ def _conflict_reason_from_error(error: BaseException) -> str | None:
     return None
 
 
-_EVENT_BY_SIGNAL = {
-    "occ_prepared": events.OCC_PREPARED,
-    "occ_committed": events.OCC_COMMITTED,
-    "occ_conflicted": events.OCC_CONFLICTED,
-    "overlay_executed": events.OVERLAY_EXECUTED,
-    "layer_stack_lease_acquired": events.LAYER_STACK_LEASE_ACQUIRED,
-    "layer_stack_layer_published": events.LAYER_STACK_LAYER_PUBLISHED,
-    "layer_stack_auto_squashed": events.LAYER_STACK_AUTO_SQUASHED,
-    "resource_snapshot": events.RESOURCE_SNAPSHOT,
-}
-
-
 __all__ = [
+    "FAILED_OPERATION_PAYLOAD_FIELDS",
+    "OPERATION_PAYLOAD_FIELDS",
     "SandboxOperation",
+    "SUPPORTED_OPERATIONS",
     "events_from_result",
     "failed_event",
     "node_from_caller",

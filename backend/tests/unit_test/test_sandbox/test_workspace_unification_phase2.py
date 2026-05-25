@@ -8,7 +8,6 @@ from pathlib import Path
 
 from sandbox._shared.models import Intent, ToolCallRequest
 from sandbox._shared.tool_primitives import VERB_TABLE
-from sandbox._shared.workspace_pipeline import WorkspacePipeline
 from sandbox.daemon.rpc import dispatcher
 from sandbox.occ.overlay_change_conversion import overlay_path_changes_to_occ_changes
 from sandbox.occ.changeset import ChangesetResult, FileResult, FileStatus
@@ -19,15 +18,6 @@ from sandbox.overlay.namespace_entrypoint import execute_tool_payload
 from sandbox.overlay.path_change import OverlayPathChange, content_hash
 import sandbox.overlay.writable_dirs as writable_dirs_mod
 from sandbox.isolated_workspace import IsolatedWorkspaceHandle, IsolatedPipeline
-
-
-def test_workspace_pipeline_protocol_has_one_method() -> None:
-    methods = [
-        name
-        for name, value in WorkspacePipeline.__dict__.items()
-        if callable(value) and not name.startswith("_")
-    ]
-    assert methods == ["run_tool_call"]
 
 
 def test_verb_table_excludes_shell() -> None:

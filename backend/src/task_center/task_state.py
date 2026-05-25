@@ -21,7 +21,7 @@ class SpawnReason(StrEnum):
     ATTEMPT_EVALUATOR = "attempt_evaluator"
 
 
-class TaskCenterTaskStatus(StrEnum):
+class TaskCenterBackgroundTaskStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     WAITING_GOAL = "waiting_goal"
@@ -30,11 +30,11 @@ class TaskCenterTaskStatus(StrEnum):
     BLOCKED = "blocked"
 
 
-TERMINAL_GENERATOR_STATUSES: frozenset[TaskCenterTaskStatus] = frozenset(
+TERMINAL_GENERATOR_STATUSES: frozenset[TaskCenterBackgroundTaskStatus] = frozenset(
     {
-        TaskCenterTaskStatus.DONE,
-        TaskCenterTaskStatus.FAILED,
-        TaskCenterTaskStatus.BLOCKED,
+        TaskCenterBackgroundTaskStatus.DONE,
+        TaskCenterBackgroundTaskStatus.FAILED,
+        TaskCenterBackgroundTaskStatus.BLOCKED,
     }
 )
 

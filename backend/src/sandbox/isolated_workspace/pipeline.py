@@ -12,12 +12,13 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from sandbox.audit.events import IsolatedWorkspaceAuditEvent
 from sandbox._shared.layer_stack_port import LayerStackPort
 from sandbox._shared.models import Intent, ToolCallRequest, ToolCallResult
 from sandbox.isolated_workspace._control_plane.orphan_reaper import (
     _OrphanResourceReaperMixin,
 )
-from sandbox.isolated_workspace._control_plane.handle_lifecycle import (
+from sandbox.isolated_workspace._control_plane.workspace_handle_lifecycle import (
     _WorkspaceHandleLifecycleMixin,
 )
 from sandbox.isolated_workspace._control_plane.linux_runtime import (
@@ -26,7 +27,6 @@ from sandbox.isolated_workspace._control_plane.linux_runtime import (
 )
 from sandbox.isolated_workspace._control_plane.pipeline_state import (
     AuditSink,
-    IsolatedWorkspaceAuditEvent,
     IsolatedWorkspaceError,
     IsolatedWorkspaceHandle,
     PERSISTED_HANDLES_SCHEMA_VERSION,

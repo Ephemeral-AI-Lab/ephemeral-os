@@ -1,7 +1,7 @@
 """Iterative continuation via partial plan.
 
 Reference scenario for iteration continuation: iteration 1 submits a partial plan
-with ``deferred_goal_for_next_iteration``, evaluator passes, iteration-manager spawns iteration
+with ``deferred_goal_for_next_iteration``, evaluator passes, iteration coordinator spawns iteration
 2 with ``creation_reason=DEFERRED_GOAL_CONTINUATION`` and ``goal=<deferred_goal_for_next_iteration>``.
 Iteration 2 submits a full plan, evaluator passes, goal closes succeeded.
 

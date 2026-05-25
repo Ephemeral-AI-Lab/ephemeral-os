@@ -4,8 +4,8 @@ The default ``TaskCenterLifecycleConfig.default_attempt_budget`` is ``2``
 (``backend/src/task_center/config.py:16``). This scenario plans a single
 generator task that **always** calls ``submit_execution_blocker``, so each
 attempt closes ``status=failed``, ``fail_reason="generator_failed"``. After
-attempt 2 fails, ``IterationManager.has_budget_remaining`` is False — iteration
-closes failed, goal handler closes the goal failed.
+attempt 2 fails, ``IterationAttemptCoordinator.has_budget_remaining`` is False — iteration
+closes failed, and the goal lifecycle closes the goal failed.
 
 Asserts: 1 goal (status=failed), 1 iteration (status=failed), exactly 2
 attempts each with ``fail_reason=generator_failed``,
@@ -75,7 +75,7 @@ class AttemptBudgetExhausted(ScenarioBase):
 
     def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         # Should never be invoked — the generator stage never reaches
-        # all-DONE quiescence, so the dispatcher never spawns the evaluator.
+        # all-DONE quiescence, so the task dispatcher never spawns the evaluator.
         # Implementation exists only to satisfy the protocol.
         return ToolCallSpec(
             submit_evaluation_failure,

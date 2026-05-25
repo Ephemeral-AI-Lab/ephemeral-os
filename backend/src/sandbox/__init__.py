@@ -5,7 +5,7 @@ Sub-packages:
 - ``sandbox.host``     — orchestrator-side setup, daemon client, and recovery
 - ``sandbox.provider`` — provider adapter registry and provider implementations
 - ``sandbox.daemon``   — in-sandbox dispatcher and services
-- ``sandbox.main_workspace`` — persistent base repo + LayerStack/OCC facade
+- ``sandbox.main_workspace`` — persistent base workspace ownership anchor
 - ``sandbox.ephemeral_workspace`` — per-tool-call pipeline and plugin dispatch
 - ``sandbox.isolated_workspace`` — opt-in per-agent pinned workspace handles
 

@@ -1,4 +1,4 @@
-"""Tests for BackgroundTaskManager."""
+"""Tests for BackgroundTaskSupervisor."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import asyncio
 from contextlib import suppress
 from typing import Any
 
-from engine.background.manager import BackgroundTaskManager
+from engine.background.task_supervisor import BackgroundTaskSupervisor
 from message.stream_events import BackgroundTaskStarted
 from tools.background.cancel_background_task import (
     CancelBackgroundTaskInput,
@@ -29,7 +29,7 @@ async def _make_tool_coro(
 
 
 def _launch(
-    mgr: BackgroundTaskManager,
+    mgr: BackgroundTaskSupervisor,
     *,
     task_id: str = "t1",
     tool_name: str = "test_tool",
@@ -49,7 +49,7 @@ def _launch(
 
 
 def _launch_subagent(
-    mgr: BackgroundTaskManager,
+    mgr: BackgroundTaskSupervisor,
     *,
     task_id: str = "bg_1",
     delay: float = 10.0,
@@ -65,7 +65,7 @@ def _launch_subagent(
     )
 
 
-def _make_ctx(mgr: BackgroundTaskManager) -> ToolExecutionContextService:
+def _make_ctx(mgr: BackgroundTaskSupervisor) -> ToolExecutionContextService:
     return ToolExecutionContextService(cwd="/tmp", services={"background_task_manager": mgr})
 
 
@@ -75,7 +75,7 @@ def _make_ctx(mgr: BackgroundTaskManager) -> ToolExecutionContextService:
 
 
 async def test_launch_creates_task() -> None:
-    mgr = BackgroundTaskManager()
+    mgr = BackgroundTaskSupervisor()
     event = mgr.launch(
         task_id="t1",
         tool_name="my_tool",
@@ -97,7 +97,7 @@ async def test_launch_creates_task() -> None:
 
 
 async def test_collect_completed_after_task_finishes() -> None:
-    mgr = BackgroundTaskManager()
+    mgr = BackgroundTaskSupervisor()
     _launch(mgr, task_id="t1", tool_name="fast_tool", output="hello")
     await asyncio.sleep(0.01)
 
@@ -115,7 +115,7 @@ async def test_collect_completed_after_task_finishes() -> None:
 
 
 async def test_collect_completed_only_once() -> None:
-    mgr = BackgroundTaskManager()
+    mgr = BackgroundTaskSupervisor()
     _launch(mgr)
     await asyncio.sleep(0.01)
 
@@ -132,7 +132,7 @@ async def test_collect_completed_only_once() -> None:
 
 
 async def test_has_pending() -> None:
-    mgr = BackgroundTaskManager()
+    mgr = BackgroundTaskSupervisor()
     assert mgr.has_pending() is False
 
     _launch(mgr, delay=1.0)
@@ -149,7 +149,7 @@ async def test_has_pending() -> None:
 
 
 async def test_cancel_running_task() -> None:
-    mgr = BackgroundTaskManager()
+    mgr = BackgroundTaskSupervisor()
     _launch(mgr, tool_name="slow", delay=10)
 
     ok = await mgr.cancel("t1", "test reason")
@@ -165,7 +165,7 @@ async def test_cancel_running_task() -> None:
 async def test_cancel_sandbox_task_sends_wire_cancel_before_local_cancel(
     monkeypatch,
 ) -> None:
-    mgr = BackgroundTaskManager()
+    mgr = BackgroundTaskSupervisor()
     events: list[str] = []
 
     async def _never() -> ToolResult:
@@ -201,7 +201,7 @@ async def test_cancel_sandbox_task_sends_wire_cancel_before_local_cancel(
 
 
 async def test_cancel_by_agent_only_targets_running_sandbox_tasks(monkeypatch) -> None:
-    mgr = BackgroundTaskManager()
+    mgr = BackgroundTaskSupervisor()
 
     async def _wire_cancel(sandbox_id: str, invocation_id: str) -> dict[str, object]:
         return {"success": True, "cancelled": True}
@@ -241,7 +241,7 @@ async def test_cancel_by_agent_only_targets_running_sandbox_tasks(monkeypatch) -
 
 
 async def test_cancel_nonexistent_task() -> None:
-    mgr = BackgroundTaskManager()
+    mgr = BackgroundTaskSupervisor()
     assert await mgr.cancel("nonexistent_id") is False
 
 
@@ -251,7 +251,7 @@ async def test_cancel_nonexistent_task() -> None:
 
 
 async def test_cancel_all() -> None:
-    mgr = BackgroundTaskManager()
+    mgr = BackgroundTaskSupervisor()
     for i in range(3):
         _launch(mgr, task_id=f"t{i}", tool_name=f"tool{i}", delay=10)
 
@@ -263,7 +263,7 @@ async def test_cancel_all() -> None:
 
 
 async def test_cancel_all_marks_subagent_cancelled_without_asyncio_cancel() -> None:
-    mgr = BackgroundTaskManager()
+    mgr = BackgroundTaskSupervisor()
     cancelled = asyncio.Event()
 
     async def _subagent_coro() -> ToolResult:
@@ -292,7 +292,7 @@ async def test_cancel_all_marks_subagent_cancelled_without_asyncio_cancel() -> N
 
 
 async def test_cancel_subagent_requests_early_stop_and_preserves_result() -> None:
-    mgr = BackgroundTaskManager()
+    mgr = BackgroundTaskSupervisor()
     cancelled = asyncio.Event()
 
     async def _subagent_coro() -> ToolResult:
@@ -328,7 +328,7 @@ async def _raise_coro() -> ToolResult:
 
 
 async def test_task_that_raises_exception() -> None:
-    mgr = BackgroundTaskManager()
+    mgr = BackgroundTaskSupervisor()
     mgr.launch(
         task_id="t1",
         tool_name="bad_tool",
@@ -354,7 +354,7 @@ async def test_task_that_raises_exception() -> None:
 
 
 async def test_progress_lines_populated() -> None:
-    mgr = BackgroundTaskManager()
+    mgr = BackgroundTaskSupervisor()
     _launch(mgr, output="line1\nline2\nline3")
     await asyncio.sleep(0.01)
 
@@ -368,7 +368,7 @@ async def test_progress_lines_populated() -> None:
 
 
 async def test_multiple_concurrent_tasks() -> None:
-    mgr = BackgroundTaskManager()
+    mgr = BackgroundTaskSupervisor()
     _launch(mgr, task_id="fast", tool_name="fast", output="fast_done", delay=0.01)
     _launch(mgr, task_id="medium", tool_name="medium", output="medium_done", delay=0.05)
     _launch(mgr, task_id="slow", tool_name="slow", output="slow_done", delay=0.1)
@@ -379,7 +379,7 @@ async def test_multiple_concurrent_tasks() -> None:
 
 
 async def test_cancel_marks_task_cancelled() -> None:
-    mgr = BackgroundTaskManager()
+    mgr = BackgroundTaskSupervisor()
     _launch(mgr, tool_name="slow", delay=10)
 
     ok = await mgr.cancel("t1", "no kill cb")
@@ -388,7 +388,7 @@ async def test_cancel_marks_task_cancelled() -> None:
 
 
 async def test_cancel_all_cancels_python_task() -> None:
-    mgr = BackgroundTaskManager()
+    mgr = BackgroundTaskSupervisor()
     _launch(mgr, tool_name="slow", delay=10)
     task = mgr._tasks["t1"].asyncio_task
 
@@ -406,7 +406,7 @@ async def test_cancel_all_cancels_python_task() -> None:
 async def test_done_callback_skips_cancelled_status() -> None:
     """If cancel() ran first, the asyncio task completing later must not
     overwrite the cancelled state with completed."""
-    mgr = BackgroundTaskManager()
+    mgr = BackgroundTaskSupervisor()
     _launch(mgr, output="late-completion", delay=0.05)
     await mgr.cancel("t1", "early")
     await asyncio.sleep(0.10)
@@ -419,7 +419,7 @@ async def test_done_callback_skips_cancelled_status() -> None:
 async def test_done_callback_handles_asyncio_cancel_without_loop_error() -> None:
     """Cancelling a pure-Python background task must not trigger the loop's
     exception handler from the done callback."""
-    mgr = BackgroundTaskManager()
+    mgr = BackgroundTaskSupervisor()
     loop = asyncio.get_running_loop()
     observed: list[dict[str, object]] = []
     previous_handler = loop.get_exception_handler()
@@ -447,7 +447,7 @@ async def test_done_callback_handles_asyncio_cancel_without_loop_error() -> None
 
 
 async def test_cancel_tool_rejects_all_sentinel() -> None:
-    mgr = BackgroundTaskManager()
+    mgr = BackgroundTaskSupervisor()
     _launch(mgr, task_id="bg_1", tool_name="t", delay=10)
 
     tool = CancelBackgroundTaskTool()

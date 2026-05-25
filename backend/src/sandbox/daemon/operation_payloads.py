@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from sandbox.occ.changeset import ChangesetResult
-from sandbox.occ.gitignore import SnapshotGitignoreOracle
 from sandbox.daemon.changeset_projection import (
     conflict_and_status,
     conflict_to_dict,
@@ -49,7 +48,7 @@ def project_changeset_result(
     *,
     verb: str,
     total_start: float,
-    gitignore: SnapshotGitignoreOracle,
+    gitignore: object,
     timings_extra: dict[str, float],
 ) -> dict[str, object]:
     conflict, status = conflict_and_status(result.files)

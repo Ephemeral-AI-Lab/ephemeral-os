@@ -6,7 +6,7 @@ import asyncio
 
 import pytest
 
-from sandbox.daemon import operation_handlers as cancel_handler
+from sandbox.daemon import builtin_operations as cancel_handler
 from sandbox.daemon.rpc.in_flight import InFlightInvocationRegistry
 
 
@@ -133,7 +133,7 @@ async def test_cancel_handler_targets_payload_invocation_id(
         op="api.v1.shell",
     )
     monkeypatch.setattr(
-        "sandbox.daemon.operation_handlers.get_in_flight_registry",
+        "sandbox.daemon.builtin_operations.get_in_flight_registry",
         lambda: registry,
     )
 

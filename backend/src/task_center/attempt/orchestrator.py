@@ -20,7 +20,7 @@ from task_center._core.primitives import (
     generator_task_id,
     planner_task_id,
 )
-from task_center.attempt.dispatcher import AttemptDispatcher
+from task_center.attempt.task_dispatcher import AttemptTaskDispatcher
 from task_center.attempt.generator_dag import (
     dependency_task_ids,
     ordered_generator_tasks,
@@ -42,7 +42,7 @@ from task_center.task_state import (
     PlannerSubmission,
     SpawnReason,
     TaskCenterTaskRole,
-    TaskCenterTaskStatus,
+    TaskCenterBackgroundTaskStatus,
 )
 
 logger = logging.getLogger(__name__)
@@ -62,7 +62,7 @@ class AttemptOrchestrator:
         self._on_attempt_closed = on_attempt_closed
         self._runtime = runtime
 
-        self._dispatcher = AttemptDispatcher(
+        self._task_dispatcher = AttemptTaskDispatcher(
             attempt_id=attempt.id,
             runtime=runtime,
             close_attempt=self._close_attempt,
@@ -96,7 +96,7 @@ class AttemptOrchestrator:
                 role=TaskCenterTaskRole.PLANNER.value,
                 agent_name=launch.agent_name,
                 context_message=launch.context,
-                status=TaskCenterTaskStatus.RUNNING.value,
+                status=TaskCenterBackgroundTaskStatus.RUNNING.value,
                 summaries=[],
                 needs=[],
                 task_center_attempt_id=attempt.id,
@@ -105,30 +105,40 @@ class AttemptOrchestrator:
             )
             runtime.attempt_store.set_planner_task_id(attempt.id, task_id)
             runtime.agent_launcher.launch(launch)
-            self._dispatcher.dispatch_ready_work()
+            self._task_dispatcher.advance_ready_tasks()
         except Exception:
             self._mark_startup_failed(planner_task_id=task_id)
             raise
 
     def apply_plan_submission(self, submission: PlannerSubmission) -> None:
         self._assert_submission_attempt(submission.attempt_id)
-        if submission.kind == "completes" and submission.deferred_goal_for_next_iteration is not None:
-            raise TaskCenterInvariantViolation("Full plans cannot set deferred_goal_for_next_iteration")
-        if submission.kind == "defers" and submission.deferred_goal_for_next_iteration is None:
-            raise TaskCenterInvariantViolation("Partial plans require deferred_goal_for_next_iteration")
+        if (
+            submission.kind == "completes"
+            and submission.deferred_goal_for_next_iteration is not None
+        ):
+            raise TaskCenterInvariantViolation(
+                "Full plans cannot set deferred_goal_for_next_iteration"
+            )
+        if (
+            submission.kind == "defers"
+            and submission.deferred_goal_for_next_iteration is None
+        ):
+            raise TaskCenterInvariantViolation(
+                "Partial plans require deferred_goal_for_next_iteration"
+            )
 
         attempt = self._validate_planner_submission(submission.planner_task_id)
         runtime = self._runtime
         runtime.task_store.set_task_status(
             submission.planner_task_id,
-            status=TaskCenterTaskStatus.DONE.value,
+            status=TaskCenterBackgroundTaskStatus.DONE.value,
             summary={"kind": submission.kind, "summary": submission.summary},
         )
         self._persist_plan_contract(submission)
         generator_ids = self._persist_generator_tasks(submission.tasks)
         runtime.attempt_store.set_generator_task_ids(attempt.id, list(generator_ids))
         runtime.attempt_store.set_stage(attempt.id, AttemptStage.GENERATE)
-        self._dispatcher.dispatch_ready_work()
+        self._task_dispatcher.advance_ready_tasks()
 
     def apply_planner_failure(
         self, submission: PlannerFailureSubmission
@@ -137,7 +147,7 @@ class AttemptOrchestrator:
         self._validate_planner_submission(submission.planner_task_id)
         self._runtime.task_store.set_task_status(
             submission.planner_task_id,
-            status=TaskCenterTaskStatus.FAILED.value,
+            status=TaskCenterBackgroundTaskStatus.FAILED.value,
             summary={
                 "fail_reason": submission.fail_reason,
                 "summary": submission.summary,
@@ -150,14 +160,14 @@ class AttemptOrchestrator:
     ) -> None:
         self._assert_submission_attempt(submission.attempt_id)
         self._mark_generator(submission)
-        self._dispatcher.dispatch_ready_work()
+        self._task_dispatcher.advance_ready_tasks()
 
     def apply_evaluator_submission(
         self, submission: EvaluatorSubmission
     ) -> None:
         self._assert_submission_attempt(submission.attempt_id)
         self._mark_evaluator(submission)
-        self._dispatcher.dispatch_ready_work()
+        self._task_dispatcher.advance_ready_tasks()
 
     def apply_goal_closure_report(self, report: GoalClosureReport) -> None:
         """Resume a generator task waiting on a delegated goal.
@@ -172,7 +182,7 @@ class AttemptOrchestrator:
             raise TaskCenterInvariantViolation(
                 f"Generator task {report.requested_by_task_id!r} not found"
             )
-        if task.get("status") != TaskCenterTaskStatus.WAITING_GOAL.value:
+        if task.get("status") != TaskCenterBackgroundTaskStatus.WAITING_GOAL.value:
             # Already delivered; no further action.
             return
 
@@ -180,19 +190,19 @@ class AttemptOrchestrator:
         assert_generator_task_for_submission(task, attempt)
 
         if report.outcome == "success":
-            status = TaskCenterTaskStatus.DONE
+            status = TaskCenterBackgroundTaskStatus.DONE
             summary = (
                 f"Delegated goal {report.goal_id} succeeded."
             )
         else:
-            status = TaskCenterTaskStatus.FAILED
+            status = TaskCenterBackgroundTaskStatus.FAILED
             summary = (
                 f"Delegated goal {report.goal_id} failed."
             )
 
         updated = runtime.task_store.set_task_status_if_current(
             report.requested_by_task_id,
-            expected_status=TaskCenterTaskStatus.WAITING_GOAL.value,
+            expected_status=TaskCenterBackgroundTaskStatus.WAITING_GOAL.value,
             status=status.value,
             summary={
                 "outcome": report.outcome,
@@ -206,7 +216,7 @@ class AttemptOrchestrator:
         if updated is None:
             # Race: another delivery moved the parent first. Idempotent.
             return
-        self._dispatcher.dispatch_ready_work()
+        self._task_dispatcher.advance_ready_tasks()
 
     def _validate_planner_submission(self, planner_task_id: str) -> Attempt:
         attempt = self._assert_stage(AttemptStage.PLAN)
@@ -255,7 +265,7 @@ class AttemptOrchestrator:
                 role=TaskCenterTaskRole.GENERATOR.value,
                 agent_name=task.agent_name,
                 context_message=task.task_spec,
-                status=TaskCenterTaskStatus.PENDING.value,
+                status=TaskCenterBackgroundTaskStatus.PENDING.value,
                 summaries=[],
                 needs=list(needs),
                 task_center_attempt_id=attempt.id,
@@ -301,16 +311,16 @@ class AttemptOrchestrator:
         self, *, task: dict, task_id: str, role: str,
         outcome: str, summary: str, payload: object,
     ) -> None:
-        if task["status"] != TaskCenterTaskStatus.RUNNING.value:
+        if task["status"] != TaskCenterBackgroundTaskStatus.RUNNING.value:
             raise TaskCenterInvariantViolation(
                 f"{role} task {task_id!r} is not running"
             )
         if outcome == "success":
-            status = TaskCenterTaskStatus.DONE
+            status = TaskCenterBackgroundTaskStatus.DONE
         elif outcome == "blocker":
-            status = TaskCenterTaskStatus.BLOCKED
+            status = TaskCenterBackgroundTaskStatus.BLOCKED
         else:
-            status = TaskCenterTaskStatus.FAILED
+            status = TaskCenterBackgroundTaskStatus.FAILED
         self._runtime.task_store.set_task_status(
             task_id,
             status=status.value,
@@ -339,7 +349,7 @@ class AttemptOrchestrator:
         self._on_attempt_closed(attempt.id)
 
     def _mark_startup_failed(self, *, planner_task_id: str) -> None:
-        # Owns planner-task cleanup + registry deregistration. IterationManager's
+        # Owns planner-task cleanup + registry deregistration. IterationAttemptCoordinator's
         # _close_attempt_after_startup_failure (its catch in
         # _start_orchestrator_if_configured) owns the attempt-close in both
         # paths — factory raises and start() raises.
@@ -348,8 +358,8 @@ class AttemptOrchestrator:
         try:
             runtime.task_store.set_task_status_if_current(
                 planner_task_id,
-                expected_status=TaskCenterTaskStatus.RUNNING.value,
-                status=TaskCenterTaskStatus.FAILED.value,
+                expected_status=TaskCenterBackgroundTaskStatus.RUNNING.value,
+                status=TaskCenterBackgroundTaskStatus.FAILED.value,
                 summary={
                     "fail_reason": AttemptFailReason.STARTUP_FAILED.value,
                 },

@@ -1,8 +1,8 @@
 """TaskCenter domain invariants — assertion helpers.
 
 Each ``assert_*`` validates one harness lifecycle invariant and raises
-:class:`TaskCenterInvariantViolation` on breach. Used by the goal handler,
-iteration manager, and attempt orchestrator/dispatcher to fail fast on
+:class:`TaskCenterInvariantViolation` on breach. Used by the goal lifecycle,
+iteration attempt coordinator, and attempt orchestrator/task dispatcher to fail fast on
 illegal transitions instead of silently corrupting state.
 """
 

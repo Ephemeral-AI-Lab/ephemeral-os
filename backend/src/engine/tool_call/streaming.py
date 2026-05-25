@@ -6,6 +6,7 @@ import asyncio
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from message.stream_events import (
@@ -28,12 +29,21 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+class StreamingToolRunState(StrEnum):
+    """Internal lifecycle for a streamed foreground tool call."""
+
+    QUEUED = "queued"
+    EXECUTING = "executing"
+    COMPLETED = "completed"
+    YIELDED = "yielded"
+
+
 @dataclass
-class TrackedTool:
+class StreamingToolRun:
     id: str
     name: str
     input: dict[str, Any]
-    status: str = "queued"
+    state: StreamingToolRunState = StreamingToolRunState.QUEUED
     task: asyncio.Task | None = None
     progress_lines: list[str] = field(default_factory=list)
     result: ToolResult | None = None
@@ -57,10 +67,12 @@ def defer_background_dispatch(
     """
     if tool_def is None:
         return False
-    bg_mode = getattr(tool_def, "background", "forbidden")
-    if bg_mode == "always":
+    background_mode = getattr(tool_def, "background", "forbidden")
+    if background_mode == "always":
         return True
-    return bool(bg_mode == "optional" and tool_input and tool_input.get("background"))
+    return bool(
+        background_mode == "optional" and tool_input and tool_input.get("background")
+    )
 
 
 class StreamingToolExecutor:
@@ -88,7 +100,7 @@ class StreamingToolExecutor:
         self._tool_registry = tool_registry
         self._context = context
         self._should_defer = should_defer
-        self._tools: dict[str, TrackedTool] = {}
+        self._tools: dict[str, StreamingToolRun] = {}
         self._aborted: set[str] = set()
         self._events: list[StreamEvent] = []
 
@@ -117,7 +129,7 @@ class StreamingToolExecutor:
             )
             return
 
-        tracked = TrackedTool(
+        tracked = StreamingToolRun(
             id=event.id,
             name=event.name,
             input=event.input,
@@ -156,7 +168,7 @@ class StreamingToolExecutor:
         """Get new progress events since last call."""
         events = []
         for tool in self._tools.values():
-            if tool.status == "completed" and tool.progress_lines:
+            if tool.state == StreamingToolRunState.COMPLETED and tool.progress_lines:
                 for line in tool.progress_lines:
                     events.append(
                         ToolExecutionProgress(
@@ -179,14 +191,14 @@ class StreamingToolExecutor:
         in_flight = [
             tool.task
             for tool in self._tools.values()
-            if tool.status == "executing" and tool.task is not None
+            if tool.state == StreamingToolRunState.EXECUTING and tool.task is not None
         ]
         if in_flight:
             await asyncio.gather(*in_flight, return_exceptions=True)
 
         results = []
         for tool in self._tools.values():
-            if tool.status == "completed":
+            if tool.state == StreamingToolRunState.COMPLETED:
                 if tool.cancelled:
                     results.append(
                         ToolExecutionCancelled(
@@ -206,21 +218,21 @@ class StreamingToolExecutor:
                             does_terminate=tool.result.does_terminate,
                         )
                     )
-                tool.status = "yielded"
+                tool.state = StreamingToolRunState.YIELDED
         return results
 
-    def _start_tool(self, tool: TrackedTool) -> None:
+    def _start_tool(self, tool: StreamingToolRun) -> None:
         """Start executing a tool."""
-        tool.status = "executing"
+        tool.state = StreamingToolRunState.EXECUTING
         tool.task = asyncio.create_task(self._execute_tool(tool))
 
-    async def _execute_tool(self, tool: TrackedTool) -> None:
+    async def _execute_tool(self, tool: StreamingToolRun) -> None:
         """Execute a single tool with progress tracking."""
         logger.debug("STREAM: Executing tool: tool_id=%s tool_name=%s", tool.id, tool.name)
         try:
             if tool.id in self._aborted:
                 logger.info("STREAM: Tool aborted before execution: tool_id=%s", tool.id)
-                tool.status = "completed"
+                tool.state = StreamingToolRunState.COMPLETED
                 tool.cancelled = True
                 return
 
@@ -231,7 +243,7 @@ class StreamingToolExecutor:
                     output=f"Unknown tool: {tool.name}",
                     is_error=True,
                 )
-                tool.status = "completed"
+                tool.state = StreamingToolRunState.COMPLETED
                 return
 
             context_with_id = ToolExecutionContextService(
@@ -257,7 +269,7 @@ class StreamingToolExecutor:
             tool.cancelled = True
             tool.cancel_reason = tool.cancel_reason or "Task cancelled"
         finally:
-            tool.status = "completed"
+            tool.state = StreamingToolRunState.COMPLETED
 
     def cancel_all(self) -> None:
         """Cancel all running tasks to prevent orphaned execution."""

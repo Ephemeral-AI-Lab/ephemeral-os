@@ -1,7 +1,7 @@
 """Iteration package facade.
 
 Iteration DTOs/enums live in :mod:`task_center.iteration.state`; lifecycle
-coordination lives in :mod:`task_center.iteration.manager`.
+coordination lives in :mod:`task_center.iteration.attempt_coordinator`.
 """
 
 from __future__ import annotations
@@ -21,30 +21,33 @@ from task_center.iteration.state import (
 )
 
 if TYPE_CHECKING:
-    from task_center.iteration.manager import (
+    from task_center.iteration.attempt_coordinator import (
         AttemptClosedCallback,
-        ClosureReportSink,
-        IterationManager,
-        IterationManagerRegistry,
+        IterationClosureSink,
+        IterationAttemptCoordinator,
+        OpenIterationCoordinatorRegistry,
         OrchestratorFactory,
     )
 
-_MANAGER_EXPORTS: dict[str, tuple[str, str]] = {
+_COORDINATOR_EXPORTS: dict[str, tuple[str, str]] = {
     "AttemptClosedCallback": (
-        "task_center.iteration.manager",
+        "task_center.iteration.attempt_coordinator",
         "AttemptClosedCallback",
     ),
-    "ClosureReportSink": (
-        "task_center.iteration.manager",
-        "ClosureReportSink",
+    "IterationClosureSink": (
+        "task_center.iteration.attempt_coordinator",
+        "IterationClosureSink",
     ),
-    "IterationManager": ("task_center.iteration.manager", "IterationManager"),
-    "IterationManagerRegistry": (
-        "task_center.iteration.manager",
-        "IterationManagerRegistry",
+    "IterationAttemptCoordinator": (
+        "task_center.iteration.attempt_coordinator",
+        "IterationAttemptCoordinator",
+    ),
+    "OpenIterationCoordinatorRegistry": (
+        "task_center.iteration.attempt_coordinator",
+        "OpenIterationCoordinatorRegistry",
     ),
     "OrchestratorFactory": (
-        "task_center.iteration.manager",
+        "task_center.iteration.attempt_coordinator",
         "OrchestratorFactory",
     ),
 }
@@ -63,7 +66,7 @@ _STATE_EXPORTS = [
 
 
 def __getattr__(name: str) -> object:
-    target = _MANAGER_EXPORTS.get(name)
+    target = _COORDINATOR_EXPORTS.get(name)
     if target is None:
         raise AttributeError(
             f"module 'task_center.iteration' has no attribute {name!r}"
@@ -82,12 +85,12 @@ __all__ = [
     "AttemptPlanFailed",
     "PriorAttemptEntry",
     "ClosureOutcome",
-    "ClosureReportSink",
+    "IterationClosureSink",
     "Iteration",
     "IterationClosureReport",
     "IterationCreationReason",
-    "IterationManager",
-    "IterationManagerRegistry",
+    "IterationAttemptCoordinator",
+    "OpenIterationCoordinatorRegistry",
     "IterationStatus",
     "OrchestratorFactory",
     "SuccessDeferred",

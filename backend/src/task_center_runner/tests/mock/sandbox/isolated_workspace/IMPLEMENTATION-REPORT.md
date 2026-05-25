@@ -434,7 +434,7 @@ backend/src/sandbox/isolated_workspace/scripts/
 |---|---|
 | ``backend/src/sandbox/isolated_workspace/pipeline.py + extracted modules`` | PR 1: ``_PhaseTimer`` class + ``_PHASE_TIMER_OVERHEAD_BUDGET_MS``. Instrumented ``enter``, ``_wire_handle``, ``exit``, ``_teardown``, ``run_in_handle``, ``_reap_orphans``, ``ttl_sweep``. Enriched 5 emit sites with ``total_ms`` + ``phases_ms`` (conditional-key per P5) + ``lowerdir_layer_count`` + ``shared_layer_snapshot=True`` on enter. PR 0: live ``mount_overlay`` + ``configure_dns`` + new ``signal_net_ready`` Protocol method. Bug fixes: ``IsolatedWorkspaceHandle.readiness_fd`` + ``control_fd`` fields; ``open_ns_fds`` now merges via ``update`` instead of replacing; ``r_parent`` no longer closed eagerly. |
 | ``backend/src/task_center_runner/audit/events.py`` | Module docstring documenting the SUBSET-COVER invariant + conditional-key emission rule (PLAN §21 Follow-up #6). No ``EventType`` enum changes. |
-| ``backend/src/sandbox/daemon/rpc/dispatcher.py`` | Lifecycle routes are inline ``_iws_*`` handlers; foreground tool routes use ``sandbox.daemon.tool_call_router`` and the unified ``api.v1.<verb>`` handlers. |
+| ``backend/src/sandbox/daemon/rpc/dispatcher.py`` | Lifecycle routes are inline ``_iws_*`` handlers; foreground tool routes use ``sandbox.daemon.workspace_tool_dispatch`` and the unified ``api.v1.<verb>`` handlers. |
 | ``backend/src/sandbox/host/runtime_bundle.py`` | Added ``sandbox/isolated_workspace/`` to the daemon runtime bundle so the in-sandbox daemon can import the package on startup. |
 | ``backend/tests/unit_test/test_sandbox/test_daemon/test_routing_invariants.py`` | Updated imports + OP_TABLE references to the new module paths. |
 

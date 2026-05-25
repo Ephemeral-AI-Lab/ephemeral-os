@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EphemeralOS Sandbox Workspace Architecture - EphemeralOS Sandbox Workspace Architecture</title>
+<title>EphemeralOS Sandbox Workspace Architecture</title>
 <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
@@ -36,16 +36,16 @@
   This split version keeps the section names from the original HTML file and uses one complete static page per top-level section. It works from <code>file://</code>; JavaScript only enhances search and active-link highlighting.
 </div>
 <div class="section-card-grid">
-<a class="section-card" href="overview.html"><strong>1. Overview</strong><span>§ Many agents and plugins inspect or mutate one repository while sharing a single durable workspace history. The runtime separates</span></a>
-<a class="section-card" href="layerstack.html"><strong>2. LayerStack</strong><span>§ Overlay users need a stable snapshot while other calls keep publishing new changes. LayerStack stores workspace versions as immu</span></a>
-<a class="section-card" href="overlay.html"><strong>3. Overlay</strong><span>§ Shells and plugins need a normal filesystem, not a layer-by-layer API. Overlay mounts layer paths as read-only lowerdirs plus a </span></a>
-<a class="section-card" href="occ.html"><strong>4. OCC</strong><span>§ Multiple operations can edit overlapping files from different snapshots. OCC routes, validates, stages, serializes, and publishe</span></a>
-<a class="section-card" href="workspaces.html"><strong>5. Workspace Modes</strong><span>§ Not every task needs the same workspace lifetime or privacy model. The package defines persistent, per-operation, and explicit p</span></a>
-<a class="section-card" href="daemon.html"><strong>6. Daemon and Background Tasks</strong><span>§ Sandbox operations need resident state, cached managers, cancellation, and plugin registration. The daemon accepts JSON RPC enve</span></a>
-<a class="section-card" href="provider.html"><strong>7. Provider</strong><span>§ The sandbox runtime can run on different backends without changing workspace logic. The provider boundary defines provider-neutr</span></a>
-<a class="section-card" href="plugins.html"><strong>8. Plugin in ephemeral_workspace</strong><span>§ Plugins need current workspace state without bypassing LayerStack/OCC ownership. The plugin path installs plugin runtime, regist</span></a>
-<a class="section-card" href="space-model.html"><strong>9. Space Model</strong><span>§ The design avoids copying a large repository for every tool call or background job. Immutable lower layers are shared; private u</span></a>
-<a class="section-card" href="workflow-cookbook.html"><strong>10. Workflow Cookbook</strong><span>§ This section restates the main runtime paths as end-to-end traces so a reader can follow one request from API/tool entrypoint to</span></a>
+<a class="section-card" href="overview.html"><strong>1. Overview</strong><span>Many agents and plugins inspect or mutate one repository while sharing a single durable workspace history.</span></a>
+<a class="section-card" href="layerstack.html"><strong>2. LayerStack</strong><span>Stable snapshots, immutable layer directories, projection rendering, publish flow, leases, and squash behavior.</span></a>
+<a class="section-card" href="overlay.html"><strong>3. Overlay</strong><span>How LayerStack paths become a normal filesystem view with private upper/work directories.</span></a>
+<a class="section-card" href="occ.html"><strong>4. OCC</strong><span>Typed changes, routing, base-hash validation, commit queue, staging, transaction, and publish semantics.</span></a>
+<a class="section-card" href="workspaces.html"><strong>5. Workspace Modes</strong><span>main_workspace, ephemeral_workspace, isolated_workspace, fast paths, and enter/exit lifecycle details.</span></a>
+<a class="section-card" href="daemon.html"><strong>6. Daemon and Background Tasks</strong><span>RPC dispatch, in-flight registry, background launch metadata, heartbeats, cancellation, and isolated gating.</span></a>
+<a class="section-card" href="provider.html"><strong>7. Provider</strong><span>Provider-neutral sandbox lifecycle, Docker/Daytona adapters, daemon transport, and runtime bootstrap boundary.</span></a>
+<a class="section-card" href="plugins.html"><strong>8. Plugin in ephemeral_workspace</strong><span>Plugin runtime ensure, operation registry, projection APIs, write overlays, Pyright refresh, and LSP apply.</span></a>
+<a class="section-card" href="space-model.html"><strong>9. Space Model</strong><span>O(1) lowerdir repository bytes and O(n * per-operation changed bytes) writable scratch for concurrent work.</span></a>
+<a class="section-card" href="workflow-cookbook.html"><strong>10. Workflow Cookbook</strong><span>End-to-end traces for direct reads, ephemeral shell, OCC publish, isolated lifecycle, plugins, and Pyright refresh.</span></a>
 </div>
 <div class="summary">
   <ul>

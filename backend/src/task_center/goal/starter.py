@@ -14,7 +14,7 @@ from typing import Any
 from task_center.goal.close_report_router import (
     GoalClosureReportRouter,
 )
-from task_center.goal.handler import GoalHandler
+from task_center.goal.lifecycle import GoalLifecycle
 from task_center.goal.state import (
     GoalClosureReport,
     GoalOrigin,
@@ -28,7 +28,7 @@ from task_center.iteration import OrchestratorFactory
 from task_center.attempt.state import AttemptFailReason, AttemptStatus
 from task_center.attempt.runtime import AttemptDeps
 from task_center.iteration.state import Iteration, IterationStatus
-from task_center.task_state import TaskCenterTaskStatus
+from task_center.task_state import TaskCenterBackgroundTaskStatus
 
 logger = logging.getLogger(__name__)
 
@@ -71,19 +71,21 @@ class GoalStarter:
             raise TaskCenterInvariantViolation("Goal prompt must be nonblank.")
         prepared = self._prepare_origin(origin)
 
-        handler = self._build_handler()
-        created_goal = handler.create_goal(
+        goal_lifecycle = self._build_goal_lifecycle()
+        created_goal = goal_lifecycle.create_goal(
             task_center_run_id=prepared.task_center_run_id,
             origin=origin,
             goal=prompt,
         )
-        iteration, iteration_manager = handler.create_initial_iteration_with_manager(
-            goal_id=created_goal.id,
+        iteration, iteration_coordinator = (
+            goal_lifecycle.create_initial_iteration_with_coordinator(
+                goal_id=created_goal.id,
+            )
         )
 
         initial_attempt = None
         try:
-            initial_attempt = iteration_manager.create_unstarted_initial_attempt()
+            initial_attempt = iteration_coordinator.create_unstarted_initial_attempt()
             if origin.kind == GoalOriginKind.TASK:
                 self._mark_parent_waiting(
                     origin=origin,
@@ -93,7 +95,7 @@ class GoalStarter:
                     attempt_id=initial_attempt.id,
                     goal_str=prompt,
                 )
-            iteration_manager.start_attempt(initial_attempt)
+            iteration_coordinator.start_attempt(initial_attempt)
         except Exception:
             self._compensate_failed_start(
                 goal=created_goal,
@@ -144,18 +146,18 @@ class GoalStarter:
             parent_attempt_id=parent_attempt_id,
         )
 
-    def _build_handler(self) -> GoalHandler:
-        manager_registry = self._runtime.manager_registry
-        if manager_registry is None:
+    def _build_goal_lifecycle(self) -> GoalLifecycle:
+        iteration_coordinators = self._runtime.iteration_coordinators
+        if iteration_coordinators is None:
             raise TaskCenterInvariantViolation(
-                "GoalStarter requires an iteration manager registry."
+                "GoalStarter requires open iteration coordinators."
             )
         router = GoalClosureReportRouter(runtime=self._runtime)
-        return GoalHandler(
+        return GoalLifecycle(
             goal_store=self._runtime.goal_store,
             iteration_store=self._runtime.iteration_store,
             attempt_store=self._runtime.attempt_store,
-            manager_registry=manager_registry,
+            iteration_coordinators=iteration_coordinators,
             config=self._runtime.lifecycle_config,
             deliver_closure_report=router.deliver,
             orchestrator_factory=self._orchestrator_factory,
@@ -169,7 +171,7 @@ class GoalStarter:
             raise TaskCenterInvariantViolation(
                 f"TaskCenter task {parent_task_id!r} was not found."
             )
-        if task.get("status") != TaskCenterTaskStatus.RUNNING.value:
+        if task.get("status") != TaskCenterBackgroundTaskStatus.RUNNING.value:
             raise TaskCenterInvariantViolation(
                 f"TaskCenter task {parent_task_id!r} is not running; "
                 "delegated goal start requires a running generator task."
@@ -254,8 +256,8 @@ class GoalStarter:
             final_outcome=None, closed_at=now,
         ))
         if origin.kind != GoalOriginKind.TASK:
-            if runtime.manager_registry is not None:
-                runtime.manager_registry.deregister(iteration.id)
+            if runtime.iteration_coordinators is not None:
+                runtime.iteration_coordinators.deregister(iteration.id)
             return
         if origin.task_id is None:
             return
@@ -271,8 +273,8 @@ class GoalStarter:
                 final_iteration_id=iteration.id,
                 final_attempt_id=initial_attempt_id,
             )))
-        if runtime.manager_registry is not None:
-            runtime.manager_registry.deregister(iteration.id)
+        if runtime.iteration_coordinators is not None:
+            runtime.iteration_coordinators.deregister(iteration.id)
 
     def _restore_parent(self, parent_task_id: str) -> None:
         parent_task = self._runtime.task_store.get_task(parent_task_id)
@@ -285,8 +287,8 @@ class GoalStarter:
             return
         self._runtime.task_store.set_task_status_if_current(
             parent_task_id,
-            expected_status=TaskCenterTaskStatus.WAITING_GOAL.value,
-            status=TaskCenterTaskStatus.RUNNING.value,
+            expected_status=TaskCenterBackgroundTaskStatus.WAITING_GOAL.value,
+            status=TaskCenterBackgroundTaskStatus.RUNNING.value,
         )
 
     def _close_unstarted_attempt(

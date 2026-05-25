@@ -5,6 +5,4 @@ snapshot lease, namespace overlay, upperdir capture, OCC publish, plugin
 dispatch, and coroutine-bound background tool execution.
 """
 
-from sandbox.ephemeral_workspace.pipeline import EphemeralPipeline
-
-__all__ = ["EphemeralPipeline"]
+__all__: list[str] = []

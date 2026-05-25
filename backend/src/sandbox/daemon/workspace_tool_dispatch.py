@@ -8,7 +8,6 @@ from uuid import uuid4
 
 from sandbox._shared.clock import monotonic_now
 from sandbox._shared.models import Intent, ToolCallRequest, ToolCallResult
-from sandbox._shared.workspace_pipeline import WorkspacePipeline
 from sandbox.daemon.occ_runtime_services import get_occ_runtime_services
 from sandbox.daemon.operation_payloads import (
     project_changeset_result,
@@ -25,27 +24,42 @@ from sandbox.layer_stack.workspace_binding import (
 from sandbox.occ.changeset import EditChange, build_api_write_change, is_published_status
 
 
-async def resolve_workspace_pipeline(req: ToolCallRequest) -> WorkspacePipeline:
-    """Return isolated pipeline for open iws handles, otherwise ephemeral."""
-    iws = get_active_pipeline()
-    if iws is not None and iws.get_handle(req.agent_id) is not None:
-        return iws
-    return await get_sandbox_overlay(
-        require_layer_stack_root(req.args),
+_LAYER_STACK_FILE_VERBS = {"edit_file", "read_file", "write_file"}
+
+
+def _active_isolated_pipeline_for(agent_id: str) -> Any | None:
+    isolated_pipeline = get_active_pipeline()
+    if (
+        isolated_pipeline is not None
+        and isolated_pipeline.get_handle(agent_id) is not None
+    ):
+        return isolated_pipeline
+    return None
+
+
+async def _dispatch_via_workspace_pipeline(
+    request: ToolCallRequest,
+    isolated_pipeline: Any | None,
+) -> ToolCallResult:
+    if isolated_pipeline is not None:
+        return await isolated_pipeline.run_tool_call(request)
+    pipeline = await get_sandbox_overlay(
+        require_layer_stack_root(request.args),
         start=False,
     )
+    return await pipeline.run_tool_call(request)
 
 
-async def route_workspace_tool_call(
+async def dispatch_workspace_tool_call(
     args: dict[str, Any],
     *,
     verb: str,
     intent: Intent,
 ) -> ToolCallResult:
-    if verb in {"read_file", "write_file", "edit_file"}:
+    if verb in _LAYER_STACK_FILE_VERBS:
         require_single_file_path(args)
     agent_id = _request_agent_id(args)
-    req = ToolCallRequest(
+    request = ToolCallRequest(
         invocation_id=str(args.get("invocation_id") or uuid4().hex),
         agent_id=agent_id,
         verb=verb,
@@ -53,26 +67,33 @@ async def route_workspace_tool_call(
         args=args,
         background=bool(args.get("background", False)),
     )
-    iws = get_active_pipeline()
-    if iws is None or iws.get_handle(agent_id) is None:
-        if verb == "read_file":
-            if _can_route_through_layer_stack(req):
-                return _read_file_from_layer_stack(req)
-        if verb == "write_file":
-            if _can_route_through_layer_stack(req):
-                return await _write_file_to_layer_stack(req)
-        if verb == "edit_file":
-            if _can_route_through_layer_stack(req):
-                return await _edit_file_in_layer_stack(req)
-    pipeline = await resolve_workspace_pipeline(req)
-    return await pipeline.run_tool_call(req)
+    isolated_pipeline = _active_isolated_pipeline_for(agent_id)
+    if isolated_pipeline is None:
+        layer_stack_result = await _dispatch_layer_stack_file_request(request)
+        if layer_stack_result is not None:
+            return layer_stack_result
+    return await _dispatch_via_workspace_pipeline(request, isolated_pipeline)
 
 
-def _read_file_from_layer_stack(req: ToolCallRequest) -> ToolCallResult:
+async def _dispatch_layer_stack_file_request(
+    request: ToolCallRequest,
+) -> ToolCallResult | None:
+    if request.verb not in _LAYER_STACK_FILE_VERBS:
+        return None
+    bound_request = _bound_file_request(request)
+    if bound_request is None:
+        return None
+    layer_stack_root, path = bound_request
+    if request.verb == "read_file":
+        return _read_file_from_layer_stack(layer_stack_root, path)
+    if request.verb == "write_file":
+        return await _write_file_to_layer_stack(request, layer_stack_root, path)
+    return await _edit_file_in_layer_stack(request, layer_stack_root, path)
+
+
+def _read_file_from_layer_stack(layer_stack_root: str, path: str) -> ToolCallResult:
     total_start = monotonic_now()
-    root = require_layer_stack_root(req.args)
-    services = get_occ_runtime_services(root)
-    path = _bound_layer_path(root, require_single_file_path(req.args))
+    services = get_occ_runtime_services(layer_stack_root)
     read_start = monotonic_now()
     content, exists = services.manager.read_text(path)
     return {
@@ -89,13 +110,17 @@ def _read_file_from_layer_stack(req: ToolCallRequest) -> ToolCallResult:
     }
 
 
-async def _write_file_to_layer_stack(req: ToolCallRequest) -> ToolCallResult:
+async def _write_file_to_layer_stack(
+    request: ToolCallRequest,
+    layer_stack_root: str,
+    path: str,
+) -> ToolCallResult:
     total_start = monotonic_now()
-    root = require_layer_stack_root(req.args)
-    services = get_occ_runtime_services(root)
-    path = _bound_layer_path(root, require_single_file_path(req.args))
-    content = str(req.args.get("content") if req.args.get("content") is not None else "")
-    if not bool(req.args.get("overwrite", True)):
+    services = get_occ_runtime_services(layer_stack_root)
+    content = str(
+        request.args.get("content") if request.args.get("content") is not None else ""
+    )
+    if not bool(request.args.get("overwrite", True)):
         _current, exists = services.manager.read_text(path)
         if exists:
             return {
@@ -130,12 +155,14 @@ async def _write_file_to_layer_stack(req: ToolCallRequest) -> ToolCallResult:
     return payload
 
 
-async def _edit_file_in_layer_stack(req: ToolCallRequest) -> ToolCallResult:
+async def _edit_file_in_layer_stack(
+    request: ToolCallRequest,
+    layer_stack_root: str,
+    path: str,
+) -> ToolCallResult:
     total_start = monotonic_now()
-    root = require_layer_stack_root(req.args)
-    services = get_occ_runtime_services(root)
-    path = _bound_layer_path(root, require_single_file_path(req.args))
-    changes = _edit_changes(req.args, path)
+    services = get_occ_runtime_services(layer_stack_root)
+    changes = _edit_changes(request.args, path)
     result = await services.occ_service.apply_changeset(changes)
     payload = project_changeset_result(
         result,
@@ -178,13 +205,16 @@ def _edit_changes(args: Mapping[str, object], path: str) -> list[EditChange]:
     return changes
 
 
-def _can_route_through_layer_stack(req: ToolCallRequest) -> bool:
+def _bound_file_request(request: ToolCallRequest) -> tuple[str, str] | None:
     try:
-        root = require_layer_stack_root(req.args)
-        _bound_layer_path(root, require_single_file_path(req.args))
+        layer_stack_root = require_layer_stack_root(request.args)
+        path = _bound_layer_path(
+            layer_stack_root,
+            require_single_file_path(request.args),
+        )
     except WorkspaceBindingError:
-        return False
-    return True
+        return None
+    return layer_stack_root, path
 
 
 def _bound_layer_path(layer_stack_root: str, raw_path: str) -> str:
@@ -242,4 +272,4 @@ def _request_agent_id(args: dict[str, Any]) -> str:
     return raw or "default"
 
 
-__all__ = ["resolve_workspace_pipeline", "route_workspace_tool_call"]
+__all__ = ["dispatch_workspace_tool_call"]

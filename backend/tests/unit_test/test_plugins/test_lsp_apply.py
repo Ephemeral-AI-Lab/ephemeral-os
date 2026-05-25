@@ -44,7 +44,7 @@ class _OperationOverlay(_Overlay):
         workdir.mkdir()
         self.handle = SimpleNamespace(
             manifest_key="hash@1",
-            manifest=SimpleNamespace(version=1),
+            snapshot_manifest=SimpleNamespace(version=1),
             layer_paths=("/layers/L1",),
             run_dir=run_dir.as_posix(),
             upperdir=upperdir.as_posix(),

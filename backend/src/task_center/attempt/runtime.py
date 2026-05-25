@@ -16,7 +16,7 @@ from audit.base import AuditSink, NoopAuditSink
 
 from task_center.attempt.state import Attempt
 from task_center._core.primitives import TaskCenterLifecycleConfig
-from task_center.iteration import IterationManagerRegistry
+from task_center.iteration import OpenIterationCoordinatorRegistry
 from task_center._core.primitives import TaskCenterInvariantViolation
 from task_center._core.persistence import (
     AttemptStoreProtocol,
@@ -24,7 +24,7 @@ from task_center._core.persistence import (
     GoalStoreProtocol,
     TaskStoreProtocol,
 )
-from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
+from task_center.task_state import TaskCenterTaskRole, TaskCenterBackgroundTaskStatus
 
 if TYPE_CHECKING:
     from task_center.agent_launch.composer import AgentEntryComposer
@@ -74,9 +74,9 @@ class AttemptDeps:
     task_store: TaskStoreProtocol
     agent_launcher: EphemeralAttemptAgentLauncher
     orchestrator_registry: AttemptOrchestratorRegistry
-    manager_registry: IterationManagerRegistry | None = None
+    iteration_coordinators: OpenIterationCoordinatorRegistry | None = None
     lifecycle_config: TaskCenterLifecycleConfig = field(default_factory=TaskCenterLifecycleConfig)
-    # When set, orchestrator + dispatcher route launches through the composer
+    # When set, orchestrator + task dispatcher route launches through the composer
     # to obtain a rendered context envelope + selected agent definition.
     # Optional so existing tests can continue without composer wiring.
     composer: AgentEntryComposer | None = None
@@ -188,8 +188,8 @@ class GeneratorTaskLifecycle:
         }
         updated = self.task_store.set_task_status_if_current(
             self.task_id,
-            expected_status=TaskCenterTaskStatus.RUNNING.value,
-            status=TaskCenterTaskStatus.WAITING_GOAL.value,
+            expected_status=TaskCenterBackgroundTaskStatus.RUNNING.value,
+            status=TaskCenterBackgroundTaskStatus.WAITING_GOAL.value,
             summary=summary,
         )
         if updated is None:
@@ -201,6 +201,6 @@ class GeneratorTaskLifecycle:
     def restore_running_after_failed_goal_start(self) -> None:
         self.task_store.set_task_status_if_current(
             self.task_id,
-            expected_status=TaskCenterTaskStatus.WAITING_GOAL.value,
-            status=TaskCenterTaskStatus.RUNNING.value,
+            expected_status=TaskCenterBackgroundTaskStatus.WAITING_GOAL.value,
+            status=TaskCenterBackgroundTaskStatus.RUNNING.value,
         )

@@ -3,10 +3,10 @@
 Module layout:
 
 * In-flight registry surface — ``cancel``, ``heartbeat``, ``inflight_count``.
-* Tool operation wrappers — ``read_file``, ``write_file``, ``edit_file``,
-  ``glob``, ``grep``, ``shell``. Each thin wrapper threads ``args`` and the
-  static verb/intent pair through
-  :func:`sandbox.daemon.tool_call_router.route_workspace_tool_call`.
+* Tool operation routes — ``read_file``, ``write_file``, ``edit_file``,
+  ``glob``, ``grep``, ``shell``. ``WORKSPACE_TOOL_OPS`` threads ``args`` and
+  the static verb/intent pair through
+  :func:`sandbox.daemon.workspace_tool_dispatch.dispatch_workspace_tool_call`.
 * Layer-stack diagnostic surface — ``layer_metrics``, ``runtime_ready``.
 * Layer-stack control surface — ``build_workspace_base``, ``ensure_workspace_base``,
   ``workspace_binding``, ``prepare_workspace_snapshot``, ``release_lease``,
@@ -31,7 +31,7 @@ from sandbox.daemon.operation_payloads import (
     require_layer_stack_root,
     require_nonempty_string_arg,
 )
-from sandbox.daemon.tool_call_router import route_workspace_tool_call
+from sandbox.daemon.workspace_tool_dispatch import dispatch_workspace_tool_call
 from sandbox.daemon.rpc.in_flight import get_in_flight_registry
 from sandbox.layer_stack.manifest import (
     manifest_path,
@@ -46,6 +46,44 @@ from sandbox.overlay.namespace_runner import detect_private_mount_namespace
 
 _CANCEL_CLEANUP_WAIT_S = 5.0
 _STARTED_AT_MONO = time.monotonic()
+WORKSPACE_TOOL_ROUTES: dict[str, Intent] = {
+    "edit_file": Intent.WRITE_ALLOWED,
+    "glob": Intent.READ_ONLY,
+    "grep": Intent.READ_ONLY,
+    "read_file": Intent.READ_ONLY,
+    "shell": Intent.WRITE_ALLOWED,
+    "write_file": Intent.WRITE_ALLOWED,
+}
+_WORKSPACE_TOOL_OP_ALIASES: dict[str, tuple[str, ...]] = {
+    "edit_file": ("api.edit_file", "api.v1.edit_file"),
+    "glob": ("api.glob", "api.v1.glob"),
+    "grep": ("api.grep", "api.v1.grep"),
+    "read_file": ("api.read_file", "api.v1.read_file"),
+    "shell": ("api.v1.shell",),
+    "write_file": ("api.write_file", "api.v1.write_file"),
+}
+
+
+def _make_workspace_tool_handler(
+    verb: str,
+    intent: Intent,
+) -> Callable[[dict[str, Any]], object]:
+    async def _dispatch(args: dict[str, Any]) -> dict[str, object]:
+        return await dispatch_workspace_tool_call(args, verb=verb, intent=intent)
+
+    _dispatch.__name__ = f"{verb}_handler"
+    return _dispatch
+
+
+WORKSPACE_TOOL_HANDLERS = {
+    verb: _make_workspace_tool_handler(verb, intent)
+    for verb, intent in WORKSPACE_TOOL_ROUTES.items()
+}
+WORKSPACE_TOOL_OPS = {
+    op: WORKSPACE_TOOL_HANDLERS[verb]
+    for verb, aliases in _WORKSPACE_TOOL_OP_ALIASES.items()
+    for op in aliases
+}
 
 
 # ---------------------------------------------------------------------------
@@ -83,35 +121,6 @@ async def inflight_count(args: dict[str, Any]) -> dict[str, object]:
     agent_id = str(args.get("agent_id") or "").strip()
     count = get_in_flight_registry().count_by_agent(agent_id)
     return {"success": True, "agent_id": agent_id, "count": count}
-
-
-# ---------------------------------------------------------------------------
-# Tool operation wrappers (api.v1.{read_file, write_file, edit_file, glob, grep, shell})
-# ---------------------------------------------------------------------------
-
-
-async def edit_file(args: dict[str, Any]) -> dict[str, object]:
-    return await route_workspace_tool_call(args, verb="edit_file", intent=Intent.WRITE_ALLOWED)
-
-
-async def glob(args: dict[str, Any]) -> dict[str, object]:
-    return await route_workspace_tool_call(args, verb="glob", intent=Intent.READ_ONLY)
-
-
-async def grep(args: dict[str, Any]) -> dict[str, object]:
-    return await route_workspace_tool_call(args, verb="grep", intent=Intent.READ_ONLY)
-
-
-async def read_file(args: dict[str, Any]) -> dict[str, object]:
-    return await route_workspace_tool_call(args, verb="read_file", intent=Intent.READ_ONLY)
-
-
-async def shell(args: dict[str, Any]) -> dict[str, object]:
-    return await route_workspace_tool_call(args, verb="shell", intent=Intent.WRITE_ALLOWED)
-
-
-async def write_file(args: dict[str, Any]) -> dict[str, object]:
-    return await route_workspace_tool_call(args, verb="write_file", intent=Intent.WRITE_ALLOWED)
 
 
 # ---------------------------------------------------------------------------
@@ -348,21 +357,18 @@ async def _drop_peer_runtime_caches(
 
 
 __all__ = [
+    "WORKSPACE_TOOL_HANDLERS",
+    "WORKSPACE_TOOL_OPS",
+    "WORKSPACE_TOOL_ROUTES",
     "build_workspace_base",
     "cancel",
-    "edit_file",
     "ensure_workspace_base",
     "fence_stale_staging",
-    "glob",
-    "grep",
     "heartbeat",
     "inflight_count",
     "layer_metrics",
     "prepare_workspace_snapshot",
-    "read_file",
     "release_lease",
     "runtime_ready",
-    "shell",
     "workspace_binding",
-    "write_file",
 ]

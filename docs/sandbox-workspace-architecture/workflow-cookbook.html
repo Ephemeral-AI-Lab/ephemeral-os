@@ -54,7 +54,7 @@
   </ol>
 </div>
 
-<p>Relevant code: router fast path <span class="file-ref">backend/src/sandbox/daemon/tool_call_router.py:70-88</span>, path binding <span class="file-ref">backend/src/sandbox/daemon/tool_call_router.py:184-197</span>, direct resource metrics <span class="file-ref">backend/src/sandbox/daemon/tool_call_router.py:205-234</span>, and merged-view reads <span class="file-ref">backend/src/sandbox/layer_stack/view.py:60-114</span>.</p>
+<p>Relevant code: router fast path <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:70-88</span>, path binding <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:184-197</span>, direct resource metrics <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:205-234</span>, and merged-view reads <span class="file-ref">backend/src/sandbox/layer_stack/view.py:60-114</span>.</p>
 
 <h3 id="cookbook-ephemeral-shell">10.2 Ephemeral Shell or Search Operation <a class="anchor" href="#cookbook-ephemeral-shell">§</a></h3>
 <div class="sequence" aria-label="Ephemeral shell operation workflow">
@@ -83,7 +83,7 @@
   </ol>
 </div>
 
-<p>Relevant code: direct write/edit router <span class="file-ref">backend/src/sandbox/daemon/tool_call_router.py:91-181</span>, preparer <span class="file-ref">backend/src/sandbox/occ/changeset_preparation.py:41-174</span>, commit queue <span class="file-ref">backend/src/sandbox/occ/commit_queue.py:55-239</span>, transaction <span class="file-ref">backend/src/sandbox/occ/commit_transaction.py:65-141</span>, and result projection <span class="file-ref">backend/src/sandbox/daemon/changeset_projection.py:16-60</span>.</p>
+<p>Relevant code: direct write/edit router <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:91-181</span>, preparer <span class="file-ref">backend/src/sandbox/occ/changeset_preparation.py:41-174</span>, commit queue <span class="file-ref">backend/src/sandbox/occ/commit_queue.py:55-239</span>, transaction <span class="file-ref">backend/src/sandbox/occ/commit_transaction.py:65-141</span>, and result projection <span class="file-ref">backend/src/sandbox/daemon/changeset_projection.py:16-60</span>.</p>
 
 <h3 id="cookbook-isolated">10.4 Isolated Workspace Tool Lifecycle <a class="anchor" href="#cookbook-isolated">§</a></h3>
 <div class="sequence" aria-label="Isolated workspace lifecycle workflow">
@@ -97,7 +97,7 @@
   </ol>
 </div>
 
-<p>Relevant code: tools registry <span class="file-ref">backend/src/tools/sandbox/_lib/registry.py:17-31</span>, enter tool <span class="file-ref">backend/src/tools/isolated_workspace/enter_isolated_workspace/definition.py:24-47</span>, exit tool <span class="file-ref">backend/src/tools/isolated_workspace/exit_isolated_workspace/definition.py:24-46</span>, handle lifecycle <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/handle_lifecycle.py:21-258</span>, and isolated run path <span class="file-ref">backend/src/sandbox/isolated_workspace/pipeline.py:121-158</span>.</p>
+<p>Relevant code: tools registry <span class="file-ref">backend/src/tools/sandbox/_lib/registry.py:17-31</span>, enter tool <span class="file-ref">backend/src/tools/isolated_workspace/enter_isolated_workspace/definition.py:24-47</span>, exit tool <span class="file-ref">backend/src/tools/isolated_workspace/exit_isolated_workspace/definition.py:24-46</span>, handle lifecycle <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:21-258</span>, and isolated run path <span class="file-ref">backend/src/sandbox/isolated_workspace/pipeline.py:121-158</span>.</p>
 
 <h3 id="cookbook-plugin-write">10.5 Plugin Write Operation <a class="anchor" href="#cookbook-plugin-write">§</a></h3>
 <div class="sequence" aria-label="Plugin write operation workflow">

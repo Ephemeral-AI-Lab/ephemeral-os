@@ -1,9 +1,9 @@
-"""Phase 02 integration through handler -> manager -> orchestrator."""
+"""Phase 02 integration through goal_lifecycle -> coordinator -> orchestrator."""
 
 from __future__ import annotations
 
 from task_center._core.primitives import TaskCenterLifecycleConfig
-from task_center.goal.handler import GoalHandler
+from task_center.goal.lifecycle import GoalLifecycle
 from task_center.goal.state import GoalOrigin, GoalStatus
 from task_center.attempt import AttemptStatus
 from task_center.attempt.orchestrator import AttemptOrchestrator
@@ -16,7 +16,7 @@ from task_center.attempt.runtime import (
 )
 from task_center.task_state import EvaluatorSubmission, GeneratorSubmission, PlannedGeneratorTask, PlannerSubmission
 from task_center._core.primitives import evaluator_task_id, generator_task_id, planner_task_id
-from task_center.iteration import IterationManagerRegistry
+from task_center.iteration import OpenIterationCoordinatorRegistry
 from task_center.iteration.state import IterationStatus
 
 
@@ -28,7 +28,7 @@ class _FakeLauncher:
         self.launches.append(launch)
 
 
-def _build_handler(
+def _build_goal_lifecycle(
     goal_store,
     iteration_store,
     attempt_store,
@@ -38,7 +38,7 @@ def _build_handler(
 ):
     launcher = _FakeLauncher()
     orchestrator_registry = AttemptOrchestratorRegistry()
-    manager_registry = IterationManagerRegistry()
+    iteration_coordinators = OpenIterationCoordinatorRegistry()
     runtime = AttemptDeps(
         goal_store=goal_store,
         iteration_store=iteration_store,
@@ -46,14 +46,14 @@ def _build_handler(
         task_store=task_store,
         agent_launcher=launcher,
         orchestrator_registry=orchestrator_registry,
-        manager_registry=manager_registry,
+        iteration_coordinators=iteration_coordinators,
         composer=composer,
     )
-    handler = GoalHandler(
+    goal_lifecycle = GoalLifecycle(
         goal_store=goal_store,
         iteration_store=iteration_store,
         attempt_store=attempt_store,
-        manager_registry=manager_registry,
+        iteration_coordinators=iteration_coordinators,
         config=TaskCenterLifecycleConfig(default_attempt_budget=2),
         orchestrator_factory=lambda attempt, on_attempt_closed: AttemptOrchestrator(
             attempt=attempt,
@@ -61,7 +61,7 @@ def _build_handler(
             runtime=runtime,
         ),
     )
-    return handler, manager_registry, orchestrator_registry
+    return goal_lifecycle, iteration_coordinators, orchestrator_registry
 
 
 def _plan(attempt_id: str) -> PlannerSubmission:
@@ -115,18 +115,18 @@ def test_full_plan_execution_success_closes_request_success(
     task_center_run_id,
     composer,
 ):
-    handler, manager_registry, orchestrator_registry = _build_handler(
+    goal_lifecycle, iteration_coordinators, orchestrator_registry = _build_goal_lifecycle(
         goal_store, iteration_store, attempt_store, task_store, composer=composer
     )
-    request = handler.create_goal(
+    request = goal_lifecycle.create_goal(
         task_center_run_id=task_center_run_id,
         origin=GoalOrigin.task(task_id="executor-1"),
         goal="g",
     )
-    iteration, _ = handler.create_initial_iteration_with_manager(goal_id=request.id)
-    manager = manager_registry.get(iteration.id)
-    assert manager is not None
-    attempt = manager.create_initial_attempt()
+    iteration, _ = goal_lifecycle.create_initial_iteration_with_coordinator(goal_id=request.id)
+    coordinator = iteration_coordinators.get(iteration.id)
+    assert coordinator is not None
+    attempt = coordinator.create_initial_attempt()
     orchestrator = orchestrator_registry.get_or_raise(attempt.id)
 
     orchestrator.apply_plan_submission(_plan(attempt.id))
@@ -141,7 +141,7 @@ def test_full_plan_execution_success_closes_request_success(
     assert final_request.status == GoalStatus.SUCCEEDED
     assert final_segment.status == IterationStatus.SUCCEEDED
     assert final_graph.status == AttemptStatus.PASSED
-    assert manager_registry.get(iteration.id) is None
+    assert iteration_coordinators.get(iteration.id) is None
 
 
 def test_generator_failure_retry_then_evaluator_success(
@@ -152,18 +152,18 @@ def test_generator_failure_retry_then_evaluator_success(
     task_center_run_id,
     composer,
 ):
-    handler, manager_registry, orchestrator_registry = _build_handler(
+    goal_lifecycle, iteration_coordinators, orchestrator_registry = _build_goal_lifecycle(
         goal_store, iteration_store, attempt_store, task_store, composer=composer
     )
-    request = handler.create_goal(
+    request = goal_lifecycle.create_goal(
         task_center_run_id=task_center_run_id,
         origin=GoalOrigin.task(task_id="executor-1"),
         goal="g",
     )
-    iteration, _ = handler.create_initial_iteration_with_manager(goal_id=request.id)
-    manager = manager_registry.get(iteration.id)
-    assert manager is not None
-    graph1 = manager.create_initial_attempt()
+    iteration, _ = goal_lifecycle.create_initial_iteration_with_coordinator(goal_id=request.id)
+    coordinator = iteration_coordinators.get(iteration.id)
+    assert coordinator is not None
+    graph1 = coordinator.create_initial_attempt()
     orchestrator1 = orchestrator_registry.get_or_raise(graph1.id)
 
     orchestrator1.apply_plan_submission(_plan(graph1.id))

@@ -2,7 +2,7 @@
 
 Reference scenario for the attempt-retry path. Iteration 1 / Attempt 1: planner
 emits a full plan, executor runs ``preflight``, evaluator returns
-``submit_evaluation_failure`` — iteration-manager creates Attempt 2 (budget
+``submit_evaluation_failure`` — iteration coordinator creates Attempt 2 (budget
 permits). Attempt 2: planner emits a full plan, executor runs ``preflight``,
 evaluator passes — goal closes succeeded.
 

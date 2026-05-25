@@ -99,7 +99,7 @@ async def test_resource_limit_exit_appends_tool_results_to_transcript(
         executor,
         run_request,
         state,
-        background_manager=None,
+        background_tasks=None,
         notification_service=notification_service,
     )
     # Drain the async generator so the branch runs to completion.

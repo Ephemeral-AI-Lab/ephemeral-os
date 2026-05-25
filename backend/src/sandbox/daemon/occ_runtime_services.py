@@ -1,8 +1,8 @@
 """Daemon-local OCC service cache.
 
 This module owns the single OCC service bundle consumed by every daemon peer
-that needs layer-stack/OCC/gitignore state: operation handlers, the workspace
-tool-call router, and the ephemeral workspace pipeline.
+that needs layer-stack/OCC/gitignore state: built-in operations, workspace
+tool dispatch, and the ephemeral workspace pipeline.
 The factory uses a canonical ``workspace_ref=layer_stack_root`` only; this
 module owns no path classification (single source of truth lives in
 :mod:`sandbox.daemon.operation_payloads`).
@@ -29,9 +29,8 @@ from sandbox.daemon.layer_stack_runtime import get_layer_stack_manager
 class OccRuntimeServices:
     """The OCC service bundle shared by every daemon runtime peer.
 
-    Field names are the structural contract: operation handlers and workspace
-    publish code all read these
-    attributes. A typo here silently breaks every consumer.
+    Field names are the structural contract: built-ins and workspace publish
+    code all read these attributes. A typo here silently breaks every consumer.
     """
 
     layer_stack: LayerStackClient

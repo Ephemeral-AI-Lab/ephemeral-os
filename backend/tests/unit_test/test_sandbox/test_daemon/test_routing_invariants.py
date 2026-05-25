@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sandbox.daemon import operation_handlers
+from sandbox.daemon import builtin_operations
 from sandbox.daemon.rpc import dispatcher as server
 from sandbox.ephemeral_workspace.plugin import runtime_api as plugin_runtime_api
 
@@ -11,28 +11,18 @@ def test_daemon_op_table_routes_to_current_handler_layout() -> None:
     server._register_builtin_operations()
 
     expected = {
-        "api.write_file": operation_handlers.write_file,
-        "api.v1.write_file": operation_handlers.write_file,
-        "api.edit_file": operation_handlers.edit_file,
-        "api.v1.edit_file": operation_handlers.edit_file,
-        "api.read_file": operation_handlers.read_file,
-        "api.v1.read_file": operation_handlers.read_file,
-        "api.glob": operation_handlers.glob,
-        "api.v1.glob": operation_handlers.glob,
-        "api.grep": operation_handlers.grep,
-        "api.v1.grep": operation_handlers.grep,
-        "api.v1.shell": operation_handlers.shell,
-        "api.v1.cancel": operation_handlers.cancel,
-        "api.v1.heartbeat": operation_handlers.heartbeat,
-        "api.v1.inflight_count": operation_handlers.inflight_count,
-        "api.layer_metrics": operation_handlers.layer_metrics,
-        "api.ensure_workspace_base": operation_handlers.ensure_workspace_base,
-        "api.build_workspace_base": operation_handlers.build_workspace_base,
-        "api.prepare_workspace_snapshot": operation_handlers.prepare_workspace_snapshot,
-        "api.release_lease": operation_handlers.release_lease,
-        "api.workspace_binding": operation_handlers.workspace_binding,
-        "api.runtime.ready": operation_handlers.runtime_ready,
-        "api.layer_stack.fence_stale_staging": operation_handlers.fence_stale_staging,
+        **builtin_operations.WORKSPACE_TOOL_OPS,
+        "api.v1.cancel": builtin_operations.cancel,
+        "api.v1.heartbeat": builtin_operations.heartbeat,
+        "api.v1.inflight_count": builtin_operations.inflight_count,
+        "api.layer_metrics": builtin_operations.layer_metrics,
+        "api.ensure_workspace_base": builtin_operations.ensure_workspace_base,
+        "api.build_workspace_base": builtin_operations.build_workspace_base,
+        "api.prepare_workspace_snapshot": builtin_operations.prepare_workspace_snapshot,
+        "api.release_lease": builtin_operations.release_lease,
+        "api.workspace_binding": builtin_operations.workspace_binding,
+        "api.runtime.ready": builtin_operations.runtime_ready,
+        "api.layer_stack.fence_stale_staging": builtin_operations.fence_stale_staging,
         "api.plugin.ensure": plugin_runtime_api.plugin_ensure,
         "api.plugin.status": plugin_runtime_api.plugin_status,
         "api.isolated_workspace.enter": server._isolated_workspace_enter,

@@ -1,6 +1,6 @@
 """Dependency DAG — serial chain a → b → c.
 
-Reference scenario for the dispatcher's ``ready_pending_generator_ids`` /
+Reference scenario for the task dispatcher's ``ready_pending_generator_ids`` /
 ``needs[]`` machinery. Plan = three sequential ``preflight`` tasks; each
 depends on the previous. Dispatcher must launch them in order: first ``a``
 PENDING+ready, then ``b`` after ``a`` DONE, then ``c`` after ``b`` DONE.

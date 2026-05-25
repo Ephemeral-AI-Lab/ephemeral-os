@@ -82,7 +82,7 @@ async def run_plugin_op_with_workspace_overlay(
                 description=f"plugin.{plugin_name}.{op_name}",
             ),
             upperdir=str(handle.upperdir),
-            snapshot=handle.manifest,
+            snapshot=handle.snapshot_manifest,
             run_maintenance=True,
         )
         return _attach_publish_result(response, publish)

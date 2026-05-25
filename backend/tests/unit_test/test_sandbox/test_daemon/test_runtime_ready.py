@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from sandbox.layer_stack.workspace_base import build_workspace_base
-from sandbox.daemon import operation_handlers as health
+from sandbox.daemon import builtin_operations as health
 from sandbox.daemon import layer_stack_runtime, occ_runtime_services
 
 

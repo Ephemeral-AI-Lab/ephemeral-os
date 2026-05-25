@@ -19,7 +19,7 @@ Combines three orthogonal composer branches into one live run so a single
    continuation branch (#2 below).
 
 2. **Continuation goal** — iteration 1 attempt 2 submits a *partial* plan
-   with a ``deferred_goal_for_next_iteration``. The iteration manager spawns
+   with a ``deferred_goal_for_next_iteration``. The iteration coordinator spawns
    iteration 2 with ``creation_reason=DEFERRED_GOAL_CONTINUATION``; iteration 2's
    planner sees a ``<iteration iteration_no="1" status="prior">`` group
    with the accepted plan and summary.

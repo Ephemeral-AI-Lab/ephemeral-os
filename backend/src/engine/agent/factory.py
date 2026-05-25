@@ -134,12 +134,14 @@ def finalize_tool_registry_and_prompt(
         Tuple of (updated_system_prompt, has_background_tools).
     """
     from prompt.runtime_prompt import build_termination_condition_prompt
-    bg_tool_names = [
+    background_capable_tool_names = [
         t.name
         for t in tool_registry.list_tools()
         if getattr(t, "background", "forbidden") != "forbidden"
     ]
-    has_background_tools = bool(bg_tool_names) and agent_type != "subagent"
+    has_background_tools = (
+        bool(background_capable_tool_names) and agent_type != "subagent"
+    )
     if has_background_tools:
         tool_registry.register_many(make_background_tools())
 

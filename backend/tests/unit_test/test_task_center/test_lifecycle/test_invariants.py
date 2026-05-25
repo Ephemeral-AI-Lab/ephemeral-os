@@ -17,7 +17,7 @@ from task_center._core.invariants import (
     assert_iteration_open,
     assert_iteration_sequence_contiguous,
 )
-from task_center.iteration import IterationManagerRegistry
+from task_center.iteration import OpenIterationCoordinatorRegistry
 from task_center.goal.state import (
     Goal,
     GoalStatus,
@@ -218,8 +218,8 @@ def test_assert_fail_reason_present_on_failure():
 # ---- Manager registry ---------------------------------------------------
 
 
-def test_iteration_manager_registry_enforces_uniqueness():
-    reg = IterationManagerRegistry()
+def test_open_iteration_coordinators_enforces_uniqueness():
+    reg = OpenIterationCoordinatorRegistry()
 
     class _Fake:
         iteration_id = "s1"

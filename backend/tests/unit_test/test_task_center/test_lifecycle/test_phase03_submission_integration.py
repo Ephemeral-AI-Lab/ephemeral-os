@@ -10,7 +10,7 @@ from task_center.attempt.orchestrator_registry import (
     AttemptOrchestratorRegistry,
 )
 from task_center.attempt.runtime import AgentLaunch, AttemptDeps
-from task_center.iteration import IterationManagerRegistry
+from task_center.iteration import OpenIterationCoordinatorRegistry
 from task_center.iteration.state import IterationCreationReason
 from task_center._core.primitives import evaluator_task_id, generator_task_id, planner_task_id
 from tools._framework.core.context import ToolExecutionContextService
@@ -76,7 +76,7 @@ def _build_runtime(goal_store, iteration_store, attempt_store, task_store, *, co
         task_store=task_store,
         agent_launcher=launcher,
         orchestrator_registry=registry,
-        manager_registry=IterationManagerRegistry(),
+        iteration_coordinators=OpenIterationCoordinatorRegistry(),
         composer=composer,
     )
     orchestrator = AttemptOrchestrator(

@@ -15,8 +15,10 @@ from sandbox.layer_stack.workspace_binding import (
     validate_workspace_binding_paths,
     write_workspace_binding_atomic,
 )
-from sandbox.daemon import occ_runtime_services
-from sandbox.daemon import operation_handlers as read
+from sandbox.daemon import builtin_operations, occ_runtime_services
+
+
+_read_file = builtin_operations.WORKSPACE_TOOL_HANDLERS["read_file"]
 
 
 def test_binding_rejects_layer_stack_inside_workspace(tmp_path: Path) -> None:
@@ -58,7 +60,7 @@ async def test_read_file_fails_closed_without_workspace_binding(tmp_path: Path) 
     occ_runtime_services.clear_occ_runtime_services()
 
     with pytest.raises(WorkspaceBindingError, match="workspace binding is missing"):
-        await read.read_file(
+        await _read_file(
             {
                 "layer_stack_root": str(tmp_path / "stack"),
                 "path": "a.txt",
@@ -96,7 +98,7 @@ async def test_read_file_uses_workspace_base_not_real_workspace(
         fake_run_in_namespace,
     )
 
-    result = await read.read_file(
+    result = await _read_file(
         {
             "layer_stack_root": str(stack),
             "path": "a.txt",
@@ -152,7 +154,7 @@ async def test_read_file_returns_exists_false_for_empty_manifest(
         fake_run_in_namespace,
     )
 
-    result = await read.read_file(
+    result = await _read_file(
         {
             "layer_stack_root": stack.as_posix(),
             "path": "anything.txt",

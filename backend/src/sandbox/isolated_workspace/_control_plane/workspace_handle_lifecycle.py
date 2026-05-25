@@ -7,10 +7,10 @@ import os
 import shutil
 from typing import Any
 
+from sandbox.audit.events import IsolatedWorkspaceAuditEvent
 from sandbox.isolated_workspace._control_plane.linux_runtime import _directory_file_bytes
 from sandbox.isolated_workspace._control_plane.pipeline_state import (
     ISOLATED_WORKSPACE_ROOT,
-    IsolatedWorkspaceAuditEvent,
     IsolatedWorkspaceError,
     IsolatedWorkspaceHandle,
     _maybe_inject_failure,

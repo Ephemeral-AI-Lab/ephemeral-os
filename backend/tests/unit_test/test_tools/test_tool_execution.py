@@ -13,10 +13,10 @@ from engine.query.context import QueryContext, QueryExitReason
 from engine.query.loop import run_query
 from engine.tool_call.streaming import StreamingToolExecutor
 from engine.background.dispatch import (
-    launch_and_collect_bg_events,
+    launch_and_collect_background_events,
     launch_background_tool,
 )
-from engine.background.manager import BackgroundTaskManager
+from engine.background.task_supervisor import BackgroundTaskSupervisor
 from message.messages import (
     ConversationMessage,
     SystemNotificationBlock,
@@ -1112,7 +1112,7 @@ async def test_background_tool_runs_hooks_and_reports_failure() -> None:
     registry = ToolRegistry()
     registry.register(tool)
     context = _query_context(tool)
-    manager = BackgroundTaskManager()
+    manager = BackgroundTaskSupervisor()
 
     async def _execute_tool_call(
         tool_name: str,
@@ -1132,7 +1132,7 @@ async def test_background_tool_runs_hooks_and_reports_failure() -> None:
     tool_result, bg_event, reject_event = launch_background_tool(
         tool_registry=registry,
         tool_metadata=context.tool_metadata,
-        background_manager=manager,
+        background_tasks=manager,
         tool_use=ToolUseBlock(
             id="toolu_bg",
             name="background_echo",
@@ -1182,7 +1182,7 @@ async def test_background_dispatch_exposes_conversation_messages_to_prehooks() -
         system_prompt="",
         max_tokens=100,
     )
-    manager = BackgroundTaskManager()
+    manager = BackgroundTaskSupervisor()
     tool_results: list[ToolResultBlock] = []
     conversation_messages = [
         ConversationMessage.from_user_text("start"),
@@ -1198,7 +1198,7 @@ async def test_background_dispatch_exposes_conversation_messages_to_prehooks() -
         ),
     ]
 
-    events = launch_and_collect_bg_events(
+    events = launch_and_collect_background_events(
         context,
         conversation_messages,
         manager,

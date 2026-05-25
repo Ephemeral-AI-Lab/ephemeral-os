@@ -25,7 +25,7 @@ from task_center.task_state import (
     GeneratorSubmission,
     PlannerFailureSubmission,
     TaskCenterTaskRole,
-    TaskCenterTaskStatus,
+    TaskCenterBackgroundTaskStatus,
 )
 from tools import ExecutionMetadata
 
@@ -215,11 +215,11 @@ class EphemeralAttemptAgentLauncher:
         if runtime is None:
             return
         task = runtime.task_store.get_task(launch.task_id)
-        if task is None or task.get("status") != TaskCenterTaskStatus.RUNNING.value:
+        if task is None or task.get("status") != TaskCenterBackgroundTaskStatus.RUNNING.value:
             # The lifecycle owner has already moved the task off RUNNING.
             return
 
-        _report_exhaustion(self, runtime, launch, summary=summary)
+        _report_exhaustion(runtime, launch, summary=summary)
 
 
 _ROLE_FAIL_REASONS: dict[TaskCenterTaskRole, AttemptFailReason] = {
@@ -242,7 +242,7 @@ def _fail_unowned_attempt(
     )
     runtime.task_store.set_task_status(
         launch.task_id,
-        status=TaskCenterTaskStatus.FAILED.value,
+        status=TaskCenterBackgroundTaskStatus.FAILED.value,
         summary={"fail_reason": "run_exhausted", "summary": summary},
     )
     if launch.attempt_id is None:
@@ -256,16 +256,15 @@ def _fail_unowned_attempt(
         fail_reason=_ROLE_FAIL_REASONS[launch.role],
         closed_at=datetime.now(UTC),
     )
-    manager_registry = runtime.manager_registry
-    if manager_registry is None:
+    iteration_coordinators = runtime.iteration_coordinators
+    if iteration_coordinators is None:
         return
-    manager = manager_registry.get(attempt.iteration_id)
-    if manager is not None:
-        manager.handle_attempt_closed(attempt.id)
+    coordinator = iteration_coordinators.get(attempt.iteration_id)
+    if coordinator is not None:
+        coordinator.handle_attempt_closed(attempt.id)
 
 
 def _require_attempt_orchestrator(
-    launcher: EphemeralAttemptAgentLauncher,
     runtime: AttemptDeps,
     launch: AgentLaunch,
     *,
@@ -283,14 +282,13 @@ def _require_attempt_orchestrator(
 
 
 def _report_exhaustion(
-    launcher: EphemeralAttemptAgentLauncher,
     runtime: AttemptDeps,
     launch: AgentLaunch,
     *,
     summary: str,
 ) -> None:
     """Single role-parameterized exhaustion reporter."""
-    orchestrator = _require_attempt_orchestrator(launcher, runtime, launch, summary=summary)
+    orchestrator = _require_attempt_orchestrator(runtime, launch, summary=summary)
     if orchestrator is None:
         return
 

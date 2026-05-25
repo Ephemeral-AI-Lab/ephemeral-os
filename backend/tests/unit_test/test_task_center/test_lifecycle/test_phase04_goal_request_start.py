@@ -21,12 +21,12 @@ from task_center.attempt import (
     AttemptFailReason,
     AttemptStatus,
 )
-from task_center.iteration import IterationManagerRegistry
+from task_center.iteration import OpenIterationCoordinatorRegistry
 from task_center.iteration.state import (
     IterationCreationReason,
     IterationStatus,
 )
-from task_center.task_state import TaskCenterTaskRole, TaskCenterTaskStatus
+from task_center.task_state import TaskCenterTaskRole, TaskCenterBackgroundTaskStatus
 from task_center._core.primitives import planner_task_id
 
 
@@ -56,7 +56,7 @@ def _build_runtime(
         task_store=task_store,
         agent_launcher=launcher,
         orchestrator_registry=registry,
-        manager_registry=IterationManagerRegistry(),
+        iteration_coordinators=OpenIterationCoordinatorRegistry(),
         composer=composer,
     )
 
@@ -95,7 +95,7 @@ def _seed_outer_generator_task(
         role=TaskCenterTaskRole.GENERATOR.value,
         agent_name="executor",
         context_message="execute the outer task",
-        status=TaskCenterTaskStatus.RUNNING.value,
+        status=TaskCenterBackgroundTaskStatus.RUNNING.value,
         summaries=[],
         needs=[],
         task_center_attempt_id=outer_attempt.id,
@@ -139,7 +139,7 @@ def test_goal_start_creates_request_segment_graph_and_marks_parent_waiting(
     assert initial_graph is not None
     assert initial_graph.iteration_id == initial_iteration.id
     assert parent_task is not None
-    assert parent_task["status"] == TaskCenterTaskStatus.WAITING_GOAL.value
+    assert parent_task["status"] == TaskCenterBackgroundTaskStatus.WAITING_GOAL.value
     # Delegated orchestrator was started.
     assert runtime.orchestrator_registry.get(initial_graph.id) is not None
 
@@ -162,28 +162,30 @@ def test_goal_start_startup_failure_leaves_parent_running(
         del attempt, on_attempt_closed
         raise RuntimeError("delegated startup boom")
 
-    coordinator = GoalStarter(runtime=runtime)
-    # Patch the factory used by the coordinator's handler builder.
-    original = GoalStarter._build_handler
+    starter = GoalStarter(runtime=runtime)
+    # Patch the factory used by the starter's goal lifecycle builder.
+    original = GoalStarter._build_goal_lifecycle
 
-    def _patched_build_handler(self):
-        handler = original(self)
-        handler._factory._orchestrator_factory = _failing_factory  # type: ignore[attr-defined]
-        return handler
+    def _patched_build_goal_lifecycle(self):
+        goal_lifecycle = original(self)
+        goal_lifecycle._iteration_factory._orchestrator_factory = (  # type: ignore[attr-defined]
+            _failing_factory
+        )
+        return goal_lifecycle
 
-    GoalStarter._build_handler = _patched_build_handler  # type: ignore[assignment]
+    GoalStarter._build_goal_lifecycle = _patched_build_goal_lifecycle  # type: ignore[assignment]
     try:
         with pytest.raises(RuntimeError):
-            coordinator.start(
+            starter.start(
                 prompt="delegated",
                 origin=GoalOrigin.task(task_id=parent_task_id),
             )
     finally:
-        GoalStarter._build_handler = original  # type: ignore[assignment]
+        GoalStarter._build_goal_lifecycle = original  # type: ignore[assignment]
 
     parent_task = task_store.get_task(parent_task_id)
     assert parent_task is not None
-    assert parent_task["status"] == TaskCenterTaskStatus.RUNNING.value
+    assert parent_task["status"] == TaskCenterBackgroundTaskStatus.RUNNING.value
     # The compensation path must mark the request and iteration cancelled.
     open_requests = [
         r
@@ -201,8 +203,8 @@ def test_goal_start_startup_failure_leaves_parent_running(
     cancelled_segment = iteration_store.list_for_goal(cancelled[0].id)
     assert len(cancelled_segment) == 1
     assert cancelled_segment[0].status == IterationStatus.CANCELLED
-    assert runtime.manager_registry is not None
-    assert runtime.manager_registry.get(cancelled_segment[0].id) is None
+    assert runtime.iteration_coordinators is not None
+    assert runtime.iteration_coordinators.get(cancelled_segment[0].id) is None
 
 
 def test_goal_start_startup_failure_closes_started_graph_and_deregisters_orchestrator(
@@ -241,11 +243,11 @@ def test_goal_start_startup_failure_closes_started_graph_and_deregisters_orchest
     assert failed_attempt.status == AttemptStatus.FAILED
     assert failed_attempt.fail_reason == AttemptFailReason.STARTUP_FAILED
     assert runtime.orchestrator_registry.get(failed_attempt.id) is None
-    assert runtime.manager_registry is not None
-    assert runtime.manager_registry.get(cancelled_segment.id) is None
+    assert runtime.iteration_coordinators is not None
+    assert runtime.iteration_coordinators.get(cancelled_segment.id) is None
     planner_task = task_store.get_task(planner_task_id(failed_attempt.id))
     assert planner_task is not None
-    assert planner_task["status"] == TaskCenterTaskStatus.FAILED.value
+    assert planner_task["status"] == TaskCenterBackgroundTaskStatus.FAILED.value
 
 
 def test_goal_start_rejects_second_open_child_request_for_same_executor(
@@ -271,7 +273,7 @@ def test_goal_start_rejects_second_open_child_request_for_same_executor(
     # but is rejected by the duplicate-open-request check.
     task_store.set_task_status(
         parent_task_id,
-        status=TaskCenterTaskStatus.RUNNING.value,
+        status=TaskCenterBackgroundTaskStatus.RUNNING.value,
     )
 
     with pytest.raises(TaskCenterInvariantViolation) as exc:
@@ -296,7 +298,7 @@ def test_goal_start_rejects_non_running_parent(
         task_center_run_id=task_center_run_id,
     )
     task_store.set_task_status(
-        parent_task_id, status=TaskCenterTaskStatus.DONE.value
+        parent_task_id, status=TaskCenterBackgroundTaskStatus.DONE.value
     )
 
     coordinator = GoalStarter(runtime=runtime)
@@ -311,7 +313,7 @@ def test_goal_start_rejects_non_running_parent(
 def test_goal_start_accepts_entry_origin_without_parent_task(
     goal_store, iteration_store, attempt_store, task_store, task_center_run_id, composer
 ) -> None:
-    manager_registry = IterationManagerRegistry()
+    iteration_coordinators = OpenIterationCoordinatorRegistry()
     runtime = AttemptDeps(
         goal_store=goal_store,
         iteration_store=iteration_store,
@@ -319,7 +321,7 @@ def test_goal_start_accepts_entry_origin_without_parent_task(
         task_store=task_store,
         agent_launcher=_FakeLauncher(),
         orchestrator_registry=AttemptOrchestratorRegistry(),
-        manager_registry=manager_registry,
+        iteration_coordinators=iteration_coordinators,
         composer=composer,
     )
 

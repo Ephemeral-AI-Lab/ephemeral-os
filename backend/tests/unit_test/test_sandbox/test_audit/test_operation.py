@@ -2,9 +2,61 @@
 
 from __future__ import annotations
 
+from typing import get_args
+
 from sandbox.audit import events
-from sandbox.audit.translation import events_from_result, node_from_caller
+from sandbox.audit.timing import TimingAuditSignal
+from sandbox.audit.translation import (
+    FAILED_OPERATION_PAYLOAD_FIELDS,
+    OPERATION_PAYLOAD_FIELDS,
+    SUPPORTED_OPERATIONS,
+    SandboxOperation,
+    events_from_result,
+    node_from_caller,
+)
 from sandbox._shared.models import ConflictInfo, SandboxCaller, WriteFileResult
+
+
+def test_event_families_group_all_known_event_types_once() -> None:
+    flattened = [
+        event_type
+        for family_events in events.EVENT_FAMILIES.values()
+        for event_type in family_events
+    ]
+
+    assert flattened == list(events.ALL_EVENT_TYPES)
+    assert len(flattened) == len(set(flattened))
+    assert events.EVENT_FAMILIES == {
+        "operation": events.OPERATION_EVENTS,
+        "occ": events.OCC_EVENTS,
+        "overlay": events.OVERLAY_EVENTS,
+        "layer_stack": events.LAYER_STACK_EVENTS,
+        "resource": events.RESOURCE_EVENTS,
+        "workspace_lifecycle": events.WORKSPACE_LIFECYCLE_EVENTS,
+        "isolated_workspace": events.ISOLATED_WORKSPACE_EVENTS,
+    }
+
+
+def test_timing_signal_mapping_covers_every_timing_signal() -> None:
+    assert set(events.TIMING_SIGNAL_EVENTS) == set(get_args(TimingAuditSignal))
+
+
+def test_operation_catalog_covers_payload_and_operation_types() -> None:
+    assert SUPPORTED_OPERATIONS == get_args(SandboxOperation)
+    assert OPERATION_PAYLOAD_FIELDS == (
+        "operation",
+        "status",
+        "changed_paths",
+        "changed_path_kinds",
+        "mutation_source",
+        "conflict_reason",
+        "warnings",
+        "timings",
+        "error",
+    )
+    assert FAILED_OPERATION_PAYLOAD_FIELDS == OPERATION_PAYLOAD_FIELDS + (
+        "error_kind",
+    )
 
 
 def test_node_from_caller_uses_task_center_fields_before_legacy_run_id() -> None:

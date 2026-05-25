@@ -23,7 +23,7 @@ from typing import Any
 from uuid import uuid4
 
 import sandbox.api as sandbox_api
-from engine.background.manager import BackgroundTaskManager
+from engine.background.task_supervisor import BackgroundTaskSupervisor
 from message.stream_events import StreamEvent
 from tools._framework.core.base import BaseTool
 from tools._framework.core.results import ToolResult
@@ -1180,7 +1180,7 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
     iws_metadata.agent_name = "iws-exit-agent"
     iws_metadata.agent_run_id = f"{agent_id}:iws-exit"
     iws_metadata["layer_stack_root"] = BACKGROUND_IWS_LAYER_STACK_ROOT
-    manager = BackgroundTaskManager()
+    manager = BackgroundTaskSupervisor()
     iws_metadata.background_task_manager = manager
 
     iws_enter = await _call_probe_tool(

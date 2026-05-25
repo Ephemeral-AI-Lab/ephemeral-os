@@ -1,12 +1,9 @@
-"""Collaborators composed by :class:`GoalHandler`.
+"""Goal lifecycle coordination.
 
-Not re-exported by ``task_center.goal``'s facade — :class:`GoalHandler`
-is the only consumer. Holds the three classes the handler composes:
-
-* :class:`GoalRepository` — CRUD + closure helpers around the goal store.
-* :class:`IterationFactory` — creates iteration rows + their managers.
-* :class:`IterationClosureRouter` — routes :class:`IterationClosureReport`
-  to either continuation or goal close.
+``GoalLifecycle`` is the entry point for creating a goal, extending its
+iteration chain, and closing it. The small private collaborators below keep
+the persistence and continuation decisions explicit without exposing another
+package surface.
 """
 
 from __future__ import annotations
@@ -14,6 +11,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from datetime import UTC, datetime
+from typing import Protocol
 
 from task_center._core.invariants import (
     assert_predecessor_has_deferred_goal_for_next_iteration,
@@ -33,8 +31,8 @@ from task_center._core.primitives import (
 )
 from task_center.goal.state import Goal, GoalClosureReport, GoalOrigin, GoalStatus
 from task_center.iteration import (
-    IterationManager,
-    IterationManagerRegistry,
+    IterationAttemptCoordinator,
+    OpenIterationCoordinatorRegistry,
     OrchestratorFactory,
 )
 from task_center.iteration.state import (
@@ -50,10 +48,102 @@ from task_center.iteration.state import (
 logger = logging.getLogger(__name__)
 
 
-CloseGoalCallback = Callable[..., Goal]
+GoalClosureReportSink = Callable[[GoalClosureReport], None]
 
 
-class GoalRepository:
+class _CloseGoal(Protocol):
+    def __call__(
+        self,
+        *,
+        goal_id: str,
+        succeeded: bool,
+        final_iteration_id: str,
+        final_attempt_id: str | None,
+    ) -> Goal: ...
+
+
+class GoalLifecycle:
+    """Coordinates one goal's iteration chain and closure report delivery."""
+
+    def __init__(
+        self,
+        *,
+        goal_store: GoalStoreProtocol,
+        iteration_store: IterationStoreProtocol,
+        attempt_store: AttemptStoreProtocol,
+        iteration_coordinators: OpenIterationCoordinatorRegistry,
+        config: TaskCenterLifecycleConfig,
+        deliver_closure_report: GoalClosureReportSink | None = None,
+        orchestrator_factory: OrchestratorFactory | None = None,
+        task_store: TaskStoreProtocol | None = None,
+    ) -> None:
+        self._deliver_closure_report = deliver_closure_report
+        self._repository = _GoalRepository(goal_store)
+        self._iteration_factory = _GoalIterationFactory(
+            goal_repository=self._repository,
+            iteration_store=iteration_store,
+            attempt_store=attempt_store,
+            iteration_coordinators=iteration_coordinators,
+            config=config,
+            on_iteration_closed=self.handle_iteration_closed,
+            orchestrator_factory=orchestrator_factory,
+            task_store=task_store,
+        )
+        self._closure_router = _IterationClosureRouter(
+            iteration_factory=self._iteration_factory,
+            iteration_store=iteration_store,
+            iteration_coordinators=iteration_coordinators,
+            close_goal=self.close_goal,
+        )
+
+    def create_goal(
+        self,
+        *,
+        task_center_run_id: str,
+        origin: GoalOrigin,
+        goal: str,
+    ) -> Goal:
+        return self._repository.create(
+            task_center_run_id=task_center_run_id,
+            origin=origin,
+            goal=goal,
+        )
+
+    def create_initial_iteration_with_coordinator(
+        self, *, goal_id: str
+    ) -> tuple[Iteration, IterationAttemptCoordinator]:
+        return self._iteration_factory.create_initial(goal_id=goal_id)
+
+    def create_deferred_iteration_with_coordinator(
+        self, *, previous_iteration: Iteration
+    ) -> tuple[Iteration, IterationAttemptCoordinator]:
+        return self._iteration_factory.create_from_deferred_goal(
+            previous_iteration=previous_iteration
+        )
+
+    def handle_iteration_closed(self, report: IterationClosureReport) -> None:
+        self._closure_router.route(report)
+
+    def close_goal(
+        self,
+        *,
+        goal_id: str,
+        succeeded: bool,
+        final_iteration_id: str,
+        final_attempt_id: str | None,
+    ) -> Goal:
+        updated, report = self._repository.close(
+            goal_id=goal_id,
+            succeeded=succeeded,
+            final_iteration_id=final_iteration_id,
+            final_attempt_id=final_attempt_id,
+        )
+        if self._deliver_closure_report is not None:
+            self._deliver_closure_report(report)
+        return updated
+
+
+class _GoalRepository:
     """CRUD + closure helpers for :class:`Goal` records."""
 
     def __init__(self, goal_store: GoalStoreProtocol) -> None:
@@ -111,16 +201,16 @@ class GoalRepository:
         return updated, report
 
 
-class IterationFactory:
-    """Creates :class:`Iteration` rows + their :class:`IterationManager`."""
+class _GoalIterationFactory:
+    """Creates :class:`Iteration` rows + their :class:`IterationAttemptCoordinator`."""
 
     def __init__(
         self,
         *,
-        goal_repository: GoalRepository,
+        goal_repository: _GoalRepository,
         iteration_store: IterationStoreProtocol,
         attempt_store: AttemptStoreProtocol,
-        manager_registry: IterationManagerRegistry,
+        iteration_coordinators: OpenIterationCoordinatorRegistry,
         config: TaskCenterLifecycleConfig,
         on_iteration_closed: Callable[[IterationClosureReport], None],
         orchestrator_factory: OrchestratorFactory | None = None,
@@ -129,7 +219,7 @@ class IterationFactory:
         self._goal_repository = goal_repository
         self._iteration_store = iteration_store
         self._attempt_store = attempt_store
-        self._manager_registry = manager_registry
+        self._iteration_coordinators = iteration_coordinators
         self._config = config
         self._on_iteration_closed = on_iteration_closed
         self._orchestrator_factory = orchestrator_factory
@@ -139,7 +229,7 @@ class IterationFactory:
     def has_orchestrator_factory(self) -> bool:
         return self._orchestrator_factory is not None
 
-    def create_initial(self, *, goal_id: str) -> tuple[Iteration, IterationManager]:
+    def create_initial(self, *, goal_id: str) -> tuple[Iteration, IterationAttemptCoordinator]:
         goal = self._goal_repository.require(goal_id)
         assert_goal_open(goal)
         assert_iteration_sequence_contiguous(goal, new_sequence_no=1)
@@ -152,7 +242,7 @@ class IterationFactory:
 
     def create_from_deferred_goal(
         self, *, previous_iteration: Iteration,
-    ) -> tuple[Iteration, IterationManager]:
+    ) -> tuple[Iteration, IterationAttemptCoordinator]:
         goal = self._goal_repository.require(previous_iteration.goal_id)
         assert_goal_open(goal)
         assert_predecessor_has_deferred_goal_for_next_iteration(previous_iteration)
@@ -173,7 +263,7 @@ class IterationFactory:
         sequence_no: int,
         creation_reason: IterationCreationReason,
         iteration_goal: str,
-    ) -> tuple[Iteration, IterationManager]:
+    ) -> tuple[Iteration, IterationAttemptCoordinator]:
         iteration = self._iteration_store.insert(
             goal_id=goal.id,
             sequence_no=sequence_no,
@@ -182,7 +272,7 @@ class IterationFactory:
             attempt_budget=self._config.default_attempt_budget,
         )
         self._goal_repository.append_iteration_id(goal, iteration.id)
-        manager = IterationManager(
+        coordinator = IterationAttemptCoordinator(
             iteration_id=iteration.id,
             iteration_store=self._iteration_store,
             attempt_store=self._attempt_store,
@@ -190,24 +280,24 @@ class IterationFactory:
             orchestrator_factory=self._orchestrator_factory,
             task_store=self._task_store,
         )
-        self._manager_registry.register(manager)
-        return iteration, manager
+        self._iteration_coordinators.register(coordinator)
+        return iteration, coordinator
 
 
-class IterationClosureRouter:
+class _IterationClosureRouter:
     """Routes :class:`IterationClosureReport` to continuation or goal close."""
 
     def __init__(
         self,
         *,
-        factory: IterationFactory,
+        iteration_factory: _GoalIterationFactory,
         iteration_store: IterationStoreProtocol,
-        manager_registry: IterationManagerRegistry,
-        close_goal: CloseGoalCallback,
+        iteration_coordinators: OpenIterationCoordinatorRegistry,
+        close_goal: _CloseGoal,
     ) -> None:
-        self._factory = factory
+        self._iteration_factory = iteration_factory
         self._iteration_store = iteration_store
-        self._manager_registry = manager_registry
+        self._iteration_coordinators = iteration_coordinators
         self._close_goal = close_goal
 
     def route(self, report: IterationClosureReport) -> None:
@@ -219,12 +309,15 @@ class IterationClosureRouter:
         try:
             outcome = report.outcome
             if isinstance(outcome, SuccessDeferred):
-                next_iteration, next_manager = self._factory.create_from_deferred_goal(
+                (
+                    next_iteration,
+                    next_coordinator,
+                ) = self._iteration_factory.create_from_deferred_goal(
                     previous_iteration=iteration
                 )
                 self._start_deferred_iteration(
                     next_iteration=next_iteration,
-                    next_manager=next_manager,
+                    next_coordinator=next_coordinator,
                     previous_report=report,
                 )
             elif isinstance(outcome, (TerminalSuccess, AttemptPlanFailed)):
@@ -239,22 +332,22 @@ class IterationClosureRouter:
                     f"Unknown ClosureOutcome: {outcome!r}"
                 )
         finally:
-            self._manager_registry.deregister(iteration.id)
+            self._iteration_coordinators.deregister(iteration.id)
 
     def _start_deferred_iteration(
         self,
         *,
         next_iteration: Iteration,
-        next_manager: IterationManager,
+        next_coordinator: IterationAttemptCoordinator,
         previous_report: IterationClosureReport,
     ) -> None:
-        if not self._factory.has_orchestrator_factory:
+        if not self._iteration_factory.has_orchestrator_factory:
             return
         try:
-            next_manager.create_initial_attempt()
+            next_coordinator.create_initial_attempt()
         except Exception:
             logger.exception(
-                "IterationClosureRouter: continuation attempt creation failed",
+                "_IterationClosureRouter: continuation attempt creation failed",
                 extra={"iteration_id": next_iteration.id},
             )
             latest_iteration = self._iteration_store.get(next_iteration.id)
@@ -267,7 +360,7 @@ class IterationClosureRouter:
                 status=IterationStatus.CANCELLED,
                 closed_at=datetime.now(UTC),
             )
-            self._manager_registry.deregister(next_iteration.id)
+            self._iteration_coordinators.deregister(next_iteration.id)
             self._close_goal(
                 goal_id=next_iteration.goal_id,
                 succeeded=False,
@@ -277,7 +370,6 @@ class IterationClosureRouter:
 
 
 __all__ = [
-    "GoalRepository",
-    "IterationClosureRouter",
-    "IterationFactory",
+    "GoalClosureReportSink",
+    "GoalLifecycle",
 ]

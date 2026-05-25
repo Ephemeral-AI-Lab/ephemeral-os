@@ -5,7 +5,7 @@ Covers, all offline (no sandbox, no LLM):
     1. `WaitBackgroundTasks` / `CheckBackgroundTaskResult` /
        `CancelBackgroundTask` schemas and ``execute`` branches that don't
        require a running loop to assert.
-    2. `BackgroundTaskManager` extras and live-progress tail behaviour.
+    2. `BackgroundTaskSupervisor` extras and live-progress tail behaviour.
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ from tools.background.cancel_background_task import (
     CancelBackgroundTaskTool,
 )
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
-from engine.background.manager import BackgroundTaskManager
+from engine.background.task_supervisor import BackgroundTaskSupervisor
 
 
 # ---------------------------------------------------------------------------
@@ -44,7 +44,7 @@ from engine.background.manager import BackgroundTaskManager
 # ---------------------------------------------------------------------------
 
 
-def _ctx(manager: BackgroundTaskManager | None) -> ToolExecutionContextService:
+def _ctx(manager: BackgroundTaskSupervisor | None) -> ToolExecutionContextService:
     metadata = {"background_task_manager": manager} if manager else {}
     return ToolExecutionContextService(cwd=Path("/tmp"), services=metadata)
 
@@ -110,7 +110,7 @@ class TestWaitBackgroundTasksExecute:
 
     async def test_no_tasks_ever(self) -> None:
         tool = WaitBackgroundTasksTool()
-        mgr = BackgroundTaskManager()
+        mgr = BackgroundTaskSupervisor()
         result = await tool.execute(WaitBackgroundTasksInput(timeout=1), _ctx(mgr))
         assert not result.is_error
         assert "[NO TASKS]" in result.output
@@ -118,7 +118,7 @@ class TestWaitBackgroundTasksExecute:
 
     async def test_completed_tasks_appear_in_snapshot(self) -> None:
         tool = WaitBackgroundTasksTool()
-        mgr = BackgroundTaskManager()
+        mgr = BackgroundTaskSupervisor()
 
         async def fast(output: str) -> ToolResult:
             return ToolResult(output=output)
@@ -136,7 +136,7 @@ class TestWaitBackgroundTasksExecute:
 
     async def test_timeout_returns_timed_out(self) -> None:
         tool = WaitBackgroundTasksTool()
-        mgr = BackgroundTaskManager()
+        mgr = BackgroundTaskSupervisor()
 
         async def slow() -> ToolResult:
             await asyncio.sleep(5)
@@ -164,14 +164,14 @@ class TestCheckBackgroundTaskResultExecute:
 
     async def test_unknown_task_id(self) -> None:
         tool = CheckBackgroundTaskResultTool()
-        mgr = BackgroundTaskManager()
+        mgr = BackgroundTaskSupervisor()
         result = await tool.execute(CheckBackgroundTaskResultInput(task_id="bg_x"), _ctx(mgr))
         assert result.is_error
         assert "bg_x" in result.output
 
     async def test_running_generic_tool_returns_progress_lines(self) -> None:
         tool = CheckBackgroundTaskResultTool()
-        mgr = BackgroundTaskManager()
+        mgr = BackgroundTaskSupervisor()
 
         async def slow() -> ToolResult:
             await asyncio.sleep(5)
@@ -193,7 +193,7 @@ class TestCheckBackgroundTaskResultExecute:
 
     async def test_finished_generic_tool_returns_full_output(self) -> None:
         tool = CheckBackgroundTaskResultTool()
-        mgr = BackgroundTaskManager()
+        mgr = BackgroundTaskSupervisor()
 
         async def fast() -> ToolResult:
             return ToolResult(output="x" * 5000)
@@ -211,7 +211,7 @@ class TestCheckBackgroundTaskResultExecute:
 
     async def test_subagent_finished_with_terminal_returns_findings(self) -> None:
         tool = CheckBackgroundTaskResultTool()
-        mgr = BackgroundTaskManager()
+        mgr = BackgroundTaskSupervisor()
 
         async def sub() -> ToolResult:
             return ToolResult(
@@ -233,7 +233,7 @@ class TestCheckBackgroundTaskResultExecute:
 
     async def test_subagent_finished_without_terminal_marked_failed(self) -> None:
         tool = CheckBackgroundTaskResultTool()
-        mgr = BackgroundTaskManager()
+        mgr = BackgroundTaskSupervisor()
 
         async def sub() -> ToolResult:
             return ToolResult(
@@ -301,21 +301,21 @@ class TestCancelBackgroundTaskExecute:
 
     async def test_rejects_all_sentinel(self) -> None:
         tool = CancelBackgroundTaskTool()
-        mgr = BackgroundTaskManager()
+        mgr = BackgroundTaskSupervisor()
         result = await tool.execute(CancelBackgroundTaskInput(task_id="all"), _ctx(mgr))
         assert result.is_error
         assert "does not support" in result.output
 
     async def test_unknown_task_id_returns_error(self) -> None:
         tool = CancelBackgroundTaskTool()
-        mgr = BackgroundTaskManager()
+        mgr = BackgroundTaskSupervisor()
         result = await tool.execute(CancelBackgroundTaskInput(task_id="bg_missing"), _ctx(mgr))
         assert result.is_error
         assert "bg_missing" in result.output
 
     async def test_subagent_cancel_reports_early_stop(self) -> None:
         tool = CancelBackgroundTaskTool()
-        mgr = BackgroundTaskManager()
+        mgr = BackgroundTaskSupervisor()
 
         async def _subagent() -> ToolResult:
             await asyncio.sleep(10)
@@ -334,18 +334,18 @@ class TestCancelBackgroundTaskExecute:
 
 
 # ---------------------------------------------------------------------------
-# BackgroundTaskManager — internal API not covered by test_background_tasks.py
+# BackgroundTaskSupervisor — internal API not covered by test_background_tasks.py
 # ---------------------------------------------------------------------------
 
 
-class TestBackgroundTaskManagerExtras:
+class TestBackgroundTaskSupervisorExtras:
     async def test_next_alias_is_monotonic(self) -> None:
-        mgr = BackgroundTaskManager()
+        mgr = BackgroundTaskSupervisor()
         ids = [mgr.next_alias() for _ in range(3)]
         assert ids == ["bg_1", "bg_2", "bg_3"]
 
     async def test_has_pending_reflects_running_state(self) -> None:
-        mgr = BackgroundTaskManager()
+        mgr = BackgroundTaskSupervisor()
 
         async def slow() -> ToolResult:
             await asyncio.sleep(5)
@@ -365,7 +365,7 @@ class TestBackgroundTaskManagerExtras:
 
 class TestLiveProgressTail:
     async def test_append_progress_buffers_running_lines(self) -> None:
-        mgr = BackgroundTaskManager()
+        mgr = BackgroundTaskSupervisor()
 
         async def slow() -> ToolResult:
             await asyncio.sleep(5)
@@ -382,11 +382,11 @@ class TestLiveProgressTail:
             await mgr.cancel(alias, "")
 
     async def test_append_progress_unknown_task_is_noop(self) -> None:
-        mgr = BackgroundTaskManager()
+        mgr = BackgroundTaskSupervisor()
         mgr.append_progress("bg_nope", "ignored")  # must not raise
 
     async def test_append_progress_after_finish_is_noop(self) -> None:
-        mgr = BackgroundTaskManager()
+        mgr = BackgroundTaskSupervisor()
 
         async def quick() -> ToolResult:
             return ToolResult(output="hi")
@@ -400,7 +400,7 @@ class TestLiveProgressTail:
         assert mgr._tasks[alias].progress_lines == before
 
     async def test_make_progress_callback_round_trip(self) -> None:
-        mgr = BackgroundTaskManager()
+        mgr = BackgroundTaskSupervisor()
 
         async def slow() -> ToolResult:
             await asyncio.sleep(5)
@@ -418,7 +418,7 @@ class TestLiveProgressTail:
 
     async def test_check_result_surfaces_live_tail_for_running(self) -> None:
         tool = CheckBackgroundTaskResultTool()
-        mgr = BackgroundTaskManager()
+        mgr = BackgroundTaskSupervisor()
 
         async def slow() -> ToolResult:
             await asyncio.sleep(5)
@@ -438,7 +438,7 @@ class TestLiveProgressTail:
 
     async def test_check_result_running_task_carries_start_stamp(self) -> None:
         tool = CheckBackgroundTaskResultTool()
-        mgr = BackgroundTaskManager()
+        mgr = BackgroundTaskSupervisor()
 
         async def slow() -> ToolResult:
             await asyncio.sleep(5)

@@ -31,7 +31,6 @@ _BOOT_T0 = monotonic_now()
 Handler = Callable[[dict[str, Any]], Any]
 
 OP_TABLE: dict[str, Handler] = {}
-PLUGIN_GATE_AUDIT_EVENTS: list[dict[str, Any]] = []
 
 
 def register_op(op: str, handler: Handler) -> None:
@@ -239,7 +238,6 @@ def _emit_plugin_gate_audit(op_name: str, agent_id: str) -> None:
         "type": "workspace_lifecycle.plugin_check_unbootstrapped",
         "payload": {"op": op_name, "agent_id": agent_id},
     }
-    PLUGIN_GATE_AUDIT_EVENTS.append(event)
     append_jsonl_event(os.environ.get("EOS_WORKSPACE_LIFECYCLE_AUDIT_PATH"), event)
 
 
@@ -344,7 +342,7 @@ async def _isolated_workspace_test_reset(args: dict[str, Any]) -> dict[str, Any]
 
 
 def _register_builtin_operations() -> None:
-    from sandbox.daemon import operation_handlers
+    from sandbox.daemon import builtin_operations
     from sandbox.ephemeral_workspace.plugin import runtime_api
 
     builtin_ops: dict[str, Handler] = {
@@ -353,30 +351,20 @@ def _register_builtin_operations() -> None:
         "api.isolated_workspace.status": _isolated_workspace_status,
         "api.isolated_workspace.list_open": _isolated_workspace_list_open,
         "api.isolated_workspace.test_reset": _isolated_workspace_test_reset,
-        "api.ensure_workspace_base": operation_handlers.ensure_workspace_base,
-        "api.build_workspace_base": operation_handlers.build_workspace_base,
-        "api.prepare_workspace_snapshot": operation_handlers.prepare_workspace_snapshot,
-        "api.release_lease": operation_handlers.release_lease,
-        "api.layer_stack.fence_stale_staging": operation_handlers.fence_stale_staging,
-        "api.edit_file": operation_handlers.edit_file,
-        "api.v1.edit_file": operation_handlers.edit_file,
-        "api.glob": operation_handlers.glob,
-        "api.v1.glob": operation_handlers.glob,
-        "api.grep": operation_handlers.grep,
-        "api.v1.grep": operation_handlers.grep,
-        "api.layer_metrics": operation_handlers.layer_metrics,
+        **builtin_operations.WORKSPACE_TOOL_OPS,
+        "api.ensure_workspace_base": builtin_operations.ensure_workspace_base,
+        "api.build_workspace_base": builtin_operations.build_workspace_base,
+        "api.prepare_workspace_snapshot": builtin_operations.prepare_workspace_snapshot,
+        "api.release_lease": builtin_operations.release_lease,
+        "api.layer_stack.fence_stale_staging": builtin_operations.fence_stale_staging,
+        "api.layer_metrics": builtin_operations.layer_metrics,
         "api.plugin.ensure": runtime_api.plugin_ensure,
         "api.plugin.status": runtime_api.plugin_status,
-        "api.read_file": operation_handlers.read_file,
-        "api.v1.read_file": operation_handlers.read_file,
-        "api.runtime.ready": operation_handlers.runtime_ready,
-        "api.v1.shell": operation_handlers.shell,
-        "api.v1.cancel": operation_handlers.cancel,
-        "api.v1.heartbeat": operation_handlers.heartbeat,
-        "api.v1.inflight_count": operation_handlers.inflight_count,
-        "api.workspace_binding": operation_handlers.workspace_binding,
-        "api.write_file": operation_handlers.write_file,
-        "api.v1.write_file": operation_handlers.write_file,
+        "api.runtime.ready": builtin_operations.runtime_ready,
+        "api.v1.cancel": builtin_operations.cancel,
+        "api.v1.heartbeat": builtin_operations.heartbeat,
+        "api.v1.inflight_count": builtin_operations.inflight_count,
+        "api.workspace_binding": builtin_operations.workspace_binding,
     }
     for op, handler in builtin_ops.items():
         register_op(op, handler)

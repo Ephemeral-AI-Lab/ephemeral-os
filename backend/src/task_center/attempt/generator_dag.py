@@ -9,7 +9,7 @@ from typing import Any
 from task_center._core.primitives import TaskCenterInvariantViolation
 from task_center._core.primitives import generator_task_id
 from task_center.task_state import (
-    TaskCenterTaskStatus,
+    TaskCenterBackgroundTaskStatus,
     PlannedGeneratorTask,
     TERMINAL_GENERATOR_STATUSES,
 )
@@ -71,9 +71,9 @@ TaskRecord = dict[str, Any]
 
 def generator_status_map(
     task_records: list[TaskRecord],
-) -> dict[str, TaskCenterTaskStatus]:
+) -> dict[str, TaskCenterBackgroundTaskStatus]:
     return {
-        task["id"]: TaskCenterTaskStatus(task["status"])
+        task["id"]: TaskCenterBackgroundTaskStatus(task["status"])
         for task in task_records
     }
 
@@ -82,7 +82,7 @@ def ready_pending_generator_ids(task_records: list[TaskRecord]) -> tuple[str, ..
     statuses = generator_status_map(task_records)
     ready: list[str] = []
     for task in task_records:
-        if statuses[task["id"]] != TaskCenterTaskStatus.PENDING:
+        if statuses[task["id"]] != TaskCenterBackgroundTaskStatus.PENDING:
             continue
         needs = tuple(task.get("needs") or ())
         missing = [dep for dep in needs if dep not in statuses]
@@ -91,7 +91,7 @@ def ready_pending_generator_ids(task_records: list[TaskRecord]) -> tuple[str, ..
                 f"Generator task {task['id']!r} has unknown persisted deps: "
                 f"{missing!r}"
             )
-        if all(statuses[dep] == TaskCenterTaskStatus.DONE for dep in needs):
+        if all(statuses[dep] == TaskCenterBackgroundTaskStatus.DONE for dep in needs):
             ready.append(task["id"])
     return tuple(ready)
 
@@ -103,12 +103,12 @@ class GeneratorDagState:
     any_failed_or_blocked: bool
 
 
-_FAILED_OR_BLOCKED = (TaskCenterTaskStatus.FAILED, TaskCenterTaskStatus.BLOCKED)
+_FAILED_OR_BLOCKED = (TaskCenterBackgroundTaskStatus.FAILED, TaskCenterBackgroundTaskStatus.BLOCKED)
 
 
 def _validate_persisted_deps(
     task_records: list[TaskRecord],
-    statuses: dict[str, TaskCenterTaskStatus],
+    statuses: dict[str, TaskCenterBackgroundTaskStatus],
 ) -> None:
     for task in task_records:
         missing = [dep for dep in task.get("needs") or () if dep not in statuses]
@@ -121,7 +121,7 @@ def _validate_persisted_deps(
 
 def _unreachable_pending_ids(
     task_records: list[TaskRecord],
-    statuses: dict[str, TaskCenterTaskStatus],
+    statuses: dict[str, TaskCenterBackgroundTaskStatus],
 ) -> frozenset[str]:
     """Pending tasks that cannot run because an upstream task failed or blocked."""
     by_id = {task["id"]: task for task in task_records}
@@ -135,7 +135,7 @@ def _unreachable_pending_ids(
             raise TaskCenterInvariantViolation(
                 f"Generator task dependency cycle reached persisted task {task_id!r}"
             )
-        if statuses[task_id] != TaskCenterTaskStatus.PENDING:
+        if statuses[task_id] != TaskCenterBackgroundTaskStatus.PENDING:
             memo[task_id] = False
             return False
 
@@ -147,7 +147,7 @@ def _unreachable_pending_ids(
                     memo[task_id] = True
                     return True
                 if (
-                    dep_status == TaskCenterTaskStatus.PENDING
+                    dep_status == TaskCenterBackgroundTaskStatus.PENDING
                     and is_unreachable(dep_id)
                 ):
                     memo[task_id] = True
@@ -160,7 +160,7 @@ def _unreachable_pending_ids(
     return frozenset(
         task_id
         for task_id, status in statuses.items()
-        if status == TaskCenterTaskStatus.PENDING and is_unreachable(task_id)
+        if status == TaskCenterBackgroundTaskStatus.PENDING and is_unreachable(task_id)
     )
 
 
@@ -179,11 +179,11 @@ def summarize_generator_dag(task_records: list[TaskRecord]) -> GeneratorDagState
         all_quiescent=all(
             status in TERMINAL_GENERATOR_STATUSES
             or (
-                status == TaskCenterTaskStatus.PENDING
+                status == TaskCenterBackgroundTaskStatus.PENDING
                 and task_id in unreachable_pending
             )
             for task_id, status in status_map.items()
         ),
-        all_done=all(s == TaskCenterTaskStatus.DONE for s in statuses),
+        all_done=all(s == TaskCenterBackgroundTaskStatus.DONE for s in statuses),
         any_failed_or_blocked=any(s in _FAILED_OR_BLOCKED for s in statuses),
     )

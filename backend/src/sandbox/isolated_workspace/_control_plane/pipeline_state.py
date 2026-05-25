@@ -8,7 +8,6 @@ import os
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import Enum
 from pathlib import Path
 from typing import Any, Literal, Protocol
 
@@ -99,14 +98,6 @@ class IsolatedWorkspaceError(Exception):
 
 class AuditSink(Protocol):
     def emit(self, event_type: str, payload: dict[str, Any]) -> None: ...
-
-
-class IsolatedWorkspaceAuditEvent(str, Enum):
-    ENTER = "sandbox_isolated_workspace_enter"
-    EXIT = "sandbox_isolated_workspace_exit"
-    TOOL_CALL = "sandbox_isolated_workspace_tool_call"
-    EVICTED = "sandbox_isolated_workspace_evicted"
-    GC_ORPHAN = "sandbox_isolated_workspace_gc_orphan"
 
 
 @dataclass

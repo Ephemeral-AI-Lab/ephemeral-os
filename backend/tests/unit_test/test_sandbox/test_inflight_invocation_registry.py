@@ -6,7 +6,7 @@ import asyncio
 
 import pytest
 
-from engine.background.manager import BackgroundTaskManager
+from engine.background.task_supervisor import BackgroundTaskSupervisor
 from sandbox.daemon.rpc.in_flight import InFlightInvocationRegistry
 from tools._framework.core.results import ToolResult
 
@@ -18,7 +18,7 @@ async def test_wire_cancel_precedes_local_task_cancel(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     events: list[str] = []
-    manager = BackgroundTaskManager()
+    manager = BackgroundTaskSupervisor()
 
     async def sandbox_cancel(sandbox_id: str, invocation_id: str) -> dict[str, object]:
         events.append(f"wire:{sandbox_id}:{invocation_id}")

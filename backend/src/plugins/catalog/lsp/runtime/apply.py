@@ -88,7 +88,7 @@ async def _apply_with_operation_overlay(
         publish = await publish_cycle(
             request=request,
             upperdir=str(handle.upperdir),
-            snapshot=handle.manifest,
+            snapshot=handle.snapshot_manifest,
             run_maintenance=True,
         )
         return _format_apply_result(

@@ -29,7 +29,7 @@ from engine.query.request import (
     build_query_run_request,
 )
 from engine.query.context import QueryContext, QueryExitReason
-from engine.background.manager import BackgroundTaskManager
+from engine.background.task_supervisor import BackgroundTaskSupervisor
 from engine.tool_call.context import prepare_tool_execution_context
 from notification import (
     SystemNotificationService,
@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 def _make_stream_dispatch_deferrer(
     context: QueryContext,
-    background_manager: BackgroundTaskManager | None,
+    background_tasks: BackgroundTaskSupervisor | None,
 ) -> Callable[[BaseTool | None, dict[str, Any] | None], bool]:
     """Build a per-stream `should_defer` predicate for `StreamingToolExecutor`.
 
@@ -59,7 +59,7 @@ def _make_stream_dispatch_deferrer(
     """
 
     def _defer(tool_def: BaseTool | None, tool_input: dict[str, Any] | None) -> bool:
-        if background_manager is not None and defer_background_dispatch(tool_def, tool_input):
+        if background_tasks is not None and defer_background_dispatch(tool_def, tool_input):
             return True
         if context.terminal_tools:
             return True
@@ -84,7 +84,7 @@ class _StreamRunState:
 
 def _initialize_loop_state(
     context: QueryContext,
-) -> tuple[BackgroundTaskManager | None, SystemNotificationService]:
+) -> tuple[BackgroundTaskSupervisor | None, SystemNotificationService]:
     """One-time setup before issuing the provider request."""
     if context.tool_metadata is None:
         context.tool_metadata = ExecutionMetadata()
@@ -100,10 +100,10 @@ def _initialize_loop_state(
 
     notification_service = ensure_system_notification_service(context.tool_metadata)
 
-    background_manager: BackgroundTaskManager | None = None
+    background_tasks: BackgroundTaskSupervisor | None = None
     if context.enable_background_tasks:
-        background_manager = BackgroundTaskManager()
-        context.tool_metadata.background_task_manager = background_manager
+        background_tasks = BackgroundTaskSupervisor()
+        context.tool_metadata.background_task_manager = background_tasks
 
     # Derive terminal tool names from the registry. Tools self-annotate via
     # ``is_terminal_tool=True``. The ``not pre-set`` guard lets test fixtures
@@ -117,12 +117,12 @@ def _initialize_loop_state(
             if tool.is_terminal_tool
         }
 
-    return background_manager, notification_service
+    return background_tasks, notification_service
 
 
 async def _build_stream_executor(
     context: QueryContext,
-    background_manager: BackgroundTaskManager | None,
+    background_tasks: BackgroundTaskSupervisor | None,
     messages: list[ConversationMessage],
 ) -> StreamingToolExecutor:
     """Build the streaming tool executor for this provider request."""
@@ -142,7 +142,7 @@ async def _build_stream_executor(
         context=execution_context,
         should_defer=_make_stream_dispatch_deferrer(
             context,
-            background_manager=background_manager,
+            background_tasks=background_tasks,
         ),
     )
     await prepare_tool_execution_context(context, execution_context)
@@ -207,7 +207,7 @@ async def _handle_tool_dispatch_branch(
     executor: StreamingToolExecutor,
     run_request: QueryRunRequest,
     state: _StreamRunState,
-    background_manager: BackgroundTaskManager | None,
+    background_tasks: BackgroundTaskSupervisor | None,
     notification_service: SystemNotificationService,
 ) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
     """Dispatch tool calls from the assistant message and append their results."""
@@ -220,7 +220,7 @@ async def _handle_tool_dispatch_branch(
         final_message,
         executor,
         streamed_tool_use_ids=state.streamed_tool_use_ids,
-        background_manager=background_manager,
+        background_tasks=background_tasks,
     )
     for event in dispatch.events:
         yield event, None
@@ -245,8 +245,8 @@ async def _handle_tool_dispatch_branch(
         and context.overshoot_units > tolerance
     ):
         context.exit_reason = QueryExitReason.RESOURCE_LIMIT
-        if background_manager is not None:
-            await background_manager.cancel_all()
+        if background_tasks is not None:
+            await background_tasks.cancel_all()
         # Keep the transcript well-formed: tool_use blocks in the assistant
         # message must be paired with tool_result blocks in the next user
         # message. ``dispatch_assistant_tools`` produces one tool_result per
@@ -282,11 +282,11 @@ async def _run_query_loop(
     context: QueryContext,
     messages: list[ConversationMessage],
 ) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
-    background_manager, notification_service = _initialize_loop_state(context)
+    background_tasks, notification_service = _initialize_loop_state(context)
 
     try:
         while True:
-            executor = await _build_stream_executor(context, background_manager, messages)
+            executor = await _build_stream_executor(context, background_tasks, messages)
 
             # Evaluate notification rules and drain any reminders into the
             # transcript before building the next provider request, so newly-
@@ -370,7 +370,7 @@ async def _run_query_loop(
                 executor,
                 run_request,
                 state,
-                background_manager,
+                background_tasks,
                 notification_service,
             ):
                 yield event, event_usage
@@ -381,8 +381,8 @@ async def _run_query_loop(
             }:
                 break
     finally:
-        if background_manager is not None and background_manager.has_pending():
-            await background_manager.cancel_all()
+        if background_tasks is not None and background_tasks.has_pending():
+            await background_tasks.cancel_all()
 
 
 async def run_query(

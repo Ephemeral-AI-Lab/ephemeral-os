@@ -36,14 +36,14 @@ from task_center.entry.sandbox_bridge import (
 )
 from task_center.goal.starter import GoalStarter
 from task_center.goal.state import GoalOrigin
-from task_center.iteration import IterationManagerRegistry
+from task_center.iteration import OpenIterationCoordinatorRegistry
 
 if TYPE_CHECKING:
     from runtime.app_factory import RuntimeConfig
 
 
 @dataclass(frozen=True, slots=True)
-class TaskCenterRunHandle:
+class TaskCenterEntryHandle:
     request_id: str
     task_center_run_id: str
     binding: TaskCenterSandboxBinding
@@ -70,7 +70,7 @@ def start_task_center_run(
     runner: AttemptAgentRunner | None = None,
     context_packet_store: ContextPacketStore | None = None,
     sandbox_bridge: TaskCenterSandboxBridge | None = None,
-) -> TaskCenterRunHandle:
+) -> TaskCenterEntryHandle:
     """Start a TaskCenter run by converting *prompt* into the first Goal."""
     return TaskCenterEntry(
         config=config,
@@ -117,7 +117,7 @@ class TaskCenterEntry:
         self._context_packet_store = context_packet_store
         self._sandbox_bridge = sandbox_bridge or TaskCenterSandboxBridge()
 
-    def start(self) -> TaskCenterRunHandle:
+    def start(self) -> TaskCenterEntryHandle:
         _assert_stores_ready(
             task_store=self._task_store,
             goal_store=self._goal_store,
@@ -125,8 +125,8 @@ class TaskCenterEntry:
             attempt_store=self._attempt_store,
         )
         request_id, run_id, binding = self._create_top_level_run()
-        manager_registry = IterationManagerRegistry()
-        runtime, launcher = self._create_runtime(manager_registry=manager_registry)
+        iteration_coordinators = OpenIterationCoordinatorRegistry()
+        runtime, launcher = self._create_runtime(iteration_coordinators=iteration_coordinators)
 
         try:
             started = GoalStarter(runtime=runtime).start(
@@ -137,7 +137,7 @@ class TaskCenterEntry:
             self._finish_run_if_open(run_id, status="failed")
             raise
 
-        return TaskCenterRunHandle(
+        return TaskCenterEntryHandle(
             request_id=request_id,
             task_center_run_id=run_id,
             binding=binding,
@@ -168,7 +168,7 @@ class TaskCenterEntry:
         return request_id, run_id, binding
 
     def _create_runtime(
-        self, *, manager_registry: IterationManagerRegistry
+        self, *, iteration_coordinators: OpenIterationCoordinatorRegistry
     ) -> tuple[AttemptDeps, EphemeralAttemptAgentLauncher]:
         runtime_ref: AttemptDeps | None = None
         launcher = EphemeralAttemptAgentLauncher(
@@ -185,7 +185,7 @@ class TaskCenterEntry:
             task_store=self._task_store,
             agent_launcher=launcher,
             orchestrator_registry=AttemptOrchestratorRegistry(),
-            manager_registry=manager_registry,
+            iteration_coordinators=iteration_coordinators,
             lifecycle_config=TaskCenterLifecycleConfig(),
             composer=self._build_composer(),
         )

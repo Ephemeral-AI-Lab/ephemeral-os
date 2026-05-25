@@ -13,7 +13,7 @@ Plan shape::
            g         (final — waits for both e AND f)
 
 Exercises ``ready_pending_generator_ids`` against a non-trivial DAG: the
-dispatcher must (i) honour multi-parent fan-in (d waits on both b and c, g on
+task dispatcher must (i) honour multi-parent fan-in (d waits on both b and c, g on
 both e and f) and (ii) launch siblings (b/c, e/f) in parallel as soon as
 their shared upstream completes.
 
@@ -46,7 +46,7 @@ def _mixed_topology_plan() -> dict[str, Any]:
         ),
         "evaluation_criteria": [
             "All seven preflight nodes completed.",
-            "Multi-parent dependencies were honoured by the dispatcher.",
+            "Multi-parent dependencies were honoured by the task dispatcher.",
         ],
         "tasks": [
             {"id": "a", "agent_name": "executor", "deps": []},
@@ -62,7 +62,7 @@ def _mixed_topology_plan() -> dict[str, Any]:
 
 
 class DependencyDagMixed(ScenarioBase):
-    """Mixed serial + parallel DAG; dispatcher honours fan-in semantics."""
+    """Mixed serial + parallel DAG; task dispatcher honours fan-in semantics."""
 
     name = "pipeline.dependency_dag_mixed"
     expected_event_sequence: tuple[EventType, ...] = (

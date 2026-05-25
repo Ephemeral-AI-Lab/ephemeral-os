@@ -48,7 +48,7 @@ class _FakeOverlay:
             manifest_key="hash@1",
             manifest_version=1,
             root_hash="hash",
-            manifest=SimpleNamespace(version=1),
+            snapshot_manifest=SimpleNamespace(version=1),
             layer_paths=("/layers/one",),
             run_dir=run_dir.as_posix(),
             upperdir=upperdir.as_posix(),

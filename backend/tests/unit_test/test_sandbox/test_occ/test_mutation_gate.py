@@ -21,7 +21,7 @@ from sandbox.daemon import occ_runtime_services
 # ---------------------------------------------------------------------------
 def test_occ_server_module_does_not_classify_paths() -> None:
     """occ-server must not own the in-workspace classifier — single source of
-    truth lives on command-exec (operation_handlers/operation_payloads.py)."""
+    truth lives on daemon built-ins (builtin_operations/operation_payloads.py)."""
     occ_server_source = Path(occ_runtime_services.__file__).read_text()
 
     assert ".workspace_root" not in occ_server_source
@@ -63,8 +63,7 @@ async def test_cas_retry_loop_bounded_under_no_contention(
     retry loop turning into a busy spin."""
     import asyncio
 
-    from sandbox.daemon import occ_runtime_services
-    from sandbox.daemon import operation_handlers as write
+    from sandbox.daemon import builtin_operations, occ_runtime_services
     from sandbox.layer_stack.workspace_base import build_workspace_base
 
     occ_runtime_services.clear_occ_runtime_services()
@@ -85,7 +84,7 @@ async def test_cas_retry_loop_bounded_under_no_contention(
     )
 
     result = await asyncio.wait_for(
-        write.write_file(
+        builtin_operations.WORKSPACE_TOOL_HANDLERS["write_file"](
             {
                 "layer_stack_root": stack.as_posix(),
                 "path": "ok.txt",
@@ -110,8 +109,7 @@ async def test_cas_retry_exhaustion_returns_conflict_result(
     from sandbox.layer_stack.manifest import ManifestConflictError
     from sandbox.layer_stack.workspace_base import build_workspace_base
     from sandbox.occ.commit_queue import MAX_OCC_CAS_RETRIES
-    from sandbox.daemon import occ_runtime_services
-    from sandbox.daemon import operation_handlers as write
+    from sandbox.daemon import builtin_operations, occ_runtime_services
 
     occ_runtime_services.clear_occ_runtime_services()
     workspace = tmp_path / "ws"
@@ -143,7 +141,7 @@ async def test_cas_retry_exhaustion_returns_conflict_result(
     publisher.publish_layer = always_cas_mismatch  # type: ignore[method-assign]
     try:
         result = await asyncio.wait_for(
-            write.write_file(
+            builtin_operations.WORKSPACE_TOOL_HANDLERS["write_file"](
                 {
                     "layer_stack_root": stack.as_posix(),
                     "path": "ok.txt",

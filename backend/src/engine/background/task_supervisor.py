@@ -1,4 +1,4 @@
-"""Background task manager for async tool execution."""
+"""Background task lifecycle supervision for async tool execution."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 _HEARTBEAT_INTERVAL_S = float(os.environ.get("EOS_BACKGROUND_HEARTBEAT_INTERVAL_S", "60"))
 
 
-# Terminal status precedence used by :meth:`BackgroundTaskManager._set_terminal_status`.
+# Terminal status precedence used by :meth:`BackgroundTaskSupervisor._set_terminal_status`.
 # A status with a *higher* precedence overwrites a lower one; otherwise the
 # attempt is dropped. This is the single-terminal-status latch the plan
 # requires (Pre-mortem #6): cancel + natural-completion races resolve to
@@ -40,13 +40,13 @@ _TERMINAL_PRECEDENCE: dict[str, int] = {
 }
 
 
-class TaskStatus(StrEnum):
+class BackgroundTaskStatus(StrEnum):
     """Lifecycle states for a tracked background task.
 
     Transitions:
         RUNNING -> {COMPLETED, FAILED, CANCELLED} -> DELIVERED
 
-    Only :meth:`BackgroundTaskManager.collect_completed` advances a task
+    Only :meth:`BackgroundTaskSupervisor.collect_completed` advances a task
     from a terminal state (COMPLETED/FAILED/CANCELLED) to DELIVERED.
     """
 
@@ -58,15 +58,19 @@ class TaskStatus(StrEnum):
 
 
 # Terminal states that are still "undelivered" and waiting for the engine
-# to pick them up via :meth:`BackgroundTaskManager.collect_completed`.
-_TERMINAL_UNDELIVERED: frozenset[TaskStatus] = frozenset(
-    {TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED}
+# to pick them up via :meth:`BackgroundTaskSupervisor.collect_completed`.
+_TERMINAL_UNDELIVERED: frozenset[BackgroundTaskStatus] = frozenset(
+    {
+        BackgroundTaskStatus.COMPLETED,
+        BackgroundTaskStatus.FAILED,
+        BackgroundTaskStatus.CANCELLED,
+    }
 )
 
 
 @dataclass
-class TrackedBackgroundTask:
-    """A background task tracked by the manager."""
+class BackgroundTaskRecord:
+    """In-memory record for one engine-owned background task."""
 
     task_id: str
     tool_name: str
@@ -82,11 +86,11 @@ class TrackedBackgroundTask:
     uses_sandbox: bool = False
     sandbox_id: str | None = None
     sandbox_invocation_id: str | None = None
-    status: TaskStatus = TaskStatus.RUNNING
+    status: BackgroundTaskStatus = BackgroundTaskStatus.RUNNING
     # Reason captured by cancel(); kept on the tracked task so callers (and
     # the subagent finaliser) can persist it to the audit record.
     cancel_reason: str | None = None
-    # Cancellation / stop mode requested by the manager. Ordinary tools use
+    # Cancellation / stop mode requested by the supervisor. Ordinary tools use
     # "cancel"; subagents may use "early_stop" so the task can salvage a
     # partial result before reaching a terminal state.
     stop_mode: str | None = None
@@ -105,15 +109,15 @@ class TrackedBackgroundTask:
     _terminal_lock: threading.Lock = field(default_factory=threading.Lock)
 
 
-class BackgroundTaskManager:
-    """Manages async background tasks launched by the query loop.
+class BackgroundTaskSupervisor:
+    """Supervise async background tasks launched by the query loop.
 
-    This is dumb plumbing -- no error detection, no auto-cancel, no alerts.
+    This is dumb plumbing: no error detection, no auto-cancel, no alerts.
     The LLM is the decision-maker.
     """
 
     def __init__(self) -> None:
-        self._tasks: dict[str, TrackedBackgroundTask] = {}
+        self._tasks: dict[str, BackgroundTaskRecord] = {}
         self._alias_counter: int = 0
         self._heartbeat_task: asyncio.Task[None] | None = None
 
@@ -141,7 +145,7 @@ class BackgroundTaskManager:
     ) -> BackgroundTaskStarted:
         """Launch *coro* as a background task and return a started event."""
         asyncio_task = asyncio.create_task(coro)
-        tracked = TrackedBackgroundTask(
+        tracked = BackgroundTaskRecord(
             task_id=task_id,
             tool_name=tool_name,
             tool_input=tool_input,
@@ -162,21 +166,21 @@ class BackgroundTaskManager:
                 if task.cancelled():
                     self._set_terminal_status(
                         tracked,
-                        new_status=TaskStatus.CANCELLED,
+                        new_status=BackgroundTaskStatus.CANCELLED,
                         new_result=ToolResult(output="Cancelled", is_error=True),
                     )
                 elif task.exception() is not None:
                     exc = task.exception()
                     self._set_terminal_status(
                         tracked,
-                        new_status=TaskStatus.FAILED,
+                        new_status=BackgroundTaskStatus.FAILED,
                         new_result=ToolResult(output=str(exc), is_error=True),
                     )
                 else:
                     real_result = task.result()
                     applied = self._set_terminal_status(
                         tracked,
-                        new_status=TaskStatus.COMPLETED,
+                        new_status=BackgroundTaskStatus.COMPLETED,
                         new_result=real_result,
                     )
                     if applied:
@@ -185,7 +189,7 @@ class BackgroundTaskManager:
                 logger.debug("done_callback failed for %s: %s", tracked.task_id, exc)
                 self._set_terminal_status(
                     tracked,
-                    new_status=TaskStatus.FAILED,
+                    new_status=BackgroundTaskStatus.FAILED,
                     new_result=ToolResult(
                         output="Unknown error in done callback",
                         is_error=True,
@@ -207,38 +211,44 @@ class BackgroundTaskManager:
             tool_input=tool_input,
         )
 
-    def collect_completed(self) -> list[TrackedBackgroundTask]:
+    def collect_completed(self) -> list[BackgroundTaskRecord]:
         """Return tasks that finished but haven't been delivered yet.
 
         Each returned task is marked as ``delivered`` so it won't be
         returned again. This is the *only* method that performs the
         terminal → delivered transition.
         """
-        ready: list[TrackedBackgroundTask] = []
+        ready: list[BackgroundTaskRecord] = []
         for tracked in self._tasks.values():
             if tracked.status in _TERMINAL_UNDELIVERED:
-                tracked.status = TaskStatus.DELIVERED
+                tracked.status = BackgroundTaskStatus.DELIVERED
                 ready.append(tracked)
         return ready
 
-    def iter_all(self) -> Iterator[TrackedBackgroundTask]:
-        """Iterate every task the manager has ever tracked."""
+    def iter_all(self) -> Iterator[BackgroundTaskRecord]:
+        """Iterate every task the supervisor has ever tracked."""
         return iter(self._tasks.values())
 
-    def iter_running(self) -> Iterator[TrackedBackgroundTask]:
+    def iter_running(self) -> Iterator[BackgroundTaskRecord]:
         """Iterate tasks that are still running."""
-        return (t for t in self._tasks.values() if t.status == TaskStatus.RUNNING)
+        return (
+            task
+            for task in self._tasks.values()
+            if task.status == BackgroundTaskStatus.RUNNING
+        )
 
     def has_pending(self) -> bool:
         """Return True if any task is still running."""
-        return any(t.status == TaskStatus.RUNNING for t in self._tasks.values())
+        return any(
+            task.status == BackgroundTaskStatus.RUNNING for task in self._tasks.values()
+        )
 
     def count_by_agent(self, agent_id: str) -> int:
         """Return running sandbox-bound background task count for one agent."""
         return sum(
             1
             for tracked in self._tasks.values()
-            if tracked.status == TaskStatus.RUNNING
+            if tracked.status == BackgroundTaskStatus.RUNNING
             and tracked.uses_sandbox
             and tracked.agent_id == agent_id
         )
@@ -247,13 +257,13 @@ class BackgroundTaskManager:
         """Append a live progress line for *task_id*.
 
         Used by streaming-capable tools to push incremental output into the
-        manager so that ``check_background_task_result`` can return a live tail
-        while the task is still running. Splits *line* on newlines so the
+        supervisor so that ``check_background_task_result`` can return a live
+        tail while the task is still running. Splits *line* on newlines so the
         caller can pass either a single line or a chunk of multiple lines.
         No-op if the task is unknown or already finished.
         """
         tracked = self._tasks.get(task_id)
-        if tracked is None or tracked.status != TaskStatus.RUNNING:
+        if tracked is None or tracked.status != BackgroundTaskStatus.RUNNING:
             return
         for piece in str(line).splitlines() or [""]:
             tracked.progress_lines.append(piece)
@@ -274,7 +284,7 @@ class BackgroundTaskManager:
 
         Convenience for wiring into a tool's execution context — the tool
         can call ``ctx['on_progress_line']('hello')`` without ever
-        knowing about the manager.
+        knowing about the supervisor.
         """
         return lambda line: self.append_progress(task_id, line)
 
@@ -301,7 +311,7 @@ class BackgroundTaskManager:
         msg = f"Cancelled: {reason}" if reason else "Cancelled"
         applied = self._set_terminal_status(
             tracked,
-            new_status=TaskStatus.CANCELLED,
+            new_status=BackgroundTaskStatus.CANCELLED,
             new_result=ToolResult(output=msg, is_error=True),
         )
         if applied:
@@ -318,17 +328,24 @@ class BackgroundTaskManager:
         targets = [
             tracked
             for tracked in self._tasks.values()
-            if tracked.status == TaskStatus.RUNNING
+            if tracked.status == BackgroundTaskStatus.RUNNING
             and tracked.uses_sandbox
             and tracked.agent_id == agent_id
         ]
         if not targets:
             return 0
         await asyncio.gather(
-            *(self.cancel(tracked.task_id, reason="isolated_workspace_exit") for tracked in targets),
+            *(
+                self.cancel(tracked.task_id, reason="isolated_workspace_exit")
+                for tracked in targets
+            ),
             return_exceptions=True,
         )
-        pending = [tracked.asyncio_task for tracked in targets if not tracked.asyncio_task.done()]
+        pending = [
+            tracked.asyncio_task
+            for tracked in targets
+            if not tracked.asyncio_task.done()
+        ]
         if pending and grace_s > 0:
             _, still_pending = await asyncio.wait(pending, timeout=grace_s)
             pending = list(still_pending)
@@ -336,7 +353,7 @@ class BackgroundTaskManager:
             task.cancel()
         return len([task for task in pending if not task.done()])
 
-    def get_task(self, task_id: str) -> TrackedBackgroundTask | None:
+    def get_task(self, task_id: str) -> BackgroundTaskRecord | None:
         """Return the tracked task for *task_id* (or None)."""
         return self._tasks.get(task_id)
 
@@ -344,12 +361,12 @@ class BackgroundTaskManager:
         """Cancel all running tasks. Called on query loop exit."""
         cancelled_tasks: list[asyncio.Task[ToolResult]] = []
         for tracked in self._tasks.values():
-            if tracked.status != TaskStatus.RUNNING:
+            if tracked.status != BackgroundTaskStatus.RUNNING:
                 continue
             tracked.stop_mode = "cancel"
             applied = self._set_terminal_status(
                 tracked,
-                new_status=TaskStatus.CANCELLED,
+                new_status=BackgroundTaskStatus.CANCELLED,
                 new_result=ToolResult(output="Cancelled", is_error=True),
             )
             if applied:
@@ -364,9 +381,9 @@ class BackgroundTaskManager:
 
     def _set_terminal_status(
         self,
-        tracked: TrackedBackgroundTask,
+        tracked: BackgroundTaskRecord,
         *,
-        new_status: TaskStatus,
+        new_status: BackgroundTaskStatus,
         new_result: ToolResult | None,
     ) -> bool:
         """CAS one terminal-status transition. Returns ``True`` if applied.
@@ -387,8 +404,12 @@ class BackgroundTaskManager:
                 tracked.result = new_result
             return True
 
-    async def _wire_cancel_if_sandbox_bound(self, tracked: TrackedBackgroundTask) -> None:
-        if not tracked.uses_sandbox or not tracked.sandbox_id or not tracked.sandbox_invocation_id:
+    async def _wire_cancel_if_sandbox_bound(self, tracked: BackgroundTaskRecord) -> None:
+        if (
+            not tracked.uses_sandbox
+            or not tracked.sandbox_id
+            or not tracked.sandbox_invocation_id
+        ):
             return
         try:
             import sandbox.api as sandbox_api
@@ -443,7 +464,7 @@ class BackgroundTaskManager:
         by_sandbox: dict[str, list[str]] = {}
         for tracked in self._tasks.values():
             if (
-                tracked.status == TaskStatus.RUNNING
+                tracked.status == BackgroundTaskStatus.RUNNING
                 and tracked.uses_sandbox
                 and tracked.sandbox_id
                 and tracked.sandbox_invocation_id
