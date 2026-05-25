@@ -67,9 +67,7 @@ class XmlPromptRenderer:
 
     def render_context(self, packet: ContextPacket) -> str:
         """Render world-state context."""
-        kept_blocks = self._compress(
-            list(packet.blocks), budget=self._budget_from(packet)
-        )
+        kept_blocks = self._compress(list(packet.blocks), budget=self._budget_from(packet))
         self._validate_no_structural_closers(kept_blocks)
         sections = self._render_blocks(kept_blocks)
         body = "\n\n".join(s for s in sections if s)
@@ -96,10 +94,7 @@ class XmlPromptRenderer:
             group_id = block.metadata.get("group_id")
             if group_id:
                 group: list[ContextBlock] = []
-                while (
-                    index < len(blocks)
-                    and blocks[index].metadata.get("group_id") == group_id
-                ):
+                while index < len(blocks) and blocks[index].metadata.get("group_id") == group_id:
                     group.append(blocks[index])
                     index += 1
                 out.append(self._render_group(group))
@@ -127,14 +122,11 @@ class XmlPromptRenderer:
             child_tag = block.metadata.get("child_tag") or _DEFAULT_TAGS.get(block.kind)
             if child_tag is None:
                 raise ContextEngineError(
-                    f"No tag mapping for kind {block.kind!r} "
-                    f"(grouped under {group_tag!r})"
+                    f"No tag mapping for kind {block.kind!r} (grouped under {group_tag!r})"
                 )
             child_attrs = block.metadata.get("attrs", "")
             children.append(
-                f"<{child_tag}{_attrs_suffix(child_attrs)}>\n"
-                f"{block.text}\n"
-                f"</{child_tag}>"
+                f"<{child_tag}{_attrs_suffix(child_attrs)}>\n{block.text}\n</{child_tag}>"
             )
         return (
             f"<{group_tag}{_attrs_suffix(group_attrs)}>\n"
@@ -145,14 +137,10 @@ class XmlPromptRenderer:
     def _tag_for(self, block: ContextBlock) -> str:
         tag = block.metadata.get("tag") or _DEFAULT_TAGS.get(block.kind)
         if tag is None:
-            raise ContextEngineError(
-                f"No tag mapping for kind {block.kind!r}"
-            )
+            raise ContextEngineError(f"No tag mapping for kind {block.kind!r}")
         return tag
 
-    def _validate_no_structural_closers(
-        self, blocks: list[ContextBlock]
-    ) -> None:
+    def _validate_no_structural_closers(self, blocks: list[ContextBlock]) -> None:
         """Reject any block whose text contains a structural tag-closer.
 
         Computes the set of closers the renderer could emit for this packet
@@ -209,11 +197,7 @@ class XmlPromptRenderer:
             if running <= budget:
                 break
             droppable = sorted(
-                (
-                    (idx, b)
-                    for idx, b in enumerate(kept)
-                    if b.priority == drop_priority
-                ),
+                ((idx, b) for idx, b in enumerate(kept) if b.priority == drop_priority),
                 key=lambda pair: -_estimate_tokens(pair[1].text),
             )
             for idx, block in droppable:
@@ -232,10 +216,7 @@ def _attrs_suffix(attrs: str) -> str:
 
 def _truncate(block: ContextBlock) -> ContextBlock:
     if block.source_id:
-        text = (
-            f"({block.kind}: see source {block.source_id} — "
-            f"truncated for token budget)"
-        )
+        text = f"({block.kind}: see source {block.source_id} — truncated for token budget)"
     else:
         text = f"({block.kind}: … truncated for token budget)"
     return block.model_copy(update={"text": text})

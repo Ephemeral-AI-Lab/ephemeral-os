@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+from dataclasses import dataclass
 from typing import Any
 
 from message import (
@@ -19,11 +20,19 @@ from tools import (
 _BACKGROUND_SNAPSHOT_TOOLS: frozenset[str] = frozenset({"wait_background_tasks"})
 _REDUCIBLE_RUNNING_STATUSES: frozenset[str] = frozenset({"running"})
 _REDUCIBLE_TERMINAL_STATUSES: frozenset[str] = frozenset(
-    {"completed", "failed", "cancelled", "delivered"}
+    {"completed", "failed", "cancelled", "delivered", "finished"}
 )
 _REDUCIBLE_STATUSES: frozenset[str] = (
     _REDUCIBLE_RUNNING_STATUSES | _REDUCIBLE_TERMINAL_STATUSES
 )
+
+
+@dataclass(frozen=True)
+class _BackgroundSnapshot:
+    kind: str
+    scope: str
+    statuses: list[dict[str, Any]]
+    elapsed_seconds: int | float | None
 
 
 def reduce_background_task_history(
@@ -50,7 +59,7 @@ def reduce_background_task_history(
             if snapshot is None:
                 continue
             snapshot_tool_use_ids.add(block.tool_use_id)
-            for status_idx, entry in enumerate(snapshot["statuses"]):
+            for status_idx, entry in enumerate(snapshot.statuses):
                 task_id = entry.get("task_id")
                 status = entry.get("status")
                 if not isinstance(task_id, str) or status not in _REDUCIBLE_STATUSES:
@@ -91,20 +100,20 @@ def reduce_background_task_history(
                     continue
                 filtered = [
                     copy.deepcopy(status)
-                    for idx, status in enumerate(snapshot["statuses"])
+                    for idx, status in enumerate(snapshot.statuses)
                     if idx in keep_indexes
                 ]
                 rebuilt = block.model_copy(deep=True)
                 rebuilt.content = render_background_snapshot(
-                    snapshot["kind"],
+                    snapshot.kind,
                     filtered,
-                    elapsed_seconds=snapshot["elapsed_seconds"],
+                    elapsed_seconds=snapshot.elapsed_seconds,
                 )
                 rebuilt.metadata = build_background_snapshot_metadata(
-                    snapshot["kind"],
-                    snapshot["scope"],
+                    snapshot.kind,
+                    snapshot.scope,
                     filtered,
-                    elapsed_seconds=snapshot["elapsed_seconds"],
+                    elapsed_seconds=snapshot.elapsed_seconds,
                 )
                 new_content.append(rebuilt)
                 continue
@@ -119,7 +128,7 @@ def reduce_background_task_history(
 def _background_snapshot_info(
     block: ToolResultBlock,
     tool_use_map: dict[str, tuple[int, int, str]],
-) -> dict[str, Any] | None:
+) -> _BackgroundSnapshot | None:
     if not block.metadata:
         return None
     snapshot = block.metadata.get("background_snapshot")
@@ -131,17 +140,22 @@ def _background_snapshot_info(
     statuses = snapshot.get("statuses")
     kind = snapshot.get("kind")
     scope = snapshot.get("scope")
-    if not isinstance(statuses, list) or not isinstance(kind, str) or not isinstance(scope, str):
+    if (
+        not isinstance(statuses, list)
+        or not all(isinstance(status, dict) for status in statuses)
+        or not isinstance(kind, str)
+        or not isinstance(scope, str)
+    ):
         return None
     elapsed = snapshot.get("elapsed_seconds")
     if not isinstance(elapsed, (int, float)):
         elapsed = None
-    return {
-        "kind": kind,
-        "scope": scope,
-        "statuses": statuses,
-        "elapsed_seconds": elapsed,
-    }
+    return _BackgroundSnapshot(
+        kind=kind,
+        scope=scope,
+        statuses=statuses,
+        elapsed_seconds=elapsed,
+    )
 
 
 __all__ = ["reduce_background_task_history"]

@@ -33,15 +33,17 @@ PLANNER_ID = "planner"
 _REQUIRED_FIELDS = frozenset({"goal_id", "iteration_id", "attempt_id"})
 
 
-def _planner_build(
-    scope: ContextScope, deps: ContextEngineDeps
-) -> ContextPacket:
-    goal = deps.goal_store.get(scope.goal_id)
+def _planner_build(scope: ContextScope, deps: ContextEngineDeps) -> ContextPacket:
+    goal_id = scope.require_field("goal_id")
+    iteration_id = scope.require_field("iteration_id")
+    attempt_id = scope.require_field("attempt_id")
+
+    goal = deps.goal_store.get(goal_id)
     if goal is None:
-        raise ContextEngineError(f"Goal {scope.goal_id!r} not found")
-    iteration = deps.iteration_store.get(scope.iteration_id)
+        raise ContextEngineError(f"Goal {goal_id!r} not found")
+    iteration = deps.iteration_store.get(iteration_id)
     if iteration is None:
-        raise ContextEngineError(f"Iteration {scope.iteration_id!r} not found")
+        raise ContextEngineError(f"Iteration {iteration_id!r} not found")
 
     blocks = goal_iteration_blocks(
         goal=goal,
@@ -50,7 +52,7 @@ def _planner_build(
     )
     blocks.extend(
         failed_attempt_blocks(
-            current_attempt_id=scope.attempt_id,
+            current_attempt_id=attempt_id,
             iteration=iteration,
             attempts=deps.attempt_store.list_for_iteration(iteration.id),
             task_store=deps.task_store,
@@ -59,11 +61,11 @@ def _planner_build(
 
     return ContextPacket(
         target_role="planner",
-        target_id=scope.attempt_id,
+        target_id=attempt_id,
         canonical_refs=ContextRefs(
             goal_id=goal.id,
             iteration_id=iteration.id,
-            attempt_id=scope.attempt_id,
+            attempt_id=attempt_id,
         ),
         blocks=blocks,
         source_ids=[b.source_id for b in blocks if b.source_id],

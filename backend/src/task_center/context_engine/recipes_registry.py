@@ -45,8 +45,7 @@ class RecipeRegistry:
             return cls._registry[key]
         except KeyError as exc:
             raise ContextEngineError(
-                f"RecipeRegistry: {key!r} is not registered. "
-                f"Known: {sorted(cls._registry)!r}"
+                f"RecipeRegistry: {key!r} is not registered. Known: {sorted(cls._registry)!r}"
             ) from exc
 
     @classmethod

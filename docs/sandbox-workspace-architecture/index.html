@@ -32,9 +32,52 @@
 <h1>EphemeralOS Sandbox Workspace Architecture</h1>
 <p class="lead">Current code-backed guide to <code>backend/src/sandbox</code>, focused on LayerStack, overlay, OCC, workspace modes, daemon/background handling, provider adapters, and ephemeral-workspace plugins.</p>
 <div class="callout">
-  <span class="label">Navigation</span>
-  This split version keeps the section names from the original HTML file and uses one complete static page per top-level section. It works from <code>file://</code>; JavaScript only enhances search and active-link highlighting.
+  <span class="label">Wiki Contract</span>
+  This directory is the maintained wiki layer over the sandbox source tree. The code checkout is the raw source of truth; these pages synthesize structure, workflows, invariants, and backlinks so a future reader does not have to rediscover the architecture from scratch.
 </div>
+
+<div class="inline-kv">
+  <div>Raw sources</div><div><code>backend/src/sandbox</code>, <code>backend/src/tools</code>, provider adapters, plugin runtime code, tests, and live artifacts.</div>
+  <div>Wiki pages</div><div>One concept page per stable architecture node, with Obsidian-style links such as <a class="wiki-link" href="workspaces.html#isolated-workspace">[[isolated_workspace]]</a> and <a class="wiki-link" href="workflow-cookbook.html#cookbook-occ-publish">[[OCC Publish]]</a>.</div>
+  <div>Schema</div><div>Every page should separate durable invariants, current workflow, ownership boundary, code evidence, and backlinks. Search index entries should be updated when a new section becomes a useful query target.</div>
+  <div>Maintenance loop</div><div>When code changes, update the smallest affected node, then update nearby backlinks and the search catalog. Do not bury contradictions: link the newer evidence and explain the mismatch.</div>
+</div>
+
+<h2 id="reading-paths">Reading Paths <a class="anchor" href="#reading-paths">§</a></h2>
+<div class="wiki-map">
+  <div class="wiki-node">
+    <strong>Fast orientation</strong>
+    <p>Start with the stable mental model, then jump to the workflow cookbook when debugging a real request.</p>
+    <div class="wiki-links"><a href="overview.html">[[Overview]]</a><a href="workflow-cookbook.html">[[Workflow Cookbook]]</a></div>
+  </div>
+  <div class="wiki-node">
+    <strong>Storage and publish</strong>
+    <p>Use this path when asking where bytes live, when a write becomes durable, or why conflicts happen.</p>
+    <div class="wiki-links"><a href="layerstack.html">[[LayerStack]]</a><a href="overlay.html">[[Overlay]]</a><a href="occ.html">[[OCC]]</a></div>
+  </div>
+  <div class="wiki-node">
+    <strong>Execution mode</strong>
+    <p>Use this path when deciding whether a call runs direct, through a per-call overlay, or inside private scratch.</p>
+    <div class="wiki-links"><a href="workspaces.html">[[Workspace Modes]]</a><a href="daemon.html#workspace-routing-and-state">[[Workspace Routing]]</a><a href="space-model.html">[[Space Model]]</a></div>
+  </div>
+  <div class="wiki-node">
+    <strong>Daemon and background</strong>
+    <p>Use this path for startup, transport, operation registration, cancellation, heartbeats, and isolated-entry gates.</p>
+    <div class="wiki-links"><a href="daemon.html">[[Daemon and Background Tasks]]</a><a href="daemon.html#request-lifecycle">[[Request Lifecycle]]</a><a href="daemon.html#isolated-background-gate">[[Isolated Background Gate]]</a></div>
+  </div>
+  <div class="wiki-node">
+    <strong>Provider boundary</strong>
+    <p>Use this path for Docker/Daytona lifecycle, runtime bundle upload, daemon bootstrap, and workspace base setup.</p>
+    <div class="wiki-links"><a href="provider.html">[[Provider]]</a><a href="daemon.html#startup-transport">[[Startup and Transport]]</a></div>
+  </div>
+  <div class="wiki-node">
+    <strong>Plugin and LSP</strong>
+    <p>Use this path for plugin registration, operation overlay wrappers, Pyright sessions, and projection refresh.</p>
+    <div class="wiki-links"><a href="plugins.html">[[Plugin in ephemeral_workspace]]</a><a href="plugins.html#plugin-refresh-detail">[[Projection Refresh]]</a></div>
+  </div>
+</div>
+
+<h2 id="concept-index">Concept Index <a class="anchor" href="#concept-index">§</a></h2>
 <div class="section-card-grid">
 <a class="section-card" href="overview.html"><strong>1. Overview</strong><span>Many agents and plugins inspect or mutate one repository while sharing a single durable workspace history.</span></a>
 <a class="section-card" href="layerstack.html"><strong>2. LayerStack</strong><span>Stable snapshots, immutable layer directories, projection rendering, publish flow, leases, and squash behavior.</span></a>
@@ -47,6 +90,20 @@
 <a class="section-card" href="space-model.html"><strong>9. Space Model</strong><span>O(1) lowerdir repository bytes and O(n * per-operation changed bytes) writable scratch for concurrent work.</span></a>
 <a class="section-card" href="workflow-cookbook.html"><strong>10. Workflow Cookbook</strong><span>End-to-end traces for direct reads, ephemeral shell, OCC publish, isolated lifecycle, plugins, and Pyright refresh.</span></a>
 </div>
+
+<h2 id="question-map">Question Map <a class="anchor" href="#question-map">§</a></h2>
+<table>
+  <thead><tr><th>Question</th><th>Start here</th><th>Then follow</th></tr></thead>
+  <tbody>
+    <tr><td>Which path handles a normal <code>read_file</code>, <code>write_file</code>, or <code>edit_file</code>?</td><td><a class="wiki-link" href="workspaces.html#ephemeral-fast-paths">[[Fast-path Technical Workflows]]</a></td><td><a class="wiki-link" href="daemon.html#workspace-routing-and-state">[[Workspace Routing and State]]</a>, <a class="wiki-link" href="occ.html#occ-technical-workflow">[[OCC Technical Workflow]]</a></td></tr>
+    <tr><td>When does an operation allocate an overlay?</td><td><a class="wiki-link" href="overlay.html">[[Overlay]]</a></td><td><a class="wiki-link" href="workflow-cookbook.html#cookbook-ephemeral-shell">[[Ephemeral Shell or Search Operation]]</a></td></tr>
+    <tr><td>What does <code>isolated_workspace</code> change?</td><td><a class="wiki-link" href="workspaces.html#isolated-workspace">[[isolated_workspace]]</a></td><td><a class="wiki-link" href="daemon.html#isolated-background-gate">[[Isolated Background Gate]]</a>, <a class="wiki-link" href="space-model.html">[[Space Model]]</a></td></tr>
+    <tr><td>Why is storage not copied for every agent?</td><td><a class="wiki-link" href="space-model.html">[[Space Model]]</a></td><td><a class="wiki-link" href="layerstack.html#layerstack-projection">[[Projection]]</a>, <a class="wiki-link" href="overlay.html">[[Overlay]]</a></td></tr>
+    <tr><td>How does a plugin write safely?</td><td><a class="wiki-link" href="plugins.html">[[Plugin in ephemeral_workspace]]</a></td><td><a class="wiki-link" href="workflow-cookbook.html#cookbook-plugin-write">[[Plugin Write Operation]]</a>, <a class="wiki-link" href="occ.html">[[OCC]]</a></td></tr>
+    <tr><td>Where do daemon failures surface?</td><td><a class="wiki-link" href="daemon.html#diagnostics-failure-modes">[[Diagnostics and Failure Modes]]</a></td><td><a class="wiki-link" href="provider.html">[[Provider]]</a>, <a class="wiki-link" href="daemon.html#startup-transport">[[Startup and Transport]]</a></td></tr>
+  </tbody>
+</table>
+
 <div class="summary">
   <ul>
     <li>Use component sections such as <code>layerstack.html</code>, <code>overlay.html</code>, and <code>occ.html</code> to understand ownership boundaries.</li>

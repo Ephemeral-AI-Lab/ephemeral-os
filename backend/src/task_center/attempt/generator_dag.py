@@ -16,14 +16,18 @@ from task_center.task_state import (
 
 
 def ordered_generator_tasks(
-    tasks: tuple[PlannedGeneratorTask, ...]
+    tasks: tuple[PlannedGeneratorTask, ...],
 ) -> tuple[PlannedGeneratorTask, ...]:
-    local_ids = {task.local_id for task in tasks}
-    if len(local_ids) != len(tasks):
-        seen: set[str] = set()
-        dups = tuple(t.local_id for t in tasks if t.local_id in seen or seen.add(t.local_id))
+    local_ids: set[str] = set()
+    duplicates: list[str] = []
+    for task in tasks:
+        if task.local_id in local_ids:
+            duplicates.append(task.local_id)
+        else:
+            local_ids.add(task.local_id)
+    if duplicates:
         raise TaskCenterInvariantViolation(
-            f"Generator plan contains duplicate local ids: {dups!r}"
+            f"Generator plan contains duplicate local ids: {tuple(duplicates)!r}"
         )
     for task in tasks:
         missing = [dep for dep in task.deps if dep not in local_ids]
@@ -72,10 +76,7 @@ TaskRecord = dict[str, Any]
 def generator_status_map(
     task_records: list[TaskRecord],
 ) -> dict[str, TaskCenterBackgroundTaskStatus]:
-    return {
-        task["id"]: TaskCenterBackgroundTaskStatus(task["status"])
-        for task in task_records
-    }
+    return {task["id"]: TaskCenterBackgroundTaskStatus(task["status"]) for task in task_records}
 
 
 def ready_pending_generator_ids(task_records: list[TaskRecord]) -> tuple[str, ...]:
@@ -88,8 +89,7 @@ def ready_pending_generator_ids(task_records: list[TaskRecord]) -> tuple[str, ..
         missing = [dep for dep in needs if dep not in statuses]
         if missing:
             raise TaskCenterInvariantViolation(
-                f"Generator task {task['id']!r} has unknown persisted deps: "
-                f"{missing!r}"
+                f"Generator task {task['id']!r} has unknown persisted deps: {missing!r}"
             )
         if all(statuses[dep] == TaskCenterBackgroundTaskStatus.DONE for dep in needs):
             ready.append(task["id"])
@@ -114,8 +114,7 @@ def _validate_persisted_deps(
         missing = [dep for dep in task.get("needs") or () if dep not in statuses]
         if missing:
             raise TaskCenterInvariantViolation(
-                f"Generator task {task['id']!r} has unknown persisted deps: "
-                f"{missing!r}"
+                f"Generator task {task['id']!r} has unknown persisted deps: {missing!r}"
             )
 
 
@@ -146,10 +145,7 @@ def _unreachable_pending_ids(
                 if dep_status in _FAILED_OR_BLOCKED:
                     memo[task_id] = True
                     return True
-                if (
-                    dep_status == TaskCenterBackgroundTaskStatus.PENDING
-                    and is_unreachable(dep_id)
-                ):
+                if dep_status == TaskCenterBackgroundTaskStatus.PENDING and is_unreachable(dep_id):
                     memo[task_id] = True
                     return True
             memo[task_id] = False
@@ -178,10 +174,7 @@ def summarize_generator_dag(task_records: list[TaskRecord]) -> GeneratorDagState
     return GeneratorDagState(
         all_quiescent=all(
             status in TERMINAL_GENERATOR_STATUSES
-            or (
-                status == TaskCenterBackgroundTaskStatus.PENDING
-                and task_id in unreachable_pending
-            )
+            or (status == TaskCenterBackgroundTaskStatus.PENDING and task_id in unreachable_pending)
             for task_id, status in status_map.items()
         ),
         all_done=all(s == TaskCenterBackgroundTaskStatus.DONE for s in statuses),

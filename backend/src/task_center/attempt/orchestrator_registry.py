@@ -15,6 +15,11 @@ from task_center._core.primitives import TaskCenterInvariantViolation
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
     from task_center.goal.state import GoalClosureReport
+    from task_center.task_state import (
+        EvaluatorSubmission,
+        GeneratorSubmission,
+        PlannerFailureSubmission,
+    )
 
 
 class RegisteredAttemptOrchestrator(Protocol):
@@ -25,9 +30,13 @@ class RegisteredAttemptOrchestrator(Protocol):
 
     def start(self) -> None: ...
 
-    def apply_goal_closure_report(
-        self, report: GoalClosureReport
-    ) -> None: ...
+    def apply_goal_closure_report(self, report: GoalClosureReport) -> None: ...
+
+    def apply_planner_failure(self, submission: PlannerFailureSubmission) -> None: ...
+
+    def apply_generator_submission(self, submission: GeneratorSubmission) -> None: ...
+
+    def apply_evaluator_submission(self, submission: EvaluatorSubmission) -> None: ...
 
 
 class AttemptOrchestratorRegistry:
@@ -41,22 +50,18 @@ class AttemptOrchestratorRegistry:
         current = self._by_attempt_id.get(attempt_id)
         if current is not None and current is not orchestrator:
             raise TaskCenterInvariantViolation(
-                f"AttemptOrchestrator already registered for attempt "
-                f"{attempt_id!r}"
+                f"AttemptOrchestrator already registered for attempt {attempt_id!r}"
             )
         self._by_attempt_id[attempt_id] = orchestrator
 
     def get(self, attempt_id: str) -> RegisteredAttemptOrchestrator | None:
         return self._by_attempt_id.get(attempt_id)
 
-    def get_or_raise(
-        self, attempt_id: str
-    ) -> RegisteredAttemptOrchestrator:
+    def get_or_raise(self, attempt_id: str) -> RegisteredAttemptOrchestrator:
         orchestrator = self.get(attempt_id)
         if orchestrator is None:
             raise TaskCenterInvariantViolation(
-                f"No active AttemptOrchestrator for attempt "
-                f"{attempt_id!r}"
+                f"No active AttemptOrchestrator for attempt {attempt_id!r}"
             )
         return orchestrator
 

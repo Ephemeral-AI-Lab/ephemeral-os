@@ -8,70 +8,67 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from task_center.iteration.state import (
-    PriorAttemptEntry,
-    AttemptPlanFailed,
-    ClosureOutcome,
-    Iteration,
-    IterationClosureReport,
-    IterationCreationReason,
-    IterationStatus,
-    SuccessDeferred,
-    TerminalSuccess,
-)
-
 if TYPE_CHECKING:
     from task_center.iteration.attempt_coordinator import (
-        AttemptClosedCallback,
-        IterationClosureSink,
-        IterationAttemptCoordinator,
-        OpenIterationCoordinatorRegistry,
-        OrchestratorFactory,
+        AttemptClosedCallback as AttemptClosedCallback,
+        IterationAttemptCoordinator as IterationAttemptCoordinator,
+        IterationClosureSink as IterationClosureSink,
+        OpenIterationCoordinatorRegistry as OpenIterationCoordinatorRegistry,
+        OrchestratorFactory as OrchestratorFactory,
+    )
+    from task_center.iteration.state import (
+        AttemptPlanFailed as AttemptPlanFailed,
+        ClosureOutcome as ClosureOutcome,
+        Iteration as Iteration,
+        IterationClosureReport as IterationClosureReport,
+        IterationCreationReason as IterationCreationReason,
+        IterationStatus as IterationStatus,
+        PriorAttemptEntry as PriorAttemptEntry,
+        SuccessDeferred as SuccessDeferred,
+        TerminalSuccess as TerminalSuccess,
     )
 
-_COORDINATOR_EXPORTS: dict[str, tuple[str, str]] = {
+_COORDINATORS = "task_center.iteration.attempt_coordinator"
+_STATE = "task_center.iteration.state"
+
+_EXPORTS: dict[str, tuple[str, str]] = {
     "AttemptClosedCallback": (
-        "task_center.iteration.attempt_coordinator",
+        _COORDINATORS,
         "AttemptClosedCallback",
     ),
+    "AttemptPlanFailed": (_STATE, "AttemptPlanFailed"),
+    "ClosureOutcome": (_STATE, "ClosureOutcome"),
+    "Iteration": (_STATE, "Iteration"),
     "IterationClosureSink": (
-        "task_center.iteration.attempt_coordinator",
+        _COORDINATORS,
         "IterationClosureSink",
     ),
+    "IterationClosureReport": (_STATE, "IterationClosureReport"),
+    "IterationCreationReason": (_STATE, "IterationCreationReason"),
     "IterationAttemptCoordinator": (
-        "task_center.iteration.attempt_coordinator",
+        _COORDINATORS,
         "IterationAttemptCoordinator",
     ),
+    "IterationStatus": (_STATE, "IterationStatus"),
     "OpenIterationCoordinatorRegistry": (
-        "task_center.iteration.attempt_coordinator",
+        _COORDINATORS,
         "OpenIterationCoordinatorRegistry",
     ),
     "OrchestratorFactory": (
-        "task_center.iteration.attempt_coordinator",
+        _COORDINATORS,
         "OrchestratorFactory",
     ),
+    "PriorAttemptEntry": (_STATE, "PriorAttemptEntry"),
+    "SuccessDeferred": (_STATE, "SuccessDeferred"),
+    "TerminalSuccess": (_STATE, "TerminalSuccess"),
 }
-
-_STATE_EXPORTS = [
-    "AttemptPlanFailed",
-    "PriorAttemptEntry",
-    "ClosureOutcome",
-    "Iteration",
-    "IterationClosureReport",
-    "IterationCreationReason",
-    "IterationStatus",
-    "SuccessDeferred",
-    "TerminalSuccess",
-]
 
 
 def __getattr__(name: str) -> object:
-    target = _COORDINATOR_EXPORTS.get(name)
-    if target is None:
-        raise AttributeError(
-            f"module 'task_center.iteration' has no attribute {name!r}"
-        )
-    module_path, attr = target
+    try:
+        module_path, attr = _EXPORTS[name]
+    except KeyError as exc:
+        raise AttributeError(f"module 'task_center.iteration' has no attribute {name!r}") from exc
     import importlib
 
     module = importlib.import_module(module_path)
@@ -80,19 +77,4 @@ def __getattr__(name: str) -> object:
     return value
 
 
-__all__ = [
-    "AttemptClosedCallback",
-    "AttemptPlanFailed",
-    "PriorAttemptEntry",
-    "ClosureOutcome",
-    "IterationClosureSink",
-    "Iteration",
-    "IterationClosureReport",
-    "IterationCreationReason",
-    "IterationAttemptCoordinator",
-    "OpenIterationCoordinatorRegistry",
-    "IterationStatus",
-    "OrchestratorFactory",
-    "SuccessDeferred",
-    "TerminalSuccess",
-]
+__all__ = sorted(_EXPORTS)

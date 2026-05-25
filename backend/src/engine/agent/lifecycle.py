@@ -109,14 +109,6 @@ async def run_ephemeral_agent(
     from engine.agent.run_tracker import AgentRunTracker
     from engine.agent.factory import spawn_agent
 
-    db_available = False
-    if persist_agent_run and task_id:
-        try:
-            from runtime.app_factory import agent_run_store as _ars
-            db_available = _ars.is_ready
-        except Exception:
-            db_available = False
-
     messages = list(initial_messages or [])
 
     agent = spawn_agent(
@@ -138,7 +130,7 @@ async def run_ephemeral_agent(
     )
 
     tracker = AgentRunTracker.create(
-        task_id=task_id if db_available else None,
+        task_id=task_id if persist_agent_run else None,
         agent_name=agent.agent_name,
     )
     agent_run_id = tracker.agent_run_id

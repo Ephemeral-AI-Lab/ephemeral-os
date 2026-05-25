@@ -47,13 +47,7 @@ def build_task_guidance(
             "row to backend/src/task_center/context_engine/role_directives.py."
         )
     outline = render_what_in_context(packet)
-    return (
-        "What's in context:\n"
-        f"{outline}\n"
-        "\n"
-        "What to do:\n"
-        f"- {directive}"
-    )
+    return f"What's in context:\n{outline}\n\nWhat to do:\n- {directive}"
 
 
 def build_explorer_task_guidance() -> str:

@@ -38,9 +38,7 @@ from task_center.task_state import (
 logger = logging.getLogger(__name__)
 
 
-CloseAttemptCallback = Callable[
-    [AttemptStatus, AttemptFailReason | None], None
-]
+CloseAttemptCallback = Callable[[AttemptStatus, AttemptFailReason | None], None]
 
 
 class AttemptTaskDispatcher:
@@ -72,9 +70,7 @@ class AttemptTaskDispatcher:
 
     def _advance_generator_stage(self, attempt: Attempt) -> None:
         runtime = self._runtime
-        task_records = runtime.task_store.list_generator_tasks_for_attempt(
-            attempt.id
-        )
+        task_records = runtime.task_store.list_generator_tasks_for_attempt(attempt.id)
         ready_ids = ready_pending_generator_ids(task_records)
         if ready_ids:
             launch_failed = False
@@ -122,9 +118,7 @@ class AttemptTaskDispatcher:
                 AttemptFailReason.EVALUATOR_FAILED,
             )
 
-    def _mark_launch_failed(
-        self, *, task_id: str, attempt_id: str, role: str
-    ) -> None:
+    def _mark_launch_failed(self, *, task_id: str, attempt_id: str, role: str) -> None:
         """Mark a task FAILED (if still RUNNING) and emit task_failed audit."""
         summary = f"{role} agent launch failed."
         runtime = self._runtime
@@ -143,9 +137,7 @@ class AttemptTaskDispatcher:
                 summary=summary,
             )
 
-    def _launch_ready_generator(
-        self, *, attempt: Attempt, task_id: str
-    ) -> bool:
+    def _launch_ready_generator(self, *, attempt: Attempt, task_id: str) -> bool:
         runtime = self._runtime
         current = runtime.task_store.get_task(task_id)
         if current is None:
@@ -158,9 +150,7 @@ class AttemptTaskDispatcher:
         self._audit.task_ready(
             current,
             attempt_id=attempt.id,
-            satisfied_dependency_ids=tuple(
-                str(dep) for dep in current.get("needs", ()) or ()
-            ),
+            satisfied_dependency_ids=tuple(str(dep) for dep in current.get("needs", ()) or ()),
         )
         task = runtime.task_store.set_task_status(
             task_id, status=TaskCenterBackgroundTaskStatus.RUNNING.value
@@ -183,13 +173,16 @@ class AttemptTaskDispatcher:
                 "AttemptTaskDispatcher: generator launch failed",
                 extra={"task_id": task_id, "attempt_id": attempt.id},
             )
-            self._mark_launch_failed(
-                task_id=task_id, attempt_id=attempt.id, role="Generator"
-            )
+            self._mark_launch_failed(task_id=task_id, attempt_id=attempt.id, role="Generator")
             return False
         return True
 
     def _launch_evaluator(self, launch: AgentLaunch) -> None:
+        attempt_id = launch.attempt_id
+        if attempt_id is None:
+            raise TaskCenterInvariantViolation(
+                f"Evaluator launch {launch.task_id!r} is missing attempt_id"
+            )
         try:
             self._runtime.agent_launcher.launch(launch)
         except Exception:
@@ -197,17 +190,15 @@ class AttemptTaskDispatcher:
                 "AttemptTaskDispatcher: evaluator launch failed",
                 extra={
                     "task_id": launch.task_id,
-                    "attempt_id": launch.attempt_id,
+                    "attempt_id": attempt_id,
                 },
             )
             self._mark_launch_failed(
                 task_id=launch.task_id,
-                attempt_id=launch.attempt_id,
+                attempt_id=attempt_id,
                 role="Evaluator",
             )
-            self._close_attempt(
-                AttemptStatus.FAILED, AttemptFailReason.EVALUATOR_FAILED
-            )
+            self._close_attempt(AttemptStatus.FAILED, AttemptFailReason.EVALUATOR_FAILED)
 
     def _start_evaluator_stage(self, attempt: Attempt) -> None:
         if attempt.evaluator_task_id is not None:
@@ -215,9 +206,7 @@ class AttemptTaskDispatcher:
         runtime = self._runtime
         task_id = evaluator_task_id(attempt.id)
         try:
-            launch = LaunchBuilder(runtime=runtime).for_evaluator(
-                attempt=attempt, task_id=task_id
-            )
+            launch = LaunchBuilder(runtime=runtime).for_evaluator(attempt=attempt, task_id=task_id)
             ready_task = {
                 "id": task_id,
                 "task_center_run_id": launch.task_center_run_id,
@@ -278,7 +267,5 @@ class AttemptTaskDispatcher:
     def _fresh_attempt(self) -> Attempt:
         attempt = self._runtime.attempt_store.get(self._attempt_id)
         if attempt is None:
-            raise TaskCenterInvariantViolation(
-                f"Attempt {self._attempt_id!r} not found"
-            )
+            raise TaskCenterInvariantViolation(f"Attempt {self._attempt_id!r} not found")
         return attempt

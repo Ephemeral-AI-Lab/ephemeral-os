@@ -42,11 +42,31 @@
     <li>Plugins are daemon extensions that consume the same snapshot/overlay/OCC pipeline as tools.</li>
   </ul>
 </div>
+<div class="wiki-links" aria-label="Plugin page links">
+  <a href="#plugin-host-daemon-flow">[[Host and Daemon Flow]]</a>
+  <a href="#plugin-operation-classes">[[Operation Classes]]</a>
+  <a href="#plugin-refresh-detail">[[Projection Refresh and LSP Writes]]</a>
+  <a href="daemon.html#operation-surface">[[Operation Surface]]</a>
+  <a href="overlay.html#overlay-capture">[[Upperdir Capture]]</a>
+  <a href="workflow-cookbook.html#cookbook-plugin-write">[[Plugin Write Operation]]</a>
+</div>
 
+<h3 id="plugin-host-daemon-flow">8.1 Host and Daemon Flow <a class="anchor" href="#plugin-host-daemon-flow">§</a></h3>
 <p>Host-side <code>call_plugin</code> is the single entrypoint: resolve sandbox/layer stack/caller, install the plugin bundle, call <code>api.plugin.ensure</code>, dispatch <code>plugin.&lt;name&gt;.&lt;op&gt;</code>, and wrap the response <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/host_dispatch.py:1-15</span>. The implementation ensures runtime only when the digest changes, then dispatches the plugin op with caller, workspace root, and intent metadata <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/host_dispatch.py:70-186</span>.</p>
 
 <p>Inside the daemon, <code>plugin_ensure</code> imports <code>plugins.catalog.&lt;plugin&gt;.runtime.server</code>, flushes plugin registrations into the daemon dispatcher, warms the runtime, and records loaded state <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/runtime_api.py:76-162</span>. The context factory gives each plugin a <code>WorkspaceProjection</code> and an <code>EphemeralPipeline</code> overlay facade created with <code>start=False</code> so plugin calls do not create a long-lived daemon mount or lease <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/runtime_api.py:266-350</span>.</p>
 
+<div class="sequence" aria-label="Plugin host daemon workflow">
+  <ol>
+    <li><span>Host code resolves sandbox id, layer-stack root, plugin name, operation name, caller identity, and plugin bundle digest.</span></li>
+    <li><span>The host installs or refreshes the bundle in the sandbox runtime area.</span></li>
+    <li><span>The host calls <code>api.plugin.ensure</code>; the daemon imports the plugin runtime and flushes registered operations into <code>OP_TABLE</code>.</span></li>
+    <li><span>The host sends <code>plugin.&lt;name&gt;.&lt;op&gt;</code> through the same daemon transport as built-in tools.</span></li>
+    <li><span>The daemon plugin context supplies projection APIs, an overlay facade, caller metadata, and workspace root information.</span></li>
+  </ol>
+</div>
+
+<h3 id="plugin-operation-classes">8.2 Operation Classes <a class="anchor" href="#plugin-operation-classes">§</a></h3>
 <div class="diagram" aria-label="Plugin operation flow">
   <div class="flow-row">
     <div class="node"><strong>READ_ONLY plugin</strong><small>in daemon process, no per-call overlay</small></div>
@@ -68,7 +88,7 @@
 
 <p><code>PyrightSession</code> starts as a long-lived session rooted at a leased overlay handle <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/pyright_session.py:54-87</span>. It starts Pyright inside a private overlay namespace when layer paths are available <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/pyright_session.py:526-567</span>. On refresh, it can remount the running Pyright namespace with fresh layer paths via <code>nsenter</code> and <code>namespace_remount</code> <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/pyright_session.py:583-650</span>. It also sends <code>workspace/didChangeWatchedFiles</code>, closes missing open documents, and syncs changed open documents <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/pyright_session.py:374-415</span>. For file text/existence checks, it reads directly from the current overlay layer paths and layer index cache <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/pyright_session.py:730-794</span>.</p>
 
-<h3 id="plugin-refresh-detail">8.1 Projection Refresh and LSP Writes <a class="anchor" href="#plugin-refresh-detail">§</a></h3>
+<h3 id="plugin-refresh-detail">8.3 Projection Refresh and LSP Writes <a class="anchor" href="#plugin-refresh-detail">§</a></h3>
 
 <div class="sequence" aria-label="Plugin projection refresh workflow">
   <ol>
@@ -95,6 +115,9 @@
 <div class="callout">
   <span class="label">Daemon change for plugins</span>
   Plugin ops are registered into the same daemon <code>OP_TABLE</code>, but the dispatcher blocks plugin access while the caller has an open isolated workspace <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:216-235</span>. That avoids a plugin reading/publishing through the shared ephemeral projection while the agent is intentionally inside private isolated scratch.
+</div>
+<div class="maintenance-note">
+  Backlinks: <a class="wiki-link" href="daemon.html#operation-surface">[[Operation Surface]]</a> owns daemon op registration, <a class="wiki-link" href="workspaces.html#ephemeral-workspace">[[ephemeral_workspace]]</a> owns the overlay facade, and <a class="wiki-link" href="workspaces.html#isolated-workspace">[[isolated_workspace]]</a> explains why plugin access is blocked during private scratch.
 </div>
 <div class="page-footer-nav"><span><a href="provider.html">← 7. Provider</a></span><span><a href="space-model.html">9. Space Model →</a></span></div>
 </main>

@@ -1,16 +1,15 @@
-"""Runtime DI bundle (:class:`AttemptDeps`) + lifecycle target protocol.
+"""Runtime DI bundle (:class:`AttemptDeps`) plus delegated-goal parent tasks.
 
-Includes :class:`AttemptDeps` (the launcher/orchestrator/store seam threaded
-into every spawn) plus :class:`LifecycleTarget` and
-:class:`GeneratorTaskLifecycle`, which expose the parent-task waiter surface
-for generator tasks inside an :class:`AttemptOrchestrator`.
+:class:`AttemptDeps` threads stores, orchestration, launch, and audit concerns
+into every attempt-scoped spawn. :class:`AttemptDelegatedGoalParentTask`
+owns the parent generator-task transitions while a child goal is running.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING
 
 from audit.base import AuditSink, NoopAuditSink
 
@@ -86,14 +85,12 @@ class AttemptDeps:
         iteration = self.iteration_store.get(attempt.iteration_id)
         if iteration is None:
             raise TaskCenterInvariantViolation(
-                f"Iteration {attempt.iteration_id!r} not found for "
-                f"Attempt {attempt.id!r}"
+                f"Iteration {attempt.iteration_id!r} not found for Attempt {attempt.id!r}"
             )
         goal = self.goal_store.get(iteration.goal_id)
         if goal is None:
             raise TaskCenterInvariantViolation(
-                f"Goal {iteration.goal_id!r} not "
-                f"found for Iteration {iteration.id!r}"
+                f"Goal {iteration.goal_id!r} not found for Iteration {iteration.id!r}"
             )
         return goal.task_center_run_id
 
@@ -105,13 +102,13 @@ class AttemptDeps:
             )
         return self.composer
 
-    def lifecycle_target_for(
+    def parent_task_for_delegated_goal(
         self, *, task_id: str, attempt_id: str | None
-    ) -> LifecycleTarget | None:
-        """Return the :class:`LifecycleTarget` for one parent generator task."""
+    ) -> AttemptDelegatedGoalParentTask | None:
+        """Return the parent generator task waiting on a child goal."""
         if attempt_id is None:
             return None
-        return GeneratorTaskLifecycle(
+        return AttemptDelegatedGoalParentTask(
             task_id=task_id,
             attempt_id=attempt_id,
             task_store=self.task_store,
@@ -119,45 +116,16 @@ class AttemptDeps:
         )
 
 
-# ---- LifecycleTarget seam (polymorphic parent-task owner) ------------------
-
-
-class LifecycleTarget(Protocol):
-    """Lifecycle owner for one parent task waiting on a delegated goal.
-
-    Implemented by :class:`GeneratorTaskLifecycle`.
-    """
-
-    task_id: str
-
-    def apply_goal_closure_report(
-        self, report: GoalClosureReport
-    ) -> None: ...
-
-    def mark_waiting_goal(
-        self,
-        *,
-        delegated_goal_id: str,
-        delegated_iteration_id: str,
-        delegated_attempt_id: str,
-        goal: str,
-    ) -> None: ...
-
-    def restore_running_after_failed_goal_start(self) -> None: ...
-
-
 @dataclass(frozen=True, slots=True)
-class GeneratorTaskLifecycle:
-    """:class:`LifecycleTarget` for a generator task inside a attempt."""
+class AttemptDelegatedGoalParentTask:
+    """Parent generator task waiting on a delegated child goal."""
 
     task_id: str
     attempt_id: str
     task_store: TaskStoreProtocol
     orchestrator_lookup: Callable[[str], RegisteredAttemptOrchestrator | None]
 
-    def apply_goal_closure_report(
-        self, report: GoalClosureReport
-    ) -> None:
+    def apply_goal_closure_report(self, report: GoalClosureReport) -> None:
         orchestrator = self.orchestrator_lookup(self.attempt_id)
         if orchestrator is None:
             raise TaskCenterInvariantViolation(

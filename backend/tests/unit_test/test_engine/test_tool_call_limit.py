@@ -67,13 +67,6 @@ def test_agent_definition_rejects_zero_and_negative():
     assert a.tool_call_limit is None
 
 
-def test_agent_definition_rejects_removed_legacy_fields():
-    with pytest.raises(ValueError):
-        AgentDefinition.model_validate(
-            {"name": "x", "description": "y", "effort": "high"}
-        )
-
-
 def test_agent_definition_default_tolerance_is_ten():
     a = AgentDefinition(name="x", description="y")
     assert a.max_tolerance_after_max_tool_call == 10

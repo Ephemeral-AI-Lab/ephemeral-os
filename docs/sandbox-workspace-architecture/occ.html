@@ -42,7 +42,16 @@
     <li>OCC is the gate that decides whether temporary workspace changes become durable truth.</li>
   </ul>
 </div>
+<div class="wiki-links" aria-label="OCC page links">
+  <a href="#occ-change-sources">[[Change Sources]]</a>
+  <a href="#occ-technical-workflow">[[Technical Workflow]]</a>
+  <a href="#occ-routes-statuses">[[Routes and Statuses]]</a>
+  <a href="layerstack.html#layerstack-publish">[[LayerStack Publish]]</a>
+  <a href="overlay.html#overlay-capture">[[Upperdir Capture]]</a>
+  <a href="workflow-cookbook.html#cookbook-occ-publish">[[OCC Publish from API Write/Edit]]</a>
+</div>
 
+<h3 id="occ-change-sources">4.1 Change Sources <a class="anchor" href="#occ-change-sources">§</a></h3>
 <p>OCC accepts typed changes tagged as <code>api_write</code>, <code>api_edit</code>, or <code>overlay_capture</code> <span class="file-ref">backend/src/sandbox/occ/changeset.py:15-125</span>. The preparer groups changes by normalized path, drops <code>.git</code>, routes gitignored paths to <code>DIRECT</code>, routes tracked paths to <code>GATED</code>, and attaches base hashes when needed <span class="file-ref">backend/src/sandbox/occ/changeset_preparation.py:41-158</span>.</p>
 
 <div class="diagram" aria-label="OCC publish flow">
@@ -63,7 +72,17 @@
 
 <p>Overlay changes are converted without rereading large files into memory: write changes thread <code>content_path</code> and <code>final_hash</code> into <code>WriteChange</code>, deletes become <code>DeleteChange</code>, symlinks become <code>SymlinkChange</code>, and opaque markers become <code>OpaqueDirChange</code> <span class="file-ref">backend/src/sandbox/occ/overlay_change_conversion.py:19-72</span>.</p>
 
-<h3 id="occ-technical-workflow">4.1 Technical Workflow <a class="anchor" href="#occ-technical-workflow">§</a></h3>
+<table>
+  <thead><tr><th>Source</th><th>Producer</th><th>Conflict model</th><th>Related path</th></tr></thead>
+  <tbody>
+    <tr><td><code>api_write</code></td><td>Direct <code>write_file</code> fast path or single-file overlay publication.</td><td>Path route decides direct/gated behavior; create-only conflicts are projected before enqueue.</td><td><a class="wiki-link" href="workspaces.html#ephemeral-fast-paths">[[Fast-path Technical Workflows]]</a></td></tr>
+    <tr><td><code>api_edit</code></td><td>Direct <code>edit_file</code> fast path with ordered search/replace edits.</td><td>Edit anchoring and expected occurrences happen before publication; stale live content becomes conflict status.</td><td><a class="wiki-link" href="workflow-cookbook.html#cookbook-occ-publish">[[OCC Publish from API Write/Edit]]</a></td></tr>
+    <tr><td><code>overlay_capture</code></td><td>Shell/plugin operation upperdir capture.</td><td>Usually atomic by captured operation so unrelated queue batches do not mix into it.</td><td><a class="wiki-link" href="overlay.html#overlay-capture">[[Upperdir Capture]]</a></td></tr>
+    <tr><td>LSP apply</td><td>Plugin-owned operation overlay after expected manifest-key check.</td><td>Uses the same publish cycle after the LSP child applies workspace edits.</td><td><a class="wiki-link" href="plugins.html#plugin-refresh-detail">[[Projection Refresh and LSP Writes]]</a></td></tr>
+  </tbody>
+</table>
+
+<h3 id="occ-technical-workflow">4.2 Technical Workflow <a class="anchor" href="#occ-technical-workflow">§</a></h3>
 
 <div class="sequence" aria-label="OCC prepare and commit lifecycle">
   <ol>
@@ -88,6 +107,7 @@
   </tbody>
 </table>
 
+<h3 id="occ-routes-statuses">4.3 Routes and Statuses <a class="anchor" href="#occ-routes-statuses">§</a></h3>
 <div class="trace-grid" aria-label="OCC route semantics">
   <div><code>DROP</code></div>
   <div>Used for paths under <code>.git</code>; the mutation is intentionally not published.</div>
@@ -97,6 +117,20 @@
   <div>Used for normal tracked/non-ignored paths; it compares expected base hashes against the live manifest before publishing.</div>
   <div><code>REJECT</code></div>
   <div>Used when path normalization or route validation fails before a publishable change exists.</div>
+</div>
+
+<table>
+  <thead><tr><th>Status family</th><th>What it means to callers</th><th>What to inspect next</th></tr></thead>
+  <tbody>
+    <tr><td>Published</td><td>The change produced a new LayerStack layer and is now visible to later direct reads, overlay lowerdirs, and plugin projections.</td><td><a class="wiki-link" href="layerstack.html#layerstack-publish">[[Publish]]</a> and daemon workspace events.</td></tr>
+    <tr><td>Rejected</td><td>The change was invalid before publication, such as unsupported path/symlink or create-only existing target.</td><td>Preparer/stager route, path normalization, and public result projection.</td></tr>
+    <tr><td>Aborted version</td><td>The base hash or expected live content no longer matched the active manifest.</td><td>Caller snapshot, queue delay, and conflicting published layer.</td></tr>
+    <tr><td>Dropped</td><td>The change was intentionally ignored, most commonly internal <code>.git</code> paths or atomic-set fallout after a failure.</td><td>Prepare route and atomic changeset semantics.</td></tr>
+  </tbody>
+</table>
+
+<div class="maintenance-note">
+  Backlinks: direct writes from <a class="wiki-link" href="workspaces.html#ephemeral-fast-paths">[[Fast-path Technical Workflows]]</a> and captured writes from <a class="wiki-link" href="overlay.html#overlay-capture">[[Upperdir Capture]]</a> both converge here before <a class="wiki-link" href="layerstack.html#layerstack-publish">[[LayerStack Publish]]</a>.
 </div>
 <div class="page-footer-nav"><span><a href="overlay.html">← 3. Overlay</a></span><span><a href="workspaces.html">5. Workspace Modes →</a></span></div>
 </main>

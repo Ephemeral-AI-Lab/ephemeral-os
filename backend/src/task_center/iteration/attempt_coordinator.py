@@ -46,9 +46,7 @@ logger = logging.getLogger(__name__)
 
 IterationClosureSink = Callable[[IterationClosureReport], None]
 AttemptClosedCallback = Callable[[str], None]
-OrchestratorFactory = Callable[
-    [Attempt, AttemptClosedCallback], RegisteredAttemptOrchestrator
-]
+OrchestratorFactory = Callable[[Attempt, AttemptClosedCallback], RegisteredAttemptOrchestrator]
 
 
 class IterationAttemptCoordinator:
@@ -88,8 +86,7 @@ class IterationAttemptCoordinator:
         assert_iteration_open(iteration)
         if iteration.attempt_ids:
             raise TaskCenterInvariantViolation(
-                f"Iteration {iteration.id!r} already has attempts; use "
-                f"create_next_attempt"
+                f"Iteration {iteration.id!r} already has attempts; use create_next_attempt"
             )
         return self._insert_attempt(iteration, attempt_sequence_no=1)
 
@@ -100,9 +97,7 @@ class IterationAttemptCoordinator:
         assert_attempt_belongs_to_iteration(attempt, iteration)
         self._start_orchestrator_if_configured(attempt)
 
-    def create_next_attempt(
-        self, *, previous_attempt_id: str
-    ) -> Attempt:
+    def create_next_attempt(self, *, previous_attempt_id: str) -> Attempt:
         """Called after a failed attempt if the iteration still has budget."""
         iteration = self._current_iteration_snapshot()
         assert_iteration_open(iteration)
@@ -113,9 +108,7 @@ class IterationAttemptCoordinator:
                 f"the latest attempt of iteration {iteration.id!r} "
                 f"(latest={iteration.latest_attempt_id!r})"
             )
-        attempt = self._insert_attempt(
-            iteration, attempt_sequence_no=iteration.attempt_count + 1
-        )
+        attempt = self._insert_attempt(iteration, attempt_sequence_no=iteration.attempt_count + 1)
         self._start_orchestrator_if_configured(attempt)
         return attempt
 
@@ -123,9 +116,7 @@ class IterationAttemptCoordinator:
         """Entry point for the closed-attempt callback from the orchestrator."""
         attempt = self._attempt_store.get(attempt_id)
         if attempt is None:
-            raise TaskCenterInvariantViolation(
-                f"Attempt {attempt_id!r} not found"
-            )
+            raise TaskCenterInvariantViolation(f"Attempt {attempt_id!r} not found")
         iteration = self._current_iteration_snapshot()
         assert_iteration_open(iteration)
         assert_attempt_belongs_to_iteration(attempt, iteration)
@@ -141,14 +132,10 @@ class IterationAttemptCoordinator:
     def _current_iteration_snapshot(self) -> Iteration:
         iteration = self._iteration_store.get(self.iteration_id)
         if iteration is None:
-            raise TaskCenterInvariantViolation(
-                f"Iteration {self.iteration_id!r} not found"
-            )
+            raise TaskCenterInvariantViolation(f"Iteration {self.iteration_id!r} not found")
         return iteration
 
-    def _insert_attempt(
-        self, iteration: Iteration, *, attempt_sequence_no: int
-    ) -> Attempt:
+    def _insert_attempt(self, iteration: Iteration, *, attempt_sequence_no: int) -> Attempt:
         assert_attempt_sequence_contiguous(iteration, attempt_sequence_no)
         attempt = self._attempt_store.insert(
             iteration_id=iteration.id,
@@ -161,9 +148,7 @@ class IterationAttemptCoordinator:
         if self._orchestrator_factory is None:
             return
         try:
-            orchestrator = self._orchestrator_factory(
-                attempt, self.handle_attempt_closed
-            )
+            orchestrator = self._orchestrator_factory(attempt, self.handle_attempt_closed)
             orchestrator.start()
         except Exception:
             self._close_attempt_after_startup_failure(attempt)
@@ -187,7 +172,8 @@ class IterationAttemptCoordinator:
 
     def _close_iteration_passed(self, attempt: Attempt) -> None:
         self._iteration_store.set_deferred_goal_for_next_iteration(
-            self.iteration_id, attempt.deferred_goal_for_next_iteration
+            self.iteration_id,
+            deferred_goal_for_next_iteration=attempt.deferred_goal_for_next_iteration,
         )
         # Atomically transition status + write the denormalized
         # plan_spec (from the passing attempt) and task_summary
@@ -216,7 +202,7 @@ class IterationAttemptCoordinator:
         """
         if self._task_store is None:
             return ""
-        free_text = self._task_store.get_evaluator_pass_summary(attempt.id)
+        free_text = str(self._task_store.get_evaluator_pass_summary(attempt.id) or "")
         passed = self._evaluator_passed_criteria(attempt)
         if not passed:
             return free_text
@@ -267,9 +253,7 @@ class IterationAttemptCoordinator:
                 # STARTUP_FAILED before the exception propagated. Re-enter the
                 # retry decision on the new closed attempt instead of leaving
                 # the iteration open.
-                retry_attempt = self._latest_failed_attempt_for(
-                    previous_id=attempt.id
-                )
+                retry_attempt = self._latest_failed_attempt_for(previous_id=attempt.id)
                 if retry_attempt is None:
                     raise
                 logger.warning(
@@ -290,9 +274,7 @@ class IterationAttemptCoordinator:
         )
         self._emit_attempt_plan_failed(attempt)
 
-    def _latest_failed_attempt_for(
-        self, *, previous_id: str
-    ) -> Attempt | None:
+    def _latest_failed_attempt_for(self, *, previous_id: str) -> Attempt | None:
         iteration = self._current_iteration_snapshot()
         latest_id = iteration.latest_attempt_id
         if latest_id is None or latest_id == previous_id:
@@ -318,7 +300,9 @@ class IterationAttemptCoordinator:
         report = IterationClosureReport(
             iteration_id=self.iteration_id,
             final_attempt_id=attempt.id,
-            outcome=SuccessDeferred(deferred_goal_for_next_iteration=attempt.deferred_goal_for_next_iteration),
+            outcome=SuccessDeferred(
+                deferred_goal_for_next_iteration=attempt.deferred_goal_for_next_iteration
+            ),
         )
         self._on_iteration_closed(report)
 

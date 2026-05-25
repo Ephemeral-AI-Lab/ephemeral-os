@@ -61,10 +61,7 @@ def _walk_top_level(blocks: list[ContextBlock]) -> list[_OutlineNode]:
         group_id = block.metadata.get("group_id")
         if group_id:
             group: list[ContextBlock] = []
-            while (
-                index < len(blocks)
-                and blocks[index].metadata.get("group_id") == group_id
-            ):
+            while index < len(blocks) and blocks[index].metadata.get("group_id") == group_id:
                 group.append(blocks[index])
                 index += 1
             node = _node_for_group(group)
@@ -177,27 +174,20 @@ def _collapse_consecutive(nodes: list[_OutlineNode]) -> list[_OutlineNode]:
     collapsed: list[_OutlineNode] = [nodes[0]]
     for node in nodes[1:]:
         prev = collapsed[-1]
-        if (
-            prev.descriptor is node.descriptor
-            and prev.children == node.children
-        ):
+        if prev.descriptor is node.descriptor and prev.children == node.children:
             continue
         collapsed.append(node)
     return collapsed
 
 
-def _render_nodes(
-    nodes: list[_OutlineNode], *, depth: int, max_depth: int
-) -> str:
+def _render_nodes(nodes: list[_OutlineNode], *, depth: int, max_depth: int) -> str:
     lines: list[str] = []
     for node in nodes:
         lines.append(_render_one(node, depth=depth, max_depth=max_depth))
     return "\n".join(lines)
 
 
-def _render_one(
-    node: _OutlineNode, *, depth: int, max_depth: int
-) -> str:
+def _render_one(node: _OutlineNode, *, depth: int, max_depth: int) -> str:
     indent = _INDENT * (depth - 1)
     attrs = render_attrs(node.attrs)
     open_tag = f"<{node.tag}{(' ' + attrs) if attrs else ''}>"

@@ -30,16 +30,12 @@ def nested_goal_depth(
     current_goal_id = goal_id
     while True:
         if current_goal_id in seen_goal_ids:
-            raise TaskCenterInvariantViolation(
-                "Cycle detected while resolving goal ancestry."
-            )
+            raise TaskCenterInvariantViolation("Cycle detected while resolving goal ancestry.")
         seen_goal_ids.add(current_goal_id)
         depth += 1
         current_goal = goal_store.get(current_goal_id)
         if current_goal is None:
-            raise TaskCenterInvariantViolation(
-                f"Goal {current_goal_id!r} was not found."
-            )
+            raise TaskCenterInvariantViolation(f"Goal {current_goal_id!r} was not found.")
         if current_goal.requested_by_task_id is None:
             return depth
         parent_task = task_store.get_task(current_goal.requested_by_task_id)

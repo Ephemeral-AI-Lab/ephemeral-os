@@ -28,7 +28,7 @@ The body inlines children as siblings — no ``<attempt_plan>``,
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from task_center.attempt.state import Attempt, AttemptFailReason, AttemptStatus
 from task_center.context_engine.exceptions import ContextEngineError
@@ -93,11 +93,7 @@ def failed_attempt_blocks(
 ) -> list[ContextBlock]:
     """Return one ``<attempt status="prior" verdict="fail">`` block per failed prior."""
     failed = sorted(
-        (
-            t
-            for t in attempts
-            if t.status == AttemptStatus.FAILED and t.id != current_attempt_id
-        ),
+        (t for t in attempts if t.status == AttemptStatus.FAILED and t.id != current_attempt_id),
         key=lambda t: t.attempt_sequence_no,
     )
     group_id = current_iteration_group_id(iteration)
@@ -114,10 +110,7 @@ def failed_attempt_blocks(
                 "group_tag": "iteration",
                 "group_attrs": group_attrs,
                 "child_tag": "attempt",
-                "attrs": (
-                    f'attempt_no="{t.attempt_sequence_no}" '
-                    'status="prior" verdict="fail"'
-                ),
+                "attrs": (f'attempt_no="{t.attempt_sequence_no}" status="prior" verdict="fail"'),
                 "pre_rendered_xml": "true",
             },
         )
@@ -153,10 +146,7 @@ def current_attempt_block(
                 "group_tag": "iteration",
                 "group_attrs": group_attrs,
                 "child_tag": "attempt",
-                "attrs": (
-                    f'attempt_no="{attempt.attempt_sequence_no}" '
-                    'status="current"'
-                ),
+                "attrs": (f'attempt_no="{attempt.attempt_sequence_no}" status="current"'),
                 "pre_rendered_xml": "true",
                 # Surface deferred-goal presence for any downstream code that
                 # wants to branch on it (e.g. role skills, audits).
@@ -170,9 +160,7 @@ def current_attempt_block(
     ]
 
 
-def _render_failed_attempt_body(
-    attempt: Attempt, *, task_store: TaskStoreProtocol | None
-) -> str:
+def _render_failed_attempt_body(attempt: Attempt, *, task_store: TaskStoreProtocol | None) -> str:
     """Render the inside of ``<attempt status="prior" verdict="fail">…</attempt>``."""
     if attempt.fail_reason in _NO_DOWNSTREAM_STAGES:
         reason = attempt.fail_reason.value
@@ -184,15 +172,11 @@ def _render_failed_attempt_body(
     parts: list[str] = []
     parts.append(_render_plan_spec_children(attempt))
     parts.append(_render_outcome_children(attempt, task_store=task_store))
-    parts.append(
-        _render_evaluator_children(attempt, task_store=task_store)
-    )
+    parts.append(_render_evaluator_children(attempt, task_store=task_store))
     return "\n".join(p for p in parts if p)
 
 
-def _render_current_attempt_body(
-    attempt: Attempt, *, task_store: TaskStoreProtocol | None
-) -> str:
+def _render_current_attempt_body(attempt: Attempt, *, task_store: TaskStoreProtocol | None) -> str:
     """Render the inside of ``<attempt status="current">…</attempt>``.
 
     Current attempts haven't finished evaluation yet, so the body omits the
@@ -212,19 +196,14 @@ def _render_plan_spec_children(attempt: Attempt) -> str:
     plan_spec = _sanitize_user_text(attempt.plan_spec or "(not submitted)", attempt.id)
     pieces = [f"<plan_spec>\n{plan_spec}\n</plan_spec>"]
     if attempt.deferred_goal_for_next_iteration:
-        handoff = _sanitize_user_text(
-            attempt.deferred_goal_for_next_iteration, attempt.id
-        )
+        handoff = _sanitize_user_text(attempt.deferred_goal_for_next_iteration, attempt.id)
         pieces.append(
-            f"<deferred_goal_for_next_iteration>\n{handoff}\n"
-            "</deferred_goal_for_next_iteration>"
+            f"<deferred_goal_for_next_iteration>\n{handoff}\n</deferred_goal_for_next_iteration>"
         )
     return "\n".join(pieces)
 
 
-def _render_outcome_children(
-    attempt: Attempt, *, task_store: TaskStoreProtocol | None
-) -> str:
+def _render_outcome_children(attempt: Attempt, *, task_store: TaskStoreProtocol | None) -> str:
     """Emit ``<status_summary>`` and one ``<task>`` per generator task."""
     outcomes = _generator_outcomes(attempt, task_store=task_store)
     if not outcomes:
@@ -242,9 +221,7 @@ def _render_outcome_children(
     return "\n".join(parts)
 
 
-def _render_task_children(
-    attempt: Attempt, *, task_store: TaskStoreProtocol | None
-) -> str:
+def _render_task_children(attempt: Attempt, *, task_store: TaskStoreProtocol | None) -> str:
     """Emit one ``<task>`` per generator task (no status_summary wrapper)."""
     outcomes = _generator_outcomes(attempt, task_store=task_store)
     if not outcomes:
@@ -255,34 +232,24 @@ def _render_task_children(
 def _render_task_element(outcome: _GeneratorOutcome, attempt_id: str) -> str:
     if outcome.summary and outcome.summary not in _EMPTY_SUMMARY_PLACEHOLDERS:
         body = _sanitize_user_text(outcome.summary, attempt_id)
-        return (
-            f'<task id="{outcome.task_id}" status="{outcome.status}">\n'
-            f"{body}\n</task>"
-        )
+        return f'<task id="{outcome.task_id}" status="{outcome.status}">\n{body}\n</task>'
     return f'<task id="{outcome.task_id}" status="{outcome.status}"/>'
 
 
 def _render_evaluation_criteria(attempt: Attempt) -> str:
     if not attempt.evaluation_criteria:
         return ""
-    body = "\n".join(
-        _sanitize_user_text(c, attempt.id) for c in attempt.evaluation_criteria
-    )
+    body = "\n".join(_sanitize_user_text(c, attempt.id) for c in attempt.evaluation_criteria)
     return f"<evaluation_criteria>\n{body}\n</evaluation_criteria>"
 
 
-def _render_evaluator_children(
-    attempt: Attempt, *, task_store: TaskStoreProtocol | None
-) -> str:
+def _render_evaluator_children(attempt: Attempt, *, task_store: TaskStoreProtocol | None) -> str:
     outcomes = _generator_outcomes(attempt, task_store=task_store)
     has_premature = any(o.status in _PREMATURE_STATUSES for o in outcomes)
     if has_premature:
-        failed_ids = sorted(
-            o.task_id for o in outcomes if o.status in _PREMATURE_STATUSES
-        )
+        failed_ids = sorted(o.task_id for o in outcomes if o.status in _PREMATURE_STATUSES)
         reason = (
-            "Evaluator skipped because generator task(s) failed: "
-            f"{', '.join(failed_ids)}."
+            f"Evaluator skipped because generator task(s) failed: {', '.join(failed_ids)}."
             if failed_ids
             else "Evaluator skipped: generator outcomes never recorded."
         )
@@ -293,10 +260,7 @@ def _render_evaluator_children(
         )
     parts: list[str] = [_render_evaluation_criteria(attempt)]
     if task_store is None or attempt.evaluator_task_id is None:
-        parts.append(
-            "<evaluator_summary>\n(no evaluator summary recorded)\n"
-            "</evaluator_summary>"
-        )
+        parts.append("<evaluator_summary>\n(no evaluator summary recorded)\n</evaluator_summary>")
         return "\n".join(p for p in parts if p)
     evaluator_task = task_store.get_task(attempt.evaluator_task_id)
     evaluator_summary = (
@@ -338,7 +302,7 @@ def _sanitize_user_text(text: str, source_id: str) -> str:
 
 
 def _evaluator_verdicts(
-    evaluator_task: dict | None,
+    evaluator_task: dict[str, Any] | None,
 ) -> tuple[list[str], list[str]]:
     """Pull passed_criteria / failed_criteria from the evaluator task's latest payload."""
     if evaluator_task is None:
@@ -358,9 +322,7 @@ def _evaluator_verdicts(
             return []
         return [str(item) for item in value if item]
 
-    return _str_list(payload.get("passed_criteria")), _str_list(
-        payload.get("failed_criteria")
-    )
+    return _str_list(payload.get("passed_criteria")), _str_list(payload.get("failed_criteria"))
 
 
 def _generator_outcomes(

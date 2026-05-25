@@ -115,6 +115,21 @@ def _validate_tool_batch(
     return _reject_tool_batch(tool_calls, message=message)
 
 
+def _append_tool_batch_rejection(
+    context: QueryContext,
+    tool_calls: list[ToolUseBlock],
+    tool_results: list[ToolResultBlock],
+) -> list[StreamEvent] | None:
+    batch_rejection = _validate_tool_batch(context, tool_calls)
+    if batch_rejection is None:
+        return None
+    tool_results.extend(batch_rejection)
+    return [
+        _completion_event_from_result(tool_call, result)
+        for tool_call, result in zip(tool_calls, batch_rejection, strict=True)
+    ]
+
+
 async def dispatch_assistant_tools(
     context: QueryContext,
     messages: list[ConversationMessage],
@@ -137,14 +152,14 @@ async def dispatch_assistant_tools(
             tool_results.append(_result_from_cancelled(completed))
             events.append(completed)
 
-    batch_rejection = _validate_tool_batch(context, final_message.tool_uses)
-    if batch_rejection is not None:
+    rejection_events = _append_tool_batch_rejection(
+        context,
+        final_message.tool_uses,
+        tool_results,
+    )
+    if rejection_events is not None:
         executor.cancel_all()
-        tool_results.extend(batch_rejection)
-        for tool_call, result in zip(
-            final_message.tool_uses, batch_rejection, strict=True
-        ):
-            events.append(_completion_event_from_result(tool_call, result))
+        events.extend(rejection_events)
         return ToolDispatchResult(
             tool_results=tool_results,
             terminal_result=_terminal_result_from_tool_results(tool_results),
@@ -186,12 +201,9 @@ async def _dispatch_deferred_tool_calls(
     tool_results: list[ToolResultBlock],
 ) -> list[StreamEvent]:
     events: list[StreamEvent] = []
-    batch_rejection = _validate_tool_batch(context, tool_calls)
-    if batch_rejection is not None:
-        tool_results.extend(batch_rejection)
-        for tool_call, result in zip(tool_calls, batch_rejection, strict=True):
-            events.append(_completion_event_from_result(tool_call, result))
-        return events
+    rejection_events = _append_tool_batch_rejection(context, tool_calls, tool_results)
+    if rejection_events is not None:
+        return rejection_events
 
     foreground_tool_calls: list[ToolUseBlock] = []
     for tool_call in tool_calls:

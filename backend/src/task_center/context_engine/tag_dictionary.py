@@ -120,9 +120,7 @@ RECURSE_THROUGH: frozenset[str] = frozenset({"iteration"})
 
 
 # Identity attributes never surfaced in the outline.
-_IDENTITY_ATTRS: frozenset[str] = frozenset(
-    {"iteration_no", "attempt_no", "task_id", "id"}
-)
+_IDENTITY_ATTRS: frozenset[str] = frozenset({"iteration_no", "attempt_no", "task_id", "id"})
 
 # Semantic attributes — the only ones the dictionary keys on.
 _SEMANTIC_ATTRS: frozenset[str] = frozenset({"status", "verdict"})
@@ -147,9 +145,7 @@ def match(tag: str, attrs: dict[str, str]) -> TagDescriptor | None:
             matches = True
         else:
             specificity = len(descriptor.attr_filter)
-            matches = all(
-                semantic.get(k) == v for k, v in descriptor.attr_filter.items()
-            )
+            matches = all(semantic.get(k) == v for k, v in descriptor.attr_filter.items())
         if matches and specificity > best_specificity:
             best = descriptor
             best_specificity = specificity

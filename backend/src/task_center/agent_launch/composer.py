@@ -53,9 +53,7 @@ class AgentEntryComposer:
             renderer=XmlPromptRenderer(),
         )
 
-    def compose(
-        self, *, base_agent_name: str, scope: ContextScope
-    ) -> AgentEntryMessages:
+    def compose(self, *, base_agent_name: str, scope: ContextScope) -> AgentEntryMessages:
         # ``router.resolve`` enforces context_recipe presence and returns an
         # effective copy whose terminal list is launch-specific.
         selection = self.router.resolve(

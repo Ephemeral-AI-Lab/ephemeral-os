@@ -48,7 +48,7 @@ from task_center.iteration.state import (
 logger = logging.getLogger(__name__)
 
 
-GoalClosureReportSink = Callable[[GoalClosureReport], None]
+GoalClosureReportSink = Callable[[GoalClosureReport], object]
 
 
 class _CloseGoal(Protocol):
@@ -241,7 +241,9 @@ class _GoalIterationFactory:
         )
 
     def create_from_deferred_goal(
-        self, *, previous_iteration: Iteration,
+        self,
+        *,
+        previous_iteration: Iteration,
     ) -> tuple[Iteration, IterationAttemptCoordinator]:
         goal = self._goal_repository.require(previous_iteration.goal_id)
         assert_goal_open(goal)
@@ -303,18 +305,14 @@ class _IterationClosureRouter:
     def route(self, report: IterationClosureReport) -> None:
         iteration = self._iteration_store.get(report.iteration_id)
         if iteration is None:
-            raise TaskCenterInvariantViolation(
-                f"Iteration {report.iteration_id!r} not found"
-            )
+            raise TaskCenterInvariantViolation(f"Iteration {report.iteration_id!r} not found")
         try:
             outcome = report.outcome
             if isinstance(outcome, SuccessDeferred):
                 (
                     next_iteration,
                     next_coordinator,
-                ) = self._iteration_factory.create_from_deferred_goal(
-                    previous_iteration=iteration
-                )
+                ) = self._iteration_factory.create_from_deferred_goal(previous_iteration=iteration)
                 self._start_deferred_iteration(
                     next_iteration=next_iteration,
                     next_coordinator=next_coordinator,
@@ -328,9 +326,7 @@ class _IterationClosureRouter:
                     final_attempt_id=report.final_attempt_id,
                 )
             else:  # pragma: no cover
-                raise TaskCenterInvariantViolation(
-                    f"Unknown ClosureOutcome: {outcome!r}"
-                )
+                raise TaskCenterInvariantViolation(f"Unknown ClosureOutcome: {outcome!r}")
         finally:
             self._iteration_coordinators.deregister(iteration.id)
 
@@ -352,9 +348,8 @@ class _IterationClosureRouter:
             )
             latest_iteration = self._iteration_store.get(next_iteration.id)
             failed_attempt_id = (
-                (latest_iteration.latest_attempt_id if latest_iteration else None)
-                or previous_report.final_attempt_id
-            )
+                latest_iteration.latest_attempt_id if latest_iteration else None
+            ) or previous_report.final_attempt_id
             self._iteration_store.set_status(
                 next_iteration.id,
                 status=IterationStatus.CANCELLED,

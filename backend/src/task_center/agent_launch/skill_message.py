@@ -29,14 +29,8 @@ def _render_terminal_tool_selection_block(agent_def: AgentDefinition) -> str | N
         return None
     from tools._terminals.registry import render_terminal_catalog
 
-    catalog = render_terminal_catalog(
-        list(agent_def.terminals), focus="selection_guidance"
-    )
-    return (
-        "<terminal_tool_selection>\n"
-        f"{catalog}\n"
-        "</terminal_tool_selection>"
-    )
+    catalog = render_terminal_catalog(list(agent_def.terminals), focus="selection_guidance")
+    return f"<terminal_tool_selection>\n{catalog}\n</terminal_tool_selection>"
 
 
 def _wrap_task_guidance(
@@ -52,13 +46,7 @@ def _wrap_task_guidance(
     body = prose.rstrip()
     terminal_block = _render_terminal_tool_selection_block(agent_def)
     if terminal_block:
-        return (
-            "<Task Guidance>\n"
-            f"{body}\n"
-            "\n"
-            f"{terminal_block}\n"
-            "</Task Guidance>"
-        )
+        return f"<Task Guidance>\n{body}\n\n{terminal_block}\n</Task Guidance>"
     return "<Task Guidance>\n" + body + "\n</Task Guidance>"
 
 

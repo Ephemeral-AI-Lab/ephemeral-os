@@ -25,7 +25,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from sandbox._shared.models import Intent
-from engine.background.subagent_policy import SUBAGENT_TASK_TYPE
+from engine.background.task_supervisor import SUBAGENT_TASK_TYPE
 from message.messages import (
     ConversationMessage,
     TextBlock,

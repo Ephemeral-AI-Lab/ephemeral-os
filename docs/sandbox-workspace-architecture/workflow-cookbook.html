@@ -42,6 +42,30 @@
     <li>The traces are intentionally redundant with earlier sections: they are meant to be useful while debugging a concrete workflow.</li>
   </ul>
 </div>
+<div class="wiki-links" aria-label="Workflow cookbook links">
+  <a href="#cookbook-layerstack-read">[[Direct LayerStack Read]]</a>
+  <a href="#cookbook-ephemeral-shell">[[Ephemeral Shell or Search Operation]]</a>
+  <a href="#cookbook-occ-publish">[[OCC Publish from API Write/Edit]]</a>
+  <a href="#cookbook-isolated">[[Isolated Workspace Tool Lifecycle]]</a>
+  <a href="#cookbook-plugin-write">[[Plugin Write Operation]]</a>
+  <a href="#cookbook-pyright-refresh">[[Pyright Latest-Projection Refresh]]</a>
+</div>
+
+<div class="callout">
+  <span class="label">How to Use</span>
+  Pick the trace by the external symptom first, then follow its backlinks to the owner page. The cookbook is intentionally operational: it names the state handoff points where bugs usually appear.
+</div>
+
+<table>
+  <thead><tr><th>Symptom or question</th><th>Trace</th><th>Owner pages</th></tr></thead>
+  <tbody>
+    <tr><td>Read returned stale or missing content.</td><td><a class="wiki-link" href="#cookbook-layerstack-read">[[Direct LayerStack Read]]</a></td><td><a class="wiki-link" href="layerstack.html">[[LayerStack]]</a>, <a class="wiki-link" href="daemon.html#workspace-routing-and-state">[[Workspace Routing and State]]</a></td></tr>
+    <tr><td>Shell/search saw different files than direct read.</td><td><a class="wiki-link" href="#cookbook-ephemeral-shell">[[Ephemeral Shell or Search Operation]]</a></td><td><a class="wiki-link" href="overlay.html">[[Overlay]]</a>, <a class="wiki-link" href="workspaces.html#ephemeral-workspace">[[ephemeral_workspace]]</a></td></tr>
+    <tr><td>Write/edit conflicted or did not publish.</td><td><a class="wiki-link" href="#cookbook-occ-publish">[[OCC Publish from API Write/Edit]]</a></td><td><a class="wiki-link" href="occ.html">[[OCC]]</a>, <a class="wiki-link" href="layerstack.html#layerstack-publish">[[Publish]]</a></td></tr>
+    <tr><td>Private scratch leaked, failed to enter, or lost state early.</td><td><a class="wiki-link" href="#cookbook-isolated">[[Isolated Workspace Tool Lifecycle]]</a></td><td><a class="wiki-link" href="workspaces.html#isolated-workspace">[[isolated_workspace]]</a>, <a class="wiki-link" href="daemon.html#isolated-background-gate">[[Isolated Background Gate]]</a></td></tr>
+    <tr><td>Plugin or LSP saw stale projection.</td><td><a class="wiki-link" href="#cookbook-pyright-refresh">[[Pyright Latest-Projection Refresh]]</a></td><td><a class="wiki-link" href="plugins.html">[[Plugin in ephemeral_workspace]]</a></td></tr>
+  </tbody>
+</table>
 
 <h3 id="cookbook-layerstack-read">10.1 Direct LayerStack Read <a class="anchor" href="#cookbook-layerstack-read">§</a></h3>
 <div class="sequence" aria-label="Direct LayerStack read workflow">
@@ -54,7 +78,7 @@
   </ol>
 </div>
 
-<p>Relevant code: router fast path <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:70-88</span>, path binding <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:184-197</span>, direct resource metrics <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:205-234</span>, and merged-view reads <span class="file-ref">backend/src/sandbox/layer_stack/view.py:60-114</span>.</p>
+<p>Relevant code: router fast path <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:94-110</span>, path binding <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:208-224</span>, direct resource metrics <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:232-260</span>, and merged-view reads <span class="file-ref">backend/src/sandbox/layer_stack/view.py:60-114</span>.</p>
 
 <h3 id="cookbook-ephemeral-shell">10.2 Ephemeral Shell or Search Operation <a class="anchor" href="#cookbook-ephemeral-shell">§</a></h3>
 <div class="sequence" aria-label="Ephemeral shell operation workflow">
@@ -83,7 +107,7 @@
   </ol>
 </div>
 
-<p>Relevant code: direct write/edit router <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:91-181</span>, preparer <span class="file-ref">backend/src/sandbox/occ/changeset_preparation.py:41-174</span>, commit queue <span class="file-ref">backend/src/sandbox/occ/commit_queue.py:55-239</span>, transaction <span class="file-ref">backend/src/sandbox/occ/commit_transaction.py:65-141</span>, and result projection <span class="file-ref">backend/src/sandbox/daemon/changeset_projection.py:16-60</span>.</p>
+<p>Relevant code: direct write/edit router <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:113-179</span>, preparer <span class="file-ref">backend/src/sandbox/occ/changeset_preparation.py:41-174</span>, commit queue <span class="file-ref">backend/src/sandbox/occ/commit_queue.py:55-239</span>, transaction <span class="file-ref">backend/src/sandbox/occ/commit_transaction.py:65-141</span>, and result projection <span class="file-ref">backend/src/sandbox/daemon/changeset_projection.py:16-60</span>.</p>
 
 <h3 id="cookbook-isolated">10.4 Isolated Workspace Tool Lifecycle <a class="anchor" href="#cookbook-isolated">§</a></h3>
 <div class="sequence" aria-label="Isolated workspace lifecycle workflow">
@@ -125,6 +149,9 @@
 </div>
 
 <p>Relevant code: session reconciliation <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/session_manager.py:34-98</span>, overlay acquisition <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/session_manager.py:176-221</span>, event pump <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/session_manager.py:294-360</span>, Pyright remount/notification <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/pyright_session.py:374-415</span>, <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/pyright_session.py:583-650</span>, and LSP apply path <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/apply.py:21-148</span>.</p>
+<div class="maintenance-note">
+  Backlinks: each trace should have one owner page and at least one storage/workspace page. If a new workflow appears, add it here, add a search-index entry, and add backlinks from the owner node.
+</div>
 <div class="page-footer-nav"><span><a href="space-model.html">← 9. Space Model</a></span><span><a href="index.html">Index →</a></span></div>
 </main>
 <script src="assets/search-index.js"></script>

@@ -111,7 +111,7 @@ class EphemeralAgent:
             await client.aclose()
 
 
-def finalize_tool_registry_and_prompt(
+def _finalize_tool_registry_and_prompt(
     tool_registry: ToolRegistry,
     system_prompt: str,
     *,
@@ -119,7 +119,7 @@ def finalize_tool_registry_and_prompt(
 ) -> tuple[str, bool]:
     """Finalize runtime tool registry and append terminal-tool guidance.
 
-    This is the shared setup logic used by both spawn_agent() and EvalAgent.
+    This is the shared setup logic used by spawn_agent().
     Terminal tool names are derived from the registry — any tool whose class
     sets ``is_terminal_tool=True`` ends the query loop on success.
 
@@ -221,7 +221,7 @@ def _build_agent_tool_registry(
     if agent_def:
         _register_requested_tools(
             tool_registry,
-            _collect_agent_tool_surface(agent_def),
+            sorted(set(agent_def.allowed_tools) | set(agent_def.terminals)),
             tool_ctx,
             agent_name,
         )
@@ -230,11 +230,6 @@ def _build_agent_tool_registry(
         logger.info("Registered sandbox tools for sandbox %s", sandbox_id)
 
     return tool_registry
-
-
-def _collect_agent_tool_surface(agent_def: AgentDefinition) -> list[str]:
-    """Return the agent's declared tool surface (allowed_tools ∪ terminals)."""
-    return sorted(set(agent_def.allowed_tools) | set(agent_def.terminals))
 
 
 def _register_requested_tools(
@@ -249,7 +244,7 @@ def _register_requested_tools(
         if not clean_name or tool_registry.get(clean_name) is not None:
             continue
         if clean_name in _BACKGROUND_CONTROL_TOOL_NAMES:
-            # These are synthesized by finalize_tool_registry_and_prompt when
+            # These are synthesized by _finalize_tool_registry_and_prompt when
             # the registered tools include at least one background-capable
             # tool. They are not ordinary tool factories.
             continue
@@ -266,14 +261,6 @@ def _register_requested_tools(
                 agent_name,
                 exc_info=True,
             )
-
-
-def _tool_registry_context_requirements(tool_registry: ToolRegistry) -> set[str]:
-    """Return runtime context requirements declared by registered tools."""
-    requirements: set[str] = set()
-    for tool in tool_registry.list_tools():
-        requirements.update(getattr(tool, "context_requirements", ()))
-    return requirements
 
 
 def _attach_default_overshoot_rules(
@@ -322,8 +309,10 @@ def _build_context_preparers(
     """Build provider/toolkit-specific context hooks for registered tools."""
     if not sandbox_id:
         return []
-    requirements = _tool_registry_context_requirements(tool_registry)
-    if SANDBOX_CONTEXT not in requirements:
+    if not any(
+        SANDBOX_CONTEXT in getattr(tool, "context_requirements", ())
+        for tool in tool_registry.list_tools()
+    ):
         return []
 
     import sandbox.api as sandbox_api
@@ -386,7 +375,7 @@ def spawn_agent(
 
     base_system_prompt = _build_agent_system_prompt(config, agent_def, settings)
 
-    system_prompt, has_background_tools = finalize_tool_registry_and_prompt(
+    system_prompt, has_background_tools = _finalize_tool_registry_and_prompt(
         tool_registry,
         base_system_prompt,
         agent_type=agent_def.agent_type if agent_def else "agent",

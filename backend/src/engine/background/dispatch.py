@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 from uuid import uuid4
 
 from pydantic import ValidationError
@@ -16,16 +16,20 @@ from message.stream_events import (
     ToolExecutionCompleted,
 )
 from notification import SystemNotification
-from tools import BaseTool, ExecutionMetadata, ToolRegistry, ToolResult
+from tools import (
+    BaseTool,
+    ExecutionMetadata,
+    SANDBOX_CONTEXT,
+    ToolRegistry,
+    ToolResult,
+)
 from tools._framework.execution.trace import record_tool_trace
 
 if TYPE_CHECKING:
     from engine.query.context import QueryContext
 
-_SANDBOX_CONTEXT_REQUIREMENT = "sandbox"
-
 ToolCallExecutor = Callable[
-    [str, str, dict[str, object], ExecutionMetadata | dict[str, Any] | None],
+    [str, str, dict[str, object], ExecutionMetadata | None],
     Awaitable[ToolResultBlock],
 ]
 
@@ -99,7 +103,7 @@ def launch_background_tool(
         )
 
     task_alias = background_tasks.next_alias()
-    uses_sandbox = _SANDBOX_CONTEXT_REQUIREMENT in getattr(
+    uses_sandbox = SANDBOX_CONTEXT in getattr(
         tool_def,
         "context_requirements",
         (),
@@ -167,19 +171,18 @@ def launch_and_collect_background_events(
         tool_name: str,
         tool_use_id: str,
         tool_input: dict[str, object],
-        extra_metadata: ExecutionMetadata | dict[str, Any] | None = None,
+        extra_metadata: ExecutionMetadata | None = None,
     ) -> ToolResultBlock:
         from tools import execute_tool_call_streaming
 
         async def emit(event: StreamEvent) -> None:
             if not isinstance(event, SystemNotification):
                 return
-            callback = None
-            if isinstance(extra_metadata, ExecutionMetadata):
-                callback = extra_metadata.on_progress_line
-            elif isinstance(extra_metadata, dict):
-                raw = extra_metadata.get("on_progress_line")
-                callback = raw if callable(raw) else None
+            callback = (
+                extra_metadata.on_progress_line
+                if isinstance(extra_metadata, ExecutionMetadata)
+                else None
+            )
             if callback is not None:
                 callback(event.text)
 

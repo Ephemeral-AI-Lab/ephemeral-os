@@ -27,9 +27,7 @@ class GoalClosureReportRouter:
     def __init__(self, *, runtime: AttemptDeps) -> None:
         self._runtime = runtime
 
-    def deliver(
-        self, report: GoalClosureReport
-    ) -> CloseReportDeliveryResult:
+    def deliver(self, report: GoalClosureReport) -> CloseReportDeliveryResult:
         if report.origin_kind == GoalOriginKind.ENTRY:
             return self._deliver_entry_origin(report)
         if report.requested_by_task_id is None:
@@ -54,14 +52,13 @@ class GoalClosureReportRouter:
             )
         if status != TaskCenterBackgroundTaskStatus.WAITING_GOAL.value:
             raise TaskCenterInvariantViolation(
-                f"TaskCenter task {report.requested_by_task_id!r} is not waiting "
-                "on a goal."
+                f"TaskCenter task {report.requested_by_task_id!r} is not waiting on a goal."
             )
 
-        target = self._runtime.lifecycle_target_for(
+        parent_task = self._runtime.parent_task_for_delegated_goal(
             task_id=report.requested_by_task_id, attempt_id=attempt_id
         )
-        if target is None:
+        if parent_task is None:
             kind = (
                 "entry controller"
                 if attempt_id is None
@@ -72,16 +69,14 @@ class GoalClosureReportRouter:
                 f"{kind} is not registered; close-report delivery cannot "
                 "proceed."
             )
-        target.apply_goal_closure_report(report)
+        parent_task.apply_goal_closure_report(report)
         return CloseReportDeliveryResult(
             status="delivered",
             requested_by_task_id=report.requested_by_task_id,
             parent_attempt_id=attempt_id,
         )
 
-    def _deliver_entry_origin(
-        self, report: GoalClosureReport
-    ) -> CloseReportDeliveryResult:
+    def _deliver_entry_origin(self, report: GoalClosureReport) -> CloseReportDeliveryResult:
         run = self._runtime.task_store.get_run(report.task_center_run_id)
         if run is None:
             raise TaskCenterInvariantViolation(

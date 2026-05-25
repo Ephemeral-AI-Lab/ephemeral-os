@@ -14,7 +14,7 @@ from agents import AgentDefinition, AgentKind
 from engine.agent.factory import (
     _build_agent_tool_registry,
     _build_context_preparers,
-    finalize_tool_registry_and_prompt,
+    _finalize_tool_registry_and_prompt,
 )
 from tools._framework.core.base import BaseTool, ToolExecutionContextService, ToolResult
 from tools._framework.core.registry import ToolRegistry
@@ -162,7 +162,7 @@ def test_finalize_adds_background_management_tools_for_background_capable_tool()
     registry = ToolRegistry()
     registry.register(_BackgroundCapableTool())
 
-    _, has_background = finalize_tool_registry_and_prompt(
+    _, has_background = _finalize_tool_registry_and_prompt(
         registry,
         "base",
         agent_type="agent",
@@ -182,7 +182,7 @@ def test_run_subagent_factory_preserves_always_background_policy() -> None:
     registry = ToolRegistry()
     registry.register(tool)
 
-    _, has_background = finalize_tool_registry_and_prompt(
+    _, has_background = _finalize_tool_registry_and_prompt(
         registry,
         "base",
         agent_type="agent",
@@ -197,7 +197,7 @@ def test_finalize_skips_background_management_tools_for_subagent() -> None:
     registry = ToolRegistry()
     registry.register(_BackgroundCapableTool())
 
-    _, has_background = finalize_tool_registry_and_prompt(
+    _, has_background = _finalize_tool_registry_and_prompt(
         registry,
         "base",
         agent_type="subagent",
@@ -212,7 +212,7 @@ def test_finalize_derives_terminal_tool_guidance_from_registry() -> None:
     registry = ToolRegistry()
     registry.register(_TerminalTool())
 
-    prompt, _ = finalize_tool_registry_and_prompt(
+    prompt, _ = _finalize_tool_registry_and_prompt(
         registry,
         "base",
         agent_type="agent",

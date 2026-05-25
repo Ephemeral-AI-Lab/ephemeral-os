@@ -93,9 +93,7 @@ class TerminalToolRouter:
     def _load_definition(name: str) -> AgentDefinition:
         definition = get_definition(name)
         if definition is None:
-            raise AgentDefinitionValidationError(
-                f"Agent definition {name!r} is not registered."
-            )
+            raise AgentDefinitionValidationError(f"Agent definition {name!r} is not registered.")
         return definition
 
     @staticmethod
@@ -134,13 +132,9 @@ class TerminalToolRouter:
         if definition.agent_kind == AgentKind.PLANNER:
             if depth_restricted:
                 return frozenset({"submit_plan_closes_goal"})
-            return frozenset(
-                {"submit_plan_closes_goal", "submit_plan_defers_goal"}
-            )
+            return frozenset({"submit_plan_closes_goal", "submit_plan_defers_goal"})
         if depth_restricted:
-            return frozenset(
-                {"submit_execution_success", "submit_execution_blocker"}
-            )
+            return frozenset({"submit_execution_success", "submit_execution_blocker"})
         return frozenset(
             {
                 "submit_execution_handoff",

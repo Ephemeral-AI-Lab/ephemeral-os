@@ -120,14 +120,10 @@ def _prior_iteration_blocks(
                 "missing plan_spec or task_summary; chain integrity violated."
             )
         priority = (
-            ContextPriority.HIGH
-            if prior.sequence_no == immediate_prior
-            else ContextPriority.MEDIUM
+            ContextPriority.HIGH if prior.sequence_no == immediate_prior else ContextPriority.MEDIUM
         )
         group_id = f"iteration_{prior.sequence_no}_prior"
-        group_attrs = (
-            f'iteration_no="{prior.sequence_no}" status="prior"'
-        )
+        group_attrs = f'iteration_no="{prior.sequence_no}" status="prior"'
         out.append(
             ContextBlock(
                 kind=ContextBlockKind.PRIOR_ITERATION_SPECIFICATION,

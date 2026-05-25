@@ -42,6 +42,16 @@
     <li>Overlay turns a versioned layer log into a temporary working tree for one operation or one isolated session.</li>
   </ul>
 </div>
+<div class="wiki-links" aria-label="Overlay page links">
+  <a href="#overlay-handle">[[Overlay Handle]]</a>
+  <a href="#overlay-mount-namespace">[[Mount Namespace]]</a>
+  <a href="#overlay-capture">[[Upperdir Capture]]</a>
+  <a href="layerstack.html#layerstack-projection">[[LayerStack Projection]]</a>
+  <a href="occ.html">[[OCC]]</a>
+  <a href="workflow-cookbook.html#cookbook-ephemeral-shell">[[Ephemeral Shell]]</a>
+</div>
+
+<h3 id="overlay-handle">3.1 Overlay Handle <a class="anchor" href="#overlay-handle">§</a></h3>
 
 <div class="stack-viz" aria-label="Overlay filesystem stack">
   <div class="layer merged"><strong>workspace_root mountpoint</strong><div class="desc">what the tool sees inside its mount namespace</div></div>
@@ -52,6 +62,14 @@
 
 <p>The overlay lifecycle primitive allocates a per-operation run dir, leases a snapshot, requires <code>layer_paths</code>, allocates <code>upper</code> and <code>work</code>, and returns an <code>OverlayHandle</code> <span class="file-ref">backend/src/sandbox/overlay/lifecycle.py:20-79</span>. Upper/work directories live under <code>/eos-mount-scratch/eos-sandbox-runtime</code>; there is intentionally no fallback because overlayfs requires a suitable writable filesystem <span class="file-ref">backend/src/sandbox/overlay/writable_dirs.py:13-52</span>.</p>
 
+<div class="inline-kv">
+  <div>Lowerdirs</div><div>Existing immutable LayerStack directories, ordered newest-first and pinned by the snapshot lease.</div>
+  <div>Upperdir</div><div>Only new writes/deletes/opaque markers for this one operation or one isolated session.</div>
+  <div>Workdir</div><div>Kernel-required overlayfs scratch that pairs with the upperdir and is not published.</div>
+  <div>Handle release</div><div>Releases the LayerStack lease and removes the run dir; isolated handles defer this until explicit exit.</div>
+</div>
+
+<h3 id="overlay-mount-namespace">3.2 Mount Namespace <a class="anchor" href="#overlay-mount-namespace">§</a></h3>
 <p>The kernel mount helper calls Linux <code>fsopen</code>, <code>fsconfig</code>, <code>fsmount</code>, and <code>move_mount</code>. It adds each layer with <code>lowerdir+</code> in manifest order, where the first path is the highest-priority lower <span class="file-ref">backend/src/sandbox/overlay/kernel_mount.py:45-67</span>. Inputs are validated with <code>O_DIRECTORY | O_NOFOLLOW</code> and passed as <code>/proc/self/fd/...</code> paths to pin the checked directories <span class="file-ref">backend/src/sandbox/overlay/kernel_mount.py:139-198</span>.</p>
 
 <div class="callout good">
@@ -61,6 +79,17 @@
 
 <p>Fresh ephemeral calls write a JSON payload and launch <code>unshare -Urm python -m sandbox.overlay.namespace_entrypoint</code> <span class="file-ref">backend/src/sandbox/overlay/namespace_runner.py:66-128</span>. The entrypoint validates/mounts the overlay, runs the tool from <code>workspace_root</code>, unmounts, and writes timings <span class="file-ref">backend/src/sandbox/overlay/namespace_entrypoint.py:85-175</span>. For isolated workspaces, the runner passes <code>mount_overlay=false</code> and executes inside the already-mounted namespace <span class="file-ref">backend/src/sandbox/overlay/namespace_runner.py:131-197</span>.</p>
 
+<table>
+  <thead><tr><th>Execution shape</th><th>Mount behavior</th><th>Publish behavior</th><th>Backlink</th></tr></thead>
+  <tbody>
+    <tr><td>Fresh ephemeral tool call</td><td>Creates a new user/mount namespace and mounts overlay onto <code>workspace_root</code> for one payload.</td><td>Write-intent calls capture upperdir and publish through OCC.</td><td><a class="wiki-link" href="workflow-cookbook.html#cookbook-ephemeral-shell">[[Ephemeral Shell or Search Operation]]</a></td></tr>
+    <tr><td>Generic plugin write</td><td>Uses the same operation overlay wrapper and runs the plugin child in a fresh namespace.</td><td>Parent captures upperdir and calls <code>publish_cycle()</code>.</td><td><a class="wiki-link" href="plugins.html">[[Plugin in ephemeral_workspace]]</a></td></tr>
+    <tr><td>Isolated workspace</td><td>Mount happens once during enter. Subsequent tool calls enter the existing namespace and do not remount lowerdirs.</td><td>No publish; upperdir is audit/discard state until exit.</td><td><a class="wiki-link" href="workspaces.html#isolated-workspace">[[isolated_workspace]]</a></td></tr>
+    <tr><td>Pyright long-lived session</td><td>Runs inside a private overlay namespace and can remount when the active manifest key changes.</td><td>Read operations do not publish; LSP apply uses a separate write overlay.</td><td><a class="wiki-link" href="plugins.html#plugin-refresh-detail">[[Projection Refresh and LSP Writes]]</a></td></tr>
+  </tbody>
+</table>
+
+<h3 id="overlay-capture">3.3 Upperdir Capture <a class="anchor" href="#overlay-capture">§</a></h3>
 <div class="sequence" aria-label="Overlay capture lifecycle">
   <ol>
     <li><span>The operation finishes and the parent pipeline keeps the overlay handle alive.</span></li>
@@ -83,6 +112,9 @@
 </table>
 
 <p>The upperdir walk uses <code>os.walk()</code> and avoids loading the entire tree into memory <span class="file-ref">backend/src/sandbox/overlay/capture.py:49-93</span>. Whiteout and opaque handling are explicit helpers <span class="file-ref">backend/src/sandbox/overlay/capture.py:95-128</span>. This is why changed-data cost is tied to the operation's writes rather than repository size.</p>
+<div class="maintenance-note">
+  Backlinks: <a class="wiki-link" href="layerstack.html#layerstack-projection">[[Projection]]</a> supplies lowerdirs, <a class="wiki-link" href="occ.html">[[OCC]]</a> consumes captured changes, and <a class="wiki-link" href="space-model.html">[[Space Model]]</a> explains why overlay scratch scales with changed bytes.
+</div>
 <div class="page-footer-nav"><span><a href="layerstack.html">← 2. LayerStack</a></span><span><a href="occ.html">4. OCC →</a></span></div>
 </main>
 <script src="assets/search-index.js"></script>

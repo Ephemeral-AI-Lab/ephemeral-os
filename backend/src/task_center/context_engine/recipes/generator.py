@@ -42,15 +42,18 @@ GENERATOR_ID = "generator"
 _REQUIRED_FIELDS = frozenset({"goal_id", "attempt_id", "task_id"})
 
 
-def _generator_build(
-    scope: ContextScope, deps: ContextEngineDeps
-) -> ContextPacket:
-    attempt = deps.attempt_store.get(scope.attempt_id)
+def _generator_build(scope: ContextScope, deps: ContextEngineDeps) -> ContextPacket:
+    attempt_id = scope.require_field("attempt_id")
+    task_id = scope.require_field("task_id")
+    goal_id = scope.require_field("goal_id")
+
+    attempt = deps.attempt_store.get(attempt_id)
     if attempt is None:
-        raise ContextEngineError(f"Attempt {scope.attempt_id!r} not found")
-    task = deps.task_store.get_task(scope.task_id)
+        raise ContextEngineError(f"Attempt {attempt_id!r} not found")
+    iteration_id = scope.iteration_id or attempt.iteration_id
+    task = deps.task_store.get_task(task_id)
     if task is None:
-        raise ContextEngineError(f"TaskCenterTask {scope.task_id!r} not found")
+        raise ContextEngineError(f"TaskCenterTask {task_id!r} not found")
 
     blocks: list[ContextBlock] = []
     if attempt.plan_spec:
@@ -66,31 +69,29 @@ def _generator_build(
         )
 
     needs = tuple(str(dep) for dep in task.get("needs") or ())
-    blocks.extend(
-        _dependency_blocks(needs=needs, task_store=deps.task_store)
-    )
+    blocks.extend(_dependency_blocks(needs=needs, task_store=deps.task_store))
     blocks.append(
         ContextBlock(
             kind=ContextBlockKind.PLANNED_TASK_SPEC,
             priority=ContextPriority.REQUIRED,
             text=str(task.get("context_message") or ""),
-            source_id=scope.task_id,
+            source_id=task_id,
             source_kind="task_center_task",
             metadata={
                 "tag": "assigned_task",
-                "attrs": f'task_id="{scope.task_id}"',
+                "attrs": f'task_id="{task_id}"',
             },
         )
     )
 
     return ContextPacket(
         target_role="generator",
-        target_id=scope.task_id,
+        target_id=task_id,
         canonical_refs=ContextRefs(
-            goal_id=scope.goal_id,
-            iteration_id=scope.iteration_id or attempt.iteration_id,
-            attempt_id=scope.attempt_id,
-            task_id=scope.task_id,
+            goal_id=goal_id,
+            iteration_id=iteration_id or attempt.iteration_id,
+            attempt_id=attempt_id,
+            task_id=task_id,
         ),
         blocks=blocks,
         source_ids=[b.source_id for b in blocks if b.source_id],

@@ -69,9 +69,7 @@ class ContextBlock(BaseModel):
     def _non_blank_required_text(cls, value: str, info: Any) -> str:
         priority = info.data.get("priority")
         if priority == ContextPriority.REQUIRED and not value.strip():
-            raise ValueError(
-                "ContextBlock with priority=required must have non-blank text"
-            )
+            raise ValueError("ContextBlock with priority=required must have non-blank text")
         return value
 
 

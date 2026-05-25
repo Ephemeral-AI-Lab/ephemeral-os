@@ -158,7 +158,7 @@ class TestPrepareProviderMessages:
             for block in msg.content
         )
 
-    def test_reduce_background_task_history_prefers_delivered_snapshot(self) -> None:
+    def test_reduce_background_task_history_prefers_finished_snapshot(self) -> None:
         running_statuses = [
             {
                 "task_id": "bg_1",
@@ -173,7 +173,7 @@ class TestPrepareProviderMessages:
                 "task_id": "bg_1",
                 "tool_name": "run_subagent",
                 "task_type": "subagent",
-                "status": "delivered",
+                "status": "finished",
                 "output": '{"summary": "Posted."}',
             }
         ]

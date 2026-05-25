@@ -12,32 +12,15 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
-from engine.background.subagent_policy import (
-    DEFAULT_BACKGROUND_TASK_TYPE,
-    mark_completion_mode_if_stopped,
-    request_subagent_early_stop,
-    should_cancel_asyncio_task,
-)
 from tools import ToolResult
 from message.stream_events import BackgroundTaskStarted
 
 logger = logging.getLogger(__name__)
 _HEARTBEAT_INTERVAL_S = float(os.environ.get("EOS_BACKGROUND_HEARTBEAT_INTERVAL_S", "60"))
-
-
-# Terminal status precedence used by :meth:`BackgroundTaskSupervisor._set_terminal_status`.
-# A status with a *higher* precedence overwrites a lower one; otherwise the
-# attempt is dropped. This is the single-terminal-status latch the plan
-# requires (Pre-mortem #6): cancel + natural-completion races resolve to
-# COMPLETED so a long-running shell that finishes between cancel and reap
-# returns its real result, not the "cancelled" overlay.
-_TERMINAL_PRECEDENCE: dict[str, int] = {
-    "running": 0,
-    "cancelled": 1,
-    "failed": 2,
-    "completed": 3,
-    "delivered": 4,
-}
+DEFAULT_BACKGROUND_TASK_TYPE = "agent"
+SUBAGENT_TASK_TYPE = "subagent"
+_EARLY_STOP_MODE = "early_stop"
+_EARLY_STOP_COMPLETION_MODE = "early_stopped"
 
 
 class BackgroundTaskStatus(StrEnum):
@@ -55,6 +38,21 @@ class BackgroundTaskStatus(StrEnum):
     FAILED = "failed"
     CANCELLED = "cancelled"
     DELIVERED = "delivered"
+
+
+# Terminal status precedence used by :meth:`BackgroundTaskSupervisor._set_terminal_status`.
+# A status with a *higher* precedence overwrites a lower one; otherwise the
+# attempt is dropped. This is the single-terminal-status latch the plan
+# requires (Pre-mortem #6): cancel + natural-completion races resolve to
+# COMPLETED so a long-running shell that finishes between cancel and reap
+# returns its real result, not the "cancelled" overlay.
+_TERMINAL_PRECEDENCE: dict[BackgroundTaskStatus, int] = {
+    BackgroundTaskStatus.RUNNING: 0,
+    BackgroundTaskStatus.CANCELLED: 1,
+    BackgroundTaskStatus.FAILED: 2,
+    BackgroundTaskStatus.COMPLETED: 3,
+    BackgroundTaskStatus.DELIVERED: 4,
+}
 
 
 # Terminal states that are still "undelivered" and waiting for the engine
@@ -79,9 +77,6 @@ class BackgroundTaskRecord:
     # Discriminator so monitoring/UI/audit can branch without sniffing tool_name.
     # "agent" for ordinary background tools, "subagent" for run_subagent.
     task_type: str = DEFAULT_BACKGROUND_TASK_TYPE
-    # Optional back-reference to a persisted AgentRunRecord (set by run_subagent
-    # so the audit row and the in-memory bg task can be cross-resolved).
-    agent_run_id: str | None = None
     agent_id: str | None = None
     uses_sandbox: bool = False
     sandbox_id: str | None = None
@@ -107,6 +102,40 @@ class BackgroundTaskRecord:
     # and the asyncio done-callback can both race to set a terminal status;
     # the lock + ``_TERMINAL_PRECEDENCE`` table make that race deterministic.
     _terminal_lock: threading.Lock = field(default_factory=threading.Lock)
+
+
+def _running_sandbox_task(
+    tracked: BackgroundTaskRecord,
+    agent_id: str | None = None,
+) -> bool:
+    if tracked.status != BackgroundTaskStatus.RUNNING or not tracked.uses_sandbox:
+        return False
+    return agent_id is None or tracked.agent_id == agent_id
+
+
+def _mark_completion_mode_if_stopped(tracked: BackgroundTaskRecord) -> None:
+    if tracked.stop_mode == _EARLY_STOP_MODE:
+        tracked.completion_mode = _EARLY_STOP_COMPLETION_MODE
+
+
+def _should_cancel_asyncio_task(tracked: BackgroundTaskRecord) -> bool:
+    return tracked.task_type != SUBAGENT_TASK_TYPE
+
+
+async def _request_subagent_early_stop(
+    tracked: BackgroundTaskRecord,
+    *,
+    reason: str = "",
+) -> None:
+    tracked.stop_mode = _EARLY_STOP_MODE
+    tracked.progress_lines = [f"Early stop requested{': ' + reason if reason else ''}"]
+    # Give a freshly launched subagent one event-loop cycle to reach its first
+    # cooperative await so cancellation can be salvaged into a partial result.
+    await asyncio.sleep(0)
+    tracked.asyncio_task.cancel()
+    # Let trivial cancellation handlers and the task done-callback run before
+    # status is reported back to the caller.
+    await asyncio.sleep(0)
 
 
 class BackgroundTaskSupervisor:
@@ -137,7 +166,6 @@ class BackgroundTaskSupervisor:
         tool_input: dict[str, Any],
         coro: Coroutine[Any, Any, ToolResult],
         task_type: str = DEFAULT_BACKGROUND_TASK_TYPE,
-        agent_run_id: str | None = None,
         agent_id: str | None = None,
         uses_sandbox: bool = False,
         sandbox_id: str | None = None,
@@ -151,7 +179,6 @@ class BackgroundTaskSupervisor:
             tool_input=tool_input,
             asyncio_task=asyncio_task,
             task_type=task_type,
-            agent_run_id=agent_run_id,
             agent_id=agent_id,
             uses_sandbox=uses_sandbox,
             sandbox_id=sandbox_id,
@@ -184,7 +211,7 @@ class BackgroundTaskSupervisor:
                         new_result=real_result,
                     )
                     if applied:
-                        mark_completion_mode_if_stopped(tracked)
+                        _mark_completion_mode_if_stopped(tracked)
             except Exception as exc:
                 logger.debug("done_callback failed for %s: %s", tracked.task_id, exc)
                 self._set_terminal_status(
@@ -248,9 +275,7 @@ class BackgroundTaskSupervisor:
         return sum(
             1
             for tracked in self._tasks.values()
-            if tracked.status == BackgroundTaskStatus.RUNNING
-            and tracked.uses_sandbox
-            and tracked.agent_id == agent_id
+            if _running_sandbox_task(tracked, agent_id)
         )
 
     def append_progress(self, task_id: str, line: str) -> None:
@@ -304,18 +329,10 @@ class BackgroundTaskSupervisor:
             return False
         tracked.cancel_reason = reason or None
         await self._wire_cancel_if_sandbox_bound(tracked)
-        if not should_cancel_asyncio_task(tracked):
-            await request_subagent_early_stop(tracked, reason=reason)
+        if not _should_cancel_asyncio_task(tracked):
+            await _request_subagent_early_stop(tracked, reason=reason)
             return True
-        tracked.stop_mode = "cancel"
-        msg = f"Cancelled: {reason}" if reason else "Cancelled"
-        applied = self._set_terminal_status(
-            tracked,
-            new_status=BackgroundTaskStatus.CANCELLED,
-            new_result=ToolResult(output=msg, is_error=True),
-        )
-        if applied:
-            tracked.progress_lines = [msg]
+        self._mark_cancelled(tracked, reason=reason)
         tracked.asyncio_task.cancel()
         self._stop_heartbeat_if_idle()
         return True
@@ -328,9 +345,7 @@ class BackgroundTaskSupervisor:
         targets = [
             tracked
             for tracked in self._tasks.values()
-            if tracked.status == BackgroundTaskStatus.RUNNING
-            and tracked.uses_sandbox
-            and tracked.agent_id == agent_id
+            if _running_sandbox_task(tracked, agent_id)
         ]
         if not targets:
             return 0
@@ -363,21 +378,30 @@ class BackgroundTaskSupervisor:
         for tracked in self._tasks.values():
             if tracked.status != BackgroundTaskStatus.RUNNING:
                 continue
-            tracked.stop_mode = "cancel"
-            applied = self._set_terminal_status(
-                tracked,
-                new_status=BackgroundTaskStatus.CANCELLED,
-                new_result=ToolResult(output="Cancelled", is_error=True),
-            )
-            if applied:
-                tracked.progress_lines = ["Cancelled"]
+            self._mark_cancelled(tracked)
             await self._wire_cancel_if_sandbox_bound(tracked)
-            if should_cancel_asyncio_task(tracked):
+            if _should_cancel_asyncio_task(tracked):
                 tracked.asyncio_task.cancel()
                 cancelled_tasks.append(tracked.asyncio_task)
         if cancelled_tasks:
             await asyncio.gather(*cancelled_tasks, return_exceptions=True)
         self._stop_heartbeat_if_idle()
+
+    def _mark_cancelled(
+        self,
+        tracked: BackgroundTaskRecord,
+        *,
+        reason: str = "",
+    ) -> None:
+        tracked.stop_mode = "cancel"
+        message = f"Cancelled: {reason}" if reason else "Cancelled"
+        applied = self._set_terminal_status(
+            tracked,
+            new_status=BackgroundTaskStatus.CANCELLED,
+            new_result=ToolResult(output=message, is_error=True),
+        )
+        if applied:
+            tracked.progress_lines = [message]
 
     def _set_terminal_status(
         self,
@@ -394,9 +418,9 @@ class BackgroundTaskSupervisor:
         the precedence rule deterministic even if event-loop ordering
         re-shuffles cancel + done_callback.
         """
-        new_rank = _TERMINAL_PRECEDENCE.get(new_status.value, 0)
+        new_rank = _TERMINAL_PRECEDENCE[new_status]
         with tracked._terminal_lock:
-            current_rank = _TERMINAL_PRECEDENCE.get(tracked.status.value, 0)
+            current_rank = _TERMINAL_PRECEDENCE[tracked.status]
             if new_rank <= current_rank:
                 return False
             tracked.status = new_status
@@ -464,8 +488,7 @@ class BackgroundTaskSupervisor:
         by_sandbox: dict[str, list[str]] = {}
         for tracked in self._tasks.values():
             if (
-                tracked.status == BackgroundTaskStatus.RUNNING
-                and tracked.uses_sandbox
+                _running_sandbox_task(tracked)
                 and tracked.sandbox_id
                 and tracked.sandbox_invocation_id
             ):

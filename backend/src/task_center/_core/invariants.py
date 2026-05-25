@@ -24,9 +24,7 @@ from task_center.task_state import TaskCenterTaskRole
 
 def assert_goal_open(goal: Goal) -> None:
     if not goal.is_open:
-        raise TaskCenterInvariantViolation(
-            f"Goal {goal.id!r} is not open (status={goal.status})"
-        )
+        raise TaskCenterInvariantViolation(f"Goal {goal.id!r} is not open (status={goal.status})")
 
 
 def assert_iteration_id_unique_in_goal(goal: Goal, iteration_id: str) -> None:
@@ -99,8 +97,7 @@ def assert_fail_reason_present_on_failure(attempt: Attempt) -> None:
 def assert_attempt_stage(attempt: Attempt, expected: AttemptStage) -> None:
     if attempt.stage != expected:
         raise TaskCenterInvariantViolation(
-            f"Attempt {attempt.id!r} expected stage {expected.value!r}, "
-            f"got {attempt.stage.value!r}"
+            f"Attempt {attempt.id!r} expected stage {expected.value!r}, got {attempt.stage.value!r}"
         )
 
 

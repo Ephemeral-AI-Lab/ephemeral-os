@@ -7,15 +7,12 @@ import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any
 
 from agents import get_definition
 from message.messages import ConversationMessage
 from message.stream_events import StreamEvent
-from task_center._core.persistence import (
-    GoalStoreProtocol,
-    IterationStoreProtocol,
-)
+from task_center.attempt.orchestrator_registry import RegisteredAttemptOrchestrator
 from task_center.attempt.runtime import AgentLaunch, AttemptDeps
 from task_center.attempt.state import AttemptFailReason, AttemptStatus
 from task_center.context_engine.scope import ContextScope
@@ -32,24 +29,8 @@ from tools import ExecutionMetadata
 if TYPE_CHECKING:
     from agents import AgentDefinition
     from runtime.app_factory import RuntimeConfig
-    from task_center.agent_launch.composer import AgentEntryComposer
-    from task_center.attempt.orchestrator import AttemptOrchestrator
     from task_center.attempt.state import Attempt
 
-
-class LaunchBuilderDeps(Protocol):
-    """Narrow seam :class:`LaunchBuilder` requires from :class:`AttemptDeps`.
-
-    Declared as a Protocol so tests can pass a structurally compatible context
-    without constructing a full :class:`AttemptDeps`.
-    """
-
-    goal_store: GoalStoreProtocol
-    iteration_store: IterationStoreProtocol
-
-    def run_id_for_attempt(self, attempt: Attempt) -> str: ...
-
-    def require_composer(self) -> AgentEntryComposer: ...
 
 logger = logging.getLogger(__name__)
 
@@ -152,9 +133,7 @@ class EphemeralAttemptAgentLauncher:
             ]
         elif task_guidance:
             runner_prompt = task_guidance
-            runner_initial_messages = [
-                ConversationMessage.from_user_text(launch.context)
-            ]
+            runner_initial_messages = [ConversationMessage.from_user_text(launch.context)]
         else:
             runner_prompt = launch.context
             runner_initial_messages = None
@@ -269,7 +248,7 @@ def _require_attempt_orchestrator(
     launch: AgentLaunch,
     *,
     summary: str,
-) -> AttemptOrchestrator | None:
+) -> RegisteredAttemptOrchestrator | None:
     if launch.attempt_id is None:
         raise TaskCenterInvariantViolation(
             f"Role {launch.role!r} exhaustion report requires launch.attempt_id."
@@ -323,9 +302,7 @@ def _report_exhaustion(
             )
         )
     else:
-        raise TaskCenterInvariantViolation(
-            f"No exhaustion reporter for role {launch.role!r}"
-        )
+        raise TaskCenterInvariantViolation(f"No exhaustion reporter for role {launch.role!r}")
 
 
 # ---- LaunchBuilder (role-parametrized AgentLaunch factory) -----------------
@@ -339,7 +316,7 @@ EVALUATOR_AGENT_NAME = "evaluator"
 class LaunchBuilder:
     """Build :class:`AgentLaunch` records for each harness role."""
 
-    runtime: LaunchBuilderDeps
+    runtime: AttemptDeps
 
     def for_planner(self, *, attempt: Attempt, task_id: str) -> AgentLaunch:
         iteration = self._require_iteration(attempt)
@@ -433,7 +410,5 @@ class LaunchBuilder:
     def _require_iteration(self, attempt: Attempt) -> Any:
         iteration = self.runtime.iteration_store.get(attempt.iteration_id)
         if iteration is None:
-            raise TaskCenterInvariantViolation(
-                f"Iteration {attempt.iteration_id!r} not found"
-            )
+            raise TaskCenterInvariantViolation(f"Iteration {attempt.iteration_id!r} not found")
         return iteration

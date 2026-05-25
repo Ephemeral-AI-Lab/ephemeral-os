@@ -42,7 +42,16 @@
     <li>Concurrent work scales with changed data, not with repository size.</li>
   </ul>
 </div>
+<div class="wiki-links" aria-label="Space model links">
+  <a href="#space-cost-model">[[Cost Model]]</a>
+  <a href="#space-by-mode">[[Mode Cost Table]]</a>
+  <a href="#space-myths">[[Non-goals and Myths]]</a>
+  <a href="layerstack.html#layerstack-projection">[[LayerStack Projection]]</a>
+  <a href="overlay.html#overlay-handle">[[Overlay Handle]]</a>
+  <a href="workspaces.html">[[Workspace Modes]]</a>
+</div>
 
+<h3 id="space-cost-model">9.1 Cost Model <a class="anchor" href="#space-cost-model">§</a></h3>
 <div class="diagram" aria-label="Space scaling model">
   <div class="flow-row">
     <div class="node good"><strong>Shared lowerdirs</strong><small>one LayerStack layer set</small></div>
@@ -60,6 +69,7 @@
 
 <p>For <code>n</code> concurrent operations, writable scratch is <strong>O(n * per-operation changed bytes)</strong> plus small metadata. Each operation/session has its own <code>upper</code> and <code>work</code> directories <span class="file-ref">backend/src/sandbox/overlay/writable_dirs.py:46-52</span>. Capturing changes walks only the upperdir and emits writes/deletes/symlinks/opaque markers <span class="file-ref">backend/src/sandbox/overlay/capture.py:19-93</span>. OCC then publishes accepted changes as one new immutable layer rather than copying the whole workspace <span class="file-ref">backend/src/sandbox/occ/commit_transaction.py:113-141</span>.</p>
 
+<h3 id="space-by-mode">9.2 Mode Cost Table <a class="anchor" href="#space-by-mode">§</a></h3>
 <table>
   <thead><tr><th>Mode</th><th>Lower side</th><th>Writable side</th><th>Publish behavior</th></tr></thead>
   <tbody>
@@ -70,6 +80,21 @@
     <tr><td><code>Pyright LSP</code></td><td>Long-lived leased overlay handle, refreshed/remounted on manifest changes.</td><td>Private overlay state for language-server view.</td><td>Read ops query session; write ops use LSP apply overlay/OCC path.</td></tr>
   </tbody>
 </table>
+
+<h3 id="space-myths">9.3 Non-goals and Myths <a class="anchor" href="#space-myths">§</a></h3>
+<table>
+  <thead><tr><th>Claim</th><th>Correct reading</th><th>Where to verify</th></tr></thead>
+  <tbody>
+    <tr><td>Every operation copies the repository.</td><td>No. It leases existing lowerdirs and allocates changed-byte scratch.</td><td><a class="wiki-link" href="layerstack.html#layerstack-projection">[[Projection]]</a>, <a class="wiki-link" href="overlay.html#overlay-handle">[[Overlay Handle]]</a></td></tr>
+    <tr><td>Isolated workspace is a second durable branch.</td><td>No. It is explicit private scratch over a pinned snapshot; without a promotion path, exit discards upperdir bytes.</td><td><a class="wiki-link" href="workspaces.html#isolated-workspace">[[isolated_workspace]]</a></td></tr>
+    <tr><td>Direct file fast paths bypass safety.</td><td>No. They bypass mount/capture cost but still publish through OCC for writes/edits.</td><td><a class="wiki-link" href="workspaces.html#ephemeral-fast-paths">[[Fast-path Technical Workflows]]</a></td></tr>
+    <tr><td>Manifest depth is free.</td><td>No. Lowerdir byte cost is O(1), but mount argument/path count grows with manifest depth; shell can pre-squash deep manifests.</td><td><a class="wiki-link" href="layerstack.html#layerstack-publish">[[Publish]]</a>, <a class="wiki-link" href="workflow-cookbook.html#cookbook-ephemeral-shell">[[Ephemeral Shell]]</a></td></tr>
+  </tbody>
+</table>
+
+<div class="maintenance-note">
+  Backlinks: update this page when <a class="wiki-link" href="layerstack.html#layerstack-projection">[[Projection]]</a>, <a class="wiki-link" href="overlay.html#overlay-capture">[[Upperdir Capture]]</a>, or <a class="wiki-link" href="workspaces.html#isolated-lifecycle-detail">[[Enter, Run, Exit Details]]</a> changes storage lifetime.
+</div>
 <div class="page-footer-nav"><span><a href="plugins.html">← 8. Plugin in ephemeral_workspace</a></span><span><a href="workflow-cookbook.html">10. Workflow Cookbook →</a></span></div>
 </main>
 <script src="assets/search-index.js"></script>

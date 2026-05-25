@@ -15,8 +15,11 @@ construction is also covered at runtime.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 from task_center.context_engine.exceptions import RecipeScopeError
+
+ScopeField = Literal["goal_id", "iteration_id", "attempt_id", "task_id"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,9 +37,14 @@ class ContextScope:
         """Raise :class:`RecipeScopeError` if any required field is None."""
         missing = sorted(f for f in required if getattr(self, f, None) is None)
         if missing:
-            raise RecipeScopeError(
-                f"ContextScope is missing required fields: {missing!r}"
-            )
+            raise RecipeScopeError(f"ContextScope is missing required fields: {missing!r}")
+
+    def require_field(self, field: ScopeField) -> str:
+        """Return one required identity field as a non-optional string."""
+        value = getattr(self, field)
+        if not isinstance(value, str):
+            raise RecipeScopeError(f"ContextScope is missing required field: {field!r}")
+        return value
 
     # ---- Role-specific factory shortcuts -------------------------------
     #

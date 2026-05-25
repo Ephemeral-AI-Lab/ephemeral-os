@@ -30,15 +30,16 @@ EVALUATOR_ID = "evaluator"
 _REQUIRED_FIELDS = frozenset({"goal_id", "attempt_id"})
 
 
-def _evaluator_build(
-    scope: ContextScope, deps: ContextEngineDeps
-) -> ContextPacket:
-    attempt = deps.attempt_store.get(scope.attempt_id)
+def _evaluator_build(scope: ContextScope, deps: ContextEngineDeps) -> ContextPacket:
+    attempt_id = scope.require_field("attempt_id")
+    goal_id = scope.require_field("goal_id")
+
+    attempt = deps.attempt_store.get(attempt_id)
     if attempt is None:
-        raise ContextEngineError(f"Attempt {scope.attempt_id!r} not found")
-    goal = deps.goal_store.get(scope.goal_id)
+        raise ContextEngineError(f"Attempt {attempt_id!r} not found")
+    goal = deps.goal_store.get(goal_id)
     if goal is None:
-        raise ContextEngineError(f"Goal {scope.goal_id!r} not found")
+        raise ContextEngineError(f"Goal {goal_id!r} not found")
     iteration_id = scope.iteration_id or attempt.iteration_id
     iteration = deps.iteration_store.get(iteration_id)
     if iteration is None:
@@ -67,11 +68,11 @@ def _evaluator_build(
 
     return ContextPacket(
         target_role="evaluator",
-        target_id=scope.attempt_id,
+        target_id=attempt_id,
         canonical_refs=ContextRefs(
-            goal_id=scope.goal_id,
+            goal_id=goal_id,
             iteration_id=iteration.id,
-            attempt_id=scope.attempt_id,
+            attempt_id=attempt_id,
         ),
         blocks=blocks,
         source_ids=[b.source_id for b in blocks if b.source_id],

@@ -6,6 +6,7 @@ import logging
 from collections.abc import Callable
 from dataclasses import asdict
 from datetime import UTC, datetime
+from typing import Any
 
 from task_center._core.invariants import (
     assert_attempt_not_closed,
@@ -76,20 +77,14 @@ class AttemptOrchestrator:
         runtime = self._runtime
         attempt = self._assert_stage(AttemptStage.PLAN)
         if attempt.status != AttemptStatus.RUNNING:
-            raise TaskCenterInvariantViolation(
-                f"Attempt {attempt.id!r} is not running"
-            )
+            raise TaskCenterInvariantViolation(f"Attempt {attempt.id!r} is not running")
         if attempt.planner_task_id is not None:
-            raise TaskCenterInvariantViolation(
-                f"Attempt {attempt.id!r} already has a planner task"
-            )
+            raise TaskCenterInvariantViolation(f"Attempt {attempt.id!r} already has a planner task")
 
         task_id = planner_task_id(attempt.id)
         runtime.orchestrator_registry.register(self)
         try:
-            launch = LaunchBuilder(runtime=runtime).for_planner(
-                attempt=attempt, task_id=task_id
-            )
+            launch = LaunchBuilder(runtime=runtime).for_planner(attempt=attempt, task_id=task_id)
             runtime.task_store.upsert_task(
                 task_id=task_id,
                 task_center_run_id=launch.task_center_run_id,
@@ -119,10 +114,7 @@ class AttemptOrchestrator:
             raise TaskCenterInvariantViolation(
                 "Full plans cannot set deferred_goal_for_next_iteration"
             )
-        if (
-            submission.kind == "defers"
-            and submission.deferred_goal_for_next_iteration is None
-        ):
+        if submission.kind == "defers" and submission.deferred_goal_for_next_iteration is None:
             raise TaskCenterInvariantViolation(
                 "Partial plans require deferred_goal_for_next_iteration"
             )
@@ -140,9 +132,7 @@ class AttemptOrchestrator:
         runtime.attempt_store.set_stage(attempt.id, AttemptStage.GENERATE)
         self._task_dispatcher.advance_ready_tasks()
 
-    def apply_planner_failure(
-        self, submission: PlannerFailureSubmission
-    ) -> None:
+    def apply_planner_failure(self, submission: PlannerFailureSubmission) -> None:
         self._assert_submission_attempt(submission.attempt_id)
         self._validate_planner_submission(submission.planner_task_id)
         self._runtime.task_store.set_task_status(
@@ -155,16 +145,12 @@ class AttemptOrchestrator:
         )
         self._close_attempt(AttemptStatus.FAILED, AttemptFailReason.PLANNER_FAILED)
 
-    def apply_generator_submission(
-        self, submission: GeneratorSubmission
-    ) -> None:
+    def apply_generator_submission(self, submission: GeneratorSubmission) -> None:
         self._assert_submission_attempt(submission.attempt_id)
         self._mark_generator(submission)
         self._task_dispatcher.advance_ready_tasks()
 
-    def apply_evaluator_submission(
-        self, submission: EvaluatorSubmission
-    ) -> None:
+    def apply_evaluator_submission(self, submission: EvaluatorSubmission) -> None:
         self._assert_submission_attempt(submission.attempt_id)
         self._mark_evaluator(submission)
         self._task_dispatcher.advance_ready_tasks()
@@ -177,11 +163,14 @@ class AttemptOrchestrator:
         without re-asserting attempt stage or appending another summary.
         """
         runtime = self._runtime
-        task = runtime.task_store.get_task(report.requested_by_task_id)
-        if task is None:
+        parent_task_id = report.requested_by_task_id
+        if parent_task_id is None:
             raise TaskCenterInvariantViolation(
-                f"Generator task {report.requested_by_task_id!r} not found"
+                f"Goal closure report {report.goal_id!r} has no parent task id"
             )
+        task = runtime.task_store.get_task(parent_task_id)
+        if task is None:
+            raise TaskCenterInvariantViolation(f"Generator task {parent_task_id!r} not found")
         if task.get("status") != TaskCenterBackgroundTaskStatus.WAITING_GOAL.value:
             # Already delivered; no further action.
             return
@@ -191,17 +180,13 @@ class AttemptOrchestrator:
 
         if report.outcome == "success":
             status = TaskCenterBackgroundTaskStatus.DONE
-            summary = (
-                f"Delegated goal {report.goal_id} succeeded."
-            )
+            summary = f"Delegated goal {report.goal_id} succeeded."
         else:
             status = TaskCenterBackgroundTaskStatus.FAILED
-            summary = (
-                f"Delegated goal {report.goal_id} failed."
-            )
+            summary = f"Delegated goal {report.goal_id} failed."
 
         updated = runtime.task_store.set_task_status_if_current(
-            report.requested_by_task_id,
+            parent_task_id,
             expected_status=TaskCenterBackgroundTaskStatus.WAITING_GOAL.value,
             status=status.value,
             summary={
@@ -227,14 +212,10 @@ class AttemptOrchestrator:
             )
         planner_task = self._runtime.task_store.get_task(planner_task_id)
         if planner_task is None:
-            raise TaskCenterInvariantViolation(
-                f"Planner task {planner_task_id!r} not found"
-            )
+            raise TaskCenterInvariantViolation(f"Planner task {planner_task_id!r} not found")
         assert_task_belongs_to_attempt(planner_task, attempt)
         if planner_task["role"] != TaskCenterTaskRole.PLANNER.value:
-            raise TaskCenterInvariantViolation(
-                f"Task {planner_task_id!r} is not a planner task"
-            )
+            raise TaskCenterInvariantViolation(f"Task {planner_task_id!r} is not a planner task")
         return attempt
 
     def _persist_plan_contract(self, submission: PlannerSubmission) -> None:
@@ -245,9 +226,7 @@ class AttemptOrchestrator:
             deferred_goal_for_next_iteration=submission.deferred_goal_for_next_iteration,
         )
 
-    def _persist_generator_tasks(
-        self, tasks: tuple[PlannedGeneratorTask, ...]
-    ) -> tuple[str, ...]:
+    def _persist_generator_tasks(self, tasks: tuple[PlannedGeneratorTask, ...]) -> tuple[str, ...]:
         runtime = self._runtime
         attempt = self._fresh_attempt()
         ordered = ordered_generator_tasks(tasks)
@@ -278,13 +257,14 @@ class AttemptOrchestrator:
         attempt = self._assert_stage(AttemptStage.GENERATE)
         task = self._runtime.task_store.get_task(submission.task_id)
         if task is None:
-            raise TaskCenterInvariantViolation(
-                f"Generator task {submission.task_id!r} not found"
-            )
+            raise TaskCenterInvariantViolation(f"Generator task {submission.task_id!r} not found")
         assert_generator_task_for_submission(task, attempt)
         self._write_submission_status(
-            task=task, task_id=submission.task_id, role="Generator",
-            outcome=submission.outcome, summary=submission.summary,
+            task=task,
+            task_id=submission.task_id,
+            role="Generator",
+            outcome=submission.outcome,
+            summary=submission.summary,
             payload=submission.payload,
         )
 
@@ -297,24 +277,29 @@ class AttemptOrchestrator:
             )
         task = self._runtime.task_store.get_task(submission.task_id)
         if task is None:
-            raise TaskCenterInvariantViolation(
-                f"Evaluator task {submission.task_id!r} not found"
-            )
+            raise TaskCenterInvariantViolation(f"Evaluator task {submission.task_id!r} not found")
         assert_evaluator_task_for_submission(task, attempt)
         self._write_submission_status(
-            task=task, task_id=submission.task_id, role="Evaluator",
-            outcome=submission.outcome, summary=submission.summary,
+            task=task,
+            task_id=submission.task_id,
+            role="Evaluator",
+            outcome=submission.outcome,
+            summary=submission.summary,
             payload=submission.payload,
         )
 
     def _write_submission_status(
-        self, *, task: dict, task_id: str, role: str,
-        outcome: str, summary: str, payload: object,
+        self,
+        *,
+        task: dict[str, Any],
+        task_id: str,
+        role: str,
+        outcome: str,
+        summary: str,
+        payload: object,
     ) -> None:
         if task["status"] != TaskCenterBackgroundTaskStatus.RUNNING.value:
-            raise TaskCenterInvariantViolation(
-                f"{role} task {task_id!r} is not running"
-            )
+            raise TaskCenterInvariantViolation(f"{role} task {task_id!r} is not running")
         if outcome == "success":
             status = TaskCenterBackgroundTaskStatus.DONE
         elif outcome == "blocker":
@@ -336,9 +321,7 @@ class AttemptOrchestrator:
         attempt = self._fresh_attempt()
         assert_attempt_not_closed(attempt)
         if attempt.status != AttemptStatus.RUNNING:
-            raise TaskCenterInvariantViolation(
-                f"Attempt {attempt.id!r} is not running"
-            )
+            raise TaskCenterInvariantViolation(f"Attempt {attempt.id!r} is not running")
         self._runtime.attempt_store.close(
             attempt.id,
             status=status,
@@ -374,9 +357,7 @@ class AttemptOrchestrator:
     def _fresh_attempt(self) -> Attempt:
         attempt = self._runtime.attempt_store.get(self._attempt.id)
         if attempt is None:
-            raise TaskCenterInvariantViolation(
-                f"Attempt {self._attempt.id!r} not found"
-            )
+            raise TaskCenterInvariantViolation(f"Attempt {self._attempt.id!r} not found")
         self._attempt = attempt
         return attempt
 

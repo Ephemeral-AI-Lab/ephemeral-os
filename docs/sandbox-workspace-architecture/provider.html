@@ -42,7 +42,15 @@
     <li>Providers own containers; sandbox workspace logic stays provider-agnostic.</li>
   </ul>
 </div>
+<div class="wiki-links" aria-label="Provider page links">
+  <a href="#provider-boundary">[[Provider Boundary]]</a>
+  <a href="#provider-bootstrap-workflow">[[Bootstrap Workflow]]</a>
+  <a href="daemon.html#startup-transport">[[Startup and Transport]]</a>
+  <a href="layerstack.html#layerstack-storage">[[LayerStack Storage]]</a>
+  <a href="workspaces.html#main-workspace">[[main_workspace]]</a>
+</div>
 
+<h3 id="provider-boundary">7.1 Provider Boundary <a class="anchor" href="#provider-boundary">§</a></h3>
 <p><code>ProviderAdapter</code> is the single protocol for Docker and Daytona. It includes health/discovery, container CRUD, preview/build logs, async <code>exec</code>, and <code>context_preparer()</code> <span class="file-ref">backend/src/sandbox/provider/protocol.py:21-79</span>. The registry supports one process-wide default plus explicit per-sandbox bindings; fallback to default is intentionally uncached <span class="file-ref">backend/src/sandbox/provider/registry.py:1-95</span>. Startup chooses <code>EOS_SANDBOX_PROVIDER</code> or central config and bootstraps Docker or Daytona once <span class="file-ref">backend/src/sandbox/provider/bootstrap.py:33-77</span>.</p>
 
 <table>
@@ -53,6 +61,31 @@
     <tr><td>Host lifecycle</td><td>Uploads runtime bundle, ensures git, runs runtime bootstrap, and ensures the workspace base after create/start.</td><td><span class="file-ref">backend/src/sandbox/host/bootstrap.py:31-115</span>, <span class="file-ref">backend/src/sandbox/host/bootstrap.py:300-322</span></td></tr>
   </tbody>
 </table>
+
+<h3 id="provider-bootstrap-workflow">7.2 Bootstrap Workflow <a class="anchor" href="#provider-bootstrap-workflow">§</a></h3>
+<div class="sequence" aria-label="Provider bootstrap workflow">
+  <ol>
+    <li><span>Provider bootstrap chooses and initializes a Docker or Daytona adapter, then the registry binds the adapter globally or per sandbox.</span></li>
+    <li><span>Container create/start returns provider metadata, including the workspace root when the provider can report it.</span></li>
+    <li><span>Host post-lifecycle setup uploads the runtime bundle, ensures git, finishes upload, runs runtime bootstrap, and calls <code>ensure_workspace_base</code> <span class="file-ref">backend/src/sandbox/host/bootstrap.py:300-312</span>.</span></li>
+    <li><span>The daemon client later uses the same adapter for TCP endpoint discovery or AF_UNIX thin-client exec.</span></li>
+    <li><span>Workspace code below the daemon boundary receives <code>layer_stack_root</code> and <code>workspace_root</code>; it does not care which provider created the container.</span></li>
+  </ol>
+</div>
+
+<table>
+  <thead><tr><th>Boundary</th><th>Provider owns</th><th>Sandbox runtime owns</th></tr></thead>
+  <tbody>
+    <tr><td>Container lifecycle</td><td>Create, start, stop, delete, labels, snapshot/image options, preview URLs, and build-log URLs.</td><td>Post-create/start runtime setup and workspace base creation.</td></tr>
+    <tr><td>Command execution</td><td>The primitive that runs a command inside the container.</td><td>Daemon envelope shape, thin-client protocol, shell policy, overlay namespace execution, and result projection.</td></tr>
+    <tr><td>Workspace path</td><td>Reporting or preparing provider-specific project directory context.</td><td>Binding that workspace root to LayerStack storage and translating tool paths.</td></tr>
+    <tr><td>Network exposure</td><td>Optional daemon TCP endpoint and provider-specific reachability.</td><td>Daemon authentication, request validation, and fallback to in-container AF_UNIX socket.</td></tr>
+  </tbody>
+</table>
+
+<div class="maintenance-note">
+  Backlinks: daemon transport details live in <a class="wiki-link" href="daemon.html#startup-transport">[[Startup and Transport]]</a>; workspace base and binding details live in <a class="wiki-link" href="layerstack.html#layerstack-storage">[[Storage]]</a> and <a class="wiki-link" href="workspaces.html#main-workspace">[[main_workspace]]</a>.
+</div>
 <div class="page-footer-nav"><span><a href="daemon.html">← 6. Daemon and Background Tasks</a></span><span><a href="plugins.html">8. Plugin in ephemeral_workspace →</a></span></div>
 </main>
 <script src="assets/search-index.js"></script>
