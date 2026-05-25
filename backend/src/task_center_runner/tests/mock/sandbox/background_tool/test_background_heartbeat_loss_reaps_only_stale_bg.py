@@ -48,6 +48,7 @@ async def test_background_heartbeat_loss_reaps_only_stale_bg(
         workspace=workspace,
         audit_dir=audit_dir,
         stores=stores,
+        preserve_inflight_ttl=True,
     )
 
     assert summary["mode"] == "heartbeat_loss", summary

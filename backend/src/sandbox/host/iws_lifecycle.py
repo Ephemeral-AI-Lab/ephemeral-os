@@ -31,6 +31,7 @@ from sandbox._shared.models import (
     LifecycleError,
 )
 from sandbox.audit.lifecycle import lifecycle_operation
+from sandbox.host.daemon_client import _DaemonDispatchError, call_daemon_api
 from sandbox.isolated_workspace.helper import manager as iws_manager
 from sandbox.isolated_workspace.helper.types import IsolatedWorkspaceError
 
@@ -60,6 +61,8 @@ async def enter_isolated_workspace(
             agent_id=agent_id,
             audit_path=os.environ.get("EOS_WORKSPACE_LIFECYCLE_AUDIT_PATH"),
         ) as timings:
+            if sandbox_id:
+                return await _daemon_enter(sandbox_id, req, timings=dict(timings))
             manager = await iws_manager._ensure_manager(  # noqa: SLF001
                 {"layer_stack_root": req.layer_stack_root}
             )
@@ -94,6 +97,7 @@ async def exit_isolated_workspace(
     req: ExitIsolatedWorkspaceRequest,
     *,
     background_manager: object | None = None,
+    sandbox_id: str = "",
 ) -> ExitIsolatedWorkspaceResult:
     agent_id = req.caller.agent_id
     try:
@@ -107,6 +111,13 @@ async def exit_isolated_workspace(
                 agent_id,
                 grace_s=req.grace_s,
             )
+            if sandbox_id:
+                return await _daemon_exit(
+                    sandbox_id,
+                    req,
+                    evicted_background_tasks=evicted_background_tasks,
+                    timings=dict(timings),
+                )
             result = await iws_manager.require_pipeline().exit(
                 agent_id, grace_s=0.0,
             )
@@ -129,6 +140,105 @@ async def exit_isolated_workspace(
                 details={str(k): str(v) for k, v in exc.details.items()},
             ),
         )
+
+
+async def _daemon_enter(
+    sandbox_id: str,
+    req: EnterIsolatedWorkspaceRequest,
+    *,
+    timings: dict[str, float],
+) -> EnterIsolatedWorkspaceResult:
+    try:
+        response = await call_daemon_api(
+            sandbox_id,
+            "api.isolated_workspace.enter",
+            {
+                "agent_id": req.caller.agent_id,
+                "layer_stack_root": req.layer_stack_root,
+            },
+            layer_stack_root=req.layer_stack_root,
+            timeout=180,
+        )
+    except _DaemonDispatchError as exc:
+        return EnterIsolatedWorkspaceResult(
+            success=False,
+            timings=timings,
+            error=_lifecycle_error_from_dispatch(exc),
+        )
+    error = response.get("error")
+    if error is not None:
+        return EnterIsolatedWorkspaceResult(
+            success=False,
+            timings=timings,
+            error=_lifecycle_error_from_mapping(error),
+        )
+    return EnterIsolatedWorkspaceResult(
+        success=bool(response.get("success", True)),
+        manifest_version=str(response.get("manifest_version") or ""),
+        manifest_root_hash=str(response.get("manifest_root_hash") or ""),
+        timings=timings,
+    )
+
+
+async def _daemon_exit(
+    sandbox_id: str,
+    req: ExitIsolatedWorkspaceRequest,
+    *,
+    evicted_background_tasks: int,
+    timings: dict[str, float],
+) -> ExitIsolatedWorkspaceResult:
+    try:
+        response = await call_daemon_api(
+            sandbox_id,
+            "api.isolated_workspace.exit",
+            {"agent_id": req.caller.agent_id},
+            timeout=180,
+        )
+    except _DaemonDispatchError as exc:
+        return ExitIsolatedWorkspaceResult(
+            success=False,
+            timings=timings,
+            error=_lifecycle_error_from_dispatch(exc),
+        )
+    error = response.get("error")
+    if error is not None:
+        return ExitIsolatedWorkspaceResult(
+            success=False,
+            timings=timings,
+            error=_lifecycle_error_from_mapping(error),
+        )
+    phases = dict(response.get("phases_ms") or {})
+    phases["evicted_background_tasks"] = float(evicted_background_tasks)
+    timings.update({str(key): float(value) for key, value in phases.items()})
+    return ExitIsolatedWorkspaceResult(
+        success=bool(response.get("success", True)),
+        evicted_upperdir_bytes=int(response.get("evicted_upperdir_bytes") or 0),
+        lifetime_s=float(response.get("lifetime_s") or 0.0),
+        phases_ms=phases,
+        timings=timings,
+    )
+
+
+def _lifecycle_error_from_dispatch(exc: _DaemonDispatchError) -> LifecycleError:
+    return LifecycleError(
+        kind=str(exc.kind or "internal_error"),
+        message=str(exc.message or ""),
+        details={str(k): str(v) for k, v in (exc.details or {}).items()},
+    )
+
+
+def _lifecycle_error_from_mapping(error: object) -> LifecycleError:
+    if not isinstance(error, dict):
+        return LifecycleError(kind="internal_error", message=str(error))
+    details = error.get("details")
+    return LifecycleError(
+        kind=str(error.get("kind") or "internal_error"),
+        message=str(error.get("message") or ""),
+        details={
+            str(k): str(v)
+            for k, v in (details if isinstance(details, dict) else {}).items()
+        },
+    )
 
 
 def _count_by_agent(background_manager: object | None, agent_id: str) -> int:

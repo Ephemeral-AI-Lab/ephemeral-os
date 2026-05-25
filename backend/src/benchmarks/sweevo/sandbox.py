@@ -669,6 +669,9 @@ async def setup_sweevo_sandbox(
     """
     _progress(on_progress, f"[setup] waiting for sandbox exec readiness sandbox_id={sandbox_id}")
     await _wait_for_sandbox_exec_ready(sandbox_id, attempts=exec_ready_attempts)
+    if os.environ.get("EOS_SANDBOX_PROVIDER", "").lower() == "docker":
+        _progress(on_progress, "[setup] checking overlay writable tmpfs mount")
+        await _exec(sandbox_id, "test -d /eos-mount-scratch")
     _progress(on_progress, f"[setup] checking repository at {repo_dir}")
     await _stop_public_workspace_overlay(sandbox_id, repo_dir)
     await _exec(sandbox_id, f"test -d {repo_dir} && test -d {repo_dir}/.git")

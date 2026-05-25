@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import time
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -54,6 +55,7 @@ ENGINE_RESTART_SUMMARY = f"{ROOT}/engine_restart/summary.json"
 MANY_SMALL_WRITES_SUMMARY = f"{ROOT}/many_small_writes/summary.json"
 
 SUMMARY_SCHEMA = "task_center_runner.background_shell.v1"
+BACKGROUND_IWS_LAYER_STACK_ROOT = "/tmp/eos-sandbox-runtime/layer-stack"
 
 EmitStreamEvent = Callable[[StreamEvent], Awaitable[None]]
 # call_tool signature with the new background_task_id parameter we plumbed
@@ -249,25 +251,30 @@ async def _write_summary(
     call_tool: CallTool,
     record_tool_check: RecordToolCheck,
 ) -> str:
-    # ``write_file_tool`` would shape this cleaner, but a shell here keeps
-    # the probe focused on the background-shell surface; the foreground
-    # heredoc is intentional and not load-bearing for the assertions.
     body = json.dumps(payload, indent=2, sort_keys=True) + "\n"
-    write_cmd = (
-        f"mkdir -p $(dirname {path}) && "
-        f"cat <<'__BG_SHELL_PROBE__' > {path}\n{body}__BG_SHELL_PROBE__"
-    )
-    written = await call_tool(
+    mkdir = await call_tool(
         shell_tool,
-        {"command": write_cmd, "timeout": 60},
+        {"command": f"mkdir -p $(dirname {path})", "timeout": 30},
         metadata,
         emit,
     )
-    record_tool_check(f"tool.shell.background_shell.summary.{path}", written)
+    record_tool_check(f"tool.shell.background_shell.summary.mkdir.{path}", mkdir)
+    if mkdir.is_error:
+        raise RuntimeError(
+            f"background_shell summary directory create failed for {path}: "
+            f"{_shell_payload(mkdir).get('stderr', '')[:200]}"
+        )
+    written = await call_tool(
+        write_file_tool,
+        {"file_path": path, "content": body},
+        metadata,
+        emit,
+    )
+    record_tool_check(f"tool.write_file.background_shell.summary.{path}", written)
     if written.is_error:
         raise RuntimeError(
             f"background_shell summary write failed for {path}: "
-            f"{_shell_payload(written).get('stderr', '')[:200]}"
+            f"{written.output[:200]}"
         )
     return path
 
@@ -878,7 +885,7 @@ async def run_background_mixed_fg_bg_same_path_conflict_probe(
     call_tool: CallTool,
     record_tool_check: RecordToolCheck,
 ) -> str:
-    """3.3.1: foreground direct write races a background shell on one path."""
+    """3.4.1: foreground direct write races a background shell on one path."""
     started = time.perf_counter()
     target = f"{ROOT}/mixed_fg_bg_same_path_conflict/bg-shared.txt"
 
@@ -954,7 +961,7 @@ async def run_background_mixed_fg_bg_same_path_conflict_probe(
     )
 
 
-# ---- 3.3.2 heartbeat loss --------------------------------------------------
+# ---- 3.4.2 heartbeat loss --------------------------------------------------
 
 
 HEARTBEAT_PROTECTED_SLEEP_S = 4
@@ -969,7 +976,7 @@ async def run_background_heartbeat_loss_probe(
     call_tool: CallTool,
     record_tool_check: RecordToolCheck,
 ) -> str:
-    """3.3.2: keep one invocation alive and let another go stale."""
+    """3.4.2: keep one invocation alive and let another go stale."""
     started = time.perf_counter()
     sandbox_id = str(metadata.sandbox_id or "")
     agent_id = _agent_id(metadata)
@@ -1115,7 +1122,7 @@ async def run_background_heartbeat_loss_probe(
     )
 
 
-# ---- 3.3.3 isolated-workspace drain ---------------------------------------
+# ---- 3.4.3 isolated-workspace drain ---------------------------------------
 
 
 async def run_background_exit_iws_drains_agent_tasks_probe(
@@ -1125,7 +1132,7 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
     call_tool: CallTool,
     record_tool_check: RecordToolCheck,
 ) -> str:
-    """3.3.3: iws enter rejects in-flight default bg and exit drains iws bg."""
+    """3.4.3: iws enter rejects in-flight default bg and exit drains iws bg."""
     started = time.perf_counter()
     sandbox_id = str(metadata.sandbox_id or "")
     agent_id = _agent_id(metadata)
@@ -1172,13 +1179,14 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
     iws_metadata = metadata.copy()
     iws_metadata.agent_name = "iws-exit-agent"
     iws_metadata.agent_run_id = f"{agent_id}:iws-exit"
+    iws_metadata["layer_stack_root"] = BACKGROUND_IWS_LAYER_STACK_ROOT
     manager = BackgroundTaskManager()
     iws_metadata.background_task_manager = manager
 
     iws_enter = await _call_probe_tool(
         label="exit_iws.enter_other_agent",
         tool_obj=enter_isolated_workspace_tool,
-        raw_input={},
+        raw_input={"layer_stack_root": BACKGROUND_IWS_LAYER_STACK_ROOT},
         metadata=iws_metadata,
         emit=emit,
         call_tool=call_tool,
@@ -1273,7 +1281,7 @@ async def run_background_exit_iws_drains_agent_tasks_probe(
     )
 
 
-# ---- 3.3.4 engine restart / abandon ---------------------------------------
+# ---- 3.4.4 engine restart / abandon ---------------------------------------
 
 
 ENGINE_RESTART_STALE_WAIT_S = 2.6
@@ -1286,7 +1294,7 @@ async def run_background_engine_restart_no_lease_leak_probe(
     call_tool: CallTool,
     record_tool_check: RecordToolCheck,
 ) -> str:
-    """3.3.4: abandon a background invocation, then prove foreground recovery."""
+    """3.4.4: abandon a background invocation, then prove foreground recovery."""
     started = time.perf_counter()
     sandbox_id = str(metadata.sandbox_id or "")
     agent_id = _agent_id(metadata)
@@ -1399,11 +1407,15 @@ async def run_background_engine_restart_no_lease_leak_probe(
     )
 
 
-# ---- 3.3.5 dispatcher under many small writes -----------------------------
+# ---- 3.4.5 dispatcher under many small writes -----------------------------
 
 
-MANY_SMALL_WRITES_BACKGROUND_COUNT = 16
-MANY_SMALL_WRITES_FOREGROUND_COUNT = 8
+MANY_SMALL_WRITES_BACKGROUND_COUNT = int(
+    os.getenv("EOS_BACKGROUND_MANY_SMALL_WRITES_BACKGROUND_COUNT", "16")
+)
+MANY_SMALL_WRITES_FOREGROUND_COUNT = int(
+    os.getenv("EOS_BACKGROUND_MANY_SMALL_WRITES_FOREGROUND_COUNT", "8")
+)
 
 
 async def run_background_many_small_writes_probe(
@@ -1413,7 +1425,7 @@ async def run_background_many_small_writes_probe(
     call_tool: CallTool,
     record_tool_check: RecordToolCheck,
 ) -> str:
-    """3.3.5: many small background shell writes with foreground file calls."""
+    """3.4.5: many small background shell writes with foreground file calls."""
     started = time.perf_counter()
     sandbox_id = str(metadata.sandbox_id or "")
     agent_id = _agent_id(metadata)
@@ -1556,6 +1568,7 @@ __all__ = [
     "ENGINE_RESTART_SUMMARY",
     "MANY_SMALL_WRITES_SUMMARY",
     "SUMMARY_SCHEMA",
+    "BACKGROUND_IWS_LAYER_STACK_ROOT",
     "run_background_shell_golden_probe",
     "run_background_shell_stop_probe",
     "run_background_shell_interleave_probe",

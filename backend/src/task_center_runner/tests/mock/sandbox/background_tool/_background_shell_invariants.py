@@ -2,14 +2,21 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
+import subprocess
+import warnings
 from pathlib import Path
 from typing import Any
 
 import sandbox.api as sandbox_api
-from benchmarks.sweevo.models import SWEEvoInstance
+from benchmarks.sweevo.models import SWEEvoInstance, _REPO_DIR
 from sandbox._shared.models import ReadFileRequest, SandboxCaller
 from sandbox.daemon.paths import DAEMON_PID_PATH, DAEMON_SOCKET_PATH
+from sandbox.host.daemon_client import call_daemon_api
+from task_center_runner.agent.mock.background_shell_probe import (
+    BACKGROUND_IWS_LAYER_STACK_ROOT,
+)
 from task_center_runner.core.runner import RunReport
 from task_center_runner.core.stores import TaskCenterStoreBundle
 from task_center_runner.environments.sweevo_image.fixtures import (
@@ -44,6 +51,14 @@ _OVERLAY_TIMING_KEYS = (
     "command_exec.capture_upperdir_s",
     "api.shell.total_s",
 )
+_IWS_APT_CACHE_DIR = (
+    Path(__file__).resolve().parents[6]
+    / "tests"
+    / "_assets"
+    / "iws_apt_cache"
+    / "jammy-amd64"
+)
+_IWS_TEST_UPPERDIR_BYTES = 67_108_864
 
 
 async def run_background_shell_scenario(
@@ -54,9 +69,12 @@ async def run_background_shell_scenario(
     workspace: dict[str, object],
     audit_dir: Path,
     stores: TaskCenterStoreBundle,
+    preserve_inflight_ttl: bool = False,
 ) -> tuple[RunReport, dict[str, Any]]:
     scenario = SCENARIO_REGISTRY[scenario_name]()
     sandbox_id = str(workspace["sandbox_id"])
+    if not preserve_inflight_ttl:
+        await configure_default_inflight_ttl(sandbox_id)
     report = await run_scenario_on_sweevo_image(
         scenario,
         instance=sweevo_image_instance,
@@ -94,6 +112,7 @@ async def configure_short_inflight_ttl(sandbox_id: str) -> None:
     command = "\n".join(
         [
             "set -eu",
+            "sed -i '/^EOS_INFLIGHT_TTL_S=/d; /^EOS_INFLIGHT_REAPER_INTERVAL_S=/d' /etc/environment 2>/dev/null || true",
             "printf '\\nEOS_INFLIGHT_TTL_S=1\\nEOS_INFLIGHT_REAPER_INTERVAL_S=0.2\\n' >> /etc/environment",
             f"if [ -f {DAEMON_PID_PATH} ]; then kill -TERM \"$(cat {DAEMON_PID_PATH})\" 2>/dev/null || true; fi",
             f"rm -f {DAEMON_SOCKET_PATH} {DAEMON_PID_PATH}",
@@ -101,6 +120,134 @@ async def configure_short_inflight_ttl(sandbox_id: str) -> None:
     )
     result = await sandbox_api.raw_exec(sandbox_id, command, timeout=30)
     assert result.exit_code == 0, result
+    readiness = await call_daemon_api(
+        sandbox_id,
+        "api.runtime.ready",
+        {},
+        timeout=30,
+    )
+    assert readiness.get("success") is True and readiness.get("ready") is True, readiness
+
+
+async def configure_default_inflight_ttl(sandbox_id: str) -> None:
+    command = "\n".join(
+        [
+            "set -eu",
+            "sed -i '/^EOS_INFLIGHT_TTL_S=/d; /^EOS_INFLIGHT_REAPER_INTERVAL_S=/d' /etc/environment 2>/dev/null || true",
+            f"if [ -f {DAEMON_PID_PATH} ]; then kill -TERM \"$(cat {DAEMON_PID_PATH})\" 2>/dev/null || true; fi",
+            f"rm -f {DAEMON_SOCKET_PATH} {DAEMON_PID_PATH}",
+        ]
+    )
+    result = await sandbox_api.raw_exec(sandbox_id, command, timeout=30)
+    assert result.exit_code == 0, result
+    readiness = await call_daemon_api(
+        sandbox_id,
+        "api.runtime.ready",
+        {},
+        timeout=30,
+    )
+    assert readiness.get("success") is True and readiness.get("ready") is True, readiness
+
+
+async def configure_isolated_workspace_for_background(sandbox_id: str) -> None:
+    """Prepare the live daemon for the background/IWS interaction probe."""
+    installed_via_cache = await _try_install_iws_deps_from_cache(sandbox_id)
+    if not installed_via_cache:
+        try:
+            await sandbox_api.raw_exec(
+                sandbox_id,
+                (
+                    "command -v ip >/dev/null 2>&1 && "
+                    "command -v nft >/dev/null 2>&1 "
+                    "|| (apt-get update -qq && "
+                    "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "
+                    "iproute2 nftables) >/dev/null 2>&1 || true"
+                ),
+                cwd="/",
+                timeout=300,
+            )
+        except (TimeoutError, asyncio.TimeoutError):
+            warnings.warn(
+                "background IWS setup: iproute2+nftables install timed out; "
+                "the live probe may fail while opening the isolated workspace.",
+                stacklevel=2,
+            )
+
+    command = "\n".join(
+        [
+            "set -eu",
+            "grep -q '^EOS_ISOLATED_WORKSPACE_ENABLED=' /etc/environment 2>/dev/null || echo 'EOS_ISOLATED_WORKSPACE_ENABLED=true' >> /etc/environment",
+            "grep -q '^EOS_ISOLATED_WORKSPACE_TEST_HARNESS=' /etc/environment 2>/dev/null || echo 'EOS_ISOLATED_WORKSPACE_TEST_HARNESS=true' >> /etc/environment",
+            "sed -i '/^EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES=/d' /etc/environment 2>/dev/null || true",
+            f"echo 'EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES={_IWS_TEST_UPPERDIR_BYTES}' >> /etc/environment",
+            "mount -o remount,rw /sys/fs/cgroup 2>/dev/null || true",
+            "pkill -f '^.*python.*-m sandbox\\.daemon' || true",
+        ]
+    )
+    result = await sandbox_api.raw_exec(sandbox_id, command, cwd="/", timeout=30)
+    assert result.exit_code == 0, result
+    await call_daemon_api(
+        sandbox_id,
+        "api.ensure_workspace_base",
+        {"workspace_root": _REPO_DIR},
+        layer_stack_root=BACKGROUND_IWS_LAYER_STACK_ROOT,
+        timeout=180,
+    )
+
+
+async def _try_install_iws_deps_from_cache(sandbox_id: str) -> bool:
+    if not _IWS_APT_CACHE_DIR.is_dir():
+        return False
+    if not any(_IWS_APT_CACHE_DIR.glob("*.deb")):
+        return False
+    staged = await sandbox_api.raw_exec(
+        sandbox_id,
+        "rm -rf /tmp/iws-debs && mkdir -p /tmp/iws-debs",
+        cwd="/",
+        timeout=10,
+    )
+    if staged.exit_code != 0:
+        return False
+    cp_cmd = [
+        "docker",
+        "cp",
+        f"{_IWS_APT_CACHE_DIR}/.",
+        f"{sandbox_id}:/tmp/iws-debs/",
+    ]
+    try:
+        copied = await asyncio.to_thread(
+            subprocess.run,
+            cp_cmd,
+            check=False,
+            capture_output=True,
+            timeout=60,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return False
+    if copied.returncode != 0:
+        return False
+    installed = await sandbox_api.raw_exec(
+        sandbox_id,
+        (
+            "command -v ip >/dev/null 2>&1 && "
+            "command -v nft >/dev/null 2>&1 && "
+            "command -v ping >/dev/null 2>&1 && "
+            "command -v host >/dev/null 2>&1 "
+            "|| DEBIAN_FRONTEND=noninteractive "
+            "dpkg -i /tmp/iws-debs/*.deb 2>&1 | tail -3"
+        ),
+        cwd="/",
+        timeout=60,
+    )
+    if installed.exit_code != 0:
+        return False
+    verified = await sandbox_api.raw_exec(
+        sandbox_id,
+        "command -v ip >/dev/null 2>&1 && command -v nft >/dev/null 2>&1",
+        cwd="/",
+        timeout=10,
+    )
+    return verified.exit_code == 0
 
 
 def assert_background_performance_artifacts(report: RunReport) -> dict[str, Any]:
@@ -166,6 +313,8 @@ def assert_shell_audit_invariants(
 
 __all__ = [
     "assert_background_performance_artifacts",
+    "configure_default_inflight_ttl",
+    "configure_isolated_workspace_for_background",
     "assert_shell_audit_invariants",
     "configure_short_inflight_ttl",
     "read_json_summary",

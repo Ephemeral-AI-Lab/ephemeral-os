@@ -41,6 +41,7 @@ async def exit_isolated_workspace(
             description="exit isolated workspace",
         ),
         background_manager=context.get("background_task_manager"),
+        sandbox_id=str(context.get("sandbox_id") or ""),
     )
     return ToolResult(output=json.dumps(_payload(result), indent=2), is_error=not result.success)
 

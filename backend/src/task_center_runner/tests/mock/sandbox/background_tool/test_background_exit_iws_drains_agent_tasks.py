@@ -17,6 +17,7 @@ from task_center_runner.tests._live_config import (
 )
 from task_center_runner.tests.mock.sandbox.background_tool._background_shell_invariants import (
     assert_background_performance_artifacts,
+    configure_isolated_workspace_for_background,
     run_background_shell_scenario,
 )
 
@@ -37,6 +38,9 @@ async def test_background_exit_iws_drains_agent_tasks(
     audit_dir: Path,
     stores: TaskCenterStoreBundle,
 ) -> None:
+    sandbox_id = str(workspace["sandbox_id"])
+    await configure_isolated_workspace_for_background(sandbox_id)
+
     report, summary = await run_background_shell_scenario(
         scenario_name="sandbox.background_exit_iws_drains_agent_tasks",
         summary_path=EXIT_IWS_DRAIN_SUMMARY,

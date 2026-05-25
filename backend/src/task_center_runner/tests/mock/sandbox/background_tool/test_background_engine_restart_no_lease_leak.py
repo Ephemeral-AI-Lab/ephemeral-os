@@ -48,6 +48,7 @@ async def test_background_engine_restart_no_lease_leak(
         workspace=workspace,
         audit_dir=audit_dir,
         stores=stores,
+        preserve_inflight_ttl=True,
     )
 
     assert summary["mode"] == "engine_restart_no_lease_leak", summary

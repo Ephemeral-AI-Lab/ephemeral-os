@@ -1,7 +1,9 @@
-"""Diagnostic shell latency matrix for concurrency 1/5/10.
+"""Diagnostic shell latency matrix for selected concurrency levels.
 
 Skipped by default so the 3.1 gate does not pay this probe unless explicitly
-requested with ``EOS_RUN_SHELL_LATENCY_MATRIX=1``.
+requested with ``EOS_RUN_SHELL_LATENCY_MATRIX=1``. Override levels with
+``EOS_SHELL_LATENCY_MATRIX_LEVELS=1,2,5`` and mark calls as background with
+``EOS_SHELL_LATENCY_MATRIX_BACKGROUND=1``.
 """
 
 from __future__ import annotations
@@ -29,7 +31,12 @@ pytestmark = [
     ),
 ]
 
-_LEVELS = (1, 5, 10)
+_LEVELS = tuple(
+    int(part.strip())
+    for part in os.getenv("EOS_SHELL_LATENCY_MATRIX_LEVELS", "1,5,10").split(",")
+    if part.strip()
+)
+_BACKGROUND = os.getenv("EOS_SHELL_LATENCY_MATRIX_BACKGROUND") == "1"
 _ROOT = "/testbed/.ephemeralos/sweevo-mock/shell_concurrency_latency_matrix"
 _ARTIFACT_DIR = Path(".sweevo_runs/manual_diagnostics/shell_concurrency_latency")
 _TIMING_KEYS = (
@@ -67,6 +74,7 @@ async def test_shell_concurrency_latency_matrix(workspace: dict[str, object]) ->
         "generated_at": datetime.now(UTC).isoformat(),
         "sandbox_id": sandbox_id,
         "levels": list(_LEVELS),
+        "background": _BACKGROUND,
         "groups": groups,
     }
     _ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
@@ -88,10 +96,10 @@ async def _run_shell(
     index: int,
 ) -> dict[str, Any]:
     caller = SandboxCaller(
-        agent_id=f"shell-latency-c{level}-{index}",
-        agent_run_id=f"shell-latency-c{level}-{index}",
+        agent_id=f"shell-latency-{_mode_slug()}-c{level}-{index}",
+        agent_run_id=f"shell-latency-{_mode_slug()}-c{level}-{index}",
         tool_name="shell",
-        tool_id=f"diagnostic-c{level}-{index}",
+        tool_id=f"diagnostic-{_mode_slug()}-c{level}-{index}",
     )
     command = (
         f"mkdir -p {_ROOT}/c{level} && "
@@ -106,7 +114,10 @@ async def _run_shell(
             cwd="/testbed",
             timeout=120,
             caller=caller,
-            description=f"shell latency diagnostic concurrency={level}",
+            background=_BACKGROUND,
+            description=(
+                f"shell latency diagnostic mode={_mode_slug()} concurrency={level}"
+            ),
         ),
     )
     wall_s = monotonic_now() - wall_start
@@ -154,3 +165,7 @@ def _stats(values_iter: Any) -> dict[str, float | int | None]:
         "p95": values[min(len(values) - 1, int(len(values) * 0.95))],
         "max": values[-1],
     }
+
+
+def _mode_slug() -> str:
+    return "background" if _BACKGROUND else "foreground"
