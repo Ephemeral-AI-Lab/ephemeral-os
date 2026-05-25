@@ -26,6 +26,8 @@ def test_sandbox_exports_expected_tools():
         "read_file",
         "write_file",
         "edit_file",
+        "enter_isolated_workspace",
+        "exit_isolated_workspace",
         "glob",
         "grep",
     }
@@ -50,7 +52,11 @@ async def test_registered_api_backed_tools_require_sandbox_id():
     }
 
     assert set(api_inputs).issubset(tools_by_name)
-    assert set(tools_by_name) - set(api_inputs) == {"read_file"}
+    assert set(tools_by_name) - set(api_inputs) == {
+        "enter_isolated_workspace",
+        "exit_isolated_workspace",
+        "read_file",
+    }
 
     for tool_name, tool_input in api_inputs.items():
         ctx = _ctx({"repo_root": "/repo"})
@@ -111,7 +117,7 @@ def test_missing_sandbox_tool_absent():
 
 def test_sandbox_tool_count():
     tools = make_sandbox_tools()
-    assert len(tools) == 6
+    assert len(tools) == 8
 
 
 def test_sandbox_tools_omit_instruction_block():

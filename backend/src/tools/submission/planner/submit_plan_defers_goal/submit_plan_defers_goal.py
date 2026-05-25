@@ -16,7 +16,7 @@ from tools.submission.context import (
 from tools.submission.planner._schemas import (
     SUBMISSION_KIND_PLANNER_DEFERS,
     PlanTaskInput,
-    PlannerSubmissionBaseInput,
+    SharedPlannerSubmissionInput,
     build_planner_submission,
     validate_nonblank,
 )
@@ -25,7 +25,7 @@ from .prompt import (
 )
 
 
-class SubmitPlanDefersGoalInput(PlannerSubmissionBaseInput):
+class SubmitPlanDefersGoalInput(SharedPlannerSubmissionInput):
     deferred_goal_for_next_iteration: str = Field(..., min_length=1)
 
     @field_validator("deferred_goal_for_next_iteration")

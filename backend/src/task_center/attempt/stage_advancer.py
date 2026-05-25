@@ -1,4 +1,4 @@
-"""Attempt task dispatch for AttemptOrchestrator.
+"""Attempt stage advancement for AttemptOrchestrator.
 
 Owns the launch/quiescence state machine for one attempt's generators and
 evaluator. Calls back into the orchestrator's ``_close_attempt`` for the actual
@@ -23,7 +23,7 @@ from task_center.attempt.runtime import (
     AgentLaunch,
     AttemptDeps,
 )
-from task_center.attempt.launch import LaunchBuilder
+from task_center.attempt.launch import AgentLaunchFactory
 from task_center.attempt.generator_dag import (
     ready_pending_generator_ids,
     summarize_generator_dag,
@@ -41,8 +41,8 @@ logger = logging.getLogger(__name__)
 CloseAttemptCallback = Callable[[AttemptStatus, AttemptFailReason | None], None]
 
 
-class AttemptTaskDispatcher:
-    """Drives the generator-DAG and evaluator launch/quiescence machine."""
+class AttemptStageAdvancer:
+    """Advances generator/evaluator stages until the attempt blocks or closes."""
 
     def __init__(
         self,
@@ -157,7 +157,7 @@ class AttemptTaskDispatcher:
         )
         self._audit.task_launched(task, attempt_id=attempt.id)
         try:
-            launch = LaunchBuilder(runtime=runtime).for_generator(
+            launch = AgentLaunchFactory(runtime=runtime).for_generator(
                 attempt=attempt,
                 task=task,
                 base_agent_name=agent_name,
@@ -170,7 +170,7 @@ class AttemptTaskDispatcher:
             runtime.agent_launcher.launch(launch)
         except Exception:
             logger.exception(
-                "AttemptTaskDispatcher: generator launch failed",
+                "AttemptStageAdvancer: generator launch failed",
                 extra={"task_id": task_id, "attempt_id": attempt.id},
             )
             self._mark_launch_failed(task_id=task_id, attempt_id=attempt.id, role="Generator")
@@ -187,7 +187,7 @@ class AttemptTaskDispatcher:
             self._runtime.agent_launcher.launch(launch)
         except Exception:
             logger.exception(
-                "AttemptTaskDispatcher: evaluator launch failed",
+                "AttemptStageAdvancer: evaluator launch failed",
                 extra={
                     "task_id": launch.task_id,
                     "attempt_id": attempt_id,
@@ -206,7 +206,7 @@ class AttemptTaskDispatcher:
         runtime = self._runtime
         task_id = evaluator_task_id(attempt.id)
         try:
-            launch = LaunchBuilder(runtime=runtime).for_evaluator(attempt=attempt, task_id=task_id)
+            launch = AgentLaunchFactory(runtime=runtime).for_evaluator(attempt=attempt, task_id=task_id)
             ready_task = {
                 "id": task_id,
                 "task_center_run_id": launch.task_center_run_id,
@@ -243,7 +243,7 @@ class AttemptTaskDispatcher:
             self._launch_evaluator(launch)
         except Exception:
             logger.exception(
-                "AttemptTaskDispatcher: evaluator spawn failed",
+                "AttemptStageAdvancer: evaluator spawn failed",
                 extra={"task_id": task_id, "attempt_id": attempt.id},
             )
             try:

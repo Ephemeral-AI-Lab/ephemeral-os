@@ -135,7 +135,7 @@ def test_prior_attempt_body_emits_flat_plan_spec_child():
     assert "<attempt_plan>" not in body
     assert "</attempt_plan>" not in body
     assert "<deferred_goal_for_next_iteration>" not in body, (
-        "absent handoff goal must not produce a child element"
+        "absent deferred goal must not produce a child element"
     )
 
 

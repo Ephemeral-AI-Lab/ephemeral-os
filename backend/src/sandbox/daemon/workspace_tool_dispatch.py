@@ -9,7 +9,7 @@ from uuid import uuid4
 from sandbox._shared.clock import monotonic_now
 from sandbox._shared.models import Intent, ToolCallRequest, ToolCallResult
 from sandbox.daemon.occ_runtime_services import get_occ_runtime_services
-from sandbox.daemon.operation_payloads import (
+from sandbox.daemon.workspace_tool_payloads import (
     project_changeset_result,
     project_conflict_result,
     require_layer_stack_root,

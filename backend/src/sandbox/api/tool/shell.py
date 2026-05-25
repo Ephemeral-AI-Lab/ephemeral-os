@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from audit.base import AuditSink
 from sandbox.api.tool._conflict_detection import is_shell_conflict
-from sandbox.api.tool._daemon_requests import daemon_identity_payload
+from sandbox.api.tool._daemon_request_payloads import daemon_request_identity_fields
 from sandbox.api.tool._operation_audit import run_audited_operation
-from sandbox.api.tool._daemon_results import (
-    shell_result_from_daemon_response,
-    timing_map_from_daemon_field,
+from sandbox.api.tool._daemon_response_parsing import (
+    parse_shell_result,
+    parse_timing_map_field,
     user_visible_error_message,
 )
 from sandbox.api.timeouts import shell_dispatch_timeout
@@ -46,7 +46,7 @@ async def shell(
                 warnings=(),
                 timings={"api.shell.total_s": monotonic_now() - total_start},
             )
-        payload = daemon_identity_payload(request) | {
+        payload = daemon_request_identity_fields(request) | {
             "command": request.command,
             "cwd": cwd,
             "timeout_seconds": request.timeout,
@@ -61,9 +61,9 @@ async def shell(
             timeout=shell_dispatch_timeout(request.timeout),
             transport=transport,
         )
-        timings = timing_map_from_daemon_field(response.get("timings"))
+        timings = parse_timing_map_field(response.get("timings"))
         timings["api.shell.dispatch_total_s"] = monotonic_now() - total_start
-        return shell_result_from_daemon_response(response, timings=timings)
+        return parse_shell_result(response, timings=timings)
 
     def _conflict_from_error(exc: BaseException) -> ShellResult | None:
         if not is_shell_conflict(exc):

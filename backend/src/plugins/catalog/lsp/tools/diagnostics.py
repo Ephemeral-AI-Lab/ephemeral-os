@@ -9,7 +9,7 @@ from sandbox.ephemeral_workspace.plugin import call_plugin
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput
-from tools.sandbox._lib.session import resolve_sandbox_path
+from tools.sandbox._lib.tool_context import resolve_tool_sandbox_path
 
 
 class DiagnosticsInput(BaseModel):
@@ -42,7 +42,7 @@ async def diagnostics(
         plugin="lsp",
         op="diagnostics",
         payload={
-            "file_path": resolve_sandbox_path(file_path, context),
+            "file_path": resolve_tool_sandbox_path(file_path, context),
             "wait_for_diagnostics": wait_for_diagnostics,
         },
     )

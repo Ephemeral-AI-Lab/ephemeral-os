@@ -1,4 +1,4 @@
-"""Daytona execution-context preparation."""
+"""Daytona runtime-context preparation."""
 
 from __future__ import annotations
 

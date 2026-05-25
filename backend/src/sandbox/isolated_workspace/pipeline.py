@@ -26,7 +26,7 @@ from sandbox.isolated_workspace._control_plane.linux_runtime import (
     _read_linux_memavailable_kb,
 )
 from sandbox.isolated_workspace._control_plane.pipeline_state import (
-    AuditSink,
+    IsolatedWorkspaceAuditSink,
     IsolatedWorkspaceError,
     IsolatedWorkspaceHandle,
     PERSISTED_HANDLES_SCHEMA_VERSION,
@@ -68,7 +68,7 @@ class IsolatedPipeline(
         *,
         scratch_root: Path,
         layer_stack: LayerStackPort,
-        audit: AuditSink | None = None,
+        audit: IsolatedWorkspaceAuditSink | None = None,
         config: _PipelineConfig | None = None,
         network: IsolatedNetwork | None = None,
         runtime: _NamespaceRuntime | None = None,

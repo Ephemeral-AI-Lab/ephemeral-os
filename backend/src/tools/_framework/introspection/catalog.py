@@ -22,16 +22,6 @@ def _iter_available_tools() -> list[BaseTool]:
     return [create_tool(name, ctx) for name in list_available_tools()]
 
 
-def _background_tool_names() -> list[str]:
-    return sorted(
-        {
-            tool.name
-            for tool in _iter_available_tools()
-            if getattr(tool, "background", "forbidden") != "forbidden"
-        }
-    )
-
-
 def collect_tool_catalog(
     tool_registry: ToolRegistry | None = None,
     *,
@@ -50,13 +40,17 @@ def collect_tool_catalog(
 
     for tool in tool_registry.list_tools() if tool_registry is not None else []:
         _merge_tool(tool)
-    for tool in _iter_available_tools():
+    available_tools = _iter_available_tools()
+    for tool in available_tools:
         _merge_tool(tool)
 
     if include_runtime_tools:
         from tools.background import make_background_tools
 
-        if _background_tool_names():
+        if any(
+            getattr(tool, "background", "forbidden") != "forbidden"
+            for tool in available_tools
+        ):
             for tool in make_background_tools():
                 _merge_tool(tool)
 

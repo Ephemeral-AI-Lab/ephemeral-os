@@ -63,7 +63,7 @@ def test_bundle_layout_includes_required_paths(tmp_path: Path) -> None:
         "sandbox/daemon/rpc/__init__.py",
         "sandbox/daemon/rpc/server.py",
         "sandbox/daemon/rpc/dispatcher.py",
-        "sandbox/daemon/operation_payloads.py",
+        "sandbox/daemon/workspace_tool_payloads.py",
         "sandbox/daemon/changeset_projection.py",
         "sandbox/daemon/occ_runtime_services.py",
         "sandbox/daemon/layer_stack_runtime.py",

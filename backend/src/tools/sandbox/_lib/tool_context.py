@@ -1,8 +1,7 @@
-"""Provider-neutral helpers for sandbox-backed tools."""
+"""Provider-neutral tool-context helpers for sandbox-backed tools."""
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from typing import Any
 
 from sandbox._shared.models import SandboxCaller
@@ -10,7 +9,7 @@ from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.results import ToolResult
 
 
-def caller_from_context(
+def sandbox_caller_from_tool_context(
     context: ToolExecutionContextService,
 ) -> SandboxCaller:
     """Build the sandbox caller identity for a tool call."""
@@ -30,7 +29,7 @@ def caller_from_context(
     )
 
 
-def audit_kwargs_from_context(
+def sandbox_audit_kwargs_from_tool_context(
     context: ToolExecutionContextService,
 ) -> dict[str, Any]:
     """Return sandbox API audit kwargs when an audit sink is available."""
@@ -43,48 +42,36 @@ def audit_kwargs_from_context(
     return {"audit_sink": audit_sink}
 
 
-def sandbox_audit_metadata(
+def sandbox_audit_metadata_from_tool_context(
     context: ToolExecutionContextService,
 ) -> dict[str, bool]:
     """Mark tool metadata when sandbox audit events were emitted directly."""
-    return {"sandbox_audit_emitted": True} if audit_kwargs_from_context(context) else {}
+    return (
+        {"sandbox_audit_emitted": True}
+        if sandbox_audit_kwargs_from_tool_context(context)
+        else {}
+    )
 
 
-def merge_tool_metadata(
-    base: Mapping[str, Any] | None,
-    extra: Mapping[str, Any],
-) -> dict[str, Any]:
-    merged = dict(base or {})
-    merged.update(extra)
-    return merged
-
-
-def get_repo_root(context: ToolExecutionContextService) -> str:
+def sandbox_repo_root_from_tool_context(context: ToolExecutionContextService) -> str:
     """Return the sandbox repository root for tool output/path resolution."""
     return str(context.get("repo_root") or "").strip()
 
 
-def resolve_sandbox_path(path: str, context: ToolExecutionContextService) -> str:
+def resolve_tool_sandbox_path(path: str, context: ToolExecutionContextService) -> str:
     """Resolve a repo-relative path against the sandbox repository root."""
     # Trust boundary: absolute paths are passed through verbatim. The
     # sandbox provider (isolated rootfs) is the authoritative layer that
     # refuses or sandboxes host paths; this helper does not gate on them.
     if path.startswith("/"):
         return path
-    repo_root = get_repo_root(context)
+    repo_root = sandbox_repo_root_from_tool_context(context)
     if repo_root:
         return f"{repo_root.rstrip('/')}/{path}"
     return path
 
 
-def normalized_path(path: str) -> str:
-    """Return a stable absolute-or-relative path without trailing separators."""
-    if path == "/":
-        return path
-    return path.rstrip("/") or path
-
-
-def path_error(exc: Exception, path: str) -> str | None:
+def sandbox_path_error_message(exc: Exception, path: str) -> str | None:
     """Return a user-facing path error when one can be recognized."""
     message = str(exc)
     if isinstance(exc, FileNotFoundError) or "No such file or directory" in message:
@@ -92,7 +79,9 @@ def path_error(exc: Exception, path: str) -> str | None:
     return None
 
 
-def sandbox_id_or_error(context: ToolExecutionContextService) -> tuple[str, ToolResult | None]:
+def sandbox_id_or_missing_error_result(
+    context: ToolExecutionContextService,
+) -> tuple[str, ToolResult | None]:
     sandbox_id = str(context.get("sandbox_id") or "").strip()
     if sandbox_id:
         return sandbox_id, None
@@ -104,13 +93,11 @@ def sandbox_id_or_error(context: ToolExecutionContextService) -> tuple[str, Tool
 
 
 __all__ = [
-    "caller_from_context",
-    "audit_kwargs_from_context",
-    "get_repo_root",
-    "merge_tool_metadata",
-    "normalized_path",
-    "path_error",
-    "resolve_sandbox_path",
-    "sandbox_audit_metadata",
-    "sandbox_id_or_error",
+    "sandbox_audit_kwargs_from_tool_context",
+    "sandbox_audit_metadata_from_tool_context",
+    "sandbox_caller_from_tool_context",
+    "sandbox_id_or_missing_error_result",
+    "sandbox_path_error_message",
+    "sandbox_repo_root_from_tool_context",
+    "resolve_tool_sandbox_path",
 ]

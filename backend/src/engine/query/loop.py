@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import logging
 from collections.abc import AsyncIterator, Callable, Mapping
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 from providers.types import (
     ApiMessageCompleteEvent,
@@ -45,8 +44,6 @@ from tools import (
 )
 
 
-logger = logging.getLogger(__name__)
-
 def _make_stream_dispatch_deferrer(
     context: QueryContext,
     background_tasks: BackgroundTaskSupervisor | None,
@@ -74,7 +71,7 @@ def _make_stream_dispatch_deferrer(
 
 
 @dataclass
-class _StreamRunState:
+class _ProviderStreamAccumulator:
     """Mutable accumulator for one provider stream."""
 
     final_message: ConversationMessage | None = None
@@ -82,7 +79,7 @@ class _StreamRunState:
     streamed_tool_use_ids: set[str] = field(default_factory=set)
 
 
-def _initialize_loop_state(
+def _prepare_query_loop_runtime(
     context: QueryContext,
 ) -> tuple[BackgroundTaskSupervisor | None, SystemNotificationService]:
     """One-time setup before issuing the provider request."""
@@ -153,7 +150,7 @@ async def _consume_provider_stream(
     context: QueryContext,
     executor: StreamingToolExecutor,
     run_request: QueryRunRequest,
-    state: _StreamRunState,
+    state: _ProviderStreamAccumulator,
 ) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
     """Consume the provider stream, populating ``state`` along the way."""
     try:
@@ -206,7 +203,7 @@ async def _handle_tool_dispatch_branch(
     messages: list[ConversationMessage],
     executor: StreamingToolExecutor,
     run_request: QueryRunRequest,
-    state: _StreamRunState,
+    state: _ProviderStreamAccumulator,
     background_tasks: BackgroundTaskSupervisor | None,
     notification_service: SystemNotificationService,
 ) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
@@ -282,7 +279,7 @@ async def _run_query_loop(
     context: QueryContext,
     messages: list[ConversationMessage],
 ) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
-    background_tasks, notification_service = _initialize_loop_state(context)
+    background_tasks, notification_service = _prepare_query_loop_runtime(context)
 
     try:
         while True:
@@ -304,7 +301,7 @@ async def _run_query_loop(
                         ConversationMessage(role="user", content=list(pending))
                     )
 
-            state = _StreamRunState()
+            state = _ProviderStreamAccumulator()
             run_request = build_query_run_request(context, messages)
             async for event, event_usage in _consume_provider_stream(
                 context, executor, run_request, state
@@ -409,7 +406,7 @@ async def run_query(
             updates["run_id"] = run_id
         if not updates:
             return event
-        return replace(event, **updates)
+        return cast(StreamEvent, replace(cast(Any, event), **updates))
 
     async def _stamped(
         inner: AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]],

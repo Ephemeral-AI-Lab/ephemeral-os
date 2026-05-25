@@ -1,4 +1,4 @@
-"""Bash wrapping helpers shared by host adapters and bundled runtime code."""
+"""Build Daytona bash commands and recover their exit codes."""
 
 from __future__ import annotations
 

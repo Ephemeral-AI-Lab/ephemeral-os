@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from agents import AgentDefinition, AgentKind
 from engine.agent.factory import (
     _build_agent_tool_registry,
-    _build_context_preparers,
+    _build_sandbox_context_preparers,
     _finalize_tool_registry_and_prompt,
 )
 from tools._framework.core.base import BaseTool, ToolExecutionContextService, ToolResult
@@ -258,7 +258,7 @@ def test_default_sandbox_agent_builds_daytona_context_preparer() -> None:
         "default",
     )
 
-    preparers = _build_context_preparers(registry, "sb-123")
+    preparers = _build_sandbox_context_preparers(registry, "sb-123")
 
     assert [type(preparer).__name__ for preparer in preparers] == [
         "DaytonaContextPreparer"
@@ -270,7 +270,7 @@ def test_context_preparers_not_added_without_declared_requirement() -> None:
     registry = ToolRegistry()
     registry.register(_DummyTool())
 
-    assert _build_context_preparers(registry, "sb-123") == []
+    assert _build_sandbox_context_preparers(registry, "sb-123") == []
 
 
 def test_context_preparers_follow_tool_declared_requirement() -> None:
@@ -280,7 +280,7 @@ def test_context_preparers_follow_tool_declared_requirement() -> None:
     registry = ToolRegistry()
     registry.register(_SandboxContextTool())
 
-    preparers = _build_context_preparers(registry, "sb-123")
+    preparers = _build_sandbox_context_preparers(registry, "sb-123")
 
     assert len(preparers) == 1
     assert type(preparers[0]).__name__ == "DaytonaContextPreparer"

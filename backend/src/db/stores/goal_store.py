@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from db.models.goal import GoalRecord
 from db.stores.base import SyncStoreMixin
@@ -74,7 +75,7 @@ class GoalStore(SyncStoreMixin):
         goal_id: str,
         *,
         status: GoalStatus,
-        final_outcome: dict | None,
+        final_outcome: dict[str, Any] | None,
         closed_at: datetime | None = None,
     ) -> Goal:
         with self._sf() as db:
@@ -89,15 +90,13 @@ class GoalStore(SyncStoreMixin):
             db.refresh(record)
             return self._to_dto(record)
 
-    def list_for_executor_task(
-        self, requested_by_task_id: str
-    ) -> list[Goal]:
+    def list_for_requesting_task(self, requesting_task_id: str) -> list[Goal]:
         with self._sf() as db:
             q = (
                 db.query(GoalRecord)
                 .filter(
                     GoalRecord.requested_by_task_id
-                    == requested_by_task_id
+                    == requesting_task_id
                 )
                 .order_by(GoalRecord.created_at.asc())
             )

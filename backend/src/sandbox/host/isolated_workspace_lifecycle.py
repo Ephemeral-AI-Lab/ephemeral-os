@@ -14,7 +14,7 @@ host-side module so the only place that knows the host orchestration is
 ``sandbox.host``; tool definitions in ``tools/`` consume these coroutines
 directly. Earlier drafts considered colocating with the tool definitions,
 but the ``tools.isolated_workspace`` package init eagerly loads
-``definition.py`` which pulls in ``tools.sandbox._lib.session`` —
+``definition.py`` which pulls in ``tools.sandbox._lib.tool_context`` —
 co-locating ``_lifecycle.py`` inside that package triggered a circular
 import through ``sandbox.api``. Hosting here breaks the cycle.
 """

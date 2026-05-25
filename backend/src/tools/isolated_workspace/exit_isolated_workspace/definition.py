@@ -14,7 +14,7 @@ from tools._framework.core.base import (
     ToolResult,
 )
 from tools._framework.core.decorator import tool
-from tools.sandbox._lib.session import caller_from_context
+from tools.sandbox._lib.tool_context import sandbox_caller_from_tool_context
 
 
 class ExitIsolatedWorkspaceInput(BaseModel):
@@ -36,17 +36,20 @@ async def exit_isolated_workspace(
 ) -> ToolResult:
     result = await lifecycle_exit(
         ExitIsolatedWorkspaceRequest(
-            caller=caller_from_context(context),
+            caller=sandbox_caller_from_tool_context(context),
             grace_s=grace_s,
             description="exit isolated workspace",
         ),
         background_manager=context.get("background_task_manager"),
         sandbox_id=str(context.get("sandbox_id") or ""),
     )
-    return ToolResult(output=json.dumps(_payload(result), indent=2), is_error=not result.success)
+    return ToolResult(
+        output=json.dumps(_exit_isolated_workspace_payload(result), indent=2),
+        is_error=not result.success,
+    )
 
 
-def _payload(result: object) -> dict[str, object]:
+def _exit_isolated_workspace_payload(result: object) -> dict[str, object]:
     error = getattr(result, "error", None)
     return {
         "success": bool(getattr(result, "success", False)),

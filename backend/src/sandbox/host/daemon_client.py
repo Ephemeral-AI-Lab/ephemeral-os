@@ -132,7 +132,7 @@ async def _call_daemon(
             _raise_exec_failed(result)
         raise
     error = response.get("error")
-    if error is not None and not _is_guarded_result_error(response):
+    if error is not None and not _is_handler_level_error_result(response):
         if not isinstance(error, dict):
             raise _DaemonDispatchError(
                 kind="RuntimeError",
@@ -149,7 +149,7 @@ async def _call_daemon(
     return response
 
 
-def _is_guarded_result_error(response: Mapping[str, Any]) -> bool:
+def _is_handler_level_error_result(response: Mapping[str, Any]) -> bool:
     """Return true for handler-level policy results, not daemon transport errors."""
     return (
         response.get("success") is False
@@ -183,7 +183,7 @@ async def call_daemon_api(
     )
 
 
-def versioned_payload(payload: Mapping[str, object]) -> dict[str, object]:
+def with_daemon_protocol_version(payload: Mapping[str, object]) -> dict[str, object]:
     """Attach the daemon protocol version while preserving caller payloads."""
     return {
         DAEMON_PROTOCOL_FIELD: DAEMON_PROTOCOL_VERSION,

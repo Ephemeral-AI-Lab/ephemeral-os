@@ -19,7 +19,7 @@ import pytest
 from engine.query.context import QueryContext, QueryExitReason
 from engine.query.loop import _handle_tool_dispatch_branch
 from engine.query.request import build_query_run_request
-from engine.tool_call.dispatch import ToolDispatchResult
+from engine.tool_call.dispatch import AssistantToolDispatchOutcome
 from message.messages import (
     ConversationMessage,
     TextBlock,
@@ -78,8 +78,8 @@ async def test_resource_limit_exit_appends_tool_results_to_transcript(
         ToolResultBlock(tool_use_id="tu_2", content="ok_2", is_error=False),
     ]
 
-    async def _fake_dispatch(*_args: Any, **_kwargs: Any) -> ToolDispatchResult:
-        return ToolDispatchResult(tool_results=dispatched_results)
+    async def _fake_dispatch(*_args: Any, **_kwargs: Any) -> AssistantToolDispatchOutcome:
+        return AssistantToolDispatchOutcome(tool_results=dispatched_results)
 
     monkeypatch.setattr(
         "engine.query.loop.dispatch_assistant_tools", _fake_dispatch

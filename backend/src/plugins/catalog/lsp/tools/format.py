@@ -11,7 +11,7 @@ from sandbox.ephemeral_workspace.plugin import call_plugin_write
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput
-from tools.sandbox._lib.session import resolve_sandbox_path
+from tools.sandbox._lib.tool_context import resolve_tool_sandbox_path
 
 
 class FormatInput(BaseModel):
@@ -41,7 +41,7 @@ async def format_document(
         plugin="lsp",
         op="format",
         payload={
-            "file_path": resolve_sandbox_path(file_path, context),
+            "file_path": resolve_tool_sandbox_path(file_path, context),
             "options": options or {"tabSize": 4, "insertSpaces": True},
         },
     )

@@ -21,7 +21,7 @@ from sandbox.daemon import occ_runtime_services
 # ---------------------------------------------------------------------------
 def test_occ_server_module_does_not_classify_paths() -> None:
     """occ-server must not own the in-workspace classifier — single source of
-    truth lives on daemon built-ins (builtin_operations/operation_payloads.py)."""
+    truth lives on daemon built-ins (builtin_operations/workspace_tool_payloads.py)."""
     occ_server_source = Path(occ_runtime_services.__file__).read_text()
 
     assert ".workspace_root" not in occ_server_source

@@ -61,7 +61,9 @@ def audit_events_from_stream_event(
                     "output_bytes": _encoded_size(stream_event.output),
                     "is_error": stream_event.is_error,
                     "does_terminate": stream_event.does_terminate,
-                    "metadata": _metadata_payload(stream_event.metadata),
+                    "metadata": _audit_metadata_from_stream_metadata(
+                        stream_event.metadata
+                    ),
                     "timings": {},
                 },
             ),
@@ -94,12 +96,14 @@ def _node_from_stream(
     )
 
 
-def _metadata_payload(metadata: Mapping[str, Any]) -> dict[str, Any]:
-    payload = dict(metadata)
-    timings = payload.pop("timings", None)
+def _audit_metadata_from_stream_metadata(
+    metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    audit_metadata = dict(metadata)
+    timings = audit_metadata.pop("timings", None)
     if isinstance(timings, dict):
-        payload["domain_timings"] = dict(timings)
-    return payload
+        audit_metadata["domain_timings"] = dict(timings)
+    return audit_metadata
 
 
 def _metadata_get(metadata: Mapping[str, Any] | None, key: str) -> Any:

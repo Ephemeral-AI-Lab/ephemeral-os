@@ -26,8 +26,8 @@ EmitStreamEvent = Callable[[StreamEvent], Awaitable[None]]
 _HookTraceEntry = dict[str, object]
 
 
-class ToolHookExecutionHelper:
-    """Runs tool-specific hooks and owns their metadata/notification plumbing."""
+class ToolHookExecutionPipeline:
+    """Coordinates tool-specific hook phases and owns metadata/notification plumbing."""
 
     def __init__(
         self,

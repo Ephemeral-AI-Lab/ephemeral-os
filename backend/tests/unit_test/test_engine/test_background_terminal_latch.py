@@ -1,4 +1,4 @@
-"""Unit tests for ``BackgroundTaskSupervisor._set_terminal_status`` precedence.
+"""Unit tests for ``BackgroundTaskSupervisor._apply_terminal_status_transition``.
 
 The single-latch invariant (plan Pre-mortem #6) says only one terminal status
 wins per task, and a later, higher-precedence transition can overwrite a
@@ -38,7 +38,7 @@ async def test_completed_overrides_cancelled() -> None:
     completed_result = ToolResult(output="real result")
 
     # Late cancel arrives first — but a natural completion later should win.
-    assert mgr._set_terminal_status(
+    assert mgr._apply_terminal_status_transition(
         tracked,
         new_status=BackgroundTaskStatus.CANCELLED,
         new_result=cancelled_result,
@@ -46,7 +46,7 @@ async def test_completed_overrides_cancelled() -> None:
     assert tracked.status == BackgroundTaskStatus.CANCELLED
     assert tracked.result is cancelled_result
 
-    assert mgr._set_terminal_status(
+    assert mgr._apply_terminal_status_transition(
         tracked,
         new_status=BackgroundTaskStatus.COMPLETED,
         new_result=completed_result,
@@ -66,13 +66,13 @@ async def test_cancelled_does_not_overwrite_completed() -> None:
     completed_result = ToolResult(output="real result")
     cancelled_result = ToolResult(output="Cancelled", is_error=True)
 
-    assert mgr._set_terminal_status(
+    assert mgr._apply_terminal_status_transition(
         tracked,
         new_status=BackgroundTaskStatus.COMPLETED,
         new_result=completed_result,
     )
     # Late cancel after natural completion: rejected.
-    assert not mgr._set_terminal_status(
+    assert not mgr._apply_terminal_status_transition(
         tracked,
         new_status=BackgroundTaskStatus.CANCELLED,
         new_result=cancelled_result,
@@ -93,19 +93,19 @@ async def test_failed_overrides_cancelled_but_not_completed() -> None:
     failed_result = ToolResult(output="boom", is_error=True)
     completed_result = ToolResult(output="real result")
 
-    assert mgr._set_terminal_status(
+    assert mgr._apply_terminal_status_transition(
         tracked,
         new_status=BackgroundTaskStatus.CANCELLED,
         new_result=cancelled_result,
     )
-    assert mgr._set_terminal_status(
+    assert mgr._apply_terminal_status_transition(
         tracked,
         new_status=BackgroundTaskStatus.FAILED,
         new_result=failed_result,
     )
     assert tracked.status == BackgroundTaskStatus.FAILED
     # Completed beats failed.
-    assert mgr._set_terminal_status(
+    assert mgr._apply_terminal_status_transition(
         tracked,
         new_status=BackgroundTaskStatus.COMPLETED,
         new_result=completed_result,

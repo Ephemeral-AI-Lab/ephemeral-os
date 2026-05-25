@@ -8,7 +8,7 @@ from typing import Any
 from pydantic import BaseModel, Field, model_validator
 
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
-from tools.sandbox._lib.session import get_repo_root
+from tools.sandbox._lib.tool_context import sandbox_repo_root_from_tool_context
 
 
 MAX_READ_FILE_LINES = 200
@@ -106,7 +106,7 @@ def build_read_file_result(
     return ToolResult(
         output=json.dumps(
             {
-                "cwd": get_repo_root(context),
+                "cwd": sandbox_repo_root_from_tool_context(context),
                 "file_path": file_path,
                 "total_lines": total,
                 "start_line": start,

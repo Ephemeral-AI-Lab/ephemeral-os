@@ -8,8 +8,8 @@ sentinel ``255`` so a failed remote command surfaces as failure to
 
 from __future__ import annotations
 
-from sandbox.provider.daytona import exec_wrapper as bash_mod
-from sandbox.provider.daytona.exec_wrapper import EXIT_MARKER, extract_exit_code
+from sandbox.provider.daytona import bash_command as bash_mod
+from sandbox.provider.daytona.bash_command import EXIT_MARKER, extract_exit_code
 
 
 def _reset_warn_flag() -> None:
@@ -89,7 +89,7 @@ class TestExtractExitCodeFailsClosed:
         import logging
 
         _reset_warn_flag()
-        caplog.set_level(logging.WARNING, logger="sandbox.provider.daytona.exec_wrapper")
+        caplog.set_level(logging.WARNING, logger="sandbox.provider.daytona.bash_command")
 
         extract_exit_code("a", fallback_exit_code="boom")
         extract_exit_code("b", fallback_exit_code="boom")

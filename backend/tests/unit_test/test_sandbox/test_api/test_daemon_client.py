@@ -16,8 +16,8 @@ class _Adapter:
         raise AssertionError("daemon dispatch is mocked in this test")
 
 
-def test_versioned_payload_attaches_daemon_protocol_version() -> None:
-    assert daemon_client_mod.versioned_payload({"path": "a.py"}) == {
+def test_with_daemon_protocol_version_attaches_daemon_protocol_field() -> None:
+    assert daemon_client_mod.with_daemon_protocol_version({"path": "a.py"}) == {
         daemon_client_mod.DAEMON_PROTOCOL_FIELD: daemon_client_mod.DAEMON_PROTOCOL_VERSION,
         "path": "a.py",
     }

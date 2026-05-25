@@ -11,7 +11,7 @@ from sandbox.ephemeral_workspace.plugin import call_plugin
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput
-from tools.sandbox._lib.session import resolve_sandbox_path
+from tools.sandbox._lib.tool_context import resolve_tool_sandbox_path
 
 
 class CodeActionsInput(BaseModel):
@@ -46,7 +46,7 @@ async def code_actions(
         plugin="lsp",
         op="code_actions",
         payload={
-            "file_path": resolve_sandbox_path(file_path, context),
+            "file_path": resolve_tool_sandbox_path(file_path, context),
             "line": line,
             "character": character,
             "range": range,

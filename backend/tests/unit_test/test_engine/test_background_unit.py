@@ -17,11 +17,11 @@ import pytest
 from pathlib import Path
 from pydantic import ValidationError
 
-from tools.background._lib._common import (
+from tools.background._lib.task_output import (
+    background_task_display_status,
     build_background_snapshot_metadata,
-    normalize_status,
     render_background_snapshot,
-    render_tool_command,
+    render_background_tool_call,
 )
 from tools.background.wait_background_tasks import (
     WaitBackgroundTasksInput,
@@ -74,17 +74,20 @@ class TestSchemas:
 
 
 # ---------------------------------------------------------------------------
-# render_tool_command / normalize_status
+# render_background_tool_call / background_task_display_status
 # ---------------------------------------------------------------------------
 
 
 class TestCommonHelpers:
-    def test_render_tool_command_joins_values(self) -> None:
-        out = render_tool_command("run_subagent", {"agent_name": "explorer", "prompt": "hi"})
+    def test_render_background_tool_call_joins_values(self) -> None:
+        out = render_background_tool_call(
+            "run_subagent",
+            {"agent_name": "explorer", "prompt": "hi"},
+        )
         assert out == "run_subagent(explorer, hi)"
 
-    def test_render_tool_command_no_args(self) -> None:
-        assert render_tool_command("noop", {}) == "noop()"
+    def test_render_background_tool_call_no_args(self) -> None:
+        assert render_background_tool_call("noop", {}) == "noop()"
 
     @pytest.mark.parametrize("raw,expected", [
         ("running", "running"),
@@ -93,8 +96,8 @@ class TestCommonHelpers:
         ("failed", "failed"),
         ("cancelled", "failed"),
     ])
-    def test_normalize_status(self, raw: str, expected: str) -> None:
-        assert normalize_status(raw) == expected
+    def test_background_task_display_status(self, raw: str, expected: str) -> None:
+        assert background_task_display_status(raw) == expected
 
 
 # ---------------------------------------------------------------------------

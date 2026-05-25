@@ -14,7 +14,7 @@ from tools.submission.context import (
 from tools.submission.planner._schemas import (
     SUBMISSION_KIND_PLANNER_COMPLETES,
     PlanTaskInput,
-    PlannerSubmissionBaseInput,
+    SharedPlannerSubmissionInput,
     build_planner_submission,
 )
 from .prompt import (
@@ -22,7 +22,7 @@ from .prompt import (
 )
 
 
-class SubmitPlanClosesGoalInput(PlannerSubmissionBaseInput):
+class SubmitPlanClosesGoalInput(SharedPlannerSubmissionInput):
     pass
 
 

@@ -7,14 +7,19 @@ import time
 
 from pydantic import BaseModel, Field
 
-from tools._framework.core.base import BaseTool, TextToolOutput, ToolExecutionContextService, ToolResult
+from tools._framework.core.base import (
+    BaseTool,
+    TextToolOutput,
+    ToolExecutionContextService,
+    ToolResult,
+)
 from .prompt import get_wait_background_tasks_description
 
-from tools.background._lib._common import (
+from tools.background._lib.task_output import (
+    background_task_display_status,
     build_background_snapshot_metadata,
-    normalize_status,
     render_background_snapshot,
-    render_tool_command,
+    render_background_tool_call,
 )
 
 
@@ -36,11 +41,16 @@ def _snapshot_all(manager) -> list[dict[str, str]]:
     """Build the [{task_id, status, tool_command}] list for every tracked task."""
     out: list[dict[str, str]] = []
     for tracked in manager.iter_all():
-        out.append({
-            "task_id": tracked.task_id,
-            "status": normalize_status(tracked.status),
-            "tool_command": render_tool_command(tracked.tool_name, tracked.tool_input),
-        })
+        out.append(
+            {
+                "task_id": tracked.task_id,
+                "status": background_task_display_status(tracked.status),
+                "tool_command": render_background_tool_call(
+                    tracked.tool_name,
+                    tracked.tool_input,
+                ),
+            }
+        )
     return out
 
 

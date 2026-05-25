@@ -1,4 +1,4 @@
-"""Daemon operation argument validation and result payload helpers."""
+"""Workspace-tool argument validation and result payload helpers."""
 
 from __future__ import annotations
 

@@ -14,13 +14,12 @@ from sandbox.api import ShellRequest
 from sandbox._shared.clock import normalize_timing_map
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
-from tools.sandbox._lib.session import (
-    audit_kwargs_from_context,
-    caller_from_context,
-    get_repo_root,
-    merge_tool_metadata,
-    sandbox_audit_metadata,
-    sandbox_id_or_error,
+from tools.sandbox._lib.tool_context import (
+    sandbox_audit_kwargs_from_tool_context,
+    sandbox_caller_from_tool_context,
+    sandbox_repo_root_from_tool_context,
+    sandbox_audit_metadata_from_tool_context,
+    sandbox_id_or_missing_error_result,
 )
 from tools.sandbox._lib.shell_policy import (
     DestructiveGitShellPreHook,
@@ -91,7 +90,7 @@ def _format_execution_failure(
     return " ".join(parts)
 
 
-def _build_tool_output(
+def _build_shell_tool_result(
     *,
     context: ToolExecutionContextService,
     status: str,
@@ -120,11 +119,11 @@ def _build_tool_output(
         metadata["timings"] = normalize_timing_map(
             cast(Mapping[object, object], timings)
         )
-    metadata = merge_tool_metadata(metadata, sandbox_audit_metadata(context))
+    metadata.update(sandbox_audit_metadata_from_tool_context(context))
     return ToolResult(
         output=json.dumps(
             {
-                "cwd": get_repo_root(context),
+                "cwd": sandbox_repo_root_from_tool_context(context),
                 "status": status,
                 "changed_paths": changed_paths,
                 "changed_path_kinds": dict(changed_path_kinds or {}),
@@ -162,7 +161,7 @@ async def shell(
     if not command or not command.strip():
         return ToolResult(output="`command` must be a non-empty string.", is_error=True)
 
-    sandbox_id, sandbox_id_error = sandbox_id_or_error(context)
+    sandbox_id, sandbox_id_error = sandbox_id_or_missing_error_result(context)
     if sandbox_id_error is not None:
         return sandbox_id_error
 
@@ -172,13 +171,13 @@ async def shell(
             ShellRequest(
                 invocation_id=str(context.get("sandbox_invocation_id") or ""),
                 command=command,
-                cwd=get_repo_root(context) or None,
+                cwd=sandbox_repo_root_from_tool_context(context) or None,
                 timeout=timeout,
-                caller=caller_from_context(context),
+                caller=sandbox_caller_from_tool_context(context),
                 description="shell",
                 background=bool(context.get("background_task_id")),
             ),
-            **audit_kwargs_from_context(context),
+            **sandbox_audit_kwargs_from_tool_context(context),
         )
     except Exception as exc:
         return ToolResult(
@@ -207,7 +206,7 @@ async def shell(
         error_detail = result.stderr or result.stdout or ""
     else:
         error_detail = ""
-    return _build_tool_output(
+    return _build_shell_tool_result(
         context=context,
         status="error" if is_error else "ok",
         command=command,
@@ -224,4 +223,4 @@ async def shell(
     )
 
 
-__all__ = ["shell", "_build_tool_output"]
+__all__ = ["shell", "_build_shell_tool_result"]

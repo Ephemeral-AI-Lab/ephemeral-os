@@ -7,15 +7,24 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from tools._framework.core.base import BaseTool, TextToolOutput, ToolExecutionContextService, ToolResult
+from tools._framework.core.base import (
+    BaseTool,
+    TextToolOutput,
+    ToolExecutionContextService,
+    ToolResult,
+)
 from .prompt import get_check_background_task_result_description
 
-from tools.background._lib._common import TASK_ID_FIELD, normalize_status, render_tool_command
+from tools.background._lib.task_output import (
+    BACKGROUND_TASK_ID_FIELD,
+    background_task_display_status,
+    render_background_tool_call,
+)
 
 
 class CheckBackgroundTaskResultInput(BaseModel):
     """Input for check_background_task_result tool."""
-    task_id: str = TASK_ID_FIELD
+    task_id: str = BACKGROUND_TASK_ID_FIELD
 
 
 def _peek_messages(tracked, n: int = 5) -> str:
@@ -105,12 +114,15 @@ class CheckBackgroundTaskResultTool(BaseTool):
             )
 
         raw_status = str(tracked.status)
-        tool_command = render_tool_command(tracked.tool_name, tracked.tool_input)
+        tool_command = render_background_tool_call(
+            tracked.tool_name,
+            tracked.tool_input,
+        )
 
         if tracked.tool_name == "run_subagent" or getattr(tracked, "task_type", "") == "subagent":
             status, result = _build_subagent_result(tracked, raw_status)
         else:
-            status = normalize_status(raw_status)
+            status = background_task_display_status(raw_status)
             result = _build_generic_result(tracked, raw_status)
 
         # If the engine hasn't yet delivered this terminal task, mark it

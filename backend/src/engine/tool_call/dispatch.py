@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from engine.tool_call.streaming import StreamingToolExecutor
-from engine.background.dispatch import launch_and_collect_background_events
+from engine.background.dispatch import dispatch_background_tool_call
 from engine.background.task_supervisor import BackgroundTaskSupervisor
 from message.messages import ConversationMessage, ToolResultBlock, ToolUseBlock
 from message.stream_events import (
@@ -26,13 +26,15 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
-class ToolDispatchResult:
+class AssistantToolDispatchOutcome:
     tool_results: list[ToolResultBlock]
     terminal_result: ToolResult | None = None
     events: list[StreamEvent] = field(default_factory=list)
 
 
-def _result_from_completed(completed: ToolExecutionCompleted) -> ToolResultBlock:
+def _tool_result_block_from_completion(
+    completed: ToolExecutionCompleted,
+) -> ToolResultBlock:
     return ToolResultBlock(
         tool_use_id=completed.tool_id,
         content=completed.output,
@@ -42,15 +44,17 @@ def _result_from_completed(completed: ToolExecutionCompleted) -> ToolResultBlock
     )
 
 
-def _result_from_cancelled(completed: ToolExecutionCancelled) -> ToolResultBlock:
+def _tool_result_block_from_cancellation(
+    cancelled: ToolExecutionCancelled,
+) -> ToolResultBlock:
     return ToolResultBlock(
-        tool_use_id=completed.tool_id,
-        content=f"[CANCELLED] {completed.reason}",
+        tool_use_id=cancelled.tool_id,
+        content=f"[CANCELLED] {cancelled.reason}",
         is_error=True,
     )
 
 
-def _completion_event_from_result(
+def _completion_event_from_tool_result_block(
     tool_call: ToolUseBlock,
     result: ToolResultBlock,
 ) -> ToolExecutionCompleted:
@@ -64,7 +68,7 @@ def _completion_event_from_result(
     )
 
 
-def _terminal_result_from_tool_results(
+def _first_terminal_tool_result(
     tool_results: list[ToolResultBlock],
 ) -> ToolResult | None:
     for result in tool_results:
@@ -77,16 +81,6 @@ def _terminal_result_from_tool_results(
             does_terminate=True,
         )
     return None
-
-
-def _reject_tool_batch(
-    tool_calls: list[ToolUseBlock],
-    message: str,
-) -> list[ToolResultBlock]:
-    return [
-        ToolResultBlock(tool_use_id=str(tool_call.id), content=message, is_error=True)
-        for tool_call in tool_calls
-    ]
 
 
 def _validate_tool_batch(
@@ -112,10 +106,13 @@ def _validate_tool_batch(
         f"No tool in this batch executed. "
         f"Resubmit with only the exclusive tool in its own final batch."
     )
-    return _reject_tool_batch(tool_calls, message=message)
+    return [
+        ToolResultBlock(tool_use_id=str(tool_call.id), content=message, is_error=True)
+        for tool_call in tool_calls
+    ]
 
 
-def _append_tool_batch_rejection(
+def _record_tool_batch_rejection(
     context: QueryContext,
     tool_calls: list[ToolUseBlock],
     tool_results: list[ToolResultBlock],
@@ -125,7 +122,7 @@ def _append_tool_batch_rejection(
         return None
     tool_results.extend(batch_rejection)
     return [
-        _completion_event_from_result(tool_call, result)
+        _completion_event_from_tool_result_block(tool_call, result)
         for tool_call, result in zip(tool_calls, batch_rejection, strict=True)
     ]
 
@@ -138,7 +135,7 @@ async def dispatch_assistant_tools(
     *,
     streamed_tool_use_ids: set[str],
     background_tasks: BackgroundTaskSupervisor | None,
-) -> ToolDispatchResult:
+) -> AssistantToolDispatchOutcome:
     events: list[StreamEvent] = []
     tool_results: list[ToolResultBlock] = []
 
@@ -146,13 +143,13 @@ async def dispatch_assistant_tools(
     events.extend(executor.get_events())
     for completed in remaining_events:
         if isinstance(completed, ToolExecutionCompleted):
-            tool_results.append(_result_from_completed(completed))
+            tool_results.append(_tool_result_block_from_completion(completed))
             events.append(completed)
         elif isinstance(completed, ToolExecutionCancelled):
-            tool_results.append(_result_from_cancelled(completed))
+            tool_results.append(_tool_result_block_from_cancellation(completed))
             events.append(completed)
 
-    rejection_events = _append_tool_batch_rejection(
+    rejection_events = _record_tool_batch_rejection(
         context,
         final_message.tool_uses,
         tool_results,
@@ -160,9 +157,9 @@ async def dispatch_assistant_tools(
     if rejection_events is not None:
         executor.cancel_all()
         events.extend(rejection_events)
-        return ToolDispatchResult(
+        return AssistantToolDispatchOutcome(
             tool_results=tool_results,
-            terminal_result=_terminal_result_from_tool_results(tool_results),
+            terminal_result=_first_terminal_tool_result(tool_results),
             events=events,
         )
 
@@ -184,9 +181,9 @@ async def dispatch_assistant_tools(
             )
         )
 
-    return ToolDispatchResult(
+    return AssistantToolDispatchOutcome(
         tool_results=tool_results,
-        terminal_result=_terminal_result_from_tool_results(tool_results),
+        terminal_result=_first_terminal_tool_result(tool_results),
         events=events,
     )
 
@@ -201,7 +198,7 @@ async def _dispatch_deferred_tool_calls(
     tool_results: list[ToolResultBlock],
 ) -> list[StreamEvent]:
     events: list[StreamEvent] = []
-    rejection_events = _append_tool_batch_rejection(context, tool_calls, tool_results)
+    rejection_events = _record_tool_batch_rejection(context, tool_calls, tool_results)
     if rejection_events is not None:
         return rejection_events
 
@@ -218,7 +215,7 @@ async def _dispatch_deferred_tool_calls(
         if should_run_in_background:
             assert background_tasks is not None
             events.extend(
-                launch_and_collect_background_events(
+                dispatch_background_tool_call(
                     context,
                     messages,
                     background_tasks,
@@ -276,7 +273,7 @@ async def _dispatch_single_foreground_tool(
     )
     tool_results.append(result)
     events: list[StreamEvent] = list(emitted_events)
-    events.append(_completion_event_from_result(tool_call, result))
+    events.append(_completion_event_from_tool_result_block(tool_call, result))
     return events
 
 
@@ -329,7 +326,7 @@ async def _dispatch_many_foreground_tools(
             tool_call, result = item
             tool_results.append(result)
             remaining -= 1
-            events.append(_completion_event_from_result(tool_call, result))
+            events.append(_completion_event_from_tool_result_block(tool_call, result))
         else:
             events.append(item)
     await asyncio.gather(*tasks, return_exceptions=True)

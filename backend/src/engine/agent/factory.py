@@ -9,12 +9,13 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from collections.abc import AsyncIterator
 
 if TYPE_CHECKING:
     from runtime.app_factory import RuntimeConfig
     from engine.query.context import QueryContext
+    from notification import NotificationRule
     from tools import ToolRegistry
 
 from agents import AgentDefinition
@@ -162,7 +163,7 @@ def _finalize_tool_registry_and_prompt(
 def _resolve_agent_identity(
     config: RuntimeConfig,
     agent_def: AgentDefinition | None,
-) -> tuple[str, str, Any, dict | None]:
+) -> tuple[str, str, Any, dict[str, Any] | None]:
     """Resolve the agent's name, model id, API client, and DB model kwargs.
 
     Returns ``(agent_name, resolved_model, api_client, db_kwargs)``.
@@ -302,7 +303,7 @@ def _attach_default_overshoot_rules(
         notification_rules.append(make_missing_terminal_reminder())
 
 
-def _build_context_preparers(
+def _build_sandbox_context_preparers(
     tool_registry: ToolRegistry,
     sandbox_id: str | None,
 ) -> list[Any]:
@@ -392,7 +393,7 @@ def spawn_agent(
         runtime_config=config,
         sandbox_id=sandbox_id or "",
         agent_name=agent_name,
-        context_preparers=_build_context_preparers(tool_registry, sandbox_id),
+        context_preparers=_build_sandbox_context_preparers(tool_registry, sandbox_id),
     )
     if agent_def is not None:
         initial_tool_metadata["agent_type"] = agent_def.agent_type
@@ -421,7 +422,7 @@ def spawn_agent(
         tool_metadata=initial_tool_metadata,
         enable_background_tasks=has_background_tools,
         agent_name=agent_name,
-        notification_rules=notification_rules,
+        notification_rules=cast("list[NotificationRule]", notification_rules),
     )
 
     return EphemeralAgent(

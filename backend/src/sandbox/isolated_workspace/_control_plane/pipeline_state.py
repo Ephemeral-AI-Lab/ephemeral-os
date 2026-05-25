@@ -96,7 +96,7 @@ class IsolatedWorkspaceError(Exception):
         self.details = details
 
 
-class AuditSink(Protocol):
+class IsolatedWorkspaceAuditSink(Protocol):
     def emit(self, event_type: str, payload: dict[str, Any]) -> None: ...
 
 

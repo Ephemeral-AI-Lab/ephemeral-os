@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from sandbox.daemon import builtin_operations, occ_runtime_services, operation_payloads
+from sandbox.daemon import builtin_operations, occ_runtime_services, workspace_tool_payloads
 from sandbox.daemon.rpc import dispatcher as server
 from sandbox.daemon.layer_stack_runtime import get_layer_stack_manager
 from sandbox.layer_stack.workspace_base import build_workspace_base
@@ -18,8 +18,8 @@ def _tool_handler(verb: str) -> Any:
 
 
 def test_operation_payload_classifier_helpers_removed() -> None:
-    assert not hasattr(operation_payloads, "ClassifiedPath")
-    assert not hasattr(operation_payloads, "classify_path")
+    assert not hasattr(workspace_tool_payloads, "ClassifiedPath")
+    assert not hasattr(workspace_tool_payloads, "classify_path")
 
 
 def test_op_table_dispatches_data_ops_to_unified_handlers() -> None:

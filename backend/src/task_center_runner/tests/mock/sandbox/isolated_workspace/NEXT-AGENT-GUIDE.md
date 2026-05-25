@@ -199,7 +199,7 @@ real sweevo container.
 **What this session landed (static):**
 
 - **Daemon-side audit sink wired**. The manager already accepted an
-  `AuditSink` port; `_control_plane.pipeline_registry.ensure_pipeline`
+  `IsolatedWorkspaceAuditSink` port; `_control_plane.pipeline_registry.ensure_pipeline`
   passes a `_JsonlAuditSink` that
   appends to `/tmp/sandbox_isolated_workspace_events.jsonl`
   (env-overrideable via `EOS_ISOLATED_WORKSPACE_AUDIT_PATH`). Previously

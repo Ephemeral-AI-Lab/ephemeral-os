@@ -4,15 +4,20 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from tools._framework.core.base import BaseTool, TextToolOutput, ToolExecutionContextService, ToolResult
+from tools._framework.core.base import (
+    BaseTool,
+    TextToolOutput,
+    ToolExecutionContextService,
+    ToolResult,
+)
 from .prompt import get_cancel_background_task_description
 
-from tools.background._lib._common import TASK_ID_FIELD
+from tools.background._lib.task_output import BACKGROUND_TASK_ID_FIELD
 
 
 class CancelBackgroundTaskInput(BaseModel):
     """Input for cancel_background_task tool."""
-    task_id: str = TASK_ID_FIELD
+    task_id: str = BACKGROUND_TASK_ID_FIELD
     reason: str = Field(
         default="",
         description="Optional reason for cancellation.",

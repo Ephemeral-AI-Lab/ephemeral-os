@@ -34,7 +34,7 @@ ToolCallExecutor = Callable[
 ]
 
 
-def validate_background_input(
+def validate_background_tool_input(
     tool_def: BaseTool,
     clean_input: dict[str, object],
 ) -> ToolResult | None:
@@ -80,7 +80,7 @@ def launch_background_tool(
             ToolExecutionCompleted(tool_name=tool_use.name, output=msg, is_error=True),
         )
 
-    validation_result = validate_background_input(
+    validation_result = validate_background_tool_input(
         tool_def=tool_def,
         clean_input=clean_input,
     )
@@ -160,14 +160,14 @@ def launch_background_tool(
     return tool_result, started_event, None
 
 
-def launch_and_collect_background_events(
+def dispatch_background_tool_call(
     context: QueryContext,
     conversation_messages: list[ConversationMessage],
     background_tasks: BackgroundTaskSupervisor,
     tool_call: ToolUseBlock,
     tool_results: list[ToolResultBlock],
 ) -> list[StreamEvent]:
-    async def _execute_in_context(
+    async def _execute_background_tool_call(
         tool_name: str,
         tool_use_id: str,
         tool_input: dict[str, object],
@@ -204,7 +204,7 @@ def launch_and_collect_background_events(
         tool_metadata=context.tool_metadata,
         background_tasks=background_tasks,
         tool_use=tool_call,
-        execute_tool_call=_execute_in_context,
+        execute_tool_call=_execute_background_tool_call,
     )
     tool_results.append(tool_result)
     events: list[StreamEvent] = []

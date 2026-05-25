@@ -24,14 +24,14 @@ Cross-package reuse
 """
 
 from sandbox.isolated_workspace._control_plane.pipeline_state import (
-    AuditSink,
+    IsolatedWorkspaceAuditSink,
     IsolatedWorkspaceError,
     IsolatedWorkspaceHandle,
 )
 from sandbox.isolated_workspace.pipeline import IsolatedPipeline
 
 __all__ = [
-    "AuditSink",
+    "IsolatedWorkspaceAuditSink",
     "IsolatedPipeline",
     "IsolatedWorkspaceError",
     "IsolatedWorkspaceHandle",

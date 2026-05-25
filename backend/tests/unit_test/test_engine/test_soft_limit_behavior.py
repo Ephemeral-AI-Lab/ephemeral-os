@@ -18,7 +18,7 @@ import pytest
 from engine.query.context import QueryContext, QueryExitReason
 from engine.query.loop import _handle_tool_dispatch_branch
 from engine.query.request import build_query_run_request
-from engine.tool_call.dispatch import ToolDispatchResult
+from engine.tool_call.dispatch import AssistantToolDispatchOutcome
 from message.messages import (
     ConversationMessage,
     ToolResultBlock,
@@ -61,8 +61,8 @@ async def _drive_dispatch_branch(
     monkeypatch: pytest.MonkeyPatch,
     terminal_result: ToolResult | None = None,
 ) -> None:
-    async def _fake_dispatch(*_args: Any, **_kwargs: Any) -> ToolDispatchResult:
-        return ToolDispatchResult(
+    async def _fake_dispatch(*_args: Any, **_kwargs: Any) -> AssistantToolDispatchOutcome:
+        return AssistantToolDispatchOutcome(
             tool_results=dispatched_results,
             terminal_result=terminal_result,
         )

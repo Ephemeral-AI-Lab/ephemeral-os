@@ -9,7 +9,7 @@ from sandbox.ephemeral_workspace.plugin import call_plugin
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
 from tools._framework.core.results import TextToolOutput
-from tools.sandbox._lib.session import resolve_sandbox_path
+from tools.sandbox._lib.tool_context import resolve_tool_sandbox_path
 
 
 class QuerySymbolsInput(BaseModel):
@@ -36,7 +36,7 @@ async def query_symbols(
 ) -> ToolResult:
     payload: dict[str, object] = {"query": query}
     if file_path is not None:
-        payload["file_path"] = resolve_sandbox_path(file_path, context)
+        payload["file_path"] = resolve_tool_sandbox_path(file_path, context)
     return await call_plugin(
         context,
         plugin="lsp",

@@ -162,26 +162,12 @@ def test_goal_start_startup_failure_leaves_parent_running(
         del attempt, on_attempt_closed
         raise RuntimeError("delegated startup boom")
 
-    starter = GoalStarter(runtime=runtime)
-    # Patch the factory used by the starter's goal lifecycle builder.
-    original = GoalStarter._build_goal_lifecycle
-
-    def _patched_build_goal_lifecycle(self):
-        goal_lifecycle = original(self)
-        goal_lifecycle._iteration_factory._orchestrator_factory = (  # type: ignore[attr-defined]
-            _failing_factory
+    starter = GoalStarter(runtime=runtime, orchestrator_factory=_failing_factory)
+    with pytest.raises(RuntimeError):
+        starter.start(
+            prompt="delegated",
+            origin=GoalOrigin.task(task_id=parent_task_id),
         )
-        return goal_lifecycle
-
-    GoalStarter._build_goal_lifecycle = _patched_build_goal_lifecycle  # type: ignore[assignment]
-    try:
-        with pytest.raises(RuntimeError):
-            starter.start(
-                prompt="delegated",
-                origin=GoalOrigin.task(task_id=parent_task_id),
-            )
-    finally:
-        GoalStarter._build_goal_lifecycle = original  # type: ignore[assignment]
 
     parent_task = task_store.get_task(parent_task_id)
     assert parent_task is not None
@@ -189,13 +175,13 @@ def test_goal_start_startup_failure_leaves_parent_running(
     # The compensation path must mark the request and iteration cancelled.
     open_requests = [
         r
-        for r in goal_store.list_for_executor_task(parent_task_id)
+        for r in goal_store.list_for_requesting_task(parent_task_id)
         if r.is_open
     ]
     assert open_requests == []
     cancelled = [
         r
-        for r in goal_store.list_for_executor_task(parent_task_id)
+        for r in goal_store.list_for_requesting_task(parent_task_id)
         if r.status == GoalStatus.CANCELLED
     ]
     assert len(cancelled) == 1
@@ -235,7 +221,7 @@ def test_goal_start_startup_failure_closes_started_graph_and_deregisters_orchest
 
     [cancelled_request] = [
         r
-        for r in goal_store.list_for_executor_task(parent_task_id)
+        for r in goal_store.list_for_requesting_task(parent_task_id)
         if r.status == GoalStatus.CANCELLED
     ]
     [cancelled_segment] = iteration_store.list_for_goal(cancelled_request.id)

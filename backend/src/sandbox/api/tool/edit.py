@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from audit.base import AuditSink
 from sandbox.api.tool._conflict_detection import is_edit_conflict
-from sandbox.api.tool._daemon_requests import daemon_identity_payload
-from sandbox.api.tool._daemon_results import (
-    guarded_result_from_daemon_response,
-    int_from_daemon_field,
+from sandbox.api.tool._daemon_request_payloads import daemon_request_identity_fields
+from sandbox.api.tool._daemon_response_parsing import (
+    parse_guarded_mutation_result,
+    strict_int_from_daemon_field,
     user_visible_error_message,
 )
 from sandbox.api.tool._operation_audit import run_audited_operation
@@ -26,7 +26,7 @@ async def edit_file(
     """Apply search/replace edits through sandbox-local OCC."""
 
     async def _call() -> EditFileResult:
-        payload = daemon_identity_payload(request) | {
+        payload = daemon_request_identity_fields(request) | {
             "path": request.path,
             "edits": [
                 {"old_text": edit.old_text, "new_text": edit.new_text}
@@ -41,10 +41,12 @@ async def edit_file(
             timeout=EDIT_FILE_TIMEOUT_S,
             transport=transport,
         )
-        return guarded_result_from_daemon_response(
+        return parse_guarded_mutation_result(
             EditFileResult,
             response,
-            applied_edits=int_from_daemon_field(response.get("applied_edits"), default=0),
+            applied_edits=strict_int_from_daemon_field(
+                response.get("applied_edits"), default=0
+            ),
         )
 
     def _conflict_from_error(exc: BaseException) -> EditFileResult | None:

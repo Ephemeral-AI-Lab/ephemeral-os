@@ -7,7 +7,7 @@ from typing import Any, Protocol
 
 from sandbox.host.daemon_client import (
     call_daemon_api,
-    versioned_payload as _versioned_payload,
+    with_daemon_protocol_version,
 )
 
 DAEMON_OP_READ_FILE = "api.v1.read_file"
@@ -55,7 +55,7 @@ class DaemonSandboxTransport:
         return await call_daemon_api(
             sandbox_id,
             op,
-            _versioned_payload(payload),
+            with_daemon_protocol_version(payload),
             timeout=timeout,
         )
 

@@ -169,10 +169,10 @@ def _render_failed_attempt_body(attempt: Attempt, *, task_store: TaskStoreProtoc
             f'<status_summary status="not_started"/>\n'
             f'<evaluator_summary status="bypassed" reason="{reason}"/>'
         )
-    parts: list[str] = []
-    parts.append(_render_plan_spec_children(attempt))
-    parts.append(_render_outcome_children(attempt, task_store=task_store))
-    parts.append(_render_evaluator_children(attempt, task_store=task_store))
+    parts: list[str] = [_render_plan_spec_children(attempt)]
+    generator_outcomes = _generator_outcomes(attempt, task_store=task_store)
+    parts.append(_render_generator_outcome_children(attempt, generator_outcomes))
+    parts.append(_render_evaluator_children(attempt, generator_outcomes, task_store=task_store))
     return "\n".join(p for p in parts if p)
 
 
@@ -184,9 +184,10 @@ def _render_current_attempt_body(attempt: Attempt, *, task_store: TaskStoreProto
     ``<passed_criteria>``, ``<failed_criteria>``). Generator ``<task>``
     children carry whatever summaries the runtime has recorded so far.
     """
-    parts: list[str] = []
-    parts.append(_render_plan_spec_children(attempt))
-    parts.append(_render_task_children(attempt, task_store=task_store))
+    parts: list[str] = [_render_plan_spec_children(attempt)]
+    generator_outcomes = _generator_outcomes(attempt, task_store=task_store)
+    if generator_outcomes:
+        parts.append("\n".join(_render_task_element(o, attempt.id) for o in generator_outcomes))
     parts.append(_render_evaluation_criteria(attempt))
     return "\n".join(p for p in parts if p)
 
@@ -196,17 +197,19 @@ def _render_plan_spec_children(attempt: Attempt) -> str:
     plan_spec = _sanitize_user_text(attempt.plan_spec or "(not submitted)", attempt.id)
     pieces = [f"<plan_spec>\n{plan_spec}\n</plan_spec>"]
     if attempt.deferred_goal_for_next_iteration:
-        handoff = _sanitize_user_text(attempt.deferred_goal_for_next_iteration, attempt.id)
+        deferred_goal = _sanitize_user_text(attempt.deferred_goal_for_next_iteration, attempt.id)
         pieces.append(
-            f"<deferred_goal_for_next_iteration>\n{handoff}\n</deferred_goal_for_next_iteration>"
+            f"<deferred_goal_for_next_iteration>\n{deferred_goal}\n"
+            "</deferred_goal_for_next_iteration>"
         )
     return "\n".join(pieces)
 
 
-def _render_outcome_children(attempt: Attempt, *, task_store: TaskStoreProtocol | None) -> str:
+def _render_generator_outcome_children(
+    attempt: Attempt, generator_outcomes: list[_GeneratorOutcome]
+) -> str:
     """Emit ``<status_summary>`` and one ``<task>`` per generator task."""
-    outcomes = _generator_outcomes(attempt, task_store=task_store)
-    if not outcomes:
+    if not generator_outcomes:
         return "<status_summary>(no generator tasks recorded)</status_summary>"
     status_summary = "\n".join(
         (
@@ -214,19 +217,11 @@ def _render_outcome_children(attempt: Attempt, *, task_store: TaskStoreProtocol 
             if o.blocked_by
             else f"{o.task_id}: {o.status}"
         )
-        for o in outcomes
+        for o in generator_outcomes
     )
     parts: list[str] = ["<status_summary>", status_summary, "</status_summary>"]
-    parts.extend(_render_task_element(o, attempt.id) for o in outcomes)
+    parts.extend(_render_task_element(o, attempt.id) for o in generator_outcomes)
     return "\n".join(parts)
-
-
-def _render_task_children(attempt: Attempt, *, task_store: TaskStoreProtocol | None) -> str:
-    """Emit one ``<task>`` per generator task (no status_summary wrapper)."""
-    outcomes = _generator_outcomes(attempt, task_store=task_store)
-    if not outcomes:
-        return ""
-    return "\n".join(_render_task_element(o, attempt.id) for o in outcomes)
 
 
 def _render_task_element(outcome: _GeneratorOutcome, attempt_id: str) -> str:
@@ -243,11 +238,17 @@ def _render_evaluation_criteria(attempt: Attempt) -> str:
     return f"<evaluation_criteria>\n{body}\n</evaluation_criteria>"
 
 
-def _render_evaluator_children(attempt: Attempt, *, task_store: TaskStoreProtocol | None) -> str:
-    outcomes = _generator_outcomes(attempt, task_store=task_store)
-    has_premature = any(o.status in _PREMATURE_STATUSES for o in outcomes)
+def _render_evaluator_children(
+    attempt: Attempt,
+    generator_outcomes: list[_GeneratorOutcome],
+    *,
+    task_store: TaskStoreProtocol | None,
+) -> str:
+    has_premature = any(o.status in _PREMATURE_STATUSES for o in generator_outcomes)
     if has_premature:
-        failed_ids = sorted(o.task_id for o in outcomes if o.status in _PREMATURE_STATUSES)
+        failed_ids = sorted(
+            o.task_id for o in generator_outcomes if o.status in _PREMATURE_STATUSES
+        )
         reason = (
             f"Evaluator skipped because generator task(s) failed: {', '.join(failed_ids)}."
             if failed_ids

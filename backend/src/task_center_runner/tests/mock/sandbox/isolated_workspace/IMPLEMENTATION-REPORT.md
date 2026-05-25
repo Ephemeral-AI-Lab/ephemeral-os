@@ -283,7 +283,7 @@ steps from `NEXT-AGENT-GUIDE.md`.
    the mount is broken" (veth, cgroup, dns, handshake) for fast triage on
    Linux CI.
 
-5. **Audit-sink wiring** — the manager already accepted an `AuditSink` port
+5. **Audit-sink wiring** — the manager already accepted an `IsolatedWorkspaceAuditSink` port
    but `handlers.py` passed `None`, so the 5 lifecycle events fell on the
    floor. Wired a `_JsonlAuditSink` that appends to
    `/tmp/sandbox_isolated_workspace_events.jsonl` (env-overrideable via

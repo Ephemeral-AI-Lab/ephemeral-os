@@ -88,7 +88,7 @@
 
 <h3 id="overview-structure">1.2 Structural Map <a class="anchor" href="#overview-structure">§</a></h3>
 <div class="concept-grid">
-  <div class="concept-card"><strong><code>sandbox.api</code></strong><p>Public typed API and transport entrypoints. Tool modules build daemon payloads, attach caller identity, and convert daemon responses back to result models.</p><div class="wiki-links"><a href="daemon.html#request-lifecycle">Request Lifecycle</a></div></div>
+  <div class="concept-card"><strong><code>sandbox.api</code></strong><p>Public typed API and transport entrypoints. Tool modules build daemon payloads with shared identity fields and parse daemon response payloads back into result models.</p><div class="wiki-links"><a href="daemon.html#request-lifecycle">Request Lifecycle</a></div></div>
   <div class="concept-card"><strong><code>sandbox.host</code></strong><p>Host-side lifecycle and daemon client code. It uploads the runtime bundle, ensures git/base state, starts or calls the daemon, and wraps isolated lifecycle preflight.</p><div class="wiki-links"><a href="provider.html">Provider</a><a href="daemon.html#startup-transport">Startup and Transport</a></div></div>
   <div class="concept-card"><strong><code>sandbox.daemon</code></strong><p>Resident in-sandbox control plane. It validates envelopes, registers in-flight invocations, owns operation handlers, and routes tools into workspace implementations.</p><div class="wiki-links"><a href="daemon.html">Daemon and Background Tasks</a></div></div>
   <div class="concept-card"><strong><code>sandbox.layer_stack</code></strong><p>Versioned storage facade: manifests, immutable layer directories, leases, merged logical reads, publish transactions, squash, and flush.</p><div class="wiki-links"><a href="layerstack.html">LayerStack</a></div></div>
@@ -110,7 +110,10 @@
 <div class="evidence-grid">
   <div class="evidence-card">
     <h4>Entry points</h4>
-    <p>Public tools build daemon payloads through <code>sandbox.api.tool</code>, and the host transport calls the resident daemon.</p>
+    <p>Public tools build daemon payloads through <code>sandbox.api.tool</code>, using one request identity helper and one response parsing helper before the host transport calls the resident daemon.</p>
+    <span class="file-ref">backend/src/sandbox/api/tool/_daemon_request_payloads.py:8-15</span>
+    <span class="file-ref">backend/src/sandbox/api/tool/_daemon_response_parsing.py:67-169</span>
+    <span class="file-ref">backend/src/sandbox/host/daemon_client.py:186-191</span>
     <span class="file-ref">backend/src/sandbox/api/transport.py:44-77</span>
   </div>
   <div class="evidence-card">

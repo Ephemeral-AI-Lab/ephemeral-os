@@ -609,7 +609,7 @@ class AttemptFailReason(StrEnum):
                 ┌──────────▶│ <span class="hi-gen">GENERATE</span> │                                    │
                 │           └────┬─────┘                                    │
                 │                │                                          │
-                │   dispatch_ready_work() fires ready DAG nodes             │
+                │   advance_ready_tasks() fires ready DAG nodes             │
                 └────────────────┤                                          │
                                  │                                          │
               ┌──────────────────┼─────────────────────┐                    │
@@ -643,7 +643,7 @@ class AttemptFailReason(StrEnum):
     generator_ids = self._persist_generator_tasks(submission.tasks)
     runtime.attempt_store.set_generator_task_ids(attempt.id, list(generator_ids))
     runtime.attempt_store.set_stage(attempt.id, AttemptStage.GENERATE)
-    self._dispatcher.dispatch_ready_work()
+    self._stage_advancer.advance_ready_tasks()
 </code></pre>
 
 <p>
@@ -658,15 +658,15 @@ which is a Kahn topological sort over local_ids. The sort guarantees:
 
 <p>
 Each ordered task is persisted with its real Task ID and a <code>needs</code> tuple
-holding the Task IDs of its dependencies. This is what the dispatcher uses later;
+holding the Task IDs of its dependencies. This is what the stage advancer uses later;
 the planner&apos;s symbolic <code>local_id</code>s are not visible at runtime.
 </p>
 
 <h3>5.2 Generator dispatch — wave-by-wave from persisted DAG</h3>
 
-<p>The dispatcher is purely store-driven:</p>
+<p>The stage advancer is purely store-driven:</p>
 
-<pre><code>def _dispatch_generating(self, attempt: Attempt) -&gt; None:
+<pre><code>def _advance_generator_stage(self, attempt: Attempt) -&gt; None:
     task_records = runtime.task_store.list_generator_tasks_for_attempt(attempt.id)
     ready_ids = ready_pending_generator_ids(task_records)
     if ready_ids:
@@ -680,7 +680,7 @@ the planner&apos;s symbolic <code>local_id</code>s are not visible at runtime.
         self._close_attempt(AttemptStatus.FAILED, AttemptFailReason.GENERATOR_FAILED)
         return
     if state.all_done:
-        self._spawn_evaluator(attempt)
+        self._start_evaluator_stage(attempt)
 </code></pre>
 
 <div class="diagram">
@@ -715,7 +715,7 @@ the planner&apos;s symbolic <code>local_id</code>s are not visible at runtime.
                                    ▼
                     ┌───────────────────────────────┐
                     │   all generators DONE         │
-                    │   → _spawn_evaluator(attempt) │
+                    │   → _start_evaluator_stage(attempt) │
                     └─────────────┬─────────────────┘
                                   ▼
                             ┌───────────┐
@@ -723,7 +723,7 @@ the planner&apos;s symbolic <code>local_id</code>s are not visible at runtime.
                             │   Task    │
                             └───────────┘
 </pre>
-<div class="caption">Generator-DAG dispatch. Every PENDING node whose entire <code>needs[]</code> is DONE fires in one wave; the dispatcher recurses on every submission to fire the next wave. After all generators reach DONE, the evaluator is spawned exactly once.</div>
+<div class="caption">Generator-DAG dispatch. Every PENDING node whose entire <code>needs[]</code> is DONE fires in one wave; the stage advancer recurses on every submission to fire the next wave. After all generators reach DONE, the evaluator is spawned exactly once.</div>
 </div>
 
 <h4>Blocked / failed upstreams</h4>
@@ -759,7 +759,7 @@ without a deferred goal).
 
 <div class="diagram">
 <pre class="ascii">
-Launcher   AttemptOrchestrator   Dispatcher   TaskStore   <span class="hi-plan">Planner</span>   <span class="hi-gen">Generators</span>   <span class="hi-eval">Evaluator</span>
+Launcher   AttemptOrchestrator   StageAdvancer   TaskStore   <span class="hi-plan">Planner</span>   <span class="hi-gen">Generators</span>   <span class="hi-eval">Evaluator</span>
    │                │                │            │          │             │           │
    │   launch planner (stage = PLAN) │            │          │             │           │
    │ ◀───────────── │                │            │          │             │           │
@@ -768,7 +768,7 @@ Launcher   AttemptOrchestrator   Dispatcher   TaskStore   <span class="hi-plan">
    │                │ ◀──────────────┼────────────┼───── submit_plan(PlannerSubmission) │
    │                │ persist DAG; set stage = GENERATE      │             │           │
    │                ├───────────────▶│            │          │             │           │
-   │                │ dispatch_ready_work()       │          │             │           │
+   │                │ advance_ready_tasks()       │          │             │           │
    │                │                │ list tasks │          │             │           │
    │                │                ├──────────▶│          │             │           │
    │ launch ready PENDING (parallel wave)         │          │             │           │
@@ -776,7 +776,7 @@ Launcher   AttemptOrchestrator   Dispatcher   TaskStore   <span class="hi-plan">
    │   run agent  ──┼────────────────┼────────────┼──────────┼────────────▶│           │
    │                │                │            │          │             │           │
    │                │ ◀──────────────┼────────────┼──────────┼── submit_generator_outcome
-   │                │ dispatch_ready_work()       │          │             │           │
+   │                │ advance_ready_tasks()       │          │             │           │
    │                │                                                                  │
    │                │   <span class="hi-dim">… loop until all generators terminal …</span>                          │
    │                │                                                                  │
@@ -787,7 +787,7 @@ Launcher   AttemptOrchestrator   Dispatcher   TaskStore   <span class="hi-plan">
    │ ◀──────────────│                                                                  │
    │   run agent  ──┼──────────────────────────────────────────────────────▶           │
    │                │ ◀────────────────────────────────────── submit_evaluator_outcome │
-   │                │ dispatch_ready_work()                                            │
+   │                │ advance_ready_tasks()                                            │
    │                │                                                                  │
    │                │  evaluator DONE   →  _close_attempt(<span class="hi-ok">PASSED</span>, None)               │
    │                │  evaluator FAILED →  _close_attempt(<span class="hi-fail">FAILED</span>, EVALUATOR_FAILED)   │
@@ -897,8 +897,6 @@ class ContextScope:
     def for_generator(cls, *, goal_id, iteration_id, attempt_id, task_id)   -&gt; ContextScope: ...
     @classmethod
     def for_evaluator(cls, *, goal_id, iteration_id, attempt_id)            -&gt; ContextScope: ...
-    @classmethod
-    def for_entry_executor(cls, *, task_id)                                 -&gt; ContextScope: ...
 
     def assert_fields(self, required: frozenset[str]) -&gt; None: ...
 </code></pre>
@@ -1288,7 +1286,7 @@ IterationMgr   AttemptOrch.   Launcher   Composer   RecipeRegistry   ContextEngi
      │              │             │ <span class="hi-dim">…hours later…</span>                                                                            │
      │              │ ◀───────────│ ◀───────────────────────────────────────────────── submit_plan(PlannerSubmission)         │
      │              │ persist generator DAG; set stage = GENERATE                                                             │
-     │              │ dispatcher.dispatch_ready_work()                                                                        │
+     │              │ stage_advancer.advance_ready_tasks()                                                                    │
 </pre>
 <div class="caption">A single planner launch traced through the harness, composer, recipe build, renderer, and back into the orchestrator. The middle ellipsis is the agent&apos;s actual LLM execution.</div>
 </div>
@@ -1331,8 +1329,8 @@ What to do:
 - Plan for &lt;iteration_goal&gt;.
 
 &lt;terminal_tool_selection&gt;
-- submit_plan_completes(...)
-- submit_plan_defers(...)
+- submit_plan_closes_goal(...)
+- submit_plan_defers_goal(...)
 &lt;/terminal_tool_selection&gt;
 &lt;/Task Guidance&gt;
 
@@ -1343,8 +1341,8 @@ Load skill: planner
 &lt;/skill&gt;
 
 &lt;terminal_tool_selection&gt;
-- submit_plan_completes(...)
-- submit_plan_defers(...)
+- submit_plan_closes_goal(...)
+- submit_plan_defers_goal(...)
 &lt;/terminal_tool_selection&gt;
 </code></pre>
 

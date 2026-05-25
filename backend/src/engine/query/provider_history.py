@@ -30,7 +30,7 @@ def sanitize_tool_sequence(
 ) -> list[ConversationMessage]:
     """Drop malformed stale tool-use/result blocks from the provider view."""
     sanitized = copy.deepcopy(messages)
-    _walk_tool_sequence(sanitized)
+    _drop_unmatched_tool_blocks_in_place(sanitized)
     return [msg for msg in sanitized if msg.content]
 
 
@@ -46,48 +46,56 @@ def _message_tool_result_ids(message: ConversationMessage) -> set[str]:
     }
 
 
-def _walk_tool_sequence(messages: list[ConversationMessage]) -> None:
-    pending_ids: set[str] = set()
-    pending_msg_idx: int | None = None
+def _drop_unmatched_tool_blocks_in_place(messages: list[ConversationMessage]) -> None:
+    pending_tool_use_ids: set[str] = set()
+    pending_message_index: int | None = None
 
-    def _strip_tool_uses(idx: int | None, ids: set[str]) -> None:
-        if idx is None or not ids:
+    def _drop_tool_uses_from_message(
+        message_index: int | None,
+        tool_use_ids: set[str],
+    ) -> None:
+        if message_index is None or not tool_use_ids:
             return
-        message = messages[idx]
+        message = messages[message_index]
         message.content = [
             block
             for block in message.content
-            if not (isinstance(block, ToolUseBlock) and block.id in ids)
+            if not (isinstance(block, ToolUseBlock) and block.id in tool_use_ids)
         ]
 
-    for msg_idx, message in enumerate(messages):
+    for message_index, message in enumerate(messages):
         tool_use_ids = _message_tool_use_ids(message)
         tool_result_ids = _message_tool_result_ids(message)
-        satisfied_pending = False
+        matched_pending_tool_uses = False
 
-        if pending_ids:
-            if message.role != "user" or not pending_ids.issubset(tool_result_ids):
-                _strip_tool_uses(pending_msg_idx, pending_ids)
-                pending_ids = set()
-                pending_msg_idx = None
+        if pending_tool_use_ids:
+            if message.role != "user" or not pending_tool_use_ids.issubset(
+                tool_result_ids
+            ):
+                _drop_tool_uses_from_message(
+                    pending_message_index,
+                    pending_tool_use_ids,
+                )
+                pending_tool_use_ids = set()
+                pending_message_index = None
                 tool_result_ids = _message_tool_result_ids(message)
             else:
-                extra = tool_result_ids - pending_ids
-                if extra:
+                unmatched_result_ids = tool_result_ids - pending_tool_use_ids
+                if unmatched_result_ids:
                     message.content = [
                         block
                         for block in message.content
                         if not (
                             isinstance(block, ToolResultBlock)
-                            and block.tool_use_id in extra
+                            and block.tool_use_id in unmatched_result_ids
                         )
                     ]
-                pending_ids = set()
-                pending_msg_idx = None
+                pending_tool_use_ids = set()
+                pending_message_index = None
                 tool_result_ids = _message_tool_result_ids(message)
-                satisfied_pending = True
+                matched_pending_tool_uses = True
 
-        if tool_result_ids and not tool_use_ids and not satisfied_pending:
+        if tool_result_ids and not tool_use_ids and not matched_pending_tool_uses:
             message.content = [
                 block
                 for block in message.content
@@ -96,11 +104,11 @@ def _walk_tool_sequence(messages: list[ConversationMessage]) -> None:
 
         tool_use_ids = _message_tool_use_ids(message)
         if tool_use_ids:
-            pending_ids = set(tool_use_ids)
-            pending_msg_idx = msg_idx
+            pending_tool_use_ids = set(tool_use_ids)
+            pending_message_index = message_index
 
-    if pending_ids:
-        _strip_tool_uses(pending_msg_idx, pending_ids)
+    if pending_tool_use_ids:
+        _drop_tool_uses_from_message(pending_message_index, pending_tool_use_ids)
 
 
 __all__ = [

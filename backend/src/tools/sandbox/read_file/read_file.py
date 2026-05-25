@@ -7,13 +7,13 @@ from sandbox._shared.models import Intent
 from sandbox.api import ReadFileRequest
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
-from tools.sandbox._lib.session import (
-    audit_kwargs_from_context,
-    caller_from_context,
-    path_error,
-    resolve_sandbox_path,
-    sandbox_audit_metadata,
-    sandbox_id_or_error,
+from tools.sandbox._lib.tool_context import (
+    sandbox_audit_kwargs_from_tool_context,
+    sandbox_caller_from_tool_context,
+    sandbox_path_error_message,
+    resolve_tool_sandbox_path,
+    sandbox_audit_metadata_from_tool_context,
+    sandbox_id_or_missing_error_result,
 )
 from tools.sandbox._lib.file_payloads import (
     MAX_READ_FILE_LINES,
@@ -40,15 +40,15 @@ async def read_file(
     context: ToolExecutionContextService,
 ) -> ToolResult:
     """Read a file."""
-    file_path = resolve_sandbox_path(file_path, context)
-    sandbox_id, sandbox_id_error = sandbox_id_or_error(context)
+    file_path = resolve_tool_sandbox_path(file_path, context)
+    sandbox_id, sandbox_id_error = sandbox_id_or_missing_error_result(context)
     if sandbox_id_error is not None:
         return sandbox_id_error
     try:
         result = await sandbox_api.read_file(
             sandbox_id,
-            ReadFileRequest(path=file_path, caller=caller_from_context(context)),
-            **audit_kwargs_from_context(context),
+            ReadFileRequest(path=file_path, caller=sandbox_caller_from_tool_context(context)),
+            **sandbox_audit_kwargs_from_tool_context(context),
         )
         if not result.success:
             raise RuntimeError(f"Failed to read file: {file_path}")
@@ -61,11 +61,11 @@ async def read_file(
             start_line=start_line,
             end_line=end_line,
             timings=result.timings,
-            metadata_extra=sandbox_audit_metadata(context),
+            metadata_extra=sandbox_audit_metadata_from_tool_context(context),
         )
     except Exception as exc:
         return ToolResult(
-            output=path_error(exc, file_path) or str(exc),
+            output=sandbox_path_error_message(exc, file_path) or str(exc),
             is_error=True,
         )
 

@@ -26,7 +26,7 @@ _LAZY_EXPORTS = {
     "ToolFactoryContext": "tools._framework.factory",
     "WaitBackgroundTasksTool": "tools.background",
     "_count_tool_dispatch": "tools._framework.execution.tool_call",
-    "build_background_snapshot_metadata": "tools.background._lib._common",
+    "build_background_snapshot_metadata": "tools.background._lib.task_output",
     "collect_schema_tools": "tools._framework.introspection.schema_summary",
     "collect_tool_catalog": "tools._framework.introspection.catalog",
     "create_tool": "tools._framework.factory",
@@ -43,7 +43,7 @@ _LAZY_EXPORTS = {
     "make_subagent_tool_from_context": "tools.subagent",
     "make_submission_tools": "tools.submission",
     "register_tool_factory": "tools._framework.factory",
-    "render_background_snapshot": "tools.background._lib._common",
+    "render_background_snapshot": "tools.background._lib.task_output",
     "resolve_harness_notification_triggers": "tools.submission.notification_triggers",
     "SANDBOX_CONTEXT": "tools.sandbox._lib.context",
 }

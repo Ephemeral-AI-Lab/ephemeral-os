@@ -298,7 +298,7 @@ generic plugin + background tool surfaces.
    `core/` so future plugins inherit it for free.
 4. **Background tool instrumentation** in
    `backend/src/engine/background/task_supervisor.py` — emit
-   `background_tool.*` on `_set_terminal_status` transitions and on every
+   `background_tool.*` on `_apply_terminal_status_transition` transitions and on every
    heartbeat tick. Reuses the existing 60 s heartbeat — no new loop.
 5. **Per-tool phase emitters** in
    `backend/src/engine/tool_call/dispatch.py` — emit `tool_call.phase`

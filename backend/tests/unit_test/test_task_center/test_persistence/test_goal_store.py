@@ -68,23 +68,23 @@ def test_set_status_records_outcome_and_closed_at(
     assert updated.closed_at is not None
 
 
-def test_list_for_executor_task_orders_by_created_at(
+def test_list_for_requesting_task_orders_by_created_at(
     goal_store, task_center_run_id
 ):
     a = goal_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="executor-A",
+        requested_by_task_id="requesting-task-A",
         goal="ga",
     )
     b = goal_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="executor-A",
+        requested_by_task_id="requesting-task-A",
         goal="gb",
     )
     goal_store.insert(
         task_center_run_id=task_center_run_id,
-        requested_by_task_id="executor-B",
+        requested_by_task_id="requesting-task-B",
         goal="gc",
     )
-    listed = goal_store.list_for_executor_task("executor-A")
+    listed = goal_store.list_for_requesting_task("requesting-task-A")
     assert [r.id for r in listed] == [a.id, b.id]

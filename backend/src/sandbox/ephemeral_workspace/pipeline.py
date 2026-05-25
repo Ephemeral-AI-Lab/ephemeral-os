@@ -61,7 +61,7 @@ class EphemeralPipeline(OperationOverlayMixin, WorkspacePublishMixin):
         in-process ``event_bus.emit()`` — this is RUNTIME CONTROL FLOW
         consumed by ``_watch_foreign_publishes``, not audit. For lifecycle
         audit, see ``IsolatedPipeline``'s ``_JsonlAuditSink`` pattern in
-        ``isolated_workspace/_manager.py``.
+        ``isolated_workspace._control_plane.pipeline_registry``.
     """
 
     def __init__(

@@ -9,30 +9,29 @@ import pytest
 from pydantic import ValidationError
 
 from tools._framework.core.base import ToolExecutionContextService
-from tools.sandbox._lib.session import (
-    get_repo_root,
-    normalized_path,
-    path_error,
-    resolve_sandbox_path,
+from tools.sandbox._lib.tool_context import (
+    sandbox_repo_root_from_tool_context,
+    sandbox_path_error_message,
+    resolve_tool_sandbox_path,
 )
 from tools.sandbox._lib.file_payloads import (
     MAX_READ_FILE_LINES,
     ReadFileInput,
     build_read_file_result,
 )
-from tools.sandbox.shell import _build_tool_output
+from tools.sandbox.shell import _build_shell_tool_result
 
 
 def _ctx(services=None) -> ToolExecutionContextService:
     return ToolExecutionContextService(cwd=Path("/tmp"), services=services or {})
 
 
-def test_build_tool_output_preserves_command_output_and_changes():
+def test_build_shell_tool_result_preserves_command_output_and_changes():
     long_command = "python -c " + repr("x" * 200)
     long_stdout = "start-" + ("x" * 9_000) + "-end"
     long_error = "error-" + ("y" * 1_000)
 
-    result = _build_tool_output(
+    result = _build_shell_tool_result(
         context=_ctx(),
         status="ok",
         command=long_command,
@@ -151,68 +150,54 @@ def test_build_read_file_result_caps_selected_content_to_200_lines():
 
 
 # ---------------------------------------------------------------------------
-# path_error
+# sandbox_path_error_message
 # ---------------------------------------------------------------------------
 
 
-def test_path_error_file_not_found():
+def test_sandbox_path_error_message_file_not_found():
     exc = FileNotFoundError("gone")
-    assert path_error(exc, "/some/path") == "Path does not exist: /some/path"
+    assert sandbox_path_error_message(exc, "/some/path") == "Path does not exist: /some/path"
 
 
-def test_path_error_message_contains_no_such_file():
+def test_sandbox_path_error_message_contains_no_such_file():
     exc = RuntimeError("No such file or directory")
-    result = path_error(exc, "/x")
+    result = sandbox_path_error_message(exc, "/x")
     assert result is not None
     assert "/x" in result
 
 
-def test_path_error_unrecognized_returns_none():
-    assert path_error(RuntimeError("something totally different"), "/p") is None
+def test_sandbox_path_error_message_unrecognized_returns_none():
+    assert sandbox_path_error_message(RuntimeError("something totally different"), "/p") is None
 
 
 # ---------------------------------------------------------------------------
-# get_repo_root
+# sandbox_repo_root_from_tool_context
 # ---------------------------------------------------------------------------
 
 
-def test_get_repo_root_returns_value():
+def test_sandbox_repo_root_from_tool_context_returns_value():
     ctx = _ctx({"repo_root": "/workspace/project"})
-    assert get_repo_root(ctx) == "/workspace/project"
+    assert sandbox_repo_root_from_tool_context(ctx) == "/workspace/project"
 
 
-def test_get_repo_root_returns_empty_when_missing():
-    assert get_repo_root(_ctx()) == ""
+def test_sandbox_repo_root_from_tool_context_returns_empty_when_missing():
+    assert sandbox_repo_root_from_tool_context(_ctx()) == ""
 
 
 # ---------------------------------------------------------------------------
-# resolve_sandbox_path
+# resolve_tool_sandbox_path
 # ---------------------------------------------------------------------------
 
 
 def test_resolve_path_absolute_unchanged():
     ctx = _ctx({"repo_root": "/workspace"})
-    assert resolve_sandbox_path("/abs/path", ctx) == "/abs/path"
+    assert resolve_tool_sandbox_path("/abs/path", ctx) == "/abs/path"
 
 
 def test_resolve_path_relative_joins_cwd():
     ctx = _ctx({"repo_root": "/workspace"})
-    assert resolve_sandbox_path("relative/file.py", ctx) == "/workspace/relative/file.py"
+    assert resolve_tool_sandbox_path("relative/file.py", ctx) == "/workspace/relative/file.py"
 
 
 def test_resolve_path_relative_no_cwd_unchanged():
-    assert resolve_sandbox_path("bare_file.py", _ctx()) == "bare_file.py"
-
-
-# ---------------------------------------------------------------------------
-# normalized_path
-# ---------------------------------------------------------------------------
-
-
-def test_normalized_path_preserves_root():
-    assert normalized_path("/") == "/"
-
-
-def test_normalized_path_strips_trailing_separators():
-    assert normalized_path("/workspace/src/") == "/workspace/src"
-    assert normalized_path("relative/path///") == "relative/path"
+    assert resolve_tool_sandbox_path("bare_file.py", _ctx()) == "bare_file.py"

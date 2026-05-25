@@ -5,8 +5,7 @@ handler, intent)`` triples at module import time.
 :func:`flush_plugin_registrations` hands them off to the daemon dispatcher
 under the public op name ``plugin.<plugin>.<op>``.
 
-The decorator enforces the namespace rule from
-``docs/architecture/plugins-refactor.md`` §2: a module that calls
+The decorator enforces the runtime plugin namespace rule: a module that calls
 ``register_plugin_op('lsp', 'hover', intent=Intent.READ_ONLY)`` MUST be
 importable as ``plugins.catalog.lsp.runtime.<something>``. The check walks
 live frames directly so wrapper functions cannot hide a caller outside the

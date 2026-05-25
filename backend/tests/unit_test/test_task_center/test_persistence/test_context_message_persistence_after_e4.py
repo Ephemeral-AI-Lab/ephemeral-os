@@ -20,7 +20,7 @@ from __future__ import annotations
 import inspect
 
 from task_center.attempt import orchestrator as orchestrator_module
-from task_center.attempt import task_dispatcher as task_dispatcher_module
+from task_center.attempt import stage_advancer as stage_advancer_module
 
 
 def test_orchestrator_persists_task_spec_for_generator_tasks_unchanged_by_e4():
@@ -46,6 +46,6 @@ def test_planner_upsert_path_persists_context_message():
 
 
 def test_evaluator_upsert_path_persists_context_message():
-    """Evaluator upsert in task dispatcher writes ``context_message=launch.context``."""
-    source = inspect.getsource(task_dispatcher_module)
+    """Evaluator upsert in stage advancer writes ``context_message=launch.context``."""
+    source = inspect.getsource(stage_advancer_module)
     assert "context_message=launch.context," in source

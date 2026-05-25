@@ -168,7 +168,7 @@ class GoalStarter:
                 "delegated goal start requires a running generator task."
             )
         open_goals = [
-            r for r in self._runtime.goal_store.list_for_executor_task(parent_task_id) if r.is_open
+            r for r in self._runtime.goal_store.list_for_requesting_task(parent_task_id) if r.is_open
         ]
         if open_goals:
             raise TaskCenterInvariantViolation(

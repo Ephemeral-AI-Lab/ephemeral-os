@@ -7,13 +7,13 @@ from sandbox._shared.models import Intent
 from sandbox.api import WriteFileRequest
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
-from tools.sandbox._lib.session import (
-    audit_kwargs_from_context,
-    caller_from_context,
-    get_repo_root,
-    resolve_sandbox_path,
-    sandbox_audit_metadata,
-    sandbox_id_or_error,
+from tools.sandbox._lib.tool_context import (
+    sandbox_audit_kwargs_from_tool_context,
+    sandbox_caller_from_tool_context,
+    sandbox_repo_root_from_tool_context,
+    resolve_tool_sandbox_path,
+    sandbox_audit_metadata_from_tool_context,
+    sandbox_id_or_missing_error_result,
 )
 from tools.sandbox._lib.file_payloads import (
     WriteFileInput,
@@ -38,9 +38,9 @@ async def write_file(
     context: ToolExecutionContextService,
 ) -> ToolResult:
     """Create or overwrite a file."""
-    file_path = resolve_sandbox_path(file_path, context)
+    file_path = resolve_tool_sandbox_path(file_path, context)
 
-    sandbox_id, sandbox_id_error = sandbox_id_or_error(context)
+    sandbox_id, sandbox_id_error = sandbox_id_or_missing_error_result(context)
     if sandbox_id_error is not None:
         return sandbox_id_error
 
@@ -49,11 +49,11 @@ async def write_file(
         WriteFileRequest(
             path=file_path,
             content=content,
-            caller=caller_from_context(context),
+            caller=sandbox_caller_from_tool_context(context),
             description=f"write {file_path}",
             overwrite=True,
         ),
-        **audit_kwargs_from_context(context),
+        **sandbox_audit_kwargs_from_tool_context(context),
     )
 
     paths = list(result.changed_paths)
@@ -63,14 +63,14 @@ async def write_file(
             success_status="written",
             paths=paths,
             success_extra={
-                "cwd": get_repo_root(context),
+                "cwd": sandbox_repo_root_from_tool_context(context),
                 "file_path": file_path,
                 "bytes_written": len(content.encode("utf-8")),
             },
             timings=result.timings,
             mutation_source=result.mutation_source,
             changed_path_kinds=dict(result.changed_path_kinds),
-            metadata_extra=sandbox_audit_metadata(context),
+            metadata_extra=sandbox_audit_metadata_from_tool_context(context),
         )
 
     return mutation_tool_result(
@@ -83,7 +83,7 @@ async def write_file(
         mutation_source=result.mutation_source,
         changed_path_kinds=dict(result.changed_path_kinds),
         timings=result.timings,
-        metadata_extra=sandbox_audit_metadata(context),
+        metadata_extra=sandbox_audit_metadata_from_tool_context(context),
     )
 
 

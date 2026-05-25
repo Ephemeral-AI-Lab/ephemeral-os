@@ -48,7 +48,7 @@ class PlanTaskInput(BaseModel):
         return value
 
 
-class PlannerSubmissionBaseInput(BaseModel):
+class SharedPlannerSubmissionInput(BaseModel):
     """Planner submission boundary schema.
 
     ``plan_spec`` is the LLM-facing name for the plan-level contract; the same

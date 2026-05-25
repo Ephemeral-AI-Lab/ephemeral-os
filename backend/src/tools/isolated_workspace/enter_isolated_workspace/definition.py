@@ -14,7 +14,7 @@ from tools._framework.core.base import (
     ToolResult,
 )
 from tools._framework.core.decorator import tool
-from tools.sandbox._lib.session import caller_from_context
+from tools.sandbox._lib.tool_context import sandbox_caller_from_tool_context
 
 
 class EnterIsolatedWorkspaceInput(BaseModel):
@@ -37,17 +37,20 @@ async def enter_isolated_workspace(
     root = layer_stack_root or str(context.get("layer_stack_root") or "")
     result = await lifecycle_enter(
         EnterIsolatedWorkspaceRequest(
-            caller=caller_from_context(context),
+            caller=sandbox_caller_from_tool_context(context),
             layer_stack_root=root,
             description="enter isolated workspace",
         ),
         background_manager=context.get("background_task_manager"),
         sandbox_id=str(context.get("sandbox_id") or ""),
     )
-    return ToolResult(output=json.dumps(_payload(result), indent=2), is_error=not result.success)
+    return ToolResult(
+        output=json.dumps(_enter_isolated_workspace_payload(result), indent=2),
+        is_error=not result.success,
+    )
 
 
-def _payload(result: object) -> dict[str, object]:
+def _enter_isolated_workspace_payload(result: object) -> dict[str, object]:
     error = getattr(result, "error", None)
     return {
         "success": bool(getattr(result, "success", False)),

@@ -14,7 +14,7 @@ from __future__ import annotations
 from task_center.attempt.runtime import AttemptDeps
 from task_center._core.primitives import TaskCenterInvariantViolation
 from task_center.goal.state import (
-    CloseReportDeliveryResult,
+    GoalClosureDeliveryResult,
     GoalClosureReport,
     GoalOriginKind,
 )
@@ -27,7 +27,7 @@ class GoalClosureReportRouter:
     def __init__(self, *, runtime: AttemptDeps) -> None:
         self._runtime = runtime
 
-    def deliver(self, report: GoalClosureReport) -> CloseReportDeliveryResult:
+    def deliver(self, report: GoalClosureReport) -> GoalClosureDeliveryResult:
         if report.origin_kind == GoalOriginKind.ENTRY:
             return self._deliver_entry_origin(report)
         if report.requested_by_task_id is None:
@@ -45,7 +45,7 @@ class GoalClosureReportRouter:
             TaskCenterBackgroundTaskStatus.DONE.value,
             TaskCenterBackgroundTaskStatus.FAILED.value,
         ):
-            return CloseReportDeliveryResult(
+            return GoalClosureDeliveryResult(
                 status="already_delivered",
                 requested_by_task_id=report.requested_by_task_id,
                 parent_attempt_id=attempt_id,
@@ -70,20 +70,20 @@ class GoalClosureReportRouter:
                 "proceed."
             )
         parent_task.apply_goal_closure_report(report)
-        return CloseReportDeliveryResult(
+        return GoalClosureDeliveryResult(
             status="delivered",
             requested_by_task_id=report.requested_by_task_id,
             parent_attempt_id=attempt_id,
         )
 
-    def _deliver_entry_origin(self, report: GoalClosureReport) -> CloseReportDeliveryResult:
+    def _deliver_entry_origin(self, report: GoalClosureReport) -> GoalClosureDeliveryResult:
         run = self._runtime.task_store.get_run(report.task_center_run_id)
         if run is None:
             raise TaskCenterInvariantViolation(
                 f"TaskCenter run {report.task_center_run_id!r} was not found."
             )
         if run.get("status") in ("done", "failed"):
-            return CloseReportDeliveryResult(
+            return GoalClosureDeliveryResult(
                 status="already_delivered",
                 requested_by_task_id=None,
                 parent_attempt_id=None,
@@ -92,7 +92,7 @@ class GoalClosureReportRouter:
             report.task_center_run_id,
             status="done" if report.outcome == "success" else "failed",
         )
-        return CloseReportDeliveryResult(
+        return GoalClosureDeliveryResult(
             status="delivered",
             requested_by_task_id=None,
             parent_attempt_id=None,

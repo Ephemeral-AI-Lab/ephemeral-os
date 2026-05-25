@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from sandbox.api.tool._daemon_results import (
-    int_from_daemon_field,
+from sandbox.api.tool._daemon_response_parsing import (
+    strict_int_from_daemon_field,
     user_visible_error_message,
 )
 from sandbox.api.tool._conflict_detection import (
@@ -38,15 +38,15 @@ def test_user_visible_error_message_strips_internal_error_prefix() -> None:
     )
 
 
-def test_int_from_daemon_field_is_strict_about_boundary_types() -> None:
-    assert int_from_daemon_field(3, default=0) == 3
-    assert int_from_daemon_field(None, default=7) == 7
+def test_strict_int_from_daemon_field_is_strict_about_boundary_types() -> None:
+    assert strict_int_from_daemon_field(3, default=0) == 3
+    assert strict_int_from_daemon_field(None, default=7) == 7
     with pytest.raises(TypeError):
-        int_from_daemon_field(True, default=0)
+        strict_int_from_daemon_field(True, default=0)
     with pytest.raises(TypeError):
-        int_from_daemon_field("1", default=0)
+        strict_int_from_daemon_field("1", default=0)
     with pytest.raises(TypeError):
-        int_from_daemon_field(1.5, default=0)
+        strict_int_from_daemon_field(1.5, default=0)
 
 
 def test_conflict_detection_prefers_typed_error_codes() -> None:

@@ -47,6 +47,7 @@
 <h2 id="source-graph">Source Graph <a class="anchor" href="#source-graph">§</a></h2>
 <p>The current sandbox workspace runtime is best read as a graph of ownership boundaries rather than a stack of folders. The daemon receives tool/API envelopes, routes work into direct LayerStack/OCC paths, per-operation overlay paths, or isolated private scratch, and every durable mutation converges on OCC before LayerStack publishes a new manifest.</p>
 <div class="edge-list">
+  <div><b>imports</b><span><code>sandbox.api.tool.read/write/edit/glob/grep/shell</code> share request identity construction through <code>_daemon_request_payloads.py</code> and parse daemon responses through <code>_daemon_response_parsing.py</code> before returning public result models <span class="file-ref">backend/src/sandbox/api/tool/read.py:6-32</span>, <span class="file-ref">backend/src/sandbox/api/tool/_daemon_response_parsing.py:67-169</span>.</span></div>
   <div><b>registers</b><span><code>sandbox.daemon.rpc.dispatcher</code> registers built-in workspace ops, isolated lifecycle ops, daemon control ops, and plugin runtime ops through <code>OP_TABLE</code> <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:344-373</span>.</span></div>
   <div><b>calls</b><span><code>dispatch_workspace_tool_call()</code> chooses isolated pipeline first, then direct file fast paths, then the ephemeral overlay pipeline <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:53-75</span>.</span></div>
   <div><b>owns-state</b><span><code>LayerStack</code> owns active manifests, immutable layer directories, leases, merged reads, publish transactions, squash, and flush <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:69-343</span>.</span></div>
@@ -73,7 +74,7 @@
   </div>
   <div class="wiki-node">
     <strong>Daemon and background</strong>
-    <p>Use this path for startup, transport, operation registration, cancellation, heartbeats, and isolated-entry gates.</p>
+    <p>Use this path for public API request payloads, daemon response parsing, startup, transport, operation registration, cancellation, heartbeats, and isolated-entry gates.</p>
     <div class="wiki-links"><a href="daemon.html">Daemon and Background Tasks</a><a href="daemon.html#request-lifecycle">Request Lifecycle</a><a href="daemon.html#isolated-background-gate">Isolated Background Gate</a></div>
   </div>
   <div class="wiki-node">
@@ -120,7 +121,7 @@
   <ul>
     <li>Use component sections such as <code>layerstack.html</code>, <code>overlay.html</code>, and <code>occ.html</code> to understand ownership boundaries.</li>
     <li>Use <code>workflow-cookbook.html</code> when tracing a concrete request from tool call to storage effect.</li>
-    <li>The legacy <code>../sandbox-workspace-architecture.html</code> now points here so existing bookmarks have a stable landing page.</li>
+    <li>This split directory is the canonical sandbox workspace wiki root; if a legacy redirect file is reintroduced, keep it pointed at this index.</li>
   </ul>
 </div>
 <div class="page-footer-nav"><span></span><span><a href="overview.html">Start: 1. Overview →</a></span></div>

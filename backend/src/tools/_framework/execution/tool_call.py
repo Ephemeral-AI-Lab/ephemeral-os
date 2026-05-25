@@ -11,7 +11,7 @@ from message.messages import ToolResultBlock
 from message.stream_events import StreamEvent, ToolExecutionStarted
 from tools._framework.core.base import BaseTool
 from tools._framework.core.context import ToolExecutionContextService
-from tools._framework.execution.hook_runner import ToolHookExecutionHelper
+from tools._framework.execution.hook_pipeline import ToolHookExecutionPipeline
 from tools._framework.core.results import ToolResult
 from tools._framework.core.runtime import ExecutionMetadata
 from tools._framework.core.validation import execute_tool_body, parse_tool_input, validate_tool_output
@@ -136,13 +136,13 @@ async def execute_tool_once(
     emit_started: bool = True,
 ) -> ToolResult:
     """Validate input, emit start, execute the tool, and validate output."""
-    hook_executor = ToolHookExecutionHelper(tool, context, emit)
+    hook_pipeline = ToolHookExecutionPipeline(tool, context, emit)
     parsed = parse_tool_input(tool, raw_input)
     if parsed.error is not None:
         return parsed.error
     assert parsed.args is not None
 
-    parsed_input, hook_failure = await hook_executor.run_pre_hooks(parsed.args)
+    parsed_input, hook_failure = await hook_pipeline.run_pre_hooks(parsed.args)
     if hook_failure is not None:
         return hook_failure
     assert parsed_input is not None
@@ -157,8 +157,8 @@ async def execute_tool_once(
 
     result = await execute_tool_body(tool, parsed_input, context)
     validated = validate_tool_output(tool, result)
-    hooked = await hook_executor.run_post_hooks(parsed_input, validated)
-    final = hook_executor.finalize_result(hooked, effective_input=parsed_input)
+    hooked = await hook_pipeline.run_post_hooks(parsed_input, validated)
+    final = hook_pipeline.finalize_result(hooked, effective_input=parsed_input)
     if tool.is_terminal_tool and not final.is_error:
         return replace(final, does_terminate=True)
     return final

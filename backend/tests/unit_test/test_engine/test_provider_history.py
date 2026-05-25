@@ -13,7 +13,7 @@ from message.messages import (
     ToolResultBlock,
     ToolUseBlock,
 )
-from tools.background._lib._common import (
+from tools.background._lib.task_output import (
     build_background_snapshot_metadata,
     render_background_snapshot,
 )

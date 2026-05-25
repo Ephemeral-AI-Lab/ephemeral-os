@@ -10,7 +10,7 @@ from sandbox.layer_stack import (
     LayerStack,
 )
 from sandbox.layer_stack.manifest import LayerRef, Manifest
-from sandbox.layer_stack.squash import CheckpointSegment, SquashService
+from sandbox.layer_stack.squash import CheckpointSegment, LayerCheckpointSquasher
 
 
 def _source(tmp_path: Path, name: str, content: bytes) -> str:
@@ -64,7 +64,7 @@ def test_squash_plan_collapses_each_unpinned_run_around_pinned_layers(
         LayerRef(layer_id=f"L{index:06d}", path=f"layers/L{index:06d}")
         for index in range(7)
     )
-    plan = SquashService(tmp_path / "stack").plan(
+    plan = LayerCheckpointSquasher(tmp_path / "stack").plan(
         Manifest(version=1, layers=layers),
         max_depth=2,
         pinned_layers=(layers[3],),
@@ -87,7 +87,7 @@ def test_squash_plan_skips_tiny_runs_when_pinned_suffix_exceeds_threshold(
     )
 
     assert (
-        SquashService(tmp_path / "stack").plan(
+        LayerCheckpointSquasher(tmp_path / "stack").plan(
             Manifest(version=1, layers=layers[:6]),
             max_depth=3,
             pinned_layers=layers[2:6],
@@ -96,7 +96,7 @@ def test_squash_plan_skips_tiny_runs_when_pinned_suffix_exceeds_threshold(
         is None
     )
 
-    plan = SquashService(tmp_path / "stack").plan(
+    plan = LayerCheckpointSquasher(tmp_path / "stack").plan(
         Manifest(version=2, layers=layers),
         max_depth=3,
         pinned_layers=layers[4:],

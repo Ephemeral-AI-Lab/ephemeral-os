@@ -21,12 +21,12 @@ from task_center._core.primitives import (
     generator_task_id,
     planner_task_id,
 )
-from task_center.attempt.task_dispatcher import AttemptTaskDispatcher
+from task_center.attempt.stage_advancer import AttemptStageAdvancer
 from task_center.attempt.generator_dag import (
     dependency_task_ids,
     ordered_generator_tasks,
 )
-from task_center.attempt.launch import LaunchBuilder
+from task_center.attempt.launch import AgentLaunchFactory
 from task_center.attempt.runtime import AttemptDeps
 from task_center.attempt.state import (
     Attempt,
@@ -63,7 +63,7 @@ class AttemptOrchestrator:
         self._on_attempt_closed = on_attempt_closed
         self._runtime = runtime
 
-        self._task_dispatcher = AttemptTaskDispatcher(
+        self._stage_advancer = AttemptStageAdvancer(
             attempt_id=attempt.id,
             runtime=runtime,
             close_attempt=self._close_attempt,
@@ -84,7 +84,7 @@ class AttemptOrchestrator:
         task_id = planner_task_id(attempt.id)
         runtime.orchestrator_registry.register(self)
         try:
-            launch = LaunchBuilder(runtime=runtime).for_planner(attempt=attempt, task_id=task_id)
+            launch = AgentLaunchFactory(runtime=runtime).for_planner(attempt=attempt, task_id=task_id)
             runtime.task_store.upsert_task(
                 task_id=task_id,
                 task_center_run_id=launch.task_center_run_id,
@@ -100,7 +100,7 @@ class AttemptOrchestrator:
             )
             runtime.attempt_store.set_planner_task_id(attempt.id, task_id)
             runtime.agent_launcher.launch(launch)
-            self._task_dispatcher.advance_ready_tasks()
+            self._stage_advancer.advance_ready_tasks()
         except Exception:
             self._mark_startup_failed(planner_task_id=task_id)
             raise
@@ -130,7 +130,7 @@ class AttemptOrchestrator:
         generator_ids = self._persist_generator_tasks(submission.tasks)
         runtime.attempt_store.set_generator_task_ids(attempt.id, list(generator_ids))
         runtime.attempt_store.set_stage(attempt.id, AttemptStage.GENERATE)
-        self._task_dispatcher.advance_ready_tasks()
+        self._stage_advancer.advance_ready_tasks()
 
     def apply_planner_failure(self, submission: PlannerFailureSubmission) -> None:
         self._assert_submission_attempt(submission.attempt_id)
@@ -148,12 +148,12 @@ class AttemptOrchestrator:
     def apply_generator_submission(self, submission: GeneratorSubmission) -> None:
         self._assert_submission_attempt(submission.attempt_id)
         self._mark_generator(submission)
-        self._task_dispatcher.advance_ready_tasks()
+        self._stage_advancer.advance_ready_tasks()
 
     def apply_evaluator_submission(self, submission: EvaluatorSubmission) -> None:
         self._assert_submission_attempt(submission.attempt_id)
         self._mark_evaluator(submission)
-        self._task_dispatcher.advance_ready_tasks()
+        self._stage_advancer.advance_ready_tasks()
 
     def apply_goal_closure_report(self, report: GoalClosureReport) -> None:
         """Resume a generator task waiting on a delegated goal.
@@ -201,7 +201,7 @@ class AttemptOrchestrator:
         if updated is None:
             # Race: another delivery moved the parent first. Idempotent.
             return
-        self._task_dispatcher.advance_ready_tasks()
+        self._stage_advancer.advance_ready_tasks()
 
     def _validate_planner_submission(self, planner_task_id: str) -> Attempt:
         attempt = self._assert_stage(AttemptStage.PLAN)

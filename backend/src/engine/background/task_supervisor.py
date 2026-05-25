@@ -40,7 +40,8 @@ class BackgroundTaskStatus(StrEnum):
     DELIVERED = "delivered"
 
 
-# Terminal status precedence used by :meth:`BackgroundTaskSupervisor._set_terminal_status`.
+# Terminal status precedence used by
+# :meth:`BackgroundTaskSupervisor._apply_terminal_status_transition`.
 # A status with a *higher* precedence overwrites a lower one; otherwise the
 # attempt is dropped. This is the single-terminal-status latch the plan
 # requires (Pre-mortem #6): cancel + natural-completion races resolve to
@@ -113,15 +114,6 @@ def _running_sandbox_task(
     return agent_id is None or tracked.agent_id == agent_id
 
 
-def _mark_completion_mode_if_stopped(tracked: BackgroundTaskRecord) -> None:
-    if tracked.stop_mode == _EARLY_STOP_MODE:
-        tracked.completion_mode = _EARLY_STOP_COMPLETION_MODE
-
-
-def _should_cancel_asyncio_task(tracked: BackgroundTaskRecord) -> bool:
-    return tracked.task_type != SUBAGENT_TASK_TYPE
-
-
 async def _request_subagent_early_stop(
     tracked: BackgroundTaskRecord,
     *,
@@ -191,30 +183,31 @@ class BackgroundTaskSupervisor:
         def _done_callback(task: asyncio.Task[ToolResult]) -> None:
             try:
                 if task.cancelled():
-                    self._set_terminal_status(
+                    self._apply_terminal_status_transition(
                         tracked,
                         new_status=BackgroundTaskStatus.CANCELLED,
                         new_result=ToolResult(output="Cancelled", is_error=True),
                     )
                 elif task.exception() is not None:
                     exc = task.exception()
-                    self._set_terminal_status(
+                    self._apply_terminal_status_transition(
                         tracked,
                         new_status=BackgroundTaskStatus.FAILED,
                         new_result=ToolResult(output=str(exc), is_error=True),
                     )
                 else:
                     real_result = task.result()
-                    applied = self._set_terminal_status(
+                    applied = self._apply_terminal_status_transition(
                         tracked,
                         new_status=BackgroundTaskStatus.COMPLETED,
                         new_result=real_result,
                     )
                     if applied:
-                        _mark_completion_mode_if_stopped(tracked)
+                        if tracked.stop_mode == _EARLY_STOP_MODE:
+                            tracked.completion_mode = _EARLY_STOP_COMPLETION_MODE
             except Exception as exc:
                 logger.debug("done_callback failed for %s: %s", tracked.task_id, exc)
-                self._set_terminal_status(
+                self._apply_terminal_status_transition(
                     tracked,
                     new_status=BackgroundTaskStatus.FAILED,
                     new_result=ToolResult(
@@ -328,8 +321,8 @@ class BackgroundTaskSupervisor:
         if tracked is None:
             return False
         tracked.cancel_reason = reason or None
-        await self._wire_cancel_if_sandbox_bound(tracked)
-        if not _should_cancel_asyncio_task(tracked):
+        await self._cancel_sandbox_invocation_if_bound(tracked)
+        if tracked.task_type == SUBAGENT_TASK_TYPE:
             await _request_subagent_early_stop(tracked, reason=reason)
             return True
         self._mark_cancelled(tracked, reason=reason)
@@ -379,8 +372,8 @@ class BackgroundTaskSupervisor:
             if tracked.status != BackgroundTaskStatus.RUNNING:
                 continue
             self._mark_cancelled(tracked)
-            await self._wire_cancel_if_sandbox_bound(tracked)
-            if _should_cancel_asyncio_task(tracked):
+            await self._cancel_sandbox_invocation_if_bound(tracked)
+            if tracked.task_type != SUBAGENT_TASK_TYPE:
                 tracked.asyncio_task.cancel()
                 cancelled_tasks.append(tracked.asyncio_task)
         if cancelled_tasks:
@@ -395,7 +388,7 @@ class BackgroundTaskSupervisor:
     ) -> None:
         tracked.stop_mode = "cancel"
         message = f"Cancelled: {reason}" if reason else "Cancelled"
-        applied = self._set_terminal_status(
+        applied = self._apply_terminal_status_transition(
             tracked,
             new_status=BackgroundTaskStatus.CANCELLED,
             new_result=ToolResult(output=message, is_error=True),
@@ -403,7 +396,7 @@ class BackgroundTaskSupervisor:
         if applied:
             tracked.progress_lines = [message]
 
-    def _set_terminal_status(
+    def _apply_terminal_status_transition(
         self,
         tracked: BackgroundTaskRecord,
         *,
@@ -428,7 +421,9 @@ class BackgroundTaskSupervisor:
                 tracked.result = new_result
             return True
 
-    async def _wire_cancel_if_sandbox_bound(self, tracked: BackgroundTaskRecord) -> None:
+    async def _cancel_sandbox_invocation_if_bound(
+        self, tracked: BackgroundTaskRecord
+    ) -> None:
         if (
             not tracked.uses_sandbox
             or not tracked.sandbox_id

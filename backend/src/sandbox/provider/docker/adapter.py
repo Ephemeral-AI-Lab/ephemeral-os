@@ -394,7 +394,7 @@ class DockerProviderAdapter:
     # -- Context preparation -------------------------------------------------
 
     def context_preparer(self, sandbox_id: str) -> Any:
-        from sandbox.provider.docker.exec_context import DockerContextPreparer
+        from sandbox.provider.docker.runtime_context import DockerContextPreparer
 
         return DockerContextPreparer(sandbox_id)
 

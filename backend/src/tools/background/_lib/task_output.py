@@ -1,4 +1,4 @@
-"""Shared helpers for background task tools."""
+"""Background task output rendering shared by wait/check/cancel tools."""
 
 from __future__ import annotations
 
@@ -8,16 +8,20 @@ from typing import Any
 
 from pydantic import Field
 
-TASK_ID_FIELD_DESCRIPTION = (
+BACKGROUND_TASK_ID_FIELD_DESCRIPTION = (
     "REQUIRED. The exact `task_id` string (e.g. \"bg_1\") shown in the "
     "`[BACKGROUND LAUNCHED]` message. Never pass null/None and never "
     "omit this field."
 )
 
-TASK_ID_FIELD = Field(..., min_length=1, description=TASK_ID_FIELD_DESCRIPTION)
+BACKGROUND_TASK_ID_FIELD = Field(
+    ...,
+    min_length=1,
+    description=BACKGROUND_TASK_ID_FIELD_DESCRIPTION,
+)
 
 
-def render_tool_command(tool_name: str, tool_input: dict[str, Any]) -> str:
+def render_background_tool_call(tool_name: str, tool_input: dict[str, Any]) -> str:
     """Render a tool invocation as ``name(v1, v2, ...)``.
 
     Values are stringified verbatim and joined by ``, ``. No truncation —
@@ -30,7 +34,7 @@ def render_tool_command(tool_name: str, tool_input: dict[str, Any]) -> str:
     return f"{tool_name}({', '.join(parts)})"
 
 
-def normalize_status(raw_status: Any) -> str:
+def background_task_display_status(raw_status: Any) -> str:
     """Collapse internal task statuses to {running, finished, failed}."""
     s = str(raw_status)
     if s == "running":

@@ -1,7 +1,6 @@
 """Host-side plugin dispatch for the public ``call_plugin`` facade.
 
-Implements the 5-step sequence from
-``docs/architecture/plugins-refactor.md`` §5:
+Implements the host-to-daemon plugin dispatch sequence:
 
   1. Resolve sandbox_id + layer_stack_root + caller from the tool context.
   2. Ensure the plugin bundle is installed inside the sandbox
@@ -32,9 +31,9 @@ from sandbox.host.daemon_client import (
 from sandbox.ephemeral_workspace.plugin.install import PluginInstallError, ensure_installed
 from tools._framework.core.context import ToolExecutionContextService
 from tools._framework.core.results import ToolResult
-from tools.sandbox._lib.session import (
-    caller_from_context,
-    sandbox_id_or_error,
+from tools.sandbox._lib.tool_context import (
+    sandbox_caller_from_tool_context,
+    sandbox_id_or_missing_error_result,
 )
 
 __all__ = [
@@ -78,7 +77,7 @@ async def call_plugin(
     install_runner: Callable[..., Any] | None = None,
 ) -> ToolResult:
     """Call a plugin op end-to-end. See module docstring for the 5-step flow."""
-    sandbox_id, error = sandbox_id_or_error(context)
+    sandbox_id, error = sandbox_id_or_missing_error_result(context)
     if error is not None:
         return error
 
@@ -147,7 +146,7 @@ async def call_plugin(
                 return _error_result("ensure-runtime", plugin, op, _exception_message(exc))
             _RUNTIME_DIGEST_BY_SANDBOX_PLUGIN[(sandbox_id, plugin)] = digest
 
-    caller = caller_from_context(context)
+    caller = sandbox_caller_from_tool_context(context)
     raw_intent = context.get("__intent")
     intent_value = (
         raw_intent.value

@@ -27,7 +27,7 @@ from sandbox._shared.clock import monotonic_now
 from sandbox._shared.models import Intent
 from sandbox.daemon import layer_stack_runtime, occ_runtime_services
 from sandbox.daemon.occ_runtime_services import OccRuntimeServices
-from sandbox.daemon.operation_payloads import (
+from sandbox.daemon.workspace_tool_payloads import (
     require_layer_stack_root,
     require_nonempty_string_arg,
 )

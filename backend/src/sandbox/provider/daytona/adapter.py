@@ -7,7 +7,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any, ClassVar
 
 from sandbox._shared.models import RawExecResult
-from sandbox.provider.daytona.exec_wrapper import extract_exit_code, wrap_bash_command
+from sandbox.provider.daytona.bash_command import extract_exit_code, wrap_bash_command
 from sandbox.provider.daytona.client import (
     APP_CREATED_VIA,
     APP_MANAGED_BY,
@@ -351,7 +351,7 @@ class DaytonaProviderAdapter:
 
     def context_preparer(self, sandbox_id: str) -> Any:
         """Return the daytona-specific context preparer for *sandbox_id*."""
-        from sandbox.provider.daytona.exec_context import DaytonaContextPreparer
+        from sandbox.provider.daytona.runtime_context import DaytonaContextPreparer
 
         return DaytonaContextPreparer(sandbox_id)
 

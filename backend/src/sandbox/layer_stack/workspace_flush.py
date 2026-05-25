@@ -14,7 +14,7 @@ from sandbox.layer_stack.lease import LeaseRegistry
 from sandbox.layer_stack.manifest import Manifest, read_manifest
 from sandbox.layer_stack.paths import remove_path
 from sandbox.layer_stack.publisher import LayerPublisher
-from sandbox.layer_stack.squash import SquashService
+from sandbox.layer_stack.squash import LayerCheckpointSquasher
 from sandbox.layer_stack.view import MergedView
 from sandbox.layer_stack.workspace_base import build_workspace_base
 
@@ -24,7 +24,7 @@ class WorkspaceFlushResult:
     manifest: Manifest
     view: MergedView
     publisher: LayerPublisher
-    squash: SquashService
+    checkpoint_squasher: LayerCheckpointSquasher
 
 
 def flush_to_workspace(
@@ -68,7 +68,7 @@ def flush_to_workspace(
             )
             next_view = MergedView(storage_root)
             next_publisher = LayerPublisher(storage_root)
-            next_squash = SquashService(storage_root)
+            next_checkpoint_squasher = LayerCheckpointSquasher(storage_root)
             new_manifest = read_manifest(manifest_path)
         record_elapsed(timings, "layer_stack.flush.rebuild_base_s", reset_start)
         record_elapsed(timings, "layer_stack.flush.total_s", total_start)
@@ -76,7 +76,7 @@ def flush_to_workspace(
             manifest=new_manifest,
             view=next_view,
             publisher=next_publisher,
-            squash=next_squash,
+            checkpoint_squasher=next_checkpoint_squasher,
         )
     finally:
         shutil.rmtree(materialized, ignore_errors=True)

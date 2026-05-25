@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class StreamingToolRunState(StrEnum):
+class StreamingToolRunPhase(StrEnum):
     """Internal lifecycle for a streamed foreground tool call."""
 
     QUEUED = "queued"
@@ -43,8 +43,8 @@ class StreamingToolRun:
     id: str
     name: str
     input: dict[str, Any]
-    state: StreamingToolRunState = StreamingToolRunState.QUEUED
-    task: asyncio.Task | None = None
+    phase: StreamingToolRunPhase = StreamingToolRunPhase.QUEUED
+    task: asyncio.Task[None] | None = None
     progress_lines: list[str] = field(default_factory=list)
     result: ToolResult | None = None
     cancelled: bool = False
@@ -149,7 +149,7 @@ class StreamingToolExecutor:
         """Get new progress events since last call."""
         events = []
         for tool in self._tools.values():
-            if tool.state == StreamingToolRunState.COMPLETED and tool.progress_lines:
+            if tool.phase == StreamingToolRunPhase.COMPLETED and tool.progress_lines:
                 for line in tool.progress_lines:
                     events.append(
                         ToolExecutionProgress(
@@ -172,14 +172,14 @@ class StreamingToolExecutor:
         in_flight = [
             tool.task
             for tool in self._tools.values()
-            if tool.state == StreamingToolRunState.EXECUTING and tool.task is not None
+            if tool.phase == StreamingToolRunPhase.EXECUTING and tool.task is not None
         ]
         if in_flight:
             await asyncio.gather(*in_flight, return_exceptions=True)
 
-        results = []
+        results: list[ToolExecutionCompleted | ToolExecutionCancelled] = []
         for tool in self._tools.values():
-            if tool.state == StreamingToolRunState.COMPLETED:
+            if tool.phase == StreamingToolRunPhase.COMPLETED:
                 if tool.cancelled:
                     results.append(
                         ToolExecutionCancelled(
@@ -199,12 +199,12 @@ class StreamingToolExecutor:
                             does_terminate=tool.result.does_terminate,
                         )
                     )
-                tool.state = StreamingToolRunState.YIELDED
+                tool.phase = StreamingToolRunPhase.YIELDED
         return results
 
     def _start_tool(self, tool: StreamingToolRun) -> None:
         """Start executing a tool."""
-        tool.state = StreamingToolRunState.EXECUTING
+        tool.phase = StreamingToolRunPhase.EXECUTING
         tool.task = asyncio.create_task(self._execute_tool(tool))
 
     async def _execute_tool(self, tool: StreamingToolRun) -> None:
@@ -218,7 +218,7 @@ class StreamingToolExecutor:
                     output=f"Unknown tool: {tool.name}",
                     is_error=True,
                 )
-                tool.state = StreamingToolRunState.COMPLETED
+                tool.phase = StreamingToolRunPhase.COMPLETED
                 return
 
             context_with_id = ToolExecutionContextService(
@@ -244,7 +244,7 @@ class StreamingToolExecutor:
             tool.cancelled = True
             tool.cancel_reason = tool.cancel_reason or "Task cancelled"
         finally:
-            tool.state = StreamingToolRunState.COMPLETED
+            tool.phase = StreamingToolRunPhase.COMPLETED
 
     def cancel_all(self) -> None:
         """Cancel all running tasks to prevent orphaned execution."""

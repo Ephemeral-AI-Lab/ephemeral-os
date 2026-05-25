@@ -596,8 +596,6 @@ def test_prior_attempt_history_ordered_by_graph_sequence(
     assert isinstance(outcome, AttemptPlanFailed)
     seqs = [e.attempt_sequence_no for e in outcome.prior_attempt_history]
     assert seqs == [1, 2]
-    assert outcome.prior_attempt_history[0].attempt_summary_id is None
-    assert outcome.prior_attempt_history[0].failure_landscape is None
 
 
 def test_creating_initial_graph_twice_raises(

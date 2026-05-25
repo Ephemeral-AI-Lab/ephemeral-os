@@ -1,4 +1,4 @@
-"""Convert daemon response payloads into public sandbox API result models."""
+"""Parse daemon response payloads into public sandbox API result models."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ def user_visible_error_message(error: BaseException) -> str:
     return message
 
 
-def conflict_info_from_daemon_field(raw: object) -> ConflictInfo | None:
+def parse_conflict_info_field(raw: object) -> ConflictInfo | None:
     if not isinstance(raw, dict):
         return None
     conflict_file = raw.get("conflict_file")
@@ -41,19 +41,19 @@ def conflict_info_from_daemon_field(raw: object) -> ConflictInfo | None:
     )
 
 
-def path_tuple_from_daemon_field(raw: object) -> tuple[str, ...]:
+def parse_path_tuple_field(raw: object) -> tuple[str, ...]:
     if not isinstance(raw, Iterable) or isinstance(raw, (str, bytes, dict)):
         return ()
     return tuple(str(path) for path in raw if str(path or "").strip())
 
 
-def timing_map_from_daemon_field(raw: object) -> dict[str, float]:
+def parse_timing_map_field(raw: object) -> dict[str, float]:
     if not isinstance(raw, dict):
         return {}
     return normalize_timing_map(raw)
 
 
-def int_from_daemon_field(value: object, *, default: int) -> int:
+def strict_int_from_daemon_field(value: object, *, default: int) -> int:
     """Return an integer boundary value without accepting bool-as-int."""
     if value is None:
         return default
@@ -64,63 +64,65 @@ def int_from_daemon_field(value: object, *, default: int) -> int:
     raise TypeError(f"expected integer value, got {type(value).__name__}")
 
 
-def read_result_from_daemon_response(response: Mapping[str, object]) -> ReadFileResult:
+def parse_read_file_result(response: Mapping[str, object]) -> ReadFileResult:
     return ReadFileResult(
         success=bool(response.get("success", False)),
         exists=bool(response.get("exists", False)),
         content=str(response.get("content", "")),
         encoding=str(response.get("encoding", "utf-8")),
-        timings=timing_map_from_daemon_field(response.get("timings")),
+        timings=parse_timing_map_field(response.get("timings")),
     )
 
 
-def glob_result_from_daemon_response(response: Mapping[str, object]) -> GlobResult:
+def parse_glob_result(response: Mapping[str, object]) -> GlobResult:
     return GlobResult(
         success=bool(response.get("success", False)),
-        filenames=path_tuple_from_daemon_field(response.get("filenames")),
-        num_files=int_from_daemon_field(response.get("num_files"), default=0),
+        filenames=parse_path_tuple_field(response.get("filenames")),
+        num_files=strict_int_from_daemon_field(response.get("num_files"), default=0),
         truncated=bool(response.get("truncated", False)),
-        timings=timing_map_from_daemon_field(response.get("timings")),
+        timings=parse_timing_map_field(response.get("timings")),
     )
 
 
-def grep_result_from_daemon_response(
+def parse_grep_result(
     response: Mapping[str, object],
 ) -> GrepResult:
     applied_limit_raw = response.get("applied_limit")
     applied_limit = (
-        int_from_daemon_field(applied_limit_raw, default=0)
+        strict_int_from_daemon_field(applied_limit_raw, default=0)
         if applied_limit_raw is not None
         else None
     )
     return GrepResult(
         success=bool(response.get("success", False)),
         output_mode=str(response.get("output_mode", "files_with_matches")),
-        filenames=path_tuple_from_daemon_field(response.get("filenames")),
+        filenames=parse_path_tuple_field(response.get("filenames")),
         content=str(response.get("content", "")),
-        num_files=int_from_daemon_field(response.get("num_files"), default=0),
-        num_lines=int_from_daemon_field(response.get("num_lines"), default=0),
-        num_matches=int_from_daemon_field(response.get("num_matches"), default=0),
+        num_files=strict_int_from_daemon_field(response.get("num_files"), default=0),
+        num_lines=strict_int_from_daemon_field(response.get("num_lines"), default=0),
+        num_matches=strict_int_from_daemon_field(response.get("num_matches"), default=0),
         applied_limit=applied_limit,
-        applied_offset=int_from_daemon_field(response.get("applied_offset"), default=0),
+        applied_offset=strict_int_from_daemon_field(
+            response.get("applied_offset"), default=0
+        ),
         truncated=bool(response.get("truncated", False)),
-        timings=timing_map_from_daemon_field(response.get("timings")),
+        timings=parse_timing_map_field(response.get("timings")),
     )
 
 
-def guarded_result_from_daemon_response(
+def parse_guarded_mutation_result(
     result_cls: type[TGuarded],
     response: Mapping[str, object],
     *,
     timings: dict[str, float] | None = None,
     **extra: object,
 ) -> TGuarded:
-    conflict = conflict_info_from_daemon_field(response.get("conflict"))
+    conflict = parse_conflict_info_field(response.get("conflict"))
     error_payload = response.get("error")
     return result_cls(
         success=bool(response.get("success", False)),
-        changed_paths=path_tuple_from_daemon_field(response.get("changed_paths")),
-        changed_path_kinds=_changed_path_kinds_from_daemon_field(
+        changed_paths=parse_path_tuple_field(response.get("changed_paths")),
+        changed_path_kinds=parse_changed_path_kinds_field(
             response.get("changed_path_kinds")
         ),
         mutation_source=str(response.get("mutation_source") or ""),
@@ -135,13 +137,13 @@ def guarded_result_from_daemon_response(
         timings=(
             timings
             if timings is not None
-            else timing_map_from_daemon_field(response.get("timings"))
+            else parse_timing_map_field(response.get("timings"))
         ),
         **cast(Any, extra),
     )
 
 
-def _changed_path_kinds_from_daemon_field(raw: object) -> dict[str, str]:
+def parse_changed_path_kinds_field(raw: object) -> dict[str, str]:
     if not isinstance(raw, Mapping):
         return {}
     return {
@@ -151,17 +153,17 @@ def _changed_path_kinds_from_daemon_field(raw: object) -> dict[str, str]:
     }
 
 
-def shell_result_from_daemon_response(
+def parse_shell_result(
     response: Mapping[str, object],
     *,
     timings: dict[str, float],
 ) -> ShellResult:
-    return guarded_result_from_daemon_response(
+    return parse_guarded_mutation_result(
         ShellResult,
         response,
-        exit_code=int_from_daemon_field(response.get("exit_code"), default=1),
+        exit_code=strict_int_from_daemon_field(response.get("exit_code"), default=1),
         stdout=str(response.get("stdout", "")),
         stderr=str(response.get("stderr", "")),
-        warnings=path_tuple_from_daemon_field(response.get("warnings")),
+        warnings=parse_path_tuple_field(response.get("warnings")),
         timings=timings,
     )

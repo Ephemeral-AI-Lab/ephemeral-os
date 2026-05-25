@@ -5,7 +5,7 @@ that needs layer-stack/OCC/gitignore state: built-in operations, workspace
 tool dispatch, and the ephemeral workspace pipeline.
 The factory uses a canonical ``workspace_ref=layer_stack_root`` only; this
 module owns no path classification (single source of truth lives in
-:mod:`sandbox.daemon.operation_payloads`).
+:mod:`sandbox.daemon.workspace_tool_payloads`).
 """
 
 from __future__ import annotations

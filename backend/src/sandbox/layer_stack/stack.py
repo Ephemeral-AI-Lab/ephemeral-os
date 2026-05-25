@@ -24,7 +24,7 @@ from sandbox.layer_stack.publisher import LayerPublisher
 from sandbox.layer_stack.lease import LeaseRegistry, WorkspaceLease
 from sandbox.layer_stack.squash import (
     CheckpointSegment,
-    SquashService,
+    LayerCheckpointSquasher,
     manifest_prefix_before_plan,
 )
 from sandbox.layer_stack.manifest import (
@@ -89,7 +89,7 @@ class LayerStack:
         self._leases = LeaseRegistry()
         self._view = MergedView(self.storage_root)
         self._publisher = LayerPublisher(self.storage_root)
-        self._squash = SquashService(self.storage_root)
+        self._checkpoint_squasher = LayerCheckpointSquasher(self.storage_root)
 
     def read_active_manifest(self) -> Manifest:
         return read_manifest(self._manifest_file)
@@ -155,7 +155,7 @@ class LayerStack:
         with self._lock:
             active = self.read_active_manifest()
             return (
-                self._squash.plan(
+                self._checkpoint_squasher.plan(
                     active,
                     max_depth=max_depth,
                     pinned_layers=self._leases.squash_barrier_layers(),
@@ -228,7 +228,7 @@ class LayerStack:
         with self._storage_write_guard():
             with self._lock:
                 active = self.read_active_manifest()
-                plan = self._squash.plan(
+                plan = self._checkpoint_squasher.plan(
                     active,
                     max_depth=max_depth,
                     pinned_layers=self._leases.squash_barrier_layers(),
@@ -245,7 +245,7 @@ class LayerStack:
             try:
                 for segment in plan.checkpoint_segments:
                     checkpoints.append(
-                        self._squash.build_checkpoint(
+                        self._checkpoint_squasher.build_checkpoint(
                             segment,
                             active_version=plan.active_version,
                         )
@@ -261,10 +261,14 @@ class LayerStack:
                     for entry in plan.entries:
                         if isinstance(entry, CheckpointSegment):
                             checkpoint = checkpoints[checkpoint_index]
-                            if not checkpoint.layer_id.startswith(f"B{next_version:06d}-"):
-                                checkpoint = self._squash.relabel_checkpoint(
-                                    checkpoint,
-                                    manifest_version=next_version,
+                            if not checkpoint.layer_id.startswith(
+                                f"B{next_version:06d}-"
+                            ):
+                                checkpoint = (
+                                    self._checkpoint_squasher.relabel_checkpoint(
+                                        checkpoint,
+                                        manifest_version=next_version,
+                                    )
                                 )
                                 checkpoints[checkpoint_index] = checkpoint
                             new_layers.append(checkpoint)
@@ -281,7 +285,7 @@ class LayerStack:
             finally:
                 if not checkpoint_committed:
                     for checkpoint in checkpoints:
-                        self._squash.discard_checkpoint(checkpoint)
+                        self._checkpoint_squasher.discard_checkpoint(checkpoint)
                 self.release_lease(squash_lease.lease_id)
 
     def flush_to_workspace(
@@ -308,7 +312,7 @@ class LayerStack:
             )
             self._view = result.view
             self._publisher = result.publisher
-            self._squash = result.squash
+            self._checkpoint_squasher = result.checkpoint_squasher
             return result.manifest
 
     def _storage_write_guard(self) -> AbstractContextManager[object]:

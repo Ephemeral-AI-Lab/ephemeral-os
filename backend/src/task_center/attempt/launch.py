@@ -1,4 +1,4 @@
-"""Production launcher + LaunchBuilder for TaskCenter harness agents."""
+"""Production launcher + AgentLaunchFactory for TaskCenter harness agents."""
 
 from __future__ import annotations
 
@@ -305,7 +305,7 @@ def _report_exhaustion(
         raise TaskCenterInvariantViolation(f"No exhaustion reporter for role {launch.role!r}")
 
 
-# ---- LaunchBuilder (role-parametrized AgentLaunch factory) -----------------
+# ---- AgentLaunchFactory (role-parametrized AgentLaunch factory) ------------
 
 
 PLANNER_AGENT_NAME = "planner"
@@ -313,7 +313,7 @@ EVALUATOR_AGENT_NAME = "evaluator"
 
 
 @dataclass(frozen=True, slots=True)
-class LaunchBuilder:
+class AgentLaunchFactory:
     """Build :class:`AgentLaunch` records for each harness role."""
 
     runtime: AttemptDeps

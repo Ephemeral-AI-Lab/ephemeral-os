@@ -13,14 +13,14 @@ from sandbox.api import GrepRequest
 from tools._framework.core.base import ToolExecutionContextService, ToolResult
 from tools._framework.core.decorator import tool
 from .prompt import get_grep_description
-from tools.sandbox._lib.session import (
-    audit_kwargs_from_context,
-    caller_from_context,
-    get_repo_root,
-    path_error,
-    resolve_sandbox_path,
-    sandbox_audit_metadata,
-    sandbox_id_or_error,
+from tools.sandbox._lib.tool_context import (
+    sandbox_audit_kwargs_from_tool_context,
+    sandbox_caller_from_tool_context,
+    sandbox_repo_root_from_tool_context,
+    sandbox_path_error_message,
+    resolve_tool_sandbox_path,
+    sandbox_audit_metadata_from_tool_context,
+    sandbox_id_or_missing_error_result,
 )
 
 
@@ -140,8 +140,8 @@ async def grep(
     """Search file contents in the workspace snapshot."""
     # output_mode is validated by Pydantic via the Literal type on
     # GrepInput.output_mode — no runtime re-check needed here.
-    resolved_path = resolve_sandbox_path(path, context) if path else None
-    sandbox_id, sandbox_id_error = sandbox_id_or_error(context)
+    resolved_path = resolve_tool_sandbox_path(path, context) if path else None
+    sandbox_id, sandbox_id_error = sandbox_id_or_missing_error_result(context)
     if sandbox_id_error is not None:
         return sandbox_id_error
     try:
@@ -163,20 +163,20 @@ async def grep(
                 case_insensitive=case_insensitive,
                 line_numbers=line_numbers,
                 multiline=multiline,
-                caller=caller_from_context(context),
+                caller=sandbox_caller_from_tool_context(context),
             ),
-            **audit_kwargs_from_context(context),
+            **sandbox_audit_kwargs_from_tool_context(context),
         )
         if not result.success:
             raise RuntimeError(f"grep failed for pattern: {pattern}")
         metadata: dict[str, object] = {}
         if result.timings:
             metadata["timings"] = dict(result.timings)
-        metadata.update(sandbox_audit_metadata(context))
+        metadata.update(sandbox_audit_metadata_from_tool_context(context))
         return ToolResult(
             output=json.dumps(
                 {
-                    "cwd": get_repo_root(context),
+                    "cwd": sandbox_repo_root_from_tool_context(context),
                     "pattern": pattern,
                     "mode": result.output_mode,
                     "filenames": list(result.filenames),
@@ -193,7 +193,7 @@ async def grep(
         )
     except Exception as exc:
         return ToolResult(
-            output=path_error(exc, resolved_path or pattern) or str(exc),
+            output=sandbox_path_error_message(exc, resolved_path or pattern) or str(exc),
             is_error=True,
         )
 

@@ -48,8 +48,8 @@ class SquashPlan:
         return tuple(entry for entry in self.entries if isinstance(entry, CheckpointSegment))
 
 
-class SquashService:
-    """Plans non-leased layer squash and materializes checkpoint layers."""
+class LayerCheckpointSquasher:
+    """Plans non-leased layer runs and materializes checkpoint layers."""
 
     def __init__(
         self,
@@ -182,7 +182,7 @@ def _default_checkpoint_id(next_version: int) -> str:
 
 __all__ = [
     "CheckpointSegment",
+    "LayerCheckpointSquasher",
     "SquashPlan",
-    "SquashService",
     "manifest_prefix_before_plan",
 ]

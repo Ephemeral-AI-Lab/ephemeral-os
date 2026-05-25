@@ -101,11 +101,11 @@ class GoalClosureReport:
         }
 
 
-CloseReportDeliveryStatus = Literal["delivered", "already_delivered"]
+GoalClosureDeliveryStatus = Literal["delivered", "already_delivered"]
 
 
 @dataclass(frozen=True, slots=True)
-class CloseReportDeliveryResult:
-    status: CloseReportDeliveryStatus
+class GoalClosureDeliveryResult:
+    status: GoalClosureDeliveryStatus
     requested_by_task_id: str | None
     parent_attempt_id: str | None

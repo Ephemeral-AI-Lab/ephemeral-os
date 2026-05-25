@@ -7,6 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, RootModel
 
 from tools._framework.core.base import BaseTool, ToolExecutionContextService, ToolResult
+from tools._framework.introspection.catalog import collect_tool_catalog
 from tools._framework.introspection.schema_summary import collect_schema_tools, format_tool_schema_summary
 
 
@@ -43,6 +44,15 @@ def test_schema_summary_prints_live_input_and_output_models():
     assert "Tool: submit_plan_closes_goal" in summary
     assert "Tool: submit_evaluation_success" in summary
     assert "Tool: submit_advisor_feedback" in summary
+
+
+def test_tool_catalog_includes_runtime_background_tools_when_requested():
+    catalog = collect_tool_catalog(include_runtime_tools=True)
+
+    names = {entry.name for entry in catalog}
+    assert "wait_background_tasks" in names
+    assert "check_background_task_result" in names
+    assert "cancel_background_task" in names
 
 
 def test_schema_summary_has_input_and_output_section_for_every_tool():

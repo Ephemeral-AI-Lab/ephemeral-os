@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from audit.base import AuditSink
-from sandbox.api.tool._daemon_requests import daemon_identity_payload
+from sandbox.api.tool._daemon_request_payloads import daemon_request_identity_fields
 from sandbox.api.tool._operation_audit import run_audited_operation
-from sandbox.api.tool._daemon_results import grep_result_from_daemon_response
+from sandbox.api.tool._daemon_response_parsing import parse_grep_result
 from sandbox.api.timeouts import GREP_TIMEOUT_S
 from sandbox.api.transport import DAEMON_OP_GREP, SandboxTransport, call_sandbox_daemon
 from sandbox._shared.models import GrepRequest, GrepResult
@@ -21,7 +21,7 @@ async def grep(
     """Regex-scan workspace file contents under the sandbox's leased snapshot."""
 
     async def _call() -> GrepResult:
-        payload = daemon_identity_payload(request) | {
+        payload = daemon_request_identity_fields(request) | {
             "pattern": request.pattern,
             "output_mode": request.output_mode,
             "offset": request.offset,
@@ -42,7 +42,7 @@ async def grep(
             timeout=GREP_TIMEOUT_S,
             transport=transport,
         )
-        return grep_result_from_daemon_response(response)
+        return parse_grep_result(response)
 
     return await run_audited_operation(
         audit_sink=audit_sink,

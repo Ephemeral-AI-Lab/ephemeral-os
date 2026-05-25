@@ -98,5 +98,5 @@ ApiStreamEvent = (
 class SupportsStreamingMessages(Protocol):
     """Protocol used by the query engine in tests and production."""
 
-    async def stream_message(self, request: ApiMessageRequest) -> AsyncIterator[ApiStreamEvent]:
+    def stream_message(self, request: ApiMessageRequest) -> AsyncIterator[ApiStreamEvent]:
         """Yield streamed events for the request."""

@@ -1,7 +1,7 @@
 """Plugin adapter — host-side ``call_plugin`` and in-sandbox op registry.
 
 This package is the *only* sandbox-side surface plugin authors are allowed to
-import (per ``docs/architecture/plugins-refactor.md`` §2). It must remain
+import. It must remain
 plugin-agnostic — no LSP-specific or language-specific code, no plugin-name
 string switches.
 

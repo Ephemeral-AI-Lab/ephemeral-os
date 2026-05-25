@@ -9,14 +9,14 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel, RootModel
 
-from engine.query.context import QueryContext, QueryExitReason
-from engine.query.loop import run_query
-from engine.tool_call.streaming import StreamingToolExecutor
 from engine.background.dispatch import (
-    launch_and_collect_background_events,
+    dispatch_background_tool_call,
     launch_background_tool,
 )
 from engine.background.task_supervisor import BackgroundTaskSupervisor
+from engine.query.context import QueryContext, QueryExitReason
+from engine.query.loop import run_query
+from engine.tool_call.streaming import StreamingToolExecutor
 from message.messages import (
     ConversationMessage,
     SystemNotificationBlock,
@@ -37,6 +37,7 @@ from providers.types import (
     SupportsStreamingMessages,
     UsageSnapshot,
 )
+from sandbox._shared.models import Intent
 from tools._framework.core.base import (
     BaseTool,
     ToolExecutionContextService,
@@ -451,6 +452,7 @@ async def test_decorator_attaches_tool_hooks() -> None:
         description="decorated",
         input_model=_Args,
         output_model=_Out,
+        intent=Intent.READ_ONLY,
         pre_hooks=[hook],
     )
     async def decorated_echo(value: str, *, context: ToolExecutionContextService) -> ToolResult:
@@ -471,6 +473,7 @@ async def test_decorator_rejects_mismatched_hook_target() -> None:
             description="decorated",
             input_model=_Args,
             output_model=_Out,
+            intent=Intent.READ_ONLY,
             pre_hooks=[_WrongHook()],
         )
         async def decorated_echo(
@@ -1198,7 +1201,7 @@ async def test_background_dispatch_exposes_conversation_messages_to_prehooks() -
         ),
     ]
 
-    events = launch_and_collect_background_events(
+    events = dispatch_background_tool_call(
         context,
         conversation_messages,
         manager,

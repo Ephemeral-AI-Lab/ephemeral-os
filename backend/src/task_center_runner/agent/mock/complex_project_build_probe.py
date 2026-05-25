@@ -11,7 +11,7 @@ delegates here from ``MockSquadRunner._run_executor`` so this module owns the
 phase-by-phase orchestration without bloating ``runner.py``.
 
 Path discipline: every tool call uses an **absolute** ``/ephemeral-os/...``
-file path so that the toolkit's ``resolve_sandbox_path`` does not rewrite the
+file path so that the toolkit's ``resolve_tool_sandbox_path`` does not rewrite the
 target against the SWE-EVO ``repo_root`` (``/testbed``). The OCC/layer-stack
 binding is rebound to ``/ephemeral-os`` via
 ``api.build_workspace_base(workspace_root='/ephemeral-os', reset=True)`` before
@@ -1446,7 +1446,7 @@ async def _shell(
     timeout: int = 60,
 ) -> ToolResult:
     """Run a toolkit shell command. cwd is controlled by ctx.metadata.repo_root
-    (the toolkit shell tool uses ``get_repo_root(context)`` as cwd) — the
+    (the toolkit shell tool uses ``sandbox_repo_root_from_tool_context(context)`` as cwd) — the
     probe rebinds workspace_root in Phase 0 and updates metadata.repo_root so
     subsequent shells run inside ``/ephemeral-os``."""
     args: dict[str, Any] = {"command": command, "timeout": timeout}
