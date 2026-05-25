@@ -23,11 +23,16 @@
     <li><a href="workspaces.html" data-doc-section="workspaces">5. Workspace Modes</a></li>
     <li><a href="daemon.html" data-doc-section="daemon">6. Daemon and Background Tasks</a>
       <ol class="sub">
+        <li><a href="daemon.html#wiki-graph">Wiki graph</a></li>
         <li><a href="daemon.html#daemon-control-plane">Control plane</a></li>
+        <li><a href="daemon.html#startup-transport">Startup and transport</a></li>
         <li><a href="daemon.html#request-lifecycle">Request lifecycle</a></li>
         <li><a href="daemon.html#operation-surface">Operation surface</a></li>
+        <li><a href="daemon.html#workflow-traces">Workflow traces</a></li>
         <li><a href="daemon.html#background-lifecycle-detail">Background lifecycle</a></li>
+        <li><a href="daemon.html#isolated-background-gate">Isolated gate</a></li>
         <li><a href="daemon.html#diagnostics-failure-modes">Diagnostics</a></li>
+        <li><a href="daemon.html#wiki-maintenance">Wiki maintenance</a></li>
       </ol>
     </li>
     <li><a href="provider.html" data-doc-section="provider">7. Provider</a></li>
@@ -58,16 +63,40 @@
 
 <div class="wiki-links" aria-label="Daemon page links">
   <a href="#daemon-control-plane">[[Control Plane Shape]]</a>
+  <a href="#startup-transport">[[Startup and Transport]]</a>
   <a href="#request-lifecycle">[[Request Lifecycle]]</a>
   <a href="#operation-surface">[[Operation Surface]]</a>
   <a href="#workspace-routing-and-state">[[Workspace Routing and State]]</a>
+  <a href="#workflow-traces">[[Workflow Traces]]</a>
   <a href="#background-lifecycle-detail">[[Background Task Lifecycle]]</a>
   <a href="#cancellation-heartbeats">[[Cancellation and Heartbeats]]</a>
   <a href="#isolated-background-gate">[[Isolated Background Gate]]</a>
   <a href="#diagnostics-failure-modes">[[Diagnostics and Failure Modes]]</a>
+  <a href="#wiki-maintenance">[[Wiki Maintenance Notes]]</a>
 </div>
 
-<h3 id="daemon-control-plane">6.1 Control Plane Shape <a class="anchor" href="#daemon-control-plane">§</a></h3>
+<h3 id="wiki-graph">6.1 Wiki Graph and Reading Paths <a class="anchor" href="#wiki-graph">§</a></h3>
+
+<p>This page is a wiki node, not a prose-only chapter. Each local section is a stable concept link, and every behavioral claim should point back to code evidence. The useful reading path depends on the question: transport bugs start in <a href="#startup-transport">[[Startup and Transport]]</a>, tool behavior starts in <a href="#workspace-routing-and-state">[[Workspace Routing and State]]</a>, and background races start in <a href="#background-lifecycle-detail">[[Background Task Lifecycle]]</a>.</p>
+
+<div class="trace-grid">
+  <div>Fast orientation</div><div><a class="wiki-link" href="#daemon-control-plane">[[Control Plane Shape]]</a> gives component ownership and the resident-process boundary.</div>
+  <div>Request debugging</div><div><a class="wiki-link" href="#startup-transport">[[Startup and Transport]]</a> then <a class="wiki-link" href="#request-lifecycle">[[Request Lifecycle]]</a> traces one envelope from host API to daemon handler.</div>
+  <div>Tool semantics</div><div><a class="wiki-link" href="#operation-surface">[[Operation Surface]]</a>, <a class="wiki-link" href="#workspace-routing-and-state">[[Workspace Routing and State]]</a>, and <a class="wiki-link" href="#workflow-traces">[[Workflow Traces]]</a> explain which calls publish, which calls only read, and which calls stay private.</div>
+  <div>Long-running work</div><div><a class="wiki-link" href="#background-lifecycle-detail">[[Background Task Lifecycle]]</a>, <a class="wiki-link" href="#cancellation-heartbeats">[[Cancellation and Heartbeats]]</a>, and <a class="wiki-link" href="#isolated-background-gate">[[Isolated Background Gate]]</a> cover engine task state versus daemon invocation state.</div>
+  <div>Backlinks</div><div><a class="wiki-link" href="overview.html">[[Overview]]</a>, <a class="wiki-link" href="layerstack.html">[[LayerStack]]</a>, <a class="wiki-link" href="occ.html">[[OCC]]</a>, <a class="wiki-link" href="workspaces.html">[[Workspace Modes]]</a>, <a class="wiki-link" href="provider.html">[[Provider]]</a>, and <a class="wiki-link" href="plugins.html">[[Plugin in ephemeral_workspace]]</a>.</div>
+</div>
+
+<table>
+  <thead><tr><th>Wiki layer</th><th>What belongs here</th><th>What does not belong here</th></tr></thead>
+  <tbody>
+    <tr><td>Source truth</td><td>Concrete code paths, handler names, operation names, error kinds, and invariants with <code>file:line</code> evidence.</td><td>Speculation about future daemon APIs or provider behavior not present in the current checkout.</td></tr>
+    <tr><td>Navigation</td><td>Obsidian-like links such as <a class="wiki-link" href="#request-lifecycle">[[Request Lifecycle]]</a> and backlinks to adjacent architecture pages.</td><td>Duplicate explanations from <a href="provider.html">[[Provider]]</a>, <a href="layerstack.html">[[LayerStack]]</a>, or <a href="occ.html">[[OCC]]</a> when a link is enough.</td></tr>
+    <tr><td>Workflow detail</td><td>Step traces that show state crossing a boundary: public API, host transport, daemon server, dispatcher, workspace router, OCC, isolated handle, or background supervisor.</td><td>Line-by-line code walkthroughs that would age faster than the surrounding contract.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="daemon-control-plane">6.2 Control Plane Shape <a class="anchor" href="#daemon-control-plane">§</a></h3>
 
 <p>The daemon is not the storage layer and it is not a provider adapter. It is the warm process inside the sandbox that receives one JSON envelope at a time, reuses expensive runtime state, and routes each operation to the right workspace implementation. Host-side code keeps the provider boundary in <a href="provider.html">[[Provider]]</a>; daemon-side code keeps workspace truth in <a href="layerstack.html">[[LayerStack]]</a> and <a href="occ.html">[[OCC]]</a>.</p>
 
@@ -87,6 +116,19 @@
 
 <p>Runtime paths are fixed under <code>/tmp/eos-sandbox-runtime</code>: the daemon socket, PID, log, environment signature, thin client, and launch script all derive from that bundle root <span class="file-ref">backend/src/sandbox/daemon/paths.py:5-19</span>. The server binds an AF_UNIX socket, optionally binds TCP with token authentication, writes a PID file, and removes PID/socket state on shutdown <span class="file-ref">backend/src/sandbox/daemon/rpc/server.py:184-226</span>, <span class="file-ref">backend/src/sandbox/daemon/rpc/server.py:259-265</span>. The resident-process payoff is cached runtime state: LayerStack managers are cached by root and fence stale staging once per daemon process <span class="file-ref">backend/src/sandbox/daemon/layer_stack_runtime.py:32-50</span>, while OCC services, clients, gitignore oracle, and manager references are cached in one daemon-local service bundle <span class="file-ref">backend/src/sandbox/daemon/occ_runtime_services.py:49-96</span>.</p>
 
+<table>
+  <thead><tr><th>Component</th><th>Resident responsibility</th><th>Structural boundary</th><th>Evidence</th></tr></thead>
+  <tbody>
+    <tr><td><code>paths.py</code></td><td>Names the runtime bundle, socket, PID file, log, env signature, default LayerStack root, thin client, and launch script.</td><td>Pure path contract; no provider calls and no daemon process state.</td><td><span class="file-ref">backend/src/sandbox/daemon/paths.py:5-19</span></td></tr>
+    <tr><td><code>rpc/server.py</code></td><td>Accepts one newline-delimited JSON envelope per connection, bounds request size/read time, applies TCP auth, and closes the stream after one response.</td><td>Does not know workspace semantics; it delegates valid envelopes to the dispatcher.</td><td><span class="file-ref">backend/src/sandbox/daemon/rpc/server.py:82-152</span></td></tr>
+    <tr><td><code>rpc/dispatcher.py</code></td><td>Owns <code>OP_TABLE</code>, envelope validation, in-flight registration, plugin isolation gate, handler dispatch, JSON-safe projection, and runtime timing attachment.</td><td>Does not perform provider exec or workspace publish itself.</td><td><span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:33-112</span>, <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:214-373</span></td></tr>
+    <tr><td><code>rpc/in_flight.py</code></td><td>Tracks daemon asyncio tasks by invocation id for cancellation, heartbeat refresh, per-agent background counts, and TTL reaping.</td><td>Only daemon task liveness; engine-facing aliases and result delivery live in <a href="#background-lifecycle-detail">[[Background Task Lifecycle]]</a>.</td><td><span class="file-ref">backend/src/sandbox/daemon/rpc/in_flight.py:20-149</span></td></tr>
+    <tr><td><code>layer_stack_runtime.py</code></td><td>Caches <code>LayerStack</code> managers, fences stale staging dirs once per daemon process, and exposes base/snapshot/lease helpers.</td><td>LayerStack manager lifecycle only; OCC service composition lives in <code>occ_runtime_services.py</code>.</td><td><span class="file-ref">backend/src/sandbox/daemon/layer_stack_runtime.py:26-150</span></td></tr>
+    <tr><td><code>occ_runtime_services.py</code></td><td>Builds the daemon-local service bundle: LayerStack client, OCC service/client, gitignore oracle, and manager.</td><td>Uses canonical <code>workspace_ref=layer_stack_root</code>; path classification is delegated to operation payload helpers.</td><td><span class="file-ref">backend/src/sandbox/daemon/occ_runtime_services.py:1-9</span>, <span class="file-ref">backend/src/sandbox/daemon/occ_runtime_services.py:28-95</span></td></tr>
+    <tr><td><code>workspace_tool_dispatch.py</code></td><td>Routes read/write/edit/glob/grep/shell to isolated workspace, direct LayerStack/OCC fast path, or ephemeral overlay pipeline.</td><td>It decides execution target, not transport, background aliasing, or provider lifecycle.</td><td><span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:53-75</span></td></tr>
+  </tbody>
+</table>
+
 <div class="trace-grid">
   <div>Related page</div><div><a href="provider.html">[[Provider]]</a> owns Docker/Daytona container lifecycle and exec primitives.</div>
   <div>Related page</div><div><a href="workspaces.html">[[Workspace Modes]]</a> explains why daemon routing chooses isolated, direct LayerStack, or ephemeral overlay execution.</div>
@@ -94,9 +136,44 @@
   <div>Related page</div><div><a href="workflow-cookbook.html">[[Workflow Cookbook]]</a> gives end-to-end traces once the pieces here are familiar.</div>
 </div>
 
-<h3 id="request-lifecycle">6.2 Request Lifecycle <a class="anchor" href="#request-lifecycle">§</a></h3>
+<h3 id="startup-transport">6.3 Startup and Transport Workflow <a class="anchor" href="#startup-transport">§</a></h3>
+
+<p>The host has two ways to reach the same daemon contract. Docker can expose a cached TCP endpoint; providers that cannot publish a port use <code>provider.exec</code> to run the bundled thin client inside the sandbox. Both paths send the same JSON envelope and receive the same JSON response.</p>
+
+<div class="sequence" aria-label="Daemon startup and transport workflow">
+  <ol>
+    <li><span><code>call_daemon_api()</code> injects <code>layer_stack_root</code>, resolves a provider adapter, and asks the adapter whether a daemon TCP endpoint exists <span class="file-ref">backend/src/sandbox/host/daemon_client.py:161-183</span>, <span class="file-ref">backend/src/sandbox/host/daemon_client.py:227-278</span>.</span></li>
+    <li><span>The first send tries TCP when an endpoint is available. TCP failures invalidate the endpoint cache; otherwise the host falls back to executing <code>thin_client.py</code> inside the sandbox <span class="file-ref">backend/src/sandbox/host/daemon_client.py:436-457</span>, <span class="file-ref">backend/src/sandbox/host/daemon_client.py:460-505</span>.</span></li>
+    <li><span>The thin client connects to <code>runtime.sock</code>, writes the envelope plus newline, shuts down the write side, reads response chunks, and returns structured exit codes for connect and I/O failure <span class="file-ref">backend/src/sandbox/daemon/scripts/thin_client.py:13-56</span>.</span></li>
+    <li><span>If the first send reports connect failure, or an empty response that is safe to retry, the host launches the daemon through the bundle launch script <span class="file-ref">backend/src/sandbox/host/daemon_client.py:281-313</span>.</span></li>
+    <li><span>The launch script checks for a live non-zombie PID, validates the environment signature, serializes respawn with <code>flock</code> when available, removes stale socket/PID state, then starts <code>python -m sandbox.daemon.__main__</code> with stdout/stderr redirected to the daemon log <span class="file-ref">backend/src/sandbox/daemon/scripts/launch_daemon.sh:19-86</span>.</span></li>
+    <li><span>After spawn, the host probes <code>api.runtime.ready</code>. Readiness checks the control plane, data-plane services, and mutation gate before the original envelope is retried with bounded connect backoff <span class="file-ref">backend/src/sandbox/host/daemon_client.py:322-394</span>, <span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:158-245</span>.</span></li>
+  </ol>
+</div>
+
+<table>
+  <thead><tr><th>Transport path</th><th>When used</th><th>Failure signal</th><th>Recovery path</th></tr></thead>
+  <tbody>
+    <tr><td>TCP daemon endpoint</td><td>Adapter exposes host/port/auth data, primarily for Docker-style local sandboxes.</td><td><code>EOS_DAEMON_CONNECT_FAILED</code>, <code>EOS_DAEMON_IO_FAILED</code>, timeout, or unauthenticated server response.</td><td>Invalidate cached endpoint, try spawn/readiness, then retry the original envelope.</td></tr>
+    <tr><td>AF_UNIX thin client</td><td>Provider only supports exec into the sandbox, including Daytona-style constraints.</td><td>Thin-client exit code <code>97</code> for connect failure or <code>98</code> for I/O failure.</td><td>Run launch script, verify readiness, then run the thin client again.</td></tr>
+    <tr><td>Daemon server</td><td>Always resident inside the sandbox after successful launch.</td><td>Structured daemon errors such as <code>bad_json</code>, <code>invalid_envelope</code>, <code>request_too_large</code>, or <code>unauthorized</code>.</td><td>Caller receives a structured error; no workspace handler runs.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="request-lifecycle">6.4 Request Lifecycle <a class="anchor" href="#request-lifecycle">§</a></h3>
 
 <p>A daemon request has two identities. The host transport always puts a wire-level <code>invocation_id</code> on the envelope; public sandbox requests also carry caller fields so daemon-side code can recover <code>agent_id</code> for routing, background counts, plugin gating, and audit correlation <span class="file-ref">backend/src/sandbox/api/tool/_daemon_requests.py:8-14</span>, <span class="file-ref">backend/src/sandbox/api/transport.py:24-40</span>.</p>
+
+<table>
+  <thead><tr><th>Envelope or payload field</th><th>Producer</th><th>Consumer</th><th>Why it matters</th></tr></thead>
+  <tbody>
+    <tr><td><code>op</code></td><td>Public sandbox API or daemon-control wrapper.</td><td><code>dispatch_envelope_async()</code> looks it up in <code>OP_TABLE</code>.</td><td>Defines the operation group and handler. Missing or unknown values return <code>invalid_envelope</code> or <code>unknown_op</code> before workspace routing.</td></tr>
+    <tr><td><code>invocation_id</code></td><td>Host daemon client, preserving a caller-provided id when present.</td><td>Dispatcher and in-flight registry.</td><td>Correlates background task alias state to the daemon asyncio task for heartbeat, TTL, and cancellation.</td></tr>
+    <tr><td><code>args.layer_stack_root</code></td><td><code>call_daemon_api()</code>.</td><td>Readiness probes, workspace router, LayerStack/OCC runtime caches, plugin runtime context.</td><td>Selects the shared durable workspace root inside the sandbox.</td></tr>
+    <tr><td><code>args.caller</code> and <code>args.agent_id</code></td><td><code>daemon_identity_payload()</code> and isolated lifecycle calls.</td><td>Dispatcher, workspace router, plugin isolation gate, isolated workspace handle map, background count gate.</td><td>Keeps per-agent behavior coherent across foreground tools, background tools, and private scratch work.</td></tr>
+    <tr><td><code>args.background</code></td><td>Background shell path.</td><td>Dispatcher registration and in-flight registry.</td><td>Marks daemon work that should be heartbeated, TTL-reaped, and counted before isolated workspace entry.</td></tr>
+  </tbody>
+</table>
 
 <div class="sequence" aria-label="Daemon request lifecycle">
   <ol>
@@ -110,28 +187,33 @@
   </ol>
 </div>
 
+<div class="callout">
+  <span class="label">Response contract</span>
+  Handlers must return JSON-object payloads. The dispatcher converts dataclasses and namespaces to JSON-safe dictionaries, attaches <code>runtime.boot_to_dispatch_s</code> and <code>runtime.dispatch_s</code>, and turns uncaught exceptions into <code>internal_error</code> envelopes with an <code>error_id</code> <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:93-112</span>, <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:161-211</span>.
+</div>
+
 <div class="callout good">
   <span class="label">Invariant</span>
   The daemon may reuse caches, but it must not hide publish semantics. Direct file fast paths still go through OCC; shell and search operations still run through the workspace pipeline; isolated writes remain private scratch until explicit exit.
 </div>
 
-<h3 id="operation-surface">6.3 Operation Surface <a class="anchor" href="#operation-surface">§</a></h3>
+<h3 id="operation-surface">6.5 Operation Surface <a class="anchor" href="#operation-surface">§</a></h3>
 
-<p>The operation table is registered at import time. Duplicate registration of the same handler is a no-op, while a different handler for an existing op raises immediately, so runtime extension remains explicit instead of silently overriding commands <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:37-53</span>. Built-in registrations cover isolated workspace lifecycle, LayerStack base/snapshot/lease control, file/search/shell tools, plugin ensure/status, and in-flight cancellation/heartbeat/count operations <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:346-385</span>.</p>
+<p>The operation table is registered at import time. Duplicate registration of the same handler is a no-op, while a different handler for an existing op raises immediately, so runtime extension remains explicit instead of silently overriding commands <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:37-53</span>. Built-in registrations cover isolated workspace lifecycle, LayerStack base/snapshot/lease control, file/search/shell tools, plugin ensure/status, and in-flight cancellation/heartbeat/count operations <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:344-373</span>.</p>
 
 <table>
   <thead><tr><th>Operation group</th><th>Ops</th><th>What the daemon owns</th><th>Evidence</th></tr></thead>
   <tbody>
-    <tr><td>Tool operations</td><td><code>api.v1.read_file</code>, <code>api.v1.write_file</code>, <code>api.v1.edit_file</code>, <code>api.v1.glob</code>, <code>api.v1.grep</code>, <code>api.v1.shell</code></td><td>Thin wrappers delegate to the common workspace router with the correct read/write intent.</td><td><span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:88-114</span></td></tr>
-    <tr><td>In-flight control</td><td><code>api.v1.cancel</code>, <code>api.v1.heartbeat</code>, <code>api.v1.inflight_count</code></td><td>Cancel one daemon asyncio task, refresh liveness for invocation ids, or count running background work by agent.</td><td><span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:51-85</span></td></tr>
-    <tr><td>Runtime diagnostics</td><td><code>api.runtime.ready</code>, <code>api.layer_metrics</code></td><td>Probe control plane, data plane, mutation gate, daemon PID/uptime, storage bytes, active leases, and manifest depth.</td><td><span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:117-169</span></td></tr>
-    <tr><td>LayerStack control</td><td><code>api.ensure_workspace_base</code>, <code>api.build_workspace_base</code>, <code>api.prepare_workspace_snapshot</code>, <code>api.release_lease</code>, <code>api.workspace_binding</code></td><td>Build/rebind workspace base, prepare snapshot leases, release leases, and expose binding details.</td><td><span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:239-348</span></td></tr>
-    <tr><td>Isolated workspace</td><td><code>api.isolated_workspace.enter</code>, <code>exit</code>, <code>status</code>, <code>list_open</code>, <code>test_reset</code></td><td>Enter/exit persistent scratch workspaces, report open handles, and expose a gated janitor reset for tests.</td><td><span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:257-343</span></td></tr>
-    <tr><td>Plugin runtime</td><td><code>api.plugin.ensure</code>, <code>api.plugin.status</code></td><td>Connects plugin lifecycle into the same operation table, with an isolation gate before dispatch.</td><td><span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:215-243</span>, <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:346-385</span></td></tr>
+    <tr><td>Tool operations</td><td><code>api.v1.read_file</code>, <code>api.v1.write_file</code>, <code>api.v1.edit_file</code>, <code>api.v1.glob</code>, <code>api.v1.grep</code>, <code>api.v1.shell</code></td><td>Thin wrappers delegate to the common workspace router with the correct read/write intent.</td><td><span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:49-86</span></td></tr>
+    <tr><td>In-flight control</td><td><code>api.v1.cancel</code>, <code>api.v1.heartbeat</code>, <code>api.v1.inflight_count</code></td><td>Cancel one daemon asyncio task, refresh liveness for invocation ids, or count running background work by agent.</td><td><span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:94-123</span></td></tr>
+    <tr><td>Runtime diagnostics</td><td><code>api.runtime.ready</code>, <code>api.layer_metrics</code></td><td>Probe control plane, data plane, mutation gate, daemon PID/uptime, storage bytes, active leases, and manifest depth.</td><td><span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:131-245</span></td></tr>
+    <tr><td>LayerStack control</td><td><code>api.ensure_workspace_base</code>, <code>api.build_workspace_base</code>, <code>api.prepare_workspace_snapshot</code>, <code>api.release_lease</code>, <code>api.workspace_binding</code></td><td>Build/rebind workspace base, prepare snapshot leases, release leases, and expose binding details.</td><td><span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:255-357</span></td></tr>
+    <tr><td>Isolated workspace</td><td><code>api.isolated_workspace.enter</code>, <code>exit</code>, <code>status</code>, <code>list_open</code>, <code>test_reset</code></td><td>Enter/exit persistent scratch workspaces, report open handles, and expose a gated janitor reset for tests.</td><td><span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:255-341</span></td></tr>
+    <tr><td>Plugin runtime</td><td><code>api.plugin.ensure</code>, <code>api.plugin.status</code></td><td>Connects plugin lifecycle into the same operation table, with an isolation gate before dispatch.</td><td><span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:214-243</span>, <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:344-373</span></td></tr>
   </tbody>
 </table>
 
-<h3 id="workspace-routing-and-state">6.4 Workspace Routing and State <a class="anchor" href="#workspace-routing-and-state">§</a></h3>
+<h3 id="workspace-routing-and-state">6.6 Workspace Routing and State <a class="anchor" href="#workspace-routing-and-state">§</a></h3>
 
 <p>The key daemon router is <code>dispatch_workspace_tool_call()</code>. It creates a <code>ToolCallRequest</code> with invocation id, agent id, verb, intent, args, and background flag. If the agent has an open isolated handle, the call runs inside <a href="workspaces.html#isolated-workspace">[[isolated_workspace]]</a>. Otherwise single-file <code>read_file</code>, <code>write_file</code>, and <code>edit_file</code> use direct LayerStack/OCC fast paths when the path can bind cleanly. Everything else goes through the <a href="workspaces.html#ephemeral-workspace">[[ephemeral_workspace]]</a> overlay pipeline <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:27-71</span>.</p>
 
@@ -164,15 +246,90 @@
 
 <p>Cache ownership follows that same split. <code>layer_stack_runtime</code> owns manager caching and base/snapshot/lease helpers <span class="file-ref">backend/src/sandbox/daemon/layer_stack_runtime.py:95-150</span>. <code>occ_runtime_services</code> owns the OCC service bundle consumed by handlers, the workspace router, and the ephemeral pipeline <span class="file-ref">backend/src/sandbox/daemon/occ_runtime_services.py:1-9</span>. A workspace-base reset intentionally stops the peer overlay and drops OCC services before rebuilding the base <span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:246-277</span>, <span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:339-348</span>.</p>
 
-<h3 id="background-lifecycle-detail">6.5 Background Task Lifecycle <a class="anchor" href="#background-lifecycle-detail">§</a></h3>
+<div class="callout good">
+  <span class="label">Routing invariant</span>
+  <code>read_file</code>, <code>write_file</code>, and <code>edit_file</code> are the only daemon tool verbs eligible for the direct LayerStack/OCC fast path. A path-binding failure does not fail the request; it falls back to the same overlay pipeline as shell/search so behavior stays correct for nonstandard paths <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:78-91</span>, <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:208-224</span>.
+</div>
+
+<h3 id="workflow-traces">6.7 Workflow Traces <a class="anchor" href="#workflow-traces">§</a></h3>
+
+<p>These traces are intentionally redundant with the component sections. They answer the practical question: "what state changes after this call?" Use them as entry points, then follow the inline links to the deeper sections.</p>
+
+<div class="lane-grid">
+  <div class="lane">
+    <h4>Direct file read</h4>
+    <ol>
+      <li>Host sends <code>api.v1.read_file</code> with caller identity and path.</li>
+      <li>Daemon creates <code>ToolCallRequest</code> and confirms no isolated handle exists.</li>
+      <li>Router binds the path through workspace binding.</li>
+      <li>OCC runtime services read active LayerStack text directly.</li>
+      <li>Result returns <code>workspace="ephemeral"</code>, content, existence flag, and resource timings.</li>
+    </ol>
+    <p><span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:53-110</span></p>
+  </div>
+  <div class="lane">
+    <h4>Direct write or edit</h4>
+    <ol>
+      <li>Host sends <code>api.v1.write_file</code> or <code>api.v1.edit_file</code>.</li>
+      <li>Router binds a single path and builds typed OCC changes.</li>
+      <li><code>OccService.apply_changeset()</code> validates and publishes to the shared LayerStack.</li>
+      <li>Guarded conflict/result projection becomes the tool response.</li>
+      <li>No transient overlay namespace is mounted for the fast path.</li>
+    </ol>
+    <p><span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:113-179</span></p>
+  </div>
+  <div class="lane">
+    <h4>Shell or search</h4>
+    <ol>
+      <li>Router bypasses the direct file fast path.</li>
+      <li>Ephemeral pipeline acquires a fresh snapshot overlay and namespace.</li>
+      <li>Tool runs inside the mounted workspace view.</li>
+      <li>Write-intent calls capture upperdir changes and publish through OCC.</li>
+      <li>Lease guard destroys the overlay handle after the response.</li>
+    </ol>
+    <p><span class="file-ref">backend/src/sandbox/ephemeral_workspace/pipeline.py:131-179</span></p>
+  </div>
+</div>
+
+<div class="sequence" aria-label="Isolated workspace foreground tool workflow">
+  <ol>
+    <li><span>The user explicitly enters <a href="workspaces.html#isolated-workspace">[[isolated_workspace]]</a>; the host checks background gates and the daemon creates a persistent handle for the agent.</span></li>
+    <li><span>Later daemon tool calls for that agent see the active isolated handle before any direct LayerStack fast path is attempted <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:30-75</span>.</span></li>
+    <li><span><code>IsolatedPipeline.run_tool_call()</code> reuses the handle's namespace, upperdir, workdir, lease id, and root pid instead of acquiring and destroying a per-call overlay <span class="file-ref">backend/src/sandbox/isolated_workspace/pipeline.py:156-188</span>.</span></li>
+    <li><span>Write-intent calls capture changed paths for audit/reporting only. They do not call OCC, and the scratch upperdir is discarded during isolated exit <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:175-217</span>.</span></li>
+  </ol>
+</div>
+
+<table>
+  <thead><tr><th>Workflow</th><th>Shared LayerStack mutation?</th><th>Private scratch?</th><th>Main cleanup point</th></tr></thead>
+  <tbody>
+    <tr><td>Direct read</td><td>No</td><td>No</td><td>None beyond normal response serialization.</td></tr>
+    <tr><td>Direct write/edit</td><td>Yes, through OCC.</td><td>No</td><td>OCC publish result and cached service reuse.</td></tr>
+    <tr><td>Ephemeral shell/search/write-intent operation</td><td>Yes only when captured changes publish successfully.</td><td>Temporary per operation.</td><td><code>LeaseGuard.destroy()</code> after the operation response.</td></tr>
+    <tr><td>Isolated foreground tool</td><td>No</td><td>Persistent until explicit exit or TTL/GC lifecycle.</td><td>Isolated exit tears down holder, veth, lease, scratch, and persisted handle state.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="background-lifecycle-detail">6.8 Background Task Lifecycle <a class="anchor" href="#background-lifecycle-detail">§</a></h3>
 
 <p>Background execution is split across two control planes. The engine owns user-visible task aliases, result delivery, progress snapshots, and task status. The daemon owns the sandbox invocation that may still be running inside the sandbox. The bridge between them is the sandbox invocation id passed in execution metadata and then into the daemon envelope.</p>
+
+<table>
+  <thead><tr><th>State</th><th>Owner</th><th>Purpose</th><th>Evidence</th></tr></thead>
+  <tbody>
+    <tr><td><code>bg_1</code>, <code>bg_2</code> aliases</td><td>Engine <code>BackgroundTaskSupervisor</code></td><td>User-facing ids for result, wait, and cancel tools.</td><td><span class="file-ref">backend/src/engine/background/task_supervisor.py:124-131</span></td></tr>
+    <tr><td>Task status and terminal result</td><td>Engine <code>BackgroundTaskRecord</code></td><td>Tracks running/completed/failed/cancelled/delivered state, progress lines, and the final tool result.</td><td><span class="file-ref">backend/src/engine/background/task_supervisor.py:43-109</span>, <span class="file-ref">backend/src/engine/background/task_supervisor.py:164-226</span></td></tr>
+    <tr><td><code>sandbox_invocation_id</code></td><td>Engine launch path, then daemon envelope</td><td>Stable bridge between a background task alias and the daemon task that must receive heartbeat/cancel.</td><td><span class="file-ref">backend/src/engine/background/dispatch.py:101-141</span>, <span class="file-ref">backend/src/tools/sandbox/shell/shell.py:169-180</span></td></tr>
+    <tr><td>In-flight daemon entry</td><td>Daemon registry</td><td>Tracks asyncio task, agent id, op, last heartbeat time, background flag, and TTL reaped flag.</td><td><span class="file-ref">backend/src/sandbox/daemon/rpc/in_flight.py:20-74</span></td></tr>
+    <tr><td>Visible result snapshots</td><td>Background result tools</td><td>Expose current or terminal state without reading daemon internals directly.</td><td><span class="file-ref">backend/src/tools/background/check_background_task_result/check_background_task_result.py:79-128</span>, <span class="file-ref">backend/src/tools/background/wait_background_tasks/wait_background_tasks.py:48-123</span></td></tr>
+  </tbody>
+</table>
 
 <div class="sequence" aria-label="Background task lifecycle">
   <ol>
     <li><span>The tool execution layer sees <code>background=true</code> for an optional background tool such as shell, validates the tool input before spawning, and allocates a short alias such as <code>bg_1</code> <span class="file-ref">backend/src/engine/background/dispatch.py:59-106</span>.</span></li>
     <li><span>If the tool requires sandbox context, dispatch creates a daemon <code>sandbox_invocation_id</code> and carries it in <code>ExecutionMetadata</code>; the shell tool copies it into <code>ShellRequest.invocation_id</code> and marks <code>background</code> from the background task id <span class="file-ref">backend/src/engine/background/dispatch.py:107-141</span>, <span class="file-ref">backend/src/tools/sandbox/shell/shell.py:169-180</span>.</span></li>
-    <li><span><code>BackgroundTaskSupervisor.launch()</code> stores task id, tool input, asyncio task, agent id, sandbox id, sandbox invocation id, and <code>uses_sandbox</code>; sandbox-bound tasks start the heartbeat loop <span class="file-ref">backend/src/engine/background/task_supervisor.py:67-155</span>, <span class="file-ref">backend/src/engine/background/task_supervisor.py:195-203</span>.</span></li>
+    <li><span><code>BackgroundTaskSupervisor.launch()</code> stores task id, tool input, asyncio task, agent id, sandbox id, sandbox invocation id, and <code>uses_sandbox</code>; sandbox-bound tasks start the heartbeat loop <span class="file-ref">backend/src/engine/background/task_supervisor.py:71-159</span>, <span class="file-ref">backend/src/engine/background/task_supervisor.py:199-206</span>.</span></li>
     <li><span>When the request reaches the daemon, the dispatcher registers the same invocation id with <code>agent_id</code>, op name, and <code>background=true</code> <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:69-83</span>.</span></li>
     <li><span>The task runs through normal daemon workspace routing: background shell is still an ordinary sandbox tool call that may publish through OCC unless it is inside isolated workspace.</span></li>
     <li><span>Result tools read the engine manager state. <code>check_background_task_result</code> returns current or terminal output; <code>wait_background_tasks</code> blocks up to a bounded timeout and marks newly completed tasks delivered <span class="file-ref">backend/src/tools/background/check_background_task_result/check_background_task_result.py:78-128</span>, <span class="file-ref">backend/src/tools/background/wait_background_tasks/wait_background_tasks.py:47-123</span>.</span></li>
@@ -189,9 +346,9 @@
   </tbody>
 </table>
 
-<h3 id="cancellation-heartbeats">6.6 Cancellation and Heartbeats <a class="anchor" href="#cancellation-heartbeats">§</a></h3>
+<h3 id="cancellation-heartbeats">6.9 Cancellation and Heartbeats <a class="anchor" href="#cancellation-heartbeats">§</a></h3>
 
-<p>Cancellation is intentionally two-stage for sandbox-bound background tasks. The supervisor first asks the daemon to cancel the sandbox invocation, then it updates the local task state and cancels the host asyncio task when the task type permits it <span class="file-ref">backend/src/engine/background/task_supervisor.py:281-311</span>, <span class="file-ref">backend/src/engine/background/task_supervisor.py:390-404</span>. The daemon control handler cancels the registered task and waits briefly for cleanup, reporting whether the task was found and whether cleanup completed <span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:56-72</span>.</p>
+<p>Cancellation is intentionally two-stage for sandbox-bound background tasks. The supervisor first asks the daemon to cancel the sandbox invocation, then it updates the local task state and cancels the host asyncio task when the task type permits it <span class="file-ref">backend/src/engine/background/task_supervisor.py:291-321</span>, <span class="file-ref">backend/src/engine/background/task_supervisor.py:382-405</span>. The daemon control handler cancels the registered task and waits briefly for cleanup, reporting whether the task was found and whether cleanup completed <span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:94-110</span>.</p>
 
 <div class="sequence" aria-label="Daemon heartbeat and TTL lifecycle">
   <ol>
@@ -204,7 +361,7 @@
 
 <p>The registry only counts entries that are both background and not done for an agent <span class="file-ref">backend/src/sandbox/daemon/rpc/in_flight.py:98-109</span>. That count is the daemon-side half of the isolated-workspace gate described in <a href="#isolated-background-gate">[[Isolated Background Gate]]</a>.</p>
 
-<h3 id="isolated-background-gate">6.7 Isolated Background Gate <a class="anchor" href="#isolated-background-gate">§</a></h3>
+<h3 id="isolated-background-gate">6.10 Isolated Background Gate <a class="anchor" href="#isolated-background-gate">§</a></h3>
 
 <div class="callout warn">
   <span class="label">Isolated vs ephemeral background behavior</span>
@@ -236,7 +393,17 @@
 
 <p>Inside the daemon, isolated enter prepares a LayerStack snapshot, allocates scratch <code>upper</code>/<code>work</code>, wires namespace holder, namespace fds, veth, overlay mount, DNS, and cgroup, then persists the handle and emits an audit event <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:21-102</span>, <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:104-163</span>. The Linux runtime creates the namespace with <code>unshare</code>, opens namespace fds, and mounts the overlay through a setns helper <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/linux_runtime.py:65-160</span>. Isolated networking is daemon-scoped: one bridge, one outbound masquerade rule, IMDS drop, optional RFC1918 deny, and one veth pair plus IP allocation per workspace <span class="file-ref">backend/src/sandbox/isolated_workspace/network.py:1-16</span>, <span class="file-ref">backend/src/sandbox/isolated_workspace/network.py:95-150</span>.</p>
 
-<h3 id="diagnostics-failure-modes">6.8 Diagnostics and Failure Modes <a class="anchor" href="#diagnostics-failure-modes">§</a></h3>
+<table>
+  <thead><tr><th>Isolated phase</th><th>State created or removed</th><th>Why the daemon owns it</th><th>Evidence</th></tr></thead>
+  <tbody>
+    <tr><td>Enter preflight</td><td>Global handle quota, per-agent duplicate check, host RAM budget, and startup orphan-recovery barrier.</td><td>The active handles live in the resident pipeline map and must be serialized against concurrent enter calls.</td><td><span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:21-48</span>, <span class="file-ref">backend/src/sandbox/isolated_workspace/pipeline.py:88-97</span></td></tr>
+    <tr><td>Snapshot and scratch</td><td>LayerStack snapshot lease plus scratch <code>upper</code> and <code>work</code> directories.</td><td>The daemon owns the lease lifetime and can release it on failure, explicit exit, TTL, or orphan recovery.</td><td><span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:49-82</span></td></tr>
+    <tr><td>Namespace wiring</td><td>Namespace holder process, namespace fds, veth pair, overlay mount, DNS, and cgroup path.</td><td>These are Linux resources inside the sandbox, not host engine state.</td><td><span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:104-163</span></td></tr>
+    <tr><td>Exit teardown</td><td>Kill holder, remove veth, close namespace fds, release LayerStack lease, remove scratch directory, persist handle map.</td><td>All private workspace state must disappear before the agent returns to default shared/OCC routing.</td><td><span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:175-240</span></td></tr>
+  </tbody>
+</table>
+
+<h3 id="diagnostics-failure-modes">6.11 Diagnostics and Failure Modes <a class="anchor" href="#diagnostics-failure-modes">§</a></h3>
 
 <p>Most daemon failures should be diagnosed by locating the layer where the request stopped: host transport, daemon server, dispatcher, workspace router, or background manager. The page-local map below is meant to make that lookup explicit instead of forcing rediscovery.</p>
 
@@ -245,10 +412,24 @@
   <tbody>
     <tr><td><code>EOS_DAEMON_CONNECT_FAILED</code></td><td>Transport / daemon spawn</td><td>TCP endpoint cache, AF_UNIX socket path, launch script lock, zombie PID handling, and spawn logs.</td><td><span class="file-ref">backend/src/sandbox/host/daemon_client.py:397-457</span>, <span class="file-ref">backend/src/sandbox/daemon/scripts/launch_daemon.sh:38-86</span></td></tr>
     <tr><td>Invalid or oversized request</td><td>Daemon server</td><td>JSON object shape, auth token on TCP, <code>MAX_REQUEST_BYTES</code>, and read timeout behavior.</td><td><span class="file-ref">backend/src/sandbox/daemon/rpc/server.py:54-152</span></td></tr>
-    <tr><td><code>unknown_op</code> or wrong handler</td><td>Dispatcher registration</td><td><code>OP_TABLE</code> registration, duplicate-op protection, plugin runtime registration.</td><td><span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:37-53</span>, <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:346-385</span></td></tr>
+    <tr><td><code>unknown_op</code> or wrong handler</td><td>Dispatcher registration</td><td><code>OP_TABLE</code> registration, duplicate-op protection, plugin runtime registration.</td><td><span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:37-53</span>, <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:344-373</span></td></tr>
     <tr><td>Plugin blocked during private work</td><td>Isolation gate</td><td>Whether the caller has an open isolated handle; plugin ops are forbidden for that agent while isolated workspace is open.</td><td><span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:215-234</span></td></tr>
     <tr><td>Background task cannot be entered into isolated mode</td><td>Background gate</td><td>Local manager count and daemon <code>api.v1.inflight_count</code> for the same agent.</td><td><span class="file-ref">backend/src/sandbox/host/isolated_workspace_lifecycle.py:41-60</span>, <span class="file-ref">backend/src/sandbox/api/daemon_invocations.py:51-65</span></td></tr>
-    <tr><td>Daemon returns <code>ready=false</code></td><td>Runtime readiness</td><td>Control-plane binding, data-plane service bundle, mutation-gate fields, PID, uptime, and probe timing details.</td><td><span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:149-237</span></td></tr>
+    <tr><td>Daemon returns <code>ready=false</code></td><td>Runtime readiness</td><td>Control-plane binding, data-plane service bundle, mutation-gate fields, PID, uptime, and probe timing details.</td><td><span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:158-245</span></td></tr>
+  </tbody>
+</table>
+
+<h3 id="wiki-maintenance">6.12 Wiki Maintenance Notes <a class="anchor" href="#wiki-maintenance">§</a></h3>
+
+<p>When this page goes stale, update it like a wiki graph: edit the smallest local node, keep backlinks live, and preserve the distinction between code evidence and explanatory summary.</p>
+
+<table>
+  <thead><tr><th>When code changes</th><th>Update here</th><th>Also check</th></tr></thead>
+  <tbody>
+    <tr><td>A new daemon op is registered or renamed.</td><td><a class="wiki-link" href="#operation-surface">[[Operation Surface]]</a> and search text in <code>assets/search-index.js</code>.</td><td><a class="wiki-link" href="plugins.html">[[Plugin in ephemeral_workspace]]</a> if the op is plugin-owned.</td></tr>
+    <tr><td>Transport retry, launch, or readiness behavior changes.</td><td><a class="wiki-link" href="#startup-transport">[[Startup and Transport]]</a> and <a class="wiki-link" href="#diagnostics-failure-modes">[[Diagnostics and Failure Modes]]</a>.</td><td><a class="wiki-link" href="provider.html">[[Provider]]</a> for adapter boundary changes.</td></tr>
+    <tr><td>Tool routing changes between direct fast path, ephemeral overlay, and isolated workspace.</td><td><a class="wiki-link" href="#workspace-routing-and-state">[[Workspace Routing and State]]</a> and <a class="wiki-link" href="#workflow-traces">[[Workflow Traces]]</a>.</td><td><a class="wiki-link" href="workspaces.html">[[Workspace Modes]]</a>, <a class="wiki-link" href="layerstack.html">[[LayerStack]]</a>, and <a class="wiki-link" href="occ.html">[[OCC]]</a>.</td></tr>
+    <tr><td>Background lifecycle or isolation gating changes.</td><td><a class="wiki-link" href="#background-lifecycle-detail">[[Background Task Lifecycle]]</a>, <a class="wiki-link" href="#cancellation-heartbeats">[[Cancellation and Heartbeats]]</a>, and <a class="wiki-link" href="#isolated-background-gate">[[Isolated Background Gate]]</a>.</td><td>Background result tools and isolated workspace lifecycle wrappers.</td></tr>
   </tbody>
 </table>
 

@@ -79,17 +79,6 @@ def _terminal_result_from_tool_results(
     return None
 
 
-def _assign_missing_tool_result_ids(
-    tool_results: list[ToolResultBlock],
-    tool_uses: list[ToolUseBlock],
-) -> None:
-    assigned_ids: set[str] = {tr.tool_use_id for tr in tool_results if tr.tool_use_id}
-    unassigned_ids = [tu.id for tu in tool_uses if tu.id not in assigned_ids]
-    for result in tool_results:
-        if not result.tool_use_id and unassigned_ids:
-            result.tool_use_id = unassigned_ids.pop(0)
-
-
 def _reject_tool_batch(
     tool_calls: list[ToolUseBlock],
     message: str,
@@ -156,7 +145,6 @@ async def dispatch_assistant_tools(
             final_message.tool_uses, batch_rejection, strict=True
         ):
             events.append(_completion_event_from_result(tool_call, result))
-        _assign_missing_tool_result_ids(tool_results, final_message.tool_uses)
         return ToolDispatchResult(
             tool_results=tool_results,
             terminal_result=_terminal_result_from_tool_results(tool_results),
@@ -181,7 +169,6 @@ async def dispatch_assistant_tools(
             )
         )
 
-    _assign_missing_tool_result_ids(tool_results, final_message.tool_uses)
     return ToolDispatchResult(
         tool_results=tool_results,
         terminal_result=_terminal_result_from_tool_results(tool_results),

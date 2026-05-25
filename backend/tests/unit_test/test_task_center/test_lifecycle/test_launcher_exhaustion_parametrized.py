@@ -59,7 +59,7 @@ def test_report_exhaustion_unknown_role_raises() -> None:
         )
         with pytest.raises(TaskCenterInvariantViolation):
             launcher_module._report_exhaustion(
-                MagicMock(), MagicMock(), fake_launch, summary="boom"
+                MagicMock(), fake_launch, summary="boom"
             )
     finally:
         launcher_module._require_attempt_orchestrator = orig

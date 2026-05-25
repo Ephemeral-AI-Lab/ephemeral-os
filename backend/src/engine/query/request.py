@@ -79,33 +79,23 @@ def _record_initial_messages_once(
     recorder = recorder_for_agent_run(context.run_id)
     if recorder is None:
         return
-    last_user_prompt = _last_user_prompt_text(messages)
-    if last_user_prompt is None:
+    initial_user_messages = _initial_user_message_prefix(messages)
+    if not initial_user_messages:
         return
-    seeded = _user_messages_before_last(messages)
+    spawn_prompt = _user_message_text(initial_user_messages[-1])
     recorder.record_initial_messages(
         system_prompt=context.system_prompt,
-        user_prompt=last_user_prompt,
+        user_prompt=spawn_prompt,
         agent_name=context.agent_name,
         run_id=context.run_id,
-        seeded_initial_messages=seeded,
+        seeded_initial_messages=initial_user_messages[:-1],
     )
 
 
-def _first_user_prompt_text(messages: list[ConversationMessage]) -> str | None:
-    for message in messages:
-        if message.role != "user":
-            continue
-        parts: list[str] = []
-        for block in message.content:
-            if isinstance(block, TextBlock):
-                parts.append(block.text)
-        return "".join(parts) if parts else ""
-    return None
-
-
-def _last_user_prompt_text(messages: list[ConversationMessage]) -> str | None:
-    """Return the last contiguous user message's text in the prefix.
+def _initial_user_message_prefix(
+    messages: list[ConversationMessage],
+) -> list[ConversationMessage]:
+    """Return contiguous initial user messages before the first assistant turn.
 
     The launcher path is: system + initial_messages[...] + spawn_prompt.
     Every entry is either a user message (text) or a follow-up that arrives
@@ -118,23 +108,10 @@ def _last_user_prompt_text(messages: list[ConversationMessage]) -> str | None:
         if message.role != "user":
             break
         prefix.append(message)
-    if not prefix:
-        return None
-    last = prefix[-1]
-    parts: list[str] = []
-    for block in last.content:
-        if isinstance(block, TextBlock):
-            parts.append(block.text)
-    return "".join(parts) if parts else ""
+    return prefix
 
 
-def _user_messages_before_last(
-    messages: list[ConversationMessage],
-) -> list[ConversationMessage]:
-    """Return every seeded user message except the spawn-prompt one."""
-    prefix: list[ConversationMessage] = []
-    for message in messages:
-        if message.role != "user":
-            break
-        prefix.append(message)
-    return prefix[:-1]
+def _user_message_text(message: ConversationMessage) -> str:
+    return "".join(
+        block.text for block in message.content if isinstance(block, TextBlock)
+    )

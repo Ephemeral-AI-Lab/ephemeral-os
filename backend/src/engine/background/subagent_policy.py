@@ -19,17 +19,13 @@ class SubagentTrackedTask(Protocol):
     asyncio_task: asyncio.Task[Any]
 
 
-def is_subagent_task(tracked: SubagentTrackedTask) -> bool:
-    return tracked.task_type == SUBAGENT_TASK_TYPE
-
-
 def mark_completion_mode_if_stopped(tracked: SubagentTrackedTask) -> None:
     if tracked.stop_mode == EARLY_STOP_MODE:
         tracked.completion_mode = EARLY_STOP_COMPLETION_MODE
 
 
 def should_cancel_asyncio_task(tracked: SubagentTrackedTask) -> bool:
-    return not is_subagent_task(tracked)
+    return tracked.task_type != SUBAGENT_TASK_TYPE
 
 
 async def request_subagent_early_stop(

@@ -81,7 +81,6 @@ class StreamingToolExecutor:
     Features:
     - Tools start executing as soon as tool_use blocks arrive (mid-stream)
     - Progress events stream back for long-running operations
-    - LLM can abort tools via cancel() signal
     - Tools the caller flags via ``should_defer`` (e.g. background
       dispatches) are **deferred**: tracked by id but not executed, so
       the query loop can dispatch them through a different path.
@@ -101,13 +100,7 @@ class StreamingToolExecutor:
         self._context = context
         self._should_defer = should_defer
         self._tools: dict[str, StreamingToolRun] = {}
-        self._aborted: set[str] = set()
         self._events: list[StreamEvent] = []
-
-    @property
-    def context(self) -> ToolExecutionContextService:
-        """Tool execution context used by this executor."""
-        return self._context
 
     def add_tool(self, event: ApiToolUseDeltaEvent) -> None:
         """Add a tool to execute as it arrives mid-stream.
@@ -151,18 +144,6 @@ class StreamingToolExecutor:
         events = list(self._events)
         self._events.clear()
         return events
-
-    def cancel(self, tool_id: str, reason: str) -> None:
-        """Cancel a running tool."""
-        logger.info("STREAM: Cancel requested: tool_id=%s reason=%s", tool_id, reason)
-        self._aborted.add(tool_id)
-        if tool_id in self._tools:
-            self._tools[tool_id].cancelled = True
-            self._tools[tool_id].cancel_reason = reason
-            task = self._tools[tool_id].task
-            if task and not task.done():
-                task.cancel()
-                logger.info("STREAM: Cancel signal sent: tool_id=%s", tool_id)
 
     def get_progress(self) -> list[ToolExecutionProgress]:
         """Get new progress events since last call."""
@@ -230,12 +211,6 @@ class StreamingToolExecutor:
         """Execute a single tool with progress tracking."""
         logger.debug("STREAM: Executing tool: tool_id=%s tool_name=%s", tool.id, tool.name)
         try:
-            if tool.id in self._aborted:
-                logger.info("STREAM: Tool aborted before execution: tool_id=%s", tool.id)
-                tool.state = StreamingToolRunState.COMPLETED
-                tool.cancelled = True
-                return
-
             tool_def = self._tool_registry.get(tool.name)
             if not tool_def:
                 logger.warning("STREAM: Unknown tool: tool_id=%s tool_name=%s", tool.id, tool.name)
