@@ -34,7 +34,8 @@
   <span><a href="index.html">Index</a> / 10. Workflow Cookbook</span>
   <span class="nav-pair"><a href="space-model.html">← 9. Space Model</a><a href="maintenance.html">11. Wiki Maintenance →</a></span>
 </div>
-<h2 id="workflow-cookbook">10. Workflow Cookbook <a class="anchor" href="#workflow-cookbook">§</a></h2>
+<section id="workflow-cookbook" data-last-reviewed-commit="29c334921" data-evidence-paths="backend/src/sandbox/api/tool/_daemon_request_payloads.py backend/src/sandbox/api/transport.py backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/occ/service.py backend/src/sandbox/isolated_workspace/pipeline.py">
+<h2>10. Workflow Cookbook <a class="anchor" href="#workflow-cookbook">§</a></h2>
 
 <div class="summary">
   <ul>
@@ -75,7 +76,9 @@
   </tbody>
 </table>
 
-<h3 id="cookbook-layerstack-read">10.1 Direct LayerStack Read <a class="anchor" href="#cookbook-layerstack-read">§</a></h3>
+</section>
+<section id="cookbook-layerstack-read" data-last-reviewed-commit="29c334921" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/layer_stack/view.py">
+<h3>10.1 Direct LayerStack Read <a class="anchor" href="#cookbook-layerstack-read">§</a></h3>
 <div class="sequence" aria-label="Direct LayerStack read workflow">
   <ol>
     <li><span>The daemon router receives a single-path <code>read_file</code> request and confirms no isolated handle is active for the caller.</span></li>
@@ -88,7 +91,9 @@
 
 <p>Relevant code: router fast path <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:94-110</span>, path binding <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:208-224</span>, direct resource metrics <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:232-260</span>, and merged-view reads <span class="file-ref">backend/src/sandbox/layer_stack/view.py:60-114</span>.</p>
 
-<h3 id="cookbook-ephemeral-shell">10.2 Ephemeral Shell or Search Operation <a class="anchor" href="#cookbook-ephemeral-shell">§</a></h3>
+</section>
+<section id="cookbook-ephemeral-shell" data-last-reviewed-commit="29c334921" data-evidence-paths="backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/overlay/namespace_entrypoint.py backend/src/sandbox/ephemeral_workspace/workspace_publish.py">
+<h3>10.2 Ephemeral Shell or Search Operation <a class="anchor" href="#cookbook-ephemeral-shell">§</a></h3>
 <div class="sequence" aria-label="Ephemeral shell operation workflow">
   <ol>
     <li><span>The router selects the ephemeral pipeline because the caller has no open isolated handle.</span></li>
@@ -103,7 +108,9 @@
 
 <p>Relevant code: pipeline run loop <span class="file-ref">backend/src/sandbox/ephemeral_workspace/pipeline.py:131-179</span>, shell pre-mount maintenance <span class="file-ref">backend/src/sandbox/ephemeral_workspace/pipeline.py:219-250</span>, namespace entrypoint <span class="file-ref">backend/src/sandbox/overlay/namespace_entrypoint.py:85-175</span>, and publish helper <span class="file-ref">backend/src/sandbox/ephemeral_workspace/workspace_publish.py:157-217</span>.</p>
 
-<h3 id="cookbook-occ-publish">10.3 OCC Publish from API Write/Edit <a class="anchor" href="#cookbook-occ-publish">§</a></h3>
+</section>
+<section id="cookbook-occ-publish" data-last-reviewed-commit="29c334921" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/occ/changeset_preparation.py backend/src/sandbox/occ/commit_queue.py backend/src/sandbox/occ/commit_transaction.py backend/src/sandbox/daemon/changeset_projection.py">
+<h3>10.3 OCC Publish from API Write/Edit <a class="anchor" href="#cookbook-occ-publish">§</a></h3>
 <div class="sequence" aria-label="API write/edit OCC workflow">
   <ol>
     <li><span>The router converts <code>write_file</code> or <code>edit_file</code> arguments into typed OCC changes.</span></li>
@@ -117,7 +124,9 @@
 
 <p>Relevant code: direct write/edit router <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:113-179</span>, preparer <span class="file-ref">backend/src/sandbox/occ/changeset_preparation.py:41-174</span>, commit queue <span class="file-ref">backend/src/sandbox/occ/commit_queue.py:55-239</span>, transaction <span class="file-ref">backend/src/sandbox/occ/commit_transaction.py:65-141</span>, and result projection <span class="file-ref">backend/src/sandbox/daemon/changeset_projection.py:16-60</span>.</p>
 
-<h3 id="cookbook-isolated">10.4 Isolated Workspace Tool Lifecycle <a class="anchor" href="#cookbook-isolated">§</a></h3>
+</section>
+<section id="cookbook-isolated" data-last-reviewed-commit="29c334921" data-evidence-paths="backend/src/tools/sandbox/_lib/registry.py backend/src/tools/isolated_workspace/enter_isolated_workspace/definition.py backend/src/tools/isolated_workspace/exit_isolated_workspace/definition.py backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py backend/src/sandbox/isolated_workspace/pipeline.py backend/src/sandbox/isolated_workspace/scripts/setns_overlay_mount.py backend/src/sandbox/isolated_workspace/_control_plane/linux_runtime.py">
+<h3>10.4 Isolated Workspace Tool Lifecycle <a class="anchor" href="#cookbook-isolated">§</a></h3>
 <div class="sequence" aria-label="Isolated workspace lifecycle workflow">
   <ol>
     <li><span>The public tools are normal sandbox tools: <code>make_sandbox_tools()</code> includes <code>enter_isolated_workspace</code> and <code>exit_isolated_workspace</code>, and each definition calls the host lifecycle with caller identity, background manager, layer-stack root, and sandbox id.</span></li>
@@ -133,7 +142,9 @@
 
 <p>Relevant code: tools registry <span class="file-ref">backend/src/tools/sandbox/_lib/registry.py:17-31</span>, enter tool <span class="file-ref">backend/src/tools/isolated_workspace/enter_isolated_workspace/definition.py:24-47</span>, exit tool <span class="file-ref">backend/src/tools/isolated_workspace/exit_isolated_workspace/definition.py:24-46</span>, host enter/exit gates <span class="file-ref">backend/src/sandbox/host/isolated_workspace_lifecycle.py:41-77</span>, <span class="file-ref">backend/src/sandbox/host/isolated_workspace_lifecycle.py:98-136</span>, daemon in-flight check <span class="file-ref">backend/src/sandbox/host/isolated_workspace_lifecycle.py:267-275</span>, daemon RPC registration <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:255-353</span>, lazy pipeline construction <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py:73-113</span>, handle lifecycle <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:21-260</span>, isolated run/no-publish path <span class="file-ref">backend/src/sandbox/isolated_workspace/pipeline.py:156-188</span>, <span class="file-ref">backend/src/sandbox/isolated_workspace/pipeline.py:280-329</span>, setns overlay helper <span class="file-ref">backend/src/sandbox/isolated_workspace/scripts/setns_overlay_mount.py:55-85</span>, and runtime helper invocation <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/linux_runtime.py:121-159</span>.</p>
 
-<h3 id="cookbook-plugin-write">10.5 Plugin Write Operation <a class="anchor" href="#cookbook-plugin-write">§</a></h3>
+</section>
+<section id="cookbook-plugin-write" data-last-reviewed-commit="29c334921" data-evidence-paths="backend/src/sandbox/ephemeral_workspace/plugin/host_dispatch.py backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py backend/src/sandbox/ephemeral_workspace/workspace_publish.py">
+<h3>10.5 Plugin Write Operation <a class="anchor" href="#cookbook-plugin-write">§</a></h3>
 <div class="sequence" aria-label="Plugin write operation workflow">
   <ol>
     <li><span>Host dispatch resolves plugin manifest, installs/refreshes the bundle, and ensures daemon runtime for the plugin digest.</span></li>
@@ -146,7 +157,9 @@
 
 <p>Relevant code: host dispatch <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/host_dispatch.py:70-186</span>, plugin registry <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py:85-220</span>, operation overlay dispatch <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py:29-173</span>, and workspace publish cycle <span class="file-ref">backend/src/sandbox/ephemeral_workspace/workspace_publish.py:84-99</span>.</p>
 
-<h3 id="cookbook-pyright-refresh">10.6 Pyright Latest-Projection Refresh <a class="anchor" href="#cookbook-pyright-refresh">§</a></h3>
+</section>
+<section id="cookbook-pyright-refresh" data-last-reviewed-commit="29c334921" data-evidence-paths="backend/src/plugins/catalog/lsp/runtime/session_manager.py backend/src/plugins/catalog/lsp/runtime/pyright_session.py backend/src/plugins/catalog/lsp/runtime/apply.py">
+<h3>10.6 Pyright Latest-Projection Refresh <a class="anchor" href="#cookbook-pyright-refresh">§</a></h3>
 <div class="sequence" aria-label="Pyright latest projection refresh workflow">
   <ol>
     <li><span>A read-only LSP tool asks the session manager for the current session.</span></li>
@@ -159,7 +172,9 @@
 </div>
 
 <p>Relevant code: session reconciliation <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/session_manager.py:34-98</span>, overlay acquisition <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/session_manager.py:176-221</span>, event pump <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/session_manager.py:294-360</span>, Pyright remount/notification <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/pyright_session.py:374-415</span>, <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/pyright_session.py:583-650</span>, and LSP apply path <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/apply.py:21-148</span>.</p>
-<h3 id="cookbook-evidence-refresh">10.7 Cross-workflow Evidence and Refresh <a class="anchor" href="#cookbook-evidence-refresh">§</a></h3>
+</section>
+<section id="cookbook-evidence-refresh" data-last-reviewed-commit="29c334921" data-evidence-paths="backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ backend/src/task_center_runner/tests/mock/sandbox/ephemeral_workspace backend/src/task_center_runner/tests/mock/sandbox/background_tool backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace backend/src/task_center_runner/tests/mock/sandbox/plugin backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/conftest.py">
+<h3>10.7 Cross-workflow Evidence and Refresh <a class="anchor" href="#cookbook-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h4>Behavior suites</h4>
@@ -188,6 +203,7 @@
 <div class="maintenance-note">
   Backlinks: each trace should have one owner page and at least one storage/workspace page. If a new workflow appears, add it here, add a search-index entry, and add backlinks from the owner node.
 </div>
+</section>
 <div class="page-footer-nav"><span><a href="space-model.html">← 9. Space Model</a></span><span><a href="maintenance.html">11. Wiki Maintenance →</a></span></div>
 </main>
 <script src="assets/search-index.js"></script>

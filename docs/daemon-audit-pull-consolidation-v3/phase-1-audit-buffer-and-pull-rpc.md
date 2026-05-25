@@ -190,6 +190,67 @@ The pull/heartbeat/ring path is intentionally cheap. Budgets (verified by Phase 
      - `snapshot.daemon.boot_epoch_id` is stable across both pulls
 - Test name: `test_phase_1_causal_chain_smoke`.
 
+## Status (2026-05-26)
+
+**Status: IMPLEMENTED.**
+
+### Delivered
+- `backend/src/sandbox/daemon/audit_buffer.py` — bounded ring with monotonic
+  `seq`, `boot_epoch_id`, three lanes, lane-priority eviction, pressure
+  formula = `max(retained_bytes/max_bytes, retained_events/max_events)`,
+  per-lane drop counters, `lost_before_seq`, edge-triggered
+  `daemon.audit_buffer_pressure` emit (default threshold 0.8).
+  `SCHEMA_VERSION = "sandbox.daemon.audit.pull.v1"` constant lives here.
+  Singleton accessor `get_audit_buffer()` plus
+  `reset_audit_buffer_for_tests()`.
+- `backend/src/sandbox/daemon/audit_schema.py` — minimal `DaemonSection` +
+  `OsResourceSection` dataclasses for typed emitter construction. Full event
+  catalog and lane assignments are documented inline at the top of
+  `audit_buffer.py` (single source of truth). Additional section dataclasses
+  land additively as their Phase 2 emitters arrive.
+- `backend/src/sandbox/daemon/rpc/dispatcher.py` — registered
+  `api.audit.pull`, `api.audit.snapshot`, `api.audit.reset_floor` via
+  `register_op`; `reset_floor` gated by
+  `EOS_DAEMON_AUDIT_ALLOW_FLOOR_RESET=true`. `daemon.started` smoke event
+  emitted on registration.
+- `backend/src/sandbox/api/daemon_audit.py` — `audit_pull` / `audit_snapshot`
+  / `audit_reset_floor` async wrappers.
+- `backend/src/sandbox/api/transport.py` — `DAEMON_OP_AUDIT_PULL`,
+  `DAEMON_OP_AUDIT_SNAPSHOT`, `DAEMON_OP_AUDIT_RESET_FLOOR` constants.
+- `backend/src/sandbox/api/__init__.py` — re-exports the three wrappers.
+- Tests: `backend/tests/unit_test/test_sandbox/test_daemon/test_audit_buffer.py`
+  covers all eight required tests plus pressure-emitter edge-trigger and
+  dispatcher-registration smoke. `test_phase_1_causal_chain_smoke` exercises
+  the full 11-event causal chain with a 100k-event sample-lane flood between
+  publish and finished and asserts critical-event survival, monotonic seq,
+  shared `operation_id`, and stable `boot_epoch_id` across pulls.
+- Routing invariants test
+  (`test_daemon_op_table_routes_to_current_handler_layout`) updated to
+  include the three new audit ops.
+
+### Deferred (not in Phase 1)
+- **`os_resource.sampled` smoke emitter.** Plan §5 says wire it to "the
+  existing sampler tick" — no such periodic sampler exists in the daemon
+  today. Phase 1 must not introduce new threads/timers (contract: revertable
+  by deleting two new files + one dispatcher block). Deferred to Phase 2,
+  which is already scheduled to instrument `os_resource` alongside other
+  emitters and runners. `OsResourceSection` is pre-defined in
+  `audit_schema.py` so Phase 2 only adds the call site.
+- **`api.audit.reset_floor` floor-state mutation.** The floor lives on the
+  runner-side puller (Phase 2). Phase 1 handler is a gated stub that returns
+  `success: true` when the env var is set; mutating actual floor state is a
+  Phase 2 deliverable. Matches the spec test
+  `test_audit_reset_floor_op_gated_by_env`, which only checks gating.
+
+### Verification
+- `.venv/bin/pytest backend/tests/unit_test/test_sandbox/test_daemon/`:
+  120 passed.
+- `.venv/bin/ruff check` clean on all touched files.
+- New surface is purely additive: deleting `audit_buffer.py`,
+  `audit_schema.py`, `daemon_audit.py`, the three transport constants, the
+  three dispatcher op entries, and the boot-time `daemon.started` emit
+  reverts Phase 1 cleanly. No pre-existing code paths changed semantics.
+
 ## What this phase does NOT do
 
 - Does NOT instrument any production code path beyond the smoke emitters. Real emitters (layer_stack, overlay, occ, isolated_workspace, plugin, background_tool, tool_call.phase) land in [Phase 2](phase-2-emitters-and-puller.md).

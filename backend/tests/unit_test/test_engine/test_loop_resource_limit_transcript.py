@@ -1,4 +1,4 @@
-"""Coverage for the RESOURCE_LIMIT transcript pairing in `_handle_tool_dispatch_branch`.
+"""Coverage for the RESOURCE_LIMIT transcript pairing in `_dispatch_final_message_tools`.
 
 The hard-cap exit (``overshoot_units > tolerance``) must leave a
 well-formed transcript: the partial tool_result blocks for the cut-off
@@ -17,7 +17,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from engine.query.context import QueryContext, QueryExitReason
-from engine.query.loop import _handle_tool_dispatch_branch
+from engine.query.loop import _dispatch_final_message_tools
 from engine.query.request import build_query_run_request
 from engine.tool_call.dispatch import AssistantToolDispatchOutcome
 from message.messages import (
@@ -93,7 +93,7 @@ async def test_resource_limit_exit_appends_tool_results_to_transcript(
     executor = MagicMock()
     notification_service = SystemNotificationService()
 
-    branch = _handle_tool_dispatch_branch(
+    branch = _dispatch_final_message_tools(
         context,
         messages,
         executor,

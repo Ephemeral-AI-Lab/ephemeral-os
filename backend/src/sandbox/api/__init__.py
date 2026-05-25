@@ -64,6 +64,7 @@ from sandbox.api.tool.shell import shell
 from sandbox.api.tool.write import write_file
 from sandbox.api.raw_exec import raw_exec
 from sandbox.api.daemon_invocations import cancel, heartbeat, inflight_count
+from sandbox.api.daemon_audit import audit_pull, audit_reset_floor, audit_snapshot
 
 __all__ = [
     "ConflictInfo",
@@ -94,6 +95,9 @@ __all__ = [
     "ToolCallResult",
     "WriteFileRequest",
     "WriteFileResult",
+    "audit_pull",
+    "audit_reset_floor",
+    "audit_snapshot",
     "configured_sandbox_defaults",
     "context_preparer_for",
     "cancel",

@@ -34,7 +34,10 @@
   <span><a href="index.html">Index</a> / 9. Space Model</span>
   <span class="nav-pair"><a href="plugins.html">← 8. Plugin in ephemeral_workspace</a><a href="workflow-cookbook.html">10. Workflow Cookbook →</a></span>
 </div>
-<h2 id="space-model">9. Space Model <a class="anchor" href="#space-model">§</a></h2>
+<section id="space-model"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/overlay/writable_dirs.py backend/src/sandbox/overlay/capture.py backend/src/sandbox/occ/commit_transaction.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py">
+<h2>9. Space Model <a class="anchor" href="#space-model">§</a></h2>
 <div class="summary">
   <ul>
     <li>The design avoids copying a large repository for every tool call or background job.</li>
@@ -52,7 +55,11 @@
   <a href="workspaces.html">Workspace Modes</a>
 </div>
 
-<h3 id="space-cost-model">9.1 Cost Model <a class="anchor" href="#space-cost-model">§</a></h3>
+</section>
+<section id="space-cost-model"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/overlay/writable_dirs.py backend/src/sandbox/overlay/capture.py backend/src/sandbox/occ/commit_transaction.py">
+<h3>9.1 Cost Model <a class="anchor" href="#space-cost-model">§</a></h3>
 <div class="diagram" aria-label="Space scaling model">
   <div class="flow-row">
     <div class="node good"><strong>Shared lowerdirs</strong><small>one LayerStack layer set</small></div>
@@ -77,7 +84,11 @@
   <div><b>private side</b><span>Isolated workspace keeps its upper/work dirs across calls, then reports discarded bytes and removes scratch on exit.</span></div>
 </div>
 
-<h3 id="space-by-mode">9.2 Mode Cost Table <a class="anchor" href="#space-by-mode">§</a></h3>
+</section>
+<section id="space-by-mode"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/isolated_workspace/pipeline.py backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py backend/src/plugins/catalog/lsp/runtime/pyright_session.py backend/src/plugins/catalog/lsp/runtime/apply.py">
+<h3>9.2 Mode Cost Table <a class="anchor" href="#space-by-mode">§</a></h3>
 <table>
   <thead><tr><th>Mode</th><th>Lower side</th><th>Writable side</th><th>Publish behavior</th></tr></thead>
   <tbody>
@@ -89,7 +100,11 @@
   </tbody>
 </table>
 
-<h3 id="space-myths">9.3 Non-goals and Myths <a class="anchor" href="#space-myths">§</a></h3>
+</section>
+<section id="space-myths"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/overlay/writable_dirs.py backend/src/sandbox/overlay/capture.py backend/src/sandbox/occ/service.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py">
+<h3>9.3 Non-goals and Myths <a class="anchor" href="#space-myths">§</a></h3>
 <table>
   <thead><tr><th>Claim</th><th>Correct reading</th><th>Where to verify</th></tr></thead>
   <tbody>
@@ -103,7 +118,11 @@
 <div class="maintenance-note">
   Backlinks: update this page when <a class="wiki-link" href="layerstack.html#layerstack-projection">Projection</a>, <a class="wiki-link" href="overlay.html#overlay-capture">Upperdir Capture</a>, or <a class="wiki-link" href="workspaces.html#isolated-lifecycle-detail">Enter, Run, Exit Details</a> changes storage lifetime.
 </div>
-<h3 id="space-evidence-refresh">9.4 Evidence and Refresh <a class="anchor" href="#space-evidence-refresh">§</a></h3>
+</section>
+<section id="space-evidence-refresh"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/overlay/writable_dirs.py backend/src/sandbox/overlay/capture.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py backend/src/task_center_runner/tests/mock/sandbox/ephemeral_workspace/test_ephemeral_lowerdir_disk_is_o1_under_100_calls.py backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace/gc_and_persistence/test_lowerdir_disk_usage_is_o1.py backend/tests/live_e2e_test/sandbox/overlay/native/test_o1_memory_bound.py backend/tests/live_e2e_test/sandbox/overlay/syscall/test_heavy_write_copy_up.py">
+<h3>9.4 Evidence and Refresh <a class="anchor" href="#space-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h4>Code anchors</h4>
@@ -128,6 +147,7 @@
     <p>Any materialized-tree default, new promotion path for isolated work, manifest-depth guard change, or writable-root policy change should update this page and the related owner page.</p>
   </div>
 </div>
+</section>
 <div class="page-footer-nav"><span><a href="plugins.html">← 8. Plugin in ephemeral_workspace</a></span><span><a href="workflow-cookbook.html">10. Workflow Cookbook →</a></span></div>
 </main>
 <script src="assets/search-index.js"></script>

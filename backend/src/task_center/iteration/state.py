@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
-from typing import Literal
+from typing import Any, Literal
 
 from task_center.attempt.state import AttemptFailReason
 
@@ -65,13 +65,15 @@ class Iteration:
 
 @dataclass(frozen=True, slots=True)
 class PriorAttemptEntry:
-    """One past attempt's structural state for failed-plan reports."""
+    """One past attempt's structural state. Phase 06 fills the summary fields."""
 
     attempt_id: str
     attempt_sequence_no: int
     plan_spec: str | None
     evaluation_criteria: tuple[str, ...]
     fail_reason: AttemptFailReason | None
+    attempt_summary_id: str | None = None
+    failure_landscape: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)

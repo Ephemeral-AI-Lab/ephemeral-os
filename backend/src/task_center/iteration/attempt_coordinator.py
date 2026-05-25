@@ -331,6 +331,8 @@ class IterationAttemptCoordinator:
                 plan_spec=g.plan_spec,
                 evaluation_criteria=g.evaluation_criteria,
                 fail_reason=g.fail_reason,
+                attempt_summary_id=None,
+                failure_landscape=None,
             )
             for g in attempts
         )

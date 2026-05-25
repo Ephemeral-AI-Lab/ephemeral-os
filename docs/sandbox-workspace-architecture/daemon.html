@@ -48,7 +48,10 @@
   <span><a href="index.html">Index</a> / 6. Daemon and Background Tasks</span>
   <span class="nav-pair"><a href="workspaces.html">← 5. Workspace Modes</a><a href="provider.html">7. Provider →</a></span>
 </div>
-<h2 id="daemon">6. Daemon and Background Tasks <a class="anchor" href="#daemon">§</a></h2>
+<section id="daemon"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/sandbox/daemon backend/src/sandbox/host/daemon_client.py backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/engine/background">
+<h2>6. Daemon and Background Tasks <a class="anchor" href="#daemon">§</a></h2>
 <div class="summary">
   <ul>
     <li>The daemon is the resident in-sandbox control plane: it owns RPC dispatch, cached LayerStack/OCC services, workspace routing, in-flight invocation tracking, and isolated-workspace lifecycle calls.</li>
@@ -83,7 +86,11 @@
   </div>
 </nav>
 
-<h3 id="daemon-control-plane">6.1 Control Plane Shape <a class="anchor" href="#daemon-control-plane">§</a></h3>
+</section>
+<section id="daemon-control-plane"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/sandbox/daemon/paths.py backend/src/sandbox/daemon/rpc/server.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/daemon/rpc/in_flight.py backend/src/sandbox/daemon/layer_stack_runtime.py backend/src/sandbox/daemon/occ_runtime_services.py backend/src/sandbox/daemon/workspace_tool_dispatch.py">
+<h3>6.1 Control Plane Shape <a class="anchor" href="#daemon-control-plane">§</a></h3>
 
 <p>The daemon is not the storage layer and it is not a provider adapter. It is the warm process inside the sandbox that receives one JSON envelope at a time, reuses expensive runtime state, and routes each operation to the right workspace implementation. Host-side code keeps the provider boundary in <a href="provider.html">Provider</a>; daemon-side code keeps workspace truth in <a href="layerstack.html">LayerStack</a> and <a href="occ.html">OCC</a>.</p>
 
@@ -123,7 +130,11 @@
   <div>Related page</div><div><a href="workflow-cookbook.html">Workflow Cookbook</a> gives end-to-end traces once the pieces here are familiar.</div>
 </div>
 
-<h3 id="startup-transport">6.2 Startup and Transport Workflow <a class="anchor" href="#startup-transport">§</a></h3>
+</section>
+<section id="startup-transport"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/sandbox/host/daemon_client.py backend/src/sandbox/daemon/rpc/server.py backend/src/sandbox/daemon/scripts/thin_client.py backend/src/sandbox/daemon/scripts/launch_daemon.sh backend/src/sandbox/daemon/builtin_operations.py">
+<h3>6.2 Startup and Transport Workflow <a class="anchor" href="#startup-transport">§</a></h3>
 
 <p>The host has two ways to reach the same daemon contract. Docker can expose a cached TCP endpoint; providers that cannot publish a port use <code>provider.exec</code> to run the bundled thin client inside the sandbox. Both paths send the same JSON envelope and receive the same JSON response.</p>
 
@@ -147,7 +158,11 @@
   </tbody>
 </table>
 
-<h3 id="request-lifecycle">6.3 Request Lifecycle <a class="anchor" href="#request-lifecycle">§</a></h3>
+</section>
+<section id="request-lifecycle"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/sandbox/api/tool/_daemon_request_payloads.py backend/src/sandbox/api/transport.py backend/src/sandbox/api/tool backend/src/sandbox/host/daemon_client.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/tests/unit_test/test_sandbox/test_api/test_payload_helpers.py">
+<h3>6.3 Request Lifecycle <a class="anchor" href="#request-lifecycle">§</a></h3>
 
 <p>A daemon request has two identities. The host transport always puts a wire-level <code>invocation_id</code> on the envelope; public sandbox requests also carry caller fields so daemon-side code can recover <code>agent_id</code> for routing, background counts, plugin gating, and audit correlation <span class="file-ref">backend/src/sandbox/api/tool/_daemon_request_payloads.py:8-14</span>, <span class="file-ref">backend/src/sandbox/api/transport.py:24-40</span>.</p>
 
@@ -190,7 +205,11 @@
   The daemon may reuse caches, but it must not hide publish semantics. Direct file fast paths still go through OCC; shell and search operations still run through the workspace pipeline; isolated writes remain private scratch until explicit exit.
 </div>
 
-<h3 id="operation-surface">6.4 Operation Surface <a class="anchor" href="#operation-surface">§</a></h3>
+</section>
+<section id="operation-surface"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/daemon/builtin_operations.py">
+<h3>6.4 Operation Surface <a class="anchor" href="#operation-surface">§</a></h3>
 
 <p>The operation table is registered at import time. Duplicate registration of the same handler is a no-op, while a different handler for an existing op raises immediately, so runtime extension remains explicit instead of silently overriding commands <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:37-53</span>. Built-in registrations cover isolated workspace lifecycle, LayerStack base/snapshot/lease control, file/search/shell tools, plugin ensure/status, and in-flight cancellation/heartbeat/count operations <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:344-373</span>.</p>
 
@@ -206,7 +225,11 @@
   </tbody>
 </table>
 
-<h3 id="workspace-routing-and-state">6.5 Workspace Routing and State <a class="anchor" href="#workspace-routing-and-state">§</a></h3>
+</section>
+<section id="workspace-routing-and-state"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/daemon/layer_stack_runtime.py backend/src/sandbox/daemon/occ_runtime_services.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/isolated_workspace/pipeline.py">
+<h3>6.5 Workspace Routing and State <a class="anchor" href="#workspace-routing-and-state">§</a></h3>
 
 <p>The key daemon router is <code>dispatch_workspace_tool_call()</code>. It creates a <code>ToolCallRequest</code> with invocation id, agent id, verb, intent, args, and background flag. If the agent has an open isolated handle, the call runs inside <a href="workspaces.html#isolated-workspace">isolated_workspace</a>. Otherwise single-file <code>read_file</code>, <code>write_file</code>, and <code>edit_file</code> use direct LayerStack/OCC fast paths when the path can bind cleanly. Everything else goes through the <a href="workspaces.html#ephemeral-workspace">ephemeral_workspace</a> overlay pipeline <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:30-75</span>.</p>
 
@@ -267,7 +290,11 @@
   <code>read_file</code>, <code>write_file</code>, and <code>edit_file</code> are the only daemon tool verbs eligible for the direct LayerStack/OCC fast path. A path-binding failure does not fail the request; it falls back to the same overlay pipeline as shell/search so behavior stays correct for nonstandard paths <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:78-91</span>, <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:208-224</span>.
 </div>
 
-<h3 id="workflow-traces">6.6 Workflow Traces <a class="anchor" href="#workflow-traces">§</a></h3>
+</section>
+<section id="workflow-traces"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/isolated_workspace/pipeline.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py">
+<h3>6.6 Workflow Traces <a class="anchor" href="#workflow-traces">§</a></h3>
 
 <p>These traces are intentionally redundant with the component sections. They answer the practical question: "what state changes after this call?" Use them as entry points, then follow the inline links to the deeper sections.</p>
 
@@ -326,7 +353,11 @@
   </tbody>
 </table>
 
-<h3 id="background-lifecycle-detail">6.7 Background Task Lifecycle <a class="anchor" href="#background-lifecycle-detail">§</a></h3>
+</section>
+<section id="background-lifecycle-detail"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/engine/background/task_supervisor.py backend/src/engine/background/dispatch.py backend/src/tools/sandbox/shell/shell.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/tools/background">
+<h3>6.7 Background Task Lifecycle <a class="anchor" href="#background-lifecycle-detail">§</a></h3>
 
 <p>Background execution is split across two control planes. The engine owns user-visible task aliases, result delivery, progress snapshots, and task status. The daemon owns the sandbox invocation that may still be running inside the sandbox. The bridge between them is the sandbox invocation id passed in execution metadata and then into the daemon envelope.</p>
 
@@ -362,7 +393,11 @@
   </tbody>
 </table>
 
-<h3 id="cancellation-heartbeats">6.8 Cancellation and Heartbeats <a class="anchor" href="#cancellation-heartbeats">§</a></h3>
+</section>
+<section id="cancellation-heartbeats"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/engine/background/task_supervisor.py backend/src/sandbox/daemon/builtin_operations.py backend/src/sandbox/api/daemon_invocations.py backend/src/sandbox/daemon/rpc/in_flight.py">
+<h3>6.8 Cancellation and Heartbeats <a class="anchor" href="#cancellation-heartbeats">§</a></h3>
 
 <p>Cancellation is intentionally two-stage for sandbox-bound background tasks. The supervisor first asks the daemon to cancel the sandbox invocation, then it updates the local task state and cancels the host asyncio task when the task type permits it <span class="file-ref">backend/src/engine/background/task_supervisor.py:317-339</span>, <span class="file-ref">backend/src/engine/background/task_supervisor.py:432-449</span>. The daemon control handler cancels the registered task and waits briefly for cleanup, reporting whether the task was found and whether cleanup completed <span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:94-110</span>.</p>
 
@@ -377,7 +412,11 @@
 
 <p>The registry only counts entries that are both background and not done for an agent <span class="file-ref">backend/src/sandbox/daemon/rpc/in_flight.py:98-109</span>. That count is the daemon-side half of the isolated-workspace gate described in <a href="#isolated-background-gate">Isolated Background Gate</a>.</p>
 
-<h3 id="isolated-background-gate">6.9 Isolated Background Gate <a class="anchor" href="#isolated-background-gate">§</a></h3>
+</section>
+<section id="isolated-background-gate"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/api/daemon_invocations.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py backend/src/sandbox/isolated_workspace/_control_plane/linux_runtime.py backend/src/sandbox/isolated_workspace/network.py">
+<h3>6.9 Isolated Background Gate <a class="anchor" href="#isolated-background-gate">§</a></h3>
 
 <div class="callout warn">
   <span class="label">Isolated vs ephemeral background behavior</span>
@@ -419,7 +458,11 @@
   </tbody>
 </table>
 
-<h3 id="diagnostics-failure-modes">6.10 Diagnostics and Failure Modes <a class="anchor" href="#diagnostics-failure-modes">§</a></h3>
+</section>
+<section id="diagnostics-failure-modes"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/sandbox/host/daemon_client.py backend/src/sandbox/daemon/rpc/server.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/daemon/scripts/launch_daemon.sh backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/isolated_workspace/network.py">
+<h3>6.10 Diagnostics and Failure Modes <a class="anchor" href="#diagnostics-failure-modes">§</a></h3>
 
 <p>Most daemon failures should be diagnosed by locating the layer where the request stopped: host transport, daemon server, dispatcher, workspace router, or background manager. The page-local map below is meant to make that lookup explicit instead of forcing rediscovery.</p>
 
@@ -436,7 +479,11 @@
   </tbody>
 </table>
 
-<h3 id="daemon-evidence-refresh">6.11 Evidence and Refresh <a class="anchor" href="#daemon-evidence-refresh">§</a></h3>
+</section>
+<section id="daemon-evidence-refresh"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/sandbox/api/tool backend/src/sandbox/host/daemon_client.py backend/src/sandbox/daemon backend/tests/unit_test/test_sandbox backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ">
+<h3>6.11 Evidence and Refresh <a class="anchor" href="#daemon-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h4>Source files</h4>
@@ -471,7 +518,11 @@
   </div>
 </div>
 
-<h3 id="maintenance-notes">6.12 Maintenance Notes <a class="anchor" href="#maintenance-notes">§</a></h3>
+</section>
+<section id="maintenance-notes"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="docs/sandbox-workspace-architecture/maintenance.html backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/engine/background backend/src/sandbox/host/isolated_workspace_lifecycle.py">
+<h3>6.12 Maintenance Notes <a class="anchor" href="#maintenance-notes">§</a></h3>
 
 <p>When this page goes stale, update the smallest relevant section, keep related links live, and preserve the distinction between code evidence and explanatory summary.</p>
 
@@ -490,6 +541,7 @@
   <span class="label">Backlinks</span>
   <a class="wiki-link" href="overview.html">Overview</a> frames why many agents share one durable workspace. <a class="wiki-link" href="layerstack.html">LayerStack</a> owns immutable snapshots. <a class="wiki-link" href="occ.html">OCC</a> owns conflict-safe publication. <a class="wiki-link" href="workspaces.html">Workspace Modes</a> explains direct, ephemeral, and isolated behavior. <a class="wiki-link" href="provider.html">Provider</a> owns the container boundary and daemon TCP endpoint.
 </div>
+</section>
 <div class="page-footer-nav"><span><a href="workspaces.html">← 5. Workspace Modes</a></span><span><a href="provider.html">7. Provider →</a></span></div>
 </main>
 <script src="assets/search-index.js"></script>

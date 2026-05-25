@@ -341,8 +341,38 @@ async def _isolated_workspace_test_reset(args: dict[str, Any]) -> dict[str, Any]
     return {"success": True, **result}
 
 
+def _audit_pull_handler(args: dict[str, Any]) -> dict[str, Any]:
+    from sandbox.daemon.audit_buffer import get_audit_buffer
+
+    after_seq = int(args.get("after_seq", -1))
+    limit = int(args.get("limit", 1000))
+    result = get_audit_buffer().pull(after_seq=after_seq, limit=limit)
+    result["success"] = True
+    return result
+
+
+def _audit_snapshot_handler(args: dict[str, Any]) -> dict[str, Any]:
+    from sandbox.daemon.audit_buffer import get_audit_buffer
+
+    result = get_audit_buffer().snapshot()
+    result["success"] = True
+    return result
+
+
+def _audit_reset_floor_handler(args: dict[str, Any]) -> dict[str, Any]:
+    if os.environ.get("EOS_DAEMON_AUDIT_ALLOW_FLOOR_RESET", "").strip().lower() != "true":
+        return _error(
+            "forbidden",
+            "api.audit.reset_floor requires EOS_DAEMON_AUDIT_ALLOW_FLOOR_RESET=true",
+            {"op": "api.audit.reset_floor"},
+        )
+    return {"success": True, "warnings": [], "timings": {}}
+
+
 def _register_builtin_operations() -> None:
     from sandbox.daemon import builtin_operations
+    from sandbox.daemon.audit_buffer import get_audit_buffer
+    from sandbox.daemon.audit_schema import DaemonSection, build_daemon_event
     from sandbox.ephemeral_workspace.plugin import runtime_api
 
     builtin_ops: dict[str, Handler] = {
@@ -365,9 +395,21 @@ def _register_builtin_operations() -> None:
         "api.v1.heartbeat": builtin_operations.heartbeat,
         "api.v1.inflight_count": builtin_operations.inflight_count,
         "api.workspace_binding": builtin_operations.workspace_binding,
+        "api.audit.pull": _audit_pull_handler,
+        "api.audit.snapshot": _audit_snapshot_handler,
+        "api.audit.reset_floor": _audit_reset_floor_handler,
     }
     for op, handler in builtin_ops.items():
         register_op(op, handler)
+
+    buffer = get_audit_buffer()
+    buffer.append(
+        build_daemon_event(
+            "daemon.started",
+            DaemonSection(boot_epoch_id=buffer.boot_epoch_id, pid=os.getpid()),
+        ),
+        lane="critical",
+    )
 
 
 _register_builtin_operations()

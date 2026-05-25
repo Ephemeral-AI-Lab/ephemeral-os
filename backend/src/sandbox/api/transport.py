@@ -19,6 +19,9 @@ DAEMON_OP_INVOCATION_HEARTBEAT = "api.v1.heartbeat"
 DAEMON_OP_INFLIGHT_COUNT = "api.v1.inflight_count"
 DAEMON_OP_GLOB = "api.v1.glob"
 DAEMON_OP_GREP = "api.v1.grep"
+DAEMON_OP_AUDIT_PULL = "api.audit.pull"
+DAEMON_OP_AUDIT_SNAPSHOT = "api.audit.snapshot"
+DAEMON_OP_AUDIT_RESET_FLOOR = "api.audit.reset_floor"
 
 
 class SandboxTransport(Protocol):
@@ -78,6 +81,9 @@ async def call_sandbox_daemon(
 
 
 __all__ = [
+    "DAEMON_OP_AUDIT_PULL",
+    "DAEMON_OP_AUDIT_RESET_FLOOR",
+    "DAEMON_OP_AUDIT_SNAPSHOT",
     "DAEMON_OP_EDIT_FILE",
     "DAEMON_OP_GLOB",
     "DAEMON_OP_GREP",

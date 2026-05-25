@@ -44,7 +44,8 @@
   <div>Maintenance loop</div><div>When code changes, update the smallest affected node, then update nearby backlinks and the search catalog. Do not bury contradictions: link the newer evidence and explain the mismatch.</div>
 </div>
 
-<h2 id="source-graph">Source Graph <a class="anchor" href="#source-graph">§</a></h2>
+<section id="source-graph" data-last-reviewed-commit="29c334921" data-evidence-paths="backend/src/sandbox/api/tool/_daemon_request_payloads.py backend/src/sandbox/api/tool/_daemon_response_parsing.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/isolated_workspace/pipeline.py backend/tests/live_e2e_test/sandbox backend/src/task_center_runner/tests/mock/sandbox">
+<h2>Source Graph <a class="anchor" href="#source-graph">§</a></h2>
 <p>The current sandbox workspace runtime is best read as a graph of ownership boundaries rather than a stack of folders. The daemon receives tool/API envelopes, routes work into direct LayerStack/OCC paths, per-operation overlay paths, or isolated private scratch, and every durable mutation converges on OCC before LayerStack publishes a new manifest.</p>
 <div class="edge-list">
   <div><b>imports</b><span><code>sandbox.api.tool.read/write/edit/glob/grep/shell</code> share request identity construction through <code>_daemon_request_payloads.py</code> and parse daemon responses through <code>_daemon_response_parsing.py</code> before returning public result models <span class="file-ref">backend/src/sandbox/api/tool/read.py:6-32</span>, <span class="file-ref">backend/src/sandbox/api/tool/_daemon_response_parsing.py:67-169</span>.</span></div>
@@ -54,8 +55,10 @@
   <div><b>owns-state</b><span><code>IsolatedPipeline</code> owns per-agent private handle maps, namespace holders, veth resources, TTL, persisted handle state, and JSONL audit events <span class="file-ref">backend/src/sandbox/isolated_workspace/pipeline.py:44-188</span>.</span></div>
   <div><b>tested-by</b><span>Live and mock suites cover workspace base, LayerStack/OCC/overlay, background tools, plugins, and isolated workspace behavior under <span class="file-ref">backend/tests/live_e2e_test/sandbox</span> and <span class="file-ref">backend/src/task_center_runner/tests/mock/sandbox</span>.</span></div>
 </div>
+</section>
 
-<h2 id="reading-paths">Reading Paths <a class="anchor" href="#reading-paths">§</a></h2>
+<section id="reading-paths" data-last-reviewed-commit="29c334921" data-evidence-paths="docs/sandbox-workspace-architecture/overview.html docs/sandbox-workspace-architecture/workflow-cookbook.html docs/sandbox-workspace-architecture/layerstack.html docs/sandbox-workspace-architecture/overlay.html docs/sandbox-workspace-architecture/occ.html docs/sandbox-workspace-architecture/workspaces.html docs/sandbox-workspace-architecture/daemon.html docs/sandbox-workspace-architecture/provider.html docs/sandbox-workspace-architecture/plugins.html docs/sandbox-workspace-architecture/space-model.html">
+<h2>Reading Paths <a class="anchor" href="#reading-paths">§</a></h2>
 <div class="wiki-map">
   <div class="wiki-node">
     <strong>Fast orientation</strong>
@@ -88,8 +91,10 @@
     <div class="wiki-links"><a href="plugins.html">Plugin in ephemeral_workspace</a><a href="plugins.html#plugin-refresh-detail">Projection Refresh</a></div>
   </div>
 </div>
+</section>
 
-<h2 id="concept-index">Concept Index <a class="anchor" href="#concept-index">§</a></h2>
+<section id="concept-index" data-last-reviewed-commit="29c334921" data-evidence-paths="docs/sandbox-workspace-architecture/*.html docs/sandbox-workspace-architecture/assets/search-index.js docs/sandbox-workspace-architecture/assets/nav.js">
+<h2>Concept Index <a class="anchor" href="#concept-index">§</a></h2>
 <div class="section-card-grid">
 <a class="section-card" href="overview.html"><strong>1. Overview</strong><span>Many agents and plugins inspect or mutate one repository while sharing a single durable workspace history.</span></a>
 <a class="section-card" href="layerstack.html"><strong>2. LayerStack</strong><span>Stable snapshots, immutable layer directories, projection rendering, publish flow, leases, and squash behavior.</span></a>
@@ -103,8 +108,10 @@
 <a class="section-card" href="workflow-cookbook.html"><strong>10. Workflow Cookbook</strong><span>End-to-end traces for direct reads, ephemeral shell, OCC publish, isolated lifecycle, plugins, and Pyright refresh.</span></a>
 <a class="section-card" href="maintenance.html"><strong>11. Wiki Maintenance</strong><span>Page conventions, evidence policy, graph vocabulary, refresh checklist, validation commands, and change log.</span></a>
 </div>
+</section>
 
-<h2 id="question-map">Question Map <a class="anchor" href="#question-map">§</a></h2>
+<section id="question-map" data-last-reviewed-commit="29c334921" data-evidence-paths="docs/sandbox-workspace-architecture/workspaces.html docs/sandbox-workspace-architecture/daemon.html docs/sandbox-workspace-architecture/occ.html docs/sandbox-workspace-architecture/overlay.html docs/sandbox-workspace-architecture/workflow-cookbook.html docs/sandbox-workspace-architecture/space-model.html docs/sandbox-workspace-architecture/plugins.html docs/sandbox-workspace-architecture/provider.html">
+<h2>Question Map <a class="anchor" href="#question-map">§</a></h2>
 <table>
   <thead><tr><th>Question</th><th>Start here</th><th>Then follow</th></tr></thead>
   <tbody>
@@ -116,6 +123,7 @@
     <tr><td>Where do daemon failures surface?</td><td><a class="wiki-link" href="daemon.html#diagnostics-failure-modes">Diagnostics and Failure Modes</a></td><td><a class="wiki-link" href="provider.html">Provider</a>, <a class="wiki-link" href="daemon.html#startup-transport">Startup and Transport</a></td></tr>
   </tbody>
 </table>
+</section>
 
 <div class="summary">
   <ul>

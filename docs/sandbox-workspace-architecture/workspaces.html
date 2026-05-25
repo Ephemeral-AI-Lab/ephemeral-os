@@ -34,7 +34,8 @@
   <span><a href="index.html">Index</a> / 5. Workspace Modes</span>
   <span class="nav-pair"><a href="occ.html">← 4. OCC</a><a href="daemon.html">6. Daemon and Background Tasks →</a></span>
 </div>
-<h2 id="workspaces">5. Workspace Modes <a class="anchor" href="#workspaces">§</a></h2>
+<section id="workspaces" data-last-reviewed-commit="29c334921" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/main_workspace/README.md backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/isolated_workspace/pipeline.py">
+<h2>5. Workspace Modes <a class="anchor" href="#workspaces">§</a></h2>
 <div class="summary">
   <ul>
     <li>Not every task needs the same workspace lifetime or privacy model.</li>
@@ -58,7 +59,9 @@
   <div class="lane"><h4>isolated_workspace</h4><p>Opt-in private mode: enter once, run many tools, exit and discard the upperdir.</p></div>
 </div>
 
-<h3 id="workspace-mode-selection">5.1 Mode Selection <a class="anchor" href="#workspace-mode-selection">§</a></h3>
+</section>
+<section id="workspace-mode-selection" data-last-reviewed-commit="29c334921" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/main_workspace/README.md backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py backend/src/sandbox/isolated_workspace/pipeline.py">
+<h3>5.1 Mode Selection <a class="anchor" href="#workspace-mode-selection">§</a></h3>
 <table>
   <thead><tr><th>Question</th><th>Default answer</th><th>Why</th><th>Related node</th></tr></thead>
   <tbody>
@@ -83,7 +86,9 @@
   <div><b>emits-artifact</b><span><code>_JsonlAuditSink</code> appends isolated lifecycle/tool events to the daemon JSONL audit file; <code>EOS_ISOLATED_WORKSPACE_AUDIT_PATH</code> overrides <code>DEFAULT_AUDIT_JSONL_PATH</code> at <code>/tmp/sandbox_isolated_workspace_events.jsonl</code> <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py:29-33</span>, <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py:55-70</span>, <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py:103-109</span>.</span></div>
 </div>
 
-<h3 id="main-workspace">5.2 main_workspace <a class="anchor" href="#main-workspace">§</a></h3>
+</section>
+<section id="main-workspace" data-last-reviewed-commit="29c334921" data-evidence-paths="backend/src/sandbox/main_workspace/README.md backend/src/sandbox/host/bootstrap.py backend/src/sandbox/main_workspace/workspace_binding.py">
+<h3>5.2 main_workspace <a class="anchor" href="#main-workspace">§</a></h3>
 <div class="summary">
   <ul>
     <li>The sandbox needs one persistent repository identity to anchor every projection.</li>
@@ -95,7 +100,9 @@
 
 <p>The <code>main_workspace</code> package intentionally remains a thin facade: its README says implementation remains in <code>sandbox/layer_stack</code> and <code>sandbox/occ</code> so the three workspace concepts can have sibling package anchors <span class="file-ref">backend/src/sandbox/main_workspace/README.md:1-6</span>. The host lifecycle calls <code>ensure_workspace_base</code> after uploading the runtime and ensuring git <span class="file-ref">backend/src/sandbox/host/bootstrap.py:300-312</span>. Runtime binding fails closed if the binding or manifest is missing/empty <span class="file-ref">backend/src/sandbox/main_workspace/workspace_binding.py:12-35</span>.</p>
 
-<h3 id="ephemeral-workspace">5.3 ephemeral_workspace <a class="anchor" href="#ephemeral-workspace">§</a></h3>
+</section>
+<section id="ephemeral-workspace" data-last-reviewed-commit="29c334921" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/ephemeral_workspace/overlay_registry.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/ephemeral_workspace/operation_overlay.py">
+<h3>5.3 ephemeral_workspace <a class="anchor" href="#ephemeral-workspace">§</a></h3>
 <div class="summary">
   <ul>
     <li>Most tool calls should not keep private workspace state after the operation ends.</li>
@@ -125,7 +132,9 @@
 
 <p>Fast paths exist for the common single-file APIs when the path can be translated through <code>workspace.json</code>. <code>read_file</code> reads from <code>backend.manager.read_text()</code> with no overlay or run dir <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:94-110</span>. <code>write_file</code> builds an <code>api_write</code> change and calls <code>occ_service.apply_changeset()</code> directly <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:113-155</span>. <code>edit_file</code> builds <code>EditChange</code> objects and applies them directly through OCC <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:158-179</span>. The resource timings explicitly report no run-dir or upperdir tree for these fast paths <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:232-260</span>.</p>
 
-<h3 id="ephemeral-fast-paths">5.3.1 Fast-path Technical Workflows <a class="anchor" href="#ephemeral-fast-paths">§</a></h3>
+</section>
+<section id="ephemeral-fast-paths" data-last-reviewed-commit="29c334921" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/layer_stack/workspace_binding.py backend/src/sandbox/daemon/changeset_projection.py">
+<h3>5.3.1 Fast-path Technical Workflows <a class="anchor" href="#ephemeral-fast-paths">§</a></h3>
 
 <table>
   <thead><tr><th>Verb</th><th>Workflow</th><th>Conflict / result behavior</th><th>Skipped work</th></tr></thead>
@@ -148,7 +157,9 @@
 
 <p>Path binding is implemented in the router helper and the workspace binding translator <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:208-224</span>, <span class="file-ref">backend/src/sandbox/layer_stack/workspace_binding.py:51-75</span>. OCC result projection is shared through daemon helpers for published paths, conflict/status conversion, and gitignore cache timings <span class="file-ref">backend/src/sandbox/daemon/changeset_projection.py:16-60</span>. This is why the direct write/edit fast path is faster without weakening the publish contract: it avoids overlay mechanics but still goes through OCC.</p>
 
-<h3 id="isolated-workspace">5.4 isolated_workspace <a class="anchor" href="#isolated-workspace">§</a></h3>
+</section>
+<section id="isolated-workspace" data-last-reviewed-commit="29c334921" data-evidence-paths="backend/src/tools/sandbox/_lib/registry.py backend/src/tools/isolated_workspace/enter_isolated_workspace/definition.py backend/src/tools/isolated_workspace/exit_isolated_workspace/definition.py backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py backend/src/sandbox/isolated_workspace/_control_plane/linux_runtime.py backend/src/sandbox/isolated_workspace/pipeline.py">
+<h3>5.4 isolated_workspace <a class="anchor" href="#isolated-workspace">§</a></h3>
 <div class="summary">
   <ul>
     <li>Low-confidence or experimental tasks can request a private scratch workspace across many tool calls.</li>
@@ -182,7 +193,9 @@
 
 <p>Subsequent tool calls do not create/destroy overlays. <code>IsolatedPipeline.run_tool_call()</code> wraps the existing handle into an <code>OverlayHandle</code>, runs in the existing namespace, marks <code>workspace=isolated</code>, and for <code>Intent.WRITE_ALLOWED</code> captures <code>changed_paths</code> for audit/result visibility only. It explicitly does not commit through OCC; writes are discarded when the scratch dir is removed on exit <span class="file-ref">backend/src/sandbox/isolated_workspace/pipeline.py:156-188</span>. Exit removes the handle from the maps first, measures discarded upperdir bytes, kills the holder, tears down veth, closes fds, releases the snapshot lease, removes the cgroup, deletes the scratch dir, persists the new state, and emits an exit audit event <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:175-260</span>.</p>
 
-<h3 id="isolated-lifecycle-detail">5.4.1 Enter, Run, Exit Details <a class="anchor" href="#isolated-lifecycle-detail">§</a></h3>
+</section>
+<section id="isolated-lifecycle-detail" data-last-reviewed-commit="29c334921" data-evidence-paths="backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py backend/src/sandbox/isolated_workspace/_control_plane/pipeline_state.py backend/src/sandbox/isolated_workspace/_control_plane/linux_runtime.py backend/src/sandbox/isolated_workspace/pipeline.py backend/src/sandbox/isolated_workspace/network.py">
+<h3>5.4.1 Enter, Run, Exit Details <a class="anchor" href="#isolated-lifecycle-detail">§</a></h3>
 
 <div class="sequence" aria-label="Isolated enter technical lifecycle">
   <ol>
@@ -209,7 +222,9 @@
   <div><b>network</b><span>The NAT/filter shape is IPv4: MASQUERADE applies to <code>10.244.0.0/24</code> outbound away from <code>eos-shared0</code>, IMDS is dropped, and optional RFC1918-deny adds drops for private destinations outside the bridge CIDR <span class="file-ref">backend/src/sandbox/isolated_workspace/network.py:186-223</span>.</span></div>
   <div><b>calls</b><span>DNS is configured after overlay mount through <code>configure_dns()</code> with <code>EOS_ISOLATED_WORKSPACE_FALLBACK_DNS</code> defaulting to <code>1.1.1.1</code>; this is separate from veth creation <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:149-154</span>, <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/linux_runtime.py:161-181</span>.</span></div>
 </div>
-<h3 id="workspace-evidence-refresh">5.5 Evidence and Refresh <a class="anchor" href="#workspace-evidence-refresh">§</a></h3>
+</section>
+<section id="workspace-evidence-refresh" data-last-reviewed-commit="29c334921" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py backend/src/sandbox/isolated_workspace/pipeline.py backend/src/sandbox/isolated_workspace/_control_plane/pipeline_state.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py backend/src/sandbox/isolated_workspace/network.py backend/src/task_center_runner/tests/mock/sandbox/ephemeral_workspace backend/src/task_center_runner/tests/mock/sandbox/isolated_workspace">
+<h3>5.5 Evidence and Refresh <a class="anchor" href="#workspace-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h4>Source files</h4>
@@ -249,6 +264,7 @@
 <div class="maintenance-note">
   Backlinks: <a class="wiki-link" href="daemon.html#workspace-routing-and-state">Workspace Routing and State</a> implements this selection logic; <a class="wiki-link" href="daemon.html#isolated-background-gate">Isolated Background Gate</a> explains why background work blocks enter; <a class="wiki-link" href="space-model.html">Space Model</a> explains the storage cost difference.
 </div>
+</section>
 <div class="page-footer-nav"><span><a href="occ.html">← 4. OCC</a></span><span><a href="daemon.html">6. Daemon and Background Tasks →</a></span></div>
 </main>
 <script src="assets/search-index.js"></script>

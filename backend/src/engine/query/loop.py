@@ -188,17 +188,7 @@ async def _consume_provider_stream(
         raise
 
 
-async def _drain_executor_after_stream(
-    executor: StreamingToolExecutor,
-) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
-    """Drain final executor progress and lifecycle events."""
-    for progress in executor.get_progress():
-        yield progress, None
-    for emitted in executor.get_events():
-        yield emitted, None
-
-
-async def _handle_tool_dispatch_branch(
+async def _dispatch_final_message_tools(
     context: QueryContext,
     messages: list[ConversationMessage],
     executor: StreamingToolExecutor,
@@ -207,7 +197,7 @@ async def _handle_tool_dispatch_branch(
     background_tasks: BackgroundTaskSupervisor | None,
     notification_service: SystemNotificationService,
 ) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
-    """Dispatch tool calls from the assistant message and append their results."""
+    """Dispatch tool calls from the final assistant message and append results."""
     final_message = state.final_message
     assert final_message is not None  # narrowed by _consume_provider_stream
 
@@ -308,8 +298,10 @@ async def _run_query_loop(
             ):
                 yield event, event_usage
 
-            async for event, event_usage in _drain_executor_after_stream(executor):
-                yield event, event_usage
+            for progress in executor.get_progress():
+                yield progress, None
+            for emitted in executor.get_events():
+                yield emitted, None
 
             final_message = state.final_message
             assert final_message is not None  # narrowed by _consume_provider_stream
@@ -361,7 +353,7 @@ async def _run_query_loop(
                 context.exit_reason = QueryExitReason.TEXT_RESPONSE
                 break
 
-            async for event, event_usage in _handle_tool_dispatch_branch(
+            async for event, event_usage in _dispatch_final_message_tools(
                 context,
                 messages,
                 executor,

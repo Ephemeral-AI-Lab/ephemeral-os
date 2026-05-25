@@ -30,6 +30,9 @@ def test_daemon_op_table_routes_to_current_handler_layout() -> None:
         "api.isolated_workspace.status": server._isolated_workspace_status,
         "api.isolated_workspace.list_open": server._isolated_workspace_list_open,
         "api.isolated_workspace.test_reset": server._isolated_workspace_test_reset,
+        "api.audit.pull": server._audit_pull_handler,
+        "api.audit.snapshot": server._audit_snapshot_handler,
+        "api.audit.reset_floor": server._audit_reset_floor_handler,
     }
     # Plugin-specific ops (plugin.<name>.<op>) appear when api.plugin.ensure
     # flushes pending registrations; only the static OP_TABLE entries are

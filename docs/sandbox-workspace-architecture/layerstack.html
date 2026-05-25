@@ -34,7 +34,10 @@
   <span><a href="index.html">Index</a> / 2. LayerStack</span>
   <span class="nav-pair"><a href="overview.html">← 1. Overview</a><a href="overlay.html">3. Overlay →</a></span>
 </div>
-<h2 id="layerstack">2. LayerStack <a class="anchor" href="#layerstack">§</a></h2>
+<section id="layerstack"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/sandbox/layer_stack backend/src/sandbox/daemon/layer_stack_runtime.py backend/src/sandbox/occ">
+<h2>2. LayerStack <a class="anchor" href="#layerstack">§</a></h2>
 <div class="summary">
   <ul>
     <li>Overlay users need a stable snapshot while other calls keep publishing new changes.</li>
@@ -58,7 +61,11 @@
   If the question is "where are the bytes?", read <a class="wiki-link" href="#layerstack-storage">Storage</a>. If the question is "why does this not copy the repo?", read <a class="wiki-link" href="#layerstack-projection">Projection</a> and then <a class="wiki-link" href="space-model.html">Space Model</a>. If the question is "how did my write become durable?", jump to <a class="wiki-link" href="#layerstack-publish">Publish</a> and <a class="wiki-link" href="occ.html#occ-technical-workflow">OCC Technical Workflow</a>.
 </div>
 
-<h3 id="layerstack-storage">2.1 Storage <a class="anchor" href="#layerstack-storage">§</a></h3>
+</section>
+<section id="layerstack-storage"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/sandbox/daemon/paths.py backend/src/sandbox/layer_stack/workspace_binding.py backend/src/sandbox/layer_stack/workspace_base.py">
+<h3>2.1 Storage <a class="anchor" href="#layerstack-storage">§</a></h3>
 <div class="summary">
   <ul>
     <li>The runtime needs one place to find manifests, layers, staging, metadata, and workspace binding.</li>
@@ -83,7 +90,11 @@
 
 <p>The base layer is built once as <code>B000001-base</code> <span class="file-ref">backend/src/sandbox/layer_stack/workspace_base.py:32</span>. The base builder walks the workspace, rejects special or unstable files, writes the layer, writes manifest version 1, then writes <code>workspace.json</code> <span class="file-ref">backend/src/sandbox/layer_stack/workspace_base.py:82-141</span>.</p>
 
-<h3 id="layerstack-data-model">2.2 Data Model <a class="anchor" href="#layerstack-data-model">§</a></h3>
+</section>
+<section id="layerstack-data-model"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/sandbox/layer_stack/manifest.py backend/src/sandbox/layer_stack/lease.py backend/src/sandbox/layer_stack/view.py backend/src/sandbox/layer_stack/transaction.py">
+<h3>2.2 Data Model <a class="anchor" href="#layerstack-data-model">§</a></h3>
 <table>
   <thead><tr><th>Object</th><th>Role</th><th>Lifetime</th><th>Cross-links</th></tr></thead>
   <tbody>
@@ -96,7 +107,11 @@
   </tbody>
 </table>
 
-<h3 id="layerstack-projection">2.3 Projection <a class="anchor" href="#layerstack-projection">§</a></h3>
+</section>
+<section id="layerstack-projection"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/layer_stack/view.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/isolated_workspace/pipeline.py">
+<h3>2.3 Projection <a class="anchor" href="#layerstack-projection">§</a></h3>
 <div class="summary">
   <ul>
     <li>Tools need the latest workspace view without copying the full repository for each call.</li>
@@ -117,7 +132,11 @@
 
 <p><code>MergedView</code> still exists for direct logical reads and materialization. It reads newest-first, honors whiteouts and opaque directories, and can list directories or iterate paths <span class="file-ref">backend/src/sandbox/layer_stack/view.py:60-193</span>. Its <code>materialize()</code> method applies layers oldest-first into a destination <span class="file-ref">backend/src/sandbox/layer_stack/view.py:195-219</span>. That rendered tree is used by flush/squash/special paths, not by normal per-tool overlay lowerdirs.</p>
 
-<h3 id="layerstack-publish">2.4 Publish <a class="anchor" href="#layerstack-publish">§</a></h3>
+</section>
+<section id="layerstack-publish"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/sandbox/layer_stack/publisher.py backend/src/sandbox/layer_stack/changes.py backend/src/sandbox/layer_stack/lease.py backend/src/sandbox/layer_stack/squash.py backend/src/sandbox/layer_stack/stack.py">
+<h3>2.4 Publish <a class="anchor" href="#layerstack-publish">§</a></h3>
 <div class="summary">
   <ul>
     <li>Concurrent writers need an atomic way to append changes without losing another commit.</li>
@@ -156,7 +175,11 @@
   The normal operation projection is a lease-backed list of existing layer directories. A full rendered tree only appears when <code>MergedView.materialize()</code> is intentionally called for maintenance or flush, not during normal ephemeral/isolated lowerdir preparation.
 </div>
 
-<h3 id="layerstack-evidence-refresh">2.5 Evidence and Refresh <a class="anchor" href="#layerstack-evidence-refresh">§</a></h3>
+</section>
+<section id="layerstack-evidence-refresh"
+  data-last-reviewed-commit="29c334921"
+  data-evidence-paths="backend/src/sandbox/layer_stack backend/tests/live_e2e_test/sandbox/layer_stack backend/tests/live_e2e_test/sandbox/workspace_base backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ">
+<h3>2.5 Evidence and Refresh <a class="anchor" href="#layerstack-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h4>Source files</h4>
@@ -197,6 +220,7 @@
 <div class="maintenance-note">
   Backlinks: <a class="wiki-link" href="overview.html#overview-invariants">Core Invariants</a> names LayerStack as durable truth; <a class="wiki-link" href="overlay.html">Overlay</a> consumes <code>layer_paths</code>; <a class="wiki-link" href="occ.html">OCC</a> publishes into LayerStack; <a class="wiki-link" href="plugins.html#plugin-refresh-detail">Projection Refresh and LSP Writes</a> watches manifest keys derived from this page.
 </div>
+</section>
 <div class="page-footer-nav"><span><a href="overview.html">← 1. Overview</a></span><span><a href="overlay.html">3. Overlay →</a></span></div>
 </main>
 <script src="assets/search-index.js"></script>
