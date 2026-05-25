@@ -567,6 +567,24 @@ def test_write_performance_reports_produces_detailed_report(tmp_path: Path) -> N
                     "timings": {
                         "resource.command_exec.upperdir_tree_bytes": 4096,
                         "resource.cgroup.memory_current_bytes": 123456,
+                        "resource.cgroup.cpu_usage_usec": 500,
+                        "resource.cgroup.io_wbytes": 1000,
+                    },
+                },
+            )
+        )
+        bus.publish(
+            Event(
+                type=EventType.SANDBOX_RESOURCE_SNAPSHOT,
+                node=node,
+                payload={
+                    "tool_name": "shell",
+                    "tool_id": "toolu_5",
+                    "status": "ok",
+                    "changed_paths": [],
+                    "timings": {
+                        "resource.cgroup.cpu_usage_usec": 800,
+                        "resource.cgroup.io_wbytes": 1500,
                     },
                 },
             )
@@ -596,7 +614,7 @@ def test_write_performance_reports_produces_detailed_report(tmp_path: Path) -> N
     assert report["sandbox"]["families"]["occ"]["event_count"] == 1
     assert report["sandbox"]["families"]["overlay"]["event_count"] == 1
     assert report["sandbox"]["families"]["layer_stack"]["event_count"] == 1
-    assert report["sandbox"]["families"]["resource"]["event_count"] == 1
+    assert report["sandbox"]["families"]["resource"]["event_count"] == 2
     assert report["sandbox"]["timing_keys"]["api.shell.overlay_s"]["total"] == 0.12
     assert report["sandbox"]["timing_keys"]["command_exec.mount_workspace_s"][
         "total"
@@ -615,6 +633,15 @@ def test_write_performance_reports_produces_detailed_report(tmp_path: Path) -> N
     assert report["sandbox"]["resource_keys"][
         "resource.command_exec.upperdir_tree_bytes"
     ]["latest"] == 4096.0
+    assert report["sandbox"]["resource_keys"]["resource.cgroup.cpu_usage_usec"][
+        "source"
+    ] == "run_delta"
+    assert report["sandbox"]["resource_keys"]["resource.cgroup.cpu_usage_usec"][
+        "latest"
+    ] == 300.0
+    assert report["sandbox"]["resource_keys"]["resource.cgroup.io_wbytes"][
+        "latest"
+    ] == 500.0
     assert report["hotspots"]["slowest_tool_calls"][0]["tool_id"] == "toolu_1"
 
     markdown = (recorder.run_dir / "performance_report.md").read_text(

@@ -646,6 +646,7 @@ _LSP_CELLS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("diagnostic_fixed", ("edit_file", "lsp.diagnostics")),
     ("signature_refresh", ("lsp.hover", "edit_file", "lsp.hover")),
     ("cross_file_reference_refresh", ("edit_file", "lsp.find_references")),
+    ("workspace_edit_publish", ("lsp.apply_workspace_edit", "read_file")),
     ("config_refresh", ("write_file", "lsp.diagnostics")),
     ("opened_file_deleted", ("shell", "lsp.diagnostics")),
 )

@@ -39,6 +39,24 @@ _SANDBOX_FAMILY_BY_EVENT: Mapping[str, str] = {
     "sandbox_batch_edit_applied": "sandbox_tool",
     "sandbox_resource_snapshot": "resource",
 }
+_RUN_DELTA_RESOURCE_KEYS = frozenset(
+    {
+        "resource.cgroup.cpu_usage_usec",
+        "resource.cgroup.cpu_user_usec",
+        "resource.cgroup.cpu_system_usec",
+        "resource.cgroup.cpu_nr_periods",
+        "resource.cgroup.cpu_nr_throttled",
+        "resource.cgroup.cpu_throttled_usec",
+        "resource.cgroup.cpu_nr_bursts",
+        "resource.cgroup.cpu_burst_usec",
+        "resource.cgroup.io_rbytes",
+        "resource.cgroup.io_wbytes",
+        "resource.cgroup.io_rios",
+        "resource.cgroup.io_wios",
+        "resource.cgroup.io_dbytes",
+        "resource.cgroup.io_dios",
+    }
+)
 
 
 def build_performance_report(
@@ -360,10 +378,11 @@ def _build_sandbox_report(rows: list[dict[str, Any]]) -> dict[str, Any]:
         if key in non_duration_observations:
             non_duration_observations[key]["latest"] = latest
     resource_keys = {
-        key: _stats(values) for key, values in sorted(resource_values.items())
+        key: _resource_stats(key, values)
+        for key, values in sorted(resource_values.items())
     }
     for key, latest in latest_resource_values.items():
-        if key in resource_keys:
+        if key in resource_keys and key not in _RUN_DELTA_RESOURCE_KEYS:
             resource_keys[key]["latest"] = latest
     return {
         "event_count": len(rows),
@@ -602,6 +621,29 @@ def _stats(values: Iterable[float]) -> dict[str, float | int]:
         "p99": _percentile(ordered, 99.0),
         "max": ordered[-1],
     }
+
+
+def _resource_stats(key: str, values: Iterable[float]) -> dict[str, Any]:
+    ordered = [float(value) for value in values]
+    if key not in _RUN_DELTA_RESOURCE_KEYS:
+        return _stats(ordered)
+
+    if not ordered:
+        stats = _stats(())
+        stats["source"] = "run_delta"
+        stats["first_lifetime"] = 0.0
+        stats["latest_lifetime"] = 0.0
+        stats["latest"] = 0.0
+        return stats
+
+    first = ordered[0]
+    deltas = [max(0.0, value - first) for value in ordered]
+    stats = _stats(deltas)
+    stats["source"] = "run_delta"
+    stats["first_lifetime"] = first
+    stats["latest_lifetime"] = ordered[-1]
+    stats["latest"] = deltas[-1]
+    return stats
 
 
 def _percentile(values: list[float], pct: float) -> float:

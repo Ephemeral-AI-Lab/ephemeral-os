@@ -12,6 +12,9 @@ from task_center_runner.agent.mock.tool_scripts import (
     PreparedToolScript,
     ToolScriptStep,
 )
+from plugins.catalog.lsp.tools.apply_workspace_edit import (
+    apply_workspace_edit as lsp_apply_workspace_edit_tool,
+)
 from plugins.catalog.lsp.tools.diagnostics import diagnostics as lsp_diagnostics_tool
 from plugins.catalog.lsp.tools.find_definitions import (
     find_definitions as lsp_find_definitions_tool,
@@ -690,6 +693,30 @@ def lsp_refresh_semantics_script(ctx: ScenarioContext) -> PreparedToolScript:
                 "character": 4,
                 "include_declaration": False,
             },
+        ),
+        ToolScriptStep(
+            "lsp-apply-workspace-edit",
+            lsp_apply_workspace_edit_tool,
+            {
+                "edit": {
+                    "changes": {
+                        f"file:///testbed/{service_path}": [
+                            {
+                                "range": {
+                                    "start": {"line": 3, "character": 6},
+                                    "end": {"line": 3, "character": 9},
+                                },
+                                "newText": "int",
+                            }
+                        ]
+                    }
+                },
+            },
+        ),
+        ToolScriptStep(
+            "read-lsp-service-after-plugin-edit",
+            read_file_tool,
+            {"file_path": service_path, "start_line": 1, "end_line": 20},
         ),
         ToolScriptStep(
             "write-pyright-config",

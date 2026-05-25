@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -25,10 +26,69 @@ from task_center_runner.environments.sweevo_image.fixtures import run_scenario_o
 from task_center_runner.environments.sweevo_image.health import (
     require_sweevo_image_provider_healthy,
 )
+from task_center_runner.tests.mock._layer_stack_occ_overlay_assertions import (
+    assert_o1_workspace_resource_snapshots,
+    assert_resource_key_max,
+    assert_timing_keys_present,
+    load_performance_report,
+    mapping,
+)
 from benchmarks.sweevo.models import SWEEvoInstance
 
 
 _DEFAULT_INSTANCE_ID = "dask__dask_2023.3.2_2023.4.0"
+_FOREGROUND_SANDBOX_P95_BUDGET_MS = 1_000.0
+_REQUIRED_PERFORMANCE_TOOLS = (
+    "shell",
+    "read_file",
+    "write_file",
+    "edit_file",
+    "lsp.diagnostics",
+    "lsp.hover",
+    "lsp.find_definitions",
+    "lsp.find_references",
+    "lsp.query_symbols",
+    "lsp.apply_workspace_edit",
+)
+_FOREGROUND_SANDBOX_TOOLS = (
+    "shell",
+    "read_file",
+    "write_file",
+    "edit_file",
+    "lsp.apply_workspace_edit",
+)
+_REQUIRED_SANDBOX_TIMING_KEYS = (
+    "command_exec.mount_workspace_s",
+    "command_exec.run_command_s",
+    "command_exec.capture_upperdir_s",
+    "command_exec.total_s",
+    "layer_stack.prepare_workspace_snapshot.total_s",
+    "occ.commit.total_s",
+    "occ.commit.publish_layer_s",
+    "occ.apply.total_s",
+)
+_REQUIRED_TOOL_SAMPLE_TIMINGS = {
+    "read_file": ("api.read.total_s", "api.read.layer_stack_read_s"),
+    "write_file": ("api.write.total_s", "occ.apply.total_s"),
+    "edit_file": ("api.edit.total_s", "occ.apply.total_s"),
+    "shell": (
+        "command_exec.mount_workspace_s",
+        "command_exec.run_command_s",
+        "command_exec.capture_upperdir_s",
+    ),
+    "lsp.apply_workspace_edit": (
+        "command_exec.capture_upperdir_s",
+        "command_exec.occ_apply_s",
+    ),
+}
+_FORBIDDEN_SANDBOX_EVENT_TEXT = (
+    "internal_error",
+    "stale lowerdir",
+    "manifest references missing layer",
+    "missing layer",
+    "mount failure",
+    "mount_failed",
+)
 
 
 def test_full_stack_instance_fixture_default_contract(
@@ -65,6 +125,9 @@ async def test_full_stack_adversarial_runs_agent_tool_script_matrix(
 
     assert report.task_center_status == "done", report.metrics
     assert report.instance_id == _DEFAULT_INSTANCE_ID
+    assert report.performance_report_task is not None
+    perf_path = await report.performance_report_task
+    assert perf_path == report.run_dir / "performance_report.json"
 
     expected_prompt = build_sweevo_user_prompt(sweevo_image_instance)
     assert report.entry_prompt_length == len(expected_prompt)
@@ -79,6 +142,7 @@ async def test_full_stack_adversarial_runs_agent_tool_script_matrix(
     _assert_task_center_shape(report.graph_summary, report.events)
     _assert_message_logs(report.run_dir)
     _assert_sandbox_monitor_events(report.events, report.run_dir)
+    _assert_full_stack_performance_report_complete(report.run_dir)
     await _assert_final_sandbox_state(
         sandbox_id=report.sandbox_id,
         task_center_run_id=report.task_center_run_id,
@@ -161,6 +225,7 @@ def _assert_message_logs(run_dir: Path) -> None:
         "lsp.find_references",
         "lsp.diagnostics",
         "lsp.query_symbols",
+        "lsp.apply_workspace_edit",
     } <= tool_uses
     assert any(
         block.get("type") == "tool_result"
@@ -191,6 +256,115 @@ def _assert_sandbox_monitor_events(events: list[Event], run_dir: Path) -> None:
     logged = {EventType(row["event_type"]) for row in _jsonl_rows(sandbox_log)}
     missing_logged = sorted(event.value for event in required - logged)
     assert not missing_logged, f"missing persisted sandbox events: {missing_logged}"
+
+
+def _assert_full_stack_performance_report_complete(run_dir: Path) -> None:
+    perf = load_performance_report(run_dir)
+    per_tool = mapping(mapping(perf["tools"])["per_tool"])
+    for tool_name in _REQUIRED_PERFORMANCE_TOOLS:
+        _assert_tool_latency_stats(per_tool, tool_name)
+    for tool_name in _FOREGROUND_SANDBOX_TOOLS:
+        _assert_tool_p95_under(per_tool, tool_name, _FOREGROUND_SANDBOX_P95_BUDGET_MS)
+    for tool_name, timing_keys in _REQUIRED_TOOL_SAMPLE_TIMINGS.items():
+        _assert_tool_samples_include_timings(per_tool, tool_name, timing_keys)
+
+    assert_timing_keys_present(perf, _REQUIRED_SANDBOX_TIMING_KEYS)
+    assert_o1_workspace_resource_snapshots(run_dir / "sandbox_events.jsonl")
+    assert_resource_key_max(perf, "resource.command_exec.workspace_tree_bytes", 0.0)
+    assert_resource_key_max(perf, "resource.command_exec.workspace_tree_exists", 0.0)
+    _assert_cgroup_metrics_are_run_deltas(perf)
+    _assert_no_forbidden_sandbox_event_text(run_dir / "sandbox_events.jsonl")
+    _assert_recursive_workflow_keeps_sandbox_responsive(run_dir, per_tool)
+
+
+def _assert_tool_latency_stats(
+    per_tool: Mapping[str, Any],
+    tool_name: str,
+) -> None:
+    assert tool_name in per_tool, f"missing performance samples for {tool_name}"
+    stats = mapping(per_tool[tool_name])
+    assert int(stats.get("count") or 0) > 0, stats
+    for key in ("p50_ms", "p95_ms", "max_ms"):
+        assert key in stats, f"{tool_name} missing {key}"
+        assert float(stats[key]) >= 0.0, f"{tool_name} {key}={stats[key]}"
+
+
+def _assert_tool_p95_under(
+    per_tool: Mapping[str, Any],
+    tool_name: str,
+    budget_ms: float,
+) -> None:
+    p95_ms = float(mapping(per_tool[tool_name]).get("p95_ms") or 0.0)
+    assert p95_ms <= budget_ms, (
+        f"{tool_name} p95 {p95_ms:.3f}ms exceeds {budget_ms:.0f}ms"
+    )
+
+
+def _assert_tool_samples_include_timings(
+    per_tool: Mapping[str, Any],
+    tool_name: str,
+    timing_keys: tuple[str, ...],
+) -> None:
+    samples = list(mapping(per_tool[tool_name]).get("samples") or ())
+    missing = [
+        key
+        for key in timing_keys
+        if not any(key in mapping(sample).get("timings_s", {}) for sample in samples)
+    ]
+    assert not missing, f"{tool_name} samples missing timing keys: {missing}"
+
+
+def _assert_cgroup_metrics_are_run_deltas(perf: Mapping[str, Any]) -> None:
+    resources = mapping(mapping(perf["sandbox"])["resource_keys"])
+    for key in (
+        "resource.cgroup.cpu_usage_usec",
+        "resource.cgroup.io_wbytes",
+    ):
+        assert key in resources, f"missing cgroup resource key: {key}"
+        stats = mapping(resources[key])
+        assert stats.get("source") == "run_delta", stats
+        assert float(stats.get("latest") or 0.0) <= float(
+            stats.get("latest_lifetime") or 0.0
+        )
+        assert float(stats.get("first_lifetime") or 0.0) <= float(
+            stats.get("latest_lifetime") or 0.0
+        )
+
+
+def _assert_no_forbidden_sandbox_event_text(events_path: Path) -> None:
+    raw = events_path.read_text(encoding="utf-8", errors="replace").lower()
+    for needle in _FORBIDDEN_SANDBOX_EVENT_TEXT:
+        assert needle not in raw, f"{needle!r} appears in {events_path}"
+
+
+def _assert_recursive_workflow_keeps_sandbox_responsive(
+    run_dir: Path,
+    per_tool: Mapping[str, Any],
+) -> None:
+    messages = _message_rows(run_dir)
+    recursive_tool_uses = _tool_uses_for_task(messages, "recursive_")
+    assert {"read_file", "write_file"} <= recursive_tool_uses
+    final_release_tool_uses = _tool_uses_for_task(messages, "final_release_guard")
+    assert {"read_file", "shell"} <= final_release_tool_uses
+    for tool_name in _FOREGROUND_SANDBOX_TOOLS:
+        _assert_tool_p95_under(
+            per_tool,
+            tool_name,
+            _FOREGROUND_SANDBOX_P95_BUDGET_MS,
+        )
+
+
+def _tool_uses_for_task(
+    messages: list[dict[str, Any]],
+    task_id_part: str,
+) -> set[str]:
+    return {
+        str(block.get("name") or "")
+        for message in messages
+        if task_id_part in str((message.get("metadata") or {}).get("task_id") or "")
+        for block in message.get("content", [])
+        if isinstance(block, dict) and block.get("type") == "tool_use"
+    }
 
 
 async def _assert_final_sandbox_state(
