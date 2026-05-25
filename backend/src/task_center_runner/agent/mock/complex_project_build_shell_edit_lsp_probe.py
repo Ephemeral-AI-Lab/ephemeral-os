@@ -124,6 +124,7 @@ async def run_complex_project_build_shell_edit_lsp_probe(
     caller,
     sandbox_id: str,
     smoke: bool,
+    shared_attempt_bootstrap: bool = False,
 ) -> str:
     """Run the mixed shell-edit + LSP probe and return summary.json path."""
     started_at = time.monotonic()
@@ -143,7 +144,11 @@ async def run_complex_project_build_shell_edit_lsp_probe(
     refactor_passes = _select_refactor_passes(smoke)
     expectations = _select_lsp_expectations(selected_files)
 
-    await _phase0_bootstrap(ctx, stats)
+    await _phase0_bootstrap(
+        ctx,
+        stats,
+        shared_attempt_bootstrap=shared_attempt_bootstrap,
+    )
     await _phase_a_skeleton(ctx, stats, selected_files)
     await _phase_b_mixed_patches(ctx, stats, selected_files, expectations)
     selected_paths = frozenset(f.relative_path for f in selected_files)

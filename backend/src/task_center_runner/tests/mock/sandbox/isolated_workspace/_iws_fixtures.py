@@ -7,6 +7,7 @@ live in :mod:`conftest`. Each helper exists because a current test calls it.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import subprocess
 import uuid
 from dataclasses import dataclass
@@ -185,12 +186,13 @@ async def daemon_kill_and_respawn(
         response = {"success": False, "error": {"kind": exc.kind, "details": exc.details or {}}}
     # Best-effort cleanup of the bootstrap handle.
     if response.get("success"):
-        await call_daemon_api(
-            sandbox_id,
-            "api.isolated_workspace.exit",
-            {"agent_id": bootstrap_agent_id},
-            timeout=30,
-        )
+        with contextlib.suppress(Exception):
+            await call_daemon_api(
+                sandbox_id,
+                "api.isolated_workspace.exit",
+                {"agent_id": bootstrap_agent_id},
+                timeout=30,
+            )
 
 
 async def list_host_eos_iws_resources(sandbox_id: str) -> dict[str, list[str]]:

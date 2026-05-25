@@ -155,6 +155,7 @@ class _ManagerConfig:
     upperdir_bytes: int
     memavail_fraction: float
     setup_timeout_s: float
+    exit_grace_s: float
     rfc1918_egress: Literal["allow", "deny"]
     fallback_dns: str
 
@@ -170,6 +171,10 @@ class _ManagerConfig:
                                       str(1024 * 1024 * 1024))),
             memavail_fraction=float(env.get("EOS_ISOLATED_WORKSPACE_MEMAVAIL_FRACTION", "0.5")),
             setup_timeout_s=float(env.get("EOS_ISOLATED_WORKSPACE_SETUP_TIMEOUT_S", "30")),
+            exit_grace_s=max(
+                0.0,
+                float(env.get("EOS_ISOLATED_WORKSPACE_EXIT_GRACE_S", "0.25")),
+            ),
             rfc1918_egress="deny" if env.get(
                 "EOS_ISOLATED_WORKSPACE_RFC1918_EGRESS", "allow"
             ).lower() == "deny" else "allow",

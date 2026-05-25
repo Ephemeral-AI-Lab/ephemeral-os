@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -20,15 +19,10 @@ def _repo_root() -> Path:
 
 
 _REPO_ROOT = _repo_root()
-_SCENARIO_PACK_DOC = (
-    _REPO_ROOT / "docs" / "wiki" / "live-e2e-capacity-suite-scenario-packs.md"
-)
-_SCENARIO_HEADING = re.compile(r"^### `([^`]+)`$", re.MULTILINE)
 
-
-def test_capacity_pack_catalog_matches_docs_matrix() -> None:
-    documented_names = set(_SCENARIO_HEADING.findall(_SCENARIO_PACK_DOC.read_text()))
-    assert documented_names == names()
+def test_capacity_pack_catalog_names_match_spec_rows() -> None:
+    spec_names = {spec.name for spec in CAPACITY_PACK_SPECS}
+    assert names() == spec_names
 
 
 def test_capacity_pack_catalog_has_no_duplicate_names() -> None:

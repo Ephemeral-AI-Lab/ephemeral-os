@@ -37,3 +37,25 @@ def test_open_no_follow_uses_openat2_when_available(
 
     assert file_ops.read_bytes_no_follow(target) == b"ok"
     assert calls == [(str(target), os.O_RDONLY, 0o666)]
+
+
+def test_is_regular_file_no_follow_checks_directory_fd_without_fdopen(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target = tmp_path / "target"
+    target.mkdir()
+
+    def fake_open_no_follow(path: str | Path, flags: int, mode: int = 0o666) -> int:
+        assert Path(path) == target
+        assert flags == os.O_RDONLY
+        assert mode == 0o666
+        return os.open(target, os.O_RDONLY)
+
+    def fail_fdopen(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("directory file descriptors must be checked with fstat")
+
+    monkeypatch.setattr(file_ops, "open_no_follow", fake_open_no_follow)
+    monkeypatch.setattr(file_ops.os, "fdopen", fail_fdopen)
+
+    assert file_ops.is_regular_file_no_follow(target) is False

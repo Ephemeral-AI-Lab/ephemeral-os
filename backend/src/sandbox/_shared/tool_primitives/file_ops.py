@@ -111,8 +111,10 @@ def is_regular_file_no_follow(path: str | Path) -> bool:
         fd = open_no_follow(path, os.O_RDONLY)
     except (OSError, ValueError):
         return False
-    with os.fdopen(fd, "rb") as handle:
-        return stat.S_ISREG(os.fstat(handle.fileno()).st_mode)
+    try:
+        return stat.S_ISREG(os.fstat(fd).st_mode)
+    finally:
+        os.close(fd)
 
 
 def write_bytes_no_follow(

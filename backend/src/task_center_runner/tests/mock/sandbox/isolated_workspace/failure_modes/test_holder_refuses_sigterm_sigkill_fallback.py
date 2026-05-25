@@ -1,8 +1,9 @@
 """SIGSTOPped holder ignores SIGTERM; exit() escalates to SIGKILL after grace.
 
 Host-side ``kill -STOP`` on the holder PID prevents it from handling
-SIGTERM. The exit() path's ``kill_holder`` waits ``grace_s`` then sends
-SIGKILL — netns/mntns/pidns are reaped along with the kernel-killed PID.
+SIGTERM. The exit() path's ``kill_holder`` waits only the configured short
+``grace_s`` window, then sends SIGKILL — netns/mntns/pidns are reaped along
+with the kernel-killed PID.
 """
 
 from __future__ import annotations
@@ -61,8 +62,19 @@ async def test_holder_refuses_sigterm_sigkill_fallback(
     exit_resp = await _iws_rpc.exit_(sandbox_id, "agent-A", timeout=30)
     elapsed = time.monotonic() - t0
     assert exit_resp.get("success") is True, exit_resp
-    # exit() pays the grace window before SIGKILL escalates (default 5s).
-    assert elapsed >= 1.0, ("exit must wait at least 1s before SIGKILL fallback", elapsed)
+    kill_holder_ms = float(
+        (exit_resp.get("phases_ms") or {}).get("kill_holder") or 0.0
+    )
+    assert kill_holder_ms >= 150.0, (
+        "exit must wait briefly before SIGKILL fallback",
+        kill_holder_ms,
+        exit_resp,
+    )
+    assert elapsed < 2.0, (
+        "SIGKILL fallback should not pay the old 5s holder grace",
+        elapsed,
+        exit_resp,
+    )
 
     jsonl = await iws_audit_jsonl()
     _iws_invariants.assert_audit_sequence(

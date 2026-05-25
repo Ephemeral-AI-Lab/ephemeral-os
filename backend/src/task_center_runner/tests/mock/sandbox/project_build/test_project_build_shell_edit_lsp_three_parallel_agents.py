@@ -59,7 +59,7 @@ class ComplexProjectBuildShellEditLspThreeParallelAgents(ScenarioBase):
         return ToolCallSpec(submit_plan_closes_goal, _three_agent_plan())
 
     def executor_actions(self, ctx: ScenarioContext) -> Sequence[str]:  # noqa: ARG002
-        return ("complex_project_build_shell_edit_lsp",)
+        return ("complex_project_build_shell_edit_lsp_shared_bootstrap",)
 
     def evaluator_response(self, ctx: ScenarioContext) -> ToolCallSpec:
         return ToolCallSpec(
@@ -145,7 +145,10 @@ def _assert_three_executor_tasks_per_attempt(report: RunReport) -> None:
     ]
     by_attempt: dict[str | None, list[str]] = {}
     for launch in executor_launches:
-        by_attempt.setdefault(launch.attempt_id, []).append(launch.task_id)
+        _assert_canonical_generator_task_id(launch.task_id, launch.attempt_id)
+        by_attempt.setdefault(launch.attempt_id, []).append(
+            _local_generator_task_id(launch.task_id)
+        )
 
     assert len(by_attempt) == 2, by_attempt
     for task_ids in by_attempt.values():
@@ -155,22 +158,40 @@ def _assert_three_executor_tasks_per_attempt(report: RunReport) -> None:
     assert len(goals) == 1, report.graph_summary
     attempts = goals[0]["iterations"][0]["attempts"]
     assert len(attempts) == 2, report.graph_summary
+    generator_status_counts: Counter[str] = Counter()
     for attempt in attempts:
         assert attempt["status"] == "failed"
         assert attempt["fail_reason"] == "generator_failed"
-        assert attempt["task_ids"] == list(_AGENT_TASK_IDS)
+        for task_id in attempt["task_ids"]:
+            _assert_canonical_generator_task_id(task_id, attempt["id"])
+        assert [
+            _local_generator_task_id(task_id) for task_id in attempt["task_ids"]
+        ] == list(_AGENT_TASK_IDS)
 
         generator_tasks = [
             task
             for task in attempt["tasks"]
-            if task["id"] in _AGENT_TASK_IDS
+            if _local_generator_task_id(task["id"]) in _AGENT_TASK_IDS
         ]
         assert len(generator_tasks) == len(_AGENT_TASK_IDS)
         assert all(task["needs"] == [] for task in generator_tasks)
+        generator_status_counts.update(str(task["status"]) for task in generator_tasks)
 
     counts = Counter(event.type for event in report.events)
     assert counts[EventType.EXECUTOR_SUCCESS] == 2
-    assert counts[EventType.EXECUTOR_FAILURE] == 4
+    assert generator_status_counts == Counter({"failed": 4, "done": 2})
+
+
+def _assert_canonical_generator_task_id(
+    task_id: str,
+    attempt_id: str | None,
+) -> None:
+    assert attempt_id is not None
+    assert task_id.startswith(f"{attempt_id}:gen:"), task_id
+
+
+def _local_generator_task_id(task_id: str) -> str:
+    return task_id.rsplit(":gen:", maxsplit=1)[-1]
 
 
 def _assert_shared_bootstrap_conflicts(report: RunReport) -> None:

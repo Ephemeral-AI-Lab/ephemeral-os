@@ -601,6 +601,15 @@ class MockSquadRunner:
                 )
                 summary = "Complex project-build shell-edit LSP probe passed."
                 artifacts = [summary_path]
+            elif action == "complex_project_build_shell_edit_lsp_shared_bootstrap":
+                summary_path = await self._run_complex_project_build_shell_edit_lsp_probe(
+                    metadata,
+                    emit,
+                    smoke=False,
+                    shared_attempt_bootstrap=True,
+                )
+                summary = "Complex project-build shell-edit LSP probe passed."
+                artifacts = [summary_path]
             elif action == "complex_project_build_shell_edit_lsp_smoke":
                 summary_path = await self._run_complex_project_build_shell_edit_lsp_probe(
                     metadata, emit, smoke=True
@@ -1459,6 +1468,7 @@ class MockSquadRunner:
         emit: EmitStreamEvent,
         *,
         smoke: bool,
+        shared_attempt_bootstrap: bool = False,
     ) -> str:
         from task_center_runner.agent.mock.complex_project_build_shell_edit_lsp_probe import (
             run_complex_project_build_shell_edit_lsp_probe,
@@ -1475,6 +1485,7 @@ class MockSquadRunner:
             caller=self._caller(metadata),
             sandbox_id=sandbox_id,
             smoke=smoke,
+            shared_attempt_bootstrap=shared_attempt_bootstrap,
         )
 
     async def _run_complex_project_build_grep_glob_probe(

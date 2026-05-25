@@ -41,6 +41,21 @@ _IWS_APT_CACHE_DIR = (
     / "jammy-amd64"
 )
 _IWS_TEST_UPPERDIR_BYTES = 67_108_864
+_IWS_TEST_ENV_KEYS = (
+    "EOS_ISOLATED_WORKSPACE_TEST_FAIL_AT",
+    "EOS_ISOLATED_WORKSPACE_TEST_HANG_AT",
+    "EOS_ISOLATED_WORKSPACE_TEST_PHASE_DELAY",
+    "EOS_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH",
+    "EOS_ISOLATED_WORKSPACE_TTL_S",
+    "EOS_ISOLATED_WORKSPACE_TOTAL_CAP",
+    "EOS_ISOLATED_WORKSPACE_PER_AGENT",
+    "EOS_ISOLATED_WORKSPACE_MEMAVAIL_FRACTION",
+    "EOS_ISOLATED_WORKSPACE_SETUP_TIMEOUT_S",
+    "EOS_ISOLATED_WORKSPACE_EXIT_GRACE_S",
+    "EOS_ISOLATED_WORKSPACE_RFC1918_EGRESS",
+    "EOS_ISOLATED_WORKSPACE_FALLBACK_DNS",
+    "EOS_ISOLATED_WORKSPACE_BASELINE_RUNS",
+)
 
 
 # ---------------------------------------------------------------------------
@@ -363,9 +378,11 @@ async def iws_clean_sandbox(iws_sandbox: dict[str, Any]) -> dict[str, Any]:
     sandbox_id = str(iws_sandbox.get("sandbox_id") or iws_sandbox.get("id") or "")
     if not sandbox_id:
         return iws_sandbox
-    # Purge any leaked test-injection vars. If grep finds none, this is a
+    # Purge any leaked per-test daemon env vars. If grep finds none, this is a
     # ~1ms no-op. If grep finds something, the sed strips it and we force a
-    # daemon respawn so the next RPC sees a clean env.
+    # daemon respawn so the next RPC sees a clean env. TTL/TOTAL_CAP/etc. are
+    # included here because interrupted tests can leave a globally hostile
+    # daemon config in /etc/environment for the rest of the run.
     #
     # Also restore the test upperdir reservation if missing or stale. Some failure_modes /
     # resource_controls tests set their own UPPERDIR_BYTES via
@@ -373,18 +390,13 @@ async def iws_clean_sandbox(iws_sandbox: dict[str, Any]) -> dict[str, Any]:
     # finally block, which removes the conftest-session default. Without
     # this idempotent restore the next test that opens N=2+ concurrent
     # handles trips the 1 GiB-default RAM gate (production fallback).
+    cleanup_regex = "|".join(_IWS_TEST_ENV_KEYS)
+    cleanup_sed = "".join(f"/^{key}=/d;" for key in _IWS_TEST_ENV_KEYS)
     purge = await raw_exec(
         sandbox_id,
         "changed=0; "
-        "if grep -qE '^(EOS_ISOLATED_WORKSPACE_TEST_FAIL_AT|"
-        "EOS_ISOLATED_WORKSPACE_TEST_HANG_AT|"
-        "EOS_ISOLATED_WORKSPACE_TEST_PHASE_DELAY|"
-        "EOS_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH)=' /etc/environment; "
-        "then sed -i '/^EOS_ISOLATED_WORKSPACE_TEST_FAIL_AT=/d;"
-        "/^EOS_ISOLATED_WORKSPACE_TEST_HANG_AT=/d;"
-        "/^EOS_ISOLATED_WORKSPACE_TEST_PHASE_DELAY=/d;"
-        "/^EOS_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH=/d' /etc/environment; "
-        "changed=1; fi; "
+        f"if grep -qE '^({cleanup_regex})=' /etc/environment; "
+        f"then sed -i '{cleanup_sed}' /etc/environment; changed=1; fi; "
         "if ! grep -q '^EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES=' /etc/environment; "
         f"then echo 'EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES={_IWS_TEST_UPPERDIR_BYTES}' "
         ">> /etc/environment; changed=1; "

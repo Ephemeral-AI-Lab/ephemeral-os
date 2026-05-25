@@ -26,6 +26,24 @@ _COMPOSITE_NAMES = frozenset(
 )
 
 
+def _assert_subpackage_exports_registry(
+    module: object,
+    *,
+    registry_prefix: str,
+) -> None:
+    exported = tuple(getattr(module, "__all__"))
+    registered = {
+        scenario_cls.__name__
+        for scenario_name, scenario_cls in SCENARIO_REGISTRY.items()
+        if scenario_name.startswith(f"{registry_prefix}.")
+    }
+
+    assert len(exported) == len(set(exported)), (
+        f"{registry_prefix}.__all__ contains duplicate exports"
+    )
+    assert set(exported) == registered
+
+
 def test_registry_is_non_empty() -> None:
     assert SCENARIO_REGISTRY, "SCENARIO_REGISTRY is empty"
 
@@ -119,25 +137,7 @@ def test_subpackage_imports_are_clean() -> None:
         "NestedGoalFailure",
         "DeferredParentPlannerTerminalRouting",
     ]
-    assert sandbox.__all__ == [
-        "AutoSquashCommitResume",
-        "BackgroundShellStop",
-        "BackgroundShellStopDuringMaintenance",
-        "BackgroundShellExhaustion",
-        "BackgroundShellGolden",
-        "BackgroundShellInterleave",
-        "BackgroundShellLateCancelRace",
-        "BackgroundShellPartialWriteCancel",
-        "ComplexProjectBuild",
-        "ComplexProjectBuildGrepGlob",
-        "ComplexProjectBuildGrepGlobSmoke",
-        "ComplexProjectBuildShellEditLsp",
-        "ComplexProjectBuildShellEditLspSmoke",
-        "ComplexProjectBuildSmoke",
-        "HeavyIoZonedConcurrent",
-        "HighConcurrencyLayerstackOverlayOcc",
-        "OccConcurrentConflicts",
-    ]
+    _assert_subpackage_exports_registry(sandbox, registry_prefix="sandbox")
     assert planner_validation.__all__ == [
         "PlannerCycleInDeps",
         "PlannerDuplicateLocalId",

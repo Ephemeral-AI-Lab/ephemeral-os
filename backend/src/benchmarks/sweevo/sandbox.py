@@ -279,6 +279,13 @@ def _find_reusable_auto_sweevo_sandbox(
         labeled_repo = str(labels.get("project_dir") or repo_dir)
         if labeled_repo != repo_dir:
             continue
+        if "docker_init" in sandbox and sandbox.get("docker_init") is not True:
+            logger.warning(
+                "Skipping reusable SWE-EVO Docker sandbox %s (%s): created without init",
+                name,
+                sandbox.get("id", ""),
+            )
+            continue
         candidates.append(sandbox)
     candidates.sort(
         key=lambda item: (

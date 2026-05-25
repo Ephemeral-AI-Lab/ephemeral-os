@@ -172,7 +172,12 @@ class _IsolatedLifecycleMixin:
             with contextlib.suppress(Exception):
                 shutil.rmtree(handle.scratch_dir, ignore_errors=True)
 
-        async def exit(self, agent_id: str, *, grace_s: float = 5.0) -> dict[str, Any]:
+        async def exit(
+            self,
+            agent_id: str,
+            *,
+            grace_s: float | None = None,
+        ) -> dict[str, Any]:
             async with self._map_lock:
                 handle_id = self._by_agent.get(agent_id)
                 if handle_id is None:
@@ -187,7 +192,10 @@ class _IsolatedLifecycleMixin:
                 del self._handles[handle_id]
             upperdir_bytes = _du_bytes(handle.upperdir)
             timer = _PhaseTimer(self._clock)
-            await self._teardown(handle, grace_s=grace_s, timer=timer)
+            effective_grace_s = (
+                self._config.exit_grace_s if grace_s is None else max(0.0, grace_s)
+            )
+            await self._teardown(handle, grace_s=effective_grace_s, timer=timer)
             handle.status = "stopped"
             self._persist()
             lifetime_s = self._clock() - handle.created_at

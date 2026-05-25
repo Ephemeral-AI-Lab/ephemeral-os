@@ -377,6 +377,54 @@ async def test_auto_sweevo_sandbox_reuses_started_matching_fixture(
 
 
 @pytest.mark.asyncio
+async def test_auto_sweevo_sandbox_skips_docker_container_without_init(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    created: dict[str, object] = {}
+
+    def fake_create_sandbox(**kwargs: object) -> dict[str, object]:
+        created.update(kwargs)
+        return {"id": "sbx-fresh"}
+
+    service = SimpleNamespace(
+        list_sandboxes=lambda: [
+            {
+                "id": "sbx-stale",
+                "name": "sweevo-test-dask__dask_2023.3.2_2023.4.0-stale",
+                "state": "started",
+                "docker_init": False,
+                "labels": {
+                    "purpose": "sweevo-test",
+                    "sweevo_instance": "dask__dask_2023.3.2_2023.4.0",
+                    "project_dir": "/testbed",
+                },
+            },
+        ],
+        set_sandbox_labels=lambda *_args, **_kwargs: pytest.fail(
+            "non-init docker sandbox should not be reused"
+        ),
+        get_sandbox=lambda sandbox_id: {"id": sandbox_id, "state": "started"},
+        start_sandbox=lambda _sandbox_id: pytest.fail(
+            "non-init docker sandbox should not be started for reuse"
+        ),
+        delete_sandbox=lambda _sandbox_id: None,
+        create_sandbox=fake_create_sandbox,
+    )
+    monkeypatch.setattr(sweevo_sandbox, "_service", lambda: service)
+    monkeypatch.setattr(sweevo_sandbox, "setup_sweevo_sandbox", AsyncMock(return_value="/testbed"))
+
+    result = await sweevo_sandbox.create_sweevo_test_sandbox(
+        _instance(),
+        register_snapshot=False,
+        reuse_existing_auto=True,
+    )
+
+    assert result["sandbox_id"] == "sbx-fresh"
+    assert result["reused_existing"] is False
+    assert created["image"] == "example/image"
+
+
+@pytest.mark.asyncio
 async def test_fresh_sweevo_sandbox_prunes_pending_build_before_create(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

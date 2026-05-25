@@ -3,15 +3,28 @@
 from __future__ import annotations
 
 import contextlib
+from dataclasses import dataclass
 import ipaddress
 import os
 import shutil
 import signal
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
 from sandbox.isolated_workspace.helper.types import CGROUP_ROOT, HANDLE_PREFIX, logger
+
+_NS_HOLDER_MARKER = "sandbox.isolated_workspace.scripts.ns_holder"
+
+
+@dataclass(frozen=True)
+class _HolderProcess:
+    pid: int
+    ppid: int
+    state: str
+    comm: str
+    cmdline: str
 
 
 class _IsolatedGcMixin:
@@ -50,6 +63,8 @@ class _IsolatedGcMixin:
             # Per-orphan gc_orphan timing (PLAN §15.3): each event carries its own
             # ``total_ms`` plus ``phases_ms.{discover, reap}``. The discover cost
             # is amortized across the orphans found in that pass.
+            self._reap_orphan_holder_processes()
+
             t0 = self._clock()
             result = subprocess.run(
                 ["ip", "-o", "link", "show"], capture_output=True, text=True, check=False,
@@ -216,6 +231,142 @@ class _IsolatedGcMixin:
                         with contextlib.suppress(ProcessLookupError, PermissionError):
                             os.kill(pid, signal.SIGKILL)
 
+        def _reap_orphan_holder_processes(self) -> None:
+            """Kill stale ns_holder process trees that outlived a daemon restart."""
+            live_root_pids = {
+                int(handle.root_pid)
+                for handle in getattr(self, "_handles", {}).values()
+                if getattr(handle, "root_pid", 0)
+            }
+            t0 = self._clock()
+            candidates = [
+                proc
+                for proc in _iter_iws_holder_processes()
+                if proc.pid not in live_root_pids and proc.ppid not in live_root_pids
+            ]
+            discover_ms = (self._clock() - t0) * 1000.0
+            if not candidates:
+                return
+            discover_share_ms = discover_ms / len(candidates)
+            target_pids = {proc.pid for proc in candidates if proc.state != "Z"}
+            t_reap = self._clock()
+            for pid in target_pids:
+                with contextlib.suppress(ProcessLookupError, PermissionError):
+                    os.kill(pid, signal.SIGCONT)
+            if target_pids:
+                time.sleep(0.05)
+            for proc in _holder_signal_order(candidates):
+                if proc.state == "Z":
+                    continue
+                with contextlib.suppress(ProcessLookupError, PermissionError):
+                    os.kill(proc.pid, signal.SIGTERM)
+            _wait_holder_processes(target_pids, timeout_s=1.0)
+            for pid in _remaining_live_holder_pids(target_pids):
+                with contextlib.suppress(ProcessLookupError, PermissionError):
+                    os.kill(pid, signal.SIGCONT)
+                with contextlib.suppress(ProcessLookupError, PermissionError):
+                    os.kill(pid, signal.SIGKILL)
+            _wait_holder_processes(target_pids, timeout_s=1.0)
+            reap_ms = (self._clock() - t_reap) * 1000.0
+            reap_share_ms = reap_ms / len(candidates)
+            for proc in candidates:
+                self._emit(
+                    "sandbox_isolated_workspace_gc_orphan",
+                    {
+                        "kind": "holder",
+                        "identifier": str(proc.pid),
+                        "state": proc.state,
+                        "comm": proc.comm,
+                        "total_ms": discover_share_ms + reap_share_ms,
+                        "phases_ms": {
+                            "discover": discover_share_ms,
+                            "reap": reap_share_ms,
+                        },
+                    },
+                )
 
 
-__all__ = ["_IsolatedGcMixin"]
+def _iter_iws_holder_processes(
+    proc_root: Path = Path("/proc"),
+) -> list[_HolderProcess]:
+    try:
+        entries = list(proc_root.iterdir())
+    except OSError:
+        return []
+    processes: list[_HolderProcess] = []
+    for entry in entries:
+        if not entry.name.isdigit():
+            continue
+        stat = _read_proc_stat(entry / "stat")
+        if stat is None:
+            continue
+        pid, comm, state, ppid = stat
+        cmdline = _read_cmdline(entry / "cmdline")
+        if _NS_HOLDER_MARKER not in cmdline:
+            continue
+        processes.append(
+            _HolderProcess(
+                pid=pid,
+                ppid=ppid,
+                state=state,
+                comm=comm,
+                cmdline=cmdline,
+            )
+        )
+    return processes
+
+
+def _holder_signal_order(processes: list[_HolderProcess]) -> list[_HolderProcess]:
+    return sorted(processes, key=lambda proc: (proc.comm == "unshare", proc.pid))
+
+
+def _wait_holder_processes(pids: set[int], *, timeout_s: float) -> None:
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        if not _remaining_live_holder_pids(pids):
+            return
+        time.sleep(0.02)
+
+
+def _remaining_live_holder_pids(pids: set[int]) -> set[int]:
+    live: set[int] = set()
+    for proc in _iter_iws_holder_processes():
+        if proc.pid in pids and proc.state != "Z":
+            live.add(proc.pid)
+    return live
+
+
+def _read_cmdline(path: Path) -> str:
+    try:
+        raw = path.read_bytes()
+    except OSError:
+        return ""
+    return raw.replace(b"\0", b" ").decode("utf-8", errors="replace")
+
+
+def _read_proc_stat(path: Path) -> tuple[int, str, str, int] | None:
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    open_paren = text.find("(")
+    close_paren = text.rfind(")")
+    if open_paren < 0 or close_paren <= open_paren:
+        return None
+    try:
+        pid = int(text[:open_paren].strip())
+        rest = text[close_paren + 1 :].split()
+        state = rest[0]
+        ppid = int(rest[1])
+    except (IndexError, ValueError):
+        return None
+    return pid, text[open_paren + 1 : close_paren], state, ppid
+
+
+
+__all__ = [
+    "_HolderProcess",
+    "_IsolatedGcMixin",
+    "_holder_signal_order",
+    "_iter_iws_holder_processes",
+]

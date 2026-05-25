@@ -130,6 +130,23 @@ class ProbeContext:
     smoke: bool
 
 
+@dataclass
+class _SharedAttemptBootstrap:
+    expected: int
+    condition: asyncio.Condition = field(default_factory=asyncio.Condition)
+    arrived: int = 0
+    reset_started: bool = False
+    reset_done: bool = False
+    reset_error: Exception | None = None
+
+
+_SHARED_ATTEMPT_BOOTSTRAPS: dict[
+    tuple[str, str, str, str],
+    _SharedAttemptBootstrap,
+] = {}
+_SHARED_ATTEMPT_BOOTSTRAPS_LOCK = asyncio.Lock()
+
+
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
@@ -225,7 +242,12 @@ def _select_refactor_passes(smoke: bool) -> tuple[RefactorPass, ...]:
 # ---------------------------------------------------------------------------
 
 
-async def _phase0_bootstrap(ctx: ProbeContext, stats: ProbeStats) -> None:
+async def _phase0_bootstrap(
+    ctx: ProbeContext,
+    stats: ProbeStats,
+    *,
+    shared_attempt_bootstrap: bool = False,
+) -> None:
     phase_started = time.monotonic()
 
     # Ensure /ephemeral-os exists on disk before rebinding the workspace_root.
@@ -273,22 +295,10 @@ async def _phase0_bootstrap(ctx: ProbeContext, stats: ProbeStats) -> None:
     )
     ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
 
-    rebind = await call_daemon_api(
-        ctx.sandbox_id,
-        "api.build_workspace_base",
-        {"workspace_root": WORKSPACE_ROOT, "reset": True},
-        timeout=240,
-    )
-    _check_record = SandboxCheck(
-        name="api.build_workspace_base.ephemeral_os",
-        passed=bool(rebind.get("success")),
-        detail=f"workspace_root={WORKSPACE_ROOT}",
-    )
-    ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
-    if not rebind.get("success"):
-        raise RuntimeError(
-            f"workspace rebind to {WORKSPACE_ROOT} failed: {rebind!r}"
-        )
+    if shared_attempt_bootstrap:
+        await _shared_attempt_workspace_base(ctx)
+    else:
+        await _reset_workspace_base(ctx)
 
     # Mutate metadata so subsequent toolkit calls (write_file, edit_file,
     # read_file, shell) default their cwd / repo_root to /ephemeral-os.
@@ -376,6 +386,113 @@ async def _phase0_bootstrap(ctx: ProbeContext, stats: ProbeStats) -> None:
             "tool_calls_at_end": _total_calls(stats),
         }
     )
+
+
+async def _reset_workspace_base(ctx: ProbeContext) -> None:
+    rebind = await call_daemon_api(
+        ctx.sandbox_id,
+        "api.build_workspace_base",
+        {"workspace_root": WORKSPACE_ROOT, "reset": True},
+        timeout=240,
+    )
+    _check_record = SandboxCheck(
+        name="api.build_workspace_base.ephemeral_os",
+        passed=bool(rebind.get("success")),
+        detail=f"workspace_root={WORKSPACE_ROOT}",
+    )
+    ctx.publish_mock_record(EventType.MOCK_SANDBOX_CHECK_RECORDED, _check_record)
+    if not rebind.get("success"):
+        raise RuntimeError(
+            f"workspace rebind to {WORKSPACE_ROOT} failed: {rebind!r}"
+        )
+
+
+async def _shared_attempt_workspace_base(ctx: ProbeContext) -> None:
+    state = await _shared_attempt_bootstrap_state(ctx)
+    do_reset = False
+    async with state.condition:
+        state.arrived += 1
+        if state.arrived >= state.expected:
+            state.condition.notify_all()
+        if not state.reset_started:
+            state.reset_started = True
+            do_reset = True
+
+    if do_reset:
+        try:
+            await _reset_workspace_base(ctx)
+        except Exception as exc:
+            async with state.condition:
+                state.reset_error = exc
+                state.reset_done = True
+                state.condition.notify_all()
+            raise
+        async with state.condition:
+            state.reset_done = True
+            state.condition.notify_all()
+
+    async with state.condition:
+        await asyncio.wait_for(
+            state.condition.wait_for(
+                lambda: state.reset_done or state.reset_error is not None
+            ),
+            timeout=240,
+        )
+        if state.reset_error is not None:
+            raise RuntimeError(
+                "shared attempt bootstrap reset failed"
+            ) from state.reset_error
+        await asyncio.wait_for(
+            state.condition.wait_for(
+                lambda: state.arrived >= state.expected
+                or state.reset_error is not None
+            ),
+            timeout=60,
+        )
+        if state.reset_error is not None:
+            raise RuntimeError(
+                "shared attempt bootstrap reset failed"
+            ) from state.reset_error
+
+
+async def _shared_attempt_bootstrap_state(
+    ctx: ProbeContext,
+) -> _SharedAttemptBootstrap:
+    key = _shared_attempt_bootstrap_key(ctx)
+    expected = _shared_attempt_bootstrap_expected(ctx)
+    async with _SHARED_ATTEMPT_BOOTSTRAPS_LOCK:
+        state = _SHARED_ATTEMPT_BOOTSTRAPS.get(key)
+        if state is None:
+            state = _SharedAttemptBootstrap(expected=max(expected, 1))
+            _SHARED_ATTEMPT_BOOTSTRAPS[key] = state
+        else:
+            state.expected = max(state.expected, expected, 1)
+        return state
+
+
+def _shared_attempt_bootstrap_key(
+    ctx: ProbeContext,
+) -> tuple[str, str, str, str]:
+    run_id = str(ctx.metadata.get("task_center_run_id") or "")
+    attempt_id = str(ctx.metadata.get("task_center_attempt_id") or "")
+    task_id = str(ctx.metadata.get("task_center_task_id") or "")
+    return (
+        ctx.sandbox_id,
+        run_id,
+        attempt_id or task_id,
+        WORKSPACE_ROOT,
+    )
+
+
+def _shared_attempt_bootstrap_expected(ctx: ProbeContext) -> int:
+    runtime = ctx.metadata.get("attempt_runtime")
+    attempt_id = str(ctx.metadata.get("task_center_attempt_id") or "")
+    if runtime is None or not attempt_id:
+        return 1
+    attempt = runtime.attempt_store.get(attempt_id)
+    if attempt is None:
+        return 1
+    return len(attempt.generator_task_ids or ()) or 1
 
 
 # ---------------------------------------------------------------------------

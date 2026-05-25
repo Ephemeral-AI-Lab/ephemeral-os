@@ -30,6 +30,7 @@ DAEMON_TCP_PORT_LABEL = "eos.daemon.tcp.port"
 DAEMON_TCP_ENV_HOST = "EOS_DAEMON_TCP_HOST"
 DAEMON_TCP_ENV_PORT = "EOS_DAEMON_TCP_PORT"
 DAEMON_AUTH_ENV = "EOS_DAEMON_AUTH_TOKEN"
+DOCKER_INIT_ENABLED_LABEL = "eos.docker.init.enabled"
 
 
 def _normalize_dict(payload: dict[str, str] | None) -> dict[str, str]:
@@ -46,6 +47,7 @@ def _serialize_container(container: Any) -> dict[str, Any]:
     """Translate ``docker.models.containers.Container`` into our canonical dict."""
     attrs = getattr(container, "attrs", None) or {}
     config = attrs.get("Config") or {}
+    host_config = attrs.get("HostConfig") or {}
     state = attrs.get("State") or {}
     labels = config.get("Labels") or {}
 
@@ -57,6 +59,7 @@ def _serialize_container(container: Any) -> dict[str, Any]:
         "status": state.get("Status") or getattr(container, "status", None),
         "labels": dict(labels),
         "project_dir": labels.get("project_dir") or config.get("WorkingDir"),
+        "docker_init": host_config.get("Init"),
     }
 
 
@@ -168,6 +171,7 @@ class DockerProviderAdapter:
         if snapshot:
             merged_labels["snapshot"] = snapshot
         merged_labels.update(_normalize_dict(labels))
+        merged_labels[DOCKER_INIT_ENABLED_LABEL] = "1"
 
         environment = _normalize_dict(env_vars)
         host_kwargs = host_config_kwargs()
@@ -191,6 +195,7 @@ class DockerProviderAdapter:
             "name": name,
             "command": ["sleep", "infinity"],
             "detach": True,
+            "init": True,
             "tty": False,
             "environment": environment,
             "labels": merged_labels,

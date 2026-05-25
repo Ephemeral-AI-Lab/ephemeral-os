@@ -1,10 +1,9 @@
 """Capacity-suite scenario-pack catalog.
 
-This catalog is the executable counterpart of
-``docs/wiki/live-e2e-capacity-suite-scenario-packs.md``. Focused rows point to
-an implemented scenario when the task_center_runner harness owns the behavior directly,
-or to the existing unit/live test anchor that currently owns the lower-level
-contract.
+This catalog is the executable capacity scenario-pack matrix. Focused rows point
+to an implemented scenario when the task_center_runner harness owns the behavior
+directly, or to the existing unit/live test anchor that currently owns the
+lower-level contract.
 """
 
 from __future__ import annotations
@@ -120,20 +119,14 @@ CAPACITY_PACK_SPECS: tuple[CapacityPackSpec, ...] = (
         "B",
         "sandbox",
         "T1",
-        test_path=(
-            "backend/tests/live_e2e_test/sandbox/overlay/native/"
-            "test_capture_changes.py"
-        ),
+        test_path="backend/tests/unit_test/test_sandbox/test_overlay/test_upperdir_capture.py",
     ),
     CapacityPackSpec(
         "sandbox.overlay_symlink_handling",
         "B",
         "sandbox",
         "T1",
-        test_path=(
-            "backend/tests/live_e2e_test/sandbox/overlay/native/"
-            "test_overlay_edge_cases.py"
-        ),
+        test_path="backend/tests/unit_test/test_sandbox/test_tool_primitives_file_ops.py",
     ),
     CapacityPackSpec(
         "sandbox.layerstack_lease_protection",

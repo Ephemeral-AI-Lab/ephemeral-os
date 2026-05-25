@@ -171,6 +171,42 @@ def test_overlay_runtime_uses_writable_root(
     assert overlay.upperdir.is_relative_to(overlay_writable_root_path)
 
 
+def test_manager_reaps_stale_runtime_overlay_dirs_once(
+    overlay_writable_root_path: Path,
+) -> None:
+    overlay_root = overlay_writable_root_path / "runtime" / "overlay"
+    stale_command = overlay_root / "overlay-executor-deadbeef"
+    stale_lsp = overlay_root / "lsp-session-__warm__-deadbeef"
+    persistent_mount = overlay_writable_root_path / "runtime" / "sandbox-overlay" / "active"
+    stale_command.mkdir(parents=True)
+    stale_lsp.mkdir(parents=True)
+    persistent_mount.mkdir(parents=True)
+
+    overlay_manager.clear_overlay_manager_for_tests()
+    overlay_manager._reap_stale_runtime_overlay_dirs_once()  # noqa: SLF001
+
+    assert overlay_root.exists()
+    assert list(overlay_root.iterdir()) == []
+    assert persistent_mount.exists()
+
+
+def test_manager_does_not_reap_runtime_overlay_dirs_after_first_pass(
+    overlay_writable_root_path: Path,
+) -> None:
+    overlay_root = overlay_writable_root_path / "runtime" / "overlay"
+    initial_stale = overlay_root / "overlay-executor-initial"
+    initial_stale.mkdir(parents=True)
+
+    overlay_manager.clear_overlay_manager_for_tests()
+    overlay_manager._reap_stale_runtime_overlay_dirs_once()  # noqa: SLF001
+
+    current_runtime_overlay = overlay_root / "overlay-executor-live"
+    current_runtime_overlay.mkdir(parents=True)
+    overlay_manager._reap_stale_runtime_overlay_dirs_once()  # noqa: SLF001
+
+    assert current_runtime_overlay.exists()
+
+
 def test_operation_overlay_uses_shared_snapshot_layers_and_private_upperdir(
     tmp_path: Path,
     overlay_writable_root_path: Path,

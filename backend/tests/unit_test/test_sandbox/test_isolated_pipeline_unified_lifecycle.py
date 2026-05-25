@@ -122,6 +122,7 @@ def _config(**overrides: Any) -> _ManagerConfig:
         "upperdir_bytes": 1024,
         "memavail_fraction": 0.5,
         "setup_timeout_s": 1.0,
+        "exit_grace_s": 0.25,
         "rfc1918_egress": "allow",
         "fallback_dns": "1.1.1.1",
     }
@@ -144,6 +145,19 @@ def _pipeline(
         runtime=runtime or _Runtime(),
         meminfo_reader=meminfo_reader,
     )
+
+
+def test_manager_config_exit_grace_defaults_to_short_escalation_window() -> None:
+    config = _ManagerConfig.from_env({"EOS_ISOLATED_WORKSPACE_ENABLED": "true"})
+    assert config.exit_grace_s == pytest.approx(0.25)
+
+
+def test_manager_config_exit_grace_env_override() -> None:
+    config = _ManagerConfig.from_env({
+        "EOS_ISOLATED_WORKSPACE_ENABLED": "true",
+        "EOS_ISOLATED_WORKSPACE_EXIT_GRACE_S": "1.5",
+    })
+    assert config.exit_grace_s == pytest.approx(1.5)
 
 
 @pytest.mark.asyncio

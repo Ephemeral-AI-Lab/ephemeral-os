@@ -19,6 +19,7 @@ from sandbox.provider.docker.adapter import (
     DAEMON_TCP_ENV_PORT,
     DAEMON_TCP_INTERNAL_PORT,
     DAEMON_TCP_PORT_LABEL,
+    DOCKER_INIT_ENABLED_LABEL,
     DockerProviderAdapter,
 )
 
@@ -48,6 +49,7 @@ def _fake_container(
             "Env": env or [],
             "Cmd": ["sleep", "infinity"],
         },
+        "HostConfig": {"Init": True},
         "State": {"Status": state_status},
         "NetworkSettings": {"Ports": ports or {}},
     }
@@ -108,6 +110,7 @@ def test_create_calls_containers_create_with_default_caps(
     assert kwargs["name"] == "sb1"
     assert kwargs["command"] == ["sleep", "infinity"]
     assert kwargs["detach"] is True
+    assert kwargs["init"] is True
     assert kwargs["cap_add"] == ["SYS_ADMIN", "NET_ADMIN"]
     assert "seccomp=unconfined" in kwargs["security_opt"]
     assert "apparmor=unconfined" in kwargs["security_opt"]
@@ -116,6 +119,7 @@ def test_create_calls_containers_create_with_default_caps(
     }
     assert kwargs["labels"]["managed_by"] == "eos"
     assert kwargs["labels"]["project_dir"] == "/repo"
+    assert kwargs["labels"][DOCKER_INIT_ENABLED_LABEL] == "1"
     assert kwargs["labels"][DAEMON_TCP_ENABLED_LABEL] == "1"
     assert kwargs["labels"][DAEMON_TCP_PORT_LABEL] == str(DAEMON_TCP_INTERNAL_PORT)
     assert kwargs["environment"][DAEMON_TCP_ENV_HOST] == "0.0.0.0"
