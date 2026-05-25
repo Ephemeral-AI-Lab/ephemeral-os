@@ -11,7 +11,7 @@ from sandbox._shared.models import Intent
 from sandbox.ephemeral_workspace.plugin.op_registry import register_plugin_op
 
 from plugins.catalog.lsp.runtime.apply import apply_workspace_edit
-from plugins.catalog.lsp.runtime.session_manager import get_session
+from plugins.catalog.lsp.runtime.session_manager import get_session, session_audit_counts
 
 
 async def warm_plugin_runtime(args: dict[str, Any], ctx: Any) -> dict[str, Any]:
@@ -144,11 +144,9 @@ async def _run_timed_lsp_op(
 ) -> dict[str, Any]:
     timings: dict[str, float] = {}
     start_s = time.monotonic()
+    initial_counts = session_audit_counts(ctx)
     session = await get_session(ctx)
     timings["lsp.get_session_s"] = time.monotonic() - start_s
-    start_count = int(getattr(session, "audit_start_count", 0))
-    refresh_count = int(getattr(session, "audit_refresh_count", 0))
-    remount_count = int(getattr(session, "audit_remount_count", 0))
     op_start_s = time.monotonic()
     result = await call(session)
     timings[f"lsp.{op_name}.body_s"] = time.monotonic() - op_start_s
@@ -156,9 +154,9 @@ async def _run_timed_lsp_op(
     _attach_session_timings(
         timings,
         session,
-        start_count=start_count,
-        refresh_count=refresh_count,
-        remount_count=remount_count,
+        start_count=initial_counts["start"],
+        refresh_count=initial_counts["refresh"],
+        remount_count=initial_counts["remount"],
     )
     if not isinstance(result, dict):
         return {"result": result, "timings": timings}

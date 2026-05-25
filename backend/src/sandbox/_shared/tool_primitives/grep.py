@@ -9,6 +9,7 @@ from pathlib import Path
 
 from sandbox._shared.models import GrepResult
 from sandbox._shared.tool_primitives.file_ops import (
+    is_regular_file_no_follow,
     read_bytes_no_follow,
     walk_dirs_no_follow,
 )
@@ -34,7 +35,7 @@ def compute(
     filenames: list[str] = []
     content_lines: list[str] = []
     num_matches = 0
-    for path in sorted(walk_dirs_no_follow(root)):
+    for path in sorted(_candidate_files(root)):
         rel = _display_path(path)
         glob_filter = opts["glob_filter"]
         if glob_filter and not fnmatch.fnmatch(rel, str(glob_filter)):
@@ -112,6 +113,12 @@ def _matching_lines(rel: str, text: str, regex: re.Pattern[str], line_numbers: o
             prefix = f"{rel}:{lineno}:" if line_numbers else f"{rel}:"
             lines.append(prefix + line)
     return lines
+
+
+def _candidate_files(root: Path) -> tuple[Path, ...]:
+    if is_regular_file_no_follow(root):
+        return (root,)
+    return tuple(walk_dirs_no_follow(root))
 
 
 def _display_path(path: Path) -> str:

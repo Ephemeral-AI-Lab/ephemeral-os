@@ -1,0 +1,57 @@
+"""3.6.1 full project-build O(1) disk and squash-budget regression."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from benchmarks.sweevo.models import SWEEvoInstance
+from task_center_runner.core.stores import TaskCenterStoreBundle
+from task_center_runner.environments.sweevo_image.fixtures import (
+    run_scenario_on_sweevo_image,
+)
+from task_center_runner.scenarios import SCENARIO_REGISTRY
+from task_center_runner.tests._live_config import (
+    database_configured,
+    live_e2e_heavy_enabled,
+)
+from task_center_runner.tests.mock._project_build_contracts import (
+    assert_complex_build_full_contract,
+    assert_project_build_full_o1_disk_budget,
+)
+
+
+pytestmark = pytest.mark.asyncio
+
+
+@pytest.mark.skipif(
+    not database_configured(),
+    reason="database URL not configured",
+)
+@pytest.mark.skipif(
+    not live_e2e_heavy_enabled(),
+    reason="heavy live e2e disabled in runner.live_e2e.heavy_enabled",
+)
+@pytest.mark.timeout(2400)
+async def test_project_build_full_o1_disk_budget(
+    sweevo_image_instance: SWEEvoInstance,
+    workspace: dict[str, object],
+    audit_dir: Path,
+    stores: TaskCenterStoreBundle,
+) -> None:
+    scenario = SCENARIO_REGISTRY["sandbox.complex_project_build"]()
+    sandbox_id = str(workspace["sandbox_id"])
+    report = await run_scenario_on_sweevo_image(
+        scenario,
+        instance=sweevo_image_instance,
+        sandbox_id=sandbox_id,
+        audit_dir=audit_dir,
+        stores=stores,
+    )
+
+    await assert_complex_build_full_contract(
+        report=report,
+        sandbox_id=sandbox_id,
+    )
+    await assert_project_build_full_o1_disk_budget(report)

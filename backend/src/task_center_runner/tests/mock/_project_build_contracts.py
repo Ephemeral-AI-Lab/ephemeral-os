@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import math
+import statistics
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -27,6 +29,13 @@ from task_center_runner.agent.mock.complex_project_build_shell_edit_lsp_probe im
 from task_center_runner.audit.events import EventType
 from task_center_runner.core.runner import RunReport
 from task_center_runner.scenarios.sandbox._metrics import PERF_SCHEMA
+from task_center_runner.tests.mock._layer_stack_occ_overlay_assertions import (
+    assert_o1_workspace_resource_snapshots,
+    assert_resource_key_max,
+    assert_timing_keys_present,
+    load_performance_report,
+    mapping,
+)
 
 
 _LSP_NAMES = (
@@ -48,6 +57,26 @@ _SUBMISSION_TOOL_NAMES = {
     "submit_verification_success",
     "submit_verification_failure",
 }
+
+_DIRECT_FILE_TOOLS = ("read_file", "write_file", "edit_file")
+_PROJECT_BUILD_REQUIRED_TOOLS = (*_DIRECT_FILE_TOOLS, "shell")
+_SEARCH_TOOLS = ("grep", "glob")
+_PROJECT_BUILD_UPPERDIR_BUDGET_BYTES = 1_048_576
+_WARM_SEARCH_P95_BUDGET_MS = 500.0
+_WARM_LSP_NO_REFRESH_P95_BUDGET_MS = 500.0
+_DIRECT_FILE_OVERLAY_RESOURCE_KEYS = (
+    "resource.command_exec.workspace_tree_bytes",
+    "resource.command_exec.workspace_tree_exists",
+    "resource.command_exec.run_dir_tree_bytes",
+    "resource.command_exec.run_dir_tree_exists",
+    "resource.command_exec.upperdir_tree_bytes",
+    "resource.command_exec.upperdir_tree_exists",
+)
+_SEARCH_PUBLISH_TIMING_PREFIXES = (
+    "occ.",
+    "layer_stack.publish.",
+    "layer_stack.auto_squash.",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -217,6 +246,106 @@ async def assert_grep_glob_full_contract(
         sandbox_id=sandbox_id,
         contract=_GREP_GLOB_FULL,
     )
+
+
+async def assert_project_build_full_o1_disk_budget(report: RunReport) -> None:
+    perf = await _load_task_center_performance_report(report)
+    _assert_no_internal_sandbox_errors(report.run_dir)
+    _assert_project_build_per_tool_report(
+        perf,
+        required_tools=(*_PROJECT_BUILD_REQUIRED_TOOLS, *_LSP_NAMES),
+    )
+    _assert_workspace_tree_is_o1(report.run_dir, perf)
+    _assert_direct_file_samples_do_not_create_overlay_resources(perf)
+    _assert_upperdir_within_single_operation_budget(perf)
+    _assert_manifest_depth_within_squash_target(perf)
+
+
+async def assert_project_build_grep_glob_low_latency_after_many_edits(
+    report: RunReport,
+) -> None:
+    perf = await _load_task_center_performance_report(report)
+    _assert_no_internal_sandbox_errors(report.run_dir)
+    _assert_project_build_per_tool_report(
+        perf,
+        required_tools=(
+            *_PROJECT_BUILD_REQUIRED_TOOLS,
+            *_SEARCH_TOOLS,
+            "lsp.diagnostics",
+            "lsp.find_references",
+        ),
+    )
+    _assert_workspace_tree_is_o1(report.run_dir, perf)
+    _assert_direct_file_samples_do_not_create_overlay_resources(perf)
+    for tool_name in _SEARCH_TOOLS:
+        p95_ms = _warm_tool_p95_ms(perf, tool_name)
+        assert p95_ms <= _WARM_SEARCH_P95_BUDGET_MS, (
+            f"{tool_name} warm p95 {p95_ms:.3f}ms exceeds "
+            f"{_WARM_SEARCH_P95_BUDGET_MS:.0f}ms"
+        )
+        _assert_tool_samples_lack_publish_timings(perf, tool_name)
+
+
+async def assert_project_build_shell_edit_lsp_remount_not_restart(
+    report: RunReport,
+    *,
+    sandbox_id: str,
+) -> None:
+    perf = await _load_task_center_performance_report(report)
+    _assert_no_internal_sandbox_errors(report.run_dir)
+    _assert_project_build_per_tool_report(
+        perf,
+        required_tools=(*_PROJECT_BUILD_REQUIRED_TOOLS, *_LSP_NAMES),
+    )
+    _assert_workspace_tree_is_o1(report.run_dir, perf)
+    _assert_direct_file_samples_do_not_create_overlay_resources(perf)
+
+    caller = SandboxCaller(agent_id="complex-project-build-shell-edit-lsp-perf-test")
+    summary = await _read_json(
+        sandbox_id,
+        f"{WORKSPACE_ROOT}/.metrics/summary.json",
+        caller,
+    )
+    assert summary["diagnostic_probe"]["error_detected"] is True
+    assert summary["diagnostic_probe"]["repair_cleared"] is True
+    assert int(summary["lsp_correctness"]["failed_checks"]) == 0
+    assert int(summary["shell_edit"]["count"]) > 0
+
+    lsp_samples = _tool_samples_by_prefix(perf, "lsp.")
+    assert lsp_samples, "missing LSP samples"
+    max_start_delta = _max_sample_timing(lsp_samples, "lsp.session.start_count_delta")
+    max_remount_delta = _max_sample_timing(
+        lsp_samples,
+        "lsp.session.remount_count_delta",
+    )
+    max_remount_total = _max_sample_timing(
+        lsp_samples,
+        "lsp.session.remount_count_total",
+    )
+    assert max_start_delta == 0.0, (
+        f"warm LSP path restarted Pyright: start_count_delta={max_start_delta}"
+    )
+    assert max_remount_delta > 0.0 or max_remount_total > 0.0, (
+        "LSP samples did not expose a remount after shell/edit writes"
+    )
+    for tool_name in _LSP_NAMES:
+        if _tool_count(perf, tool_name) <= 0:
+            continue
+        warm_samples = [
+            sample
+            for sample in _tool_samples(perf, tool_name)
+            if _is_lsp_no_refresh_sample(sample)
+        ]
+        assert warm_samples, f"{tool_name} has no no-refresh warm samples"
+        p95_ms = _warm_tool_p95_ms(
+            perf,
+            tool_name,
+            include_sample=_is_lsp_no_refresh_sample,
+        )
+        assert p95_ms <= _WARM_LSP_NO_REFRESH_P95_BUDGET_MS, (
+            f"{tool_name} no-refresh warm p95 {p95_ms:.3f}ms exceeds "
+            f"{_WARM_LSP_NO_REFRESH_P95_BUDGET_MS:.0f}ms"
+        )
 
 
 async def _assert_complex_build_contract(
@@ -544,3 +673,180 @@ def _jsonl_rows(path: Path) -> list[dict[str, Any]]:
         for line in path.read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
+
+
+async def _load_task_center_performance_report(
+    report: RunReport,
+) -> Mapping[str, Any]:
+    task = getattr(report, "performance_report_task", None)
+    assert task is not None, "run did not schedule performance_report.json"
+    perf_path = await task
+    assert perf_path == report.run_dir / "performance_report.json"
+    return load_performance_report(report.run_dir)
+
+
+def _assert_project_build_per_tool_report(
+    perf: Mapping[str, Any],
+    *,
+    required_tools: Sequence[str],
+) -> None:
+    per_tool = mapping(mapping(perf["tools"])["per_tool"])
+    missing = [tool for tool in required_tools if tool not in per_tool]
+    assert not missing, f"performance_report.json missing tools: {missing}"
+    for tool_name in required_tools:
+        stats = mapping(per_tool[tool_name])
+        assert int(stats.get("count") or 0) > 0, f"{tool_name} count is zero"
+        for key in ("p50_ms", "p95_ms", "max_ms"):
+            assert key in stats, f"{tool_name} missing {key}"
+            assert float(stats[key]) >= 0.0, f"{tool_name}.{key}={stats[key]}"
+
+
+def _assert_workspace_tree_is_o1(run_dir: Path, perf: Mapping[str, Any]) -> None:
+    assert_o1_workspace_resource_snapshots(run_dir / "sandbox_events.jsonl")
+    assert_resource_key_max(perf, "resource.command_exec.workspace_tree_bytes", 0.0)
+    assert_resource_key_max(perf, "resource.command_exec.workspace_tree_exists", 0.0)
+
+
+def _assert_direct_file_samples_do_not_create_overlay_resources(
+    perf: Mapping[str, Any],
+) -> None:
+    violations: list[str] = []
+    for tool_name in _DIRECT_FILE_TOOLS:
+        for sample in _tool_samples(perf, tool_name):
+            timings = mapping(sample.get("timings_s") or {})
+            for key in _DIRECT_FILE_OVERLAY_RESOURCE_KEYS:
+                value = float(timings.get(key) or 0.0)
+                if value:
+                    violations.append(f"{tool_name}:{key}={value}")
+    assert not violations, (
+        "direct file verbs exposed overlay command resources: "
+        + ", ".join(violations[:10])
+    )
+
+
+def _assert_upperdir_within_single_operation_budget(perf: Mapping[str, Any]) -> None:
+    resources = mapping(mapping(perf["sandbox"])["resource_keys"])
+    key = "resource.command_exec.upperdir_tree_bytes"
+    assert key in resources, f"missing resource key: {key}"
+    upperdir_max = float(mapping(resources[key]).get("max") or 0.0)
+    assert upperdir_max <= _PROJECT_BUILD_UPPERDIR_BUDGET_BYTES, (
+        f"upperdir max {upperdir_max:.0f} exceeds "
+        f"{_PROJECT_BUILD_UPPERDIR_BUDGET_BYTES} byte single-operation budget"
+    )
+    for truncated_key in (
+        "resource.command_exec.upperdir_tree_truncated",
+        "resource.command_exec.run_dir_tree_truncated",
+        "resource.command_exec.workspace_tree_truncated",
+    ):
+        assert float(mapping(resources[truncated_key])["max"]) == 0.0
+
+
+def _assert_manifest_depth_within_squash_target(perf: Mapping[str, Any]) -> None:
+    resources = mapping(mapping(perf["sandbox"])["resource_keys"])
+    key = "resource.layer_stack.manifest_depth"
+    assert key in resources, f"missing resource key: {key}"
+    manifest_depth_max = float(mapping(resources[key]).get("max") or 0.0)
+    assert manifest_depth_max <= float(AUTO_SQUASH_MAX_DEPTH), (
+        f"manifest depth max {manifest_depth_max:.0f} exceeds "
+        f"AUTO_SQUASH_MAX_DEPTH={AUTO_SQUASH_MAX_DEPTH}"
+    )
+    assert_timing_keys_present(perf, ("layer_stack.auto_squash.total_s",))
+
+
+def _assert_tool_samples_lack_publish_timings(
+    perf: Mapping[str, Any],
+    tool_name: str,
+) -> None:
+    violating_keys: set[str] = set()
+    for sample in _tool_samples(perf, tool_name):
+        timings = mapping(sample.get("timings_s") or {})
+        for key in timings:
+            if key.startswith(_SEARCH_PUBLISH_TIMING_PREFIXES):
+                violating_keys.add(key)
+    assert not violating_keys, (
+        f"{tool_name} read-only samples published or advanced manifest: "
+        f"{sorted(violating_keys)}"
+    )
+
+
+def _assert_no_internal_sandbox_errors(run_dir: Path) -> None:
+    events_path = run_dir / "sandbox_events.jsonl"
+    assert events_path.exists(), events_path
+    raw = events_path.read_text(encoding="utf-8", errors="replace")
+    forbidden = (
+        "internal_error",
+        "stale lowerdir",
+        "manifest references missing layer",
+        "mount_failed",
+    )
+    for needle in forbidden:
+        assert needle not in raw, f"{needle!r} appears in {events_path}"
+
+
+def _tool_count(perf: Mapping[str, Any], tool_name: str) -> int:
+    per_tool = mapping(mapping(perf["tools"])["per_tool"])
+    if tool_name not in per_tool:
+        return 0
+    return int(mapping(per_tool[tool_name]).get("count") or 0)
+
+
+def _tool_samples(perf: Mapping[str, Any], tool_name: str) -> list[Mapping[str, Any]]:
+    per_tool = mapping(mapping(perf["tools"])["per_tool"])
+    if tool_name not in per_tool:
+        return []
+    return [
+        mapping(sample)
+        for sample in list(mapping(per_tool[tool_name]).get("samples") or ())
+    ]
+
+
+def _tool_samples_by_prefix(
+    perf: Mapping[str, Any],
+    prefix: str,
+) -> list[Mapping[str, Any]]:
+    per_tool = mapping(mapping(perf["tools"])["per_tool"])
+    samples: list[Mapping[str, Any]] = []
+    for tool_name, stats in per_tool.items():
+        if str(tool_name).startswith(prefix):
+            samples.extend(mapping(sample) for sample in mapping(stats).get("samples") or ())
+    return samples
+
+
+def _max_sample_timing(samples: Sequence[Mapping[str, Any]], key: str) -> float:
+    values = [
+        float(mapping(sample.get("timings_s") or {}).get(key) or 0.0)
+        for sample in samples
+    ]
+    return max(values) if values else 0.0
+
+
+def _warm_tool_p95_ms(
+    perf: Mapping[str, Any],
+    tool_name: str,
+    *,
+    include_sample: Callable[[Mapping[str, Any]], bool] | None = None,
+) -> float:
+    samples = _tool_samples(perf, tool_name)
+    warm_samples = samples[2:]
+    if include_sample is not None:
+        warm_samples = [sample for sample in warm_samples if include_sample(sample)]
+    durations = [
+        float(sample["duration_ms"])
+        for sample in warm_samples
+        if "duration_ms" in sample
+    ]
+    if len(durations) >= 2:
+        return float(statistics.quantiles(durations, n=20, method="inclusive")[18])
+    if len(durations) == 1:
+        return durations[0]
+    per_tool = mapping(mapping(perf["tools"])["per_tool"])
+    return float(mapping(per_tool[tool_name]).get("p95_ms") or 0.0)
+
+
+def _is_lsp_no_refresh_sample(sample: Mapping[str, Any]) -> bool:
+    timings = mapping(sample.get("timings_s") or {})
+    return (
+        float(timings.get("lsp.session.start_count_delta") or 0.0) == 0.0
+        and float(timings.get("lsp.session.refresh_count_delta") or 0.0) == 0.0
+        and float(timings.get("lsp.session.remount_count_delta") or 0.0) == 0.0
+    )

@@ -649,12 +649,18 @@ async def _semantic_lsp_mini_suite(
         return
     use_site_expectations = _use_site_expectations(available)
     if use_site_expectations:
+        hover_expectation = _next_expectation(
+            stats,
+            "lsp.hover",
+            use_site_expectations,
+        )
         await _assert_lsp_hover(
             ctx,
             stats,
-            _next_expectation(stats, "lsp.hover", use_site_expectations),
+            hover_expectation,
             label,
         )
+        await _assert_lsp_hover(ctx, stats, hover_expectation, f"{label}.warm")
         await _assert_lsp_definition(
             ctx,
             stats,

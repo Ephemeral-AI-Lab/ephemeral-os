@@ -13,7 +13,7 @@ from plugins.catalog.lsp.runtime.pyright_session import (
     PyrightSession,
 )
 
-__all__ = ["get_session", "evict_all", "evict_for_root"]
+__all__ = ["get_session", "session_audit_counts", "evict_all", "evict_for_root"]
 
 
 logger = logging.getLogger(__name__)
@@ -96,6 +96,18 @@ async def get_session(ctx: Any) -> PyrightSession:
             session,
         )
         return session
+
+
+def session_audit_counts(ctx: Any) -> dict[str, int]:
+    """Return cached session counters before a timed operation reconciles it."""
+    cached = _sessions.get(str(ctx.layer_stack_root))
+    if cached is None:
+        return {"start": 0, "refresh": 0, "remount": 0}
+    return {
+        "start": int(getattr(cached, "audit_start_count", 0)),
+        "refresh": int(getattr(cached, "audit_refresh_count", 0)),
+        "remount": int(getattr(cached, "audit_remount_count", 0)),
+    }
 
 
 async def evict_for_root(layer_stack_root: str) -> None:

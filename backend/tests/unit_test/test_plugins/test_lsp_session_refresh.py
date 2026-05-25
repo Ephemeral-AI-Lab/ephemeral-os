@@ -121,6 +121,9 @@ class _FakeSession:
         self._overlay_handle = self.overlay_handle
         self.refresh_count = 0
         self.evict_count = 0
+        self.audit_start_count = 0
+        self.audit_refresh_count = 0
+        self.audit_remount_count = 0
 
     async def refresh_manifest(
         self,
@@ -131,12 +134,14 @@ class _FakeSession:
     ) -> None:
         old_handle = self._overlay_handle
         self.refresh_count += 1
+        self.audit_refresh_count += 1
         self.manifest_key = manifest_key
         if workspace_root is not None:
             self.workspace_root = workspace_root
         if overlay_handle is not None:
             self.overlay_handle = overlay_handle
             self._overlay_handle = overlay_handle
+            self.audit_remount_count += 1
             if old_handle is not None and old_handle is not overlay_handle:
                 release = getattr(old_handle, "release", None)
                 if callable(release):
@@ -163,15 +168,31 @@ class _StartableFakeSession(_FakeSession):
             **kwargs,
         )
         self.start_count = 0
+        self._started = False
 
     async def start(self) -> None:
+        if self._started:
+            return
         self.start_count += 1
+        self.audit_start_count += 1
+        self._started = True
 
 
 class _SlowStartFakeSession(_StartableFakeSession):
     async def start(self) -> None:
+        if self._started:
+            return
         self.start_count += 1
+        self.audit_start_count += 1
         await asyncio.sleep(3600)
+        self._started = True
+
+
+class _DiagnosticFakeSession(_StartableFakeSession):
+    async def diagnostics(self, args: dict[str, Any]) -> dict[str, Any]:
+        del args
+        await self.start()
+        return {"diagnostics": []}
 
 
 @pytest.mark.asyncio
@@ -318,6 +339,31 @@ async def test_lsp_runtime_warm_hook_defers_slow_start(
     }
     assert isinstance(session, _SlowStartFakeSession)
     assert session.start_count == 1
+
+
+@pytest.mark.asyncio
+async def test_lsp_timing_includes_get_session_refresh_delta(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(session_manager, "PyrightSession", _DiagnosticFakeSession)
+
+    overlay = _OperationOverlay(workspace_root="/testbed", manifest_key="hash-a@1")
+    ctx = _Ctx(
+        layer_stack_root=str(tmp_path / "layer-stack"),
+        overlay=overlay,
+        metadata={"op_name": "diagnostics"},
+    )
+    session = await session_manager.get_session(ctx)
+    await session.start()
+
+    overlay.manifest_key = "hash-b@2"
+    result = await lsp_server.diagnostics({"file_path": "/testbed/pkg.py"}, ctx)
+
+    timings = result["timings"]
+    assert timings["lsp.session.start_count_delta"] == 0.0
+    assert timings["lsp.session.refresh_count_delta"] == 1.0
+    assert timings["lsp.session.remount_count_delta"] == 1.0
 
 
 class _Client:

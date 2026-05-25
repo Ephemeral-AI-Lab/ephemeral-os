@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -108,6 +109,29 @@ def test_grep_files_with_matches_mode(
     assert result.output_mode == "files_with_matches"
     assert result.filenames == ("a.py", "c.txt")
     assert result.num_files == 2
+
+
+def test_grep_accepts_single_file_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace = _seed_workspace(
+        tmp_path,
+        files={"conftest.py": "# fixtures\n", "other.py": "# fixtures\n"},
+    )
+    monkeypatch.chdir(workspace)
+
+    result = grep_compute(
+        {
+            "pattern": re.escape("# fixtures\n"),
+            "path": (workspace / "conftest.py").as_posix(),
+            "multiline": True,
+        }
+    )
+
+    assert result.success is True
+    assert result.filenames == ("conftest.py",)
+    assert result.num_matches == 1
 
 
 def test_grep_count_mode_returns_per_file_counts(
